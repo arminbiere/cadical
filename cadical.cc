@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <vector>
+#include <climits>
 
 using namespace std;
 
@@ -93,8 +94,6 @@ static vector<Clause*> redundant;
 
 /*------------------------------------------------------------------------*/
 
-// statistics
-
 static long conflicts;
 static long decisions;
 static long restarts;
@@ -153,9 +152,9 @@ static Clause * new_clause (bool red, int glue = 0) {
   return res;
 }
 
-static void delete_clause (Clause * clause) { 
-  LOG (clause, "delete");
-  delete [] (char*) clause;
+static void delete_clause (Clause * c) { 
+  LOG (c, "delete");
+  delete [] (char*) c;
 }
 
 /*------------------------------------------------------------------------*/
@@ -204,6 +203,7 @@ static FILE * read_pipe (const char * fmt, const char * path) {
 
 static const char * USAGE =
 "usage: cadical [ -h ] [ <input> [ <proof> ] ]\n"
+"\n"
 "where '<input>' is a (compressed) DIMACS file and '<output>'\n"
 "is a file to store the DRAT proof.  If no '<proof>' file is\n"
 "specified, then no proof is generated.  If no '<input>' is given\n"
@@ -263,6 +263,8 @@ int main (int argc, char ** argv) {
     } else {
       if (has_suffix (argv[i], ".bz2"))
 	input = read_pipe ("bzcat %s", argv[i]), close_input = 2;
+      else if (has_suffix (argv[i], ".gz"))
+	input = read_pipe ("gunzip -c %s", argv[i]), close_input = 2;
       else input = fopen (argv[i], "r"), close_input = 1;
       if (!input)
 	die ("can not open and read DIMACS file '%s'", argv[i]);
