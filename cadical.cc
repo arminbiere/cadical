@@ -32,6 +32,14 @@ static void die (const char * fmt, ...) {
   exit (1);
 }
 
+/*------------------------------------------------------------------------*/
+
+static int solve () {
+  return 0;
+}
+
+/*------------------------------------------------------------------------*/
+
 static FILE * proof, * input;
 static int close_input;
 static const char * input_name, * proof_name;
@@ -63,8 +71,11 @@ static void usage () {
   exit (0);
 } 
 
+static void parse () {
+}
+
 int main (int argc, char ** argv) {
-  int i, res = 0;
+  int i, res;
   for (i = 1; i < argc; i++) {
     if (!strcmp (argv[i], "-h")) usage ();
     else if (!strcmp (argv[i], "-")) {
@@ -95,6 +106,8 @@ int main (int argc, char ** argv) {
   else msg ("will not generate nor write DRAT proof");
   if (close_input == 1) fclose (input);
   if (close_input == 2) pclose (input);
+  parse ();
+  res = solve ();
   if (proof) fclose (proof);
   return res;
 }
