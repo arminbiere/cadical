@@ -3,6 +3,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cassert>
+#include <vector>
+
+using namespace std;
+
+/*------------------------------------------------------------------------*/
 
 static void msg (const char * fmt, ...) {
   va_list ap;
@@ -45,24 +50,29 @@ static double seconds (void) {
 /*------------------------------------------------------------------------*/
 
 struct Var {
-  long bumped, seen;
+  long bumped;
+  signed char marked;
+  bool seen, minimized, poison;
   int prev, next;
+  Var () :
+    bumped (0), marked (0),
+    seen (false), minimized (false), poison (false),
+    prev (0), next (0)
+  { }
 };
 
 struct Clause {
   int size, glue;
   long resolved;
-  bool garbage, redundant;
+  bool redundant, garbage;
   int literals[1];
 };
 
 struct Watch {
   int blit;
   Clause * clause;
+  Watch (int b, Clause * c) : blit (b), clause (c) { }
 };
-
-#include <vector>
-using namespace std;
 
 typedef vector<Watch> Watches;
 
@@ -73,7 +83,13 @@ static int num_original_clauses;
 
 static Var * vars;
 static signed char * vals;
-static Watches * literal_watches;
+static Watches * all_literal_watches;
+
+/*------------------------------------------------------------------------*/
+
+static vector<int> literals;
+static vector<Clause*> irredundant;
+static vector<Clause*> redundant;
 
 /*------------------------------------------------------------------------*/
 
@@ -90,12 +106,19 @@ static long propagations;
 
 /*------------------------------------------------------------------------*/
 
-static vector<int> literals;
-static vector<Clause*> irredundant_clauses, redundant_clauses;
-
-static size_t bytes_clause (int size) {
-  return sizeof (Clause) + size * sizeof (int);
+static int val (int lit) {
+  assert (lit), assert (abs (lit) <= max_var);
+  int res = vals[abs (lit)];
+  if (lit < 0) res = -res;
+  return res;
 }
+
+static int sign (int lit) {
+  assert (lit), assert (abs (lit) <= max_var);
+  return lit < 0 ? -1 : 1;
+}
+
+/*------------------------------------------------------------------------*/
 
 #ifdef LOGGING
 static void msg (Clause * c, const char * fmt, ...) {
@@ -107,22 +130,25 @@ static void msg (Clause * c, const char * fmt, ...) {
   if (c->redundant) printf (" redundant glue %d", c->glue);
   else printf (" irredundant");
   printf (" size %d clause", c->size);
-  for (int i = 0; i < c->size; i++) printf (" %d", c->literals[i]);
+  for (const int * p = 0; *p; p++) printf (" %d", *p);
   fputc ('\n', stdout);
   fflush (stdout);
 }
 #endif
 
-static Clause * new_clause (bool redundant, int size, int glue) {
-  assert (size == (int) literals.size ());
-  Clause * res = (Clause*) new char[bytes_clause (size)];
-  res->garbage = size, res->glue = glue;
+static Clause * new_clause (bool red, int glue = 0) {
+  assert (literals.size () <= (size_t) INT_MAX);
+  int size = (int) literals.size ();
+  Clause * res = (Clause*) new char[sizeof *res + sizeof (int)];
+  res->size = size;
+  res->glue = glue;
   res->resolved = conflicts;
+  res->redundant = red;
   res->garbage = false;
-  if ((res->redundant = redundant)) redundant_clauses.push_back (res);
-  else irredundant_clauses.push_back (res);
   for (int i = 0; i < size; i++) res->literals[i] = literals[i];
   res->literals[size] = 0;
+  if (red) redundant.push_back (res);
+  else irredundant.push_back (res);
   LOG (res, "new");
   return res;
 }
@@ -141,20 +167,20 @@ static int solve () {
 /*------------------------------------------------------------------------*/
 
 static void init () {
-  msg ("initialized %d variables", max_var);
   vals = new signed char[max_var + 1];
   vars = new Var[max_var + 1];
-  literal_watches = new Watches[2*(max_var + 1)];
+  all_literal_watches = new Watches[2*(max_var + 1)];
+  msg ("initialized %d variables", max_var);
 }
 
 static void reset () {
-  for (size_t i = 0; i < irredundant_clauses.size (); i++)
-    delete_clause (irredundant_clauses[i]);
-  for (size_t i = 0; i < redundant_clauses.size (); i++)
-    delete_clause (redundant_clauses[i]);
+  for (size_t i = 0; i < irredundant.size (); i++)
+    delete_clause (irredundant[i]);
+  for (size_t i = 0; i < redundant.size (); i++)
+    delete_clause (redundant[i]);
   delete [] vals;
   delete [] vars;
-  delete [] literal_watches;
+  delete [] all_literal_watches;
 }
 
 /*------------------------------------------------------------------------*/
