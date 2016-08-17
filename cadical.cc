@@ -10,7 +10,7 @@ static void msg (const char * fmt, ...) {
   fflush (stdout);
 }
 
-#ifdef ENABLE_LOGGING
+#ifdef LOGGING
 #define LOG(FMT,ARGS...) do { msg (" LOG " FMT, ##ARGS); } while (0)
 #else
 #define LOG(ARGS..) do { } while (0)
