@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <vector>
+#include <algorithm>
 #include <climits>
 
 using namespace std;
@@ -52,11 +53,10 @@ static double seconds (void) {
 
 struct Var {
   long bumped;
-  signed char marked;
   bool seen, minimized, poison;
-  int prev, next;
+  Var * prev, * next;
   Var () :
-    bumped (0), marked (0),
+    bumped (0),
     seen (false), minimized (false), poison (false),
     prev (0), next (0)
   { }
@@ -79,29 +79,22 @@ typedef vector<Watch> Watches;
 
 /*------------------------------------------------------------------------*/
 
-static int max_var;
-static int num_original_clauses;
+static int max_var, num_original_clauses;
 
 static Var * vars;
 static signed char * vals;
 static Watches * all_literal_watches;
+static struct { Var * first, * last, * next; } queue;
 
-/*------------------------------------------------------------------------*/
+static vector<int> literals, units, trail;
+static vector<Clause*> irredundant, redundant;
 
-static vector<int> literals;
-static vector<Clause*> irredundant;
-static vector<Clause*> redundant;
+static long conflicts, decisions, restarts, propagations, bumped;
 
-/*------------------------------------------------------------------------*/
-
-static long conflicts;
-static long decisions;
-static long restarts;
-static long propagations;
-
-// static long bumped;
-// static double average_glue;
-// static double average_size;
+static struct { 
+  struct { double glue, size; } resolved;
+  struct { struct { double fast, slow; } glue; } learned;
+} ema;
 
 /*------------------------------------------------------------------------*/
 
@@ -115,6 +108,11 @@ static int val (int lit) {
 static int sign (int lit) {
   assert (lit), assert (abs (lit) <= max_var);
   return lit < 0 ? -1 : 1;
+}
+
+static Watches & watches (int lit) {
+  assert (lit), assert (abs (lit) <= max_var);
+  return all_literal_watches[2*abs (lit) + (lit < 0)];
 }
 
 /*------------------------------------------------------------------------*/
@@ -135,7 +133,7 @@ static void msg (Clause * c, const char * fmt, ...) {
 }
 #endif
 
-static Clause * new_clause (bool red, int glue = 0) {
+static Clause * new_clause (bool red, int glue) {
   assert (literals.size () <= (size_t) INT_MAX);
   int size = (int) literals.size ();
   Clause * res = (Clause*) new char[sizeof *res + sizeof (int)];
@@ -152,6 +150,9 @@ static Clause * new_clause (bool red, int glue = 0) {
   return res;
 }
 
+static Clause * new_original_clause () { return new_clause (false, 0); }
+static Clause * new_learned_clause (int g) { return new_clause (true, g); }
+
 static void delete_clause (Clause * c) { 
   LOG (c, "delete");
   delete [] (char*) c;
@@ -165,10 +166,23 @@ static int solve () {
 
 /*------------------------------------------------------------------------*/
 
+static void init_queue () {
+  Var * prev = 0;
+  for (int i = 1; i <= max_var; i++) {
+    Var * v = &vars[i];
+    if ((v->prev = prev)) prev->next = v;
+    else queue.first = v;
+    prev = v;
+  }
+  queue.last = queue.next = prev;
+}
+
 static void init () {
   vals = new signed char[max_var + 1];
   vars = new Var[max_var + 1];
   all_literal_watches = new Watches[2*(max_var + 1)];
+  for (int i = 1; i <= max_var; i++) vals[i] = 0;
+  init_queue ();
   msg ("initialized %d variables", max_var);
 }
 
@@ -177,9 +191,9 @@ static void reset () {
     delete_clause (irredundant[i]);
   for (size_t i = 0; i < redundant.size (); i++)
     delete_clause (redundant[i]);
-  delete [] vals;
-  delete [] vars;
   delete [] all_literal_watches;
+  delete [] vars;
+  delete [] vals;
 }
 
 /*------------------------------------------------------------------------*/
@@ -188,7 +202,7 @@ static FILE * input, * proof;
 static int close_input, close_proof;
 static const char * input_name, * proof_name;
 
-static int has_suffix (const char * str, const char * suffix) {
+static bool has_suffix (const char * str, const char * suffix) {
   int k = strlen (str), l = strlen (suffix);
   return k > l && !strcmp (str + k - l, suffix);
 }
@@ -211,6 +225,19 @@ static const char * USAGE =
 "solver reads from '<stdin>'.  If '-' is specified for '<proof>'\n"
 "then the proof is generated and printed to '<stdout>'.\n";
 
+struct lit_less_than {
+  bool operator () (const int a, const int b) const {
+    int res = abs (a) - abs (b);
+    if (res) return res;
+    return a < b ? -1 : 1;
+  }
+};
+
+static bool tautological () {
+  sort (literals.begin (), literals.end (), lit_less_than ());
+  return true;
+}
+
 static void parse_dimacs () {
   int ch;
   for (;;) {
@@ -226,21 +253,35 @@ static void parse_dimacs () {
     die ("invalid 'p ...' header");
   msg ("found 'p cnf %d %d' header", max_var, num_original_clauses);
   init ();
+  int lit = 0, parsed_clauses = 0;
+  while (fscanf (input, "%d", &lit) == 1) {
+    if (lit == INT_MIN || abs (lit) > max_var)
+      die ("invalid literal %d", lit);
+    if (lit) literals.push_back (lit);
+    else if (!tautological ()) new_original_clause ();
+    literals.clear ();
+    parsed_clauses++;
+  }
+  if (lit) die ("last clause without '0'");
+  if (parsed_clauses + 1 < num_original_clauses) die ("clauses missing");
+  if (parsed_clauses < num_original_clauses) die ("clause missing");
+  if (parsed_clauses > num_original_clauses) die ("too many clauses");
+  msg ("parsed %d clauses in %.2f seconds", parsed_clauses, seconds ());
 }
 
-static double average (double a, double b) { return b ? a / b : 0; }
+static double relative (double a, double b) { return b ? a / b : 0; }
 
 static void print_statistics () {
   double t = seconds ();
   msg ("");
   msg ("conflicts:    %22ld   %10.2f per second",
-    conflicts, average (conflicts, t));
+    conflicts, relative (conflicts, t));
   msg ("decisions:    %22ld   %10.2f per second",
-    decisions, average (decisions, t));
+    decisions, relative (decisions, t));
   msg ("restarts:     %22ld   %10.2f per second",
-    restarts, average (restarts, t));
+    restarts, relative (restarts, t));
   msg ("propagations: %22ld   %10.2f per second",
-    propagations, average (propagations, t));
+    propagations, relative (propagations, t));
   msg ("time:         %22s   %10.2f seconds", "", t);
   msg ("");
 }
