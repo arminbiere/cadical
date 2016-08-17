@@ -47,7 +47,7 @@ then
 fi
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
-CXXFLAGS="$CXXFLAGS -DVERSION=`cat VERSION`"
+CXXFLAGS="$CXXFLAGS -DVERSION=\\\\\"`cat VERSION`\\\\\""
 echo "$CXX $CXXFLAGS"
 rm -f makefile
 sed -e "s,@COMPILE@,$CXX $CXXFLAGS," makefile.in > makefile

@@ -1,6 +1,10 @@
+#include <cstdarg>
+#include <cstring>
 #include <cstdio>
 #include <cstdlib>
-#include <cstdarg>
+#include <vector>
+
+using namespace std;
 
 static void msg (const char * fmt, ...) {
   va_list ap;
@@ -28,8 +32,53 @@ static void die (const char * fmt, ...) {
   exit (1);
 }
 
-using namespace std;
-#include <vector>
+static FILE * proof, * input;
+static int close_input;
+static const char * input_name, * proof_name;
 
-int main () {
+static int has_suffix (const char * str, const char * suffix) {
+  int k = strlen (str), l = strlen (suffix);
+  return k > l && !strcmp (str + k - l, suffix);
+}
+
+static FILE * read_pipe (const char * fmt, const char * path) {
+  char * cmd = (char*) malloc (strlen (fmt) + strlen (path));
+  sprintf (cmd, fmt, path);
+  FILE * res = popen (cmd, "r");
+  free (cmd);
+  return res;
+}
+
+static void usage () {
+} 
+
+int main (int argc, char ** argv) {
+  int i, res = 0;
+  for (i = 1; i < argc; i++) {
+    if (!strcmp (argv[i], "-h")) usage ();
+    else if (argv[i][0] == '-') die ("invalid option '%s'", argv[i]);
+    else if (proof) die ("too many options");
+    else if (input) {
+      if (!(proof = fopen (argv[i], "w")))
+	die ("can not open and write DRAT proof to '%s'", argv[i]);
+      proof_name = argv[i];
+    } else {
+      close_input = 2;
+      input_name = argv[i];
+      if (has_suffix (argv[i], ".bz2"))
+	input = read_pipe ("bzcat %s", argv[i]);
+      else input = fopen (argv[i], "r"), close_input = 1;
+      if (!input)
+	die ("can not open and read DIMACS file '%s'", argv[i]);
+    }
+  }
+  if (!input) input_name = "<stdin>", input = stdin;
+  msg ("CaDiCaL Radically Simplified CDCL Solver " VERSION);
+  msg ("reading DIMACS file from '%s'", input_name);
+  if (proof) msg ("writing DRAT proof to '%s'", proof_name);
+  else msg ("will not generate nor write DRAT proof");
+  if (close_input == 1) fclose (input);
+  if (close_input == 2) pclose (input);
+  if (proof) fclose (proof);
+  return res;
 }
