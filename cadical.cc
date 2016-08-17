@@ -2,6 +2,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <cassert>
 
 static void msg (const char * fmt, ...) {
   va_list ap;
@@ -14,7 +15,7 @@ static void msg (const char * fmt, ...) {
 }
 
 #ifdef LOGGING
-#define LOG(FMT,ARGS...) do { msg (" LOG " FMT, ##ARGS); } while (0)
+#define LOG(FMT,ARGS...) do { msg (FMT, ##ARGS); } while (0)
 #else
 #define LOG(ARGS...) do { } while (0)
 #endif
@@ -43,18 +44,15 @@ static double seconds (void) {
 
 /*------------------------------------------------------------------------*/
 
-#include <vector>
-using namespace std;
-
 struct Var {
-  long bumped;
+  long bumped, seen;
   int prev, next;
 };
 
 struct Clause {
-  bool garbage, redundant;
   int size, glue;
   long resolved;
+  bool garbage, redundant;
   int literals[1];
 };
 
@@ -62,6 +60,9 @@ struct Watch {
   int blit;
   Clause * clause;
 };
+
+#include <vector>
+using namespace std;
 
 typedef vector<Watch> Watches;
 
@@ -72,7 +73,7 @@ static int num_original_clauses;
 
 static Var * vars;
 static signed char * vals;
-static Watches * watches;
+static Watches * literal_watches;
 
 /*------------------------------------------------------------------------*/
 
@@ -90,6 +91,52 @@ static long propagations;
 /*------------------------------------------------------------------------*/
 
 static vector<int> literals;
+static vector<Clause*> irredundant_clauses, redundant_clauses;
+
+static size_t bytes_clause (int size) {
+  return sizeof (Clause) + size * sizeof (int);
+}
+
+#ifdef LOGGING
+static void msg (Clause * c, const char * fmt, ...) {
+  va_list ap;
+  fputs ("c ", stdout);
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  if (c->redundant) printf (" redundant glue %d", c->glue);
+  else printf (" irredundant");
+  printf (" size %d clause", c->size);
+  for (int i = 0; i < c->size; i++) printf (" %d", c->literals[i]);
+  fputc ('\n', stdout);
+  fflush (stdout);
+}
+#endif
+
+static Clause * new_clause (bool redundant, int size, int glue) {
+  assert (size == (int) literals.size ());
+  Clause * res = (Clause*) new char[bytes_clause (size)];
+  res->garbage = size, res->glue = glue;
+  res->resolved = conflicts;
+  res->garbage = false;
+  if ((res->redundant = redundant)) redundant_clauses.push_back (res);
+  else irredundant_clauses.push_back (res);
+  for (int i = 0; i < size; i++) res->literals[i] = literals[i];
+  res->literals[size] = 0;
+  LOG (res, "new");
+  return res;
+}
+
+static void delete_clause (Clause * clause) { 
+  LOG (clause, "delete");
+  delete [] (char*) clause;
+}
+
+/*------------------------------------------------------------------------*/
+
+static int solve () {
+  return 0;
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -97,17 +144,17 @@ static void init () {
   msg ("initialized %d variables", max_var);
   vals = new signed char[max_var + 1];
   vars = new Var[max_var + 1];
-  watches = new Watches[2*(max_var + 1)];
-}
-
-static int solve () {
-  return 0;
+  literal_watches = new Watches[2*(max_var + 1)];
 }
 
 static void reset () {
+  for (size_t i = 0; i < irredundant_clauses.size (); i++)
+    delete_clause (irredundant_clauses[i]);
+  for (size_t i = 0; i < redundant_clauses.size (); i++)
+    delete_clause (redundant_clauses[i]);
   delete [] vals;
   delete [] vars;
-  delete [] watches;
+  delete [] literal_watches;
 }
 
 /*------------------------------------------------------------------------*/
