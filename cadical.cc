@@ -2,9 +2,6 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
-#include <vector>
-
-using namespace std;
 
 static void msg (const char * fmt, ...) {
   va_list ap;
@@ -32,16 +29,91 @@ static void die (const char * fmt, ...) {
   exit (1);
 }
 
+#include <sys/time.h>
+#include <sys/resource.h>
+
+static double seconds (void) {
+  struct rusage u;
+  double res;
+  if (getrusage (RUSAGE_SELF, &u)) return 0;
+  res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;
+  res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec;
+  return res;
+}
+
 /*------------------------------------------------------------------------*/
+
+#include <vector>
+using namespace std;
+
+struct Var {
+  long bumped;
+  int prev, next;
+};
+
+struct Clause {
+  bool garbage, redundant;
+  int size, glue;
+  long resolved;
+  int literals[1];
+};
+
+struct Watch {
+  int blit;
+  Clause * clause;
+};
+
+typedef vector<Watch> Watches;
+
+/*------------------------------------------------------------------------*/
+
+static int max_var;
+static int num_original_clauses;
+
+static Var * vars;
+static signed char * vals;
+static Watches * watches;
+
+/*------------------------------------------------------------------------*/
+
+// statistics
+
+static long conflicts;
+static long decisions;
+static long restarts;
+static long propagations;
+
+// static long bumped;
+// static double average_glue;
+// static double average_size;
+
+/*------------------------------------------------------------------------*/
+
+static vector<int> literals;
+
+/*------------------------------------------------------------------------*/
+
+static void init () {
+  msg ("initialized %d variables", max_var);
+  vals = new signed char[max_var + 1];
+  vars = new Var[max_var + 1];
+  watches = new Watches[2*(max_var + 1)];
+}
 
 static int solve () {
   return 0;
 }
 
+static void reset () {
+  delete [] vals;
+  delete [] vars;
+  delete [] watches;
+}
+
 /*------------------------------------------------------------------------*/
 
-static FILE * proof, * input;
-static int close_input;
+static FILE * input, * proof;
+static int close_input, close_proof;
 static const char * input_name, * proof_name;
 
 static int has_suffix (const char * str, const char * suffix) {
@@ -66,18 +138,44 @@ static const char * USAGE =
 "solver reads from '<stdin>'.  If '-' is specified for '<proof>'\n"
 "then the proof is generated and printed to '<stdout>'.\n";
 
-static void usage () {
-  fputs (USAGE, stdout);
-  exit (0);
-} 
+static void parse_dimacs () {
+  int ch;
+  for (;;) {
+    ch = getc (input);
+    if (ch != 'c') break;
+    while ((ch = getc (input)) != '\n')
+      if (ch == EOF)
+	die ("unexpected end-of-file in header comment");
+  }
+  if (ch != 'p') die ("expected 'c' or 'p'");
+  if (fscanf (input, " cnf %d %d", &max_var, &num_original_clauses) != 2 ||
+      max_var < 0 || num_original_clauses < 0)
+    die ("invalid 'p ...' header");
+  msg ("found 'p cnf %d %d' header", max_var, num_original_clauses);
+  init ();
+}
 
-static void parse () {
+static double average (double a, double b) { return b ? a / b : 0; }
+
+static void print_statistics () {
+  double t = seconds ();
+  msg ("");
+  msg ("conflicts:    %22ld   %10.2f per second",
+    conflicts, average (conflicts, t));
+  msg ("decisions:    %22ld   %10.2f per second",
+    decisions, average (decisions, t));
+  msg ("restarts:     %22ld   %10.2f per second",
+    restarts, average (restarts, t));
+  msg ("propagations: %22ld   %10.2f per second",
+    propagations, average (propagations, t));
+  msg ("time:         %22s   %10.2f seconds", "", t);
+  msg ("");
 }
 
 int main (int argc, char ** argv) {
   int i, res;
   for (i = 1; i < argc; i++) {
-    if (!strcmp (argv[i], "-h")) usage ();
+    if (!strcmp (argv[i], "-h")) fputs (USAGE, stdout), exit (0);
     else if (!strcmp (argv[i], "-")) {
       if (proof) die ("too many arguments");
       else if (!input) input = stdin, input_name = "<stdin>";
@@ -88,26 +186,29 @@ int main (int argc, char ** argv) {
     else if (input) {
       if (!(proof = fopen (argv[i], "w")))
 	die ("can not open and write DRAT proof to '%s'", argv[i]);
-      proof_name = argv[i];
+      proof_name = argv[i], close_proof = 1;
     } else {
-      close_input = 2;
-      input_name = argv[i];
       if (has_suffix (argv[i], ".bz2"))
-	input = read_pipe ("bzcat %s", argv[i]);
+	input = read_pipe ("bzcat %s", argv[i]), close_input = 2;
       else input = fopen (argv[i], "r"), close_input = 1;
       if (!input)
 	die ("can not open and read DIMACS file '%s'", argv[i]);
+      input_name = argv[i];
     }
   }
   if (!input) input_name = "<stdin>", input = stdin;
-  msg ("CaDiCaL Radically Simplified CDCL Solver " VERSION);
+  msg ("CaDiCaL Radically Simplified CDCL Solver Version " VERSION);
+  msg ("");
   msg ("reading DIMACS file from '%s'", input_name);
   if (proof) msg ("writing DRAT proof to '%s'", proof_name);
   else msg ("will not generate nor write DRAT proof");
   if (close_input == 1) fclose (input);
   if (close_input == 2) pclose (input);
-  parse ();
+  parse_dimacs ();
   res = solve ();
-  if (proof) fclose (proof);
+  if (close_proof) fclose (proof);
+  reset ();
+  print_statistics ();
+  msg ("exit %d", res);
   return res;
 }
