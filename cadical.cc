@@ -49,15 +49,31 @@ static FILE * read_pipe (const char * fmt, const char * path) {
   return res;
 }
 
+static const char * USAGE =
+"usage: cadical [ -h ] [ <input> [ <proof> ] ]\n"
+"where '<input>' is a (compressed) DIMACS file and '<output>'\n"
+"is a file to store the DRAT proof.  If no '<proof>' file is\n"
+"specified, then no proof is generated.  If no '<input>' is given\n"
+"then '<stdin>' is used. If '-' is used as '<input>' then the\n"
+"solver reads from '<stdin>'.  If '-' is specified for '<proof>'\n"
+"then the proof is generated and printed to '<stdout>'.\n";
+
 static void usage () {
+  fputs (USAGE, stdout);
+  exit (0);
 } 
 
 int main (int argc, char ** argv) {
   int i, res = 0;
   for (i = 1; i < argc; i++) {
     if (!strcmp (argv[i], "-h")) usage ();
-    else if (argv[i][0] == '-') die ("invalid option '%s'", argv[i]);
-    else if (proof) die ("too many options");
+    else if (!strcmp (argv[i], "-")) {
+      if (proof) die ("too many arguments");
+      else if (!input) input = stdin, input_name = "<stdin>";
+      else proof = stdout, proof_name = "<stdout>";
+    } else if (argv[i][0] == '-')
+    die ("invalid option '%s'", argv[i]);
+    else if (proof) die ("too many arguments");
     else if (input) {
       if (!(proof = fopen (argv[i], "w")))
 	die ("can not open and write DRAT proof to '%s'", argv[i]);
