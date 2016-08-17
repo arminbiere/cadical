@@ -1,4 +1,6 @@
 #include <cstdio>
+#include <cstdlib>
+#include <cstdarg>
 
 static void msg (const char * fmt, ...) {
   va_list ap;
@@ -13,7 +15,7 @@ static void msg (const char * fmt, ...) {
 #ifdef LOGGING
 #define LOG(FMT,ARGS...) do { msg (" LOG " FMT, ##ARGS); } while (0)
 #else
-#define LOG(ARGS..) do { } while (0)
+#define LOG(ARGS...) do { } while (0)
 #endif
 
 static void die (const char * fmt, ...) {
