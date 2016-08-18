@@ -1,15 +1,68 @@
+#include <algorithm>
+#include <vector>
+
+#include <cassert>
+#include <climits>
 #include <cstdarg>
-#include <cstring>
 #include <cstdio>
 #include <cstdlib>
-#include <cassert>
-#include <vector>
-#include <algorithm>
-#include <climits>
+#include <cstring>
+
+#include <sys/resource.h>
+#include <sys/time.h>
 
 using namespace std;
 
-/*------------------------------------------------------------------------*/
+struct Clause {
+  int size, glue;
+  long resolved;
+  bool redundant, garbage;
+  int literals[1];
+};
+
+struct Var {
+  long bumped;
+  bool seen, minimized, poison;
+  int level;
+  Var * prev, * next;
+  Clause * reason;
+  Var () :
+    bumped (0),
+    seen (false), minimized (false), poison (false),
+    prev (0), next (0)
+  { }
+};
+
+struct Watch {
+  int blit;
+  Clause * clause;
+  Watch (int b, Clause * c) : blit (b), clause (c) { }
+};
+
+typedef vector<Watch> Watches;
+
+static int max_var, num_original_clauses;
+
+static Var * vars;
+static signed char * vals, * phases;
+static Watches * all_literal_watches;
+static struct { Var * first, * last, * next; } queue;
+
+static int level;
+static vector<int> literals, trail;
+static vector<Clause*> irredundant, redundant;
+static Clause * conflict;
+
+static long conflicts, decisions, restarts, propagations, bumped;
+
+static struct { 
+  struct { double glue, size; } resolved;
+  struct { struct { double fast, slow; } glue; } learned;
+} ema;
+
+static FILE * input, * proof;
+static int close_input, close_proof;
+static const char * input_name, * proof_name;
 
 static void msg (const char * fmt, ...) {
   va_list ap;
@@ -20,6 +73,8 @@ static void msg (const char * fmt, ...) {
   fputc ('\n', stdout);
   fflush (stdout);
 }
+
+// TODO log with decision level and 'LOG' prefix ...
 
 #ifdef LOGGING
 #define LOG(FMT,ARGS...) do { msg (FMT, ##ARGS); } while (0)
@@ -37,9 +92,6 @@ static void die (const char * fmt, ...) {
   exit (1);
 }
 
-#include <sys/time.h>
-#include <sys/resource.h>
-
 static double seconds (void) {
   struct rusage u;
   double res;
@@ -48,53 +100,6 @@ static double seconds (void) {
   res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec;
   return res;
 }
-
-/*------------------------------------------------------------------------*/
-
-struct Var {
-  long bumped;
-  bool seen, minimized, poison;
-  Var * prev, * next;
-  Var () :
-    bumped (0),
-    seen (false), minimized (false), poison (false),
-    prev (0), next (0)
-  { }
-};
-
-struct Clause {
-  int size, glue;
-  long resolved;
-  bool redundant, garbage;
-  int literals[1];
-};
-
-struct Watch {
-  int blit;
-  Clause * clause;
-  Watch (int b, Clause * c) : blit (b), clause (c) { }
-};
-
-typedef vector<Watch> Watches;
-
-/*------------------------------------------------------------------------*/
-
-static int max_var, num_original_clauses;
-
-static Var * vars;
-static signed char * vals;
-static Watches * all_literal_watches;
-static struct { Var * first, * last, * next; } queue;
-
-static vector<int> literals, units, trail;
-static vector<Clause*> irredundant, redundant;
-
-static long conflicts, decisions, restarts, propagations, bumped;
-
-static struct { 
-  struct { double glue, size; } resolved;
-  struct { struct { double fast, slow; } glue; } learned;
-} ema;
 
 /*------------------------------------------------------------------------*/
 
@@ -113,6 +118,17 @@ static int sign (int lit) {
 static Watches & watches (int lit) {
   assert (lit), assert (abs (lit) <= max_var);
   return all_literal_watches[2*abs (lit) + (lit < 0)];
+}
+
+static Var & var (int lit) { return vars [abs (lit)]; }
+
+static void assign (int lit, Clause * reason) {
+  assert (!val (lit));
+  Var & v = var (lit);
+  v.level = level;
+  v.reason = reason;
+  vals[abs (lit)] = sign (lit);
+  assert (val (lit) > 0);
 }
 
 /*------------------------------------------------------------------------*/
@@ -179,9 +195,11 @@ static void init_queue () {
 
 static void init () {
   vals = new signed char[max_var + 1];
+  phases = new signed char[max_var + 1];
   vars = new Var[max_var + 1];
   all_literal_watches = new Watches[2*(max_var + 1)];
   for (int i = 1; i <= max_var; i++) vals[i] = 0;
+  for (int i = 1; i <= max_var; i++) phases[i] = -1;
   init_queue ();
   msg ("initialized %d variables", max_var);
 }
@@ -197,10 +215,6 @@ static void reset () {
 }
 
 /*------------------------------------------------------------------------*/
-
-static FILE * input, * proof;
-static int close_input, close_proof;
-static const char * input_name, * proof_name;
 
 static bool has_suffix (const char * str, const char * suffix) {
   int k = strlen (str), l = strlen (suffix);
@@ -235,6 +249,16 @@ struct lit_less_than {
 
 static bool tautological () {
   sort (literals.begin (), literals.end (), lit_less_than ());
+  size_t j = 0;
+  int prev = 0;
+  for (size_t i = 0; i < literals.size (); i++) {
+    int lit = literals[i];
+    if (lit == -prev) {
+      return true;
+    }
+    if (lit != prev) literals[j++] = lit;
+  }
+  literals.resize (j);
   return true;
 }
 
@@ -257,15 +281,25 @@ static void parse_dimacs () {
   while (fscanf (input, "%d", &lit) == 1) {
     if (lit == INT_MIN || abs (lit) > max_var)
       die ("invalid literal %d", lit);
-    if (lit) literals.push_back (lit);
-    else if (!tautological ()) new_original_clause ();
+    if (lit) {
+      if (literals.size () == INT_MAX) die ("clause too large");
+      literals.push_back (lit);
+    } else if (!tautological ()) {
+      Clause * c = new_original_clause ();
+      if (c->size == 1) {
+	int unit = c->literals[0], tmp = val (unit);
+	if (!tmp) assign (unit, c);
+	else if (tmp < 0 && !conflict)
+	  msg ("parsed clashing unit clause"), conflict = c;
+      } else if (!c->size && !conflict)
+	msg ("parsed empty clause"), conflict = c;
+      else if (c->size > 1) ; // watch_clause (c); // TODO
+    } else LOG ("tautological original clause");
     literals.clear ();
-    parsed_clauses++;
+    if (parsed_clauses++ >= num_original_clauses) die ("too many clauses");
   }
   if (lit) die ("last clause without '0'");
-  if (parsed_clauses + 1 < num_original_clauses) die ("clauses missing");
   if (parsed_clauses < num_original_clauses) die ("clause missing");
-  if (parsed_clauses > num_original_clauses) die ("too many clauses");
   msg ("parsed %d clauses in %.2f seconds", parsed_clauses, seconds ());
 }
 
