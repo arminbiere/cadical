@@ -1,6 +1,3 @@
-#include <algorithm>
-#include <vector>
-
 #include <cassert>
 #include <climits>
 #include <cstdarg>
@@ -15,6 +12,9 @@ extern "C" {
 };
 
 #include "config.h"
+
+#include <algorithm>
+#include <vector>
 
 using namespace std;
 
@@ -54,7 +54,8 @@ static Watches * all_literal_watches;
 static struct { Var * first, * last, * next; } queue;
 
 static bool unsat;
-static int level, next;
+static int level;
+static size_t next;
 static vector<int> literals, trail;
 static vector<Clause*> irredundant, redundant;
 static Clause * conflict;
@@ -294,7 +295,13 @@ static void delete_clause (Clause * c) {
 }
 
 static bool propagate () {
+  assert (!unsat);
   START (propagate);
+  while (!conflict && next < trail.size ()) {
+    stats.propagations++;
+    int lit = trail[next++];
+    Watches & w = watches (-lit);
+  }
   STOP (propagate);
   return !conflict;
 }
