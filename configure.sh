@@ -51,7 +51,6 @@ fi
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -DPROFILE"
-CXXFLAGS="$CXXFLAGS -DVERSION=\\\\\"`cat VERSION`\\\\\""
 echo "$CXX $CXXFLAGS"
 rm -f makefile
-sed -e "s,@COMPILE@,$CXX $CXXFLAGS," makefile.in > makefile
+sed -e "s,@CXX@,$CXX," -e "s,@CXXFLAGS@,$CXXFLAGS," makefile.in > makefile

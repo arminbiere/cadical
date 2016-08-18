@@ -11,6 +11,8 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 
+#include "config.h"
+
 using namespace std;
 
 struct Clause {
@@ -115,7 +117,7 @@ static void LOG (Clause * c, const char *fmt, ...) {
   else printf (" decision");
   fputc ('\n', stdout);
   fflush (stdout);
-} while (0)
+}
 
 #else
 #define LOG(ARGS...) do { } while (0)
@@ -484,7 +486,9 @@ int main (int argc, char ** argv) {
     }
   }
   if (!input) input_name = "<stdin>", input = stdin;
-  msg ("CaDiCaL Radically Simplified CDCL Solver Version " VERSION);
+  msg ("CaDiCaL Radically Simplified CDCL SAT Solver");
+  msg ("Version " VERSION " " GITID);
+  msg ("Compile " COMPILE);
   msg ("");
   msg ("reading DIMACS file from '%s'", input_name);
   if (proof) msg ("writing DRAT proof to '%s'", proof_name);

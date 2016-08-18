@@ -1,5 +1,9 @@
+CXX=@CXX@
+CXXFLAGS=@CXXFLAGS@
 all: cadical
-cadical: cadical.cc makefile
-	@COMPILE@ -o $@ cadical.cc
+cadical: cadical.cc config.h makefile
+	$(CXX) $(CXXFLAGS) -o $@ cadical.cc
+config.h: mkconfig.sh makefile
+	./mkconfig.sh > config.h
 clean:
-	rm -f cadical makefile test/cnfs/*.log
+	rm -f cadical makefile config.h test/cnfs/*.log
