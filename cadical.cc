@@ -357,6 +357,7 @@ static void init () {
 }
 
 static void reset () {
+#ifndef NDEBUG
   for (size_t i = 0; i < irredundant.size (); i++)
     delete_clause (irredundant[i]);
   for (size_t i = 0; i < redundant.size (); i++)
@@ -364,6 +365,8 @@ static void reset () {
   delete [] all_literal_watches;
   delete [] vars;
   delete [] vals;
+  delete [] phases;
+#endif
 }
 
 /*------------------------------------------------------------------------*/
@@ -383,7 +386,6 @@ static FILE * read_pipe (const char * fmt, const char * path) {
 
 static const char * USAGE =
 "usage: cadical [ -h ] [ <input> [ <proof> ] ]\n"
-"\n"
 "where '<input>' is a (compressed) DIMACS file and '<output>'\n"
 "is a file to store the DRAT proof.  If no '<proof>' file is\n"
 "specified, then no proof is generated.  If no '<input>' is given\n"

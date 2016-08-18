@@ -2,12 +2,18 @@
 
 cd `dirname $0`
 
+if [ ! -x ../cadical ]
+then
+  echo "*** run-regression.sh: make 'cadical' first" 1>&2
+  exit 1
+fi
+
 ok=0
 failed=0
 
 run () {
   echo -n $program $*
-  ../cadical cnfs/$1.in >cnfs/$1.log 2>&1
+  ../cadical cnfs/$1.cnf 1>cnfs/$1.log 2>cnfs/$2.err
   res=$?
   if [ $res = $2 ]
   then 

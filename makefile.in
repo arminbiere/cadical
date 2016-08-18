@@ -6,4 +6,5 @@ cadical: cadical.cc config.h makefile
 config.h: make-config-header.sh makefile
 	./make-config-header.sh > config.h
 clean:
-	rm -f cadical makefile config.h test/cnfs/*.log
+	rm -f cadical makefile config.h
+	rm -f test/cnfs/*.log test/cnfs/*.err
