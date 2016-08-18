@@ -48,6 +48,7 @@ static signed char * vals, * phases;
 static Watches * all_literal_watches;
 static struct { Var * first, * last, * next; } queue;
 
+static bool unsat;
 static int level;
 static vector<int> literals, trail;
 static vector<Clause*> irredundant, redundant;
@@ -86,7 +87,7 @@ static void LOG (const char * fmt, ...) {
   fflush (stdout);
 }
 
-static void LOGCLS (Clause * c, const char *fmt, ...) {
+static void LOG (Clause * c, const char *fmt, ...) {
   va_list ap;
   printf ("c LOG %d ", level);
   va_start (ap, fmt);
@@ -98,16 +99,14 @@ static void LOGCLS (Clause * c, const char *fmt, ...) {
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
       printf (" %d", c->literals[i]);
-  } else printf (" decision");
+  } else if (level) printf (" unit");
+  else printf (" decision");
   fputc ('\n', stdout);
   fflush (stdout);
 } while (0)
 
 #else
-
 #define LOG(ARGS...) do { } while (0)
-#define LOGCLS(ARGS...) do { } while (0)
-
 #endif
 
 static void die (const char * fmt, ...) {
@@ -129,8 +128,6 @@ static double seconds (void) {
   return res;
 }
 
-/*------------------------------------------------------------------------*/
-
 static int val (int lit) {
   assert (lit), assert (abs (lit) <= max_var);
   int res = vals[abs (lit)];
@@ -150,7 +147,7 @@ static Watches & watches (int lit) {
 
 static Var & var (int lit) { return vars [abs (lit)]; }
 
-static void assign (int lit, Clause * reason) {
+static void assign (int lit, Clause * reason = 0) {
   assert (!val (lit));
   Var & v = var (lit);
   v.level = level;
@@ -158,28 +155,22 @@ static void assign (int lit, Clause * reason) {
   vals[abs (lit)] = sign (lit);
   assert (val (lit) > 0);
   trail.push_back (lit);
-  LOGCLS (reason, "assign %d", lit);
+  LOG (reason, "assign %d", lit);
 }
 
-/*------------------------------------------------------------------------*/
-
-#ifdef LOGGING
-static void msg (Clause * c, const char * fmt, ...) {
-  va_list ap;
-  fputs ("c ", stdout);
-  va_start (ap, fmt);
-  vprintf (fmt, ap);
-  va_end (ap);
-  if (c->redundant) printf (" redundant glue %d", c->glue);
-  else printf (" irredundant");
-  printf (" size %d clause", c->size);
-  for (const int * p = 0; *p; p++) printf (" %d", *p);
-  fputc ('\n', stdout);
-  fflush (stdout);
+static void watch_literal (Clause * c, int lit, int blit) {
+  watches (lit).push_back (Watch (blit, c));
+  LOG (c, "watch %d blit %d in", lit, blit);
 }
-#endif
 
-static Clause * new_clause (bool red, int glue) {
+static void watch_clause (Clause * c) {
+  assert (c->size > 1);
+  int l0 = c->literals[0], l1 = c->literals[1];
+  watch_literal (c, l0, l1);
+  watch_literal (c, l1, l0);
+}
+
+static Clause * new_clause (bool red, int glue = 0) {
   assert (literals.size () <= (size_t) INT_MAX);
   int size = (int) literals.size ();
   Clause * res = (Clause*) new char[sizeof *res + sizeof (int)];
@@ -196,7 +187,21 @@ static Clause * new_clause (bool red, int glue) {
   return res;
 }
 
-static Clause * new_original_clause () { return new_clause (false, 0); }
+static void add_new_original_clause () {
+  int size = (int) literals.size ();
+  if (!size) {
+    if (!unsat) msg ("original empty clause"), unsat = true;
+    else LOG ("original empty clause produces another inconsistency");
+  } else if (size == 1) {
+    int unit = literals[0], tmp = val (unit);
+    if (!tmp) assign (unit);
+    else if (tmp < 0) {
+      if (!unsat) msg ("parsed clashing unit"), unsat = true;
+      else LOG ("original clashing unit produces another inconsistency");
+    } else LOG ("original redundant unit");
+  } else watch_clause (new_clause (false));
+}
+
 static Clause * new_learned_clause (int g) { return new_clause (true, g); }
 
 static void delete_clause (Clause * c) { 
@@ -204,13 +209,9 @@ static void delete_clause (Clause * c) {
   delete [] (char*) c;
 }
 
-/*------------------------------------------------------------------------*/
-
 static int solve () {
   return 0;
 }
-
-/*------------------------------------------------------------------------*/
 
 static void init_queue () {
   Var * prev = 0;
@@ -314,17 +315,8 @@ static void parse_dimacs () {
     if (lit) {
       if (literals.size () == INT_MAX) die ("clause too large");
       literals.push_back (lit);
-    } else if (!tautological ()) {
-      Clause * c = new_original_clause ();
-      if (c->size == 1) {
-	int unit = c->literals[0], tmp = val (unit);
-	if (!tmp) assign (unit, c);
-	else if (tmp < 0 && !conflict)
-	  msg ("parsed clashing unit clause"), conflict = c;
-      } else if (!c->size && !conflict)
-	msg ("parsed empty clause"), conflict = c;
-      else if (c->size > 1) ; // watch_clause (c); // TODO
-    } else LOG ("tautological original clause");
+    } else if (!tautological ()) add_new_original_clause ();
+    else LOG ("tautological original clause");
     literals.clear ();
     if (parsed_clauses++ >= num_original_clauses) die ("too many clauses");
   }
