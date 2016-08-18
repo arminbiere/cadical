@@ -65,6 +65,18 @@ static FILE * input, * proof;
 static int close_input, close_proof;
 static const char * input_name, * proof_name;
 
+static double relative (double a, double b) { return b ? a / b : 0; }
+static double percent (double a, double b) { return relative (100 * a, b); }
+
+static double seconds (void) {
+  struct rusage u;
+  double res;
+  if (getrusage (RUSAGE_SELF, &u)) return 0;
+  res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;
+  res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec;
+  return res;
+}
+
 static void msg (const char * fmt, ...) {
   va_list ap;
   fputs ("c ", stdout);
@@ -109,6 +121,60 @@ static void LOG (Clause * c, const char *fmt, ...) {
 #define LOG(ARGS...) do { } while (0)
 #endif
 
+#ifdef PROFILE
+
+struct Timer {
+  double started, * update;
+  Timer (double s, double * u) : started (s), update (u) { }
+};
+
+static vector<Timer> timers;
+
+static void start (double * u) { timers.push_back (Timer (seconds (), u)); }
+
+static void stop (double * u) {
+  assert (!timers.empty ());
+  const Timer & t = timers.back ();
+  assert (u == t.u), (void) u;
+  *t.update += seconds () - t.started;
+  timers.pop_back ();
+}
+
+static struct { 
+  double analyze;
+  double decide;
+  double parse;
+  double propagate;
+  double reduce;
+  double restart;
+  double search;
+} profile;
+
+#define START(P) start (&profile.P)
+#define STOP(P) stop (&profile.P)
+
+#define PRINT_PROFILE(P) \
+  msg ("%12.2f %7.2f%% %s\n", profile.P, percent (profile.P, all), #P)
+
+static void print_profile () {
+  double all = seconds ();
+  PRINT_PROFILE (analyze);
+  PRINT_PROFILE (decide);
+  PRINT_PROFILE (parse);
+  PRINT_PROFILE (propagate);
+  PRINT_PROFILE (reduce);
+  PRINT_PROFILE (restart);
+  PRINT_PROFILE (search);
+  msg ("===============================");
+  msg ("%12.2f %7.2f%% all\n", all, 100.0);
+}
+
+#else
+#define START(ARGS...) do { } while (0)
+#define STOP(ARGS...) do { } while (0)
+#define print_profile(ARGS...) do { } while (0)
+#endif
+
 static void die (const char * fmt, ...) {
   va_list ap;
   fputs ("*** cadical error: ", stderr);
@@ -117,15 +183,6 @@ static void die (const char * fmt, ...) {
   va_end (ap);
   fputc ('\n', stderr);
   exit (1);
-}
-
-static double seconds (void) {
-  struct rusage u;
-  double res;
-  if (getrusage (RUSAGE_SELF, &u)) return 0;
-  res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;
-  res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec;
-  return res;
 }
 
 static int val (int lit) {
@@ -212,13 +269,20 @@ static void delete_clause (Clause * c) {
 }
 
 static bool propagate () {
-  return conflict;
+  START (propagate);
+  STOP (propagate);
+  return !conflict;
 }
 
 static void analyze () {
+  assert (conflict);
   if (!level) {
+    assert (!unsat);
     msg ("learned empty clause");
+    unsat = true;
   }
+  START (analyze);
+  STOP (analyze);
 }
 
 static bool satisfied () {
@@ -230,6 +294,8 @@ static bool restarting () {
 }
 
 static void restart () {
+  START (restart);
+  STOP (restart);
 }
 
 static bool reducing () {
@@ -237,19 +303,27 @@ static bool reducing () {
 }
 
 static void reduce () {
+  START (reduce);
+  STOP (reduce);
 }
 
 static void decide () {
+  START (decide);
+  STOP (decide);
 }
 
-static int solve () {
-  for (;;)
-         if (unsat) return 20;
+static int search () {
+  int res = 0;
+  START (search);
+  while (!res)
+         if (unsat) res = 20;
     else if (!propagate ()) analyze ();
-    else if (satisfied ()) return 10;
+    else if (satisfied ()) res= 10;
     else if (restarting ()) restart ();
     else if (reducing ()) reduce ();
     else decide ();
+  STOP (search);
+  return res;
 }
 
 static void init_vmtf_queue () {
@@ -334,6 +408,7 @@ static bool tautological () {
 
 static void parse_dimacs () {
   int ch;
+  START (parse);
   for (;;) {
     ch = getc (input);
     if (ch != 'c') break;
@@ -354,17 +429,18 @@ static void parse_dimacs () {
     if (lit) {
       if (literals.size () == INT_MAX) die ("clause too large");
       literals.push_back (lit);
-    } else if (!tautological ()) add_new_original_clause ();
-    else LOG ("tautological original clause");
-    literals.clear ();
-    if (parsed_clauses++ >= num_original_clauses) die ("too many clauses");
+    } else {
+      if (!tautological ()) add_new_original_clause ();
+      else LOG ("tautological original clause");
+      literals.clear ();
+      if (parsed_clauses++ >= num_original_clauses) die ("too many clauses");
+    }
   }
   if (lit) die ("last clause without '0'");
   if (parsed_clauses < num_original_clauses) die ("clause missing");
   msg ("parsed %d clauses in %.2f seconds", parsed_clauses, seconds ());
+  STOP (parse);
 }
-
-static double relative (double a, double b) { return b ? a / b : 0; }
 
 static void print_statistics () {
   double t = seconds ();
@@ -413,12 +489,13 @@ int main (int argc, char ** argv) {
   msg ("reading DIMACS file from '%s'", input_name);
   if (proof) msg ("writing DRAT proof to '%s'", proof_name);
   else msg ("will not generate nor write DRAT proof");
+  parse_dimacs ();
   if (close_input == 1) fclose (input);
   if (close_input == 2) pclose (input);
-  parse_dimacs ();
-  res = solve ();
+  res = search ();
   if (close_proof) fclose (proof);
   reset ();
+  print_profile ();
   print_statistics ();
   msg ("exit %d", res);
   return res;

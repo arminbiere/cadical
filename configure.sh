@@ -26,7 +26,7 @@ do
     -g|--debug) debug=yes; check=yes;;
     -c|--check) check=yes;;
     -l|--logging) logging=yes;;
-    -p|--profile) profiling=yes;;
+    -p|--profile) profile=yes;;
     *) die "invalid option '$1' (try '-h')";;
   esac
   shift
@@ -50,7 +50,7 @@ then
 fi
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
-[ $profiling = yes ] && CXXFLAGS="$CXXFLAGS -DPROFILING"
+[ $profile = yes ] && CXXFLAGS="$CXXFLAGS -DPROFILE"
 CXXFLAGS="$CXXFLAGS -DVERSION=\\\\\"`cat VERSION`\\\\\""
 echo "$CXX $CXXFLAGS"
 rm -f makefile

@@ -2,4 +2,4 @@ all: cadical
 cadical: cadical.cc makefile
 	@COMPILE@ -o $@ cadical.cc
 clean:
-	rm -f cadical makefile
+	rm -f cadical makefile test/cnfs/*.log
