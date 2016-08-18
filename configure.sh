@@ -2,6 +2,7 @@
 debug=no
 logging=no
 check=no
+profile=no
 die () {
   echo "*** configure.sh: $*" 1>&2
   exit 1
@@ -14,6 +15,7 @@ where '<option>' is one of the following
 -g|--debug    compile with debugging information
 -c|--check    compile with assertion checking (default for '-g')
 -l|--log      include and enable logging code
+-p|--profile  include and enable profiling code
 EOF
 exit 0
 }
@@ -24,6 +26,7 @@ do
     -g|--debug) debug=yes; check=yes;;
     -c|--check) check=yes;;
     -l|--logging) logging=yes;;
+    -p|--profile) profiling=yes;;
     *) die "invalid option '$1' (try '-h')";;
   esac
   shift
@@ -47,6 +50,7 @@ then
 fi
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
+[ $profiling = yes ] && CXXFLAGS="$CXXFLAGS -DPROFILING"
 CXXFLAGS="$CXXFLAGS -DVERSION=\\\\\"`cat VERSION`\\\\\""
 echo "$CXX $CXXFLAGS"
 rm -f makefile

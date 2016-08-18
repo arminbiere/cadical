@@ -14,9 +14,9 @@
 using namespace std;
 
 struct Clause {
+  bool redundant, garbage;
   int size, glue;
   long resolved;
-  bool redundant, garbage;
   int literals[1];
 };
 
@@ -49,7 +49,7 @@ static Watches * all_literal_watches;
 static struct { Var * first, * last, * next; } queue;
 
 static bool unsat;
-static int level;
+static int level, next;
 static vector<int> literals, trail;
 static vector<Clause*> irredundant, redundant;
 static Clause * conflict;
@@ -163,24 +163,24 @@ static void watch_literal (Clause * c, int lit, int blit) {
   LOG (c, "watch %d blit %d in", lit, blit);
 }
 
-static void watch_clause (Clause * c) {
+static Clause * watch_clause (Clause * c) {
   assert (c->size > 1);
   int l0 = c->literals[0], l1 = c->literals[1];
   watch_literal (c, l0, l1);
   watch_literal (c, l1, l0);
+  return c;
 }
 
 static Clause * new_clause (bool red, int glue = 0) {
   assert (literals.size () <= (size_t) INT_MAX);
   int size = (int) literals.size ();
-  Clause * res = (Clause*) new char[sizeof *res + sizeof (int)];
+  Clause * res = (Clause*) new char[sizeof *res + size * sizeof (int)];
   res->size = size;
   res->glue = glue;
   res->resolved = conflicts;
   res->redundant = red;
   res->garbage = false;
   for (int i = 0; i < size; i++) res->literals[i] = literals[i];
-  res->literals[size] = 0;
   if (red) redundant.push_back (res);
   else irredundant.push_back (res);
   LOG (res, "new");
@@ -202,18 +202,57 @@ static void add_new_original_clause () {
   } else watch_clause (new_clause (false));
 }
 
-static Clause * new_learned_clause (int g) { return new_clause (true, g); }
+static Clause * new_learned_clause (int g) {
+  return watch_clause (new_clause (true, g));
+}
 
 static void delete_clause (Clause * c) { 
   LOG (c, "delete");
   delete [] (char*) c;
 }
 
-static int solve () {
-  return 0;
+static bool propagate () {
+  return conflict;
 }
 
-static void init_queue () {
+static void analyze () {
+  if (!level) {
+    msg ("learned empty clause");
+  }
+}
+
+static bool satisfied () {
+  return trail.size () == (size_t) max_var;
+}
+
+static bool restarting () {
+  return false;
+}
+
+static void restart () {
+}
+
+static bool reducing () {
+  return false;
+}
+
+static void reduce () {
+}
+
+static void decide () {
+}
+
+static int solve () {
+  for (;;)
+         if (unsat) return 20;
+    else if (!propagate ()) analyze ();
+    else if (satisfied ()) return 10;
+    else if (restarting ()) restart ();
+    else if (reducing ()) reduce ();
+    else decide ();
+}
+
+static void init_vmtf_queue () {
   Var * prev = 0;
   for (int i = 1; i <= max_var; i++) {
     Var * v = &vars[i];
@@ -231,7 +270,7 @@ static void init () {
   all_literal_watches = new Watches[2*(max_var + 1)];
   for (int i = 1; i <= max_var; i++) vals[i] = 0;
   for (int i = 1; i <= max_var; i++) phases[i] = -1;
-  init_queue ();
+  init_vmtf_queue ();
   msg ("initialized %d variables", max_var);
 }
 
