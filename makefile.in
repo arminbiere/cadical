@@ -3,7 +3,7 @@ CXXFLAGS=@CXXFLAGS@
 all: cadical
 cadical: cadical.cc config.h makefile
 	$(CXX) $(CXXFLAGS) -o $@ cadical.cc
-config.h: mkconfig.sh makefile
-	./mkconfig.sh > config.h
+config.h: make-config-header.sh makefile
+	./make-config-header.sh > config.h
 clean:
 	rm -f cadical makefile config.h test/cnfs/*.log

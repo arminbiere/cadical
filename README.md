@@ -7,5 +7,3 @@ time not too much slower than state of the art CDCL solvers
 if pre-processing is disabled.
 
 Run './configure.sh' and then 'make' to compile 'cadical'.
-You might want to run the regression script
-'test/run-regression.sh' then.

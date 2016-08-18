@@ -1,1 +1,2 @@
-First compile '../cadical' and the call './run-regression.sh'.
+First compile '../cadical' and then call './run-regression.sh'.
+ls -l $tar

@@ -56,7 +56,13 @@ static vector<int> literals, trail;
 static vector<Clause*> irredundant, redundant;
 static Clause * conflict;
 
-static long conflicts, decisions, restarts, propagations, bumped;
+static struct Statistics {
+  long conflicts;
+  long decisions;
+  long restarts;
+  long propagations;
+  long bumped;
+} stats;
 
 static struct { 
   struct { double glue, size; } resolved;
@@ -236,7 +242,7 @@ static Clause * new_clause (bool red, int glue = 0) {
   Clause * res = (Clause*) new char[sizeof *res + size * sizeof (int)];
   res->size = size;
   res->glue = glue;
-  res->resolved = conflicts;
+  res->resolved = stats.conflicts;
   res->redundant = red;
   res->garbage = false;
   for (int i = 0; i < size; i++) res->literals[i] = literals[i];
@@ -448,13 +454,13 @@ static void print_statistics () {
   double t = seconds ();
   msg ("");
   msg ("conflicts:    %22ld   %10.2f per second",
-    conflicts, relative (conflicts, t));
+    stats.conflicts, relative (stats.conflicts, t));
   msg ("decisions:    %22ld   %10.2f per second",
-    decisions, relative (decisions, t));
+    stats.decisions, relative (stats.decisions, t));
   msg ("restarts:     %22ld   %10.2f per second",
-    restarts, relative (restarts, t));
+    stats.restarts, relative (stats.restarts, t));
   msg ("propagations: %22ld   %10.2f per second",
-    propagations, relative (propagations, t));
+    stats.propagations, relative (stats.propagations, t));
   msg ("time:         %22s   %10.2f seconds", "", t);
   msg ("");
 }
