@@ -10,11 +10,14 @@ cp -p \
 cadical.cc \
 configure.sh \
 LICENSE \
-make-config-header.sh \
 makefile.in \
+make-config-header.sh \
 README.md \
 VERSION \
 $dir
+sed -i \
+-e 's,`./get-git-id.sh`,'"`./get-git-id.sh`", \
+$dir/make-config-header.sh
 cd /tmp
 tar jcf $tar $name
 ls -l $tar
