@@ -59,7 +59,7 @@ static vector<int> literals, trail;
 static vector<Clause*> irredundant, redundant;
 static Clause * conflict;
 
-static struct Statistics {
+static struct {
   long conflicts;
   long decisions;
   long restarts;
@@ -71,6 +71,10 @@ static struct {
   struct { double glue, size; } resolved;
   struct { struct { double fast, slow; } glue; } learned;
 } ema;
+
+static struct {
+  struct { long conflicts; } restart, reduce;
+} limits;
 
 static FILE * input, * proof;
 static int close_input, close_proof;
@@ -177,7 +181,7 @@ static struct {
 
 static void print_profile (double all) {
   msg ("");
-  msg ("-- [ run-time profiling data ] -------------------");
+  msg ("---- [ run-time profiling data ] -------------------");
   msg ("");
   PRINT_PROFILE (analyze);
   PRINT_PROFILE (decide);
@@ -186,7 +190,7 @@ static void print_profile (double all) {
   PRINT_PROFILE (reduce);
   PRINT_PROFILE (restart);
   PRINT_PROFILE (search);
-  msg ("===============================");
+  msg ("  ===============================");
   msg ("%12.2f %7.2f%% all", all, 100.0);
 }
 
@@ -306,9 +310,7 @@ static void analyze () {
   STOP (analyze);
 }
 
-static bool satisfied () {
-  return trail.size () == (size_t) max_var;
-}
+static bool satisfied () { return trail.size () == (size_t) max_var; }
 
 static bool restarting () {
   return false;
@@ -316,6 +318,7 @@ static bool restarting () {
 
 static void restart () {
   START (restart);
+  stats.restarts++;
   STOP (restart);
 }
 
@@ -330,6 +333,7 @@ static void reduce () {
 
 static void decide () {
   START (decide);
+  stats.decisions++;
   STOP (decide);
 }
 
@@ -351,7 +355,7 @@ static void print_statistics () {
   double t = seconds ();
   print_profile (t);
   msg ("");
-  msg ("-- [ statistics ] --------------------------------");
+  msg ("---- [ statistics ] --------------------------------");
   msg ("");
   msg ("conflicts:    %20ld   %10.2f  (per second)",
     stats.conflicts, relative (stats.conflicts, t));
