@@ -42,6 +42,7 @@ struct Watch {
   int blit;
   Clause * clause;
   Watch (int b, Clause * c) : blit (b), clause (c) { }
+  Watch () { }
 };
 
 typedef vector<Watch> Watches;
@@ -300,7 +301,14 @@ static bool propagate () {
   while (!conflict && next < trail.size ()) {
     stats.propagations++;
     int lit = trail[next++];
-    Watches & w = watches (-lit);
+    LOG ("propagating %d", lit);
+    Watches & ws = watches (-lit);
+    size_t j = 0;
+    for (size_t i = 0; i < ws.size (); i++) {
+      const Watch w = ws[j++] = ws[i];
+      if (val (w.blit) > 0) continue;
+    }
+    ws.resize (j);
   }
   STOP (propagate);
   return !conflict;
@@ -320,7 +328,8 @@ static void analyze () {
 static bool satisfied () { return trail.size () == (size_t) max_var; }
 
 static bool restarting () {
-  return false;
+  if (stats.conflicts <= limits.restart.conflicts) return false;
+  return 1.25 * ema.learned.glue.fast  > ema.learned.glue.slow;
 }
 
 static void restart () {
