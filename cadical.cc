@@ -74,12 +74,40 @@ static void msg (const char * fmt, ...) {
   fflush (stdout);
 }
 
-// TODO log with decision level and 'LOG' prefix ...
-
 #ifdef LOGGING
-#define LOG(FMT,ARGS...) do { msg (FMT, ##ARGS); } while (0)
+
+static void LOG (const char * fmt, ...) {
+  va_list ap;
+  printf ("c LOG %d ", level);
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  fputc ('\n', stdout);
+  fflush (stdout);
+}
+
+static void LOGCLS (Clause * c, const char *fmt, ...) {
+  va_list ap;
+  printf ("c LOG %d ", level);
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  if (c) {
+    if (c->redundant) printf (" redundant glue %d", c->glue);
+    else printf (" irredundant");
+    printf (" size %d clause", c->size);
+    for (int i = 0; i < c->size; i++)
+      printf (" %d", c->literals[i]);
+  } else printf (" decision");
+  fputc ('\n', stdout);
+  fflush (stdout);
+} while (0)
+
 #else
+
 #define LOG(ARGS...) do { } while (0)
+#define LOGCLS(ARGS...) do { } while (0)
+
 #endif
 
 static void die (const char * fmt, ...) {
@@ -129,6 +157,8 @@ static void assign (int lit, Clause * reason) {
   v.reason = reason;
   vals[abs (lit)] = sign (lit);
   assert (val (lit) > 0);
+  trail.push_back (lit);
+  LOGCLS (reason, "assign %d", lit);
 }
 
 /*------------------------------------------------------------------------*/
