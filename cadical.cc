@@ -7,9 +7,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <csignal>
 
+extern "C" {
 #include <sys/resource.h>
 #include <sys/time.h>
+};
 
 #include "config.h"
 
@@ -72,6 +75,14 @@ static struct {
 static FILE * input, * proof;
 static int close_input, close_proof;
 static const char * input_name, * proof_name;
+
+static bool catchedsig = false;
+
+static void (*sig_int_handler)(int);
+static void (*sig_segv_handler)(int);
+static void (*sig_abrt_handler)(int);
+static void (*sig_term_handler)(int);
+static void (*sig_bus_handler)(int);
 
 static double relative (double a, double b) { return b ? a / b : 0; }
 static double percent (double a, double b) { return relative (100 * a, b); }
@@ -162,10 +173,12 @@ static struct {
 #define STOP(P) stop (&profile.P)
 
 #define PRINT_PROFILE(P) \
-  msg ("%12.2f %7.2f%% %s\n", profile.P, percent (profile.P, all), #P)
+  msg ("%12.2f %7.2f%% %s", profile.P, percent (profile.P, all), #P)
 
-static void print_profile () {
-  double all = seconds ();
+static void print_profile (double all) {
+  msg ("");
+  msg ("-- [ run-time profiling data ] -------------------");
+  msg ("");
   PRINT_PROFILE (analyze);
   PRINT_PROFILE (decide);
   PRINT_PROFILE (parse);
@@ -174,7 +187,7 @@ static void print_profile () {
   PRINT_PROFILE (restart);
   PRINT_PROFILE (search);
   msg ("===============================");
-  msg ("%12.2f %7.2f%% all\n", all, 100.0);
+  msg ("%12.2f %7.2f%% all", all, 100.0);
 }
 
 #else
@@ -334,6 +347,24 @@ static int search () {
   return res;
 }
 
+static void print_statistics () {
+  double t = seconds ();
+  print_profile (t);
+  msg ("");
+  msg ("-- [ statistics ] --------------------------------");
+  msg ("");
+  msg ("conflicts:    %20ld   %10.2f  (per second)",
+    stats.conflicts, relative (stats.conflicts, t));
+  msg ("decisions:    %20ld   %10.2f  (per second)",
+    stats.decisions, relative (stats.decisions, t));
+  msg ("restarts:     %20ld   %10.2f  (per second)",
+    stats.restarts, relative (stats.restarts, t));
+  msg ("propagations: %20ld   %10.2f  (per second)",
+    stats.propagations, relative (stats.propagations, t));
+  msg ("time:         %20s   %10.2f  seconds", "", t);
+  msg ("");
+}
+
 static void init_vmtf_queue () {
   Var * prev = 0;
   for (int i = 1; i <= max_var; i++) {
@@ -345,6 +376,34 @@ static void init_vmtf_queue () {
   queue.last = queue.next = prev;
 }
 
+static void reset_signal_handlers (void) {
+  (void) signal (SIGINT, sig_int_handler);
+  (void) signal (SIGSEGV, sig_segv_handler);
+  (void) signal (SIGABRT, sig_abrt_handler);
+  (void) signal (SIGTERM, sig_term_handler);
+  (void) signal (SIGBUS, sig_bus_handler);
+}
+
+static void catchsig (int sig) {
+  if (!catchedsig) {
+    catchedsig = true;
+    msg ("CAUGHT SIGNAL %d", sig);
+    msg ("s UNKNOWN");
+    print_statistics ();
+  }
+  reset_signal_handlers ();
+  msg ("RERAISING SIGNAL %d", sig);
+  raise (sig);
+}
+
+static void init_signal_handlers (void) {
+  sig_int_handler = signal (SIGINT, catchsig);
+  sig_segv_handler = signal (SIGSEGV, catchsig);
+  sig_abrt_handler = signal (SIGABRT, catchsig);
+  sig_term_handler = signal (SIGTERM, catchsig);
+  sig_bus_handler = signal (SIGBUS, catchsig);
+}
+
 static void init () {
   vals = new signed char[max_var + 1];
   phases = new signed char[max_var + 1];
@@ -354,6 +413,7 @@ static void init () {
   for (int i = 1; i <= max_var; i++) phases[i] = -1;
   init_vmtf_queue ();
   msg ("initialized %d variables", max_var);
+  init_signal_handlers ();
 }
 
 static void reset () {
@@ -367,6 +427,7 @@ static void reset () {
   delete [] vals;
   delete [] phases;
 #endif
+  reset_signal_handlers ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -452,21 +513,6 @@ static void parse_dimacs () {
   STOP (parse);
 }
 
-static void print_statistics () {
-  double t = seconds ();
-  msg ("");
-  msg ("conflicts:    %22ld   %10.2f per second",
-    stats.conflicts, relative (stats.conflicts, t));
-  msg ("decisions:    %22ld   %10.2f per second",
-    stats.decisions, relative (stats.decisions, t));
-  msg ("restarts:     %22ld   %10.2f per second",
-    stats.restarts, relative (stats.restarts, t));
-  msg ("propagations: %22ld   %10.2f per second",
-    stats.propagations, relative (stats.propagations, t));
-  msg ("time:         %22s   %10.2f seconds", "", t);
-  msg ("");
-}
-
 int main (int argc, char ** argv) {
   int i, res;
   for (i = 1; i < argc; i++) {
@@ -507,7 +553,6 @@ int main (int argc, char ** argv) {
   res = search ();
   if (close_proof) fclose (proof);
   reset ();
-  print_profile ();
   print_statistics ();
   msg ("exit %d", res);
   return res;
