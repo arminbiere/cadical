@@ -16,6 +16,7 @@ where '<option>' is one of the following
 -c|--check    compile with assertion checking (default for '-g')
 -l|--log      include and enable logging code
 -p|--profile  include and enable profiling code
+-a|--all      short cut for '-g -l -p'
 EOF
 exit 0
 }
@@ -27,6 +28,7 @@ do
     -c|--check) check=yes;;
     -l|--logging) logging=yes;;
     -p|--profile) profile=yes;;
+    -a|--all) debug=yes;logging=yes;profile=yes;;
     *) die "invalid option '$1' (try '-h')";;
   esac
   shift
