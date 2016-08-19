@@ -12,7 +12,7 @@ ok=0
 failed=0
 
 run () {
-  echo -n "./cadical test/cnfs/$1.cnf\t\t# expecting $expected"
+  echo -n "./cadical test/cnfs/$1.cnf\t\t# expecting $2 ..."
   ../cadical cnfs/$1.cnf 1>cnfs/$1.log 2>cnfs/$2.err
   res=$?
   if [ $res = $2 ]

@@ -300,7 +300,6 @@ static void add_new_original_clause () {
       if (!unsat) msg ("parsed clashing unit"), unsat = true;
       else LOG ("original clashing unit produces another inconsistency");
     } else LOG ("original redundant unit");
-
   } else watch_clause (new_clause (false));
 }
 
@@ -347,7 +346,7 @@ static bool propagate () {
 	  else if (!v) {
 	    LOG (w.clause, "unwatch %d in", -lit);
 	    swap (lits[1], lits[k]);
-	    watch_literal (lits[k], -lit, w.clause);
+	    watch_literal (lits[1], -lit, w.clause);
 	    j--;
 	  } else if (!u) assign (lits[0], w.clause);
 	  else conflict = w.clause;
