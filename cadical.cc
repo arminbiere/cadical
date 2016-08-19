@@ -505,7 +505,12 @@ static bool satisfied () { return trail.size () == (size_t) max_var; }
 
 static bool restarting () {
   if (stats.conflicts <= limits.restart.conflicts) return false;
-  return 1.25 * ema.learned.glue.fast  > ema.learned.glue.slow;
+  double slow = ema.learned.glue.slow;
+  double fast = ema.learned.glue.fast;
+  double limit = 1.25  * slow;
+  LOG ("EMA learned glue: slow %.2f, limit %.2f %c fast %.2f",
+    slow, limit, (limit < fast ? '<' : (limit == fast ? '=' : '>')), fast);
+  return limit < fast;
 }
 
 static void restart () {
