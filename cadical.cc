@@ -45,9 +45,15 @@ struct Watch {
   Watch () { }
 };
 
+/*------------------------------------------------------------------------*/
+
 typedef vector<Watch> Watches;
 
 static int max_var, num_original_clauses;
+
+#ifndef NDEBUG
+static vector<int> original_literals;
+#endif
 
 static Var * vars;
 static signed char * vals, * phases;
@@ -89,6 +95,14 @@ static void (*sig_segv_handler)(int);
 static void (*sig_abrt_handler)(int);
 static void (*sig_term_handler)(int);
 static void (*sig_bus_handler)(int);
+
+/*------------------------------------------------------------------------*/
+
+#ifdef NDEBUG
+#define DEBUG(ARGS...) do { } while (0)
+#else
+#define DEBUG(CODE) do { CODE; } while (0)
+#endif
 
 static double relative (double a, double b) { return b ? a / b : 0; }
 
@@ -286,6 +300,7 @@ static void add_new_original_clause () {
       if (!unsat) msg ("parsed clashing unit"), unsat = true;
       else LOG ("original clashing unit produces another inconsistency");
     } else LOG ("original redundant unit");
+
   } else watch_clause (new_clause (false));
 }
 
@@ -548,6 +563,7 @@ static void parse_dimacs () {
   while (fscanf (input, "%d", &lit) == 1) {
     if (lit == INT_MIN || abs (lit) > max_var)
       die ("invalid literal %d", lit);
+    DEBUG (original_literals.push_back (lit));
     if (lit) {
       if (literals.size () == INT_MAX) die ("clause too large");
       literals.push_back (lit);
@@ -562,6 +578,29 @@ static void parse_dimacs () {
   if (parsed_clauses < num_original_clauses) die ("clause missing");
   msg ("parsed %d clauses in %.2f seconds", parsed_clauses, seconds ());
   STOP (parse);
+}
+
+static void check_witness () {
+#ifndef NDEBUG
+  bool satisfied = false;
+  size_t start = 0;
+  for (size_t i = 0; i < original_literals.size (); i++) {
+    int lit = original_literals[i];
+    if (!lit) {
+      if (!satisfied) {
+	fflush (stdout);
+	fputs ("*** cadical error: unsatisfied clause:\n", stderr);
+	for (size_t j = start; j < i; j++)
+	  fprintf (stderr, "%d ", original_literals[j]);
+	fputs ("0\n", stderr);
+	fflush (stderr);
+	abort ();
+      }
+      satisfied = false;
+      start = i + 1;
+    } else if (!satisfied && val (lit) > 0) satisfied = true;
+  }
+#endif
 }
 
 static void print_witness () {
@@ -622,6 +661,7 @@ int main (int argc, char ** argv) {
   msg ("");
   if (res == 10) {
     printf ("s SATISFIABLE\n");
+    check_witness ();
     print_witness ();
     fflush (stdout);
   } else {
