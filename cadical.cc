@@ -45,9 +45,9 @@ struct Watch {
   Watch () { }
 };
 
-/*------------------------------------------------------------------------*/
-
 typedef vector<Watch> Watches;
+
+/*------------------------------------------------------------------------*/
 
 static int max_var, num_original_clauses;
 
@@ -63,7 +63,7 @@ static struct { Var * first, * last, * next; } queue;
 static bool unsat;
 static int level;
 static size_t next;
-static vector<int> literals, trail;
+static vector<int> literals, trail, seen;
 static vector<Clause*> irredundant, redundant;
 static Clause * conflict;
 
@@ -73,6 +73,8 @@ static struct {
   long restarts;
   long propagations;
   long bumped;
+  struct { long current, max; } clauses;
+  struct { size_t current, max; } bytes;
 } stats;
 
 static struct { 
@@ -110,12 +112,39 @@ static double relative (double a, double b) { return b ? a / b : 0; }
 static double percent (double a, double b) { return relative (100 * a, b); }
 #endif
 
-static double seconds (void) {
+static double seconds () {
   struct rusage u;
   double res;
   if (getrusage (RUSAGE_SELF, &u)) return 0;
   res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;
   res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec;
+  return res;
+}
+
+static void inc_bytes (size_t bytes) {
+  if ((stats.bytes.current += bytes) > stats.bytes.max)
+    stats.bytes.max = stats.bytes.current;
+}
+
+static void dec_bytes (size_t bytes) {
+  assert (stats.bytes.current >= bytes);
+  stats.bytes.current -= bytes;
+}
+
+#define ADJUST_MAX_BYTES(V) \
+  res += V.capacity () * sizeof (V[0])
+
+static size_t max_bytes () {
+  size_t res = stats.bytes.max;
+#ifndef NDEBUG
+  ADJUST_MAX_BYTES (original_literals);
+#endif
+  ADJUST_MAX_BYTES (literals);
+  ADJUST_MAX_BYTES (trail);
+  ADJUST_MAX_BYTES (seen);
+  ADJUST_MAX_BYTES (irredundant);
+  ADJUST_MAX_BYTES (redundant);
+  res += (4 * stats.clauses.max * sizeof (Watch)) / 3;
   return res;
 }
 
@@ -128,6 +157,18 @@ static void msg (const char * fmt, ...) {
   fputc ('\n', stdout);
   fflush (stdout);
 }
+
+static void die (const char * fmt, ...) {
+  va_list ap;
+  fputs ("*** cadical error: ", stderr);
+  va_start (ap, fmt);
+  vfprintf (stderr, fmt, ap);
+  va_end (ap);
+  fputc ('\n', stderr);
+  exit (1);
+}
+
+/*------------------------------------------------------------------------*/
 
 #ifdef LOGGING
 
@@ -162,6 +203,8 @@ static void LOG (Clause * c, const char *fmt, ...) {
 #else
 #define LOG(ARGS...) do { } while (0)
 #endif
+
+/*------------------------------------------------------------------------*/
 
 #ifdef PROFILE
 
@@ -219,15 +262,7 @@ static void print_profile (double all) {
 #define print_profile(ARGS...) do { } while (0)
 #endif
 
-static void die (const char * fmt, ...) {
-  va_list ap;
-  fputs ("*** cadical error: ", stderr);
-  va_start (ap, fmt);
-  vfprintf (stderr, fmt, ap);
-  va_end (ap);
-  fputc ('\n', stderr);
-  exit (1);
-}
+/*------------------------------------------------------------------------*/
 
 static int val (int lit) {
   assert (lit), assert (abs (lit) <= max_var);
@@ -272,10 +307,17 @@ static Clause * watch_clause (Clause * c) {
   return c;
 }
 
+static size_t bytes_clause (int size) {
+  assert (size > 0);
+  return sizeof (Clause) + (size - 1) * sizeof (int);
+}
+
 static Clause * new_clause (bool red, int glue = 0) {
   assert (literals.size () <= (size_t) INT_MAX);
   int size = (int) literals.size ();
-  Clause * res = (Clause*) new char[sizeof *res + size * sizeof (int)];
+  size_t bytes = bytes_clause (size);
+  inc_bytes (bytes);
+  Clause * res = (Clause*) new char[bytes];
   res->size = size;
   res->glue = glue;
   res->resolved = stats.conflicts;
@@ -284,6 +326,8 @@ static Clause * new_clause (bool red, int glue = 0) {
   for (int i = 0; i < size; i++) res->literals[i] = literals[i];
   if (red) redundant.push_back (res);
   else irredundant.push_back (res);
+  if (++stats.clauses.current > stats.clauses.max)
+    stats.clauses.max = stats.clauses.current;
   LOG (res, "new");
   return res;
 }
@@ -311,6 +355,9 @@ static Clause * new_learned_clause (int g) {
 
 static void delete_clause (Clause * c) { 
   LOG (c, "delete");
+  assert (stats.clauses.current > 0);
+  stats.clauses.current--;
+  dec_bytes (bytes_clause (c->size));
   delete [] (char*) c;
 }
 
@@ -361,11 +408,18 @@ static bool propagate () {
   return !conflict;
 }
 
+static void trace_empty_clause () {
+  if (!proof) return;
+  LOG ("trace empty clause");
+  fputs ("0\n", proof);
+}
+
 static void analyze () {
   assert (conflict);
   if (!level) {
     assert (!unsat);
     msg ("learned empty clause");
+    trace_empty_clause ();
     unsat = true;
   }
   START (analyze);
@@ -416,19 +470,22 @@ static int search () {
 
 static void print_statistics () {
   double t = seconds ();
+  size_t m = max_bytes ();
   print_profile (t);
   msg ("");
   msg ("---- [ statistics ] --------------------------------");
   msg ("");
-  msg ("conflicts:    %20ld   %10.2f  (per second)",
+  msg ("conflicts:     %20ld   %10.2f  (per second)",
     stats.conflicts, relative (stats.conflicts, t));
-  msg ("decisions:    %20ld   %10.2f  (per second)",
+  msg ("decisions:     %20ld   %10.2f  (per second)",
     stats.decisions, relative (stats.decisions, t));
-  msg ("restarts:     %20ld   %10.2f  (per second)",
+  msg ("restarts:      %20ld   %10.2f  (per second)",
     stats.restarts, relative (stats.restarts, t));
-  msg ("propagations: %20ld   %10.2f  (per second)",
+  msg ("propagations:  %20ld   %10.2f  (per second)",
     stats.propagations, relative (stats.propagations, t));
-  msg ("time:         %20s   %10.2f  seconds", "", t);
+  msg ("maxbytes:      %20ld   %10.2f  MB",
+    m, m/(double)(1<<20));
+  msg ("time:          %20s   %10.2f  seconds", "", t);
   msg ("");
 }
 
@@ -471,11 +528,14 @@ static void init_signal_handlers (void) {
   sig_bus_handler = signal (SIGBUS, catchsig);
 }
 
+#define NEW(P,T,N) \
+  P = new T[N], inc_bytes ((N) * sizeof (T))
+
 static void init () {
-  vals = new signed char[max_var + 1];
-  phases = new signed char[max_var + 1];
-  vars = new Var[max_var + 1];
-  all_literal_watches = new Watches[2*(max_var + 1)];
+  NEW (vals, signed char, max_var + 1);
+  NEW (phases, signed char, max_var + 1);
+  NEW (vars, Var, max_var + 1);
+  NEW (all_literal_watches, Watches, 2 * (max_var + 1));
   for (int i = 1; i <= max_var; i++) vals[i] = 0;
   for (int i = 1; i <= max_var; i++) phases[i] = -1;
   init_vmtf_queue ();
@@ -494,7 +554,6 @@ static void reset () {
   delete [] vals;
   delete [] phases;
 #endif
-  reset_signal_handlers ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -530,7 +589,7 @@ struct lit_less_than {
 };
 
 static bool tautological () {
-  sort (literals.begin (), literals.end (), lit_less_than ());
+  std::sort (literals.begin (), literals.end (), lit_less_than ());
   size_t j = 0;
   int prev = 0;
   for (size_t i = 0; i < literals.size (); i++) {
@@ -668,8 +727,9 @@ int main (int argc, char ** argv) {
     printf ("s UNSATISFIABLE\n");
     fflush (stdout);
   }
-  reset ();
+  reset_signal_handlers ();
   print_statistics ();
+  reset ();
   msg ("exit %d", res);
   return res;
 }

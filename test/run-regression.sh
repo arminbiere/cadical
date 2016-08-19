@@ -8,6 +8,8 @@ then
   exit 1
 fi
 
+echo $PATH
+
 ok=0
 failed=0
 
