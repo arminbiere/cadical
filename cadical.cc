@@ -41,7 +41,7 @@ struct Var {
 struct Watch {
   int blit, size;
   Clause * clause;
-  Watch (int b, int s, Clause * c) : blit (b), size (s), clause (c) { }
+  Watch (int b, Clause * c) : blit (b), size (c->size), clause (c) { }
   Watch () { }
 };
 
@@ -91,7 +91,10 @@ static void (*sig_term_handler)(int);
 static void (*sig_bus_handler)(int);
 
 static double relative (double a, double b) { return b ? a / b : 0; }
+
+#ifdef PROFILE
 static double percent (double a, double b) { return relative (100 * a, b); }
+#endif
 
 static double seconds (void) {
   struct rusage u;
@@ -136,8 +139,8 @@ static void LOG (Clause * c, const char *fmt, ...) {
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
       printf (" %d", c->literals[i]);
-  } else if (level) printf (" unit");
-  else printf (" decision");
+  } else if (level) printf (" decision");
+  else printf (" unit");
   fputc ('\n', stdout);
   fflush (stdout);
 }
@@ -243,7 +246,7 @@ static void assign (int lit, Clause * reason = 0) {
 }
 
 static void watch_literal (int lit, int blit, Clause * c) {
-  watches (lit).push_back (Watch (blit, c->size, c));
+  watches (lit).push_back (Watch (blit, c));
   LOG (c, "watch %d blit %d in", lit, blit);
 }
 
@@ -286,9 +289,11 @@ static void add_new_original_clause () {
   } else watch_clause (new_clause (false));
 }
 
+#if 0
 static Clause * new_learned_clause (int g) {
   return watch_clause (new_clause (true, g));
 }
+#endif
 
 static void delete_clause (Clause * c) { 
   LOG (c, "delete");
@@ -304,29 +309,30 @@ static bool propagate () {
     assert (val (lit) > 0);
     LOG ("propagating %d", lit);
     Watches & ws = watches (-lit);
-    size_t i, j = 0;
-    for (i = 0; !conflict && i < ws.size (); i++) {
-      const Watch w = ws[j++] = ws[i];
-      const int blit_val = val (w.blit);
-      if (blit_val > 0) continue;
+    size_t i = 0, j = 0;
+    while (!conflict && i < ws.size ()) {
+      const Watch w = ws[j++] = ws[i++];
+      const int b = val (w.blit);
+      if (b > 0) continue;
       else if (w.size == 2) {
-	if (blit_val < 0) conflict = w.clause;
+	if (b < 0) conflict = w.clause;
 	else assign (w.blit, w.clause);
       } else {
 	assert (w.clause->size == w.size);
 	int * lits = w.clause->literals;
 	if (lits[1] != -lit) swap (lits[0], lits[1]);
+	assert (lits[1] == -lit);
 	const int u = val (lits[0]);
 	if (u > 0) ws[j-1].blit = lits[0];
 	else {
-	  int k, v;
+	  int k, v = 0;
 	  for (k = 2; k < w.size && (v = val (lits[k])) < 0; k++)
 	    ;
 	  if (v > 0) ws[j-1].blit = lits[k];
 	  else if (!v) {
 	    LOG (w.clause, "unwatch %d in", -lit);
-	    watch_literal (lits[k], -lit, w.clause);
 	    swap (lits[1], lits[k]);
+	    watch_literal (lits[k], -lit, w.clause);
 	    j--;
 	  } else if (!u) assign (lits[0], w.clause);
 	  else conflict = w.clause;
@@ -515,13 +521,11 @@ static bool tautological () {
   int prev = 0;
   for (size_t i = 0; i < literals.size (); i++) {
     int lit = literals[i];
-    if (lit == -prev) {
-      return true;
-    }
+    if (lit == -prev) return true;
     if (lit != prev) literals[j++] = lit;
   }
   literals.resize (j);
-  return true;
+  return false;
 }
 
 static void parse_dimacs () {
@@ -558,6 +562,22 @@ static void parse_dimacs () {
   if (parsed_clauses < num_original_clauses) die ("clause missing");
   msg ("parsed %d clauses in %.2f seconds", parsed_clauses, seconds ());
   STOP (parse);
+}
+
+static void print_witness () {
+  int c = 0;
+  for (int i = 1; i <= max_var; i++) {
+    if (!c) fputc ('v', stdout), c = 1;
+    char str[20];
+    sprintf (str, " %d", val (i) < 0 ? -i : i);
+    int l = strlen (str);
+    if (c + l > 78) fputs ("\nv", stdout), c = 1;
+    fputs (str, stdout);
+    c += l;
+  }
+  if (c) fputc ('\n', stdout);
+  fputs ("v 0\n", stdout);
+  fflush (stdout);
 }
 
 int main (int argc, char ** argv) {
@@ -599,6 +619,16 @@ int main (int argc, char ** argv) {
   if (close_input == 2) pclose (input);
   res = search ();
   if (close_proof) fclose (proof);
+  msg ("");
+  if (res == 10) {
+    printf ("s SATISFIABLE\n");
+    print_witness ();
+    fflush (stdout);
+  } else {
+    assert (res = 20);
+    printf ("s UNSATISFIABLE\n");
+    fflush (stdout);
+  }
   reset ();
   print_statistics ();
   msg ("exit %d", res);
