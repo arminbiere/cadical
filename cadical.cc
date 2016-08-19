@@ -92,20 +92,24 @@ struct Watch {
   int blit;		// if blocking literal is true do not visit clause
   int size;		// if size==2 no need to visit clause at all
   Clause * clause;
-  Watch (int b, Clause * c) :
-    blit (b), size (c->size), clause (c)
-  { }
-  Watch () { }		// needed for 'vector'
+  Watch (int b, Clause * c) : blit (b), size (c->size), clause (c) { }
+  Watch () { }
 };
 
 typedef vector<Watch> Watches;		// of one literal
+
+struct Level {
+  int decision;		// decision literal of level
+  int pulled;		// how man variables pulled in during 'analyze'
+  Level (int d) : decision (d), pulled (0) { }
+  Level () { }
+};
 
 #ifdef PROFILE
 
 struct Timer {
   double started;	// starting time (in seconds) for this phase
   double * update;	// update this profile if phase stops
-
   Timer (double s, double * u) : started (s), update (u) { }
 };
 
@@ -134,15 +138,19 @@ static struct {
 } queue;
 
 static bool unsat;		// empty clause found or learned
-static int level;		// decision level;
+
+static int level;		// decision level (levels.size () - 1)
+static vector<Level> levels;
+
 static size_t propagate_next;	// BFS index into 'trail'
-static vector<int> literals;	// temporary clause in parsing & learning
 static vector<int> trail;	// assigned literals
-static vector<int> seen;	// seen literals in 'analyze'
+
+static vector<int> literals;	// temporary clause in parsing & learning
 
 static vector<Clause*> irredundant;	// all not redundant clauses
 static vector<Clause*> redundant;	// all redundant clauses
 
+static vector<int> seen;	// seen literals in 'analyze'
 static Clause * conflict;	// set in 'propagation', reset in 'analyze'
 
 static struct {
@@ -226,6 +234,7 @@ static size_t max_bytes () {
   ADJUST_MAX_BYTES (seen);
   ADJUST_MAX_BYTES (irredundant);
   ADJUST_MAX_BYTES (redundant);
+  ADJUST_MAX_BYTES (levels);
   res += (4 * stats.clauses.max * sizeof (Watch)) / 3;	// estimate
   return res;
 }
@@ -491,13 +500,24 @@ static void trace_empty_clause () {
 
 static void analyze () {
   assert (conflict);
+  START (analyze);
   if (!level) {
     assert (!unsat);
     msg ("learned empty clause");
     trace_empty_clause ();
     unsat = true;
+  } else {
+    Clause * reason = conflict;
+    LOG (reason, "starting analyzing conflicting");
+    assert (literals.empty ());
+    assert (seen.empty ());
+    int open = 0;
+    for (;;) {
+      for (int i = 0; i < reason->size; i++)
+	if (pull_reason_literal (reason[i])) open++;
+    }
   }
-  START (analyze);
+  conflict = 0;
   STOP (analyze);
 }
 
@@ -536,6 +556,7 @@ static void decide () {
     queue.assigned = queue.assigned->prev;
   int idx = queue.assigned - vars;
   int decision = phases[idx] * idx;
+  levels.push_back (
   LOG ("decide %d", decision);
   assign (decision);
   STOP (decide);
@@ -628,6 +649,7 @@ static void init () {
   for (int i = 1; i <= max_var; i++) phases[i] = -1;
   init_vmtf_queue ();
   msg ("initialized %d variables", max_var);
+  levels.push_back (Level (0));
   init_signal_handlers ();
 }
 
