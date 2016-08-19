@@ -34,18 +34,22 @@ using namespace std;
 // Type declarations
 
 struct Clause {
-  bool redundant, garbage;
-  int size, glue;
-  long resolved;
-  int literals[1];
+  bool redundant;	// so not 'irredundant' and on 'redudant' stack
+  bool garbage;		// can be garbage collected
+  int size;		// actual size of 'literals'
+  int glue;		// LBD = glucose level = glue
+  long resolved;	// conflict index when last resolved
+  int literals[1];	// actually of variadic 'size'
 };
 
 struct Var {
-  long bumped;
-  bool seen, minimized, poison;
-  int level;
-  Var * prev, * next;
-  Clause * reason;
+  long bumped;		// enqueue/bump time stamp
+  bool seen;		// in 'analyze'
+  bool minimized;	// can be minimized in 'minimize'
+  bool poison;		// can not be minimized in 'minimize'
+  int level;		// decision level
+  Var * prev, * next;	// double links for decision VMTF queue
+  Clause * reason;	// assignment reason/antecedent
   Var () :
     bumped (0),
     seen (false), minimized (false), poison (false),
@@ -54,18 +58,23 @@ struct Var {
 };
 
 struct Watch {
-  int blit, size;
+  int blit;		// if blocking literal is true do not visit clause
+  int size;		// if size==2 no need to visit clause at all
   Clause * clause;
-  Watch (int b, Clause * c) : blit (b), size (c->size), clause (c) { }
-  Watch () { }
+  Watch (int b, Clause * c) :
+    blit (b), size (c->size), clause (c)
+  { }
+  Watch () { }		// needed for 'vector'
 };
 
-typedef vector<Watch> Watches;
+typedef vector<Watch> Watches;		// of one literal
 
 #ifdef PROFILE
 
 struct Timer {
-  double started, * update;
+  double started;	// starting time (in seconds) for this phase
+  double * update;	// update this profile if phase stops
+
   Timer (double s, double * u) : started (s), update (u) { }
 };
 
@@ -82,16 +91,28 @@ static vector<int> original_literals;
 #endif
 
 static Var * vars;
-static signed char * vals, * phases;
+static signed char * vals;			// assignment
+static signed char * phases;
 static Watches * all_literal_watches;
-static struct { Var * first, * last, * next; } queue;
 
-static bool unsat;
-static int level;
-static size_t next;
-static vector<int> literals, trail, seen;
-static vector<Clause*> irredundant, redundant;
-static Clause * conflict;
+// VMTF decision queue
+
+static struct {
+  Var * first, * last;	// anchors (head/tail) for doubly linked list
+  Var * assigned;	// all variables after this one are assigned
+} queue;
+
+static bool unsat;		// empty clause found or learned
+static int level;		// decision level;
+static size_t propagate_next;	// BFS index into 'trail'
+static vector<int> literals;	// temporary clause in parsing & learning
+static vector<int> trail;	// assigned literals
+static vector<int> seen;	// seen literals in 'analyze'
+
+static vector<Clause*> irredundant;	// all not redundant clauses
+static vector<Clause*> redundant;	// all redundant clauses
+
+static Clause * conflict;	// set in 'propagation', reset in 'analyze'
 
 static struct {
   long conflicts;
@@ -387,9 +408,9 @@ static void delete_clause (Clause * c) {
 static bool propagate () {
   assert (!unsat);
   START (propagate);
-  while (!conflict && next < trail.size ()) {
+  while (!conflict && propagate_next < trail.size ()) {
     stats.propagations++;
-    int lit = trail[next++];
+    int lit = trail[propagate_next++];
     assert (val (lit) > 0);
     LOG ("propagating %d", lit);
     Watches & ws = watches (-lit);
@@ -518,9 +539,10 @@ static void init_vmtf_queue () {
     Var * v = &vars[i];
     if ((v->prev = prev)) prev->next = v;
     else queue.first = v;
+    v->bumped = ++stats.bumped;
     prev = v;
   }
-  queue.last = queue.next = prev;
+  queue.last = queue.assigned = prev;
 }
 
 static void reset_signal_handlers (void) {
