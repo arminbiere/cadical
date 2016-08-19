@@ -1,3 +1,8 @@
+
+/*------------------------------------------------------------------------*/
+
+// Standard C includes
+
 #include <cassert>
 #include <climits>
 #include <cstdarg>
@@ -6,17 +11,27 @@
 #include <cstring>
 #include <csignal>
 
+// Low-level but Posix / Unix includes
+
 extern "C" {
 #include <sys/resource.h>
 #include <sys/time.h>
 };
 
-#include "config.h"
+// Some standard C++ includes from STL 
 
 #include <algorithm>
 #include <vector>
 
 using namespace std;
+
+// Configuration file for tracking version and compiler options
+
+#include "config.h"
+
+/*------------------------------------------------------------------------*/
+
+// Type declarations
 
 struct Clause {
   bool redundant, garbage;
@@ -47,7 +62,18 @@ struct Watch {
 
 typedef vector<Watch> Watches;
 
+#ifdef PROFILE
+
+struct Timer {
+  double started, * update;
+  Timer (double s, double * u) : started (s), update (u) { }
+};
+
+#endif
+
 /*------------------------------------------------------------------------*/
+
+// Static variables
 
 static int max_var, num_original_clauses;
 
@@ -76,6 +102,10 @@ static struct {
   struct { long current, max; } clauses;
   struct { size_t current, max; } bytes;
 } stats;
+
+#ifdef PROFILE
+static vector<Timer> timers;
+#endif
 
 static struct { 
   struct { double glue, size; } resolved;
@@ -144,7 +174,7 @@ static size_t max_bytes () {
   ADJUST_MAX_BYTES (seen);
   ADJUST_MAX_BYTES (irredundant);
   ADJUST_MAX_BYTES (redundant);
-  res += (4 * stats.clauses.max * sizeof (Watch)) / 3;
+  res += (4 * stats.clauses.max * sizeof (Watch)) / 3;	// estimate
   return res;
 }
 
@@ -207,13 +237,6 @@ static void LOG (Clause * c, const char *fmt, ...) {
 /*------------------------------------------------------------------------*/
 
 #ifdef PROFILE
-
-struct Timer {
-  double started, * update;
-  Timer (double s, double * u) : started (s), update (u) { }
-};
-
-static vector<Timer> timers;
 
 static void start (double * u) { timers.push_back (Timer (seconds (), u)); }
 
