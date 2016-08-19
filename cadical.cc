@@ -39,9 +39,9 @@ struct Var {
 };
 
 struct Watch {
-  int blit;
+  int blit, size;
   Clause * clause;
-  Watch (int b, Clause * c) : blit (b), clause (c) { }
+  Watch (int b, int s, Clause * c) : blit (b), size (s), clause (c) { }
   Watch () { }
 };
 
@@ -160,7 +160,7 @@ static void start (double * u) { timers.push_back (Timer (seconds (), u)); }
 static void stop (double * u) {
   assert (!timers.empty ());
   const Timer & t = timers.back ();
-  assert (u == t.u), (void) u;
+  assert (u == t.update), (void) u;
   *t.update += seconds () - t.started;
   timers.pop_back ();
 }
@@ -242,16 +242,16 @@ static void assign (int lit, Clause * reason = 0) {
   LOG (reason, "assign %d", lit);
 }
 
-static void watch_literal (Clause * c, int lit, int blit) {
-  watches (lit).push_back (Watch (blit, c));
+static void watch_literal (int lit, int blit, Clause * c) {
+  watches (lit).push_back (Watch (blit, c->size, c));
   LOG (c, "watch %d blit %d in", lit, blit);
 }
 
 static Clause * watch_clause (Clause * c) {
   assert (c->size > 1);
   int l0 = c->literals[0], l1 = c->literals[1];
-  watch_literal (c, l0, l1);
-  watch_literal (c, l1, l0);
+  watch_literal (l0, l1, c);
+  watch_literal (l1, l0, c);
   return c;
 }
 
@@ -301,16 +301,43 @@ static bool propagate () {
   while (!conflict && next < trail.size ()) {
     stats.propagations++;
     int lit = trail[next++];
+    assert (val (lit) > 0);
     LOG ("propagating %d", lit);
     Watches & ws = watches (-lit);
-    size_t j = 0;
-    for (size_t i = 0; i < ws.size (); i++) {
+    size_t i, j = 0;
+    for (i = 0; !conflict && i < ws.size (); i++) {
       const Watch w = ws[j++] = ws[i];
-      if (val (w.blit) > 0) continue;
+      const int blit_val = val (w.blit);
+      if (blit_val > 0) continue;
+      else if (w.size == 2) {
+	if (blit_val < 0) conflict = w.clause;
+	else assign (w.blit, w.clause);
+      } else {
+	assert (w.clause->size == w.size);
+	int * lits = w.clause->literals;
+	if (lits[1] != -lit) swap (lits[0], lits[1]);
+	const int u = val (lits[0]);
+	if (u > 0) ws[j-1].blit = lits[0];
+	else {
+	  int k, v;
+	  for (k = 2; k < w.size && (v = val (lits[k])) < 0; k++)
+	    ;
+	  if (v > 0) ws[j-1].blit = lits[k];
+	  else if (!v) {
+	    LOG (w.clause, "unwatch %d in", -lit);
+	    watch_literal (lits[k], -lit, w.clause);
+	    swap (lits[1], lits[k]);
+	    j--;
+	  } else if (!u) assign (lits[0], w.clause);
+	  else conflict = w.clause;
+	}
+      }
     }
+    while (i < ws.size ()) ws[j++] = ws[i++];
     ws.resize (j);
   }
   STOP (propagate);
+  if (conflict) { stats.conflicts++; LOG (conflict, "conflict"); }
   return !conflict;
 }
 
