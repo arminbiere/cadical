@@ -722,6 +722,13 @@ static void print_witness () {
   fflush (stdout);
 }
 
+static void banner () {
+  msg ("CaDiCaL Radically Simplified CDCL SAT Solver");
+  msg ("Version " VERSION " " GITID);
+  msg ("Copyright (c) 2016 Armin Biere, JKU");
+  msg (COMPILE);
+}
+
 int main (int argc, char ** argv) {
   int i, res;
   for (i = 1; i < argc; i++) {
@@ -749,9 +756,7 @@ int main (int argc, char ** argv) {
     }
   }
   if (!input) input_name = "<stdin>", input = stdin;
-  msg ("CaDiCaL Radically Simplified CDCL SAT Solver");
-  msg ("Version " VERSION " " GITID);
-  msg ("Compile " COMPILE);
+  banner ();
   msg ("");
   msg ("reading DIMACS file from '%s'", input_name);
   if (proof) msg ("writing DRAT proof to '%s'", proof_name);
