@@ -43,17 +43,19 @@ struct Clause {
 };
 
 struct Var {
-  long bumped;		// enqueue/bump time stamp
   bool seen;		// in 'analyze'
   bool minimized;	// can be minimized in 'minimize'
   bool poison;		// can not be minimized in 'minimize'
   int level;		// decision level
+
+  long bumped;		// enqueue/bump time stamp for VMTF queue
   Var * prev, * next;	// double links for decision VMTF queue
+
   Clause * reason;	// assignment reason/antecedent
+
   Var () :
-    bumped (0),
     seen (false), minimized (false), poison (false),
-    prev (0), next (0)
+    bumped (0), prev (0), next (0)
   { }
 };
 
