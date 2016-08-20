@@ -887,7 +887,7 @@ static void parse_dimacs () {
   STOP (parse);
 }
 
-static void check_witness () {
+static void check_produced_witness () {
 #ifndef NDEBUG
   bool satisfied = false;
   size_t start = 0;
@@ -973,7 +973,7 @@ int main (int argc, char ** argv) {
   msg ("");
   if (res == 10) {
     printf ("s SATISFIABLE\n");
-    check_witness ();
+    check_produced_witness ();
     print_witness ();
     fflush (stdout);
   } else {
