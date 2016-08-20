@@ -684,6 +684,7 @@ static bool restarting () {
 static void restart () {
   START (restart);
   stats.restarts++;
+  limits.restart.conflicts = stats.conflicts + 50;
   STOP (restart);
 }
 
@@ -790,7 +791,7 @@ static void init_signal_handlers (void) {
 #define NEW(P,T,N) \
   P = new T[N], inc_bytes ((N) * sizeof (T))
 
-static void init () {
+static void init_variables () {
   NEW (vals, signed char, max_var + 1);
   NEW (phases, signed char, max_var + 1);
   NEW (vars, Var, max_var + 1);
@@ -800,7 +801,10 @@ static void init () {
   init_vmtf_queue ();
   msg ("initialized %d variables", max_var);
   levels.push_back (Level (0));
-  init_signal_handlers ();
+}
+
+static void init_search () {
+  limits.restart.conflicts = stats.conflicts + 50;
 }
 
 static void reset () {
@@ -906,7 +910,7 @@ static void parse_dimacs () {
   if (ch != '\n') perr ("expected new-line after 'p cnf %d %d'",
                         max_var, num_original_clauses);
   msg ("found 'p cnf %d %d' header", max_var, num_original_clauses);
-  init ();
+  init_variables ();
   int lit = 0, parsed_clauses = 0;
   while ((ch = nextch ()) != EOF) {
     if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r') continue;
@@ -1024,6 +1028,7 @@ int main (int argc, char ** argv) {
   }
   if (!input) input_name = "<stdin>", input = stdin;
   banner ();
+  init_signal_handlers ();
   msg ("");
   msg ("reading DIMACS file from '%s'", input_name);
   if (proof) msg ("writing DRAT proof to '%s'", proof_name);
@@ -1031,6 +1036,7 @@ int main (int argc, char ** argv) {
   parse_dimacs ();
   if (close_input == 1) fclose (input);
   if (close_input == 2) pclose (input);
+  init_search ();
   res = search ();
   if (close_proof) fclose (proof);
   msg ("");
