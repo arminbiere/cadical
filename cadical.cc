@@ -877,9 +877,9 @@ static void parse_dimacs () {
   }
   if (ch != 'p') perr ("expected 'c' or 'p'");
   if (nextch () != ' ') perr ("expected ' ' after 'p'");
-  if (nextch () != 'c') perr ("expected ' ' after 'p '");
-  if (nextch () != 'n') perr ("expected ' ' after 'p c'");
-  if (nextch () != 'f') perr ("expected ' ' after 'p cn'");
+  if (nextch () != 'c') perr ("expected 'c' after 'p '");
+  if (nextch () != 'n') perr ("expected 'n' after 'p c'");
+  if (nextch () != 'f') perr ("expected 'f' after 'p cn'");
   if (nextch () != ' ') perr ("expected ' ' after 'p cnf'");
   if (!isdigit (ch = nextch ())) perr ("expected digit after 'p cnf '");
   max_var = ch - '0';
@@ -889,7 +889,7 @@ static void parse_dimacs () {
       perr ("too large '<max-var>' in header");
     max_var = 10*max_var + digit;
   }
-  if (nextch () != ' ') perr ("expected ' ' after 'p cnf %d'", max_var);
+  if (ch != ' ') perr ("expected ' ' after 'p cnf %d'", max_var);
   if (!isdigit (ch = nextch ()))
     perr ("expected digit after 'p cnf %d '", max_var);
   num_original_clauses = ch - '0';
