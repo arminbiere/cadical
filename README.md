@@ -1,4 +1,4 @@
-# cadical
+# CaDiCaL
 Radically Simplified Conflict Driven Clause Learning Solver (CDCL)
 
 The goal of CaDiCal is to have a minimalistic CDCL solver,

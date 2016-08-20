@@ -416,6 +416,7 @@ static void backtrack (int target_level, int except = 0) {
     unassign (lit = trail.back (), except);
     trail.pop_back ();
   } while (lit != decision);
+  if (trail.size () < propagate_next) propagate_next = trail.size ();
   levels.resize (target_level + 1);
   level = target_level;
 }
@@ -632,6 +633,7 @@ static void analyze () {
       LOG (reason, "analyzing %d reason", uip);
     }
     LOG ("first UIP %d", uip);
+    literals.push_back (-uip);
     if (literals.size () == 1) {
       LOG ("learned unit clause %d", -uip); 
       trace_unit_clause (-uip);
