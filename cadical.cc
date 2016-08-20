@@ -33,12 +33,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 // Standard C includes
 
 #include <cassert>
+#include <cctype>
 #include <climits>
+#include <csignal>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <csignal>
 
 // Low-level but Posix / Unix includes
 
@@ -181,7 +182,7 @@ static struct {
 } limits;
 
 static FILE * input, * proof;
-static int close_input, close_proof;
+static int lineno = 1, close_input, close_proof;
 static const char * input_name, * proof_name;
 
 static bool catchedsig = false;
@@ -257,6 +258,16 @@ static void msg (const char * fmt, ...) {
 static void die (const char * fmt, ...) {
   va_list ap;
   fputs ("*** cadical error: ", stderr);
+  va_start (ap, fmt);
+  vfprintf (stderr, fmt, ap);
+  va_end (ap);
+  fputc ('\n', stderr);
+  exit (1);
+}
+
+static void perr (const char * fmt, ...) {
+  va_list ap;
+  fprintf (stderr, "%s:%d: parse error: ", input_name, lineno);
   va_start (ap, fmt);
   vfprintf (stderr, fmt, ap);
   va_end (ap);
@@ -848,41 +859,91 @@ static bool tautological () {
   return false;
 }
 
-// TODO better parser!!
+static int nextch () {
+  int res = getc (input);
+  if (res == '\n') lineno++;
+  return res;
+}
 
 static void parse_dimacs () {
   int ch;
   START (parse);
   for (;;) {
-    ch = getc (input);
+    ch = nextch ();
     if (ch != 'c') break;
-    while ((ch = getc (input)) != '\n')
+    while ((ch = nextch ()) != '\n')
       if (ch == EOF)
-	die ("unexpected end-of-file in header comment");
+	perr ("unexpected end-of-file in header comment");
   }
-  if (ch != 'p') die ("expected 'c' or 'p'");
-  if (fscanf (input, " cnf %d %d", &max_var, &num_original_clauses) != 2 ||
-      max_var < 0 || num_original_clauses < 0)
-    die ("invalid 'p ...' header");
+  if (ch != 'p') perr ("expected 'c' or 'p'");
+  if (nextch () != ' ') perr ("expected ' ' after 'p'");
+  if (nextch () != 'c') perr ("expected ' ' after 'p '");
+  if (nextch () != 'n') perr ("expected ' ' after 'p c'");
+  if (nextch () != 'f') perr ("expected ' ' after 'p cn'");
+  if (nextch () != ' ') perr ("expected ' ' after 'p cnf'");
+  if (!isdigit (ch = nextch ())) perr ("expected digit after 'p cnf '");
+  max_var = ch - '0';
+  while (isdigit (ch = nextch ())) {
+    int digit = ch - '0';
+    if (INT_MAX/10 < max_var || INT_MAX - digit < 10*max_var)
+      perr ("too large '<max-var>' in header");
+    max_var = 10*max_var + digit;
+  }
+  if (nextch () != ' ') perr ("expected ' ' after 'p cnf %d'", max_var);
+  if (!isdigit (ch = nextch ()))
+    perr ("expected digit after 'p cnf %d '", max_var);
+  num_original_clauses = ch - '0';
+  while (isdigit (ch = nextch ())) {
+    int digit = ch - '0';
+    if (INT_MAX/10 < num_original_clauses ||
+        INT_MAX - digit < 10*num_original_clauses)
+      perr ("too large '<num-clauses>' in header");
+    num_original_clauses = 10*num_original_clauses + digit;
+  }
+  while (ch == ' ' || ch == '\r') ch = nextch ();
+  if (ch != '\n') perr ("expected new-line after 'p cnf %d %d'",
+                        max_var, num_original_clauses);
   msg ("found 'p cnf %d %d' header", max_var, num_original_clauses);
   init ();
   int lit = 0, parsed_clauses = 0;
-  while (fscanf (input, "%d", &lit) == 1) {
-    if (lit == INT_MIN || abs (lit) > max_var)
-      die ("invalid literal %d", lit);
+  while ((ch = nextch ()) != EOF) {
+    if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r') continue;
+    if (ch == 'c') {
+      while ((ch = nextch ()) != '\n')
+	if (ch == EOF) perr ("unexpected end-of-file in body comment");
+      continue;
+    }
+    int sign;
+    if (ch == '-') {
+      ch = nextch ();
+      if (!isdigit (ch)) perr ("expected digit after '-'");
+      sign = -1;
+    } else if (!isdigit (ch))
+      perr ("expected '-' or digit (or comment start character 'c')");
+    else sign = 1;
+    lit = ch - '0';
+    while (isdigit (ch = nextch ())) {
+      int digit = ch - '0';
+      if (INT_MAX/10 < lit || INT_MAX - digit < 10*lit)
+	perr ("too large literal in header");
+      lit = 10*lit + digit;
+    }
+    if (lit > max_var)
+      perr ("literal exceeds maximum variable index %d", max_var);
+    lit *= sign;
     DEBUG (original_literals.push_back (lit));
     if (lit) {
-      if (literals.size () == INT_MAX) die ("clause too large");
+      if (literals.size () == INT_MAX) perr ("clause too large");
       literals.push_back (lit);
     } else {
       if (!tautological ()) add_new_original_clause ();
       else LOG ("tautological original clause");
       literals.clear ();
-      if (parsed_clauses++ >= num_original_clauses) die ("too many clauses");
+      if (parsed_clauses++ >= num_original_clauses) perr ("too many clauses");
     }
   }
-  if (lit) die ("last clause without '0'");
-  if (parsed_clauses < num_original_clauses) die ("clause missing");
+  if (lit) perr ("last clause without '0'");
+  if (parsed_clauses < num_original_clauses) perr ("clause missing");
   msg ("parsed %d clauses in %.2f seconds", parsed_clauses, seconds ());
   STOP (parse);
 }
