@@ -579,19 +579,20 @@ static void enqueue (Var * v) {
   v->next = 0;
 }
 
-static void bump_seen_literals () {
+static void bump_seen_literals (int uip) {
   START (bump);
   sort (seen.literals.begin (), seen.literals.end (), bumped_earlier ());
+  if (uip < 0) uip = -uip;
   for (size_t i = 0; i < seen.literals.size (); i++) {
     int idx = vidx (seen.literals[i]);
     Var * v = vars + idx;
     assert (v->seen);
     v->seen = v->minimized = v->poison = false;
-    assert (vals [idx]);
     if (!v->next) continue;
     queue.next = v->prev ? v->prev : v->next;
     dequeue (v), enqueue (v);
     v->bumped = ++stats.bumped;
+    if (idx != uip && !vals[idx]) queue.next = v;
     LOG ("bumped and moved to front %d", idx);
   }
   STOP (bump);
@@ -631,7 +632,8 @@ static void analyze () {
     Clause * reason = conflict;
     LOG (reason, "analyzing conflicting");
     assert (literals.empty ());
-    assert (seen.empty ());
+    assert (seen.literals.empty ());
+    assert (seen.levels.empty ());
     int open = 0, uip = 0;
     size_t i = trail.size ();
     for (;;) {
@@ -660,7 +662,7 @@ static void analyze () {
       backtrack (jump, uip);
       assign (-uip, driving_clause);
     }
-    bump_seen_literals ();
+    bump_seen_literals (uip);
     literals.clear ();
   }
   conflict = 0;

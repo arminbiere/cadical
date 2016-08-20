@@ -28,7 +28,7 @@ do
     -c|--check) check=yes;;
     -l|--logging) logging=yes;;
     -p|--profile) profile=yes;;
-    -a|--all) debug=yes;logging=yes;profile=yes;;
+    -a|--all) debug=yes;check=yes;logging=yes;profile=yes;;
     *) die "invalid option '$1' (try '-h')";;
   esac
   shift
