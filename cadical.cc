@@ -100,8 +100,8 @@ typedef vector<Watch> Watches;		// of one literal
 
 struct Level {
   int decision;		// decision literal of level
-  int pulled;		// how man variables pulled in during 'analyze'
-  Level (int d) : decision (d), pulled (0) { }
+  int seen;		// how man variables seen during 'analyze'
+  Level (int d) : decision (d), seen (0) { }
   Level () { }
 };
 
@@ -134,7 +134,7 @@ static Watches * all_literal_watches;
 
 static struct {
   Var * first, * last;	// anchors (head/tail) for doubly linked list
-  Var * assigned;	// all variables after this one are assigned
+  Var * next;		// all variables after this one are assigned
 } queue;
 
 static bool unsat;		// empty clause found or learned
@@ -150,7 +150,10 @@ static vector<int> literals;	// temporary clause in parsing & learning
 static vector<Clause*> irredundant;	// all not redundant clauses
 static vector<Clause*> redundant;	// all redundant clauses
 
-static vector<int> seen;	// seen literals in 'analyze'
+static struct {
+  vector<int> literals, levels;	// seen literals & levels in 'analyze'
+} seen;
+
 static Clause * conflict;	// set in 'propagation', reset in 'analyze'
 
 static struct {
@@ -161,6 +164,7 @@ static struct {
   long bumped;
   struct { long current, max; } clauses;
   struct { size_t current, max; } bytes;
+  struct { long units; } learned;
 } stats;
 
 #ifdef PROFILE
@@ -231,7 +235,8 @@ static size_t max_bytes () {
 #endif
   ADJUST_MAX_BYTES (literals);
   ADJUST_MAX_BYTES (trail);
-  ADJUST_MAX_BYTES (seen);
+  ADJUST_MAX_BYTES (seen.literals);
+  ADJUST_MAX_BYTES (seen.levels);
   ADJUST_MAX_BYTES (irredundant);
   ADJUST_MAX_BYTES (redundant);
   ADJUST_MAX_BYTES (levels);
@@ -348,9 +353,16 @@ static void print_profile (double all) {
 
 /*------------------------------------------------------------------------*/
 
+static int vidx (int lit) {
+  int idx;
+  assert (lit), assert (lit != INT_MIN);
+  idx = abs (lit);
+  assert (idx <= max_var);
+  return idx;
+}
+
 static int val (int lit) {
-  assert (lit), assert (abs (lit) <= max_var);
-  int res = vals[abs (lit)];
+  int idx = vidx (lit), res = vals[idx];
   if (lit < 0) res = -res;
   return res;
 }
@@ -361,22 +373,52 @@ static int sign (int lit) {
 }
 
 static Watches & watches (int lit) {
-  assert (lit), assert (abs (lit) <= max_var);
-  return all_literal_watches[2*abs (lit) + (lit < 0)];
+  int idx = vidx (lit);
+  return all_literal_watches[2*idx + (lit < 0)];
 }
 
-static Var & var (int lit) { return vars [abs (lit)]; }
+static Var & var (int lit) { return vars [vidx (lit)]; }
+
+/*------------------------------------------------------------------------*/
 
 static void assign (int lit, Clause * reason = 0) {
-  assert (!val (lit));
-  Var & v = var (lit);
+  int idx = vidx (lit);
+  assert (!vals[idx]);
+  Var & v = vars[idx];
   v.level = level;
   v.reason = reason;
-  vals[abs (lit)] = sign (lit);
+  vals[idx] = phases[idx] = sign (lit);
   assert (val (lit) > 0);
   trail.push_back (lit);
   LOG (reason, "assign %d", lit);
 }
+
+static void unassign (int lit, int except) {
+  assert (val (lit) > 0);
+  int idx = vidx (lit);
+  vals[idx] = 0;
+  LOG ("unassign %d", lit);
+  if (lit == except) return;
+  Var * v = vars + idx;
+  if (queue.next->bumped >= v->bumped) return;
+  queue.next = v;
+  LOG ("queue next moved to %d", idx);
+}
+
+static void backtrack (int target_level, int except = 0) {
+  assert (target_level <= level);
+  if (target_level == level) return;
+  LOG ("backtracking to decision level %d", target_level);
+  int decision = levels[target_level + 1].decision, lit;
+  do {
+    unassign (lit = trail.back (), except);
+    trail.pop_back ();
+  } while (lit != decision);
+  levels.resize (target_level + 1);
+  level = target_level;
+}
+
+/*------------------------------------------------------------------------*/
 
 static void watch_literal (int lit, int blit, Clause * c) {
   watches (lit).push_back (Watch (blit, c));
@@ -431,11 +473,9 @@ static void add_new_original_clause () {
   } else watch_clause (new_clause (false));
 }
 
-#if 0
 static Clause * new_learned_clause (int g) {
   return watch_clause (new_clause (true, g));
 }
-#endif
 
 static void delete_clause (Clause * c) { 
   LOG (c, "delete");
@@ -444,6 +484,22 @@ static void delete_clause (Clause * c) {
   dec_bytes (bytes_clause (c->size));
   delete [] (char*) c;
 }
+
+/*------------------------------------------------------------------------*/
+
+static void trace_empty_clause () {
+  if (!proof) return;
+  LOG ("tracing empty clause");
+  fputs ("0\n", proof);
+}
+
+static void trace_unit_clause (int unit) {
+  if (!proof) return;
+  LOG ("tracing unit clause %d", unit);
+  fprintf (proof, "%d 0\n", unit);
+}
+
+/*------------------------------------------------------------------------*/
 
 static bool propagate () {
   assert (!unsat);
@@ -492,10 +548,59 @@ static bool propagate () {
   return !conflict;
 }
 
-static void trace_empty_clause () {
-  if (!proof) return;
-  LOG ("trace empty clause");
-  fputs ("0\n", proof);
+struct bumped_earlier {
+  bool operator () (int a, int b) {
+    return var (a).bumped < var (b).bumped;
+  }
+};
+
+static void dequeue (Var * v) {
+  if (v->prev) v->prev->next = v->next; else queue.first = v->next;
+  if (v->next) v->next->prev = v->prev; else queue.last = v->prev;
+}
+
+static void enqueue (Var * v) {
+  if ((v->prev = queue.last)) queue.last->next = v; else queue.first = v;
+  queue.last = v;
+  v->next = 0;
+}
+
+static void bump_seen_literals () {
+  sort (seen.literals.begin (), seen.literals.end (), bumped_earlier ());
+  for (size_t i = 0; i < seen.literals.size (); i++) {
+    int idx = vidx (seen.literals[i]);
+    Var * v = vars + idx;
+    assert (v->seen);
+    v->seen = v->minimized = v->poison = false;
+    assert (vals [idx]);
+    if (!v->next) continue;
+    queue.next = v->prev ? v->prev : v->next;
+    dequeue (v), enqueue (v);
+    v->bumped = ++stats.bumped;
+    LOG ("bumped and moved to front %d", idx);
+  }
+  seen.literals.clear ();
+  for (size_t i = 0; i < seen.levels.size (); i++)
+    levels[seen.levels[i]].seen = 0;
+  seen.levels.clear ();
+}
+
+struct level_greater_than {
+  bool operator () (int a, int b) {
+    return var (a).level > var (b).level;
+  }
+};
+
+static bool analyze_literal (int lit) {
+  Var & v = var (lit);
+  if (v.seen) return false;
+  if (!v.level) return false;
+  assert (val (lit) < 0);
+  if (v.level < level) literals.push_back (-lit);
+  v.seen = true;
+  seen.literals.push_back (lit);
+  LOG ("analyzed literal %d assigned at level %d", lit, v.level);
+  return v.level == level;
 }
 
 static void analyze () {
@@ -508,14 +613,38 @@ static void analyze () {
     unsat = true;
   } else {
     Clause * reason = conflict;
-    LOG (reason, "starting analyzing conflicting");
+    LOG (reason, "analyzing conflicting");
     assert (literals.empty ());
     assert (seen.empty ());
-    int open = 0;
+    int open = 0, uip = 0;
+    size_t i = trail.size ();
     for (;;) {
-      for (int i = 0; i < reason->size; i++)
-	if (pull_reason_literal (reason[i])) open++;
+      for (int j = 0; j < reason->size; j++)
+	if (analyze_literal (reason->literals[j])) open++;
+      while (!var (uip = trail[--i]).seen)
+	;
+      if (!--open) break;
+      reason = var (uip).reason;
+      LOG (reason, "analyzing %d reason", uip);
     }
+    LOG ("first UIP %d", uip);
+    if (literals.size () == 1) {
+      LOG ("learned unit clause %d", -uip); 
+      trace_unit_clause (-uip);
+      stats.learned.units++;
+      backtrack (0, uip);
+      assign (-uip);
+    } else {
+      sort (literals.begin (), literals.end (), level_greater_than ());
+      assert (literals[0] == -uip);
+      Clause * driving_clause = new_learned_clause (0);	// GLUE?
+      int jump = var (literals[1]).level;
+      assert (jump < level);
+      backtrack (jump, uip);
+      assign (-uip, driving_clause);
+    }
+    bump_seen_literals ();
+    literals.clear ();
   }
   conflict = 0;
   STOP (analyze);
@@ -552,11 +681,11 @@ static void decide () {
   START (decide);
   level++;
   stats.decisions++;
-  while (val (queue.assigned - vars))
-    queue.assigned = queue.assigned->prev;
-  int idx = queue.assigned - vars;
+  int idx;
+  while (val (idx = queue.next - vars))
+    queue.next = queue.next->prev;
   int decision = phases[idx] * idx;
-  levels.push_back (
+  levels.push_back (Level (decision));
   LOG ("decide %d", decision);
   assign (decision);
   STOP (decide);
@@ -575,6 +704,8 @@ static int search () {
   STOP (search);
   return res;
 }
+
+/*------------------------------------------------------------------------*/
 
 static void print_statistics () {
   double t = seconds ();
@@ -606,7 +737,7 @@ static void init_vmtf_queue () {
     v->bumped = ++stats.bumped;
     prev = v;
   }
-  queue.last = queue.assigned = prev;
+  queue.last = queue.next = prev;
 }
 
 static void reset_signal_handlers (void) {
@@ -691,7 +822,7 @@ static const char * USAGE =
 "then the proof is generated and printed to '<stdout>'.\n";
 
 struct lit_less_than {
-  bool operator () (const int a, const int b) const {
+  bool operator () (int a, int b) {
     int res = abs (a) - abs (b);
     if (res) return res;
     return a < b ? -1 : 1;
