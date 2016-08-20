@@ -316,6 +316,7 @@ static void stop (double * u) {
 
 static struct { 
   double analyze;
+  double bump;
   double decide;
   double parse;
   double propagate;
@@ -332,9 +333,10 @@ static struct {
 
 static void print_profile (double all) {
   msg ("");
-  msg ("---- [ run-time profiling data ] -------------------");
+  msg ("---- [ run-time profiling data ] ------------------------");
   msg ("");
   PRINT_PROFILE (analyze);
+  PRINT_PROFILE (bump);
   PRINT_PROFILE (decide);
   PRINT_PROFILE (parse);
   PRINT_PROFILE (propagate);
@@ -566,6 +568,7 @@ static void enqueue (Var * v) {
 }
 
 static void bump_seen_literals () {
+  START (bump);
   sort (seen.literals.begin (), seen.literals.end (), bumped_earlier ());
   for (size_t i = 0; i < seen.literals.size (); i++) {
     int idx = vidx (seen.literals[i]);
@@ -579,6 +582,7 @@ static void bump_seen_literals () {
     v->bumped = ++stats.bumped;
     LOG ("bumped and moved to front %d", idx);
   }
+  STOP (bump);
   seen.literals.clear ();
   for (size_t i = 0; i < seen.levels.size (); i++)
     levels[seen.levels[i]].seen = 0;
@@ -712,19 +716,19 @@ static void print_statistics () {
   size_t m = max_bytes ();
   print_profile (t);
   msg ("");
-  msg ("---- [ statistics ] --------------------------------");
+  msg ("---- [ statistics ] -------------------------------------");
   msg ("");
-  msg ("conflicts:     %20ld   %10.2f  (per second)",
+  msg ("conflicts:     %15ld   %10.2f  (per second)",
     stats.conflicts, relative (stats.conflicts, t));
-  msg ("decisions:     %20ld   %10.2f  (per second)",
+  msg ("decisions:     %15ld   %10.2f  (per second)",
     stats.decisions, relative (stats.decisions, t));
-  msg ("restarts:      %20ld   %10.2f  (per second)",
+  msg ("restarts:      %15ld   %10.2f  (per second)",
     stats.restarts, relative (stats.restarts, t));
-  msg ("propagations:  %20ld   %10.2f  (per second)",
+  msg ("propagations:  %15ld   %10.2f  (per second)",
     stats.propagations, relative (stats.propagations, t));
-  msg ("maxbytes:      %20ld   %10.2f  MB",
+  msg ("maxbytes:      %15ld   %10.2f  MB",
     m, m/(double)(1<<20));
-  msg ("time:          %20s   %10.2f  seconds", "", t);
+  msg ("time:          %15s   %10.2f  seconds", "", t);
   msg ("");
 }
 
