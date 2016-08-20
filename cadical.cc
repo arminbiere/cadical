@@ -207,6 +207,10 @@ static double relative (double a, double b) { return b ? a / b : 0; }
 static double percent (double a, double b) { return relative (100 * a, b); }
 #endif
 
+static void update_ema (double & ema, double y, double alpha) {
+  ema += alpha * (y - ema);
+}
+
 static double seconds () {
   struct rusage u;
   double res;
@@ -513,6 +517,14 @@ static void trace_unit_clause (int unit) {
   fprintf (proof, "%d 0\n", unit);
 }
 
+static void trace_add_clause (Clause * c) {
+  if (!proof) return;
+  LOG (c, "tracing");
+  for (int i = 0; i < c->size; i++)
+    fprintf (proof, "%d ", c->literals[i]);
+  fputs ("0\n", proof);
+}
+
 /*------------------------------------------------------------------------*/
 
 static bool propagate () {
@@ -614,6 +626,10 @@ static bool analyze_literal (int lit) {
   if (!v.level) return false;
   assert (val (lit) < 0);
   if (v.level < level) literals.push_back (-lit);
+  if (!levels[v.level].seen++) {
+    LOG ("found new level %d contributing to conflict");
+    seen.levels.push_back (v.level);
+  }
   v.seen = true;
   seen.literals.push_back (lit);
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);
@@ -647,7 +663,8 @@ static void analyze () {
     }
     LOG ("first UIP %d", uip);
     literals.push_back (-uip);
-    if (literals.size () == 1) {
+    int size = literals.size ();
+    if (size == 1) {
       LOG ("learned unit clause %d", -uip); 
       trace_unit_clause (-uip);
       stats.learned.units++;
@@ -656,7 +673,13 @@ static void analyze () {
     } else {
       sort (literals.begin (), literals.end (), level_greater_than ());
       assert (literals[0] == -uip);
-      Clause * driving_clause = new_learned_clause (0);	// GLUE?
+      int glue = (int) seen.levels.size ();
+      Clause * driving_clause = new_learned_clause (glue);
+      update_ema (ema.learned.glue.slow, glue, 0.0001);
+      update_ema (ema.learned.glue.fast, glue, 0.03);
+      LOG ("new slow learned glue EMA %.4f", ema.learned.glue.slow);
+      LOG ("new slow learned fast EMA %.4f", ema.learned.glue.fast);
+      trace_add_clause (driving_clause);
       int jump = var (literals[1]).level;
       assert (jump < level);
       backtrack (jump, uip);
