@@ -848,6 +848,8 @@ static bool tautological () {
   return false;
 }
 
+// TODO better parser!!
+
 static void parse_dimacs () {
   int ch;
   START (parse);
