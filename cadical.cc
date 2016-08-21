@@ -574,6 +574,31 @@ static bool propagate () {
   return !conflict;
 }
 
+static void minimize_clause () {
+}
+
+static int sol (int lit) {
+  assert (solution);
+  int res = solution[vidx (lit)];
+  if (lit < 0) res = -res;
+  return res;
+}
+
+static void check_clause () {
+  if (!solution) return;
+  bool satisfied = false;
+  for (size_t i = 0; !satisfied && i < literals.size (); i++)
+    satisfied = (sol (literals[i]) > 0);
+  if (satisfied) return;
+  fflush (stdout);
+  fputs ("*** cadical error: learned clause unsatisfied by solution:\n", stderr);
+  for (size_t i = 0; i < literals.size (); i++)
+    fprintf (stderr, "%d ", literals[i]);
+  fputs ("0\n", stderr);
+  fflush (stderr);
+  abort ();
+}
+
 struct bumped_earlier {
   bool operator () (int a, int b) {
     return var (a).bumped < var (b).bumped;
@@ -614,7 +639,12 @@ static void bump_seen_literals (int uip) {
   seen.levels.clear ();
 }
 
-static void bump_clause (Clause * c) { c->resolved = stats.conflicts; }
+static void bump_clause (Clause * c) { 
+  if (!c->redundant) return;
+  c->resolved = stats.conflicts;
+  update_ema (ema.resolved.size, c->size, 1e-6);
+  update_ema (ema.resolved.glue, c->glue, 1e-6);
+}
 
 struct level_greater_than {
   bool operator () (int a, int b) {
@@ -678,10 +708,12 @@ static void analyze () {
       assert (literals[0] == -uip);
       int glue = (int) seen.levels.size ();
       Clause * driving_clause = new_learned_clause (glue);
-      update_ema (ema.learned.glue.slow, glue, 0.0001);
-      update_ema (ema.learned.glue.fast, glue, 0.03);
+      update_ema (ema.learned.glue.slow, glue, 1e-6);
+      update_ema (ema.learned.glue.fast, glue, 1e-4);
       LOG ("new slow learned glue EMA %.4f", ema.learned.glue.slow);
       LOG ("new slow learned fast EMA %.4f", ema.learned.glue.fast);
+      minimize_clause ();
+      check_clause ();
       trace_add_clause (driving_clause);
       int jump = var (literals[1]).level;
       assert (jump < level);
@@ -692,6 +724,8 @@ static void analyze () {
     literals.clear ();
   }
   conflict = 0;
+  LOG ("new resolved glue EMA %.4f", ema.resolved.glue);
+  LOG ("new resolved size EMA %.4f", ema.resolved.size);
   STOP (analyze);
 }
 
@@ -701,7 +735,7 @@ static bool restarting () {
   if (stats.conflicts <= limits.restart.conflicts) return false;
   double slow = ema.learned.glue.slow;
   double fast = ema.learned.glue.fast;
-  double limit = 1.25  * slow;
+  double limit = 1.1 * slow;
   LOG ("EMA learned glue: slow %.2f, limit %.2f %c fast %.2f",
     slow, limit, (limit < fast ? '<' : (limit == fast ? '=' : '>')), fast);
   return limit < fast;
@@ -930,6 +964,10 @@ static int parse_lit (int ch, int & lit) {
   else sign = 1;
   lit = ch - '0';
   while (isdigit (ch = nextch ())) {
+    int digit = ch - '0';
+    if (INT_MAX/10 < lit || INT_MAX - digit < 10*lit)
+      perr ("literal too large");
+    lit = 10*lit + digit;
   }
   if (ch == '\r') ch = nextch ();
   if (ch != 'c' && ch != ' ' && ch != '\t' && ch != '\n')

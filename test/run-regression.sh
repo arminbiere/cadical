@@ -21,7 +21,7 @@ run () {
     solopts=""
   fi
   opts="cnfs/$1.cnf$solopts"
-  echo -n "../cadical $opts\t# expecting $2 ..."
+  echo -n "../cadical $opts # $2 ..."
   ../cadical $opts 1>cnfs/$1.log 2>cnfs/$1.err
   res=$?
   if [ $res = $2 ]
@@ -65,6 +65,8 @@ run full4 20
 run full5 20
 run full6 20
 run full7 20
+
+run regr000 10
 
 run prime4 10
 run prime9 10
