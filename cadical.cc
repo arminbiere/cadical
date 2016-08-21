@@ -181,7 +181,7 @@ static struct {
   struct { long conflicts; } restart, reduce;
 } limits;
 
-static FILE * input, * proof;
+static FILE * input_file, * proof_file;
 static int lineno = 1, close_input, close_proof;
 static const char * input_name, * proof_name;
 
@@ -506,23 +506,23 @@ static void delete_clause (Clause * c) {
 /*------------------------------------------------------------------------*/
 
 static void trace_empty_clause () {
-  if (!proof) return;
+  if (!proof_file) return;
   LOG ("tracing empty clause");
-  fputs ("0\n", proof);
+  fputs ("0\n", proof_file);
 }
 
 static void trace_unit_clause (int unit) {
-  if (!proof) return;
+  if (!proof_file) return;
   LOG ("tracing unit clause %d", unit);
-  fprintf (proof, "%d 0\n", unit);
+  fprintf (proof_file, "%d 0\n", unit);
 }
 
 static void trace_add_clause (Clause * c) {
-  if (!proof) return;
+  if (!proof_file) return;
   LOG (c, "tracing");
   for (int i = 0; i < c->size; i++)
-    fprintf (proof, "%d ", c->literals[i]);
-  fputs ("0\n", proof);
+    fprintf (proof_file, "%d ", c->literals[i]);
+  fputs ("0\n", proof_file);
 }
 
 /*------------------------------------------------------------------------*/
@@ -859,8 +859,14 @@ static FILE * read_pipe (const char * fmt, const char * path) {
 }
 
 static const char * USAGE =
-"usage: cadical [ -h ] [ <input> [ <proof> ] ]\n"
-"where '<input>' is a (compressed) DIMACS file and '<output>'\n"
+"usage: cadical [ <option> ... ] [ <input> [ <proof> ] ]\n"
+"\n"
+"where '<option>' is one of the following\n"
+"\n"
+"-h         print this command line option summary\n"
+"-s <sol>   read and check solution (competition output format)\n"
+"\n"
+"and '<input>' is a (compressed) DIMACS file and '<output>'\n"
 "is a file to store the DRAT proof.  If no '<proof>' file is\n"
 "specified, then no proof is generated.  If no '<input>' is given\n"
 "then '<stdin>' is used. If '-' is used as '<input>' then the\n"
@@ -889,7 +895,7 @@ static bool tautological () {
 }
 
 static int nextch () {
-  int res = getc (input);
+  int res = getc (input_file);
   if (res == '\n') lineno++;
   return res;
 }
@@ -1028,40 +1034,40 @@ int main (int argc, char ** argv) {
   for (i = 1; i < argc; i++) {
     if (!strcmp (argv[i], "-h")) fputs (USAGE, stdout), exit (0);
     else if (!strcmp (argv[i], "-")) {
-      if (proof) die ("too many arguments");
-      else if (!input) input = stdin, input_name = "<stdin>";
-      else proof = stdout, proof_name = "<stdout>";
+      if (proof_file) die ("too many arguments");
+      else if (!input_file) input_file = stdin, input_name = "<stdin>";
+      else proof_file = stdout, proof_name = "<stdout>";
     } else if (argv[i][0] == '-')
     die ("invalid option '%s'", argv[i]);
-    else if (proof) die ("too many arguments");
-    else if (input) {
-      if (!(proof = fopen (argv[i], "w")))
+    else if (proof_file) die ("too many arguments");
+    else if (input_file) {
+      if (!(proof_file = fopen (argv[i], "w")))
 	die ("can not open and write DRAT proof to '%s'", argv[i]);
       proof_name = argv[i], close_proof = 1;
     } else {
       if (has_suffix (argv[i], ".bz2"))
-	input = read_pipe ("bzcat %s", argv[i]), close_input = 2;
+	input_file = read_pipe ("bzcat %s", argv[i]), close_input = 2;
       else if (has_suffix (argv[i], ".gz"))
-	input = read_pipe ("gunzip -c %s", argv[i]), close_input = 2;
-      else input = fopen (argv[i], "r"), close_input = 1;
-      if (!input)
+	input_file = read_pipe ("gunzip -c %s", argv[i]), close_input = 2;
+      else input_file = fopen (argv[i], "r"), close_input = 1;
+      if (!input_file)
 	die ("can not open and read DIMACS file '%s'", argv[i]);
       input_name = argv[i];
     }
   }
-  if (!input) input_name = "<stdin>", input = stdin;
+  if (!input_file) input_name = "<stdin>", input_file = stdin;
   banner ();
   init_signal_handlers ();
   msg ("");
   msg ("reading DIMACS file from '%s'", input_name);
-  if (proof) msg ("writing DRAT proof to '%s'", proof_name);
+  if (proof_file) msg ("writing DRAT proof to '%s'", proof_name);
   else msg ("will not generate nor write DRAT proof");
   parse_dimacs ();
-  if (close_input == 1) fclose (input);
-  if (close_input == 2) pclose (input);
+  if (close_input == 1) fclose (input_file);
+  if (close_input == 2) pclose (input_file);
   init_search ();
   res = search ();
-  if (close_proof) fclose (proof);
+  if (close_proof) fclose (proof_file);
   msg ("");
   if (res == 10) {
     printf ("s SATISFIABLE\n");
