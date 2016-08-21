@@ -614,6 +614,8 @@ static void bump_seen_literals (int uip) {
   seen.levels.clear ();
 }
 
+static void bump_clause (Clause * c) { c->resolved = stats.conflicts; }
+
 struct level_greater_than {
   bool operator () (int a, int b) {
     return var (a).level > var (b).level;
@@ -647,6 +649,7 @@ static void analyze () {
   } else {
     Clause * reason = conflict;
     LOG (reason, "analyzing conflicting");
+    bump_clause (reason);
     assert (literals.empty ());
     assert (seen.literals.empty ());
     assert (seen.levels.empty ());
