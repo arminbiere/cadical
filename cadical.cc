@@ -205,10 +205,7 @@ static void (*sig_bus_handler)(int);
 #endif
 
 static double relative (double a, double b) { return b ? a / b : 0; }
-
-#ifdef PROFILE
 static double percent (double a, double b) { return relative (100 * a, b); }
-#endif
 
 static void update_ema (double & ema, double y, double alpha) {
   ema += alpha * (y - ema);
@@ -1002,31 +999,41 @@ static void parse_solution () {
   lineno = 1;
   NEW (solution, signed char, max_var + 1);
   for (int i = 1; i <= max_var; i++) solution[i] = 0;
+  int ch;
   for (;;) {
-    int ch = nextch ();
+    ch = nextch ();
     if (ch == EOF) perr ("missing 's' line");
     if (ch == 'c') {
       while ((ch = getc (solution_file)) != '\n')
 	if (ch == EOF) perr ("unexpected end-of-file in comment");
     }
-    if (ch != 's') perr ("expected 'c' or 's'");
-    parse_string (" SATISFIABLE", 's');
-    if ((ch = nextch ()) == '\r') ch = nextch ();
-    if (ch == '\n') break;
-    perr ("expected new-line after 's SATISFIABLE'");
+    if (ch == 's') break;
+    perr ("expected 'c' or 's'");
   }
+  parse_string (" SATISFIABLE", 's');
+  if ((ch = nextch ()) == '\r') ch = nextch ();
+  if (ch != '\n') perr ("expected new-line after 's SATISFIABLE'");
+  int count = 0;
   for (;;) {
-    int ch = nextch ();
+    ch = nextch ();
     if (ch != 'v') perr ("expected 'v' at start-of-line");
+    if ((ch = nextch ()) != ' ') perr ("expected ' ' after 'v'");
     int lit = 0;
-    for (;;) {
-      ch = nextch ();
-      if (ch == ' ' || ch == '\t' || ch == '\r') continue;
+    ch = nextch ();
+    do {
+      if (ch == ' ' || ch == '\t') { ch = nextch (); continue; }
       if ((ch = parse_lit (ch, lit)) == 'c') perr ("unexpected comment");
-      if (ch == '\n') break;
-    }
+      if (!lit) break;
+      if (solution[abs (lit)]) perr ("variable %d occurs twice", abs (lit));
+      LOG ("solution %d", lit);
+      solution [abs (lit)] = sign (lit);
+      count++;
+      if (ch == '\r') ch = nextch ();
+    } while (ch != '\n');
     if (!lit) break;
   }
+  // ignore rest of file after 'v 0<white-space-or-new-line>'
+  msg ("parsed %d solutions %.2f%%", count, percent (count, max_var));
   STOP (parse);
 }
 
@@ -1081,6 +1088,7 @@ int main (int argc, char ** argv) {
   for (i = 1; i < argc; i++) {
     if (!strcmp (argv[i], "-h")) fputs (USAGE, stdout), exit (0);
     else if (!strcmp (argv[i], "-s")) {
+      if (++i == argc) die ("argument to '-s' missing");
       if (solution_file) die ("multiple solution files");
       if (!(solution_file = fopen (argv[i], "r")))
 	die ("can not read solution file '%s'", argv[i]);

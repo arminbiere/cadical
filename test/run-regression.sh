@@ -14,8 +14,15 @@ ok=0
 failed=0
 
 run () {
-  echo -n "./cadical test/cnfs/$1.cnf\t# expecting $2 ..."
-  ../cadical cnfs/$1.cnf 1>cnfs/$1.log 2>cnfs/$2.err
+  if [ -f cnfs/$1.sol ]
+  then
+    solopts=" -s cnfs/$1.sol"
+  else
+    solopts=""
+  fi
+  opts="cnfs/$1.cnf$solopts"
+  echo -n "./cadical $opts\t# expecting $2 ..."
+  ../cadical $opts 1>cnfs/$1.log 2>cnfs/$2.err
   res=$?
   if [ $res = $2 ]
   then 
