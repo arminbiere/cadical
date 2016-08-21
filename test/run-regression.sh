@@ -21,8 +21,8 @@ run () {
     solopts=""
   fi
   opts="cnfs/$1.cnf$solopts"
-  echo -n "./cadical $opts\t# expecting $2 ..."
-  ../cadical $opts 1>cnfs/$1.log 2>cnfs/$2.err
+  echo -n "../cadical $opts\t# expecting $2 ..."
+  ../cadical $opts 1>cnfs/$1.log 2>cnfs/$1.err
   res=$?
   if [ $res = $2 ]
   then 
