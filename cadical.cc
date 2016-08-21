@@ -127,9 +127,12 @@ static vector<int> original_literals;
 #endif
 
 static Var * vars;
-static signed char * vals;			// assignment
-static signed char * phases;
-static Watches * all_literal_watches;
+
+static signed char * vals;		// assignment
+static signed char * phases;		// saved previous assignment
+static signed char * solution;		// for debugging
+
+static Watches * all_literal_watches;	// [2,2*max_var+1]
 
 // VMTF decision queue
 
@@ -181,9 +184,9 @@ static struct {
   struct { long conflicts; } restart, reduce;
 } limits;
 
-static FILE * input_file, * proof_file;
+static FILE * input_file, * proof_file, * solution_file;
+static const char * input_name, * proof_name, * solution_name;
 static int lineno = 1, close_input, close_proof;
-static const char * input_name, * proof_name;
 
 static bool catchedsig = false;
 
@@ -840,6 +843,7 @@ static void reset () {
   delete [] vars;
   delete [] vals;
   delete [] phases;
+  if (solution) delete [] solution;
 #endif
 }
 
@@ -983,6 +987,10 @@ static void parse_dimacs () {
   STOP (parse);
 }
 
+static void parse_solution () {
+  NEW (solution, signed char, max_var + 1);
+}
+
 static void check_produced_witness () {
 #ifndef NDEBUG
   bool satisfied = false;
@@ -1033,7 +1041,12 @@ int main (int argc, char ** argv) {
   int i, res;
   for (i = 1; i < argc; i++) {
     if (!strcmp (argv[i], "-h")) fputs (USAGE, stdout), exit (0);
-    else if (!strcmp (argv[i], "-")) {
+    else if (!strcmp (argv[i], "-s")) {
+      if (solution_file) die ("multiple solution files");
+      if (!(solution_file = fopen (argv[i], "r")))
+	die ("can not read solution file '%s'", argv[i]);
+      solution_name = argv[i];
+    } else if (!strcmp (argv[i], "-")) {
       if (proof_file) die ("too many arguments");
       else if (!input_file) input_file = stdin, input_name = "<stdin>";
       else proof_file = stdout, proof_name = "<stdout>";
@@ -1059,12 +1072,17 @@ int main (int argc, char ** argv) {
   banner ();
   init_signal_handlers ();
   msg ("");
-  msg ("reading DIMACS file from '%s'", input_name);
   if (proof_file) msg ("writing DRAT proof to '%s'", proof_name);
   else msg ("will not generate nor write DRAT proof");
+  msg ("reading DIMACS file from '%s'", input_name);
   parse_dimacs ();
   if (close_input == 1) fclose (input_file);
   if (close_input == 2) pclose (input_file);
+  if (solution_file) {
+    msg ("reading solution file from '%s'", input_name);
+    parse_solution ();
+    fclose (solution_file);
+  }
   init_search ();
   res = search ();
   if (close_proof) fclose (proof_file);
