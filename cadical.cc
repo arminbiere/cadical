@@ -868,7 +868,7 @@ static const char * USAGE =
 "where '<option>' is one of the following\n"
 "\n"
 "-h         print this command line option summary\n"
-"-s <sol>   read and check solution (competition output format)\n"
+"-s <sol>   read and check solution in competition output format\n"
 "\n"
 "and '<input>' is a (compressed) DIMACS file and '<output>'\n"
 "is a file to store the DRAT proof.  If no '<proof>' file is\n"
@@ -1035,7 +1035,6 @@ static void parse_solution () {
     } while (ch != '\n');
     if (!lit) break;
   }
-  // ignore rest of file after 'v 0<white-space-or-new-line>'
   msg ("parsed %d solutions %.2f%%", count, percent (count, max_var));
   STOP (parse);
 }
