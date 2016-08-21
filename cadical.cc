@@ -184,9 +184,9 @@ static struct {
   struct { long conflicts; } restart, reduce;
 } limits;
 
-static FILE * input_file, * proof_file, * solution_file;
-static const char * input_name, * proof_name, * solution_name;
-static int lineno = 1, close_input, close_proof;
+static FILE * input_file, * dimacs_file, * proof_file, * solution_file;
+static const char *input_name, *dimacs_name, *proof_name, *solution_name;
+static int lineno, close_input, close_proof;
 
 static bool catchedsig = false;
 
@@ -904,9 +904,49 @@ static int nextch () {
   return res;
 }
 
+static void parse_string (const char * str, char prev) {
+  for (const char * p = str; *p; p++)
+    if (nextch () == *p) prev = *p;
+    else perr ("expected '%c' after '%c'", *p, prev);
+}
+
+static int parse_positive_int (int ch, int & res, const char * name) {
+  res = ch - '0';
+  while (isdigit (ch = nextch ())) {
+    int digit = ch - '0';
+    if (INT_MAX/10 < res || INT_MAX - digit < 10*res)
+      perr ("too large '%s' in header", name);
+    res = 10*res + digit;
+  }
+  return ch;
+}
+
+static int parse_lit (int ch, int & lit) {
+  int sign = 0;
+  if (ch == '-') {
+    if (!isdigit (ch = nextch ())) perr ("expected digit after '-'");
+    sign = -1;
+  } else if (!isdigit (ch)) perr ("expected digit or '-'");
+  else sign = 1;
+  lit = ch - '0';
+  while (isdigit (ch = nextch ())) {
+  }
+  if (ch == '\r') ch = nextch ();
+  if (ch != 'c' && ch != ' ' && ch != '\t' && ch != '\n')
+    perr ("expected white space after '%d'", sign*lit);
+  if (lit > max_var)
+    perr ("literal %d exceeds maximum variable %d", sign*lit, max_var);
+  lit *= sign;
+  return ch;
+}
+
 static void parse_dimacs () {
   int ch;
+  assert (dimacs_name), assert (dimacs_file);
   START (parse);
+  input_name = dimacs_name;
+  input_file = dimacs_file;
+  lineno = 1;
   for (;;) {
     ch = nextch ();
     if (ch != 'c') break;
@@ -915,30 +955,13 @@ static void parse_dimacs () {
 	perr ("unexpected end-of-file in header comment");
   }
   if (ch != 'p') perr ("expected 'c' or 'p'");
-  if (nextch () != ' ') perr ("expected ' ' after 'p'");
-  if (nextch () != 'c') perr ("expected 'c' after 'p '");
-  if (nextch () != 'n') perr ("expected 'n' after 'p c'");
-  if (nextch () != 'f') perr ("expected 'f' after 'p cn'");
-  if (nextch () != ' ') perr ("expected ' ' after 'p cnf'");
+  parse_string (" cnf ", 'p');
   if (!isdigit (ch = nextch ())) perr ("expected digit after 'p cnf '");
-  max_var = ch - '0';
-  while (isdigit (ch = nextch ())) {
-    int digit = ch - '0';
-    if (INT_MAX/10 < max_var || INT_MAX - digit < 10*max_var)
-      perr ("too large '<max-var>' in header");
-    max_var = 10*max_var + digit;
-  }
+  ch = parse_positive_int (ch, max_var, "<max-var>");
   if (ch != ' ') perr ("expected ' ' after 'p cnf %d'", max_var);
   if (!isdigit (ch = nextch ()))
     perr ("expected digit after 'p cnf %d '", max_var);
-  num_original_clauses = ch - '0';
-  while (isdigit (ch = nextch ())) {
-    int digit = ch - '0';
-    if (INT_MAX/10 < num_original_clauses ||
-        INT_MAX - digit < 10*num_original_clauses)
-      perr ("too large '<num-clauses>' in header");
-    num_original_clauses = 10*num_original_clauses + digit;
-  }
+  ch = parse_positive_int (ch, num_original_clauses, "<num-clauses>");
   while (ch == ' ' || ch == '\r') ch = nextch ();
   if (ch != '\n') perr ("expected new-line after 'p cnf %d %d'",
                         max_var, num_original_clauses);
@@ -948,28 +971,12 @@ static void parse_dimacs () {
   while ((ch = nextch ()) != EOF) {
     if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r') continue;
     if (ch == 'c') {
+COMMENT:
       while ((ch = nextch ()) != '\n')
 	if (ch == EOF) perr ("unexpected end-of-file in body comment");
       continue;
     }
-    int sign;
-    if (ch == '-') {
-      ch = nextch ();
-      if (!isdigit (ch)) perr ("expected digit after '-'");
-      sign = -1;
-    } else if (!isdigit (ch))
-      perr ("expected '-' or digit (or comment start character 'c')");
-    else sign = 1;
-    lit = ch - '0';
-    while (isdigit (ch = nextch ())) {
-      int digit = ch - '0';
-      if (INT_MAX/10 < lit || INT_MAX - digit < 10*lit)
-	perr ("too large literal in header");
-      lit = 10*lit + digit;
-    }
-    if (lit > max_var)
-      perr ("literal exceeds maximum variable index %d", max_var);
-    lit *= sign;
+    if (parse_lit (ch, lit) == 'c') goto COMMENT;
     DEBUG (original_literals.push_back (lit));
     if (lit) {
       if (literals.size () == INT_MAX) perr ("clause too large");
@@ -988,7 +995,39 @@ static void parse_dimacs () {
 }
 
 static void parse_solution () {
+  assert (solution_name), assert (solution_file);
+  START (parse);
+  input_name = solution_name;
+  input_file = solution_file;
+  lineno = 1;
   NEW (solution, signed char, max_var + 1);
+  for (int i = 1; i <= max_var; i++) solution[i] = 0;
+  for (;;) {
+    int ch = nextch ();
+    if (ch == EOF) perr ("missing 's' line");
+    if (ch == 'c') {
+      while ((ch = getc (solution_file)) != '\n')
+	if (ch == EOF) perr ("unexpected end-of-file in comment");
+    }
+    if (ch != 's') perr ("expected 'c' or 's'");
+    parse_string (" SATISFIABLE", 's');
+    if ((ch = nextch ()) == '\r') ch = nextch ();
+    if (ch == '\n') break;
+    perr ("expected new-line after 's SATISFIABLE'");
+  }
+  for (;;) {
+    int ch = nextch ();
+    if (ch != 'v') perr ("expected 'v' at start-of-line");
+    int lit = 0;
+    for (;;) {
+      ch = nextch ();
+      if (ch == ' ' || ch == '\t' || ch == '\r') continue;
+      if ((ch = parse_lit (ch, lit)) == 'c') perr ("unexpected comment");
+      if (ch == '\n') break;
+    }
+    if (!lit) break;
+  }
+  STOP (parse);
 }
 
 static void check_produced_witness () {
@@ -1048,38 +1087,38 @@ int main (int argc, char ** argv) {
       solution_name = argv[i];
     } else if (!strcmp (argv[i], "-")) {
       if (proof_file) die ("too many arguments");
-      else if (!input_file) input_file = stdin, input_name = "<stdin>";
+      else if (!dimacs_file) dimacs_file = stdin, dimacs_name = "<stdin>";
       else proof_file = stdout, proof_name = "<stdout>";
     } else if (argv[i][0] == '-')
     die ("invalid option '%s'", argv[i]);
     else if (proof_file) die ("too many arguments");
-    else if (input_file) {
+    else if (dimacs_file) {
       if (!(proof_file = fopen (argv[i], "w")))
 	die ("can not open and write DRAT proof to '%s'", argv[i]);
       proof_name = argv[i], close_proof = 1;
     } else {
       if (has_suffix (argv[i], ".bz2"))
-	input_file = read_pipe ("bzcat %s", argv[i]), close_input = 2;
+	dimacs_file = read_pipe ("bzcat %s", argv[i]), close_input = 2;
       else if (has_suffix (argv[i], ".gz"))
-	input_file = read_pipe ("gunzip -c %s", argv[i]), close_input = 2;
-      else input_file = fopen (argv[i], "r"), close_input = 1;
-      if (!input_file)
+	dimacs_file = read_pipe ("gunzip -c %s", argv[i]), close_input = 2;
+      else dimacs_file = fopen (argv[i], "r"), close_input = 1;
+      if (!dimacs_file)
 	die ("can not open and read DIMACS file '%s'", argv[i]);
-      input_name = argv[i];
+      dimacs_name = argv[i];
     }
   }
-  if (!input_file) input_name = "<stdin>", input_file = stdin;
+  if (!dimacs_file) dimacs_name = "<stdin>", dimacs_file = stdin;
   banner ();
   init_signal_handlers ();
   msg ("");
   if (proof_file) msg ("writing DRAT proof to '%s'", proof_name);
   else msg ("will not generate nor write DRAT proof");
-  msg ("reading DIMACS file from '%s'", input_name);
+  msg ("reading DIMACS file from '%s'", dimacs_name);
   parse_dimacs ();
-  if (close_input == 1) fclose (input_file);
-  if (close_input == 2) pclose (input_file);
+  if (close_input == 1) fclose (dimacs_file);
+  if (close_input == 2) pclose (dimacs_file);
   if (solution_file) {
-    msg ("reading solution file from '%s'", input_name);
+    msg ("reading solution file from '%s'", dimacs_name);
     parse_solution ();
     fclose (solution_file);
   }
