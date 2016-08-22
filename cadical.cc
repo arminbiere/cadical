@@ -616,7 +616,7 @@ static void enqueue (Var * v) {
   v->next = 0;
 }
 
-static void bump_seen_literals (int uip) {
+static void bump_and_clear_seen_literals (int uip) {
   START (bump);
   sort (seen.literals.begin (), seen.literals.end (), bumped_earlier ());
   if (uip < 0) uip = -uip;
@@ -634,6 +634,9 @@ static void bump_seen_literals (int uip) {
   }
   STOP (bump);
   seen.literals.clear ();
+}
+
+static void clear_levels () {
   for (size_t i = 0; i < seen.levels.size (); i++)
     levels[seen.levels[i]].seen = 0;
   seen.levels.clear ();
@@ -657,7 +660,7 @@ static bool analyze_literal (int lit) {
   if (v.seen) return false;
   if (!v.level) return false;
   assert (val (lit) < 0);
-  if (v.level < level) literals.push_back (-lit);
+  if (v.level < level) literals.push_back (lit);
   if (!levels[v.level].seen++) {
     LOG ("found new level %d contributing to conflict");
     seen.levels.push_back (v.level);
@@ -720,8 +723,9 @@ static void analyze () {
       backtrack (jump, uip);
       assign (-uip, driving_clause);
     }
-    bump_seen_literals (uip);
+    bump_and_clear_seen_literals (uip);
     literals.clear ();
+    clear_levels ();
   }
   conflict = 0;
   LOG ("new resolved glue EMA %.4f", ema.resolved.glue);
@@ -1166,7 +1170,7 @@ int main (int argc, char ** argv) {
   if (close_input == 1) fclose (dimacs_file);
   if (close_input == 2) pclose (dimacs_file);
   if (solution_file) {
-    msg ("reading solution file from '%s'", dimacs_name);
+    msg ("reading solution file from '%s'", solution_name);
     parse_solution ();
     fclose (solution_file);
   }
