@@ -79,7 +79,7 @@ struct Var {
   int level;		// decision level
 
   long bumped;		// enqueue/bump time stamp for VMTF queue
-  Var * prev, * next;	// double links for decision VMTF queue
+  int prev, next;	// double links for decision VMTF queue
 
   Clause * reason;	// assignment reason/antecedent
 
@@ -137,8 +137,8 @@ static Watches * all_literal_watches;	// [2,2*max_var+1]
 // VMTF decision queue
 
 static struct {
-  Var * first, * last;	// anchors (head/tail) for doubly linked list
-  Var * next;		// all variables after this one are assigned
+  int first, last;	// anchors (head/tail) for doubly linked list
+  int next;		// all variables after this one are assigned
 } queue;
 
 static bool unsat;		// empty clause found or learned
@@ -417,8 +417,8 @@ static void unassign (int lit, int except) {
   LOG ("unassign %d", lit);
   if (lit == except) return;
   Var * v = vars + idx;
-  if (queue.next->bumped >= v->bumped) return;
-  queue.next = v;
+  if (var (queue.next).bumped >= v->bumped) return;
+  queue.next = idx;
   LOG ("queue next moved to %d", idx);
 }
 
@@ -606,13 +606,13 @@ struct bumped_earlier {
 };
 
 static void dequeue (Var * v) {
-  if (v->prev) v->prev->next = v->next; else queue.first = v->next;
-  if (v->next) v->next->prev = v->prev; else queue.last = v->prev;
+  if (v->prev) var (v->prev).next = v->next; else queue.first = v->next;
+  if (v->next) var (v->next).prev = v->prev; else queue.last = v->prev;
 }
 
-static void enqueue (Var * v) {
-  if ((v->prev = queue.last)) queue.last->next = v; else queue.first = v;
-  queue.last = v;
+static void enqueue (Var * v, int idx) {
+  if ((v->prev = queue.last)) var (queue.last).next = idx; else queue.first = idx;
+  queue.last = idx;
   v->next = 0;
 }
 
@@ -627,9 +627,9 @@ static void bump_and_clear_seen_literals (int uip) {
     v->seen = v->minimized = v->poison = false;
     if (!v->next) continue;
     queue.next = v->prev ? v->prev : v->next;
-    dequeue (v), enqueue (v);
+    dequeue (v), enqueue (v, idx);
     v->bumped = ++stats.bumped;
-    if (idx != uip && !vals[idx]) queue.next = v;
+    if (idx != uip && !vals[idx]) queue.next = idx;
     LOG ("bumped and moved to front %d", idx);
   }
   STOP (bump);
@@ -766,8 +766,8 @@ static void decide () {
   level++;
   stats.decisions++;
   int idx;
-  while (val (idx = queue.next - vars))
-    queue.next = queue.next->prev;
+  while (val (idx = queue.next))
+    queue.next = var (queue.next).prev;
   int decision = phases[idx] * idx;
   levels.push_back (Level (decision));
   LOG ("decide %d", decision);
@@ -813,13 +813,13 @@ static void print_statistics () {
 }
 
 static void init_vmtf_queue () {
-  Var * prev = 0;
+  int prev;
   for (int i = 1; i <= max_var; i++) {
     Var * v = &vars[i];
-    if ((v->prev = prev)) prev->next = v;
-    else queue.first = v;
+    if ((v->prev = prev)) var (prev).next = i;
+    else queue.first = i;
     v->bumped = ++stats.bumped;
-    prev = v;
+    prev = i;
   }
   queue.last = queue.next = prev;
 }
