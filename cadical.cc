@@ -813,7 +813,7 @@ static void print_statistics () {
 }
 
 static void init_vmtf_queue () {
-  int prev;
+  int prev = 0;
   for (int i = 1; i <= max_var; i++) {
     Var * v = &vars[i];
     if ((v->prev = prev)) var (prev).next = i;
