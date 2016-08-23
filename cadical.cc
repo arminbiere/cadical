@@ -398,6 +398,27 @@ static Var & var (int lit) { return vars [vidx (lit)]; }
 
 /*------------------------------------------------------------------------*/
 
+static void check_vmtf_queue_invariant () {
+#if 1
+  int count = 0;
+  for (int idx = queue.first; idx; idx = var (idx).next) count++;
+  assert (count == max_var);
+  count = 0;
+  for (int idx = queue.last; idx; idx = var (idx).prev) count++;
+  assert (count == max_var);
+  for (int idx = queue.first, next; idx; idx = next) {
+    next = var (idx).next;
+    if (next) assert (var (idx).bumped < var (next).bumped);
+  }
+  for (int idx = queue.next, next; idx; idx = next) {
+    next = var (idx).next;
+    assert (!next || val (next));
+  }
+#endif
+}
+
+/*------------------------------------------------------------------------*/
+
 static void assign (int lit, Clause * reason = 0) {
   int idx = vidx (lit);
   assert (!vals[idx]);
@@ -420,6 +441,7 @@ static void unassign (int lit, int except) {
   if (var (queue.next).bumped >= v->bumped) return;
   queue.next = idx;
   LOG ("queue next moved to %d", idx);
+  check_vmtf_queue_invariant ();
 }
 
 static void backtrack (int target_level, int except = 0) {
@@ -626,11 +648,12 @@ static void bump_and_clear_seen_literals (int uip) {
     assert (v->seen);
     v->seen = v->minimized = v->poison = false;
     if (!v->next) continue;
-    queue.next = v->prev ? v->prev : v->next;
+    if (queue.next == idx) queue.next = v->prev ? v->prev : v->next;
     dequeue (v), enqueue (v, idx);
     v->bumped = ++stats.bumped;
     if (idx != uip && !vals[idx]) queue.next = idx;
     LOG ("bumped and moved to front %d", idx);
+    check_vmtf_queue_invariant ();
   }
   STOP (bump);
   seen.literals.clear ();
