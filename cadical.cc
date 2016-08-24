@@ -399,7 +399,7 @@ static Var & var (int lit) { return vars [vidx (lit)]; }
 /*------------------------------------------------------------------------*/
 
 static void check_vmtf_queue_invariant () {
-#if 1
+#if 0
   int count = 0;
   for (int idx = queue.first; idx; idx = var (idx).next) count++;
   assert (count == max_var);
@@ -431,16 +431,17 @@ static void assign (int lit, Clause * reason = 0) {
   LOG (reason, "assign %d", lit);
 }
 
-static void unassign (int lit, int except) {
+static void unassign (int lit) {
+  check_vmtf_queue_invariant ();
   assert (val (lit) > 0);
   int idx = vidx (lit);
   vals[idx] = 0;
   LOG ("unassign %d", lit);
-  if (lit == except) return;
   Var * v = vars + idx;
-  if (var (queue.next).bumped >= v->bumped) return;
-  queue.next = idx;
-  LOG ("queue next moved to %d", idx);
+  if (var (queue.next).bumped < v->bumped) {
+    queue.next = idx;
+    LOG ("queue next moved to %d", idx);
+  }
   check_vmtf_queue_invariant ();
 }
 
@@ -450,7 +451,7 @@ static void backtrack (int target_level, int except = 0) {
   LOG ("backtracking to decision level %d", target_level);
   int decision = levels[target_level + 1].decision, lit;
   do {
-    unassign (lit = trail.back (), except);
+    unassign (lit = trail.back ());
     trail.pop_back ();
   } while (lit != decision);
   if (trail.size () < propagate_next) propagate_next = trail.size ();
