@@ -983,9 +983,8 @@ static const char * USAGE =
 
 struct lit_less_than {
   bool operator () (int a, int b) {
-    int res = abs (a) - abs (b);
-    if (res < 0) return true;
-    return !res && a < b;
+    int s = abs (a), t = abs (b);
+    return s < t || (s == t && a < b);
   }
 };
 
