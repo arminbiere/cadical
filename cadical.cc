@@ -211,6 +211,8 @@ static signed char * solution;		// like 'val' (and 'phases')
 
 /*------------------------------------------------------------------------*/
 
+// Signals handlers for printing statistics even if solver is interrupted.
+
 static bool catchedsig = false;
 
 static void (*sig_int_handler)(int);
@@ -429,7 +431,7 @@ static void check_vmtf_queue_invariant () {
   assert (!count);
   for (idx = queue.first; idx && (next = var (idx).next); idx = next)
     assert (var (idx).bumped < var (next).bumped);
-  for (idx = queue.next; idx && (next = var (idx).next; idx = next)
+  for (idx = queue.next; idx && (next = var (idx).next); idx = next)
     assert (val (next));
 #endif
 }
@@ -449,16 +451,14 @@ static void assign (int lit, Clause * reason = 0) {
 }
 
 static void unassign (int lit) {
-  check_vmtf_queue_invariant ();
   assert (val (lit) > 0);
   int idx = vidx (lit);
   vals[idx] = 0;
   LOG ("unassign %d", lit);
   Var * v = vars + idx;
-  if (var (queue.next).bumped < v->bumped) {
-    queue.next = idx;
-    LOG ("queue next moved to %d", idx);
-  }
+  if (var (queue.next).bumped >= v->bumped) return;
+  queue.next = idx;
+  LOG ("queue next moved to %d", idx);
   check_vmtf_queue_invariant ();
 }
 
