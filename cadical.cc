@@ -164,8 +164,13 @@ static struct {
   long conflicts;
   long decisions;
   long restarts;
-  long propagations;
-  long bumped;
+  long propagations;		// propagated literals in 'propagate'
+
+  long bumped;			// seen and bumped variables in 'analyze'
+  long searched;		// searched decisions in 'decide'
+
+  struct { long count, clauses, bytes; } reduce;	// in 'reduce'
+
   struct { long current, max; } clauses;
   struct { size_t current, max; } bytes;
   struct { long units; } learned;
@@ -175,10 +180,15 @@ static struct {
 static vector<Timer> timers;
 #endif
 
+// Exponential moving averages to control which clauses are collected
+// in  'reduce' and when to 'restart' respectively.
+
 static struct { 
   struct { double glue, size; } resolved;
   struct { struct { double fast, slow; } glue; } learned;
 } ema;
+
+// Reduce and base restart limit.
 
 static struct {
   struct { long conflicts; } restart, reduce;
@@ -187,6 +197,8 @@ static struct {
 static FILE * input_file, * dimacs_file, * proof_file, * solution_file;
 static const char *input_name, *dimacs_name, *proof_name, *solution_name;
 static int lineno, close_input, close_proof;
+
+/*------------------------------------------------------------------------*/
 
 static bool catchedsig = false;
 
@@ -782,6 +794,7 @@ static bool reducing () {
 
 static void reduce () {
   START (reduce);
+  stats.reduce.count++;
   STOP (reduce);
 }
 
@@ -791,7 +804,7 @@ static void decide () {
   stats.decisions++;
   int idx;
   while (val (idx = queue.next))
-    queue.next = var (queue.next).prev;
+    queue.next = var (queue.next).prev, stats.searched++;
   int decision = phases[idx] * idx;
   levels.push_back (Level (decision));
   LOG ("decide %d", decision);
@@ -824,14 +837,24 @@ static void print_statistics () {
   msg ("");
   msg ("conflicts:     %15ld   %10.2f  (per second)",
     stats.conflicts, relative (stats.conflicts, t));
+  msg ("  bumped:      %15ld   %10.2f  (per conflict)",
+    stats.bumped, relative (stats.bumped, stats.conflicts));
+  msg ("  units:       %15ld   %10.2f  (conflicts per unit)",
+    stats.learned.units, relative (stats.conflicts, stats.learned.units));
   msg ("decisions:     %15ld   %10.2f  (per second)",
     stats.decisions, relative (stats.decisions, t));
-  msg ("restarts:      %15ld   %10.2f  (per second)",
-    stats.restarts, relative (stats.restarts, t));
-  msg ("propagations:  %15ld   %10.2f  (per second)",
-    stats.propagations, relative (stats.propagations, t));
+  msg ("  searched:    %15ld   %10.2f  (per decision)",
+    stats.searched, relative (stats.searched, stats.decisions));
+  msg ("reductions:    %15ld   %10.2f  (conflicts per reduction)",
+    stats.reduce.count, relative (stats.conflicts, stats.reduce.count));
+  msg ("  collected:   %15ld   %10.2f  (clauses and MB)",
+    stats.reduce.clauses, stats.reduce.bytes/(double)(1l<<20));
+  msg ("restarts:      %15ld   %10.2f  (conflicts per restart)",
+    stats.restarts, relative (stats.conflicts, stats.restarts));
+  msg ("propagations:  %15ld   %10.2f  (millions per second)",
+    stats.propagations, relative (stats.propagations/1e6, t));
   msg ("maxbytes:      %15ld   %10.2f  MB",
-    m, m/(double)(1<<20));
+    m, m/(double)(1l<<20));
   msg ("time:          %15s   %10.2f  seconds", "", t);
   msg ("");
 }
@@ -930,7 +953,9 @@ static const char * USAGE =
 "where '<option>' is one of the following\n"
 "\n"
 "-h         print this command line option summary\n"
-"-s <sol>   read and check solution in competition output format\n"
+"\n"
+"-s <sol>   read solution in competition output format\n"
+"           (used for testing and debugging only)\n"
 "\n"
 "and '<input>' is a (compressed) DIMACS file and '<output>'\n"
 "is a file to store the DRAT proof.  If no '<proof>' file is\n"
@@ -948,7 +973,7 @@ struct lit_less_than {
 };
 
 static bool tautological () {
-  std::sort (literals.begin (), literals.end (), lit_less_than ());
+  sort (literals.begin (), literals.end (), lit_less_than ());
   size_t j = 0;
   int prev = 0;
   for (size_t i = 0; i < literals.size (); i++) {
