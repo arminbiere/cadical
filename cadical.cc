@@ -326,7 +326,7 @@ static void LOG (Clause * c, const char *fmt, ...) {
     else printf (" irredundant");
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
-      printf (" %d", c->literals[i]);
+      printf (" %d", c->lits[i]);
   } else if (level) printf (" decision");
   else printf (" unit");
   fputc ('\n', stdout);
