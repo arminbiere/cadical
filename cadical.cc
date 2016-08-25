@@ -1,5 +1,7 @@
 /*--------------------------------------------------------------------------
 
+CaDiCaL
+
 Radically Simplified Conflict Driven Clause Learning Solver (CDCL)
 
 The goal of CaDiCal is to have a minimalistic CDCL solver, which is easy
@@ -209,12 +211,6 @@ static void (*sig_term_handler)(int);
 static void (*sig_bus_handler)(int);
 
 /*------------------------------------------------------------------------*/
-
-#ifdef NDEBUG
-#define DEBUG(ARGS...) do { } while (0)
-#else
-#define DEBUG(CODE) do { CODE; } while (0)
-#endif
 
 static double relative (double a, double b) { return b ? a / b : 0; }
 static double percent (double a, double b) { return relative (100 * a, b); }
@@ -628,6 +624,8 @@ static int sol (int lit) {
   return res;
 }
 
+// If the user provides a witness for checking
+
 static void check_clause () {
   if (!solution) return;
   bool satisfied = false;
@@ -740,30 +738,31 @@ static void analyze () {
     }
     LOG ("first UIP %d", uip);
     literals.push_back (-uip);
+    check_clause ();
     int size = literals.size ();
+    int glue = seen.levels.size ();
+    update_ema (ema.learned.glue.slow, glue, 1e-6);
+    update_ema (ema.learned.glue.fast, glue, 1e-4);
+    LOG ("new slow learned glue EMA %.4f", ema.learned.glue.slow);
+    LOG ("new slow learned fast EMA %.4f", ema.learned.glue.fast);
+    Clause * driving_clause = 0;
+    int jump = 0;
     if (size == 1) {
       LOG ("learned unit clause %d", -uip); 
       trace_unit_clause (-uip);
       stats.learned.units++;
-      backtrack (0, uip);
-      assign (-uip);
     } else {
       sort (literals.begin (), literals.end (), level_greater_than ());
       assert (literals[0] == -uip);
-      int glue = (int) seen.levels.size ();
-      Clause * driving_clause = new_learned_clause (glue);
-      update_ema (ema.learned.glue.slow, glue, 1e-6);
-      update_ema (ema.learned.glue.fast, glue, 1e-4);
-      LOG ("new slow learned glue EMA %.4f", ema.learned.glue.slow);
-      LOG ("new slow learned fast EMA %.4f", ema.learned.glue.fast);
+      driving_clause = new_learned_clause (glue);
       minimize_clause ();
       check_clause ();
       trace_add_clause (driving_clause);
-      int jump = var (literals[1]).level;
+      jump = var (literals[1]).level;
       assert (jump < level);
-      backtrack (jump, uip);
-      assign (-uip, driving_clause);
     }
+    backtrack (jump, uip);
+    assign (-uip, driving_clause);
     bump_and_clear_seen_literals (uip);
     literals.clear ();
     clear_levels ();
@@ -1073,7 +1072,9 @@ COMMENT:
       continue;
     }
     if (parse_lit (ch, lit) == 'c') goto COMMENT;
-    DEBUG (original_literals.push_back (lit));
+#ifndef NDEBUG
+    original_literals.push_back (lit);
+#endif
     if (lit) {
       if (literals.size () == INT_MAX) perr ("clause too large");
       literals.push_back (lit);
@@ -1135,7 +1136,7 @@ static void parse_solution () {
   STOP (parse);
 }
 
-static void check_produced_witness () {
+static void check_satisfying_assignment (int (*assignment)(int)) {
 #ifndef NDEBUG
   bool satisfied = false;
   size_t start = 0;
@@ -1153,8 +1154,9 @@ static void check_produced_witness () {
       }
       satisfied = false;
       start = i + 1;
-    } else if (!satisfied && val (lit) > 0) satisfied = true;
+    } else if (!satisfied && assignment (lit) > 0) satisfied = true;
   }
+  msg ("satisfying assignment checked");
 #endif
 }
 
@@ -1224,17 +1226,19 @@ int main (int argc, char ** argv) {
   if (close_input == 1) fclose (dimacs_file);
   if (close_input == 2) pclose (dimacs_file);
   if (solution_file) {
+    msg ("");
     msg ("reading solution file from '%s'", solution_name);
     parse_solution ();
     fclose (solution_file);
+    check_satisfying_assignment (sol);
   }
   init_search ();
   res = search ();
   if (close_proof) fclose (proof_file);
   msg ("");
   if (res == 10) {
+    check_satisfying_assignment (val);
     printf ("s SATISFIABLE\n");
-    check_produced_witness ();
     print_witness ();
     fflush (stdout);
   } else {

@@ -2,11 +2,12 @@
 
 cd `dirname $0`
 
-if [ ! -x cadical ]
-then
-  echo "*** run-regression.sh: make 'cadical' first" 1>&2
+die () {
+  echo "*** run-regression.sh: $*" 1>&2
   exit 1
-fi
+}
+
+[ -x cadical ] || die "make 'cadical' first"
 
 checker=none
 for d in `echo $PATH | tr : \ `
