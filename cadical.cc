@@ -211,7 +211,7 @@ static signed char * solution;		// like 'val' (and 'phases')
 
 /*------------------------------------------------------------------------*/
 
-// Signals handlers for printing statistics even if solver is interrupted.
+// Signal handlers for printing statistics even if solver is interrupted.
 
 static bool catchedsig = false;
 
