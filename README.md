@@ -10,7 +10,7 @@ Run './configure.sh' and then 'make' to compile 'cadical'.
 
 You might want to check out options of './configure.sh -h', such as
 
-  ./configure -p # to measure time spent in functions
+  ./configure -p # to measure/profile time spent in functions
   ./configure -l # to really see what the solver is doing
   ./configure -a # both above and in addition '-g' for debugging.
 

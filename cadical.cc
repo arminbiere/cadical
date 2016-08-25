@@ -156,6 +156,8 @@ static vector<int> literals;	// temporary clause in parsing & learning
 static vector<Clause*> irredundant;	// all not redundant clauses
 static vector<Clause*> redundant;	// all redundant clauses
 
+static bool iterating;		// report top-level assigned variables
+
 static struct {
   vector<int> literals, levels;	// seen literals & levels in 'analyze'
 } seen;
@@ -166,6 +168,7 @@ static struct {
   long conflicts;
   long decisions;
   long restarts;
+  long reports;
   long propagations;		// propagated literals in 'propagate'
 
   long bumped;			// seen and bumped variables in 'analyze'
@@ -176,6 +179,8 @@ static struct {
   struct { long current, max; } clauses;
   struct { size_t current, max; } bytes;
   struct { long units; } learned;
+
+  int fixed;			// top level assigned variables
 } stats;
 
 #ifdef PROFILE
@@ -190,11 +195,17 @@ static struct {
   struct { struct { double fast, slow; } glue; } learned;
 } ema;
 
-// Reduce and base restart limit.
+// Limits for next restart, reduce.
 
 static struct {
   struct { long conflicts; } restart, reduce;
 } limits;
+
+// Increments for next restart, reduce interval.
+
+static struct {
+  struct { long conflicts; } reduce;
+} inc;
 
 static FILE * input_file, * dimacs_file, * proof_file;
 static const char *input_name, *dimacs_name, *proof_name;
@@ -270,6 +281,11 @@ static size_t max_bytes () {
   res += (4 * stats.clauses.max * sizeof (Watch)) / 3;	// estimate
   return res;
 }
+
+static int active_variables () { return max_var - stats.fixed; }
+
+
+/*------------------------------------------------------------------------*/
 
 static void msg (const char * fmt, ...) {
   va_list ap;
@@ -442,7 +458,7 @@ static void assign (int lit, Clause * reason = 0) {
   int idx = vidx (lit);
   assert (!vals[idx]);
   Var & v = vars[idx];
-  v.level = level;
+  if (!(v.level = level)) stats.fixed++, iterating = true;
   v.reason = reason;
   vals[idx] = phases[idx] = sign (lit);
   assert (val (lit) > 0);
@@ -500,7 +516,7 @@ static void trace_add_clause (Clause * c) {
 
 static void learn_empty_clause () {
   assert (!unsat);
-  msg ("learned empty clause");
+  LOG ("learned empty clause");
   trace_empty_clause ();
   unsat = true;
 }
@@ -570,6 +586,36 @@ static void delete_clause (Clause * c) {
   stats.clauses.current--;
   dec_bytes (bytes_clause (c->size));
   delete [] (char*) c;
+}
+
+/*------------------------------------------------------------------------*/
+
+static void report (char type) {
+  if (!stats.reports++)
+    fputs (
+"c\n"
+"c                                 redundant           irredundant\n"
+"c     seconds     MB   conflicts   clauses   decisions   clauses variables\n"
+"c\n", stdout);
+//   123456.89 123456 12345678901 123456789 12345678901 123456789 123456789
+  printf (
+    "c %c "
+    "%9.2f "
+    "%6.0f "
+    "%11ld "
+    "%9ld "
+    "%11ld "
+    "%9ld "
+    "%9d\n",
+    type,
+    seconds (),
+    max_bytes ()/(double)(1<<20),
+    stats.conflicts,
+    (long) redundant.size (),
+    stats.decisions,
+    (long) irredundant.size (),
+    active_variables ());
+  fflush (stdout);
 }
 
 /*------------------------------------------------------------------------*/
@@ -804,12 +850,15 @@ static void restart () {
 }
 
 static bool reducing () {
-  return false;
+  return stats.conflicts >= limits.reduce.conflicts;
 }
 
 static void reduce () {
   START (reduce);
   stats.reduce.count++;
+  inc.reduce.conflicts += 100;
+  limits.reduce.conflicts = stats.conflicts + inc.reduce.conflicts;
+  report ('-');
   STOP (reduce);
 }
 
@@ -827,6 +876,11 @@ static void decide () {
   STOP (decide);
 }
 
+static void iterate () {
+  iterating = false;
+  report ('i');
+}
+
 static int search () {
   int res = 0;
   START (search);
@@ -836,6 +890,7 @@ static int search () {
     else if (satisfied ()) res= 10;
     else if (restarting ()) restart ();
     else if (reducing ()) reduce ();
+    else if (iterating) iterate ();
     else decide ();
   STOP (search);
   return res;
@@ -930,7 +985,9 @@ static void init_variables () {
 }
 
 static void init_search () {
-  limits.restart.conflicts = stats.conflicts + 50;
+  limits.restart.conflicts = 50;
+  limits.reduce.conflicts = 2000;
+  inc.reduce.conflicts = 2000;
 }
 
 static void reset () {
