@@ -68,10 +68,10 @@ using namespace std;
 struct Clause {
   bool redundant;	// so not 'irredundant' and on 'redudant' stack
   bool garbage;		// can be garbage collected
-  int size;		// actual size of 'lits'
+  int size;		// actual size of 'literals'
   int glue;		// LBD = glucose level = glue
   long resolved;	// conflict index when last resolved
-  int lits[1];		// actually of variadic 'size'
+  int literals[1];	// actually of variadic 'size'
 };
 
 struct Var {
@@ -326,7 +326,7 @@ static void LOG (Clause * c, const char *fmt, ...) {
     else printf (" irredundant");
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
-      printf (" %d", c->lits[i]);
+      printf (" %d", c->literals[i]);
   } else if (level) printf (" decision");
   else printf (" unit");
   fputc ('\n', stdout);
@@ -494,7 +494,7 @@ static void trace_add_clause (Clause * c) {
   if (!proof_file) return;
   LOG (c, "tracing");
   for (int i = 0; i < c->size; i++)
-    fprintf (proof_file, "%d ", c->lits[i]);
+    fprintf (proof_file, "%d ", c->literals[i]);
   fputs ("0\n", proof_file);
 }
 
@@ -514,7 +514,7 @@ static void watch_literal (int lit, int blit, Clause * c) {
 
 static Clause * watch_clause (Clause * c) {
   assert (c->size > 1);
-  int l0 = c->lits[0], l1 = c->lits[1];
+  int l0 = c->literals[0], l1 = c->literals[1];
   watch_literal (l0, l1, c);
   watch_literal (l1, l0, c);
   return c;
@@ -536,7 +536,7 @@ static Clause * new_clause (bool red, int glue = 0) {
   res->resolved = stats.conflicts;
   res->redundant = red;
   res->garbage = false;
-  for (int i = 0; i < size; i++) res->lits[i] = literals[i];
+  for (int i = 0; i < size; i++) res->literals[i] = literals[i];
   if (red) redundant.push_back (res);
   else irredundant.push_back (res);
   if (++stats.clauses.current > stats.clauses.max)
@@ -593,7 +593,7 @@ static bool propagate () {
 	else assign (w.blit, w.clause);
       } else {
 	assert (w.clause->size == w.size);
-	int * lits = w.clause->lits;
+	int * lits = w.clause->literals;
 	if (lits[1] != -lit) swap (lits[0], lits[1]);
 	assert (lits[1] == -lit);
 	const int u = val (lits[0]);
@@ -740,7 +740,7 @@ static void analyze () {
     size_t i = trail.size ();
     for (;;) {
       for (int j = 0; j < reason->size; j++)
-	if (analyze_literal (reason->lits[j])) open++;
+	if (analyze_literal (reason->literals[j])) open++;
       while (!var (uip = trail[--i]).seen)
 	;
       if (!--open) break;
