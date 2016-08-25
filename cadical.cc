@@ -755,8 +755,8 @@ static void clear_levels () {
 static void bump_clause (Clause * c) { 
   if (!c->redundant) return;
   c->resolved = stats.conflicts;
-  update_ema (ema.resolved.size, c->size, 1e-6);
-  update_ema (ema.resolved.glue, c->glue, 1e-6);
+  update_ema (ema.resolved.size, c->size, 1e-5);
+  update_ema (ema.resolved.glue, c->glue, 1e-5);
 }
 
 struct level_greater_than {
@@ -808,8 +808,8 @@ static void analyze () {
     check_clause ();
     int size = (int) literals.size ();
     int glue = (int) seen.levels.size ();
-    update_ema (ema.learned.glue.slow, glue, 1e-6);
-    update_ema (ema.learned.glue.fast, glue, 1e-4);
+    update_ema (ema.learned.glue.slow, glue, 1e-5);
+    update_ema (ema.learned.glue.fast, glue, 1e-2);
     LOG ("new slow learned glue EMA %.4f", ema.learned.glue.slow);
     LOG ("new slow learned fast EMA %.4f", ema.learned.glue.fast);
     Clause * driving_clause = 0;
@@ -907,12 +907,17 @@ static void mark_redundant_clauses () {
     assert (c->redundant);
     if (c->reason) continue;
     if (c->garbage) continue;
+    if (c->glue <= 2) continue;
+    if (c->size <= 3) continue;
     if (c->resolved > limits.reduce.resolved) continue;
     if (c->glue <= ema.resolved.glue &&
         c->size <= ema.resolved.size) continue;
     work.push_back (c);
   }
   sort (work.begin (), work.end (), reduce_less_than ());
+  size_t target = work.size ()/2;
+  for (size_t i = 0; i < target; i++)
+    work[i]->garbage = true;
 }
 
 static void unprotect_reasons () {
@@ -942,7 +947,18 @@ static void flush_watches () {
   }
 }
 
-static void collect_clauses () {
+static void collect_clauses (vector<Clause*> & clauses) {
+  const size_t size = clauses.size ();
+  size_t i = 0, j = 0;
+  while (i < size) {
+    Clause * c = clauses[j++] = clauses[i++];
+    if (!c->garbage) continue;
+    stats.reduce.clauses++;
+    stats.reduce.bytes += bytes_clause (c->size);
+    delete_clause (c);
+    j--;
+  }
+  clauses.resize (j);
 }
 
 static void reduce () {
@@ -956,11 +972,12 @@ static void reduce () {
   mark_redundant_clauses ();
   unprotect_reasons ();
   flush_watches ();
-  collect_clauses ();
+  if (limits.reduce.fixed < stats.fixed) collect_clauses (irredundant);
+  collect_clauses (redundant);
   inc.reduce.conflicts += 100;
   limits.reduce.conflicts = stats.conflicts + inc.reduce.conflicts;
-  limits.reduce.fixed = stats.fixed;
   limits.reduce.resolved = stats.conflicts;
+  limits.reduce.fixed = stats.fixed;
   report ('-');
   STOP (reduce);
 }
@@ -1012,22 +1029,22 @@ static void print_statistics () {
   msg ("");
   msg ("conflicts:     %15ld   %10.2f  (per second)",
     stats.conflicts, relative (stats.conflicts, t));
-  msg ("  bumped:      %15ld   %10.2f  (per conflict)",
-    stats.bumped, relative (stats.bumped, stats.conflicts));
-  msg ("  units:       %15ld   %10.2f  (conflicts per unit)",
-    stats.learned.units, relative (stats.conflicts, stats.learned.units));
   msg ("decisions:     %15ld   %10.2f  (per second)",
     stats.decisions, relative (stats.decisions, t));
-  msg ("  searched:    %15ld   %10.2f  (per decision)",
-    stats.searched, relative (stats.searched, stats.decisions));
   msg ("reductions:    %15ld   %10.2f  (conflicts per reduction)",
     stats.reduce.count, relative (stats.conflicts, stats.reduce.count));
-  msg ("  collected:   %15ld   %10.2f  (clauses and MB)",
-    stats.reduce.clauses, stats.reduce.bytes/(double)(1l<<20));
   msg ("restarts:      %15ld   %10.2f  (conflicts per restart)",
     stats.restarts, relative (stats.conflicts, stats.restarts));
   msg ("propagations:  %15ld   %10.2f  (millions per second)",
     stats.propagations, relative (stats.propagations/1e6, t));
+  msg ("bumped:        %15ld   %10.2f  (per conflict)",
+    stats.bumped, relative (stats.bumped, stats.conflicts));
+  msg ("units:         %15ld   %10.2f  (conflicts per unit)",
+    stats.learned.units, relative (stats.conflicts, stats.learned.units));
+  msg ("searched:      %15ld   %10.2f  (per decision)",
+    stats.searched, relative (stats.searched, stats.decisions));
+  msg ("collected:     %15ld   %10.2f  (clauses and MB)",
+    stats.reduce.clauses, stats.reduce.bytes/(double)(1l<<20));
   msg ("maxbytes:      %15ld   %10.2f  MB",
     m, m/(double)(1l<<20));
   msg ("time:          %15s   %10.2f  seconds", "", t);
