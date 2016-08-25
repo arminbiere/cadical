@@ -13,7 +13,7 @@ for d in `echo $PATH | tr : \ `
 do
   if [ -x "$d/drabt" ]
   then 
-    checker="$d/drabt"
+    checker="$d/drabt -v"
     break 
   elif [ -x "$d/drat-trim" ]
   then
