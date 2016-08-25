@@ -7,15 +7,19 @@ time not too much slower than state of the art CDCL solvers
 if pre-processing is disabled.
 
 Run './configure.sh' and then 'make' to compile 'cadical'.
-You might want to check out './configure.sh -h'.
+You might want to check out './configure.sh -h', e.g., use
+
+  ./configure -p # to measure time spent in functions
+  ./configure -l # to really see what the solver is doing
+  ./configure -a # both above and in addition '-g' for debugging.
 
 The lastest version of CaDiCal can be found on github
 
   http://github.com/arminbiere/cadical
 
-and stable source releases on
+and a stable source releases on
 
   http://fmv.jku.at/cadical
 
 Armin Biere
-Sa 20. Aug 08:20:56 EDT 2016
+Do 25. Aug 02:26:08 CEST 2016

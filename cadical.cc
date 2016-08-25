@@ -329,6 +329,8 @@ static void LOG (Clause * c, const char *fmt, ...) {
 
 /*------------------------------------------------------------------------*/
 
+// You might want to turn logging on with './configure -l' for debugging.
+
 #ifdef PROFILE
 
 static void start (double * u) { timers.push_back (Timer (seconds (), u)); }
