@@ -68,6 +68,7 @@ using namespace std;
 struct Clause {
   bool redundant;	// so not 'irredundant' and on 'redudant' stack
   bool garbage;		// can be garbage collected
+  bool reason;		// reason clause can not be collected
   int size;		// actual size of 'literals'
   int glue;		// LBD = glucose level = glue
   long resolved;	// conflict index when last resolved
@@ -198,7 +199,8 @@ static struct {
 // Limits for next restart, reduce.
 
 static struct {
-  struct { long conflicts; } restart, reduce;
+  struct { long conflicts, resolved; int fixed; } reduce;
+  struct { long conflicts; } restart;
 } limits;
 
 // Increments for next restart, reduce interval.
@@ -424,6 +426,13 @@ static int val (int lit) {
   return res;
 }
 
+static int fixed (int lit) {
+  int idx = vidx (lit), res = vals[idx];
+  if (res && vars[idx].level) res = 0;
+  if (lit < 0) res = -res;
+  return res;
+}
+
 static int sign (int lit) {
   assert (lit), assert (abs (lit) <= max_var);
   return lit < 0 ? -1 : 1;
@@ -552,6 +561,7 @@ static Clause * new_clause (bool red, int glue = 0) {
   res->resolved = stats.conflicts;
   res->redundant = red;
   res->garbage = false;
+  res->reason = false;
   for (int i = 0; i < size; i++) res->literals[i] = literals[i];
   if (red) redundant.push_back (res);
   else irredundant.push_back (res);
@@ -594,17 +604,17 @@ static void report (char type) {
   if (!stats.reports++)
     fputs (
 "c\n"
-"c                                 redundant           irredundant\n"
-"c     seconds     MB   conflicts   clauses   decisions   clauses variables\n"
+"c                                 redundant average irredundant\n"
+"c     seconds     MB   conflicts   clauses     glue   clauses variables\n"
 "c\n", stdout);
-//   123456.89 123456 12345678901 123456789 12345678901 123456789 123456789
+//   123456.89 123456 12345678901 123456789 123456.8 123456789 123456789
   printf (
     "c %c "
     "%9.2f "
     "%6.0f "
     "%11ld "
     "%9ld "
-    "%11ld "
+    "%8.1f "
     "%9ld "
     "%9d\n",
     type,
@@ -612,7 +622,7 @@ static void report (char type) {
     max_bytes ()/(double)(1<<20),
     stats.conflicts,
     (long) redundant.size (),
-    stats.decisions,
+    ema.learned.glue.slow,
     (long) irredundant.size (),
     active_variables ());
   fflush (stdout);
@@ -832,6 +842,8 @@ static void analyze () {
 
 static bool satisfied () { return trail.size () == (size_t) max_var; }
 
+/*------------------------------------------------------------------------*/
+
 static bool restarting () {
   if (stats.conflicts <= limits.restart.conflicts) return false;
   double slow = ema.learned.glue.slow;
@@ -849,18 +861,111 @@ static void restart () {
   STOP (restart);
 }
 
+/*------------------------------------------------------------------------*/
+
 static bool reducing () {
   return stats.conflicts >= limits.reduce.conflicts;
+}
+
+static void protect_reasons () {
+  for (size_t i = 0; i < trail.size (); i++) {
+    Var & v = var (trail[i]);
+    if (v.level && v.reason) v.reason->reason = true;
+  }
+}
+static bool clause_root_level_satisfied (Clause * c) {
+  for (int i = 0; i < c->size; i++)
+    if (fixed (c->literals[i]) > 0) return true;
+  return false;
+}
+
+static void mark_satisfied_clauses (const vector<Clause*> & clauses) {
+  const size_t size = clauses.size ();
+  for (size_t i = 0; i < size; i++) {
+    Clause * c = clauses[i];
+    if (!c->reason && clause_root_level_satisfied (c)) c->garbage = true;
+  }
+}
+
+struct reduce_less_than {
+  bool operator () (Clause * c, Clause * d) {
+    if (c->resolved < d->resolved) return true;
+    if (c->resolved > d->resolved) return false;
+    if (c->glue > d->glue) return true;
+    if (c->glue < d->glue) return false;
+    if (c->size > d->size) return true;
+    if (c->size < d->size) return false;
+    return false;
+  }
+};
+
+static void mark_redundant_clauses () {
+  vector<Clause *> work;
+  const size_t size = redundant.size ();
+  for (size_t i = 0; i < size; i++) {
+    Clause * c = redundant[i];
+    assert (c->redundant);
+    if (c->reason) continue;
+    if (c->garbage) continue;
+    if (c->resolved > limits.reduce.resolved) continue;
+    if (c->glue <= ema.resolved.glue &&
+        c->size <= ema.resolved.size) continue;
+    work.push_back (c);
+  }
+  sort (work.begin (), work.end (), reduce_less_than ());
+}
+
+static void unprotect_reasons () {
+  for (size_t i = 0; i < trail.size (); i++) {
+    Var & v = var (trail[i]);
+    if (v.level && v.reason)
+      assert (v.reason->reason), v.reason->reason = false;
+  }
+}
+
+static void flush_watches () {
+  for (int idx = 1; idx <= max_var; idx++) {
+    if (fixed (idx)) 
+      watches (idx) = Watches (), watches (-idx) = Watches ();
+    else {
+      for (int sign = -1; sign <= 1; sign += 2) {
+	Watches & ws = watches (sign * idx);
+	const size_t size = ws.size ();
+	size_t i = 0, j = 0;
+	while (i < size) {
+	  Watch w = ws[j++] = ws[i++];
+	  if (w.clause->garbage) j--;
+	}
+	ws.resize (j);
+      }
+    }
+  }
+}
+
+static void collect_clauses () {
 }
 
 static void reduce () {
   START (reduce);
   stats.reduce.count++;
+  LOG ("reduce %ld", stats.reduce.count);
+  protect_reasons ();
+  if (limits.reduce.fixed < stats.fixed)
+    mark_satisfied_clauses (irredundant),
+    mark_satisfied_clauses (redundant);
+  mark_redundant_clauses ();
+  unprotect_reasons ();
+  flush_watches ();
+  collect_clauses ();
   inc.reduce.conflicts += 100;
   limits.reduce.conflicts = stats.conflicts + inc.reduce.conflicts;
+  limits.reduce.fixed = stats.fixed;
+  limits.reduce.resolved = stats.conflicts;
   report ('-');
   STOP (reduce);
 }
+
+/*------------------------------------------------------------------------*/
 
 static void decide () {
   START (decide);
