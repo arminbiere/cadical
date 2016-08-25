@@ -223,7 +223,7 @@ static void (*sig_bus_handler)(int);
 
 static double relative (double a, double b) { return b ? a / b : 0; }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(PROFILE)
 static double percent (double a, double b) { return relative (100 * a, b); }
 #endif
 
@@ -422,20 +422,15 @@ static Var & var (int lit) { return vars [vidx (lit)]; }
 
 static void check_vmtf_queue_invariant () {
 #if 0
-  int count = 0;
-  for (int idx = queue.first; idx; idx = var (idx).next) count++;
+  int count = 0, idx, next;
+  for (idx = queue.first; idx; idx = var (idx).next) count++;
   assert (count == max_var);
-  count = 0;
-  for (int idx = queue.last; idx; idx = var (idx).prev) count++;
-  assert (count == max_var);
-  for (int idx = queue.first, next; idx; idx = next) {
-    next = var (idx).next;
-    if (next) assert (var (idx).bumped < var (next).bumped);
-  }
-  for (int idx = queue.next, next; idx; idx = next) {
-    next = var (idx).next;
-    assert (!next || val (next));
-  }
+  for (idx = queue.last; idx; idx = var (idx).prev) count--;
+  assert (!count);
+  for (idx = queue.first; idx && (next = var (idx).next); idx = next)
+    assert (var (idx).bumped < var (next).bumped);
+  for (idx = queue.next; idx && (next = var (idx).next; idx = next)
+    assert (val (next));
 #endif
 }
 
@@ -639,8 +634,6 @@ static int sol (int lit) {
 }
 
 #endif
-
-// If the user provides a witness for checking
 
 static void check_clause () {
 #ifndef NDEBUG
