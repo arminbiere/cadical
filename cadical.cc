@@ -68,10 +68,10 @@ using namespace std;
 struct Clause {
   bool redundant;	// so not 'irredundant' and on 'redudant' stack
   bool garbage;		// can be garbage collected
-  int size;		// actual size of 'literals'
+  int size;		// actual size of 'lits'
   int glue;		// LBD = glucose level = glue
   long resolved;	// conflict index when last resolved
-  int literals[1];	// actually of variadic 'size'
+  int lits[1];		// actually of variadic 'size'
 };
 
 struct Var {
@@ -114,6 +114,7 @@ struct Timer {
   double started;	// starting time (in seconds) for this phase
   double * update;	// update this profile if phase stops
   Timer (double s, double * u) : started (s), update (u) { }
+  Timer () { }
 };
 
 #endif
@@ -132,7 +133,6 @@ static Var * vars;
 
 static signed char * vals;		// assignment
 static signed char * phases;		// saved previous assignment
-static signed char * solution;		// for debugging
 
 static Watches * all_literal_watches;	// [2,2*max_var+1]
 
@@ -196,9 +196,18 @@ static struct {
   struct { long conflicts; } restart, reduce;
 } limits;
 
-static FILE * input_file, * dimacs_file, * proof_file, * solution_file;
-static const char *input_name, *dimacs_name, *proof_name, *solution_name;
+static FILE * input_file, * dimacs_file, * proof_file;
+static const char *input_name, *dimacs_name, *proof_name;
 static int lineno, close_input, close_proof;
+
+#ifndef NDEBUG
+// Sam Buss suggested to debug the case where a solver incorrectly
+// claims the formula to be unsatisfiable by checking every learned
+// clause to be satisfied by a satisfying assignment.
+static FILE * solution_file;
+static const char *solution_name;
+static signed char * solution;		// like 'val' (and 'phases')
+#endif
 
 /*------------------------------------------------------------------------*/
 
@@ -213,7 +222,10 @@ static void (*sig_bus_handler)(int);
 /*------------------------------------------------------------------------*/
 
 static double relative (double a, double b) { return b ? a / b : 0; }
+
+#ifndef NDEBUG
 static double percent (double a, double b) { return relative (100 * a, b); }
+#endif
 
 static void update_ema (double & ema, double y, double alpha) {
   ema += alpha * (y - ema);
@@ -455,7 +467,7 @@ static void unassign (int lit) {
   check_vmtf_queue_invariant ();
 }
 
-static void backtrack (int target_level, int except = 0) {
+static void backtrack (int target_level) {
   assert (target_level <= level);
   if (target_level == level) return;
   LOG ("backtracking to decision level %d", target_level);
@@ -487,7 +499,7 @@ static void trace_add_clause (Clause * c) {
   if (!proof_file) return;
   LOG (c, "tracing");
   for (int i = 0; i < c->size; i++)
-    fprintf (proof_file, "%d ", c->literals[i]);
+    fprintf (proof_file, "%d ", c->lits[i]);
   fputs ("0\n", proof_file);
 }
 
@@ -507,7 +519,7 @@ static void watch_literal (int lit, int blit, Clause * c) {
 
 static Clause * watch_clause (Clause * c) {
   assert (c->size > 1);
-  int l0 = c->literals[0], l1 = c->literals[1];
+  int l0 = c->lits[0], l1 = c->lits[1];
   watch_literal (l0, l1, c);
   watch_literal (l1, l0, c);
   return c;
@@ -529,7 +541,7 @@ static Clause * new_clause (bool red, int glue = 0) {
   res->resolved = stats.conflicts;
   res->redundant = red;
   res->garbage = false;
-  for (int i = 0; i < size; i++) res->literals[i] = literals[i];
+  for (int i = 0; i < size; i++) res->lits[i] = literals[i];
   if (red) redundant.push_back (res);
   else irredundant.push_back (res);
   if (++stats.clauses.current > stats.clauses.max)
@@ -586,7 +598,7 @@ static bool propagate () {
 	else assign (w.blit, w.clause);
       } else {
 	assert (w.clause->size == w.size);
-	int * lits = w.clause->literals;
+	int * lits = w.clause->lits;
 	if (lits[1] != -lit) swap (lits[0], lits[1]);
 	assert (lits[1] == -lit);
 	const int u = val (lits[0]);
@@ -617,6 +629,8 @@ static bool propagate () {
 static void minimize_clause () {
 }
 
+#ifndef NDEBUG
+
 static int sol (int lit) {
   assert (solution);
   int res = solution[vidx (lit)];
@@ -624,9 +638,12 @@ static int sol (int lit) {
   return res;
 }
 
+#endif
+
 // If the user provides a witness for checking
 
 static void check_clause () {
+#ifndef NDEBUG
   if (!solution) return;
   bool satisfied = false;
   for (size_t i = 0; !satisfied && i < literals.size (); i++)
@@ -639,6 +656,7 @@ static void check_clause () {
   fputs ("0\n", stderr);
   fflush (stderr);
   abort ();
+#endif
 }
 
 struct bumped_earlier {
@@ -729,7 +747,7 @@ static void analyze () {
     size_t i = trail.size ();
     for (;;) {
       for (int j = 0; j < reason->size; j++)
-	if (analyze_literal (reason->literals[j])) open++;
+	if (analyze_literal (reason->lits[j])) open++;
       while (!var (uip = trail[--i]).seen)
 	;
       if (!--open) break;
@@ -739,8 +757,8 @@ static void analyze () {
     LOG ("first UIP %d", uip);
     literals.push_back (-uip);
     check_clause ();
-    int size = literals.size ();
-    int glue = seen.levels.size ();
+    int size = (int) literals.size ();
+    int glue = (int) seen.levels.size ();
     update_ema (ema.learned.glue.slow, glue, 1e-6);
     update_ema (ema.learned.glue.fast, glue, 1e-4);
     LOG ("new slow learned glue EMA %.4f", ema.learned.glue.slow);
@@ -761,7 +779,7 @@ static void analyze () {
       jump = var (literals[1]).level;
       assert (jump < level);
     }
-    backtrack (jump, uip);
+    backtrack (jump);
     assign (-uip, driving_clause);
     bump_and_clear_seen_literals (uip);
     literals.clear ();
@@ -956,11 +974,13 @@ static const char * USAGE =
 "\n"
 "where '<option>' is one of the following\n"
 "\n"
-"-h         print this command line option summary\n"
+"  -h         print this command line option summary\n"
 "\n"
-"-s <sol>   read solution in competition output format\n"
-"           (used for testing and debugging only)\n"
+#ifndef NDEBUG
+"  -s <sol>   read solution in competition output format\n"
+"             (used for testing and debugging only)\n"
 "\n"
+#endif
 "and '<input>' is a (compressed) DIMACS file and '<output>'\n"
 "is a file to store the DRAT proof.  If no '<proof>' file is\n"
 "specified, then no proof is generated.  If no '<input>' is given\n"
@@ -971,8 +991,8 @@ static const char * USAGE =
 struct lit_less_than {
   bool operator () (int a, int b) {
     int res = abs (a) - abs (b);
-    if (res) return res;
-    return a < b ? -1 : 1;
+    if (res < 0) return true;
+    return !res && a < b;
   }
 };
 
@@ -1091,6 +1111,8 @@ COMMENT:
   STOP (parse);
 }
 
+#ifndef NDEBUG
+
 static void parse_solution () {
   assert (solution_name), assert (solution_file);
   START (parse);
@@ -1135,6 +1157,8 @@ static void parse_solution () {
   msg ("parsed %d solutions %.2f%%", count, percent (count, max_var));
   STOP (parse);
 }
+
+#endif
 
 static void check_satisfying_assignment (int (*assignment)(int)) {
 #ifndef NDEBUG
@@ -1187,18 +1211,19 @@ int main (int argc, char ** argv) {
   int i, res;
   for (i = 1; i < argc; i++) {
     if (!strcmp (argv[i], "-h")) fputs (USAGE, stdout), exit (0);
-    else if (!strcmp (argv[i], "-s")) {
+    else if (!strcmp (argv[i], "-")) {
+      if (proof_file) die ("too many arguments");
+      else if (!dimacs_file) dimacs_file = stdin, dimacs_name = "<stdin>";
+      else proof_file = stdout, proof_name = "<stdout>";
+#ifndef NDEBUG
+    } else if (!strcmp (argv[i], "-s")) {
       if (++i == argc) die ("argument to '-s' missing");
       if (solution_file) die ("multiple solution files");
       if (!(solution_file = fopen (argv[i], "r")))
 	die ("can not read solution file '%s'", argv[i]);
       solution_name = argv[i];
-    } else if (!strcmp (argv[i], "-")) {
-      if (proof_file) die ("too many arguments");
-      else if (!dimacs_file) dimacs_file = stdin, dimacs_name = "<stdin>";
-      else proof_file = stdout, proof_name = "<stdout>";
-    } else if (argv[i][0] == '-')
-    die ("invalid option '%s'", argv[i]);
+#endif
+    } else if (argv[i][0] == '-') die ("invalid option '%s'", argv[i]);
     else if (proof_file) die ("too many arguments");
     else if (dimacs_file) {
       if (!(proof_file = fopen (argv[i], "w")))
@@ -1225,6 +1250,7 @@ int main (int argc, char ** argv) {
   parse_dimacs ();
   if (close_input == 1) fclose (dimacs_file);
   if (close_input == 2) pclose (dimacs_file);
+#ifndef NDEBUG
   if (solution_file) {
     msg ("");
     msg ("reading solution file from '%s'", solution_name);
@@ -1232,6 +1258,7 @@ int main (int argc, char ** argv) {
     fclose (solution_file);
     check_satisfying_assignment (sol);
   }
+#endif
   init_search ();
   res = search ();
   if (close_proof) fclose (proof_file);
