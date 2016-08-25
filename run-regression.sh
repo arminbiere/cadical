@@ -2,13 +2,32 @@
 
 cd `dirname $0`
 
-if [ ! -x ../cadical ]
+if [ ! -x cadical ]
 then
   echo "*** run-regression.sh: make 'cadical' first" 1>&2
   exit 1
 fi
 
-echo $PATH
+checker=none
+for d in `echo $PATH | tr : \ `
+do
+  if [ -x "$d/drabt" ]
+  then 
+    checker="$d/drabt"
+    break 
+  elif [ -x "$d/drat-trim" ]
+  then
+    checker="$d/drat-trim"
+    break
+  fi
+done
+
+if [ x"$checker" = xnone ]
+then
+  echo "no proof checking (neither 'drabt' nor 'drat-trim' found)"
+else
+  echo "checking DRAT proofs with '$checker'"
+fi
 
 ok=0
 failed=0
@@ -20,14 +39,37 @@ run () {
   else
     solopts=""
   fi
-  opts="cnfs/$1.cnf$solopts"
-  echo -n "../cadical $opts # $2 ..."
-  ../cadical $opts 1>cnfs/$1.log 2>cnfs/$1.err
+  if [ $2 = 20 -a x"$checker" = xnone ]
+  then
+    proofopts=""
+  else
+    proofopts=" cnfs/$1.proof"
+  fi
+  opts="cnfs/$1.cnf$solopts$proofopts"
+  echo -n "./cadical $opts # $2 ..."
+  ./cadical $opts 1>cnfs/$1.log 2>cnfs/$1.err
   res=$?
   if [ $res = $2 ]
   then 
-    echo " ok"
-    ok=`expr $ok + 1`
+    if [ $res = 10 ]
+    then
+      echo " ok"
+      ok=`expr $ok + 1`
+    elif [ x"$checker" = x ]
+    then
+      echo " ok"
+      ok=`expr $ok + 1`
+    else
+      $checker cnfs/$1.cnf cnfs/$1.proof 1>&2 >cnfs/$1.check
+      if test $?
+      then
+	echo " ok (proof checked)"
+	ok=`expr $ok + 1`
+      else
+	echo " failed (proof check '$checker cnfs/$1.cnf cnfs/$1.proof' failed)"
+	failed=`expr $failed + 1`
+      fi
+    fi
   else 
     echo " failed (exit code $res)"
     failed=`expr $failed + 1`

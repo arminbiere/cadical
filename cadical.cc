@@ -475,6 +475,35 @@ static void backtrack (int target_level, int except = 0) {
 
 /*------------------------------------------------------------------------*/
 
+static void trace_empty_clause () {
+  if (!proof_file) return;
+  LOG ("tracing empty clause");
+  fputs ("0\n", proof_file);
+}
+
+static void trace_unit_clause (int unit) {
+  if (!proof_file) return;
+  LOG ("tracing unit clause %d", unit);
+  fprintf (proof_file, "%d 0\n", unit);
+}
+
+static void trace_add_clause (Clause * c) {
+  if (!proof_file) return;
+  LOG (c, "tracing");
+  for (int i = 0; i < c->size; i++)
+    fprintf (proof_file, "%d ", c->literals[i]);
+  fputs ("0\n", proof_file);
+}
+
+static void learn_empty_clause () {
+  assert (!unsat);
+  msg ("learned empty clause");
+  trace_empty_clause ();
+  unsat = true;
+}
+
+/*------------------------------------------------------------------------*/
+
 static void watch_literal (int lit, int blit, Clause * c) {
   watches (lit).push_back (Watch (blit, c));
   LOG (c, "watch %d blit %d in", lit, blit);
@@ -522,7 +551,7 @@ static void add_new_original_clause () {
     int unit = literals[0], tmp = val (unit);
     if (!tmp) assign (unit);
     else if (tmp < 0) {
-      if (!unsat) msg ("parsed clashing unit"), unsat = true;
+      if (!unsat) msg ("parsed clashing unit"), learn_empty_clause ();
       else LOG ("original clashing unit produces another inconsistency");
     } else LOG ("original redundant unit");
   } else watch_clause (new_clause (false));
@@ -538,28 +567,6 @@ static void delete_clause (Clause * c) {
   stats.clauses.current--;
   dec_bytes (bytes_clause (c->size));
   delete [] (char*) c;
-}
-
-/*------------------------------------------------------------------------*/
-
-static void trace_empty_clause () {
-  if (!proof_file) return;
-  LOG ("tracing empty clause");
-  fputs ("0\n", proof_file);
-}
-
-static void trace_unit_clause (int unit) {
-  if (!proof_file) return;
-  LOG ("tracing unit clause %d", unit);
-  fprintf (proof_file, "%d 0\n", unit);
-}
-
-static void trace_add_clause (Clause * c) {
-  if (!proof_file) return;
-  LOG (c, "tracing");
-  for (int i = 0; i < c->size; i++)
-    fprintf (proof_file, "%d ", c->literals[i]);
-  fputs ("0\n", proof_file);
 }
 
 /*------------------------------------------------------------------------*/
@@ -712,12 +719,8 @@ static bool analyze_literal (int lit) {
 static void analyze () {
   assert (conflict);
   START (analyze);
-  if (!level) {
-    assert (!unsat);
-    msg ("learned empty clause");
-    trace_empty_clause ();
-    unsat = true;
-  } else {
+  if (!level) learn_empty_clause ();
+  else {
     Clause * reason = conflict;
     LOG (reason, "analyzing conflicting");
     bump_clause (reason);

@@ -1,2 +1,0 @@
-First compile '../cadical' and then call './run-regression.sh'.
-ls -l $tar
