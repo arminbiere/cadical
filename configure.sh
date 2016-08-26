@@ -52,7 +52,7 @@ then
 fi
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
-[ $profile = yes ] && CXXFLAGS="$CXXFLAGS -DPROFILE"
+[ $profile = yes ] && CXXFLAGS="$CXXFLAGS -DPROFILING"
 echo "$CXX $CXXFLAGS"
 rm -f makefile
 sed -e "s,@CXX@,$CXX," -e "s,@CXXFLAGS@,$CXXFLAGS," makefile.in > makefile

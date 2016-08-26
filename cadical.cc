@@ -63,6 +63,16 @@ using namespace std;
 
 /*------------------------------------------------------------------------*/
 
+#define OPTIONS \
+/*  NAME,          TYPE,  VAL,  LOW, HIGH, DESCRIPTION */ \
+OPTION(reduce,     bool,    1,    0,    1, "garbage collect clauses") \
+OPTION(reduceinc,   int,  300,    1,   -1, "reduce limit increment") \
+OPTION(reduceinit,  int, 2000,    0,   -1, "initial reduce limit") \
+OPTION(restart,    bool,    1,    0,    1, "enable restarting") \
+OPTION(restartint,  int,   50,    1,   -1, "restart base interval") \
+
+/*------------------------------------------------------------------------*/
+
 // Type declarations
 
 struct Clause {
@@ -109,7 +119,7 @@ struct Level {
   Level () { }
 };
 
-#ifdef PROFILE
+#ifdef PROFILING
 
 struct Timer {
   double started;	// starting time (in seconds) for this phase
@@ -184,7 +194,7 @@ static struct {
   int fixed;			// top level assigned variables
 } stats;
 
-#ifdef PROFILE
+#ifdef PROFILING
 static vector<Timer> timers;
 #endif
 
@@ -224,6 +234,22 @@ static signed char * solution;		// like 'val' (and 'phases')
 
 /*------------------------------------------------------------------------*/
 
+// Options are defined above and statically allocated and initialized here.
+
+static struct {
+#define OPTION(N,T,V,L,H,D) \
+  T N;
+  OPTIONS
+#undef OPTION
+} opts = {
+#define OPTION(N,T,V,L,H,D) \
+  V,
+  OPTIONS
+#undef OPTION
+};
+
+/*------------------------------------------------------------------------*/
+
 // Signal handlers for printing statistics even if solver is interrupted.
 
 static bool catchedsig = false;
@@ -238,7 +264,7 @@ static void (*sig_bus_handler)(int);
 
 static double relative (double a, double b) { return b ? a / b : 0; }
 
-#if !defined(NDEBUG) || defined(PROFILE)
+#if !defined(NDEBUG) || defined(PROFILING)
 static double percent (double a, double b) { return relative (100 * a, b); }
 #endif
 
@@ -299,6 +325,18 @@ static void msg (const char * fmt, ...) {
   fflush (stdout);
 }
 
+static void section (const char * title) {
+  char line[160];
+  sprintf (line, "---- [ %s ] ", title);
+  assert (strlen (line) < sizeof line);
+  int i = 0;
+  for (i = strlen (line); i < 76; i++) line[i] = '-';
+  line[i] = 0;
+  msg ("");
+  msg (line);
+  msg ("");
+}
+
 static void die (const char * fmt, ...) {
   va_list ap;
   fputs ("*** cadical error: ", stderr);
@@ -320,6 +358,8 @@ static void perr (const char * fmt, ...) {
 }
 
 /*------------------------------------------------------------------------*/
+
+// You might want to turn on logging with './configure -l'.
 
 #ifdef LOGGING
 
@@ -357,9 +397,9 @@ static void LOG (Clause * c, const char *fmt, ...) {
 
 /*------------------------------------------------------------------------*/
 
-// You might want to turn logging on with './configure -l' for debugging.
+// You might want to turn on profiling with './configure -p'.
 
-#ifdef PROFILE
+#ifdef PROFILING
 
 static void start (double * u) { timers.push_back (Timer (seconds (), u)); }
 
@@ -371,35 +411,53 @@ static void stop (double * u) {
   timers.pop_back ();
 }
 
+// To profile say 'foo', just add another line 'PROFILE(foo)' and wrap
+// the code to be profiled within a 'START (foo)' / 'STOP (foo)' block.
+
+#define PROFILES \
+PROFILE(analyze) \
+PROFILE(bump) \
+PROFILE(decide) \
+PROFILE(parse) \
+PROFILE(propagate) \
+PROFILE(reduce) \
+PROFILE(restart) \
+PROFILE(search) \
+
 static struct { 
-  double analyze;
-  double bump;
-  double decide;
-  double parse;
-  double propagate;
-  double reduce;
-  double restart;
-  double search;
+#define PROFILE(NAME) \
+  double NAME;
+  PROFILES
+#undef PROFILE
 } profile;
 
 #define START(P) start (&profile.P)
 #define STOP(P) stop (&profile.P)
 
-#define PRINT_PROFILE(P) \
-  msg ("%12.2f %7.2f%% %s", profile.P, percent (profile.P, all), #P)
-
 static void print_profile (double all) {
-  msg ("");
-  msg ("---- [ run-time profiling data ] ------------------------");
-  msg ("");
-  PRINT_PROFILE (analyze);
-  PRINT_PROFILE (bump);
-  PRINT_PROFILE (decide);
-  PRINT_PROFILE (parse);
-  PRINT_PROFILE (propagate);
-  PRINT_PROFILE (reduce);
-  PRINT_PROFILE (restart);
-  PRINT_PROFILE (search);
+  section ("run-time profiling data");
+  const size_t size = sizeof profile / sizeof (double);
+  struct { double value; const char * name; } profs[size];
+  size_t i = 0;
+#define PROFILE(NAME) \
+  profs[i].value = profile.NAME; \
+  profs[i].name = # NAME; \
+  i++;
+  PROFILES
+#undef PROFILE
+  assert (i == size);
+  // Explicit bubble sort to avoid heap allocation since 'print_profile'
+  // is also called during catching a signal after out of heap memory.
+  // This only makes sense if 'profs' is allocated on the stack, and
+  // not the heap, which should be the case.
+  for (i = 0; i < size - 1; i++) {
+    for (size_t j = i + 1; j < size; j++)
+      if (profs[j].value > profs[i].value)
+	swap (profs[i].value, profs[j].value),
+	swap (profs[i].name, profs[j].name);
+    msg ("%12.2f %7.2f%% %s",
+      profs[i].value, percent (profs[i].value, all), profs[i].name);
+  }
   msg ("  ===============================");
   msg ("%12.2f %7.2f%% all", all, 100.0);
 }
@@ -845,6 +903,7 @@ static bool satisfied () { return trail.size () == (size_t) max_var; }
 /*------------------------------------------------------------------------*/
 
 static bool restarting () {
+  if (!opts.restart) return false;
   if (stats.conflicts <= limits.restart.conflicts) return false;
   double slow = ema.learned.glue.slow;
   double fast = ema.learned.glue.fast;
@@ -864,6 +923,7 @@ static void restart () {
 /*------------------------------------------------------------------------*/
 
 static bool reducing () {
+  if (!opts.reduce) return false;
   return stats.conflicts >= limits.reduce.conflicts;
 }
 
@@ -974,7 +1034,7 @@ static void reduce () {
   flush_watches ();
   if (limits.reduce.fixed < stats.fixed) collect_clauses (irredundant);
   collect_clauses (redundant);
-  inc.reduce.conflicts += 100;
+  inc.reduce.conflicts += opts.reduceinc;
   limits.reduce.conflicts = stats.conflicts + inc.reduce.conflicts;
   limits.reduce.resolved = stats.conflicts;
   limits.reduce.fixed = stats.fixed;
@@ -1020,13 +1080,25 @@ static int search () {
 
 /*------------------------------------------------------------------------*/
 
+static void init_solving () {
+  limits.restart.conflicts = opts.restartint;
+  limits.reduce.conflicts = opts.reduceinit;
+  inc.reduce.conflicts = opts.reduceinit;
+}
+
+static int solve () {
+  init_solving ();
+  section ("solving");
+  return search ();
+}
+
+/*------------------------------------------------------------------------*/
+
 static void print_statistics () {
   double t = seconds ();
   size_t m = max_bytes ();
   print_profile (t);
-  msg ("");
-  msg ("---- [ statistics ] -------------------------------------");
-  msg ("");
+  section ("statistics");
   msg ("conflicts:     %15ld   %10.2f  (per second)",
     stats.conflicts, relative (stats.conflicts, t));
   msg ("decisions:     %15ld   %10.2f  (per second)",
@@ -1106,10 +1178,16 @@ static void init_variables () {
   levels.push_back (Level (0));
 }
 
-static void init_search () {
-  limits.restart.conflicts = 50;
-  limits.reduce.conflicts = 2000;
-  inc.reduce.conflicts = 2000;
+#define printf_bool_FMT   "%d"
+#define printf_int_FMT    "%d"
+#define printf_double_FMT "%f"
+
+static void print_options () {
+  section ("options");
+#define OPTION(N,T,V,L,H,D) \
+  msg ("--" #N "=" printf_ ## T ## _FMT, opts.N);
+  OPTIONS
+#undef OPTION
 }
 
 static void reset () {
@@ -1430,8 +1508,8 @@ int main (int argc, char ** argv) {
     check_satisfying_assignment (sol);
   }
 #endif
-  init_search ();
-  res = search ();
+  print_options ();
+  res = solve ();
   if (close_proof) fclose (proof_file);
   msg ("");
   if (res == 10) {
