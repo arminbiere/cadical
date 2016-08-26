@@ -974,7 +974,7 @@ static bool restarting () {
   if (stats.conflicts <= limits.restart.conflicts) return false;
   double slow = ema.learned.glue.slow;
   double fast = ema.learned.glue.fast;
-  double limit = (1 + opts.restartmargin) * slow;
+  double limit = (1.0 + opts.restartmargin) * slow;
   LOG ("EMA learned glue: slow %.2f, limit %.2f %c fast %.2f",
     slow, limit, (limit < fast ? '<' : (limit == fast ? '=' : '>')), fast);
   if (limit > fast) {
@@ -1174,7 +1174,7 @@ static int search () {
 static void init_solving () {
   limits.restart.conflicts = opts.restartint;
   limits.reduce.conflicts = opts.reduceinit;
-  inc.reduce.conflicts = opts.reduceinit;
+  inc.reduce.conflicts = opts.reduceinit/2;
   INIT_EMA (ema.learned.glue.fast, opts.emagluefast);
   INIT_EMA (ema.learned.glue.slow, opts.emaglueslow);
   INIT_EMA (ema.resolved.glue, opts.emaresolved);
