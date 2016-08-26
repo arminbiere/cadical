@@ -64,17 +64,18 @@ using namespace std;
 /*------------------------------------------------------------------------*/
 
 #define OPTIONS \
-/*  NAME,             TYPE,  VAL, LOW, HIGH, DESCRIPTION */ \
-OPTION(emagluefast, double, 1e-2,   0,    1, "alpha fast learned glue") \
-OPTION(emaglueslow, double, 1e-6,   0,    1, "alpha slow learned glue") \
-OPTION(emaresolved, double, 1e-4,   0,    1, "alpha resolved glue & size") \
-OPTION(reduce,        bool,    1,   0,    1, "garbage collect clauses") \
-OPTION(reducedynamic, bool,    1,   0,    1, "dynamic glue & size limit") \
-OPTION(reduceinc,      int,  300,   1,  1e9, "reduce limit increment") \
-OPTION(reduceinit,     int, 2000,   0,  1e9, "initial reduce limit") \
-OPTION(restart,       bool,    1,   0,    1, "enable restarting") \
-OPTION(restartint,     int,   50,   1,  1e9, "restart base interval") \
-OPTION(reusetrail,    bool,    1,   0,    1, "enable trail reuse") \
+/*  NAME,               TYPE,  VAL,LOW,HIGH,DESCRIPTION */ \
+OPTION(emagluefast,   double, 3e-2, 0,  1, "alpha fast learned glue") \
+OPTION(emaglueslow,   double, 1e-5, 0,  1, "alpha slow learned glue") \
+OPTION(emaresolved,   double, 1e-6, 0,  1, "alpha resolved glue & size") \
+OPTION(reduce,          bool,    1, 0,  1, "garbage collect clauses") \
+OPTION(reducedynamic,   bool,    1, 0,  1, "dynamic glue & size limit") \
+OPTION(reduceinc,        int,  300, 1,1e9, "reduce limit increment") \
+OPTION(reduceinit,       int, 2000, 0,1e9, "initial reduce limit") \
+OPTION(restart,         bool,    1, 0,  1, "enable restarting") \
+OPTION(restartint,       int,   10, 1,1e9, "restart base interval") \
+OPTION(restartmargin, double,  0.2, 0, 10, "restart slow & fast margin") \
+OPTION(reusetrail,      bool,    1, 0,  1, "enable trail reuse") \
 
 /*------------------------------------------------------------------------*/
 
@@ -125,7 +126,7 @@ struct Level {
 };
 
 // We have a more complex generic exponential moving average struct here
-// for more robust initialization (see the documentation in 'Splatz').
+// for more robust initialization (see documentation before 'update').
 
 struct EMA {
   double value;		// current average value
@@ -514,7 +515,7 @@ inline void EMA::update (double y, const char * name) {
   //   ...
   //
   //  We did not derive this formally, but observed it during logging.
-  //  This is 'Splatz' but not published yet, e.g., was not in POS'15.
+  //  This is in 'Splatz' but not published yet, e.g., was not in POS'15.
 
   if (beta <= alpha || wait--) return;
   wait = period = 2*(period + 1) - 1;
@@ -967,7 +968,7 @@ static bool restarting () {
   if (stats.conflicts <= limits.restart.conflicts) return false;
   double slow = ema.learned.glue.slow;
   double fast = ema.learned.glue.fast;
-  double limit = 1.1 * slow;
+  double limit = (1 + opts.restartmargin) * slow;
   LOG ("EMA learned glue: slow %.2f, limit %.2f %c fast %.2f",
     slow, limit, (limit < fast ? '<' : (limit == fast ? '=' : '>')), fast);
   return limit < fast;
@@ -988,7 +989,7 @@ static void restart () {
   START (restart);
   stats.restarts++;
   backtrack (reusetrail ());
-  limits.restart.conflicts = stats.conflicts + 50;
+  limits.restart.conflicts = stats.conflicts + opts.restartint;
   STOP (restart);
 }
 
@@ -1129,10 +1130,7 @@ static void decide () {
   STOP (decide);
 }
 
-static void iterate () {
-  iterating = false;
-  report ('i');
-}
+static void iterate () { iterating = false; report ('i'); }
 
 static int search () {
   int res = 0;
