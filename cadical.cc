@@ -64,12 +64,15 @@ using namespace std;
 /*------------------------------------------------------------------------*/
 
 #define OPTIONS \
-/*  NAME,          TYPE,  VAL,  LOW, HIGH, DESCRIPTION */ \
-OPTION(reduce,     bool,    1,    0,    1, "garbage collect clauses") \
-OPTION(reduceinc,   int,  300,    1,   -1, "reduce limit increment") \
-OPTION(reduceinit,  int, 2000,    0,   -1, "initial reduce limit") \
-OPTION(restart,    bool,    1,    0,    1, "enable restarting") \
-OPTION(restartint,  int,   50,    1,   -1, "restart base interval") \
+/*  NAME,             TYPE,  VAL, LOW, HIGH, DESCRIPTION */ \
+OPTION(emagluefast, double, 1e-2,   0,    1, "alpha fast learned glue") \
+OPTION(emaglueslow, double, 1e-6,   0,    1, "alpha slow learned glue") \
+OPTION(emaresolved, double, 1e-4,   0,    1, "alpha resolved glue & size") \
+OPTION(reduce,        bool,    1,   0,    1, "garbage collect clauses") \
+OPTION(reduceinc,      int,  300,   1,  1e9, "reduce limit increment") \
+OPTION(reduceinit,     int, 2000,   0,  1e9, "initial reduce limit") \
+OPTION(restart,       bool,    1,   0,    1, "enable restarting") \
+OPTION(restartint,     int,   50,   1,  1e9, "restart base interval") \
 
 /*------------------------------------------------------------------------*/
 
@@ -117,6 +120,24 @@ struct Level {
   int seen;		// how man variables seen during 'analyze'
   Level (int d) : decision (d), seen (0) { }
   Level () { }
+};
+
+// We have a more complex generic exponential moving average struct here
+// for more robust initialization (see the documentation in 'Splatz').
+
+struct EMA {
+  double value;		// current average value
+  double alpha;		// percentage contribution of new values
+  double beta;		// current upper approximation of alpha
+  long wait;		// count-down using 'beta' instead of 'alpha'
+  long period;		// length of current waiting phase
+  EMA (double a = 0) :
+     value (0), alpha (a), beta (1), wait (0), period (0)
+  {
+    assert (0 <= alpha), assert (alpha <= 1);
+  }
+  operator double () const { return value; }
+  void update (double y, const char * name);
 };
 
 #ifdef PROFILING
@@ -202,8 +223,8 @@ static vector<Timer> timers;
 // in  'reduce' and when to 'restart' respectively.
 
 static struct { 
-  struct { double glue, size; } resolved;
-  struct { struct { double fast, slow; } glue; } learned;
+  struct { EMA glue, size; } resolved;
+  struct { struct { EMA fast, slow; } glue; } learned;
 } ema;
 
 // Limits for next restart, reduce.
@@ -226,7 +247,11 @@ static int lineno, close_input, close_proof;
 #ifndef NDEBUG
 // Sam Buss suggested to debug the case where a solver incorrectly
 // claims the formula to be unsatisfiable by checking every learned
-// clause to be satisfied by a satisfying assignment.
+// clause to be satisfied by a satisfying assignment.  Thus the first
+// inconsistent learned clause will be immediately flagged without the
+// need to generate proof traces and perform forward proof checking.
+// The incorrectly derived clause will raise an abort signal and
+// thus allows to debug the issue with a symbolic debugger immediately.
 static FILE * solution_file;
 static const char *solution_name;
 static signed char * solution;		// like 'val' (and 'phases')
@@ -268,10 +293,6 @@ static double relative (double a, double b) { return b ? a / b : 0; }
 static double percent (double a, double b) { return relative (100 * a, b); }
 #endif
 
-static void update_ema (double & ema, double y, double alpha) {
-  ema += alpha * (y - ema);
-}
-
 static double seconds () {
   struct rusage u;
   double res;
@@ -311,7 +332,6 @@ static size_t max_bytes () {
 }
 
 static int active_variables () { return max_var - stats.fixed; }
-
 
 /*------------------------------------------------------------------------*/
 
@@ -470,6 +490,40 @@ static void print_profile (double all) {
 
 /*------------------------------------------------------------------------*/
 
+inline void EMA::update (double y, const char * name) {
+
+  // This is the common exponential moving average update.
+
+  value += beta * (y - value);
+  LOG ("update %s EMA with %g beta %g yields %g", name, y, beta, value);
+
+  // However, we used the upper approximation 'beta' of 'alpha'.  The idea
+  // is that 'beta' slowly moves down to 'alpha' to smoothly initialize
+  // the exponential moving average.  This technique was used in 'Splatz'.
+
+  // We maintain 'beta = 2^-period' until 'beta < alpha' and then set
+  // it to 'alpha'.  The period gives the number of updates this 'beta'
+  // is used.  So for smaller and smaller 'beta' we wait exponentially
+  // longer until 'beta' is halfed again.  The sequence of 'beta's is
+  //
+  //   1,
+  //   1/2, 1/2,
+  //   1/4, 1/4, 1/4, 1/4
+  //   1/8, 1/8, 1/8, 1/8, 1/8, 1/8, 1/8, 1/8,
+  //   ...
+  //
+  //  We did not derive this formally, but observed it during logging.
+  //  This is 'Splatz' but not published yet, e.g., was not in POS'15.
+
+  if (beta <= alpha || wait--) return;
+  wait = period = 2*(period + 1) - 1;
+  beta *= 0.5;
+  if (beta < alpha) beta = alpha;
+  LOG ("new %s EMA wait = period = %ld, beta = %g", name, wait, beta);
+}
+
+/*------------------------------------------------------------------------*/
+
 static int vidx (int lit) {
   int idx;
   assert (lit), assert (lit != INT_MIN);
@@ -545,7 +599,7 @@ static void unassign (int lit) {
   check_vmtf_queue_invariant ();
 }
 
-static void backtrack (int target_level) {
+static void backtrack (int target_level = 0) {
   assert (target_level <= level);
   if (target_level == level) return;
   LOG ("backtracking to decision level %d", target_level);
@@ -680,7 +734,7 @@ static void report (char type) {
     max_bytes ()/(double)(1<<20),
     stats.conflicts,
     (long) redundant.size (),
-    ema.learned.glue.slow,
+    (double) ema.learned.glue.slow,
     (long) irredundant.size (),
     active_variables ());
   fflush (stdout);
@@ -810,11 +864,13 @@ static void clear_levels () {
   seen.levels.clear ();
 }
 
+#define UPDATE_EMA(E,Y) E.update ((Y), #E)
+
 static void bump_clause (Clause * c) { 
   if (!c->redundant) return;
   c->resolved = stats.conflicts;
-  update_ema (ema.resolved.size, c->size, 1e-5);
-  update_ema (ema.resolved.glue, c->glue, 1e-5);
+  UPDATE_EMA (ema.resolved.size, c->size);
+  UPDATE_EMA (ema.resolved.glue, c->glue);
 }
 
 struct level_greater_than {
@@ -866,10 +922,8 @@ static void analyze () {
     check_clause ();
     int size = (int) clause.size ();
     int glue = (int) seen.levels.size ();
-    update_ema (ema.learned.glue.slow, glue, 1e-5);
-    update_ema (ema.learned.glue.fast, glue, 1e-2);
-    LOG ("new slow learned glue EMA %.4f", ema.learned.glue.slow);
-    LOG ("new slow learned fast EMA %.4f", ema.learned.glue.fast);
+    UPDATE_EMA (ema.learned.glue.slow, glue);
+    UPDATE_EMA (ema.learned.glue.fast, glue);
     Clause * driving_clause = 0;
     int jump = 0;
     if (size == 1) {
@@ -893,8 +947,6 @@ static void analyze () {
     clear_levels ();
   }
   conflict = 0;
-  LOG ("new resolved glue EMA %.4f", ema.resolved.glue);
-  LOG ("new resolved size EMA %.4f", ema.resolved.size);
   STOP (analyze);
 }
 
@@ -916,6 +968,7 @@ static bool restarting () {
 static void restart () {
   START (restart);
   stats.restarts++;
+  backtrack ();
   limits.restart.conflicts = stats.conflicts + 50;
   STOP (restart);
 }
@@ -970,12 +1023,12 @@ static void mark_redundant_clauses () {
     if (c->glue <= 2) continue;
     if (c->size <= 3) continue;
     if (c->resolved > limits.reduce.resolved) continue;
-    if (c->glue <= ema.resolved.glue &&
-        c->size <= ema.resolved.size) continue;
+    if (c->glue < ema.resolved.glue &&
+        c->size < ema.resolved.size) continue;
     work.push_back (c);
   }
   sort (work.begin (), work.end (), reduce_less_than ());
-  size_t target = work.size ()/2;
+  const size_t target = work.size ()/2;
   for (size_t i = 0; i < target; i++)
     work[i]->garbage = true;
 }
@@ -1080,10 +1133,18 @@ static int search () {
 
 /*------------------------------------------------------------------------*/
 
+#define INIT_EMA(E,V) \
+  E = EMA (V); \
+  LOG ("init " #E " EMA target alpha %g", (double) V)
+
 static void init_solving () {
   limits.restart.conflicts = opts.restartint;
   limits.reduce.conflicts = opts.reduceinit;
   inc.reduce.conflicts = opts.reduceinit;
+  INIT_EMA (ema.learned.glue.fast, opts.emagluefast);
+  INIT_EMA (ema.learned.glue.slow, opts.emaglueslow);
+  INIT_EMA (ema.resolved.glue, opts.emaresolved);
+  INIT_EMA (ema.resolved.size, opts.emaresolved);
 }
 
 static int solve () {
