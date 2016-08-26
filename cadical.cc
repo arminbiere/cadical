@@ -69,10 +69,12 @@ OPTION(emagluefast, double, 1e-2,   0,    1, "alpha fast learned glue") \
 OPTION(emaglueslow, double, 1e-6,   0,    1, "alpha slow learned glue") \
 OPTION(emaresolved, double, 1e-4,   0,    1, "alpha resolved glue & size") \
 OPTION(reduce,        bool,    1,   0,    1, "garbage collect clauses") \
+OPTION(reducedynamic, bool,    1,   0,    1, "dynamic glue & size limit") \
 OPTION(reduceinc,      int,  300,   1,  1e9, "reduce limit increment") \
 OPTION(reduceinit,     int, 2000,   0,  1e9, "initial reduce limit") \
 OPTION(restart,       bool,    1,   0,    1, "enable restarting") \
 OPTION(restartint,     int,   50,   1,  1e9, "restart base interval") \
+OPTION(reusetrail,    bool,    1,   0,    1, "enable trail reuse") \
 
 /*------------------------------------------------------------------------*/
 
@@ -200,6 +202,7 @@ static struct {
   long conflicts;
   long decisions;
   long restarts;
+  long reused;
   long reports;
   long propagations;		// propagated literals in 'propagate'
 
@@ -289,9 +292,7 @@ static void (*sig_bus_handler)(int);
 
 static double relative (double a, double b) { return b ? a / b : 0; }
 
-#if !defined(NDEBUG) || defined(PROFILING)
 static double percent (double a, double b) { return relative (100 * a, b); }
-#endif
 
 static double seconds () {
   struct rusage u;
@@ -837,6 +838,13 @@ static void enqueue (Var * v, int idx) {
   v->next = 0;
 }
 
+static int next_decision_variable () {
+  int res;
+  while (val (res = queue.next))
+    queue.next = var (queue.next).prev, stats.searched++;
+  return res;
+}
+
 static void bump_and_clear_seen_literals (int uip) {
   START (bump);
   sort (seen.literals.begin (), seen.literals.end (), bumped_earlier ());
@@ -965,10 +973,21 @@ static bool restarting () {
   return limit < fast;
 }
 
+static int reusetrail () {
+  if (!opts.reusetrail) return 0;
+  long limit = var (next_decision_variable ()).bumped;
+  int res = 0;
+  while (res < level && var (levels[res + 1].decision).bumped > limit)
+    res++;
+  if (res) { stats.reused++; LOG ("reusing trail %d", res); }
+  else LOG ("could not reuse the trail");
+  return res;
+}
+
 static void restart () {
   START (restart);
   stats.restarts++;
-  backtrack ();
+  backtrack (reusetrail ());
   limits.restart.conflicts = stats.conflicts + 50;
   STOP (restart);
 }
@@ -1023,7 +1042,8 @@ static void mark_redundant_clauses () {
     if (c->glue <= 2) continue;
     if (c->size <= 3) continue;
     if (c->resolved > limits.reduce.resolved) continue;
-    if (c->glue < ema.resolved.glue &&
+    if (opts.reducedynamic &&
+        c->glue < ema.resolved.glue &&
         c->size < ema.resolved.size) continue;
     work.push_back (c);
   }
@@ -1101,9 +1121,7 @@ static void decide () {
   START (decide);
   level++;
   stats.decisions++;
-  int idx;
-  while (val (idx = queue.next))
-    queue.next = var (queue.next).prev, stats.searched++;
+  int idx = next_decision_variable ();
   int decision = phases[idx] * idx;
   levels.push_back (Level (decision));
   LOG ("decide %d", decision);
@@ -1122,10 +1140,10 @@ static int search () {
   while (!res)
          if (unsat) res = 20;
     else if (!propagate ()) analyze ();
-    else if (satisfied ()) res= 10;
+    else if (iterating) iterate ();
+    else if (satisfied ()) res = 10;
     else if (restarting ()) restart ();
     else if (reducing ()) reduce ();
-    else if (iterating) iterate ();
     else decide ();
   STOP (search);
   return res;
@@ -1160,27 +1178,29 @@ static void print_statistics () {
   size_t m = max_bytes ();
   print_profile (t);
   section ("statistics");
-  msg ("conflicts:     %15ld   %10.2f  (per second)",
+  msg ("conflicts:     %15ld   %10.2f   (per second)",
     stats.conflicts, relative (stats.conflicts, t));
-  msg ("decisions:     %15ld   %10.2f  (per second)",
+  msg ("decisions:     %15ld   %10.2f   (per second)",
     stats.decisions, relative (stats.decisions, t));
-  msg ("reductions:    %15ld   %10.2f  (conflicts per reduction)",
+  msg ("reductions:    %15ld   %10.2f   (conflicts per reduction)",
     stats.reduce.count, relative (stats.conflicts, stats.reduce.count));
-  msg ("restarts:      %15ld   %10.2f  (conflicts per restart)",
+  msg ("restarts:      %15ld   %10.2f   (conflicts per restart)",
     stats.restarts, relative (stats.conflicts, stats.restarts));
-  msg ("propagations:  %15ld   %10.2f  (millions per second)",
+  msg ("propagations:  %15ld   %10.2f   (millions per second)",
     stats.propagations, relative (stats.propagations/1e6, t));
-  msg ("bumped:        %15ld   %10.2f  (per conflict)",
+  msg ("bumped:        %15ld   %10.2f   (per conflict)",
     stats.bumped, relative (stats.bumped, stats.conflicts));
-  msg ("units:         %15ld   %10.2f  (conflicts per unit)",
+  msg ("reused:        %15ld   %10.2f %% (per restart)",
+    stats.reused, percent (stats.reused, stats.restarts));
+  msg ("units:         %15ld   %10.2f   (conflicts per unit)",
     stats.learned.units, relative (stats.conflicts, stats.learned.units));
-  msg ("searched:      %15ld   %10.2f  (per decision)",
+  msg ("searched:      %15ld   %10.2f   (per decision)",
     stats.searched, relative (stats.searched, stats.decisions));
-  msg ("collected:     %15ld   %10.2f  (clauses and MB)",
+  msg ("collected:     %15ld   %10.2f   (clauses and MB)",
     stats.reduce.clauses, stats.reduce.bytes/(double)(1l<<20));
-  msg ("maxbytes:      %15ld   %10.2f  MB",
+  msg ("maxbytes:      %15ld   %10.2f   MB",
     m, m/(double)(1l<<20));
-  msg ("time:          %15s   %10.2f  seconds", "", t);
+  msg ("time:          %15s   %10.2f   seconds", "", t);
   msg ("");
 }
 
