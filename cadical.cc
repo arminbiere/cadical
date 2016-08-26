@@ -228,7 +228,7 @@ static vector<Timer> timers;
 #endif
 
 // Exponential moving averages to control which clauses are collected
-// in  'reduce' and when to 'restart' respectively.
+// in  'reduce' and when to force and delay 'restart' respectively.
 
 static struct { 
   struct { EMA glue, size; } resolved;
@@ -977,12 +977,18 @@ static bool restarting () {
   double limit = (1 + opts.restartmargin) * slow;
   LOG ("EMA learned glue: slow %.2f, limit %.2f %c fast %.2f",
     slow, limit, (limit < fast ? '<' : (limit == fast ? '=' : '>')), fast);
-  if (limit > fast) return false;
+  if (limit > fast) {
+    LOG ("restart not forced");
+    limits.restart.conflicts = stats.conflicts + opts.restartint;
+    return false;
+  }
   if (opts.restartdelay && level < opts.restartdelaylim * ema.jump) {
     LOG ("restart delayed");
+    limits.restart.conflicts = stats.conflicts + opts.restartint;
     stats.delayed++;
     return false;
   }
+  LOG ("restart forced and not delayed");
   return true;
 }
 
