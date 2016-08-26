@@ -32,6 +32,26 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------*/
 
+#define OPTIONS \
+/*  NAME,                TYPE, VAL,LOW,HIGH,DESCRIPTION */ \
+OPTION(emagluefast,    double,3e-2, 0,  1, "alpha fast learned glue") \
+OPTION(emaglueslow,    double,1e-5, 0,  1, "alpha slow learned glue") \
+OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
+OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
+OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
+OPTION(reducedynamic,    bool,   1, 0,  1, "dynamic glue & size limit") \
+OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
+OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
+OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
+OPTION(restartdelay,     bool,   1, 0,  1, "delay restarts") \
+OPTION(restartdelaylim,double, 0.5, 0,  1, "restart delay percent limit") \
+OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
+OPTION(restartmargin,  double, 0.2, 0, 10, "restart slow & fast margin") \
+OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
+OPTION(witness,          bool,   1, 0,  1, "print witness") \
+
+/*------------------------------------------------------------------------*/
+
 // Standard C includes
 
 #include <cassert>
@@ -60,25 +80,6 @@ using namespace std;
 // Configuration file for tracking version and compiler options
 
 #include "config.h"
-
-/*------------------------------------------------------------------------*/
-
-#define OPTIONS \
-/*  NAME,                TYPE, VAL,LOW,HIGH,DESCRIPTION */ \
-OPTION(emagluefast,    double,3e-2, 0,  1, "alpha fast learned glue") \
-OPTION(emaglueslow,    double,1e-5, 0,  1, "alpha slow learned glue") \
-OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
-OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
-OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
-OPTION(reducedynamic,    bool,   1, 0,  1, "dynamic glue & size limit") \
-OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
-OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
-OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
-OPTION(restartdelay,     bool,   1, 0,  1, "delay restarts") \
-OPTION(restartdelaylim,double, 0.5, 0,  1, "restart delay percent limit") \
-OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
-OPTION(restartmargin,  double, 0.2, 0, 10, "restart slow & fast margin") \
-OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
 
 /*------------------------------------------------------------------------*/
 
@@ -710,6 +711,26 @@ static Clause * new_clause (bool red, int glue = 0) {
   return res;
 }
 
+struct lit_less_than {
+  bool operator () (int a, int b) {
+    int s = abs (a), t = abs (b);
+    return s < t || (s == t && a < b);
+  }
+};
+
+static bool tautological () {
+  sort (clause.begin (), clause.end (), lit_less_than ());
+  size_t j = 0;
+  int prev = 0;
+  for (size_t i = 0; i < clause.size (); i++) {
+    int lit = clause[i];
+    if (lit == -prev) return true;
+    if (lit != prev) clause[j++] = lit;
+  }
+  clause.resize (j);
+  return false;
+}
+
 static void add_new_original_clause () {
   int size = (int) clause.size ();
   if (!size) {
@@ -1337,44 +1358,102 @@ static FILE * read_pipe (const char * fmt, const char * path) {
   return res;
 }
 
-static const char * USAGE =
+static void print_usage () {
+  fputs (
 "usage: cadical [ <option> ... ] [ <input> [ <proof> ] ]\n"
 "\n"
-"where '<option>' is one of the following\n"
+"The '<option>' is one of the following short options:\n"
 "\n"
 "  -h         print this command line option summary\n"
-"\n"
+"  -n         do not print witness\n"
 #ifndef NDEBUG
 "  -s <sol>   read solution in competition output format\n"
 "             (used for testing and debugging only)\n"
-"\n"
 #endif
-"and '<input>' is a (compressed) DIMACS file and '<output>'\n"
+"\n"
+"Or '<option>' can be one of the following long options:\n"
+"\n",
+  stdout);
+#define OPTION(N,T,V,L,H,D) \
+  printf ( \
+    "  %-26s " D " [" printf_ ## T ## _FMT "]\n", \
+    "--" #N "=<" #T ">", V);
+  OPTIONS
+#undef OPTION
+  fputs (
+"\n"
+"The long options have their default value printed in brackets\n"
+"after their description.  They can also be used in the form\n"
+"'--<name>' which is equivalent to '--<name>=1' and in the form\n"
+"'--no-<name>' which is equivalent to '--<name>=0'.\n"
+"\n"
+"Then '<input>' is a (compressed) DIMACS file and '<output>'\n"
 "is a file to store the DRAT proof.  If no '<proof>' file is\n"
 "specified, then no proof is generated.  If no '<input>' is given\n"
 "then '<stdin>' is used. If '-' is used as '<input>' then the\n"
 "solver reads from '<stdin>'.  If '-' is specified for '<proof>'\n"
-"then the proof is generated and printed to '<stdout>'.\n";
+"then the proof is generated and printed to '<stdout>'.\n",
+  stdout);
+}
 
-struct lit_less_than {
-  bool operator () (int a, int b) {
-    int s = abs (a), t = abs (b);
-    return s < t || (s == t && a < b);
-  }
-};
+/*------------------------------------------------------------------------*/
 
-static bool tautological () {
-  sort (clause.begin (), clause.end (), lit_less_than ());
-  size_t j = 0;
-  int prev = 0;
-  for (size_t i = 0; i < clause.size (); i++) {
-    int lit = clause[i];
-    if (lit == -prev) return true;
-    if (lit != prev) clause[j++] = lit;
-  }
-  clause.resize (j);
+static bool set_option (bool & opt, const char * name,
+                        const char * valstr, const bool l, const bool h) {
+  assert (!l), assert (h);
+       if (!strcmp (valstr, "true")  || !strcmp (valstr, "1")) opt = true;
+  else if (!strcmp (valstr, "false") || !strcmp (valstr, "0")) opt = false;
+  else return false;
+  LOG ("set option --%s=%d", name, opt);
+  return true;
+}
+
+static bool set_option (int & opt, const char * name,
+                        const char * valstr, const int l, const int h) {
+  assert (l < h);
+  int val = atoi (valstr);              // TODO check valstr to be valid
+  if (val < l) val = l;
+  if (val > h) val = h;
+  opt = val;
+  LOG ("set option --%s=%d", name, opt);
+  return true;
+}
+
+static bool set_option (double & opt, const char * name,
+                        const char * valstr,
+                        const double l, const double h) {
+  assert (l < h);
+  double val = atof (valstr);           // TODO check valstr to be valid
+  if (val < l) val = l;
+  if (val > h) val = h;
+  opt = val;
+  LOG ("set option --%s=%g", name, opt);
+  return true;
+}
+
+static const char *
+match_option (const char * arg, const char * name) {
+  if (arg[0] != '-' || arg[1] != '-') return 0;
+  const bool no = (arg[2] == 'n' && arg[3] == 'o' && arg[4] == '-');
+  const char * p = arg + (no ? 5 : 2), * q = name;
+  while (*q) if (*q++ != *p++) return 0;
+  if (!*p) return no ? "0" : "1";
+  if (*p++ != '=') return 0;
+  return p;
+}
+
+static bool set_option (const char * arg) {
+  const char * valstr;
+#define OPTION(N,T,V,L,H,D) \
+  if ((valstr = match_option (arg, # N))) \
+    return set_option (opts.N, # N, valstr, L, H); \
+  else
+  OPTIONS
+#undef OPTION
   return false;
 }
+
+/*------------------------------------------------------------------------*/
 
 static int nextch () {
   int res = getc (input_file);
@@ -1389,6 +1468,7 @@ static void parse_string (const char * str, char prev) {
 }
 
 static int parse_positive_int (int ch, int & res, const char * name) {
+  assert (isdigit (ch));
   res = ch - '0';
   while (isdigit (ch = nextch ())) {
     int digit = ch - '0';
@@ -1577,8 +1657,7 @@ static void banner () {
 int main (int argc, char ** argv) {
   int i, res;
   for (i = 1; i < argc; i++) {
-    if (!strcmp (argv[i], "-h"))
-      fputs (USAGE, stdout), exit (0);
+    if (!strcmp (argv[i], "-h")) print_usage (), exit (0);
     else if (!strcmp (argv[i], "--version"))
       fputs (VERSION "\n", stdout), exit (0);
     else if (!strcmp (argv[i], "-")) {
@@ -1593,7 +1672,9 @@ int main (int argc, char ** argv) {
         die ("can not read solution file '%s'", argv[i]);
       solution_name = argv[i];
 #endif
-    } else if (argv[i][0] == '-') die ("invalid option '%s'", argv[i]);
+    } else if (!strcmp (argv[i], "-n")) set_option ("--no-witness");
+    else if (set_option (argv[i])) { /* nothing do be done */ }
+    else if (argv[i][0] == '-') die ("invalid option '%s'", argv[i]);
     else if (proof_file) die ("too many arguments");
     else if (dimacs_file) {
       if (!(proof_file = fopen (argv[i], "w")))
@@ -1636,7 +1717,7 @@ int main (int argc, char ** argv) {
   if (res == 10) {
     check_satisfying_assignment (val);
     printf ("s SATISFIABLE\n");
-    print_witness ();
+    if (opts.witness) print_witness ();
     fflush (stdout);
   } else {
     assert (res = 20);
