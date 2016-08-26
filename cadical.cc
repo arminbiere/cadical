@@ -1280,7 +1280,7 @@ static void init_variables () {
 
 #define printf_bool_FMT   "%d"
 #define printf_int_FMT    "%d"
-#define printf_double_FMT "%f"
+#define printf_double_FMT "%g"
 
 static void print_options () {
   section ("options");
