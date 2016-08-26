@@ -64,44 +64,46 @@ using namespace std;
 /*------------------------------------------------------------------------*/
 
 #define OPTIONS \
-/*  NAME,               TYPE,  VAL,LOW,HIGH,DESCRIPTION */ \
-OPTION(emagluefast,   double, 3e-2, 0,  1, "alpha fast learned glue") \
-OPTION(emaglueslow,   double, 1e-5, 0,  1, "alpha slow learned glue") \
-OPTION(emajump,       double, 1e-6, 0,  1, "alpha jump") \
-OPTION(emaresolved,   double, 1e-6, 0,  1, "alpha resolved glue & size") \
-OPTION(reduce,          bool,    1, 0,  1, "garbage collect clauses") \
-OPTION(reducedynamic,   bool,    1, 0,  1, "dynamic glue & size limit") \
-OPTION(reduceinc,        int,  300, 1,1e9, "reduce limit increment") \
-OPTION(reduceinit,       int, 2000, 0,1e9, "initial reduce limit") \
-OPTION(restart,         bool,    1, 0,  1, "enable restarting") \
-OPTION(restartint,       int,   10, 1,1e9, "restart base interval") \
-OPTION(restartmargin, double,  0.2, 0, 10, "restart slow & fast margin") \
-OPTION(reusetrail,      bool,    1, 0,  1, "enable trail reuse") \
+/*  NAME,                TYPE, VAL,LOW,HIGH,DESCRIPTION */ \
+OPTION(emagluefast,    double,3e-2, 0,  1, "alpha fast learned glue") \
+OPTION(emaglueslow,    double,1e-5, 0,  1, "alpha slow learned glue") \
+OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
+OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
+OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
+OPTION(reducedynamic,    bool,   1, 0,  1, "dynamic glue & size limit") \
+OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
+OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
+OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
+OPTION(restartdelay,     bool,   1, 0,  1, "delay restarts") \
+OPTION(restartdelaylim,double, 0.5, 0,  1, "restart delay percent limit") \
+OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
+OPTION(restartmargin,  double, 0.2, 0, 10, "restart slow & fast margin") \
+OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
 
 /*------------------------------------------------------------------------*/
 
 // Type declarations
 
 struct Clause {
-  bool redundant;	// so not 'irredundant' and on 'redudant' stack
-  bool garbage;		// can be garbage collected
-  bool reason;		// reason clause can not be collected
-  int size;		// actual size of 'literals'
-  int glue;		// LBD = glucose level = glue
-  long resolved;	// conflict index when last resolved
-  int literals[1];	// actually of variadic 'size'
+  bool redundant;       // so not 'irredundant' and on 'redudant' stack
+  bool garbage;         // can be garbage collected
+  bool reason;          // reason clause can not be collected
+  int size;             // actual size of 'literals'
+  int glue;             // LBD = glucose level = glue
+  long resolved;        // conflict index when last resolved
+  int literals[1];      // actually of variadic 'size'
 };
 
 struct Var {
-  bool seen;		// in 'analyze'
-  bool minimized;	// can be minimized in 'minimize'
-  bool poison;		// can not be minimized in 'minimize'
-  int level;		// decision level
+  bool seen;            // in 'analyze'
+  bool minimized;       // can be minimized in 'minimize'
+  bool poison;          // can not be minimized in 'minimize'
+  int level;            // decision level
 
-  long bumped;		// enqueue/bump time stamp for VMTF queue
-  int prev, next;	// double links for decision VMTF queue
+  long bumped;          // enqueue/bump time stamp for VMTF queue
+  int prev, next;       // double links for decision VMTF queue
 
-  Clause * reason;	// assignment reason/antecedent
+  Clause * reason;      // assignment reason/antecedent
 
   Var () :
     seen (false), minimized (false), poison (false),
@@ -110,18 +112,18 @@ struct Var {
 };
 
 struct Watch {
-  int blit;		// if blocking literal is true do not visit clause
-  int size;		// if size==2 no need to visit clause at all
+  int blit;             // if blocking literal is true do not visit clause
+  int size;             // if size==2 no need to visit clause at all
   Clause * clause;
   Watch (int b, Clause * c) : blit (b), size (c->size), clause (c) { }
   Watch () { }
 };
 
-typedef vector<Watch> Watches;		// of one literal
+typedef vector<Watch> Watches;          // of one literal
 
 struct Level {
-  int decision;		// decision literal of level
-  int seen;		// how man variables seen during 'analyze'
+  int decision;         // decision literal of level
+  int seen;             // how man variables seen during 'analyze'
   Level (int d) : decision (d), seen (0) { }
   Level () { }
 };
@@ -130,11 +132,11 @@ struct Level {
 // for more robust initialization (see documentation before 'update').
 
 struct EMA {
-  double value;		// current average value
-  double alpha;		// percentage contribution of new values
-  double beta;		// current upper approximation of alpha
-  long wait;		// count-down using 'beta' instead of 'alpha'
-  long period;		// length of current waiting phase
+  double value;         // current average value
+  double alpha;         // percentage contribution of new values
+  double beta;          // current upper approximation of alpha
+  long wait;            // count-down using 'beta' instead of 'alpha'
+  long period;          // length of current waiting phase
   EMA (double a = 0) :
      value (0), alpha (a), beta (1), wait (0), period (0)
   {
@@ -147,8 +149,8 @@ struct EMA {
 #ifdef PROFILING
 
 struct Timer {
-  double started;	// starting time (in seconds) for this phase
-  double * update;	// update this profile if phase stops
+  double started;       // starting time (in seconds) for this phase
+  double * update;      // update this profile if phase stops
   Timer (double s, double * u) : started (s), update (u) { }
   Timer () { }
 };
@@ -167,57 +169,58 @@ static vector<int> original_literals;
 
 static Var * vars;
 
-static signed char * vals;		// assignment
-static signed char * phases;		// saved previous assignment
+static signed char * vals;              // assignment
+static signed char * phases;            // saved previous assignment
 
-static Watches * all_literal_watches;	// [2,2*max_var+1]
+static Watches * all_literal_watches;   // [2,2*max_var+1]
 
 // VMTF decision queue
 
 static struct {
-  int first, last;	// anchors (head/tail) for doubly linked list
-  int next;		// all variables after this one are assigned
+  int first, last;      // anchors (head/tail) for doubly linked list
+  int next;             // all variables after this one are assigned
 } queue;
 
-static bool unsat;		// empty clause found or learned
+static bool unsat;              // empty clause found or learned
 
-static int level;		// decision level (levels.size () - 1)
+static int level;               // decision level (levels.size () - 1)
 static vector<Level> levels;
 
-static size_t propagate_next;	// BFS index into 'trail'
-static vector<int> trail;	// assigned literals
+static size_t propagate_next;   // BFS index into 'trail'
+static vector<int> trail;       // assigned literals
 
-static vector<int> clause;	// temporary clause in parsing & learning
+static vector<int> clause;      // temporary clause in parsing & learning
 
-static vector<Clause*> irredundant;	// original / not redundant clauses
-static vector<Clause*> redundant;	// redundant / learned clauses
+static vector<Clause*> irredundant;     // original / not redundant clauses
+static vector<Clause*> redundant;       // redundant / learned clauses
 
-static bool iterating;		// report top-level assigned variables
+static bool iterating;          // report top-level assigned variables
 
 static struct {
-  vector<int> literals, levels;	// seen literals & levels in 'analyze'
+  vector<int> literals, levels; // seen literals & levels in 'analyze'
 } seen;
 
-static Clause * conflict;	// set in 'propagation', reset in 'analyze'
+static Clause * conflict;       // set in 'propagation', reset in 'analyze'
 
 static struct {
   long conflicts;
   long decisions;
   long restarts;
-  long reused;
+  long reused;                  // trails
+  long delayed;                 // restarts
   long reports;
-  long propagations;		// propagated literals in 'propagate'
+  long propagations;            // propagated literals in 'propagate'
 
-  long bumped;			// seen and bumped variables in 'analyze'
-  long searched;		// searched decisions in 'decide'
+  long bumped;                  // seen and bumped variables in 'analyze'
+  long searched;                // searched decisions in 'decide'
 
-  struct { long count, clauses, bytes; } reduce;	// in 'reduce'
+  struct { long count, clauses, bytes; } reduce;        // in 'reduce'
 
   struct { long current, max; } clauses;
   struct { size_t current, max; } bytes;
   struct { long units; } learned;
 
-  int fixed;			// top level assigned variables
+  int fixed;                    // top level assigned variables
 } stats;
 
 #ifdef PROFILING
@@ -260,7 +263,7 @@ static int lineno, close_input, close_proof;
 // thus allows to debug the issue with a symbolic debugger immediately.
 static FILE * solution_file;
 static const char *solution_name;
-static signed char * solution;		// like 'val' (and 'phases')
+static signed char * solution;          // like 'val' (and 'phases')
 #endif
 
 /*------------------------------------------------------------------------*/
@@ -331,7 +334,7 @@ static size_t max_bytes () {
   ADJUST_MAX_BYTES (irredundant);
   ADJUST_MAX_BYTES (redundant);
   ADJUST_MAX_BYTES (levels);
-  res += (4 * stats.clauses.max * sizeof (Watch)) / 3;	// estimate
+  res += (4 * stats.clauses.max * sizeof (Watch)) / 3;  // estimate
   return res;
 }
 
@@ -477,8 +480,8 @@ static void print_profile (double all) {
   for (i = 0; i < size - 1; i++) {
     for (size_t j = i + 1; j < size; j++)
       if (profs[j].value > profs[i].value)
-	swap (profs[i].value, profs[j].value),
-	swap (profs[i].name, profs[j].name);
+        swap (profs[i].value, profs[j].value),
+        swap (profs[i].name, profs[j].name);
     msg ("%12.2f %7.2f%% %s",
       profs[i].value, percent (profs[i].value, all), profs[i].name);
   }
@@ -761,28 +764,28 @@ static bool propagate () {
       const int b = val (w.blit);
       if (b > 0) continue;
       else if (w.size == 2) {
-	if (b < 0) conflict = w.clause;
-	else assign (w.blit, w.clause);
+        if (b < 0) conflict = w.clause;
+        else assign (w.blit, w.clause);
       } else {
-	assert (w.clause->size == w.size);
-	int * lits = w.clause->literals;
-	if (lits[1] != -lit) swap (lits[0], lits[1]);
-	assert (lits[1] == -lit);
-	const int u = val (lits[0]);
-	if (u > 0) ws[j-1].blit = lits[0];
-	else {
-	  int k, v = 0;
-	  for (k = 2; k < w.size && (v = val (lits[k])) < 0; k++)
-	    ;
-	  if (v > 0) ws[j-1].blit = lits[k];
-	  else if (!v) {
-	    LOG (w.clause, "unwatch %d in", -lit);
-	    swap (lits[1], lits[k]);
-	    watch_literal (lits[1], -lit, w.clause);
-	    j--;
-	  } else if (!u) assign (lits[0], w.clause);
-	  else conflict = w.clause;
-	}
+        assert (w.clause->size == w.size);
+        int * lits = w.clause->literals;
+        if (lits[1] != -lit) swap (lits[0], lits[1]);
+        assert (lits[1] == -lit);
+        const int u = val (lits[0]);
+        if (u > 0) ws[j-1].blit = lits[0];
+        else {
+          int k, v = 0;
+          for (k = 2; k < w.size && (v = val (lits[k])) < 0; k++)
+            ;
+          if (v > 0) ws[j-1].blit = lits[k];
+          else if (!v) {
+            LOG (w.clause, "unwatch %d in", -lit);
+            swap (lits[1], lits[k]);
+            watch_literal (lits[1], -lit, w.clause);
+            j--;
+          } else if (!u) assign (lits[0], w.clause);
+          else conflict = w.clause;
+        }
       }
     }
     while (i < ws.size ()) ws[j++] = ws[i++];
@@ -921,9 +924,9 @@ static void analyze () {
     size_t i = trail.size ();
     for (;;) {
       for (int j = 0; j < reason->size; j++)
-	if (analyze_literal (reason->literals[j])) open++;
+        if (analyze_literal (reason->literals[j])) open++;
       while (!var (uip = trail[--i]).seen)
-	;
+        ;
       if (!--open) break;
       reason = var (uip).reason;
       LOG (reason, "analyzing %d reason", uip);
@@ -974,7 +977,13 @@ static bool restarting () {
   double limit = (1 + opts.restartmargin) * slow;
   LOG ("EMA learned glue: slow %.2f, limit %.2f %c fast %.2f",
     slow, limit, (limit < fast ? '<' : (limit == fast ? '=' : '>')), fast);
-  return limit < fast;
+  if (limit > fast) return false;
+  if (opts.restartdelay && level < opts.restartdelaylim * ema.jump) {
+    LOG ("restart delayed");
+    stats.delayed++;
+    return false;
+  }
+  return true;
 }
 
 static int reusetrail () {
@@ -1071,14 +1080,14 @@ static void flush_watches () {
       watches (idx) = Watches (), watches (-idx) = Watches ();
     else {
       for (int sign = -1; sign <= 1; sign += 2) {
-	Watches & ws = watches (sign * idx);
-	const size_t size = ws.size ();
-	size_t i = 0, j = 0;
-	while (i < size) {
-	  Watch w = ws[j++] = ws[i++];
-	  if (w.clause->garbage) j--;
-	}
-	ws.resize (j);
+        Watches & ws = watches (sign * idx);
+        const size_t size = ws.size ();
+        size_t i = 0, j = 0;
+        while (i < size) {
+          Watch w = ws[j++] = ws[i++];
+          if (w.clause->garbage) j--;
+        }
+        ws.resize (j);
       }
     }
   }
@@ -1194,6 +1203,8 @@ static void print_statistics () {
     stats.bumped, relative (stats.bumped, stats.conflicts));
   msg ("reused:        %15ld   %10.2f %% (per restart)",
     stats.reused, percent (stats.reused, stats.restarts));
+  msg ("delayed:       %15ld   %10.2f %% (per restart)",
+    stats.delayed, percent (stats.delayed, stats.restarts));
   msg ("units:         %15ld   %10.2f   (conflicts per unit)",
     stats.learned.units, relative (stats.conflicts, stats.learned.units));
   msg ("searched:      %15ld   %10.2f   (per decision)",
@@ -1399,7 +1410,7 @@ static void parse_dimacs () {
     if (ch != 'c') break;
     while ((ch = nextch ()) != '\n')
       if (ch == EOF)
-	perr ("unexpected end-of-file in header comment");
+        perr ("unexpected end-of-file in header comment");
   }
   if (ch != 'p') perr ("expected 'c' or 'p'");
   parse_string (" cnf ", 'p');
@@ -1420,7 +1431,7 @@ static void parse_dimacs () {
     if (ch == 'c') {
 COMMENT:
       while ((ch = nextch ()) != '\n')
-	if (ch == EOF) perr ("unexpected end-of-file in body comment");
+        if (ch == EOF) perr ("unexpected end-of-file in body comment");
       continue;
     }
     if (parse_lit (ch, lit) == 'c') goto COMMENT;
@@ -1459,7 +1470,7 @@ static void parse_solution () {
     if (ch == EOF) perr ("missing 's' line");
     if (ch == 'c') {
       while ((ch = getc (solution_file)) != '\n')
-	if (ch == EOF) perr ("unexpected end-of-file in comment");
+        if (ch == EOF) perr ("unexpected end-of-file in comment");
     }
     if (ch == 's') break;
     perr ("expected 'c' or 's'");
@@ -1500,13 +1511,13 @@ static void check_satisfying_assignment (int (*assignment)(int)) {
     int lit = original_literals[i];
     if (!lit) {
       if (!satisfied) {
-	fflush (stdout);
-	fputs ("*** cadical error: unsatisfied clause:\n", stderr);
-	for (size_t j = start; j < i; j++)
-	  fprintf (stderr, "%d ", original_literals[j]);
-	fputs ("0\n", stderr);
-	fflush (stderr);
-	abort ();
+        fflush (stdout);
+        fputs ("*** cadical error: unsatisfied clause:\n", stderr);
+        for (size_t j = start; j < i; j++)
+          fprintf (stderr, "%d ", original_literals[j]);
+        fputs ("0\n", stderr);
+        fflush (stderr);
+        abort ();
       }
       satisfied = false;
       start = i + 1;
@@ -1552,23 +1563,23 @@ int main (int argc, char ** argv) {
       if (++i == argc) die ("argument to '-s' missing");
       if (solution_file) die ("multiple solution files");
       if (!(solution_file = fopen (argv[i], "r")))
-	die ("can not read solution file '%s'", argv[i]);
+        die ("can not read solution file '%s'", argv[i]);
       solution_name = argv[i];
 #endif
     } else if (argv[i][0] == '-') die ("invalid option '%s'", argv[i]);
     else if (proof_file) die ("too many arguments");
     else if (dimacs_file) {
       if (!(proof_file = fopen (argv[i], "w")))
-	die ("can not open and write DRAT proof to '%s'", argv[i]);
+        die ("can not open and write DRAT proof to '%s'", argv[i]);
       proof_name = argv[i], close_proof = 1;
     } else {
       if (has_suffix (argv[i], ".bz2"))
-	dimacs_file = read_pipe ("bzcat %s", argv[i]), close_input = 2;
+        dimacs_file = read_pipe ("bzcat %s", argv[i]), close_input = 2;
       else if (has_suffix (argv[i], ".gz"))
-	dimacs_file = read_pipe ("gunzip -c %s", argv[i]), close_input = 2;
+        dimacs_file = read_pipe ("gunzip -c %s", argv[i]), close_input = 2;
       else dimacs_file = fopen (argv[i], "r"), close_input = 1;
       if (!dimacs_file)
-	die ("can not open and read DIMACS file '%s'", argv[i]);
+        die ("can not open and read DIMACS file '%s'", argv[i]);
       dimacs_name = argv[i];
     }
   }
