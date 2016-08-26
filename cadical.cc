@@ -763,7 +763,6 @@ static void delete_clause (Clause * c) {
 static void report (char type) {
   if (!stats.reports++)
     fputs (
-"c\n"
 "c                                 redundant average irredundant\n"
 "c     seconds     MB   conflicts   clauses     jump   clauses variables\n"
 "c\n", stdout);
@@ -1234,31 +1233,31 @@ static void print_statistics () {
   size_t m = max_bytes ();
   print_profile (t);
   section ("statistics");
-  msg ("conflicts:     %15ld   %10.2f   (per second)",
+  msg ("conflicts:     %15ld   %10.2f    per second",
     stats.conflicts, relative (stats.conflicts, t));
-  msg ("decisions:     %15ld   %10.2f   (per second)",
+  msg ("decisions:     %15ld   %10.2f    per second",
     stats.decisions, relative (stats.decisions, t));
-  msg ("reductions:    %15ld   %10.2f   (conflicts per reduction)",
+  msg ("reductions:    %15ld   %10.2f    conflicts per reduction",
     stats.reduce.count, relative (stats.conflicts, stats.reduce.count));
-  msg ("restarts:      %15ld   %10.2f   (conflicts per restart)",
+  msg ("restarts:      %15ld   %10.2f    conflicts per restart",
     stats.restarts, relative (stats.conflicts, stats.restarts));
-  msg ("propagations:  %15ld   %10.2f   (millions per second)",
+  msg ("propagations:  %15ld   %10.2f    millions per second",
     stats.propagations, relative (stats.propagations/1e6, t));
-  msg ("bumped:        %15ld   %10.2f   (per conflict)",
+  msg ("bumped:        %15ld   %10.2f    per conflict",
     stats.bumped, relative (stats.bumped, stats.conflicts));
-  msg ("reused:        %15ld   %10.2f %% (per restart)",
+  msg ("reused:        %15ld   %10.2f %%  per restart",
     stats.reused, percent (stats.reused, stats.restarts));
-  msg ("delayed:       %15ld   %10.2f %% (per restart)",
+  msg ("delayed:       %15ld   %10.2f %%  per restart",
     stats.delayed, percent (stats.delayed, stats.restarts));
-  msg ("units:         %15ld   %10.2f   (conflicts per unit)",
+  msg ("units:         %15ld   %10.2f    conflicts per unit",
     stats.learned.units, relative (stats.conflicts, stats.learned.units));
-  msg ("searched:      %15ld   %10.2f   (per decision)",
+  msg ("searched:      %15ld   %10.2f    per decision",
     stats.searched, relative (stats.searched, stats.decisions));
-  msg ("collected:     %15ld   %10.2f   (clauses and MB)",
+  msg ("collected:     %15ld   %10.2f    clauses and MB",
     stats.reduce.clauses, stats.reduce.bytes/(double)(1l<<20));
-  msg ("maxbytes:      %15ld   %10.2f   MB",
+  msg ("maxbytes:      %15ld   %10.2f    MB",
     m, m/(double)(1l<<20));
-  msg ("time:          %15s   %10.2f   seconds", "", t);
+  msg ("time:          %15s   %10.2f    seconds", "", t);
   msg ("");
 }
 
@@ -1697,6 +1696,7 @@ int main (int argc, char ** argv) {
   msg ("");
   if (proof_file) msg ("writing DRAT proof to '%s'", proof_name);
   else msg ("will not generate nor write DRAT proof");
+  section ("parsing");
   msg ("reading DIMACS file from '%s'", dimacs_name);
   parse_dimacs ();
   if (close_input == 1) fclose (dimacs_file);
@@ -1713,7 +1713,7 @@ int main (int argc, char ** argv) {
   print_options ();
   res = solve ();
   if (close_proof) fclose (proof_file);
-  msg ("");
+  section ("result");
   if (res == 10) {
     check_satisfying_assignment (val);
     printf ("s SATISFIABLE\n");
