@@ -1559,7 +1559,10 @@ static void banner () {
 int main (int argc, char ** argv) {
   int i, res;
   for (i = 1; i < argc; i++) {
-    if (!strcmp (argv[i], "-h")) fputs (USAGE, stdout), exit (0);
+    if (!strcmp (argv[i], "-h"))
+      fputs (USAGE, stdout), exit (0);
+    else if (!strcmp (argv[i], "--version"))
+      fputs (VERSION "\n", stdout), exit (0);
     else if (!strcmp (argv[i], "-")) {
       if (proof_file) die ("too many arguments");
       else if (!dimacs_file) dimacs_file = stdin, dimacs_name = "<stdin>";
