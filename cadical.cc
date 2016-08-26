@@ -254,6 +254,7 @@ static const char *input_name, *dimacs_name, *proof_name;
 static int lineno, close_input, close_proof;
 
 #ifndef NDEBUG
+
 // Sam Buss suggested to debug the case where a solver incorrectly
 // claims the formula to be unsatisfiable by checking every learned
 // clause to be satisfied by a satisfying assignment.  Thus the first
@@ -261,9 +262,11 @@ static int lineno, close_input, close_proof;
 // need to generate proof traces and perform forward proof checking.
 // The incorrectly derived clause will raise an abort signal and
 // thus allows to debug the issue with a symbolic debugger immediately.
+
 static FILE * solution_file;
 static const char *solution_name;
-static signed char * solution;          // like 'val' (and 'phases')
+static signed char * solution;          // like 'vals' (and 'phases')
+
 #endif
 
 /*------------------------------------------------------------------------*/
@@ -497,6 +500,9 @@ static void print_profile (double all) {
 
 /*------------------------------------------------------------------------*/
 
+// Updating an exponential moving average is placed here since we want to
+// log both updates and phases of initialization, thus need 'LOG'.
+
 inline void EMA::update (double y, const char * name) {
 
   // This is the common exponential moving average update.
@@ -529,7 +535,13 @@ inline void EMA::update (double y, const char * name) {
   LOG ("new %s EMA wait = period = %ld, beta = %g", name, wait, beta);
 }
 
+// Short hand for better logging.
+
+#define UPDATE_EMA(E,Y) E.update ((Y), #E)
+
 /*------------------------------------------------------------------------*/
+
+// In essence 'abs' but also checks whether 'lit' is a valid literal.
 
 static int vidx (int lit) {
   int idx;
@@ -539,11 +551,15 @@ static int vidx (int lit) {
   return idx;
 }
 
+// Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
+
 static int val (int lit) {
   int idx = vidx (lit), res = vals[idx];
   if (lit < 0) res = -res;
   return res;
 }
+
+// As 'val' but restricted to the root-level value of a literal.
 
 static int fixed (int lit) {
   int idx = vidx (lit), res = vals[idx];
@@ -551,6 +567,8 @@ static int fixed (int lit) {
   if (lit < 0) res = -res;
   return res;
 }
+
+// Sign of an integer, but also does proper index checking.
 
 static int sign (int lit) {
   assert (lit), assert (abs (lit) <= max_var);
@@ -565,6 +583,8 @@ static Watches & watches (int lit) {
 static Var & var (int lit) { return vars [vidx (lit)]; }
 
 /*------------------------------------------------------------------------*/
+
+// Very expensive check for the consistency of the VMTF queue.
 
 static void check_vmtf_queue_invariant () {
 #if 0
@@ -705,8 +725,8 @@ static void add_new_original_clause () {
   } else watch_clause (new_clause (false));
 }
 
-static Clause * new_learned_clause (int g) {
-  return watch_clause (new_clause (true, g));
+static Clause * new_learned_clause (int glue) {
+  return watch_clause (new_clause (true, glue));
 }
 
 static void delete_clause (Clause * c) { 
@@ -728,22 +748,16 @@ static void report (char type) {
 "c\n", stdout);
 //   123456.89 123456 12345678901 123456789 123456.8 123456789 123456789
   printf (
-    "c %c "
-    "%9.2f "
-    "%6.0f "
-    "%11ld "
-    "%9ld "
-    "%8.1f "
-    "%9ld "
-    "%9d\n",
-    type,
+    "c %c " 
+    "%9.2f " "%6.0f "   "%11ld "   "%9ld "  "%8.1f "  "%9ld "   "%9d\n",
+    type,   
     seconds (),
     max_bytes ()/(double)(1<<20),
-    stats.conflicts,
-    (long) redundant.size (),
-    (double) ema.jump,
-    (long) irredundant.size (),
-    active_variables ());
+                     stats.conflicts,
+                          (long) redundant.size (),
+                                     (double) ema.jump,
+                                            (long) irredundant.size (),
+                                                      active_variables ());
   fflush (stdout);
 }
 
@@ -797,9 +811,12 @@ static bool propagate () {
 }
 
 static void minimize_clause () {
+  // TODO
 }
 
 #ifndef NDEBUG
+
+// Like 'val' for 'vals' but 'sol' is for 'solution'.
 
 static int sol (int lit) {
   assert (solution);
@@ -818,7 +835,9 @@ static void check_clause () {
     satisfied = (sol (clause[i]) > 0);
   if (satisfied) return;
   fflush (stdout);
-  fputs ("*** cadical error: learned clause unsatisfied by solution:\n", stderr);
+  fputs (
+    "*** cadical error: learned clause unsatisfied by solution:\n",
+    stderr);
   for (size_t i = 0; i < clause.size (); i++)
     fprintf (stderr, "%d ", clause[i]);
   fputs ("0\n", stderr);
@@ -839,7 +858,8 @@ static void dequeue (Var * v) {
 }
 
 static void enqueue (Var * v, int idx) {
-  if ((v->prev = queue.last)) var (queue.last).next = idx; else queue.first = idx;
+  if ((v->prev = queue.last)) var (queue.last).next = idx;
+  else queue.first = idx;
   queue.last = idx;
   v->next = 0;
 }
@@ -877,8 +897,6 @@ static void clear_levels () {
     levels[seen.levels[i]].seen = 0;
   seen.levels.clear ();
 }
-
-#define UPDATE_EMA(E,Y) E.update ((Y), #E)
 
 static void bump_clause (Clause * c) { 
   if (!c->redundant) return;
