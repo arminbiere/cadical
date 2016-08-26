@@ -152,10 +152,10 @@ static vector<Level> levels;
 static size_t propagate_next;	// BFS index into 'trail'
 static vector<int> trail;	// assigned literals
 
-static vector<int> literals;	// temporary clause in parsing & learning
+static vector<int> clause;	// temporary clause in parsing & learning
 
-static vector<Clause*> irredundant;	// all not redundant clauses
-static vector<Clause*> redundant;	// all redundant clauses
+static vector<Clause*> irredundant;	// original / not redundant clauses
+static vector<Clause*> redundant;	// redundant / learned clauses
 
 static bool iterating;		// report top-level assigned variables
 
@@ -273,7 +273,7 @@ static size_t max_bytes () {
 #ifndef NDEBUG
   ADJUST_MAX_BYTES (original_literals);
 #endif
-  ADJUST_MAX_BYTES (literals);
+  ADJUST_MAX_BYTES (clause);
   ADJUST_MAX_BYTES (trail);
   ADJUST_MAX_BYTES (seen.literals);
   ADJUST_MAX_BYTES (seen.levels);
@@ -551,8 +551,8 @@ static size_t bytes_clause (int size) {
 }
 
 static Clause * new_clause (bool red, int glue = 0) {
-  assert (literals.size () <= (size_t) INT_MAX);
-  int size = (int) literals.size ();
+  assert (clause.size () <= (size_t) INT_MAX);
+  int size = (int) clause.size ();
   size_t bytes = bytes_clause (size);
   inc_bytes (bytes);
   Clause * res = (Clause*) new char[bytes];
@@ -562,7 +562,7 @@ static Clause * new_clause (bool red, int glue = 0) {
   res->redundant = red;
   res->garbage = false;
   res->reason = false;
-  for (int i = 0; i < size; i++) res->literals[i] = literals[i];
+  for (int i = 0; i < size; i++) res->literals[i] = clause[i];
   if (red) redundant.push_back (res);
   else irredundant.push_back (res);
   if (++stats.clauses.current > stats.clauses.max)
@@ -572,12 +572,12 @@ static Clause * new_clause (bool red, int glue = 0) {
 }
 
 static void add_new_original_clause () {
-  int size = (int) literals.size ();
+  int size = (int) clause.size ();
   if (!size) {
     if (!unsat) msg ("original empty clause"), unsat = true;
     else LOG ("original empty clause produces another inconsistency");
   } else if (size == 1) {
-    int unit = literals[0], tmp = val (unit);
+    int unit = clause[0], tmp = val (unit);
     if (!tmp) assign (unit);
     else if (tmp < 0) {
       if (!unsat) msg ("parsed clashing unit"), learn_empty_clause ();
@@ -695,13 +695,13 @@ static void check_clause () {
 #ifndef NDEBUG
   if (!solution) return;
   bool satisfied = false;
-  for (size_t i = 0; !satisfied && i < literals.size (); i++)
-    satisfied = (sol (literals[i]) > 0);
+  for (size_t i = 0; !satisfied && i < clause.size (); i++)
+    satisfied = (sol (clause[i]) > 0);
   if (satisfied) return;
   fflush (stdout);
   fputs ("*** cadical error: learned clause unsatisfied by solution:\n", stderr);
-  for (size_t i = 0; i < literals.size (); i++)
-    fprintf (stderr, "%d ", literals[i]);
+  for (size_t i = 0; i < clause.size (); i++)
+    fprintf (stderr, "%d ", clause[i]);
   fputs ("0\n", stderr);
   fflush (stderr);
   abort ();
@@ -770,7 +770,7 @@ static bool analyze_literal (int lit) {
   if (v.seen) return false;
   if (!v.level) return false;
   assert (val (lit) < 0);
-  if (v.level < level) literals.push_back (lit);
+  if (v.level < level) clause.push_back (lit);
   if (!levels[v.level].seen++) {
     LOG ("found new level %d contributing to conflict");
     seen.levels.push_back (v.level);
@@ -789,7 +789,7 @@ static void analyze () {
     Clause * reason = conflict;
     LOG (reason, "analyzing conflicting");
     bump_clause (reason);
-    assert (literals.empty ());
+    assert (clause.empty ());
     assert (seen.literals.empty ());
     assert (seen.levels.empty ());
     int open = 0, uip = 0;
@@ -804,9 +804,9 @@ static void analyze () {
       LOG (reason, "analyzing %d reason", uip);
     }
     LOG ("first UIP %d", uip);
-    literals.push_back (-uip);
+    clause.push_back (-uip);
     check_clause ();
-    int size = (int) literals.size ();
+    int size = (int) clause.size ();
     int glue = (int) seen.levels.size ();
     update_ema (ema.learned.glue.slow, glue, 1e-5);
     update_ema (ema.learned.glue.fast, glue, 1e-2);
@@ -819,19 +819,19 @@ static void analyze () {
       trace_unit_clause (-uip);
       stats.learned.units++;
     } else {
-      sort (literals.begin (), literals.end (), level_greater_than ());
-      assert (literals[0] == -uip);
+      sort (clause.begin (), clause.end (), level_greater_than ());
+      assert (clause[0] == -uip);
       driving_clause = new_learned_clause (glue);
       minimize_clause ();
       check_clause ();
       trace_add_clause (driving_clause);
-      jump = var (literals[1]).level;
+      jump = var (clause[1]).level;
       assert (jump < level);
     }
     backtrack (jump);
     assign (-uip, driving_clause);
     bump_and_clear_seen_literals (uip);
-    literals.clear ();
+    clause.clear ();
     clear_levels ();
   }
   conflict = 0;
@@ -1168,15 +1168,15 @@ struct lit_less_than {
 };
 
 static bool tautological () {
-  sort (literals.begin (), literals.end (), lit_less_than ());
+  sort (clause.begin (), clause.end (), lit_less_than ());
   size_t j = 0;
   int prev = 0;
-  for (size_t i = 0; i < literals.size (); i++) {
-    int lit = literals[i];
+  for (size_t i = 0; i < clause.size (); i++) {
+    int lit = clause[i];
     if (lit == -prev) return true;
-    if (lit != prev) literals[j++] = lit;
+    if (lit != prev) clause[j++] = lit;
   }
-  literals.resize (j);
+  clause.resize (j);
   return false;
 }
 
@@ -1267,12 +1267,12 @@ COMMENT:
     original_literals.push_back (lit);
 #endif
     if (lit) {
-      if (literals.size () == INT_MAX) perr ("clause too large");
-      literals.push_back (lit);
+      if (clause.size () == INT_MAX) perr ("clause too large");
+      clause.push_back (lit);
     } else {
       if (!tautological ()) add_new_original_clause ();
       else LOG ("tautological original clause");
-      literals.clear ();
+      clause.clear ();
       if (parsed_clauses++ >= num_original_clauses) perr ("too many clauses");
     }
   }
