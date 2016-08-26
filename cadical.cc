@@ -67,6 +67,7 @@ using namespace std;
 /*  NAME,               TYPE,  VAL,LOW,HIGH,DESCRIPTION */ \
 OPTION(emagluefast,   double, 3e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaglueslow,   double, 1e-5, 0,  1, "alpha slow learned glue") \
+OPTION(emajump,       double, 1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,   double, 1e-6, 0,  1, "alpha resolved glue & size") \
 OPTION(reduce,          bool,    1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,   bool,    1, 0,  1, "dynamic glue & size limit") \
@@ -229,6 +230,7 @@ static vector<Timer> timers;
 static struct { 
   struct { EMA glue, size; } resolved;
   struct { struct { EMA fast, slow; } glue; } learned;
+  EMA jump;
 } ema;
 
 // Limits for next restart, reduce.
@@ -719,7 +721,7 @@ static void report (char type) {
     fputs (
 "c\n"
 "c                                 redundant average irredundant\n"
-"c     seconds     MB   conflicts   clauses     glue   clauses variables\n"
+"c     seconds     MB   conflicts   clauses     jump   clauses variables\n"
 "c\n", stdout);
 //   123456.89 123456 12345678901 123456789 123456.8 123456789 123456789
   printf (
@@ -736,7 +738,7 @@ static void report (char type) {
     max_bytes ()/(double)(1<<20),
     stats.conflicts,
     (long) redundant.size (),
-    (double) ema.learned.glue.slow,
+    (double) ema.jump,
     (long) irredundant.size (),
     active_variables ());
   fflush (stdout);
@@ -949,6 +951,7 @@ static void analyze () {
       jump = var (clause[1]).level;
       assert (jump < level);
     }
+    UPDATE_EMA (ema.jump, jump);
     backtrack (jump);
     assign (-uip, driving_clause);
     bump_and_clear_seen_literals (uip);
@@ -1161,6 +1164,7 @@ static void init_solving () {
   INIT_EMA (ema.learned.glue.slow, opts.emaglueslow);
   INIT_EMA (ema.resolved.glue, opts.emaresolved);
   INIT_EMA (ema.resolved.size, opts.emaresolved);
+  INIT_EMA (ema.jump, opts.emajump);
 }
 
 static int solve () {
