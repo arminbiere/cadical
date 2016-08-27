@@ -38,6 +38,7 @@ OPTION(emagluefast,    double,3e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaglueslow,    double,1e-5, 0,  1, "alpha slow learned glue") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
+OPTION(keep,              int,   2, 1,1e9, "size kept learned clauses") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,    bool,   1, 0,  1, "dynamic glue & size limit") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
@@ -795,21 +796,21 @@ static bool propagate () {
     size_t i = 0, j = 0;
     while (!conflict && i < ws.size ()) {
       const Watch w = ws[j++] = ws[i++];
-      const int b = val (w.blit);
+      const int b = val (w.blit), size = w.size;
       if (b > 0) continue;
-      else if (w.size == 2) {
+      else if (size == 2) {
         if (b < 0) conflict = w.clause;
         else assign (w.blit, w.clause);
       } else {
-        assert (w.clause->size == w.size);
+        assert (w.clause->size == size);
         int * lits = w.clause->literals;
         if (lits[1] != -lit) swap (lits[0], lits[1]);
         assert (lits[1] == -lit);
         const int u = val (lits[0]);
         if (u > 0) ws[j-1].blit = lits[0];
         else {
-          int k, v = 0;
-          for (k = 2; k < w.size && (v = val (lits[k])) < 0; k++)
+          int k, v = -1;
+          for (k = 2; k < size && (v = val (lits[k])) < 0; k++)
             ;
           if (v > 0) ws[j-1].blit = lits[k];
           else if (!v) {
@@ -1096,8 +1097,7 @@ static void mark_redundant_clauses () {
     assert (c->redundant);
     if (c->reason) continue;
     if (c->garbage) continue;
-    if (c->glue <= 2) continue;
-    if (c->size <= 3) continue;
+    if (c->size <= opts.keep) continue;
     if (c->resolved > limits.reduce.resolved) continue;
     if (opts.reducedynamic &&
         c->glue < ema.resolved.glue &&
