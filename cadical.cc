@@ -47,7 +47,7 @@ OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartdelay,     bool,   1, 0,  1, "delay restarts") \
 OPTION(restartdelaylim,double, 0.5, 0,  1, "restart delay percent limit") \
 OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
-OPTION(restartmargin,  double, 0.2, 0, 10, "restart slow & fast margin") \
+OPTION(restartmargin,  double, 0.1, 0, 10, "restart slow & fast margin") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
 OPTION(witness,          bool,   1, 0,  1, "print witness") \
 
@@ -764,13 +764,13 @@ static void delete_clause (Clause * c) {
 static void report (char type) {
   if (!stats.reports++)
     fputs (
-"c                                 redundant average irredundant\n"
-"c     seconds     MB   conflicts   clauses     jump   clauses variables\n"
+"c                                 redundant average irredundant           resolved\n"
+"c     seconds     MB   conflicts   clauses     jump   clauses variables  glue  size\n"
 "c\n", stdout);
-//   123456.89 123456 12345678901 123456789 123456.8 123456789 123456789
+//   123456.89 123456 12345678901 123456789 123456.8 123456789 123456789 12345 12345
   printf (
     "c %c " 
-    "%9.2f " "%6.0f "   "%11ld "   "%9ld "  "%8.1f "  "%9ld "   "%9d\n",
+    "%9.2f " "%6.0f "   "%11ld "   "%9ld "  "%8.1f "  "%9ld "   "%9d"   "%5.0f %5.0f\n",
     type,   
     seconds (),
     max_bytes ()/(double)(1<<20),
@@ -778,7 +778,9 @@ static void report (char type) {
                           (long) redundant.size (),
                                      (double) ema.jump,
                                             (long) irredundant.size (),
-                                                      active_variables ());
+                                                      active_variables (),
+                                                          (double) ema.resolved.glue,
+                                                             (double) ema.resolved.size);
   fflush (stdout);
 }
 
@@ -1100,8 +1102,8 @@ static void mark_redundant_clauses () {
     if (c->size <= opts.keep) continue;
     if (c->resolved > limits.reduce.resolved) continue;
     if (opts.reducedynamic &&
-        c->glue < ema.resolved.glue &&
-        c->size < ema.resolved.size) continue;
+        c->glue < (int) ema.resolved.glue &&
+        c->size < (int) ema.resolved.size) continue;
     work.push_back (c);
   }
   sort (work.begin (), work.end (), reduce_less_than ());
