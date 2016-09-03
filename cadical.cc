@@ -361,6 +361,7 @@ static size_t max_bytes () {
   ADJUST_MAX_BYTES (trail);
   ADJUST_MAX_BYTES (seen.literals);
   ADJUST_MAX_BYTES (seen.levels);
+  ADJUST_MAX_BYTES (resolved);
   ADJUST_MAX_BYTES (irredundant);
   ADJUST_MAX_BYTES (redundant);
   ADJUST_MAX_BYTES (levels);
