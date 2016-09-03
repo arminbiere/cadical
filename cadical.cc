@@ -38,7 +38,8 @@ OPTION(emagluefast,    double,3e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaglueslow,    double,1e-5, 0,  1, "alpha slow learned glue") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
-OPTION(keep,              int,   2, 1,1e9, "size kept learned clauses") \
+OPTION(keepglue,          int,   3, 1,1e9, "size kept learned clauses") \
+OPTION(keepsize,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,    bool,   1, 0,  1, "dynamic glue & size limit") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
@@ -1127,7 +1128,8 @@ static void mark_redundant_clauses () {
     assert (c->redundant);
     if (c->reason) continue;
     if (c->garbage) continue;
-    if (c->size <= opts.keep) continue;
+    if (c->size <= opts.keepsize) continue;
+    if (c->glue () <= opts.keepglue) continue;
     if (c->resolved () > limits.reduce.resolved) continue;
     if (opts.reducedynamic &&
         c->glue () < (int) ema.resolved.glue &&
