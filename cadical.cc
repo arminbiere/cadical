@@ -709,8 +709,8 @@ static Clause * watch_clause (Clause * c) {
 }
 
 static size_t bytes_clause (bool redundant, int size) {
-  size_t res = sizeof (Clause) + (size - 1) * sizeof (int);
-  assert (size > 0);
+  assert (size >= 2);
+  size_t res = sizeof (Clause) + (size - 2) * sizeof (int);
   if (redundant) res += Clause::REDUNDANT_OFFSET;
   return res;
 }
