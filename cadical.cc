@@ -38,8 +38,8 @@ OPTION(emagluefast,    double,3e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaglueslow,    double,1e-5, 0,  1, "alpha slow learned glue") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
-OPTION(keepglue,          int,   3, 1,1e9, "size kept learned clauses") \
-OPTION(keepsize,          int,   2, 1,1e9, "glue kept learned clauses") \
+OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
+OPTION(keepsize,          int,   2, 2,1e9, "size kept learned clauses") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,    bool,   1, 0,  1, "dynamic glue & size limit") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
@@ -224,6 +224,8 @@ static struct {
   vector<int> literals, levels; // seen literals & levels in 'analyze'
 } seen;
 
+static vector<Clause*> resolved;
+
 static Clause * conflict;       // set in 'propagation', reset in 'analyze'
 
 static struct {
@@ -236,6 +238,7 @@ static struct {
   long propagations;            // propagated literals in 'propagate'
 
   long bumped;                  // seen and bumped variables in 'analyze'
+  long resolved;		// resolved redundant clauses in 'analyze'
   long searched;                // searched decisions in 'decide'
 
   struct { long count, clauses, bytes; } reduce;        // in 'reduce'
@@ -727,7 +730,7 @@ static Clause * new_clause (bool red, int glue = 0) {
   res->garbage = false;
   res->reason = false;
   if ((res->redundant = red)) {
-    res->resolved () = stats.conflicts;
+    res->resolved () = ++stats.resolved;
     res->glue () = glue;
   }
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
@@ -898,12 +901,6 @@ static void check_clause () {
 #endif
 }
 
-struct bumped_earlier {
-  bool operator () (int a, int b) {
-    return var (a).bumped < var (b).bumped;
-  }
-};
-
 static void dequeue (Var * v) {
   if (v->prev) var (v->prev).next = v->next; else queue.first = v->next;
   if (v->next) var (v->next).prev = v->prev; else queue.last = v->prev;
@@ -923,7 +920,13 @@ static int next_decision_variable () {
   return res;
 }
 
-static void bump_and_clear_seen_literals (int uip) {
+struct bumped_earlier {
+  bool operator () (int a, int b) {
+    return var (a).bumped < var (b).bumped;
+  }
+};
+
+static void bump_seen_variables (int uip) {
   START (bump);
   sort (seen.literals.begin (), seen.literals.end (), bumped_earlier ());
   if (uip < 0) uip = -uip;
@@ -944,17 +947,34 @@ static void bump_and_clear_seen_literals (int uip) {
   seen.literals.clear ();
 }
 
+struct resolved_earlier {
+  bool operator () (Clause * a, Clause * b) {
+    return a->resolved () < b->resolved ();
+  }
+};
+
+static void bump_resolved_clauses () {
+  START (bump);
+  sort (resolved.begin (), resolved.end (), resolved_earlier ());
+  for (size_t i = 0; i < resolved.size (); i++)
+    resolved[i]->resolved () = ++stats.resolved;
+  STOP (bump);
+  resolved.clear ();
+}
+
 static void clear_levels () {
   for (size_t i = 0; i < seen.levels.size (); i++)
     levels[seen.levels[i]].seen = 0;
   seen.levels.clear ();
 }
 
-static void bump_clause (Clause * c) { 
+static void resolve_clause (Clause * c) { 
   if (!c->redundant) return;
-  c->resolved () = stats.conflicts;
+  if (c->size <= opts.keepsize) return;
+  if (c->glue () <= opts.keepglue) return;
   UPDATE_EMA (ema.resolved.size, c->size);
   UPDATE_EMA (ema.resolved.glue, c->glue ());
+  resolved.push_back (c);
 }
 
 struct level_greater_than {
@@ -981,15 +1001,16 @@ static bool analyze_literal (int lit) {
 
 static void analyze () {
   assert (conflict);
+  assert (clause.empty ());
+  assert (seen.literals.empty ());
+  assert (seen.levels.empty ());
+  assert (resolved.empty ());
   START (analyze);
   if (!level) learn_empty_clause ();
   else {
     Clause * reason = conflict;
     LOG (reason, "analyzing conflicting");
-    bump_clause (reason);
-    assert (clause.empty ());
-    assert (seen.literals.empty ());
-    assert (seen.levels.empty ());
+    resolve_clause (reason);
     int open = 0, uip = 0;
     size_t i = trail.size ();
     for (;;) {
@@ -1004,6 +1025,7 @@ static void analyze () {
     LOG ("first UIP %d", uip);
     clause.push_back (-uip);
     check_clause ();
+    bump_resolved_clauses ();
     int size = (int) clause.size ();
     int glue = (int) seen.levels.size ();
     UPDATE_EMA (ema.learned.glue.slow, glue);
@@ -1027,7 +1049,7 @@ static void analyze () {
     UPDATE_EMA (ema.jump, jump);
     backtrack (jump);
     assign (-uip, driving_clause);
-    bump_and_clear_seen_literals (uip);
+    bump_seen_variables (uip);
     clause.clear ();
     clear_levels ();
   }
