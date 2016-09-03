@@ -87,14 +87,35 @@ using namespace std;
 // Type declarations
 
 struct Clause {
-  bool redundant;       // so not 'irredundant' and on 'redudant' stack
+  bool redundant;       // so not 'irredundant' and on 'redundant' stack
   bool garbage;         // can be garbage collected
   bool reason;          // reason clause can not be collected
-  int size;             // actual size of 'literals'
-  int glue;             // LBD = glucose level = glue
-  long resolved;        // conflict index when last resolved
-  int literals[1];      // actually of variadic 'size'
+  int size;             // actual size of 'literals' >= 2
+  int literals[2];      // actually of variadic 'size'
+
+  // Actually, a redundant clause has two additional fields
+  //
+  //  long resolved;      // conflict index when last resolved
+  //  int glue;           // LBD = glucose level = glue
+  //
+  // These are however placed before the actual clause data and
+  // thus not directly visible.
+
+  static const size_t GLUE_OFFSET      =  4; // wrt '&Clause.redundant'
+  static const size_t RESOLVED_OFFSET  = 12; // ditto
+  static const size_t REDUNDANT_OFFSET = 12; // ditto
+
+  long & resolved () {
+    assert (this), assert (redundant);
+    return *(long*) (((char*)this) - RESOLVED_OFFSET);
+  }
+
+  int & glue () {
+    assert (this), assert (redundant);
+    return *(int*) (((char*)this) - GLUE_OFFSET);
+  }
 };
+
 
 struct Var {
   bool seen;            // in 'analyze'
@@ -412,7 +433,7 @@ static void LOG (Clause * c, const char *fmt, ...) {
   vprintf (fmt, ap);
   va_end (ap);
   if (c) {
-    if (c->redundant) printf (" redundant glue %d", c->glue);
+    if (c->redundant) printf (" redundant glue %d", c->glue ());
     else printf (" irredundant");
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
@@ -686,23 +707,28 @@ static Clause * watch_clause (Clause * c) {
   return c;
 }
 
-static size_t bytes_clause (int size) {
+static size_t bytes_clause (bool redundant, int size) {
+  size_t res = sizeof (Clause) + (size - 1) * sizeof (int);
   assert (size > 0);
-  return sizeof (Clause) + (size - 1) * sizeof (int);
+  if (redundant) res += Clause::REDUNDANT_OFFSET;
+  return res;
 }
 
 static Clause * new_clause (bool red, int glue = 0) {
   assert (clause.size () <= (size_t) INT_MAX);
   int size = (int) clause.size ();
-  size_t bytes = bytes_clause (size);
+  size_t bytes = bytes_clause (red, size);
+  char * ptr = new char[bytes];
   inc_bytes (bytes);
-  Clause * res = (Clause*) new char[bytes];
+  if (red) ptr += Clause::REDUNDANT_OFFSET;
+  Clause * res = (Clause*) ptr;
   res->size = size;
-  res->glue = glue;
-  res->resolved = stats.conflicts;
-  res->redundant = red;
   res->garbage = false;
   res->reason = false;
+  if ((res->redundant = red)) {
+    res->resolved () = stats.conflicts;
+    res->glue () = glue;
+  }
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
   if (red) redundant.push_back (res);
   else irredundant.push_back (res);
@@ -755,8 +781,10 @@ static void delete_clause (Clause * c) {
   LOG (c, "delete");
   assert (stats.clauses.current > 0);
   stats.clauses.current--;
-  dec_bytes (bytes_clause (c->size));
-  delete [] (char*) c;
+  dec_bytes (bytes_clause (c->redundant, c->size));
+  char * ptr = (char*) c;
+  if (c->redundant) ptr -= Clause::REDUNDANT_OFFSET;
+  delete [] (char*) ptr;
 }
 
 /*------------------------------------------------------------------------*/
@@ -923,9 +951,9 @@ static void clear_levels () {
 
 static void bump_clause (Clause * c) { 
   if (!c->redundant) return;
-  c->resolved = stats.conflicts;
+  c->resolved () = stats.conflicts;
   UPDATE_EMA (ema.resolved.size, c->size);
-  UPDATE_EMA (ema.resolved.glue, c->glue);
+  UPDATE_EMA (ema.resolved.glue, c->glue ());
 }
 
 struct level_greater_than {
@@ -1081,10 +1109,10 @@ static void mark_satisfied_clauses (const vector<Clause*> & clauses) {
 
 struct reduce_less_than {
   bool operator () (Clause * c, Clause * d) {
-    if (c->resolved < d->resolved) return true;
-    if (c->resolved > d->resolved) return false;
-    if (c->glue > d->glue) return true;
-    if (c->glue < d->glue) return false;
+    if (c->resolved () < d->resolved ()) return true;
+    if (c->resolved () > d->resolved ()) return false;
+    if (c->glue () > d->glue ()) return true;
+    if (c->glue () < d->glue ()) return false;
     if (c->size > d->size) return true;
     if (c->size < d->size) return false;
     return false;
@@ -1100,9 +1128,9 @@ static void mark_redundant_clauses () {
     if (c->reason) continue;
     if (c->garbage) continue;
     if (c->size <= opts.keep) continue;
-    if (c->resolved > limits.reduce.resolved) continue;
+    if (c->resolved () > limits.reduce.resolved) continue;
     if (opts.reducedynamic &&
-        c->glue < (int) ema.resolved.glue &&
+        c->glue () < (int) ema.resolved.glue &&
         c->size < (int) ema.resolved.size) continue;
     work.push_back (c);
   }
@@ -1146,7 +1174,7 @@ static void collect_clauses (vector<Clause*> & clauses) {
     Clause * c = clauses[j++] = clauses[i++];
     if (!c->garbage) continue;
     stats.reduce.clauses++;
-    stats.reduce.bytes += bytes_clause (c->size);
+    stats.reduce.bytes += bytes_clause (c->redundant, c->size);
     delete_clause (c);
     j--;
   }
