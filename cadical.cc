@@ -139,15 +139,16 @@ struct Var {
   bool seen;            // in 'analyze'
   bool minimized;       // can be minimized in 'minimize'
   bool poison;          // can not be minimized in 'minimize'
-  int level;            // decision level
+  int mark;		// used in 'minmize_literal'
 
   long bumped;          // enqueue/bump time stamp for VMTF queue
   int prev, next;       // double links for decision VMTF queue
 
   Clause * reason;      // assignment reason/antecedent
+  int level;            // decision level
 
   Var () :
-    seen (false), minimized (false), poison (false),
+    seen (false), minimized (false), poison (false), mark (0),
     bumped (0), prev (0), next (0)
   { }
 };
@@ -245,6 +246,7 @@ static struct {
 
 static struct {
   vector<Clause *> clauses;
+  vector<int> lits;
 } work;
 
 static vector<Clause*> resolved;
@@ -380,6 +382,7 @@ static size_t max_bytes () {
   ADJUST_MAX_BYTES (redundant);
   ADJUST_MAX_BYTES (levels);
   ADJUST_MAX_BYTES (work.clauses);
+  ADJUST_MAX_BYTES (work.lits);
   res += (4 * stats.clauses.max * sizeof (Watch)) / 3;  // estimate
   return res;
 }
@@ -464,8 +467,21 @@ static void LOG (Clause * c, const char *fmt, ...) {
   fflush (stdout);
 }
 
+static void LOGCLAUSE (const char *fmt, ...) {
+  va_list ap;
+  printf ("c LOG %d ", level);
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  for (size_t i = 0; i < clause.size (); i++)
+    printf (" %d", clause[i]);
+  fputc ('\n', stdout);
+  fflush (stdout);
+}
+
 #else
 #define LOG(ARGS...) do { } while (0)
+#define LOGCLAUSE(ARGS...) do { } while (0)
 #endif
 
 /*------------------------------------------------------------------------*/
@@ -896,6 +912,8 @@ static bool propagate () {
 
 /*------------------------------------------------------------------------*/
 
+#if 1
+
 static bool minimize_literal (int lit, int depth = 0) {
   Var & v = var (lit);
   if (!v.level || v.minimized || (depth && v.seen)) return true;
@@ -911,9 +929,44 @@ static bool minimize_literal (int lit, int depth = 0) {
   return res;
 }
 
+#else
+
+static bool minimize_literal (int root) {
+  assert (val (root) > 0);
+  assert (work.lits.empty ());
+  work.lits.push_back (root);
+  while (!work.lits.empty ()) {
+    int lit = work.lits.back ();
+    assert (val (lit) > 0);
+    work.lits.pop_back ();
+    Var & v = var (lit);
+    if (v.minimized || v.poison) continue;
+    if (!v.level || (lit != root && v.seen)) v.minimized = true;
+    else if (!v.reason || levels[v.level].seen < 2) v.poison = true;
+    else if (v.mark < v.reason->size) {
+      assert (v.mark >= 0);
+      int other = v.reason->literals[v.mark];
+      Var & u = var (other);
+      if (u.poison) v.poison = true;
+      else {
+	work.lits.push_back (lit);
+	if (other == lit || u.minimized) v.mark++;
+	else work.lits.push_back (-other);
+      }
+    } else assert (v.mark == v.reason->size), v.minimized = true;
+    if (v.minimized || v.poison) seen.minimized.push_back (lit);
+  }
+  assert (var (root).minimized != var (root).poison);
+  LOG ("minimizing %d %s", root, var (root).poison ? "failed" : "succeeded");
+  return var (root).minimized;
+}
+
+#endif
+
 static void minimize_clause () {
   if (!opts.minimize) return;
   START (minimize);
+  LOGCLAUSE ("minimizing");
   assert (seen.minimized.empty ());
   stats.literals.learned += clause.size ();
   size_t j = 0;
@@ -925,6 +978,7 @@ static void minimize_clause () {
   for (size_t i = 0; i < seen.minimized.size (); i++) {
     Var & v = var (seen.minimized[i]);
     v.minimized = v.poison = false;
+    v.mark = 0;
   }
   seen.minimized.clear ();
   STOP (minimize);
@@ -1425,8 +1479,8 @@ static void init_variables () {
 #define printf_double_FMT "%g"
 
 #define printf_bool_CONV(V)    ((V) ? "true" : "false")
-#define printf_int_CONV(V)     (V)
-#define printf_double_CONV(V)  (V)
+#define printf_int_CONV(V)     ((int)(V))
+#define printf_double_CONV(V)  ((double)(V))
 
 static void print_options () {
   section ("options");
