@@ -1135,12 +1135,12 @@ static void mark_useless_redundant_clauses_as_garbage () {
         c->size    < ema.resolved.size) continue;
     work.push_back (c);
   }
-  inc_bytes (work.capacity () * sizeof work[0]);
   sort (work.begin (), work.end (), resolved_earlier ());
-  const size_t target = work.size ()/2; //min (work.size (), redundant.size ()/2);
+  const size_t target = work.size ()/2;
   for (size_t i = 0; i < target; i++)
     work[i]->garbage = true;
-  dec_bytes (work.capacity () * sizeof work[0]);
+  size_t bytes = work.capacity () * sizeof work[0];
+  inc_bytes (bytes), dec_bytes (bytes);
 }
 
 static void unprotect_reasons () {
