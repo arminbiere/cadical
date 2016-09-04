@@ -630,11 +630,51 @@ static void check_vmtf_queue_invariant () {
 
 /*------------------------------------------------------------------------*/
 
+static void trace_empty_clause () {
+  if (!proof_file) return;
+  LOG ("tracing empty clause");
+  fputs ("0\n", proof_file);
+}
+
+static void trace_unit_clause (int unit) {
+  if (!proof_file) return;
+  LOG ("tracing unit clause %d", unit);
+  fprintf (proof_file, "%d 0\n", unit);
+}
+
+static void trace_clause (Clause * c, bool add) {
+  if (!proof_file) return;
+  LOG (c, "tracing %s", add ? "addition" : "deletion");
+  if (!add) fputs ("d ", proof_file);
+  for (int i = 0; i < c->size; i++)
+    fprintf (proof_file, "%d ", c->literals[i]);
+  fputs ("0\n", proof_file);
+}
+
+static void trace_add_clause (Clause * c) { trace_clause (c, true); }
+static void trace_delete_clause (Clause * c) { trace_clause (c, false); }
+
+static void learn_empty_clause () {
+  assert (!unsat);
+  LOG ("learned empty clause");
+  trace_empty_clause ();
+  unsat = true;
+}
+
+static void learn_unit_clause (int lit) {
+  LOG ("learned unit clause %d", lit);
+  trace_unit_clause (lit);
+  iterating = true;
+  stats.fixed++;
+}
+
+/*------------------------------------------------------------------------*/
+
 static void assign (int lit, Clause * reason = 0) {
   int idx = vidx (lit);
   assert (!vals[idx]);
   Var & v = vars[idx];
-  if (!(v.level = level)) stats.fixed++, iterating = true;
+  if (!(v.level = level)) learn_unit_clause (lit);
   v.reason = reason;
   vals[idx] = phases[idx] = sign (lit);
   assert (val (lit) > 0);
@@ -666,39 +706,6 @@ static void backtrack (int target_level = 0) {
   if (trail.size () < propagate_next) propagate_next = trail.size ();
   levels.resize (target_level + 1);
   level = target_level;
-}
-
-/*------------------------------------------------------------------------*/
-
-static void trace_empty_clause () {
-  if (!proof_file) return;
-  LOG ("tracing empty clause");
-  fputs ("0\n", proof_file);
-}
-
-static void trace_unit_clause (int unit) {
-  if (!proof_file) return;
-  LOG ("tracing unit clause %d", unit);
-  fprintf (proof_file, "%d 0\n", unit);
-}
-
-static void trace_clause (Clause * c, bool add) {
-  if (!proof_file) return;
-  LOG (c, "tracing %s", add ? "addition" : "deletion");
-  if (!add) fputs ("d ", proof_file);
-  for (int i = 0; i < c->size; i++)
-    fprintf (proof_file, "%d ", c->literals[i]);
-  fputs ("0\n", proof_file);
-}
-
-static void trace_add_clause (Clause * c) { trace_clause (c, true); }
-static void trace_delete_clause (Clause * c) { trace_clause (c, false); }
-
-static void learn_empty_clause () {
-  assert (!unsat);
-  LOG ("learned empty clause");
-  trace_empty_clause ();
-  unsat = true;
 }
 
 /*------------------------------------------------------------------------*/
@@ -1044,7 +1051,6 @@ static void analyze () {
     int jump = 0;
     if (size == 1) {
       LOG ("learned unit clause %d", -uip); 
-      trace_unit_clause (-uip);
       stats.learned.units++;
     } else {
       sort (clause.begin (), clause.end (), level_greater_than ());
@@ -1308,7 +1314,7 @@ static void print_statistics () {
 
 static void init_vmtf_queue () {
   int prev = 0;
-  for (int i = 1; i <= max_var; i++) {
+  for (int i = max_var; i >= 1; i--) {
     Var * v = &vars[i];
     if ((v->prev = prev)) var (prev).next = i;
     else queue.first = i;
@@ -1361,14 +1367,18 @@ static void init_variables () {
   levels.push_back (Level (0));
 }
 
-#define printf_bool_FMT   "%d"
+#define printf_bool_FMT   "%s"
 #define printf_int_FMT    "%d"
 #define printf_double_FMT "%g"
+
+#define printf_bool_CONV(V)    ((V) ? "true" : "false")
+#define printf_int_CONV(V)     (V)
+#define printf_double_CONV(V)  (V)
 
 static void print_options () {
   section ("options");
 #define OPTION(N,T,V,L,H,D) \
-  msg ("--" #N "=" printf_ ## T ## _FMT, opts.N);
+  msg ("--" #N "=" printf_ ## T ## _FMT, printf_ ## T ## _CONV (opts.N));
   OPTIONS
 #undef OPTION
 }
@@ -1421,7 +1431,7 @@ static void print_usage () {
 #define OPTION(N,T,V,L,H,D) \
   printf ( \
     "  %-26s " D " [" printf_ ## T ## _FMT "]\n", \
-    "--" #N "=<" #T ">", V);
+    "--" #N "=<" #T ">", printf_ ## T ## _CONV (V));
   OPTIONS
 #undef OPTION
   fputs (
@@ -1430,6 +1440,9 @@ static void print_usage () {
 "after their description.  They can also be used in the form\n"
 "'--<name>' which is equivalent to '--<name>=1' and in the form\n"
 "'--no-<name>' which is equivalent to '--<name>=0'.\n"
+"\n"
+"Note that decimal integers are casted to 'double' and 'bool'\n"
+"in the natural way, e.g., '1' can be interpreted as 'true'.\n"
 "\n"
 "Then '<input>' is a (compressed) DIMACS file and '<output>'\n"
 "is a file to store the DRAT proof.  If no '<proof>' file is\n"
@@ -1738,8 +1751,8 @@ int main (int argc, char ** argv) {
   if (!dimacs_file) dimacs_name = "<stdin>", dimacs_file = stdin;
   banner ();
   init_signal_handlers ();
-  msg ("");
-  if (proof_file) msg ("writing DRAT proof to '%s'", proof_name);
+  section ("proof trace");
+  if (proof_file) msg ("writing DRAT proof trace to '%s'", proof_name);
   else msg ("will not generate nor write DRAT proof");
   section ("parsing");
   msg ("reading DIMACS file from '%s'", dimacs_name);
