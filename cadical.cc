@@ -926,8 +926,7 @@ static bool minimize_literal (int root, int lit = 0, int depth = 0) {
   if (!lit) lit = root;
   Var & v = var (lit);
   const int tmp = minimize_literal_base_case (root, lit);
-  if (tmp > 0) return true;
-  if (tmp < 0) return false;
+  if (tmp > 0) return true; else if (tmp < 0) return false;
   if (depth++ > opts.minimizedepth) return false;
   bool res = true;
   for (int i = 0; res && i < v.reason->size; i++) {
@@ -936,6 +935,7 @@ static bool minimize_literal (int root, int lit = 0, int depth = 0) {
   }
   if (res) v.minimized = true; else v.poison = true;
   seen.minimized.push_back (lit);
+  if (!depth) LOG ("minimizing %d %s", root, res ? "succeeded" : "failed");
   return res;
 }
 
@@ -958,8 +958,11 @@ static bool minimize_literal (int root) {
 	if (other == lit) v.mark++;
 	else {
 	  const int tmp = minimize_literal_base_case (root, -other);
-	  if (tmp < 0) v.poison = true, seen.minimized.push_back (lit);
-	  else if (tmp > 0) v.mark++;
+	  if (tmp < 0) {
+	    v.poison = true;
+	    seen.minimized.push_back (lit);
+            work.lits.pop_back ();
+	  } else if (tmp > 0) v.mark++;
 	  else work.lits.push_back (-other);
 	}
       } else {
