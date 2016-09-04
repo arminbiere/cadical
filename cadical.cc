@@ -40,6 +40,8 @@ OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
+OPTION(minimize,         bool,   1, 0,  1, "minimize learned clauses") \
+OPTION(minimizedepth,     int,1000, 0,1e9, "recursive minimization depth") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,    bool,   1, 0,  1, "dynamic glue & size limit") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
@@ -93,7 +95,7 @@ static struct {
 #undef OPTION
 } opts = {
 #define OPTION(N,T,V,L,H,D) \
-  V,
+  (T)(V),
   OPTIONS
 #undef OPTION
 };
@@ -236,12 +238,13 @@ static vector<Clause*> redundant;       // redundant / learned clauses
 static bool iterating;          // report top-level assigned variables
 
 static struct {
-  vector<int> literals, levels; // seen literals & levels in 'analyze'
+  vector<int> literals;		// bumped literals in 'analyze'
+  vector<int> levels;		// decision levels of 1st UIP clause
+  vector<int> minimized;	// in 'minimize_literal'
 } seen;
 
 static struct {
   vector<Clause *> clauses;
-  vector<int> lits;
 } work;
 
 static vector<Clause*> resolved;
@@ -252,18 +255,22 @@ static Clause clashing_unit;	// needed if input contains clashing units
 static struct {
   long conflicts;
   long decisions;
+  long propagations;            // propagated literals in 'propagate'
+
   long restarts;
   long delayed;                 // restarts
   long unforced;		// restarts
   long reused;                  // trails
+
   long reports;
-  long propagations;            // propagated literals in 'propagate'
 
   long bumped;                  // seen and bumped variables in 'analyze'
   long resolved;                // resolved redundant clauses in 'analyze'
   long searched;                // searched decisions in 'decide'
 
-  struct { long count, clauses, bytes; } reduce;        // in 'reduce'
+  struct { long count, clauses, bytes; } reduce; // in 'reduce'
+
+  struct { long learned, minimized; } literals;	 // in 'minimize_clause'
 
   struct { long current, max; } clauses;
   struct { size_t current, max; } bytes;
@@ -367,12 +374,12 @@ static size_t max_bytes () {
   ADJUST_MAX_BYTES (trail);
   ADJUST_MAX_BYTES (seen.literals);
   ADJUST_MAX_BYTES (seen.levels);
+  ADJUST_MAX_BYTES (seen.minimized);
   ADJUST_MAX_BYTES (resolved);
   ADJUST_MAX_BYTES (irredundant);
   ADJUST_MAX_BYTES (redundant);
   ADJUST_MAX_BYTES (levels);
   ADJUST_MAX_BYTES (work.clauses);
-  ADJUST_MAX_BYTES (work.lits);
   res += (4 * stats.clauses.max * sizeof (Watch)) / 3;  // estimate
   return res;
 }
@@ -484,6 +491,7 @@ static void stop (double * u) {
 PROFILE(analyze) \
 PROFILE(bump) \
 PROFILE(decide) \
+PROFILE(minimize) \
 PROFILE(parse) \
 PROFILE(propagate) \
 PROFILE(reduce) \
@@ -886,7 +894,40 @@ static bool propagate () {
   return !conflict;
 }
 
+/*------------------------------------------------------------------------*/
+
+static bool minimize_literal (int lit, int depth = 0) {
+  Var & v = var (lit);
+  if (!v.level || v.minimized || (depth && v.seen)) return true;
+  if (!v.reason || v.poison || levels[v.level].seen < 2) return false;
+  if (depth++ > opts.minimizedepth) return false;
+  bool res = true;
+  for (int i = 0; res && i < v.reason->size; i++) {
+    int other = v.reason->literals[i];
+    if (other != lit) res = minimize_literal (-other, depth + 1);
+  }
+  if (res) v.minimized = true; else v.poison = true;
+  seen.minimized.push_back (lit);
+  return res;
+}
+
 static void minimize_clause () {
+  if (!opts.minimize) return;
+  START (minimize);
+  assert (seen.minimized.empty ());
+  stats.literals.learned += clause.size ();
+  size_t j = 0;
+  for (size_t i = 0; i < clause.size (); i++)
+    if (minimize_literal (-clause[i])) stats.literals.minimized++;
+    else clause[j++] = clause[i];
+  LOG ("minimized %d literals", clause.size () - j);
+  clause.resize (j);
+  for (size_t i = 0; i < seen.minimized.size (); i++) {
+    Var & v = var (seen.minimized[i]);
+    v.minimized = v.poison = false;
+  }
+  seen.minimized.clear ();
+  STOP (minimize);
 }
 
 /*------------------------------------------------------------------------*/
@@ -953,7 +994,7 @@ struct bumped_earlier {
   }
 };
 
-static void bump_seen_variables (int uip) {
+static void bump_and_clear_seen_variables (int uip) {
   START (bump);
   sort (seen.literals.begin (), seen.literals.end (), bumped_earlier ());
   if (uip < 0) uip = -uip;
@@ -961,7 +1002,7 @@ static void bump_seen_variables (int uip) {
     int idx = vidx (seen.literals[i]);
     Var * v = vars + idx;
     assert (v->seen);
-    v->seen = v->minimized = v->poison = false;
+    v->seen = false;
     if (!v->next) continue;
     if (queue.assigned == idx)
       queue.assigned = v->prev ? v->prev : v->next;
@@ -971,8 +1012,8 @@ static void bump_seen_variables (int uip) {
     LOG ("bumped and moved to front %d", idx);
     check_vmtf_queue_invariant ();
   }
-  STOP (bump);
   seen.literals.clear ();
+  STOP (bump);
 }
 
 struct resolved_earlier {
@@ -1056,6 +1097,8 @@ static void analyze () {
     int glue = (int) seen.levels.size ();
     UPDATE_EMA (ema.learned.glue.slow, glue);
     UPDATE_EMA (ema.learned.glue.fast, glue);
+    LOG ("original 1st UIP clause of size %d and glue %d", size, glue);
+    if (opts.minimize) minimize_clause (), check_clause ();
     Clause * driving_clause = 0;
     int jump = 0;
     if (size == 1) {
@@ -1065,8 +1108,6 @@ static void analyze () {
       sort (clause.begin (), clause.end (), level_greater_than ());
       assert (clause[0] == -uip);
       driving_clause = new_learned_clause (glue);
-      minimize_clause ();
-      check_clause ();
       trace_add_clause (driving_clause);
       jump = var (clause[1]).level;
       assert (jump < level);
@@ -1074,7 +1115,7 @@ static void analyze () {
     UPDATE_EMA (ema.jump, jump);
     backtrack (jump);
     assign (-uip, driving_clause);
-    bump_seen_variables (uip);
+    bump_and_clear_seen_variables (uip);
     clause.clear ();
     clear_levels ();
   }
@@ -1292,14 +1333,12 @@ static void print_statistics () {
     stats.conflicts, relative (stats.conflicts, t));
   msg ("decisions:     %15ld   %10.2f    per second",
     stats.decisions, relative (stats.decisions, t));
+  msg ("propagations:  %15ld   %10.2f    millions per second",
+    stats.propagations, relative (stats.propagations/1e6, t));
   msg ("reductions:    %15ld   %10.2f    conflicts per reduction",
     stats.reduce.count, relative (stats.conflicts, stats.reduce.count));
   msg ("restarts:      %15ld   %10.2f    conflicts per restart",
     stats.restarts, relative (stats.conflicts, stats.restarts));
-  msg ("propagations:  %15ld   %10.2f    millions per second",
-    stats.propagations, relative (stats.propagations/1e6, t));
-  msg ("bumped:        %15ld   %10.2f    per conflict",
-    stats.bumped, relative (stats.bumped, stats.conflicts));
   msg ("reused:        %15ld   %10.2f %%  per restart",
     stats.reused, percent (stats.reused, stats.restarts));
   msg ("delayed:       %15ld   %10.2f %%  per restart",
@@ -1308,8 +1347,16 @@ static void print_statistics () {
     stats.unforced, percent (stats.unforced, stats.restarts));
   msg ("units:         %15ld   %10.2f    conflicts per unit",
     stats.learned.units, relative (stats.conflicts, stats.learned.units));
+  msg ("bumped:        %15ld   %10.2f    per conflict",
+    stats.bumped, relative (stats.bumped, stats.conflicts));
   msg ("searched:      %15ld   %10.2f    per decision",
     stats.searched, relative (stats.searched, stats.decisions));
+  long learned = stats.literals.learned - stats.literals.minimized;
+  msg ("learned:       %15ld   %10.2f    per conflict",
+    learned, relative (learned, stats.conflicts));
+  msg ("minimized:     %15ld   %10.2f %%  of 1st-UIP-literals",
+    stats.literals.minimized,
+    percent (stats.literals.minimized, stats.literals.learned));
   msg ("collected:     %15ld   %10.2f    clauses and MB",
     stats.reduce.clauses, stats.reduce.bytes/(double)(1l<<20));
   msg ("maxbytes:      %15ld   %10.2f    MB",
@@ -1437,7 +1484,7 @@ static void print_usage () {
 #define OPTION(N,T,V,L,H,D) \
   printf ( \
     "  %-26s " D " [" printf_ ## T ## _FMT "]\n", \
-    "--" #N "=<" #T ">", printf_ ## T ## _CONV (V));
+    "--" #N "=<" #T ">", printf_ ## T ## _CONV ((T)(V)));
   OPTIONS
 #undef OPTION
   fputs (
