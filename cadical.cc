@@ -682,13 +682,17 @@ static void trace_unit_clause (int unit) {
   fprintf (proof_file, "%d 0\n", unit);
 }
 
-static void trace_add_clause (Clause * c) {
+static void trace_clause (Clause * c, bool add) {
   if (!proof_file) return;
-  LOG (c, "tracing");
+  LOG (c, "tracing %s", add ? "addition" : "deletion");
+  if (!add) fputs ("d ", proof_file);
   for (int i = 0; i < c->size; i++)
     fprintf (proof_file, "%d ", c->literals[i]);
   fputs ("0\n", proof_file);
 }
+
+static void trace_add_clause (Clause * c) { trace_clause (c, true); }
+static void trace_delete_clause (Clause * c) { trace_clause (c, false); }
 
 static void learn_empty_clause () {
   assert (!unsat);
@@ -868,8 +872,9 @@ static bool propagate () {
 }
 
 static void minimize_clause () {
-  // TODO
 }
+
+/*------------------------------------------------------------------------*/
 
 #ifndef NDEBUG
 
@@ -883,6 +888,9 @@ static int sol (int lit) {
 }
 
 #endif
+
+// See comments at the declaration of 'solution' above.  This is used
+// for debugging inconsistent models and unexpected UNSAT results.
 
 static void check_clause () {
 #ifndef NDEBUG
@@ -902,6 +910,8 @@ static void check_clause () {
   abort ();
 #endif
 }
+
+/*------------------------------------------------------------------------*/
 
 static void dequeue (Var * v) {
   if (v->prev) var (v->prev).next = v->next; else queue.first = v->next;
@@ -979,12 +989,6 @@ static void resolve_clause (Clause * c) {
   resolved.push_back (c);
 }
 
-struct level_greater_than {
-  bool operator () (int a, int b) {
-    return var (a).level > var (b).level;
-  }
-};
-
 static bool analyze_literal (int lit) {
   Var & v = var (lit);
   if (v.seen) return false;
@@ -1000,6 +1004,10 @@ static bool analyze_literal (int lit) {
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);
   return v.level == level;
 }
+
+struct level_greater_than {
+  bool operator () (int a, int b) { return var (a).level > var (b).level; }
+};
 
 static void analyze () {
   assert (conflict);
@@ -1178,6 +1186,7 @@ static void collect_garbage_clauses (vector<Clause*> & clauses) {
     if (c->reason || !c->garbage) continue;
     stats.reduce.clauses++;
     stats.reduce.bytes += bytes_clause (c->redundant, c->size);
+    trace_delete_clause (c);
     delete_clause (c);
     j--;
   }
