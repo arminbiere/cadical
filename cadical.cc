@@ -1152,13 +1152,9 @@ static void mark_useless_redundant_clauses_as_garbage () {
     if (c->size <= opts.keepsize) continue;
     if (c->glue () <= opts.keepglue) continue;
     if (c->resolved () > limits.reduce.resolved) continue;
-#if 1
     if (opts.reducedynamic &&
         c->glue () < ema.resolved.glue &&
-        c->size    < 0.75 * ema.resolved.size) continue;
-#else
-    if (opts.reducedynamic && c->glue () < ema.resolved.glue) continue;
-#endif
+        c->size    < ema.resolved.size) continue;
     work.clauses.push_back (c);
   }
   sort (work.clauses.begin (), work.clauses.end (), resolved_earlier ());
