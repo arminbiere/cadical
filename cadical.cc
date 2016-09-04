@@ -262,7 +262,7 @@ static struct {
   long unforced;		// restarts
   long reused;                  // trails
 
-  long reports;
+  long reports, sections;
 
   long bumped;                  // seen and bumped variables in 'analyze'
   long resolved;                // resolved redundant clauses in 'analyze'
@@ -405,7 +405,7 @@ static void section (const char * title) {
   int i = 0;
   for (i = strlen (line); i < 76; i++) line[i] = '-';
   line[i] = 0;
-  msg ("");
+  if (stats.sections++) msg ("");
   msg (line);
   msg ("");
 }
