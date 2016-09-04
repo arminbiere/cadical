@@ -20,9 +20,9 @@ The lastest version of CaDiCal can be found on 'github'
 
 which also contains a test suite (use './run-regression.sh').
 
-A plain stable source release can be found on
+A plain stable source release can eventually be found at
 
   http://fmv.jku.at/cadical
 
 Armin Biere
-Do 25. Aug 03:14:03 CEST 2016
+So 4. Sep 12:43:12 CEST 2016
