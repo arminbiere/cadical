@@ -294,7 +294,7 @@ static struct {
 
 static FILE * input_file, * dimacs_file, * proof_file;
 static const char *input_name, *dimacs_name, *proof_name;
-static int lineno, close_input, close_proof;
+static int lineno, close_input, close_proof, trace_proof;
 
 #ifndef NDEBUG
 
@@ -1718,9 +1718,9 @@ int main (int argc, char ** argv) {
     else if (!strcmp (argv[i], "--version"))
       fputs (VERSION "\n", stdout), exit (0);
     else if (!strcmp (argv[i], "-")) {
-      if (proof_file) die ("too many arguments");
+      if (trace_proof) die ("too many arguments");
       else if (!dimacs_file) dimacs_file = stdin, dimacs_name = "<stdin>";
-      else proof_file = stdout, proof_name = "<stdout>";
+      else trace_proof, assert (!proof_name);
 #ifndef NDEBUG
     } else if (!strcmp (argv[i], "-s")) {
       if (++i == argc) die ("argument to '-s' missing");
@@ -1732,12 +1732,9 @@ int main (int argc, char ** argv) {
     } else if (!strcmp (argv[i], "-n")) set_option ("--no-witness");
     else if (set_option (argv[i])) { /* nothing do be done */ }
     else if (argv[i][0] == '-') die ("invalid option '%s'", argv[i]);
-    else if (proof_file) die ("too many arguments");
-    else if (dimacs_file) {
-      if (!(proof_file = fopen (argv[i], "w")))
-        die ("can not open and write DRAT proof to '%s'", argv[i]);
-      proof_name = argv[i], close_proof = 1;
-    } else {
+    else if (trace_proof) die ("too many arguments");
+    else if (dimacs_file) trace_proof = 1, proof_name = argv[i];
+    else {
       if (has_suffix (argv[i], ".bz2"))
         dimacs_file = read_pipe ("bzcat %s", argv[i]), close_input = 2;
       else if (has_suffix (argv[i], ".gz"))
@@ -1751,17 +1748,15 @@ int main (int argc, char ** argv) {
   if (!dimacs_file) dimacs_name = "<stdin>", dimacs_file = stdin;
   banner ();
   init_signal_handlers ();
-  section ("proof trace");
-  if (proof_file) msg ("writing DRAT proof trace to '%s'", proof_name);
-  else msg ("will not generate nor write DRAT proof");
-  section ("parsing");
+
+  section ("parsing input");
   msg ("reading DIMACS file from '%s'", dimacs_name);
   parse_dimacs ();
   if (close_input == 1) fclose (dimacs_file);
   if (close_input == 2) pclose (dimacs_file);
 #ifndef NDEBUG
   if (solution_file) {
-    msg ("");
+    section ("parsing solution");
     msg ("reading solution file from '%s'", solution_name);
     parse_solution ();
     fclose (solution_file);
@@ -1769,6 +1764,18 @@ int main (int argc, char ** argv) {
   }
 #endif
   print_options ();
+  section ("proof tracing");
+  if (trace_proof) {
+    if (proof_name) {
+      if (!(proof_file = fopen (proof_name, "w")))
+        die ("can not open and write DRAT proof to '%s'", proof_name);
+      close_proof = 1;
+    } else {
+      proof_file = stdout, proof_name = "<stdout>";
+      assert (!close_proof);
+    }
+    msg ("writing DRAT proof trace to '%s'", proof_name);
+  } else msg ("will not generate nor write DRAT proof");
   res = solve ();
   if (close_proof) fclose (proof_file);
   section ("result");
