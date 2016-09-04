@@ -63,7 +63,6 @@ OPTION(witness,          bool,   1, 0,  1, "print witness") \
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-// #include <cmath>
 
 // Low-level but Posix / Unix includes
 
@@ -248,13 +247,14 @@ static struct {
   long conflicts;
   long decisions;
   long restarts;
-  long reused;                  // trails
   long delayed;                 // restarts
+  long unforced;		// restarts
+  long reused;                  // trails
   long reports;
   long propagations;            // propagated literals in 'propagate'
 
   long bumped;                  // seen and bumped variables in 'analyze'
-  long resolved;		// resolved redundant clauses in 'analyze'
+  long resolved;                // resolved redundant clauses in 'analyze'
   long searched;                // searched decisions in 'decide'
 
   struct { long count, clauses, bytes; } reduce;        // in 'reduce'
@@ -798,8 +798,8 @@ static void delete_clause (Clause * c) {
 static void report (char type) {
   if (!stats.reports++)
     fputs (
-"c                               redundant    irredundant             resolved\n"
-"c     seconds     MB conflicts  clauses  jump   clauses  variables  glue  size\n"
+"c                               redundant     irredundant            resolved\n"
+"c     seconds     MB conflicts  clauses   jump   clauses variables  glue  size\n"
 "c\n", stdout);
 //   123456.89 123456 123456789 12345678 123456 123456789 123456789 12345 12345
   printf (
@@ -1070,10 +1070,10 @@ static bool restarting () {
   double s = ema.learned.glue.slow, f = ema.learned.glue.fast;
   double l = (1.0 + opts.restartmargin) * s;
   LOG ("EMA learned glue slow %.2f fast %.2f limit %.2f", s, f, l);
-  if (l > f) { LOG ("restart not forced"); return false; }
+  if (l > f) { stats.unforced++; LOG ("unforced"); return false; }
   double j = ema.jump; l = opts.restartdelay * j;
   LOG ("EMA jump %.2f limit %.2f", j, l);
-  if (level < l) { LOG ("restart delayed"); return false; }
+  if (level < l) { stats.delayed++; LOG ("delayed"); return false; }
   return true;
 }
 
@@ -1114,22 +1114,18 @@ static bool clause_root_level_satisfied (Clause * c) {
   return false;
 }
 
-static void mark_satisfied_clauses (const vector<Clause*> & clauses) {
-  const size_t size = clauses.size ();
-  for (size_t i = 0; i < size; i++) {
-    Clause * c = clauses[i];
-    if (!c->reason && clause_root_level_satisfied (c)) c->garbage = true;
-  }
+static void mark_satisfied_clauses_as_garbage (const vector<Clause*> & cs) {
+  for (size_t i = 0; i < cs.size (); i++)
+    if (clause_root_level_satisfied (cs[i])) cs[i]->garbage = true;
 }
 
-static void determine_redundant_garbage_clauses (const bool new_units) {
+static void mark_useless_redundant_clauses_as_garbage () {
   vector<Clause *> work;
   const size_t size = redundant.size ();
   for (size_t i = 0; i < size; i++) {
     Clause * c = redundant[i];
     assert (c->redundant);
     if (c->reason) continue;
-    if (new_units && clause_root_level_satisfied (c)) c->garbage = true;
     if (c->garbage) continue;
     if (c->size <= opts.keepsize) continue;
     if (c->glue () <= opts.keepglue) continue;
@@ -1174,12 +1170,12 @@ static void flush_watches () {
   }
 }
 
-static void collect_clauses (vector<Clause*> & clauses) {
+static void collect_garbage_clauses (vector<Clause*> & clauses) {
   const size_t size = clauses.size ();
   size_t i = 0, j = 0;
   while (i < size) {
     Clause * c = clauses[j++] = clauses[i++];
-    if (!c->garbage) continue;
+    if (c->reason || !c->garbage) continue;
     stats.reduce.clauses++;
     stats.reduce.bytes += bytes_clause (c->redundant, c->size);
     delete_clause (c);
@@ -1194,12 +1190,14 @@ static void reduce () {
   LOG ("reduce %ld", stats.reduce.count);
   protect_reasons ();
   const bool new_units = (limits.reduce.fixed < stats.fixed);
-  if (new_units) mark_satisfied_clauses (irredundant);
-  determine_redundant_garbage_clauses (new_units);
-  unprotect_reasons ();
+  if (new_units) 
+    mark_satisfied_clauses_as_garbage (irredundant),
+    mark_satisfied_clauses_as_garbage (redundant);
+  mark_useless_redundant_clauses_as_garbage ();
   flush_watches ();
-  if (new_units) collect_clauses (irredundant);
-  collect_clauses (redundant);
+  if (new_units) collect_garbage_clauses (irredundant);
+  collect_garbage_clauses (redundant);
+  unprotect_reasons ();
   inc.reduce.conflicts += opts.reduceinc;
   limits.reduce.conflicts = stats.conflicts + inc.reduce.conflicts;
   limits.reduce.resolved = stats.resolved;
@@ -1285,6 +1283,8 @@ static void print_statistics () {
     stats.reused, percent (stats.reused, stats.restarts));
   msg ("delayed:       %15ld   %10.2f %%  per restart",
     stats.delayed, percent (stats.delayed, stats.restarts));
+  msg ("unforced:      %15ld   %10.2f %%  per restart",
+    stats.unforced, percent (stats.unforced, stats.restarts));
   msg ("units:         %15ld   %10.2f    conflicts per unit",
     stats.learned.units, relative (stats.conflicts, stats.learned.units));
   msg ("searched:      %15ld   %10.2f    per decision",
