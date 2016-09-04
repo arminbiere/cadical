@@ -39,14 +39,13 @@ OPTION(emaglueslow,    double,1e-5, 0,  1, "alpha slow learned glue") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
-OPTION(keepsize,          int,   2, 2,1e9, "size kept learned clauses") \
+OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,    bool,   1, 0,  1, "dynamic glue & size limit") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
-OPTION(restartdelay,     bool,   1, 0,  1, "delay restarts") \
-OPTION(restartdelaylim,double, 0.5, 0,  1, "restart delay percent limit") \
+OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
 OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
 OPTION(restartmargin,  double, 0.1, 0, 10, "restart slow & fast margin") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
@@ -64,6 +63,7 @@ OPTION(witness,          bool,   1, 0,  1, "print witness") \
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+// #include <cmath>
 
 // Low-level but Posix / Unix includes
 
@@ -85,13 +85,29 @@ using namespace std;
 
 /*------------------------------------------------------------------------*/
 
+// Options are defined above and statically allocated and initialized here.
+
+static struct {
+#define OPTION(N,T,V,L,H,D) \
+  T N;
+  OPTIONS
+#undef OPTION
+} opts = {
+#define OPTION(N,T,V,L,H,D) \
+  V,
+  OPTIONS
+#undef OPTION
+};
+
+/*------------------------------------------------------------------------*/
+
 // Type declarations
 
 struct Clause {
   bool redundant;       // so not 'irredundant' and on 'redundant' stack
   bool garbage;         // can be garbage collected
   bool reason;          // reason clause can not be collected
-  int size;             // actual size of 'literals' >= 2
+  int size;             // actual size of 'literals' (at least 2)
   int literals[2];      // actually of variadic 'size'
 
   // Actually, a redundant clause has two additional fields
@@ -295,22 +311,6 @@ static const char *solution_name;
 static signed char * solution;          // like 'vals' (and 'phases')
 
 #endif
-
-/*------------------------------------------------------------------------*/
-
-// Options are defined above and statically allocated and initialized here.
-
-static struct {
-#define OPTION(N,T,V,L,H,D) \
-  T N;
-  OPTIONS
-#undef OPTION
-} opts = {
-#define OPTION(N,T,V,L,H,D) \
-  V,
-  OPTIONS
-#undef OPTION
-};
 
 /*------------------------------------------------------------------------*/
 
@@ -727,10 +727,11 @@ static Clause * new_clause (bool red, int glue = 0) {
   inc_bytes (bytes);
   if (red) ptr += Clause::REDUNDANT_OFFSET;
   Clause * res = (Clause*) ptr;
-  res->size = size;
+  res->redundant = red;
   res->garbage = false;
   res->reason = false;
-  if ((res->redundant = red)) {
+  res->size = size;
+  if (red) {
     res->resolved () = ++stats.resolved;
     res->glue () = glue;
   }
@@ -797,23 +798,23 @@ static void delete_clause (Clause * c) {
 static void report (char type) {
   if (!stats.reports++)
     fputs (
-"c                                 redundant average irredundant           resolved\n"
-"c     seconds     MB   conflicts   clauses     jump   clauses variables  glue  size\n"
+"c                               redundant    irredundant             resolved\n"
+"c     seconds     MB conflicts  clauses  jump   clauses  variables  glue  size\n"
 "c\n", stdout);
-//   123456.89 123456 12345678901 123456789 123456.8 123456789 123456789 12345 12345
+//   123456.89 123456 123456789 12345678 123456 123456789 123456789 12345 12345
   printf (
     "c %c " 
-    "%9.2f " "%6.0f "   "%11ld "   "%9ld "  "%8.1f "  "%9ld "   "%9d"   "%5.0f %5.0f\n",
+    "%9.2f " "%6.0f "   "%9ld "   "%8ld %6.0f "  "%9ld "   "%9d"  " %5.0f %5.0f\n",
     type,   
     seconds (),
     max_bytes ()/(double)(1<<20),
-                     stats.conflicts,
-                          (long) redundant.size (),
-                                     (double) ema.jump,
-                                            (long) irredundant.size (),
-                                                      active_variables (),
-                                                          (double) ema.resolved.glue,
-                                                             (double) ema.resolved.size);
+                  stats.conflicts,
+                      (long) redundant.size (),
+                               (double) ema.jump,
+                                      (long) irredundant.size (),
+                                                   active_variables (),
+                                                        (double) ema.resolved.glue,
+                                                            (double) ema.resolved.size);
   fflush (stdout);
 }
 
@@ -971,10 +972,10 @@ static void clear_levels () {
 
 static void resolve_clause (Clause * c) { 
   if (!c->redundant) return;
-  if (c->size <= opts.keepsize) return;
-  if (c->glue () <= opts.keepglue) return;
   UPDATE_EMA (ema.resolved.size, c->size);
   UPDATE_EMA (ema.resolved.glue, c->glue ());
+  if (c->size <= opts.keepsize) return;
+  if (c->glue () <= opts.keepglue) return;
   resolved.push_back (c);
 }
 
@@ -1065,23 +1066,14 @@ static bool satisfied () { return trail.size () == (size_t) max_var; }
 static bool restarting () {
   if (!opts.restart) return false;
   if (stats.conflicts <= limits.restart.conflicts) return false;
-  double slow = ema.learned.glue.slow;
-  double fast = ema.learned.glue.fast;
-  double limit = (1.0 + opts.restartmargin) * slow;
-  LOG ("EMA learned glue: slow %.2f, limit %.2f %c fast %.2f",
-    slow, limit, (limit < fast ? '<' : (limit == fast ? '=' : '>')), fast);
-  if (limit > fast) {
-    LOG ("restart not forced");
-    limits.restart.conflicts = stats.conflicts + opts.restartint;
-    return false;
-  }
-  if (opts.restartdelay && level < opts.restartdelaylim * ema.jump) {
-    LOG ("restart delayed");
-    limits.restart.conflicts = stats.conflicts + opts.restartint;
-    stats.delayed++;
-    return false;
-  }
-  LOG ("restart forced and not delayed");
+  limits.restart.conflicts = stats.conflicts + opts.restartint;
+  double s = ema.learned.glue.slow, f = ema.learned.glue.fast;
+  double l = (1.0 + opts.restartmargin) * s;
+  LOG ("EMA learned glue slow %.2f fast %.2f limit %.2f", s, f, l);
+  if (l > f) { LOG ("restart not forced"); return false; }
+  double j = ema.jump; l = opts.restartdelay * j;
+  LOG ("EMA jump %.2f limit %.2f", j, l);
+  if (level < l) { LOG ("restart delayed"); return false; }
   return true;
 }
 
@@ -1092,15 +1084,14 @@ static int reusetrail () {
   while (res < level && var (levels[res + 1].decision).bumped > limit)
     res++;
   if (res) { stats.reused++; LOG ("reusing trail %d", res); }
-  else LOG ("could not reuse the trail");
   return res;
 }
 
 static void restart () {
   START (restart);
   stats.restarts++;
+  LOG ("restart %ld", stats.restarts);
   backtrack (reusetrail ());
-  limits.restart.conflicts = stats.conflicts + opts.restartint;
   STOP (restart);
 }
 
@@ -1131,38 +1122,29 @@ static void mark_satisfied_clauses (const vector<Clause*> & clauses) {
   }
 }
 
-struct reduce_less_than {
-  bool operator () (Clause * c, Clause * d) {
-    if (c->resolved () < d->resolved ()) return true;
-    if (c->resolved () > d->resolved ()) return false;
-    if (c->glue () > d->glue ()) return true;
-    if (c->glue () < d->glue ()) return false;
-    if (c->size > d->size) return true;
-    if (c->size < d->size) return false;
-    return false;
-  }
-};
-
-static void mark_redundant_clauses () {
+static void determine_redundant_garbage_clauses (const bool new_units) {
   vector<Clause *> work;
   const size_t size = redundant.size ();
   for (size_t i = 0; i < size; i++) {
     Clause * c = redundant[i];
     assert (c->redundant);
     if (c->reason) continue;
+    if (new_units && clause_root_level_satisfied (c)) c->garbage = true;
     if (c->garbage) continue;
     if (c->size <= opts.keepsize) continue;
     if (c->glue () <= opts.keepglue) continue;
     if (c->resolved () > limits.reduce.resolved) continue;
     if (opts.reducedynamic &&
-        c->glue () < (int) ema.resolved.glue &&
-        c->size < (int) ema.resolved.size) continue;
+        c->glue () + 1.0 < ema.resolved.glue &&
+        c->size    + 1.0 < ema.resolved.size) continue;
     work.push_back (c);
   }
-  sort (work.begin (), work.end (), reduce_less_than ());
-  const size_t target = work.size ()/2;
+  inc_bytes (work.capacity () * sizeof work[0]);
+  sort (work.begin (), work.end (), resolved_earlier ());
+  const size_t target = work.size ()/2; //min (work.size (), redundant.size ()/2);
   for (size_t i = 0; i < target; i++)
     work[i]->garbage = true;
+  dec_bytes (work.capacity () * sizeof work[0]);
 }
 
 static void unprotect_reasons () {
@@ -1211,17 +1193,16 @@ static void reduce () {
   stats.reduce.count++;
   LOG ("reduce %ld", stats.reduce.count);
   protect_reasons ();
-  if (limits.reduce.fixed < stats.fixed)
-    mark_satisfied_clauses (irredundant),
-    mark_satisfied_clauses (redundant);
-  mark_redundant_clauses ();
+  const bool new_units = (limits.reduce.fixed < stats.fixed);
+  if (new_units) mark_satisfied_clauses (irredundant);
+  determine_redundant_garbage_clauses (new_units);
   unprotect_reasons ();
   flush_watches ();
-  if (limits.reduce.fixed < stats.fixed) collect_clauses (irredundant);
+  if (new_units) collect_clauses (irredundant);
   collect_clauses (redundant);
   inc.reduce.conflicts += opts.reduceinc;
   limits.reduce.conflicts = stats.conflicts + inc.reduce.conflicts;
-  limits.reduce.resolved = stats.conflicts;
+  limits.reduce.resolved = stats.resolved;
   limits.reduce.fixed = stats.fixed;
   report ('-');
   STOP (reduce);
