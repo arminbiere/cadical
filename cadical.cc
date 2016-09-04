@@ -41,7 +41,7 @@ OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
-OPTION(reducedynamic,    bool,   0, 0,  1, "dynamic glue & size limit") \
+OPTION(reducedynamic,    bool,   1, 0,  1, "dynamic glue & size limit") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
@@ -217,7 +217,7 @@ static Watches * all_literal_watches;   // [2,2*max_var+1]
 
 static struct {
   int first, last;      // anchors (head/tail) for doubly linked list
-  int next;             // all variables after this one are assigned
+  int assigned;         // all variables after this one are assigned
 } queue;
 
 static bool unsat;              // empty clause found or learned
@@ -239,9 +239,15 @@ static struct {
   vector<int> literals, levels; // seen literals & levels in 'analyze'
 } seen;
 
+static struct {
+  vector<Clause *> clauses;
+  vector<int> lits;
+} work;
+
 static vector<Clause*> resolved;
 
 static Clause * conflict;       // set in 'propagation', reset in 'analyze'
+static Clause clashing_unit;	// needed if input contains clashing units
 
 static struct {
   long conflicts;
@@ -365,6 +371,8 @@ static size_t max_bytes () {
   ADJUST_MAX_BYTES (irredundant);
   ADJUST_MAX_BYTES (redundant);
   ADJUST_MAX_BYTES (levels);
+  ADJUST_MAX_BYTES (work.clauses);
+  ADJUST_MAX_BYTES (work.lits);
   res += (4 * stats.clauses.max * sizeof (Watch)) / 3;  // estimate
   return res;
 }
@@ -623,7 +631,7 @@ static void check_vmtf_queue_invariant () {
   assert (!count);
   for (idx = queue.first; idx && (next = var (idx).next); idx = next)
     assert (var (idx).bumped < var (next).bumped);
-  for (idx = queue.next; idx && (next = var (idx).next); idx = next)
+  for (idx = queue.assigned; idx && (next = var (idx).next); idx = next)
     assert (val (next));
 #endif
 }
@@ -688,8 +696,8 @@ static void unassign (int lit) {
   vals[idx] = 0;
   LOG ("unassign %d", lit);
   Var * v = vars + idx;
-  if (var (queue.next).bumped >= v->bumped) return;
-  queue.next = idx;
+  if (var (queue.assigned).bumped >= v->bumped) return;
+  queue.assigned = idx;
   LOG ("queue next moved to %d", idx);
   check_vmtf_queue_invariant ();
 }
@@ -784,7 +792,7 @@ static void add_new_original_clause () {
     int unit = clause[0], tmp = val (unit);
     if (!tmp) assign (unit);
     else if (tmp < 0) {
-      if (!unsat) msg ("parsed clashing unit"), learn_empty_clause ();
+      if (!unsat) msg ("parsed clashing unit"), conflict = &clashing_unit;
       else LOG ("original clashing unit produces another inconsistency");
     } else LOG ("original redundant unit");
   } else watch_clause (new_clause (false));
@@ -934,8 +942,8 @@ static void enqueue (Var * v, int idx) {
 
 static int next_decision_variable () {
   int res;
-  while (val (res = queue.next))
-    queue.next = var (queue.next).prev, stats.searched++;
+  while (val (res = queue.assigned))
+    queue.assigned = var (queue.assigned).prev, stats.searched++;
   return res;
 }
 
@@ -955,10 +963,11 @@ static void bump_seen_variables (int uip) {
     assert (v->seen);
     v->seen = v->minimized = v->poison = false;
     if (!v->next) continue;
-    if (queue.next == idx) queue.next = v->prev ? v->prev : v->next;
+    if (queue.assigned == idx)
+      queue.assigned = v->prev ? v->prev : v->next;
     dequeue (v), enqueue (v, idx);
     v->bumped = ++stats.bumped;
-    if (idx != uip && !vals[idx]) queue.next = idx;
+    if (idx != uip && !vals[idx]) queue.assigned = idx;
     LOG ("bumped and moved to front %d", idx);
     check_vmtf_queue_invariant ();
   }
@@ -1134,9 +1143,8 @@ static void mark_satisfied_clauses_as_garbage (const vector<Clause*> & cs) {
 }
 
 static void mark_useless_redundant_clauses_as_garbage () {
-  vector<Clause *> work;
-  const size_t size = redundant.size ();
-  for (size_t i = 0; i < size; i++) {
+  work.clauses.clear ();
+  for (size_t i = 0; i < redundant.size (); i++) {
     Clause * c = redundant[i];
     assert (c->redundant);
     if (c->reason) continue;
@@ -1144,17 +1152,19 @@ static void mark_useless_redundant_clauses_as_garbage () {
     if (c->size <= opts.keepsize) continue;
     if (c->glue () <= opts.keepglue) continue;
     if (c->resolved () > limits.reduce.resolved) continue;
+#if 1
     if (opts.reducedynamic &&
         c->glue () < ema.resolved.glue &&
-        c->size    < ema.resolved.size) continue;
-    work.push_back (c);
+        c->size    < 0.75 * ema.resolved.size) continue;
+#else
+    if (opts.reducedynamic && c->glue () < ema.resolved.glue) continue;
+#endif
+    work.clauses.push_back (c);
   }
-  sort (work.begin (), work.end (), resolved_earlier ());
-  const size_t target = work.size ()/2;
+  sort (work.clauses.begin (), work.clauses.end (), resolved_earlier ());
+  const size_t target = work.clauses.size ()/2;
   for (size_t i = 0; i < target; i++)
-    work[i]->garbage = true;
-  size_t bytes = work.capacity () * sizeof work[0];
-  inc_bytes (bytes), dec_bytes (bytes);
+    work.clauses[i]->garbage = true;
 }
 
 static void unprotect_reasons () {
@@ -1321,7 +1331,7 @@ static void init_vmtf_queue () {
     v->bumped = ++stats.bumped;
     prev = i;
   }
-  queue.last = queue.next = prev;
+  queue.last = queue.assigned = prev;
 }
 
 static void reset_signal_handlers (void) {
@@ -1416,7 +1426,7 @@ static void print_usage () {
   fputs (
 "usage: cadical [ <option> ... ] [ <input> [ <proof> ] ]\n"
 "\n"
-"The '<option>' is one of the following short options:\n"
+"where '<option>' is one of the following short options\n"
 "\n"
 "  -h         print this command line option summary\n"
 "  -n         do not print witness\n"
@@ -1425,7 +1435,7 @@ static void print_usage () {
 "             (used for testing and debugging only)\n"
 #endif
 "\n"
-"Or '<option>' can be one of the following long options:\n"
+"or '<option>' can be one of the following long options\n"
 "\n",
   stdout);
 #define OPTION(N,T,V,L,H,D) \
@@ -1442,7 +1452,7 @@ static void print_usage () {
 "'--no-<name>' which is equivalent to '--<name>=0'.\n"
 "\n"
 "Note that decimal integers are casted to 'double' and 'bool'\n"
-"in the natural way, e.g., '1' can be interpreted as 'true'.\n"
+"in the natural way, e.g., '1' is interpreted as 'true'.\n"
 "\n"
 "Then '<input>' is a (compressed) DIMACS file and '<output>'\n"
 "is a file to store the DRAT proof.  If no '<proof>' file is\n"
@@ -1705,6 +1715,7 @@ static void print_witness () {
 }
 
 static void banner () {
+  section ("banner");
   msg ("CaDiCaL Radically Simplified CDCL SAT Solver");
   msg ("Version " VERSION " " GITID);
   msg ("Copyright (c) 2016 Armin Biere, JKU");
@@ -1720,7 +1731,7 @@ int main (int argc, char ** argv) {
     else if (!strcmp (argv[i], "-")) {
       if (trace_proof) die ("too many arguments");
       else if (!dimacs_file) dimacs_file = stdin, dimacs_name = "<stdin>";
-      else trace_proof, assert (!proof_name);
+      else trace_proof = 1, assert (!proof_name);
 #ifndef NDEBUG
     } else if (!strcmp (argv[i], "-s")) {
       if (++i == argc) die ("argument to '-s' missing");
