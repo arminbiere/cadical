@@ -271,7 +271,7 @@ static vector<Timer> timers;
 #endif
 
 // Exponential moving averages to control which clauses are collected
-// in  'reduce' and when to force and delay 'restart' respectively.
+// in 'reduce' and when to force and delay 'restart' respectively.
 
 static struct { 
   struct { EMA glue, size; } resolved;
@@ -1131,8 +1131,8 @@ static void mark_useless_redundant_clauses_as_garbage () {
     if (c->glue () <= opts.keepglue) continue;
     if (c->resolved () > limits.reduce.resolved) continue;
     if (opts.reducedynamic &&
-        c->glue () + 1.0 < ema.resolved.glue &&
-        c->size    + 1.0 < ema.resolved.size) continue;
+        c->glue () < ema.resolved.glue &&
+        c->size    < ema.resolved.size) continue;
     work.push_back (c);
   }
   inc_bytes (work.capacity () * sizeof work[0]);
