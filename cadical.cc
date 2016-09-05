@@ -803,9 +803,12 @@ static bool tautological () {
   for (size_t i = 0; i < clause.size (); i++) {
     int lit = clause[i];
     if (lit == -prev) return true;
-    if (lit != prev) clause[j++] = lit;
+    if (lit !=  prev) clause[j++] = lit;
   }
-  clause.resize (j);
+  if (j < clause.size ()) {
+    clause.resize (j);
+    LOG ("removed %d duplicates", clause.size () - j);
+  }
   return false;
 }
 
@@ -921,19 +924,20 @@ static bool minimize_literal (int lit, int depth = 0) {
   if (!v.level || v.minimized || (depth && v.seen)) return true;
   if (!v.reason || v.poison || levels[v.level].seen < 2) return false;
   if (depth > opts.minimizedepth) return false;
-  int size = v.reason->size, * lits = v.reason->literals, other, res = 0;
-  for (int i = 0; res && i < size; i++)
-    if ((other = lits[i]) != lit)
-      res = minimize_literal (-other, depth + 1);
+  int size = v.reason->size, * lits = v.reason->literals, res = 1;
+  for (int i = 0, other; res && i < size; i++)
+    if ((other = lits[i]) != lit) res = minimize_literal (-other, depth+1);
   if (res) v.minimized = true; else v.poison = true;
   seen.minimized.push_back (lit);
-  if (!depth) LOG ("minimizing %d %s", root, res ? "succeeded" : "failed");
+  if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
   return res;
 }
 
 #else
 
-static int minimize_literal_base_case (int root, int lit) {
+// non-recursive version seems not faster nor provides additional benefit
+
+static int minimize_base_case (int root, int lit) {
   assert (val (root) > 0), assert (val (lit) > 0);
   Var & v = var (lit);
   if (!v.level || v.minimized || (root != lit && v.seen)) return 1;
@@ -946,14 +950,14 @@ static bool minimize_literal (int root) {
   stack.push_back (root);
   while (!stack.empty ()) {
     int lit = stack.back ();
-    if (minimize_literal_base_case (root, lit)) stack.pop_back ();
+    if (minimize_base_case (root, lit)) stack.pop_back ();
     else {
       Var & v = var (lit);
       if (v.mark < v.reason->size) {
 	int other = v.reason->literals[v.mark];
 	if (other == lit) v.mark++;
 	else {
-	  const int tmp = minimize_literal_base_case (root, -other);
+	  const int tmp = minimize_base_case (root, -other);
 	  if (tmp < 0) {
 	    v.poison = true;
 	    seen.minimized.push_back (lit);
@@ -968,8 +972,8 @@ static bool minimize_literal (int root) {
       }
     }
   }
-  const bool res = (minimize_literal_base_case (root, root) > 0);
-  LOG ("minimizing %d %s", root, res ? "succeeded" : "failed");
+  const bool res = (minimize_base_case (root, root) > 0);
+  LOG ("minimizing literal %d %s", root, res ? "succeeded" : "failed");
   return res;
 }
 
@@ -978,7 +982,7 @@ static bool minimize_literal (int root) {
 static void minimize_clause () {
   if (!opts.minimize) return;
   START (minimize);
-  LOGCLAUSE ("minimizing");
+  LOGCLAUSE ("minimizing first UIP clause");
   assert (seen.minimized.empty ());
   stats.literals.learned += clause.size ();
   size_t j = 0;
