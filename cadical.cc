@@ -949,19 +949,19 @@ static bool minimize_literal (int root) {
   vector<int> & stack = work.lits;
   stack.push_back (root);
   while (!stack.empty ()) {
-    int lit = stack.back ();
+    const int lit = stack.back ();
     if (minimize_base_case (root, lit)) stack.pop_back ();
     else {
       Var & v = var (lit);
       const int size = v.reason->size, * lits = v.reason->literals;
 NEXT:
       if (v.mark < size) {
-	int other = lits[v.mark];
+	const int other = lits[v.mark];
 	if (other == lit) { v.mark++; goto NEXT; }
 	else {
 	  const int tmp = minimize_base_case (root, -other);
-	  if (tmp < 0) { v.poison = true; goto DONE; }
-	  else if (tmp > 0) { v.mark++; goto NEXT; }
+	       if (tmp < 0) { v.poison = true; goto DONE; }
+	  else if (tmp > 0) { v.mark++;        goto NEXT; }
 	  else stack.push_back (-other);
 	}
       } else {
