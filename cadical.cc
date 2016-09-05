@@ -137,15 +137,16 @@ struct Clause {
 
 
 struct Var {
-  bool seen;            // in 'analyze'
-  bool minimized;       // can be minimized in 'minimize'
-  bool poison;          // can not be minimized in 'minimize'
-  int mark;		// used in 'minmize_literal'
+  bool seen;            // in 'analyze' 
+  bool minimized;       // can be minimized
+  bool poison;          // can not be minimized
 
-  long bumped;          // enqueue/bump time stamp for VMTF queue
+  int mark;		// reason position
+
+  long bumped;          // enqueue time stamp for VMTF queue
   int prev, next;       // double links for decision VMTF queue
 
-  Clause * reason;      // assignment reason/antecedent
+  Clause * reason;      // implication graph edge
   int level;            // decision level
 
   Var () :
@@ -240,14 +241,14 @@ static vector<Clause*> redundant;       // redundant / learned clauses
 static bool iterating;          // report top-level assigned variables
 
 static struct {
-  vector<int> literals;		// bumped literals in 'analyze'
+  vector<int> literals;		// seen & bumped literals in 'analyze'
   vector<int> levels;		// decision levels of 1st UIP clause
-  vector<int> minimized;	// in 'minimize_literal'
+  vector<int> minimized;	// DFS done: minimized or poisoned
 } seen;
 
 static struct {
-  vector<Clause *> clauses;
-  vector<int> lits;
+  vector<Clause *> clauses;	// redundant reduce candidates
+  vector<int> lits;		// non-recursive DFS working stack
 } work;
 
 static vector<Clause*> resolved;
