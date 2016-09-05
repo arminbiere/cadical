@@ -917,7 +917,7 @@ static bool propagate () {
 
 /*------------------------------------------------------------------------*/
 
-#if 1
+#if 0
 
 static bool minimize_literal (int lit, int depth = 0) {
   Var & v = var (lit);
@@ -937,8 +937,6 @@ static bool minimize_literal (int lit, int depth = 0) {
 
 #else
 
-// non-recursive version seems not faster nor provides additional benefit
-
 static int minimize_base_case (int root, int lit) {
   assert (val (root) > 0), assert (val (lit) > 0);
   Var & v = var (lit);
@@ -955,22 +953,22 @@ static bool minimize_literal (int root) {
     if (minimize_base_case (root, lit)) stack.pop_back ();
     else {
       Var & v = var (lit);
-      if (v.mark < v.reason->size) {
-	int other = v.reason->literals[v.mark];
-	if (other == lit) v.mark++;
+      const int size = v.reason->size, * lits = v.reason->literals;
+NEXT:
+      if (v.mark < size) {
+	int other = lits[v.mark];
+	if (other == lit) { v.mark++; goto NEXT; }
 	else {
 	  const int tmp = minimize_base_case (root, -other);
-	  if (tmp < 0) {
-	    v.poison = true;
-	    seen.minimized.push_back (lit);
-            stack.pop_back ();
-	  } else if (tmp > 0) v.mark++;
+	  if (tmp < 0) { v.poison = true; goto DONE; }
+	  else if (tmp > 0) { v.mark++; goto NEXT; }
 	  else stack.push_back (-other);
 	}
       } else {
-        stack.pop_back ();
 	v.minimized = true;
+DONE:
 	seen.minimized.push_back (lit);
+        stack.pop_back ();
       }
     }
   }
