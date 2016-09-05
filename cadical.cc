@@ -44,6 +44,7 @@ OPTION(minimize,         bool,   1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,     int,1000, 0,1e9, "recursive minimization depth") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,    bool,   1, 0,  1, "dynamic glue & size limit") \
+OPTION(reduceglue,       bool,   0, 0,  1, "reduce by glue first") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
@@ -943,12 +944,13 @@ static bool minimize_literal (int root, int lit = 0, int depth = 0) {
 
 static bool minimize_literal (int root) {
   assert (val (root) > 0);
-  assert (work.lits.empty ());
-  work.lits.push_back (root);
-  while (!work.lits.empty ()) {
-    int lit = work.lits.back ();
+  vector<int> & stack = work.lits;
+  assert (stack.empty ());
+  stack.push_back (root);
+  while (!stack.empty ()) {
+    int lit = stack.back ();
     assert (val (lit) > 0);
-    if (minimize_literal_base_case (root, lit)) work.lits.pop_back ();
+    if (minimize_literal_base_case (root, lit)) stack.pop_back ();
     else {
       Var & v = var (lit);
       assert (!v.minimized), assert (!v.poison);
@@ -961,14 +963,14 @@ static bool minimize_literal (int root) {
 	  if (tmp < 0) {
 	    v.poison = true;
 	    seen.minimized.push_back (lit);
-            work.lits.pop_back ();
+            stack.pop_back ();
 	  } else if (tmp > 0) v.mark++;
-	  else work.lits.push_back (-other);
+	  else stack.push_back (-other);
 	}
       } else {
 	assert (v.mark == v.reason->size);
 	assert (!v.poison);
-        work.lits.pop_back ();
+        stack.pop_back ();
 	v.minimized = true;
 	seen.minimized.push_back (lit);
       }
@@ -1257,8 +1259,17 @@ static void mark_satisfied_clauses_as_garbage (const vector<Clause*> & cs) {
     if (clause_root_level_satisfied (cs[i])) cs[i]->garbage = true;
 }
 
+struct glue_larger {
+  bool operator () (Clause * c, Clause * d) {
+    if (c->glue () > d->glue ()) return true;
+    if (c->glue () < d->glue ()) return false;
+    return resolved_earlier () (c, d);
+  }
+};
+
 static void mark_useless_redundant_clauses_as_garbage () {
-  work.clauses.clear ();
+  vector<Clause*> & stack = work.clauses;
+  assert (stack.empty ());
   for (size_t i = 0; i < redundant.size (); i++) {
     Clause * c = redundant[i];
     assert (c->redundant);
@@ -1270,12 +1281,13 @@ static void mark_useless_redundant_clauses_as_garbage () {
     if (opts.reducedynamic &&
         c->glue () < ema.resolved.glue &&
         c->size    < ema.resolved.size) continue;
-    work.clauses.push_back (c);
+    stack.push_back (c);
   }
-  sort (work.clauses.begin (), work.clauses.end (), resolved_earlier ());
-  const size_t target = work.clauses.size ()/2;
-  for (size_t i = 0; i < target; i++)
-    work.clauses[i]->garbage = true;
+  if (opts.reduceglue) sort (stack.begin (), stack.end (), glue_larger ());
+  else sort (stack.begin (), stack.end (), resolved_earlier ());
+  const size_t target = stack.size ()/2;
+  for (size_t i = 0; i < target; i++) stack[i]->garbage = true;
+  stack.clear ();
 }
 
 static void unprotect_reasons () {
