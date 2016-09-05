@@ -547,7 +547,7 @@ static void print_profile (double now) {
   // is also called during catching a signal after out of heap memory.
   // This only makes sense if 'profs' is allocated on the stack, and
   // not the heap, which should be the case.
-  for (i = 0; i < size - 1; i++) {
+  for (i = 0; i < size; i++) {
     for (size_t j = i + 1; j < size; j++)
       if (profs[j].value > profs[i].value)
         swap (profs[i].value, profs[j].value),
@@ -669,25 +669,37 @@ static void check_vmtf_queue_invariant () {
 
 /*------------------------------------------------------------------------*/
 
+static void print (const char * str, FILE * file) {
+  fputs_unlocked (str, file);
+}
+
+static void print (int lit, FILE * file) {
+  char buffer[20];
+  sprintf (buffer, "%d", lit);
+  print (buffer, file);
+}
+
 static void trace_empty_clause () {
   if (!proof_file) return;
   LOG ("tracing empty clause");
-  fputs ("0\n", proof_file);
+  print ("0\n", proof_file);
 }
 
 static void trace_unit_clause (int unit) {
   if (!proof_file) return;
   LOG ("tracing unit clause %d", unit);
-  fprintf (proof_file, "%d 0\n", unit);
+  print (unit, proof_file);
+  print (" 0\n", proof_file);
 }
 
 static void trace_clause (Clause * c, bool add) {
   if (!proof_file) return;
   LOG (c, "tracing %s", add ? "addition" : "deletion");
-  if (!add) fputs ("d ", proof_file);
+  if (!add) print ("d ", proof_file);
   for (int i = 0; i < c->size; i++)
-    fprintf (proof_file, "%d ", c->literals[i]);
-  fputs ("0\n", proof_file);
+    print (c->literals[i], proof_file),
+    print (" ", proof_file);
+  print ("0\n", proof_file);
 }
 
 static void trace_add_clause (Clause * c) { trace_clause (c, true); }
@@ -879,8 +891,9 @@ struct Report {
     sprintf (fmt, "%%.%df", abs (precision));
     if (precision < 0) strcat (fmt, "%%");
     sprintf (buffer, fmt, value);
-    if (strlen (buffer) >= 3) return;
-    sprintf (fmt, "%%3.%df", abs (precision));
+    const int min_len = 4;
+    if (strlen (buffer) >= min_len) return;
+    sprintf (fmt, "%%%d.%df", min_len, abs (precision));
     if (precision < 0) strcat (fmt, "%%");
     sprintf (buffer, fmt, value);
   }
@@ -1712,7 +1725,7 @@ static bool set_option (const char * arg) {
 /*------------------------------------------------------------------------*/
 
 static int nextch () {
-  int res = getc (input_file);
+  int res = getc_unlocked (input_file);
   if (res == '\n') lineno++;
   return res;
 }
@@ -1829,7 +1842,7 @@ static void parse_solution () {
     ch = nextch ();
     if (ch == EOF) perr ("missing 's' line");
     if (ch == 'c') {
-      while ((ch = getc (solution_file)) != '\n')
+      while ((ch = nextch ()) != '\n')
         if (ch == EOF) perr ("unexpected end-of-file in comment");
     }
     if (ch == 's') break;
