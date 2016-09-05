@@ -103,6 +103,8 @@ static struct {
 
 /*------------------------------------------------------------------------*/
 
+enum { GLUE_OFFSET = 4, RESOLVED_OFFSET = 12, EXTENDED_OFFSET = 12 };
+
 struct Clause {
   bool redundant;       // so not 'irredundant' and on 'redundant' stack
   bool garbage;         // can be garbage collected
@@ -118,10 +120,6 @@ struct Clause {
   // These are however placed before the actual clause data and
   // thus not directly visible.
 
-  static const size_t GLUE_OFFSET      =  4; // wrt '&Clause.redundant'
-  static const size_t RESOLVED_OFFSET  = 12; // ditto
-  static const size_t REDUNDANT_OFFSET = 12; // ditto
-
   bool extended () const { return redundant && size > 2; }
 
   long & resolved () {
@@ -133,6 +131,8 @@ struct Clause {
     assert (this), assert (extended ());
     return *(int*) (((char*)this) - GLUE_OFFSET);
   }
+
+  int read_only_glue () { return extended () ? glue () : size - 1; }
 };
 
 struct Var {
@@ -458,7 +458,7 @@ static void LOG (Clause * c, const char *fmt, ...) {
   vprintf (fmt, ap);
   va_end (ap);
   if (c) {
-    if (c->redundant) printf (" redundant glue %d", c->glue ());
+    if (c->redundant) printf (" redundant glue %d", c->read_only_glue ());
     else printf (" irredundant");
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
@@ -469,7 +469,7 @@ static void LOG (Clause * c, const char *fmt, ...) {
   fflush (stdout);
 }
 
-static void LOGCLAUSE (const char *fmt, ...) {
+static void LOG (const vector<int> & clause, const char *fmt, ...) {
   va_list ap;
   printf ("c LOG %d ", level);
   va_start (ap, fmt);
@@ -483,7 +483,6 @@ static void LOGCLAUSE (const char *fmt, ...) {
 
 #else
 #define LOG(ARGS...) do { } while (0)
-#define LOGCLAUSE(ARGS...) do { } while (0)
 #endif
 
 /*------------------------------------------------------------------------*/
@@ -757,29 +756,31 @@ static Clause * watch_clause (Clause * c) {
   return c;
 }
 
-static size_t bytes_clause (bool redundant, int size) {
+static bool extended (bool red, int size) { return red && size > 2; }
+
+static size_t bytes_clause (bool red, int size) {
   assert (size >= 2);
   size_t res = sizeof (Clause) + (size - 2) * sizeof (int);
-  if (redundant) res += Clause::REDUNDANT_OFFSET;
+  if (extended (red, size)) res += EXTENDED_OFFSET;
   return res;
 }
 
 static Clause * new_clause (bool red, int glue = 0) {
   assert (clause.size () <= (size_t) INT_MAX);
-  int size = (int) clause.size ();
-  size_t bytes = bytes_clause (red, size);
+  const int size = (int) clause.size ();
+  const size_t bytes = bytes_clause (red, size);
   char * ptr = new char[bytes];
   inc_bytes (bytes);
-  if (red) ptr += Clause::REDUNDANT_OFFSET;
+  if (extended (red, size)) ptr += EXTENDED_OFFSET;
   Clause * res = (Clause*) ptr;
   res->redundant = red;
   res->garbage = false;
   res->reason = false;
   res->size = size;
-  if (red) {
+  if (extended (red, size)) {
     res->resolved () = ++stats.resolved;
     res->glue () = glue;
-  }
+  } else assert (!res->extended ());
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
   if (red) redundant.push_back (res);
   else irredundant.push_back (res);
@@ -837,7 +838,7 @@ static void delete_clause (Clause * c) {
   stats.clauses.current--;
   dec_bytes (bytes_clause (c->redundant, c->size));
   char * ptr = (char*) c;
-  if (c->redundant) ptr -= Clause::REDUNDANT_OFFSET;
+  if (c->extended ()) ptr -= EXTENDED_OFFSET;
   delete [] (char*) ptr;
 }
 
@@ -985,7 +986,7 @@ DONE:   seen.minimized.push_back (lit);
 static void minimize_clause () {
   if (!opts.minimize) return;
   START (minimize);
-  LOGCLAUSE ("minimizing first UIP clause");
+  LOG (clause, "minimizing first UIP clause");
   assert (seen.minimized.empty ());
   stats.literals.learned += clause.size ();
   size_t j = 0;
@@ -1113,7 +1114,7 @@ static void clear_levels () {
 static void resolve_clause (Clause * c) { 
   if (!c->redundant) return;
   UPDATE_EMA (ema.resolved.size, c->size);
-  UPDATE_EMA (ema.resolved.glue, c->glue ());
+  UPDATE_EMA (ema.resolved.glue, c->read_only_glue ());
   if (c->size <= opts.keepsize) return;
   if (c->glue () <= opts.keepglue) return;
   resolved.push_back (c);
