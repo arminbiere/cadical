@@ -1547,7 +1547,9 @@ static void reset_signal_handlers (void) {
 static void catchsig (int sig) {
   if (!catchedsig) {
     catchedsig = true;
+    msg ("");
     msg ("CAUGHT SIGNAL %d", sig);
+    section ("result");
     msg ("s UNKNOWN");
     print_statistics ();
   }
