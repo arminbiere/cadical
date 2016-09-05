@@ -914,27 +914,17 @@ static bool propagate () {
 
 /*------------------------------------------------------------------------*/
 
-static int minimize_literal_base_case (int root, int lit) {
-  assert (val (root) > 0), assert (val (lit) > 0);
-  Var & v = var (lit);
-  if (!v.level || v.minimized || (root != lit && v.seen)) return 1;
-  if (!v.reason || v.poison || levels[v.level].seen < 2) return -1;
-  return 0;
-}
+#if 1
 
-#if 0
-
-static bool minimize_literal (int root, int lit = 0, int depth = 0) {
-  if (!lit) lit = root;
+static bool minimize_literal (int lit, int depth = 0) {
   Var & v = var (lit);
-  const int tmp = minimize_literal_base_case (root, lit);
-  if (tmp > 0) return true; else if (tmp < 0) return false;
-  if (depth++ > opts.minimizedepth) return false;
-  bool res = true;
-  for (int i = 0; res && i < v.reason->size; i++) {
-    int other = v.reason->literals[i];
-    if (other != lit) res = minimize_literal (root, -other, depth + 1);
-  }
+  if (!v.level || v.minimized || (depth && v.seen)) return true;
+  if (!v.reason || v.poison || levels[v.level].seen < 2) return false;
+  if (depth > opts.minimizedepth) return false;
+  int size = v.reason->size, * lits = v.reason->literals, other, res = 0;
+  for (int i = 0; res && i < size; i++)
+    if ((other = lits[i]) != lit)
+      res = minimize_literal (-other, depth + 1);
   if (res) v.minimized = true; else v.poison = true;
   seen.minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", root, res ? "succeeded" : "failed");
@@ -942,6 +932,14 @@ static bool minimize_literal (int root, int lit = 0, int depth = 0) {
 }
 
 #else
+
+static int minimize_literal_base_case (int root, int lit) {
+  assert (val (root) > 0), assert (val (lit) > 0);
+  Var & v = var (lit);
+  if (!v.level || v.minimized || (root != lit && v.seen)) return 1;
+  if (!v.reason || v.poison || levels[v.level].seen < 2) return -1;
+  return 0;
+}
 
 static bool minimize_literal (int root) {
   vector<int> & stack = work.lits;
