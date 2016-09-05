@@ -944,19 +944,14 @@ static bool minimize_literal (int root, int lit = 0, int depth = 0) {
 #else
 
 static bool minimize_literal (int root) {
-  assert (val (root) > 0);
   vector<int> & stack = work.lits;
-  assert (stack.empty ());
   stack.push_back (root);
   while (!stack.empty ()) {
     int lit = stack.back ();
-    assert (val (lit) > 0);
     if (minimize_literal_base_case (root, lit)) stack.pop_back ();
     else {
       Var & v = var (lit);
-      assert (!v.minimized), assert (!v.poison);
       if (v.mark < v.reason->size) {
-	assert (v.mark >= 0);
 	int other = v.reason->literals[v.mark];
 	if (other == lit) v.mark++;
 	else {
@@ -969,17 +964,13 @@ static bool minimize_literal (int root) {
 	  else stack.push_back (-other);
 	}
       } else {
-	assert (v.mark == v.reason->size);
-	assert (!v.poison);
         stack.pop_back ();
 	v.minimized = true;
 	seen.minimized.push_back (lit);
       }
     }
   }
-  const int tmp = minimize_literal_base_case (root, root);
-  assert (tmp == -1 || tmp == 1);
-  const bool res = tmp > 0;
+  const bool res = (minimize_literal_base_case (root, root) > 0);
   LOG ("minimizing %d %s", root, res ? "succeeded" : "failed");
   return res;
 }
