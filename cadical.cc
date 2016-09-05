@@ -194,9 +194,10 @@ struct EMA {
 
 struct Timer {
   double started;       // starting time (in seconds) for this phase
-  double * update;      // update this profile if phase stops
-  Timer (double s, double * u) : started (s), update (u) { }
+  double * profile;     // update this profile if phase stops
+  Timer (double s, double * p) : started (s), profile (p) { }
   Timer () { }
+  void update (double now) { *profile += now - started; started = now; }
 };
 
 #endif
@@ -491,13 +492,13 @@ static void LOG (const vector<int> & clause, const char *fmt, ...) {
 
 #ifdef PROFILING
 
-static void start (double * u) { timers.push_back (Timer (seconds (), u)); }
+static void start (double * p) { timers.push_back (Timer (seconds (), p)); }
 
-static void stop (double * u) {
+static void stop (double * p) {
   assert (!timers.empty ());
-  const Timer & t = timers.back ();
-  assert (u == t.update), (void) u;
-  *t.update += seconds () - t.started;
+  Timer & t = timers.back ();
+  assert (p == t.profile), (void) p;
+  t.update (seconds ());
   timers.pop_back ();
 }
 
@@ -525,7 +526,12 @@ static struct {
 #define START(P) start (&profile.P)
 #define STOP(P) stop (&profile.P)
 
-static void print_profile (double all) {
+static void update_all_timers (double now) {
+  for (size_t i = 0; i < timers.size (); i++) timers[i].update (now);
+}
+
+static void print_profile (double now) {
+  update_all_timers (now);
   section ("run-time profiling data");
   const size_t size = sizeof profile / sizeof (double);
   struct { double value; const char * name; } profs[size];
@@ -547,10 +553,10 @@ static void print_profile (double all) {
         swap (profs[i].value, profs[j].value),
         swap (profs[i].name, profs[j].name);
     msg ("%12.2f %7.2f%% %s",
-      profs[i].value, percent (profs[i].value, all), profs[i].name);
+      profs[i].value, percent (profs[i].value, now), profs[i].name);
   }
   msg ("  ===============================");
-  msg ("%12.2f %7.2f%% all", all, 100.0);
+  msg ("%12.2f %7.2f%% all", now, 100.0);
 }
 
 #else
