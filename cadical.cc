@@ -924,9 +924,11 @@ static bool minimize_literal (int lit, int depth = 0) {
   if (!v.level || v.minimized || (depth && v.seen)) return true;
   if (!v.reason || v.poison || levels[v.level].seen < 2) return false;
   if (depth > opts.minimizedepth) return false;
-  int size = v.reason->size, * lits = v.reason->literals, res = 1;
+  const int size = v.reason->size, * lits = v.reason->literals;
+  bool res = true;
   for (int i = 0, other; res && i < size; i++)
-    if ((other = lits[i]) != lit) res = minimize_literal (-other, depth+1);
+    if ((other = lits[i]) != lit)
+      res = minimize_literal (-other, depth+1);
   if (res) v.minimized = true; else v.poison = true;
   seen.minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
