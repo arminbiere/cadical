@@ -850,26 +850,79 @@ static void delete_clause (Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
+// The following statistics are printed in columns, whenever 'report' is
+// called.  For instance reduce with prefix '-' will call it.  The other
+// more interesting report is due learning a unit with prefix 'i'.
+// In order to add another column, add a corresponding line here.
+
+#define REPORTS \
+/*            HEADER, PRECISION, VALUE */ \
+REPORT(    "seconds",         2, seconds ()) \
+REPORT(         "MB",         0, max_bytes () / (double)(1l<<20)) \
+REPORT(  "conflicts",         0, stats.conflicts) \
+REPORT(  "redundant",         0, redundant.size ()) \
+REPORT(   "slowglue",         1, ema.learned.glue.slow) \
+REPORT(   "fastglue",         1, ema.learned.glue.fast) \
+REPORT(       "jump",         1, ema.jump) \
+REPORT(    "resglue",         1, ema.resolved.glue) \
+REPORT(    "ressize",         1, ema.resolved.size) \
+REPORT("irredundant",         0, irredundant.size ()) \
+REPORT(  "variables",         0, active_variables ()) \
+
+struct Report {
+  const char * header;
+  char buffer[20];
+  int pos;
+  Report (const char * h, int precision, double value) : header (h) {
+    char fmt[6];
+    sprintf (fmt, "%%.%df", precision);
+    sprintf (buffer, fmt, value);
+    if (strlen (buffer) >= 3) return;
+    sprintf (fmt, "%%3.%df", precision);
+    sprintf (buffer, fmt, value);
+  }
+  Report () { }
+  void print_header (char * line) {
+    int len = strlen (header);
+    for (int i = -1, j = pos - (len + 1)/2 - 1; i < len; i++, j++)
+      line[j] = i < 0 ? ' ' : header[i];
+  }
+};
+
 static void report (char type) {
-  if (!stats.reports++)
-    fputs (
-"c                              redundant      irredundant            resolved\n"
-"c     seconds     MB conflicts  clauses   jump   clauses variables  glue  size\n"
-"c\n", stdout);
-//   123456.89 123456 123456789 12345678 123456 123456789 123456789 12345 12345
-  printf (
-    "c %c " 
-    "%9.2f " "%6.0f "   "%9ld "   "%8ld %6.0f "  "%9ld "   "%9d"  " %5.0f %5.0f\n",
-    type,   
-    seconds (),
-    max_bytes ()/(double)(1<<20),
-                  stats.conflicts,
-                      (long) redundant.size (),
-                               (double) ema.jump,
-                                      (long) irredundant.size (),
-                                                   active_variables (),
-                                                        (double) ema.resolved.glue,
-                                                            (double) ema.resolved.size);
+  const int max_reports = 16;
+  Report reports[max_reports];
+  int n = 0;
+#define REPORT(HEAD,POS,EXPR) \
+  assert (n < max_reports); \
+  reports[n++] = Report (HEAD, POS, (double)(EXPR));
+  REPORTS
+#undef REPORT
+  if (!(stats.reports++ % 20)) {
+    fputs ("c\n", stdout);
+    int pos = 4;
+    for (int i = 0; i < n; i++) {
+      int len = strlen (reports[i].buffer);
+      reports[i].pos = pos + (len + 1)/2;
+      pos += len + 1;
+    }
+    const int max_line = pos + 20, nrows = 3;
+    char line[max_line];
+    for (int start = 0; start < nrows; start++) {
+      int i;
+      for (i = 0; i < max_line; i++) line[i] = ' ';
+      line[0] = 'c';
+      for (i = start; i < n; i += nrows) reports[i].print_header (line);
+      for (i = max_line-1; line[i-1] == ' '; i--) ;
+      line[i] = 0;
+      fputs (line, stdout);
+      fputc ('\n', stdout);
+    }
+    fputs ("c\n", stdout);
+  }
+  printf ("c %c", type);
+  for (int i = 0; i < n; i++) printf (" %s", reports[i].buffer);
+  fputc ('\n', stdout);
   fflush (stdout);
 }
 
