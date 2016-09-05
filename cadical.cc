@@ -938,7 +938,6 @@ static bool minimize_literal (int lit, int depth = 0) {
 #else
 
 static int minimize_base_case (int root, int lit) {
-  assert (val (root) > 0), assert (val (lit) > 0);
   Var & v = var (lit);
   if (!v.level || v.minimized || (root != lit && v.seen)) return 1;
   if (!v.reason || v.poison || levels[v.level].seen < 2) return -1;
@@ -954,10 +953,9 @@ static bool minimize_literal (int root) {
     else {
       Var & v = var (lit);
       const int size = v.reason->size, * lits = v.reason->literals;
-NEXT:
-      if (v.mark < size) {
+NEXT: if (v.mark < size) {
 	const int other = lits[v.mark];
-	if (other == lit) { v.mark++; goto NEXT; }
+	if (other == lit)   { v.mark++;        goto NEXT; }
 	else {
 	  const int tmp = minimize_base_case (root, -other);
 	       if (tmp < 0) { v.poison = true; goto DONE; }
@@ -966,8 +964,7 @@ NEXT:
 	}
       } else {
 	v.minimized = true;
-DONE:
-	seen.minimized.push_back (lit);
+DONE:   seen.minimized.push_back (lit);
         stack.pop_back ();
       }
     }
