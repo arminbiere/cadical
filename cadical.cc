@@ -143,7 +143,7 @@ struct Var {
   bool seen;            // analyzed in 'analyze' and will be bumped
   bool poison;          // can not be minimized during clause minimization
   bool minimized;       // can be removed during clause minimization
-  int mark;		// reason position for non-recursive DFS
+  int mark;             // reason position for non-recursive DFS
 
   int prev, next;       // double links for decision VMTF queue
   long bumped;          // enqueue time stamp for VMTF queue
@@ -242,20 +242,20 @@ static vector<Clause*> redundant;       // redundant / learned clauses
 static bool iterating;          // report top-level assigned variables
 
 static struct {
-  vector<int> literals;		// seen & bumped literals in 'analyze'
-  vector<int> levels;		// decision levels of 1st UIP clause
-  vector<int> minimized;	// DFS done: minimized or poisoned
+  vector<int> literals;         // seen & bumped literals in 'analyze'
+  vector<int> levels;           // decision levels of 1st UIP clause
+  vector<int> minimized;        // DFS done: minimized or poisoned
 } seen;
 
 static struct {
-  vector<Clause *> clauses;	// redundant reduce candidates
-  vector<int> lits;		// non-recursive DFS working stack
+  vector<Clause *> clauses;     // redundant reduce candidates
+  vector<int> lits;             // non-recursive DFS working stack
 } work;
 
 static vector<Clause*> resolved;
 
 static Clause * conflict;       // set in 'propagation', reset in 'analyze'
-static Clause clashing_unit;	// needed if input contains clashing units
+static Clause clashing_unit;    // needed if input contains clashing units
 
 static struct {
   long conflicts;
@@ -264,7 +264,7 @@ static struct {
 
   long restarts;
   long delayed;                 // restarts
-  long unforced;		// restarts
+  long unforced;                // restarts
   long reused;                  // trails
 
   long reports, sections;
@@ -275,7 +275,7 @@ static struct {
 
   struct { long count, clauses, bytes; } reduce; // in 'reduce'
 
-  struct { long learned, minimized; } literals;	 // in 'minimize_clause'
+  struct { long learned, minimized; } literals;  // in 'minimize_clause'
 
   struct { long current, max; } clauses;
   struct { size_t current, max; } bytes;
@@ -352,8 +352,8 @@ static double seconds () {
   struct rusage u;
   double res;
   if (getrusage (RUSAGE_SELF, &u)) return 0;
-  res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;
-  res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec;
+  res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;  // user time
+  res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec; // + system time
   return res;
 }
 
@@ -961,16 +961,16 @@ static bool minimize_literal (int root) {
       Var & v = var (lit);
       const int size = v.reason->size, * lits = v.reason->literals;
 NEXT: if (v.mark < size) {
-	const int other = lits[v.mark];
-	if (other == lit)   { v.mark++;        goto NEXT; }
-	else {
-	  const int tmp = minimize_base_case (root, -other);
-	       if (tmp < 0) { v.poison = true; goto DONE; }
-	  else if (tmp > 0) { v.mark++;        goto NEXT; }
-	  else stack.push_back (-other);
-	}
+        const int other = lits[v.mark];
+        if (other == lit)   { v.mark++;        goto NEXT; }
+        else {
+          const int tmp = minimize_base_case (root, -other);
+               if (tmp < 0) { v.poison = true; goto DONE; }
+          else if (tmp > 0) { v.mark++;        goto NEXT; }
+          else stack.push_back (-other);
+        }
       } else {
-	v.minimized = true;
+        v.minimized = true;
 DONE:   seen.minimized.push_back (lit);
         stack.pop_back ();
       }
