@@ -868,17 +868,20 @@ REPORT(    "resglue",         1, ema.resolved.glue) \
 REPORT(    "ressize",         1, ema.resolved.size) \
 REPORT("irredundant",         0, irredundant.size ()) \
 REPORT(  "variables",         0, active_variables ()) \
+REPORT(     "remain",        -1, percent (active_variables (), max_var)) \
 
 struct Report {
   const char * header;
   char buffer[20];
   int pos;
   Report (const char * h, int precision, double value) : header (h) {
-    char fmt[6];
-    sprintf (fmt, "%%.%df", precision);
+    char fmt[10];
+    sprintf (fmt, "%%.%df", abs (precision));
+    if (precision < 0) strcat (fmt, "%%");
     sprintf (buffer, fmt, value);
     if (strlen (buffer) >= 3) return;
-    sprintf (fmt, "%%3.%df", precision);
+    sprintf (fmt, "%%3.%df", abs (precision));
+    if (precision < 0) strcat (fmt, "%%");
     sprintf (buffer, fmt, value);
   }
   Report () { }
