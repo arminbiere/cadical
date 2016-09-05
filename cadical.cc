@@ -2,7 +2,7 @@
 
 CaDiCaL
 
-Radically Simplified Conflict Driven Clause Learning Solver (CDCL)
+Radically Simplified Conflict Driven Clause Learning (CDCL) SAT Solver
 
 The goal of CaDiCal is to have a minimalistic CDCL solver, which is easy
 to understand and change, while at the same time not too much slower
@@ -103,8 +103,6 @@ static struct {
 
 /*------------------------------------------------------------------------*/
 
-// Type declarations
-
 struct Clause {
   bool redundant;       // so not 'irredundant' and on 'redundant' stack
   bool garbage;         // can be garbage collected
@@ -124,17 +122,18 @@ struct Clause {
   static const size_t RESOLVED_OFFSET  = 12; // ditto
   static const size_t REDUNDANT_OFFSET = 12; // ditto
 
+  bool extended () const { return redundant && size > 2; }
+
   long & resolved () {
-    assert (this), assert (redundant);
+    assert (this), assert (extended ());
     return *(long*) (((char*)this) - RESOLVED_OFFSET);
   }
 
   int & glue () {
-    assert (this), assert (redundant);
+    assert (this), assert (extended ());
     return *(int*) (((char*)this) - GLUE_OFFSET);
   }
 };
-
 
 struct Var {
 
@@ -191,7 +190,7 @@ struct EMA {
   void update (double y, const char * name);
 };
 
-#ifdef PROFILING
+#ifdef PROFILING        // enabled by './configure -p'
 
 struct Timer {
   double started;       // starting time (in seconds) for this phase

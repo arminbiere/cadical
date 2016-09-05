@@ -1,5 +1,5 @@
 # CaDiCaL
-Radically Simplified Conflict Driven Clause Learning Solver (CDCL)
+Radically Simplified Conflict Driven Clause Learning (CDCL) SAT Solver
 
 The goal of CaDiCal is to have a minimalistic CDCL solver,
 which is easy to understand and change, while at the same
@@ -25,4 +25,4 @@ A plain stable source release can eventually be found at
   http://fmv.jku.at/cadical
 
 Armin Biere
-So 4. Sep 12:43:12 CEST 2016
+Mo 5. Sep 21:03:06 CEST 2016
