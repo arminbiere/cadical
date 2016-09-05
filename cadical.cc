@@ -137,21 +137,22 @@ struct Clause {
 
 
 struct Var {
-  bool seen;            // in 'analyze' 
-  bool minimized;       // can be minimized
-  bool poison;          // can not be minimized
 
-  int mark;		// reason position
-
-  long bumped;          // enqueue time stamp for VMTF queue
-  int prev, next;       // double links for decision VMTF queue
-
-  Clause * reason;      // implication graph edge
   int level;            // decision level
 
+  bool seen;            // analyzed in 'analyze' and will be bumped
+  bool poison;          // can not be minimized during clause minimization
+  bool minimized;       // can be removed during clause minimization
+  int mark;		// reason position for non-recursive DFS
+
+  int prev, next;       // double links for decision VMTF queue
+  long bumped;          // enqueue time stamp for VMTF queue
+
+  Clause * reason;      // implication graph edge
+
   Var () :
-    seen (false), minimized (false), poison (false), mark (0),
-    bumped (0), prev (0), next (0)
+    seen (false), poison (false), minimized (false), mark (0),
+    prev (0), next (0), bumped (0)
   { }
 };
 
@@ -919,6 +920,8 @@ static bool propagate () {
 
 #if 0
 
+// Recursive but bounded version of DFS for minimizing clauses.
+
 static bool minimize_literal (int lit, int depth = 0) {
   Var & v = var (lit);
   if (!v.level || v.minimized || (depth && v.seen)) return true;
@@ -936,6 +939,10 @@ static bool minimize_literal (int lit, int depth = 0) {
 }
 
 #else
+
+// Non-recursive unbounded version of DFS for minimizing clauses.
+// It is more ugly and needs slightly more heap memory for variables
+// due to 'mark' used for saving the position in the reason clause.
 
 static int minimize_base_case (int root, int lit) {
   Var & v = var (lit);
