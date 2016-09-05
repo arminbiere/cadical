@@ -847,7 +847,7 @@ static void delete_clause (Clause * c) {
 static void report (char type) {
   if (!stats.reports++)
     fputs (
-"c                               redundant     irredundant            resolved\n"
+"c                              redundant      irredundant            resolved\n"
 "c     seconds     MB conflicts  clauses   jump   clauses variables  glue  size\n"
 "c\n", stdout);
 //   123456.89 123456 123456789 12345678 123456 123456789 123456789 12345 12345
