@@ -138,6 +138,7 @@ struct Clause {
 struct Var {
 
   int level;            // decision level
+  int trail;		// trail level
 
   bool seen;            // analyzed in 'analyze' and will be bumped
   bool poison;          // can not be minimized during clause minimization
@@ -168,7 +169,8 @@ typedef vector<Watch> Watches;          // of one literal
 struct Level {
   int decision;         // decision literal of level
   int seen;             // how man variables seen during 'analyze'
-  Level (int d) : decision (d), seen (0) { }
+  int trail;		// smallest trail position seen
+  Level (int d) : decision (d), seen (0), trail (INT_MAX) { }
   Level () { }
 };
 
@@ -729,6 +731,7 @@ static void assign (int lit, Clause * reason = 0) {
   v.reason = reason;
   vals[idx] = phases[idx] = sign (lit);
   assert (val (lit) > 0);
+  v.trail = (int) trail.size ();
   trail.push_back (lit);
   LOG (reason, "assign %d", lit);
 }
@@ -993,14 +996,21 @@ static bool propagate () {
 
 /*------------------------------------------------------------------------*/
 
-#if 0
+#if 1
 
 // Recursive but bounded version of DFS for minimizing clauses.
 
 static bool minimize_literal (int lit, int depth = 0) {
   Var & v = var (lit);
   if (!v.level || v.minimized || (depth && v.seen)) return true;
-  if (!v.reason || v.poison || levels[v.level].seen < 2) return false;
+  if (!v.reason || v.poison || v.level == level) return false;
+  const Level & l = levels[v.level];
+#if 0
+  if (l.seen < 2 || v.trail <= l.trail) return false;
+#else
+  if (v.trail <= l.trail) return false;
+  assert (l.seen >= 2);
+#endif
   if (depth > opts.minimizedepth) return false;
   const int size = v.reason->size, * lits = v.reason->literals;
   bool res = true;
@@ -1022,7 +1032,9 @@ static bool minimize_literal (int lit, int depth = 0) {
 static int minimize_base_case (int root, int lit) {
   Var & v = var (lit);
   if (!v.level || v.minimized || (root != lit && v.seen)) return 1;
-  if (!v.reason || v.poison || levels[v.level].seen < 2) return -1;
+  if (!v.reason || v.poison || v.level == level) return -1;
+  const Level & l = levels[v.level];
+  if (l.seen < 2 || v.trail <= l.trail) return -1;
   return 0;
 }
 
@@ -1058,10 +1070,15 @@ DONE:   seen.minimized.push_back (lit);
 
 #endif
 
+struct trail_smaller_than {
+  bool operator () (int a, int b) { return var (a).trail < var (b).trail; }
+};
+
 static void minimize_clause () {
   if (!opts.minimize) return;
   START (minimize);
   LOG (clause, "minimizing first UIP clause");
+  sort (clause.begin (), clause.end (), trail_smaller_than ());
   assert (seen.minimized.empty ());
   stats.literals.learned += clause.size ();
   size_t j = 0;
@@ -1201,18 +1218,20 @@ static bool analyze_literal (int lit) {
   if (!v.level) return false;
   assert (val (lit) < 0);
   if (v.level < level) clause.push_back (lit);
-  if (!levels[v.level].seen++) {
+  Level & l = levels[v.level];
+  if (!l.seen++) {
     LOG ("found new level %d contributing to conflict");
     seen.levels.push_back (v.level);
   }
+  if (v.trail < l.trail) l.trail = v.trail;
   v.seen = true;
   seen.literals.push_back (lit);
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);
   return v.level == level;
 }
 
-struct level_greater_than {
-  bool operator () (int a, int b) { return var (a).level > var (b).level; }
+struct trail_greater_than {
+  bool operator () (int a, int b) { return var (a).trail > var (b).trail; }
 };
 
 static void analyze () {
@@ -1254,7 +1273,7 @@ static void analyze () {
       LOG ("learned unit clause %d", -uip); 
       stats.learned.units++;
     } else {
-      sort (clause.begin (), clause.end (), level_greater_than ());
+      sort (clause.begin (), clause.end (), trail_greater_than ());
       assert (clause[0] == -uip);
       driving_clause = new_learned_clause (glue);
       trace_add_clause (driving_clause);
