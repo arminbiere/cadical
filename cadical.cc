@@ -751,7 +751,7 @@ static void learn_unit_clause (int lit) {
 
 /*------------------------------------------------------------------------*/
 
-static void assign (int lit, Clause * reason = 0) {
+static void assign (int lit, Reason reason = 0) {
   int idx = vidx (lit);
   assert (!vals[idx]);
   Var & v = vars[idx];
@@ -993,8 +993,8 @@ static bool propagate () {
       const int b = val (w.blit), size = w.size;
       if (b > 0) continue;
       else if (size == 2) {
-        if (b < 0) conflict = w.clause;
-        else assign (w.blit, w.clause);
+        if (b < 0) conflict = Reason (-lit, w.blit);
+        else assign (w.blit, Reason (-lit, w.blit));
       } else {
         assert (w.clause->size == size);
         int * lits = w.clause->literals;
@@ -1232,10 +1232,10 @@ static void clear_levels () {
 
 static void resolve_clause (Clause * c) { 
   if (!c->redundant) return;
-  UPDATE_EMA (ema.resolved.size, c->size);
-  UPDATE_EMA (ema.resolved.glue, c->read_only_glue ());
   if (c->size <= opts.keepsize) return;
   if (c->glue () <= opts.keepglue) return;
+  UPDATE_EMA (ema.resolved.size, c->size);
+  UPDATE_EMA (ema.resolved.glue, c->read_only_glue ());
   resolved.push_back (c);
 }
 
