@@ -110,7 +110,14 @@ struct Clause {
   bool garbage;         // can be garbage collected
   bool reason;          // reason clause can not be collected
   int size;             // actual size of 'literals' (at least 2)
-  int literals[2];      // actually of variadic 'size'
+
+  int literals[2];      // actually of variadic 'size' except
+                        // for binary embedded reason clauses
+
+  void set (int a, int b) {
+    redundant = garbage = reason = false;
+    size = 2, literals[0] = a, literals[1] = b;
+  }
 
   // Actually, a redundant clause has two additional fields
   //
@@ -135,10 +142,22 @@ struct Clause {
   int read_only_glue () { return extended () ? glue () : size - 1; }
 };
 
+struct Reason {
+  bool embedded;
+  union { Clause binary; Clause * ptr; };
+  Reason (Clause * c = 0) : embedded (false) { ptr = c; }
+  Reason (int a, int b) : embedded (true) { binary.set (a, b); }
+  Clause * clause () { return embedded ? &binary : ptr; }
+  Clause * operator -> () { return clause (); }
+  operator Clause * () { return clause (); }
+  int size () { assert (clause ()); return clause ()->size; }
+  int * literals () { assert (clause ()); return clause ()->literals; }
+};
+
 struct Var {
 
   int level;            // decision level
-  int trail;		// trail level
+  int trail;            // trail level
 
   bool seen;            // analyzed in 'analyze' and will be bumped
   bool poison;          // can not be minimized during clause minimization
@@ -148,7 +167,7 @@ struct Var {
   int prev, next;       // double links for decision VMTF queue
   long bumped;          // enqueue time stamp for VMTF queue
 
-  Clause * reason;      // implication graph edge
+  Reason reason;        // implication graph edge
 
   Var () :
     seen (false), poison (false), minimized (false), mark (0),
@@ -169,7 +188,7 @@ typedef vector<Watch> Watches;          // of one literal
 struct Level {
   int decision;         // decision literal of level
   int seen;             // how man variables seen during 'analyze'
-  int trail;		// smallest trail position seen
+  int trail;            // smallest trail position seen
   void reset () { seen = 0, trail = INT_MAX; }
   Level (int d) : decision (d) { reset (); }
   Level () { }
@@ -257,7 +276,7 @@ static struct {
 
 static vector<Clause*> resolved;
 
-static Clause * conflict;       // set in 'propagation', reset in 'analyze'
+static Reason conflict;         // set in 'propagation', reset in 'analyze'
 static Clause clashing_unit;    // needed if input contains clashing units
 
 static struct {
@@ -1056,7 +1075,7 @@ static bool minimize_literal (int lit, int depth = 0) {
   const Level & l = levels[v.level];
   if ((!depth && l.seen < 2) || v.trail <= l.trail) return false;
   if (depth > opts.minimizedepth) return false;
-  const int size = v.reason->size, * lits = v.reason->literals;
+  const int size = v.reason.size (), * lits = v.reason.literals ();
   bool res = true;
   for (int i = 0, other; res && i < size; i++)
     if ((other = lits[i]) != lit)
@@ -1251,14 +1270,15 @@ static void analyze () {
   START (analyze);
   if (!level) learn_empty_clause ();
   else {
-    Clause * reason = conflict;
+    Reason & reason = conflict;
     LOG (reason, "analyzing conflict");
-    resolve_clause (reason);
+    if (!reason.embedded) resolve_clause (reason);
     int open = 0, uip = 0;
     size_t i = trail.size ();
     for (;;) {
-      for (int j = 0; j < reason->size; j++)
-        if (analyze_literal (reason->literals[j])) open++;
+      const int size = reason.size (), * lits = reason.literals ();;
+      for (int j = 0; j < size; j++)
+        if (analyze_literal (lits[j])) open++;
       while (!var (uip = trail[--i]).seen)
         ;
       if (!--open) break;
@@ -1338,7 +1358,8 @@ static bool reducing () {
 static void protect_reasons () {
   for (size_t i = 0; i < trail.size (); i++) {
     Var & v = var (trail[i]);
-    if (v.level && v.reason) v.reason->reason = true;
+    if (v.level && v.reason && !v.reason.embedded)
+      v.reason->reason = true;
   }
 }
 static bool clause_root_level_satisfied (Clause * c) {
@@ -1386,7 +1407,7 @@ static void mark_useless_redundant_clauses_as_garbage () {
 static void unprotect_reasons () {
   for (size_t i = 0; i < trail.size (); i++) {
     Var & v = var (trail[i]);
-    if (v.level && v.reason)
+    if (v.level && v.reason && !v.reason.embedded)
       assert (v.reason->reason), v.reason->reason = false;
   }
 }
