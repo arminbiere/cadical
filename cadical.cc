@@ -138,8 +138,6 @@ struct Clause {
     assert (this), assert (extended ());
     return *(int*) (((char*)this) - GLUE_OFFSET);
   }
-
-  int read_only_glue () { return extended () ? glue () : size - 1; }
 };
 
 struct Reason {
@@ -481,8 +479,9 @@ static void LOG (Clause * c, const char *fmt, ...) {
   vprintf (fmt, ap);
   va_end (ap);
   if (c) {
-    if (c->redundant) printf (" redundant glue %d", c->read_only_glue ());
-    else printf (" irredundant");
+    if (!c->redundant) printf (" irredundant");
+    else if (c->extended ()) printf (" redundant glue %d", c->glue ());
+    else printf (" redundant without glue");
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
       printf (" %d", c->literals[i]);
@@ -1235,7 +1234,7 @@ static void resolve_clause (Clause * c) {
   if (c->size <= opts.keepsize) return;
   if (c->glue () <= opts.keepglue) return;
   UPDATE_EMA (ema.resolved.size, c->size);
-  UPDATE_EMA (ema.resolved.glue, c->read_only_glue ());
+  UPDATE_EMA (ema.resolved.glue, c->glue ());
   resolved.push_back (c);
 }
 
