@@ -170,7 +170,8 @@ struct Level {
   int decision;         // decision literal of level
   int seen;             // how man variables seen during 'analyze'
   int trail;		// smallest trail position seen
-  Level (int d) : decision (d), seen (0), trail (INT_MAX) { }
+  void reset () { seen = 0, trail = INT_MAX; }
+  Level (int d) : decision (d) { reset (); }
   Level () { }
 };
 
@@ -1199,7 +1200,7 @@ static void bump_resolved_clauses () {
 
 static void clear_levels () {
   for (size_t i = 0; i < seen.levels.size (); i++)
-    levels[seen.levels[i]].seen = 0;
+    levels[seen.levels[i]].reset ();
   seen.levels.clear ();
 }
 
