@@ -142,7 +142,7 @@ struct Clause {
 
 struct Reason {
   bool embedded;
-  union { Clause binary; Clause * ptr; };
+  union { Clause binary, * ptr; };
   Reason (Clause * c = 0) : embedded (false) { ptr = c; }
   Reason (int a, int b) : embedded (true) { binary.set (a, b); }
   Clause * clause () { return embedded ? &binary : ptr; }
