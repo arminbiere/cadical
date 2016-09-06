@@ -182,6 +182,7 @@ struct Watch {
 };
 
 typedef vector<Watch> Watches;          // of one literal
+typedef vector<int> Binaries;           // of one literal
 
 struct Level {
   int decision;         // decision literal of level
@@ -238,6 +239,7 @@ static signed char * vals;              // assignment
 static signed char * phases;            // saved previous assignment
 
 static Watches * all_literal_watches;   // [2,2*max_var+1]
+static Binaries * all_literal_binaries; // ditto
 
 // VMTF decision queue
 
@@ -251,8 +253,12 @@ static bool unsat;              // empty clause found or learned
 static int level;               // decision level (levels.size () - 1)
 static vector<Level> levels;
 
-static size_t propagate_next;   // BFS index into 'trail'
 static vector<int> trail;       // assigned literals
+
+static struct {
+  size_t watches;       // next literal position for watches
+  size_t binaries;      // next literal position for binaries
+} next;                 // as BFS indices into 'trail' for propagation
 
 static vector<int> clause;      // temporary clause in parsing & learning
 
@@ -668,6 +674,11 @@ static Watches & watches (int lit) {
   return all_literal_watches[2*idx + (lit < 0)];
 }
 
+static Binaries & binaries (int lit) {
+  int idx = vidx (lit);
+  return all_literal_binaries[2*idx + (lit < 0)];
+}
+
 static Var & var (int lit) { return vars [vidx (lit)]; }
 
 /*------------------------------------------------------------------------*/
@@ -784,7 +795,8 @@ static void backtrack (int target_level = 0) {
     unassign (lit = trail.back ());
     trail.pop_back ();
   } while (lit != decision);
-  if (trail.size () < propagate_next) propagate_next = trail.size ();
+  if (trail.size () < next.watches) next.watches = trail.size ();
+  if (trail.size () < next.binaries) next.binaries = trail.size ();
   levels.resize (target_level + 1);
   level = target_level;
 }
@@ -792,7 +804,8 @@ static void backtrack (int target_level = 0) {
 /*------------------------------------------------------------------------*/
 
 static void watch_literal (int lit, int blit, Clause * c) {
-  watches (lit).push_back (Watch (blit, c));
+  if (c->size > 2) watches (lit).push_back (Watch (blit, c));
+  else binaries (lit).push_back (blit);
   LOG (c, "watch %d blit %d in", lit, blit);
 }
 
@@ -980,47 +993,55 @@ static void report (char type) {
 static bool propagate () {
   assert (!unsat);
   START (propagate);
-  while (!conflict && propagate_next < trail.size ()) {
-    stats.propagations++;
-    int lit = trail[propagate_next++];
-    assert (val (lit) > 0);
-    LOG ("propagating %d", lit);
-    Watches & ws = watches (-lit);
-    size_t i = 0, j = 0;
-    while (!conflict && i < ws.size ()) {
-      const Watch w = ws[j++] = ws[i++];
-      const int b = val (w.blit), size = w.size;
-      if (b > 0) continue;
-      else if (size == 2) {
-        if (b < 0) conflict = Reason (-lit, w.blit);
-        else assign (w.blit, Reason (-lit, w.blit));
-      } else {
-        assert (w.clause->size == size);
-        int * lits = w.clause->literals;
-        if (lits[1] != -lit) swap (lits[0], lits[1]);
-        assert (lits[1] == -lit);
-        const int u = val (lits[0]);
-        if (u > 0) ws[j-1].blit = lits[0];
-        else {
-          int k, v = -1;
-          for (k = 2; k < size && (v = val (lits[k])) < 0; k++)
-            ;
-          if (v > 0) ws[j-1].blit = lits[k];
-          else if (!v) {
-            LOG (w.clause, "unwatch %d in", -lit);
-            swap (lits[1], lits[k]);
-            watch_literal (lits[1], -lit, w.clause);
-            j--;
-          } else if (!u) assign (lits[0], w.clause);
-          else conflict = w.clause;
-        }
+  while (!conflict) {
+    if (next.binaries < trail.size ()) {
+      stats.propagations++;
+      const int lit = trail[next.binaries++];
+      assert (val (lit) > 0);
+      LOG ("propagating binaries of %d", lit);
+      Binaries & bs = binaries (-lit);
+      for (size_t i = 0; !conflict && i < bs.size (); i++) {
+	const int other = bs[i], b = val (other);
+	if (b < 0) conflict = Reason (-lit, other);
+	else if (!b) assign (other, Reason (-lit, other));
       }
-    }
-    while (i < ws.size ()) ws[j++] = ws[i++];
-    ws.resize (j);
+    } else if (next.watches < trail.size ()) {
+      const int lit = trail[next.watches++];
+      assert (val (lit) > 0);
+      LOG ("propagating watches of %d", lit);
+      Watches & ws = watches (-lit);
+      size_t i = 0, j = 0;
+      while (!conflict && i < ws.size ()) {
+	const Watch w = ws[j++] = ws[i++];
+	const int b = val (w.blit);
+	if (b > 0) continue;
+	const int size = w.size;
+	assert (w.clause->size == size);
+	int * lits = w.clause->literals;
+	if (lits[1] != -lit) swap (lits[0], lits[1]);
+	assert (lits[1] == -lit);
+	const int u = val (lits[0]);
+	if (u > 0) ws[j-1].blit = lits[0];
+	else {
+	  int k, v = -1;
+	  for (k = 2; k < size && (v = val (lits[k])) < 0; k++)
+	    ;
+	  if (v > 0) ws[j-1].blit = lits[k];
+	  else if (!v) {
+	    LOG (w.clause, "unwatch %d in", -lit);
+	    swap (lits[1], lits[k]);
+	    watch_literal (lits[1], -lit, w.clause);
+	    j--;
+	  } else if (!u) assign (lits[0], w.clause);
+	  else conflict = w.clause;
+	}
+      }
+      while (i < ws.size ()) ws[j++] = ws[i++];
+      ws.resize (j);
+    } else break;
   }
-  STOP (propagate);
   if (conflict) { stats.conflicts++; LOG (conflict, "conflict"); }
+  STOP (propagate);
   return !conflict;
 }
 
@@ -1614,6 +1635,7 @@ static void init_variables () {
   NEW (phases, signed char, max_var + 1);
   NEW (vars, Var, max_var + 1);
   NEW (all_literal_watches, Watches, 2 * (max_var + 1));
+  NEW (all_literal_binaries, Binaries, 2 * (max_var + 1));
   for (int i = 1; i <= max_var; i++) vals[i] = 0;
   for (int i = 1; i <= max_var; i++) phases[i] = -1;
   init_vmtf_queue ();
@@ -1643,6 +1665,7 @@ static void reset () {
     delete_clause (irredundant[i]);
   for (size_t i = 0; i < redundant.size (); i++)
     delete_clause (redundant[i]);
+  delete [] all_literal_binaries;
   delete [] all_literal_watches;
   delete [] vars;
   delete [] vals;
