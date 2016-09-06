@@ -672,15 +672,23 @@ static void check_vmtf_queue_invariant () {
 
 /*------------------------------------------------------------------------*/
 
-static void print (const char * str, FILE * file) {
-  fputs_unlocked (str, file);
+// Faster file IO without locking.
+
+static void print (char ch, FILE * file = stdout) {
+  fputc_unlocked (ch, file);
 }
 
-static void print (int lit, FILE * file) {
+static void print (const char * s, FILE * file = stdout) {
+  fputs_unlocked (s, file);
+}
+
+static void print (int lit, FILE * file = stdout) {
   char buffer[20];
   sprintf (buffer, "%d", lit);
   print (buffer, file);
 }
+
+/*------------------------------------------------------------------------*/
 
 static void trace_empty_clause () {
   if (!proof_file) return;
@@ -770,12 +778,11 @@ static void watch_literal (int lit, int blit, Clause * c) {
   LOG (c, "watch %d blit %d in", lit, blit);
 }
 
-static Clause * watch_clause (Clause * c) {
+static void watch_clause (Clause * c) {
   assert (c->size > 1);
   int l0 = c->literals[0], l1 = c->literals[1];
   watch_literal (l0, l1, c);
   watch_literal (l1, l0, c);
-  return c;
 }
 
 static bool extended (bool red, int size) { return red && size > 2; }
@@ -851,7 +858,10 @@ static void add_new_original_clause () {
 }
 
 static Clause * new_learned_clause (int glue) {
-  return watch_clause (new_clause (true, glue));
+  Clause * res = new_clause (true, glue);
+  trace_add_clause (res);
+  watch_clause (res);
+  return res;
 }
 
 static void delete_clause (Clause * c) { 
@@ -919,7 +929,7 @@ static void report (char type) {
   REPORTS
 #undef REPORT
   if (!(stats.reports++ % 20)) {
-    fputs ("c\n", stdout);
+    print ("c\n", stdout);
     int pos = 4;
     for (int i = 0; i < n; i++) {
       int len = strlen (reports[i].buffer);
@@ -935,14 +945,15 @@ static void report (char type) {
       for (i = start; i < n; i += nrows) reports[i].print_header (line);
       for (i = max_line-1; line[i-1] == ' '; i--) ;
       line[i] = 0;
-      fputs (line, stdout);
-      fputc ('\n', stdout);
+      print (line, stdout);
+      print ('\n', stdout);
     }
-    fputs ("c\n", stdout);
+    print ("c\n", stdout);
   }
-  printf ("c %c", type);
-  for (int i = 0; i < n; i++) printf (" %s", reports[i].buffer);
-  fputc ('\n', stdout);
+  print ("c "), print (type);
+  for (int i = 0; i < n; i++)
+    print (' '), print (reports[i].buffer);
+  print ('\n', stdout);
   fflush (stdout);
 }
 
@@ -997,6 +1008,43 @@ static bool propagate () {
 
 /*------------------------------------------------------------------------*/
 
+#ifndef NDEBUG
+
+// Like 'val' for 'vals' but 'sol' is for 'solution'.
+
+static int sol (int lit) {
+  assert (solution);
+  int res = solution[vidx (lit)];
+  if (lit < 0) res = -res;
+  return res;
+}
+
+#endif
+
+// See comments at the declaration of 'solution' above.  This is used
+// for debugging inconsistent models and unexpected UNSAT results.
+
+static void check_clause () {
+#ifndef NDEBUG
+  if (!solution) return;
+  bool satisfied = false;
+  for (size_t i = 0; !satisfied && i < clause.size (); i++)
+    satisfied = (sol (clause[i]) > 0);
+  if (satisfied) return;
+  fflush (stdout);
+  fputs (
+    "*** cadical error: learned clause unsatisfied by solution:\n",
+    stderr);
+  for (size_t i = 0; i < clause.size (); i++)
+    fprintf (stderr, "%d ", clause[i]);
+  fputs ("0\n", stderr);
+  fflush (stderr);
+  abort ();
+#endif
+}
+
+/*------------------------------------------------------------------------*/
+
 #if 1
 
 // Recursive but bounded version of DFS for minimizing clauses.
@@ -1006,12 +1054,7 @@ static bool minimize_literal (int lit, int depth = 0) {
   if (!v.level || v.minimized || (depth && v.seen)) return true;
   if (!v.reason || v.poison || v.level == level) return false;
   const Level & l = levels[v.level];
-#if 0
-  if (l.seen < 2 || v.trail <= l.trail) return false;
-#else
-  if (v.trail <= l.trail) return false;
-  assert (l.seen >= 2);
-#endif
+  if ((!depth && l.seen < 2) || v.trail <= l.trail) return false;
   if (depth > opts.minimizedepth) return false;
   const int size = v.reason->size, * lits = v.reason->literals;
   bool res = true;
@@ -1035,7 +1078,7 @@ static int minimize_base_case (int root, int lit) {
   if (!v.level || v.minimized || (root != lit && v.seen)) return 1;
   if (!v.reason || v.poison || v.level == level) return -1;
   const Level & l = levels[v.level];
-  if (l.seen < 2 || v.trail <= l.trail) return -1;
+  if ((root == lit && l.seen < 2) || v.trail <= l.trail) return -1;
   return 0;
 }
 
@@ -1078,8 +1121,8 @@ struct trail_smaller_than {
 static void minimize_clause () {
   if (!opts.minimize) return;
   START (minimize);
-  LOG (clause, "minimizing first UIP clause");
   sort (clause.begin (), clause.end (), trail_smaller_than ());
+  LOG (clause, "minimizing first UIP clause");
   assert (seen.minimized.empty ());
   stats.literals.learned += clause.size ();
   size_t j = 0;
@@ -1095,43 +1138,7 @@ static void minimize_clause () {
   }
   seen.minimized.clear ();
   STOP (minimize);
-}
-
-/*------------------------------------------------------------------------*/
-
-#ifndef NDEBUG
-
-// Like 'val' for 'vals' but 'sol' is for 'solution'.
-
-static int sol (int lit) {
-  assert (solution);
-  int res = solution[vidx (lit)];
-  if (lit < 0) res = -res;
-  return res;
-}
-
-#endif
-
-// See comments at the declaration of 'solution' above.  This is used
-// for debugging inconsistent models and unexpected UNSAT results.
-
-static void check_clause () {
-#ifndef NDEBUG
-  if (!solution) return;
-  bool satisfied = false;
-  for (size_t i = 0; !satisfied && i < clause.size (); i++)
-    satisfied = (sol (clause[i]) > 0);
-  if (satisfied) return;
-  fflush (stdout);
-  fputs (
-    "*** cadical error: learned clause unsatisfied by solution:\n",
-    stderr);
-  for (size_t i = 0; i < clause.size (); i++)
-    fprintf (stderr, "%d ", clause[i]);
-  fputs ("0\n", stderr);
-  fflush (stderr);
-  abort ();
-#endif
+  check_clause ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -1245,7 +1252,7 @@ static void analyze () {
   if (!level) learn_empty_clause ();
   else {
     Clause * reason = conflict;
-    LOG (reason, "analyzing conflicting");
+    LOG (reason, "analyzing conflict");
     resolve_clause (reason);
     int open = 0, uip = 0;
     size_t i = trail.size ();
@@ -1262,31 +1269,24 @@ static void analyze () {
     clause.push_back (-uip);
     check_clause ();
     bump_resolved_clauses ();
-    int size = (int) clause.size ();
-    int glue = (int) seen.levels.size ();
+    const int size = (int) clause.size ();
+    const int glue = (int) seen.levels.size ();
+    LOG ("1st UIP clause of size %d and glue %d", size, glue);
     UPDATE_EMA (ema.learned.glue.slow, glue);
     UPDATE_EMA (ema.learned.glue.fast, glue);
-    LOG ("original 1st UIP clause of size %d and glue %d", size, glue);
-    if (opts.minimize) minimize_clause (), check_clause ();
+    if (opts.minimize) minimize_clause ();
     Clause * driving_clause = 0;
     int jump = 0;
-    if (size == 1) {
-      LOG ("learned unit clause %d", -uip); 
-      stats.learned.units++;
-    } else {
+    if (size > 1) {
       sort (clause.begin (), clause.end (), trail_greater_than ());
-      assert (clause[0] == -uip);
       driving_clause = new_learned_clause (glue);
-      trace_add_clause (driving_clause);
       jump = var (clause[1]).level;
-      assert (jump < level);
-    }
+    } else stats.learned.units++;
     UPDATE_EMA (ema.jump, jump);
     backtrack (jump);
     assign (-uip, driving_clause);
     bump_and_clear_seen_variables (uip);
-    clause.clear ();
-    clear_levels ();
+    clause.clear (), clear_levels ();
   }
   conflict = 0;
   STOP (analyze);
@@ -1925,16 +1925,16 @@ static void check_satisfying_assignment (int (*assignment)(int)) {
 static void print_witness () {
   int c = 0;
   for (int i = 1; i <= max_var; i++) {
-    if (!c) fputc ('v', stdout), c = 1;
+    if (!c) print ('v', stdout), c = 1;
     char str[20];
     sprintf (str, " %d", val (i) < 0 ? -i : i);
     int l = strlen (str);
-    if (c + l > 78) fputs ("\nv", stdout), c = 1;
-    fputs (str, stdout);
+    if (c + l > 78) print ("\nv", stdout), c = 1;
+    print (str, stdout);
     c += l;
   }
-  if (c) fputc ('\n', stdout);
-  fputs ("v 0\n", stdout);
+  if (c) print ('\n', stdout);
+  print ("v 0\n", stdout);
   fflush (stdout);
 }
 
