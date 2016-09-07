@@ -181,8 +181,37 @@ struct Watch {
   Watch () { }
 };
 
+// Memory allocator for compact ordered allocation of clauses with
+// 32-bit references instead of 64-bit pointers.  A similar technique is
+// used in MiniSAT and descendants as well as in Splatz.  This first gives
+// fast consecutive (that is cache friendly) allocation of clauses and
+// more importantly allows to mix (32-bit) blocking literals with clause
+// references which reduces watcher size by 2 from 16 to 8 bytes.
+
+typedef unsigned Ref;			// 32-bit = 4 Byte reference
+static const size_t alignment = 4;	// memory alignment in an arena
+
+class Arena {
+  char * start, * top, * end;
+  void enlarge (size_t new_capacity);
+public:
+  size_t size () const { return top - start; }
+  size_t capacity () const { return end - start; }
+  bool contains (void * ptr) const { return start <= ptr && ptr < top; }
+  void * operator [] (Ref ref) const {
+    assert (ref < size ());
+    char * res = start + alignment*(size_t)ref;
+    assert (contains (res));
+    return res;
+  }
+  void init () { start = top = end = 0; }
+  void release ();
+  void * allocate (size_t bytes, Ref & ref);
+  Arena () { init (); }
+  ~Arena () { release (); }
+};
+
 typedef vector<Watch> Watches;          // of one literal
-typedef vector<int> Binaries;           // of one literal
 
 struct Level {
   int decision;         // decision literal of level
@@ -228,6 +257,7 @@ struct Timer {
 // Static variables
 
 static int max_var, num_original_clauses;
+static int min_lit, max_lit;
 
 #ifndef NDEBUG
 static vector<int> original_literals;
@@ -238,8 +268,13 @@ static Var * vars;
 static signed char * vals;              // assignment
 static signed char * phases;            // saved previous assignment
 
-static Watches * all_literal_watches;   // [2,2*max_var+1]
-static Binaries * all_literal_binaries; // ditto
+static Watches * all_literal_watches; 
+
+static int ** all_literal_binaries;
+static int * all_num_binaries;
+
+static size_t size_binaries_table;
+static int * binaries_table;
 
 // VMTF decision queue
 
@@ -272,11 +307,6 @@ static struct {
   vector<int> levels;           // decision levels of 1st UIP clause
   vector<int> minimized;        // DFS done: minimized or poisoned
 } seen;
-
-static struct {
-  vector<Clause *> clauses;     // redundant reduce candidates
-  vector<int> lits;             // non-recursive DFS working stack
-} work;
 
 static vector<Clause*> resolved;
 
@@ -376,56 +406,6 @@ SIGNALS
 
 /*------------------------------------------------------------------------*/
 
-static double relative (double a, double b) { return b ? a / b : 0; }
-
-static double percent (double a, double b) { return relative (100 * a, b); }
-
-static double seconds () {
-  struct rusage u;
-  double res;
-  if (getrusage (RUSAGE_SELF, &u)) return 0;
-  res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;  // user time
-  res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec; // + system time
-  return res;
-}
-
-static void inc_bytes (size_t bytes) {
-  if ((stats.bytes.current += bytes) > stats.bytes.max)
-    stats.bytes.max = stats.bytes.current;
-}
-
-static void dec_bytes (size_t bytes) {
-  assert (stats.bytes.current >= bytes);
-  stats.bytes.current -= bytes;
-}
-
-#define ADJUST_MAX_BYTES(V) \
-  res += V.capacity () * sizeof (V[0])
-
-static size_t max_bytes () {
-  size_t res = stats.bytes.max;
-#ifndef NDEBUG
-  ADJUST_MAX_BYTES (original_literals);
-#endif
-  ADJUST_MAX_BYTES (clause);
-  ADJUST_MAX_BYTES (trail);
-  ADJUST_MAX_BYTES (seen.literals);
-  ADJUST_MAX_BYTES (seen.levels);
-  ADJUST_MAX_BYTES (seen.minimized);
-  ADJUST_MAX_BYTES (resolved);
-  ADJUST_MAX_BYTES (irredundant);
-  ADJUST_MAX_BYTES (redundant);
-  ADJUST_MAX_BYTES (levels);
-  ADJUST_MAX_BYTES (work.clauses);
-  ADJUST_MAX_BYTES (work.lits);
-  res += (4 * stats.clauses.max * sizeof (Watch)) / 3;  // estimate
-  return res;
-}
-
-static int active_variables () { return max_var - stats.fixed; }
-
-/*------------------------------------------------------------------------*/
-
 static void msg (const char * fmt, ...) {
   va_list ap;
   fputs ("c ", stdout);
@@ -467,6 +447,104 @@ static void perr (const char * fmt, ...) {
   fputc ('\n', stderr);
   exit (1);
 }
+
+/*------------------------------------------------------------------------*/
+
+static double relative (double a, double b) { return b ? a / b : 0; }
+
+static double percent (double a, double b) { return relative (100 * a, b); }
+
+static double seconds () {
+  struct rusage u;
+  double res;
+  if (getrusage (RUSAGE_SELF, &u)) return 0;
+  res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;  // user time
+  res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec; // + system time
+  return res;
+}
+
+static void inc_bytes (size_t bytes) {
+  if ((stats.bytes.current += bytes) > stats.bytes.max)
+    stats.bytes.max = stats.bytes.current;
+}
+
+static void dec_bytes (size_t bytes) {
+  assert (stats.bytes.current >= bytes);
+  stats.bytes.current -= bytes;
+}
+
+#ifndef NDEBUG
+static bool aligned (size_t bytes) { return !((alignment-1)&bytes); }
+static bool aligned (void * ptr) { return aligned ((size_t) ptr); }
+#endif
+
+static inline size_t align (size_t bytes) {
+  size_t res = (bytes + (alignment-1)) & ~ (alignment-1);
+  assert (aligned (res)), assert (!aligned (bytes) || bytes == res);
+  return res;
+}
+
+inline void Arena::release () { 
+  if (!start) return;
+  dec_bytes (capacity ());
+  delete [] start;
+  init ();
+}
+
+inline void * Arena::allocate (size_t bytes, Ref & ref) {
+  bytes = align (bytes);
+  char * new_top = top + bytes;
+  if (new_top > end) enlarge (new_top - start), new_top = top + bytes;
+  char * res = top;
+  top = new_top;
+  ref = (res - start)/alignment;
+  assert (start + ref == res);
+  assert (aligned (res)), assert (contains (res));
+  return res;
+}
+
+void Arena::enlarge (size_t requested_capacity) {
+  if (requested_capacity > (1l << 32))
+    die ("maximum memory arena of %ld GB exhausted",
+      ((alignment * (1l<<32)) >> 30));
+  size_t old_capacity = capacity (), old_size = size ();
+  size_t new_capacity = old_capacity ? old_capacity : 4;
+  while (new_capacity < requested_capacity)
+    if (new_capacity < (1l << 30)) new_capacity *= 2;
+    else new_capacity += (1l << 30);
+  assert (new_capacity >= requested_capacity);
+  char * new_start = new char[new_capacity];
+  end = new_start + new_capacity;
+  top = new_start + old_size;
+  memcpy (new_start, start, old_size);
+  dec_bytes (old_capacity);
+  inc_bytes (new_capacity);
+  delete [] start;
+  start = new_start;
+}
+
+#define ADJUST_MAX_BYTES(V) \
+  res += V.capacity () * sizeof (V[0])
+
+static size_t max_bytes () {
+  size_t res = stats.bytes.max;
+#ifndef NDEBUG
+  ADJUST_MAX_BYTES (original_literals);
+#endif
+  ADJUST_MAX_BYTES (clause);
+  ADJUST_MAX_BYTES (trail);
+  ADJUST_MAX_BYTES (seen.literals);
+  ADJUST_MAX_BYTES (seen.levels);
+  ADJUST_MAX_BYTES (seen.minimized);
+  ADJUST_MAX_BYTES (resolved);
+  ADJUST_MAX_BYTES (irredundant);
+  ADJUST_MAX_BYTES (redundant);
+  ADJUST_MAX_BYTES (levels);
+  res += (4 * stats.clauses.max * sizeof (Watch)) / 3;  // estimate
+  return res;
+}
+
+static int active_variables () { return max_var - stats.fixed; }
 
 /*------------------------------------------------------------------------*/
 
@@ -653,7 +731,7 @@ static int vidx (int lit) {
 
 // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
 
-static int val (int lit) {
+static inline int val (int lit) {
   int idx = vidx (lit), res = vals[idx];
   if (lit < 0) res = -res;
   return res;
@@ -661,7 +739,7 @@ static int val (int lit) {
 
 // As 'val' but restricted to the root-level value of a literal.
 
-static int fixed (int lit) {
+static inline int fixed (int lit) {
   int idx = vidx (lit), res = vals[idx];
   if (res && vars[idx].level) res = 0;
   if (lit < 0) res = -res;
@@ -670,22 +748,32 @@ static int fixed (int lit) {
 
 // Sign of an integer, but also does proper index checking.
 
-static int sign (int lit) {
+static inline int sign (int lit) {
   assert (lit), assert (abs (lit) <= max_var);
   return lit < 0 ? -1 : 1;
 }
 
-static Watches & watches (int lit) {
-  int idx = vidx (lit);
-  return all_literal_watches[2*idx + (lit < 0)];
+// Unsigned version with LSB denoting sign.  This is used in indexing
+// arrays by literals.  The idea is to keep the elements in such an array
+// for both the positive and negated version of a literal close together
+
+static inline unsigned vlit (int lit) {
+  return (lit < 0) + 2u * (unsigned) vidx (lit);
 }
 
-static Binaries & binaries (int lit) {
-  int idx = vidx (lit);
-  return all_literal_binaries[2*idx + (lit < 0)];
+static inline Watches & watches (int lit) {
+  return all_literal_watches[vlit (lit)];
 }
 
-static Var & var (int lit) { return vars [vidx (lit)]; }
+static inline int * & binaries (int lit) {
+  return all_literal_binaries[vlit (lit)];
+}
+
+static inline int & num_binaries (int lit) {
+  return all_num_binaries[vlit (lit)];
+}
+
+static inline Var & var (int lit) { return vars [vidx (lit)]; }
 
 /*------------------------------------------------------------------------*/
 
@@ -810,8 +898,7 @@ static void backtrack (int target_level = 0) {
 /*------------------------------------------------------------------------*/
 
 static void watch_literal (int lit, int blit, Clause * c) {
-  if (c->size > 2) watches (lit).push_back (Watch (blit, c));
-  else binaries (lit).push_back (blit);
+  watches (lit).push_back (Watch (blit, c));
   LOG (c, "watch %d blit %d in", lit, blit);
 }
 
@@ -1005,12 +1092,12 @@ static bool propagate () {
       const int lit = trail[next.binaries++];
       assert (val (lit) > 0);
       LOG ("propagating binaries of %d", lit);
-      Binaries & bs = binaries (-lit);
-      for (size_t i = 0; !conflict && i < bs.size (); i++) {
-	const int other = bs[i], b = val (other);
-	if (b < 0) conflict = Reason (-lit, other);
+      if (!all_literal_binaries) continue;
+      int * p = binaries (-lit), other, b;
+      if (!p) continue;
+      while  (!conflict && (other = *p++))
+	if ((b = val (other)) < 0) conflict = Reason (-lit, other);
 	else if (!b) assign (other, Reason (-lit, other));
-      }
     } else if (next.watches < trail.size ()) {
       const int lit = trail[next.watches++];
       assert (val (lit) > 0);
@@ -1090,7 +1177,7 @@ static void check_clause () {
 
 /*------------------------------------------------------------------------*/
 
-#if 1
+#if 0
 
 // Recursive but bounded version of DFS for minimizing clauses.
 
@@ -1130,7 +1217,7 @@ static int minimize_base_case (int root, int lit) {
 }
 
 static bool minimize_literal (int root) {
-  vector<int> & stack = work.lits;
+  vector<int> stack;
   stack.push_back (root);
   while (!stack.empty ()) {
     const int lit = stack.back ();
@@ -1410,7 +1497,7 @@ struct glue_larger {
 };
 
 static void mark_useless_redundant_clauses_as_garbage () {
-  vector<Clause*> & stack = work.clauses;
+  vector<Clause*> stack;
   assert (stack.empty ());
   for (size_t i = 0; i < redundant.size (); i++) {
     Clause * c = redundant[i];
@@ -1440,7 +1527,44 @@ static void unprotect_reasons () {
   }
 }
 
+static void count_binaries (vector<Clause*> & cs) {
+  for (size_t i = 0; i < cs.size (); i++) {
+    Clause * c = cs[i];
+    if (c->garbage || c->size != 2) continue;
+    num_binaries (c->literals[0])++;
+    num_binaries (c->literals[1])++;
+  }
+}
+
+static void count_binaries () {
+  if (binaries_table) {
+    dec_bytes (size_binaries_table * sizeof (int));
+    delete [] binaries_table;
+    binaries_table = 0;
+  }
+  for (int l = min_lit; l <= max_lit; l++) all_num_binaries[l] = 0;
+  count_binaries (irredundant), count_binaries (redundant);
+  size_binaries_table = 0;
+  for (int l = min_lit, count; l <= max_lit; l++)
+    if ((count = all_num_binaries[l]))
+      size_binaries_table += count + 1;
+  inc_bytes (size_binaries_table * sizeof (int));
+  binaries_table = new int[size_binaries_table];
+  int * p = binaries_table + size_binaries_table;
+  for (int idx = queue.last; idx; idx = var (idx).prev) {
+    for (int sign = 1; sign >= -1; sign -= 2) {
+      const int lit = sign * phases[idx] * idx;
+      const int count = num_binaries (lit);
+      if (!count) continue;
+      binaries (lit) = p;
+      p -= count + 1;
+    }
+  }
+  assert (p == binaries_table);
+}
+
 static void flush_watches () {
+  count_binaries ();
   for (int idx = 1; idx <= max_var; idx++) {
     if (fixed (idx)) 
       watches (idx) = Watches (), watches (-idx) = Watches ();
@@ -1454,25 +1578,6 @@ static void flush_watches () {
           if (w.clause->garbage) j--;
         }
         ws.resize (j);
-      }
-    }
-  }
-}
-
-static void flush_binaries () {
-  for (int idx = 1; idx <= max_var; idx++) {
-    if (fixed (idx)) 
-      binaries (idx) = Binaries (), binaries (-idx) = Binaries ();
-    else {
-      for (int sign = -1; sign <= 1; sign += 2) {
-        Binaries & bs = binaries (sign * idx);
-        const size_t size = bs.size ();
-        size_t i = 0, j = 0;
-        while (i < size) {
-          int b = bs[j++] = bs[i++];
-	  if (fixed (b)) j--;
-        }
-        bs.resize (j);
       }
     }
   }
@@ -1503,7 +1608,7 @@ static void reduce () {
     mark_satisfied_clauses_as_garbage (irredundant),
     mark_satisfied_clauses_as_garbage (redundant);
   mark_useless_redundant_clauses_as_garbage ();
-  flush_watches (), flush_binaries ();
+  flush_watches ();
   if (new_units) collect_garbage_clauses (irredundant);
   collect_garbage_clauses (redundant);
   unprotect_reasons ();
@@ -1554,8 +1659,7 @@ static int search () {
 
 static void init_solving () {
   limits.restart.conflicts = opts.restartint;
-  limits.reduce.conflicts = opts.reduceinit;
-  inc.reduce.conflicts = opts.reduceinit/2;
+  inc.reduce.conflicts = opts.reduceinit;
   INIT_EMA (ema.learned.glue.fast, opts.emagluefast);
   INIT_EMA (ema.learned.glue.slow, opts.emaglueslow);
   INIT_EMA (ema.resolved.glue, opts.emaresolved);
@@ -1664,11 +1768,13 @@ SIGNALS
   P = new T[N], inc_bytes ((N) * sizeof (T))
 
 static void init_variables () {
+  min_lit = vlit (1), max_lit = vlit (max_var);
   NEW (vals, signed char, max_var + 1);
   NEW (phases, signed char, max_var + 1);
   NEW (vars, Var, max_var + 1);
   NEW (all_literal_watches, Watches, 2 * (max_var + 1));
-  NEW (all_literal_binaries, Binaries, 2 * (max_var + 1));
+  NEW (all_literal_binaries, int *, 2 * (max_var + 1));
+  NEW (all_num_binaries, int, 2 * (max_var + 1));
   for (int i = 1; i <= max_var; i++) vals[i] = 0;
   for (int i = 1; i <= max_var; i++) phases[i] = -1;
   init_vmtf_queue ();
@@ -1694,10 +1800,12 @@ static void print_options () {
 
 static void reset () {
 #ifndef NDEBUG
+  if (binaries_table) delete [] binaries_table;
   for (size_t i = 0; i < irredundant.size (); i++)
     delete_clause (irredundant[i]);
   for (size_t i = 0; i < redundant.size (); i++)
     delete_clause (redundant[i]);
+  delete [] all_num_binaries;
   delete [] all_literal_binaries;
   delete [] all_literal_watches;
   delete [] vars;
