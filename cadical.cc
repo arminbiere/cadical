@@ -362,11 +362,17 @@ static signed char * solution;          // like 'vals' (and 'phases')
 
 static bool catchedsig = false;
 
-static void (*sig_int_handler)(int);
-static void (*sig_segv_handler)(int);
-static void (*sig_abrt_handler)(int);
-static void (*sig_term_handler)(int);
-static void (*sig_bus_handler)(int);
+#define SIGNALS \
+SIGNAL(SIGINT) \
+SIGNAL(SIGSEGV) \
+SIGNAL(SIGABRT) \
+SIGNAL(SIGTERM) \
+SIGNAL(SIGBUS) \
+
+#define SIGNAL(SIG) \
+static void (*SIG ## _handler)(int);
+SIGNALS
+#undef SIGNAL
 
 /*------------------------------------------------------------------------*/
 
@@ -1617,33 +1623,39 @@ static void init_vmtf_queue () {
 }
 
 static void reset_signal_handlers (void) {
-  (void) signal (SIGINT, sig_int_handler);
-  (void) signal (SIGSEGV, sig_segv_handler);
-  (void) signal (SIGABRT, sig_abrt_handler);
-  (void) signal (SIGTERM, sig_term_handler);
-  (void) signal (SIGBUS, sig_bus_handler);
+#define SIGNAL(SIG) \
+  (void) signal (SIG, SIG ## _handler);
+SIGNALS
+#undef SIGNAL
+}
+
+static const char * signal_name (int sig) {
+#define SIGNAL(SIG) \
+  if (sig == SIG) return # SIG; else
+  SIGNALS
+#undef SIGNAL
+  return "UNKNOWN";
 }
 
 static void catchsig (int sig) {
   if (!catchedsig) {
     catchedsig = true;
     msg ("");
-    msg ("CAUGHT SIGNAL %d", sig);
+    msg ("CAUGHT SIGNAL %d %s", sig, signal_name (sig));
     section ("result");
     msg ("s UNKNOWN");
     print_statistics ();
   }
   reset_signal_handlers ();
-  msg ("RERAISING SIGNAL %d", sig);
+  msg ("RERAISING SIGNAL %d %s", sig, signal_name (sig));
   raise (sig);
 }
 
 static void init_signal_handlers (void) {
-  sig_int_handler = signal (SIGINT, catchsig);
-  sig_segv_handler = signal (SIGSEGV, catchsig);
-  sig_abrt_handler = signal (SIGABRT, catchsig);
-  sig_term_handler = signal (SIGTERM, catchsig);
-  sig_bus_handler = signal (SIGBUS, catchsig);
+#define SIGNAL(SIG) \
+  SIG ## _handler = signal (SIG, catchsig);
+SIGNALS
+#undef SIGNAL
 }
 
 #define NEW(P,T,N) \
