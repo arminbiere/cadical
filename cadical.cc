@@ -1451,6 +1451,25 @@ static void flush_watches () {
   }
 }
 
+static void flush_binaries () {
+  for (int idx = 1; idx <= max_var; idx++) {
+    if (fixed (idx)) 
+      binaries (idx) = Binaries (), binaries (-idx) = Binaries ();
+    else {
+      for (int sign = -1; sign <= 1; sign += 2) {
+        Binaries & bs = binaries (sign * idx);
+        const size_t size = bs.size ();
+        size_t i = 0, j = 0;
+        while (i < size) {
+          int b = bs[j++] = bs[i++];
+	  if (fixed (b)) j--;
+        }
+        bs.resize (j);
+      }
+    }
+  }
+}
+
 static void collect_garbage_clauses (vector<Clause*> & clauses) {
   const size_t size = clauses.size ();
   size_t i = 0, j = 0;
@@ -1476,7 +1495,7 @@ static void reduce () {
     mark_satisfied_clauses_as_garbage (irredundant),
     mark_satisfied_clauses_as_garbage (redundant);
   mark_useless_redundant_clauses_as_garbage ();
-  flush_watches ();
+  flush_watches (), flush_binaries ();
   if (new_units) collect_garbage_clauses (irredundant);
   collect_garbage_clauses (redundant);
   unprotect_reasons ();
