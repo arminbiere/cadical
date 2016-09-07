@@ -1117,6 +1117,8 @@ static bool minimize_literal (int lit, int depth = 0) {
 // Non-recursive unbounded version of DFS for minimizing clauses.
 // It is more ugly and needs slightly more heap memory for variables
 // due to 'mark' used for saving the position in the reason clause.
+// It runs minimization until completion though and thus might
+// remove more literals than the bounded recursive version.
 
 static int minimize_base_case (int root, int lit) {
   Var & v = var (lit);
