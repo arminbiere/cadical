@@ -1555,9 +1555,10 @@ static void count_binaries () {
     for (int sign = 1; sign >= -1; sign -= 2) {
       const int lit = sign * phases[idx] * idx;
       const int count = num_binaries (lit);
-      if (!count) continue;
-      binaries (lit) = p;
-      p -= count + 1;
+      if (count) {
+	*(binaries (lit) = p) = 0;
+	p -= count + 1;
+      } else binaries (lit) = 0;
     }
   }
   assert (p == binaries_table);
