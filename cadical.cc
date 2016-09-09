@@ -268,13 +268,18 @@ static Var * vars;
 static signed char * vals;              // assignment
 static signed char * phases;            // saved previous assignment
 
-static Watches * all_literal_watches; 
+// This table contains for each literal a zero terminated sequence of
+// other literals in binary clauses with the first literal.  This avoids
+// to use 'vector' for this data which is mostly static.  New binary
+// clauses are treated as long clauses until the next 'reduce'.
 
-static int ** all_literal_binaries;
-static int * all_num_binaries;
+static int * others;
+static size_t size_others;
 
-static size_t size_binaries_table;
-static int * binaries_table;
+static struct {
+  Watches * watches;
+  int ** binaries;		// points to start of sequence.
+} literal;
 
 // VMTF decision queue
 
@@ -762,15 +767,11 @@ static inline unsigned vlit (int lit) {
 }
 
 static inline Watches & watches (int lit) {
-  return all_literal_watches[vlit (lit)];
+  return literal.watches[vlit (lit)];
 }
 
 static inline int * & binaries (int lit) {
-  return all_literal_binaries[vlit (lit)];
-}
-
-static inline int & num_binaries (int lit) {
-  return all_num_binaries[vlit (lit)];
+  return literal.binaries[vlit (lit)];
 }
 
 static inline Var & var (int lit) { return vars [vidx (lit)]; }
@@ -1092,7 +1093,7 @@ static bool propagate () {
       const int lit = trail[next.binaries++];
       assert (val (lit) > 0);
       LOG ("propagating binaries of %d", lit);
-      if (!all_literal_binaries) continue;
+      if (!literal.binaries) continue;
       int * p = binaries (-lit), other, b;
       if (!p) continue;
       while  (!conflict && (other = *p++))
@@ -1527,58 +1528,74 @@ static void unprotect_reasons () {
   }
 }
 
-static void count_binaries (vector<Clause*> & cs) {
+static void count_binaries (int * num_binaries, vector<Clause*> & cs) {
   for (size_t i = 0; i < cs.size (); i++) {
     Clause * c = cs[i];
     if (c->garbage || c->size != 2) continue;
-    num_binaries (c->literals[0])++;
-    num_binaries (c->literals[1])++;
+    int l0 = c->literals[0], l1 = c->literals[1];
+    num_binaries[vlit (l0)]++, num_binaries[vlit (l1)]++;
   }
 }
 
-static void count_binaries () {
-  if (binaries_table) {
-    dec_bytes (size_binaries_table * sizeof (int));
-    delete [] binaries_table;
-    binaries_table = 0;
+static void fill_others (vector<Clause*> & cs) {
+  for (size_t i = 0; i < cs.size (); i++) {
+    Clause * c = cs[i];
+    if (c->garbage || c->size != 2) continue;
+    int l0 = c->literals[0], l1 = c->literals[1];
+    *--binaries (l0) = l1, *--binaries (l1) = l0;
   }
-  for (int l = min_lit; l <= max_lit; l++) all_num_binaries[l] = 0;
-  count_binaries (irredundant), count_binaries (redundant);
-  size_binaries_table = 0;
+}
+
+static void init_others () {
+  if (others) {
+    dec_bytes (size_others * sizeof (int));
+    delete [] others;
+    others = 0;
+  }
+  int * num_binaries = new int[max_lit + 1];
+  for (int l = min_lit; l <= max_lit; l++) num_binaries[l] = 0;
+  count_binaries (num_binaries, irredundant);
+  count_binaries (num_binaries, redundant);
+  size_others = 0;
   for (int l = min_lit, count; l <= max_lit; l++)
-    if ((count = all_num_binaries[l]))
-      size_binaries_table += count + 1;
-  inc_bytes (size_binaries_table * sizeof (int));
-  binaries_table = new int[size_binaries_table];
-  int * p = binaries_table + size_binaries_table;
+    if ((count = num_binaries[l]))
+      size_others += count + 1;
+  LOG ("initializing others table of size %ld", size_others);
+  inc_bytes (size_others * sizeof (int));
+  others = new int[size_others];
+  int * p = others + size_others;
   for (int idx = queue.last; idx; idx = var (idx).prev) {
     for (int sign = 1; sign >= -1; sign -= 2) {
       const int lit = sign * phases[idx] * idx;
-      const int count = num_binaries (lit);
+      const int count = num_binaries [ vlit (lit) ];
       if (count) {
-	*(binaries (lit) = p) = 0;
-	p -= count + 1;
+	*(binaries (lit) = --p) = 0;
+	p -= count;
       } else binaries (lit) = 0;
     }
   }
-  assert (p == binaries_table);
+  assert (p == others);
+  delete [] num_binaries;
+  fill_others (irredundant);
+  fill_others (redundant);
 }
 
 static void flush_watches () {
-  count_binaries ();
   for (int idx = 1; idx <= max_var; idx++) {
     if (fixed (idx)) 
       watches (idx) = Watches (), watches (-idx) = Watches ();
     else {
       for (int sign = -1; sign <= 1; sign += 2) {
-        Watches & ws = watches (sign * idx);
+	const int lit = sign * idx;
+        Watches & ws = watches (lit);
         const size_t size = ws.size ();
         size_t i = 0, j = 0;
         while (i < size) {
           Watch w = ws[j++] = ws[i++];
-          if (w.clause->garbage) j--;
-        }
-        ws.resize (j);
+	  Clause * c = w.clause;
+          if (c->garbage || c->size == 2) j--;
+	}
+	ws.resize (j);
       }
     }
   }
@@ -1609,6 +1626,7 @@ static void reduce () {
     mark_satisfied_clauses_as_garbage (irredundant),
     mark_satisfied_clauses_as_garbage (redundant);
   mark_useless_redundant_clauses_as_garbage ();
+  init_others ();
   flush_watches ();
   if (new_units) collect_garbage_clauses (irredundant);
   collect_garbage_clauses (redundant);
@@ -1769,13 +1787,12 @@ SIGNALS
   P = new T[N], inc_bytes ((N) * sizeof (T))
 
 static void init_variables () {
-  min_lit = vlit (1), max_lit = vlit (max_var);
+  min_lit = 2, max_lit = 2*max_var + 1;
   NEW (vals, signed char, max_var + 1);
   NEW (phases, signed char, max_var + 1);
   NEW (vars, Var, max_var + 1);
-  NEW (all_literal_watches, Watches, 2 * (max_var + 1));
-  NEW (all_literal_binaries, int *, 2 * (max_var + 1));
-  NEW (all_num_binaries, int, 2 * (max_var + 1));
+  NEW (literal.watches, Watches, 2 * (max_var + 1));
+  NEW (literal.binaries, int *, 2 * (max_var + 1));
   for (int i = 1; i <= max_var; i++) vals[i] = 0;
   for (int i = 1; i <= max_var; i++) phases[i] = -1;
   init_vmtf_queue ();
@@ -1801,14 +1818,13 @@ static void print_options () {
 
 static void reset () {
 #ifndef NDEBUG
-  if (binaries_table) delete [] binaries_table;
+  if (others) delete [] others;
   for (size_t i = 0; i < irredundant.size (); i++)
     delete_clause (irredundant[i]);
   for (size_t i = 0; i < redundant.size (); i++)
     delete_clause (redundant[i]);
-  delete [] all_num_binaries;
-  delete [] all_literal_binaries;
-  delete [] all_literal_watches;
+  delete [] literal.binaries;
+  delete [] literal.watches;
   delete [] vars;
   delete [] vals;
   delete [] phases;
