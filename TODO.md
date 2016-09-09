@@ -30,6 +30,8 @@ Some of them first need proper benchmarking to avoid oversimplifying the solver:
   - Maybe remove the C++ operator hacks, to make the code easier to
     understand.
 
+  - Check whether the complicated EMA initialization is necessary.
+
 ## Additions
 
 Second things are listed related to additional features.
