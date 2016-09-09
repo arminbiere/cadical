@@ -1019,24 +1019,33 @@ static size_t delete_clause (Clause * c) {
 /*------------------------------------------------------------------------*/
 
 // The following statistics are printed in columns, whenever 'report' is
-// called.  For instance reduce with prefix '-' will call it.  The other
-// more interesting report is due learning a unit with prefix 'i'.
-// In order to add another column, add a corresponding line here.
+// called.  For instance 'reduce' with prefix '-' will call it.  The other
+// more interesting report is due to learning a unit, called iteration, with
+// prefix 'i'.  To add another statistics column, add a corresponding line
+// here.  If you want to report something else add 'report (..)' functions.
 
 #define REPORTS \
 /*            HEADER, PRECISION, VALUE */ \
 REPORT(    "seconds",         2, seconds ()) \
 REPORT(         "MB",         0, max_bytes () / (double)(1l<<20)) \
+REPORT(      "level",         1, ema.jump) \
+REPORT(       "glue",         1, ema.learned.glue.slow) \
+REPORT( "reductions",         0, stats.reduce.count) \
+REPORT(   "restarts",         0, stats.restarts) \
 REPORT(  "conflicts",         0, stats.conflicts) \
 REPORT(  "redundant",         0, redundant.size ()) \
-REPORT(   "slowglue",         1, ema.learned.glue.slow) \
-REPORT(   "fastglue",         1, ema.learned.glue.fast) \
-REPORT(       "jump",         1, ema.jump) \
-REPORT(    "resglue",         1, ema.resolved.glue) \
-REPORT(    "ressize",         1, ema.resolved.size) \
 REPORT("irredundant",         0, irredundant.size ()) \
 REPORT(  "variables",         0, active_variables ()) \
 REPORT(     "remain",        -1, percent (active_variables (), max_var)) \
+
+#if 0
+
+REPORT(   "slowglue",         1, ema.learned.glue.slow) \
+REPORT(   "fastglue",         1, ema.learned.glue.fast) \
+REPORT(    "resglue",         1, ema.resolved.glue) \
+REPORT(    "ressize",         1, ema.resolved.size) \
+
+#endif
 
 struct Report {
   const char * header;
@@ -1047,9 +1056,9 @@ struct Report {
     sprintf (fmt, "%%.%df", abs (precision));
     if (precision < 0) strcat (fmt, "%%");
     sprintf (buffer, fmt, value);
-    const int min_len = 4;
-    if (strlen (buffer) >= min_len) return;
-    sprintf (fmt, "%%%d.%df", min_len, abs (precision));
+    const int min_width = 3;
+    if (strlen (buffer) >= min_width) return;
+    sprintf (fmt, "%%%d.%df", min_width, abs (precision));
     if (precision < 0) strcat (fmt, "%%");
     sprintf (buffer, fmt, value);
   }
@@ -1156,7 +1165,7 @@ static bool propagate () {
     } else break;
   }
   if (conflict) { stats.conflicts++; LOG (conflict, "conflict"); }
-  stats.propagations = next.binaries - before;;
+  stats.propagations += next.binaries - before;;
   STOP (propagate);
   return !conflict;
 }
