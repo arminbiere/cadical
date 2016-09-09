@@ -45,8 +45,8 @@ OPTION(minimizedepth,     int,1000, 0,1e9, "recursive minimization depth") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,    bool,   0, 0,  1, "dynamic glue & size limit") \
 OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
-OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
-OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
+OPTION(reduceinc,         int,   1, 1,1e9, "reduce limit increment") \
+OPTION(reduceinit,        int,   1, 0,1e9, "initial reduce limit") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
 OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
@@ -54,6 +54,14 @@ OPTION(restartmargin,  double, 0.1, 0, 10, "restart slow & fast margin") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
 OPTION(witness,          bool,   1, 0,  1, "print witness") \
 
+#if 0
+
+// TODO remove again
+
+OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
+OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
+
+#endif
 /*------------------------------------------------------------------------*/
 
 // Standard C includes
@@ -150,12 +158,28 @@ struct Clause {
   size_t bytes () const;
 };
 
+// Memory allocator for compact ordered allocation of clauses with 32-bit
+// references instead of 64-bit pointers.  A similar technique is used in
+// MiniSAT and descendants as well as in Splatz.  This first gives fast
+// consecutive (that is cache friendly) allocation of clauses and more
+// importantly allows to mix (32-bit) blocking literals with clause
+// references which reduces watcher size by 2 from 16 to 8 bytes.
+
+struct Ref {
+  unsigned ref;
+  Ref (unsigned r = 0) : ref (r) { }
+  Ref (Clause *);
+  operator Clause * () const;
+  operator unsigned () { return ref; }
+};
+
 struct Reason {
   bool embedded;
-  union { Clause binary, * ptr; };
-  Reason (Clause * c = 0) : embedded (false) { ptr = c; }
+  Ref ref;
+  Clause binary; 
+  Reason (Clause * c = 0) : embedded (false) { ref = c; }
   Reason (int a, int b) : embedded (true) { binary.set (a, b); }
-  Clause * clause () { return embedded ? &binary : ptr; }
+  Clause * clause () { if (embedded) return &binary; else return ref; }
   Clause * operator -> () { return clause (); }
   operator Clause * () { return clause (); }
   int size () { assert (clause ()); return clause ()->size; }
@@ -185,37 +209,47 @@ struct Var {
 
 struct Watch {
   int blit;             // if blocking literal is true do not visit clause
-  Clause * clause;
-  Watch (int b, Clause * c) : blit (b), clause (c) { }
+  Ref clause;
+  Watch (int b, Ref r) : blit (b), clause (r) { }
   Watch () { }
 };
 
-// Memory allocator for compact ordered allocation of clauses with 32-bit
-// references instead of 64-bit pointers.  A similar technique is used in
-// MiniSAT and descendants as well as in Splatz.  This first gives fast
-// consecutive (that is cache friendly) allocation of clauses and more
-// importantly allows to mix (32-bit) blocking literals with clause
-// references which reduces watcher size by 2 from 16 to 8 bytes.
-
-typedef unsigned Ref;                   // 32-bit = 4 Byte reference
 static const size_t alignment = 4;      // memory alignment in an arena
+#ifndef NDEBUG
+static bool aligned (size_t bytes) { return !((alignment-1)&bytes); }
+static bool aligned (void * ptr) { return aligned ((size_t) ptr); }
+#endif
 
 class Arena {
   char * start, * top, * end;
   void enlarge (size_t new_capacity);
+  void init () { start = top = end = 0; }
 public:
   size_t size () const { return top - start; }
   size_t capacity () const { return end - start; }
+
   bool contains (void * ptr) const { return start <= ptr && ptr < top; }
+
   void * operator [] (Ref ref) const {
+    if (!ref) return 0;
     assert (ref < size ());
-    char * res = start + alignment*(size_t)ref;
+    char * res = start + alignment * (size_t) ref;
     assert (contains (res));
     return res;
   }
-  void init () { start = top = end = 0; }
-  void release ();
+
+  Ref operator [] (void * p) const {
+    if (!p) return 0u;
+    assert (contains (p)),
+    assert (aligned (p));
+    assert (start < p);
+    return (((char*)p) - start)/alignment;
+  }
+
   void * allocate (size_t bytes, Ref & ref);
+
+  void release ();
+
   Arena () { init (); }
   ~Arena () { release (); }
 };
@@ -311,8 +345,10 @@ static struct {
 
 static vector<int> clause;      // temporary clause in parsing & learning
 
-static vector<Clause*> irredundant;     // original / not redundant clauses
-static vector<Clause*> redundant;       // redundant / learned clauses
+static Arena arena;	// memory arena for storing clauses
+
+static vector<Ref> irredundant;     // original / not redundant clauses
+static vector<Ref> redundant;       // redundant / learned clauses
 
 static bool iterating;          // report top-level assigned variables
 
@@ -487,11 +523,6 @@ static void dec_bytes (size_t bytes) {
   stats.bytes.current -= bytes;
 }
 
-#ifndef NDEBUG
-static bool aligned (size_t bytes) { return !((alignment-1)&bytes); }
-static bool aligned (void * ptr) { return aligned ((size_t) ptr); }
-#endif
-
 static inline size_t align (size_t bytes) {
   size_t res = (bytes + (alignment-1)) & ~ (alignment-1);
   assert (aligned (res)), assert (!aligned (bytes) || bytes == res);
@@ -512,12 +543,14 @@ inline void * Arena::allocate (size_t bytes, Ref & ref) {
   char * res = top;
   top = new_top;
   ref = (res - start)/alignment;
-  assert (start + ref == res);
+  assert (start + alignment * (size_t) ref == res);
+  assert ((*this)[ref] == res);
   assert (aligned (res)), assert (contains (res));
   return res;
 }
 
 void Arena::enlarge (size_t requested_capacity) {
+  if (!start) requested_capacity += alignment;		// zero ref = zero ptr
   if (requested_capacity > (1l << 32))
     die ("maximum memory arena of %ld GB exhausted",
       ((alignment * (1l<<32)) >> 30));
@@ -528,13 +561,13 @@ void Arena::enlarge (size_t requested_capacity) {
     else new_capacity += (1l << 30);
   assert (new_capacity >= requested_capacity);
   char * new_start = new char[new_capacity];
-  end = new_start + new_capacity;
-  top = new_start + old_size;
   memcpy (new_start, start, old_size);
   dec_bytes (old_capacity);
   inc_bytes (new_capacity);
-  delete [] start;
+  if (start) delete [] start;
   start = new_start;
+  top   = new_start + (old_size ? old_size : alignment);
+  end   = new_start + new_capacity;
 }
 
 #define ADJUST_MAX_BYTES(V) \
@@ -946,7 +979,8 @@ static Clause * new_clause (bool red, int glue = 0) {
   size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int);
   const bool extended = red && size > opts.keepsize;
   if (extended) bytes += Clause::EXTENDED_OFFSET;
-  char * ptr = new char[bytes];
+  Ref ref;
+  char * ptr = (char*) arena.allocate (bytes, ref);
   inc_bytes (bytes);
   if (extended) ptr += Clause::EXTENDED_OFFSET;
   Clause * res = (Clause*) ptr;
@@ -959,8 +993,8 @@ static Clause * new_clause (bool red, int glue = 0) {
     res->glue () = glue;
   assert (res->bytes () == bytes);
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
-  if (red) redundant.push_back (res);
-  else irredundant.push_back (res);
+  if (red) redundant.push_back (ref);
+  else irredundant.push_back (ref);
   if (++stats.clauses.current > stats.clauses.max)
     stats.clauses.max = stats.clauses.current;
   LOG (res, "new");
@@ -1020,7 +1054,10 @@ static size_t delete_clause (Clause * c) {
   dec_bytes (bytes);
   char * ptr = (char*) c;
   if (c->extended) ptr -= Clause::EXTENDED_OFFSET;
-  delete [] (char*) ptr;
+{
+  int TODO;
+  // delete [] (char*) ptr;
+}
   return bytes;
 }
 
@@ -1033,9 +1070,9 @@ static size_t delete_clause (Clause * c) {
 // here.  If you want to report something else add 'report (..)' functions.
 
 #define REPORTS \
-/*            HEADER, PRECISION, MIN, VALUE */ \
+/*     HEADER, PRECISION, MIN, VALUE */ \
 REPORT(    "seconds",  2, 5, seconds ()) \
-REPORT(         "MB",  0, 1, max_bytes () / (double)(1l<<20)) \
+REPORT(         "MB",  0, 2, max_bytes () / (double)(1l<<20)) \
 REPORT(      "level",  1, 4, ema.jump) \
 REPORT( "reductions",  0, 2, stats.reduce.count) \
 REPORT(   "restarts",  0, 4, stats.restarts) \
@@ -1605,7 +1642,7 @@ static void flush_falsified_literals (Clause * c) {
   LOG (c, "flushed %d literals and got", flushed);
 }
 
-static void mark_satisfied_clauses_as_garbage (vector<Clause*> & cs) {
+static void mark_satisfied_clauses_as_garbage (vector<Ref> & cs) {
   for (size_t i = 0; i < cs.size (); i++) {
     Clause * c = cs[i];
     if (c->garbage) continue;
@@ -1622,6 +1659,9 @@ struct glue_larger {
     return resolved_earlier () (c, d);
   }
 };
+
+inline Ref::operator Clause * () const { return (Clause*) arena[ref]; }
+inline Ref::Ref (Clause * c) : ref (arena[c]) { }
 
 // This function implements the important reduction policy. It determines
 // which redundant clauses are considered not useful and thus will be
@@ -1650,7 +1690,7 @@ static void mark_useless_redundant_clauses_as_garbage () {
   stack.clear ();
 }
 
-static void count_binaries (int * num_binaries, vector<Clause*> & cs) {
+static void count_binaries (int * num_binaries, vector<Ref> & cs) {
   for (size_t i = 0; i < cs.size (); i++) {
     Clause * c = cs[i];
     if (c->garbage || c->size != 2) continue;
@@ -1659,7 +1699,7 @@ static void count_binaries (int * num_binaries, vector<Clause*> & cs) {
   }
 }
 
-static void fill_others (vector<Clause*> & cs) {
+static void fill_others (vector<Ref> & cs) {
   for (size_t i = 0; i < cs.size (); i++) {
     Clause * c = cs[i];
     if (c->garbage || c->size != 2) continue;
@@ -1723,7 +1763,7 @@ static void flush_watches () {
   }
 }
 
-static void collect_garbage_clauses (vector<Clause*> & clauses) {
+static void collect_garbage_clauses (vector<Ref> & clauses) {
   const size_t size = clauses.size ();
   size_t i = 0, j = 0;
   while (i < size) {
@@ -1909,13 +1949,14 @@ SIGNALS
 
 static void init_variables () {
   min_lit = 2, max_lit = 2*max_var + 1;
-  NEW (vals, signed char, max_var + 1);
-  NEW (phases, signed char, max_var + 1);
-  NEW (vars, Var, max_var + 1);
-  NEW (literal.watches, Watches, 2 * (max_var + 1));
-  NEW (literal.binaries, int *, 2 * (max_var + 1));
+  NEW (vals,        signed char, max_var + 1);
+  NEW (phases,      signed char, max_var + 1);
+  NEW (vars,                Var, max_var + 1);
+  NEW (literal.watches, Watches, max_lit + 1);
+  NEW (literal.binaries,  int *, max_lit + 1);
   for (int i = 1; i <= max_var; i++) vals[i] = 0;
   for (int i = 1; i <= max_var; i++) phases[i] = -1;
+  for (int l = min_lit; l <= max_lit; l++) literal.binaries [l] = 0;
   init_vmtf_queue ();
   msg ("initialized %d variables", max_var);
   levels.push_back (Level (0));
@@ -1940,10 +1981,14 @@ static void print_options () {
 static void reset () {
 #ifndef NDEBUG
   if (others) delete [] others;
+#if 0
   for (size_t i = 0; i < irredundant.size (); i++)
     delete_clause (irredundant[i]);
   for (size_t i = 0; i < redundant.size (); i++)
     delete_clause (redundant[i]);
+#else
+  arena.release ();
+#endif
   delete [] literal.binaries;
   delete [] literal.watches;
   delete [] vars;
