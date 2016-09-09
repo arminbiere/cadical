@@ -107,35 +107,36 @@ enum { GLUE_OFFSET = 4, RESOLVED_OFFSET = 12, EXTENDED_OFFSET = 12 };
 
 struct Clause {
   bool redundant;       // so not 'irredundant' and on 'redundant' stack
-  bool garbage;         // can be garbage collected
-  bool reason;          // reason clause can not be collected
+  bool garbage;         // can be garbage collected unless it is a 'reason'
+  bool reason;          // reason / antecedent clause can not be collected
+  bool extended;	// see discussion on 'additional fields' below.
+
   int size;             // actual size of 'literals' (at least 2)
 
-  int literals[2];      // actually of variadic 'size' except
-                        // for binary embedded reason clauses
+  int literals[2];      // actually of variadic 'size'
+                        // for binary embedded reason clauses 'size == 2'
 
   void set (int a, int b) {
     redundant = garbage = reason = false;
     size = 2, literals[0] = a, literals[1] = b;
   }
 
-  // Actually, a redundant clause has two additional fields
+  // Actually, a redundant large clause has two additional fields
   //
   //  long resolved;      // conflict index when last resolved
   //  int glue;           // LBD = glucose level = glue
   //
   // These are however placed before the actual clause data and
-  // thus not directly visible.
-
-  bool extended () const { return redundant && size > 2; }
+  // thus not directly visible.  We set 'extended' to 'true' if
+  // these two fields are allocated.
 
   long & resolved () {
-    assert (this), assert (extended ());
+    assert (this), assert (extended);
     return *(long*) (((char*)this) - RESOLVED_OFFSET);
   }
 
   int & glue () {
-    assert (this), assert (extended ());
+    assert (this), assert (extended);
     return *(int*) (((char*)this) - GLUE_OFFSET);
   }
 };
@@ -175,9 +176,8 @@ struct Var {
 
 struct Watch {
   int blit;             // if blocking literal is true do not visit clause
-  int size;             // if size==2 no need to visit clause at all
   Clause * clause;
-  Watch (int b, Clause * c) : blit (b), size (c->size), clause (c) { }
+  Watch (int b, Clause * c) : blit (b), clause (c) { }
   Watch () { }
 };
 
@@ -575,7 +575,7 @@ static void LOG (Clause * c, const char *fmt, ...) {
   va_end (ap);
   if (c) {
     if (!c->redundant) printf (" irredundant");
-    else if (c->extended ()) printf (" redundant glue %d", c->glue ());
+    else if (c->extended) printf (" redundant glue %d", c->glue ());
     else printf (" redundant without glue");
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
@@ -831,9 +831,24 @@ static void trace_clause (Clause * c, bool add) {
   if (!proof_file) return;
   LOG (c, "tracing %s", add ? "addition" : "deletion");
   if (!add) print ("d ", proof_file);
-  for (int i = 0; i < c->size; i++)
-    print (c->literals[i], proof_file),
-    print (" ", proof_file);
+  const int size = c->size, * lits = c->literals;
+  for (int i = 0; i < size; i++)
+    print (lits[i], proof_file), print (" ", proof_file);
+  print ("0\n", proof_file);
+}
+
+static void trace_flushing_clause (Clause * c) {
+  if (!proof_file) return;
+  LOG (c, "tracing flushing");
+  const int size = c->size, * lits = c->literals;
+  for (int i = 0; i < size; i++) {
+    const int lit = lits[i];
+    if (fixed (lit) >= 0)
+      print (lit, proof_file), print (" ", proof_file);
+  }
+  print ("0\nd ", proof_file);
+  for (int i = 0; i < size; i++)
+    print (lits[i], proof_file), print (" ", proof_file);
   print ("0\n", proof_file);
 }
 
@@ -910,12 +925,12 @@ static void watch_clause (Clause * c) {
   watch_literal (l1, l0, c);
 }
 
-static bool extended (bool red, int size) { return red && size > 2; }
+static bool extended_clause (bool red, int size) { return red && size > 2; }
 
 static size_t bytes_clause (bool red, int size) {
   assert (size >= 2);
   size_t res = sizeof (Clause) + (size - 2) * sizeof (int);
-  if (extended (red, size)) res += EXTENDED_OFFSET;
+  if (extended_clause (red, size)) res += EXTENDED_OFFSET;
   return res;
 }
 
@@ -925,16 +940,16 @@ static Clause * new_clause (bool red, int glue = 0) {
   const size_t bytes = bytes_clause (red, size);
   char * ptr = new char[bytes];
   inc_bytes (bytes);
-  if (extended (red, size)) ptr += EXTENDED_OFFSET;
+  const bool extended = extended_clause (red, size);
+  if (extended) ptr += EXTENDED_OFFSET;
   Clause * res = (Clause*) ptr;
   res->redundant = red;
   res->garbage = false;
   res->reason = false;
   res->size = size;
-  if (extended (red, size)) {
-    res->resolved () = ++stats.resolved;
+  if ((res->extended = extended))
+    res->resolved () = ++stats.resolved,
     res->glue () = glue;
-  } else assert (!res->extended ());
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
   if (red) redundant.push_back (res);
   else irredundant.push_back (res);
@@ -989,14 +1004,16 @@ static Clause * new_learned_clause (int glue) {
   return res;
 }
 
-static void delete_clause (Clause * c) { 
+static size_t delete_clause (Clause * c) { 
   LOG (c, "delete");
   assert (stats.clauses.current > 0);
   stats.clauses.current--;
-  dec_bytes (bytes_clause (c->redundant, c->size));
+  size_t bytes = bytes_clause (c->redundant, c->size);
+  dec_bytes (bytes);
   char * ptr = (char*) c;
-  if (c->extended ()) ptr -= EXTENDED_OFFSET;
+  if (c->extended) ptr -= EXTENDED_OFFSET;
   delete [] (char*) ptr;
+  return bytes;
 }
 
 /*------------------------------------------------------------------------*/
@@ -1109,9 +1126,9 @@ static bool propagate () {
 	const Watch w = ws[j++] = ws[i++];
 	const int b = val (w.blit);
 	if (b > 0) continue;
-	const int size = w.size;
-	assert (w.clause->size == size);
-	int * lits = w.clause->literals;
+	Clause * c = w.clause;
+	const int size = c->size;
+	int * lits = c->literals;
 	if (lits[1] != -lit) swap (lits[0], lits[1]);
 	assert (lits[1] == -lit);
 	const int u = val (lits[0]);
@@ -1478,15 +1495,72 @@ static void protect_reasons () {
       v.reason->reason = true;
   }
 }
-static bool clause_root_level_satisfied (Clause * c) {
-  for (int i = 0; i < c->size; i++)
-    if (fixed (c->literals[i]) > 0) return true;
-  return false;
+
+static void unprotect_reasons () {
+  for (size_t i = 0; i < trail.size (); i++) {
+    Var & v = var (trail[i]);
+    if (v.level && v.reason && !v.reason.embedded)
+      assert (v.reason->reason), v.reason->reason = false;
+  }
 }
 
-static void mark_satisfied_clauses_as_garbage (const vector<Clause*> & cs) {
-  for (size_t i = 0; i < cs.size (); i++)
-    if (clause_root_level_satisfied (cs[i])) cs[i]->garbage = true;
+// This function returns 1 the given clause is root level satisfied
+// or -1 if it is not root level satisfied but contains a root level
+// falsified literal and 0 otherwise, if it does not contain a root
+// level fixed literal.
+
+static int clause_contains_fixed_literal (Clause * c) {
+  const int * lits = c->literals, size = c->size;
+  int res = 0;
+  for (int i = 0; res <= 0 && i < size; i++) {
+    const int lit = lits[i];
+    const int tmp = fixed (lit);
+   if (tmp > 0) {
+     LOG (c, "root level satisfied literal %d in", lit);
+     res = 1;
+   } else if (!res && tmp < 0) {
+     LOG (c, "root level falsified literal %d in", lit);
+     res = -1;
+    }
+  }
+  return res;
+}
+
+// Assume that the clause is not root level satisfied but contains a literal
+// set to false (root level falsified literal), so it can be shrunken.  The
+// clause data is not actually reallocated at this point to avoid dealing
+// with issues of special policies for watching binary clauses or whether a
+// clause is extended or not. Only its size field is adjusted accordingly
+// after flushing out root level falsified literals.
+
+static void flush_falsified_literals (Clause * c) {
+  if (c->reason || c->size == 2) return;
+  trace_flushing_clause (c);
+  const int size = c->size;
+  int * lits = c->literals, j = 0;
+  for (int i = 0; i < size; i++) {
+    const int lit = lits[j++] = lits[i];
+    const int tmp = fixed (lit);
+    assert (tmp <= 0);
+    if (tmp >= 0) continue;
+    LOG ("flushing %d", lit);
+    j--;
+  }
+  int flushed = c->size - j;
+  stats.reduce.bytes += flushed * sizeof (int);
+  for (int i = j; i < size; i++) lits[i] = 0;
+  c->size = j;
+  LOG (c, "flushed %d literals and got", flushed);
+}
+
+static void mark_satisfied_clauses_as_garbage (vector<Clause*> & cs) {
+  for (size_t i = 0; i < cs.size (); i++) {
+    Clause * c = cs[i];
+    if (c->garbage) continue;
+    const int tmp = clause_contains_fixed_literal (c);
+         if (tmp > 0) c->garbage = true;
+    else if (tmp < 0) flush_falsified_literals (c);
+  }
 }
 
 struct glue_larger {
@@ -1496,6 +1570,10 @@ struct glue_larger {
     return resolved_earlier () (c, d);
   }
 };
+
+// This function implements the important reduction policy. It determines
+// which redundant clauses are considered not useful and thus will be
+// collected in a subsequent garbage collection phase.
 
 static void mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
@@ -1520,13 +1598,7 @@ static void mark_useless_redundant_clauses_as_garbage () {
   stack.clear ();
 }
 
-static void unprotect_reasons () {
-  for (size_t i = 0; i < trail.size (); i++) {
-    Var & v = var (trail[i]);
-    if (v.level && v.reason && !v.reason.embedded)
-      assert (v.reason->reason), v.reason->reason = false;
-  }
-}
+//
 
 static void count_binaries (int * num_binaries, vector<Clause*> & cs) {
   for (size_t i = 0; i < cs.size (); i++) {
@@ -1608,9 +1680,8 @@ static void collect_garbage_clauses (vector<Clause*> & clauses) {
     Clause * c = clauses[j++] = clauses[i++];
     if (c->reason || !c->garbage) continue;
     stats.reduce.clauses++;
-    stats.reduce.bytes += bytes_clause (c->redundant, c->size);
     trace_delete_clause (c);
-    delete_clause (c);
+    stats.reduce.bytes += delete_clause (c);
     j--;
   }
   clauses.resize (j);
