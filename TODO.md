@@ -27,6 +27,9 @@ Some of them first need proper benchmarking to avoid oversimplifying the solver:
 
   - Remove some redundant code related to disabled options.
 
+  - Maybe remove the C++ operator hacks, to make the code easier to
+    understand.
+
 ## Additions
 
 Second things are listed related to additional features.
