@@ -1104,19 +1104,22 @@ static void report (char type) {
 static bool propagate () {
   assert (!unsat);
   START (propagate);
+  const size_t before = next.binaries;
   while (!conflict) {
-    if (next.binaries < trail.size ()) {
-      stats.propagations++;
+    while (next.binaries < trail.size ()) {
       const int lit = trail[next.binaries++];
-      assert (val (lit) > 0);
       LOG ("propagating binaries of %d", lit);
-      if (!literal.binaries) continue;
-      int * p = binaries (-lit), other, b;
+      assert (val (lit) > 0);
+      assert (literal.binaries);
+      const int * p = binaries (-lit);
       if (!p) continue;
-      while  ((other = *p++))
-	if ((b = val (other)) < 0) conflict = Reason (-lit, other);
+      int other;
+      while  ((other = *p++)) {
+	const int b = val (other);
+	if (b < 0) conflict = Reason (-lit, other);
 	else if (!b) assign (other, Reason (-lit, other));
-    } // else 
+      }
+    }
     if (!conflict && next.watches < trail.size ()) {
       const int lit = trail[next.watches++];
       assert (val (lit) > 0);
@@ -1140,12 +1143,12 @@ static bool propagate () {
 	    ;
 	  if (v > 0) ws[j-1].blit = lits[k];
 	  else if (!v) {
-	    LOG (w.clause, "unwatch %d in", -lit);
+	    LOG (c, "unwatch %d in", -lit);
 	    swap (lits[1], lits[k]);
-	    watch_literal (lits[1], -lit, w.clause);
+	    watch_literal (lits[1], -lit, c);
 	    j--;
-	  } else if (!u) assign (lits[0], w.clause);
-	  else conflict = w.clause;
+	  } else if (!u) assign (lits[0], c);
+	  else conflict = c;
 	}
       }
       while (i < ws.size ()) ws[j++] = ws[i++];
@@ -1153,6 +1156,7 @@ static bool propagate () {
     } else break;
   }
   if (conflict) { stats.conflicts++; LOG (conflict, "conflict"); }
+  stats.propagations = next.binaries - before;;
   STOP (propagate);
   return !conflict;
 }
