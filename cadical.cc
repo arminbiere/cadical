@@ -4,31 +4,31 @@ CaDiCaL
 
 Radically Simplified Conflict Driven Clause Learning (CDCL) SAT Solver
 
-The goal of CaDiCal is to have a minimalistic CDCL solver, which is easy
-to understand and change, while at the same time not too much slower
-than state of the art CDCL solvers if pre-processing is disabled.
+The goal of CaDiCal is to have a minimalistic CDCL solver, which is easy to
+understand and change, while at the same time not too much slower than state
+of the art CDCL solvers if pre-processing is disabled.
 
 MIT License
 
 Copyright (c) 2016 Armin Biere, JKU.
 
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and associated documentation files (the "Software"),
-to deal in the Software without restriction, including without limitation
-the rights to use, copy, modify, merge, publish, distribute, sublicense,
-and/or sell copies of the Software, and to permit persons to whom the
-Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to
+deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included
-in all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+IN THE SOFTWARE.
 
 --------------------------------------------------------------------------*/
 
@@ -109,7 +109,7 @@ struct Clause {
   bool redundant;       // so not 'irredundant' and on 'redundant' stack
   bool garbage;         // can be garbage collected unless it is a 'reason'
   bool reason;          // reason / antecedent clause can not be collected
-  bool extended;	// see discussion on 'additional fields' below.
+  bool extended;        // see discussion on 'additional fields' below.
 
   int size;             // actual size of 'literals' (at least 2)
 
@@ -181,15 +181,15 @@ struct Watch {
   Watch () { }
 };
 
-// Memory allocator for compact ordered allocation of clauses with
-// 32-bit references instead of 64-bit pointers.  A similar technique is
-// used in MiniSAT and descendants as well as in Splatz.  This first gives
-// fast consecutive (that is cache friendly) allocation of clauses and
-// more importantly allows to mix (32-bit) blocking literals with clause
+// Memory allocator for compact ordered allocation of clauses with 32-bit
+// references instead of 64-bit pointers.  A similar technique is used in
+// MiniSAT and descendants as well as in Splatz.  This first gives fast
+// consecutive (that is cache friendly) allocation of clauses and more
+// importantly allows to mix (32-bit) blocking literals with clause
 // references which reduces watcher size by 2 from 16 to 8 bytes.
 
-typedef unsigned Ref;			// 32-bit = 4 Byte reference
-static const size_t alignment = 4;	// memory alignment in an arena
+typedef unsigned Ref;                   // 32-bit = 4 Byte reference
+static const size_t alignment = 4;      // memory alignment in an arena
 
 class Arena {
   char * start, * top, * end;
@@ -278,7 +278,7 @@ static size_t size_others;
 
 static struct {
   Watches * watches;
-  int ** binaries;		// points to start of sequence.
+  int ** binaries;              // points to start of sequence.
 } literal;
 
 // VMTF decision queue
@@ -377,13 +377,13 @@ static int lineno, close_input, close_proof, trace_proof;
 
 #ifndef NDEBUG
 
-// Sam Buss suggested to debug the case where a solver incorrectly
-// claims the formula to be unsatisfiable by checking every learned
-// clause to be satisfied by a satisfying assignment.  Thus the first
-// inconsistent learned clause will be immediately flagged without the
-// need to generate proof traces and perform forward proof checking.
-// The incorrectly derived clause will raise an abort signal and
-// thus allows to debug the issue with a symbolic debugger immediately.
+// Sam Buss suggested to debug the case where a solver incorrectly claims
+// the formula to be unsatisfiable by checking every learned clause to be
+// satisfied by a satisfying assignment.  Thus the first inconsistent
+// learned clause will be immediately flagged without the need to generate
+// proof traces and perform forward proof checking.  The incorrectly derived
+// clause will raise an abort signal and thus allows to debug the issue with
+// a symbolic debugger immediately.
 
 static FILE * solution_file;
 static const char *solution_name;
@@ -697,10 +697,10 @@ inline void EMA::update (double y, const char * name) {
   // is that 'beta' slowly moves down to 'alpha' to smoothly initialize
   // the exponential moving average.  This technique was used in 'Splatz'.
 
-  // We maintain 'beta = 2^-period' until 'beta < alpha' and then set
-  // it to 'alpha'.  The period gives the number of updates this 'beta'
-  // is used.  So for smaller and smaller 'beta' we wait exponentially
-  // longer until 'beta' is halfed again.  The sequence of 'beta's is
+  // We maintain 'beta = 2^-period' until 'beta < alpha' and then set it to
+  // 'alpha'.  The period gives the number of updates this 'beta' is used.
+  // So for smaller and smaller 'beta' we wait exponentially longer until
+  // 'beta' is halfed again.  The sequence of 'beta's is
   //
   //   1,
   //   1/2, 1/2,
@@ -708,8 +708,8 @@ inline void EMA::update (double y, const char * name) {
   //   1/8, 1/8, 1/8, 1/8, 1/8, 1/8, 1/8, 1/8,
   //   ...
   //
-  //  We did not derive this formally, but observed it during logging.
-  //  This is in 'Splatz' but not published yet, e.g., was not in POS'15.
+  //  We did not derive this formally, but observed it during logging.  This
+  //  is in 'Splatz' but not published yet, e.g., was not in POS'15.
 
   if (beta <= alpha || wait--) return;
   wait = period = 2*(period + 1) - 1;
@@ -758,9 +758,9 @@ static inline int sign (int lit) {
   return lit < 0 ? -1 : 1;
 }
 
-// Unsigned version with LSB denoting sign.  This is used in indexing
-// arrays by literals.  The idea is to keep the elements in such an array
-// for both the positive and negated version of a literal close together
+// Unsigned version with LSB denoting sign.  This is used in indexing arrays
+// by literals.  The idea is to keep the elements in such an array for both
+// the positive and negated version of a literal close together
 
 static inline unsigned vlit (int lit) {
   return (lit < 0) + 2u * (unsigned) vidx (lit);
@@ -1025,18 +1025,18 @@ static size_t delete_clause (Clause * c) {
 // here.  If you want to report something else add 'report (..)' functions.
 
 #define REPORTS \
-/*            HEADER, PRECISION, VALUE */ \
-REPORT(    "seconds",         2, seconds ()) \
-REPORT(         "MB",         0, max_bytes () / (double)(1l<<20)) \
-REPORT(      "level",         1, ema.jump) \
-REPORT(       "glue",         1, ema.learned.glue.slow) \
-REPORT( "reductions",         0, stats.reduce.count) \
-REPORT(   "restarts",         0, stats.restarts) \
-REPORT(  "conflicts",         0, stats.conflicts) \
-REPORT(  "redundant",         0, redundant.size ()) \
-REPORT("irredundant",         0, irredundant.size ()) \
-REPORT(  "variables",         0, active_variables ()) \
-REPORT(     "remain",        -1, percent (active_variables (), max_var)) \
+/*            HEADER, PRECISION, MIN, VALUE */ \
+REPORT(    "seconds",  2, 5, seconds ()) \
+REPORT(         "MB",  0, 1, max_bytes () / (double)(1l<<20)) \
+REPORT(      "level",  1, 4, ema.jump) \
+REPORT( "reductions",  0, 2, stats.reduce.count) \
+REPORT(   "restarts",  0, 4, stats.restarts) \
+REPORT(  "conflicts",  0, 5, stats.conflicts) \
+REPORT(  "redundant",  0, 5, redundant.size ()) \
+REPORT(       "glue",  1, 4, ema.learned.glue.slow) \
+REPORT("irredundant",  0, 4, irredundant.size ()) \
+REPORT(  "variables",  0, 4, active_variables ()) \
+REPORT(  "remaining", -1, 5, percent (active_variables (), max_var)) \
 
 #if 0
 
@@ -1051,13 +1051,13 @@ struct Report {
   const char * header;
   char buffer[20];
   int pos;
-  Report (const char * h, int precision, double value) : header (h) {
+  Report (const char * h, int precision, int min, double value) : header (h) {
     char fmt[10];
     sprintf (fmt, "%%.%df", abs (precision));
     if (precision < 0) strcat (fmt, "%%");
     sprintf (buffer, fmt, value);
-    const int min_width = 3;
-    if (strlen (buffer) >= min_width) return;
+    const int min_width = min;
+    if (strlen (buffer) >= (size_t) min_width) return;
     sprintf (fmt, "%%%d.%df", min_width, abs (precision));
     if (precision < 0) strcat (fmt, "%%");
     sprintf (buffer, fmt, value);
@@ -1074,9 +1074,9 @@ static void report (char type) {
   const int max_reports = 16;
   Report reports[max_reports];
   int n = 0;
-#define REPORT(HEAD,POS,EXPR) \
+#define REPORT(HEAD,PREC,MIN,EXPR) \
   assert (n < max_reports); \
-  reports[n++] = Report (HEAD, POS, (double)(EXPR));
+  reports[n++] = Report (HEAD, PREC, MIN, (double)(EXPR));
   REPORTS
 #undef REPORT
   if (!(stats.reports++ % 20)) {
@@ -1110,11 +1110,32 @@ static void report (char type) {
 
 /*------------------------------------------------------------------------*/
 
+// The 'propagate' function is usually the hot-spot of a CDCL SAT solver.
+// The 'trail' stack saves assigned variables and is used here as BFS queue
+// for checking clauses with the negation of assigned variables for being in
+// conflict or whether they produce additional assignments (units).  This
+// version of 'propagate' uses lazy watches and keeps two watches literals
+// at the beginning of the clause.  We also have seperate data structures
+// for binary clauses and use 'blocking literals' to reduce the number of
+// times clauses have to be visited.
+
 static bool propagate () {
   assert (!unsat);
   START (propagate);
+
+  // The number of assigned variables propagated (at least for binary
+  // clauses) gives the number of 'propagations', which is commonly used
+  // to compare raw 'propagation speed' of solvers.  We save the BFS next
+  // binary counter to avoid updating the 64-bit 'propagations' counter in
+  // this tight loop below.
+
   const size_t before = next.binaries;
+
   while (!conflict) {
+
+    // Propagate binary clauses eagerly and even continue propagating if a
+    // conflicting binary clause if found.
+
     while (next.binaries < trail.size ()) {
       const int lit = trail[next.binaries++];
       LOG ("propagating binaries of %d", lit);
@@ -1124,11 +1145,15 @@ static bool propagate () {
       if (!p) continue;
       int other;
       while  ((other = *p++)) {
-	const int b = val (other);
-	if (b < 0) conflict = Reason (-lit, other);
-	else if (!b) assign (other, Reason (-lit, other));
+        const int b = val (other);
+        if (b < 0) conflict = Reason (-lit, other);
+        else if (!b) assign (other, Reason (-lit, other));
       }
     }
+
+    // Then if all binary clauses are propagated, go over longer clauses
+    // with the negation of the assigned literal on the trail.
+
     if (!conflict && next.watches < trail.size ()) {
       const int lit = trail[next.watches++];
       assert (val (lit) > 0);
@@ -1136,36 +1161,39 @@ static bool propagate () {
       Watches & ws = watches (-lit);
       size_t i = 0, j = 0;
       while (!conflict && i < ws.size ()) {
-	const Watch w = ws[j++] = ws[i++];
-	const int b = val (w.blit);
-	if (b > 0) continue;
-	Clause * c = w.clause;
-	const int size = c->size;
-	int * lits = c->literals;
-	if (lits[1] != -lit) swap (lits[0], lits[1]);
-	assert (lits[1] == -lit);
-	const int u = val (lits[0]);
-	if (u > 0) ws[j-1].blit = lits[0];
-	else {
-	  int k, v = -1;
-	  for (k = 2; k < size && (v = val (lits[k])) < 0; k++)
-	    ;
-	  if (v > 0) ws[j-1].blit = lits[k];
-	  else if (!v) {
-	    LOG (c, "unwatch %d in", -lit);
-	    swap (lits[1], lits[k]);
-	    watch_literal (lits[1], -lit, c);
-	    j--;
-	  } else if (!u) assign (lits[0], c);
-	  else conflict = c;
-	}
+        const Watch w = ws[j++] = ws[i++];      // keep watch by default
+        const int b = val (w.blit);
+        if (b > 0) continue;
+        Clause * c = w.clause;
+        const int size = c->size;
+        int * lits = c->literals;
+        if (lits[1] != -lit) swap (lits[0], lits[1]);
+        assert (lits[1] == -lit);
+        const int u = val (lits[0]);
+        if (u > 0) ws[j-1].blit = lits[0];
+        else {
+          int k, v = -1;
+          for (k = 2; k < size && (v = val (lits[k])) < 0; k++)
+            ;
+          if (v > 0) ws[j-1].blit = lits[k];
+          else if (!v) {
+            LOG (c, "unwatch %d in", -lit);
+            swap (lits[1], lits[k]);
+            watch_literal (lits[1], -lit, c);
+            j--;                                // flush watch
+          } else if (!u) assign (lits[0], c);
+          else conflict = c;
+        }
       }
       while (i < ws.size ()) ws[j++] = ws[i++];
       ws.resize (j);
+
     } else break;
   }
+
   if (conflict) { stats.conflicts++; LOG (conflict, "conflict"); }
   stats.propagations += next.binaries - before;;
+
   STOP (propagate);
   return !conflict;
 }
@@ -1655,8 +1683,8 @@ static void init_others () {
       const int lit = sign * phases[idx] * idx;
       const int count = num_binaries [ vlit (lit) ];
       if (count) {
-	*(binaries (lit) = --p) = 0;
-	p -= count;
+        *(binaries (lit) = --p) = 0;
+        p -= count;
       } else binaries (lit) = 0;
     }
   }
@@ -1672,16 +1700,16 @@ static void flush_watches () {
       watches (idx) = Watches (), watches (-idx) = Watches ();
     else {
       for (int sign = -1; sign <= 1; sign += 2) {
-	const int lit = sign * idx;
+        const int lit = sign * idx;
         Watches & ws = watches (lit);
         const size_t size = ws.size ();
         size_t i = 0, j = 0;
         while (i < size) {
           Watch w = ws[j++] = ws[i++];
-	  Clause * c = w.clause;
+          Clause * c = w.clause;
           if (c->garbage || c->size == 2) j--;
-	}
-	ws.resize (j);
+        }
+        ws.resize (j);
       }
     }
   }
