@@ -159,8 +159,8 @@ struct Var {
   int trail;            // trail level
 
   bool seen;            // analyzed in 'analyze' and will be bumped
-  bool poison;          // can not be minimized during clause minimization
-  bool minimized;       // can be removed during clause minimization
+  bool poison;          // can not be removed during clause minimization
+  bool removable;       // can be removed during clause minimization
   int mark;             // reason position for non-recursive DFS
 
   int prev, next;       // double links for decision VMTF queue
@@ -169,7 +169,7 @@ struct Var {
   Reason reason;        // implication graph edge
 
   Var () :
-    seen (false), poison (false), minimized (false), mark (0),
+    seen (false), poison (false), removable (false), mark (0),
     prev (0), next (0), bumped (0)
   { }
 };
@@ -310,7 +310,7 @@ static bool iterating;          // report top-level assigned variables
 static struct {
   vector<int> literals;         // seen & bumped literals in 'analyze'
   vector<int> levels;           // decision levels of 1st UIP clause
-  vector<int> minimized;        // DFS done: minimized or poisoned
+  vector<int> minimized;        // marked removable or poison in 'minmize'
 } seen;
 
 static vector<Clause*> resolved;
@@ -1113,10 +1113,11 @@ static bool propagate () {
       if (!literal.binaries) continue;
       int * p = binaries (-lit), other, b;
       if (!p) continue;
-      while  (!conflict && (other = *p++))
+      while  ((other = *p++))
 	if ((b = val (other)) < 0) conflict = Reason (-lit, other);
 	else if (!b) assign (other, Reason (-lit, other));
-    } else if (next.watches < trail.size ()) {
+    } // else 
+    if (!conflict && next.watches < trail.size ()) {
       const int lit = trail[next.watches++];
       assert (val (lit) > 0);
       LOG ("propagating watches of %d", lit);
@@ -1197,11 +1198,11 @@ static void check_clause () {
 
 #if 0
 
-// Recursive but bounded version of DFS for minimizing clauses.
+// Compact recursive but bounded version of DFS for minimizing clauses.
 
 static bool minimize_literal (int lit, int depth = 0) {
   Var & v = var (lit);
-  if (!v.level || v.minimized || (depth && v.seen)) return true;
+  if (!v.level || v.removable || (depth && v.seen)) return true;
   if (!v.reason || v.poison || v.level == level) return false;
   const Level & l = levels[v.level];
   if ((!depth && l.seen < 2) || v.trail <= l.trail) return false;
@@ -1211,7 +1212,7 @@ static bool minimize_literal (int lit, int depth = 0) {
   for (int i = 0, other; res && i < size; i++)
     if ((other = lits[i]) != lit)
       res = minimize_literal (-other, depth+1);
-  if (res) v.minimized = true; else v.poison = true;
+  if (res) v.removable = true; else v.poison = true;
   seen.minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
   return res;
@@ -1222,12 +1223,14 @@ static bool minimize_literal (int lit, int depth = 0) {
 // Non-recursive unbounded version of DFS for minimizing clauses.
 // It is more ugly and needs slightly more heap memory for variables
 // due to 'mark' used for saving the position in the reason clause.
+// It also trades stack memory for holding the recursion stack
+// for heap memory, which however should be negligible.
 // It runs minimization until completion though and thus might
 // remove more literals than the bounded recursive version.
 
 static int minimize_base_case (int root, int lit) {
   Var & v = var (lit);
-  if (!v.level || v.minimized || (root != lit && v.seen)) return 1;
+  if (!v.level || v.removable || (root != lit && v.seen)) return 1;
   if (!v.reason || v.poison || v.level == level) return -1;
   const Level & l = levels[v.level];
   if ((root == lit && l.seen < 2) || v.trail <= l.trail) return -1;
@@ -1253,7 +1256,7 @@ NEXT: if (v.mark < size) {
           else stack.push_back (-other);
         }
       } else {
-        v.minimized = true;
+        v.removable = true;
 DONE:   seen.minimized.push_back (lit);
         stack.pop_back ();
       }
@@ -1285,7 +1288,7 @@ static void minimize_clause () {
   clause.resize (j);
   for (size_t i = 0; i < seen.minimized.size (); i++) {
     Var & v = var (seen.minimized[i]);
-    v.minimized = v.poison = false;
+    v.removable = v.poison = false;
     v.mark = 0;
   }
   seen.minimized.clear ();
@@ -1597,8 +1600,6 @@ static void mark_useless_redundant_clauses_as_garbage () {
   for (size_t i = 0; i < target; i++) stack[i]->garbage = true;
   stack.clear ();
 }
-
-//
 
 static void count_binaries (int * num_binaries, vector<Clause*> & cs) {
   for (size_t i = 0; i < cs.size (); i++) {
