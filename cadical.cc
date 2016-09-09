@@ -139,6 +139,8 @@ struct Clause {
     assert (this), assert (extended);
     return *(int*) (((char*)this) - GLUE_OFFSET);
   }
+
+  size_t bytes () const;
 };
 
 struct Reason {
@@ -268,10 +270,10 @@ static Var * vars;
 static signed char * vals;              // assignment
 static signed char * phases;            // saved previous assignment
 
-// This table contains for each literal a zero terminated sequence of
-// other literals in binary clauses with the first literal.  This avoids
-// to use 'vector' for this data which is mostly static.  New binary
-// clauses are treated as long clauses until the next 'reduce'.
+// This 'others' table contains for each literal a zero terminated sequence
+// of other literals in binary clauses with the first literal.  This avoids
+// to use 'vector' for this data which is mostly static.  New binary clauses
+// are treated as long clauses until the next 'reduce'.
 
 static int * others;
 static size_t size_others;
@@ -925,22 +927,20 @@ static void watch_clause (Clause * c) {
   watch_literal (l1, l0, c);
 }
 
-static bool extended_clause (bool red, int size) { return red && size > 2; }
-
-static size_t bytes_clause (bool red, int size) {
-  assert (size >= 2);
-  size_t res = sizeof (Clause) + (size - 2) * sizeof (int);
-  if (extended_clause (red, size)) res += EXTENDED_OFFSET;
+inline size_t Clause::bytes () const {
+  size_t res = sizeof *this + (size - 2) * sizeof (int);
+  if (extended) res += EXTENDED_OFFSET;
   return res;
 }
 
 static Clause * new_clause (bool red, int glue = 0) {
   assert (clause.size () <= (size_t) INT_MAX);
-  const int size = (int) clause.size ();
-  const size_t bytes = bytes_clause (red, size);
+  const int size = (int) clause.size ();  assert (size >= 2);
+  size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int);
+  const bool extended = red && size > opts.keepsize;
+  if (extended) bytes += EXTENDED_OFFSET;
   char * ptr = new char[bytes];
   inc_bytes (bytes);
-  const bool extended = extended_clause (red, size);
   if (extended) ptr += EXTENDED_OFFSET;
   Clause * res = (Clause*) ptr;
   res->redundant = red;
@@ -950,6 +950,7 @@ static Clause * new_clause (bool red, int glue = 0) {
   if ((res->extended = extended))
     res->resolved () = ++stats.resolved,
     res->glue () = glue;
+  assert (res->bytes () == bytes);
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
   if (red) redundant.push_back (res);
   else irredundant.push_back (res);
@@ -1008,7 +1009,7 @@ static size_t delete_clause (Clause * c) {
   LOG (c, "delete");
   assert (stats.clauses.current > 0);
   stats.clauses.current--;
-  size_t bytes = bytes_clause (c->redundant, c->size);
+  size_t bytes = c->bytes ();
   dec_bytes (bytes);
   char * ptr = (char*) c;
   if (c->extended) ptr -= EXTENDED_OFFSET;
@@ -1660,7 +1661,7 @@ static void fill_others (vector<Clause*> & cs) {
   }
 }
 
-static void init_others () {
+static void setup_binaries () {
   if (others) {
     dec_bytes (size_others * sizeof (int));
     delete [] others;
@@ -1739,7 +1740,7 @@ static void reduce () {
     mark_satisfied_clauses_as_garbage (irredundant),
     mark_satisfied_clauses_as_garbage (redundant);
   mark_useless_redundant_clauses_as_garbage ();
-  init_others ();
+  setup_binaries ();
   flush_watches ();
   if (new_units) collect_garbage_clauses (irredundant);
   collect_garbage_clauses (redundant);
