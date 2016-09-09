@@ -1,10 +1,13 @@
-#TODO
+# TODO
 
 As the goal for this solver is to produce a simplified easy to change CDCL
 solver, there are two types of TODO's here.
 
-First we list things to simplify or to remove.  Some of them first need
-proper benchmarking to avoid oversimplifying the solver:
+## Simplifications
+
+First we list things to simplify or to remove.
+
+Some of them first need proper benchmarking to avoid oversimplifying the solver:
 
   - Check if a reentrant, e.g., non static version is slower, and if not add
     everything to a 'CaDiCaL' class.
@@ -24,6 +27,8 @@ proper benchmarking to avoid oversimplifying the solver:
 
   - Remove some redundant code related to disabled options.
 
+## Additions
+
 Second things are listed related to additional features.
   
   - Complete the arena allocation of large clauses and use 32-bit clause
@@ -39,6 +44,8 @@ Second things are listed related to additional features.
   - Subsumption of learned clauses as in Splatz.
 
   - Equivalent literal substitution.
+
+## General
 
 There should be an ongoing process of refactoring and documenting the code.
 
