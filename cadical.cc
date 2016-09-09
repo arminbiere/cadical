@@ -103,8 +103,6 @@ static struct {
 
 /*------------------------------------------------------------------------*/
 
-enum { GLUE_OFFSET = 4, RESOLVED_OFFSET = 12, EXTENDED_OFFSET = 12 };
-
 struct Clause {
   bool redundant;       // so not 'irredundant' and on 'redundant' stack
   bool garbage;         // can be garbage collected unless it is a 'reason'
@@ -121,14 +119,23 @@ struct Clause {
     size = 2, literals[0] = a, literals[1] = b;
   }
 
+  enum {
+    GLUE_OFFSET = 4,      // byte offset of 'glue' field before clause
+    RESOLVED_OFFSET = 12, // byte offset of 'resolved' field before clause
+    EXTENDED_OFFSET = 12, // additional bytes if clause is extended
+  };		
+
   // Actually, a redundant large clause has two additional fields
   //
   //  long resolved;      // conflict index when last resolved
   //  int glue;           // LBD = glucose level = glue
   //
-  // These are however placed before the actual clause data and
-  // thus not directly visible.  We set 'extended' to 'true' if
-  // these two fields are allocated.
+  // These are however placed before the actual clause data and thus not
+  // directly visible.  We set 'extended' to 'true' if these two fields are
+  // allocated.  The policy used to determine whether a redundant clause is
+  // extended uses the 'keepsize' option.  A redundant clause larger than
+  // its value is extended. Usually we always keep clauses of size 2 or 3,
+  // which then do not require 'glue' nor 'resolved' fields.
 
   long & resolved () {
     assert (this), assert (extended);
@@ -938,10 +945,10 @@ static Clause * new_clause (bool red, int glue = 0) {
   const int size = (int) clause.size ();  assert (size >= 2);
   size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int);
   const bool extended = red && size > opts.keepsize;
-  if (extended) bytes += EXTENDED_OFFSET;
+  if (extended) bytes += Clause::EXTENDED_OFFSET;
   char * ptr = new char[bytes];
   inc_bytes (bytes);
-  if (extended) ptr += EXTENDED_OFFSET;
+  if (extended) ptr += Clause::EXTENDED_OFFSET;
   Clause * res = (Clause*) ptr;
   res->redundant = red;
   res->garbage = false;
@@ -1012,7 +1019,7 @@ static size_t delete_clause (Clause * c) {
   size_t bytes = c->bytes ();
   dec_bytes (bytes);
   char * ptr = (char*) c;
-  if (c->extended) ptr -= EXTENDED_OFFSET;
+  if (c->extended) ptr -= Clause::EXTENDED_OFFSET;
   delete [] (char*) ptr;
   return bytes;
 }
