@@ -1,3 +1,4 @@
 makefile
-cadical
 config.h
+cadical
+cadical.o
