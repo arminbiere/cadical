@@ -169,7 +169,7 @@ struct Clause {
 
   int size;             // actual size of 'literals' (at least 2)
 
-  int literals[2];      // actually of variadic 'size'
+  int literals[2];      // actually of variadic 'size' in general
                         // for binary embedded reason clauses 'size == 2'
 
   void set (int a, int b) {
@@ -178,15 +178,15 @@ struct Clause {
   }
 
   enum {
-    GLUE_OFFSET = alignment,         // of 'glue' field before clause
-    RESOLVED_OFFSET = 8 + alignment, // of 'resolved' field before clause
+    GLUE_OFFSET     = 8 + alignment, // of 'glue' field before clause
+    RESOLVED_OFFSET = 0 + alignment, // of 'resolved' field before clause
     EXTENDED_OFFSET = 8 + alignment, // additional bytes if extended
   };            
 
   // Actually, a redundant large clause has two additional fields
   //
-  //  long resolved;      // conflict index when last resolved
   //  int glue;           // LBD = glucose level = glue
+  //  long resolved;      // conflict index when last resolved
   //
   // These are however placed before the actual clause data and thus not
   // directly visible.  We set 'extended' to 'true' if these two fields are
