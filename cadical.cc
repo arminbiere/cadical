@@ -229,7 +229,7 @@ public:
 
   bool contains (void * ptr) const { return start <= ptr && ptr < top; }
 
-  void * operator [] (Ref ref) const {
+  void * ref2ptr (Ref ref) const {
     if (!ref) return 0;
     assert (ref < size ());
     char * res = start + alignment * (size_t) ref;
@@ -237,7 +237,7 @@ public:
     return res;
   }
 
-  Ref operator [] (void * p) const {
+  Ref ptr2ref (void * p) const {
     if (!p) return 0u;
     assert (contains (p)),
     assert (aligned (p));
@@ -1659,8 +1659,14 @@ struct glue_larger {
   }
 };
 
-inline Ref::operator Clause * () const { return (Clause*) arena[ref]; }
-inline Ref::Ref (Clause * c) : ref (arena[c]) { }
+
+int REMOVE1;
+inline Ref::operator Clause * () const {
+  return (Clause*) arena.ref2ptr (ref);
+}
+
+int REMOVE2;
+inline Ref::Ref (Clause * c) : ref (arena.ptr2ref (c)) { }
 
 // This function implements the important reduction policy. It determines
 // which redundant clauses are considered not useful and thus will be
@@ -1761,7 +1767,7 @@ collect_garbage_clauses () {
     Ref old_ref = clauses[i++];
     assert (prev_ref.ref < old_ref.ref);
     prev_ref = old_ref;
-    Clause * c = (Clause*) arena [old_ref];
+    Clause * c = (Clause*) arena.ref2ptr (old_ref);
     char * ptr = (char *) c;
     size_t bytes = c->bytes ();
     int forced;
@@ -1776,7 +1782,7 @@ collect_garbage_clauses () {
     if (!new_top) new_top = ptr;
     if (c->reason || !c->garbage) {
       memmove (new_top, ptr, bytes);
-      Ref new_ref = arena[new_top];
+      Ref new_ref = arena.ptr2ref (new_top);
       if (extended) new_ref.ref += Clause::EXTENDED_OFFSET/alignment;
       clauses[j++] = new_ref;
       new_top += bytes;
