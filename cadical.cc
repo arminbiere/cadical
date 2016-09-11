@@ -43,7 +43,7 @@ OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(minimize,         bool,   1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,     int,1000, 0,1e9, "recursive minimization depth") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
-OPTION(reducedynamic,    bool,   1, 0,  1, "dynamic glue & size limit") \
+OPTION(reducedynamic,    bool,   0, 0,  1, "dynamic glue & size limit") \
 OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
