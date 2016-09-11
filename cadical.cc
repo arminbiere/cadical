@@ -112,7 +112,7 @@ static struct {
 
 typedef unsigned Ref;
 
-static const size_t alignment = 4;      // memory alignment in an arena
+static const size_t alignment = 8;      // memory alignment in an arena
 #ifndef NDEBUG
 static bool aligned (size_t bytes) { return !((alignment-1)&bytes); }
 static bool aligned (void * ptr) { return aligned ((size_t) ptr); }
@@ -178,9 +178,9 @@ struct Clause {
   }
 
   enum {
-    GLUE_OFFSET = 4,      // byte offset of 'glue' field before clause
-    RESOLVED_OFFSET = 12, // byte offset of 'resolved' field before clause
-    EXTENDED_OFFSET = 12, // additional bytes if clause is extended
+    GLUE_OFFSET = alignment,         // of 'glue' field before clause
+    RESOLVED_OFFSET = 8 + alignment, // of 'resolved' field before clause
+    EXTENDED_OFFSET = 8 + alignment, // additional bytes if extended
   };            
 
   // Actually, a redundant large clause has two additional fields
@@ -280,8 +280,8 @@ struct Var {
 
 struct Watch {
   int blit;             // if blocking literal is true do not visit clause
-  Ref clause;
-  Watch (int b, Ref r) : blit (b), clause (r) { }
+  Ref ref;
+  Watch (int b, Ref r) : blit (b), ref (r) { }
   Watch () { }
 };
 
@@ -1241,7 +1241,7 @@ static bool propagate () {
         const Watch w = ws[j++] = ws[i++];      // keep watch by default
         const int b = val (w.blit);
         if (b > 0) continue;
-        Clause * c = ref2clause (w.clause);
+        Clause * c = ref2clause (w.ref);
         const int size = c->size;
         int * lits = c->literals;
         if (lits[1] != -lit) swap (lits[0], lits[1]);
@@ -1804,11 +1804,11 @@ collect_garbage_clauses () {
     if (extended) ptr -= Clause::EXTENDED_OFFSET;
     if (!new_top) new_top = ptr;
     if (c->reason || !c->garbage) {
-      memmove (new_top, ptr, bytes);
+      memmove (new_top, ptr, align (bytes));
       Ref new_ref = arena.ptr2ref (new_top);
       if (extended) new_ref += Clause::EXTENDED_OFFSET/alignment;
       clauses[j++] = new_ref;
-      new_top += bytes;
+      new_top += align (bytes);
       if (forced) {
         Var & v = var (forced);
         assert (v.reason.reference () == old_ref);
