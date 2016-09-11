@@ -56,7 +56,7 @@ OPTION(witness,          bool,   1, 0,  1, "print witness") \
 
 #if 0
 
-// TODO remove again
+// TODO add back again
 
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
@@ -131,7 +131,7 @@ struct Clause {
     GLUE_OFFSET = 4,      // byte offset of 'glue' field before clause
     RESOLVED_OFFSET = 12, // byte offset of 'resolved' field before clause
     EXTENDED_OFFSET = 12, // additional bytes if clause is extended
-  };		
+  };            
 
   // Actually, a redundant large clause has two additional fields
   //
@@ -345,7 +345,7 @@ static struct {
 
 static vector<int> clause;      // temporary clause in parsing & learning
 
-static Arena arena;	// memory arena for storing clauses
+static Arena arena;     // memory arena for storing clauses
 
 static vector<Ref> irredundant;     // original / not redundant clauses
 static vector<Ref> redundant;       // redundant / learned clauses
@@ -361,7 +361,7 @@ static struct {
 static vector<Clause*> resolved;
 
 static Reason conflict;         // set in 'propagation', reset in 'analyze'
-static Clause clashing_unit;    // needed if input contains clashing units
+static bool clashing_unit;      // set 'parse_dimacs'
 
 static struct {
   long conflicts;
@@ -550,7 +550,7 @@ inline void * Arena::allocate (size_t bytes, Ref & ref) {
 }
 
 void Arena::enlarge (size_t requested_capacity) {
-  if (!start) requested_capacity += alignment;		// zero ref = zero ptr
+  if (!start) requested_capacity += alignment;          // zero ref = zero ptr
   if (requested_capacity > (1l << 32))
     die ("maximum memory arena of %ld GB exhausted",
       ((alignment * (1l<<32)) >> 30));
@@ -1033,7 +1033,7 @@ static void add_new_original_clause () {
     int unit = clause[0], tmp = val (unit);
     if (!tmp) assign (unit);
     else if (tmp < 0) {
-      if (!unsat) msg ("parsed clashing unit"), conflict = &clashing_unit;
+      if (!unsat) msg ("parsed clashing unit"), clashing_unit = true;
       else LOG ("original clashing unit produces another inconsistency");
     } else LOG ("original redundant unit");
   } else watch_clause (new_clause (false));
@@ -1850,7 +1850,8 @@ static void init_solving () {
 static int solve () {
   init_solving ();
   section ("solving");
-  return search ();
+  if (clashing_unit) { learn_empty_clause (); return 20; }
+  else return search ();
 }
 
 /*------------------------------------------------------------------------*/
