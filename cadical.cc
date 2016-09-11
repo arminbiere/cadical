@@ -110,11 +110,7 @@ static struct {
 // importantly allows to mix (32-bit) blocking literals with clause
 // references which reduces watcher size by 2 from 16 to 8 bytes.
 
-struct Ref {
-  unsigned ref;
-  Ref (unsigned r = 0) : ref (r) { }
-  operator unsigned () { return ref; }
-};
+typedef unsigned Ref;
 
 static const size_t alignment = 4;      // memory alignment in an arena
 #ifndef NDEBUG
@@ -212,25 +208,52 @@ struct Clause {
   size_t bytes () const;
 };
 
-static Clause * ref2clause (Ref);
+static Arena arena;             // memory arena for storing clauses
 
-static Ref clause2ref (Clause *);
+static inline
+Clause * ref2clause (Ref r) { return (Clause*) arena.ref2ptr (r); }
 
-struct Reason {
-  bool embedded;
+static inline Ref clause2ref (Clause * c) { return arena.ptr2ref (c); }
+
+class Reason {
+
+  enum Tag {
+    INVALID    = 0,
+    EMBEDDED   = 1, 
+    REFERENCED = 2, 
+  };
+
+  Tag tag;
   Ref ref;
-  Clause binary; 
-  Reason (Clause * c = 0) : embedded (false) { ref = clause2ref (c); }
-  Reason (int a, int b) : embedded (true) { binary.set (a, b); }
+  Clause embedded; 
+
+public:
+
+  Reason () : tag (INVALID) { }
+
+  Reason (Clause * c) : tag (REFERENCED) { ref = clause2ref (c); }
+
+  Reason (int a, int b) : tag (EMBEDDED) { embedded.set (a, b); }
+
+  bool referenced () const { return tag == REFERENCED; }
+
+  Ref reference () { return ref; }
+
+  void update_reference (Ref r) { assert (referenced ()), ref = r; }
+
   Clause * clause () {
-    if (embedded) return &binary;
-    else return ref2clause (ref);
+         if (!tag)              return 0;
+    else if (tag == REFERENCED) return ref2clause (ref);
+    else                        return &embedded;
   }
+
   Clause * operator -> () { return clause (); }
   operator Clause * () { return clause (); }
-  int size () { assert (clause ()); return clause ()->size; }
-  int * literals () { assert (clause ()); return clause ()->literals; }
 };
+
+struct NoReason : public Reason { };
+struct UnitReason : public Reason { };
+struct DecisionReason : public Reason { };
 
 /*------------------------------------------------------------------------*/
 
@@ -355,7 +378,6 @@ static struct {
 
 static vector<int> clause;      // temporary clause in parsing & learning
 
-static Arena arena;             // memory arena for storing clauses
 static vector<Ref> clauses;     // references to all clauses
 
 static bool iterating;          // report top-level assigned variables
@@ -936,7 +958,7 @@ static void learn_unit_clause (int lit) {
 
 /*------------------------------------------------------------------------*/
 
-static void assign (int lit, Reason reason = 0) {
+static void assign (int lit, Reason reason) {
   int idx = vidx (lit);
   assert (!vals[idx]);
   Var & v = vars[idx];
@@ -946,7 +968,7 @@ static void assign (int lit, Reason reason = 0) {
   assert (val (lit) > 0);
   v.trail = (int) trail.size ();
   trail.push_back (lit);
-  LOG (reason, "assign %d", lit);
+  LOG (reason.clause (), "assign %d", lit);
 }
 
 static void unassign (int lit) {
@@ -1006,7 +1028,7 @@ static Clause * new_clause (bool red, int glue = 0) {
   char * ptr = (char*) arena.allocate (bytes, ref);
   if (extended) 
     ptr += Clause::EXTENDED_OFFSET,
-    ref.ref += Clause::EXTENDED_OFFSET/alignment;
+    ref += Clause::EXTENDED_OFFSET/alignment;
   Clause * res = (Clause*) ptr;
   res->redundant = red;
   res->garbage = false;
@@ -1056,7 +1078,7 @@ static void add_new_original_clause () {
     else LOG ("original empty clause produces another inconsistency");
   } else if (size == 1) {
     int unit = clause[0], tmp = val (unit);
-    if (!tmp) assign (unit);
+    if (!tmp) assign (unit, UnitReason ());
     else if (tmp < 0) {
       if (!unsat) msg ("parsed clashing unit"), clashing_unit = true;
       else LOG ("original clashing unit produces another inconsistency");
@@ -1246,7 +1268,7 @@ static bool propagate () {
     } else break;
   }
 
-  if (conflict) { stats.conflicts++; LOG (conflict, "conflict"); }
+  if (conflict) { stats.conflicts++; LOG (conflict.clause (), "conflict"); }
   stats.propagations += next.binaries - before;;
 
   STOP (propagate);
@@ -1303,7 +1325,7 @@ static bool minimize_literal (int lit, int depth = 0) {
   const Level & l = levels[v.level];
   if ((!depth && l.seen < 2) || v.trail <= l.trail) return false;
   if (depth > opts.minimizedepth) return false;
-  const int size = v.reason.size (), * lits = v.reason.literals ();
+  const int size = v.reason->size, * lits = v.reason->literals;
   bool res = true;
   for (int i = 0, other; res && i < size; i++)
     if ((other = lits[i]) != lit)
@@ -1503,19 +1525,19 @@ static void analyze () {
   if (!level) learn_empty_clause ();
   else {
     Reason & reason = conflict;
-    LOG (reason, "analyzing conflict");
-    if (!reason.embedded) resolve_clause (reason);
+    LOG (reason.clause (), "analyzing conflict");
+    if (!reason.referenced ()) resolve_clause (reason.clause ());
     int open = 0, uip = 0;
     size_t i = trail.size ();
     for (;;) {
-      const int size = reason.size (), * lits = reason.literals ();;
+      const int size = reason->size, * lits = reason->literals;;
       for (int j = 0; j < size; j++)
         if (analyze_literal (lits[j])) open++;
       while (!var (uip = trail[--i]).seen)
         ;
       if (!--open) break;
       reason = var (uip).reason;
-      LOG (reason, "analyzing %d reason", uip);
+      LOG (reason.clause (), "analyzing %d reason", uip);
     }
     LOG ("first UIP %d", uip);
     clause.push_back (-uip);
@@ -1540,7 +1562,7 @@ static void analyze () {
     bump_and_clear_seen_variables (uip);
     clause.clear (), clear_levels ();
   }
-  conflict = 0;
+  conflict = NoReason ();
   STOP (analyze);
 }
 
@@ -1590,16 +1612,17 @@ static bool reducing () {
 static void protect_reasons () {
   for (size_t i = 0; i < trail.size (); i++) {
     Var & v = var (trail[i]);
-    if (v.level && v.reason && !v.reason.embedded)
-      v.reason->reason = true;
+    if (v.level && v.reason.referenced ())
+      v.reason.clause ()->reason = true;
   }
 }
 
 static void unprotect_reasons () {
   for (size_t i = 0; i < trail.size (); i++) {
     Var & v = var (trail[i]);
-    if (v.level && v.reason && !v.reason.embedded)
-      assert (v.reason->reason), v.reason->reason = false;
+    if (v.level && v.reason.referenced ())
+      assert (v.reason.clause ()->reason),
+      v.reason.clause ()->reason = false;
   }
 }
 
@@ -1669,14 +1692,6 @@ struct glue_larger {
     return resolved_earlier () (c, d);
   }
 };
-
-static inline Clause * ref2clause (Ref r) {
-  return (Clause*) arena.ref2ptr (r);
-}
-
-static inline Ref clause2ref (Clause * c) {
-  return arena.ptr2ref (c);
-}
 
 // This function implements the important reduction policy. It determines
 // which redundant clauses are considered not useful and thus will be
@@ -1772,10 +1787,10 @@ collect_garbage_clauses () {
   size_t collected_bytes = 0;
   size_t i = 0, j = 0;
   char * new_top = 0;
-  Ref prev_ref;
+  Ref prev_ref = 0;
   while (i < size) {
     Ref old_ref = clauses[i++];
-    assert (prev_ref.ref < old_ref.ref);
+    assert (prev_ref < old_ref);
     prev_ref = old_ref;
     Clause * c = (Clause*) arena.ref2ptr (old_ref);
     char * ptr = (char *) c;
@@ -1793,13 +1808,13 @@ collect_garbage_clauses () {
     if (c->reason || !c->garbage) {
       memmove (new_top, ptr, bytes);
       Ref new_ref = arena.ptr2ref (new_top);
-      if (extended) new_ref.ref += Clause::EXTENDED_OFFSET/alignment;
+      if (extended) new_ref += Clause::EXTENDED_OFFSET/alignment;
       clauses[j++] = new_ref;
       new_top += bytes;
       if (forced) {
         Var & v = var (forced);
-        assert (v.reason.ref == old_ref.ref);
-        v.reason.ref = new_ref;
+        assert (v.reason.reference () == old_ref);
+        v.reason.update_reference (new_ref);
       }
     } else {
       LOG (c, "delete");
@@ -1850,7 +1865,7 @@ static void decide () {
   int decision = phases[idx] * idx;
   levels.push_back (Level (decision));
   LOG ("decide %d", decision);
-  assign (decision);
+  assign (decision, DecisionReason ());
   STOP (decide);
 }
 
