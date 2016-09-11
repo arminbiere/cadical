@@ -103,53 +103,6 @@ static struct {
 
 /*------------------------------------------------------------------------*/
 
-struct Clause {
-  bool redundant;       // aka 'learned' so not 'irredundant' (original)
-  bool garbage;         // can be garbage collected unless it is a 'reason'
-  bool reason;          // reason / antecedent clause can not be collected
-  bool extended;        // see discussion on 'additional fields' below.
-
-  int size;             // actual size of 'literals' (at least 2)
-
-  int literals[2];      // actually of variadic 'size'
-                        // for binary embedded reason clauses 'size == 2'
-
-  void set (int a, int b) {
-    redundant = garbage = reason = false;
-    size = 2, literals[0] = a, literals[1] = b;
-  }
-
-  enum {
-    GLUE_OFFSET = 4,      // byte offset of 'glue' field before clause
-    RESOLVED_OFFSET = 12, // byte offset of 'resolved' field before clause
-    EXTENDED_OFFSET = 12, // additional bytes if clause is extended
-  };            
-
-  // Actually, a redundant large clause has two additional fields
-  //
-  //  long resolved;      // conflict index when last resolved
-  //  int glue;           // LBD = glucose level = glue
-  //
-  // These are however placed before the actual clause data and thus not
-  // directly visible.  We set 'extended' to 'true' if these two fields are
-  // allocated.  The policy used to determine whether a redundant clause is
-  // extended uses the 'keepsize' option.  A redundant clause larger than
-  // its value is extended. Usually we always keep clauses of size 2 or 3,
-  // which then do not require 'glue' nor 'resolved' fields.
-
-  long & resolved () {
-    assert (this), assert (extended);
-    return *(long*) (((char*)this) - RESOLVED_OFFSET);
-  }
-
-  int & glue () {
-    assert (this), assert (extended);
-    return *(int*) (((char*)this) - GLUE_OFFSET);
-  }
-
-  size_t bytes () const;
-};
-
 // Memory allocator for compact ordered allocation of clauses with 32-bit
 // references instead of 64-bit pointers.  A similar technique is used in
 // MiniSAT and descendants as well as in Splatz.  This first gives fast
@@ -160,50 +113,7 @@ struct Clause {
 struct Ref {
   unsigned ref;
   Ref (unsigned r = 0) : ref (r) { }
-  Ref (Clause *);
-  operator Clause * () const;
   operator unsigned () { return ref; }
-};
-
-struct Reason {
-  bool embedded;
-  Ref ref;
-  Clause binary; 
-  Reason (Clause * c = 0) : embedded (false) { ref = c; }
-  Reason (int a, int b) : embedded (true) { binary.set (a, b); }
-  Clause * clause () { if (embedded) return &binary; else return ref; }
-  Clause * operator -> () { return clause (); }
-  operator Clause * () { return clause (); }
-  int size () { assert (clause ()); return clause ()->size; }
-  int * literals () { assert (clause ()); return clause ()->literals; }
-};
-
-struct Var {
-
-  int level;            // decision level
-  int trail;            // trail level
-
-  bool seen;            // analyzed in 'analyze' and will be bumped
-  bool poison;          // can not be removed during clause minimization
-  bool removable;       // can be removed during clause minimization
-  int mark;             // reason position for non-recursive DFS
-
-  int prev, next;       // double links for decision VMTF queue
-  long bumped;          // enqueue time stamp for VMTF queue
-
-  Reason reason;        // implication graph edge
-
-  Var () :
-    seen (false), poison (false), removable (false), mark (0),
-    prev (0), next (0), bumped (0)
-  { }
-};
-
-struct Watch {
-  int blit;             // if blocking literal is true do not visit clause
-  Ref clause;
-  Watch (int b, Ref r) : blit (b), clause (r) { }
-  Watch () { }
 };
 
 static const size_t alignment = 4;      // memory alignment in an arena
@@ -253,6 +163,105 @@ public:
   ~Arena () { release (); }
 };
 
+/*------------------------------------------------------------------------*/
+
+struct Clause {
+  bool redundant;       // aka 'learned' so not 'irredundant' (original)
+  bool garbage;         // can be garbage collected unless it is a 'reason'
+  bool reason;          // reason / antecedent clause can not be collected
+  bool extended;        // see discussion on 'additional fields' below.
+
+  int size;             // actual size of 'literals' (at least 2)
+
+  int literals[2];      // actually of variadic 'size'
+                        // for binary embedded reason clauses 'size == 2'
+
+  void set (int a, int b) {
+    redundant = garbage = reason = false;
+    size = 2, literals[0] = a, literals[1] = b;
+  }
+
+  enum {
+    GLUE_OFFSET = 4,      // byte offset of 'glue' field before clause
+    RESOLVED_OFFSET = 12, // byte offset of 'resolved' field before clause
+    EXTENDED_OFFSET = 12, // additional bytes if clause is extended
+  };            
+
+  // Actually, a redundant large clause has two additional fields
+  //
+  //  long resolved;      // conflict index when last resolved
+  //  int glue;           // LBD = glucose level = glue
+  //
+  // These are however placed before the actual clause data and thus not
+  // directly visible.  We set 'extended' to 'true' if these two fields are
+  // allocated.  The policy used to determine whether a redundant clause is
+  // extended uses the 'keepsize' option.  A redundant clause larger than
+  // its value is extended. Usually we always keep clauses of size 2 or 3,
+  // which then do not require 'glue' nor 'resolved' fields.
+
+  long & resolved () {
+    assert (this), assert (extended);
+    return *(long*) (((char*)this) - RESOLVED_OFFSET);
+  }
+
+  int & glue () {
+    assert (this), assert (extended);
+    return *(int*) (((char*)this) - GLUE_OFFSET);
+  }
+
+  size_t bytes () const;
+};
+
+static Clause * ref2clause (Ref);
+
+static Ref clause2ref (Clause *);
+
+struct Reason {
+  bool embedded;
+  Ref ref;
+  Clause binary; 
+  Reason (Clause * c = 0) : embedded (false) { ref = clause2ref (c); }
+  Reason (int a, int b) : embedded (true) { binary.set (a, b); }
+  Clause * clause () {
+    if (embedded) return &binary;
+    else return ref2clause (ref);
+  }
+  Clause * operator -> () { return clause (); }
+  operator Clause * () { return clause (); }
+  int size () { assert (clause ()); return clause ()->size; }
+  int * literals () { assert (clause ()); return clause ()->literals; }
+};
+
+/*------------------------------------------------------------------------*/
+
+struct Var {
+
+  int level;            // decision level
+  int trail;            // trail level
+
+  bool seen;            // analyzed in 'analyze' and will be bumped
+  bool poison;          // can not be removed during clause minimization
+  bool removable;       // can be removed during clause minimization
+  int mark;             // reason position for non-recursive DFS
+
+  int prev, next;       // double links for decision VMTF queue
+  long bumped;          // enqueue time stamp for VMTF queue
+
+  Reason reason;        // implication graph edge
+
+  Var () :
+    seen (false), poison (false), removable (false), mark (0),
+    prev (0), next (0), bumped (0)
+  { }
+};
+
+struct Watch {
+  int blit;             // if blocking literal is true do not visit clause
+  Ref clause;
+  Watch (int b, Ref r) : blit (b), clause (r) { }
+  Watch () { }
+};
+
 typedef vector<Watch> Watches;          // of one literal
 
 struct Level {
@@ -263,6 +272,8 @@ struct Level {
   Level (int d) : decision (d) { reset (); }
   Level () { }
 };
+
+/*------------------------------------------------------------------------*/
 
 // We have a more complex generic exponential moving average struct here
 // for more robust initialization (see documentation before 'update').
@@ -593,7 +604,7 @@ inline void * Arena::allocate (size_t bytes, Ref & ref) {
   top = new_top;
   ref = (res - start)/alignment;
   assert (start + alignment * (size_t) ref == res);
-  assert ((*this)[ref] == res);
+  assert (ref2ptr (ref) == res);
   assert (aligned (res)), assert (contains (res));
   return res;
 }
@@ -968,7 +979,7 @@ static void backtrack (int target_level = 0) {
 /*------------------------------------------------------------------------*/
 
 static void watch_literal (int lit, int blit, Clause * c) {
-  watches (lit).push_back (Watch (blit, c));
+  watches (lit).push_back (Watch (blit, clause2ref (c)));
   LOG (c, "watch %d blit %d in", lit, blit);
 }
 
@@ -1208,7 +1219,7 @@ static bool propagate () {
         const Watch w = ws[j++] = ws[i++];      // keep watch by default
         const int b = val (w.blit);
         if (b > 0) continue;
-        Clause * c = w.clause;
+        Clause * c = ref2clause (w.clause);
         const int size = c->size;
         int * lits = c->literals;
         if (lits[1] != -lit) swap (lits[0], lits[1]);
@@ -1643,7 +1654,7 @@ static void flush_falsified_literals (Clause * c) {
 
 static void mark_satisfied_clauses_as_garbage () {
   for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = clauses[i];
+    Clause * c = ref2clause (clauses[i]);
     if (c->garbage) continue;
     const int tmp = clause_contains_fixed_literal (c);
          if (tmp > 0) c->garbage = true;
@@ -1659,14 +1670,13 @@ struct glue_larger {
   }
 };
 
-
-int REMOVE1;
-inline Ref::operator Clause * () const {
-  return (Clause*) arena.ref2ptr (ref);
+static inline Clause * ref2clause (Ref r) {
+  return (Clause*) arena.ref2ptr (r);
 }
 
-int REMOVE2;
-inline Ref::Ref (Clause * c) : ref (arena.ptr2ref (c)) { }
+static inline Ref clause2ref (Clause * c) {
+  return arena.ptr2ref (c);
+}
 
 // This function implements the important reduction policy. It determines
 // which redundant clauses are considered not useful and thus will be
@@ -1676,7 +1686,7 @@ static void mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
   assert (stack.empty ());
   for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = clauses[i];
+    Clause * c = ref2clause (clauses[i]);
     if (!c->redundant) continue;
     if (c->reason) continue;
     if (c->garbage) continue;
@@ -1704,7 +1714,7 @@ static void setup_binaries () {
   int * num_binaries = new int[max_lit + 1];
   for (int l = min_lit; l <= max_lit; l++) num_binaries[l] = 0;
   for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = clauses[i];
+    Clause * c = ref2clause (clauses[i]);
     if (c->garbage || c->size != 2) continue;
     int l0 = c->literals[0], l1 = c->literals[1];
     num_binaries[vlit (l0)]++, num_binaries[vlit (l1)]++;
@@ -1730,7 +1740,7 @@ static void setup_binaries () {
   assert (p == others);
   delete [] num_binaries;
   for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = clauses[i];
+    Clause * c = ref2clause (clauses[i]);
     if (c->garbage || c->size != 2) continue;
     int l0 = c->literals[0], l1 = c->literals[1];
     *--binaries (l0) = l1, *--binaries (l1) = l0;
@@ -1751,7 +1761,7 @@ static void setup_watches () {
   stats.bytes.watcher.current = bytes;
   if (bytes > stats.bytes.watcher.max) stats.bytes.watcher.max = bytes;
   for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = clauses[i];
+    Clause * c = ref2clause (clauses[i]);
     if (c->size > 2) watch_clause (c);
   }
 }
