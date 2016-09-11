@@ -112,7 +112,7 @@ static struct {
 
 typedef unsigned Ref;
 
-static const size_t alignment = 8;      // memory alignment in an arena
+static const size_t alignment = 4;      // memory alignment in an arena
 #ifndef NDEBUG
 static bool aligned (size_t bytes) { return !((alignment-1)&bytes); }
 static bool aligned (void * ptr) { return aligned ((size_t) ptr); }
@@ -179,15 +179,16 @@ struct Clause {
   }
 
   enum {
-    GLUE_OFFSET     = 8 + alignment, // of 'glue' field before clause
-    RESOLVED_OFFSET = 0 + alignment, // of 'resolved' field before clause
-    EXTENDED_OFFSET = 8 + alignment, // additional bytes if extended
+    GLUE_OFFSET     = 2*sizeof(int), // of 'glue' field before clause
+    RESOLVED_OFFSET = 1*sizeof(int), // of 'resolved' field before clause
+    EXTENDED_OFFSET = 2*sizeof(int), // additional bytes if extended
   };            
 
   // Actually, a redundant large clause has two additional fields
   //
-  //  int glue;           // LBD = glucose level = glue
-  //  long resolved;      // conflict index when last resolved
+  //  int glue;         // LBD = glucose level = glue
+  //  int resolved;     // conflict index abstraction when last resolved
+  //                    // copied from 'resolve32' in 'inc_resolved'
   //
   // These are however placed before the actual clause data and thus not
   // directly visible.  We set 'extended' to 'true' if these two fields are
@@ -196,9 +197,9 @@ struct Clause {
   // its value is extended. Usually we always keep clauses of size 2 or 3,
   // which then do not require 'glue' nor 'resolved' fields.
 
-  long & resolved () {
+  int & resolved () {
     assert (this), assert (extended);
-    return *(long*) (((char*)this) - RESOLVED_OFFSET);
+    return *(int*) (((char*)this) - RESOLVED_OFFSET);
   }
 
   int & glue () {
@@ -409,6 +410,8 @@ static struct {
   long bumped;                  // seen and bumped variables in 'analyze'
   long resolved;                // resolved redundant clauses in 'analyze'
   long searched;                // searched decisions in 'decide'
+
+  int resolved32;               // 32-bit abstraction of 'resolved'
 
   struct { long count, clauses, bytes; } reduce; // in 'reduce'
 
@@ -691,6 +694,116 @@ static int active_variables () { return max_var - stats.fixed; }
 
 /*------------------------------------------------------------------------*/
 
+// Faster file IO without locking.
+
+static void print (char ch, FILE * file = stdout) {
+  fputc_unlocked (ch, file);
+}
+
+static void print (const char * s, FILE * file = stdout) {
+  fputs_unlocked (s, file);
+}
+
+static void print (int lit, FILE * file = stdout) {
+  char buffer[20];
+  sprintf (buffer, "%d", lit);
+  print (buffer, file);
+}
+
+/*------------------------------------------------------------------------*/
+
+// The following statistics are printed in columns, whenever 'report' is
+// called.  For instance 'reduce' with prefix '-' will call it.  The other
+// more interesting report is due to learning a unit, called iteration, with
+// prefix 'i'.  To add another statistics column, add a corresponding line
+// here.  If you want to report something else add 'report (..)' functions.
+
+#define REPORTS \
+/*     HEADER, PRECISION, MIN, VALUE */ \
+REPORT(    "seconds",  2, 5, seconds ()) \
+REPORT(         "MB",  0, 2, current_bytes () / (double)(1l<<20)) \
+REPORT(      "level",  1, 4, ema.jump) \
+REPORT( "reductions",  0, 2, stats.reduce.count) \
+REPORT(   "restarts",  0, 4, stats.restarts) \
+REPORT(  "conflicts",  0, 5, stats.conflicts) \
+REPORT(  "redundant",  0, 5, stats.clauses.redundant) \
+REPORT(       "glue",  1, 4, ema.learned.glue.slow) \
+REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
+REPORT(  "variables",  0, 4, active_variables ()) \
+REPORT(  "remaining", -1, 5, percent (active_variables (), max_var)) \
+
+#if 0
+
+REPORT(   "slowglue",         1, ema.learned.glue.slow) \
+REPORT(   "fastglue",         1, ema.learned.glue.fast) \
+REPORT(    "resglue",         1, ema.resolved.glue) \
+REPORT(    "ressize",         1, ema.resolved.size) \
+
+#endif
+
+struct Report {
+  const char * header;
+  char buffer[20];
+  int pos;
+  Report (const char * h, int precision, int min, double value) : header (h) {
+    char fmt[10];
+    sprintf (fmt, "%%.%df", abs (precision));
+    if (precision < 0) strcat (fmt, "%%");
+    sprintf (buffer, fmt, value);
+    const int min_width = min;
+    if (strlen (buffer) >= (size_t) min_width) return;
+    sprintf (fmt, "%%%d.%df", min_width, abs (precision));
+    if (precision < 0) strcat (fmt, "%%");
+    sprintf (buffer, fmt, value);
+  }
+  Report () { }
+  void print_header (char * line) {
+    int len = strlen (header);
+    for (int i = -1, j = pos - (len + 1)/2 - 1; i < len; i++, j++)
+      line[j] = i < 0 ? ' ' : header[i];
+  }
+};
+
+static void report (char type) {
+  const int max_reports = 16;
+  Report reports[max_reports];
+  int n = 0;
+#define REPORT(HEAD,PREC,MIN,EXPR) \
+  assert (n < max_reports); \
+  reports[n++] = Report (HEAD, PREC, MIN, (double)(EXPR));
+  REPORTS
+#undef REPORT
+  if (!(stats.reports++ % 20)) {
+    print ("c\n", stdout);
+    int pos = 4;
+    for (int i = 0; i < n; i++) {
+      int len = strlen (reports[i].buffer);
+      reports[i].pos = pos + (len + 1)/2;
+      pos += len + 1;
+    }
+    const int max_line = pos + 20, nrows = 3;
+    char line[max_line];
+    for (int start = 0; start < nrows; start++) {
+      int i;
+      for (i = 0; i < max_line; i++) line[i] = ' ';
+      line[0] = 'c';
+      for (i = start; i < n; i += nrows) reports[i].print_header (line);
+      for (i = max_line-1; line[i-1] == ' '; i--) ;
+      line[i] = 0;
+      print (line, stdout);
+      print ('\n', stdout);
+    }
+    print ("c\n", stdout);
+  }
+  print ("c "), print (type);
+  for (int i = 0; i < n; i++)
+    print (' '), print (reports[i].buffer);
+  print ('\n', stdout);
+  fflush (stdout);
+}
+
+/*------------------------------------------------------------------------*/
+
 // You might want to turn on profiling with './configure -p'.
 
 #ifdef PROFILING
@@ -883,24 +996,6 @@ static void check_vmtf_queue_invariant () {
 
 /*------------------------------------------------------------------------*/
 
-// Faster file IO without locking.
-
-static void print (char ch, FILE * file = stdout) {
-  fputc_unlocked (ch, file);
-}
-
-static void print (const char * s, FILE * file = stdout) {
-  fputs_unlocked (s, file);
-}
-
-static void print (int lit, FILE * file = stdout) {
-  char buffer[20];
-  sprintf (buffer, "%d", lit);
-  print (buffer, file);
-}
-
-/*------------------------------------------------------------------------*/
-
 static void trace_empty_clause () {
   if (!proof_file) return;
   LOG ("tracing empty clause");
@@ -1001,6 +1096,61 @@ static void backtrack (int target_level = 0) {
 
 /*------------------------------------------------------------------------*/
 
+struct resolved_earlier {
+  bool operator () (Clause * a, Clause * b) {
+    return a->resolved () < b->resolved ();
+  }
+};
+
+static const int rescoring_resolved_limit = INT_MAX/2;
+
+static long rescore_resolved () {
+  vector<Clause*> work;
+  for (size_t i = 0; i < clauses.size (); i++) {
+    Clause * c = ref2clause (clauses[i]);
+    if (c->extended) work.push_back (c);
+  }
+  if (work.size () + 1 >= rescoring_resolved_limit)
+    die ("too many redundant 'extended' clauses to rescore 'resolved'");
+  sort (work.begin (), work.end (), resolved_earlier ());
+  stats.resolved32 = 0;
+  bool set_limit = false;
+  for (size_t i = 0; i < work.size (); i++) {
+    Clause * c = work[i];
+    long resolved = c->resolved ();
+    c->resolved () = ++stats.resolved32;
+    if (set_limit) continue;
+    if (resolved < limits.reduce.resolved) continue;
+    const bool different = (resolved > limits.reduce.resolved);
+    limits.reduce.resolved = stats.resolved32;
+    if (different) c->resolved () = ++stats.resolved32;
+    set_limit = true;
+  }
+  report ('R');
+  return ++stats.resolved32;
+}
+
+static bool rescoring_resolved () {
+#if 1
+  return stats.resolved32 >= rescoring_resolved_limit;
+#else
+  // For testing purposes use this one.
+  return stats.resolved32 > 2*stats.clauses.redundant + 1000;
+#endif
+}
+
+static long inc_resolved () {
+  stats.resolved++;
+  if (stats.resolved32 >= rescoring_resolved_limit)
+    die ("'resolved' counter too large bounds");
+  long res = ++stats.resolved32;
+  if (rescoring_resolved ()) res = rescore_resolved ();
+  assert (res > 0);
+  return res;
+}
+
+/*------------------------------------------------------------------------*/
+
 static void watch_literal (int lit, int blit, Clause * c) {
   watches (lit).push_back (Watch (blit, clause2ref (c)));
   LOG (c, "watch %d blit %d in", lit, blit);
@@ -1036,7 +1186,7 @@ static Clause * new_clause (bool red, int glue = 0) {
   res->reason = false;
   res->size = size;
   if ((res->extended = extended))
-    res->resolved () = ++stats.resolved,
+    res->resolved () = inc_resolved (),
     res->glue () = glue;
   assert (res->bytes () == bytes);
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
@@ -1092,98 +1242,6 @@ static Clause * new_learned_clause (int glue) {
   trace_add_clause (res);
   watch_clause (res);
   return res;
-}
-
-/*------------------------------------------------------------------------*/
-
-// The following statistics are printed in columns, whenever 'report' is
-// called.  For instance 'reduce' with prefix '-' will call it.  The other
-// more interesting report is due to learning a unit, called iteration, with
-// prefix 'i'.  To add another statistics column, add a corresponding line
-// here.  If you want to report something else add 'report (..)' functions.
-
-#define REPORTS \
-/*     HEADER, PRECISION, MIN, VALUE */ \
-REPORT(    "seconds",  2, 5, seconds ()) \
-REPORT(         "MB",  0, 2, current_bytes () / (double)(1l<<20)) \
-REPORT(      "level",  1, 4, ema.jump) \
-REPORT( "reductions",  0, 2, stats.reduce.count) \
-REPORT(   "restarts",  0, 4, stats.restarts) \
-REPORT(  "conflicts",  0, 5, stats.conflicts) \
-REPORT(  "redundant",  0, 5, stats.clauses.redundant) \
-REPORT(       "glue",  1, 4, ema.learned.glue.slow) \
-REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
-REPORT(  "variables",  0, 4, active_variables ()) \
-REPORT(  "remaining", -1, 5, percent (active_variables (), max_var)) \
-
-#if 0
-
-REPORT(   "slowglue",         1, ema.learned.glue.slow) \
-REPORT(   "fastglue",         1, ema.learned.glue.fast) \
-REPORT(    "resglue",         1, ema.resolved.glue) \
-REPORT(    "ressize",         1, ema.resolved.size) \
-
-#endif
-
-struct Report {
-  const char * header;
-  char buffer[20];
-  int pos;
-  Report (const char * h, int precision, int min, double value) : header (h) {
-    char fmt[10];
-    sprintf (fmt, "%%.%df", abs (precision));
-    if (precision < 0) strcat (fmt, "%%");
-    sprintf (buffer, fmt, value);
-    const int min_width = min;
-    if (strlen (buffer) >= (size_t) min_width) return;
-    sprintf (fmt, "%%%d.%df", min_width, abs (precision));
-    if (precision < 0) strcat (fmt, "%%");
-    sprintf (buffer, fmt, value);
-  }
-  Report () { }
-  void print_header (char * line) {
-    int len = strlen (header);
-    for (int i = -1, j = pos - (len + 1)/2 - 1; i < len; i++, j++)
-      line[j] = i < 0 ? ' ' : header[i];
-  }
-};
-
-static void report (char type) {
-  const int max_reports = 16;
-  Report reports[max_reports];
-  int n = 0;
-#define REPORT(HEAD,PREC,MIN,EXPR) \
-  assert (n < max_reports); \
-  reports[n++] = Report (HEAD, PREC, MIN, (double)(EXPR));
-  REPORTS
-#undef REPORT
-  if (!(stats.reports++ % 20)) {
-    print ("c\n", stdout);
-    int pos = 4;
-    for (int i = 0; i < n; i++) {
-      int len = strlen (reports[i].buffer);
-      reports[i].pos = pos + (len + 1)/2;
-      pos += len + 1;
-    }
-    const int max_line = pos + 20, nrows = 3;
-    char line[max_line];
-    for (int start = 0; start < nrows; start++) {
-      int i;
-      for (i = 0; i < max_line; i++) line[i] = ' ';
-      line[0] = 'c';
-      for (i = start; i < n; i += nrows) reports[i].print_header (line);
-      for (i = max_line-1; line[i-1] == ' '; i--) ;
-      line[i] = 0;
-      print (line, stdout);
-      print ('\n', stdout);
-    }
-    print ("c\n", stdout);
-  }
-  print ("c "), print (type);
-  for (int i = 0; i < n; i++)
-    print (' '), print (reports[i].buffer);
-  print ('\n', stdout);
-  fflush (stdout);
 }
 
 /*------------------------------------------------------------------------*/
@@ -1464,17 +1522,11 @@ static void bump_and_clear_seen_variables (int uip) {
   STOP (bump);
 }
 
-struct resolved_earlier {
-  bool operator () (Clause * a, Clause * b) {
-    return a->resolved () < b->resolved ();
-  }
-};
-
 static void bump_resolved_clauses () {
   START (bump);
   sort (resolved.begin (), resolved.end (), resolved_earlier ());
   for (size_t i = 0; i < resolved.size (); i++)
-    resolved[i]->resolved () = ++stats.resolved;
+    resolved[i]->resolved () = inc_resolved ();
   STOP (bump);
   resolved.clear ();
 }
@@ -1728,6 +1780,7 @@ static void setup_binaries () {
     others = 0;
   }
   int * num_binaries = new int[max_lit + 1];
+  inc_bytes ((max_lit + 1) * sizeof (int));
   for (int l = min_lit; l <= max_lit; l++) num_binaries[l] = 0;
   for (size_t i = 0; i < clauses.size (); i++) {
     Clause * c = ref2clause (clauses[i]);
@@ -1743,8 +1796,8 @@ static void setup_binaries () {
   inc_bytes (size_others * sizeof (int));
   others = new int[size_others];
   int * p = others + size_others;
-  for (int idx = queue.last; idx; idx = var (idx).prev) {
-    for (int sign = 1; sign >= -1; sign -= 2) {
+  for (int sign = -1; sign <= 2; sign += 2) {
+    for (int idx = queue.last; idx; idx = var (idx).prev) {
       const int lit = sign * phases[idx] * idx;
       const int count = num_binaries [ vlit (lit) ];
       if (count) {
@@ -1754,6 +1807,7 @@ static void setup_binaries () {
     }
   }
   assert (p == others);
+  dec_bytes ((max_lit + 1) * sizeof (int));
   delete [] num_binaries;
   for (size_t i = 0; i < clauses.size (); i++) {
     Clause * c = ref2clause (clauses[i]);
@@ -1847,7 +1901,7 @@ static void reduce () {
   setup_watches ();
   inc.reduce.conflicts += opts.reduceinc;
   limits.reduce.conflicts = stats.conflicts + inc.reduce.conflicts;
-  limits.reduce.resolved = stats.resolved;
+  limits.reduce.resolved = stats.resolved32;
   limits.reduce.fixed = stats.fixed;
   report ('-');
   STOP (reduce);
