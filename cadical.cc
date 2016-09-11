@@ -1788,7 +1788,7 @@ collect_garbage_clauses () {
     } else {
       LOG (c, "delete");
       if (c->redundant)
-	   assert (stats.clauses.redundant),   stats.clauses.redundant--;
+           assert (stats.clauses.redundant),   stats.clauses.redundant--;
       else assert (stats.clauses.irredundant), stats.clauses.irredundant--;
       assert (stats.clauses.current);
       stats.clauses.current--;
