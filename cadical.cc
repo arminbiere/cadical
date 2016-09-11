@@ -4,31 +4,31 @@ CaDiCaL
 
 Radically Simplified Conflict Driven Clause Learning (CDCL) SAT Solver
 
-The goal of CaDiCal is to have a minimalistic CDCL solver, which is easy
-to understand and change, while at the same time not too much slower
-than state of the art CDCL solvers if pre-processing is disabled.
+The goal of CaDiCal is to have a minimalistic CDCL solver, which is easy to
+understand and change, while at the same time not too much slower than state
+of the art CDCL solvers if pre-processing is disabled.
 
 MIT License
 
 Copyright (c) 2016 Armin Biere, JKU.
 
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and associated documentation files (the "Software"),
-to deal in the Software without restriction, including without limitation
-the rights to use, copy, modify, merge, publish, distribute, sublicense,
-and/or sell copies of the Software, and to permit persons to whom the
-Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to
+deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included
-in all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+IN THE SOFTWARE.
 
 --------------------------------------------------------------------------*/
 
@@ -103,13 +103,11 @@ static struct {
 
 /*------------------------------------------------------------------------*/
 
-enum { GLUE_OFFSET = 4, RESOLVED_OFFSET = 12, EXTENDED_OFFSET = 12 };
-
 struct Clause {
-  bool redundant;       // so not 'irredundant' and on 'redundant' stack
+  bool redundant;       // aka 'learned' so not 'irredundant' (original)
   bool garbage;         // can be garbage collected unless it is a 'reason'
   bool reason;          // reason / antecedent clause can not be collected
-  bool extended;	// see discussion on 'additional fields' below.
+  bool extended;        // see discussion on 'additional fields' below.
 
   int size;             // actual size of 'literals' (at least 2)
 
@@ -121,14 +119,23 @@ struct Clause {
     size = 2, literals[0] = a, literals[1] = b;
   }
 
+  enum {
+    GLUE_OFFSET = 4,      // byte offset of 'glue' field before clause
+    RESOLVED_OFFSET = 12, // byte offset of 'resolved' field before clause
+    EXTENDED_OFFSET = 12, // additional bytes if clause is extended
+  };            
+
   // Actually, a redundant large clause has two additional fields
   //
   //  long resolved;      // conflict index when last resolved
   //  int glue;           // LBD = glucose level = glue
   //
-  // These are however placed before the actual clause data and
-  // thus not directly visible.  We set 'extended' to 'true' if
-  // these two fields are allocated.
+  // These are however placed before the actual clause data and thus not
+  // directly visible.  We set 'extended' to 'true' if these two fields are
+  // allocated.  The policy used to determine whether a redundant clause is
+  // extended uses the 'keepsize' option.  A redundant clause larger than
+  // its value is extended. Usually we always keep clauses of size 2 or 3,
+  // which then do not require 'glue' nor 'resolved' fields.
 
   long & resolved () {
     assert (this), assert (extended);
@@ -139,14 +146,32 @@ struct Clause {
     assert (this), assert (extended);
     return *(int*) (((char*)this) - GLUE_OFFSET);
   }
+
+  size_t bytes () const;
+};
+
+// Memory allocator for compact ordered allocation of clauses with 32-bit
+// references instead of 64-bit pointers.  A similar technique is used in
+// MiniSAT and descendants as well as in Splatz.  This first gives fast
+// consecutive (that is cache friendly) allocation of clauses and more
+// importantly allows to mix (32-bit) blocking literals with clause
+// references which reduces watcher size by 2 from 16 to 8 bytes.
+
+struct Ref {
+  unsigned ref;
+  Ref (unsigned r = 0) : ref (r) { }
+  Ref (Clause *);
+  operator Clause * () const;
+  operator unsigned () { return ref; }
 };
 
 struct Reason {
   bool embedded;
-  union { Clause binary, * ptr; };
-  Reason (Clause * c = 0) : embedded (false) { ptr = c; }
+  Ref ref;
+  Clause binary; 
+  Reason (Clause * c = 0) : embedded (false) { ref = c; }
   Reason (int a, int b) : embedded (true) { binary.set (a, b); }
-  Clause * clause () { return embedded ? &binary : ptr; }
+  Clause * clause () { if (embedded) return &binary; else return ref; }
   Clause * operator -> () { return clause (); }
   operator Clause * () { return clause (); }
   int size () { assert (clause ()); return clause ()->size; }
@@ -159,8 +184,8 @@ struct Var {
   int trail;            // trail level
 
   bool seen;            // analyzed in 'analyze' and will be bumped
-  bool poison;          // can not be minimized during clause minimization
-  bool minimized;       // can be removed during clause minimization
+  bool poison;          // can not be removed during clause minimization
+  bool removable;       // can be removed during clause minimization
   int mark;             // reason position for non-recursive DFS
 
   int prev, next;       // double links for decision VMTF queue
@@ -169,44 +194,61 @@ struct Var {
   Reason reason;        // implication graph edge
 
   Var () :
-    seen (false), poison (false), minimized (false), mark (0),
+    seen (false), poison (false), removable (false), mark (0),
     prev (0), next (0), bumped (0)
   { }
 };
 
 struct Watch {
   int blit;             // if blocking literal is true do not visit clause
-  Clause * clause;
-  Watch (int b, Clause * c) : blit (b), clause (c) { }
+  Ref clause;
+  Watch (int b, Ref r) : blit (b), clause (r) { }
   Watch () { }
 };
 
-// Memory allocator for compact ordered allocation of clauses with
-// 32-bit references instead of 64-bit pointers.  A similar technique is
-// used in MiniSAT and descendants as well as in Splatz.  This first gives
-// fast consecutive (that is cache friendly) allocation of clauses and
-// more importantly allows to mix (32-bit) blocking literals with clause
-// references which reduces watcher size by 2 from 16 to 8 bytes.
-
-typedef unsigned Ref;			// 32-bit = 4 Byte reference
-static const size_t alignment = 4;	// memory alignment in an arena
+static const size_t alignment = 4;      // memory alignment in an arena
+#ifndef NDEBUG
+static bool aligned (size_t bytes) { return !((alignment-1)&bytes); }
+static bool aligned (void * ptr) { return aligned ((size_t) ptr); }
+#endif
 
 class Arena {
   char * start, * top, * end;
   void enlarge (size_t new_capacity);
+  void init () { start = top = end = 0; }
 public:
   size_t size () const { return top - start; }
   size_t capacity () const { return end - start; }
+
+  void resize (char * new_top) {
+    assert (start <= new_top);
+    assert (new_top <= end);
+    assert (aligned (new_top));
+    top = new_top;
+  }
+
   bool contains (void * ptr) const { return start <= ptr && ptr < top; }
+
   void * operator [] (Ref ref) const {
+    if (!ref) return 0;
     assert (ref < size ());
-    char * res = start + alignment*(size_t)ref;
+    char * res = start + alignment * (size_t) ref;
     assert (contains (res));
     return res;
   }
-  void init () { start = top = end = 0; }
-  void release ();
+
+  Ref operator [] (void * p) const {
+    if (!p) return 0u;
+    assert (contains (p)),
+    assert (aligned (p));
+    assert (start < p);
+    return (((char*)p) - start)/alignment;
+  }
+
   void * allocate (size_t bytes, Ref & ref);
+
+  void release ();
+
   Arena () { init (); }
   ~Arena () { release (); }
 };
@@ -268,17 +310,17 @@ static Var * vars;
 static signed char * vals;              // assignment
 static signed char * phases;            // saved previous assignment
 
-// This table contains for each literal a zero terminated sequence of
-// other literals in binary clauses with the first literal.  This avoids
-// to use 'vector' for this data which is mostly static.  New binary
-// clauses are treated as long clauses until the next 'reduce'.
+// This 'others' table contains for each literal a zero terminated sequence
+// of other literals in binary clauses with the first literal.  This avoids
+// to use 'vector' for this data which is mostly static.  New binary clauses
+// are treated as long clauses until the next 'reduce'.
 
 static int * others;
 static size_t size_others;
 
 static struct {
   Watches * watches;
-  int ** binaries;		// points to start of sequence.
+  int ** binaries;              // points to start of sequence.
 } literal;
 
 // VMTF decision queue
@@ -302,21 +344,21 @@ static struct {
 
 static vector<int> clause;      // temporary clause in parsing & learning
 
-static vector<Clause*> irredundant;     // original / not redundant clauses
-static vector<Clause*> redundant;       // redundant / learned clauses
+static Arena arena;             // memory arena for storing clauses
+static vector<Ref> clauses;     // references to all clauses
 
 static bool iterating;          // report top-level assigned variables
 
 static struct {
   vector<int> literals;         // seen & bumped literals in 'analyze'
   vector<int> levels;           // decision levels of 1st UIP clause
-  vector<int> minimized;        // DFS done: minimized or poisoned
+  vector<int> minimized;        // marked removable or poison in 'minmize'
 } seen;
 
 static vector<Clause*> resolved;
 
 static Reason conflict;         // set in 'propagation', reset in 'analyze'
-static Clause clashing_unit;    // needed if input contains clashing units
+static bool clashing_unit;      // set 'parse_dimacs'
 
 static struct {
   long conflicts;
@@ -338,8 +380,8 @@ static struct {
 
   struct { long learned, minimized; } literals;  // in 'minimize_clause'
 
-  struct { long current, max; } clauses;
-  struct { size_t current, max; } bytes;
+  struct { long redundant, irredundant, current, max; } clauses;
+  struct { struct { size_t current, max; } total, watcher; } bytes;
   struct { long units; } learned;
 
   int fixed;                    // top level assigned variables
@@ -377,13 +419,13 @@ static int lineno, close_input, close_proof, trace_proof;
 
 #ifndef NDEBUG
 
-// Sam Buss suggested to debug the case where a solver incorrectly
-// claims the formula to be unsatisfiable by checking every learned
-// clause to be satisfied by a satisfying assignment.  Thus the first
-// inconsistent learned clause will be immediately flagged without the
-// need to generate proof traces and perform forward proof checking.
-// The incorrectly derived clause will raise an abort signal and
-// thus allows to debug the issue with a symbolic debugger immediately.
+// Sam Buss suggested to debug the case where a solver incorrectly claims
+// the formula to be unsatisfiable by checking every learned clause to be
+// satisfied by a satisfying assignment.  Thus the first inconsistent
+// learned clause will be immediately flagged without the need to generate
+// proof traces and perform forward proof checking.  The incorrectly derived
+// clause will raise an abort signal and thus allows to debug the issue with
+// a symbolic debugger immediately.
 
 static FILE * solution_file;
 static const char *solution_name;
@@ -455,104 +497,6 @@ static void perr (const char * fmt, ...) {
 
 /*------------------------------------------------------------------------*/
 
-static double relative (double a, double b) { return b ? a / b : 0; }
-
-static double percent (double a, double b) { return relative (100 * a, b); }
-
-static double seconds () {
-  struct rusage u;
-  double res;
-  if (getrusage (RUSAGE_SELF, &u)) return 0;
-  res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;  // user time
-  res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec; // + system time
-  return res;
-}
-
-static void inc_bytes (size_t bytes) {
-  if ((stats.bytes.current += bytes) > stats.bytes.max)
-    stats.bytes.max = stats.bytes.current;
-}
-
-static void dec_bytes (size_t bytes) {
-  assert (stats.bytes.current >= bytes);
-  stats.bytes.current -= bytes;
-}
-
-#ifndef NDEBUG
-static bool aligned (size_t bytes) { return !((alignment-1)&bytes); }
-static bool aligned (void * ptr) { return aligned ((size_t) ptr); }
-#endif
-
-static inline size_t align (size_t bytes) {
-  size_t res = (bytes + (alignment-1)) & ~ (alignment-1);
-  assert (aligned (res)), assert (!aligned (bytes) || bytes == res);
-  return res;
-}
-
-inline void Arena::release () { 
-  if (!start) return;
-  dec_bytes (capacity ());
-  delete [] start;
-  init ();
-}
-
-inline void * Arena::allocate (size_t bytes, Ref & ref) {
-  bytes = align (bytes);
-  char * new_top = top + bytes;
-  if (new_top > end) enlarge (new_top - start), new_top = top + bytes;
-  char * res = top;
-  top = new_top;
-  ref = (res - start)/alignment;
-  assert (start + ref == res);
-  assert (aligned (res)), assert (contains (res));
-  return res;
-}
-
-void Arena::enlarge (size_t requested_capacity) {
-  if (requested_capacity > (1l << 32))
-    die ("maximum memory arena of %ld GB exhausted",
-      ((alignment * (1l<<32)) >> 30));
-  size_t old_capacity = capacity (), old_size = size ();
-  size_t new_capacity = old_capacity ? old_capacity : 4;
-  while (new_capacity < requested_capacity)
-    if (new_capacity < (1l << 30)) new_capacity *= 2;
-    else new_capacity += (1l << 30);
-  assert (new_capacity >= requested_capacity);
-  char * new_start = new char[new_capacity];
-  end = new_start + new_capacity;
-  top = new_start + old_size;
-  memcpy (new_start, start, old_size);
-  dec_bytes (old_capacity);
-  inc_bytes (new_capacity);
-  delete [] start;
-  start = new_start;
-}
-
-#define ADJUST_MAX_BYTES(V) \
-  res += V.capacity () * sizeof (V[0])
-
-static size_t max_bytes () {
-  size_t res = stats.bytes.max;
-#ifndef NDEBUG
-  ADJUST_MAX_BYTES (original_literals);
-#endif
-  ADJUST_MAX_BYTES (clause);
-  ADJUST_MAX_BYTES (trail);
-  ADJUST_MAX_BYTES (seen.literals);
-  ADJUST_MAX_BYTES (seen.levels);
-  ADJUST_MAX_BYTES (seen.minimized);
-  ADJUST_MAX_BYTES (resolved);
-  ADJUST_MAX_BYTES (irredundant);
-  ADJUST_MAX_BYTES (redundant);
-  ADJUST_MAX_BYTES (levels);
-  res += (4 * stats.clauses.max * sizeof (Watch)) / 3;  // estimate
-  return res;
-}
-
-static int active_variables () { return max_var - stats.fixed; }
-
-/*------------------------------------------------------------------------*/
-
 // You might want to turn on logging with './configure -l'.
 
 #ifdef LOGGING
@@ -575,7 +519,8 @@ static void LOG (Clause * c, const char *fmt, ...) {
   va_end (ap);
   if (c) {
     if (!c->redundant) printf (" irredundant");
-    else if (c->extended) printf (" redundant glue %d", c->glue ());
+    else if (c->extended)
+      printf (" redundant glue %d resolved %ld", c->glue (), c->resolved ());
     else printf (" redundant without glue");
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
@@ -601,6 +546,114 @@ static void LOG (const vector<int> & clause, const char *fmt, ...) {
 #else
 #define LOG(ARGS...) do { } while (0)
 #endif
+
+/*------------------------------------------------------------------------*/
+
+static double relative (double a, double b) { return b ? a / b : 0; }
+
+static double percent (double a, double b) { return relative (100 * a, b); }
+
+static double seconds () {
+  struct rusage u;
+  double res;
+  if (getrusage (RUSAGE_SELF, &u)) return 0;
+  res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;  // user time
+  res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec; // + system time
+  return res;
+}
+
+static void inc_bytes (size_t bytes) {
+  if ((stats.bytes.total.current += bytes) > stats.bytes.total.max)
+    stats.bytes.total.max = stats.bytes.total.current;
+}
+
+static void dec_bytes (size_t bytes) {
+  assert (stats.bytes.total.current >= bytes);
+  stats.bytes.total.current -= bytes;
+}
+
+static inline size_t align (size_t bytes) {
+  size_t res = (bytes + (alignment-1)) & ~ (alignment-1);
+  assert (aligned (res)), assert (!aligned (bytes) || bytes == res);
+  return res;
+}
+
+inline void Arena::release () { 
+  if (!start) return;
+  dec_bytes (capacity ());
+  delete [] start;
+  init ();
+}
+
+inline void * Arena::allocate (size_t bytes, Ref & ref) {
+  bytes = align (bytes);
+  char * new_top = top + bytes;
+  if (new_top > end) enlarge (new_top - start), new_top = top + bytes;
+  char * res = top;
+  top = new_top;
+  ref = (res - start)/alignment;
+  assert (start + alignment * (size_t) ref == res);
+  assert ((*this)[ref] == res);
+  assert (aligned (res)), assert (contains (res));
+  return res;
+}
+
+void Arena::enlarge (size_t requested_capacity) {
+  if (!start) requested_capacity += alignment;          // zero ref = zero ptr
+  if (requested_capacity > (1l << 32))
+    die ("maximum memory arena of %ld GB exhausted",
+      ((alignment * (1l<<32)) >> 30));
+  size_t old_capacity = capacity (), old_size = size ();
+  size_t new_capacity = old_capacity ? old_capacity : 4;
+  while (new_capacity < requested_capacity)
+    if (new_capacity < (1l << 30)) new_capacity *= 2;
+    else new_capacity += (1l << 30);
+  assert (new_capacity >= requested_capacity);
+  char * new_start = new char[new_capacity];
+  memcpy (new_start, start, old_size);
+  dec_bytes (old_capacity);
+  inc_bytes (new_capacity);
+  if (start) delete [] start;
+  start = new_start;
+  top   = new_start + (old_size ? old_size : alignment);
+  end   = new_start + new_capacity;
+  LOG ("enlarged arena to new capacity %ld", new_capacity);
+}
+
+#define VECTOR_BYTES(V) \
+  res += V.capacity () * sizeof (V[0])
+
+static size_t vector_bytes () {
+  size_t res = 0;
+#ifndef NDEBUG
+  VECTOR_BYTES (original_literals);
+#endif
+  VECTOR_BYTES (clause);
+  VECTOR_BYTES (trail);
+  VECTOR_BYTES (seen.literals);
+  VECTOR_BYTES (seen.levels);
+  VECTOR_BYTES (seen.minimized);
+  VECTOR_BYTES (resolved);
+  VECTOR_BYTES (clauses);
+  VECTOR_BYTES (levels);
+  return res;
+}
+
+static size_t max_bytes () {
+  size_t res = stats.bytes.total.max + vector_bytes ();
+  if (stats.bytes.watcher.max > 0) res += stats.bytes.watcher.max;
+  else res += (4 * stats.clauses.max * sizeof (Watch)) / 3;
+  return res;
+}
+
+static size_t current_bytes () {
+  size_t res = stats.bytes.total.current + vector_bytes ();
+  if (stats.bytes.watcher.current > 0) res += stats.bytes.watcher.current;
+  else res += (4 * stats.clauses.current * sizeof (Watch)) / 3;
+  return res;
+}
+
+static int active_variables () { return max_var - stats.fixed; }
 
 /*------------------------------------------------------------------------*/
 
@@ -697,10 +750,10 @@ inline void EMA::update (double y, const char * name) {
   // is that 'beta' slowly moves down to 'alpha' to smoothly initialize
   // the exponential moving average.  This technique was used in 'Splatz'.
 
-  // We maintain 'beta = 2^-period' until 'beta < alpha' and then set
-  // it to 'alpha'.  The period gives the number of updates this 'beta'
-  // is used.  So for smaller and smaller 'beta' we wait exponentially
-  // longer until 'beta' is halfed again.  The sequence of 'beta's is
+  // We maintain 'beta = 2^-period' until 'beta < alpha' and then set it to
+  // 'alpha'.  The period gives the number of updates this 'beta' is used.
+  // So for smaller and smaller 'beta' we wait exponentially longer until
+  // 'beta' is halfed again.  The sequence of 'beta's is
   //
   //   1,
   //   1/2, 1/2,
@@ -708,8 +761,8 @@ inline void EMA::update (double y, const char * name) {
   //   1/8, 1/8, 1/8, 1/8, 1/8, 1/8, 1/8, 1/8,
   //   ...
   //
-  //  We did not derive this formally, but observed it during logging.
-  //  This is in 'Splatz' but not published yet, e.g., was not in POS'15.
+  //  We did not derive this formally, but observed it during logging.  This
+  //  is in 'Splatz' but not published yet, e.g., was not in POS'15.
 
   if (beta <= alpha || wait--) return;
   wait = period = 2*(period + 1) - 1;
@@ -758,9 +811,9 @@ static inline int sign (int lit) {
   return lit < 0 ? -1 : 1;
 }
 
-// Unsigned version with LSB denoting sign.  This is used in indexing
-// arrays by literals.  The idea is to keep the elements in such an array
-// for both the positive and negated version of a literal close together
+// Unsigned version with LSB denoting sign.  This is used in indexing arrays
+// by literals.  The idea is to keep the elements in such an array for both
+// the positive and negated version of a literal close together
 
 static inline unsigned vlit (int lit) {
   return (lit < 0) + 2u * (unsigned) vidx (lit);
@@ -853,6 +906,7 @@ static void trace_flushing_clause (Clause * c) {
 }
 
 static void trace_add_clause (Clause * c) { trace_clause (c, true); }
+
 static void trace_delete_clause (Clause * c) { trace_clause (c, false); }
 
 static void learn_empty_clause () {
@@ -925,23 +979,23 @@ static void watch_clause (Clause * c) {
   watch_literal (l1, l0, c);
 }
 
-static bool extended_clause (bool red, int size) { return red && size > 2; }
-
-static size_t bytes_clause (bool red, int size) {
-  assert (size >= 2);
-  size_t res = sizeof (Clause) + (size - 2) * sizeof (int);
-  if (extended_clause (red, size)) res += EXTENDED_OFFSET;
+inline size_t Clause::bytes () const {
+  size_t res = sizeof *this + (size - 2) * sizeof (int);
+  if (extended) res += EXTENDED_OFFSET;
   return res;
 }
 
 static Clause * new_clause (bool red, int glue = 0) {
   assert (clause.size () <= (size_t) INT_MAX);
-  const int size = (int) clause.size ();
-  const size_t bytes = bytes_clause (red, size);
-  char * ptr = new char[bytes];
-  inc_bytes (bytes);
-  const bool extended = extended_clause (red, size);
-  if (extended) ptr += EXTENDED_OFFSET;
+  const int size = (int) clause.size ();  assert (size >= 2);
+  size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int);
+  const bool extended = red && size > opts.keepsize;
+  if (extended) bytes += Clause::EXTENDED_OFFSET;
+  Ref ref;
+  char * ptr = (char*) arena.allocate (bytes, ref);
+  if (extended) 
+    ptr += Clause::EXTENDED_OFFSET,
+    ref.ref += Clause::EXTENDED_OFFSET/alignment;
   Clause * res = (Clause*) ptr;
   res->redundant = red;
   res->garbage = false;
@@ -950,9 +1004,11 @@ static Clause * new_clause (bool red, int glue = 0) {
   if ((res->extended = extended))
     res->resolved () = ++stats.resolved,
     res->glue () = glue;
+  assert (res->bytes () == bytes);
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
-  if (red) redundant.push_back (res);
-  else irredundant.push_back (res);
+  clauses.push_back (ref);
+  if (red) stats.clauses.redundant++;
+  else     stats.clauses.irredundant++;
   if (++stats.clauses.current > stats.clauses.max)
     stats.clauses.max = stats.clauses.current;
   LOG (res, "new");
@@ -991,7 +1047,7 @@ static void add_new_original_clause () {
     int unit = clause[0], tmp = val (unit);
     if (!tmp) assign (unit);
     else if (tmp < 0) {
-      if (!unsat) msg ("parsed clashing unit"), conflict = &clashing_unit;
+      if (!unsat) msg ("parsed clashing unit"), clashing_unit = true;
       else LOG ("original clashing unit produces another inconsistency");
     } else LOG ("original redundant unit");
   } else watch_clause (new_clause (false));
@@ -1004,52 +1060,49 @@ static Clause * new_learned_clause (int glue) {
   return res;
 }
 
-static size_t delete_clause (Clause * c) { 
-  LOG (c, "delete");
-  assert (stats.clauses.current > 0);
-  stats.clauses.current--;
-  size_t bytes = bytes_clause (c->redundant, c->size);
-  dec_bytes (bytes);
-  char * ptr = (char*) c;
-  if (c->extended) ptr -= EXTENDED_OFFSET;
-  delete [] (char*) ptr;
-  return bytes;
-}
-
 /*------------------------------------------------------------------------*/
 
 // The following statistics are printed in columns, whenever 'report' is
-// called.  For instance reduce with prefix '-' will call it.  The other
-// more interesting report is due learning a unit with prefix 'i'.
-// In order to add another column, add a corresponding line here.
+// called.  For instance 'reduce' with prefix '-' will call it.  The other
+// more interesting report is due to learning a unit, called iteration, with
+// prefix 'i'.  To add another statistics column, add a corresponding line
+// here.  If you want to report something else add 'report (..)' functions.
 
 #define REPORTS \
-/*            HEADER, PRECISION, VALUE */ \
-REPORT(    "seconds",         2, seconds ()) \
-REPORT(         "MB",         0, max_bytes () / (double)(1l<<20)) \
-REPORT(  "conflicts",         0, stats.conflicts) \
-REPORT(  "redundant",         0, redundant.size ()) \
+/*     HEADER, PRECISION, MIN, VALUE */ \
+REPORT(    "seconds",  2, 5, seconds ()) \
+REPORT(         "MB",  0, 2, current_bytes () / (double)(1l<<20)) \
+REPORT(      "level",  1, 4, ema.jump) \
+REPORT( "reductions",  0, 2, stats.reduce.count) \
+REPORT(   "restarts",  0, 4, stats.restarts) \
+REPORT(  "conflicts",  0, 5, stats.conflicts) \
+REPORT(  "redundant",  0, 5, stats.clauses.redundant) \
+REPORT(       "glue",  1, 4, ema.learned.glue.slow) \
+REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
+REPORT(  "variables",  0, 4, active_variables ()) \
+REPORT(  "remaining", -1, 5, percent (active_variables (), max_var)) \
+
+#if 0
+
 REPORT(   "slowglue",         1, ema.learned.glue.slow) \
 REPORT(   "fastglue",         1, ema.learned.glue.fast) \
-REPORT(       "jump",         1, ema.jump) \
 REPORT(    "resglue",         1, ema.resolved.glue) \
 REPORT(    "ressize",         1, ema.resolved.size) \
-REPORT("irredundant",         0, irredundant.size ()) \
-REPORT(  "variables",         0, active_variables ()) \
-REPORT(     "remain",        -1, percent (active_variables (), max_var)) \
+
+#endif
 
 struct Report {
   const char * header;
   char buffer[20];
   int pos;
-  Report (const char * h, int precision, double value) : header (h) {
+  Report (const char * h, int precision, int min, double value) : header (h) {
     char fmt[10];
     sprintf (fmt, "%%.%df", abs (precision));
     if (precision < 0) strcat (fmt, "%%");
     sprintf (buffer, fmt, value);
-    const int min_len = 4;
-    if (strlen (buffer) >= min_len) return;
-    sprintf (fmt, "%%%d.%df", min_len, abs (precision));
+    const int min_width = min;
+    if (strlen (buffer) >= (size_t) min_width) return;
+    sprintf (fmt, "%%%d.%df", min_width, abs (precision));
     if (precision < 0) strcat (fmt, "%%");
     sprintf (buffer, fmt, value);
   }
@@ -1065,9 +1118,9 @@ static void report (char type) {
   const int max_reports = 16;
   Report reports[max_reports];
   int n = 0;
-#define REPORT(HEAD,POS,EXPR) \
+#define REPORT(HEAD,PREC,MIN,EXPR) \
   assert (n < max_reports); \
-  reports[n++] = Report (HEAD, POS, (double)(EXPR));
+  reports[n++] = Report (HEAD, PREC, MIN, (double)(EXPR));
   REPORTS
 #undef REPORT
   if (!(stats.reports++ % 20)) {
@@ -1101,57 +1154,90 @@ static void report (char type) {
 
 /*------------------------------------------------------------------------*/
 
+// The 'propagate' function is usually the hot-spot of a CDCL SAT solver.
+// The 'trail' stack saves assigned variables and is used here as BFS queue
+// for checking clauses with the negation of assigned variables for being in
+// conflict or whether they produce additional assignments (units).  This
+// version of 'propagate' uses lazy watches and keeps two watches literals
+// at the beginning of the clause.  We also have seperate data structures
+// for binary clauses and use 'blocking literals' to reduce the number of
+// times clauses have to be visited.
+
 static bool propagate () {
   assert (!unsat);
   START (propagate);
+
+  // The number of assigned variables propagated (at least for binary
+  // clauses) gives the number of 'propagations', which is commonly used
+  // to compare raw 'propagation speed' of solvers.  We save the BFS next
+  // binary counter to avoid updating the 64-bit 'propagations' counter in
+  // this tight loop below.
+
+  const size_t before = next.binaries;
+
   while (!conflict) {
-    if (next.binaries < trail.size ()) {
-      stats.propagations++;
+
+    // Propagate binary clauses eagerly and even continue propagating if a
+    // conflicting binary clause if found.
+
+    while (next.binaries < trail.size ()) {
       const int lit = trail[next.binaries++];
-      assert (val (lit) > 0);
       LOG ("propagating binaries of %d", lit);
-      if (!literal.binaries) continue;
-      int * p = binaries (-lit), other, b;
+      assert (val (lit) > 0);
+      assert (literal.binaries);
+      const int * p = binaries (-lit);
       if (!p) continue;
-      while  (!conflict && (other = *p++))
-	if ((b = val (other)) < 0) conflict = Reason (-lit, other);
-	else if (!b) assign (other, Reason (-lit, other));
-    } else if (next.watches < trail.size ()) {
+      int other;
+      while  ((other = *p++)) {
+        const int b = val (other);
+        if (b < 0) conflict = Reason (-lit, other);
+        else if (!b) assign (other, Reason (-lit, other));
+      }
+    }
+
+    // Then if all binary clauses are propagated, go over longer clauses
+    // with the negation of the assigned literal on the trail.
+
+    if (!conflict && next.watches < trail.size ()) {
       const int lit = trail[next.watches++];
       assert (val (lit) > 0);
       LOG ("propagating watches of %d", lit);
       Watches & ws = watches (-lit);
       size_t i = 0, j = 0;
       while (!conflict && i < ws.size ()) {
-	const Watch w = ws[j++] = ws[i++];
-	const int b = val (w.blit);
-	if (b > 0) continue;
-	Clause * c = w.clause;
-	const int size = c->size;
-	int * lits = c->literals;
-	if (lits[1] != -lit) swap (lits[0], lits[1]);
-	assert (lits[1] == -lit);
-	const int u = val (lits[0]);
-	if (u > 0) ws[j-1].blit = lits[0];
-	else {
-	  int k, v = -1;
-	  for (k = 2; k < size && (v = val (lits[k])) < 0; k++)
-	    ;
-	  if (v > 0) ws[j-1].blit = lits[k];
-	  else if (!v) {
-	    LOG (w.clause, "unwatch %d in", -lit);
-	    swap (lits[1], lits[k]);
-	    watch_literal (lits[1], -lit, w.clause);
-	    j--;
-	  } else if (!u) assign (lits[0], w.clause);
-	  else conflict = w.clause;
-	}
+        const Watch w = ws[j++] = ws[i++];      // keep watch by default
+        const int b = val (w.blit);
+        if (b > 0) continue;
+        Clause * c = w.clause;
+        const int size = c->size;
+        int * lits = c->literals;
+        if (lits[1] != -lit) swap (lits[0], lits[1]);
+        assert (lits[1] == -lit);
+        const int u = val (lits[0]);
+        if (u > 0) ws[j-1].blit = lits[0];
+        else {
+          int k, v = -1;
+          for (k = 2; k < size && (v = val (lits[k])) < 0; k++)
+            ;
+          if (v > 0) ws[j-1].blit = lits[k];
+          else if (!v) {
+            LOG (c, "unwatch %d in", -lit);
+            swap (lits[1], lits[k]);
+            watch_literal (lits[1], -lit, c);
+            j--;                                // flush watch
+          } else if (!u) assign (lits[0], c);
+          else conflict = c;
+        }
       }
       while (i < ws.size ()) ws[j++] = ws[i++];
       ws.resize (j);
+
     } else break;
   }
+
   if (conflict) { stats.conflicts++; LOG (conflict, "conflict"); }
+  stats.propagations += next.binaries - before;;
+
   STOP (propagate);
   return !conflict;
 }
@@ -1195,13 +1281,13 @@ static void check_clause () {
 
 /*------------------------------------------------------------------------*/
 
-#if 0
+#if 1
 
-// Recursive but bounded version of DFS for minimizing clauses.
+// Compact recursive but bounded version of DFS for minimizing clauses.
 
 static bool minimize_literal (int lit, int depth = 0) {
   Var & v = var (lit);
-  if (!v.level || v.minimized || (depth && v.seen)) return true;
+  if (!v.level || v.removable || (depth && v.seen)) return true;
   if (!v.reason || v.poison || v.level == level) return false;
   const Level & l = levels[v.level];
   if ((!depth && l.seen < 2) || v.trail <= l.trail) return false;
@@ -1211,7 +1297,7 @@ static bool minimize_literal (int lit, int depth = 0) {
   for (int i = 0, other; res && i < size; i++)
     if ((other = lits[i]) != lit)
       res = minimize_literal (-other, depth+1);
-  if (res) v.minimized = true; else v.poison = true;
+  if (res) v.removable = true; else v.poison = true;
   seen.minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
   return res;
@@ -1222,12 +1308,14 @@ static bool minimize_literal (int lit, int depth = 0) {
 // Non-recursive unbounded version of DFS for minimizing clauses.
 // It is more ugly and needs slightly more heap memory for variables
 // due to 'mark' used for saving the position in the reason clause.
+// It also trades stack memory for holding the recursion stack
+// for heap memory, which however should be negligible.
 // It runs minimization until completion though and thus might
 // remove more literals than the bounded recursive version.
 
 static int minimize_base_case (int root, int lit) {
   Var & v = var (lit);
-  if (!v.level || v.minimized || (root != lit && v.seen)) return 1;
+  if (!v.level || v.removable || (root != lit && v.seen)) return 1;
   if (!v.reason || v.poison || v.level == level) return -1;
   const Level & l = levels[v.level];
   if ((root == lit && l.seen < 2) || v.trail <= l.trail) return -1;
@@ -1253,7 +1341,7 @@ NEXT: if (v.mark < size) {
           else stack.push_back (-other);
         }
       } else {
-        v.minimized = true;
+        v.removable = true;
 DONE:   seen.minimized.push_back (lit);
         stack.pop_back ();
       }
@@ -1285,7 +1373,7 @@ static void minimize_clause () {
   clause.resize (j);
   for (size_t i = 0; i < seen.minimized.size (); i++) {
     Var & v = var (seen.minimized[i]);
-    v.minimized = v.poison = false;
+    v.removable = v.poison = false;
     v.mark = 0;
   }
   seen.minimized.clear ();
@@ -1553,9 +1641,9 @@ static void flush_falsified_literals (Clause * c) {
   LOG (c, "flushed %d literals and got", flushed);
 }
 
-static void mark_satisfied_clauses_as_garbage (vector<Clause*> & cs) {
-  for (size_t i = 0; i < cs.size (); i++) {
-    Clause * c = cs[i];
+static void mark_satisfied_clauses_as_garbage () {
+  for (size_t i = 0; i < clauses.size (); i++) {
+    Clause * c = clauses[i];
     if (c->garbage) continue;
     const int tmp = clause_contains_fixed_literal (c);
          if (tmp > 0) c->garbage = true;
@@ -1571,6 +1659,9 @@ struct glue_larger {
   }
 };
 
+inline Ref::operator Clause * () const { return (Clause*) arena[ref]; }
+inline Ref::Ref (Clause * c) : ref (arena[c]) { }
+
 // This function implements the important reduction policy. It determines
 // which redundant clauses are considered not useful and thus will be
 // collected in a subsequent garbage collection phase.
@@ -1578,9 +1669,9 @@ struct glue_larger {
 static void mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
   assert (stack.empty ());
-  for (size_t i = 0; i < redundant.size (); i++) {
-    Clause * c = redundant[i];
-    assert (c->redundant);
+  for (size_t i = 0; i < clauses.size (); i++) {
+    Clause * c = clauses[i];
+    if (!c->redundant) continue;
     if (c->reason) continue;
     if (c->garbage) continue;
     if (c->size <= opts.keepsize) continue;
@@ -1598,27 +1689,7 @@ static void mark_useless_redundant_clauses_as_garbage () {
   stack.clear ();
 }
 
-//
-
-static void count_binaries (int * num_binaries, vector<Clause*> & cs) {
-  for (size_t i = 0; i < cs.size (); i++) {
-    Clause * c = cs[i];
-    if (c->garbage || c->size != 2) continue;
-    int l0 = c->literals[0], l1 = c->literals[1];
-    num_binaries[vlit (l0)]++, num_binaries[vlit (l1)]++;
-  }
-}
-
-static void fill_others (vector<Clause*> & cs) {
-  for (size_t i = 0; i < cs.size (); i++) {
-    Clause * c = cs[i];
-    if (c->garbage || c->size != 2) continue;
-    int l0 = c->literals[0], l1 = c->literals[1];
-    *--binaries (l0) = l1, *--binaries (l1) = l0;
-  }
-}
-
-static void init_others () {
+static void setup_binaries () {
   if (others) {
     dec_bytes (size_others * sizeof (int));
     delete [] others;
@@ -1626,8 +1697,12 @@ static void init_others () {
   }
   int * num_binaries = new int[max_lit + 1];
   for (int l = min_lit; l <= max_lit; l++) num_binaries[l] = 0;
-  count_binaries (num_binaries, irredundant);
-  count_binaries (num_binaries, redundant);
+  for (size_t i = 0; i < clauses.size (); i++) {
+    Clause * c = clauses[i];
+    if (c->garbage || c->size != 2) continue;
+    int l0 = c->literals[0], l1 = c->literals[1];
+    num_binaries[vlit (l0)]++, num_binaries[vlit (l1)]++;
+  }
   size_others = 0;
   for (int l = min_lit, count; l <= max_lit; l++)
     if ((count = num_binaries[l]))
@@ -1641,67 +1716,106 @@ static void init_others () {
       const int lit = sign * phases[idx] * idx;
       const int count = num_binaries [ vlit (lit) ];
       if (count) {
-	*(binaries (lit) = --p) = 0;
-	p -= count;
+        *(binaries (lit) = --p) = 0;
+        p -= count;
       } else binaries (lit) = 0;
     }
   }
   assert (p == others);
   delete [] num_binaries;
-  fill_others (irredundant);
-  fill_others (redundant);
+  for (size_t i = 0; i < clauses.size (); i++) {
+    Clause * c = clauses[i];
+    if (c->garbage || c->size != 2) continue;
+    int l0 = c->literals[0], l1 = c->literals[1];
+    *--binaries (l0) = l1, *--binaries (l1) = l0;
+  }
 }
 
-static void flush_watches () {
+static void setup_watches () {
+  size_t bytes = 0;
   for (int idx = 1; idx <= max_var; idx++) {
-    if (fixed (idx)) 
-      watches (idx) = Watches (), watches (-idx) = Watches ();
-    else {
-      for (int sign = -1; sign <= 1; sign += 2) {
-	const int lit = sign * idx;
-        Watches & ws = watches (lit);
-        const size_t size = ws.size ();
-        size_t i = 0, j = 0;
-        while (i < size) {
-          Watch w = ws[j++] = ws[i++];
-	  Clause * c = w.clause;
-          if (c->garbage || c->size == 2) j--;
-	}
-	ws.resize (j);
-      }
+    for (int sign = -1; sign <= 1; sign += 2) {
+      const int lit = sign * idx;
+      Watches & ws = watches (lit);
+      bytes += ws.capacity () * sizeof ws[0];
+      if (fixed (lit)) ws = Watches ();
+      else ws.clear ();
     }
   }
+  stats.bytes.watcher.current = bytes;
+  if (bytes > stats.bytes.watcher.max) stats.bytes.watcher.max = bytes;
+  for (size_t i = 0; i < clauses.size (); i++) {
+    Clause * c = clauses[i];
+    if (c->size > 2) watch_clause (c);
+  }
 }
 
-static void collect_garbage_clauses (vector<Clause*> & clauses) {
+static void
+collect_garbage_clauses () {
   const size_t size = clauses.size ();
+  size_t collected_bytes = 0;
   size_t i = 0, j = 0;
+  char * new_top = 0;
+  Ref prev_ref;
   while (i < size) {
-    Clause * c = clauses[j++] = clauses[i++];
-    if (c->reason || !c->garbage) continue;
-    stats.reduce.clauses++;
-    trace_delete_clause (c);
-    stats.reduce.bytes += delete_clause (c);
-    j--;
+    Ref old_ref = clauses[i++];
+    assert (prev_ref.ref < old_ref.ref);
+    prev_ref = old_ref;
+    Clause * c = (Clause*) arena [old_ref];
+    char * ptr = (char *) c;
+    size_t bytes = c->bytes ();
+    int forced;
+    if (c->reason) {
+      forced = c->literals[0];
+      if (val (forced) < 0) forced = c->literals[1];
+      else assert (val (c->literals[1]) < 0);
+      assert (val (forced) > 0);
+    } else forced = 0;
+    const bool extended = c->extended;
+    if (extended) ptr -= Clause::EXTENDED_OFFSET;
+    if (!new_top) new_top = ptr;
+    if (c->reason || !c->garbage) {
+      memmove (new_top, ptr, bytes);
+      Ref new_ref = arena[new_top];
+      if (extended) new_ref.ref += Clause::EXTENDED_OFFSET/alignment;
+      clauses[j++] = new_ref;
+      new_top += bytes;
+      if (forced) {
+        Var & v = var (forced);
+        assert (v.reason.ref == old_ref.ref);
+        v.reason.ref = new_ref;
+      }
+    } else {
+      LOG (c, "delete");
+      if (c->redundant)
+           assert (stats.clauses.redundant),   stats.clauses.redundant--;
+      else assert (stats.clauses.irredundant), stats.clauses.irredundant--;
+      assert (stats.clauses.current);
+      stats.clauses.current--;
+      stats.reduce.clauses++;
+      stats.reduce.bytes += bytes;
+      collected_bytes += bytes;
+      trace_delete_clause (c);
+    }
   }
   clauses.resize (j);
+  if (new_top) arena.resize (new_top);
+  LOG ("collected %ld bytes", collected_bytes);
 }
 
 static void reduce () {
   START (reduce);
   stats.reduce.count++;
-  LOG ("reduce %ld", stats.reduce.count);
+  LOG ("reduce %ld resolved limit %ld",
+    stats.reduce.count, limits.reduce.resolved);
   protect_reasons ();
   const bool new_units = (limits.reduce.fixed < stats.fixed);
-  if (new_units) 
-    mark_satisfied_clauses_as_garbage (irredundant),
-    mark_satisfied_clauses_as_garbage (redundant);
+  if (new_units) mark_satisfied_clauses_as_garbage ();
   mark_useless_redundant_clauses_as_garbage ();
-  init_others ();
-  flush_watches ();
-  if (new_units) collect_garbage_clauses (irredundant);
-  collect_garbage_clauses (redundant);
+  collect_garbage_clauses ();
   unprotect_reasons ();
+  setup_binaries ();
+  setup_watches ();
   inc.reduce.conflicts += opts.reduceinc;
   limits.reduce.conflicts = stats.conflicts + inc.reduce.conflicts;
   limits.reduce.resolved = stats.resolved;
@@ -1760,7 +1874,8 @@ static void init_solving () {
 static int solve () {
   init_solving ();
   section ("solving");
-  return search ();
+  if (clashing_unit) { learn_empty_clause (); return 20; }
+  else return search ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -1859,13 +1974,14 @@ SIGNALS
 
 static void init_variables () {
   min_lit = 2, max_lit = 2*max_var + 1;
-  NEW (vals, signed char, max_var + 1);
-  NEW (phases, signed char, max_var + 1);
-  NEW (vars, Var, max_var + 1);
-  NEW (literal.watches, Watches, 2 * (max_var + 1));
-  NEW (literal.binaries, int *, 2 * (max_var + 1));
+  NEW (vals,        signed char, max_var + 1);
+  NEW (phases,      signed char, max_var + 1);
+  NEW (vars,                Var, max_var + 1);
+  NEW (literal.watches, Watches, max_lit + 1);
+  NEW (literal.binaries,  int *, max_lit + 1);
   for (int i = 1; i <= max_var; i++) vals[i] = 0;
   for (int i = 1; i <= max_var; i++) phases[i] = -1;
+  for (int l = min_lit; l <= max_lit; l++) literal.binaries [l] = 0;
   init_vmtf_queue ();
   msg ("initialized %d variables", max_var);
   levels.push_back (Level (0));
@@ -1890,10 +2006,7 @@ static void print_options () {
 static void reset () {
 #ifndef NDEBUG
   if (others) delete [] others;
-  for (size_t i = 0; i < irredundant.size (); i++)
-    delete_clause (irredundant[i]);
-  for (size_t i = 0; i < redundant.size (); i++)
-    delete_clause (redundant[i]);
+  arena.release ();
   delete [] literal.binaries;
   delete [] literal.watches;
   delete [] vars;
