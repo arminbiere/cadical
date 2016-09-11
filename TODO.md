@@ -36,8 +36,9 @@ Some of them first need proper benchmarking to avoid oversimplifying the solver:
 
 Second things are listed related to additional features.
   
-  - Try a moving cache access optimizing garbage collector, which gave
-    for Splatz 15% after the arena based allocator works.
+  - Try a moving cache access optimizing garbage collector, which gave for
+    Splatz 15% after the arena based allocator now working.  First remove
+    'clauses' and use clause iterator over clauses in the arena instead.
 
   - Binary DRAT proof trace format.
 
@@ -52,4 +53,4 @@ Second things are listed related to additional features.
 There should be an ongoing process of refactoring and documenting the code.
 
 
-So 11. Sep 06:47:11 CEST 2016
+So 11. Sep 13:07:56 CEST 2016

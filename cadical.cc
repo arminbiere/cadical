@@ -162,10 +162,11 @@ public:
 /*------------------------------------------------------------------------*/
 
 struct Clause {
-  bool redundant;       // aka 'learned' so not 'irredundant' (original)
-  bool garbage;         // can be garbage collected unless it is a 'reason'
-  bool reason;          // reason / antecedent clause can not be collected
-  bool extended;        // see discussion on 'additional fields' below.
+
+  unsigned redundant:1; // aka 'learned' so not 'irredundant' (original)
+  unsigned garbage  :1; // can be garbage collected unless it is a 'reason'
+  unsigned reason   :1; // reason / antecedent clause can not be collected
+  unsigned extended :1; // see discussion on 'additional fields' below.
 
   int size;             // actual size of 'literals' (at least 2)
 
@@ -1781,8 +1782,7 @@ static void setup_watches () {
   }
 }
 
-static void
-collect_garbage_clauses () {
+static void collect_garbage_clauses () {
   const size_t size = clauses.size ();
   size_t collected_bytes = 0;
   size_t i = 0, j = 0;
