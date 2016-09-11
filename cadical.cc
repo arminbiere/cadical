@@ -1804,7 +1804,7 @@ collect_garbage_clauses () {
     if (extended) ptr -= Clause::EXTENDED_OFFSET;
     if (!new_top) new_top = ptr;
     if (c->reason || !c->garbage) {
-      memmove (new_top, ptr, align (bytes));
+      memmove (new_top, ptr, bytes);
       Ref new_ref = arena.ptr2ref (new_top);
       if (extended) new_ref += Clause::EXTENDED_OFFSET/alignment;
       clauses[j++] = new_ref;
