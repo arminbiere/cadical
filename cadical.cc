@@ -1787,11 +1787,9 @@ collect_garbage_clauses () {
   size_t collected_bytes = 0;
   size_t i = 0, j = 0;
   char * new_top = 0;
-  Ref prev_ref = 0;
   while (i < size) {
+    assert (!i || clauses[i-1] < clauses[i]);
     Ref old_ref = clauses[i++];
-    assert (prev_ref < old_ref);
-    prev_ref = old_ref;
     Clause * c = (Clause*) arena.ref2ptr (old_ref);
     char * ptr = (char *) c;
     size_t bytes = c->bytes ();
