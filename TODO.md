@@ -36,9 +36,6 @@ Some of them first need proper benchmarking to avoid oversimplifying the solver:
 
 Second things are listed related to additional features.
   
-  - Complete the arena allocation of large clauses and use 32-bit clause
-    references.  This is probably a bigger deal.
-
   - Try a moving cache access optimizing garbage collector, which gave
     for Splatz 15% after the arena based allocator works.
 
@@ -55,4 +52,4 @@ Second things are listed related to additional features.
 There should be an ongoing process of refactoring and documenting the code.
 
 
-Fr 9. Sep 15:21:44 CEST 2016
+So 11. Sep 06:47:11 CEST 2016

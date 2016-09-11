@@ -45,8 +45,8 @@ OPTION(minimizedepth,     int,1000, 0,1e9, "recursive minimization depth") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,    bool,   0, 0,  1, "dynamic glue & size limit") \
 OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
-OPTION(reduceinc,         int,   1, 1,1e9, "reduce limit increment") \
-OPTION(reduceinit,        int,   1, 0,1e9, "initial reduce limit") \
+OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
+OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
 OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
@@ -54,14 +54,6 @@ OPTION(restartmargin,  double, 0.1, 0, 10, "restart slow & fast margin") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
 OPTION(witness,          bool,   1, 0,  1, "print witness") \
 
-#if 0
-
-// TODO add back again
-
-OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
-OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
-
-#endif
 /*------------------------------------------------------------------------*/
 
 // Standard C includes
@@ -112,7 +104,7 @@ static struct {
 /*------------------------------------------------------------------------*/
 
 struct Clause {
-  bool redundant;       // so not 'irredundant' and on 'redundant' stack
+  bool redundant;       // aka 'learned' so not 'irredundant' (original)
   bool garbage;         // can be garbage collected unless it is a 'reason'
   bool reason;          // reason / antecedent clause can not be collected
   bool extended;        // see discussion on 'additional fields' below.
@@ -227,6 +219,13 @@ class Arena {
 public:
   size_t size () const { return top - start; }
   size_t capacity () const { return end - start; }
+
+  void resize (char * new_top) {
+    assert (start <= new_top);
+    assert (new_top <= end);
+    assert (aligned (new_top));
+    top = new_top;
+  }
 
   bool contains (void * ptr) const { return start <= ptr && ptr < top; }
 
@@ -345,10 +344,8 @@ static struct {
 
 static vector<int> clause;      // temporary clause in parsing & learning
 
-static Arena arena;     // memory arena for storing clauses
-
-static vector<Ref> irredundant;     // original / not redundant clauses
-static vector<Ref> redundant;       // redundant / learned clauses
+static Arena arena;             // memory arena for storing clauses
+static vector<Ref> clauses;     // references to all clauses
 
 static bool iterating;          // report top-level assigned variables
 
@@ -383,8 +380,8 @@ static struct {
 
   struct { long learned, minimized; } literals;  // in 'minimize_clause'
 
-  struct { long current, max; } clauses;
-  struct { size_t current, max; } bytes;
+  struct { long redundant, irredundant, current, max; } clauses;
+  struct { struct { size_t current, max; } total, watcher; } bytes;
   struct { long units; } learned;
 
   int fixed;                    // top level assigned variables
@@ -500,6 +497,58 @@ static void perr (const char * fmt, ...) {
 
 /*------------------------------------------------------------------------*/
 
+// You might want to turn on logging with './configure -l'.
+
+#ifdef LOGGING
+
+static void LOG (const char * fmt, ...) {
+  va_list ap;
+  printf ("c LOG %d ", level);
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  fputc ('\n', stdout);
+  fflush (stdout);
+}
+
+static void LOG (Clause * c, const char *fmt, ...) {
+  va_list ap;
+  printf ("c LOG %d ", level);
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  if (c) {
+    if (!c->redundant) printf (" irredundant");
+    else if (c->extended)
+      printf (" redundant glue %d resolved %ld", c->glue (), c->resolved ());
+    else printf (" redundant without glue");
+    printf (" size %d clause", c->size);
+    for (int i = 0; i < c->size; i++)
+      printf (" %d", c->literals[i]);
+  } else if (level) printf (" decision");
+  else printf (" unit");
+  fputc ('\n', stdout);
+  fflush (stdout);
+}
+
+static void LOG (const vector<int> & clause, const char *fmt, ...) {
+  va_list ap;
+  printf ("c LOG %d ", level);
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  for (size_t i = 0; i < clause.size (); i++)
+    printf (" %d", clause[i]);
+  fputc ('\n', stdout);
+  fflush (stdout);
+}
+
+#else
+#define LOG(ARGS...) do { } while (0)
+#endif
+
+/*------------------------------------------------------------------------*/
+
 static double relative (double a, double b) { return b ? a / b : 0; }
 
 static double percent (double a, double b) { return relative (100 * a, b); }
@@ -514,13 +563,13 @@ static double seconds () {
 }
 
 static void inc_bytes (size_t bytes) {
-  if ((stats.bytes.current += bytes) > stats.bytes.max)
-    stats.bytes.max = stats.bytes.current;
+  if ((stats.bytes.total.current += bytes) > stats.bytes.total.max)
+    stats.bytes.total.max = stats.bytes.total.current;
 }
 
 static void dec_bytes (size_t bytes) {
-  assert (stats.bytes.current >= bytes);
-  stats.bytes.current -= bytes;
+  assert (stats.bytes.total.current >= bytes);
+  stats.bytes.total.current -= bytes;
 }
 
 static inline size_t align (size_t bytes) {
@@ -568,81 +617,43 @@ void Arena::enlarge (size_t requested_capacity) {
   start = new_start;
   top   = new_start + (old_size ? old_size : alignment);
   end   = new_start + new_capacity;
+  LOG ("enlarged arena to new capacity %ld", new_capacity);
 }
 
-#define ADJUST_MAX_BYTES(V) \
+#define VECTOR_BYTES(V) \
   res += V.capacity () * sizeof (V[0])
 
-static size_t max_bytes () {
-  size_t res = stats.bytes.max;
+static size_t vector_bytes () {
+  size_t res = 0;
 #ifndef NDEBUG
-  ADJUST_MAX_BYTES (original_literals);
+  VECTOR_BYTES (original_literals);
 #endif
-  ADJUST_MAX_BYTES (clause);
-  ADJUST_MAX_BYTES (trail);
-  ADJUST_MAX_BYTES (seen.literals);
-  ADJUST_MAX_BYTES (seen.levels);
-  ADJUST_MAX_BYTES (seen.minimized);
-  ADJUST_MAX_BYTES (resolved);
-  ADJUST_MAX_BYTES (irredundant);
-  ADJUST_MAX_BYTES (redundant);
-  ADJUST_MAX_BYTES (levels);
-  res += (4 * stats.clauses.max * sizeof (Watch)) / 3;  // estimate
+  VECTOR_BYTES (clause);
+  VECTOR_BYTES (trail);
+  VECTOR_BYTES (seen.literals);
+  VECTOR_BYTES (seen.levels);
+  VECTOR_BYTES (seen.minimized);
+  VECTOR_BYTES (resolved);
+  VECTOR_BYTES (clauses);
+  VECTOR_BYTES (levels);
+  return res;
+}
+
+static size_t max_bytes () {
+  size_t res = stats.bytes.total.max + vector_bytes ();
+  if (stats.bytes.watcher.max > 0) res += stats.bytes.watcher.max;
+  else res += (4 * stats.clauses.max * sizeof (Watch)) / 3;
+  return res;
+}
+
+static size_t current_bytes () {
+  size_t res = stats.bytes.total.current + vector_bytes ();
+  if (stats.bytes.watcher.current > 0) res += stats.bytes.watcher.current;
+  else res += (4 * stats.clauses.current * sizeof (Watch)) / 3;
   return res;
 }
 
 static int active_variables () { return max_var - stats.fixed; }
-
-/*------------------------------------------------------------------------*/
-
-// You might want to turn on logging with './configure -l'.
-
-#ifdef LOGGING
-
-static void LOG (const char * fmt, ...) {
-  va_list ap;
-  printf ("c LOG %d ", level);
-  va_start (ap, fmt);
-  vprintf (fmt, ap);
-  va_end (ap);
-  fputc ('\n', stdout);
-  fflush (stdout);
-}
-
-static void LOG (Clause * c, const char *fmt, ...) {
-  va_list ap;
-  printf ("c LOG %d ", level);
-  va_start (ap, fmt);
-  vprintf (fmt, ap);
-  va_end (ap);
-  if (c) {
-    if (!c->redundant) printf (" irredundant");
-    else if (c->extended) printf (" redundant glue %d", c->glue ());
-    else printf (" redundant without glue");
-    printf (" size %d clause", c->size);
-    for (int i = 0; i < c->size; i++)
-      printf (" %d", c->literals[i]);
-  } else if (level) printf (" decision");
-  else printf (" unit");
-  fputc ('\n', stdout);
-  fflush (stdout);
-}
-
-static void LOG (const vector<int> & clause, const char *fmt, ...) {
-  va_list ap;
-  printf ("c LOG %d ", level);
-  va_start (ap, fmt);
-  vprintf (fmt, ap);
-  va_end (ap);
-  for (size_t i = 0; i < clause.size (); i++)
-    printf (" %d", clause[i]);
-  fputc ('\n', stdout);
-  fflush (stdout);
-}
-
-#else
-#define LOG(ARGS...) do { } while (0)
-#endif
 
 /*------------------------------------------------------------------------*/
 
@@ -895,6 +906,7 @@ static void trace_flushing_clause (Clause * c) {
 }
 
 static void trace_add_clause (Clause * c) { trace_clause (c, true); }
+
 static void trace_delete_clause (Clause * c) { trace_clause (c, false); }
 
 static void learn_empty_clause () {
@@ -981,8 +993,9 @@ static Clause * new_clause (bool red, int glue = 0) {
   if (extended) bytes += Clause::EXTENDED_OFFSET;
   Ref ref;
   char * ptr = (char*) arena.allocate (bytes, ref);
-  inc_bytes (bytes);
-  if (extended) ptr += Clause::EXTENDED_OFFSET;
+  if (extended) 
+    ptr += Clause::EXTENDED_OFFSET,
+    ref.ref += Clause::EXTENDED_OFFSET/alignment;
   Clause * res = (Clause*) ptr;
   res->redundant = red;
   res->garbage = false;
@@ -993,8 +1006,9 @@ static Clause * new_clause (bool red, int glue = 0) {
     res->glue () = glue;
   assert (res->bytes () == bytes);
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
-  if (red) redundant.push_back (ref);
-  else irredundant.push_back (ref);
+  clauses.push_back (ref);
+  if (red) stats.clauses.redundant++;
+  else     stats.clauses.irredundant++;
   if (++stats.clauses.current > stats.clauses.max)
     stats.clauses.max = stats.clauses.current;
   LOG (res, "new");
@@ -1046,21 +1060,6 @@ static Clause * new_learned_clause (int glue) {
   return res;
 }
 
-static size_t delete_clause (Clause * c) { 
-  LOG (c, "delete");
-  assert (stats.clauses.current > 0);
-  stats.clauses.current--;
-  size_t bytes = c->bytes ();
-  dec_bytes (bytes);
-  char * ptr = (char*) c;
-  if (c->extended) ptr -= Clause::EXTENDED_OFFSET;
-{
-  int TODO;
-  // delete [] (char*) ptr;
-}
-  return bytes;
-}
-
 /*------------------------------------------------------------------------*/
 
 // The following statistics are printed in columns, whenever 'report' is
@@ -1072,14 +1071,14 @@ static size_t delete_clause (Clause * c) {
 #define REPORTS \
 /*     HEADER, PRECISION, MIN, VALUE */ \
 REPORT(    "seconds",  2, 5, seconds ()) \
-REPORT(         "MB",  0, 2, max_bytes () / (double)(1l<<20)) \
+REPORT(         "MB",  0, 2, current_bytes () / (double)(1l<<20)) \
 REPORT(      "level",  1, 4, ema.jump) \
 REPORT( "reductions",  0, 2, stats.reduce.count) \
 REPORT(   "restarts",  0, 4, stats.restarts) \
 REPORT(  "conflicts",  0, 5, stats.conflicts) \
-REPORT(  "redundant",  0, 5, redundant.size ()) \
+REPORT(  "redundant",  0, 5, stats.clauses.redundant) \
 REPORT(       "glue",  1, 4, ema.learned.glue.slow) \
-REPORT("irredundant",  0, 4, irredundant.size ()) \
+REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
 REPORT(  "variables",  0, 4, active_variables ()) \
 REPORT(  "remaining", -1, 5, percent (active_variables (), max_var)) \
 
@@ -1642,9 +1641,9 @@ static void flush_falsified_literals (Clause * c) {
   LOG (c, "flushed %d literals and got", flushed);
 }
 
-static void mark_satisfied_clauses_as_garbage (vector<Ref> & cs) {
-  for (size_t i = 0; i < cs.size (); i++) {
-    Clause * c = cs[i];
+static void mark_satisfied_clauses_as_garbage () {
+  for (size_t i = 0; i < clauses.size (); i++) {
+    Clause * c = clauses[i];
     if (c->garbage) continue;
     const int tmp = clause_contains_fixed_literal (c);
          if (tmp > 0) c->garbage = true;
@@ -1670,9 +1669,9 @@ inline Ref::Ref (Clause * c) : ref (arena[c]) { }
 static void mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
   assert (stack.empty ());
-  for (size_t i = 0; i < redundant.size (); i++) {
-    Clause * c = redundant[i];
-    assert (c->redundant);
+  for (size_t i = 0; i < clauses.size (); i++) {
+    Clause * c = clauses[i];
+    if (!c->redundant) continue;
     if (c->reason) continue;
     if (c->garbage) continue;
     if (c->size <= opts.keepsize) continue;
@@ -1690,24 +1689,6 @@ static void mark_useless_redundant_clauses_as_garbage () {
   stack.clear ();
 }
 
-static void count_binaries (int * num_binaries, vector<Ref> & cs) {
-  for (size_t i = 0; i < cs.size (); i++) {
-    Clause * c = cs[i];
-    if (c->garbage || c->size != 2) continue;
-    int l0 = c->literals[0], l1 = c->literals[1];
-    num_binaries[vlit (l0)]++, num_binaries[vlit (l1)]++;
-  }
-}
-
-static void fill_others (vector<Ref> & cs) {
-  for (size_t i = 0; i < cs.size (); i++) {
-    Clause * c = cs[i];
-    if (c->garbage || c->size != 2) continue;
-    int l0 = c->literals[0], l1 = c->literals[1];
-    *--binaries (l0) = l1, *--binaries (l1) = l0;
-  }
-}
-
 static void setup_binaries () {
   if (others) {
     dec_bytes (size_others * sizeof (int));
@@ -1716,8 +1697,12 @@ static void setup_binaries () {
   }
   int * num_binaries = new int[max_lit + 1];
   for (int l = min_lit; l <= max_lit; l++) num_binaries[l] = 0;
-  count_binaries (num_binaries, irredundant);
-  count_binaries (num_binaries, redundant);
+  for (size_t i = 0; i < clauses.size (); i++) {
+    Clause * c = clauses[i];
+    if (c->garbage || c->size != 2) continue;
+    int l0 = c->literals[0], l1 = c->literals[1];
+    num_binaries[vlit (l0)]++, num_binaries[vlit (l1)]++;
+  }
   size_others = 0;
   for (int l = min_lit, count; l <= max_lit; l++)
     if ((count = num_binaries[l]))
@@ -1738,60 +1723,99 @@ static void setup_binaries () {
   }
   assert (p == others);
   delete [] num_binaries;
-  fill_others (irredundant);
-  fill_others (redundant);
+  for (size_t i = 0; i < clauses.size (); i++) {
+    Clause * c = clauses[i];
+    if (c->garbage || c->size != 2) continue;
+    int l0 = c->literals[0], l1 = c->literals[1];
+    *--binaries (l0) = l1, *--binaries (l1) = l0;
+  }
 }
 
-static void flush_watches () {
+static void setup_watches () {
+  size_t bytes = 0;
   for (int idx = 1; idx <= max_var; idx++) {
-    if (fixed (idx)) 
-      watches (idx) = Watches (), watches (-idx) = Watches ();
-    else {
-      for (int sign = -1; sign <= 1; sign += 2) {
-        const int lit = sign * idx;
-        Watches & ws = watches (lit);
-        const size_t size = ws.size ();
-        size_t i = 0, j = 0;
-        while (i < size) {
-          Watch w = ws[j++] = ws[i++];
-          Clause * c = w.clause;
-          if (c->garbage || c->size == 2) j--;
-        }
-        ws.resize (j);
-      }
+    for (int sign = -1; sign <= 1; sign += 2) {
+      const int lit = sign * idx;
+      Watches & ws = watches (lit);
+      bytes += ws.capacity () * sizeof ws[0];
+      if (fixed (lit)) ws = Watches ();
+      else ws.clear ();
     }
   }
+  stats.bytes.watcher.current = bytes;
+  if (bytes > stats.bytes.watcher.max) stats.bytes.watcher.max = bytes;
+  for (size_t i = 0; i < clauses.size (); i++) {
+    Clause * c = clauses[i];
+    if (c->size > 2) watch_clause (c);
+  }
 }
 
-static void collect_garbage_clauses (vector<Ref> & clauses) {
+static void
+collect_garbage_clauses () {
   const size_t size = clauses.size ();
+  size_t collected_bytes = 0;
   size_t i = 0, j = 0;
+  char * new_top = 0;
+  Ref prev_ref;
   while (i < size) {
-    Clause * c = clauses[j++] = clauses[i++];
-    if (c->reason || !c->garbage) continue;
-    stats.reduce.clauses++;
-    trace_delete_clause (c);
-    stats.reduce.bytes += delete_clause (c);
-    j--;
+    Ref old_ref = clauses[i++];
+    assert (prev_ref.ref < old_ref.ref);
+    prev_ref = old_ref;
+    Clause * c = (Clause*) arena [old_ref];
+    char * ptr = (char *) c;
+    size_t bytes = c->bytes ();
+    int forced;
+    if (c->reason) {
+      forced = c->literals[0];
+      if (val (forced) < 0) forced = c->literals[1];
+      else assert (val (c->literals[1]) < 0);
+      assert (val (forced) > 0);
+    } else forced = 0;
+    const bool extended = c->extended;
+    if (extended) ptr -= Clause::EXTENDED_OFFSET;
+    if (!new_top) new_top = ptr;
+    if (c->reason || !c->garbage) {
+      memmove (new_top, ptr, bytes);
+      Ref new_ref = arena[new_top];
+      if (extended) new_ref.ref += Clause::EXTENDED_OFFSET/alignment;
+      clauses[j++] = new_ref;
+      new_top += bytes;
+      if (forced) {
+        Var & v = var (forced);
+        assert (v.reason.ref == old_ref.ref);
+        v.reason.ref = new_ref;
+      }
+    } else {
+      LOG (c, "delete");
+      if (c->redundant)
+	   assert (stats.clauses.redundant),   stats.clauses.redundant--;
+      else assert (stats.clauses.irredundant), stats.clauses.irredundant--;
+      assert (stats.clauses.current);
+      stats.clauses.current--;
+      stats.reduce.clauses++;
+      stats.reduce.bytes += bytes;
+      collected_bytes += bytes;
+      trace_delete_clause (c);
+    }
   }
   clauses.resize (j);
+  if (new_top) arena.resize (new_top);
+  LOG ("collected %ld bytes", collected_bytes);
 }
 
 static void reduce () {
   START (reduce);
   stats.reduce.count++;
-  LOG ("reduce %ld", stats.reduce.count);
+  LOG ("reduce %ld resolved limit %ld",
+    stats.reduce.count, limits.reduce.resolved);
   protect_reasons ();
   const bool new_units = (limits.reduce.fixed < stats.fixed);
-  if (new_units) 
-    mark_satisfied_clauses_as_garbage (irredundant),
-    mark_satisfied_clauses_as_garbage (redundant);
+  if (new_units) mark_satisfied_clauses_as_garbage ();
   mark_useless_redundant_clauses_as_garbage ();
-  setup_binaries ();
-  flush_watches ();
-  if (new_units) collect_garbage_clauses (irredundant);
-  collect_garbage_clauses (redundant);
+  collect_garbage_clauses ();
   unprotect_reasons ();
+  setup_binaries ();
+  setup_watches ();
   inc.reduce.conflicts += opts.reduceinc;
   limits.reduce.conflicts = stats.conflicts + inc.reduce.conflicts;
   limits.reduce.resolved = stats.resolved;
@@ -1982,14 +2006,7 @@ static void print_options () {
 static void reset () {
 #ifndef NDEBUG
   if (others) delete [] others;
-#if 0
-  for (size_t i = 0; i < irredundant.size (); i++)
-    delete_clause (irredundant[i]);
-  for (size_t i = 0; i < redundant.size (); i++)
-    delete_clause (redundant[i]);
-#else
   arena.release ();
-#endif
   delete [] literal.binaries;
   delete [] literal.watches;
   delete [] vars;
