@@ -48,9 +48,10 @@ OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
-OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
-OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
-OPTION(restartmargin,  double, 0.1, 0, 10, "restart slow & fast margin") \
+OPTION(restartblock,   double, 1.4, 0,  2, "restart blocking limit") \
+OPTION(restartdelay,   double, 0.0, 0,  2, "delay restart level limit") \
+OPTION(restartint,        int,  50, 1,1e9, "restart base interval") \
+OPTION(restartmargin,  double, 0.2, 0, 10, "restart slow & fast margin") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
 OPTION(witness,          bool,   1, 0,  1, "print witness") \
 
@@ -400,10 +401,13 @@ static struct {
   long decisions;
   long propagations;            // propagated literals in 'propagate'
 
-  long restarts;
-  long delayed;                 // restarts
-  long unforced;                // restarts
-  long reused;                  // trails
+  struct {
+    long count;
+    long delayed;
+    long blocked;
+    long unforced;
+    long reused;
+  } restart;
 
   long reports, sections;
 
@@ -724,7 +728,7 @@ REPORT(    "seconds",  2, 5, seconds ()) \
 REPORT(         "MB",  0, 2, current_bytes () / (double)(1l<<20)) \
 REPORT(      "level",  1, 4, ema.jump) \
 REPORT( "reductions",  0, 2, stats.reduce.count) \
-REPORT(   "restarts",  0, 4, stats.restarts) \
+REPORT(   "restarts",  0, 4, stats.restart.count) \
 REPORT(  "conflicts",  0, 5, stats.conflicts) \
 REPORT(  "redundant",  0, 5, stats.clauses.redundant) \
 REPORT(       "glue",  1, 4, ema.learned.glue.slow) \
@@ -1630,10 +1634,10 @@ static bool restarting () {
   double s = ema.learned.glue.slow, f = ema.learned.glue.fast;
   double l = (1.0 + opts.restartmargin) * s;
   LOG ("EMA learned glue slow %.2f fast %.2f limit %.2f", s, f, l);
-  if (l > f) { stats.unforced++; LOG ("unforced"); return false; }
+  if (l > f) { stats.restart.unforced++; LOG ("unforced"); return false; }
   double j = ema.jump; l = opts.restartdelay * j;
   LOG ("EMA jump %.2f limit %.2f", j, l);
-  if (level < l) { stats.delayed++; LOG ("delayed"); return false; }
+  if (level < l) { stats.restart.delayed++; LOG ("delayed"); return false; }
   return true;
 }
 
@@ -1643,13 +1647,13 @@ static int reusetrail () {
   int res = 0;
   while (res < level && var (levels[res + 1].decision).bumped > limit)
     res++;
-  if (res) { stats.reused++; LOG ("reusing trail %d", res); }
+  if (res) { stats.restart.reused++; LOG ("reusing trail %d", res); }
   return res;
 }
 
 static void restart () {
   START (restart);
-  stats.restarts++;
+  stats.restart.count++;
   LOG ("restart %ld", stats.restarts);
   backtrack (reusetrail ());
   STOP (restart);
@@ -1977,13 +1981,16 @@ static void print_statistics () {
   msg ("reductions:    %15ld   %10.2f    conflicts per reduction",
     stats.reduce.count, relative (stats.conflicts, stats.reduce.count));
   msg ("restarts:      %15ld   %10.2f    conflicts per restart",
-    stats.restarts, relative (stats.conflicts, stats.restarts));
+    stats.restart.count, relative (stats.conflicts, stats.restart.count));
   msg ("reused:        %15ld   %10.2f %%  per restart",
-    stats.reused, percent (stats.reused, stats.restarts));
+    stats.restart.reused,
+    percent (stats.restart.reused, stats.restart.count));
   msg ("delayed:       %15ld   %10.2f %%  per restart",
-    stats.delayed, percent (stats.delayed, stats.restarts));
+    stats.restart.delayed,
+    percent (stats.restart.delayed, stats.restart.count));
   msg ("unforced:      %15ld   %10.2f %%  per restart",
-    stats.unforced, percent (stats.unforced, stats.restarts));
+    stats.restart.unforced,
+    percent (stats.restart.unforced, stats.restart.count));
   msg ("units:         %15ld   %10.2f    conflicts per unit",
     stats.learned.units, relative (stats.conflicts, stats.learned.units));
   msg ("bumped:        %15ld   %10.2f    per conflict",
