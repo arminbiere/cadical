@@ -38,6 +38,7 @@ OPTION(emagluefast,    double,3e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaglueslow,    double,1e-5, 0,  1, "alpha slow learned glue") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
+OPTION(ematrail,       double,1e-7, 0,  1, "alpha trail") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(minimize,         bool,   1, 0,  1, "minimize learned clauses") \
@@ -48,8 +49,10 @@ OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
-OPTION(restartblock,   double, 1.4, 0,  2, "restart blocking limit") \
-OPTION(restartdelay,   double, 0.0, 0,  2, "delay restart level limit") \
+OPTION(restartblock,   double, 1.4, 0,  2, "restart blocking factor") \
+OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
+OPTION(restartblocklim,   int, 1e5, 0,1e9, "restart blocking limit") \
+OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
 OPTION(restartint,        int,  50, 1,1e9, "restart base interval") \
 OPTION(restartmargin,  double, 0.2, 0, 10, "restart slow & fast margin") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
@@ -439,6 +442,7 @@ static struct {
   struct { EMA glue, size; } resolved;
   struct { struct { EMA fast, slow; } glue; } learned;
   EMA jump;
+  EMA trail;
 } ema;
 
 // Limits for next restart, reduce.
@@ -732,6 +736,7 @@ REPORT(   "restarts",  0, 4, stats.restart.count) \
 REPORT(  "conflicts",  0, 5, stats.conflicts) \
 REPORT(  "redundant",  0, 5, stats.clauses.redundant) \
 REPORT(       "glue",  1, 4, ema.learned.glue.slow) \
+REPORT(      "trail",  1, 4, ema.trail) \
 REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
 REPORT(  "variables",  0, 4, active_variables ()) \
 REPORT(  "remaining", -1, 5, percent (active_variables (), max_var)) \
@@ -1614,6 +1619,15 @@ static void analyze () {
       jump = var (clause[1]).level;
     } else stats.learned.units++;
     UPDATE_EMA (ema.jump, jump);
+    UPDATE_EMA (ema.trail, trail.size ());
+    if (opts.restartblocking &&
+        stats.conflicts > opts.restartblocklim &&
+        stats.conflicts >= limits.restart.conflicts &&
+        trail.size () > opts.restartblock * ema.trail) {
+      LOG ("blocked restart");
+      limits.restart.conflicts = stats.conflicts + opts.restartint;
+      stats.restart.blocked++;
+    }
     backtrack (jump);
     assign (-uip, driving_clause);
     bump_and_clear_seen_variables (uip);
@@ -1985,6 +1999,9 @@ static void print_statistics () {
   msg ("reused:        %15ld   %10.2f %%  per restart",
     stats.restart.reused,
     percent (stats.restart.reused, stats.restart.count));
+  msg ("blocked:       %15ld   %10.2f %%  per restart",
+    stats.restart.blocked,
+    percent (stats.restart.blocked, stats.restart.count));
   msg ("delayed:       %15ld   %10.2f %%  per restart",
     stats.restart.delayed,
     percent (stats.restart.delayed, stats.restart.count));
