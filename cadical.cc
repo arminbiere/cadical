@@ -53,7 +53,7 @@ OPTION(restartblock,   double, 1.4, 0,  2, "restart blocking factor") \
 OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
 OPTION(restartblocklim,   int, 1e5, 0,1e9, "restart blocking limit") \
 OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
-OPTION(restartint,        int,  50, 1,1e9, "restart base interval") \
+OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
 OPTION(restartmargin,  double, 0.2, 0, 10, "restart slow & fast margin") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
 OPTION(witness,          bool,   1, 0,  1, "print witness") \
