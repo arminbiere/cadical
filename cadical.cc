@@ -38,6 +38,7 @@ OPTION(eagerpropbinlim,   int,   1, 1,1e9, "eager binary propagation limit") \
 OPTION(emagluefast,    double,3e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
+OPTION(ematrail,       double,2e-4, 0,  1, "alpha trail") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(minimize,         bool,   1, 0,  1, "minimize learned clauses") \
@@ -448,11 +449,10 @@ static vector<Timer> timers;
 static struct { 
   struct { EMA glue, size; } resolved;
   struct { struct { EMA fast; } glue; } learned;
-  EMA jump;
+  EMA jump, trail;
 } ema;
 
 static struct {
-  AVG trail;
   struct { struct { AVG slow; } glue; } learned;
 } avg;
 
@@ -747,7 +747,7 @@ REPORT("restarts",     0, 4, stats.restart.count) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
 REPORT("redundant",    0, 5, stats.clauses.redundant) \
 REPORT("glue",         1, 4, avg.learned.glue.slow) \
-REPORT("trail",        1, 4, avg.trail) \
+REPORT("trail",        1, 4, ema.trail) \
 REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
 REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
@@ -941,8 +941,6 @@ inline void EMA::update (double y, const char * name) {
 
 // Short hand for better logging.
 
-#define UPDATE_EMA(E,Y) E.update ((Y), #E)
-
 inline void AVG::update (double y, const char * name) {
   value = count * value + y;
   value /= ++count;
@@ -951,7 +949,7 @@ inline void AVG::update (double y, const char * name) {
 
 // Short hand for better logging.
 
-#define UPDATE_AVG(A,Y) A.update ((Y), #A)
+#define UPDATE(EorA,Y) EorA.update ((Y), #EorA)
 
 /*------------------------------------------------------------------------*/
 
@@ -1576,8 +1574,8 @@ static void resolve_clause (Clause * c) {
   if (!c->redundant) return;
   if (c->size <= opts.keepsize) return;
   if (c->glue () <= opts.keepglue) return;
-  UPDATE_EMA (ema.resolved.size, c->size);
-  UPDATE_EMA (ema.resolved.glue, c->glue ());
+  UPDATE (ema.resolved.size, c->size);
+  UPDATE (ema.resolved.glue, c->glue ());
   resolved.push_back (c);
 }
 
@@ -1634,8 +1632,8 @@ static void analyze () {
     const int size = (int) clause.size ();
     const int glue = (int) seen.levels.size ();
     LOG ("1st UIP clause of size %d and glue %d", size, glue);
-    UPDATE_AVG (avg.learned.glue.slow, glue);
-    UPDATE_EMA (ema.learned.glue.fast, glue);
+    UPDATE (avg.learned.glue.slow, glue);
+    UPDATE (ema.learned.glue.fast, glue);
     if (opts.minimize) minimize_clause ();
     Clause * driving_clause = 0;
     int jump = 0;
@@ -1644,12 +1642,12 @@ static void analyze () {
       driving_clause = new_learned_clause (glue);
       jump = var (clause[1]).level;
     } else stats.learned.units++;
-    UPDATE_EMA (ema.jump, jump);
-    UPDATE_AVG (avg.trail, trail.size ());
+    UPDATE (ema.jump, jump);
+    UPDATE (ema.trail, trail.size ());
     if (opts.restartblocking &&
         stats.conflicts > opts.restartblocklim &&
         stats.conflicts >= limits.restart.conflicts &&
-        trail.size () > opts.restartblock * avg.trail) {
+        trail.size () > opts.restartblock * ema.trail) {
       LOG ("blocked restart");
       limits.restart.conflicts = stats.conflicts + opts.restartint;
       stats.restart.blocked++;
@@ -1996,6 +1994,7 @@ static void init_solving () {
   INIT_EMA (ema.resolved.glue, opts.emaresolved);
   INIT_EMA (ema.resolved.size, opts.emaresolved);
   INIT_EMA (ema.jump, opts.emajump);
+  INIT_EMA (ema.trail, opts.ematrail);
 }
 
 static int solve () {
