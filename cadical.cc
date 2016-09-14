@@ -516,6 +516,7 @@ SIGNALS
 
 static void msg (const char * fmt, ...) {
   va_list ap;
+  // TODO quiet ...
   fputs ("c ", stdout);
   va_start (ap, fmt);
   vprintf (fmt, ap);
@@ -1709,6 +1710,7 @@ static void restart () {
   stats.restart.count++;
   LOG ("restart %ld", stats.restarts);
   backtrack (reusetrail ());
+  // report ('r');	// TODO verbose level ...
   STOP (restart);
 }
 
@@ -1736,10 +1738,10 @@ static void unprotect_reasons () {
   }
 }
 
-// This function returns 1 the given clause is root level satisfied
-// or -1 if it is not root level satisfied but contains a root level
-// falsified literal and 0 otherwise, if it does not contain a root
-// level fixed literal.
+// This function returns 1 if the given clause is root level satisfied or -1
+// if it is not root level satisfied but contains a root level falsified
+// literal and 0 otherwise, if it does not contain a root level fixed
+// literal.
 
 static int clause_contains_fixed_literal (Clause * c) {
   const int * lits = c->literals, size = c->size;
