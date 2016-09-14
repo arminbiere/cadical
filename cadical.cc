@@ -35,10 +35,13 @@ IN THE SOFTWARE.
 #define OPTIONS \
 /*  NAME,                TYPE, VAL,LOW,HIGH,DESCRIPTION */ \
 OPTION(eagerpropbinlim,   int,   1, 1,1e9, "eager binary propagation limit") \
-OPTION(emagluefast,    double,3e-2, 0,  1, "alpha fast learned glue") \
+OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
+OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
+OPTION(emaf2,          double,5e-3, 0,  1, "alpha learned binary frequency") \
+OPTION(emaglueslow,    double,2e-5, 0,  1, "alpha fast learned glue") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
-OPTION(ematrail,       double,2e-4, 0,  1, "alpha trail") \
+OPTION(ematrail,       double,1e-5, 0,  1, "alpha trail") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(minimize,         bool,   1, 0,  1, "minimize learned clauses") \
@@ -46,16 +49,17 @@ OPTION(minimizedepth,     int,1000, 0,1e9, "recursive minimization depth") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,    bool,   0, 0,  1, "dynamic glue & size limit") \
 OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
-OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
-OPTION(reduceinit,        int,1700, 0,1e9, "initial reduce limit") \
+OPTION(reduceinc,         int,1000, 1,1e9, "reduce limit increment") \
+OPTION(reduceinit,        int,1000, 0,1e9, "initial reduce limit") \
+OPTION(reducereskeep,  double,0.01, 0,  1, "resolved keep fraction") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
-OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
+OPTION(restartblocking,  bool,   0, 0,  1, "enable restart blocking") \
 OPTION(restartblocklim,   int, 1e4, 0,1e9, "restart blocking limit") \
 OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
 OPTION(restartdelaying,  bool,   0, 0,  1, "delay restart level limit") \
-OPTION(restartint,        int,  50, 1,1e9, "restart base interval") \
-OPTION(restartmargin,  double,1.25, 0, 10, "restart slow & fast margin (1/K)") \
+OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
+OPTION(restartmargin,  double,1.05, 0, 10, "restart slow & fast margin (1/K)") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
 OPTION(witness,          bool,   1, 0,  1, "print witness") \
 
@@ -323,6 +327,7 @@ struct EMA {
   void update (double y, const char * name);
 };
 
+#if 0
 struct AVG {
   double value;
   long count;
@@ -330,6 +335,7 @@ struct AVG {
   operator double () const { return value; }
   void update (double y, const char * name);
 };
+#endif
 
 #ifdef PROFILING        // enabled by './configure -p'
 
@@ -435,7 +441,8 @@ static struct {
 
   struct { long redundant, irredundant, current, max; } clauses;
   struct { struct { size_t current, max; } total, watcher; } bytes;
-  struct { long units; } learned;
+
+  struct { long unit, binary; } learned;
 
   int fixed;                    // top level assigned variables
 } stats;
@@ -449,18 +456,15 @@ static vector<Timer> timers;
 
 static struct { 
   struct { EMA glue, size; } resolved;
-  struct { struct { EMA fast; } glue; } learned;
+  struct { EMA unit, binary; } frequency;
+  struct { EMA fast, slow; } glue;
   EMA jump, trail;
 } ema;
-
-static struct {
-  struct { struct { AVG slow; } glue; } learned;
-} avg;
 
 // Limits for next restart, reduce.
 
 static struct {
-  struct { long conflicts, resolved; int fixed; } reduce;
+  struct { long conflicts; int resolved32, fixed; } reduce;
   struct { long conflicts; } restart;
 } limits;
 
@@ -743,23 +747,25 @@ static void print (int lit, FILE * file = stdout) {
 REPORT("seconds",      2, 5, seconds ()) \
 REPORT("MB",           0, 2, current_bytes () / (double)(1l<<20)) \
 REPORT("level",        1, 4, ema.jump) \
+REPORT("f1",           0, 2, ema.frequency.unit) \
+REPORT("f2",           0, 2, ema.frequency.binary) \
 REPORT("reductions",   0, 2, stats.reduce.count) \
 REPORT("restarts",     0, 4, stats.restart.count) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
 REPORT("redundant",    0, 5, stats.clauses.redundant) \
-REPORT("glue",         1, 4, avg.learned.glue.slow) \
-REPORT("trail",        1, 4, ema.trail) \
+REPORT("glue",         1, 4, ema.glue.slow) \
 REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
 REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
-REPORT("properdec",    0, 7, relative (stats.propagations, stats.decisions)) \
+REPORT("properdec",    0, 3, relative (stats.propagations, stats.decisions)) \
 
 #if 0
 
-REPORT(   "slowglue",         1, ema.learned.glue.slow) \
-REPORT(   "fastglue",         1, ema.learned.glue.fast) \
-REPORT(    "resglue",         1, ema.resolved.glue) \
-REPORT(    "ressize",         1, ema.resolved.size) \
+REPORT("fastglue",     1, 4, ema.learned.glue.fast) \
+REPORT("resglue",      1, 4, ema.resolved.glue) \
+REPORT("ressize",      1, 4, ema.resolved.size) \
+REPORT("slowglue",     1, 4, ema.learned.glue.slow) \
+REPORT("trail",        1, 4, ema.trail) \
 
 #endif
 
@@ -940,13 +946,15 @@ inline void EMA::update (double y, const char * name) {
   LOG ("new %s EMA wait = period = %ld, beta = %g", name, wait, beta);
 }
 
-// Short hand for better logging.
+#if 0
 
 inline void AVG::update (double y, const char * name) {
   value = count * value + y;
   value /= ++count;
   LOG ("update %s AVG with %g yields %g", name, y, value);
 }
+
+#endif
 
 // Short hand for better logging.
 
@@ -1150,9 +1158,9 @@ static long rescore_resolved () {
     long resolved = c->resolved ();
     c->resolved () = ++stats.resolved32;
     if (set_limit) continue;
-    if (resolved < limits.reduce.resolved) continue;
-    const bool different = (resolved > limits.reduce.resolved);
-    limits.reduce.resolved = stats.resolved32;
+    if (resolved < limits.reduce.resolved32) continue;
+    const bool different = (resolved > limits.reduce.resolved32);
+    limits.reduce.resolved32 = stats.resolved32;
     if (different) c->resolved () = ++stats.resolved32;
     set_limit = true;
   }
@@ -1403,7 +1411,7 @@ static void check_clause () {
 
 /*------------------------------------------------------------------------*/
 
-#if 0
+#if 1
 
 // Compact recursive but bounded version of DFS for minimizing clauses.
 
@@ -1633,8 +1641,8 @@ static void analyze () {
     const int size = (int) clause.size ();
     const int glue = (int) seen.levels.size ();
     LOG ("1st UIP clause of size %d and glue %d", size, glue);
-    UPDATE (avg.learned.glue.slow, glue);
-    UPDATE (ema.learned.glue.fast, glue);
+    UPDATE (ema.glue.slow, glue);
+    UPDATE (ema.glue.fast, glue);
     if (opts.minimize) minimize_clause ();
     Clause * driving_clause = 0;
     int jump = 0;
@@ -1642,7 +1650,11 @@ static void analyze () {
       sort (clause.begin (), clause.end (), trail_greater_than ());
       driving_clause = new_learned_clause (glue);
       jump = var (clause[1]).level;
-    } else stats.learned.units++;
+    } 
+    stats.learned.unit += (size == 1);
+    stats.learned.binary += (size == 2);
+    UPDATE (ema.frequency.unit, 10000*(size == 1));
+    UPDATE (ema.frequency.binary, 1000*(size == 2));
     UPDATE (ema.jump, jump);
     UPDATE (ema.trail, trail.size ());
     if (opts.restartblocking &&
@@ -1669,8 +1681,10 @@ static bool satisfied () { return trail.size () == (size_t) max_var; }
 static bool restarting () {
   if (!opts.restart) return false;
   if (stats.conflicts <= limits.restart.conflicts) return false;
-  double s = avg.learned.glue.slow, f = ema.learned.glue.fast;
-  double l = opts.restartmargin * s;
+  limits.restart.conflicts = stats.conflicts + opts.restartint;
+  if (ema.frequency.unit >= 10.0) return true;
+  if (ema.frequency.binary >= 10.0) return true;
+  double s = ema.glue.slow, f = ema.glue.fast, l = opts.restartmargin * s;
   LOG ("EMA learned glue slow %.2f fast %.2f limit %.2f", s, f, l);
   if (l > f) { stats.restart.unforced++; LOG ("unforced"); return false; }
   if (!opts.restartdelaying) return true;
@@ -1695,7 +1709,6 @@ static void restart () {
   stats.restart.count++;
   LOG ("restart %ld", stats.restarts);
   backtrack (reusetrail ());
-  limits.restart.conflicts = stats.conflicts + opts.restartint;
   STOP (restart);
 }
 
@@ -1797,6 +1810,8 @@ struct glue_larger {
 static void mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
   assert (stack.empty ());
+  int limit32 = stats.resolved32 -
+    (stats.resolved32 - limits.reduce.resolved32) * opts.reducereskeep;
   for (size_t i = 0; i < clauses.size (); i++) {
     Clause * c = ref2clause (clauses[i]);
     if (!c->redundant) continue;
@@ -1804,7 +1819,7 @@ static void mark_useless_redundant_clauses_as_garbage () {
     if (c->garbage) continue;
     if (c->size <= opts.keepsize) continue;
     if (c->glue () <= opts.keepglue) continue;
-    if (c->resolved () > limits.reduce.resolved) continue;
+    if (c->resolved () > limit32) continue;
     if (opts.reducedynamic &&
         c->glue () < ema.resolved.glue &&
         c->size    < ema.resolved.size) continue;
@@ -1945,7 +1960,7 @@ static void reduce () {
   setup_watches ();
   inc.reduce.conflicts += opts.reduceinc;
   limits.reduce.conflicts = stats.conflicts + inc.reduce.conflicts;
-  limits.reduce.resolved = stats.resolved32;
+  limits.reduce.resolved32 = stats.resolved32;
   limits.reduce.fixed = stats.fixed;
   report ('-');
   STOP (reduce);
@@ -1990,9 +2005,12 @@ static int search () {
 
 static void init_solving () {
   limits.restart.conflicts = opts.restartint;
+  limits.reduce.conflicts = opts.reduceinit;
   inc.reduce.conflicts = opts.reduceinit;
-  INIT_EMA (ema.learned.glue.fast, opts.emagluefast);
-  // INIT_EMA (ema.learned.glue.slow, opts.emaglueslow);
+  INIT_EMA (ema.glue.fast, opts.emagluefast);
+  INIT_EMA (ema.glue.slow, opts.emaglueslow);
+  INIT_EMA (ema.frequency.unit, opts.emaf1);
+  INIT_EMA (ema.frequency.binary, opts.emaf2);
   INIT_EMA (ema.resolved.glue, opts.emaresolved);
   INIT_EMA (ema.resolved.size, opts.emaresolved);
   INIT_EMA (ema.jump, opts.emajump);
@@ -2036,7 +2054,9 @@ static void print_statistics () {
     stats.restart.unforced,
     percent (stats.restart.unforced, stats.restart.count));
   msg ("units:         %15ld   %10.2f    conflicts per unit",
-    stats.learned.units, relative (stats.conflicts, stats.learned.units));
+    stats.learned.unit, relative (stats.conflicts, stats.learned.unit));
+  msg ("binaries:      %15ld   %10.2f    conflicts per binary",
+    stats.learned.binary, relative (stats.conflicts, stats.learned.binary));
   msg ("bumped:        %15ld   %10.2f    per conflict",
     stats.bumped, relative (stats.bumped, stats.conflicts));
   msg ("searched:      %15ld   %10.2f    per decision",
