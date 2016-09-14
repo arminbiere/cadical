@@ -50,10 +50,11 @@ OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,1700, 0,1e9, "initial reduce limit") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0,  2, "restart blocking factor") \
-OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
+OPTION(restartblocking,  bool,   0, 0,  1, "enable restart blocking") \
 OPTION(restartblocklim,   int, 1e4, 0,1e9, "restart blocking limit") \
 OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
-OPTION(restartint,        int,  50, 1,1e9, "restart base interval") \
+OPTION(restartdelaying,  bool,   0, 0,  1, "delay restart level limit") \
+OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
 OPTION(restartmargin,  double, 0.2, 0, 10, "restart slow & fast margin") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
 OPTION(witness,          bool,   1, 0,  1, "print witness") \
@@ -1402,7 +1403,7 @@ static void check_clause () {
 
 /*------------------------------------------------------------------------*/
 
-#if 1
+#if 0
 
 // Compact recursive but bounded version of DFS for minimizing clauses.
 
@@ -1673,6 +1674,7 @@ static bool restarting () {
   double l = (1.0 + opts.restartmargin) * s;
   LOG ("EMA learned glue slow %.2f fast %.2f limit %.2f", s, f, l);
   if (l > f) { stats.restart.unforced++; LOG ("unforced"); return false; }
+  if (!opts.restartdelaying) return true;
   double j = ema.jump; l = opts.restartdelay * j;
   LOG ("EMA jump %.2f limit %.2f", j, l);
   if (level < l) { stats.restart.delayed++; LOG ("delayed"); return false; }
