@@ -49,13 +49,13 @@ OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,1700, 0,1e9, "initial reduce limit") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
-OPTION(restartblock,   double, 1.4, 0,  2, "restart blocking factor") \
-OPTION(restartblocking,  bool,   0, 0,  1, "enable restart blocking") \
+OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
+OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
 OPTION(restartblocklim,   int, 1e4, 0,1e9, "restart blocking limit") \
 OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
 OPTION(restartdelaying,  bool,   0, 0,  1, "delay restart level limit") \
-OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
-OPTION(restartmargin,  double, 0.2, 0, 10, "restart slow & fast margin") \
+OPTION(restartint,        int,  50, 1,1e9, "restart base interval") \
+OPTION(restartmargin,  double,1.25, 0, 10, "restart slow & fast margin (1/K)") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
 OPTION(witness,          bool,   1, 0,  1, "print witness") \
 
@@ -1669,9 +1669,8 @@ static bool satisfied () { return trail.size () == (size_t) max_var; }
 static bool restarting () {
   if (!opts.restart) return false;
   if (stats.conflicts <= limits.restart.conflicts) return false;
-  limits.restart.conflicts = stats.conflicts + opts.restartint;
   double s = avg.learned.glue.slow, f = ema.learned.glue.fast;
-  double l = (1.0 + opts.restartmargin) * s;
+  double l = opts.restartmargin * s;
   LOG ("EMA learned glue slow %.2f fast %.2f limit %.2f", s, f, l);
   if (l > f) { stats.restart.unforced++; LOG ("unforced"); return false; }
   if (!opts.restartdelaying) return true;
@@ -1696,6 +1695,7 @@ static void restart () {
   stats.restart.count++;
   LOG ("restart %ld", stats.restarts);
   backtrack (reusetrail ());
+  limits.restart.conflicts = stats.conflicts + opts.restartint;
   STOP (restart);
 }
 
