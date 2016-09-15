@@ -36,6 +36,7 @@ IN THE SOFTWARE.
 /*  NAME,                TYPE, VAL,LOW,HIGH,DESCRIPTION */ \
 OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
+OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
 OPTION(emaf2,          double,5e-3, 0,  1, "alpha learned binary frequency") \
 OPTION(emaglueslow,    double,2e-5, 0,  1, "alpha slow learned glue") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
@@ -57,6 +58,7 @@ OPTION(restartblocking,  bool,   0, 0,  1, "enable restart blocking") \
 OPTION(restartblocklim,   int, 1e4, 0,1e9, "restart blocking limit") \
 OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
 OPTION(restartdelaying,  bool,   0, 0,  1, "delay restart level limit") \
+OPTION(restartemaf1,     bool,   1, 0,  1, "unit frequency based restart") \
 OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
 OPTION(restartmargin,  double,1.05, 0, 10, "restart slow & fast margin (1/K)") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
@@ -424,6 +426,7 @@ static struct {
     long blocked;
     long unforced;
     long reused;
+    long unit;
   } restart;
 
   long reports, sections;
@@ -471,6 +474,7 @@ static struct {
 
 static struct {
   struct { long conflicts; } reduce;
+  double unit, binary;
 } inc;
 
 static FILE * input_file, * dimacs_file, * proof_file;
@@ -747,7 +751,7 @@ static void print (int lit, FILE * file = stdout) {
 REPORT("seconds",      2, 5, seconds ()) \
 REPORT("MB",           0, 2, current_bytes () / (double)(1l<<20)) \
 REPORT("level",        1, 4, ema.jump) \
-REPORT("f1",           0, 2, ema.frequency.unit) \
+REPORT("f1",           0, 3, 100.0 * ema.frequency.unit) \
 REPORT("reductions",   0, 2, stats.reduce.count) \
 REPORT("restarts",     0, 4, stats.restart.count) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
@@ -1653,8 +1657,8 @@ static void analyze () {
     } 
     stats.learned.unit += (size == 1);
     stats.learned.binary += (size == 2);
-    UPDATE (ema.frequency.unit, (size == 1) ? (10.0/opts.emaf1) : 0);
-    UPDATE (ema.frequency.binary, (size == 2) ? (10.0/opts.emaf2) : 0);
+    UPDATE (ema.frequency.unit, (size == 1) ? inc.unit : 0);
+    UPDATE (ema.frequency.binary, (size == 2) ? inc.binary : 0);
     UPDATE (ema.jump, jump);
     UPDATE (ema.trail, trail.size ());
     if (opts.restartblocking &&
@@ -1682,7 +1686,8 @@ static bool restarting () {
   if (!opts.restart) return false;
   if (stats.conflicts <= limits.restart.conflicts) return false;
   limits.restart.conflicts = stats.conflicts + opts.restartint;
-  if (ema.frequency.unit >= 10.0) return true;
+  if (opts.restartemaf1 && ema.frequency.unit >= opts.emaf1lim)
+    { stats.restart.unit++; LOG ("unit restart"); return true; }
   double s = ema.glue.slow, f = ema.glue.fast, l = opts.restartmargin * s;
   LOG ("EMA learned glue slow %.2f fast %.2f limit %.2f", s, f, l);
   if (l > f) { stats.restart.unforced++; LOG ("unforced"); return false; }
@@ -2007,6 +2012,8 @@ static void init_solving () {
   limits.restart.conflicts = opts.restartint;
   limits.reduce.conflicts = opts.reduceinit;
   inc.reduce.conflicts = opts.reduceinit;
+  inc.unit = opts.emaf1 ? 1.0 / opts.emaf1 : 1e-9;
+  inc.binary = opts.emaf2 ? 1.0 / opts.emaf2 : 1e-9;
   INIT_EMA (ema.glue.fast, opts.emagluefast);
   INIT_EMA (ema.glue.slow, opts.emaglueslow);
   INIT_EMA (ema.frequency.unit, opts.emaf1);
@@ -2044,6 +2051,9 @@ static void print_statistics () {
   msg ("reused:        %15ld   %10.2f %%  per restart",
     stats.restart.reused,
     percent (stats.restart.reused, stats.restart.count));
+  msg ("f1:            %15ld   %10.2f %%  per restart",
+    stats.restart.unit,
+    percent (stats.restart.unit, stats.restart.count));
   msg ("blocked:       %15ld   %10.2f %%  per restart",
     stats.restart.blocked,
     percent (stats.restart.blocked, stats.restart.count));
