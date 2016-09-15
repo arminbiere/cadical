@@ -34,11 +34,10 @@ IN THE SOFTWARE.
 
 #define OPTIONS \
 /*  NAME,                TYPE, VAL,LOW,HIGH,DESCRIPTION */ \
-OPTION(eagerpropbinlim,   int,   1, 1,1e9, "eager binary propagation limit") \
 OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf2,          double,5e-3, 0,  1, "alpha learned binary frequency") \
-OPTION(emaglueslow,    double,2e-5, 0,  1, "alpha fast learned glue") \
+OPTION(emaglueslow,    double,2e-5, 0,  1, "alpha slow learned glue") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
 OPTION(ematrail,       double,1e-5, 0,  1, "alpha trail") \
@@ -749,7 +748,6 @@ REPORT("seconds",      2, 5, seconds ()) \
 REPORT("MB",           0, 2, current_bytes () / (double)(1l<<20)) \
 REPORT("level",        1, 4, ema.jump) \
 REPORT("f1",           0, 2, ema.frequency.unit) \
-REPORT("f2",           0, 2, ema.frequency.binary) \
 REPORT("reductions",   0, 2, stats.reduce.count) \
 REPORT("restarts",     0, 4, stats.restart.count) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
@@ -762,6 +760,7 @@ REPORT("properdec",    0, 3, relative (stats.propagations, stats.decisions)) \
 
 #if 0
 
+REPORT("f2",           0, 2, ema.frequency.binary) \
 REPORT("fastglue",     1, 4, ema.learned.glue.fast) \
 REPORT("resglue",      1, 4, ema.resolved.glue) \
 REPORT("ressize",      1, 4, ema.resolved.size) \
@@ -1654,8 +1653,8 @@ static void analyze () {
     } 
     stats.learned.unit += (size == 1);
     stats.learned.binary += (size == 2);
-    UPDATE (ema.frequency.unit, 10000*(size == 1));
-    UPDATE (ema.frequency.binary, 1000*(size == 2));
+    UPDATE (ema.frequency.unit, (size == 1) ? (10.0/opts.emaf1) : 0);
+    UPDATE (ema.frequency.binary, (size == 2) ? (10.0/opts.emaf2) : 0);
     UPDATE (ema.jump, jump);
     UPDATE (ema.trail, trail.size ());
     if (opts.restartblocking &&
@@ -1684,7 +1683,6 @@ static bool restarting () {
   if (stats.conflicts <= limits.restart.conflicts) return false;
   limits.restart.conflicts = stats.conflicts + opts.restartint;
   if (ema.frequency.unit >= 10.0) return true;
-  if (ema.frequency.binary >= 10.0) return true;
   double s = ema.glue.slow, f = ema.glue.fast, l = opts.restartmargin * s;
   LOG ("EMA learned glue slow %.2f fast %.2f limit %.2f", s, f, l);
   if (l > f) { stats.restart.unforced++; LOG ("unforced"); return false; }

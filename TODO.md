@@ -50,7 +50,8 @@ Second things are listed related to additional features.
 
 ## General
 
-There should be an ongoing process of refactoring and documenting the code.
+There should be an ongoing process of refactoring and documenting the code
+and in particular remove part of the code which is not used anymore.
 
 
-So 11. Sep 13:07:56 CEST 2016
+Do 15. Sep 11:21:46 BST 2016
