@@ -51,7 +51,6 @@ OPTION(reducedynamic,    bool,   1, 0,  1, "dynamic glue & size limit") \
 OPTION(reduceglue,       bool,   0, 0,  1, "reduce by glue first") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
-OPTION(reducereskeep,  double,0.01, 0,  1, "resolved keep fraction") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
 OPTION(restartblocking,  bool,   0, 0,  1, "enable restart blocking") \
@@ -171,6 +170,10 @@ public:
 
 /*------------------------------------------------------------------------*/
 
+static const int    LD_MAX_GLUE     =  28;
+static const int    MAX_GLUE        =  (1 << LD_MAX_GLUE);
+static const size_t EXTENDED_OFFSET = sizeof(long);
+
 struct Clause {
 
   unsigned redundant:1; // aka 'learned' so not 'irredundant' (original)
@@ -178,43 +181,36 @@ struct Clause {
   unsigned reason   :1; // reason / antecedent clause can not be collected
   unsigned extended :1; // see discussion on 'additional fields' below.
 
+  unsigned glue : LD_MAX_GLUE;
+
   int size;             // actual size of 'literals' (at least 2)
 
   int literals[2];      // actually of variadic 'size' in general
                         // for binary embedded reason clauses 'size == 2'
 
-  void set (int a, int b) {
+  void set_literals (int a, int b) {
     redundant = garbage = reason = false;
     size = 2, literals[0] = a, literals[1] = b;
   }
 
   enum {
-    GLUE_OFFSET     = 2*sizeof(int), // of 'glue' field before clause
     RESOLVED_OFFSET = 1*sizeof(int), // of 'resolved' field before clause
-    EXTENDED_OFFSET = 2*sizeof(int), // additional bytes if extended
   };            
 
-  // Actually, a redundant large clause has two additional fields
+  // Actually, a redundant large clause has one additional field
   //
-  //  int glue;         // LBD = glucose level = glue
-  //  int resolved;     // conflict index abstraction when last resolved
-  //                    // copied from 'resolve32' in 'inc_resolved'
+  //  long resolved;     // conflict index when last resolved
   //
-  // These are however placed before the actual clause data and thus not
-  // directly visible.  We set 'extended' to 'true' if these two fields are
+  // This is however placed before the actual clause data and thus not
+  // directly visible.  We set 'extended' to 'true' if this field is
   // allocated.  The policy used to determine whether a redundant clause is
   // extended uses the 'keepsize' option.  A redundant clause larger than
   // its value is extended. Usually we always keep clauses of size 2 or 3,
-  // which then do not require 'glue' nor 'resolved' fields.
+  // which then do not require 'resolved' fields.
 
-  int & resolved () {
+  long & resolved () {
     assert (this), assert (extended);
-    return *(int*) (((char*)this) - RESOLVED_OFFSET);
-  }
-
-  int & glue () {
-    assert (this), assert (extended);
-    return *(int*) (((char*)this) - GLUE_OFFSET);
+    return *(long*) (((char*)this) - EXTENDED_OFFSET);
   }
 
   size_t bytes () const;
@@ -245,7 +241,7 @@ public:
 
   Reason (Clause * c) : tag (REFERENCED) { ref = clause2ref (c); }
 
-  Reason (int a, int b) : tag (EMBEDDED) { embedded.set (a, b); }
+  Reason (int a, int b) : tag (EMBEDDED) { embedded.set_literals (a, b); }
 
   bool referenced () const { return tag == REFERENCED; }
 
@@ -435,8 +431,6 @@ static struct {
   long resolved;                // resolved redundant clauses in 'analyze'
   long searched;                // searched decisions in 'decide'
 
-  int resolved32;               // 32-bit abstraction of 'resolved'
-
   struct { long count, clauses, bytes; } reduce; // in 'reduce'
 
   struct { long learned, minimized; } literals;  // in 'minimize_clause'
@@ -466,7 +460,7 @@ static struct {
 // Limits for next restart, reduce.
 
 static struct {
-  struct { long conflicts; int resolved32, fixed; } reduce;
+  struct { long conflicts, resolved; int fixed; } reduce;
   struct { long conflicts; } restart;
 } limits;
 
@@ -585,7 +579,7 @@ static void LOG (Clause * c, const char *fmt, ...) {
   if (c) {
     if (!c->redundant) printf (" irredundant");
     else if (c->extended)
-      printf (" redundant glue %d resolved %ld", c->glue (), c->resolved ());
+      printf (" redundant glue %u resolved %ld", c->glue, c->resolved ());
     else printf (" redundant without glue");
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
@@ -761,13 +755,13 @@ REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
 REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
 REPORT("properdec",    0, 3, relative (stats.propagations, stats.decisions)) \
+REPORT("resglue",      1, 4, ema.resolved.glue) \
+REPORT("ressize",      1, 4, ema.resolved.size) \
 
 #if 0
 
 REPORT("f2",           0, 2, ema.frequency.binary) \
 REPORT("fastglue",     1, 4, ema.learned.glue.fast) \
-REPORT("resglue",      1, 4, ema.resolved.glue) \
-REPORT("ressize",      1, 4, ema.resolved.size) \
 REPORT("slowglue",     1, 4, ema.learned.glue.slow) \
 REPORT("trail",        1, 4, ema.trail) \
 
@@ -1138,61 +1132,6 @@ static void backtrack (int target_level = 0) {
 
 /*------------------------------------------------------------------------*/
 
-struct resolved_earlier {
-  bool operator () (Clause * a, Clause * b) {
-    return a->resolved () < b->resolved ();
-  }
-};
-
-static const int rescoring_resolved_limit = INT_MAX/2;
-
-static long rescore_resolved () {
-  vector<Clause*> work;
-  for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = ref2clause (clauses[i]);
-    if (c->extended) work.push_back (c);
-  }
-  if (work.size () + 1 >= rescoring_resolved_limit)
-    die ("too many redundant 'extended' clauses to rescore 'resolved'");
-  sort (work.begin (), work.end (), resolved_earlier ());
-  stats.resolved32 = 0;
-  bool set_limit = false;
-  for (size_t i = 0; i < work.size (); i++) {
-    Clause * c = work[i];
-    long resolved = c->resolved ();
-    c->resolved () = ++stats.resolved32;
-    if (set_limit) continue;
-    if (resolved < limits.reduce.resolved32) continue;
-    const bool different = (resolved > limits.reduce.resolved32);
-    limits.reduce.resolved32 = stats.resolved32;
-    if (different) c->resolved () = ++stats.resolved32;
-    set_limit = true;
-  }
-  report ('R');
-  return ++stats.resolved32;
-}
-
-static bool rescoring_resolved () {
-#if 1
-  return stats.resolved32 >= rescoring_resolved_limit;
-#else
-  // For testing purposes use this one.
-  return stats.resolved32 > 2*stats.clauses.redundant + 1000;
-#endif
-}
-
-static long inc_resolved () {
-  stats.resolved++;
-  if (stats.resolved32 >= rescoring_resolved_limit)
-    die ("'resolved' counter too large bounds");
-  long res = ++stats.resolved32;
-  if (rescoring_resolved ()) res = rescore_resolved ();
-  assert (res > 0);
-  return res;
-}
-
-/*------------------------------------------------------------------------*/
-
 static void watch_literal (int lit, int blit, Clause * c) {
   watches (lit).push_back (Watch (blit, clause2ref (c)));
   LOG (c, "watch %d blit %d in", lit, blit);
@@ -1211,27 +1150,25 @@ inline size_t Clause::bytes () const {
   return res;
 }
 
-static Clause * new_clause (bool red, int glue = 0) {
+static Clause * new_clause (bool red, unsigned glue = 0) {
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();  assert (size >= 2);
   size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int);
   const bool extended = red && size > opts.keepsize;
-  if (extended) bytes += Clause::EXTENDED_OFFSET;
+  if (extended) bytes += EXTENDED_OFFSET;
   Ref ref;
   char * ptr = (char*) arena.allocate (bytes, ref);
-  if (extended) 
-    ptr += Clause::EXTENDED_OFFSET,
-    ref += Clause::EXTENDED_OFFSET/alignment;
+  if (extended) ptr += EXTENDED_OFFSET, ref += EXTENDED_OFFSET/alignment;
   Clause * res = (Clause*) ptr;
   res->redundant = red;
   res->garbage = false;
   res->reason = false;
+  res->extended = extended;
+  res->glue = min ((unsigned) MAX_GLUE, glue);
   res->size = size;
-  if ((res->extended = extended))
-    res->resolved () = inc_resolved (),
-    res->glue () = glue;
-  assert (res->bytes () == bytes);
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
+  if (extended) res->resolved () = ++stats.resolved;
+  assert (res->bytes () == bytes);
   clauses.push_back (ref);
   if (red) stats.clauses.redundant++;
   else     stats.clauses.irredundant++;
@@ -1544,10 +1481,6 @@ struct bumped_earlier {
 
 static void bump_and_clear_seen_variables (int uip) {
   START (bump);
-#if 0
-  for (size_t i = 0; i < seen.minimized.size (); i++)
-    seen.literals.push_back (seen.minimized[i]);
-#endif
   sort (seen.literals.begin (), seen.literals.end (), bumped_earlier ());
   if (uip < 0) uip = -uip;
   for (size_t i = 0; i < seen.literals.size (); i++) {
@@ -1568,11 +1501,17 @@ static void bump_and_clear_seen_variables (int uip) {
   STOP (bump);
 }
 
+struct resolved_earlier {
+  bool operator () (Clause * a, Clause * b) {
+    return a->resolved () < b->resolved ();
+  }
+};
+
 static void bump_resolved_clauses () {
   START (bump);
   sort (resolved.begin (), resolved.end (), resolved_earlier ());
   for (size_t i = 0; i < resolved.size (); i++)
-    resolved[i]->resolved () = inc_resolved ();
+    resolved[i]->resolved () = ++stats.resolved;
   STOP (bump);
   resolved.clear ();
 }
@@ -1585,10 +1524,10 @@ static void clear_levels () {
 
 static void resolve_clause (Clause * c) { 
   if (!c->redundant) return;
-  if (c->size <= opts.keepsize) return;
-  if (c->glue () <= opts.keepglue) return;
   UPDATE (ema.resolved.size, c->size);
-  UPDATE (ema.resolved.glue, c->glue ());
+  UPDATE (ema.resolved.glue, c->glue);
+  if (c->size <= opts.keepsize) return;
+  if (c->glue <= (unsigned) opts.keepglue) return;
   resolved.push_back (c);
 }
 
@@ -1711,9 +1650,9 @@ static int reusetrail () {
 static void restart () {
   START (restart);
   stats.restart.count++;
-  LOG ("restart %ld", stats.restarts);
+  LOG ("restart %ld", stats.restart.count);
   backtrack (reusetrail ());
-  // report ('r');	// TODO verbose level ...
+  // report ('r');      // TODO verbose level ...
   STOP (restart);
 }
 
@@ -1802,8 +1741,8 @@ static void mark_satisfied_clauses_as_garbage () {
 
 struct glue_larger {
   bool operator () (Clause * c, Clause * d) {
-    if (c->glue () > d->glue ()) return true;
-    if (c->glue () < d->glue ()) return false;
+    if (c->glue > d->glue) return true;
+    if (c->glue < d->glue) return false;
     return resolved_earlier () (c, d);
   }
 };
@@ -1815,19 +1754,17 @@ struct glue_larger {
 static void mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
   assert (stack.empty ());
-  int limit32 = stats.resolved32 -
-    (stats.resolved32 - limits.reduce.resolved32) * opts.reducereskeep;
   for (size_t i = 0; i < clauses.size (); i++) {
     Clause * c = ref2clause (clauses[i]);
     if (!c->redundant) continue;
     if (c->reason) continue;
     if (c->garbage) continue;
     if (c->size <= opts.keepsize) continue;
-    if (c->glue () <= opts.keepglue) continue;
-    if (c->resolved () > limit32) continue;
+    if (c->glue <= (unsigned) opts.keepglue) continue;
+    if (c->resolved () > limits.reduce.resolved) continue;
     if (opts.reducedynamic &&
-        c->glue () < ema.resolved.glue &&
-        c->size    < ema.resolved.size) continue;
+        c->glue < ema.resolved.glue &&
+        c->size < ema.resolved.size) continue;
     stack.push_back (c);
   }
   if (opts.reduceglue) sort (stack.begin (), stack.end (), glue_larger ());
@@ -1919,12 +1856,12 @@ static void collect_garbage_clauses () {
       assert (val (forced) > 0);
     } else forced = 0;
     const bool extended = c->extended;
-    if (extended) ptr -= Clause::EXTENDED_OFFSET;
+    if (extended) ptr -= EXTENDED_OFFSET;
     if (!new_top) new_top = ptr;
     if (c->reason || !c->garbage) {
       memmove (new_top, ptr, bytes);
       Ref new_ref = arena.ptr2ref (new_top);
-      if (extended) new_ref += Clause::EXTENDED_OFFSET/alignment;
+      if (extended) new_ref += EXTENDED_OFFSET/alignment;
       clauses[j++] = new_ref;
       new_top += align (bytes);
       if (forced) {
@@ -1965,7 +1902,7 @@ static void reduce () {
   setup_watches ();
   inc.reduce.conflicts += opts.reduceinc;
   limits.reduce.conflicts = stats.conflicts + inc.reduce.conflicts;
-  limits.reduce.resolved32 = stats.resolved32;
+  limits.reduce.resolved = stats.resolved;
   limits.reduce.fixed = stats.fixed;
   report ('-');
   STOP (reduce);
