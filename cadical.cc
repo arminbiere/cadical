@@ -1564,7 +1564,7 @@ static void analyze () {
   else {
     Reason & reason = conflict;
     LOG (reason.clause (), "analyzing conflict");
-    if (!reason.referenced ()) resolve_clause (reason.clause ());
+    if (reason.referenced ()) resolve_clause (reason.clause ());
     int open = 0, uip = 0;
     size_t i = trail.size ();
     for (;;) {
