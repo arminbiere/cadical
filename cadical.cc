@@ -311,7 +311,7 @@ struct Level {
 /*------------------------------------------------------------------------*/
 
 // We have a more complex generic exponential moving average struct here
-// for more robust initialization (see documentation before 'update').
+// for more robust initialization (see comments before 'update' below).
 
 struct EMA {
   double value;         // current average value
@@ -330,6 +330,7 @@ struct EMA {
 };
 
 #if 0
+
 struct AVG {
   double value;
   long count;
@@ -337,6 +338,7 @@ struct AVG {
   operator double () const { return value; }
   void update (double y, const char * name);
 };
+
 #endif
 
 #ifdef PROFILING        // enabled by './configure -p'
@@ -370,7 +372,8 @@ static signed char * phases;            // saved previous assignment
 // This 'others' table contains for each literal a zero terminated sequence
 // of other literals in binary clauses with the first literal.  This avoids
 // to use 'vector' for this data which is mostly static.  New binary clauses
-// are treated as long clauses until the next 'reduce'.
+// are treated as long clauses until the next 'reduce' after which this
+// binary data structure is updated.
 
 static int * others;
 static size_t size_others;
