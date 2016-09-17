@@ -756,7 +756,7 @@ static void print (int lit, FILE * file = stdout) {
 REPORT("seconds",      2, 5, seconds ()) \
 REPORT("MB",           0, 2, current_bytes () / (double)(1l<<20)) \
 REPORT("level",        1, 4, ema.jump) \
-REPORT("f1",           0, 3, 10.0 * ema.frequency.unit) \
+REPORT("f1",           0, 2, 10.0 * ema.frequency.unit) \
 REPORT("reductions",   0, 2, stats.reduce.count) \
 REPORT("restarts",     0, 4, stats.restart.count) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
