@@ -418,9 +418,11 @@ static struct {
 
   struct {
     long count;
+    long tried;
     long delayed;
     long blocked;
     long unforced;
+    long forced;
     long reused;
     long unit;
   } restart;
@@ -1614,16 +1616,34 @@ static bool satisfied () { return trail.size () == (size_t) max_var; }
 static bool restarting () {
   if (!opts.restart) return false;
   if (stats.conflicts <= limits.restart.conflicts) return false;
+  stats.restart.tried++;
   limits.restart.conflicts = stats.conflicts + opts.restartint;
-  if (opts.restartemaf1 && ema.frequency.unit >= opts.emaf1lim)
-    { stats.restart.unit++; LOG ("unit restart"); return true; }
   double s = ema.glue.slow, f = ema.glue.fast, l = opts.restartmargin * s;
   LOG ("EMA learned glue slow %.2f fast %.2f limit %.2f", s, f, l);
-  if (l > f) { stats.restart.unforced++; LOG ("unforced"); return false; }
-  if (!opts.restartdelaying) return true;
-  double j = ema.jump; l = opts.restartdelay * j;
-  LOG ("EMA jump %.2f limit %.2f", j, l);
-  if (level < l) { stats.restart.delayed++; LOG ("delayed"); return false; }
+  if (l > f) { 
+    if (opts.restartemaf1) {
+      if (ema.frequency.unit >= opts.emaf1lim) {
+	stats.restart.unit++;
+	LOG ("high unit frequency restart", (double) ema.frequency.unit);
+	return true;
+      } else LOG ("low unit frequency", (double) ema.frequency.unit);
+    }
+    stats.restart.unforced++;
+    LOG ("unforced restart");
+    return false;
+  } else {
+    LOG ("forced restart");
+    stats.restart.forced++;
+  }
+  if (opts.restartdelaying) {
+    double j = ema.jump; l = opts.restartdelay * j;
+    LOG ("EMA jump %.2f limit %.2f", j, l);
+    if (level < l) {
+      stats.restart.delayed++;
+      LOG ("delayed restart");
+      return false;
+    } else LOG ("undelayed restart");
+  }
   return true;
 }
 
@@ -1979,9 +1999,6 @@ static void print_statistics () {
   msg ("reused:        %15ld   %10.2f %%  per restart",
     stats.restart.reused,
     percent (stats.restart.reused, stats.restart.count));
-  msg ("f1:            %15ld   %10.2f %%  per restart",
-    stats.restart.unit,
-    percent (stats.restart.unit, stats.restart.count));
   msg ("blocked:       %15ld   %10.2f %%  per restart",
     stats.restart.blocked,
     percent (stats.restart.blocked, stats.restart.count));
@@ -1991,6 +2008,12 @@ static void print_statistics () {
   msg ("unforced:      %15ld   %10.2f %%  per restart",
     stats.restart.unforced,
     percent (stats.restart.unforced, stats.restart.count));
+  msg ("forced:        %15ld   %10.2f %%  per restart",
+    stats.restart.forced,
+    percent (stats.restart.forced, stats.restart.count));
+  msg ("f1restart:     %15ld   %10.2f %%  per restart",
+    stats.restart.unit,
+    percent (stats.restart.unit, stats.restart.count));
   msg ("units:         %15ld   %10.2f    conflicts per unit",
     stats.learned.unit, relative (stats.conflicts, stats.learned.unit));
   msg ("binaries:      %15ld   %10.2f    conflicts per binary",
