@@ -38,7 +38,8 @@ OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
 OPTION(emaf2,          double,5e-3, 0,  1, "alpha learned binary frequency") \
-OPTION(emaglueslow,    double,2e-5, 0,  1, "alpha slow learned glue") \
+OPTION(emaglueslow,    double,2e-4, 0,  1, "alpha slow learned glue") \
+OPTION(emainitsmoothly,  bool,   1, 0,  1, "initialize EMAs smoothly") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
 OPTION(ematrail,       double,1e-5, 0,  1, "alpha trail") \
@@ -62,6 +63,7 @@ OPTION(restartemaf1,     bool,   1, 0,  1, "unit frequency based restart") \
 OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
 OPTION(restartmargin,  double, 1.1, 0, 10, "restart slow & fast margin (1/K)") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
+OPTION(reverse,          bool,   0, 0,  1, "last index first initially") \
 OPTION(verbose,          bool,   0, 0,  1, "more verbose messages") \
 OPTION(witness,          bool,   1, 0,  1, "print witness") \
 
@@ -318,9 +320,10 @@ struct EMA {
   long wait;            // count-down using 'beta' instead of 'alpha'
   long period;          // length of current waiting phase
   EMA (double a = 0) :
-     value (0), alpha (a), beta (1), wait (0), period (0)
+     value (0), alpha (a), wait (0), period (0)
   {
     assert (0 <= alpha), assert (alpha <= 1);
+    beta = opts.emainitsmoothly ? 1.0 : alpha;
   }
   operator double () const { return value; }
   void update (double y, const char * name);
@@ -760,15 +763,15 @@ REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
 REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
 REPORT("properdec",    0, 3, relative (stats.propagations, stats.decisions)) \
+REPORT("trail",        1, 4, ema.trail) \
 REPORT("resglue",      1, 4, ema.resolved.glue) \
+REPORT("fastglue",     1, 4, ema.glue.fast) \
 REPORT("ressize",      1, 4, ema.resolved.size) \
 
 #if 0
 
 REPORT("f2",           0, 2, 10.0 * ema.frequency.binary) \
-REPORT("fastglue",     1, 4, ema.learned.glue.fast) \
 REPORT("slowglue",     1, 4, ema.learned.glue.slow) \
-REPORT("trail",        1, 4, ema.trail) \
 
 #endif
 
@@ -797,7 +800,7 @@ struct Report {
 
 static void report (char type, bool verbose = false) {
   if (opts.quiet || (verbose && !opts.verbose)) return;
-  const int max_reports = 16;
+  const int max_reports = 32;
   Report reports[max_reports];
   int n = 0;
 #define REPORT(HEAD,PREC,MIN,EXPR) \
@@ -924,6 +927,8 @@ inline void EMA::update (double y, const char * name) {
 
   value += beta * (y - value);
   LOG ("update %s EMA with %g beta %g yields %g", name, y, beta, value);
+
+  if (!opts.emainitsmoothly) return;
 
   // However, we used the upper approximation 'beta' of 'alpha'.  The idea
   // is that 'beta' slowly moves down to 'alpha' to smoothly initialize
@@ -1266,7 +1271,8 @@ static bool propagate () {
         if (b < 0) conflict = Reason (-lit, other);
         else if (!b) assign (other, Reason (-lit, other));
       }
-    } else if (next.watches < trail.size ()) {  // propagate large clauses
+    } // else 
+    if (!conflict && next.watches < trail.size ()) {  // propagate large clauses
       const int lit = trail[next.watches++];
       assert (val (lit) > 0);
       LOG ("propagating watches of %d", lit);
@@ -2052,8 +2058,10 @@ static void print_statistics () {
 }
 
 static void init_vmtf_queue () {
-  int prev = 0;
-  for (int i = max_var; i >= 1; i--) {
+  int prev = 0, start, end, dir;
+  if (opts.reverse) start = 1, end = max_var + 1, dir = 1;
+  else start = max_var, end = 0, dir = -1;
+  for (int i = start; i != end; i += dir) {
     Var * v = &vars[i];
     if ((v->prev = prev)) var (prev).next = i;
     else queue.first = i;
