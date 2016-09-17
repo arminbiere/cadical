@@ -46,6 +46,7 @@ OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(minimize,         bool,   1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,     int,1000, 0,1e9, "recursive minimization depth") \
+OPTION(quiet,            bool,   0, 0,  1, "disable all messages") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,    bool,   0, 0,  1, "dynamic glue & size limit") \
 OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
@@ -61,6 +62,7 @@ OPTION(restartemaf1,     bool,   1, 0,  1, "unit frequency based restart") \
 OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
 OPTION(restartmargin,  double, 1.1, 0, 10, "restart slow & fast margin (1/K)") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
+OPTION(verbose,          bool,   0, 0,  1, "more verbose messages") \
 OPTION(witness,          bool,   1, 0,  1, "print witness") \
 
 /*------------------------------------------------------------------------*/
@@ -515,7 +517,7 @@ SIGNALS
 
 static void msg (const char * fmt, ...) {
   va_list ap;
-  // TODO quiet ...
+  if (opts.quiet) return;
   fputs ("c ", stdout);
   va_start (ap, fmt);
   vprintf (fmt, ap);
@@ -525,6 +527,7 @@ static void msg (const char * fmt, ...) {
 }
 
 static void section (const char * title) {
+  if (opts.quiet) return;
   char line[160];
   sprintf (line, "---- [ %s ] ", title);
   assert (strlen (line) < sizeof line);
@@ -747,7 +750,7 @@ static void print (int lit, FILE * file = stdout) {
 REPORT("seconds",      2, 5, seconds ()) \
 REPORT("MB",           0, 2, current_bytes () / (double)(1l<<20)) \
 REPORT("level",        1, 4, ema.jump) \
-REPORT("f1",           0, 3, 100.0 * ema.frequency.unit) \
+REPORT("f1",           0, 3, 10.0 * ema.frequency.unit) \
 REPORT("reductions",   0, 2, stats.reduce.count) \
 REPORT("restarts",     0, 4, stats.restart.count) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
@@ -762,7 +765,7 @@ REPORT("ressize",      1, 4, ema.resolved.size) \
 
 #if 0
 
-REPORT("f2",           0, 2, ema.frequency.binary) \
+REPORT("f2",           0, 2, 10.0 * ema.frequency.binary) \
 REPORT("fastglue",     1, 4, ema.learned.glue.fast) \
 REPORT("slowglue",     1, 4, ema.learned.glue.slow) \
 REPORT("trail",        1, 4, ema.trail) \
@@ -792,7 +795,8 @@ struct Report {
   }
 };
 
-static void report (char type) {
+static void report (char type, bool verbose = false) {
+  if (opts.quiet || (verbose && !opts.verbose)) return;
   const int max_reports = 16;
   Report reports[max_reports];
   int n = 0;
@@ -1368,13 +1372,12 @@ static bool minimize_literal (int lit, int depth = 0) {
 
 #else
 
-// Non-recursive unbounded version of DFS for minimizing clauses.
-// It is more ugly and needs slightly more heap memory for variables
-// due to 'mark' used for saving the position in the reason clause.
-// It also trades stack memory for holding the recursion stack
-// for heap memory, which however should be negligible.
-// It runs minimization until completion though and thus might
-// remove more literals than the bounded recursive version.
+// Non-recursive unbounded version of DFS for minimizing clauses.  It is
+// more ugly and needs slightly more heap memory for variables due to 'mark'
+// used for saving the position in the reason clause.  It also trades stack
+// memory for holding the recursion stack for heap memory, which however
+// should be negligible.  It runs minimization until completion though and
+// thus might remove more literals than the bounded recursive version.
 
 static int minimize_base_case (int root, int lit) {
   Var & v = var (lit);
@@ -1623,9 +1626,9 @@ static bool restarting () {
   if (l > f) { 
     if (opts.restartemaf1) {
       if (ema.frequency.unit >= opts.emaf1lim) {
-	stats.restart.unit++;
-	LOG ("high unit frequency restart", (double) ema.frequency.unit);
-	return true;
+        stats.restart.unit++;
+        LOG ("high unit frequency restart", (double) ema.frequency.unit);
+        return true;
       } else LOG ("low unit frequency", (double) ema.frequency.unit);
     }
     stats.restart.unforced++;
@@ -1662,7 +1665,7 @@ static void restart () {
   stats.restart.count++;
   LOG ("restart %ld", stats.restart.count);
   backtrack (reusetrail ());
-  // report ('r');      // TODO verbose level ...
+  report ('r', 1);
   STOP (restart);
 }
 
@@ -1766,16 +1769,28 @@ static void mark_useless_redundant_clauses_as_garbage () {
   assert (stack.empty ());
   for (size_t i = 0; i < clauses.size (); i++) {
     Clause * c = ref2clause (clauses[i]);
-    if (!c->redundant) continue;
-    if (c->reason) continue;
-    if (c->garbage) continue;
+    if (!c->redundant) continue;                // keep irredundant
+    if (c->reason) continue;                    // need to keep reasons
+    if (c->garbage) continue;                   // already marked
+
+    // If the clause is short or has small glue keep it.
+    //
     if (c->size <= opts.keepsize) continue;
     if (c->glue <= (unsigned) opts.keepglue) continue;
+
+    // If the clause has recently been resolved or generated keep it.
+    //
     if (c->resolved () > limits.reduce.resolved) continue;
+
+    // In dynamic reduction we estimate the average glue and size of
+    // resolved clauses in conflict analysis and always keep clauses which
+    // are below both limits.
+    //
     if (opts.reducedynamic &&
         c->glue < ema.resolved.glue &&
         c->size < ema.resolved.size) continue;
-    stack.push_back (c);
+
+    stack.push_back (c);        // clause is garbage collection candidate
   }
   if (opts.reduceglue) sort (stack.begin (), stack.end (), glue_larger ());
   else sort (stack.begin (), stack.end (), resolved_earlier ());
@@ -2154,6 +2169,8 @@ static void print_usage () {
 "\n"
 "  -h         print this command line option summary\n"
 "  -n         do not print witness\n"
+"  -q         quiet (same as '--quiet')\n"
+"  -v         more verbose messages (same as '--verbose')\n"
 #ifndef NDEBUG
 "  -s <sol>   read solution in competition output format\n"
 "             (used for testing and debugging only)\n"
@@ -2465,6 +2482,8 @@ int main (int argc, char ** argv) {
       solution_name = argv[i];
 #endif
     } else if (!strcmp (argv[i], "-n")) set_option ("--no-witness");
+    else if (!strcmp (argv[i], "-q")) set_option ("--quiet");
+    else if (!strcmp (argv[i], "-v")) set_option ("--verbose");
     else if (set_option (argv[i])) { /* nothing do be done */ }
     else if (argv[i][0] == '-') die ("invalid option '%s'", argv[i]);
     else if (trace_proof) die ("too many arguments");
