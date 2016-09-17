@@ -1838,9 +1838,8 @@ static void setup_watches () {
 }
 
 static void collect_garbage_clauses () {
+  size_t collected_bytes = 0, i = 0, j = i;
   const size_t size = clauses.size ();
-  size_t collected_bytes = 0;
-  size_t i = 0, j = i;
   char * new_top = 0;
   while (i < size) {
     assert (!i || clauses[i-1] < clauses[i]);
