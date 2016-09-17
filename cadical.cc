@@ -1247,11 +1247,7 @@ static bool propagate () {
   const size_t before = next.binaries;
 
   while (!conflict) {
-
-    // Propagate binary clauses eagerly and even continue propagating if a
-    // conflicting binary clause if found.
-
-    while (next.binaries < trail.size ()) {
+    if (next.binaries < trail.size ()) {        // propagate binary clauses
       const int lit = trail[next.binaries++];
       LOG ("propagating binaries of %d", lit);
       assert (val (lit) > 0);
@@ -1259,17 +1255,12 @@ static bool propagate () {
       const int * p = binaries (-lit);
       if (!p) continue;
       int other;
-      while  ((other = *p++)) {
+      while  (!conflict && (other = *p++)) {
         const int b = val (other);
         if (b < 0) conflict = Reason (-lit, other);
         else if (!b) assign (other, Reason (-lit, other));
       }
-    }
-
-    // Then if all binary clauses are propagated, go over longer clauses
-    // with the negation of the assigned literal on the trail.
-
-    if (!conflict && next.watches < trail.size ()) {
+    } else if (next.watches < trail.size ()) {  // propagate large clauses
       const int lit = trail[next.watches++];
       assert (val (lit) > 0);
       LOG ("propagating watches of %d", lit);
@@ -1302,7 +1293,6 @@ static bool propagate () {
       }
       while (i < ws.size ()) ws[j++] = ws[i++];
       ws.resize (j);
-
     } else break;
   }
 
@@ -1859,15 +1849,15 @@ static void collect_garbage_clauses () {
     if (!new_top) new_top = ptr;
     if (c->reason || !c->garbage) {
       if (ptr != new_top) {
-	memmove (new_top, ptr, bytes);
-	Ref new_ref = arena.ptr2ref (new_top);
-	if (extended) new_ref += EXTENDED_OFFSET/alignment;
-	clauses[j++] = new_ref;
-	if (forced) {
-	  Var & v = var (forced);
-	  assert (v.reason.reference () == old_ref);
-	  v.reason.update_reference (new_ref);
-	}
+        memmove (new_top, ptr, bytes);
+        Ref new_ref = arena.ptr2ref (new_top);
+        if (extended) new_ref += EXTENDED_OFFSET/alignment;
+        clauses[j++] = new_ref;
+        if (forced) {
+          Var & v = var (forced);
+          assert (v.reason.reference () == old_ref);
+          v.reason.update_reference (new_ref);
+        }
       } else j++;
       new_top += align (bytes);
     } else {
