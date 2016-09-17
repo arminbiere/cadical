@@ -1802,7 +1802,6 @@ static void mark_useless_redundant_clauses_as_garbage () {
   else sort (stack.begin (), stack.end (), resolved_earlier ());
   const size_t target = stack.size ()/2;
   for (size_t i = 0; i < target; i++) stack[i]->garbage = true;
-  stack.clear ();
 }
 
 static void setup_binaries () {
