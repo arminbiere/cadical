@@ -125,7 +125,7 @@ static struct {
 
 typedef unsigned Ref;
 
-static const size_t alignment = 4;      // memory alignment in an arena
+static const size_t alignment = 8;      // memory alignment in an arena
 #ifndef NDEBUG
 static bool aligned (size_t bytes) { return !((alignment-1)&bytes); }
 static bool aligned (void * ptr) { return aligned ((size_t) ptr); }
@@ -1258,7 +1258,11 @@ static bool propagate () {
   const size_t before = next.binaries;
 
   while (!conflict) {
-    if (next.binaries < trail.size ()) {        // propagate binary clauses
+
+    // Propagate binary clauses eagerly and even continue propagating if a
+    // conflicting binary clause if found.
+
+    while (next.binaries < trail.size ()) {
       const int lit = trail[next.binaries++];
       LOG ("propagating binaries of %d", lit);
       assert (val (lit) > 0);
@@ -1268,10 +1272,15 @@ static bool propagate () {
       int other;
       while ((other = *p++)) {
         const int b = val (other);
-        if (b < 0) { conflict = Reason (-lit, other); break; }
+        if (b < 0) conflict = Reason (-lit, other);
         else if (!b) assign (other, Reason (-lit, other));
       }
-    } else if (next.watches < trail.size ()) {  // propagate large clauses
+    }
+
+    // Then if all binary clauses are propagated, go over longer clauses
+    // with the negation of the assigned literal on the trail.
+    
+    if (!conflict && next.watches < trail.size ()) {
       const int lit = trail[next.watches++];
       assert (val (lit) > 0);
       LOG ("propagating watches of %d", lit);
@@ -1304,6 +1313,7 @@ static bool propagate () {
       }
       while (i < ws.size ()) ws[j++] = ws[i++];
       ws.resize (j);
+
     } else break;
   }
 
