@@ -38,7 +38,7 @@ OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
 OPTION(emaf2,          double,5e-3, 0,  1, "alpha learned binary frequency") \
-OPTION(emaglueslow,    double,2e-4, 0,  1, "alpha slow learned glue") \
+OPTION(emaglueslow,    double,2e-5, 0,  1, "alpha slow learned glue") \
 OPTION(emainitsmoothly,  bool,   1, 0,  1, "initialize EMAs smoothly") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
