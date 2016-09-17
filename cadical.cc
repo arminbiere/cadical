@@ -1266,19 +1266,18 @@ static bool propagate () {
       const int * p = binaries (-lit);
       if (!p) continue;
       int other;
-      while  (!conflict && (other = *p++)) {
+      while ((other = *p++)) {
         const int b = val (other);
-        if (b < 0) conflict = Reason (-lit, other);
+        if (b < 0) { conflict = Reason (-lit, other); break; }
         else if (!b) assign (other, Reason (-lit, other));
       }
-    } // else 
-    if (!conflict && next.watches < trail.size ()) {  // propagate large clauses
+    } else if (next.watches < trail.size ()) {  // propagate large clauses
       const int lit = trail[next.watches++];
       assert (val (lit) > 0);
       LOG ("propagating watches of %d", lit);
       Watches & ws = watches (-lit);
       size_t i = 0, j = 0;
-      while (!conflict && i < ws.size ()) {
+      while (i < ws.size ()) {
         const Watch w = ws[j++] = ws[i++];      // keep watch by default
         const int b = val (w.blit);
         if (b > 0) continue;
@@ -1300,7 +1299,7 @@ static bool propagate () {
             watch_literal (lits[1], -lit, c);
             j--;                                // flush watch
           } else if (!u) assign (lits[0], c);
-          else conflict = c;
+          else { conflict = c; break; }
         }
       }
       while (i < ws.size ()) ws[j++] = ws[i++];
@@ -1801,7 +1800,10 @@ static void mark_useless_redundant_clauses_as_garbage () {
   if (opts.reduceglue) sort (stack.begin (), stack.end (), glue_larger ());
   else sort (stack.begin (), stack.end (), resolved_earlier ());
   const size_t target = stack.size ()/2;
-  for (size_t i = 0; i < target; i++) stack[i]->garbage = true;
+  for (size_t i = 0; i < target; i++) {
+    LOG (stack[i], "marking useless to be collected");
+    stack[i]->garbage = true;
+  }
 }
 
 static void setup_binaries () {
