@@ -1342,7 +1342,7 @@ static void check_clause () {
 
 /*------------------------------------------------------------------------*/
 
-#if 1
+#if 0
 
 // Compact recursive but bounded version of DFS for minimizing clauses.
 
