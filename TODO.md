@@ -27,10 +27,12 @@ Some of them first need proper benchmarking to avoid oversimplifying the solver:
 
   - Remove some redundant code related to disabled options.
 
-  - Maybe remove the C++ operator hacks, to make the code easier to
+  - Maybe remove C++ operator hacks altogether, to make the code easier to
     understand.
 
   - Check whether the complicated EMA initialization is necessary.
+
+  - Check whether not using bit-fields uses too much memory or is too small.
 
 ## Additions
 
@@ -39,6 +41,8 @@ Second things are listed related to additional features.
   - Try a moving cache access optimizing garbage collector, which gave for
     Splatz 15% after the arena based allocator now working.  First remove
     'clauses' and use clause iterator over clauses in the arena instead.
+
+  - Allocate the watcher lists in the arena as well.
 
   - Binary DRAT proof trace format.
 
@@ -54,4 +58,4 @@ There should be an ongoing process of refactoring and documenting the code
 and in particular remove part of the code which is not used anymore.
 
 
-Do 15. Sep 11:21:46 BST 2016
+Sa 17. Sep 05:00:55 BST 2016

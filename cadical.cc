@@ -1840,7 +1840,7 @@ static void setup_watches () {
 static void collect_garbage_clauses () {
   const size_t size = clauses.size ();
   size_t collected_bytes = 0;
-  size_t i = 0, j = 0;
+  size_t i = 0, j = i;
   char * new_top = 0;
   while (i < size) {
     assert (!i || clauses[i-1] < clauses[i]);
@@ -1859,16 +1859,18 @@ static void collect_garbage_clauses () {
     if (extended) ptr -= EXTENDED_OFFSET;
     if (!new_top) new_top = ptr;
     if (c->reason || !c->garbage) {
-      memmove (new_top, ptr, bytes);
-      Ref new_ref = arena.ptr2ref (new_top);
-      if (extended) new_ref += EXTENDED_OFFSET/alignment;
-      clauses[j++] = new_ref;
+      if (ptr != new_top) {
+	memmove (new_top, ptr, bytes);
+	Ref new_ref = arena.ptr2ref (new_top);
+	if (extended) new_ref += EXTENDED_OFFSET/alignment;
+	clauses[j++] = new_ref;
+	if (forced) {
+	  Var & v = var (forced);
+	  assert (v.reason.reference () == old_ref);
+	  v.reason.update_reference (new_ref);
+	}
+      } else j++;
       new_top += align (bytes);
-      if (forced) {
-        Var & v = var (forced);
-        assert (v.reason.reference () == old_ref);
-        v.reason.update_reference (new_ref);
-      }
     } else {
       LOG (c, "delete");
       if (c->redundant)
