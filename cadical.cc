@@ -260,7 +260,7 @@ public:
   }
 
   Clause * operator -> () { return clause (); }
-  operator Clause * () { return clause (); }
+  operator bool () { return tag; }
 };
 
 struct NoReason : public Reason { };
