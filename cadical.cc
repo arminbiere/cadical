@@ -34,6 +34,8 @@ IN THE SOFTWARE.
 
 #define OPTIONS \
 /*  NAME,                TYPE, VAL,LOW,HIGH,DESCRIPTION */ \
+OPTION(bump,             bool,   1, 0,  1, "bump variables") \
+OPTION(bumpfocus,        bool,   1, 0,  1, "current level focus") \
 OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
@@ -1490,22 +1492,27 @@ static int next_decision_variable () {
   return res;
 }
 
-struct bumped_earlier {
+struct bump_earlier {
   bool operator () (int a, int b) {
-    return var (a).bumped < var (b).bumped;
+    Var & u = var (a), & v = var (b);
+    if (opts.bumpfocus) {
+      if (u.level != level && v.level == level) return true;
+      if (u.level == level && v.level != level) return false;
+    }
+    return u.bumped < v.bumped;
   }
 };
 
 static void bump_and_clear_seen_variables (int uip) {
   START (bump);
-  sort (seen.literals.begin (), seen.literals.end (), bumped_earlier ());
+  sort (seen.literals.begin (), seen.literals.end (), bump_earlier ());
   if (uip < 0) uip = -uip;
   for (size_t i = 0; i < seen.literals.size (); i++) {
     int idx = vidx (seen.literals[i]);
     Var * v = vars + idx;
     assert (v->seen);
     v->seen = false;
-    if (!v->next) continue;
+    if (!opts.bump || !v->next) continue;
     if (queue.assigned == idx)
       queue.assigned = v->prev ? v->prev : v->next;
     dequeue (v), enqueue (v, idx);
