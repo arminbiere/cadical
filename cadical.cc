@@ -125,7 +125,11 @@ static struct {
 
 typedef unsigned Ref;
 
-static const size_t alignment = 8;      // memory alignment in an arena
+#ifndef ALIGNMENT
+#define ALIGNMENT 4
+#endif
+
+static const size_t alignment = ALIGNMENT;   // memory alignment in an arena
 #ifndef NDEBUG
 static bool aligned (size_t bytes) { return !((alignment-1)&bytes); }
 static bool aligned (void * ptr) { return aligned ((size_t) ptr); }
@@ -1263,7 +1267,7 @@ static bool propagate () {
   while (!conflict) {
 
     // Propagate binary clauses eagerly and even continue propagating if a
-    // conflicting binary clause if found.
+    // conflicting binary clause is found.
 
     while (next.binaries < trail.size ()) {
       const int lit = trail[next.binaries++];
