@@ -35,7 +35,6 @@ IN THE SOFTWARE.
 #define OPTIONS \
 /*  NAME,                TYPE, VAL,LOW,HIGH,DESCRIPTION */ \
 OPTION(bump,             bool,   1, 0,  1, "bump variables") \
-OPTION(bumpfocus,        bool,   1, 0,  1, "current level focus") \
 OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
@@ -52,9 +51,13 @@ OPTION(minimizedepth,     int,1000, 0,1e9, "recursive minimization depth") \
 OPTION(quiet,            bool,   0, 0,  1, "disable all messages") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,    bool,   0, 0,  1, "dynamic glue & size limit") \
+OPTION(reducefocus,      bool,   1, 0,  1, "keep resolved longer") \
+OPTION(reducefocusglue,   int,   6, 0,1e9, "reduce focus max glue") \
+OPTION(reducefocusize,    int,  30, 0,1e9, "reduce focus max size") \
 OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
+OPTION(reduceresolved,    int, 0.1, 0,  1, "resolved keep ratio") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
 OPTION(restartblocking,  bool,   0, 0,  1, "enable restart blocking") \
@@ -1494,11 +1497,9 @@ static int next_decision_variable () {
 
 struct bump_earlier {
   bool operator () (int a, int b) {
-    Var & u = var (a), & v = var (b);
-    if (opts.bumpfocus) {
-      if (u.level != level && v.level == level) return true;
-      if (u.level == level && v.level != level) return false;
-    }
+    const Var & u = var (a), & v = var (b);
+    if (u.level != level && v.level == level) return true;
+    if (u.level == level && v.level != level) return false;
     return u.bumped < v.bumped;
   }
 };
@@ -1796,6 +1797,9 @@ struct glue_larger {
 static void mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
   assert (stack.empty ());
+  const long delta_resolved = stats.resolved - limits.reduce.resolved;
+  const long limit_resolved = stats.resolved +
+    (1.0 - opts.reduceresolved) * delta_resolved;
   for (size_t i = 0; i < clauses.size (); i++) {
     Clause * c = ref2clause (clauses[i]);
     if (!c->redundant) continue;                // keep irredundant
@@ -1809,7 +1813,10 @@ static void mark_useless_redundant_clauses_as_garbage () {
 
     // If the clause has recently been resolved or generated keep it.
     //
-    if (c->resolved () > limits.reduce.resolved) continue;
+    if (opts.reducefocus &&
+        c->size <= opts.reducefocusize &&
+        c->glue <= opts.reducefocusglue &&
+        c->resolved () > limit_resolved) continue;
 
     // In dynamic reduction we estimate the average glue and size of
     // resolved clauses in conflict analysis and always keep clauses which
