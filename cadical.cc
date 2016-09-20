@@ -1808,8 +1808,8 @@ static void mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
   assert (stack.empty ());
   const long delta_resolved = stats.resolved - limits.reduce.resolved;
-  const long limit_resolved = stats.resolved +
-    (1.0 - opts.reduceresolved) * delta_resolved;
+  const long limit_resolved =
+    limits.reduce.resolved + (1.0 - opts.reduceresolved) * delta_resolved;
   for (size_t i = 0; i < clauses.size (); i++) {
     Clause * c = ref2clause (clauses[i]);
     if (!c->redundant) continue;                // keep irredundant
