@@ -52,12 +52,12 @@ OPTION(quiet,            bool,   0, 0,  1, "disable all messages") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,    bool,   0, 0,  1, "dynamic glue & size limit") \
 OPTION(reducefocus,      bool,   1, 0,  1, "keep resolved longer") \
-OPTION(reducefocusglue,   int,   6, 0,1e9, "reduce focus max glue") \
-OPTION(reducefocusize,    int,  30, 0,1e9, "reduce focus max size") \
+OPTION(reducefocusglue,   int, 1e6, 0,1e9, "reduce focus max glue") \
+OPTION(reducefocusize,    int, 1e6, 0,1e9, "reduce focus max size") \
 OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
-OPTION(reduceresolved,    int, 0.1, 0,  1, "resolved keep ratio") \
+OPTION(reduceresolved,    int, 1.0, 0,  1, "resolved keep ratio") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
 OPTION(restartblocking,  bool,   0, 0,  1, "enable restart blocking") \
@@ -1495,18 +1495,28 @@ static int next_decision_variable () {
   return res;
 }
 
+static bool high_propagations_per_decision () {
+  return relative (stats.propagations, stats.decisions) > 1000;
+}
+
 struct bump_earlier {
+  const bool focus_on_last_level;
+  bump_earlier (bool f) : focus_on_last_level (f) { }
   bool operator () (int a, int b) {
     const Var & u = var (a), & v = var (b);
-    if (u.level != level && v.level == level) return true;
-    if (u.level == level && v.level != level) return false;
+    if (focus_on_last_level) {
+      if (u.level != level && v.level == level) return true;
+      if (u.level == level && v.level != level) return false;
+    }
     return u.bumped < v.bumped;
   }
 };
 
 static void bump_and_clear_seen_variables (int uip) {
   START (bump);
-  sort (seen.literals.begin (), seen.literals.end (), bump_earlier ());
+  sort (seen.literals.begin (),
+        seen.literals.end (),
+	bump_earlier (high_propagations_per_decision ()));
   if (uip < 0) uip = -uip;
   for (size_t i = 0; i < seen.literals.size (); i++) {
     int idx = vidx (seen.literals[i]);
@@ -2533,6 +2543,9 @@ int main (int argc, char ** argv) {
         dimacs_file = read_pipe ("bzcat %s", argv[i]), close_input = 2;
       else if (has_suffix (argv[i], ".gz"))
         dimacs_file = read_pipe ("gunzip -c %s", argv[i]), close_input = 2;
+      else if (has_suffix (argv[i], ".7z"))
+        dimacs_file = read_pipe ("7z x -so %s 2>/dev/null", argv[i]),
+	close_input = 2;
       else dimacs_file = fopen (argv[i], "r"), close_input = 1;
       if (!dimacs_file)
         die ("can not open and read DIMACS file '%s'", argv[i]);
