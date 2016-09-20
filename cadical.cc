@@ -1499,6 +1499,10 @@ static bool high_propagations_per_decision () {
   return relative (stats.propagations, stats.decisions) > 1000;
 }
 
+static bool high_bumps_per_conflicts () {
+  return relative (stats.bumped, stats.conflicts) > 1000;
+}
+
 struct bump_earlier {
   const bool focus_on_last_level;
   bump_earlier (bool f) : focus_on_last_level (f) { }
@@ -1516,7 +1520,9 @@ static void bump_and_clear_seen_variables (int uip) {
   START (bump);
   sort (seen.literals.begin (),
         seen.literals.end (),
-	bump_earlier (high_propagations_per_decision ()));
+	bump_earlier (
+	  high_propagations_per_decision () ||
+	  high_bumps_per_conflicts ()));
   if (uip < 0) uip = -uip;
   for (size_t i = 0; i < seen.literals.size (); i++) {
     int idx = vidx (seen.literals[i]);
