@@ -35,6 +35,7 @@ IN THE SOFTWARE.
 #define OPTIONS \
 /*  NAME,                TYPE, VAL,LOW,HIGH,DESCRIPTION */ \
 OPTION(bump,             bool,   1, 0,  1, "bump variables") \
+OPTION(copying,          bool,   1, 0,  1, "use copying garbage collector") \
 OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
@@ -56,8 +57,8 @@ OPTION(reducefocus,      bool,   1, 0,  1, "keep resolved longer") \
 OPTION(reducefocusglue,   int, 1e6, 0,1e9, "reduce focus max glue") \
 OPTION(reducefocusize,    int, 1e6, 0,1e9, "reduce focus max size") \
 OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
-OPTION(reduceinc,         int,/*300*/   1, 1,1e9, "reduce limit increment") \
-OPTION(reduceinit,        int,/*2000*/  0, 0,1e9, "initial reduce limit") \
+OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
+OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
 OPTION(reduceresolved,    int, 1.0, 0,  1, "resolved keep ratio") \
 OPTION(reducetrail,      bool,   1, 0,  1, "bump based on trail") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
@@ -144,9 +145,9 @@ static bool aligned (void * ptr) { return aligned ((size_t) ptr); }
 
 class Arena {
   char * start, * top, * end;
-  void enlarge (size_t new_capacity);
   void init () { start = top = end = 0; }
 public:
+  void enlarge (size_t new_capacity);
   size_t size () const { return top - start; }
   size_t capacity () const { return end - start; }
 
@@ -1383,7 +1384,7 @@ static void check_clause () {
 
 /*------------------------------------------------------------------------*/
 
-#if 0
+#if 1
 
 // Compact recursive but bounded version of DFS for minimizing clauses.
 
@@ -1869,7 +1870,6 @@ static void setup_binaries () {
   for (int l = min_lit; l <= max_lit; l++) num_binaries[l] = 0;
   for (size_t i = 0; i < clauses.size (); i++) {
     Clause * c = ref2clause (clauses[i]);
-    LOG ("clause index %ld", i);
     if (c->garbage || c->size != 2) continue;
     int l0 = c->literals[0], l1 = c->literals[1];
     num_binaries[vlit (l0)]++, num_binaries[vlit (l1)]++;
@@ -1882,7 +1882,7 @@ static void setup_binaries () {
   inc_bytes (size_others * sizeof (int));
   others = new int[size_others];
   int * p = others + size_others;
-  for (int sign = -1; sign <= 2; sign += 2) {
+  for (int sign = -1; sign <= 1; sign += 2) {
     for (int idx = queue.last; idx; idx = var (idx).prev) {
       const int lit = sign * phases[idx] * idx;
       const int count = num_binaries [ vlit (lit) ];
@@ -1922,9 +1922,9 @@ static void setup_watches () {
   }
 }
 
-#if 0
+// TODO ugly ... should be replaced by copying version?
 
-static void collect_garbage_clauses () {
+static void compactifying_garbage_collector () {
   size_t collected_bytes = 0, i = 0, j = i;
   const size_t size = clauses.size ();
   char * new_top = 0;
@@ -1975,40 +1975,69 @@ static void collect_garbage_clauses () {
   LOG ("collected %ld bytes", collected_bytes);
 }
 
-#else
+// TODO Still pretty ugly ... simplify? needed?
 
-static void collect_garbage_clauses () {
+static void copying_garbage_collector () {
   Arena new_arena;
-  for (int idx = 1; idx <= max_var; idx++) {
-    for (int sign = -1; sign <= 2; sign += 2) {
+  new_arena.enlarge (arena.size () - alignment);
+  for (size_t k = 0; k < clauses.size (); k++) {
+    Ref old_ref = clauses[k];
+    Clause * c = ref2clause (old_ref);
+    if (c->size != 2 || c->garbage) continue;
+    char * old_ptr = (char *) c;
+    size_t bytes = c->bytes ();
+    Ref new_ref;
+    char * new_ptr = (char*) new_arena.allocate (bytes, new_ref);
+    memcpy (new_ptr, old_ptr, bytes);
+    LOG ((Clause*) new_arena.ref2ptr (new_ref),
+      "old reference %u now %u",
+      (unsigned) old_ref, (unsigned) new_ref);
+    c->literals[0] = 0;
+    c->literals[1] = new_ref;
+  }
+  for (int sign = -1; sign <= 1; sign += 2) {
+    for (int idx = queue.last; idx; idx = var (idx).prev) {
+      if (fixed (idx)) continue;
       const int lit = sign * idx;
+      LOG ("moving non-garbage clauses with %d", lit);
       Watches & ws = watches (lit);
       for (size_t k = 0; k < ws.size (); k++) {
 	Ref old_ref = ws[k].ref;
 	Clause * c = (Clause*) arena.ref2ptr (old_ref);
-	if (!c->literals[0]) continue;
-	char * ptr = (char *) c;
+        if (!c->reason && c->garbage) continue;
+	if (!c->literals[0]) {
+	  LOG ("reference %u already moved to %u",
+	    (unsigned) old_ref, (unsigned) c->literals[1]);
+	  continue;
+	}
+	char * old_ptr = (char *) c;
 	size_t bytes = c->bytes ();
-	int forced;
-	if (c->reason) {
-	  forced = c->literals[0];
-	  if (val (forced) < 0) forced = c->literals[1];
-	  else assert (val (c->literals[1]) < 0);
-	  assert (val (forced) > 0);
-	} else forced = 0;
 	const bool extended = c->extended;
-	if (extended) ptr -= EXTENDED_OFFSET;
+	if (extended) old_ptr -= EXTENDED_OFFSET;
 	Ref new_ref;
-	(void) new_arena.allocate (bytes, new_ref);
+	void * new_ptr = new_arena.allocate (bytes, new_ref);
+	memcpy (new_ptr, old_ptr, bytes);
         if (extended) new_ref += EXTENDED_OFFSET/alignment;
+	LOG ((Clause*) new_arena.ref2ptr (new_ref),
+	  "old reference %u now %u literal %d",
+	  (unsigned) old_ref, (unsigned) new_ref, lit);
 	c->literals[0] = 0;
 	c->literals[1] = new_ref;
       }
     }
   }
+  if (level > 0) {
+    for (size_t k = var (levels[1].decision).trail; k < trail.size (); k++) {
+      const int lit = trail[k];
+      Var & v = var (lit);
+      if (!v.reason.referenced ()) continue;
+      Clause * c = ref2clause (v.reason.reference ());
+      assert (c->reason), assert (!c->literals[0]);
+      v.reason.update_reference (c->literals[1]);
+    }
+  }
   size_t collected_bytes = 0, moved_bytes = 0, i = 0, j = i;
-  const size_t size = clauses.size ();
-  while (i < size) {
+  while (i < clauses.size ()) {
     Ref old_ref = clauses[i++];
     Clause * c = (Clause*) arena.ref2ptr (old_ref);
     size_t bytes = c->bytes ();
@@ -2035,8 +2064,6 @@ static void collect_garbage_clauses () {
   arena.release_and_take_over_memory (new_arena);
 }
 
-#endif
-
 static void reduce () {
   START (reduce);
   stats.reduce.count++;
@@ -2046,7 +2073,8 @@ static void reduce () {
   const bool new_units = (limits.reduce.fixed < stats.fixed);
   if (new_units) mark_satisfied_clauses_as_garbage ();
   mark_useless_redundant_clauses_as_garbage ();
-  collect_garbage_clauses ();
+  if (opts.copying) copying_garbage_collector ();
+  else compactifying_garbage_collector ();
   unprotect_reasons ();
   setup_binaries ();
   setup_watches ();
