@@ -56,8 +56,8 @@ OPTION(reducefocus,      bool,   1, 0,  1, "keep resolved longer") \
 OPTION(reducefocusglue,   int, 1e6, 0,1e9, "reduce focus max glue") \
 OPTION(reducefocusize,    int, 1e6, 0,1e9, "reduce focus max size") \
 OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
-OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
-OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
+OPTION(reduceinc,         int,/*300*/   1, 1,1e9, "reduce limit increment") \
+OPTION(reduceinit,        int,/*2000*/  0, 0,1e9, "initial reduce limit") \
 OPTION(reduceresolved,    int, 1.0, 0,  1, "resolved keep ratio") \
 OPTION(reducetrail,      bool,   1, 0,  1, "bump based on trail") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
@@ -179,11 +179,10 @@ public:
 
   void release ();
 
-  void release_and_take_over (Arena & other) {
+  void release_and_take_over_memory (Arena & other) {
     release ();
-    start = other.start;
-    top = other.top;
-    end = other.end;
+    start = other.start, top = other.top, end = other.end;
+    other.start = other.top = other.end = 0;
   }
 
   Arena () { init (); }
@@ -1870,6 +1869,7 @@ static void setup_binaries () {
   for (int l = min_lit; l <= max_lit; l++) num_binaries[l] = 0;
   for (size_t i = 0; i < clauses.size (); i++) {
     Clause * c = ref2clause (clauses[i]);
+    LOG ("clause index %ld", i);
     if (c->garbage || c->size != 2) continue;
     int l0 = c->literals[0], l1 = c->literals[1];
     num_binaries[vlit (l0)]++, num_binaries[vlit (l1)]++;
@@ -2014,8 +2014,8 @@ static void collect_garbage_clauses () {
     size_t bytes = c->bytes ();
     if (c->reason || !c->garbage) {
       assert (!c->literals[0]);
-      Ref new_ref = c->literals[1];
-      clauses[j++] = new_ref;
+      assert ((unsigned) c->literals[1] < new_arena.size () / alignment );
+      clauses[j++] = c->literals[1];
       moved_bytes += bytes;
     } else {
       LOG (c, "delete");
@@ -2032,7 +2032,7 @@ static void collect_garbage_clauses () {
   }
   clauses.resize (j);
   LOG ("collected %ld bytes", collected_bytes);
-  arena.release_and_take_over (new_arena);
+  arena.release_and_take_over_memory (new_arena);
 }
 
 #endif
