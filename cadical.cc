@@ -179,6 +179,13 @@ public:
 
   void release ();
 
+  void release_and_take_over (Arena & other) {
+    release ();
+    start = other.start;
+    top = other.top;
+    end = other.end;
+  }
+
   Arena () { init (); }
   ~Arena () { release (); }
 };
@@ -1915,6 +1922,8 @@ static void setup_watches () {
   }
 }
 
+#if 0
+
 static void collect_garbage_clauses () {
   size_t collected_bytes = 0, i = 0, j = i;
   const size_t size = clauses.size ();
@@ -1965,6 +1974,68 @@ static void collect_garbage_clauses () {
   if (new_top) arena.resize (new_top);
   LOG ("collected %ld bytes", collected_bytes);
 }
+
+#else
+
+static void collect_garbage_clauses () {
+  Arena new_arena;
+  for (int idx = 1; idx <= max_var; idx++) {
+    for (int sign = -1; sign <= 2; sign += 2) {
+      const int lit = sign * idx;
+      Watches & ws = watches (lit);
+      for (size_t k = 0; k < ws.size (); k++) {
+	Ref old_ref = ws[k].ref;
+	Clause * c = (Clause*) arena.ref2ptr (old_ref);
+	if (!c->literals[0]) continue;
+	char * ptr = (char *) c;
+	size_t bytes = c->bytes ();
+	int forced;
+	if (c->reason) {
+	  forced = c->literals[0];
+	  if (val (forced) < 0) forced = c->literals[1];
+	  else assert (val (c->literals[1]) < 0);
+	  assert (val (forced) > 0);
+	} else forced = 0;
+	const bool extended = c->extended;
+	if (extended) ptr -= EXTENDED_OFFSET;
+	Ref new_ref;
+	(void) new_arena.allocate (bytes, new_ref);
+        if (extended) new_ref += EXTENDED_OFFSET/alignment;
+	c->literals[0] = 0;
+	c->literals[1] = new_ref;
+      }
+    }
+  }
+  size_t collected_bytes = 0, moved_bytes = 0, i = 0, j = i;
+  const size_t size = clauses.size ();
+  while (i < size) {
+    Ref old_ref = clauses[i++];
+    Clause * c = (Clause*) arena.ref2ptr (old_ref);
+    size_t bytes = c->bytes ();
+    if (c->reason || !c->garbage) {
+      assert (!c->literals[0]);
+      Ref new_ref = c->literals[1];
+      clauses[j++] = new_ref;
+      moved_bytes += bytes;
+    } else {
+      LOG (c, "delete");
+      if (c->redundant)
+	   assert (stats.clauses.redundant),   stats.clauses.redundant--;
+      else assert (stats.clauses.irredundant), stats.clauses.irredundant--;
+      assert (stats.clauses.current);
+      stats.clauses.current--;
+      stats.reduce.clauses++;
+      stats.reduce.bytes += bytes;
+      collected_bytes += bytes;
+      trace_delete_clause (c);
+    }
+  }
+  clauses.resize (j);
+  LOG ("collected %ld bytes", collected_bytes);
+  arena.release_and_take_over (new_arena);
+}
+
+#endif
 
 static void reduce () {
   START (reduce);
