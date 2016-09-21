@@ -44,7 +44,6 @@ OPTION(emainitsmoothly,  bool,   1, 0,  1, "initialize EMAs smoothly") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
 OPTION(ematrail,       double,1e-5, 0,  1, "alpha trail") \
-OPTION(highbumperconf,    int, 1e3, 0,1e9, "high prop per decision limit") \
 OPTION(highproperdec,     int, 1e3, 0,1e9, "high bump per conflict limit") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
@@ -60,7 +59,7 @@ OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
 OPTION(reduceresolved,    int, 1.0, 0,  1, "resolved keep ratio") \
-OPTION(reducetrail,      bool,   0, 0,  1, "bump based on trail") \
+OPTION(reducetrail,      bool,   1, 0,  1, "bump based on trail") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
 OPTION(restartblocking,  bool,   0, 0,  1, "enable restart blocking") \
@@ -1502,10 +1501,6 @@ static bool high_propagations_per_decision () {
   return relative (stats.propagations, stats.decisions) > opts.highproperdec;
 }
 
-static bool high_bumps_per_conflicts () {
-  return relative (stats.bumped, stats.conflicts) > opts.highbumperconf;
-}
-
 struct bump_earlier {
   const bool focus_on_last_level;
   bump_earlier (bool f) : focus_on_last_level (f) { }
@@ -1521,13 +1516,12 @@ struct bump_earlier {
 
 static void bump_and_clear_seen_variables (int uip) {
   START (bump);
-  if (opts.reducetrail)
+  if (opts.reducetrail && high_propagations_per_decision ())
     sort (seen.literals.begin (), seen.literals.end (),
       trail_smaller_than ());
   else
     sort (seen.literals.begin (), seen.literals.end (),
-      bump_earlier (
-        high_propagations_per_decision () || high_bumps_per_conflicts ()));
+      bump_earlier (high_propagations_per_decision ()));
   if (uip < 0) uip = -uip;
   for (size_t i = 0; i < seen.literals.size (); i++) {
     int idx = vidx (seen.literals[i]);
