@@ -483,7 +483,7 @@ static struct {
   struct { EMA unit, binary; } frequency;
   struct { EMA fast, slow; } glue;
   EMA jump, trail;
-} ema;
+} avg;
 
 // Limits for next restart, reduce.
 
@@ -773,26 +773,26 @@ static void print (int lit, FILE * file = stdout) {
 /*     HEADER, PRECISION, MIN, VALUE */ \
 REPORT("seconds",      2, 5, seconds ()) \
 REPORT("MB",           0, 2, current_bytes () / (double)(1l<<20)) \
-REPORT("level",        1, 4, ema.jump) \
-REPORT("f1",           0, 2, 10.0 * ema.frequency.unit) \
+REPORT("level",        1, 4, avg.jump) \
+REPORT("f1",           0, 2, 10.0 * avg.frequency.unit) \
 REPORT("reductions",   0, 2, stats.reduce.count) \
 REPORT("restarts",     0, 4, stats.restart.count) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
 REPORT("redundant",    0, 5, stats.clauses.redundant) \
-REPORT("glue",         1, 4, ema.glue.slow) \
+REPORT("glue",         1, 4, avg.glue.slow) \
 REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
 REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
 REPORT("properdec",    0, 3, relative (stats.propagations, stats.decisions)) \
-REPORT("trail",        1, 4, ema.trail) \
-REPORT("resglue",      1, 4, ema.resolved.glue) \
-REPORT("fastglue",     1, 4, ema.glue.fast) \
-REPORT("ressize",      1, 4, ema.resolved.size) \
+REPORT("trail",        1, 4, avg.trail) \
+REPORT("resglue",      1, 4, avg.resolved.glue) \
+REPORT("fastglue",     1, 4, avg.glue.fast) \
+REPORT("ressize",      1, 4, avg.resolved.size) \
 
 #if 0
 
-REPORT("f2",           0, 2, 10.0 * ema.frequency.binary) \
-REPORT("slowglue",     1, 4, ema.learned.glue.slow) \
+REPORT("f2",           0, 2, 10.0 * avg.frequency.binary) \
+REPORT("slowglue",     1, 4, avg.learned.glue.slow) \
 
 #endif
 
@@ -1571,8 +1571,8 @@ static void clear_levels () {
 
 static void resolve_clause (Clause * c) { 
   if (!c->redundant) return;
-  UPDATE (ema.resolved.size, c->size);
-  UPDATE (ema.resolved.glue, c->glue);
+  UPDATE (avg.resolved.size, c->size);
+  UPDATE (avg.resolved.glue, c->glue);
   if (c->size <= opts.keepsize) return;
   if (c->glue <= (unsigned) opts.keepglue) return;
   resolved.push_back (c);
@@ -1631,8 +1631,8 @@ static void analyze () {
     const int size = (int) clause.size ();
     const int glue = (int) seen.levels.size ();
     LOG ("1st UIP clause of size %d and glue %d", size, glue);
-    UPDATE (ema.glue.slow, glue);
-    UPDATE (ema.glue.fast, glue);
+    UPDATE (avg.glue.slow, glue);
+    UPDATE (avg.glue.fast, glue);
     if (opts.minimize) minimize_clause ();
     Clause * driving_clause = 0;
     int jump = 0;
@@ -1643,14 +1643,14 @@ static void analyze () {
     } 
     stats.learned.unit += (size == 1);
     stats.learned.binary += (size == 2);
-    UPDATE (ema.frequency.unit, (size == 1) ? inc.unit : 0);
-    UPDATE (ema.frequency.binary, (size == 2) ? inc.binary : 0);
-    UPDATE (ema.jump, jump);
-    UPDATE (ema.trail, trail.size ());
+    UPDATE (avg.frequency.unit, (size == 1) ? inc.unit : 0);
+    UPDATE (avg.frequency.binary, (size == 2) ? inc.binary : 0);
+    UPDATE (avg.jump, jump);
+    UPDATE (avg.trail, trail.size ());
     if (opts.restartblocking &&
         stats.conflicts > opts.restartblocklim &&
         stats.conflicts >= limits.restart.conflicts &&
-        trail.size () > opts.restartblock * ema.trail) {
+        trail.size () > opts.restartblock * avg.trail) {
       LOG ("blocked restart");
       limits.restart.conflicts = stats.conflicts + opts.restartint;
       stats.restart.blocked++;
@@ -1673,15 +1673,15 @@ static bool restarting () {
   if (stats.conflicts <= limits.restart.conflicts) return false;
   stats.restart.tried++;
   limits.restart.conflicts = stats.conflicts + opts.restartint;
-  double s = ema.glue.slow, f = ema.glue.fast, l = opts.restartmargin * s;
+  double s = avg.glue.slow, f = avg.glue.fast, l = opts.restartmargin * s;
   LOG ("EMA learned glue slow %.2f fast %.2f limit %.2f", s, f, l);
   if (l > f) { 
     if (opts.restartemaf1) {
-      if (ema.frequency.unit >= opts.emaf1lim) {
+      if (avg.frequency.unit >= opts.emaf1lim) {
         stats.restart.unit++;
-        LOG ("high unit frequency restart", (double) ema.frequency.unit);
+        LOG ("high unit frequency restart", (double) avg.frequency.unit);
         return true;
-      } else LOG ("low unit frequency", (double) ema.frequency.unit);
+      } else LOG ("low unit frequency", (double) avg.frequency.unit);
     }
     stats.restart.unforced++;
     LOG ("unforced restart");
@@ -1691,7 +1691,7 @@ static bool restarting () {
     stats.restart.forced++;
   }
   if (opts.restartdelaying) {
-    double j = ema.jump; l = opts.restartdelay * j;
+    double j = avg.jump; l = opts.restartdelay * j;
     LOG ("EMA jump %.2f limit %.2f", j, l);
     if (level < l) {
       stats.restart.delayed++;
@@ -1845,8 +1845,8 @@ static void mark_useless_redundant_clauses_as_garbage () {
     // are below both limits.
     //
     if (opts.reducedynamic &&
-        c->glue < ema.resolved.glue &&
-        c->size < ema.resolved.size) continue;
+        c->glue < avg.resolved.glue &&
+        c->size < avg.resolved.size) continue;
 
     stack.push_back (c);        // clause is garbage collection candidate
   }
@@ -2129,14 +2129,14 @@ static void init_solving () {
   inc.reduce.conflicts = opts.reduceinit;
   inc.unit = opts.emaf1 ? 1.0 / opts.emaf1 : 1e-9;
   inc.binary = opts.emaf2 ? 1.0 / opts.emaf2 : 1e-9;
-  INIT_EMA (ema.glue.fast, opts.emagluefast);
-  INIT_EMA (ema.glue.slow, opts.emaglueslow);
-  INIT_EMA (ema.frequency.unit, opts.emaf1);
-  INIT_EMA (ema.frequency.binary, opts.emaf2);
-  INIT_EMA (ema.resolved.glue, opts.emaresolved);
-  INIT_EMA (ema.resolved.size, opts.emaresolved);
-  INIT_EMA (ema.jump, opts.emajump);
-  INIT_EMA (ema.trail, opts.ematrail);
+  INIT_EMA (avg.glue.fast, opts.emagluefast);
+  INIT_EMA (avg.glue.slow, opts.emaglueslow);
+  INIT_EMA (avg.frequency.unit, opts.emaf1);
+  INIT_EMA (avg.frequency.binary, opts.emaf2);
+  INIT_EMA (avg.resolved.glue, opts.emaresolved);
+  INIT_EMA (avg.resolved.size, opts.emaresolved);
+  INIT_EMA (avg.jump, opts.emajump);
+  INIT_EMA (avg.trail, opts.ematrail);
 }
 
 static int solve () {
