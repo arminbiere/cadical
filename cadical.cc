@@ -40,7 +40,6 @@ OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
 OPTION(emaf2,          double,5e-3, 0,  1, "alpha learned binary frequency") \
-OPTION(emaglueslow,    double,2e-5, 0,  1, "alpha slow learned glue") \
 OPTION(emainitsmoothly,  bool,   1, 0,  1, "initialize EMAs smoothly") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
@@ -347,8 +346,6 @@ struct EMA {
   void update (double y, const char * name);
 };
 
-#if 0
-
 struct AVG {
   double value;
   long count;
@@ -356,8 +353,6 @@ struct AVG {
   operator double () const { return value; }
   void update (double y, const char * name);
 };
-
-#endif
 
 #ifdef PROFILING        // enabled by './configure -p'
 
@@ -479,9 +474,9 @@ static vector<Timer> timers;
 // in 'reduce' and when to force and delay 'restart' respectively.
 
 static struct { 
+  struct { EMA unit; } frequency;
   struct { EMA glue, size; } resolved;
-  struct { EMA unit, binary; } frequency;
-  struct { EMA fast, slow; } glue;
+  struct { EMA fast; AVG slow; } glue;
   EMA jump, trail;
 } avg;
 
@@ -976,19 +971,15 @@ inline void EMA::update (double y, const char * name) {
   LOG ("new %s EMA wait = period = %ld, beta = %g", name, wait, beta);
 }
 
-#if 0
-
 inline void AVG::update (double y, const char * name) {
   value = count * value + y;
   value /= ++count;
   LOG ("update %s AVG with %g yields %g", name, y, value);
 }
 
-#endif
-
 // Short hand for better logging.
 
-#define UPDATE(EorA,Y) EorA.update ((Y), #EorA)
+#define UPDATE(EMA_OR_AVG,Y) EMA_OR_AVG.update ((Y), #EMA_OR_AVG)
 
 /*------------------------------------------------------------------------*/
 
@@ -1644,7 +1635,6 @@ static void analyze () {
     stats.learned.unit += (size == 1);
     stats.learned.binary += (size == 2);
     UPDATE (avg.frequency.unit, (size == 1) ? inc.unit : 0);
-    UPDATE (avg.frequency.binary, (size == 2) ? inc.binary : 0);
     UPDATE (avg.jump, jump);
     UPDATE (avg.trail, trail.size ());
     if (opts.restartblocking &&
@@ -1998,7 +1988,7 @@ static void copying_garbage_collector () {
   for (int sign = -1; sign <= 1; sign += 2) {
     for (int idx = queue.last; idx; idx = var (idx).prev) {
       if (fixed (idx)) continue;
-      const int lit = sign * idx;
+      const int lit = sign * phases[idx] * idx;
       LOG ("moving non-garbage clauses with %d", lit);
       Watches & ws = watches (lit);
       for (size_t k = 0; k < ws.size (); k++) {
@@ -2128,11 +2118,8 @@ static void init_solving () {
   limits.reduce.conflicts = opts.reduceinit;
   inc.reduce.conflicts = opts.reduceinit;
   inc.unit = opts.emaf1 ? 1.0 / opts.emaf1 : 1e-9;
-  inc.binary = opts.emaf2 ? 1.0 / opts.emaf2 : 1e-9;
   INIT_EMA (avg.glue.fast, opts.emagluefast);
-  INIT_EMA (avg.glue.slow, opts.emaglueslow);
   INIT_EMA (avg.frequency.unit, opts.emaf1);
-  INIT_EMA (avg.frequency.binary, opts.emaf2);
   INIT_EMA (avg.resolved.glue, opts.emaresolved);
   INIT_EMA (avg.resolved.size, opts.emaresolved);
   INIT_EMA (avg.jump, opts.emajump);
