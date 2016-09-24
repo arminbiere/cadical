@@ -470,15 +470,21 @@ static struct {
 static vector<Timer> timers;
 #endif
 
-// Exponential moving averages to control which clauses are collected
-// in 'reduce' and when to force and delay 'restart' respectively.
+// Averages to control which clauses are collected in 'reduce' and when to
+// force and delay 'restart' respectively.  Most of them are exponential
+// moving average, but for the slow glue we use an actual average.
 
 static struct { 
   struct { EMA unit; } frequency;
   struct { EMA glue, size; } resolved;
-  struct { EMA fast; AVG slow; } glue;
+  struct { EMA fast; AVG slow, blocking, nonblocking; } glue;
   EMA jump, trail;
 } avg;
+
+static struct {
+  bool enabled, exploring;
+  long limit, inc;
+} blocking;
 
 // Limits for next restart, reduce.
 
@@ -1587,6 +1593,37 @@ static bool analyze_literal (int lit) {
   return v.level == level;
 }
 
+static bool blocking_enabled () {
+  if (stats.conflicts > blocking.limit) {
+    if (blocking.exploring) {
+      blocking.inc += opts.restartblocklim;
+      blocking.limit = stats.conflicts + blocking.inc;
+      blocking.exploring = false;
+      msg ("average blocking glue %.2f non-blocking %.2f",
+        (double) avg.glue.blocking, (double) avg.glue.nonblocking);
+      if (avg.glue.blocking > 2.0 * avg.glue.nonblocking) {
+	msg ("exploiting non-blocking until %ld conflicts", blocking.limit);
+	blocking.enabled = false;
+      } else {
+	msg ("exploiting blocking until %ld conflicts", blocking.limit);
+	blocking.enabled = true;
+      }
+    } else {
+      blocking.exploring = true;
+      blocking.limit =
+        stats.conflicts + max (blocking.inc/10, (long)opts.restartblocklim);
+      if (blocking.enabled) {
+	msg ("exploring non-blocking until %ld conflicts", blocking.limit);
+	blocking.enabled = false;
+      } else {
+	msg ("exploring blocking until %ld conflicts", blocking.limit);
+	blocking.enabled = true;
+      }
+    }
+  }
+  return blocking.enabled;
+}
+
 struct trail_greater_than {
   bool operator () (int a, int b) { return var (a).trail > var (b).trail; }
 };
@@ -1624,6 +1661,8 @@ static void analyze () {
     LOG ("1st UIP clause of size %d and glue %d", size, glue);
     UPDATE (avg.glue.slow, glue);
     UPDATE (avg.glue.fast, glue);
+    if (blocking.enabled) UPDATE (avg.glue.blocking, glue);
+    else                  UPDATE (avg.glue.nonblocking, glue);
     if (opts.minimize) minimize_clause ();
     Clause * driving_clause = 0;
     int jump = 0;
@@ -1638,8 +1677,8 @@ static void analyze () {
     UPDATE (avg.jump, jump);
     UPDATE (avg.trail, trail.size ());
     if (opts.restartblocking &&
-        stats.conflicts > opts.restartblocklim &&
         stats.conflicts >= limits.restart.conflicts &&
+	blocking_enabled () &&
         trail.size () > opts.restartblock * avg.trail) {
       LOG ("blocked restart");
       limits.restart.conflicts = stats.conflicts + opts.restartint;
@@ -2124,6 +2163,7 @@ static void init_solving () {
   INIT_EMA (avg.resolved.size, opts.emaresolved);
   INIT_EMA (avg.jump, opts.emajump);
   INIT_EMA (avg.trail, opts.ematrail);
+  blocking.limit = blocking.inc = opts.restartblocklim;
 }
 
 static int solve () {
