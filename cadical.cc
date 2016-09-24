@@ -62,7 +62,7 @@ OPTION(reduceresolved,    int, 1.0, 0,  1, "resolved keep ratio") \
 OPTION(reducetrail,      bool,   1, 0,  1, "bump based on trail") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
-OPTION(restartblocking,  bool,   0, 0,  1, "enable restart blocking") \
+OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
 OPTION(restartblocklim,   int, 1e4, 0,1e9, "restart blocking limit") \
 OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
 OPTION(restartdelaying,  bool,   0, 0,  1, "delay restart level limit") \
