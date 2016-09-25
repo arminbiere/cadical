@@ -39,12 +39,11 @@ OPTION(copying,          bool,   1, 0,  1, "use copying garbage collector") \
 OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
-OPTION(emaf2,          double,5e-3, 0,  1, "alpha learned binary frequency") \
 OPTION(emainitsmoothly,  bool,   1, 0,  1, "initialize EMAs smoothly") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
 OPTION(ematrail,       double,1e-5, 0,  1, "alpha trail") \
-OPTION(highproperdec,     int, 1e3, 0,1e9, "high bump per conflict limit") \
+OPTION(highproperdec,     int,   0, 0,1e9, "high bump per conflict limit") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(minimize,         bool,   1, 0,  1, "minimize learned clauses") \
@@ -64,12 +63,13 @@ OPTION(reducetrail,      bool,   1, 0,  1, "bump based on trail") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
 OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
-OPTION(restartblocklim,   int, 1e4, 0,1e9, "restart blocking limit") \
+OPTION(restartblocklimit, int, 1e4, 0,1e9, "restart blocking limit") \
+OPTION(restartblockmargin,bool,1.2, 0, 10, "restart blocking margin") \
 OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
-OPTION(restartdelaying,  bool,   0, 0,  1, "delay restart level limit") \
+OPTION(restartdelaying,  bool,   0, 0,  1, "enable restart delaying") \
 OPTION(restartemaf1,     bool,   1, 0,  1, "unit frequency based restart") \
 OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
-OPTION(restartmargin,  double, 1.1, 0, 10, "restart slow & fast margin (1/K)") \
+OPTION(restartmargin,  double, 1.1, 0, 10, "restart slow fast margin (1/K)") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
 OPTION(reverse,          bool,   0, 0,  1, "last index first initially") \
 OPTION(verbose,          bool,   0, 0,  1, "more verbose messages") \
@@ -417,9 +417,7 @@ static struct {
 } next;                 // as BFS indices into 'trail' for propagation
 
 static vector<int> clause;      // temporary clause in parsing & learning
-
 static vector<Ref> clauses;     // references to all clauses
-
 static bool iterating;          // report top-level assigned variables
 
 static struct {
@@ -428,10 +426,9 @@ static struct {
   vector<int> minimized;        // marked removable or poison in 'minmize'
 } seen;
 
-static vector<Clause*> resolved;
-
-static Reason conflict;         // set in 'propagation', reset in 'analyze'
-static bool clashing_unit;      // set 'parse_dimacs'
+static vector<Clause*> resolved;  // large clauses in 'analyze'
+static Reason conflict;           // set: 'propagation', reset: 'analyze'
+static bool clashing_unit;        // set: 'parse_dimacs'
 
 static struct {
   long conflicts;
@@ -454,6 +451,8 @@ static struct {
   long bumped;                  // seen and bumped variables in 'analyze'
   long resolved;                // resolved redundant clauses in 'analyze'
   long searched;                // searched decisions in 'decide'
+
+  long trailsorted;             // trail sorted before bumping
 
   struct { long count, clauses, bytes; } reduce; // in 'reduce'
 
@@ -790,13 +789,6 @@ REPORT("trail",        1, 4, avg.trail) \
 REPORT("resglue",      1, 4, avg.resolved.glue) \
 REPORT("fastglue",     1, 4, avg.glue.fast) \
 REPORT("ressize",      1, 4, avg.resolved.size) \
-
-#if 0
-
-REPORT("f2",           0, 2, 10.0 * avg.frequency.binary) \
-REPORT("slowglue",     1, 4, avg.learned.glue.slow) \
-
-#endif
 
 struct Report {
   const char * header;
@@ -1498,34 +1490,35 @@ static int next_decision_variable () {
   int res;
   while (val (res = queue.assigned))
     queue.assigned = var (queue.assigned).prev, stats.searched++;
+  LOG ("next decision variable %d", res);
   return res;
 }
 
 static bool high_propagations_per_decision () {
-  return relative (stats.propagations, stats.decisions) > opts.highproperdec;
+  const double r = relative (stats.propagations, stats.decisions);
+  const bool res = r > opts.highproperdec;
+  LOG ("%s propagation per decision rate %.2f", (res ? "high" : "low"), r);
+  return res;
 }
 
-struct bump_earlier {
-  const bool focus_on_last_level;
-  bump_earlier (bool f) : focus_on_last_level (f) { }
-  bool operator () (int a, int b) {
-    const Var & u = var (a), & v = var (b);
-    if (focus_on_last_level) {
-      if (u.level != level && v.level == level) return true;
-      if (u.level == level && v.level != level) return false;
-    }
-    return u.bumped < v.bumped;
-  }
+struct bumped_earlier {
+  bool operator () (int a, int b) { return var (a).bumped < var (b).bumped; }
 };
 
 static void bump_and_clear_seen_variables (int uip) {
   START (bump);
-  if (opts.reducetrail && high_propagations_per_decision ())
-    sort (seen.literals.begin (), seen.literals.end (),
-      trail_smaller_than ());
-  else
-    sort (seen.literals.begin (), seen.literals.end (),
-      bump_earlier (high_propagations_per_decision ()));
+  if (opts.reducetrail && high_propagations_per_decision ()) {
+    LOG ("trail sorting seen variables before bumping");
+    stats.trailsorted++;
+    sort (seen.literals.begin (),
+          seen.literals.end (),
+          trail_smaller_than ());
+  } else {
+    LOG ("bumped sorting seen variables before bumping");
+    sort (seen.literals.begin (),
+          seen.literals.end (),
+          bumped_earlier ());
+  }
   if (uip < 0) uip = -uip;
   for (size_t i = 0; i < seen.literals.size (); i++) {
     int idx = vidx (seen.literals[i]);
@@ -1596,28 +1589,30 @@ static bool analyze_literal (int lit) {
 static bool blocking_enabled () {
   if (stats.conflicts > blocking.limit) {
     if (blocking.exploring) {
-      blocking.inc += opts.restartblocklim;
+      blocking.inc += opts.restartblocklimit;
       blocking.limit = stats.conflicts + blocking.inc;
       blocking.exploring = false;
-      msg ("average blocking glue %.2f non-blocking %.2f",
-        (double) avg.glue.blocking, (double) avg.glue.nonblocking);
-      if (avg.glue.blocking > 2.0 * avg.glue.nonblocking) {
-	msg ("exploiting non-blocking until %ld conflicts", blocking.limit);
-	blocking.enabled = false;
+      msg ("average blocking glue %.2f non-blocking %.2f ratio %.2f",
+        (double) avg.glue.blocking, (double) avg.glue.nonblocking,
+        relative (avg.glue.blocking, avg.glue.nonblocking));
+      if (avg.glue.blocking > 
+          opts.restartblockmargin * avg.glue.nonblocking) {
+        msg ("exploiting non-blocking until %ld conflicts", blocking.limit);
+        blocking.enabled = false;
       } else {
-	msg ("exploiting blocking until %ld conflicts", blocking.limit);
-	blocking.enabled = true;
+        msg ("exploiting blocking until %ld conflicts", blocking.limit);
+        blocking.enabled = true;
       }
     } else {
       blocking.exploring = true;
       blocking.limit =
-        stats.conflicts + max (blocking.inc/10, (long)opts.restartblocklim);
+        stats.conflicts + max (blocking.inc/10, (long)opts.restartblocklimit);
       if (blocking.enabled) {
-	msg ("exploring non-blocking until %ld conflicts", blocking.limit);
-	blocking.enabled = false;
+        msg ("exploring non-blocking until %ld conflicts", blocking.limit);
+        blocking.enabled = false;
       } else {
-	msg ("exploring blocking until %ld conflicts", blocking.limit);
-	blocking.enabled = true;
+        msg ("exploring blocking until %ld conflicts", blocking.limit);
+        blocking.enabled = true;
       }
     }
   }
@@ -1678,7 +1673,7 @@ static void analyze () {
     UPDATE (avg.trail, trail.size ());
     if (opts.restartblocking &&
         stats.conflicts >= limits.restart.conflicts &&
-	blocking_enabled () &&
+        blocking_enabled () &&
         trail.size () > opts.restartblock * avg.trail) {
       LOG ("blocked restart");
       limits.restart.conflicts = stats.conflicts + opts.restartint;
@@ -2031,27 +2026,27 @@ static void copying_garbage_collector () {
       LOG ("moving non-garbage clauses with %d", lit);
       Watches & ws = watches (lit);
       for (size_t k = 0; k < ws.size (); k++) {
-	Ref old_ref = ws[k].ref;
-	Clause * c = (Clause*) arena.ref2ptr (old_ref);
+        Ref old_ref = ws[k].ref;
+        Clause * c = (Clause*) arena.ref2ptr (old_ref);
         if (!c->reason && c->garbage) continue;
-	if (!c->literals[0]) {
-	  LOG ("reference %u already moved to %u",
-	    (unsigned) old_ref, (unsigned) c->literals[1]);
-	  continue;
-	}
-	char * old_ptr = (char *) c;
-	size_t bytes = c->bytes ();
-	const bool extended = c->extended;
-	if (extended) old_ptr -= EXTENDED_OFFSET;
-	Ref new_ref;
-	void * new_ptr = new_arena.allocate (bytes, new_ref);
-	memcpy (new_ptr, old_ptr, bytes);
+        if (!c->literals[0]) {
+          LOG ("reference %u already moved to %u",
+            (unsigned) old_ref, (unsigned) c->literals[1]);
+          continue;
+        }
+        char * old_ptr = (char *) c;
+        size_t bytes = c->bytes ();
+        const bool extended = c->extended;
+        if (extended) old_ptr -= EXTENDED_OFFSET;
+        Ref new_ref;
+        void * new_ptr = new_arena.allocate (bytes, new_ref);
+        memcpy (new_ptr, old_ptr, bytes);
         if (extended) new_ref += EXTENDED_OFFSET/alignment;
-	LOG ((Clause*) new_arena.ref2ptr (new_ref),
-	  "old reference %u now %u literal %d",
-	  (unsigned) old_ref, (unsigned) new_ref, lit);
-	c->literals[0] = 0;
-	c->literals[1] = new_ref;
+        LOG ((Clause*) new_arena.ref2ptr (new_ref),
+          "old reference %u now %u literal %d",
+          (unsigned) old_ref, (unsigned) new_ref, lit);
+        c->literals[0] = 0;
+        c->literals[1] = new_ref;
       }
     }
   }
@@ -2078,7 +2073,7 @@ static void copying_garbage_collector () {
     } else {
       LOG (c, "delete");
       if (c->redundant)
-	   assert (stats.clauses.redundant),   stats.clauses.redundant--;
+           assert (stats.clauses.redundant),   stats.clauses.redundant--;
       else assert (stats.clauses.irredundant), stats.clauses.irredundant--;
       assert (stats.clauses.current);
       stats.clauses.current--;
@@ -2163,7 +2158,7 @@ static void init_solving () {
   INIT_EMA (avg.resolved.size, opts.emaresolved);
   INIT_EMA (avg.jump, opts.emajump);
   INIT_EMA (avg.trail, opts.ematrail);
-  blocking.limit = blocking.inc = opts.restartblocklim;
+  blocking.limit = blocking.inc = opts.restartblocklimit;
 }
 
 static int solve () {
@@ -2212,8 +2207,12 @@ static void print_statistics () {
     stats.learned.unit, relative (stats.conflicts, stats.learned.unit));
   msg ("binaries:      %15ld   %10.2f    conflicts per binary",
     stats.learned.binary, relative (stats.conflicts, stats.learned.binary));
+  msg ("trailsorted:   %15ld   %10.2f %%  per conflict",
+    stats.trailsorted, percent (stats.trailsorted, stats.conflicts));
   msg ("bumped:        %15ld   %10.2f    per conflict",
     stats.bumped, relative (stats.bumped, stats.conflicts));
+  msg ("resolved:      %15ld   %10.2f    per conflict",
+    stats.resolved, relative (stats.resolved, stats.conflicts));
   msg ("searched:      %15ld   %10.2f    per decision",
     stats.searched, relative (stats.searched, stats.decisions));
   long learned = stats.literals.learned - stats.literals.minimized;
@@ -2676,7 +2675,7 @@ int main (int argc, char ** argv) {
         dimacs_file = read_pipe ("gunzip -c %s", argv[i]), close_input = 2;
       else if (has_suffix (argv[i], ".7z"))
         dimacs_file = read_pipe ("7z x -so %s 2>/dev/null", argv[i]),
-	close_input = 2;
+        close_input = 2;
       else dimacs_file = fopen (argv[i], "r"), close_input = 1;
       if (!dimacs_file)
         die ("can not open and read DIMACS file '%s'", argv[i]);
