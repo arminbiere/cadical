@@ -59,12 +59,12 @@ OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
 OPTION(reduceresolved,    int, 1.0, 0,  1, "resolved keep ratio") \
-OPTION(reducetrail,      bool,   1, 0,  1, "bump based on trail") \
+OPTION(reducetrail,       int,   2, 0,  2, "bump based on trail (2=both)") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
 OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
 OPTION(restartblocklimit, int, 1e4, 0,1e9, "restart blocking limit") \
-OPTION(restartblockmargin,bool,1.2, 0, 10, "restart blocking margin") \
+OPTION(restartblockmargin,double,1.2,0,10, "restart blocking margin") \
 OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
 OPTION(restartdelaying,  bool,   0, 0,  1, "enable restart delaying") \
 OPTION(restartemaf1,     bool,   1, 0,  1, "unit frequency based restart") \
@@ -781,13 +781,13 @@ REPORT("restarts",     0, 4, stats.restart.count) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
 REPORT("redundant",    0, 5, stats.clauses.redundant) \
 REPORT("glue",         1, 4, avg.glue.slow) \
+REPORT("fastglue",     1, 4, avg.glue.fast) \
 REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
 REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
 REPORT("properdec",    0, 3, relative (stats.propagations, stats.decisions)) \
 REPORT("trail",        1, 4, avg.trail) \
 REPORT("resglue",      1, 4, avg.resolved.glue) \
-REPORT("fastglue",     1, 4, avg.glue.fast) \
 REPORT("ressize",      1, 4, avg.resolved.size) \
 
 struct Report {
@@ -1505,14 +1505,26 @@ struct bumped_earlier {
   bool operator () (int a, int b) { return var (a).bumped < var (b).bumped; }
 };
 
+struct bumped_plus_trail_smaller_than {
+  bool operator () (int a, int b) { 
+    Var & u = var (a), & v = var (b);
+    return u.bumped + u.trail < v.bumped + v.trail;
+  }
+};
+
 static void bump_and_clear_seen_variables (int uip) {
   START (bump);
-  if (opts.reducetrail && high_propagations_per_decision ()) {
+  if (opts.reducetrail == 1 && high_propagations_per_decision ()) {
     LOG ("trail sorting seen variables before bumping");
     stats.trailsorted++;
     sort (seen.literals.begin (),
           seen.literals.end (),
           trail_smaller_than ());
+  } else if (opts.reducetrail == 2) {
+    LOG ("bumped plus trail sorting seen variables before bumping");
+    sort (seen.literals.begin (),
+          seen.literals.end (),
+          bumped_plus_trail_smaller_than ());
   } else {
     LOG ("bumped sorting seen variables before bumping");
     sort (seen.literals.begin (),
@@ -2088,6 +2100,11 @@ static void copying_garbage_collector () {
   arena.release_and_take_over_memory (new_arena);
 }
 
+static void garbage_collection () {
+  if (opts.copying) copying_garbage_collector ();
+  else compactifying_garbage_collector ();
+}
+
 static void reduce () {
   START (reduce);
   stats.reduce.count++;
@@ -2097,8 +2114,7 @@ static void reduce () {
   const bool new_units = (limits.reduce.fixed < stats.fixed);
   if (new_units) mark_satisfied_clauses_as_garbage ();
   mark_useless_redundant_clauses_as_garbage ();
-  if (opts.copying) copying_garbage_collector ();
-  else compactifying_garbage_collector ();
+  garbage_collection ();
   unprotect_reasons ();
   setup_binaries ();
   setup_watches ();
