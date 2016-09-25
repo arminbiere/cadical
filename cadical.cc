@@ -49,6 +49,7 @@ OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(minimize,         bool,   1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,     int,1000, 0,1e9, "recursive minimization depth") \
+OPTION(minimizerecursive,bool,   1, 0,  1, "use recursive minimization") \
 OPTION(quiet,            bool,   0, 0,  1, "disable all messages") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reducedynamic,    bool,   0, 0,  1, "dynamic glue & size limit") \
@@ -1381,11 +1382,9 @@ static void check_clause () {
 
 /*------------------------------------------------------------------------*/
 
-#if 1
-
 // Compact recursive but bounded version of DFS for minimizing clauses.
 
-static bool minimize_literal (int lit, int depth = 0) {
+static bool recursive_minimize_literal (int lit, int depth = 0) {
   Var & v = var (lit);
   if (!v.level || v.removable || (depth && v.seen)) return true;
   if (!v.reason || v.poison || v.level == level) return false;
@@ -1396,14 +1395,12 @@ static bool minimize_literal (int lit, int depth = 0) {
   bool res = true;
   for (int i = 0, other; res && i < size; i++)
     if ((other = lits[i]) != lit)
-      res = minimize_literal (-other, depth+1);
+      res = recursive_minimize_literal (-other, depth+1);
   if (res) v.removable = true; else v.poison = true;
   seen.minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
   return res;
 }
-
-#else
 
 // Non-recursive unbounded version of DFS for minimizing clauses.  It is
 // more ugly and needs slightly more heap memory for variables due to 'mark'
@@ -1421,7 +1418,7 @@ static int minimize_base_case (int root, int lit) {
   return 0;
 }
 
-static bool minimize_literal (int root) {
+static bool derecursived_minimize_literal (int root) {
   vector<int> stack;
   stack.push_back (root);
   while (!stack.empty ()) {
@@ -1451,7 +1448,10 @@ DONE:   seen.minimized.push_back (lit);
   return res;
 }
 
-#endif
+static bool minimize_literal (int root) {
+  if (opts.minimizerecursive) return recursive_minimize_literal (root);
+  else return derecursived_minimize_literal (root);
+}
 
 struct trail_smaller_than {
   bool operator () (int a, int b) { return var (a).trail < var (b).trail; }
