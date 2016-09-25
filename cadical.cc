@@ -60,6 +60,7 @@ OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
 OPTION(reduceresolved,    int, 1.0, 0,  1, "resolved keep ratio") \
 OPTION(reducetrail,       int,   2, 0,  2, "bump based on trail (2=both)") \
+OPTION(trailweight,    double,   2, 0,1e9, "trail weight versus bump") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
 OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
@@ -95,7 +96,7 @@ extern "C" {
 #include <sys/time.h>
 };
 
-// Some standard C++ includes from STL 
+// Some standard C++ includes from STL
 
 #include <algorithm>
 #include <vector>
@@ -217,7 +218,7 @@ struct Clause {
 
   enum {
     RESOLVED_OFFSET = 1*sizeof(int), // of 'resolved' field before clause
-  };            
+  };
 
   // Actually, a redundant large clause has one additional field
   //
@@ -249,13 +250,13 @@ class Reason {
 
   enum Tag {
     INVALID    = 0,
-    EMBEDDED   = 1, 
-    REFERENCED = 2, 
+    EMBEDDED   = 1,
+    REFERENCED = 2,
   };
 
   Tag tag;
   Ref ref;
-  Clause embedded; 
+  Clause embedded;
 
 public:
 
@@ -474,7 +475,7 @@ static vector<Timer> timers;
 // force and delay 'restart' respectively.  Most of them are exponential
 // moving average, but for the slow glue we use an actual average.
 
-static struct { 
+static struct {
   struct { EMA unit; } frequency;
   struct { EMA glue, size; } resolved;
   struct { EMA fast; AVG slow, blocking, nonblocking; } glue;
@@ -667,7 +668,7 @@ static inline size_t align (size_t bytes) {
   return res;
 }
 
-inline void Arena::release () { 
+inline void Arena::release () {
   if (!start) return;
   dec_bytes (capacity ());
   delete [] start;
@@ -882,7 +883,7 @@ PROFILE(reduce) \
 PROFILE(restart) \
 PROFILE(search) \
 
-static struct { 
+static struct {
 #define PROFILE(NAME) \
   double NAME;
   PROFILES
@@ -1290,7 +1291,7 @@ static bool propagate () {
 
     // Then if all binary clauses are propagated, go over longer clauses
     // with the negation of the assigned literal on the trail.
-    
+
     if (!conflict && next.watches < trail.size ()) {
       const int lit = trail[next.watches++];
       assert (val (lit) > 0);
@@ -1506,9 +1507,10 @@ struct bumped_earlier {
 };
 
 struct bumped_plus_trail_smaller_than {
-  bool operator () (int a, int b) { 
+  bool operator () (int a, int b) {
     Var & u = var (a), & v = var (b);
-    return u.bumped + u.trail < v.bumped + v.trail;
+    return u.bumped + opts.trailweight * u.trail <
+           v.bumped + opts.trailweight * v.trail;
   }
 };
 
@@ -1571,7 +1573,7 @@ static void clear_levels () {
   seen.levels.clear ();
 }
 
-static void resolve_clause (Clause * c) { 
+static void resolve_clause (Clause * c) {
   if (!c->redundant) return;
   UPDATE (avg.resolved.size, c->size);
   UPDATE (avg.resolved.glue, c->glue);
@@ -1607,7 +1609,7 @@ static bool blocking_enabled () {
       msg ("average blocking glue %.2f non-blocking %.2f ratio %.2f",
         (double) avg.glue.blocking, (double) avg.glue.nonblocking,
         relative (avg.glue.blocking, avg.glue.nonblocking));
-      if (avg.glue.blocking > 
+      if (avg.glue.blocking >
           opts.restartblockmargin * avg.glue.nonblocking) {
         msg ("exploiting non-blocking until %ld conflicts", blocking.limit);
         blocking.enabled = false;
@@ -1677,7 +1679,7 @@ static void analyze () {
       sort (clause.begin (), clause.end (), trail_greater_than ());
       driving_clause = new_learned_clause (glue);
       jump = var (clause[1]).level;
-    } 
+    }
     stats.learned.unit += (size == 1);
     stats.learned.binary += (size == 2);
     UPDATE (avg.frequency.unit, (size == 1) ? inc.unit : 0);
@@ -1711,7 +1713,7 @@ static bool restarting () {
   limits.restart.conflicts = stats.conflicts + opts.restartint;
   double s = avg.glue.slow, f = avg.glue.fast, l = opts.restartmargin * s;
   LOG ("EMA learned glue slow %.2f fast %.2f limit %.2f", s, f, l);
-  if (l > f) { 
+  if (l > f) {
     if (opts.restartemaf1) {
       if (avg.frequency.unit >= opts.emaf1lim) {
         stats.restart.unit++;
