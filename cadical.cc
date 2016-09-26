@@ -1601,6 +1601,7 @@ static bool analyze_literal (int lit) {
 }
 
 static bool blocking_enabled () {
+  return true;
   if (stats.conflicts > blocking.limit) {
     if (blocking.exploring) {
       blocking.inc += opts.restartblocklimit;
