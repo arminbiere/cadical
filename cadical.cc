@@ -36,6 +36,7 @@ IN THE SOFTWARE.
 /*  NAME,                TYPE, VAL,LOW,HIGH,DESCRIPTION */ \
 OPTION(bump,             bool,   1, 0,  1, "bump variables") \
 OPTION(copying,          bool,   1, 0,  1, "use copying garbage collector") \
+OPTION(decay,          double, 0.9,1e-9,1e9,"EVSIDS variable decay") \
 OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
@@ -43,6 +44,7 @@ OPTION(emainitsmoothly,  bool,   1, 0,  1, "initialize EMAs smoothly") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
 OPTION(ematrail,       double,1e-5, 0,  1, "alpha trail") \
+OPTION(evsids,           bool,   1, 0,  1, "use EVSIDS instead of VMTF") \
 OPTION(highproperdec,     int,   0, 0,1e9, "high bump per conflict limit") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
@@ -301,11 +303,15 @@ struct Var {
   int prev, next;       // double links for decision VMTF queue
   long bumped;          // enqueue time stamp for VMTF queue
 
+  double score;
+  int pos;
+
   Reason reason;        // implication graph edge
 
   Var () :
     seen (false), poison (false), removable (false), mark (0),
-    prev (0), next (0), bumped (0)
+    prev (0), next (0), bumped (0),
+    score (0), pos (-1)
   { }
 };
 
@@ -405,6 +411,10 @@ static struct {
   int assigned;         // all variables after this one are assigned
 } queue;
 
+// EVSIDS binary heap
+
+static vector<Var*> heap;
+
 static bool unsat;              // empty clause found or learned
 
 static int level;               // decision level (levels.size () - 1)
@@ -465,6 +475,10 @@ static struct {
   struct { long unit, binary; } learned;
 
   int fixed;                    // top level assigned variables
+
+  struct { long up, down; } bubble;
+
+  long rescored;
 } stats;
 
 #ifdef PROFILING
@@ -499,6 +513,7 @@ static struct {
 static struct {
   struct { long conflicts; } reduce;
   double unit, binary;
+  double bump;
 } inc;
 
 static FILE * input_file, * dimacs_file, * proof_file;
@@ -1053,6 +1068,25 @@ static void check_vmtf_queue_invariant () {
 #endif
 }
 
+// Ditto for binary heap.
+
+static void check_heap_invariant () {
+#if 0
+  int idx;
+  for (idx = 1; idx <= max_var; idx++) {
+    Var * v = &var (idx);
+    if (v->pos < 0) assert (val (idx));
+    else assert (v->pos < (int) heap.size ()), assert (heap[v->pos] == v);
+  }
+  for (size_t i = 0; i < heap.size (); i++) {
+    Var * u = heap[i], * v, * w;
+    size_t p = 2*i + 1, q = p + 1;
+    if (p < heap.size ()) v = heap[p], assert (u->score >= v->score);
+    if (q < heap.size ()) w = heap[q], assert (u->score >= w->score);
+  }
+#endif
+}
+
 /*------------------------------------------------------------------------*/
 
 static void trace_empty_clause () {
@@ -1113,6 +1147,47 @@ static void learn_unit_clause (int lit) {
 
 /*------------------------------------------------------------------------*/
 
+static void bubble_up (Var * v) {
+  while (v->pos > 0) {
+    stats.bubble.up++;
+    Var * u = heap[(v->pos - 1)/2];
+    if (u->score >= v->score) break;
+    swap (heap[u->pos], heap[v->pos]);
+    swap (u->pos, v->pos);
+  }
+}
+
+static void bubble_down (Var * v) {
+  for (;;) {
+    stats.bubble.down++;
+    const size_t p = 2*v->pos + 1, q = p + 1;
+    if (p >= heap.size ()) break;
+    Var * u = heap[p];
+    if (q < heap.size ()) {
+      Var * w = heap[q];
+      if (w->score > u->score) u = w;
+    }
+    if (v->score >= u->score) break;
+    swap (heap[u->pos], heap[v->pos]);
+    swap (u->pos, v->pos);
+  }
+}
+
+static Var * pop_heap () {
+  Var * res = heap[0];
+  res->pos = -1;
+  Var * v = heap.back ();
+  heap.pop_back ();
+  if (v != res) {
+    v->pos = 0;
+    heap[0] = v;
+    bubble_down (v);
+  }
+  return res;
+}
+
+/*------------------------------------------------------------------------*/
+
 static void assign (int lit, Reason reason) {
   int idx = vidx (lit);
   assert (!vals[idx]);
@@ -1132,10 +1207,19 @@ static void unassign (int lit) {
   vals[idx] = 0;
   LOG ("unassign %d", lit);
   Var * v = vars + idx;
-  if (var (queue.assigned).bumped >= v->bumped) return;
-  queue.assigned = idx;
-  LOG ("queue next moved to %d", idx);
-  check_vmtf_queue_invariant ();
+  if (opts.evsids) {
+    if (v->pos < 0) {
+      v->pos = (int) heap.size ();
+      heap.push_back (v);
+      bubble_up (v);
+      bubble_down (v);
+    }
+  } else {
+    if (var (queue.assigned).bumped >= v->bumped) return;
+    queue.assigned = idx;
+    LOG ("queue next moved to %d", idx);
+    check_vmtf_queue_invariant ();
+  }
 }
 
 static void backtrack (int target_level = 0) {
@@ -1487,12 +1571,24 @@ static void enqueue (Var * v, int idx) {
   v->next = 0;
 }
 
-static int next_decision_variable () {
+static int next_vmtf_decision_variable () {
   int res;
   while (val (res = queue.assigned))
     queue.assigned = var (queue.assigned).prev, stats.searched++;
-  LOG ("next decision variable %d", res);
+  LOG ("next VMTF decision variable %d", res);
   return res;
+}
+
+static int next_heap_decision_variable () {
+  int res;
+  while (val (res = (heap[0] - vars)))
+    pop_heap ();
+  return res;
+}
+
+static int next_decision_variable () {
+  if (opts.evsids) return next_heap_decision_variable ();
+  else return next_vmtf_decision_variable ();
 }
 
 static bool high_propagations_per_decision () {
@@ -1514,8 +1610,40 @@ struct bumped_plus_trail_smaller_than {
   }
 };
 
+static void vmtf_bump_variable (int idx, int uip, Var * v) {
+  if (!opts.bump || !v->next) return;
+  if (queue.assigned == idx)
+    queue.assigned = v->prev ? v->prev : v->next;
+  dequeue (v), enqueue (v, idx);
+  v->bumped = ++stats.bumped;
+  if (idx != uip && !vals[idx]) queue.assigned = idx;
+  LOG ("VMTF bumped and moved to front %d", idx);
+  check_vmtf_queue_invariant ();
+}
+
+static void evsids_bump_variable (int idx, Var * v) {
+  v->score += inc.bump;
+  if (v->score > 1e100) {
+    stats.rescored++;
+    LOG ("rescored all variables scores");
+    for (int other = 1; other <= max_var; other++)
+      var (other).score /= 1e100;
+    inc.bump /= 1e100;
+    LOG ("new bumping increment %.2f", inc.bump);
+  }
+  bubble_up (v);
+  LOG ("EVSIDS bumped %d new score %.2f", idx, v->score);
+  check_heap_invariant ();
+}
+
+static void bump_variable (int idx, int uip, Var * v) {
+  if (opts.evsids) evsids_bump_variable (idx, v);
+  else vmtf_bump_variable (idx, uip, v);
+}
+
 static void bump_and_clear_seen_variables (int uip) {
   START (bump);
+if (!opts.evsids) {
   if (opts.reducetrail == 1 && high_propagations_per_decision ()) {
     LOG ("trail sorting seen variables before bumping");
     stats.trailsorted++;
@@ -1533,22 +1661,20 @@ static void bump_and_clear_seen_variables (int uip) {
           seen.literals.end (),
           bumped_earlier ());
   }
+}
   if (uip < 0) uip = -uip;
   for (size_t i = 0; i < seen.literals.size (); i++) {
     int idx = vidx (seen.literals[i]);
     Var * v = vars + idx;
     assert (v->seen);
     v->seen = false;
-    if (!opts.bump || !v->next) continue;
-    if (queue.assigned == idx)
-      queue.assigned = v->prev ? v->prev : v->next;
-    dequeue (v), enqueue (v, idx);
-    v->bumped = ++stats.bumped;
-    if (idx != uip && !vals[idx]) queue.assigned = idx;
-    LOG ("bumped and moved to front %d", idx);
-    check_vmtf_queue_invariant ();
+    if (opts.bump) bump_variable (idx, uip, v);
   }
   seen.literals.clear ();
+  if (opts.bump && opts.evsids) {
+    inc.bump *= 1.0 / opts.decay;
+    LOG ("new bumping increment %.2f", inc.bump);
+  }
   STOP (bump);
 }
 
@@ -1601,7 +1727,6 @@ static bool analyze_literal (int lit) {
 }
 
 static bool blocking_enabled () {
-  return true;
   if (stats.conflicts > blocking.limit) {
     if (blocking.exploring) {
       blocking.inc += opts.restartblocklimit;
@@ -2108,6 +2233,29 @@ static void garbage_collection () {
   else compactifying_garbage_collector ();
 }
 
+struct score_smaller {
+  bool operator () (int a, int b) { return var (a).score < var (b).score; }
+};
+
+static void enqueue_variables_based_on_evsids_score () {
+  int * tmp = new int[max_var];
+  for (int idx = 1; idx <= max_var; idx++)
+    tmp[idx - 1] = idx;
+  sort (tmp, tmp + max_var, score_smaller ());
+  int prev = 0;
+  queue.first = 0;
+  for (int i = 0; i < max_var; i++) {
+    int idx = tmp[i];
+    Var & v = var (idx);
+    if ((v.prev = prev)) var (prev).next = idx;
+    else queue.first = idx;
+    v.next = 0;
+    prev = idx;
+  }
+  delete [] tmp;
+  queue.last = prev;
+}
+
 static void reduce () {
   START (reduce);
   stats.reduce.count++;
@@ -2117,6 +2265,7 @@ static void reduce () {
   const bool new_units = (limits.reduce.fixed < stats.fixed);
   if (new_units) mark_satisfied_clauses_as_garbage ();
   mark_useless_redundant_clauses_as_garbage ();
+  if (opts.evsids) enqueue_variables_based_on_evsids_score ();
   garbage_collection ();
   unprotect_reasons ();
   setup_binaries ();
@@ -2178,6 +2327,7 @@ static void init_solving () {
   INIT_EMA (avg.jump, opts.emajump);
   INIT_EMA (avg.trail, opts.ematrail);
   blocking.limit = blocking.inc = opts.restartblocklimit;
+  inc.bump = 1;
 }
 
 static int solve () {
@@ -2234,6 +2384,12 @@ static void print_statistics () {
     stats.resolved, relative (stats.resolved, stats.conflicts));
   msg ("searched:      %15ld   %10.2f    per decision",
     stats.searched, relative (stats.searched, stats.decisions));
+  msg ("bubbleups:     %15ld   %10.2f    per conflict",
+    stats.bubble.up, relative (stats.bubble.up, stats.conflicts));
+  msg ("bubbledowns:   %15ld   %10.2f    per conflict",
+    stats.bubble.down, relative (stats.bubble.down, stats.conflicts));
+  msg ("rescored:     %15ld   %10.2f     conflicts per rescore",
+    stats.rescored, relative (stats.conflicts, stats.rescored));
   long learned = stats.literals.learned - stats.literals.minimized;
   msg ("learned:       %15ld   %10.2f    per conflict",
     learned, relative (learned, stats.conflicts));
@@ -2260,6 +2416,19 @@ static void init_vmtf_queue () {
     prev = i;
   }
   queue.last = queue.assigned = prev;
+}
+
+static void init_heap () {
+  int start, end, dir;
+  if (opts.reverse) start = max_var, end = 0, dir = -1;
+  else start = 1, end = max_var + 1, dir = 1;
+  for (int i = start; i != end; i += dir) {
+    Var * v = &vars[i];
+    v->score = 0;
+    v->pos = heap.size ();
+    heap.push_back (v);
+  }
+  check_heap_invariant ();
 }
 
 static void reset_signal_handlers (void) {
@@ -2311,7 +2480,8 @@ static void init_variables () {
   for (int i = 1; i <= max_var; i++) vals[i] = 0;
   for (int i = 1; i <= max_var; i++) phases[i] = -1;
   for (int l = min_lit; l <= max_lit; l++) literal.binaries [l] = 0;
-  init_vmtf_queue ();
+  if (opts.evsids) init_heap ();
+  else init_vmtf_queue ();
   msg ("initialized %d variables", max_var);
   levels.push_back (Level (0));
 }
