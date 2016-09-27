@@ -65,7 +65,7 @@ OPTION(reducetrail,       int,   2, 0,  2, "bump based on trail (2=both)") \
 OPTION(trailweight,    double,   2, 0,1e9, "trail weight versus bump") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
-OPTION(restartblocking,  bool,   0, 0,  1, "enable restart blocking") \
+OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
 OPTION(restartblocklimit, int, 1e4, 0,1e9, "restart blocking limit") \
 OPTION(restartblockmargin,double,1.2,0,10, "restart blocking margin") \
 OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
