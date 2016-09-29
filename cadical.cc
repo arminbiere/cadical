@@ -984,6 +984,7 @@ static size_t delete_clause (Clause * c) {
   stats.reduce.bytes += bytes;
   trace_delete_clause (c);
   dec_bytes (bytes);
+  LOG (c, "delete");
   delete [] (char*) c;
   return bytes;
 }
