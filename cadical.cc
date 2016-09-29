@@ -1070,8 +1070,7 @@ static bool propagate () {
       const Watches & ws = binaries (-lit);
       for (size_t i = 0; i < ws.size (); i++) {
         const Watch & w = ws[i];
-        const int other = w.blit;
-        const int b = val (other);
+        const int other = w.blit, b = val (other);
         if (b < 0) conflict = w.clause;
         else if (!b) assign (other, w.clause);
       }
@@ -1349,6 +1348,7 @@ static void analyze () {
   assert (clause.empty ());
   assert (seen.literals.empty ());
   assert (seen.levels.empty ());
+  assert (seen.minimized.empty ());
   assert (resolved.empty ());
   START (analyze);
   if (!level) learn_empty_clause ();
