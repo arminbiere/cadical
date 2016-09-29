@@ -34,47 +34,30 @@ IN THE SOFTWARE.
 
 #define OPTIONS \
 /*  NAME,                TYPE, VAL,LOW,HIGH,DESCRIPTION */ \
-OPTION(bump,             bool,   1, 0,  1, "bump variables") \
-OPTION(copying,          bool,   1, 0,  1, "use copying garbage collector") \
-OPTION(decay,          double, 0.9,1e-9,1e9,"EVSIDS variable decay") \
 OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
 OPTION(emainitsmoothly,  bool,   1, 0,  1, "initialize EMAs smoothly") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
-OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
 OPTION(ematrail,       double,1e-5, 0,  1, "alpha trail") \
-OPTION(evsids,           bool,   0, 0,  1, "use EVSIDS instead of VMTF") \
-OPTION(highproperdec,     int,   0, 0,1e9, "high bump per conflict limit") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(minimize,         bool,   1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,     int,1000, 0,1e9, "recursive minimization depth") \
-OPTION(minimizerecursive,bool,   1, 0,  1, "use recursive minimization") \
 OPTION(quiet,            bool,   0, 0,  1, "disable all messages") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
-OPTION(reducedynamic,    bool,   0, 0,  1, "dynamic glue & size limit") \
 OPTION(reducefocus,      bool,   1, 0,  1, "keep resolved longer") \
-OPTION(reducefocusglue,   int, 1e6, 0,1e9, "reduce focus max glue") \
-OPTION(reducefocusize,    int, 1e6, 0,1e9, "reduce focus max size") \
-OPTION(reduceglue,       bool,   1, 0,  1, "reduce by glue first") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
-OPTION(reduceresolved,    int, 1.0, 0,  1, "resolved keep ratio") \
-OPTION(reducetrail,       int,   2, 0,  2, "bump based on trail (2=both)") \
-OPTION(trailweight,    double,   1, 0,1e9, "trail weight versus bump") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
 OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
 OPTION(restartblocklimit, int, 1e4, 0,1e9, "restart blocking limit") \
 OPTION(restartblockmargin,double,1.2,0,10, "restart blocking margin") \
-OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
-OPTION(restartdelaying,  bool,   0, 0,  1, "enable restart delaying") \
 OPTION(restartemaf1,     bool,   1, 0,  1, "unit frequency based restart") \
 OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
 OPTION(restartmargin,  double, 1.1, 0, 10, "restart slow fast margin (1/K)") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
-OPTION(reverse,          bool,   0, 0,  1, "last index first initially") \
 OPTION(verbose,          bool,   0, 0,  1, "more verbose messages") \
 OPTION(witness,          bool,   1, 0,  1, "print witness") \
 
@@ -127,166 +110,20 @@ static struct {
 
 /*------------------------------------------------------------------------*/
 
-// Memory allocator for compact ordered allocation of clauses with 32-bit
-// references instead of 64-bit pointers.  A similar technique is used in
-// MiniSAT and descendants as well as in Splatz.  This first gives fast
-// consecutive (that is cache friendly) allocation of clauses and more
-// importantly allows to mix (32-bit) blocking literals with clause
-// references which reduces watcher size by 2 from 16 to 8 bytes.
-
-typedef unsigned Ref;
-
-#ifndef ALIGNMENT
-#define ALIGNMENT 4
-#endif
-
-static const size_t alignment = ALIGNMENT;   // memory alignment in an arena
-#ifndef NDEBUG
-static bool aligned (size_t bytes) { return !((alignment-1)&bytes); }
-static bool aligned (void * ptr) { return aligned ((size_t) ptr); }
-#endif
-
-class Arena {
-  char * start, * top, * end;
-  void init () { start = top = end = 0; }
-public:
-  void enlarge (size_t new_capacity);
-  size_t size () const { return top - start; }
-  size_t capacity () const { return end - start; }
-
-  void resize (char * new_top) {
-    assert (start <= new_top);
-    assert (new_top <= end);
-    assert (aligned (new_top));
-    top = new_top;
-  }
-
-  bool contains (void * ptr) const { return start <= ptr && ptr < top; }
-
-  void * ref2ptr (Ref ref) const {
-    if (!ref) return 0;
-    assert (ref < size ());
-    char * res = start + alignment * (size_t) ref;
-    assert (contains (res));
-    return res;
-  }
-
-  Ref ptr2ref (void * p) const {
-    if (!p) return 0u;
-    assert (contains (p)),
-    assert (aligned (p));
-    assert (start < p);
-    return (((char*)p) - start)/alignment;
-  }
-
-  void * allocate (size_t bytes, Ref & ref);
-
-  void release ();
-
-  void release_and_take_over_memory (Arena & other) {
-    release ();
-    start = other.start, top = other.top, end = other.end;
-    other.start = other.top = other.end = 0;
-  }
-
-  Arena () { init (); }
-  ~Arena () { release (); }
-};
-
-/*------------------------------------------------------------------------*/
-
-static const int    LD_MAX_GLUE     =  28;
-static const int    MAX_GLUE        =  (1 << LD_MAX_GLUE);
-static const size_t EXTENDED_OFFSET = sizeof(long);
-
 struct Clause {
 
-  unsigned redundant:1; // aka 'learned' so not 'irredundant' (original)
-  unsigned garbage  :1; // can be garbage collected unless it is a 'reason'
-  unsigned reason   :1; // reason / antecedent clause can not be collected
-  unsigned extended :1; // see discussion on 'additional fields' below.
+  long resolved;
 
-  unsigned glue : LD_MAX_GLUE;
+  bool redundant; // aka 'learned' so not 'irredundant' (original)
+  bool garbage;   // can be garbage collected unless it is a 'reason'
+  bool reason;    // reason / antecedent clause can not be collected
 
+  int glue;		// glue = glucose level = LBD
   int size;             // actual size of 'literals' (at least 2)
 
   int literals[2];      // actually of variadic 'size' in general
                         // for binary embedded reason clauses 'size == 2'
-
-  void set_literals (int a, int b) {
-    redundant = garbage = reason = false;
-    size = 2, literals[0] = a, literals[1] = b;
-  }
-
-  enum {
-    RESOLVED_OFFSET = 1*sizeof(int), // of 'resolved' field before clause
-  };
-
-  // Actually, a redundant large clause has one additional field
-  //
-  //  long resolved;     // conflict index when last resolved
-  //
-  // This is however placed before the actual clause data and thus not
-  // directly visible.  We set 'extended' to 'true' if this field is
-  // allocated.  The policy used to determine whether a redundant clause is
-  // extended uses the 'keepsize' option.  A redundant clause larger than
-  // its value is extended. Usually we always keep clauses of size 2 or 3,
-  // which then do not require 'resolved' fields.
-
-  long & resolved () {
-    assert (this), assert (extended);
-    return *(long*) (((char*)this) - EXTENDED_OFFSET);
-  }
-
-  size_t bytes () const;
 };
-
-static Arena arena;             // memory arena for storing clauses
-
-static inline
-Clause * ref2clause (Ref r) { return (Clause*) arena.ref2ptr (r); }
-
-static inline Ref clause2ref (Clause * c) { return arena.ptr2ref (c); }
-
-class Reason {
-
-  enum Tag {
-    INVALID    = 0,
-    EMBEDDED   = 1,
-    REFERENCED = 2,
-  };
-
-  Tag tag;
-  Ref ref;
-  Clause embedded;
-
-public:
-
-  Reason () : tag (INVALID) { }
-
-  Reason (Clause * c) : tag (REFERENCED) { ref = clause2ref (c); }
-
-  Reason (int a, int b) : tag (EMBEDDED) { embedded.set_literals (a, b); }
-
-  bool referenced () const { return tag == REFERENCED; }
-
-  Ref reference () { return ref; }
-
-  void update_reference (Ref r) { assert (referenced ()), ref = r; }
-
-  Clause * clause () {
-         if (!tag)              return 0;
-    else if (tag == REFERENCED) return ref2clause (ref);
-    else                        return &embedded;
-  }
-
-  Clause * operator -> () { return clause (); }
-  operator bool () { return tag; }
-};
-
-struct NoReason : public Reason { };
-struct UnitReason : public Reason { };
-struct DecisionReason : public Reason { };
 
 /*------------------------------------------------------------------------*/
 
@@ -298,27 +135,23 @@ struct Var {
   bool seen;            // analyzed in 'analyze' and will be bumped
   bool poison;          // can not be removed during clause minimization
   bool removable;       // can be removed during clause minimization
-  int mark;             // reason position for non-recursive DFS
 
   int prev, next;       // double links for decision VMTF queue
   long bumped;          // enqueue time stamp for VMTF queue
 
-  double score;
-  int pos;
-
-  Reason reason;        // implication graph edge
+  Clause * reason;      // implication graph edge
 
   Var () :
-    seen (false), poison (false), removable (false), mark (0),
-    prev (0), next (0), bumped (0),
-    score (0), pos (-1)
+    seen (false), poison (false), removable (false),
+    prev (0), next (0), bumped (0)
   { }
 };
 
 struct Watch {
   int blit;             // if blocking literal is true do not visit clause
-  Ref ref;
-  Watch (int b, Ref r) : blit (b), ref (r) { }
+  int size;
+  Clause * clause;
+  Watch (int b, Clause * c) : blit (b), size (c->size), clause (c) { }
   Watch () { }
 };
 
@@ -396,12 +229,9 @@ static signed char * phases;            // saved previous assignment
 // are treated as long clauses until the next 'reduce' after which this
 // binary data structure is updated.
 
-static int * others;
-static size_t size_others;
-
 static struct {
   Watches * watches;
-  int ** binaries;              // points to start of sequence.
+  Watches * binaries;
 } literal;
 
 // VMTF decision queue
@@ -428,7 +258,7 @@ static struct {
 } next;                 // as BFS indices into 'trail' for propagation
 
 static vector<int> clause;      // temporary clause in parsing & learning
-static vector<Ref> clauses;     // references to all clauses
+static vector<Clause*> clauses; // collection of all clauses
 static bool iterating;          // report top-level assigned variables
 
 static struct {
@@ -438,7 +268,7 @@ static struct {
 } seen;
 
 static vector<Clause*> resolved;  // large clauses in 'analyze'
-static Reason conflict;           // set: 'propagation', reset: 'analyze'
+static Clause * conflict;         // set: 'propagation', reset: 'analyze'
 static bool clashing_unit;        // set: 'parse_dimacs'
 
 static struct {
@@ -449,7 +279,6 @@ static struct {
   struct {
     long count;
     long tried;
-    long delayed;
     long blocked;
     long unforced;
     long forced;
@@ -463,8 +292,6 @@ static struct {
   long resolved;                // resolved redundant clauses in 'analyze'
   long searched;                // searched decisions in 'decide'
 
-  long trailsorted;             // trail sorted before bumping
-
   struct { long count, clauses, bytes; } reduce; // in 'reduce'
 
   struct { long learned, minimized; } literals;  // in 'minimize_clause'
@@ -475,10 +302,6 @@ static struct {
   struct { long unit, binary; } learned;
 
   int fixed;                    // top level assigned variables
-
-  struct { long up, down; } bubble;
-
-  long rescored;
 } stats;
 
 #ifdef PROFILING
@@ -491,7 +314,6 @@ static vector<Timer> timers;
 
 static struct {
   struct { EMA unit; } frequency;
-  struct { EMA glue, size; } resolved;
   struct { EMA fast; AVG slow, blocking, nonblocking; } glue;
   EMA jump, trail;
 } avg;
@@ -677,54 +499,6 @@ static void dec_bytes (size_t bytes) {
   stats.bytes.total.current -= bytes;
 }
 
-static inline size_t align (size_t bytes) {
-  size_t res = (bytes + (alignment-1)) & ~ (alignment-1);
-  assert (aligned (res)), assert (!aligned (bytes) || bytes == res);
-  return res;
-}
-
-inline void Arena::release () {
-  if (!start) return;
-  dec_bytes (capacity ());
-  delete [] start;
-  init ();
-}
-
-inline void * Arena::allocate (size_t bytes, Ref & ref) {
-  bytes = align (bytes);
-  char * new_top = top + bytes;
-  if (new_top > end) enlarge (new_top - start), new_top = top + bytes;
-  char * res = top;
-  top = new_top;
-  ref = (res - start)/alignment;
-  assert (start + alignment * (size_t) ref == res);
-  assert (ref2ptr (ref) == res);
-  assert (aligned (res)), assert (contains (res));
-  return res;
-}
-
-void Arena::enlarge (size_t requested_capacity) {
-  if (!start) requested_capacity += alignment;          // zero ref = zero ptr
-  if (requested_capacity > (1l << 32))
-    die ("maximum memory arena of %ld GB exhausted",
-      ((alignment * (1l<<32)) >> 30));
-  size_t old_capacity = capacity (), old_size = size ();
-  size_t new_capacity = old_capacity ? old_capacity : 4;
-  while (new_capacity < requested_capacity)
-    if (new_capacity < (1l << 30)) new_capacity *= 2;
-    else new_capacity += (1l << 30);
-  assert (new_capacity >= requested_capacity);
-  char * new_start = new char[new_capacity];
-  memcpy (new_start, start, old_size);
-  dec_bytes (old_capacity);
-  inc_bytes (new_capacity);
-  if (start) delete [] start;
-  start = new_start;
-  top   = new_start + (old_size ? old_size : alignment);
-  end   = new_start + new_capacity;
-  LOG ("enlarged arena to new capacity %ld", new_capacity);
-}
-
 #define VECTOR_BYTES(V) \
   res += V.capacity () * sizeof (V[0])
 
@@ -803,8 +577,6 @@ REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
 REPORT("properdec",    0, 3, relative (stats.propagations, stats.decisions)) \
 REPORT("trail",        1, 4, avg.trail) \
-REPORT("resglue",      1, 4, avg.resolved.glue) \
-REPORT("ressize",      1, 4, avg.resolved.size) \
 
 struct Report {
   const char * header;
@@ -1044,48 +816,11 @@ static inline Watches & watches (int lit) {
   return literal.watches[vlit (lit)];
 }
 
-static inline int * & binaries (int lit) {
+static inline Watches & binaries (int lit) {
   return literal.binaries[vlit (lit)];
 }
 
 static inline Var & var (int lit) { return vars [vidx (lit)]; }
-
-/*------------------------------------------------------------------------*/
-
-// Very expensive check for the consistency of the VMTF queue.
-
-static void check_vmtf_queue_invariant () {
-#if 0
-  int count = 0, idx, next;
-  for (idx = queue.first; idx; idx = var (idx).next) count++;
-  assert (count == max_var);
-  for (idx = queue.last; idx; idx = var (idx).prev) count--;
-  assert (!count);
-  for (idx = queue.first; idx && (next = var (idx).next); idx = next)
-    assert (var (idx).bumped < var (next).bumped);
-  for (idx = queue.assigned; idx && (next = var (idx).next); idx = next)
-    assert (val (next));
-#endif
-}
-
-// Ditto for binary heap.
-
-static void check_heap_invariant () {
-#if 0
-  int idx;
-  for (idx = 1; idx <= max_var; idx++) {
-    Var * v = &var (idx);
-    if (v->pos < 0) assert (val (idx));
-    else assert (v->pos < (int) heap.size ()), assert (heap[v->pos] == v);
-  }
-  for (size_t i = 0; i < heap.size (); i++) {
-    Var * u = heap[i], * v, * w;
-    size_t p = 2*i + 1, q = p + 1;
-    if (p < heap.size ()) v = heap[p], assert (u->score >= v->score);
-    if (q < heap.size ()) w = heap[q], assert (u->score >= w->score);
-  }
-#endif
-}
 
 /*------------------------------------------------------------------------*/
 
@@ -1147,48 +882,7 @@ static void learn_unit_clause (int lit) {
 
 /*------------------------------------------------------------------------*/
 
-static void bubble_up (Var * v) {
-  while (v->pos > 0) {
-    stats.bubble.up++;
-    Var * u = heap[(v->pos - 1)/2];
-    if (u->score >= v->score) break;
-    swap (heap[u->pos], heap[v->pos]);
-    swap (u->pos, v->pos);
-  }
-}
-
-static void bubble_down (Var * v) {
-  for (;;) {
-    stats.bubble.down++;
-    const size_t p = 2*v->pos + 1, q = p + 1;
-    if (p >= heap.size ()) break;
-    Var * u = heap[p];
-    if (q < heap.size ()) {
-      Var * w = heap[q];
-      if (w->score > u->score) u = w;
-    }
-    if (v->score >= u->score) break;
-    swap (heap[u->pos], heap[v->pos]);
-    swap (u->pos, v->pos);
-  }
-}
-
-static Var * pop_heap () {
-  Var * res = heap[0];
-  res->pos = -1;
-  Var * v = heap.back ();
-  heap.pop_back ();
-  if (v != res) {
-    v->pos = 0;
-    heap[0] = v;
-    bubble_down (v);
-  }
-  return res;
-}
-
-/*------------------------------------------------------------------------*/
-
-static void assign (int lit, Reason reason) {
+static void assign (int lit, Clause * reason = 0) {
   int idx = vidx (lit);
   assert (!vals[idx]);
   Var & v = vars[idx];
@@ -1207,19 +901,9 @@ static void unassign (int lit) {
   vals[idx] = 0;
   LOG ("unassign %d", lit);
   Var * v = vars + idx;
-  if (opts.evsids) {
-    if (v->pos < 0) {
-      v->pos = (int) heap.size ();
-      heap.push_back (v);
-      bubble_up (v);
-      bubble_down (v);
-    }
-  } else {
-    if (var (queue.assigned).bumped >= v->bumped) return;
-    queue.assigned = idx;
-    LOG ("queue next moved to %d", idx);
-    check_vmtf_queue_invariant ();
-  }
+  if (var (queue.assigned).bumped >= v->bumped) return;
+  queue.assigned = idx;
+  LOG ("queue next moved to %d", idx);
 }
 
 static void backtrack (int target_level = 0) {
@@ -1240,7 +924,8 @@ static void backtrack (int target_level = 0) {
 /*------------------------------------------------------------------------*/
 
 static void watch_literal (int lit, int blit, Clause * c) {
-  watches (lit).push_back (Watch (blit, clause2ref (c)));
+  Watches & ws = c->size == 2 ? binaries (lit) : watches (lit);
+  ws.push_back (Watch (blit, c));
   LOG (c, "watch %d blit %d in", lit, blit);
 }
 
@@ -1251,38 +936,45 @@ static void watch_clause (Clause * c) {
   watch_literal (l1, l0, c);
 }
 
-inline size_t Clause::bytes () const {
-  size_t res = sizeof *this + (size - 2) * sizeof (int);
-  if (extended) res += EXTENDED_OFFSET;
-  return res;
+static size_t bytes_clause (int size) {
+  return sizeof (Clause) + (size - 2) * sizeof (int);
 }
 
 static Clause * new_clause (bool red, unsigned glue = 0) {
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();  assert (size >= 2);
-  size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int);
-  const bool extended = red && size > opts.keepsize;
-  if (extended) bytes += EXTENDED_OFFSET;
-  Ref ref;
-  char * ptr = (char*) arena.allocate (bytes, ref);
-  if (extended) ptr += EXTENDED_OFFSET, ref += EXTENDED_OFFSET/alignment;
-  Clause * res = (Clause*) ptr;
+  size_t bytes = bytes_clause (size);
+  Clause * res = (Clause*) new char[bytes];
+  inc_bytes (bytes);
+  res->resolved = ++stats.resolved;
   res->redundant = red;
   res->garbage = false;
   res->reason = false;
-  res->extended = extended;
-  res->glue = min ((unsigned) MAX_GLUE, glue);
+  res->glue = glue;
   res->size = size;
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
-  if (extended) res->resolved () = ++stats.resolved;
-  assert (res->bytes () == bytes);
-  clauses.push_back (ref);
+  clauses.push_back (res);
   if (red) stats.clauses.redundant++;
   else     stats.clauses.irredundant++;
   if (++stats.clauses.current > stats.clauses.max)
     stats.clauses.max = stats.clauses.current;
   LOG (res, "new");
   return res;
+}
+
+static size_t delete_clause (Clause * c) {
+  if (c->redundant)
+       assert (stats.clauses.redundant),   stats.clauses.redundant--;
+  else assert (stats.clauses.irredundant), stats.clauses.irredundant--;
+  assert (stats.clauses.current);
+  stats.clauses.current--;
+  stats.reduce.clauses++;
+  size_t bytes = bytes_clause (c->size);
+  stats.reduce.bytes += bytes;
+  trace_delete_clause (c);
+  dec_bytes (bytes);
+  delete [] (char*) c;
+  return bytes;
 }
 
 struct lit_less_than {
@@ -1315,7 +1007,7 @@ static void add_new_original_clause () {
     else LOG ("original empty clause produces another inconsistency");
   } else if (size == 1) {
     int unit = clause[0], tmp = val (unit);
-    if (!tmp) assign (unit, UnitReason ());
+    if (!tmp) assign (unit, 0);
     else if (tmp < 0) {
       if (!unsat) msg ("parsed clashing unit"), clashing_unit = true;
       else LOG ("original clashing unit produces another inconsistency");
@@ -1363,13 +1055,14 @@ static bool propagate () {
       LOG ("propagating binaries of %d", lit);
       assert (val (lit) > 0);
       assert (literal.binaries);
-      const int * p = binaries (-lit);
-      if (!p) continue;
-      int other;
-      while ((other = *p++)) {
+      const Watches & ws = binaries (-lit);
+      for (size_t i = 0; i < ws.size (); i++) {
+	const Watch & w = ws[i];
+	assert (w.size == 2);
+        const int other = w.blit;
         const int b = val (other);
-        if (b < 0) conflict = Reason (-lit, other);
-        else if (!b) assign (other, Reason (-lit, other));
+        if (b < 0) conflict = w.clause;
+        else if (!b) assign (other, w.clause);
       }
     }
 
@@ -1384,9 +1077,10 @@ static bool propagate () {
       size_t i = 0, j = 0;
       while (i < ws.size ()) {
         const Watch w = ws[j++] = ws[i++];      // keep watch by default
+	assert (w.size > 2);
         const int b = val (w.blit);
         if (b > 0) continue;
-        Clause * c = ref2clause (w.ref);
+        Clause * c = w.clause;
         const int size = c->size;
         int * lits = c->literals;
         if (lits[1] != -lit) swap (lits[0], lits[1]);
@@ -1459,9 +1153,7 @@ static void check_clause () {
 
 /*------------------------------------------------------------------------*/
 
-// Compact recursive but bounded version of DFS for minimizing clauses.
-
-static bool recursive_minimize_literal (int lit, int depth = 0) {
+static bool minimize_literal (int lit, int depth = 0) {
   Var & v = var (lit);
   if (!v.level || v.removable || (depth && v.seen)) return true;
   if (!v.reason || v.poison || v.level == level) return false;
@@ -1472,62 +1164,11 @@ static bool recursive_minimize_literal (int lit, int depth = 0) {
   bool res = true;
   for (int i = 0, other; res && i < size; i++)
     if ((other = lits[i]) != lit)
-      res = recursive_minimize_literal (-other, depth+1);
+      res = minimize_literal (-other, depth+1);
   if (res) v.removable = true; else v.poison = true;
   seen.minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
   return res;
-}
-
-// Non-recursive unbounded version of DFS for minimizing clauses.  It is
-// more ugly and needs slightly more heap memory for variables due to 'mark'
-// used for saving the position in the reason clause.  It also trades stack
-// memory for holding the recursion stack for heap memory, which however
-// should be negligible.  It runs minimization until completion though and
-// thus might remove more literals than the bounded recursive version.
-
-static int minimize_base_case (int root, int lit) {
-  Var & v = var (lit);
-  if (!v.level || v.removable || (root != lit && v.seen)) return 1;
-  if (!v.reason || v.poison || v.level == level) return -1;
-  const Level & l = levels[v.level];
-  if ((root == lit && l.seen < 2) || v.trail <= l.trail) return -1;
-  return 0;
-}
-
-static bool derecursived_minimize_literal (int root) {
-  vector<int> stack;
-  stack.push_back (root);
-  while (!stack.empty ()) {
-    const int lit = stack.back ();
-    if (minimize_base_case (root, lit)) stack.pop_back ();
-    else {
-      Var & v = var (lit);
-      const int size = v.reason->size, * lits = v.reason->literals;
-NEXT: if (v.mark < size) {
-        const int other = lits[v.mark];
-        if (other == lit)   { v.mark++;        goto NEXT; }
-        else {
-          const int tmp = minimize_base_case (root, -other);
-               if (tmp < 0) { v.poison = true; goto DONE; }
-          else if (tmp > 0) { v.mark++;        goto NEXT; }
-          else stack.push_back (-other);
-        }
-      } else {
-        v.removable = true;
-DONE:   seen.minimized.push_back (lit);
-        stack.pop_back ();
-      }
-    }
-  }
-  const bool res = (minimize_base_case (root, root) > 0);
-  LOG ("minimizing literal %d %s", root, res ? "succeeded" : "failed");
-  return res;
-}
-
-static bool minimize_literal (int root) {
-  if (opts.minimizerecursive) return recursive_minimize_literal (root);
-  else return derecursived_minimize_literal (root);
 }
 
 struct trail_smaller_than {
@@ -1550,7 +1191,6 @@ static void minimize_clause () {
   for (size_t i = 0; i < seen.minimized.size (); i++) {
     Var & v = var (seen.minimized[i]);
     v.removable = v.poison = false;
-    v.mark = 0;
   }
   seen.minimized.clear ();
   STOP (minimize);
@@ -1571,7 +1211,7 @@ static void enqueue (Var * v, int idx) {
   v->next = 0;
 }
 
-static int next_vmtf_decision_variable () {
+static int next_decision_variable () {
   int res;
   while (val (res = queue.assigned))
     queue.assigned = var (queue.assigned).prev, stats.searched++;
@@ -1579,108 +1219,41 @@ static int next_vmtf_decision_variable () {
   return res;
 }
 
-static int next_heap_decision_variable () {
-  int res;
-  while (val (res = (heap[0] - vars)))
-    pop_heap ();
-  return res;
-}
-
-static int next_decision_variable () {
-  if (opts.evsids) return next_heap_decision_variable ();
-  else return next_vmtf_decision_variable ();
-}
-
-static bool high_propagations_per_decision () {
-  const double r = relative (stats.propagations, stats.decisions);
-  const bool res = r > opts.highproperdec;
-  LOG ("%s propagation per decision rate %.2f", (res ? "high" : "low"), r);
-  return res;
-}
-
-struct bumped_earlier {
-  bool operator () (int a, int b) { return var (a).bumped < var (b).bumped; }
-};
-
-struct bumped_plus_trail_smaller_than {
+struct bump_earlier {
   bool operator () (int a, int b) {
     Var & u = var (a), & v = var (b);
-    return u.bumped + opts.trailweight * u.trail <
-           v.bumped + opts.trailweight * v.trail;
+    return u.bumped + u.trail < v.bumped + v.trail;
   }
 };
 
-static void vmtf_bump_variable (int idx, int uip, Var * v) {
-  if (!opts.bump || !v->next) return;
+static void bump_variable (int idx, int uip, Var * v) {
+  if (!v->next) return;
   if (queue.assigned == idx)
     queue.assigned = v->prev ? v->prev : v->next;
   dequeue (v), enqueue (v, idx);
   v->bumped = ++stats.bumped;
   if (idx != uip && !vals[idx]) queue.assigned = idx;
   LOG ("VMTF bumped and moved to front %d", idx);
-  check_vmtf_queue_invariant ();
-}
-
-static void evsids_bump_variable (int idx, Var * v) {
-  v->score += inc.bump;
-  if (v->score > 1e100) {
-    stats.rescored++;
-    LOG ("rescored all variables scores");
-    for (int other = 1; other <= max_var; other++)
-      var (other).score /= 1e100;
-    inc.bump /= 1e100;
-    LOG ("new bumping increment %.2f", inc.bump);
-  }
-  bubble_up (v);
-  LOG ("EVSIDS bumped %d new score %.2f", idx, v->score);
-  check_heap_invariant ();
-}
-
-static void bump_variable (int idx, int uip, Var * v) {
-  if (opts.evsids) evsids_bump_variable (idx, v);
-  else vmtf_bump_variable (idx, uip, v);
 }
 
 static void bump_and_clear_seen_variables (int uip) {
   START (bump);
-if (!opts.evsids) {
-  if (opts.reducetrail == 1 && high_propagations_per_decision ()) {
-    LOG ("trail sorting seen variables before bumping");
-    stats.trailsorted++;
-    sort (seen.literals.begin (),
-          seen.literals.end (),
-          trail_smaller_than ());
-  } else if (opts.reducetrail == 2) {
-    LOG ("bumped plus trail sorting seen variables before bumping");
-    sort (seen.literals.begin (),
-          seen.literals.end (),
-          bumped_plus_trail_smaller_than ());
-  } else {
-    LOG ("bumped sorting seen variables before bumping");
-    sort (seen.literals.begin (),
-          seen.literals.end (),
-          bumped_earlier ());
-  }
-}
+  sort (seen.literals.begin (), seen.literals.end (), bump_earlier ());
   if (uip < 0) uip = -uip;
   for (size_t i = 0; i < seen.literals.size (); i++) {
     int idx = vidx (seen.literals[i]);
     Var * v = vars + idx;
     assert (v->seen);
     v->seen = false;
-    if (opts.bump) bump_variable (idx, uip, v);
+    bump_variable (idx, uip, v);
   }
   seen.literals.clear ();
-  if (opts.bump && opts.evsids) {
-    inc.bump *= 1.0 / opts.decay;
-    LOG ("new bumping increment %.2f", inc.bump);
-  }
   STOP (bump);
 }
 
 struct resolved_earlier {
   bool operator () (Clause * a, Clause * b) {
-    return a->resolved () < b->resolved ();
+    return a->resolved < b->resolved;
   }
 };
 
@@ -1688,7 +1261,7 @@ static void bump_resolved_clauses () {
   START (bump);
   sort (resolved.begin (), resolved.end (), resolved_earlier ());
   for (size_t i = 0; i < resolved.size (); i++)
-    resolved[i]->resolved () = ++stats.resolved;
+    resolved[i]->resolved = ++stats.resolved;
   STOP (bump);
   resolved.clear ();
 }
@@ -1701,10 +1274,8 @@ static void clear_levels () {
 
 static void resolve_clause (Clause * c) {
   if (!c->redundant) return;
-  UPDATE (avg.resolved.size, c->size);
-  UPDATE (avg.resolved.glue, c->glue);
   if (c->size <= opts.keepsize) return;
-  if (c->glue <= (unsigned) opts.keepglue) return;
+  if (c->glue <= opts.keepglue) return;
   resolved.push_back (c);
 }
 
@@ -1772,9 +1343,9 @@ static void analyze () {
   START (analyze);
   if (!level) learn_empty_clause ();
   else {
-    Reason & reason = conflict;
-    LOG (reason.clause (), "analyzing conflict");
-    if (reason.referenced ()) resolve_clause (reason.clause ());
+    Clause * reason = conflict;
+    LOG (reason, "analyzing conflict");
+    resolve_clause (reason);
     int open = 0, uip = 0;
     size_t i = trail.size ();
     for (;;) {
@@ -1824,7 +1395,7 @@ static void analyze () {
     bump_and_clear_seen_variables (uip);
     clause.clear (), clear_levels ();
   }
-  conflict = NoReason ();
+  conflict = 0;
   STOP (analyze);
 }
 
@@ -1853,15 +1424,6 @@ static bool restarting () {
   } else {
     LOG ("forced restart");
     stats.restart.forced++;
-  }
-  if (opts.restartdelaying) {
-    double j = avg.jump; l = opts.restartdelay * j;
-    LOG ("EMA jump %.2f limit %.2f", j, l);
-    if (level < l) {
-      stats.restart.delayed++;
-      LOG ("delayed restart");
-      return false;
-    } else LOG ("undelayed restart");
   }
   return true;
 }
@@ -1895,17 +1457,15 @@ static bool reducing () {
 static void protect_reasons () {
   for (size_t i = 0; i < trail.size (); i++) {
     Var & v = var (trail[i]);
-    if (v.level && v.reason.referenced ())
-      v.reason.clause ()->reason = true;
+    if (v.level && v.reason) v.reason->reason = true;
   }
 }
 
 static void unprotect_reasons () {
   for (size_t i = 0; i < trail.size (); i++) {
     Var & v = var (trail[i]);
-    if (v.level && v.reason.referenced ())
-      assert (v.reason.clause ()->reason),
-      v.reason.clause ()->reason = false;
+    if (v.level && v.reason)
+      assert (v.reason->reason), v.reason->reason = false;
   }
 }
 
@@ -1960,7 +1520,7 @@ static void flush_falsified_literals (Clause * c) {
 
 static void mark_satisfied_clauses_as_garbage () {
   for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = ref2clause (clauses[i]);
+    Clause * c = clauses[i];
     if (c->garbage) continue;
     const int tmp = clause_contains_fixed_literal (c);
          if (tmp > 0) c->garbage = true;
@@ -1983,11 +1543,8 @@ struct glue_larger {
 static void mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
   assert (stack.empty ());
-  const long delta_resolved = stats.resolved - limits.reduce.resolved;
-  const long limit_resolved =
-    limits.reduce.resolved + (1.0 - opts.reduceresolved) * delta_resolved;
   for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = ref2clause (clauses[i]);
+    Clause * c = clauses[i];
     if (!c->redundant) continue;                // keep irredundant
     if (c->reason) continue;                    // need to keep reasons
     if (c->garbage) continue;                   // already marked
@@ -1995,27 +1552,16 @@ static void mark_useless_redundant_clauses_as_garbage () {
     // If the clause is short or has small glue keep it.
     //
     if (c->size <= opts.keepsize) continue;
-    if (c->glue <= (unsigned) opts.keepglue) continue;
+    if (c->glue <= opts.keepglue) continue;
 
     // If the clause has recently been resolved or generated keep it.
     //
     if (opts.reducefocus &&
-        c->size <= opts.reducefocusize &&
-        c->glue <= opts.reducefocusglue &&
-        c->resolved () > limit_resolved) continue;
-
-    // In dynamic reduction we estimate the average glue and size of
-    // resolved clauses in conflict analysis and always keep clauses which
-    // are below both limits.
-    //
-    if (opts.reducedynamic &&
-        c->glue < avg.resolved.glue &&
-        c->size < avg.resolved.size) continue;
+        c->resolved > limits.reduce.resolved) continue;
 
     stack.push_back (c);        // clause is garbage collection candidate
   }
-  if (opts.reduceglue) sort (stack.begin (), stack.end (), glue_larger ());
-  else sort (stack.begin (), stack.end (), resolved_earlier ());
+  sort (stack.begin (), stack.end (), glue_larger ());
   const size_t target = stack.size ()/2;
   for (size_t i = 0; i < target; i++) {
     LOG (stack[i], "marking useless to be collected");
@@ -2023,237 +1569,39 @@ static void mark_useless_redundant_clauses_as_garbage () {
   }
 }
 
-static void setup_binaries () {
-  if (others) {
-    dec_bytes (size_others * sizeof (int));
-    delete [] others;
-    others = 0;
-  }
-  int * num_binaries = new int[max_lit + 1];
-  inc_bytes ((max_lit + 1) * sizeof (int));
-  for (int l = min_lit; l <= max_lit; l++) num_binaries[l] = 0;
-  for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = ref2clause (clauses[i]);
-    if (c->garbage || c->size != 2) continue;
-    int l0 = c->literals[0], l1 = c->literals[1];
-    num_binaries[vlit (l0)]++, num_binaries[vlit (l1)]++;
-  }
-  size_others = 0;
-  for (int l = min_lit, count; l <= max_lit; l++)
-    if ((count = num_binaries[l]))
-      size_others += count + 1;
-  LOG ("initializing others table of size %ld", size_others);
-  inc_bytes (size_others * sizeof (int));
-  others = new int[size_others];
-  int * p = others + size_others;
-  for (int sign = -1; sign <= 1; sign += 2) {
-    for (int idx = queue.last; idx; idx = var (idx).prev) {
-      const int lit = sign * phases[idx] * idx;
-      const int count = num_binaries [ vlit (lit) ];
-      if (count) {
-        *(binaries (lit) = --p) = 0;
-        p -= count;
-      } else binaries (lit) = 0;
-    }
-  }
-  assert (p == others);
-  dec_bytes ((max_lit + 1) * sizeof (int));
-  delete [] num_binaries;
-  for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = ref2clause (clauses[i]);
-    if (c->garbage || c->size != 2) continue;
-    int l0 = c->literals[0], l1 = c->literals[1];
-    *--binaries (l0) = l1, *--binaries (l1) = l0;
-  }
-}
-
-static void setup_watches () {
+static void flush_watches () {
   size_t bytes = 0;
   for (int idx = 1; idx <= max_var; idx++) {
     for (int sign = -1; sign <= 1; sign += 2) {
-      const int lit = sign * idx;
-      Watches & ws = watches (lit);
-      bytes += ws.capacity () * sizeof ws[0];
-      if (fixed (lit)) ws = Watches ();
-      else ws.clear ();
+      for (int size = 2; size <= 3; size++) {
+	const int lit = sign * idx;
+	Watches & ws = size == 2 ? binaries (lit) : watches (lit);
+	bytes += ws.capacity () * sizeof ws[0];
+	if (fixed (lit)) ws = Watches ();
+	else ws.clear ();
+      }
     }
   }
   stats.bytes.watcher.current = bytes;
   if (bytes > stats.bytes.watcher.max) stats.bytes.watcher.max = bytes;
-  for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = ref2clause (clauses[i]);
-    if (c->size > 2) watch_clause (c);
-  }
 }
 
-// TODO ugly ... should be replaced by copying version?
-
-static void compactifying_garbage_collector () {
-  size_t collected_bytes = 0, i = 0, j = i;
-  const size_t size = clauses.size ();
-  char * new_top = 0;
-  while (i < size) {
-    assert (!i || clauses[i-1] < clauses[i]);
-    Ref old_ref = clauses[i++];
-    Clause * c = (Clause*) arena.ref2ptr (old_ref);
-    char * ptr = (char *) c;
-    size_t bytes = c->bytes ();
-    int forced;
-    if (c->reason) {
-      forced = c->literals[0];
-      if (val (forced) < 0) forced = c->literals[1];
-      else assert (val (c->literals[1]) < 0);
-      assert (val (forced) > 0);
-    } else forced = 0;
-    const bool extended = c->extended;
-    if (extended) ptr -= EXTENDED_OFFSET;
-    if (!new_top) new_top = ptr;
-    if (c->reason || !c->garbage) {
-      if (ptr != new_top) {
-        memmove (new_top, ptr, bytes);
-        Ref new_ref = arena.ptr2ref (new_top);
-        if (extended) new_ref += EXTENDED_OFFSET/alignment;
-        clauses[j++] = new_ref;
-        if (forced) {
-          Var & v = var (forced);
-          assert (v.reason.reference () == old_ref);
-          v.reason.update_reference (new_ref);
-        }
-      } else j++;
-      new_top += align (bytes);
-    } else {
-      LOG (c, "delete");
-      if (c->redundant)
-           assert (stats.clauses.redundant),   stats.clauses.redundant--;
-      else assert (stats.clauses.irredundant), stats.clauses.irredundant--;
-      assert (stats.clauses.current);
-      stats.clauses.current--;
-      stats.reduce.clauses++;
-      stats.reduce.bytes += bytes;
-      collected_bytes += bytes;
-      trace_delete_clause (c);
-    }
-  }
-  clauses.resize (j);
-  if (new_top) arena.resize (new_top);
-  LOG ("collected %ld bytes", collected_bytes);
-}
-
-// TODO Still pretty ugly ... simplify? needed?
-
-static void copying_garbage_collector () {
-  Arena new_arena;
-  new_arena.enlarge (arena.size () - alignment);
-  for (size_t k = 0; k < clauses.size (); k++) {
-    Ref old_ref = clauses[k];
-    Clause * c = ref2clause (old_ref);
-    if (c->size != 2 || c->garbage) continue;
-    char * old_ptr = (char *) c;
-    size_t bytes = c->bytes ();
-    Ref new_ref;
-    char * new_ptr = (char*) new_arena.allocate (bytes, new_ref);
-    memcpy (new_ptr, old_ptr, bytes);
-    LOG ((Clause*) new_arena.ref2ptr (new_ref),
-      "old reference %u now %u",
-      (unsigned) old_ref, (unsigned) new_ref);
-    c->literals[0] = 0;
-    c->literals[1] = new_ref;
-  }
-  for (int sign = -1; sign <= 1; sign += 2) {
-    for (int idx = queue.last; idx; idx = var (idx).prev) {
-      if (fixed (idx)) continue;
-      const int lit = sign * phases[idx] * idx;
-      LOG ("moving non-garbage clauses with %d", lit);
-      Watches & ws = watches (lit);
-      for (size_t k = 0; k < ws.size (); k++) {
-        Ref old_ref = ws[k].ref;
-        Clause * c = (Clause*) arena.ref2ptr (old_ref);
-        if (!c->reason && c->garbage) continue;
-        if (!c->literals[0]) {
-          LOG ("reference %u already moved to %u",
-            (unsigned) old_ref, (unsigned) c->literals[1]);
-          continue;
-        }
-        char * old_ptr = (char *) c;
-        size_t bytes = c->bytes ();
-        const bool extended = c->extended;
-        if (extended) old_ptr -= EXTENDED_OFFSET;
-        Ref new_ref;
-        void * new_ptr = new_arena.allocate (bytes, new_ref);
-        memcpy (new_ptr, old_ptr, bytes);
-        if (extended) new_ref += EXTENDED_OFFSET/alignment;
-        LOG ((Clause*) new_arena.ref2ptr (new_ref),
-          "old reference %u now %u literal %d",
-          (unsigned) old_ref, (unsigned) new_ref, lit);
-        c->literals[0] = 0;
-        c->literals[1] = new_ref;
-      }
-    }
-  }
-  if (level > 0) {
-    for (size_t k = var (levels[1].decision).trail; k < trail.size (); k++) {
-      const int lit = trail[k];
-      Var & v = var (lit);
-      if (!v.reason.referenced ()) continue;
-      Clause * c = ref2clause (v.reason.reference ());
-      assert (c->reason), assert (!c->literals[0]);
-      v.reason.update_reference (c->literals[1]);
-    }
-  }
-  size_t collected_bytes = 0, moved_bytes = 0, i = 0, j = i;
-  while (i < clauses.size ()) {
-    Ref old_ref = clauses[i++];
-    Clause * c = (Clause*) arena.ref2ptr (old_ref);
-    size_t bytes = c->bytes ();
-    if (c->reason || !c->garbage) {
-      assert (!c->literals[0]);
-      assert ((unsigned) c->literals[1] < new_arena.size () / alignment );
-      clauses[j++] = c->literals[1];
-      moved_bytes += bytes;
-    } else {
-      LOG (c, "delete");
-      if (c->redundant)
-           assert (stats.clauses.redundant),   stats.clauses.redundant--;
-      else assert (stats.clauses.irredundant), stats.clauses.irredundant--;
-      assert (stats.clauses.current);
-      stats.clauses.current--;
-      stats.reduce.clauses++;
-      stats.reduce.bytes += bytes;
-      collected_bytes += bytes;
-      trace_delete_clause (c);
-    }
-  }
-  clauses.resize (j);
-  LOG ("collected %ld bytes", collected_bytes);
-  arena.release_and_take_over_memory (new_arena);
+static void setup_watches () {
+  for (size_t i = 0; i < clauses.size (); i++)
+    watch_clause (clauses[i]);
 }
 
 static void garbage_collection () {
-  if (opts.copying) copying_garbage_collector ();
-  else compactifying_garbage_collector ();
-}
-
-struct score_smaller {
-  bool operator () (int a, int b) { return var (a).score < var (b).score; }
-};
-
-static void enqueue_variables_based_on_evsids_score () {
-  int * tmp = new int[max_var];
-  for (int idx = 1; idx <= max_var; idx++)
-    tmp[idx - 1] = idx;
-  sort (tmp, tmp + max_var, score_smaller ());
-  int prev = 0;
-  queue.first = 0;
-  for (int i = 0; i < max_var; i++) {
-    int idx = tmp[i];
-    Var & v = var (idx);
-    if ((v.prev = prev)) var (prev).next = idx;
-    else queue.first = idx;
-    v.next = 0;
-    prev = idx;
+  size_t collected_bytes = 0, i = 0, j = i;
+  const size_t size = clauses.size ();
+  while (i < size) {
+    Clause * c = clauses[j++] = clauses[i++];
+    if (c->reason || !c->garbage) continue;
+    collected_bytes += delete_clause (c);
+    j--;
   }
-  delete [] tmp;
-  queue.last = prev;
+  clauses.resize (j);
+  LOG ("collected %ld bytes", collected_bytes);
 }
 
 static void reduce () {
@@ -2265,10 +1613,9 @@ static void reduce () {
   const bool new_units = (limits.reduce.fixed < stats.fixed);
   if (new_units) mark_satisfied_clauses_as_garbage ();
   mark_useless_redundant_clauses_as_garbage ();
-  if (opts.evsids) enqueue_variables_based_on_evsids_score ();
   garbage_collection ();
   unprotect_reasons ();
-  setup_binaries ();
+  flush_watches ();
   setup_watches ();
   inc.reduce.conflicts += opts.reduceinc;
   limits.reduce.conflicts = stats.conflicts + inc.reduce.conflicts;
@@ -2288,7 +1635,7 @@ static void decide () {
   int decision = phases[idx] * idx;
   levels.push_back (Level (decision));
   LOG ("decide %d", decision);
-  assign (decision, DecisionReason ());
+  assign (decision, 0);
   STOP (decide);
 }
 
@@ -2322,8 +1669,6 @@ static void init_solving () {
   inc.unit = opts.emaf1 ? 1.0 / opts.emaf1 : 1e-9;
   INIT_EMA (avg.glue.fast, opts.emagluefast);
   INIT_EMA (avg.frequency.unit, opts.emaf1);
-  INIT_EMA (avg.resolved.glue, opts.emaresolved);
-  INIT_EMA (avg.resolved.size, opts.emaresolved);
   INIT_EMA (avg.jump, opts.emajump);
   INIT_EMA (avg.trail, opts.ematrail);
   blocking.limit = blocking.inc = opts.restartblocklimit;
@@ -2360,9 +1705,6 @@ static void print_statistics () {
   msg ("blocked:       %15ld   %10.2f %%  per restart",
     stats.restart.blocked,
     percent (stats.restart.blocked, stats.restart.count));
-  msg ("delayed:       %15ld   %10.2f %%  per restart",
-    stats.restart.delayed,
-    percent (stats.restart.delayed, stats.restart.count));
   msg ("unforced:      %15ld   %10.2f %%  per restart",
     stats.restart.unforced,
     percent (stats.restart.unforced, stats.restart.count));
@@ -2376,20 +1718,12 @@ static void print_statistics () {
     stats.learned.unit, relative (stats.conflicts, stats.learned.unit));
   msg ("binaries:      %15ld   %10.2f    conflicts per binary",
     stats.learned.binary, relative (stats.conflicts, stats.learned.binary));
-  msg ("trailsorted:   %15ld   %10.2f %%  per conflict",
-    stats.trailsorted, percent (stats.trailsorted, stats.conflicts));
   msg ("bumped:        %15ld   %10.2f    per conflict",
     stats.bumped, relative (stats.bumped, stats.conflicts));
   msg ("resolved:      %15ld   %10.2f    per conflict",
     stats.resolved, relative (stats.resolved, stats.conflicts));
   msg ("searched:      %15ld   %10.2f    per decision",
     stats.searched, relative (stats.searched, stats.decisions));
-  msg ("bubbleups:     %15ld   %10.2f    per conflict",
-    stats.bubble.up, relative (stats.bubble.up, stats.conflicts));
-  msg ("bubbledowns:   %15ld   %10.2f    per conflict",
-    stats.bubble.down, relative (stats.bubble.down, stats.conflicts));
-  msg ("rescored:     %15ld   %10.2f     conflicts per rescore",
-    stats.rescored, relative (stats.conflicts, stats.rescored));
   long learned = stats.literals.learned - stats.literals.minimized;
   msg ("learned:       %15ld   %10.2f    per conflict",
     learned, relative (learned, stats.conflicts));
@@ -2405,10 +1739,8 @@ static void print_statistics () {
 }
 
 static void init_vmtf_queue () {
-  int prev = 0, start, end, dir;
-  if (opts.reverse) start = 1, end = max_var + 1, dir = 1;
-  else start = max_var, end = 0, dir = -1;
-  for (int i = start; i != end; i += dir) {
+  int prev = 0;
+  for (int i = max_var; i; i--) {
     Var * v = &vars[i];
     if ((v->prev = prev)) var (prev).next = i;
     else queue.first = i;
@@ -2416,19 +1748,6 @@ static void init_vmtf_queue () {
     prev = i;
   }
   queue.last = queue.assigned = prev;
-}
-
-static void init_heap () {
-  int start, end, dir;
-  if (opts.reverse) start = max_var, end = 0, dir = -1;
-  else start = 1, end = max_var + 1, dir = 1;
-  for (int i = start; i != end; i += dir) {
-    Var * v = &vars[i];
-    v->score = 0;
-    v->pos = heap.size ();
-    heap.push_back (v);
-  }
-  check_heap_invariant ();
 }
 
 static void reset_signal_handlers (void) {
@@ -2476,12 +1795,10 @@ static void init_variables () {
   NEW (phases,      signed char, max_var + 1);
   NEW (vars,                Var, max_var + 1);
   NEW (literal.watches, Watches, max_lit + 1);
-  NEW (literal.binaries,  int *, max_lit + 1);
+  NEW (literal.binaries,Watches, max_lit + 1);
   for (int i = 1; i <= max_var; i++) vals[i] = 0;
   for (int i = 1; i <= max_var; i++) phases[i] = -1;
-  for (int l = min_lit; l <= max_lit; l++) literal.binaries [l] = 0;
-  if (opts.evsids) init_heap ();
-  else init_vmtf_queue ();
+  init_vmtf_queue ();
   msg ("initialized %d variables", max_var);
   levels.push_back (Level (0));
 }
@@ -2504,8 +1821,6 @@ static void print_options () {
 
 static void reset () {
 #ifndef NDEBUG
-  if (others) delete [] others;
-  arena.release ();
   delete [] literal.binaries;
   delete [] literal.watches;
   delete [] vars;
