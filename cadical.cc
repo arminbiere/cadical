@@ -38,7 +38,6 @@ OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
 OPTION(emainitsmoothly,  bool,   1, 0,  1, "initialize EMAs smoothly") \
-OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(ematrail,       double,1e-5, 0,  1, "alpha trail") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
@@ -114,11 +113,12 @@ struct Clause {
 
   long resolved;
 
-  bool redundant; // aka 'learned' so not 'irredundant' (original)
-  bool garbage;   // can be garbage collected unless it is a 'reason'
-  bool reason;    // reason / antecedent clause can not be collected
+  unsigned redundant : 1; // aka 'learned' so not 'irredundant' (original)
+  unsigned garbage   : 1; // can be garbage collected unless it is a 'reason'
+  unsigned reason    : 1; // reason / antecedent clause can not be collected
+  unsigned extended  : 1; // whether 'resolved' valid
 
-  int glue;		// glue = glucose level = LBD
+  signed int glue : 28;	// glue = glucose level = LBD
   int size;             // actual size of 'literals' (at least 2)
 
   int literals[2];      // actually of variadic 'size' in general
@@ -315,7 +315,8 @@ static vector<Timer> timers;
 static struct {
   struct { EMA unit; } frequency;
   struct { EMA fast; AVG slow, blocking, nonblocking; } glue;
-  EMA jump, trail;
+  AVG jump;
+  EMA trail;
 } avg;
 
 static struct {
@@ -447,7 +448,7 @@ static void LOG (Clause * c, const char *fmt, ...) {
   if (c) {
     if (!c->redundant) printf (" irredundant");
     else if (c->extended)
-      printf (" redundant glue %u resolved %ld", c->glue, c->resolved ());
+      printf (" redundant glue %u resolved %ld", c->glue, c->resolved);
     else printf (" redundant without glue");
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
@@ -892,7 +893,7 @@ static void assign (int lit, Clause * reason = 0) {
   assert (val (lit) > 0);
   v.trail = (int) trail.size ();
   trail.push_back (lit);
-  LOG (reason.clause (), "assign %d", lit);
+  LOG (reason, "assign %d", lit);
 }
 
 static void unassign (int lit) {
@@ -940,18 +941,22 @@ static size_t bytes_clause (int size) {
   return sizeof (Clause) + (size - 2) * sizeof (int);
 }
 
-static Clause * new_clause (bool red, unsigned glue = 0) {
+static Clause * new_clause (bool red, int glue = 0) {
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();  assert (size >= 2);
+  bool extended = red && (glue > opts.keepglue || size > opts.keepsize);
   size_t bytes = bytes_clause (size);
-  Clause * res = (Clause*) new char[bytes];
+  if (!extended) bytes -= sizeof (long);
+  char * ptr = new char[bytes];
   inc_bytes (bytes);
-  res->resolved = ++stats.resolved;
+  if (!extended) ptr -= sizeof (long);
+  Clause * res = (Clause*) ptr;
   res->redundant = red;
   res->garbage = false;
   res->reason = false;
-  res->glue = glue;
+  res->glue = min (glue, (1<<27)-1);
   res->size = size;
+  if ((res->extended = extended)) res->resolved = ++stats.resolved;
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
   clauses.push_back (res);
   if (red) stats.clauses.redundant++;
@@ -970,10 +975,12 @@ static size_t delete_clause (Clause * c) {
   stats.clauses.current--;
   stats.reduce.clauses++;
   size_t bytes = bytes_clause (c->size);
+  char * ptr = (char*) c;
+  if (!c->extended) bytes -= sizeof (long), ptr += sizeof (long);
   stats.reduce.bytes += bytes;
   trace_delete_clause (c);
   dec_bytes (bytes);
-  delete [] (char*) c;
+  delete [] ptr;
   return bytes;
 }
 
@@ -1107,7 +1114,7 @@ static bool propagate () {
     } else break;
   }
 
-  if (conflict) { stats.conflicts++; LOG (conflict.clause (), "conflict"); }
+  if (conflict) { stats.conflicts++; LOG (conflict, "conflict"); }
   stats.propagations += next.binaries - before;;
 
   STOP (propagate);
@@ -1356,7 +1363,7 @@ static void analyze () {
         ;
       if (!--open) break;
       reason = var (uip).reason;
-      LOG (reason.clause (), "analyzing %d reason", uip);
+      LOG (reason, "analyzing %d reason", uip);
     }
     LOG ("first UIP %d", uip);
     clause.push_back (-uip);
@@ -1669,7 +1676,6 @@ static void init_solving () {
   inc.unit = opts.emaf1 ? 1.0 / opts.emaf1 : 1e-9;
   INIT_EMA (avg.glue.fast, opts.emagluefast);
   INIT_EMA (avg.frequency.unit, opts.emaf1);
-  INIT_EMA (avg.jump, opts.emajump);
   INIT_EMA (avg.trail, opts.ematrail);
   blocking.limit = blocking.inc = opts.restartblocklimit;
   inc.bump = 1;
