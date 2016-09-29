@@ -334,7 +334,6 @@ static struct {
 static struct {
   struct { long conflicts; } reduce;
   double unit, binary;
-  double bump;
 } inc;
 
 static FILE * input_file, * dimacs_file, * proof_file;
@@ -1679,7 +1678,6 @@ static void init_solving () {
   INIT_EMA (avg.frequency.unit, opts.emaf1);
   INIT_EMA (avg.trail, opts.ematrail);
   blocking.limit = blocking.inc = opts.restartblocklimit;
-  inc.bump = 1;
 }
 
 static int solve () {
@@ -1706,6 +1704,9 @@ static void print_statistics () {
     stats.reduce.count, relative (stats.conflicts, stats.reduce.count));
   msg ("restarts:      %15ld   %10.2f    conflicts per restart",
     stats.restart.count, relative (stats.conflicts, stats.restart.count));
+  msg ("tried:         %15ld   %10.2f    per restart",
+    stats.restart.tried,
+    relative (stats.restart.tried, stats.restart.count));
   msg ("reused:        %15ld   %10.2f %%  per restart",
     stats.restart.reused,
     percent (stats.restart.reused, stats.restart.count));
