@@ -146,6 +146,8 @@ struct Var {
   { }
 };
 
+/*------------------------------------------------------------------------*/
+
 struct Watch {
   int blit;             // if blocking literal is true do not visit clause
   int size;
@@ -154,7 +156,11 @@ struct Watch {
   Watch () { }
 };
 
+/*------------------------------------------------------------------------*/
+
 typedef vector<Watch> Watches;          // of one literal
+
+/*------------------------------------------------------------------------*/
 
 struct Level {
   int decision;         // decision literal of level
@@ -186,6 +192,8 @@ struct EMA {
   void update (double y, const char * name);
 };
 
+/*------------------------------------------------------------------------*/
+
 struct AVG {
   double value;
   long count;
@@ -193,6 +201,8 @@ struct AVG {
   operator double () const { return value; }
   void update (double y, const char * name);
 };
+
+/*------------------------------------------------------------------------*/
 
 #ifdef PROFILING        // enabled by './configure -p'
 
@@ -222,15 +232,9 @@ static Var * vars;
 static signed char * vals;              // assignment
 static signed char * phases;            // saved previous assignment
 
-// This 'others' table contains for each literal a zero terminated sequence
-// of other literals in binary clauses with the first literal.  This avoids
-// to use 'vector' for this data which is mostly static.  New binary clauses
-// are treated as long clauses until the next 'reduce' after which this
-// binary data structure is updated.
-
 static struct {
-  Watches * watches;
-  Watches * binaries;
+  Watches * watches;		// watches of long clauses
+  Watches * binaries;		// watches of binary clauses
 } literal;
 
 // VMTF decision queue
@@ -239,10 +243,6 @@ static struct {
   int first, last;      // anchors (head/tail) for doubly linked list
   int assigned;         // all variables after this one are assigned
 } queue;
-
-// EVSIDS binary heap
-
-static vector<Var*> heap;
 
 static bool unsat;              // empty clause found or learned
 
