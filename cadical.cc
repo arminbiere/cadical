@@ -37,7 +37,7 @@ IN THE SOFTWARE.
 OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
-OPTION(emainitsmoothly,  bool,   0, 0,  1, "initialize EMAs smoothly") \
+OPTION(emainitsmoothly,  bool,   1, 0,  1, "initialize EMAs smoothly") \
 OPTION(ematrail,       double,1e-5, 0,  1, "alpha trail") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
@@ -1325,7 +1325,7 @@ static bool blocking_enabled () {
         vrb ("exploiting non-blocking until %ld conflicts", blocking.limit);
         blocking.enabled = false;
       } else {
-        msg ("exploiting blocking until %ld conflicts", blocking.limit);
+        vrb ("exploiting blocking until %ld conflicts", blocking.limit);
         blocking.enabled = true;
       }
     } else {
