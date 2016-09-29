@@ -44,7 +44,7 @@ OPTION(emainitsmoothly,  bool,   1, 0,  1, "initialize EMAs smoothly") \
 OPTION(emajump,        double,1e-6, 0,  1, "alpha jump") \
 OPTION(emaresolved,    double,1e-6, 0,  1, "alpha resolved glue & size") \
 OPTION(ematrail,       double,1e-5, 0,  1, "alpha trail") \
-OPTION(evsids,           bool,   1, 0,  1, "use EVSIDS instead of VMTF") \
+OPTION(evsids,           bool,   0, 0,  1, "use EVSIDS instead of VMTF") \
 OPTION(highproperdec,     int,   0, 0,1e9, "high bump per conflict limit") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
@@ -62,10 +62,10 @@ OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
 OPTION(reduceresolved,    int, 1.0, 0,  1, "resolved keep ratio") \
 OPTION(reducetrail,       int,   2, 0,  2, "bump based on trail (2=both)") \
-OPTION(trailweight,    double,   2, 0,1e9, "trail weight versus bump") \
+OPTION(trailweight,    double,   1, 0,1e9, "trail weight versus bump") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
-OPTION(restartblocking,  bool,   0, 0,  1, "enable restart blocking") \
+OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
 OPTION(restartblocklimit, int, 1e4, 0,1e9, "restart blocking limit") \
 OPTION(restartblockmargin,double,1.2,0,10, "restart blocking margin") \
 OPTION(restartdelay,   double, 0.5, 0,  2, "delay restart level limit") \
