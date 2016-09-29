@@ -149,9 +149,8 @@ struct Var {
 
 struct Watch {
   int blit;             // if blocking literal is true do not visit clause
-  int size;
   Clause * clause;
-  Watch (int b, Clause * c) : blit (b), size (c->size), clause (c) { }
+  Watch (int b, Clause * c) : blit (b), clause (c) { }
   Watch () { }
 };
 
@@ -1021,7 +1020,7 @@ static void add_new_original_clause () {
     else LOG ("original empty clause produces another inconsistency");
   } else if (size == 1) {
     int unit = clause[0], tmp = val (unit);
-    if (!tmp) assign (unit, 0);
+    if (!tmp) assign (unit);
     else if (tmp < 0) {
       if (!unsat) msg ("parsed clashing unit"), clashing_unit = true;
       else LOG ("original clashing unit produces another inconsistency");
@@ -1072,7 +1071,6 @@ static bool propagate () {
       const Watches & ws = binaries (-lit);
       for (size_t i = 0; i < ws.size (); i++) {
         const Watch & w = ws[i];
-        assert (w.size == 2);
         const int other = w.blit;
         const int b = val (other);
         if (b < 0) conflict = w.clause;
@@ -1091,7 +1089,6 @@ static bool propagate () {
       size_t i = 0, j = 0;
       while (i < ws.size ()) {
         const Watch w = ws[j++] = ws[i++];      // keep watch by default
-        assert (w.size > 2);
         const int b = val (w.blit);
         if (b > 0) continue;
         Clause * c = w.clause;
@@ -1642,7 +1639,7 @@ static void decide () {
   int decision = phases[idx] * idx;
   levels.push_back (Level (decision));
   LOG ("decide %d", decision);
-  assign (decision, 0);
+  assign (decision);
   STOP (decide);
 }
 
