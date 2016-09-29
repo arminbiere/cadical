@@ -389,6 +389,18 @@ static void msg (const char * fmt, ...) {
   fflush (stdout);
 }
 
+static void vrb (const char * fmt, ...) {
+  va_list ap;
+  if (opts.quiet) return;
+  if (!opts.verbose) return;
+  fputs ("c ", stdout);
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  fputc ('\n', stdout);
+  fflush (stdout);
+}
+
 static void section (const char * title) {
   if (opts.quiet) return;
   char line[160];
@@ -565,18 +577,23 @@ static void print (int lit, FILE * file = stdout) {
 REPORT("seconds",      2, 5, seconds ()) \
 REPORT("MB",           0, 2, current_bytes () / (double)(1l<<20)) \
 REPORT("level",        1, 4, avg.jump) \
-REPORT("f1",           0, 2, 10.0 * avg.frequency.unit) \
 REPORT("reductions",   0, 2, stats.reduce.count) \
 REPORT("restarts",     0, 4, stats.restart.count) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
 REPORT("redundant",    0, 5, stats.clauses.redundant) \
 REPORT("glue",         1, 4, avg.glue.slow) \
-REPORT("fastglue",     1, 4, avg.glue.fast) \
 REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
 REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
+
+#if 0
+
+REPORT("f1",           0, 2, 10.0 * avg.frequency.unit) \
 REPORT("properdec",    0, 3, relative (stats.propagations, stats.decisions)) \
+REPORT("fastglue",     1, 4, avg.glue.fast) \
 REPORT("trail",        1, 4, avg.trail) \
+
+#endif
 
 struct Report {
   const char * header;
@@ -1302,12 +1319,12 @@ static bool blocking_enabled () {
       blocking.inc += opts.restartblocklimit;
       blocking.limit = stats.conflicts + blocking.inc;
       blocking.exploring = false;
-      msg ("average blocking glue %.2f non-blocking %.2f ratio %.2f",
+      vrb ("average blocking glue %.2f non-blocking %.2f ratio %.2f",
         (double) avg.glue.blocking, (double) avg.glue.nonblocking,
         relative (avg.glue.blocking, avg.glue.nonblocking));
       if (avg.glue.blocking >
           opts.restartblockmargin * avg.glue.nonblocking) {
-        msg ("exploiting non-blocking until %ld conflicts", blocking.limit);
+        vrb ("exploiting non-blocking until %ld conflicts", blocking.limit);
         blocking.enabled = false;
       } else {
         msg ("exploiting blocking until %ld conflicts", blocking.limit);
@@ -1318,10 +1335,10 @@ static bool blocking_enabled () {
       blocking.limit =
         stats.conflicts + max (blocking.inc/10, (long)opts.restartblocklimit);
       if (blocking.enabled) {
-        msg ("exploring non-blocking until %ld conflicts", blocking.limit);
+        vrb ("exploring non-blocking until %ld conflicts", blocking.limit);
         blocking.enabled = false;
       } else {
-        msg ("exploring blocking until %ld conflicts", blocking.limit);
+        vrb ("exploring blocking until %ld conflicts", blocking.limit);
         blocking.enabled = true;
       }
     }
