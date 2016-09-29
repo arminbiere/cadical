@@ -45,7 +45,6 @@ OPTION(minimize,         bool,   1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,     int,1000, 0,1e9, "recursive minimization depth") \
 OPTION(quiet,            bool,   0, 0,  1, "disable all messages") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
-OPTION(reducefocus,      bool,   1, 0,  1, "keep resolved longer") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
 OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
@@ -1544,7 +1543,7 @@ static void mark_satisfied_clauses_as_garbage () {
   }
 }
 
-struct glue_larger {
+struct less_usefull {
   bool operator () (Clause * c, Clause * d) {
     if (c->glue > d->glue) return true;
     if (c->glue < d->glue) return false;
@@ -1564,20 +1563,12 @@ static void mark_useless_redundant_clauses_as_garbage () {
     if (!c->redundant) continue;                // keep irredundant
     if (c->reason) continue;                    // need to keep reasons
     if (c->garbage) continue;                   // already marked
-
-    // If the clause is short or has small glue keep it.
-    //
-    if (c->size <= opts.keepsize) continue;
-    if (c->glue <= opts.keepglue) continue;
-
-    // If the clause has recently been resolved or generated keep it.
-    //
-    if (opts.reducefocus &&
-        c->resolved > limits.reduce.resolved) continue;
-
-    stack.push_back (c);        // clause is garbage collection candidate
+    if (c->size <= opts.keepsize) continue;     // keep small size clauses
+    if (c->glue <= opts.keepglue) continue;     // keep small glue clauses
+    if (c->resolved > limits.reduce.resolved) continue; // recently resolved
+    stack.push_back (c);
   }
-  sort (stack.begin (), stack.end (), glue_larger ());
+  sort (stack.begin (), stack.end (), less_usefull ());
   const size_t target = stack.size ()/2;
   for (size_t i = 0; i < target; i++) {
     LOG (stack[i], "marking useless to be collected");
@@ -1586,20 +1577,22 @@ static void mark_useless_redundant_clauses_as_garbage () {
 }
 
 static void flush_watches () {
-  size_t bytes = 0;
+  size_t current_bytes = 0, max_bytes = 0;
   for (int idx = 1; idx <= max_var; idx++) {
     for (int sign = -1; sign <= 1; sign += 2) {
       for (int size = 2; size <= 3; size++) {
         const int lit = sign * idx;
         Watches & ws = size == 2 ? binaries (lit) : watches (lit);
-        bytes += ws.capacity () * sizeof ws[0];
+	const size_t bytes = ws.capacity () * sizeof ws[0];
+        max_bytes += bytes;
         if (fixed (lit)) ws = Watches ();
-        else ws.clear ();
+        else ws.clear (), current_bytes += bytes;
       }
     }
   }
-  stats.bytes.watcher.current = bytes;
-  if (bytes > stats.bytes.watcher.max) stats.bytes.watcher.max = bytes;
+  stats.bytes.watcher.current = current_bytes;
+  if (max_bytes > stats.bytes.watcher.max)
+    stats.bytes.watcher.max = max_bytes;
 }
 
 static void setup_watches () {
@@ -1608,10 +1601,9 @@ static void setup_watches () {
 }
 
 static void garbage_collection () {
-  size_t collected_bytes = 0, i = 0, j = i;
-  const size_t size = clauses.size ();
-  while (i < size) {
-    Clause * c = clauses[j++] = clauses[i++];
+  size_t collected_bytes = 0, j = 0;
+  for (size_t i = 0; i < clauses.size (); i++) {
+    Clause * c = clauses[j++] = clauses[i];
     if (c->reason || !c->garbage) continue;
     collected_bytes += delete_clause (c);
     j--;
@@ -1626,8 +1618,8 @@ static void reduce () {
   LOG ("reduce %ld resolved limit %ld",
     stats.reduce.count, limits.reduce.resolved);
   protect_reasons ();
-  const bool new_units = (limits.reduce.fixed < stats.fixed);
-  if (new_units) mark_satisfied_clauses_as_garbage ();
+  if (limits.reduce.fixed < stats.fixed)
+    mark_satisfied_clauses_as_garbage ();
   mark_useless_redundant_clauses_as_garbage ();
   garbage_collection ();
   unprotect_reasons ();
