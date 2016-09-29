@@ -113,12 +113,11 @@ struct Clause {
 
   long resolved;
 
-  unsigned redundant : 1; // aka 'learned' so not 'irredundant' (original)
-  unsigned garbage   : 1; // can be garbage collected unless it is a 'reason'
-  unsigned reason    : 1; // reason / antecedent clause can not be collected
-  unsigned extended  : 1; // whether 'resolved' valid
+  bool redundant; // aka 'learned' so not 'irredundant' (original)
+  bool garbage;   // can be garbage collected unless it is a 'reason'
+  bool reason;    // reason / antecedent clause can not be collected
 
-  signed int glue : 28;	// glue = glucose level = LBD
+  int glue;             // glue = glucose level = LBD
   int size;             // actual size of 'literals' (at least 2)
 
   int literals[2];      // actually of variadic 'size' in general
@@ -944,19 +943,14 @@ static size_t bytes_clause (int size) {
 static Clause * new_clause (bool red, int glue = 0) {
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();  assert (size >= 2);
-  bool extended = red && (glue > opts.keepglue || size > opts.keepsize);
   size_t bytes = bytes_clause (size);
-  if (!extended) bytes -= sizeof (long);
-  char * ptr = new char[bytes];
+  Clause * res = (Clause*) new char[bytes];
   inc_bytes (bytes);
-  if (!extended) ptr -= sizeof (long);
-  Clause * res = (Clause*) ptr;
   res->redundant = red;
   res->garbage = false;
   res->reason = false;
   res->glue = min (glue, (1<<27)-1);
   res->size = size;
-  if ((res->extended = extended)) res->resolved = ++stats.resolved;
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
   clauses.push_back (res);
   if (red) stats.clauses.redundant++;
@@ -975,12 +969,10 @@ static size_t delete_clause (Clause * c) {
   stats.clauses.current--;
   stats.reduce.clauses++;
   size_t bytes = bytes_clause (c->size);
-  char * ptr = (char*) c;
-  if (!c->extended) bytes -= sizeof (long), ptr += sizeof (long);
   stats.reduce.bytes += bytes;
   trace_delete_clause (c);
   dec_bytes (bytes);
-  delete [] ptr;
+  delete [] (char*) c;
   return bytes;
 }
 
@@ -1064,8 +1056,8 @@ static bool propagate () {
       assert (literal.binaries);
       const Watches & ws = binaries (-lit);
       for (size_t i = 0; i < ws.size (); i++) {
-	const Watch & w = ws[i];
-	assert (w.size == 2);
+        const Watch & w = ws[i];
+        assert (w.size == 2);
         const int other = w.blit;
         const int b = val (other);
         if (b < 0) conflict = w.clause;
@@ -1084,7 +1076,7 @@ static bool propagate () {
       size_t i = 0, j = 0;
       while (i < ws.size ()) {
         const Watch w = ws[j++] = ws[i++];      // keep watch by default
-	assert (w.size > 2);
+        assert (w.size > 2);
         const int b = val (w.blit);
         if (b > 0) continue;
         Clause * c = w.clause;
@@ -1581,11 +1573,11 @@ static void flush_watches () {
   for (int idx = 1; idx <= max_var; idx++) {
     for (int sign = -1; sign <= 1; sign += 2) {
       for (int size = 2; size <= 3; size++) {
-	const int lit = sign * idx;
-	Watches & ws = size == 2 ? binaries (lit) : watches (lit);
-	bytes += ws.capacity () * sizeof ws[0];
-	if (fixed (lit)) ws = Watches ();
-	else ws.clear ();
+        const int lit = sign * idx;
+        Watches & ws = size == 2 ? binaries (lit) : watches (lit);
+        bytes += ws.capacity () * sizeof ws[0];
+        if (fixed (lit)) ws = Watches ();
+        else ws.clear ();
       }
     }
   }
