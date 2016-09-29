@@ -218,16 +218,20 @@ struct Timer {
 
 // Static variables
 
-static int max_var, num_original_clauses;
+static int max_var, num_original_clauses; // 'm' and 'n' in 'p cnf <m> <n>'
 
 #ifndef NDEBUG
 static vector<int> original_literals;
 #endif
 
-static Var * vars;
+// The following three actual range from '1' to 'max_var' (inclusively).
 
+static Var * vars;
 static signed char * vals;              // assignment
 static signed char * phases;            // saved previous assignment
+
+// These range from '2' to '2*max_var + 1' (again inclusively).
+// See also 'vlit' below for the mapping of 'int' to this index.
 
 static struct {
   Watches * watches;		// watches of long clauses
@@ -242,19 +246,17 @@ static struct {
 } queue;
 
 static bool unsat;              // empty clause found or learned
-
 static int level;               // decision level (levels.size () - 1)
-static vector<Level> levels;
-
+static vector<Level> levels;	// 'level + 1 == levels.size ()'
 static vector<int> trail;       // assigned literals
 
 static struct {
-  size_t watches;       // next literal position for watches
-  size_t binaries;      // next literal position for binaries
-} next;                 // as BFS indices into 'trail' for propagation
+  size_t binaries;    // next literal position on trail for binaries
+  size_t watches;     // next literal position on trail for watches
+} next;
 
 static vector<int> clause;      // temporary clause in parsing & learning
-static vector<Clause*> clauses; // collection of all clauses
+static vector<Clause*> clauses; // ordered collection of all clauses
 static bool iterating;          // report top-level assigned variables
 
 static struct {
@@ -263,9 +265,9 @@ static struct {
   vector<int> minimized;        // marked removable or poison in 'minmize'
 } seen;
 
-static vector<Clause*> resolved;  // large clauses in 'analyze'
-static Clause * conflict;         // set: 'propagation', reset: 'analyze'
-static bool clashing_unit;        // set: 'parse_dimacs'
+static vector<Clause*> resolved; // large clauses in 'analyze'
+static Clause * conflict;        // set in 'propagation', reset in 'analyze'
+static bool clashing_unit;       // set in 'parse_dimacs'
 
 static struct {
   long conflicts;
@@ -273,13 +275,13 @@ static struct {
   long propagations;            // propagated literals in 'propagate'
 
   struct {
-    long count;
-    long tried;
-    long blocked;
-    long unforced;
-    long forced;
-    long reused;
-    long unit;
+    long count;		// actual number of happened restarts 
+    long tried;		// number of tried restarts
+    long unit;          // from those the number forced by low unit frequency
+    long blocked;       // blocked restart intervals in 'analyze'
+    long unforced;      // not forced (slow glue > fast glue)
+    long forced;        // forced (slow glue < fast glue)
+    long reused;        // number of time trail was (partially) reused
   } restart;
 
   long reports, sections;
@@ -289,7 +291,6 @@ static struct {
   long searched;                // searched decisions in 'decide'
 
   struct { long count, clauses, bytes; } reduce; // in 'reduce'
-
   struct { long learned, minimized; } literals;  // in 'minimize_clause'
 
   struct { long redundant, irredundant, current, max; } clauses;
@@ -311,27 +312,25 @@ static vector<Timer> timers;
 static struct {
   struct { EMA unit; } frequency;
   struct { EMA fast; AVG slow, blocking, nonblocking; } glue;
-  AVG jump;
   EMA trail;
+  AVG jump;
 } avg;
 
-static struct {
-  bool enabled, exploring;
-  long limit, inc;
-} blocking;
+static struct { bool enabled, exploring; } blocking;
 
 // Limits for next restart, reduce.
 
 static struct {
   struct { long conflicts, resolved; int fixed; } reduce;
   struct { long conflicts; } restart;
+  long blocking;
 } limits;
 
 // Increments for next restart, reduce interval.
 
 static struct {
-  struct { long conflicts; } reduce;
-  double unit, binary;
+  long reduce, blocking;
+  double unit;
 } inc;
 
 static FILE * input_file, * dimacs_file, * proof_file;
@@ -1308,31 +1307,31 @@ static bool analyze_literal (int lit) {
 }
 
 static bool blocking_enabled () {
-  if (stats.conflicts > blocking.limit) {
+  if (stats.conflicts > limits.blocking) {
     if (blocking.exploring) {
-      blocking.inc += opts.restartblocklimit;
-      blocking.limit = stats.conflicts + blocking.inc;
+      inc.blocking += opts.restartblocklimit;
+      limits.blocking = stats.conflicts + inc.blocking;
       blocking.exploring = false;
       vrb ("average blocking glue %.2f non-blocking %.2f ratio %.2f",
         (double) avg.glue.blocking, (double) avg.glue.nonblocking,
         relative (avg.glue.blocking, avg.glue.nonblocking));
       if (avg.glue.blocking >
           opts.restartblockmargin * avg.glue.nonblocking) {
-        vrb ("exploiting non-blocking until %ld conflicts", blocking.limit);
+        vrb ("exploiting non-blocking until %ld conflicts", limits.blocking);
         blocking.enabled = false;
       } else {
-        vrb ("exploiting blocking until %ld conflicts", blocking.limit);
+        vrb ("exploiting blocking until %ld conflicts", limits.blocking);
         blocking.enabled = true;
       }
     } else {
       blocking.exploring = true;
-      blocking.limit =
-        stats.conflicts + max (blocking.inc/10, (long)opts.restartblocklimit);
+      limits.blocking =
+        stats.conflicts + max (inc.blocking/10, (long)opts.restartblocklimit);
       if (blocking.enabled) {
-        vrb ("exploring non-blocking until %ld conflicts", blocking.limit);
+        vrb ("exploring non-blocking until %ld conflicts", limits.blocking);
         blocking.enabled = false;
       } else {
-        vrb ("exploring blocking until %ld conflicts", blocking.limit);
+        vrb ("exploring blocking until %ld conflicts", limits.blocking);
         blocking.enabled = true;
       }
     }
@@ -1620,8 +1619,8 @@ static void reduce () {
   unprotect_reasons ();
   flush_watches ();
   setup_watches ();
-  inc.reduce.conflicts += opts.reduceinc;
-  limits.reduce.conflicts = stats.conflicts + inc.reduce.conflicts;
+  inc.reduce += opts.reduceinc;
+  limits.reduce.conflicts = stats.conflicts + inc.reduce;
   limits.reduce.resolved = stats.resolved;
   limits.reduce.fixed = stats.fixed;
   report ('-');
@@ -1668,12 +1667,12 @@ static int search () {
 static void init_solving () {
   limits.restart.conflicts = opts.restartint;
   limits.reduce.conflicts = opts.reduceinit;
-  inc.reduce.conflicts = opts.reduceinit;
+  inc.reduce = opts.reduceinit;
   inc.unit = opts.emaf1 ? 1.0 / opts.emaf1 : 1e-9;
   INIT_EMA (avg.glue.fast, opts.emagluefast);
   INIT_EMA (avg.frequency.unit, opts.emaf1);
   INIT_EMA (avg.trail, opts.ematrail);
-  blocking.limit = blocking.inc = opts.restartblocklimit;
+  limits.blocking = inc.blocking = opts.restartblocklimit;
 }
 
 static int solve () {
