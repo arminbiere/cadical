@@ -219,7 +219,6 @@ struct Timer {
 // Static variables
 
 static int max_var, num_original_clauses;
-static int min_lit, max_lit;
 
 #ifndef NDEBUG
 static vector<int> original_literals;
@@ -1795,7 +1794,7 @@ SIGNALS
   P = new T[N], inc_bytes ((N) * sizeof (T))
 
 static void init_variables () {
-  min_lit = 2, max_lit = 2*max_var + 1;
+  const int max_lit = 2*max_var + 1;
   NEW (vals,        signed char, max_var + 1);
   NEW (phases,      signed char, max_var + 1);
   NEW (vars,                Var, max_var + 1);
