@@ -1521,7 +1521,9 @@ static void flush_falsified_literals (Clause * c) {
     j--;
   }
   int flushed = c->size - j;
-  stats.reduce.bytes += flushed * sizeof (int);
+  const size_t bytes = flushed * sizeof (int);
+  stats.reduce.bytes += bytes;
+  dec_bytes (bytes);
   for (int i = j; i < size; i++) lits[i] = 0;
   c->size = j;
   LOG (c, "flushed %d literals and got", flushed);
