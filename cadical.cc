@@ -52,7 +52,7 @@ OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
 OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
 OPTION(restartblocklimit, int, 1e4, 0,1e9, "restart blocking limit") \
 OPTION(restartblockmargin,double,1.2,0,10, "restart blocking margin") \
-OPTION(restartemaf1,     bool,   0, 0,  1, "unit frequency based restart") \
+OPTION(restartemaf1,     bool,   1, 0,  1, "unit frequency based restart") \
 OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
 OPTION(restartmargin,  double, 1.1, 0, 10, "restart slow fast margin (1/K)") \
 OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
@@ -958,10 +958,11 @@ static Clause * new_clause (bool red, int glue = 0) {
   size_t bytes = bytes_clause (size);
   Clause * res = (Clause*) new char[bytes];
   inc_bytes (bytes);
+  res->resolved = ++stats.resolved;
   res->redundant = red;
   res->garbage = false;
   res->reason = false;
-  res->glue = min (glue, (1<<27)-1);
+  res->glue = glue;
   res->size = size;
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
   clauses.push_back (res);
