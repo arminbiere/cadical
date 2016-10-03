@@ -1,12 +1,17 @@
 CXX=@CXX@
 CXXFLAGS=@CXXFLAGS@
-all: cadical
+HEADERS=$(shell ls *.hpp)$
+all: cadical main.o
 cadical: cadical.o makefile
 	$(CXX) $(CXXFLAGS) -o $@ cadical.o
 cadical.o: cadical.cc config.h makefile
 	$(CXX) $(CXXFLAGS) -c cadical.cc
 config.h: make-config-header.sh cadical.cc makefile
 	./make-config-header.sh > config.h
+
+main.o: main.cpp $(HEADERS) makefile
+	$(CXX) $(CXXFLAGS) -c main.cpp
+
 clean:
 	rm -f cadical makefile config.h
 	rm -f cnfs/*.log cnfs/*.err cnfs/*.proof cnfs/*.check
