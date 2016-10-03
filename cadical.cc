@@ -781,7 +781,7 @@ inline void AVG::update (double y, const char * name) {
 
 // In essence 'abs' but also checks whether 'lit' is a valid literal.
 
-static int vidx (int lit) {
+static inline int vidx (int lit) {
   int idx;
   assert (lit), assert (lit != INT_MIN);
   idx = abs (lit);
@@ -932,7 +932,7 @@ static void backtrack (int target_level = 0) {
 
 /*------------------------------------------------------------------------*/
 
-static void watch_literal (int lit, int blit, Clause * c) {
+static inline void watch_literal (int lit, int blit, Clause * c) {
   Watches & ws = c->size == 2 ? binaries (lit) : watches (lit);
   ws.push_back (Watch (blit, c));
   LOG (c, "watch %d blit %d in", lit, blit);
@@ -945,7 +945,7 @@ static void watch_clause (Clause * c) {
   watch_literal (l1, l0, c);
 }
 
-static size_t bytes_clause (int size) {
+static inline size_t bytes_clause (int size) {
   return sizeof (Clause) + (size - 2) * sizeof (int);
 }
 
