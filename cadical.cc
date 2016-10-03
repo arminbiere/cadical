@@ -112,11 +112,11 @@ struct Clause {
 
   long resolved;     // time stamp when resolved last time
                     
-  bool redundant;    // aka 'learned' so not 'irredundant' (original)
-  bool garbage;      // can be garbage collected unless it is a 'reason'
-  bool reason;       // reason / antecedent clause can not be collected
+  bool redundant:1;    // aka 'learned' so not 'irredundant' (original)
+  bool garbage:1;      // can be garbage collected unless it is a 'reason'
+  bool reason:1;       // reason / antecedent clause can not be collected
 
-  int glue;          // glue = glucose level = LBD
+  unsigned glue :28;          // glue = glucose level = LBD
   int size;          // actual size of 'literals' (at least 2)
 
   int literals[2];   // actually of variadic 'size' in general
@@ -452,9 +452,7 @@ static void LOG (Clause * c, const char *fmt, ...) {
   va_end (ap);
   if (c) {
     if (!c->redundant) printf (" irredundant");
-    else if (c->extended)
-      printf (" redundant glue %u resolved %ld", c->glue, c->resolved);
-    else printf (" redundant without glue");
+    else printf (" redundant glue %u resolved %ld", c->glue, c->resolved);
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
       printf (" %d", c->literals[i]);
