@@ -1,17 +1,27 @@
-CXX=@CXX@
-CXXFLAGS=@CXXFLAGS@
-HEADERS=$(shell ls *.hpp)$
-all: cadical main.o
-cadical: cadical.o makefile
-	$(CXX) $(CXXFLAGS) -o $@ cadical.o
-cadical.o: cadical.cc config.h makefile
-	$(CXX) $(CXXFLAGS) -c cadical.cc
-config.h: make-config-header.sh cadical.cc makefile
-	./make-config-header.sh > config.h
+MAKEFLAGS=-j $(if $(CORES),$(CORES),1)
+OBJ=$(shell ls *.cpp|sed -e '/main/d' -e 's,.cpp$$,.o,g')
+SRC=$(shell ls *.cpp *.hpp|grep -v config.hpp)
+COMPILE=@CXX@ @CXXFLAGS@
+all: cadical libcadical.a
+.cpp.o:
+	$(COMPILE) -c $<
 
-main.o: main.cpp $(HEADERS) makefile
-	$(CXX) $(CXXFLAGS) -c main.cpp
+cadical: cadical.o makefile
+	$(COMPILE) -o $@ cadical.o
+cadical.o: cadical.cc config.h makefile
+	$(COMPILE) -c cadical.cc
+config.h: make-config-header.sh $(SRC) makefile
+	./make-config-header.sh > $@
+
+-include dependencies
+libcadical.a: $(OBJ) makefile
+	ar rc $@ $(OBJ)
+	ranlib $@
+config.hpp: make-config-header.sh $(SRC) makefile
+	./make-config-header.sh > $@
+dependencies: config.h $(SRC) makefile
+	$(COMPILE) -MM $(SRC)|sed -e 's,:,: makefile,' >$@
 
 clean:
-	rm -f cadical makefile config.h
+	rm -f *.o cadical makefile config.h dependencies
 	rm -f cnfs/*.log cnfs/*.err cnfs/*.proof cnfs/*.check

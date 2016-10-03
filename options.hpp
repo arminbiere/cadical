@@ -28,4 +28,17 @@ OPTION(reusetrail,       bool,   1, 0,  1, "enable trail reuse") \
 OPTION(verbose,          bool,   0, 0,  1, "more verbose messages") \
 OPTION(witness,          bool,   1, 0,  1, "print witness") \
 
+namespace CaDiCaL {
+
+struct Options {
+#define OPTION(N,T,V,L,H,D) \
+  T N;
+  OPTIONS
+#undef OPTION
+  Options ();
+  bool set (const char *);	// of the form "--<opt>=<val>"
+};
+
+};
+
 #endif

@@ -111,13 +111,7 @@ struct Timer {
 /*------------------------------------------------------------------------*/
 
 class Solver {
-  struct {
-#define OPTION(N,T,V,L,H,D) \
-  T N;
-  OPTIONS
-#undef OPTION
-  } opts;
-  void init_opts ();
+  Options opts;
 };
 
 };
