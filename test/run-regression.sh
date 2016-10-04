@@ -7,7 +7,9 @@ die () {
   exit 1
 }
 
-[ -x cadical ] || die "make 'cadical' first"
+binary=../build/cadical
+
+[ -x $binary ] || die "make 'cadical' first"
 
 checker=none
 for d in `echo $PATH | tr : \ `
@@ -30,7 +32,7 @@ else
   echo "checking DRAT proofs with '$checker'"
 fi
 
-if [ x"`./cadical -h|grep -- ' -s '`" = x ]
+if [ x"`$binary -h|grep -- ' -s '`" = x ]
 then
   solchecking=no
 else
@@ -54,8 +56,8 @@ run () {
     proofopts=" cnfs/$1.proof"
   fi
   opts="cnfs/$1.cnf$solopts$proofopts"
-  echo -n "./cadical $opts # $2 ..."
-  ./cadical $opts 1>cnfs/$1.log 2>cnfs/$1.err
+  echo -n "$binary $opts # $2 ..."
+  $binary $opts 1>cnfs/$1.log 2>cnfs/$1.err
   res=$?
   if [ $res = $2 ]
   then 

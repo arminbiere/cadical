@@ -1,6 +1,0 @@
-*.o
-*.a
-cadical
-makefile
-config.hpp
-dependencies

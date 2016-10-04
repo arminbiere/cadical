@@ -1,9 +1,10 @@
+.SUFFIXES: .cpp .o
 MAKEFLAGS=-j $(if $(CORES),$(CORES),1)
-OBJ=$(shell ls *.cpp|sed -e '/main/d' -e 's,.cpp$$,.o,g')
-SRC=$(shell ls *.cpp *.hpp|grep -v config.hpp)
+OBJ=$(shell ls ../src/*.cpp|sed -e '/main/d' -e 's,../src/,,' -e 's,.cpp$$,.o,g')
+SRC=$(shell ls ../src/*.cpp ../src/*.hpp|grep -v config.hpp)
 COMPILE=@CXX@ @CXXFLAGS@
 all: cadical libcadical.a
-.cpp.o:
+%.o: ../src/%.cpp
 	$(COMPILE) -c $<
 -include dependencies
 cadical: main.o libcadical.a makefile
@@ -13,8 +14,7 @@ libcadical.a: $(OBJ) makefile
 	ranlib $@
 config.hpp: make-config-header.sh $(SRC) makefile
 	./make-config-header.sh > $@
-dependencies: config.hpp $(SRC) makefile
-	$(COMPILE) -MM $(SRC)|sed -e 's,:,: makefile,' >$@
+dependencies: config.hpp ../src/*.cpp makefile
+	$(COMPILE) -MM ../src/*.cpp|sed -e 's,:,: makefile,' >$@
 clean:
 	rm -f *.o *.a cadical makefile config.hpp dependencies
-	rm -f cnfs/*.log cnfs/*.err cnfs/*.proof cnfs/*.check
