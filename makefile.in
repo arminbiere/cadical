@@ -5,15 +5,9 @@ COMPILE=@CXX@ @CXXFLAGS@
 all: cadical libcadical.a
 .cpp.o:
 	$(COMPILE) -c $<
-
-cadical: cadical.o makefile
-	$(COMPILE) -o $@ cadical.o
-cadical.o: cadical.cc config.h makefile
-	$(COMPILE) -c cadical.cc
-config.h: make-config-header.sh $(SRC) makefile
-	./make-config-header.sh > $@
-
 -include dependencies
+cadical: main.o libcadical.a makefile
+	$(COMPILE) -o $@ main.o -L. -lcadical
 libcadical.a: $(OBJ) makefile
 	ar rc $@ $(OBJ)
 	ranlib $@
@@ -21,7 +15,6 @@ config.hpp: make-config-header.sh $(SRC) makefile
 	./make-config-header.sh > $@
 dependencies: config.h $(SRC) makefile
 	$(COMPILE) -MM $(SRC)|sed -e 's,:,: makefile,' >$@
-
 clean:
-	rm -f *.o cadical makefile config.h dependencies
+	rm -f *.o *.a cadical makefile config.hpp dependencies
 	rm -f cnfs/*.log cnfs/*.err cnfs/*.proof cnfs/*.check

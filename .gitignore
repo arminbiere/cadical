@@ -1,7 +1,6 @@
-*.a
 *.o
+*.a
 cadical
 makefile
-config.h
 config.hpp
 dependencies

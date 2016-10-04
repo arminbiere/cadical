@@ -1,4 +1,5 @@
-#include "cadical.hpp"
+#include "app.hpp"
 
-int main () {
+int main (int argc, char ** argv) {
+  return CaDiCaL::App::main (argc, argv);
 }
