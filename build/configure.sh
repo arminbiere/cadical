@@ -20,8 +20,6 @@ where '<option>' is one of the following
 -l|--log               include and enable logging code
 -p|--profile           include and enable profiling code
 -a|--all               short cut for '-g -l -p'
-
---alignment=<bytes>    enforces arena alignment to <bytes>
 EOF
 exit 0
 }
@@ -34,8 +32,6 @@ do
     -l|--logging) logging=yes;;
     -p|--profile) profile=yes;;
     -a|--all) debug=yes;check=yes;logging=yes;profile=yes;;
-    --alignment=8) alignment=8;;
-    --alignment=4) alignment=4;;
     *) die "invalid option '$1' (try '-h')";;
   esac
   shift
@@ -60,7 +56,6 @@ fi
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -DPROFILING"
-[ x"$alignment" = x"default" ] || CXXFLAGS="$CXXFLAGS -DALIGNMENT=$alignment"
 echo "$CXX $CXXFLAGS"
 rm -f makefile
 sed -e "s,@CXX@,$CXX," -e "s,@CXXFLAGS@,$CXXFLAGS," makefile.in > makefile
