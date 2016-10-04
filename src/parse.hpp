@@ -6,22 +6,18 @@ namespace CaDiCaL {
 class File;
 class Solver;
 
-struct Parser {
-protected:
+class Parser {
+  Solver & solver;
   File & file;
-  Parser (File & f) : file (f) { }
   void perr (const char * fmt, ...);
   int parse_char ();
   void parse_string (const char * str, char prev);
-  void parse_positive_int (int ch, int & res, const char * name);
-  void parse_lit (int ch, int & lit);
-};
-
-struct DimacsParser : public Parser {
-  Solver & solver;
+  int parse_positive_int (int ch, int & res, const char * name);
+  int parse_lit (int ch, int & lit);
 public:
-  DimacsParser (Solver & s, File & f) : Parser (f), solver (s) { }
-  static void parse (Solver &, File & file);
+  Parser (Solver & s, File & f) : solver (s), file (f) { }
+  void parse_dimacs ();
+  void parse_solution ();
 };
 
 };

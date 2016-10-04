@@ -18,10 +18,13 @@ using namespace std;
 #include "timer.hpp"
 #include "parse.hpp"
 #include "proof.hpp"
+#include "profiler.hpp"
 
 namespace CaDiCaL {
 
 class Solver {
+
+  friend class Parser;
 
   Options opts;
   int max_var;
@@ -98,10 +101,6 @@ class Solver {
 
     int fixed;                    // top level assigned variables
   } stats;
-
-#ifdef PROFILING
-  vector<Timer> timers;
-#endif
 
   // Averages to control which clauses are collected in 'reduce' and when to
   // force and delay 'restart' respectively.  Most of them are exponential
@@ -181,6 +180,32 @@ class Solver {
   }
 
   Var & var (int lit) { return vars [vidx (lit)]; }
+
+  void msg (const char * fmt, ...);
+
+  void init_variables ();
+  bool tautological ();
+  void add_new_original_clause ();
+
+  double seconds ();
+
+#ifdef PROFILING
+  vector<Timer> timers;
+  Profiler profiler;
+
+  void start_profiling (double * p);
+  void stop_profiling (double * p);
+
+#define START(P) start_profiling (&profiler.P)
+#define STOP(P) stop_profiling (&profiler.P)
+
+#else
+
+#define START(P) do { } while (0)
+#define STOP(P) do { } while (0)
+
+#endif
+
 public:
 
   // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
