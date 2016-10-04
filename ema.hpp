@@ -1,6 +1,8 @@
 #ifndef _ema_hpp_INCLUDED
 #define _ema_hpp_INCLUDED
 
+#include <cassert>
+
 namespace CaDiCaL {
 
 // We have a more complex generic exponential moving average struct here
