@@ -1,5 +1,5 @@
-#ifndef _profiler_h_INCLUDED
-#define _profiler_h_INCLUDED
+#ifndef _profiles_h_INCLUDED
+#define _profiles_h_INCLUDED
 
 namespace CaDiCaL {
 
@@ -17,7 +17,7 @@ PROFILE(reduce) \
 PROFILE(restart) \
 PROFILE(search) \
 
-struct Profiler {
+struct Profiles {
 #define PROFILE(NAME) \
   double NAME;
   PROFILES

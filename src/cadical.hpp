@@ -18,7 +18,7 @@ using namespace std;
 #include "timer.hpp"
 #include "parse.hpp"
 #include "proof.hpp"
-#include "profiler.hpp"
+#include "profiles.hpp"
 
 namespace CaDiCaL {
 
