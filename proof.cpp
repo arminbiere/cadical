@@ -1,32 +1,36 @@
 #include "proof.hpp"
 #include "cadical.hpp"
 #include "logging.hpp"
+#include "clause.hpp"
+#include "file.hpp"
 
 #include <cassert>
 
 namespace CaDiCaL {
 
+using namespace std;
+
 void Proof::trace_empty_clause () {
-  assert (enabled);
+  if (!enabled) return;
   LOG ("tracing empty clause");
-  print ("0\n", proof_file);
+  file->put ("0\n");
 }
 
 void Proof::trace_unit_clause (int unit) {
-  if (!proof_file) return;
+  if (!enabled) return;
   LOG ("tracing unit clause %d", unit);
-  print (unit, proof_file);
-  print (" 0\n", proof_file);
+  file->put (unit);
+  file->put (" 0\n");
 }
 
 void Proof::trace_clause (Clause * c, bool add) {
-  if (!proof_file) return;
+  if (!enabled) return;
   LOG (c, "tracing %s", add ? "addition" : "deletion");
-  if (!add) print ("d ", proof_file);
+  if (!add) file->put ("d ");
   const int size = c->size, * lits = c->literals;
   for (int i = 0; i < size; i++)
-    print (lits[i], proof_file), print (" ", proof_file);
-  print ("0\n", proof_file);
+    file->put (lits[i]), file->put (" ");
+  file->put ("0\n");
 }
 
 void Proof::trace_add_clause (Clause * c) { trace_clause (c, true); }
@@ -34,18 +38,18 @@ void Proof::trace_add_clause (Clause * c) { trace_clause (c, true); }
 void Proof::trace_delete_clause (Clause * c) { trace_clause (c, false); }
 
 void Proof::trace_flushing_clause (Solver * s, Clause * c) {
-  if (!proof_file) return;
+  if (!enabled) return;
   LOG (c, "tracing flushing");
   const int size = c->size, * lits = c->literals;
   for (int i = 0; i < size; i++) {
     const int lit = lits[i];
     if (s->fixed (lit) >= 0)
-      print (lit, proof_file), print (" ", proof_file);
+      file->put (lit), file->put (" ");
   }
-  print ("0\nd ", proof_file);
+  file->put ("0\nd ");
   for (int i = 0; i < size; i++)
-    print (lits[i], proof_file), print (" ", proof_file);
-  print ("0\n", proof_file);
+    file->put (lits[i]), file->put (" ");
+  file->put ("0\n");
 }
 
 };

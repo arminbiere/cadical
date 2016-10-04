@@ -31,6 +31,11 @@ class Solver {
   signed char * vals;
   signed char * phases;
 
+  struct {
+    Watches * watches;		// watches of long clauses
+    Watches * binaries;		// watches of binary clauses
+  } literal;
+
   // VMTF decision queue
 
   struct {
@@ -141,6 +146,60 @@ class Solver {
 #endif
 
   Proof * proof;
+
+  // In essence 'abs' but also checks whether 'lit' is a valid literal.
+
+  int vidx (int lit) {
+    int idx;
+    assert (lit), assert (lit != INT_MIN);
+    idx = abs (lit);
+    assert (idx <= max_var);
+    return idx;
+  }
+
+  // Sign of an integer, but also does proper index checking.
+
+  int sign (int lit) {
+    assert (lit), assert (abs (lit) <= max_var);
+    return lit < 0 ? -1 : 1;
+  }
+
+  // Unsigned version with LSB denoting sign.  This is used in indexing arrays
+  // by literals.  The idea is to keep the elements in such an array for both
+  // the positive and negated version of a literal close together
+
+  unsigned vlit (int lit) {
+    return (lit < 0) + 2u * (unsigned) vidx (lit);
+  }
+
+  Watches & watches (int lit) {
+    return literal.watches[vlit (lit)];
+  }
+
+  Watches & binaries (int lit) {
+    return literal.binaries[vlit (lit)];
+  }
+
+  Var & var (int lit) { return vars [vidx (lit)]; }
+public:
+
+  // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
+
+  int val (int lit) {
+    int idx = vidx (lit), res = vals[idx];
+    if (lit < 0) res = -res;
+    return res;
+  }
+
+  // As 'val' but restricted to the root-level value of a literal.
+
+  int fixed (int lit) {
+    int idx = vidx (lit), res = vals[idx];
+    if (res && vars[idx].level) res = 0;
+    if (lit < 0) res = -res;
+    return res;
+  }
+
 };
 
 };

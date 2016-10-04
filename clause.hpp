@@ -3,6 +3,8 @@
 
 #include <cstdlib>
 
+namespace CaDiCaL {
+
 struct Clause {
 
   long resolved;     // time stamp when resolved last time
@@ -21,6 +23,8 @@ struct Clause {
   }
 
   size_t bytes () const { return bytes (size); }
+};
+
 };
 
 #endif

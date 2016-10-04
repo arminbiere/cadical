@@ -1,6 +1,8 @@
 #ifndef _level_hpp_INCLUDED
 #define _level_hpp_INCLUDED
 
+#include <climits>
+
 namespace CaDiCaL {
 
 struct Level {
