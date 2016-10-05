@@ -20,6 +20,10 @@ using namespace std;
 #include "proof.hpp"
 #include "profiles.hpp"
 #include "logging.hpp"
+#include "file.hpp"
+#include "message.hpp"
+#include "stats.hpp"
+#include "util.hpp"
 
 namespace CaDiCaL {
 
@@ -27,6 +31,8 @@ class Solver {
 
   friend class Parser;
   friend struct Logger;
+  friend struct Message;
+  friend struct Stats;
 
   Options opts;
   int max_var;
@@ -72,37 +78,7 @@ class Solver {
   Clause * conflict;        // set in 'propagation', reset in 'analyze'
   bool clashing_unit;       // set in 'parse_dimacs'
 
-  struct {
-    long conflicts;
-    long decisions;
-    long propagations;    // propagated literals in 'propagate'
-
-    struct {
-      long count;         // actual number of happened restarts 
-      long tried;         // number of tried restarts
-      long unit;          // from those the number forced by low unit frequency
-      long blocked;       // blocked restart intervals in 'analyze'
-      long unforced;      // not forced (slow glue > fast glue)
-      long forced;        // forced (slow glue < fast glue)
-      long reused;        // number of time trail was (partially) reused
-    } restart;
-
-    long reports, sections;
-
-    long bumped;                  // seen and bumped variables in 'analyze'
-    long resolved;                // resolved redundant clauses in 'analyze'
-    long searched;                // searched decisions in 'decide'
-
-    struct { long count, clauses, bytes; } reduce; // in 'reduce'
-    struct { long learned, minimized; } literals;  // in 'minimize_clause'
-
-    struct { long redundant, irredundant, current, max; } clauses;
-    struct { struct { size_t current, max; } total, watcher; } bytes;
-
-    struct { long unit, binary; } learned;
-
-    int fixed;                    // top level assigned variables
-  } stats;
+  Stats stats;
 
   // Averages to control which clauses are collected in 'reduce' and when to
   // force and delay 'restart' respectively.  Most of them are exponential
@@ -183,13 +159,9 @@ class Solver {
 
   Var & var (int lit) { return vars [vidx (lit)]; }
 
-  void msg (const char * fmt, ...);
-
   void init_variables ();
   bool tautological ();
   void add_new_original_clause ();
-
-  double seconds ();
 
 #ifdef PROFILING
   vector<Timer> timers;
@@ -227,6 +199,8 @@ public:
     return res;
   }
 
+  double seconds ();
+  size_t max_bytes ();
 };
 
 };

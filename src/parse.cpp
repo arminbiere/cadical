@@ -87,8 +87,7 @@ void Parser::parse_dimacs () {
   if (ch != '\n')
     perr ("expected new-line after 'p cnf %d %d'",
       solver.max_var, solver.num_original_clauses);
-  solver.msg ("found 'p cnf %d %d' header",
-    solver.max_var, solver.num_original_clauses);
+  MSG ("found 'p cnf %d %d' header", solver.max_var, solver.num_original_clauses);
   solver.init_variables ();
   int lit = 0, parsed_clauses = 0;
   while ((ch = parse_char ()) != EOF) {
@@ -116,8 +115,7 @@ COMMENT:
   }
   if (lit) perr ("last clause without '0'");
   if (parsed_clauses < solver.num_original_clauses) perr ("clause missing");
-  solver.msg ("parsed %d clauses in %.2f seconds",
-    parsed_clauses, solver.seconds ());
+  MSG ("parsed %d clauses in %.2f seconds", parsed_clauses, solver.seconds ());
   STOP (parse);
 }
 
