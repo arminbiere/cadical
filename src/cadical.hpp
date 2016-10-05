@@ -43,11 +43,8 @@ class Solver {
   Var * vars;
   signed char * vals;
   signed char * phases;
-
-  struct {
-    Watches * watches;		// watches of long clauses
-    Watches * binaries;		// watches of binary clauses
-  } literal;
+  Watches * watches;		// watches of long clauses
+  Watches * binaries;		// watches of binary clauses
 
   // VMTF decision queue
 
@@ -122,6 +119,8 @@ class Solver {
 
   Proof * proof;
 
+  /*------------------------------------------------------------------------*/
+
   // In essence 'abs' but also checks whether 'lit' is a valid literal.
 
   int vidx (int lit) {
@@ -178,6 +177,8 @@ class Solver {
   void dec_bytes (size_t);
 
 public:
+  
+  Solver ();
 
   // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
 

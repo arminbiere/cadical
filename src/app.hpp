@@ -4,6 +4,7 @@
 namespace CaDiCaL {
 
 struct App {
+  static void usage ();
   static int main (int arg, char ** argv);
 };
 

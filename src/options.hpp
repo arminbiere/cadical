@@ -29,13 +29,23 @@ OPTION(witness,          bool,   1, 0,  1, "print witness") \
 
 namespace CaDiCaL {
 
-struct Options {
+class Solver;
+
+class Options {
+  Solver & solver;
+  bool set (bool &, const char *, const char *, const bool, const bool);
+  bool set (int &, const char *, const char *, const int, const int);
+  bool set (double &, const char *, const char *, const double, const double);
+  const char * match (const char *, const char *);
+public:
 #define OPTION(N,T,V,L,H,D) \
   T N;
   OPTIONS
 #undef OPTION
-  Options ();
+  Options (Solver &);
   bool set (const char *);	// of the form "--<opt>=<val>"
+  void print ();
+  static void usage ();
 };
 
 };
