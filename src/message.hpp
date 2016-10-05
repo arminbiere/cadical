@@ -24,8 +24,8 @@ do { Message::print (solver, 1, ##ARGS); } while (0)
 #define DIE(ARGS...) \
 do { Message::die (solver, ##ARGS); } while (0)
 
-#define PER(F,ARGS...) \
-do { Message::parse_error (solver, F, ##ARGS); } while (0)
+#define PER(ARGS...) \
+do { Message::parse_error (solver, file, ##ARGS); } while (0)
 
 #define SECTION(ARGS...) \
 do { Message::section (solver, ##ARGS); } while (0)

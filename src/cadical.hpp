@@ -134,13 +134,6 @@ class Solver {
     return idx;
   }
 
-  // Sign of an integer, but also does proper index checking.
-
-  int sign (int lit) {
-    assert (lit), assert (abs (lit) <= max_var);
-    return lit < 0 ? -1 : 1;
-  }
-
   // Unsigned version with LSB denoting sign.  This is used in indexing arrays
   // by literals.  The idea is to keep the elements in such an array for both
   // the positive and negated version of a literal close together
@@ -177,6 +170,12 @@ class Solver {
 
 #define START(P) do { } while (0)
 #define STOP(P) do { } while (0)
+
+#define NEW(P,T,N) \
+  P = new T[N], solver.inc_bytes ((N) * sizeof (T))
+
+  void inc_bytes (size_t);
+  void dec_bytes (size_t);
 
 #endif
 
