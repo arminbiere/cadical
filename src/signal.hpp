@@ -2,9 +2,19 @@
 #define _signal_hpp_INCLUDED
 
 namespace CaDiCaL {
+
 class Solver;
-void reset_signal_handlers ();
-void init_signal_handlers (Solver &);
+
+class Signal {
+  static bool catchedsig;
+  static Solver * global_solver;
+  static const char * name (int sig);
+  static void catchsig (int sig);
+public:
+  static void reset ();
+  static void init (Solver &);
+};
+
 };
 
 #endif

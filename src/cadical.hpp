@@ -24,6 +24,7 @@ using namespace std;
 #include "message.hpp"
 #include "stats.hpp"
 #include "util.hpp"
+#include "signal.hpp"
 
 namespace CaDiCaL {
 
@@ -33,6 +34,7 @@ class Solver {
   friend struct Logger;
   friend struct Message;
   friend struct Stats;
+  friend struct Signal;
 
   Options opts;
   int max_var;
@@ -108,8 +110,6 @@ class Solver {
     double unit;
   } inc;
 
-#ifndef NDEBUG
-
   // Sam Buss suggested to debug the case where a solver incorrectly claims
   // the formula to be unsatisfiable by checking every learned clause to be
   // satisfied by a satisfying assignment.  Thus the first inconsistent
@@ -119,8 +119,6 @@ class Solver {
   // a symbolic debugger immediately.
 
   signed char * solution;          // like 'vals' (and 'phases')
-
-#endif
 
   Proof * proof;
 
@@ -171,13 +169,13 @@ class Solver {
 #define START(P) do { } while (0)
 #define STOP(P) do { } while (0)
 
+#endif
+
 #define NEW(P,T,N) \
-  P = new T[N], solver.inc_bytes ((N) * sizeof (T))
+  do { (P) = new T[N], solver.inc_bytes ((N) * sizeof (T)); } while (0)
 
   void inc_bytes (size_t);
   void dec_bytes (size_t);
-
-#endif
 
 public:
 

@@ -7,8 +7,8 @@
 
 namespace CaDiCaL {
 
-static bool catchedsig = false;
-static Solver * global_solver;
+bool Signal::catchedsig = false;
+Solver * Signal::global_solver;
 
 #define SIGNALS \
 SIGNAL(SIGINT) \
@@ -22,14 +22,16 @@ static void (*SIG ## _handler)(int);
 SIGNALS
 #undef SIGNAL
 
-void reset_signal_handlers (void) {
+void Signal::reset () {
 #define SIGNAL(SIG) \
   (void) signal (SIG, SIG ## _handler);
 SIGNALS
 #undef SIGNAL
+  global_solver = 0;
+  catchedsig = 0;
 }
 
-static const char * signal_name (int sig) {
+const char * Signal::name (int sig) {
 #define SIGNAL(SIG) \
   if (sig == SIG) return # SIG; else
   SIGNALS
@@ -37,27 +39,27 @@ static const char * signal_name (int sig) {
   return "UNKNOWN";
 }
 
-static void catchsig (int sig) {
+void Signal::catchsig (int sig) {
   Solver & solver = *global_solver;
   if (!catchedsig) {
     catchedsig = true;
     MSG ("");
-    MSG ("CAUGHT SIGNAL %d %s", sig, signal_name (sig));
+    MSG ("CAUGHT SIGNAL %d %s", sig, name (sig));
     SECTION ("result");
     MSG ("s UNKNOWN");
-    solver.stats.print ();
+    solver.stats.print (solver);
   }
-  reset_signal_handlers ();
-  MSG ("RERAISING SIGNAL %d %s", sig, signal_name (sig));
+  reset ();
+  MSG ("RERAISING SIGNAL %d %s", sig, name (sig));
   raise (sig);
 }
 
-static void init_signal_handlers (Solver & s) {
+void Signal::init (Solver & s) {
 #define SIGNAL(SIG) \
-  SIG ## _handler = signal (SIG, catchsig);
+  SIG ## _handler = signal (SIG, Signal::catchsig);
 SIGNALS
 #undef SIGNAL
-  global_solver_ptr = &s;
+  global_solver = &s;
 }
 
 
