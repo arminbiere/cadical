@@ -5,6 +5,8 @@
 
 namespace CaDiCaL {
 
+class Solver;
+
 // We have a more complex generic exponential moving average struct here
 // for more robust initialization (see comments before 'update' below).
 
@@ -21,7 +23,7 @@ struct EMA {
     assert (0 <= alpha), assert (alpha <= beta), assert (beta <= 1);
   }
   operator double () const { return value; }
-  void update (double y, const char * name);
+  void update (Solver &, double y, const char * name);
 };
 
 };

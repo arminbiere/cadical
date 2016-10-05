@@ -3,7 +3,7 @@
 
 #ifdef PROFILING
 
-namespacd CaDiCaL {
+namespace CaDiCaL {
 
 struct Timer {
   double started;       // starting time (in seconds) for this phase

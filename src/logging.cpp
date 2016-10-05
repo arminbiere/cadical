@@ -1,16 +1,15 @@
 #ifdef LOGGING
 
-#include "logging.hpp"
-#include "clause.hpp"
+#include "cadical.hpp"
 
 #include <cstdio>
 #include <cstdarg>
 
 namespace CaDiCaL {
 
-void LOG (const char * fmt, ...) {
+void Logger::log (Solver & solver, const char * fmt, ...) {
   va_list ap;
-  printf ("c LOG %d ", level);
+  printf ("c LOG %d ", solver.level);
   va_start (ap, fmt);
   vprintf (fmt, ap);
   va_end (ap);
@@ -18,9 +17,9 @@ void LOG (const char * fmt, ...) {
   fflush (stdout);
 }
 
-void LOG (Clause * c, const char *fmt, ...) {
+void Logger::log (Solver & solver, Clause * c, const char *fmt, ...) {
   va_list ap;
-  printf ("c LOG %d ", level);
+  printf ("c LOG %d ", solver.level);
   va_start (ap, fmt);
   vprintf (fmt, ap);
   va_end (ap);
@@ -30,15 +29,16 @@ void LOG (Clause * c, const char *fmt, ...) {
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
       printf (" %d", c->literals[i]);
-  } else if (level) printf (" decision");
+  } else if (solver.level) printf (" decision");
   else printf (" unit");
   fputc ('\n', stdout);
   fflush (stdout);
 }
 
-void LOG (const vector<int> & clause, const char *fmt, ...) {
+void Logger::log (Solver & solver,
+                  const vector<int> & clause, const char *fmt, ...) {
   va_list ap;
-  printf ("c LOG %d ", level);
+  printf ("c LOG %d ", solver.level);
   va_start (ap, fmt);
   vprintf (fmt, ap);
   va_end (ap);

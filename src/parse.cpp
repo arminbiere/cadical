@@ -101,7 +101,7 @@ COMMENT:
     }
     if (parse_lit (ch, lit) == 'c') goto COMMENT;
 #ifndef NDEBUG
-    original_literals.push_back (lit);
+    solver.original_literals.push_back (lit);
 #endif
     if (lit) {
       if (solver.clause.size () == INT_MAX) perr ("clause too large");

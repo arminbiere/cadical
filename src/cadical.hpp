@@ -19,12 +19,14 @@ using namespace std;
 #include "parse.hpp"
 #include "proof.hpp"
 #include "profiles.hpp"
+#include "logging.hpp"
 
 namespace CaDiCaL {
 
 class Solver {
 
   friend class Parser;
+  friend struct Logger;
 
   Options opts;
   int max_var;
@@ -191,13 +193,13 @@ class Solver {
 
 #ifdef PROFILING
   vector<Timer> timers;
-  Profiler profiler;
+  Profiles profiles;
 
   void start_profiling (double * p);
   void stop_profiling (double * p);
 
-#define START(P) start_profiling (&profiler.P)
-#define STOP(P) stop_profiling (&profiler.P)
+#define START(P) solver.start_profiling (&solver.profiles.P)
+#define STOP(P) solver.stop_profiling (&solver.profiles.P)
 
 #else
 
