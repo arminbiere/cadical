@@ -21,14 +21,16 @@ void Solver::update_all_timers (double now) {
     timers[i].update (now);
 }
 
+#define solver this
+
 void Solver::print_profile (double now) {
   update_all_timers (now);
-  section ("run-time profiling data");
-  const size_t size = sizeof profile / sizeof (double);
+  SECTION ("run-time profiling data");
+  const size_t size = sizeof profiles / sizeof (double);
   struct { double value; const char * name; } profs[size];
   size_t i = 0;
 #define PROFILE(NAME) \
-  profs[i].value = profile.NAME; \
+  profs[i].value = profiles.NAME; \
   profs[i].name = # NAME; \
   i++;
   PROFILES
@@ -43,11 +45,11 @@ void Solver::print_profile (double now) {
       if (profs[j].value > profs[i].value)
         swap (profs[i].value, profs[j].value),
         swap (profs[i].name, profs[j].name);
-    msg ("%12.2f %7.2f%% %s",
+    MSG ("%12.2f %7.2f%% %s",
       profs[i].value, percent (profs[i].value, now), profs[i].name);
   }
-  msg ("  ===============================");
-  msg ("%12.2f %7.2f%% all", now, 100.0);
+  MSG ("  ===============================");
+  MSG ("%12.2f %7.2f%% all", now, 100.0);
 }
 
 };

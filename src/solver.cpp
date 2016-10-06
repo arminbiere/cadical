@@ -34,6 +34,8 @@ Solver::Solver ()
 
 /*------------------------------------------------------------------------*/
 
+#define solver this
+
 void Solver::learn_empty_clause () {
   assert (!unsat);
   LOG ("learned empty clause");

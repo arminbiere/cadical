@@ -129,7 +129,7 @@ class Solver {
   void start_profiling (double * p);
   void stop_profiling (double * p);
   void update_all_timers (double now);
-  void print_profile (double now) {
+  void print_profile (double now);
 #endif
 
   size_t vector_bytes ();
@@ -163,7 +163,10 @@ class Solver {
   void watch_literal (int lit, int blit, Clause * c) {
     Watches & ws = c->size == 2 ? binaries (lit) : watches (lit);
     ws.push_back (Watch (blit, c));
+#ifdef LOGGING
+    Solver * solver = this;
     LOG (c, "watch %d blit %d in", lit, blit);
+#endif
   }
 
   void watch_clause (Clause * c) {
