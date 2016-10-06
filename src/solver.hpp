@@ -1,12 +1,13 @@
-#ifndef _cadical_hpp_INCLUDED
-#define _cadical_hpp_INCLUDED
+#ifndef _solver_hpp_INCLUDED
+#define _solver_hpp_INCLUDED
 
+#include <cassert>
+#include <climits>
 #include <vector>
 
-using namespace std;
+/*------------------------------------------------------------------------*/
 
-#include <climits>
-#include <cassert>
+using namespace std;
 
 #include "macros.hpp"
 #include "options.hpp"
@@ -34,7 +35,7 @@ using namespace std;
 namespace CaDiCaL {
 
 class Solver {
-
+  
   friend class Parser;
   friend struct Logger;
   friend struct Message;
@@ -104,15 +105,9 @@ class Solver {
     double unit;
   } inc;
 
-  // Sam Buss suggested to debug the case where a solver incorrectly claims
-  // the formula to be unsatisfiable by checking every learned clause to be
-  // satisfied by a satisfying assignment.  Thus the first inconsistent
-  // learned clause will be immediately flagged without the need to generate
-  // proof traces and perform forward proof checking.  The incorrectly derived
-  // clause will raise an abort signal and thus allows to debug the issue with
-  // a symbolic debugger immediately.
+#ifndef NDEBUG
 
-  signed char * solution;          // like 'vals' (and 'phases')
+#endif
 
   Proof * proof;
 
@@ -122,15 +117,6 @@ class Solver {
   /*------------------------------------------------------------------------*/
 
   void init_variables ();
-
-#ifdef PROFILING
-  vector<Timer> timers;
-  Profiles profiles;
-  void start_profiling (double * p);
-  void stop_profiling (double * p);
-  void update_all_timers (double now);
-  void print_profile (double now);
-#endif
 
   size_t vector_bytes ();
   void inc_bytes (size_t);
@@ -189,6 +175,34 @@ class Solver {
   void assign (int lit, Clause * reason = 0);
   void unassign (int lit);
   void backtrack (int target_level = 0);
+
+  bool propagate ();
+
+  bool minimize_literal (int lit, int depth = 0);
+
+#ifdef PROFILING
+  vector<Timer> timers;
+  Profiles profiles;
+  void start_profiling (double * p);
+  void stop_profiling (double * p);
+  void update_all_timers (double now);
+  void print_profile (double now);
+#endif
+
+#ifndef NDEBUG
+  // Sam Buss suggested to debug the case where a solver incorrectly claims
+  // the formula to be unsatisfiable by checking every learned clause to be
+  // satisfied by a satisfying assignment.  Thus the first inconsistent
+  // learned clause will be immediately flagged without the need to generate
+  // proof traces and perform forward proof checking.  The incorrectly derived
+  // clause will raise an abort signal and thus allows to debug the issue with
+  // a symbolic debugger immediately.
+  signed char * solution;          // like 'vals' (and 'phases')
+  int sol (int lit);
+  void check_clause ();
+#endif
+
+  Solver * solver;		// proxy to 'this' in macros
 
 public:
   

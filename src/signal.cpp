@@ -1,5 +1,5 @@
 
-#include "cadical.hpp"
+#include "solver.hpp"
 
 #include <csignal>
 

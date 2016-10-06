@@ -1,4 +1,4 @@
-#include "cadical.hpp"
+#include "solver.hpp"
 
 #include <algorithm>
 
@@ -7,8 +7,6 @@ namespace CaDiCaL {
 size_t Solver::bytes_clause (int size) {
   return sizeof (Clause) + (size - 2) * sizeof (int);
 }
-
-#define solver this
 
 Clause * Solver::new_clause (bool red, int glue) {
   assert (clause.size () <= (size_t) INT_MAX);

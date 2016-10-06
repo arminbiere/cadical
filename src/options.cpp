@@ -1,4 +1,4 @@
-#include "cadical.hpp"
+#include "solver.hpp"
 
 #include <cassert>
 #include <cstring>

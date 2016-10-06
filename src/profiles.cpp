@@ -1,6 +1,6 @@
 #ifdef PROFILING
 
-#include "cadical.hpp"
+#include "solver.hpp"
 
 namespace CaDiCaL {
 

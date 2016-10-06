@@ -1,4 +1,4 @@
-#include "cadical.hpp"
+#include "solver.hpp"
 
 #include <cstring>
 #include <algorithm>
@@ -16,10 +16,13 @@ Solver::Solver ()
   level (0),
   conflict (0),
   clashing_unit (false),
-  solution (0),
   proof (0),
   opts (this),
-  stats (this)
+  stats (this),
+#ifndef NDEBUG
+  solution (0),
+#endif
+  solver (this)
 {
   literal.watches = 0;
   literal.binaries = 0;

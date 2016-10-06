@@ -1,5 +1,5 @@
 #include "proof.hpp"
-#include "cadical.hpp"
+#include "solver.hpp"
 #include "logging.hpp"
 #include "clause.hpp"
 #include "file.hpp"

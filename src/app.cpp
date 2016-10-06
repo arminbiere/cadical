@@ -1,5 +1,5 @@
 #include "app.hpp"
-#include "cadical.hpp"
+#include "solver.hpp"
 
 namespace CaDiCaL {
 

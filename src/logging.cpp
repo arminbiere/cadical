@@ -1,6 +1,6 @@
 #ifdef LOGGING
 
-#include "cadical.hpp"
+#include "solver.hpp"
 
 #include <cstdio>
 #include <cstdarg>
