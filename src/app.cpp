@@ -6,7 +6,7 @@
 
 namespace CaDiCaL {
 
-Solver * solver;
+Solver * App::solver;
 
 void App::usage () {
   fputs (
@@ -96,8 +96,92 @@ void App::banner () {
   MSG (COMPILE);
 }
 
-int App::main (int arg, char ** argv) {
-  return 0;
+bool App::set (const char * arg) { return solver->opts.set (arg); }
+
+int App::main (int argc, char ** argv) {
+#ifndef NDEBUG
+  File * solution = 0;
+#endif
+  File * proof = 0, * dimacs = 0;  
+  const char * proof_name = 0;
+  bool trace_proof = false;
+  int i, res;
+  solver = new Solver ();
+  for (i = 1; i < argc; i++) {
+    if (!strcmp (argv[i], "-h")) usage (), exit (0);
+    else if (!strcmp (argv[i], "--version"))
+      fputs (VERSION "\n", stdout), exit (0);
+    else if (!strcmp (argv[i], "-")) {
+      if (trace_proof) DIE ("too many arguments");
+      else if (!dimacs) dimacs = File::read (stdin, "<stdin>");
+      else trace_proof = true, proof_name = 0;
+#ifndef NDEBUG
+    } else if (!strcmp (argv[i], "-s")) {
+      if (++i == argc) DIE ("argument to '-s' missing");
+      if (solution) DIE ("multiple solution files");
+      if (!(solution = File::read (argv[i])))
+        DIE ("can not read solution file '%s'", argv[i]);
+#endif
+    } else if (!strcmp (argv[i], "-n")) set ("--no-witness");
+    else if (!strcmp (argv[i], "-q")) set ("--quiet");
+    else if (!strcmp (argv[i], "-v")) set ("--verbose");
+    else if (set (argv[i])) { /* nothing do be done */ }
+    else if (argv[i][0] == '-') DIE ("invalid option '%s'", argv[i]);
+    else if (trace_proof) DIE ("too many arguments");
+    else if (dimacs) trace_proof = true, proof_name = argv[i];
+    else if (!(dimacs = File::read (argv[i])))
+      DIE ("can not open and read DIMACS file '%s'", argv[i]);
+  }
+  if (!dimacs) dimacs = File::read (stdin, "<stdin>");
+  banner ();
+  Signal handler;
+  handler.init (solver);
+  SECTION ("parsing input");
+  MSG ("reading DIMACS file from '%s'", dimacs->name ());
+  {
+    Parser dimacs_parser (solver, dimacs);
+    dimacs_parser.parse_dimacs ();
+    delete dimacs;
+  }
+#ifndef NDEBUG
+  if (solution) {
+    SECTION ("parsing solution");
+    Parser solution_parser (solver, solution);
+    MSG ("reading solution file from '%s'", solution->name ());
+    solution_parser.parse_solution ();
+    delete (solution);
+    check_satisfying_assignment (&Solver::sol);
+  }
+#endif
+  solver->opts.print ();
+  SECTION ("proof tracing");
+  if (trace_proof) {
+    if (!proof_name) proof = File::write (stdout, "<stdout>");
+    else if (!(proof = File::write (proof_name)))
+      DIE ("can not open and write DRAT proof to '%s'", proof_name);
+    MSG ("writing DRAT proof trace to '%s'", proof->name ());
+    solver->proof = new Proof (proof);
+  } else MSG ("will not generate nor write DRAT proof");
+  res = solver->solve ();
+  if (proof) delete proof;
+  SECTION ("result");
+  if (res == 10) {
+#ifndef NDEBUG
+    check_satisfying_assignment (&Solver::val);
+#endif
+    printf ("s SATISFIABLE\n");
+    if (solver->opts.witness) print_witness ();
+    fflush (stdout);
+  } else {
+    assert (res = 20);
+    printf ("s UNSATISFIABLE\n");
+    fflush (stdout);
+  }
+  handler.reset ();
+  solver->stats.print ();
+  delete solver;
+  MSG ("exit %d", res);
+  return res;
 }
 
 };

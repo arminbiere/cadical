@@ -45,11 +45,11 @@ void Message::section (Solver * solver, const char * title) {
 }
 
 void Message::parse_error (Solver * solver,
-                           File & file, const char * fmt, ...) {
+                           File * file, const char * fmt, ...) {
   va_list ap;
   fprintf (stderr,
     "%s:%ld: parse error: ",
-    file.name (), file.lineno ());
+    file->name (), file->lineno ());
   va_start (ap, fmt);
   vfprintf (stderr, fmt, ap);
   va_end (ap);

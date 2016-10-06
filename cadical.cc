@@ -2152,22 +2152,25 @@ static void banner () {
 }
 
 int main (int argc, char ** argv) {
+  File * proof = 0, * dimacs = 0;
+#ifndef NDEBUG
+  File * solution = 0;
+#endif
   int i, res;
   for (i = 1; i < argc; i++) {
     if (!strcmp (argv[i], "-h")) print_usage (), exit (0);
     else if (!strcmp (argv[i], "--version"))
       fputs (VERSION "\n", stdout), exit (0);
     else if (!strcmp (argv[i], "-")) {
-      if (trace_proof) die ("too many arguments");
-      else if (!dimacs_file) dimacs_file = stdin, dimacs_name = "<stdin>";
-      else trace_proof = 1, assert (!proof_name);
+      if (proof) die ("too many arguments");
+      else if (!dimacs) dimacs = File::read (stdin, "<stdin>");
+      else proof = File::write (stdout, "<stdout>");
 #ifndef NDEBUG
     } else if (!strcmp (argv[i], "-s")) {
       if (++i == argc) die ("argument to '-s' missing");
-      if (solution_file) die ("multiple solution files");
-      if (!(solution_file = fopen (argv[i], "r")))
+      if (solution) die ("multiple solution files");
+      if (!(solution = File::read (argv[i]);
         die ("can not read solution file '%s'", argv[i]);
-      solution_name = argv[i];
 #endif
     } else if (!strcmp (argv[i], "-n")) set_option ("--no-witness");
     else if (!strcmp (argv[i], "-q")) set_option ("--quiet");

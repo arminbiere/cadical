@@ -12,7 +12,7 @@
 
 namespace CaDiCaL {
 
-int Parser::parse_char () { return file.get (); }
+int Parser::parse_char () { return file->get (); }
 
 void Parser::parse_string (const char * str, char prev) {
   for (const char * p = str; *p; p++)
