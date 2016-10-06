@@ -12,7 +12,7 @@ struct Var {
   bool poison;          // can not be removed during clause minimization
   bool removable;       // can be removed during clause minimization
 
-  int prev, next;       // double links for decision VMTF queue
+  Var * prev, * next;   // double links for decision VMTF queue
   long bumped;          // enqueue time stamp for VMTF queue
 
   Clause * reason;      // implication graph edge

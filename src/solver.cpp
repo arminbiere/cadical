@@ -74,8 +74,8 @@ void Solver::unassign (int lit) {
   vals[idx] = 0;
   LOG ("unassign %d", lit);
   Var * v = vars + idx;
-  if (var (queue.assigned).bumped >= v->bumped) return;
-  queue.assigned = idx;
+  if (queue.assigned->bumped >= v->bumped) return;
+  queue.assigned = v;
   LOG ("queue next moved to %d", idx);
 }
 
