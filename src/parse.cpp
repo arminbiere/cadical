@@ -96,7 +96,8 @@ COMMENT:
       if (solver->clause.size () == INT_MAX) PER ("clause too large");
       solver->clause.push_back (lit);
     } else {
-      if (!solver->tautological ()) solver->add_new_original_clause ();
+      if (!solver->tautological_clause ())
+	solver->add_new_original_clause ();
       else LOG ("tautological original clause");
       solver->clause.clear ();
       if (parsed_clauses++ >= solver->num_original_clauses)

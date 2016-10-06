@@ -121,29 +121,7 @@ class Solver {
 
   /*------------------------------------------------------------------------*/
 
-  // In essence 'abs' but also checks whether 'lit' is a valid literal.
-
-  int vidx (int lit) {
-    int idx;
-    assert (lit), assert (lit != INT_MIN);
-    idx = abs (lit);
-    assert (idx <= max_var);
-    return idx;
-  }
-
-  // Unsigned version with LSB denoting sign.  This is used in indexing arrays
-  // by literals.  The idea is to keep the elements in such an array for both
-  // the positive and negated version of a literal close together
-
-  unsigned vlit (int lit) {
-    return (lit < 0) + 2u * (unsigned) vidx (lit);
-  }
-
-  Var & var (int lit) { return vars [vidx (lit)]; }
-
   void init_variables ();
-  bool tautological ();
-  void add_new_original_clause ();
 
 #ifdef PROFILING
   vector<Timer> timers;
@@ -161,6 +139,53 @@ class Solver {
   int active_variables () { return max_var - stats.fixed; }
 
   void report (char type, bool verbose = false);
+
+  int vidx (int lit) {
+    int idx;
+    assert (lit), assert (lit != INT_MIN);
+    idx = abs (lit);
+    assert (idx <= max_var);
+    return idx;
+  }
+
+  // Unsigned version with LSB denoting sign.  This is used in indexing arrays
+  // by literals.  The idea is to keep the elements in such an array for both
+  // the positive and negated version of a literal close together.
+
+  unsigned vlit (int lit) {
+    return (lit < 0) + 2u * (unsigned) vidx (lit);
+  }
+
+  Var & var (int lit) { return vars [vidx (lit)]; }
+  Watches & watches (int lit) { return literal.watches[vlit (lit)]; }
+  Watches & binaries (int lit) { return literal.binaries[vlit (lit)]; }
+
+  void watch_literal (int lit, int blit, Clause * c) {
+    Watches & ws = c->size == 2 ? binaries (lit) : watches (lit);
+    ws.push_back (Watch (blit, c));
+    LOG (c, "watch %d blit %d in", lit, blit);
+  }
+
+  void watch_clause (Clause * c) {
+    assert (c->size > 1);
+    int l0 = c->literals[0], l1 = c->literals[1];
+    watch_literal (l0, l1, c);
+    watch_literal (l1, l0, c);
+  }
+
+  size_t bytes_clause (int size);
+  Clause * new_clause (bool red, int glue = 0);
+  size_t delete_clause (Clause *);
+  bool tautological_clause ();
+  void add_new_original_clause ();
+  Clause * new_learned_clause (int glue);
+
+  void learn_empty_clause ();
+  void learn_unit_clause (int lit);
+
+  void assign (int lit, Clause * reason = 0);
+  void unassign (int lit);
+  void backtrack (int target_level = 0);
 
 public:
   

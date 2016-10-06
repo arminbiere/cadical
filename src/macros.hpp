@@ -27,4 +27,6 @@ do { Message::parse_error (solver, file, ##ARGS); } while (0)
 #define SECTION(ARGS...) \
 do { Message::section (solver, ##ARGS); } while (0)
 
+#define UPDATE(EMA_OR_AVG,Y) EMA_OR_AVG.update ((Y), #EMA_OR_AVG)
+
 #endif
