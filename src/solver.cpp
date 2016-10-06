@@ -35,6 +35,31 @@ Solver::Solver ()
   memset (&inc, 0, sizeof limits);
 }
 
+void Solver::init_variables () {
+  const int max_lit = 2*max_var + 1;
+  NEW (vals,        signed char, max_var + 1);
+  NEW (phases,      signed char, max_var + 1);
+  NEW (vars,                Var, max_var + 1);
+  NEW (literal.watches, Watches, max_lit + 1);
+  NEW (literal.binaries,Watches, max_lit + 1);
+  for (int i = 1; i <= max_var; i++) vals[i] = 0;
+  for (int i = 1; i <= max_var; i++) phases[i] = -1;
+  queue.init (this);
+  MSG ("initialized %d variables", max_var);
+  levels.push_back (Level (0));
+}
+
+Solver::~Solver () {
+  delete [] literal.binaries;
+  delete [] literal.watches;
+  delete [] vars;
+  delete [] vals;
+  delete [] phases;
+#ifndef NDEBUG
+  if (solution) delete [] solution;
+#endif
+}
+
 /*------------------------------------------------------------------------*/
 
 int Solver::search () {

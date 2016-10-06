@@ -3,6 +3,8 @@
 
 namespace CaDiCaL {
 
+class Solver;
+
 // VMTF decision queue
 
 struct Queue {
@@ -22,6 +24,8 @@ struct Queue {
     last = v;
     v->next = 0;
   }
+
+  void init (Solver *);
 };
 
 };

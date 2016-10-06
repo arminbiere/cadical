@@ -3,8 +3,14 @@
 
 namespace CaDiCaL {
 
-struct App {
+class Solver;
+
+class App {
   static void usage ();
+  static void check_satisfying_assignment (int (Solver::*)(int));
+  static void print_witness ();
+  static void banner ();
+public:
   static int main (int arg, char ** argv);
 };
 
