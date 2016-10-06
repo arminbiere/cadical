@@ -27,7 +27,11 @@ do { Message::parse_error (solver, file, ##ARGS); } while (0)
 #define SECTION(ARGS...) \
 do { Message::section (solver, ##ARGS); } while (0)
 
-#define UPDATE(EMA_OR_AVG,Y) \
+#define UPDATE_AVG(EMA_OR_AVG,Y) \
 do { avg.EMA_OR_AVG.update (solver, (Y), #EMA_OR_AVG); } while (0)
+
+#define INIT_EMA(E,V) \
+  E = EMA (V); \
+  LOG ("init " #E " EMA target alpha %g", (double) V)
 
 #endif

@@ -37,69 +37,39 @@ Solver::Solver ()
 
 /*------------------------------------------------------------------------*/
 
-void Solver::learn_empty_clause () {
-  assert (!unsat);
-  LOG ("learned empty clause");
-  if (proof) proof->trace_empty_clause ();
-  unsat = true;
-}
-
-void Solver::learn_unit_clause (int lit) {
-  LOG ("learned unit clause %d", lit);
-  if (proof) proof->trace_unit_clause (lit);
-  iterating = true;
-  stats.fixed++;
-}
-
-/*------------------------------------------------------------------------*/
-
-void Solver::assign (int lit, Clause * reason) {
-  int idx = vidx (lit);
-  assert (!vals[idx]);
-  Var & v = vars[idx];
-  if (!(v.level = level)) learn_unit_clause (lit);
-  v.reason = reason;
-  vals[idx] = phases[idx] = sign (lit);
-  assert (val (lit) > 0);
-  v.trail = (int) trail.size ();
-  trail.push_back (lit);
-  LOG (reason, "assign %d", lit);
-}
-
-void Solver::unassign (int lit) {
-  assert (val (lit) > 0);
-  int idx = vidx (lit);
-  vals[idx] = 0;
-  LOG ("unassign %d", lit);
-  Var * v = vars + idx;
-  if (queue.assigned->bumped >= v->bumped) return;
-  queue.assigned = v;
-  LOG ("queue next moved to %d", idx);
-}
-
-void Solver::backtrack (int target_level) {
-  assert (target_level <= level);
-  if (target_level == level) return;
-  LOG ("backtracking to decision level %d", target_level);
-  int decision = levels[target_level + 1].decision, lit;
-  do {
-    unassign (lit = trail.back ());
-    trail.pop_back ();
-  } while (lit != decision);
-  if (trail.size () < next.watches) next.watches = trail.size ();
-  if (trail.size () < next.binaries) next.binaries = trail.size ();
-  levels.resize (target_level + 1);
-  level = target_level;
-}
-
-/*------------------------------------------------------------------------*/
-
-int Solver::next_decision_variable () {
-  int res;
-  while (val (res = queue.assigned - vars))
-    queue.assigned = queue.assigned->prev, stats.searched++;
-  LOG ("next VMTF decision variable %d", res);
+int Solver::search () {
+  int res = 0;
+  START (search);
+  while (!res)
+         if (unsat) res = 20;
+    else if (!propagate ()) analyze ();
+    else if (iterating) iterate ();
+    else if (satisfied ()) res = 10;
+    else if (restarting ()) restart ();
+    else if (reducing ()) reduce ();
+    else decide ();
+  STOP (search);
   return res;
+}
+
+/*------------------------------------------------------------------------*/
+
+void Solver::init_solving () {
+  limits.restart.conflicts = opts.restartint;
+  limits.reduce.conflicts = opts.reduceinit;
+  inc.reduce = opts.reduceinit;
+  inc.unit = opts.emaf1 ? 1.0 / opts.emaf1 : 1e-9;
+  INIT_EMA (avg.glue.fast, opts.emagluefast);
+  INIT_EMA (avg.frequency.unit, opts.emaf1);
+  INIT_EMA (avg.trail, opts.ematrail);
+  limits.blocking = inc.blocking = opts.restartblocklimit;
+}
+
+int Solver::solve () {
+  init_solving ();
+  SECTION ("solving");
+  if (clashing_unit) { learn_empty_clause (); return 20; }
+  else return search ();
 }
 
 };

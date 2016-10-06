@@ -175,8 +175,6 @@ class Solver {
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
 
-  int next_decision_variable ();
-
   void bump_variable (Var * v, int uip);
   void bump_and_clear_seen_variables (int uip);
 
@@ -185,8 +183,7 @@ class Solver {
   void clear_levels ();
   bool analyze_literal (int);
   void analyze ();
-
-  bool satisfied () const { return trail.size () == (size_t) max_var; }
+  void iterate ();
 
   bool restarting ();
   bool blocking_enabled ();
@@ -204,6 +201,14 @@ class Solver {
   void setup_watches ();
   void garbage_collection ();
   void reduce ();
+
+  bool satisfied () const { return trail.size () == (size_t) max_var; }
+  int next_decision_variable ();
+  void decide ();
+
+  int search ();
+  void init_solving ();
+  int solve ();
 
 #ifdef PROFILING
   vector<Timer> timers;

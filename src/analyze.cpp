@@ -4,6 +4,20 @@
 
 namespace CaDiCaL {
 
+void Solver::learn_empty_clause () {
+  assert (!unsat);
+  LOG ("learned empty clause");
+  if (proof) proof->trace_empty_clause ();
+  unsat = true;
+}
+
+void Solver::learn_unit_clause (int lit) {
+  LOG ("learned unit clause %d", lit);
+  if (proof) proof->trace_unit_clause (lit);
+  iterating = true;
+  stats.fixed++;
+}
+
 void Solver::bump_variable (Var * v, int uip) {
   if (!v->next) return;
   if (queue.assigned == v)
@@ -121,10 +135,10 @@ void Solver::analyze () {
     const int size = (int) clause.size ();
     const int glue = (int) seen.levels.size ();
     LOG ("1st UIP clause of size %d and glue %d", size, glue);
-    UPDATE (glue.slow, glue);
-    UPDATE (glue.fast, glue);
-    if (blocking.enabled) UPDATE (glue.blocking, glue);
-    else                  UPDATE (glue.nonblocking, glue);
+    UPDATE_AVG (glue.slow, glue);
+    UPDATE_AVG (glue.fast, glue);
+    if (blocking.enabled) UPDATE_AVG (glue.blocking, glue);
+    else                  UPDATE_AVG (glue.nonblocking, glue);
     if (opts.minimize) minimize_clause ();
     Clause * driving_clause = 0;
     int jump = 0;
@@ -135,9 +149,9 @@ void Solver::analyze () {
     }
     stats.learned.unit += (size == 1);
     stats.learned.binary += (size == 2);
-    UPDATE (frequency.unit, (size == 1) ? inc.unit : 0);
-    UPDATE (jump, jump);
-    UPDATE (trail, trail.size ());
+    UPDATE_AVG (frequency.unit, (size == 1) ? inc.unit : 0);
+    UPDATE_AVG (jump, jump);
+    UPDATE_AVG (trail, trail.size ());
     if (opts.restartblocking &&
         stats.conflicts >= limits.restart.conflicts &&
         blocking_enabled () &&
@@ -154,5 +168,7 @@ void Solver::analyze () {
   conflict = 0;
   STOP (analyze);
 }
+
+void Solver::iterate () { iterating = false; report ('i'); }
 
 };
