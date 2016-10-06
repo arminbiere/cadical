@@ -146,13 +146,12 @@ class Solver {
   void add_new_original_clause ();
 
 #ifdef PROFILING
-
   vector<Timer> timers;
   Profiles profiles;
-
   void start_profiling (double * p);
   void stop_profiling (double * p);
-
+  void update_all_timers (double now);
+  void print_profile (double now) {
 #endif
 
   size_t vector_bytes ();

@@ -13,6 +13,9 @@ Stats::Stats (Solver * s) {
 void Stats::print () {
   Stats & stats = solver->stats;
   double t = solver->seconds ();
+#ifdef PROFILING
+  solver->print_profile (t);
+#endif
   size_t m = solver->max_bytes ();
   SECTION ("statistics");
   MSG ("conflicts:     %15ld   %10.2f    per second",
