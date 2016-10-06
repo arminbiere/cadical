@@ -160,7 +160,7 @@ int App::main (int argc, char ** argv) {
     else if (!(proof = File::write (proof_name)))
       DIE ("can not open and write DRAT proof to '%s'", proof_name);
     MSG ("writing DRAT proof trace to '%s'", proof->name ());
-    solver->proof = new Proof (proof);
+    solver->proof = new Proof (solver, proof);
   } else MSG ("will not generate nor write DRAT proof");
   res = solver->solve ();
   if (proof) delete proof;

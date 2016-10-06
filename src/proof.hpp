@@ -13,8 +13,7 @@ class Proof {
   bool enabled;
   void trace_clause (Clause *, bool add);
 public:
-  Proof (Solver * s) : solver (s), file (0), enabled (false) { }
-  Proof (File * f) :  file (f), enabled (true) { }
+  Proof (Solver * s, File * f) :  solver (s), file (f), enabled (true) { }
   operator bool () const { return enabled; }
   void trace_empty_clause ();
   void trace_unit_clause (int unit);
