@@ -1,6 +1,18 @@
 #include "solver.hpp"
 
+#include <sys/time.h>
+#include <sys/resource.h>
+
 namespace CaDiCaL {
+
+double Solver::seconds () {
+  struct rusage u;
+  double res;
+  if (getrusage (RUSAGE_SELF, &u)) return 0;
+  res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;  // user time
+  res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec; // + system time
+  return res;
+}
 
 void Solver::inc_bytes (size_t bytes) {
   if ((stats.bytes.total.current += bytes) > stats.bytes.total.max)
