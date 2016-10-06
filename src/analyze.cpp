@@ -39,12 +39,6 @@ void Solver::bump_and_clear_seen_variables (int uip) {
   STOP (bump);
 }
 
-struct resolved_earlier {
-  bool operator () (Clause * a, Clause * b) {
-    return a->resolved < b->resolved;
-  }
-};
-
 void Solver::bump_resolved_clauses () {
   START (bump);
   sort (resolved.begin (), resolved.end (), resolved_earlier ());

@@ -25,6 +25,12 @@ struct Clause {
   size_t bytes () const { return bytes (size); }
 };
 
+struct resolved_earlier {
+  bool operator () (Clause * a, Clause * b) {
+    return a->resolved < b->resolved;
+  }
+};
+
 };
 
 #endif

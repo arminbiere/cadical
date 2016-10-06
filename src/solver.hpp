@@ -188,10 +188,22 @@ class Solver {
 
   bool satisfied () const { return trail.size () == (size_t) max_var; }
 
-  bool blocking_enabled ();
   bool restarting ();
+  bool blocking_enabled ();
   int reuse_trail ();
   void restart ();
+
+  bool reducing ();
+  void protect_reasons ();
+  void unprotect_reasons ();
+  int clause_contains_fixed_literal (Clause *);
+  void flush_falsified_literals (Clause *);
+  void mark_satisfied_clauses_as_garbage ();
+  void mark_useless_redundant_clauses_as_garbage ();
+  void flush_watches ();
+  void setup_watches ();
+  void garbage_collection ();
+  void reduce ();
 
 #ifdef PROFILING
   vector<Timer> timers;
