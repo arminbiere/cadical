@@ -179,8 +179,8 @@ int App::main (int argc, char ** argv) {
   }
   handler.reset ();
   solver->stats.print ();
-  delete solver;
   MSG ("exit %d", res);
+  delete solver;
   return res;
 }
 

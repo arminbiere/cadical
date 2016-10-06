@@ -50,6 +50,8 @@ void Solver::init_variables () {
 }
 
 Solver::~Solver () {
+  for (size_t i = 0; i < clauses.size (); i++)
+    delete_clause (clauses[i]);
   if (proof) delete proof;
   delete [] literal.binaries;
   delete [] literal.watches;
