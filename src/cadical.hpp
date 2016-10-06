@@ -154,8 +154,11 @@ class Solver {
 
 #endif
 
+  size_t vector_bytes ();
   void inc_bytes (size_t);
   void dec_bytes (size_t);
+
+  int active_variables () { return max_var - stats.fixed; }
 
 public:
   
@@ -180,6 +183,7 @@ public:
 
   double seconds ();
   size_t max_bytes ();
+  size_t current_bytes ();
 };
 
 };
