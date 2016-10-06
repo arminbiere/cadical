@@ -36,12 +36,6 @@ namespace CaDiCaL {
 
 class Solver {
   
-  friend class Parser;
-  friend struct Logger;
-  friend struct Message;
-  friend struct Stats;
-  friend struct Signal;
-
   int max_var;
   int num_original_clauses;
   vector<int> original_literals;
@@ -175,10 +169,9 @@ class Solver {
   void assign (int lit, Clause * reason = 0);
   void unassign (int lit);
   void backtrack (int target_level = 0);
-
   bool propagate ();
-
   bool minimize_literal (int lit, int depth = 0);
+  void minimize_clause ();
 
 #ifdef PROFILING
   vector<Timer> timers;
@@ -204,9 +197,18 @@ class Solver {
 
   Solver * solver;		// proxy to 'this' in macros
 
+  friend class Parser;
+  friend struct Logger;
+  friend struct Message;
+  friend struct Stats;
+  friend struct Signal;
+
+  friend struct trail_smaller_than;
+
 public:
   
   Solver ();
+  ~Solver ();
 
   // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
 
