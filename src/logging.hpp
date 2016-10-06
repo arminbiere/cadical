@@ -16,9 +16,9 @@ class Solver;
 
 struct Logger {
 
-static void log (Solver &, const char * fmt, ...);
-static void log (Solver &, Clause *, const char *fmt, ...);
-static void log (Solver &, const vector<int> &, const char *fmt, ...);
+static void log (Solver *, const char * fmt, ...);
+static void log (Solver *, Clause *, const char *fmt, ...);
+static void log (Solver *, const vector<int> &, const char *fmt, ...);
 
 };
 

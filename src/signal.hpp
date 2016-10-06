@@ -7,12 +7,12 @@ class Solver;
 
 class Signal {
   static bool catchedsig;
-  static Solver * global_solver;
+  static Solver * solver;
   static const char * name (int sig);
   static void catchsig (int sig);
 public:
   static void reset ();
-  static void init (Solver &);
+  static void init (Solver *);
 };
 
 };

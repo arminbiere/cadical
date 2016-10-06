@@ -32,7 +32,7 @@ namespace CaDiCaL {
 class Solver;
 
 class Options {
-  Solver & solver;
+  Solver * solver;
   bool set (bool &, const char *, const char *, const bool, const bool);
   bool set (int &, const char *, const char *, const int, const int);
   bool set (double &, const char *, const char *, const double, const double);
@@ -42,7 +42,7 @@ public:
   T N;
   OPTIONS
 #undef OPTION
-  Options (Solver &);
+  Options (Solver *);
   bool set (const char *);	// of the form "--<opt>=<val>"
   void print ();
   static void usage ();

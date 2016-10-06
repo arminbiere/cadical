@@ -6,7 +6,7 @@
 
 namespace CaDiCaL {
 
-Options::Options (Solver & s) : solver (s) {
+Options::Options (Solver * s) : solver (s) {
 #define OPTION(N,T,V,L,H,D) \
   N = (T) (V);
   OPTIONS

@@ -1,11 +1,16 @@
 #ifndef _stats_hpp_INCLUDED
 #define _stats_hpp_INCLUDED
 
+#include <cstdlib>
+
 namespace CaDiCaL {
 
 class Solver;
 
 struct Stats {
+
+  Solver * solver;
+
   long conflicts;
   long decisions;
   long propagations;            // propagated literals in 'propagate'
@@ -36,8 +41,8 @@ struct Stats {
 
   int fixed;                    // top level assigned variables
 
-  Stats ();
-  void print (Solver &);
+  Stats (Solver *);
+  void print ();
 };
 
 };

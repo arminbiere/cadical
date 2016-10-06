@@ -49,8 +49,8 @@ int Parser::parse_lit (int ch, int & lit) {
   if (ch == '\r') ch = parse_char ();
   if (ch != 'c' && ch != ' ' && ch != '\t' && ch != '\n')
     PER ("expected white space after '%d'", sign*lit);
-  if (lit > solver.max_var)
-    PER ("literal %d exceeds maximum variable %d", sign*lit, solver.max_var);
+  if (lit > solver->max_var)
+    PER ("literal %d exceeds maximum variable %d", sign*lit, solver->max_var);
   lit *= sign;
   return ch;
 }
@@ -68,17 +68,17 @@ void Parser::parse_dimacs () {
   if (ch != 'p') PER ("expected 'c' or 'p'");
   parse_string (" cnf ", 'p');
   if (!isdigit (ch = parse_char ())) PER ("expected digit after 'p cnf '");
-  ch = parse_positive_int (ch, solver.max_var, "<max-var>");
-  if (ch != ' ') PER ("expected ' ' after 'p cnf %d'", solver.max_var);
+  ch = parse_positive_int (ch, solver->max_var, "<max-var>");
+  if (ch != ' ') PER ("expected ' ' after 'p cnf %d'", solver->max_var);
   if (!isdigit (ch = parse_char ()))
-    PER ("expected digit after 'p cnf %d '", solver.max_var);
-  ch = parse_positive_int (ch, solver.num_original_clauses, "<num-clauses>");
+    PER ("expected digit after 'p cnf %d '", solver->max_var);
+  ch = parse_positive_int (ch, solver->num_original_clauses, "<num-clauses>");
   while (ch == ' ' || ch == '\r') ch = parse_char ();
   if (ch != '\n')
     PER ("expected new-line after 'p cnf %d %d'",
-      solver.max_var, solver.num_original_clauses);
-  MSG ("found 'p cnf %d %d' header", solver.max_var, solver.num_original_clauses);
-  solver.init_variables ();
+      solver->max_var, solver->num_original_clauses);
+  MSG ("found 'p cnf %d %d' header", solver->max_var, solver->num_original_clauses);
+  solver->init_variables ();
   int lit = 0, parsed_clauses = 0;
   while ((ch = parse_char ()) != EOF) {
     if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r') continue;
@@ -90,29 +90,29 @@ COMMENT:
     }
     if (parse_lit (ch, lit) == 'c') goto COMMENT;
 #ifndef NDEBUG
-    solver.original_literals.push_back (lit);
+    solver->original_literals.push_back (lit);
 #endif
     if (lit) {
-      if (solver.clause.size () == INT_MAX) PER ("clause too large");
-      solver.clause.push_back (lit);
+      if (solver->clause.size () == INT_MAX) PER ("clause too large");
+      solver->clause.push_back (lit);
     } else {
-      if (!solver.tautological ()) solver.add_new_original_clause ();
+      if (!solver->tautological ()) solver->add_new_original_clause ();
       else LOG ("tautological original clause");
-      solver.clause.clear ();
-      if (parsed_clauses++ >= solver.num_original_clauses)
+      solver->clause.clear ();
+      if (parsed_clauses++ >= solver->num_original_clauses)
 	PER ("too many clauses");
     }
   }
   if (lit) PER ("last clause without '0'");
-  if (parsed_clauses < solver.num_original_clauses) PER ("clause missing");
-  MSG ("parsed %d clauses in %.2f seconds", parsed_clauses, solver.seconds ());
+  if (parsed_clauses < solver->num_original_clauses) PER ("clause missing");
+  MSG ("parsed %d clauses in %.2f seconds", parsed_clauses, solver->seconds ());
   STOP (parse);
 }
 
 void Parser::parse_solution () {
   START (parse);
-  NEW (solver.solution, signed char, solver.max_var + 1);
-  for (int i = 1; i <= solver.max_var; i++) solver.solution[i] = 0;
+  NEW (solver->solution, signed char, solver->max_var + 1);
+  for (int i = 1; i <= solver->max_var; i++) solver->solution[i] = 0;
   int ch;
   for (;;) {
     ch = parse_char ();
@@ -138,17 +138,17 @@ void Parser::parse_solution () {
       if (ch == ' ' || ch == '\t') { ch = parse_char (); continue; }
       if ((ch = parse_lit (ch, lit)) == 'c') PER ("unexpected comment");
       if (!lit) break;
-      if (solver.solution[abs (lit)])
+      if (solver->solution[abs (lit)])
 	PER ("variable %d occurs twice", abs (lit));
       LOG ("solution %d", lit);
-      solver.solution [abs (lit)] = sign (lit);
+      solver->solution [abs (lit)] = sign (lit);
       count++;
       if (ch == '\r') ch = parse_char ();
     } while (ch != '\n');
     if (!lit) break;
   }
   MSG ("parsed %d solutions %.2f%%",
-    count, percent (count, solver.max_var));
+    count, percent (count, solver->max_var));
   STOP (parse);
 }
 

@@ -23,7 +23,7 @@ struct EMA {
     assert (0 <= alpha), assert (alpha <= beta), assert (beta <= 1);
   }
   operator double () const { return value; }
-  void update (Solver &, double y, const char * name);
+  void update (Solver *, double y, const char * name);
 };
 
 };

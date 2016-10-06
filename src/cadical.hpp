@@ -25,6 +25,7 @@ using namespace std;
 #include "stats.hpp"
 #include "util.hpp"
 #include "signal.hpp"
+#include "queue.hpp"
 
 namespace CaDiCaL {
 
@@ -36,23 +37,17 @@ class Solver {
   friend struct Stats;
   friend struct Signal;
 
-  Options opts;
   int max_var;
   int num_original_clauses;
   vector<int> original_literals;
   Var * vars;
   signed char * vals;
   signed char * phases;
-  Watches * watches;		// watches of long clauses
-  Watches * binaries;		// watches of binary clauses
-
-  // VMTF decision queue
-
   struct {
-    int first, last;    // anchors (head/tail) for doubly linked list
-    int assigned;       // all variables after this one are assigned
-  } queue;
-
+    Watches * watches;		// watches of long clauses
+    Watches * binaries;		// watches of binary clauses
+  } literal;
+  Queue queue;
   bool unsat;           // empty clause found or learned
   int level;            // decision level (levels.size () - 1)
   vector<Level> levels; // 'level + 1 == levels.size ()'
@@ -76,8 +71,6 @@ class Solver {
   vector<Clause*> resolved; // large clauses in 'analyze'
   Clause * conflict;        // set in 'propagation', reset in 'analyze'
   bool clashing_unit;       // set in 'parse_dimacs'
-
-  Stats stats;
 
   // Averages to control which clauses are collected in 'reduce' and when to
   // force and delay 'restart' respectively.  Most of them are exponential
@@ -119,6 +112,9 @@ class Solver {
 
   Proof * proof;
 
+  Options opts;
+  Stats stats;
+
   /*------------------------------------------------------------------------*/
 
   // In essence 'abs' but also checks whether 'lit' is a valid literal.
@@ -139,14 +135,6 @@ class Solver {
     return (lit < 0) + 2u * (unsigned) vidx (lit);
   }
 
-  Watches & watches (int lit) {
-    return literal.watches[vlit (lit)];
-  }
-
-  Watches & binaries (int lit) {
-    return literal.binaries[vlit (lit)];
-  }
-
   Var & var (int lit) { return vars [vidx (lit)]; }
 
   void init_variables ();
@@ -160,8 +148,8 @@ class Solver {
   void start_profiling (double * p);
   void stop_profiling (double * p);
 
-#define START(P) solver.start_profiling (&solver.profiles.P)
-#define STOP(P) solver.stop_profiling (&solver.profiles.P)
+#define START(P) solver->start_profiling (&solver->profiles.P)
+#define STOP(P) solver->stop_profiling (&solver->profiles.P)
 
 #else
 
@@ -171,7 +159,7 @@ class Solver {
 #endif
 
 #define NEW(P,T,N) \
-  do { (P) = new T[N], solver.inc_bytes ((N) * sizeof (T)); } while (0)
+  do { (P) = new T[N], solver->inc_bytes ((N) * sizeof (T)); } while (0)
 
   void inc_bytes (size_t);
   void dec_bytes (size_t);

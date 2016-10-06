@@ -10,7 +10,7 @@ struct AVG {
   long count;
   AVG () : value (0), count (0) { }
   operator double () const { return value; }
-  void update (Solver &, double y, const char * name);
+  void update (Solver *, double y, const char * name);
 };
 
 };

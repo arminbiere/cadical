@@ -5,12 +5,15 @@
 
 namespace CaDiCaL {
 
-Stats::Stats () { memset (this, 0, sizeof *this); }
+Stats::Stats (Solver * s) {
+  memset (this, 0, sizeof *this);
+  solver = s;
+}
 
-void Stats::print (Solver & solver) {
-  Stats & stats = solver.stats;
-  double t = solver.seconds ();
-  size_t m = solver.max_bytes ();
+void Stats::print () {
+  Stats & stats = solver->stats;
+  double t = solver->seconds ();
+  size_t m = solver->max_bytes ();
   SECTION ("statistics");
   MSG ("conflicts:     %15ld   %10.2f    per second",
     stats.conflicts, relative (stats.conflicts, t));
