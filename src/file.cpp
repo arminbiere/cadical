@@ -66,10 +66,4 @@ File::~File () {
   if (close_file == 2) pclose (file);
 }
 
-void File::put (int i) {
-  char buf[20];
-  sprintf (buf, "%d", i);
-  put (buf);
-}
-
 };

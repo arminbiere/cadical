@@ -27,6 +27,7 @@ using namespace std;
 #include "util.hpp"
 #include "signal.hpp"
 #include "queue.hpp"
+#include "report.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -159,6 +160,8 @@ class Solver {
   void dec_bytes (size_t);
 
   int active_variables () { return max_var - stats.fixed; }
+
+  void report (char type, bool verbose = false);
 
 public:
   

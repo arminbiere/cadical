@@ -32,9 +32,23 @@ public:
     return res;
   }
 
-  void put (char c) { assert (writing); (void) putc (c, file); }
-  void put (const char * s) { assert (writing); (void) fputs (s, file); }
-  void put (int);
+  static void print (char ch, FILE * file = stdout) {
+    fputc_unlocked (ch, file);
+  }
+
+  static void print (const char * s, FILE * file = stdout) {
+    fputs_unlocked (s, file);
+  }
+
+  static void print (int lit, FILE * file = stdout) {
+    char buffer[20];
+    sprintf (buffer, "%d", lit);	// TODO faster?
+    print (buffer, file);
+  }
+
+  void put (char c) { assert (writing); print (c, file); }
+  void put (const char * s) { assert (writing); print (s, file); }
+  void put (int lit) { assert (writing); print (lit, file); }
 
   const char * name () const { return _name; }
   long lineno () const { return _lineno; }
