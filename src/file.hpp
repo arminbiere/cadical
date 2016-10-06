@@ -17,10 +17,10 @@ struct File {
 
 public:
 
-  static File * read (FILE * f, const char * n);
+  static File * read (FILE * f, const char * name);
   static File * read (const char * path);
 
-  static File * write (FILE *, const char *);
+  static File * write (FILE *, const char * name);
   static File * write (const char * path);
 
   ~File ();

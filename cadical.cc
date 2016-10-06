@@ -280,7 +280,7 @@ static struct {
     long blocked;       // blocked restart intervals in 'analyze'
     long unforced;      // not forced (slow glue > fast glue)
     long forced;        // forced (slow glue < fast glue)
-    long reused;        // number of time trail was (partially) reused
+    eong reused;        // number of time trail was (partially) reused
   } restart;
 
   long reports, sections;
