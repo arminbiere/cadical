@@ -144,4 +144,50 @@ void Solver::minimize_clause () {
 #endif
 }
 
+/*------------------------------------------------------------------------*/
+
+int Solver::next_decision_variable () {
+  int res;
+  while (val (res = queue.assigned - vars))
+    queue.assigned = queue.assigned->prev, stats.searched++;
+  LOG ("next VMTF decision variable %d", res);
+  return res;
+}
+
+void Solver::bump_variable (Var * v, int uip) {
+  if (!v->next) return;
+  if (queue.assigned == v)
+    queue.assigned = v->prev ? v->prev : v->next;
+  queue.dequeue (v), queue.enqueue (v);
+  v->bumped = ++stats.bumped;
+  int idx = v - vars;
+  if (idx != uip && !vals[idx]) queue.assigned = v;
+  LOG ("VMTF bumped and moved to front %d", idx);
+}
+
+struct bump_earlier {
+  Solver * solver;
+  bump_earlier (Solver * s) : solver (s) { }
+  bool operator () (int a, int b) {
+    Var & u = solver->var (a), & v = solver->var (b);
+    return u.bumped + u.trail < v.bumped + v.trail;
+  }
+};
+
+void Solver::bump_and_clear_seen_variables (int uip) {
+  START (bump);
+  sort (seen.literals.begin (), seen.literals.end (), bump_earlier (this));
+  if (uip < 0) uip = -uip;
+  for (size_t i = 0; i < seen.literals.size (); i++) {
+    int idx = vidx (seen.literals[i]);
+    Var * v = vars + idx;
+    assert (v->seen);
+    v->seen = false;
+    bump_variable (v, uip);
+  }
+  seen.literals.clear ();
+  STOP (bump);
+}
+
+
 };

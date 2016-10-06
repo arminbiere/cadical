@@ -169,9 +169,15 @@ class Solver {
   void assign (int lit, Clause * reason = 0);
   void unassign (int lit);
   void backtrack (int target_level = 0);
+
   bool propagate ();
+
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
+
+  int next_decision_variable ();
+  void bump_variable (Var * v, int uip);
+  void bump_and_clear_seen_variables (int uip);
 
 #ifdef PROFILING
   vector<Timer> timers;
@@ -204,6 +210,7 @@ class Solver {
   friend struct Signal;
 
   friend struct trail_smaller_than;
+  friend struct bump_earlier;
 
 public:
   
