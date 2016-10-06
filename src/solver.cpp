@@ -94,58 +94,6 @@ void Solver::backtrack (int target_level) {
 
 /*------------------------------------------------------------------------*/
 
-bool Solver::minimize_literal (int lit, int depth) {
-  Var & v = var (lit);
-  if (!v.level || v.removable || (depth && v.seen)) return true;
-  if (!v.reason || v.poison || v.level == level) return false;
-  const Level & l = levels[v.level];
-  if ((!depth && l.seen < 2) || v.trail <= l.trail) return false;
-  if (depth > opts.minimizedepth) return false;
-  const int size = v.reason->size, * lits = v.reason->literals;
-  bool res = true;
-  for (int i = 0, other; res && i < size; i++)
-    if ((other = lits[i]) != lit)
-      res = minimize_literal (-other, depth+1);
-  if (res) v.removable = true; else v.poison = true;
-  seen.minimized.push_back (lit);
-  if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
-  return res;
-}
-
-struct trail_smaller_than {
-  Solver * solver;
-  trail_smaller_than (Solver * s) : solver (s) { }
-  bool operator () (int a, int b) {
-    return solver->var (a).trail < solver->var (b).trail;
-  }
-};
-
-void Solver::minimize_clause () {
-  if (!opts.minimize) return;
-  START (minimize);
-  sort (clause.begin (), clause.end (), trail_smaller_than (this));
-  LOG (clause, "minimizing first UIP clause");
-  assert (seen.minimized.empty ());
-  stats.literals.learned += clause.size ();
-  size_t j = 0;
-  for (size_t i = 0; i < clause.size (); i++)
-    if (minimize_literal (-clause[i])) stats.literals.minimized++;
-    else clause[j++] = clause[i];
-  LOG ("minimized %d literals", clause.size () - j);
-  clause.resize (j);
-  for (size_t i = 0; i < seen.minimized.size (); i++) {
-    Var & v = var (seen.minimized[i]);
-    v.removable = v.poison = false;
-  }
-  seen.minimized.clear ();
-  STOP (minimize);
-#ifndef NDEBUG
-  check_clause ();
-#endif
-}
-
-/*------------------------------------------------------------------------*/
-
 int Solver::next_decision_variable () {
   int res;
   while (val (res = queue.assigned - vars))
@@ -153,41 +101,5 @@ int Solver::next_decision_variable () {
   LOG ("next VMTF decision variable %d", res);
   return res;
 }
-
-void Solver::bump_variable (Var * v, int uip) {
-  if (!v->next) return;
-  if (queue.assigned == v)
-    queue.assigned = v->prev ? v->prev : v->next;
-  queue.dequeue (v), queue.enqueue (v);
-  v->bumped = ++stats.bumped;
-  int idx = v - vars;
-  if (idx != uip && !vals[idx]) queue.assigned = v;
-  LOG ("VMTF bumped and moved to front %d", idx);
-}
-
-struct bump_earlier {
-  Solver * solver;
-  bump_earlier (Solver * s) : solver (s) { }
-  bool operator () (int a, int b) {
-    Var & u = solver->var (a), & v = solver->var (b);
-    return u.bumped + u.trail < v.bumped + v.trail;
-  }
-};
-
-void Solver::bump_and_clear_seen_variables (int uip) {
-  START (bump);
-  sort (seen.literals.begin (), seen.literals.end (), bump_earlier (this));
-  if (uip < 0) uip = -uip;
-  for (size_t i = 0; i < seen.literals.size (); i++) {
-    int idx = vidx (seen.literals[i]);
-    Var * v = vars + idx;
-    assert (v->seen);
-    v->seen = false;
-    bump_variable (v, uip);
-  }
-  seen.literals.clear ();
-  STOP (bump);
-}
-
 
 };

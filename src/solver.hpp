@@ -116,7 +116,7 @@ class Solver {
   void inc_bytes (size_t);
   void dec_bytes (size_t);
 
-  int active_variables () { return max_var - stats.fixed; }
+  int active_variables () const { return max_var - stats.fixed; }
 
   void report (char type, bool verbose = false);
 
@@ -176,8 +176,19 @@ class Solver {
   void minimize_clause ();
 
   int next_decision_variable ();
+
   void bump_variable (Var * v, int uip);
   void bump_and_clear_seen_variables (int uip);
+
+  void bump_resolved_clauses ();
+  void resolve_clause (Clause *);
+  void clear_levels ();
+  bool analyze_literal (int);
+  void analyze ();
+
+  bool satisfied () const { return trail.size () == (size_t) max_var; }
+
+  bool blocking_enabled ();
 
 #ifdef PROFILING
   vector<Timer> timers;
@@ -210,6 +221,7 @@ class Solver {
   friend struct Signal;
 
   friend struct trail_smaller_than;
+  friend struct trail_greater_than;
   friend struct bump_earlier;
 
 public:
