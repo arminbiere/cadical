@@ -32,7 +32,7 @@ Solver::Solver ()
   blocking.enabled = false;
   blocking.exploring = false;
   memset (&limits, 0, sizeof limits);
-  memset (&inc, 0, sizeof limits);
+  memset (&inc, 0, sizeof inc);
 }
 
 void Solver::init_variables () {
@@ -50,6 +50,7 @@ void Solver::init_variables () {
 }
 
 Solver::~Solver () {
+  if (proof) delete proof;
   delete [] literal.binaries;
   delete [] literal.watches;
   delete [] vars;
