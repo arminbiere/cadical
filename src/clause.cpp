@@ -4,6 +4,13 @@
 
 namespace CaDiCaL {
 
+void Solver::watch_clause (Clause * c) {
+  assert (c->size > 1);
+  int l0 = c->literals[0], l1 = c->literals[1];
+  watch_literal (l0, l1, c);
+  watch_literal (l1, l0, c);
+}
+
 size_t Solver::bytes_clause (int size) {
   return sizeof (Clause) + (size - 2) * sizeof (int);
 }

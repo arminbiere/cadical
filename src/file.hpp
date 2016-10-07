@@ -6,6 +6,11 @@
 
 namespace CaDiCaL {
 
+// Wraps a 'C' file 'FILE' with name and supports zipped
+// reading through 'popen' (using external helper tools).
+// Reading has a line number counter as well.  Note that
+// zipped writing is not supported yet.
+
 struct File {
   bool writing;
   int close_file;
@@ -25,9 +30,13 @@ public:
 
   ~File ();
 
+  // Using the 'unlocked' versions here is way faster but
+  // not thread safe if the same file is used by different
+  // threads, which on the other hand currently is impossible.
+
   int get () {
     assert (!writing);
-    int res = getc (file);
+    int res = getc_unlocked (file);
     if (res == '\n') _lineno++;
     return res;
   }
@@ -41,7 +50,7 @@ public:
   }
 
   static void print (int lit, FILE * file = stdout) {
-    char buffer[20];
+    char buffer[16];
     sprintf (buffer, "%d", lit);	// TODO faster?
     print (buffer, file);
   }

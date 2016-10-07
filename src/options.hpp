@@ -3,9 +3,9 @@
 
 #define OPTIONS \
 /*  NAME,                TYPE, VAL,LOW,HIGH,DESCRIPTION */ \
-OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
+OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
 OPTION(ematrail,       double,1e-5, 0,  1, "alpha trail") \
 OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
@@ -16,11 +16,11 @@ OPTION(quiet,            bool,   0, 0,  1, "disable all messages") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,        int,2000, 0,1e9, "initial reduce limit") \
-OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartblock,   double, 1.4, 0, 10, "restart blocking factor (R)") \
 OPTION(restartblocking,  bool,   1, 0,  1, "enable restart blocking") \
 OPTION(restartblocklimit, int, 1e4, 0,1e9, "restart blocking limit") \
 OPTION(restartblockmargin,double,1.2,0,10, "restart blocking margin") \
+OPTION(restart,          bool,   1, 0,  1, "enable restarting") \
 OPTION(restartemaf1,     bool,   1, 0,  1, "unit frequency based restart") \
 OPTION(restartint,        int,  10, 1,1e9, "restart base interval") \
 OPTION(restartmargin,  double, 1.1, 0, 10, "restart slow fast margin (1/K)") \

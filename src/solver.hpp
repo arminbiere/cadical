@@ -36,18 +36,17 @@ namespace CaDiCaL {
 
 class Solver {
   
-  int max_var;
+  int max_var;			// maximum variable index
   int num_original_clauses;
-  vector<int> original_literals;
   Var * vars;
-  signed char * vals;
-  signed char * phases;
+  signed char * vals;		// current partial assignment
+  signed char * phases;		// last assignment
   struct {
     Watches * watches;		// watches of long clauses
     Watches * binaries;		// watches of binary clauses
   } literal;
-  Queue queue;
-  bool unsat;           // empty clause found or learned
+  Queue queue;		// variable move to front (VMTF) decision queue
+  bool unsat;           // remember if empty clause found or learned
   int level;            // decision level (levels.size () - 1)
   vector<Level> levels; // 'level + 1 == levels.size ()'
   vector<int> trail;    // assigned literals
@@ -74,7 +73,7 @@ class Solver {
   // Averages to control which clauses are collected in 'reduce' and when to
   // force and delay 'restart' respectively.  Most of them are exponential
   // moving average, but for the slow glue we use an actual average.
-
+  //
   struct {
     struct { EMA unit; } frequency;
     struct { EMA fast; AVG slow, blocking, nonblocking; } glue;
@@ -82,44 +81,47 @@ class Solver {
     AVG jump;
   } avg;
 
+  // We try to learn whether it is better to block restarts or not.
+  //
   struct { bool enabled, exploring; } blocking;
 
-  // Limits for next restart, reduce.
-
+  // Limits for next restart, reduce and blocking restarts;
+  //
   struct {
     struct { long conflicts, resolved; int fixed; } reduce;
     struct { long conflicts; } restart;
     long blocking;
   } limits;
 
-  // Increments for next restart, reduce interval.
-
+  // Increments for next reduce interval and blocking restarts.
+  //
   struct {
     long reduce, blocking;
     double unit;
   } inc;
 
-#ifndef NDEBUG
-
-#endif
-
-  Proof * proof;
-
+  Proof * proof;	// trace clausal proof if non zero
   Options opts;
   Stats stats;
 
   /*------------------------------------------------------------------------*/
 
-  void init_variables ();
+  void init_variables ();	// Currently called in DIMACS parser.
 
+  // Functions for monitoring memory usage.
+  //
   size_t vector_bytes ();
   void inc_bytes (size_t);
   void dec_bytes (size_t);
 
   int active_variables () const { return max_var - stats.fixed; }
 
+  // Regularly reports what is going on in 'report.cpp'.
+  //
   void report (char type, bool verbose = false);
 
+  // Unsigned literals (abs) with checks.
+  //
   int vidx (int lit) {
     int idx;
     assert (lit), assert (lit != INT_MIN);
@@ -131,31 +133,31 @@ class Solver {
   // Unsigned version with LSB denoting sign.  This is used in indexing arrays
   // by literals.  The idea is to keep the elements in such an array for both
   // the positive and negated version of a literal close together.
-
+  //
   unsigned vlit (int lit) {
     return (lit < 0) + 2u * (unsigned) vidx (lit);
   }
 
+  // Helper function to access variables and watches to avoid index bugs.
+  //
   Var & var (int lit) { return vars [vidx (lit)]; }
   Watches & watches (int lit) { return literal.watches[vlit (lit)]; }
   Watches & binaries (int lit) { return literal.binaries[vlit (lit)]; }
 
+  // Watch a literal 'lit' in a clause with blocking literal 'blit'.
+  // This function is (inlined) here, since it occurs in the inner
+  // loop of 'propagate'.
+  //
   void watch_literal (int lit, int blit, Clause * c) {
     Watches & ws = c->size == 2 ? binaries (lit) : watches (lit);
     ws.push_back (Watch (blit, c));
-#ifdef LOGGING
-    Solver * solver = this;
     LOG (c, "watch %d blit %d in", lit, blit);
-#endif
   }
 
-  void watch_clause (Clause * c) {
-    assert (c->size > 1);
-    int l0 = c->literals[0], l1 = c->literals[1];
-    watch_literal (l0, l1, c);
-    watch_literal (l1, l0, c);
-  }
-
+  // Managing clauses in 'clause.cpp'.  Without explicit 'Clause' argument
+  // these functions work on the global temporary 'clause'.
+  //
+  void watch_clause (Clause *);
   size_t bytes_clause (int size);
   Clause * new_clause (bool red, int glue = 0);
   size_t delete_clause (Clause *);
@@ -163,12 +165,18 @@ class Solver {
   void add_new_original_clause ();
   Clause * new_learned_clause (int glue);
 
+  // Forward reasoning through propagation in 'propagate.cpp'.
+  //
   void assign (int lit, Clause * reason = 0);
   bool propagate ();
 
+  // Undo and restart in 'backtrack.cpp'.
+  //
   void unassign (int lit);
   void backtrack (int target_level = 0);
 
+  // Learning from conflicts in 'analyze.cc'.
+  //
   void learn_empty_clause ();
   void learn_unit_clause (int lit);
   bool minimize_literal (int lit, int depth = 0);
@@ -180,13 +188,17 @@ class Solver {
   void clear_levels ();
   bool analyze_literal (int);
   void analyze ();
-  void iterate ();
+  void iterate ();       // for reporting learned unit clause
 
+  // Restarting policy in 'restart.cc'.
+  //
   bool restarting ();
   bool blocking_enabled ();
   int reuse_trail ();
   void restart ();
 
+  // Reducing means garbage collecing useless clauses in 'reduce.cpp'.
+  //
   bool reducing ();
   void protect_reasons ();
   void unprotect_reasons ();
@@ -199,14 +211,20 @@ class Solver {
   void garbage_collection ();
   void reduce ();
 
+  // Part on picking the next decision in 'decide.cpp'.
+  //
   bool satisfied () const { return trail.size () == (size_t) max_var; }
   int next_decision_variable ();
   void decide ();
 
-  int search ();
+  // Main search functions in 'solver.cpp'.
+  //
+  int search ();		// CDCL loop
   void init_solving ();
   int solve ();
 
+  // Built in profiling in 'profile.cpp'.
+  //
   Profiles profiles;
   vector<Timer> timers;
   void start_profiling (Profile * p);
@@ -227,7 +245,14 @@ class Solver {
   void check_clause ();
 #endif
 
-  Solver * solver;		// proxy to 'this' in macros
+#ifndef NDEBUG
+  // This is for checking and debugging the other case, where a solver claims
+  // the formula to be satisfiable, but the original formulas was not.  Then
+  // the generated witness will falsify at least one original clause.
+  vector<int> original_literals;
+#endif
+
+  Solver * solver;		// proxy to 'this' in macros (redundant)
 
   friend class Parser;
   friend struct Logger;
@@ -247,7 +272,7 @@ public:
   ~Solver ();
 
   // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
-
+  //
   int val (int lit) {
     int idx = vidx (lit), res = vals[idx];
     if (lit < 0) res = -res;
@@ -255,7 +280,7 @@ public:
   }
 
   // As 'val' but restricted to the root-level value of a literal.
-
+  //
   int fixed (int lit) {
     int idx = vidx (lit), res = vals[idx];
     if (res && vars[idx].level) res = 0;
