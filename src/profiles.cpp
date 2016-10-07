@@ -4,6 +4,16 @@
 
 namespace CaDiCaL {
 
+Profiles::Profiles (Solver * s)
+:
+  solver (s)
+#define PROFILE(NAME, LEVEL) \
+  , NAME (#NAME, LEVEL)
+  PROFILES
+#undef PROFILE
+{
+}
+
 void Solver::start_profiling (double * p) {
   timers.push_back (Timer (seconds (), p));
 }
@@ -21,15 +31,13 @@ void Solver::update_all_timers (double now) {
     timers[i].update (now);
 }
 
-#define solver this
-
 void Solver::print_profile (double now) {
   update_all_timers (now);
   SECTION ("run-time profiling data");
   const size_t size = sizeof profiles / sizeof (double);
   struct { double value; const char * name; } profs[size];
   size_t i = 0;
-#define PROFILE(NAME) \
+#define PROFILE(NAME,LEVEL) \
   profs[i].value = profiles.NAME; \
   profs[i].name = # NAME; \
   i++;
