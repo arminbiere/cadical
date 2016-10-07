@@ -1,6 +1,9 @@
-
 #ifndef _macros_hpp_INCLUDED
 #define _macros_hpp_INCLUDED
+
+// Central file for keeping (most) macros.
+
+/*------------------------------------------------------------------------*/
 
 #define START(P) \
 do { \
@@ -14,8 +17,12 @@ do { \
   solver->stop_profiling (&solver->profiles.P); \
 } while (0)
 
+/*------------------------------------------------------------------------*/
+
 #define NEW(P,T,N) \
   do { (P) = new T[N], solver->inc_bytes ((N) * sizeof (T)); } while (0)
+
+/*------------------------------------------------------------------------*/
 
 #define MSG(ARGS...) \
 do { Message::print (solver, 0, ##ARGS); } while (0)
@@ -31,6 +38,8 @@ do { Message::parse_error (solver, file, ##ARGS); } while (0)
 
 #define SECTION(ARGS...) \
 do { Message::section (solver, ##ARGS); } while (0)
+
+/*------------------------------------------------------------------------*/
 
 #define UPDATE_AVG(EMA_OR_AVG,Y) \
 do { avg.EMA_OR_AVG.update (solver, (Y), #EMA_OR_AVG); } while (0)

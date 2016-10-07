@@ -18,7 +18,7 @@ public:
   Parser (Solver * s, File * f) : solver (s), file (f) { }
   void parse_dimacs ();
 #ifndef NDEBUG
-  void parse_solution ();
+  void parse_solution ();	// see comments to 'Solver.solution'.
 #endif
 };
 

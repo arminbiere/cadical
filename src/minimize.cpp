@@ -4,6 +4,8 @@
 
 namespace CaDiCaL {
 
+// Functions for learned clause minimization.
+
 bool Solver::minimize_literal (int lit, int depth) {
   Var & v = var (lit);
   if (!v.level || v.removable || (depth && v.seen)) return true;

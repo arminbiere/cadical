@@ -2,7 +2,7 @@
 #define _options_hpp_INCLUDED
 
 #define OPTIONS \
-/*  NAME,                TYPE, VAL,LOW,HIGH,DESCRIPTION */ \
+/*     NAME              TYPE, VAL,LO, HI, USAGE */ \
 OPTION(emaf1,          double,1e-3, 0,  1, "alpha learned unit frequency") \
 OPTION(emaf1lim,       double,   1, 0,100, "alpha unit frequency limit") \
 OPTION(emagluefast,    double,4e-2, 0,  1, "alpha fast learned glue") \
@@ -33,20 +33,29 @@ namespace CaDiCaL {
 class Solver;
 
 class Options {
+
   Solver * solver;
+
   bool set (bool &, const char *, const char *, const bool, const bool);
   bool set (int &, const char *, const char *, const int, const int);
   bool set (double &, const char *, const char *, const double, const double);
   const char * match (const char *, const char *);
+
 public:
+
 #define OPTION(N,T,V,L,H,D) \
   T N;
   OPTIONS
 #undef OPTION
+
   Options (Solver *);
-  bool set (const char *);      // of the form "--<opt>=<val>"
-  void print ();
+
+  // Of the form "--<NAME>=<val>", "--<NAME>" or "--no-<NAME>".
+  //
+  bool set (const char *);
+
   static void usage ();
+  void print ();
 };
 
 };
