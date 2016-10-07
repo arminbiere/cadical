@@ -46,15 +46,6 @@ REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
 REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
 
-#if 0
-
-REPORT("f1",           0, 2, 10.0 * avg.frequency.unit) \
-REPORT("properdec",    0, 3, relative (stats.propagations, stats.decisions)) \
-REPORT("fastglue",     1, 4, avg.glue.fast) \
-REPORT("trail",        1, 4, avg.trail) \
-
-#endif
-
 /*------------------------------------------------------------------------*/
 
 void Solver::report (char type, bool verbose) {
