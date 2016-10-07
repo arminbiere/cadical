@@ -25,11 +25,11 @@ namespace CaDiCaL {
 // use 27 out of them.  If more boolean flags are needed this number has to
 // be adapted accordingly.
 //
-// (3) Since original clauses and clauses which are kept anyhow do not need
-// the activity counter 'resolved', we can omit these 8 bytes for these.
-// Clauses which have a 'resolved' field are called 'extended'.  The other
-// clauses are actually allocated with 8 bytes less and accessing 'resolved'
-// for them is not allowed.
+// (3) Original clauses and clauses with small glue or size are kept anyhow and o
+// not need the activity counter 'resolved'.  Thus we can omit these 8 bytes for
+// these clauses.  Redundant clauses of long size and with large glue have a
+// 'resolved' field and are called 'extended'.  The non extended clauses need 8
+// bytes less and accessing 'resolved' for them is not allowed.
 //
 // With these three optimizations a binary original clause only needs 16
 // bytes instead of 40 bytes without embedding and 32 bytes with embedding
@@ -38,8 +38,8 @@ namespace CaDiCaL {
 //
 // If you want to add few additional boolean flags add them after the
 // sequence of already existing ones.  This makes sure that these bits and
-// the following 'glue' field are put into a 4 byte word. Of course you need
-// to adapt 'LD_MAX_GLUE' accordingly.  Adding one flag reduces it by one.
+// the following 'glue' field are put into a 4 byte word by the compiler. Of course
+// you need to adapt 'LD_MAX_GLUE' accordingly.  Adding one flag reduces it by one.
 //
 // Similarly if you want to add more data to extended clauses put these
 // fields after 'resolved' and before the flags section.  Then adapt the
@@ -49,7 +49,7 @@ namespace CaDiCaL {
 // should also add a 'int padding' field, just to enforce that the
 // 'resolved' field is always 8 byte aligned.  Here we assume that 'new'
 // returns 8 bytes aligned memory, which on those systems which care about
-// alignment is true for for sure.
+// alignment is true for sure.
 //
 // Additional fields needed for all clauses are savely put between 'glue'
 // and 'size' without the need to change anything else.  In general these
