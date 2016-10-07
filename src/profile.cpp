@@ -40,7 +40,7 @@ void Solver::print_profile (double now) {
     profs[n++] = &profiles.NAME;
   PROFILES
 #undef PROFILE
-  assert (i <= size);
+  assert (n <= size);
   // Explicit bubble sort to avoid heap allocation since 'print_profile'
   // is also called during catching a signal after out of heap memory.
   // This only makes sense if 'profs' is allocated on the stack, and

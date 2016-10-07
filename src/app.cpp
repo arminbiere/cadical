@@ -163,7 +163,7 @@ int App::main (int argc, char ** argv) {
     solver->proof = new Proof (solver, proof);
   } else MSG ("will not generate nor write DRAT proof");
   res = solver->solve ();
-  if (proof) { delete proof; proof = 0; }
+  if (proof) { delete proof; solver->proof = 0; }
   SECTION ("result");
   if (res == 10) {
 #ifndef NDEBUG
