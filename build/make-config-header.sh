@@ -1,6 +1,5 @@
 #!/bin/sh
-CXX="`sed -e '/^CXX=/!d' -e 's,.*=,,' makefile`"
-CXXFLAGS="`sed -e '/^CXXFLAGS=/!d' -e 's,.*=,,' makefile`"
+COMPILE="`sed -e '/^COMPILE=/!d' -e 's,.*=,,' makefile`"
 echo "#define VERSION \"`cat ../VERSION`\""
-echo "#define COMPILE \"$CXX $CXXFLAGS\""
+echo "#define COMPILE \"$COMPILE\""
 echo "#define GITID \"`./get-git-id.sh`\""

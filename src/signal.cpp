@@ -3,6 +3,10 @@
 
 #include <csignal>
 
+extern "C" {
+#include <unistd.h>
+};
+
 // Signal handlers for printing statistics even if solver is interrupted.
 
 namespace CaDiCaL {
@@ -48,8 +52,8 @@ void Signal::catchsig (int sig) {
     MSG ("s UNKNOWN");
     solver->stats.print ();
   }
-  reset ();
   MSG ("RERAISING SIGNAL %d %s", sig, name (sig));
+  reset ();
   raise (sig);
 }
 

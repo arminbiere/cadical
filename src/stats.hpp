@@ -17,7 +17,6 @@ struct Stats {
 
   struct {
     long count;                 // actual number of happened restarts
-    long tried;                 // number of tried restarts
     long reused;                // number of reused trails
   } restart;
 

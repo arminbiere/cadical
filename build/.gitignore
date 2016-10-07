@@ -4,3 +4,7 @@ cadical
 makefile
 config.hpp
 dependencies
+*.gcda
+*.gcno
+*.gcov
+gmon.out

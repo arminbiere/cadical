@@ -2,7 +2,8 @@
 debug=no
 logging=no
 check=no
-alignment=default
+coverage=no
+profile=no
 die () {
   echo "*** configure.sh: $*" 1>&2
   exit 1
@@ -18,6 +19,8 @@ where '<option>' is one of the following
 -c|--check             compile with assertion checking (default for '-g')
 -l|--log               include and enable logging code
 -a|--all               short cut for '-g -l -p'
+--coverage             compile with '-ftest-coverage -fprofile-arcs'
+--profile              compile with '-pg'
 EOF
 exit 0
 }
@@ -29,6 +32,8 @@ do
     -c|--check) check=yes;;
     -l|--logging) logging=yes;;
     -a|--all) debug=yes;check=yes;logging=yes;;
+    --coverage) coverage=yes;;
+    --profile) profile=yes;;
     *) die "invalid option '$1' (try '-h')";;
   esac
   shift
@@ -52,6 +57,8 @@ then
 fi
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
+[ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
+[ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
 echo "$CXX $CXXFLAGS"
 rm -f makefile
 sed -e "s,@CXX@,$CXX," -e "s,@CXXFLAGS@,$CXXFLAGS," makefile.in > makefile

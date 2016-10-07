@@ -10,8 +10,9 @@ bool Solver::minimize_literal (int lit, int depth) {
   Var & v = var (lit);
   if (!v.level || v.removable || (depth && v.seen)) return true;
   if (!v.reason || v.poison || v.level == level) return false;
-  const Level & l = levels[v.level];
-  if ((!depth && l.seen < 2) || v.trail <= l.trail) return false;
+  const Level & l = control[v.level];
+  if (!depth && l.seen < 2) return false;
+  if (v.trail <= l.trail) return false;
   if (depth > opts.minimizedepth) return false;
   const int size = v.reason->size, * lits = v.reason->literals;
   bool res = true;

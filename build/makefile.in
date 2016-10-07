@@ -18,3 +18,4 @@ dependencies: config.hpp ../src/*.cpp makefile
 	$(COMPILE) -MM ../src/*.cpp|sed -e 's,:,: makefile,' >$@
 clean:
 	rm -f *.o *.a cadical makefile config.hpp dependencies
+	rm -f *.gcda *.gcno *.gcov gmon.out
