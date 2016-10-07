@@ -1,8 +1,5 @@
 #include "solver.hpp"
 
-#include <cstring>
-#include <algorithm>
-
 namespace CaDiCaL {
 
 Solver::Solver ()
