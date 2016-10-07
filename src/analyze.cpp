@@ -56,7 +56,7 @@ void Solver::bump_resolved_clauses () {
   START (bump);
   sort (resolved.begin (), resolved.end (), resolved_earlier ());
   for (size_t i = 0; i < resolved.size (); i++)
-    resolved[i]->resolved = ++stats.resolved;
+    resolved[i]->resolved () = ++stats.resolved;
   STOP (bump);
   resolved.clear ();
 }
@@ -65,6 +65,7 @@ void Solver::resolve_clause (Clause * c) {
   if (!c->redundant) return;
   if (c->size <= opts.keepsize) return;
   if (c->glue <= opts.keepglue) return;
+  assert (c->extended);
   resolved.push_back (c);
 }
 

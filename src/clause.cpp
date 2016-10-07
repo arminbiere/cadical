@@ -19,13 +19,18 @@ Clause * Solver::new_clause (bool red, int glue) {
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();  assert (size >= 2);
   size_t bytes = bytes_clause (size);
-  Clause * res = (Clause*) new char[bytes];
+  bool extended = (red && size > opts.keepsize && glue >= opts.keepglue);
+  if (!extended) bytes -= EXTENDED_OFFSET;
+  char * ptr = new char[bytes];
+  if (!extended) ptr -= EXTENDED_OFFSET;
+  Clause * res = (Clause*) ptr;
   inc_bytes (bytes);
-  res->resolved = ++stats.resolved;
+  if (extended) res->resolved () = ++stats.resolved;
+  res->extended = extended;
   res->redundant = red;
   res->garbage = false;
   res->reason = false;
-  res->glue = glue;
+  res->glue = min (glue, MAX_GLUE);
   res->size = size;
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
   clauses.push_back (res);
@@ -45,11 +50,13 @@ size_t Solver::delete_clause (Clause * c) {
   stats.clauses.current--;
   stats.reduce.clauses++;
   size_t bytes = bytes_clause (c->size);
+  char * ptr = (char*) c;
+  if (!c->extended) bytes -= EXTENDED_OFFSET, ptr += EXTENDED_OFFSET;
   stats.reduce.bytes += bytes;
   if (proof) proof->trace_delete_clause (c);
   dec_bytes (bytes);
   LOG (c, "delete");
-  delete [] (char*) c;
+  delete [] (char*) ptr;
   return bytes;
 }
 

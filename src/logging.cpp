@@ -17,7 +17,7 @@ void Logger::log (Solver * solver, const char * fmt, ...) {
   fflush (stdout);
 }
 
-void Logger::log (Solver * solver, Clause * c, const char *fmt, ...) {
+void Logger::log (Solver * solver, const Clause * c, const char *fmt, ...) {
   va_list ap;
   printf ("c LOG %d ", solver->level);
   va_start (ap, fmt);
@@ -25,7 +25,8 @@ void Logger::log (Solver * solver, Clause * c, const char *fmt, ...) {
   va_end (ap);
   if (c) {
     if (!c->redundant) printf (" irredundant");
-    else printf (" redundant glue %u resolved %ld", c->glue, c->resolved);
+    else if (!c->extended) printf (" redundant glue %u", c->glue);
+    else printf (" redundant glue %u resolved %ld", c->glue, c->resolved ());
     printf (" size %d clause", c->size);
     for (int i = 0; i < c->size; i++)
       printf (" %d", c->literals[i]);

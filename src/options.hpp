@@ -8,6 +8,7 @@ OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha fast learned glue") \
 OPTION(keepglue,         int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,         int,   3, 2,1e9, "size kept learned clauses") \
+OPTION(leak,            bool,   1, 0,  1, "leak solver memory") \
 OPTION(minimize,        bool,   1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,    int,1000, 0,1e9, "recursive minimization depth") \
 OPTION(profile,          int,   0, 0,  4, "profiling level") \

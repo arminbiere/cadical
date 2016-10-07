@@ -170,7 +170,7 @@ int App::main (int argc, char ** argv) {
   handler.reset ();
   solver->stats.print ();
   MSG ("exit %d", res);
-  delete solver;
+  if (!solver->opts.leak) delete solver;
   solver = 0;
   return res;
 }

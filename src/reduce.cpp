@@ -103,12 +103,12 @@ void Solver::mark_useless_redundant_clauses_as_garbage () {
   assert (stack.empty ());
   for (size_t i = 0; i < clauses.size (); i++) {
     Clause * c = clauses[i];
-    if (!c->redundant) continue;                // keep irredundant
-    if (c->reason) continue;                    // need to keep reasons
-    if (c->garbage) continue;                   // already marked
-    if (c->size <= opts.keepsize) continue;     // keep small size clauses
-    if (c->glue <= opts.keepglue) continue;     // keep small glue clauses
-    if (c->resolved > recently_resolved) continue; // keep recently resolved
+    if (!c->redundant) continue;            // keep irredundant
+    if (c->reason) continue;                // need to keep reasons
+    if (c->garbage) continue;               // already marked
+    if (c->size <= opts.keepsize) continue; // keep small size clauses
+    if (c->glue <= opts.keepglue) continue; // keep small glue clauses
+    if (c->resolved () > recently_resolved) continue;
     stack.push_back (c);
   }
   sort (stack.begin (), stack.end (), less_usefull ());
