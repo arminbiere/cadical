@@ -37,60 +37,34 @@ namespace CaDiCaL {
 class Solver {
 
   int max_var;                  // maximum variable index
-  int num_original_clauses;
-  Var * vars;
+  Var * vtab;                   // variable table
   signed char * vals;           // current partial assignment
-  signed char * phases;         // last assignment
-  struct {
-    Watches * watches;          // watches of long clauses
-    Watches * binaries;         // watches of binary clauses
-  } literal;
-  Queue queue;          // variable move to front (VMTF) decision queue
-  bool unsat;           // remember if empty clause found or learned
-  int level;            // decision level (levels.size () - 1)
-  vector<Level> levels; // 'level + 1 == levels.size ()'
-  vector<int> trail;    // assigned literals
+  signed char * phases;         // saved last assignment
+  Watches * wtab;               // table of watches for all literals
+  Queue queue;                  // variable move to front decision queue
+  bool unsat;                   // empty clause found or learned
+  int level;                    // decision level (levels.size () - 1)
+  vector<Level> control;        // 'level + 1 == levels.size ()'
+  vector<int> trail;       	// assigned literals
+  size_t propagated;       	// next position on trail to propagate
+  vector<int> clause;      	// temporary clause in parsing & learning
+  vector<Clause*> clauses;      // ordered collection of all clauses
+  bool iterating;               // report top-level assigned variables
+  vector<int> seen;             // seen & bumped literals in 'analyze'
+  vector<int> levels;           // decision levels of 1st UIP clause
+  vector<int> minimized;        // marked removable or poison in 'minmize'
+  vector<Clause*> resolved;     // large clauses in 'analyze'
+  Clause * conflict;            // set in 'propagation', reset in 'analyze'
+  bool clashing_unit;           // set in 'parse_dimacs'
+  EMA fast_glue_avg;            // fast exponential moving average
+  EMA slow_glue_avg;            // slow exponential moving average
+  AVG jump_avg;                 // average back jump level
 
-  struct {
-    size_t binaries;    // next literal position on trail for binaries
-    size_t watches;     // next literal position on trail for watches
-  } next;
-
-  vector<int> clause;      // temporary clause in parsing & learning
-  vector<Clause*> clauses; // ordered collection of all clauses
-  bool iterating;          // report top-level assigned variables
-
-  struct {
-    vector<int> literals;  // seen & bumped literals in 'analyze'
-    vector<int> levels;    // decision levels of 1st UIP clause
-    vector<int> minimized; // marked removable or poison in 'minmize'
-  } seen;
-
-  vector<Clause*> resolved; // large clauses in 'analyze'
-  Clause * conflict;        // set in 'propagation', reset in 'analyze'
-  bool clashing_unit;       // set in 'parse_dimacs'
-
-  // Averages to control which clauses are collected in 'reduce' and when to
-  // force and delay 'restart' respectively.  Most of them are exponential
-  // moving average, but for the slow glue we use an actual average.
-  //
-  struct {
-    struct { EMA unit; } frequency;
-    struct { EMA fast; AVG slow, blocking, nonblocking; } glue;
-    EMA trail;
-    AVG jump;
-  } avg;
-
-  // We try to learn whether it is better to block restarts or not.
-  //
-  struct { bool enabled, exploring; } blocking;
-
-  // Limits for next restart, reduce and blocking restarts;
+  // Limits for next 'restart' and 'reduce'.
   //
   struct {
     struct { long conflicts, resolved; int fixed; } reduce;
     struct { long conflicts; } restart;
-    long blocking;
   } limits;
 
   // Increments for next reduce interval and blocking restarts.
@@ -100,7 +74,7 @@ class Solver {
     double unit;
   } inc;
 
-  Proof * proof;        // trace clausal proof if non zero
+  Proof * proof;        	// trace clausal proof if non zero
   Options opts;
   Stats stats;
 
@@ -122,7 +96,7 @@ class Solver {
 
   // Unsigned literals (abs) with checks.
   //
-  int vidx (int lit) {
+  int vidx (int lit) const {
     int idx;
     assert (lit), assert (lit != INT_MIN);
     idx = abs (lit);
@@ -130,26 +104,29 @@ class Solver {
     return idx;
   }
 
+  // Get the index of variable (with checking).
+  //
+  int var2idx (Var * v) const {
+    assert (v), assert (vtab < v), assert (v <= vtab + max_var);
+    return v - vtab;
+  }
+
   // Unsigned version with LSB denoting sign.  This is used in indexing arrays
   // by literals.  The idea is to keep the elements in such an array for both
   // the positive and negated version of a literal close together.
   //
-  unsigned vlit (int lit) {
-    return (lit < 0) + 2u * (unsigned) vidx (lit);
-  }
+  unsigned vlit (int lit) { return (lit < 0) + 2u * (unsigned) vidx (lit); }
 
-  // Helper function to access variables and watches to avoid index bugs.
+  // Helper function to access variables and watches to avoid indexing bugs.
   //
-  Var & var (int lit) { return vars [vidx (lit)]; }
-  Watches & watches (int lit) { return literal.watches[vlit (lit)]; }
-  Watches & binaries (int lit) { return literal.binaries[vlit (lit)]; }
+  Var & var (int lit)         { return vtab [vidx (lit)]; }
+  Watches & watches (int lit) { return wtab [vlit (lit)]; }
 
-  // Watch a literal 'lit' in a clause with blocking literal 'blit'.
-  // This function is (inlined) here, since it occurs in the inner
-  // loop of 'propagate'.
+  // Watch literal 'lit' in clause with blocking literal 'blit'.
+  // Inlined here, since it occurs in the tight inner loop of 'propagate'.
   //
   void watch_literal (int lit, int blit, Clause * c) {
-    Watches & ws = c->size == 2 ? binaries (lit) : watches (lit);
+    Watches & ws = watches (lit);
     ws.push_back (Watch (blit, c));
     LOG (c, "watch %d blit %d in", lit, blit);
   }
@@ -283,7 +260,7 @@ public:
   //
   int fixed (int lit) {
     int idx = vidx (lit), res = vals[idx];
-    if (res && vars[idx].level) res = 0;
+    if (res && vtab[idx].level) res = 0;
     if (lit < 0) res = -res;
     return res;
   }

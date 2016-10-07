@@ -5,8 +5,9 @@ namespace CaDiCaL {
 
 struct Watch {
   int blit;             // if blocking literal is true do not visit clause
+  int size;		// size of clause
   Clause * clause;
-  Watch (int b, Clause * c) : blit (b), clause (c) { }
+  Watch (int b, Clause * c) : blit (b), size (c->size), clause (c) { }
   Watch () { }
 };
 

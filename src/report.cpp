@@ -36,12 +36,12 @@ Report::Report (const char * h, int precision, int min, double value) :
 /*     HEADER, PRECISION, MIN, VALUE */ \
 REPORT("seconds",      2, 5, seconds ()) \
 REPORT("MB",           0, 2, current_bytes () / (double)(1l<<20)) \
-REPORT("level",        1, 4, avg.jump) \
+REPORT("level",        1, 4, jump_avg) \
 REPORT("reductions",   0, 2, stats.reduce.count) \
 REPORT("restarts",     0, 4, stats.restart.count) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
 REPORT("redundant",    0, 5, stats.clauses.redundant) \
-REPORT("glue",         1, 4, avg.glue.slow) \
+REPORT("glue",         1, 4, slow_glue_avg) \
 REPORT("irredundant",  0, 4, stats.clauses.irredundant) \
 REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \

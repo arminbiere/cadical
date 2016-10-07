@@ -32,18 +32,6 @@ void Stats::print () {
   MSG ("reused:        %15ld   %10.2f %%  per restart",
     stats.restart.reused,
     percent (stats.restart.reused, stats.restart.count));
-  MSG ("blocked:       %15ld   %10.2f %%  per restart",
-    stats.restart.blocked,
-    percent (stats.restart.blocked, stats.restart.count));
-  MSG ("unforced:      %15ld   %10.2f %%  per restart",
-    stats.restart.unforced,
-    percent (stats.restart.unforced, stats.restart.count));
-  MSG ("forced:        %15ld   %10.2f %%  per restart",
-    stats.restart.forced,
-    percent (stats.restart.forced, stats.restart.count));
-  MSG ("f1restart:     %15ld   %10.2f %%  per restart",
-    stats.restart.unit,
-    percent (stats.restart.unit, stats.restart.count));
   MSG ("units:         %15ld   %10.2f    conflicts per unit",
     stats.learned.unit, relative (stats.conflicts, stats.learned.unit));
   MSG ("binaries:      %15ld   %10.2f    conflicts per binary",

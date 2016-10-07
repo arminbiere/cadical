@@ -122,14 +122,12 @@ void Solver::flush_watches () {
   size_t current_bytes = 0, max_bytes = 0;
   for (int idx = 1; idx <= max_var; idx++) {
     for (int sign = -1; sign <= 1; sign += 2) {
-      for (int size = 2; size <= 3; size++) {
-        const int lit = sign * idx;
-        Watches & ws = size == 2 ? binaries (lit) : watches (lit);
-        const size_t bytes = ws.capacity () * sizeof ws[0];
-        max_bytes += bytes;
-        if (fixed (lit)) ws = Watches ();
-        else ws.clear (), current_bytes += bytes;
-      }
+      const int lit = sign * idx;
+      Watches & ws = watches (lit);
+      const size_t bytes = ws.capacity () * sizeof ws[0];
+      max_bytes += bytes;
+      if (ws.empty () || fixed (lit)) ws = Watches ();
+      else ws.clear (), current_bytes += bytes;
     }
   }
   stats.bytes.watcher.current = current_bytes;

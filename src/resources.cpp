@@ -34,9 +34,9 @@ size_t Solver::vector_bytes () {
 #endif
   VECTOR_BYTES (clause);
   VECTOR_BYTES (trail);
-  VECTOR_BYTES (seen.literals);
-  VECTOR_BYTES (seen.levels);
-  VECTOR_BYTES (seen.minimized);
+  VECTOR_BYTES (seen);
+  VECTOR_BYTES (levels);
+  VECTOR_BYTES (minimized);
   VECTOR_BYTES (resolved);
   VECTOR_BYTES (clauses);
   VECTOR_BYTES (levels);

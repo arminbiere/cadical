@@ -56,7 +56,7 @@ int Parser::parse_lit (int ch, int & lit) {
 }
 
 void Parser::parse_dimacs () {
-  int ch;
+  int ch, num_original_clauses = 0;
   START (parse);
   for (;;) {
     ch = parse_char ();
@@ -72,12 +72,12 @@ void Parser::parse_dimacs () {
   if (ch != ' ') PER ("expected ' ' after 'p cnf %d'", solver->max_var);
   if (!isdigit (ch = parse_char ()))
     PER ("expected digit after 'p cnf %d '", solver->max_var);
-  ch = parse_positive_int (ch, solver->num_original_clauses, "<num-clauses>");
+  ch = parse_positive_int (ch, num_original_clauses, "<num-clauses>");
   while (ch == ' ' || ch == '\r') ch = parse_char ();
   if (ch != '\n')
     PER ("expected new-line after 'p cnf %d %d'",
-      solver->max_var, solver->num_original_clauses);
-  MSG ("found 'p cnf %d %d' header", solver->max_var, solver->num_original_clauses);
+      solver->max_var, num_original_clauses);
+  MSG ("found 'p cnf %d %d' header", solver->max_var, num_original_clauses);
   solver->init_variables ();
   int lit = 0, parsed_clauses = 0;
   while ((ch = parse_char ()) != EOF) {
@@ -100,12 +100,12 @@ COMMENT:
         solver->add_new_original_clause ();
       else LOG ("tautological original clause");
       solver->clause.clear ();
-      if (parsed_clauses++ >= solver->num_original_clauses)
+      if (parsed_clauses++ >= num_original_clauses)
         PER ("too many clauses");
     }
   }
   if (lit) PER ("last clause without '0'");
-  if (parsed_clauses < solver->num_original_clauses) PER ("clause missing");
+  if (parsed_clauses < num_original_clauses) PER ("clause missing");
   MSG ("parsed %d clauses in %.2f seconds", parsed_clauses, solver->seconds ());
   STOP (parse);
 }

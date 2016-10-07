@@ -7,7 +7,7 @@ void Solver::unassign (int lit) {
   int idx = vidx (lit);
   vals[idx] = 0;
   LOG ("unassign %d", lit);
-  Var * v = vars + idx;
+  Var * v = &var (idx);
   if (queue.assigned->bumped >= v->bumped) return;
   queue.assigned = v;
   LOG ("queue next moved to %d", idx);
@@ -17,14 +17,13 @@ void Solver::backtrack (int target_level) {
   assert (target_level <= level);
   if (target_level == level) return;
   LOG ("backtracking to decision level %d", target_level);
-  int decision = levels[target_level + 1].decision, lit;
+  int decision = control[target_level + 1].decision, lit;
   do {
     unassign (lit = trail.back ());
     trail.pop_back ();
   } while (lit != decision);
-  if (trail.size () < next.watches) next.watches = trail.size ();
-  if (trail.size () < next.binaries) next.binaries = trail.size ();
-  levels.resize (target_level + 1);
+  if (trail.size () < propagated) propagated = trail.size ();
+  control.resize (target_level + 1);
   level = target_level;
 }
 

@@ -13,19 +13,16 @@ struct Stats {
 
   long conflicts;
   long decisions;
-  long propagations;            // propagated literals in 'propagate'
+  long propagations;    	// propagated literals in 'propagate'
 
   struct {
-    long count;         // actual number of happened restarts
-    long tried;         // number of tried restarts
-    long unit;          // from those the number forced by low unit frequency
-    long blocked;       // blocked restart intervals in 'analyze'
-    long unforced;      // not forced (slow glue > fast glue)
-    long forced;        // forced (slow glue < fast glue)
-    long reused;        // number of time trail was (partially) reused
+    long count;                 // actual number of happened restarts
+    long tried;                 // number of tried restarts
+    long reused;                // number of reused trails
   } restart;
 
-  long reports, sections;
+  long reports;                 // 'report' counter
+  long sections;                // 'section' counter
 
   long bumped;                  // seen and bumped variables in 'analyze'
   long resolved;                // resolved redundant clauses in 'analyze'

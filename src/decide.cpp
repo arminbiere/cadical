@@ -4,7 +4,7 @@ namespace CaDiCaL {
 
 int Solver::next_decision_variable () {
   int res;
-  while (val (res = queue.assigned - vars))
+  while (val (res = var2idx (queue.assigned)))
     queue.assigned = queue.assigned->prev, stats.searched++;
   LOG ("next VMTF decision variable %d", res);
   return res;
@@ -16,7 +16,7 @@ void Solver::decide () {
   stats.decisions++;
   int idx = next_decision_variable ();
   int decision = phases[idx] * idx;
-  levels.push_back (Level (decision));
+  control.push_back (Level (decision));
   LOG ("decide %d", decision);
   assign (decision);
   STOP (decide);
