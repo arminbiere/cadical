@@ -24,10 +24,9 @@ void Solver::unprotect_reasons () {
   }
 }
 
-// This function returns 1 if the given clause is root level satisfied or -1
-// if it is not root level satisfied but contains a root level falsified
-// literal and 0 otherwise, if it does not contain a root level fixed
-// literal.
+// Returns 1 if the given clause is root level satisfied or -1 if it is not
+// root level satisfied but contains a root level falsified literal and 0
+// otherwise, if it does not contain a root level fixed literal.
 
 int Solver::clause_contains_fixed_literal (Clause * c) {
   const int * lits = c->literals, size = c->size;

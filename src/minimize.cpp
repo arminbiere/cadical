@@ -52,9 +52,7 @@ void Solver::minimize_clause () {
   }
   minimized.clear ();
   STOP (minimize);
-#ifndef NDEBUG
   check_clause ();
-#endif
 }
 
 };

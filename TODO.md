@@ -32,5 +32,4 @@ Second things are listed related to additional features.
 There should be an ongoing process of refactoring and documenting the code
 and in particular remove part of the code which is not used anymore.
 
-
 Mo 3. Okt 07:26:33 PDT 2016

@@ -32,18 +32,11 @@ else
   echo "checking DRAT proofs with '$checker'"
 fi
 
-if [ x"`$binary -h|grep -- ' -s '`" = x ]
-then
-  solchecking=no
-else
-  solchecking=yes
-fi
-
 ok=0
 failed=0
 
 run () {
-  if [ $solchecking = yes -a -f cnfs/$1.sol ]
+  if [ -f cnfs/$1.sol ]
   then
     solopts=" -s cnfs/$1.sol"
   else

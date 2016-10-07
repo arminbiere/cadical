@@ -18,10 +18,13 @@ void App::usage () {
 "  -n         do not print witness\n"
 "  -q         quiet (same as '--quiet')\n"
 "  -v         more verbose messages (same as '--verbose')\n"
-#ifndef NDEBUG
+"\n"
+"  -c         check witness on original formula\n"
+"             for testing and debuging\n"
+"\n"
 "  -s <sol>   read solution in competition output format\n"
-"             (used for testing and debugging only)\n"
-#endif
+"             to check consistency of learned clauses\n"
+"             during testing and debugging\n"
 "\n"
 "or '<option>' can be one of the following long options\n"
 "\n",
@@ -46,19 +49,17 @@ fputs (
   stdout);
 }
 
-#ifndef NDEBUG
-
 void App::check_satisfying_assignment (int (Solver::*assignment)(int)) {
   bool satisfied = false;
   size_t start = 0;
-  for (size_t i = 0; i < solver->original_literals.size (); i++) {
-    int lit = solver->original_literals[i];
+  for (size_t i = 0; i < solver->original.size (); i++) {
+    int lit = solver->original[i];
     if (!lit) {
       if (!satisfied) {
         fflush (stdout);
         fputs ("*** cadical error: unsatisfied clause:\n", stderr);
         for (size_t j = start; j < i; j++)
-          fprintf (stderr, "%d ", solver->original_literals[j]);
+          fprintf (stderr, "%d ", solver->original[j]);
         fputs ("0\n", stderr);
         fflush (stderr);
         abort ();
@@ -69,8 +70,6 @@ void App::check_satisfying_assignment (int (Solver::*assignment)(int)) {
   }
   MSG ("satisfying assignment checked");
 }
-
-#endif
 
 void App::print_witness () {
   int c = 0;
@@ -99,10 +98,7 @@ void App::banner () {
 bool App::set (const char * arg) { return solver->opts.set (arg); }
 
 int App::main (int argc, char ** argv) {
-#ifndef NDEBUG
-  File * solution = 0;
-#endif
-  File * proof = 0, * dimacs = 0;
+  File * dimacs = 0, * proof = 0, * solution = 0;
   const char * proof_name = 0;
   bool trace_proof = false;
   int i, res;
@@ -115,16 +111,15 @@ int App::main (int argc, char ** argv) {
       if (trace_proof) DIE ("too many arguments");
       else if (!dimacs) dimacs = File::read (stdin, "<stdin>");
       else trace_proof = true, proof_name = 0;
-#ifndef NDEBUG
     } else if (!strcmp (argv[i], "-s")) {
       if (++i == argc) DIE ("argument to '-s' missing");
       if (solution) DIE ("multiple solution files");
       if (!(solution = File::read (argv[i])))
         DIE ("can not read solution file '%s'", argv[i]);
-#endif
     } else if (!strcmp (argv[i], "-n")) set ("--no-witness");
     else if (!strcmp (argv[i], "-q")) set ("--quiet");
     else if (!strcmp (argv[i], "-v")) set ("--verbose");
+    else if (!strcmp (argv[i], "-c")) set ("--check");
     else if (set (argv[i])) { /* nothing do be done */ }
     else if (argv[i][0] == '-') DIE ("invalid option '%s'", argv[i]);
     else if (trace_proof) DIE ("too many arguments");
@@ -132,18 +127,16 @@ int App::main (int argc, char ** argv) {
     else if (!(dimacs = File::read (argv[i])))
       DIE ("can not open and read DIMACS file '%s'", argv[i]);
   }
+  if (solution && !solver->opts.check) set ("--check");
   if (!dimacs) dimacs = File::read (stdin, "<stdin>");
   banner ();
   Signal handler;
   handler.init (solver);
   SECTION ("parsing input");
   MSG ("reading DIMACS file from '%s'", dimacs->name ());
-  {
-    Parser dimacs_parser (solver, dimacs);
-    dimacs_parser.parse_dimacs ();
-    delete dimacs;
-  }
-#ifndef NDEBUG
+  Parser dimacs_parser (solver, dimacs);
+  dimacs_parser.parse_dimacs ();
+  delete dimacs;
   if (solution) {
     SECTION ("parsing solution");
     Parser solution_parser (solver, solution);
@@ -152,7 +145,6 @@ int App::main (int argc, char ** argv) {
     delete (solution);
     check_satisfying_assignment (&Solver::sol);
   }
-#endif
   solver->opts.print ();
   SECTION ("proof tracing");
   if (trace_proof) {
@@ -166,9 +158,7 @@ int App::main (int argc, char ** argv) {
   if (proof) { delete proof; solver->proof = 0; }
   SECTION ("result");
   if (res == 10) {
-#ifndef NDEBUG
     check_satisfying_assignment (&Solver::val);
-#endif
     printf ("s SATISFIABLE\n");
     if (solver->opts.witness) print_witness ();
     fflush (stdout);

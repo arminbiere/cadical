@@ -29,9 +29,7 @@ void Solver::dec_bytes (size_t bytes) {
 
 size_t Solver::vector_bytes () {
   size_t res = 0;
-#ifndef NDEBUG
-  VECTOR_BYTES (original_literals);
-#endif
+  VECTOR_BYTES (original);
   VECTOR_BYTES (clause);
   VECTOR_BYTES (trail);
   VECTOR_BYTES (seen);

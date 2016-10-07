@@ -53,7 +53,7 @@ class Solver {
   size_t propagated;            // next position on trail to propagate
   vector<int> clause;           // temporary clause in parsing & learning
   vector<Clause*> clauses;      // ordered collection of all clauses
-  bool iterating;               // report top-level assigned variables
+  bool iterating;               // report learned unit (iteration)
   vector<int> seen;             // seen & bumped literals in 'analyze'
   vector<int> levels;           // decision levels of 1st UIP clause
   vector<int> minimized;        // marked removable or poison in 'minmize'
@@ -67,12 +67,17 @@ class Solver {
   long restart_limit;           // conflict limit for next 'restart'
   long recently_resolved;       // to keep recently resolved clauses
   int fixed_limit;              // remember last number of units
-  long reduce_inc;              // reduce limit interval increment
+  long reduce_inc;              // reduce interval increment
   Proof * proof;                // trace clausal proof if non zero
-  Options opts;
-  Stats stats;
+  Options opts;			// run-time options
+  Stats stats;			// statistics
+  signed char * solution;       // for debugging (like 'vals' and 'phases')
+  vector<int> original;		// original CNF for debugging
+  vector<Timer> timers;         // active timers for profiling functions
+  Profiles profiles;            // global profiled time for functions
+  Solver * solver;              // proxy to 'this' in macros (redundant)
 
-  /*------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------*/
 
   void init_variables ();       // Currently called in DIMACS parser.
 
@@ -167,7 +172,7 @@ class Solver {
   int reuse_trail ();
   void restart ();
 
-  // Reducing means garbage collecing useless clauses in 'reduce.cpp'.
+  // Reducing means garbage collecting useless clauses in 'reduce.cpp'.
   //
   bool reducing ();
   void protect_reasons ();
@@ -196,34 +201,17 @@ class Solver {
 
   // Built in profiling in 'profile.cpp'.
   //
-  Profiles profiles;
-  vector<Timer> timers;
   void start_profiling (Profile * p);
   void stop_profiling (Profile * p);
   void update_all_timers (double now);
   void print_profile (double now);
 
-#ifndef NDEBUG
-  // Sam Buss suggested to debug the case where a solver incorrectly claims
-  // the formula to be unsatisfiable by checking every learned clause to be
-  // satisfied by a satisfying assignment.  Thus the first inconsistent
-  // learned clause will be immediately flagged without the need to generate
-  // proof traces and perform forward proof checking.  The incorrectly derived
-  // clause will raise an abort signal and thus allows to debug the issue with
-  // a symbolic debugger immediately.
-  signed char * solution;          // like 'vals' (and 'phases')
+  // Checking solutions (see 'solution.cpp').
+  //
   int sol (int lit);
   void check_clause ();
-#endif
 
-#ifndef NDEBUG
-  // This is for checking and debugging the other case, where a solver claims
-  // the formula to be satisfiable, but the original formula was not.  Then
-  // the generated witness will falsify at least one original clause.
-  vector<int> original_literals;
-#endif
-
-  Solver * solver;              // proxy to 'this' in macros (redundant)
+/*------------------------------------------------------------------------*/
 
   friend class App;
   friend class Parser;

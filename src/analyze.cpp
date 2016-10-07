@@ -126,9 +126,7 @@ void Solver::analyze () {
   }
   LOG ("first UIP %d", uip);
   clause.push_back (-uip);
-#ifndef NDEBUG
   check_clause ();
-#endif
   bump_resolved_clauses ();
   const int size = (int) clause.size ();
   const int glue = (int) levels.size ();

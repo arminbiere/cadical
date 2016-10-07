@@ -89,9 +89,7 @@ COMMENT:
       continue;
     }
     if (parse_lit (ch, lit) == 'c') goto COMMENT;
-#ifndef NDEBUG
-    solver->original_literals.push_back (lit);
-#endif
+    solver->original.push_back (lit);
     if (lit) {
       if (solver->clause.size () == INT_MAX) PER ("clause too large");
       solver->clause.push_back (lit);

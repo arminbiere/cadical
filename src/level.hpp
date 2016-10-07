@@ -6,7 +6,7 @@
 namespace CaDiCaL {
 
 // For each new decision we increase the decision level
-// and push a 'Level' on the 'levels' stack.  This is used in
+// and push a 'Level' on the 'control' stack.  This is used in
 // 'reuse_trail' and for early aborts in clause minimization.
 
 struct Level {

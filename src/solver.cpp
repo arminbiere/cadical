@@ -26,10 +26,8 @@ Solver::Solver ()
   proof (0),
   opts (this),
   stats (this),
-  profiles (this),
-#ifndef NDEBUG
   solution (0),
-#endif
+  profiles (this),
   solver (this)
 {
 }
@@ -51,13 +49,11 @@ Solver::~Solver () {
   for (size_t i = 0; i < clauses.size (); i++)
     delete_clause (clauses[i]);
   if (proof) delete proof;
-  delete [] wtab;
-  delete [] vtab;
-  delete [] vals;
-  delete [] phases;
-#ifndef NDEBUG
+  if (wtab) delete [] wtab;
+  if (vtab) delete [] vtab;
+  if (vals) delete [] vals;
+  if (phases) delete [] phases;
   if (solution) delete [] solution;
-#endif
 }
 
 /*------------------------------------------------------------------------*/

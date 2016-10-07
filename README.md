@@ -1,4 +1,5 @@
 # CaDiCaL
+
 Radically Simplified Conflict Driven Clause Learning (CDCL) SAT Solver
 
 The goal of CaDiCal is to have a minimalistic CDCL solver,
