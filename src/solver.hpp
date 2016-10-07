@@ -170,7 +170,6 @@ class Solver {
   // Restarting policy in 'restart.cc'.
   //
   bool restarting ();
-  bool blocking_enabled ();
   int reuse_trail ();
   void restart ();
 
