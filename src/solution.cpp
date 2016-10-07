@@ -33,7 +33,7 @@ void Parser::parse_solution () {
       if ((ch = parse_lit (ch, lit)) == 'c') PER ("unexpected comment");
       if (!lit) break;
       if (solver->solution[abs (lit)])
-	PER ("variable %d occurs twice", abs (lit));
+        PER ("variable %d occurs twice", abs (lit));
       LOG ("solution %d", lit);
       solver->solution [abs (lit)] = sign (lit);
       count++;

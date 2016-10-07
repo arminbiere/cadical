@@ -8,7 +8,7 @@ namespace CaDiCaL {
 struct Clause {
 
   long resolved;     // time stamp when resolved last time
-                    
+
   bool redundant;    // aka 'learned' so not 'irredundant' (original)
   bool garbage;      // can be garbage collected unless it is a 'reason'
   bool reason;       // reason / antecedent clause can not be collected

@@ -35,17 +35,17 @@ using namespace std;
 namespace CaDiCaL {
 
 class Solver {
-  
-  int max_var;			// maximum variable index
+
+  int max_var;                  // maximum variable index
   int num_original_clauses;
   Var * vars;
-  signed char * vals;		// current partial assignment
-  signed char * phases;		// last assignment
+  signed char * vals;           // current partial assignment
+  signed char * phases;         // last assignment
   struct {
-    Watches * watches;		// watches of long clauses
-    Watches * binaries;		// watches of binary clauses
+    Watches * watches;          // watches of long clauses
+    Watches * binaries;         // watches of binary clauses
   } literal;
-  Queue queue;		// variable move to front (VMTF) decision queue
+  Queue queue;          // variable move to front (VMTF) decision queue
   bool unsat;           // remember if empty clause found or learned
   int level;            // decision level (levels.size () - 1)
   vector<Level> levels; // 'level + 1 == levels.size ()'
@@ -100,13 +100,13 @@ class Solver {
     double unit;
   } inc;
 
-  Proof * proof;	// trace clausal proof if non zero
+  Proof * proof;        // trace clausal proof if non zero
   Options opts;
   Stats stats;
 
   /*------------------------------------------------------------------------*/
 
-  void init_variables ();	// Currently called in DIMACS parser.
+  void init_variables ();       // Currently called in DIMACS parser.
 
   // Functions for monitoring memory usage.
   //
@@ -219,7 +219,7 @@ class Solver {
 
   // Main search functions in 'solver.cpp'.
   //
-  int search ();		// CDCL loop
+  int search ();                // CDCL loop
   void init_solving ();
   int solve ();
 
@@ -252,7 +252,7 @@ class Solver {
   vector<int> original_literals;
 #endif
 
-  Solver * solver;		// proxy to 'this' in macros (redundant)
+  Solver * solver;              // proxy to 'this' in macros (redundant)
 
   friend class Parser;
   friend struct Logger;
@@ -267,7 +267,7 @@ class Solver {
   friend struct bump_earlier;
 
 public:
-  
+
   Solver ();
   ~Solver ();
 

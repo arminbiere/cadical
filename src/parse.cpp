@@ -97,11 +97,11 @@ COMMENT:
       solver->clause.push_back (lit);
     } else {
       if (!solver->tautological_clause ())
-	solver->add_new_original_clause ();
+        solver->add_new_original_clause ();
       else LOG ("tautological original clause");
       solver->clause.clear ();
       if (parsed_clauses++ >= solver->num_original_clauses)
-	PER ("too many clauses");
+        PER ("too many clauses");
     }
   }
   if (lit) PER ("last clause without '0'");

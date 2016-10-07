@@ -6,7 +6,7 @@
 namespace CaDiCaL {
 
 Solver::Solver ()
-: 
+:
   max_var (0),
   num_original_clauses (0),
   vars (0),

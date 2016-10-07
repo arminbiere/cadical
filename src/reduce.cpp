@@ -125,7 +125,7 @@ void Solver::flush_watches () {
       for (int size = 2; size <= 3; size++) {
         const int lit = sign * idx;
         Watches & ws = size == 2 ? binaries (lit) : watches (lit);
-	const size_t bytes = ws.capacity () * sizeof ws[0];
+        const size_t bytes = ws.capacity () * sizeof ws[0];
         max_bytes += bytes;
         if (fixed (lit)) ws = Watches ();
         else ws.clear (), current_bytes += bytes;

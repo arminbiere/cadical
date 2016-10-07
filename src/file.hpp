@@ -51,7 +51,7 @@ public:
 
   static void print (int lit, FILE * file = stdout) {
     char buffer[16];
-    sprintf (buffer, "%d", lit);	// TODO faster?
+    sprintf (buffer, "%d", lit);        // TODO faster?
     print (buffer, file);
   }
 

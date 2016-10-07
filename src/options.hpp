@@ -44,7 +44,7 @@ public:
   OPTIONS
 #undef OPTION
   Options (Solver *);
-  bool set (const char *);	// of the form "--<opt>=<val>"
+  bool set (const char *);      // of the form "--<opt>=<val>"
   void print ();
   static void usage ();
 };

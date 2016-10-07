@@ -16,8 +16,8 @@ struct Stats {
   long propagations;            // propagated literals in 'propagate'
 
   struct {
-    long count;		// actual number of happened restarts 
-    long tried;		// number of tried restarts
+    long count;         // actual number of happened restarts
+    long tried;         // number of tried restarts
     long unit;          // from those the number forced by low unit frequency
     long blocked;       // blocked restart intervals in 'analyze'
     long unforced;      // not forced (slow glue > fast glue)

@@ -102,7 +102,7 @@ int App::main (int argc, char ** argv) {
 #ifndef NDEBUG
   File * solution = 0;
 #endif
-  File * proof = 0, * dimacs = 0;  
+  File * proof = 0, * dimacs = 0;
   const char * proof_name = 0;
   bool trace_proof = false;
   int i, res;

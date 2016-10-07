@@ -88,8 +88,8 @@ void Solver::add_new_original_clause () {
     if (!tmp) assign (unit);
     else if (tmp < 0) {
       if (!unsat) {
-	MSG ("parsed clashing unit");
-	clashing_unit = true;
+        MSG ("parsed clashing unit");
+        clashing_unit = true;
       } else LOG ("original clashing unit produces another inconsistency");
     } else LOG ("original redundant unit");
   } else watch_clause (new_clause (false));

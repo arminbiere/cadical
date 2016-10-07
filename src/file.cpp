@@ -21,13 +21,13 @@ open_pipe (const char * fmt, const char * path, const char * mode) {
 static FILE * read_pipe (const char * fmt, const char * path) {
   return open_pipe (fmt, path, "r");
 }
- 
+
 #if 0
 static FILE * write_pipe (const char * fmt, const char * path) {
   return open_pipe (fmt, path, "w");
 }
 #endif
- 
+
 File::File (bool w, int c, FILE * f, const char * n) :
   writing (w), close_file (c), file (f), _name (n), _lineno (0)
 {
@@ -51,7 +51,7 @@ File * File::read (const char * path) {
     file = read_pipe ("gunzip -c %s", path);
   else if (has_suffix (path, ".7z"))
     file = read_pipe ("7z x -so %s 2>/dev/null", path);
-  else 
+  else
     file = fopen (path, "r"), close_input = 1;
   return file ? new File (false, close_input, file, path) : 0;
 }
