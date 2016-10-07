@@ -45,9 +45,9 @@ class Solver {
   bool unsat;                   // empty clause found or learned
   int level;                    // decision level (levels.size () - 1)
   vector<Level> control;        // 'level + 1 == levels.size ()'
-  vector<int> trail;       	// assigned literals
-  size_t propagated;       	// next position on trail to propagate
-  vector<int> clause;      	// temporary clause in parsing & learning
+  vector<int> trail;            // assigned literals
+  size_t propagated;            // next position on trail to propagate
+  vector<int> clause;           // temporary clause in parsing & learning
   vector<Clause*> clauses;      // ordered collection of all clauses
   bool iterating;               // report top-level assigned variables
   vector<int> seen;             // seen & bumped literals in 'analyze'
@@ -74,7 +74,7 @@ class Solver {
     double unit;
   } inc;
 
-  Proof * proof;        	// trace clausal proof if non zero
+  Proof * proof;                // trace clausal proof if non zero
   Options opts;
   Stats stats;
 

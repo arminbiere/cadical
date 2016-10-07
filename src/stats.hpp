@@ -13,7 +13,7 @@ struct Stats {
 
   long conflicts;
   long decisions;
-  long propagations;    	// propagated literals in 'propagate'
+  long propagations;            // propagated literals in 'propagate'
 
   struct {
     long count;                 // actual number of happened restarts

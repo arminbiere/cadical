@@ -43,24 +43,24 @@ bool Solver::propagate () {
         if (b < 0) conflict = w.clause;
         else if (!b) assign (w.blit, w.clause);
       } else {
-	int * lits = c->literals;
-	if (lits[1] != -lit) swap (lits[0], lits[1]);
-	assert (lits[1] == -lit);
-	const int u = val (lits[0]);
-	if (u > 0) ws[j-1].blit = lits[0];
-	else {
-	  int k, v = -1;
-	  for (k = 2; k < size && (v = val (lits[k])) < 0; k++)
-	    ;
-	  if (v > 0) ws[j-1].blit = lits[k];
-	  else if (!v) {
-	    LOG (c, "unwatch %d in", -lit);
-	    swap (lits[1], lits[k]);
-	    watch_literal (lits[1], -lit, c);
-	    j--;
-	  } else if (!u) assign (lits[0], c);
-	  else { conflict = c; break; }
-	}
+        int * lits = c->literals;
+        if (lits[1] != -lit) swap (lits[0], lits[1]);
+        assert (lits[1] == -lit);
+        const int u = val (lits[0]);
+        if (u > 0) ws[j-1].blit = lits[0];
+        else {
+          int k, v = -1;
+          for (k = 2; k < size && (v = val (lits[k])) < 0; k++)
+            ;
+          if (v > 0) ws[j-1].blit = lits[k];
+          else if (!v) {
+            LOG (c, "unwatch %d in", -lit);
+            swap (lits[1], lits[k]);
+            watch_literal (lits[1], -lit, c);
+            j--;
+          } else if (!u) assign (lits[0], c);
+          else { conflict = c; break; }
+        }
       }
     }
     while (i < ws.size ()) ws[j++] = ws[i++];
