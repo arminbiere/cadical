@@ -225,13 +225,13 @@ class Solver {
 
   Solver * solver;              // proxy to 'this' in macros (redundant)
 
+  friend class App;
   friend class Parser;
+  friend class Signal;
   friend struct Logger;
   friend struct Message;
-  friend struct Stats;
-  friend struct Signal;
   friend struct Queue;
-  friend class App;
+  friend struct Stats;
 
   friend struct trail_smaller_than;
   friend struct trail_greater_than;

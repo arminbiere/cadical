@@ -3,7 +3,7 @@
 
 namespace CaDiCaL {
 
-class File;
+struct File;
 class Solver;
 
 class Parser {

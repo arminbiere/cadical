@@ -3,8 +3,8 @@
 
 namespace CaDiCaL {
 
-class File;
-class Clause;
+struct File;
+struct Clause;
 class Solver;
 
 class Proof {

@@ -3,8 +3,8 @@
 
 namespace CaDiCaL {
 
+struct File;
 class Solver;
-class File;
 
 struct Message {
   static void print (Solver *, int verbosity, const char *, ...);

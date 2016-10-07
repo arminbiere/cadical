@@ -10,7 +10,7 @@ cp -p ../LICENSE ../README.md ../VERSION $dir
 mkdir $dir/src
 cp -p ../src/*.[ch]pp $dir/src
 mkdir $dir/build
-cp -p makefile.in *.sh $dir/build
+cp -p makefile.in configure.sh make-config-header.sh $dir/build
 sed -i -e 's,`./get-git-id.sh`,'"`./get-git-id.sh`", $dir/build/make-config-header.sh
 sed -i -e '/rm -f test/d' $dir/build/makefile.in
 cd /tmp
