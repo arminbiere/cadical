@@ -11,6 +11,7 @@ OPTION(keepglue,          int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,          int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(minimize,         bool,   1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,     int,1000, 0,1e9, "recursive minimization depth") \
+OPTION(profile,           int,   0, 0,  4, "profiling level") \
 OPTION(quiet,            bool,   0, 0,  1, "disable all messages") \
 OPTION(reduce,           bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reduceinc,         int, 300, 1,1e9, "reduce limit increment") \

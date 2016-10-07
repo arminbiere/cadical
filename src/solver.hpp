@@ -17,10 +17,10 @@ using namespace std;
 #include "ema.hpp"
 #include "avg.hpp"
 #include "level.hpp"
-#include "timer.hpp"
 #include "parse.hpp"
 #include "proof.hpp"
-#include "profiles.hpp"
+#include "profile.hpp"
+#include "timer.hpp"
 #include "logging.hpp"
 #include "file.hpp"
 #include "message.hpp"
@@ -163,21 +163,18 @@ class Solver {
   void add_new_original_clause ();
   Clause * new_learned_clause (int glue);
 
-  void learn_empty_clause ();
-  void learn_unit_clause (int lit);
-
   void assign (int lit, Clause * reason = 0);
+  bool propagate ();
+
   void unassign (int lit);
   void backtrack (int target_level = 0);
 
-  bool propagate ();
-
+  void learn_empty_clause ();
+  void learn_unit_clause (int lit);
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
-
   void bump_variable (Var * v, int uip);
   void bump_and_clear_seen_variables (int uip);
-
   void bump_resolved_clauses ();
   void resolve_clause (Clause *);
   void clear_levels ();
@@ -210,14 +207,12 @@ class Solver {
   void init_solving ();
   int solve ();
 
-#ifdef PROFILING
-  vector<Timer> timers;
   Profiles profiles;
-  void start_profiling (double * p);
-  void stop_profiling (double * p);
+  vector<Timer> timers;
+  void start_profiling (Profile * p);
+  void stop_profiling (Profile * p);
   void update_all_timers (double now);
   void print_profile (double now);
-#endif
 
 #ifndef NDEBUG
   // Sam Buss suggested to debug the case where a solver incorrectly claims

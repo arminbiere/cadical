@@ -23,7 +23,7 @@ struct Profile {
   double value;
   const char * name;
   int level;
-  Profile (const char * n, int l) : name (n), level (l) { }
+  Profile (const char * n, int l) : value (0), name (n), level (l) { }
 };
 
 struct Profiles {

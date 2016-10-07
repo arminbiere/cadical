@@ -19,6 +19,7 @@ Solver::Solver ()
   proof (0),
   opts (this),
   stats (this),
+  profiles (this),
 #ifndef NDEBUG
   solution (0),
 #endif
