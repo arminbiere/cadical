@@ -6,7 +6,7 @@ namespace CaDiCaL {
 
 bool Solver::reducing () {
   if (!opts.reduce) return false;
-  return stats.conflicts >= limits.reduce.conflicts;
+  return stats.conflicts >= reduce_limit;
 }
 
 void Solver::protect_reasons () {
@@ -76,6 +76,7 @@ void Solver::flush_falsified_literals (Clause * c) {
 }
 
 void Solver::mark_satisfied_clauses_as_garbage () {
+  if (fixed_limit >= stats.fixed) return;
   for (size_t i = 0; i < clauses.size (); i++) {
     Clause * c = clauses[i];
     if (c->garbage) continue;
@@ -83,6 +84,7 @@ void Solver::mark_satisfied_clauses_as_garbage () {
          if (tmp > 0) c->garbage = true;
     else if (tmp < 0) flush_falsified_literals (c);
   }
+  fixed_limit = stats.fixed;
 }
 
 struct less_usefull {
@@ -107,7 +109,7 @@ void Solver::mark_useless_redundant_clauses_as_garbage () {
     if (c->garbage) continue;                   // already marked
     if (c->size <= opts.keepsize) continue;     // keep small size clauses
     if (c->glue <= opts.keepglue) continue;     // keep small glue clauses
-    if (c->resolved > limits.reduce.resolved) continue; // recently resolved
+    if (c->resolved > recently_resolved) continue; // keep recently resolved
     stack.push_back (c);
   }
   sort (stack.begin (), stack.end (), less_usefull ());
@@ -116,6 +118,18 @@ void Solver::mark_useless_redundant_clauses_as_garbage () {
     LOG (stack[i], "marking useless to be collected");
     stack[i]->garbage = true;
   }
+}
+
+void Solver::delete_garbage_clauses () {
+  size_t collected_bytes = 0, j = 0;
+  for (size_t i = 0; i < clauses.size (); i++) {
+    Clause * c = clauses[j++] = clauses[i];
+    if (c->reason || !c->garbage) continue;
+    collected_bytes += delete_clause (c);
+    j--;
+  }
+  clauses.resize (j);
+  LOG ("collected %ld bytes", collected_bytes);
 }
 
 void Solver::flush_watches () {
@@ -141,34 +155,23 @@ void Solver::setup_watches () {
 }
 
 void Solver::garbage_collection () {
-  size_t collected_bytes = 0, j = 0;
-  for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = clauses[j++] = clauses[i];
-    if (c->reason || !c->garbage) continue;
-    collected_bytes += delete_clause (c);
-    j--;
-  }
-  clauses.resize (j);
-  LOG ("collected %ld bytes", collected_bytes);
+  delete_garbage_clauses ();
+  flush_watches ();
+  setup_watches ();
 }
 
 void Solver::reduce () {
   START (reduce);
   stats.reduce.count++;
-  LOG ("reduce %ld resolved limit %ld",
-    stats.reduce.count, limits.reduce.resolved);
+  LOG ("reduce %ld resolved limit %ld", stats.reduce.count, reduce_limit);
   protect_reasons ();
-  if (limits.reduce.fixed < stats.fixed)
-    mark_satisfied_clauses_as_garbage ();
+  mark_satisfied_clauses_as_garbage ();
   mark_useless_redundant_clauses_as_garbage ();
   garbage_collection ();
   unprotect_reasons ();
-  flush_watches ();
-  setup_watches ();
-  inc.reduce += opts.reduceinc;
-  limits.reduce.conflicts = stats.conflicts + inc.reduce;
-  limits.reduce.resolved = stats.resolved;
-  limits.reduce.fixed = stats.fixed;
+  reduce_inc += opts.reduceinc;
+  reduce_limit = stats.conflicts + reduce_inc;
+  recently_resolved = stats.resolved;
   report ('-');
   STOP (reduce);
 }

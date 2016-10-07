@@ -35,6 +35,10 @@ using namespace std;
 namespace CaDiCaL {
 
 class Solver {
+ 
+  /*------------------------------------------------------------------------*/
+
+  // The actual state of the solver is in this section.
 
   int max_var;                  // maximum variable index
   Var * vtab;                   // variable table
@@ -59,21 +63,11 @@ class Solver {
   EMA fast_glue_avg;            // fast exponential moving average
   EMA slow_glue_avg;            // slow exponential moving average
   AVG jump_avg;                 // average back jump level
-
-  // Limits for next 'restart' and 'reduce'.
-  //
-  struct {
-    struct { long conflicts, resolved; int fixed; } reduce;
-    struct { long conflicts; } restart;
-  } limits;
-
-  // Increments for next reduce interval and blocking restarts.
-  //
-  struct {
-    long reduce, blocking;
-    double unit;
-  } inc;
-
+  long reduce_limit;            // conflict limit for next 'reduce'
+  long restart_limit;           // conflict limit for next 'restart'
+  long recently_resolved;       // to keep recently resolved clauses
+  int fixed_limit;              // remember last number of units
+  long reduce_inc;              // reduce limit interval increment
   Proof * proof;                // trace clausal proof if non zero
   Options opts;
   Stats stats;
@@ -182,6 +176,7 @@ class Solver {
   void flush_falsified_literals (Clause *);
   void mark_satisfied_clauses_as_garbage ();
   void mark_useless_redundant_clauses_as_garbage ();
+  void delete_garbage_clauses ();
   void flush_watches ();
   void setup_watches ();
   void garbage_collection ();
@@ -223,7 +218,7 @@ class Solver {
 
 #ifndef NDEBUG
   // This is for checking and debugging the other case, where a solver claims
-  // the formula to be satisfiable, but the original formulas was not.  Then
+  // the formula to be satisfiable, but the original formula was not.  Then
   // the generated witness will falsify at least one original clause.
   vector<int> original_literals;
 #endif

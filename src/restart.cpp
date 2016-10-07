@@ -4,9 +4,9 @@ namespace CaDiCaL {
 
 bool Solver::restarting () {
   if (!opts.restart) return false;
-  if (stats.conflicts <= limits.restart.conflicts) return false;
+  if (stats.conflicts <= restart_limit) return false;
   stats.restart.tried++;
-  limits.restart.conflicts = stats.conflicts + opts.restartint;
+  restart_limit = stats.conflicts + opts.restartint;
   double s = slow_glue_avg, f = fast_glue_avg, l = opts.restartmargin * s;
   LOG ("EMA learned glue slow %.2f fast %.2f limit %.2f", s, f, l);
   return l <= f;

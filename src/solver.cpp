@@ -18,6 +18,11 @@ Solver::Solver ()
   iterating (false),
   conflict (0),
   clashing_unit (false),
+  reduce_limit (0),
+  restart_limit (0),
+  recently_resolved (0),
+  fixed_limit (0),
+  reduce_inc (0),
   proof (0),
   opts (this),
   stats (this),
@@ -27,8 +32,6 @@ Solver::Solver ()
 #endif
   solver (this)
 {
-  memset (&limits, 0, sizeof limits);
-  memset (&inc, 0, sizeof inc);
 }
 
 void Solver::init_variables () {
@@ -77,9 +80,8 @@ int Solver::search () {
 /*------------------------------------------------------------------------*/
 
 void Solver::init_solving () {
-  limits.restart.conflicts = opts.restartint;
-  limits.reduce.conflicts = opts.reduceinit;
-  inc.reduce = opts.reduceinit;
+  restart_limit = opts.restartint;
+  reduce_limit = reduce_inc = opts.reduceinit;
   INIT_EMA (fast_glue_avg, opts.emagluefast);
   INIT_EMA (slow_glue_avg, opts.emaglueslow);
 }
