@@ -11,9 +11,17 @@ class Proof {
   Solver * solver;
   File * file;
   bool enabled;
+  bool binary;
+
+  void put_binary_zero ();
+  void put_binary_lit (int lit);
+
   void trace_clause (Clause *, bool add);
+
 public:
-  Proof (Solver * s, File * f) :  solver (s), file (f), enabled (true) { }
+  Proof (Solver * s, File * f, bool b)
+    : solver (s), file (f), enabled (true), binary (b)
+  { }
   operator bool () const { return enabled; }
   void trace_empty_clause ();
   void trace_unit_clause (int unit);

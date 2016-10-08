@@ -3,6 +3,7 @@
 
 #define OPTIONS \
 /*     NAME              TYPE, VAL,LO, HI, USAGE */ \
+OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
 OPTION(check,           bool,   0, 0,  1, "check witness") \
 OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha fast learned glue") \
@@ -31,9 +32,10 @@ class Options {
 
   Solver * solver;
 
-  bool set (bool &, const char *, const char *, const bool, const bool);
-  bool set (int &, const char *, const char *, const int, const int);
+  bool set (   int &, const char *, const char *, const    int, const    int);
+  bool set (  bool &, const char *, const char *, const   bool, const   bool);
   bool set (double &, const char *, const char *, const double, const double);
+
   const char * match (const char *, const char *);
 
 public:

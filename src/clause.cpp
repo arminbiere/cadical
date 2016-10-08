@@ -25,8 +25,7 @@ Clause * Solver::new_clause (bool red, int glue) {
   if (!extended) ptr -= EXTENDED_OFFSET;
   Clause * res = (Clause*) ptr;
   inc_bytes (bytes);
-  if (extended) res->resolved () = ++stats.resolved;
-  res->extended = extended;
+  if ((res->extended = extended)) res->resolved () = ++stats.resolved;
   res->redundant = red;
   res->garbage = false;
   res->reason = false;

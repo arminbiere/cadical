@@ -45,6 +45,10 @@ public:
     fputc_unlocked (ch, file);
   }
 
+  static void print (unsigned char ch, FILE * file = stdout) {
+    fputc_unlocked (ch, file);
+  }
+
   static void print (const char * s, FILE * file = stdout) {
     fputs_unlocked (s, file);
   }
@@ -56,6 +60,7 @@ public:
   }
 
   void put (char c) { assert (writing); print (c, file); }
+  void put (unsigned char c) { assert (writing); print (c, file); }
   void put (const char * s) { assert (writing); print (s, file); }
   void put (int lit) { assert (writing); print (lit, file); }
 

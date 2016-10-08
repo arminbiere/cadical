@@ -19,8 +19,6 @@ Some of them first need proper benchmarking to avoid oversimplifying the solver:
 
 Second things are listed related to additional features.
   
-  - Binary DRAT proof trace format.
-
   - Add bounded variable elimination and blocked clause elimination.
 
   - Subsumption of learned clauses as in Splatz.
@@ -32,4 +30,4 @@ Second things are listed related to additional features.
 There should be an ongoing process of refactoring and documenting the code
 and in particular remove part of the code which is not used anymore.
 
-Mo 3. Okt 07:26:33 PDT 2016
+Sa 8. Okt 18:10:11 CEST 2016
