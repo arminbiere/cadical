@@ -19,12 +19,11 @@ void App::usage () {
 "where '<option>' is one of the following short options\n"
 "\n"
 "  -h         print this command line option summary\n"
-"  -n         do not print witness\n"
-"  -q         quiet (same as '--quiet')\n"
+"  -n         do not print witness (same as '--no-witness')\n"
 "  -v         more verbose messages (same as '--verbose')\n"
+"  -q         quiet (same as '--quiet')\n"
 "\n"
 "  -c         check witness on original formula\n"
-"             for testing and debuging\n"
 "\n"
 "  -s <sol>   read solution in competition output format\n"
 "             to check consistency of learned clauses\n"
@@ -41,9 +40,6 @@ fputs (
 "'--<name>' which is equivalent to '--<name>=1' and in the form\n"
 "'--no-<name>' which is equivalent to '--<name>=0'.\n"
 "\n"
-"Note that decimal integers are casted to 'double' and 'bool'\n"
-"in the natural way, e.g., '1' is interpreted as 'true'.\n"
-"\n"
 "Then '<input>' has to be a DIMACS file and in '<output>' a DRAT\n"
 "proof is saved.  If no '<proof>' file is specified, then no proof\n"
 "is generated.  If no '<input>' is given then '<stdin>' is used.\n"
@@ -55,9 +51,8 @@ fputs (
 "\n"
 "The input is assumed to be compressed if it is given explicitly\n"
 "and has a '.gz', '.bz2' or '.7z' suffix.  The same applies to the\n"
-"output file.  For decompression helper commands 'gunzip', 'bzcat'\n"
-"and '7z' are needed, and for proof compression
-"and '7z' have to be in the path and are used through opening a pipe.\n",
+"output file.  For decompression commands 'gunzip', 'bzcat' and '7z'\n"
+"are needed, and for compression 'gzip', 'bzip2' and '7z'.\n",
   stdout);
 }
 
@@ -162,7 +157,7 @@ int App::main (int argc, char ** argv) {
     if (!proof_name) {
       proof = File::write (stdout, "<stdout>");
       if (isatty (1) && solver->opts.binary) {
-	MSG ("forcing non-binary proof: '<stdout>' connected to terminal");
+MSG ("forcing non-binary proof since '<stdout>' connected to terminal");
 	binary_proof = false;
       }
     } else if (!(proof = File::write (proof_name)))
