@@ -44,12 +44,20 @@ fputs (
 "Note that decimal integers are casted to 'double' and 'bool'\n"
 "in the natural way, e.g., '1' is interpreted as 'true'.\n"
 "\n"
-"Then '<input>' is a (compressed) DIMACS file and '<output>'\n"
-"is a file to store the DRAT proof.  If no '<proof>' file is\n"
-"specified, then no proof is generated.  If no '<input>' is given\n"
-"then '<stdin>' is used. If '-' is used as '<input>' then the\n"
-"solver reads from '<stdin>'.  If '-' is specified for '<proof>'\n"
-"then the proof is generated and printed to '<stdout>'.\n",
+"Then '<input>' has to be a DIMACS file and in '<output>' a DRAT\n"
+"proof is saved.  If no '<proof>' file is specified, then no proof\n"
+"is generated.  If no '<input>' is given then '<stdin>' is used.\n"
+"If '-' is used as '<input>' then the solver reads from '<stdin>'.\n"
+"If '-' is specified for '<proof> then a proof is generated and\n"
+"printed to '<stdout>'.  The proof is by default stored in binary\n"
+"format unless '--binary=0' or the proof is written to '<stdout>'\n"
+"and '<stdout>' is connected to a terminal.\n"
+"\n"
+"The input is assumed to be compressed if it is given explicitly\n"
+"and has a '.gz', '.bz2' or '.7z' suffix.  The same applies to the\n"
+"output file.  For decompression helper commands 'gunzip', 'bzcat'\n"
+"and '7z' are needed, and for proof compression
+"and '7z' have to be in the path and are used through opening a pipe.\n",
   stdout);
 }
 
