@@ -15,7 +15,7 @@ namespace CaDiCaL {
 // alternative is to store the actual literals somewhere else, which
 // not only needs more memory but more importantly also requires another
 // memory access and thus is so costly that even for CaDiCaL we want to use
-// this optimizations.
+// this optimization.
 //
 // (2) The boolean flags only need one bit each and thus there is enough
 // space left to merge them with a 'glue' bit field (which is less accessed
@@ -25,33 +25,29 @@ namespace CaDiCaL {
 // use 27 out of them.  If more boolean flags are needed this number has to
 // be adapted accordingly.
 //
-// (3) Original clauses and clauses with small glue or size are kept anyhow and o
-// not need the activity counter 'resolved'.  Thus we can omit these 8 bytes for
-// these clauses.  Redundant clauses of long size and with large glue have a
-// 'resolved' field and are called 'extended'.  The non extended clauses need 8
-// bytes less and accessing 'resolved' for them is not allowed.
+// (3) Original clauses and clauses with small glue or size are kept anyhow
+// and do not need the activity counter 'resolved'.  Thus we can omit these
+// 8 bytes used for 'resolved' for these clauses.  Redundant clauses of long
+// size and with large glue have a 'resolved' field and are called
+// 'extended'.  The non extended clauses need 8 bytes less and accessing
+// 'resolved' for them is not allowed.
 //
 // With these three optimizations a binary original clause only needs 16
 // bytes instead of 40 bytes without embedding and 32 bytes with embedding
 // the literals.  The last two optimizations reduce memory usage of very
 // large formulas slightly but are otherwise not that important.
 //
-// If you want to add few additional boolean flags add them after the
+// If you want to add few additional boolean flags, add them after the
 // sequence of already existing ones.  This makes sure that these bits and
-// the following 'glue' field are put into a 4 byte word by the compiler. Of course
-// you need to adapt 'LD_MAX_GLUE' accordingly.  Adding one flag reduces it by one.
+// the following 'glue' field are put into a 4 byte word by the compiler. Of
+// course you need to adapt 'LD_MAX_GLUE' accordingly.  Adding one flag
+// reduces it by one.
 //
 // Similarly if you want to add more data to extended clauses put these
 // fields after 'resolved' and before the flags section.  Then adapt the
-// 'EXTENDED_OFFSET' accordingly.  You might need to consider padding though
-// on some architectures, since misaligned pointer access might happen.
-// For instance if you want to add a 4 byte 'int data' field, then you
-// should also add a 'int padding' field, just to enforce that the
-// 'resolved' field is always 8 byte aligned.  Here we assume that 'new'
-// returns 8 bytes aligned memory, which on those systems which care about
-// alignment is true for sure.
+// 'EXTENDED_OFFSET' accordingly.
 //
-// Additional fields needed for all clauses are savely put between 'glue'
+// Additional fields needed for all clauses are safely put between 'glue'
 // and 'size' without the need to change anything else.  In general these
 // optimizations are local to 'clause.[hc]pp' and otherwise can be ignored
 // except that you should for instance never access 'resolved' of a clauses
@@ -62,7 +58,7 @@ namespace CaDiCaL {
 #define LD_MAX_GLUE     28      // 32 - 4 boolean flags
 #define EXTENDED_OFFSET  8      // sizeof (resolved)
 
-#define MAX_GLUE ((1<<(LD_MAX_GLUE-1))-1)
+#define MAX_GLUE ((1<<(LD_MAX_GLUE-1))-1)       // 1 bit less since signed
 
 class Clause {
 
