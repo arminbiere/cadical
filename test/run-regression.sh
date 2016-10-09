@@ -46,7 +46,7 @@ run () {
   then
     proofopts=""
   else
-    proofopts=" --no-binary cnfs/$1.proof"
+    proofopts=" cnfs/$1.proof"
   fi
   opts="cnfs/$1.cnf$solopts$proofopts"
   echo -n "$binary $opts # $2 ..."

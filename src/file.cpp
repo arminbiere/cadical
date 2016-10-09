@@ -22,11 +22,9 @@ static FILE * read_pipe (const char * fmt, const char * path) {
   return open_pipe (fmt, path, "r");
 }
 
-#if 0
 static FILE * write_pipe (const char * fmt, const char * path) {
   return open_pipe (fmt, path, "w");
 }
-#endif
 
 File::File (bool w, int c, FILE * f, const char * n) :
   writing (w), close_file (c), file (f), _name (n), _lineno (0)
@@ -58,7 +56,16 @@ File * File::read (const char * path) {
 
 File * File::write (const char * path) {
   FILE * file = fopen (path, "w");
-  return file ? new File (true, 1, file, path) : 0;
+  int close_input = 2;
+  if (has_suffix (path, ".bz2"))
+    file = write_pipe ("bzip2 -c > %s", path);
+  else if (has_suffix (path, ".gz"))
+    file = write_pipe ("gzip -c > %s", path);
+  else if (has_suffix (path, ".7z"))
+    file = write_pipe ("7z a -an -txz -si -so > %s 2>/dev/null", path);
+  else
+    file = fopen (path, "w"), close_input = 1;
+  return file ? new File (false, close_input, file, path) : 0;
 }
 
 File::~File () {

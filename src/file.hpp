@@ -6,10 +6,10 @@
 
 namespace CaDiCaL {
 
-// Wraps a 'C' file 'FILE' with name and supports zipped
-// reading through 'popen' (using external helper tools).
-// Reading has a line number counter as well.  Note that
-// zipped writing is not supported yet.
+// Wraps a 'C' file 'FILE' with name and supports zipped reading and writing
+// through 'popen' using external helper tools.  Reading has line numbers.
+// Unzipping relies on external utilities, e.g., 'gunzip', 'bzcat' and '7z',
+// while zipping relies on 'gzip', 'bzip2' and '7z' as external tools.
 
 struct File {
   bool writing;
