@@ -4,6 +4,8 @@
 
 namespace CaDiCaL {
 
+/*------------------------------------------------------------------------*/
+
 void Solver::learn_empty_clause () {
   assert (!unsat);
   LOG ("learned empty clause");
@@ -18,16 +20,33 @@ void Solver::learn_unit_clause (int lit) {
   stats.fixed++;
 }
 
-void Solver::bump_variable (Var * v, int uip) {
+/*------------------------------------------------------------------------*/
+
+// Important variables recently used in conflict analysis are 'bumped',
+// which means to move them to the front of the VMTF decision queue.  The
+// 'bumped' time stamp is updated accordingly.  It is used to determine
+// whether the 'queue.assigned' pointer has to be moved in 'unassign'.
+
+void Solver::bump_variable (Var * v) {
   if (!v->next) return;
-  if (queue.assigned == v)
-    queue.assigned = v->prev ? v->prev : v->next;
+  if (queue.assigned == v) queue.assigned = v->prev ? v->prev : v->next;
   queue.dequeue (v), queue.enqueue (v);
   v->bumped = ++stats.bumped;
   int idx = var2idx (v);
-  if (idx != uip && !vals[idx]) queue.assigned = v;
+  if (!vals[idx]) queue.assigned = v;
   LOG ("VMTF bumped and moved to front %d", idx);
 }
+
+// Initially we proposed to bump the variable in the current 'bumped' stamp
+// order.  This maintains the current order between bumped variables.  On
+// few benchmarks this however lead to a large number of propagations per
+// seconds, which can be reduce by an order of magnitude by focusing
+// somewhat on recently assigned variables more, particularly in this
+// situation.  This can easily be achieved by using the sum of the 'bumped'
+// time stamp and trail height 'trail' for comparison.  Note that 'bumped'
+// is always increasing and gets really large, while 'trail' can never be
+// larger than the number of variables, so there is likely a potential for
+// further optimization.
 
 struct bump_earlier {
   Solver * solver;
@@ -38,19 +57,20 @@ struct bump_earlier {
   }
 };
 
-void Solver::bump_and_clear_seen_variables (int uip) {
+void Solver::bump_and_clear_seen_variables () {
   START (bump);
   sort (seen.begin (), seen.end (), bump_earlier (this));
-  if (uip < 0) uip = -uip;
   for (size_t i = 0; i < seen.size (); i++) {
     Var * v = &var (seen[i]);
     assert (v->seen);
     v->seen = false;
-    bump_variable (v, uip);
+    bump_variable (v);
   }
   seen.clear ();
   STOP (bump);
 }
+
+/*------------------------------------------------------------------------*/
 
 void Solver::bump_resolved_clauses () {
   START (bump);
@@ -68,6 +88,8 @@ void Solver::resolve_clause (Clause * c) {
   assert (c->extended);
   resolved.push_back (c);
 }
+
+/*------------------------------------------------------------------------*/
 
 bool Solver::analyze_literal (int lit) {
   Var & v = var (lit);
@@ -147,7 +169,7 @@ void Solver::analyze () {
   UPDATE_AVG (jump_avg, jump);
   backtrack (jump);
   assign (-uip, driving_clause);
-  bump_and_clear_seen_variables (uip);
+  bump_and_clear_seen_variables ();
   clause.clear (), clear_levels ();
   conflict = 0;
   STOP (analyze);

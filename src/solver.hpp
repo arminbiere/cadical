@@ -157,8 +157,8 @@ class Solver {
   void learn_unit_clause (int lit);
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
-  void bump_variable (Var * v, int uip);
-  void bump_and_clear_seen_variables (int uip);
+  void bump_variable (Var * v);
+  void bump_and_clear_seen_variables ();
   void bump_resolved_clauses ();
   void resolve_clause (Clause *);
   void clear_levels ();

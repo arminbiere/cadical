@@ -65,7 +65,7 @@ File * File::write (const char * path) {
     file = write_pipe ("7z a -an -txz -si -so > %s 2>/dev/null", path);
   else
     file = fopen (path, "w"), close_input = 1;
-  return file ? new File (false, close_input, file, path) : 0;
+  return file ? new File (true, close_input, file, path) : 0;
 }
 
 File::~File () {
