@@ -4,7 +4,17 @@
 
 namespace CaDiCaL {
 
-// Functions for learned clause minimization.
+// Functions for learned clause minimization. We only have the recursive
+// version, which actually is implemented recursively.  We also played with
+// a non-recursive version, which however was more complex and slower.  The
+// trick to keep pontential stack exhausting recursion under guards is to
+// explicitly limit the recursion depth.
+
+// Instead of signatures as in the original implementation in MiniSAT and
+// the corresponding paper, we use Allen Van Gelders 'poison' idea to mark
+// unsuccesful removal attempts, Donald Knuth's idea to abort minimization
+// if only one literal was seen on the level and a new idea of also aborting
+// if the earliest seen literal was assigned afterwards.
 
 bool Solver::minimize_literal (int lit, int depth) {
   Var & v = var (lit);
@@ -24,6 +34,11 @@ bool Solver::minimize_literal (int lit, int depth) {
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
   return res;
 }
+
+// We try to minimize the first UIP clause by trying to remove away literals
+// on smaller decision level first.  This makes more room for depth bounded
+// minimization even though we have not really seen cases where the depth
+// limit is hit and results in substantially less succesful minimization.
 
 struct trail_smaller_than {
   Solver * solver;
@@ -56,4 +71,3 @@ void Solver::minimize_clause () {
 }
 
 };
-

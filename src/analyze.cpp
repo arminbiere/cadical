@@ -72,6 +72,12 @@ void Solver::bump_and_clear_seen_variables () {
 
 /*------------------------------------------------------------------------*/
 
+// Clause activity is replaced by a move to front scheme as well with
+// 'resolved' as time stamp.  Only long and high glue clauses are stamped
+// since small or low glue clauses are kept anyhow (and do not actually have
+// a 'resolved' field).  We keep the relative order of bumped clauses by
+// sorting them first.
+
 void Solver::bump_resolved_clauses () {
   START (bump);
   sort (resolved.begin (), resolved.end (), resolved_earlier ());
@@ -90,6 +96,14 @@ void Solver::resolve_clause (Clause * c) {
 }
 
 /*------------------------------------------------------------------------*/
+
+// During conflict analysis literals not seen yet either become part of the
+// first-uip clauses (if on lower decision level), are dropped (if fixed),
+// or are resolved away (if on the current decision level and different from
+// the first UIP).  At the same time we update the number of seen literals on
+// a decision level and the smallest trail position of a seen literal for
+// each decision level.  This both helps conflict clause minimization.  The
+// number of seen levels is the glucose level (also called glue, or LBD).
 
 bool Solver::analyze_literal (int lit) {
   Var & v = var (lit);
@@ -114,6 +128,10 @@ void Solver::clear_levels () {
     control[levels[i]].reset ();
   levels.clear ();
 }
+
+// By sorting the first UIP clause literals before minimization, we
+// establish the invariant that the two watched literals are on the largest
+// decision highest level.
 
 struct trail_greater_than {
   Solver * solver;
@@ -174,6 +192,10 @@ void Solver::analyze () {
   conflict = 0;
   STOP (analyze);
 }
+
+// We wait reporting a learned unit until propagation of that unit is
+// completed.  Otherwise the 'i' report line might prematurely give the
+// number of remaining variables.
 
 void Solver::iterate () { iterating = false; report ('i'); }
 
