@@ -8,6 +8,9 @@ namespace CaDiCaL {
 // The 'Clause' data structure is very important. There are usually many
 // clauses and accessing them is a hot-spot.  Thus we use three common
 // optimizations to reduce their memory foot print and improve cache usage.
+// Even though is induces some complexity in understanding the actual
+// implementation, though arguably not the usage of this data-structure,
+// we deem these optimizations for essential.
 //
 // (1) The most important optimization is to 'embed' the actual literals in
 // the clause.  This requires a variadic size structure and thus strictly is

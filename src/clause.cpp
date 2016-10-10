@@ -11,9 +11,20 @@ void Solver::watch_clause (Clause * c) {
   watch_literal (l1, l0, c);
 }
 
+// Since the literals are embedded a clause actually contains always 'size'
+// literals and 'literals[2]' should be regarded as 'literals[size]'.
+// Clauses have at least 2 literals.  Empty and unit clauses are implicitly
+// handled and never allocated.
+
 size_t Solver::bytes_clause (int size) {
   return sizeof (Clause) + (size - 2) * sizeof (int);
 }
+
+// Redundant clauses of large glue and large size are extended to hold a
+// 'resolved' time stamp.  This makes memory allocation and deallocation a
+// little bit tricky but some space and time.  Since the embedding of the
+// literals is actually important and on the same level of complexity we
+// keep both optimizations.
 
 Clause * Solver::new_clause (bool red, int glue) {
   assert (clause.size () <= (size_t) INT_MAX);
@@ -29,7 +40,7 @@ Clause * Solver::new_clause (bool red, int glue) {
   res->redundant = red;
   res->garbage = false;
   res->reason = false;
-  res->glue = min (glue, MAX_GLUE);
+  res->glue = min (glue, MAX_GLUE);     // restrict to bit-field width
   res->size = size;
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
   clauses.push_back (res);
@@ -58,6 +69,9 @@ size_t Solver::delete_clause (Clause * c) {
   delete [] (char*) ptr;
   return bytes;
 }
+
+// Place literals over the same variable close to each other.  This allows
+// eager removal of identical literals and detection of tautological clauses.
 
 struct lit_less_than {
   bool operator () (int a, int b) {

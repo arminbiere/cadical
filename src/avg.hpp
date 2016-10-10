@@ -5,6 +5,8 @@ namespace CaDiCaL {
 
 class Solver;
 
+// Cumulative average.
+
 struct AVG {
   double value;
   long count;

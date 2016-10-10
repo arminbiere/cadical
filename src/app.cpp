@@ -5,12 +5,12 @@
 #include <cstring>
 
 extern "C" {
-#include "unistd.h"	// for 'isatty'
+#include "unistd.h"     // for 'isatty'
 };
 
 namespace CaDiCaL {
 
-Solver * App::solver;
+Solver * App::solver;   // static, thus non-reentrant
 
 void App::usage () {
   fputs (
@@ -23,11 +23,11 @@ void App::usage () {
 "  -v         more verbose messages (same as '--verbose')\n"
 "  -q         quiet (same as '--quiet')\n"
 "\n"
-"  -c         check witness on original formula\n"
+"  -c         check witness on formula (same as '--check')\n"
 "\n"
 "  -s <sol>   read solution in competition output format\n"
 "             to check consistency of learned clauses\n"
-"             during testing and debugging\n"
+"             during testing and debugging (implies '-c')\n"
 "\n"
 "or '<option>' can be one of the following long options\n"
 "\n",
@@ -158,7 +158,7 @@ int App::main (int argc, char ** argv) {
       proof = File::write (stdout, "<stdout>");
       if (isatty (1) && solver->opts.binary) {
 MSG ("forcing non-binary proof since '<stdout>' connected to terminal");
-	binary_proof = false;
+        binary_proof = false;
       }
     } else if (!(proof = File::write (proof_name)))
       DIE ("can not open and write DRAT proof to '%s'", proof_name);
