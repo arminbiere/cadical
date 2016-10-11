@@ -188,7 +188,7 @@ MSG ("forcing non-binary proof since '<stdout>' connected to terminal");
     fflush (stdout);
   }
   Signal::reset ();
-  internal->stats.print ();
+  solver->statistics ();
   MSG ("exit %d", res);
   if (!internal->opts.leak) delete internal;
   internal = 0;
