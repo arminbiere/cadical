@@ -231,6 +231,8 @@ class Internal {
   int sol (int lit);
   void check_clause ();
 
+  void check (int (Internal::*assignment) (int));
+
   Internal ();
   ~Internal ();
 

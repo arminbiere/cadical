@@ -62,28 +62,6 @@ fputs (
   stdout);
 }
 
-void App::check_satisfying_assignment (int (Internal::*assignment)(int)) {
-  bool satisfied = false;
-  size_t start = 0;
-  for (size_t i = 0; i < internal->original.size (); i++) {
-    int lit = internal->original[i];
-    if (!lit) {
-      if (!satisfied) {
-        fflush (stdout);
-        fputs ("*** cadical error: unsatisfied clause:\n", stderr);
-        for (size_t j = start; j < i; j++)
-          fprintf (stderr, "%d ", internal->original[j]);
-        fputs ("0\n", stderr);
-        fflush (stderr);
-        abort ();
-      }
-      satisfied = false;
-      start = i + 1;
-    } else if (!satisfied && (internal->*assignment) (lit) > 0) satisfied = true;
-  }
-  solver->msg ("satisfying assignment checked");
-}
-
 void App::print_witness () {
   int c = 0;
   for (int i = 1; i <= internal->max_var; i++) {
@@ -108,7 +86,7 @@ void App::banner () {
   solver->msg (COMPILE);
 }
 
-bool App::set (const char * arg) { return internal->opts.set (arg); }
+bool App::set (const char * arg) { return solver->set (arg); }
 
 int App::main (int argc, char ** argv) {
   File * dimacs = 0, * proof = 0, * solution = 0;
@@ -158,7 +136,7 @@ int App::main (int argc, char ** argv) {
     err = solution_parser.parse_solution ();
     if (err) { fprintf (stderr, "%s\n", err); exit (1); }
     delete solution;
-    check_satisfying_assignment (&Internal::sol);
+    internal->check (&Internal::sol);
   }
   solver->options ();
   solver->section ("proof tracing");
@@ -181,7 +159,7 @@ int App::main (int argc, char ** argv) {
   if (proof) { delete proof; internal->proof = 0; }
   solver->section ("result");
   if (res == 10) {
-    check_satisfying_assignment (&Internal::val);
+    internal->check (&Internal::val);
     printf ("s SATISFIABLE\n");
     if (internal->opts.witness) print_witness ();
     fflush (stdout);

@@ -86,4 +86,28 @@ int Internal::solve () {
   else return search ();
 }
 
+/*------------------------------------------------------------------------*/
+
+void Internal::check (int (Internal::*a)(int)) {
+  bool satisfied = false;
+  size_t start = 0;
+  for (size_t i = 0; i < original.size (); i++) {
+    int lit = original[i];
+    if (!lit) {
+      if (!satisfied) {
+        fflush (stdout);
+        fputs ("*** cadical error: unsatisfied clause:\n", stderr);
+        for (size_t j = start; j < i; j++)
+          fprintf (stderr, "%d ", original[j]);
+        fputs ("0\n", stderr);
+        fflush (stderr);
+        abort ();
+      }
+      satisfied = false;
+      start = i + 1;
+    } else if (!satisfied && (this->*a) (lit) > 0) satisfied = true;
+  }
+  MSG ("satisfying assignment checked");
+}
+
 };

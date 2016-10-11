@@ -1,10 +1,43 @@
 #include "cadical.hpp"
 #include "internal.hpp"
 
+#include <cstring>
+#include <cstdio>
+
 namespace CaDiCaL {
 
 Solver::Solver () { internal = new Internal (); }
 Solver::~Solver () { delete internal; }
+
+#if 0
+
+bool Solver::set (const char * name, const bool val) {
+  char * arg = new char [strlen (name) + 15];
+  sprintf (arg, "--%s=%s", name, val ? "true" : "false");
+  bool res = internal->opts.set (arg);
+  delete [] arg;
+  return res;
+}
+
+bool Solver::set (const char * name, const int val) {
+  char * arg = new char [strlen (name) + 15];
+  sprintf (arg, "--%s=%d", name, val);
+  bool res = internal->opts.set (arg);
+  delete [] arg;
+  return res;
+}
+
+bool Solver::set (const char * name, const double val) {
+  char * arg = new char [strlen (name) + 15];
+  sprintf (arg, "--%s=%f", name, val);
+  bool res = internal->opts.set (arg);
+  delete [] arg;
+  return res;
+}
+
+#endif
+
+bool Solver::set (const char * arg) { return internal->opts.set (arg); }
 
 void Solver::banner () { internal->opts.print (); }
 void Solver::options () { internal->opts.print (); }
