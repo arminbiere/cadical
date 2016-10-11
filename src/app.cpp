@@ -1,6 +1,8 @@
 #include "app.hpp"
 #include "internal.hpp"
 #include "cadical.hpp"
+#include "signal.hpp"
+
 #include "../build/config.hpp"
 
 #include <cstring>
@@ -142,7 +144,7 @@ int App::main (int argc, char ** argv) {
   if (solution && !internal->opts.check) set ("--check");
   if (!dimacs) dimacs = File::read (stdin, "<stdin>");
   banner ();
-  Signal::init (internal);
+  Signal::init (solver);
   solver->section ("parsing input");
   solver->msg ("reading DIMACS file from '%s'", dimacs->name ());
   Parser dimacs_parser (internal, dimacs);

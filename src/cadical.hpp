@@ -64,6 +64,7 @@ public:
 private:
   
   friend class App;
+  friend class Signal;
 
   // Read solution in competition format for debugging and testing.
   //

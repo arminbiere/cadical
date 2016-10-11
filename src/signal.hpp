@@ -3,16 +3,16 @@
 
 namespace CaDiCaL {
 
-class Internal;
+class Solver;
 
 class Signal {
   static bool catchedsig;
-  static Internal * internal;
+  static Solver * solver;
   static const char * name (int sig);
   static void catchsig (int sig);
 public:
   static void reset ();
-  static void init (Internal *);
+  static void init (Solver *);
 };
 
 };

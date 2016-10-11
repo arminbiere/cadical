@@ -26,7 +26,6 @@ using namespace std;
 #include "message.hpp"
 #include "stats.hpp"
 #include "util.hpp"
-#include "signal.hpp"
 #include "queue.hpp"
 #include "report.hpp"
 #include "format.hpp"
