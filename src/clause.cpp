@@ -1,10 +1,10 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 #include <algorithm>
 
 namespace CaDiCaL {
 
-void Solver::watch_clause (Clause * c) {
+void Internal::watch_clause (Clause * c) {
   assert (c->size > 1);
   int l0 = c->literals[0], l1 = c->literals[1];
   watch_literal (l0, l1, c);
@@ -16,7 +16,7 @@ void Solver::watch_clause (Clause * c) {
 // Clauses have at least 2 literals.  Empty and unit clauses are implicitly
 // handled and never allocated.
 
-size_t Solver::bytes_clause (int size) {
+size_t Internal::bytes_clause (int size) {
   return sizeof (Clause) + (size - 2) * sizeof (int);
 }
 
@@ -26,7 +26,7 @@ size_t Solver::bytes_clause (int size) {
 // literals is actually important and on the same level of complexity we
 // keep both optimizations.
 
-Clause * Solver::new_clause (bool red, int glue) {
+Clause * Internal::new_clause (bool red, int glue) {
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();  assert (size >= 2);
   size_t bytes = bytes_clause (size);
@@ -52,7 +52,7 @@ Clause * Solver::new_clause (bool red, int glue) {
   return res;
 }
 
-size_t Solver::delete_clause (Clause * c) {
+size_t Internal::delete_clause (Clause * c) {
   if (c->redundant)
        assert (stats.clauses.redundant),   stats.clauses.redundant--;
   else assert (stats.clauses.irredundant), stats.clauses.irredundant--;
@@ -80,7 +80,7 @@ struct lit_less_than {
   }
 };
 
-bool Solver::tautological_clause () {
+bool Internal::tautological_clause () {
   sort (clause.begin (), clause.end (), lit_less_than ());
   size_t j = 0;
   int prev = 0;
@@ -96,7 +96,7 @@ bool Solver::tautological_clause () {
   return false;
 }
 
-void Solver::add_new_original_clause () {
+void Internal::add_new_original_clause () {
   int size = (int) clause.size ();
   if (!size) {
     if (!unsat) {
@@ -115,7 +115,7 @@ void Solver::add_new_original_clause () {
   } else watch_clause (new_clause (false));
 }
 
-Clause * Solver::new_learned_clause (int glue) {
+Clause * Internal::new_learned_clause (int glue) {
   Clause * res = new_clause (true, glue);
   if (proof) proof->trace_add_clause (res);
   watch_clause (res);

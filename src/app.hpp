@@ -3,12 +3,12 @@
 
 namespace CaDiCaL {
 
-class Solver;
+class Internal;
 
 class App {
-  static Solver * solver;
+  static Internal * internal;
   static void usage ();
-  static void check_satisfying_assignment (int (Solver::*)(int));
+  static void check_satisfying_assignment (int (Internal::*)(int));
   static void print_witness ();
   static void banner ();
   static bool set (const char*);

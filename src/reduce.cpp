@@ -1,22 +1,22 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 #include <algorithm>
 
 namespace CaDiCaL {
 
-bool Solver::reducing () {
+bool Internal::reducing () {
   if (!opts.reduce) return false;
   return stats.conflicts >= reduce_limit;
 }
 
-void Solver::protect_reasons () {
+void Internal::protect_reasons () {
   for (size_t i = 0; i < trail.size (); i++) {
     Var & v = var (trail[i]);
     if (v.level && v.reason) v.reason->reason = true;
   }
 }
 
-void Solver::unprotect_reasons () {
+void Internal::unprotect_reasons () {
   for (size_t i = 0; i < trail.size (); i++) {
     Var & v = var (trail[i]);
     if (v.level && v.reason)
@@ -28,7 +28,7 @@ void Solver::unprotect_reasons () {
 // root level satisfied but contains a root level falsified literal and 0
 // otherwise, if it does not contain a root level fixed literal.
 
-int Solver::clause_contains_fixed_literal (Clause * c) {
+int Internal::clause_contains_fixed_literal (Clause * c) {
   const int * lits = c->literals, size = c->size;
   int res = 0;
   for (int i = 0; res <= 0 && i < size; i++) {
@@ -52,7 +52,7 @@ int Solver::clause_contains_fixed_literal (Clause * c) {
 // clause is extended or not. Only its size field is adjusted accordingly
 // after flushing out root level falsified literals.
 
-void Solver::flush_falsified_literals (Clause * c) {
+void Internal::flush_falsified_literals (Clause * c) {
   if (c->reason || c->size == 2) return;
   if (proof) proof->trace_flushing_clause (c);
   const int size = c->size;
@@ -74,7 +74,7 @@ void Solver::flush_falsified_literals (Clause * c) {
   LOG (c, "flushed %d literals and got", flushed);
 }
 
-void Solver::mark_satisfied_clauses_as_garbage () {
+void Internal::mark_satisfied_clauses_as_garbage () {
   if (fixed_limit >= stats.fixed) return;
   for (size_t i = 0; i < clauses.size (); i++) {
     Clause * c = clauses[i];
@@ -98,7 +98,7 @@ struct less_usefull {
 // which redundant clauses are considered not useful and thus will be
 // collected in a subsequent garbage collection phase.
 
-void Solver::mark_useless_redundant_clauses_as_garbage () {
+void Internal::mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
   assert (stack.empty ());
   for (size_t i = 0; i < clauses.size (); i++) {
@@ -119,7 +119,7 @@ void Solver::mark_useless_redundant_clauses_as_garbage () {
   }
 }
 
-void Solver::delete_garbage_clauses () {
+void Internal::delete_garbage_clauses () {
   size_t collected_bytes = 0, j = 0;
   for (size_t i = 0; i < clauses.size (); i++) {
     Clause * c = clauses[j++] = clauses[i];
@@ -131,7 +131,7 @@ void Solver::delete_garbage_clauses () {
   LOG ("collected %ld bytes", collected_bytes);
 }
 
-void Solver::flush_watches () {
+void Internal::flush_watches () {
   size_t current_bytes = 0, max_bytes = 0;
   for (int idx = 1; idx <= max_var; idx++) {
     for (int sign = -1; sign <= 1; sign += 2) {
@@ -148,18 +148,18 @@ void Solver::flush_watches () {
     stats.bytes.watcher.max = max_bytes;
 }
 
-void Solver::setup_watches () {
+void Internal::setup_watches () {
   for (size_t i = 0; i < clauses.size (); i++)
     watch_clause (clauses[i]);
 }
 
-void Solver::garbage_collection () {
+void Internal::garbage_collection () {
   delete_garbage_clauses ();
   flush_watches ();
   setup_watches ();
 }
 
-void Solver::reduce () {
+void Internal::reduce () {
   START (reduce);
   stats.reduce.count++;
   LOG ("reduce %ld resolved limit %ld", stats.reduce.count, reduce_limit);

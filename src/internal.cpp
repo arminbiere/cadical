@@ -1,8 +1,8 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 namespace CaDiCaL {
 
-Solver::Solver ()
+Internal::Internal ()
 :
   max_var (0),
   vtab (0),
@@ -25,11 +25,11 @@ Solver::Solver ()
   stats (this),
   solution (0),
   profiles (this),
-  solver (this)
+  internal (this)
 {
 }
 
-void Solver::init_variables () {
+void Internal::init_variables () {
   const int max_lit = 2*max_var + 1;
   NEW (vals,   signed char, max_var + 1);
   NEW (phases, signed char, max_var + 1);
@@ -42,7 +42,7 @@ void Solver::init_variables () {
   control.push_back (Level (0));
 }
 
-Solver::~Solver () {
+Internal::~Internal () {
   for (size_t i = 0; i < clauses.size (); i++)
     delete_clause (clauses[i]);
   if (proof) delete proof;
@@ -55,7 +55,7 @@ Solver::~Solver () {
 
 /*------------------------------------------------------------------------*/
 
-int Solver::search () {
+int Internal::search () {
   int res = 0;
   START (search);
   while (!res)
@@ -72,14 +72,14 @@ int Solver::search () {
 
 /*------------------------------------------------------------------------*/
 
-void Solver::init_solving () {
+void Internal::init_solving () {
   restart_limit = opts.restartint;
   reduce_limit = reduce_inc = opts.reduceinit;
   INIT_EMA (fast_glue_avg, opts.emagluefast);
   INIT_EMA (slow_glue_avg, opts.emaglueslow);
 }
 
-int Solver::solve () {
+int Internal::solve () {
   init_solving ();
   SECTION ("solving");
   if (clashing_unit) { learn_empty_clause (); return 20; }

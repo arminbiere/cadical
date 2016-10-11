@@ -4,10 +4,10 @@
 namespace CaDiCaL {
 
 struct File;
-class Solver;
+class Internal;
 
 class Parser {
-  Solver * solver;
+  Internal * internal;
   File * file;
   void perr (const char * fmt, ...);
   int parse_char ();
@@ -15,7 +15,7 @@ class Parser {
   int parse_positive_int (int ch, int & res, const char * name);
   int parse_lit (int ch, int & lit);
 public:
-  Parser (Solver * s, File * f) : solver (s), file (f) { }
+  Parser (Internal * s, File * f) : internal (s), file (f) { }
   void parse_dimacs ();
   void parse_solution ();
 };

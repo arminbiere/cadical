@@ -1,10 +1,10 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 namespace CaDiCaL {
 
-Profiles::Profiles (Solver * s)
+Profiles::Profiles (Internal * s)
 :
-  solver (s)
+  internal (s)
 #define PROFILE(NAME, LEVEL) \
   , NAME (#NAME, LEVEL)
   PROFILES
@@ -12,11 +12,11 @@ Profiles::Profiles (Solver * s)
 {
 }
 
-void Solver::start_profiling (Profile * p) {
+void Internal::start_profiling (Profile * p) {
   timers.push_back (Timer (seconds (), p));
 }
 
-void Solver::stop_profiling (Profile * p) {
+void Internal::stop_profiling (Profile * p) {
   assert (!timers.empty ());
   Timer & t = timers.back ();
   assert (p == t.profile), (void) p;
@@ -24,12 +24,12 @@ void Solver::stop_profiling (Profile * p) {
   timers.pop_back ();
 }
 
-void Solver::update_all_timers (double now) {
+void Internal::update_all_timers (double now) {
   for (size_t i = 0; i < timers.size (); i++)
     timers[i].update (now);
 }
 
-void Solver::print_profile (double now) {
+void Internal::print_profile (double now) {
   update_all_timers (now);
   SECTION ("run-time profiling data");
   const size_t size = sizeof profiles / sizeof (Profile);

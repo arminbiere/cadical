@@ -1,5 +1,5 @@
-#ifndef _solver_hpp_INCLUDED
-#define _solver_hpp_INCLUDED
+#ifndef _internal_hpp_INCLUDED
+#define _internal_hpp_INCLUDED
 
 #include <cassert>
 #include <climits>
@@ -34,7 +34,7 @@ using namespace std;
 
 namespace CaDiCaL {
 
-class Solver {
+class Internal {
  
   /*------------------------------------------------------------------------*/
 
@@ -75,7 +75,7 @@ class Solver {
   vector<int> original;		// original CNF for debugging
   vector<Timer> timers;         // active timers for profiling functions
   Profiles profiles;            // global profiled time for functions
-  Solver * solver;              // proxy to 'this' in macros (redundant)
+  Internal * internal;              // proxy to 'this' in macros (redundant)
 
 /*------------------------------------------------------------------------*/
 
@@ -193,7 +193,7 @@ class Solver {
   int next_decision_variable ();
   void decide ();
 
-  // Main search functions in 'solver.cpp'.
+  // Main search functions in 'internal.cpp'.
   //
   int search ();                // CDCL loop
   void init_solving ();
@@ -211,28 +211,12 @@ class Solver {
   int sol (int lit);
   void check_clause ();
 
-/*------------------------------------------------------------------------*/
-
-  friend class App;
-  friend class Parser;
-  friend class Signal;
-  friend struct Logger;
-  friend struct Message;
-  friend struct Queue;
-  friend struct Stats;
-
-  friend struct trail_smaller_than;
-  friend struct trail_greater_than;
-  friend struct bump_earlier;
-
-public:
-
-  Solver ();
-  ~Solver ();
+  Internal ();
+  ~Internal ();
 
   // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
   //
-  int val (int lit) {
+  inline int val (int lit) {
     int idx = vidx (lit), res = vals[idx];
     if (lit < 0) res = -res;
     return res;
@@ -240,7 +224,7 @@ public:
 
   // As 'val' but restricted to the root-level value of a literal.
   //
-  int fixed (int lit) {
+  inline int fixed (int lit) {
     int idx = vidx (lit), res = vals[idx];
     if (res && vtab[idx].level) res = 0;
     if (lit < 0) res = -res;
@@ -250,6 +234,23 @@ public:
   double seconds ();
   size_t max_bytes ();
   size_t current_bytes ();
+
+/*------------------------------------------------------------------------*/
+
+  friend class Solver;
+
+  friend class App;
+  friend class Parser;
+  friend class Signal;
+  friend struct Logger;
+  friend struct Message;
+  friend struct Queue;
+  friend struct Proof;
+  friend struct Stats;
+
+  friend struct trail_smaller_than;
+  friend struct trail_greater_than;
+  friend struct bump_earlier;
 };
 
 };

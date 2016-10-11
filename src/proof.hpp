@@ -5,10 +5,10 @@ namespace CaDiCaL {
 
 struct File;
 struct Clause;
-class Solver;
+class Internal;
 
 class Proof {
-  Solver * solver;
+  Internal * internal;
   File * file;
   bool enabled;
   bool binary;
@@ -19,8 +19,8 @@ class Proof {
   void trace_clause (Clause *, bool add);
 
 public:
-  Proof (Solver * s, File * f, bool b)
-    : solver (s), file (f), enabled (true), binary (b)
+  Proof (Internal * s, File * f, bool b)
+    : internal (s), file (f), enabled (true), binary (b)
   { }
   operator bool () const { return enabled; }
   void trace_empty_clause ();

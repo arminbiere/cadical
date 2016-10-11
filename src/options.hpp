@@ -26,11 +26,11 @@ OPTION(witness,         bool,   1, 0,  1, "print witness") \
 
 namespace CaDiCaL {
 
-class Solver;
+class Internal;
 
 class Options {
 
-  Solver * solver;
+  Internal * internal;
 
   bool set (   int &, const char *, const char *, const    int, const    int);
   bool set (  bool &, const char *, const char *, const   bool, const   bool);
@@ -45,7 +45,7 @@ public:
   OPTIONS
 #undef OPTION
 
-  Options (Solver *);
+  Options (Internal *);
 
   // Of the form "--<NAME>=<val>", "--<NAME>" or "--no-<NAME>".
   //

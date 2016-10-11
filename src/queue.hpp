@@ -3,7 +3,7 @@
 
 namespace CaDiCaL {
 
-class Solver;
+class Internal;
 
 // VMTF decision queue
 
@@ -25,7 +25,7 @@ struct Queue {
     v->next = 0;
   }
 
-  void init (Solver *);
+  void init (Internal *);
 };
 
 };

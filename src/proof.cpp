@@ -1,5 +1,5 @@
 #include "proof.hpp"
-#include "solver.hpp"
+#include "internal.hpp"
 #include "logging.hpp"
 #include "clause.hpp"
 #include "file.hpp"
@@ -68,7 +68,7 @@ void Proof::trace_flushing_clause (Clause * c) {
   const int size = c->size, * lits = c->literals;
   for (int i = 0; i < size; i++) {
     const int lit = lits[i];
-    if (solver->fixed (lit) < 0) continue;
+    if (internal->fixed (lit) < 0) continue;
     if (binary) put_binary_lit (lit);
     else file->put (lit), file->put (" ");
   }

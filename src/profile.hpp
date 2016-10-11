@@ -3,7 +3,7 @@
 
 namespace CaDiCaL {
 
-class Solver;
+class Internal;
 
 // To profile say 'foo', just add another line 'PROFILE(foo)' and wrap
 // the code to be profiled within a 'START (foo)' / 'STOP (foo)' block.
@@ -27,12 +27,12 @@ struct Profile {
 };
 
 struct Profiles {
-  Solver * solver;
+  Internal * internal;
 #define PROFILE(NAME, LEVEL) \
   Profile NAME;
   PROFILES
 #undef PROFILE
-  Profiles (Solver *);
+  Profiles (Internal *);
 };
 
 };

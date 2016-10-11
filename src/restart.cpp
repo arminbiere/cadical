@@ -1,8 +1,8 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 namespace CaDiCaL {
 
-bool Solver::restarting () {
+bool Internal::restarting () {
   if (!opts.restart) return false;
   if (stats.conflicts <= restart_limit) return false;
   restart_limit = stats.conflicts + opts.restartint;
@@ -11,7 +11,7 @@ bool Solver::restarting () {
   return l <= f;
 }
 
-int Solver::reuse_trail () {
+int Internal::reuse_trail () {
   if (!opts.reusetrail) return 0;
   long limit = var (next_decision_variable ()).bumped;
   int res = 0;
@@ -21,7 +21,7 @@ int Solver::reuse_trail () {
   return res;
 }
 
-void Solver::restart () {
+void Internal::restart () {
   START (restart);
   stats.restart.count++;
   LOG ("restart %ld", stats.restart.count);

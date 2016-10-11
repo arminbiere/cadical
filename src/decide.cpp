@@ -1,8 +1,8 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 namespace CaDiCaL {
 
-int Solver::next_decision_variable () {
+int Internal::next_decision_variable () {
   int res;
   while (val (res = var2idx (queue.assigned)))
     queue.assigned = queue.assigned->prev, stats.searched++;
@@ -10,7 +10,7 @@ int Solver::next_decision_variable () {
   return res;
 }
 
-void Solver::decide () {
+void Internal::decide () {
   START (decide);
   level++;
   stats.decisions++;

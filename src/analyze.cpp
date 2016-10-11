@@ -1,4 +1,4 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 #include <algorithm>
 
@@ -6,14 +6,14 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-void Solver::learn_empty_clause () {
+void Internal::learn_empty_clause () {
   assert (!unsat);
   LOG ("learned empty clause");
   if (proof) proof->trace_empty_clause ();
   unsat = true;
 }
 
-void Solver::learn_unit_clause (int lit) {
+void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   if (proof) proof->trace_unit_clause (lit);
   iterating = true;
@@ -27,7 +27,7 @@ void Solver::learn_unit_clause (int lit) {
 // 'bumped' time stamp is updated accordingly.  It is used to determine
 // whether the 'queue.assigned' pointer has to be moved in 'unassign'.
 
-void Solver::bump_variable (Var * v) {
+void Internal::bump_variable (Var * v) {
   if (!v->next) return;
   if (queue.assigned == v) queue.assigned = v->prev ? v->prev : v->next;
   queue.dequeue (v), queue.enqueue (v);
@@ -49,15 +49,15 @@ void Solver::bump_variable (Var * v) {
 // further optimization.
 
 struct bump_earlier {
-  Solver * solver;
-  bump_earlier (Solver * s) : solver (s) { }
+  Internal * internal;
+  bump_earlier (Internal * s) : internal (s) { }
   bool operator () (int a, int b) {
-    Var & u = solver->var (a), & v = solver->var (b);
+    Var & u = internal->var (a), & v = internal->var (b);
     return u.bumped + u.trail < v.bumped + v.trail;
   }
 };
 
-void Solver::bump_and_clear_seen_variables () {
+void Internal::bump_and_clear_seen_variables () {
   START (bump);
   sort (seen.begin (), seen.end (), bump_earlier (this));
   for (size_t i = 0; i < seen.size (); i++) {
@@ -78,7 +78,7 @@ void Solver::bump_and_clear_seen_variables () {
 // a 'resolved' field).  We keep the relative order of bumped clauses by
 // sorting them first.
 
-void Solver::bump_resolved_clauses () {
+void Internal::bump_resolved_clauses () {
   START (bump);
   sort (resolved.begin (), resolved.end (), resolved_earlier ());
   for (size_t i = 0; i < resolved.size (); i++)
@@ -87,7 +87,7 @@ void Solver::bump_resolved_clauses () {
   resolved.clear ();
 }
 
-void Solver::resolve_clause (Clause * c) {
+void Internal::resolve_clause (Clause * c) {
   if (!c->redundant) return;
   if (c->size <= opts.keepsize) return;
   if (c->glue <= opts.keepglue) return;
@@ -105,7 +105,7 @@ void Solver::resolve_clause (Clause * c) {
 // each decision level.  This both helps conflict clause minimization.  The
 // number of seen levels is the glucose level (also called glue, or LBD).
 
-bool Solver::analyze_literal (int lit) {
+bool Internal::analyze_literal (int lit) {
   Var & v = var (lit);
   if (v.seen) return false;
   if (!v.level) return false;
@@ -123,7 +123,7 @@ bool Solver::analyze_literal (int lit) {
   return v.level == level;
 }
 
-void Solver::clear_levels () {
+void Internal::clear_levels () {
   for (size_t i = 0; i < levels.size (); i++)
     control[levels[i]].reset ();
   levels.clear ();
@@ -134,14 +134,14 @@ void Solver::clear_levels () {
 // decision highest level.
 
 struct trail_greater_than {
-  Solver * solver;
-  trail_greater_than (Solver * s) : solver (s) { }
+  Internal * internal;
+  trail_greater_than (Internal * s) : internal (s) { }
   bool operator () (int a, int b) {
-    return solver->var (a).trail > solver->var (b).trail;
+    return internal->var (a).trail > internal->var (b).trail;
   }
 };
 
-void Solver::analyze () {
+void Internal::analyze () {
   assert (conflict);
   if (!level) { learn_empty_clause (); conflict = 0; return; }
   START (analyze);
@@ -197,6 +197,6 @@ void Solver::analyze () {
 // completed.  Otherwise the 'i' report line might prematurely give the
 // number of remaining variables.
 
-void Solver::iterate () { iterating = false; report ('i'); }
+void Internal::iterate () { iterating = false; report ('i'); }
 
 };

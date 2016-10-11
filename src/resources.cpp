@@ -1,11 +1,11 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 #include <sys/time.h>
 #include <sys/resource.h>
 
 namespace CaDiCaL {
 
-double Solver::seconds () {
+double Internal::seconds () {
   struct rusage u;
   double res;
   if (getrusage (RUSAGE_SELF, &u)) return 0;
@@ -14,12 +14,12 @@ double Solver::seconds () {
   return res;
 }
 
-void Solver::inc_bytes (size_t bytes) {
+void Internal::inc_bytes (size_t bytes) {
   if ((stats.bytes.total.current += bytes) > stats.bytes.total.max)
     stats.bytes.total.max = stats.bytes.total.current;
 }
 
-void Solver::dec_bytes (size_t bytes) {
+void Internal::dec_bytes (size_t bytes) {
   assert (stats.bytes.total.current >= bytes);
   stats.bytes.total.current -= bytes;
 }
@@ -27,7 +27,7 @@ void Solver::dec_bytes (size_t bytes) {
 #define VECTOR_BYTES(V) \
   res += V.capacity () * sizeof (V[0])
 
-size_t Solver::vector_bytes () {
+size_t Internal::vector_bytes () {
   size_t res = 0;
   VECTOR_BYTES (original);
   VECTOR_BYTES (clause);
@@ -41,14 +41,14 @@ size_t Solver::vector_bytes () {
   return res;
 }
 
-size_t Solver::max_bytes () {
+size_t Internal::max_bytes () {
   size_t res = stats.bytes.total.max + vector_bytes ();
   if (stats.bytes.watcher.max > 0) res += stats.bytes.watcher.max;
   else res += (4 * stats.clauses.max * sizeof (Watch)) / 3;
   return res;
 }
 
-size_t Solver::current_bytes () {
+size_t Internal::current_bytes () {
   size_t res = stats.bytes.total.current + vector_bytes ();
   if (stats.bytes.watcher.current > 0) res += stats.bytes.watcher.current;
   else res += (4 * stats.clauses.current * sizeof (Watch)) / 3;

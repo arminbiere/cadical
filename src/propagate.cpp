@@ -1,8 +1,8 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 namespace CaDiCaL {
 
-void Solver::assign (int lit, Clause * reason) {
+void Internal::assign (int lit, Clause * reason) {
   int idx = vidx (lit);
   assert (!vals[idx]);
   Var & v = var (idx);
@@ -23,7 +23,7 @@ void Solver::assign (int lit, Clause * reason) {
 // at the beginning of the clause.  We also use 'blocking literals' to
 // reduce the number of times clauses have to be visited.
 
-bool Solver::propagate () {
+bool Internal::propagate () {
   assert (!unsat);
   START (propagate);
   while (!conflict && propagated < trail.size ()) {

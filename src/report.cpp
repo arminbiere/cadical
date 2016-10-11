@@ -1,4 +1,4 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 #include <cstring>
 
@@ -48,7 +48,7 @@ REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
 
 /*------------------------------------------------------------------------*/
 
-void Solver::report (char type, bool verbose) {
+void Internal::report (char type, bool verbose) {
   if (opts.quiet || (verbose && !opts.verbose)) return;
   const int max_reports = 32;
   Report reports[max_reports];

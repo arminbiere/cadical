@@ -1,4 +1,4 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 #include <cassert>
 #include <cstring>
@@ -6,7 +6,7 @@
 
 namespace CaDiCaL {
 
-Options::Options (Solver * s) : solver (s) {
+Options::Options (Internal * s) : internal (s) {
 #define OPTION(N,T,V,L,H,D) \
   N = (T) (V);
   OPTIONS

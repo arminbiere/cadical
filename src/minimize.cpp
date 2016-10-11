@@ -1,4 +1,4 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 #include <algorithm>
 
@@ -16,7 +16,7 @@ namespace CaDiCaL {
 // if only one literal was seen on the level and a new idea of also aborting
 // if the earliest seen literal was assigned afterwards.
 
-bool Solver::minimize_literal (int lit, int depth) {
+bool Internal::minimize_literal (int lit, int depth) {
   Var & v = var (lit);
   if (!v.level || v.removable || (depth && v.seen)) return true;
   if (!v.reason || v.poison || v.level == level) return false;
@@ -41,14 +41,14 @@ bool Solver::minimize_literal (int lit, int depth) {
 // limit is hit and results in substantially less succesful minimization.
 
 struct trail_smaller_than {
-  Solver * solver;
-  trail_smaller_than (Solver * s) : solver (s) { }
+  Internal * internal;
+  trail_smaller_than (Internal * s) : internal (s) { }
   bool operator () (int a, int b) {
-    return solver->var (a).trail < solver->var (b).trail;
+    return internal->var (a).trail < internal->var (b).trail;
   }
 };
 
-void Solver::minimize_clause () {
+void Internal::minimize_clause () {
   if (!opts.minimize) return;
   START (minimize);
   sort (clause.begin (), clause.end (), trail_smaller_than (this));

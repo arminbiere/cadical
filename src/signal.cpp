@@ -1,5 +1,5 @@
 
-#include "solver.hpp"
+#include "internal.hpp"
 
 #include <csignal>
 
@@ -12,7 +12,7 @@ extern "C" {
 namespace CaDiCaL {
 
 bool Signal::catchedsig = false;
-Solver * Signal::solver;
+Internal * Signal::internal;
 
 #define SIGNALS \
 SIGNAL(SIGINT) \
@@ -31,7 +31,7 @@ void Signal::reset () {
   (void) signal (SIG, SIG ## _handler);
 SIGNALS
 #undef SIGNAL
-  solver = 0;
+  internal = 0;
   catchedsig = 0;
 }
 
@@ -50,19 +50,19 @@ void Signal::catchsig (int sig) {
     MSG ("CAUGHT SIGNAL %d %s", sig, name (sig));
     SECTION ("result");
     MSG ("s UNKNOWN");
-    solver->stats.print ();
+    internal->stats.print ();
   }
   MSG ("RERAISING SIGNAL %d %s", sig, name (sig));
   reset ();
   raise (sig);
 }
 
-void Signal::init (Solver * s) {
+void Signal::init (Internal * s) {
 #define SIGNAL(SIG) \
   SIG ## _handler = signal (SIG, Signal::catchsig);
 SIGNALS
 #undef SIGNAL
-  solver = s;
+  internal = s;
 }
 
 

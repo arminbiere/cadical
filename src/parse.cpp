@@ -1,5 +1,5 @@
 #include "parse.hpp"
-#include "solver.hpp"
+#include "internal.hpp"
 #include "file.hpp"
 #include "logging.hpp"
 
@@ -49,8 +49,8 @@ int Parser::parse_lit (int ch, int & lit) {
   if (ch == '\r') ch = parse_char ();
   if (ch != 'c' && ch != ' ' && ch != '\t' && ch != '\n')
     PER ("expected white space after '%d'", sign*lit);
-  if (lit > solver->max_var)
-    PER ("literal %d exceeds maximum variable %d", sign*lit, solver->max_var);
+  if (lit > internal->max_var)
+    PER ("literal %d exceeds maximum variable %d", sign*lit, internal->max_var);
   lit *= sign;
   return ch;
 }
@@ -68,17 +68,17 @@ void Parser::parse_dimacs () {
   if (ch != 'p') PER ("expected 'c' or 'p'");
   parse_string (" cnf ", 'p');
   if (!isdigit (ch = parse_char ())) PER ("expected digit after 'p cnf '");
-  ch = parse_positive_int (ch, solver->max_var, "<max-var>");
-  if (ch != ' ') PER ("expected ' ' after 'p cnf %d'", solver->max_var);
+  ch = parse_positive_int (ch, internal->max_var, "<max-var>");
+  if (ch != ' ') PER ("expected ' ' after 'p cnf %d'", internal->max_var);
   if (!isdigit (ch = parse_char ()))
-    PER ("expected digit after 'p cnf %d '", solver->max_var);
+    PER ("expected digit after 'p cnf %d '", internal->max_var);
   ch = parse_positive_int (ch, num_original_clauses, "<num-clauses>");
   while (ch == ' ' || ch == '\r') ch = parse_char ();
   if (ch != '\n')
     PER ("expected new-line after 'p cnf %d %d'",
-      solver->max_var, num_original_clauses);
-  MSG ("found 'p cnf %d %d' header", solver->max_var, num_original_clauses);
-  solver->init_variables ();
+      internal->max_var, num_original_clauses);
+  MSG ("found 'p cnf %d %d' header", internal->max_var, num_original_clauses);
+  internal->init_variables ();
   int lit = 0, parsed_clauses = 0;
   while ((ch = parse_char ()) != EOF) {
     if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r') continue;
@@ -89,22 +89,22 @@ COMMENT:
       continue;
     }
     if (parse_lit (ch, lit) == 'c') goto COMMENT;
-    solver->original.push_back (lit);
+    internal->original.push_back (lit);
     if (lit) {
-      if (solver->clause.size () == INT_MAX) PER ("clause too large");
-      solver->clause.push_back (lit);
+      if (internal->clause.size () == INT_MAX) PER ("clause too large");
+      internal->clause.push_back (lit);
     } else {
-      if (!solver->tautological_clause ())
-        solver->add_new_original_clause ();
+      if (!internal->tautological_clause ())
+        internal->add_new_original_clause ();
       else LOG ("tautological original clause");
-      solver->clause.clear ();
+      internal->clause.clear ();
       if (parsed_clauses++ >= num_original_clauses)
         PER ("too many clauses");
     }
   }
   if (lit) PER ("last clause without '0'");
   if (parsed_clauses < num_original_clauses) PER ("clause missing");
-  MSG ("parsed %d clauses in %.2f seconds", parsed_clauses, solver->seconds ());
+  MSG ("parsed %d clauses in %.2f seconds", parsed_clauses, internal->seconds ());
   STOP (parse);
 }
 

@@ -1,4 +1,4 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -8,11 +8,11 @@
 
 namespace CaDiCaL {
 
-void Message::print (Solver * solver,
+void Message::print (Internal * internal,
                      int verbosity, const char * fmt, ...) {
   va_list ap;
-  if (solver->opts.quiet) return;
-  if (solver->opts.verbose < verbosity) return;
+  if (internal->opts.quiet) return;
+  if (internal->opts.verbose < verbosity) return;
   fputs ("c ", stdout);
   va_start (ap, fmt);
   vprintf (fmt, ap);
@@ -21,7 +21,7 @@ void Message::print (Solver * solver,
   fflush (stdout);
 }
 
-void Message::die (Solver * solver, const char *fmt, ...) {
+void Message::die (Internal * internal, const char *fmt, ...) {
   va_list ap;
   fputs ("*** cadical error: ", stderr);
   va_start (ap, fmt);
@@ -31,20 +31,20 @@ void Message::die (Solver * solver, const char *fmt, ...) {
   exit (1);
 }
 
-void Message::section (Solver * solver, const char * title) {
-  if (solver->opts.quiet) return;
+void Message::section (Internal * internal, const char * title) {
+  if (internal->opts.quiet) return;
   char line[160];
   sprintf (line, "---- [ %s ] ", title);
   assert (strlen (line) < sizeof line);
   int i = 0;
   for (i = strlen (line); i < 76; i++) line[i] = '-';
   line[i] = 0;
-  if (solver->stats.sections++) MSG ("");
+  if (internal->stats.sections++) MSG ("");
   MSG (line);
   MSG ("");
 }
 
-void Message::parse_error (Solver * solver,
+void Message::parse_error (Internal * internal,
                            File * file, const char * fmt, ...) {
   va_list ap;
   fprintf (stderr,

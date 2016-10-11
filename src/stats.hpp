@@ -5,11 +5,11 @@
 
 namespace CaDiCaL {
 
-class Solver;
+class Internal;
 
 struct Stats {
 
-  Solver * solver;
+  Internal * internal;
 
   long conflicts;
   long decisions;
@@ -37,7 +37,7 @@ struct Stats {
 
   int fixed;                    // top level assigned variables
 
-  Stats (Solver *);
+  Stats (Internal *);
   void print ();
 };
 

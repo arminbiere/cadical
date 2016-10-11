@@ -1,8 +1,8 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 namespace CaDiCaL {
 
-// Sam Buss suggested to debug the case where a solver incorrectly claims the
+// Sam Buss suggested to debug the case where a internal incorrectly claims the
 // formula to be unsatisfiable by checking every learned clause to be satisfied by
 // a satisfying assignment.  Thus the first inconsistent learned clause will be
 // immediately flagged without the need to generate proof traces and perform
@@ -11,8 +11,8 @@ namespace CaDiCaL {
 
 void Parser::parse_solution () {
   START (parse);
-  NEW (solver->solution, signed char, solver->max_var + 1);
-  for (int i = 1; i <= solver->max_var; i++) solver->solution[i] = 0;
+  NEW (internal->solution, signed char, internal->max_var + 1);
+  for (int i = 1; i <= internal->max_var; i++) internal->solution[i] = 0;
   int ch;
   for (;;) {
     ch = parse_char ();
@@ -37,28 +37,28 @@ void Parser::parse_solution () {
       if (ch == ' ' || ch == '\t') { ch = parse_char (); continue; }
       if ((ch = parse_lit (ch, lit)) == 'c') PER ("unexpected comment");
       if (!lit) break;
-      if (solver->solution[abs (lit)])
+      if (internal->solution[abs (lit)])
         PER ("variable %d occurs twice", abs (lit));
       LOG ("solution %d", lit);
-      solver->solution [abs (lit)] = sign (lit);
+      internal->solution [abs (lit)] = sign (lit);
       count++;
       if (ch == '\r') ch = parse_char ();
     } while (ch != '\n');
     if (!lit) break;
   }
   MSG ("parsed %d solutions %.2f%%",
-    count, percent (count, solver->max_var));
+    count, percent (count, internal->max_var));
   STOP (parse);
 }
 
-int Solver::sol (int lit) {
+int Internal::sol (int lit) {
   assert (solution);
   int res = solution[vidx (lit)];
   if (lit < 0) res = -res;
   return res;
 }
 
-void Solver::check_clause () {
+void Internal::check_clause () {
   if (!solution) return;
   bool satisfied = false;
   for (size_t i = 0; !satisfied && i < clause.size (); i++)

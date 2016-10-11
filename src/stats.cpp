@@ -1,20 +1,20 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 #include <cstring>
 #include <cstdio>
 
 namespace CaDiCaL {
 
-Stats::Stats (Solver * s) {
+Stats::Stats (Internal * s) {
   memset (this, 0, sizeof *this);
-  solver = s;
+  internal = s;
 }
 
 void Stats::print () {
-  Stats & stats = solver->stats;
-  double t = solver->seconds ();
-  if (solver->opts.profile) solver->print_profile (t);
-  size_t m = solver->max_bytes ();
+  Stats & stats = internal->stats;
+  double t = internal->seconds ();
+  if (internal->opts.profile) internal->print_profile (t);
+  size_t m = internal->max_bytes ();
   SECTION ("statistics");
   MSG ("reductions:    %15ld   %10.2f    conflicts per reduction",
     stats.reduce.count, relative (stats.conflicts, stats.reduce.count));

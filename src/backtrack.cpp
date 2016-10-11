@@ -1,8 +1,8 @@
-#include "solver.hpp"
+#include "internal.hpp"
 
 namespace CaDiCaL {
 
-void Solver::unassign (int lit) {
+void Internal::unassign (int lit) {
   assert (val (lit) > 0);
   int idx = vidx (lit);
   vals[idx] = 0;
@@ -13,7 +13,7 @@ void Solver::unassign (int lit) {
   LOG ("queue next moved to %d", idx);
 }
 
-void Solver::backtrack (int target_level) {
+void Internal::backtrack (int target_level) {
   assert (target_level <= level);
   if (target_level == level) return;
   LOG ("backtracking to decision level %d", target_level);

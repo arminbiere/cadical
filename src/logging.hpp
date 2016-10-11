@@ -12,17 +12,17 @@ namespace CaDiCaL {
 using namespace std;
 
 struct Clause;
-class Solver;
+class Internal;
 
 struct Logger {
-static void log (Solver *, const char * fmt, ...);
-static void log (Solver *, const Clause *, const char *fmt, ...);
-static void log (Solver *, const vector<int> &, const char *fmt, ...);
+static void log (Internal *, const char * fmt, ...);
+static void log (Internal *, const Clause *, const char *fmt, ...);
+static void log (Internal *, const vector<int> &, const char *fmt, ...);
 };
 
 };
 
-#define LOG(ARGS...) do { Logger::log (solver, ##ARGS); } while (0)
+#define LOG(ARGS...) do { Logger::log (internal, ##ARGS); } while (0)
 
 #else
 #define LOG(ARGS...) do { } while (0)
