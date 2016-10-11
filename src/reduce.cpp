@@ -9,6 +9,9 @@ bool Internal::reducing () {
   return stats.conflicts >= reduce_limit;
 }
 
+// Reason clauses (on non-zero decision level) can not be collected.
+// We protect them before and unprotect them after garbage collection.
+
 void Internal::protect_reasons () {
   for (size_t i = 0; i < trail.size (); i++) {
     Var & v = var (trail[i]);
@@ -86,6 +89,10 @@ void Internal::mark_satisfied_clauses_as_garbage () {
   fixed_limit = stats.fixed;
 }
 
+// Clause with smaller glucose level (glue) are considered more useful.
+// Then we use the 'resolved' time stamp as a tie breaker.  So more recently
+// resolved clauses are preferred to keep (if they have the same glue).
+
 struct less_usefull {
   bool operator () (Clause * c, Clause * d) {
     if (c->glue > d->glue) return true;
@@ -131,6 +138,9 @@ void Internal::delete_garbage_clauses () {
   LOG ("collected %ld bytes", collected_bytes);
 }
 
+// Deallocate watcher stacks of inactive variables and reset watcher stacks
+// of still active variables.
+
 void Internal::flush_watches () {
   size_t current_bytes = 0, max_bytes = 0;
   for (int idx = 1; idx <= max_var; idx++) {
@@ -162,7 +172,7 @@ void Internal::garbage_collection () {
 void Internal::reduce () {
   START (reduce);
   stats.reduce.count++;
-  LOG ("reduce %ld resolved limit %ld", stats.reduce.count, reduce_limit);
+  report ('R', 1);
   protect_reasons ();
   mark_satisfied_clauses_as_garbage ();
   mark_useless_redundant_clauses_as_garbage ();
