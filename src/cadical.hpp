@@ -5,7 +5,7 @@
 
 namespace CaDiCaL {
 
-// This is a wrapper or 'external' API for the CaDiCaL library.
+// External API of the CaDiCaL solver.
 
 class Internal;
 
@@ -48,11 +48,19 @@ public:
   // if appropriate helper functions 'gzip' etc. are available.  They are
   // called through opening a pipe to an external command.
 
-  void dimacs (FILE * file);		// read DIMACS file
-  void dimacs (const char * path);	// read DIMACS file
+  // Returns zero if successful and otherwise an error message.
+  //
+  const char * dimacs (FILE * file);	    // read DIMACS file
+  const char * dimacs (const char * path);  // read DIMACS file
 
-  void proof (FILE * file);		// write DRAT proof file
-  void proof (const char * path);	// write DRAT proof file
+  // Enables clausal proof tracing in DRAT format and returns 'true' if
+  // successfully opened for writing.  Writing proofs has to be enabled
+  // before calling 'solve', 'add' and 'dimacs'.  Otherwise only partial
+  // proofs are written.
+  //
+  bool proof (FILE * file);	   // write DRAT proof file
+  bool proof (const char * path);  // write DRAT proof file
+  void close ();                   // close proof file
 
 private:
   
@@ -60,7 +68,7 @@ private:
 
   // Read solution in competition format for debugging and testing.
   //
-  void solution (const char * path);    
+  const char * solution (const char * path);    
 };
 
 };

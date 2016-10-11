@@ -44,17 +44,4 @@ void Message::section (Internal * internal, const char * title) {
   MSG ("");
 }
 
-void Message::parse_error (Internal * internal,
-                           File * file, const char * fmt, ...) {
-  va_list ap;
-  fprintf (stderr,
-    "%s:%ld: parse error: ",
-    file->name (), file->lineno ());
-  va_start (ap, fmt);
-  vfprintf (stderr, fmt, ap);
-  va_end (ap);
-  fputc ('\n', stderr);
-  exit (1);
-}
-
 };

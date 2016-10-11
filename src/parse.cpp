@@ -14,13 +14,15 @@ namespace CaDiCaL {
 
 int Parser::parse_char () { return file->get (); }
 
-void Parser::parse_string (const char * str, char prev) {
+const char * Parser::parse_string (const char * str, char prev) {
   for (const char * p = str; *p; p++)
     if (parse_char () == *p) prev = *p;
     else PER ("expected '%c' after '%c'", *p, prev);
+  return 0;
 }
 
-int Parser::parse_positive_int (int ch, int & res, const char * name) {
+const char *
+Parser::parse_positive_int (int & ch, int & res, const char * name) {
   assert (isdigit (ch));
   res = ch - '0';
   while (isdigit (ch = parse_char ())) {
@@ -29,10 +31,10 @@ int Parser::parse_positive_int (int ch, int & res, const char * name) {
       PER ("too large '%s' in header", name);
     res = 10*res + digit;
   }
-  return ch;
+  return 0;
 }
 
-int Parser::parse_lit (int ch, int & lit) {
+const char * Parser::parse_lit (int & ch, int & lit) {
   int sign = 0;
   if (ch == '-') {
     if (!isdigit (ch = parse_char ())) PER ("expected digit after '-'");
@@ -50,14 +52,14 @@ int Parser::parse_lit (int ch, int & lit) {
   if (ch != 'c' && ch != ' ' && ch != '\t' && ch != '\n')
     PER ("expected white space after '%d'", sign*lit);
   if (lit > internal->max_var)
-    PER ("literal %d exceeds maximum variable %d", sign*lit, internal->max_var);
+    PER ("literal %d exceeds maximum variable %d",
+      sign*lit, internal->max_var);
   lit *= sign;
-  return ch;
+  return 0;
 }
 
-void Parser::parse_dimacs () {
+const char * Parser::parse_dimacs_non_profiled () {
   int ch, num_original_clauses = 0;
-  START (parse);
   for (;;) {
     ch = parse_char ();
     if (ch != 'c') break;
@@ -66,18 +68,22 @@ void Parser::parse_dimacs () {
         PER ("unexpected end-of-file in header comment");
   }
   if (ch != 'p') PER ("expected 'c' or 'p'");
-  parse_string (" cnf ", 'p');
+  const char * err = parse_string (" cnf ", 'p');
+  if (err) return err;
   if (!isdigit (ch = parse_char ())) PER ("expected digit after 'p cnf '");
-  ch = parse_positive_int (ch, internal->max_var, "<max-var>");
+  err = parse_positive_int (ch, internal->max_var, "<max-var>");
+  if (err) return err;
   if (ch != ' ') PER ("expected ' ' after 'p cnf %d'", internal->max_var);
   if (!isdigit (ch = parse_char ()))
     PER ("expected digit after 'p cnf %d '", internal->max_var);
-  ch = parse_positive_int (ch, num_original_clauses, "<num-clauses>");
+  err = parse_positive_int (ch, num_original_clauses, "<num-clauses>");
+  if (err) return err;
   while (ch == ' ' || ch == '\r') ch = parse_char ();
   if (ch != '\n')
     PER ("expected new-line after 'p cnf %d %d'",
       internal->max_var, num_original_clauses);
-  MSG ("found 'p cnf %d %d' header", internal->max_var, num_original_clauses);
+  MSG ("found 'p cnf %d %d' header",
+    internal->max_var, num_original_clauses);
   internal->init_variables ();
   int lit = 0, parsed_clauses = 0;
   while ((ch = parse_char ()) != EOF) {
@@ -88,7 +94,9 @@ COMMENT:
         if (ch == EOF) PER ("unexpected end-of-file in body comment");
       continue;
     }
-    if (parse_lit (ch, lit) == 'c') goto COMMENT;
+    err = parse_lit (ch, lit);
+    if (err) return err;
+    if (ch == 'c') goto COMMENT;
     internal->original.push_back (lit);
     if (lit) {
       if (internal->clause.size () == INT_MAX) PER ("clause too large");
@@ -104,8 +112,16 @@ COMMENT:
   }
   if (lit) PER ("last clause without '0'");
   if (parsed_clauses < num_original_clauses) PER ("clause missing");
-  MSG ("parsed %d clauses in %.2f seconds", parsed_clauses, internal->seconds ());
+  MSG ("parsed %d clauses in %.2f seconds",
+    parsed_clauses, internal->seconds ());
+  return 0;
+}
+
+const char * Parser::parse_dimacs () {
+  START (parse);
+  const char * err = parse_dimacs_non_profiled ();
   STOP (parse);
+  return err;
 }
 
 };

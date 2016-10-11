@@ -9,8 +9,7 @@ namespace CaDiCaL {
 // forward proof checking.  The incorrectly derived clause will raise an abort
 // signal and thus allows to debug the issue with a symbolic debugger immediately.
 
-void Parser::parse_solution () {
-  START (parse);
+const char * Parser::parse_solution_non_profiled () {
   NEW (internal->solution, signed char, internal->max_var + 1);
   for (int i = 1; i <= internal->max_var; i++) internal->solution[i] = 0;
   int ch;
@@ -24,7 +23,8 @@ void Parser::parse_solution () {
     if (ch == 's') break;
     PER ("expected 'c' or 's'");
   }
-  parse_string (" SATISFIABLE", 's');
+  const char * err = parse_string (" SATISFIABLE", 's');
+  if (err) return err;
   if ((ch = parse_char ()) == '\r') ch = parse_char ();
   if (ch != '\n') PER ("expected new-line after 's SATISFIABLE'");
   int count = 0;
@@ -35,7 +35,9 @@ void Parser::parse_solution () {
     int lit = 0; ch = parse_char ();
     do {
       if (ch == ' ' || ch == '\t') { ch = parse_char (); continue; }
-      if ((ch = parse_lit (ch, lit)) == 'c') PER ("unexpected comment");
+      err = parse_lit (ch, lit);
+      if (err) return err;
+      if (ch == 'c') PER ("unexpected comment");
       if (!lit) break;
       if (internal->solution[abs (lit)])
         PER ("variable %d occurs twice", abs (lit));
@@ -48,7 +50,13 @@ void Parser::parse_solution () {
   }
   MSG ("parsed %d solutions %.2f%%",
     count, percent (count, internal->max_var));
+}
+
+const char * Parser::parse_solution () {
+  START (parse);
+  const char * err = parse_solution_non_profiled ();
   STOP (parse);
+  return err;
 }
 
 int Internal::sol (int lit) {

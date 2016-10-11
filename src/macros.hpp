@@ -33,9 +33,6 @@ do { Message::print (internal, 1, ##ARGS); } while (0)
 #define DIE(ARGS...) \
 do { Message::die (internal, ##ARGS); } while (0)
 
-#define PER(ARGS...) \
-do { Message::parse_error (internal, file, ##ARGS); } while (0)
-
 #define SECTION(ARGS...) \
 do { Message::section (internal, ##ARGS); } while (0)
 

@@ -17,7 +17,8 @@ class Format {
 public:
   Format () : buffer (0), count (0), size (0) { } 
   ~Format () { if (buffer) delete [] buffer; }
-  const char * generate (const char * fmt, ...);
+  const char * append (const char * fmt, ...);
+  operator const char * () const { return count ? buffer : 0; }
 };
 
 };

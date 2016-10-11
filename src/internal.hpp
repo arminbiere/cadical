@@ -29,6 +29,7 @@ using namespace std;
 #include "signal.hpp"
 #include "queue.hpp"
 #include "report.hpp"
+#include "format.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -75,7 +76,8 @@ class Internal {
   vector<int> original;		// original CNF for debugging
   vector<Timer> timers;         // active timers for profiling functions
   Profiles profiles;            // global profiled time for functions
-  Internal * internal;              // proxy to 'this' in macros (redundant)
+  Format error;                 // last (persistent) error message
+  Internal * internal;          // proxy to 'this' in macros (redundant)
 
 /*------------------------------------------------------------------------*/
 

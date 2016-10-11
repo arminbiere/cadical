@@ -141,13 +141,15 @@ int App::main (int argc, char ** argv) {
   SECTION ("parsing input");
   MSG ("reading DIMACS file from '%s'", dimacs->name ());
   Parser dimacs_parser (internal, dimacs);
-  dimacs_parser.parse_dimacs ();
+  const char * err = dimacs_parser.parse_dimacs ();
+  if (err) { fprintf (stderr, "%s\n", err); exit (1); }
   delete dimacs;
   if (solution) {
     SECTION ("parsing solution");
     Parser solution_parser (internal, solution);
     MSG ("reading solution file from '%s'", solution->name ());
-    solution_parser.parse_solution ();
+    err = solution_parser.parse_solution ();
+    if (err) { fprintf (stderr, "%s\n", err); exit (1); }
     delete solution;
     check_satisfying_assignment (&Internal::sol);
   }
