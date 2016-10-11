@@ -36,8 +36,23 @@ using namespace std;
 namespace CaDiCaL {
 
 class Internal {
+
+  friend class Solver;
+
+  friend class App;
+  friend class Parser;
+  friend class Signal;
+  friend struct Logger;
+  friend struct Message;
+  friend struct Queue;
+  friend struct Proof;
+  friend struct Stats;
+
+  friend struct trail_smaller_than;
+  friend struct trail_greater_than;
+  friend struct bump_earlier;
  
-  /*------------------------------------------------------------------------*/
+  /*----------------------------------------------------------------------*/
 
   // The actual state of the solver is in this section.
 
@@ -79,15 +94,19 @@ class Internal {
   Format error;                 // last (persistent) error message
   Internal * internal;          // proxy to 'this' in macros (redundant)
 
-/*------------------------------------------------------------------------*/
+  /*----------------------------------------------------------------------*/
 
   void init_variables ();       // Currently called in DIMACS parser.
 
-  // Functions for monitoring memory usage.
+  // Functions for monitoring resources.
   //
   size_t vector_bytes ();
   void inc_bytes (size_t);
   void dec_bytes (size_t);
+
+  double seconds ();
+  size_t max_bytes ();
+  size_t current_bytes ();
 
   int active_variables () const { return max_var - stats.fixed; }
 
@@ -233,26 +252,11 @@ class Internal {
     return res;
   }
 
-  double seconds ();
-  size_t max_bytes ();
-  size_t current_bytes ();
-
-/*------------------------------------------------------------------------*/
-
-  friend class Solver;
-
-  friend class App;
-  friend class Parser;
-  friend class Signal;
-  friend struct Logger;
-  friend struct Message;
-  friend struct Queue;
-  friend struct Proof;
-  friend struct Stats;
-
-  friend struct trail_smaller_than;
-  friend struct trail_greater_than;
-  friend struct bump_earlier;
+  // Parsing functions (handed over to 'parse.cpp').
+  //
+  const char * parse_dimacs (FILE *);
+  const char * parse_dimacs (const char *);
+  const char * parse_solution (const char *);
 };
 
 };

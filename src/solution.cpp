@@ -2,62 +2,12 @@
 
 namespace CaDiCaL {
 
-// Sam Buss suggested to debug the case where a internal incorrectly claims the
+// Sam Buss suggested to debug the case where a solver incorrectly claims the
 // formula to be unsatisfiable by checking every learned clause to be satisfied by
 // a satisfying assignment.  Thus the first inconsistent learned clause will be
 // immediately flagged without the need to generate proof traces and perform
 // forward proof checking.  The incorrectly derived clause will raise an abort
 // signal and thus allows to debug the issue with a symbolic debugger immediately.
-
-const char * Parser::parse_solution_non_profiled () {
-  NEW (internal->solution, signed char, internal->max_var + 1);
-  for (int i = 1; i <= internal->max_var; i++) internal->solution[i] = 0;
-  int ch;
-  for (;;) {
-    ch = parse_char ();
-    if (ch == EOF) PER ("missing 's' line");
-    if (ch == 'c') {
-      while ((ch = parse_char ()) != '\n')
-        if (ch == EOF) PER ("unexpected end-of-file in comment");
-    }
-    if (ch == 's') break;
-    PER ("expected 'c' or 's'");
-  }
-  const char * err = parse_string (" SATISFIABLE", 's');
-  if (err) return err;
-  if ((ch = parse_char ()) == '\r') ch = parse_char ();
-  if (ch != '\n') PER ("expected new-line after 's SATISFIABLE'");
-  int count = 0;
-  for (;;) {
-    ch = parse_char ();
-    if (ch != 'v') PER ("expected 'v' at start-of-line");
-    if ((ch = parse_char ()) != ' ') PER ("expected ' ' after 'v'");
-    int lit = 0; ch = parse_char ();
-    do {
-      if (ch == ' ' || ch == '\t') { ch = parse_char (); continue; }
-      err = parse_lit (ch, lit);
-      if (err) return err;
-      if (ch == 'c') PER ("unexpected comment");
-      if (!lit) break;
-      if (internal->solution[abs (lit)])
-        PER ("variable %d occurs twice", abs (lit));
-      LOG ("solution %d", lit);
-      internal->solution [abs (lit)] = sign (lit);
-      count++;
-      if (ch == '\r') ch = parse_char ();
-    } while (ch != '\n');
-    if (!lit) break;
-  }
-  MSG ("parsed %d solutions %.2f%%",
-    count, percent (count, internal->max_var));
-}
-
-const char * Parser::parse_solution () {
-  START (parse);
-  const char * err = parse_solution_non_profiled ();
-  STOP (parse);
-  return err;
-}
 
 int Internal::sol (int lit) {
   assert (solution);
