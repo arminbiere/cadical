@@ -1,5 +1,6 @@
 #include "app.hpp"
 #include "internal.hpp"
+#include "cadical.hpp"
 #include "../build/config.hpp"
 
 #include <cstring>
@@ -10,7 +11,10 @@ extern "C" {
 
 namespace CaDiCaL {
 
-Internal * App::internal;   // static, thus non-reentrant
+// Static non-reentrant global solver needed for signal handling.
+
+Solver * App::solver;
+Internal * App::internal;
 
 void App::usage () {
   fputs (
@@ -109,7 +113,8 @@ int App::main (int argc, char ** argv) {
   bool trace_proof = false, binary_proof = true;
   const char * proof_name = 0;
   int i, res;
-  internal = new Internal ();
+  solver = new Solver ();
+  internal = solver->internal;
   for (i = 1; i < argc; i++) {
     if (!strcmp (argv[i], "-h")) usage (), exit (0);
     else if (!strcmp (argv[i], "--version"))
