@@ -40,7 +40,6 @@ public:
 
   void banner ();	// print solver banner
   void options ();	// print current option and value list
-  void witness ();	// print witness in competition format
   void statistics ();   // print statistics
 
   //------------------------------------------------------------------------
@@ -69,6 +68,13 @@ private:
   // Read solution in competition format for debugging and testing.
   //
   const char * solution (const char * path);    
+
+  // Messages in a common style.
+  //
+  void msg (const char *, ...);
+  void die (const char *, ...);
+  void section (const char *);
+
 };
 
 };

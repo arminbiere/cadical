@@ -8,27 +8,37 @@
 
 namespace CaDiCaL {
 
-void Message::print (Internal * internal,
-                     int verbosity, const char * fmt, ...) {
-  va_list ap;
+void Message::print_va_list (Internal * internal,
+                             int verbosity, const char * fmt, va_list & ap) {
   if (internal->opts.quiet) return;
   if (internal->opts.verbose < verbosity) return;
   fputs ("c ", stdout);
-  va_start (ap, fmt);
   vprintf (fmt, ap);
-  va_end (ap);
   fputc ('\n', stdout);
   fflush (stdout);
 }
 
-void Message::die (Internal * internal, const char *fmt, ...) {
+void Message::print (Internal * internal,
+                     int verbosity, const char * fmt, ...) {
   va_list ap;
-  fputs ("*** cadical error: ", stderr);
   va_start (ap, fmt);
-  vfprintf (stderr, fmt, ap);
+  print_va_list (internal, verbosity, fmt, ap);
   va_end (ap);
+}
+
+void Message::die_va_list (Internal * internal,
+                           const char *fmt, va_list & ap) {
+  fputs ("*** cadical error: ", stderr);
+  vfprintf (stderr, fmt, ap);
   fputc ('\n', stderr);
   exit (1);
+}
+
+void Message::die (Internal * internal, const char *fmt, ...) {
+  va_list ap;
+  va_start (ap, fmt);
+  die_va_list (internal, fmt, ap);
+  va_end (ap);				// unreachable
 }
 
 void Message::section (Internal * internal, const char * title) {

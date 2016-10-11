@@ -79,7 +79,7 @@ void App::check_satisfying_assignment (int (Internal::*assignment)(int)) {
       start = i + 1;
     } else if (!satisfied && (internal->*assignment) (lit) > 0) satisfied = true;
   }
-  MSG ("satisfying assignment checked");
+  solver->msg ("satisfying assignment checked");
 }
 
 void App::print_witness () {
@@ -99,11 +99,11 @@ void App::print_witness () {
 }
 
 void App::banner () {
-  SECTION ("banner");
-  MSG ("CaDiCaL Radically Simplified CDCL SAT Internal");
-  MSG ("Version " VERSION " " GITID);
-  MSG ("Copyright (c) 2016 Armin Biere, JKU");
-  MSG (COMPILE);
+  solver->section ("banner");
+  solver->msg ("CaDiCaL Radically Simplified CDCL SAT Internal");
+  solver->msg ("Version " VERSION " " GITID);
+  solver->msg ("Copyright (c) 2016 Armin Biere, JKU");
+  solver->msg (COMPILE);
 }
 
 bool App::set (const char * arg) { return internal->opts.set (arg); }
@@ -120,63 +120,64 @@ int App::main (int argc, char ** argv) {
     else if (!strcmp (argv[i], "--version"))
       fputs (VERSION "\n", stdout), exit (0);
     else if (!strcmp (argv[i], "-")) {
-      if (trace_proof) DIE ("too many arguments");
+      if (trace_proof) solver->die ("too many arguments");
       else if (!dimacs) dimacs = File::read (stdin, "<stdin>");
       else trace_proof = true, proof_name = 0;
     } else if (!strcmp (argv[i], "-s")) {
-      if (++i == argc) DIE ("argument to '-s' missing");
-      if (solution) DIE ("multiple solution files");
+      if (++i == argc) solver->die ("argument to '-s' missing");
+      if (solution) solver->die ("multiple solution files");
       if (!(solution = File::read (argv[i])))
-        DIE ("can not read solution file '%s'", argv[i]);
+        solver->die ("can not read solution file '%s'", argv[i]);
     } else if (!strcmp (argv[i], "-n")) set ("--no-witness");
     else if (!strcmp (argv[i], "-q")) set ("--quiet");
     else if (!strcmp (argv[i], "-v")) set ("--verbose");
     else if (!strcmp (argv[i], "-c")) set ("--check");
     else if (set (argv[i])) { /* nothing do be done */ }
-    else if (argv[i][0] == '-') DIE ("invalid option '%s'", argv[i]);
-    else if (trace_proof) DIE ("too many arguments");
+    else if (argv[i][0] == '-') solver->die ("invalid option '%s'", argv[i]);
+    else if (trace_proof) solver->die ("too many arguments");
     else if (dimacs) trace_proof = true, proof_name = argv[i];
     else if (!(dimacs = File::read (argv[i])))
-      DIE ("can not open and read DIMACS file '%s'", argv[i]);
+      solver->die ("can not open and read DIMACS file '%s'", argv[i]);
   }
   if (solution && !internal->opts.check) set ("--check");
   if (!dimacs) dimacs = File::read (stdin, "<stdin>");
   banner ();
   Signal::init (internal);
-  SECTION ("parsing input");
-  MSG ("reading DIMACS file from '%s'", dimacs->name ());
+  solver->section ("parsing input");
+  solver->msg ("reading DIMACS file from '%s'", dimacs->name ());
   Parser dimacs_parser (internal, dimacs);
   const char * err = dimacs_parser.parse_dimacs ();
   if (err) { fprintf (stderr, "%s\n", err); exit (1); }
   delete dimacs;
   if (solution) {
-    SECTION ("parsing solution");
+    solver->section ("parsing solution");
     Parser solution_parser (internal, solution);
-    MSG ("reading solution file from '%s'", solution->name ());
+    solver->msg ("reading solution file from '%s'", solution->name ());
     err = solution_parser.parse_solution ();
     if (err) { fprintf (stderr, "%s\n", err); exit (1); }
     delete solution;
     check_satisfying_assignment (&Internal::sol);
   }
-  internal->opts.print ();
-  SECTION ("proof tracing");
+  solver->options ();
+  solver->section ("proof tracing");
   if (trace_proof) {
     if (!proof_name) {
       proof = File::write (stdout, "<stdout>");
       if (isatty (1) && internal->opts.binary) {
-MSG ("forcing non-binary proof since '<stdout>' connected to terminal");
+        solver->msg (
+	  "non-binary proof since '<stdout>' connected to terminal");
         binary_proof = false;
       }
     } else if (!(proof = File::write (proof_name)))
-      DIE ("can not open and write DRAT proof to '%s'", proof_name);
+      solver->die ("can not open and write DRAT proof to '%s'", proof_name);
     if (binary_proof && !internal->opts.binary) binary_proof = false;
-    MSG ("writing %s DRAT proof trace to '%s'",
+    solver->msg ("writing %s DRAT proof trace to '%s'",
       (binary_proof ? "binary" : "non-binary"), proof->name ());
     internal->proof = new Proof (internal, proof, binary_proof);
-  } else MSG ("will not generate nor write DRAT proof");
+  } else solver->msg ("will not generate nor write DRAT proof");
   res = internal->solve ();
   if (proof) { delete proof; internal->proof = 0; }
-  SECTION ("result");
+  solver->section ("result");
   if (res == 10) {
     check_satisfying_assignment (&Internal::val);
     printf ("s SATISFIABLE\n");
@@ -189,9 +190,8 @@ MSG ("forcing non-binary proof since '<stdout>' connected to terminal");
   }
   Signal::reset ();
   solver->statistics ();
-  MSG ("exit %d", res);
-  if (!internal->opts.leak) delete internal;
-  internal = 0;
+  solver->msg ("exit %d", res);
+  if (!internal->opts.leak) delete solver;
   return res;
 }
 

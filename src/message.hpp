@@ -1,15 +1,21 @@
 #ifndef _message_h_INCLUDED
 #define _message_h_INCLUDED
 
+#include <cstdarg>
+
 namespace CaDiCaL {
 
 struct File;
 class Internal;
 
 struct Message {
-  static void print (Internal *, int verbosity, const char *, ...);
   static void die (Internal *, const char *, ...);
+  static void die_va_list (Internal *, const char *, va_list &);
+
   static void section (Internal *, const char * title);
+
+  static void print (Internal *, int verbosity, const char *, ...);
+  static void print_va_list (Internal *, int, const char *, va_list &);
 };
 
 };
