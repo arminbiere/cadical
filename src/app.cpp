@@ -155,7 +155,6 @@ int App::main (int argc, char ** argv) {
   if (trace_proof) solver->close ();
   solver->section ("result");
   if (res == 10) {
-    internal->check (&Internal::val);
     printf ("s SATISFIABLE\n");
     if (solver->get ("witness")) witness ();
     fflush (stdout);

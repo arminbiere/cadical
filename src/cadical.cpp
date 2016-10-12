@@ -27,7 +27,12 @@ bool Solver::set (const char * arg) { return internal->opts.set (arg); }
 /*------------------------------------------------------------------------*/
 
 int Solver::val (int lit) { return internal->val (lit); }
-int Solver::solve () { return internal->solve (); }
+
+int Solver::solve () { 
+  int res = internal->solve ();
+  if (res == 10) internal->check (&Internal::val);
+  return res;
+}
 
 /*------------------------------------------------------------------------*/
 
