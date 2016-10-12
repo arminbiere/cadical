@@ -49,6 +49,7 @@ void Internal::resize (int new_max_var) {
   for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = -1;
   queue.init (this, new_max_var);
   MSG ("initialized %d variables", new_max_var - max_var);
+  max_var = new_max_var;
 }
 
 Internal::~Internal () {

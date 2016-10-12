@@ -18,9 +18,10 @@ The default build process requires GNU make but simply issuing
 
   - cd src; g++ -O3 -DNDEBUG -o ../build/cadical \*.cpp
 
-should also work.  Using the generated 'makefile' compiles seperate
-object files, which can be cached, and can be parallelized (for instance
-by setting the environment variables CORES, e.g., using 'CORES=4 make').
+should give you a stand alone binary.  Using the generated 'makefile' with
+GNU make compiles seperate object files, which can be cached, and can be
+parallelized (for instance by setting the environment variables CORES, e.g.,
+using 'CORES=4 make' on a 4 core machine).
 
 The header file of the library is in 'src/cadical.hpp'.
 
@@ -44,4 +45,4 @@ A plain stable source release can eventually be found at
 
 Armin Biere
 
-Mit Okt 12 09:24:50 CEST 2016
+Mit Okt 12 11:01:04 CEST 2016

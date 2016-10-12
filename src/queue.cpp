@@ -4,8 +4,9 @@ namespace CaDiCaL {
 
 void Queue::init (Internal * internal, int new_max_var) {
   Var * prev = 0;
+  assert ((size_t) new_max_var < internal->vsize);
   for (int i = new_max_var; i > internal->max_var; i--) {
-    Var * v = &internal->var (i);
+    Var * v = internal->vtab + i;
     if ((v->prev = prev)) prev->next = v;
     else first = v;
     v->bumped = ++internal->stats.bumped;
