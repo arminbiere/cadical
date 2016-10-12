@@ -161,11 +161,10 @@ int App::main (int argc, char ** argv) {
     fflush (stdout);
   }
   solver->statistics ();
+  solver->msg ("exit %d", res);
 DONE:
   Signal::reset ();
   if (!solver->get ("leak")) delete solver;
-  printf ("c return %d\n", res);
-  fflush (stdout);
   return res;
 }
 
