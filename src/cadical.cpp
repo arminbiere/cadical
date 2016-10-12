@@ -82,10 +82,10 @@ void Solver::msg (const char * fmt, ...) {
   va_end (ap);
 }
 
-void Solver::die (const char * fmt, ...) {
+void Solver::err (const char * fmt, ...) {
   va_list ap;
   va_start (ap, fmt);
-  Message::die_va_list (internal, fmt, ap);
+  Message::err_va_list (internal, fmt, ap);
   va_end (ap);
 }
 

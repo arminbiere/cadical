@@ -6,6 +6,11 @@ namespace CaDiCaL {
 class Solver;
 class Internal;
 
+// A wrapper app which makes up the CaDiCaL stand alone solver which in
+// essence only consists of the 'App::main' function.  So this class
+// contains code, which is not required if only the library interface in
+// 'Solver' is used.
+
 class App {
 
   // Global solver.

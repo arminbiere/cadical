@@ -79,7 +79,7 @@ private:
   // Messages in a common style.
   //
   void msg (const char *, ...);
-  void die (const char *, ...);
+  void err (const char *, ...);
   void section (const char *);
 };
 

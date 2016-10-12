@@ -26,18 +26,17 @@ void Message::print (Internal * internal,
   va_end (ap);
 }
 
-void Message::die_va_list (Internal * internal,
+void Message::err_va_list (Internal * internal,
                            const char *fmt, va_list & ap) {
   fputs ("*** cadical error: ", stderr);
   vfprintf (stderr, fmt, ap);
   fputc ('\n', stderr);
-  exit (1);
 }
 
-void Message::die (Internal * internal, const char *fmt, ...) {
+void Message::err (Internal * internal, const char *fmt, ...) {
   va_list ap;
   va_start (ap, fmt);
-  die_va_list (internal, fmt, ap);
+  err_va_list (internal, fmt, ap);
   va_end (ap);				// unreachable
 }
 

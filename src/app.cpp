@@ -80,36 +80,39 @@ void App::witness () {
 
 bool App::set (const char * arg) { return solver->set (arg); }
 
+#define ERROR(FMT,ARGS...) \
+do { solver->err (FMT,##ARGS); res = 1; goto DONE; } while (0)
+
 int App::main (int argc, char ** argv) {
   File * dimacs = 0, * solution = 0;
   const char * proof_name = 0;
   bool trace_proof = false;
-  int i, res;
+  int i, res = 0;
   solver = new Solver ();
   internal = solver->internal;
   for (i = 1; i < argc; i++) {
-    if (!strcmp (argv[i], "-h")) usage (), exit (0);
-    else if (!strcmp (argv[i], "--version"))
-      fputs (CADICAL_VERSION "\n", stdout), exit (0);
-    else if (!strcmp (argv[i], "-")) {
-      if (trace_proof) solver->die ("too many arguments");
+    if (!strcmp (argv[i], "-h")) { usage (); goto DONE; }
+    else if (!strcmp (argv[i], "--version")) {
+      fputs (CADICAL_VERSION "\n", stdout); goto DONE;
+    } else if (!strcmp (argv[i], "-")) {
+      if (trace_proof) ERROR ("too many arguments");
       else if (!dimacs) dimacs = File::read (stdin, "<stdin>");
       else trace_proof = true, proof_name = 0;
     } else if (!strcmp (argv[i], "-s")) {
-      if (++i == argc) solver->die ("argument to '-s' missing");
-      if (solution) solver->die ("multiple solution files");
-      if (!(solution = File::read (argv[i])))
-        solver->die ("can not read solution file '%s'", argv[i]);
+      if (++i == argc) ERROR ("argument to '-s' missing");
+      else if (solution) ERROR ("multiple solution files");
+      else if (!(solution = File::read (argv[i])))
+        ERROR ("can not read solution file '%s'", argv[i]);
     } else if (!strcmp (argv[i], "-n")) set ("--no-witness");
     else if (!strcmp (argv[i], "-q")) set ("--quiet");
     else if (!strcmp (argv[i], "-v")) set ("--verbose");
     else if (!strcmp (argv[i], "-c")) set ("--check");
     else if (set (argv[i])) { /* nothing do be done */ }
-    else if (argv[i][0] == '-') solver->die ("invalid option '%s'", argv[i]);
-    else if (trace_proof) solver->die ("too many arguments");
+    else if (argv[i][0] == '-') ERROR ("invalid option '%s'", argv[i]);
+    else if (trace_proof) ERROR ("too many arguments");
     else if (dimacs) trace_proof = true, proof_name = argv[i];
     else if (!(dimacs = File::read (argv[i])))
-      solver->die ("can not open and read DIMACS file '%s'", argv[i]);
+      ERROR ("can not open and read DIMACS file '%s'", argv[i]);
   }
   if (solution && !solver->get ("check")) solver->set ("check", 1);
   if (!dimacs) dimacs = File::read (stdin, "<stdin>");
@@ -117,6 +120,7 @@ int App::main (int argc, char ** argv) {
   Signal::init (solver);
   solver->section ("parsing input");
   solver->msg ("reading DIMACS file from '%s'", dimacs->name ());
+{
   Parser dimacs_parser (internal, dimacs);
   const char * err = dimacs_parser.parse_dimacs ();
   if (err) { fprintf (stderr, "%s\n", err); exit (1); }
@@ -130,6 +134,7 @@ int App::main (int argc, char ** argv) {
     delete solution;
     internal->check (&Internal::sol);
   }
+}
   solver->options ();
   solver->section ("proof tracing");
   if (trace_proof) {
@@ -141,9 +146,10 @@ int App::main (int argc, char ** argv) {
       }
       solver->proof (stdout, "<stdout>");
     } else if (!solver->proof (proof_name))
-      solver->die ("can not open and write DRAT proof to '%s'", proof_name);
-    solver->msg ("writing %s DRAT proof trace to '%s'",
-      (solver->get ("binary") ? "binary" : "non-binary"), proof_name);
+      ERROR ("can not open and write DRAT proof to '%s'", proof_name);
+    else
+      solver->msg ("writing %s DRAT proof trace to '%s'",
+	(solver->get ("binary") ? "binary" : "non-binary"), proof_name);
   } else solver->msg ("will not generate nor write DRAT proof");
   res = solver->solve ();
   if (trace_proof) solver->close ();
@@ -161,6 +167,7 @@ int App::main (int argc, char ** argv) {
   Signal::reset ();
   solver->statistics ();
   solver->msg ("exit %d", res);
+DONE:
   if (!solver->get ("leak")) delete solver;
   return res;
 }

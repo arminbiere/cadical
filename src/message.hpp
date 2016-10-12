@@ -9,8 +9,8 @@ struct File;
 class Internal;
 
 struct Message {
-  static void die (Internal *, const char *, ...);
-  static void die_va_list (Internal *, const char *, va_list &);
+  static void err (Internal *, const char *, ...);
+  static void err_va_list (Internal *, const char *, va_list &);
 
   static void section (Internal *, const char * title);
 

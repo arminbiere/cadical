@@ -30,9 +30,6 @@ do { Message::print (internal, 0, ##ARGS); } while (0)
 #define VRB(ARGS...) \
 do { Message::print (internal, 1, ##ARGS); } while (0)
 
-#define DIE(ARGS...) \
-do { Message::die (internal, ##ARGS); } while (0)
-
 #define SECTION(ARGS...) \
 do { Message::section (internal, ##ARGS); } while (0)
 
