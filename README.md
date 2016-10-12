@@ -14,6 +14,12 @@ followed by 'make'.  This will build the library and the executable
 
   - ./build/cadical
 
+The default build process requires GNU make but simply issuing
+
+  - cd src; g++ -O3 -DNDEBUG -o ../build/cadical \*.cpp
+
+should also work.
+
 The header file of the library is in 'src/cadical.hpp'.
 
 You might want to check out options of './configure.sh -h', such as
