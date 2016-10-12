@@ -73,20 +73,33 @@ void Solver::banner () {
 }
 
 void Solver::options () { internal->opts.print (); }
-
+void Solver::usage () { internal->opts.usage (); }
 void Solver::statistics () { internal->stats.print (); }
 
 /*------------------------------------------------------------------------*/
 
-const char * Solver::dimacs (const char * path) {
-  File * file = File::read (path);
-  if (!file)
-    return internal->error.init ("failed to read DIMACS file '%s'", path);
+const char * Solver::dimacs (File * file) {
   section ("parsing input");
   Parser * parser = new Parser (internal, file);
   msg ("reading DIMACS file from '%s'", file->name ());
   const char * err = parser->parse_dimacs ();
   delete parser;
+  return err;
+}
+
+const char * Solver::dimacs (FILE * external_file, const char * name) {
+  File * file = File::read (external_file, name);
+  assert (file);
+  const char * err = dimacs (file);
+  delete file;
+  return err;
+}
+
+const char * Solver::dimacs (const char * path) {
+  File * file = File::read (path);
+  if (!file)
+    return internal->error.init ("failed to read DIMACS file '%s'", path);
+  const char * err = dimacs (file);
   delete file;
   return err;
 }

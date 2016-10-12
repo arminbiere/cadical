@@ -11,6 +11,7 @@ namespace CaDiCaL {
 // It has the additional benefit to decouple this header file from all
 // the internal data structures.
 
+class File;
 class Internal;
 
 class Solver {
@@ -81,6 +82,9 @@ private:
   void msg (const char *, ...);
   void err (const char *, ...);
   void section (const char *);
+
+  const char * dimacs (File *);
+  void usage ();
 };
 
 };

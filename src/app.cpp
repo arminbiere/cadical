@@ -1,7 +1,7 @@
 #include "app.hpp"
-#include "internal.hpp"
 #include "cadical.hpp"
 #include "signal.hpp"
+#include "file.hpp"
 
 #include "../build/config.hpp"
 
@@ -16,7 +16,6 @@ namespace CaDiCaL {
 // Static non-reentrant global solver needed for signal handling.
 
 Solver * App::solver;
-Internal * App::internal;
 
 void App::usage () {
   fputs (
@@ -38,7 +37,7 @@ void App::usage () {
 "or '<option>' can be one of the following long options\n"
 "\n",
   stdout);
-  Options::usage ();
+  solver->usage ();
 fputs (
 "\n"
 "The long options have their default value printed in brackets\n"
@@ -84,69 +83,64 @@ bool App::set (const char * arg) { return solver->set (arg); }
 do { solver->err (FMT,##ARGS); res = 1; goto DONE; } while (0)
 
 int App::main (int argc, char ** argv) {
-  File * dimacs = 0;
-  const char * proof_name = 0, * solution_name = 0;
-  bool trace_proof = false;
+  const char * proof_path = 0, * solution_path = 0, * dimacs_path = 0;
+  bool proof_specified = false, dimacs_specified = false;
+  const char * dimacs_name;
+  const char * err;
   int i, res = 0;
   solver = new Solver ();
   Signal::init (solver);
-  internal = solver->internal;
   for (i = 1; i < argc; i++) {
     if (!strcmp (argv[i], "-h")) { usage (); goto DONE; }
     else if (!strcmp (argv[i], "--version")) {
       fputs (CADICAL_VERSION "\n", stdout); goto DONE;
     } else if (!strcmp (argv[i], "-")) {
-      if (trace_proof) ERROR ("too many arguments");
-      else if (!dimacs) dimacs = File::read (stdin, "<stdin>");
-      else trace_proof = true, proof_name = 0;
+      if (proof_specified) ERROR ("too many arguments");
+      else if (!dimacs_specified) dimacs_specified = true;
+      else                         proof_specified = true;
     } else if (!strcmp (argv[i], "-s")) {
       if (++i == argc) ERROR ("argument to '-s' missing");
-      else if (solution_name) ERROR ("multiple solution files");
-      else solution_name = argv[i];
+      else if (solution_path) ERROR ("multiple solution files");
+      else solution_path = argv[i];
     } else if (!strcmp (argv[i], "-n")) set ("--no-witness");
     else if (!strcmp (argv[i], "-q")) set ("--quiet");
     else if (!strcmp (argv[i], "-v")) set ("--verbose");
     else if (!strcmp (argv[i], "-c")) set ("--check");
     else if (set (argv[i])) { /* nothing do be done */ }
     else if (argv[i][0] == '-') ERROR ("invalid option '%s'", argv[i]);
-    else if (trace_proof) ERROR ("too many arguments");
-    else if (dimacs) trace_proof = true, proof_name = argv[i];
-    else if (!(dimacs = File::read (argv[i])))
-      ERROR ("can not open and read DIMACS file '%s'", argv[i]);
+    else if (proof_specified) ERROR ("too many arguments");
+    else if (dimacs_specified)
+          proof_specified = true, proof_path = argv[i];
+    else dimacs_specified = true, dimacs_path = argv[i];
   }
-  if (solution_name && !solver->get ("check")) solver->set ("check", 1);
-  if (!dimacs) dimacs = File::read (stdin, "<stdin>");
+  if (solution_path && !solver->get ("check")) solver->set ("check", 1);
   solver->banner ();
   solver->section ("parsing input");
-  solver->msg ("reading DIMACS file from '%s'", dimacs->name ());
-{
-  Parser dimacs_parser (internal, dimacs);
-  const char * err = dimacs_parser.parse_dimacs ();
-  if (err) { fprintf (stderr, "%s\n", err); exit (1); }
-  delete dimacs;
-}
-  if (solution_name) {
-    const char * err = solver->solution (solution_name);
-    if (err) ERROR ("can not read solution file '%s'", solution_name);
-  }
+  dimacs_name = dimacs_path ? dimacs_path : "<stdin>";
+  solver->msg ("reading DIMACS file from '%s'", dimacs_name);
+  if (dimacs_path) err = solver->dimacs (dimacs_path);
+  else             err = solver->dimacs (stdin, dimacs_name);
+  if (err) ERROR ("%s", err);
+  if (solution_path && (err = solver->solution (solution_path)))
+    ERROR ("%s", err);
   solver->options ();
   solver->section ("proof tracing");
-  if (trace_proof) {
-    if (!proof_name) {
+  if (proof_specified) {
+    if (!proof_path) {
       if (isatty (1) && solver->get ("binary")) {
         solver->msg (
 	  "forced non-binary proof since '<stdout>' connected to terminal");
 	solver->set ("binary", false);
       }
       solver->proof (stdout, "<stdout>");
-    } else if (!solver->proof (proof_name))
-      ERROR ("can not open and write DRAT proof to '%s'", proof_name);
+    } else if (!solver->proof (proof_path))
+      ERROR ("can not open and write DRAT proof to '%s'", proof_path);
     else
       solver->msg ("writing %s DRAT proof trace to '%s'",
-	(solver->get ("binary") ? "binary" : "non-binary"), proof_name);
+	(solver->get ("binary") ? "binary" : "non-binary"), proof_path);
   } else solver->msg ("will not generate nor write DRAT proof");
   res = solver->solve ();
-  if (trace_proof) solver->close ();
+  if (proof_specified) solver->close ();
   solver->section ("result");
   if (res == 10) {
     printf ("s SATISFIABLE\n");
