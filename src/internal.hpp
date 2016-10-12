@@ -38,9 +38,7 @@ class Internal {
 
   friend class Solver;
 
-  friend class App;
   friend class Parser;
-  friend class Signal;
   friend struct Logger;
   friend struct Message;
   friend struct Queue;

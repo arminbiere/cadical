@@ -7,12 +7,20 @@ namespace CaDiCaL {
 
 // External API of the CaDiCaL solver.  In essence 'Solver' is a 'facade'
 // object for 'Internal'.  It thus exposes the meant to be public API of
-// 'Internal' and should make it easier to understand and use the solver.
-// It has the additional benefit to decouple this header file from all
-// the internal data structures.
+// 'Internal' but hides everything else (except for the private member
+// functions below).  It makes it easier to understand and use the solver.
+// It has the additional benefit to decouple this header file from all the
+// internal data structures, which is particularly useful if the rest of the
+// source is not available. For instance if only a CaDiCaL library is
+// installed in a system, then only this header file has to be installed
+// too, to compile and link against the library.
+
+/*------------------------------------------------------------------------*/
 
 class File;
 class Internal;
+
+/*------------------------------------------------------------------------*/
 
 class Solver {
 
@@ -46,6 +54,7 @@ public:
   //------------------------------------------------------------------------
 
   void banner ();	// print solver banner
+  void usage ();	// print usage information for long options
   void options ();	// print current option and value list
   void statistics ();   // print statistics
 
@@ -70,6 +79,12 @@ public:
 
 private:
   
+  //------------------------------------------------------------------------
+  // Used in the stand alone solver application 'App' which in turn uses
+  // 'Signal' for catching signals and printing statistics before aborting.
+  // So only these two classes need access to the otherwise more application
+  // specific functions listed here.
+
   friend class App;
   friend class Signal;
 
@@ -79,12 +94,11 @@ private:
 
   // Messages in a common style.
   //
-  void msg (const char *, ...);
-  void err (const char *, ...);
-  void section (const char *);
+  void section (const char *);		// standardized section header
+  void msg (const char *, ...);		// verbose (level 0) message
+  void err (const char *, ...);		// produce error message
 
-  const char * dimacs (File *);
-  void usage ();
+  const char * dimacs (File *);	// helper function factoring out common code
 };
 
 };
