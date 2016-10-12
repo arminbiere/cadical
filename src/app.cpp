@@ -84,8 +84,8 @@ bool App::set (const char * arg) { return solver->set (arg); }
 do { solver->err (FMT,##ARGS); res = 1; goto DONE; } while (0)
 
 int App::main (int argc, char ** argv) {
-  File * dimacs = 0, * solution = 0;
-  const char * proof_name = 0;
+  File * dimacs = 0;
+  const char * proof_name = 0, * solution_name = 0;
   bool trace_proof = false;
   int i, res = 0;
   solver = new Solver ();
@@ -101,9 +101,8 @@ int App::main (int argc, char ** argv) {
       else trace_proof = true, proof_name = 0;
     } else if (!strcmp (argv[i], "-s")) {
       if (++i == argc) ERROR ("argument to '-s' missing");
-      else if (solution) ERROR ("multiple solution files");
-      else if (!(solution = File::read (argv[i])))
-        ERROR ("can not read solution file '%s'", argv[i]);
+      else if (solution_name) ERROR ("multiple solution files");
+      else solution_name = argv[i];
     } else if (!strcmp (argv[i], "-n")) set ("--no-witness");
     else if (!strcmp (argv[i], "-q")) set ("--quiet");
     else if (!strcmp (argv[i], "-v")) set ("--verbose");
@@ -115,7 +114,7 @@ int App::main (int argc, char ** argv) {
     else if (!(dimacs = File::read (argv[i])))
       ERROR ("can not open and read DIMACS file '%s'", argv[i]);
   }
-  if (solution && !solver->get ("check")) solver->set ("check", 1);
+  if (solution_name && !solver->get ("check")) solver->set ("check", 1);
   if (!dimacs) dimacs = File::read (stdin, "<stdin>");
   solver->banner ();
   solver->section ("parsing input");
@@ -125,16 +124,11 @@ int App::main (int argc, char ** argv) {
   const char * err = dimacs_parser.parse_dimacs ();
   if (err) { fprintf (stderr, "%s\n", err); exit (1); }
   delete dimacs;
-  if (solution) {
-    solver->section ("parsing solution");
-    Parser solution_parser (internal, solution);
-    solver->msg ("reading solution file from '%s'", solution->name ());
-    err = solution_parser.parse_solution ();
-    if (err) { fprintf (stderr, "%s\n", err); exit (1); }
-    delete solution;
-    internal->check (&Internal::sol);
-  }
 }
+  if (solution_name) {
+    const char * err = solver->solution (solution_name);
+    if (err) ERROR ("can not read solution file '%s'", solution_name);
+  }
   solver->options ();
   solver->section ("proof tracing");
   if (trace_proof) {
@@ -156,11 +150,14 @@ int App::main (int argc, char ** argv) {
   solver->section ("result");
   if (res == 10) {
     printf ("s SATISFIABLE\n");
+    fflush (stdout);
     if (solver->get ("witness")) witness ();
     fflush (stdout);
-  } else {
-    assert (res = 20);
+  } else if (res == 20) {
     printf ("s UNSATISFIABLE\n");
+    fflush (stdout);
+  } else {
+    printf ("c UNKNOWN\n");
     fflush (stdout);
   }
   solver->statistics ();

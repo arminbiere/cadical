@@ -55,8 +55,8 @@ public:
 
   // Returns zero if successful and otherwise an error message.
   //
-  const char * dimacs (FILE * file);	    // read DIMACS file
-  const char * dimacs (const char * path);  // read DIMACS file
+  const char * dimacs (FILE * file, const char * name); // read DIMACS
+  const char * dimacs (const char * path);              // open & read
 
   // Enables clausal proof tracing in DRAT format and returns 'true' if
   // successfully opened for writing.  Writing proofs has to be enabled

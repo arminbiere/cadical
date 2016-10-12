@@ -78,6 +78,35 @@ void Solver::statistics () { internal->stats.print (); }
 
 /*------------------------------------------------------------------------*/
 
+const char * Solver::dimacs (const char * path) {
+  File * file = File::read (path);
+  if (!file)
+    return internal->error.init ("failed to read DIMACS file '%s'", path);
+  section ("parsing input");
+  Parser * parser = new Parser (internal, file);
+  msg ("reading DIMACS file from '%s'", file->name ());
+  const char * err = parser->parse_dimacs ();
+  delete parser;
+  delete file;
+  return err;
+}
+
+const char * Solver::solution (const char * path) {
+  File * file = File::read (path);
+  if (!file)
+    return internal->error.init ("failed to read solution file '%s'", path);
+  section ("parsing solution");
+  Parser * parser = new Parser (internal, file);
+  msg ("reading solution file from '%s'", file->name ());
+  const char * err = parser->parse_solution ();
+  delete parser;
+  delete file;
+  if (!err) internal->check (&Internal::sol);
+  return err;
+}
+
+/*------------------------------------------------------------------------*/
+
 void Solver::section (const char * title) { SECTION (title); }
 
 void Solver::msg (const char * fmt, ...) {

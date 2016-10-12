@@ -22,7 +22,7 @@ struct Message {
 
 #define PER(FMT,ARGS...) \
 do { \
-  internal->error.append (\
+  internal->error.init (\
     "%s:%d: parse error: ", \
     file->name (), (int) file->lineno ()); \
   return internal->error.append (FMT, ##ARGS); \

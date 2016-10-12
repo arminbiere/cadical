@@ -29,11 +29,9 @@ void Format::push_int (int d) {
   push_string (tmp);
 }
 
-const char * Format::append (const char * fmt, ...) {
+const char * Format::add (const char * fmt, va_list & ap) {
   const char * p = fmt;
-  va_list ap;
   char ch;
-  va_start (ap, fmt);
   while ((ch = *p++)) {
     if (ch != '%') push_char (ch);
     else if (*p == 'c') push_char (va_arg (ap, int)), p++;
@@ -41,10 +39,26 @@ const char * Format::append (const char * fmt, ...) {
     else if (*p == 's') push_string (va_arg (ap, const char*)), p++;
     else { push_char ('%'); push_char (*p); break; }  // unsupported
   }
-  va_end (ap);
   push_char (0);
   count--;        // thus automatic append in subsequent calls.
   return buffer;
+}
+
+const char * Format::init (const char * fmt, ...) {
+  count = 0;
+  va_list ap;
+  va_start (ap, fmt);
+  const char * res = add (fmt, ap);
+  va_end (ap);
+  return res;
+}
+
+const char * Format::append (const char * fmt, ...) {
+  va_list ap;
+  va_start (ap, fmt);
+  const char * res = add (fmt, ap);
+  va_end (ap);
+  return res;
 }
 
 };
