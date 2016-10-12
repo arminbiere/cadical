@@ -81,9 +81,12 @@ void App::witness () {
 void App::banner () {
   solver->section ("banner");
   solver->msg ("CaDiCaL Radically Simplified CDCL SAT Internal");
-  solver->msg ("Version " VERSION " " GITID);
+  solver->msg ("Version " CADICAL_VERSION " " CADICAL_GITID);
   solver->msg ("Copyright (c) 2016 Armin Biere, JKU");
-  solver->msg (COMPILE);
+  solver->msg (CADICAL_CXXVERSION);
+  solver->msg (CADICAL_COMPILED);
+  solver->msg (CADICAL_OS);
+  solver->msg (CADICAL_CXX CADICAL_CXXFLAGS);
 }
 
 bool App::set (const char * arg) { return internal->opts.set (arg); }
@@ -98,7 +101,7 @@ int App::main (int argc, char ** argv) {
   for (i = 1; i < argc; i++) {
     if (!strcmp (argv[i], "-h")) usage (), exit (0);
     else if (!strcmp (argv[i], "--version"))
-      fputs (VERSION "\n", stdout), exit (0);
+      fputs (CADICAL_VERSION "\n", stdout), exit (0);
     else if (!strcmp (argv[i], "-")) {
       if (trace_proof) solver->die ("too many arguments");
       else if (!dimacs) dimacs = File::read (stdin, "<stdin>");

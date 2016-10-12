@@ -44,7 +44,7 @@ class Internal {
   friend struct Logger;
   friend struct Message;
   friend struct Queue;
-  friend struct Proof;
+  friend class Proof;
   friend struct Stats;
 
   friend struct trail_smaller_than;

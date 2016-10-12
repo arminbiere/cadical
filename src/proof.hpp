@@ -4,7 +4,7 @@
 namespace CaDiCaL {
 
 struct File;
-struct Clause;
+class Clause;
 class Internal;
 
 class Proof {

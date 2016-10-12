@@ -2,7 +2,9 @@
 MAKEFLAGS=-j $(if $(CORES),$(CORES),1)
 OBJ=$(shell ls ../src/*.cpp|sed -e '/main/d' -e 's,../src/,,' -e 's,.cpp$$,.o,g')
 SRC=$(shell ls ../src/*.cpp ../src/*.hpp)
-COMPILE=@CXX@ @CXXFLAGS@
+CXX=@CXX@
+CXXFLAGS=@CXXFLAGS@
+COMPILE=$(CXX) $(CXXFLAGS)
 all: cadical libcadical.a
 %.o: ../src/%.cpp
 	$(COMPILE) -c $<

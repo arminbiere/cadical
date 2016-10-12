@@ -41,10 +41,14 @@ class Options {
 public:
 
   // Makes options directly accessible, e.g., for instance declares the
-  // member 'bool Options.restart' here.  This will give fast a type save
+  // member 'bool Options.restart' here.  This will give fast and type save
   // access to option values (internally).  In principle one could make all
-  // options simply 'double' though and we will test, whether this makes
-  // sense (TODO).
+  // options simply 'double' though, but that requires double conversions
+  // during accessing options at run-time and disregard the intended types,
+  // e.g., one would need to allow fractional values for actual integer
+  // or boolean options.  Keeping the different types makes the output of
+  // 'print' and 'usage' also more appealing (since correctly typed values
+  // are printed).
 
 #define OPTION(N,T,V,L,H,D) \
   T N;
@@ -64,7 +68,8 @@ public:
   // type options we parse "<VAL>" with 'atoi' and force the resulting 'int'
   // value to the 'LO' and 'HI' range and similarly for 'double' type
   // options using 'atof'.  Thus in both cases we do not check whether
-  // "<VAL>" is actually a string representing a proper 'int' or 'double'.
+  // "<VAL>" is actually a string representing a proper 'int' or 'double'
+  // which is also quite difficult for the latter.
   //
   bool set (const char * arg);
 
