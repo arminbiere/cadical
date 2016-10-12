@@ -5,6 +5,7 @@ namespace CaDiCaL {
 Internal::Internal ()
 :
   max_var (0),
+  vsize (0),
   vtab (0),
   vals (0),
   phases (0),
@@ -27,19 +28,27 @@ Internal::Internal ()
   profiles (this),
   internal (this)
 {
+  control.push_back (Level (0));
 }
 
-void Internal::init_variables () {
-  const int max_lit = 2*max_var + 1;
-  NEW (vals,   signed char, max_var + 1);
-  NEW (phases, signed char, max_var + 1);
-  NEW (vtab,           Var, max_var + 1);
-  NEW (wtab,       Watches, max_lit + 1);
-  for (int i = 1; i <= max_var; i++) vals[i] = 0;
-  for (int i = 1; i <= max_var; i++) phases[i] = -1;
-  queue.init (this);
-  MSG ("initialized %d variables", max_var);
-  control.push_back (Level (0));
+void Internal::resize (int new_max_var) {
+  if (new_max_var < max_var) return;
+  if ((size_t) new_max_var >= vsize) {
+    size_t new_vsize = vsize ? 2*vsize : 1 + (size_t) new_max_var;
+    while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
+    vector<int> order;
+    queue.save (this, order);
+    RESIZE (vals,   signed char,   vsize,   new_vsize);
+    RESIZE (phases, signed char,   vsize,   new_vsize);
+    RESIZE (vtab,           Var,   vsize,   new_vsize);
+    RESIZE (wtab,       Watches, 2*vsize, 2*new_vsize);
+    queue.restore (this, order);
+    vsize = new_vsize;
+  }
+  for (int i = max_var + 1; i <= new_max_var; i++) vals[i] = 0;
+  for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = -1;
+  queue.init (this, new_max_var);
+  MSG ("initialized %d variables", new_max_var - max_var);
 }
 
 Internal::~Internal () {

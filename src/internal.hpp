@@ -54,6 +54,7 @@ class Internal {
   // The actual state of the solver is in this section.
 
   int max_var;                  // maximum variable index
+  size_t vsize;                 // actually allocated variable data size
   Var * vtab;                   // variable table
   signed char * vals;           // current partial assignment
   signed char * phases;         // saved last assignment
@@ -92,8 +93,8 @@ class Internal {
   Internal * internal;          // proxy to 'this' in macros (redundant)
 
   /*----------------------------------------------------------------------*/
-
-  void init_variables ();       // Currently called in DIMACS parser.
+  
+  void resize (int new_max_var);
 
   // Functions for monitoring resources.
   //

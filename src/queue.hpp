@@ -25,7 +25,15 @@ struct Queue {
     v->next = 0;
   }
 
-  void init (Internal *);
+  // Initialize VMTF queue.  This incoporates an initial variable order.
+  // We currently simply make smaller variables more important.
+  //
+  void init (Internal *, int new_max_var);
+
+  // Save and restore the variable order for resizing the solver.
+  //
+  void save (Internal *, vector<int> &);
+  void restore (Internal *, const vector<int> &);
 };
 
 };

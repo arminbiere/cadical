@@ -20,7 +20,16 @@ do { \
 /*------------------------------------------------------------------------*/
 
 #define NEW(P,T,N) \
-  do { (P) = new T[N], internal->inc_bytes ((N) * sizeof (T)); } while (0)
+do { (P) = new T[N], internal->inc_bytes ((N) * sizeof (T)); } while (0)
+
+#define RESIZE(P,T,O,N) \
+do { \
+  T * TMP = (P); \
+  NEW (P, T, N); \
+  for (size_t I = 0; I < (O); I++) (P)[I] = (TMP)[I]; \
+  internal->dec_bytes ((O) * sizeof (T)); \
+  delete [] TMP; \
+} while (0)
 
 /*------------------------------------------------------------------------*/
 

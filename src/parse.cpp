@@ -40,7 +40,7 @@ Parser::parse_positive_int (int & ch, int & res, const char * name) {
   return 0;
 }
 
-const char * Parser::parse_lit (int & ch, int & lit) {
+const char * Parser::parse_lit (int & ch, int & lit, const int vars) {
   int sign = 0;
   if (ch == '-') {
     if (!isdigit (ch = parse_char ())) PER ("expected digit after '-'");
@@ -57,9 +57,9 @@ const char * Parser::parse_lit (int & ch, int & lit) {
   if (ch == '\r') ch = parse_char ();
   if (ch != 'c' && ch != ' ' && ch != '\t' && ch != '\n')
     PER ("expected white space after '%d'", sign*lit);
-  if (lit > internal->max_var)
+  if (lit > vars)
     PER ("literal %d exceeds maximum variable %d",
-      sign*lit, internal->max_var);
+      sign*lit, vars);
   lit *= sign;
   return 0;
 }
@@ -69,7 +69,7 @@ const char * Parser::parse_lit (int & ch, int & lit) {
 // Parsing function for CNF in DIMACS format.
 
 const char * Parser::parse_dimacs_non_profiled () {
-  int ch, num_original_clauses = 0;
+  int ch, vars = 0, clauses = 0;
   for (;;) {
     ch = parse_char ();
     if (ch != 'c') break;
@@ -81,21 +81,20 @@ const char * Parser::parse_dimacs_non_profiled () {
   const char * err = parse_string (" cnf ", 'p');
   if (err) return err;
   if (!isdigit (ch = parse_char ())) PER ("expected digit after 'p cnf '");
-  err = parse_positive_int (ch, internal->max_var, "<max-var>");
+  err = parse_positive_int (ch, vars, "<max-var>");
   if (err) return err;
-  if (ch != ' ') PER ("expected ' ' after 'p cnf %d'", internal->max_var);
+  if (ch != ' ') PER ("expected ' ' after 'p cnf %d'", vars);
   if (!isdigit (ch = parse_char ()))
-    PER ("expected digit after 'p cnf %d '", internal->max_var);
-  err = parse_positive_int (ch, num_original_clauses, "<num-clauses>");
+    PER ("expected digit after 'p cnf %d '", vars);
+  err = parse_positive_int (ch, clauses, "<num-clauses>");
   if (err) return err;
   while (ch == ' ' || ch == '\r') ch = parse_char ();
   if (ch != '\n')
     PER ("expected new-line after 'p cnf %d %d'",
-      internal->max_var, num_original_clauses);
-  MSG ("found 'p cnf %d %d' header",
-    internal->max_var, num_original_clauses);
-  internal->init_variables ();
-  int lit = 0, parsed_clauses = 0;
+      vars, clauses);
+  MSG ("found 'p cnf %d %d' header", vars, clauses);
+  internal->resize (vars);
+  int lit = 0, parsed = 0;
   while ((ch = parse_char ()) != EOF) {
     if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r') continue;
     if (ch == 'c') {
@@ -104,7 +103,7 @@ COMMENT:
         if (ch == EOF) PER ("unexpected end-of-file in body comment");
       continue;
     }
-    err = parse_lit (ch, lit);
+    err = parse_lit (ch, lit, vars);
     if (err) return err;
     if (ch == 'c') goto COMMENT;
     internal->original.push_back (lit);
@@ -116,14 +115,14 @@ COMMENT:
         internal->add_new_original_clause ();
       else LOG ("tautological original clause");
       internal->clause.clear ();
-      if (parsed_clauses++ >= num_original_clauses)
+      if (parsed++ >= clauses)
         PER ("too many clauses");
     }
   }
   if (lit) PER ("last clause without '0'");
-  if (parsed_clauses < num_original_clauses) PER ("clause missing");
+  if (parsed < clauses) PER ("clause missing");
   MSG ("parsed %d clauses in %.2f seconds",
-    parsed_clauses, internal->seconds ());
+    parsed, internal->seconds ());
   return 0;
 }
 
@@ -157,7 +156,7 @@ const char * Parser::parse_solution_non_profiled () {
     int lit = 0; ch = parse_char ();
     do {
       if (ch == ' ' || ch == '\t') { ch = parse_char (); continue; }
-      err = parse_lit (ch, lit);
+      err = parse_lit (ch, lit, internal->max_var);
       if (err) return err;
       if (ch == 'c') PER ("unexpected comment");
       if (!lit) break;
