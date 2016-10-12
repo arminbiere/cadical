@@ -21,17 +21,13 @@ public:
   //------------------------------------------------------------------------
   // Option handling.
 
-  bool set (const char * arg); // of type '--<name>=<val>'
+  bool has (const char * name);
+  double get (const char * name);
+  bool set (const char * name, double val);
 
-#if 0
-  bool set (const char * name, const int val);
-  bool set (const char * name, const bool val);
-  bool set (const char * name, const double val);
-
-  bool get (const char * name, int & val);
-  bool get (const char * name, bool & val);
-  bool get (const char * name, double & val);
-#endif
+  // command line form: '--<name>=<val>', '--<name>', or '--no-<name>'
+  //
+  bool set (const char * arg);
 
   //------------------------------------------------------------------------
   // Core functionality as in the IPASIR incremental SAT solver interface.

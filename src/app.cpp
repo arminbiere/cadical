@@ -62,7 +62,7 @@ fputs (
   stdout);
 }
 
-void App::print_witness () {
+void App::witness () {
   int c = 0;
   for (int i = 1; i <= internal->max_var; i++) {
     if (!c) File::print ('v'), c = 1;
@@ -86,7 +86,7 @@ void App::banner () {
   solver->msg (COMPILE);
 }
 
-bool App::set (const char * arg) { return solver->set (arg); }
+bool App::set (const char * arg) { return internal->opts.set (arg); }
 
 int App::main (int argc, char ** argv) {
   File * dimacs = 0, * proof = 0, * solution = 0;
@@ -161,7 +161,7 @@ int App::main (int argc, char ** argv) {
   if (res == 10) {
     internal->check (&Internal::val);
     printf ("s SATISFIABLE\n");
-    if (internal->opts.witness) print_witness ();
+    if (internal->opts.witness) witness ();
     fflush (stdout);
   } else {
     assert (res = 20);

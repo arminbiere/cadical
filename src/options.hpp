@@ -40,6 +40,12 @@ class Options {
 
 public:
 
+  // Makes options directly accessible, e.g., for instance declares the
+  // member 'bool Options.restart' here.  This will give fast a type save
+  // access to option values (internally).  In principle one could make all
+  // options simply 'double' though and we will test, whether this makes
+  // sense (TODO).
+
 #define OPTION(N,T,V,L,H,D) \
   T N;
   OPTIONS
@@ -47,12 +53,33 @@ public:
 
   Options (Internal *);
 
-  // Of the form "--<NAME>=<val>", "--<NAME>" or "--no-<NAME>".
+  // This sets the value of an option assuming a 'long' command line
+  // argument form.  The argument 'arg' thus should look like
   //
-  bool set (const char *);
+  //  "--<NAME>=<VAL>", "--<NAME>" or "--no-<NAME>"
+  //
+  // where 'NAME' is one of the option names above.  Returns 'true' if the
+  // option was parsed and set correctly.  For boolean values we strictly
+  // only allow "true", "false", "0" and "1" as "<VAL>" string.  For 'int'
+  // type options we parse "<VAL>" with 'atoi' and force the resulting 'int'
+  // value to the 'LO' and 'HI' range and similarly for 'double' type
+  // options using 'atof'.  Thus in both cases we do not check whether
+  // "<VAL>" is actually a string representing a proper 'int' or 'double'.
+  //
+  bool set (const char * arg);
 
-  static void usage ();
-  void print ();
+  // Interface to options using in a certain sense non-type-safe 'double'
+  // values even for 'int' and 'bool'.  However, since 'double' can hold a
+  // 'bool' and ' with typing, since a 'double' can hold a 'bool' as well an
+  // 'int' value precisely, e.g., if the result of 'get' cast down again by
+  // the client.
+  //
+  bool has (const char * name);
+  double get (const char * name);
+  bool set (const char * name, double);
+
+  void print ();             // print current values in command line form
+  static void usage ();      // print usage message for all options
 };
 
 };

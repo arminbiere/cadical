@@ -13,13 +13,17 @@ Options::Options (Internal * s) : internal (s) {
 #undef OPTION
 }
 
+/*------------------------------------------------------------------------*/
+
+// Functions to work with command line option style format.
+
 bool Options::set (bool & opt, const char * name,
                    const char * valstr, const bool l, const bool h) {
   assert (!l), assert (h);
        if (!strcmp (valstr, "true")  || !strcmp (valstr, "1")) opt = true;
   else if (!strcmp (valstr, "false") || !strcmp (valstr, "0")) opt = false;
   else return false;
-  LOG ("set option --%s=%d", name, opt);
+  LOG ("set option --%s=%d from (const char*) \"%s\"", name, opt, valstr);
   return true;
 }
 
@@ -30,7 +34,7 @@ bool Options::set (int & opt, const char * name,
   if (val < l) val = l;
   if (val > h) val = h;
   opt = val;
-  LOG ("set option --%s=%d", name, opt);
+  LOG ("set option --%s=%d from (const char*) \"%s\"", name, opt, valstr);
   return true;
 }
 
@@ -42,7 +46,7 @@ bool Options::set (double & opt, const char * name,
   if (val < l) val = l;
   if (val > h) val = h;
   opt = val;
-  LOG ("set option --%s=%g", name, opt);
+  LOG ("set option --%s=%g from (const char*) \"%s\"", name, opt, valstr);
   return true;
 }
 
@@ -67,6 +71,8 @@ bool Options::set (const char * arg) {
   return false;
 }
 
+/*------------------------------------------------------------------------*/
+
 #define printf_bool_FMT   "%s"
 #define printf_int_FMT    "%d"
 #define printf_double_FMT "%g"
@@ -74,6 +80,42 @@ bool Options::set (const char * arg) {
 #define printf_bool_CONV(V)    ((V) ? "true" : "false")
 #define printf_int_CONV(V)     ((int)(V))
 #define printf_double_CONV(V)  ((double)(V))
+
+/*------------------------------------------------------------------------*/
+
+// More generic interface with 'double' values.
+
+bool Options::has (const char * name) {
+#define OPTION(N,T,V,L,H,D) \
+  if (!strcmp (name, #N)) return true; else
+  OPTIONS
+#undef OPTION
+  return false;
+}
+
+bool Options::set (const char * name, double val) {
+#define OPTION(N,T,V,L,H,D) \
+  if (!strcmp (name, #N)) { \
+    if (val < L) val = L; \
+    if (val > H) val = H; \
+    N = val; \
+    LOG ("set option --%s=" printf_ ## T ## _FMT " from (double) %g", \
+      printf_ ## T ## _CONV (N), val); \
+  }
+  OPTIONS
+#undef OPTION
+  return false;
+}
+
+double Options::get (const char * name) {
+#define OPTION(N,T,V,L,H,D) \
+  if (!strcmp (name, #N)) return N; else
+  OPTIONS
+#undef OPTION
+  return 0;
+}
+
+/*------------------------------------------------------------------------*/
 
 void Options::print () {
   SECTION ("options");
@@ -91,5 +133,7 @@ void Options::usage () {
   OPTIONS
 #undef OPTION
 }
+
+/*------------------------------------------------------------------------*/
 
 };
