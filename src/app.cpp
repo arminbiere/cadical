@@ -63,11 +63,11 @@ fputs (
 }
 
 void App::witness () {
-  int c = 0;
-  for (int i = 1; i <= internal->max_var; i++) {
+  int c = 0, m = solver->max ();
+  for (int i = 1; i <= m; i++) {
     if (!c) File::print ('v'), c = 1;
     char str[20];
-    sprintf (str, " %d", internal->val (i) < 0 ? -i : i);
+    sprintf (str, " %d", solver->val (i) < 0 ? -i : i);
     int l = strlen (str);
     if (c + l > 78) File::print ("\nv"), c = 1;
     File::print (str);
@@ -78,12 +78,12 @@ void App::witness () {
   fflush (stdout);
 }
 
-bool App::set (const char * arg) { return internal->opts.set (arg); }
+bool App::set (const char * arg) { return solver->set (arg); }
 
 int App::main (int argc, char ** argv) {
-  File * dimacs = 0, * proof = 0, * solution = 0;
-  bool trace_proof = false, binary_proof = true;
+  File * dimacs = 0, * solution = 0;
   const char * proof_name = 0;
+  bool trace_proof = false;
   int i, res;
   solver = new Solver ();
   internal = solver->internal;
@@ -111,7 +111,7 @@ int App::main (int argc, char ** argv) {
     else if (!(dimacs = File::read (argv[i])))
       solver->die ("can not open and read DIMACS file '%s'", argv[i]);
   }
-  if (solution && !internal->opts.check) set ("--check");
+  if (solution && !solver->get ("check")) solver->set ("check", 1);
   if (!dimacs) dimacs = File::read (stdin, "<stdin>");
   solver->banner ();
   Signal::init (solver);
@@ -134,26 +134,24 @@ int App::main (int argc, char ** argv) {
   solver->section ("proof tracing");
   if (trace_proof) {
     if (!proof_name) {
-      proof = File::write (stdout, "<stdout>");
-      if (isatty (1) && internal->opts.binary) {
+      if (isatty (1) && solver->get ("binary")) {
         solver->msg (
-	  "non-binary proof since '<stdout>' connected to terminal");
-        binary_proof = false;
+	  "forced non-binary proof since '<stdout>' connected to terminal");
+	solver->set ("binary", false);
       }
-    } else if (!(proof = File::write (proof_name)))
+      solver->proof (stdout, "<stdout>");
+    } else if (!solver->proof (proof_name))
       solver->die ("can not open and write DRAT proof to '%s'", proof_name);
-    if (binary_proof && !internal->opts.binary) binary_proof = false;
     solver->msg ("writing %s DRAT proof trace to '%s'",
-      (binary_proof ? "binary" : "non-binary"), proof->name ());
-    internal->proof = new Proof (internal, proof, binary_proof);
+      (solver->get ("binary") ? "binary" : "non-binary"), proof_name);
   } else solver->msg ("will not generate nor write DRAT proof");
-  res = internal->solve ();
-  if (proof) { delete proof; internal->proof = 0; }
+  res = solver->solve ();
+  if (trace_proof) solver->close ();
   solver->section ("result");
   if (res == 10) {
     internal->check (&Internal::val);
     printf ("s SATISFIABLE\n");
-    if (internal->opts.witness) witness ();
+    if (solver->get ("witness")) witness ();
     fflush (stdout);
   } else {
     assert (res = 20);
@@ -163,7 +161,7 @@ int App::main (int argc, char ** argv) {
   Signal::reset ();
   solver->statistics ();
   solver->msg ("exit %d", res);
-  if (!internal->opts.leak) delete solver;
+  if (!solver->get ("leak")) delete solver;
   return res;
 }
 

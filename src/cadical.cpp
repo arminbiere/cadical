@@ -10,6 +10,8 @@ namespace CaDiCaL {
 Solver::Solver () { internal = new Internal (); }
 Solver::~Solver () { delete internal; }
 
+int Solver::max () const { return internal->max_var; }
+
 /*------------------------------------------------------------------------*/
 
 bool Solver::has (const char * arg) { return internal->opts.has (arg); }
@@ -21,6 +23,36 @@ bool Solver::set (const char * arg, double val) {
 }
 
 bool Solver::set (const char * arg) { return internal->opts.set (arg); }
+
+/*------------------------------------------------------------------------*/
+
+int Solver::val (int lit) { return internal->val (lit); }
+int Solver::solve () { return internal->solve (); }
+
+/*------------------------------------------------------------------------*/
+
+void Solver::close () {
+  if (!internal->proof) return;
+  delete internal->proof;
+  internal->proof = 0;
+}
+
+void Solver::proof (FILE * external_file, const char * name) {
+  File * internal_file = File::write (external_file, name);
+  assert (internal_file);
+  close ();
+  internal->proof =
+    new Proof (internal, internal_file, internal->opts.binary);
+}
+
+bool Solver::proof (const char * path) {
+  File * internal_file = File::write (path);
+  if (!internal_file) return false;
+  close ();
+  internal->proof =
+    new Proof (internal, internal_file, internal->opts.binary);
+  return true;
+}
 
 /*------------------------------------------------------------------------*/
 

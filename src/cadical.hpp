@@ -5,7 +5,11 @@
 
 namespace CaDiCaL {
 
-// External API of the CaDiCaL solver.
+// External API of the CaDiCaL solver.  In essence 'Solver' is a 'facade'
+// object for 'Internal'.  It thus exposes the meant to be public API of
+// 'Internal' and should make it easier to understand and use the solver.
+// It has the additional benefit to decouple this header file from all
+// the internal data structures.
 
 class Internal;
 
@@ -17,6 +21,8 @@ public:
 
   Solver ();
   ~Solver ();
+
+  int max () const;	// return maximum variable index
 
   //------------------------------------------------------------------------
   // Option handling.
@@ -57,9 +63,9 @@ public:
   // before calling 'solve', 'add' and 'dimacs'.  Otherwise only partial
   // proofs are written.
   //
-  bool proof (FILE * file);	   // write DRAT proof file
-  bool proof (const char * path);  // write DRAT proof file
-  void close ();                   // close proof file
+  void proof (FILE * file, const char * name); // write DRAT proof file
+  bool proof (const char * path);              // open & write DRAT proof
+  void close ();                               // close proof (early)
 
 private:
   
