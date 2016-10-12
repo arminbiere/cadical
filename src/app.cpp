@@ -89,6 +89,7 @@ int App::main (int argc, char ** argv) {
   bool trace_proof = false;
   int i, res = 0;
   solver = new Solver ();
+  Signal::init (solver);
   internal = solver->internal;
   for (i = 1; i < argc; i++) {
     if (!strcmp (argv[i], "-h")) { usage (); goto DONE; }
@@ -117,7 +118,6 @@ int App::main (int argc, char ** argv) {
   if (solution && !solver->get ("check")) solver->set ("check", 1);
   if (!dimacs) dimacs = File::read (stdin, "<stdin>");
   solver->banner ();
-  Signal::init (solver);
   solver->section ("parsing input");
   solver->msg ("reading DIMACS file from '%s'", dimacs->name ());
 {
@@ -164,11 +164,12 @@ int App::main (int argc, char ** argv) {
     printf ("s UNSATISFIABLE\n");
     fflush (stdout);
   }
-  Signal::reset ();
   solver->statistics ();
-  solver->msg ("exit %d", res);
 DONE:
+  Signal::reset ();
   if (!solver->get ("leak")) delete solver;
+  printf ("c return %d\n", res);
+  fflush (stdout);
   return res;
 }
 
