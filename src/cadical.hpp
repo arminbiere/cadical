@@ -75,7 +75,6 @@ private:
   void msg (const char *, ...);
   void die (const char *, ...);
   void section (const char *);
-
 };
 
 };

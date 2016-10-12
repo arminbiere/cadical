@@ -78,17 +78,6 @@ void App::witness () {
   fflush (stdout);
 }
 
-void App::banner () {
-  solver->section ("banner");
-  solver->msg ("CaDiCaL Radically Simplified CDCL SAT Internal");
-  solver->msg ("Version " CADICAL_VERSION " " CADICAL_GITID);
-  solver->msg ("Copyright (c) 2016 Armin Biere, JKU");
-  solver->msg (CADICAL_CXXVERSION);
-  solver->msg (CADICAL_COMPILED);
-  solver->msg (CADICAL_OS);
-  solver->msg (CADICAL_CXX CADICAL_CXXFLAGS);
-}
-
 bool App::set (const char * arg) { return internal->opts.set (arg); }
 
 int App::main (int argc, char ** argv) {
@@ -124,7 +113,7 @@ int App::main (int argc, char ** argv) {
   }
   if (solution && !internal->opts.check) set ("--check");
   if (!dimacs) dimacs = File::read (stdin, "<stdin>");
-  banner ();
+  solver->banner ();
   Signal::init (solver);
   solver->section ("parsing input");
   solver->msg ("reading DIMACS file from '%s'", dimacs->name ());
