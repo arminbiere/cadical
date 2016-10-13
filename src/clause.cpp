@@ -87,7 +87,7 @@ bool Internal::tautological_clause () {
   for (size_t i = 0; i < clause.size (); i++) {
     int lit = clause[i];
     if (lit == -prev) return true;
-    if (lit !=  prev) clause[j++] = lit;
+    if (lit !=  prev) clause[j++] = prev = lit;
   }
   if (j < clause.size ()) {
     clause.resize (j);

@@ -32,8 +32,8 @@ Internal::Internal ()
 }
 
 Internal::~Internal () {
-  for (size_t i = 0; i < clauses.size (); i++)
-    delete_clause (clauses[i]);
+  for (clause_it i = clauses.begin (); i != clauses.end (); i++)
+    delete_clause (*i);
   if (proof) delete proof;
   if (wtab) delete [] wtab;
   if (vtab) delete [] vtab;
@@ -132,7 +132,11 @@ void Internal::check (int (Internal::*a)(int)) {
       start = i + 1;
     } else if (!satisfied && (this->*a) (lit) > 0) satisfied = true;
   }
-  MSG ("satisfying assignment checked");
+  if (internal->opts.verbose) {
+    MSG ("");
+    MSG ("satisfying assignment checked");
+    MSG ("");
+  }
 }
 
 };

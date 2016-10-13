@@ -13,15 +13,15 @@ bool Internal::reducing () {
 // We protect them before and unprotect them after garbage collection.
 
 void Internal::protect_reasons () {
-  for (size_t i = 0; i < trail.size (); i++) {
-    Var & v = var (trail[i]);
+  for (const_int_it i = trail.begin (); i != trail.end (); i++) {
+    Var & v = var (*i);
     if (v.level && v.reason) v.reason->reason = true;
   }
 }
 
 void Internal::unprotect_reasons () {
-  for (size_t i = 0; i < trail.size (); i++) {
-    Var & v = var (trail[i]);
+  for (const_int_it i = trail.begin (); i != trail.end (); i++) {
+    Var & v = var (*i);
     if (v.level && v.reason)
       assert (v.reason->reason), v.reason->reason = false;
   }
@@ -79,8 +79,8 @@ void Internal::flush_falsified_literals (Clause * c) {
 
 void Internal::mark_satisfied_clauses_as_garbage () {
   if (fixed_limit >= stats.fixed) return;
-  for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = clauses[i];
+  for (const_clause_it i = clauses.begin (); i != clauses.end (); i++) {
+    Clause * c = *i;
     if (c->garbage) continue;
     const int tmp = clause_contains_fixed_literal (c);
          if (tmp > 0) c->garbage = true;
@@ -108,8 +108,8 @@ struct less_usefull {
 void Internal::mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
   assert (stack.empty ());
-  for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = clauses[i];
+  for (const_clause_it i = clauses.begin (); i != clauses.end (); i++) {
+    Clause * c = *i;
     if (!c->redundant) continue;            // keep irredundant
     if (c->reason) continue;                // need to keep reasons
     if (c->garbage) continue;               // already marked
@@ -127,14 +127,15 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
 }
 
 void Internal::delete_garbage_clauses () {
-  size_t collected_bytes = 0, j = 0;
-  for (size_t i = 0; i < clauses.size (); i++) {
-    Clause * c = clauses[j++] = clauses[i];
+  clause_it i = clauses.begin (), j = i;
+  size_t collected_bytes = 0;
+  while (i != clauses.end ()) {
+    Clause * c = *j++ = *i++;
     if (c->reason || !c->garbage) continue;
     collected_bytes += delete_clause (c);
     j--;
   }
-  clauses.resize (j);
+  clauses.resize (j - clauses.begin ());
   LOG ("collected %ld bytes", collected_bytes);
 }
 
@@ -159,8 +160,8 @@ void Internal::flush_watches () {
 }
 
 void Internal::setup_watches () {
-  for (size_t i = 0; i < clauses.size (); i++)
-    watch_clause (clauses[i]);
+  for (const_clause_it i = clauses.begin (); i != clauses.end (); i++)
+    watch_clause (*i);
 }
 
 void Internal::garbage_collection () {

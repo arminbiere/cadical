@@ -69,7 +69,6 @@ bool Solver::proof (const char * path) {
 /*------------------------------------------------------------------------*/
 
 void Solver::banner () {
-  section ("banner");
   msg ("CaDiCaL Radically Simplified CDCL SAT Internal");
   msg ("Version " CADICAL_VERSION " " CADICAL_GITID);
   msg ("Copyright (c) 2016 Armin Biere, JKU");
@@ -86,9 +85,7 @@ void Solver::statistics () { internal->stats.print (); }
 /*------------------------------------------------------------------------*/
 
 const char * Solver::dimacs (File * file) {
-  section ("parsing input");
   Parser * parser = new Parser (internal, file);
-  msg ("reading DIMACS file from '%s'", file->name ());
   const char * err = parser->parse_dimacs ();
   delete parser;
   return err;
@@ -115,9 +112,7 @@ const char * Solver::solution (const char * path) {
   File * file = File::read (path);
   if (!file)
     return internal->error.init ("failed to read solution file '%s'", path);
-  section ("parsing solution");
   Parser * parser = new Parser (internal, file);
-  msg ("reading solution file from '%s'", file->name ());
   const char * err = parser->parse_solution ();
   delete parser;
   delete file;

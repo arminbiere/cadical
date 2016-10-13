@@ -118,7 +118,6 @@ double Options::get (const char * name) {
 /*------------------------------------------------------------------------*/
 
 void Options::print () {
-  SECTION ("options");
 #define OPTION(N,T,V,L,H,D) \
   MSG ("--" #N "=" printf_ ## T ## _FMT, printf_ ## T ## _CONV (N));
   OPTIONS

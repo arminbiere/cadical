@@ -60,8 +60,8 @@ struct bump_earlier {
 void Internal::bump_and_clear_seen_variables () {
   START (bump);
   sort (seen.begin (), seen.end (), bump_earlier (this));
-  for (size_t i = 0; i < seen.size (); i++) {
-    Var * v = &var (seen[i]);
+  for (const_int_it i = seen.begin (); i != seen.end (); i++) {
+    Var * v = &var (*i);
     assert (v->seen);
     v->seen = false;
     bump_variable (v);
@@ -81,8 +81,8 @@ void Internal::bump_and_clear_seen_variables () {
 void Internal::bump_resolved_clauses () {
   START (bump);
   sort (resolved.begin (), resolved.end (), resolved_earlier ());
-  for (size_t i = 0; i < resolved.size (); i++)
-    resolved[i]->resolved () = ++stats.resolved;
+  for (const_clause_it i = resolved.begin (); i != resolved.end (); i++)
+    (*i)->resolved () = ++stats.resolved;
   STOP (bump);
   resolved.clear ();
 }
@@ -124,8 +124,8 @@ bool Internal::analyze_literal (int lit) {
 }
 
 void Internal::clear_levels () {
-  for (size_t i = 0; i < levels.size (); i++)
-    control[levels[i]].reset ();
+  for (const_int_it i = levels.begin (); i != levels.end (); i++)
+    control[*i].reset ();
   levels.clear ();
 }
 
@@ -154,12 +154,12 @@ void Internal::analyze () {
   LOG (reason, "analyzing conflict");
   resolve_clause (reason);
   int open = 0, uip = 0;
-  size_t i = trail.size ();
+  const_int_it i = trail.end ();
   for (;;) {
     const int size = reason->size, * lits = reason->literals;;
     for (int j = 0; j < size; j++)
       if (analyze_literal (lits[j])) open++;
-    while (!var (uip = trail[--i]).seen)
+    while (!var (uip = *--i).seen)
       ;
     if (!--open) break;
     reason = var (uip).reason;

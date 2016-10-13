@@ -114,6 +114,7 @@ int App::main (int argc, char ** argv) {
     else dimacs_specified = true, dimacs_path = argv[i];
   }
   if (solution_path && !solver->get ("check")) solver->set ("check", 1);
+  solver->section ("banner");
   solver->banner ();
   solver->section ("parsing input");
   dimacs_name = dimacs_path ? dimacs_path : "<stdin>";
@@ -121,8 +122,12 @@ int App::main (int argc, char ** argv) {
   if (dimacs_path) err = solver->dimacs (dimacs_path);
   else             err = solver->dimacs (stdin, dimacs_name);
   if (err) ERROR ("%s", err);
-  if (solution_path && (err = solver->solution (solution_path)))
-    ERROR ("%s", err);
+  if (solution_path) {
+    solver->section ("parsing solution");
+    solver->msg ("reading solution file from '%s'", solution_path);
+    if ((err = solver->solution (solution_path))) ERROR ("%s", err);
+  }
+  solver->section ("options");
   solver->options ();
   solver->section ("proof tracing");
   if (proof_specified) {

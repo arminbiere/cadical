@@ -9,6 +9,8 @@
 
 using namespace std;
 
+/*------------------------------------------------------------------------*/
+
 #include "macros.hpp"
 #include "options.hpp"
 #include "clause.hpp"
@@ -33,6 +35,11 @@ using namespace std;
 /*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
+
+typedef vector<int>::iterator int_it;
+typedef vector<int>::const_iterator const_int_it;
+typedef vector<Clause *>::iterator clause_it;
+typedef vector<Clause *>::const_iterator const_clause_it;
 
 class Internal {
 
