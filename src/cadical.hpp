@@ -31,7 +31,8 @@ public:
   Solver ();
   ~Solver ();
 
-  int max () const;	// return maximum variable index
+  void resize (int new_max);	// explicitly set maximum variable index
+  int max () const;	 	// return maximum variable index
 
   //------------------------------------------------------------------------
   // Option handling.

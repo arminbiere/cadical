@@ -10,7 +10,10 @@ namespace CaDiCaL {
 Solver::Solver () { internal = new Internal (); }
 Solver::~Solver () { delete internal; }
 
+/*------------------------------------------------------------------------*/
+
 int Solver::max () const { return internal->max_var; }
+void Solver::resize (int new_max) { internal->resize (new_max); }
 
 /*------------------------------------------------------------------------*/
 
