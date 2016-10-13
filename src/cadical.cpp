@@ -50,17 +50,17 @@ void Solver::close () {
 }
 
 void Solver::proof (FILE * external_file, const char * name) {
+  close ();
   File * internal_file = File::write (external_file, name);
   assert (internal_file);
-  close ();
   internal->proof =
     new Proof (internal, internal_file, internal->opts.binary);
 }
 
 bool Solver::proof (const char * path) {
+  close ();
   File * internal_file = File::write (path);
   if (!internal_file) return false;
-  close ();
   internal->proof =
     new Proof (internal, internal_file, internal->opts.binary);
   return true;
