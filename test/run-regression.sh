@@ -145,3 +145,4 @@ run add128 20
 run prime65537 20
 
 echo "regression results: $ok ok, $failed failed"
+exit $failed
