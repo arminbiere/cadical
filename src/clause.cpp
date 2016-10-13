@@ -90,8 +90,8 @@ bool Internal::tautological_clause () {
     if (lit !=  prev) clause[j++] = prev = lit;
   }
   if (j < clause.size ()) {
+    LOG ("removing %d duplicates", (long)(clause.size () - j));
     clause.resize (j);
-    LOG ("removed %d duplicates", clause.size () - j);
   }
   return false;
 }
