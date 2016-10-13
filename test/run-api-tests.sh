@@ -20,3 +20,4 @@ run () {
 }
 
 run newdelete
+run unit

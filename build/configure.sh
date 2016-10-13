@@ -8,6 +8,8 @@ die () {
   echo "*** configure.sh: $*" 1>&2
   exit 1
 }
+[ -f ../VERSION -a -f makefile.in -a -f make-config-header.sh ] || \
+die "change to 'build' directory before calling this script"
 usage () {
 cat << EOF
 usage: configure.sh [ <option> ... ]
