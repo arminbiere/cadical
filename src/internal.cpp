@@ -31,6 +31,19 @@ Internal::Internal ()
   control.push_back (Level (0));
 }
 
+Internal::~Internal () {
+  for (size_t i = 0; i < clauses.size (); i++)
+    delete_clause (clauses[i]);
+  if (proof) delete proof;
+  if (wtab) delete [] wtab;
+  if (vtab) delete [] vtab;
+  if (vals) delete [] vals;
+  if (phases) delete [] phases;
+  if (solution) delete [] solution;
+}
+
+/*------------------------------------------------------------------------*/
+
 void Internal::resize (int new_max_var) {
   if (new_max_var < max_var) return;
   if ((size_t) new_max_var >= vsize) {
@@ -52,15 +65,15 @@ void Internal::resize (int new_max_var) {
   max_var = new_max_var;
 }
 
-Internal::~Internal () {
-  for (size_t i = 0; i < clauses.size (); i++)
-    delete_clause (clauses[i]);
-  if (proof) delete proof;
-  if (wtab) delete [] wtab;
-  if (vtab) delete [] vtab;
-  if (vals) delete [] vals;
-  if (phases) delete [] phases;
-  if (solution) delete [] solution;
+void Internal::add_original_lit (int lit) {
+  assert (abs (lit) <= max_var);
+  original.push_back (lit);
+  if (lit) clause.push_back (lit);
+  else {
+    if (!tautological_clause ()) add_new_original_clause ();
+    else LOG ("tautological original clause");
+    clause.clear ();
+  }
 }
 
 /*------------------------------------------------------------------------*/
@@ -93,7 +106,9 @@ int Internal::solve () {
   init_solving ();
   SECTION ("solving");
   if (clashing_unit) { learn_empty_clause (); return 20; }
-  else return search ();
+  int res = search ();
+  if (res == 10) check (&Internal::val);
+  return res;
 }
 
 /*------------------------------------------------------------------------*/

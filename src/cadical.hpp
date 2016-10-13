@@ -2,6 +2,7 @@
 #define _cadical_hpp_INCLUDED
 
 #include <cstdio>
+#include <vector>
 
 namespace CaDiCaL {
 
@@ -31,7 +32,7 @@ public:
   Solver ();
   ~Solver ();
 
-  void resize (int new_max);	// explicitly set maximum variable index
+  void resize (int new_max);	// explicitly set new maximum variable index
   int max () const;	 	// return maximum variable index
 
   //------------------------------------------------------------------------

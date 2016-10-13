@@ -93,8 +93,11 @@ class Internal {
   Internal * internal;          // proxy to 'this' in macros (redundant)
 
   /*----------------------------------------------------------------------*/
-  
+ 
+  // Internal delegates for corresponding functions in 'Solver'
+
   void resize (int new_max_var);
+  void add_original_lit (int lit);
 
   // Functions for monitoring resources.
   //

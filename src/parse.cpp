@@ -106,18 +106,8 @@ COMMENT:
     err = parse_lit (ch, lit, vars);
     if (err) return err;
     if (ch == 'c') goto COMMENT;
-    internal->original.push_back (lit);
-    if (lit) {
-      if (internal->clause.size () == INT_MAX) PER ("clause too large");
-      internal->clause.push_back (lit);
-    } else {
-      if (!internal->tautological_clause ())
-        internal->add_new_original_clause ();
-      else LOG ("tautological original clause");
-      internal->clause.clear ();
-      if (parsed++ >= clauses)
-        PER ("too many clauses");
-    }
+    internal->add_original_lit (lit);
+    if (!lit && parsed++ >= clauses) PER ("too many clauses");
   }
   if (lit) PER ("last clause without '0'");
   if (parsed < clauses) PER ("clause missing");

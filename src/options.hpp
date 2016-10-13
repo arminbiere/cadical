@@ -4,7 +4,6 @@
 #define OPTIONS \
 /*     NAME              TYPE, VAL,LO, HI, USAGE */ \
 OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
-OPTION(check,           bool,   0, 0,  1, "check witness") \
 OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha fast learned glue") \
 OPTION(keepglue,         int,   2, 1,1e9, "glue kept learned clauses") \

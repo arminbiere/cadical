@@ -29,13 +29,17 @@ bool Solver::set (const char * arg) { return internal->opts.set (arg); }
 
 /*------------------------------------------------------------------------*/
 
-int Solver::val (int lit) { return internal->val (lit); }
-
-int Solver::solve () { 
-  int res = internal->solve ();
-  if (res == 10) internal->check (&Internal::val);
-  return res;
+void Solver::add (int lit) {
+  if (abs (lit) > internal->max_var) internal->resize (abs (lit));
+  internal->add_original_lit (lit);
 }
+
+int Solver::val (int lit) {
+  if (abs (lit) > internal->max_var) return 0;
+  else return internal->val (lit);
+}
+
+int Solver::solve () { return internal->solve (); }
 
 /*------------------------------------------------------------------------*/
 
