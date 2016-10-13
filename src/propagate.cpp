@@ -32,9 +32,9 @@ bool Internal::propagate () {
     assert (val (lit) > 0);
     LOG ("propagating watches of %d", lit);
     Watches & ws = watches (-lit);
-    size_t i = 0, j = 0;
-    while (i < ws.size ()) {
-      const Watch w = ws[j++] = ws[i++];
+    vector<Watch>::iterator i = ws.begin (), j = i;
+    while (i != ws.end ()) {
+      const Watch w = *j++ = *i++;
       const int b = val (w.blit);
       if (b > 0) continue;
       Clause * c = w.clause;
@@ -47,12 +47,12 @@ bool Internal::propagate () {
         if (lits[1] != -lit) swap (lits[0], lits[1]);
         assert (lits[1] == -lit);
         const int u = val (lits[0]);
-        if (u > 0) ws[j-1].blit = lits[0];
+        if (u > 0) j[-1].blit = lits[0];
         else {
           int k, v = -1;
           for (k = 2; k < size && (v = val (lits[k])) < 0; k++)
             ;
-          if (v > 0) ws[j-1].blit = lits[k];
+          if (v > 0) j[-1].blit = lits[k];
           else if (!v) {
             LOG (c, "unwatch %d in", -lit);
             swap (lits[1], lits[k]);
@@ -63,8 +63,8 @@ bool Internal::propagate () {
         }
       }
     }
-    while (i < ws.size ()) ws[j++] = ws[i++];
-    ws.resize (j);
+    while (i != ws.end ()) *j++ = *i++;
+    ws.resize (j - ws.begin ());
   }
   if (conflict) { stats.conflicts++; LOG (conflict, "conflict"); }
   STOP (propagate);

@@ -113,7 +113,7 @@ bool Internal::analyze_literal (int lit) {
   if (v.level < level) clause.push_back (lit);
   Level & l = control[v.level];
   if (!l.seen++) {
-    LOG ("found new level %d contributing to conflict");
+    LOG ("found new level %d contributing to conflict", v.level);
     levels.push_back (v.level);
   }
   if (v.trail < l.trail) l.trail = v.trail;
