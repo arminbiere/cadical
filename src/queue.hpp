@@ -5,7 +5,7 @@ namespace CaDiCaL {
 
 class Internal;
 
-// VMTF decision queue
+// VMTF decision queue ordered by 'Var.bumped'.
 
 struct Queue {
 
@@ -25,8 +25,9 @@ struct Queue {
     v->next = 0;
   }
 
-  // Initialize VMTF queue.  This incoporates an initial variable order.
-  // We currently simply make smaller variables more important.
+  // Initialize VMTF queue from current 'max_var+1' to 'new_max_var'.  This
+  // incoporates an initial variable order.  We currently simply assume 
+  // that variables with smaller index are more important.
   //
   void init (Internal *, int new_max_var);
 
