@@ -9,12 +9,9 @@
 
 namespace CaDiCaL {
 
-Stats::Stats (Internal * s) {
-  memset (this, 0, sizeof *this);
-  internal = s;
-}
+Stats::Stats () { memset (this, 0, sizeof *this); }
 
-void Stats::print () {
+void Stats::print (Internal * internal) {
   Stats & stats = internal->stats;
   double t = internal->seconds ();
   if (internal->opts.profile) internal->print_profile (t);
@@ -23,7 +20,7 @@ void Stats::print () {
   MSG ("reductions:    %15ld   %10.2f    conflicts per reduction",
     stats.reduce.count, relative (stats.conflicts, stats.reduce.count));
   MSG ("restarts:      %15ld   %10.2f    conflicts per restart",
-    stats.restart.count, relative (stats.conflicts, stats.restart.count));
+    stats.restarts, relative (stats.conflicts, stats.restarts));
   MSG ("conflicts:     %15ld   %10.2f    per second",
     stats.conflicts, relative (stats.conflicts, t));
   MSG ("decisions:     %15ld   %10.2f    per second",
@@ -31,12 +28,11 @@ void Stats::print () {
   MSG ("propagations:  %15ld   %10.2f    millions per second",
     stats.propagations, relative (stats.propagations/1e6, t));
   MSG ("reused:        %15ld   %10.2f %%  per restart",
-    stats.restart.reused,
-    percent (stats.restart.reused, stats.restart.count));
+    stats.reused, percent (stats.reused, stats.restarts));
   MSG ("units:         %15ld   %10.2f    conflicts per unit",
-    stats.learned.unit, relative (stats.conflicts, stats.learned.unit));
+    stats.units, relative (stats.conflicts, stats.units));
   MSG ("binaries:      %15ld   %10.2f    conflicts per binary",
-    stats.learned.binary, relative (stats.conflicts, stats.learned.binary));
+    stats.binaries, relative (stats.conflicts, stats.binaries));
   MSG ("resolved:      %15ld   %10.2f    per conflict",
     stats.resolved, relative (stats.resolved, stats.conflicts));
   long learned = stats.literals.learned - stats.literals.minimized;

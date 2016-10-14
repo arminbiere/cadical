@@ -87,7 +87,7 @@ void Solver::banner () {
 
 void Solver::options () { internal->opts.print (); }
 void Solver::usage () { internal->opts.usage (); }
-void Solver::statistics () { internal->stats.print (); }
+void Solver::statistics () { internal->stats.print (internal); }
 
 /*------------------------------------------------------------------------*/
 

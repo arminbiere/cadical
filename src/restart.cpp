@@ -20,14 +20,14 @@ int Internal::reuse_trail () {
   int res = 0;
   while (res < level && var (control[res + 1].decision).bumped > limit)
     res++;
-  if (res) stats.restart.reused++;
+  if (res) stats.reused++;
   return res;
 }
 
 void Internal::restart () {
   START (restart);
-  stats.restart.count++;
-  LOG ("restart %ld", stats.restart.count);
+  stats.restarts++;
+  LOG ("restart %ld", stats.restarts);
   backtrack (reuse_trail ());
   report ('r', 1);
   STOP (restart);

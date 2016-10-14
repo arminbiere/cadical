@@ -183,8 +183,8 @@ void Internal::analyze () {
 
   if (opts.minimize) minimize_clause ();	// minimize clause
 
-  stats.learned.unit += (clause.size () == 1);
-  stats.learned.binary += (clause.size () == 2);
+  stats.units += (clause.size () == 1);
+  stats.binaries += (clause.size () == 2);
 
   // Determine back jump level, backtrack and assign flipped literal.
   //

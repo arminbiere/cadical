@@ -11,18 +11,13 @@ struct Stats {
 
   Internal * internal;
 
-  long conflicts;
-  long decisions;
+  long conflicts;               // generated conflicts in 'propagate'
+  long decisions;               // number of decisions in 'decide'
   long propagations;            // propagated literals in 'propagate'
-
-  struct {
-    long count;                 // actual number of happened restarts
-    long reused;                // number of reused trails
-  } restart;
-
+  long restarts;                // actual number of happened restarts
+  long reused;                  // number of reused trails
   long reports;                 // 'report' counter
   long sections;                // 'section' counter
-
   long bumped;                  // seen and bumped variables in 'analyze'
   long resolved;                // resolved redundant clauses in 'analyze'
   long searched;                // searched decisions in 'decide'
@@ -33,12 +28,13 @@ struct Stats {
   struct { long redundant, irredundant, current, max; } clauses;
   struct { struct { size_t current, max; } total, watcher; } bytes;
 
-  struct { long unit, binary; } learned;
+  long units;                   // learned unit clauses
+  long binaries;                // learned binary clauses
 
   int fixed;                    // top level assigned variables
 
-  Stats (Internal *);
-  void print ();
+  Stats ();
+  void print (Internal *);
 };
 
 };

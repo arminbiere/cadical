@@ -28,7 +28,6 @@ Internal::Internal ()
   reduce_inc (0),
   proof (0),
   opts (this),
-  stats (this),
   solution (0),
   profiles (this),
   internal (this)
