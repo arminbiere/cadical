@@ -31,17 +31,11 @@ using namespace std;
 #include "queue.hpp"
 #include "report.hpp"
 #include "format.hpp"
+#include "iterator.hpp"
 
 /*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
-
-// short cuts for common iterators over 'int' and clause vectors
-
-typedef vector<int>::iterator                      int_iterator;
-typedef vector<int>::const_iterator          const_int_iterator;
-typedef vector<Clause *>::iterator              clause_iterator;
-typedef vector<Clause *>::const_iterator  const_clause_iterator;
 
 class Internal {
 
@@ -57,7 +51,7 @@ class Internal {
   friend struct trail_smaller_than;
   friend struct trail_greater_than;
   friend struct bump_earlier;
- 
+
   /*----------------------------------------------------------------------*/
 
   // The actual state of the solver is in this section.
@@ -92,17 +86,17 @@ class Internal {
   int fixed_limit;              // remember last number of units
   long reduce_inc;              // reduce interval increment
   Proof * proof;                // trace clausal proof if non zero
-  Options opts;			// run-time options
-  Stats stats;			// statistics
+  Options opts;                 // run-time options
+  Stats stats;                  // statistics
   signed char * solution;       // for debugging (like 'vals' and 'phases')
-  vector<int> original;		// original CNF for debugging
+  vector<int> original;         // original CNF for debugging
   vector<Timer> timers;         // active timers for profiling functions
   Profiles profiles;            // global profiled time for functions
   Format error;                 // last (persistent) error message
   Internal * internal;          // proxy to 'this' in macros (redundant)
 
   /*----------------------------------------------------------------------*/
- 
+
   // Internal delegates for corresponding functions in 'Solver'
 
   void resize (int new_max_var);

@@ -18,7 +18,7 @@ class Format {
   void push_int (int);
   const char * add (const char * fmt, va_list &);
 public:
-  Format () : buffer (0), count (0), size (0) { } 
+  Format () : buffer (0), count (0), size (0) { }
   ~Format () { if (buffer) delete [] buffer; }
   const char * init (const char * fmt, ...);
   const char * append (const char * fmt, ...);

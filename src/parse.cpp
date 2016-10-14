@@ -58,8 +58,7 @@ const char * Parser::parse_lit (int & ch, int & lit, const int vars) {
   if (ch != 'c' && ch != ' ' && ch != '\t' && ch != '\n')
     PER ("expected white space after '%d'", sign*lit);
   if (lit > vars)
-    PER ("literal %d exceeds maximum variable %d",
-      sign*lit, vars);
+    PER ("literal %d exceeds maximum variable %d", sign*lit, vars);
   lit *= sign;
   return 0;
 }
@@ -90,8 +89,7 @@ const char * Parser::parse_dimacs_non_profiled () {
   if (err) return err;
   while (ch == ' ' || ch == '\r') ch = parse_char ();
   if (ch != '\n')
-    PER ("expected new-line after 'p cnf %d %d'",
-      vars, clauses);
+    PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
   MSG ("found 'p cnf %d %d' header", vars, clauses);
   internal->resize (vars);
   int lit = 0, parsed = 0;
@@ -111,8 +109,7 @@ COMMENT:
   }
   if (lit) PER ("last clause without '0'");
   if (parsed < clauses) PER ("clause missing");
-  MSG ("parsed %d clauses in %.2f seconds",
-    parsed, internal->seconds ());
+  MSG ("parsed %d clauses in %.2f seconds", parsed, internal->seconds ());
   return 0;
 }
 

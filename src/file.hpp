@@ -11,7 +11,8 @@ namespace CaDiCaL {
 // Unzipping relies on external utilities, e.g., 'gunzip', 'bzcat' and '7z',
 // while zipping relies on 'gzip', 'bzip2' and '7z' as external tools.
 
-struct File {
+class File {
+
   bool writing;
   int close_file;
   FILE * file;

@@ -37,7 +37,7 @@ void Message::err (Internal * internal, const char *fmt, ...) {
   va_list ap;
   va_start (ap, fmt);
   err_va_list (internal, fmt, ap);
-  va_end (ap);				// unreachable
+  va_end (ap);                          // unreachable
 }
 
 void Message::section (Internal * internal, const char * title) {

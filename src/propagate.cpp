@@ -32,7 +32,8 @@ bool Internal::propagate () {
     assert (val (lit) > 0);
     LOG ("propagating watches of %d", lit);
     Watches & ws = watches (-lit);
-    vector<Watch>::iterator i = ws.begin (), j = i;
+    const_watch_iterator i = ws.begin ();
+    watch_iterator j = ws.begin ();
     while (i != ws.end ()) {
       const Watch w = *j++ = *i++;
       const int b = val (w.blit);

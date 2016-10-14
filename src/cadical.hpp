@@ -32,8 +32,8 @@ public:
   Solver ();
   ~Solver ();
 
-  void resize (int new_max);	// explicitly set new maximum variable index
-  int max () const;	 	// return maximum variable index
+  void resize (int new_max);    // explicitly set new maximum variable index
+  int max () const;             // return maximum variable index
 
   //------------------------------------------------------------------------
   // Option handling.
@@ -49,15 +49,15 @@ public:
   //------------------------------------------------------------------------
   // Core functionality as in the IPASIR incremental SAT solver interface.
 
-  void add (int lit);	// add literal, zero to terminate clause
-  int val (int lit);	// get value (-1=false,1=true) of literal
-  int solve ();		// returns 10 = SAT, 20 = UNSAT
+  void add (int lit);   // add literal, zero to terminate clause
+  int val (int lit);    // get value (-1=false,1=true) of literal
+  int solve ();         // returns 10 = SAT, 20 = UNSAT
 
   //------------------------------------------------------------------------
 
-  void banner ();	// print solver banner
-  void usage ();	// print usage information for long options
-  void options ();	// print current option and value list
+  void banner ();       // print solver banner
+  void usage ();        // print usage information for long options
+  void options ();      // print current option and value list
   void statistics ();   // print statistics
 
   //------------------------------------------------------------------------
@@ -80,7 +80,7 @@ public:
   void close ();                               // close proof (early)
 
 private:
-  
+
   //------------------------------------------------------------------------
   // Used in the stand alone solver application 'App' which in turn uses
   // 'Signal' for catching signals and printing statistics before aborting.
@@ -92,15 +92,15 @@ private:
 
   // Read solution in competition format for debugging and testing.
   //
-  const char * solution (const char * path);    
+  const char * solution (const char * path);
 
   // Messages in a common style.
   //
-  void section (const char *);		// standardized section header
-  void msg (const char *, ...);		// verbose (level 0) message
-  void err (const char *, ...);		// produce error message
+  void section (const char *);          // standardized section header
+  void msg (const char *, ...);         // verbose (level 0) message
+  void err (const char *, ...);         // produce error message
 
-  const char * dimacs (File *);	// helper function factoring out common code
+  const char * dimacs (File *); // helper function factoring out common code
 };
 
 };

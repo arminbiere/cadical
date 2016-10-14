@@ -134,15 +134,15 @@ int App::main (int argc, char ** argv) {
     if (!proof_path) {
       if (isatty (1) && solver->get ("binary")) {
         solver->msg (
-	  "forced non-binary proof since '<stdout>' connected to terminal");
-	solver->set ("binary", false);
+          "forced non-binary proof since '<stdout>' connected to terminal");
+        solver->set ("binary", false);
       }
       solver->proof (stdout, "<stdout>");
     } else if (!solver->proof (proof_path))
       ERROR ("can not open and write DRAT proof to '%s'", proof_path);
     else
       solver->msg ("writing %s DRAT proof trace to '%s'",
-	(solver->get ("binary") ? "binary" : "non-binary"), proof_path);
+        (solver->get ("binary") ? "binary" : "non-binary"), proof_path);
   } else solver->msg ("will not generate nor write DRAT proof");
   res = solver->solve ();
   if (proof_specified) solver->close ();

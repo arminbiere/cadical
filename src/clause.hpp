@@ -54,7 +54,7 @@ namespace CaDiCaL {
 // and 'size' without the need to change anything else.  In general these
 // optimizations are local to 'clause.[hc]pp' and otherwise can be ignored
 // except that you should for instance never access 'resolved' of a clauses
-// which is not extended.  This can be checked with for instance 'valgrind' 
+// which is not extended.  This can be checked with for instance 'valgrind'
 // but is also guarded by making the actual '_resolved' field private and
 // checking this contract in the 'resolved ()' accessor functions.
 
@@ -80,7 +80,7 @@ public:
   // Also note that 'C' does not explicitly define 'signedness' of 'int' bit
   // fields and thus we explicitly have to use 'signed' here (on an IBM main
   // frame or on Sparc 'int a:1' might be 'unsigned').
-  // 
+  //
   signed int glue : LD_MAX_GLUE;
 
   int size;             // actual size of 'literals' (at least 2)
@@ -96,7 +96,7 @@ public:
 
 struct resolved_earlier {
   bool operator () (const Clause * a, const Clause * b) {
-    assert (a->extended), assert (b->extended); 
+    assert (a->extended), assert (b->extended);
     return a->resolved () < b->resolved ();
   }
 };
