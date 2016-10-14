@@ -18,7 +18,7 @@ void Stats::print (Internal * internal) {
   size_t m = internal->max_bytes ();
   SECTION ("statistics");
   MSG ("reductions:    %15ld   %10.2f    conflicts per reduction",
-    stats.reduce.count, relative (stats.conflicts, stats.reduce.count));
+    stats.reductions, relative (stats.conflicts, stats.reductions));
   MSG ("restarts:      %15ld   %10.2f    conflicts per restart",
     stats.restarts, relative (stats.conflicts, stats.restarts));
   MSG ("conflicts:     %15ld   %10.2f    per second",
@@ -35,18 +35,17 @@ void Stats::print (Internal * internal) {
     stats.binaries, relative (stats.conflicts, stats.binaries));
   MSG ("resolved:      %15ld   %10.2f    per conflict",
     stats.resolved, relative (stats.resolved, stats.conflicts));
-  long learned = stats.literals.learned - stats.literals.minimized;
+  long learned = stats.learned - stats.minimized;
   MSG ("learned:       %15ld   %10.2f    per conflict",
     learned, relative (learned, stats.conflicts));
   MSG ("minimized:     %15ld   %10.2f %%  of 1st-UIP-literals",
-    stats.literals.minimized,
-    percent (stats.literals.minimized, stats.literals.learned));
+    stats.minimized, percent (stats.minimized, stats.learned));
   MSG ("searched:      %15ld   %10.2f    per decision",
     stats.searched, relative (stats.searched, stats.decisions));
   MSG ("bumped:        %15ld   %10.2f    per conflict",
     stats.bumped, relative (stats.bumped, stats.conflicts));
   MSG ("collected:     %15ld   %10.2f    clauses and MB",
-    stats.reduce.clauses, stats.reduce.bytes/(double)(1l<<20));
+    stats.reduced, stats.collected/(double)(1l<<20));
   MSG ("maxbytes:      %15ld   %10.2f    MB",
     m, m/(double)(1l<<20));
   MSG ("time:          %15s   %10.2f    seconds", "", t);

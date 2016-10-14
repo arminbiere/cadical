@@ -42,16 +42,16 @@ size_t Internal::vector_bytes () {
 }
 
 size_t Internal::max_bytes () {
-  size_t res = stats.bytes.total.max + vector_bytes ();
-  if (stats.bytes.watcher.max > 0) res += stats.bytes.watcher.max;
-  else res += (4 * stats.clauses.max * sizeof (Watch)) / 3;
+  size_t res = stats.bytes.total.max;
+  res += vector_bytes ();
+  res += stats.bytes.watcher.max;
   return res;
 }
 
 size_t Internal::current_bytes () {
-  size_t res = stats.bytes.total.current + vector_bytes ();
-  if (stats.bytes.watcher.current > 0) res += stats.bytes.watcher.current;
-  else res += (4 * stats.clauses.current * sizeof (Watch)) / 3;
+  size_t res = stats.bytes.total.current;
+  res += vector_bytes ();
+  res += stats.bytes.watcher.current;
   return res;
 }
 

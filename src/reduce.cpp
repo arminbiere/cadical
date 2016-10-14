@@ -75,7 +75,7 @@ void Internal::flush_falsified_literals (Clause * c) {
   }
   int flushed = c->size - j;
   const size_t bytes = flushed * sizeof (int);
-  stats.reduce.bytes += bytes;
+  stats.collected += bytes;
   dec_bytes (bytes);
   for (int i = j; i < size; i++) lits[i] = 0;
   c->size = j;
@@ -112,7 +112,7 @@ struct less_usefull {
 
 void Internal::mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
-  stack.reserve (stats.clauses.redundant);
+  stack.reserve (stats.redundant);
   for (const_clause_iterator i = clauses.begin (); i != clauses.end (); i++) {
     Clause * c = *i;
     if (!c->redundant) continue;            // keep irredundant
@@ -178,7 +178,7 @@ void Internal::garbage_collection () {
 
 void Internal::reduce () {
   START (reduce);
-  stats.reduce.count++;
+  stats.reductions++;
   report ('R', 1);
   protect_reasons ();
   mark_satisfied_clauses_as_garbage ();

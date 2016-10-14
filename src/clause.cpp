@@ -49,25 +49,19 @@ Clause * Internal::new_clause (bool red, int glue) {
   res->size = size;
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
   clauses.push_back (res);
-  if (red) stats.clauses.redundant++;
-  else     stats.clauses.irredundant++;
-  if (++stats.clauses.current > stats.clauses.max)
-    stats.clauses.max = stats.clauses.current;
+  if (red) stats.redundant++; else stats.irredundant++;
   LOG (res, "new");
   return res;
 }
 
 size_t Internal::delete_clause (Clause * c) {
-  if (c->redundant)
-       assert (stats.clauses.redundant),   stats.clauses.redundant--;
-  else assert (stats.clauses.irredundant), stats.clauses.irredundant--;
-  assert (stats.clauses.current);
-  stats.clauses.current--;
-  stats.reduce.clauses++;
+  if (c->redundant) assert (stats.redundant),   stats.redundant--;
+  else              assert (stats.irredundant), stats.irredundant--;
+  stats.reduced++;
   size_t bytes = bytes_clause (c->size);
   char * ptr = (char*) c;
   if (!c->extended) bytes -= EXTENDED_OFFSET, ptr += EXTENDED_OFFSET;
-  stats.reduce.bytes += bytes;
+  stats.collected += bytes;
   if (proof) proof->trace_delete_clause (c);
   dec_bytes (bytes);
   LOG (c, "delete");

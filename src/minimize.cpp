@@ -60,10 +60,10 @@ void Internal::minimize_clause () {
   sort (clause.begin (), clause.end (), trail_smaller_than (this));
   LOG (clause, "minimizing first UIP clause");
   assert (minimized.empty ());
-  stats.literals.learned += clause.size ();
+  stats.learned += clause.size ();
   int_iterator j = clause.begin ();
   for (const_int_iterator i = clause.begin (); i != clause.end (); i++)
-    if (minimize_literal (-*i)) stats.literals.minimized++;
+    if (minimize_literal (-*i)) stats.minimized++;
     else *j++ = *i;
   LOG ("minimized %d literals", (long)(clause.end () - j));
   clause.resize (j - clause.begin ());
