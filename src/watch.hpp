@@ -7,7 +7,11 @@ struct Watch {
   int blit;             // if blocking literal is true do not visit clause
   int size;             // size of clause
   Clause * clause;
-  Watch (int b, Clause * c) : blit (b), size (c->size), clause (c) { }
+  Watch (int b, Clause * c, int size) :
+    blit (b), size (size), clause (c)
+  {
+    assert (c->size == size);
+  }
   Watch () { }
 };
 

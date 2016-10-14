@@ -5,10 +5,10 @@
 namespace CaDiCaL {
 
 void Internal::watch_clause (Clause * c) {
-  assert (c->size > 1);
+  const int size = c->size;
   int l0 = c->literals[0], l1 = c->literals[1];
-  watch_literal (l0, l1, c);
-  watch_literal (l1, l0, c);
+  watch_literal (l0, l1, c, size);
+  watch_literal (l1, l0, c, size);
 }
 
 // Since the literals are embedded a clause actually contains always 'size'
