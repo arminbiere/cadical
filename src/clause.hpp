@@ -14,28 +14,28 @@ namespace CaDiCaL {
 // implementation, though arguably not the usage of this data-structure,
 // we deem these optimizations for essential.
 //
-// (1) The most important optimization is to 'embed' the actual literals in
-// the clause.  This requires a variadic size structure and thus strictly is
-// not 'C' conformant, but supported by all compilers we used.  The
-// alternative is to store the actual literals somewhere else, which
-// not only needs more memory but more importantly also requires another
-// memory access and thus is so costly that even for CaDiCaL we want to use
-// this optimization.
+//   (1) The most important optimization is to 'embed' the actual literals
+//   in the clause.  This requires a variadic size structure and thus
+//   strictly is not 'C' conformant, but supported by all compilers we used.
+//   The alternative is to store the actual literals somewhere else, which
+//   not only needs more memory but more importantly also requires another
+//   memory access and thus is so costly that even for CaDiCaL we want to
+//   use this optimization.
 //
-// (2) The boolean flags only need one bit each and thus there is enough
-// space left to merge them with a 'glue' bit field (which is less accessed
-// than 'size').  This saves 4 bytes and also keeps the header without
-// 'resolved' nicely in 8 bytes.  We currently use 28 bits and actually
-// since we do not want to mess with 'unsigned' versus 'signed' issues just
-// use 27 out of them.  If more boolean flags are needed this number has to
-// be adapted accordingly.
+//   (2) The boolean flags only need one bit each and thus there is enough
+//   space left to merge them with a 'glue' bit field (which is less
+//   accessed than 'size').  This saves 4 bytes and also keeps the header
+//   without 'resolved' nicely in 8 bytes.  We currently use 28 bits and
+//   actually since we do not want to mess with 'unsigned' versus 'signed'
+//   issues just use 27 out of them.  If more boolean flags are needed this
+//   number has to be adapted accordingly.
 //
-// (3) Original clauses and clauses with small glue or size are kept anyhow
-// and do not need the activity counter 'resolved'.  Thus we can omit these
-// 8 bytes used for 'resolved' for these clauses.  Redundant clauses of long
-// size and with large glue have a 'resolved' field and are called
-// 'extended'.  The non extended clauses need 8 bytes less and accessing
-// 'resolved' for them is not allowed.
+//   (3) Original clauses and clauses with small glue or size are kept
+//   anyhow and do not need the activity counter 'resolved'.  Thus we can
+//   omit these 8 bytes used for 'resolved' for these clauses.  Redundant
+//   clauses of long size and with large glue have a 'resolved' field and
+//   are called 'extended'.  The non extended clauses need 8 bytes less and
+//   accessing 'resolved' for them is not allowed.
 //
 // With these three optimizations a binary original clause only needs 16
 // bytes instead of 40 bytes without embedding and 32 bytes with embedding
