@@ -36,10 +36,12 @@ using namespace std;
 
 namespace CaDiCaL {
 
-typedef vector<int>::iterator int_it;
-typedef vector<int>::const_iterator const_int_it;
-typedef vector<Clause *>::iterator clause_it;
-typedef vector<Clause *>::const_iterator const_clause_it;
+// short cuts for common iterators over 'int' and clause vectors
+
+typedef vector<int>::iterator                      int_iterator;
+typedef vector<int>::const_iterator          const_int_iterator;
+typedef vector<Clause *>::iterator              clause_iterator;
+typedef vector<Clause *>::const_iterator  const_clause_iterator;
 
 class Internal {
 

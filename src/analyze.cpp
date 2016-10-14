@@ -60,7 +60,7 @@ struct bump_earlier {
 void Internal::bump_and_clear_seen_variables () {
   START (bump);
   sort (seen.begin (), seen.end (), bump_earlier (this));
-  for (const_int_it i = seen.begin (); i != seen.end (); i++) {
+  for (const_int_iterator i = seen.begin (); i != seen.end (); i++) {
     Var * v = &var (*i);
     assert (v->seen);
     v->seen = false;
@@ -81,7 +81,7 @@ void Internal::bump_and_clear_seen_variables () {
 void Internal::bump_resolved_clauses () {
   START (bump);
   sort (resolved.begin (), resolved.end (), resolved_earlier ());
-  for (const_clause_it i = resolved.begin (); i != resolved.end (); i++)
+  for (const_clause_iterator i = resolved.begin (); i != resolved.end (); i++)
     (*i)->resolved () = ++stats.resolved;
   STOP (bump);
   resolved.clear ();
@@ -124,7 +124,7 @@ bool Internal::analyze_literal (int lit) {
 }
 
 void Internal::clear_levels () {
-  for (const_int_it i = levels.begin (); i != levels.end (); i++)
+  for (const_int_iterator i = levels.begin (); i != levels.end (); i++)
     control[*i].reset ();
   levels.clear ();
 }
@@ -154,7 +154,7 @@ void Internal::analyze () {
   LOG (reason, "analyzing conflict");
   resolve_clause (reason);
   int open = 0, uip = 0;
-  const_int_it i = trail.end ();
+  const_int_iterator i = trail.end ();
   for (;;) {
     const int size = reason->size, * lits = reason->literals;;
     for (int j = 0; j < size; j++)

@@ -32,7 +32,7 @@ Internal::Internal ()
 }
 
 Internal::~Internal () {
-  for (clause_it i = clauses.begin (); i != clauses.end (); i++)
+  for (clause_iterator i = clauses.begin (); i != clauses.end (); i++)
     delete_clause (*i);
   if (proof) delete proof;
   if (wtab) delete [] wtab;
