@@ -107,7 +107,7 @@ struct less_usefull {
 
 void Internal::mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
-  assert (stack.empty ());
+  stack.reserve (stats.clauses.redundant);
   for (const_clause_iterator i = clauses.begin (); i != clauses.end (); i++) {
     Clause * c = *i;
     if (!c->redundant) continue;            // keep irredundant
@@ -119,15 +119,16 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     stack.push_back (c);
   }
   sort (stack.begin (), stack.end (), less_usefull ());
-  const size_t target = stack.size ()/2;
-  for (size_t i = 0; i < target; i++) {
-    LOG (stack[i], "marking useless to be collected");
-    stack[i]->garbage = true;
+  const_clause_iterator target = stack.begin () + stack.size ()/2;
+  for (const_clause_iterator i = stack.begin (); i != target; i++) {
+    LOG (*i, "marking useless to be collected");
+    (*i)->garbage = true;
   }
 }
 
 void Internal::delete_garbage_clauses () {
-  clause_iterator i = clauses.begin (), j = i;
+  const_clause_iterator i = clauses.begin ();
+  clause_iterator j = clauses.begin ();
   size_t collected_bytes = 0;
   while (i != clauses.end ()) {
     Clause * c = *j++ = *i++;
