@@ -1,5 +1,6 @@
 #include "internal.hpp"
 
+#include "clause.hpp"
 #include "macros.hpp"
 #include "message.hpp"
 #include "proof.hpp"
