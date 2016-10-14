@@ -1,6 +1,8 @@
 #ifndef _queue_hpp_INCLUDED
 #define _queue_hpp_INCLUDED
 
+#include "var.hpp"
+
 namespace CaDiCaL {
 
 class Internal;

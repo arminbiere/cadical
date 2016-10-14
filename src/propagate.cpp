@@ -1,5 +1,8 @@
 #include "internal.hpp"
 
+#include "macros.hpp"
+#include "util.hpp"
+
 namespace CaDiCaL {
 
 void Internal::assign (int lit, Clause * reason) {

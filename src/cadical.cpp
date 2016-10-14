@@ -1,5 +1,12 @@
 #include "cadical.hpp"
 #include "internal.hpp"
+
+#include "file.hpp"
+#include "macros.hpp"
+#include "message.hpp"
+#include "parse.hpp"
+#include "proof.hpp"
+
 #include "../build/config.hpp"
 
 #include <cstring>

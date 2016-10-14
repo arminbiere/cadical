@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <climits>
+#include <cstdio>
 #include <vector>
 
 /*------------------------------------------------------------------------*/
@@ -11,31 +12,23 @@ using namespace std;
 
 /*------------------------------------------------------------------------*/
 
-#include "macros.hpp"
-#include "options.hpp"
-#include "clause.hpp"
-#include "var.hpp"
-#include "watch.hpp"
-#include "ema.hpp"
 #include "avg.hpp"
-#include "level.hpp"
-#include "parse.hpp"
-#include "proof.hpp"
-#include "profile.hpp"
-#include "timer.hpp"
-#include "logging.hpp"
-#include "file.hpp"
-#include "message.hpp"
-#include "stats.hpp"
-#include "util.hpp"
-#include "queue.hpp"
-#include "report.hpp"
+#include "ema.hpp"
 #include "format.hpp"
-#include "iterator.hpp"
+#include "level.hpp"
+#include "logging.hpp"
+#include "options.hpp"
+#include "profile.hpp"
+#include "queue.hpp"
+#include "stats.hpp"
+#include "timer.hpp"
+#include "watch.hpp"
 
 /*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
+
+class Proof;
 
 class Internal {
 

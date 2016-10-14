@@ -3,6 +3,8 @@
 
 namespace CaDiCaL {
 
+class Clause;
+
 struct Var {
 
   int level;            // decision level

@@ -1,5 +1,9 @@
 #include "internal.hpp"
 
+#include "file.hpp"
+#include "report.hpp"
+#include "util.hpp"
+
 #include <cstring>
 
 namespace CaDiCaL {

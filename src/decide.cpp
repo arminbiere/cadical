@@ -1,5 +1,7 @@
 #include "internal.hpp"
 
+#include "macros.hpp"
+
 namespace CaDiCaL {
 
 int Internal::next_decision_variable () {

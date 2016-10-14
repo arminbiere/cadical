@@ -1,6 +1,11 @@
 #ifndef _watch_hpp_INCLUDED
 #define _watch_hpp_INCLUDED
 
+#ifndef NDEBUG
+#include <cassert>
+#include "clause.hpp"
+#endif
+
 namespace CaDiCaL {
 
 struct Watch {

@@ -1,5 +1,8 @@
 #include "internal.hpp"
 
+#include "macros.hpp"
+#include "message.hpp"
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

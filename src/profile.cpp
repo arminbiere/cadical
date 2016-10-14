@@ -1,5 +1,9 @@
 #include "internal.hpp"
 
+#include "macros.hpp"
+#include "message.hpp"
+#include "util.hpp"
+
 namespace CaDiCaL {
 
 Profiles::Profiles (Internal * s)

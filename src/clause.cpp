@@ -1,5 +1,9 @@
 #include "internal.hpp"
 
+#include "macros.hpp"
+#include "message.hpp"
+#include "proof.hpp"
+
 #include <algorithm>
 
 namespace CaDiCaL {
