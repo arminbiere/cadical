@@ -13,15 +13,26 @@ void Internal::assign (int lit, Clause * reason) {
   v.trail = (int) trail.size ();
   trail.push_back (lit);
   LOG (reason, "assign %d", lit);
+
+  // As 'assign' is called most of the time from 'propagate' below and then
+  // the watches of '-lit' are accessed next during propagation it is wise
+  // to tell the processor to prefetch the memory of those watches.  This
+  // seems to give consistent speed-ups (both with 'g++' and 'clang++') in
+  // the order of 5%.  Even though this is a rather low-level optimization
+  // it is confined to the next line (and these comments), so we keep it.
+  //
+  __builtin_prefetch (&*(watches (-lit).begin ()), 1);
 }
 
 // The 'propagate' function is usually the hot-spot of a CDCL SAT solver.
 // The 'trail' stack saves assigned variables and is used here as BFS queue
 // for checking clauses with the negation of assigned variables for being in
 // conflict or whether they produce additional assignments (units).  This
-// version of 'propagate' uses lazy watches and keeps two watches literals
+// version of 'propagate' uses lazy watches and keeps two watched literals
 // at the beginning of the clause.  We also use 'blocking literals' to
-// reduce the number of times clauses have to be visited.
+// reduce the number of times clauses have to be visited.  Since the size of
+// the watched clause is stored in the watch, we never have to visit binary
+// clauses.  If a binary clause is falsified we continue propagating.
 
 bool Internal::propagate () {
   assert (!unsat);
@@ -41,18 +52,19 @@ bool Internal::propagate () {
         if (b < 0) conflict = w.clause;
         else if (!b) assign (w.blit, w.clause);
       } else {
-        int * lits = w.clause->literals;
+        literal_iterator lits = w.clause->begin ();
         if (lits[0] == lit) swap (lits[0], lits[1]);
         const int u = val (lits[0]);
         if (u > 0) j[-1].blit = lits[0];
         else {
-          int k, v = -1;
-          for (k = 2; k < w.size && (v = val (lits[k])) < 0; k++)
-            ;
-          if (v > 0) j[-1].blit = lits[k];
+	  const_literal_iterator end = lits + w.size;
+	  literal_iterator k = lits + 2;
+          int v = -1;
+	  while (k != end && (v = val (*k)) < 0) k++;
+          if (v > 0) j[-1].blit = *k;
           else if (!v) {
-            LOG (c, "unwatch %d in", lit);
-	    swap (lits[1], lits[k]);
+            LOG (w.clause, "unwatch %d in", *k);
+	    swap (lits[1], *k);
             watch_literal (lits[1], lit, w.clause, w.size);
             j--;
           } else if (!u) assign (lits[0], w.clause);

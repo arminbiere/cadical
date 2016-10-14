@@ -24,11 +24,13 @@ bool Internal::minimize_literal (int lit, int depth) {
   if (!depth && l.seen < 2) return false;
   if (v.trail <= l.trail) return false;
   if (depth > opts.minimizedepth) return false;
-  const int size = v.reason->size, * lits = v.reason->literals;
+  const_literal_iterator end = v.reason->end ();
   bool res = true;
-  for (int i = 0, other; res && i < size; i++)
-    if ((other = lits[i]) != lit)
-      res = minimize_literal (-other, depth+1);
+  for (const_literal_iterator i = v.reason->begin (); res && i != end; i++) {
+    int other = *i;
+    if (other == lit) continue;
+    res = minimize_literal (-other, depth+1);
+  }
   if (res) v.removable = true; else v.poison = true;
   minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
@@ -55,14 +57,14 @@ void Internal::minimize_clause () {
   LOG (clause, "minimizing first UIP clause");
   assert (minimized.empty ());
   stats.literals.learned += clause.size ();
-  size_t j = 0;
-  for (size_t i = 0; i < clause.size (); i++)
-    if (minimize_literal (-clause[i])) stats.literals.minimized++;
-    else clause[j++] = clause[i];
-  LOG ("minimized %d literals", clause.size () - j);
-  clause.resize (j);
-  for (size_t i = 0; i < minimized.size (); i++) {
-    Var & v = var (minimized[i]);
+  int_iterator j = clause.begin ();
+  for (const_int_iterator i = clause.begin (); i != clause.end (); i++)
+    if (minimize_literal (-*i)) stats.literals.minimized++;
+    else *j++ = *i;
+  LOG ("minimized %d literals", (long)(clause.end () - j));
+  clause.resize (j - clause.begin ());
+  for (const_int_iterator i = minimized.begin (); i != minimized.end (); i++) {
+    Var & v = var (*i);
     v.removable = v.poison = false;
   }
   minimized.clear ();

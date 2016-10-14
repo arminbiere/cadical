@@ -144,12 +144,11 @@ struct trail_greater_than {
 void Internal::analyze () {
   assert (conflict);
   if (!level) { learn_empty_clause (); conflict = 0; return; }
+
   START (analyze);
-  assert (clause.empty ());
-  assert (seen.empty ());
-  assert (levels.empty ());
-  assert (minimized.empty ());
-  assert (resolved.empty ());
+
+  // First derive the first UIP clause.
+  //
   Clause * reason = conflict;
   LOG (reason, "analyzing conflict");
   resolve_clause (reason);
@@ -168,28 +167,39 @@ void Internal::analyze () {
   LOG ("first UIP %d", uip);
   clause.push_back (-uip);
   check_clause ();
+
+  // Update glue statistics.
+  //
   bump_resolved_clauses ();
-  const int size = (int) clause.size ();
   const int glue = (int) levels.size ();
-  LOG ("1st UIP clause of size %d and glue %d", size, glue);
+  LOG ("1st UIP clause of size %d and glue %d", (int) clause.size (), glue);
   UPDATE_AVG (fast_glue_avg, glue);
   UPDATE_AVG (slow_glue_avg, glue);
-  if (opts.minimize) minimize_clause ();
+
+  if (opts.minimize) minimize_clause ();	// minimize clause
+
+  stats.learned.unit += (clause.size () == 1);
+  stats.learned.binary += (clause.size () == 2);
+
+  // Determine back jump level, backtrack and assign flipped literal.
+  //
   Clause * driving_clause = 0;
   int jump = 0;
-  if (size > 1) {
+  if (clause.size () > 1) {
     sort (clause.begin (), clause.end (), trail_greater_than (this));
     driving_clause = new_learned_clause (glue);
     jump = var (clause[1]).level;
   }
-  stats.learned.unit += (size == 1);
-  stats.learned.binary += (size == 2);
   UPDATE_AVG (jump_avg, jump);
   backtrack (jump);
   assign (-uip, driving_clause);
+
+  // Update decision heuristics and clean up.
+  //
   bump_and_clear_seen_variables ();
   clause.clear (), clear_levels ();
   conflict = 0;
+
   STOP (analyze);
 }
 

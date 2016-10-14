@@ -3,6 +3,8 @@
 
 #include <cstdlib>
 
+#include "iterator.hpp"
+
 namespace CaDiCaL {
 
 // The 'Clause' data structure is very important. There are usually many
@@ -92,6 +94,11 @@ public:
 
   long & resolved () { assert (extended); return _resolved; }
   const long & resolved () const { assert (extended); return _resolved; }
+
+  literal_iterator       begin ()       { return literals; }
+  literal_iterator         end ()       { return literals + size; }
+  const_literal_iterator begin () const { return literals; }
+  const_literal_iterator   end () const { return literals + size; }
 };
 
 struct resolved_earlier {

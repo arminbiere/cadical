@@ -9,11 +9,9 @@ First we list things to simplify or to remove.
 
 Some of them first need proper benchmarking to avoid oversimplifying the solver:
 
-  - Propagation speed goes down if we do not use 'blocking' literal.  The
-    same applies if 'binary' and 'large' clauses are merged.  Still after
-    we got to fix-point we should revisit these design decisions.
-
   - Check whether the complicated EMA initialization is necessary.
+
+  - Check that to propagating after binary conflicts really gives a benefit.
 
 ## Additions
 
@@ -30,4 +28,4 @@ Second things are listed related to additional features.
 There should be an ongoing process of refactoring and documenting the code
 and in particular remove part of the code which is not used anymore.
 
-Sa 8. Okt 18:10:11 CEST 2016
+Fr 14. Okt 08:59:27 CEST 2016

@@ -28,8 +28,8 @@ void Logger::log (Internal * internal, const Clause * c, const char *fmt, ...) {
     else if (!c->extended) printf (" redundant glue %u", c->glue);
     else printf (" redundant glue %u resolved %ld", c->glue, c->resolved ());
     printf (" size %d clause", c->size);
-    for (int i = 0; i < c->size; i++)
-      printf (" %d", c->literals[i]);
+    for (const_literal_iterator i = c->begin (); i != c->end (); i++)
+      printf (" %d", *i);
   } else if (internal->level) printf (" decision");
   else printf (" unit");
   fputc ('\n', stdout);

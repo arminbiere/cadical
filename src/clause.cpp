@@ -82,16 +82,17 @@ struct lit_less_than {
 
 bool Internal::tautological_clause () {
   sort (clause.begin (), clause.end (), lit_less_than ());
-  size_t j = 0;
+  const_int_iterator i = clause.begin ();
+  int_iterator j = clause.begin ();
   int prev = 0;
-  for (size_t i = 0; i < clause.size (); i++) {
-    int lit = clause[i];
+  while (i != clause.end ()) {
+    int lit = *i++;
     if (lit == -prev) return true;
-    if (lit !=  prev) clause[j++] = prev = lit;
+    if (lit !=  prev) *j++ = prev = lit;
   }
-  if (j < clause.size ()) {
-    LOG ("removing %d duplicates", (long)(clause.size () - j));
-    clause.resize (j);
+  if (j != clause.end ()) {
+    LOG ("removing %d duplicates", (long)(clause.end () - j));
+    clause.resize (j - clause.begin ());
   }
   return false;
 }
