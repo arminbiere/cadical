@@ -115,15 +115,15 @@ int Internal::solve () {
 
 void Internal::check (int (Internal::*a)(int)) {
   bool satisfied = false;
-  size_t start = 0;
-  for (size_t i = 0; i < original.size (); i++) {
-    int lit = original[i];
+  const_int_iterator start = original.begin ();
+  for (const_int_iterator i = start; i != original.end (); i++) {
+    int lit = *i;
     if (!lit) {
       if (!satisfied) {
         fflush (stdout);
         fputs ("*** cadical error: unsatisfied clause:\n", stderr);
-        for (size_t j = start; j < i; j++)
-          fprintf (stderr, "%d ", original[j]);
+        for (const_int_iterator j = start; j != i; j++)
+          fprintf (stderr, "%d ", *j);
         fputs ("0\n", stderr);
         fflush (stderr);
         abort ();
