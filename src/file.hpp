@@ -13,7 +13,9 @@ namespace CaDiCaL {
 
 class File {
 
+#ifndef NDEBUG
   bool writing;
+#endif
   int close_file;
   FILE * file;
   const char * _name;

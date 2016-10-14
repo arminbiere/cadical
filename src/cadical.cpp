@@ -75,7 +75,7 @@ void Solver::banner () {
   msg (CADICAL_CXXVERSION);
   msg (CADICAL_COMPILED);
   msg (CADICAL_OS);
-  msg (CADICAL_CXX CADICAL_CXXFLAGS);
+  msg (CADICAL_CXX " " CADICAL_CXXFLAGS);
 }
 
 void Solver::options () { internal->opts.print (); }

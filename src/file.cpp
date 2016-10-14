@@ -27,7 +27,10 @@ static FILE * write_pipe (const char * fmt, const char * path) {
 }
 
 File::File (bool w, int c, FILE * f, const char * n) :
-  writing (w), close_file (c), file (f), _name (n), _lineno (1)
+#ifndef NDEBUG
+  writing (w), 
+#endif
+  close_file (c), file (f), _name (n), _lineno (1)
 {
   assert (f), assert (n);
 }
