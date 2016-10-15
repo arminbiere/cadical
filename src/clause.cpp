@@ -59,7 +59,19 @@ Clause * Internal::new_clause (bool red, int glue) {
   return res;
 }
 
-size_t Internal::delete_clause (Clause * c) {
+// This is the 'raw' deallocation of a clause.  If the clause is in the
+// arena nothing happens.  If the clause is not in the arena and its memory
+// is reclaimed immediately and the allocation statistics is updated.
+
+void Internal::deallocate_clause (Clause * c) {
+  char * p = c->start ();
+  if (arena.contains (p)) return;
+  LOG (c, "deallocate");
+  dec_bytes (c->bytes ());
+  delete [] p;
+}
+
+void Internal::delete_clause (Clause * c) {
   LOG (c, "delete");
   if (c->redundant) assert (stats.redundant),   stats.redundant--;
   else              assert (stats.irredundant), stats.irredundant--;
@@ -67,9 +79,7 @@ size_t Internal::delete_clause (Clause * c) {
   size_t bytes = c->bytes ();
   stats.collected += bytes;
   if (proof) proof->trace_delete_clause (c);
-  dec_bytes (bytes);
-  if (!arena.contains (c->start ())) delete [] c->start ();
-  return bytes;
+  deallocate_clause (c);
 }
 
 // Place literals over the same variable close to each other.  This allows

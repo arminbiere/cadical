@@ -87,7 +87,16 @@ public:
   signed int glue : LD_MAX_GLUE;
 
   int size;             // actual size of 'literals' (at least 2)
-  int literals[2];      // of variadic 'size' (not just 2) in general
+
+  union {
+    int literals[2];    // of variadic 'size' (not just 2) in general
+    Clause * copy;      // only valid if 'moved', then that's where
+
+    // The 'copy' field is only used for 'moved' clauses in 'move_clause'
+    // in the moving garbage collector 'move_non_garbage_clauses'.
+    // Otherwise 'literals' is valid.
+  };
+
 
   long & resolved () { assert (extended); return _resolved; }
   const long & resolved () const { assert (extended); return _resolved; }

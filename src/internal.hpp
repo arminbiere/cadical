@@ -157,7 +157,8 @@ class Internal {
   void watch_clause (Clause *);
   size_t bytes_clause (int size);
   Clause * new_clause (bool red, int glue = 0);
-  size_t delete_clause (Clause *);
+  void deallocate_clause (Clause *);
+  void delete_clause (Clause *);
   bool tautological_clause ();
   void add_new_original_clause ();
   Clause * new_learned_clause (int glue);
@@ -202,7 +203,7 @@ class Internal {
   void flush_falsified_literals (Clause *);
   void mark_satisfied_clauses_as_garbage ();
   void mark_useless_redundant_clauses_as_garbage ();
-  Clause * move_clause (Clause *);
+  void move_clause (Clause *);
   void move_non_garbage_clauses ();
   void delete_garbage_clauses ();
   void flush_watches ();

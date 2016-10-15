@@ -141,57 +141,63 @@ void Internal::delete_garbage_clauses () {
   while (i != clauses.end ()) {
     Clause * c = *j++ = *i++;
     if (!c->collect ()) continue;
-    collected_bytes += delete_clause (c);
+    collected_bytes += c->bytes ();
+    delete_clause (c);
     j--;
   }
   clauses.resize (j - clauses.begin ());
   VRB ("collected %ld bytes", (long) collected_bytes);
 }
 
-Clause * Internal::move_clause (Clause * c) {
+void Internal::move_clause (Clause * c) {
   LOG (c, "moving");
+  assert (!c->moved);
   char * p = c->start (), * q = arena.copy (p, c->bytes ());
-  Clause * d = (Clause *) (q - c->offset ());
+  Clause * d = c->copy = (Clause *) (q - c->offset ());
   if (d->reason) var (d->literals[val (d->literals[1]) > 0]).reason = d;
-  if (!arena.contains (p)) delete [] p;
-  // c->moved = true;
-  return d;
+  c->moved = true;
 }
 
 void Internal::move_non_garbage_clauses () {
 
+  Clause * c;
+
   size_t collected_clauses = 0, collected_bytes = 0;
   size_t     moved_clauses = 0,     moved_bytes = 0;
 
+  // First determine 'move_bytes' and 'collected_bytes'.
+  //
   const_clause_iterator i;
-  for (i = clauses.begin (); i != clauses.end (); i++) {
-    const Clause * c = *i;
-    const size_t bytes = c->bytes ();
-    if (!c->collect ()) moved_bytes += bytes, moved_clauses++;
-    else collected_bytes += bytes, collected_clauses++;
-  }
+  for (i = clauses.begin (); i != clauses.end (); i++)
+    if (!(c = *i)->collect ()) moved_bytes += c->bytes (), moved_clauses++;
+    else collected_bytes += c->bytes (), collected_clauses++;
 
   VRB ("moving %ld bytes of %ld non garbage clauses",
     (long) moved_bytes, (long) moved_clauses);
 
-  arena.prepare (moved_bytes);                  // prepare 'to' space
+  arena.prepare (moved_bytes);  // prepare 'to' space of size 'moved_bytes'
 
+  // Copy clauses according to the order of calling 'move_clause'.
+  //
+  for (i = clauses.begin (); i != clauses.end (); i++)
+    if (!(c = *i)->collect ()) move_clause (c);
+
+  // Replace and flush clause references in 'clauses'.
+  //
   clause_iterator j = clauses.begin ();
-  for (i = clauses.begin (); i != clauses.end (); i++) {
-    Clause * c = *i;
-    if (!c->collect ()) *j++ = move_clause (c);
-    else delete_clause (c);
-  }
+  for (i = clauses.begin (); i != clauses.end (); i++)
+    if ((c = *i)->collect ()) delete_clause (c);
+    else assert (c->moved), *j++ = c->copy, deallocate_clause (c);
   clauses.resize (j - clauses.begin ());
 
-  arena.swap ();                                // release 'from' space
+  arena.swap ();                // release complete 'from' space and swap
 
   VRB ("collected %ld bytes of %ld garbage clauses",
     (long) collected_bytes, (long) collected_clauses);
 }
 
-// Deallocate watcher stacks of inactive variables and reset watcher stacks
-// of still active variables.
+// Deallocate watcher stacks of inactive (fixed) variables and reset (clear)
+// watcher stacks of still active variables.
 
 void Internal::flush_watches () {
   size_t current_bytes = 0, max_bytes = 0;
