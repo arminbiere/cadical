@@ -44,7 +44,7 @@ void Stats::print (Internal * internal) {
     stats.searched, relative (stats.searched, stats.decisions));
   MSG ("bumped:        %15ld   %10.2f    per conflict",
     stats.bumped, relative (stats.bumped, stats.conflicts));
-  MSG ("reduced  :     %15ld   %10.2f %%  clauses per conflict",
+  MSG ("reduced:       %15ld   %10.2f %%  clauses per conflict",
     stats.reduced, percent (stats.reduced, stats.conflicts));
   MSG ("collected:     %15ld   %10.2f    bytes and MB",
     stats.collected, stats.collected/(double)(1l<<20));
