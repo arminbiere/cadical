@@ -242,18 +242,10 @@ class Internal {
 
   // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
   //
-#if 0
-  inline int val (int lit) {
-    int idx = vidx (lit), res = vals[idx];
-    if (lit < 0) res = -res;
-    return res;
-  }
-#else
   inline int val (int lit) {
     assert (lit), assert (abs (lit) <= max_var);
     return vals[lit];
   }
-#endif
 
   // As 'val' but restricted to the root-level value of a literal.
   //
