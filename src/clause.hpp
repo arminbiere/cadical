@@ -2,6 +2,7 @@
 #define _clause_hpp_INCLUDED
 
 #include <cstdlib>
+#include <cassert>
 
 #include "iterator.hpp"
 

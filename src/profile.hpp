@@ -11,6 +11,7 @@ class Internal;
 #define PROFILES \
 PROFILE(analyze,3) \
 PROFILE(bump,4) \
+PROFILE(collect,2) \
 PROFILE(decide,3) \
 PROFILE(minimize,4) \
 PROFILE(parse,1) \

@@ -1,7 +1,11 @@
 #ifndef _iterator_hpp_INCLUDED
 #define _iterator_hpp_INCLUDED
 
+#include <vector>
+
 namespace CaDiCaL {
+
+using namespace std;
 
 struct Watch;
 class Clause;
