@@ -117,6 +117,24 @@ struct resolved_earlier {
   }
 };
 
+/*------------------------------------------------------------------------*/
+
+inline size_t Clause::bytes () const {
+  size_t res = sizeof (Clause) + (size - 2) * sizeof (int);
+  if (!extended) res -= sizeof (long);
+  return res;
+}
+
+inline char * Clause::start () const {
+  char * res = (char *) this;
+  if (!extended) res += sizeof (long);
+  return res;
+}
+
+inline size_t Clause::offset () const {
+  return extended ? 0 : EXTENDED_OFFSET;
+}
+
 };
 
 #endif

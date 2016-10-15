@@ -18,22 +18,6 @@ void Internal::watch_clause (Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
-size_t Clause::bytes () const {
-  size_t res = sizeof (Clause) + (size - 2) * sizeof (int);
-  if (!extended) res -= sizeof (long);
-  return res;
-}
-
-char * Clause::start () const {
-  char * res = (char *) this;
-  if (!extended) res += sizeof (long);
-  return res;
-}
-
-size_t Clause::offset () const { return extended ? 0 : EXTENDED_OFFSET; }
-
-/*------------------------------------------------------------------------*/
-
 // Since the literals are embedded a clause actually contains always 'size'
 // literals and 'literals[2]' should be regarded as 'literals[size]'.
 // Clauses have at least 2 literals.  Empty and unit clauses are implicitly
