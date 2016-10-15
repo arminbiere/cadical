@@ -61,7 +61,7 @@ namespace CaDiCaL {
 // checking this contract in the 'resolved ()' accessor functions.
 
 #define LD_MAX_GLUE     27      // 32 bits - (5 boolean flags)
-#define EXTENDED_OFFSET  8      // sizeof (resolved)
+#define EXTENDED_OFFSET  8      // sizeof (_resolved)
 
 #define MAX_GLUE ((1<<(LD_MAX_GLUE-1))-1)       // 1 bit less since signed
 
@@ -104,6 +104,10 @@ public:
   char * start () const;        // actual start of allocated memory
   size_t bytes () const;        // actual number of bytes allocated
   size_t offset () const;       // offset of valid bytes (start - this)
+
+  // Ready to be collected and deleted.
+  //
+  bool collect () const { return !reason && garbage; }
 };
 
 struct resolved_earlier {

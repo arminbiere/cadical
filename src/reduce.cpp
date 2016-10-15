@@ -140,7 +140,7 @@ void Internal::delete_garbage_clauses () {
   size_t collected_bytes = 0;
   while (i != clauses.end ()) {
     Clause * c = *j++ = *i++;
-    if (c->reason || !c->garbage) continue;
+    if (!c->collect ()) continue;
     collected_bytes += delete_clause (c);
     j--;
   }
@@ -167,20 +167,19 @@ void Internal::move_non_garbage_clauses () {
   for (i = clauses.begin (); i != clauses.end (); i++) {
     const Clause * c = *i;
     const size_t bytes = c->bytes ();
-    if (c->reason || !c->garbage) moved_bytes += bytes,     moved_clauses++;
-    else                      collected_bytes += bytes, collected_clauses++;
+    if (!c->collect ()) moved_bytes += bytes, moved_clauses++;
+    else collected_bytes += bytes, collected_clauses++;
   }
 
   VRB ("moving %ld bytes of %ld non garbage clauses",
-    (long) moved_bytes,
-    (long) moved_clauses);
+    (long) moved_bytes, (long) moved_clauses);
 
   arena.prepare (moved_bytes);                  // prepare 'to' space
 
   clause_iterator j = clauses.begin ();
   for (i = clauses.begin (); i != clauses.end (); i++) {
     Clause * c = *i;
-    if (c->reason || !c->garbage) *j++ = move_clause (c);
+    if (!c->collect ()) *j++ = move_clause (c);
     else delete_clause (c);
   }
   clauses.resize (j - clauses.begin ());
@@ -188,8 +187,7 @@ void Internal::move_non_garbage_clauses () {
   arena.swap ();                                // release 'from' space
 
   VRB ("collected %ld bytes of %ld garbage clauses",
-    (long) collected_bytes,
-    (long) collected_clauses);
+    (long) collected_bytes, (long) collected_clauses);
 }
 
 // Deallocate watcher stacks of inactive variables and reset watcher stacks
