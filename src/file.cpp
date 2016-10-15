@@ -46,7 +46,9 @@ File * File::write (FILE * f, const char * n) {
 File * File::read (const char * path) {
   FILE * file;
   int close_input = 2;
-  if (has_suffix (path, ".bz2"))
+  if (has_suffix (path, ".xz"))
+    file = read_pipe ("xz -c -d %s", path);
+  else if (has_suffix (path, ".bz2"))
     file = read_pipe ("bzcat %s", path);
   else if (has_suffix (path, ".gz"))
     file = read_pipe ("gunzip -c %s", path);
@@ -60,7 +62,9 @@ File * File::read (const char * path) {
 File * File::write (const char * path) {
   FILE * file = fopen (path, "w");
   int close_input = 2;
-  if (has_suffix (path, ".bz2"))
+  if (has_suffix (path, ".xz"))
+    file = write_pipe ("xz -c -e > %s", path);
+  else if (has_suffix (path, ".bz2"))
     file = write_pipe ("bzip2 -c > %s", path);
   else if (has_suffix (path, ".gz"))
     file = write_pipe ("gzip -c > %s", path);
