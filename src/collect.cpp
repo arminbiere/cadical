@@ -136,8 +136,20 @@ void Internal::move_non_garbage_clauses () {
 
   // Copy clauses according to the order of calling 'move_clause'.
   //
-  for (i = clauses.begin (); i != clauses.end (); i++)
-    if (!(c = *i)->collect ()) move_clause (c);
+  if (opts.compact) {
+    // Localize according to (original) clause order.
+    for (i = clauses.begin (); i != clauses.end (); i++)
+      if (!(c = *i)->collect ()) move_clause (c);
+  } else {
+    // Localize according to (original) variable order.
+    for (int idx = 1; idx <= max_var; idx++) {
+      for (int sign = -1; sign <= 1; sign += 2) {
+	const Watches & ws = watches (sign * phases[idx] * idx);
+	for (const_watch_iterator i = ws.begin (); i != ws. end (); i++)
+	  if (!(c = i->clause)->moved && !c->collect ()) move_clause (c);
+      }
+    }
+  }
 
   // Replace and flush clause references in 'clauses'.
   //
