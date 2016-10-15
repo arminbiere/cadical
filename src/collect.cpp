@@ -134,16 +134,38 @@ void Internal::move_non_garbage_clauses () {
   //
   arena.prepare (moved_bytes);
 
-  // Copy clauses according to the order of calling 'move_clause'.
+  // Copy clauses according to the order of calling 'move_clause', which in
+  // essence just gives a compactifying garbage collector, since their
+  // relative order is kept, and already gives some cache locality.
   //
-  if (opts.compact) {
+  if (opts.arena == 1) {
+
     // Localize according to (original) clause order.
+
     for (i = clauses.begin (); i != clauses.end (); i++)
       if (!(c = *i)->collect ()) move_clause (c);
-  } else {
+
+  } else if (opts.arena == 2) {
+
     // Localize according to (original) variable order.
-    for (int idx = 1; idx <= max_var; idx++) {
-      for (int sign = -1; sign <= 1; sign += 2) {
+
+    for (int sign = -1; sign <= 1; sign += 2) {
+      for (int idx = 1; idx <= max_var; idx++) {
+	const Watches & ws = watches (sign * phases[idx] * idx);
+	for (const_watch_iterator i = ws.begin (); i != ws. end (); i++)
+	  if (!(c = i->clause)->moved && !c->collect ()) move_clause (c);
+      }
+    }
+
+  } else {
+
+    // Localize according to decision queue order.
+
+    assert (opts.arena == 2);
+
+    for (int sign = -1; sign <= 1; sign += 2) {
+      for (Var * v = queue.last; v; v = v->prev) {
+	const int idx = var2idx (v);
 	const Watches & ws = watches (sign * phases[idx] * idx);
 	for (const_watch_iterator i = ws.begin (); i != ws. end (); i++)
 	  if (!(c = i->clause)->moved && !c->collect ()) move_clause (c);
