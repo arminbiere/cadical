@@ -30,6 +30,7 @@ Internal::Internal ()
   opts (this),
   solution (0),
   profiles (this),
+  arena (this),
   internal (this)
 {
   control.push_back (Level (0));

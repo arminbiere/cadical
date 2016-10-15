@@ -16,6 +16,24 @@ void Internal::watch_clause (Clause * c) {
   watch_literal (l1, l0, c, size);
 }
 
+/*------------------------------------------------------------------------*/
+
+size_t Clause::bytes () const {
+  size_t res = sizeof (Clause) + (size - 2) * sizeof (int);
+  if (!extended) res -= sizeof (long);
+  return res;
+}
+
+char * Clause::start () const {
+  char * res = (char *) this;
+  if (!extended) res += sizeof (long);
+  return res;
+}
+
+size_t Clause::offset () const { return extended ? 0 : EXTENDED_OFFSET; }
+
+/*------------------------------------------------------------------------*/
+
 // Since the literals are embedded a clause actually contains always 'size'
 // literals and 'literals[2]' should be regarded as 'literals[size]'.
 // Clauses have at least 2 literals.  Empty and unit clauses are implicitly
@@ -27,27 +45,30 @@ size_t Internal::bytes_clause (int size) {
 
 // Redundant clauses of large glue and large size are extended to hold a
 // 'resolved' time stamp.  This makes memory allocation and deallocation a
-// little bit tricky but some space and time.  Since the embedding of the
-// literals is actually important and on the same level of complexity we
-// keep both optimizations.
+// little bit tricky but saves space and time.  Since the embedding of the
+// literals is really important and on the same level of complexity we keep
+// both optimizations.
 
 Clause * Internal::new_clause (bool red, int glue) {
+  if (glue > MAX_GLUE) glue = MAX_GLUE;
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();  assert (size >= 2);
   size_t bytes = bytes_clause (size);
   bool extended = (red && size > opts.keepsize && glue >= opts.keepglue);
   if (!extended) bytes -= EXTENDED_OFFSET;
   char * ptr = new char[bytes];
+  inc_bytes (bytes);
   if (!extended) ptr -= EXTENDED_OFFSET;
   Clause * res = (Clause*) ptr;
-  inc_bytes (bytes);
-  if ((res->extended = extended)) res->resolved () = ++stats.resolved;
+  res->extended = extended;
   res->redundant = red;
   res->garbage = false;
   res->reason = false;
-  res->glue = min (glue, MAX_GLUE);     // restrict to bit-field width
+  res->moved = false;
+  res->glue = glue;
   res->size = size;
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
+  if (extended) res->resolved () = ++stats.resolved;
   clauses.push_back (res);
   if (red) stats.redundant++; else stats.irredundant++;
   LOG (res, "new");
@@ -55,17 +76,15 @@ Clause * Internal::new_clause (bool red, int glue) {
 }
 
 size_t Internal::delete_clause (Clause * c) {
+  LOG (c, "delete");
   if (c->redundant) assert (stats.redundant),   stats.redundant--;
   else              assert (stats.irredundant), stats.irredundant--;
   stats.reduced++;
-  size_t bytes = bytes_clause (c->size);
-  char * ptr = (char*) c;
-  if (!c->extended) bytes -= EXTENDED_OFFSET, ptr += EXTENDED_OFFSET;
+  size_t bytes = c->bytes ();
   stats.collected += bytes;
   if (proof) proof->trace_delete_clause (c);
   dec_bytes (bytes);
-  LOG (c, "delete");
-  delete [] (char*) ptr;
+  if (!arena.contains (c->start ())) delete [] c->start ();
   return bytes;
 }
 

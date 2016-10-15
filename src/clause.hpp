@@ -60,7 +60,7 @@ namespace CaDiCaL {
 // but is also guarded by making the actual '_resolved' field private and
 // checking this contract in the 'resolved ()' accessor functions.
 
-#define LD_MAX_GLUE     28      // 32 - 4 boolean flags
+#define LD_MAX_GLUE     27      // 32 bits - (5 boolean flags)
 #define EXTENDED_OFFSET  8      // sizeof (resolved)
 
 #define MAX_GLUE ((1<<(LD_MAX_GLUE-1))-1)       // 1 bit less since signed
@@ -75,6 +75,7 @@ public:
   unsigned redundant:1; // aka 'learned' so not 'irredundant' (original)
   unsigned garbage:1;   // can be garbage collected unless it is a 'reason'
   unsigned reason:1;    // reason / antecedent clause can not be collected
+  unsigned moved:1;     // moved during garbage collector ('copy' valid)
 
   // This is the 'glue' = 'glucose level' = 'LBD' of a redundant clause.
   // We actually only use 'CLAUSE_LD_MAX_GLUE-1' bits since the field is
@@ -86,11 +87,7 @@ public:
   signed int glue : LD_MAX_GLUE;
 
   int size;             // actual size of 'literals' (at least 2)
-  int literals[2];      // of variadic 'size' (not 2) in general
-
-  static size_t bytes (int size) {
-    return sizeof (Clause) + (size -2 ) * sizeof (int);
-  }
+  int literals[2];      // of variadic 'size' (not just 2) in general
 
   long & resolved () { assert (extended); return _resolved; }
   const long & resolved () const { assert (extended); return _resolved; }
@@ -99,6 +96,14 @@ public:
   literal_iterator         end ()       { return literals + size; }
   const_literal_iterator begin () const { return literals; }
   const_literal_iterator   end () const { return literals + size; }
+
+  // Actual start of allocated memory, bytes allocated and offset are only
+  // used for memory (de)allocation in 'delete_clause' and in the moving
+  // garbage collector 'move_non_garbage_clauses'.
+  //
+  char * start () const;        // actual start of allocated memory
+  size_t bytes () const;        // actual number of bytes allocated
+  size_t offset () const;       // offset of valid bytes (start - this)
 };
 
 struct resolved_earlier {

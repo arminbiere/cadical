@@ -3,6 +3,7 @@
 
 #define OPTIONS \
 /*     NAME              TYPE, VAL,LO, HI, USAGE */ \
+OPTION(arena,           bool,   1, 0,  1, "use memory arena") \
 OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
 OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha fast learned glue") \
@@ -22,6 +23,13 @@ OPTION(restartmargin, double, 1.1, 0, 10, "restart slow fast margin (1/K)") \
 OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
 OPTION(verbose,         bool,   0, 0,  1, "more verbose messages") \
 OPTION(witness,         bool,   1, 0,  1, "print witness") \
+
+#if 0
+
+OPTION(reduceinc,        int, 300, 1,1e9, "reduce limit increment") \
+OPTION(reduceinit,       int,2000, 0,1e9, "initial reduce limit") \
+
+#endif
 
 namespace CaDiCaL {
 

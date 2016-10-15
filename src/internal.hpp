@@ -13,6 +13,7 @@ using namespace std;
 /*------------------------------------------------------------------------*/
 
 #include "avg.hpp"
+#include "arena.hpp"
 #include "ema.hpp"
 #include "format.hpp"
 #include "level.hpp"
@@ -34,16 +35,17 @@ class Internal {
 
   friend class Solver;
 
-  friend class Parser;
+  friend class Arena;
   friend struct Logger;
   friend struct Message;
-  friend struct Queue;
+  friend class Parser;
   friend class Proof;
+  friend struct Queue;
   friend struct Stats;
 
-  friend struct trail_smaller_than;
-  friend struct trail_greater_than;
   friend struct bump_earlier;
+  friend struct trail_greater_than;
+  friend struct trail_smaller_than;
 
   /*----------------------------------------------------------------------*/
 
@@ -85,6 +87,7 @@ class Internal {
   vector<int> original;         // original CNF for debugging
   vector<Timer> timers;         // active timers for profiling functions
   Profiles profiles;            // global profiled time for functions
+  Arena arena;                  // memory arena for moving garbage collector
   Format error;                 // last (persistent) error message
   Internal * internal;          // proxy to 'this' in macros (redundant)
 
@@ -199,6 +202,8 @@ class Internal {
   void flush_falsified_literals (Clause *);
   void mark_satisfied_clauses_as_garbage ();
   void mark_useless_redundant_clauses_as_garbage ();
+  Clause * move_clause (Clause *);
+  void move_non_garbage_clauses ();
   void delete_garbage_clauses ();
   void flush_watches ();
   void setup_watches ();
