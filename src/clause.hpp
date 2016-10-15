@@ -99,7 +99,7 @@ public:
 
   // Actual start of allocated memory, bytes allocated and offset are only
   // used for memory (de)allocation in 'delete_clause' and in the moving
-  // garbage collector 'move_non_garbage_clauses'.
+  // garbage collector 'move_non_garbage_clauses' and 'move_clause'.
   //
   char * start () const;        // actual start of allocated memory
   size_t bytes () const;        // actual number of bytes allocated
