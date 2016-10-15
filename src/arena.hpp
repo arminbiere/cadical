@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <cstring>
 
 namespace CaDiCaL {
 
@@ -62,7 +63,13 @@ public:
   // space has been prepared to hold enough memory with 'prepare'.  Then
   // copy the memory pointed to by 'p' of size 'bytes'.
   //
-  char * copy (const char * p, size_t bytes);
+  char * copy (const char * p, size_t bytes) {
+    char * res = to.top;
+    to.top += bytes;
+    assert (to.top <= to.end);
+    memcpy (res, p, bytes);
+    return res;
+  }
 
   // Completely delete 'from' space and then replace 'from' by 'to' (by
   // pointer swapping).  Everything previously allocated (in 'from') and not

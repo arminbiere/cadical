@@ -1,7 +1,5 @@
 #include "internal.hpp"
 
-#include <cstring>
-
 namespace CaDiCaL {
 
 Arena::Arena (Internal * i) {
@@ -22,14 +20,6 @@ void Arena::prepare (size_t bytes) {
   internal->inc_bytes (bytes);
   to.top = to.start = new char[bytes];
   to.end = to.start + bytes;
-}
-
-char * Arena::copy (const char * p, size_t bytes) {
-  char * res = to.top;
-  to.top += bytes;
-  assert (to.top <= to.end);
-  memcpy (res, p, bytes);
-  return res;
 }
 
 void Arena::swap () {
