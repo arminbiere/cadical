@@ -161,7 +161,7 @@ void Internal::move_non_garbage_clauses () {
 
     // Localize according to decision queue order.
 
-    assert (opts.arena == 2);
+    assert (opts.arena == 3);
 
     for (int sign = -1; sign <= 1; sign += 2) {
       for (Var * v = queue.last; v; v = v->prev) {

@@ -42,7 +42,7 @@ Internal::~Internal () {
   if (proof) delete proof;
   if (wtab) delete [] wtab;
   if (vtab) delete [] vtab;
-  if (vals) delete [] vals;
+  if (vals) vals -= vsize, delete [] vals;
   if (phases) delete [] phases;
   if (solution) delete [] solution;
 }
@@ -56,15 +56,23 @@ void Internal::resize (int new_max_var) {
     while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
     vector<int> order;
     queue.save (this, order);
-    RESIZE (vals,   signed char,   vsize,   new_vsize);
     RESIZE (phases, signed char,   vsize,   new_vsize);
     RESIZE (vtab,           Var,   vsize,   new_vsize);
     RESIZE (wtab,       Watches, 2*vsize, 2*new_vsize);
+    signed char * new_vals;
+    NEW (new_vals, signed char, 2*new_vsize);
+    new_vals += new_vsize;
+    if (vals) memcpy (new_vals - max_var, vals - max_var, 2*max_var + 1);
+    dec_bytes (2*vsize);
+    vals -= vsize;
+    delete [] vals;
+    vals = new_vals;
     queue.restore (this, order);
     vsize = new_vsize;
   }
-  for (int i = max_var + 1; i <= new_max_var; i++) vals[i] = 0;
-  for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = -1;
+  for (int i = new_max_var; i > max_var; i--) vals[i] = 0;
+  for (int i = new_max_var; i > max_var; i--) phases[i] = -1;
+  for (int i = -new_max_var; i < -max_var; i++) vals[i] = 0;
   queue.init (this, new_max_var);
   MSG ("initialized %d variables", new_max_var - max_var);
   max_var = new_max_var;

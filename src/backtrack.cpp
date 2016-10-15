@@ -6,6 +6,7 @@ void Internal::unassign (int lit) {
   assert (val (lit) > 0);
   int idx = vidx (lit);
   vals[idx] = 0;
+  vals[-idx] = 0;
   LOG ("unassign %d", lit);
   Var * v = &var (idx);
   if (queue.assigned->bumped >= v->bumped) return;

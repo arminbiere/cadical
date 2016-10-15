@@ -14,6 +14,7 @@ void Internal::assign (int lit, Clause * reason) {
   if (!(v.level = level)) learn_unit_clause (lit);
   v.reason = reason;
   vals[idx] = phases[idx] = sign (lit);
+  vals[-idx] = -sign (lit);
   assert (val (lit) > 0);
   v.trail = (int) trail.size ();
   trail.push_back (lit);
