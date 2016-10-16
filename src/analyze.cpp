@@ -160,9 +160,11 @@ void Internal::analyze () {
   int open = 0, uip = 0;
   const_int_iterator i = trail.end ();
   for (;;) {
-    const int size = reason->size, * lits = reason->literals;;
-    for (int j = 0; j < size; j++)
-      if (analyze_literal (lits[j])) open++;
+    const const_literal_iterator end = reason->end ();
+    const_literal_iterator j = reason->begin ();
+    while (j != end)
+      if (analyze_literal (*j++))
+	open++;
     while (!var (uip = *--i).seen)
       ;
     if (!--open) break;
