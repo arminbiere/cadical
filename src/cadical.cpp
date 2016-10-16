@@ -5,7 +5,6 @@
 #include "macros.hpp"
 #include "message.hpp"
 #include "parse.hpp"
-#include "proof.hpp"
 
 #include "../build/config.hpp"
 
@@ -50,26 +49,19 @@ int Solver::solve () { return internal->solve (); }
 
 /*------------------------------------------------------------------------*/
 
-void Solver::close () {
-  if (!internal->proof) return;
-  delete internal->proof;
-  internal->proof = 0;
+void Solver::close () { internal->close_proof ();
 }
 
 void Solver::proof (FILE * external_file, const char * name) {
-  close ();
   File * internal_file = File::write (external_file, name);
   assert (internal_file);
-  internal->proof =
-    new Proof (internal, internal_file, internal->opts.binary);
+  internal->new_proof (internal_file, true);
 }
 
 bool Solver::proof (const char * path) {
-  close ();
   File * internal_file = File::write (path);
   if (!internal_file) return false;
-  internal->proof =
-    new Proof (internal, internal_file, internal->opts.binary);
+  internal->new_proof (internal_file, true);
   return true;
 }
 

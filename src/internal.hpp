@@ -30,6 +30,7 @@ using namespace std;
 namespace CaDiCaL {
 
 class Proof;
+class File;
 
 class Internal {
 
@@ -261,6 +262,10 @@ class Internal {
   const char * parse_dimacs (FILE *);
   const char * parse_dimacs (const char *);
   const char * parse_solution (const char *);
+
+  // Enable and disable proof logging.
+  void close_proof ();
+  void new_proof (File *, bool owned = false);
 };
 
 };

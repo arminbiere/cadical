@@ -34,6 +34,7 @@ Internal::Internal ()
   internal (this)
 {
   control.push_back (Level (0));
+  inc_bytes (sizeof *this);
 }
 
 Internal::~Internal () {

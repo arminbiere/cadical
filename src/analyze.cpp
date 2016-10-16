@@ -110,7 +110,7 @@ void Internal::resolve_clause (Clause * c) {
 // each decision level.  This both helps conflict clause minimization.  The
 // number of seen levels is the glucose level (also called glue, or LBD).
 
-bool Internal::analyze_literal (int lit) {
+inline bool Internal::analyze_literal (int lit) {
   Var & v = var (lit);
   if (v.seen) return false;
   if (!v.level) return false;

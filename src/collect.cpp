@@ -14,17 +14,17 @@ namespace CaDiCaL {
 // otherwise, if it does not contain a root level fixed literal.
 
 int Internal::clause_contains_fixed_literal (Clause * c) {
-  const int * lits = c->literals, size = c->size;
+  const const_literal_iterator end = c->end ();
+  const_literal_iterator i = c->begin ();
   int res = 0;
-  for (int i = 0; res <= 0 && i < size; i++) {
-    const int lit = lits[i];
-    const int tmp = fixed (lit);
-   if (tmp > 0) {
-     LOG (c, "root level satisfied literal %d in", lit);
-     res = 1;
-   } else if (!res && tmp < 0) {
-     LOG (c, "root level falsified literal %d in", lit);
-     res = -1;
+  while (res <= 0 && i != end) {
+    const int lit = *i++, tmp = fixed (lit);
+    if (tmp > 0) {
+      LOG (c, "root level satisfied literal %d in", lit);
+      res = 1;
+    } else if (!res && tmp < 0) {
+      LOG (c, "root level falsified literal %d in", lit);
+      res = -1;
     }
   }
   return res;
@@ -40,22 +40,22 @@ int Internal::clause_contains_fixed_literal (Clause * c) {
 void Internal::flush_falsified_literals (Clause * c) {
   if (c->reason || c->size == 2) return;
   if (proof) proof->trace_flushing_clause (c);
-  const int size = c->size;
-  int * lits = c->literals, j = 0;
-  for (int i = 0; i < size; i++) {
-    const int lit = lits[j++] = lits[i];
-    const int tmp = fixed (lit);
+  const const_literal_iterator end = c->end ();
+  const_literal_iterator i = c->begin ();
+  literal_iterator j = c->begin ();
+  while (i != end) {
+    const int lit = *j++ = *i++, tmp = fixed (lit);
     assert (tmp <= 0);
     if (tmp >= 0) continue;
     LOG ("flushing %d", lit);
     j--;
   }
-  int flushed = c->size - j;
+  c->size = j - c->begin ();
+  int flushed = end - j;
   const size_t bytes = flushed * sizeof (int);
   stats.collected += bytes;
+  while (j != end) *j++ = 0;
   dec_bytes (bytes);
-  for (int i = j; i < size; i++) lits[i] = 0;
-  c->size = j;
   LOG (c, "flushed %d literals and got", flushed);
 }
 
