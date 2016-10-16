@@ -29,8 +29,9 @@ void Internal::stop_profiling (Profile * p) {
 }
 
 void Internal::update_all_timers (double now) {
-  for (size_t i = 0; i < timers.size (); i++)
-    timers[i].update (now);
+  const vector<Timer>::iterator end = timers.end ();
+  vector<Timer>::iterator i = timers.begin ();
+  while (i != end) i->update (now);
 }
 
 void Internal::print_profile (double now) {
