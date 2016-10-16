@@ -94,10 +94,16 @@ class Internal {
 
   /*----------------------------------------------------------------------*/
 
-  // Internal delegates for corresponding functions in 'Solver'
-
+  // Internal delegates and helpers for corresponding functions in 'Solver'.
+  //
   void resize (int new_max_var);
   void add_original_lit (int lit);
+
+  // Enlarge tables.
+  //
+  void enlarge_vtab (int new_vsize);
+  void enlarge_vals (int new_vsize);
+  void enlarge (int new_max_var);
 
   // Functions for monitoring resources.
   //

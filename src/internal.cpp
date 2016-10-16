@@ -50,30 +50,40 @@ Internal::~Internal () {
 
 /*------------------------------------------------------------------------*/
 
+void Internal::enlarge_vtab (int new_vsize) {
+  vector<int> order;
+  queue.save (this, order);
+  ENLARGE (vtab, Var, vsize, new_vsize);
+  queue.restore (this, order);
+}
+
+void Internal::enlarge_vals (int new_vsize) {
+  signed char * new_vals;
+  NEW (new_vals, signed char, 2*new_vsize);
+  new_vals += new_vsize;
+  if (vals) memcpy (new_vals - max_var, vals - max_var, 2*max_var + 1);
+  dec_bytes (2*vsize * sizeof *vals);
+  vals -= vsize;
+  delete [] vals;
+  vals = new_vals;
+}
+
+void Internal::enlarge (int new_max_var) {
+  size_t new_vsize = vsize ? 2*vsize : 1 + (size_t) new_max_var;
+  while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
+  ENLARGE (phases, signed char, vsize, new_vsize);
+  ENLARGE (wtab, Watches, 2*vsize, 2*new_vsize);
+  enlarge_vtab (new_vsize);
+  enlarge_vals (new_vsize);
+  vsize = new_vsize;
+}
+
 void Internal::resize (int new_max_var) {
   if (new_max_var < max_var) return;
-  if ((size_t) new_max_var >= vsize) {
-    size_t new_vsize = vsize ? 2*vsize : 1 + (size_t) new_max_var;
-    while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
-    vector<int> order;
-    queue.save (this, order);
-    RESIZE (phases, signed char,   vsize,   new_vsize);
-    RESIZE (vtab,           Var,   vsize,   new_vsize);
-    RESIZE (wtab,       Watches, 2*vsize, 2*new_vsize);
-    signed char * new_vals;
-    NEW (new_vals, signed char, 2*new_vsize);
-    new_vals += new_vsize;
-    if (vals) memcpy (new_vals - max_var, vals - max_var, 2*max_var + 1);
-    dec_bytes (2*vsize);
-    vals -= vsize;
-    delete [] vals;
-    vals = new_vals;
-    queue.restore (this, order);
-    vsize = new_vsize;
-  }
-  for (int i = new_max_var; i > max_var; i--) vals[i] = 0;
-  for (int i = new_max_var; i > max_var; i--) phases[i] = -1;
+  if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
+  for (int i =  new_max_var; i >  max_var; i--) vals[i] = 0;
   for (int i = -new_max_var; i < -max_var; i++) vals[i] = 0;
+  for (int i = new_max_var; i > max_var; i--) phases[i] = -1;
   queue.init (this, new_max_var);
   MSG ("initialized %d variables", new_max_var - max_var);
   max_var = new_max_var;
