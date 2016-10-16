@@ -28,8 +28,9 @@ void Logger::log (Internal * internal, const Clause * c, const char *fmt, ...) {
     else if (!c->extended) printf (" redundant glue %u", c->glue);
     else printf (" redundant glue %u resolved %ld", c->glue, c->resolved ());
     printf (" size %d clause", c->size);
-    for (const_literal_iterator i = c->begin (); i != c->end (); i++)
-      printf (" %d", *i);
+    const const_literal_iterator end = c->end ();
+    const_literal_iterator i = c->begin ();
+    while (i != end) printf (" %d", *i++);
   } else if (internal->level) printf (" decision");
   else printf (" unit");
   fputc ('\n', stdout);
@@ -37,14 +38,15 @@ void Logger::log (Internal * internal, const Clause * c, const char *fmt, ...) {
 }
 
 void Logger::log (Internal * internal,
-                  const vector<int> & clause, const char *fmt, ...) {
+                  const vector<int> & c, const char *fmt, ...) {
   va_list ap;
   printf ("c LOG %d ", internal->level);
   va_start (ap, fmt);
   vprintf (fmt, ap);
   va_end (ap);
-  for (size_t i = 0; i < clause.size (); i++)
-    printf (" %d", clause[i]);
+  const const_int_iterator end = c.end ();
+  const_int_iterator i = c.begin ();
+  while (i != end) printf (" %d", *i++);
   fputc ('\n', stdout);
   fflush (stdout);
 }
