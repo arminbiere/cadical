@@ -81,6 +81,7 @@ class Internal {
   long recently_resolved;       // to keep recently resolved clauses
   int fixed_limit;              // remember last number of units
   long reduce_inc;              // reduce interval increment
+  long reduce_inc_inc;          // reduce interval increment increment
   Proof * proof;                // trace clausal proof if non zero
   Options opts;                 // run-time options
   Stats stats;                  // statistics

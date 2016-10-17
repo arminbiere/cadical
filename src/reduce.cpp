@@ -80,7 +80,8 @@ void Internal::reduce () {
   mark_useless_redundant_clauses_as_garbage ();
   garbage_collection ();
   unprotect_reasons ();
-  reduce_inc += opts.reduceinc;
+  reduce_inc += reduce_inc_inc;
+  if (reduce_inc_inc > 1) reduce_inc_inc--;
   reduce_limit = stats.conflicts + reduce_inc;
   recently_resolved = stats.resolved;
   report ('-');

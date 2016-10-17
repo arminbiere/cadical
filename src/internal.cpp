@@ -26,6 +26,7 @@ Internal::Internal ()
   recently_resolved (0),
   fixed_limit (0),
   reduce_inc (0),
+  reduce_inc_inc (0),
   proof (0),
   opts (this),
   solution (0),
@@ -122,6 +123,7 @@ int Internal::search () {
 void Internal::init_solving () {
   restart_limit = opts.restartint;
   reduce_limit = reduce_inc = opts.reduceinit;
+  reduce_inc_inc = opts.reduceinc;
   INIT_EMA (fast_glue_avg, opts.emagluefast);
   INIT_EMA (slow_glue_avg, opts.emaglueslow);
 }
