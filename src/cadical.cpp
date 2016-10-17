@@ -71,8 +71,9 @@ void Solver::banner () {
   msg ("CaDiCaL Radically Simplified CDCL SAT Internal");
   msg ("Version " CADICAL_VERSION " " CADICAL_GITID);
   msg ("Copyright (c) 2016 Armin Biere, JKU");
-  msg (CADICAL_CXXVERSION);
+  msg ("");
   msg (CADICAL_COMPILED);
+  msg (CADICAL_CXXVERSION);
   msg (CADICAL_OS);
   msg (CADICAL_CXX " " CADICAL_CXXFLAGS);
 }
