@@ -58,7 +58,11 @@ struct bump_earlier {
   bump_earlier (Internal * s) : internal (s) { }
   bool operator () (int a, int b) {
     Var & u = internal->var (a), & v = internal->var (b);
+#if 0
     return u.bumped + u.trail < v.bumped + v.trail;
+#else
+    return u.trail < v.trail;
+#endif
   }
 };
 
