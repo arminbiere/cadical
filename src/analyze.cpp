@@ -61,7 +61,7 @@ struct bump_earlier {
 #if 0
     return u.bumped + u.trail < v.bumped + v.trail;
 #else
-    return u.trail < v.trail;
+    return u.bumped < v.bumped;
 #endif
   }
 };
