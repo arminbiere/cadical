@@ -82,6 +82,7 @@ class Internal {
   int fixed_limit;              // remember last number of units
   long reduce_inc;              // reduce interval increment
   long reduce_inc_inc;          // reduce interval increment increment
+  double scinc;                 // score increment
   Proof * proof;                // trace clausal proof if non zero
   Options opts;                 // run-time options
   Stats stats;                  // statistics
@@ -187,6 +188,7 @@ class Internal {
   void learn_unit_clause (int lit);
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
+  void rescore ();
   void bump_variable (Var * v);
   void bump_and_clear_seen_variables ();
   void bump_resolved_clauses ();

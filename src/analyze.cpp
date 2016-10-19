@@ -4,6 +4,7 @@
 #include "iterator.hpp"
 #include "proof.hpp"
 #include "macros.hpp"
+#include "message.hpp"
 
 #include <algorithm>
 
@@ -27,6 +28,14 @@ void Internal::learn_unit_clause (int lit) {
 
 /*------------------------------------------------------------------------*/
 
+void Internal::rescore () {
+  stats.rescored++;
+  VRB ("rescore %ld", stats.rescored);
+  for (Var * v = vtab + 1; v <= vtab + max_var; v++)
+    v->score /= scinc;
+  scinc = 1;
+}
+
 // Important variables recently used in conflict analysis are 'bumped',
 // which means to move them to the front of the VMTF decision queue.  The
 // 'bumped' time stamp is updated accordingly.  It is used to determine
@@ -37,6 +46,8 @@ void Internal::bump_variable (Var * v) {
   if (queue.assigned == v) queue.assigned = v->prev ? v->prev : v->next;
   queue.dequeue (v), queue.enqueue (v);
   v->bumped = ++stats.bumped;
+  v->score += scinc;
+  if (v->score > 1e100) rescore ();
   int idx = var2idx (v);
   if (!vals[idx]) queue.assigned = v;
   LOG ("VMTF bumped and moved to front %d", idx);
@@ -61,7 +72,7 @@ struct bump_earlier {
 #if 0
     return u.bumped + u.trail < v.bumped + v.trail;
 #else
-    return u.bumped < v.bumped;
+    return u.score < v.score;
 #endif
   }
 };
@@ -76,6 +87,8 @@ void Internal::bump_and_clear_seen_variables () {
     bump_variable (v);
   }
   seen.clear ();
+  scinc /= opts.decay;
+  if (scinc > 1e100) rescore ();
   STOP (bump);
 }
 

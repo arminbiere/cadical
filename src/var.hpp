@@ -16,12 +16,13 @@ struct Var {
 
   Var * prev, * next;   // double links for decision VMTF queue
   long bumped;          // enqueue time stamp for VMTF queue
+  double score;         // exponential VSIDS score
 
   Clause * reason;      // implication graph edge
 
   Var () :
     seen (false), poison (false), removable (false),
-    prev (0), next (0), bumped (0)
+    prev (0), next (0), bumped (0), score (0)
   { }
 };
 

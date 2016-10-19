@@ -19,6 +19,8 @@ void Stats::print (Internal * internal) {
   SECTION ("statistics");
   MSG ("reductions:    %15ld   %10.2f    conflicts per reduction",
     stats.reductions, relative (stats.conflicts, stats.reductions));
+  MSG ("rescored:      %15ld   %10.2f    conflicts per rescore",
+    stats.rescored, relative (stats.conflicts, stats.rescored));
   MSG ("restarts:      %15ld   %10.2f    conflicts per restart",
     stats.restarts, relative (stats.conflicts, stats.restarts));
   MSG ("conflicts:     %15ld   %10.2f    per second",

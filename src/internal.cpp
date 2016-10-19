@@ -27,6 +27,7 @@ Internal::Internal ()
   fixed_limit (0),
   reduce_inc (0),
   reduce_inc_inc (0),
+  scinc (1),
   proof (0),
   opts (this),
   solution (0),

@@ -16,6 +16,7 @@ struct Stats {
   long propagations; // propagated literals in 'propagate'
   long restarts;     // actual number of happened restarts
   long reused;       // number of reused trails
+  long rescored;     // rescored variables
   long reports;      // 'report' counter
   long sections;     // 'section' counter
   long bumped;       // seen and bumped variables in 'analyze'
