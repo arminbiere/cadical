@@ -190,6 +190,7 @@ class Internal {
   void minimize_clause ();
   void rescore ();
   void bump_variable (Var * v);
+  void sort_seen ();
   void bump_and_clear_seen_variables ();
   void bump_resolved_clauses ();
   void resolve_clause (Clause *);

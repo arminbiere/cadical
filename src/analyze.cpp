@@ -54,9 +54,9 @@ void Internal::bump_variable (Var * v) {
 }
 
 // Initially we proposed to bump the variable in the current 'bumped' stamp
-// order.  This maintains the current order between bumped variables.  On
-// few benchmarks this however lead to a large number of propagations per
-// seconds, which can be reduce by an order of magnitude by focusing
+// order only.  This maintains the current order between bumped variables.
+// On few benchmarks this however lead to a large number of propagations per
+// seconds, which can be reduced by an order of magnitude by focusing
 // somewhat on recently assigned variables more, particularly in this
 // situation.  This can easily be achieved by using the sum of the 'bumped'
 // time stamp and trail height 'trail' for comparison.  Note that 'bumped'
@@ -64,22 +64,63 @@ void Internal::bump_variable (Var * v) {
 // larger than the number of variables, so there is likely a potential for
 // further optimization.
 
-struct bump_earlier {
+struct bumped_plus_trail_smaller {
   Internal * internal;
-  bump_earlier (Internal * s) : internal (s) { }
+  bumped_plus_trail_smaller (Internal * s) : internal (s) { }
   bool operator () (int a, int b) {
     Var & u = internal->var (a), & v = internal->var (b);
-#if 0
     return u.bumped + u.trail < v.bumped + v.trail;
-#else
-    return u.score < v.score;
-#endif
   }
 };
 
+struct bumped_earlier {
+  Internal * internal;
+  bumped_earlier (Internal * s) : internal (s) { }
+  bool operator () (int a, int b) {
+    return internal->var (a).bumped < internal->var (b).bumped;
+  }
+};
+
+struct trail_smaller {
+  Internal * internal;
+  trail_smaller (Internal * s) : internal (s) { }
+  bool operator () (int a, int b) {
+    return internal->var (a).trail < internal->var (b).trail;
+  }
+};
+
+struct score_smaller {
+  Internal * internal;
+  score_smaller (Internal * s) : internal (s) { }
+  bool operator () (int a, int b) {
+    return internal->var (a).score < internal->var (b).score;
+  }
+};
+
+void Internal::sort_seen () {
+  switch (opts.bumpsort) {
+    default: case 0: break;
+    case 1:
+      sort (seen.begin (), seen.end (), bumped_earlier (this));
+      break;
+    case 2:
+      sort (seen.begin (), seen.end (), trail_smaller (this));
+      break;
+    case 3;
+      sort (seen.begin (), seen.end (), bumped_plus_trail_smaller (this));
+      break;
+    case 4;
+      sort (seen.begin (), seen.end (), score_smaller (this));
+      break;
+    case 5;
+      reverse (seen.begin (), seen.end ());
+      break;
+  }
+}
+
 void Internal::bump_and_clear_seen_variables () {
   START (bump);
-  sort (seen.begin (), seen.end (), bump_earlier (this));
+  sort_seen ();
   for (const_int_iterator i = seen.begin (); i != seen.end (); i++) {
     Var * v = &var (*i);
     assert (v->seen);

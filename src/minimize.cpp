@@ -4,8 +4,6 @@
 #include "iterator.hpp"
 #include "macros.hpp"
 
-#include <algorithm>
-
 namespace CaDiCaL {
 
 // Functions for learned clause minimization. We only have the recursive
@@ -41,6 +39,7 @@ bool Internal::minimize_literal (int lit, int depth) {
   return res;
 }
 
+#if 0
 // We try to minimize the first UIP clause by trying to remove away literals
 // on smaller decision level first.  This makes more room for depth bounded
 // minimization even though we have not really seen cases where the depth
@@ -53,11 +52,11 @@ struct trail_smaller_than {
     return internal->var (a).trail < internal->var (b).trail;
   }
 };
+#endif
 
 void Internal::minimize_clause () {
   if (!opts.minimize) return;
   START (minimize);
-  sort (clause.begin (), clause.end (), trail_smaller_than (this));
   LOG (clause, "minimizing first UIP clause");
   assert (minimized.empty ());
   stats.learned += clause.size ();

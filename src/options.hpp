@@ -5,6 +5,7 @@
 /*     NAME              TYPE, VAL,LO, HI, USAGE */ \
 OPTION(arena,            int,   3,  0,  3, "1=clause,2=var,3=queue") \
 OPTION(binary,          bool,   1,  0,  1, "use binary proof format") \
+OPTION(bumpsort,         int,   5,  0,  5, "l=0,b=1,t=2,bt=3,s=4,d=5") \
 OPTION(decay,         double, 0.9,0.5,1.0, "decay") \
 OPTION(emagluefast,   double,3e-2,  0,  1, "alpha fast learned glue") \
 OPTION(emaglueslow,   double,1e-5,  0,  1, "alpha fast learned glue") \
