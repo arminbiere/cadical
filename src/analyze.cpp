@@ -63,18 +63,21 @@ struct bump_earlier {
   }
 };
 
+struct trail_smaller {
+  Internal * internal;
+  trail_smaller (Internal * s) : internal (s) { }
+  bool operator () (int a, int b) {
+    return internal->var (a).trail < internal->var (b).trail;
+  }
+};
+
 void Internal::bump_variables () {
   START (bump);
-  sort (seen.begin (), seen.end (), bump_earlier (this));
+  sort (seen.begin (), seen.end (), trail_smaller (this));      // tie-break
+  stable_sort (seen.begin (), seen.end (), bump_earlier (this));
   for (const_int_iterator i = seen.begin (); i != seen.end (); i++)
     bump_variable (&var (*i));
   STOP (bump);
-}
-
-void Internal::clear_seen () {
-  for (const_int_iterator i = seen.begin (); i != seen.end (); i++)
-    var (*i).seen = false;
-  seen.clear ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -130,11 +133,21 @@ inline bool Internal::analyze_literal (int lit) {
   return v.level == level;
 }
 
+/*------------------------------------------------------------------------*/
+
+void Internal::clear_seen () {
+  for (const_int_iterator i = seen.begin (); i != seen.end (); i++)
+    var (*i).seen = false;
+  seen.clear ();
+}
+
 void Internal::clear_levels () {
   for (const_int_iterator i = levels.begin (); i != levels.end (); i++)
     control[*i].reset ();
   levels.clear ();
 }
+
+/*------------------------------------------------------------------------*/
 
 // By sorting the first UIP clause literals, we establish the invariant that
 // the two watched literals are on the largest decision highest level.
@@ -189,7 +202,7 @@ void Internal::analyze () {
   stats.units += (clause.size () == 1);
   stats.binaries += (clause.size () == 2);
 
-  bump_variables ();                            // Update decision heuristics.
+  bump_variables ();                         // Update decision heuristics.
 
   // Determine back jump level, backtrack and assign flipped literal.
   //

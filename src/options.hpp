@@ -15,7 +15,7 @@ OPTION(minimizedepth,    int,1000, 0,1e9, "minimization depth") \
 OPTION(profile,          int,   0, 0,  4, "profiling level") \
 OPTION(quiet,           bool,   0, 0,  1, "disable all messages") \
 OPTION(reduce,          bool,   1, 0,  1, "garbage collect clauses") \
-OPTION(reduceinc,        int, 300, 1,1e9, "reduce limit increment") \
+OPTION(reduceinc,        int,2000, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,       int,2000, 0,1e9, "initial reduce limit") \
 OPTION(restart,         bool,   1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,  10, 1,1e9, "restart base interval") \

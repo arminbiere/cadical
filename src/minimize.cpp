@@ -58,7 +58,7 @@ void Internal::minimize_clause () {
   if (!opts.minimize) return;
   START (minimize);
   LOG (clause, "minimizing first UIP clause");
-  sort (seen.begin (), seen.end (), trail_smaller (this));
+  sort (clause.begin (), clause.end (), trail_smaller (this));
   assert (minimized.empty ());
   stats.learned += clause.size ();
   int_iterator j = clause.begin ();
