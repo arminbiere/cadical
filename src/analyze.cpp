@@ -118,19 +118,20 @@ void Internal::sort_seen () {
   }
 }
 
-void Internal::bump_and_clear_seen_variables () {
+void Internal::bump_variables () {
   START (bump);
   sort_seen ();
-  for (const_int_iterator i = seen.begin (); i != seen.end (); i++) {
-    Var * v = &var (*i);
-    assert (v->seen);
-    v->seen = false;
-    bump_variable (v);
-  }
-  seen.clear ();
+  for (const_int_iterator i = seen.begin (); i != seen.end (); i++)
+    bump_variable (&var (*i));
   scinc /= opts.decay;
   if (scinc > 1e100) rescore ();
   STOP (bump);
+}
+
+void Internal::clear_seen () {
+  for (const_int_iterator i = seen.begin (); i != seen.end (); i++)
+    var (*i).seen = false;
+  seen.clear ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -246,6 +247,8 @@ void Internal::analyze () {
   stats.units += (clause.size () == 1);
   stats.binaries += (clause.size () == 2);
 
+  bump_variables ();                            // Update decision heuristics.
+
   // Determine back jump level, backtrack and assign flipped literal.
   //
   Clause * driving_clause = 0;
@@ -259,10 +262,11 @@ void Internal::analyze () {
   backtrack (jump);
   assign (-uip, driving_clause);
 
-  // Update decision heuristics and clean up.
+  // Clean up.
   //
-  bump_and_clear_seen_variables ();
-  clause.clear (), clear_levels ();
+  clear_seen ();
+  clause.clear ();
+  clear_levels ();
   conflict = 0;
 
   STOP (analyze);
