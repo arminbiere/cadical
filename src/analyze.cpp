@@ -73,7 +73,9 @@ struct trail_smaller {
 
 void Internal::bump_variables () {
   START (bump);
+#if 0
   sort (seen.begin (), seen.end (), trail_smaller (this));      // tie-break
+#endif
   stable_sort (seen.begin (), seen.end (), bump_earlier (this));
   for (const_int_iterator i = seen.begin (); i != seen.end (); i++)
     bump_variable (&var (*i));
