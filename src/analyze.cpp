@@ -28,14 +28,6 @@ void Internal::learn_unit_clause (int lit) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::rescore () {
-  stats.rescored++;
-  VRB ("rescore %ld", stats.rescored);
-  for (Var * v = vtab + 1; v <= vtab + max_var; v++)
-    v->score /= scinc;
-  scinc = 1;
-}
-
 // Important variables recently used in conflict analysis are 'bumped',
 // which means to move them to the front of the VMTF decision queue.  The
 // 'bumped' time stamp is updated accordingly.  It is used to determine
@@ -46,8 +38,6 @@ void Internal::bump_variable (Var * v) {
   if (queue.assigned == v) queue.assigned = v->prev ? v->prev : v->next;
   queue.dequeue (v), queue.enqueue (v);
   v->bumped = ++stats.bumped;
-  v->score += scinc;
-  if (v->score > 1e100) rescore ();
   int idx = var2idx (v);
   if (!vals[idx]) queue.assigned = v;
   LOG ("VMTF bumped and moved to front %d", idx);
@@ -64,67 +54,20 @@ void Internal::bump_variable (Var * v) {
 // larger than the number of variables, so there is likely a potential for
 // further optimization.
 
-struct bumped_plus_trail_smaller {
+struct bump_earlier {
   Internal * internal;
-  bumped_plus_trail_smaller (Internal * s) : internal (s) { }
+  bump_earlier (Internal * s) : internal (s) { }
   bool operator () (int a, int b) {
     Var & u = internal->var (a), & v = internal->var (b);
     return u.bumped + u.trail < v.bumped + v.trail;
   }
 };
 
-struct bumped_earlier {
-  Internal * internal;
-  bumped_earlier (Internal * s) : internal (s) { }
-  bool operator () (int a, int b) {
-    return internal->var (a).bumped < internal->var (b).bumped;
-  }
-};
-
-struct trail_smaller {
-  Internal * internal;
-  trail_smaller (Internal * s) : internal (s) { }
-  bool operator () (int a, int b) {
-    return internal->var (a).trail < internal->var (b).trail;
-  }
-};
-
-struct score_smaller {
-  Internal * internal;
-  score_smaller (Internal * s) : internal (s) { }
-  bool operator () (int a, int b) {
-    return internal->var (a).score < internal->var (b).score;
-  }
-};
-
-void Internal::sort_seen () {
-  switch (opts.bumpsort) {
-    default: case 0: break;
-    case 1:
-      sort (seen.begin (), seen.end (), bumped_earlier (this));
-      break;
-    case 2:
-      sort (seen.begin (), seen.end (), trail_smaller (this));
-      break;
-    case 3:
-      sort (seen.begin (), seen.end (), bumped_plus_trail_smaller (this));
-      break;
-    case 4:
-      sort (seen.begin (), seen.end (), score_smaller (this));
-      break;
-    case 5:
-      reverse (seen.begin (), seen.end ());
-      break;
-  }
-}
-
 void Internal::bump_variables () {
   START (bump);
-  sort_seen ();
+  sort (seen.begin (), seen.end (), bump_earlier (this));
   for (const_int_iterator i = seen.begin (); i != seen.end (); i++)
     bump_variable (&var (*i));
-  scinc /= opts.decay;
-  if (scinc > 1e100) rescore ();
   STOP (bump);
 }
 
@@ -193,13 +136,12 @@ void Internal::clear_levels () {
   levels.clear ();
 }
 
-// By sorting the first UIP clause literals before minimization, we
-// establish the invariant that the two watched literals are on the largest
-// decision highest level.
+// By sorting the first UIP clause literals, we establish the invariant that
+// the two watched literals are on the largest decision highest level.
 
-struct trail_greater_than {
+struct trail_greater {
   Internal * internal;
-  trail_greater_than (Internal * s) : internal (s) { }
+  trail_greater (Internal * s) : internal (s) { }
   bool operator () (int a, int b) {
     return internal->var (a).trail > internal->var (b).trail;
   }
@@ -254,7 +196,7 @@ void Internal::analyze () {
   Clause * driving_clause = 0;
   int jump = 0;
   if (clause.size () > 1) {
-    sort (clause.begin (), clause.end (), trail_greater_than (this));
+    sort (clause.begin (), clause.end (), trail_greater (this));
     driving_clause = new_learned_clause (glue);
     jump = var (clause[1]).level;
   }

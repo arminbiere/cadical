@@ -3,28 +3,26 @@
 
 #define OPTIONS \
 /*     NAME              TYPE, VAL,LO, HI, USAGE */ \
-OPTION(arena,            int,   3,  0,  3, "1=clause,2=var,3=queue") \
-OPTION(binary,          bool,   1,  0,  1, "use binary proof format") \
-OPTION(bumpsort,         int,   5,  0,  5, "l=0,b=1,t=2,bt=3,s=4,d=5") \
-OPTION(decay,         double, 0.9,0.5,1.0, "decay") \
-OPTION(emagluefast,   double,3e-2,  0,  1, "alpha fast learned glue") \
-OPTION(emaglueslow,   double,1e-5,  0,  1, "alpha fast learned glue") \
-OPTION(keepglue,         int,   2,  1,1e9, "glue kept learned clauses") \
-OPTION(keepsize,         int,   3,  2,1e9, "size kept learned clauses") \
-OPTION(leak,            bool,   1,  0,  1, "leak solver memory") \
-OPTION(minimize,        bool,   1,  0,  1, "minimize learned clauses") \
-OPTION(minimizedepth,    int,1000,  0,1e9, "minimization depth") \
-OPTION(profile,          int,   0,  0,  4, "profiling level") \
-OPTION(quiet,           bool,   0,  0,  1, "disable all messages") \
-OPTION(reduce,          bool,   1,  0,  1, "garbage collect clauses") \
-OPTION(reduceinc,        int, 300,  1,1e9, "reduce limit increment") \
-OPTION(reduceinit,       int,2000,  0,1e9, "initial reduce limit") \
-OPTION(restart,         bool,   1,  0,  1, "enable restarting") \
-OPTION(restartint,       int,  10,  1,1e9, "restart base interval") \
-OPTION(restartmargin, double, 1.1,  0, 10, "restart slow fast margin") \
-OPTION(reusetrail,      bool,   1,  0,  1, "enable trail reuse") \
-OPTION(verbose,         bool,   0,  0,  1, "more verbose messages") \
-OPTION(witness,         bool,   1,  0,  1, "print witness") \
+OPTION(arena,            int,   3, 0,  3, "1=clause,2=var,3=queue") \
+OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
+OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast learned glue") \
+OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha fast learned glue") \
+OPTION(keepglue,         int,   2, 1,1e9, "glue kept learned clauses") \
+OPTION(keepsize,         int,   3, 2,1e9, "size kept learned clauses") \
+OPTION(leak,            bool,   1, 0,  1, "leak solver memory") \
+OPTION(minimize,        bool,   1, 0,  1, "minimize learned clauses") \
+OPTION(minimizedepth,    int,1000, 0,1e9, "minimization depth") \
+OPTION(profile,          int,   0, 0,  4, "profiling level") \
+OPTION(quiet,           bool,   0, 0,  1, "disable all messages") \
+OPTION(reduce,          bool,   1, 0,  1, "garbage collect clauses") \
+OPTION(reduceinc,        int, 300, 1,1e9, "reduce limit increment") \
+OPTION(reduceinit,       int,2000, 0,1e9, "initial reduce limit") \
+OPTION(restart,         bool,   1, 0,  1, "enable restarting") \
+OPTION(restartint,       int,  10, 1,1e9, "restart base interval") \
+OPTION(restartmargin, double, 1.1, 0, 10, "restart slow fast margin") \
+OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
+OPTION(verbose,         bool,   0, 0,  1, "more verbose messages") \
+OPTION(witness,         bool,   1, 0,  1, "print witness") \
 
 #if 0
 

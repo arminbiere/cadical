@@ -44,13 +44,9 @@ class Internal {
   friend struct Queue;
   friend struct Stats;
 
-  friend struct trail_greater_than;
-  friend struct trail_smaller_than;
-
-  friend struct bumped_earlier;
+  friend struct trail_greater;
   friend struct trail_smaller;
-  friend struct bumped_plus_trail_smaller;
-  friend struct score_smaller;
+  friend struct bump_earlier;
 
   /*----------------------------------------------------------------------*/
 
@@ -86,7 +82,6 @@ class Internal {
   int fixed_limit;              // remember last number of units
   long reduce_inc;              // reduce interval increment
   long reduce_inc_inc;          // reduce interval increment increment
-  double scinc;                 // score increment
   Proof * proof;                // trace clausal proof if non zero
   Options opts;                 // run-time options
   Stats stats;                  // statistics
@@ -192,9 +187,7 @@ class Internal {
   void learn_unit_clause (int lit);
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
-  void rescore ();
   void bump_variable (Var * v);
-  void sort_seen ();
   void bump_variables ();
   void bump_resolved_clauses ();
   void resolve_clause (Clause *);
