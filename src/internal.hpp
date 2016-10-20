@@ -44,9 +44,13 @@ class Internal {
   friend struct Queue;
   friend struct Stats;
 
-  friend struct bump_earlier;
   friend struct trail_greater_than;
   friend struct trail_smaller_than;
+
+  friend struct bumped_earlier;
+  friend struct trail_smaller;
+  friend struct bumped_plus_trail_smaller;
+  friend struct score_smaller;
 
   /*----------------------------------------------------------------------*/
 

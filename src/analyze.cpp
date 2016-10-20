@@ -106,13 +106,13 @@ void Internal::sort_seen () {
     case 2:
       sort (seen.begin (), seen.end (), trail_smaller (this));
       break;
-    case 3;
+    case 3:
       sort (seen.begin (), seen.end (), bumped_plus_trail_smaller (this));
       break;
-    case 4;
+    case 4:
       sort (seen.begin (), seen.end (), score_smaller (this));
       break;
-    case 5;
+    case 5:
       reverse (seen.begin (), seen.end ());
       break;
   }
