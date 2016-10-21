@@ -1,7 +1,7 @@
 # TODO
 
-As the goal for this solver is to produce a simplified easy to change CDCL
-solver, there are two types of TODO's here.
+As the goal for this solver is to produce a simplified easy to understand, easy to
+change, and easy to analyze CDCL solver, there are two types of TODO's here.
 
 ## Simplifications
 
@@ -28,4 +28,4 @@ Second things are listed related to additional features.
 There should be an ongoing process of refactoring and documenting the code
 and in particular remove part of the code which is not used anymore.
 
-Fr 14. Okt 08:59:27 CEST 2016
+Fr 21. Okt 21:16:09 CEST 2016
