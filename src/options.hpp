@@ -24,13 +24,6 @@ OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
 OPTION(verbose,         bool,   0, 0,  1, "more verbose messages") \
 OPTION(witness,         bool,   1, 0,  1, "print witness") \
 
-#if 0
-
-OPTION(reduceinc,        int, 300, 1,1e9, "reduce limit increment") \
-OPTION(reduceinit,       int,2000, 0,1e9, "initial reduce limit") \
-
-#endif
-
 namespace CaDiCaL {
 
 class Internal;
