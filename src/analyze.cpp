@@ -63,14 +63,6 @@ struct bump_earlier {
   }
 };
 
-struct trail_smaller {
-  Internal * internal;
-  trail_smaller (Internal * s) : internal (s) { }
-  bool operator () (int a, int b) {
-    return internal->var (a).trail < internal->var (b).trail;
-  }
-};
-
 void Internal::bump_variables () {
   START (bump);
   reverse (seen.begin (), seen.end ());
