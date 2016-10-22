@@ -65,8 +65,7 @@ struct bump_earlier {
 
 void Internal::bump_variables () {
   START (bump);
-  reverse (seen.begin (), seen.end ());
-  stable_sort (seen.begin (), seen.end (), bump_earlier (this));
+  sort (seen.begin (), seen.end (), bump_earlier (this));
   for (const_int_iterator i = seen.begin (); i != seen.end (); i++)
     bump_variable (&var (*i));
   STOP (bump);
@@ -194,8 +193,6 @@ void Internal::analyze () {
   stats.units += (clause.size () == 1);
   stats.binaries += (clause.size () == 2);
 
-  bump_variables ();                         // Update decision heuristics.
-
   // Determine back jump level, backtrack and assign flipped literal.
   //
   Clause * driving_clause = 0;
@@ -208,6 +205,8 @@ void Internal::analyze () {
   UPDATE_AVG (jump_avg, jump);
   backtrack (jump);
   assign (-uip, driving_clause);
+
+  bump_variables ();                         // Update decision heuristics.
 
   // Clean up.
   //
