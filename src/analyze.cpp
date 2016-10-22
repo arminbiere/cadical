@@ -65,7 +65,7 @@ struct bump_earlier {
 
 void Internal::bump_variables () {
   START (bump);
-  sort (seen.begin (), seen.end (), bump_earlier (this));
+  stable_sort (seen.begin (), seen.end (), bump_earlier (this));
   for (const_int_iterator i = seen.begin (); i != seen.end (); i++)
     bump_variable (&var (*i));
   STOP (bump);
@@ -198,7 +198,7 @@ void Internal::analyze () {
   Clause * driving_clause = 0;
   int jump = 0;
   if (clause.size () > 1) {
-    sort (clause.begin (), clause.end (), trail_greater (this));
+    stable_sort (clause.begin (), clause.end (), trail_greater (this));
     driving_clause = new_learned_clause (glue);
     jump = var (clause[1]).level;
   }
