@@ -65,6 +65,7 @@ struct bump_earlier {
 
 void Internal::bump_variables () {
   START (bump);
+  reverse (seen.begin (), seen.end ());
   stable_sort (seen.begin (), seen.end (), bump_earlier (this));
   for (const_int_iterator i = seen.begin (); i != seen.end (); i++)
     bump_variable (&var (*i));
