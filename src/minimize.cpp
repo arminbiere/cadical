@@ -22,8 +22,9 @@ namespace CaDiCaL {
 
 bool Internal::minimize_literal (int lit, int depth) {
   Var & v = var (lit);
-  if (!v.level || v.removable || (depth && v.seen)) return true;
-  if (!v.reason || v.poison || v.level == level) return false;
+  Tag & t = tag (lit);
+  if (!v.level || t.removable () || (depth && t.seen ())) return true;
+  if (!v.reason || t.poison () || v.level == level) return false;
   const Level & l = control[v.level];
   if (!depth && l.seen < 2) return false;
   if (v.trail <= l.trail) return false;
@@ -35,7 +36,7 @@ bool Internal::minimize_literal (int lit, int depth) {
     if (other == lit) continue;
     res = minimize_literal (-other, depth+1);
   }
-  if (res) v.removable = true; else v.poison = true;
+  if (res) t.mark (Tag::REMOVABLE); else t.mark (Tag::POISON);
   minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
   return res;
@@ -67,10 +68,8 @@ void Internal::minimize_clause () {
     else *j++ = *i;
   LOG ("minimized %d literals", (long)(clause.end () - j));
   clause.resize (j - clause.begin ());
-  for (const_int_iterator i = minimized.begin (); i != minimized.end (); i++) {
-    Var & v = var (*i);
-    v.removable = v.poison = false;
-  }
+  for (const_int_iterator i = minimized.begin (); i != minimized.end (); i++)
+    tag (*i).reset ();
   minimized.clear ();
   STOP (minimize);
   check_clause ();

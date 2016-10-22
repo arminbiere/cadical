@@ -44,6 +44,7 @@ Internal::~Internal () {
   if (proof) delete proof;
   if (wtab) delete [] wtab;
   if (vtab) delete [] vtab;
+  if (tags) delete [] tags;
   if (vals) vals -= vsize, delete [] vals;
   if (phases) delete [] phases;
   if (solution) delete [] solution;
@@ -74,6 +75,7 @@ void Internal::enlarge (int new_max_var) {
   while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
   ENLARGE (phases, signed char, vsize, new_vsize);
   ENLARGE (wtab, Watches, 2*vsize, 2*new_vsize);
+  ENLARGE (tags, Tag, vsize, new_vsize);
   enlarge_vtab (new_vsize);
   enlarge_vals (new_vsize);
   vsize = new_vsize;
@@ -139,7 +141,7 @@ int Internal::solve () {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::check (int (Internal::*a)(int)) {
+void Internal::check (int (Internal::*a)(int) const) {
   bool satisfied = false;
   const_int_iterator start = original.begin ();
   for (const_int_iterator i = start; i != original.end (); i++) {

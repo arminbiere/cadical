@@ -10,7 +10,7 @@ namespace CaDiCaL {
 // forward proof checking.  The incorrectly derived clause will raise an abort
 // signal and thus allows to debug the issue with a symbolic debugger immediately.
 
-int Internal::sol (int lit) {
+int Internal::sol (int lit) const {
   assert (solution);
   int res = solution[vidx (lit)];
   if (lit < 0) res = -res;

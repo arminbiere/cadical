@@ -24,6 +24,7 @@ using namespace std;
 #include "stats.hpp"
 #include "timer.hpp"
 #include "watch.hpp"
+#include "tag.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -57,6 +58,7 @@ class Internal {
   Var * vtab;                   // variable table
   signed char * vals;           // current partial assignment
   signed char * phases;         // saved last assignment
+  Tag * tags;                   // seen, poison, minimized tags
   Watches * wtab;               // table of watches for all literals
   Queue queue;                  // variable move to front decision queue
   bool unsat;                   // empty clause found or learned
@@ -67,7 +69,7 @@ class Internal {
   vector<int> clause;           // temporary clause in parsing & learning
   vector<Clause*> clauses;      // ordered collection of all clauses
   bool iterating;               // report learned unit (iteration)
-  vector<int> seen;             // seen & bumped literals in 'analyze'
+  vector<int> bump;             // seen & bumped literals in 'analyze'
   vector<int> levels;           // decision levels of 1st UIP clause
   vector<int> minimized;        // marked removable or poison in 'minmize'
   vector<Clause*> resolved;     // large clauses in 'analyze'
@@ -241,20 +243,25 @@ class Internal {
 
   // Checking solutions (see 'solution.cpp').
   //
-  int sol (int lit);
+  int sol (int lit) const;
   void check_clause ();
 
-  void check (int (Internal::*assignment) (int));
+  void check (int (Internal::*assignment) (int) const);
 
   Internal ();
   ~Internal ();
 
   // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
   //
-  inline int val (int lit) {
+  inline int val (int lit) const {
     assert (lit), assert (abs (lit) <= max_var);
     return vals[lit];
   }
+
+  inline Tag & tag (int lit) { return tags[vidx (lit)]; }
+  inline const Tag & tag (int lit) const { return tags[vidx (lit)]; }
+
+  inline bool seen (int lit) const { return tag (lit).seen (); }
 
   // As 'val' but restricted to the root-level value of a literal.
   //

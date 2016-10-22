@@ -65,9 +65,9 @@ struct bump_earlier {
 
 void Internal::bump_variables () {
   START (bump);
-  reverse (seen.begin (), seen.end ());
-  stable_sort (seen.begin (), seen.end (), bump_earlier (this));
-  for (const_int_iterator i = seen.begin (); i != seen.end (); i++)
+  reverse (bump.begin (), bump.end ());
+  stable_sort (bump.begin (), bump.end (), bump_earlier (this));
+  for (const_int_iterator i = bump.begin (); i != bump.end (); i++)
     bump_variable (&var (*i));
   STOP (bump);
 }
@@ -108,8 +108,9 @@ void Internal::resolve_clause (Clause * c) {
 // number of seen levels is the glucose level (also called glue, or LBD).
 
 inline bool Internal::analyze_literal (int lit) {
+  Tag & t = tag (lit);
+  if (t.seen ()) return false;
   Var & v = var (lit);
-  if (v.seen) return false;
   if (!v.level) return false;
   assert (val (lit) < 0);
   if (v.level < level) clause.push_back (lit);
@@ -119,8 +120,8 @@ inline bool Internal::analyze_literal (int lit) {
     levels.push_back (v.level);
   }
   if (v.trail < l.trail) l.trail = v.trail;
-  v.seen = true;
-  seen.push_back (lit);
+  t.mark (Tag::SEEN);
+  bump.push_back (lit);
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);
   return v.level == level;
 }
@@ -128,9 +129,9 @@ inline bool Internal::analyze_literal (int lit) {
 /*------------------------------------------------------------------------*/
 
 void Internal::clear_seen () {
-  for (const_int_iterator i = seen.begin (); i != seen.end (); i++)
-    var (*i).seen = false;
-  seen.clear ();
+  for (const_int_iterator i = bump.begin (); i != bump.end (); i++)
+    tag (*i).reset ();
+  bump.clear ();
 }
 
 void Internal::clear_levels () {
@@ -171,7 +172,7 @@ void Internal::analyze () {
     while (j != end)
       if (analyze_literal (*j++))
 	open++;
-    while (!var (uip = *--i).seen)
+    while (!seen(uip = *--i))
       ;
     if (!--open) break;
     reason = var (uip).reason;

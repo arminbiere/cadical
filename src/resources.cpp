@@ -32,7 +32,7 @@ size_t Internal::vector_bytes () {
   VECTOR_BYTES (original);
   VECTOR_BYTES (clause);
   VECTOR_BYTES (trail);
-  VECTOR_BYTES (seen);
+  VECTOR_BYTES (bump);
   VECTOR_BYTES (levels);
   VECTOR_BYTES (minimized);
   VECTOR_BYTES (resolved);
