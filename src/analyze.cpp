@@ -39,14 +39,17 @@ void Internal::learn_unit_clause (int lit) {
 // whether the 'queue.assigned' pointer has to be moved in 'unassign'.
 
 void Internal::bump_variable (int lit) {
-  Link * l = &link (lit);
+  const int idx = vidx (lit);
+  Link * l = ltab + idx;
   if (!l->next) return;
-  queue.dequeue (l);
-  queue.enqueue (l);
-  int idx = link2idx (l);
+  queue.dequeue (ltab, l);
+  queue.enqueue (ltab, l);
   btab[idx] = ++stats.bumped;
-  if (!vals[idx]) queue.bassigned = l, queue.bumped = btab[idx];
-  LOG ("VMTF bumped and moved to front %d", idx);
+  LOG ("moved to front %d and bumped %ld", idx, btab[idx]);
+  if (vals[idx]) return;
+  queue.bassigned = idx;
+  queue.bumped = btab[idx];
+  LOG ("queue assigned now %d bumped %ld", queue.bassigned, queue.bumped);
 }
 
 // Initially we proposed to bump the variable in the current 'bumped' stamp

@@ -10,9 +10,9 @@ void Internal::unassign (int lit) {
   LOG ("unassign %d", lit);
   long b = btab[idx];
   if (queue.bumped >= b) return;
-  queue.bassigned = ltab + idx;
+  queue.bassigned = idx;
   queue.bumped = b;
-  LOG ("queue next moved to %d", idx);
+  LOG ("queue assigned now %d bumped %ld", idx, b);
 }
 
 void Internal::backtrack (int target_level) {

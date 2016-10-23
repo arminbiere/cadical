@@ -3,13 +3,11 @@
 
 namespace CaDiCaL {
 
-struct Var;
-
-// Links for double linked decision VMTF queue.
+// Links for double linked decision queue.
 
 struct Link {
 
-  Link * prev, * next;
+  int prev, next;    // variable indices
 
   Link () : prev (0), next (0) { }
 };
