@@ -7,18 +7,21 @@
 
 namespace CaDiCaL {
 
-void Internal::assign (int lit, Clause * reason) {
+void Internal::assign (int lit, Clause * reason, int other) {
   int idx = vidx (lit);
   assert (!vals[idx]);
   Var & v = var (idx);
   if (!(v.level = level)) learn_unit_clause (lit);
   v.reason = reason;
+  v.other = other;
   vals[-idx] = -(vals[idx] = phases[idx] = sign (lit));
   assert (val (lit) > 0);
   v.trail = (int) trail.size ();
   trail.push_back (lit);
-  LOG (reason, "assign %d", lit);
-
+#ifdef LOGGING
+  if (other) LOG ("assign %d binary reason %d %d", lit, lit, other);
+  else LOG (reason, "assign %d", lit);
+#endif
   // As 'assign' is called most of the time from 'propagate' below and then
   // the watches of '-lit' are accessed next during propagation it is wise
   // to tell the processor to prefetch the memory of those watches.  This
@@ -55,7 +58,7 @@ bool Internal::propagate () {
       if (b > 0) continue;
       if (w.size == 2) {
         if (b < 0) conflict = w.clause;
-        else if (!b) assign (w.blit, w.clause);
+        else if (!b) assign (w.blit, 0, lit);
       } else {
         literal_iterator lits = w.clause->begin ();
         if (lits[0] == lit) swap (lits[0], lits[1]);

@@ -189,7 +189,7 @@ class Internal {
 
   // Forward reasoning through propagation in 'propagate.cpp'.
   //
-  void assign (int lit, Clause * reason = 0);
+  void assign (int lit, Clause * reason = 0, int other = 0);
   bool propagate ();
 
   // Undo and restart in 'backtrack.cpp'.
@@ -209,7 +209,8 @@ class Internal {
   void resolve_clause (Clause *);
   void clear_seen ();
   void clear_levels ();
-  bool analyze_literal (int);
+  void analyze_literal (int lit, int & open);
+  void analyze_reason (int lit, Clause *, int & open);
   void analyze ();
   void iterate ();       // for reporting learned unit clause
 

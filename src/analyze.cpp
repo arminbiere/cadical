@@ -114,11 +114,12 @@ void Internal::resolve_clause (Clause * c) {
 // each decision level.  This both helps conflict clause minimization.  The
 // number of seen levels is the glucose level (also called glue, or LBD).
 
-inline bool Internal::analyze_literal (int lit) {
+inline void Internal::analyze_literal (int lit, int & open) {
+  assert (lit);
   Flags & f = flags (lit);
-  if (f.seen ()) return false;
+  if (f.seen ()) return;
   Var & v = var (lit);
-  if (!v.level) return false;
+  if (!v.level) return;
   assert (val (lit) < 0);
   if (v.level < level) clause.push_back (lit);
   Level & l = control[v.level];
@@ -130,7 +131,20 @@ inline bool Internal::analyze_literal (int lit) {
   f.set (SEEN);
   analyzed.push_back (lit);
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);
-  return v.level == level;
+  if (v.level == level) open++;
+}
+
+
+inline void
+Internal::analyze_reason (int lit, Clause * reason, int & open) {
+  assert (reason);
+  resolve_clause (reason);
+  const const_literal_iterator end = reason->end ();
+  const_literal_iterator j = reason->begin ();
+  int other;
+  while (j != end)
+    if ((other = *j++) != lit)
+      analyze_literal (other, open);
 }
 
 /*------------------------------------------------------------------------*/
@@ -170,20 +184,20 @@ void Internal::analyze () {
   //
   Clause * reason = conflict;
   LOG (reason, "analyzing conflict");
-  resolve_clause (reason);
-  int open = 0, uip = 0;
+  int open = 0, uip = 0, other = 0;
   const_int_iterator i = trail.end ();
   for (;;) {
-    const const_literal_iterator end = reason->end ();
-    const_literal_iterator j = reason->begin ();
-    while (j != end)
-      if (analyze_literal (*j++))
-        open++;
+    if (reason) analyze_reason (uip, reason, open);
+    else analyze_literal (other, open);
     while (!seen (uip = *--i))
       ;
     if (!--open) break;
-    reason = var (uip).reason;
-    LOG (reason, "analyzing %d reason", uip);
+    Var & v = var (uip);
+    if (!(reason = v.reason)) other = v.other;
+#ifdef LOGGING
+    if (reason) LOG (reason, "analyzing %d reason", uip);
+    else LOG ("analyzing %d binary reason %d %d", uip, uip, other);
+#endif
   }
   LOG ("first UIP %d", uip);
   clause.push_back (-uip);

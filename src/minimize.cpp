@@ -27,19 +27,20 @@ bool Internal::minimize_literal (int lit, int depth) {
   // TODO split in tests dependent on 'f' only.
 
   if (!v.level || f.removable () || (depth && f.seen ())) return true;
-  if (!v.reason || f.poison () || v.level == level) return false;
+  if (v.decision () || f.poison () || v.level == level) return false;
 
   const Level & l = control[v.level];
   if (!depth && l.seen < 2) return false;
   if (v.trail <= l.trail) return false;
   if (depth > opts.minimizedepth) return false;
-  const_literal_iterator end = v.reason->end ();
   bool res = true;
-  for (const_literal_iterator i = v.reason->begin (); res && i != end; i++) {
-    int other = *i;
-    if (other == lit) continue;
-    res = minimize_literal (-other, depth+1);
-  }
+  if (v.reason) {
+    const_literal_iterator end = v.reason->end (), i;
+    int other;
+    for (i = v.reason->begin (); res && i != end; i++)
+      if ((other = *i) != lit)
+	res = minimize_literal (-other, depth+1);
+  } else res = minimize_literal (-v.other, depth+1);
   if (res) f.set (REMOVABLE); else f.set (POISON);
   minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
