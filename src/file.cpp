@@ -19,6 +19,7 @@ open_pipe (const char * fmt, const char * path, const char * mode) {
 }
 
 static FILE * read_pipe (const char * fmt, const char * path) {
+  // TODO check that file exists and if not return 0
   return open_pipe (fmt, path, "r");
 }
 
