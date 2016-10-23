@@ -1,6 +1,11 @@
 #include "file.hpp"
 
-#include <cstring>
+extern "C" {
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+};
 
 namespace CaDiCaL {
 
@@ -18,8 +23,13 @@ open_pipe (const char * fmt, const char * path, const char * mode) {
   return res;
 }
 
+bool File::exists (const char * path) {
+  struct stat buf;
+  return !stat (path, &buf);
+}
+
 static FILE * read_pipe (const char * fmt, const char * path) {
-  // TODO check that file exists and if not return 0
+  if (!File::exists (path)) return 0;
   return open_pipe (fmt, path, "r");
 }
 

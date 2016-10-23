@@ -25,6 +25,8 @@ class File {
 
 public:
 
+  static bool exists (const char * path);
+
   static File * read (FILE * f, const char * name);
   static File * read (const char * path);
 

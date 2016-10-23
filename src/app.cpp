@@ -113,6 +113,10 @@ int App::main (int argc, char ** argv) {
           proof_specified = true, proof_path = argv[i];
     else dimacs_specified = true, dimacs_path = argv[i];
   }
+  if (dimacs_specified && dimacs_path && !File::exists (dimacs_path))
+    ERROR ("DIMACS input file '%s' does not exist", dimacs_path);
+  if (solution_path && !File::exists (solution_path))
+    ERROR ("solution file '%s' does not exist", solution_path);
   if (solution_path && !solver->get ("check")) solver->set ("check", 1);
   solver->section ("banner");
   solver->banner ();
