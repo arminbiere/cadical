@@ -1,14 +1,19 @@
-#include "internal.hpp"
-
 #include "clause.hpp"
+#include "internal.hpp"
 #include "iterator.hpp"
-#include "proof.hpp"
 #include "macros.hpp"
 #include "message.hpp"
+#include "proof.hpp"
 
 #include <algorithm>
 
 namespace CaDiCaL {
+
+// Code for conflict analysis, e.g., to generate the first UIP clause.  The
+// main function is 'analyze' below.  It further uses 'minimize' to minimize
+// the first UIP clause, which is in 'minimize.cpp'.  An important side
+// effect of conflict analysis is to update the decision queue by bumping
+// variables.  Similarly resolved clauses are bumped to mark them as active.
 
 /*------------------------------------------------------------------------*/
 
@@ -74,7 +79,7 @@ void Internal::bump_variables () {
 
 /*------------------------------------------------------------------------*/
 
-// Clause activity is replaced by a move to front scheme as well with
+// Clause activity is replaced by a move-to-front scheme as well with
 // 'resolved' as time stamp.  Only long and high glue clauses are stamped
 // since small or low glue clauses are kept anyhow (and do not actually have
 // a 'resolved' field).  We keep the relative order of bumped clauses by
@@ -100,7 +105,7 @@ void Internal::resolve_clause (Clause * c) {
 /*------------------------------------------------------------------------*/
 
 // During conflict analysis literals not seen yet either become part of the
-// first-uip clauses (if on lower decision level), are dropped (if fixed),
+// first UIP clause (if on lower decision level), are dropped (if fixed),
 // or are resolved away (if on the current decision level and different from
 // the first UIP).  At the same time we update the number of seen literals on
 // a decision level and the smallest trail position of a seen literal for
@@ -172,7 +177,7 @@ void Internal::analyze () {
     while (j != end)
       if (analyze_literal (*j++))
 	open++;
-    while (!seen(uip = *--i))
+    while (!seen (uip = *--i))
       ;
     if (!--open) break;
     reason = var (uip).reason;

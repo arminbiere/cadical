@@ -77,6 +77,7 @@ void Internal::enlarge (int new_max_var) {
   ENLARGE (phases, signed char, vsize, new_vsize);
   ENLARGE (wtab, Watches, 2*vsize, 2*new_vsize);
   ENLARGE (ftab, Flags, vsize, new_vsize);
+  assert (sizeof (Flags) == 1);
   enlarge_vtab (new_vsize);
   enlarge_vals (new_vsize);
   vsize = new_vsize;
