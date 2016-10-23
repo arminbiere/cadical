@@ -11,10 +11,10 @@ class Clause;
 
 struct Watch {
   int blit;             // if blocking literal is true do not visit clause
-  bool binary;
+  int size;             // same as 'clause->size'
   Clause * clause;
-  Watch (int b, bool bin, Clause * c) : blit (b), binary (bin), clause (c) {
-    assert (binary == (c->size == 2));
+  Watch (int b, Clause * c, int s) : blit (b), size (s), clause (c) {
+    assert (c->size == s);
   }
   Watch () { }
 };

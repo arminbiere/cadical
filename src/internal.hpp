@@ -27,6 +27,7 @@ using namespace std;
 #include "timer.hpp"
 #include "watch.hpp"
 #include "var.hpp"
+#include "util.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -60,9 +61,10 @@ class Internal {
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // maximum variable index
   int level;                    // decision level ('control.size () - 1')
-  signed char * vals;           // current partial assignment
-  signed char * phases;         // saved last assignment
-  signed char * solution;       // for debugging (like 'vals' and 'phases')
+  signed char * vals;           // partial assignment    [-max_var,max_var]
+  signed char * marks;          // literal marks         [1,max_var]
+  signed char * phases;         // saved last assignment [1,max_var]
+  signed char * solution;       // as vals for debugging [-max_var,max_var]
   Var * vtab;                   // variable table
   Link * ltab;                  // table of links for decision queue
   Flags * ftab;                 // seen, poison, minimized flags table
@@ -88,6 +90,8 @@ class Internal {
   long reduce_inc;              // reduce interval increment
   long reduce_inc_inc;          // reduce interval increment increment
   long fixed_limit;             // remember last number of units
+  long subsume_limit;           // next subsumption check
+  size_t subsume_next;          // next clause index to try to subsume
   Proof * proof;                // trace clausal proof if non zero
   Options opts;                 // run-time options
   Stats stats;                  // statistics
@@ -154,12 +158,25 @@ class Internal {
 
   Watches & watches (int lit) { return wtab[vlit (lit)]; }
 
+  // Marking variables with a sign (positive or negative).
+  //
+  signed char marked (int lit) const {
+    signed char res = marks [ vidx (lit) ];
+    if (lit < 0) res = -res;
+    return res;
+  }
+  void mark (int lit) {
+    assert (!marked (lit));
+    marks[vidx (lit)] = sign (lit);
+  }
+  void unmark (int lit) { marks [ vidx (lit) ] = 0; }
+
   // Watch literal 'lit' in clause with blocking literal 'blit'.
   // Inlined here, since it occurs in the tight inner loop of 'propagate'.
   //
-  inline void watch_literal (int lit, int blit, bool binary, Clause * c) {
+  inline void watch_literal (int lit, int blit, Clause * c, int size) {
     Watches & ws = watches (lit);
-    ws.push_back (Watch (blit, binary, c));
+    ws.push_back (Watch (blit, c, size));
     LOG (c, "watch %d blit %d in", lit, blit);
   }
 
@@ -236,6 +253,13 @@ class Internal {
   void setup_watches ();
   void garbage_collection ();
   void reduce ();
+
+  // Subsumption checking.
+  //
+  bool subsuming ();
+  bool subsumes (Clause *);
+  void subsume (Clause *);
+  void subsume ();
 
   // Part on picking the next decision in 'decide.cpp'.
   //

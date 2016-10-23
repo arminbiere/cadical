@@ -84,9 +84,11 @@ void Internal::mark_satisfied_clauses_as_garbage () {
 void Internal::delete_garbage_clauses () {
   LOG ("deleting garbage clauses");
   const_clause_iterator i = clauses.begin ();
+  const_clause_iterator l = i + subsume_next;
   clause_iterator j = clauses.begin ();
   size_t collected_bytes = 0;
   while (i != clauses.end ()) {
+    if (l == i) subsume_next = j - clauses.begin (), l = clauses.end ();
     Clause * c = *j++ = *i++;
     if (!c->collect ()) continue;
     collected_bytes += c->bytes ();
@@ -175,9 +177,12 @@ void Internal::move_non_garbage_clauses () {
   // Replace and flush clause references in 'clauses'.
   //
   clause_iterator j = clauses.begin ();
-  for (i = clauses.begin (); i != clauses.end (); i++)
+  const_clause_iterator l = j + subsume_next;
+  for (i = j; i != clauses.end (); i++) {
+    if (l == i) subsume_next = j - clauses.begin (), l = clauses.end ();
     if ((c = *i)->collect ()) delete_clause (c);
     else assert (c->moved), *j++ = c->copy, deallocate_clause (c);
+  }
   clauses.resize (j - clauses.begin ());
 
   // Release 'from' space completetly and then swap 'to' with 'from'.

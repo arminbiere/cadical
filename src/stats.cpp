@@ -40,6 +40,8 @@ void Stats::print (Internal * internal) {
     learned, relative (learned, stats.conflicts));
   MSG ("minimized:     %15ld   %10.2f %%  of 1st-UIP-literals",
     stats.minimized, percent (stats.minimized, stats.learned));
+  MSG ("subsumed:      %15ld   %10.2f %%  of conflicts",
+    stats.subsumed, percent (stats.subsumed, stats.conflicts));
   MSG ("searched:      %15ld   %10.2f    per decision",
     stats.searched, relative (stats.searched, stats.decisions));
   MSG ("bumped:        %15ld   %10.2f    per conflict",

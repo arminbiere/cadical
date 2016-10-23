@@ -24,6 +24,7 @@ struct Stats {
   long reductions;   // 'reduce' counter
   long reduced;      // number of reduced clauses
   long collected;    // number of collected bytes
+  long subsumed;     // number of subsumed clauses
   long learned;      // learned literals
   long minimized;    // minimized literals
   long redundant;    // number of current redundant clauses

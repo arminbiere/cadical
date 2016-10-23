@@ -88,6 +88,8 @@ run unit5 20
 run unit6 20
 run unit7 20
 
+run sub0 10
+
 run sat0 20
 run sat1 10
 run sat2 10

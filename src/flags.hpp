@@ -6,9 +6,9 @@
 namespace CaDiCaL {
 
 enum Flag {
-  SEEN      = 1, // seen in generating first UIP clause in 'analyze'.
-  POISON    = 2, // can not be removed in 'minimize'.
-  REMOVABLE = 4  // can be removed in 'minimize'.
+  SEEN      =  1, // seen in generating first UIP clause in 'analyze'.
+  POISON    =  2, // can not be removed in 'minimize'.
+  REMOVABLE =  4, // can be removed in 'minimize'.
 
   // Powers of two since these constants are used in a bit-set in 'Flags'.
 };
@@ -25,7 +25,8 @@ class Flags {
   // exactly one byte and more important that 'new Flags[10]' is allocated
   // as a byte array (and needs 10 bytes).
   //
-  // Used bit-sets:
+  // Used bit-sets in 'minimize' are as follows:
+  //
   //                       0   no flag set
   //   SEEN             == 1   seen in 'minimize' but not minimized yet
   //   SEEN | POISON    == 3   seen in 'minimize' and can not be removed

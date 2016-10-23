@@ -17,6 +17,7 @@ Internal::Internal ()
   max_var (0),
   level (0),
   vals (0),
+  marks (0),
   phases (0),
   solution (0),
   vtab (0),
@@ -32,6 +33,7 @@ Internal::Internal ()
   reduce_inc (0),
   reduce_inc_inc (0),
   fixed_limit (0),
+  subsume_next (0),
   proof (0),
   opts (this),
   profiles (this),
@@ -52,6 +54,7 @@ Internal::~Internal () {
   if (ftab) delete [] ftab;
   if (btab) delete [] btab;
   if (vals) vals -= vsize, delete [] vals;
+  if (marks) delete [] marks;
   if (phases) delete [] phases;
   if (solution) delete [] solution;
 }
@@ -74,6 +77,7 @@ void Internal::enlarge (int new_max_var) {
   while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
   ENLARGE (vtab, Var, vsize, new_vsize);
   ENLARGE (ltab, Link, vsize, new_vsize);
+  ENLARGE (marks, signed char, vsize, new_vsize);
   ENLARGE (phases, signed char, vsize, new_vsize);
   ENLARGE (wtab, Watches, 2*vsize, 2*new_vsize);
   ENLARGE (ftab, Flags, vsize, new_vsize);
@@ -107,6 +111,7 @@ void Internal::resize (int new_max_var) {
   for (int i = -new_max_var; i < -max_var; i++) vals[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) vals[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = -1;
+  for (int i = max_var + 1; i <= new_max_var; i++) marks[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) btab[i] = 0;
   if (!max_var) btab[0] = 0;
   resize_queue (new_max_var);
@@ -137,6 +142,7 @@ int Internal::search () {
     else if (satisfied ()) res = 10;
     else if (restarting ()) restart ();
     else if (reducing ()) reduce ();
+    else if (subsuming ()) subsume ();
     else decide ();
   STOP (search);
   return res;

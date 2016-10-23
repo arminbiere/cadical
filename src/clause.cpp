@@ -10,10 +10,11 @@
 namespace CaDiCaL {
 
 void Internal::watch_clause (Clause * c) {
-  const bool binary = c->size == 2;
-  int l0 = c->literals[0], l1 = c->literals[1];
-  watch_literal (l0, l1, binary, c);
-  watch_literal (l1, l0, binary, c);
+  const int size = c->size;
+  const int l0 = c->literals[0];
+  const int l1 = c->literals[1];
+  watch_literal (l0, l1, c, size);
+  watch_literal (l1, l0, c, size);
 }
 
 /*------------------------------------------------------------------------*/
@@ -38,7 +39,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();  assert (size >= 2);
   size_t bytes = bytes_clause (size);
-  bool extended = (red && size > opts.keepsize && glue >= opts.keepglue);
+  bool extended = (red && size > opts.keepsize && glue > opts.keepglue);
   if (!extended) bytes -= EXTENDED_OFFSET;
   char * ptr = new char[bytes];
   inc_bytes (bytes);

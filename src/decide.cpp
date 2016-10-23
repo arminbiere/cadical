@@ -12,7 +12,7 @@ int Internal::next_decision_variable () {
     stats.searched += searched;
     update_queue_unassigned (res);
   }
-  LOG ("next VMTF decision variable %d", res);
+  LOG ("next decision variable %d", res);
   return res;
 }
 
