@@ -59,7 +59,7 @@ bool Internal::propagate () {
       if (w.binary) {
         if (b < 0) conflict = w.clause;
         else if (!b) assign (w.blit, 0, lit);
-      } else {
+      } else if (!conflict) {
         literal_iterator lits = w.clause->begin ();
         if (lits[0] == lit) swap (lits[0], lits[1]);
         const int u = val (lits[0]);
@@ -78,7 +78,7 @@ bool Internal::propagate () {
           } else if (!u) assign (lits[0], w.clause);
           else { conflict = w.clause; break; }
         }
-      }
+      } else break;
     }
     while (i != ws.end ()) *j++ = *i++;
     ws.resize (j - ws.begin ());
