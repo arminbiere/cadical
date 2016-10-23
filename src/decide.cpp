@@ -1,5 +1,4 @@
 #include "internal.hpp"
-
 #include "macros.hpp"
 
 namespace CaDiCaL {
@@ -7,11 +6,11 @@ namespace CaDiCaL {
 int Internal::next_decision_variable () {
   long searched = 0;
   int res;
-  while (val (res = var2idx (queue.bassigned)))
+  while (val (res = link2idx (queue.bassigned)))
     queue.bassigned = queue.bassigned->prev, searched++;
   if (searched) {
     stats.searched += searched;
-    queue.bumped = btab[var2idx (queue.bassigned)];
+    queue.bumped = btab[link2idx (queue.bassigned)];
   }
   LOG ("next VMTF decision variable %d", res);
   return res;

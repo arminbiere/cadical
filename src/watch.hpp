@@ -2,11 +2,12 @@
 #define _watch_hpp_INCLUDED
 
 #ifndef NDEBUG
-#include <cassert>
 #include "clause.hpp"
 #endif
 
 namespace CaDiCaL {
+
+class Clause;
 
 struct Watch {
   int blit;             // if blocking literal is true do not visit clause

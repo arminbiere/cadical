@@ -38,12 +38,14 @@ void Internal::learn_unit_clause (int lit) {
 // 'bumped' time stamp is updated accordingly.  It is used to determine
 // whether the 'queue.assigned' pointer has to be moved in 'unassign'.
 
-void Internal::bump_variable (Var * v) {
-  if (!v->next) return;
-  queue.dequeue (v), queue.enqueue (v);
-  int idx = var2idx (v);
+void Internal::bump_variable (int lit) {
+  Link * l = &link (lit);
+  if (!l->next) return;
+  queue.dequeue (l);
+  queue.enqueue (l);
+  int idx = link2idx (l);
   btab[idx] = ++stats.bumped;
-  if (!vals[idx]) queue.bassigned = v, queue.bumped = btab[var2idx (v)];
+  if (!vals[idx]) queue.bassigned = l, queue.bumped = btab[idx];
   LOG ("VMTF bumped and moved to front %d", idx);
 }
 
@@ -73,7 +75,7 @@ void Internal::bump_variables () {
   reverse (analyzed.begin (), analyzed.end ());
   stable_sort (analyzed.begin (), analyzed.end (), bump_earlier (this));
   for (const_int_iterator i = analyzed.begin (); i != analyzed.end (); i++)
-    bump_variable (&var (*i));
+    bump_variable (*i);
   STOP (bump);
 }
 

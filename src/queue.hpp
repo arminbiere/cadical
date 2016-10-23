@@ -1,31 +1,31 @@
 #ifndef _queue_hpp_INCLUDED
 #define _queue_hpp_INCLUDED
 
-#include "var.hpp"
+#include "link.hpp"
 
 namespace CaDiCaL {
 
 class Internal;
 
-// VMTF decision queue ordered by 'Var.bumped'.
+// VMTF decision queue ordered by 'Link.bumped'.
 
 struct Queue {
 
-  Var * first, * last;  // anchors (head/tail) for doubly linked list
-  Var * bassigned;      // all variables after this one are assigned
+  Link * first, * last; // anchors (head/tail) for doubly linked list
+  Link * bassigned;     // all variables after this one are assigned
   long bumped;          // bumped stamp of 'bassigned'
 
   Queue () : first (0), last (0), bassigned (0), bumped (0) { }
 
-  void dequeue (Var * v) {
-    if (v->prev) v->prev->next = v->next; else first = v->next;
-    if (v->next) v->next->prev = v->prev; else last = v->prev;
+  void dequeue (Link * l) {
+    if (l->prev) l->prev->next = l->next; else first = l->next;
+    if (l->next) l->next->prev = l->prev; else last = l->prev;
   }
 
-  void enqueue (Var * v) {
-    if ((v->prev = last)) last->next = v; else first = v;
-    last = v;
-    v->next = 0;
+  void enqueue (Link * l) {
+    if ((l->prev = last)) last->next = l; else first = l;
+    last = l;
+    l->next = 0;
   }
 
   // Initialize VMTF queue from current 'max_var+1' to 'new_max_var'.  This

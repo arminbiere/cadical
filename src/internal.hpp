@@ -12,11 +12,13 @@ using namespace std;
 
 /*------------------------------------------------------------------------*/
 
-#include "avg.hpp"
 #include "arena.hpp"
+#include "avg.hpp"
 #include "ema.hpp"
+#include "flags.hpp"
 #include "format.hpp"
 #include "level.hpp"
+#include "link.hpp"
 #include "logging.hpp"
 #include "options.hpp"
 #include "profile.hpp"
@@ -24,7 +26,7 @@ using namespace std;
 #include "stats.hpp"
 #include "timer.hpp"
 #include "watch.hpp"
-#include "flags.hpp"
+#include "var.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -56,11 +58,12 @@ class Internal {
   int max_var;                  // maximum variable index
   size_t vsize;                 // actually allocated variable data size
   Var * vtab;                   // variable table
+  Link * ltab;                  // table of links for decision queue
   signed char * vals;           // current partial assignment
   signed char * phases;         // saved last assignment
   Watches * wtab;               // table of watches for all literals
   Flags * ftab;                 // seen, poison, minimized flags table
-  long * btab;                  // enqueue time stamps for VMTF queue
+  long * btab;                  // enqueue time stamps for queue
   Queue queue;                  // variable move to front decision queue
   bool unsat;                   // empty clause found or learned
   int level;                    // decision level (levels.size () - 1)
@@ -105,7 +108,7 @@ class Internal {
 
   // Enlarge tables.
   //
-  void enlarge_vtab (int new_vsize);
+  void enlarge_ltab (int new_vsize);    // TODO eventually remove
   void enlarge_vals (int new_vsize);
   void enlarge (int new_max_var);
 
@@ -135,11 +138,18 @@ class Internal {
     return idx;
   }
 
-  // Get the index of variable (with checking).
+  // Get the index of variable (with checking). TODO remove?
   //
   int var2idx (Var * v) const {
     assert (v), assert (vtab < v), assert (v <= vtab + max_var);
     return v - vtab;
+  }
+
+  // Get the index of link (with checking).
+  //
+  int link2idx (Link * l) const {
+    assert (l), assert (ltab < l), assert (l <= ltab + max_var);
+    return l - ltab;
   }
 
   // Unsigned version with LSB denoting sign.  This is used in indexing arrays
@@ -148,10 +158,16 @@ class Internal {
   //
   unsigned vlit (int lit) { return (lit < 0) + 2u * (unsigned) vidx (lit); }
 
-  // Helper function to access variables and watches to avoid indexing bugs.
+  // Helper functions to access variable and literal data.
   //
-  Var & var (int lit)         { return vtab [vidx (lit)]; }
-  Watches & watches (int lit) { return wtab [vlit (lit)]; }
+  Var & var (int lit)         { return vtab[vidx (lit)]; }
+  Link & link (int lit)       { return ltab[vidx (lit)]; }
+  Flags & flags (int lit)     { return ftab[vidx (lit)]; }
+
+  const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
+  bool seen (int lit) const { return flags (lit).seen (); }
+
+  Watches & watches (int lit) { return wtab[vlit (lit)]; }
 
   // Watch literal 'lit' in clause with blocking literal 'blit'.
   // Inlined here, since it occurs in the tight inner loop of 'propagate'.
@@ -190,7 +206,7 @@ class Internal {
   void learn_unit_clause (int lit);
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
-  void bump_variable (Var * v);
+  void bump_variable (int lit);
   void bump_variables ();
   void bump_resolved_clauses ();
   void resolve_clause (Clause *);
@@ -258,12 +274,6 @@ class Internal {
     assert (lit), assert (abs (lit) <= max_var);
     return vals[lit];
   }
-
-  // Get and manipulate variable flags.
-  //
-  Flags & flags (int lit) { return ftab[vidx (lit)]; }
-  const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
-  bool seen (int lit) const { return flags (lit).seen (); }
 
   long & bumped (int lit) { return btab[vidx (lit)]; }
 

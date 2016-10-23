@@ -10,7 +10,7 @@ void Internal::unassign (int lit) {
   LOG ("unassign %d", lit);
   long b = btab[idx];
   if (queue.bumped >= b) return;
-  queue.bassigned = vtab + idx;
+  queue.bassigned = ltab + idx;
   queue.bumped = b;
   LOG ("queue next moved to %d", idx);
 }

@@ -164,8 +164,8 @@ void Internal::move_non_garbage_clauses () {
     assert (opts.arena == 3);
 
     for (int sign = -1; sign <= 1; sign += 2) {
-      for (Var * v = queue.last; v; v = v->prev) {
-        const int idx = var2idx (v);
+      for (Link * l = queue.last; l; l = l->prev) {
+        const int idx = link2idx (l);
         const Watches & ws = watches (sign * phases[idx] * idx);
         for (const_watch_iterator i = ws.begin (); i != ws. end (); i++)
           if (!(c = i->clause)->moved && !c->collect ()) move_clause (c);

@@ -12,6 +12,7 @@ Internal::Internal ()
   max_var (0),
   vsize (0),
   vtab (0),
+  ltab (0),
   vals (0),
   phases (0),
   wtab (0),
@@ -46,6 +47,7 @@ Internal::~Internal () {
   if (proof) delete proof;
   if (wtab) delete [] wtab;
   if (vtab) delete [] vtab;
+  if (ltab) delete [] ltab;
   if (ftab) delete [] ftab;
   if (btab) delete [] btab;
   if (vals) vals -= vsize, delete [] vals;
@@ -55,10 +57,10 @@ Internal::~Internal () {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::enlarge_vtab (int new_vsize) {
+void Internal::enlarge_ltab (int new_vsize) {
   vector<int> order;
   queue.save (this, order);
-  ENLARGE (vtab, Var, vsize, new_vsize);
+  ENLARGE (ltab, Link, vsize, new_vsize);
   queue.restore (this, order);
 }
 
@@ -76,12 +78,13 @@ void Internal::enlarge_vals (int new_vsize) {
 void Internal::enlarge (int new_max_var) {
   size_t new_vsize = vsize ? 2*vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
+  ENLARGE (vtab, Var, vsize, new_vsize);
   ENLARGE (phases, signed char, vsize, new_vsize);
   ENLARGE (wtab, Watches, 2*vsize, 2*new_vsize);
   ENLARGE (ftab, Flags, vsize, new_vsize);
   ENLARGE (btab, long, vsize, new_vsize);
   assert (sizeof (Flags) == 1);
-  enlarge_vtab (new_vsize);
+  enlarge_ltab (new_vsize);
   enlarge_vals (new_vsize);
   vsize = new_vsize;
 }
