@@ -169,8 +169,8 @@ class Internal {
   // assigned.  Then update the 'queue.bumped' field and and log it.  This
   // is inlined here since it occurs in several inner loops.
   //
-  inline void update_queue_unassigned (int lit) {
-    const int idx = vidx (lit);
+  inline void update_queue_unassigned (int idx) {
+    assert (0 < idx), assert (idx <= max_var);
     queue.unassigned = idx;
     queue.bumped = btab[idx];
     LOG ("queue unassigned now %d bumped %ld", idx, btab[idx]);
