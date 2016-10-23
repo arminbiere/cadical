@@ -55,9 +55,9 @@ fputs (
 "and '<stdout>' is connected to a terminal.\n"
 "\n"
 "The input is assumed to be compressed if it is given explicitly\n"
-"and has a '.gz', '.bz2' or '.7z' suffix.  The same applies to the\n"
-"output file.  For decompression commands 'gunzip', 'bzcat' and '7z'\n"
-"are needed, and for compression 'gzip', 'bzip2' and '7z'.\n",
+"and has a '.gz', '.bz2', '.xz or '.7z' suffix.  The same applies to\n"
+"the output file.  For compression and decompression the utilities\n"
+"'gzip', 'bzip', '7z', and 'xz' are needed.\n",
   stdout);
 }
 

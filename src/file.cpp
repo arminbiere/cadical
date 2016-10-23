@@ -49,9 +49,9 @@ File * File::read (const char * path) {
   if (has_suffix (path, ".xz"))
     file = read_pipe ("xz -c -d %s", path);
   else if (has_suffix (path, ".bz2"))
-    file = read_pipe ("bzcat %s", path);
+    file = read_pipe ("bunzip2 -c -d %s", path);
   else if (has_suffix (path, ".gz"))
-    file = read_pipe ("gunzip -c %s", path);
+    file = read_pipe ("gzip -c -d %s", path);
   else if (has_suffix (path, ".7z"))
     file = read_pipe ("7z x -so %s 2>/dev/null", path);
   else

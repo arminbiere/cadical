@@ -115,9 +115,7 @@ void Internal::resize (int new_max_var) {
 
 void Internal::add_original_lit (int lit) {
   assert (abs (lit) <= max_var);
-#ifndef NDEBUG
-  original.push_back (lit);
-#endif
+  if (opts.check) original.push_back (lit);
   if (lit) clause.push_back (lit);
   else {
     if (!tautological_clause ()) add_new_original_clause ();

@@ -1,10 +1,17 @@
 #ifndef _options_hpp_INCLUDED
 #define _options_hpp_INCLUDED
 
+#ifndef NDEBUG
+#define DBG 1
+#else
+#define DBG 0
+#endif
+
 #define OPTIONS \
 /*     NAME              TYPE, VAL,LO, HI, USAGE */ \
 OPTION(arena,            int,   3, 0,  3, "1=clause,2=var,3=queue") \
 OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
+OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
 OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha fast learned glue") \
 OPTION(keepglue,         int,   2, 1,1e9, "glue kept learned clauses") \
