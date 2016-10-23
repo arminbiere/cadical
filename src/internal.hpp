@@ -59,7 +59,7 @@ class Internal {
   signed char * vals;           // current partial assignment
   signed char * phases;         // saved last assignment
   Watches * wtab;               // table of watches for all literals
-  Flags * ftab;                // seen, poison, minimized flags
+  Flags * ftab;                 // seen, poison, minimized flags table
   Queue queue;                  // variable move to front decision queue
   bool unsat;                   // empty clause found or learned
   int level;                    // decision level (levels.size () - 1)
