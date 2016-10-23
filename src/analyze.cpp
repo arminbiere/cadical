@@ -108,8 +108,8 @@ void Internal::resolve_clause (Clause * c) {
 // number of seen levels is the glucose level (also called glue, or LBD).
 
 inline bool Internal::analyze_literal (int lit) {
-  Tag & t = tag (lit);
-  if (t.seen ()) return false;
+  Flags & f = flags (lit);
+  if (f.seen ()) return false;
   Var & v = var (lit);
   if (!v.level) return false;
   assert (val (lit) < 0);
@@ -120,7 +120,7 @@ inline bool Internal::analyze_literal (int lit) {
     levels.push_back (v.level);
   }
   if (v.trail < l.trail) l.trail = v.trail;
-  t.mark (Tag::SEEN);
+  f.set (SEEN);
   bump.push_back (lit);
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);
   return v.level == level;
@@ -130,7 +130,7 @@ inline bool Internal::analyze_literal (int lit) {
 
 void Internal::clear_seen () {
   for (const_int_iterator i = bump.begin (); i != bump.end (); i++)
-    tag (*i).reset ();
+    flags (*i).reset ();
   bump.clear ();
 }
 

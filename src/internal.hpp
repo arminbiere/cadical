@@ -24,7 +24,7 @@ using namespace std;
 #include "stats.hpp"
 #include "timer.hpp"
 #include "watch.hpp"
-#include "tag.hpp"
+#include "flags.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -58,8 +58,8 @@ class Internal {
   Var * vtab;                   // variable table
   signed char * vals;           // current partial assignment
   signed char * phases;         // saved last assignment
-  Tag * tags;                   // seen, poison, minimized tags
   Watches * wtab;               // table of watches for all literals
+  Flags * ftab;                // seen, poison, minimized flags
   Queue queue;                  // variable move to front decision queue
   bool unsat;                   // empty clause found or learned
   int level;                    // decision level (levels.size () - 1)
@@ -253,19 +253,20 @@ class Internal {
 
   // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
   //
-  inline int val (int lit) const {
+  int val (int lit) const {
     assert (lit), assert (abs (lit) <= max_var);
     return vals[lit];
   }
 
-  inline Tag & tag (int lit) { return tags[vidx (lit)]; }
-  inline const Tag & tag (int lit) const { return tags[vidx (lit)]; }
-
-  inline bool seen (int lit) const { return tag (lit).seen (); }
+  // Get and manipulate variable flags.
+  //
+  Flags & flags (int lit) { return ftab[vidx (lit)]; }
+  const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
+  bool seen (int lit) const { return flags (lit).seen (); }
 
   // As 'val' but restricted to the root-level value of a literal.
   //
-  inline int fixed (int lit) {
+  int fixed (int lit) {
     int idx = vidx (lit), res = vals[idx];
     if (res && vtab[idx].level) res = 0;
     if (lit < 0) res = -res;
