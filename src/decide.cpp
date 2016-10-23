@@ -9,8 +9,10 @@ int Internal::next_decision_variable () {
   int res;
   while (val (res = var2idx (queue.bassigned)))
     queue.bassigned = queue.bassigned->prev, searched++;
-  stats.searched += searched;
-  queue.bumped = btab[res];
+  if (searched) {
+    stats.searched += searched;
+    queue.bumped = btab[var2idx (queue.bassigned)];
+  }
   LOG ("next VMTF decision variable %d", res);
   return res;
 }

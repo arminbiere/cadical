@@ -43,7 +43,7 @@ void Internal::bump_variable (Var * v) {
   queue.dequeue (v), queue.enqueue (v);
   int idx = var2idx (v);
   btab[idx] = ++stats.bumped;
-  if (!vals[idx]) queue.bassigned = v, queue.bumped = stats.bumped;
+  if (!vals[idx]) queue.bassigned = v, queue.bumped = btab[var2idx (v)];
   LOG ("VMTF bumped and moved to front %d", idx);
 }
 
