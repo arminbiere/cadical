@@ -46,10 +46,7 @@ void Internal::bump_variable (int lit) {
   queue.enqueue (ltab, l);
   btab[idx] = ++stats.bumped;
   LOG ("moved to front %d and bumped %ld", idx, btab[idx]);
-  if (vals[idx]) return;
-  queue.bassigned = idx;
-  queue.bumped = btab[idx];
-  LOG ("queue assigned now %d bumped %ld", queue.bassigned, queue.bumped);
+  if (!vals[idx]) update_queue_unassigned (idx);
 }
 
 // Initially we proposed to bump the variable in the current 'bumped' stamp

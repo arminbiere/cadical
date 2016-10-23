@@ -103,12 +103,12 @@ class Internal {
 
   // Internal delegates and helpers for corresponding functions in 'Solver'.
   //
+  void resize_queue (int new_max_var);
   void resize (int new_max_var);
   void add_original_lit (int lit);
 
   // Enlarge tables.
   //
-  void enlarge_ltab (int new_vsize);    // TODO eventually remove
   void enlarge_vals (int new_vsize);
   void enlarge (int new_max_var);
 
@@ -138,20 +138,6 @@ class Internal {
     return idx;
   }
 
-  // Get the index of variable (with checking). TODO remove?
-  //
-  int var2idx (Var * v) const {
-    assert (v), assert (vtab < v), assert (v <= vtab + max_var);
-    return v - vtab;
-  }
-
-  // Get the index of link (with checking).
-  //
-  int link2idx (Link * l) const {
-    assert (l), assert (ltab < l), assert (l <= ltab + max_var);
-    return l - ltab;
-  }
-
   // Unsigned version with LSB denoting sign.  This is used in indexing arrays
   // by literals.  The idea is to keep the elements in such an array for both
   // the positive and negated version of a literal close together.
@@ -176,6 +162,18 @@ class Internal {
     Watches & ws = watches (lit);
     ws.push_back (Watch (blit, c, size));
     LOG (c, "watch %d blit %d in", lit, blit);
+  }
+
+  // Update queue to point to last potentially still unassigned variable.
+  // All variables after 'queue.unassigned' in bump order are assumed to be
+  // assigned.  Then update the 'queue.bumped' field and and log it.  This
+  // is inlined here since it occurs in several inner loops.
+  //
+  inline void update_queue_unassigned (int lit) {
+    const int idx = vidx (lit);
+    queue.unassigned = idx;
+    queue.bumped = btab[idx];
+    LOG ("queue unassigned now %d bumped %ld", idx, btab[idx]);
   }
 
   // Managing clauses in 'clause.cpp'.  Without explicit 'Clause' argument

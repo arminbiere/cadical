@@ -57,13 +57,6 @@ Internal::~Internal () {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::enlarge_ltab (int new_vsize) {
-  vector<int> order;
-  queue.save (this, order);
-  ENLARGE (ltab, Link, vsize, new_vsize);
-  queue.restore (this, order);
-}
-
 void Internal::enlarge_vals (int new_vsize) {
   signed char * new_vals;
   NEW (new_vals, signed char, 2*new_vsize);
@@ -79,14 +72,32 @@ void Internal::enlarge (int new_max_var) {
   size_t new_vsize = vsize ? 2*vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
   ENLARGE (vtab, Var, vsize, new_vsize);
+  ENLARGE (ltab, Link, vsize, new_vsize);
   ENLARGE (phases, signed char, vsize, new_vsize);
   ENLARGE (wtab, Watches, 2*vsize, 2*new_vsize);
   ENLARGE (ftab, Flags, vsize, new_vsize);
   ENLARGE (btab, long, vsize, new_vsize);
   assert (sizeof (Flags) == 1);
-  enlarge_ltab (new_vsize);
   enlarge_vals (new_vsize);
   vsize = new_vsize;
+}
+
+// Initialize VMTF queue from current 'max_var+1' to 'new_max_var'.  This
+// incorporates an initial variable order.  We currently simply assume that
+// variables with smaller index are more important.
+//
+void Internal::resize_queue (int new_max_var) {
+  int prev = queue.last;
+  assert ((size_t) new_max_var < vsize);
+  for (int i = new_max_var; i > max_var; i--) {
+    Link * l = ltab + i;
+    if ((l->prev = prev)) ltab[prev].next = i; else queue.first = i;
+    btab[i] = ++stats.bumped;
+    prev = i;
+  }
+  if (prev) ltab[prev].next = 0; else queue.first = 0;
+  queue.bumped = btab[prev];
+  queue.last = queue.unassigned = prev;
 }
 
 void Internal::resize (int new_max_var) {
@@ -97,7 +108,7 @@ void Internal::resize (int new_max_var) {
   for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = -1;
   for (int i = max_var + 1; i <= new_max_var; i++) btab[i] = 0;
   if (!max_var) btab[0] = 0;
-  queue.init (this, new_max_var);
+  resize_queue (new_max_var);
   MSG ("initialized %d variables", new_max_var - max_var);
   max_var = new_max_var;
 }
@@ -170,7 +181,7 @@ void Internal::check (int (Internal::*a)(int) const) {
       start = i + 1;
     } else if (!satisfied && (this->*a) (lit) > 0) satisfied = true;
   }
-  if (internal->opts.verbose) {
+  if (opts.verbose) {
     MSG ("");
     MSG ("satisfying assignment checked");
     MSG ("");

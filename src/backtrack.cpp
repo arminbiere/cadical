@@ -2,17 +2,13 @@
 
 namespace CaDiCaL {
 
-void Internal::unassign (int lit) {
+inline void Internal::unassign (int lit) {
   assert (val (lit) > 0);
   int idx = vidx (lit);
   vals[idx] = 0;
   vals[-idx] = 0;
   LOG ("unassign %d", lit);
-  long b = btab[idx];
-  if (queue.bumped >= b) return;
-  queue.bassigned = idx;
-  queue.bumped = b;
-  LOG ("queue assigned now %d bumped %ld", idx, b);
+  if (queue.bumped < btab[idx]) update_queue_unassigned (idx);
 }
 
 void Internal::backtrack (int target_level) {
