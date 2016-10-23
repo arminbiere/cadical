@@ -9,27 +9,27 @@ namespace CaDiCaL {
 
 Internal::Internal ()
 :
+  unsat (false),
+  iterating (false),
+  clashing_unit (false),
   max_var (0),
+  level (0),
   vsize (0),
-  vtab (0),
-  ltab (0),
   vals (0),
   phases (0),
-  wtab (0),
+  vtab (0),
+  ltab (0),
   ftab (0),
   btab (0),
-  unsat (false),
-  level (0),
+  wtab (0),
   propagated (0),
-  iterating (false),
   conflict (0),
-  clashing_unit (false),
   reduce_limit (0),
   restart_limit (0),
   recently_resolved (0),
-  fixed_limit (0),
   reduce_inc (0),
   reduce_inc_inc (0),
+  fixed_limit (0),
   proof (0),
   opts (this),
   solution (0),
@@ -115,7 +115,9 @@ void Internal::resize (int new_max_var) {
 
 void Internal::add_original_lit (int lit) {
   assert (abs (lit) <= max_var);
+#ifndef NDEBUG
   original.push_back (lit);
+#endif
   if (lit) clause.push_back (lit);
   else {
     if (!tautological_clause ()) add_new_original_clause ();

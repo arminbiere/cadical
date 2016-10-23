@@ -55,39 +55,39 @@ class Internal {
 
   // The actual state of the solver is in this section.
 
+  bool unsat;                   // empty clause found or learned
+  bool iterating;               // report learned unit (iteration)
+  bool clashing_unit;           // set in 'parse_dimacs'
   int max_var;                  // maximum variable index
+  int level;                    // decision level (control.size () - 1)
   size_t vsize;                 // actually allocated variable data size
-  Var * vtab;                   // variable table
-  Link * ltab;                  // table of links for decision queue
   signed char * vals;           // current partial assignment
   signed char * phases;         // saved last assignment
-  Watches * wtab;               // table of watches for all literals
+  Var * vtab;                   // variable table
+  Link * ltab;                  // table of links for decision queue
   Flags * ftab;                 // seen, poison, minimized flags table
   long * btab;                  // enqueue time stamps for queue
   Queue queue;                  // variable move to front decision queue
-  bool unsat;                   // empty clause found or learned
-  int level;                    // decision level (levels.size () - 1)
-  vector<Level> control;        // 'level + 1 == levels.size ()'
+  Watches * wtab;               // table of watches for all literals
+  vector<Level> control;        // 'level + 1 == control.size ()'
   vector<int> trail;            // assigned literals
   size_t propagated;            // next position on trail to propagate
   vector<int> clause;           // temporary clause in parsing & learning
   vector<Clause*> clauses;      // ordered collection of all clauses
-  bool iterating;               // report learned unit (iteration)
   vector<int> analyzed;         // analyzed literals in 'analyze'
   vector<int> levels;           // decision levels of 1st UIP clause
   vector<int> minimized;        // marked removable or poison in 'minmize'
   vector<Clause*> resolved;     // large clauses in 'analyze'
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
-  bool clashing_unit;           // set in 'parse_dimacs'
   EMA fast_glue_avg;            // fast exponential moving average
   EMA slow_glue_avg;            // slow exponential moving average
   AVG jump_avg;                 // average back jump level
   long reduce_limit;            // conflict limit for next 'reduce'
   long restart_limit;           // conflict limit for next 'restart'
   long recently_resolved;       // to keep recently resolved clauses
-  int fixed_limit;              // remember last number of units
   long reduce_inc;              // reduce interval increment
   long reduce_inc_inc;          // reduce interval increment increment
+  long fixed_limit;             // remember last number of units
   Proof * proof;                // trace clausal proof if non zero
   Options opts;                 // run-time options
   Stats stats;                  // statistics
