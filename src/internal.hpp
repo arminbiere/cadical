@@ -57,28 +57,29 @@ class Internal {
 
   bool unsat;                   // empty clause found or learned
   bool iterating;               // report learned unit (iteration)
-  bool clashing_unit;           // set in 'parse_dimacs'
-  int max_var;                  // maximum variable index
-  int level;                    // decision level (control.size () - 1)
+  bool clashing_unit;           // found clashing units in 'parse_dimacs'
   size_t vsize;                 // actually allocated variable data size
+  int max_var;                  // maximum variable index
+  int level;                    // decision level ('control.size () - 1')
   signed char * vals;           // current partial assignment
   signed char * phases;         // saved last assignment
+  signed char * solution;       // for debugging (like 'vals' and 'phases')
   Var * vtab;                   // variable table
   Link * ltab;                  // table of links for decision queue
   Flags * ftab;                 // seen, poison, minimized flags table
   long * btab;                  // enqueue time stamps for queue
   Queue queue;                  // variable move to front decision queue
   Watches * wtab;               // table of watches for all literals
-  vector<Level> control;        // 'level + 1 == control.size ()'
-  vector<int> trail;            // assigned literals
-  size_t propagated;            // next position on trail to propagate
-  vector<int> clause;           // temporary clause in parsing & learning
-  vector<Clause*> clauses;      // ordered collection of all clauses
-  vector<int> analyzed;         // analyzed literals in 'analyze'
-  vector<int> levels;           // decision levels of 1st UIP clause
-  vector<int> minimized;        // marked removable or poison in 'minmize'
-  vector<Clause*> resolved;     // large clauses in 'analyze'
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
+  size_t propagated;            // next position on trail to propagate
+  vector<int> trail;            // assigned literals
+  vector<int> clause;           // temporary clause in parsing & learning
+  vector<int> levels;           // decision levels of 1st UIP clause
+  vector<int> analyzed;         // analyzed literals in 'analyze'
+  vector<int> minimized;        // marked removable or poison in 'minmize'
+  vector<Level> control;        // 'level + 1 == control.size ()'
+  vector<Clause*> clauses;      // ordered collection of all clauses
+  vector<Clause*> resolved;     // large clauses in 'analyze'
   EMA fast_glue_avg;            // fast exponential moving average
   EMA slow_glue_avg;            // slow exponential moving average
   AVG jump_avg;                 // average back jump level
@@ -91,7 +92,6 @@ class Internal {
   Proof * proof;                // trace clausal proof if non zero
   Options opts;                 // run-time options
   Stats stats;                  // statistics
-  signed char * solution;       // for debugging (like 'vals' and 'phases')
   vector<int> original;         // original CNF for debugging
   vector<Timer> timers;         // active timers for profiling functions
   Profiles profiles;            // global profiled time for functions
