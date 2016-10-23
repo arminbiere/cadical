@@ -96,7 +96,7 @@ void Internal::bump_resolved_clauses () {
   resolved.clear ();
 }
 
-void Internal::resolve_clause (Clause * c) {
+inline void Internal::resolve_clause (Clause * c) {
   if (!c->redundant) return;
   if (c->size <= opts.keepsize) return;
   if (c->glue <= opts.keepglue) return;
