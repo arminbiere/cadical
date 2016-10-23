@@ -30,7 +30,7 @@ OPTION(restartint,       int,  10, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double, 1.1, 0, 10, "restart slow fast margin") \
 OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
 OPTION(subsume,         bool,   1, 0,  1, "enable clause subsumption") \
-OPTION(subsumeinc,       int,  10, 1,1e9, "clause subsumption interval") \
+OPTION(subsumeinc,       int,   2, 1,1e9, "clause subsumption interval") \
 OPTION(subsumelim,       int, 100, 0,1e9, "watch list length limit") \
 OPTION(verbose,         bool,   0, 0,  1, "more verbose messages") \
 OPTION(witness,         bool,   1, 0,  1, "print witness") \
