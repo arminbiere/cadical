@@ -62,14 +62,14 @@ bool Internal::propagate () {
         const int u = val (lits[0]);
         if (u > 0) j[-1].blit = lits[0];
         else {
-	  const_literal_iterator end = lits + w.size;
-	  literal_iterator k = lits + 2;
+          const_literal_iterator end = lits + w.size;
+          literal_iterator k = lits + 2;
           int v = -1;
-	  while (k != end && (v = val (*k)) < 0) k++;
+          while (k != end && (v = val (*k)) < 0) k++;
           if (v > 0) j[-1].blit = *k;
           else if (!v) {
             LOG (w.clause, "unwatch %d in", *k);
-	    swap (lits[1], *k);
+            swap (lits[1], *k);
             watch_literal (lits[1], lit, w.clause, w.size);
             j--;
           } else if (!u) assign (lits[0], w.clause);

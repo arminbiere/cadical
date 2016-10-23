@@ -28,7 +28,7 @@ struct Queue {
   }
 
   // Initialize VMTF queue from current 'max_var+1' to 'new_max_var'.  This
-  // incoporates an initial variable order.  We currently simply assume 
+  // incoporates an initial variable order.  We currently simply assume
   // that variables with smaller index are more important.
   //
   void init (Internal *, int new_max_var);

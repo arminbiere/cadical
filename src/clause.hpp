@@ -98,7 +98,6 @@ public:
     // Otherwise 'literals' is valid.
   };
 
-
   long & resolved () { assert (extended); return _resolved; }
   const long & resolved () const { assert (extended); return _resolved; }
 

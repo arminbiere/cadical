@@ -176,7 +176,7 @@ void Internal::analyze () {
     const_literal_iterator j = reason->begin ();
     while (j != end)
       if (analyze_literal (*j++))
-	open++;
+        open++;
     while (!seen (uip = *--i))
       ;
     if (!--open) break;
@@ -195,7 +195,7 @@ void Internal::analyze () {
   UPDATE_AVG (fast_glue_avg, glue);
   UPDATE_AVG (slow_glue_avg, glue);
 
-  if (opts.minimize) minimize_clause ();	// minimize clause
+  if (opts.minimize) minimize_clause ();        // minimize clause
 
   stats.units += (clause.size () == 1);
   stats.binaries += (clause.size () == 2);

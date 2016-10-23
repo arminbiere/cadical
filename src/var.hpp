@@ -18,7 +18,6 @@ struct Var {
   Var () : prev (0), next (0), bumped (0) { }
 };
 
-
 };
 
 #endif

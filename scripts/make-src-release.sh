@@ -1,4 +1,5 @@
 #!/bin/sh
+cd `dirname $0`/../build
 version="`cat ../VERSION`"
 gitid="`./get-git-id.sh|sed -e 's,^\(.......\).*,\1,'`"
 name=cadical-$version-$gitid

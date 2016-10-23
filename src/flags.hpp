@@ -36,7 +36,7 @@ class Flags {
   // spot within 'analyze'.  This is the main reason for keeping 'Flags'
   // seperate.  Originally we used 'bool seen' etc. members in 'Var.'
   //
-  unsigned char byte;  
+  unsigned char byte;
 
 public:
 
