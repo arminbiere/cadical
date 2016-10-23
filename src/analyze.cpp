@@ -88,6 +88,7 @@ void Internal::bump_variables () {
 // sorting them first.
 
 void Internal::bump_resolved_clauses () {
+  if (!opts.resolve) { assert (resolved.empty ()); return; }
   START (bump);
   sort (resolved.begin (), resolved.end (), resolved_earlier ());
   for (const_clause_iterator i = resolved.begin (); i != resolved.end (); i++)
@@ -138,7 +139,7 @@ inline void Internal::analyze_literal (int lit, int & open) {
 inline void
 Internal::analyze_reason (int lit, Clause * reason, int & open) {
   assert (reason);
-  resolve_clause (reason);
+  if (opts.resolve) resolve_clause (reason);
   const const_literal_iterator end = reason->end ();
   const_literal_iterator j = reason->begin ();
   int other;

@@ -3,6 +3,7 @@
 #include "iterator.hpp"
 #include "macros.hpp"
 #include "message.hpp"
+#include "clause.hpp"
 #include "proof.hpp"
 
 namespace CaDiCaL {

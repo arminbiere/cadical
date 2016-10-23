@@ -157,9 +157,9 @@ class Internal {
   // Watch literal 'lit' in clause with blocking literal 'blit'.
   // Inlined here, since it occurs in the tight inner loop of 'propagate'.
   //
-  inline void watch_literal (int lit, int blit, Clause * c, int size) {
+  inline void watch_literal (int lit, int blit, bool binary, Clause * c) {
     Watches & ws = watches (lit);
-    ws.push_back (Watch (blit, c, size));
+    ws.push_back (Watch (blit, binary, c));
     LOG (c, "watch %d blit %d in", lit, blit);
   }
 

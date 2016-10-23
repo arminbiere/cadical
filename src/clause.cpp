@@ -10,10 +10,10 @@
 namespace CaDiCaL {
 
 void Internal::watch_clause (Clause * c) {
-  const int size = c->size;
+  const bool binary = c->size == 2;
   int l0 = c->literals[0], l1 = c->literals[1];
-  watch_literal (l0, l1, c, size);
-  watch_literal (l1, l0, c, size);
+  watch_literal (l0, l1, binary, c);
+  watch_literal (l1, l0, binary, c);
 }
 
 /*------------------------------------------------------------------------*/

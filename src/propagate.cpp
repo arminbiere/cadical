@@ -38,9 +38,9 @@ void Internal::assign (int lit, Clause * reason, int other) {
 // conflict or whether they produce additional assignments (units).  This
 // version of 'propagate' uses lazy watches and keeps two watched literals
 // at the beginning of the clause.  We also use 'blocking literals' to
-// reduce the number of times clauses have to be visited.  Since the size of
-// the watched clause is stored in the watch, we never have to visit binary
-// clauses.  If a binary clause is falsified we continue propagating.
+// reduce the number of times clauses have to be visited.  The watches know
+// if a watched clause is binary, in which case it never hast to be visited.
+// If a binary clause is falsified we continue propagating.
 
 bool Internal::propagate () {
   assert (!unsat);
@@ -56,7 +56,7 @@ bool Internal::propagate () {
       const Watch w = *j++ = *i++;
       const int b = val (w.blit);
       if (b > 0) continue;
-      if (w.size == 2) {
+      if (w.binary) {
         if (b < 0) conflict = w.clause;
         else if (!b) assign (w.blit, 0, lit);
       } else {
@@ -65,7 +65,7 @@ bool Internal::propagate () {
         const int u = val (lits[0]);
         if (u > 0) j[-1].blit = lits[0];
         else {
-          const_literal_iterator end = lits + w.size;
+          const_literal_iterator end = w.clause->end ();
           literal_iterator k = lits + 2;
           int v = -1;
           while (k != end && (v = val (*k)) < 0) k++;
@@ -73,7 +73,7 @@ bool Internal::propagate () {
           else if (!v) {
             LOG (w.clause, "unwatch %d in", *k);
             swap (lits[1], *k);
-            watch_literal (lits[1], lit, w.clause, w.size);
+            watch_literal (lits[1], lit, false, w.clause);
             j--;
           } else if (!u) assign (lits[0], w.clause);
           else { conflict = w.clause; break; }
