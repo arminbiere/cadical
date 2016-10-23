@@ -16,6 +16,7 @@ Internal::Internal ()
   phases (0),
   wtab (0),
   ftab (0),
+  btab (0),
   unsat (false),
   level (0),
   propagated (0),
@@ -46,6 +47,7 @@ Internal::~Internal () {
   if (wtab) delete [] wtab;
   if (vtab) delete [] vtab;
   if (ftab) delete [] ftab;
+  if (btab) delete [] btab;
   if (vals) vals -= vsize, delete [] vals;
   if (phases) delete [] phases;
   if (solution) delete [] solution;
@@ -77,6 +79,7 @@ void Internal::enlarge (int new_max_var) {
   ENLARGE (phases, signed char, vsize, new_vsize);
   ENLARGE (wtab, Watches, 2*vsize, 2*new_vsize);
   ENLARGE (ftab, Flags, vsize, new_vsize);
+  ENLARGE (btab, long, vsize, new_vsize);
   assert (sizeof (Flags) == 1);
   enlarge_vtab (new_vsize);
   enlarge_vals (new_vsize);
@@ -86,9 +89,11 @@ void Internal::enlarge (int new_max_var) {
 void Internal::resize (int new_max_var) {
   if (new_max_var < max_var) return;
   if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
-  for (int i =  new_max_var; i >  max_var; i--) vals[i] = 0;
   for (int i = -new_max_var; i < -max_var; i++) vals[i] = 0;
-  for (int i = new_max_var; i > max_var; i--) phases[i] = -1;
+  for (int i = max_var + 1; i <= new_max_var; i++) vals[i] = 0;
+  for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = -1;
+  for (int i = max_var + 1; i <= new_max_var; i++) btab[i] = 0;
+  if (!max_var) btab[0] = 0;
   queue.init (this, new_max_var);
   MSG ("initialized %d variables", new_max_var - max_var);
   max_var = new_max_var;

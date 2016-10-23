@@ -8,9 +8,9 @@ void Internal::unassign (int lit) {
   vals[idx] = 0;
   vals[-idx] = 0;
   LOG ("unassign %d", lit);
-  Var * v = &var (idx);
-  if (queue.assigned->bumped >= v->bumped) return;
-  queue.assigned = v;
+  long b = btab[idx];
+  if (queue.bumped >= b) return;
+  queue.bumped = b;
   LOG ("queue next moved to %d", idx);
 }
 

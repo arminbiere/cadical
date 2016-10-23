@@ -60,6 +60,7 @@ class Internal {
   signed char * phases;         // saved last assignment
   Watches * wtab;               // table of watches for all literals
   Flags * ftab;                 // seen, poison, minimized flags table
+  long * btab;                  // enqueue time stamps for VMTF queue
   Queue queue;                  // variable move to front decision queue
   bool unsat;                   // empty clause found or learned
   int level;                    // decision level (levels.size () - 1)
@@ -69,7 +70,7 @@ class Internal {
   vector<int> clause;           // temporary clause in parsing & learning
   vector<Clause*> clauses;      // ordered collection of all clauses
   bool iterating;               // report learned unit (iteration)
-  vector<int> bump;             // seen & bumped literals in 'analyze'
+  vector<int> analyzed;         // analyzed literals in 'analyze'
   vector<int> levels;           // decision levels of 1st UIP clause
   vector<int> minimized;        // marked removable or poison in 'minmize'
   vector<Clause*> resolved;     // large clauses in 'analyze'
@@ -263,6 +264,8 @@ class Internal {
   Flags & flags (int lit) { return ftab[vidx (lit)]; }
   const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
   bool seen (int lit) const { return flags (lit).seen (); }
+
+  long & bumped (int lit) { return btab[vidx (lit)]; }
 
   // As 'val' but restricted to the root-level value of a literal.
   //

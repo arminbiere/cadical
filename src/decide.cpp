@@ -5,9 +5,12 @@
 namespace CaDiCaL {
 
 int Internal::next_decision_variable () {
+  long searched = 0;
   int res;
-  while (val (res = var2idx (queue.assigned)))
-    queue.assigned = queue.assigned->prev, stats.searched++;
+  while (val (res = var2idx (queue.bassigned)))
+    queue.bassigned = queue.bassigned->prev, searched++;
+  stats.searched += searched;
+  queue.bumped = btab[res];
   LOG ("next VMTF decision variable %d", res);
   return res;
 }

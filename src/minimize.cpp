@@ -23,8 +23,12 @@ namespace CaDiCaL {
 bool Internal::minimize_literal (int lit, int depth) {
   Flags & f = flags (lit);
   Var & v = var (lit);
+
+  // TODO split in tests dependent on 'f' only.
+
   if (!v.level || f.removable () || (depth && f.seen ())) return true;
   if (!v.reason || f.poison () || v.level == level) return false;
+
   const Level & l = control[v.level];
   if (!depth && l.seen < 2) return false;
   if (v.trail <= l.trail) return false;

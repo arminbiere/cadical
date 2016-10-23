@@ -8,13 +8,13 @@ void Queue::init (Internal * internal, int new_max_var) {
   assert ((size_t) new_max_var < internal->vsize);
   for (int i = new_max_var; i > internal->max_var; i--) {
     Var * v = internal->vtab + i;
-    if ((v->prev = prev)) prev->next = v;
-    else first = v;
-    v->bumped = ++internal->stats.bumped;
+    if ((v->prev = prev)) prev->next = v; else first = v;
+    internal->btab[i] = ++internal->stats.bumped;
     prev = v;
   }
   if (prev) prev->next = 0; else first = 0;
-  last = assigned = prev;
+  bumped = internal->btab[prev ? prev - internal->vtab : 0];
+  last = bassigned = prev;
 }
 
 void Queue::save (Internal * internal, vector<int> & order) {
@@ -31,13 +31,15 @@ void Queue::restore (Internal * internal, const vector<int> & order) {
     const int idx = *i;
     Var * v = &internal->var (idx);
     if ((v->prev = prev)) {
-      assert (prev->bumped < v->bumped);
+      assert (internal->bumped (internal->var2idx (prev)) <
+              internal->bumped (internal->var2idx (v)));
       prev->next = v;
     } else first = v;
     prev = v;
   }
   if (prev) prev->next = 0; else first = 0;
-  last = assigned = prev;
+  last = bassigned = prev;
+  bumped = internal->btab[prev ? prev - internal->vtab : 0];
 }
 
 };

@@ -16,9 +16,9 @@ bool Internal::restarting () {
 
 int Internal::reuse_trail () {
   if (!opts.reusetrail) return 0;
-  long limit = var (next_decision_variable ()).bumped;
+  long limit = bumped (next_decision_variable ());
   int res = 0;
-  while (res < level && var (control[res + 1].decision).bumped > limit)
+  while (res < level && bumped (control[res + 1].decision) > limit)
     res++;
   if (res) stats.reused++;
   return res;

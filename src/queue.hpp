@@ -12,9 +12,10 @@ class Internal;
 struct Queue {
 
   Var * first, * last;  // anchors (head/tail) for doubly linked list
-  Var * assigned;       // all variables after this one are assigned
+  Var * bassigned;      // all variables after this one are assigned
+  long bumped;          // bumped stamp of 'bassigned'
 
-  Queue () : first (0), last (0), assigned (0) { }
+  Queue () : first (0), last (0), bassigned (0), bumped (0) { }
 
   void dequeue (Var * v) {
     if (v->prev) v->prev->next = v->next; else first = v->next;

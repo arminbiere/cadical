@@ -40,11 +40,10 @@ void Internal::learn_unit_clause (int lit) {
 
 void Internal::bump_variable (Var * v) {
   if (!v->next) return;
-  if (queue.assigned == v) queue.assigned = v->prev ? v->prev : v->next;
   queue.dequeue (v), queue.enqueue (v);
-  v->bumped = ++stats.bumped;
   int idx = var2idx (v);
-  if (!vals[idx]) queue.assigned = v;
+  btab[idx] = ++stats.bumped;
+  if (!vals[idx]) queue.bassigned = v, queue.bumped = stats.bumped;
   LOG ("VMTF bumped and moved to front %d", idx);
 }
 
@@ -63,16 +62,17 @@ struct bump_earlier {
   Internal * internal;
   bump_earlier (Internal * s) : internal (s) { }
   bool operator () (int a, int b) {
-    Var & u = internal->var (a), & v = internal->var (b);
-    return u.bumped + u.trail < v.bumped + v.trail;
+    long s = internal->bumped (a) + internal->var (a).trail;
+    long t = internal->bumped (b) + internal->var (b).trail;
+    return s < t;
   }
 };
 
 void Internal::bump_variables () {
   START (bump);
-  reverse (bump.begin (), bump.end ());
-  stable_sort (bump.begin (), bump.end (), bump_earlier (this));
-  for (const_int_iterator i = bump.begin (); i != bump.end (); i++)
+  reverse (analyzed.begin (), analyzed.end ());
+  stable_sort (analyzed.begin (), analyzed.end (), bump_earlier (this));
+  for (const_int_iterator i = analyzed.begin (); i != analyzed.end (); i++)
     bump_variable (&var (*i));
   STOP (bump);
 }
@@ -126,7 +126,7 @@ inline bool Internal::analyze_literal (int lit) {
   }
   if (v.trail < l.trail) l.trail = v.trail;
   f.set (SEEN);
-  bump.push_back (lit);
+  analyzed.push_back (lit);
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);
   return v.level == level;
 }
@@ -134,9 +134,9 @@ inline bool Internal::analyze_literal (int lit) {
 /*------------------------------------------------------------------------*/
 
 void Internal::clear_seen () {
-  for (const_int_iterator i = bump.begin (); i != bump.end (); i++)
+  for (const_int_iterator i = analyzed.begin (); i != analyzed.end (); i++)
     flags (*i).reset ();
-  bump.clear ();
+  analyzed.clear ();
 }
 
 void Internal::clear_levels () {
