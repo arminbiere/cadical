@@ -74,8 +74,9 @@ void Internal::eagerly_subsume_last_learned () {
 // means that the clause from which the sumption check is started is checked
 // for being subsumed by other (smaller or equal size) clauses.
 
-bool Internal::subsuming () { if (!opts.subsume) return false; return
-stats.conflicts >= subsume_limit;
+bool Internal::subsuming () {
+  if (!opts.subsume) return false;
+  return stats.conflicts >= subsume_limit;
 }
 
 inline bool Internal::subsume_check (Clause * c) {
@@ -88,20 +89,38 @@ inline bool Internal::subsume_check (Clause * c) {
 }
 
 inline int Internal::subsume (Clause * c) {
-  if (c->garbage || c->size < 3) return 0;
+
+  if (c->garbage) return 0;
+  if (c->size < 3) return 0;	// do not subsume binary clauses
+
+  // Redundant and extended clauses are subject to being recycled in
+  // 'reduce' and thus not checked for being forward subsumed here.
+  //
   if (c->redundant && c->extended) return 0;
-  int lit0 = c->literals[0];
-  int lit1 = c->literals[1];
-  size_t size0 = watches (lit0).size ();
-  size_t size1 = watches (lit1).size ();
-  size_t minsize = min (size0, size1);
+
+  // Find literal in 'c' with smallest watch list.
+  //
+  const const_literal_iterator end = c->end ();
+  size_t minsize = 0;
+  int minlit = 0;
+  for (const_literal_iterator i = c->begin (); i != end; i++) {
+    int lit = *i;
+    size_t size = watches (lit).size ();
+    if (minlit && size >= minsize) continue;
+    minlit = lit, minsize = size;
+  }
   if (minsize > (size_t) opts.subsumelim) return 0;
+
   stats.subtried++;
-  int minlit = size0 == minsize ? lit0 : lit1;
   LOG (c, "trying to subsume");
   LOG ("checking %ld clauses watching %d", (long) minsize, minlit);
-  const const_literal_iterator end = c->end ();
+
+  // Mark all literals in 'c'.
+  //
   for (const_literal_iterator i = c->begin (); i != end; i++) mark (*i);
+
+  // Go over the clauses of the watched literal with less watches.
+  //
   Watches & ws = watches (minlit);
   Clause * d = 0;
   for (const_watch_iterator i = ws.begin (); !d && i != ws.end (); i++)
@@ -110,19 +129,26 @@ inline int Internal::subsume (Clause * c) {
 	marked (i->blit) > 0 &&    // blocking literal has to in 'c'
 	subsume_check (i->clause)) // then really check subsumption
       d = i->clause;
+
+  // Unmark all literals in 'c'.
+  //
   for (const_literal_iterator i = c->begin (); i != end; i++) unmark (*i);
+
   if (!d) return -1;
+
+  stats.subsumed++;
   LOG (c, "subsumed");
   LOG (d, "subsuming");
-  stats.subsumed++;
   if (c->redundant) stats.subred++; else stats.subirr++;
   c->garbage = true;
   if (c->redundant || !d->redundant) return 1;
+
   LOG ("turning redundant subsuming clause into irredundant clause");
   d->redundant = false;
   stats.irredundant++;
   assert (stats.redundant);
   stats.redundant--;
+
   return 1;
 }
 

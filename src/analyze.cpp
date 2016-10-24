@@ -208,22 +208,24 @@ void Internal::analyze () {
   //
   bump_resolved_clauses ();
   const int glue = (int) levels.size ();
-  LOG ("1st UIP clause of size %d and glue %d", (int) clause.size (), glue);
+  LOG ("1st UIP clause of size %ld and glue %d",
+    (long) clause.size (), glue);
   UPDATE_AVG (fast_glue_avg, glue);
   UPDATE_AVG (slow_glue_avg, glue);
 
   if (opts.minimize) minimize_clause ();     // minimize clause
 
-  stats.units += (clause.size () == 1);
-  stats.binaries += (clause.size () == 2);
+  int size = (int) clause.size ();
+  stats.units    += (size == 1);
+  stats.binaries += (size == 2);
 
-  if (opts.sublast) eagerly_subsume_last_learned ();
+  if (size > 1 && opts.sublast) eagerly_subsume_last_learned ();
 
   // Determine back jump level, backtrack and assign flipped literal.
   //
   Clause * driving_clause = 0;
   int jump = 0;
-  if (clause.size () > 1) {
+  if (size > 1) {
     stable_sort (clause.begin (), clause.end (), trail_greater (this));
     driving_clause = new_learned_clause (glue);
     jump = var (clause[1]).level;
