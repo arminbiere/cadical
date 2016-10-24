@@ -29,9 +29,11 @@ OPTION(restart,         bool,   1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,  10, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double, 1.1, 0, 10, "restart slow fast margin") \
 OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
+OPTION(sublast,          int,   5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,   1, 0,  1, "enable clause subsumption") \
-OPTION(subsumeinc,       int,   2, 1,1e9, "clause subsumption interval") \
+OPTION(subsumeinc,       int, 100, 1,1e9, "interval in conflicts") \
 OPTION(subsumelim,       int, 100, 0,1e9, "watch list length limit") \
+OPTION(subsumetries,     int, 500, 1,1e9, "trials per phase") \
 OPTION(verbose,         bool,   0, 0,  1, "more verbose messages") \
 OPTION(witness,         bool,   1, 0,  1, "print witness") \
 

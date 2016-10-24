@@ -13,8 +13,10 @@ namespace CaDiCaL {
 
 void Message::print_va_list (Internal * internal,
                              int verbosity, const char * fmt, va_list & ap) {
+#ifndef LOGGING
   if (internal->opts.quiet) return;
   if (internal->opts.verbose < verbosity) return;
+#endif
   fputs ("c ", stdout);
   vprintf (fmt, ap);
   fputc ('\n', stdout);

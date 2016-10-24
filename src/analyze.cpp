@@ -164,6 +164,46 @@ void Internal::clear_levels () {
 
 /*------------------------------------------------------------------------*/
 
+inline bool Internal::eagerly_subsume_last_learned (Clause * c) {
+  const_literal_iterator end = c->end ();
+  size_t found = 0;
+  for (const_literal_iterator i = c->begin (); i != end; i++) {
+    int tmp = marked (*i);
+    if (tmp < 0) break;
+    if (tmp > 0) found++;
+  }
+  assert (found <= clause.size ());
+  if (found < clause.size ()) return false;
+  LOG (c, "learned clauses eagerly subsumes");
+  c->garbage = true;
+  assert (c->redundant);
+  stats.sublast++;
+  return true;
+}
+
+void Internal::eagerly_subsume_last_learned () {
+  START (sublast);
+  const_int_iterator k;
+  for (k = clause.begin (); k != clause.end (); k++) mark (*k);
+  const_clause_iterator i = clauses.end ();
+  int subsumed = 0, tried = 0;
+  for (int j = 0; j < opts.sublast; j++) {
+    if (i == clauses.begin ()) break;
+    Clause * c = *--i;
+    if (!c->redundant) break;
+    if (c->garbage) continue;
+    if ((size_t) c->size <= clause.size ()) continue;
+    tried++;
+    LOG (c, "trying to eagerly subsume");
+    if (eagerly_subsume_last_learned (c)) subsumed++;
+  }
+  for (k = clause.begin (); k != clause.end (); k++) unmark (*k);
+  LOG ("subsumed eagerly %d clauses out of %d tried", subsumed, tried);
+  STOP (sublast);
+}
+
+/*------------------------------------------------------------------------*/
+
 // By sorting the first UIP clause literals, we establish the invariant that
 // the two watched literals are on the largest decision highest level.
 
@@ -212,10 +252,12 @@ void Internal::analyze () {
   UPDATE_AVG (fast_glue_avg, glue);
   UPDATE_AVG (slow_glue_avg, glue);
 
-  if (opts.minimize) minimize_clause ();        // minimize clause
+  if (opts.minimize) minimize_clause ();     // minimize clause
 
   stats.units += (clause.size () == 1);
   stats.binaries += (clause.size () == 2);
+
+  if (opts.sublast) eagerly_subsume_last_learned ();
 
   // Determine back jump level, backtrack and assign flipped literal.
   //

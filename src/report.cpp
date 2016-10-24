@@ -53,7 +53,9 @@ REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
 /*------------------------------------------------------------------------*/
 
 void Internal::report (char type, bool verbose) {
+#ifndef LOGGING
   if (opts.quiet || (verbose && !opts.verbose)) return;
+#endif
   const int max_reports = 32;
   Report reports[max_reports];
   int n = 0;

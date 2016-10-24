@@ -257,8 +257,10 @@ class Internal {
   // Subsumption checking.
   //
   bool subsuming ();
+  bool eagerly_subsume_last_learned (Clause *);
+  void eagerly_subsume_last_learned ();
   bool subsumes (Clause *);
-  void subsume (Clause *);
+  int subsume (Clause *);
   void subsume ();
 
   // Part on picking the next decision in 'decide.cpp'.
