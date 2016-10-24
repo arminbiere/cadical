@@ -254,12 +254,15 @@ class Internal {
   void garbage_collection ();
   void reduce ();
 
-  // Subsumption checking.
+  // Eager backward subsumption checking of learned clauses.
   //
-  bool subsuming ();
   bool eagerly_subsume_last_learned (Clause *);
   void eagerly_subsume_last_learned ();
-  bool subsumes (Clause *);
+
+  // Regular forward subsumption checking.
+  //
+  bool subsuming ();
+  bool subsume_check (Clause *);
   int subsume (Clause *);
   void subsume ();
 
