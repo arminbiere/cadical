@@ -61,7 +61,11 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     if (c->resolved () > recently_resolved) continue;
     stack.push_back (c);
   }
-  stable_sort (stack.begin (), stack.end (), less_usefull ());
+  if (opts.reduceglue)
+    stable_sort (stack.begin (), stack.end (), resolved_earlier ());
+  else
+    stable_sort (stack.begin (), stack.end (), less_usefull ());
+
   const_clause_iterator target = stack.begin () + stack.size ()/2;
   for (const_clause_iterator i = stack.begin (); i != target; i++) {
     LOG (*i, "marking useless to be collected");
