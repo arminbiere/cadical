@@ -1,6 +1,5 @@
 #include "internal.hpp"
-
-#include <cassert>
+#include "iterator.hpp"
 
 namespace CaDiCaL {
 
