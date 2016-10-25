@@ -2,6 +2,7 @@
 #include "internal.hpp"
 #include "macros.hpp"
 #include "message.hpp"
+#include "proof.hpp"
 
 namespace CaDiCaL {
 
@@ -79,13 +80,40 @@ bool Internal::subsuming () {
   return stats.conflicts >= subsume_limit;
 }
 
-inline bool Internal::subsume_check (Clause * c) {
+inline int Internal::subsume_check (Clause * c) {
   if (c->garbage) return false;
   stats.subchecks++;
   const const_literal_iterator end = c->end ();
-  for (const_literal_iterator i = c->begin (); i != end; i++)
-    if (marked (*i) <= 0) return false;
-  return true;
+  int flipped = 0;
+  for (const_literal_iterator i = c->begin (); i != end; i++) {
+    const int lit = *i, tmp = marked (lit);
+    if (!tmp) return 0;
+    if (tmp > 0) continue;
+    if (flipped) return 0;
+    flipped = lit;
+  }
+  return flipped ? flipped : INT_MIN;
+}
+
+inline void Internal::strengthen_clause (Clause * c, int remove) {
+  stats.strengthened++;
+  assert (c->size > 2);
+  LOG (c, "removing %d in", remove);
+  if (proof) proof->trace_strengthen_clause (c, remove);
+  const int l0 = c->literals[0], l1 = c->literals[1];
+  unwatch_literal (l0, c), unwatch_literal (l1, c);
+  const const_literal_iterator end = c->end ();
+  literal_iterator j = c->begin ();
+  for (const_literal_iterator i = j; i != end; i++)
+    if ((*j++ = *i) == remove) j--;
+  assert (j + 1 == end);
+  dec_bytes (sizeof (int));;
+  c->size--;
+  if (c->redundant && c->glue > c->size) c->glue = c->size;
+  if (c->extended) c->resolved () = ++stats.resolved;
+  LOG (c, "strengthened");
+  watch_literal (c->literals[0], c->literals[1], c, c->size);
+  watch_literal (c->literals[1], c->literals[0], c, c->size);
 }
 
 inline int Internal::subsume (Clause * c) {
@@ -123,31 +151,35 @@ inline int Internal::subsume (Clause * c) {
   //
   Watches & ws = watches (minlit);
   Clause * d = 0;
+  int flipped = 0;
   for (const_watch_iterator i = ws.begin (); !d && i != ws.end (); i++)
     if (i->clause != c &&          // ignore starting clause of course
         i->size <= c->size &&      // smaller or identically sized
 	marked (i->blit) > 0 &&    // blocking literal has to in 'c'
-	subsume_check (i->clause)) // then really check subsumption
+	(flipped = subsume_check (i->clause)))
       d = i->clause;
 
   // Unmark all literals in 'c'.
   //
   for (const_literal_iterator i = c->begin (); i != end; i++) unmark (*i);
 
-  if (!d) return -1;
+  if (flipped == INT_MIN) {
+    stats.subsumed++;
+    LOG (d, "subsuming");
+    LOG (c, "subsumed");
+    if (c->redundant) stats.subred++; else stats.subirr++;
+    c->garbage = true;
+    if (c->redundant || !d->redundant) return 1;
 
-  stats.subsumed++;
-  LOG (c, "subsumed");
-  LOG (d, "subsuming");
-  if (c->redundant) stats.subred++; else stats.subirr++;
-  c->garbage = true;
-  if (c->redundant || !d->redundant) return 1;
-
-  LOG ("turning redundant subsuming clause into irredundant clause");
-  d->redundant = false;
-  stats.irredundant++;
-  assert (stats.redundant);
-  stats.redundant--;
+    LOG ("turning redundant subsuming clause into irredundant clause");
+    d->redundant = false;
+    stats.irredundant++;
+    assert (stats.redundant);
+    stats.redundant--;
+  } else if (flipped && var (flipped).reason != c) {
+    LOG (d, "self-subsuming");
+    strengthen_clause (c, -flipped);
+  } else return 0;
 
   return 1;
 }

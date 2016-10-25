@@ -26,6 +26,7 @@ struct Stats {
   long collected;    // number of collected bytes
   long sublast;      // number of eagerly subsumed clauses
   long subsumed;     // number of subsumed clauses
+  long strengthened; // number of strengthened clauses
   long subirr;       // number of subsumed irredundant clauses
   long subred;       // number of subsumed redundant clauses
   long subtried;     // number of tried subsumptions

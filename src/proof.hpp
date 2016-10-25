@@ -28,6 +28,7 @@ public:
   void trace_add_clause (Clause *);
   void trace_delete_clause (Clause *);
   void trace_flushing_clause (Clause *);
+  void trace_strengthen_clause (Clause *, int);
 };
 
 };

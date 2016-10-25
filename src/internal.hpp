@@ -180,6 +180,8 @@ class Internal {
     LOG (c, "watch %d blit %d in", lit, blit);
   }
 
+  void unwatch_literal (int lit, Clause * c);
+
   // Update queue to point to last potentially still unassigned variable.
   // All variables after 'queue.unassigned' in bump order are assumed to be
   // assigned.  Then update the 'queue.bumped' field and and log it.  This
@@ -262,7 +264,8 @@ class Internal {
   // Regular forward subsumption checking.
   //
   bool subsuming ();
-  bool subsume_check (Clause *);
+  void strengthen_clause (Clause *, int);
+  int subsume_check (Clause *);
   int subsume (Clause *);
   void subsume ();
 

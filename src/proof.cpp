@@ -62,8 +62,7 @@ void Proof::trace_unit_clause (int unit) {
   else file->put (unit), file->put (" 0\n");
 }
 
-void Proof::trace_clause (Clause * c, bool add) {
-  LOG (c, "tracing %s", add ? "addition" : "deletion");
+inline void Proof::trace_clause (Clause * c, bool add) {
   if (binary) file->put (add ? 'a' : 'd');
   else if (!add) file->put ("d ");
   const const_literal_iterator end = c->end ();
@@ -75,11 +74,18 @@ void Proof::trace_clause (Clause * c, bool add) {
   else file->put ("0\n");
 }
 
-void Proof::trace_add_clause (Clause * c) { trace_clause (c, true); }
-void Proof::trace_delete_clause (Clause * c) { trace_clause (c, false); }
+void Proof::trace_add_clause (Clause * c) {
+  LOG (c, "tracing addition");
+  trace_clause (c, true);
+}
+
+void Proof::trace_delete_clause (Clause * c) {
+  LOG (c, "tracing deletion");
+  trace_clause (c, false);
+}
 
 void Proof::trace_flushing_clause (Clause * c) {
-  LOG (c, "tracing flushing");
+  LOG (c, "tracing flushing fixed");
   if (binary) file->put ('a');
   const const_literal_iterator end = c->end ();
   for (const_literal_iterator i = c->begin (); i != end; i++) {
@@ -88,15 +94,24 @@ void Proof::trace_flushing_clause (Clause * c) {
     if (binary) put_binary_lit (lit);
     else file->put (lit), file->put (" ");
   }
-  if (binary) put_binary_zero (), file->put ('d');
-  else file->put ("0\nd ");
+  if (binary) put_binary_zero ();
+  else file->put ("0\n");
+  trace_clause (c, false);
+}
+
+void Proof::trace_strengthen_clause (Clause * c, int remove) {
+  LOG (c, "tracing strengthen %d in", remove);
+  if (binary) file->put ('a');
+  const const_literal_iterator end = c->end ();
   for (const_literal_iterator i = c->begin (); i != end; i++) {
     const int lit = *i;
+    if (lit == remove) continue;
     if (binary) put_binary_lit (lit);
     else file->put (lit), file->put (" ");
   }
   if (binary) put_binary_zero ();
   else file->put ("0\n");
+  trace_clause (c, false);
 }
 
 };
