@@ -49,6 +49,8 @@ REPORT("glue",         1, 4, slow_glue_avg) \
 REPORT("irredundant",  0, 4, stats.irredundant) \
 REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
+REPORT("prop/dec",     0, 5, relative (stats.propagations, stats.decisions)) \
+REPORT("bumphi",      -1, 5, percent (stats.bumphi, stats.bumped)) \
 
 /*------------------------------------------------------------------------*/
 

@@ -166,7 +166,7 @@ void Internal::subsume () {
     if (tmp > 0) subsumed++;
   }
   VRB ("subsumed %d ouf of %d tried clauses %.2f",
-    tried, subsumed, percent (subsumed, tried));
+    subsumed, tried, percent (subsumed, tried));
   STOP (subsume);
 }
 

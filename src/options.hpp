@@ -22,7 +22,7 @@ OPTION(minimizedepth,    int,1000, 0,1e9, "minimization depth") \
 OPTION(profile,          int,   0, 0,  4, "profiling level") \
 OPTION(quiet,           bool,   0, 0,  1, "disable all messages") \
 OPTION(reduce,          bool,   1, 0,  1, "garbage collect clauses") \
-OPTION(reduceglue,      bool,   0, 0,  1, "reduce on glue first") \
+OPTION(reduceglue,      bool,   1, 0,  1, "reduce on glue first") \
 OPTION(reduceinc,        int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,       int,2000, 0,1e9, "initial reduce limit") \
 OPTION(resolve,         bool,   1, 0,  1, "bump resolved clauses") \

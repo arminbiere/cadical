@@ -6,6 +6,7 @@
 #include "proof.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 namespace CaDiCaL {
 
@@ -45,6 +46,7 @@ void Internal::bump_variable (int lit) {
   queue.dequeue (ltab, l);
   queue.enqueue (ltab, l);
   btab[idx] = ++stats.bumped;
+  if (var (idx).level == level) stats.bumphi++;
   LOG ("moved to front %d and bumped %ld", idx, btab[idx]);
   if (!vals[idx]) update_queue_unassigned (idx);
 }
@@ -62,10 +64,17 @@ void Internal::bump_variable (int lit) {
 
 struct bump_earlier {
   Internal * internal;
-  bump_earlier (Internal * s) : internal (s) { }
+  double wb, wt;
+  bump_earlier (Internal * s) : internal (s) {
+    double x = percent (internal->stats.bumphi, internal->stats.bumped);
+    wt = 1 / (1 + exp (-0.5 * (x - 67)));
+    wb = 1 - wt;
+  }
   bool operator () (int a, int b) {
-    long s = internal->bumped (a) + internal->var (a).trail;
-    long t = internal->bumped (b) + internal->var (b).trail;
+    Var & u = internal->var (a);
+    Var & v = internal->var (b);
+    double s = wb*internal->bumped (a) + wt*u.trail;
+    double t = wb*internal->bumped (b) + wt*v.trail;
     return s < t;
   }
 };
@@ -221,6 +230,8 @@ void Internal::analyze () {
 
   if (size > 1 && opts.sublast) eagerly_subsume_last_learned ();
 
+  bump_variables ();                         // Update decision heuristics.
+
   // Determine back jump level, backtrack and assign flipped literal.
   //
   Clause * driving_clause = 0;
@@ -233,8 +244,6 @@ void Internal::analyze () {
   UPDATE_AVG (jump_avg, jump);
   backtrack (jump);
   assign (-uip, driving_clause);
-
-  bump_variables ();                         // Update decision heuristics.
 
   // Clean up.
   //

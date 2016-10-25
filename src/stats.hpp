@@ -37,6 +37,8 @@ struct Stats {
   long units;        // learned unit clauses
   long binaries;     // learned binary clauses
 
+  long bumphi;
+
   int fixed;         // top level assigned variables
 
   struct { struct { size_t current, max; } total, watcher; } bytes;
