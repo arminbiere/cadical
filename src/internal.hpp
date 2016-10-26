@@ -28,6 +28,8 @@ using namespace std;
 #include "watch.hpp"
 #include "var.hpp"
 #include "util.hpp"
+#include "limit.hpp"
+#include "inc.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -84,13 +86,8 @@ class Internal {
   EMA fast_glue_avg;            // fast exponential moving average
   EMA slow_glue_avg;            // slow exponential moving average
   AVG jump_avg;                 // average back jump level
-  long reduce_limit;            // conflict limit for next 'reduce'
-  long restart_limit;           // conflict limit for next 'restart'
-  long recently_resolved;       // to keep recently resolved clauses
-  long reduce_inc;              // reduce interval increment
-  long reduce_inc_inc;          // reduce interval increment increment
-  long fixed_limit;             // remember last number of units
-  long subsume_limit;           // next subsumption check
+  Limit lim;                    // limits for various phases
+  Inc inc;                      // increments for limits for various phases
   size_t subsume_next;          // next clause index to try to subsume
   Proof * proof;                // trace clausal proof if non zero
   Options opts;                 // run-time options
@@ -171,6 +168,12 @@ class Internal {
   }
   void unmark (int lit) { marks [ vidx (lit) ] = 0; }
 
+  void mark_clause ();		// mark 'this->clause'
+  void unmark_clause ();	// unmark 'this->clause'
+
+  void mark (Clause *);
+  void unmark (Clause *);
+
   // Watch literal 'lit' in clause with blocking literal 'blit'.
   // Inlined here, since it occurs in the tight inner loop of 'propagate'.
   //
@@ -181,6 +184,7 @@ class Internal {
   }
 
   void unwatch_literal (int lit, Clause * c);
+  void update_size_watch (int lit, Clause * c, int new_size);
 
   // Update queue to point to last potentially still unassigned variable.
   // All variables after 'queue.unassigned' in bump order are assumed to be

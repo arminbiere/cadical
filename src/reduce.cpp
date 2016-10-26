@@ -10,7 +10,7 @@ namespace CaDiCaL {
 
 bool Internal::reducing () {
   if (!opts.reduce) return false;
-  return stats.conflicts >= reduce_limit;
+  return stats.conflicts >= lim.reduce;
 }
 
 // Reason clauses (on non-zero decision level) can not be collected.
@@ -58,7 +58,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     if (c->garbage) continue;               // already marked
     if (c->size <= opts.keepsize) continue; // keep small size clauses
     if (c->glue <= opts.keepglue) continue; // keep small glue clauses
-    if (c->resolved () > recently_resolved) continue;
+    if (c->resolved () > lim.resolved) continue;
     stack.push_back (c);
   }
   if (opts.reduceglue)
@@ -84,10 +84,10 @@ void Internal::reduce () {
   mark_useless_redundant_clauses_as_garbage ();
   garbage_collection ();
   unprotect_reasons ();
-  reduce_inc += reduce_inc_inc;
-  if (reduce_inc_inc > 1) reduce_inc_inc--;
-  reduce_limit = stats.conflicts + reduce_inc;
-  recently_resolved = stats.resolved;
+  inc.reduce += inc.redinc;
+  if (inc.redinc > 1) inc.redinc--;
+  lim.reduce = stats.conflicts + inc.reduce;
+  lim.resolved = stats.resolved;
   report ('-');
   STOP (reduce);
 }

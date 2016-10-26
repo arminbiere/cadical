@@ -27,12 +27,6 @@ Internal::Internal ()
   wtab (0),
   conflict (0),
   propagated (0),
-  reduce_limit (0),
-  restart_limit (0),
-  recently_resolved (0),
-  reduce_inc (0),
-  reduce_inc_inc (0),
-  fixed_limit (0),
   subsume_next (0),
   proof (0),
   opts (this),
@@ -151,9 +145,16 @@ int Internal::search () {
 /*------------------------------------------------------------------------*/
 
 void Internal::init_solving () {
-  restart_limit = opts.restartint;
-  reduce_limit = reduce_inc = opts.reduceinit;
-  reduce_inc_inc = opts.reduceinc;
+
+  lim.restart = opts.restartint;
+
+  lim.reduce  = opts.reduceinit;
+  inc.reduce  = opts.reduceinit; 
+  inc.redinc  = opts.reduceinc;
+
+  lim.subsume = opts.subsumeinit; 
+  inc.subsume = opts.subsumeinit; 
+
   INIT_EMA (fast_glue_avg, opts.emagluefast);
   INIT_EMA (slow_glue_avg, opts.emaglueslow);
 }

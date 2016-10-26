@@ -42,8 +42,7 @@ inline bool Internal::eagerly_subsume_last_learned (Clause * c) {
 
 void Internal::eagerly_subsume_last_learned () {
   START (sublast);
-  const_int_iterator k;
-  for (k = clause.begin (); k != clause.end (); k++) mark (*k);
+  mark_clause ();
   const_clause_iterator i = clauses.end ();
   int subsumed = 0, tried = 0;
   for (int j = 0; j < opts.sublast; j++) {
@@ -56,7 +55,7 @@ void Internal::eagerly_subsume_last_learned () {
     if (eagerly_subsume_last_learned (c)) subsumed++;
     tried++;
   }
-  for (k = clause.begin (); k != clause.end (); k++) unmark (*k);
+  unmark_clause ();
   LOG ("subsumed eagerly %d clauses out of %d tried", subsumed, tried);
   STOP (sublast);
 }
@@ -77,7 +76,7 @@ void Internal::eagerly_subsume_last_learned () {
 
 bool Internal::subsuming () {
   if (!opts.subsume) return false;
-  return stats.conflicts >= subsume_limit;
+  return stats.conflicts >= lim.subsume;
 }
 
 inline int Internal::subsume_check (Clause * c) {
@@ -143,9 +142,7 @@ inline int Internal::subsume (Clause * c) {
   LOG (c, "trying to subsume");
   LOG ("checking %ld clauses watching %d", (long) minsize, minlit);
 
-  // Mark all literals in 'c'.
-  //
-  for (const_literal_iterator i = c->begin (); i != end; i++) mark (*i);
+  mark (c);
 
   // Go over the clauses of the watched literal with less watches.
   //
@@ -159,9 +156,7 @@ inline int Internal::subsume (Clause * c) {
 	(flipped = subsume_check (i->clause)))
       d = i->clause;
 
-  // Unmark all literals in 'c'.
-  //
-  for (const_literal_iterator i = c->begin (); i != end; i++) unmark (*i);
+  unmark (c);
 
   if (flipped == INT_MIN) {
     stats.subsumed++;
@@ -176,7 +171,7 @@ inline int Internal::subsume (Clause * c) {
     stats.irredundant++;
     assert (stats.redundant);
     stats.redundant--;
-  } else if (flipped && var (flipped).reason != c) {
+  } else if (flipped && opts.strengthen && var (flipped).reason != c) {
     LOG (d, "self-subsuming");
     strengthen_clause (c, -flipped);
   } else return 0;
@@ -185,20 +180,32 @@ inline int Internal::subsume (Clause * c) {
 }
 
 void Internal::subsume () {
-  subsume_limit = stats.conflicts + opts.subsumeinc;
+
+  long check = 2*inc.subsume;
+
+  inc.subsume += opts.subsumeinc;
+  lim.subsume = stats.conflicts + inc.subsume;
   if (clauses.empty ()) return;
+
   START (subsume);
-  int tried = 0, subsumed = 0, round = 0, tmp;
+
   size_t start = subsume_next;
-  while (tried < opts.subsumetries) {
+  long tried = 0, subsumed = 0;
+  int round = 0;
+
+  while (tried < check) {
     if (subsume_next >= clauses.size ()) subsume_next = 0;
     if (subsume_next == start && round++) break;
     Clause * c = clauses[subsume_next++];
-    if ((tmp = subsume (c))) tried++;
+    const int tmp = subsume (c);
     if (tmp > 0) subsumed++;
+    if (tmp) tried++;
   }
-  VRB ("subsumed %d ouf of %d tried clauses %.2f",
+
+  VRB ("subsumed %ld ouf of %ld tried clauses %.2f",
     subsumed, tried, percent (subsumed, tried));
+
+  report ('s');
   STOP (subsume);
 }
 
