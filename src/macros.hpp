@@ -23,18 +23,18 @@ do { \
 do { \
   const double N = seconds (); \
   const int L = internal->opts.profile; \
-  if (internal->profiles.F.level > L)  STOP (F, N); \
-  if (internal->profiles.T.level > L) START (T, N); \
-  if (internal->profiles.P.level > L) START (P, N); \
+  if (internal->profiles.F.level <= L)  STOP (F, N); \
+  if (internal->profiles.T.level <= L) START (T, N); \
+  if (internal->profiles.P.level <= L) START (P, N); \
 } while (0)
 
 #define STOP_AND_SWITCH(P,F,T) \
 do { \
   const double N = seconds (); \
   const int L = internal->opts.profile; \
-  if (internal->profiles.P.level > L)  STOP (P, N); \
-  if (internal->profiles.F.level > L)  STOP (F, N); \
-  if (internal->profiles.T.level > L) START (T, N); \
+  if (internal->profiles.P.level <= L)  STOP (P, N); \
+  if (internal->profiles.F.level <= L)  STOP (F, N); \
+  if (internal->profiles.T.level <= L) START (T, N); \
 } while (0)
 
 /*------------------------------------------------------------------------*/
