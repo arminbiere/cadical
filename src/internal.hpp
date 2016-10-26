@@ -84,9 +84,11 @@ class Internal {
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
   vector<Clause*> resolved;     // large clauses in 'analyze'
-  EMA fast_glue_avg;            // fast exponential moving average
-  EMA slow_glue_avg;            // slow exponential moving average
-  AVG jump_avg;                 // average back jump level
+  EMA fast_glue_avg;            // fast exponential moving glue average
+  EMA slow_glue_avg;            // slow exponential moving glue average
+  EMA fast_jump_avg;            // fast exponential moving jump average
+  EMA slow_jump_avg;            // slow exponential moving jump average
+  EMA stable;                   // checkers whether restart is stable
   Limit lim;                    // limits for various phases
   Inc inc;                      // limit increments
   Proof * proof;                // trace clausal proof if non zero

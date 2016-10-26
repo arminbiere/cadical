@@ -222,6 +222,11 @@ void Internal::analyze () {
   UPDATE_AVG (fast_glue_avg, glue);
   UPDATE_AVG (slow_glue_avg, glue);
 
+  if (lim.lastlevel) {
+    UPDATE_AVG (stable, level/(double)lim.lastlevel);
+    lim.lastlevel = 0;
+  }
+
   if (opts.minimize) minimize_clause ();     // minimize clause
 
   int size = (int) clause.size ();
@@ -241,7 +246,8 @@ void Internal::analyze () {
     driving_clause = new_learned_clause (glue);
     jump = var (clause[1]).level;
   }
-  UPDATE_AVG (jump_avg, jump);
+  UPDATE_AVG (slow_jump_avg, jump);
+  UPDATE_AVG (fast_jump_avg, jump);
   backtrack (jump);
   assign (-uip, driving_clause);
 

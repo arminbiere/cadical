@@ -40,18 +40,20 @@ Report::Report (const char * h, int precision, int min, double value) :
 /*     HEADER, PRECISION, MIN, VALUE */ \
 REPORT("seconds",      2, 5, seconds ()) \
 REPORT("MB",           0, 2, current_bytes () / (double)(1l<<20)) \
-REPORT("level",        1, 4, jump_avg) \
+REPORT("level-slow",   1, 4, slow_jump_avg) \
+REPORT("level-fast",   1, 4, fast_jump_avg) \
 REPORT("reductions",   0, 2, stats.reductions) \
 REPORT("restarts",     0, 4, stats.restarts) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
 REPORT("redundant",    0, 5, stats.redundant) \
-REPORT("slow-glue",    1, 4, slow_glue_avg) \
-REPORT("fast-glue",    1, 4, fast_glue_avg) \
+REPORT("glue-slow",    1, 4, slow_glue_avg) \
+REPORT("glue-fast",    1, 4, fast_glue_avg) \
 REPORT("irredundant",  0, 4, stats.irredundant) \
 REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
 REPORT("prop/dec",     0, 2, relative (stats.propagations, stats.decisions)) \
 REPORT("bump-high",   -1, 5, percent (stats.bumphi, stats.bumped)) \
+REPORT("stable",       2, 5, stable) \
 
 /*------------------------------------------------------------------------*/
 

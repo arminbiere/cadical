@@ -16,6 +16,8 @@ struct Limit {
   int keptglue;   // maximum kept glue in 'reduce'
   int keptsize;   // maximum kept size in 'reduce'
 
+  int lastlevel;  // level at last restart
+
   Limit () : 
     reduce (0), resolved (0), restart (0), subsume (0),
     redlast (0),

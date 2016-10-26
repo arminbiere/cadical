@@ -14,6 +14,9 @@ OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
 OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
 OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast learned glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha fast learned glue") \
+OPTION(emajumpfast,   double,3e-2, 0,  1, "alpha fast jump level") \
+OPTION(emajumpslow,   double,1e-5, 0,  1, "alpha fast jump level") \
+OPTION(emastable,     double,1e-3, 0,  1, "alpha restart success") \
 OPTION(keepglue,         int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,         int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(leak,            bool,   1, 0,  1, "leak solver memory") \
@@ -28,7 +31,7 @@ OPTION(reduceinc,        int, 300, 1,1e9, "reduce limit increment") \
 OPTION(reduceinit,       int,2000, 0,1e9, "initial reduce limit") \
 OPTION(resolve,         bool,   1, 0,  1, "bump resolved clauses") \
 OPTION(restart,         bool,   1, 0,  1, "enable restarting") \
-OPTION(restartint,       int,  10, 1,1e9, "restart base interval") \
+OPTION(restartint,       int,   4, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double, 1.1, 0, 10, "restart slow fast margin") \
 OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
 OPTION(strengthen,      bool,   1, 0,  1, "strengthen during subsume") \
