@@ -3,6 +3,9 @@
 #include "macros.hpp"
 #include "message.hpp"
 #include "proof.hpp"
+#include "macros.hpp"
+
+#include <algorithm>
 
 namespace CaDiCaL {
 
@@ -10,12 +13,13 @@ namespace CaDiCaL {
 
 // For certain instances it happens quite frequently that learned clauses
 // backward subsume some of the recently learned clauses.  Thus whenever we
-// learn a clause, we can eagerly check whether the last 'opts.sublast'
-// learned clauses are subsumed by the new learned clause. This observation
-// and the idea for this code is due to Donald Knuth (even though he
-// originally only tried to subsume the very last clause).  Note that
-// 'backward' means the learned clause from which we start the subsumption
-// check is checked for subsuming earlier (larger) clauses.
+// learn a clause, we can eagerly check whether one of the last
+// 'opts.sublast' learned clauses is subsumed by the new learned clause.
+//
+// This observation and the idea for this code is due to Donald Knuth (even
+// though he originally only tried to subsume the very last clause).  Note
+// that 'backward' means the learned clause from which we start the
+// subsumption check is checked for subsuming earlier (larger) clauses.
 
 // Check whether the marked 'Internal.clause' subsumes the argument.
 
@@ -62,10 +66,8 @@ void Internal::eagerly_subsume_last_learned () {
 
 /*------------------------------------------------------------------------*/
 
-// This section contains a global forward subsumption algorithm, which is
-// run frequently during search.  More specifically it is run in phases
-// every 'opts.subsumeinc' conflicts and then in each phase tries to subsume
-// the next 'opts.subsumetries' clauses.  It works both on original
+// The rest of the file implements a global forward subsumption algorithm,
+// which is run frequently during search.  It works both on original
 // (irredundant) clauses and on 'sticky' learned clauses which are small
 // enough or have a small enough glue to be otherwise kept forever (see
 // 'opts.keepsize' and 'opts.keeglue', e.g., a redundant clause is not
@@ -78,6 +80,20 @@ bool Internal::subsuming () {
   if (!opts.subsume) return false;
   return stats.conflicts >= lim.subsume;
 }
+
+// This is the actual subsumption and strengthening check.  We assume that
+// all the literals of the candidate clause to be subsumed or strengthened
+// are marked, so we only have to check that all the literals of the
+// argument clause 'c', which is checked for subsuming the candidate clause,
+// has all its literals marked (in the correct phase).  If exactly one is in
+// the oposite phase we can still strengthen the candidate clause by this
+// single literal which occurs in opposite phase.
+//
+// The result is INT_MIN if all literals are marked and thus the candidate
+// clause can be subsumed.  It is zero if neither subsumption nor
+// strengthening is possible.  Otherwise the candidate clause can be
+// strengthened and as a result the negation of the literal which can be
+// removed is returned.
 
 inline int Internal::subsume_check (Clause * c) {
   if (c->garbage) return false;
@@ -92,6 +108,25 @@ inline int Internal::subsume_check (Clause * c) {
     flipped = lit;
   }
   return flipped ? flipped : INT_MIN;
+}
+
+/*------------------------------------------------------------------------*/
+
+// Candidate clause 'c' can be subsumed or strengthened.
+
+inline void
+Internal::subsume_clause (Clause * subsumed, Clause * subsuming) {
+  stats.subsumed++;
+  assert (subsuming->size <= subsumed->size);
+  LOG (subsumed, "subsumed");
+  if (subsumed->redundant) stats.subred++; else stats.subirr++;
+  mark_garbage (subsumed);
+  if (subsumed->redundant || !subsuming->redundant) return;
+  LOG ("turning redundant subsuming clause into irredundant clause");
+  subsuming->redundant = false;
+  stats.irredundant++;
+  assert (stats.redundant);
+  stats.redundant--;
 }
 
 inline void Internal::strengthen_clause (Clause * c, int remove) {
@@ -115,73 +150,61 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   watch_literal (c->literals[1], c->literals[0], c, c->size);
 }
 
-inline int Internal::subsume (Clause * c) {
+/*------------------------------------------------------------------------*/
 
-  if (c->garbage) return 0;
-  if (c->size < 3) return 0;	// do not subsume binary clauses
+// Find clauses connected in the occurrence lists 'occs' which subsume the
+// candidate clause 'c' given as first argument.  If this is the case the
+// clause is subsumed and the result is positive.   If the clause was
+// strengthened the result is negative.  Otherwise the candidate clause
+// can not be subsumed nor strengthened and zero is returned.
 
-  // Redundant and extended clauses are subject to being recycled in
-  // 'reduce' and thus not checked for being forward subsumed here.
-  //
-  if (c->redundant && c->extended) return 0;
-
-  // Find literal in 'c' with smallest watch list.
-  //
-  const const_literal_iterator end = c->end ();
-  size_t minsize = 0;
-  int minlit = 0;
-  for (const_literal_iterator i = c->begin (); i != end; i++) {
-    int lit = *i;
-    size_t size = watches (lit).size ();
-    if (minlit && size >= minsize) continue;
-    minlit = lit, minsize = size;
-  }
-  if (minsize > (size_t) opts.subsumelim) return 0;
+inline int Internal::subsume (Clause * c, vector<Clause*> * occs) {
 
   stats.subtried++;
   LOG (c, "trying to subsume");
-  LOG ("checking %ld clauses watching %d", (long) minsize, minlit);
 
   mark (c);
 
-  // Go over the clauses of the watched literal with less watches.
-  //
-  Watches & ws = watches (minlit);
   Clause * d = 0;
   int flipped = 0;
-  for (const_watch_iterator i = ws.begin (); !d && i != ws.end (); i++)
-    if (i->clause != c &&          // ignore starting clause of course
-        i->size <= c->size &&      // smaller or identically sized
-	marked (i->blit) > 0 &&    // blocking literal has to in 'c'
-	(flipped = subsume_check (i->clause)))
-      d = i->clause;
+  const const_literal_iterator end = c->end ();
+  for (const_literal_iterator i = c->begin (); !d && i != end; i++) {
+    int lit = *i;
+    vector<Clause*> & os = occs[lit];
+    for (const_clause_iterator j = os.begin (); !d && j != os.end (); j++) {
+      Clause * e = *j;
+      assert (e != c);
+      assert (e->size <= c->size);
+      flipped = subsume_check (e);
+      if (flipped &&
+	  flipped != INT_MIN &&
+	  (!opts.strengthen || var (flipped).reason == c)) {
+	flipped = 0;
+      }
+      if (flipped) d = e; // ... and thus leave both loops.
+    }
+  }
 
   unmark (c);
 
   if (flipped == INT_MIN) {
-    stats.subsumed++;
     LOG (d, "subsuming");
-    LOG (c, "subsumed");
-    if (c->redundant) stats.subred++; else stats.subirr++;
-    mark_garbage (c);
-    if (c->redundant || !d->redundant) return 1;
-
-    LOG ("turning redundant subsuming clause into irredundant clause");
-    d->redundant = false;
-    stats.irredundant++;
-    assert (stats.redundant);
-    stats.redundant--;
-  } else if (flipped && opts.strengthen && var (flipped).reason != c) {
-    LOG (d, "self-subsuming");
+    subsume_clause (c, d);
+    return 1;
+  }
+  
+  if (flipped) {
+    LOG (d, "strengthening");
     strengthen_clause (c, -flipped);
-  } else return 0;
-
-  return 1;
+    return -1;
+  }
+  
+  return 0;
 }
 
-void Internal::subsume () {
+/*------------------------------------------------------------------------*/
 
-  long check = opts.subsumeffort * inc.subsume;
+void Internal::subsume () {
 
   inc.subsume += opts.subsumeinc;
   lim.subsume = stats.conflicts + inc.subsume;
@@ -189,21 +212,74 @@ void Internal::subsume () {
 
   START (subsume);
 
-  size_t start = subnext;
-  long tried = 0, subsumed = 0;
-  int round = 0;
+  // Allocate schedule and occurrence lists.
+  //
+  vector<Clause*> schedule;
+  vector<Clause*> * occs;
+  NEW (occs, vector<Clause*>, 2*max_var+1);
+  occs += max_var;
 
-  while (tried < check) {
-    if (subnext >= clauses.size ()) subnext = 0;
-    if (subnext == start && round++) break;
-    Clause * c = clauses[subnext++];
-    const int tmp = subsume (c);
-    if (tmp > 0) subsumed++;
-    if (tmp) tried++;
+  // Determine candidate clauses and sort them by size.
+  //
+  const_clause_iterator i;
+  for (i = clauses.begin (); i != clauses.end (); i++) {
+    Clause * c = *i;
+    if (c->garbage) continue;
+    if (c->redundant && c->extended) continue;
+    schedule.push_back (c);
+  }
+  sort (schedule.begin (), schedule.end (), smaller_size ());
+
+  // Now go over the scheduled clauses in the order of increasing size and
+  // try to forward subsume and strengthen them. Forward means find smaller
+  // or same size clauses which subsume or might strengthen the candidate.
+  // After the candidate has been processed connect its literals.
+
+  long subsumed = 0, strengthened = 0;
+
+  for (i = schedule.begin (); i != schedule.end (); i++) {
+    Clause * c = *i;
+
+    // First try to subsume or strengthen this candidate clause.
+    //
+    const int tmp = subsume (c, occs);
+    if (tmp > 0) { subsumed++; continue; }
+    if (tmp < 0) strengthened++;
+
+    // If not subsumed connect smallest occurring literal.
+    //
+    int minlit = 0;
+    size_t minsize = 0;
+    const const_literal_iterator end = c->end ();
+    const_literal_iterator j;
+    for (j = c->begin (); j != end; j++) {
+      const int lit = *j;
+      const size_t size = occs[lit].size ();
+      if (minlit && minsize <= size) continue;
+      minlit = lit, minsize = size;
+    }
+
+    // Unless this smallest occurring literal occurs too often.
+    //
+    if (minsize > (size_t) opts.subsumelim) continue;
+
+    LOG (c, "watching %d with %ld occurrences", minlit, (long) minsize);
+    occs[minlit].push_back (c);
   }
 
-  VRB ("subsumed %ld ouf of %ld tried clauses %.2f",
-    subsumed, tried, percent (subsumed, tried));
+  // Compute memory usage and release occurrence lists.
+  //
+  size_t bytes = VECTOR_BYTES (schedule);
+  for (int lit = -max_var; lit <= max_var; lit++)
+    bytes += VECTOR_BYTES (occs[lit]);
+  inc_bytes (bytes);
+  dec_bytes (bytes);
+  occs -= max_var;
+  DEL (occs, vector<int>, 2*max_var+1);
+
+  VRB ("subsumed %ld strengthened %ld of %ld clauses %.2f%%",
+    subsumed, strengthened, (long) schedule.size (),
+    percent (subsumed + strengthened, schedule.size ()));
 
   report ('s');
   STOP (subsume);

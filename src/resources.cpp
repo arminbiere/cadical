@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "macros.hpp"
 
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -24,20 +25,17 @@ void Internal::dec_bytes (size_t bytes) {
   stats.bytes.total.current -= bytes;
 }
 
-#define VECTOR_BYTES(V) \
-  res += V.capacity () * sizeof (V[0])
-
 size_t Internal::vector_bytes () {
   size_t res = 0;
-  VECTOR_BYTES (original);
-  VECTOR_BYTES (clause);
-  VECTOR_BYTES (trail);
-  VECTOR_BYTES (analyzed);
-  VECTOR_BYTES (levels);
-  VECTOR_BYTES (minimized);
-  VECTOR_BYTES (resolved);
-  VECTOR_BYTES (clauses);
-  VECTOR_BYTES (levels);
+  res += VECTOR_BYTES (original);
+  res += VECTOR_BYTES (clause);
+  res += VECTOR_BYTES (trail);
+  res += VECTOR_BYTES (analyzed);
+  res += VECTOR_BYTES (levels);
+  res += VECTOR_BYTES (minimized);
+  res += VECTOR_BYTES (resolved);
+  res += VECTOR_BYTES (clauses);
+  res += VECTOR_BYTES (levels);
   return res;
 }
 

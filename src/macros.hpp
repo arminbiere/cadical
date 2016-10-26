@@ -26,6 +26,9 @@ do { \
 #define NEW(P,T,N) \
 do { (P) = new T[N], internal->inc_bytes ((N) * sizeof (T)); } while (0)
 
+#define DEL(P,T,N) \
+do { delete [] (P), internal->dec_bytes ((N) * sizeof (T)); } while (0)
+
 #define ENLARGE(P,T,O,N) \
 do { \
   T * TMP = (P); \
@@ -34,6 +37,8 @@ do { \
   internal->dec_bytes ((O) * sizeof (T)); \
   delete [] TMP; \
 } while (0)
+
+#define VECTOR_BYTES(V) ((V).capacity () * sizeof ((V)[0]))
 
 /*------------------------------------------------------------------------*/
 

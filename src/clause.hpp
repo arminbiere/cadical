@@ -127,6 +127,13 @@ struct resolved_earlier {
   }
 };
 
+struct smaller_size {
+  bool operator () (const Clause * a, const Clause * b) {
+    return a->size < b->size;
+  }
+};
+
+
 /*------------------------------------------------------------------------*/
 
 inline size_t Clause::bytes () const {

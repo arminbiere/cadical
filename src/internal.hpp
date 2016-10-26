@@ -89,7 +89,6 @@ class Internal {
   AVG jump_avg;                 // average back jump level
   Limit lim;                    // limits for various phases
   Inc inc;                      // increments for limits for various phases
-  size_t subnext;               // next clause index to try to subsume
   Proof * proof;                // trace clausal proof if non zero
   Options opts;                 // run-time options
   Stats stats;                  // statistics
@@ -282,9 +281,10 @@ class Internal {
   // Regular forward subsumption checking.
   //
   bool subsuming ();
+  void subsume_clause (Clause * subsumed, Clause * subsuming);
   void strengthen_clause (Clause *, int);
   int subsume_check (Clause *);
-  int subsume (Clause *);
+  int subsume (Clause *, vector<Clause*> * occs);
   void subsume ();
 
   // Part on picking the next decision in 'decide.cpp'.
