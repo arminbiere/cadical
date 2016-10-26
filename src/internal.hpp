@@ -59,7 +59,7 @@ class Internal {
 
   bool unsat;                   // empty clause found or learned
   bool iterating;               // report learned unit (iteration)
-  bool clashing_unit;           // found clashing units in 'parse_dimacs'
+  bool clashing;                // found clashing units in 'parse_dimacs'
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // maximum variable index
   int level;                    // decision level ('control.size () - 1')
@@ -88,7 +88,7 @@ class Internal {
   AVG jump_avg;                 // average back jump level
   Limit lim;                    // limits for various phases
   Inc inc;                      // increments for limits for various phases
-  size_t subsume_next;          // next clause index to try to subsume
+  size_t subnext;               // next clause index to try to subsume
   Proof * proof;                // trace clausal proof if non zero
   Options opts;                 // run-time options
   Stats stats;                  // statistics

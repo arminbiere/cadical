@@ -123,7 +123,7 @@ void Internal::add_new_original_clause () {
     else if (tmp < 0) {
       if (!unsat) {
         MSG ("parsed clashing unit");
-        clashing_unit = true;
+        clashing = true;
       } else LOG ("original clashing unit produces another inconsistency");
     } else LOG ("original redundant unit");
   } else watch_clause (new_clause (false));

@@ -189,14 +189,14 @@ void Internal::subsume () {
 
   START (subsume);
 
-  size_t start = subsume_next;
+  size_t start = subnext;
   long tried = 0, subsumed = 0;
   int round = 0;
 
   while (tried < check) {
-    if (subsume_next >= clauses.size ()) subsume_next = 0;
-    if (subsume_next == start && round++) break;
-    Clause * c = clauses[subsume_next++];
+    if (subnext >= clauses.size ()) subnext = 0;
+    if (subnext == start && round++) break;
+    Clause * c = clauses[subnext++];
     const int tmp = subsume (c);
     if (tmp > 0) subsumed++;
     if (tmp) tried++;

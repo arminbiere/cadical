@@ -12,7 +12,7 @@ Internal::Internal ()
 :
   unsat (false),
   iterating (false),
-  clashing_unit (false),
+  clashing (false),
   vsize (0),
   max_var (0),
   level (0),
@@ -27,7 +27,7 @@ Internal::Internal ()
   wtab (0),
   conflict (0),
   propagated (0),
-  subsume_next (0),
+  subnext (0),
   proof (0),
   opts (this),
   profiles (this),
@@ -162,7 +162,7 @@ void Internal::init_solving () {
 int Internal::solve () {
   init_solving ();
   SECTION ("solving");
-  if (clashing_unit) { learn_empty_clause (); return 20; }
+  if (clashing) { learn_empty_clause (); return 20; }
   int res = search ();
   if (res == 10) check (&Internal::val);
   return res;

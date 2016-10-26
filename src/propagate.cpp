@@ -29,7 +29,7 @@ void Internal::assign (int lit, Clause * reason, int other) {
   // the order of 5%.  Even though this is a rather low-level optimization
   // it is confined to the next line (and these comments), so we keep it.
   //
-  __builtin_prefetch (&*(watches (-lit).begin ()), 1);
+  if (opts.prefetch) __builtin_prefetch (&*(watches (-lit).begin ()), 1);
 }
 
 // The 'propagate' function is usually the hot-spot of a CDCL SAT solver.
