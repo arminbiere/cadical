@@ -74,8 +74,6 @@ void Internal::deallocate_clause (Clause * c) {
 
 void Internal::delete_clause (Clause * c) {
   LOG (c, "delete");
-  if (c->redundant) assert (stats.redundant),   stats.redundant--;
-  else              assert (stats.irredundant), stats.irredundant--;
   stats.reduced++;
   size_t bytes = c->bytes ();
   stats.collected += bytes;

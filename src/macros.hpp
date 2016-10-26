@@ -39,14 +39,9 @@ do { \
 
 // Compact message code.
 
-#define MSG(ARGS...) \
-do { Message::print (internal, 0, ##ARGS); } while (0)
-
-#define VRB(ARGS...) \
-do { Message::print (internal, 1, ##ARGS); } while (0)
-
-#define SECTION(ARGS...) \
-do { Message::section (internal, ##ARGS); } while (0)
+#define MSG(ARGS...) Message::print (internal, 0, ##ARGS)
+#define VRB(ARGS...) Message::print (internal, 1, ##ARGS)
+#define SECTION(ARGS...) Message::section (internal, ##ARGS)
 
 /*------------------------------------------------------------------------*/
 

@@ -32,7 +32,7 @@ inline bool Internal::eagerly_subsume_last_learned (Clause * c) {
   if (found < clause.size ()) return false;
   LOG (c, "learned clauses eagerly subsumes");
   assert (c->redundant);
-  c->garbage = true;
+  mark_garbage (c);
   stats.sublast++;
   return true;
 }
@@ -163,7 +163,7 @@ inline int Internal::subsume (Clause * c) {
     LOG (d, "subsuming");
     LOG (c, "subsumed");
     if (c->redundant) stats.subred++; else stats.subirr++;
-    c->garbage = true;
+    mark_garbage (c);
     if (c->redundant || !d->redundant) return 1;
 
     LOG ("turning redundant subsuming clause into irredundant clause");
@@ -181,7 +181,7 @@ inline int Internal::subsume (Clause * c) {
 
 void Internal::subsume () {
 
-  long check = 2*inc.subsume;
+  long check = opts.subsumeffort * inc.subsume;
 
   inc.subsume += opts.subsumeinc;
   lim.subsume = stats.conflicts + inc.subsume;

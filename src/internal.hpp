@@ -30,6 +30,7 @@ using namespace std;
 #include "util.hpp"
 #include "limit.hpp"
 #include "inc.hpp"
+#include "clause.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -209,6 +210,19 @@ class Internal {
   bool tautological_clause ();
   void add_new_original_clause ();
   Clause * new_learned_clause (int glue);
+
+  // We want to eagerly update statistics as soon clauses are marked
+  // garbage.  Otherwise 'report' for instance gives wrong numbers after
+  // 'subsume' before the next 'reduce'.  Thus we factored out marking and
+  // accounting for garbage clauses.  Note that we do not update allocated
+  // bytes statistics at this point, but wait until the next 'collect'.
+  //
+  void mark_garbage (Clause * c) {
+    assert (!c->garbage);
+    if (c->redundant) assert (stats.redundant), stats.redundant--;
+    else assert (stats.irredundant), stats.irredundant--;
+    c->garbage = true;
+  }
 
   // Forward reasoning through propagation in 'propagate.cpp'.
   //

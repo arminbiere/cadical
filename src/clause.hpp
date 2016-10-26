@@ -78,12 +78,13 @@ public:
   unsigned reason:1;    // reason / antecedent clause can not be collected
   unsigned moved:1;     // moved during garbage collector ('copy' valid)
 
-  // This is the 'glue' = 'glucose level' = 'LBD' of a redundant clause.
-  // We actually only use 'CLAUSE_LD_MAX_GLUE-1' bits since the field is
-  // 'signed' to avoid surprises due to 'unsigned' versus 'sign' semantics.
-  // Also note that 'C' does not explicitly define 'signedness' of 'int' bit
-  // fields and thus we explicitly have to use 'signed' here (on an IBM main
-  // frame or on Sparc 'int a:1' might be 'unsigned').
+  // This is the 'glue' = 'glucose level' = 'LBD' of a redundant clause.  We
+  // actually only use 'CLAUSE_LD_MAX_GLUE-1' bits since the field is
+  // 'signed' to avoid surprises due to 'unsigned' vs. 'signed' semantics.
+  //
+  // Another issue is that 'C' does not explicitly define 'signedness' of
+  // 'int' bit fields and thus we explicitly have to use 'signed' here (on
+  // an IBM main frame or on Sparc 'int a:1' might be 'unsigned').
   //
   signed int glue : LD_MAX_GLUE;
 

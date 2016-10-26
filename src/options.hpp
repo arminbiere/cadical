@@ -34,6 +34,7 @@ OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
 OPTION(strengthen,      bool,   1, 0,  1, "strengthen during subsume") \
 OPTION(sublast,          int,   5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,   1, 0,  1, "enable clause subsumption") \
+OPTION(subsumeffort,  double,  10, 1,1e9, "checked clauses wrt interval") \
 OPTION(subsumeinc,       int,1000, 1,1e9, "interval in conflicts") \
 OPTION(subsumeinit,      int,5000, 0,1e9, "intial subsume limit") \
 OPTION(subsumelim,       int, 100, 0,1e9, "watch list length limit") \

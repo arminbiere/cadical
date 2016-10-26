@@ -69,7 +69,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   const_clause_iterator target = stack.begin () + stack.size ()/2;
   for (const_clause_iterator i = stack.begin (); i != target; i++) {
     LOG (*i, "marking useless to be collected");
-    (*i)->garbage = true;
+    mark_garbage (*i);
   }
 }
 

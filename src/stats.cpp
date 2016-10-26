@@ -44,19 +44,18 @@ void Stats::print (Internal * internal) {
     stats.subsumed, relative (stats.subtried, stats.subsumed));
   MSG ("backward:      %15ld   %10.2f %%  per conflict",
     stats.sublast, percent (stats.sublast, stats.conflicts));
-  MSG ("strengthened:  %15ld   %10.2f    tried per strengthened",
-    stats.strengthened,
-    relative (stats.subtried, stats.strengthened));
-if (internal->opts.verbose) {
-  MSG ("  subirr:      %15ld   %10.2f %%  of subsumed",
-    stats.subirr, percent (stats.subirr, stats.subsumed));
-  MSG ("  subred:      %15ld   %10.2f %%  of subsumed",
-    stats.subred, percent (stats.subred, stats.subsumed));
-  MSG ("  subtried:    %15ld   %10.2f    per conflict",
-    stats.subtried, relative (stats.subtried, stats.conflicts));
-  MSG ("  subchecks:   %15ld   %10.2f    per tried",
-    stats.subchecks, relative (stats.subchecks, stats.subtried));
-}
+  MSG ("strengthened:  %15ld   %10.2f %%  per subsumed",
+    stats.strengthened, percent (stats.strengthened, stats.subsumed));
+  if (internal->opts.verbose) {
+    MSG ("  subirr:      %15ld   %10.2f %%  of subsumed",
+      stats.subirr, percent (stats.subirr, stats.subsumed));
+    MSG ("  subred:      %15ld   %10.2f %%  of subsumed",
+      stats.subred, percent (stats.subred, stats.subsumed));
+    MSG ("  subtried:    %15ld   %10.2f    per conflict",
+      stats.subtried, relative (stats.subtried, stats.conflicts));
+    MSG ("  subchecks:   %15ld   %10.2f    per tried",
+      stats.subchecks, relative (stats.subchecks, stats.subtried));
+  }
   MSG ("searched:      %15ld   %10.2f    per decision",
     stats.searched, relative (stats.searched, stats.decisions));
   MSG ("bumped:        %15ld   %10.2f    per conflict",
