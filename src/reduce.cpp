@@ -51,7 +51,8 @@ struct less_usefull {
 void Internal::mark_useless_redundant_clauses_as_garbage () {
   vector<Clause*> stack;
   stack.reserve (stats.redundant);
-  for (const_clause_iterator i = clauses.begin (); i != clauses.end (); i++) {
+  const_clause_iterator end = clauses.end (), i;
+  for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (!c->redundant) continue;            // keep irredundant
     if (c->reason) continue;                // need to keep reasons
@@ -71,6 +72,14 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     LOG (*i, "marking useless to be collected");
     mark_garbage (*i);
   }
+  lim.keptsize = lim.keptglue = 0;
+  end = stack.end ();
+  for (i = target; i != end; i++) {
+    Clause * c = *i;
+    if (c->size > lim.keptsize) lim.keptsize = c->size;
+    if (c->glue > lim.keptglue) lim.keptglue = c->glue;
+  }
+  VRB ("maximum kept size %d glue %d", lim.keptsize, lim.keptglue);
 }
 
 /*------------------------------------------------------------------------*/

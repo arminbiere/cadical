@@ -64,10 +64,10 @@ class Internal {
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // maximum variable index
   int level;                    // decision level ('control.size () - 1')
-  signed char * vals;           // partial assignment    [-max_var,max_var]
-  signed char * marks;          // literal marks         [1,max_var]
-  signed char * phases;         // saved last assignment [1,max_var]
-  signed char * solution;       // as vals for debugging [-max_var,max_var]
+  signed char * vals;           // assignment       [-max_var,max_var]
+  signed char * marks;          // literal marks    [1,max_var]
+  signed char * phases;         // saved assignment [1,max_var]
+  signed char * solution;       // for debugging    [-max_var,max_var]
   Var * vtab;                   // variable table
   Link * ltab;                  // table of links for decision queue
   Flags * ftab;                 // seen, poison, minimized flags table
@@ -77,10 +77,10 @@ class Internal {
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
   size_t propagated;            // next position on trail to propagate
   vector<int> trail;            // assigned literals
-  vector<int> clause;           // temporary clause in parsing & learning
-  vector<int> levels;           // decision levels of 1st UIP clause
+  vector<int> clause;           // temporary in parsing & learning
+  vector<int> levels;           // decision levels in learned clause
   vector<int> analyzed;         // analyzed literals in 'analyze'
-  vector<int> minimized;        // marked removable or poison in 'minmize'
+  vector<int> minimized;        // marked removable or poison in 'minimize'
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
   vector<Clause*> resolved;     // large clauses in 'analyze'

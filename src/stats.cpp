@@ -40,7 +40,7 @@ void Stats::print (Internal * internal) {
     learned, relative (learned, stats.conflicts));
   MSG ("minimized:     %15ld   %10.2f %%  of 1st-UIP-literals",
     stats.minimized, percent (stats.minimized, stats.learned));
-  MSG ("forward:       %15ld   %10.2f    tried per subsumed",
+  MSG ("forward:       %15ld   %10.2f    tried per forward",
     stats.subsumed, relative (stats.subtried, stats.subsumed));
   MSG ("backward:      %15ld   %10.2f %%  per conflict",
     stats.sublast, percent (stats.sublast, stats.conflicts));

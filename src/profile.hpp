@@ -33,6 +33,7 @@ PROFILE(propagate,4) \
 PROFILE(reduce,2) \
 PROFILE(restart,2) \
 PROFILE(search,1) \
+PROFILE(simplify,1) \
 PROFILE(sublast,4) \
 PROFILE(subsume,2) \
 

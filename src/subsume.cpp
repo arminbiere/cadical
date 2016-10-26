@@ -210,6 +210,8 @@ void Internal::subsume () {
   lim.subsume = stats.conflicts + inc.subsume;
   if (clauses.empty ()) return;
 
+  STOP (search);
+  START (simplify);
   START (subsume);
 
   // Allocate schedule and occurrence lists.
@@ -225,7 +227,8 @@ void Internal::subsume () {
   for (i = clauses.begin (); i != clauses.end (); i++) {
     Clause * c = *i;
     if (c->garbage) continue;
-    if (c->redundant && c->extended) continue;
+    if (c->redundant && c->extended &&
+	(c->size > lim.keptsize || c->glue > lim.keptglue)) continue;
     schedule.push_back (c);
   }
   sort (schedule.begin (), schedule.end (), smaller_size ());
@@ -238,13 +241,16 @@ void Internal::subsume () {
   long subsumed = 0, strengthened = 0;
 
   for (i = schedule.begin (); i != schedule.end (); i++) {
+
     Clause * c = *i;
 
     // First try to subsume or strengthen this candidate clause.
     //
-    const int tmp = subsume (c, occs);
-    if (tmp > 0) { subsumed++; continue; }
-    if (tmp < 0) strengthened++;
+    if (c->size > 2) {
+      const int tmp = subsume (c, occs);
+      if (tmp > 0) { subsumed++; continue; }
+      if (tmp < 0) strengthened++;
+    }
 
     // If not subsumed connect smallest occurring literal.
     //
@@ -283,6 +289,8 @@ void Internal::subsume () {
 
   report ('s');
   STOP (subsume);
+  STOP (simplify);
+  START (search);
 }
 
 };
