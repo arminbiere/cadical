@@ -261,6 +261,7 @@ class Internal {
   bool reducing ();
   void protect_reasons ();
   void unprotect_reasons ();
+  bool clause_root_level_satisfied (Clause *);
   int clause_contains_fixed_literal (Clause *);
   void flush_falsified_literals (Clause *);
   void mark_satisfied_clauses_as_garbage ();

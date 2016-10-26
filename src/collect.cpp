@@ -9,6 +9,15 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
+bool Internal::clause_root_level_satisfied (Clause * c) {
+  const const_literal_iterator end = c->end ();
+  const_literal_iterator i = c->begin ();
+  while (i != end)
+    if (fixed (*i++) > 0)
+      return true;
+  return false;
+}
+
 // Returns 1 if the given clause is root level satisfied or -1 if it is not
 // root level satisfied but contains a root level falsified literal and 0
 // otherwise, if it does not contain a root level fixed literal.

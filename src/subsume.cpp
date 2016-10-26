@@ -225,6 +225,7 @@ void Internal::subsume () {
   for (i = clauses.begin (); i != clauses.end (); i++) {
     Clause * c = *i;
     if (c->garbage) continue;
+    if (clause_root_level_satisfied (c)) { mark_garbage (c); continue; }
     if (c->redundant && c->extended &&
 	(c->size > lim.keptsize || c->glue > lim.keptglue)) continue;
     schedule.push_back (c);
