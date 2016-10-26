@@ -97,6 +97,7 @@ void Internal::reduce () {
   if (inc.redinc > 1) inc.redinc--;
   lim.reduce = stats.conflicts + inc.reduce;
   lim.resolved = stats.resolved;
+  lim.redlast = stats.conflicts;
   report ('-');
   STOP (reduce);
 }

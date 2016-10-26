@@ -37,7 +37,7 @@ OPTION(subsume,         bool,   1, 0,  1, "enable clause subsumption") \
 OPTION(subsumeffort,  double,  10, 1,1e9, "checked clauses wrt interval") \
 OPTION(subsumeinc,       int, 1e4, 1,1e9, "interval in conflicts") \
 OPTION(subsumeinit,      int, 1e4, 0,1e9, "intial subsume limit") \
-OPTION(subsumelim,       int,  20, 0,1e9, "watch list length limit") \
+OPTION(subsumelim,       int, 100, 0,1e9, "watch list length limit") \
 OPTION(verbose,         bool,   0, 0,  1, "more verbose messages") \
 OPTION(witness,         bool,   1, 0,  1, "print witness") \
 

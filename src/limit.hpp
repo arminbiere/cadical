@@ -10,12 +10,15 @@ struct Limit {
   long restart;   // conflict limit for next 'restart'
   long subsume;   // next subsumption check
 
+  long redlast;   // last reduced at this conflict
+
   int fixed;      // number of units in 'collect'
   int keptglue;   // maximum kept glue in 'reduce'
   int keptsize;   // maximum kept size in 'reduce'
 
   Limit () : 
     reduce (0), resolved (0), restart (0), subsume (0),
+    redlast (0),
     fixed (0), keptglue (0), keptsize (0)
   { }
 };

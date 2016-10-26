@@ -78,6 +78,7 @@ void Internal::eagerly_subsume_last_learned () {
 
 bool Internal::subsuming () {
   if (!opts.subsume) return false;
+  if (stats.conflicts > lim.redlast) return false;
   return stats.conflicts >= lim.subsume;
 }
 
