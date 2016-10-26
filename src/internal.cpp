@@ -17,9 +17,9 @@ Internal::Internal ()
   max_var (0),
   level (0),
   vals (0),
+  solution (0),
   marks (0),
   phases (0),
-  solution (0),
   vtab (0),
   ltab (0),
   ftab (0),
@@ -47,9 +47,9 @@ Internal::~Internal () {
   if (ftab) delete [] ftab;
   if (btab) delete [] btab;
   if (vals) vals -= vsize, delete [] vals;
+  if (solution) solution -= vsize, delete [] solution;
   if (marks) delete [] marks;
   if (phases) delete [] phases;
-  if (solution) delete [] solution;
 }
 
 /*------------------------------------------------------------------------*/

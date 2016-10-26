@@ -65,9 +65,9 @@ class Internal {
   int max_var;                  // maximum variable index
   int level;                    // decision level ('control.size () - 1')
   signed char * vals;           // assignment       [-max_var,max_var]
-  signed char * marks;          // literal marks    [1,max_var]
-  signed char * phases;         // saved assignment [1,max_var]
   signed char * solution;       // for debugging    [-max_var,max_var]
+  signed char * marks;          // signed marks     [1,max_var]
+  signed char * phases;         // saved assignment [1,max_var]
   Var * vtab;                   // variable table
   Link * ltab;                  // table of links for decision queue
   Flags * ftab;                 // seen, poison, minimized flags table
@@ -75,12 +75,12 @@ class Internal {
   Queue queue;                  // variable move to front decision queue
   Watches * wtab;               // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
-  size_t propagated;            // next position on trail to propagate
+  size_t propagated;            // next trail position to propagate
   vector<int> trail;            // assigned literals
   vector<int> clause;           // temporary in parsing & learning
   vector<int> levels;           // decision levels in learned clause
   vector<int> analyzed;         // analyzed literals in 'analyze'
-  vector<int> minimized;        // marked removable or poison in 'minimize'
+  vector<int> minimized;        // removable or poison in 'minimize'
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
   vector<Clause*> resolved;     // large clauses in 'analyze'
@@ -88,7 +88,7 @@ class Internal {
   EMA slow_glue_avg;            // slow exponential moving average
   AVG jump_avg;                 // average back jump level
   Limit lim;                    // limits for various phases
-  Inc inc;                      // increments for limits for various phases
+  Inc inc;                      // limit increments
   Proof * proof;                // trace clausal proof if non zero
   Options opts;                 // run-time options
   Stats stats;                  // statistics
