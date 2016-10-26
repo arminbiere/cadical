@@ -301,8 +301,12 @@ class Internal {
 
   // Built in profiling in 'profile.cpp'.
   //
-  void start_profiling (Profile * p);
-  void stop_profiling (Profile * p);
+  void start_profiling (Profile * p, double);
+  void stop_profiling (Profile * p, double);
+
+  void start_profiling (Profile * p) { start_profiling (p, seconds ()); }
+  void stop_profiling (Profile * p) { stop_profiling (p, seconds ()); }
+
   void update_all_timers (double now);
   void print_profile (double now);
 

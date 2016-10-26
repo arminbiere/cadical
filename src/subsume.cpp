@@ -210,9 +210,7 @@ void Internal::subsume () {
   lim.subsume = stats.conflicts + inc.subsume;
   if (clauses.empty ()) return;
 
-  STOP (search);
-  START (simplify);
-  START (subsume);
+  SWITCH_AND_START (search, simplify, subsume);
 
   // Allocate schedule and occurrence lists.
   //
@@ -288,9 +286,8 @@ void Internal::subsume () {
     percent (subsumed + strengthened, schedule.size ()));
 
   report ('s');
-  STOP (subsume);
-  STOP (simplify);
-  START (search);
+
+  STOP_AND_SWITCH (subsume, simplify, search);
 }
 
 };

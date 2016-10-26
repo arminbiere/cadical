@@ -16,15 +16,15 @@ Profiles::Profiles (Internal * s)
 {
 }
 
-void Internal::start_profiling (Profile * p) {
-  timers.push_back (Timer (seconds (), p));
+void Internal::start_profiling (Profile * p, double s) {
+  timers.push_back (Timer (s, p));
 }
 
-void Internal::stop_profiling (Profile * p) {
+void Internal::stop_profiling (Profile * p, double s) {
   assert (!timers.empty ());
   Timer & t = timers.back ();
   assert (p == t.profile), (void) p;
-  t.update (seconds ());
+  t.update (s);
   timers.pop_back ();
 }
 
