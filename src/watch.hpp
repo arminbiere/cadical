@@ -14,7 +14,7 @@ struct Watch {
   int size;             // same as 'clause->size'
   Clause * clause;
   Watch (int b, Clause * c, int s) : blit (b), size (s), clause (c) {
-    assert (c->size == s);
+    assert (b), assert (c), assert (c->size == s);
   }
   Watch () { }
 };

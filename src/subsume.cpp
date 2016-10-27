@@ -96,7 +96,7 @@ bool Internal::subsuming () {
 // strengthened and as a result the negation of the literal which can be
 // removed is returned.
 
-inline int Internal::subsume_check (Clause * c) {
+inline int Internal::subsume_check (Clause * c, Clause * d) {
   if (c->garbage) return false;
   stats.subchecks++;
   const const_literal_iterator end = c->end ();
@@ -108,7 +108,39 @@ inline int Internal::subsume_check (Clause * c) {
     if (flipped) return 0;
     flipped = lit;
   }
-  return flipped ? flipped : INT_MIN;
+  if (!flipped) return INT_MIN;                   // subsumed!!
+  else if (!opts.strengthen) return 0;
+  else {
+    const int tmp = val (-flipped);   // 'flipped' occurs negated in 'd'.
+
+    // We can always remove a currently false literal since we assume we
+    // have fully propagated all assigned literals and thus '-flipped' can
+    // not be watched or if it is watched, the other watched literal in 'd'
+    // has to be true and we can even then simply remove '-flipped' from 'd'
+    // and replace it by an arbitrary literal (even if it is currently
+    // assigned to false).
+    //
+    assert (propagated == trail.size ());
+    if (tmp < 0) return flipped;                  // strengthen!!
+
+    // If the literal '-flipped' to be removed is true then make sure the
+    // clause 'd' to be strengthened is not the reason for '-flipped'.
+    // Otherwise we would produce an incorrect reason for '-flipped' by
+    // removing it from its original reason.
+    //
+    if (tmp > 0) {
+      if (var (flipped).reason == d) return 0;
+      return flipped;                             // strengthen!!
+    }
+
+    // Finally, if the literal '-flipped' is unassigned we have to make sure
+    // that it is not one of the two watched literals in 'd' unless we want
+    // to search for a replacement watch, which is pretty complicated.
+    assert (!tmp);
+    if (d->literals[0] == flipped) return 0;
+    if (d->literals[1] == flipped) return 0;
+    return flipped;                               // strengthen!!
+  }
 }
 
 /*------------------------------------------------------------------------*/
@@ -176,13 +208,8 @@ inline int Internal::subsume (Clause * c, vector<Clause*> * occs) {
       Clause * e = *j;
       assert (e != c);
       assert (e->size <= c->size);
-      flipped = subsume_check (e);
-      if (flipped &&
-	  flipped != INT_MIN &&
-	  (!opts.strengthen || var (flipped).reason == c)) {
-	flipped = 0;
-      }
-      if (flipped) d = e; // ... and thus leave both loops.
+      flipped = subsume_check (e, c);
+      if (flipped) d = e;                 // ... and leave both loops.
     }
   }
 
