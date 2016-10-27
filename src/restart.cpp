@@ -9,8 +9,11 @@ bool Internal::restarting () {
   if (!opts.restart) return false;
   if (level < 2) return false;
   if (stats.conflicts <= lim.restart) return false;
-  double s = slow_glue_avg, f = fast_glue_avg, l = opts.restartmargin * s;
-  LOG ("EMA learned glue slow %.2f fast %.2f limit %.2f", s, f, l);
+  double s, f;
+  if (opts.restartlevel) s = slow_jump_avg, f = fast_jump_avg;
+  else s = slow_glue_avg, f = fast_glue_avg;
+  double l = opts.restartmargin * s;
+  LOG ("EMA learned slow %.2f fast %.2f limit %.2f", s, f, l);
   return l <= f;
 }
 
