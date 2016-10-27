@@ -111,34 +111,8 @@ inline int Internal::subsume_check (Clause * c, Clause * d) {
   if (!flipped) return INT_MIN;                   // subsumed!!
   else if (!opts.strengthen) return 0;
   else {
-    const int tmp = val (-flipped);   // 'flipped' occurs negated in 'd'.
-
-    // We can always remove a currently false literal since we assume we
-    // have fully propagated all assigned literals and thus '-flipped' can
-    // not be watched or if it is watched, the other watched literal in 'd'
-    // has to be true and we can even then simply remove '-flipped' from 'd'
-    // and replace it by an arbitrary literal (even if it is currently
-    // assigned to false).
-    //
-    assert (propagated == trail.size ());
-    if (tmp < 0) return flipped;                  // strengthen!!
-
-    // If the literal '-flipped' to be removed is true then make sure the
-    // clause 'd' to be strengthened is not the reason for '-flipped'.
-    // Otherwise we would produce an incorrect reason for '-flipped' by
-    // removing it from its original reason.
-    //
-    if (tmp > 0) {
-      if (var (flipped).reason == d) return 0;
-      return flipped;                             // strengthen!!
-    }
-
-    // Finally, if the literal '-flipped' is unassigned we have to make sure
-    // that it is not one of the two watched literals in 'd' unless we want
-    // to search for a replacement watch, which is pretty complicated.
-    assert (!tmp);
-    if (d->literals[0] == flipped) return 0;
-    if (d->literals[1] == flipped) return 0;
+    if (d->literals[0] == -flipped) return 0;
+    if (d->literals[1] == -flipped) return 0;
     return flipped;                               // strengthen!!
   }
 }
@@ -148,7 +122,7 @@ inline int Internal::subsume_check (Clause * c, Clause * d) {
 // Candidate clause 'c' can be subsumed or strengthened.
 
 inline void
-Internal::subsume_clause (Clause * subsumed, Clause * subsuming) {
+Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
   stats.subsumed++;
   assert (subsuming->size <= subsumed->size);
   LOG (subsumed, "subsumed");
@@ -217,7 +191,7 @@ inline int Internal::subsume (Clause * c, vector<Clause*> * occs) {
 
   if (flipped == INT_MIN) {
     LOG (d, "subsuming");
-    subsume_clause (c, d);
+    subsume_clause (d, c);
     return 1;
   }
   

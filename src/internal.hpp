@@ -284,9 +284,9 @@ class Internal {
   // Regular forward subsumption checking.
   //
   bool subsuming ();
-  void subsume_clause (Clause * subsumed, Clause * subsuming);
   void strengthen_clause (Clause *, int);
-  int subsume_check (Clause *);
+  void subsume_clause (Clause * subsuming, Clause * subsumed);
+  int subsume_check (Clause * subsuming, Clause * subsumed);
   int subsume (Clause *, vector<Clause*> * occs);
   void subsume ();
 
