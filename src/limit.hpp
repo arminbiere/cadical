@@ -16,11 +16,9 @@ struct Limit {
 
   int decision_level_at_last_restart;
   long conflicts_at_last_restart;
+  long conflicts_at_last_reduce;
 
-  Limit () : 
-    reduce (0), resolved (0), restart (0), subsume (0),
-    fixed (0), keptglue (0), keptsize (0)
-  { }
+  Limit ();
 };
 
 };

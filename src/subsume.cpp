@@ -78,7 +78,7 @@ void Internal::eagerly_subsume_last_learned () {
 
 bool Internal::subsuming () {
   if (!opts.subsume) return false;
-  if (level) return false;
+  if (stats.conflicts != lim.conflicts_at_last_reduce) return false;
   return stats.conflicts >= lim.subsume;
 }
 
@@ -216,6 +216,10 @@ void Internal::subsume () {
   if (clauses.empty ()) return;
 
   SWITCH_AND_START (search, simplify, subsume);
+
+  // Otherwise lots of contracts fail.
+  //
+  backtrack ();
 
   // Allocate schedule and occurrence lists.
   //
