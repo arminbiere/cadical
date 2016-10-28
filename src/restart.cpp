@@ -28,15 +28,18 @@ void Internal::restart () {
   START (restart);
   stats.restarts++;
   LOG ("restart %ld", stats.restarts);
-  lim.lastlevel = level;
+  lim.decision_level_at_last_restart = level;
+  long last = stats.conflicts - lim.conflicts_at_last_restart;
+  UPDATE_AVG (restartint, last);
   backtrack (reuse_trail ());
-  int delta = opts.restartint;
+  int next = opts.restartint;
   if (opts.restartscale) {
-    for (int i = 0; i < opts.restartscale; i++) delta *= stable;
-    if (delta < 1) delta = 1;
-    if (delta > opts.restartscalemax) delta = opts.restartscalemax;
+    for (int i = 0; i < opts.restartscale; i++) next *= restarteff;
+    if (next < 1) next = 1;
+    if (next > opts.restartscalemax) next = opts.restartscalemax;
   }
-  lim.restart = stats.conflicts + delta;
+  lim.conflicts_at_last_restart = stats.conflicts;
+  lim.restart = stats.conflicts + next;
   report ('r', 1);
   STOP (restart);
 }

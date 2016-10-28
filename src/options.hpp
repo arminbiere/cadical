@@ -17,12 +17,12 @@ OPTION(bumptrail,        int,   1, 0,  3, "0=no,1=heur,2=sum,3=only") \
 OPTION(bumptrailthresh,double, 67, 0,100, "heuristic threshold") \
 OPTION(bumptrailscale,double, 0.5, 0,  1, "heuristic scaling") \
 OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
-OPTION(emagluefast,   double,3e-2, 0,  1, "EMA alpha fast glue") \
-OPTION(emaglueslow,   double,1e-5, 0,  1, "EMA alpha slow glue") \
-OPTION(emajumpfast,   double,3e-2, 0,  1, "EMA alpha fast jump level") \
-OPTION(emajumpslow,   double,1e-5, 0,  1, "EMA alpha slow jump level") \
-OPTION(emasize,       double,1e-5, 0,  1, "EMA alpha size") \
-OPTION(emastable,     double,1e-3, 0,  1, "EMA alpha restart stable") \
+OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast glue") \
+OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha slow glue") \
+OPTION(emajump,       double,1e-5, 0,  1, "alpha slow jump level") \
+OPTION(emarestartint, double,1e-5, 0,  1, "alhpa actual restart interval") \
+OPTION(emarestarteff, double,1e-3, 0,  1, "alpha restart effectiveness") \
+OPTION(emasize,       double,1e-5, 0,  1, "alpha learned clause size") \
 OPTION(keepglue,         int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,         int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(leak,            bool,   1, 0,  1, "leak solver memory") \

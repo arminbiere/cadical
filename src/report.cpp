@@ -40,7 +40,7 @@ Report::Report (const char * h, int precision, int min, double value) :
 /*     HEADER, PRECISION, MIN, VALUE */ \
 REPORT("seconds",      2, 5, seconds ()) \
 REPORT("MB",           0, 2, current_bytes () / (double)(1l<<20)) \
-REPORT("level",        1, 4, slow_jump_avg) \
+REPORT("level",        1, 4, jump_avg) \
 REPORT("reductions",   0, 2, stats.reductions) \
 REPORT("restarts",     0, 4, stats.restarts) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
@@ -50,8 +50,8 @@ REPORT("size",         1, 4, size_avg) \
 REPORT("irredundant",  0, 4, stats.irredundant) \
 REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
-REPORT("stable",       2, 4, stable) \
-
+REPORT("restarteff",   2, 4, restarteff) \
+REPORT("restartint",   1, 4, restartint) \
 
 #if 0
 

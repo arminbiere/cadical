@@ -156,13 +156,10 @@ void Internal::init_solving () {
 
   INIT_EMA (fast_glue_avg, opts.emagluefast);
   INIT_EMA (slow_glue_avg, opts.emaglueslow);
-
-  INIT_EMA (slow_jump_avg, opts.emajumpslow);
-  INIT_EMA (fast_jump_avg, opts.emajumpfast);
-
+  INIT_EMA (jump_avg, opts.emajump);
+  INIT_EMA (restarteff, opts.emarestarteff);
+  INIT_EMA (restartint, opts.emarestartint);
   INIT_EMA (size_avg, opts.emasize);
-
-  INIT_EMA (stable, opts.emastable);
 }
 
 int Internal::solve () {
