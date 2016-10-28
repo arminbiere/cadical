@@ -1,8 +1,8 @@
 # CaDiCaL
 
-Radically Simplified Conflict Driven Clause Learning (CDCL) SAT Solver
+CaDiCaLy Simplified Satisfiability Solver
 
-The goal of CaDiCal is to have a minimalistic CDCL solver,
+The goal of CaDiCaL is to have a minimalistic CDCL solver,
 which is easy to understand and change, while at the same
 time not too much slower than state of the art CDCL solvers
 if pre-processing is disabled.
@@ -33,7 +33,7 @@ You might want to check out options of './configure.sh -h', such as
 
   - ./configure -a # both above and in addition '-g' for debugging.
 
-The lastest version of CaDiCal can be found on 'github'
+The latest version of CaDiCaL can be found on 'github'
 
   - http://github.com/arminbiere/cadical
 
@@ -45,4 +45,4 @@ A plain stable source release can eventually be found at
 
 Armin Biere
 
-Mit Okt 12 11:01:04 CEST 2016
+Fr 28. Okt 15:11:27 CEST 2016
