@@ -1,7 +1,8 @@
 #ifndef _flags_hpp_INCLUDED
 #define _flags_hpp_INCLUDED
 
-// Variable flags related to 'analyze' and 'minimize'.
+// Variable flags related to 'analyze' and 'minimize' they are kept in one
+// global byte table 'flags' for fast access.
 
 namespace CaDiCaL {
 
@@ -35,7 +36,7 @@ class Flags {
   //
   // Using the 'operator bool ()' function in 'analyze' seems to be a hot
   // spot within 'analyze'.  This is the main reason for keeping 'Flags'
-  // seperate.  Originally we used 'bool seen' etc. members in 'Var.'
+  // separate.  Originally we used 'bool seen' etc. members in 'Var.'
   //
   unsigned char byte;
 
