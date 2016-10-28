@@ -8,7 +8,9 @@
 #endif
 
 #define OPTIONS \
-/*     NAME              TYPE, VAL,LO, HI, USAGE */ \
+\
+/*     NAME             TYPE, VAL,LO, HI, USAGE */ \
+\
 OPTION(arena,            int,   3, 0,  3, "1=clause,2=var,3=queue") \
 OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
 OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
@@ -34,6 +36,8 @@ OPTION(resolve,         bool,   1, 0,  1, "bump resolved clauses") \
 OPTION(restart,         bool,   1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,   4, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double, 1.1, 0, 10, "restart slow fast margin") \
+OPTION(restartscale,     int,   2, 0, 10, "stability of restarting") \
+OPTION(restartscalemax,  int,1000, 0,1e5, "stability of restarting") \
 OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
 OPTION(strengthen,      bool,   1, 0,  1, "strengthen during subsume") \
 OPTION(sublast,          int,   5, 0,1e4, "eagerly subsume last") \

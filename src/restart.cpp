@@ -30,9 +30,12 @@ void Internal::restart () {
   LOG ("restart %ld", stats.restarts);
   lim.lastlevel = level;
   backtrack (reuse_trail ());
-  int delta = opts.restartint * stable * stable;
-  if (delta < 1) delta = 1;
-  if (delta > 200) delta = 200;
+  int delta = opts.restartint;
+  if (opts.restartscale) {
+    for (int i = 0; i < opts.restartscale; i++) delta *= stable;
+    if (delta < 1) delta = 1;
+    if (delta > opts.restartscalemax) delta = opts.restartscalemax;
+  }
   lim.restart = stats.conflicts + delta;
   report ('r', 1);
   STOP (restart);
