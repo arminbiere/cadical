@@ -50,7 +50,7 @@ REPORT("size",         1, 4, size_avg) \
 REPORT("irredundant",  0, 4, stats.irredundant) \
 REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
-REPORT("stable",       2, 5, stable) \
+REPORT("stable",       2, 4, stable) \
 
 
 #if 0
