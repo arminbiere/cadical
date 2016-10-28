@@ -258,12 +258,13 @@ class Internal {
   int reuse_trail ();
   void restart ();
 
-  // Reducing means garbage collecting useless clauses in 'reduce.cpp'.
+  // Reducing means determining useless clauses with 'reduce' in
+  // 'reduce.cpp' as well as root level satisfied clause and then collecing
+  // them with 'garbage_collection' in 'collect.cpp'.
   //
   bool reducing ();
   void protect_reasons ();
   void unprotect_reasons ();
-  bool clause_root_level_satisfied (Clause *);
   int clause_contains_fixed_literal (Clause *);
   void flush_falsified_literals (Clause *);
   void mark_satisfied_clauses_as_garbage ();

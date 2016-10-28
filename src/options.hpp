@@ -32,13 +32,11 @@ OPTION(reduceinit,       int,2000, 0,1e9, "initial reduce limit") \
 OPTION(resolve,         bool,   1, 0,  1, "bump resolved clauses") \
 OPTION(restart,         bool,   1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,   4, 1,1e9, "restart base interval") \
-OPTION(restartlevel,    bool,   1, 0,  1, "restart on level not glue") \
 OPTION(restartmargin, double, 1.1, 0, 10, "restart slow fast margin") \
 OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
 OPTION(strengthen,      bool,   1, 0,  1, "strengthen during subsume") \
 OPTION(sublast,          int,   5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,   1, 0,  1, "enable clause subsumption") \
-OPTION(subsumeffort,  double,  10, 1,1e9, "checked clauses wrt interval") \
 OPTION(subsumeinc,       int, 1e4, 1,1e9, "interval in conflicts") \
 OPTION(subsumeinit,      int, 1e4, 0,1e9, "intial subsume limit") \
 OPTION(subsumelim,       int, 100, 0,1e9, "watch list length limit") \

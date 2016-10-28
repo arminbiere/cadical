@@ -78,7 +78,7 @@ void Internal::eagerly_subsume_last_learned () {
 
 bool Internal::subsuming () {
   if (!opts.subsume) return false;
-  if (stats.conflicts > lim.redlast) return false;
+  if (level) return false;
   return stats.conflicts >= lim.subsume;
 }
 
@@ -110,11 +110,7 @@ inline int Internal::subsume_check (Clause * c, Clause * d) {
   }
   if (!flipped) return INT_MIN;                   // subsumed!!
   else if (!opts.strengthen) return 0;
-  else {
-    if (d->literals[0] == -flipped) return 0;
-    if (d->literals[1] == -flipped) return 0;
-    return flipped;                               // strengthen!!
-  }
+  else return flipped;                            // strengthen!!
 }
 
 /*------------------------------------------------------------------------*/
@@ -141,8 +137,12 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   assert (c->size > 2);
   LOG (c, "removing %d in", remove);
   if (proof) proof->trace_strengthen_clause (c, remove);
-  const int l0 = c->literals[0], l1 = c->literals[1];
-  unwatch_literal (l0, c), unwatch_literal (l1, c);
+
+  int l0 = c->literals[0];
+  int l1 = c->literals[1];
+  unwatch_literal (l0, c);
+  unwatch_literal (l1, c);
+
   const const_literal_iterator end = c->end ();
   literal_iterator j = c->begin ();
   for (const_literal_iterator i = j; i != end; i++)
@@ -153,8 +153,11 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   if (c->redundant && c->glue > c->size) c->glue = c->size;
   if (c->extended) c->resolved () = ++stats.resolved;
   LOG (c, "strengthened");
-  watch_literal (c->literals[0], c->literals[1], c, c->size);
-  watch_literal (c->literals[1], c->literals[0], c, c->size);
+
+  l0 = c->literals[0];
+  l1 = c->literals[1];
+  watch_literal (l0, l1, c, c->size);
+  watch_literal (l1, l0, c, c->size);
 }
 
 /*------------------------------------------------------------------------*/
@@ -227,9 +230,14 @@ void Internal::subsume () {
   for (i = clauses.begin (); i != clauses.end (); i++) {
     Clause * c = *i;
     if (c->garbage) continue;
-    if (clause_root_level_satisfied (c)) { mark_garbage (c); continue; }
-    if (c->redundant && c->extended &&
-	(c->size > lim.keptsize || c->glue > lim.keptglue)) continue;
+    if (clause_contains_fixed_literal (c)) continue;
+    if (c->redundant && c->extended) {
+      // All irredundant clauses and short clauses with small glue (not
+      // extended) are candidates in any case.  Otherwise, redundant long
+      // clauses are considered as candidates if they would have been kept
+      // in the last 'reduce' operation based on their size and glue value.
+      if (c->size > lim.keptsize || c->glue > lim.keptglue) continue;
+    }
     schedule.push_back (c);
   }
   sort (schedule.begin (), schedule.end (), smaller_size ());
