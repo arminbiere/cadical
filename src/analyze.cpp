@@ -66,8 +66,21 @@ struct bump_earlier {
   Internal * internal;
   double wb, wt;
   bump_earlier (Internal * s) : internal (s) {
-    double x = percent (internal->stats.bumphi, internal->stats.bumped);
-    wt = 1 / (1 + exp (-0.5 * (x - 67)));
+    switch (internal->opts.bumptrail) {
+      case 0: default: wt  = 0; break; // only previous 'bumped' stamp
+      case 1:
+	{
+	  double x = percent (internal->stats.bumphi,
+	                      internal->stats.bumped);
+	  double s = internal->opts.bumptrailscale;
+	  double t = internal->opts.bumptrailthresh;
+	  // Sigmoid threshold function at 't' with scale 's'.
+	  wt = 1.0 / (1.0 + exp (-s * (x - t)));
+	}
+	break;
+      case 2: wt = 0.5; break; // fixed sum between 'bumped' and 'trail'
+      case 3: wt = 1.0; break; // only 'trail' level for comparison
+    }
     wb = 1 - wt;
   }
   bool operator () (int a, int b) {

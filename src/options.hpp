@@ -13,6 +13,9 @@
 \
 OPTION(arena,            int,   3, 0,  3, "1=clause,2=var,3=queue") \
 OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
+OPTION(bumptrail,        int,   1, 0,  3, "0=no,1=heur,2=sum,3=only") \
+OPTION(bumptrailthresh,double, 67, 0,100, "heuristic threshold") \
+OPTION(bumptrailscale,double, 0.5, 0,  1, "heuristic scaling") \
 OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
 OPTION(emagluefast,   double,3e-2, 0,  1, "EMA alpha fast glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "EMA alpha slow glue") \
