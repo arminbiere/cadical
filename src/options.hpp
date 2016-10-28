@@ -12,11 +12,12 @@
 OPTION(arena,            int,   3, 0,  3, "1=clause,2=var,3=queue") \
 OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
 OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
-OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast learned glue") \
-OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha fast learned glue") \
-OPTION(emajumpfast,   double,3e-2, 0,  1, "alpha fast jump level") \
-OPTION(emajumpslow,   double,1e-5, 0,  1, "alpha fast jump level") \
-OPTION(emastable,     double,1e-3, 0,  1, "alpha restart success") \
+OPTION(emagluefast,   double,3e-2, 0,  1, "EMA alpha fast glue") \
+OPTION(emaglueslow,   double,1e-5, 0,  1, "EMA alpha slow glue") \
+OPTION(emajumpfast,   double,3e-2, 0,  1, "EMA alpha fast jump level") \
+OPTION(emajumpslow,   double,1e-5, 0,  1, "EMA alpha slow jump level") \
+OPTION(emasize,       double,1e-5, 0,  1, "EMA alpha size") \
+OPTION(emastable,     double,1e-3, 0,  1, "EMA alpha restart stable") \
 OPTION(keepglue,         int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,         int,   3, 2,1e9, "size kept learned clauses") \
 OPTION(leak,            bool,   1, 0,  1, "leak solver memory") \

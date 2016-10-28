@@ -160,6 +160,8 @@ void Internal::init_solving () {
   INIT_EMA (slow_jump_avg, opts.emajumpslow);
   INIT_EMA (fast_jump_avg, opts.emajumpfast);
 
+  INIT_EMA (size_avg, opts.emasize);
+
   INIT_EMA (stable, opts.emastable);
 }
 

@@ -88,6 +88,7 @@ class Internal {
   EMA slow_glue_avg;            // slow exponential moving glue average
   EMA fast_jump_avg;            // fast exponential moving jump average
   EMA slow_jump_avg;            // slow exponential moving jump average
+  EMA size_avg;
   EMA stable;                   // checkers whether restart is stable
   Limit lim;                    // limits for various phases
   Inc inc;                      // limit increments

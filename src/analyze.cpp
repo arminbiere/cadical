@@ -232,7 +232,7 @@ void Internal::analyze () {
   int size = (int) clause.size ();
   stats.units    += (size == 1);
   stats.binaries += (size == 2);
-
+  UPDATE_AVG (size_avg, size);
   if (size > 1 && opts.sublast) eagerly_subsume_last_learned ();
 
   bump_variables ();                         // Update decision heuristics.
