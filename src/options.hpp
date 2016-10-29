@@ -13,9 +13,7 @@
 \
 OPTION(arena,            int,   3, 0,  3, "1=clause,2=var,3=queue") \
 OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
-OPTION(bumptrail,        int,   1, 0,  3, "0=no,1=heur,2=sum,3=only") \
-OPTION(bumptrailthresh,double, 67, 0,100, "heuristic threshold") \
-OPTION(bumptrailscale,double, 0.5, 0,  1, "heuristic scaling") \
+OPTION(bumprevlim,    double,0.67, 0,  1, "reverse bump threshold") \
 OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
 OPTION(clim,             int,  -1, 0,1e9, "conflict limit (-1=none)") \
 OPTION(dlim,             int,  -1, 0,1e9, "decision limit (-1=none)") \

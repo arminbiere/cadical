@@ -62,40 +62,34 @@ void Internal::bump_variable (int lit) {
 // larger than the number of variables, so there is likely a potential for
 // further optimization.
 
-struct bump_earlier {
+struct bumped_earlier {
   Internal * internal;
-  double wb, wt;
-  bump_earlier (Internal * s) : internal (s) {
-    switch (internal->opts.bumptrail) {
-      case 0: default: wt  = 0; break; // only previous 'bumped' stamp
-      case 1:
-	{
-	  double x = percent (internal->stats.bumphi,
-	                      internal->stats.bumped);
-	  double s = internal->opts.bumptrailscale;
-	  double t = internal->opts.bumptrailthresh;
-	  // Sigmoid threshold function at 't' with scale 's'.
-	  wt = 1.0 / (1.0 + exp (-s * (x - t)));
-	}
-	break;
-      case 2: wt = 0.5; break; // fixed sum between 'bumped' and 'trail'
-      case 3: wt = 1.0; break; // only 'trail' level for comparison
-    }
-    wb = 1 - wt;
-  }
+  bumped_earlier (Internal * i) : internal (i) { }
   bool operator () (int a, int b) {
-    Var & u = internal->var (a);
-    Var & v = internal->var (b);
-    double s = wb*internal->bumped (a) + wt*u.trail;
-    double t = wb*internal->bumped (b) + wt*v.trail;
-    return s < t;
+    return internal->bumped (a) < internal->bumped (b);
   }
 };
 
 void Internal::bump_variables () {
   START (bump);
-  reverse (analyzed.begin (), analyzed.end ());
-  stable_sort (analyzed.begin (), analyzed.end (), bump_earlier (this));
+  double x = relative (internal->stats.bumphi, internal->stats.bumped);
+  if (x > internal->opts.bumprevlim) {
+    // There are some instances (the 'newton...' instances), which have a
+    // very high number of propagations per decision if we try to maintain
+    // previous bump order as much as possible.  They go through easily if
+    // more recent propagated variables are bumped first, which also reduces
+    // propagations per decision by two orders of magnitude.  It seems that
+    // this is related to the high percentage of bumped variables on the
+    // highest decision level.  So if this percentage is high we simply bump
+    // in reverse resolved order.
+    //
+    reverse (analyzed.begin (), analyzed.end ());
+  } else {
+    // Otherwise the default is to bump the variable in the order they are
+    // in the current decision queue.  This maintains relative order between
+    // bumped variables the queue.
+    stable_sort (analyzed.begin (), analyzed.end (), bumped_earlier (this));
+  }
   for (const_int_iterator i = analyzed.begin (); i != analyzed.end (); i++)
     bump_variable (*i);
   STOP (bump);
@@ -150,7 +144,7 @@ inline void Internal::analyze_literal (int lit, int & open) {
     LOG ("found new level %d contributing to conflict", v.level);
     levels.push_back (v.level);
   }
-  if (v.trail < l.trail) l.trail = v.trail;
+  //if (v.trail < l.trail) l.trail = v.trail;
   f.set (SEEN);
   analyzed.push_back (lit);
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);
@@ -186,6 +180,7 @@ void Internal::clear_levels () {
 
 /*------------------------------------------------------------------------*/
 
+#if 0
 // By sorting the first UIP clause literals, we establish the invariant that
 // the two watched literals are on the largest decision highest level.
 
@@ -196,6 +191,16 @@ struct trail_greater {
     return internal->var (a).trail > internal->var (b).trail;
   }
 };
+#else
+
+struct level_greater {
+  Internal * internal;
+  level_greater (Internal * s) : internal (s) { }
+  bool operator () (int a, int b) {
+    return internal->var (a).level > internal->var (b).level;
+  }
+};
+#endif
 
 void Internal::analyze () {
   assert (conflict);
@@ -257,7 +262,7 @@ void Internal::analyze () {
   Clause * driving_clause = 0;
   int jump = 0;
   if (size > 1) {
-    stable_sort (clause.begin (), clause.end (), trail_greater (this));
+    stable_sort (clause.begin (), clause.end (), level_greater (this));
     driving_clause = new_learned_clause (glue);
     jump = var (clause[1]).level;
   }

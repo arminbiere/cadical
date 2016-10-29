@@ -50,9 +50,10 @@ class Internal {
   friend class Proof;
   friend struct Stats;
 
-  friend struct trail_greater;
-  friend struct trail_smaller;
-  friend struct bump_earlier;
+  //friend struct trail_greater;
+  //friend struct trail_smaller;
+  friend struct level_greater;
+  friend struct bumped_earlier;
 
   /*----------------------------------------------------------------------*/
 
