@@ -39,7 +39,7 @@ OPTION(resolve,         bool,   1, 0,  1, "bump resolved clauses") \
 OPTION(restart,         bool,   1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,   4, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double, 1.1, 0, 10, "restart slow fast margin") \
-OPTION(restartscale,     int,   2, 0, 10, "stability of restarting") \
+OPTION(restartscale,     int,   0, 0, 10, "stability of restarting") \
 OPTION(restartscalemax,  int, 200, 0,1e5, "stability of restarting") \
 OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
 OPTION(strengthen,      bool,   1, 0,  1, "strengthen during subsume") \

@@ -33,11 +33,9 @@ void Internal::restart () {
   UPDATE_AVG (restartint, last);
   backtrack (reuse_trail ());
   double next = opts.restartint;
-  if (opts.restartscale) {
-    for (int i = 0; i < opts.restartscale; i++) next *= restarteff;
-    if (next < 1) next = 1;
-    if (next > opts.restartscalemax) next = opts.restartscalemax;
-  } else next = opts.restartint;
+  for (int i = 0; i < opts.restartscale; i++) next *= restarteff;
+  if (next < 1) next = 1;
+  if (next > opts.restartscalemax) next = opts.restartscalemax;
   lim.conflicts_at_last_restart = stats.conflicts;
   lim.restart = stats.conflicts + next;
   report ('r', 1);
