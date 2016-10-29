@@ -10,6 +10,9 @@ struct Limit {
   long restart;   // conflict limit for next 'restart'
   long subsume;   // next subsumption check
 
+  long conflict;  // conflict limit if non-negative
+  long decision;  // decision limit if non-negative
+
   int fixed;      // number of units in 'collect'
   int keptglue;   // maximum kept glue in 'reduce'
   int keptsize;   // maximum kept size in 'reduce'

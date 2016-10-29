@@ -5,7 +5,7 @@ namespace CaDiCaL {
 
 class Clause;
 
-// This struct captures data associated with an assigned variable.
+// This structure captures data associated with an assigned variable.
 
 struct Var {
 
@@ -30,7 +30,7 @@ struct Var {
   // Splitting it here and not hiding it in a separate class makes reason
   // traversal code slightly more complicated, since it always has to
   // distinguish the two cases ('other' non-zero or 'reason' non-zero).
-  // This happends in 'minimize' and 'analyze', but it is worse doing.
+  // This happens in 'minimize' and 'analyze', but it is worse doing.
 
   int other;            // binary reason other literal
   Clause * reason;      // implication graph edge through clause

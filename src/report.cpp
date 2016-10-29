@@ -52,13 +52,13 @@ REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
 REPORT("restarteff",   2, 4, restarteff) \
 REPORT("restartint",   1, 4, restartint) \
+REPORT("bump-high",   -1, 5, percent (stats.bumphi, stats.bumped)) \
 
 #if 0
 
 REPORT("prop/dec",     0, 2, relative (stats.propagations, stats.decisions)) \
 REPORT("glue-fast",    1, 4, fast_glue_avg) \
 REPORT("level-fast",   1, 4, fast_jump_avg) \
-REPORT("bump-high",   -1, 5, percent (stats.bumphi, stats.bumped)) \
 
 #endif
 

@@ -133,6 +133,7 @@ int Internal::search () {
     else if (!propagate ()) analyze ();
     else if (iterating) iterate ();
     else if (satisfied ()) res = 10;
+    else if (terminating ()) break;
     else if (restarting ()) restart ();
     else if (reducing ()) reduce ();
     else if (subsuming ()) subsume ();
@@ -154,6 +155,9 @@ void Internal::init_solving () {
   lim.subsume = opts.subsumeinit; 
   inc.subsume = opts.subsumeinit; 
 
+  lim.conflict = (opts.clim < 0) ? -1 : stats.conflicts + opts.clim;
+  lim.decision = (opts.dlim < 0) ? -1 : stats.decisions + opts.dlim;
+
   INIT_EMA (fast_glue_avg, opts.emagluefast);
   INIT_EMA (slow_glue_avg, opts.emaglueslow);
   INIT_EMA (jump_avg, opts.emajump);
@@ -165,9 +169,15 @@ void Internal::init_solving () {
 int Internal::solve () {
   init_solving ();
   SECTION ("solving");
-  if (clashing) { learn_empty_clause (); return 20; }
-  int res = search ();
-  if (res == 10) check (&Internal::val);
+  int res;
+  if (clashing) {                  // clashing original unit clauses
+    learn_empty_clause ();
+    res = 20;
+  } else {
+    res = search ();
+    if (res == 10) check (&Internal::val);
+  }
+  report ((res == 10) ? '1' : (res == 20 ? '0' : '?'));
   return res;
 }
 

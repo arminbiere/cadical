@@ -191,8 +191,8 @@ class Internal {
 
   // Update queue to point to last potentially still unassigned variable.
   // All variables after 'queue.unassigned' in bump order are assumed to be
-  // assigned.  Then update the 'queue.bumped' field and and log it.  This
-  // is inlined here since it occurs in several inner loops.
+  // assigned.  Then update the 'queue.bumped' field and log it.  This is
+  // inlined here since it occurs in several inner loops.
   //
   inline void update_queue_unassigned (int idx) {
     assert (0 < idx), assert (idx <= max_var);
@@ -259,8 +259,13 @@ class Internal {
   int reuse_trail ();
   void restart ();
 
+  // Asynchronous terminating check.
+  //
+  bool terminating ();
+  void terminate ();		// TODO: non implemented yet.
+
   // Reducing means determining useless clauses with 'reduce' in
-  // 'reduce.cpp' as well as root level satisfied clause and then collecing
+  // 'reduce.cpp' as well as root level satisfied clause and then collecting
   // them with 'garbage_collection' in 'collect.cpp'.
   //
   bool reducing ();

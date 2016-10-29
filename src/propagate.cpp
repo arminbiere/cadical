@@ -11,12 +11,15 @@ void Internal::assign (int lit, Clause * reason, int other) {
   int idx = vidx (lit);
   assert (!vals[idx]);
   Var & v = var (idx);
-  if (!(v.level = level)) learn_unit_clause (lit);
-  v.reason = reason;
-  v.other = other;
-  vals[-idx] = -(vals[idx] = phases[idx] = sign (lit));
-  assert (val (lit) > 0);
+  v.level = level;
   v.trail = (int) trail.size ();
+  v.other = other;
+  v.reason = reason;
+  if (!level) learn_unit_clause (lit);
+  const signed char tmp = sign (lit);
+  vals[idx] = phases[idx] = tmp;
+  vals[-idx] = -tmp;
+  assert (val (lit) > 0);
   trail.push_back (lit);
 #ifdef LOGGING
   if (other) LOG ("assign %d binary reason %d %d", lit, lit, other);
@@ -45,8 +48,8 @@ void Internal::assign (int lit, Clause * reason, int other) {
 bool Internal::propagate () {
   assert (!unsat);
   START (propagate);
+  long before = propagated;
   while (!conflict && propagated < trail.size ()) {
-    stats.propagations++;
     const int lit = -trail[propagated++];
     LOG ("propagating %d", -lit);
     Watches & ws = watches (lit);
@@ -59,8 +62,7 @@ bool Internal::propagate () {
       if (w.size == 2) {
         if (b < 0) conflict = w.clause;
         else if (!b) assign (w.blit, 0, lit);
-      } else if (w.clause->garbage) j--;
-      else {
+      } else {
         literal_iterator lits = w.clause->begin ();
         if (lits[0] == lit) swap (lits[0], lits[1]);
         const int u = val (lits[0]);
@@ -85,6 +87,7 @@ bool Internal::propagate () {
     ws.resize (j - ws.begin ());
   }
   if (conflict) { stats.conflicts++; LOG (conflict, "conflict"); }
+  stats.propagations += propagated - before;
   STOP (propagate);
   return !conflict;
 }

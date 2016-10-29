@@ -17,10 +17,12 @@ OPTION(bumptrail,        int,   1, 0,  3, "0=no,1=heur,2=sum,3=only") \
 OPTION(bumptrailthresh,double, 67, 0,100, "heuristic threshold") \
 OPTION(bumptrailscale,double, 0.5, 0,  1, "heuristic scaling") \
 OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
+OPTION(clim,             int,  -1, 0,1e9, "conflict limit (-1=none)") \
+OPTION(dlim,             int,  -1, 0,1e9, "decision limit (-1=none)") \
 OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha slow glue") \
 OPTION(emajump,       double,1e-5, 0,  1, "alpha slow jump level") \
-OPTION(emarestartint, double,1e-5, 0,  1, "alhpa actual restart interval") \
+OPTION(emarestartint, double,1e-5, 0,  1, "alpha actual restart interval") \
 OPTION(emarestarteff, double,1e-3, 0,  1, "alpha restart effectiveness") \
 OPTION(emasize,       double,1e-5, 0,  1, "alpha learned clause size") \
 OPTION(keepglue,         int,   2, 1,1e9, "glue kept learned clauses") \
@@ -39,14 +41,12 @@ OPTION(resolve,         bool,   1, 0,  1, "bump resolved clauses") \
 OPTION(restart,         bool,   1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,   4, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double, 1.1, 0, 10, "restart slow fast margin") \
-OPTION(restartscale,     int,   0, 0, 10, "stability of restarting") \
-OPTION(restartscalemax,  int, 200, 0,1e5, "stability of restarting") \
 OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
 OPTION(strengthen,      bool,   1, 0,  1, "strengthen during subsume") \
 OPTION(sublast,          int,   5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,   1, 0,  1, "enable clause subsumption") \
 OPTION(subsumeinc,       int, 1e4, 1,1e9, "interval in conflicts") \
-OPTION(subsumeinit,      int, 1e4, 0,1e9, "intial subsume limit") \
+OPTION(subsumeinit,      int, 1e4, 0,1e9, "initial subsume limit") \
 OPTION(subsumelim,       int, 100, 0,1e9, "watch list length limit") \
 OPTION(verbose,         bool,   0, 0,  1, "more verbose messages") \
 OPTION(witness,         bool,   1, 0,  1, "print witness") \
