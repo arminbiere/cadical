@@ -7,9 +7,10 @@
 namespace CaDiCaL {
 
 enum Flag {
-  SEEN      =  1, // seen in generating first UIP clause in 'analyze'.
-  POISON    =  2, // can not be removed in 'minimize'.
-  REMOVABLE =  4, // can be removed in 'minimize'.
+  SEEN      =  1, // seen in generating first UIP clause in 'analyze'
+  POISON    =  2, // can not be removed in 'minimize'
+  REMOVABLE =  4, // can be removed in 'minimize'
+  INCLAUSE  =  8, // part of final learned clause
 
   // Powers of two since these constants are used in a bit-set in 'Flags'.
 };
@@ -47,12 +48,13 @@ public:
   bool seen () const { return (byte & SEEN) != 0; }
   bool poison () const { return (byte & POISON) != 0; }
   bool removable () const { return (byte & REMOVABLE) != 0; }
+  bool inclause () const { return (byte & INCLAUSE) != 0; }
 
   // Set flag, e.g., 'set (SEEN)', 'set (POISON)', or 'set (REMOVABLE)'.
   //
   inline void set (Flag f) {
     assert (!(byte & f));
-    assert (f == SEEN || f == POISON || f == REMOVABLE);
+    assert (f == SEEN || f == POISON || f == REMOVABLE || f == INCLAUSE);
     byte |= f;
   }
 
