@@ -248,7 +248,11 @@ void Internal::analyze () {
   }
 
   if (opts.minimize) minimize_clause ();     // minimize clause
-  if (opts.shrink) shrink_clause ();
+
+  if (opts.shrink &&
+      clause.size () <= (size_t) opts.shrinksize &&
+      glue <= opts.shrinkglue)
+    shrink_clause ();
 
   int size = (int) clause.size ();
   stats.units    += (size == 1);

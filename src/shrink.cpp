@@ -1,10 +1,10 @@
 #include "internal.hpp"
+#include "macros.hpp"
 
 namespace CaDiCaL {
 
 void Internal::shrink_clause () {
-  if (!opts.shrink) return;
-  if (clause.size () > (size_t) opts.shrinklim) return;
+  START (shrink);
   int_iterator j = clause.begin (), i;
   for (i = j; i != clause.end (); i++) {
     int root = *j++ = *i;
@@ -16,16 +16,17 @@ void Internal::shrink_clause () {
 	 k++) {
       Clause * c = k->clause;
       if (c->garbage) continue;
+      if ((size_t) c->size > clause.size ()) continue;
       bool failed = false;
       const_literal_iterator l;
       for (l = c->begin (); !failed && l != c->end (); l++) {
 	int lit = *l;
-	if (lit == --root) continue;
+	if (lit == -root) continue;
 	if (!flags (lit).inclause ()) failed = true;
 	else if (val (lit) >= 0) failed = true;
       }
       if (!failed) {
-	LOG (c, "literal %d removed by", root);
+	LOG (c, "literal %d shrunken by", root);
 	remove = true;
       }
     }
@@ -36,6 +37,7 @@ void Internal::shrink_clause () {
   }
   clause.resize (j - clause.begin ());
   check_clause ();
+  STOP (shrink);
 }
 
 };

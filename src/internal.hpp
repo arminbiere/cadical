@@ -244,6 +244,7 @@ class Internal {
   void learn_unit_clause (int lit);
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
+  void shrink_clause ();
   void bump_variable (int lit);
   void bump_variables ();
   void bump_resolved_clauses ();
@@ -265,9 +266,6 @@ class Internal {
   //
   bool terminating ();
   void terminate ();		// TODO: non implemented yet.
-
-  void shrink_clause ();
-  void unhide_stamping ();
 
   // Reducing means determining useless clauses with 'reduce' in
   // 'reduce.cpp' as well as root level satisfied clause and then collecting
