@@ -12,8 +12,9 @@ namespace CaDiCaL {
 struct Level {
   int decision;         // decision literal of level
   int seen;             // how many variables seen during 'analyze'
-  void reset () { seen = 0; }
-  Level (int d) : decision (d), seen (0) { }
+  int trail;            // smallest trail position seen
+  void reset () { seen = 0, trail = INT_MAX; }
+  Level (int d) : decision (d) { reset (); }
   Level () { }
 };
 

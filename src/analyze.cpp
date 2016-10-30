@@ -46,7 +46,7 @@ void Internal::bump_variable (int lit) {
   queue.dequeue (ltab, l);
   queue.enqueue (ltab, l);
   btab[idx] = ++stats.bumped;
-  if (var (idx).level == level) stats.bumphi++;
+  if (var (idx).level == level) stats.bumplast++;
   LOG ("moved to front %d and bumped %ld", idx, btab[idx]);
   if (!vals[idx]) update_queue_unassigned (idx);
 }
@@ -59,27 +59,43 @@ struct bumped_earlier {
   }
 };
 
+struct bumped_plus_trail_earlier {
+  Internal * internal;
+  bumped_plus_trail_earlier (Internal * i) : internal (i) { }
+  bool operator () (int a, int b) {
+    long s = internal->bumped (a) + internal->var (a).trail;
+    long t = internal->bumped (b) + internal->var (b).trail;
+    return s < t;
+  }
+};
+
 void Internal::bump_variables () {
   START (bump);
-  double x = relative (internal->stats.bumphi, internal->stats.bumped);
-  if (x > internal->opts.bumprevlim) {
-    // There are some instances (the 'newton...' instances), which have a
-    // very high number of propagations per decision if we try to maintain
-    // previous bump order as much as possible.  They go through easily if
-    // more recent propagated variables are bumped first, which also reduces
-    // propagations per decision by two orders of magnitude.  It seems that
-    // this is related to the high percentage of bumped variables on the
-    // highest decision level.  So if this percentage is high we simply bump
-    // in reverse resolved order.  As an alternative we can bump in the
-    // assignment order, which however requires to store the 'trail' height.
-    //
+  if (percent (stats.bumplast, stats.bumped) > opts.bumprevlim) {
+
+    // There are some instances (for instance the 'newton...' instances),
+    // which have a very high number of propagations per decision if we try
+    // to maintain previous bump order as much as possible.  They go through
+    // easily if more recent propagated variables are bumped first, which
+    // also reduces propagations per decision by two orders of magnitude.
+    // It seems that this is related to the high percentage of bumped
+    // variables on the highest decision level.  So if this percentage is
+    // we take the assignment order into account too.
+
     reverse (analyzed.begin (), analyzed.end ());
+    stable_sort (analyzed.begin (), analyzed.end (),
+      bumped_plus_trail_earlier (this));
+    stats.reverse++;
+
   } else {
+
     // Otherwise the default is to bump the variable in the order they are
     // in the current decision queue.  This maintains relative order between
-    // bumped variables in the queue.
-    //
-    stable_sort (analyzed.begin (), analyzed.end (), bumped_earlier (this));
+    // bumped variables in the queue and seems to work best for those
+    // instance with smaller number of bumped variables on the last decision
+    // level.
+
+    sort (analyzed.begin (), analyzed.end (), bumped_earlier (this));
   }
   for (const_int_iterator i = analyzed.begin (); i != analyzed.end (); i++)
     bump_variable (*i);
@@ -134,6 +150,7 @@ inline void Internal::analyze_literal (int lit, int & open) {
     LOG ("found new level %d contributing to conflict", v.level);
     levels.push_back (v.level);
   }
+  if (v.trail < l.trail) l.trail = v.trail;
   f.set (SEEN);
   analyzed.push_back (lit);
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);

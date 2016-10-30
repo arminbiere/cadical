@@ -13,6 +13,7 @@ struct Var {
   // assigned.  During unassigning it we also do not need to reset it.
 
   int level;            // decision level
+  int trail;            // trail
 
   // For assignments forced by binary clauses, watches contain already all
   // the information to track the reason for the assignment and building the
@@ -29,7 +30,7 @@ struct Var {
   // Splitting it here and not hiding it in a separate class makes reason
   // traversal code slightly more complicated, since it always has to
   // distinguish the two cases ('other' non-zero or 'reason' non-zero).
-  // This happens in 'minimize' and 'analyze', but it is worse doing.
+  // This happens in 'minimize' and 'analyze', but it is worth doing.
 
   int other;            // binary reason other literal
   Clause * reason;      // implication graph edge through clause

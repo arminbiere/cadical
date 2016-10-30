@@ -19,6 +19,8 @@ struct Stats {
   long reports;      // 'report' counter
   long sections;     // 'section' counter
   long bumped;       // seen and bumped variables in 'analyze'
+  long bumplast;     // bumped variables on last decision level
+  long reverse;      // bumped 'reverse' instead of 'earlier'
   long resolved;     // resolved redundant clauses in 'analyze'
   long searched;     // searched decisions in 'decide'
   long reductions;   // 'reduce' counter
@@ -37,8 +39,6 @@ struct Stats {
   long irredundant;  // number of current irredundant clauses
   long units;        // learned unit clauses
   long binaries;     // learned binary clauses
-
-  long bumphi;
 
   int fixed;         // top level assigned variables
 

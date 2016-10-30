@@ -33,6 +33,8 @@ void Stats::print (Internal * internal) {
     stats.units, relative (stats.conflicts, stats.units));
   MSG ("binaries:      %15ld   %10.2f    conflicts per binary",
     stats.binaries, relative (stats.conflicts, stats.binaries));
+  MSG ("reverse:       %15ld   %10.2f %%  per conflict",
+    stats.reverse, percent (stats.reverse, stats.conflicts));
   MSG ("resolved:      %15ld   %10.2f    per conflict",
     stats.resolved, relative (stats.resolved, stats.conflicts));
   long learned = stats.learned - stats.minimized;

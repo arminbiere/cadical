@@ -159,11 +159,11 @@ void Internal::init_solving () {
   lim.decision = (opts.dlim < 0) ? -1 : stats.decisions + opts.dlim;
 
   INIT_EMA (fast_glue_avg, opts.emagluefast);
-  INIT_EMA (slow_glue_avg, opts.emaglueslow);
   INIT_EMA (jump_avg, opts.emajump);
   INIT_EMA (restarteff, opts.emarestarteff);
   INIT_EMA (restartint, opts.emarestartint);
   INIT_EMA (size_avg, opts.emasize);
+  INIT_EMA (slow_glue_avg, opts.emaglueslow);
 }
 
 int Internal::solve () {

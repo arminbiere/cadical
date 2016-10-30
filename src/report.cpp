@@ -52,7 +52,7 @@ REPORT("variables",    0, 4, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
 REPORT("restarteff",   2, 4, restarteff) \
 REPORT("restartint",   1, 4, restartint) \
-REPORT("bump-high",   -1, 5, percent (stats.bumphi, stats.bumped)) \
+REPORT("bumplast",    -1, 5, percent (stats.bumplast, stats.bumped)) \
 
 #if 0
 
