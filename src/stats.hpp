@@ -26,6 +26,7 @@ struct Stats {
   long reductions;   // 'reduce' counter
   long reduced;      // number of reduced clauses
   long collected;    // number of collected bytes
+  long shrunken;     // removed literals in learned clauses
   long sublast;      // number of eagerly subsumed clauses
   long subsumed;     // number of subsumed clauses
   long strengthened; // number of strengthened clauses

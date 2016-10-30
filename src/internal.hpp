@@ -266,6 +266,9 @@ class Internal {
   bool terminating ();
   void terminate ();		// TODO: non implemented yet.
 
+  void shrink_clause ();
+  void unhide_stamping ();
+
   // Reducing means determining useless clauses with 'reduce' in
   // 'reduce.cpp' as well as root level satisfied clause and then collecting
   // them with 'garbage_collection' in 'collect.cpp'.

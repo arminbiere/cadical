@@ -248,6 +248,7 @@ void Internal::analyze () {
   }
 
   if (opts.minimize) minimize_clause ();     // minimize clause
+  if (opts.shrink) shrink_clause ();
 
   int size = (int) clause.size ();
   stats.units    += (size == 1);

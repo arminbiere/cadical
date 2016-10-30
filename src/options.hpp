@@ -43,6 +43,8 @@ OPTION(restartint,       int,   4, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double, 1.1, 0, 10, "restart slow fast margin") \
 OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
 OPTION(reverselim,    double, 500, 0,1e9, "reverse bumping limit") \
+OPTION(shrink,          bool,   1, 0,  1, "shrink learned clause") \
+OPTION(shrinklim,        int,  30, 0,  1, "size limit for shrinking") \
 OPTION(strengthen,      bool,   1, 0,  1, "strengthen during subsume") \
 OPTION(sublast,          int,   5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,   1, 0,  1, "enable clause subsumption") \
