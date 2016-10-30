@@ -51,17 +51,6 @@ void Internal::bump_variable (int lit) {
   if (!vals[idx]) update_queue_unassigned (idx);
 }
 
-// Initially we proposed to bump the variable in the current 'bumped' stamp
-// order only.  This maintains the current order between bumped variables.
-// On few benchmarks this however lead to a large number of propagations per
-// seconds, which can be reduced by an order of magnitude by focusing
-// somewhat on recently assigned variables more, particularly in this
-// situation.  This can easily be achieved by using the sum of the 'bumped'
-// time stamp and trail height 'trail' for comparison.  Note that 'bumped'
-// is always increasing and gets really large, while 'trail' can never be
-// larger than the number of variables, so there is likely a potential for
-// further optimization.
-
 struct bumped_earlier {
   Internal * internal;
   bumped_earlier (Internal * i) : internal (i) { }
@@ -81,13 +70,15 @@ void Internal::bump_variables () {
     // propagations per decision by two orders of magnitude.  It seems that
     // this is related to the high percentage of bumped variables on the
     // highest decision level.  So if this percentage is high we simply bump
-    // in reverse resolved order.
+    // in reverse resolved order.  As an alternative we can bump in the
+    // assignment order, which however requires to store the 'trail' height.
     //
     reverse (analyzed.begin (), analyzed.end ());
   } else {
     // Otherwise the default is to bump the variable in the order they are
     // in the current decision queue.  This maintains relative order between
-    // bumped variables the queue.
+    // bumped variables in the queue.
+    //
     stable_sort (analyzed.begin (), analyzed.end (), bumped_earlier (this));
   }
   for (const_int_iterator i = analyzed.begin (); i != analyzed.end (); i++)
@@ -127,9 +118,8 @@ inline void Internal::resolve_clause (Clause * c) {
 // first UIP clause (if on lower decision level), are dropped (if fixed),
 // or are resolved away (if on the current decision level and different from
 // the first UIP).  At the same time we update the number of seen literals on
-// a decision level and the smallest trail position of a seen literal for
-// each decision level.  This both helps conflict clause minimization.  The
-// number of seen levels is the glucose level (also called glue, or LBD).
+// a decision level.  This helps conflict clause minimization.  The number
+// of seen levels is the glucose level (also called glue, or LBD).
 
 inline void Internal::analyze_literal (int lit, int & open) {
   assert (lit);
@@ -144,7 +134,6 @@ inline void Internal::analyze_literal (int lit, int & open) {
     LOG ("found new level %d contributing to conflict", v.level);
     levels.push_back (v.level);
   }
-  //if (v.trail < l.trail) l.trail = v.trail;
   f.set (SEEN);
   analyzed.push_back (lit);
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);
@@ -180,19 +169,6 @@ void Internal::clear_levels () {
 
 /*------------------------------------------------------------------------*/
 
-#if 0
-// By sorting the first UIP clause literals, we establish the invariant that
-// the two watched literals are on the largest decision highest level.
-
-struct trail_greater {
-  Internal * internal;
-  trail_greater (Internal * s) : internal (s) { }
-  bool operator () (int a, int b) {
-    return internal->var (a).trail > internal->var (b).trail;
-  }
-};
-#else
-
 struct level_greater {
   Internal * internal;
   level_greater (Internal * s) : internal (s) { }
@@ -200,7 +176,6 @@ struct level_greater {
     return internal->var (a).level > internal->var (b).level;
   }
 };
-#endif
 
 void Internal::analyze () {
   assert (conflict);
