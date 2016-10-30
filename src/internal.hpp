@@ -91,6 +91,7 @@ class Internal {
   EMA restarteff;               // restart effectiveness average
   EMA size_avg;                 // learned clause size average
   EMA jump_avg;                 // jump average
+  EMA propconf;                 // propagations per conflict rate
   Limit lim;                    // limits for various phases
   Inc inc;                      // limit increments
   Proof * proof;                // trace clausal proof if non zero

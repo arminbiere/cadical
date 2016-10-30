@@ -71,20 +71,27 @@ struct bumped_plus_trail_earlier {
 
 void Internal::bump_variables () {
   START (bump);
-  if (percent (stats.bumplast, stats.bumped) > opts.bumprevlim) {
+
+  if (percent (stats.bumplast, stats.bumped) > opts.bumprevlim &&
+      propconf > opts.reverselim) {
 
     // There are some instances (for instance the 'newton...' instances),
     // which have a very high number of propagations per decision if we try
     // to maintain previous bump order as much as possible.  They go through
-    // easily if more recent propagated variables are bumped first, which
+    // easily if more recent propagated variables are bumped last, which
     // also reduces propagations per decision by two orders of magnitude.
     // It seems that this is related to the high percentage of bumped
     // variables on the highest decision level.  So if this percentage is
-    // we take the assignment order into account too.
+    // hight we take the assignment order into account too by comparing with
+    // respect to the sum of bumped and trail order. For the instances
+    // mentioned above just comparing with respect to assignment order
+    // (e.g., trail height when assigned) would work too, but is in general
+    // less robust and thus we use the sum instead.
 
     reverse (analyzed.begin (), analyzed.end ());
-    stable_sort (analyzed.begin (), analyzed.end (),
-      bumped_plus_trail_earlier (this));
+    stable_sort (analyzed.begin (),
+                 analyzed.end (),
+                 bumped_plus_trail_earlier (this));
     stats.reverse++;
 
   } else {
@@ -99,6 +106,7 @@ void Internal::bump_variables () {
   }
   for (const_int_iterator i = analyzed.begin (); i != analyzed.end (); i++)
     bump_variable (*i);
+
   STOP (bump);
 }
 

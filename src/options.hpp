@@ -13,7 +13,7 @@
 \
 OPTION(arena,            int,   3, 0,  3, "1=clause,2=var,3=queue") \
 OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
-OPTION(bumprevlim,    double,  67, 0,100, "reverse bump last threshold") \
+OPTION(bumprevlim,    double,  40, 0,100, "reverse bump last threshold") \
 OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
 OPTION(clim,             int,  -1, 0,1e9, "conflict limit (-1=none)") \
 OPTION(dlim,             int,  -1, 0,1e9, "decision limit (-1=none)") \
@@ -21,6 +21,7 @@ OPTION(emabumplast,   double,1e-5, 0,  1, "alpha bump last percentage") \
 OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha slow glue") \
 OPTION(emajump,       double,1e-5, 0,  1, "alpha jump level") \
+OPTION(emapropconf,   double,1e-5, 0,  1, "alpha propagations/conflicts") \
 OPTION(emarestartint, double,1e-5, 0,  1, "alpha actual restart interval") \
 OPTION(emarestarteff, double,1e-3, 0,  1, "alpha restart effectiveness") \
 OPTION(emasize,       double,1e-5, 0,  1, "alpha learned clause size") \
@@ -41,6 +42,7 @@ OPTION(restart,         bool,   1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,   4, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double, 1.1, 0, 10, "restart slow fast margin") \
 OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
+OPTION(reverselim,    double,1000, 0,1e9, "reverse bumping limit") \
 OPTION(strengthen,      bool,   1, 0,  1, "strengthen during subsume") \
 OPTION(sublast,          int,   5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,   1, 0,  1, "enable clause subsumption") \

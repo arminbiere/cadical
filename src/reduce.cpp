@@ -71,6 +71,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   for (const_clause_iterator i = stack.begin (); i != target; i++) {
     LOG (*i, "marking useless to be collected");
     mark_garbage (*i);
+    stats.reduced++;
   }
   lim.keptsize = lim.keptglue = 0;
   end = stack.end ();

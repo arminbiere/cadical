@@ -17,9 +17,10 @@ struct Limit {
   int keptglue;   // maximum kept glue in 'reduce'
   int keptsize;   // maximum kept size in 'reduce'
 
-  int decision_level_at_last_restart;
-  long conflicts_at_last_restart;
   long conflicts_at_last_reduce;
+  long conflicts_at_last_restart;
+  int decision_level_at_last_restart;
+  long propagations_at_last_conflict;
 
   Limit ();
 };
