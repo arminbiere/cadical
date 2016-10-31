@@ -73,7 +73,7 @@ void Internal::eagerly_subsume_last_learned () {
 // 'opts.keepsize' and 'opts.keeglue', e.g., a redundant clause is not
 // extended and thus kept if its size is smaller equal to 'opts.keepsize' or
 // its glue is smaller equal than 'opts.keepsize').  Note, that 'forward'
-// means that the clause from which the sumption check is started is checked
+// means that the clause from which the subsumption check is started is checked
 // for being subsumed by other (smaller or equal size) clauses.
 
 bool Internal::subsuming () {
@@ -87,7 +87,7 @@ bool Internal::subsuming () {
 // are marked, so we only have to check that all the literals of the
 // argument clause 'c', which is checked for subsuming the candidate clause,
 // has all its literals marked (in the correct phase).  If exactly one is in
-// the oposite phase we can still strengthen the candidate clause by this
+// the opposite phase we can still strengthen the candidate clause by this
 // single literal which occurs in opposite phase.
 //
 // The result is INT_MIN if all literals are marked and thus the candidate

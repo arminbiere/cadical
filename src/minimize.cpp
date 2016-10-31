@@ -27,7 +27,7 @@ bool Internal::minimize_literal (int lit, int depth) {
   if (v.decision () || f.poison () || v.level == level) return false;
   const Level & l = control[v.level];
   if (!depth && l.seen < 2) return false;
-  if (v.trail <= l.trail) return false;
+  //if (v.trail <= l.trail) return false;
   if (depth > opts.minimizedepth) return false;
   bool res = true;
   if (v.reason) {
@@ -43,24 +43,10 @@ bool Internal::minimize_literal (int lit, int depth) {
   return res;
 }
 
-// We try to minimize the first UIP clause by trying to remove away literals
-// on smaller decision level first.  This makes more room for depth bounded
-// minimization even though we have not really seen cases where the depth
-// limit is hit and results in substantially less succesfull minimization.
-
-struct trail_smaller {
-  Internal * internal;
-  trail_smaller (Internal * s) : internal (s) { }
-  bool operator () (int a, int b) {
-    return internal->var (a).trail < internal->var (b).trail;
-  }
-};
-
 void Internal::minimize_clause () {
   if (!opts.minimize) return;
   START (minimize);
   LOG (clause, "minimizing first UIP clause");
-  stable_sort (clause.begin (), clause.end (), trail_smaller (this));
   assert (minimized.empty ());
   stats.learned += clause.size ();
   int_iterator j = clause.begin ();
