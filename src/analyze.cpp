@@ -90,12 +90,14 @@ void Internal::bump_variables () {
     // (e.g., trail height when assigned) would work too, but is in general
     // less robust and thus we use the sum instead.
 
-    reverse (analyzed.begin (), analyzed.end ());
 #if 0
+    reverse (analyzed.begin (), analyzed.end ());
+
     stable_sort (analyzed.begin (),
                  analyzed.end (),
                  bumped_plus_trail_earlier (this));
 #endif
+
     stats.reverse++;
 
   } else {
