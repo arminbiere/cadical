@@ -12,7 +12,7 @@ void Internal::assign (int lit, Clause * reason, int other) {
   assert (!vals[idx]);
   Var & v = var (idx);
   v.level = level;
-  //v.trail = (int) trail.size ();
+  v.trail = (int) trail.size ();
   v.other = other;
   v.reason = reason;
   if (!level) learn_unit_clause (lit);

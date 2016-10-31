@@ -13,7 +13,7 @@ struct Var {
   // assigned.  During unassigning it we also do not need to reset it.
 
   int level;            // decision level
-  // int trail;            // trail
+  int trail;            // trail
 
   // For assignments forced by binary clauses, watches contain already all
   // the information to track the reason for the assignment and building the

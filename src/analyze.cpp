@@ -59,7 +59,6 @@ struct bumped_earlier {
   }
 };
 
-#if 0
 struct bumped_plus_trail_earlier {
   Internal * internal;
   bumped_plus_trail_earlier (Internal * i) : internal (i) { }
@@ -69,7 +68,6 @@ struct bumped_plus_trail_earlier {
     return s < t;
   }
 };
-#endif
 
 void Internal::bump_variables () {
   START (bump);
@@ -90,14 +88,10 @@ void Internal::bump_variables () {
     // (e.g., trail height when assigned) would work too, but is in general
     // less robust and thus we use the sum instead.
 
-#if 0
     reverse (analyzed.begin (), analyzed.end ());
-
     stable_sort (analyzed.begin (),
                  analyzed.end (),
                  bumped_plus_trail_earlier (this));
-#endif
-
     stats.reverse++;
 
   } else {
@@ -164,7 +158,7 @@ inline void Internal::analyze_literal (int lit, int & open) {
     LOG ("found new level %d contributing to conflict", v.level);
     levels.push_back (v.level);
   }
-  //if (v.trail < l.trail) l.trail = v.trail;
+  if (v.trail < l.trail) l.trail = v.trail;
   f.set (SEEN);
   analyzed.push_back (lit);
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);
@@ -235,7 +229,6 @@ void Internal::analyze () {
   }
   LOG ("first UIP %d", uip);
   clause.push_back (-uip);
-  reverse (clause.begin (), clause.end ());
   check_clause ();
 
   // Update glue statistics.
