@@ -244,7 +244,7 @@ void Internal::subsume () {
     }
     schedule.push_back (c);
   }
-  sort (schedule.begin (), schedule.end (), smaller_size ());
+  stable_sort (schedule.begin (), schedule.end (), smaller_size ());
 
   // Now go over the scheduled clauses in the order of increasing size and
   // try to forward subsume and strengthen them. Forward means find smaller

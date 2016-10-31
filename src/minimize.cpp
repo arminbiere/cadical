@@ -23,7 +23,7 @@ namespace CaDiCaL {
 bool Internal::minimize_literal (int lit, int depth) {
   Flags & f = flags (lit);
   Var & v = var (lit);
-  if (!v.level || f.removable () || (depth && f.seen ())) return true;
+  if (!v.level || f.removable () || f.clause ()) return true;
   if (v.decision () || f.poison () || v.level == level) return false;
   const Level & l = control[v.level];
   if (!depth && l.seen < 2) return false;
@@ -37,43 +37,37 @@ bool Internal::minimize_literal (int lit, int depth) {
       if ((other = *i) != lit)
 	res = minimize_literal (-other, depth+1);
   } else res = minimize_literal (-v.other, depth+1);
-  if (res) f.set (REMOVABLE); else f.set (POISON);
+  if (res) {
+    f.set (REMOVABLE);
+    // if (!f.seen ()) analyzed.push_back (lit);  // TODO?
+  } else f.set (POISON);
   minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
   return res;
 }
 
-// We try to minimize the first UIP clause by trying to remove away literals
-// on smaller decision level first.  This makes more room for depth bounded
-// minimization even though we have not really seen cases where the depth
-// limit is hit and results in substantially less succesfull minimization.
-
-struct trail_smaller {
-  Internal * internal;
-  trail_smaller (Internal * s) : internal (s) { }
-  bool operator () (int a, int b) {
-    return internal->var (a).trail < internal->var (b).trail;
-  }
-};
-
 void Internal::minimize_clause () {
-  if (!opts.minimize) return;
   START (minimize);
   LOG (clause, "minimizing first UIP clause");
-  stable_sort (clause.begin (), clause.end (), trail_smaller (this));
+  sort (clause.begin (), clause.end (), trail_smaller (this));
   assert (minimized.empty ());
-  stats.learned += clause.size ();
   int_iterator j = clause.begin ();
-  for (const_int_iterator i = clause.begin (); i != clause.end (); i++)
+  for (const_int_iterator i = j; i != clause.end (); i++)
     if (minimize_literal (-*i)) stats.minimized++;
-    else *j++ = *i;
+    else flags (*j++ = *i).set (CLAUSE);
   LOG ("minimized %d literals", (long)(clause.end () - j));
   clause.resize (j - clause.begin ());
-  for (const_int_iterator i = minimized.begin (); i != minimized.end (); i++)
-    flags (*i).reset ();
-  minimized.clear ();
-  STOP (minimize);
+  clear_minimized ();
   check_clause ();
+  STOP (minimize);
+}
+
+void Internal::clear_minimized () {
+  for (const_int_iterator i = minimized.begin (); i != minimized.end (); i++)
+    flags (*i).clear (POISON | REMOVABLE);
+  for (const_int_iterator i = clause.begin (); i != clause.end (); i++)
+    flags (*i).clear (CLAUSE);
+  minimized.clear ();
 }
 
 };

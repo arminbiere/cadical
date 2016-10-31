@@ -46,6 +46,7 @@ OPTION(reverselim,    double, 500, 0,1e9, "reverse bumping limit") \
 OPTION(shrink,          bool,   1, 0,  1, "shrink learned clause") \
 OPTION(shrinkglue,       int,   6, 0,  1, "glue limit for shrinking") \
 OPTION(shrinksize,       int,  30, 0,  1, "size limit for shrinking") \
+OPTION(shrinkdepth,      int,1000, 0,1e9, "shrinking depth") \
 OPTION(strengthen,      bool,   1, 0,  1, "strengthen during subsume") \
 OPTION(sublast,          int,   5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,   1, 0,  1, "enable clause subsumption") \

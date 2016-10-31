@@ -156,7 +156,6 @@ class Internal {
   Flags & flags (int lit)     { return ftab[vidx (lit)]; }
 
   const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
-  bool seen (int lit) const { return flags (lit).seen (); }
 
   Watches & watches (int lit) { return wtab[vlit (lit)]; }
 
@@ -244,6 +243,7 @@ class Internal {
   void learn_unit_clause (int lit);
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
+  bool shrink_literal (int lit, int depth = 0);
   void shrink_clause ();
   void bump_variable (int lit);
   void bump_variables ();
@@ -251,6 +251,7 @@ class Internal {
   void resolve_clause (Clause *);
   void clear_seen ();
   void clear_levels ();
+  void clear_minimized ();
   void analyze_literal (int lit, int & open);
   void analyze_reason (int lit, Clause *, int & open);
   void analyze ();
@@ -360,6 +361,14 @@ class Internal {
   // Enable and disable proof logging.
   void close_proof ();
   void new_proof (File *, bool owned = false);
+};
+
+struct trail_smaller {
+  Internal * internal;
+  trail_smaller (Internal * s) : internal (s) { }
+  bool operator () (int a, int b) {
+    return internal->var (a).trail < internal->var (b).trail;
+  }
 };
 
 };

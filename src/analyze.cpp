@@ -217,7 +217,7 @@ void Internal::analyze () {
   for (;;) {
     if (reason) analyze_reason (uip, reason, open);
     else analyze_literal (other, open);
-    while (!seen (uip = *--i))
+    while (!flags (uip = *--i).seen ())
       ;
     if (!--open) break;
     Var & v = var (uip);
@@ -247,14 +247,18 @@ void Internal::analyze () {
     lim.decision_level_at_last_restart = 0;
   }
 
-  if (opts.minimize) minimize_clause ();     // minimize clause
-
-  if (opts.shrink &&
-      clause.size () <= (size_t) opts.shrinksize &&
-      glue <= opts.shrinkglue)
-    shrink_clause ();
-
   int size = (int) clause.size ();
+  stats.learned += size;
+
+  if (size > 1) {
+    if (opts.minimize) minimize_clause ();
+
+    if (opts.shrink && size <= opts.shrinksize && glue <= opts.shrinkglue)
+      shrink_clause ();
+
+    size = (int) clause.size ();
+  }
+
   stats.units    += (size == 1);
   stats.binaries += (size == 2);
   UPDATE_AVG (size_avg, size);

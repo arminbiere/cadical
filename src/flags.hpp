@@ -10,7 +10,7 @@ enum Flag {
   SEEN      =  1, // seen in generating first UIP clause in 'analyze'
   POISON    =  2, // can not be removed in 'minimize'
   REMOVABLE =  4, // can be removed in 'minimize'
-  INCLAUSE  =  8, // part of final learned clause
+  CLAUSE    =  8, // part of learned clause
 
   // Powers of two since these constants are used in a bit-set in 'Flags'.
 };
@@ -48,14 +48,21 @@ public:
   bool seen () const { return (byte & SEEN) != 0; }
   bool poison () const { return (byte & POISON) != 0; }
   bool removable () const { return (byte & REMOVABLE) != 0; }
-  bool inclause () const { return (byte & INCLAUSE) != 0; }
+  bool clause () const { return (byte & CLAUSE) != 0; }
 
-  // Set flag, e.g., 'set (SEEN)', 'set (POISON)', or 'set (REMOVABLE)'.
+  // Set flag, e.g., 'set (SEEN)', 'set (POISON)', etc.
   //
   inline void set (Flag f) {
     assert (!(byte & f));
-    assert (f == SEEN || f == POISON || f == REMOVABLE || f == INCLAUSE);
+    assert (f == SEEN || f == POISON || f == REMOVABLE || f == CLAUSE);
     byte |= f;
+  }
+
+  // Clear flag, e.g., 'clear (SEEN)' but also 'clear (POISON | REMOVABLE)'
+  //
+  inline void clear (unsigned char f) {
+    assert ((byte & f));
+    byte &= ~f;
   }
 
   // Any flag set?
