@@ -16,29 +16,41 @@ namespace CaDiCaL {
 // to avoid cycles (which yields unsound removals).
 
 bool Internal::shrink_literal (int lit, int depth) {
+  assert (val (lit) > 0);
   Flags & f = flags (lit);
   Var & v = var (lit);
   if (!v.level || f.removable () || f.clause ()) return true;
   if (v.decision () || f.poison () || v.level == level) return false;
   const Level & l = control[v.level];
-  if (!depth && l.seen < 2) return false;
+  if (!depth && l.seen < 2) return false;	// TODO buggy?
   if (v.trail <= l.trail) return false;
   if (depth > opts.shrinkdepth) return false;
-  bool res = true;
-  if (v.reason) {
-    const_literal_iterator end = v.reason->end (), i;
-    int other;
-    for (i = v.reason->begin (); res && i != end; i++)
-      if ((other = *i) != lit)
-	res = shrink_literal (-other, depth+1);
-  } else res = shrink_literal (-v.other, depth+1);
-  if (res) {
+  bool remove = false;
+  Watches & ws = watches (lit);
+  const const_watch_iterator eow = ws.end ();
+  const_watch_iterator i;
+  for (i = ws.begin (); !remove && i != eow; i++) {
+    Clause * c = i->clause;
+    const const_literal_iterator eoc = c->end ();
+    const_literal_iterator j;
+    bool failed = false;
+    int lit_trail = var (lit).trail;
+    for (j = c->begin (); !failed && j != eoc; j++) {
+      int other = *j;
+      if (other == lit) continue;
+      else if (var (other).trail > lit_trail) failed = true;
+      else if (val (other) >= 0) failed = true;
+      else failed = !shrink_literal (-other, depth+1);
+    }
+    if (!failed) remove = true;
+  }
+  if (remove) {
     f.set (REMOVABLE);
     // if (!f.seen ()) analyzed.push_back (lit); // TODO?
   } else f.set (POISON);
   minimized.push_back (lit);
-  if (!depth) LOG ("shrinking %d %s", lit, res ? "succeeded" : "failed");
-  return res;
+  if (!depth) LOG ("shrinking %d %s", lit, remove ? "succeeded" : "failed");
+  return remove;
 }
 
 
@@ -49,7 +61,7 @@ void Internal::shrink_clause () {
   assert (minimized.empty ());
   int_iterator j = clause.begin ();
   for (const_int_iterator i = j; i != clause.end (); i++)
-    if (shrink_literal (-*i)) stats.shrunken++, abort ();
+    if (shrink_literal (-*i)) stats.shrunken++;
     else flags (*j++ = *i).set (CLAUSE);
   LOG ("shrunken %d literals", (long)(clause.end () - j));
   clause.resize (j - clause.begin ());

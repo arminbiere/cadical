@@ -26,7 +26,7 @@ bool Internal::minimize_literal (int lit, int depth) {
   if (!v.level || f.removable () || f.clause ()) return true;
   if (v.decision () || f.poison () || v.level == level) return false;
   const Level & l = control[v.level];
-  if (!depth && l.seen < 2) return false;
+  if (!depth && l.seen < 2) return false;	// TODO buggy?
   if (v.trail <= l.trail) return false;
   if (depth > opts.minimizedepth) return false;
   bool res = true;
