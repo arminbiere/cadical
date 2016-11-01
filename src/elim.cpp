@@ -15,6 +15,7 @@ bool Internal::eliminating () {
 }
 
 inline void Internal::elim (int pivot, vector<int> & work) {
+  if (val (pivot)) return;
   assert (!eliminated (pivot));
   vector<Clause*> & ps = occs[pivot];
   vector<Clause*> & ns = occs[-pivot];
@@ -40,40 +41,70 @@ inline void Internal::elim (int pivot, vector<int> & work) {
   bool failed = false;
   for (i = ps.begin (); !failed && !unsat && i != ps.end (); i++) {
     Clause * c = *i;
-    LOG (c, "first antecedent");
-    mark (c);
+    if (c->garbage) continue;
+    int csize = 0;
+    const_literal_iterator end = c->end (), l;
+    for (l = c->begin (); l != end; l++) {
+      int lit = *l;
+      if (lit == pivot) continue;
+      int tmp = val (lit);
+      if (tmp > 0) break;
+      else if (tmp < 0) continue;
+      else csize++;
+    }
+    if (l != end) {
+      LOG (c, "skipping satisfied first antecedent");
+      mark_garbage (c);
+      continue;
+    }
+    LOG (c, "first actual size %d antecedent", csize + 1);
     const_clause_iterator j;
     for (j = ns.begin (); !failed && !unsat && j != ns.end (); j++) {
-      stats.resolutions++;
       Clause * d = *j;
-      LOG (d, "second antecedent");
-      const_literal_iterator end = d->end (), l;
-      bool tautology = false;
+      if (d->garbage) continue;
+      int tautology = 0;
       size_t before = work.size ();
-      int size = c->size - 1;
-      int unit = 0;
+      int dsize = 0, unit = 0;
+      end = d->end ();
       for (l = d->begin (); !tautology && l != end; l++) {
 	int lit = *l;
 	assert (lit != pivot);
 	if (lit == -pivot) continue;
-	int tmp = marked (lit);
-	unit = lit;
-	if (tmp > 0) continue;
-	else if (tmp < 0) tautology = true;
-	else work.push_back (lit), size++;
+	int tmp = val (lit);
+	if (tmp > 0) tautology = 2;
+	else if (tmp < 0) continue;
+	else {
+	  tmp = marked (lit);
+	  unit = lit;
+	  if (tmp > 0) continue;
+	  else if (tmp < 0) tautology = 1;
+	  else work.push_back (lit), dsize++;
+	}
       }
-      if (tautology) {
-	LOG ("resolvent tautological");
+      if (tautology == 2) {
+	LOG (d, "skipping satisfied second antecedent");
+	work.resize (before);
+	continue;
+      }
+      stats.resolutions++;
+      int size = csize + dsize;
+      LOG (d, "second actual size %d antecedent", dsize + 1);
+      if (!size) {
+	LOG ("empty resolvent");
+	learn_empty_clause ();
+	work.resize (before);
+      } else if (tautology == 1) {
+	LOG ("tautological resolvent");
 	work.resize (before);
       } else if (size == 1 && val (unit) < 0) {
-	LOG ("clashing unit resolvent %d", unit);
+	LOG ("clashing unit %d resolvent", unit);
 	learn_empty_clause ();
 	work.resize (before);
       } else if (size == 1 && val (unit) > 0) {
 	LOG ("ignoring redundant unit resolvent %d", unit);
 	work.resize (before);
       } else if (size == 1) {
-	LOG ("unit resolvent %d", unit);
+	LOG ("new unit resolvent %d", unit);
 	work.resize (before);
 	assign (unit);
       } else if (size > opts.elimclslim) {
@@ -87,7 +118,7 @@ inline void Internal::elim (int pivot, vector<int> & work) {
 	} else {
 	  end = c->end ();
 	  for (l = c->begin (); l != end; l++)
-	    if (*l != pivot) work.push_back (*l);
+	    if (*l != pivot && !val (*l)) work.push_back (*l);
 	  work.push_back (0);
 	}
       }
@@ -210,8 +241,6 @@ void Internal::elim () {
       if (this->eliminated (*j)) break;
     if (j != eol) mark_garbage (c);
   }
-
-  if (!unsat && propagate ()) learn_empty_clause ();
 
   // Collect everything.  
   //
