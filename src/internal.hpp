@@ -51,6 +51,7 @@ class Internal {
   friend struct Stats;
 
   friend struct bumped_earlier;
+  friend struct sum_occs_smaller;
   friend struct trail_bumped_smaller;
   friend struct trail_smaller;
 
@@ -388,6 +389,17 @@ struct trail_smaller {
   trail_smaller (Internal * s) : internal (s) { }
   bool operator () (int a, int b) {
     return internal->var (a).trail < internal->var (b).trail;
+  }
+};
+
+struct sum_occs_smaller {
+  Internal * internal;
+  sum_occs_smaller (Internal * s) : internal (s) { }
+  bool operator () (int a, int b) {
+    assert (internal->occs);
+    size_t s = internal->occs[a].size () + internal->occs[-a].size ();
+    size_t t = internal->occs[b].size () + internal->occs[-b].size ();
+    return s < t;
   }
 };
 
