@@ -139,6 +139,7 @@ inline void Internal::elim (int pivot, vector<int> & work) {
   LOG ("marking %ld original clauses as garbage", limit);
   for (i = ps.begin (); i != ps.end (); i++) {
     Clause * c = *i;
+    if (c->garbage) continue;
     extension.push_back (0);
     const const_literal_iterator end = c->end ();
     const_literal_iterator l;
@@ -150,7 +151,7 @@ inline void Internal::elim (int pivot, vector<int> & work) {
   extension.push_back (0);
   extension.push_back (-pivot);
   for (i = ns.begin (); i != ns.end (); i++)
-    mark_garbage (*i);
+    if (!(*i)->garbage) mark_garbage (*i);
   LOG ("eliminated %d", pivot);
   eliminated (pivot) = true;
   stats.eliminated++;
