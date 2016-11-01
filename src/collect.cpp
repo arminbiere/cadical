@@ -150,7 +150,7 @@ void Internal::move_non_garbage_clauses () {
     // Localize according to (original) variable order.
 
     for (int sign = -1; sign <= 1; sign += 2) {
-      for (int idx = 1; idx <= maxvar; idx++) {
+      for (int idx = 1; idx <= max_var; idx++) {
         const Watches & ws = watches (sign * phases[idx] * idx);
         for (const_watch_iterator i = ws.begin (); i != ws. end (); i++)
           if (!(c = i->clause)->moved && !c->collect ()) move_clause (c);
@@ -196,7 +196,7 @@ void Internal::move_non_garbage_clauses () {
 
 void Internal::flush_watches () {
   size_t current_bytes = 0, max_bytes = 0;
-  for (int idx = 1; idx <= maxvar; idx++) {
+  for (int idx = 1; idx <= max_var; idx++) {
     for (int sign = -1; sign <= 1; sign += 2) {
       const int lit = sign * idx;
       Watches & ws = watches (lit);

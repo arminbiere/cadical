@@ -24,7 +24,7 @@ struct Queue {
     l->next = 0;
   }
 
-  void init (Internal *, int new_maxvar);
+  void init (Internal *, int new_max_var);
 };
 
 };

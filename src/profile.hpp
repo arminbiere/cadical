@@ -27,6 +27,7 @@ PROFILE(analyze,3) \
 PROFILE(bump,4) \
 PROFILE(collect,2) \
 PROFILE(decide,3) \
+PROFILE(extend,4) \
 PROFILE(minimize,4) \
 PROFILE(parse,1) \
 PROFILE(propagate,4) \

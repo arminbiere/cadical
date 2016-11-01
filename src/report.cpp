@@ -49,7 +49,7 @@ REPORT("glue",         1, 3, slow_glue_avg) \
 REPORT("size",         1, 4, size_avg) \
 REPORT("irredundant",  0, 4, stats.irredundant) \
 REPORT("variables",    0, 3, active_variables ()) \
-REPORT("remaining",   -1, 5, percent (active_variables (), maxvar)) \
+REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
 REPORT("restarteff",   2, 4, restarteff) \
 REPORT("restartint",   1, 4, restartint) \
 REPORT("bumplast",    -1, 4, percent (stats.bumplast, stats.bumped)) \

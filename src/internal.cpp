@@ -14,7 +14,7 @@ Internal::Internal ()
   iterating (false),
   clashing (false),
   vsize (0),
-  maxvar (0),
+  max_var (0),
   level (0),
   vals (0),
   solution (0),
@@ -58,16 +58,16 @@ void Internal::enlarge_vals (int new_vsize) {
   signed char * new_vals;
   NEW (new_vals, signed char, 2*new_vsize);
   new_vals += new_vsize;
-  if (vals) memcpy (new_vals - maxvar, vals - maxvar, 2*maxvar + 1);
+  if (vals) memcpy (new_vals - max_var, vals - max_var, 2*max_var + 1);
   dec_bytes (2*vsize * sizeof *vals);
   vals -= vsize;
   delete [] vals;
   vals = new_vals;
 }
 
-void Internal::enlarge (int new_maxvar) {
-  size_t new_vsize = vsize ? 2*vsize : 1 + (size_t) new_maxvar;
-  while (new_vsize <= (size_t) new_maxvar) new_vsize *= 2;
+void Internal::enlarge (int new_max_var) {
+  size_t new_vsize = vsize ? 2*vsize : 1 + (size_t) new_max_var;
+  while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
   ENLARGE (vtab, Var, vsize, new_vsize);
   ENLARGE (ltab, Link, vsize, new_vsize);
   ENLARGE (marks, signed char, vsize, new_vsize);
@@ -80,14 +80,14 @@ void Internal::enlarge (int new_maxvar) {
   vsize = new_vsize;
 }
 
-// Initialize VMTF queue from current 'maxvar+1' to 'new_maxvar'.  This
+// Initialize VMTF queue from current 'max_var+1' to 'new_max_var'.  This
 // incorporates an initial variable order.  We currently simply assume that
 // variables with smaller index are more important.
 //
-void Internal::resize_queue (int new_maxvar) {
+void Internal::resize_queue (int new_max_var) {
   int prev = queue.last;
-  assert ((size_t) new_maxvar < vsize);
-  for (int i = new_maxvar; i > maxvar; i--) {
+  assert ((size_t) new_max_var < vsize);
+  for (int i = new_max_var; i > max_var; i--) {
     Link * l = ltab + i;
     if ((l->prev = prev)) ltab[prev].next = i; else queue.first = i;
     btab[i] = ++stats.bumped;
@@ -98,22 +98,22 @@ void Internal::resize_queue (int new_maxvar) {
   queue.last = queue.unassigned = prev;
 }
 
-void Internal::resize (int new_maxvar) {
-  if (new_maxvar < maxvar) return;
-  if ((size_t) new_maxvar >= vsize) enlarge (new_maxvar);
-  for (int i = -new_maxvar; i < -maxvar; i++) vals[i] = 0;
-  for (int i = maxvar + 1; i <= new_maxvar; i++) vals[i] = 0;
-  for (int i = maxvar + 1; i <= new_maxvar; i++) phases[i] = -1;
-  for (int i = maxvar + 1; i <= new_maxvar; i++) marks[i] = 0;
-  for (int i = maxvar + 1; i <= new_maxvar; i++) btab[i] = 0;
-  if (!maxvar) btab[0] = 0;
-  resize_queue (new_maxvar);
-  MSG ("initialized %d variables", new_maxvar - maxvar);
-  maxvar = new_maxvar;
+void Internal::resize (int new_max_var) {
+  if (new_max_var < max_var) return;
+  if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
+  for (int i = -new_max_var; i < -max_var; i++) vals[i] = 0;
+  for (int i = max_var + 1; i <= new_max_var; i++) vals[i] = 0;
+  for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = -1;
+  for (int i = max_var + 1; i <= new_max_var; i++) marks[i] = 0;
+  for (int i = max_var + 1; i <= new_max_var; i++) btab[i] = 0;
+  if (!max_var) btab[0] = 0;
+  resize_queue (new_max_var);
+  MSG ("initialized %d variables", new_max_var - max_var);
+  max_var = new_max_var;
 }
 
 void Internal::add_original_lit (int lit) {
-  assert (abs (lit) <= maxvar);
+  assert (abs (lit) <= max_var);
   if (opts.check) original.push_back (lit);
   if (lit) clause.push_back (lit);
   else {
@@ -175,7 +175,10 @@ int Internal::solve () {
     res = 20;
   } else {
     res = search ();
-    if (res == 10) check (&Internal::val);
+    if (res == 10) {
+      if (!extension.empty ()) extend ();
+      if (opts.check) check (&Internal::val);
+    }
   }
   report ((res == 10) ? '1' : (res == 20 ? '0' : '?'));
   return res;

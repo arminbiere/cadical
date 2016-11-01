@@ -33,6 +33,7 @@ size_t Internal::vector_bytes () {
   res += VECTOR_BYTES (analyzed);
   res += VECTOR_BYTES (minimized);
   res += VECTOR_BYTES (original);
+  res += VECTOR_BYTES (extension);
   res += VECTOR_BYTES (control);
   res += VECTOR_BYTES (clauses);
   res += VECTOR_BYTES (resolved);

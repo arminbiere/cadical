@@ -62,12 +62,12 @@ class Internal {
   bool iterating;               // report learned unit (iteration)
   bool clashing;                // found clashing units in during parsing
   size_t vsize;                 // actually allocated variable data size
-  int maxvar;                  // maximum variable index
+  int max_var;                  // maximum variable index
   int level;                    // decision level ('control.size () - 1')
-  signed char * vals;           // assignment       [-maxvar,maxvar]
-  signed char * solution;       // for debugging    [-maxvar,maxvar]
-  signed char * marks;          // signed marks     [1,maxvar]
-  signed char * phases;         // saved assignment [1,maxvar]
+  signed char * vals;           // assignment       [-max_var,max_var]
+  signed char * solution;       // for debugging    [-max_var,max_var]
+  signed char * marks;          // signed marks     [1,max_var]
+  signed char * phases;         // saved assignment [1,max_var]
   Var * vtab;                   // variable table
   Link * ltab;                  // table of links for decision queue
   Flags * ftab;                 // seen, poison, minimized flags table
@@ -82,6 +82,7 @@ class Internal {
   vector<int> analyzed;         // analyzed literals in 'analyze'
   vector<int> minimized;        // removable or poison in 'minimize'
   vector<int> original;         // original CNF for debugging
+  vector<int> extension;        // original CNF for debugging
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
   vector<Clause*> resolved;     // large clauses in 'analyze'
@@ -106,14 +107,14 @@ class Internal {
 
   // Internal delegates and helpers for corresponding functions in 'Solver'.
   //
-  void resize_queue (int new_maxvar);
-  void resize (int new_maxvar);
+  void resize_queue (int new_max_var);
+  void resize (int new_max_var);
   void add_original_lit (int lit);
 
   // Enlarge tables.
   //
   void enlarge_vals (int new_vsize);
-  void enlarge (int new_maxvar);
+  void enlarge (int new_max_var);
 
   // Functions for monitoring resources.
   //
@@ -125,7 +126,7 @@ class Internal {
   size_t max_bytes ();
   size_t current_bytes ();
 
-  int active_variables () const { return maxvar - stats.fixed; }
+  int active_variables () const { return max_var - stats.fixed; }
 
   // Regularly reports what is going on in 'report.cpp'.
   //
@@ -137,7 +138,7 @@ class Internal {
     int idx;
     assert (lit), assert (lit != INT_MIN);
     idx = abs (lit);
-    assert (idx <= maxvar);
+    assert (idx <= max_var);
     return idx;
   }
 
@@ -194,7 +195,7 @@ class Internal {
   // inlined here since it occurs in several inner loops.
   //
   inline void update_queue_unassigned (int idx) {
-    assert (0 < idx), assert (idx <= maxvar);
+    assert (0 < idx), assert (idx <= max_var);
     queue.unassigned = idx;
     queue.bumped = btab[idx];
     LOG ("queue unassigned now %d bumped %ld", idx, btab[idx]);
@@ -304,9 +305,16 @@ class Internal {
   int subsume (Clause *, vector<Clause*> * occs);
   void subsume ();
 
+  // Bounded variable elimination.
+  //
+  bool eliminating ();
+  void eliminate (int lit);
+  void eliminate ();
+  void extend ();
+
   // Part on picking the next decision in 'decide.cpp'.
   //
-  bool satisfied () const { return trail.size () == (size_t) maxvar; }
+  bool satisfied () const { return trail.size () == (size_t) max_var; }
   int next_decision_variable ();
   void decide ();
 
@@ -340,7 +348,7 @@ class Internal {
   // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
   //
   int val (int lit) const {
-    assert (lit), assert (abs (lit) <= maxvar);
+    assert (lit), assert (abs (lit) <= max_var);
     return vals[lit];
   }
 
