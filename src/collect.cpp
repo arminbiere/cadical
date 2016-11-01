@@ -236,6 +236,7 @@ void Internal::check_clause_stats () {
 
 void Internal::garbage_collection () {
   START (collect);
+  mark_satisfied_clauses_as_garbage ();
   if (opts.arena) move_non_garbage_clauses ();
   else delete_garbage_clauses ();
   check_clause_stats ();

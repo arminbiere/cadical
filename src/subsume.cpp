@@ -168,7 +168,7 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
 // strengthened the result is negative.  Otherwise the candidate clause
 // can not be subsumed nor strengthened and zero is returned.
 
-inline int Internal::subsume (Clause * c, vector<Clause*> * occs) {
+inline int Internal::subsume (Clause * c) {
 
   stats.subtried++;
   LOG (c, "trying to subsume");
@@ -211,23 +211,18 @@ inline int Internal::subsume (Clause * c, vector<Clause*> * occs) {
 
 void Internal::subsume () {
 
-  stats.subsumptions++;
-  inc.subsume += opts.subsumeinc;
-  lim.subsume = stats.conflicts + inc.subsume;
-  if (clauses.empty ()) return;
-
   SWITCH_AND_START (search, simplify, subsume);
+  stats.subsumptions++;
 
   // Otherwise lots of contracts fail.
   //
   backtrack ();
+  if (lim.fixed_at_last_collect < stats.fixed) garbage_collection ();
 
   // Allocate schedule and occurrence lists.
   //
   vector<Clause*> schedule;
-  vector<Clause*> * occs;
-  NEW (occs, vector<Clause*>, 2*max_var+1);
-  occs += max_var;
+  init_occs ();
 
   // Determine candidate clauses and sort them by size.
   //
@@ -245,6 +240,7 @@ void Internal::subsume () {
     }
     schedule.push_back (c);
   }
+  inc_bytes (VECTOR_BYTES (schedule));
   stable_sort (schedule.begin (), schedule.end (), smaller_size ());
 
   // Now go over the scheduled clauses in the order of increasing size and
@@ -261,7 +257,7 @@ void Internal::subsume () {
     // First try to subsume or strengthen this candidate clause.
     //
     if (c->size > 2) {
-      const int tmp = subsume (c, occs);
+      const int tmp = subsume (c);
       if (tmp > 0) { subsumed++; continue; }
       if (tmp < 0) strengthened++;
     }
@@ -287,22 +283,24 @@ void Internal::subsume () {
     occs[minlit].push_back (c);
   }
 
-  // Compute memory usage and release occurrence lists.
+  // Account for memory allocated in occurrence lists.
   //
-  size_t bytes = VECTOR_BYTES (schedule);
-  for (int lit = -max_var; lit <= max_var; lit++)
-    bytes += VECTOR_BYTES (occs[lit]);
-  inc_bytes (bytes);
-  dec_bytes (bytes);
-  occs -= max_var;
-  DEL (occs, vector<int>, 2*max_var+1);
+  account_occs ();
+
+  // Release occurrence lists and schedule.
+  //
+  reset_occs ();
+  dec_bytes (VECTOR_BYTES (schedule));
+  schedule = vector<Clause*> ();
 
   VRB ("subsumed %ld strengthened %ld of %ld clauses %.2f%%",
     subsumed, strengthened, (long) schedule.size (),
     percent (subsumed + strengthened, schedule.size ()));
 
+  garbage_collection ();
+  inc.subsume += opts.subsumeinc;
+  lim.subsume = stats.conflicts + inc.subsume;
   report ('s');
-
   STOP_AND_SWITCH (subsume, simplify, search);
 }
 

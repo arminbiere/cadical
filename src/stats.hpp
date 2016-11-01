@@ -36,6 +36,7 @@ struct Stats {
   long subtried;     // number of tried subsumptions
   long subchecks;    // number of pair-wise subsumption checks
   long subsumptions; // number of subsumption phases
+  long resolutions;  // number of resolutions in eliminations
   long eliminations; // number of subsumption phases
   long learned;      // learned literals
   long minimized;    // minimized literals

@@ -17,6 +17,8 @@ void Stats::print (Internal * internal) {
   if (internal->opts.profile) internal->print_profile (t);
   size_t m = internal->max_bytes ();
   SECTION ("statistics");
+  MSG ("eliminations:  %15ld   %10.2f    conflicts per elimination",
+    stats.eliminations, relative (stats.conflicts, stats.eliminations));
   MSG ("subsumptions:  %15ld   %10.2f    conflicts per subsumption",
     stats.subsumptions, relative (stats.conflicts, stats.subsumptions));
   MSG ("reductions:    %15ld   %10.2f    conflicts per reduction",
@@ -29,6 +31,8 @@ void Stats::print (Internal * internal) {
     stats.decisions, relative (stats.decisions, t));
   MSG ("propagations:  %15ld   %10.2f    millions per second",
     stats.propagations, relative (stats.propagations/1e6, t));
+  MSG ("resolutions:   %15ld   %10.2f    per elimination",
+    stats.resolutions, relative (stats.resolutions, stats.eliminations));
   MSG ("reused:        %15ld   %10.2f %%  per restart",
     stats.reused, percent (stats.reused, stats.restarts));
   MSG ("units:         %15ld   %10.2f    conflicts per unit",

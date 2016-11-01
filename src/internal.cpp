@@ -50,6 +50,7 @@ Internal::~Internal () {
   if (solution) solution -= vsize, delete [] solution;
   if (marks) delete [] marks;
   if (phases) delete [] phases;
+  if (occs) reset_occs ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -137,7 +138,7 @@ int Internal::search () {
     else if (restarting ()) restart ();
     else if (reducing ()) reduce ();
     else if (subsuming ()) subsume ();
-    else if (eliminating ()) eliminate ();
+    else if (eliminating ()) elim ();
     else decide ();
   STOP (search);
   return res;

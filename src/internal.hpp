@@ -86,6 +86,7 @@ class Internal {
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
   vector<Clause*> resolved;     // large clauses in 'analyze'
+  vector<Clause*> * occs;       // clause occurrences
   vector<Timer> timers;         // active timers for profiling functions
   EMA fast_glue_avg;            // fast glue average
   EMA slow_glue_avg;            // slow glue average
@@ -298,20 +299,26 @@ class Internal {
   bool eagerly_subsume_last_learned (Clause *);
   void eagerly_subsume_last_learned ();
 
+  // Set-up occurrence list containers.
+  //
+  void init_occs ();
+  void account_occs ();  // for vector memory allocated
+  void reset_occs ();
+
   // Regular forward subsumption checking.
   //
   bool subsuming ();
   void strengthen_clause (Clause *, int);
   void subsume_clause (Clause * subsuming, Clause * subsumed);
   int subsume_check (Clause * subsuming, Clause * subsumed);
-  int subsume (Clause *, vector<Clause*> * occs);
+  int subsume (Clause *);
   void subsume ();
 
   // Bounded variable elimination.
   //
   bool eliminating ();
-  void eliminate (int lit, vector<Clause*> * occs);
-  void eliminate ();
+  void elim (int lit);
+  void elim ();
   void extend ();
 
   // Part on picking the next decision in 'decide.cpp'.
