@@ -13,7 +13,7 @@ namespace CaDiCaL {
 // is more expensive and thus should be called only on clauses for which
 // shrinking is useful (such as small clauses with small glue).  As in
 // PrecoSAT we restrict traversal to follow the topological assignment order
-// to avoid cycles (which yields unsound removals).
+// to avoid cycles (which would yield unsound removals).
 
 bool Internal::shrink_literal (int lit, int depth) {
   assert (val (lit) > 0);
@@ -27,6 +27,13 @@ bool Internal::shrink_literal (int lit, int depth) {
   if (depth > opts.shrinkdepth) return false;
   bool remove = false;
   Watches & ws = watches (lit);
+
+  // The difference to 'minimize_literal' is here, where we iterate over all
+  // clauses watches by 'lit' instead of 'just' the reason clause except for
+  // '(!!!)' where we have to make sure that we respect assignment order in
+  // resolutions to avoid cyclic derivations.  For the actual reason this
+  // test is not necessary.
+
   const const_watch_iterator eow = ws.end ();
   const_watch_iterator i;
   for (i = ws.begin (); !remove && i != eow; i++) {
@@ -38,19 +45,14 @@ bool Internal::shrink_literal (int lit, int depth) {
     for (j = c->begin (); !failed && j != eoc; j++) {
       int other = *j;
       if (other == lit) continue;
-      else if (var (other).trail > lit_trail) failed = true;
+      else if (var (other).trail > lit_trail) failed = true;  // (!!!)
       else if (val (other) >= 0) failed = true;
       else failed = !shrink_literal (-other, depth+1);
     }
     if (!failed) remove = true;
   }
-  if (remove) {
-    f.set (REMOVABLE);
-    if (!f.seen ()) {
-      analyzed.push_back (lit);
-      f.set (SEEN);
-    }
-  } else f.set (POISON);
+
+  if (remove) f.set (REMOVABLE); else f.set (POISON);
   minimized.push_back (lit);
   if (!depth) LOG ("shrinking %d %s", lit, remove ? "succeeded" : "failed");
   return remove;

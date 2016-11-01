@@ -26,8 +26,8 @@ bool Internal::minimize_literal (int lit, int depth) {
   if (!v.level || f.removable () || f.clause ()) return true;
   if (v.decision () || f.poison () || v.level == level) return false;
   const Level & l = control[v.level];
-  if (!depth && l.seen < 2) return false;
-  if (v.trail <= l.trail) return false;
+  if (!depth && l.seen < 2) return false;         // Don Knuth's idea
+  if (v.trail <= l.trail) return false;           // new early abort
   if (depth > opts.minimizedepth) return false;
   bool res = true;
   if (v.reason) {
@@ -37,13 +37,7 @@ bool Internal::minimize_literal (int lit, int depth) {
       if ((other = *i) != lit)
         res = minimize_literal (-other, depth+1);
   } else res = minimize_literal (-v.other, depth+1);
-  if (res) {
-    f.set (REMOVABLE);
-    if (!f.seen ()) {
-      analyzed.push_back (lit);
-      f.set (SEEN);
-    }
-  } else f.set (POISON);
+  if (res) f.set (REMOVABLE); else f.set (POISON);
   minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
   return res;
