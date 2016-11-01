@@ -63,7 +63,7 @@ void Internal::mark_satisfied_clauses_as_garbage () {
 
   // Only needed if there are new units (fixed variables) since last time.
   //
-  if (lim.fixed >= stats.fixed) return;
+  if (lim.fixed_at_last_collect >= stats.fixed) return;
 
   const_clause_iterator i;
   for (i = clauses.begin (); i != clauses.end (); i++) {
@@ -74,7 +74,7 @@ void Internal::mark_satisfied_clauses_as_garbage () {
     else if (tmp < 0) flush_falsified_literals (c);
   }
 
-  lim.fixed = stats.fixed;
+  lim.fixed_at_last_collect = stats.fixed;
 }
 
 /*------------------------------------------------------------------------*/

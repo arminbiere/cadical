@@ -4,11 +4,12 @@
 namespace CaDiCaL {
 
 struct Inc {
-  long reduce;   // reduce interval increment
-  long redinc;   // reduce increment increment
-  long subsume;  // subsumption interval increment
+  long reduce;  // reduce interval increment
+  long redinc;  // reduce increment increment
+  long subsume; // subsumption interval increment
+  long elim;    // elimination interval increment
 
-  Inc () : reduce (0), redinc (0), subsume (0) { }
+  Inc () : reduce (0), redinc (0), subsume (0), elim (0) { }
 };
 
 };

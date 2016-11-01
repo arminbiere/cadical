@@ -36,6 +36,7 @@ struct Stats {
   long subtried;     // number of tried subsumptions
   long subchecks;    // number of pair-wise subsumption checks
   long subsumptions; // number of subsumption phases
+  long eliminations; // number of subsumption phases
   long learned;      // learned literals
   long minimized;    // minimized literals
   long redundant;    // number of current redundant clauses
@@ -43,7 +44,8 @@ struct Stats {
   long units;        // learned unit clauses
   long binaries;     // learned binary clauses
 
-  int fixed;         // top level assigned variables
+  int fixed;         // number of top level assigned variables
+  int eliminated;    // number of eliminated variables
 
   struct { struct { size_t current, max; } total, watcher; } bytes;
 

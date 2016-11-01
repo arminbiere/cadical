@@ -137,6 +137,7 @@ int Internal::search () {
     else if (restarting ()) restart ();
     else if (reducing ()) reduce ();
     else if (subsuming ()) subsume ();
+    else if (eliminating ()) eliminate ();
     else decide ();
   STOP (search);
   return res;
@@ -154,6 +155,8 @@ void Internal::init_solving () {
 
   lim.subsume = opts.subsumeinit;
   inc.subsume = opts.subsumeinit;
+
+  inc.elim = (opts.elimint + 1)/2;
 
   lim.conflict = (opts.clim < 0) ? -1 : stats.conflicts + opts.clim;
   lim.decision = (opts.dlim < 0) ? -1 : stats.decisions + opts.dlim;

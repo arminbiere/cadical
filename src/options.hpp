@@ -16,6 +16,11 @@ OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
 OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
 OPTION(clim,             int,  -1, 0,1e9, "conflict limit (-1=none)") \
 OPTION(dlim,             int,  -1, 0,1e9, "decision limit (-1=none)") \
+OPTION(elim,            bool,   1, 0,  1, "bounded variable elimination") \
+OPTION(elimint,          int, 2e4, 1,1e9, "initial conflict interval") \
+OPTION(elim1lim,         int, 100, 0,1e9, "one sided occurrence limit") \
+OPTION(elim2lim,         int,1000, 0,1e9, "two sided occurrence limit") \
+OPTION(elimclslim,       int,1000, 0,1e9, "clause length limit") \
 OPTION(emabumplast,   double,1e-5, 0,  1, "alpha bump last percentage") \
 OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha slow glue") \

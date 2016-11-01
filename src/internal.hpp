@@ -126,7 +126,9 @@ class Internal {
   size_t max_bytes ();
   size_t current_bytes ();
 
-  int active_variables () const { return max_var - stats.fixed; }
+  int active_variables () const {
+    return max_var - stats.fixed - stats.eliminated;
+  }
 
   // Regularly reports what is going on in 'report.cpp'.
   //
@@ -308,7 +310,7 @@ class Internal {
   // Bounded variable elimination.
   //
   bool eliminating ();
-  void eliminate (int lit);
+  void eliminate (int lit, vector<Clause*> * occs);
   void eliminate ();
   void extend ();
 

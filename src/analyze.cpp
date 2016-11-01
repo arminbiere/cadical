@@ -28,7 +28,6 @@ void Internal::learn_empty_clause () {
 void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   if (proof) proof->trace_unit_clause (lit);
-  iterating = true;
   stats.fixed++;
 }
 
@@ -270,7 +269,7 @@ void Internal::analyze () {
     sort (clause.rbegin (), clause.rend (), trail_smaller (this));
     driving_clause = new_learned_clause (glue);
     jump = var (clause[1]).level;
-  }
+  } else iterating = true;
   UPDATE_AVG (jump_avg, jump);
   backtrack (jump);
   assign (-uip, driving_clause);
