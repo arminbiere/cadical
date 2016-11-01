@@ -226,8 +226,8 @@ void Internal::subsume () {
   //
   vector<Clause*> schedule;
   vector<Clause*> * occs;
-  NEW (occs, vector<Clause*>, 2*max_var+1);
-  occs += max_var;
+  NEW (occs, vector<Clause*>, 2*maxvar+1);
+  occs += maxvar;
 
   // Determine candidate clauses and sort them by size.
   //
@@ -290,12 +290,12 @@ void Internal::subsume () {
   // Compute memory usage and release occurrence lists.
   //
   size_t bytes = VECTOR_BYTES (schedule);
-  for (int lit = -max_var; lit <= max_var; lit++)
+  for (int lit = -maxvar; lit <= maxvar; lit++)
     bytes += VECTOR_BYTES (occs[lit]);
   inc_bytes (bytes);
   dec_bytes (bytes);
-  occs -= max_var;
-  DEL (occs, vector<int>, 2*max_var+1);
+  occs -= maxvar;
+  DEL (occs, vector<int>, 2*maxvar+1);
 
   VRB ("subsumed %ld strengthened %ld of %ld clauses %.2f%%",
     subsumed, strengthened, (long) schedule.size (),

@@ -18,7 +18,7 @@ Solver::~Solver () { delete internal; }
 
 /*------------------------------------------------------------------------*/
 
-int Solver::max () const { return internal->max_var; }
+int Solver::max () const { return internal->maxvar; }
 void Solver::resize (int new_max) { internal->resize (new_max); }
 
 /*------------------------------------------------------------------------*/
@@ -36,12 +36,12 @@ bool Solver::set (const char * arg) { return internal->opts.set (arg); }
 /*------------------------------------------------------------------------*/
 
 void Solver::add (int lit) {
-  if (abs (lit) > internal->max_var) internal->resize (abs (lit));
+  if (abs (lit) > internal->maxvar) internal->resize (abs (lit));
   internal->add_original_lit (lit);
 }
 
 int Solver::val (int lit) {
-  if (abs (lit) > internal->max_var) return 0;
+  if (abs (lit) > internal->maxvar) return 0;
   else return internal->val (lit);
 }
 

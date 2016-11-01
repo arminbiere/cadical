@@ -119,8 +119,8 @@ COMMENT:
 // Parsing function for a solution in competition output format.
 
 const char * Parser::parse_solution_non_profiled () {
-  NEW (internal->solution, signed char, internal->max_var + 1);
-  for (int i = 1; i <= internal->max_var; i++) internal->solution[i] = 0;
+  NEW (internal->solution, signed char, internal->maxvar + 1);
+  for (int i = 1; i <= internal->maxvar; i++) internal->solution[i] = 0;
   int ch;
   for (;;) {
     ch = parse_char ();
@@ -144,7 +144,7 @@ const char * Parser::parse_solution_non_profiled () {
     int lit = 0; ch = parse_char ();
     do {
       if (ch == ' ' || ch == '\t') { ch = parse_char (); continue; }
-      err = parse_lit (ch, lit, internal->max_var);
+      err = parse_lit (ch, lit, internal->maxvar);
       if (err) return err;
       if (ch == 'c') PER ("unexpected comment");
       if (!lit) break;
@@ -158,7 +158,7 @@ const char * Parser::parse_solution_non_profiled () {
     if (!lit) break;
   }
   MSG ("parsed %d solutions %.2f%%",
-    count, percent (count, internal->max_var));
+    count, percent (count, internal->maxvar));
   return 0;
 }
 
