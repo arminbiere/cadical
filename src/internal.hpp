@@ -69,7 +69,7 @@ class Internal {
   signed char * solution;       // for debugging    [-max_var,max_var]
   signed char * marks;          // signed marks     [1,max_var]
   signed char * phases;         // saved assignment [1,max_var]
-  unsigned char * etab;	        // eliminated table
+  unsigned char * etab;        	// eliminated table
   Var * vtab;                   // variable table
   Link * ltab;                  // table of links for decision queue
   Flags * ftab;                 // seen, poison, minimized flags table
@@ -216,7 +216,8 @@ class Internal {
   void delete_clause (Clause *);
   bool tautological_clause ();
   void add_new_original_clause ();
-  Clause * new_learned_clause (int glue);
+  Clause * new_learned_redundant_clause (int glue);
+  Clause * new_resolved_irredundant_clause ();
 
   // We want to eagerly update statistics as soon clauses are marked
   // garbage.  Otherwise 'report' for instance gives wrong numbers after
@@ -319,7 +320,7 @@ class Internal {
   // Bounded variable elimination.
   //
   bool eliminating ();
-  void elim (int lit);
+  void elim (int lit, vector<int> & work);
   void elim ();
   void extend ();
 

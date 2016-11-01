@@ -126,11 +126,19 @@ void Internal::add_new_original_clause () {
   } else watch_clause (new_clause (false));
 }
 
-Clause * Internal::new_learned_clause (int glue) {
+Clause * Internal::new_learned_redundant_clause (int glue) {
   Clause * res = new_clause (true, glue);
   if (proof) proof->trace_add_clause (res);
   watch_clause (res);
   return res;
 }
+
+Clause * Internal::new_resolved_irredundant_clause () {
+  Clause * res = new_clause (false);
+  if (proof) proof->trace_add_clause (res);
+  watch_clause (res);
+  return res;
+}
+
 
 };

@@ -267,7 +267,7 @@ void Internal::analyze () {
   int jump = 0;
   if (size > 1) {
     sort (clause.rbegin (), clause.rend (), trail_smaller (this));
-    driving_clause = new_learned_clause (glue);
+    driving_clause = new_learned_redundant_clause (glue);
     jump = var (clause[1]).level;
   } else iterating = true;
   UPDATE_AVG (jump_avg, jump);
