@@ -52,9 +52,9 @@ REPORT("variables",    0, 3, active_variables ()) \
 REPORT("remaining",   -1, 5, percent (active_variables (), max_var)) \
 REPORT("restarteff",   2, 4, restarteff) \
 REPORT("restartint",   1, 4, restartint) \
-REPORT("bumplast",    -1, 5, percent (stats.bumplast, stats.bumped)) \
+REPORT("bumplast",    -1, 4, percent (stats.bumplast, stats.bumped)) \
 REPORT("propdec",     0, 2, relative (stats.propagations, stats.decisions)) \
-REPORT("propconf",    0, 2, propconf) \
+REPORT("propconf",    0, 2, relative (stats.propagations, stats.conflicts)) \
 
 #if 0
 

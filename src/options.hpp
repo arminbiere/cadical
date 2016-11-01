@@ -20,7 +20,6 @@ OPTION(emabumplast,   double,1e-5, 0,  1, "alpha bump last percentage") \
 OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha slow glue") \
 OPTION(emajump,       double,1e-5, 0,  1, "alpha jump level") \
-OPTION(emapropconf,   double,1e-5, 0,  1, "alpha propagations/conflicts") \
 OPTION(emarestarteff, double,1e-3, 0,  1, "alpha restart effectiveness") \
 OPTION(emarestartint, double,1e-5, 0,  1, "alpha actual restart interval") \
 OPTION(emasize,       double,1e-5, 0,  1, "alpha learned clause size") \
@@ -53,7 +52,7 @@ OPTION(subsumeinit,      int, 1e4, 0,1e9, "initial subsume limit") \
 OPTION(subsumelim,       int, 100, 0,1e9, "watch list length limit") \
 OPTION(trailbump,       bool,   1, 0,  1, "use trail + bumped") \
 OPTION(trailbumplast, double,  40, 0,100, "trail bump last level limit") \
-OPTION(trailbumprops, double, 500, 0,1e9, "trail bump propagation limit") \
+OPTION(trailbumprops, double, 200, 0,1e9, "trail bump propagation limit") \
 OPTION(verbose,         bool,   0, 0,  1, "more verbose messages") \
 OPTION(witness,         bool,   1, 0,  1, "print witness") \
 

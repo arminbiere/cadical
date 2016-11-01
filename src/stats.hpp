@@ -35,6 +35,7 @@ struct Stats {
   long subred;       // number of subsumed redundant clauses
   long subtried;     // number of tried subsumptions
   long subchecks;    // number of pair-wise subsumption checks
+  long subsumptions; // number of subsumption phases
   long learned;      // learned literals
   long minimized;    // minimized literals
   long redundant;    // number of current redundant clauses

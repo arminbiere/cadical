@@ -17,6 +17,8 @@ void Stats::print (Internal * internal) {
   if (internal->opts.profile) internal->print_profile (t);
   size_t m = internal->max_bytes ();
   SECTION ("statistics");
+  MSG ("subsumptions:  %15ld   %10.2f    conflicts per subsumption",
+    stats.subsumptions, relative (stats.conflicts, stats.subsumptions));
   MSG ("reductions:    %15ld   %10.2f    conflicts per reduction",
     stats.reductions, relative (stats.conflicts, stats.reductions));
   MSG ("restarts:      %15ld   %10.2f    conflicts per restart",

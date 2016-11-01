@@ -160,7 +160,6 @@ void Internal::init_solving () {
 
   INIT_EMA (fast_glue_avg, opts.emagluefast);
   INIT_EMA (jump_avg, opts.emajump);
-  INIT_EMA (propconf, opts.emapropconf);
   INIT_EMA (restarteff, opts.emarestarteff);
   INIT_EMA (restartint, opts.emarestartint);
   INIT_EMA (size_avg, opts.emasize);

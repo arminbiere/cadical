@@ -75,7 +75,7 @@ void Internal::bump_variables () {
   START (bump);
 
   if (opts.trailbump &&
-      propconf > opts.trailbumprops &&
+      relative (stats.propagations, stats.decisions) > opts.trailbumprops &&
       percent (stats.bumplast, stats.bumped) > opts.trailbumplast) {
 
     // There are some instances (for instance the 'newton...' instances),
