@@ -2,6 +2,7 @@
 
 #include "macros.hpp"
 #include "message.hpp"
+#include "util.hpp"
 
 #include <cassert>
 #include <cstring>
@@ -33,7 +34,8 @@ bool Options::set (bool & opt, const char * name,
 bool Options::set (int & opt, const char * name,
                    const char * valstr, const int l, const int h) {
   assert (l < h);
-  int val = atoi (valstr);              // TODO check valstr to be valid
+  if (!is_int_str (valstr)) return false;
+  int val = atoi (valstr);
   if (val < l) val = l;
   if (val > h) val = h;
   opt = val;
@@ -45,7 +47,8 @@ bool Options::set (double & opt, const char * name,
                    const char * valstr,
                    const double l, const double h) {
   assert (l < h);
-  double val = atof (valstr);           // TODO check valstr to be valid
+  if (!is_double_str (valstr)) return false;
+  double val = atof (valstr);
   if (val < l) val = l;
   if (val > h) val = h;
   opt = val;

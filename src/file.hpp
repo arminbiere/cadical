@@ -3,6 +3,11 @@
 
 #include <cstdio>
 #include <cassert>
+#include <cstdlib>
+
+#ifndef NDEBUG
+#include <climits>
+#endif
 
 namespace CaDiCaL {
 
@@ -59,9 +64,24 @@ public:
   }
 
   static void print (int lit, FILE * file = stdout) {
-    char buffer[16];
-    sprintf (buffer, "%d", lit);        // TODO faster?
-    print (buffer, file);
+    if (!lit) print ('0');
+    else if (lit == -2147483648) {
+      assert (lit == INT_MIN);
+      print ("-2147483648");
+    } else {
+      char buffer[11];
+      int i = sizeof buffer;
+      buffer[--i] = 0;
+      assert (lit != INT_MIN);
+      unsigned idx = abs (lit);
+      while (idx) {
+	assert (i > 0);
+	buffer[--i] = idx % 10;
+	idx /= 10;
+      }
+      if (lit < 0) print ('-');
+      print (buffer + i);
+    }
   }
 
   void put (char c) { assert (writing); print (c, file); }
