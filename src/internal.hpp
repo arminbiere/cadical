@@ -51,7 +51,6 @@ class Internal {
   friend struct Stats;
 
   friend struct bumped_earlier;
-  friend struct level_greater;
   friend struct trail_bumped_smaller;
   friend struct trail_smaller;
 
@@ -266,7 +265,7 @@ class Internal {
   // Asynchronous terminating check.
   //
   bool terminating ();
-  void terminate ();            // TODO: non implemented yet.
+  void terminate ();            // TODO: not implemented yet.
 
   // Reducing means determining useless clauses with 'reduce' in
   // 'reduce.cpp' as well as root level satisfied clause and then collecting

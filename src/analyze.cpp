@@ -198,14 +198,6 @@ void Internal::clear_levels () {
 
 /*------------------------------------------------------------------------*/
 
-struct level_greater {
-  Internal * internal;
-  level_greater (Internal * s) : internal (s) { }
-  bool operator () (int a, int b) {
-    return internal->var (a).level > internal->var (b).level;
-  }
-};
-
 void Internal::analyze () {
   assert (conflict);
   if (!level) { learn_empty_clause (); conflict = 0; return; }
@@ -275,7 +267,7 @@ void Internal::analyze () {
   Clause * driving_clause = 0;
   int jump = 0;
   if (size > 1) {
-    stable_sort (clause.begin (), clause.end (), level_greater (this));
+    sort (clause.rbegin (), clause.rend (), trail_smaller (this));
     driving_clause = new_learned_clause (glue);
     jump = var (clause[1]).level;
   }
