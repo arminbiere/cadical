@@ -217,7 +217,6 @@ void Internal::subsume () {
   // Otherwise lots of contracts fail.
   //
   backtrack ();
-  if (lim.fixed_at_last_collect < stats.fixed) garbage_collection ();
 
   // Allocate schedule and occurrence lists.
   //

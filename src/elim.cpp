@@ -14,118 +14,80 @@ bool Internal::eliminating () {
   return lim.elim <= stats.conflicts;
 }
 
-inline void Internal::elim (int pivot, vector<int> & work) {
-  if (val (pivot)) return;
-  assert (!eliminated (pivot));
-  vector<Clause*> & ps = occs[pivot];
-  vector<Clause*> & ns = occs[-pivot];
+inline size_t Internal::flush_occs (int lit) {
+  vector<Clause *> & os = occs[lit];
+  const const_clause_iterator end = os.end ();
   const_clause_iterator i;
-  clause_iterator k;
-  k = ps.begin ();
-  for (i = k; i != ps.end (); i++)
+  clause_iterator k = os.begin ();
+  for (i = k; i != end; i++)
     if ((*k++ = *i)->garbage) k--;
-  ps.resize (k - ps.begin ());
-  k = ns.begin ();
-  for (i = k; i != ns.end (); i++)
-    if ((*k++ = *i)->garbage) k--;
-  ns.resize (k - ns.begin ());
-  long pos = ps.size ();
-  long neg = ns.size ();
+  size_t res = k - os.begin ();
+  os.resize (res);
+  return res;
+}
+
+inline void
+Internal::elim_var (int pivot, vector<int> & work, vector<int> & units) {
+  long pos = flush_occs (pivot);
+  long neg = flush_occs (-pivot);
   if (pos > opts.elimocclim) return;
   if (neg > opts.elimocclim) return;
-  if (pos > neg) { swap (pos, neg); swap (ps, ns); pivot = -pivot; }
+  if (pos > neg) { swap (pos, neg); pivot = -pivot; }
+  vector<Clause*> & ps = occs[pivot];
+  vector<Clause*> & ns = occs[-pivot];
   long limit = pos + neg, count = 0;
   LOG ("try to eliminate %d with %ld = %ld + %ld occurrences",
     pivot, limit, pos, neg);
   work.clear ();
   bool failed = false;
-  for (i = ps.begin (); !failed && !unsat && i != ps.end (); i++) {
+  const_clause_iterator i;
+  for (i = ps.begin (); !failed && i != ps.end (); i++) {
     Clause * c = *i;
-    if (c->garbage) continue;
-    int csize = 0;
-    const_literal_iterator end = c->end (), l;
-    for (l = c->begin (); l != end; l++) {
-      int lit = *l;
-      if (lit == pivot) continue;
-      int tmp = val (lit);
-      if (tmp > 0) break;
-      else if (tmp < 0) continue;
-      else csize++;
-    }
-    if (l != end) {
-      LOG (c, "skipping satisfied first antecedent");
-      mark_garbage (c);
-      continue;
-    }
-    LOG (c, "first actual size %d antecedent", csize + 1);
+    LOG (c, "first antecedent");
+    mark (c);
     const_clause_iterator j;
-    for (j = ns.begin (); !failed && !unsat && j != ns.end (); j++) {
+    for (j = ns.begin (); !failed && j != ns.end (); j++) {
       Clause * d = *j;
-      if (d->garbage) continue;
-      int tautology = 0;
+      stats.resolutions++;
+      LOG (d, "second antecedent");
       size_t before = work.size ();
-      int dsize = 0, unit = 0;
-      end = d->end ();
+      bool tautology = false;
+      int unit = 0;
+      const_literal_iterator end = d->end (), l;
       for (l = d->begin (); !tautology && l != end; l++) {
 	int lit = *l;
 	assert (lit != pivot);
 	if (lit == -pivot) continue;
-	int tmp = val (lit);
-	if (tmp > 0) tautology = 2;
-	else if (tmp < 0) continue;
-	else {
-	  tmp = marked (lit);
-	  unit = lit;
-	  if (tmp > 0) continue;
-	  else if (tmp < 0) tautology = 1;
-	  else work.push_back (lit), dsize++;
-	}
+	int tmp = marked (lit);
+	if (!unit) unit = lit;
+	if (tmp > 0) continue;
+	else if (tmp < 0) tautology = true;
+	else work.push_back (lit);
       }
-      if (tautology == 2) {
-	LOG (d, "skipping satisfied second antecedent");
-	work.resize (before);
-	continue;
-      }
-      stats.resolutions++;
-      int size = csize + dsize;
-      LOG (d, "second actual size %d antecedent", dsize + 1);
-      if (!size) {
-	LOG ("empty resolvent");
-	learn_empty_clause ();
-	work.resize (before);
-      } else if (tautology == 1) {
+      int size = c->size - 1 + (int) (work.size () - before);
+      if (tautology) {
 	LOG ("tautological resolvent");
 	work.resize (before);
-      } else if (size == 1 && val (unit) < 0) {
-	LOG ("clashing unit %d resolvent", unit);
-	learn_empty_clause ();
-	work.resize (before);
-      } else if (size == 1 && val (unit) > 0) {
-	LOG ("ignoring redundant unit resolvent %d", unit);
-	work.resize (before);
-      } else if (size == 1) {
-	LOG ("new unit resolvent %d", unit);
-	work.resize (before);
-	assign (unit);
       } else if (size > opts.elimclslim) {
 	LOG ("non-tautological resolvent of size %d too big", size);
 	failed = true;
+      } else if (size == 1) {
+	LOG ("unit %d resolvent", unit);
+	units.push_back (unit);
+	work.resize (before);
+      } else if (++count > limit) { 
+	LOG ("limit %ld non-tautological resolvents exhausted", limit);
+	failed = true;
       } else {
-	LOG ("resolvent non-tautological");
-	if (++count > limit) { 
-	  LOG ("limit %ld non-tautological resolvents exhausted", limit);
-	  failed = true;
-	} else {
-	  end = c->end ();
-	  for (l = c->begin (); l != end; l++)
-	    if (*l != pivot && !val (*l)) work.push_back (*l);
-	  work.push_back (0);
-	}
+	LOG ("non-tautological size %d resolvent", size);
+	end = c->end ();
+	for (l = c->begin (); l != end; l++)
+	  if (*l != pivot) work.push_back (*l);
+	work.push_back (0);
       }
     }
     unmark (c);
   }
-  if (unsat) { LOG ("elimination produced empty clause"); return ;}
   if (failed) { LOG ("failed to eliminate %d", pivot); return; }
   LOG ("adding %ld resolvents", count);
   const_int_iterator w;
@@ -165,11 +127,10 @@ void Internal::elim () {
   // Otherwise lots of contracts fail.
   //
   backtrack ();
-  if (lim.fixed_at_last_collect < stats.fixed) garbage_collection ();
 
   // Allocate schedule and occurrence lists.
   //
-  vector<int> schedule, work;
+  vector<int> schedule, work, units;
   init_occs ();
 
   // Connect all irredundant clauses.
@@ -212,10 +173,13 @@ void Internal::elim () {
   // Try eliminating variables according to the schedule.
   const const_int_iterator eos = schedule.end ();
   const_int_iterator k;
-  for (k = schedule.begin (); !unsat && k != eos; k++)
-    elim (*k, work);				// TODO garbage collection!
+  for (k = schedule.begin (); k != eos; k++) {
+    elim_var (*k, work, units);			
+    // TODO garbage collection!
+  }
 
   inc_bytes (VECTOR_BYTES (work));
+  inc_bytes (VECTOR_BYTES (units));
 
   long resolutions = stats.resolutions - old_resolutions;
   int eliminated = stats.eliminated - old_eliminated;
@@ -243,9 +207,22 @@ void Internal::elim () {
     if (j != eol) mark_garbage (c);
   }
 
-  // Collect everything.  
+  // Assigning units.
   //
-  garbage_collection ();
+  while (!unsat && !units.empty ()) {
+    const int unit = units.back (), tmp = val (unit);
+    if (!tmp) assign (unit);
+    else if (tmp < 0) {
+      LOG ("clashing unit %d", unit);
+      learn_empty_clause ();
+    }
+    units.pop_back ();
+  }
+
+  // Clean up units stack too.
+  //
+  dec_bytes (VECTOR_BYTES (units));
+  units = vector<int> ();
 
   inc.elim *= 2;
   lim.elim = stats.conflicts + inc.elim;

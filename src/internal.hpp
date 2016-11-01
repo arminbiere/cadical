@@ -320,7 +320,8 @@ class Internal {
   // Bounded variable elimination.
   //
   bool eliminating ();
-  void elim (int lit, vector<int> & work);
+  size_t flush_occs (int lit);
+  void elim_var (int lit, vector<int> & work, vector<int> & units);
   void elim ();
   void extend ();
 
