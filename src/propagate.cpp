@@ -7,7 +7,7 @@
 
 namespace CaDiCaL {
 
-void Internal::assign (int lit, Clause * reason, int other) {
+inline void Internal::assign (int lit, Clause * reason, int other) {
   int idx = vidx (lit);
   assert (!vals[idx]);
   Var & v = var (idx);
@@ -29,11 +29,29 @@ void Internal::assign (int lit, Clause * reason, int other) {
   // the watches of '-lit' are accessed next during propagation it is wise
   // to tell the processor to prefetch the memory of those watches.  This
   // seems to give consistent speed-ups (both with 'g++' and 'clang++') in
-  // the order of 5%.  Even though this is a rather low-level optimization
-  // it is confined to the next line (and these comments), so we keep it.
+  // the order of 5%.  For instance on 'sokoban-p20.sas.ex.13', which has
+  // very high propagation per conflict rates, we saw a difference of 24
+  // seconds for the version with prefetching versus 32 seconds for the one
+  // without. This was for the first 10k conflicts and resulted of course in
+  // the same search space otherwise.  Even though this is a rather
+  // low-level optimization it is confined to the next line (and these
+  // comments), so we keep it.
   //
-  if (opts.prefetch) __builtin_prefetch (&*(watches (-lit).begin ()), 1);
+  if (opts.prefetch) __builtin_prefetch (&*(watches (-lit).begin ()));
 }
+
+/*------------------------------------------------------------------------*/
+
+// External versions of 'assign' which are not inlined.  They either are
+// used in 'decide' or in 'analyze' to assign a decision or a learned
+// clause.  This happens far less frequently than the 'assign' above, which
+// is only called from 'propagate' below (and thus can be inlined).
+
+void Internal::assign (int lit) { assign (lit, 0, 0); }
+
+void Internal::assign (int lit, Clause * c) { assign (lit, c, 0); }
+
+/*------------------------------------------------------------------------*/
 
 // The 'propagate' function is usually the hot-spot of a CDCL SAT solver.
 // The 'trail' stack saves assigned variables and is used here as BFS queue
@@ -78,7 +96,7 @@ bool Internal::propagate () {
             swap (lits[1], *k);
             watch_literal (lits[1], lit, w.clause, w.size);
             j--;
-          } else if (!u) assign (lits[0], w.clause);
+          } else if (!u) assign (lits[0], w.clause, 0);
           else { conflict = w.clause; break; }
         }
       }
