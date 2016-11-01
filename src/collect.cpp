@@ -218,10 +218,27 @@ void Internal::setup_watches () {
 
 /*------------------------------------------------------------------------*/
 
+void Internal::check_clause_stats () {
+#ifndef NDEBUG
+  long irredundant = 0, redundant = 0;
+  const_clause_iterator i;
+  for (i = clauses.begin (); i != clauses.end (); i++) {
+    Clause * c = *i;
+    if (c->garbage) continue;
+    if (c->redundant) redundant++; else irredundant++;
+  }
+  assert (stats.irredundant == irredundant);
+  assert (stats.redundant == redundant);
+#endif
+}
+
+/*------------------------------------------------------------------------*/
+
 void Internal::garbage_collection () {
   START (collect);
   if (opts.arena) move_non_garbage_clauses ();
   else delete_garbage_clauses ();
+  check_clause_stats ();
   flush_watches ();
   setup_watches ();
   STOP (collect);

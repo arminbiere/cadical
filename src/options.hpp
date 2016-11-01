@@ -45,8 +45,8 @@ OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
 OPTION(reverselim,    double, 500, 0,1e9, "reverse bumping limit") \
 OPTION(shrink,          bool,   1, 0,  1, "shrink learned clause") \
 OPTION(shrinkglue,       int,   5, 0,1e9, "glue limit for shrinking") \
-OPTION(shrinksize,       int,  15, 0,1e9, "size limit for shrinking") \
-OPTION(shrinkdepth,      int,  10, 0,1e9, "shrinking depth") \
+OPTION(shrinksize,       int,  20, 0,1e9, "size limit for shrinking") \
+OPTION(shrinkdepth,      int,   2, 0,1e9, "shrinking depth") \
 OPTION(strengthen,      bool,   1, 0,  1, "strengthen during subsume") \
 OPTION(sublast,          int,   5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,   1, 0,  1, "enable clause subsumption") \

@@ -284,6 +284,7 @@ class Internal {
   void delete_garbage_clauses ();
   void flush_watches ();
   void setup_watches ();
+  void check_clause_stats ();
   void garbage_collection ();
   void reduce ();
 

@@ -46,8 +46,8 @@ void Stats::print (Internal * internal) {
     stats.subsumed, relative (stats.subtried, stats.subsumed));
   MSG ("strengthened:  %15ld   %10.2f    per forward",
     stats.strengthened, relative (stats.strengthened, stats.subsumed));
-  MSG ("shrunken:      %15ld   %10.2f    per conflict",
-    stats.shrunken, relative (stats.shrunken, stats.conflicts));
+  MSG ("shrunken:      %15ld   %10.2f %%  of tried literals",
+    stats.shrunken, percent (stats.shrunken, stats.shrinktried));
   MSG ("backward:      %15ld   %10.2f %%  per conflict",
     stats.sublast, percent (stats.sublast, stats.conflicts));
   if (internal->opts.verbose) {

@@ -22,7 +22,7 @@ bool Internal::shrink_literal (int lit, int depth) {
   if (!v.level || f.removable () || f.clause ()) return true;
   if (v.decision () || f.poison () || v.level == level) return false;
   const Level & l = control[v.level];
-  if (!depth && l.seen < 2) return false;	// TODO buggy?
+  if (!depth && l.seen < 2) return false;
   if (v.trail <= l.trail) return false;
   if (depth > opts.shrinkdepth) return false;
   bool remove = false;
@@ -57,6 +57,7 @@ bool Internal::shrink_literal (int lit, int depth) {
 void Internal::shrink_clause () {
   START (shrink);
   LOG (clause, "shrinking minimized first UIP clause");
+  stats.shrinktried += clause.size ();
   sort (clause.begin (), clause.end (), trail_smaller (this));
   assert (minimized.empty ());
   int_iterator j = clause.begin ();
