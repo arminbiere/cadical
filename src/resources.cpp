@@ -27,15 +27,16 @@ void Internal::dec_bytes (size_t bytes) {
 
 size_t Internal::vector_bytes () {
   size_t res = 0;
-  res += VECTOR_BYTES (original);
-  res += VECTOR_BYTES (clause);
   res += VECTOR_BYTES (trail);
+  res += VECTOR_BYTES (clause);
+  res += VECTOR_BYTES (levels);
   res += VECTOR_BYTES (analyzed);
-  res += VECTOR_BYTES (levels);
   res += VECTOR_BYTES (minimized);
-  res += VECTOR_BYTES (resolved);
+  res += VECTOR_BYTES (original);
+  res += VECTOR_BYTES (control);
   res += VECTOR_BYTES (clauses);
-  res += VECTOR_BYTES (levels);
+  res += VECTOR_BYTES (resolved);
+  res += VECTOR_BYTES (timers);
   return res;
 }
 

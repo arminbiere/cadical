@@ -81,9 +81,11 @@ class Internal {
   vector<int> levels;           // decision levels in learned clause
   vector<int> analyzed;         // analyzed literals in 'analyze'
   vector<int> minimized;        // removable or poison in 'minimize'
+  vector<int> original;         // original CNF for debugging
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
   vector<Clause*> resolved;     // large clauses in 'analyze'
+  vector<Timer> timers;         // active timers for profiling functions
   EMA fast_glue_avg;            // fast glue average
   EMA slow_glue_avg;            // slow glue average
   EMA restartint;               // actual restart interval average
@@ -95,8 +97,6 @@ class Internal {
   Proof * proof;                // trace clausal proof if non zero
   Options opts;                 // run-time options
   Stats stats;                  // statistics
-  vector<int> original;         // original CNF for debugging
-  vector<Timer> timers;         // active timers for profiling functions
   Profiles profiles;            // global profiled time for functions
   Arena arena;                  // memory arena for moving garbage collector
   Format error;                 // last (persistent) error message
