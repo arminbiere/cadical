@@ -69,6 +69,7 @@ class Internal {
   signed char * solution;       // for debugging    [-max_var,max_var]
   signed char * marks;          // signed marks     [1,max_var]
   signed char * phases;         // saved assignment [1,max_var]
+  unsigned char * etab;	        // eliminated table
   Var * vtab;                   // variable table
   Link * ltab;                  // table of links for decision queue
   Flags * ftab;                 // seen, poison, minimized flags table
@@ -372,6 +373,8 @@ class Internal {
     if (lit < 0) res = -res;
     return res;
   }
+
+  unsigned char & eliminated (int lit) { return etab [vidx (lit) ]; }
 
   // Parsing functions (handed over to 'parse.cpp').
   //
