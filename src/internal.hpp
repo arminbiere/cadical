@@ -217,6 +217,8 @@ class Internal {
   // 'subsume' before the next 'reduce'.  Thus we factored out marking and
   // accounting for garbage clauses.  Note that we do not update allocated
   // bytes statistics at this point, but wait until the next 'collect'.
+  // In order not to miss any update to those statistics we call
+  // 'check_clause_stats' after garbage collection in debugging mode.
   //
   void mark_garbage (Clause * c) {
     assert (!c->garbage);
