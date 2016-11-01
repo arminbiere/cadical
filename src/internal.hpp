@@ -172,8 +172,8 @@ class Internal {
   }
   void unmark (int lit) { marks [ vidx (lit) ] = 0; }
 
-  void mark_clause ();		// mark 'this->clause'
-  void unmark_clause ();	// unmark 'this->clause'
+  void mark_clause ();          // mark 'this->clause'
+  void unmark_clause ();        // unmark 'this->clause'
 
   void mark (Clause *);
   void unmark (Clause *);
@@ -266,7 +266,7 @@ class Internal {
   // Asynchronous terminating check.
   //
   bool terminating ();
-  void terminate ();		// TODO: non implemented yet.
+  void terminate ();            // TODO: non implemented yet.
 
   // Reducing means determining useless clauses with 'reduce' in
   // 'reduce.cpp' as well as root level satisfied clause and then collecting

@@ -149,11 +149,11 @@ void Internal::init_solving () {
   lim.restart = opts.restartint;
 
   lim.reduce  = opts.reduceinit;
-  inc.reduce  = opts.reduceinit; 
+  inc.reduce  = opts.reduceinit;
   inc.redinc  = opts.reduceinc;
 
-  lim.subsume = opts.subsumeinit; 
-  inc.subsume = opts.subsumeinit; 
+  lim.subsume = opts.subsumeinit;
+  inc.subsume = opts.subsumeinit;
 
   lim.conflict = (opts.clim < 0) ? -1 : stats.conflicts + opts.clim;
   lim.decision = (opts.dlim < 0) ? -1 : stats.decisions + opts.dlim;

@@ -197,13 +197,13 @@ inline int Internal::subsume (Clause * c, vector<Clause*> * occs) {
     subsume_clause (d, c);
     return 1;
   }
-  
+
   if (flipped) {
     LOG (d, "strengthening");
     strengthen_clause (c, -flipped);
     return -1;
   }
-  
+
   return 0;
 }
 

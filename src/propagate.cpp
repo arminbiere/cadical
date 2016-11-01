@@ -87,7 +87,7 @@ bool Internal::propagate () {
     ws.resize (j - ws.begin ());
   }
   stats.propagations += propagated - before;
-  if (conflict) { 
+  if (conflict) {
     stats.conflicts++;
     long delta = stats.propagations - lim.propagations_at_last_conflict;
     lim.propagations_at_last_conflict = stats.propagations;

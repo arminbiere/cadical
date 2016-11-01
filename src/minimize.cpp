@@ -35,7 +35,7 @@ bool Internal::minimize_literal (int lit, int depth) {
     int other;
     for (i = v.reason->begin (); res && i != end; i++)
       if ((other = *i) != lit)
-	res = minimize_literal (-other, depth+1);
+        res = minimize_literal (-other, depth+1);
   } else res = minimize_literal (-v.other, depth+1);
   if (res) {
     f.set (REMOVABLE);

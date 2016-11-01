@@ -75,9 +75,9 @@ public:
       assert (lit != INT_MIN);
       unsigned idx = abs (lit);
       while (idx) {
-	assert (i > 0);
-	buffer[--i] = idx % 10;
-	idx /= 10;
+        assert (i > 0);
+        buffer[--i] = idx % 10;
+        idx /= 10;
       }
       if (lit < 0) print ('-');
       print (buffer + i);

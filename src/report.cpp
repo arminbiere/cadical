@@ -62,7 +62,6 @@ REPORT("glue-fast",    1, 4, fast_glue_avg) \
 REPORT("level-fast",   1, 4, fast_jump_avg) \
 REPORT("propconf",    0, 2, relative (stats.propagations, stats.conflicts)) \
 
-
 #endif
 
 /*------------------------------------------------------------------------*/

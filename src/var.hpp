@@ -21,7 +21,7 @@ struct Var {
   // analysis and clause minimization we do not really need to have access
   // to the actual clause, but simply can use a saved copy of the other
   // 'blit' literal in the watch as reason.
-  // 
+  //
   // If a variable is assigned either both 'other' and 'reason' are zero,
   // and the variable is a decision or root level unit, or exactly one of
   // them is non-zero.  If 'other' is non-zero than the reason is a binary

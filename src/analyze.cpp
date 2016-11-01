@@ -166,7 +166,6 @@ inline void Internal::analyze_literal (int lit, int & open) {
   if (v.level == level) open++;
 }
 
-
 inline void
 Internal::analyze_reason (int lit, Clause * reason, int & open) {
   assert (reason);

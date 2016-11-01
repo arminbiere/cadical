@@ -56,7 +56,6 @@ bool Internal::shrink_literal (int lit, int depth) {
   return remove;
 }
 
-
 void Internal::shrink_clause () {
   START (shrink);
   LOG (clause, "shrinking minimized first UIP clause");
