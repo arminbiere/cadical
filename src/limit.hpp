@@ -8,7 +8,7 @@ struct Limit {
   long reduce;    // conflict limit for next 'reduce'
   long resolved;  // limit on keeping recently resolved clauses
   long restart;   // conflict limit for next 'restart'
-  long subsume;   // next subsumption check
+  long subsume;   // conflict limit on next 'subsume'
 
   long conflict;  // conflict limit if non-negative
   long decision;  // decision limit if non-negative
