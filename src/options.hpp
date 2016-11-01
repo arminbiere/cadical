@@ -13,7 +13,6 @@
 \
 OPTION(arena,            int,   3, 0,  3, "1=clause,2=var,3=queue") \
 OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
-OPTION(bumprevlim,    double,  40, 0,100, "reverse bump last threshold") \
 OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
 OPTION(clim,             int,  -1, 0,1e9, "conflict limit (-1=none)") \
 OPTION(dlim,             int,  -1, 0,1e9, "decision limit (-1=none)") \
@@ -22,8 +21,8 @@ OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha slow glue") \
 OPTION(emajump,       double,1e-5, 0,  1, "alpha jump level") \
 OPTION(emapropconf,   double,1e-5, 0,  1, "alpha propagations/conflicts") \
-OPTION(emarestartint, double,1e-5, 0,  1, "alpha actual restart interval") \
 OPTION(emarestarteff, double,1e-3, 0,  1, "alpha restart effectiveness") \
+OPTION(emarestartint, double,1e-5, 0,  1, "alpha actual restart interval") \
 OPTION(emasize,       double,1e-5, 0,  1, "alpha learned clause size") \
 OPTION(keepglue,         int,   2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,         int,   3, 2,1e9, "size kept learned clauses") \
@@ -42,17 +41,19 @@ OPTION(restart,         bool,   1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,   4, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double, 1.1, 0, 10, "restart slow fast margin") \
 OPTION(reusetrail,      bool,   1, 0,  1, "enable trail reuse") \
-OPTION(reverselim,    double, 500, 0,1e9, "reverse bumping limit") \
 OPTION(shrink,          bool,   1, 0,  1, "shrink learned clause") \
+OPTION(shrinkdepth,      int,   2, 0,1e9, "shrinking depth") \
 OPTION(shrinkglue,       int,   5, 0,1e9, "glue limit for shrinking") \
 OPTION(shrinksize,       int,  20, 0,1e9, "size limit for shrinking") \
-OPTION(shrinkdepth,      int,   2, 0,1e9, "shrinking depth") \
 OPTION(strengthen,      bool,   1, 0,  1, "strengthen during subsume") \
 OPTION(sublast,          int,   5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,   1, 0,  1, "enable clause subsumption") \
 OPTION(subsumeinc,       int, 1e4, 1,1e9, "interval in conflicts") \
 OPTION(subsumeinit,      int, 1e4, 0,1e9, "initial subsume limit") \
 OPTION(subsumelim,       int, 100, 0,1e9, "watch list length limit") \
+OPTION(trailbump,       bool,   1, 0,  1, "use trail + bumped") \
+OPTION(trailbumplast, double,  40, 0,100, "trail bump last level limit") \
+OPTION(trailbumprops, double, 500, 0,1e9, "trail bump propagation limit") \
 OPTION(verbose,         bool,   0, 0,  1, "more verbose messages") \
 OPTION(witness,         bool,   1, 0,  1, "print witness") \
 

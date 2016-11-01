@@ -59,21 +59,24 @@ struct bumped_earlier {
   }
 };
 
-struct bumped_plus_trail_earlier {
+struct trail_bumped_smaller {
   Internal * internal;
-  bumped_plus_trail_earlier (Internal * i) : internal (i) { }
+  trail_bumped_smaller (Internal * i) : internal (i) { }
   bool operator () (int a, int b) {
-    long s = internal->bumped (a) + internal->var (a).trail;
-    long t = internal->bumped (b) + internal->var (b).trail;
-    return s < t;
+    long c = internal->var (a).trail, s = internal->bumped (a) + c;
+    long d = internal->var (b).trail, t = internal->bumped (b) + d;
+    if (s < t) return true;
+    if (s > t) return false;
+    return c < d;
   }
 };
 
 void Internal::bump_variables () {
   START (bump);
 
-  if (percent (stats.bumplast, stats.bumped) > opts.bumprevlim &&
-      propconf > opts.reverselim) {
+  if (opts.trailbump &&
+      propconf > opts.trailbumprops &&
+      percent (stats.bumplast, stats.bumped) > opts.trailbumplast) {
 
     // There are some instances (for instance the 'newton...' instances),
     // which have a very high number of propagations per decision if we try
@@ -82,17 +85,15 @@ void Internal::bump_variables () {
     // also reduces propagations per decision by two orders of magnitude.
     // It seems that this is related to the high percentage of bumped
     // variables on the highest decision level.  So if this percentage is
-    // hight we take the assignment order into account too by comparing with
-    // respect to the sum of bumped and trail order. For the instances
-    // mentioned above just comparing with respect to assignment order
-    // (e.g., trail height when assigned) would work too, but is in general
-    // less robust and thus we use the sum instead.
+    // high and we have many propagations per decision, then we take the
+    // assignment order into account too by comparing with respect to the
+    // sum of bumped and trail order. For the instances mentioned above just
+    // comparing with respect to assignment order (e.g., trail height when
+    // assigned) would work too, but this is in general less robust and thus
+    // we use the sum instead with the trail height as (stable) tie-breaker.
 
-    reverse (analyzed.begin (), analyzed.end ());
-    stable_sort (analyzed.begin (),
-                 analyzed.end (),
-                 bumped_plus_trail_earlier (this));
-    stats.reverse++;
+    sort (analyzed.begin (), analyzed.end (), trail_bumped_smaller (this));
+    stats.trailbumped++;
 
   } else {
 
@@ -181,8 +182,12 @@ Internal::analyze_reason (int lit, Clause * reason, int & open) {
 /*------------------------------------------------------------------------*/
 
 void Internal::clear_seen () {
-  for (const_int_iterator i = analyzed.begin (); i != analyzed.end (); i++)
-    flags (*i).reset ();
+  for (const_int_iterator i = analyzed.begin (); i != analyzed.end (); i++) {
+    Flags & f = flags (*i);
+    assert (f.seen ());
+    f.clear (SEEN);
+    assert (!f);
+  }
   analyzed.clear ();
 }
 

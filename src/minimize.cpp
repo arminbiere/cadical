@@ -39,7 +39,10 @@ bool Internal::minimize_literal (int lit, int depth) {
   } else res = minimize_literal (-v.other, depth+1);
   if (res) {
     f.set (REMOVABLE);
-    // if (!f.seen ()) analyzed.push_back (lit);  // TODO?
+    if (!f.seen ()) {
+      analyzed.push_back (lit);
+      f.set (SEEN);
+    }
   } else f.set (POISON);
   minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");

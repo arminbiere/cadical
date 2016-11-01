@@ -46,7 +46,10 @@ bool Internal::shrink_literal (int lit, int depth) {
   }
   if (remove) {
     f.set (REMOVABLE);
-    // if (!f.seen ()) analyzed.push_back (lit); // TODO?
+    if (!f.seen ()) {
+      analyzed.push_back (lit);
+      f.set (SEEN);
+    }
   } else f.set (POISON);
   minimized.push_back (lit);
   if (!depth) LOG ("shrinking %d %s", lit, remove ? "succeeded" : "failed");

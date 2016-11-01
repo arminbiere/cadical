@@ -51,8 +51,8 @@ class Internal {
   friend struct Stats;
 
   friend struct bumped_earlier;
-  friend struct bumped_plus_trail_earlier;
   friend struct level_greater;
+  friend struct trail_bumped_smaller;
   friend struct trail_smaller;
 
   /*----------------------------------------------------------------------*/

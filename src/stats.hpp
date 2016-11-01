@@ -20,7 +20,7 @@ struct Stats {
   long sections;     // 'section' counter
   long bumped;       // seen and bumped variables in 'analyze'
   long bumplast;     // bumped variables on last decision level
-  long reverse;      // bumped 'reverse' instead of 'earlier'
+  long trailbumped;  // bumped 'reverse' instead of 'earlier'
   long resolved;     // resolved redundant clauses in 'analyze'
   long searched;     // searched decisions in 'decide'
   long reductions;   // 'reduce' counter
