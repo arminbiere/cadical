@@ -288,7 +288,7 @@ bool Internal::subsume_round (bool irredundant_only) {
 
     // Unless this smallest occurring literal occurs too often.
     //
-    if (minsize > (size_t) opts.subsumelim) continue;
+    if (minsize > (size_t) opts.subsumeocclim) continue;
 
     LOG (c, "watching %d with %ld occurrences", minlit, (long) minsize);
     occs[minlit].push_back (c);
