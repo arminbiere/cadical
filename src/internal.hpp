@@ -105,6 +105,7 @@ class Internal {
   Arena arena;                  // memory arena for moving garbage collector
   Format error;                 // last (persistent) error message
   Internal * internal;          // proxy to 'this' in macros (redundant)
+  File * output;                // output file
 
   /*----------------------------------------------------------------------*/
 

@@ -63,17 +63,18 @@ fputs (
 
 void App::witness () {
   int c = 0, m = solver->max ();
+  File * output = solver->output ();
   for (int i = 1; i <= m; i++) {
-    if (!c) File::print ('v'), c = 1;
+    if (!c) output->put ('v'), c = 1;
     char str[20];
     sprintf (str, " %d", solver->val (i) < 0 ? -i : i);
     int l = strlen (str);
-    if (c + l > 78) File::print ("\nv"), c = 1;
-    File::print (str);
+    if (c + l > 78) output->put ("\nv"), c = 1;
+    output->put (str);
     c += l;
   }
-  if (c) File::print ('\n');
-  File::print ("v 0\n");
+  if (c) output->put ('\n');
+  output->put ("v 0\n");
   fflush (stdout);
 }
 
@@ -141,6 +142,8 @@ int App::main (int argc, char ** argv) {
           "forced non-binary proof since '<stdout>' connected to terminal");
         solver->set ("binary", false);
       }
+      solver->msg ("writing %s proof trace to '<stdout>'",
+        (solver->get ("binary") ? "binary" : "non-binary"));
       solver->proof (stdout, "<stdout>");
     } else if (!solver->proof (proof_path))
       ERROR ("can not open and write DRAT proof to '%s'", proof_path);

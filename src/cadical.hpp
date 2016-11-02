@@ -101,6 +101,7 @@ private:
   void err (const char *, ...);         // produce error message
 
   const char * dimacs (File *); // helper function factoring out common code
+  File * output ();             // get access to internal 'output' file
 };
 
 };
