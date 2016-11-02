@@ -32,7 +32,7 @@ OPTION(leak,            bool,   1, 0,  1, "leak solver memory") \
 OPTION(minimize,        bool,   1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,    int,1000, 0,1e9, "minimization depth") \
 OPTION(prefetch,        bool,   1, 0,  1, "prefetch watches") \
-OPTION(profile,          int,   1, 0,  4, "profiling level") \
+OPTION(profile,          int,   2, 0,  4, "profiling level") \
 OPTION(quiet,           bool,   0, 0,  1, "disable all messages") \
 OPTION(reduce,          bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reduceglue,      bool,   1, 0,  1, "reduce on glue first") \

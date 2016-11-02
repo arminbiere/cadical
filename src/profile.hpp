@@ -33,7 +33,7 @@ PROFILE(minimize,4) \
 PROFILE(parse,1) \
 PROFILE(propagate,4) \
 PROFILE(reduce,2) \
-PROFILE(restart,2) \
+PROFILE(restart,3) \
 PROFILE(search,1) \
 PROFILE(shrink,4) \
 PROFILE(simplify,1) \
