@@ -1,7 +1,6 @@
 #include "cadical.hpp"
-#include "internal.hpp"
-
 #include "file.hpp"
+#include "internal.hpp"
 #include "macros.hpp"
 #include "message.hpp"
 #include "parse.hpp"
@@ -49,7 +48,10 @@ int Solver::solve () { return internal->solve (); }
 
 /*------------------------------------------------------------------------*/
 
-void Solver::close () { internal->close_proof ();
+void Solver::close () {
+  if (!internal->proof) return;
+  section ("closing proof");
+  internal->close_proof ();
 }
 
 void Solver::proof (FILE * external_file, const char * name) {
@@ -107,6 +109,8 @@ const char * Solver::dimacs (const char * path) {
   delete file;
   return err;
 }
+
+File * Solver::output () { return internal->output; }
 
 const char * Solver::solution (const char * path) {
   File * file = File::read (internal, path);

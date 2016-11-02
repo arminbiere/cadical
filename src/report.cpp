@@ -79,7 +79,7 @@ void Internal::report (char type, bool verbose) {
   REPORTS
 #undef REPORT
   if (!(stats.reports++ % 20)) {
-    File::print ("c\n");
+    output->put ("c\n");
     int pos = 4;
     for (int i = 0; i < n; i++) {
       int len = strlen (reports[i].buffer);
@@ -95,15 +95,15 @@ void Internal::report (char type, bool verbose) {
       for (i = start; i < n; i += nrows) reports[i].print_header (line);
       for (i = max_line-1; line[i-1] == ' '; i--) ;
       line[i] = 0;
-      File::print (line);
-      File::print ('\n');
+      output->put (line);
+      output->put ('\n');
     }
-    File::print ("c\n");
+    output->put ("c\n");
   }
-  File::print ("c "), File::print (type);
+  output->put ("c "), output->put (type);
   for (int i = 0; i < n; i++)
-    File::print (' '), File::print (reports[i].buffer);
-  File::print ('\n');
+    output->put (' '), output->put (reports[i].buffer);
+  output->put ('\n');
   fflush (stdout);
 }
 

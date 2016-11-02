@@ -4,6 +4,7 @@
 namespace CaDiCaL {
 
 class Solver;
+class File;
 
 // A wrapper app which makes up the CaDiCaL stand alone solver.  It in
 // essence only consists of the 'App::main' function.  So this class

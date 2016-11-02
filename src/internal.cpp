@@ -5,6 +5,7 @@
 #include "message.hpp"
 #include "clause.hpp"
 #include "proof.hpp"
+#include "file.hpp"
 
 namespace CaDiCaL {
 
@@ -33,7 +34,8 @@ Internal::Internal ()
   opts (this),
   profiles (this),
   arena (this),
-  internal (this)
+  internal (this),
+  output (File::write (this, stdout, "<stdou>"))
 {
   control.push_back (Level (0));
   inc_bytes (sizeof *this);
@@ -54,6 +56,7 @@ Internal::~Internal () {
   if (phases) delete [] phases;
   if (etab) delete [] etab;
   if (occs) reset_occs ();
+  delete output;
 }
 
 /*------------------------------------------------------------------------*/

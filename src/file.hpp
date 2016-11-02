@@ -26,21 +26,27 @@ class File {
   FILE * file;
   const char * _name;
   long _lineno;
+  long _bytes;
 
   File (Internal *, bool, int, FILE *, const char *);
+
+  static FILE * open_file (Internal *,
+                           const char * path, const char * mode);
+  static FILE * read_file (Internal *, const char * path);
+  static FILE * write_file (Internal *, const char * path);
 
   static FILE * open_pipe (Internal *,
                            const char * fmt, const char * path,
 			   const char * mode);
-
   static FILE * read_pipe (Internal *,
 		  	   const char * fmt, const char * path);
-
   static FILE * write_pipe (Internal *,
 		            const char * fmt, const char * path);
 public:
 
+  static char* find (const char * prg);  	// in 'PATH'
   static bool exists (const char * path);
+  static size_t size (const char * path);	// in bytes ..
 
   static File * read (Internal *, FILE * f, const char * name);
   static File * read (Internal *, const char * path);
@@ -58,26 +64,33 @@ public:
     assert (!writing);
     int res = getc_unlocked (file);
     if (res == '\n') _lineno++;
+    if (res != EOF) _bytes++;
     return res;
   }
 
-  static void print (char ch, FILE * file = stdout) {
+  void put (char ch) {
+    assert (writing);
     fputc_unlocked (ch, file);
+    _bytes++;
   }
 
-  static void print (unsigned char ch, FILE * file = stdout) {
+  void put (unsigned char ch) {
+    assert (writing);
     fputc_unlocked (ch, file);
+    _bytes++;
   }
 
-  static void print (const char * s, FILE * file = stdout) {
-    fputs_unlocked (s, file);
+  void put (const char * s) {
+    for (const char * p = s; *p; p++)
+      put (*p);
   }
 
-  static void print (int lit, FILE * file = stdout) {
-    if (!lit) print ('0');
+  void put (int lit) {
+    assert (writing);
+    if (!lit) put ('0');
     else if (lit == -2147483648) {
       assert (lit == INT_MIN);
-      print ("-2147483648");
+      put ("-2147483648");
     } else {
       char buffer[11];
       int i = sizeof buffer;
@@ -86,21 +99,17 @@ public:
       unsigned idx = abs (lit);
       while (idx) {
         assert (i > 0);
-        buffer[--i] = idx % 10;
+        buffer[--i] = '0' + idx % 10;
         idx /= 10;
       }
-      if (lit < 0) print ('-');
-      print (buffer + i);
+      if (lit < 0) put ('-');
+      put (buffer + i);
     }
   }
 
-  void put (char c) { assert (writing); print (c, file); }
-  void put (unsigned char c) { assert (writing); print (c, file); }
-  void put (const char * s) { assert (writing); print (s, file); }
-  void put (int lit) { assert (writing); print (lit, file); }
-
   const char * name () const { return _name; }
   long lineno () const { return _lineno; }
+  long bytes () const { return _bytes; }
 };
 
 };

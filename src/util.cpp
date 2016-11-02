@@ -1,6 +1,7 @@
 #include "util.hpp"
 
 #include <cctype>
+#include <cstring>
 
 namespace CaDiCaL {
 
@@ -26,6 +27,11 @@ bool is_double_str (const char * str) {
     while (isdigit (*p)) p++;
   }
   return !*p;
+}
+
+bool has_suffix (const char * str, const char * suffix) {
+  int k = strlen (str), l = strlen (suffix);
+  return k > l && !strcmp (str + k - l, suffix);
 }
 
 };

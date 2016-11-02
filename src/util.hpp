@@ -10,6 +10,8 @@ inline int sign (int lit) { return (lit > 0) - (lit < 0); }
 bool is_int_str (const char * str);
 bool is_double_str (const char * str);
 
+bool has_suffix (const char * str, const char * suffix);
+
 };
 
 #endif
