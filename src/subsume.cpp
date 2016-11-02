@@ -78,7 +78,12 @@ void Internal::eagerly_subsume_last_learned () {
 
 bool Internal::subsuming () {
   if (!opts.subsume) return false;
+
+  // Only perform global subsumption checking immediately after a clause
+  // reduction where the overall allocated memory is small.
+  //
   if (stats.conflicts != lim.conflicts_at_last_reduce) return false;
+
   return stats.conflicts >= lim.subsume;
 }
 

@@ -111,7 +111,7 @@ void Internal::move_clause (Clause * c) {
   c->moved = true;
 }
 
-// This is the the moving garbage collector.
+// This is the moving garbage collector.
 
 void Internal::move_non_garbage_clauses () {
 
@@ -135,7 +135,7 @@ void Internal::move_non_garbage_clauses () {
   arena.prepare (moved_bytes);
 
   // Copy clauses according to the order of calling 'move_clause', which in
-  // essence just gives a compactifying garbage collector, since their
+  // essence just gives a compacting garbage collector, since their
   // relative order is kept, and already gives some cache locality.
   //
   if (opts.arena == 1) {
@@ -181,7 +181,7 @@ void Internal::move_non_garbage_clauses () {
   }
   clauses.resize (j - clauses.begin ());
 
-  // Release 'from' space completetly and then swap 'to' with 'from'.
+  // Release 'from' space completely and then swap 'to' with 'from'.
   //
   arena.swap ();
 
