@@ -10,12 +10,8 @@ namespace CaDiCaL {
 
 bool Internal::eliminating () {
   if (!opts.elim) return false;
-
-  // Only perform variable elimination immediately after a clause
-  // reduction where the overall allocated memory is small.
-  //
-  if (stats.conflicts != lim.conflicts_at_last_reduce) return false;
-
+  if (lim.fixed_at_last_elim == stats.fixed &&
+      stats.irredundant == stats.irredundant) return false;
   return lim.elim <= stats.conflicts;
 }
 
@@ -43,7 +39,7 @@ inline size_t Internal::flush_occs (int lit) {
 // is the main criteria of bounded variable elimination.
 
 inline bool
-Internal::resolvents_bounded (int pivot, vector<Clause*> & res) {
+Internal::resolvents_are_bounded (int pivot, vector<Clause*> & res) {
 
   LOG ("checking whether resolvents on %d are bounded", pivot);
 
@@ -261,7 +257,7 @@ inline void Internal::add_resolvents (int pivot, vector<Clause*> & res) {
 // at the same time push those with 'pivot' on the extension stack for
 // latter witness reconstruction (in 'extend').
 
-inline void Internal::mark_clauses_with_literal_garbage (int pivot) {
+inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
   assert (!unsat);
 
   LOG ("marking irredundant clauses with %d as garbage", pivot);
@@ -322,10 +318,10 @@ inline void Internal::elim (int pivot, vector<Clause*> & work) {
   //
   if (pos > neg) pivot = -pivot;
 
-  if (!resolvents_bounded (pivot, work)) return;
+  if (!resolvents_are_bounded (pivot, work)) return;
 
   add_resolvents (pivot, work);
-  if (!unsat) mark_clauses_with_literal_garbage (pivot);
+  if (!unsat) mark_eliminated_clauses_as_garbage (pivot);
 
   LOG ("eliminated %d", pivot);
   eliminated (pivot) = true;
@@ -334,13 +330,14 @@ inline void Internal::elim (int pivot, vector<Clause*> & work) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::elim () {
+bool Internal::elim_round () {
 
   SWITCH_AND_START (search, simplify, elim);
   stats.eliminations++;
 
   backtrack ();
-  garbage_collection ();
+
+  if (lim.fixed_at_last_collect < stats.fixed) garbage_collection ();
 
   // Allocate schedule, working stack and occurrence lists.
   //
@@ -428,11 +425,32 @@ void Internal::elim () {
   }
   garbage_collection ();
 
-  inc.elim *= 2;
-  lim.elim = stats.conflicts + inc.elim;
-
   report ('e');
   STOP_AND_SWITCH (elim, simplify, search);
+
+  return eliminated > 0;
+}
+
+void Internal::elim () {
+  int old_eliminated = stats.eliminated, old_var = active_variables ();
+  int round = 0, limit;
+  if (stats.eliminations) limit = opts.elimrounds;
+  else limit = opts.elimroundsinit;
+  assert (limit > 0);
+  for (;;) {
+    round++;
+    VRB ("elimination round %d", round);
+    if (!elim_round ()) break;
+    if (round >= limit) break;
+    if (!subsume_round (true)) break;
+  }
+  double relelim = percent (stats.eliminated - old_eliminated, old_var);
+  VRB ("elimination %ld eliminated %.2f% variables", relelim);
+  if (relelim >= 10) lim.elim = stats.conflicts + opts.elimint;
+  else if (relelim >= 5) lim.elim = stats.conflicts + inc.elim;
+  else inc.elim *= 2, lim.elim = stats.conflicts + inc.elim;
+  lim.fixed_at_last_elim = stats.fixed;
+  lim.irredundant_at_last_elim = stats.irredundant;
 }
 
 };

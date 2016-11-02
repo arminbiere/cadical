@@ -162,7 +162,7 @@ void Internal::init_solving () {
   lim.subsume = opts.subsumeinit;
   inc.subsume = opts.subsumeinit;
 
-  lim.elim = opts.elimint/10;
+  lim.elim = opts.eliminit;
   inc.elim = (opts.elimint + 1)/2;
 
   lim.conflict = (opts.clim < 0) ? -1 : stats.conflicts + opts.clim;

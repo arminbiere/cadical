@@ -17,13 +17,23 @@ struct Limit {
   int keptglue;   // maximum kept glue in 'reduce'
   int keptsize;   // maximum kept size in 'reduce'
 
+  // Used to compute restart efficiency and interval.
+  //
   int decision_level_at_last_restart;
-  long conflicts_at_last_restart;
+  long     conflicts_at_last_restart;
 
-  int fixed_at_last_elim;
+  // Used to prohibit useless elimination attempts.
+  //
+  int        fixed_at_last_elim;
   long irredundant_at_last_elim;
 
+  // Used to let 'subsume' wait until and right after next 'reduce'.
+  //
   long conflicts_at_last_reduce;
+
+  // Determines whether marking satisfied clauses and removing falsified
+  // literals during garbage collection would make sense or is required.
+  //
   int fixed_at_last_collect;
 
   Limit ();

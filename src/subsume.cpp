@@ -77,10 +77,12 @@ void Internal::eagerly_subsume_last_learned () {
 // checked for being subsumed by other (smaller or equal size) clauses.
 
 bool Internal::subsuming () {
+
   if (!opts.subsume) return false;
 
   // Only perform global subsumption checking immediately after a clause
-  // reduction where the overall allocated memory is small.
+  // reduction happened where the overall allocated memory is small and we
+  // got a limit on the number of kept clause in terms of size and glue.
   //
   if (stats.conflicts != lim.conflicts_at_last_reduce) return false;
 
@@ -214,7 +216,9 @@ inline int Internal::subsume (Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::subsume () {
+bool Internal::subsume_round (bool irredundant_only) {
+
+  if (!opts.subsume) return false;
 
   SWITCH_AND_START (search, simplify, subsume);
   stats.subsumptions++;
@@ -235,12 +239,15 @@ void Internal::subsume () {
     Clause * c = *i;
     if (c->garbage) continue;
     if (clause_contains_fixed_literal (c)) continue;
-    if (c->redundant && c->extended) {
-      // All irredundant clauses and short clauses with small glue (not
-      // extended) are candidates in any case.  Otherwise, redundant long
-      // clauses are considered as candidates if they would have been kept
-      // in the last 'reduce' operation based on their size and glue value.
-      if (c->size > lim.keptsize || c->glue > lim.keptglue) continue;
+    if (c->redundant) {
+      if (irredundant_only) continue;
+      if (c->extended) {
+	// All irredundant clauses and short clauses with small glue (not
+	// extended) are candidates in any case.  Otherwise, redundant long
+	// clauses are considered as candidates if they would have been kept
+	// in the last 'reduce' operation based on their size and glue value.
+	if (c->size > lim.keptsize || c->glue > lim.keptglue) continue;
+      }
     }
     schedule.push_back (c);
   }
@@ -301,11 +308,18 @@ void Internal::subsume () {
     subsumed, strengthened, (long) schedule.size (),
     percent (subsumed + strengthened, schedule.size ()));
 
-  garbage_collection ();
-  inc.subsume += opts.subsumeinc;
   lim.subsume = stats.conflicts + inc.subsume;
+
   report ('s');
   STOP_AND_SWITCH (subsume, simplify, search);
+
+  return subsumed > 0;
+}
+
+void Internal::subsume () {
+  (void) subsume_round (false);
+  inc.subsume += opts.subsumeinc;
+  lim.subsume = stats.conflicts + inc.subsume;
 }
 
 };

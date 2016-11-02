@@ -315,16 +315,18 @@ class Internal {
   void subsume_clause (Clause * subsuming, Clause * subsumed);
   int subsume_check (Clause * subsuming, Clause * subsumed);
   int subsume (Clause *);
+  bool subsume_round (bool irredundant_only = false);
   void subsume ();
 
   // Bounded variable elimination.
   //
   bool eliminating ();
   size_t flush_occs (int lit);
-  bool resolvents_bounded (int pivot, vector<Clause*> & res);
+  bool resolvents_are_bounded (int pivot, vector<Clause*> & res);
   void add_resolvents (int pivot, vector<Clause*> & res);
-  void mark_clauses_with_literal_garbage (int pivot);
+  void mark_eliminated_clauses_as_garbage (int pivot);
   void elim (int pivot, vector<Clause*> & res);
+  bool elim_round ();
   void extend ();
   void elim ();
 
@@ -391,6 +393,8 @@ class Internal {
   void close_proof ();
   void new_proof (File *, bool owned = false);
 };
+
+/*------------------------------------------------------------------------*/
 
 struct trail_smaller {
   Internal * internal;
