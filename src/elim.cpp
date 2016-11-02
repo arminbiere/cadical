@@ -11,7 +11,7 @@ namespace CaDiCaL {
 bool Internal::eliminating () {
   if (!opts.elim) return false;
   if (lim.fixed_at_last_elim == stats.fixed &&
-      stats.irredundant == stats.irredundant) return false;
+      lim.irredundant_at_last_elim == stats.irredundant) return false;
   return lim.elim <= stats.conflicts;
 }
 
@@ -431,12 +431,19 @@ bool Internal::elim_round () {
   return eliminated > 0;
 }
 
+/*------------------------------------------------------------------------*/
+
 void Internal::elim () {
-  int old_eliminated = stats.eliminated, old_var = active_variables ();
+
+  int old_eliminated = stats.eliminated;
+  int old_var = active_variables ();
+
   int round = 0, limit;
+
   if (stats.eliminations) limit = opts.elimrounds;
   else limit = opts.elimroundsinit;
   assert (limit > 0);
+
   for (;;) {
     round++;
     VRB ("elimination round %d", round);
@@ -444,11 +451,32 @@ void Internal::elim () {
     if (round >= limit) break;
     if (!subsume_round (true)) break;
   }
-  double relelim = percent (stats.eliminated - old_eliminated, old_var);
-  VRB ("elimination %ld eliminated %.2f% variables", relelim);
-  if (relelim >= 10) lim.elim = stats.conflicts + opts.elimint;
-  else if (relelim >= 5) lim.elim = stats.conflicts + inc.elim;
-  else inc.elim *= 2, lim.elim = stats.conflicts + inc.elim;
+
+  int eliminated = stats.eliminated - old_eliminated;
+  double relelim = percent (eliminated, old_var);
+  VRB ("elimination %ld eliminated %d variables %.2f%",
+    eliminated, relelim);
+
+  // Schedule next elimination based on number of eliminated variables.
+  //
+  if (relelim >= 10) {
+    // Very high percentage eliminated, so use base interval.
+    lim.elim = stats.conflicts + opts.elimint;
+  } else {
+    if (!eliminated) {
+      // Nothing eliminated, go into geometric increase.
+      inc.elim *= 2;
+    } else if (relelim < 5) {
+      // Something eliminated, so go into arithmetic increase.
+      inc.elim += opts.elimint;
+    } else {
+      // Substantial number eliminated, keep interval.
+    }
+    lim.elim = stats.conflicts + inc.elim;
+  }
+  VRB ("next elimination scheduled in %ld conflicts at %ld conflicts",
+    lim.elim - stats.conflicts, lim.elim);
+
   lim.fixed_at_last_elim = stats.fixed;
   lim.irredundant_at_last_elim = stats.irredundant;
 }

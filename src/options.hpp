@@ -16,7 +16,7 @@ OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
 OPTION(clim,             int,  -1, 0,1e9, "conflict limit (-1=none)") \
 OPTION(dlim,             int,  -1, 0,1e9, "decision limit (-1=none)") \
 OPTION(elim,            bool,   1, 0,  1, "bounded variable elimination") \
-OPTION(eliminit,         int, 1e3, 1,1e9, "initial conflict interval") \
+OPTION(eliminit,         int, 1e3, 0,1e9, "initial conflict interval") \
 OPTION(elimint,          int, 1e4, 1,1e9, "geometric conflict interval") \
 OPTION(elimrounds,       int,   2, 1,1e9, "number of elimination rounds") \
 OPTION(elimroundsinit,   int,   5, 1,1e9, "initial number of rounds") \
