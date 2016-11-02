@@ -31,10 +31,14 @@ void Stats::print (Internal * internal) {
     stats.decisions, relative (stats.decisions, t));
   MSG ("propagations:  %15ld   %10.2f    millions per second",
     stats.propagations, relative (stats.propagations/1e6, t));
-  MSG ("resolutions:   %15ld   %10.2f    per elimination",
-    stats.resolutions, relative (stats.resolutions, stats.eliminations));
   MSG ("reused:        %15ld   %10.2f %%  per restart",
     stats.reused, percent (stats.reused, stats.restarts));
+  MSG ("resolutions:   %15ld   %10.2f    per elimination",
+    stats.resolutions, relative (stats.resolutions, stats.eliminations));
+  MSG ("eliminated:    %15ld   %10.2f %%  of all variables",
+    stats.eliminated, percent (stats.eliminated, internal->max_var));
+  MSG ("fixed:         %15ld   %10.2f %%  of all variables",
+    stats.fixed, percent (stats.fixed, internal->max_var));
   MSG ("units:         %15ld   %10.2f    conflicts per unit",
     stats.units, relative (stats.conflicts, stats.units));
   MSG ("binaries:      %15ld   %10.2f    conflicts per binary",

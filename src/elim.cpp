@@ -242,7 +242,7 @@ inline void Internal::add_resolvents (int pivot, vector<Clause*> & res) {
         } else {
           resolvents++;
           Clause * r = new_resolved_irredundant_clause ();
-          const const_literal_iterator re = d->end ();
+          const const_literal_iterator re = r->end ();
           for (l = r->begin (); l != re; l++)
             occs[*l].push_back (r);
         }
@@ -283,7 +283,7 @@ inline void Internal::mark_clauses_with_literal_garbage (int pivot) {
 
   LOG ("marking irredundant clauses with %d as garbage", -pivot);
 
-  vector<Clause*> & ns = occs[pivot];
+  vector<Clause*> & ns = occs[-pivot];
   const const_clause_iterator ne = ns.end ();
   for (i = ns.begin (); i != ne; i++)
     if (!(*i)->garbage) mark_garbage (*i);
@@ -339,9 +339,8 @@ void Internal::elim () {
   SWITCH_AND_START (search, simplify, elim);
   stats.eliminations++;
 
-  // Otherwise lots of contracts fail.
-  //
   backtrack ();
+  garbage_collection ();
 
   // Allocate schedule, working stack and occurrence lists.
   //
@@ -351,7 +350,7 @@ void Internal::elim () {
 
   // Connect all irredundant clauses.
   //
-  const const_clause_iterator eoc = clauses.end ();
+  const_clause_iterator eoc = clauses.end ();
   const_clause_iterator i;
   for (i = clauses.begin (); i != eoc; i++) {
     Clause * c = *i;
@@ -404,8 +403,8 @@ void Internal::elim () {
 
   long resolutions = stats.resolutions - old_resolutions;
   int eliminated = stats.eliminated - old_eliminated;
-  VRB ("eliminated %ld variables in %ld resolutions",
-    eliminated, resolutions);
+  VRB ("eliminated %ld variables %.2f%% in %ld resolutions",
+    eliminated, percent (eliminated, max_var), resolutions);
 
   // Release occurrence lists, and both schedule and work stacks.
   //
@@ -417,6 +416,7 @@ void Internal::elim () {
 
   // Mark all redundant clauses with eliminated variables as garbage.
   //
+  eoc = clauses.end ();
   for (i = clauses.begin (); i != eoc; i++) {
     Clause * c = *i;
     if (c->garbage || !c->redundant) continue;

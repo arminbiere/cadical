@@ -28,6 +28,7 @@ Internal::Internal ()
   wtab (0),
   conflict (0),
   propagated (0),
+  occs (0),
   proof (0),
   opts (this),
   profiles (this),
