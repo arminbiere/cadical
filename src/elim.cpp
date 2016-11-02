@@ -65,7 +65,7 @@ Internal::resolvents_bounded (int pivot, vector<Clause*> & res) {
 
   // Bound on the number non-tautological resolvents.
 
-  long bound = pos + neg;  
+  long bound = pos + neg;
 
   LOG ("try to eliminate %d with %ld = %ld + %ld occurrences",
     pivot, bound, pos, neg);
@@ -124,19 +124,19 @@ Internal::resolvents_bounded (int pivot, vector<Clause*> & res) {
       bool tautological = false;
       satisfied = false;
       for (l = d->begin (); !satisfied && l != de; l++) {
-	int lit = *l;
-	assert (lit != pivot);
-	if (lit == -pivot) continue;
-	int tmp = val (lit);
-	if (tmp < 0) continue;
-	else if (tmp > 0) satisfied = true;
-	else if ((tmp = marked (lit)) > 0) continue;
-	else if (tmp < 0) tautological = true;
+        int lit = *l;
+        assert (lit != pivot);
+        if (lit == -pivot) continue;
+        int tmp = val (lit);
+        if (tmp < 0) continue;
+        else if (tmp > 0) satisfied = true;
+        else if ((tmp = marked (lit)) > 0) continue;
+        else if (tmp < 0) tautological = true;
       }
       if (satisfied) {
         LOG (d, "skipping satisfied second antecedent");
-	mark_garbage (d);
-	continue;
+        mark_garbage (d);
+        continue;
       }
 
       // Now we count it as a real resolution. Note that 'satisfied' second
@@ -147,10 +147,10 @@ Internal::resolvents_bounded (int pivot, vector<Clause*> & res) {
 
       if (tautological) LOG ("tautological resolvent");
       else {
-	count++;
-	res.push_back (c);
-	res.push_back (d);
-	LOG ("now have %ld non-tautological resolvents", count);
+        count++;
+        res.push_back (c);
+        res.push_back (d);
+        LOG ("now have %ld non-tautological resolvents", count);
       }
     }
 
@@ -210,42 +210,42 @@ inline void Internal::add_resolvents (int pivot, vector<Clause*> & res) {
       //
       const const_literal_iterator de = d->end ();
       for (l = d->begin (); !satisfied && l != de; l++) {
-	int lit = *l;
-	if (lit == pivot || lit == -pivot) continue;
-	int tmp = val (lit);
-	if (tmp > 0) satisfied = true;
-	else if (!tmp) {
-	  tmp = marked (lit);
-	  if (!tmp) clause.push_back (lit);
-	  else assert (tmp > 0);
-	}
+        int lit = *l;
+        if (lit == pivot || lit == -pivot) continue;
+        int tmp = val (lit);
+        if (tmp > 0) satisfied = true;
+        else if (!tmp) {
+          tmp = marked (lit);
+          if (!tmp) clause.push_back (lit);
+          else assert (tmp > 0);
+        }
       }
       if (satisfied) {
-	LOG (d, "second now satisfied antecedent");
-	mark_garbage (d);
+        LOG (d, "second now satisfied antecedent");
+        mark_garbage (d);
       } else {
 
-	LOG (c, "resolving first antecedent");
-	LOG (d, "resolving second antecedent");
+        LOG (c, "resolving first antecedent");
+        LOG (d, "resolving second antecedent");
 
-	if (clause.empty ()) {
-	  LOG ("empty resolvent");
-	  learn_empty_clause ();
-	} else if (clause.size () == 1) {
-	  int unit = clause[0];
-	  LOG ("unit resolvent %d", unit);
-	  assign (unit);
-	  if (!propagate ()) {
-	    LOG ("propagating resolved unit produces conflict");
-	    learn_empty_clause ();
-	  }
-	} else {
-	  resolvents++;
-	  Clause * r = new_resolved_irredundant_clause ();
-	  const const_literal_iterator re = d->end ();
-	  for (l = r->begin (); l != re; l++)
-	    occs[*l].push_back (r);
-	}
+        if (clause.empty ()) {
+          LOG ("empty resolvent");
+          learn_empty_clause ();
+        } else if (clause.size () == 1) {
+          int unit = clause[0];
+          LOG ("unit resolvent %d", unit);
+          assign (unit);
+          if (!propagate ()) {
+            LOG ("propagating resolved unit produces conflict");
+            learn_empty_clause ();
+          }
+        } else {
+          resolvents++;
+          Clause * r = new_resolved_irredundant_clause ();
+          const const_literal_iterator re = d->end ();
+          for (l = r->begin (); l != re; l++)
+            occs[*l].push_back (r);
+        }
       }
     }
     clause.clear ();
@@ -393,14 +393,14 @@ void Internal::elim () {
   const const_int_iterator eos = schedule.end ();
   const_int_iterator k;
   for (k = schedule.begin (); !unsat && k != eos; k++) {
-    elim (*k, work);		
+    elim (*k, work);
     // TODO garbage collection once in a while.
   }
 
   // Compute and account memory for 'work' and 'occs'.
   //
   inc_bytes (VECTOR_BYTES (work));
-  account_occs ();  
+  account_occs ();
 
   long resolutions = stats.resolutions - old_resolutions;
   int eliminated = stats.eliminated - old_eliminated;
