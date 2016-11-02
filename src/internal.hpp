@@ -231,6 +231,7 @@ class Internal {
     assert (!c->garbage);
     if (c->redundant) assert (stats.redundant), stats.redundant--;
     else assert (stats.irredundant), stats.irredundant--;
+    stats.garbage++;
     c->garbage = true;
   }
 

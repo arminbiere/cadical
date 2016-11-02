@@ -53,13 +53,13 @@ void Solver::close () { internal->close_proof ();
 }
 
 void Solver::proof (FILE * external_file, const char * name) {
-  File * internal_file = File::write (external_file, name);
+  File * internal_file = File::write (internal, external_file, name);
   assert (internal_file);
   internal->new_proof (internal_file, true);
 }
 
 bool Solver::proof (const char * path) {
-  File * internal_file = File::write (path);
+  File * internal_file = File::write (internal, path);
   if (!internal_file) return false;
   internal->new_proof (internal_file, true);
   return true;
@@ -92,7 +92,7 @@ const char * Solver::dimacs (File * file) {
 }
 
 const char * Solver::dimacs (FILE * external_file, const char * name) {
-  File * file = File::read (external_file, name);
+  File * file = File::read (internal, external_file, name);
   assert (file);
   const char * err = dimacs (file);
   delete file;
@@ -100,7 +100,7 @@ const char * Solver::dimacs (FILE * external_file, const char * name) {
 }
 
 const char * Solver::dimacs (const char * path) {
-  File * file = File::read (path);
+  File * file = File::read (internal, path);
   if (!file)
     return internal->error.init ("failed to read DIMACS file '%s'", path);
   const char * err = dimacs (file);
@@ -109,7 +109,7 @@ const char * Solver::dimacs (const char * path) {
 }
 
 const char * Solver::solution (const char * path) {
-  File * file = File::read (path);
+  File * file = File::read (internal, path);
   if (!file)
     return internal->error.init ("failed to read solution file '%s'", path);
   Parser * parser = new Parser (internal, file);

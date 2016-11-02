@@ -13,30 +13,40 @@ namespace CaDiCaL {
 
 // Wraps a 'C' file 'FILE' with name and supports zipped reading and writing
 // through 'popen' using external helper tools.  Reading has line numbers.
-// Unzipping relies on external utilities, e.g., 'gunzip', 'bzcat' and '7z',
-// while zipping relies on 'gzip', 'bzip2' and '7z' as external tools.
+// Compression and decompression relies on external utilities, e.g., 'gzip',
+// 'bzip2', 'xz', and '7z', which should be in the 'PATH'.
+
+class Internal;
 
 class File {
 
-#ifndef NDEBUG
+  Internal * internal;
   bool writing;
-#endif
   int close_file;
   FILE * file;
   const char * _name;
   long _lineno;
 
-  File (bool, int, FILE *, const char *);
+  File (Internal *, bool, int, FILE *, const char *);
 
+  static FILE * open_pipe (Internal *,
+                           const char * fmt, const char * path,
+			   const char * mode);
+
+  static FILE * read_pipe (Internal *,
+		  	   const char * fmt, const char * path);
+
+  static FILE * write_pipe (Internal *,
+		            const char * fmt, const char * path);
 public:
 
   static bool exists (const char * path);
 
-  static File * read (FILE * f, const char * name);
-  static File * read (const char * path);
+  static File * read (Internal *, FILE * f, const char * name);
+  static File * read (Internal *, const char * path);
 
-  static File * write (FILE *, const char * name);
-  static File * write (const char * path);
+  static File * write (Internal *, FILE *, const char * name);
+  static File * write (Internal *, const char * path);
 
   ~File ();
 

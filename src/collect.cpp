@@ -172,6 +172,23 @@ void Internal::move_non_garbage_clauses () {
     }
   }
 
+  // Replace and flush clause references in 'occs' if necessary.
+  //
+  if (occs) {
+    for (int lit = -max_var; lit <= max_var; lit++) {
+      if (!lit) continue;
+      vector<Clause *> & os = occs[lit];
+      clause_iterator j = os.begin ();
+      for (i = j; i != os.end (); i++) {
+	Clause * c = *i;
+	if (c->collect ()) continue;
+	assert (c->moved);
+	*j++ = c->copy;
+      }
+      os.resize (j - os.begin ());
+    }
+  }
+
   // Replace and flush clause references in 'clauses'.
   //
   clause_iterator j = clauses.begin ();

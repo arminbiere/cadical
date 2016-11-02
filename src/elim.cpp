@@ -355,11 +355,8 @@ bool Internal::elim_round () {
     if (c->redundant) continue;
     const const_literal_iterator eol = c->end ();
     const_literal_iterator j;
-    for (j = c->begin (); j != eol; j++) {
-      int lit = *j;
-      assert (!val (lit));
-      occs[lit].push_back (c);
-    }
+    for (j = c->begin (); j != eol; j++)
+      if (!val (*j)) occs[*j].push_back (c);
   }
 
   // Now find elimination candidates.
@@ -386,11 +383,12 @@ bool Internal::elim_round () {
 
   // Try eliminating variables according to the schedule.
   //
+  const long limit = stats.irredundant/10;	// TODO larger ...
   const const_int_iterator eos = schedule.end ();
   const_int_iterator k;
   for (k = schedule.begin (); !unsat && k != eos; k++) {
+    if (stats.garbage > limit) garbage_collection ();
     elim (*k, work);
-    // TODO garbage collection once in a while.
   }
 
   // Compute and account memory for 'work' and 'occs'.

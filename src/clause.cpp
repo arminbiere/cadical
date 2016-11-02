@@ -76,6 +76,7 @@ void Internal::delete_clause (Clause * c) {
   LOG (c, "delete");
   size_t bytes = c->bytes ();
   stats.collected += bytes;
+  if (c->garbage) assert (stats.garbage > 0), stats.garbage--;
   if (proof) proof->trace_delete_clause (c);
   deallocate_clause (c);
 }
