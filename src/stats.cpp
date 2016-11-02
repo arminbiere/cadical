@@ -33,8 +33,8 @@ void Stats::print (Internal * internal) {
     stats.propagations, relative (stats.propagations/1e6, t));
   MSG ("reused:        %15ld   %10.2f %%  per restart",
     stats.reused, percent (stats.reused, stats.restarts));
-  MSG ("resolutions:   %15ld   %10.2f    per elimination",
-    stats.resolutions, relative (stats.resolutions, stats.eliminations));
+  MSG ("resolutions:   %15ld   %10.2f    per eliminated",
+    stats.resolutions, relative (stats.resolutions, stats.eliminated));
   MSG ("eliminated:    %15ld   %10.2f %%  of all variables",
     stats.eliminated, percent (stats.eliminated, internal->max_var));
   MSG ("fixed:         %15ld   %10.2f %%  of all variables",
