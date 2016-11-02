@@ -321,9 +321,12 @@ class Internal {
   //
   bool eliminating ();
   size_t flush_occs (int lit);
-  void elim_var (int lit, vector<int> & work, vector<int> & units);
-  void elim ();
+  bool resolvents_bounded (int pivot, vector<Clause*> & res);
+  void add_resolvents (int pivot, vector<Clause*> & res);
+  void mark_clauses_with_literal_garbage (int pivot);
+  void elim (int pivot, vector<Clause*> & res);
   void extend ();
+  void elim ();
 
   // Part on picking the next decision in 'decide.cpp'.
   //

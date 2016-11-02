@@ -199,7 +199,7 @@ void Internal::clear_levels () {
 
 void Internal::analyze () {
   assert (conflict);
-  if (!level) { learn_empty_clause (); conflict = 0; return; }
+  if (!level) { learn_empty_clause (); return; }
 
   START (analyze);
 
