@@ -104,7 +104,6 @@ bool Internal::subsuming () {
 // removed is returned.
 
 inline int Internal::subsume_check (Clause * c, Clause * d) {
-  if (c->garbage) return false;
   stats.subchecks++;
   const const_literal_iterator end = c->end ();
   int flipped = 0;
@@ -122,7 +121,7 @@ inline int Internal::subsume_check (Clause * c, Clause * d) {
 
 /*------------------------------------------------------------------------*/
 
-// Candidate clause 'c' can be subsumed or strengthened.
+// Candidate clause 'subsumed' is subsumed by 'subsuming'.
 
 inline void
 Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
@@ -138,6 +137,8 @@ Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
   assert (stats.redundant);
   stats.redundant--;
 }
+
+// Candidate clause 'c' is strengthened by removing 'remove'.
 
 inline void Internal::strengthen_clause (Clause * c, int remove) {
   stats.strengthened++;
@@ -175,7 +176,7 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
 // strengthened the result is negative.  Otherwise the candidate clause
 // can not be subsumed nor strengthened and zero is returned.
 
-inline int Internal::subsume (Clause * c) {
+inline int Internal::try_to_subsume_clause (Clause * c) {
 
   stats.subtried++;
   LOG (c, "trying to subsume");
@@ -184,17 +185,23 @@ inline int Internal::subsume (Clause * c) {
 
   Clause * d = 0;
   int flipped = 0;
-  const const_literal_iterator end = c->end ();
-  for (const_literal_iterator i = c->begin (); !d && i != end; i++) {
+  const const_literal_iterator ec = c->end ();
+  for (const_literal_iterator i = c->begin (); !d && i != ec; i++) {
     int lit = *i;
     vector<Clause*> & os = occs[lit];
-    for (const_clause_iterator j = os.begin (); !d && j != os.end (); j++) {
+    const const_clause_iterator eo = os.end ();
+    clause_iterator k = os.begin ();
+    for (const_clause_iterator j = k; j != eo; j++) {
       Clause * e = *j;
       assert (e != c);
       assert (e->size <= c->size);
+      if (e->garbage) continue;
+      *k++ = e;
+      if (d) continue;
       flipped = subsume_check (e, c);
-      if (flipped) d = e;                 // ... and leave both loops.
+      if (flipped) d = e;                 // ... and leave outer loop.
     }
+    os.resize (k - os.begin ());
   }
 
   unmark (c);
@@ -215,6 +222,11 @@ inline int Internal::subsume (Clause * c) {
 }
 
 /*------------------------------------------------------------------------*/
+
+// Usually called from 'subsume' below if 'subsuming' triggered it.  Then
+// the idea is to subsume both redundant and irredundant clauses. It is also
+// called in the elimination loop in 'elim' in which case we focus on
+// irredundant clauses only to help bounded variable elimination.
 
 bool Internal::subsume_round (bool irredundant_only) {
 
@@ -268,10 +280,17 @@ bool Internal::subsume_round (bool irredundant_only) {
 
     Clause * c = *i;
 
-    // First try to subsume or strengthen this candidate clause.
+    assert (!c->garbage);
+
+    // First try to subsume or strengthen this candidate clause.  For binary
+    // clauses this could be done much faster by hashing and is costly due
+    // to large number of binary clauses.  There is further the issue, that
+    // strengthening binary clauses (through double self-subsuming
+    // resolution) would produce units, which needs much more care. For now
+    // we ignore clauses with fixed literals (false or true).
     //
     if (c->size > 2) {
-      const int tmp = subsume (c);
+      const int tmp = try_to_subsume_clause (c);
       if (tmp > 0) { subsumed++; continue; }
       if (tmp < 0) strengthened++;
     }
@@ -284,12 +303,14 @@ bool Internal::subsume_round (bool irredundant_only) {
     const_literal_iterator j;
     for (j = c->begin (); j != end; j++) {
       const int lit = *j;
+      assert (!val (lit));
       const size_t size = occs[lit].size ();
       if (minlit && minsize <= size) continue;
       minlit = lit, minsize = size;
     }
 
     // Unless this smallest occurring literal occurs too often.
+    // Ignore potential subsumed garbage clauses.
     //
     if (minsize > (size_t) opts.subsumeocclim) continue;
 
@@ -321,6 +342,7 @@ bool Internal::subsume_round (bool irredundant_only) {
 }
 
 void Internal::subsume () {
+  assert (opts.subsume);
   (void) subsume_round (false);
   inc.subsume += opts.subsumeinc;
   lim.subsume = stats.conflicts + inc.subsume;

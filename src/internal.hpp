@@ -292,6 +292,7 @@ class Internal {
   void mark_useless_redundant_clauses_as_garbage ();
   void move_clause (Clause *);
   void flush_and_copy_clause_references (vector<Clause*> &);
+  void flush_clause_references (vector<Clause*> &);
   void move_non_garbage_clauses ();
   void delete_garbage_clauses ();
   void flush_watches ();
@@ -317,7 +318,7 @@ class Internal {
   void strengthen_clause (Clause *, int);
   void subsume_clause (Clause * subsuming, Clause * subsumed);
   int subsume_check (Clause * subsuming, Clause * subsumed);
-  int subsume (Clause *);
+  int try_to_subsume_clause (Clause *);
   bool subsume_round (bool irredundant_only = false);
   void subsume ();
 

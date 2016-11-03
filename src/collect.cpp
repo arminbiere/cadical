@@ -79,10 +79,27 @@ void Internal::mark_satisfied_clauses_as_garbage () {
 
 /*------------------------------------------------------------------------*/
 
+void Internal::flush_clause_references (vector<Clause *> & v) {
+  const const_clause_iterator end = v.end ();
+  clause_iterator j = v.begin ();
+  const_clause_iterator i;
+  for (i = j; i != end; i++) {
+    Clause * c = *i;
+    if (!c->collect ()) *j++ = c;
+  }
+  v.resize (j - v.begin ());
+}
+
 // This is a simple garbage collector which does not move clauses.
 
 void Internal::delete_garbage_clauses () {
+
   LOG ("deleting garbage clauses");
+
+  if (occs)
+    for (int lit = -max_var; lit <= max_var; lit++)
+      if (lit) flush_clause_references (occs[lit]);
+
   const_clause_iterator i = clauses.begin ();
   clause_iterator j = clauses.begin ();
   size_t collected_bytes = 0;
@@ -94,6 +111,7 @@ void Internal::delete_garbage_clauses () {
     j--;
   }
   clauses.resize (j - clauses.begin ());
+
   VRB ("collect", stats.collections,
     "collected %ld bytes", (long) collected_bytes);
 }
@@ -189,8 +207,6 @@ void Internal::move_non_garbage_clauses () {
     }
   }
 
-  // Replace and flush clause references in 'occs' if necessary.
-  //
   if (occs)
     for (int lit = -max_var; lit <= max_var; lit++)
       if (lit) flush_and_copy_clause_references (occs[lit]);
