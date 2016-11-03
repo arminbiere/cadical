@@ -88,9 +88,9 @@ FILE * File::open_pipe (Internal * internal,
   strncpy (prg, fmt, prglen);
   prg[prglen] = 0;
   char * found = find (prg);
+  if (found) MSG ("found '%s' in path for '%s'", found, prg);
   delete [] prg;
   if (!found) return 0;
-  MSG ("using '%s'", found);
   delete [] found;
   char * cmd = new char [strlen (fmt) + strlen (path)];
   sprintf (cmd, fmt, path);
