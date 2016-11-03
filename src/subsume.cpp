@@ -263,7 +263,7 @@ bool Internal::subsume_round (bool irredundant_only) {
     }
     schedule.push_back (c);
   }
-  inc_bytes (VECTOR_BYTES (schedule));
+  inc_bytes (bytes_vector (schedule));
   stable_sort (schedule.begin (), schedule.end (), smaller_size ());
 
   long scheduled = schedule.size ();
@@ -325,8 +325,8 @@ bool Internal::subsume_round (bool irredundant_only) {
   // Release occurrence lists and schedule.
   //
   reset_occs ();
-  dec_bytes (VECTOR_BYTES (schedule));
-  schedule = vector<Clause*> ();
+  dec_bytes (bytes_vector (schedule));
+  erase_vector (schedule);
 
   VRB ("subsume", stats.subsumptions,
     "subsumed %ld and strengthened %ld of %ld clauses %.0f%%",

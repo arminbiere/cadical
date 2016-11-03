@@ -391,7 +391,7 @@ bool Internal::elim_round () {
     schedule.push_back (idx);
   }
   long scheduled = schedule.size ();
-  inc_bytes (VECTOR_BYTES (schedule));
+  inc_bytes (bytes_vector (schedule));
   VRB ("elim", stats.eliminations,
     "scheduled %ld variables %.0f%% for elimination",
     scheduled, percent (scheduled, max_var));
@@ -408,17 +408,17 @@ bool Internal::elim_round () {
 
   // Try eliminating variables according to the schedule.
   //
-  const long limit = stats.irredundant/2;
+  const long irredundant_limit = stats.irredundant;
   const const_int_iterator eos = schedule.end ();
   const_int_iterator k;
   for (k = schedule.begin (); !unsat && k != eos; k++) {
-    if (stats.garbage > limit) garbage_collection ();
+    if (stats.garbage > irredundant_limit) garbage_collection ();
     elim (*k, work);
   }
 
   // Compute and account memory for 'work' and 'occs'.
   //
-  inc_bytes (VECTOR_BYTES (work));
+  inc_bytes (bytes_vector (work));
   account_occs ();
 
   long resolutions = stats.resolutions - old_resolutions;
@@ -430,10 +430,10 @@ bool Internal::elim_round () {
   // Release occurrence lists, and both schedule and work stacks.
   //
   reset_occs ();
-  dec_bytes (VECTOR_BYTES (work));
-  dec_bytes (VECTOR_BYTES (schedule));
-  schedule = vector<int> ();
-  work = vector<Clause*> ();
+  dec_bytes (bytes_vector (work));
+  dec_bytes (bytes_vector (schedule));
+  erase_vector (schedule);
+  erase_vector (work);
 
   // Mark all redundant clauses with eliminated variables as garbage.
   //

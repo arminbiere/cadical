@@ -56,8 +56,6 @@ do { \
   delete [] TMP; \
 } while (0)
 
-#define VECTOR_BYTES(V) ((V).capacity () * sizeof ((V)[0]))
-
 /*------------------------------------------------------------------------*/
 
 // Compact message code.

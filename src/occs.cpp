@@ -12,7 +12,7 @@ void Internal::init_occs () {
 void Internal::account_occs () {
   size_t bytes = 0;
   for (int lit = -max_var; lit <= max_var; lit++)
-    bytes += VECTOR_BYTES (occs[lit]);
+    bytes += bytes_vector (occs[lit]);
   inc_bytes (bytes);
   dec_bytes (bytes);
 }

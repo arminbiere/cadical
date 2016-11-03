@@ -88,6 +88,7 @@ void Internal::flush_clause_references (vector<Clause *> & v) {
     if (!c->collect ()) *j++ = c;
   }
   v.resize (j - v.begin ());
+  shrink_vector (v);
 }
 
 // This is a simple garbage collector which does not move clauses.
@@ -129,6 +130,7 @@ void Internal::flush_and_copy_clause_references (vector<Clause *> & v) {
     *j++ = c->copy;
   }
   v.resize (j - v.begin ());
+  shrink_vector (v);
 }
 
 // Copy a clause to the 'to' space of the arena.  Be careful if this clause
@@ -233,32 +235,38 @@ void Internal::move_non_garbage_clauses () {
 
 /*------------------------------------------------------------------------*/
 
-// Deallocate watcher stacks of inactive (fixed) variables and reset (clear)
-// watcher stacks of still active variables. As a side effect this function
-// computes the actual current and maximum memory for watcher stacks.
+// Deallocate watcher stacks of inactive (fixed) variables and reset watcher
+// stacks. As a side effect of this function the actual maximum memory for
+// watcher stacks is computed and the corresponding statistics are updated.
 
 void Internal::flush_watches () {
-  size_t current_bytes = 0, max_bytes = 0;
+  size_t max_bytes = 0;
   for (int idx = 1; idx <= max_var; idx++) {
     for (int sign = -1; sign <= 1; sign += 2) {
       const int lit = sign * idx;
       Watches & ws = watches (lit);
-      const size_t bytes = ws.capacity () * sizeof ws[0];
-      max_bytes += bytes;
-      if (ws.empty () || fixed (lit)) ws = Watches ();
-      else ws.clear (), current_bytes += bytes;
+      max_bytes += bytes_vector (ws);;
+      erase_vector (ws);
     }
   }
-  stats.bytes.watcher.current = current_bytes;
   if (max_bytes > stats.bytes.watcher.max)
     stats.bytes.watcher.max = max_bytes;
 }
+
+// Add back all the watches and again compute current memory used.
 
 void Internal::setup_watches () {
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
   for (i = clauses.begin (); i != end; i++)
     watch_clause (*i);
+
+  size_t current_bytes = 0;
+  for (int lit = -max_var; lit <= max_var; lit++)
+    current_bytes += bytes_vector (watches (lit));
+  stats.bytes.watcher.current = current_bytes;
+  if (current_bytes > stats.bytes.watcher.max)
+    stats.bytes.watcher.max = current_bytes;
 }
 
 /*------------------------------------------------------------------------*/
