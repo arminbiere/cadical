@@ -19,11 +19,11 @@ struct Message {
 
   static void verbose (Internal *,
                        const char * phase,
-		       const char *, ...);
+                       const char *, ...);
 
   static void verbose (Internal *,
                        const char * phase, long count,
-		       const char *, ...);
+                       const char *, ...);
 };
 
 };

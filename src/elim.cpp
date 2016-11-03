@@ -135,8 +135,8 @@ Internal::resolvents_are_bounded (int pivot, vector<Clause*> & res) {
         continue;
       }
 
-      // Now we count it as a real resolution. Note that 'satisfied' second
-      // antecedent clauses are traversed only once.
+      // Now we count it as a real resolution. Note that those 'satisfied'
+      // second antecedent clauses detected above are traversed only once.
       //
       LOG (d, "trying second antecedent");
       stats.resolutions++;
@@ -181,7 +181,9 @@ inline void Internal::add_resolvents (int pivot, vector<Clause*> & res) {
   const const_clause_iterator re = res.end ();
   const_clause_iterator i = res.begin ();
   while (!unsat && i != re) {
+
     Clause * c = *i++, * d = *i++;
+
     if (c->garbage || d->garbage) continue;
     if (c->size > d->size) swap (c, d);
     assert (clause.empty ());
@@ -192,7 +194,7 @@ inline void Internal::add_resolvents (int pivot, vector<Clause*> & res) {
     const_literal_iterator l;
     bool satisfied = false;
     for (l = c->begin (); !satisfied && l != ce; l++) {
-      int lit = *l;
+      const int lit = *l;
       if (lit == pivot || lit == -pivot) continue;
       const int tmp = val (lit);
       if (tmp > 0) satisfied = true;
@@ -206,7 +208,7 @@ inline void Internal::add_resolvents (int pivot, vector<Clause*> & res) {
       //
       const const_literal_iterator de = d->end ();
       for (l = d->begin (); !satisfied && l != de; l++) {
-        int lit = *l;
+        const int lit = *l;
         if (lit == pivot || lit == -pivot) continue;
         int tmp = val (lit);
         if (tmp > 0) satisfied = true;
@@ -228,7 +230,7 @@ inline void Internal::add_resolvents (int pivot, vector<Clause*> & res) {
           LOG ("empty resolvent");
           learn_empty_clause ();
         } else if (clause.size () == 1) {
-          int unit = clause[0];
+          const int unit = clause[0];
           LOG ("unit resolvent %d", unit);
           assign (unit);
           if (!propagate ()) {
@@ -301,7 +303,7 @@ inline void Internal::elim (int pivot, vector<Clause*> & work) {
 
   // First remove garbage clauses to get a (more) accurate count. There
   // might still be satisfied clauses included in this count which we have
-  // not found yet.
+  // not found yet by we ignore this in the following check.
   //
   long pos = flush_occs (pivot);
   long neg = flush_occs (-pivot);
@@ -341,11 +343,11 @@ bool Internal::elim_round () {
 
   // Allocate schedule, working stack and occurrence lists.
   //
-  vector<int> schedule;
-  vector<Clause*> work;
-  init_occs ();
+  vector<int> schedule;         // schedule of candidate variables
+  vector<Clause*> work;         // pairs of clauses to be resolved
+  init_occs ();                 // occurrences lists
 
-  // Connect all irredundant clauses.
+  // Connect irredundant clauses ignoring literals with many occurrences.
   //
   const_clause_iterator eoc = clauses.end ();
   const_clause_iterator i;
@@ -355,11 +357,14 @@ bool Internal::elim_round () {
     if (c->redundant) continue;
     const const_literal_iterator eol = c->end ();
     const_literal_iterator j;
-    for (j = c->begin (); j != eol; j++)
-      if (!val (*j)) occs[*j].push_back (c);
+    for (j = c->begin (); j != eol; j++) {
+      if (val (*j)) continue;
+      vector<Clause *> & os = occs[*j];
+      if (os.size () <= (size_t) opts.elimocclim) os.push_back (c);
+    }
   }
 
-  // Now find elimination candidates.
+  // Now find elimination candidates (with small number of occurrences).
   //
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;

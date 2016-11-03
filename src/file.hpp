@@ -37,16 +37,16 @@ class File {
 
   static FILE * open_pipe (Internal *,
                            const char * fmt, const char * path,
-			   const char * mode);
+                           const char * mode);
   static FILE * read_pipe (Internal *,
-		  	   const char * fmt, const char * path);
+                           const char * fmt, const char * path);
   static FILE * write_pipe (Internal *,
-		            const char * fmt, const char * path);
+                            const char * fmt, const char * path);
 public:
 
-  static char* find (const char * prg);  	// in 'PATH'
+  static char* find (const char * prg);         // in 'PATH'
   static bool exists (const char * path);
-  static size_t size (const char * path);	// in bytes ..
+  static size_t size (const char * path);       // in bytes ..
 
   static File * read (Internal *, FILE * f, const char * name);
   static File * read (Internal *, const char * path);

@@ -242,11 +242,11 @@ bool Internal::subsume_round (bool irredundant_only) {
     if (c->redundant) {
       if (irredundant_only) continue;
       if (c->extended) {
-	// All irredundant clauses and short clauses with small glue (not
-	// extended) are candidates in any case.  Otherwise, redundant long
-	// clauses are considered as candidates if they would have been kept
-	// in the last 'reduce' operation based on their size and glue value.
-	if (c->size > lim.keptsize || c->glue > lim.keptglue) continue;
+        // All irredundant clauses and short clauses with small glue (not
+        // extended) are candidates in any case.  Otherwise, redundant long
+        // clauses are considered as candidates if they would have been kept
+        // in the last 'reduce' operation based on their size and glue value.
+        if (c->size > lim.keptsize || c->glue > lim.keptglue) continue;
       }
     }
     schedule.push_back (c);

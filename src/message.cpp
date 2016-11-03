@@ -63,7 +63,7 @@ void Message::section (Internal * internal, const char * title) {
 
 void Message::verbose (Internal * internal,
                        const char * phase,
-		       const char * fmt, ...) {
+                       const char * fmt, ...) {
 #ifndef LOGGING
   if (internal->opts.quiet) return;
   if (!internal->opts.verbose) return;
@@ -79,7 +79,7 @@ void Message::verbose (Internal * internal,
 
 void Message::verbose (Internal * internal,
                        const char * phase, long count,
-		       const char * fmt, ...) {
+                       const char * fmt, ...) {
 #ifndef LOGGING
   if (internal->opts.quiet) return;
   if (!internal->opts.verbose) return;

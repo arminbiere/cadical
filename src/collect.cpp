@@ -210,7 +210,7 @@ void Internal::move_non_garbage_clauses () {
 
   VRB ("collect", stats.collections,
     "collected %ld bytes %.0f%% of %ld garbage clauses",
-    (long) collected_bytes, 
+    (long) collected_bytes,
     percent (collected_bytes, collected_bytes + moved_bytes),
     (long) collected_clauses);
 }

@@ -63,7 +63,7 @@ char * File::find (const char * prg) {
 
 FILE * File::open_file (Internal * internal,
                         const char * path,
-	       	        const char * mode) {
+                        const char * mode) {
   return fopen (path, mode);
 }
 
@@ -81,7 +81,7 @@ FILE * File::write_file (Internal * internal, const char * path) {
 
 FILE * File::open_pipe (Internal * internal,
                         const char * fmt, const char * path,
-	       	        const char * mode) {
+                        const char * mode) {
   size_t prglen = 0;
   while (fmt[prglen] && fmt[prglen] != ' ') prglen++;
   char * prg = new char [prglen + 1];
