@@ -24,8 +24,9 @@ struct Limit {
 
   // Used to prohibit useless elimination attempts.
   //
-  int        fixed_at_last_elim;
-  long irredundant_at_last_elim;
+  int         fixed_at_last_elim;
+  long  irredundant_at_last_elim;
+  long subsumptions_at_last_elim;
 
   // Used to let 'subsume' wait until and right after next 'reduce'.
   //

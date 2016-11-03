@@ -450,33 +450,38 @@ void Internal::elim () {
   else limit = opts.elimroundsinit;
   assert (limit > 0);
 
+  // Make sure there was an subsumption attempt since last elimination.
+  //
+  if (lim.subsumptions_at_last_elim < stats.subsumptions)
+    subsume_round ();
+
   for (;;) {
     round++;
     if (!elim_round ()) break;
-    if (round >= limit) break;
+    if (round >= limit) break;             // stop after elimination
     if (!subsume_round (true)) break;
   }
 
   int eliminated = stats.eliminated - old_eliminated;
   double relelim = percent (eliminated, old_var);
   VRB ("elim", stats.eliminations,
-    "elimination %ld eliminated %d variables %.2f%",
-    eliminated, relelim);
+    "elimination %ld eliminated %d variables %.2f% in %d rounds",
+    eliminated, relelim, round);
 
   // Schedule next elimination based on number of eliminated variables.
   //
   if (relelim >= 10) {
-    // Very high percentage eliminated, so use base interval.
+    // Very high percentage 10% eliminated, so use base interval.
     lim.elim = stats.conflicts + opts.elimint;
   } else {
     if (!eliminated) {
       // Nothing eliminated, go into geometric increase.
       inc.elim *= 2;
     } else if (relelim < 5) {
-      // Something eliminated, so go into arithmetic increase.
+      // Less than 5% eliminated, so go into arithmetic increase.
       inc.elim += opts.elimint;
     } else {
-      // Substantial number eliminated, keep interval.
+      // Substantial number 5%-10% eliminated, keep interval.
     }
     lim.elim = stats.conflicts + inc.elim;
   }
@@ -486,6 +491,7 @@ void Internal::elim () {
 
   lim.fixed_at_last_elim = stats.fixed;
   lim.irredundant_at_last_elim = stats.irredundant;
+  lim.subsumptions_at_last_elim = stats.subsumptions;
 }
 
 };
