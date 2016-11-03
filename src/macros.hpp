@@ -62,9 +62,19 @@ do { \
 
 // Compact message code.
 
-#define MSG(ARGS...) Message::print (internal, 0, ##ARGS)
-#define VRB(ARGS...) Message::print (internal, 1, ##ARGS)
+#define MSG(ARGS...) Message::message (internal, ##ARGS)
+#define VRB(ARGS...) Message::verbose (internal, ##ARGS)
 #define SECTION(ARGS...) Message::section (internal, ##ARGS)
+
+// Parse error.
+
+#define PER(FMT,ARGS...) \
+do { \
+  internal->error.init (\
+    "%s:%d: parse error: ", \
+    file->name (), (int) file->lineno ()); \
+  return internal->error.append (FMT, ##ARGS); \
+} while (0)
 
 /*------------------------------------------------------------------------*/
 

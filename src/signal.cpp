@@ -46,13 +46,13 @@ const char * Signal::name (int sig) {
 void Signal::catchsig (int sig) {
   if (!catchedsig) {
     catchedsig = true;
-    solver->msg ("");
-    solver->msg ("CAUGHT SIGNAL %d %s", sig, name (sig));
+    solver->message ("");
+    solver->message ("CAUGHT SIGNAL %d %s", sig, name (sig));
     solver->section ("result");
-    solver->msg ("s UNKNOWN");
+    solver->message ("s UNKNOWN");
     solver->statistics ();
   }
-  solver->msg ("RERAISING SIGNAL %d %s", sig, name (sig));
+  solver->message ("RERAISING SIGNAL %d %s", sig, name (sig));
   reset ();
   raise (sig);
 }

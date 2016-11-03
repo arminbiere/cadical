@@ -254,6 +254,9 @@ bool Internal::subsume_round (bool irredundant_only) {
   inc_bytes (VECTOR_BYTES (schedule));
   stable_sort (schedule.begin (), schedule.end (), smaller_size ());
 
+  long scheduled = schedule.size ();
+  VRB ("subsume", stats.subsumptions, "scheduled %ld clauses", scheduled);
+
   // Now go over the scheduled clauses in the order of increasing size and
   // try to forward subsume and strengthen them. Forward means find smaller
   // or same size clauses which subsume or might strengthen the candidate.
@@ -304,9 +307,10 @@ bool Internal::subsume_round (bool irredundant_only) {
   dec_bytes (VECTOR_BYTES (schedule));
   schedule = vector<Clause*> ();
 
-  VRB ("subsumed %ld strengthened %ld of %ld clauses %.2f%%",
-    subsumed, strengthened, (long) schedule.size (),
-    percent (subsumed + strengthened, schedule.size ()));
+  VRB ("subsume", stats.subsumptions,
+    "subsumed %ld and strengthened %ld of %ld clauses %.0f%%",
+    subsumed, strengthened, scheduled,
+    percent (subsumed + strengthened, scheduled));
 
   lim.subsume = stats.conflicts + inc.subsume;
 

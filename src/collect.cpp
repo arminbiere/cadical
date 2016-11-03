@@ -94,10 +94,24 @@ void Internal::delete_garbage_clauses () {
     j--;
   }
   clauses.resize (j - clauses.begin ());
-  VRB ("collected %ld bytes", (long) collected_bytes);
+  VRB ("collect", stats.collections,
+    "collected %ld bytes", (long) collected_bytes);
 }
 
 /*------------------------------------------------------------------------*/
+
+void Internal::flush_and_copy_clause_references (vector<Clause *> & v) {
+  const const_clause_iterator end = v.end ();
+  clause_iterator j = v.begin ();
+  const_clause_iterator i;
+  for (i = j; i != end; i++) {
+    Clause * c = *i;
+    if (c->collect ()) continue;
+    assert (c->moved);
+    *j++ = c->copy;
+  }
+  v.resize (j - v.begin ());
+}
 
 // Copy a clause to the 'to' space of the arena.  Be careful if this clause
 // is a reason of an assignment.  In that case update the reason reference.
@@ -127,8 +141,11 @@ void Internal::move_non_garbage_clauses () {
     if (!(c = *i)->collect ()) moved_bytes += c->bytes (), moved_clauses++;
     else collected_bytes += c->bytes (), collected_clauses++;
 
-  VRB ("moving %ld bytes of %ld non garbage clauses",
-    (long) moved_bytes, (long) moved_clauses);
+  VRB ("collect", stats.collections,
+    "moving %ld bytes %.0f%% of %ld non garbage clauses",
+    (long) moved_bytes,
+    percent (moved_bytes, collected_bytes + moved_bytes),
+    (long) moved_clauses);
 
   // Prepare 'to' space of size 'moved_bytes'.
   //
@@ -174,20 +191,9 @@ void Internal::move_non_garbage_clauses () {
 
   // Replace and flush clause references in 'occs' if necessary.
   //
-  if (occs) {
-    for (int lit = -max_var; lit <= max_var; lit++) {
-      if (!lit) continue;
-      vector<Clause *> & os = occs[lit];
-      clause_iterator j = os.begin ();
-      for (i = j; i != os.end (); i++) {
-	Clause * c = *i;
-	if (c->collect ()) continue;
-	assert (c->moved);
-	*j++ = c->copy;
-      }
-      os.resize (j - os.begin ());
-    }
-  }
+  if (occs)
+    for (int lit = -max_var; lit <= max_var; lit++)
+      if (lit) flush_and_copy_clause_references (occs[lit]);
 
   // Replace and flush clause references in 'clauses'.
   //
@@ -202,14 +208,18 @@ void Internal::move_non_garbage_clauses () {
   //
   arena.swap ();
 
-  VRB ("collected %ld bytes of %ld garbage clauses",
-    (long) collected_bytes, (long) collected_clauses);
+  VRB ("collect", stats.collections,
+    "collected %ld bytes %.0f%% of %ld garbage clauses",
+    (long) collected_bytes, 
+    percent (collected_bytes, collected_bytes + moved_bytes),
+    (long) collected_clauses);
 }
 
 /*------------------------------------------------------------------------*/
 
 // Deallocate watcher stacks of inactive (fixed) variables and reset (clear)
-// watcher stacks of still active variables.
+// watcher stacks of still active variables. As a side effect this function
+// computes the actual current and maximum memory for watcher stacks.
 
 void Internal::flush_watches () {
   size_t current_bytes = 0, max_bytes = 0;
@@ -229,7 +239,9 @@ void Internal::flush_watches () {
 }
 
 void Internal::setup_watches () {
-  for (const_clause_iterator i = clauses.begin (); i != clauses.end (); i++)
+  const const_clause_iterator end = clauses.end ();
+  const_clause_iterator i;
+  for (i = clauses.begin (); i != end; i++)
     watch_clause (*i);
 }
 
@@ -238,8 +250,9 @@ void Internal::setup_watches () {
 void Internal::check_clause_stats () {
 #ifndef NDEBUG
   long irredundant = 0, redundant = 0;
+  const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
-  for (i = clauses.begin (); i != clauses.end (); i++) {
+  for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
     if (c->redundant) redundant++; else irredundant++;
@@ -253,6 +266,7 @@ void Internal::check_clause_stats () {
 
 void Internal::garbage_collection () {
   START (collect);
+  stats.collections++;
   mark_satisfied_clauses_as_garbage ();
   if (opts.arena) move_non_garbage_clauses ();
   else delete_garbage_clauses ();

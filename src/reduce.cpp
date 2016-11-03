@@ -80,7 +80,8 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     if (c->size > lim.keptsize) lim.keptsize = c->size;
     if (c->glue > lim.keptglue) lim.keptglue = c->glue;
   }
-  VRB ("maximum kept size %d glue %d", lim.keptsize, lim.keptglue);
+  VRB ("reduce", stats.reductions,
+    "maximum kept size %d glue %d", lim.keptsize, lim.keptglue);
 }
 
 /*------------------------------------------------------------------------*/

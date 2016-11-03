@@ -7,7 +7,9 @@ namespace CaDiCaL {
 void Internal::extend () {
   START (extend);
   long flipped = 0;
-  VRB ("extending through extension stack of size %ld", extension.size ());
+  VRB ("extend",
+    "extending through extension stack of size %ld",
+    extension.size ());
   const const_int_iterator begin = extension.begin ();
   const_int_iterator i = extension.end ();
   while (i != begin) {
@@ -27,7 +29,7 @@ void Internal::extend () {
     phases[idx] = -phases[idx];
     vals[idx] = -vals[idx];
   }
-  VRB ("flipped %ld literals during extension", flipped);
+  VRB ("extend", "flipped %ld literals during extension", flipped);
   STOP (extend);
 }
 

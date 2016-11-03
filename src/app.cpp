@@ -81,7 +81,7 @@ void App::witness () {
 bool App::set (const char * arg) { return solver->set (arg); }
 
 #define ERROR(FMT,ARGS...) \
-do { solver->err (FMT,##ARGS); res = 1; goto DONE; } while (0)
+do { solver->error (FMT,##ARGS); res = 1; goto DONE; } while (0)
 
 int App::main (int argc, char ** argv) {
   const char * proof_path = 0, * solution_path = 0, * dimacs_path = 0;
@@ -123,13 +123,13 @@ int App::main (int argc, char ** argv) {
   solver->banner ();
   solver->section ("parsing input");
   dimacs_name = dimacs_path ? dimacs_path : "<stdin>";
-  solver->msg ("reading DIMACS file from '%s'", dimacs_name);
+  solver->message ("reading DIMACS file from '%s'", dimacs_name);
   if (dimacs_path) err = solver->dimacs (dimacs_path);
   else             err = solver->dimacs (stdin, dimacs_name);
   if (err) ERROR ("%s", err);
   if (solution_path) {
     solver->section ("parsing solution");
-    solver->msg ("reading solution file from '%s'", solution_path);
+    solver->message ("reading solution file from '%s'", solution_path);
     if ((err = solver->solution (solution_path))) ERROR ("%s", err);
   }
   solver->section ("options");
@@ -138,19 +138,19 @@ int App::main (int argc, char ** argv) {
   if (proof_specified) {
     if (!proof_path) {
       if (isatty (1) && solver->get ("binary")) {
-        solver->msg (
+        solver->message (
           "forced non-binary proof since '<stdout>' connected to terminal");
         solver->set ("binary", false);
       }
-      solver->msg ("writing %s proof trace to '<stdout>'",
+      solver->message ("writing %s proof trace to '<stdout>'",
         (solver->get ("binary") ? "binary" : "non-binary"));
       solver->proof (stdout, "<stdout>");
     } else if (!solver->proof (proof_path))
       ERROR ("can not open and write DRAT proof to '%s'", proof_path);
     else
-      solver->msg ("writing %s DRAT proof trace to '%s'",
+      solver->message ("writing %s DRAT proof trace to '%s'",
         (solver->get ("binary") ? "binary" : "non-binary"), proof_path);
-  } else solver->msg ("will not generate nor write DRAT proof");
+  } else solver->message ("will not generate nor write DRAT proof");
   res = solver->solve ();
   if (proof_specified) solver->close ();
   solver->section ("result");
@@ -167,7 +167,7 @@ int App::main (int argc, char ** argv) {
     fflush (stdout);
   }
   solver->statistics ();
-  solver->msg ("exit %d", res);
+  solver->message ("exit %d", res);
 DONE:
   Signal::reset ();
   if (!solver->get ("leak")) delete solver;

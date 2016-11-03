@@ -368,9 +368,11 @@ bool Internal::elim_round () {
     if (occs[-idx].size () > (size_t) opts.elimocclim) continue;
     schedule.push_back (idx);
   }
+  long scheduled = schedule.size ();
   inc_bytes (VECTOR_BYTES (schedule));
-  VRB ("scheduled %ld variables for elimination",
-    (long) schedule.size ());
+  VRB ("elim", stats.eliminations,
+    "scheduled %ld variables %.0f%% for elimination",
+    scheduled, percent (scheduled, max_var));
 
   account_occs ();  // Compute and account memory for 'occs'.
 
@@ -383,7 +385,7 @@ bool Internal::elim_round () {
 
   // Try eliminating variables according to the schedule.
   //
-  const long limit = stats.irredundant/10;	// TODO larger ...
+  const long limit = stats.irredundant/2;
   const const_int_iterator eos = schedule.end ();
   const_int_iterator k;
   for (k = schedule.begin (); !unsat && k != eos; k++) {
@@ -398,8 +400,9 @@ bool Internal::elim_round () {
 
   long resolutions = stats.resolutions - old_resolutions;
   int eliminated = stats.eliminated - old_eliminated;
-  VRB ("eliminated %ld variables %.2f%% in %ld resolutions",
-    eliminated, percent (eliminated, max_var), resolutions);
+  VRB ("elim", stats.eliminations,
+    "eliminated %ld variables %.0f%% in %ld resolutions",
+    eliminated, percent (eliminated, scheduled), resolutions);
 
   // Release occurrence lists, and both schedule and work stacks.
   //
@@ -444,7 +447,6 @@ void Internal::elim () {
 
   for (;;) {
     round++;
-    VRB ("elimination round %d", round);
     if (!elim_round ()) break;
     if (round >= limit) break;
     if (!subsume_round (true)) break;
@@ -452,7 +454,8 @@ void Internal::elim () {
 
   int eliminated = stats.eliminated - old_eliminated;
   double relelim = percent (eliminated, old_var);
-  VRB ("elimination %ld eliminated %d variables %.2f%",
+  VRB ("elim", stats.eliminations,
+    "elimination %ld eliminated %d variables %.2f%",
     eliminated, relelim);
 
   // Schedule next elimination based on number of eliminated variables.
@@ -472,7 +475,8 @@ void Internal::elim () {
     }
     lim.elim = stats.conflicts + inc.elim;
   }
-  VRB ("next elimination scheduled in %ld conflicts at %ld conflicts",
+  VRB ("elim", stats.eliminations,
+    "next elimination scheduled in %ld conflicts at %ld conflicts",
     lim.elim - stats.conflicts, lim.elim);
 
   lim.fixed_at_last_elim = stats.fixed;

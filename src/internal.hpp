@@ -291,6 +291,7 @@ class Internal {
   void mark_satisfied_clauses_as_garbage ();
   void mark_useless_redundant_clauses_as_garbage ();
   void move_clause (Clause *);
+  void flush_and_copy_clause_references (vector<Clause*> &);
   void move_non_garbage_clauses ();
   void delete_garbage_clauses ();
   void flush_watches ();

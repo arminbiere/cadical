@@ -5,27 +5,27 @@
 
 namespace CaDiCaL {
 
-class File;
 class Internal;
 
 struct Message {
-  static void err (Internal *, const char *, ...);
-  static void err_va_list (Internal *, const char *, va_list &);
+
+  static void vmessage (Internal *, const char *, va_list &);
+  static void message (Internal *, const char *, ...);
+
+  static void verror (Internal *, const char *, va_list &);
+  static void error (Internal *, const char *, ...);
 
   static void section (Internal *, const char * title);
 
-  static void print (Internal *, int verbosity, const char *, ...);
-  static void print_va_list (Internal *, int, const char *, va_list &);
+  static void verbose (Internal *,
+                       const char * phase,
+		       const char *, ...);
+
+  static void verbose (Internal *,
+                       const char * phase, long count,
+		       const char *, ...);
 };
 
 };
-
-#define PER(FMT,ARGS...) \
-do { \
-  internal->error.init (\
-    "%s:%d: parse error: ", \
-    file->name (), (int) file->lineno ()); \
-  return internal->error.append (FMT, ##ARGS); \
-} while (0)
 
 #endif

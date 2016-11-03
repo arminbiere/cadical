@@ -70,14 +70,14 @@ bool Solver::proof (const char * path) {
 /*------------------------------------------------------------------------*/
 
 void Solver::banner () {
-  msg ("CaDiCaL Radically Simplified CDCL SAT Internal");
-  msg ("Version " CADICAL_VERSION " " CADICAL_GITID);
-  msg ("Copyright (c) 2016 Armin Biere, JKU");
-  msg ("");
-  msg (CADICAL_COMPILED);
-  msg (CADICAL_CXXVERSION);
-  msg (CADICAL_OS);
-  msg (CADICAL_CXX " " CADICAL_CXXFLAGS);
+  message ("CaDiCaL Radically Simplified CDCL SAT Internal");
+  message ("Version " CADICAL_VERSION " " CADICAL_GITID);
+  message ("Copyright (c) 2016 Armin Biere, JKU");
+  message ("");
+  message (CADICAL_COMPILED);
+  message (CADICAL_CXXVERSION);
+  message (CADICAL_OS);
+  message (CADICAL_CXX " " CADICAL_CXXFLAGS);
 }
 
 void Solver::options () { internal->opts.print (); }
@@ -128,17 +128,17 @@ const char * Solver::solution (const char * path) {
 
 void Solver::section (const char * title) { SECTION (title); }
 
-void Solver::msg (const char * fmt, ...) {
+void Solver::message (const char * fmt, ...) {
   va_list ap;
   va_start (ap, fmt);
-  Message::print_va_list (internal, 0, fmt, ap);
+  Message::vmessage (internal, fmt, ap);
   va_end (ap);
 }
 
-void Solver::err (const char * fmt, ...) {
+void Solver::error (const char * fmt, ...) {
   va_list ap;
   va_start (ap, fmt);
-  Message::err_va_list (internal, fmt, ap);
+  Message::verror (internal, fmt, ap);
   va_end (ap);
 }
 
