@@ -346,8 +346,9 @@ bool Internal::elim_round () {
   vector<int> schedule;         // schedule of candidate variables
   vector<Clause*> work;         // pairs of clauses to be resolved
   init_occs ();                 // occurrences lists
+  init_noccs ();
 
-  // Connect irredundant clauses ignoring literals with many occurrences.
+  // First compute the number of occurrences of each literal.
   //
   const_clause_iterator eoc = clauses.end ();
   const_clause_iterator i;
@@ -357,20 +358,36 @@ bool Internal::elim_round () {
     if (c->redundant) continue;
     const const_literal_iterator eol = c->end ();
     const_literal_iterator j;
+    long inc = (c->size > opts.elimclslim) ? opts.elimocclim + 1 : 1;
+    for (j = c->begin (); j != eol; j++)
+      if (!val (*j)) noccs[*j] += inc;
+  }
+
+  // Connect irredundant clauses ignoring literals with many occurrences.
+  //
+  for (i = clauses.begin (); i != eoc; i++) {
+    Clause * c = *i;
+    if (c->garbage) continue;
+    if (c->redundant) continue;
+    const const_literal_iterator eol = c->end ();
+    const_literal_iterator j;
     for (j = c->begin (); j != eol; j++) {
       if (val (*j)) continue;
+      if (noccs[*j] > opts.elimocclim) continue;
       vector<Clause *> & os = occs[*j];
-      if (os.size () <= (size_t) opts.elimocclim) os.push_back (c);
+      assert (os.size () < (size_t) opts.elimocclim);
+      os.push_back (c);
     }
   }
+
 
   // Now find elimination candidates (with small number of occurrences).
   //
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
     if (eliminated (idx)) continue;
-    if (occs[idx].size () > (size_t) opts.elimocclim) continue;
-    if (occs[-idx].size () > (size_t) opts.elimocclim) continue;
+    if (noccs[idx] > opts.elimocclim) continue;
+    if (noccs[-idx] > opts.elimocclim) continue;
     schedule.push_back (idx);
   }
   long scheduled = schedule.size ();
@@ -380,6 +397,7 @@ bool Internal::elim_round () {
     scheduled, percent (scheduled, max_var));
 
   account_occs ();  // Compute and account memory for 'occs'.
+  reset_noccs ();
 
   // And sort according to the number of occurrences.
   //

@@ -10,7 +10,7 @@
 \
 /*     NAME             TYPE, VAL,LO, HI, USAGE */ \
 \
-OPTION(arena,            int,/*TODO 3*/0, 0,  3, "1=clause,2=var,3=queue") \
+OPTION(arena,            int,   3, 0,  3, "1=clause,2=var,3=queue") \
 OPTION(binary,          bool,   1, 0,  1, "use binary proof format") \
 OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
 OPTION(clim,             int,  -1, 0,1e9, "conflict limit (-1=none)") \
@@ -21,6 +21,7 @@ OPTION(elimint,          int, 1e4, 1,1e9, "geometric conflict interval") \
 OPTION(elimrounds,       int,   2, 1,1e9, "number of elimination rounds") \
 OPTION(elimroundsinit,   int,   5, 1,1e9, "initial number of rounds") \
 OPTION(elimocclim,       int, 100, 0,1e9, "one sided occurrence limit") \
+OPTION(elimclslim,       int,1000, 0,1e9, "ignore clauses of this size") \
 OPTION(emabumplast,   double,1e-5, 0,  1, "alpha bump last percentage") \
 OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha slow glue") \

@@ -75,6 +75,7 @@ class Internal {
   Flags * ftab;                 // seen, poison, minimized flags table
   long * btab;                  // enqueue time stamps for queue
   Queue queue;                  // variable move to front decision queue
+  long * noccs;                 // number of irredundant occurrences
   Watches * wtab;               // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
   size_t propagated;            // next trail position to propagate
@@ -306,11 +307,13 @@ class Internal {
   bool eagerly_subsume_last_learned (Clause *);
   void eagerly_subsume_last_learned ();
 
-  // Set-up occurrence list containers.
+  // Set-up occurrence list counters and containers.
   //
   void init_occs ();
+  void init_noccs ();
   void account_occs ();  // for vector memory allocated
   void reset_occs ();
+  void reset_noccs ();
 
   // Regular forward subsumption checking.
   //

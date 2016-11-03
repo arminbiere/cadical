@@ -24,4 +24,18 @@ void Internal::reset_occs () {
   occs = 0;
 }
 
+void Internal::init_noccs () {
+  assert (!noccs);
+  NEW (noccs, long, 2*max_var+1);
+  noccs += max_var;
+  for (int lit = -max_var; lit <= max_var; lit++) noccs[lit] = 0;
+}
+
+void Internal::reset_noccs () {
+  assert (noccs);
+  noccs -= max_var;
+  DEL (noccs, long, 2*max_var+1);
+  noccs = 0;
+}
+
 };
