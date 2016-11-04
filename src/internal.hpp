@@ -26,6 +26,7 @@ using namespace std;
 #include "stats.hpp"
 #include "timer.hpp"
 #include "watch.hpp"
+#include "occs.hpp"
 #include "var.hpp"
 #include "util.hpp"
 #include "limit.hpp"
@@ -75,7 +76,8 @@ class Internal {
   Flags * ftab;                 // seen, poison, minimized flags table
   long * btab;                  // enqueue time stamps for queue
   Queue queue;                  // variable move to front decision queue
-  long * noccs;                 // number of irredundant occurrences
+  Occs * otab;                  // table of occurrences for all literals
+  long * ntab;                  // table number irredundant occurrences
   Watches * wtab;               // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
   size_t propagated;            // next trail position to propagate
@@ -89,7 +91,6 @@ class Internal {
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
   vector<Clause*> resolved;     // large clauses in 'analyze'
-  vector<Clause*> * occs;       // clause occurrences
   vector<Timer> timers;         // active timers for profiling functions
   EMA fast_glue_avg;            // fast glue average
   EMA slow_glue_avg;            // slow glue average
@@ -162,8 +163,13 @@ class Internal {
   Flags & flags (int lit)     { return ftab[vidx (lit)]; }
 
   const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
+  
+  const bool occs () const { return otab != 0; }
+  const bool watches () const { return wtab != 0; }
 
-  Watches & watches (int lit) { return wtab[vlit (lit)]; }
+  Occs & occs (int lit) { assert (otab); return otab[vlit (lit)]; }
+  long & noccs (int lit) { assert (ntab); return ntab[vlit (lit)]; }
+  Watches & watches (int lit) { assert (wtab); return wtab[vlit (lit)]; }
 
   // Marking variables with a sign (positive or negative).
   //
@@ -281,26 +287,28 @@ class Internal {
   void terminate ();            // TODO: not implemented yet.
 
   // Reducing means determining useless clauses with 'reduce' in
-  // 'reduce.cpp' as well as root level satisfied clause and then collecting
-  // them with 'garbage_collection' in 'collect.cpp'.
+  // 'reduce.cpp' as well as root level satisfied clause and then removing
+  // those which are not used as reason anymore with garbage collection.
   //
   bool reducing ();
   void protect_reasons ();
+  void mark_useless_redundant_clauses_as_garbage ();
   void unprotect_reasons ();
+  void reduce ();
+
+  // Garbage collection called from 'reduce' and during preprocessing.
+  //
   int clause_contains_fixed_literal (Clause *);
   void flush_falsified_literals (Clause *);
   void mark_satisfied_clauses_as_garbage ();
-  void mark_useless_redundant_clauses_as_garbage ();
   void move_clause (Clause *);
-  void flush_and_copy_clause_references (vector<Clause*> &);
-  void flush_clause_references (vector<Clause*> &);
+  void flush_watches (int lit);
+  size_t flush_occs (int lit);
+  void flush_all_occs_and_watches ();
   void move_non_garbage_clauses ();
   void delete_garbage_clauses ();
-  void flush_watches ();
-  void setup_watches ();
   void check_clause_stats ();
   void garbage_collection ();
-  void reduce ();
 
   // Eager backward subsumption checking of learned clauses.
   //
@@ -311,9 +319,10 @@ class Internal {
   //
   void init_occs ();
   void init_noccs ();
-  void account_occs ();  // for vector memory allocated
+  void init_watches ();
   void reset_occs ();
   void reset_noccs ();
+  void reset_watches ();
 
   // Regular forward subsumption checking.
   //
@@ -328,7 +337,6 @@ class Internal {
   // Bounded variable elimination.
   //
   bool eliminating ();
-  size_t flush_occs (int lit);
   bool resolvents_are_bounded (int pivot, vector<Clause*> & res);
   void add_resolvents (int pivot, vector<Clause*> & res);
   void mark_eliminated_clauses_as_garbage (int pivot);
@@ -416,8 +424,8 @@ struct sum_occs_smaller {
   sum_occs_smaller (Internal * s) : internal (s) { }
   bool operator () (int a, int b) {
     assert (internal->occs);
-    size_t s = internal->occs[a].size () + internal->occs[-a].size ();
-    size_t t = internal->occs[b].size () + internal->occs[-b].size ();
+    size_t s = internal->occs (a).size () + internal->occs (-a).size ();
+    size_t t = internal->occs (b).size () + internal->occs (-b).size ();
     return s < t;
   }
 };

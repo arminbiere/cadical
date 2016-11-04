@@ -50,7 +50,8 @@ struct Stats {
   int fixed;         // number of top level assigned variables
   int eliminated;    // number of eliminated variables
 
-  struct { struct { size_t current, max; } total, watcher; } bytes;
+  long allocated;    // number of (explicitly) allocated bytes
+  long maxbytes;     // maximum number of allocated bytes
 
   Stats ();
   void print (Internal *);

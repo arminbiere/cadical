@@ -188,7 +188,7 @@ inline int Internal::try_to_subsume_clause (Clause * c) {
   const const_literal_iterator ec = c->end ();
   for (const_literal_iterator i = c->begin (); !d && i != ec; i++) {
     int lit = *i;
-    vector<Clause*> & os = occs[lit];
+    Occs & os = occs (lit);
     const const_clause_iterator eo = os.end ();
     clause_iterator k = os.begin ();
     for (const_clause_iterator j = k; j != eo; j++) {
@@ -304,7 +304,7 @@ bool Internal::subsume_round (bool irredundant_only) {
     for (j = c->begin (); j != end; j++) {
       const int lit = *j;
       assert (!val (lit));
-      const size_t size = occs[lit].size ();
+      const size_t size = occs (lit).size ();
       if (minlit && minsize <= size) continue;
       minlit = lit, minsize = size;
     }
@@ -315,12 +315,8 @@ bool Internal::subsume_round (bool irredundant_only) {
     if (minsize > (size_t) opts.subsumeocclim) continue;
 
     LOG (c, "watching %d with %ld occurrences", minlit, (long) minsize);
-    occs[minlit].push_back (c);
+    occs (minlit).push_back (c);
   }
-
-  // Account for memory allocated in occurrence lists.
-  //
-  account_occs ();
 
   // Release occurrence lists and schedule.
   //

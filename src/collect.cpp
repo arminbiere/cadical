@@ -79,59 +79,76 @@ void Internal::mark_satisfied_clauses_as_garbage () {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::flush_clause_references (vector<Clause *> & v) {
-  const const_clause_iterator end = v.end ();
-  clause_iterator j = v.begin ();
+size_t Internal::flush_occs (int lit) {
+  Occs & os = occs (lit);
+  const const_clause_iterator end = os.end ();
+  clause_iterator j = os.begin ();
   const_clause_iterator i;
-  for (i = j; i != end; i++) {
-    Clause * c = *i;
-    if (!c->collect ()) *j++ = c;
-  }
-  v.resize (j - v.begin ());
-  shrink_vector (v);
+  Clause * c;
+  for (i = j; i != end; i++)
+    if (!(c = *i)->collect ())
+      *j++ = c->moved ? c->copy : c;
+  size_t new_size = j - os.begin ();
+  os.resize (new_size);
+  shrink_vector (os);
+  return new_size;
 }
+
+void Internal::flush_watches (int lit) {
+  Watches & ws = watches (lit);
+  const const_watch_iterator end = ws.end ();
+  watch_iterator j = ws.begin ();
+  const_watch_iterator i;
+  for (i = j; i != end; i++) {
+    Watch w = *i;
+    Clause * c = w.clause;
+    if (c->collect ()) continue;
+    if (c->moved) w.clause = c->copy;
+    *j++ = w;
+  }
+  ws.resize (j - ws.begin ());
+  shrink_vector (ws);
+}
+
+void Internal::flush_all_occs_and_watches () {
+  if (occs ())
+    for (int idx = 1; idx <= max_var; idx++)
+      flush_occs (idx), flush_occs (-idx);
+
+  if (watches ())
+    for (int idx = 1; idx <= max_var; idx++)
+      flush_watches (idx), flush_watches (-idx);
+}
+
+/*------------------------------------------------------------------------*/
 
 // This is a simple garbage collector which does not move clauses.
 
 void Internal::delete_garbage_clauses () {
 
+  flush_all_occs_and_watches ();
+
   LOG ("deleting garbage clauses");
-
-  if (occs)
-    for (int lit = -max_var; lit <= max_var; lit++)
-      if (lit) flush_clause_references (occs[lit]);
-
-  const_clause_iterator i = clauses.begin ();
+  long collected_bytes = 0, collected_clauses = 0;
+  const const_clause_iterator end = clauses.begin ();
   clause_iterator j = clauses.begin ();
-  size_t collected_bytes = 0;
-  while (i != clauses.end ()) {
+  const_clause_iterator i = j;
+  while (i != end) {
     Clause * c = *j++ = *i++;
     if (!c->collect ()) continue;
     collected_bytes += c->bytes ();
+    collected_clauses++;
     delete_clause (c);
     j--;
   }
   clauses.resize (j - clauses.begin ());
 
   VRB ("collect", stats.collections,
-    "collected %ld bytes", (long) collected_bytes);
+    "collected %ld bytes of %ld garbage clauses",
+    collected_bytes, collected_clauses);
 }
 
 /*------------------------------------------------------------------------*/
-
-void Internal::flush_and_copy_clause_references (vector<Clause *> & v) {
-  const const_clause_iterator end = v.end ();
-  clause_iterator j = v.begin ();
-  const_clause_iterator i;
-  for (i = j; i != end; i++) {
-    Clause * c = *i;
-    if (c->collect ()) continue;
-    assert (c->moved);
-    *j++ = c->copy;
-  }
-  v.resize (j - v.begin ());
-  shrink_vector (v);
-}
 
 // Copy a clause to the 'to' space of the arena.  Be careful if this clause
 // is a reason of an assignment.  In that case update the reason reference.
@@ -209,9 +226,7 @@ void Internal::move_non_garbage_clauses () {
     }
   }
 
-  if (occs)
-    for (int lit = -max_var; lit <= max_var; lit++)
-      if (lit) flush_and_copy_clause_references (occs[lit]);
+  flush_all_occs_and_watches ();
 
   // Replace and flush clause references in 'clauses'.
   //
@@ -231,42 +246,6 @@ void Internal::move_non_garbage_clauses () {
     (long) collected_bytes,
     percent (collected_bytes, collected_bytes + moved_bytes),
     (long) collected_clauses);
-}
-
-/*------------------------------------------------------------------------*/
-
-// Deallocate watcher stacks of inactive (fixed) variables and reset watcher
-// stacks. As a side effect of this function the actual maximum memory for
-// watcher stacks is computed and the corresponding statistics are updated.
-
-void Internal::flush_watches () {
-  size_t max_bytes = 0;
-  for (int idx = 1; idx <= max_var; idx++) {
-    for (int sign = -1; sign <= 1; sign += 2) {
-      const int lit = sign * idx;
-      Watches & ws = watches (lit);
-      max_bytes += bytes_vector (ws);;
-      erase_vector (ws);
-    }
-  }
-  if (max_bytes > stats.bytes.watcher.max)
-    stats.bytes.watcher.max = max_bytes;
-}
-
-// Add back all the watches and again compute current memory used.
-
-void Internal::setup_watches () {
-  const const_clause_iterator end = clauses.end ();
-  const_clause_iterator i;
-  for (i = clauses.begin (); i != end; i++)
-    watch_clause (*i);
-
-  size_t current_bytes = 0;
-  for (int lit = -max_var; lit <= max_var; lit++)
-    current_bytes += bytes_vector (watches (lit));
-  stats.bytes.watcher.current = current_bytes;
-  if (current_bytes > stats.bytes.watcher.max)
-    stats.bytes.watcher.max = current_bytes;
 }
 
 /*------------------------------------------------------------------------*/
@@ -295,8 +274,6 @@ void Internal::garbage_collection () {
   if (opts.arena) move_non_garbage_clauses ();
   else delete_garbage_clauses ();
   check_clause_stats ();
-  flush_watches ();
-  setup_watches ();
   STOP (collect);
 }
 

@@ -16,13 +16,13 @@ double Internal::seconds () {
 }
 
 void Internal::inc_bytes (size_t bytes) {
-  if ((stats.bytes.total.current += bytes) > stats.bytes.total.max)
-    stats.bytes.total.max = stats.bytes.total.current;
+  if ((stats.allocated += bytes) > stats.maxbytes)
+    stats.maxbytes = stats.allocated;
 }
 
 void Internal::dec_bytes (size_t bytes) {
-  assert (stats.bytes.total.current >= bytes);
-  stats.bytes.total.current -= bytes;
+  assert (stats.allocated >= bytes);
+  stats.allocated -= bytes;
 }
 
 size_t Internal::vector_bytes () {
@@ -42,16 +42,14 @@ size_t Internal::vector_bytes () {
 }
 
 size_t Internal::max_bytes () {
-  size_t res = stats.bytes.total.max;
+  size_t res = stats.maxbytes;
   res += vector_bytes ();
-  res += stats.bytes.watcher.max;
   return res;
 }
 
 size_t Internal::current_bytes () {
-  size_t res = stats.bytes.total.current;
+  size_t res = stats.allocated;
   res += vector_bytes ();
-  res += stats.bytes.watcher.current;
   return res;
 }
 

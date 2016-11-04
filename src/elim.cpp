@@ -17,23 +17,6 @@ bool Internal::eliminating () {
 
 /*------------------------------------------------------------------------*/
 
-// Remove clauses marked as garbage from the occurrence lists.  This gives
-// (more) accurate counts of remaining clauses for variable elimination.
-
-inline size_t Internal::flush_occs (int lit) {
-  vector<Clause *> & os = occs[lit];
-  const const_clause_iterator end = os.end ();
-  const_clause_iterator i;
-  clause_iterator k = os.begin ();
-  for (i = k; i != end; i++)
-    if ((*k++ = *i)->garbage) k--;
-  size_t res = k - os.begin ();
-  os.resize (res);
-  return res;
-}
-
-/*------------------------------------------------------------------------*/
-
 // Check whether the number of non-tautological resolutions on 'pivot' is
 // smaller or equal to the number of clauses with 'pivot' or '-pivot'.  This
 // is the main criteria of bounded variable elimination.
@@ -54,7 +37,7 @@ Internal::resolvents_are_bounded (int pivot, vector<Clause*> & res) {
   res.clear ();               // pairs of non-tautological resolvents
   long count = 0;             // maintain 'count == res.size ()/2'
 
-  vector<Clause*> & ps = occs[pivot], & ns = occs[-pivot];
+  Occs & ps = occs (pivot), & ns = occs (-pivot);
   long pos = ps.size (), neg = ns.size ();
 
   assert (pos <= neg);       // better, but not crucial ...
@@ -240,9 +223,11 @@ inline void Internal::add_resolvents (int pivot, vector<Clause*> & res) {
         } else {
           resolvents++;
           Clause * r = new_resolved_irredundant_clause ();
-          const const_literal_iterator re = r->end ();
-          for (l = r->begin (); l != re; l++)
-            occs[*l].push_back (r);
+	  if (occs ()) {
+	    const const_literal_iterator re = r->end ();
+	    for (l = r->begin (); l != re; l++)
+	      occs (*l).push_back (r);
+	  }
         }
       }
     }
@@ -264,7 +249,7 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
 
   LOG ("marking irredundant clauses with %d as garbage", pivot);
 
-  vector<Clause*> & ps = occs[pivot];
+  Occs & ps = occs (pivot);
   const const_clause_iterator pe = ps.end ();
   const_clause_iterator i;
   for (i = ps.begin (); i != pe; i++) {
@@ -278,13 +263,17 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
       if (*l != pivot) extension.push_back (*l);
     mark_garbage (c);
   }
+  erase_vector (ps);
+  erase_vector (watches (pivot));
 
   LOG ("marking irredundant clauses with %d as garbage", -pivot);
 
-  vector<Clause*> & ns = occs[-pivot];
+  Occs & ns = occs (-pivot);
   const const_clause_iterator ne = ns.end ();
   for (i = ns.begin (); i != ne; i++)
     if (!(*i)->garbage) mark_garbage (*i);
+  erase_vector (ns);
+  erase_vector (watches (-pivot));
 
   // This is a trick by Niklas Soerensson to avoid saving all clauses on the
   // extension stack.  Just first in extending the witness the 'pivot' is
@@ -360,7 +349,7 @@ bool Internal::elim_round () {
     const_literal_iterator j;
     long inc = (c->size > opts.elimclslim) ? opts.elimocclim + 1 : 1;
     for (j = c->begin (); j != eol; j++)
-      if (!val (*j)) noccs[*j] += inc;
+      if (!val (*j)) noccs (*j) += inc;
   }
 
   // Connect irredundant clauses ignoring literals with many occurrences.
@@ -373,8 +362,8 @@ bool Internal::elim_round () {
     const_literal_iterator j;
     for (j = c->begin (); j != eol; j++) {
       if (val (*j)) continue;
-      if (noccs[*j] > opts.elimocclim) continue;
-      vector<Clause *> & os = occs[*j];
+      if (noccs (*j) > opts.elimocclim) continue;
+      Occs & os = occs (*j);
       assert (os.size () < (size_t) opts.elimocclim);
       os.push_back (c);
     }
@@ -386,8 +375,8 @@ bool Internal::elim_round () {
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
     if (eliminated (idx)) continue;
-    if (noccs[idx] > opts.elimocclim) continue;
-    if (noccs[-idx] > opts.elimocclim) continue;
+    if (noccs (idx) > opts.elimocclim) continue;
+    if (noccs (-idx) > opts.elimocclim) continue;
     schedule.push_back (idx);
   }
   long scheduled = schedule.size ();
@@ -396,7 +385,6 @@ bool Internal::elim_round () {
     "scheduled %ld variables %.0f%% for elimination",
     scheduled, percent (scheduled, max_var));
 
-  account_occs ();  // Compute and account memory for 'occs'.
   reset_noccs ();
 
   // And sort according to the number of occurrences.
@@ -419,7 +407,6 @@ bool Internal::elim_round () {
   // Compute and account memory for 'work' and 'occs'.
   //
   inc_bytes (bytes_vector (work));
-  account_occs ();
 
   long resolutions = stats.resolutions - old_resolutions;
   int eliminated = stats.eliminated - old_eliminated;

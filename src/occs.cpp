@@ -3,39 +3,45 @@
 
 namespace CaDiCaL {
 
+/*------------------------------------------------------------------------*/
+
 void Internal::init_occs () {
-  assert (!occs);
-  NEW (occs, vector<Clause*>, 2*max_var+1);
-  occs += max_var;
+  assert (!otab);
+  NEW (otab, vector<Clause*>, 2*vsize);
 }
 
-void Internal::account_occs () {
-  size_t bytes = 0;
-  for (int lit = -max_var; lit <= max_var; lit++)
-    bytes += bytes_vector (occs[lit]);
-  inc_bytes (bytes);
-  dec_bytes (bytes);
+// TODO remove?
+#if 0
+
+size_t Internal::implicit_occs_bytes () {
+  assert (occs);
+  size_t res = 0;
+  for (int idx = 1; idx <= max_var; idx++)
+    res += bytes_vector (occs (idx)),
+    res += bytes_vector (occs (-idx));
+  return res;
 }
+
+#endif
 
 void Internal::reset_occs () {
-  assert (occs);
-  occs -= max_var;
-  DEL (occs, vector<Clause*>, 2*max_var+1);
-  occs = 0;
+  assert (otab);
+  DEL (otab, vector<Clause*>, 2*vsize);
+  otab = 0;
 }
 
+/*------------------------------------------------------------------------*/
+
 void Internal::init_noccs () {
-  assert (!noccs);
-  NEW (noccs, long, 2*max_var+1);
-  noccs += max_var;
-  for (int lit = -max_var; lit <= max_var; lit++) noccs[lit] = 0;
+  assert (!ntab);
+  NEW (ntab, long, 2*vsize);
+  ZERO (ntab, long, 2*vsize);
 }
 
 void Internal::reset_noccs () {
-  assert (noccs);
-  noccs -= max_var;
-  DEL (noccs, long, 2*max_var+1);
-  noccs = 0;
+  assert (ntab);
+  DEL (ntab, long, 2*vsize);
+  ntab = 0;
 }
 
 };

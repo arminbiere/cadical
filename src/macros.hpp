@@ -1,6 +1,8 @@
 #ifndef _macros_hpp_INCLUDED
 #define _macros_hpp_INCLUDED
 
+/*------------------------------------------------------------------------*/
+
 // Central file for keeping (most) macros.
 
 /*------------------------------------------------------------------------*/
@@ -46,6 +48,9 @@ do { (P) = new T[N], internal->inc_bytes ((N) * sizeof (T)); } while (0)
 
 #define DEL(P,T,N) \
 do { delete [] (P), internal->dec_bytes ((N) * sizeof (T)); } while (0)
+
+#define ZERO(P,T,N) \
+do { memset ((P), 0, (N) * sizeof (T)); } while (0)
 
 #define ENLARGE(P,T,O,N) \
 do { \

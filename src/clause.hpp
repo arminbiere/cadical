@@ -59,7 +59,7 @@ namespace CaDiCaL {
 // except that you should for instance never access 'resolved' of a clauses
 // which is not extended.  This can be checked with for instance 'valgrind'
 // but is also guarded by making the actual '_resolved' field private and
-// checking this contract in the 'resolved ()' accessor functions.
+// checking this contract in the 'resolved ()' accessors functions.
 
 #define LD_MAX_GLUE     27      // 32 bits - (5 boolean flags)
 #define EXTENDED_OFFSET  8      // sizeof (_resolved)
@@ -115,7 +115,12 @@ public:
   size_t bytes () const;        // actual number of bytes allocated
   size_t offset () const;       // offset of valid bytes (start - this)
 
-  // Ready to be collected and deleted.
+  // Check whether this clause is ready to be collected and deleted.  The
+  // 'reason' flag is only there for protecting reason clauses in 'reduce',
+  // which does not backtrack to the root level.  If garbage collection is
+  // triggered from a preprocessor, which backtracks to the root level, then
+  // 'reason' is false for sure. We want to use the same garbage collection
+  // code though for both situations and thus hide here this variance.
   //
   bool collect () const { return !reason && garbage; }
 };

@@ -26,10 +26,11 @@ Internal::Internal ()
   ltab (0),
   ftab (0),
   btab (0),
+  otab (0),
+  ntab (0),
   wtab (0),
   conflict (0),
   propagated (0),
-  occs (0),
   proof (0),
   opts (this),
   profiles (this),
@@ -45,7 +46,6 @@ Internal::~Internal () {
   for (clause_iterator i = clauses.begin (); i != clauses.end (); i++)
     delete_clause (*i);
   if (proof) delete proof;
-  if (wtab) delete [] wtab;
   if (vtab) delete [] vtab;
   if (ltab) delete [] ltab;
   if (ftab) delete [] ftab;
@@ -55,7 +55,9 @@ Internal::~Internal () {
   if (marks) delete [] marks;
   if (phases) delete [] phases;
   if (etab) delete [] etab;
-  if (occs) reset_occs ();
+  if (otab) reset_occs ();
+  if (ntab) reset_noccs ();
+  if (wtab) reset_watches ();
   delete output;
 }
 
