@@ -471,7 +471,9 @@ bool Internal::elim_round () {
   erase_vector (schedule);
   erase_vector (work);
 
+  lim.subsumptions_at_last_elim = stats.subsumptions;
   report ('e');
+
   STOP_AND_SWITCH (elim, simplify, search);
 
   return eliminated > 0;
@@ -492,7 +494,7 @@ void Internal::elim () {
 
   // Make sure there was an subsumption attempt since last elimination.
   //
-  if (lim.subsumptions_at_last_elim < stats.subsumptions)
+  if (lim.subsumptions_at_last_elim == stats.subsumptions)
     subsume_round ();
 
   for (;;) {
@@ -531,7 +533,6 @@ void Internal::elim () {
 
   lim.fixed_at_last_elim = stats.fixed;
   lim.irredundant_at_last_elim = stats.irredundant;
-  lim.subsumptions_at_last_elim = stats.subsumptions;
 }
 
 };
