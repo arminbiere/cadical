@@ -379,6 +379,10 @@ class Internal {
   ~Internal ();
 
   // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
+  // We use a redundant table for both negative and positive literals.  This
+  // however allows a branch-less check for the value of literal and is
+  // considered substantially faster than negating the result if the
+  // argument is negative.  We also avoid taking the absolute value.
   //
   int val (int lit) const {
     assert (lit), assert (abs (lit) <= max_var);
@@ -388,6 +392,8 @@ class Internal {
   long & bumped (int lit) { return btab[vidx (lit)]; }
 
   // As 'val' but restricted to the root-level value of a literal.
+  // It is not that time critical and also needs to check the decision level
+  // of the variable anyhow.
   //
   int fixed (int lit) {
     int idx = vidx (lit), res = vals[idx];

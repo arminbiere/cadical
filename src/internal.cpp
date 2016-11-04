@@ -202,6 +202,23 @@ int Internal::solve () {
 /*------------------------------------------------------------------------*/
 
 void Internal::check (int (Internal::*a)(int) const) {
+  for (int idx = 1; idx <= max_var; idx++) {
+    if (!(this->*a) (idx)) {
+      fflush (stdout);
+      fprintf (stderr,
+        "*** cadical error: unassigned variable: %d\n", idx);
+      fflush (stderr);
+      abort ();
+    }
+    if ((this->*a) (idx) != -(this->*a)(-idx)) {
+      fflush (stdout);
+      fprintf (stderr,
+        "*** cadical error: inconsistently assigned literals %d and %d\n",
+	idx, -idx);
+      fflush (stderr);
+      abort ();
+    }
+  }
   bool satisfied = false;
   const const_int_iterator end = original.end ();
   const_int_iterator start = original.begin ();
