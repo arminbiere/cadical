@@ -334,8 +334,12 @@ bool Internal::elim_round () {
   //
   vector<int> schedule;         // schedule of candidate variables
   vector<Clause*> work;         // pairs of clauses to be resolved
-  init_occs ();                 // occurrences lists
-  init_noccs ();
+  init_noccs ();                // number of irredundant occurrences
+  init_occs ();                 // the actual occurrence lists
+
+  const int size_limit = opts.elimclslim;
+  const long occ_limit = opts.elimocclim;
+  const long occ_limit_exceeded = occ_limit + 1;
 
   // First compute the number of occurrences of each literal.
   //
@@ -343,40 +347,41 @@ bool Internal::elim_round () {
   const_clause_iterator i;
   for (i = clauses.begin (); i != eoc; i++) {
     Clause * c = *i;
-    if (c->garbage) continue;
-    if (c->redundant) continue;
+    if (c->garbage || c->redundant) continue;
     const const_literal_iterator eol = c->end ();
     const_literal_iterator j;
-    long inc = (c->size > opts.elimclslim) ? opts.elimocclim + 1 : 1;
-    for (j = c->begin (); j != eol; j++)
-      if (!val (*j)) noccs (*j) += inc;
+    if (c->size > size_limit)
+      for (j = c->begin (); j != eol; j++)
+	noccs (*j) = occ_limit_exceeded;	// thus not scheduled
+    else
+      for (j = c->begin (); j != eol; j++)
+	if (!val (*j)) noccs (*j)++;
   }
 
-  // Connect irredundant clauses ignoring literals with many occurrences.
+  // Connect irredundant clauses ignoring literals with too many occurrences
+  // as well as those occurring in very long irredundant clauses.
   //
   for (i = clauses.begin (); i != eoc; i++) {
     Clause * c = *i;
-    if (c->garbage) continue;
-    if (c->redundant) continue;
+    if (c->garbage || c->redundant) continue;
     const const_literal_iterator eol = c->end ();
     const_literal_iterator j;
     for (j = c->begin (); j != eol; j++) {
       if (val (*j)) continue;
-      if (noccs (*j) > opts.elimocclim) continue;
+      if (noccs (*j) > occ_limit) continue;
       Occs & os = occs (*j);
-      assert (os.size () < (size_t) opts.elimocclim);
+      assert ((long) os.size () <= occ_limit);
       os.push_back (c);
     }
   }
-
 
   // Now find elimination candidates (with small number of occurrences).
   //
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
     if (eliminated (idx)) continue;
-    if (noccs (idx) > opts.elimocclim) continue;
-    if (noccs (-idx) > opts.elimocclim) continue;
+    if (noccs (idx) > occ_limit) continue;
+    if (noccs (-idx) > occ_limit) continue;
     schedule.push_back (idx);
   }
   long scheduled = schedule.size ();
@@ -391,8 +396,8 @@ bool Internal::elim_round () {
   //
   stable_sort (schedule.begin (), schedule.end (), sum_occs_smaller (this));
 
-  long old_resolutions = stats.resolutions;
-  int old_eliminated = stats.eliminated;
+  const long old_resolutions = stats.resolutions;
+  const int old_eliminated = stats.eliminated;
 
   // Try eliminating variables according to the schedule.
   //

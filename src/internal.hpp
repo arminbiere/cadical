@@ -423,7 +423,7 @@ struct sum_occs_smaller {
   Internal * internal;
   sum_occs_smaller (Internal * s) : internal (s) { }
   bool operator () (int a, int b) {
-    assert (internal->occs);
+    assert (internal->occs ());
     size_t s = internal->occs (a).size () + internal->occs (-a).size ();
     size_t t = internal->occs (b).size () + internal->occs (-b).size ();
     return s < t;

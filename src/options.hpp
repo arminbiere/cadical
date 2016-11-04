@@ -16,12 +16,12 @@ OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
 OPTION(clim,             int,  -1, 0,1e9, "conflict limit (-1=none)") \
 OPTION(dlim,             int,  -1, 0,1e9, "decision limit (-1=none)") \
 OPTION(elim,            bool,   1, 0,  1, "bounded variable elimination") \
-OPTION(eliminit,         int, 1e3, 0,1e9, "initial conflict interval") \
-OPTION(elimint,          int, 1e4, 1,1e9, "geometric conflict interval") \
-OPTION(elimrounds,       int,   2, 1,1e9, "number of elimination rounds") \
-OPTION(elimroundsinit,   int,   5, 1,1e9, "initial number of rounds") \
-OPTION(elimocclim,       int, 100, 0,1e9, "one sided occurrence limit") \
 OPTION(elimclslim,       int,1000, 0,1e9, "ignore clauses of this size") \
+OPTION(eliminit,         int, 1e3, 0,1e9, "initial conflict limit") \
+OPTION(elimint,          int, 1e4, 1,1e9, "initial conflict interval") \
+OPTION(elimocclim,       int, 100, 0,1e9, "one sided occurrence limit") \
+OPTION(elimroundsinit,   int,   5, 1,1e9, "initial number of rounds") \
+OPTION(elimrounds,       int,   2, 1,1e9, "usual number of rounds") \
 OPTION(emabumplast,   double,1e-5, 0,  1, "alpha bump last percentage") \
 OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha slow glue") \
@@ -105,9 +105,9 @@ public:
   // only allow "true", "false", "0" and "1" as "<VAL>" string.  For 'int'
   // type options we parse "<VAL>" with 'atoi' and force the resulting 'int'
   // value to the 'LO' and 'HI' range and similarly for 'double' type
-  // options using 'atof'.  Thus in both cases we do not check whether
-  // "<VAL>" is actually a string representing a proper 'int' or 'double'
-  // which is also quite difficult for the latter.
+  // options using 'atof'.  If the string is not a valid 'int' for 'int'
+  // options or a 'double' value for 'double' options, then the function
+  // returns 'false'.
   //
   bool set (const char * arg);
 

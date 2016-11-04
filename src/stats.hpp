@@ -43,15 +43,15 @@ struct Stats {
   long minimized;    // minimized literals
   long redundant;    // number of current redundant clauses
   long irredundant;  // number of current irredundant clauses
-  long garbage;      // number of current garabge clauses
+  long garbage;      // number of current garbage clauses
   long units;        // learned unit clauses
   long binaries;     // learned binary clauses
 
   int fixed;         // number of top level assigned variables
   int eliminated;    // number of eliminated variables
 
-  long allocated;    // number of (explicitly) allocated bytes
-  long maxbytes;     // maximum number of allocated bytes
+  size_t allocated;  // number of (explicitly) allocated bytes
+  size_t maxbytes;   // maximum number of allocated bytes
 
   Stats ();
   void print (Internal *);
