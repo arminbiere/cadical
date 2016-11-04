@@ -227,8 +227,11 @@ inline void Internal::add_resolvents (int pivot, vector<Clause*> & res) {
           Clause * r = new_resolved_irredundant_clause ();
 	  if (occs ()) {
 	    const const_literal_iterator re = r->end ();
-	    for (l = r->begin (); l != re; l++)
+	    for (l = r->begin (); l != re; l++) {
+	      Occs & os = occs (*l);
+	      if (os.empty ()) continue;	// was not connected ...
 	      occs (*l).push_back (r);
+	    }
 	  }
         }
       }
@@ -335,9 +338,7 @@ bool Internal::elim_round () {
   // Allocate schedule, working stack and occurrence lists.
   //
   vector<int> schedule;         // schedule of candidate variables
-  vector<Clause*> work;         // pairs of clauses to be resolved
   init_noccs ();                // number of irredundant occurrences
-  init_occs ();                 // the actual occurrence lists
 
   const int size_limit = opts.elimclslim;
   const long occ_limit = opts.elimocclim;
@@ -360,6 +361,53 @@ bool Internal::elim_round () {
 	if (!val (*j)) noccs (*j)++;
   }
 
+  char * connected;
+  NEW (connected, char, max_var + 1);
+  ZERO (connected, char, max_var + 1);
+
+  // Now find elimination candidates (with small number of occurrences).
+  //
+  for (int idx = 1; idx <= max_var; idx++) {
+    if (val (idx)) continue;
+    if (eliminated (idx)) continue;
+    if (noccs (idx) > occ_limit) continue;
+    if (noccs (-idx) > occ_limit) continue;
+    connected [idx] = 1;
+    schedule.push_back (idx);
+  }
+
+  // And sort according to the number of occurrences.
+  //
+  stable_sort (schedule.begin (), schedule.end (), sum_occs_smaller (this));
+
+  // Now prune the schedule above the median.
+  //
+  size_t ignore = (1 - opts.elimignore) * schedule.size ();
+  if (ignore < schedule.size ()) {
+    const int idx = schedule[ignore];
+    const long median_noccs_sum = noccs (idx) + noccs (-idx);
+    while (++ignore < schedule.size ()) {
+      const int other = schedule[ignore];
+      const long noccs_sum = noccs (other) + noccs (-other);
+      if (noccs_sum > median_noccs_sum) break;
+    }
+    for (size_t i = ignore; i < schedule.size (); i++)
+      connected [ abs (schedule [i]) ] = 0;
+    schedule.resize (ignore);
+    shrink_vector (schedule);
+  }
+
+  inc_bytes (bytes_vector (schedule));
+  reset_noccs ();
+
+  long scheduled = schedule.size ();
+  inc_bytes (bytes_vector (schedule));
+  VRB ("elim", stats.eliminations,
+    "scheduled %ld variables %.0f%% for elimination",
+    scheduled, percent (scheduled, active_variables ()));
+
+  init_occs ();
+
   // Connect irredundant clauses ignoring literals with too many occurrences
   // as well as those occurring in very long irredundant clauses.
   //
@@ -370,33 +418,12 @@ bool Internal::elim_round () {
     const_literal_iterator j;
     for (j = c->begin (); j != eol; j++) {
       if (val (*j)) continue;
-      if (noccs (*j) > occ_limit) continue;
+      if (!connected [abs (*j)]) continue;
       Occs & os = occs (*j);
-      assert ((long) os.size () <= occ_limit);
+      assert ((long) os.size () < occ_limit);
       os.push_back (c);
     }
   }
-
-  // Now find elimination candidates (with small number of occurrences).
-  //
-  for (int idx = 1; idx <= max_var; idx++) {
-    if (val (idx)) continue;
-    if (eliminated (idx)) continue;
-    if (noccs (idx) > occ_limit) continue;
-    if (noccs (-idx) > occ_limit) continue;
-    schedule.push_back (idx);
-  }
-  long scheduled = schedule.size ();
-  inc_bytes (bytes_vector (schedule));
-  VRB ("elim", stats.eliminations,
-    "scheduled %ld variables %.0f%% for elimination",
-    scheduled, percent (scheduled, max_var));
-
-  reset_noccs ();
-
-  // And sort according to the number of occurrences.
-  //
-  stable_sort (schedule.begin (), schedule.end (), sum_occs_smaller (this));
 
   const long old_resolutions = stats.resolutions;
   const int old_eliminated = stats.eliminated;
@@ -406,28 +433,15 @@ bool Internal::elim_round () {
   const long irredundant_limit = stats.irredundant;
   const const_int_iterator eos = schedule.end ();
   const_int_iterator k;
+  vector<Clause*> work;
   for (k = schedule.begin (); !unsat && k != eos; k++) {
     if (stats.garbage > irredundant_limit) garbage_collection ();
     elim (*k, work);
   }
 
-  // Compute and account memory for 'work' and 'occs'.
+  // Account memory for 'work'.
   //
   inc_bytes (bytes_vector (work));
-
-  long resolutions = stats.resolutions - old_resolutions;
-  int eliminated = stats.eliminated - old_eliminated;
-  VRB ("elim", stats.eliminations,
-    "eliminated %ld variables %.0f%% in %ld resolutions",
-    eliminated, percent (eliminated, scheduled), resolutions);
-
-  // Release occurrence lists, and both schedule and work stacks.
-  //
-  reset_occs ();
-  dec_bytes (bytes_vector (work));
-  dec_bytes (bytes_vector (schedule));
-  erase_vector (schedule);
-  erase_vector (work);
 
   // Mark all redundant clauses with eliminated variables as garbage.
   //
@@ -442,6 +456,20 @@ bool Internal::elim_round () {
     if (j != eol) mark_garbage (c);
   }
   garbage_collection ();
+
+  long resolutions = stats.resolutions - old_resolutions;
+  int eliminated = stats.eliminated - old_eliminated;
+  VRB ("elim", stats.eliminations,
+    "eliminated %ld variables %.0f%% in %ld resolutions",
+    eliminated, percent (eliminated, scheduled), resolutions);
+
+  // Release occurrence lists, and both schedule and work stacks.
+  //
+  reset_occs ();
+  dec_bytes (bytes_vector (work));
+  dec_bytes (bytes_vector (schedule));
+  erase_vector (schedule);
+  erase_vector (work);
 
   report ('e');
   STOP_AND_SWITCH (elim, simplify, search);
