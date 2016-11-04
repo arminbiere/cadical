@@ -45,8 +45,8 @@ bool Internal::shrink_literal (int lit, int depth) {
     for (j = c->begin (); !failed && j != eoc; j++) {
       int other = *j;
       if (other == lit) continue;
-      else if (var (other).trail > lit_trail) failed = true;  // (!!!)
       else if (val (other) >= 0) failed = true;
+      else if (var (other).trail > lit_trail) failed = true;  // (!!!)
       else failed = !shrink_literal (-other, depth+1);
     }
     if (!failed) remove = true;

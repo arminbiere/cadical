@@ -17,7 +17,7 @@ OPTION(clim,             int,  -1, 0,1e9, "conflict limit (-1=none)") \
 OPTION(dlim,             int,  -1, 0,1e9, "decision limit (-1=none)") \
 OPTION(elim,            bool,   1, 0,  1, "bounded variable elimination") \
 OPTION(elimclslim,       int,1000, 0,1e9, "ignore clauses of this size") \
-OPTION(eliminit,         int, 1e3, 0,1e9, "initial conflict limit") \
+OPTION(eliminit,         int, /*FIXME 1e3*/10, 0,1e9, "initial conflict limit") \
 OPTION(elimint,          int, 1e4, 1,1e9, "initial conflict interval") \
 OPTION(elimocclim,       int, 100, 0,1e9, "one sided occurrence limit") \
 OPTION(elimroundsinit,   int,   5, 1,1e9, "initial number of rounds") \
@@ -54,7 +54,7 @@ OPTION(strengthen,      bool,   1, 0,  1, "strengthen during subsume") \
 OPTION(sublast,          int,   5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,   1, 0,  1, "enable clause subsumption") \
 OPTION(subsumeinc,       int, 1e4, 1,1e9, "interval in conflicts") \
-OPTION(subsumeinit,      int, 1e4, 0,1e9, "initial subsume limit") \
+OPTION(subsumeinit,      int,/*FIXME 1e4*/0, 0,1e9, "initial subsume limit") \
 OPTION(subsumeocclim,    int, 100, 0,1e9, "watch list length limit") \
 OPTION(trailbump,       bool,   1, 0,  1, "use trail + bumped") \
 OPTION(trailbumplast, double,  40, 0,100, "trail bump last level limit") \

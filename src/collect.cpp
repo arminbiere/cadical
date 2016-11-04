@@ -110,7 +110,7 @@ void Internal::flush_watches (int lit) {
     Watch w = *i;
     Clause * c = w.clause;
     if (c->collect ()) continue;
-    if (c->moved) w.clause = c->copy;
+    if (c->moved) c = w.clause = c->copy;
     if (c->size < w.size) {
 
       // During 'reduce' root level falsified literals might be removed in
@@ -196,8 +196,9 @@ void Internal::move_non_garbage_clauses () {
 
   // First determine 'moved_bytes' and 'collected_bytes'.
   //
+  const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
-  for (i = clauses.begin (); i != clauses.end (); i++)
+  for (i = clauses.begin (); i != end; i++)
     if (!(c = *i)->collect ()) moved_bytes += c->bytes (), moved_clauses++;
     else collected_bytes += c->bytes (), collected_clauses++;
 
@@ -219,7 +220,7 @@ void Internal::move_non_garbage_clauses () {
 
     // Localize according to (original) clause order.
 
-    for (i = clauses.begin (); i != clauses.end (); i++)
+    for (i = clauses.begin (); i != end; i++)
       if (!(c = *i)->collect ()) move_clause (c);
 
   } else if (opts.arena == 2) {
@@ -229,7 +230,8 @@ void Internal::move_non_garbage_clauses () {
     for (int sign = -1; sign <= 1; sign += 2) {
       for (int idx = 1; idx <= max_var; idx++) {
         const Watches & ws = watches (sign * phases[idx] * idx);
-        for (const_watch_iterator i = ws.begin (); i != ws. end (); i++)
+	const const_watch_iterator ew = ws.end ();
+        for (const_watch_iterator i = ws.begin (); i != ew; i++)
           if (!(c = i->clause)->moved && !c->collect ()) move_clause (c);
       }
     }
@@ -243,18 +245,25 @@ void Internal::move_non_garbage_clauses () {
     for (int sign = -1; sign <= 1; sign += 2) {
       for (int idx = queue.last; idx; idx = link (idx).prev) {
         const Watches & ws = watches (sign * phases[idx] * idx);
-        for (const_watch_iterator i = ws.begin (); i != ws. end (); i++)
+	const const_watch_iterator ew = ws.end ();
+        for (const_watch_iterator i = ws.begin (); i != ew; i++)
           if (!(c = i->clause)->moved && !c->collect ()) move_clause (c);
       }
     }
   }
+
+  // Do not forget to move clauses which are not watched.
+  //
+  for (i = clauses.begin (); i != end; i++)
+    if (!(c = *i)->collect () && !c->moved) move_clause (c);
 
   flush_all_occs_and_watches ();
 
   // Replace and flush clause references in 'clauses'.
   //
   clause_iterator j = clauses.begin ();
-  for (i = j; i != clauses.end (); i++) {
+  assert (end == clauses.end ());
+  for (i = j; i != end; i++) {
     if ((c = *i)->collect ()) delete_clause (c);
     else assert (c->moved), *j++ = c->copy, deallocate_clause (c);
   }
