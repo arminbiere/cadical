@@ -51,6 +51,7 @@ struct Stats {
   int eliminated;    // number of eliminated variables
 
   size_t allocated;  // number of (explicitly) allocated bytes
+  size_t implicit;   // implicitly approximated allocated bytes
   size_t maxbytes;   // maximum number of allocated bytes
 
   Stats ();

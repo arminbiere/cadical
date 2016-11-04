@@ -61,6 +61,8 @@ void Internal::remove_falsified_literals (Clause * c) {
 
 void Internal::mark_satisfied_clauses_as_garbage () {
 
+  assert (propagated == trail.size ());
+
   // Only needed if there are new units (fixed variables) since last time.
   //
   if (lim.fixed_at_last_collect >= stats.fixed) return;
@@ -302,12 +304,13 @@ void Internal::check_clause_stats () {
 
 void Internal::garbage_collection () {
   if (unsat) return;
-  assert (propagated == trail.size ());
   START (collect);
   stats.collections++;
+  account_implicitly_allocated_bytes ();
   mark_satisfied_clauses_as_garbage ();
   if (opts.arena) move_non_garbage_clauses ();
   else delete_garbage_clauses ();
+  account_implicitly_allocated_bytes ();
   check_clause_stats ();
   STOP (collect);
 }

@@ -210,6 +210,7 @@ inline int Internal::try_to_subsume_clause (Clause * c) {
       if (flipped) d = e;                 // ... and leave outer loop.
     }
     os.resize (k - os.begin ());
+    shrink_vector (os);
   }
 
   unmark (c);

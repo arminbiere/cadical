@@ -124,13 +124,17 @@ class Internal {
 
   // Functions for monitoring resources.
   //
-  size_t vector_bytes ();
   void inc_bytes (size_t);
   void dec_bytes (size_t);
 
   double seconds ();
   size_t max_bytes ();
   size_t current_bytes ();
+
+  size_t bytes_occs ();
+  size_t bytes_watches ();
+  void account_implicitly_allocated_bytes ();
+  void update_max_bytes ();
 
   int active_variables () const {
     return max_var - stats.fixed - stats.eliminated;

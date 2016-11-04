@@ -15,9 +15,14 @@ double Internal::seconds () {
   return res;
 }
 
+inline void Internal::update_max_bytes () {
+  size_t really_allocated = stats.allocated + stats.implicit;
+  if (really_allocated > stats.maxbytes) stats.maxbytes = really_allocated;
+}
+
 void Internal::inc_bytes (size_t bytes) {
-  if ((stats.allocated += bytes) > stats.maxbytes)
-    stats.maxbytes = stats.allocated;
+  stats.allocated += bytes;
+  update_max_bytes ();
 }
 
 void Internal::dec_bytes (size_t bytes) {
@@ -25,32 +30,43 @@ void Internal::dec_bytes (size_t bytes) {
   stats.allocated -= bytes;
 }
 
-size_t Internal::vector_bytes () {
-  size_t res = 0;
-  res += bytes_vector (trail);
-  res += bytes_vector (clause);
-  res += bytes_vector (levels);
-  res += bytes_vector (analyzed);
-  res += bytes_vector (minimized);
-  res += bytes_vector (original);
-  res += bytes_vector (extension);
-  res += bytes_vector (control);
-  res += bytes_vector (clauses);
-  res += bytes_vector (resolved);
-  res += bytes_vector (timers);
-  return res;
+// We do this once in a while to approximate the actual number of allocated
+// bytes taking all the implicit memory used in vectors into account.  An
+// alternative would be to add a wrapper around 'std::vector' which updates
+// memory statistics eagerly.  This is however awkward to use since it
+// requires an 'Internal' argument to every 'push_back' etc.  It might also
+// be slightly slower.
+
+// The risk of this approach is that we forget to include an important
+// vector and further updating might not accurate enough in time.
+
+void Internal::account_implicitly_allocated_bytes () {
+  size_t bytes = 0;
+  bytes += bytes_vector (trail);
+  bytes += bytes_vector (clause);
+  bytes += bytes_vector (levels);
+  bytes += bytes_vector (analyzed);
+  bytes += bytes_vector (minimized);
+  bytes += bytes_vector (original);
+  bytes += bytes_vector (extension);
+  bytes += bytes_vector (control);
+  bytes += bytes_vector (clauses);
+  bytes += bytes_vector (resolved);
+  bytes += bytes_vector (timers);
+  if (occs ()) bytes += bytes_occs ();
+  if (watches ()) bytes += bytes_watches ();
+  LOG ("now %ld instead of %ld bytes implicitly allocated",
+    (long) stats->implicit, (long) bytes);
+  stats.implicit = bytes;
+  update_max_bytes ();
+  if (opts.verbose) report ('a');
 }
 
-size_t Internal::max_bytes () {
-  size_t res = stats.maxbytes;
-  res += vector_bytes ();
-  return res;
-}
+size_t Internal::max_bytes () { return stats.maxbytes; }
 
 size_t Internal::current_bytes () {
-  size_t res = stats.allocated;
-  res += vector_bytes ();
-  return res;
+  if (!stats.implicit) account_implicitly_allocated_bytes ();
+  return stats.allocated + stats.implicit;
 }
 
 };

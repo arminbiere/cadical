@@ -8,17 +8,14 @@ void Internal::init_watches () {
   wtab = new Watches [2*vsize];
 }
 
-// TODO remove?
-#if 0
-size_t Internal::implicit_watches_bytes () {
-  assert (wtab);
-  size_t res = 0;
+size_t Internal::bytes_watches () {
+  assert (watches ());
+  size_t bytes = 0;
   for (int idx = 1; idx <= max_var; idx++)
-    res += bytes_vector (watches (idx)),
-    res += bytes_vector (watches (-idx));
-  return res;
+    bytes += bytes_vector (watches (idx)),
+    bytes += bytes_vector (watches (-idx));
+  return bytes;
 }
-#endif
 
 void Internal::reset_watches () {
   assert (wtab);
