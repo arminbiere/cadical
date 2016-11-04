@@ -174,6 +174,8 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   l1 = c->literals[1];
   watch_literal (l0, l1, c, c->size);
   watch_literal (l1, l0, c, c->size);
+
+  // TODO add check_clause (Clause*)
 }
 
 /*------------------------------------------------------------------------*/

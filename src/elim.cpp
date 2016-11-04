@@ -209,6 +209,8 @@ inline void Internal::add_resolvents (int pivot, vector<Clause*> & res) {
         LOG (c, "resolving first antecedent");
         LOG (d, "resolving second antecedent");
 
+	check_clause ();
+
         if (clause.empty ()) {
           LOG ("empty resolvent");
           learn_empty_clause ();

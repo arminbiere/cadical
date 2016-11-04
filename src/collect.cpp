@@ -301,6 +301,8 @@ void Internal::check_clause_stats () {
 /*------------------------------------------------------------------------*/
 
 void Internal::garbage_collection () {
+  if (unsat) return;
+  assert (propagated == trail.size ());
   START (collect);
   stats.collections++;
   mark_satisfied_clauses_as_garbage ();
