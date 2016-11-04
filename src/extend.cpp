@@ -25,9 +25,10 @@ void Internal::extend () {
     flipped++;
     assert (last);
     LOG ("flipping blocking literal %d", last);
-    int idx = vidx (last);
-    phases[idx] = -phases[idx];
-    vals[idx] = -vals[idx];
+    const int idx = vidx (last);
+    const int tmp = sign (last);
+    vals[idx] = phases[idx] = tmp;
+    vals[-idx] = -tmp;
   }
   VRB ("extend", "flipped %ld literals during extension", flipped);
   STOP (extend);

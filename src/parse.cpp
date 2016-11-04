@@ -10,6 +10,7 @@
 #include <cassert>
 #include <cctype>
 #include <climits>
+#include <string>
 
 namespace CaDiCaL {
 
@@ -21,14 +22,15 @@ int Parser::parse_char () { return file->get (); }
 
 // Return an non zero error string if a parse error occurred.
 
-const char * Parser::parse_string (const char * str, char prev) {
+inline const char *
+Parser::parse_string (const char * str, char prev) {
   for (const char * p = str; *p; p++)
     if (parse_char () == *p) prev = *p;
     else PER ("expected '%c' after '%c'", *p, prev);
   return 0;
 }
 
-const char *
+inline const char *
 Parser::parse_positive_int (int & ch, int & res, const char * name) {
   assert (isdigit (ch));
   res = ch - '0';
@@ -41,7 +43,8 @@ Parser::parse_positive_int (int & ch, int & res, const char * name) {
   return 0;
 }
 
-const char * Parser::parse_lit (int & ch, int & lit, const int vars) {
+inline const char *
+Parser::parse_lit (int & ch, int & lit, const int vars) {
   int sign = 0;
   if (ch == '-') {
     if (!isdigit (ch = parse_char ())) PER ("expected digit after '-'");
@@ -73,9 +76,15 @@ const char * Parser::parse_dimacs_non_profiled () {
   for (;;) {
     ch = parse_char ();
     if (ch != 'c') break;
+    string buf;
     while ((ch = parse_char ()) != '\n')
-      if (ch == EOF)
-        PER ("unexpected end-of-file in header comment");
+      if (ch == EOF) PER ("unexpected end-of-file in header comment");
+      else if (ch != '\r') buf.push_back (ch);
+    const char * o;
+    for (o = buf.c_str (); *o && *o != '-'; o++)
+      ;
+    VRB ("parse-dimacs", "found option '%s'", o);
+    if (*o) internal->opts.set (o);
   }
   if (ch != 'p') PER ("expected 'c' or 'p'");
   const char * err = parse_string (" cnf ", 'p');
