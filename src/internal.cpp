@@ -203,8 +203,9 @@ int Internal::solve () {
 
 void Internal::check (int (Internal::*a)(int) const) {
   bool satisfied = false;
+  const const_int_iterator end = original.end ();
   const_int_iterator start = original.begin ();
-  for (const_int_iterator i = start; i != original.end (); i++) {
+  for (const_int_iterator i = start; i != end; i++) {
     int lit = *i;
     if (!lit) {
       if (!satisfied) {
@@ -225,6 +226,22 @@ void Internal::check (int (Internal::*a)(int) const) {
     MSG ("satisfying assignment checked");
     MSG ("");
   }
+}
+
+void Internal::dump () {
+  const const_clause_iterator eoc = clauses.end ();
+  const_clause_iterator i;
+  printf ("p cnf %d %ld\n", max_var, stats.irredundant + stats.redundant);
+  for (i = clauses.begin (); i != eoc; i++) {
+    Clause * c = *i;
+    if (c->garbage) continue;
+    const const_literal_iterator eol = c->end ();
+    const_literal_iterator j = c->begin ();
+    for (j = c->begin (); j != eol; j++)
+      printf ("%d ", *j);
+    printf ("0\n");
+  }
+  fflush (stdout);
 }
 
 };

@@ -37,7 +37,7 @@ int Internal::clause_contains_fixed_literal (Clause * c) {
 // clause is extended or not. Only its size field is adjusted accordingly
 // after flushing out root level falsified literals.
 
-void Internal::flush_falsified_literals (Clause * c) {
+void Internal::remove_falsified_literals (Clause * c) {
   if (c->reason || c->size == 2) return;
   if (proof) proof->trace_flushing_clause (c);
   const const_literal_iterator end = c->end ();
@@ -71,13 +71,20 @@ void Internal::mark_satisfied_clauses_as_garbage () {
     if (c->garbage) continue;
     const int tmp = clause_contains_fixed_literal (c);
          if (tmp > 0) mark_garbage (c);
-    else if (tmp < 0) flush_falsified_literals (c);
+    else if (tmp < 0) remove_falsified_literals (c);
   }
 
   lim.fixed_at_last_collect = stats.fixed;
 }
 
 /*------------------------------------------------------------------------*/
+
+// Update occurrence and watch lists before removing garbage clauses.  This
+// works both in the context of 'reduce' where the decision level might be
+// non zero as well as during preprocessing, e.g., in 'elim'.  During
+// 'reduce' we have to protect reason clauses not be collected and thus we
+// have this additional check hidden in 'Clause.collect', which for the root
+// level context of preprocessing is actually redundant.
 
 size_t Internal::flush_occs (int lit) {
   Occs & os = occs (lit);
@@ -104,6 +111,21 @@ void Internal::flush_watches (int lit) {
     Clause * c = w.clause;
     if (c->collect ()) continue;
     if (c->moved) w.clause = c->copy;
+    if (c->size < w.size) {
+
+      // During 'reduce' root level falsified literals might be removed in
+      // which case the actual clause size does not match the saved size in
+      // the watch lists.  If this is the case we update both size and
+      // eagerly the blocking literal (even if it got not removed). Note
+      // that if the clause size and watch list size match, then there is no
+      // need to update the watch, except if the clause was moved.
+
+      w.size = c->size;
+      const int new_blit_pos = (c->literals[0] == lit);
+      assert (c->literals[!new_blit_pos] == lit);
+      w.blit = c->literals[new_blit_pos];
+
+    } else assert (c->size == w.size);
     *j++ = w;
   }
   ws.resize (j - ws.begin ());
@@ -130,7 +152,7 @@ void Internal::delete_garbage_clauses () {
 
   LOG ("deleting garbage clauses");
   long collected_bytes = 0, collected_clauses = 0;
-  const const_clause_iterator end = clauses.begin ();
+  const const_clause_iterator end = clauses.end ();
   clause_iterator j = clauses.begin ();
   const_clause_iterator i = j;
   while (i != end) {
@@ -142,6 +164,7 @@ void Internal::delete_garbage_clauses () {
     j--;
   }
   clauses.resize (j - clauses.begin ());
+  shrink_vector (clauses);
 
   VRB ("collect", stats.collections,
     "collected %ld bytes of %ld garbage clauses",
@@ -236,6 +259,7 @@ void Internal::move_non_garbage_clauses () {
     else assert (c->moved), *j++ = c->copy, deallocate_clause (c);
   }
   clauses.resize (j - clauses.begin ());
+  shrink_vector (clauses);
 
   // Release 'from' space completely and then swap 'to' with 'from'.
   //

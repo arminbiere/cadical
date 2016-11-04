@@ -299,7 +299,7 @@ class Internal {
   // Garbage collection called from 'reduce' and during preprocessing.
   //
   int clause_contains_fixed_literal (Clause *);
-  void flush_falsified_literals (Clause *);
+  void remove_falsified_literals (Clause *);
   void mark_satisfied_clauses_as_garbage ();
   void move_clause (Clause *);
   void flush_watches (int lit);
@@ -405,8 +405,13 @@ class Internal {
   const char * parse_solution (const char *);
 
   // Enable and disable proof logging.
+  //
   void close_proof ();
   void new_proof (File *, bool owned = false);
+
+  // Dump to '<stdout>' as DIMACS mostly for debugging.
+  //
+  void dump ();
 };
 
 /*------------------------------------------------------------------------*/

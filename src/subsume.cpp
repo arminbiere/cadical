@@ -92,10 +92,10 @@ bool Internal::subsuming () {
 // This is the actual subsumption and strengthening check.  We assume that
 // all the literals of the candidate clause to be subsumed or strengthened
 // are marked, so we only have to check that all the literals of the
-// argument clause 'c', which is checked for subsuming the candidate clause,
-// has all its literals marked (in the correct phase).  If exactly one is in
-// the opposite phase we can still strengthen the candidate clause by this
-// single literal which occurs in opposite phase.
+// argument clause 'subsuming', which is checked for subsuming the candidate
+// clause 'subsumed', has all its literals marked (in the correct phase).
+// If exactly one is in the opposite phase we can still strengthen the
+// candidate clause by this single literal which occurs in opposite phase.
 //
 // The result is INT_MIN if all literals are marked and thus the candidate
 // clause can be subsumed.  It is zero if neither subsumption nor
@@ -103,11 +103,19 @@ bool Internal::subsuming () {
 // strengthened and as a result the negation of the literal which can be
 // removed is returned.
 
-inline int Internal::subsume_check (Clause * c, Clause * d) {
+inline int Internal::subsume_check (Clause * subsuming,
+                                    Clause * subsumed) {
+
+  // Only use 'subsumed' for these following assertion checks.  Otherwise we
+  // only require that 'subsumed' has all its literals marked.
+  //
+  assert (subsuming != subsumed);
+  assert (subsuming->size <= subsumed->size);
+  
   stats.subchecks++;
-  const const_literal_iterator end = c->end ();
+  const const_literal_iterator end = subsuming->end ();
   int flipped = 0;
-  for (const_literal_iterator i = c->begin (); i != end; i++) {
+  for (const_literal_iterator i = subsuming->begin (); i != end; i++) {
     const int lit = *i, tmp = marked (lit);
     if (!tmp) return 0;
     if (tmp > 0) continue;
@@ -193,8 +201,6 @@ inline int Internal::try_to_subsume_clause (Clause * c) {
     clause_iterator k = os.begin ();
     for (const_clause_iterator j = k; j != eo; j++) {
       Clause * e = *j;
-      assert (e != c);
-      assert (e->size <= c->size);
       if (e->garbage) continue;
       *k++ = e;
       if (d) continue;

@@ -22,19 +22,23 @@ bool has_suffix (const char * str, const char * suffix);
 /*------------------------------------------------------------------------*/
 
 // The standard 'Effective STL' way (though not guaranteed) to clear a
-// vector and reduce its capacity to zero.
+// vector and reduce its capacity to zero, thus deallocating all its
+// internal memory.  This is quite important for keeping the actual
+// allocated size of watched and occurrence lists small particularly during
+// bounded variable elimination where many clauses are added and removed.
 
 template<class T> void erase_vector (vector<T> & v) {
-  vector<T>().swap (v);
-  assert (!v.capacity ());		// not guaranteed
+  if (v.capacity ()) { vector<T>().swap (v); }
+  assert (!v.capacity ());                          // not guaranteed though
 }
 
 // The standard 'Effective STL' way (though not guaranteed) to shrink the
-// capacity of a vector to its size.
+// capacity of a vector to its size thus kind of releasing all the internal
+// access memory not needed at the moment any more.
 
 template<class T> void shrink_vector (vector<T> & v) {
-  vector<T>(v).swap (v);
-  assert (v.capacity () == v.size ());	// not guaranteed
+  if (v.capacity () > v.size ()) { vector<T>(v).swap (v); }
+  assert (v.capacity () == v.size ());              // not guaranteed though
 }
 
 // Shallow memory usage of a vector.
