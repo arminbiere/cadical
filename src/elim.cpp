@@ -3,6 +3,7 @@
 #include "message.hpp"
 #include "profile.hpp"
 #include "iterator.hpp"
+#include "proof.hpp"
 
 #include <algorithm>
 
@@ -165,6 +166,7 @@ inline void Internal::add_resolvents (int pivot,
     } else if (clause.size () == 1) {
       const int unit = clause[0];
       LOG ("saving unit resolvent %d", unit);
+      if (proof) proof->trace_unit_clause (unit);
       units.push_back (unit);
     } else {
       resolvents++;
@@ -415,10 +417,12 @@ bool Internal::elim_round () {
   erase_vector (schedule);
   erase_vector (work);
 
+  COVER (!units.empty ());
   if (!units.empty ()) {
-    while (!unsat && !units.empty ()) {
-      int unit = units.back ();
-      units.pop_back ();
+    const const_int_iterator eou = units.end ();
+    const_int_iterator i;
+    for (i = units.begin (); i != eou; i++) {
+      int unit = *i;
       const int tmp = val (unit);
       if (tmp < 0) {
 	LOG ("found clashing resolved unit %d", unit);
