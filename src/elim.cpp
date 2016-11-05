@@ -267,6 +267,28 @@ inline void Internal::elim (int pivot,
 
 /*------------------------------------------------------------------------*/
 
+// Sorting the scheduled variables is way faster if we compute the sum of
+// the occurrences up-front and avoid pointer access to 'noccs' during
+// sorting. This slightly increases the schedule size though.
+
+struct IdxSumOccs {
+  int idx;
+  long soccs;
+  IdxSumOccs (int i, long pos, long neg) : idx (i), soccs (pos + neg) { }
+  IdxSumOccs () { }
+};
+
+typedef vector<IdxSumOccs>::const_iterator const_idx_sum_occs_iterator;
+typedef vector<IdxSumOccs>::iterator idx_sum_occs_iterator;
+
+struct idx_sum_occs_smaller {
+  bool operator () (const IdxSumOccs & a, const IdxSumOccs & b) const {
+    return a.soccs < b.soccs;
+  }
+};
+
+/*------------------------------------------------------------------------*/
+
 bool Internal::elim_round () {
 
   SWITCH_AND_START (search, simplify, elim);
@@ -278,7 +300,7 @@ bool Internal::elim_round () {
   if (lim.fixed_at_last_collect < stats.fixed) garbage_collection ();
   else account_implicitly_allocated_bytes ();
 
-  vector<int> schedule;         // schedule of candidate variables
+  vector<IdxSumOccs> schedule;  // schedule of candidate variables
   init_noccs ();                // number of irredundant occurrences
 
   const int size_limit = opts.elimclslim;
@@ -311,36 +333,32 @@ bool Internal::elim_round () {
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
     if (eliminated (idx)) continue;
-    if (noccs (idx) > occ_limit) continue;
-    if (noccs (-idx) > occ_limit) continue;
+    long pos = noccs (idx);
+    if (pos > occ_limit) continue;
+    long neg = noccs (-idx);
+    if (neg > occ_limit) continue;
     connected [idx] = 1;
-    schedule.push_back (idx);
+    schedule.push_back (IdxSumOccs (idx, pos, neg));
   }
   shrink_vector (schedule);
+  reset_noccs ();
 
-  // And sort according to the number of occurrences.
-  //
-  stable_sort (schedule.begin (), schedule.end (), sum_occs_smaller (this));
+  stable_sort (schedule.begin (), schedule.end (), idx_sum_occs_smaller ());
 
   // Drop 'opts.elimignore' fraction of variables.
   //
   size_t ignore = (1 - opts.elimignore) * schedule.size ();
   if (ignore < schedule.size ()) {
-    const int idx = schedule[ignore];
-    const long limit_noccs_sum = noccs (idx) + noccs (-idx);
-    while (++ignore < schedule.size ()) {
-      const int other = schedule[ignore];
-      const long noccs_sum = noccs (other) + noccs (-other);
-      if (noccs_sum > limit_noccs_sum) break;
-    }
+    const long limit = schedule[ignore].soccs;
+    while (++ignore < schedule.size () && schedule[ignore].soccs == limit)
+      ;
     for (size_t i = ignore; i < schedule.size (); i++)
-      connected [ abs (schedule [i]) ] = 0;
+      connected [ schedule [i].idx ] = 0;
     schedule.resize (ignore);
     shrink_vector (schedule);
   }
 
   inc_bytes (bytes_vector (schedule));
-  reset_noccs ();
 
   long scheduled = schedule.size ();
 
@@ -376,12 +394,12 @@ bool Internal::elim_round () {
   // Try eliminating variables according to the schedule.
   //
   const long irredundant_limit = stats.irredundant;
-  const const_int_iterator eos = schedule.end ();
-  const_int_iterator k;
+  const const_idx_sum_occs_iterator eos = schedule.end ();
+  const_idx_sum_occs_iterator k;
   vector<Clause*> work;
   for (k = schedule.begin (); !unsat && k != eos; k++) {
     if (stats.garbage > irredundant_limit) garbage_collection ();
-    elim (*k, work, units);
+    elim (k->idx, work, units);
   }
 
   inc_bytes (bytes_vector (work));

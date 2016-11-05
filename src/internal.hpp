@@ -52,7 +52,7 @@ class Internal {
   friend struct Stats;
 
   friend struct bumped_earlier;
-  friend struct sum_occs_smaller;
+  // friend struct sum_occs_smaller;
   friend struct trail_bumped_smaller;
   friend struct trail_smaller;
 
@@ -437,6 +437,7 @@ struct trail_smaller {
   }
 };
 
+#if 0
 struct sum_occs_smaller {
   Internal * internal;
   sum_occs_smaller (Internal * s) : internal (s) { }
@@ -447,6 +448,7 @@ struct sum_occs_smaller {
     return s < t;
   }
 };
+#endif
 
 };
 

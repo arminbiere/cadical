@@ -232,6 +232,27 @@ inline int Internal::try_to_subsume_clause (Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
+// Sorting the scheduled clauses is way faster if we compute save the clause
+// size in the schedule to avoid pointer access to clauses during sorting.
+// This slightly increases the schedule size though.
+
+struct ClauseSize {
+  Clause * clause;
+  int size;
+  ClauseSize (Clause * c) : clause (c), size (c->size) { }
+};
+
+typedef vector<ClauseSize>::const_iterator const_clause_size_iterator;
+typedef vector<ClauseSize>::iterator clause_size_iterator;
+
+struct smaller_clause_size {
+  bool operator () (const ClauseSize & a, const ClauseSize & b) const {
+    return a.size < b.size;
+  }
+};
+
+/*------------------------------------------------------------------------*/
+
 // Usually called from 'subsume' below if 'subsuming' triggered it.  Then
 // the idea is to subsume both redundant and irredundant clauses. It is also
 // called in the elimination loop in 'elim' in which case we focus on
@@ -250,13 +271,14 @@ bool Internal::subsume_round (bool irredundant_only) {
 
   // Allocate schedule and occurrence lists.
   //
-  vector<Clause*> schedule;
+  vector<ClauseSize> schedule;
   init_occs ();
 
   // Determine candidate clauses and sort them by size.
   //
+  const const_clause_iterator eoc = clauses.end ();
   const_clause_iterator i;
-  for (i = clauses.begin (); i != clauses.end (); i++) {
+  for (i = clauses.begin (); i != eoc; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
     if (clause_contains_fixed_literal (c)) continue;
@@ -274,7 +296,7 @@ bool Internal::subsume_round (bool irredundant_only) {
   }
   shrink_vector (schedule);
   inc_bytes (bytes_vector (schedule));
-  stable_sort (schedule.begin (), schedule.end (), smaller_size ());
+  stable_sort (schedule.begin (), schedule.end (), smaller_clause_size ());
 
   long scheduled = schedule.size ();
   VRB ("subsume", stats.subsumptions, "scheduled %ld clauses", scheduled);
@@ -286,9 +308,11 @@ bool Internal::subsume_round (bool irredundant_only) {
 
   long subsumed = 0, strengthened = 0;
 
-  for (i = schedule.begin (); i != schedule.end (); i++) {
+  const const_clause_size_iterator eos = schedule.end ();
+  const_clause_size_iterator s;
+  for (s = schedule.begin (); s != eos; s++) {
 
-    Clause * c = *i;
+    Clause * c = s->clause;
 
     assert (!c->garbage);
 
