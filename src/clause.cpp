@@ -137,7 +137,7 @@ Clause * Internal::new_learned_redundant_clause (int glue) {
 Clause * Internal::new_resolved_irredundant_clause () {
   Clause * res = new_clause (false);
   if (proof) proof->trace_add_clause (res);
-  watch_clause (res);
+  assert (!watches ());
   return res;
 }
 

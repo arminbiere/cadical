@@ -132,7 +132,7 @@ bool Internal::resolvents_are_bounded (int pivot, vector<Clause*> & res) {
       count, pivot);
   else
     LOG ("found only %ld <= %ld non-tautological resolvents on %d",
-      count, limit, pivot);
+      count, bound, pivot);
 #endif
   return !too_long && count <= bound;
 }
@@ -209,7 +209,6 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
     mark_garbage (c);
   }
   erase_vector (ps);
-  erase_vector (watches (pivot));
 
   LOG ("marking irredundant clauses with %d as garbage", -pivot);
 
@@ -218,7 +217,6 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
   for (i = ns.begin (); i != ne; i++)
     if (!(*i)->garbage) mark_garbage (*i);
   erase_vector (ns);
-  erase_vector (watches (-pivot));
 
   // This is a trick by Niklas Soerensson to avoid saving all clauses on the
   // extension stack.  Just first in extending the witness the 'pivot' is

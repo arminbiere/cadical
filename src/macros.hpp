@@ -90,4 +90,16 @@ do { EMA_OR_AVG.update (internal, (Y), #EMA_OR_AVG); } while (0)
   E = EMA (V); \
   LOG ("init " #E " EMA target alpha %g", (double) V)
 
+/*------------------------------------------------------------------------*/
+
+#define COVER(COND) \
+do { \
+  if (!(COND)) break; \
+  fprintf (stderr, \
+    "libcadical.a: %s:%d: %s: Coverage target `%s' reached.\n", \
+    __FUNCTION__, __LINE__, __FILE__, # COND); \
+  fflush (stderr); \
+  abort (); \
+} while (0)
+
 #endif

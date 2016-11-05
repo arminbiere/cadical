@@ -218,7 +218,7 @@ void Internal::move_non_garbage_clauses () {
   // essence just gives a compacting garbage collector, since their
   // relative order is kept, and already gives some cache locality.
   //
-  if (opts.arena == 1) {
+  if (opts.arena == 1 || !watches ()) {
 
     // Localize according to (original) clause order.
 

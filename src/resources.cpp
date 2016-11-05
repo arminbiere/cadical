@@ -56,7 +56,7 @@ void Internal::account_implicitly_allocated_bytes () {
   if (occs ()) bytes += bytes_occs ();
   if (watches ()) bytes += bytes_watches ();
   LOG ("now %ld instead of %ld bytes implicitly allocated",
-    (long) stats->implicit, (long) bytes);
+    (long) stats.implicit, (long) bytes);
   stats.implicit = bytes;
   update_max_bytes ();
   if (opts.verbose) report ('a');
