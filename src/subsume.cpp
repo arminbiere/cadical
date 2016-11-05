@@ -272,6 +272,7 @@ bool Internal::subsume_round (bool irredundant_only) {
     }
     schedule.push_back (c);
   }
+  shrink_vector (schedule);
   inc_bytes (bytes_vector (schedule));
   stable_sort (schedule.begin (), schedule.end (), smaller_size ());
 

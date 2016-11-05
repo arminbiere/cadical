@@ -343,7 +343,7 @@ bool Internal::elim_round () {
   reset_noccs ();
 
   long scheduled = schedule.size ();
-  inc_bytes (bytes_vector (schedule));
+
   VRB ("elim", stats.eliminations,
     "scheduled %ld variables %.0f%% for elimination",
     scheduled, percent (scheduled, active_variables ()));
@@ -413,6 +413,7 @@ bool Internal::elim_round () {
     resolutions, units.size ());
 
   dec_bytes (bytes_vector (work));
+  dec_bytes (bytes_vector (units));
   dec_bytes (bytes_vector (schedule));
   erase_vector (schedule);
   erase_vector (work);
@@ -437,7 +438,6 @@ bool Internal::elim_round () {
       LOG ("propagating resolved units results in empty clause");
       learn_empty_clause ();
     }
-    dec_bytes (bytes_vector (units));
     erase_vector (units);
     garbage_collection ();
   } else account_implicitly_allocated_bytes ();
