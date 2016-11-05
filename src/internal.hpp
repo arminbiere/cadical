@@ -324,6 +324,7 @@ class Internal {
   void init_occs ();
   void init_noccs ();
   void init_watches ();
+  void connect_watches ();
   void reset_occs ();
   void reset_noccs ();
   void reset_watches ();
@@ -341,10 +342,12 @@ class Internal {
   // Bounded variable elimination.
   //
   bool eliminating ();
-  bool resolvents_are_bounded (int pivot, vector<Clause*> & res);
-  void add_resolvents (int pivot, vector<Clause*> & res);
+  void resolve_clauses (Clause * c, Clause * d);
+  bool have_tautological_resolvent (Clause * c, Clause * d);
+  bool resolvents_are_bounded (int pivot, vector<Clause*> &);
+  void add_resolvents (int pivot, vector<Clause*> &, vector<int> &);
   void mark_eliminated_clauses_as_garbage (int pivot);
-  void elim (int pivot, vector<Clause*> & res);
+  void elim (int pivot, vector<Clause*> & res, vector<int> & units);
   bool elim_round ();
   void extend ();
   void elim ();

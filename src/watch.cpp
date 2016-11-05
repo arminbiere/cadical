@@ -35,4 +35,12 @@ void Internal::unwatch_literal (int lit, Clause * c) {
   ws.resize (j - ws.begin ());
 }
 
+void Internal::connect_watches () {
+  assert (watches ());
+  LOG ("connecting all watches");
+  const const_clause_iterator end = clauses.end ();
+  for (const_clause_iterator i = clauses.begin (); i != end; i++)
+    watch_clause (*i);
+}
+
 };

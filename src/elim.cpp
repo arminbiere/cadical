@@ -17,21 +17,72 @@ bool Internal::eliminating () {
 
 /*------------------------------------------------------------------------*/
 
+bool Internal::have_tautological_resolvent (Clause * c, Clause * d) {
+  stats.restests++;
+  assert (!c->garbage);
+  assert (!d->garbage);
+  if (c->size > d->size) swap (c, d);
+  LOG (c, "testing resolution with first antecedent");
+  LOG (d, "testing resolution with second antecedent");
+  mark (c);
+  int clashing = 0;
+  const const_literal_iterator end = d->end ();
+  const_literal_iterator i;
+  for (i = d->begin (); clashing < 2 && i != end; i++)
+    if (marked (*i) < 0) clashing++;
+  unmark (c);
+  assert (clashing > 0);
+  const bool tautological = (clashing > 1);
+#ifdef LOGGING
+  if (tautological) LOG ("have tautological resolvent");
+  else LOG ("have non-tautological resolvent");
+#endif
+  return tautological;
+}
+
+void Internal::resolve_clauses (Clause * c, Clause * d) {
+  stats.resolutions++;
+  assert (clause.empty ());
+  assert (!c->garbage);
+  assert (!d->garbage);
+  if (c->size > d->size) swap (c, d);
+  LOG (c, "resolving first antecedent");
+  LOG (d, "resolving second antecedent");
+  const_literal_iterator end = c->end ();
+  const_literal_iterator i;
+  for (i = c->begin (); i != end; i++) mark (*i);
+  int pivot = 0;
+  end = d->end ();
+  for (i = d->begin (); i != end; i++) {
+    const int lit = *i, tmp = marked (lit);
+    if (tmp > 0) continue;
+    else if (!tmp) clause.push_back (lit);
+    else assert (!pivot), pivot = -lit;
+  }
+  end = c->end ();
+  for (i = c->begin (); i != end; i++) {
+    const int lit = *i;
+    if (lit != pivot) clause.push_back (lit);
+    unmark (lit);
+  }
+}
+
+/*------------------------------------------------------------------------*/
+
 // Check whether the number of non-tautological resolutions on 'pivot' is
 // smaller or equal to the number of clauses with 'pivot' or '-pivot'.  This
 // is the main criteria of bounded variable elimination.
 
-inline bool
-Internal::resolvents_are_bounded (int pivot, vector<Clause*> & res) {
+bool Internal::resolvents_are_bounded (int pivot, vector<Clause*> & res) {
 
   LOG ("checking whether resolvents on %d are bounded", pivot);
 
-  if (val (pivot)) return false;        // ignore root level assigned
+  assert (!val (pivot));
   assert (!eliminated (pivot));
 
   // Beside determining whether the number of non-tautological resolvents is
-  // too large, this function also produce the list of all consecutive pairs
-  // of clauses, with non-tautological resolvent such that latter in
+  // too large, this function also produces the list of all consecutive
+  // pairs of clauses, with non-tautological resolvent such that latter in
   // 'add_resolvents' these can actually be resolved and added.
 
   res.clear ();               // pairs of non-tautological resolvents
@@ -51,99 +102,39 @@ Internal::resolvents_are_bounded (int pivot, vector<Clause*> & res) {
 
   // Try all resolutions between a positive occurrence (outer loop) of
   // 'pivot' and a negative occurrence of 'pivot' (inner loop) as long the
-  // bound on non-tautological resolvents is not hit.
+  // bound on non-tautological resolvents is not hit and the size of the
+  // generated resolvents does not exceed the resolvent size limit.
   //
   const const_clause_iterator pe = ps.end ();
   const_clause_iterator i;
-  for (i = ps.begin (); count <= bound && i != pe; i++) {
-
+  bool too_long = false;
+  for (i = ps.begin (); !too_long && count <= bound && i != pe; i++) {
     Clause * c = *i;
-    assert (!c->garbage);
-    // if (c->garbage) continue;  // redundant!!
-
-    // Check whether first antecedent is not root level satisfied already
-    // and at the same time mark all its literals, such that we can easily
-    // find tautological resolvents latter when resolving against clauses
-    // with negative occurrence of the 'pivot' in the following inner loop.
-    //
-    const const_literal_iterator ce = c->end ();
-    const_literal_iterator l;
-    bool satisfied = false;
-    for (l = c->begin (); !satisfied && l != ce; l++) {
-      int lit = *l;
-      if (lit == pivot) continue;
-      if (val (lit) > 0) satisfied = true;
-      else mark (lit);
-    }
-    if (satisfied) {
-      LOG (c, "skipping satisfied first antecedent");
-      mark_garbage (c);
-      unmark (c);
-      continue;
-    }
-
-    LOG (c, "trying first antecedent");
-
-    // In the inner loop we go over all potential resolution candidates
-    // which contain '-pivot' and try to resolve them with the first
-    // antecedent (on 'pivot').
-    //
     const const_clause_iterator ne = ns.end ();
     const_clause_iterator j;
-    for (j = ns.begin (); count <= bound && j != ne; j++) {
-
+    for (j = ns.begin (); !too_long && count <= bound && j != ne; j++) {
       Clause * d = *j;
-      if (d->garbage) continue;
-
-      // Go over the literals in the second antecedent and check whether
-      // they make the resolvent clause satisfied or tautological ignoring
-      // root level units fixed to false.
-      //
-      const const_literal_iterator de = d->end ();
-      bool tautological = false;
-      satisfied = false;
-      for (l = d->begin (); !satisfied && l != de; l++) {
-        int lit = *l;
-        assert (lit != pivot);
-        if (lit == -pivot) continue;
-        int tmp = val (lit);
-        if (tmp < 0) continue;
-        else if (tmp > 0) satisfied = true;
-        else if ((tmp = marked (lit)) > 0) continue;
-        else if (tmp < 0) tautological = true;
-      }
-      if (satisfied) {
-        LOG (d, "skipping satisfied second antecedent");
-        mark_garbage (d);
-        continue;
-      }
-
-      // Now we count it as a real resolution. Note that those 'satisfied'
-      // second antecedent clauses detected above are traversed only once.
-      //
-      LOG (d, "trying second antecedent");
-      stats.resolutions++;
-
-      if (tautological) LOG ("tautological resolvent");
+      if (have_tautological_resolvent (c, d)) continue;
+      if (c->size + d->size - 2 > opts.elimclslim) too_long = true;
       else {
-        count++;
-        res.push_back (c);
-        res.push_back (d);
-        LOG ("now have %ld non-tautological resolvents", count);
+	res.push_back (c);
+	res.push_back (d);
+	count++;
+	LOG ("now have %ld non-tautological resolvents", count);
       }
     }
-
-    unmark (c);
   }
-#ifndef LOGGING
-  if (count > bound)
+#ifdef LOGGING
+  if (too_long)
+    LOG ("resolvent exceeds limit on resolvent size");
+  else if (count > bound)
     LOG ("found too many %ld non-tautological resolvents on %d",
       count, pivot);
   else
     LOG ("found only %ld <= %ld non-tautological resolvents on %d",
       count, limit, pivot);
 #endif
-  return count <= bound;
+  return !too_long && count <= bound;
 }
 
 /*------------------------------------------------------------------------*/
@@ -152,7 +143,9 @@ Internal::resolvents_are_bounded (int pivot, vector<Clause*> & res) {
 // Be careful with empty and unit resolvents and ignore satisfied clauses
 // and falsified literals. If units are resolved then propagate them.
 
-inline void Internal::add_resolvents (int pivot, vector<Clause*> & res) {
+inline void Internal::add_resolvents (int pivot,
+                                      vector<Clause*> & res,
+				      vector<int> & units) {
 
   LOG ("adding all %ld resolvents on %d", (long) res.size ()/2, pivot);
 
@@ -161,83 +154,30 @@ inline void Internal::add_resolvents (int pivot, vector<Clause*> & res) {
 
   long resolvents = 0;
 
-  const const_clause_iterator re = res.end ();
+  const const_clause_iterator end = res.end ();
   const_clause_iterator i = res.begin ();
-  while (!unsat && i != re) {
-
-    Clause * c = *i++, * d = *i++;
-
-    if (c->garbage || d->garbage) continue;
-    if (c->size > d->size) swap (c, d);
-    assert (clause.empty ());
-
-    // First add all (non-falsified) literals from 'c' and mark them.
-    //
-    const const_literal_iterator ce = c->end ();
-    const_literal_iterator l;
-    bool satisfied = false;
-    for (l = c->begin (); !satisfied && l != ce; l++) {
-      const int lit = *l;
-      if (lit == pivot || lit == -pivot) continue;
-      const int tmp = val (lit);
-      if (tmp > 0) satisfied = true;
-      else if (!tmp) clause.push_back (lit), mark (lit);
-    }
-    if (satisfied) {
-      LOG (c, "first now satisfied antecedent");
-      mark_garbage (c);
+  while (!unsat && i != end) {
+    resolve_clauses (*i++, *i++);
+    check_clause ();
+    if (clause.empty ()) {
+      LOG ("empty resolvent");
+      learn_empty_clause ();
+    } else if (clause.size () == 1) {
+      const int unit = clause[0];
+      LOG ("saving unit resolvent %d", unit);
+      units.push_back (unit);
     } else {
-      // Now add all (non-falsified) literals from 'd' without duplicates.
-      //
-      const const_literal_iterator de = d->end ();
-      for (l = d->begin (); !satisfied && l != de; l++) {
-        const int lit = *l;
-        if (lit == pivot || lit == -pivot) continue;
-        int tmp = val (lit);
-        if (tmp > 0) satisfied = true;
-        else if (!tmp) {
-          tmp = marked (lit);
-          if (!tmp) clause.push_back (lit);
-          else assert (tmp > 0);
-        }
-      }
-      if (satisfied) {
-        LOG (d, "second now satisfied antecedent");
-        mark_garbage (d);
-      } else {
-
-        LOG (c, "resolving first antecedent");
-        LOG (d, "resolving second antecedent");
-
-	check_clause ();
-
-        if (clause.empty ()) {
-          LOG ("empty resolvent");
-          learn_empty_clause ();
-        } else if (clause.size () == 1) {
-          const int unit = clause[0];
-          LOG ("unit resolvent %d", unit);
-          assign (unit);
-          if (!propagate ()) {
-            LOG ("propagating resolved unit produces conflict");
-            learn_empty_clause ();
-          }
-        } else {
-          resolvents++;
-          Clause * r = new_resolved_irredundant_clause ();
-	  if (occs ()) {
-	    const const_literal_iterator re = r->end ();
-	    for (l = r->begin (); l != re; l++) {
-	      Occs & os = occs (*l);
-	      if (os.empty ()) continue;	// was not connected ...
-	      occs (*l).push_back (r);
-	    }
-	  }
-        }
+      resolvents++;
+      Clause * r = new_resolved_irredundant_clause ();
+      assert (occs ());
+      const const_literal_iterator re = r->end ();
+      for (const_literal_iterator l = r->begin (); l != re; l++) {
+	Occs & os = occs (*l);
+	if (os.empty ()) continue;	// was not connected ...
+	occs (*l).push_back (r);
       }
     }
     clause.clear ();
-    unmark (c);
   }
 
   LOG ("added %ld resolvents to eliminate %d", resolvents, pivot);
@@ -293,7 +233,9 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
 
 // Try to eliminate 'pivot' by bounded variable elimination.
 
-inline void Internal::elim (int pivot, vector<Clause*> & work) {
+inline void Internal::elim (int pivot,
+                            vector<Clause*> & work,
+			    vector<int> & units) {
 
   // First remove garbage clauses to get a (more) accurate count. There
   // might still be satisfied clauses included in this count which we have
@@ -302,21 +244,20 @@ inline void Internal::elim (int pivot, vector<Clause*> & work) {
   long pos = flush_occs (pivot);
   long neg = flush_occs (-pivot);
 
-  // If the number of occurrences it too large do not eliminate variable.
+  // If number of occurrences became too large do not eliminate variable.
   //
   if (pos > opts.elimocclim) return;
   if (neg > opts.elimocclim) return;
 
-  // Both 'resolvents_bounded' and 'mark_clauses_with_literal_garbage'
-  // benefit from having the 'pivot' in the phase with less occurrences than
-  // its negation.  For the former this requires less marking and for the
-  // latter it reduces the size of the extension stack greatly.
+  // The 'mark_clauses_with_literal_garbage' benefits from having the
+  // 'pivot' in the phase with less occurrences than its negation.  It
+  // reduces the size of the extension stack greatly.
   //
   if (pos > neg) pivot = -pivot;
 
   if (!resolvents_are_bounded (pivot, work)) return;
 
-  add_resolvents (pivot, work);
+  add_resolvents (pivot, work, units);
   if (!unsat) mark_eliminated_clauses_as_garbage (pivot);
 
   LOG ("eliminated %d", pivot);
@@ -332,11 +273,11 @@ bool Internal::elim_round () {
   stats.eliminations++;
 
   backtrack ();
+  reset_watches ();
 
   if (lim.fixed_at_last_collect < stats.fixed) garbage_collection ();
+  else account_implicitly_allocated_bytes ();
 
-  // Allocate schedule, working stack and occurrence lists.
-  //
   vector<int> schedule;         // schedule of candidate variables
   init_noccs ();                // number of irredundant occurrences
 
@@ -375,21 +316,22 @@ bool Internal::elim_round () {
     connected [idx] = 1;
     schedule.push_back (idx);
   }
+  shrink_vector (schedule);
 
   // And sort according to the number of occurrences.
   //
   stable_sort (schedule.begin (), schedule.end (), sum_occs_smaller (this));
 
-  // Now prune the schedule above the median.
+  // Drop 'opts.elimignore' fraction of variables.
   //
   size_t ignore = (1 - opts.elimignore) * schedule.size ();
   if (ignore < schedule.size ()) {
     const int idx = schedule[ignore];
-    const long median_noccs_sum = noccs (idx) + noccs (-idx);
+    const long limit_noccs_sum = noccs (idx) + noccs (-idx);
     while (++ignore < schedule.size ()) {
       const int other = schedule[ignore];
       const long noccs_sum = noccs (other) + noccs (-other);
-      if (noccs_sum > median_noccs_sum) break;
+      if (noccs_sum > limit_noccs_sum) break;
     }
     for (size_t i = ignore; i < schedule.size (); i++)
       connected [ abs (schedule [i]) ] = 0;
@@ -425,6 +367,9 @@ bool Internal::elim_round () {
     }
   }
 
+  DEL (connected, char, max_var + 1);
+  vector<int> units;
+
   const long old_resolutions = stats.resolutions;
   const int old_eliminated = stats.eliminated;
 
@@ -436,12 +381,11 @@ bool Internal::elim_round () {
   vector<Clause*> work;
   for (k = schedule.begin (); !unsat && k != eos; k++) {
     if (stats.garbage > irredundant_limit) garbage_collection ();
-    elim (*k, work);
+    elim (*k, work, units);
   }
 
-  // Account memory for 'work'.
-  //
   inc_bytes (bytes_vector (work));
+  inc_bytes (bytes_vector (units));
 
   // Mark all redundant clauses with eliminated variables as garbage.
   //
@@ -455,28 +399,54 @@ bool Internal::elim_round () {
       if (this->eliminated (*j)) break;
     if (j != eol) mark_garbage (c);
   }
+  reset_occs ();
   garbage_collection ();
+
+  init_watches ();
+  connect_watches ();
 
   long resolutions = stats.resolutions - old_resolutions;
   int eliminated = stats.eliminated - old_eliminated;
   VRB ("elim", stats.eliminations,
-    "eliminated %ld variables %.0f%% in %ld resolutions",
-    eliminated, percent (eliminated, scheduled), resolutions);
+    "eliminated %ld variables %.0f%% in %ld resolutions %ld units",
+    eliminated, percent (eliminated, scheduled),
+    resolutions, units.size ());
 
-  // Release occurrence lists, and both schedule and work stacks.
-  //
-  reset_occs ();
   dec_bytes (bytes_vector (work));
   dec_bytes (bytes_vector (schedule));
   erase_vector (schedule);
   erase_vector (work);
+
+  if (!units.empty ()) {
+    while (!unsat && !units.empty ()) {
+      int unit = units.back ();
+      units.pop_back ();
+      const int tmp = val (unit);
+      if (tmp < 0) {
+	LOG ("found clashing resolved unit %d", unit);
+	learn_empty_clause ();
+      } else if (tmp > 0) {
+	LOG ("ignoring redundant resolved unit %d", unit);
+      } else {
+	LOG ("assigning resolved unit %d", unit);
+	assign (unit);
+      }
+    }
+    if (!unsat && !propagate ()) {
+      LOG ("propagating resolved units results in empty clause");
+      learn_empty_clause ();
+    }
+    dec_bytes (bytes_vector (units));
+    erase_vector (units);
+    garbage_collection ();
+  } else account_implicitly_allocated_bytes ();
 
   lim.subsumptions_at_last_elim = stats.subsumptions;
   report ('e');
 
   STOP_AND_SWITCH (elim, simplify, search);
 
-  return eliminated > 0;
+  return !unsat && eliminated > 0;
 }
 
 /*------------------------------------------------------------------------*/

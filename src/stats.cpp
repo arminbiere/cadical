@@ -35,6 +35,8 @@ void Stats::print (Internal * internal) {
     stats.reused, percent (stats.reused, stats.restarts));
   MSG ("resolutions:   %15ld   %10.2f    per eliminated",
     stats.resolutions, relative (stats.resolutions, stats.eliminated));
+  MSG ("restests:      %15ld   %10.2f    tests per resolution",
+    stats.restests, relative (stats.restests, stats.resolutions));
   MSG ("eliminated:    %15ld   %10.2f %%  of all variables",
     stats.eliminated, percent (stats.eliminated, internal->max_var));
   MSG ("fixed:         %15ld   %10.2f %%  of all variables",
