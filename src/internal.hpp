@@ -167,7 +167,7 @@ class Internal {
   Flags & flags (int lit)     { return ftab[vidx (lit)]; }
 
   const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
-  
+
   const bool occs () const { return otab != 0; }
   const bool watches () const { return wtab != 0; }
 

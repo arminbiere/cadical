@@ -136,20 +136,22 @@ void Internal::add_original_lit (int lit) {
 
 /*------------------------------------------------------------------------*/
 
+// This is the main CDCL with interleaved inprocessing loop.
+
 int Internal::search () {
   int res = 0;
   START (search);
   while (!res)
          if (unsat) res = 20;
-    else if (!propagate ()) analyze ();
-    else if (iterating) iterate ();
-    else if (satisfied ()) res = 10;
-    else if (terminating ()) break;
-    else if (restarting ()) restart ();
-    else if (reducing ()) reduce ();
-    else if (subsuming ()) subsume ();
-    else if (eliminating ()) elim ();
-    else decide ();
+    else if (!propagate ()) analyze (); // analyze propagated conflict
+    else if (iterating) iterate ();     // report learned unit
+    else if (satisfied ()) res = 10;    // all variables satisfied
+    else if (terminating ()) break;     // limit hit or asynchronous abort
+    else if (restarting ()) restart (); // restart by backtracking
+    else if (reducing ()) reduce ();    // collect useless learned clauses
+    else if (subsuming ()) subsume ();  // run subsumption algorithm
+    else if (eliminating ()) elim ();   // run bounded variable elimination
+    else decide ();                     // otherwise pick next decision
   STOP (search);
   return res;
 }
@@ -214,7 +216,7 @@ void Internal::check (int (Internal::*a)(int) const) {
       fflush (stdout);
       fprintf (stderr,
         "*** cadical error: inconsistently assigned literals %d and %d\n",
-	idx, -idx);
+        idx, -idx);
       fflush (stderr);
       abort ();
     }

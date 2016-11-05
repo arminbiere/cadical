@@ -111,7 +111,7 @@ inline int Internal::subsume_check (Clause * subsuming,
   //
   assert (subsuming != subsumed);
   assert (subsuming->size <= subsumed->size);
-  
+
   stats.subchecks++;
   const const_literal_iterator end = subsuming->end ();
   int flipped = 0;

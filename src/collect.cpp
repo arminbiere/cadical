@@ -232,7 +232,7 @@ void Internal::move_non_garbage_clauses () {
     for (int sign = -1; sign <= 1; sign += 2) {
       for (int idx = 1; idx <= max_var; idx++) {
         const Watches & ws = watches (sign * phases[idx] * idx);
-	const const_watch_iterator ew = ws.end ();
+        const const_watch_iterator ew = ws.end ();
         for (const_watch_iterator i = ws.begin (); i != ew; i++)
           if (!(c = i->clause)->moved && !c->collect ()) move_clause (c);
       }
@@ -247,7 +247,7 @@ void Internal::move_non_garbage_clauses () {
     for (int sign = -1; sign <= 1; sign += 2) {
       for (int idx = queue.last; idx; idx = link (idx).prev) {
         const Watches & ws = watches (sign * phases[idx] * idx);
-	const const_watch_iterator ew = ws.end ();
+        const const_watch_iterator ew = ws.end ();
         for (const_watch_iterator i = ws.begin (); i != ew; i++)
           if (!(c = i->clause)->moved && !c->collect ()) move_clause (c);
       }

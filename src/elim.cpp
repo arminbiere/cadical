@@ -118,10 +118,10 @@ bool Internal::resolvents_are_bounded (int pivot, vector<Clause*> & res) {
       if (have_tautological_resolvent (c, d)) continue;
       if (c->size + d->size - 2 > opts.elimclslim) too_long = true;
       else {
-	res.push_back (c);
-	res.push_back (d);
-	count++;
-	LOG ("now have %ld non-tautological resolvents", count);
+        res.push_back (c);
+        res.push_back (d);
+        count++;
+        LOG ("now have %ld non-tautological resolvents", count);
       }
     }
   }
@@ -146,7 +146,7 @@ bool Internal::resolvents_are_bounded (int pivot, vector<Clause*> & res) {
 
 inline void Internal::add_resolvents (int pivot,
                                       vector<Clause*> & res,
-				      vector<int> & units) {
+                                      vector<int> & units) {
 
   LOG ("adding all %ld resolvents on %d", (long) res.size ()/2, pivot);
 
@@ -174,9 +174,9 @@ inline void Internal::add_resolvents (int pivot,
       assert (occs ());
       const const_literal_iterator re = r->end ();
       for (const_literal_iterator l = r->begin (); l != re; l++) {
-	Occs & os = occs (*l);
-	if (os.empty ()) continue;	// was not connected ...
-	occs (*l).push_back (r);
+        Occs & os = occs (*l);
+        if (os.empty ()) continue;      // was not connected ...
+        occs (*l).push_back (r);
       }
     }
     clause.clear ();
@@ -235,7 +235,7 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
 
 inline void Internal::elim (int pivot,
                             vector<Clause*> & work,
-			    vector<int> & units) {
+                            vector<int> & units) {
 
   // First remove garbage clauses to get a (more) accurate count. There
   // might still be satisfied clauses included in this count which we have
@@ -296,10 +296,10 @@ bool Internal::elim_round () {
     const_literal_iterator j;
     if (c->size > size_limit)
       for (j = c->begin (); j != eol; j++)
-	noccs (*j) = occ_limit_exceeded;	// thus not scheduled
+        noccs (*j) = occ_limit_exceeded;        // thus not scheduled
     else
       for (j = c->begin (); j != eol; j++)
-	if (!val (*j)) noccs (*j)++;
+        if (!val (*j)) noccs (*j)++;
   }
 
   char * connected;
@@ -425,13 +425,13 @@ bool Internal::elim_round () {
       int unit = *i;
       const int tmp = val (unit);
       if (tmp < 0) {
-	LOG ("found clashing resolved unit %d", unit);
-	learn_empty_clause ();
+        LOG ("found clashing resolved unit %d", unit);
+        learn_empty_clause ();
       } else if (tmp > 0) {
-	LOG ("ignoring redundant resolved unit %d", unit);
+        LOG ("ignoring redundant resolved unit %d", unit);
       } else {
-	LOG ("assigning resolved unit %d", unit);
-	assign (unit);
+        LOG ("assigning resolved unit %d", unit);
+        assign (unit);
       }
     }
     if (!unsat && !propagate ()) {
