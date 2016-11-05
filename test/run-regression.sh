@@ -114,6 +114,8 @@ run full6 20
 run full7 20
 
 run regr000 10
+run elimclash 20
+run elimredundant 10
 
 run prime4 10
 run prime9 10

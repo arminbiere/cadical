@@ -417,7 +417,6 @@ bool Internal::elim_round () {
   erase_vector (schedule);
   erase_vector (work);
 
-  COVER (!units.empty ());
   if (!units.empty ()) {
     const const_int_iterator eou = units.end ();
     const_int_iterator i;
