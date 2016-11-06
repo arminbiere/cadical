@@ -33,7 +33,7 @@ void Internal::unprotect_reasons () {
 }
 
 // Clause with smaller glucose level (glue) are considered more useful.
-// Then we use the 'resolved' time stamp as a tie breaker.  So more recently
+// Then we use the 'analyzed' time stamp as a tie breaker.  So more recently
 // resolved clauses are preferred to keep (if they have the same glue).
 
 struct less_usefull {

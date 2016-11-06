@@ -29,7 +29,7 @@ size_t Internal::bytes_clause (int size) {
 }
 
 // Redundant clauses of large glue and large size are extended to hold a
-// 'resolved' time stamp.  This makes memory allocation and deallocation a
+// 'analyzed' time stamp.  This makes memory allocation and deallocation a
 // little bit tricky but saves space and time.  Since the embedding of the
 // literals is really important and on the same level of complexity we keep
 // both optimizations.

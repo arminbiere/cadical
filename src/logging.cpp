@@ -26,7 +26,7 @@ void Logger::log (Internal * internal, const Clause * c, const char *fmt, ...) {
   if (c) {
     if (!c->redundant) printf (" irredundant");
     else if (!c->extended) printf (" redundant glue %u", c->glue);
-    else printf (" redundant glue %u resolved %ld", c->glue, c->analyzed ());
+    else printf (" redundant glue %u analyzed %ld", c->glue, c->analyzed ());
     printf (" size %d clause", c->size);
     const const_literal_iterator end = c->end ();
     const_literal_iterator i = c->begin ();
