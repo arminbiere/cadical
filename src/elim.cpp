@@ -38,7 +38,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   assert (!level);
   assert (clause.empty ());
 
-  int p = 0;		// pivot in 'c' for debugging purposes
+  int p = 0;            // pivot in 'c' for debugging purposes
 
   bool satisfied = false;
 
@@ -60,10 +60,10 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
     unmark (c);
     return false;
   }
-  assert (p), (void) p;	// 'pivot' or '-pivot' has to be in 'c'
+  assert (p), (void) p; // 'pivot' or '-pivot' has to be in 'c'
 
-  int q = 0;		// pivot in 'd' for debugging purposes
-  int tautological = 0;	// clashing literal if tautological
+  int q = 0;            // pivot in 'd' for debugging purposes
+  int tautological = 0; // clashing literal if tautological
 
   end = d->end ();
   for (i = d->begin ();
@@ -127,7 +127,7 @@ bool Internal::resolvents_are_bounded (int pivot) {
 
   Occs & ps = occs (pivot), & ns = occs (-pivot);
   long pos = ps.size (), neg = ns.size ();
-  assert (pos <= neg);       			// better, but not crucial
+  assert (pos <= neg);                          // better, but not crucial
 
   // Bound the number of non-tautological resolvents by the number of
   // positive and negative occurrences, such that the number of clauses to
@@ -137,7 +137,7 @@ bool Internal::resolvents_are_bounded (int pivot) {
   LOG ("try to eliminate %d with %ld = %ld + %ld occurrences",
     pivot, bound, pos, neg);
 
-  long count = 0;		// number of non-tautological resolvents
+  long count = 0;               // number of non-tautological resolvents
 
   // Try all resolutions between a positive occurrence (outer loop) of
   // 'pivot' and a negative occurrence of 'pivot' (inner loop) as long the
@@ -153,18 +153,18 @@ bool Internal::resolvents_are_bounded (int pivot) {
       Clause * d = *j;
       if (d->garbage) continue;
       if (resolve_clauses (c, pivot, d)) {
-	const int size = (int) clause.size ();
-	clause.clear ();
-	if (size > opts.elimclslim) {
-	  LOG ("resolvent exceeds limit on resolvent size");
-	  return false;
-	} 
-	if (++count > bound) {
-	  LOG ("too many %ld non-tautological resolvents on %d",
-	    count, pivot);
-	  return false;
-	}
-	LOG ("now have %ld non-tautological resolvents", count);
+        const int size = (int) clause.size ();
+        clause.clear ();
+        if (size > opts.elimclslim) {
+          LOG ("resolvent exceeds limit on resolvent size");
+          return false;
+        }
+        if (++count > bound) {
+          LOG ("too many %ld non-tautological resolvents on %d",
+            count, pivot);
+          return false;
+        }
+        LOG ("now have %ld non-tautological resolvents", count);
       } else if (unsat) return false;
     }
   }
@@ -195,15 +195,15 @@ inline void Internal::add_resolvents (int pivot) {
   for (i = ps.begin (); !unsat && i != eop; i++) {
     for (j = ns.begin (); !unsat && j != eon; j++) {
       if (resolve_clauses (*i, pivot, *j)) {
-	resolvents++;
-	Clause * r = new_resolved_irredundant_clause ();
-	const const_literal_iterator re = r->end ();
-	for (const_literal_iterator l = r->begin (); l != re; l++) {
-	  Occs & os = occs (*l);
-	  if (os.empty ()) continue;      // was not connected ...
-	  occs (*l).push_back (r);
-	}
-	clause.clear ();
+        resolvents++;
+        Clause * r = new_resolved_irredundant_clause ();
+        const const_literal_iterator re = r->end ();
+        for (const_literal_iterator l = r->begin (); l != re; l++) {
+          Occs & os = occs (*l);
+          if (os.empty ()) continue;      // was not connected ...
+          occs (*l).push_back (r);
+        }
+        clause.clear ();
       }
     }
   }

@@ -76,7 +76,7 @@ void Internal::mark_satisfied_clauses_as_garbage () {
     Clause * c = *i;
     if (c->garbage) continue;
     const int tmp = clause_contains_fixed_literal (c);
-	 if (tmp > 0) mark_garbage (c);
+         if (tmp > 0) mark_garbage (c);
     else if (tmp < 0) remove_falsified_literals (c);
   }
 }
