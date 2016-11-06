@@ -193,7 +193,7 @@ inline void Internal::add_resolvents (int pivot) {
   const const_clause_iterator eop = ps.end (), eon = ns.end ();
   const_clause_iterator i, j;
   for (i = ps.begin (); !unsat && i != eop; i++) {
-    for (j = ps.begin (); !unsat && j != eon; j++) {
+    for (j = ns.begin (); !unsat && j != eon; j++) {
       if (resolve_clauses (*i, pivot, *j)) {
 	resolvents++;
 	Clause * r = new_resolved_irredundant_clause ();

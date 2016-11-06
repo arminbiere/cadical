@@ -37,7 +37,8 @@ inline void Internal::assign (int lit, Clause * reason, int other) {
   // low-level optimization it is confined to the next line (and these
   // comments), so we keep it.
   //
-  if (opts.prefetch) __builtin_prefetch (&*(watches (-lit).begin ()));
+  if (opts.prefetch && watches ())
+    __builtin_prefetch (&*(watches (-lit).begin ()));
 }
 
 /*------------------------------------------------------------------------*/

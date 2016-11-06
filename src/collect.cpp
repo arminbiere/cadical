@@ -38,13 +38,16 @@ int Internal::clause_contains_fixed_literal (Clause * c) {
 // after flushing out root level falsified literals.
 
 void Internal::remove_falsified_literals (Clause * c) {
-  if (c->reason || c->size == 2) return;
-  if (proof) proof->trace_flushing_clause (c);
   const const_literal_iterator end = c->end ();
-  const_literal_iterator i = c->begin ();
+  const_literal_iterator i;
+  int num_non_false = 0;
+  for (i = c->begin (); num_non_false < 2 && i != end; i++)
+    if (fixed (*i) >= 0) num_non_false++;
+  if (num_non_false < 2) return;
+  if (proof) proof->trace_flushing_clause (c);
   literal_iterator j = c->begin ();
-  while (i != end) {
-    const int lit = *j++ = *i++, tmp = fixed (lit);
+  for (i = j; i != end; i++) {
+    const int lit = *j++ = *i, tmp = fixed (lit);
     assert (tmp <= 0);
     if (tmp >= 0) continue;
     LOG ("flushing %d", lit);
@@ -61,22 +64,21 @@ void Internal::remove_falsified_literals (Clause * c) {
 
 void Internal::mark_satisfied_clauses_as_garbage () {
 
-  assert (propagated == trail.size ());
-
   // Only needed if there are new units (fixed variables) since last time.
   //
   if (lim.fixed_at_last_collect >= stats.fixed) return;
+  lim.fixed_at_last_collect = stats.fixed;
+
+  LOG ("marking satisfied clauses and removing falsified literals");
 
   const_clause_iterator i;
   for (i = clauses.begin (); i != clauses.end (); i++) {
     Clause * c = *i;
     if (c->garbage) continue;
     const int tmp = clause_contains_fixed_literal (c);
-         if (tmp > 0) mark_garbage (c);
+	 if (tmp > 0) mark_garbage (c);
     else if (tmp < 0) remove_falsified_literals (c);
   }
-
-  lim.fixed_at_last_collect = stats.fixed;
 }
 
 /*------------------------------------------------------------------------*/
@@ -117,7 +119,7 @@ void Internal::flush_watches (int lit) {
 
       // During 'reduce' root level falsified literals might be removed in
       // which case the actual clause size does not match the saved size in
-      // the watch lists.  If this is the case we update both size and
+      // the watch lists.  If this is the case we update both size and then
       // eagerly the blocking literal (even if it got not removed). Note
       // that if the clause size and watch list size match, then there is no
       // need to update the watch, except if the clause was moved.
