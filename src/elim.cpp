@@ -18,54 +18,97 @@ bool Internal::eliminating () {
 
 /*------------------------------------------------------------------------*/
 
-bool Internal::have_tautological_resolvent (Clause * c, Clause * d) {
-  stats.restests++;
-  assert (!c->garbage);
-  assert (!d->garbage);
-  if (c->size > d->size) swap (c, d);
-  LOG (c, "testing resolution with first antecedent");
-  LOG (d, "testing resolution with second antecedent");
-  mark (c);
-  int clashing = 0;
-  const const_literal_iterator end = d->end ();
-  const_literal_iterator i;
-  for (i = d->begin (); clashing < 2 && i != end; i++)
-    if (marked (*i) < 0) clashing++;
-  unmark (c);
-  assert (clashing > 0);
-  const bool tautological = (clashing > 1);
-#ifdef LOGGING
-  if (tautological) LOG ("have tautological resolvent");
-  else LOG ("have non-tautological resolvent");
-#endif
-  return tautological;
-}
+// Resolve two clauses on the pivot literal 'pivot', which is assumed to
+// occur in opposite phase in 'c' and 'd'.  The actual resolvent is stored
+// in the temporary global 'clause' if it is not redundant.  It is
+// considered redundant if one of the clauses is already marked as garbage
+// or is root level satisfied, or the resolvent is empty or a unit taking
+// the current root level assignment into account, e.g., by removing root
+// level falsified literals.  It returns true if the resolution is not
+// redundant and for instance has to be taken into account during bounded
+// variable elimination.
 
-void Internal::resolve_clauses (Clause * c, Clause * d) {
+bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
+
   stats.resolutions++;
-  assert (clause.empty ());
-  assert (!c->garbage);
-  assert (!d->garbage);
+
+  if (c->garbage || d->garbage) return false;
   if (c->size > d->size) swap (c, d);
-  LOG (c, "resolving first antecedent");
-  LOG (d, "resolving second antecedent");
+
+  assert (!level);
+  assert (clause.empty ());
+
+  int p = 0;		// pivot in 'c' for debugging purposes
+
+  bool satisfied = false;
+
   const_literal_iterator end = c->end ();
   const_literal_iterator i;
-  for (i = c->begin (); i != end; i++) mark (*i);
-  int pivot = 0;
-  end = d->end ();
-  for (i = d->begin (); i != end; i++) {
-    const int lit = *i, tmp = marked (lit);
-    if (tmp > 0) continue;
-    else if (!tmp) clause.push_back (lit);
-    else assert (!pivot), pivot = -lit;
-  }
-  end = c->end ();
-  for (i = c->begin (); i != end; i++) {
+
+  for (i = c->begin (); !satisfied && i != end; i++) {
     const int lit = *i;
-    if (lit != pivot) clause.push_back (lit);
-    unmark (lit);
+    if (lit == pivot || lit == -pivot) { p = lit; continue; }
+    const int tmp = val (lit);
+    if (tmp > 0) satisfied = true;
+    else if (tmp < 0) continue;
+    else mark (lit), clause.push_back (lit);
   }
+  if (satisfied) {
+    LOG (c, "satisfied antecedent");
+    mark_garbage (c);
+    clause.clear ();
+    unmark (c);
+    return false;
+  }
+  assert (p);		// 'pivot' or '-pivot' has to be in 'c'
+
+  int q = 0;		// pivot in 'd' for debugging purposes
+  int tautological = 0;	// clashing literal if tautological
+
+  end = d->end ();
+  for (i = d->begin ();
+       !satisfied && !tautological && i != end;
+       i++) {
+    const int lit = *i;
+    if (lit == pivot || lit == -pivot) { q = lit; continue; }
+    int tmp = val (lit);
+    if (tmp > 0) satisfied = true;
+    else if (tmp < 0) continue;
+    else if ((tmp = marked (lit)) < 0) tautological = lit;
+    else if (!tmp) clause.push_back (lit);
+  }
+
+  unmark (c);
+  const size_t size = clause.size ();
+  if (tautological || satisfied || size <= 1) clause.clear ();
+
+  if (satisfied) {
+    LOG (d, "satisfied antecedent");
+    mark_garbage (d);
+    return false;
+  }
+
+  // If the resolvent is not tautological, e.g., we went over all of 'd',
+  // then 'd' also has to contain either 'pivot' or '-pivot' which is saved
+  // in 'q' and the phase of the pivot has to be the opposite as in 'c'.
+  //
+  assert (tautological || q == -p);
+
+  LOG (c, "first antecedent");
+  LOG (d, "second antecedent");
+
+  if (tautological)
+    LOG ("resolvent tautological on %d", tautological);
+  else if (!size) {
+    LOG ("empty resolvent");
+    learn_empty_clause ();
+  } else if (size == 1) {
+    const int unit = clause[0];
+    LOG ("unit resolvent %d", unit);
+    assign (unit);
+  } else LOG (clause, "resolvent");
+
+  return size > 1 && !tautological;
 }
 
 /*------------------------------------------------------------------------*/
@@ -74,68 +117,61 @@ void Internal::resolve_clauses (Clause * c, Clause * d) {
 // smaller or equal to the number of clauses with 'pivot' or '-pivot'.  This
 // is the main criteria of bounded variable elimination.
 
-bool Internal::resolvents_are_bounded (int pivot, vector<Clause*> & res) {
+bool Internal::resolvents_are_bounded (int pivot) {
 
   LOG ("checking whether resolvents on %d are bounded", pivot);
 
+  assert (!unsat);
   assert (!val (pivot));
   assert (!eliminated (pivot));
 
-  // Beside determining whether the number of non-tautological resolvents is
-  // too large, this function also produces the list of all consecutive
-  // pairs of clauses, with non-tautological resolvent such that latter in
-  // 'add_resolvents' these can actually be resolved and added.
-
-  res.clear ();               // pairs of non-tautological resolvents
-  long count = 0;             // maintain 'count == res.size ()/2'
-
   Occs & ps = occs (pivot), & ns = occs (-pivot);
   long pos = ps.size (), neg = ns.size ();
+  assert (pos <= neg);       			// better, but not crucial
 
-  assert (pos <= neg);       // better, but not crucial ...
-
-  // Bound on the number non-tautological resolvents.
-
+  // Bound the number of non-tautological resolvents by the number of
+  // positive and negative occurrences, such that the number of clauses to
+  // be added is at most the number of removed clauses.
+  //
   long bound = pos + neg;
-
   LOG ("try to eliminate %d with %ld = %ld + %ld occurrences",
     pivot, bound, pos, neg);
+
+  long count = 0;		// number of non-tautological resolvents
 
   // Try all resolutions between a positive occurrence (outer loop) of
   // 'pivot' and a negative occurrence of 'pivot' (inner loop) as long the
   // bound on non-tautological resolvents is not hit and the size of the
   // generated resolvents does not exceed the resolvent size limit.
   //
-  const const_clause_iterator pe = ps.end ();
-  const_clause_iterator i;
-  bool too_long = false;
-  for (i = ps.begin (); !too_long && count <= bound && i != pe; i++) {
+  const const_clause_iterator pe = ps.end (), ne = ns.end ();
+  const_clause_iterator i, j;
+  for (i = ps.begin (); i != pe; i++) {
     Clause * c = *i;
-    const const_clause_iterator ne = ns.end ();
-    const_clause_iterator j;
-    for (j = ns.begin (); !too_long && count <= bound && j != ne; j++) {
+    if (c->garbage) continue;
+    for (j = ns.begin (); j != ne; j++) {
       Clause * d = *j;
-      if (have_tautological_resolvent (c, d)) continue;
-      if (c->size + d->size - 2 > opts.elimclslim) too_long = true;
-      else {
-        res.push_back (c);
-        res.push_back (d);
-        count++;
-        LOG ("now have %ld non-tautological resolvents", count);
-      }
+      if (d->garbage) continue;
+      if (resolve_clauses (c, pivot, d)) {
+	const int size = (int) clause.size ();
+	clause.clear ();
+	if (size > opts.elimclslim) {
+	  LOG ("resolvent exceeds limit on resolvent size");
+	  return false;
+	} 
+	if (++count > bound) {
+	  LOG ("too many %ld non-tautological resolvents on %d",
+	    count, pivot);
+	  return false;
+	}
+	LOG ("now have %ld non-tautological resolvents", count);
+      } else if (unsat) return false;
     }
   }
-#ifdef LOGGING
-  if (too_long)
-    LOG ("resolvent exceeds limit on resolvent size");
-  else if (count > bound)
-    LOG ("found too many %ld non-tautological resolvents on %d",
-      count, pivot);
-  else
-    LOG ("found only %ld <= %ld non-tautological resolvents on %d",
-      count, bound, pivot);
-#endif
-  return !too_long && count <= bound;
+
+  LOG ("expecting %ld <= %ld non-tautological resolvents", count, bound);
+
+  return true;
 }
 
 /*------------------------------------------------------------------------*/
@@ -144,44 +180,33 @@ bool Internal::resolvents_are_bounded (int pivot, vector<Clause*> & res) {
 // Be careful with empty and unit resolvents and ignore satisfied clauses
 // and falsified literals. If units are resolved then propagate them.
 
-inline void Internal::add_resolvents (int pivot,
-                                      vector<Clause*> & res,
-                                      vector<int> & units) {
+inline void Internal::add_resolvents (int pivot) {
 
-  LOG ("adding all %ld resolvents on %d", (long) res.size ()/2, pivot);
+  LOG ("adding all resolvents on %d", pivot);
 
   assert (!val (pivot));
   assert (!eliminated (pivot));
 
   long resolvents = 0;
 
-  const const_clause_iterator end = res.end ();
-  const_clause_iterator i = res.begin ();
-  while (!unsat && i != end) {
-    resolve_clauses (*i++, *i++);
-    check_clause ();
-    if (clause.empty ()) {
-      LOG ("empty resolvent");
-      learn_empty_clause ();
-    } else if (clause.size () == 1) {
-      const int unit = clause[0];
-      LOG ("saving unit resolvent %d", unit);
-      if (proof) proof->trace_unit_clause (unit);
-      units.push_back (unit);
-    } else {
-      resolvents++;
-      Clause * r = new_resolved_irredundant_clause ();
-      assert (occs ());
-      const const_literal_iterator re = r->end ();
-      for (const_literal_iterator l = r->begin (); l != re; l++) {
-        Occs & os = occs (*l);
-        if (os.empty ()) continue;      // was not connected ...
-        occs (*l).push_back (r);
+  Occs & ps = occs (pivot), & ns = occs (-pivot);
+  const const_clause_iterator eop = ps.end (), eon = ns.end ();
+  const_clause_iterator i, j;
+  for (i = ps.begin (); !unsat && i != eop; i++) {
+    for (j = ps.begin (); !unsat && j != eon; j++) {
+      if (resolve_clauses (*i, pivot, *j)) {
+	resolvents++;
+	Clause * r = new_resolved_irredundant_clause ();
+	const const_literal_iterator re = r->end ();
+	for (const_literal_iterator l = r->begin (); l != re; l++) {
+	  Occs & os = occs (*l);
+	  if (os.empty ()) continue;      // was not connected ...
+	  occs (*l).push_back (r);
+	}
+	clause.clear ();
       }
     }
-    clause.clear ();
   }
-
   LOG ("added %ld resolvents to eliminate %d", resolvents, pivot);
 }
 
@@ -233,9 +258,12 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
 
 // Try to eliminate 'pivot' by bounded variable elimination.
 
-inline void Internal::elim (int pivot,
-                            vector<Clause*> & work,
-                            vector<int> & units) {
+inline void Internal::elim_variable (int pivot) {
+
+  if (val (pivot)) return;
+
+  LOG ("trying to eliminate %d", pivot);
+  assert (!eliminated (pivot));
 
   // First remove garbage clauses to get a (more) accurate count. There
   // might still be satisfied clauses included in this count which we have
@@ -246,8 +274,10 @@ inline void Internal::elim (int pivot,
 
   // If number of occurrences became too large do not eliminate variable.
   //
-  if (pos > opts.elimocclim) return;
-  if (neg > opts.elimocclim) return;
+  if (pos > opts.elimocclim || neg > opts.elimocclim) {
+    LOG ("now have too many occurrences of %d", pivot);
+    return;
+  }
 
   // The 'mark_clauses_with_literal_garbage' benefits from having the
   // 'pivot' in the phase with less occurrences than its negation.  It
@@ -255,9 +285,12 @@ inline void Internal::elim (int pivot,
   //
   if (pos > neg) pivot = -pivot;
 
-  if (!resolvents_are_bounded (pivot, work)) return;
+  if (!resolvents_are_bounded (pivot)) {
+    LOG ("kept and not eliminated %d", pivot);
+    return;
+  }
 
-  add_resolvents (pivot, work, units);
+  add_resolvents (pivot);
   if (!unsat) mark_eliminated_clauses_as_garbage (pivot);
 
   LOG ("eliminated %d", pivot);
@@ -386,7 +419,6 @@ bool Internal::elim_round () {
   }
 
   DEL (connected, char, max_var + 1);
-  vector<int> units;
 
   const long old_resolutions = stats.resolutions;
   const int old_eliminated = stats.eliminated;
@@ -396,14 +428,10 @@ bool Internal::elim_round () {
   const long irredundant_limit = stats.irredundant;
   const const_idx_sum_occs_iterator eos = schedule.end ();
   const_idx_sum_occs_iterator k;
-  vector<Clause*> work;
   for (k = schedule.begin (); !unsat && k != eos; k++) {
     if (stats.garbage > irredundant_limit) garbage_collection ();
-    elim (k->idx, work, units);
+    elim_variable (k->idx);
   }
-
-  inc_bytes (bytes_vector (work));
-  inc_bytes (bytes_vector (units));
 
   // Mark all redundant clauses with eliminated variables as garbage.
   //
@@ -426,37 +454,19 @@ bool Internal::elim_round () {
   long resolutions = stats.resolutions - old_resolutions;
   int eliminated = stats.eliminated - old_eliminated;
   VRB ("elim", stats.eliminations,
-    "eliminated %ld variables %.0f%% in %ld resolutions %ld units",
-    eliminated, percent (eliminated, scheduled),
-    resolutions, units.size ());
+    "eliminated %ld variables %.0f%% in %ld resolutions",
+    eliminated, percent (eliminated, scheduled), resolutions);
 
-  dec_bytes (bytes_vector (work));
-  dec_bytes (bytes_vector (units));
   dec_bytes (bytes_vector (schedule));
   erase_vector (schedule);
-  erase_vector (work);
 
-  if (!units.empty ()) {
-    const const_int_iterator eou = units.end ();
-    const_int_iterator i;
-    for (i = units.begin (); i != eou; i++) {
-      int unit = *i;
-      const int tmp = val (unit);
-      if (tmp < 0) {
-        LOG ("found clashing resolved unit %d", unit);
-        learn_empty_clause ();
-      } else if (tmp > 0) {
-        LOG ("ignoring redundant resolved unit %d", unit);
-      } else {
-        LOG ("assigning resolved unit %d", unit);
-        assign (unit);
-      }
-    }
-    if (!unsat && !propagate ()) {
-      LOG ("propagating resolved units results in empty clause");
+  if (unsat) LOG ("elimination derived empty clause");
+  else if (propagated < trail.size ()) {
+    LOG ("elimination produced %ld units", trail.size () - propagated);
+    if (!propagate ()) {
+      LOG ("propagating units results in empty clause");
       learn_empty_clause ();
     }
-    erase_vector (units);
     garbage_collection ();
   } else account_implicitly_allocated_bytes ();
 
@@ -496,7 +506,7 @@ void Internal::elim () {
   int eliminated = stats.eliminated - old_eliminated;
   double relelim = percent (eliminated, old_var);
   VRB ("elim", stats.eliminations,
-    "elimination %ld eliminated %d variables %.2f% in %d rounds",
+    "eliminated %d variables %.2f% in %d rounds",
     eliminated, relelim, round);
 
   // Schedule next elimination based on number of eliminated variables.

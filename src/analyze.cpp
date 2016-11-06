@@ -14,7 +14,7 @@ namespace CaDiCaL {
 // main function is 'analyze' below.  It further uses 'minimize' to minimize
 // the first UIP clause, which is in 'minimize.cpp'.  An important side
 // effect of conflict analysis is to update the decision queue by bumping
-// variables.  Similarly resolved clauses are bumped to mark them as active.
+// variables.  Similarly analyzed clauses are bumped to mark them as active.
 
 /*------------------------------------------------------------------------*/
 
@@ -113,22 +113,21 @@ void Internal::bump_variables () {
 /*------------------------------------------------------------------------*/
 
 // Clause activity is replaced by a move-to-front scheme as well with
-// 'resolved' as time stamp.  Only long and high glue clauses are stamped
+// 'analyzed' as time stamp.  Only long and high glue clauses are stamped
 // since small or low glue clauses are kept anyhow (and do not actually have
-// a 'resolved' field).  We keep the relative order of bumped clauses by
+// a 'analyzed' field).  We keep the relative order of bumped clauses by
 // sorting them first.
 
-void Internal::bump_resolved_clauses () {
-  if (!opts.resolve) { assert (resolved.empty ()); return; }
+void Internal::bump_analyzed_clauses () {
   START (bump);
-  sort (resolved.begin (), resolved.end (), resolved_earlier ());
+  sort (resolved.begin (), resolved.end (), analyzed_earlier ());
   for (const_clause_iterator i = resolved.begin (); i != resolved.end (); i++)
-    (*i)->resolved () = ++stats.resolved;
+    (*i)->analyzed () = ++stats.analyzed;
   STOP (bump);
   resolved.clear ();
 }
 
-inline void Internal::resolve_clause (Clause * c) {
+inline void Internal::analyze_clause (Clause * c) {
   if (!c->redundant) return;
   if (c->size <= opts.keepsize) return;
   if (c->glue <= opts.keepglue) return;
@@ -168,7 +167,6 @@ inline void Internal::analyze_literal (int lit, int & open) {
 inline void
 Internal::analyze_reason (int lit, Clause * reason, int & open) {
   assert (reason);
-  if (opts.resolve) resolve_clause (reason);
   const const_literal_iterator end = reason->end ();
   const_literal_iterator j = reason->begin ();
   int other;
@@ -228,7 +226,7 @@ void Internal::analyze () {
 
   // Update glue statistics.
   //
-  bump_resolved_clauses ();
+  bump_analyzed_clauses ();
   const int glue = (int) levels.size ();
   LOG ("1st UIP clause of size %ld and glue %d",
     (long) clause.size (), glue);

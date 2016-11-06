@@ -21,7 +21,7 @@ struct Stats {
   long bumped;       // seen and bumped variables in 'analyze'
   long bumplast;     // bumped variables on last decision level
   long trailbumped;  // bumped 'reverse' instead of 'earlier'
-  long resolved;     // resolved redundant clauses in 'analyze'
+  long analyzed;     // analyzed redundant clauses
   long searched;     // searched decisions in 'decide'
   long reductions;   // 'reduce' counter
   long reduced;      // number of reduced clauses
@@ -38,7 +38,6 @@ struct Stats {
   long subchecks;    // number of pair-wise subsumption checks
   long subsumptions; // number of subsumption phases
   long resolutions;  // number of resolved clauses in eliminations
-  long restests;     // number of tried resolutions in eliminations
   long eliminations; // number of subsumption phases
   long learned;      // learned literals
   long minimized;    // minimized literals

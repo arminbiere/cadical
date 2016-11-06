@@ -40,7 +40,7 @@ struct less_usefull {
   bool operator () (Clause * c, Clause * d) {
     if (c->glue > d->glue) return true;
     if (c->glue < d->glue) return false;
-    return resolved_earlier () (c, d);
+    return analyzed_earlier () (c, d);
   }
 };
 
@@ -59,13 +59,13 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     if (c->garbage) continue;               // already marked
     if (c->size <= opts.keepsize) continue; // keep small size clauses
     if (c->glue <= opts.keepglue) continue; // keep small glue clauses
-    if (c->resolved () > lim.resolved) continue;
+    if (c->analyzed () > lim.analyzed) continue;
     stack.push_back (c);
   }
   if (opts.reduceglue)
     stable_sort (stack.begin (), stack.end (), less_usefull ());
   else
-    stable_sort (stack.begin (), stack.end (), resolved_earlier ());
+    stable_sort (stack.begin (), stack.end (), analyzed_earlier ());
 
   const_clause_iterator target = stack.begin () + stack.size ()/2;
   for (const_clause_iterator i = stack.begin (); i != target; i++) {
@@ -98,7 +98,7 @@ void Internal::reduce () {
   inc.reduce += inc.redinc;
   if (inc.redinc > 1) inc.redinc--;
   lim.reduce = stats.conflicts + inc.reduce;
-  lim.resolved = stats.resolved;
+  lim.analyzed = stats.analyzed;
   lim.conflicts_at_last_reduce = stats.conflicts;
   report ('-');
   STOP (reduce);

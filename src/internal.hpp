@@ -90,7 +90,7 @@ class Internal {
   vector<int> extension;        // original CNF for debugging
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
-  vector<Clause*> resolved;     // large clauses in 'analyze'
+  vector<Clause*> resolved;     // resolved clauses in 'analyze' & 'elim'
   vector<Timer> timers;         // active timers for profiling functions
   EMA fast_glue_avg;            // fast glue average
   EMA slow_glue_avg;            // slow glue average
@@ -269,8 +269,8 @@ class Internal {
   void shrink_clause ();
   void bump_variable (int lit);
   void bump_variables ();
-  void bump_resolved_clauses ();
-  void resolve_clause (Clause *);
+  void bump_analyzed_clauses ();
+  void analyze_clause (Clause *);
   void clear_seen ();
   void clear_levels ();
   void clear_minimized ();
@@ -342,12 +342,11 @@ class Internal {
   // Bounded variable elimination.
   //
   bool eliminating ();
-  void resolve_clauses (Clause * c, Clause * d);
-  bool have_tautological_resolvent (Clause * c, Clause * d);
-  bool resolvents_are_bounded (int pivot, vector<Clause*> &);
-  void add_resolvents (int pivot, vector<Clause*> &, vector<int> &);
+  bool resolve_clauses (Clause * c, int pivot, Clause * d);
   void mark_eliminated_clauses_as_garbage (int pivot);
-  void elim (int pivot, vector<Clause*> & res, vector<int> & units);
+  bool resolvents_are_bounded (int pivot);
+  void add_resolvents (int pivot);
+  void elim_variable (int pivot);
   bool elim_round ();
   void extend ();
   void elim ();

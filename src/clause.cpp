@@ -53,7 +53,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   res->glue = glue;
   res->size = size;
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
-  if (extended) res->resolved () = ++stats.resolved;
+  if (extended) res->analyzed () = ++stats.analyzed;
   clauses.push_back (res);
   if (red) stats.redundant++; else stats.irredundant++;
   LOG (res, "new");

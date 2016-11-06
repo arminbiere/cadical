@@ -6,7 +6,7 @@ namespace CaDiCaL {
 struct Limit {
 
   long reduce;    // conflict limit for next 'reduce'
-  long resolved;  // limit on keeping recently resolved clauses
+  long analyzed;  // limit on keeping recently analyzed clauses
   long restart;   // conflict limit for next 'restart'
   long subsume;   // conflict limit on next 'subsume'
   long elim;      // conflict limit on next 'eliminate'

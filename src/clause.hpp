@@ -26,17 +26,17 @@ namespace CaDiCaL {
 //   (2) The boolean flags only need one bit each and thus there is enough
 //   space left to merge them with a 'glue' bit field (which is less
 //   accessed than 'size').  This saves 4 bytes and also keeps the header
-//   without 'resolved' nicely in 8 bytes.  We currently use 28 bits and
+//   without 'analyzed' nicely in 8 bytes.  We currently use 28 bits and
 //   actually since we do not want to mess with 'unsigned' versus 'signed'
 //   issues just use 27 out of them.  If more boolean flags are needed this
 //   number has to be adapted accordingly.
 //
 //   (3) Original clauses and clauses with small glue or size are kept
-//   anyhow and do not need the activity counter 'resolved'.  Thus we can
-//   omit these 8 bytes used for 'resolved' for these clauses.  Redundant
-//   clauses of long size and with large glue have a 'resolved' field and
+//   anyhow and do not need the activity counter 'analyzed'.  Thus we can
+//   omit these 8 bytes used for 'analyzed' for these clauses.  Redundant
+//   clauses of long size and with large glue have a 'analyzed' field and
 //   are called 'extended'.  The non extended clauses need 8 bytes less and
-//   accessing 'resolved' for them is not allowed.
+//   accessing 'analyzed' for them is not allowed.
 //
 // With these three optimizations a binary original clause only needs 16
 // bytes instead of 40 bytes without embedding and 32 bytes with embedding
@@ -50,29 +50,29 @@ namespace CaDiCaL {
 // reduces it by one.
 //
 // Similarly if you want to add more data to extended clauses put these
-// fields after 'resolved' and before the flags section.  Then adapt the
+// fields after 'analyzed' and before the flags section.  Then adapt the
 // 'EXTENDED_OFFSET' accordingly.
 //
 // Additional fields needed for all clauses are safely put between 'glue'
 // and 'size' without the need to change anything else.  In general these
 // optimizations are local to 'clause.[hc]pp' and otherwise can be ignored
-// except that you should for instance never access 'resolved' of a clauses
+// except that you should for instance never access 'analyzed' of a clauses
 // which is not extended.  This can be checked with for instance 'valgrind'
-// but is also guarded by making the actual '_resolved' field private and
-// checking this contract in the 'resolved ()' accessors functions.
+// but is also guarded by making the actual '_analyzed' field private and
+// checking this contract in the 'analyzed ()' accessors functions.
 
 #define LD_MAX_GLUE     27      // 32 bits - (5 boolean flags)
-#define EXTENDED_OFFSET  8      // sizeof (_resolved)
+#define EXTENDED_OFFSET  8      // sizeof (_analyzed)
 
 #define MAX_GLUE ((1<<(LD_MAX_GLUE-1))-1)       // 1 bit less since signed
 
 class Clause {
 
-  long _resolved;        // time stamp when resolved last time
+  long _analyzed;        // time stamp when analyzed last time
 
 public:
 
-  unsigned extended:1;  // 'resolved' field only valid this is true
+  unsigned extended:1;  // 'analyzed' field only valid this is true
   unsigned redundant:1; // aka 'learned' so not 'irredundant' (original)
   unsigned garbage:1;   // can be garbage collected unless it is a 'reason'
   unsigned reason:1;    // reason / antecedent clause can not be collected
@@ -99,8 +99,8 @@ public:
     // Otherwise 'literals' is valid.
   };
 
-  long & resolved () { assert (extended); return _resolved; }
-  const long & resolved () const { assert (extended); return _resolved; }
+  long & analyzed () { assert (extended); return _analyzed; }
+  const long & analyzed () const { assert (extended); return _analyzed; }
 
   literal_iterator       begin ()       { return literals; }
   literal_iterator         end ()       { return literals + size; }
@@ -125,10 +125,10 @@ public:
   bool collect () const { return !reason && garbage; }
 };
 
-struct resolved_earlier {
+struct analyzed_earlier {
   bool operator () (const Clause * a, const Clause * b) {
     assert (a->extended), assert (b->extended);
-    return a->resolved () < b->resolved ();
+    return a->analyzed () < b->analyzed ();
   }
 };
 

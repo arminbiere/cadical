@@ -35,8 +35,6 @@ void Stats::print (Internal * internal) {
     stats.reused, percent (stats.reused, stats.restarts));
   MSG ("resolutions:   %15ld   %10.2f    per eliminated",
     stats.resolutions, relative (stats.resolutions, stats.eliminated));
-  MSG ("restests:      %15ld   %10.2f    tests per resolution",
-    stats.restests, relative (stats.restests, stats.resolutions));
   MSG ("eliminated:    %15ld   %10.2f %%  of all variables",
     stats.eliminated, percent (stats.eliminated, internal->max_var));
   MSG ("fixed:         %15ld   %10.2f %%  of all variables",
@@ -47,8 +45,8 @@ void Stats::print (Internal * internal) {
     stats.binaries, relative (stats.conflicts, stats.binaries));
   MSG ("trailbumped:   %15ld   %10.2f %%  per conflict",
     stats.trailbumped, percent (stats.trailbumped, stats.conflicts));
-  MSG ("resolved:      %15ld   %10.2f    per conflict",
-    stats.resolved, relative (stats.resolved, stats.conflicts));
+  MSG ("analyzed:      %15ld   %10.2f    per conflict",
+    stats.analyzed, relative (stats.analyzed, stats.conflicts));
   long learned = stats.learned - stats.minimized;
   MSG ("learned:       %15ld   %10.2f    per conflict",
     learned, relative (learned, stats.conflicts));
