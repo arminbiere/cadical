@@ -60,7 +60,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
     unmark (c);
     return false;
   }
-  assert (p);		// 'pivot' or '-pivot' has to be in 'c'
+  assert (p), (void) p;	// 'pivot' or '-pivot' has to be in 'c'
 
   int q = 0;		// pivot in 'd' for debugging purposes
   int tautological = 0;	// clashing literal if tautological
@@ -92,7 +92,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   // then 'd' also has to contain either 'pivot' or '-pivot' which is saved
   // in 'q' and the phase of the pivot has to be the opposite as in 'c'.
   //
-  assert (tautological || q == -p);
+  assert (tautological || q == -p), (void) q;
 
   LOG (c, "first antecedent");
   LOG (d, "second antecedent");
