@@ -11,8 +11,13 @@ namespace CaDiCaL {
 
 bool Internal::eliminating () {
   if (!opts.elim) return false;
+
+  // Wait until there has been a change in terms of new units or removed
+  // irredundant clauses (through subsumption).
+  //
   if (lim.fixed_at_last_elim == stats.fixed &&
       lim.irredundant_at_last_elim == stats.irredundant) return false;
+
   return lim.elim <= stats.conflicts;
 }
 
@@ -22,11 +27,11 @@ bool Internal::eliminating () {
 // occur in opposite phase in 'c' and 'd'.  The actual resolvent is stored
 // in the temporary global 'clause' if it is not redundant.  It is
 // considered redundant if one of the clauses is already marked as garbage
-// or is root level satisfied, or the resolvent is empty or a unit taking
-// the current root level assignment into account, e.g., by removing root
-// level falsified literals.  It returns true if the resolution is not
-// redundant and for instance has to be taken into account during bounded
-// variable elimination.
+// or is root level satisfied, or the resolvent is empty or a unit.
+// Note that current root level assignment are taken into account, e.g., by
+// removing root level falsified literals.  The function returns true if the
+// resolution is not redundant and for instance has to be taken into account
+// during bounded variable elimination.
 
 bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
 
@@ -45,6 +50,9 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   const_literal_iterator end = c->end ();
   const_literal_iterator i;
 
+  // First determine whether the first antecedent is satisfied, add its
+  // literal to 'clause' and mark them (except for 'pivot').
+  //
   for (i = c->begin (); !satisfied && i != end; i++) {
     const int lit = *i;
     if (lit == pivot || lit == -pivot) { p = lit; continue; }
@@ -65,6 +73,10 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   int q = 0;            // pivot in 'd' for debugging purposes
   int tautological = 0; // clashing literal if tautological
 
+  // Then determine whether the second antecedent is satisfied, add its
+  // literal to 'clause' and check whether a clashing literal is found, such
+  // that the resolvent would be tautological.
+  //
   end = d->end ();
   for (i = d->begin ();
        !satisfied && !tautological && i != end;
@@ -113,7 +125,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
 
 /*------------------------------------------------------------------------*/
 
-// Check whether the number of non-tautological resolutions on 'pivot' is
+// Check whether the number of non-tautological resolvents on 'pivot' is
 // smaller or equal to the number of clauses with 'pivot' or '-pivot'.  This
 // is the main criteria of bounded variable elimination.
 
@@ -176,9 +188,7 @@ bool Internal::resolvents_are_bounded (int pivot) {
 
 /*------------------------------------------------------------------------*/
 
-// Go over all consecutive pairs of clauses in 'res', resolve and add them.
-// Be careful with empty and unit resolvents and ignore satisfied clauses
-// and falsified literals. If units are resolved then propagate them.
+// Add all resolvents on 'pivot' and connect them.
 
 inline void Internal::add_resolvents (int pivot) {
 
@@ -214,9 +224,10 @@ inline void Internal::add_resolvents (int pivot) {
 
 // Remove clauses with 'pivot' and '-pivot' by marking them as garbage and
 // at the same time push those with 'pivot' on the extension stack for
-// latter witness reconstruction (in 'extend').
+// witness reconstruction (in 'extend').
 
 inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
+
   assert (!unsat);
 
   LOG ("marking irredundant clauses with %d as garbage", pivot);
@@ -267,7 +278,7 @@ inline void Internal::elim_variable (int pivot) {
 
   // First remove garbage clauses to get a (more) accurate count. There
   // might still be satisfied clauses included in this count which we have
-  // not found yet by we ignore this in the following check.
+  // not found yet but we ignore them in the following check.
   //
   long pos = flush_occs (pivot);
   long neg = flush_occs (-pivot);
@@ -275,7 +286,7 @@ inline void Internal::elim_variable (int pivot) {
   // If number of occurrences became too large do not eliminate variable.
   //
   if (pos > opts.elimocclim || neg > opts.elimocclim) {
-    LOG ("now have too many occurrences of %d", pivot);
+    LOG ("now too many occurrences of %d", pivot);
     return;
   }
 
@@ -328,7 +339,7 @@ bool Internal::elim_round () {
   stats.eliminations++;
 
   backtrack ();
-  reset_watches ();
+  reset_watches ();             // saves lots of memory
 
   if (lim.fixed_at_last_collect < stats.fixed) garbage_collection ();
   else account_implicitly_allocated_bytes ();
@@ -435,21 +446,24 @@ bool Internal::elim_round () {
 
   // Mark all redundant clauses with eliminated variables as garbage.
   //
-  eoc = clauses.end ();
-  for (i = clauses.begin (); i != eoc; i++) {
-    Clause * c = *i;
-    if (c->garbage || !c->redundant) continue;
-    const const_literal_iterator eol = c->end ();
-    const_literal_iterator j;
-    for (j = c->begin (); j != eol; j++)
-      if (this->eliminated (*j)) break;
-    if (j != eol) mark_garbage (c);
-  }
-  reset_occs ();
-  garbage_collection ();
+  if (!unsat) {
+    eoc = clauses.end ();
+    for (i = clauses.begin (); i != eoc; i++) {
+      Clause * c = *i;
+      if (c->garbage || !c->redundant) continue;
+      const const_literal_iterator eol = c->end ();
+      const_literal_iterator j;
+      for (j = c->begin (); j != eol; j++)
+        if (this->eliminated (*j)) break;
+      if (j != eol) mark_garbage (c);
+    }
 
-  init_watches ();
-  connect_watches ();
+    reset_occs ();
+    garbage_collection ();
+
+    init_watches ();
+    connect_watches ();
+  }
 
   long resolutions = stats.resolutions - old_resolutions;
   int eliminated = stats.eliminated - old_eliminated;
@@ -491,11 +505,13 @@ void Internal::elim () {
   else limit = opts.elimroundsinit;
   assert (limit > 0);
 
-  // Make sure there was an subsumption attempt since last elimination.
+  // Make sure there was a subsumption attempt since last elimination.
   //
   if (lim.subsumptions_at_last_elim == stats.subsumptions)
     subsume_round ();
 
+  // Alternate variable elimination and subsumption until nothing changes.
+  //
   for (;;) {
     round++;
     if (!elim_round ()) break;
