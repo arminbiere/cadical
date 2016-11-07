@@ -27,10 +27,10 @@ bool Internal::eliminating () {
 // occur in opposite phase in 'c' and 'd'.  The actual resolvent is stored
 // in the temporary global 'clause' if it is not redundant.  It is
 // considered redundant if one of the clauses is already marked as garbage
-// or is root level satisfied, or the resolvent is empty or a unit.
-// Note that current root level assignment are taken into account, e.g., by
+// it is root level satisfied, or the resolvent is empty or a unit.  Note
+// that current root level assignment are taken into account, e.g., by
 // removing root level falsified literals.  The function returns true if the
-// resolution is not redundant and for instance has to be taken into account
+// resolvent is not redundant and for instance has to be taken into account
 // during bounded variable elimination.
 
 bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
