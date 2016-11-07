@@ -4,7 +4,14 @@ prefix=/tmp/run-cadical-and-check-proof
 res=$?
 cat $prefix.log
 case $res in
-  10) precochk $1 $prefix.log; res=$?;;
+  10) 
+    precochk $1 $prefix.log | sed -e 's,^,c ,'
+    case $? in
+      0|10) res=10;;
+      20) res=20;;
+      *) res=1;;
+    esac
+    ;;
   20) drabt -v $1 $prefix.proof || exit 1;;
 esac
 exit $res

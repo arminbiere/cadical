@@ -16,13 +16,13 @@ OPTION(check,           bool, DBG, 0,  1, "save & check original CNF") \
 OPTION(clim,             int,  -1, 0,1e9, "conflict limit (-1=none)") \
 OPTION(dlim,             int,  -1, 0,1e9, "decision limit (-1=none)") \
 OPTION(elim,            bool,   1, 0,  1, "bounded variable elimination") \
-OPTION(elimclslim,       int,1000, 0,1e9, "ignore clauses of this size") \
-OPTION(elimignore,    double, 0.5, 0,  1, "ignored fraction of variables") \
+OPTION(elimclslim,       int, 1e6, 0,1e9, "ignore clauses of this size") \
+OPTION(elimignore,    double, 0.0, 0,  1, "ignored fraction of variables") \
 OPTION(eliminit,         int, 1e3, 0,1e9, "initial conflict limit") \
 OPTION(elimint,          int, 1e4, 1,1e9, "initial conflict interval") \
-OPTION(elimocclim,       int, 100, 0,1e9, "one sided occurrence limit") \
-OPTION(elimroundsinit,   int,   5, 1,1e9, "initial number of rounds") \
-OPTION(elimrounds,       int,   2, 1,1e9, "usual number of rounds") \
+OPTION(elimocclim,       int, 1e6, 0,1e9, "one sided occurrence limit") \
+OPTION(elimroundsinit,   int,  10, 1,1e9, "initial number of rounds") \
+OPTION(elimrounds,       int,   5, 1,1e9, "usual number of rounds") \
 OPTION(emabumplast,   double,1e-5, 0,  1, "alpha bump last percentage") \
 OPTION(emagluefast,   double,3e-2, 0,  1, "alpha fast glue") \
 OPTION(emaglueslow,   double,1e-5, 0,  1, "alpha slow glue") \
@@ -40,8 +40,8 @@ OPTION(profile,          int,   2, 0,  4, "profiling level") \
 OPTION(quiet,           bool,   0, 0,  1, "disable all messages") \
 OPTION(reduce,          bool,   1, 0,  1, "garbage collect clauses") \
 OPTION(reduceglue,      bool,   1, 0,  1, "reduce on glue first") \
-OPTION(reduceinc,        int, 300, 1,1e9, "reduce limit increment") \
-OPTION(reduceinit,       int,2000, 0,1e9, "initial reduce limit") \
+OPTION(reduceinc,        int, 300, 1,1e6, "reduce limit increment") \
+OPTION(reduceinit,       int,2000, 0,1e6, "initial reduce limit") \
 OPTION(restart,         bool,   1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,   4, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double, 1.1, 0, 10, "restart slow fast margin") \
@@ -55,7 +55,7 @@ OPTION(sublast,          int,   5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,   1, 0,  1, "enable clause subsumption") \
 OPTION(subsumeinc,       int, 1e4, 1,1e9, "interval in conflicts") \
 OPTION(subsumeinit,      int, 1e4, 0,1e9, "initial subsume limit") \
-OPTION(subsumeocclim,    int, 100, 0,1e9, "watch list length limit") \
+OPTION(subsumeocclim,    int, 1e5, 0,1e9, "watch list length limit") \
 OPTION(trailbump,       bool,   1, 0,  1, "use trail + bumped") \
 OPTION(trailbumplast, double,  40, 0,100, "trail bump last level limit") \
 OPTION(trailbumprops, double, 200, 0,1e9, "trail bump propagation limit") \
