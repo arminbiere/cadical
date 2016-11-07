@@ -167,6 +167,7 @@ inline void Internal::analyze_literal (int lit, int & open) {
 inline void
 Internal::analyze_reason (int lit, Clause * reason, int & open) {
   assert (reason);
+  analyze_clause (reason);
   const const_literal_iterator end = reason->end ();
   const_literal_iterator j = reason->begin ();
   int other;
