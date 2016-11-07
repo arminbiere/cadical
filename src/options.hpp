@@ -17,7 +17,7 @@ OPTION(clim,             int,  -1, 0,1e9, "conflict limit (-1=none)") \
 OPTION(dlim,             int,  -1, 0,1e9, "decision limit (-1=none)") \
 OPTION(elim,            bool,   1, 0,  1, "bounded variable elimination") \
 OPTION(elimclslim,       int,1000, 0,1e9, "ignore clauses of this size") \
-OPTION(elimignore,    double,0.33, 0,  1, "ignored fraction of variables") \
+OPTION(elimignore,    double, 0.5, 0,  1, "ignored fraction of variables") \
 OPTION(eliminit,         int, 1e3, 0,1e9, "initial conflict limit") \
 OPTION(elimint,          int, 1e4, 1,1e9, "initial conflict interval") \
 OPTION(elimocclim,       int, 100, 0,1e9, "one sided occurrence limit") \

@@ -146,8 +146,14 @@ bool Internal::resolvents_are_bounded (int pivot) {
   // be added is at most the number of removed clauses.
   //
   long bound = pos + neg;
+
   LOG ("try to eliminate %d with %ld = %ld + %ld occurrences",
     pivot, bound, pos, neg);
+
+  // From all 'pos*neg' resolvents we need that many redundant resolvents.
+  // If this number becomes zero or less we can eliminate the variable.
+  //
+  long needed = pos*neg - bound;
 
   long count = 0;               // number of non-tautological resolvents
 
@@ -158,12 +164,12 @@ bool Internal::resolvents_are_bounded (int pivot) {
   //
   const const_clause_iterator pe = ps.end (), ne = ns.end ();
   const_clause_iterator i, j;
-  for (i = ps.begin (); i != pe; i++) {
+  for (i = ps.begin (); needed >= 0 && i != pe; i++) {
     Clause * c = *i;
-    if (c->garbage) continue;
-    for (j = ns.begin (); j != ne; j++) {
+    if (c->garbage) { needed -= neg; continue; }
+    for (j = ns.begin (); needed >= 0 && j != ne; j++) {
       Clause * d = *j;
-      if (d->garbage) continue;
+      if (d->garbage) { needed--; continue; }
       if (resolve_clauses (c, pivot, d)) {
         const int size = (int) clause.size ();
         clause.clear ();
@@ -178,10 +184,12 @@ bool Internal::resolvents_are_bounded (int pivot) {
         }
         LOG ("now have %ld non-tautological resolvents", count);
       } else if (unsat) return false;
+      else needed--;
     }
   }
 
-  LOG ("expecting %ld <= %ld non-tautological resolvents", count, bound);
+  if (needed <= 0) LOG ("found enough redundant resolvents");
+  else LOG ("expecting %ld <= %ld resolvents", count, bound);
 
   return true;
 }
