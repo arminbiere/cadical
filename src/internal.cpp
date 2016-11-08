@@ -51,6 +51,7 @@ Internal::~Internal () {
   if (ltab) delete [] ltab;
   if (ftab) delete [] ftab;
   if (btab) delete [] btab;
+  if (ttab) delete [] ttab;
   if (vals) vals -= vsize, delete [] vals;
   if (solution) solution -= vsize, delete [] solution;
   if (marks) delete [] marks;
@@ -58,7 +59,6 @@ Internal::~Internal () {
   if (etab) delete [] etab;
   if (otab) reset_occs ();
   if (ntab) reset_noccs ();
-  if (ttab) ttab -= vsize, delete [] ttab;
   if (wtab) reset_watches ();
   delete output;
 }
