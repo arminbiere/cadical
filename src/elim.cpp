@@ -540,7 +540,7 @@ void Internal::elim () {
   int eliminated = stats.eliminated - old_eliminated;
   double relelim = percent (eliminated, old_var);
   VRB ("elim", stats.eliminations,
-    "eliminated %d variables %.2f% in %d rounds",
+    "eliminated %d variables %.2f%% in %d rounds",
     eliminated, relelim, round);
 
   // Schedule next elimination based on number of eliminated variables.

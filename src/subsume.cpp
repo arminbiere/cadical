@@ -203,12 +203,10 @@ inline int Internal::try_to_subsume_clause (Clause * c,
   const const_literal_iterator ec = c->end ();
   for (const_literal_iterator i = c->begin (); !d && i != ec; i++) {
     int lit = *i;
-#if 1
     if (irredundant_only &&
         touched (lit) <= old_touched &&
         touched (-lit) <= old_touched)
       continue;
-#endif
     Occs & os = occs (lit);
     const const_clause_iterator eo = os.end ();
     clause_iterator k = os.begin ();
@@ -305,7 +303,6 @@ bool Internal::subsume_round (bool irredundant_only) {
         // in the last 'reduce' operation based on their size and glue value.
         if (c->size > lim.keptsize || c->glue > lim.keptglue) continue;
       }
-#if 1
     } else if (irredundant_only) {
       const const_literal_iterator end = c->end ();
       const_literal_iterator i;
@@ -313,7 +310,6 @@ bool Internal::subsume_round (bool irredundant_only) {
 	if (touched (*i) > old_touched  ||
 	    touched (-*i) > old_touched) break;
       if (i == end) continue;
-#endif
     }
     schedule.push_back (c);
   }
@@ -322,7 +318,12 @@ bool Internal::subsume_round (bool irredundant_only) {
   stable_sort (schedule.begin (), schedule.end (), smaller_clause_size ());
 
   long scheduled = schedule.size ();
-  VRB ("subsume", stats.subsumptions, "scheduled %ld clauses", scheduled);
+  long total = stats.irredundant;
+  if (!irredundant_only) total += stats.redundant;
+  VRB ("subsume", stats.subsumptions,
+    "scheduled %ld clauses %.0f%% of all %ld %sclauses",
+    scheduled, percent (scheduled, total), total,
+    (irredundant_only ? "irredundant " : ""));
 
   // Now go over the scheduled clauses in the order of increasing size and
   // try to forward subsume and strengthen them. Forward means find smaller
