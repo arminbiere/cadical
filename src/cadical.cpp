@@ -70,7 +70,7 @@ bool Solver::proof (const char * path) {
 /*------------------------------------------------------------------------*/
 
 void Solver::banner () {
-  message ("CaDiCaL Radically Simplified CDCL SAT Internal");
+  message ("CaDiCaL Radically Simplified CDCL SAT Solver");
   message ("Version " CADICAL_VERSION " " CADICAL_GITID);
   message ("Copyright (c) 2016 Armin Biere, JKU");
   message ("");
