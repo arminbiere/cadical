@@ -89,7 +89,7 @@ public:
   signed int glue : LD_MAX_GLUE;
 
   int size;             // actual size of 'literals' (at least 2)
-  //int pos;
+  int pos;
 
   union {
     int literals[2];    // of variadic 'size' (not just 2) in general

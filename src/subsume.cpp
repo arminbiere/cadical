@@ -169,7 +169,7 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   assert (j + 1 == end);
   dec_bytes (sizeof (int));;
   c->size--;
-  // if (c->pos > c->size) c->pos = 2;
+  if (c->pos > c->size) c->pos = 2;
   if (c->redundant && c->glue > c->size) c->glue = c->size;
   if (c->extended) c->analyzed () = ++stats.analyzed;
   LOG (c, "strengthened");

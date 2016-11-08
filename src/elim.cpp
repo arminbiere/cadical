@@ -355,9 +355,6 @@ bool Internal::elim_round () {
   backtrack ();
   reset_watches ();             // saves lots of memory
 
-  if (lim.fixed_at_last_collect < stats.fixed) garbage_collection ();
-  else account_implicitly_allocated_bytes ();
-
   vector<IdxSumOccs> schedule;  // schedule of candidate variables
   init_noccs ();                // number of irredundant occurrences
 
@@ -475,8 +472,6 @@ bool Internal::elim_round () {
     }
 
     reset_occs ();
-    garbage_collection ();
-
     init_watches ();
     connect_watches ();
   }
@@ -497,12 +492,12 @@ bool Internal::elim_round () {
       LOG ("propagating units results in empty clause");
       learn_empty_clause ();
     }
-    garbage_collection ();
-  } else account_implicitly_allocated_bytes ();
+  }
 
   lim.subsumptions_at_last_elim = stats.subsumptions;
   lim.touched_at_last_elim = old_touched;
 
+  account_implicitly_allocated_bytes ();
   report ('e');
 
   STOP_AND_SWITCH (elim, simplify, search);
