@@ -82,23 +82,38 @@ bool Internal::propagate () {
         else if (!b) assign (w.blit, 0, lit);
       } else {
 	ADD (visits, 1);
-        literal_iterator lits = w.clause->begin ();
+	Clause * c = w.clause;
+        literal_iterator lits = c->begin ();
         if (lits[0] == lit) swap (lits[0], lits[1]);
         const int u = val (lits[0]);
         if (u > 0) j[-1].blit = lits[0];
         else {
           const_literal_iterator end = lits + w.size;
+#if 1
           literal_iterator k = lits + 2;
           int v = -1;
 	  while (k != end && (v = val (*k)) < 0) k++;
-	  ADD (traversed, k - (lits + 2));
+#else
+          literal_iterator k = lits + c->pos;
+          int v = -1;
+	  while (k < end && (v = val (*k)) < 0) k++;
+	  ADD (traversed, k - (lits + c->pos));
+	  if (v < 0) {
+	    k = lits + 2;
+	    end = lits + c->pos;
+	    while (k < end && (v = val (*k)) < 0) k++;
+	    ADD (traversed, k - (lits + 2));
+	  }
+	  assert (lits + 2 <= k), assert (k <= c->end ());
+	  if (v >= 0) c->pos = k - lits;
+#endif
           if (v > 0) j[-1].blit = *k;
           else if (!v) {
-            LOG (w.clause, "unwatch %d in", *k);
+            LOG (c, "unwatch %d in", *k);
             swap (lits[1], *k);
-            watch_literal (lits[1], lit, w.clause, w.size);
+            watch_literal (lits[1], lit, c, w.size);
             j--;
-          } else if (!u) assign (lits[0], w.clause, 0);
+          } else if (!u) assign (lits[0], c, 0);
           else { conflict = w.clause; break; }
         }
       }

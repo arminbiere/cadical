@@ -52,6 +52,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   res->moved = false;
   res->glue = glue;
   res->size = size;
+  //res->pos = 2;
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
   if (extended) res->analyzed () = ++stats.analyzed;
   clauses.push_back (res);
