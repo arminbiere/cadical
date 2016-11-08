@@ -526,7 +526,7 @@ void Internal::elim () {
   // Make sure there was a subsumption attempt since last elimination.
   //
   if (lim.subsumptions_at_last_elim == stats.subsumptions)
-    subsume_round ();
+    subsume_round (false);
 
   // Alternate variable elimination and subsumption until nothing changes.
   //
