@@ -82,8 +82,7 @@ void Internal::delete_clause (Clause * c) {
 }
 
 void Internal::touch_clause (Clause * c) {
-  assert (c->irredundant);
-  assert (c->garbage);
+  assert (!c->redundant);
   const const_literal_iterator end = c->end ();
   const_literal_iterator i;
   for (i = c->begin (); i != end; i++)

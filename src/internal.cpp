@@ -175,6 +175,7 @@ void Internal::init_solving () {
   inc.subsume = opts.subsumeinit;
 
   lim.touched_at_last_elim = -1;
+  lim.touched_at_last_subsume = -1;
 
   lim.elim = opts.eliminit;
   inc.elim = (opts.elimint + 1)/2;

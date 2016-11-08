@@ -84,7 +84,8 @@ bool Internal::subsuming () {
   // reduction happened where the overall allocated memory is small and we
   // got a limit on the number of kept clause in terms of size and glue.
   //
-  if (stats.conflicts != lim.conflicts_at_last_reduce) return false;
+  if (opts.reduce &&
+      stats.conflicts != lim.conflicts_at_last_reduce) return false;
 
   return stats.conflicts >= lim.subsume;
 }
@@ -154,7 +155,7 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   LOG (c, "removing %d in", remove);
   if (proof) proof->trace_strengthen_clause (c, remove);
 
-  touch_clause (c);
+  if (!c->redundant) touch_clause (c);
 
   int l0 = c->literals[0];
   int l1 = c->literals[1];
@@ -188,7 +189,9 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
 // strengthened the result is negative.  Otherwise the candidate clause
 // can not be subsumed nor strengthened and zero is returned.
 
-inline int Internal::try_to_subsume_clause (Clause * c) {
+inline int Internal::try_to_subsume_clause (Clause * c,
+                                            bool irredundant_only,
+					    long old_touched) {
 
   stats.subtried++;
   LOG (c, "trying to subsume");
@@ -200,6 +203,12 @@ inline int Internal::try_to_subsume_clause (Clause * c) {
   const const_literal_iterator ec = c->end ();
   for (const_literal_iterator i = c->begin (); !d && i != ec; i++) {
     int lit = *i;
+#if 1
+    if (irredundant_only &&
+        touched (lit) <= old_touched &&
+        touched (-lit) <= old_touched)
+      continue;
+#endif
     Occs & os = occs (lit);
     const const_clause_iterator eo = os.end ();
     clause_iterator k = os.begin ();
@@ -267,6 +276,9 @@ bool Internal::subsume_round (bool irredundant_only) {
   SWITCH_AND_START (search, simplify, subsume);
   stats.subsumptions++;
 
+  long old_touched = lim.touched_at_last_subsume;
+  lim.touched_at_last_subsume = stats.touched;
+
   // Otherwise lots of contracts fail.
   //
   backtrack ();
@@ -293,6 +305,15 @@ bool Internal::subsume_round (bool irredundant_only) {
         // in the last 'reduce' operation based on their size and glue value.
         if (c->size > lim.keptsize || c->glue > lim.keptglue) continue;
       }
+#if 1
+    } else if (irredundant_only) {
+      const const_literal_iterator end = c->end ();
+      const_literal_iterator i;
+      for (i = c->begin (); i != end; i++)
+	if (touched (*i) > old_touched  ||
+	    touched (-*i) > old_touched) break;
+      if (i == end) continue;
+#endif
     }
     schedule.push_back (c);
   }
@@ -326,7 +347,8 @@ bool Internal::subsume_round (bool irredundant_only) {
     // we ignore clauses with fixed literals (false or true).
     //
     if (c->size > 2) {
-      const int tmp = try_to_subsume_clause (c);
+      const int tmp =
+        try_to_subsume_clause (c, irredundant_only, old_touched);
       if (tmp > 0) { subsumed++; continue; }
       if (tmp < 0) strengthened++;
     }

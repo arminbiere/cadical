@@ -324,7 +324,7 @@ class Internal {
   void strengthen_clause (Clause *, int);
   void subsume_clause (Clause * subsuming, Clause * subsumed);
   int subsume_check (Clause * subsuming, Clause * subsumed);
-  int try_to_subsume_clause (Clause *);
+  int try_to_subsume_clause (Clause *, bool, long);
   bool subsume_round (bool irredundant_only = false);
   void subsume ();
 
