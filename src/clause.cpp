@@ -81,6 +81,33 @@ void Internal::delete_clause (Clause * c) {
   deallocate_clause (c);
 }
 
+void Internal::touch_clause (Clause * c) {
+  assert (c->irredundant);
+  assert (c->garbage);
+  const const_literal_iterator end = c->end ();
+  const_literal_iterator i;
+  for (i = c->begin (); i != end; i++)
+    touched (*i) = ++stats.touched;
+}
+
+// We want to eagerly update statistics as soon clauses are marked garbage.
+// Otherwise 'report' for instance gives wrong numbers after 'subsume'
+// before the next 'reduce'.  Thus we factored out marking and accounting
+// for garbage clauses.  Note that we do not update allocated bytes
+// statistics at this point, but wait until the next 'collect'.  In order
+// not to miss any update to those statistics we call 'check_clause_stats'
+// after garbage collection in debugging mode.  This is also the place where
+// we touch variables in irredundant clauses which became garbage.
+//
+void Internal::mark_garbage (Clause * c) {
+  assert (!c->garbage);
+  if (c->redundant) assert (stats.redundant), stats.redundant--;
+  else assert (stats.irredundant), stats.irredundant--;
+  stats.garbage++;
+  c->garbage = true;
+  if (!c->redundant) touch_clause (c);
+}
+
 // Place literals over the same variable close to each other.  This allows
 // eager removal of identical literals and detection of tautological clauses.
 

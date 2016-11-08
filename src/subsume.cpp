@@ -154,6 +154,8 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   LOG (c, "removing %d in", remove);
   if (proof) proof->trace_strengthen_clause (c, remove);
 
+  touch_clause (c);
+
   int l0 = c->literals[0];
   int l1 = c->literals[1];
   unwatch_literal (l0, c);

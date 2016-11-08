@@ -78,6 +78,7 @@ class Internal {
   Queue queue;                  // variable move to front decision queue
   Occs * otab;                  // table of occurrences for all literals
   long * ntab;                  // table number irredundant occurrences
+  long * ttab;                  // touched variable table
   Watches * wtab;               // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
   size_t propagated;            // next trail position to propagate
@@ -165,6 +166,8 @@ class Internal {
   Var & var (int lit)         { return vtab[vidx (lit)]; }
   Link & link (int lit)       { return ltab[vidx (lit)]; }
   Flags & flags (int lit)     { return ftab[vidx (lit)]; }
+  long & bumped (int lit)     { return btab[vidx (lit)]; }
+  long & touched (int lit)    { return ttab[vlit (lit)]; }
 
   const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
 
@@ -226,26 +229,12 @@ class Internal {
   Clause * new_clause (bool red, int glue = 0);
   void deallocate_clause (Clause *);
   void delete_clause (Clause *);
+  void touch_clause (Clause *);
+  void mark_garbage (Clause *);
   bool tautological_clause ();
   void add_new_original_clause ();
   Clause * new_learned_redundant_clause (int glue);
   Clause * new_resolved_irredundant_clause ();
-
-  // We want to eagerly update statistics as soon clauses are marked
-  // garbage.  Otherwise 'report' for instance gives wrong numbers after
-  // 'subsume' before the next 'reduce'.  Thus we factored out marking and
-  // accounting for garbage clauses.  Note that we do not update allocated
-  // bytes statistics at this point, but wait until the next 'collect'.
-  // In order not to miss any update to those statistics we call
-  // 'check_clause_stats' after garbage collection in debugging mode.
-  //
-  void mark_garbage (Clause * c) {
-    assert (!c->garbage);
-    if (c->redundant) assert (stats.redundant), stats.redundant--;
-    else assert (stats.irredundant), stats.irredundant--;
-    stats.garbage++;
-    c->garbage = true;
-  }
 
   // Forward reasoning through propagation in 'propagate.cpp'.
   //
@@ -394,8 +383,6 @@ class Internal {
     assert (lit), assert (abs (lit) <= max_var);
     return vals[lit];
   }
-
-  long & bumped (int lit) { return btab[vidx (lit)]; }
 
   // As 'val' but restricted to the root-level value of a literal.
   // It is not that time critical and also needs to check the decision level

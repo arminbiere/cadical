@@ -16,7 +16,7 @@ bool Internal::eliminating () {
   // irredundant clauses (through subsumption).
   //
   if (lim.fixed_at_last_elim == stats.fixed &&
-      lim.irredundant_at_last_elim == stats.irredundant) return false;
+      lim.touched_at_last_elim == stats.touched) return false;
 
   return lim.elim <= stats.conflicts;
 }
@@ -35,10 +35,12 @@ bool Internal::eliminating () {
 
 bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
 
-  stats.resolutions++;
+  stats.resolved++;
 
   if (c->garbage || d->garbage) return false;
   if (c->size > d->size) swap (c, d);
+
+  if (c->size == 2) stats.resolved2++;
 
   assert (!level);
   assert (clause.empty ());
@@ -170,6 +172,7 @@ bool Internal::resolvents_are_bounded (int pivot) {
     for (j = ns.begin (); needed >= 0 && j != ne; j++) {
       Clause * d = *j;
       if (d->garbage) { needed--; continue; }
+      stats.restried++;
       if (resolve_clauses (c, pivot, d)) {
         const int size = (int) clause.size ();
         clause.clear ();
@@ -346,6 +349,9 @@ bool Internal::elim_round () {
   SWITCH_AND_START (search, simplify, elim);
   stats.eliminations++;
 
+  long old_touched = stats.touched;
+  long last_touched = lim.touched_at_last_elim;
+
   backtrack ();
   reset_watches ();             // saves lots of memory
 
@@ -385,6 +391,8 @@ bool Internal::elim_round () {
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
     if (eliminated (idx)) continue;
+    if (touched (idx) <= last_touched &&
+        touched (-idx) <= last_touched) continue;
     long pos = noccs (idx);
     if (pos > occ_limit) continue;
     long neg = noccs (-idx);
@@ -439,7 +447,7 @@ bool Internal::elim_round () {
 
   DEL (connected, char, max_var + 1);
 
-  const long old_resolutions = stats.resolutions;
+  const long old_resolutions = stats.resolved;
   const int old_eliminated = stats.eliminated;
 
   // Try eliminating variables according to the schedule.
@@ -473,7 +481,7 @@ bool Internal::elim_round () {
     connect_watches ();
   }
 
-  long resolutions = stats.resolutions - old_resolutions;
+  long resolutions = stats.resolved - old_resolutions;
   int eliminated = stats.eliminated - old_eliminated;
   VRB ("elim", stats.eliminations,
     "eliminated %ld variables %.0f%% in %ld resolutions",
@@ -493,6 +501,8 @@ bool Internal::elim_round () {
   } else account_implicitly_allocated_bytes ();
 
   lim.subsumptions_at_last_elim = stats.subsumptions;
+  lim.touched_at_last_elim = old_touched;
+
   report ('e');
 
   STOP_AND_SWITCH (elim, simplify, search);
@@ -555,7 +565,6 @@ void Internal::elim () {
     lim.elim - stats.conflicts, lim.elim);
 
   lim.fixed_at_last_elim = stats.fixed;
-  lim.irredundant_at_last_elim = stats.irredundant;
 }
 
 };

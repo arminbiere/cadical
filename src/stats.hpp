@@ -19,6 +19,7 @@ struct Stats {
   long reports;      // 'report' counter
   long sections;     // 'section' counter
   long bumped;       // seen and bumped variables in 'analyze'
+  long touched;      // touched literals in deleted clauses
   long bumplast;     // bumped variables on last decision level
   long trailbumped;  // bumped 'reverse' instead of 'earlier'
   long analyzed;     // analyzed redundant clauses
@@ -37,7 +38,9 @@ struct Stats {
   long subtried;     // number of tried subsumptions
   long subchecks;    // number of pair-wise subsumption checks
   long subsumptions; // number of subsumption phases
-  long resolutions;  // number of resolved clauses in eliminations
+  long resolved;     // number of resolved clauses in eliminations
+  long resolved2;    // number of resolved binary clauses
+  long restried;     // number of tried resolved clauses
   long eliminations; // number of subsumption phases
   long learned;      // learned literals
   long minimized;    // minimized literals
