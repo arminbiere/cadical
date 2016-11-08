@@ -49,6 +49,10 @@ struct Stats {
   long garbage;      // number of current garbage clauses
   long units;        // learned unit clauses
   long binaries;     // learned binary clauses
+#ifdef STATS
+  long visits;       // visited clauses in propagation
+  long traversed;    // traversed literals in propagation
+#endif
 
   int fixed;         // number of top level assigned variables
   int eliminated;    // number of eliminated variables
@@ -60,6 +64,16 @@ struct Stats {
   Stats ();
   void print (Internal *);
 };
+
+/*------------------------------------------------------------------------*/
+
+#ifdef STATS
+#define ADD(STAT,INC) do { stats.STAT += (INC); } while (0)
+#else
+#define ADD(STAT,INC) do { } while (0)
+#endif
+
+/*------------------------------------------------------------------------*/
 
 };
 

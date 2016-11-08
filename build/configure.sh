@@ -1,5 +1,6 @@
 #!/bin/sh
 debug=no
+stats=no
 logging=no
 check=no
 coverage=no
@@ -20,6 +21,7 @@ where '<option>' is one of the following
 -g|--debug             compile with debugging information
 -c|--check             compile with assertion checking (default for '-g')
 -l|--log               include and enable logging code
+-s|--sats              include and enable expensive statistics code
 -a|--all               short cut for '-g -l -p'
 --coverage             compile with '-ftest-coverage -fprofile-arcs'
 --profile              compile with '-pg'
@@ -33,7 +35,8 @@ do
     -g|--debug) debug=yes; check=yes;;
     -c|--check) check=yes;;
     -l|--logging) logging=yes;;
-    -a|--all) debug=yes;check=yes;logging=yes;;
+    -s|--stats) stats=yes;;
+    -a|--all) debug=yes;check=yes;logging=yes;stats=yes;;
     --coverage) coverage=yes;;
     --profile) profile=yes;;
     *) die "invalid option '$1' (try '-h')";;
@@ -59,6 +62,7 @@ then
 fi
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
+[ $stats = yes ] && CXXFLAGS="$CXXFLAGS -DSTATS"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
 echo "$CXX $CXXFLAGS"

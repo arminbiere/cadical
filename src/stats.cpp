@@ -31,14 +31,26 @@ void Stats::print (Internal * internal) {
     stats.decisions, relative (stats.decisions, t));
   MSG ("propagations:  %15ld   %10.2f    millions per second",
     stats.propagations, relative (stats.propagations/1e6, t));
+#ifdef STATS
+  MSG ("  visits:      %15ld   %10.2f    per propagation",
+    stats.visits, relative (stats.visits, stats.propagations));
+  MSG ("  traversed:   %15ld   %10.2f    per visit",
+    stats.traversed, relative (stats.traversed, stats.visits));
+#endif
   MSG ("reused:        %15ld   %10.2f %%  per restart",
     stats.reused, percent (stats.reused, stats.restarts));
   MSG ("resolved:      %15ld   %10.2f    per eliminated",
     stats.resolved, relative (stats.resolved, stats.eliminated));
-  MSG ("resolved2:     %15ld   %10.2f %%  per resolved",
+#ifndef STATS
+  if (internal->opts.verbose) {
+#endif
+  MSG ("  resolved2:   %15ld   %10.2f %%  per resolved",
     stats.resolved2, percent (stats.resolved2, stats.resolved));
-  MSG ("restried:      %15ld   %10.2f %%  per resolved",
+  MSG ("  restried:    %15ld   %10.2f %%  per resolved",
     stats.restried, percent (stats.restried, stats.resolved));
+#ifndef STATS
+  }
+#endif
   MSG ("eliminated:    %15ld   %10.2f %%  of all variables",
     stats.eliminated, percent (stats.eliminated, internal->max_var));
   MSG ("fixed:         %15ld   %10.2f %%  of all variables",
@@ -64,7 +76,9 @@ void Stats::print (Internal * internal) {
     stats.shrunken, percent (stats.shrunken, stats.shrinktried));
   MSG ("backward:      %15ld   %10.2f %%  per conflict",
     stats.sublast, percent (stats.sublast, stats.conflicts));
+#ifndef STATS
   if (internal->opts.verbose) {
+#endif
     MSG ("  subirr:      %15ld   %10.2f %%  of subsumed",
       stats.subirr, percent (stats.subirr, stats.subsumed));
     MSG ("  subred:      %15ld   %10.2f %%  of subsumed",
@@ -73,7 +87,9 @@ void Stats::print (Internal * internal) {
       stats.subtried, relative (stats.subtried, stats.conflicts));
     MSG ("  subchecks:   %15ld   %10.2f    per tried",
       stats.subchecks, relative (stats.subchecks, stats.subtried));
+#ifndef STATS
   }
+#endif
   MSG ("searched:      %15ld   %10.2f    per decision",
     stats.searched, relative (stats.searched, stats.decisions));
   MSG ("bumped:        %15ld   %10.2f    per conflict",

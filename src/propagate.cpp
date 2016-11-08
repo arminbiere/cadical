@@ -1,6 +1,5 @@
-#include "internal.hpp"
-
 #include "clause.hpp"
+#include "internal.hpp"
 #include "iterator.hpp"
 #include "macros.hpp"
 #include "util.hpp"
@@ -82,6 +81,7 @@ bool Internal::propagate () {
         if (b < 0) conflict = w.clause;
         else if (!b) assign (w.blit, 0, lit);
       } else {
+	ADD (visits, 1);
         literal_iterator lits = w.clause->begin ();
         if (lits[0] == lit) swap (lits[0], lits[1]);
         const int u = val (lits[0]);
@@ -90,7 +90,8 @@ bool Internal::propagate () {
           const_literal_iterator end = lits + w.size;
           literal_iterator k = lits + 2;
           int v = -1;
-          while (k != end && (v = val (*k)) < 0) k++;
+	  while (k != end && (v = val (*k)) < 0) k++;
+	  ADD (traversed, k - (lits + 2));
           if (v > 0) j[-1].blit = *k;
           else if (!v) {
             LOG (w.clause, "unwatch %d in", *k);
