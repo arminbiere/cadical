@@ -62,10 +62,8 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     if (c->analyzed () > lim.analyzed) continue;
     stack.push_back (c);
   }
-  if (opts.reduceglue)
-    stable_sort (stack.begin (), stack.end (), less_usefull ());
-  else
-    stable_sort (stack.begin (), stack.end (), analyzed_earlier ());
+  if (opts.reduceglue) sort (stack.begin (), stack.end (), less_usefull ());
+  else sort (stack.begin (), stack.end (), analyzed_earlier ());
 
   const_clause_iterator target = stack.begin () + stack.size ()/2;
   for (const_clause_iterator i = stack.begin (); i != target; i++) {
