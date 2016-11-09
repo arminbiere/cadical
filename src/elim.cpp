@@ -343,7 +343,9 @@ typedef vector<IdxSumOccs>::iterator idx_sum_occs_iterator;
 
 struct idx_sum_occs_smaller {
   bool operator () (const IdxSumOccs & a, const IdxSumOccs & b) const {
-    return a.soccs < b.soccs;
+    if (a.soccs < b.soccs) return true;
+    if (a.soccs > b.soccs) return false;
+    return a.idx < b.idx;
   }
 };
 
@@ -405,7 +407,7 @@ bool Internal::elim_round () {
   shrink_vector (schedule);
   reset_noccs ();
 
-  stable_sort (schedule.begin (), schedule.end (), idx_sum_occs_smaller ());
+  sort (schedule.begin (), schedule.end (), idx_sum_occs_smaller ());
 
   // Drop 'opts.elimignore' fraction of variables.
   //
