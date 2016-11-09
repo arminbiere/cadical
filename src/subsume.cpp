@@ -152,8 +152,10 @@ Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
 // Candidate clause 'c' is strengthened by removing 'remove'.
 
 inline void Internal::strengthen_clause (Clause * c, int remove) {
+  if (watches ()) {
+    if (c->literals[0] == remove || c->literals[1] == remove) return;
+  }
   stats.strengthened++;
-  assert (!watches ());
   assert (c->size > 2);
   LOG (c, "removing %d in", remove);
   if (proof) proof->trace_strengthen_clause (c, remove);
@@ -271,10 +273,7 @@ bool Internal::subsume_round (bool irredundant_only) {
   long old_touched = lim.touched_at_last_subsume;
   lim.touched_at_last_subsume = stats.touched;
 
-  // Otherwise lots of contracts fail.
-  //
-  backtrack ();
-  reset_watches ();		// saved lots of memory
+  assert (!level);
 
   // Allocate schedule and occurrence lists.
   //
@@ -377,10 +376,6 @@ bool Internal::subsume_round (bool irredundant_only) {
   dec_bytes (bytes_vector (schedule));
   erase_vector (schedule);
   reset_occs ();
-  assert (!unsat);
-  assert (propagated == trail.size ());
-  init_watches ();
-  connect_watches();
 
   VRB ("subsume", stats.subsumptions,
     "subsumed %ld and strengthened %ld of %ld clauses %.0f%%",
@@ -397,7 +392,12 @@ bool Internal::subsume_round (bool irredundant_only) {
 
 void Internal::subsume () {
   assert (opts.subsume);
+  assert (!unsat);
+  backtrack ();
+  reset_watches ();
   (void) subsume_round (false);
+  init_watches ();
+  connect_watches ();
   inc.subsume += opts.subsumeinc;
   lim.subsume = stats.conflicts + inc.subsume;
 }

@@ -360,8 +360,7 @@ bool Internal::elim_round () {
   long old_touched = stats.touched;
   long last_touched = lim.touched_at_last_elim;
 
-  backtrack ();
-  reset_watches ();             // saves lots of memory
+  assert (!level);
 
   vector<IdxSumOccs> schedule;  // schedule of candidate variables
   init_noccs ();                // number of irredundant occurrences
@@ -480,8 +479,6 @@ bool Internal::elim_round () {
     }
 
     reset_occs ();
-    init_watches ();
-    connect_watches ();
   }
 
   long resolutions = stats.resolved - old_resolutions;
@@ -492,15 +489,6 @@ bool Internal::elim_round () {
 
   dec_bytes (bytes_vector (schedule));
   erase_vector (schedule);
-
-  if (unsat) LOG ("elimination derived empty clause");
-  else if (propagated < trail.size ()) {
-    LOG ("elimination produced %ld units", trail.size () - propagated);
-    if (!propagate ()) {
-      LOG ("propagating units after elimination results in empty clause");
-      learn_empty_clause ();
-    }
-  }
 
   lim.subsumptions_at_last_elim = stats.subsumptions;
   lim.touched_at_last_elim = old_touched;
@@ -526,6 +514,9 @@ void Internal::elim () {
   else limit = opts.elimroundsinit;
   assert (limit > 0);
 
+  backtrack ();
+  reset_watches ();             // saves lots of memory
+
   // Make sure there was a subsumption attempt since last elimination.
   //
   if (lim.subsumptions_at_last_elim == stats.subsumptions)
@@ -536,8 +527,23 @@ void Internal::elim () {
   for (;;) {
     round++;
     if (!elim_round ()) break;
+    if (unsat) break;
     if (round >= limit) break;             // stop after elimination
     if (!subsume_round (true)) break;
+  }
+
+  if (!unsat) {
+    init_watches ();
+    connect_watches ();
+  }
+
+  if (unsat) LOG ("elimination derived empty clause");
+  else if (propagated < trail.size ()) {
+    LOG ("elimination produced %ld units", trail.size () - propagated);
+    if (!propagate ()) {
+      LOG ("propagating units after elimination results in empty clause");
+      learn_empty_clause ();
+    }
   }
 
   int eliminated = stats.eliminated - old_eliminated;

@@ -26,6 +26,7 @@ class Internal;
 PROFILE(analyze,3) \
 PROFILE(bump,4) \
 PROFILE(collect,2) \
+PROFILE(connect,2) \
 PROFILE(decide,3) \
 PROFILE(elim,2) \
 PROFILE(extend,4) \

@@ -1,5 +1,6 @@
 #include "internal.hpp"
 #include "iterator.hpp"
+#include "macros.hpp"
 
 namespace CaDiCaL {
 
@@ -24,11 +25,13 @@ void Internal::reset_watches () {
 }
 
 void Internal::connect_watches () {
+  START (connect);
   assert (watches ());
   LOG ("connecting all watches");
   const const_clause_iterator end = clauses.end ();
   for (const_clause_iterator i = clauses.begin (); i != end; i++)
     watch_clause (*i);
+  STOP (connect);
 }
 
 };
