@@ -119,11 +119,7 @@ inline int Internal::subsume_check (Clause * subsuming,
   const const_literal_iterator end = subsuming->end ();
   int flipped = 0;
   for (const_literal_iterator i = subsuming->begin (); i != end; i++) {
-    const int lit = *i;
-    int tmp = val (lit);
-    assert (tmp <= 0);
-    if (tmp) continue;
-    tmp = marked (lit);
+    const int lit = *i, tmp = marked (lit);
     if (!tmp) return 0;
     if (tmp > 0) continue;
     if (flipped) return 0;
@@ -170,12 +166,6 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   dec_bytes (sizeof (int));;
   c->size--;
   if (c->pos > c->size) c->pos = 2;
-  for (int i = 0; i < 2; i++) {
-    int lit = c->literals[i];
-    const int tmp = val (lit);
-    if (tmp >= 0) continue;
-    if (propagated > (size_t) var (lit).trail) propagated = var (lit).trail;
-  }
   if (c->redundant && c->glue > c->size) c->glue = c->size;
   if (c->extended) c->analyzed () = ++stats.analyzed;
   LOG (c, "strengthened");
@@ -205,7 +195,6 @@ inline int Internal::try_to_subsume_clause (Clause * c,
   const const_literal_iterator ec = c->end ();
   for (const_literal_iterator i = c->begin (); !d && i != ec; i++) {
     int lit = *i;
-    if (val (lit)) continue;
     if (irredundant_only &&
         touched (lit) <= old_touched &&
         touched (-lit) <= old_touched)
@@ -216,11 +205,6 @@ inline int Internal::try_to_subsume_clause (Clause * c,
     for (const_clause_iterator j = k; j != eo; j++) {
       Clause * e = *j;
       if (e->garbage) continue;
-      if (clause_root_level_satisfied (c)) {
-	LOG (c, "skipping root level satisfied");
-	mark_garbage (e);
-	continue;
-      }
       *k++ = e;
       if (d) continue;
       flipped = subsume_check (e, c);
@@ -303,11 +287,7 @@ bool Internal::subsume_round (bool irredundant_only) {
   for (size_t i = 0; i != size; i++) {
     Clause * c = clauses[i];
     if (c->garbage) continue;
-    if (clause_root_level_satisfied (c)) {
-      LOG (c, "not scheduling root level satisfied clause");
-      mark_garbage (c);
-      continue;
-    }
+    if (clause_contains_fixed_literal (c)) continue;
     if (c->redundant) {
       if (irredundant_only) continue;
       if (c->extended) {
@@ -378,7 +358,6 @@ bool Internal::subsume_round (bool irredundant_only) {
     const_literal_iterator j;
     for (j = c->begin (); j != end; j++) {
       const int lit = *j;
-      if (val (lit)) continue;
       const size_t size = occs (lit).size ();
       if (minlit && minsize <= size) continue;
       minlit = lit, minsize = size;
@@ -398,20 +377,10 @@ bool Internal::subsume_round (bool irredundant_only) {
   dec_bytes (bytes_vector (schedule));
   erase_vector (schedule);
   reset_occs ();
-
-  if (!unsat) {
-    init_watches ();
-    connect_watches();
-  }
-
-  if (unsat) LOG ("subsumption derived empty clause");
-  else if (propagated < trail.size ()) {
-    LOG ("subsumption requires propagation");
-    if (!propagate ()) {
-      LOG ("propagating again after subsumption results in empty clause");
-      learn_empty_clause ();
-    }
-  }
+  assert (!unsat);
+  assert (propagated == trail.size ());
+  init_watches ();
+  connect_watches();
 
   VRB ("subsume", stats.subsumptions,
     "subsumed %ld and strengthened %ld of %ld clauses %.0f%%",

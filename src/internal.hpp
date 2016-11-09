@@ -289,7 +289,6 @@ class Internal {
   // Garbage collection called from 'reduce' and during preprocessing.
   //
   int clause_contains_fixed_literal (Clause *);
-  bool clause_root_level_satisfied (Clause *);
   void remove_falsified_literals (Clause *);
   void mark_satisfied_clauses_as_garbage ();
   void move_clause (Clause *);

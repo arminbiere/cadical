@@ -30,14 +30,6 @@ int Internal::clause_contains_fixed_literal (Clause * c) {
   return res;
 }
 
-bool Internal::clause_root_level_satisfied (Clause * c) {
-  assert (!level);
-  const const_literal_iterator end = c->end ();
-  for (const_literal_iterator i = c->begin (); i != end; i++)
-    if (val (*i) > 0) return true;
-  return false;
-}
-
 // Assume that the clause is not root level satisfied but contains a literal
 // set to false (root level falsified literal), so it can be shrunken.  The
 // clause data is not actually reallocated at this point to avoid dealing
