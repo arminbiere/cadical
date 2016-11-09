@@ -134,12 +134,11 @@ const char * Parser::parse_solution_non_profiled () {
   for (;;) {
     ch = parse_char ();
     if (ch == EOF) PER ("missing 's' line");
-    if (ch == 'c') {
+    else if (ch == 'c') {
       while ((ch = parse_char ()) != '\n')
         if (ch == EOF) PER ("unexpected end-of-file in comment");
-    }
-    if (ch == 's') break;
-    PER ("expected 'c' or 's'");
+    } else if (ch == 's') break;
+    else PER ("expected 'c' or 's'");
   }
   const char * err = parse_string (" SATISFIABLE", 's');
   if (err) return err;
