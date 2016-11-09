@@ -110,6 +110,8 @@ inline int Internal::subsume_check (Clause * subsuming,
   // Only use 'subsumed' for these following assertion checks.  Otherwise we
   // only require that 'subsumed' has all its literals marked.
   //
+  assert (!subsumed->garbage);
+  assert (!subsuming->garbage);
   assert (subsuming != subsumed);
   assert (subsuming->size <= subsumed->size);
 
@@ -117,7 +119,11 @@ inline int Internal::subsume_check (Clause * subsuming,
   const const_literal_iterator end = subsuming->end ();
   int flipped = 0;
   for (const_literal_iterator i = subsuming->begin (); i != end; i++) {
-    const int lit = *i, tmp = marked (lit);
+    const int lit = *i;
+    int tmp = val (lit);
+    assert (tmp <= 0);
+    if (tmp) continue;
+    tmp = marked (lit);
     if (!tmp) return 0;
     if (tmp > 0) continue;
     if (flipped) return 0;
@@ -183,6 +189,7 @@ inline int Internal::try_to_subsume_clause (Clause * c,
 					    long old_touched) {
 
   stats.subtried++;
+  assert (!level);
   LOG (c, "trying to subsume");
 
   mark (c);
@@ -192,6 +199,7 @@ inline int Internal::try_to_subsume_clause (Clause * c,
   const const_literal_iterator ec = c->end ();
   for (const_literal_iterator i = c->begin (); !d && i != ec; i++) {
     int lit = *i;
+    if (val (lit)) continue;
     if (irredundant_only &&
         touched (lit) <= old_touched &&
         touched (-lit) <= old_touched)
@@ -202,6 +210,11 @@ inline int Internal::try_to_subsume_clause (Clause * c,
     for (const_clause_iterator j = k; j != eo; j++) {
       Clause * e = *j;
       if (e->garbage) continue;
+      if (clause_root_level_satisfied (c)) {
+	LOG (c, "skipping root level satisfied");
+	mark_garbage (e);
+	continue;
+      }
       *k++ = e;
       if (d) continue;
       flipped = subsume_check (e, c);
@@ -284,7 +297,11 @@ bool Internal::subsume_round (bool irredundant_only) {
   for (size_t i = 0; i != size; i++) {
     Clause * c = clauses[i];
     if (c->garbage) continue;
-    if (clause_contains_fixed_literal (c)) continue;
+    if (clause_root_level_satisfied (c)) {
+      LOG (c, "not scheduling root level satisfied clause");
+      mark_garbage (c);
+      continue;
+    }
     if (c->redundant) {
       if (irredundant_only) continue;
       if (c->extended) {
@@ -355,7 +372,7 @@ bool Internal::subsume_round (bool irredundant_only) {
     const_literal_iterator j;
     for (j = c->begin (); j != end; j++) {
       const int lit = *j;
-      assert (!val (lit));
+      if (val (lit)) continue;
       const size_t size = occs (lit).size ();
       if (minlit && minsize <= size) continue;
       minlit = lit, minsize = size;
