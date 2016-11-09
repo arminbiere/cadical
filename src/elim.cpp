@@ -157,6 +157,11 @@ bool Internal::resolvents_are_bounded (int pivot) {
   //
   long needed = pos*neg - bound;
 
+  if (needed > 0) {
+    stable_sort (ps.begin (), ps.end (), smaller_size ());
+    stable_sort (ns.begin (), ns.end (), smaller_size ());
+  }
+
   long count = 0;               // number of non-tautological resolvents
 
   // Try all resolutions between a positive occurrence (outer loop) of

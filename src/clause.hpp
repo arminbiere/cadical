@@ -133,13 +133,11 @@ struct analyzed_earlier {
   }
 };
 
-#if 0
 struct smaller_size {
   bool operator () (const Clause * a, const Clause * b) {
     return a->size < b->size;
   }
 };
-#endif
 
 /*------------------------------------------------------------------------*/
 
