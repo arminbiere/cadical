@@ -170,6 +170,12 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   dec_bytes (sizeof (int));;
   c->size--;
   if (c->pos > c->size) c->pos = 2;
+  for (int i = 0; i < 2; i++) {
+    int lit = c->literals[i];
+    const int tmp = val (lit);
+    if (tmp >= 0) continue;
+    if (propagated > (size_t) var (lit).trail) propagated = var (lit).trail;
+  }
   if (c->redundant && c->glue > c->size) c->glue = c->size;
   if (c->extended) c->analyzed () = ++stats.analyzed;
   LOG (c, "strengthened");
@@ -387,17 +393,25 @@ bool Internal::subsume_round (bool irredundant_only) {
     occs (minlit).push_back (c);
   }
 
-  // Release occurrence lists and schedule.
+  // Release occurrence lists and schedule and reconnected watches.
   //
   dec_bytes (bytes_vector (schedule));
   erase_vector (schedule);
-
-  assert (!unsat);
-  assert (propagated == trail.size ());
-
   reset_occs ();
-  init_watches ();
-  connect_watches();
+
+  if (!unsat) {
+    init_watches ();
+    connect_watches();
+  }
+
+  if (unsat) LOG ("subsumption derived empty clause");
+  else if (propagated < trail.size ()) {
+    LOG ("subsumption requires propagation");
+    if (!propagate ()) {
+      LOG ("propagating again after subsumption results in empty clause");
+      learn_empty_clause ();
+    }
+  }
 
   VRB ("subsume", stats.subsumptions,
     "subsumed %ld and strengthened %ld of %ld clauses %.0f%%",

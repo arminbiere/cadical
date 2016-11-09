@@ -497,7 +497,7 @@ bool Internal::elim_round () {
   else if (propagated < trail.size ()) {
     LOG ("elimination produced %ld units", trail.size () - propagated);
     if (!propagate ()) {
-      LOG ("propagating units results in empty clause");
+      LOG ("propagating units after elimination results in empty clause");
       learn_empty_clause ();
     }
   }
