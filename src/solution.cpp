@@ -17,11 +17,10 @@ int Internal::sol (int lit) const {
   return res;
 }
 
-void Internal::check_clause () {
+void Internal::check_learned_clause () {
   if (!solution) return;
   bool satisfied = false;
   const const_int_iterator end = clause.end ();
-  const_int_iterator i;
   for (const_int_iterator i = clause.begin (); !satisfied && i != end; i++)
     satisfied = (sol (*i) > 0);
   if (satisfied) return;
@@ -30,6 +29,24 @@ void Internal::check_clause () {
     "*** cadical error: learned clause unsatisfied by solution:\n",
     stderr);
   for (const_int_iterator i = clause.begin (); i != end; i++)
+    fprintf (stderr, "%d ", *i);
+  fputs ("0\n", stderr);
+  fflush (stderr);
+  abort ();
+}
+
+void Internal::check_shrunken_clause (Clause * c) {
+  if (!solution) return;
+  bool satisfied = false;
+  const const_literal_iterator end = c->end ();
+  for (const_literal_iterator i = c->begin (); !satisfied && i != end; i++)
+    satisfied = (sol (*i) < 0);
+  if (satisfied) return;
+  fflush (stdout);
+  fputs (
+    "*** cadical error: shrunken clause unsatisfied by solution:\n",
+    stderr);
+  for (const_literal_iterator i = c->begin (); i != end; i++)
     fprintf (stderr, "%d ", *i);
   fputs ("0\n", stderr);
   fflush (stderr);

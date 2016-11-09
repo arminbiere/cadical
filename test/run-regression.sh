@@ -133,6 +133,26 @@ run prime1681 10
 run prime1849 10
 run prime2209 10
 
+run sqrt2809 10
+run sqrt3481 10
+run sqrt3721 10
+run sqrt4489 10
+run sqrt5041 10
+run sqrt5329 10
+run sqrt6241 10
+run sqrt6889 10
+run sqrt7921 10
+run sqrt9409 10
+run sqrt10201 10
+run sqrt10609 10
+run sqrt11449 10
+run sqrt11881 10
+run sqrt12769 10
+run sqrt16129 10
+run sqrt63001 10
+run sqrt259081 10
+run sqrt1042441 10
+
 run ph2 20
 run ph3 20
 run ph4 20

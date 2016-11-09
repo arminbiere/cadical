@@ -222,6 +222,7 @@ inline void Internal::add_resolvents (int pivot) {
     for (j = ns.begin (); !unsat && j != eon; j++) {
       if (resolve_clauses (*i, pivot, *j)) {
         resolvents++;
+	check_learned_clause ();
         Clause * r = new_resolved_irredundant_clause ();
         const const_literal_iterator re = r->end ();
         for (const_literal_iterator l = r->begin (); l != re; l++) {

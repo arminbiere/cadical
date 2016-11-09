@@ -223,7 +223,7 @@ void Internal::analyze () {
   }
   LOG ("first UIP %d", uip);
   clause.push_back (-uip);
-  check_clause ();
+  check_learned_clause ();
 
   // Update glue statistics.
   //

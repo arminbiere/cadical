@@ -151,17 +151,11 @@ Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
 
 inline void Internal::strengthen_clause (Clause * c, int remove) {
   stats.strengthened++;
+  assert (!watches ());
   assert (c->size > 2);
   LOG (c, "removing %d in", remove);
   if (proof) proof->trace_strengthen_clause (c, remove);
-
   if (!c->redundant) touch_clause (c);
-
-  int l0 = c->literals[0];
-  int l1 = c->literals[1];
-  unwatch_literal (l0, c);
-  unwatch_literal (l1, c);
-
   const const_literal_iterator end = c->end ();
   literal_iterator j = c->begin ();
   for (const_literal_iterator i = j; i != end; i++)
@@ -173,13 +167,7 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   if (c->redundant && c->glue > c->size) c->glue = c->size;
   if (c->extended) c->analyzed () = ++stats.analyzed;
   LOG (c, "strengthened");
-
-  l0 = c->literals[0];
-  l1 = c->literals[1];
-  watch_literal (l0, l1, c, c->size);
-  watch_literal (l1, l0, c, c->size);
-
-  // TODO add check_clause (Clause*)
+  check_shrunken_clause (c);
 }
 
 /*------------------------------------------------------------------------*/
@@ -247,9 +235,9 @@ inline int Internal::try_to_subsume_clause (Clause * c,
 // This slightly increases the schedule size though.
 
 struct ClauseSize {
-  Clause * clause;
   int size;
-  ClauseSize (Clause * c) : clause (c), size (c->size) { }
+  size_t cidx;
+  ClauseSize (int s, size_t i) : size (s), cidx (i) { }
 };
 
 typedef vector<ClauseSize>::const_iterator const_clause_size_iterator;
@@ -257,7 +245,9 @@ typedef vector<ClauseSize>::iterator clause_size_iterator;
 
 struct smaller_clause_size {
   bool operator () (const ClauseSize & a, const ClauseSize & b) const {
-    return a.size < b.size;
+    if (a.size < b.size) return true;
+    if (a.size > b.size) return false;
+    return a.cidx < b.cidx;
   }
 };
 
@@ -281,6 +271,7 @@ bool Internal::subsume_round (bool irredundant_only) {
   // Otherwise lots of contracts fail.
   //
   backtrack ();
+  reset_watches ();		// saved lots of memory
 
   // Allocate schedule and occurrence lists.
   //
@@ -289,10 +280,9 @@ bool Internal::subsume_round (bool irredundant_only) {
 
   // Determine candidate clauses and sort them by size.
   //
-  const const_clause_iterator eoc = clauses.end ();
-  const_clause_iterator i;
-  for (i = clauses.begin (); i != eoc; i++) {
-    Clause * c = *i;
+  const size_t size = clauses.size ();
+  for (size_t i = 0; i != size; i++) {
+    Clause * c = clauses[i];
     if (c->garbage) continue;
     if (clause_contains_fixed_literal (c)) continue;
     if (c->redundant) {
@@ -306,17 +296,20 @@ bool Internal::subsume_round (bool irredundant_only) {
       }
     } else if (irredundant_only) {
       const const_literal_iterator end = c->end ();
-      const_literal_iterator i;
-      for (i = c->begin (); i != end; i++)
-	if (touched (*i) > old_touched  ||
-	    touched (-*i) > old_touched) break;
-      if (i == end) continue;
+      const_literal_iterator l;
+      for (l = c->begin (); l != end; l++) {
+	const int lit = *l;
+	if (touched (lit) > old_touched  ||
+	    touched (-lit) > old_touched) break;
+      }
+      if (l == end) continue;
     }
-    schedule.push_back (c);
+    schedule.push_back (ClauseSize (c->size, i));
   }
   shrink_vector (schedule);
   inc_bytes (bytes_vector (schedule));
-  stable_sort (schedule.begin (), schedule.end (), smaller_clause_size ());
+
+  sort (schedule.begin (), schedule.end (), smaller_clause_size ());
 
   long scheduled = schedule.size ();
   long total = stats.irredundant;
@@ -337,8 +330,7 @@ bool Internal::subsume_round (bool irredundant_only) {
   const_clause_size_iterator s;
   for (s = schedule.begin (); s != eos; s++) {
 
-    Clause * c = s->clause;
-
+    Clause * c = clauses[s->cidx];
     assert (!c->garbage);
 
     // First try to subsume or strengthen this candidate clause.  For binary
@@ -380,9 +372,15 @@ bool Internal::subsume_round (bool irredundant_only) {
 
   // Release occurrence lists and schedule.
   //
-  reset_occs ();
   dec_bytes (bytes_vector (schedule));
   erase_vector (schedule);
+
+  assert (!unsat);
+  assert (propagated == trail.size ());
+
+  reset_occs ();
+  init_watches ();
+  connect_watches();
 
   VRB ("subsume", stats.subsumptions,
     "subsumed %ld and strengthened %ld of %ld clauses %.0f%%",

@@ -206,9 +206,6 @@ class Internal {
     LOG (c, "watch %d blit %d in", lit, blit);
   }
 
-  void unwatch_literal (int lit, Clause * c);
-  void update_size_watch (int lit, Clause * c, int new_size);
-
   // Update queue to point to last potentially still unassigned variable.
   // All variables after 'queue.unassigned' in bump order are assumed to be
   // assigned.  Then update the 'queue.bumped' field and log it.  This is
@@ -366,7 +363,8 @@ class Internal {
   // Checking solutions (see 'solution.cpp').
   //
   int sol (int lit) const;
-  void check_clause ();
+  void check_shrunken_clause (Clause *);
+  void check_learned_clause ();
 
   void check (int (Internal::*assignment) (int) const);
 

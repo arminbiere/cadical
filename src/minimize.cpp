@@ -55,7 +55,7 @@ void Internal::minimize_clause () {
   LOG ("minimized %d literals", (long)(clause.end () - j));
   clause.resize (j - clause.begin ());
   clear_minimized ();
-  check_clause ();
+  check_learned_clause ();
   STOP (minimize);
 }
 
