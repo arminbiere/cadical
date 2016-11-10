@@ -12,8 +12,8 @@ namespace CaDiCaL {
 bool Internal::eliminating () {
   if (!opts.elim) return false;
 
-  // Wait until there has been a change in terms of new units or removed
-  // irredundant clauses (through subsumption).
+  // Wait until there has been a change in terms of new units or new touched
+  // variables (in removed or shrunken irredundant clauses).
   //
   if (lim.fixed_at_last_elim == stats.fixed &&
       lim.touched_at_last_elim == stats.touched) return false;

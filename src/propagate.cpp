@@ -59,9 +59,13 @@ void Internal::assign (int lit, Clause * c) { assign (lit, c, 0); }
 // conflict or whether they produce additional assignments (units).  This
 // version of 'propagate' uses lazy watches and keeps two watched literals
 // at the beginning of the clause.  We also use 'blocking literals' to
-// reduce the number of times clauses have to be visited.  The watches know
-// if a watched clause is binary, in which case it never hast to be visited.
-// If a binary clause is falsified we continue propagating.
+// reduce the number of times clauses have to be visited (2008 JSAT paper by
+// Chu, Harwood and Stuckey).  The watches know if a watched clause is
+// binary, in which case it never hast to be visited.  If a binary clause is
+// falsified we continue propagating.  Finally, we save the position of the
+// last watch replacement in 'pos', which in turn reduces certain quadratic
+// accumulated propagation costs (2013 JAIR article by Ian Gent) at the
+// expense of four more bytes.
 
 bool Internal::propagate () {
   assert (!unsat);

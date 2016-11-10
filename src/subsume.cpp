@@ -152,17 +152,7 @@ Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
 // Candidate clause 'c' is strengthened by removing 'remove'.
 
 inline void Internal::strengthen_clause (Clause * c, int remove) {
-#if 0
-  if (watches ()) {
-    // An alternative is to remove and update watch lists, which is pretty
-    // expensive (quadratic in accumulated in the worst case).  Thus we just
-    // skip strengthening this clause if the removed literal is watched.
-    if (c->literals[0] == remove ||
-        c->literals[1] == remove) return;
-  }
-#else
   assert (!watches ());
-#endif
   stats.strengthened++;
   assert (c->size > 2);
   LOG (c, "removing %d in", remove);
@@ -173,7 +163,7 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   for (const_literal_iterator i = j; i != end; i++)
     if ((*j++ = *i) == remove) j--;
   assert (j + 1 == end);
-  dec_bytes (sizeof (int));;
+  dec_bytes (sizeof (int));
   c->size--;
   if (c->pos > c->size) c->pos = 2;
   if (c->redundant && c->glue > c->size) c->glue = c->size;
@@ -266,6 +256,19 @@ struct smaller_clause_size {
 
 /*------------------------------------------------------------------------*/
 
+struct less_noccs {
+  Internal * internal;
+  less_noccs (Internal * i) : internal (i) { } 
+  bool operator () (int a, int b) {
+    long m = internal->noccs (a), n = internal ->noccs (b);
+    if (m < n) return true;
+    if (m > n) return false;
+    return abs (a) < abs (b);
+  }
+};
+
+/*------------------------------------------------------------------------*/
+
 // Usually called from 'subsume' below if 'subsuming' triggered it.  Then
 // the idea is to subsume both redundant and irredundant clauses. It is also
 // called in the elimination loop in 'elim' in which case we focus on
@@ -286,7 +289,7 @@ bool Internal::subsume_round (bool irredundant_only) {
   // Allocate schedule and occurrence lists.
   //
   vector<ClauseSize> schedule;
-  init_occs ();
+  init_noccs ();
 
   // Determine candidate clauses and sort them by size.
   //
@@ -305,6 +308,12 @@ bool Internal::subsume_round (bool irredundant_only) {
         if (c->size > lim.keptsize || c->glue > lim.keptglue) continue;
       }
     } else if (irredundant_only) {
+      // In this case we only care for irredundant clauses and thus can use
+      // the 'touched' time stamp (which is only updated for literals
+      // occurring in irredundant clauses) to determine whether it make
+      // sense to check this clause for subsumption.  If none of its
+      // literals has been touched since the last subsumption, we should
+      // ignore it.
       const const_literal_iterator end = c->end ();
       const_literal_iterator l;
       for (l = c->begin (); l != end; l++) {
@@ -314,11 +323,21 @@ bool Internal::subsume_round (bool irredundant_only) {
       }
       if (l == end) continue;
     }
+
     schedule.push_back (ClauseSize (c->size, i));
+
+    // Count all literals in candidate clauses.
+    //
+    const const_literal_iterator end = c->end ();
+    const_literal_iterator l;
+    for (l = c->begin (); l != end; l++)
+      noccs (*l)++;
   }
   shrink_vector (schedule);
   inc_bytes (bytes_vector (schedule));
 
+  // Smaller clauses are checked and connected first.
+  //
   sort (schedule.begin (), schedule.end (), smaller_clause_size ());
 
   long scheduled = schedule.size ();
@@ -338,6 +357,9 @@ bool Internal::subsume_round (bool irredundant_only) {
 
   const const_clause_size_iterator eos = schedule.end ();
   const_clause_size_iterator s;
+
+  init_occs ();
+
   for (s = schedule.begin (); s != eos; s++) {
 
     Clause * c = clauses[s->cidx];
@@ -345,10 +367,11 @@ bool Internal::subsume_round (bool irredundant_only) {
 
     // First try to subsume or strengthen this candidate clause.  For binary
     // clauses this could be done much faster by hashing and is costly due
-    // to large number of binary clauses.  There is further the issue, that
-    // strengthening binary clauses (through double self-subsuming
-    // resolution) would produce units, which needs much more care. For now
-    // we ignore clauses with fixed literals (false or true).
+    // to a usually large number of binary clauses.  There is further the
+    // issue, that strengthening binary clauses (through double
+    // self-subsuming resolution) would produce units, which needs much more
+    // care. In the same (lazy) spirit we also ignore clauses with fixed
+    // literals (false or true).
     //
     if (c->size > 2) {
       const int tmp =
@@ -357,7 +380,12 @@ bool Internal::subsume_round (bool irredundant_only) {
       if (tmp < 0) strengthened++;
     }
 
-    // If not subsumed connect smallest occurring literal.
+    // If not subsumed connect smallest occurring literal, where occurring
+    // means the number of times it was used to connect (as a one watch) a
+    // previous smaller or equal sized clause.  This minimizes the length of
+    // the occurrence lists traversed during 'try_to_subsume_clause'. Also
+    // note that this number is usually way smaller than the number of
+    // occurrences computed before and stored in 'noccs'.
     //
     int minlit = 0;
     size_t minsize = 0;
@@ -371,18 +399,28 @@ bool Internal::subsume_round (bool irredundant_only) {
     }
 
     // Unless this smallest occurring literal occurs too often.
-    // Ignore potential subsumed garbage clauses.
     //
     if (minsize > (size_t) opts.subsumeocclim) continue;
 
     LOG (c, "watching %d with %ld occurrences", minlit, (long) minsize);
     occs (minlit).push_back (c);
+
+    // This should give faster failures for assumption checks since the
+    // less occurring variables are put first in a clause and thus will
+    // make it more likely to be found as witness for a clause not to be
+    // subsumed.  One could in principle (see also the discussion on
+    // 'subsumption' in the 'Splatz' solver) replace marking by a kind of
+    // merge sort, which we do not want to do.  It would avoid 'marked'
+    // calls and thus might be slightly faster.
+    //
+    sort (c->begin (), c->end (), less_noccs (this));
   }
 
-  // Release occurrence lists and schedule and reconnected watches.
+  // Release occurrence lists and schedule.
   //
   dec_bytes (bytes_vector (schedule));
   erase_vector (schedule);
+  reset_noccs ();
   reset_occs ();
 
   VRB ("subsume", stats.subsumptions,
