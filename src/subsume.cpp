@@ -152,6 +152,7 @@ Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
 // Candidate clause 'c' is strengthened by removing 'remove'.
 
 inline void Internal::strengthen_clause (Clause * c, int remove) {
+#if 0
   if (watches ()) {
     // An alternative is to remove and update watch lists, which is pretty
     // expensive (quadratic in accumulated in the worst case).  Thus we just
@@ -159,6 +160,9 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
     if (c->literals[0] == remove ||
         c->literals[1] == remove) return;
   }
+#else
+  assert (!watches ());
+#endif
   stats.strengthened++;
   assert (c->size > 2);
   LOG (c, "removing %d in", remove);
@@ -398,7 +402,10 @@ void Internal::subsume () {
   assert (opts.subsume);
   assert (!unsat);
   backtrack ();
+  reset_watches ();
   (void) subsume_round (false);
+  init_watches ();
+  connect_watches ();
   inc.subsume += opts.subsumeinc;
   lim.subsume = stats.conflicts + inc.subsume;
 }
