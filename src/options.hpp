@@ -112,10 +112,9 @@ public:
   bool set (const char * arg);
 
   // Interface to options using in a certain sense non-type-safe 'double'
-  // values even for 'int' and 'bool'.  However, since 'double' can hold a
-  // 'bool' and ' with typing, since a 'double' can hold a 'bool' as well an
-  // 'int' value precisely, e.g., if the result of 'get' cast down again by
-  // the client.
+  // values even for 'int' and 'bool'.  However, 'double' can hold a 'bool'
+  // as well an 'int' value precisely, e.g., if the result of 'get' is cast
+  // down again by the client.  This would only fail for 64 byte 'long'.
   //
   bool has (const char * name);
   double get (const char * name);
