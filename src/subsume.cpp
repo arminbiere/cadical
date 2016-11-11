@@ -196,24 +196,25 @@ inline int Internal::try_to_subsume_clause (Clause * c,
   for (const_literal_iterator i = c->begin (); !d && i != ec; i++) {
     int lit = *i;
     if (irredundant_only &&
-        touched (lit) <= old_touched &&
-        touched (-lit) <= old_touched)
+	touched (lit) <= old_touched &&
+	touched (-lit) <= old_touched)
       continue;
-    Occs & os = occs (lit);
-    const const_clause_iterator eo = os.end ();
-    clause_iterator k = os.begin ();
-    for (const_clause_iterator j = k; j != eo; j++) {
-      Clause * e = *j;
-      if (e->garbage) continue;
-      *k++ = e;
-      if (d) continue;
-      flipped = subsume_check (e, c);
-      if (flipped) d = e;                 // ... and leave outer loop.
+    for (int sign = -1; !d && sign <= 1; sign += 2) {
+      Occs & os = occs (sign * lit);
+      const const_clause_iterator eo = os.end ();
+      clause_iterator k = os.begin ();
+      for (const_clause_iterator j = k; j != eo; j++) {
+	Clause * e = *j;
+	if (e->garbage) continue;
+	*k++ = e;
+	if (d) continue;
+	flipped = subsume_check (e, c);
+	if (flipped) d = e;                 // ... and leave outer loop.
+      }
+      os.resize (k - os.begin ());
+      shrink_vector (os);
     }
-    os.resize (k - os.begin ());
-    shrink_vector (os);
   }
-
   unmark (c);
 
   if (flipped == INT_MIN) {
