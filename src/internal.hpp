@@ -14,24 +14,24 @@ using namespace std;
 
 #include "arena.hpp"
 #include "avg.hpp"
+#include "clause.hpp"
 #include "ema.hpp"
 #include "flags.hpp"
 #include "format.hpp"
+#include "inc.hpp"
 #include "level.hpp"
+#include "limit.hpp"
 #include "link.hpp"
 #include "logging.hpp"
+#include "occs.hpp"
 #include "options.hpp"
 #include "profile.hpp"
 #include "queue.hpp"
 #include "stats.hpp"
 #include "timer.hpp"
-#include "watch.hpp"
-#include "occs.hpp"
-#include "var.hpp"
 #include "util.hpp"
-#include "limit.hpp"
-#include "inc.hpp"
-#include "clause.hpp"
+#include "var.hpp"
+#include "watch.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -51,10 +51,16 @@ class Internal {
   friend class Proof;
   friend struct Stats;
 
+#ifdef LOGGING
+  friend struct AVG;
+  friend struct EMA;
+  friend class Options;
+#endif
+
   friend struct bumped_earlier;
+  friend struct less_noccs;
   friend struct trail_bumped_smaller;
   friend struct trail_smaller;
-  friend struct less_noccs;
 
   /*----------------------------------------------------------------------*/
 

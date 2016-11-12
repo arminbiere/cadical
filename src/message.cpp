@@ -45,9 +45,10 @@ void Message::error (Internal * internal, const char *fmt, ...) {
 /*------------------------------------------------------------------------*/
 
 void Message::section (Internal * internal, const char * title) {
-#ifndef LOGGING
-  if (internal->opts.quiet) return;
+#ifdef LOGGING
+  if (!internal->opts.log)
 #endif
+  if (internal->opts.quiet) return;
   char line[160];
   sprintf (line, "---- [ %s ] ", title);
   assert (strlen (line) < sizeof line);
@@ -64,10 +65,11 @@ void Message::section (Internal * internal, const char * title) {
 void Message::verbose (Internal * internal,
                        const char * phase,
                        const char * fmt, ...) {
-#ifndef LOGGING
-  if (internal->opts.quiet) return;
-  if (!internal->opts.verbose) return;
+#ifdef LOGGING
+  if (!internal->opts.log)
 #endif
+  if (internal->opts.quiet ||
+      !internal->opts.verbose) return;
   printf ("c [%s] ", phase);
   va_list ap;
   va_start (ap, fmt);
@@ -80,10 +82,11 @@ void Message::verbose (Internal * internal,
 void Message::verbose (Internal * internal,
                        const char * phase, long count,
                        const char * fmt, ...) {
-#ifndef LOGGING
-  if (internal->opts.quiet) return;
-  if (!internal->opts.verbose) return;
+#ifdef LOGGING
+  if (!internal->opts.log)
 #endif
+  if (internal->opts.quiet ||
+      !internal->opts.verbose) return;
   printf ("c [%s-%ld] ", phase, count);
   va_list ap;
   va_start (ap, fmt);

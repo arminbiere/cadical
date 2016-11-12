@@ -22,7 +22,11 @@ static void log (Internal *, const vector<int> &, const char *fmt, ...);
 
 };
 
-#define LOG(ARGS...) do { Logger::log (internal, ##ARGS); } while (0)
+#define LOG(ARGS...) \
+do {  \
+  if (!internal->opts.log) break; \
+  Logger::log (internal, ##ARGS); \
+} while (0)
 
 #else
 #define LOG(ARGS...) do { } while (0)

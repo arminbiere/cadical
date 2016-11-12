@@ -1,6 +1,10 @@
 #include "ema.hpp"
 #include "logging.hpp"
 
+#ifdef LOGGING
+#include "internal.hpp"
+#endif
+
 namespace CaDiCaL {
 
 // Updating an exponential moving average is placed here since we want to

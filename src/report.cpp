@@ -67,9 +67,10 @@ REPORT("propconf",    0, 2, relative (stats.propagations, stats.conflicts)) \
 /*------------------------------------------------------------------------*/
 
 void Internal::report (char type, bool verbose) {
-#ifndef LOGGING
-  if (opts.quiet || (verbose && !opts.verbose)) return;
+#ifdef LOGGING
+  if (!opts.log)
 #endif
+  if (opts.quiet || (verbose && !opts.verbose)) return;
   const int max_reports = 32;
   Report reports[max_reports];
   int n = 0;

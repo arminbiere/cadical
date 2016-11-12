@@ -209,7 +209,20 @@ inline int Internal::try_to_subsume_clause (Clause * c,
 	*k++ = e;
 	if (d) continue;
 	flipped = subsume_check (e, c);
-	if (flipped) d = e;                 // ... and leave outer loop.
+	if (!flipped) continue;
+	d = e;                 	      		 // ... and leave outer loop.
+	if (flipped == INT_MIN) continue;
+	if (sign < 0) {
+	  assert (flipped == -lit);
+#if 0
+	  // TODO remove
+	  static int count = 0;
+	  //if (count == 163) abort ();
+	  //if (count++ < 163) k--;
+	  count++;
+#endif
+	  k--;
+	}
       }
       os.resize (k - os.begin ());
       shrink_vector (os);
@@ -409,7 +422,7 @@ bool Internal::subsume_round (bool irredundant_only) {
     // This should give faster failures for assumption checks since the
     // less occurring variables are put first in a clause and thus will
     // make it more likely to be found as witness for a clause not to be
-    // subsumed.  One could in principle (see also the discussion on
+    // subsuming.  One could in principle (see also the discussion on
     // 'subsumption' in the 'Splatz' solver) replace marking by a kind of
     // merge sort, which we do not want to do.  It would avoid 'marked'
     // calls and thus might be slightly faster.

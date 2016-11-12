@@ -20,7 +20,7 @@ where '<option>' is one of the following
 -h|--help              print this command line summary
 -g|--debug             compile with debugging information
 -c|--check             compile with assertion checking (default for '-g')
--l|--log               include and enable logging code
+-l|--log               include logging code (but disabled by default)
 -s|--sats              include and enable expensive statistics code
 -a|--all               short cut for '-g -l -p'
 --coverage             compile with '-ftest-coverage -fprofile-arcs'
