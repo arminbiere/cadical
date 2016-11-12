@@ -212,17 +212,7 @@ inline int Internal::try_to_subsume_clause (Clause * c,
 	if (!flipped) continue;
 	d = e;                 	      		 // ... and leave outer loop.
 	if (flipped == INT_MIN) continue;
-	if (sign < 0) {
-	  assert (flipped == -lit);
-#if 0
-	  // TODO remove
-	  static int count = 0;
-	  //if (count == 163) abort ();
-	  //if (count++ < 163) k--;
-	  count++;
-#endif
-	  k--;
-	}
+	if (sign < 0) assert (flipped == -lit), k--;
       }
       os.resize (k - os.begin ());
       shrink_vector (os);
