@@ -116,6 +116,7 @@ inline int Internal::subsume_check (Clause * subsuming,
   assert (subsuming->size <= subsumed->size);
 
   stats.subchecks++;
+  if (subsuming->size == 2) stats.subchecks2++;
   const const_literal_iterator end = subsuming->end ();
   int flipped = 0;
   for (const_literal_iterator i = subsuming->begin (); i != end; i++) {
@@ -207,12 +208,13 @@ inline int Internal::try_to_subsume_clause (Clause * c,
 	Clause * e = *j;
 	if (e->garbage) continue;
 	*k++ = e;
-	if (d) continue;
+	if (d) continue;			// need to copy rest
 	flipped = subsume_check (e, c);
 	if (!flipped) continue;
-	d = e;                 	      		 // ... and leave outer loop.
+	d = e;                 	      	        // leave outer loop
 	if (flipped == INT_MIN) continue;
 	if (sign < 0) assert (flipped == -lit), k--;
+	else assert (flipped != lit);
       }
       os.resize (k - os.begin ());
       shrink_vector (os);
@@ -237,9 +239,9 @@ inline int Internal::try_to_subsume_clause (Clause * c,
 
 /*------------------------------------------------------------------------*/
 
-// Sorting the scheduled clauses is way faster if we compute save the clause
-// size in the schedule to avoid pointer access to clauses during sorting.
-// This slightly increases the schedule size though.
+// Sorting the scheduled clauses is way faster if we compute and save the
+// clause size in the schedule to avoid pointer access to clauses during
+// sorting.  This slightly increases the schedule size though.
 
 struct ClauseSize {
   int size;
@@ -301,9 +303,20 @@ bool Internal::subsume_round (bool irredundant_only) {
   for (size_t i = 0; i != size; i++) {
     Clause * c = clauses[i];
     if (c->garbage) continue;
-    if (clause_contains_fixed_literal (c)) continue;
+
+    if (c->size > opts.subsumeclslim) continue;
+
+    // Handling fixed falsified literals is pretty complicated and we just
+    // postpone checking such clauses until the next garbage collection has
+    // flushed out these literals.
+    int fixed = clause_contains_fixed_literal (c);
+    if (fixed) {
+      if (fixed > 0) mark_garbage (c);	// Do not waste this effort.
+      continue;				// Even if just falsified exists.
+    }
+
     if (c->redundant) {
-      if (irredundant_only) continue;
+      if (irredundant_only) continue; // Skip it during 'elim'.
       if (c->extended) {
         // All irredundant clauses and short clauses with small glue (not
         // extended) are candidates in any case.  Otherwise, redundant long
@@ -314,9 +327,9 @@ bool Internal::subsume_round (bool irredundant_only) {
     } else if (irredundant_only) {
       // In this case we only care for irredundant clauses and thus can use
       // the 'touched' time stamp (which is only updated for literals
-      // occurring in irredundant clauses) to determine whether it make
+      // occurring in irredundant clauses) to determine whether it makes
       // sense to check this clause for subsumption.  If none of its
-      // literals has been touched since the last subsumption, we should
+      // variables has been touched since the last subsumption, we should
       // ignore it.
       const const_literal_iterator end = c->end ();
       const_literal_iterator l;
@@ -330,7 +343,7 @@ bool Internal::subsume_round (bool irredundant_only) {
 
     schedule.push_back (ClauseSize (c->size, i));
 
-    // Count all literals in candidate clauses.
+    // Count all literals in this candidate clause.
     //
     const const_literal_iterator end = c->end ();
     const_literal_iterator l;
@@ -353,9 +366,11 @@ bool Internal::subsume_round (bool irredundant_only) {
     (irredundant_only ? "irredundant " : ""));
 
   // Now go over the scheduled clauses in the order of increasing size and
-  // try to forward subsume and strengthen them. Forward means find smaller
-  // or same size clauses which subsume or might strengthen the candidate.
-  // After the candidate has been processed connect its literals.
+  // try to forward subsume and strengthen them. Forward subsumptions tries
+  // to find smaller or same size clauses which subsume or might strengthen
+  // the candidate.  After the candidate has been processed connect one
+  // of its literals (with smallest number of occurrences at this point) in
+  // a one-watched scheme.
 
   long subsumed = 0, strengthened = 0;
 
@@ -392,6 +407,7 @@ bool Internal::subsume_round (bool irredundant_only) {
     // occurrences computed before and stored in 'noccs'.
     //
     int minlit = 0;
+    long minoccs = 0;
     size_t minsize = 0;
     const const_literal_iterator end = c->end ();
     const_literal_iterator j;
@@ -399,18 +415,21 @@ bool Internal::subsume_round (bool irredundant_only) {
       const int lit = *j;
       const size_t size = occs (lit).size ();
       if (minlit && minsize <= size) continue;
-      minlit = lit, minsize = size;
+      const long tmp = noccs (lit);
+      if (minlit && minsize == size && tmp <= minoccs) continue;
+      minlit = lit, minsize = size, minoccs = tmp;
     }
 
     // Unless this smallest occurring literal occurs too often.
     //
     if (minsize > (size_t) opts.subsumeocclim) continue;
 
-    LOG (c, "watching %d with %ld occurrences", minlit, (long) minsize);
+    LOG (c, "watching %d with %ld current and total %ld occurrences",
+      minlit, (long) minsize, minoccs);
     occs (minlit).push_back (c);
 
-    // This should give faster failures for assumption checks since the
-    // less occurring variables are put first in a clause and thus will
+    // This sorting should give faster failures for assumption checks since
+    // the less occurring variables are put first in a clause and thus will
     // make it more likely to be found as witness for a clause not to be
     // subsuming.  One could in principle (see also the discussion on
     // 'subsumption' in the 'Splatz' solver) replace marking by a kind of

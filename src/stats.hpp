@@ -37,6 +37,7 @@ struct Stats {
   long subred;       // number of subsumed redundant clauses
   long subtried;     // number of tried subsumptions
   long subchecks;    // number of pair-wise subsumption checks
+  long subchecks2;   // same but restricted to binary clauses
   long subsumptions; // number of subsumption phases
   long resolved;     // number of resolved clauses in eliminations
   long resolved2;    // number of resolved binary clauses

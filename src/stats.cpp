@@ -87,6 +87,8 @@ void Stats::print (Internal * internal) {
       stats.subtried, relative (stats.subtried, stats.conflicts));
     MSG ("  subchecks:   %15ld   %10.2f    per tried",
       stats.subchecks, relative (stats.subchecks, stats.subtried));
+    MSG ("  subchecks2:  %15ld   %10.2f %%  per subcheck",
+      stats.subchecks2, percent (stats.subchecks2, stats.subchecks));
 #ifndef STATS
   }
 #endif

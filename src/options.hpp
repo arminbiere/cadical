@@ -65,6 +65,7 @@ OPTION(shrinksize,       int,   20, 0,1e9, "size limit for shrinking") \
 OPTION(strengthen,      bool,    1, 0,  1, "strengthen during subsume") \
 OPTION(sublast,          int,    5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,    1, 0,  1, "enable clause subsumption") \
+OPTION(subsumeclslim,    int, 1000, 0,1e9, "clause length limit") \
 OPTION(subsumeinc,       int,  1e4, 1,1e9, "interval in conflicts") \
 OPTION(subsumeinit,      int,  1e4, 0,1e9, "initial subsume limit") \
 OPTION(subsumeocclim,    int,  100, 0,1e9, "watch list length limit") \
