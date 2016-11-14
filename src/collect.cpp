@@ -9,9 +9,10 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// Returns 1 if the given clause is root level satisfied or -1 if it is not
-// root level satisfied but contains a root level falsified literal and 0
-// otherwise, if it does not contain a root level fixed literal.
+// Returns positive number 1 ( > 0) if the given clause is root level
+// satisfied or the negative number -1 ( < 0) if it is not root level
+// satisfied but contains a root level falsified literal and 0 otherwise, if
+// it does not contain a root level fixed literal.
 
 int Internal::clause_contains_fixed_literal (Clause * c) {
   const const_literal_iterator end = c->end ();
