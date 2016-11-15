@@ -45,6 +45,7 @@ OPTION(keepglue,         int,    2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,         int,    3, 2,1e9, "size kept learned clauses") \
 OPTION(leak,            bool,    1, 0,  1, "leak solver memory") \
 LOGOPT(log,             bool,    0, 0,  1, "enable logging") \
+LOGOPT(logsort,         bool,    0, 0,  1, "sort logged clauses") \
 OPTION(minimize,        bool,    1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,    int, 1000, 0,1e9, "minimization depth") \
 OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \

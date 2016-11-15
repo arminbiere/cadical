@@ -108,16 +108,6 @@ void Internal::mark_garbage (Clause * c) {
   if (!c->redundant) touch_clause (c);
 }
 
-// Place literals over the same variable close to each other.  This allows
-// eager removal of identical literals and detection of tautological clauses.
-
-struct lit_less_than {
-  bool operator () (int a, int b) {
-    int s = abs (a), t = abs (b);
-    return s < t || (s == t && a < b);
-  }
-};
-
 bool Internal::tautological_clause () {
   sort (clause.begin (), clause.end (), lit_less_than ());
   const_int_iterator i = clause.begin ();

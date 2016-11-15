@@ -157,6 +157,19 @@ inline size_t Clause::offset () const {
   return extended ? 0 : EXTENDED_OFFSET;
 }
 
+/*------------------------------------------------------------------------*/
+
+// Place literals over the same variable close to each other.  This allows
+// eager removal of identical literals and detection of tautological clauses
+// and also is easier to read for debugging.
+
+struct lit_less_than {
+  bool operator () (int a, int b) const {
+    int s = abs (a), t = abs (b);
+    return s < t || (s == t && a < b);
+  }
+};
+
 };
 
 #endif
