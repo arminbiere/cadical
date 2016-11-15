@@ -28,7 +28,7 @@ OPTION(clim,             int,   -1, 0,1e9, "conflict limit (-1=none)") \
 OPTION(dlim,             int,   -1, 0,1e9, "decision limit (-1=none)") \
 OPTION(elim,            bool,    1, 0,  1, "bounded variable elimination") \
 OPTION(elimclslim,       int, 1000, 0,1e9, "ignore clauses of this size") \
-OPTION(elimignore,    double,  0.0, 0,  1, "ignored fraction of variables") \
+OPTION(elimignore,    double,  0.3, 0,  1, "ignored variables fraction") \
 OPTION(eliminit,         int,  1e3, 0,1e9, "initial conflict limit") \
 OPTION(elimint,          int,  1e4, 1,1e9, "initial conflict interval") \
 OPTION(elimocclim,       int,   20, 0,1e9, "one sided occurrence limit") \
@@ -67,6 +67,7 @@ OPTION(strengthen,      bool,    1, 0,  1, "strengthen during subsume") \
 OPTION(sublast,          int,    5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,    1, 0,  1, "enable clause subsumption") \
 OPTION(subsumeclslim,    int, 1000, 0,1e9, "clause length limit") \
+OPTION(subsumeignore, double,  0.3, 0,  1, "ignored clauses fraction") \
 OPTION(subsumeinc,       int,  1e4, 1,1e9, "interval in conflicts") \
 OPTION(subsumeinit,      int,  1e4, 0,1e9, "initial subsume limit") \
 OPTION(subsumeocclim,    int,   20, 0,1e9, "watch list length limit") \

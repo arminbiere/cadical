@@ -247,6 +247,7 @@ struct ClauseSize {
   int size;
   size_t cidx;
   ClauseSize (int s, size_t i) : size (s), cidx (i) { }
+  ClauseSize () { }
 };
 
 typedef vector<ClauseSize>::const_iterator const_clause_size_iterator;
@@ -356,6 +357,17 @@ bool Internal::subsume_round (bool irredundant_only) {
   // Smaller clauses are checked and connected first.
   //
   sort (schedule.begin (), schedule.end (), smaller_clause_size ());
+
+  // Drop 'opts.subsumeignore' fraction of variables.
+  //
+  size_t ignore = (1 - opts.subsumeignore) * schedule.size ();
+  if (ignore < schedule.size ()) {
+    int long limit = schedule[ignore].size;
+    while (++ignore < schedule.size () && schedule[ignore].size == limit)
+      ;
+    schedule.resize (ignore);
+    shrink_vector (schedule);
+  }
 
   long scheduled = schedule.size ();
   long total = stats.irredundant;
