@@ -38,13 +38,13 @@ void Logger::log (Internal * internal, const Clause * c, const char *fmt, ...) {
     if (internal->opts.logsort) {
       vector<int> s;
       for (const_literal_iterator i = c->begin (); i != c->end (); i++)
-	s.push_back (*i);
+        s.push_back (*i);
       sort (s.begin (), s.end (), lit_less_than ());
       for (const_int_iterator i = s.begin (); i != s.end (); i++)
-	printf (" %d", *i);
+        printf (" %d", *i);
     } else {
       for (const_literal_iterator i = c->begin (); i != c->end (); i++)
-	printf (" %d", *i);
+        printf (" %d", *i);
     }
     printf (" 0");
   } else if (internal->level) printf (" decision");

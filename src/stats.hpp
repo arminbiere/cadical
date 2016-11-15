@@ -69,9 +69,9 @@ struct Stats {
 /*------------------------------------------------------------------------*/
 
 #ifdef STATS
-#define ADD(STAT,INC) do { stats.STAT += (INC); } while (0)
+#define EXPENSIVE_STATS_ADD(STAT,INC) do { stats.STAT += (INC); } while (0)
 #else
-#define ADD(STAT,INC) do { } while (0)
+#define EXPENSIVE_STATS_ADD(STAT,INC) do { } while (0)
 #endif
 
 /*------------------------------------------------------------------------*/

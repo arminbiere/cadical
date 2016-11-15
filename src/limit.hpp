@@ -28,7 +28,7 @@ struct Limit {
   long subsumptions_at_last_elim;
   long      touched_at_last_elim;
 
-  long   touched_at_last_subsume;	// ditto for subsumptions
+  long   touched_at_last_subsume;       // ditto for subsumptions
 
   // Used to let 'subsume' wait until and right after next 'reduce'.
   //

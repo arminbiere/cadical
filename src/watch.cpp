@@ -29,8 +29,10 @@ void Internal::connect_watches () {
   assert (watches ());
   LOG ("connecting all watches");
   const const_clause_iterator end = clauses.end ();
-  for (const_clause_iterator i = clauses.begin (); i != end; i++)
-    watch_clause (*i);
+  for (const_clause_iterator i = clauses.begin (); i != end; i++) {
+    Clause * c = *i;
+    if (!c->garbage) watch_clause (c);
+  }
   STOP (connect);
 }
 

@@ -9,7 +9,7 @@ namespace CaDiCaL {
 inline void Internal::assign (int lit, Clause * reason, int other) {
   int idx = vidx (lit);
   assert (!vals[idx]);
-  assert (!etab[idx]);
+  assert (!etab[idx] || (!reason && !other));
   Var & v = var (idx);
   v.level = level;
   v.trail = (int) trail.size ();
@@ -86,27 +86,28 @@ bool Internal::propagate () {
         if (b < 0) conflict = w.clause;
         else if (!b) assign (w.blit, 0, lit);
       } else {
-	ADD (visits, 1);
+        EXPENSIVE_STATS_ADD (visits, 1);
+        if (w.clause->garbage) continue;
         literal_iterator lits = w.clause->begin ();
         if (lits[0] == lit) swap (lits[0], lits[1]);
         const int u = val (lits[0]);
         if (u > 0) j[-1].blit = lits[0];
         else {
           const const_literal_iterator end = lits + w.size;
-	  assert (w.size == w.clause->size);
+          assert (w.size == w.clause->size);
           literal_iterator k = lits + w.clause->pos;
           int v = -1;
-	  while (k != end && (v = val (*k)) < 0) k++;
-	  ADD (traversed, k - (lits + w.clause->pos));
-	  if (v < 0) {
-	    const const_literal_iterator middle = lits + w.clause->pos;
-	    k = lits + 2;
-	    assert (w.clause->pos <= w.size);
-	    while (k != middle && (v = val (*k)) < 0) k++;
-	    ADD (traversed, k - (lits + 2));
-	  }
-	  assert (lits + 2 <= k), assert (k <= w.clause->end ());
-	  w.clause->pos = k - lits;
+          while (k != end && (v = val (*k)) < 0) k++;
+          EXPENSIVE_STATS_ADD (traversed, k - (lits + w.clause->pos));
+          if (v < 0) {
+            const const_literal_iterator middle = lits + w.clause->pos;
+            k = lits + 2;
+            assert (w.clause->pos <= w.size);
+            while (k != middle && (v = val (*k)) < 0) k++;
+            EXPENSIVE_STATS_ADD (traversed, k - (lits + 2));
+          }
+          assert (lits + 2 <= k), assert (k <= w.clause->end ());
+          w.clause->pos = k - lits;
           if (v > 0) j[-1].blit = *k;
           else if (!v) {
             LOG (w.clause, "unwatch %d in", *k);

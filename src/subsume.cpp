@@ -183,7 +183,7 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
 
 inline int Internal::try_to_subsume_clause (Clause * c,
                                             bool irredundant_only,
-					    long old_touched) {
+                                            long old_touched) {
 
   stats.subtried++;
   assert (!level);
@@ -197,24 +197,24 @@ inline int Internal::try_to_subsume_clause (Clause * c,
   for (const_literal_iterator i = c->begin (); !d && i != ec; i++) {
     int lit = *i;
     if (irredundant_only &&
-	touched (lit) <= old_touched &&
-	touched (-lit) <= old_touched)
+        touched (lit) <= old_touched &&
+        touched (-lit) <= old_touched)
       continue;
     for (int sign = -1; !d && sign <= 1; sign += 2) {
       Occs & os = occs (sign * lit);
       const const_clause_iterator eo = os.end ();
       clause_iterator k = os.begin ();
       for (const_clause_iterator j = k; j != eo; j++) {
-	Clause * e = *j;
-	if (e->garbage) continue;
-	*k++ = e;
-	if (d) continue;			// need to copy rest
-	flipped = subsume_check (e, c);
-	if (!flipped) continue;
-	d = e;                 	      	        // leave outer loop
-	if (flipped == INT_MIN) continue;
-	if (sign < 0) assert (flipped == -lit), k--;
-	else assert (flipped != lit);
+        Clause * e = *j;
+        if (e->garbage) continue;
+        *k++ = e;
+        if (d) continue;                        // need to copy rest
+        flipped = subsume_check (e, c);
+        if (!flipped) continue;
+        d = e;                                  // leave outer loop
+        if (flipped == INT_MIN) continue;
+        if (sign < 0) assert (flipped == -lit), k--;
+        else assert (flipped != lit);
       }
       os.resize (k - os.begin ());
       shrink_vector (os);
@@ -264,7 +264,7 @@ struct smaller_clause_size {
 
 struct less_noccs {
   Internal * internal;
-  less_noccs (Internal * i) : internal (i) { } 
+  less_noccs (Internal * i) : internal (i) { }
   bool operator () (int a, int b) {
     long m = internal->noccs (a), n = internal ->noccs (b);
     if (m < n) return true;
@@ -311,8 +311,8 @@ bool Internal::subsume_round (bool irredundant_only) {
     // flushed out these literals.
     int fixed = clause_contains_fixed_literal (c);
     if (fixed) {
-      if (fixed > 0) mark_garbage (c);	// Do not waste this effort.
-      continue;				// Even if just falsified exists.
+      if (fixed > 0) mark_garbage (c);  // Do not waste this effort.
+      continue;                         // Even if just falsified exists.
     }
 
     if (c->redundant) {
@@ -334,9 +334,9 @@ bool Internal::subsume_round (bool irredundant_only) {
       const const_literal_iterator end = c->end ();
       const_literal_iterator l;
       for (l = c->begin (); l != end; l++) {
-	const int lit = *l;
-	if (touched (lit) > old_touched  ||
-	    touched (-lit) > old_touched) break;
+        const int lit = *l;
+        if (touched (lit) > old_touched  ||
+            touched (-lit) > old_touched) break;
       }
       if (l == end) continue;
     }
