@@ -9,6 +9,7 @@ namespace CaDiCaL {
 inline void Internal::assign (int lit, Clause * reason, int other) {
   int idx = vidx (lit);
   assert (!vals[idx]);
+  assert (!etab[idx]);
   Var & v = var (idx);
   v.level = level;
   v.trail = (int) trail.size ();
