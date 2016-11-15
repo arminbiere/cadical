@@ -332,20 +332,21 @@ inline void Internal::elim_variable (int pivot) {
 // the occurrences up-front and avoid pointer access to 'noccs' during
 // sorting. This slightly increases the schedule size though.
 
-struct IdxSumOccs {
+struct IdxScore {
   int idx;
-  long soccs;
-  IdxSumOccs (int i, long pos, long neg) : idx (i), soccs (pos + neg) { }
-  IdxSumOccs () { }
+  int score;
+  IdxScore (int i, long s) :
+    idx (i), score (s > (long) INT_MAX ? INT_MAX : s) { }
+  IdxScore () { }
 };
 
-typedef vector<IdxSumOccs>::const_iterator const_idx_sum_occs_iterator;
-typedef vector<IdxSumOccs>::iterator idx_sum_occs_iterator;
+typedef vector<IdxScore>::const_iterator const_idx_sum_occs_iterator;
+typedef vector<IdxScore>::iterator idx_sum_occs_iterator;
 
 struct idx_sum_occs_smaller {
-  bool operator () (const IdxSumOccs & a, const IdxSumOccs & b) const {
-    if (a.soccs < b.soccs) return true;
-    if (a.soccs > b.soccs) return false;
+  bool operator () (const IdxScore & a, const IdxScore & b) const {
+    if (a.score < b.score) return true;
+    if (a.score > b.score) return false;
     return a.idx < b.idx;
   }
 };
@@ -362,7 +363,7 @@ bool Internal::elim_round () {
 
   assert (!level);
 
-  vector<IdxSumOccs> schedule;  // schedule of candidate variables
+  vector<IdxScore> schedule;  // schedule of candidate variables
   init_noccs ();                // number of irredundant occurrences
 
   const int size_limit = opts.elimclslim;
@@ -402,7 +403,7 @@ bool Internal::elim_round () {
     long neg = noccs (-idx);
     if (neg > occ_limit) continue;
     connected [idx] = 1;
-    schedule.push_back (IdxSumOccs (idx, pos, neg));
+    schedule.push_back (IdxScore (idx, ((pos && neg) ? pos + neg : 0)));
   }
   shrink_vector (schedule);
   reset_noccs ();
@@ -413,8 +414,8 @@ bool Internal::elim_round () {
   //
   size_t ignore = (1 - opts.elimignore) * schedule.size ();
   if (ignore < schedule.size ()) {
-    const long limit = schedule[ignore].soccs;
-    while (++ignore < schedule.size () && schedule[ignore].soccs == limit)
+    const long limit = schedule[ignore].score;
+    while (++ignore < schedule.size () && schedule[ignore].score == limit)
       ;
     for (size_t i = ignore; i < schedule.size (); i++)
       connected [ schedule [i].idx ] = 0;
