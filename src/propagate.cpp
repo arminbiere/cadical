@@ -17,7 +17,8 @@ inline void Internal::assign (int lit, Clause * reason, int other) {
   v.reason = reason;
   if (!level) learn_unit_clause (lit);
   const signed char tmp = sign (lit);
-  vals[idx] = phases[idx] = tmp;
+  vals[idx] = tmp;
+  phases[idx] = tmp;
   vals[-idx] = -tmp;
   assert (val (lit) > 0);
   trail.push_back (lit);
