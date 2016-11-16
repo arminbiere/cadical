@@ -16,15 +16,19 @@ int Internal::next_decision_variable () {
   return res;
 }
 
+void Internal::assume_decision (int lit) {
+  level++;
+  control.push_back (Level (lit));
+  LOG ("decide %d", lit);
+  assign (lit);
+}
+
 void Internal::decide () {
   START (decide);
-  level++;
   stats.decisions++;
   int idx = next_decision_variable ();
   int decision = phases[idx] * idx;
-  control.push_back (Level (decision));
-  LOG ("decide %d", decision);
-  assign (decision);
+  assume_decision (decision);
   STOP (decide);
 }
 

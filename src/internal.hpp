@@ -69,7 +69,7 @@ class Internal {
   bool unsat;                   // empty clause found or learned
   bool iterating;               // report learned unit (iteration)
   bool clashing;                // found clashing units in during parsing
-  bool savephases;		// save current assignment in 'phases'
+  bool simplifying;		// outside of CDCL loop
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // maximum variable index
   int level;                    // decision level ('control.size () - 1')
@@ -346,6 +346,7 @@ class Internal {
 
   // Failed literal probing.
   //
+  bool occurs_in_binary_clauses (int lit);
   bool probing ();
   void probe ();
 
@@ -353,6 +354,7 @@ class Internal {
   //
   bool satisfied () const { return trail.size () == (size_t) max_var; }
   int next_decision_variable ();
+  void assume_decision (int decision);
   void decide ();
 
   // Main search functions in 'internal.cpp'.

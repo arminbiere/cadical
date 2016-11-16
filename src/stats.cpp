@@ -33,6 +33,8 @@ void Stats::print (Internal * internal) {
     stats.decisions, relative (stats.decisions, t));
   MSG ("propagations:  %15ld   %10.2f    millions per second",
     stats.propagations, relative (stats.propagations/1e6, t));
+  MSG ("probed:        %15ld   %10.2f    per failed",
+    stats.probed, relative (stats.probed, stats.failed));
 #ifdef STATS
   MSG ("  visits:      %15ld   %10.2f    per propagation",
     stats.visits, relative (stats.visits, stats.propagations));

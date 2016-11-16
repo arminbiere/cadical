@@ -18,7 +18,7 @@ inline void Internal::assign (int lit, Clause * reason, int other) {
   if (!level) learn_unit_clause (lit);
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
-  phases[idx] = tmp;
+  if (!simplifying) phases[idx] = tmp;
   vals[-idx] = -tmp;
   assert (val (lit) > 0);
   trail.push_back (lit);
@@ -87,7 +87,7 @@ bool Internal::propagate () {
         if (b < 0) conflict = w.clause;
         else if (!b) assign (w.blit, 0, lit);
       } else {
-        EXPENSIVE_STATS_ADD (visits, 1);
+        EXPENSIVE_STATS_ADD (simplifying, visits, 1);
         if (w.clause->garbage) continue;
         literal_iterator lits = w.clause->begin ();
         if (lits[0] == lit) swap (lits[0], lits[1]);
@@ -99,13 +99,15 @@ bool Internal::propagate () {
           literal_iterator k = lits + w.clause->pos;
           int v = -1;
           while (k != end && (v = val (*k)) < 0) k++;
-          EXPENSIVE_STATS_ADD (traversed, k - (lits + w.clause->pos));
+          EXPENSIVE_STATS_ADD (simplifying,
+	    traversed, k - (lits + w.clause->pos));
           if (v < 0) {
             const const_literal_iterator middle = lits + w.clause->pos;
             k = lits + 2;
             assert (w.clause->pos <= w.size);
             while (k != middle && (v = val (*k)) < 0) k++;
-            EXPENSIVE_STATS_ADD (traversed, k - (lits + 2));
+            EXPENSIVE_STATS_ADD (simplifying,
+	      traversed, k - (lits + 2));
           }
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
           w.clause->pos = k - lits;
@@ -123,8 +125,11 @@ bool Internal::propagate () {
     while (i != ws.end ()) *j++ = *i++;
     ws.resize (j - ws.begin ());
   }
-  stats.propagations += propagated - before;
-  if (conflict) { stats.conflicts++; LOG (conflict, "conflict"); }
+  if (!simplifying) {
+    stats.propagations += propagated - before;
+    if (conflict) stats.conflicts++; 
+  }
+  if (conflict) LOG (conflict, "conflict");
   STOP (propagate);
   return !conflict;
 }

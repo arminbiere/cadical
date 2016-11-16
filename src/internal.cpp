@@ -14,7 +14,7 @@ Internal::Internal ()
   unsat (false),
   iterating (false),
   clashing (false),
-  savephases (true),
+  simplifying (false),
   vsize (0),
   max_var (0),
   level (0),
@@ -155,6 +155,7 @@ int Internal::search () {
     else if (terminating ()) break;     // limit hit or asynchronous abort
     else if (restarting ()) restart (); // restart by backtracking
     else if (reducing ()) reduce ();    // collect useless learned clauses
+    else if (probing ()) probe ();      // failed literal probing
     else if (subsuming ()) subsume ();  // run subsumption algorithm
     else if (eliminating ()) elim ();   // run bounded variable elimination
     else decide ();                     // otherwise pick next decision
