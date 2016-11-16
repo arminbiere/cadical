@@ -7,25 +7,25 @@ change, and easy to analyze CDCL solver, there are two types of TODO's here.
 
 First we list things to simplify or to remove.
 
-Some of them first need proper benchmarking to avoid oversimplifying the solver:
+  - Check again that all the core CDCL features are necessary.
 
-  - Check whether the complicated EMA initialization is necessary.
-
-  - Check that to propagating after binary conflicts really gives a benefit.
+  - Benchmark, configure and simplify preprocessors.
 
 ## Additions
 
 Second things are listed related to additional features.
   
-  - Add bounded variable elimination and blocked clause elimination.
+  - Add clause elimination procedures.
 
-  - Subsumption of learned clauses as in Splatz.
+  - Add failed literal probing.
 
-  - Equivalent literal substitution.
+  - Add equivalent literal substitution.
+
+  - Add clause shrinking procedures.
 
 ## General
 
 There should be an ongoing process of refactoring and documenting the code
 and in particular remove part of the code which is not used anymore.
 
-Fr 21. Okt 21:16:09 CEST 2016
+Mit Nov 16 11:10:55 CET 2016

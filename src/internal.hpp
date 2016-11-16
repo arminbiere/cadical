@@ -69,6 +69,7 @@ class Internal {
   bool unsat;                   // empty clause found or learned
   bool iterating;               // report learned unit (iteration)
   bool clashing;                // found clashing units in during parsing
+  bool savephases;		// save current assignment in 'phases'
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // maximum variable index
   int level;                    // decision level ('control.size () - 1')

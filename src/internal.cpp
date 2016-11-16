@@ -14,6 +14,7 @@ Internal::Internal ()
   unsat (false),
   iterating (false),
   clashing (false),
+  savephases (true),
   vsize (0),
   max_var (0),
   level (0),

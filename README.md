@@ -1,11 +1,12 @@
 # CaDiCaL
 
-CaDiCaLy Simplified Satisfiability Solver
+CaDiCaL Simplified Satisfiability Solver
 
-The goal of CaDiCaL is to have a minimalistic CDCL solver,
-which is easy to understand and change, while at the same
-time not too much slower than state of the art CDCL solvers
-if pre-processing is disabled.
+The goal of the development of CaDiCaL is to provide a CDCL solver, which is
+easy to understand and change, while at the same time not being much slower
+than other state-of-the-art CDCL solvers.  Originally we wanted to also
+radically simplify the design and internal data structures, but that goal
+was only achieved partially.
 
 First go to the 'build' subdirectory and then run './configure.sh',
 followed by 'make'.  This will build the library and the executable
@@ -45,4 +46,4 @@ A plain stable source release can eventually be found at
 
 Armin Biere
 
-Fr 28. Okt 15:11:27 CEST 2016
+Mit Nov 16 11:08:56 CET 2016
