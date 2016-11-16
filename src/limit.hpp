@@ -9,7 +9,8 @@ struct Limit {
   long analyzed;  // limit on keeping recently analyzed clauses
   long restart;   // conflict limit for next 'restart'
   long subsume;   // conflict limit on next 'subsume'
-  long elim;      // conflict limit on next 'eliminate'
+  long elim;      // conflict limit on next 'elim'
+  long probe;     // conflict limit on next 'probe'
 
   long conflict;  // conflict limit if non-negative
   long decision;  // decision limit if non-negative

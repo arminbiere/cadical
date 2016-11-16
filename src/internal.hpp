@@ -344,6 +344,11 @@ class Internal {
   void extend ();
   void elim ();
 
+  // Failed literal probing.
+  //
+  bool probing ();
+  void probe ();
+
   // Part on picking the next decision in 'decide.cpp'.
   //
   bool satisfied () const { return trail.size () == (size_t) max_var; }

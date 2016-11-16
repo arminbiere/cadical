@@ -48,6 +48,9 @@ LOGOPT(log,             bool,    0, 0,  1, "enable logging") \
 LOGOPT(logsort,         bool,    0, 0,  1, "sort logged clauses") \
 OPTION(minimize,        bool,    1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,    int, 1000, 0,1e9, "minimization depth") \
+OPTION(probe,           bool,    1, 0,  1, "failed literal probing" ) \
+OPTION(probeinit,        int,  500, 0,1e9, "initial probing interval" ) \
+OPTION(probeint,         int,  1e3, 1,1e9, "probing interval increment" ) \
 OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
 OPTION(profile,          int,    2, 0,  4, "profiling level") \
 OPTION(quiet,           bool,    0, 0,  1, "disable all messages") \

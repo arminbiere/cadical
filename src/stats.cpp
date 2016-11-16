@@ -17,6 +17,8 @@ void Stats::print (Internal * internal) {
   if (internal->opts.profile) internal->print_profile (t);
   size_t m = internal->max_bytes ();
   SECTION ("statistics");
+  MSG ("probings:      %15ld   %10.2f    conflicts per probing",
+    stats.probings, relative (stats.conflicts, stats.probings));
   MSG ("eliminations:  %15ld   %10.2f    conflicts per elimination",
     stats.eliminations, relative (stats.conflicts, stats.eliminations));
   MSG ("subsumptions:  %15ld   %10.2f    conflicts per subsumption",
@@ -53,6 +55,8 @@ void Stats::print (Internal * internal) {
 #endif
   MSG ("eliminated:    %15ld   %10.2f %%  of all variables",
     stats.eliminated, percent (stats.eliminated, internal->max_var));
+  MSG ("failed:        %15ld   %10.2f %%  of all variables",
+    stats.failed, percent (stats.failed, internal->max_var));
   MSG ("fixed:         %15ld   %10.2f %%  of all variables",
     stats.fixed, percent (stats.fixed, internal->max_var));
   MSG ("units:         %15ld   %10.2f    conflicts per unit",

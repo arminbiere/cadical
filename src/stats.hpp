@@ -50,6 +50,9 @@ struct Stats {
   long garbage;      // number of current garbage clauses
   long units;        // learned unit clauses
   long binaries;     // learned binary clauses
+  long probings;     // number of probings
+  long probed;       // number of probed literals
+  long failed;       // number of failed literals
 #ifdef STATS
   long visits;       // visited clauses in propagation
   long traversed;    // traversed literals in propagation
