@@ -346,7 +346,6 @@ class Internal {
 
   // Failed literal probing.
   //
-  bool occurs_in_binary_clauses (int lit);
   bool probing ();
   void probe ();
 
