@@ -171,10 +171,10 @@ File::~File () {
     long s = size (name ());
     double mb = s / (double) (1<<20);
     if (writing)
-      MSG ("deflated to %ld bytes %.1f MB by factor %.2f or %.2f%%",
+      MSG ("deflated to %ld bytes %.1f MB by factor %.2f (%.2f%% compression)",
         s, mb, relative (bytes (), s), percent (bytes () - s, bytes ()));
     else
-      MSG ("inflated from %ld bytes %.1f MB by factor %.2f or %.2f%%",
+      MSG ("inflated from %ld bytes %.1f MB by factor %.2f (%.2f%% compression)",
         s, mb, relative (bytes (), s), percent (bytes () - s, bytes ()));
   }
 }
