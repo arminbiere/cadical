@@ -11,6 +11,8 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
+// [PART 1] EAGER BACKWARD SUBSUMPTION
+
 // For certain instances it happens quite frequently that learned clauses
 // backward subsume some of the recently learned clauses.  Thus whenever we
 // learn a clause, we can eagerly check whether one of the last
@@ -34,7 +36,7 @@ inline bool Internal::eagerly_subsume_last_learned (Clause * c) {
   }
   assert (found <= clause.size ());
   if (found < clause.size ()) return false;
-  LOG (c, "learned clauses eagerly subsumes");
+  LOG (c, "eagerly backward subsumed");
   assert (c->redundant);
   mark_garbage (c);
   stats.sublast++;
@@ -55,16 +57,18 @@ void Internal::eagerly_subsume_last_learned () {
     if (c->garbage) continue;
     if (!c->redundant) continue;
     if ((size_t) c->size <= clause.size ()) continue;
-    LOG (c, "trying to eagerly subsume");
+    LOG (c, "trying to eagerly backward subsume");
     if (eagerly_subsume_last_learned (c)) subsumed++;
     tried++;
   }
   unmark_clause ();
-  LOG ("subsumed eagerly %d clauses out of %d tried", subsumed, tried);
+  LOG ("subsumed backward %d clauses out of %d tried", subsumed, tried);
   STOP (sublast);
 }
 
 /*------------------------------------------------------------------------*/
+
+// [PART 2] GLOBAL FORWARD SUBSUMPTION IN PHASES
 
 // The rest of the file implements a global forward subsumption algorithm,
 // which is run frequently during search.  It works both on original
