@@ -34,7 +34,7 @@ void Stats::print (Internal * internal) {
   long propagations = stats.propagations + stats.probagations;
   MSG ("propagations:  %15ld   %10.2f    millions per second",
     propagations, relative (propagations/1e6, t));
-  MSG ("probagations:  %15ld   %10.2f %%  per propagation",
+  MSG ("probagations:  %15ld   %10.2f %%  of propagations",
     stats.probagations, percent (stats.probagations, propagations));
   MSG ("probed:        %15ld   %10.2f    per failed",
     stats.probed, relative (stats.probed, stats.failed));

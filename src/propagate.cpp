@@ -127,8 +127,8 @@ bool Internal::propagate () {
     ws.resize (j - ws.begin ());
   }
   long delta = propagated - before;
-  if (simplifying) stats.propagations += delta;
-  else             stats.probagations += delta;
+  if (simplifying) stats.probagations += delta;
+  else             stats.propagations += delta;
   //                        ^ !!!!!
   if (conflict) {
     if (!simplifying) stats.conflicts++; 
