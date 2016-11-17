@@ -14,6 +14,7 @@ struct Stats {
   long conflicts;    // generated conflicts in 'propagate'
   long decisions;    // number of decisions in 'decide'
   long propagations; // propagated literals in 'propagate'
+  long probagations; // propagated during 'probe'
   long restarts;     // actual number of happened restarts
   long reused;       // number of reused trails
   long reports;      // 'report' counter

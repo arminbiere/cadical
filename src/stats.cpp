@@ -31,8 +31,11 @@ void Stats::print (Internal * internal) {
     stats.conflicts, relative (stats.conflicts, t));
   MSG ("decisions:     %15ld   %10.2f    per second",
     stats.decisions, relative (stats.decisions, t));
+  long propagations = stats.propagations + stats.probagations;
   MSG ("propagations:  %15ld   %10.2f    millions per second",
-    stats.propagations, relative (stats.propagations/1e6, t));
+    propagations, relative (propagations/1e6, t));
+  MSG ("probagations:  %15ld   %10.2f %%  per propagation",
+    stats.probagations, percent (stats.probagations, propagations));
   MSG ("probed:        %15ld   %10.2f    per failed",
     stats.probed, relative (stats.probed, stats.failed));
 #ifdef STATS

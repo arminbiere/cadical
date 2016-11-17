@@ -126,11 +126,14 @@ bool Internal::propagate () {
     while (i != ws.end ()) *j++ = *i++;
     ws.resize (j - ws.begin ());
   }
-  if (!simplifying) {
-    stats.propagations += propagated - before;
-    if (conflict) stats.conflicts++; 
+  long delta = propagated - before;
+  if (simplifying) stats.propagations += delta;
+  else             stats.probagations += delta;
+  //                        ^ !!!!!
+  if (conflict) {
+    if (!simplifying) stats.conflicts++; 
+    LOG (conflict, "conflict");
   }
-  if (conflict) LOG (conflict, "conflict");
   STOP (propagate);
   return !conflict;
 }

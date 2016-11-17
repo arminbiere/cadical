@@ -51,12 +51,16 @@ void Internal::failed_literal (int failed) {
 
   START (analyze);
 
+  long inc = stats.propagations/20;
+  if (inc < 1e6) inc = 1e6;
+  long limit = stats.probagations + inc;
+
   Clause * reason = conflict;
   LOG (reason, "analyzing failed literal conflict");
   int open = 0, uip = 0, other = 0;
   const_int_iterator i = trail.end ();
   vector<int> uips;
-  for (;;) {
+  while (stats.probagations < limit) {
     if (reason) analyze_failed_reason (uip, reason, open);
     else analyze_failed_literal (other, open);
     while (!flags (uip = *--i).seen ())
