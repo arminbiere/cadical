@@ -86,6 +86,7 @@ class Internal {
   Occs * otab;                  // table of occurrences for all literals
   long * ntab;                  // table number irredundant occurrences
   long * ttab;                  // touched variable table
+  int * ptab;			// propagated table
   Watches * wtab;               // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
   size_t propagated;            // next trail position to propagate
@@ -175,6 +176,7 @@ class Internal {
   Flags & flags (int lit)     { return ftab[vidx (lit)]; }
   long & bumped (int lit)     { return btab[vidx (lit)]; }
   long & touched (int lit)    { return ttab[vlit (lit)]; }
+  int & fixedprop (int lit)   { return ptab[vlit (lit)]; }
 
   const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
 
@@ -346,6 +348,9 @@ class Internal {
 
   // Failed literal probing.
   //
+  void analyze_failed_literal (int lit, int & open);
+  void analyze_failed_reason (int lit, Clause * reason, int & open);
+  void failed_literal (int lit);
   bool probing ();
   void probe ();
 

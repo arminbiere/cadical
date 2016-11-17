@@ -9,6 +9,90 @@ bool Internal::probing () {
   return lim.probe <= stats.conflicts;
 }
 
+/*------------------------------------------------------------------------*/
+
+// These are optimized versions of the corresponding 'analyze_literal' and
+// 'analyze_reason' functions in 'analyze.cpp' for the case 'level == 1'.
+
+inline void Internal::analyze_failed_literal (int lit, int & open) {
+  assert (lit);
+  Flags & f = flags (lit);
+  if (f.seen ()) return;
+  if (!var (lit).level) return;
+  f.set (SEEN);
+  analyzed.push_back (lit);
+  LOG ("analyzed failed literal %d", lit);
+  open++;
+}
+
+inline void
+Internal::analyze_failed_reason (int lit, Clause * reason, int & open) {
+  assert (reason);
+  const const_literal_iterator end = reason->end ();
+  const_literal_iterator j = reason->begin ();
+  int other;
+  while (j != end)
+    if ((other = *j++) != lit)
+      analyze_failed_literal (other, open);
+}
+
+/*------------------------------------------------------------------------*/
+
+void Internal::failed_literal (int failed) {
+
+  LOG ("analyzing failed literal probe %d", failed);
+  stats.failed++;
+
+  assert (!unsat);
+  assert (conflict);
+  assert (level == 1);
+  assert (control[1].decision == failed);
+  assert (seen.empty ());
+
+  START (analyze);
+
+  Clause * reason = conflict;
+  LOG (reason, "analyzing failed literal conflict");
+  int open = 0, uip = 0, other = 0;
+  const_int_iterator i = trail.end ();
+  vector<int> uips;
+  for (;;) {
+    if (reason) analyze_failed_reason (uip, reason, open);
+    else analyze_failed_literal (other, open);
+    while (!flags (uip = *--i).seen ())
+      ;
+    if (!--open) {
+      LOG ("%ld. UIP %d", (long) units.size (), uip);
+      uips.push_back (uip);
+    }
+    Var & v = var (uip);
+    if (v.decision ()) break;
+    if (!(reason = v.reason)) other = v.other;
+#ifdef LOGGING
+    if (reason) LOG (reason, "analyzing %d reason", uip);
+    else LOG ("analyzing %d binary reason %d %d", uip, uip, other);
+#endif
+  }
+  LOG ("found %ld UIPs", (long) uips.size ());
+  assert (!uips.empty ());
+
+  backtrack ();
+  clear_seen ();
+  conflict = 0;
+
+  const const_int_iterator end = uips.end ();
+  for (const_int_iterator i = uips.begin (); i != end; i++)
+    assign (-*i);
+
+  STOP (analyze);
+
+  if (!propagate ()) learn_empty_clause ();
+
+  assert (unsat || val (failed) < 0);
+}
+
+/*------------------------------------------------------------------------*/
+
 void Internal::probe () {
 
   SWITCH_AND_START (search, simplify, probe);
@@ -37,16 +121,11 @@ void Internal::probe () {
     bins[c->literals[1]] = 1;
   }
 
-  int * stamp;
-  NEW (stamp, int, 2*(max_var + 1));
-  stamp += max_var;
-  for (int lit = -max_var; lit <= max_var; lit++) stamp[lit] = -1;
-
   for (int idx = 1; !unsat && idx <= max_var; idx++) {
     if (val (idx)) continue;
     if (eliminated (idx)) continue;
-    bool pos_prop_no_fail = stamp[idx] < stats.failed;
-    bool neg_prop_no_fail = stamp[-idx] < stats.failed;
+    bool pos_prop_no_fail = fixedprop (idx) < stats.fixed;
+    bool neg_prop_no_fail = fixedprop (-idx) < stats.fixed;
     if (!pos_prop_no_fail && !neg_prop_no_fail) continue;
     bool pos_bin_occs = bins[idx];
     bool neg_bin_occs = bins[-idx];
@@ -67,20 +146,10 @@ void Internal::probe () {
     assume_decision (decision);
     if (propagate ()) {
       for (size_t i = before_propagation; i < trail.size (); i++)
-	stamp[trail[i]] = stats.failed;
+	fixedprop (trail[i]) = stats.fixed;
       backtrack ();
-    } else {
-      stats.failed++;
-      analyze ();
-      assert (!level);
-      if (propagate ()) continue;
-      learn_empty_clause ();
-      assert (unsat);
-    }
+    } else failed_literal (decision);
   }
-
-  stamp -= max_var;
-  DEL (stamp, int, 2*(max_var + 1));
 
   bins -= max_var;
   DEL (bins, signed char, 2*(max_var + 1));

@@ -18,8 +18,9 @@ inline void Internal::assign (int lit, Clause * reason, int other) {
   if (!level) learn_unit_clause (lit);
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
-  if (!simplifying) phases[idx] = tmp;
   vals[-idx] = -tmp;
+  if (!simplifying) phases[idx] = tmp;
+  fixedprop (lit) = stats.fixed;
   assert (val (lit) > 0);
   trail.push_back (lit);
 #ifdef LOGGING
