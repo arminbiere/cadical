@@ -47,7 +47,7 @@ void Internal::failed_literal (int failed) {
   assert (conflict);
   assert (level == 1);
   assert (control[1].decision == failed);
-  assert (seen.empty ());
+  assert (analyzed.empty ());
 
   START (analyze);
 
