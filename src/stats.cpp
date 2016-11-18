@@ -36,14 +36,14 @@ void Stats::print (Internal * internal) {
     propagations, relative (propagations/1e6, t));
   MSG ("probagations:  %15ld   %10.2f %%  of propagations",
     stats.probagations, percent (stats.probagations, propagations));
-  MSG ("probed:        %15ld   %10.2f    per failed",
-    stats.probed, relative (stats.probed, stats.failed));
 #ifdef STATS
   MSG ("  visits:      %15ld   %10.2f    per propagation",
     stats.visits, relative (stats.visits, stats.propagations));
   MSG ("  traversed:   %15ld   %10.2f    per visit",
     stats.traversed, relative (stats.traversed, stats.visits));
 #endif
+  MSG ("probed:        %15ld   %10.2f    per failed",
+    stats.probed, relative (stats.probed, stats.failed));
   MSG ("reused:        %15ld   %10.2f %%  per restart",
     stats.reused, percent (stats.reused, stats.restarts));
   MSG ("resolved:      %15ld   %10.2f    per eliminated",

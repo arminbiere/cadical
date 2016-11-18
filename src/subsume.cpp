@@ -415,19 +415,6 @@ bool Internal::subsume_round (bool irredundant_only) {
       if (tmp < 0) strengthened++;
     }
 
-    // Do not connect clauses with an untouched variable.
-    //
-    const const_literal_iterator end = c->end ();
-    const_literal_iterator j;
-    if (irredundant_only) {
-      for (j = c->begin (); j != end; j++) {
-	const int lit = *j;
-	if (touched (lit) <= old_touched &&
-	    touched (-lit) <= old_touched) break;
-      }
-      if (j != end) continue;
-    }
-
     // If not subsumed connect smallest occurring literal, where occurring
     // means the number of times it was used to connect (as a one watch) a
     // previous smaller or equal sized clause.  This minimizes the length of
@@ -438,6 +425,8 @@ bool Internal::subsume_round (bool irredundant_only) {
     int minlit = 0;
     long minoccs = 0;
     size_t minsize = 0;
+    const const_literal_iterator end = c->end ();
+    const_literal_iterator j;
     for (j = c->begin (); j != end; j++) {
       const int lit = *j;
       const size_t size = occs (lit).size ();
