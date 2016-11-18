@@ -128,7 +128,7 @@ void Internal::probe () {
   int start = 0;
   assert (max_var > 0);
 
-  for (;;) {
+  while (!unsat) {
 
     if (++lim.last_probed >= max_var) lim.last_probed = 1;
     int idx = lim.last_probed;
