@@ -125,7 +125,16 @@ void Internal::probe () {
     bins[c->literals[1]] = 1;
   }
 
-  for (int idx = 1; !unsat && idx <= max_var; idx++) {
+  int start = 0;
+  assert (max_var > 0);
+
+  for (;;) {
+
+    if (++lim.last_probed >= max_var) lim.last_probed = 1;
+    int idx = lim.last_probed;
+    if (idx == start) break;
+    if (!start) start = idx;
+
     if (val (idx)) continue;
     if (eliminated (idx)) continue;
     bool pos_prop_no_fail = fixedprop (idx) < stats.fixed;

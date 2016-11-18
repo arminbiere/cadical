@@ -40,6 +40,8 @@ struct Limit {
   //
   int fixed_at_last_collect;
 
+  int last_probed;
+
   Limit ();
 };
 
