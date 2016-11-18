@@ -51,16 +51,12 @@ void Internal::failed_literal (int failed) {
 
   START (analyze);
 
-  long inc = stats.propagations/20;
-  if (inc < 1e6) inc = 1e6;
-  long limit = stats.probagations + inc;
-
   Clause * reason = conflict;
   LOG (reason, "analyzing failed literal conflict");
   int open = 0, uip = 0, other = 0;
   const_int_iterator i = trail.end ();
   vector<int> uips;
-  while (stats.probagations < limit) {
+  for (;;) {
     if (reason) analyze_failed_reason (uip, reason, open);
     else analyze_failed_literal (other, open);
     while (!flags (uip = *--i).seen ())
@@ -125,16 +121,13 @@ void Internal::probe () {
     bins[c->literals[1]] = 1;
   }
 
-  int start = 0;
-  assert (max_var > 0);
+  long delta = opts.probereleff * stats.propagations;
+  if (delta < opts.probemineff) delta = opts.probemineff;
+  long limit = stats.probagations + delta;
 
-  while (!unsat) {
-
-    if (++lim.last_probed >= max_var) lim.last_probed = 1;
-    int idx = lim.last_probed;
-    if (idx == start) break;
-    if (!start) start = idx;
-
+  VarIdxIterator it (lim.last_probed, max_var);
+  int idx;
+  while (!unsat && stats.probagations < limit && (idx = it.next ())) {
     if (val (idx)) continue;
     if (eliminated (idx)) continue;
     bool pos_prop_no_fail = fixedprop (idx) < stats.fixed;
