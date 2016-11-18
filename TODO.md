@@ -17,8 +17,6 @@ Second things are listed related to additional features.
   
   - Add clause elimination procedures.
 
-  - Add failed literal probing.
-
   - Add equivalent literal substitution.
 
   - Add clause shrinking procedures.
@@ -28,4 +26,4 @@ Second things are listed related to additional features.
 There should be an ongoing process of refactoring and documenting the code
 and in particular remove part of the code which is not used anymore.
 
-Mit Nov 16 11:10:55 CET 2016
+Fr 18. Nov 20:47:41 CET 2016
