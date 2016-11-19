@@ -20,7 +20,7 @@ void Internal::assume_decision (int lit) {
   level++;
   control.push_back (Level (lit));
   LOG ("decide %d", lit);
-  assign (lit);
+  assign_decision (lit);
 }
 
 void Internal::decide () {

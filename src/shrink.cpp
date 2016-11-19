@@ -20,7 +20,7 @@ bool Internal::shrink_literal (int lit, int depth) {
   Flags & f = flags (lit);
   Var & v = var (lit);
   if (!v.level || f.removable () || f.clause ()) return true;
-  if (v.decision () || f.poison () || v.level == level) return false;
+  if (!v.reason || f.poison () || v.level == level) return false;
   const Level & l = control[v.level];
   if (!depth && l.seen < 2) return false;
   if (v.trail <= l.trail) return false;

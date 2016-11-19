@@ -119,7 +119,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   } else if (size == 1) {
     const int unit = clause[0];
     LOG ("unit resolvent %d", unit);
-    assign (unit);
+    assign_unit (unit);
   } else LOG (clause, "resolvent");
 
   return size > 1 && !tautological;

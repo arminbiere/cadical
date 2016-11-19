@@ -214,12 +214,8 @@ void Internal::analyze () {
     while (!flags (uip = *--i).seen ())
       ;
     if (!--open) break;
-    Var & v = var (uip);
-    if (!(reason = v.reason)) other = v.other;
-#ifdef LOGGING
-    if (reason) LOG (reason, "analyzing %d reason", uip);
-    else LOG ("analyzing %d binary reason %d %d", uip, uip, other);
-#endif
+    reason = var (uip).reason;
+    LOG (reason, "analyzing %d reason", uip);
   }
   LOG ("first UIP %d", uip);
   clause.push_back (-uip);
@@ -271,7 +267,7 @@ void Internal::analyze () {
   } else iterating = true;
   UPDATE_AVG (jump_avg, jump);
   backtrack (jump);
-  assign (-uip, driving_clause);
+  assign_driving (-uip, driving_clause);
 
   // Clean up.
   //

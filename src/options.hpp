@@ -64,6 +64,7 @@ OPTION(restart,         bool,    1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,    4, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double,  1.1, 0, 10, "restart slow fast margin") \
 OPTION(reusetrail,      bool,    1, 0,  1, "enable trail reuse") \
+OPTION(simplify,        bool,    1, 0,  1, "enable simplifier") \
 OPTION(shrink,          bool,    1, 0,  1, "shrink learned clause") \
 OPTION(shrinkdepth,      int,    2, 0,1e9, "shrinking depth") \
 OPTION(shrinkglue,       int,    5, 0,1e9, "glue limit for shrinking") \

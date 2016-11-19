@@ -6,14 +6,13 @@
 
 namespace CaDiCaL {
 
-inline void Internal::assign (int lit, Clause * reason, int other) {
+inline void Internal::inlined_assign (int lit, Clause * reason) {
   int idx = vidx (lit);
   assert (!vals[idx]);
   assert (!etab[idx] || (!reason && !other));
   Var & v = var (idx);
   v.level = level;
   v.trail = (int) trail.size ();
-  v.other = other;
   v.reason = reason;
   if (!level) learn_unit_clause (lit);
   const signed char tmp = sign (lit);
@@ -46,13 +45,26 @@ inline void Internal::assign (int lit, Clause * reason, int other) {
 /*------------------------------------------------------------------------*/
 
 // External versions of 'assign' which are not inlined.  They either are
-// used in 'decide' or in 'analyze' to assign a decision or a learned
-// clause.  This happens far less frequently than the 'assign' above, which
-// is only called from 'propagate' below (and thus can be inlined).
+// used to assign unit clauses on the root-level, in 'decide' to assign a
+// decision or in 'analyze' to assign literal "driven" by a learned clause.
+// This happens far less frequently than the 'inlined_assign' above, which
+// is called directly in 'propagate' below.
 
-void Internal::assign (int lit) { assign (lit, 0, 0); }
+void Internal::assign_unit (int lit) {
+  assert (!level);
+  inlined_assign (lit, 0);
+}
 
-void Internal::assign (int lit, Clause * c) { assign (lit, c, 0); }
+void Internal::assign_decision (int lit) {
+  assert (level > 0);
+  assert (propagated == trail.size ());
+  inlined_assign (lit, 0);
+}
+
+void Internal::assign_driving (int lit, Clause * c) {
+  assert (c);
+  inlined_assign (lit, c);
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -86,7 +98,7 @@ bool Internal::propagate () {
       if (b > 0) continue;
       if (w.size == 2) {
         if (b < 0) conflict = w.clause;
-        else if (!b) assign (w.blit, 0, lit);
+	else inlined_assign (w.blit, w.clause);
       } else {
         EXPENSIVE_STATS_ADD (simplifying, visits, 1);
         if (w.clause->garbage) continue;
@@ -118,7 +130,7 @@ bool Internal::propagate () {
             swap (lits[1], *k);
             watch_literal (lits[1], lit, w.clause, w.size);
             j--;
-          } else if (!u) assign (lits[0], w.clause, 0);
+          } else if (!u) inlined_assign (lits[0], w.clause);
           else { conflict = w.clause; break; }
         }
       }

@@ -134,7 +134,7 @@ void Internal::add_new_original_clause () {
     } else LOG ("original empty clause produces another inconsistency");
   } else if (size == 1) {
     int unit = clause[0], tmp = val (unit);
-    if (!tmp) assign (unit);
+    if (!tmp) assign_unit (unit);
     else if (tmp < 0) {
       if (!unsat) {
         MSG ("parsed clashing unit");

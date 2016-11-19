@@ -65,13 +65,8 @@ void Internal::failed_literal (int failed) {
       LOG ("%ld. UIP %d", (long) units.size (), uip);
       uips.push_back (uip);
     }
-    Var & v = var (uip);
-    if (v.decision ()) break;
-    if (!(reason = v.reason)) other = v.other;
-#ifdef LOGGING
-    if (reason) LOG (reason, "analyzing %d reason", uip);
-    else LOG ("analyzing %d binary reason %d %d", uip, uip, other);
-#endif
+    if (!(reason = var (uip).reason)) break;
+    LOG (reason, "analyzing %d reason", uip);
   }
   LOG ("found %ld UIPs", (long) uips.size ());
   assert (!uips.empty ());
@@ -82,7 +77,7 @@ void Internal::failed_literal (int failed) {
 
   const const_int_iterator end = uips.end ();
   for (const_int_iterator i = uips.begin (); i != end; i++)
-    assign (-*i);
+    assign_unit (-*i);
 
   STOP (analyze);
 

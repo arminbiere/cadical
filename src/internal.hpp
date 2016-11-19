@@ -244,9 +244,10 @@ class Internal {
 
   // Forward reasoning through propagation in 'propagate.cpp'.
   //
-  void assign (int lit);                 // unit or decision
-  void assign (int lit, Clause *);       // driving learned clause
-  void assign (int lit, Clause *, int);  // inlined in 'propagate.cpp'
+  void inlined_assign (int lit, Clause *);
+  void assign_driving (int lit, Clause * reason);
+  void assign_decision (int decision);
+  void assign_unit (int lit);
   bool propagate ();
 
   // Undo and restart in 'backtrack.cpp'.

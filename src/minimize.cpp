@@ -24,19 +24,19 @@ bool Internal::minimize_literal (int lit, int depth) {
   Flags & f = flags (lit);
   Var & v = var (lit);
   if (!v.level || f.removable () || f.clause ()) return true;
-  if (v.decision () || f.poison () || v.level == level) return false;
+  if (!v.reason || f.poison () || v.level == level) return false;
   const Level & l = control[v.level];
   if (!depth && l.seen < 2) return false;         // Don Knuth's idea
   if (v.trail <= l.trail) return false;           // new early abort
   if (depth > opts.minimizedepth) return false;
   bool res = true;
-  if (v.reason) {
-    const_literal_iterator end = v.reason->end (), i;
-    int other;
-    for (i = v.reason->begin (); res && i != end; i++)
-      if ((other = *i) != lit)
-        res = minimize_literal (-other, depth+1);
-  } else res = minimize_literal (-v.other, depth+1);
+  assert (v.reason);
+  const_literal_iterator end = v.reason->end (), i;
+  for (i = v.reason->begin (); res && i != end; i++) {
+    const int other = *i;
+    if (other == lit) continue;
+    res = minimize_literal (-other, depth + 1);
+  }
   if (res) f.set (REMOVABLE); else f.set (POISON);
   minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
