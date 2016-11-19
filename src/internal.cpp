@@ -83,9 +83,9 @@ void Internal::enlarge (int new_max_var) {
   // Ordered in the size of allocated memory (larger block first).
   ENLARGE (wtab, Watches, 2*vsize, 2*new_vsize);
   ENLARGE (vtab, Var, vsize, new_vsize);
-  ENLARGE (ttab, long, 2*vsize, 2*new_vsize);
   ENLARGE (btab, long, vsize, new_vsize);
   ENLARGE (ptab, int, 2*vsize, 2*new_vsize);
+  ENLARGE (ttab, long, vsize, new_vsize);
   ENLARGE (ltab, Link, vsize, new_vsize);
   ENLARGE (marks, signed char, vsize, new_vsize);
   ENLARGE (phases, signed char, vsize, new_vsize);
@@ -123,7 +123,7 @@ void Internal::resize (int new_max_var) {
   for (int i = max_var + 1; i <= new_max_var; i++) etab[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) marks[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) btab[i] = 0;
-  for (int i = 2*(max_var + 1); i <= 2*new_max_var+1; i++) ttab[i] = 0;
+  for (int i = max_var + 1; i <= new_max_var; i++) ttab[i] = 0;
   for (int i = 2*(max_var + 1); i <= 2*new_max_var+1; i++) ptab[i] = -1;
   if (!max_var) btab[0] = 0;
   resize_queue (new_max_var);

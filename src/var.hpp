@@ -13,7 +13,7 @@ struct Var {
   // assigned.  Thus during unassigning it we do not reset it.
 
   int level;            // decision level
-  int trail;            // trail
+  int trail;            // trail height at assignment
   Clause * reason;      // implication graph edge through clause
 };
 

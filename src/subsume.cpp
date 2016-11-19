@@ -199,10 +199,7 @@ inline int Internal::try_to_subsume_clause (Clause * c,
   const const_literal_iterator ec = c->end ();
   for (const_literal_iterator i = c->begin (); !d && i != ec; i++) {
     int lit = *i;
-    if (irredundant_only &&
-        touched (lit) <= old_touched &&
-        touched (-lit) <= old_touched)
-      continue;
+    if (irredundant_only && touched (lit) <= old_touched) continue;
     for (int sign = -1; !d && sign <= 1; sign += 2) {
       Occs & os = occs (sign * lit);
       const const_clause_iterator eo = os.end ();
@@ -337,11 +334,8 @@ bool Internal::subsume_round (bool irredundant_only) {
       // ignore it.
       const const_literal_iterator end = c->end ();
       const_literal_iterator l;
-      for (l = c->begin (); l != end; l++) {
-        const int lit = *l;
-        if (touched (lit) > old_touched  ||
-            touched (-lit) > old_touched) break;
-      }
+      for (l = c->begin (); l != end; l++)
+	if (touched (*l) > old_touched) break;
       if (l == end) continue;
     }
 

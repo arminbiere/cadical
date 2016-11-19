@@ -162,7 +162,7 @@ class Internal {
   Link & link (int lit)       { return ltab[vidx (lit)]; }
   Flags & flags (int lit)     { return ftab[vidx (lit)]; }
   long & bumped (int lit)     { return btab[vidx (lit)]; }
-  long & touched (int lit)    { return ttab[vlit (lit)]; }
+  long & touched (int lit)    { return ttab[vidx (lit)]; }
   int & fixedprop (int lit)   { return ptab[vlit (lit)]; }
 
   const Flags & flags (int lit) const { return ftab[vidx (lit)]; }

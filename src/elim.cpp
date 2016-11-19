@@ -396,8 +396,7 @@ bool Internal::elim_round () {
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
     if (eliminated (idx)) continue;
-    if (touched (idx) <= last_touched &&
-        touched (-idx) <= last_touched) continue;
+    if (touched (idx) <= last_touched) continue;
     long pos = noccs (idx);
     if (pos > occ_limit) continue;
     long neg = noccs (-idx);
