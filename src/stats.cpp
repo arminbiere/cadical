@@ -15,7 +15,6 @@ void Stats::print (Internal * internal) {
   Stats & stats = internal->stats;
   double t = process_time ();
   if (internal->opts.profile) internal->print_profile (t);
-  size_t m = internal->max_bytes ();
   SECTION ("statistics");
   MSG ("probings:      %15ld   %10.2f    conflicts per probing",
     stats.probings, relative (stats.conflicts, stats.probings));
@@ -111,6 +110,9 @@ void Stats::print (Internal * internal) {
     stats.collections, relative (stats.conflicts, stats.collections));
   MSG ("collected:     %15ld   %10.2f    bytes and MB",
     stats.collected, stats.collected/(double)(1l<<20));
+  size_t m = internal->max_bytes (), r = maximum_resident_set_size ();
+  MSG ("maxresize:     %15ld   %10.2f %% of maxbytes",
+    r, percent (r, m));
   MSG ("maxbytes:      %15ld   %10.2f    bytes and MB",
     m, m/(double)(1l<<20));
   MSG ("time:          %15s   %10.2f    seconds", "", t);

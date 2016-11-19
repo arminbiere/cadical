@@ -18,7 +18,7 @@ double process_time () {
 size_t maximum_resident_set_size () {
   struct rusage u;
   if (getrusage (RUSAGE_SELF, &u)) return 0;
-  return u.ru_maxrss;
+  return ((size_t) u.ru_maxrss) << 10;
 }
 
 inline void Internal::update_max_bytes () {
