@@ -13,7 +13,7 @@ Stats::Stats () { memset (this, 0, sizeof *this); }
 
 void Stats::print (Internal * internal) {
   Stats & stats = internal->stats;
-  double t = internal->seconds ();
+  double t = process_time ();
   if (internal->opts.profile) internal->print_profile (t);
   size_t m = internal->max_bytes ();
   SECTION ("statistics");

@@ -23,7 +23,7 @@ do { \
 
 #define SWITCH_AND_START(F,T,P) \
 do { \
-  const double N = seconds (); \
+  const double N = process_time (); \
   const int L = internal->opts.profile; \
   if (internal->profiles.F.level <= L)  STOP (F, N); \
   if (internal->profiles.T.level <= L) START (T, N); \
@@ -32,7 +32,7 @@ do { \
 
 #define STOP_AND_SWITCH(P,F,T) \
 do { \
-  const double N = seconds (); \
+  const double N = process_time (); \
   const int L = internal->opts.profile; \
   if (internal->profiles.P.level <= L)  STOP (P, N); \
   if (internal->profiles.F.level <= L)  STOP (F, N); \

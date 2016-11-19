@@ -6,13 +6,19 @@
 
 namespace CaDiCaL {
 
-double Internal::seconds () {
+double process_time () {
   struct rusage u;
   double res;
   if (getrusage (RUSAGE_SELF, &u)) return 0;
   res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;  // user time
   res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec; // + system time
   return res;
+}
+
+size_t maximum_resident_set_size () {
+  struct rusage u;
+  if (getrusage (RUSAGE_SELF, &u)) return 0;
+  return u.ru_maxrss;
 }
 
 inline void Internal::update_max_bytes () {

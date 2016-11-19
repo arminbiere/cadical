@@ -38,7 +38,7 @@ Report::Report (const char * h, int precision, int min, double value) :
 
 #define REPORTS \
 /*     HEADER, PRECISION, MIN, VALUE */ \
-REPORT("seconds",      2, 5, seconds ()) \
+REPORT("seconds",      2, 5, process_time ()) \
 REPORT("MB",           0, 2, current_bytes () / (double)(1l<<20)) \
 REPORT("level",        1, 4, jump_avg) \
 REPORT("reductions",   0, 2, stats.reductions) \

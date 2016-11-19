@@ -119,7 +119,7 @@ COMMENT:
   }
   if (lit) PER ("last clause without '0'");
   if (parsed < clauses) PER ("clause missing");
-  MSG ("parsed %d clauses in %.2f seconds", parsed, internal->seconds ());
+  MSG ("parsed %d clauses in %.2f seconds", parsed, process_time ());
   return 0;
 }
 

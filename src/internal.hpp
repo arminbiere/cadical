@@ -27,6 +27,7 @@ using namespace std;
 #include "options.hpp"
 #include "profile.hpp"
 #include "queue.hpp"
+#include "resources.hpp"
 #include "stats.hpp"
 #include "timer.hpp"
 #include "util.hpp"
@@ -136,7 +137,6 @@ class Internal {
   void inc_bytes (size_t);
   void dec_bytes (size_t);
 
-  double seconds ();
   size_t max_bytes ();
   size_t current_bytes ();
 
@@ -372,8 +372,8 @@ class Internal {
   void start_profiling (Profile * p, double);
   void stop_profiling (Profile * p, double);
 
-  void start_profiling (Profile * p) { start_profiling (p, seconds ()); }
-  void stop_profiling (Profile * p) { stop_profiling (p, seconds ()); }
+  void start_profiling (Profile * p) { start_profiling (p, process_time ()); }
+  void stop_profiling (Profile * p) { stop_profiling (p, process_time ()); }
 
   void update_all_timers (double now);
   void print_profile (double now);
