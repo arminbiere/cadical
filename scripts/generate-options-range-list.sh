@@ -1,9 +1,10 @@
 #!/bin/sh
 cd `dirname $0`
 grep '^OPTION' ../src/options.hpp | \
-grep '\<int,' | \
+grep -v '\<double,' | \
 sed -e 's,^OPTION(,,' \
     -e 's/\<int,//' \
+    -e 's/\<bool,//' \
     -e 's,".*,,' \
     -e 's/,[^,]*$//' \
     -e 's,/\*[^\*]*\*/,,' \

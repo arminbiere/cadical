@@ -29,7 +29,8 @@ Internal::Internal ()
   btab (0),
   otab (0),
   ntab (0),
-  ttab (0),
+  atab (0),
+  rtab (0),
   ptab (0),
   wtab (0),
   conflict (0),
@@ -52,7 +53,8 @@ Internal::~Internal () {
   if (ltab) delete [] ltab;
   if (ftab) delete [] ftab;
   if (btab) delete [] btab;
-  if (ttab) delete [] ttab;
+  if (atab) delete [] atab;
+  if (rtab) delete [] rtab;
   if (ptab) delete [] ptab;
   if (vals) vals -= vsize, delete [] vals;
   if (solution) solution -= vsize, delete [] solution;
@@ -85,8 +87,9 @@ void Internal::enlarge (int new_max_var) {
   ENLARGE (vtab, Var, vsize, new_vsize);
   ENLARGE (btab, long, vsize, new_vsize);
   ENLARGE (ptab, int, 2*vsize, 2*new_vsize);
-  ENLARGE (ttab, long, vsize, new_vsize);
   ENLARGE (ltab, Link, vsize, new_vsize);
+  ENLARGE (atab, char, vsize, new_vsize);
+  ENLARGE (rtab, char, vsize, new_vsize);
   ENLARGE (marks, signed char, vsize, new_vsize);
   ENLARGE (phases, signed char, vsize, new_vsize);
   ENLARGE (etab, unsigned char, vsize, new_vsize);
@@ -123,7 +126,8 @@ void Internal::resize (int new_max_var) {
   for (int i = max_var + 1; i <= new_max_var; i++) etab[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) marks[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) btab[i] = 0;
-  for (int i = max_var + 1; i <= new_max_var; i++) ttab[i] = 0;
+  for (int i = max_var + 1; i <= new_max_var; i++) atab[i] = 0;
+  for (int i = max_var + 1; i <= new_max_var; i++) rtab[i] = 1;
   for (int i = 2*(max_var + 1); i <= 2*new_max_var+1; i++) ptab[i] = -1;
   if (!max_var) btab[0] = 0;
   resize_queue (new_max_var);
@@ -178,8 +182,8 @@ void Internal::init_solving () {
   lim.subsume = opts.subsumeinit;
   inc.subsume = opts.subsumeinit;
 
-  lim.touched_at_last_elim = -1;
-  lim.touched_at_last_subsume = -1;
+  lim.removed_at_last_elim = -1;
+  lim.added_at_last_subsume = -1;
 
   lim.elim = opts.eliminit;
   inc.elim = (opts.elimint + 1)/2;

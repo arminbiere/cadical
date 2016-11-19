@@ -154,6 +154,13 @@ Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
   stats.redundant--;
 }
 
+/*------------------------------------------------------------------------*/
+
+bool Internal::likely_to_be_kept_clause (Clause * c) {
+  if (!c->redundant || !c->extended) return true;
+  return c->size <= lim.keptsize && c->glue <= lim.keptglue;
+}
+
 // Candidate clause 'c' is strengthened by removing 'remove'.
 
 inline void Internal::strengthen_clause (Clause * c, int remove) {
@@ -162,7 +169,9 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   assert (c->size > 2);
   LOG (c, "removing %d in", remove);
   if (proof) proof->trace_strengthen_clause (c, remove);
-  if (!c->redundant) touch_clause (c);
+  if (likely_to_be_kept_clause (c))
+    mark_variables_as_added_in_clause (c, remove);
+  if (!c->redundant) mark_removed (remove);
   const const_literal_iterator end = c->end ();
   literal_iterator j = c->begin ();
   for (const_literal_iterator i = j; i != end; i++)
@@ -184,9 +193,8 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
 // strengthened the result is negative.  Otherwise the candidate clause
 // can not be subsumed nor strengthened and zero is returned.
 
-inline int Internal::try_to_subsume_clause (Clause * c,
-                                            bool irredundant_only,
-                                            long old_touched) {
+inline
+int Internal::try_to_subsume_clause (Clause * c) {
 
   stats.subtried++;
   assert (!level);
@@ -199,7 +207,7 @@ inline int Internal::try_to_subsume_clause (Clause * c,
   const const_literal_iterator ec = c->end ();
   for (const_literal_iterator i = c->begin (); !d && i != ec; i++) {
     int lit = *i;
-    if (irredundant_only && touched (lit) <= old_touched) continue;
+    if (!added (lit)) continue;
     for (int sign = -1; !d && sign <= 1; sign += 2) {
       Occs & os = occs (sign * lit);
       const const_clause_iterator eo = os.end ();
@@ -267,6 +275,9 @@ struct less_noccs {
   Internal * internal;
   less_noccs (Internal * i) : internal (i) { }
   bool operator () (int a, int b) {
+    int u = internal->val (a), v = internal->val (b);
+    if (!u && v) return true;
+    if (u && !v) return false;
     long m = internal->noccs (a), n = internal ->noccs (b);
     if (m < n) return true;
     if (m > n) return false;
@@ -281,15 +292,13 @@ struct less_noccs {
 // called in the elimination loop in 'elim' in which case we focus on
 // irredundant clauses only to help bounded variable elimination.
 
-bool Internal::subsume_round (bool irredundant_only) {
+bool Internal::subsume_round () {
 
   if (!opts.subsume) return false;
 
   SWITCH_AND_START (search, simplify, subsume);
   stats.subsumptions++;
-
-  long old_touched = lim.touched_at_last_subsume;
-  lim.touched_at_last_subsume = stats.touched;
+  lim.added_at_last_subsume = stats.added;
 
   assert (!level);
 
@@ -304,47 +313,20 @@ bool Internal::subsume_round (bool irredundant_only) {
   for (size_t i = 0; i != size; i++) {
     Clause * c = clauses[i];
     if (c->garbage) continue;
-
     if (c->size > opts.subsumeclslim) continue;
+    if (!likely_to_be_kept_clause (c)) continue;
 
-    // Handling fixed falsified literals is pretty complicated and we just
-    // postpone checking such clauses until the next garbage collection has
-    // flushed out these literals.
-    int fixed = clause_contains_fixed_literal (c);
-    if (fixed) {
-      if (fixed > 0) mark_garbage (c);  // Do not waste this effort.
-      continue;                         // Even if just falsified exists.
-    }
-
-    if (c->redundant) {
-      if (irredundant_only) continue; // Skip it during 'elim'.
-      if (c->extended) {
-        // All irredundant clauses and short clauses with small glue (not
-        // extended) are candidates in any case.  Otherwise, redundant long
-        // clauses are considered as candidates if they would have been kept
-        // in the last 'reduce' operation based on their size and glue value.
-        if (c->size > lim.keptsize || c->glue > lim.keptglue) continue;
-      }
-    } else if (irredundant_only) {
-      // In this case we only care for irredundant clauses and thus can use
-      // the 'touched' time stamp (which is only updated for literals
-      // occurring in irredundant clauses) to determine whether it makes
-      // sense to check this clause for subsumption.  If none of its
-      // variables has been touched since the last subsumption, we should
-      // ignore it.
-      const const_literal_iterator end = c->end ();
-      const_literal_iterator l;
-      for (l = c->begin (); l != end; l++)
-	if (touched (*l) > old_touched) break;
-      if (l == end) continue;
-    }
-
-    schedule.push_back (ClauseSize (c->size, i));
-
-    // Count all literals in this candidate clause.
-    //
     const const_literal_iterator end = c->end ();
     const_literal_iterator l;
+
+    bool fixed = false;
+    for (l = c->begin (); !fixed && l != end; l++)
+      if (val (*l)) fixed = true;
+      else if (added (*l)) break;
+
+    if (fixed || l == end) continue;	// fixed or no added variable
+
+    schedule.push_back (ClauseSize (c->size, i));
     for (l = c->begin (); l != end; l++)
       noccs (*l)++;
   }
@@ -366,12 +348,10 @@ bool Internal::subsume_round (bool irredundant_only) {
   }
 
   long scheduled = schedule.size ();
-  long total = stats.irredundant;
-  if (!irredundant_only) total += stats.redundant;
+  long total = stats.irredundant + stats.redundant;
   VRB ("subsume", stats.subsumptions,
-    "scheduled %ld clauses %.0f%% of all %ld %sclauses",
-    scheduled, percent (scheduled, total), total,
-    (irredundant_only ? "irredundant " : ""));
+    "scheduled %ld clauses %.0f%% out of %ld clauses",
+    scheduled, percent (scheduled, total), total);
 
   // Now go over the scheduled clauses in the order of increasing size and
   // try to forward subsume and strengthen them. Forward subsumptions tries
@@ -401,8 +381,7 @@ bool Internal::subsume_round (bool irredundant_only) {
     // literals (false or true).
     //
     if (c->size > 2) {
-      const int tmp =
-        try_to_subsume_clause (c, irredundant_only, old_touched);
+      const int tmp = try_to_subsume_clause (c);
       if (tmp > 0) { subsumed++; continue; }
       if (tmp < 0) strengthened++;
     }
@@ -471,7 +450,7 @@ void Internal::subsume () {
   assert (!unsat);
   backtrack ();
   reset_watches ();
-  (void) subsume_round (false);
+  (void) subsume_round ();
   init_watches ();
   connect_watches ();
   inc.subsume += opts.subsumeinc;

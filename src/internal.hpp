@@ -86,7 +86,8 @@ class Internal {
   Queue queue;                  // variable move to front decision queue
   Occs * otab;                  // table of occurrences for all literals
   long * ntab;                  // table number irredundant occurrences
-  long * ttab;                  // touched variable table
+  char * atab;			// likely to be kept added variables table
+  char * rtab;			// removed irredundant variables table
   int * ptab;			// propagated table
   Watches * wtab;               // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
@@ -162,8 +163,13 @@ class Internal {
   Link & link (int lit)       { return ltab[vidx (lit)]; }
   Flags & flags (int lit)     { return ftab[vidx (lit)]; }
   long & bumped (int lit)     { return btab[vidx (lit)]; }
-  long & touched (int lit)    { return ttab[vidx (lit)]; }
   int & fixedprop (int lit)   { return ptab[vlit (lit)]; }
+
+  char added (int lit)   const { return atab[vidx (lit)]; }
+  char removed (int lit) const { return rtab[vidx (lit)]; }
+
+  void mark_removed (int lit) { rtab[vidx (lit)] = 1; stats.removed++; }
+  void mark_added (int lit) { atab[vidx (lit)] = 1; stats.added++; }
 
   const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
 
@@ -221,8 +227,9 @@ class Internal {
   size_t bytes_clause (int size);
   Clause * new_clause (bool red, int glue = 0);
   void deallocate_clause (Clause *);
+  void mark_variables_as_removed_in_clause (Clause *);
+  void mark_variables_as_added_in_clause (Clause *, int except = 0);
   void delete_clause (Clause *);
-  void touch_clause (Clause *);
   void mark_garbage (Clause *);
   bool tautological_clause ();
   void add_new_original_clause ();
@@ -318,8 +325,10 @@ class Internal {
   void strengthen_clause (Clause *, int);
   void subsume_clause (Clause * subsuming, Clause * subsumed);
   int subsume_check (Clause * subsuming, Clause * subsumed);
-  int try_to_subsume_clause (Clause *, bool, long);
-  bool subsume_round (bool irredundant_only = false);
+  int try_to_subsume_clause (Clause *);
+  bool likely_to_be_kept_clause (Clause *);
+  bool subsume_round ();
+  void reset_added ();
   void subsume ();
 
   // Bounded variable elimination.
@@ -330,6 +339,7 @@ class Internal {
   bool resolvents_are_bounded (int pivot);
   void add_resolvents (int pivot);
   void elim_variable (int pivot);
+  void reset_removed ();
   bool elim_round ();
   void extend ();
   void elim ();

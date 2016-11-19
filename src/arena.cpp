@@ -21,7 +21,8 @@ void Arena::prepare (size_t bytes) {
 
 void Arena::swap () {
   delete [] from.start;
-  LOG ("delete 'from' space of arena with %ld bytes", (long) bytes);
+  LOG ("delete 'from' space of arena with %ld bytes",
+    (long) (from.end - from.start));
   from = to;
   to.start = to.top = to.end = 0;
 }

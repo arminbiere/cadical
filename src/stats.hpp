@@ -19,8 +19,9 @@ struct Stats {
   long reused;       // number of reused trails
   long reports;      // 'report' counter
   long sections;     // 'section' counter
+  long added;        // irredundant clauses
+  long removed;      // literals in likely to be kept clauses
   long bumped;       // seen and bumped variables in 'analyze'
-  long touched;      // touched literals in deleted clauses
   long bumplast;     // bumped variables on last decision level
   long trailbumped;  // bumped 'reverse' instead of 'earlier'
   long analyzed;     // analyzed redundant clauses

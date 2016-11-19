@@ -16,7 +16,7 @@ bool Internal::eliminating () {
   // variables (in removed or shrunken irredundant clauses).
   //
   if (lim.fixed_at_last_elim == stats.fixed &&
-      lim.touched_at_last_elim == stats.touched) return false;
+      lim.removed_at_last_elim == stats.removed) return false;
 
   return lim.elim <= stats.conflicts;
 }
@@ -66,6 +66,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   if (satisfied) {
     LOG (c, "satisfied antecedent");
     mark_garbage (c);
+    mark_variables_as_removed_in_clause (c);
     clause.clear ();
     unmark (c);
     return false;
@@ -99,6 +100,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   if (satisfied) {
     LOG (d, "satisfied antecedent");
     mark_garbage (d);
+    mark_variables_as_removed_in_clause (d);
     return false;
   }
 
@@ -262,6 +264,7 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
     for (l = c->begin (); l != end; l++)
       if (*l != pivot) extension.push_back (*l);
     mark_garbage (c);
+    mark_variables_as_removed_in_clause (c);
   }
   erase_vector (ps);
 
@@ -269,8 +272,12 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
 
   Occs & ns = occs (-pivot);
   const const_clause_iterator ne = ns.end ();
-  for (i = ns.begin (); i != ne; i++)
-    if (!(*i)->garbage) mark_garbage (*i);
+  for (i = ns.begin (); i != ne; i++) {
+    Clause * d = *i;
+    if (d->garbage) continue;
+    mark_garbage (d);
+    mark_variables_as_removed_in_clause (d);
+  }
   erase_vector (ns);
 
   // This is a trick by Niklas Soerensson to avoid saving all clauses on the
@@ -356,10 +363,9 @@ struct idx_sum_occs_smaller {
 bool Internal::elim_round () {
 
   SWITCH_AND_START (search, simplify, elim);
-  stats.eliminations++;
 
-  long old_touched = stats.touched;
-  long last_touched = lim.touched_at_last_elim;
+  stats.eliminations++;
+  lim.removed_at_last_elim = stats.removed;
 
   assert (!level);
 
@@ -396,7 +402,7 @@ bool Internal::elim_round () {
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
     if (eliminated (idx)) continue;
-    if (touched (idx) <= last_touched) continue;
+    if (!removed (idx)) continue;
     long pos = noccs (idx);
     if (pos > occ_limit) continue;
     long neg = noccs (-idx);
@@ -406,6 +412,7 @@ bool Internal::elim_round () {
   }
   shrink_vector (schedule);
   reset_noccs ();
+  reset_removed ();
 
   sort (schedule.begin (), schedule.end (), idx_sum_occs_smaller ());
 
@@ -488,7 +495,6 @@ bool Internal::elim_round () {
   erase_vector (schedule);
 
   lim.subsumptions_at_last_elim = stats.subsumptions;
-  lim.touched_at_last_elim = old_touched;
 
   report ('e');
 
@@ -516,7 +522,7 @@ void Internal::elim () {
   // Make sure there was a subsumption attempt since last elimination.
   //
   if (lim.subsumptions_at_last_elim == stats.subsumptions)
-    subsume_round (false);
+    subsume_round ();
 
   // Alternate variable elimination and subsumption until nothing changes.
   //
@@ -525,7 +531,7 @@ void Internal::elim () {
     if (!elim_round ()) break;
     if (unsat) break;
     if (round >= limit) break;             // stop after elimination
-    if (!subsume_round (true)) break;
+    if (!subsume_round ()) break;
   }
 
   if (!unsat) {

@@ -23,13 +23,12 @@ struct Limit {
   int decision_level_at_last_restart;
   long     conflicts_at_last_restart;
 
-  // Used to prohibit useless elimination attempts.
+  // Used to schedule elimination and subsumption rounds.
   //
   int         fixed_at_last_elim;
   long subsumptions_at_last_elim;
-  long      touched_at_last_elim;
-
-  long   touched_at_last_subsume;       // ditto for subsumptions
+  long      removed_at_last_elim;
+  long     added_at_last_subsume;
 
   // Used to let 'subsume' wait until and right after next 'reduce'.
   //
