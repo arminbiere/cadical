@@ -126,7 +126,7 @@ void Internal::resize (int new_max_var) {
   for (int i = max_var + 1; i <= new_max_var; i++) etab[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) marks[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) btab[i] = 0;
-  for (int i = max_var + 1; i <= new_max_var; i++) atab[i] = 0;
+  for (int i = max_var + 1; i <= new_max_var; i++) atab[i] = 1;
   for (int i = max_var + 1; i <= new_max_var; i++) rtab[i] = 1;
   for (int i = 2*(max_var + 1); i <= 2*new_max_var+1; i++) ptab[i] = -1;
   if (!max_var) btab[0] = 0;
