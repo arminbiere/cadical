@@ -258,16 +258,19 @@ void Internal::analyze () {
 
   // Determine back jump level, backtrack and assign flipped literal.
   //
-  Clause * driving_clause = 0;
-  int jump = 0;
   if (size > 1) {
     sort (clause.rbegin (), clause.rend (), trail_smaller (this));
-    driving_clause = new_learned_redundant_clause (glue);
-    jump = var (clause[1]).level;
-  } else iterating = true;
-  UPDATE_AVG (jump_avg, jump);
-  backtrack (jump);
-  assign_driving (-uip, driving_clause);
+    Clause * driving_clause = new_learned_redundant_clause (glue);
+    const int jump = var (clause[1]).level;
+    UPDATE_AVG (jump_avg, jump);
+    backtrack (jump);
+    assign_driving (-uip, driving_clause);
+  } else {
+    iterating = true;
+    UPDATE_AVG (jump_avg, 0);
+    backtrack (0);
+    assign_unit (-uip);
+  }
 
   // Clean up.
   //

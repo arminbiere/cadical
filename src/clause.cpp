@@ -42,7 +42,6 @@ Clause * Internal::new_clause (bool red, int glue) {
   bool extended = (red && size > opts.keepsize && glue > opts.keepglue);
   if (!extended) bytes -= EXTENDED_OFFSET;
   char * ptr = new char[bytes];
-  inc_bytes (bytes);
   if (!extended) ptr -= EXTENDED_OFFSET;
   Clause * res = (Clause*) ptr;
   res->extended = extended;
@@ -69,7 +68,6 @@ void Internal::deallocate_clause (Clause * c) {
   char * p = c->start ();
   if (arena.contains (p)) return;
   LOG (c, "deallocate");
-  dec_bytes (c->bytes ());
   delete [] p;
 }
 

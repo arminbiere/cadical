@@ -9,7 +9,7 @@ namespace CaDiCaL {
 inline void Internal::inlined_assign (int lit, Clause * reason) {
   int idx = vidx (lit);
   assert (!vals[idx]);
-  assert (!etab[idx] || (!reason && !other));
+  assert (!etab[idx] || !reason);
   Var & v = var (idx);
   v.level = level;
   v.trail = (int) trail.size ();
@@ -22,10 +22,7 @@ inline void Internal::inlined_assign (int lit, Clause * reason) {
   fixedprop (lit) = stats.fixed;
   assert (val (lit) > 0);
   trail.push_back (lit);
-#ifdef LOGGING
-  if (other) LOG ("assign %d binary reason %d %d", lit, lit, other);
-  else LOG (reason, "assign %d", lit);
-#endif
+  LOG (reason, "assign %d", lit);
   // As 'assign' is called most of the time from 'propagate' below and then
   // the watches of '-lit' are accessed next during propagation it is wise
   // to tell the processor to prefetch the memory of those watches.  This

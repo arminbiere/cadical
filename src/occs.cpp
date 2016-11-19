@@ -10,15 +10,6 @@ void Internal::init_occs () {
   NEW (otab, vector<Clause*>, 2*vsize);
 }
 
-size_t Internal::bytes_occs () {
-  assert (occs ());
-  size_t bytes = 0;
-  for (int idx = 1; idx <= max_var; idx++)
-    bytes += bytes_vector (occs (idx)),
-    bytes += bytes_vector (occs (-idx));
-  return bytes;
-}
-
 void Internal::reset_occs () {
   assert (otab);
   DEL (otab, vector<Clause*>, 2*vsize);

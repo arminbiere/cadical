@@ -60,7 +60,6 @@ void Internal::remove_falsified_literals (Clause * c) {
   const size_t bytes = flushed * sizeof (int);
   stats.collected += bytes;
   while (j != end) *j++ = 0;
-  dec_bytes (bytes);
   LOG (c, "flushed %d literals and got", flushed);
 }
 
@@ -310,11 +309,9 @@ void Internal::garbage_collection () {
   if (unsat) return;
   START (collect);
   stats.collections++;
-  account_implicitly_allocated_bytes ();
   mark_satisfied_clauses_as_garbage ();
   if (opts.arena) move_non_garbage_clauses ();
   else delete_garbage_clauses ();
-  account_implicitly_allocated_bytes ();
   check_clause_stats ();
   STOP (collect);
 }

@@ -168,7 +168,6 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   for (const_literal_iterator i = j; i != end; i++)
     if ((*j++ = *i) == remove) j--;
   assert (j + 1 == end);
-  dec_bytes (sizeof (int));
   c->size--;
   if (c->pos > c->size) c->pos = 2;
   if (c->redundant && c->glue > c->size) c->glue = c->size;
@@ -356,7 +355,6 @@ bool Internal::subsume_round (bool irredundant_only) {
       noccs (*l)++;
   }
   shrink_vector (schedule);
-  inc_bytes (bytes_vector (schedule));
 
   // Smaller clauses are checked and connected first.
   //
@@ -457,7 +455,6 @@ bool Internal::subsume_round (bool irredundant_only) {
 
   // Release occurrence lists and schedule.
   //
-  dec_bytes (bytes_vector (schedule));
   erase_vector (schedule);
   reset_noccs ();
   reset_occs ();

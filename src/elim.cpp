@@ -423,8 +423,6 @@ bool Internal::elim_round () {
     shrink_vector (schedule);
   }
 
-  inc_bytes (bytes_vector (schedule));
-
   long scheduled = schedule.size ();
 
   VRB ("elim", stats.eliminations,
@@ -488,13 +486,11 @@ bool Internal::elim_round () {
     "eliminated %ld variables %.0f%% in %ld resolutions",
     eliminated, percent (eliminated, scheduled), resolutions);
 
-  dec_bytes (bytes_vector (schedule));
   erase_vector (schedule);
 
   lim.subsumptions_at_last_elim = stats.subsumptions;
   lim.touched_at_last_elim = old_touched;
 
-  account_implicitly_allocated_bytes ();
   report ('e');
 
   STOP_AND_SWITCH (elim, simplify, search);

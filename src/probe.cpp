@@ -62,7 +62,7 @@ void Internal::failed_literal (int failed) {
     while (!flags (uip = *--i).seen ())
       ;
     if (!--open) {
-      LOG ("%ld. UIP %d", (long) units.size (), uip);
+      LOG ("%ld. UIP %d", (long) uips.size (), uip);
       uips.push_back (uip);
     }
     if (!(reason = var (uip).reason)) break;

@@ -9,15 +9,6 @@ void Internal::init_watches () {
   wtab = new Watches [2*vsize];
 }
 
-size_t Internal::bytes_watches () {
-  assert (watches ());
-  size_t bytes = 0;
-  for (int idx = 1; idx <= max_var; idx++)
-    bytes += bytes_vector (watches (idx)),
-    bytes += bytes_vector (watches (-idx));
-  return bytes;
-}
-
 void Internal::reset_watches () {
   assert (wtab);
   delete [] wtab;
