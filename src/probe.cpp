@@ -17,9 +17,9 @@ bool Internal::probing () {
 inline void Internal::analyze_failed_literal (int lit, int & open) {
   assert (lit);
   Flags & f = flags (lit);
-  if (f.seen ()) return;
+  if (f.seen) return;
   if (!var (lit).level) return;
-  f.set (SEEN);
+  f.seen = true;
   analyzed.push_back (lit);
   LOG ("analyzed failed literal %d", lit);
   open++;
@@ -59,7 +59,7 @@ void Internal::failed_literal (int failed) {
   for (;;) {
     if (reason) analyze_failed_reason (uip, reason, open);
     else analyze_failed_literal (other, open);
-    while (!flags (uip = *--i).seen ())
+    while (!flags (uip = *--i).seen)
       ;
     if (!--open) {
       LOG ("%ld. UIP %d", (long) uips.size (), uip);

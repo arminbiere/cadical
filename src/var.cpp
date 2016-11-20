@@ -5,11 +5,13 @@
 namespace CaDiCaL {
 
 void Internal::reset_removed () {
-  memset (rtab, 0, max_var + 1);
+  for (int idx = 1; idx <= max_var; idx++)
+    flags (idx).removed = false;
 }
 
 void Internal::reset_added () {
-  memset (atab, 0, max_var + 1);
+  for (int idx = 1; idx <= max_var; idx++)
+    flags (idx).added = false;
 }
 
 };

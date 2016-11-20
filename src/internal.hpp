@@ -86,8 +86,6 @@ class Internal {
   Queue queue;                  // variable move to front decision queue
   Occs * otab;                  // table of occurrences for all literals
   long * ntab;                  // table number irredundant occurrences
-  char * atab;			// likely to be kept added variables table
-  char * rtab;			// removed irredundant variables table
   int * ptab;			// propagated table
   Watches * wtab;               // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
@@ -165,12 +163,6 @@ class Internal {
   long & bumped (int lit)     { return btab[vidx (lit)]; }
   int & fixedprop (int lit)   { return ptab[vlit (lit)]; }
 
-  char added (int lit)   const { return atab[vidx (lit)]; }
-  char removed (int lit) const { return rtab[vidx (lit)]; }
-
-  void mark_removed (int lit) { rtab[vidx (lit)] = 1; stats.removed++; }
-  void mark_added (int lit) { atab[vidx (lit)] = 1; stats.added++; }
-
   const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
 
   const bool occs () const { return otab != 0; }
@@ -227,8 +219,6 @@ class Internal {
   size_t bytes_clause (int size);
   Clause * new_clause (bool red, int glue = 0);
   void deallocate_clause (Clause *);
-  void mark_variables_as_removed_in_clause (Clause *);
-  void mark_variables_as_added_in_clause (Clause *, int except = 0);
   void delete_clause (Clause *);
   void mark_garbage (Clause *);
   bool tautological_clause ();
@@ -326,10 +316,38 @@ class Internal {
   void subsume_clause (Clause * subsuming, Clause * subsumed);
   int subsume_check (Clause * subsuming, Clause * subsumed);
   int try_to_subsume_clause (Clause *);
-  bool likely_to_be_kept_clause (Clause *);
   bool subsume_round ();
   void reset_added ();
   void subsume ();
+
+  // We monitor the maximum glue and maximum size of clauses during 'reduce'
+  // and thus can predict if a redundant extended clause is likely to be
+  // kept in the next 'reduce' phase.  These clauses are target of
+  // subsumption checks, in addition to irredundant and non-extended
+  // clauses.  Their variables are marked as being 'added'.
+  //
+  bool likely_to_be_kept_clause (Clause * c) {
+    if (!c->redundant || !c->extended) return true;
+    return c->size <= lim.keptsize && c->glue <= lim.keptglue;
+  }
+
+  // We mark variables in added or shrunken clauses as being 'added' if the
+  // clause is likely to be kept in the next 'reduce' phase (see last
+  // function above).  This gives a persistent (across consecutive
+  // interleaved search and inprocessing phases) of variables which have to
+  // be reconsidered in subsumption checks, e.g., only clauses with 'added'
+  // variables are checked to be forward subsumed.
+  //
+  void mark_added (int lit) { flags (lit).added = true; stats.added++; }
+  void mark_variables_as_added_in_clause (Clause *, int except = 0);
+
+  // If irredundant clauses are removed or literals in clauses are removed,
+  // then variables in these clauses should be reconsidered to be eliminated
+  // through bounded variable elimination.  In contrast to 'removed' the
+  // 'added' flag is restricted to 'irredundant' clauses only.
+  //
+  void mark_removed (int lit) { flags (lit).removed = true; stats.removed++; }
+  void mark_variables_as_removed_in_clause (Clause *, int except = 0);
 
   // Bounded variable elimination.
   //

@@ -82,12 +82,12 @@ void Internal::delete_clause (Clause * c) {
   deallocate_clause (c);
 }
 
-void Internal::mark_variables_as_removed_in_clause (Clause * c) {
+void Internal::mark_variables_as_removed_in_clause (Clause * c, int except) {
   assert (!c->redundant);
   const const_literal_iterator end = c->end ();
   const_literal_iterator i;
   for (i = c->begin (); i != end; i++)
-    mark_removed (*i);
+    if (*i != except) mark_removed (*i);
 }
 
 void Internal::mark_variables_as_added_in_clause (Clause * c, int except) {

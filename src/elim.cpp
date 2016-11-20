@@ -12,7 +12,7 @@ namespace CaDiCaL {
 bool Internal::eliminating () {
   if (!opts.elim) return false;
 
-  // Wait until there has been a change in terms of new units or new touched
+  // Wait until there has been a change in terms of new units or new removed
   // variables (in removed or shrunken irredundant clauses).
   //
   if (lim.fixed_at_last_elim == stats.fixed &&
@@ -264,7 +264,7 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
     for (l = c->begin (); l != end; l++)
       if (*l != pivot) extension.push_back (*l);
     mark_garbage (c);
-    mark_variables_as_removed_in_clause (c);
+    mark_variables_as_removed_in_clause (c, pivot);
   }
   erase_vector (ps);
 
@@ -276,7 +276,7 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
     Clause * d = *i;
     if (d->garbage) continue;
     mark_garbage (d);
-    mark_variables_as_removed_in_clause (d);
+    mark_variables_as_removed_in_clause (d, -pivot);
   }
   erase_vector (ns);
 
@@ -402,7 +402,7 @@ bool Internal::elim_round () {
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
     if (eliminated (idx)) continue;
-    if (!removed (idx)) continue;
+    if (!flags (idx).removed) continue;
     long pos = noccs (idx);
     if (pos > occ_limit) continue;
     long neg = noccs (-idx);

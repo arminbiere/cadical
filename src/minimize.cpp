@@ -23,8 +23,8 @@ namespace CaDiCaL {
 bool Internal::minimize_literal (int lit, int depth) {
   Flags & f = flags (lit);
   Var & v = var (lit);
-  if (!v.level || f.removable () || f.clause ()) return true;
-  if (!v.reason || f.poison () || v.level == level) return false;
+  if (!v.level || f.removable || f.clause) return true;
+  if (!v.reason || f.poison || v.level == level) return false;
   const Level & l = control[v.level];
   if (!depth && l.seen < 2) return false;         // Don Knuth's idea
   if (v.trail <= l.trail) return false;           // new early abort
@@ -37,7 +37,7 @@ bool Internal::minimize_literal (int lit, int depth) {
     if (other == lit) continue;
     res = minimize_literal (-other, depth + 1);
   }
-  if (res) f.set (REMOVABLE); else f.set (POISON);
+  if (res) f.removable = true; else f.poison = true;
   minimized.push_back (lit);
   if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
   return res;
@@ -51,7 +51,7 @@ void Internal::minimize_clause () {
   int_iterator j = clause.begin ();
   for (const_int_iterator i = j; i != clause.end (); i++)
     if (minimize_literal (-*i)) stats.minimized++;
-    else flags (*j++ = *i).set (CLAUSE);
+    else flags (*j++ = *i).clause = true;
   LOG ("minimized %d literals", (long)(clause.end () - j));
   clause.resize (j - clause.begin ());
   clear_minimized ();
@@ -60,10 +60,13 @@ void Internal::minimize_clause () {
 }
 
 void Internal::clear_minimized () {
-  for (const_int_iterator i = minimized.begin (); i != minimized.end (); i++)
-    flags (*i).clear (POISON | REMOVABLE);
-  for (const_int_iterator i = clause.begin (); i != clause.end (); i++)
-    flags (*i).clear (CLAUSE);
+  const_int_iterator i;
+  for (i = minimized.begin (); i != minimized.end (); i++) {
+    Flags & f = flags (*i);
+    f.poison = f.removable = false;
+  }
+  for (i = clause.begin (); i != clause.end (); i++)
+    flags (*i).clause = false;
   minimized.clear ();
 }
 

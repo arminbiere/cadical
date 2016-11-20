@@ -1,75 +1,26 @@
 #ifndef _flags_hpp_INCLUDED
 #define _flags_hpp_INCLUDED
 
-// Variable flags related to 'analyze' and 'minimize' they are kept in one
-// global byte table 'flags' for fast access.
-
 namespace CaDiCaL {
 
-enum Flag {
-  SEEN      =  1, // seen in generating first UIP clause in 'analyze'
-  POISON    =  2, // can not be removed in 'minimize'
-  REMOVABLE =  4, // can be removed in 'minimize'
-  CLAUSE    =  8, // part of learned clause
+struct Flags {         // Variable flags.
 
-  // Powers of two since these constants are used in a bit-set in 'Flags'.
-};
 
-class Flags {
+  bool seen      : 1;  // seen in generating first UIP clause in 'analyze'
+  bool poison    : 1;  // can not be removed in 'minimize/shrink'
+  bool removable : 1;  // can be removed in 'minimize/shrink'
+  bool clause    : 1;  // part of learned clause in 'minimize/shrink'
+  bool added     : 1;  // added since last 'subsume' round
+  bool removed   : 1;  // removed since last 'elim' round
 
-  // One byte bit-set of flags above.  Note that we want a fast check that
-  // no bit is set (the 'operator bool ()' function below) and thus do not
-  // want to use bit-fields nor 'bool' members, which would be needed to be
-  // checked in turn otherwise.  We hide read operators of those bits behind
-  // the 'seen ()' etc. functions but for simpler naming only have one 'set'
-  // functions for all flags.  It further turns out that 'g++' and 'clang++'
-  // actually figure out that 'sizeof (Flags) == 1', so 'Flags' needs
-  // exactly one byte and more important that 'new Flags[10]' is allocated
-  // as a byte array (and needs 10 bytes).
-  //
-  // Used bit-sets in 'minimize' are as follows:
-  //
-  //                       0   no flag set
-  //   SEEN             == 1   seen in 'minimize' but not minimized yet
-  //   SEEN | POISON    == 3   seen in 'minimize' and can not be removed
-  //   SEEN | REMOVABLE == 5   seen in 'minimize' and can be removed
-  //   POISON           == 4   can not be removed in 'minimize'
-  //
-  // Using the 'operator bool ()' function in 'analyze' seems to be a hot
-  // spot within 'analyze'.  This is the main reason for keeping 'Flags'
-  // separate.  Originally we used 'bool seen' etc. members in 'Var.'
-  //
-  unsigned char byte;
-
-public:
-
-  Flags () : byte (0) { }
-
-  bool seen () const { return (byte & SEEN) != 0; }
-  bool poison () const { return (byte & POISON) != 0; }
-  bool removable () const { return (byte & REMOVABLE) != 0; }
-  bool clause () const { return (byte & CLAUSE) != 0; }
-
-  // Set flag, e.g., 'set (SEEN)', 'set (POISON)', etc.
-  //
-  inline void set (Flag f) {
-    assert (!(byte & f));
-    assert (f == SEEN || f == POISON || f == REMOVABLE || f == CLAUSE);
-    byte |= f;
-  }
-
-  // Clear flag, e.g., 'clear (SEEN)' but also 'clear (POISON | REMOVABLE)'
-  //
-  inline void clear (unsigned char f) {
-    assert ((byte & f));
-    byte &= ~f;
-  }
-
-  // Any flag set?
-  //
-  operator bool () const { return byte != 0; }
-
-  void reset () { byte = 0; }
+  Flags () :
+    seen (false),
+    poison (false),
+    removable (false),
+    clause (false),
+    added (false),
+    removed (false)
+  { }
 };
 
 };

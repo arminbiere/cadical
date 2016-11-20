@@ -147,7 +147,7 @@ inline void Internal::analyze_clause (Clause * c) {
 inline void Internal::analyze_literal (int lit, int & open) {
   assert (lit);
   Flags & f = flags (lit);
-  if (f.seen ()) return;
+  if (f.seen) return;
   Var & v = var (lit);
   if (!v.level) return;
   assert (val (lit) < 0);
@@ -158,7 +158,7 @@ inline void Internal::analyze_literal (int lit, int & open) {
     levels.push_back (v.level);
   }
   if (v.trail < l.trail) l.trail = v.trail;
-  f.set (SEEN);
+  f.seen = true;
   analyzed.push_back (lit);
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);
   if (v.level == level) open++;
@@ -181,9 +181,11 @@ Internal::analyze_reason (int lit, Clause * reason, int & open) {
 void Internal::clear_seen () {
   for (const_int_iterator i = analyzed.begin (); i != analyzed.end (); i++) {
     Flags & f = flags (*i);
-    assert (f.seen ());
-    f.clear (SEEN);
-    assert (!f);
+    assert (f.seen);
+    f.seen = false;
+    assert (!f.poison),
+    assert (!f.clause);
+    assert (!f.removable);
   }
   analyzed.clear ();
 }
@@ -211,7 +213,7 @@ void Internal::analyze () {
   for (;;) {
     if (reason) analyze_reason (uip, reason, open);
     else analyze_literal (other, open);
-    while (!flags (uip = *--i).seen ())
+    while (!flags (uip = *--i).seen)
       ;
     if (!--open) break;
     reason = var (uip).reason;

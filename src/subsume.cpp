@@ -156,11 +156,6 @@ Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
 
 /*------------------------------------------------------------------------*/
 
-bool Internal::likely_to_be_kept_clause (Clause * c) {
-  if (!c->redundant || !c->extended) return true;
-  return c->size <= lim.keptsize && c->glue <= lim.keptglue;
-}
-
 // Candidate clause 'c' is strengthened by removing 'remove'.
 
 inline void Internal::strengthen_clause (Clause * c, int remove) {
@@ -207,7 +202,7 @@ int Internal::try_to_subsume_clause (Clause * c) {
   const const_literal_iterator ec = c->end ();
   for (const_literal_iterator i = c->begin (); !d && i != ec; i++) {
     int lit = *i;
-    if (!added (lit)) continue;
+    if (!flags (lit).added) continue;
     for (int sign = -1; !d && sign <= 1; sign += 2) {
       Occs & os = occs (sign * lit);
       const const_clause_iterator eo = os.end ();
@@ -319,12 +314,18 @@ bool Internal::subsume_round () {
     const const_literal_iterator end = c->end ();
     const_literal_iterator l;
 
-    bool fixed = false;
+    bool fixed = false, added = false;
     for (l = c->begin (); !fixed && l != end; l++)
       if (val (*l)) fixed = true;
-      else if (added (*l)) break;
+      else if (flags (*l).added) added = true;
 
-    if (fixed || l == end) continue;	// fixed or no added variable
+    // If the clause contains a root level assigned (fixed) literal we will
+    // not work on it.  This simplifies the code substantially since we do
+    // not have to care about assignments at all.  Strengthening becomes
+    // much simpler too.  Further, if no variable in the clause was added
+    // since the last subsumption round, the clause is ignored too.
+    //
+    if (fixed || !added) continue;
 
     schedule.push_back (ClauseSize (c->size, i));
     for (l = c->begin (); l != end; l++)
