@@ -314,19 +314,31 @@ void Internal::subsume_round () {
 
     const const_literal_iterator end = c->end ();
     const_literal_iterator l;
+    int lit = 0;
 
-    bool fixed = false, added = false;
+    bool fixed = false;
+    int added = 0;
     for (l = c->begin (); !fixed && l != end; l++)
-      if (val (*l)) fixed = true;
-      else if (flags (*l).added) added = true;
+      if (val ((lit = *l))) fixed = true;
+      else if (flags (lit).added) added++;
 
     // If the clause contains a root level assigned (fixed) literal we will
     // not work on it.  This simplifies the code substantially since we do
     // not have to care about assignments at all.  Strengthening becomes
-    // much simpler too.  Further, if no variable in the clause was added
-    // since the last subsumption round, the clause is ignored too.
+    // much simpler too.  
     //
-    if (fixed || !added) continue;
+    if (fixed) {
+      LOG (c, "skipping (fixed literal %d)", lit);
+      continue;
+    }
+
+    // Further, if less than two  variables in the clause were added since
+    // the last subsumption round, the clause is ignored too.
+    //
+    if (added < 2) {
+      LOG (c, "skipping (only %d added literals)", added);
+      continue;
+    }
 
     schedule.push_back (ClauseSize (c->size, i));
     for (l = c->begin (); l != end; l++)

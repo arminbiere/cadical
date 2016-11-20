@@ -20,6 +20,7 @@ void Internal::watch_clause (Clause * c) {
 /*------------------------------------------------------------------------*/
 
 void Internal::mark_removed (Clause * c, int except) {
+  LOG (c, "marking removed");
   assert (!c->redundant);
   const const_literal_iterator end = c->end ();
   const_literal_iterator i;
@@ -28,6 +29,7 @@ void Internal::mark_removed (Clause * c, int except) {
 }
 
 void Internal::mark_added (Clause * c) {
+  LOG (c, "marking added");
   assert (likely_to_be_kept_clause (c));
   const const_literal_iterator end = c->end ();
   const_literal_iterator i;

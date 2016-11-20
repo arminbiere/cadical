@@ -338,7 +338,13 @@ class Internal {
   // be reconsidered in subsumption checks, e.g., only clauses with 'added'
   // variables are checked to be forward subsumed.
   //
-  void mark_added (int lit) { flags (lit).added = true; stats.added++; }
+  void mark_added (int lit) { 
+    Flags & f = flags (lit);
+    if (f.added) return;
+    LOG ("marking %d as added", abs (lit));
+    f.added = true;
+    stats.added++;
+  }
   void mark_added (Clause *);
 
   // If irredundant clauses are removed or literals in clauses are removed,
@@ -346,7 +352,13 @@ class Internal {
   // through bounded variable elimination.  In contrast to 'removed' the
   // 'added' flag is restricted to 'irredundant' clauses only.
   //
-  void mark_removed (int lit) { flags (lit).removed = true; stats.removed++; }
+  void mark_removed (int lit) {
+    Flags & f = flags (lit);
+    if (f.removed) return;
+    LOG ("marking %d as removed", abs (lit));
+    f.removed = true;
+    stats.removed++;
+  }
   void mark_removed (Clause *, int except = 0);
 
   // Bounded variable elimination.
