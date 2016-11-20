@@ -28,7 +28,7 @@ bool Internal::eliminating () {
 // in the temporary global 'clause' if it is not redundant.  It is
 // considered redundant if one of the clauses is already marked as garbage
 // it is root level satisfied, or the resolvent is empty or a unit.  Note
-// that current root level assignment are taken into account, e.g., by
+// that current root level assignments are taken into account, e.g., by
 // removing root level falsified literals.  The function returns true if the
 // resolvent is not redundant and for instance has to be taken into account
 // during bounded variable elimination.
@@ -38,14 +38,13 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   stats.resolved++;
 
   if (c->garbage || d->garbage) return false;
-  if (c->size > d->size) swap (c, d);
-
+  if (c->size > d->size) swap (c, d);		// optimize marking
   if (c->size == 2) stats.resolved2++;
 
   assert (!level);
   assert (clause.empty ());
 
-  int p = 0;            // pivot in 'c' for debugging purposes
+  int p = 0;               // determine pivot in 'c' for debugging
 
   bool satisfied = false;
 
@@ -53,7 +52,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   const_literal_iterator i;
 
   // First determine whether the first antecedent is satisfied, add its
-  // literal to 'clause' and mark them (except for 'pivot').
+  // literals to 'clause' and mark them (except for 'pivot').
   //
   for (i = c->begin (); !satisfied && i != end; i++) {
     const int lit = *i;
@@ -520,7 +519,8 @@ void Internal::elim () {
   if (lim.subsumptions_at_last_elim == stats.subsumptions)
     subsume_round ();
 
-  // Alternate variable elimination and subsumption until nothing changes.
+  // Alternate variable elimination and subsumption until nothing changes or
+  // the round limit is hit.
   //
   for (;;) {
     round++;
