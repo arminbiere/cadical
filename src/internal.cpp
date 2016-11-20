@@ -78,6 +78,7 @@ void Internal::enlarge_vals (int new_vsize) {
 void Internal::enlarge (int new_max_var) {
   size_t new_vsize = vsize ? 2*vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
+  VRB ("enlarge", "from size %ld to new size %ld", vsize, new_vsize);
   // Ordered in the size of allocated memory (larger block first).
   ENLARGE (wtab, Watches, 2*vsize, 2*new_vsize);
   ENLARGE (vtab, Var, vsize, new_vsize);
@@ -123,7 +124,7 @@ void Internal::resize (int new_max_var) {
   for (int i = 2*(max_var + 1); i <= 2*new_max_var+1; i++) ptab[i] = -1;
   if (!max_var) btab[0] = 0;
   resize_queue (new_max_var);
-  MSG ("initialized %d variables", new_max_var - max_var);
+  LOG ("initialized %d variables", new_max_var - max_var);
   max_var = new_max_var;
 }
 

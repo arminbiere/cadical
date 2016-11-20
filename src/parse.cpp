@@ -83,6 +83,7 @@ const char * Parser::parse_dimacs_non_profiled () {
     const char * o;
     for (o = buf.c_str (); *o && *o != '-'; o++)
       ;
+    if (!*o) continue;
     VRB ("parse-dimacs", "found option '%s'", o);
     if (*o) internal->opts.set (o);
   }

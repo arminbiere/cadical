@@ -27,7 +27,8 @@ void Internal::connect_watches () {
   STOP (connect);
 }
 
-#if 0
+#ifdef WATCHES
+
 void Watches::enlarge () {
   assert (full ());
   if (_begin) {
@@ -37,7 +38,7 @@ void Watches::enlarge () {
     delete [] (char*) _begin;
     _begin = (Watch *) p;
   } else {
-    _begin = new Watch;
+    _begin = (Watch*) new char[sizeof (Watch)];
     assert (!_log_capacity);
   }
 }
@@ -50,7 +51,7 @@ void Watches::shrink () {
       new_log_capacity--;
     if (new_log_capacity == _log_capacity) return;
     _log_capacity = new_log_capacity;
-    size_t bytes = (1ull << _log_capacity);
+    size_t bytes = (1ull << _log_capacity) * sizeof (Watch);
     char * p = new char[bytes];
     memcpy (p, _begin, bytes);
     delete [] (char*) _begin;
@@ -61,6 +62,7 @@ void Watches::shrink () {
     _begin = 0;
   }
 }
+
 #endif
 
 };
