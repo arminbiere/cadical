@@ -135,7 +135,7 @@ void Internal::flush_watches (int lit) {
     *j++ = w;
   }
   ws.resize (j - ws.begin ());
-  shrink_vector (ws);
+  shrink_watches (ws);
 }
 
 void Internal::flush_all_occs_and_watches () {

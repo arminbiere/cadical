@@ -19,7 +19,66 @@ struct Watch {
   Watch () { }
 };
 
+#if 1
+
 typedef vector<Watch> Watches;          // of one literal
+
+inline void shrink_watches (Watches & ws) { shrink_vector (ws); }
+
+typedef vector<Watch>::iterator watch_iterator;
+typedef vector<Watch>::const_iterator const_watch_iterator;
+
+#else
+
+typedef Watch * watch_iterator;
+typedef Watch const * const_watch_iterator;
+
+class Watches {
+
+  Watch * _begin;
+  unsigned long _size : 56;
+  unsigned _log_capacity : 8;
+
+public:
+
+  size_t size () const { return (size_t) _size; }
+
+  size_t capacity () const {
+    return _begin ? (1ull << _log_capacity) : 0ull;
+  }
+
+private:
+
+  bool full () const { return size () == capacity (); }
+  void enlarge ();
+
+public:
+
+  Watches () : _begin (0), _size (0), _log_capacity (0) { }
+  ~Watches () { if (_begin) delete [] _begin; }
+
+  void push_back (const Watch & w) {
+    if (full ()) enlarge ();
+    _begin[_size++] = w;
+  }
+
+  void resize (size_t i) {
+    assert (i <= size ());
+    _size = i;
+  }
+
+  void shrink ();
+
+  watch_iterator begin () { return _begin; }
+  watch_iterator end () { return _begin + _size; }
+
+  const_watch_iterator begin () const { return _begin; }
+  const_watch_iterator end () const { return _begin + _size; }
+};
+
+inline void shrink_watches (Watches & ws) { ws.shrink (); }
+
+#endif
 
 };
 
