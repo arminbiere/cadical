@@ -19,6 +19,24 @@ void Internal::watch_clause (Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
+void Internal::mark_removed (Clause * c, int except) {
+  assert (!c->redundant);
+  const const_literal_iterator end = c->end ();
+  const_literal_iterator i;
+  for (i = c->begin (); i != end; i++)
+    if (*i != except) mark_removed (*i);
+}
+
+void Internal::mark_added (Clause * c) {
+  assert (likely_to_be_kept_clause (c));
+  const const_literal_iterator end = c->end ();
+  const_literal_iterator i;
+  for (i = c->begin (); i != end; i++)
+    mark_added (*i);
+}
+
+/*------------------------------------------------------------------------*/
+
 // Since the literals are embedded a clause actually contains always 'size'
 // literals and 'literals[2]' should be regarded as 'literals[size]'.
 // Clauses have at least 2 literals.  Empty and unit clauses are implicitly
@@ -57,8 +75,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   clauses.push_back (res);
   if (red) stats.redundant++; else stats.irredundant++;
   LOG (res, "new");
-  if (likely_to_be_kept_clause (res))
-    mark_variables_as_added_in_clause (res);
+  if (likely_to_be_kept_clause (res)) mark_added (res);
   return res;
 }
 
@@ -82,22 +99,6 @@ void Internal::delete_clause (Clause * c) {
   deallocate_clause (c);
 }
 
-void Internal::mark_variables_as_removed_in_clause (Clause * c, int except) {
-  assert (!c->redundant);
-  const const_literal_iterator end = c->end ();
-  const_literal_iterator i;
-  for (i = c->begin (); i != end; i++)
-    if (*i != except) mark_removed (*i);
-}
-
-void Internal::mark_variables_as_added_in_clause (Clause * c, int except) {
-  assert (likely_to_be_kept_clause (c));
-  const const_literal_iterator end = c->end ();
-  const_literal_iterator i;
-  for (i = c->begin (); i != end; i++)
-    if (*i != except) mark_added (*i);
-}
-
 // We want to eagerly update statistics as soon clauses are marked garbage.
 // Otherwise 'report' for instance gives wrong numbers after 'subsume'
 // before the next 'reduce'.  Thus we factored out marking and accounting
@@ -113,7 +114,7 @@ void Internal::mark_garbage (Clause * c) {
   else assert (stats.irredundant), stats.irredundant--;
   stats.garbage++;
   c->garbage = true;
-  if (!c->redundant) mark_variables_as_removed_in_clause (c);
+  if (!c->redundant) mark_removed (c);
 }
 
 bool Internal::tautological_clause () {

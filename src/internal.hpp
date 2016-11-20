@@ -315,8 +315,8 @@ class Internal {
   void strengthen_clause (Clause *, int);
   void subsume_clause (Clause * subsuming, Clause * subsumed);
   int subsume_check (Clause * subsuming, Clause * subsumed);
-  int try_to_subsume_clause (Clause *);
-  bool subsume_round ();
+  int try_to_subsume_clause (Clause *, vector<Clause*> & shrunken);
+  void subsume_round ();
   void reset_added ();
   void subsume ();
 
@@ -339,7 +339,7 @@ class Internal {
   // variables are checked to be forward subsumed.
   //
   void mark_added (int lit) { flags (lit).added = true; stats.added++; }
-  void mark_variables_as_added_in_clause (Clause *, int except = 0);
+  void mark_added (Clause *);
 
   // If irredundant clauses are removed or literals in clauses are removed,
   // then variables in these clauses should be reconsidered to be eliminated
@@ -347,7 +347,7 @@ class Internal {
   // 'added' flag is restricted to 'irredundant' clauses only.
   //
   void mark_removed (int lit) { flags (lit).removed = true; stats.removed++; }
-  void mark_variables_as_removed_in_clause (Clause *, int except = 0);
+  void mark_removed (Clause *, int except = 0);
 
   // Bounded variable elimination.
   //

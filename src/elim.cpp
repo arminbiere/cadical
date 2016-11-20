@@ -66,7 +66,6 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   if (satisfied) {
     LOG (c, "satisfied antecedent");
     mark_garbage (c);
-    mark_variables_as_removed_in_clause (c);
     clause.clear ();
     unmark (c);
     return false;
@@ -100,7 +99,6 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   if (satisfied) {
     LOG (d, "satisfied antecedent");
     mark_garbage (d);
-    mark_variables_as_removed_in_clause (d);
     return false;
   }
 
@@ -264,7 +262,6 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
     for (l = c->begin (); l != end; l++)
       if (*l != pivot) extension.push_back (*l);
     mark_garbage (c);
-    mark_variables_as_removed_in_clause (c, pivot);
   }
   erase_vector (ps);
 
@@ -276,7 +273,6 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
     Clause * d = *i;
     if (d->garbage) continue;
     mark_garbage (d);
-    mark_variables_as_removed_in_clause (d, -pivot);
   }
   erase_vector (ns);
 
@@ -531,7 +527,9 @@ void Internal::elim () {
     if (!elim_round ()) break;
     if (unsat) break;
     if (round >= limit) break;             // stop after elimination
-    if (!subsume_round ()) break;
+    long old_removed = stats.removed;
+    subsume_round ();
+    if (old_removed == stats.removed) break;
   }
 
   if (!unsat) {

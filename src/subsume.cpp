@@ -164,8 +164,6 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   assert (c->size > 2);
   LOG (c, "removing %d in", remove);
   if (proof) proof->trace_strengthen_clause (c, remove);
-  if (likely_to_be_kept_clause (c))
-    mark_variables_as_added_in_clause (c, remove);
   if (!c->redundant) mark_removed (remove);
   const const_literal_iterator end = c->end ();
   literal_iterator j = c->begin ();
@@ -188,8 +186,8 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
 // strengthened the result is negative.  Otherwise the candidate clause
 // can not be subsumed nor strengthened and zero is returned.
 
-inline
-int Internal::try_to_subsume_clause (Clause * c) {
+inline int
+Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
 
   stats.subtried++;
   assert (!level);
@@ -234,6 +232,8 @@ int Internal::try_to_subsume_clause (Clause * c) {
   if (flipped) {
     LOG (d, "strengthening");
     strengthen_clause (c, -flipped);
+    assert (likely_to_be_kept_clause (c));
+    shrunken.push_back (c);
     return -1;
   }
 
@@ -287,12 +287,13 @@ struct less_noccs {
 // called in the elimination loop in 'elim' in which case we focus on
 // irredundant clauses only to help bounded variable elimination.
 
-bool Internal::subsume_round () {
+void Internal::subsume_round () {
 
-  if (!opts.subsume) return false;
+  if (!opts.subsume) return;
 
   SWITCH_AND_START (search, simplify, subsume);
   stats.subsumptions++;
+
   lim.added_at_last_subsume = stats.added;
 
   assert (!level);
@@ -366,6 +367,7 @@ bool Internal::subsume_round () {
   const const_clause_size_iterator eos = schedule.end ();
   const_clause_size_iterator s;
 
+  vector<Clause *> shrunken;
   init_occs ();
 
   for (s = schedule.begin (); s != eos; s++) {
@@ -382,7 +384,7 @@ bool Internal::subsume_round () {
     // literals (false or true).
     //
     if (c->size > 2) {
-      const int tmp = try_to_subsume_clause (c);
+      const int tmp = try_to_subsume_clause (c, shrunken);
       if (tmp > 0) { subsumed++; continue; }
       if (tmp < 0) strengthened++;
     }
@@ -397,18 +399,29 @@ bool Internal::subsume_round () {
     int minlit = 0;
     long minoccs = 0;
     size_t minsize = 0;
+    bool added = true;
+
     const const_literal_iterator end = c->end ();
     const_literal_iterator j;
-    for (j = c->begin (); j != end; j++) {
+
+    for (j = c->begin (); added && j != end; j++) {
       const int lit = *j;
       const size_t size = occs (lit).size ();
+      if (!flags (lit).added) added = false;
       if (minlit && minsize <= size) continue;
       const long tmp = noccs (lit);
       if (minlit && minsize == size && tmp <= minoccs) continue;
       minlit = lit, minsize = size, minoccs = tmp;
     }
 
-    // Unless this smallest occurring literal occurs too often.
+    // If there is a variable in the clause which is not 'added', then this
+    // clause can not serve to strengthen or subsume another clause, since
+    // all shrunken or added clauses mark all their variables as 'added'.
+    //
+    if (!added) continue;
+
+    // If this smallest occurring literal occurs too often do not
+    // connect the clause.
     //
     if (minsize > (size_t) opts.subsumeocclim) continue;
 
@@ -427,23 +440,31 @@ bool Internal::subsume_round () {
     sort (c->begin (), c->end (), less_noccs (this));
   }
 
+  VRB ("subsume", stats.subsumptions,
+    "subsumed %ld and strengthened %ld of %ld clauses %.0f%%",
+    subsumed, strengthened, scheduled,
+    percent (subsumed + strengthened, scheduled));
+
   // Release occurrence lists and schedule.
   //
   erase_vector (schedule);
   reset_noccs ();
   reset_occs ();
 
-  VRB ("subsume", stats.subsumptions,
-    "subsumed %ld and strengthened %ld of %ld clauses %.0f%%",
-    subsumed, strengthened, scheduled,
-    percent (subsumed + strengthened, scheduled));
+  // Reset all old 'added' flags and mark variables in shrunken
+  // clauses as 'added' for the next subsumption round.
+  //
+  reset_added ();
+  for (const_clause_iterator i = shrunken.begin ();
+       i != shrunken.end ();
+       i++)
+    mark_added (*i);
+  erase_vector (shrunken);
 
   lim.subsume = stats.conflicts + inc.subsume;
 
   report ('s');
   STOP_AND_SWITCH (subsume, simplify, search);
-
-  return subsumed > 0;
 }
 
 void Internal::subsume () {
@@ -451,7 +472,7 @@ void Internal::subsume () {
   assert (!unsat);
   backtrack ();
   reset_watches ();
-  (void) subsume_round ();
+  subsume_round ();
   init_watches ();
   connect_watches ();
   inc.subsume += opts.subsumeinc;

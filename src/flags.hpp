@@ -18,8 +18,8 @@ struct Flags {         // Variable flags.
     poison (false),
     removable (false),
     clause (false),
-    added (false),
-    removed (false)
+    added (true),
+    removed (true)
   { }
 };
 

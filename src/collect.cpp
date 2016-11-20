@@ -61,6 +61,7 @@ void Internal::remove_falsified_literals (Clause * c) {
   stats.collected += bytes;
   while (j != end) *j++ = 0;
   LOG (c, "flushed %d literals and got", flushed);
+  if (likely_to_be_kept_clause (c)) mark_added (c);
 }
 
 void Internal::mark_satisfied_clauses_as_garbage () {
