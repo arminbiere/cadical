@@ -203,9 +203,9 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
     if (!flags (lit).added) continue;
     for (int sign = -1; !d && sign <= 1; sign += 2) {
       Occs & os = occs (sign * lit);
-      const const_clause_iterator eo = os.end ();
-      clause_iterator k = os.begin ();
-      for (const_clause_iterator j = k; j != eo; j++) {
+      const const_occs_iterator eo = os.end ();
+      occs_iterator k = os.begin ();
+      for (const_occs_iterator j = k; j != eo; j++) {
         Clause * e = *j;
         if (e->garbage) continue;
         *k++ = e;
@@ -218,7 +218,7 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
         else assert (flipped != lit);
       }
       os.resize (k - os.begin ());
-      shrink_vector (os);
+      shrink_occs (os);
     }
   }
   unmark (c);

@@ -168,8 +168,8 @@ bool Internal::resolvents_are_bounded (int pivot) {
   // bound on non-tautological resolvents is not hit and the size of the
   // generated resolvents does not exceed the resolvent size limit.
   //
-  const const_clause_iterator pe = ps.end (), ne = ns.end ();
-  const_clause_iterator i, j;
+  const const_occs_iterator pe = ps.end (), ne = ns.end ();
+  const_occs_iterator i, j;
   for (i = ps.begin (); needed >= 0 && i != pe; i++) {
     Clause * c = *i;
     if (c->garbage) { needed -= neg; continue; }
@@ -215,8 +215,8 @@ inline void Internal::add_resolvents (int pivot) {
   long resolvents = 0;
 
   Occs & ps = occs (pivot), & ns = occs (-pivot);
-  const const_clause_iterator eop = ps.end (), eon = ns.end ();
-  const_clause_iterator i, j;
+  const const_occs_iterator eop = ps.end (), eon = ns.end ();
+  const_occs_iterator i, j;
   for (i = ps.begin (); !unsat && i != eop; i++) {
     for (j = ns.begin (); !unsat && j != eon; j++) {
       if (resolve_clauses (*i, pivot, *j)) {
@@ -249,8 +249,8 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
   LOG ("marking irredundant clauses with %d as garbage", pivot);
 
   Occs & ps = occs (pivot);
-  const const_clause_iterator pe = ps.end ();
-  const_clause_iterator i;
+  const const_occs_iterator pe = ps.end ();
+  const_occs_iterator i;
   for (i = ps.begin (); i != pe; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
@@ -262,18 +262,18 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
       if (*l != pivot) extension.push_back (*l);
     mark_garbage (c);
   }
-  erase_vector (ps);
+  erase_occs (ps);
 
   LOG ("marking irredundant clauses with %d as garbage", -pivot);
 
   Occs & ns = occs (-pivot);
-  const const_clause_iterator ne = ns.end ();
+  const const_occs_iterator ne = ns.end ();
   for (i = ns.begin (); i != ne; i++) {
     Clause * d = *i;
     if (d->garbage) continue;
     mark_garbage (d);
   }
-  erase_vector (ns);
+  erase_occs (ns);
 
   // This is a trick by Niklas Soerensson to avoid saving all clauses on the
   // extension stack.  Just first in extending the witness the 'pivot' is

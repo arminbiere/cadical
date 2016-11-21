@@ -94,16 +94,16 @@ void Internal::mark_satisfied_clauses_as_garbage () {
 
 size_t Internal::flush_occs (int lit) {
   Occs & os = occs (lit);
-  const const_clause_iterator end = os.end ();
-  clause_iterator j = os.begin ();
-  const_clause_iterator i;
+  const const_occs_iterator end = os.end ();
+  occs_iterator j = os.begin ();
+  const_occs_iterator i;
   Clause * c;
   for (i = j; i != end; i++)
     if (!(c = *i)->collect ())
       *j++ = c->moved ? c->copy : c;
   size_t new_size = j - os.begin ();
   os.resize (new_size);
-  shrink_vector (os);
+  shrink_occs (os);
   return new_size;
 }
 

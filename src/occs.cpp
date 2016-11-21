@@ -7,12 +7,12 @@ namespace CaDiCaL {
 
 void Internal::init_occs () {
   assert (!otab);
-  NEW (otab, vector<Clause*>, 2*vsize);
+  NEW (otab, Occs, 2*vsize);
 }
 
 void Internal::reset_occs () {
   assert (otab);
-  DEL (otab, vector<Clause*>, 2*vsize);
+  DEL (otab, Occs, 2*vsize);
   otab = 0;
 }
 

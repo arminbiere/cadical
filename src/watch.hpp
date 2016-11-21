@@ -1,9 +1,8 @@
 #ifndef _watch_hpp_INCLUDED
 #define _watch_hpp_INCLUDED
 
-#ifndef NDEBUG
 #include "clause.hpp"
-#endif
+#include "cector.hpp"
 
 #include <cassert>
 
@@ -23,35 +22,20 @@ struct Watch {
 
 };
 
-#if 1
-
 namespace CaDiCaL {
 
+#if 0
 typedef vector<Watch> Watches;          // of one literal
-
 inline void shrink_watches (Watches & ws) { shrink_vector (ws); }
-
-typedef vector<Watch>::iterator watch_iterator;
-typedef vector<Watch>::const_iterator const_watch_iterator;
-
-};
-
 #else
-
-#include "cector.hpp"
-
-namespace CaDiCaL {
-
-#define WATCHES
-
 typedef cector<Watch> Watches;
+inline void shrink_watches (Watches & ws) { ws.shrink (); }
+#endif
+
 typedef Watches::iterator watch_iterator;
 typedef Watches::const_iterator const_watch_iterator;
 
-inline void shrink_watches (Watches & ws) { ws.shrink (); }
-
 };
 
-#endif
 
 #endif
