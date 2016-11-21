@@ -21,6 +21,16 @@ bool has_suffix (const char * str, const char * suffix);
 
 /*------------------------------------------------------------------------*/
 
+inline unsigned next_power_of_two (unsigned n) {
+  return 1u << (32 - __builtin_clz (n - 1));
+}
+
+inline bool is_power_of_two (unsigned n) {
+  return n && !(n & (n-1));
+}
+
+/*------------------------------------------------------------------------*/
+
 // The standard 'Effective STL' way (though not guaranteed) to clear a
 // vector and reduce its capacity to zero, thus deallocating all its
 // internal memory.  This is quite important for keeping the actual
@@ -39,12 +49,6 @@ template<class T> void erase_vector (vector<T> & v) {
 template<class T> void shrink_vector (vector<T> & v) {
   if (v.capacity () > v.size ()) { vector<T>(v).swap (v); }
   assert (v.capacity () == v.size ());              // not guaranteed though
-}
-
-// Shallow memory usage of a vector.
-
-template<class T> size_t bytes_vector (const vector<T> & v) {
-  return sizeof (T) * v.capacity ();
 }
 
 /*------------------------------------------------------------------------*/
