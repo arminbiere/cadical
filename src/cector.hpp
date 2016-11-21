@@ -26,10 +26,12 @@ private:
 
   bool full () const { return size () == capacity (); }
 
+#if 0
   void set_capacity_to_power_of_two () {
     if (!_capacity || is_power_of_two (_capacity)) return;
     _capacity = next_power_of_two (_capacity);
   }
+#endif
 
   void enlarge () {
     assert (full ());
@@ -70,7 +72,6 @@ public:
     assert (_size <= _capacity);
     if (_size == _capacity) return;
     _capacity = _size;
-    set_capacity_to_power_of_two ();
     if (_size == _capacity) return;
     _begin = (T*) realloc (_begin, _capacity * sizeof (T));
     if (_capacity && !_begin) throw std::bad_alloc ();
