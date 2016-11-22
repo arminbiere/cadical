@@ -99,7 +99,7 @@ class Internal {
   vector<int> extension;        // original CNF for debugging
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
-  vector<Clause*> resolved;     // resolved clauses in 'analyze' & 'elim'
+  vector<Clause*> resolved;     // resolved clauses in 'analyze'
   vector<Timer> timers;         // active timers for profiling functions
   EMA fast_glue_avg;            // fast glue average
   EMA slow_glue_avg;            // slow glue average
@@ -249,8 +249,9 @@ class Internal {
   void shrink_clause ();
   void bump_variable (int lit);
   void bump_variables ();
-  void bump_analyzed_clauses ();
-  void analyze_clause (Clause *);
+  void bump_clause (Clause *);
+  void bump_resolved_clauses ();
+  void save_as_resolved_clause (Clause *);
   void clear_seen ();
   void clear_levels ();
   void clear_minimized ();

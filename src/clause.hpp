@@ -72,11 +72,11 @@ class Clause {
 
 public:
 
-  unsigned extended:1;  // 'analyzed' field only valid this is true
-  unsigned redundant:1; // aka 'learned' so not 'irredundant' (original)
-  unsigned garbage:1;   // can be garbage collected unless it is a 'reason'
-  unsigned reason:1;    // reason / antecedent clause can not be collected
-  unsigned moved:1;     // moved during garbage collector ('copy' valid)
+  bool extended:1;  // 'analyzed' field only valid this is true
+  bool redundant:1; // aka 'learned' so not 'irredundant' (original)
+  bool garbage:1;   // can be garbage collected unless it is a 'reason'
+  bool reason:1;    // reason / antecedent clause can not be collected
+  bool moved:1;     // moved during garbage collector ('copy' valid)
 
   // This is the 'glue' = 'glucose level' = 'LBD' of a redundant clause.  We
   // actually only use 'CLAUSE_LD_MAX_GLUE-1' bits since the field is

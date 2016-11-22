@@ -73,8 +73,8 @@ Clause * Internal::new_clause (bool red, int glue) {
   res->size = size;
   res->pos = 2;
   for (int i = 0; i < size; i++) res->literals[i] = clause[i];
-  if (extended) res->analyzed () = ++stats.analyzed;
   clauses.push_back (res);
+  if (extended) res->analyzed () = ++stats.analyzed;
   if (red) stats.redundant++; else stats.irredundant++;
   LOG (res, "new");
   if (likely_to_be_kept_clause (res)) mark_added (res);

@@ -118,16 +118,21 @@ void Internal::bump_variables () {
 // a 'analyzed' field).  We keep the relative order of bumped clauses by
 // sorting them first.
 
-void Internal::bump_analyzed_clauses () {
+inline void Internal::bump_clause (Clause * c) {
+  assert (c->extended);
+  c->analyzed () = ++stats.analyzed;
+}
+
+inline void Internal::bump_resolved_clauses () {
   START (bump);
   sort (resolved.begin (), resolved.end (), analyzed_earlier ());
   for (const_clause_iterator i = resolved.begin (); i != resolved.end (); i++)
-    (*i)->analyzed () = ++stats.analyzed;
+    bump_clause (*i);
   STOP (bump);
   resolved.clear ();
 }
 
-inline void Internal::analyze_clause (Clause * c) {
+inline void Internal::save_as_resolved_clause (Clause * c) {
   if (!c->redundant) return;
   if (c->size <= opts.keepsize) return;
   if (c->glue <= opts.keepglue) return;
@@ -167,7 +172,7 @@ inline void Internal::analyze_literal (int lit, int & open) {
 inline void
 Internal::analyze_reason (int lit, Clause * reason, int & open) {
   assert (reason);
-  analyze_clause (reason);
+  save_as_resolved_clause (reason);
   const const_literal_iterator end = reason->end ();
   const_literal_iterator j = reason->begin ();
   int other;
@@ -225,7 +230,7 @@ void Internal::analyze () {
 
   // Update glue statistics.
   //
-  bump_analyzed_clauses ();
+  bump_resolved_clauses ();
   const int glue = (int) levels.size ();
   LOG ("1st UIP clause of size %ld and glue %d",
     (long) clause.size (), glue);
