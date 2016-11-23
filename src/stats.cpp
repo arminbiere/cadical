@@ -77,6 +77,8 @@ void Stats::print (Internal * internal) {
     learned, relative (learned, stats.conflicts));
   MSG ("minimized:     %15ld   %10.2f %%  of 1st-UIP-literals",
     stats.minimized, percent (stats.minimized, stats.learned));
+  MSG ("blocked:       %15ld   %10.2f    of original clauses",
+    stats.blocked, percent (stats.blocked, stats.original));
   MSG ("forward:       %15ld   %10.2f    tried per forward",
     stats.subsumed, relative (stats.subtried, stats.subsumed));
   MSG ("strengthened:  %15ld   %10.2f    per forward",

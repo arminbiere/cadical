@@ -254,12 +254,7 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
   for (i = ps.begin (); i != pe; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
-    extension.push_back (0);
-    const const_literal_iterator end = c->end ();
-    const_literal_iterator l;
-    extension.push_back (pivot);
-    for (l = c->begin (); l != end; l++)
-      if (*l != pivot) extension.push_back (*l);
+    push_on_extension_stack (c, pivot);
     mark_garbage (c);
   }
   erase_occs (ps);
@@ -524,6 +519,7 @@ void Internal::elim () {
   //
   for (;;) {
     round++;
+    block ();
     if (!elim_round ()) break;
     if (unsat) break;
     if (round >= limit) break;             // stop after elimination

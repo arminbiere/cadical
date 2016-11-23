@@ -34,6 +34,8 @@ struct Stats {
   long shrinktried;  // number of tried to shrink literals
   long sublast;      // number of eagerly subsumed clauses
   long subsumed;     // number of subsumed clauses
+  long blockings;    // blocked clause elimination rounds
+  long blocked;      // number of blocked clauses
   long strengthened; // number of strengthened clauses
   long subirr;       // number of subsumed irredundant clauses
   long subred;       // number of subsumed redundant clauses
@@ -49,6 +51,7 @@ struct Stats {
   long minimized;    // minimized literals
   long redundant;    // number of current redundant clauses
   long irredundant;  // number of current irredundant clauses
+  long original;     // number of original irredundant clauses
   long garbage;      // number of current garbage clauses
   long units;        // learned unit clauses
   long binaries;     // learned binary clauses

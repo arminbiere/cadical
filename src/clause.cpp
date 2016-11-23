@@ -142,6 +142,7 @@ bool Internal::tautological_clause () {
 }
 
 void Internal::add_new_original_clause () {
+  stats.original++;
   int size = (int) clause.size ();
   if (!size) {
     if (!unsat) {

@@ -24,6 +24,7 @@ class Internal;
 
 #define PROFILES \
 PROFILE(analyze,3) \
+PROFILE(block,2) \
 PROFILE(bump,4) \
 PROFILE(collect,2) \
 PROFILE(connect,2) \

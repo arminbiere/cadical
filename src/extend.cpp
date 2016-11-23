@@ -4,6 +4,15 @@
 
 namespace CaDiCaL {
 
+void Internal::push_on_extension_stack (Clause * c, int pivot) {
+  extension.push_back (0);
+  const const_literal_iterator end = c->end ();
+  const_literal_iterator l;
+  extension.push_back (pivot);
+  for (l = c->begin (); l != end; l++)
+    if (*l != pivot) extension.push_back (*l);
+}
+
 void Internal::extend () {
   START (extend);
   long flipped = 0;

@@ -62,6 +62,7 @@ class Internal {
   friend struct less_noccs;
   friend struct trail_bumped_smaller;
   friend struct trail_smaller;
+  friend struct more_occs;
 
   /*----------------------------------------------------------------------*/
 
@@ -365,10 +366,11 @@ class Internal {
   // Bounded variable elimination.
   //
   bool eliminating ();
-  bool resolve_clauses (Clause * c, int pivot, Clause * d);
+  bool resolve_clauses (Clause *, int pivot, Clause *);
   void mark_eliminated_clauses_as_garbage (int pivot);
   bool resolvents_are_bounded (int pivot);
   void add_resolvents (int pivot);
+  void push_on_extension_stack (Clause *, int pivot);
   void elim_variable (int pivot);
   void reset_removed ();
   bool elim_round ();
@@ -382,6 +384,11 @@ class Internal {
   void failed_literal (int lit);
   bool probing ();
   void probe ();
+
+  // Blocked clause elimination.
+  //
+  bool block_clause_on_literal (Clause *, int lit);
+  void block ();
 
   // Part on picking the next decision in 'decide.cpp'.
   //
