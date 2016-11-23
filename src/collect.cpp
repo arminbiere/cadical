@@ -59,7 +59,7 @@ void Internal::remove_falsified_literals (Clause * c) {
   int flushed = end - j;
   const size_t bytes = flushed * sizeof (int);
   if (!c->redundant) {
-    assert (stats.irrbytes >= bytes);
+    assert (stats.irrbytes >= (long) bytes);
     stats.irrbytes -= bytes;
   }
   stats.collected += bytes;
