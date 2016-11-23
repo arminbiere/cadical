@@ -103,7 +103,8 @@ void Internal::delete_clause (Clause * c) {
   LOG (c, "delete");
   size_t bytes = c->bytes ();
   stats.collected += bytes;
-  if (c->garbage) assert (stats.garbage >= bytes), stats.garbage -= bytes;
+  if (c->garbage) 
+    assert (stats.garbage >= (long) bytes), stats.garbage -= bytes;
   if (proof) proof->trace_delete_clause (c);
   deallocate_clause (c);
 }
@@ -122,7 +123,7 @@ void Internal::mark_garbage (Clause * c) {
   if (c->redundant) assert (stats.redundant), stats.redundant--;
   else {
     assert (stats.irredundant), stats.irredundant--;
-    assert (stats.irrbytes >= bytes), stats.irrbytes -= bytes;
+    assert (stats.irrbytes >= (long) bytes), stats.irrbytes -= bytes;
   }
   stats.garbage += bytes;
   c->garbage = true;
