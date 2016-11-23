@@ -104,25 +104,30 @@ bool Internal::propagate () {
         const int u = val (lits[0]);
         if (u > 0) j[-1].blit = lits[0];
         else {
-          const const_literal_iterator end = lits + w.size;
           assert (w.size == w.clause->size);
-	  const bool have_pos = w.clause->have.pos;
-          literal_iterator start = lits;
-	  if (have_pos) start += w.clause->pos (); else start += 2;
-	  literal_iterator k = start;
-          int v = -1;
-          while (k != end && (v = val (*k)) < 0) k++;
-          EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
-          if (have_pos && v < 0) {
-            const const_literal_iterator middle = lits + w.clause->pos ();
-            k = lits + 2;
-            assert (w.clause->pos () <= w.size);
-            while (k != middle && (v = val (*k)) < 0) k++;
-            EXPENSIVE_STATS_ADD (simplifying,
-	      traversed, k - (lits + 2));
-          }
+          const const_literal_iterator end = lits + w.size;
+	  literal_iterator k;
+	  int v = -1;
+	  if (w.clause->have.pos) {
+	    literal_iterator start = lits + w.clause->pos ();
+	    k = start;
+	    while (k != end && (v = val (*k)) < 0) k++;
+	    EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
+	    if (v < 0) {
+	      const const_literal_iterator middle = lits + w.clause->pos ();
+	      k = lits + 2;
+	      assert (w.clause->pos () <= w.size);
+	      while (k != middle && (v = val (*k)) < 0) k++;
+	      EXPENSIVE_STATS_ADD (simplifying, traversed, k - (lits + 2));
+	    }
+	    w.clause->pos () = k - lits;
+          } else {
+	    literal_iterator start = lits + 2;
+	    k = start;
+	    while (k != end && (v = val (*k)) < 0) k++;
+	    EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
+	  }
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
-          if (have_pos) w.clause->pos () = k - lits;
           if (v > 0) j[-1].blit = *k;
           else if (!v) {
             LOG (w.clause, "unwatch %d in", *k);
