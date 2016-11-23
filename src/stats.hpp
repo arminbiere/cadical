@@ -51,8 +51,9 @@ struct Stats {
   long minimized;    // minimized literals
   long redundant;    // number of current redundant clauses
   long irredundant;  // number of current irredundant clauses
+  long irrbytes;     // bytes of irredundant clauses
   long original;     // number of original irredundant clauses
-  long garbage;      // number of current garbage clauses
+  long garbage;      // bytes of current garbage clauses
   long units;        // learned unit clauses
   long binaries;     // learned binary clauses
   long probings;     // number of probings

@@ -151,6 +151,30 @@ bool Internal::resolvents_are_bounded (int pivot) {
   LOG ("try to eliminate %d with %ld = %ld + %ld occurrences",
     pivot, bound, pos, neg);
 
+  const const_occs_iterator pe = ps.end (), ne = ns.end ();
+  const_occs_iterator i, j;
+  
+  size_t pm = 0, nm = 0;
+
+  for (i = ps.begin (); i != pe; i++) {
+    Clause * c = *i;
+    assert (!c->garbage);
+    size_t tmp = c->size;
+    if (tmp > pm) pm = tmp;
+  }
+
+  for (j = ns.begin (); j != ne; j++) {
+    Clause * d = *j;
+    assert (!d->garbage);
+    size_t tmp = d->size;
+    if (tmp > nm) nm = tmp;
+  }
+
+  if (pm + nm - 2 > (size_t) opts.elimclslim) {
+    LOG ("expecting one resolvent to exceed limit on resolvent size");
+    return false;
+  }
+
   // From all 'pos*neg' resolvents we need that many redundant resolvents.
   // If this number becomes zero or less we can eliminate the variable.
   //
@@ -168,8 +192,6 @@ bool Internal::resolvents_are_bounded (int pivot) {
   // bound on non-tautological resolvents is not hit and the size of the
   // generated resolvents does not exceed the resolvent size limit.
   //
-  const const_occs_iterator pe = ps.end (), ne = ns.end ();
-  const_occs_iterator i, j;
   for (i = ps.begin (); needed >= 0 && i != pe; i++) {
     Clause * c = *i;
     if (c->garbage) { needed -= neg; continue; }
@@ -178,12 +200,8 @@ bool Internal::resolvents_are_bounded (int pivot) {
       if (d->garbage) { needed--; continue; }
       stats.restried++;
       if (resolve_clauses (c, pivot, d)) {
-        const int size = (int) clause.size ();
+	assert (clause.size () <= (size_t) opts.elimclslim);
         clause.clear ();
-        if (size > opts.elimclslim) {
-          LOG ("resolvent exceeds limit on resolvent size");
-          return false;
-        }
         if (++count > bound) {
           LOG ("too many %ld non-tautological resolvents on %d",
             count, pivot);
@@ -451,11 +469,11 @@ bool Internal::elim_round () {
 
   // Try eliminating variables according to the schedule.
   //
-  const long irredundant_limit = stats.irredundant;
+  const long limit = (2*stats.irrbytes/3) + (1<<20);
   const const_idx_sum_occs_iterator eos = schedule.end ();
   const_idx_sum_occs_iterator k;
   for (k = schedule.begin (); !unsat && k != eos; k++) {
-    if (stats.garbage > irredundant_limit) garbage_collection ();
+    if (stats.garbage > limit) garbage_collection ();
     elim_variable (k->idx);
   }
 

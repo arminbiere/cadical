@@ -58,8 +58,14 @@ void Internal::remove_falsified_literals (Clause * c) {
   c->update_after_shrinking ();
   int flushed = end - j;
   const size_t bytes = flushed * sizeof (int);
+  if (!c->redundant) {
+    assert (stats.irrbytes >= bytes);
+    stats.irrbytes -= bytes;
+  }
   stats.collected += bytes;
+#ifndef NDEBUG
   while (j != end) *j++ = 0;
+#endif
   LOG (c, "flushed %d literals and got", flushed);
   if (likely_to_be_kept_clause (c)) mark_added (c);
 }

@@ -150,6 +150,7 @@ Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
   LOG ("turning redundant subsuming clause into irredundant clause");
   subsuming->redundant = false;
   stats.irredundant++;
+  stats.irrbytes += subsuming->bytes ();
   assert (stats.redundant);
   stats.redundant--;
 }
@@ -171,6 +172,7 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
     if ((*j++ = *i) == remove) j--;
   assert (j + 1 == end);
   c->size--;
+  if (!c->redundant) assert (stats.irrbytes >= 4), stats.irrbytes -= 4;
   c->update_after_shrinking ();
   if (c->have.analyzed) c->analyzed () = ++stats.analyzed;
   LOG (c, "strengthened");

@@ -80,7 +80,8 @@ Clause * Internal::new_clause (bool red, int glue) {
   if (have_glue) c->_glue = glue;
   if (have_pos) c->_pos = 2;
   assert (c->offset () == offset);
-  if (red) stats.redundant++; else stats.irredundant++;
+  if (red) stats.redundant++;
+  else stats.irredundant++, stats.irrbytes += bytes;
   clauses.push_back (c);
   LOG (c, "new");
   if (likely_to_be_kept_clause (c)) mark_added (c);
@@ -102,7 +103,7 @@ void Internal::delete_clause (Clause * c) {
   LOG (c, "delete");
   size_t bytes = c->bytes ();
   stats.collected += bytes;
-  if (c->garbage) assert (stats.garbage > 0), stats.garbage--;
+  if (c->garbage) assert (stats.garbage >= bytes), stats.garbage -= bytes;
   if (proof) proof->trace_delete_clause (c);
   deallocate_clause (c);
 }
@@ -117,9 +118,13 @@ void Internal::delete_clause (Clause * c) {
 //
 void Internal::mark_garbage (Clause * c) {
   assert (!c->garbage);
+  size_t bytes = c->bytes ();
   if (c->redundant) assert (stats.redundant), stats.redundant--;
-  else assert (stats.irredundant), stats.irredundant--;
-  stats.garbage++;
+  else {
+    assert (stats.irredundant), stats.irredundant--;
+    assert (stats.irrbytes >= bytes), stats.irrbytes -= bytes;
+  }
+  stats.garbage += bytes;
   c->garbage = true;
   if (!c->redundant) mark_removed (c);
 }
