@@ -38,8 +38,8 @@ void Internal::unprotect_reasons () {
 
 struct less_usefull {
   bool operator () (Clause * c, Clause * d) {
-    if (c->glue > d->glue) return true;
-    if (c->glue < d->glue) return false;
+    if (c->glue () > d->glue ()) return true;
+    if (c->glue () < d->glue ()) return false;
     return analyzed_earlier () (c, d);
   }
 };
@@ -54,11 +54,11 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   const_clause_iterator end = clauses.end (), i;
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
-    if (!c->redundant) continue;            // keep irredundant
-    if (c->reason) continue;                // need to keep reasons
-    if (c->garbage) continue;               // already marked
-    if (c->size <= opts.keepsize) continue; // keep small size clauses
-    if (c->glue <= opts.keepglue) continue; // keep small glue clauses
+    if (!c->redundant) continue;                 // keep irredundant
+    if (c->reason) continue;                     // need to keep reasons
+    if (c->garbage) continue;                    // already marked
+    if (c->size <= opts.keepsize) continue;      // keep small size clauses
+    if (c->glue () <= opts.keepglue) continue;   // keep small glue clauses
     if (c->analyzed () > lim.analyzed) continue;
     stack.push_back (c);
   }
@@ -76,7 +76,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   for (i = target; i != end; i++) {
     Clause * c = *i;
     if (c->size > lim.keptsize) lim.keptsize = c->size;
-    if (c->glue > lim.keptglue) lim.keptglue = c->glue;
+    if (c->glue () > lim.keptglue) lim.keptglue = c->glue ();
   }
   VRB ("reduce", stats.reductions,
     "maximum kept size %d glue %d", lim.keptsize, lim.keptglue);

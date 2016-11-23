@@ -106,21 +106,23 @@ bool Internal::propagate () {
         else {
           const const_literal_iterator end = lits + w.size;
           assert (w.size == w.clause->size);
-          literal_iterator k = lits + w.clause->pos;
+	  const bool have_pos = w.clause->have.pos;
+          literal_iterator start = lits;
+	  if (have_pos) start += w.clause->pos (); else start += 2;
+	  literal_iterator k = start;
           int v = -1;
           while (k != end && (v = val (*k)) < 0) k++;
-          EXPENSIVE_STATS_ADD (simplifying,
-	    traversed, k - (lits + w.clause->pos));
-          if (v < 0) {
-            const const_literal_iterator middle = lits + w.clause->pos;
+          EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
+          if (have_pos && v < 0) {
+            const const_literal_iterator middle = lits + w.clause->pos ();
             k = lits + 2;
-            assert (w.clause->pos <= w.size);
+            assert (w.clause->pos () <= w.size);
             while (k != middle && (v = val (*k)) < 0) k++;
             EXPENSIVE_STATS_ADD (simplifying,
 	      traversed, k - (lits + 2));
           }
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
-          w.clause->pos = k - lits;
+          if (have_pos) w.clause->pos () = k - lits;
           if (v > 0) j[-1].blit = *k;
           else if (!v) {
             LOG (w.clause, "unwatch %d in", *k);

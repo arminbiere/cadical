@@ -11,17 +11,16 @@ namespace CaDiCaL {
 // The 'Clause' data structure is very important. There are usually many
 // clauses and accessing them is a hot-spot.  Thus we use three common
 // optimizations to reduce their memory foot print and improve cache usage.
-// Even though is induces some complexity in understanding the actual
-// implementation, though arguably not the usage of this data-structure,
-// we deem these optimizations for essential.
+// Even though this induces some complexity in understanding the actual
+// implementation, arguably not the usage of this data-structure, we deem
+// these optimizations for essential.
 //
 //   (1) The most important optimization is to 'embed' the actual literals
 //   in the clause.  This requires a variadic size structure and thus
 //   strictly is not 'C' conformant, but supported by all compilers we used.
 //   The alternative is to store the actual literals somewhere else, which
 //   not only needs more memory but more importantly also requires another
-//   memory access and thus is so costly that even for CaDiCaL we want to
-//   use this optimization.
+//   memory access and thus is very costly.
 //
 //   (2) The boolean flags only need one bit each and thus there is enough
 //   space left to merge them with a 'glue' bit field (which is less
@@ -61,50 +60,61 @@ namespace CaDiCaL {
 // but is also guarded by making the actual '_analyzed' field private and
 // checking this contract in the 'analyzed ()' accessors functions.
 
-#define LD_MAX_GLUE     27      // 32 bits - (5 boolean flags)
-#define EXTENDED_OFFSET  8      // sizeof (_analyzed)
-
-#define MAX_GLUE ((1<<(LD_MAX_GLUE-1))-1)       // 1 bit less since signed
-
 class Clause {
-
-  long _analyzed;        // time stamp when analyzed last time
 
 public:
 
-  bool extended:1;  // 'analyzed' field only valid this is true
+  long _analyzed;   // time stamp when analyzed last time if redundant
+  int _glue;        // glucose level of redundant clauses with size > 2
+  int _pos;         // position of last watch replacement
+
+  struct { bool analyzed : 1; bool glue : 1; bool pos : 1; } have;
+
   bool redundant:1; // aka 'learned' so not 'irredundant' (original)
   bool garbage:1;   // can be garbage collected unless it is a 'reason'
   bool reason:1;    // reason / antecedent clause can not be collected
   bool moved:1;     // moved during garbage collector ('copy' valid)
 
-  // This is the 'glue' = 'glucose level' = 'LBD' of a redundant clause.  We
-  // actually only use 'CLAUSE_LD_MAX_GLUE-1' bits since the field is
-  // 'signed' to avoid surprises due to 'unsigned' vs. 'signed' semantics.
-  //
-  // Another issue is that 'C' does not explicitly define 'signedness' of
-  // 'int' bit fields and thus we explicitly have to use 'signed' here (on
-  // an IBM main frame or on Sparc 'int a:1' might be 'unsigned').
-  //
-  signed int glue : LD_MAX_GLUE;
-
   int size;             // actual size of 'literals' (at least 2)
-  int pos;              // position of last watch replacement
 
   union {
+
     int literals[2];    // of variadic 'size' (not just 2) in general
-    Clause * copy;      // only valid if 'moved', then that's where
+
+    Clause * copy;      // only valid if 'moved', then that's where to
 
     // The 'copy' field is only used for 'moved' clauses in 'move_clause'
     // in the moving garbage collector 'move_non_garbage_clauses'.
     // Otherwise 'literals' is valid.
   };
 
-  long & analyzed () { assert (extended); return _analyzed; }
-  const long & analyzed () const { assert (extended); return _analyzed; }
+  long & analyzed () {
+    assert (have.analyzed);
+    return _analyzed;
+  }
+
+  const long & analyzed () const {
+    assert (have.analyzed);
+    return _analyzed;
+  }
+
+  const int & glue () const {
+    assert (redundant);
+    return have.glue ? _glue : size;
+  }
+
+  int & pos () { assert (have.pos); return _pos; }
+  const int & pos () const { assert (have.pos); return _pos; }
+
+  void update_after_shrinking () { 
+    assert (size >= 2);
+    if (have.pos && _pos >= size) _pos = 2;
+    if (have.glue && _glue > size) _glue = size;
+  }
 
   literal_iterator       begin ()       { return literals; }
   literal_iterator         end ()       { return literals + size; }
+
   const_literal_iterator begin () const { return literals; }
   const_literal_iterator   end () const { return literals + size; }
 
@@ -128,7 +138,6 @@ public:
 
 struct analyzed_earlier {
   bool operator () (const Clause * a, const Clause * b) {
-    assert (a->extended), assert (b->extended);
     return a->analyzed () < b->analyzed ();
   }
 };
@@ -141,20 +150,20 @@ struct smaller_size {
 
 /*------------------------------------------------------------------------*/
 
-inline size_t Clause::bytes () const {
-  size_t res = sizeof (Clause) + (size - 2) * sizeof (int);
-  if (!extended) res -= sizeof (long);
+inline size_t Clause::offset () const {
+  size_t res = 0;
+  if (!have.pos) res += sizeof _pos;
+  if (!have.glue) res += sizeof _glue;
+  if (!have.analyzed) res += sizeof _analyzed;
   return res;
+}
+
+inline size_t Clause::bytes () const {
+  return sizeof (Clause) + (size - 2) * sizeof (int) - offset ();
 }
 
 inline char * Clause::start () const {
-  char * res = (char *) this;
-  if (!extended) res += sizeof (long);
-  return res;
-}
-
-inline size_t Clause::offset () const {
-  return extended ? 0 : EXTENDED_OFFSET;
+  return offset () + (char*) this;
 }
 
 /*------------------------------------------------------------------------*/

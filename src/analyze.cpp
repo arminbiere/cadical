@@ -119,7 +119,7 @@ void Internal::bump_variables () {
 // sorting them first.
 
 inline void Internal::bump_clause (Clause * c) {
-  assert (c->extended);
+  assert (c->have.analyzed);
   c->analyzed () = ++stats.analyzed;
 }
 
@@ -135,8 +135,8 @@ inline void Internal::bump_resolved_clauses () {
 inline void Internal::save_as_resolved_clause (Clause * c) {
   if (!c->redundant) return;
   if (c->size <= opts.keepsize) return;
-  if (c->glue <= opts.keepglue) return;
-  assert (c->extended);
+  if (c->glue () <= opts.keepglue) return;
+  assert (c->have.analyzed);
   resolved.push_back (c);
 }
 

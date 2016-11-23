@@ -55,7 +55,7 @@ void Internal::remove_falsified_literals (Clause * c) {
     j--;
   }
   c->size = j - c->begin ();
-  if (c->pos > c->size) c->pos = 2;
+  c->update_after_shrinking ();
   int flushed = end - j;
   const size_t bytes = flushed * sizeof (int);
   stats.collected += bytes;

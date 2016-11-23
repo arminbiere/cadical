@@ -171,9 +171,8 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
     if ((*j++ = *i) == remove) j--;
   assert (j + 1 == end);
   c->size--;
-  if (c->pos > c->size) c->pos = 2;
-  if (c->redundant && c->glue > c->size) c->glue = c->size;
-  if (c->extended) c->analyzed () = ++stats.analyzed;
+  c->update_after_shrinking ();
+  if (c->have.analyzed) c->analyzed () = ++stats.analyzed;
   LOG (c, "strengthened");
   check_shrunken_clause (c);
 }

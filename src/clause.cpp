@@ -39,15 +39,6 @@ void Internal::mark_added (Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
-// Since the literals are embedded a clause actually contains always 'size'
-// literals and 'literals[2]' should be regarded as 'literals[size]'.
-// Clauses have at least 2 literals.  Empty and unit clauses are implicitly
-// handled and never allocated.
-
-size_t Internal::bytes_clause (int size) {
-  return sizeof (Clause) + (size - 2) * sizeof (int);
-}
-
 // Redundant clauses of large glue and large size are extended to hold a
 // 'analyzed' time stamp.  This makes memory allocation and deallocation a
 // little bit tricky but saves space and time.  Since the embedding of the
@@ -55,30 +46,45 @@ size_t Internal::bytes_clause (int size) {
 // both optimizations.
 
 Clause * Internal::new_clause (bool red, int glue) {
-  if (glue > MAX_GLUE) glue = MAX_GLUE;
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();  assert (size >= 2);
-  size_t bytes = bytes_clause (size);
-  bool extended = (red && size > opts.keepsize && glue > opts.keepglue);
-  if (!extended) bytes -= EXTENDED_OFFSET;
+  bool have_pos = (size > 2), have_glue, have_analyzed;
+  if (size == 2) have_pos = have_glue = have_analyzed = false;
+  else if (red) {
+    have_pos = have_glue = true;
+    have_analyzed = (size > opts.keepsize && glue > opts.keepglue);
+  } else have_pos = (size > 3), have_glue = have_analyzed = false;
+#ifndef NDEBUG
+  if (have_glue) assert (have_pos);
+  if (have_analyzed) assert (have_glue);
+#endif
+  Clause * c;
+  size_t offset = 0;
+  if (!have_pos) offset += sizeof c->_pos;
+  if (!have_glue) offset += sizeof c->_glue;
+  if (!have_analyzed) offset += sizeof c->_analyzed;
+  size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int) - offset;
   char * ptr = new char[bytes];
-  if (!extended) ptr -= EXTENDED_OFFSET;
-  Clause * res = (Clause*) ptr;
-  res->extended = extended;
-  res->redundant = red;
-  res->garbage = false;
-  res->reason = false;
-  res->moved = false;
-  res->glue = glue;
-  res->size = size;
-  res->pos = 2;
-  for (int i = 0; i < size; i++) res->literals[i] = clause[i];
-  clauses.push_back (res);
-  if (extended) res->analyzed () = ++stats.analyzed;
+  ptr -= offset;
+  c = (Clause*) ptr;
+  c->have.analyzed = have_analyzed;
+  c->have.glue = have_glue;
+  c->have.pos = have_pos;
+  c->redundant = red;
+  c->garbage = false;
+  c->reason = false;
+  c->moved = false;
+  c->size = size;
+  for (int i = 0; i < size; i++) c->literals[i] = clause[i];
+  if (have_analyzed) c->_analyzed = ++stats.analyzed;
+  if (have_glue) c->_glue = glue;
+  if (have_pos) c->_pos = 2;
+  assert (c->offset () == offset);
   if (red) stats.redundant++; else stats.irredundant++;
-  LOG (res, "new");
-  if (likely_to_be_kept_clause (res)) mark_added (res);
-  return res;
+  clauses.push_back (c);
+  LOG (c, "new");
+  if (likely_to_be_kept_clause (c)) mark_added (c);
+  return c;
 }
 
 // This is the 'raw' deallocation of a clause.  If the clause is in the
