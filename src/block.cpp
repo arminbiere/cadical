@@ -12,7 +12,7 @@ bool Internal::block_clause_on_literal (Clause * c, int pivot) {
   LOG (c, "trying to block on %d", pivot);
   mark (c);
   assert (marked (pivot) > 0);
-  Occs & os = occs (pivot);
+  Occs & os = occs (-pivot);
   const const_occs_iterator eos = os.end ();
   occs_iterator sos = os.begin (), i;
   for (i = sos; i != eos; i++) {
@@ -62,7 +62,6 @@ struct more_occs {
 void Internal::block () {
 
   assert (!level);
-  assert (simplifying);
   assert (!watches ());
 
   if (!opts.block) return;
@@ -82,22 +81,13 @@ void Internal::block () {
     if (c->redundant || c->garbage) continue;
     const const_literal_iterator eol = c->end ();
     const_literal_iterator l;
-    bool satisfied = false, removed = false;
+    bool satisfied = false;
     for (l = c->begin (); !satisfied && l != eol; l++) {
       const int lit = *l, tmp = val (lit);
-      if (tmp < 0) continue;
-      else if (tmp > 0) satisfied = true;
-      else if (!removed && flags (lit).removed) removed = true;
+      if (tmp > 0) satisfied = true;
+      else if (!tmp) occs (lit).push_back (c);
     }
     if (satisfied) mark_garbage (c);
-    else if (removed) {
-      for (l = c->begin (); !satisfied && l != eol; l++) {
-	const int lit = *l, tmp = val (lit);
-	if (tmp < 0) continue;
-	if (!flags (lit).removed) continue;
-	occs (lit).push_back (c);
-      }
-    }
   }
 
   vector<int> schedule;

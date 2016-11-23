@@ -10,7 +10,7 @@
 namespace CaDiCaL {
 
 bool Internal::eliminating () {
-  if (!opts.elim) return false;
+  if (!opts.elim && !opts.block) return false;
 
   // Wait until there has been a change in terms of new units or new removed
   // variables (in removed or shrunken irredundant clauses).

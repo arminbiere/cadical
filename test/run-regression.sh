@@ -117,6 +117,8 @@ run regr000 10
 run elimclash 20
 run elimredundant 10
 
+run block0 10
+
 run prime4 10
 run prime9 10
 run prime25 10
