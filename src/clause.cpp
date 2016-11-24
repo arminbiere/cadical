@@ -124,10 +124,10 @@ void Internal::mark_garbage (Clause * c) {
   else {
     assert (stats.irredundant), stats.irredundant--;
     assert (stats.irrbytes >= (long) bytes), stats.irrbytes -= bytes;
+    mark_removed (c);
   }
   stats.garbage += bytes;
   c->garbage = true;
-  if (!c->redundant) mark_removed (c);
 }
 
 bool Internal::tautological_clause () {

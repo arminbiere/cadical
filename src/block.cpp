@@ -49,12 +49,12 @@ bool Internal::block_clause_on_literal (Clause * c, int pivot) {
   return false;
 }
 
-struct more_occs {
+struct more_negated_occs {
   Internal * internal;
-  more_occs (Internal * i) : internal (i) { }
+  more_negated_occs (Internal * i) : internal (i) { }
   bool operator () (int l, int k) const {
-    long m = internal->occs (l).size ();
-    long n = internal->occs (k).size ();
+    long m = internal->occs (-l).size ();
+    long n = internal->occs (-k).size ();
     if (m > n) return true;
     if (m < n) return false;
     int i = abs (k), j = abs (l);
@@ -119,7 +119,7 @@ void Internal::block () {
     scheduled[idx] = scheduled[-idx] = 1;
   }
 
-  sort (schedule.begin (), schedule.end (), more_occs (internal));
+  sort (schedule.begin (), schedule.end (), more_negated_occs (internal));
 
   LOG ("scheduled %ld literals", (long) schedule.size ());
 

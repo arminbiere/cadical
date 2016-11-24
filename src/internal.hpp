@@ -62,7 +62,7 @@ class Internal {
   friend struct less_noccs;
   friend struct trail_bumped_smaller;
   friend struct trail_smaller;
-  friend struct more_occs;
+  friend struct more_negated_occs;
 
   /*----------------------------------------------------------------------*/
 
