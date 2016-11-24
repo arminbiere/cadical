@@ -90,6 +90,15 @@ void Internal::block () {
     if (satisfied) mark_garbage (c);
   }
 
+  for (int idx = 1; idx <= max_var; idx++) {
+    if (val (idx) || eliminated (idx)) continue;
+    for (int sign = -1; sign <= 1; sign += 2) {
+      const int lit = sign*idx;
+      Occs & os = occs (lit);
+      stable_sort (os.begin (), os.end (), smaller_size ());
+    }
+  }
+
   vector<int> schedule;
   char * scheduled;
   NEW (scheduled, char, 2*(max_var + 1));
