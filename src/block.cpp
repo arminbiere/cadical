@@ -8,7 +8,7 @@ namespace CaDiCaL {
 
 bool Internal::block_clause_on_literal (Clause * c, int pivot) {
   assert (!val (pivot));
-  assert (!eliminated (pivot));
+  assert (!flags (pivot).eliminated);
   LOG (c, "trying to block on %d", pivot);
   mark (c);
   assert (marked (pivot) > 0);
@@ -103,7 +103,7 @@ void Internal::block () {
 
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
-    if (eliminated (idx)) continue;
+    if (flags (idx).eliminated) continue;
     if (!flags (idx).removed) continue;
     schedule.push_back (idx);
     schedule.push_back (-idx);

@@ -136,7 +136,7 @@ bool Internal::resolvents_are_bounded (int pivot) {
 
   assert (!unsat);
   assert (!val (pivot));
-  assert (!eliminated (pivot));
+  assert (!flags (pivot).eliminated);
 
   Occs & ps = occs (pivot), & ns = occs (-pivot);
   long pos = ps.size (), neg = ns.size ();
@@ -228,7 +228,7 @@ inline void Internal::add_resolvents (int pivot) {
   LOG ("adding all resolvents on %d", pivot);
 
   assert (!val (pivot));
-  assert (!eliminated (pivot));
+  assert (!flags (pivot).eliminated);
 
   long resolvents = 0;
 
@@ -306,7 +306,7 @@ inline void Internal::elim_variable (int pivot) {
   if (val (pivot)) return;
 
   LOG ("trying to eliminate %d", pivot);
-  assert (!eliminated (pivot));
+  assert (!flags (pivot).eliminated);
 
   // First remove garbage clauses to get a (more) accurate count. There
   // might still be satisfied clauses included in this count which we have
@@ -337,7 +337,7 @@ inline void Internal::elim_variable (int pivot) {
   if (!unsat) mark_eliminated_clauses_as_garbage (pivot);
 
   LOG ("eliminated %d", pivot);
-  eliminated (pivot) = true;
+  flags (pivot).eliminated = true;
   stats.eliminated++;
 }
 
@@ -409,7 +409,7 @@ bool Internal::elim_round () {
   //
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
-    if (eliminated (idx)) continue;
+    if (flags (idx).eliminated) continue;
     if (!flags (idx).removed) continue;
     long pos = noccs (idx);
     if (pos > occ_limit) continue;
@@ -487,7 +487,7 @@ bool Internal::elim_round () {
       const const_literal_iterator eol = c->end ();
       const_literal_iterator j;
       for (j = c->begin (); j != eol; j++)
-        if (this->eliminated (*j)) break;
+        if (flags (*j).eliminated) break;
       if (j != eol) mark_garbage (c);
     }
 

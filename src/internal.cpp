@@ -22,7 +22,6 @@ Internal::Internal ()
   solution (0),
   marks (0),
   phases (0),
-  etab (0),
   vtab (0),
   ltab (0),
   ftab (0),
@@ -56,7 +55,6 @@ Internal::~Internal () {
   if (solution) solution -= vsize, delete [] solution;
   if (marks) delete [] marks;
   if (phases) delete [] phases;
-  if (etab) delete [] etab;
   if (otab) reset_occs ();
   if (ntab) reset_noccs ();
   if (wtab) reset_watches ();
@@ -87,7 +85,6 @@ void Internal::enlarge (int new_max_var) {
   ENLARGE (ltab, Link, vsize, new_vsize);
   ENLARGE (marks, signed char, vsize, new_vsize);
   ENLARGE (phases, signed char, vsize, new_vsize);
-  ENLARGE (etab, unsigned char, vsize, new_vsize);
   ENLARGE (ftab, Flags, vsize, new_vsize);
   assert (sizeof (Flags) == 1);
   enlarge_vals (new_vsize);
@@ -118,7 +115,6 @@ void Internal::resize (int new_max_var) {
   for (int i = -new_max_var; i < -max_var; i++) vals[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) vals[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = -1;
-  for (int i = max_var + 1; i <= new_max_var; i++) etab[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) marks[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) btab[i] = 0;
   for (int i = 2*(max_var + 1); i <= 2*new_max_var+1; i++) ptab[i] = -1;

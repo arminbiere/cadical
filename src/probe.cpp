@@ -124,7 +124,7 @@ void Internal::probe () {
   int idx;
   while (!unsat && stats.probagations < limit && (idx = it.next ())) {
     if (val (idx)) continue;
-    if (eliminated (idx)) continue;
+    if (flags (idx).eliminated) continue;
     bool pos_prop_no_fail = fixedprop (idx) < stats.fixed;
     bool neg_prop_no_fail = fixedprop (-idx) < stats.fixed;
     if (!pos_prop_no_fail && !neg_prop_no_fail) continue;
