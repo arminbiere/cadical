@@ -40,7 +40,12 @@ bool Internal::block_clause_on_literal (Clause * c, int pivot) {
   }
   unmark (c);
   if (i == eos) return true;
-  if (i != sos) swap (*i, *sos);
+  if (i != sos) {
+    occs_iterator j;
+    Clause * last = *i;
+    for (j = sos; j != i; j++) swap (last, *j);
+    *i = last;
+  }
   return false;
 }
 
