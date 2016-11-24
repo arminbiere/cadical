@@ -49,6 +49,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();  assert (size >= 2);
   bool have_pos = (size > 2), have_glue, have_analyzed;
+
   if (size == 2) have_pos = have_glue = have_analyzed = false;
   else if (red) {
     have_pos = have_glue = true;
@@ -58,6 +59,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   if (have_glue) assert (have_pos);
   if (have_analyzed) assert (have_glue);
 #endif
+
   Clause * c;
   size_t offset = 0;
   if (!have_pos) offset += sizeof c->_pos;

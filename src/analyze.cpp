@@ -134,9 +134,7 @@ inline void Internal::bump_resolved_clauses () {
 
 inline void Internal::save_as_resolved_clause (Clause * c) {
   if (!c->redundant) return;
-  if (c->size <= opts.keepsize) return;
-  if (c->glue () <= opts.keepglue) return;
-  assert (c->have.analyzed);
+  if (!c->have.analyzed) return;
   resolved.push_back (c);
 }
 

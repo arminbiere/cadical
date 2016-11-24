@@ -57,8 +57,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     if (!c->redundant) continue;                 // keep irredundant
     if (c->reason) continue;                     // need to keep reasons
     if (c->garbage) continue;                    // already marked
-    if (c->size <= opts.keepsize) continue;      // keep small size clauses
-    if (c->glue () <= opts.keepglue) continue;   // keep small glue clauses
+    if (!c->have.analyzed) continue;
     if (c->analyzed () > lim.analyzed) continue;
     stack.push_back (c);
   }

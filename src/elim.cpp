@@ -537,7 +537,7 @@ void Internal::elim () {
   //
   for (;;) {
     round++;
-    block ();
+    if (stats.eliminations > opts.blockwait) block ();
     if (!elim_round ()) break;
     if (unsat) break;
     if (round >= limit) break;             // stop after elimination

@@ -17,7 +17,7 @@ bool Internal::block_clause_on_literal (Clause * c, int pivot) {
   occs_iterator sos = os.begin (), i;
   for (i = sos; i != eos; i++) {
     Clause * d = *i;
-    if (d->garbage) continue;
+    if (d->redundant || d->garbage) continue;
     const const_literal_iterator eoc = d->end ();
     const_literal_iterator l;
     bool satisfied = false;
@@ -126,7 +126,7 @@ void Internal::block () {
     const_occs_iterator i;
     for (i = j; i != eor; i++) {
       Clause * c = *i;
-      if (c->garbage) continue;
+      if (c->redundant || c->garbage) continue;
       if (block_clause_on_literal (c, lit)) {
 	LOG (c, "blocked on %d", lit);
 	push_on_extension_stack (c, lit);
@@ -140,7 +140,14 @@ void Internal::block () {
 	  schedule.push_back (-other);
 	}
 	stats.blocked++;
-	mark_garbage (c);
+	if (opts.blockmove) {
+	  assert (stats.irredundant), stats.irredundant--;
+	  size_t bytes = c->bytes ();
+	  assert (stats.irrbytes >= (long) bytes), stats.irrbytes -= bytes;
+	  stats.redundant++;
+	  mark_removed (c);
+	  c->redundant = 1;
+	} else mark_garbage (c);
       } else *j++ = c;
     }
     os.resize (j - os.begin ());
