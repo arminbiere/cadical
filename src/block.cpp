@@ -10,10 +10,15 @@ namespace CaDiCaL {
 bool Internal::block_clause_on_literal (Clause * c, int pivot) {
   assert (!val (pivot));
   assert (!flags (pivot).eliminated);
-  LOG (c, "trying to block on %d", pivot);
+  Occs & os = occs (-pivot);
+  LOG (c, "trying to block on %d where %d occurs %ld times",
+    pivot, -pivot, (long) os.size ());
+  if (os.empty ()) {
+    LOG ("no occurrences of %d", -pivot);
+    return true;
+  }
   mark (c);
   assert (marked (pivot) > 0);
-  Occs & os = occs (-pivot);
   const const_occs_iterator eos = os.end ();
   occs_iterator sos = os.begin (), i;
   for (i = sos; i != eos; i++) {
@@ -50,17 +55,17 @@ bool Internal::block_clause_on_literal (Clause * c, int pivot) {
   return false;
 }
 
-struct less_negated_occs {
+struct more_negated_occs {
   Internal * internal;
-  less_negated_occs (Internal * i) : internal (i) { }
+  more_negated_occs (Internal * i) : internal (i) { }
   bool operator () (int l, int k) const {
     long m = internal->occs (-l).size ();
     long n = internal->occs (-k).size ();
-    if (m < n) return true;
-    if (m > n) return false;
+    if (m > n) return true;
+    if (m < n) return false;
     int i = abs (l), j = abs (k);
-    if (i < j) return true;
-    if (i > j) return false;
+    if (i > j) return true;
+    if (i < j) return false;
     return l > k;
   }
 };
@@ -96,8 +101,8 @@ void Internal::block () {
     if (satisfied) mark_garbage (c);
   }
 
-  heap<less_negated_occs> schedule = 
-    heap<less_negated_occs> (less_negated_occs (this));
+  more_negated_occs less (this);
+  heap<more_negated_occs> schedule = heap<more_negated_occs> (less);
 
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
@@ -128,7 +133,7 @@ void Internal::block () {
 	for (l = c->begin (); l != eoc; l++) {
 	  const int other = *l;
 	  if (val (other)) continue;
-	  schedule.push_back_if_not_contained (-other);
+	  if (!schedule.contains (-other)) schedule.push_back (-other);
 	}
 	stats.blocked++;
 	if (opts.blockmove) {
@@ -145,7 +150,7 @@ void Internal::block () {
     }
     if (j == eor) continue;
     os.resize (j - os.begin ());
-    schedule.update_or_push_back (-lit);
+    if (schedule.contains (-lit)) schedule.update (-lit);
   }
 
   schedule.erase ();

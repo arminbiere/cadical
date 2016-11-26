@@ -170,10 +170,6 @@ public:
     check ();
   }
 
-  void push_back_if_not_contained (int e) {
-    if (!contains (e)) push_back (e);
-  }
-
   // Returns the maximum element in the heap.
   //
   int front () const { assert (!empty ()); return array[0]; }
@@ -198,11 +194,6 @@ public:
     up (e);
     down (e);
     check ();
-  }
-
-  void update_or_push_back (int e) {
-    if (contains (e)) update (e);
-    else push_back (e);
   }
 
   void clear () {
