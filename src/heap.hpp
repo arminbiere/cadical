@@ -110,13 +110,18 @@ template<class C> class heap {
 	assert (i == (size_t) pos[array[i]]);
       } else {
 	assert ((size_t) - (long) array[i] < neg.size ());
-	assert (i == (size_t) neg[array[i]]);
+	assert (i == (size_t) neg[(size_t) - (long) array[i]]);
       }
     }
     for (size_t i = 0; i < pos.size (); i++) {
       if (pos[i] == invalid) continue;
       assert (pos[i] < array.size ());
       assert (array[pos[i]] == (int) i);
+    }
+    for (size_t i = 0; i < neg.size (); i++) {
+      if (neg[i] == invalid) continue;
+      assert (neg[i] < array.size ());
+      assert (array[neg[i]] == (int) - (long) i);
     }
 #endif
   }
