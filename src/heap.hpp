@@ -14,27 +14,47 @@ using namespace std;
 // This is a priority queue with updates for positive integers implemented
 // as binary heap.  We need to map integer elements added (through
 // 'push_back') to positions on the binary heap in 'array'. This map is
-// stored in the 'pos' array.  As a consequence only positive elements
-// can be added.  This approach is also really wasteful (at least in terms
+// stored in the 'pos' array for positive and in the 'neg' array for
+// negative integers. This approach is really wasteful (at least in terms
 // of memory) if only few and a sparse set of integers is added.  So it
 // should not be used in this situation.  A generic priority queue would
-// implement that mapping externally provided by another template parameter.
+// implement the mapping externally provided by another template parameter.
+// Since we use 'UINT_MAX' as 'not contained' flag, we can only have
+// 'UINT_MAX - 1' elements in the heap.
 
-template<class C> class pos_int_heap {
+template<class C> class heap {
 
   vector<int> array;	// actual binary heap
-  vector<int> pos;	// positions of 'int' elements in heap
+  vector<unsigned> pos;	// positions of positive 'int' elements in array
+  vector<unsigned> neg;	// positions of negative 'int' elements in array
   C less;		// less-than for 'int' elements
 
-  // Map an 'int' element to its position entry in the 'pos' map.
+  const unsigned invalid = UINT_MAX;
+
+  // Map a positive 'int' element to its position entry in the 'pos' map.
   //
-  int & index (int e) {
+  unsigned & pindex (int e) {
     assert (e >= 0);
-    while ((size_t) e >= pos.size ()) pos.push_back (-1);
-    int & res = pos[e];
-    assert (res < 0 || (size_t) res < array.size ());
+    while ((size_t) e >= pos.size ()) pos.push_back (invalid);
+    unsigned & res = pos[e];
+    assert (res == invalid || (size_t) res < array.size ());
     return res;
   }
+
+  // Map a negative 'int' element to its position entry in the 'neg' map.
+  //
+  unsigned & nindex (int e) {
+    assert (e < 0);
+    size_t n = - (long) e; // beware of 'INT_MIN'
+    while (n >= neg.size ()) neg.push_back (-1);
+    unsigned & res = neg[n];
+    assert (res == invalid || (size_t) res < array.size ());
+    return res;
+  }
+
+  // Map an 'int' element to its position entry in the 'pos' or 'neg' map.
+  //
+  unsigned & index (int e) { return e >= 0 ? pindex (e) : nindex (e); }
 
   bool has_parent (int e) { return index (e) > 0; }
   bool has_left (int e)   { return (size_t) 2*index (e) + 1 < size (); }
@@ -47,7 +67,7 @@ template<class C> class pos_int_heap {
   // Exchange 'int' elements 'a' and 'b' in 'array' and fix their positions.
   //
   void exchange (int a, int b) {
-    int & i = index (a), & j = index (b);
+    unsigned & i = index (a), & j = index (b);
     swap (array[i], array[j]);
     swap (i, j);
   }
@@ -80,25 +100,43 @@ template<class C> class pos_int_heap {
   //
   void check () {
 #if 1
+    assert (array.size () <= invalid);
     for (size_t i = 0; i < array.size (); i++) {
       size_t l = 2*i + 1, r = 2*i + 2;
       if (l < array.size ()) assert (!less (array[i], array[l]));
       if (r < array.size ()) assert (!less (array[i], array[r]));
-      assert ((size_t) array[i] < pos.size ());
-      assert (i == (size_t) pos[array[i]]);
+      if (array[i] >= 0) {
+	assert ((size_t) array[i] < pos.size ());
+	assert (i == (size_t) pos[array[i]]);
+      } else {
+	assert ((size_t) - (long) array[i] < neg.size ());
+	assert (i == (size_t) neg[array[i]]);
+      }
     }
     for (size_t i = 0; i < pos.size (); i++) {
-      assert (i <= (size_t) INT_MAX);
-      if (pos[i] < 0) continue;
-      assert ((size_t) pos[i] < array.size ());
+      if (pos[i] == invalid) continue;
+      assert (pos[i] < array.size ());
       assert (array[pos[i]] == (int) i);
     }
 #endif
   }
 
+  bool pcontains (int e) const {
+    assert (e >= 0);
+    if ((size_t) e >= pos.size ()) return false;
+    return pos[e] != invalid;
+  }
+
+  bool ncontains (int e) const {
+    assert (e < 0);
+    long n = - (long) e;
+    if (n >= (long) neg.size ()) return false;
+    return neg[n] >= 0;
+  }
+
 public:
 
-  pos_int_heap (const C & c) : less (c) { }
+  heap (const C & c) : less (c) { }
 
   // Number of elements in the heap.
   //
@@ -108,24 +146,20 @@ public:
   //
   bool empty () const { return array.empty (); }
 
-  // Check whether 'e' is already int the heap.
+  // Check whether 'e' is already in the heap.
   //
-  bool contains (int e) { 
-    assert (0 <= e);
-    if ((size_t) e >= pos.size ()) return false;
-    return pos[e] >= 0;
+  bool contains (int e) const {
+    return (e < 0) ? ncontains (e) : pcontains (e);
   }
 
   // Add a new (not contained) element 'e' to the heap.
   //
   void push_back (int e) {
-    assert (0 <= e);
     assert (!contains (e));
-    assert (array.size () <= (size_t) INT_MAX);
-    int i = (int) array.size ();
-    if (i == INT_MAX) throw bad_alloc ();
+    size_t i = array.size ();
+    if (i == invalid - 1) throw bad_alloc ();
     array.push_back (e);
-    index (e) = i;
+    index (e) = (unsigned) i;
     up (e);
     down (e);
     check ();
@@ -139,11 +173,11 @@ public:
   //
   int pop_front () {
     assert (!empty ());
-    int res = array[0], last = -1;
-    if (size () > 1) exchange (res, (last = array.back ()));
+    int res = array[0], last = array.back ();
+    if (size () > 1) exchange (res, last);
     index (res) = -1;
     array.pop_back ();
-    if (last >= 0) down (last);
+    if (size () > 1) down (last);
     check ();
     return res;
   }
@@ -160,9 +194,14 @@ public:
   void clear () {
     array.clear ();
     for (size_t i = 0; i < pos.size (); i++) pos[i] = -1;
+    for (size_t i = 0; i < neg.size (); i++) neg[i] = -1;
   }
 
-  void erase () { erase_vector (array); erase_vector (pos); }
+  void erase () {
+    erase_vector (array);
+    erase_vector (pos);
+    erase_vector (neg);
+  }
 
   // Standard iterators 'inherited' from 'vector'.
   //

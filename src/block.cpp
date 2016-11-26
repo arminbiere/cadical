@@ -1,6 +1,7 @@
 #include "internal.hpp"
 #include "macros.hpp"
 #include "message.hpp"
+#include "heap.hpp"
 
 #include <algorithm>
 
@@ -49,18 +50,18 @@ bool Internal::block_clause_on_literal (Clause * c, int pivot) {
   return false;
 }
 
-struct more_negated_occs {
+struct less_negated_occs {
   Internal * internal;
-  more_negated_occs (Internal * i) : internal (i) { }
+  less_negated_occs (Internal * i) : internal (i) { }
   bool operator () (int l, int k) const {
     long m = internal->occs (-l).size ();
     long n = internal->occs (-k).size ();
-    if (m > n) return true;
-    if (m < n) return false;
-    int i = abs (k), j = abs (l);
-    if (i > j) return true;
-    if (i < j) return false;
-    return l < k;
+    if (m < n) return true;
+    if (m > n) return false;
+    int i = abs (l), j = abs (k);
+    if (i < j) return true;
+    if (i > j) return false;
+    return l > k;
   }
 };
 
@@ -95,11 +96,8 @@ void Internal::block () {
     if (satisfied) mark_garbage (c);
   }
 
-  vector<int> schedule;
-  char * scheduled;
-  NEW (scheduled, char, 2*(max_var + 1));
-  ZERO (scheduled, char, 2*(max_var + 1));
-  scheduled += max_var;
+  heap<less_negated_occs> schedule = 
+    heap<less_negated_occs> (less_negated_occs (this));
 
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
@@ -107,18 +105,13 @@ void Internal::block () {
     if (!flags (idx).removed) continue;
     schedule.push_back (idx);
     schedule.push_back (-idx);
-    scheduled[idx] = scheduled[-idx] = 1;
   }
-
-  sort (schedule.begin (), schedule.end (), more_negated_occs (internal));
 
   LOG ("scheduled %ld literals", (long) schedule.size ());
 
   while (!schedule.empty ()) {
-    int lit = schedule.back ();
-    schedule.pop_back ();
-    assert (scheduled[lit]);
-    scheduled[lit] = 0;
+    int lit = schedule.front ();
+    schedule.pop_front ();
     Occs & os = occs (lit);
     LOG ("trying to block %ld clauses on %d", (long) os.size (), lit);
     const const_occs_iterator eor = os.end ();
@@ -135,8 +128,7 @@ void Internal::block () {
 	for (l = c->begin (); l != eoc; l++) {
 	  const int other = *l;
 	  if (val (other)) continue;
-	  if (scheduled[-other]) continue;
-	  scheduled[-other] = 1;
+	  if (schedule.contains (-other)) continue;
 	  schedule.push_back (-other);
 	}
 	stats.blocked++;
@@ -155,9 +147,7 @@ void Internal::block () {
     os.resize (j - os.begin ());
   }
 
-  scheduled -= max_var;
-  DEL (scheduled, char, 2*(max_var + 1));
-  erase_vector (schedule);
+  schedule.erase ();
   reset_occs ();
 
   long blocked = stats.blocked - before;
