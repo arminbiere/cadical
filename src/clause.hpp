@@ -60,22 +60,27 @@ namespace CaDiCaL {
 // but is also guarded by making the actual '_analyzed' field private and
 // checking this contract in the 'analyzed ()' accessors functions.
 
+#define LD_MAX_GLUE 25
+#define MAX_GLUE ((1 << (LD_MAX_GLUE-1)) - 1)
+
 class Clause {
 
 public:
 
   long _analyzed;   // time stamp when analyzed last time if redundant
-  int _glue;        // glucose level of redundant clauses with size > 2
   int _pos;         // position of last watch replacement
 
-  struct { bool analyzed : 1; bool glue : 1; bool pos : 1; } have;
+  struct { bool analyzed : 1; bool pos : 1; } have;
 
   bool redundant:1; // aka 'learned' so not 'irredundant' (original)
   bool garbage:1;   // can be garbage collected unless it is a 'reason'
   bool reason:1;    // reason / antecedent clause can not be collected
   bool moved:1;     // moved during garbage collector ('copy' valid)
+  bool blocked:1;   // irredundant but blocked clause
 
-  int size;             // actual size of 'literals' (at least 2)
+  signed int glue : LD_MAX_GLUE;
+
+  int size;         // actual size of 'literals' (at least 2)
 
   union {
 
@@ -96,11 +101,6 @@ public:
   const long & analyzed () const {
     assert (have.analyzed);
     return _analyzed;
-  }
-
-  const int & glue () const {
-    assert (redundant);
-    return have.glue ? _glue : size;
   }
 
   int & pos () { assert (have.pos); return _pos; }

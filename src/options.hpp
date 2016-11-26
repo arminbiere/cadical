@@ -45,17 +45,18 @@ OPTION(emarestarteff, double, 1e-3, 0,  1, "alpha restart effectiveness") \
 OPTION(emarestartint, double, 1e-5, 0,  1, "alpha actual restart interval") \
 OPTION(emasize,       double, 1e-5, 0,  1, "alpha learned clause size") \
 OPTION(keepglue,         int,    2, 1,1e9, "glue kept learned clauses") \
-OPTION(keepsize,         int,    3, 2,1e9, "size kept learned clauses") \
+OPTION(keepsize,         int,    3, 1,1e9, "size kept learned clauses") \
 OPTION(leak,            bool,    1, 0,  1, "leak solver memory") \
 LOGOPT(log,             bool,    0, 0,  1, "enable logging") \
 LOGOPT(logsort,         bool,    0, 0,  1, "sort logged clauses") \
 OPTION(minimize,        bool,    1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,    int, 1000, 0,1e9, "minimization depth") \
+OPTION(posize,           int,    4, 1,1e9, "size for saving position") \
 OPTION(probe,           bool,    1, 0,  1, "failed literal probing" ) \
 OPTION(probeinit,        int,  500, 0,1e9, "initial probing interval" ) \
 OPTION(probeint,         int,  1e4, 1,1e9, "probing interval increment" ) \
 OPTION(probereleff,   double, 0.05, 0,  1, "relative probing efficiency") \
-OPTION(probemineff,   double,  1e6, 0,  1, "mininum probing efficiency") \
+OPTION(probemineff,   double,  1e6, 0,  1, "minimum probing efficiency") \
 OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
 OPTION(profile,          int,    2, 0,  4, "profiling level") \
 OPTION(quiet,           bool,    0, 0,  1, "disable all messages") \

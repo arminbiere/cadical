@@ -46,47 +46,62 @@ void Internal::mark_added (Clause * c) {
 // both optimizations.
 
 Clause * Internal::new_clause (bool red, int glue) {
+
   assert (clause.size () <= (size_t) INT_MAX);
-  const int size = (int) clause.size ();  assert (size >= 2);
-  bool have_pos = (size > 2), have_glue, have_analyzed;
+  const int size = (int) clause.size ();
+  assert (size >= 2);
 
-  if (size == 2) have_pos = have_glue = have_analyzed = false;
-  else if (red) {
-    have_pos = have_glue = true;
-    have_analyzed = (size > opts.keepsize && glue > opts.keepglue);
-  } else have_pos = (size > 3), have_glue = have_analyzed = false;
-#ifndef NDEBUG
-  if (have_glue) assert (have_pos);
-  if (have_analyzed) assert (have_glue);
-#endif
+  // Since 'glue' is a bit-field, we cap the 'glue' value at 'MAX_GLUE'.
+  //
+  if (glue > MAX_GLUE) glue = MAX_GLUE;
 
+  // Determine whether this clauses uses a 'pos' and 'analyzed' field.
+  //
+  bool have_pos, have_analyzed;
+  if (!red) have_analyzed = false;
+  else if (size <= opts.keepsizse) have_analyzed = false;
+  else if (glue <= opts.keepglue) have_analyzed = false;
+  else have_analyzed = true;
+  if (have_analyzed) have_pos = true;
+  else have_pos = (size >= opts.posize);
+
+  // Now allocate the clause after ignored the 'offset' bytes, if 'pos' or
+  // 'analyzed' fields are not used.
+  //
   Clause * c;
   size_t offset = 0;
   if (!have_pos) offset += sizeof c->_pos;
-  if (!have_glue) offset += sizeof c->_glue;
   if (!have_analyzed) offset += sizeof c->_analyzed;
   size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int) - offset;
   char * ptr = new char[bytes];
   ptr -= offset;
   c = (Clause*) ptr;
+
+  // Initialize all clause data and copy literals from global 'clause'.
+  //
+  if (have_analyzed) c->_analyzed = ++stats.analyzed;
+  if (have_pos) c->_pos = 2;
   c->have.analyzed = have_analyzed;
-  c->have.glue = have_glue;
   c->have.pos = have_pos;
   c->redundant = red;
   c->garbage = false;
   c->reason = false;
   c->moved = false;
+  c->blocked = false;
+  c->glue = glue;
   c->size = size;
   for (int i = 0; i < size; i++) c->literals[i] = clause[i];
-  if (have_analyzed) c->_analyzed = ++stats.analyzed;
-  if (have_glue) c->_glue = glue;
-  if (have_pos) c->_pos = 2;
+
   assert (c->offset () == offset);
+
   if (red) stats.redundant++;
   else stats.irredundant++, stats.irrbytes += bytes;
+
   clauses.push_back (c);
   LOG (c, "new");
+
   if (likely_to_be_kept_clause (c)) mark_added (c);
+
   return c;
 }
 
