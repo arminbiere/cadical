@@ -128,8 +128,7 @@ void Internal::block () {
 	for (l = c->begin (); l != eoc; l++) {
 	  const int other = *l;
 	  if (val (other)) continue;
-	  if (schedule.contains (-other)) continue;
-	  schedule.push_back (-other);
+	  schedule.push_back_if_not_contained (-other);
 	}
 	stats.blocked++;
 	if (opts.blockmove) {
@@ -146,8 +145,7 @@ void Internal::block () {
     }
     if (j == eor) continue;
     os.resize (j - os.begin ());
-    if (schedule.contains (lit)) schedule.update (lit);
-    else schedule.push_back (lit);
+    schedule.update_or_push_back (-lit);
   }
 
   schedule.erase ();

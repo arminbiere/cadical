@@ -60,9 +60,9 @@ template<class C> class heap {
   bool has_left (int e)   { return (size_t) 2*index (e) + 1 < size (); }
   bool has_right (int e)  { return (size_t) 2*index (e) + 2 < size (); }
 
-  int parent (int e) { assert (has_parent (e)); return array[ (index (e) - 1)/2]; }
-  int left   (int e) { assert (has_left (e));   return array[2*index (e) + 1]; }
-  int right  (int e) { assert (has_right (e));  return array[2*index (e) + 2]; }
+  int parent (int e) { assert(has_parent (e));return array[(index(e)-1)/2]; }
+  int left   (int e) { assert(has_left (e));  return array[2*index(e)+1]; }
+  int right  (int e) { assert(has_right (e)); return array[2*index(e)+2]; }
 
   // Exchange 'int' elements 'a' and 'b' in 'array' and fix their positions.
   //
@@ -99,7 +99,7 @@ template<class C> class heap {
   // 'less', as well of course, bugs in this heap implementation.
   //
   void check () {
-#if 1
+#if 0
     assert (array.size () <= invalid);
     for (size_t i = 0; i < array.size (); i++) {
       size_t l = 2*i + 1, r = 2*i + 2;
@@ -170,6 +170,10 @@ public:
     check ();
   }
 
+  void push_back_if_not_contained (int e) {
+    if (!contains (e)) push_back (e);
+  }
+
   // Returns the maximum element in the heap.
   //
   int front () const { assert (!empty ()); return array[0]; }
@@ -194,6 +198,11 @@ public:
     up (e);
     down (e);
     check ();
+  }
+
+  void update_or_push_back (int e) {
+    if (contains (e)) update (e);
+    else push_back (e);
   }
 
   void clear () {
