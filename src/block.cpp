@@ -144,7 +144,10 @@ void Internal::block () {
 	} else mark_garbage (c);
       } else *j++ = c;
     }
+    if (j == eor) continue;
     os.resize (j - os.begin ());
+    if (schedule.contains (lit)) schedule.update (lit);
+    else schedule.push_back (lit);
   }
 
   schedule.erase ();

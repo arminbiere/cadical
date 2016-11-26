@@ -136,7 +136,7 @@ template<class C> class heap {
     assert (e < 0);
     long n = - (long) e;
     if (n >= (long) neg.size ()) return false;
-    return neg[n] >= 0;
+    return neg[n] != invalid;
   }
 
 public:
@@ -180,7 +180,7 @@ public:
     assert (!empty ());
     int res = array[0], last = array.back ();
     if (size () > 1) exchange (res, last);
-    index (res) = -1;
+    index (res) = invalid;
     array.pop_back ();
     if (size () > 1) down (last);
     check ();
@@ -198,8 +198,8 @@ public:
 
   void clear () {
     array.clear ();
-    for (size_t i = 0; i < pos.size (); i++) pos[i] = -1;
-    for (size_t i = 0; i < neg.size (); i++) neg[i] = -1;
+    for (size_t i = 0; i < pos.size (); i++) pos[i] = invalid;
+    for (size_t i = 0; i < neg.size (); i++) neg[i] = invalid;
   }
 
   void erase () {
