@@ -59,7 +59,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   //
   bool have_pos, have_analyzed;
   if (!red) have_analyzed = false;
-  else if (size <= opts.keepsizse) have_analyzed = false;
+  else if (size <= opts.keepsize) have_analyzed = false;
   else if (glue <= opts.keepglue) have_analyzed = false;
   else have_analyzed = true;
   if (have_analyzed) have_pos = true;

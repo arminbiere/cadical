@@ -38,8 +38,8 @@ void Internal::unprotect_reasons () {
 
 struct less_usefull {
   bool operator () (Clause * c, Clause * d) {
-    if (c->glue () > d->glue ()) return true;
-    if (c->glue () < d->glue ()) return false;
+    if (c->glue > d->glue) return true;
+    if (c->glue < d->glue) return false;
     return analyzed_earlier () (c, d);
   }
 };
@@ -75,7 +75,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   for (i = target; i != end; i++) {
     Clause * c = *i;
     if (c->size > lim.keptsize) lim.keptsize = c->size;
-    if (c->glue () > lim.keptglue) lim.keptglue = c->glue ();
+    if (c->glue > lim.keptglue) lim.keptglue = c->glue;
   }
   VRB ("reduce", stats.reductions,
     "maximum kept size %d glue %d", lim.keptsize, lim.keptglue);

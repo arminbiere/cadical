@@ -109,7 +109,7 @@ public:
   void update_after_shrinking () { 
     assert (size >= 2);
     if (have.pos && _pos >= size) _pos = 2;
-    if (have.glue && _glue > size) _glue = size;
+    if (glue > size) glue = size;
   }
 
   literal_iterator       begin ()       { return literals; }
@@ -153,7 +153,6 @@ struct smaller_size {
 inline size_t Clause::offset () const {
   size_t res = 0;
   if (!have.pos) res += sizeof _pos;
-  if (!have.glue) res += sizeof _glue;
   if (!have.analyzed) res += sizeof _analyzed;
   return res;
 }
