@@ -18,6 +18,7 @@ using namespace std;
 #include "ema.hpp"
 #include "flags.hpp"
 #include "format.hpp"
+#include "heap.hpp"
 #include "inc.hpp"
 #include "level.hpp"
 #include "limit.hpp"
@@ -38,8 +39,17 @@ using namespace std;
 
 namespace CaDiCaL {
 
+class Internal;
 class Proof;
 class File;
+
+struct idx_sum_occs_larger {
+  Internal * internal;
+  idx_sum_occs_larger (Internal * i) : internal (i) { }
+  bool operator () (int a, int b);
+};
+
+typedef heap<idx_sum_occs_larger> ElimSchedule;
 
 class Internal {
 
@@ -59,10 +69,11 @@ class Internal {
 #endif
 
   friend struct bumped_earlier;
+  friend struct idx_sum_occs_larger;
   friend struct less_noccs;
+  friend struct more_negated_occs;
   friend struct trail_bumped_smaller;
   friend struct trail_smaller;
-  friend struct more_negated_occs;
 
   /*----------------------------------------------------------------------*/
 
@@ -368,9 +379,9 @@ class Internal {
   bool resolve_clauses (Clause *, int pivot, Clause *);
   void mark_eliminated_clauses_as_garbage (int pivot);
   bool resolvents_are_bounded (int pivot);
-  void add_resolvents (int pivot);
+  void add_resolvents (int pivot, ElimSchedule &);
   void push_on_extension_stack (Clause *, int pivot);
-  void elim_variable (int pivot);
+  void elim_variable (int pivot, ElimSchedule &);
   void reset_removed ();
   bool elim_round ();
   void extend ();
@@ -471,6 +482,14 @@ struct trail_smaller {
     return internal->var (a).trail < internal->var (b).trail;
   }
 };
+
+inline bool idx_sum_occs_larger::operator () (int a, int b) {
+  size_t s = internal->occs (a).size () + internal->occs (-a).size ();
+  size_t t = internal->occs (b).size () + internal->occs (-b).size ();
+  if (s > t) return true;
+  if (s < t) return false;
+  return a > b;
+}
 
 };
 

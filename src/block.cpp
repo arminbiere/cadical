@@ -1,7 +1,7 @@
+#include "heap.hpp"
 #include "internal.hpp"
 #include "macros.hpp"
 #include "message.hpp"
-#include "heap.hpp"
 
 #include <algorithm>
 

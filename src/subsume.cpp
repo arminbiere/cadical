@@ -351,17 +351,6 @@ void Internal::subsume_round () {
   //
   sort (schedule.begin (), schedule.end (), smaller_clause_size ());
 
-  // Drop 'opts.subsumeignore' fraction of variables.
-  //
-  size_t ignore = (1 - opts.subsumeignore) * schedule.size ();
-  if (ignore < schedule.size ()) {
-    int long limit = schedule[ignore].size;
-    while (++ignore < schedule.size () && schedule[ignore].size == limit)
-      ;
-    schedule.resize (ignore);
-    shrink_vector (schedule);
-  }
-
   long scheduled = schedule.size ();
   long total = stats.irredundant + stats.redundant;
   VRB ("subsume", stats.subsumptions,
