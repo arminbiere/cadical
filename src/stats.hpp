@@ -43,10 +43,13 @@ struct Stats {
   long subchecks;    // number of pair-wise subsumption checks
   long subchecks2;   // same but restricted to binary clauses
   long subsumptions; // number of subsumption phases
-  long resolved;     // number of resolved clauses in eliminations
-  long resolved2;    // number of resolved binary clauses
-  long restried;     // number of tried resolved clauses
-  long eliminations; // number of subsumption phases
+  long elimres;      // number of resolved clauses in BVE
+  long elimres2;     // number of resolved binary clauses in BVE
+  long elimrestried; // number of tried resolved clauses in BVE
+  long eliminations; // number of elimination phases
+  long blockres;     // number of resolved clauses in BCE
+  long blockres2;    // number of resolved binary clauses in BCE
+  long blocktried;   // number of tried clauses in BCE
   long learned;      // learned literals
   long minimized;    // minimized literals
   long redundant;    // number of current redundant clauses

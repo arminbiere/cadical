@@ -35,11 +35,11 @@ bool Internal::eliminating () {
 
 bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
 
-  stats.resolved++;
+  stats.elimres++;
 
   if (c->garbage || d->garbage) return false;
   if (c->size > d->size) swap (c, d);		// optimize marking
-  if (c->size == 2) stats.resolved2++;
+  if (c->size == 2) stats.elimres2++;
 
   assert (!level);
   assert (clause.empty ());
@@ -198,7 +198,7 @@ bool Internal::resolvents_are_bounded (int pivot) {
     for (j = ns.begin (); needed >= 0 && j != ne; j++) {
       Clause * d = *j;
       if (d->garbage) { needed--; continue; }
-      stats.restried++;
+      stats.elimrestried++;
       if (resolve_clauses (c, pivot, d)) {
 	assert (clause.size () <= (size_t) opts.elimclslim);
         clause.clear ();
@@ -464,7 +464,7 @@ bool Internal::elim_round () {
 
   DEL (connected, char, max_var + 1);
 
-  const long old_resolutions = stats.resolved;
+  const long old_resolutions = stats.elimres;
   const int old_eliminated = stats.eliminated;
 
   // Try eliminating variables according to the schedule.
@@ -494,7 +494,7 @@ bool Internal::elim_round () {
     reset_occs ();
   }
 
-  long resolutions = stats.resolved - old_resolutions;
+  long resolutions = stats.elimres - old_resolutions;
   int eliminated = stats.eliminated - old_eliminated;
   VRB ("elim", stats.eliminations,
     "eliminated %ld variables %.0f%% in %ld resolutions",

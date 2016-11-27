@@ -17,6 +17,7 @@ bool Internal::block_clause_on_literal (Clause * c, int pivot) {
     LOG ("no occurrences of %d", -pivot);
     return true;
   }
+  stats.blocktried++;
   mark (c);
   assert (marked (pivot) > 0);
   const const_occs_iterator eos = os.end ();
@@ -24,6 +25,8 @@ bool Internal::block_clause_on_literal (Clause * c, int pivot) {
   for (i = sos; i != eos; i++) {
     Clause * d = *i;
     if (d->redundant || d->garbage) continue;
+    stats.blockres++;
+    if (c->size == 2 || d->size == 2) stats.blockres2++;
     const const_literal_iterator eoc = d->end ();
     const_literal_iterator l;
     bool satisfied = false;
@@ -107,14 +110,18 @@ void Internal::block () {
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
     if (flags (idx).eliminated) continue;
-    if (!flags (idx).removed) continue;
+    if (stats.blockings > 1 && !flags (idx).removed) continue;
     schedule.push_back (idx);
     schedule.push_back (-idx);
   }
 
   LOG ("scheduled %ld literals", (long) schedule.size ());
 
-  while (!schedule.empty ()) {
+  long delta = opts.blockreleff * stats.propagations;
+  if (delta < opts.blockmineff) delta = opts.blockmineff;
+  long limit = stats.blockres + delta;
+
+  while (!schedule.empty () && stats.blockres < limit) {
     int lit = schedule.front ();
     schedule.pop_front ();
     Occs & os = occs (lit);
