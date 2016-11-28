@@ -19,7 +19,7 @@ Solver * App::solver;
 
 void App::usage () {
   fputs (
-"usage: cadical [ <option> ... ] [ <input> [ <proof> ] ]\n"
+"usage: cadical [ <option> ... ] [ <dimacs> [ <proof> ] ]\n"
 "\n"
 "where '<option>' is one of the following short options\n"
 "\n"
@@ -48,10 +48,10 @@ fputs (
 "'--<name>' which is equivalent to '--<name>=1' and in the form\n"
 "'--no-<name>' which is equivalent to '--<name>=0'.\n"
 "\n"
-"Then '<input>' has to be a DIMACS file and in '<output>' a DRAT\n"
+"Then '<dimacs>' has to be a DIMACS file and in '<drat>' a DRAT\n"
 "proof is saved.  If no '<proof>' file is specified, then no proof\n"
-"is generated.  If no '<input>' is given then '<stdin>' is used.\n"
-"If '-' is used as '<input>' then the solver reads from '<stdin>'.\n"
+"is generated.  If no '<dimacs>' is given then '<stdin>' is used.\n"
+"If '-' is used as '<dimacs>' then the solver reads from '<stdin>'.\n"
 "If '-' is specified for '<proof> then a proof is generated and\n"
 "printed to '<stdout>'.  The proof is by default stored in binary\n"
 "format unless '--binary=0' or the proof is written to '<stdout>'\n"

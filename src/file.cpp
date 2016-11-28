@@ -36,6 +36,9 @@ size_t File::size (const char * path) {
   return (size_t) buf.st_size;
 }
 
+// Check that 'prg' is in the 'PATH' and thus can be found if executed
+// through 'popen'.
+
 char * File::find (const char * prg) {
   size_t prglen = strlen (prg);
   const char * c = getenv ("PATH");
