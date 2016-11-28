@@ -30,4 +30,18 @@ void Internal::reset_noccs () {
   ntab = 0;
 }
 
+/*------------------------------------------------------------------------*/
+
+void Internal::init_noccs2 () {
+  assert (!ntab2);
+  NEW (ntab2, long, vsize);
+  ZERO (ntab2, long, vsize);
+}
+
+void Internal::reset_noccs2 () {
+  assert (ntab2);
+  DEL (ntab2, long, vsize);
+  ntab2 = 0;
+}
+
 };

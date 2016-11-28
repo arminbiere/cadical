@@ -43,15 +43,17 @@ class Internal;
 class Proof;
 class File;
 
-struct idx_sum_occs_larger {
+struct more_noccs2 {
   Internal * internal;
-  idx_sum_occs_larger (Internal * i) : internal (i) { }
+  more_noccs2 (Internal * i) : internal (i) { }
   bool operator () (int a, int b);
 };
 
-typedef heap<idx_sum_occs_larger> ElimSchedule;
+typedef heap<more_noccs2> ElimSchedule;
 
 class Internal {
+
+  /*----------------------------------------------------------------------*/
 
   friend class Solver;
 
@@ -68,8 +70,10 @@ class Internal {
   friend class Options;
 #endif
 
+  // Comparison functors for sorting.
+  //
   friend struct bumped_earlier;
-  friend struct idx_sum_occs_larger;
+  friend struct more_noccs2;
   friend struct less_noccs;
   friend struct more_negated_occs;
   friend struct trail_bumped_smaller;
@@ -96,7 +100,8 @@ class Internal {
   long * btab;                  // enqueue time stamps for queue
   Queue queue;                  // variable move to front decision queue
   Occs * otab;                  // table of occurrences for all literals
-  long * ntab;                  // table number irredundant occurrences
+  long * ntab;                  // table number one sided occurrences
+  long * ntab2;                 // table number two sided occurrences
   int * ptab;			// propagated table
   Watches * wtab;               // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
@@ -111,6 +116,7 @@ class Internal {
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
   vector<Clause*> resolved;     // resolved clauses in 'analyze'
+  ElimSchedule esched;          // bounded variable elimination schedule
   vector<Timer> timers;         // active timers for profiling functions
   EMA fast_glue_avg;            // fast glue average
   EMA slow_glue_avg;            // slow glue average
@@ -141,6 +147,10 @@ class Internal {
   //
   void enlarge_vals (int new_vsize);
   void enlarge (int new_max_var);
+
+  // A variable is 'active' if it is not eliminated nor fixed.
+  // 
+  bool active (int lit) { return flags(lit).active (); }
 
   int active_variables () const {
     return max_var - stats.fixed - stats.eliminated;
@@ -181,6 +191,7 @@ class Internal {
 
   Occs & occs (int lit) { assert (otab); return otab[vlit (lit)]; }
   long & noccs (int lit) { assert (ntab); return ntab[vlit (lit)]; }
+  long & noccs2 (int lit) { assert (ntab2); return ntab2[vidx (lit)]; }
   Watches & watches (int lit) { assert (wtab); return wtab[vlit (lit)]; }
 
   // Marking variables with a sign (positive or negative).
@@ -315,10 +326,12 @@ class Internal {
   //
   void init_occs ();
   void init_noccs ();
+  void init_noccs2 ();
   void init_watches ();
   void connect_watches ();
   void reset_occs ();
   void reset_noccs ();
+  void reset_noccs2 ();
   void reset_watches ();
 
   // Regular forward subsumption checking.
@@ -378,10 +391,12 @@ class Internal {
   bool eliminating ();
   bool resolve_clauses (Clause *, int pivot, Clause *);
   void mark_eliminated_clauses_as_garbage (int pivot);
-  bool resolvents_are_bounded (int pivot);
-  void add_resolvents (int pivot, ElimSchedule &);
+  bool elim_resolvents_are_bounded (int pivot);
+  void elim_update_added (Clause *);
+  void elim_update_removed (Clause *);
+  void elim_add_resolvents (int pivot);
   void push_on_extension_stack (Clause *, int pivot);
-  void elim_variable (int pivot, ElimSchedule &);
+  void elim_variable (int pivot);
   void reset_removed ();
   bool elim_round ();
   void extend ();
@@ -483,11 +498,11 @@ struct trail_smaller {
   }
 };
 
-inline bool idx_sum_occs_larger::operator () (int a, int b) {
-  size_t s = internal->occs (a).size () + internal->occs (-a).size ();
-  size_t t = internal->occs (b).size () + internal->occs (-b).size ();
+inline bool more_noccs2::operator () (int a, int b) {
+  size_t s = internal->noccs2 (a), t = internal->noccs2 (b);
   if (s > t) return true;
   if (s < t) return false;
+  assert (a > 0), assert (b > 0);
   return a > b;
 }
 

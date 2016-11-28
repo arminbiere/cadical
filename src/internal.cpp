@@ -28,10 +28,12 @@ Internal::Internal ()
   btab (0),
   otab (0),
   ntab (0),
+  ntab2 (0),
   ptab (0),
   wtab (0),
   conflict (0),
   propagated (0),
+  esched (more_noccs2 (this)),
   proof (0),
   opts (this),
   profiles (this),
@@ -57,6 +59,7 @@ Internal::~Internal () {
   if (phases) delete [] phases;
   if (otab) reset_occs ();
   if (ntab) reset_noccs ();
+  if (ntab2) reset_noccs2 ();
   if (wtab) reset_watches ();
   delete output;
 }

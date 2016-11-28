@@ -208,6 +208,12 @@ public:
     erase_vector (neg);
   }
 
+  void shrink () {
+    shrink_vector (array);
+    shrink_vector (pos);
+    shrink_vector (neg);
+  }
+
   // Standard iterators 'inherited' from 'vector'.
   //
   typedef typename vector<int>::iterator iterator;
