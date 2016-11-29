@@ -150,6 +150,8 @@ void Internal::block () {
 	  stats.redundant++;
 	  mark_removed (c);
 	  c->redundant = 1;
+	  c->blocked = 1;
+	  stats.redblocked++;
 	  assert (!c->glue);
 	  assert (!c->have.analyzed);
 	} else mark_garbage (c);
