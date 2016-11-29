@@ -8,7 +8,7 @@
 namespace CaDiCaL {
 
 // This memory allocation arena provides fixed size pre-allocated memory for
-// the moving garbage collector 'move_non_garbage_clauses' in 'reduce.cpp'
+// the moving garbage collector 'copy_non_garbage_clauses' in 'reduce.cpp'
 // to hold clauses which should survive garbage collection.  The advantage
 // of using a pre-allocated arena is that the allocation order of the
 // clauses can be adapted in such a way that clauses watched by the same

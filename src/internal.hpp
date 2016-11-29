@@ -308,11 +308,11 @@ class Internal {
   int clause_contains_fixed_literal (Clause *);
   void remove_falsified_literals (Clause *);
   void mark_satisfied_clauses_as_garbage ();
-  void move_clause (Clause *);
+  void copy_clause (Clause *);
   void flush_watches (int lit);
   size_t flush_occs (int lit);
   void flush_all_occs_and_watches ();
-  void move_non_garbage_clauses ();
+  void copy_non_garbage_clauses ();
   void delete_garbage_clauses ();
   void check_clause_stats ();
   void garbage_collection ();
@@ -391,7 +391,7 @@ class Internal {
   bool eliminating ();
   bool resolve_clauses (Clause *, int pivot, Clause *);
   void mark_eliminated_clauses_as_garbage (int pivot);
-  bool elim_resolvents_are_bounded (int pivot);
+  bool elim_resolvents_are_bounded (int pivot, long pos, long neg);
   void elim_update_removed (Clause *, int except = 0);
   void elim_update_added (Clause *);
   void elim_add_resolvents (int pivot);
@@ -413,6 +413,7 @@ class Internal {
   // Blocked clause elimination.
   //
   bool block_clause_on_literal (Clause *, int lit);
+  void keep_blocked_clause (Clause *);
   void block ();
 
   // Part on picking the next decision in 'decide.cpp'.

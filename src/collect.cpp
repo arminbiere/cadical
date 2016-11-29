@@ -103,14 +103,17 @@ size_t Internal::flush_occs (int lit) {
   const const_occs_iterator end = os.end ();
   occs_iterator j = os.begin ();
   const_occs_iterator i;
+  size_t res = 0;
   Clause * c;
-  for (i = j; i != end; i++)
-    if (!(c = *i)->collect ())
-      *j++ = c->moved ? c->copy : c;
-  size_t new_size = j - os.begin ();
-  os.resize (new_size);
+  for (i = j; i != end; i++) {
+    c = *i;
+    if (c->collect ()) continue;
+    *j++ = c->moved ? c->copy : c;
+    if (!c->redundant) res++;
+  }
+  os.resize (j - os.begin ());
   shrink_occs (os);
-  return new_size;
+  return res;
 }
 
 void Internal::flush_watches (int lit) {
@@ -188,7 +191,7 @@ void Internal::delete_garbage_clauses () {
 // Copy a clause to the 'to' space of the arena.  Be careful if this clause
 // is a reason of an assignment.  In that case update the reason reference.
 //
-void Internal::move_clause (Clause * c) {
+void Internal::copy_clause (Clause * c) {
   LOG (c, "moving");
   assert (!c->moved);
   char * p = c->start (), * q = arena.copy (p, c->bytes ());
@@ -199,7 +202,7 @@ void Internal::move_clause (Clause * c) {
 
 // This is the moving garbage collector.
 
-void Internal::move_non_garbage_clauses () {
+void Internal::copy_non_garbage_clauses () {
 
   Clause * c;
 
@@ -224,7 +227,7 @@ void Internal::move_non_garbage_clauses () {
   //
   arena.prepare (moved_bytes);
 
-  // Copy clauses according to the order of calling 'move_clause', which in
+  // Copy clauses according to the order of calling 'copy_clause', which in
   // essence just gives a compacting garbage collector, since their
   // relative order is kept, and already gives some cache locality.
   //
@@ -233,7 +236,7 @@ void Internal::move_non_garbage_clauses () {
     // Localize according to (original) clause order.
 
     for (i = clauses.begin (); i != end; i++)
-      if (!(c = *i)->collect ()) move_clause (c);
+      if (!(c = *i)->collect ()) copy_clause (c);
 
   } else if (opts.arena == 2) {
 
@@ -244,7 +247,7 @@ void Internal::move_non_garbage_clauses () {
         const Watches & ws = watches (sign * phases[idx] * idx);
         const const_watch_iterator ew = ws.end ();
         for (const_watch_iterator i = ws.begin (); i != ew; i++)
-          if (!(c = i->clause)->moved && !c->collect ()) move_clause (c);
+          if (!(c = i->clause)->moved && !c->collect ()) copy_clause (c);
       }
     }
 
@@ -259,7 +262,7 @@ void Internal::move_non_garbage_clauses () {
         const Watches & ws = watches (sign * phases[idx] * idx);
         const const_watch_iterator ew = ws.end ();
         for (const_watch_iterator i = ws.begin (); i != ew; i++)
-          if (!(c = i->clause)->moved && !c->collect ()) move_clause (c);
+          if (!(c = i->clause)->moved && !c->collect ()) copy_clause (c);
       }
     }
   }
@@ -267,7 +270,7 @@ void Internal::move_non_garbage_clauses () {
   // Do not forget to move clauses which are not watched.
   //
   for (i = clauses.begin (); i != end; i++)
-    if (!(c = *i)->collect () && !c->moved) move_clause (c);
+    if (!(c = *i)->collect () && !c->moved) copy_clause (c);
 
   flush_all_occs_and_watches ();
 
@@ -318,7 +321,7 @@ void Internal::garbage_collection () {
   report ('g', 1);
   stats.collections++;
   mark_satisfied_clauses_as_garbage ();
-  if (opts.arena) move_non_garbage_clauses ();
+  if (opts.arena) copy_non_garbage_clauses ();
   else delete_garbage_clauses ();
   check_clause_stats ();
   report ('c', 1);

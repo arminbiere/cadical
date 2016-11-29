@@ -88,8 +88,8 @@ public:
 
     Clause * copy;      // only valid if 'moved', then that's where to
 
-    // The 'copy' field is only used for 'moved' clauses in 'move_clause'
-    // in the moving garbage collector 'move_non_garbage_clauses'.
+    // The 'copy' field is only used for 'moved' clauses in 'copy_clause'
+    // in the moving garbage collector 'copy_non_garbage_clauses'.
     // Otherwise 'literals' is valid.
   };
 
@@ -120,7 +120,7 @@ public:
 
   // Actual start of allocated memory, bytes allocated and offset are only
   // used for memory (de)allocation in 'delete_clause' and in the moving
-  // garbage collector 'move_non_garbage_clauses' and 'move_clause'.
+  // garbage collector 'copy_non_garbage_clauses' and 'copy_clause'.
   //
   char * start () const;        // actual start of allocated memory
   size_t bytes () const;        // actual number of bytes allocated

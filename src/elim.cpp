@@ -28,6 +28,7 @@ bool Internal::eliminating () {
 // schedule uses the two-side score 'noccs2', which needs explicit updates.
 
 inline void Internal::elim_update_added (Clause * c) {
+  assert (!c->redundant);
   const const_literal_iterator end = c->end ();
   const_literal_iterator i;
   for (i = c->begin (); i != end; i++) {
@@ -47,6 +48,7 @@ inline void Internal::elim_update_added (Clause * c) {
 }
 
 inline void Internal::elim_update_removed (Clause * c, int except) {
+  assert (!c->redundant);
   const const_literal_iterator end = c->end ();
   const_literal_iterator i;
   for (i = c->begin (); i != end; i++) {
@@ -91,8 +93,8 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   assert (clause.empty ());
 
   int p = 0;               // determine pivot in 'c' for debugging
-
-  bool satisfied = false;
+  int satisfied = 0;       // contains this satisfying literal
+  int eliminated = 0;      // contains this eliminated literal
 
   const_literal_iterator end = c->end ();
   const_literal_iterator i;
@@ -100,17 +102,23 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   // First determine whether the first antecedent is satisfied, add its
   // literals to 'clause' and mark them (except for 'pivot').
   //
-  for (i = c->begin (); !satisfied && i != end; i++) {
-    const int lit = *i;
+  for (i = c->begin (); !satisfied && !eliminated && i != end; i++) {
+    int lit = *i, tmp;
     if (lit == pivot || lit == -pivot) { p = lit; continue; }
-    const int tmp = val (lit);
-    if (tmp > 0) satisfied = true;
+    if (flags (lit).eliminated) eliminated = lit;
+    else if ((tmp = val (lit)) > 0) satisfied = lit;
     else if (tmp < 0) continue;
     else mark (lit), clause.push_back (lit);
   }
+  if (eliminated) {
+    assert (c->redundant), assert (c->blocked);
+    LOG (c, "eliminated literal %d in", eliminated);
+  }
   if (satisfied) {
-    LOG (c, "satisfied antecedent");
+    LOG (c, "satisfied by %d antecedent", satisfied);
     elim_update_removed (c);
+  }
+  if (satisfied || eliminated) {
     mark_garbage (c);
     clause.clear ();
     unmark (c);
@@ -127,12 +135,12 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   //
   end = d->end ();
   for (i = d->begin ();
-       !satisfied && !tautological && i != end;
+       !satisfied && !eliminated && !tautological && i != end;
        i++) {
-    const int lit = *i;
+    int lit = *i, tmp;
     if (lit == pivot || lit == -pivot) { q = lit; continue; }
-    int tmp = val (lit);
-    if (tmp > 0) satisfied = true;
+    if (flags (lit).eliminated) eliminated = lit;
+    else if ((tmp = val (lit)) > 0) satisfied = lit;
     else if (tmp < 0) continue;
     else if ((tmp = marked (lit)) < 0) tautological = lit;
     else if (!tmp) clause.push_back (lit);
@@ -140,11 +148,17 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
 
   unmark (c);
   const size_t size = clause.size ();
-  if (tautological || satisfied || size <= 1) clause.clear ();
-
+  if (tautological || satisfied || eliminated || size <= 1) clause.clear ();
+  
+  if (eliminated) {
+    assert (d->redundant), assert (c->blocked);
+    LOG (d, "eliminated literal %d in ", eliminated);
+  }
   if (satisfied) {
-    LOG (d, "satisfied antecedent");
+    LOG (d, "satisfied by %d antecedent", satisfied);
     elim_update_removed (d);
+  }
+  if (satisfied || eliminated) {
     mark_garbage (d);
     return false;
   }
@@ -178,7 +192,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
 // smaller or equal to the number of clauses with 'pivot' or '-pivot'.  This
 // is the main criteria of bounded variable elimination.
 
-bool Internal::elim_resolvents_are_bounded (int pivot) {
+bool Internal::elim_resolvents_are_bounded (int pivot, long pos, long neg) {
 
   LOG ("checking whether resolvents on %d are bounded", pivot);
 
@@ -187,7 +201,8 @@ bool Internal::elim_resolvents_are_bounded (int pivot) {
   assert (!flags (pivot).eliminated);
 
   Occs & ps = occs (pivot), & ns = occs (-pivot);
-  long pos = ps.size (), neg = ns.size ();
+  assert (pos <= (long) ps.size ());
+  assert (neg <= (long) ns.size ());
   assert (pos <= neg);                          // better, but not crucial
 
   // Bound the number of non-tautological resolvents by the number of
@@ -195,7 +210,6 @@ bool Internal::elim_resolvents_are_bounded (int pivot) {
   // be added is at most the number of removed clauses.
   //
   long bound = pos + neg;
-
   assert (bound == noccs2 (pivot));
 
   LOG ("try to eliminate %d with %ld = %ld + %ld occurrences",
@@ -244,9 +258,11 @@ bool Internal::elim_resolvents_are_bounded (int pivot) {
   //
   for (i = ps.begin (); needed >= 0 && i != pe; i++) {
     Clause * c = *i;
+    if (c->redundant) continue;
     if (c->garbage) { needed -= neg; continue; }
     for (j = ns.begin (); needed >= 0 && j != ne; j++) {
       Clause * d = *j;
+      if (d->redundant) continue;
       if (d->garbage) { needed--; continue; }
       stats.elimrestried++;
       if (resolve_clauses (c, pivot, d)) {
@@ -286,14 +302,18 @@ inline void Internal::elim_add_resolvents (int pivot) {
   const const_occs_iterator eop = ps.end (), eon = ns.end ();
   const_occs_iterator i, j;
   for (i = ps.begin (); !unsat && i != eop; i++) {
+    Clause * c = *i;
     for (j = ns.begin (); !unsat && j != eon; j++) {
-      if (resolve_clauses (*i, pivot, *j)) {
-        resolvents++;
-        check_learned_clause ();
-        Clause * r = new_resolved_irredundant_clause ();
-	elim_update_added (r);
-        clause.clear ();
-      }
+      Clause *d = *j;
+      if (!resolve_clauses (c, pivot, d)) continue;
+      resolvents++;
+      check_learned_clause ();
+      Clause * r = new_resolved_irredundant_clause ();
+      if (c->redundant || d->redundant) {
+        assert (c->blocked || d->blocked);
+	keep_blocked_clause (r);
+      } else elim_update_added (r);
+      clause.clear ();
     }
   }
   LOG ("added %ld resolvents to eliminate %d", resolvents, pivot);
@@ -372,9 +392,9 @@ inline void Internal::elim_variable (int pivot) {
   // 'pivot' in the phase with less occurrences than its negation.  It
   // reduces the size of the extension stack greatly.
   //
-  if (pos > neg) pivot = -pivot;
+  if (pos > neg) pivot = -pivot, swap (pos, neg);
 
-  if (!elim_resolvents_are_bounded (pivot)) {
+  if (!elim_resolvents_are_bounded (pivot, pos, neg)) {
     LOG ("kept and not eliminated %d", pivot);
     return;
   }
@@ -458,7 +478,8 @@ bool Internal::elim_round () {
   //
   for (i = clauses.begin (); i != eoc; i++) {
     Clause * c = *i;
-    if (c->garbage || c->redundant) continue;
+    if (c->garbage) continue;
+    if (c->redundant && !c->blocked) continue;
     const const_literal_iterator eol = c->end ();
     const_literal_iterator j;
     for (j = c->begin (); j != eol; j++) {
