@@ -392,8 +392,8 @@ class Internal {
   bool resolve_clauses (Clause *, int pivot, Clause *);
   void mark_eliminated_clauses_as_garbage (int pivot);
   bool elim_resolvents_are_bounded (int pivot);
+  void elim_update_removed (Clause *, int except = 0);
   void elim_update_added (Clause *);
-  void elim_update_removed (Clause *);
   void elim_add_resolvents (int pivot);
   void push_on_extension_stack (Clause *, int pivot);
   void elim_variable (int pivot);

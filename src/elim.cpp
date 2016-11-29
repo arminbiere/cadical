@@ -24,25 +24,35 @@ bool Internal::eliminating () {
 
 /*------------------------------------------------------------------------*/
 
+// Update the elimination schedule after adding or removing a clause.  The
+// schedule uses the two-side score 'noccs2', which needs explicit updates.
+
 inline void Internal::elim_update_added (Clause * c) {
   const const_literal_iterator end = c->end ();
   const_literal_iterator i;
   for (i = c->begin (); i != end; i++) {
     const int lit = *i;
     if (!active (lit)) continue;
-    if (occs (lit).empty ()) continue;		// not connected
+    Occs & os = occs (lit);
+    if (os.empty ()) continue;		// not connected
+    os.push_back (c);
     noccs2 (lit)++;
     const int idx = abs (lit);
     if (esched.contains (idx)) esched.update (idx);
-    else esched.push_back (idx);
+    else {
+      LOG ("rescheduling %d for elimination after adding clause", idx);
+      esched.push_back (idx);
+    }
   }
 }
 
-inline void Internal::elim_update_removed (Clause * c) {
+inline void Internal::elim_update_removed (Clause * c, int except) {
   const const_literal_iterator end = c->end ();
   const_literal_iterator i;
   for (i = c->begin (); i != end; i++) {
     const int lit = *i;
+    if (lit == except) continue;
+    assert (lit != -except);
     if (!active (lit)) continue;
     if (occs (lit).empty ()) continue;		// not connected
     long & score = noccs2 (lit);
@@ -50,7 +60,10 @@ inline void Internal::elim_update_removed (Clause * c) {
     score--;
     const int idx = abs (lit);
     if (esched.contains (idx)) esched.update (idx);
-    else esched.push_back (idx);
+    else {
+      LOG ("rescheduling %d for elimination after removing clause", idx);
+      esched.push_back (idx);
+    }
   }
 }
 
@@ -183,6 +196,8 @@ bool Internal::elim_resolvents_are_bounded (int pivot) {
   //
   long bound = pos + neg;
 
+  assert (bound == noccs2 (pivot));
+
   LOG ("try to eliminate %d with %ld = %ld + %ld occurrences",
     pivot, bound, pos, neg);
 
@@ -248,7 +263,7 @@ bool Internal::elim_resolvents_are_bounded (int pivot) {
     }
   }
 
-  if (needed <= 0) LOG ("found enough redundant resolvents");
+  if (needed <= 0) LOG ("found enough tautological resolvents");
   else LOG ("expecting %ld <= %ld resolvents", count, bound);
 
   return true;
@@ -292,7 +307,6 @@ inline void Internal::elim_add_resolvents (int pivot) {
 
 inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
 
-  assert (!active (pivot)); // 'elim_update_removed' should ignore 'pivot'
   assert (!unsat);
 
   LOG ("marking irredundant clauses with %d as garbage", pivot);
@@ -304,7 +318,7 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
     Clause * c = *i;
     if (c->garbage) continue;
     push_on_extension_stack (c, pivot);
-    elim_update_removed (c);
+    elim_update_removed (c, pivot);
     mark_garbage (c);
   }
   erase_occs (ps);
@@ -316,7 +330,7 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
   for (i = ns.begin (); i != ne; i++) {
     Clause * d = *i;
     if (d->garbage) continue;
-    elim_update_removed (d);
+    elim_update_removed (d, -pivot);
     mark_garbage (d);
   }
   erase_occs (ns);
@@ -336,7 +350,7 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
 
 inline void Internal::elim_variable (int pivot) {
 
-  if (val (pivot)) return;
+  if (!active (pivot)) return;
 
   LOG ("trying to eliminate %d", pivot);
   assert (!flags (pivot).eliminated);
@@ -366,10 +380,9 @@ inline void Internal::elim_variable (int pivot) {
   }
 
   elim_add_resolvents (pivot);
-
-  flags (pivot).eliminated = true;
   if (!unsat) mark_eliminated_clauses_as_garbage (pivot);
 
+  flags (pivot).eliminated = true;
   LOG ("eliminated %d", pivot);
   stats.eliminated++;
 }
@@ -400,12 +413,14 @@ bool Internal::elim_round () {
     if (c->garbage || c->redundant) continue;
     const const_literal_iterator eol = c->end ();
     const_literal_iterator j;
-    if (c->size > size_limit)
+    if (c->size > size_limit) {
+      LOG (c, "variables not scheduled in too large");
       for (j = c->begin (); j != eol; j++)
         noccs2 (*j) = nocc2_limit_exceeded;        // thus not scheduled
-    else
+    } else {
       for (j = c->begin (); j != eol; j++)
         if (active (*j)) noccs2 (*j)++;
+    }
   }
 
   init_occs ();
@@ -420,6 +435,7 @@ bool Internal::elim_round () {
     if (!flags (idx).removed) continue;
     const long score = noccs2 (idx);
     if (score > nocc2_limit) continue;
+    LOG ("scheduling %d for elimination initially", idx);
     esched.push_back (idx);
   }
 
