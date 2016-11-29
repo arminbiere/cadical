@@ -116,7 +116,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   }
   if (satisfied) {
     LOG (c, "satisfied by %d antecedent", satisfied);
-    elim_update_removed (c);
+    if (!c->redundant) elim_update_removed (c);
   }
   if (satisfied || eliminated) {
     mark_garbage (c);
@@ -156,7 +156,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   }
   if (satisfied) {
     LOG (d, "satisfied by %d antecedent", satisfied);
-    elim_update_removed (d);
+    if (!d->redundant) elim_update_removed (d);
   }
   if (satisfied || eliminated) {
     mark_garbage (d);
@@ -210,7 +210,7 @@ bool Internal::elim_resolvents_are_bounded (int pivot, long pos, long neg) {
   // be added is at most the number of removed clauses.
   //
   long bound = pos + neg;
-  assert (bound == noccs2 (pivot));
+  assert (bound <= noccs2 (pivot)); // not '==' due to 'garbage_collection'
 
   LOG ("try to eliminate %d with %ld = %ld + %ld occurrences",
     pivot, bound, pos, neg);
@@ -306,13 +306,14 @@ inline void Internal::elim_add_resolvents (int pivot) {
     for (j = ns.begin (); !unsat && j != eon; j++) {
       Clause *d = *j;
       if (!resolve_clauses (c, pivot, d)) continue;
-      resolvents++;
       check_learned_clause ();
-      Clause * r = new_resolved_irredundant_clause ();
-      if (c->redundant || d->redundant) {
-        assert (c->blocked || d->blocked);
-	keep_blocked_clause (r);
-      } else elim_update_added (r);
+      if ((!c->redundant && !d->redundant) ||
+	  clause.size () <= (size_t) opts.blockeepsize) {
+	resolvents++;
+	Clause * r = new_resolved_irredundant_clause ();
+	if (!c->redundant && !d->redundant) elim_update_added (r);
+	else turn_into_redundant_blocked_clause (r);
+      }
       clause.clear ();
     }
   }

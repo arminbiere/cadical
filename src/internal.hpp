@@ -413,7 +413,7 @@ class Internal {
   // Blocked clause elimination.
   //
   bool block_clause_on_literal (Clause *, int lit);
-  void keep_blocked_clause (Clause *);
+  void turn_into_redundant_blocked_clause (Clause *);
   void block ();
 
   // Part on picking the next decision in 'decide.cpp'.

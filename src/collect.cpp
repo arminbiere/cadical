@@ -300,16 +300,20 @@ void Internal::copy_non_garbage_clauses () {
 
 void Internal::check_clause_stats () {
 #ifndef NDEBUG
-  long irredundant = 0, redundant = 0;
+  long irredundant = 0, redundant = 0, blocked = 0;
+  size_t irrbytes = 0;
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
     if (c->redundant) redundant++; else irredundant++;
+    if (c->blocked) blocked++;
+    if (!c->redundant) irrbytes += c->bytes ();
   }
   assert (stats.irredundant == irredundant);
   assert (stats.redundant == redundant);
+  assert (stats.redblocked == blocked);
 #endif
 }
 

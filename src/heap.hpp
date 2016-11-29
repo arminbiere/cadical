@@ -6,6 +6,7 @@
 #include <cassert>
 #include <vector>
 #include <climits>
+#include <algorithm>
 
 namespace CaDiCaL {
 

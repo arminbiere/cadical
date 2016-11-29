@@ -45,7 +45,7 @@ REPORT("reductions",   0, 2, stats.reductions) \
 REPORT("restarts",     0, 4, stats.restarts) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
 REPORT("redundant",    0, 5, stats.redundant) \
-REPORT("blocked",      0, 3, stats.redblocked) \
+REPORT("blocked",      0, 2, stats.redblocked) \
 REPORT("glue",         1, 3, slow_glue_avg) \
 REPORT("size",         1, 4, size_avg) \
 REPORT("irredundant",  0, 4, stats.irredundant) \

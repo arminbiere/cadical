@@ -73,7 +73,7 @@ struct more_negated_occs {
   }
 };
 
-void Internal::keep_blocked_clause (Clause * c) {
+void Internal::turn_into_redundant_blocked_clause (Clause * c) {
   assert (!c->garbage);
   assert (!c->redundant);
   assert (stats.irredundant > 0);
@@ -85,8 +85,7 @@ void Internal::keep_blocked_clause (Clause * c) {
   stats.redundant++;
   c->blocked = 1;
   stats.redblocked++;
-  assert (!c->glue);
-  assert (!c->have.analyzed);
+  c->glue = c->size;
 } 
 
 void Internal::block () {
@@ -159,8 +158,8 @@ void Internal::block () {
 	  if (!schedule.contains (-other)) schedule.push_back (-other);
 	}
 	stats.blocked++;
-	if (opts.blockeep) keep_blocked_clause (c);
-	else mark_garbage (c);
+	if (c->size > opts.blockeepsize) mark_garbage (c);
+	else turn_into_redundant_blocked_clause (c);
       } else *j++ = c;
     }
     if (j == eor) continue;
