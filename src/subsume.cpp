@@ -151,8 +151,12 @@ Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
   subsuming->redundant = false;
   stats.irredundant++;
   stats.irrbytes += subsuming->bytes ();
-  assert (stats.redundant);
+  assert (stats.redundant > 0);
   stats.redundant--;
+  if (!subsuming->blocked) return;
+  subsuming->blocked = false;
+  assert (stats.redblocked > 0);
+  stats.redblocked--;
 }
 
 /*------------------------------------------------------------------------*/

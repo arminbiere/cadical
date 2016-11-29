@@ -36,6 +36,9 @@ struct Stats {
   long subsumed;     // number of subsumed clauses
   long blockings;    // blocked clause elimination rounds
   long blocked;      // number of blocked clauses
+  long blockres;     // number of resolved clauses in BCE
+  long blockres2;    // number of resolved binary clauses in BCE
+  long blocktried;   // number of tried clauses in BCE
   long strengthened; // number of strengthened clauses
   long subirr;       // number of subsumed irredundant clauses
   long subred;       // number of subsumed redundant clauses
@@ -47,12 +50,10 @@ struct Stats {
   long elimres2;     // number of resolved binary clauses in BVE
   long elimrestried; // number of tried resolved clauses in BVE
   long eliminations; // number of elimination phases
-  long blockres;     // number of resolved clauses in BCE
-  long blockres2;    // number of resolved binary clauses in BCE
-  long blocktried;   // number of tried clauses in BCE
   long learned;      // learned literals
   long minimized;    // minimized literals
   long redundant;    // number of current redundant clauses
+  long redblocked;   // number of blocked redundant clauses
   long irredundant;  // number of current irredundant clauses
   long irrbytes;     // bytes of irredundant clauses
   long original;     // number of original irredundant clauses

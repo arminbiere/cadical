@@ -337,9 +337,10 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
   for (i = ps.begin (); i != pe; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
+    mark_garbage (c);
+    if (c->redundant) continue;
     push_on_extension_stack (c, pivot);
     elim_update_removed (c, pivot);
-    mark_garbage (c);
   }
   erase_occs (ps);
 
@@ -350,8 +351,9 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
   for (i = ns.begin (); i != ne; i++) {
     Clause * d = *i;
     if (d->garbage) continue;
-    elim_update_removed (d, -pivot);
     mark_garbage (d);
+    if (d->redundant) continue;
+    elim_update_removed (d, -pivot);
   }
   erase_occs (ns);
 
@@ -570,7 +572,7 @@ void Internal::elim () {
   //
   for (;;) {
     round++;
-    if (stats.eliminations > opts.blockwait) block ();
+    if (stats.eliminations >= opts.blockwait) block ();
     if (!elim_round ()) break;
     if (unsat) break;
     if (round >= limit) break;             // stop after elimination

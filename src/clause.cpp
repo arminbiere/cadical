@@ -137,10 +137,19 @@ void Internal::delete_clause (Clause * c) {
 void Internal::mark_garbage (Clause * c) {
   assert (!c->garbage);
   size_t bytes = c->bytes ();
-  if (c->redundant) assert (stats.redundant), stats.redundant--;
-  else {
-    assert (stats.irredundant), stats.irredundant--;
-    assert (stats.irrbytes >= (long) bytes), stats.irrbytes -= bytes;
+  if (c->redundant) {
+    assert (stats.redundant > 0);
+    stats.redundant--;
+    if (c->blocked) {
+      assert (stats.redblocked > 0);
+      stats.redblocked--;
+    }
+  } else {
+    assert (!c->blocked);
+    assert (stats.irredundant > 0);
+    assert (stats.irrbytes >= (long) bytes);
+    stats.irrbytes -= bytes;
+    stats.irredundant--;
     mark_removed (c);
   }
   stats.garbage += bytes;

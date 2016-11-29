@@ -80,9 +80,11 @@ void Internal::keep_blocked_clause (Clause * c) {
   assert (stats.irrbytes >= (long) c->bytes ()), 
   stats.irredundant--;
   stats.irrbytes -= c->bytes ();
-  stats.redundant++;
   mark_removed (c);
   c->redundant = 1;
+  stats.redundant++;
+  c->blocked = 1;
+  stats.redblocked++;
   assert (!c->glue);
   assert (!c->have.analyzed);
 } 
