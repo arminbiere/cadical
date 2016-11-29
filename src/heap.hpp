@@ -22,6 +22,9 @@ using namespace std;
 // Since we use 'UINT_MAX' as 'not contained' flag, we can only have
 // 'UINT_MAX - 1' elements in the heap.
 
+
+const unsigned invalid_heap_position = UINT_MAX;
+
 template<class C> class heap {
 
   vector<int> array;	// actual binary heap
@@ -29,15 +32,13 @@ template<class C> class heap {
   vector<unsigned> neg;	// positions of negative 'int' elements in array
   C less;		// less-than for 'int' elements
 
-  const unsigned invalid = UINT_MAX;
-
   // Map a positive 'int' element to its position entry in the 'pos' map.
   //
   unsigned & pindex (int e) {
     assert (e >= 0);
-    while ((size_t) e >= pos.size ()) pos.push_back (invalid);
+    while ((size_t) e >= pos.size ()) pos.push_back (invalid_heap_position);
     unsigned & res = pos[e];
-    assert (res == invalid || (size_t) res < array.size ());
+    assert (res == invalid_heap_position || (size_t) res < array.size ());
     return res;
   }
 
@@ -48,7 +49,7 @@ template<class C> class heap {
     size_t n = - (long) e; // beware of 'INT_MIN'
     while (n >= neg.size ()) neg.push_back (-1);
     unsigned & res = neg[n];
-    assert (res == invalid || (size_t) res < array.size ());
+    assert (res == invalid_heap_position || (size_t) res < array.size ());
     return res;
   }
 
@@ -100,7 +101,7 @@ template<class C> class heap {
   //
   void check () {
 #if 0
-    assert (array.size () <= invalid);
+    assert (array.size () <= invalid_heap_position);
     for (size_t i = 0; i < array.size (); i++) {
       size_t l = 2*i + 1, r = 2*i + 2;
       if (l < array.size ()) assert (!less (array[i], array[l]));
@@ -114,12 +115,12 @@ template<class C> class heap {
       }
     }
     for (size_t i = 0; i < pos.size (); i++) {
-      if (pos[i] == invalid) continue;
+      if (pos[i] == invalid_heap_position) continue;
       assert (pos[i] < array.size ());
       assert (array[pos[i]] == (int) i);
     }
     for (size_t i = 0; i < neg.size (); i++) {
-      if (neg[i] == invalid) continue;
+      if (neg[i] == invalid_heap_position) continue;
       assert (neg[i] < array.size ());
       assert (array[neg[i]] == (int) - (long) i);
     }
@@ -129,14 +130,14 @@ template<class C> class heap {
   bool pcontains (int e) const {
     assert (e >= 0);
     if ((size_t) e >= pos.size ()) return false;
-    return pos[e] != invalid;
+    return pos[e] != invalid_heap_position;
   }
 
   bool ncontains (int e) const {
     assert (e < 0);
     long n = - (long) e;
     if (n >= (long) neg.size ()) return false;
-    return neg[n] != invalid;
+    return neg[n] != invalid_heap_position;
   }
 
 public:
@@ -162,7 +163,7 @@ public:
   void push_back (int e) {
     assert (!contains (e));
     size_t i = array.size ();
-    if (i == invalid - 1) throw bad_alloc ();
+    if (i == invalid_heap_position - 1) throw bad_alloc ();
     array.push_back (e);
     index (e) = (unsigned) i;
     up (e);
@@ -180,7 +181,7 @@ public:
     assert (!empty ());
     int res = array[0], last = array.back ();
     if (size () > 1) exchange (res, last);
-    index (res) = invalid;
+    index (res) = invalid_heap_position;
     array.pop_back ();
     if (size () > 1) down (last);
     check ();
@@ -198,8 +199,8 @@ public:
 
   void clear () {
     array.clear ();
-    for (size_t i = 0; i < pos.size (); i++) pos[i] = invalid;
-    for (size_t i = 0; i < neg.size (); i++) neg[i] = invalid;
+    pos.clear ();
+    neg.clear ();
   }
 
   void erase () {
