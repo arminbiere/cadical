@@ -14,8 +14,10 @@ extern "C" {
 namespace CaDiCaL {
 
 // Static non-reentrant global solver needed for signal handling.
-
+//
 Solver * App::solver;
+
+/*------------------------------------------------------------------------*/
 
 void App::usage () {
   fputs (
@@ -64,6 +66,10 @@ fputs (
   stdout);
 }
 
+/*------------------------------------------------------------------------*/
+
+// Pretty print competition format witness with 'v' lines.
+//
 void App::witness () {
   int c = 0, m = solver->max ();
   File * output = solver->output ();
@@ -81,16 +87,25 @@ void App::witness () {
   fflush (stdout);
 }
 
+/*------------------------------------------------------------------------*/
+
+// Wrapper around option setting.
+
 bool App::set (const char * arg) { return solver->set (arg); }
+
+/*------------------------------------------------------------------------*/
+
+// Short-cut for errors to avoid a hard 'exit'.
 
 #define ERROR(FMT,ARGS...) \
 do { solver->error (FMT,##ARGS); res = 1; goto DONE; } while (0)
 
+/*------------------------------------------------------------------------*/
+
 int App::main (int argc, char ** argv) {
   const char * proof_path = 0, * solution_path = 0, * dimacs_path = 0;
   bool proof_specified = false, dimacs_specified = false;
-  const char * dimacs_name;
-  const char * err;
+  const char * dimacs_name, * err;
   int i, res = 0;
   solver = new Solver ();
   Signal::init (solver);
@@ -124,7 +139,7 @@ int App::main (int argc, char ** argv) {
     ERROR ("DIMACS input file '%s' does not exist", dimacs_path);
   if (solution_path && !File::exists (solution_path))
     ERROR ("solution file '%s' does not exist", solution_path);
-  if (solution_path && !solver->get ("check")) solver->set ("check", 1);
+  if (solution_path && !solver->get ("check")) set ("--check");
   solver->section ("banner");
   solver->banner ();
   solver->section ("parsing input");
@@ -146,7 +161,7 @@ int App::main (int argc, char ** argv) {
       if (isatty (1) && solver->get ("binary")) {
         solver->message (
           "forced non-binary proof since '<stdout>' connected to terminal");
-        solver->set ("binary", false);
+        set ("--no-binary");
       }
       solver->message ("writing %s proof trace to '<stdout>'",
         (solver->get ("binary") ? "binary" : "non-binary"));
