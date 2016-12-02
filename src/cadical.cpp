@@ -15,6 +15,10 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
+// See header file 'cadical.cpp' for more information.
+
+/*------------------------------------------------------------------------*/
+
 Solver::Solver () { internal = new Internal (); }
 Solver::~Solver () { delete internal; }
 
