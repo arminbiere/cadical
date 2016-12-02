@@ -18,11 +18,6 @@ struct Limit {
   int keptglue;   // maximum kept glue in 'reduce'
   int keptsize;   // maximum kept size in 'reduce'
 
-  // Used to compute restart efficiency and interval.
-  //
-  int decision_level_at_last_restart;
-  long     conflicts_at_last_restart;
-
   // Used to schedule elimination and subsumption rounds.
   //
   int         fixed_at_last_elim;

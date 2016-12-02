@@ -238,13 +238,6 @@ void Internal::analyze () {
   UPDATE_AVG (fast_glue_avg, glue);
   UPDATE_AVG (slow_glue_avg, glue);
 
-  if (lim.decision_level_at_last_restart) {
-    double x = relative (level, lim.decision_level_at_last_restart);
-    LOG ("last restart effectiveness %.2f", x);
-    UPDATE_AVG (restarteff, x);
-    lim.decision_level_at_last_restart = 0;
-  }
-
   int size = (int) clause.size ();
   stats.learned += size;
 

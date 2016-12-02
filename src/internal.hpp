@@ -121,8 +121,6 @@ class Internal {
   vector<Timer> timers;         // active timers for profiling functions
   EMA fast_glue_avg;            // fast glue average
   EMA slow_glue_avg;            // slow glue average
-  EMA restartint;               // actual restart interval average
-  EMA restarteff;               // restart effectiveness average
   EMA size_avg;                 // learned clause size average
   EMA jump_avg;                 // jump average
   Limit lim;                    // limits for various phases

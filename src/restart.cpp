@@ -29,11 +29,7 @@ void Internal::restart () {
   START (restart);
   stats.restarts++;
   LOG ("restart %ld", stats.restarts);
-  lim.decision_level_at_last_restart = level;
-  long last = stats.conflicts - lim.conflicts_at_last_restart;
-  UPDATE_AVG (restartint, last);
   backtrack (reuse_trail ());
-  lim.conflicts_at_last_restart = stats.conflicts;
   lim.restart = stats.conflicts + opts.restartint;
   report ('R', 1);
   STOP (restart);

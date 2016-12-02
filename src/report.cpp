@@ -59,13 +59,10 @@ REPORT("remaining",   -1, 4, percent (active_variables (), max_var)) \
 
 // These are some more interesting statistics ...
 
-REPORT("restarteff",   2, 4, restarteff) \
-REPORT("restartint",   1, 4, restartint) \
 REPORT("bumplast",    -1, 4, percent (stats.bumplast, stats.bumped)) \
 REPORT("propdec",     0, 2, relative (stats.propagations, stats.decisions)) \
 REPORT("propconf",    0, 2, relative (stats.propagations, stats.conflicts)) \
 REPORT("glue-fast",    1, 4, fast_glue_avg) \
-REPORT("level-fast",   1, 4, fast_jump_avg) \
 REPORT("propconf",    0, 2, relative (stats.propagations, stats.conflicts)) \
 REPORT("blocked",      0, 2, stats.redblocked) \
 
