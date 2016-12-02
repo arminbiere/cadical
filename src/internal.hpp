@@ -77,6 +77,7 @@ class Internal {
   friend struct less_noccs;
   friend struct more_negated_occs;
   friend struct trail_bumped_smaller;
+  friend struct trail_larger;
   friend struct trail_smaller;
 
   /*----------------------------------------------------------------------*/
@@ -497,6 +498,14 @@ class Internal {
 };
 
 /*------------------------------------------------------------------------*/
+
+struct trail_larger {
+  Internal * internal;
+  trail_larger (Internal * s) : internal (s) { }
+  bool operator () (int a, int b) {
+    return internal->var (a).trail > internal->var (b).trail;
+  }
+};
 
 struct trail_smaller {
   Internal * internal;

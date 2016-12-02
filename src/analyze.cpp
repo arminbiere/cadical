@@ -143,11 +143,12 @@ inline void Internal::save_as_resolved_clause (Clause * c) {
 /*------------------------------------------------------------------------*/
 
 // During conflict analysis literals not seen yet either become part of the
-// first UIP clause (if on lower decision level), are dropped (if fixed),
-// or are resolved away (if on the current decision level and different from
-// the first UIP).  At the same time we update the number of seen literals on
-// a decision level.  This helps conflict clause minimization.  The number
-// of seen levels is the glucose level (also called glue, or LBD).
+// first unique implication point (UIP) clause (if on lower decision level),
+// are dropped (if fixed), or are resolved away (if on the current decision
+// level and different from the first UIP).  At the same time we update the
+// number of seen literals on a decision level.  This helps conflict clause
+// minimization.  The number of seen levels is the glucose level (also
+// called 'glue', or 'LBD').
 
 inline void Internal::analyze_literal (int lit, int & open) {
   assert (lit);
@@ -266,7 +267,7 @@ void Internal::analyze () {
   // Determine back jump level, backtrack and assign flipped literal.
   //
   if (size > 1) {
-    sort (clause.rbegin (), clause.rend (), trail_smaller (this));
+    sort (clause.begin (), clause.end (), trail_larger (this));
     Clause * driving_clause = new_learned_redundant_clause (glue);
     const int jump = var (clause[1]).level;
     UPDATE_AVG (jump_avg, jump);

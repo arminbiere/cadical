@@ -9,6 +9,17 @@
 #include <climits>
 #endif
 
+/*------------------------------------------------------------------------*/
+
+#include "features.hpp"
+
+#ifndef HAVE_UNLOCKED_IO
+#define putc_unlocked putc
+#define getc_unlocked getc
+#endif
+
+/*------------------------------------------------------------------------*/
+
 namespace CaDiCaL {
 
 // Wraps a 'C' file 'FILE' with name and supports zipped reading and writing
@@ -70,13 +81,13 @@ public:
 
   void put (char ch) {
     assert (writing);
-    fputc_unlocked (ch, file);
+    putc_unlocked (ch, file);
     _bytes++;
   }
 
   void put (unsigned char ch) {
     assert (writing);
-    fputc_unlocked (ch, file);
+    putc_unlocked (ch, file);
     _bytes++;
   }
 
