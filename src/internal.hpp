@@ -156,7 +156,7 @@ class Internal {
 
   // Regularly reports what is going on in 'report.cpp'.
   //
-  void report (char type, bool verbose = false);
+  void report (char type, int verbose_level = 0);
 
   // Unsigned literals (abs) with checks.
   //

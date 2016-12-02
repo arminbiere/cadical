@@ -70,12 +70,12 @@ REPORT("blocked",      0, 2, stats.redblocked) \
 
 /*------------------------------------------------------------------------*/
 
-void Internal::report (char type, bool verbose) {
+void Internal::report (char type, int verbose) {
   assert (!verbose || !isalpha (type) || isupper (type));
 #ifdef LOGGING
   if (!opts.log)
 #endif
-  if (opts.quiet || (verbose && !opts.verbose)) return;
+  if (opts.quiet || (verbose > opts.verbose)) return;
   const int max_reports = 32;
   Report reports[max_reports];
   int n = 0;

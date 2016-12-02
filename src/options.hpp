@@ -89,7 +89,7 @@ OPTION(subsumeocclim,    int,  100, 0,1e9, "watch list length limit") \
 OPTION(trailbump,       bool,    1, 0,  1, "use trail + bumped") \
 OPTION(trailbumplast, double,   40, 0,100, "trail bump last level limit") \
 OPTION(trailbumprops, double,  200, 0,1e9, "trail bump propagation limit") \
-OPTION(verbose,         bool,    0, 0,  1, "more verbose messages") \
+OPTION(verbose,          int,    0, 0,  2, "more verbose messages") \
 OPTION(witness,         bool,    1, 0,  1, "print witness") \
 
 /*------------------------------------------------------------------------*/
