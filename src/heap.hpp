@@ -23,6 +23,9 @@ using namespace std;
 // Since we use 'UINT_MAX' as 'not contained' flag, we can only have
 // 'UINT_MAX - 1' elements in the heap.
 
+#ifdef BCE
+// We need the negative integer schedules for BCE.
+#endif
 
 const unsigned invalid_heap_position = UINT_MAX;
 

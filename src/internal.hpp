@@ -135,6 +135,9 @@ class Internal {
 
   /*----------------------------------------------------------------------*/
 
+  Internal ();
+  ~Internal ();
+
   // Internal delegates and helpers for corresponding functions in 'Solver'.
   //
   void resize_queue (int new_max_var);
@@ -465,10 +468,9 @@ class Internal {
   void check_shrunken_clause (Clause *);
   void check_learned_clause ();
 
+  // Check that the assignment satisfies all saved original clauses.
+  //
   void check (int (Internal::*assignment) (int) const);
-
-  Internal ();
-  ~Internal ();
 
   // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
   // We use a redundant table for both negative and positive literals.  This

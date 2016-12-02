@@ -9,6 +9,8 @@
 
 namespace CaDiCaL {
 
+/*------------------------------------------------------------------------*/
+
 Internal::Internal ()
 :
   unsat (false),
@@ -140,7 +142,7 @@ void Internal::add_original_lit (int lit) {
 
 /*------------------------------------------------------------------------*/
 
-// This is the main CDCL with interleaved inprocessing loop.
+// This is the main CDCL loop with interleaved inprocessing.
 
 int Internal::search () {
   int res = 0;
@@ -213,6 +215,9 @@ int Internal::solve () {
 /*------------------------------------------------------------------------*/
 
 void Internal::check (int (Internal::*a)(int) const) {
+
+  // First check all assigned and 'vals[idx] == -vals[-idx]' consistency.
+  //
   for (int idx = 1; idx <= max_var; idx++) {
     if (!(this->*a) (idx)) {
       fflush (stdout);
@@ -230,6 +235,9 @@ void Internal::check (int (Internal::*a)(int) const) {
       abort ();
     }
   }
+
+  // Then check that all (saved) original clauses are satisfied.
+  //
   bool satisfied = false;
   const const_int_iterator end = original.end ();
   const_int_iterator start = original.begin ();
@@ -249,12 +257,15 @@ void Internal::check (int (Internal::*a)(int) const) {
       start = i + 1;
     } else if (!satisfied && (this->*a) (lit) > 0) satisfied = true;
   }
+
   if (opts.verbose) {
     MSG ("");
     MSG ("satisfying assignment checked");
     MSG ("");
   }
 }
+
+// Currently only used for debugging purposes.
 
 void Internal::dump () {
   const const_clause_iterator eoc = clauses.end ();
