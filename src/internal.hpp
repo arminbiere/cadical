@@ -13,7 +13,6 @@ using namespace std;
 /*------------------------------------------------------------------------*/
 
 #include "arena.hpp"
-#include "avg.hpp"
 #include "clause.hpp"
 #include "ema.hpp"
 #include "flags.hpp"

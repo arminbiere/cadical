@@ -2,6 +2,10 @@
 
 namespace CaDiCaL {
 
+// The global assignment stack can only be (partially) reset through
+// 'backtrack' which is the only function using 'unassign' (inlined and thus
+// local to this file).
+
 inline void Internal::unassign (int lit) {
   assert (val (lit) > 0);
   int idx = vidx (lit);
@@ -17,6 +21,7 @@ void Internal::backtrack (int target_level) {
   LOG ("backtracking to decision level %d", target_level);
   int decision = control[target_level + 1].decision, lit;
   do {
+    assert (!trail.empty ());
     unassign (lit = trail.back ());
     trail.pop_back ();
   } while (lit != decision);
