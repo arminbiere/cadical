@@ -55,13 +55,21 @@ class File {
                             const char * fmt, const char * path);
 public:
 
-  static char* find (const char * prg);         // in 'PATH'
-  static bool exists (const char * path);
-  static size_t size (const char * path);       // in bytes ..
+  static char* find (const char * prg);    // search in 'PATH'
+  static bool exists (const char * path);  // file exists?
+  static size_t size (const char * path);  // file size in bytes
 
+  // Read from existing file. Assume given name.
+  //
   static File * read (Internal *, FILE * f, const char * name);
+
+  // Open file from path name for reading (possibly through opening a pipe
+  // to a decompression utility, based on the suffix).
+  //
   static File * read (Internal *, const char * path);
 
+  // Same for writing as for reading above.
+  //
   static File * write (Internal *, FILE *, const char * name);
   static File * write (Internal *, const char * path);
 

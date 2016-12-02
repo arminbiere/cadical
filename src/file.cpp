@@ -15,7 +15,10 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-File::File (Internal *i, bool w, int c, FILE * f, const char * n) :
+// Private constructor.
+
+File::File (Internal *i, bool w, int c, FILE * f, const char * n)
+:
   internal (i), writing (w),
   close_file (c), file (f),
   _name (n), _lineno (1), _bytes (0)
@@ -64,9 +67,8 @@ char * File::find (const char * prg) {
 
 /*------------------------------------------------------------------------*/
 
-FILE * File::open_file (Internal * internal,
-                        const char * path,
-                        const char * mode) {
+FILE * File::open_file (Internal * internal, const char * path,
+                                             const char * mode) {
   return fopen (path, mode);
 }
 
