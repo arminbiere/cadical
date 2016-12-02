@@ -21,6 +21,18 @@
 #define BCEOPT(ARGS...) /**/
 #endif
 
+#ifdef SHRINK
+#define SHROPT OPTION
+#else
+#define SHROPT(ARGS...) /**/
+#endif
+
+#ifdef BACKWARD
+#define BWDOPT OPTION
+#else
+#define BWDOPT(ARGS...) /**/
+#endif
+
 /*------------------------------------------------------------------------*/
 
 #define OPTIONS \
@@ -75,12 +87,12 @@ OPTION(restartint,       int,    4, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double,  1.1, 0, 10, "restart slow fast margin") \
 OPTION(reusetrail,      bool,    1, 0,  1, "enable trail reuse") \
 OPTION(simplify,        bool,    1, 0,  1, "enable simplifier") \
-OPTION(shrink,          bool,    1, 0,  1, "shrink learned clause") \
-OPTION(shrinkdepth,      int,    2, 0,1e9, "shrinking depth") \
-OPTION(shrinkglue,       int,    5, 0,1e9, "glue limit for shrinking") \
-OPTION(shrinksize,       int,   20, 0,1e9, "size limit for shrinking") \
+SHROPT(shrink,          bool,    1, 0,  1, "shrink learned clause") \
+SHROPT(shrinkdepth,      int,    2, 0,1e9, "shrinking depth") \
+SHROPT(shrinkglue,       int,    5, 0,1e9, "glue limit for shrinking") \
+SHROPT(shrinksize,       int,   20, 0,1e9, "size limit for shrinking") \
 OPTION(strengthen,      bool,    1, 0,  1, "strengthen during subsume") \
-OPTION(sublast,          int,    5, 0,1e4, "eagerly subsume last") \
+BWDOPT(sublast,          int,    5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,    1, 0,  1, "enable clause subsumption") \
 OPTION(subsumeclslim,    int, 1000, 0,1e9, "clause length limit") \
 OPTION(subsumeinc,       int,  1e4, 1,1e9, "interval in conflicts") \

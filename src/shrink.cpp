@@ -1,3 +1,5 @@
+#ifdef SHRINK
+
 #include "internal.hpp"
 #include "macros.hpp"
 
@@ -76,3 +78,5 @@ void Internal::shrink_clause () {
 }
 
 };
+
+#endif

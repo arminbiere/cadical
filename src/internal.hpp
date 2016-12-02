@@ -259,14 +259,24 @@ class Internal {
   void unassign (int lit);
   void backtrack (int target_level = 0);
 
+  // Minimized learned clauses in 'minimize.cpp'.
+  //
+  bool minimize_literal (int lit, int depth = 0);
+  void minimize_clause ();
+
+#ifdef SHRINK
+
+  // Shrinking minimized clauses in 'shrink.cpp'.
+  //
+  bool shrink_literal (int lit, int depth = 0);
+  void shrink_clause ();
+
+#endif
+
   // Learning from conflicts in 'analyze.cc'.
   //
   void learn_empty_clause ();
   void learn_unit_clause (int lit);
-  bool minimize_literal (int lit, int depth = 0);
-  void minimize_clause ();
-  bool shrink_literal (int lit, int depth = 0);
-  void shrink_clause ();
   void bump_variable (int lit);
   void bump_variables ();
   void bump_clause (Clause *);
@@ -315,10 +325,14 @@ class Internal {
   void check_clause_stats ();
   void garbage_collection ();
 
+#ifdef BACKWARD
+
   // Eager backward subsumption checking of learned clauses.
   //
   bool eagerly_subsume_last_learned (Clause *);
   void eagerly_subsume_last_learned ();
+
+#endif
 
   // Set-up occurrence list counters and containers.
   //

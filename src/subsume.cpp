@@ -11,6 +11,8 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
+#ifdef BACKWARD
+
 // [PART 1] EAGER BACKWARD SUBSUMPTION
 
 // For certain instances it happens quite frequently that learned clauses
@@ -65,6 +67,8 @@ void Internal::eagerly_subsume_last_learned () {
   LOG ("subsumed backward %d clauses out of %d tried", subsumed, tried);
   STOP (sublast);
 }
+
+#endif
 
 /*------------------------------------------------------------------------*/
 

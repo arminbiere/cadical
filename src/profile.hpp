@@ -22,9 +22,27 @@ class Internal;
 // To profile say 'foo', just add another line 'PROFILE(foo)' and wrap
 // the code to be profiled within a 'START (foo)' / 'STOP (foo)' block.
 
+#ifdef BCE
+#define PROFBCE PROFILE
+#else
+#define PROFBCE(ARGS...) /**/
+#endif
+
+#ifdef SHRINK
+#define PROFSHR PROFILE
+#else
+#define PROFSHR(ARGS...) /**/
+#endif
+
+#ifdef BACKWARD
+#define PROFBWD PROFILE
+#else
+#define PROFBWD(ARGS...) /**/
+#endif
+
 #define PROFILES \
 PROFILE(analyze,3) \
-PROFILE(block,2) \
+PROFBCE(block,2) \
 PROFILE(bump,4) \
 PROFILE(collect,2) \
 PROFILE(connect,2) \
@@ -38,10 +56,11 @@ PROFILE(propagate,4) \
 PROFILE(reduce,2) \
 PROFILE(restart,3) \
 PROFILE(search,1) \
-PROFILE(shrink,4) \
+PROFSHR(shrink,4) \
 PROFILE(simplify,1) \
-PROFILE(sublast,4) \
+PROFBWD(sublast,4) \
 PROFILE(subsume,2) \
+
 
 struct Profile {
   double value;

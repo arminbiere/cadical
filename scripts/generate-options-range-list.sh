@@ -1,6 +1,6 @@
 #!/bin/sh
 cd `dirname $0`
-egrep '^(OPTION|BCEOPT)' ../src/options.hpp | \
+egrep '^(OPTION|BCEOPT|SHROPT)' ../src/options.hpp | \
 grep -v '\<double,' | \
 sed -e 's,^[^(]*(,,' \
     -e 's/\<int,//' \
