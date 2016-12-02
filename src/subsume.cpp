@@ -153,10 +153,12 @@ Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
   stats.irrbytes += subsuming->bytes ();
   assert (stats.redundant > 0);
   stats.redundant--;
+#ifdef BCE
   if (!subsuming->blocked) return;
   subsuming->blocked = false;
   assert (stats.redblocked > 0);
   stats.redblocked--;
+#endif
 }
 
 /*------------------------------------------------------------------------*/

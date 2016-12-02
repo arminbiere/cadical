@@ -35,7 +35,7 @@ void Internal::restart () {
   backtrack (reuse_trail ());
   lim.conflicts_at_last_restart = stats.conflicts;
   lim.restart = stats.conflicts + opts.restartint;
-  report ('r', 1);
+  report ('R', 1);
   STOP (restart);
 }
 

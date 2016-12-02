@@ -19,8 +19,10 @@ void Stats::print (Internal * internal) {
   SECTION ("statistics");
   MSG ("probings:        %15ld   %10.2f    conflicts per probing",
     stats.probings, relative (stats.conflicts, stats.probings));
+#ifdef BCE
   MSG ("blockings:       %15ld   %10.2f    conflicts per blocking",
     stats.blockings, relative (stats.conflicts, stats.blockings));
+#endif
   MSG ("eliminations:    %15ld   %10.2f    conflicts per elimination",
     stats.eliminations, relative (stats.conflicts, stats.eliminations));
   MSG ("subsumptions:    %15ld   %10.2f    conflicts per subsumption",
@@ -60,15 +62,19 @@ void Stats::print (Internal * internal) {
 #ifndef STATS
   }
 #endif
+#ifdef BCE
   MSG ("blockres:        %15ld   %10.2f    per blocked",
     stats.blockres, relative (stats.blockres, stats.blocked));
+#endif
 #ifndef STATS
   if (internal->opts.verbose) {
 #endif
+#ifdef BCE
   MSG ("  blockres2:     %15ld   %10.2f %%  per resolved",
     stats.blockres2, percent (stats.blockres2, stats.blockres));
   MSG ("  blocktried:    %15ld   %10.2f    per blocked",
     stats.blocktried, relative (stats.blocktried, stats.blocked));
+#endif
 #ifndef STATS
   }
 #endif
@@ -91,8 +97,10 @@ void Stats::print (Internal * internal) {
     learned, relative (learned, stats.conflicts));
   MSG ("minimized:       %15ld   %10.2f %%  of 1st-UIP-literals",
     stats.minimized, percent (stats.minimized, stats.learned));
+#ifdef BCE
   MSG ("blocked:         %15ld   %10.2f %%  of original clauses",
     stats.blocked, percent (stats.blocked, stats.original));
+#endif
   MSG ("forward:         %15ld   %10.2f    tried per forward",
     stats.subsumed, relative (stats.subtried, stats.subsumed));
   MSG ("strengthened:    %15ld   %10.2f    per forward",

@@ -55,7 +55,9 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (!c->redundant) continue;                 // keep irredundant
+#ifdef BCE
     if (c->blocked) continue;			 // keep blocked clauses
+#endif
     if (c->reason) continue;                     // need to keep reasons
     if (c->garbage) continue;                    // already marked
     if (!c->have.analyzed) continue;
@@ -87,7 +89,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
 void Internal::reduce () {
   START (reduce);
   stats.reductions++;
-  report ('R', 1);
+  report ('+', 1);
   protect_reasons ();
   mark_satisfied_clauses_as_garbage ();
   mark_useless_redundant_clauses_as_garbage ();

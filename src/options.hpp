@@ -15,6 +15,12 @@
 #define LOGOPT(ARGS...) /**/
 #endif
 
+#ifdef BCE
+#define BCEOPT OPTION
+#else
+#define BCEOPT(ARGS...) /**/
+#endif
+
 /*------------------------------------------------------------------------*/
 
 #define OPTIONS \
@@ -22,12 +28,12 @@
 /*     NAME             TYPE, VAL, LO, HI, USAGE */ \
 \
 OPTION(arena,            int,    3, 0,  3, "1=clause,2=var,3=queue") \
-OPTION(block,           bool,    1, 0,  1, "blocked clause elimination") \
-OPTION(blockeepsize,     int,    3, 0,1e9, "max size kept blocked clauses") \
-OPTION(blockminclsize,   int,    2, 0,1e9, "minimum clause size for BVE") \
-OPTION(blockreleff,   double, 0.10, 0,  1, "relative block efficiency") \
-OPTION(blockmineff,   double,  1e6, 0,  1, "minimum block efficiency") \
-OPTION(blockwait,        int,    0, 0,1e9, "wait for blocking phase") \
+BCEOPT(block,           bool,    1, 0,  1, "blocked clause elimination") \
+BCEOPT(blockeepsize,     int,    3, 0,1e9, "max size kept blocked clauses") \
+BCEOPT(blockminclsize,   int,    2, 0,1e9, "minimum clause size for BVE") \
+BCEOPT(blockreleff,   double, 0.10, 0,  1, "relative block efficiency") \
+BCEOPT(blockmineff,   double,  1e6, 0,  1, "minimum block efficiency") \
+BCEOPT(blockwait,        int,    0, 0,1e9, "wait for blocking phase") \
 OPTION(binary,          bool,    1, 0,  1, "use binary proof format") \
 OPTION(check,           bool,DEBUG, 0,  1, "save & check original CNF") \
 OPTION(clim,             int,   -1, 0,1e9, "conflict limit (-1=none)") \

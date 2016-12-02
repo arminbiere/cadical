@@ -1,8 +1,8 @@
 #!/bin/sh
 cd `dirname $0`
-grep '^OPTION' ../src/options.hpp | \
+egrep '^(OPTION|BCEOPT)' ../src/options.hpp | \
 grep -v '\<double,' | \
-sed -e 's,^OPTION(,,' \
+sed -e 's,^[^(]*(,,' \
     -e 's/\<int,//' \
     -e 's/\<bool,//' \
     -e 's,".*,,' \

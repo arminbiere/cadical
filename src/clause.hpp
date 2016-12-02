@@ -76,7 +76,9 @@ public:
   bool garbage:1;   // can be garbage collected unless it is a 'reason'
   bool reason:1;    // reason / antecedent clause can not be collected
   bool moved:1;     // moved during garbage collector ('copy' valid)
+#ifdef BCE
   bool blocked:1;   // redundant but blocked clause
+#endif
 
   signed int glue : LD_MAX_GLUE;
 

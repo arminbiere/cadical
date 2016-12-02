@@ -87,7 +87,9 @@ Clause * Internal::new_clause (bool red, int glue) {
   c->garbage = false;
   c->reason = false;
   c->moved = false;
+#ifdef BCE
   c->blocked = false;
+#endif
   c->glue = glue;
   c->size = size;
   for (int i = 0; i < size; i++) c->literals[i] = clause[i];
@@ -140,12 +142,16 @@ void Internal::mark_garbage (Clause * c) {
   if (c->redundant) {
     assert (stats.redundant > 0);
     stats.redundant--;
+#ifdef BCE
     if (c->blocked) {
       assert (stats.redblocked > 0);
       stats.redblocked--;
     }
+#endif
   } else {
+#ifdef BCE
     assert (!c->blocked);
+#endif
     assert (stats.irredundant > 0);
     assert (stats.irrbytes >= (long) bytes);
     stats.irrbytes -= bytes;

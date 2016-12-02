@@ -5,6 +5,7 @@ logging=no
 check=no
 coverage=no
 profile=no
+bce=no
 die () {
   echo "*** configure.sh: $*" 1>&2
   exit 1
@@ -22,7 +23,8 @@ where '<option>' is one of the following
 -c|--check   compile with assertion checking (default for '-g')
 -l|--log     include logging code (but disabled by default)
 -s|--sats    include and enable expensive statistics code
--a|--all     short cut for '-g -l -s' (and thus also '-c')
+-a|--all     short cut for all above, e.g., '-g -l -s' (thus also '-c')
+-b|--bce     include BCE code
 --coverage   compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile    compile with '-pg' to profile with 'gprof'
 EOF
@@ -37,6 +39,7 @@ do
     -l|--logging) logging=yes;;
     -s|--stats) stats=yes;;
     -a|--all) debug=yes;check=yes;logging=yes;stats=yes;;
+    -b|--bce) bce=yes;;
     --coverage) coverage=yes;;
     --profile) profile=yes;;
     *) die "invalid option '$1' (try '-h')";;
@@ -63,6 +66,7 @@ fi
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
 [ $stats = yes ] && CXXFLAGS="$CXXFLAGS -DSTATS"
+[ $bce = yes ] && CXXFLAGS="$CXXFLAGS -DBCE"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
 echo "$CXX $CXXFLAGS"

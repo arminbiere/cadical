@@ -1,3 +1,5 @@
+#ifdef BCE
+
 #include "heap.hpp"
 #include "internal.hpp"
 #include "macros.hpp"
@@ -180,3 +182,5 @@ void Internal::block () {
 }
 
 };
+
+#endif

@@ -352,7 +352,10 @@ class Internal {
   // clauses.  Their variables are marked as being 'added'.
   //
   bool likely_to_be_kept_clause (Clause * c) {
-    if (!c->redundant || c->blocked) return true;
+    if (!c->redundant) return true;
+#ifdef BCE
+    if (!c->blocked) return true;
+#endif
     return c->size <= lim.keptsize && c->glue <= lim.keptglue;
   }
 
@@ -410,11 +413,15 @@ class Internal {
   bool probing ();
   void probe ();
 
+#ifdef BCE
+
   // Blocked clause elimination.
   //
   bool block_clause_on_literal (Clause *, int lit);
   void turn_into_redundant_blocked_clause (Clause *);
   void block ();
+
+#endif
 
   // Part on picking the next decision in 'decide.cpp'.
   //

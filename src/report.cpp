@@ -6,6 +6,10 @@
 
 #include <cstring>
 
+#ifndef NDEBUG
+#include <cctype>
+#endif
+
 namespace CaDiCaL {
 
 void Report::print_header (char * line) {
@@ -45,7 +49,6 @@ REPORT("reductions",   0, 2, stats.reductions) \
 REPORT("restarts",     0, 4, stats.restarts) \
 REPORT("conflicts",    0, 5, stats.conflicts) \
 REPORT("redundant",    0, 5, stats.redundant) \
-REPORT("blocked",      0, 2, stats.redblocked) \
 REPORT("glue",         1, 3, slow_glue_avg) \
 REPORT("size",         1, 4, size_avg) \
 REPORT("irredundant",  0, 4, stats.irredundant) \
@@ -64,12 +67,14 @@ REPORT("propconf",    0, 2, relative (stats.propagations, stats.conflicts)) \
 REPORT("glue-fast",    1, 4, fast_glue_avg) \
 REPORT("level-fast",   1, 4, fast_jump_avg) \
 REPORT("propconf",    0, 2, relative (stats.propagations, stats.conflicts)) \
+REPORT("blocked",      0, 2, stats.redblocked) \
 
 #endif
 
 /*------------------------------------------------------------------------*/
 
 void Internal::report (char type, bool verbose) {
+  assert (!verbose || !isalpha (type) || isupper (type));
 #ifdef LOGGING
   if (!opts.log)
 #endif

@@ -300,7 +300,10 @@ void Internal::copy_non_garbage_clauses () {
 
 void Internal::check_clause_stats () {
 #ifndef NDEBUG
-  long irredundant = 0, redundant = 0, blocked = 0;
+  long irredundant = 0, redundant = 0;
+#ifdef BCE
+  long blocked = 0;
+#endif
   size_t irrbytes = 0;
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
@@ -308,12 +311,16 @@ void Internal::check_clause_stats () {
     Clause * c = *i;
     if (c->garbage) continue;
     if (c->redundant) redundant++; else irredundant++;
+#ifdef BCE
     if (c->blocked) blocked++;
+#endif
     if (!c->redundant) irrbytes += c->bytes ();
   }
   assert (stats.irredundant == irredundant);
   assert (stats.redundant == redundant);
+#ifdef BCE
   assert (stats.redblocked == blocked);
+#endif
 #endif
 }
 
@@ -322,13 +329,13 @@ void Internal::check_clause_stats () {
 void Internal::garbage_collection () {
   if (unsat) return;
   START (collect);
-  report ('g', 1);
+  report ('G', 1);
   stats.collections++;
   mark_satisfied_clauses_as_garbage ();
   if (opts.arena) copy_non_garbage_clauses ();
   else delete_garbage_clauses ();
   check_clause_stats ();
-  report ('c', 1);
+  report ('C', 1);
   STOP (collect);
 }
 
