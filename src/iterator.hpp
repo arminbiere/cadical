@@ -15,7 +15,7 @@ class Clause;
 
 /*------------------------------------------------------------------------*/
 
-// short cuts for iterators over 'int', clause and watch vectors
+// Short cuts for iterators over 'int', clause and literal vectors.
 
 typedef vector<int>::iterator                      int_iterator;
 typedef vector<int>::const_iterator          const_int_iterator;
@@ -27,6 +27,9 @@ typedef int *                                  literal_iterator;
 typedef const int *                      const_literal_iterator;
 
 /*------------------------------------------------------------------------*/
+
+// Used in 'probe' for partially iterating over all variables, preempting
+// the iteration and then continue probing in the next probing phase.
 
 class VarIdxIterator {
   int & last;
