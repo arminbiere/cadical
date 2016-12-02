@@ -19,8 +19,8 @@ struct Flags {         // Variable flags.
     poison (false),
     removable (false),
     clause (false),
-    added (true),
-    removed (true),
+    added (true),	// initially all variables are 'added'
+    removed (true),     // and all variables are 'removed'
     eliminated (false),
     fixed (false)
   { }
