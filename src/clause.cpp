@@ -246,7 +246,7 @@ void Internal::add_new_original_clause () {
 Clause * Internal::new_learned_redundant_clause (int glue) {
   Clause * res = new_clause (true, glue);
   if (proof) proof->trace_add_clause (res);
-  assert (!watches ());
+  assert (watches ());
   watch_clause (res);
   return res;
 }

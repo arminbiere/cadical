@@ -70,10 +70,13 @@ void Internal::remove_falsified_literals (Clause * c) {
   if (likely_to_be_kept_clause (c)) mark_added (c);
 }
 
+// If there are new units (fixed variables) since the last garbage
+// collection we go over all clauses, mark satisfied ones as garbage and
+// flush falsified literals.  Otherwise if no new units have been generated
+// just skip this step.
+
 void Internal::mark_satisfied_clauses_as_garbage () {
 
-  // Only needed if there are new units (fixed variables) since last time.
-  //
   if (lim.fixed_at_last_collect >= stats.fixed) return;
   lim.fixed_at_last_collect = stats.fixed;
 
@@ -91,12 +94,10 @@ void Internal::mark_satisfied_clauses_as_garbage () {
 
 /*------------------------------------------------------------------------*/
 
-// Update occurrence and watch lists before removing garbage clauses.  This
-// works both in the context of 'reduce' where the decision level might be
-// non zero as well as during preprocessing, e.g., in 'elim'.  During
-// 'reduce' we have to protect reason clauses not be collected and thus we
-// have this additional check hidden in 'Clause.collect', which for the root
-// level context of preprocessing is actually redundant.
+// Update occurrence lists before deleting garbage clauses in the context of
+// preprocessing, e.g., during bounded variable elimination 'elim'.  The
+// result is the number of remaining clauses, which in this context  means
+// the number of non-garbage clauses.
 
 size_t Internal::flush_occs (int lit) {
   Occs & os = occs (lit);
@@ -109,12 +110,24 @@ size_t Internal::flush_occs (int lit) {
     c = *i;
     if (c->collect ()) continue;
     *j++ = c->moved ? c->copy : c;
+#ifdef BCE
     if (!c->redundant) res++;
+    else assert (c->blocked);
+#else
+    assert (!c->redundant);
+    res++;
+#endif
   }
   os.resize (j - os.begin ());
   shrink_occs (os);
   return res;
 }
+
+// Update watch lists before deleting garbage clauses in the context of
+// 'reduce' where we watch and no occurrence lists.  We have to protect
+// reason clauses not be collected and thus we have this additional check
+// hidden in 'Clause.collect', which for the root level context of
+// preprocessing is actually redundant.
 
 void Internal::flush_watches (int lit) {
   Watches & ws = watches (lit);
@@ -159,7 +172,10 @@ void Internal::flush_all_occs_and_watches () {
 
 /*------------------------------------------------------------------------*/
 
-// This is a simple garbage collector which does not move clauses.
+// This is a simple garbage collector which does not move clauses.  It needs
+// less space than the arena based clause allocator, but is not as cache
+// efficient, since the copying garbage collector can put clauses together
+// which are likely accessed after each other.
 
 void Internal::delete_garbage_clauses () {
 
@@ -187,6 +203,8 @@ void Internal::delete_garbage_clauses () {
 }
 
 /*------------------------------------------------------------------------*/
+
+// This is the start of the copying garbage collector using the arena.
 
 // Copy a clause to the 'to' space of the arena.  Be careful if this clause
 // is a reason of an assignment.  In that case update the reason reference.
@@ -227,13 +245,13 @@ void Internal::copy_non_garbage_clauses () {
   //
   arena.prepare (moved_bytes);
 
-  // Copy clauses according to the order of calling 'copy_clause', which in
-  // essence just gives a compacting garbage collector, since their
-  // relative order is kept, and already gives some cache locality.
-  //
   if (opts.arena == 1 || !watches ()) {
 
     // Localize according to (original) clause order.
+
+    // Copy clauses according to the order of calling 'copy_clause', which
+    // in essence just gives a compacting garbage collector, since their
+    // relative order is kept, and already gives some cache locality.
 
     for (i = clauses.begin (); i != end; i++)
       if (!(c = *i)->collect ()) copy_clause (c);
@@ -241,6 +259,9 @@ void Internal::copy_non_garbage_clauses () {
   } else if (opts.arena == 2) {
 
     // Localize according to (original) variable order.
+
+    // Might be useful if somehow the original order allows to predict
+    // clause access order.  Use saved phases.
 
     for (int sign = -1; sign <= 1; sign += 2) {
       for (int idx = 1; idx <= max_var; idx++) {
@@ -255,6 +276,9 @@ void Internal::copy_non_garbage_clauses () {
 
     // Localize according to decision queue order.
 
+    // This seems to the best for search, since it allocates clauses in the
+    // order of the decision queue.  Use saved phases.
+
     assert (opts.arena == 3);
 
     for (int sign = -1; sign <= 1; sign += 2) {
@@ -267,11 +291,14 @@ void Internal::copy_non_garbage_clauses () {
     }
   }
 
-  // Do not forget to move clauses which are not watched.
+  // Do not forget to move clauses which are not watched, which happened in
+  // a rare situation, and now is only left as defensive code.
   //
   for (i = clauses.begin (); i != end; i++)
     if (!(c = *i)->collect () && !c->moved) copy_clause (c);
 
+  // Updates watches or occurrence lists.
+  //
   flush_all_occs_and_watches ();
 
   // Replace and flush clause references in 'clauses'.
@@ -283,7 +310,7 @@ void Internal::copy_non_garbage_clauses () {
     else assert (c->moved), *j++ = c->copy, deallocate_clause (c);
   }
   clauses.resize (j - clauses.begin ());
-  shrink_vector (clauses);
+  if (clauses.size () < clauses.capacity ()/2) shrink_vector (clauses);
 
   // Release 'from' space completely and then swap 'to' with 'from'.
   //
@@ -298,13 +325,17 @@ void Internal::copy_non_garbage_clauses () {
 
 /*------------------------------------------------------------------------*/
 
+// Maintaining clause statistics is complex and error prone but necessary
+// for proper scheduling of garbage collection, particularly during bounded
+// variable elimination.  With this function we can check whether these
+// statistics are updated correctly.
+
 void Internal::check_clause_stats () {
 #ifndef NDEBUG
-  long irredundant = 0, redundant = 0;
+  long irredundant = 0, redundant = 0, irrbytes = 0;
 #ifdef BCE
   long blocked = 0;
 #endif
-  size_t irrbytes = 0;
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
   for (i = clauses.begin (); i != end; i++) {
@@ -318,6 +349,7 @@ void Internal::check_clause_stats () {
   }
   assert (stats.irredundant == irredundant);
   assert (stats.redundant == redundant);
+  assert (stats.irrbytes == irrbytes);
 #ifdef BCE
   assert (stats.redblocked == blocked);
 #endif
