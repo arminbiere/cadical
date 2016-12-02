@@ -9,6 +9,13 @@
 
 namespace CaDiCaL {
 
+/*------------------------------------------------------------------------*/
+
+// Add two watches to a clause.  This is used initially  during allocation
+// of a clause and during connecting back all watches after preprocessing.
+// Since that happens quite infrequently (in contrast to 'watch_literal'
+// called from 'propagate') we can keep this function here.
+
 void Internal::watch_clause (Clause * c) {
   const int size = c->size;
   const int l0 = c->literals[0];
@@ -19,6 +26,13 @@ void Internal::watch_clause (Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
+// Mark the variables of an irredundant clause to 'have been removed', which
+// will trigger these variables to be considered again in the next bounded
+// variable elimination phase.  This is called from 'mark_garbage' below.
+
+#ifndef BCE
+inline
+#endif
 void Internal::mark_removed (Clause * c, int except) {
   LOG (c, "marking removed");
   assert (!c->redundant);
@@ -27,6 +41,13 @@ void Internal::mark_removed (Clause * c, int except) {
   for (i = c->begin (); i != end; i++)
     if (*i != except) mark_removed (*i);
 }
+  
+// Mark the variables of a (redundant or irredundant) clause to 'have been
+// added', which triggers clauses with such a variables, to be considered
+// both as a subsumed or subsuming clause in the next subsumption phase.
+// This function is called from 'new_clause' below as well as in situations
+// where a clause is shrunken (and thus needs to be at least considered
+// again to subsume a larger clause).
 
 void Internal::mark_added (Clause * c) {
   LOG (c, "marking added");
@@ -40,10 +61,10 @@ void Internal::mark_added (Clause * c) {
 /*------------------------------------------------------------------------*/
 
 // Redundant clauses of large glue and large size are extended to hold a
-// 'analyzed' time stamp.  This makes memory allocation and deallocation a
-// little bit tricky but saves space and time.  Since the embedding of the
-// literals is really important and on the same level of complexity we keep
-// both optimizations.
+// '_analyzed' time stamp, and similarly longer clauses need a '_pos' field.
+// This makes memory allocation and deallocation a little bit tricky but
+// saves space and time.  Since the embedding of the literals is really
+// important and on the same level of complexity we keep both optimizations.
 
 Clause * Internal::new_clause (bool red, int glue) {
 
@@ -55,7 +76,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   //
   if (glue > MAX_GLUE) glue = MAX_GLUE;
 
-  // Determine whether this clauses uses a 'pos' and 'analyzed' field.
+  // Determine whether this clauses uses a '_pos' and '_analyzed' field.
   //
   bool have_pos, have_analyzed;
   if (!red) have_analyzed = false;
@@ -65,7 +86,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   if (have_analyzed) have_pos = true;
   else have_pos = (size >= opts.posize);
 
-  // Now allocate the clause after ignored the 'offset' bytes, if 'pos' or
+  // Now allocate the clause after ignored the 'offset' bytes, if '_pos' or
   // 'analyzed' fields are not used.
   //
   Clause * c;
@@ -108,8 +129,8 @@ Clause * Internal::new_clause (bool red, int glue) {
 }
 
 // This is the 'raw' deallocation of a clause.  If the clause is in the
-// arena nothing happens.  If the clause is not in the arena and its memory
-// is reclaimed immediately and the allocation statistics is updated.
+// arena nothing happens.  If the clause is not in the arena its memory is
+// reclaimed immediately.
 
 void Internal::deallocate_clause (Clause * c) {
   char * p = c->start ();
@@ -122,8 +143,10 @@ void Internal::delete_clause (Clause * c) {
   LOG (c, "delete");
   size_t bytes = c->bytes ();
   stats.collected += bytes;
-  if (c->garbage) 
-    assert (stats.garbage >= (long) bytes), stats.garbage -= bytes;
+  if (c->garbage) {
+    assert (stats.garbage >= (long) bytes);
+    stats.garbage -= bytes;
+  }
   if (proof) proof->trace_delete_clause (c);
   deallocate_clause (c);
 }
@@ -131,10 +154,15 @@ void Internal::delete_clause (Clause * c) {
 // We want to eagerly update statistics as soon clauses are marked garbage.
 // Otherwise 'report' for instance gives wrong numbers after 'subsume'
 // before the next 'reduce'.  Thus we factored out marking and accounting
-// for garbage clauses.  Note that we do not update allocated bytes
-// statistics at this point, but wait until the next 'collect'.  In order
-// not to miss any update to those statistics we call 'check_clause_stats'
-// after garbage collection in debugging mode.
+// for garbage clauses.  
+//
+// We also update garbage statistics at this point.  This helps to
+// determine whether the garbage collector should be called during for
+// instance bounded variable elimination, which usually generates lots of
+// garbage clauses.
+//
+// In order not to miss any update to these clause statistics we call
+// 'check_clause_stats' after garbage collection in debugging mode.
 //
 void Internal::mark_garbage (Clause * c) {
   assert (!c->garbage);
@@ -162,6 +190,12 @@ void Internal::mark_garbage (Clause * c) {
   c->garbage = true;
 }
 
+/*------------------------------------------------------------------------*/
+
+// Check whether the next to be allocated 'clause' is actually tautological.
+// This is currently only used during adding original clauses (through the
+// API, e.g., while parsing the DIMACS file in the stand-alone solver).
+
 bool Internal::tautological_clause () {
   sort (clause.begin (), clause.end (), lit_less_than ());
   const_int_iterator i = clause.begin ();
@@ -179,6 +213,12 @@ bool Internal::tautological_clause () {
   return false;
 }
 
+/*------------------------------------------------------------------------*/
+
+// New clause added through the API, e.g., while parsing a DIMACS file.
+// Assume the clause has been simplified and checked with
+// 'tautological_clause' before.
+//
 void Internal::add_new_original_clause () {
   stats.original++;
   int size = (int) clause.size ();
@@ -199,13 +239,21 @@ void Internal::add_new_original_clause () {
   } else watch_clause (new_clause (false));
 }
 
+// Add learned new clause during conflict analysis and watch it. Requires
+// that the clause is at least of size 2, and the first two literals
+// are assigned at the highest decision level.
+//
 Clause * Internal::new_learned_redundant_clause (int glue) {
   Clause * res = new_clause (true, glue);
   if (proof) proof->trace_add_clause (res);
+  assert (!watches ());
   watch_clause (res);
   return res;
 }
 
+// Add resolved clause during resolution, e.g., bounded variable
+// elimination, but do not connect its occurrences here.
+//
 Clause * Internal::new_resolved_irredundant_clause () {
   Clause * res = new_clause (false);
   if (proof) proof->trace_add_clause (res);
