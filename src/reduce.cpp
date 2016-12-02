@@ -55,6 +55,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (!c->redundant) continue;                 // keep irredundant
+    if (c->blocked) continue;			 // keep blocked clauses
     if (c->reason) continue;                     // need to keep reasons
     if (c->garbage) continue;                    // already marked
     if (!c->have.analyzed) continue;

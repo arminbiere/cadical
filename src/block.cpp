@@ -172,8 +172,8 @@ void Internal::block () {
 
   long blocked = stats.blocked - before;
   VRB ("block", stats.blockings,
-    "blocked %ld clauses out of %.2f%% (%.0f%% remain)",
-    blocked, percent (blocked, oldirr),
+    "blocked %ld clauses %.2f%% of %ld (%.0f%% remain)",
+    blocked, percent (blocked, oldirr), oldirr,
     percent (stats.irredundant, stats.original));
   report ('b');
   STOP (block);

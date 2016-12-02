@@ -352,7 +352,7 @@ class Internal {
   // clauses.  Their variables are marked as being 'added'.
   //
   bool likely_to_be_kept_clause (Clause * c) {
-    if (!c->redundant) return true;
+    if (!c->redundant || c->blocked) return true;
     return c->size <= lim.keptsize && c->glue <= lim.keptglue;
   }
 

@@ -218,23 +218,23 @@ bool Internal::elim_resolvents_are_bounded (int pivot, long pos, long neg) {
   const const_occs_iterator pe = ps.end (), ne = ns.end ();
   const_occs_iterator i, j;
   
-  size_t pm = 0, nm = 0;
+  long pm = 0, nm = 0;
 
   for (i = ps.begin (); i != pe; i++) {
     Clause * c = *i;
     assert (!c->garbage);
-    size_t tmp = c->size;
+    long tmp = c->size;
     if (tmp > pm) pm = tmp;
   }
 
   for (j = ns.begin (); j != ne; j++) {
     Clause * d = *j;
     assert (!d->garbage);
-    size_t tmp = d->size;
+    long tmp = d->size;
     if (tmp > nm) nm = tmp;
   }
 
-  if (pm + nm - 2 > (size_t) opts.elimclslim) {
+  if (pm + nm - 2 > opts.elimclslim) {
     LOG ("expecting one resolvent to exceed limit on resolvent size");
     return false;
   }
@@ -427,7 +427,9 @@ bool Internal::elim_round () {
   const long nocc2_limit = opts.elimocclim;
   const long nocc2_limit_exceeded = nocc2_limit + 1;
 
-  // First compute the number of occurrences of each literal.
+  // First compute the number of occurrences of each literal and at the same
+  // time mark satisfied clauses and update 'removed' flags of variables in
+  // clauses with root level assigned literals (both false and true).
   //
   const_clause_iterator eoc = clauses.end ();
   const_clause_iterator i;
@@ -441,8 +443,22 @@ bool Internal::elim_round () {
       for (j = c->begin (); j != eol; j++)
         noccs2 (*j) = nocc2_limit_exceeded;        // thus not scheduled
     } else {
-      for (j = c->begin (); j != eol; j++)
-        if (active (*j)) noccs2 (*j)++;
+      bool satisfied = false, falsified = false;
+      for (j = c->begin (); j != eol; j++) {
+        const int lit = *j, tmp = val (lit);
+	if (tmp > 0) satisfied = true;
+	else if (tmp < 0) falsified = true;
+	else assert (active (lit));
+      }
+      if (satisfied) mark_garbage (c);          // more precise counts
+      else {
+	for (j = c->begin (); j != eol; j++) {
+	  const int lit = *j;
+	  if (!active (lit)) continue;
+	  if (falsified) mark_removed (lit); // simulate unit propagation
+	  noccs2 (lit)++;
+	}
+      }
     }
   }
 
