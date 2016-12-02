@@ -5,15 +5,16 @@ namespace CaDiCaL {
 
 struct Limit {
 
-  long reduce;    // conflict limit for next 'reduce'
-  long analyzed;  // limit on keeping recently analyzed clauses
-  long restart;   // conflict limit for next 'restart'
-  long subsume;   // conflict limit on next 'subsume'
-  long elim;      // conflict limit on next 'elim'
-  long probe;     // conflict limit on next 'probe'
-
   long conflict;  // conflict limit if non-negative
   long decision;  // decision limit if non-negative
+
+  long elim;      // conflict limit for next 'elim'
+  long probe;     // conflict limit for next 'probe'
+  long reduce;    // conflict limit for next 'reduce'
+  long restart;   // conflict limit for next 'restart'
+  long subsume;   // conflict limit for next 'subsume'
+
+  long analyzed;  // limit on keeping recently analyzed clauses
 
   int keptglue;   // maximum kept glue in 'reduce'
   int keptsize;   // maximum kept size in 'reduce'
@@ -23,7 +24,6 @@ struct Limit {
   int         fixed_at_last_elim;
   long subsumptions_at_last_elim;
   long      removed_at_last_elim;
-  long     added_at_last_subsume;
 
   // Used to let 'subsume' wait until and right after next 'reduce'.
   //
@@ -34,6 +34,8 @@ struct Limit {
   //
   int fixed_at_last_collect;
 
+  // Used by persistent 'VarIdxIterator' of 'probe'.
+  //
   int last_probed;
 
   Limit ();

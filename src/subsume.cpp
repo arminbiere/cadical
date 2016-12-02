@@ -305,8 +305,6 @@ void Internal::subsume_round () {
   SWITCH_AND_START (search, simplify, subsume);
   stats.subsumptions++;
 
-  lim.added_at_last_subsume = stats.added;
-
   assert (!level);
 
   // Allocate schedule and occurrence lists.
