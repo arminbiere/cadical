@@ -1,3 +1,4 @@
+#if 0
 #include "internal.hpp"
 
 namespace CaDiCaL {
@@ -9,3 +10,4 @@ void AVG::update (Internal * internal, double y, const char * name) {
 }
 
 };
+#endif

@@ -235,8 +235,8 @@ void Internal::analyze () {
   const int glue = (int) levels.size ();
   LOG ("1st UIP clause of size %ld and glue %d",
     (long) clause.size (), glue);
-  UPDATE_AVG (fast_glue_avg, glue);
-  UPDATE_AVG (slow_glue_avg, glue);
+  UPDATE_AVERAGE (fast_glue_avg, glue);
+  UPDATE_AVERAGE (slow_glue_avg, glue);
 
   // Update learned = 1st UIP literals counter.
   //
@@ -256,7 +256,7 @@ void Internal::analyze () {
   //
   stats.units    += (size == 1);
   stats.binaries += (size == 2);
-  UPDATE_AVG (size_avg, size);
+  UPDATE_AVERAGE (size_avg, size);
 
   // Eager backward subsumption of learned clauses.
   //
@@ -272,12 +272,12 @@ void Internal::analyze () {
     sort (clause.begin (), clause.end (), trail_larger (this));
     Clause * driving_clause = new_learned_redundant_clause (glue);
     const int jump = var (clause[1]).level;
-    UPDATE_AVG (jump_avg, jump);
+    UPDATE_AVERAGE (jump_avg, jump);
     backtrack (jump);
     assign_driving (-uip, driving_clause);
   } else {
     iterating = true;
-    UPDATE_AVG (jump_avg, 0);
+    UPDATE_AVERAGE (jump_avg, 0);
     backtrack (0);
     assign_unit (-uip);
   }

@@ -1,3 +1,4 @@
+#if 0
 #ifndef _avg_hpp_INCLUDED
 #define _avg_hpp_INCLUDED
 
@@ -17,4 +18,5 @@ struct AVG {
 
 };
 
+#endif
 #endif

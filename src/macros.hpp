@@ -82,8 +82,8 @@ do { \
 
 // Compact average update and initialization code for better logging.
 
-#define UPDATE_AVG(EMA_OR_AVG,Y) \
-do { EMA_OR_AVG.update (internal, (Y), #EMA_OR_AVG); } while (0)
+#define UPDATE_AVERAGE(A,Y) \
+do { A.update (internal, (Y), #A); } while (0)
 
 #define INIT_EMA(E,V) \
   E = EMA (V); \
