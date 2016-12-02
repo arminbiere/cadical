@@ -9,25 +9,28 @@ namespace CaDiCaL {
 
 // This memory allocation arena provides fixed size pre-allocated memory for
 // the moving garbage collector 'copy_non_garbage_clauses' in 'reduce.cpp'
-// to hold clauses which should survive garbage collection.  The advantage
-// of using a pre-allocated arena is that the allocation order of the
-// clauses can be adapted in such a way that clauses watched by the same
-// literal are allocated consecutively.  This improves locality and thus is
-// more cache friendly. A similar technique is implemented in MiniSAT and
-// Glucose and gives substantial speed-up in propagations per second even
-// though it might even almost double peek memory usage.  Note that in
-// MiniSAT this arena is also required for MiniSAT to use 32 bit clauses
-// references instead of 64 bit pointers.  This would restrict the maximum
-// number of clauses and thus is a restriction we do not want to use
-// anymore.  New learned clauses are allocated in CaDiCaL outside of this
-// arena and moved to the arena during garbage collection.  The additional
-// 'to' space required for such a moving garbage collector is only allocated
-// for those clauses surviving garbage collection, which usually needs much
-// less memory than all clauses.  The net effect is that in this
-// implementation the moving garbage collector using this arena only needs
-// roughly 50% more memory than allocating the clauses directly.  Both
-// implementations can be compared by varying the 'arena' option (which also
-// controls the allocation order of clauses during moving them).
+// to hold clauses which should survive garbage collection.
+
+// The advantage of using a pre-allocated arena is that the allocation order
+// of the clauses can be adapted in such a way that clauses watched by the
+// same literal are allocated consecutively.  This improves locality and
+// thus is more cache friendly. A similar technique is implemented in
+// MiniSAT and Glucose and gives substantial speed-up in propagations per
+// second even though it might even almost double peek memory usage.  Note
+// that in MiniSAT this arena is also required for MiniSAT to use 32 bit
+// clauses references instead of 64 bit pointers.  This would restrict the
+// maximum number of clauses and thus is a restriction we do not want to use
+// anymore.  
+
+// New learned clauses are allocated in CaDiCaL outside of this arena and
+// moved to the arena during garbage collection.  The additional 'to' space
+// required for such a moving garbage collector is only allocated for those
+// clauses surviving garbage collection, which usually needs much less
+// memory than all clauses.  The net effect is that in our implementation
+// the moving garbage collector using this arena only needs roughly 50% more
+// memory than allocating the clauses directly.  Both implementations can be
+// compared by varying the 'arena' option (which also controls the
+// allocation order of clauses during moving them).
 
 // The standard sequence of using the arena is as follows:
 //
