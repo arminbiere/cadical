@@ -10,7 +10,10 @@
 #include <cstring>
 #include <cstdio>
 
+
 namespace CaDiCaL {
+
+/*------------------------------------------------------------------------*/
 
 Solver::Solver () { internal = new Internal (); }
 Solver::~Solver () { delete internal; }

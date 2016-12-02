@@ -6,10 +6,13 @@
 
 namespace CaDiCaL {
 
+/*------------------------------------------------------------------------*/
+
 // External API of the CaDiCaL solver.  In essence 'Solver' is a 'facade'
 // object for 'Internal'.  It thus exposes the meant to be public API of
 // 'Internal' but hides everything else (except for the private member
 // functions below).  It makes it easier to understand and use the solver.
+
 // It has the additional benefit to decouple this header file from all the
 // internal data structures, which is particularly useful if the rest of the
 // source is not available. For instance if only a CaDiCaL library is
