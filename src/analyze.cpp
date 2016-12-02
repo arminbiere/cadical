@@ -238,24 +238,33 @@ void Internal::analyze () {
   UPDATE_AVG (fast_glue_avg, glue);
   UPDATE_AVG (slow_glue_avg, glue);
 
+  // Update learned = 1st UIP literals counter.
+  //
   int size = (int) clause.size ();
   stats.learned += size;
 
+  // Minimize and optionally shrink 1st UIP clause.
+  //
   if (size > 1) {
     if (opts.minimize) minimize_clause ();
-
     if (opts.shrink && size <= opts.shrinksize && glue <= opts.shrinkglue)
       shrink_clause ();
-
     size = (int) clause.size ();
   }
 
+  // Update actual size statistics.
+  //
   stats.units    += (size == 1);
   stats.binaries += (size == 2);
   UPDATE_AVG (size_avg, size);
+
+  // Eager backward subsumption of learned clauses.
+  //
   if (size > 1 && opts.sublast) eagerly_subsume_last_learned ();
 
-  bump_variables ();                         // Update decision heuristics.
+  // Update decision heuristics.
+  //
+  bump_variables ();                         
 
   // Determine back jump level, backtrack and assign flipped literal.
   //
@@ -284,8 +293,9 @@ void Internal::analyze () {
 }
 
 // We wait reporting a learned unit until propagation of that unit is
-// completed.  Otherwise the 'i' report line might prematurely give the
-// number of remaining variables.
+// completed.  Otherwise the 'i' report gives the number of remaining
+// variables before propagating the unit (and hides the actual remaining
+// variables after propagating it).
 
 void Internal::iterate () { iterating = false; report ('i'); }
 
