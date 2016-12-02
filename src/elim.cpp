@@ -10,6 +10,24 @@
 
 namespace CaDiCaL {
 
+// Implements bounded variable elimination as pioneered in our SATeLite
+// paper.  This is an inprocessing version, e.g., is interleaved with search
+// and triggers subsumption and strengthening rounds during elimination
+// rounds.  It focuses only those variables which occurred in removed
+// irredundant clauses since the last time an elimination round was run.
+// By bounding the maximum number of occurrences and the maximum clause
+// size we can run each elimination round until completion.  See the code of
+// 'elim' for the actual scheduling of 'subsumption' and 'elimination'.
+
+// Note that the new fast subsumption algorithm implemented in 'subsume'
+// does not distinguish between irredundant and redundant clauses and is
+// also run during search to strengthen and remove 'sticky' redundant
+// clauses but also irredundant ones.  So beside learned units during search
+// or as consequence of other preprocessors, these subsumption rounds during
+// search can remove (irredundant) clauses (and literals), which in turn
+// might make new bounded variable elimination possible.  This is tested
+// in the 'eliminating' guard.
+
 bool Internal::eliminating () {
 #ifdef BCE
   if (!opts.elim && !opts.block) return false;
@@ -28,8 +46,9 @@ bool Internal::eliminating () {
 
 /*------------------------------------------------------------------------*/
 
-// Update the elimination schedule after adding or removing a clause.  The
-// schedule uses the two-side score 'noccs2', which needs explicit updates.
+// Update the global elimination schedule 'esched' after adding or removing
+// a clause.  Scheduling is based on the two-sided score 'noccs2', which
+// needs explicit updates.
 
 inline void Internal::elim_update_added (Clause * c) {
   assert (!c->redundant);
@@ -253,8 +272,10 @@ bool Internal::elim_resolvents_are_bounded (int pivot, long pos, long neg) {
     return false;
   }
 
-  // From all 'pos*neg' resolvents we need that many redundant resolvents.
-  // If this number becomes zero or less we can eliminate the variable.
+  // From all 'pos*neg' possible resolvents we need 'needed' many
+  // tautological resolvents.  As soon we find a tautological resolvent we
+  // decrease 'needed' and as soon it becomes zero or less we can stop
+  // resolving, since bounded variable elimination will succeed.
   //
   long needed = pos*neg - bound;
 
@@ -272,11 +293,19 @@ bool Internal::elim_resolvents_are_bounded (int pivot, long pos, long neg) {
   //
   for (i = ps.begin (); needed >= 0 && i != pe; i++) {
     Clause * c = *i;
+#ifdef BCE
     if (c->redundant) continue;
+#else
+    assert (!c->redundant);
+#endif
     if (c->garbage) { needed -= neg; continue; }
     for (j = ns.begin (); needed >= 0 && j != ne; j++) {
       Clause * d = *j;
+#ifdef BCE
       if (d->redundant) continue;
+#else
+      assert (!d->redundant);
+#endif
       if (d->garbage) { needed--; continue; }
       stats.elimrestried++;
       if (resolve_clauses (c, pivot, d)) {
@@ -404,6 +433,7 @@ inline void Internal::elim_variable (int pivot) {
   long pos = flush_occs (pivot);
   long neg = flush_occs (-pivot);
 
+  // Bound the number of resolvents tried per variable by '2*elimocclim'.
   //
   if (pos > opts.elimocclim || neg > opts.elimocclim) {
     LOG ("now too many occurrences of %d", pivot);

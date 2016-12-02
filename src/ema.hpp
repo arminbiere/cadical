@@ -7,8 +7,9 @@ namespace CaDiCaL {
 
 class Internal;
 
-// We have a more complex generic exponential moving average struct here
-// for more robust initialization (see comments before 'update' below).
+// This is a more complex generic exponential moving average class to
+// support  more robust initialization (see comments in the 'update'
+// implementation).
 
 struct EMA {
   double value;         // current average value
