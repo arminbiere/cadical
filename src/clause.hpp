@@ -12,12 +12,12 @@ namespace CaDiCaL {
 // clauses and accessing them is a hot-spot.  Thus we use three common
 // optimizations to reduce their memory foot print and improve cache usage.
 // Even though this induces some complexity in understanding the actual
-// implementation, arguably not the usage of this data-structure, we deem
-// these optimizations for essential.
+// implementation, arguably not the usage of this data-structure, we
+// consider these optimizations as essential.
 //
 //   (1) The most important optimization is to 'embed' the actual literals
 //   in the clause.  This requires a variadic size structure and thus
-//   strictly is not 'C' conformant, but supported by all compilers we used.
+//   strictly is not 'C' conform, but supported by all compilers we used.
 //   The alternative is to store the actual literals somewhere else, which
 //   not only needs more memory but more importantly also requires another
 //   memory access and thus is very costly.
@@ -25,32 +25,30 @@ namespace CaDiCaL {
 //   (2) The boolean flags only need one bit each and thus there is enough
 //   space left to merge them with a 'glue' bit field (which is less
 //   accessed than 'size').  This saves 4 bytes and also keeps the header
-//   without 'analyzed' nicely in 8 bytes.  We currently use 28 bits and
-//   actually since we do not want to mess with 'unsigned' versus 'signed'
-//   issues just use 27 out of them.  If more boolean flags are needed this
-//   number has to be adapted accordingly.
+//   without '_analyzed' and '_pos' nicely in 8 bytes.  We currently use 25
+//   bits and, actually, since we do not want to mess with 'unsigned' versus
+//   'signed' issues just use 24 out of them.  If more boolean flags are
+//   needed this number has to be adapted accordingly.
 //
 //   (3) Original clauses and clauses with small glue or size are kept
-//   anyhow and do not need the activity counter 'analyzed'.  Thus we can
-//   omit these 8 bytes used for 'analyzed' for these clauses.  Redundant
-//   clauses of long size and with large glue have a 'analyzed' field and
-//   are called 'extended'.  The non extended clauses need 8 bytes less and
-//   accessing 'analyzed' for them is not allowed.
+//   anyhow and do not need the activity counter '_analyzed'.  Thus we can
+//   omit these 8 bytes used for '_analyzed' for these clauses.  Redundant
+//   clauses of long size and with large glue have a '_analyzed' field.
+//   The same idea is used for the '_pos' 4 byte integer field which saves
+//   the position of the last exchanged watch in a long clause.  However,
+//   we always require '_pos' to present if we also need '_analyzed', which
+//   is not really an issue, since saving in '_pos' starts making sense for
+//   clauses of length 4 and we usually have 'opts.keepsize == 3'.
 //
-// With these three optimizations a binary original clause only needs 16
-// bytes instead of 40 bytes without embedding and 32 bytes with embedding
-// the literals.  The last two optimizations reduce memory usage of very
-// large formulas slightly but are otherwise not that important.
+// With these three optimizations a binary clause only needs 16 bytes
+// instead of 44 bytes.  The last two optimizations reduce memory usage of
+// very large formulas measurably but are otherwise not that important.
 //
 // If you want to add few additional boolean flags, add them after the
 // sequence of already existing ones.  This makes sure that these bits and
 // the following 'glue' field are put into a 4 byte word by the compiler. Of
 // course you need to adapt 'LD_MAX_GLUE' accordingly.  Adding one flag
 // reduces it by one.
-//
-// Similarly if you want to add more data to extended clauses put these
-// fields after 'analyzed' and before the flags section.  Then adapt the
-// 'EXTENDED_OFFSET' accordingly.
 //
 // Additional fields needed for all clauses are safely put between 'glue'
 // and 'size' without the need to change anything else.  In general these
@@ -95,17 +93,14 @@ public:
     // Otherwise 'literals' is valid.
   };
 
-  long & analyzed () {
-    assert (have.analyzed);
-    return _analyzed;
-  }
+  long & analyzed () { assert (have.analyzed); return _analyzed; }
 
   const long & analyzed () const {
     assert (have.analyzed);
     return _analyzed;
   }
 
-  int & pos () { assert (have.pos); return _pos; }
+        int & pos ()       { assert (have.pos); return _pos; }
   const int & pos () const { assert (have.pos); return _pos; }
 
   void update_after_shrinking () { 
