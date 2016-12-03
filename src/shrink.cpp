@@ -15,7 +15,7 @@ namespace CaDiCaL {
 // is more expensive and thus should be called only on clauses for which
 // shrinking is useful (such as small clauses with small glue).  As in
 // PrecoSAT we restrict traversal to follow the topological assignment order
-// to avoid cycles (which would yield unsound removals).
+// to avoid cycles (which could yield unsound removals).
 
 bool Internal::shrink_literal (int lit, int depth) {
   assert (val (lit) > 0);
@@ -31,7 +31,7 @@ bool Internal::shrink_literal (int lit, int depth) {
   Watches & ws = watches (lit);
 
   // The difference to 'minimize_literal' is here, where we iterate over all
-  // clauses watches by 'lit' instead of 'just' the reason clause except for
+  // clauses watched by 'lit' instead of 'just' the reason clause except for
   // '(!!!)' where we have to make sure that we respect assignment order in
   // resolutions to avoid cyclic derivations.  For the actual reason this
   // test is not necessary.
