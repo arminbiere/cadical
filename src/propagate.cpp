@@ -95,64 +95,130 @@ void Internal::assign_driving (int lit, Clause * c) {
 bool Internal::propagate () {
   assert (!unsat);
   START (propagate);
+
+  // Updating the statistics counter in the propagation loops is costly so
+  // we delay until propagation run to completion.
+  //
   long before = propagated;
+
   while (!conflict && propagated < trail.size ()) {
+
     const int lit = -trail[propagated++];
     LOG ("propagating %d", -lit);
     Watches & ws = watches (lit);
+
     const_watch_iterator i = ws.begin ();
     watch_iterator j = ws.begin ();
+
     while (i != ws.end ()) {
+
       const Watch w = *j++ = *i++;
       const int b = val (w.blit);
-      if (b > 0) continue;
+
+      if (b > 0) continue;                // blocking literal satisfied?
+
       if (w.size == 2) {
-        if (b < 0) conflict = w.clause;
+
+	// Binary clauses are treated separately since they do not require
+	// to access the clause at all (only during conflict analysis, and
+	// there also only to simplify the code).
+        
+        if (b < 0) conflict = w.clause;          // but continue ...
 	else inlined_assign (w.blit, w.clause);
+
       } else {
+
+	// The first pointer access to a long (non-binary) clause is the
+	// most expensive operation in a CDCL SAT solver.  We count this by
+	// the 'visits' counter.  However, since this would be in the
+	// tightest loop of the solver, we only want to count it if
+	// expensive statistics are required (actually costs quite a bit
+	// having this enabled all the time).
+
         EXPENSIVE_STATS_ADD (simplifying, visits, 1);
+
         if (w.clause->garbage) continue;
+
         literal_iterator lits = w.clause->begin ();
+
+	// Simplify the code by assuming 'lit' is first literal in clause.
+	//
         if (lits[0] == lit) swap (lits[0], lits[1]);
+	assert (lits[1] == lit);
+
         const int u = val (lits[0]);
-        if (u > 0) j[-1].blit = lits[0];
+
+        if (u > 0) j[-1].blit = lits[0];  // satisfied, just replace blit
         else {
+
           assert (w.size == w.clause->size);
           const const_literal_iterator end = lits + w.size;
 	  literal_iterator k;
 	  int v = -1;
+
 	  if (w.clause->have.pos) {
+
+	    // This follows Ian Gent's idea of saving the position of the
+	    // last watch replacement.  In essence it needs two copies of
+	    // the default search for a watch replacement (in essence the
+	    // code in the 'else' branch below), one starting at the saved
+	    // position until the end of the clause and then if that one
+	    // failed to find a replacement another one starting at the
+	    // first non-watched literal until the saved position.
+
 	    literal_iterator start = lits + w.clause->pos ();
 	    k = start;
 	    while (k != end && (v = val (*k)) < 0) k++;
+
 	    EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
-	    if (v < 0) {
+
+	    if (v < 0) {  // need second search starting at the head?
+
 	      const const_literal_iterator middle = lits + w.clause->pos ();
 	      k = lits + 2;
 	      assert (w.clause->pos () <= w.size);
 	      while (k != middle && (v = val (*k)) < 0) k++;
+
 	      EXPENSIVE_STATS_ADD (simplifying, traversed, k - (lits + 2));
 	    }
-	    w.clause->pos () = k - lits;
+
+	    w.clause->pos () = k - lits;  // always save position
+
           } else {
+
+	    // For short clauses (particularly if they are of size 3), we do
+	    // not want to save the position.  This saves space but also
+	    // avoids a second search.  We do pay by the branch of this
+	    // 'else' branch though, but some initial testing seems to show
+	    // that it is useful to have this 'else' branch separately.
+
 	    literal_iterator start = lits + 2;
 	    k = start;
 	    while (k != end && (v = val (*k)) < 0) k++;
+
 	    EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
 	  }
+
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
-          if (v > 0) j[-1].blit = *k;
+
+          if (v > 0) j[-1].blit = *k;    // satisfied, just replace 'blit'
           else if (!v) {
+
+	    // Found new unassigned replacement literal to be watched.
+
             LOG (w.clause, "unwatch %d in", *k);
+
             swap (lits[1], *k);
             watch_literal (lits[1], lit, w.clause, w.size);
-            j--;
+
+            j--;  // drop this watch from the watch list of 'lit'
+
           } else if (!u) inlined_assign (lits[0], w.clause);
           else { conflict = w.clause; break; }
         }
       }
     }
-    while (i != ws.end ()) *j++ = *i++;
+    while (i != ws.end ()) *j++ = *i++;  // because of the last 'break'
     ws.resize (j - ws.begin ());
   }
   long delta = propagated - before;
