@@ -15,7 +15,7 @@ namespace CaDiCaL {
 // explicitly limit the recursion depth.
 
 // Instead of signatures as in the original implementation in MiniSAT and
-// the corresponding paper, we use the 'poison' idea of Allen Van Gelder to
+// our corresponding paper, we use the 'poison' idea of Allen Van Gelder to
 // mark unsuccessful removal attempts, then Donald Knuth's idea to abort
 // minimization if only one literal was seen on the level and a new idea of
 // also aborting if the earliest seen literal was assigned afterwards.

@@ -5,6 +5,8 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
+// Occurrence lists.
+
 void Internal::init_occs () {
   assert (!otab);
   NEW (otab, Occs, 2*vsize);
@@ -17,6 +19,8 @@ void Internal::reset_occs () {
 }
 
 /*------------------------------------------------------------------------*/
+
+// One-sided occurrence counter (each literal has its own counter).
 
 void Internal::init_noccs () {
   assert (!ntab);
@@ -31,6 +35,8 @@ void Internal::reset_noccs () {
 }
 
 /*------------------------------------------------------------------------*/
+
+// Two-sided occurrence counter (each variable has one counter).
 
 void Internal::init_noccs2 () {
   assert (!ntab2);
