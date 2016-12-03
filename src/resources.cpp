@@ -11,6 +11,12 @@ extern "C" {
 
 namespace CaDiCaL {
 
+// TODO: port these functions to different OS.
+
+// We use 'getrusage' for the next two functions, which is pretty standard
+// on Unix but probably not available on Windows etc. For different variants
+// of Unix not all fields are meaningful (or even existing).
+
 double process_time () {
   struct rusage u;
   double res;
@@ -20,11 +26,20 @@ double process_time () {
   return res;
 }
 
+// This seems to work on Linux (man page says since Linux 2.6.32).
+
 size_t maximum_resident_set_size () {
   struct rusage u;
   if (getrusage (RUSAGE_SELF, &u)) return 0;
   return ((size_t) u.ru_maxrss) << 10;
 }
+
+// Unfortunately 'getrusage' on Linux does not support current resident set
+// size (the field 'ru_ixrss' is there but according to the man page
+// 'unused'). Thus we fall back to use the '/proc' file system instead.  So
+// this is not portable at all and needs to be replaced on other systems
+// The code would still compile though (assuming 'sysconf' and
+// '_SC_PAGESIZE' are available).
 
 size_t current_resident_set_size () {
   char path[40];
