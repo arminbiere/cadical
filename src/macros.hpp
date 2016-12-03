@@ -41,7 +41,7 @@ do { \
 
 /*------------------------------------------------------------------------*/
 
-// Memory allocation with implicit memory usage updates.
+// Memory allocation.
 
 #define NEW(P,T,N) \
 do { (P) = new T[N]; } while (0)
@@ -90,6 +90,9 @@ do { A.update (internal, (Y), #A); } while (0)
   LOG ("init " #E " EMA target alpha %g", (double) V)
 
 /*------------------------------------------------------------------------*/
+
+// Coverage goal, used similar to 'assert' (but with flipped condition) and
+// also included even if 'NDEBUG' is defined (in optimizing compilation).
 
 #define COVER(COND) \
 do { \
