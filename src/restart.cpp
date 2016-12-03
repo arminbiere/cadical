@@ -5,6 +5,13 @@
 
 namespace CaDiCaL {
 
+// Restarts are scheduled by a variant of the Glucose scheme presented in
+// our POS'15 paper using exponential moving averages.  There is a slow
+// moving average of the average recent glue level of learned clauses as
+// well as fast moving average of those glues.  If the end of base restart
+// conflict interval has passed and the fast moving average is above a
+// certain margin of the slow moving average then we restart.
+
 bool Internal::restarting () {
   if (!opts.restart) return false;
   if (stats.conflicts <= lim.restart) return false;
@@ -14,6 +21,11 @@ bool Internal::restarting () {
   LOG ("EMA glue slow %.2f fast %.2f limit %.2f", s, f, l);
   return l <= f;
 }
+
+// This is Marijn's reuse trail idea.  Instead of always backtracking to the
+// top we figure out which decisions would be made again anyhow and only
+// backtrack to the level of the last such decision or if no such decision
+// exists to the top (in which case we do reuse any level).
 
 int Internal::reuse_trail () {
   if (!opts.reusetrail) return 0;
