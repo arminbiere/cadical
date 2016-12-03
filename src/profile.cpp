@@ -6,6 +6,8 @@
 
 namespace CaDiCaL {
 
+// Initialize all profile counters with constant name and profiling level.
+
 Profiles::Profiles (Internal * s)
 :
   internal (s)
@@ -17,10 +19,12 @@ Profiles::Profiles (Internal * s)
 }
 
 void Internal::start_profiling (Profile * p, double s) {
+  assert (p->level <= opts.profile);
   timers.push_back (Timer (s, p));
 }
 
 void Internal::stop_profiling (Profile * p, double s) {
+  assert (p->level <= opts.profile);
   assert (!timers.empty ());
   Timer & t = timers.back ();
   assert (p == t.profile), (void) p;

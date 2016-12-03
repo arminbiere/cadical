@@ -11,6 +11,17 @@ namespace CaDiCaL {
 
 using namespace std;
 
+/*------------------------------------------------------------------------*/
+
+// Enable proof logging by allocating a 'Proof' object.
+
+void Internal::new_proof (File * file, bool owned) {
+  close_proof ();
+  proof = new Proof (this, file, opts.binary, owned);
+}
+
+// We want to close a proof trace as soon we are done.
+
 void Internal::close_proof () {
   if (!proof) return;
   LOG ("closing proof");
@@ -18,16 +29,19 @@ void Internal::close_proof () {
   proof = 0;
 }
 
-Proof::Proof (Internal * s, File * f, bool b, bool o) :
-internal (s), file (f), binary (b), owned (o)
-{ }
+/*------------------------------------------------------------------------*/
+
+Proof::Proof (Internal * s, File * f, bool b, bool o)
+:
+  internal (s), file (f), binary (b), owned (o)
+{
+}
 
 Proof::~Proof () { if (owned) delete file; }
 
-void Internal::new_proof (File * file, bool o) {
-  close_proof ();
-  proof = new Proof (this, file, opts.binary, o);
-}
+/*------------------------------------------------------------------------*/
+
+// Support for binary DRAT format.
 
 inline void Proof::put_binary_zero () {
   assert (binary);
@@ -50,6 +64,8 @@ inline void Proof::put_binary_lit (int lit) {
   file->put (ch);
 }
 
+/*------------------------------------------------------------------------*/
+
 void Proof::trace_empty_clause () {
   LOG ("tracing empty clause");
   if (binary) file->put ('a'), put_binary_zero ();
@@ -61,6 +77,8 @@ void Proof::trace_unit_clause (int unit) {
   if (binary) file->put ('a'), put_binary_lit (unit), put_binary_zero ();
   else file->put (unit), file->put (" 0\n");
 }
+
+/*------------------------------------------------------------------------*/
 
 inline void Proof::trace_clause (Clause * c, bool add) {
   if (binary) file->put (add ? 'a' : 'd');
@@ -84,6 +102,12 @@ void Proof::trace_delete_clause (Clause * c) {
   trace_clause (c, false);
 }
 
+/*------------------------------------------------------------------------*/
+
+// During garbage collection clauses are shrunken by removing falsified
+// literals. To avoid copying the clause, we provide a specialized tracing
+// function here, which traces the required 'add' and 'remove' operations.
+
 void Proof::trace_flushing_clause (Clause * c) {
   LOG (c, "tracing flushing fixed");
   if (binary) file->put ('a');
@@ -98,6 +122,12 @@ void Proof::trace_flushing_clause (Clause * c) {
   else file->put ("0\n");
   trace_clause (c, false);
 }
+
+// While strengthening clauses, e.g., through self-subsuming resolutions,
+// during subsumption checking, we have a similar situation, except that we
+// have to remove exactly one literal.  Again the following function allows
+// to avoid copying the clause and instead provides tracing of the required
+// 'add' and 'remove' operations.
 
 void Proof::trace_strengthen_clause (Clause * c, int remove) {
   LOG (c, "tracing strengthen %d in", remove);

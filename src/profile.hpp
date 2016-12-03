@@ -8,7 +8,9 @@ class Internal;
 // The solver contains some built in profiling (even for optimized code).
 // The idea is that even without using external tools it is possible to get
 // an overview of where time is spent.  This is enabled with the option
-// 'profile', e.g., you might want to use 'cadical --profile=2 ...'.
+// 'profile', e.g., you might want to use '--profile=3', or even higher
+// values for more detailed profiling information.  Currently the default is
+// '--profile=2', which should only induce a tiny profiling overhead.
 //
 // Profiling has a Heisenberg effect, since we rely on calling 'getrusage'
 // instead of using profile counters and sampling.  For functions which are
@@ -17,10 +19,15 @@ class Internal;
 // overhead in measuring time spent in them.  These get a smaller profiling
 // level, which is the second argument in the 'PROFILE' macro below.  Thus
 // using '--profile=1' for instance should not add any penalty to the
-// run-time, while '--profile=2' and higer levels slow down the solver.
+// run-time, while '--profile=3' and higer levels slow down the solver.
 //
 // To profile say 'foo', just add another line 'PROFILE(foo)' and wrap
 // the code to be profiled within a 'START (foo)' / 'STOP (foo)' block.
+
+/*------------------------------------------------------------------------*/
+
+// Profile counters for functions which are not compiled in should be
+// removed. This is achieved by adding a wrapper macro for them here.
 
 #ifdef BCE
 #define PROFBCE PROFILE
@@ -39,6 +46,8 @@ class Internal;
 #else
 #define PROFBWD(ARGS...) /**/
 #endif
+
+/*------------------------------------------------------------------------*/
 
 #define PROFILES \
 PROFILE(analyze,3) \
@@ -62,10 +71,16 @@ PROFBWD(sublast,4) \
 PROFILE(subsume,2) \
 
 
+/*------------------------------------------------------------------------*/
+
+// See 'START' and 'STOP' in 'macros.hpp' too.
+
 struct Profile {
-  double value;
-  const char * name;
-  int level;
+
+  double value;      // accumulated time
+  const char * name; // name of the profiled function (or 'phase')
+  const int level;   // allows to cheaply test if profiling is enabled
+
   Profile (const char * n, int l) : value (0), name (n), level (l) { }
 };
 

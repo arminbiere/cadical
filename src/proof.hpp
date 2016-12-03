@@ -3,6 +3,8 @@
 
 namespace CaDiCaL {
 
+// Provides proof tracing in the DRAT format.
+
 class File;
 class Clause;
 class Internal;
@@ -21,8 +23,10 @@ class Proof {
   void trace_clause (Clause *, bool add);
 
 public:
+
   Proof (Internal *, File *, bool b, bool o);
   ~Proof ();
+
   void trace_empty_clause ();
   void trace_unit_clause (int unit);
   void trace_add_clause (Clause *);
