@@ -15,6 +15,9 @@ void Internal::reset_watches () {
   wtab = 0;
 }
 
+// This can be quite costly since lots of memory is accessed in a rather
+// random fashion, and thus we optionally profile it.
+
 void Internal::connect_watches () {
   START (connect);
   assert (watches ());
