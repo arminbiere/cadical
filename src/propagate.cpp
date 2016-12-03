@@ -7,22 +7,32 @@
 namespace CaDiCaL {
 
 inline void Internal::inlined_assign (int lit, Clause * reason) {
+
   int idx = vidx (lit);
+
   assert (!vals[idx]);
   assert (!flags (idx).eliminated || !reason);
+
   Var & v = var (idx);
   v.level = level;
   v.trail = (int) trail.size ();
   v.reason = reason;
-  if (!level) learn_unit_clause (lit);
+
+  if (!level) learn_unit_clause (lit);   // increases 'stats.fixed'
+
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
-  if (!simplifying) phases[idx] = tmp;
-  fixedprop (lit) = stats.fixed;
   assert (val (lit) > 0);
+  assert (val (-lit) < 0);
+
+  if (!simplifying) phases[idx] = tmp;   // phase saving during search
+
+  fixedprop (lit) = stats.fixed;         // avoids too much probing
+
   trail.push_back (lit);
   LOG (reason, "assign %d", lit);
+
   // As 'assign' is called most of the time from 'propagate' below and then
   // the watches of '-lit' are accessed next during propagation it is wise
   // to tell the processor to prefetch the memory of those watches.  This
@@ -68,16 +78,19 @@ void Internal::assign_driving (int lit, Clause * c) {
 // The 'propagate' function is usually the hot-spot of a CDCL SAT solver.
 // The 'trail' stack saves assigned variables and is used here as BFS queue
 // for checking clauses with the negation of assigned variables for being in
-// conflict or whether they produce additional assignments (units).  This
-// version of 'propagate' uses lazy watches and keeps two watched literals
-// at the beginning of the clause.  We also use 'blocking literals' to
-// reduce the number of times clauses have to be visited (2008 JSAT paper by
-// Chu, Harwood and Stuckey).  The watches know if a watched clause is
+// conflict or whether they produce additional assignments (units). 
+
+// This version of 'propagate' uses lazy watches and keeps two watched
+// literals at the beginning of the clause.  We also use 'blocking literals'
+// to reduce the number of times clauses have to be visited (2008 JSAT paper
+// by Chu, Harwood and Stuckey).  The watches know if a watched clause is
 // binary, in which case it never hast to be visited.  If a binary clause is
-// falsified we continue propagating.  Finally, we save the position of the
-// last watch replacement in 'pos', which in turn reduces certain quadratic
-// accumulated propagation costs (2013 JAIR article by Ian Gent) at the
-// expense of four more bytes.
+// falsified we continue propagating.
+
+// Finally, for long clauses we save the position of the last watch
+// replacement in 'pos', which in turn reduces certain quadratic accumulated
+// propagation costs (2013 JAIR article by Ian Gent) at the expense of four
+// more bytes for long clauses (where it does not matter much).
 
 bool Internal::propagate () {
   assert (!unsat);
