@@ -10,6 +10,10 @@
 
 namespace CaDiCaL {
 
+/*------------------------------------------------------------------------*/
+
+// Initialize all the options to their default value 'V'.
+
 Options::Options (Internal * s) : internal (s) {
 #define OPTION(N,T,V,L,H,D) \
   N = (T) (V);

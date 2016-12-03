@@ -3,11 +3,23 @@
 
 /*------------------------------------------------------------------------*/
 
+// The 'check' option has by default '0' in optimized compilation, but for
+// debugging and testing we want to set it to '1', by default.  Setting
+// 'check' to '1' for instance triggers saving all the original clauses for
+// checking witnesses and also learned clauses if a solution is provided.
+
 #ifndef NDEBUG
 #define DEBUG 1
 #else
 #define DEBUG 0
 #endif
+
+/*------------------------------------------------------------------------*/
+
+// Some of the 'OPTION' macros below should only be included if certain
+// compile time options are enabled.  This has the effect, that for instance
+// if 'LOGGING' is defined, and thus logging code is included, then also the
+// 'log' option is defined.  Otherwise the 'log' option is not included.
 
 #ifdef LOGGING
 #define LOGOPT OPTION
@@ -34,6 +46,8 @@
 #endif
 
 /*------------------------------------------------------------------------*/
+
+// In order to add new option, simply add a new line below.
 
 #define OPTIONS \
 \
@@ -126,7 +140,7 @@ public:
   // member 'bool Options.restart' here.  This will give fast and type save
   // access to option values (internally).  In principle one could make all
   // options simply 'double' though, but that requires double conversions
-  // during accessing options at run-time and disregard the intended types,
+  // during accessing options at run-time and disregards the intended types,
   // e.g., one would need to allow fractional values for actual integer
   // or boolean options.  Keeping the different types makes the output of
   // 'print' and 'usage' also more appealing (since correctly typed values
@@ -158,7 +172,8 @@ public:
   // Interface to options using in a certain sense non-type-safe 'double'
   // values even for 'int' and 'bool'.  However, 'double' can hold a 'bool'
   // as well an 'int' value precisely, e.g., if the result of 'get' is cast
-  // down again by the client.  This would only fail for 64 byte 'long'.
+  // down again by the client.  This would only fail for 64 byte 'long',
+  // which we currently do not support as option type.
   //
   bool has (const char * name);
   double get (const char * name);
