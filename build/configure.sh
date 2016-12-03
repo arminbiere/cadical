@@ -1,4 +1,10 @@
 #!/bin/sh
+
+# Run './configure.sh' to produce a 'makefile' in the 'build' directory.
+
+#--------------------------------------------------------------------------#
+# Common default options.
+#
 debug=no
 stats=no
 logging=no
@@ -6,16 +12,28 @@ check=no
 coverage=no
 profile=no
 
+# Options do disable code, which usually is not included.
+#
 bce=no
 shrink=no
 backward=no
+
+#--------------------------------------------------------------------------#
 
 die () {
   echo "*** configure.sh: $*" 1>&2
   exit 1
 }
+
+# Check that we are in the 'build' directory.
+
 [ -f ../VERSION -a -f makefile.in -a -f make-config-header.sh ] || \
 die "change to 'build' directory before calling this script"
+
+#--------------------------------------------------------------------------#
+
+# Parse and handle command line options.
+
 usage () {
 cat << EOF
 usage: configure.sh [ <option> ... ]
@@ -36,6 +54,7 @@ where '<option>' is one of the following
 EOF
 exit 0
 }
+
 while [ $# -gt 0 ]
 do
   case $1 in
@@ -54,6 +73,11 @@ do
   esac
   shift
 done
+
+#--------------------------------------------------------------------------#
+
+# Prepare '@CXX@' and '@CXXFLAGS@' parameters for 'makefile.in'
+
 [ x"$CXX" = x ] && CXX=g++
 if [ x"$CXXFLAGS" ]
 then
@@ -71,6 +95,7 @@ then
     esac
   fi
 fi
+
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
 [ $stats = yes ] && CXXFLAGS="$CXXFLAGS -DSTATS"
@@ -79,6 +104,11 @@ fi
 [ $backward = yes ] && CXXFLAGS="$CXXFLAGS -DBACKWARD"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
+
+#--------------------------------------------------------------------------#
+
+# Instantiate the 'makefile.in' template to produce 'makefile'.
+
 echo "$CXX $CXXFLAGS"
 rm -f makefile
 sed -e "s,@CXX@,$CXX," -e "s,@CXXFLAGS@,$CXXFLAGS," makefile.in > makefile

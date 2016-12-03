@@ -1,12 +1,15 @@
 #!/bin/sh
 
-# Otherwise might have for instance an umlaut in 'CADICAL_COMPILED'
+# Used to 'config.hpp', which in turn is used in 'banner' to print compile
+# time options, compiler version, and source code version.
 
+# Otherwise might have for instance an umlaut in 'CADICAL_COMPILED'
+#
 LC_TIME="en_US"
 export LC_TIME
 
 # Get compiler, its versions and compile flags from 'makefile'.
-
+#
 CXX="`sed -e '/^CXX=/!d' -e 's,.*=,,' makefile`"
 CXXFLAGS="`sed -e '/^CXXFLAGS=/!d' -e 's,.*=,,' makefile`"
 case x"$CXX" in 

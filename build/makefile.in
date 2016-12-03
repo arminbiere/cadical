@@ -1,6 +1,8 @@
+# 'makefile' template with '@CXX@' and '@CXXFLAGS@' as parameters
+# relies on 'gmake' for dependency handling and '$(shell ...)' commands
 .SUFFIXES: .cpp .o
 MAKEFLAGS=-j $(if $(CORES),$(CORES),1)
-OBJ=$(shell ls ../src/*.cpp|sed -e '/main/d' -e 's,../src/,,' -e 's,.cpp$$,.o,g')
+OBJ=$(shell ls ../src/*.cpp|sed -e '/main/d' -e '/app/d' -e 's,../src/,,' -e 's,.cpp$$,.o,g')
 SRC=$(shell ls ../src/*.cpp ../src/*.hpp)
 CXX=@CXX@
 CXXFLAGS=@CXXFLAGS@
@@ -9,8 +11,8 @@ all: cadical libcadical.a
 %.o: ../src/%.cpp
 	$(COMPILE) -c $<
 -include dependencies
-cadical: main.o libcadical.a makefile
-	$(COMPILE) -o $@ main.o -L. -lcadical
+cadical: main.o app.o libcadical.a makefile
+	$(COMPILE) -o $@ main.o app.o -L. -lcadical
 libcadical.a: $(OBJ) makefile
 	rm -f $@
 	ar rc $@ $(OBJ)
