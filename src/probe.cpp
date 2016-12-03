@@ -4,6 +4,8 @@
 
 namespace CaDiCaL {
 
+// Failed literal probing in phases.  
+
 bool Internal::probing () {
   if (!opts.probe) return false;
   return lim.probe <= stats.conflicts;
@@ -37,6 +39,8 @@ Internal::analyze_failed_reason (int lit, Clause * reason, int & open) {
 }
 
 /*------------------------------------------------------------------------*/
+
+// This a specialized instance of 'analyze'.
 
 void Internal::failed_literal (int failed) {
 
@@ -101,36 +105,68 @@ void Internal::probe () {
 
   backtrack ();
 
+  // First determine all the literals which occur in binary clauses. It is
+  // way faster. To go over the clauses once, instead of walking the watch
+  // lists for each literal.
+  //
   signed char * bins;
   NEW (bins, signed char, 2*(max_var + 1));
   ZERO (bins, signed char, 2*(max_var + 1));
-  bins += max_var;
-
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
     if (c->size != 2) continue;
-    bins[c->literals[0]] = 1;
-    bins[c->literals[1]] = 1;
+    bins[vlit (c->literals[0])] = 1;
+    bins[vlit (c->literals[1])] = 1;
   }
 
+  // Probing is limited in terms of non-probing propagations
+  // 'stats.propagations'. We allow a certain percentage 'opts.probereleff'
+  // (say %5) of probing propagations (called 'probagations') in each
+  // probing with a lower bound of 'opts.probmineff'.
+  //
   long delta = opts.probereleff * stats.propagations;
   if (delta < opts.probemineff) delta = opts.probemineff;
   long limit = stats.probagations + delta;
 
+  // We have a persistent variable index iterator to schedule probes, which
+  // starts from the last variable index tried before and wraps around at
+  // 'max_var' until the first variable index is reached or the probing
+  // limit is hit.  The next to last probe tried is saved and will be used
+  // as starting point for the next probing round.
+  //
   VarIdxIterator it (lim.last_probed, max_var);
   int idx;
+
   while (!unsat && stats.probagations < limit && (idx = it.next ())) {
-    if (val (idx)) continue;
-    if (flags (idx).eliminated) continue;
+
+    if (!active (idx)) continue;
+
+    // First check whether there was a new unit learned since the last time
+    // either 'idx' or '-idx' where propagated.  If both were propagated
+    // without producing a unit and no new unit has been learned since then,
+    // there is no need to consider 'idx' as probe.  Note that 'fixedprop'
+    // also takes propagations during regular CDCL search into account.
+    //
     bool pos_prop_no_fail = fixedprop (idx) < stats.fixed;
     bool neg_prop_no_fail = fixedprop (-idx) < stats.fixed;
     if (!pos_prop_no_fail && !neg_prop_no_fail) continue;
-    bool pos_bin_occs = bins[idx];
-    bool neg_bin_occs = bins[-idx];
+
+    // Then focus on roots of the binary implication graph, which are
+    // literals which occur negatively in a binary clause, but not
+    // positively.  If neither 'idx' nor '-idx' is a root it does not make
+    // sense to probe this variable.  This assumes that equivalent literal
+    // substitution was performed.
+    //
+    bool pos_bin_occs = bins[vlit (idx)];
+    bool neg_bin_occs = bins[vlit (-idx)];
     if (pos_bin_occs == neg_bin_occs) continue;
+
+    // First try the phase in which the variable is a root unless that
+    // literal was propagated since the last found unit without success.
+    //
     int decision;
     if (pos_bin_occs) {
       assert (!neg_bin_occs);
@@ -141,18 +177,14 @@ void Internal::probe () {
       if (!pos_prop_no_fail) continue;
       decision = idx;
     } 
+
     LOG ("probing %d", decision);
     stats.probed++;
-    size_t before_propagation = trail.size ();
     assume_decision (decision);
-    if (propagate ()) {
-      for (size_t i = before_propagation; i < trail.size (); i++)
-	fixedprop (trail[i]) = stats.fixed;
-      backtrack ();
-    } else failed_literal (decision);
+    if (propagate ()) backtrack ();
+    else failed_literal (decision);
   }
 
-  bins -= max_var;
   DEL (bins, signed char, 2*(max_var + 1));
 
   int failed = stats.failed - old_failed;
@@ -165,7 +197,7 @@ void Internal::probe () {
   assert (simplifying);
   simplifying = false;
 
-  if (failed) inc.probe *= 2;
+  if (!failed) inc.probe *= 2;
   else inc.probe += opts.probeint;
   lim.probe = stats.conflicts + inc.probe;
 
