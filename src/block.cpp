@@ -39,8 +39,8 @@ bool Internal::block_clause_on_literal (Clause * c, int pivot) {
       if (tmp > 0) satisfied = true;
       else if (tmp < 0) continue;
       else if (marked (lit) < 0) {
-	LOG (d, "clashing literal %d", lit);
-	break;
+        LOG (d, "clashing literal %d", lit);
+        break;
       }
     }
     if (satisfied) mark_garbage (d);
@@ -79,7 +79,7 @@ void Internal::turn_into_redundant_blocked_clause (Clause * c) {
   assert (!c->garbage);
   assert (!c->redundant);
   assert (stats.irredundant > 0);
-  assert (stats.irrbytes >= (long) c->bytes ()), 
+  assert (stats.irrbytes >= (long) c->bytes ()),
   stats.irredundant--;
   stats.irrbytes -= c->bytes ();
   mark_removed (c);
@@ -88,7 +88,7 @@ void Internal::turn_into_redundant_blocked_clause (Clause * c) {
   c->blocked = 1;
   stats.redblocked++;
   c->glue = c->size;
-} 
+}
 
 void Internal::block () {
 
@@ -150,18 +150,18 @@ void Internal::block () {
       Clause * c = *i;
       if (c->redundant || c->garbage) continue;
       if (block_clause_on_literal (c, lit)) {
-	LOG (c, "blocked on %d", lit);
-	push_on_extension_stack (c, lit);
-	const const_literal_iterator eoc = c->end ();
-	const_literal_iterator l;
-	for (l = c->begin (); l != eoc; l++) {
-	  const int other = *l;
-	  if (val (other)) continue;
-	  if (!schedule.contains (-other)) schedule.push_back (-other);
-	}
-	stats.blocked++;
-	if (c->size > opts.blockeepsize) mark_garbage (c);
-	else turn_into_redundant_blocked_clause (c);
+        LOG (c, "blocked on %d", lit);
+        push_on_extension_stack (c, lit);
+        const const_literal_iterator eoc = c->end ();
+        const_literal_iterator l;
+        for (l = c->begin (); l != eoc; l++) {
+          const int other = *l;
+          if (val (other)) continue;
+          if (!schedule.contains (-other)) schedule.push_back (-other);
+        }
+        stats.blocked++;
+        if (c->size > opts.blockeepsize) mark_garbage (c);
+        else turn_into_redundant_blocked_clause (c);
       } else *j++ = c;
     }
     if (j == eor) continue;

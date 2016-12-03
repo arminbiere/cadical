@@ -78,7 +78,7 @@ void Internal::assign_driving (int lit, Clause * c) {
 // The 'propagate' function is usually the hot-spot of a CDCL SAT solver.
 // The 'trail' stack saves assigned variables and is used here as BFS queue
 // for checking clauses with the negation of assigned variables for being in
-// conflict or whether they produce additional assignments (units). 
+// conflict or whether they produce additional assignments (units).
 
 // This version of 'propagate' uses lazy watches and keeps two watched
 // literals at the beginning of the clause.  We also use 'blocking literals'
@@ -119,21 +119,21 @@ bool Internal::propagate () {
 
       if (w.size == 2) {
 
-	// Binary clauses are treated separately since they do not require
-	// to access the clause at all (only during conflict analysis, and
-	// there also only to simplify the code).
-        
+        // Binary clauses are treated separately since they do not require
+        // to access the clause at all (only during conflict analysis, and
+        // there also only to simplify the code).
+
         if (b < 0) conflict = w.clause;          // but continue ...
-	else inlined_assign (w.blit, w.clause);
+        else inlined_assign (w.blit, w.clause);
 
       } else {
 
-	// The first pointer access to a long (non-binary) clause is the
-	// most expensive operation in a CDCL SAT solver.  We count this by
-	// the 'visits' counter.  However, since this would be in the
-	// tightest loop of the solver, we only want to count it if
-	// expensive statistics are required (actually costs quite a bit
-	// having this enabled all the time).
+        // The first pointer access to a long (non-binary) clause is the
+        // most expensive operation in a CDCL SAT solver.  We count this by
+        // the 'visits' counter.  However, since this would be in the
+        // tightest loop of the solver, we only want to count it if
+        // expensive statistics are required (actually costs quite a bit
+        // having this enabled all the time).
 
         EXPENSIVE_STATS_ADD (simplifying, visits, 1);
 
@@ -141,10 +141,10 @@ bool Internal::propagate () {
 
         literal_iterator lits = w.clause->begin ();
 
-	// Simplify the code by assuming 'lit' is first literal in clause.
-	//
+        // Simplify the code by assuming 'lit' is first literal in clause.
+        //
         if (lits[0] == lit) swap (lits[0], lits[1]);
-	assert (lits[1] == lit);
+        assert (lits[1] == lit);
 
         const int u = val (lits[0]);
 
@@ -153,58 +153,58 @@ bool Internal::propagate () {
 
           assert (w.size == w.clause->size);
           const const_literal_iterator end = lits + w.size;
-	  literal_iterator k;
-	  int v = -1;
+          literal_iterator k;
+          int v = -1;
 
-	  if (w.clause->have.pos) {
+          if (w.clause->have.pos) {
 
-	    // This follows Ian Gent's idea of saving the position of the
-	    // last watch replacement.  In essence it needs two copies of
-	    // the default search for a watch replacement (in essence the
-	    // code in the 'else' branch below), one starting at the saved
-	    // position until the end of the clause and then if that one
-	    // failed to find a replacement another one starting at the
-	    // first non-watched literal until the saved position.
+            // This follows Ian Gent's idea of saving the position of the
+            // last watch replacement.  In essence it needs two copies of
+            // the default search for a watch replacement (in essence the
+            // code in the 'else' branch below), one starting at the saved
+            // position until the end of the clause and then if that one
+            // failed to find a replacement another one starting at the
+            // first non-watched literal until the saved position.
 
-	    literal_iterator start = lits + w.clause->pos ();
-	    k = start;
-	    while (k != end && (v = val (*k)) < 0) k++;
+            literal_iterator start = lits + w.clause->pos ();
+            k = start;
+            while (k != end && (v = val (*k)) < 0) k++;
 
-	    EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
+            EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
 
-	    if (v < 0) {  // need second search starting at the head?
+            if (v < 0) {  // need second search starting at the head?
 
-	      const const_literal_iterator middle = lits + w.clause->pos ();
-	      k = lits + 2;
-	      assert (w.clause->pos () <= w.size);
-	      while (k != middle && (v = val (*k)) < 0) k++;
+              const const_literal_iterator middle = lits + w.clause->pos ();
+              k = lits + 2;
+              assert (w.clause->pos () <= w.size);
+              while (k != middle && (v = val (*k)) < 0) k++;
 
-	      EXPENSIVE_STATS_ADD (simplifying, traversed, k - (lits + 2));
-	    }
+              EXPENSIVE_STATS_ADD (simplifying, traversed, k - (lits + 2));
+            }
 
-	    w.clause->pos () = k - lits;  // always save position
+            w.clause->pos () = k - lits;  // always save position
 
           } else {
 
-	    // For short clauses (particularly if they are of size 3), we do
-	    // not want to save the position.  This saves space but also
-	    // avoids a second search.  We do pay by the branch of this
-	    // 'else' branch though, but some initial testing seems to show
-	    // that it is useful to have this 'else' branch separately.
+            // For short clauses (particularly if they are of size 3), we do
+            // not want to save the position.  This saves space but also
+            // avoids a second search.  We do pay by the branch of this
+            // 'else' branch though, but some initial testing seems to show
+            // that it is useful to have this 'else' branch separately.
 
-	    literal_iterator start = lits + 2;
-	    k = start;
-	    while (k != end && (v = val (*k)) < 0) k++;
+            literal_iterator start = lits + 2;
+            k = start;
+            while (k != end && (v = val (*k)) < 0) k++;
 
-	    EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
-	  }
+            EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
+          }
 
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
 
           if (v > 0) j[-1].blit = *k;    // satisfied, just replace 'blit'
           else if (!v) {
 
-	    // Found new unassigned replacement literal to be watched.
+            // Found new unassigned replacement literal to be watched.
 
             LOG (w.clause, "unwatch %d in", *k);
 
@@ -226,7 +226,7 @@ bool Internal::propagate () {
   else             stats.propagations += delta;
   //                        ^ !!!!!
   if (conflict) {
-    if (!simplifying) stats.conflicts++; 
+    if (!simplifying) stats.conflicts++;
     LOG (conflict, "conflict");
   }
   STOP (propagate);

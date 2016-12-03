@@ -58,7 +58,7 @@ inline void Internal::elim_update_added (Clause * c) {
     const int lit = *i;
     if (!active (lit)) continue;
     Occs & os = occs (lit);
-    if (os.empty ()) continue;		// not connected
+    if (os.empty ()) continue;          // not connected
     os.push_back (c);
     noccs2 (lit)++;
     const int idx = abs (lit);
@@ -79,7 +79,7 @@ inline void Internal::elim_update_removed (Clause * c, int except) {
     if (lit == except) continue;
     assert (lit != -except);
     if (!active (lit)) continue;
-    if (occs (lit).empty ()) continue;		// not connected
+    if (occs (lit).empty ()) continue;          // not connected
     long & score = noccs2 (lit);
     assert (score > 0);
     score--;
@@ -109,7 +109,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   stats.elimres++;
 
   if (c->garbage || d->garbage) return false;
-  if (c->size > d->size) swap (c, d);		// optimize marking
+  if (c->size > d->size) swap (c, d);           // optimize marking
   if (c->size == 2) stats.elimres2++;
 
   assert (!level);
@@ -177,7 +177,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   unmark (c);
   const size_t size = clause.size ();
   if (tautological || satisfied || eliminated || size <= 1) clause.clear ();
-  
+
 #ifdef BCE
   if (eliminated) {
     assert (d->redundant);
@@ -250,7 +250,7 @@ bool Internal::elim_resolvents_are_bounded (int pivot, long pos, long neg) {
 
   const const_occs_iterator pe = ps.end (), ne = ns.end ();
   const_occs_iterator i, j;
-  
+
   long pm = 0, nm = 0;
 
   for (i = ps.begin (); i != pe; i++) {
@@ -309,7 +309,7 @@ bool Internal::elim_resolvents_are_bounded (int pivot, long pos, long neg) {
       if (d->garbage) { needed--; continue; }
       stats.elimrestried++;
       if (resolve_clauses (c, pivot, d)) {
-	assert (clause.size () <= (size_t) opts.elimclslim);
+        assert (clause.size () <= (size_t) opts.elimclslim);
         clause.clear ();
         if (++count > bound) {
           LOG ("too many %ld non-tautological resolvents on %d",
@@ -352,14 +352,14 @@ inline void Internal::elim_add_resolvents (int pivot) {
       check_learned_clause ();
       if ((!c->redundant && !d->redundant)
 #ifdef BCE
-	|| clause.size () <= (size_t) opts.blockeepsize
+        || clause.size () <= (size_t) opts.blockeepsize
 #endif
-	  ) {
-	resolvents++;
-	Clause * r = new_resolved_irredundant_clause ();
-	if (!c->redundant && !d->redundant) elim_update_added (r);
+          ) {
+        resolvents++;
+        Clause * r = new_resolved_irredundant_clause ();
+        if (!c->redundant && !d->redundant) elim_update_added (r);
 #ifdef BCE
-	else turn_into_redundant_blocked_clause (r);
+        else turn_into_redundant_blocked_clause (r);
 #endif
       }
       clause.clear ();
@@ -495,18 +495,18 @@ bool Internal::elim_round () {
       bool satisfied = false, falsified = false;
       for (j = c->begin (); j != eol; j++) {
         const int lit = *j, tmp = val (lit);
-	if (tmp > 0) satisfied = true;
-	else if (tmp < 0) falsified = true;
-	else assert (active (lit));
+        if (tmp > 0) satisfied = true;
+        else if (tmp < 0) falsified = true;
+        else assert (active (lit));
       }
       if (satisfied) mark_garbage (c);          // more precise counts
       else {
-	for (j = c->begin (); j != eol; j++) {
-	  const int lit = *j;
-	  if (!active (lit)) continue;
-	  if (falsified) mark_removed (lit); // simulate unit propagation
-	  noccs2 (lit)++;
-	}
+        for (j = c->begin (); j != eol; j++) {
+          const int lit = *j;
+          if (!active (lit)) continue;
+          if (falsified) mark_removed (lit); // simulate unit propagation
+          noccs2 (lit)++;
+        }
       }
     }
   }

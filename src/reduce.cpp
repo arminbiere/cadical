@@ -67,7 +67,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     Clause * c = *i;
     if (!c->redundant) continue;                 // keep irredundant
 #ifdef BCE
-    if (c->blocked) continue;			 // keep blocked clauses
+    if (c->blocked) continue;                    // keep blocked clauses
 #endif
     if (c->reason) continue;                     // need to keep reasons
     if (c->garbage) continue;                    // already marked

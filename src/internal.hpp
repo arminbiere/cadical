@@ -85,7 +85,7 @@ class Internal {
   bool unsat;                   // empty clause found or learned
   bool iterating;               // report learned unit (iteration)
   bool clashing;                // found clashing units in during parsing
-  bool simplifying;		// outside of CDCL loop
+  bool simplifying;             // outside of CDCL loop
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // maximum variable index
   int level;                    // decision level ('control.size () - 1')
@@ -101,7 +101,7 @@ class Internal {
   Occs * otab;                  // table of occurrences for all literals
   long * ntab;                  // table number one sided occurrences
   long * ntab2;                 // table number two sided occurrences
-  int * ptab;			// propagated table
+  int * ptab;                   // propagated table
   Watches * wtab;               // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
   size_t propagated;            // next trail position to propagate
@@ -149,7 +149,7 @@ class Internal {
   void enlarge (int new_max_var);
 
   // A variable is 'active' if it is not eliminated nor fixed.
-  // 
+  //
   bool active (int lit) { return flags(lit).active (); }
 
   int active_variables () const {
@@ -380,7 +380,7 @@ class Internal {
   // be reconsidered in subsumption checks, e.g., only clauses with 'added'
   // variables are checked to be forward subsumed.
   //
-  void mark_added (int lit) { 
+  void mark_added (int lit) {
     Flags & f = flags (lit);
     if (f.added) return;
     LOG ("marking %d as added", abs (lit));

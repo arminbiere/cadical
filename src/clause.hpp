@@ -103,7 +103,7 @@ public:
         int & pos ()       { assert (have.pos); return _pos; }
   const int & pos () const { assert (have.pos); return _pos; }
 
-  void update_after_shrinking () { 
+  void update_after_shrinking () {
     assert (size >= 2);
     if (have.pos && _pos >= size) _pos = 2;
     if (glue > size) glue = size;

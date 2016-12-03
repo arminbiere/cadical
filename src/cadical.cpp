@@ -10,7 +10,6 @@
 #include <cstring>
 #include <cstdio>
 
-
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/

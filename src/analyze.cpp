@@ -272,7 +272,7 @@ void Internal::analyze () {
 
   // Update decision heuristics.
   //
-  bump_variables ();                         
+  bump_variables ();
 
   // Determine back jump level, backtrack and assign flipped literal.
   //

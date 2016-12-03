@@ -334,7 +334,7 @@ void Internal::subsume_round () {
     // If the clause contains a root level assigned (fixed) literal we will
     // not work on it.  This simplifies the code substantially since we do
     // not have to care about assignments at all.  Strengthening becomes
-    // much simpler too.  
+    // much simpler too.
     //
     if (fixed) {
       LOG (c, "skipping (fixed literal %d)", lit);

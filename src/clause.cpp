@@ -69,7 +69,7 @@ void Internal::mark_removed (Clause * c, int except) {
   for (i = c->begin (); i != end; i++)
     if (*i != except) mark_removed (*i);
 }
-  
+
 // Mark the variables of a (redundant or irredundant) clause to 'have been
 // added', which triggers clauses with such a variables, to be considered
 // both as a subsumed or subsuming clause in the next subsumption phase.
@@ -182,7 +182,7 @@ void Internal::delete_clause (Clause * c) {
 // We want to eagerly update statistics as soon clauses are marked garbage.
 // Otherwise 'report' for instance gives wrong numbers after 'subsume'
 // before the next 'reduce'.  Thus we factored out marking and accounting
-// for garbage clauses.  
+// for garbage clauses.
 //
 // We also update garbage statistics at this point.  This helps to
 // determine whether the garbage collector should be called during for

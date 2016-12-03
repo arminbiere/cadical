@@ -72,7 +72,6 @@ PROFILE(simplify,1) \
 PROFBWD(sublast,4) \
 PROFILE(subsume,2) \
 
-
 /*------------------------------------------------------------------------*/
 
 // See 'START' and 'STOP' in 'macros.hpp' too.

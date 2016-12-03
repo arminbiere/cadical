@@ -21,7 +21,7 @@ struct Message {
   static void error (Internal *, const char *, ...);
 
   // This is for printing section headers in the form
-  // 
+  //
   //  c ---- [ <title> ] ---------------------
   //
   // nicely aligned (and of course is ignored if 'quiet' is set).

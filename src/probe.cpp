@@ -4,7 +4,7 @@
 
 namespace CaDiCaL {
 
-// Failed literal probing in phases.  
+// Failed literal probing in phases.
 
 bool Internal::probing () {
   if (!opts.probe) return false;
@@ -176,7 +176,7 @@ void Internal::probe () {
       assert (neg_bin_occs);
       if (!pos_prop_no_fail) continue;
       decision = idx;
-    } 
+    }
 
     LOG ("probing %d", decision);
     stats.probed++;
@@ -190,7 +190,7 @@ void Internal::probe () {
   int failed = stats.failed - old_failed;
   long probed = stats.probed - old_probed;
 
-  VRB ("probe", stats.probings, 
+  VRB ("probe", stats.probings,
     "probed %ld and found %d failed literals",
     probed, failed);
 

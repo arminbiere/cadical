@@ -31,10 +31,10 @@ const unsigned invalid_heap_position = UINT_MAX;
 
 template<class C> class heap {
 
-  vector<int> array;	// actual binary heap
-  vector<unsigned> pos;	// positions of positive 'int' elements in array
-  vector<unsigned> neg;	// positions of negative 'int' elements in array
-  C less;		// less-than for 'int' elements
+  vector<int> array;    // actual binary heap
+  vector<unsigned> pos; // positions of positive 'int' elements in array
+  vector<unsigned> neg; // positions of negative 'int' elements in array
+  C less;               // less-than for 'int' elements
 
   // Map a positive 'int' element to its position entry in the 'pos' map.
   //
@@ -91,8 +91,8 @@ template<class C> class heap {
     while (has_left (e)) {
       int c = left (e);
       if (has_right (e)) {
-	int r = right (e);
-	if (less (c, r)) c = r;
+        int r = right (e);
+        if (less (c, r)) c = r;
       }
       if (!less (e, c)) break;
       exchange (e, c);
@@ -111,11 +111,11 @@ template<class C> class heap {
       if (l < array.size ()) assert (!less (array[i], array[l]));
       if (r < array.size ()) assert (!less (array[i], array[r]));
       if (array[i] >= 0) {
-	assert ((size_t) array[i] < pos.size ());
-	assert (i == (size_t) pos[array[i]]);
+        assert ((size_t) array[i] < pos.size ());
+        assert (i == (size_t) pos[array[i]]);
       } else {
-	assert ((size_t) - (long) array[i] < neg.size ());
-	assert (i == (size_t) neg[(size_t) - (long) array[i]]);
+        assert ((size_t) - (long) array[i] < neg.size ());
+        assert (i == (size_t) neg[(size_t) - (long) array[i]]);
       }
     }
     for (size_t i = 0; i < pos.size (); i++) {

@@ -20,7 +20,7 @@ namespace CaDiCaL {
 // that in MiniSAT this arena is also required for MiniSAT to use 32 bit
 // clauses references instead of 64 bit pointers.  This would restrict the
 // maximum number of clauses and thus is a restriction we do not want to use
-// anymore.  
+// anymore.
 
 // New learned clauses are allocated in CaDiCaL outside of this arena and
 // moved to the arena during garbage collection.  The additional 'to' space

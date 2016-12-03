@@ -45,5 +45,4 @@ typedef Watches::const_iterator const_watch_iterator;
 
 };
 
-
 #endif
