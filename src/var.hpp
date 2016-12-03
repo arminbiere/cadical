@@ -10,7 +10,7 @@ class Clause;
 struct Var {
 
   // Note that none of these members is valid unless the variable is
-  // assigned.  Thus during unassigning it we do not reset it.
+  // assigned.  Thus during unassigning a variable we do not reset it.
 
   int level;            // decision level
   int trail;            // trail height at assignment

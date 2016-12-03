@@ -8,6 +8,8 @@ namespace CaDiCaL {
 
 using namespace std;
 
+// Common simple utility functions independent from 'Internal'.
+
 /*------------------------------------------------------------------------*/
 
 inline double relative (double a, double b) { return b ? a / b : 0; }
@@ -45,7 +47,7 @@ template<class T> void erase_vector (vector<T> & v) {
 
 // The standard 'Effective STL' way (though not guaranteed) to shrink the
 // capacity of a vector to its size thus kind of releasing all the internal
-// access memory not needed at the moment any more.
+// excess memory not needed at the moment any more.
 
 template<class T> void shrink_vector (vector<T> & v) {
   if (v.capacity () > v.size ()) { vector<T>(v).swap (v); }
