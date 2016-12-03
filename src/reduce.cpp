@@ -8,10 +8,17 @@
 
 namespace CaDiCaL {
 
+// Once in a while reduce, that is remove learned clauses which are supposed
+// to be less useful in the future.  This is done in increasing intervals,
+// which has the effect of allowing more and more learned clause to be kept
+// for a longer period.
+
 bool Internal::reducing () {
   if (!opts.reduce) return false;
   return stats.conflicts >= lim.reduce;
 }
+
+/*------------------------------------------------------------------------*/
 
 // Reason clauses (on non-zero decision level) can not be collected.
 // We protect them before and unprotect them after garbage collection.
@@ -32,9 +39,13 @@ void Internal::unprotect_reasons () {
   }
 }
 
-// Clause with smaller glucose level (glue) are considered more useful.
-// Then we use the 'analyzed' time stamp as a tie breaker.  So more recently
-// resolved clauses are preferred to keep (if they have the same glue).
+/*------------------------------------------------------------------------*/
+
+// Clause with smaller glucose level (also called 'glue' or 'LBD') are
+// considered more useful following the observations made by the Glucose
+// team in their IJCAI'09 paper.  Then we use the 'analyzed' time stamp as a
+// tie breaker.  Thus more recently resolved clauses are preferred to be
+// kept if they have the same glue.
 
 struct less_usefull {
   bool operator () (Clause * c, Clause * d) {
@@ -60,10 +71,11 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
 #endif
     if (c->reason) continue;                     // need to keep reasons
     if (c->garbage) continue;                    // already marked
-    if (!c->have.analyzed) continue;
-    if (c->analyzed () > lim.analyzed) continue;
+    if (!c->have.analyzed) continue;             // statically deemed useful
+    if (c->analyzed () > lim.analyzed) continue; // keep recent clauses
     stack.push_back (c);
   }
+
   if (opts.reduceglue) sort (stack.begin (), stack.end (), less_usefull ());
   else sort (stack.begin (), stack.end (), analyzed_earlier ());
 
@@ -73,6 +85,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     mark_garbage (*i);
     stats.reduced++;
   }
+
   lim.keptsize = lim.keptglue = 0;
   end = stack.end ();
   for (i = target; i != end; i++) {
@@ -80,6 +93,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     if (c->size > lim.keptsize) lim.keptsize = c->size;
     if (c->glue > lim.keptglue) lim.keptglue = c->glue;
   }
+
   VRB ("reduce", stats.reductions,
     "maximum kept size %d glue %d", lim.keptsize, lim.keptglue);
 }
