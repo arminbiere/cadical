@@ -43,6 +43,12 @@ const char * Signal::name (int sig) {
   return "UNKNOWN";
 }
 
+// TODO printing is not reentrant and might lead to deadlock if the signal
+// is raised during another print attempt (and locked IO is used).  To avoid
+// this we have to either run our own low-level printing routine here or in
+// 'Message' or just dump those statistics somewhere else were we have
+// exclusive access to.  All there solutions are painful and not elegant.
+
 void Signal::catchsig (int sig) {
   if (!catchedsig) {
     catchedsig = true;
