@@ -5,6 +5,23 @@ namespace CaDiCaL {
 
 class Internal;
 
+/*------------------------------------------------------------------------*/
+
+// There is a timer stack for profiling functions.
+
+struct Timer {
+
+  double started;       // starting time (in seconds) for this phase
+  Profile * profile;    // update this profile if phase stops
+
+  Timer (double s, Profile * p) : started (s), profile (p) { }
+  Timer () { }
+
+  void update (double now) { profile->value += now - started; started = now; }
+};
+
+/*------------------------------------------------------------------------*/
+
 // The solver contains some built in profiling (even for optimized code).
 // The idea is that even without using external tools it is possible to get
 // an overview of where time is spent.  This is enabled with the option

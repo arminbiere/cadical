@@ -29,7 +29,6 @@ using namespace std;
 #include "queue.hpp"
 #include "resources.hpp"
 #include "stats.hpp"
-#include "timer.hpp"
 #include "util.hpp"
 #include "var.hpp"
 #include "watch.hpp"
