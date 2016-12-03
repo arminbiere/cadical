@@ -78,6 +78,7 @@ struct Stats {
   int eliminated;    // number of eliminated variables
 
   Stats ();
+
   void print (Internal *);
 };
 

@@ -9,7 +9,11 @@
 
 namespace CaDiCaL {
 
+/*------------------------------------------------------------------------*/
+
 Stats::Stats () { memset (this, 0, sizeof *this); }
+
+/*------------------------------------------------------------------------*/
 
 void Stats::print (Internal * internal) {
   Stats & stats = internal->stats;
