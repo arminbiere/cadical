@@ -336,6 +336,7 @@ void Internal::check_clause_stats () {
 #ifdef BCE
   long blocked = 0;
 #endif
+#endif
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
   for (i = clauses.begin (); i != end; i++) {
