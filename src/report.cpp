@@ -1,7 +1,5 @@
-#include "internal.hpp"
-
 #include "file.hpp"
-#include "report.hpp"
+#include "internal.hpp"
 #include "util.hpp"
 
 #include <cstring>
@@ -12,13 +10,35 @@
 
 namespace CaDiCaL {
 
+// Provide nicely formatted progress report messages while running through
+// the 'report' function below.  The code is so complex, because it should
+// be easy to add and remove reporting of certain statistics, while at the
+// same time proving a nicely looking format, including automatic headers.
+
+/*------------------------------------------------------------------------*/
+
+struct Report {
+
+  const char * header;
+  char buffer[20];
+  int pos;
+
+  Report (const char * h, int precision, int min, double value);
+  Report () { }
+
+  void print_header (char * line);
+};
+
+/*------------------------------------------------------------------------*/
+
 void Report::print_header (char * line) {
   int len = strlen (header);
   for (int i = -1, j = pos - (len + 1)/2 - 1; i < len; i++, j++)
     line[j] = i < 0 ? ' ' : header[i];
 }
 
-Report::Report (const char * h, int precision, int min, double value) :
+Report::Report (const char * h, int precision, int min, double value)
+:
   header (h)
 {
   char fmt[10];
