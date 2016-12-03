@@ -14,6 +14,10 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 void Message::vmessage (Internal * internal, const char * fmt, va_list & ap) {
+#ifdef LOGGING
+  if (!internal->opts.log)
+#endif
+  if (internal->opts.quiet) return;
   fputs ("c ", stdout);
   vprintf (fmt, ap);
   fputc ('\n', stdout);
@@ -21,6 +25,10 @@ void Message::vmessage (Internal * internal, const char * fmt, va_list & ap) {
 }
 
 void Message::message (Internal * internal, const char * fmt, ...) {
+#ifdef LOGGING
+  if (!internal->opts.log)
+#endif
+  if (internal->opts.quiet) return;
   va_list ap;
   va_start (ap, fmt);
   vmessage (internal, fmt, ap);
@@ -68,8 +76,7 @@ void Message::verbose (Internal * internal,
 #ifdef LOGGING
   if (!internal->opts.log)
 #endif
-  if (internal->opts.quiet ||
-      !internal->opts.verbose) return;
+  if (internal->opts.quiet || !internal->opts.verbose) return;
   printf ("c [%s] ", phase);
   va_list ap;
   va_start (ap, fmt);
@@ -85,8 +92,7 @@ void Message::verbose (Internal * internal,
 #ifdef LOGGING
   if (!internal->opts.log)
 #endif
-  if (internal->opts.quiet ||
-      !internal->opts.verbose) return;
+  if (internal->opts.quiet || !internal->opts.verbose) return;
   printf ("c [%s-%ld] ", phase, count);
   va_list ap;
   va_start (ap, fmt);
