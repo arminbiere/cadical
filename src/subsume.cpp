@@ -366,7 +366,7 @@ void Internal::subsume_round () {
     scheduled, percent (scheduled, total), total);
 
   // Now go over the scheduled clauses in the order of increasing size and
-  // try to forward subsume and strengthen them. Forward subsumptions tries
+  // try to forward subsume and strengthen them. Forward subsumption tries
   // to find smaller or same size clauses which subsume or might strengthen
   // the candidate.  After the candidate has been processed connect one
   // of its literals (with smallest number of occurrences at this point) in
