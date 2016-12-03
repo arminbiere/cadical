@@ -18,11 +18,10 @@ void Logger::log (Internal * internal, const char * fmt, ...) {
   fflush (stdout);
 }
 
-template<class T, class I>
-inline static void log_literals (const T & lits, bool sortit = false) {
-  const I end = lits.end ();
-  I i = lits.begin ();
-}
+// It is hard to factor out the common part between the two clause loggers,
+// since they are also used in slightly different contexts.  Our attempt to
+// do so were not more readable than the current version.  See the header
+// for an explanation of the difference between the following two functions.
 
 void Logger::log (Internal * internal, const Clause * c, const char *fmt, ...) {
   va_list ap;
@@ -53,6 +52,8 @@ void Logger::log (Internal * internal, const Clause * c, const char *fmt, ...) {
   fputc ('\n', stdout);
   fflush (stdout);
 }
+
+// Same as above, but for the global 'clause' (which is not a reason).
 
 void Logger::log (Internal * internal,
                   const vector<int> & c, const char *fmt, ...) {
