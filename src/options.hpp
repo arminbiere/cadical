@@ -87,7 +87,7 @@ OPTION(posize,           int,    4, 1,1e9, "size for saving position") \
 OPTION(probe,           bool,    1, 0,  1, "failed literal probing" ) \
 OPTION(probeinit,        int,  500, 0,1e9, "initial probing interval" ) \
 OPTION(probeint,         int,  1e4, 1,1e9, "probing interval increment" ) \
-OPTION(probereleff,   double, 0.05, 0,  1, "relative probing efficiency") \
+OPTION(probereleff,   double, 0.03, 0,  1, "relative probing efficiency") \
 OPTION(probemineff,   double,  1e6, 0,  1, "minimum probing efficiency") \
 OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
 OPTION(profile,          int,    2, 0,  4, "profiling level") \
