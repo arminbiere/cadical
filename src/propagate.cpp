@@ -117,7 +117,7 @@ bool Internal::propagate () {
 
       if (b > 0) continue;                // blocking literal satisfied?
 
-      if (w.size == 2) {
+      if (w.binary) {
 
         // Binary clauses are treated separately since they do not require
         // to access the clause at all (only during conflict analysis, and
@@ -151,8 +151,8 @@ bool Internal::propagate () {
         if (u > 0) j[-1].blit = lits[0];  // satisfied, just replace blit
         else {
 
-          assert (w.size == w.clause->size);
-          const const_literal_iterator end = lits + w.size;
+	  const int size = w.clause->size;
+          const const_literal_iterator end = lits + size;
           literal_iterator k;
           int v = -1;
 
@@ -176,7 +176,7 @@ bool Internal::propagate () {
 
               const const_literal_iterator middle = lits + w.clause->pos ();
               k = lits + 2;
-              assert (w.clause->pos () <= w.size);
+              assert (w.clause->pos () <= size);
               while (k != middle && (v = val (*k)) < 0) k++;
 
               EXPENSIVE_STATS_ADD (simplifying, traversed, k - (lits + 2));
@@ -209,7 +209,7 @@ bool Internal::propagate () {
             LOG (w.clause, "unwatch %d in", *k);
 
             swap (lits[1], *k);
-            watch_literal (lits[1], lit, w.clause, w.size);
+            watch_literal (lits[1], lit, w.clause, size);
 
             j--;  // drop this watch from the watch list of 'lit'
 

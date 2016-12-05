@@ -139,21 +139,10 @@ void Internal::flush_watches (int lit) {
     Clause * c = w.clause;
     if (c->collect ()) continue;
     if (c->moved) c = w.clause = c->copy;
-    if (c->size < w.size) {
-
-      // During 'reduce' root level falsified literals might be removed in
-      // which case the actual clause size does not match the saved size in
-      // the watch lists.  If this is the case we update both size and then
-      // eagerly the blocking literal (even if it got not removed). Note
-      // that if the clause size and watch list size match, then there is no
-      // need to update the watch, except if the clause was moved.
-
-      w.size = c->size;
-      const int new_blit_pos = (c->literals[0] == lit);
-      assert (c->literals[!new_blit_pos] == lit);
-      w.blit = c->literals[new_blit_pos];
-
-    } else assert (c->size == w.size);
+    if (c->size == 2 && !w.binary) w.binary = true;
+    const int new_blit_pos = (c->literals[0] == lit);
+    assert (c->literals[!new_blit_pos] == lit);
+    w.blit = c->literals[new_blit_pos];
     *j++ = w;
   }
   ws.resize (j - ws.begin ());
