@@ -318,6 +318,7 @@ void Internal::subsume_round () {
   for (size_t i = 0; i != size; i++) {
     Clause * c = clauses[i];
     if (c->garbage) continue;
+    //if (c->size < 3) continue;
     if (c->size > opts.subsumeclslim) continue;
     if (!likely_to_be_kept_clause (c)) continue;
 
