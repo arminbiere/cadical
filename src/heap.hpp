@@ -12,7 +12,7 @@ namespace CaDiCaL {
 
 using namespace std;
 
-// This is a priority queue with updates for positive integers implemented
+// This is a priority queue with updates for integers implemented
 // as binary heap.  We need to map integer elements added (through
 // 'push_back') to positions on the binary heap in 'array'. This map is
 // stored in the 'pos' array for positive and in the 'neg' array for
@@ -24,7 +24,8 @@ using namespace std;
 // 'UINT_MAX - 1' elements in the heap.
 
 #ifdef BCE
-// We need the negative integer schedules for BCE.
+// We currently only need the negative integer schedules for BCE and thus
+// adding negative number to the heap is disabled if BCE is not included.
 #endif
 
 const unsigned invalid_heap_position = UINT_MAX;
@@ -161,7 +162,7 @@ template<class C> class heap {
 #ifdef BCE
   bool ncontains (int e) const {
     assert (e < 0);
-    long n = - (long) e;
+    long n = - (long) e; // beware of -INT_MIN overflow
     if (n >= (long) neg.size ()) return false;
     return neg[n] != invalid_heap_position;
   }
@@ -195,7 +196,7 @@ public:
   void push_back (int e) {
     assert (!contains (e));
     size_t i = array.size ();
-    if (i == invalid_heap_position - 1) throw bad_alloc ();
+    assert (i < (size_t) invalid_heap_position);
     array.push_back (e);
     index (e) = (unsigned) i;
     up (e);
