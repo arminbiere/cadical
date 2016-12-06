@@ -53,7 +53,7 @@
 \
 /*     NAME             TYPE, VAL, LO, HI, USAGE */ \
 \
-OPTION(arena,            int,    1, 0,  3, "1=clause,2=var,3=queue") \
+OPTION(arena,            int,    0, 0,  3, "1=clause,2=var,3=queue") \
 BCEOPT(block,           bool,    1, 0,  1, "blocked clause elimination") \
 BCEOPT(blockeepsize,     int,    3, 0,1e9, "max size kept blocked clauses") \
 BCEOPT(blockminclsize,   int,    2, 0,1e9, "minimum clause size for BVE") \
