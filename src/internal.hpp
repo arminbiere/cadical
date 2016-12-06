@@ -93,11 +93,11 @@ class Internal {
   signed char * solution;       // for debugging    [-max_var,max_var]
   signed char * marks;          // signed marks     [1,max_var]
   signed char * phases;         // saved assignment [1,max_var]
+  Queue queue;                  // variable move to front decision queue
   Var * vtab;                   // variable table
   Link * ltab;                  // table of links for decision queue
   Flags * ftab;                 // seen, poison, minimized flags table
   long * btab;                  // enqueue time stamps for queue
-  Queue queue;                  // variable move to front decision queue
   Occs * otab;                  // table of occurrences for all literals
   long * ntab;                  // table number one sided occurrences
   long * ntab2;                 // table number two sided occurrences
@@ -182,7 +182,7 @@ class Internal {
   Link & link (int lit)       { return ltab[vidx (lit)]; }
   Flags & flags (int lit)     { return ftab[vidx (lit)]; }
   long & bumped (int lit)     { return btab[vidx (lit)]; }
-  int & fixedprop (int lit)   { return ptab[vlit (lit)]; }
+  int & propfixed (int lit)   { return ptab[vlit (lit)]; }
 
   const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
 
@@ -413,7 +413,7 @@ class Internal {
   void elim_update_added (Clause *);
   void elim_add_resolvents (int pivot);
   void push_on_extension_stack (Clause *, int pivot);
-  void elim_variable (int pivot);
+  void try_to_eliminate_variable (int pivot);
   void reset_removed ();
   bool elim_round ();
   void extend ();

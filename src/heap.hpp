@@ -33,7 +33,9 @@ template<class C> class heap {
 
   vector<int> array;    // actual binary heap
   vector<unsigned> pos; // positions of positive 'int' elements in array
+#ifdef BCE
   vector<unsigned> neg; // positions of negative 'int' elements in array
+#endif
   C less;               // less-than for 'int' elements
 
   // Map a positive 'int' element to its position entry in the 'pos' map.
@@ -46,6 +48,7 @@ template<class C> class heap {
     return res;
   }
 
+#ifdef BCE
   // Map a negative 'int' element to its position entry in the 'neg' map.
   //
   unsigned & nindex (int e) {
@@ -56,10 +59,18 @@ template<class C> class heap {
     assert (res == invalid_heap_position || (size_t) res < array.size ());
     return res;
   }
+#endif
 
   // Map an 'int' element to its position entry in the 'pos' or 'neg' map.
   //
-  unsigned & index (int e) { return e >= 0 ? pindex (e) : nindex (e); }
+  unsigned & index (int e) {
+#ifdef BCE
+    return e >= 0 ? pindex (e) : nindex (e);
+#else
+    assert (e >= 0);
+    return pindex (e);
+#endif
+  }
 
   bool has_parent (int e) { return index (e) > 0; }
   bool has_left (int e)   { return (size_t) 2*index (e) + 1 < size (); }
@@ -110,24 +121,34 @@ template<class C> class heap {
       size_t l = 2*i + 1, r = 2*i + 2;
       if (l < array.size ()) assert (!less (array[i], array[l]));
       if (r < array.size ()) assert (!less (array[i], array[r]));
-      if (array[i] >= 0) {
+#ifdef BCE
+      if (array[i] >= 0) 
+#else
+      assert (array[i] >= 0);
+#endif
+      {
         assert ((size_t) array[i] < pos.size ());
         assert (i == (size_t) pos[array[i]]);
-      } else {
+      } 
+#ifdef BCE
+      if (array[i] < 0) {
         assert ((size_t) - (long) array[i] < neg.size ());
         assert (i == (size_t) neg[(size_t) - (long) array[i]]);
       }
+#endif
     }
     for (size_t i = 0; i < pos.size (); i++) {
       if (pos[i] == invalid_heap_position) continue;
       assert (pos[i] < array.size ());
       assert (array[pos[i]] == (int) i);
     }
+#ifdef BCE
     for (size_t i = 0; i < neg.size (); i++) {
       if (neg[i] == invalid_heap_position) continue;
       assert (neg[i] < array.size ());
       assert (array[neg[i]] == (int) - (long) i);
     }
+#endif
 #endif
   }
 
@@ -137,12 +158,14 @@ template<class C> class heap {
     return pos[e] != invalid_heap_position;
   }
 
+#ifdef BCE
   bool ncontains (int e) const {
     assert (e < 0);
     long n = - (long) e;
     if (n >= (long) neg.size ()) return false;
     return neg[n] != invalid_heap_position;
   }
+#endif
 
 public:
 
@@ -159,7 +182,12 @@ public:
   // Check whether 'e' is already in the heap.
   //
   bool contains (int e) const {
+#ifdef BCE
     return (e < 0) ? ncontains (e) : pcontains (e);
+#else
+    assert (e >= 0);
+    return pcontains (e);
+#endif
   }
 
   // Add a new (not contained) element 'e' to the heap.
@@ -204,19 +232,25 @@ public:
   void clear () {
     array.clear ();
     pos.clear ();
+#ifdef BCE
     neg.clear ();
+#endif
   }
 
   void erase () {
     erase_vector (array);
     erase_vector (pos);
+#ifdef BCE
     erase_vector (neg);
+#endif
   }
 
   void shrink () {
     shrink_vector (array);
     shrink_vector (pos);
+#ifdef BCE
     shrink_vector (neg);
+#endif
   }
 
   // Standard iterators 'inherited' from 'vector'.

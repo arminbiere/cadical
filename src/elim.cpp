@@ -419,7 +419,7 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
 
 // Try to eliminate 'pivot' by bounded variable elimination.
 
-inline void Internal::elim_variable (int pivot) {
+inline void Internal::try_to_eliminate_variable (int pivot) {
 
   if (!active (pivot)) return;
 
@@ -579,7 +579,7 @@ bool Internal::elim_round () {
     esched.pop_front ();
     flags (idx).removed = false;
     if (stats.garbage > limit) garbage_collection ();
-    elim_variable (idx);
+    try_to_eliminate_variable (idx);
   }
 
   esched.erase ();

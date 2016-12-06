@@ -150,8 +150,8 @@ void Internal::probe () {
     // there is no need to consider 'idx' as probe.  Note that 'fixedprop'
     // also takes propagations during regular CDCL search into account.
     //
-    bool pos_prop_no_fail = fixedprop (idx) < stats.fixed;
-    bool neg_prop_no_fail = fixedprop (-idx) < stats.fixed;
+    bool pos_prop_no_fail = propfixed (idx) < stats.fixed;
+    bool neg_prop_no_fail = propfixed (-idx) < stats.fixed;
     if (!pos_prop_no_fail && !neg_prop_no_fail) continue;
 
     // Then focus on roots of the binary implication graph, which are

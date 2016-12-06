@@ -28,7 +28,7 @@ inline void Internal::inlined_assign (int lit, Clause * reason) {
 
   if (!simplifying) phases[idx] = tmp;   // phase saving during search
 
-  fixedprop (lit) = stats.fixed;         // avoids too much probing
+  propfixed (lit) = stats.fixed;         // avoids too much probing
 
   trail.push_back (lit);
   LOG (reason, "assign %d", lit);
