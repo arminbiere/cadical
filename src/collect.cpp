@@ -73,7 +73,7 @@ void Internal::remove_falsified_literals (Clause * c) {
 // If there are new units (fixed variables) since the last garbage
 // collection we go over all clauses, mark satisfied ones as garbage and
 // flush falsified literals.  Otherwise if no new units have been generated
-// just skip this step.
+// since the last garbage collection just skip this step.
 
 void Internal::mark_satisfied_clauses_as_garbage () {
 
@@ -193,10 +193,10 @@ void Internal::delete_garbage_clauses () {
 
 /*------------------------------------------------------------------------*/
 
-// This is the start of the copying garbage collector using the arena.
-
-// Copy a clause to the 'to' space of the arena.  Be careful if this clause
-// is a reason of an assignment.  In that case update the reason reference.
+// This is the start of the copying garbage collector using the arena.  At
+// the core is the following function, which copies a clause to the 'to'
+// space of the arena.  Be careful if this clause is a reason of an
+// assignment.  In that case update the reason reference.
 //
 void Internal::copy_clause (Clause * c) {
   LOG (c, "moving");
@@ -236,11 +236,17 @@ void Internal::copy_non_garbage_clauses () {
 
   if (opts.arena == 1 || !watches ()) {
 
-    // Localize according to (original) clause order.
+    // Localize according to current clause order.
+
+    // If the option 'opts.arena == 1' is set, then this means the solver
+    // uses the original order of clauses.  If there are no watches, we can
+    // not use the watched based copying policies below.  This happens if
+    // garbage collection is triggered during bounded variable elimination.
 
     // Copy clauses according to the order of calling 'copy_clause', which
     // in essence just gives a compacting garbage collector, since their
-    // relative order is kept, and already gives some cache locality.
+    // relative order is kept, and actually already gives the largest
+    // benefit due to better cache locality.
 
     for (i = clauses.begin (); i != end; i++)
       if (!(c = *i)->collect ()) copy_clause (c);

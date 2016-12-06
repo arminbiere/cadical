@@ -10,6 +10,7 @@
 namespace CaDiCaL {
 
 bool Internal::block_clause_on_literal (Clause * c, int pivot) {
+  if (c->size < opts.blockminclsize) return false;
   assert (!val (pivot));
   assert (!flags (pivot).eliminated);
   Occs & os = occs (-pivot);

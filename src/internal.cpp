@@ -32,6 +32,7 @@ Internal::Internal ()
   ntab (0),
   ntab2 (0),
   ptab (0),
+  big (0),
   wtab (0),
   conflict (0),
   propagated (0),
@@ -44,6 +45,8 @@ Internal::Internal ()
   output (File::write (this, stdout, "<stdou>"))
 {
   control.push_back (Level (0));
+  binary_subsuming.redundant = false;
+  binary_subsuming.size = 2;
 }
 
 Internal::~Internal () {
@@ -55,6 +58,7 @@ Internal::~Internal () {
   if (ftab) delete [] ftab;
   if (btab) delete [] btab;
   if (ptab) delete [] ptab;
+  if (big) delete [] big;
   if (vals) vals -= vsize, delete [] vals;
   if (solution) solution -= vsize, delete [] solution;
   if (marks) delete [] marks;

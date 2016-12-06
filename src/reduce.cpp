@@ -8,7 +8,7 @@
 
 namespace CaDiCaL {
 
-// Once in a while reduce, that is remove learned clauses which are supposed
+// Once in a while reduce, e.g., remove, learned clauses which are supposed
 // to be less useful in the future.  This is done in increasing intervals,
 // which has the effect of allowing more and more learned clause to be kept
 // for a longer period.
@@ -41,7 +41,7 @@ void Internal::unprotect_reasons () {
 
 /*------------------------------------------------------------------------*/
 
-// Clause with smaller glucose level (also called 'glue' or 'LBD') are
+// Clauses with smaller glucose level (also called 'glue' or 'LBD') are
 // considered more useful following the observations made by the Glucose
 // team in their IJCAI'09 paper.  Then we use the 'analyzed' time stamp as a
 // tie breaker.  Thus more recently resolved clauses are preferred to be

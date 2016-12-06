@@ -212,6 +212,21 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
   for (const_literal_iterator i = c->begin (); !d && i != ec; i++) {
     int lit = *i;
     if (!flags (lit).added) continue;
+
+    Bins & bs = bins (lit);
+    const const_bins_iterator eb = bs.end ();
+    const_bins_iterator b;
+    for (b = bs.begin (); !d && b != eb; b++) {
+      const int other = *b, tmp = marked (other);
+      if (!tmp) continue;
+      binary_subsuming.literals[0] = lit;
+      binary_subsuming.literals[1] = other;
+      flipped = (tmp < 0) ? other : INT_MIN;
+      assert (binary_subsuming.size == 2);
+      assert (!binary_subsuming.redundant);
+      d = &binary_subsuming;
+    }
+
     for (int sign = -1; !d && sign <= 1; sign += 2) {
       Occs & os = occs (sign * lit);
       const const_occs_iterator eo = os.end ();
@@ -379,6 +394,7 @@ void Internal::subsume_round () {
 
   vector<Clause *> shrunken;
   init_occs ();
+  init_bins ();
 
   for (s = schedule.begin (); s != eos; s++) {
 
@@ -416,8 +432,8 @@ void Internal::subsume_round () {
 
     for (j = c->begin (); added && j != end; j++) {
       const int lit = *j;
-      const size_t size = occs (lit).size ();
       if (!flags (lit).added) added = false;
+      const size_t size = occs (lit).size ();
       if (minlit && minsize <= size) continue;
       const long tmp = noccs (lit);
       if (minlit && minsize == size && tmp <= minoccs) continue;
@@ -433,21 +449,33 @@ void Internal::subsume_round () {
     // If this smallest occurring literal occurs too often do not
     // connect the clause.
     //
-    if (minsize > (size_t) opts.subsumeocclim) continue;
 
-    LOG (c, "watching %d with %ld current and total %ld occurrences",
-      minlit, (long) minsize, minoccs);
-    occs (minlit).push_back (c);
+    if (c->size > 2 || c->redundant) {
 
-    // This sorting should give faster failures for assumption checks since
-    // the less occurring variables are put first in a clause and thus will
-    // make it more likely to be found as witness for a clause not to be
-    // subsuming.  One could in principle (see also the discussion on
-    // 'subsumption' in the 'Splatz' solver) replace marking by a kind of
-    // merge sort, which we do not want to do.  It would avoid 'marked'
-    // calls and thus might be slightly faster.
-    //
-    sort (c->begin (), c->end (), less_noccs (this));
+      if (minsize > (size_t) opts.subsumeocclim) continue;
+
+      LOG (c, "watching %d with %ld current and total %ld occurrences",
+	minlit, (long) minsize, minoccs);
+      occs (minlit).push_back (c);
+
+      // This sorting should give faster failures for assumption checks
+      // since the less occurring variables are put first in a clause and
+      // thus will make it more likely to be found as witness for a clause
+      // not to be subsuming.  One could in principle (see also the
+      // discussion on 'subsumption' in the 'Splatz' solver) replace marking
+      // by a kind of merge sort, which we do not want to do.  It would
+      // avoid 'marked' calls and thus might be slightly faster.
+      //
+      sort (c->begin (), c->end (), less_noccs (this));
+
+    } else {
+
+      LOG (c, "binary watching");
+
+      bins (c->literals[0]).push_back (c->literals[1]);
+      bins (c->literals[1]).push_back (c->literals[0]);
+
+    }
   }
 
   VRB ("subsume", stats.subsumptions,
@@ -460,6 +488,7 @@ void Internal::subsume_round () {
   erase_vector (schedule);
   reset_noccs ();
   reset_occs ();
+  reset_bins ();
 
   // Reset all old 'added' flags and mark variables in shrunken
   // clauses as 'added' for the next subsumption round.

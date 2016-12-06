@@ -8,11 +8,8 @@
 
 /*------------------------------------------------------------------------*/
 
-using namespace std;
-
-/*------------------------------------------------------------------------*/
-
 #include "arena.hpp"
+#include "bins.hpp"
 #include "clause.hpp"
 #include "ema.hpp"
 #include "flags.hpp"
@@ -36,6 +33,8 @@ using namespace std;
 /*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
+
+using namespace std;
 
 class Internal;
 class Proof;
@@ -102,6 +101,7 @@ class Internal {
   long * ntab;                  // table number one sided occurrences
   long * ntab2;                 // table number two sided occurrences
   int * ptab;                   // propagated table
+  Bins * big;			// binary implication graph
   Watches * wtab;               // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
   size_t propagated;            // next trail position to propagate
@@ -130,6 +130,7 @@ class Internal {
   Arena arena;                  // memory arena for moving garbage collector
   Format error;                 // last (persistent) error message
   Internal * internal;          // proxy to 'this' in macros (redundant)
+  Clause binary_subsuming;      // communicate binary subsuming clause
   File * output;                // output file
 
   /*----------------------------------------------------------------------*/
@@ -189,6 +190,7 @@ class Internal {
   const bool occs () const { return otab != 0; }
   const bool watches () const { return wtab != 0; }
 
+  Bins & bins (int lit) { assert (big); return big[vlit (lit)]; }
   Occs & occs (int lit) { assert (otab); return otab[vlit (lit)]; }
   long & noccs (int lit) { assert (ntab); return ntab[vlit (lit)]; }
   long & noccs2 (int lit) { assert (ntab2); return ntab2[vidx (lit)]; }
@@ -339,11 +341,13 @@ class Internal {
   // Set-up occurrence list counters and containers.
   //
   void init_occs ();
+  void init_bins ();
   void init_noccs ();
   void init_noccs2 ();
   void init_watches ();
   void connect_watches ();
   void reset_occs ();
+  void reset_bins ();
   void reset_noccs ();
   void reset_noccs2 ();
   void reset_watches ();
