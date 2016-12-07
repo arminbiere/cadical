@@ -213,21 +213,24 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
     int lit = *i;
     if (!flags (lit).added) continue;
 
-    Bins & bs = bins (lit);
-    const const_bins_iterator eb = bs.end ();
-    const_bins_iterator b;
-    for (b = bs.begin (); !d && b != eb; b++) {
-      const int other = *b, tmp = marked (other);
-      if (!tmp) continue;
-      binary_subsuming.literals[0] = lit;
-      binary_subsuming.literals[1] = other;
-      flipped = (tmp < 0) ? other : INT_MIN;
-      assert (binary_subsuming.size == 2);
-      assert (!binary_subsuming.redundant);
-      d = &binary_subsuming;
-    }
-
     for (int sign = -1; !d && sign <= 1; sign += 2) {
+
+      Bins & bs = bins (sign*lit);
+      const const_bins_iterator eb = bs.end ();
+      const_bins_iterator b;
+      for (b = bs.begin (); !d && b != eb; b++) {
+	const int other = *b, tmp = marked (other);
+	if (tmp <= 0) continue;
+	binary_subsuming.literals[0] = sign*lit;
+	binary_subsuming.literals[1] = other;
+	flipped = (sign < 0) ? -lit : INT_MIN;
+	assert (binary_subsuming.size == 2);
+	assert (!binary_subsuming.redundant);
+	d = &binary_subsuming;
+      }
+
+      if (d) break;
+
       Occs & os = occs (sign * lit);
       const const_occs_iterator eo = os.end ();
       occs_iterator k = os.begin ();
@@ -426,6 +429,7 @@ void Internal::subsume_round () {
     long minoccs = 0;
     size_t minsize = 0;
     bool added = true;
+    bool binary = (c->size == 2 && !c->redundant);
 
     const const_literal_iterator end = c->end ();
     const_literal_iterator j;
@@ -433,7 +437,7 @@ void Internal::subsume_round () {
     for (j = c->begin (); added && j != end; j++) {
       const int lit = *j;
       if (!flags (lit).added) added = false;
-      const size_t size = occs (lit).size ();
+      const size_t size = binary ? bins (lit).size () : occs (lit).size ();
       if (minlit && minsize <= size) continue;
       const long tmp = noccs (lit);
       if (minlit && minsize == size && tmp <= minoccs) continue;
@@ -446,16 +450,15 @@ void Internal::subsume_round () {
     //
     if (!added) continue;
 
-    // If this smallest occurring literal occurs too often do not
-    // connect the clause.
-    //
+    if (!binary) {
 
-    if (c->size > 2 || c->redundant) {
-
+      // If smallest occurring literal occurs too often do not connect.
+      //
       if (minsize > (size_t) opts.subsumeocclim) continue;
 
       LOG (c, "watching %d with %ld current and total %ld occurrences",
 	minlit, (long) minsize, minoccs);
+
       occs (minlit).push_back (c);
 
       // This sorting should give faster failures for assumption checks
@@ -470,11 +473,16 @@ void Internal::subsume_round () {
 
     } else {
 
-      LOG (c, "binary watching");
+      // If smallest occurring literal occurs too often do not connect.
+      //
+      if (minsize > (size_t) opts.subsumebinlim) continue;
 
-      bins (c->literals[0]).push_back (c->literals[1]);
-      bins (c->literals[1]).push_back (c->literals[0]);
+      LOG (c, "watching %d with %ld current binary and total %ld occurrences",
+	minlit, (long) minsize, minoccs);
 
+      const int minlit_pos = (c->literals[1] == minlit);
+      const int other = c->literals[!minlit_pos];
+      bins (minlit).push_back (other);
     }
   }
 
