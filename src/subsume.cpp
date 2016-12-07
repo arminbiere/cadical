@@ -213,7 +213,7 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
     int lit = *i;
     if (!flags (lit).added) continue;
 
-    for (int sign = 1; !d && sign >= -1; sign -= 2) {
+    for (int sign = -1; !d && sign <= 1; sign += 2) {
 
       Bins & bs = bins (sign*lit);
       const const_bins_iterator eb = bs.end ();
