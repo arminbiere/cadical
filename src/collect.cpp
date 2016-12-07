@@ -255,8 +255,8 @@ void Internal::copy_non_garbage_clauses () {
 
     // Localize according to (original) variable order.
 
-    // Might be useful if somehow the original order allows to predict
-    // clause access order.  Use saved phases.
+    // This is almost the version used by MiniSAT and descendants and seems
+    // to work best for search.  Our version uses saved phases.
 
     for (int sign = -1; sign <= 1; sign += 2) {
       for (int idx = 1; idx <= max_var; idx++) {
@@ -271,8 +271,10 @@ void Internal::copy_non_garbage_clauses () {
 
     // Localize according to decision queue order.
 
-    // This seems to the best for search, since it allocates clauses in the
-    // order of the decision queue.  Use saved phases.
+    // This is second best for search. It allocates clauses in the order of
+    // the decision queue.  It also uses saved phases.  Intuitively it
+    // should be faster than MiniSAT version, but it seems that using the
+    // original variable order ('opts.arena==2') gives a small benefit.
 
     assert (opts.arena == 3);
 
