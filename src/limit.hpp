@@ -34,10 +34,6 @@ struct Limit {
   //
   int fixed_at_last_collect;
 
-  // Used by persistent 'VarIdxIterator' of 'probe'.
-  //
-  int last_probed;
-
   Limit ();
 };
 

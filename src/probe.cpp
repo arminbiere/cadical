@@ -92,6 +92,80 @@ void Internal::failed_literal (int failed) {
 
 /*------------------------------------------------------------------------*/
 
+struct less_negated_bins {
+  Internal * internal;
+  long * bins;
+  less_negated_bins (Internal * i, long * b) : internal (i), bins (b) { }
+  bool operator () (int a, int b) {
+    long l = bins [internal->vlit (-a)], k = bins [internal->vlit (-b)];
+    if (l < k) return true;
+    if (l > k) return false;
+    assert (a != -b);
+    return abs (a) > abs (b);
+  }
+};
+
+void Internal::generate_probe () {
+
+  assert (probes.empty ());
+
+  // First determine all the literals which occur in binary clauses. It is
+  // way faster. To go over the clauses once, instead of walking the watch
+  // lists for each literal.
+  //
+  long * bins;
+  NEW (bins, long, 2*(max_var + 1));
+  ZERO (bins, long, 2*(max_var + 1));
+  const const_clause_iterator end = clauses.end ();
+  const_clause_iterator i;
+  for (i = clauses.begin (); i != end; i++) {
+    Clause * c = *i;
+    if (c->garbage) continue;
+    if (c->size != 2) continue;
+    bins[vlit (c->literals[0])]++;
+    bins[vlit (c->literals[1])]++;
+  }
+
+  for (int idx = 1; idx <= max_var; idx++) {
+    // Then focus on roots of the binary implication graph, which are
+    // literals which occur negatively in a binary clause, but not
+    // positively.  If neither 'idx' nor '-idx' is a root it does not make
+    // sense to probe this variable.  This assumes that equivalent literal
+    // substitution was performed.
+    //
+    bool have_pos_bin_occs = bins[vlit (idx)] > 0;
+    bool have_neg_bin_occs = bins[vlit (-idx)] > 0;
+    if (have_pos_bin_occs == have_neg_bin_occs) continue;
+    int probe = have_neg_bin_occs ? idx : -idx;
+    LOG ("scheduling probe %d", probe);
+    probes.push_back (probe);
+  }
+
+  sort (probes.begin (), probes.end (), less_negated_bins (this, bins));
+
+  DEL (bins, long, 2*(max_var + 1));
+  shrink_vector (probes);
+
+  if (probes.empty ()) LOG ("no potential probes found");
+  else LOG ("new probes schedule of size %ld", (long) probes.size ());
+}
+
+int Internal::next_probe () {
+  int generated = 0;
+  for (;;) {
+    if (probes.empty ()) {
+      if (generated++) return 0;
+      generate_probe ();
+    }
+    while (!probes.empty ()) {
+      int probe = probes.back ();
+      probes.pop_back ();
+      if (!active (probe)) continue;
+      if (propfixed (probe) < stats.fixed) return probe;
+    }
+  }
+}
+
 void Internal::probe () {
 
   SWITCH_AND_START (search, simplify, probe);
@@ -105,23 +179,6 @@ void Internal::probe () {
 
   backtrack ();
 
-  // First determine all the literals which occur in binary clauses. It is
-  // way faster. To go over the clauses once, instead of walking the watch
-  // lists for each literal.
-  //
-  signed char * bins;
-  NEW (bins, signed char, 2*(max_var + 1));
-  ZERO (bins, signed char, 2*(max_var + 1));
-  const const_clause_iterator end = clauses.end ();
-  const_clause_iterator i;
-  for (i = clauses.begin (); i != end; i++) {
-    Clause * c = *i;
-    if (c->garbage) continue;
-    if (c->size != 2) continue;
-    bins[vlit (c->literals[0])] = 1;
-    bins[vlit (c->literals[1])] = 1;
-  }
-
   // Probing is limited in terms of non-probing propagations
   // 'stats.propagations'. We allow a certain percentage 'opts.probereleff'
   // (say %5) of probing propagations (called 'probagations') in each
@@ -131,61 +188,14 @@ void Internal::probe () {
   if (delta < opts.probemineff) delta = opts.probemineff;
   long limit = stats.probagations + delta;
 
-  // We have a persistent variable index iterator to schedule probes, which
-  // starts from the last variable index tried before and wraps around at
-  // 'max_var' until the first variable index is reached or the probing
-  // limit is hit.  The next to last probe tried is saved and will be used
-  // as starting point for the next probing round.
-  //
-  VarIdxIterator it (lim.last_probed, max_var);
-  int idx;
-
-  while (!unsat && stats.probagations < limit && (idx = it.next ())) {
-
-    if (!active (idx)) continue;
-
-    // First check whether there was a new unit learned since the last time
-    // either 'idx' or '-idx' where propagated.  If both were propagated
-    // without producing a unit and no new unit has been learned since then,
-    // there is no need to consider 'idx' as probe.  Note that 'fixedprop'
-    // also takes propagations during regular CDCL search into account.
-    //
-    bool pos_prop_no_fail = propfixed (idx) < stats.fixed;
-    bool neg_prop_no_fail = propfixed (-idx) < stats.fixed;
-    if (!pos_prop_no_fail && !neg_prop_no_fail) continue;
-
-    // Then focus on roots of the binary implication graph, which are
-    // literals which occur negatively in a binary clause, but not
-    // positively.  If neither 'idx' nor '-idx' is a root it does not make
-    // sense to probe this variable.  This assumes that equivalent literal
-    // substitution was performed.
-    //
-    bool pos_bin_occs = bins[vlit (idx)];
-    bool neg_bin_occs = bins[vlit (-idx)];
-    if (pos_bin_occs == neg_bin_occs) continue;
-
-    // First try the phase in which the variable is a root unless that
-    // literal was propagated since the last found unit without success.
-    //
-    int decision;
-    if (pos_bin_occs) {
-      assert (!neg_bin_occs);
-      if (!neg_prop_no_fail) continue;
-      decision = -idx;
-    } else {
-      assert (neg_bin_occs);
-      if (!pos_prop_no_fail) continue;
-      decision = idx;
-    }
-
-    LOG ("probing %d", decision);
+  int probe;
+  while (!unsat && stats.probagations < limit && (probe = next_probe ())) {
+    LOG ("probing %d", probe);
     stats.probed++;
-    assume_decision (decision);
+    assume_decision (probe);
     if (propagate ()) backtrack ();
-    else failed_literal (decision);
+    else failed_literal (probe);
   }
-
-  DEL (bins, signed char, 2*(max_var + 1));
 
   int failed = stats.failed - old_failed;
   long probed = stats.probed - old_probed;

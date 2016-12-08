@@ -28,29 +28,6 @@ typedef const int *                      const_literal_iterator;
 
 /*------------------------------------------------------------------------*/
 
-// Used in 'probe' for partially iterating over all variables, preempting
-// the iteration and then continue probing in the next probing phase.
-
-class VarIdxIterator {
-  int & last;
-  int start;
-  int max_var;
-public:
-  VarIdxIterator (int & l, int m) : last (l), start (0), max_var (m) {
-    assert (max_var >= 0);
-    if (!max_var) start = 1, last = 0;
-  }
-  int next () {
-    if (++last > max_var) last = 1;
-    if (last == start) return 0;
-    assert (1 <= last), assert (last <= max_var);
-    if (!start) start = last;
-    return last;
-  }
-};
-
-/*------------------------------------------------------------------------*/
-
 }
 
 #endif

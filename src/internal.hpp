@@ -71,6 +71,7 @@ class Internal {
   //
   friend struct bumped_earlier;
   friend struct more_noccs2;
+  friend struct less_negated_bins;
   friend struct less_noccs;
   friend struct more_negated_occs;
   friend struct trail_bumped_smaller;
@@ -112,6 +113,7 @@ class Internal {
   vector<int> minimized;        // removable or poison in 'minimize'
   vector<int> original;         // original CNF for debugging
   vector<int> extension;        // original CNF for debugging
+  vector<int> probes;           // remaining scheduled probes
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
   vector<Clause*> resolved;     // resolved clauses in 'analyze'
@@ -425,10 +427,12 @@ class Internal {
 
   // Failed literal probing.
   //
+  bool probing ();
   void analyze_failed_literal (int lit, int & open);
   void analyze_failed_reason (int lit, Clause * reason, int & open);
   void failed_literal (int lit);
-  bool probing ();
+  void generate_probe ();
+  int next_probe ();
   void probe ();
 
 #ifdef BCE
