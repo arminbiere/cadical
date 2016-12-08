@@ -441,6 +441,7 @@ class Internal {
   void probe_assign_decision (int lit);
   void probe_assign (int lit, Clause * reason);
   void probe_unassign (int lit);
+  int probe_dominator (int a, int b);
   void packtrack (int probe);
   bool probagate ();
   void generate_probes ();

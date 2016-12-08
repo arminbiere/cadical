@@ -40,8 +40,29 @@ void Internal::probe_assign_decision (int lit) {
 
 void Internal::probe_assign_unit (int lit) {
   assert (!level);
-  assert (!active (lit));
+  assert (active (lit));
   probe_assign (lit, 0);
+}
+
+int Internal::probe_dominator (int a, int b) {
+  int c = a, d = b;
+  while (c != d) {
+    assert (val (c) > 0), assert (val (d) > 0);
+    Var * u = &var (c), * v = &var (d);
+    assert (u->level > 0), assert (v.level > 0);
+    if (u->trail > v->trail) swap (c, d), swap (u, v);
+    if (!u->reason) return c;
+    Clause * c = v->reason;
+    assert (c);
+    const const_literal_iterator end = c->end ();
+    const_literal_iterator i;
+    int pred = 0;
+    for (i = c->begin (); !pred && i != end; i++) {
+      const int lit = *i;
+    }
+    assert (pred);
+  }
+  return c;
 }
 
 // This is essentially the same as 'propagate' except that we prioritize and
@@ -116,8 +137,44 @@ bool Internal::probagate () {
             swap (lits[1], *k);
             watch_literal (lits[1], lit, w.clause, size);
             j--;
-          } else if (!u) probe_assign (lits[0], w.clause);
-          else { conflict = w.clause; break; }
+          } else if (!u) {
+	    Clause * reason = w.clause;
+	    if (level) {
+	      int dom = -lit, non_root_level = 1;
+	      bool dom_in_clause = true;
+	      for (k = lits + 2; k != end; k++) {
+		const int other = -*k;
+		assert (val (other) > 0);
+		if (!var (other).level) continue;
+		dom = probe_dominator (dom, other);
+		dom_in_clause = (dom == other);
+		non_root_level++;
+	      }
+	      if (non_root_level > 1) {
+		LOG ("hyper binary resolution %d %d", -other, lits[0]);
+		size_t i_offset = i - ws.begin ();
+		size_t j_offset = j - ws.begin ();
+		// TODO new clause and reason
+		assert (clause.empty ());
+		clause.push_back (-other);
+		clause.push_back (lits[0]);
+		clause.clear ();
+		i = ws.begin () + i_offset;
+		j = ws.begin () + j_offset;
+		// TODO check whether 'w.clause' is subsumed
+		if (dom_in_clause) {
+		  // mark garbage
+		  // j--;
+		}
+	      } else {
+		assert (dom == -lit);
+		LOG (reason, "on-the-fly flushing falsified literals");
+		// TODO shrink clause
+		// w.binary = true;
+	      }
+	    }
+	    probe_assign (lits[0], reason);
+	  } else { conflict = w.clause; break; }
         }
       }
       while (i != ws.end ()) *j++ = *i++;

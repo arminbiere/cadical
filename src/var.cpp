@@ -18,12 +18,15 @@ void Internal::reset_added () {
 }
 
 void Internal::init_doms () {
+  assert (!doms);
   NEW (doms, int, vsize);
   ZERO (doms, int, vsize);
 }
 
 void Internal::reset_doms () {
+  assert (doms);
   DEL (doms, int, vsize);
+  doms = 0;
 }
 
 };

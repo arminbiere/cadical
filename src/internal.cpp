@@ -201,16 +201,21 @@ void Internal::init_solving () {
 }
 
 int Internal::solve () {
-  init_solving ();
   SECTION ("solving");
   int res;
   if (unsat) {
-    LOG ("empty clause already found");
+    LOG ("already inconsistent");
     res = 20;
   } else if (clashing) {                  // clashing original unit clauses
+    LOG ("clashing original clause");
+    learn_empty_clause ();
+    res = 20;
+  } else if (!propagate ()) {
+    LOG ("root level propagation produces conflict");
     learn_empty_clause ();
     res = 20;
   } else {
+    init_solving ();
     garbage_collection ();
     res = search ();
     if (res == 10) {
