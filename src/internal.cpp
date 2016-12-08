@@ -204,11 +204,14 @@ int Internal::solve () {
   init_solving ();
   SECTION ("solving");
   int res;
-  if (clashing) {                  // clashing original unit clauses
+  if (unsat) {
+    LOG ("empty clause already found");
+    res = 20;
+  } else if (clashing) {                  // clashing original unit clauses
     learn_empty_clause ();
     res = 20;
   } else {
-    sort_watches ();
+    garbage_collection ();
     res = search ();
     if (res == 10) {
       if (!extension.empty ()) extend ();

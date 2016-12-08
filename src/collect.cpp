@@ -129,9 +129,10 @@ size_t Internal::flush_occs (int lit) {
 // hidden in 'Clause.collect', which for the root level context of
 // preprocessing is actually redundant.
 
-void Internal::flush_watches (int lit) {
+inline void Internal::flush_watches (int lit, Watches & saved) {
+  assert (saved.empty ());
   Watches & ws = watches (lit);
-  const const_watch_iterator end = ws.end ();
+  const_watch_iterator end = ws.end ();
   watch_iterator j = ws.begin ();
   const_watch_iterator i;
   for (i = j; i != end; i++) {
@@ -143,9 +144,14 @@ void Internal::flush_watches (int lit) {
     const int new_blit_pos = (c->literals[0] == lit);
     assert (c->literals[!new_blit_pos] == lit);
     w.blit = c->literals[new_blit_pos];
-    *j++ = w;
+    if (w.binary) *j++ = w;
+    else saved.push_back (w);
   }
   ws.resize (j - ws.begin ());
+  end = saved.end ();
+  for (i = saved.begin (); i != end; i++)
+    ws.push_back (*i);
+  saved.clear ();
   shrink_watches (ws);
 }
 
@@ -154,9 +160,11 @@ void Internal::flush_all_occs_and_watches () {
     for (int idx = 1; idx <= max_var; idx++)
       flush_occs (idx), flush_occs (-idx);
 
-  if (watches ())
+  if (watches ()) {
+    Watches tmp;
     for (int idx = 1; idx <= max_var; idx++)
-      flush_watches (idx), flush_watches (-idx);
+      flush_watches (idx, tmp), flush_watches (-idx, tmp);
+  }
 }
 
 /*------------------------------------------------------------------------*/

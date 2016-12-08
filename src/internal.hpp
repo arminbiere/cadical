@@ -326,7 +326,7 @@ class Internal {
   void remove_falsified_literals (Clause *);
   void mark_satisfied_clauses_as_garbage ();
   void copy_clause (Clause *);
-  void flush_watches (int lit);
+  void flush_watches (int lit, Watches &);
   size_t flush_occs (int lit);
   void flush_all_occs_and_watches ();
   void copy_non_garbage_clauses ();

@@ -60,8 +60,8 @@ void Internal::sort_watches () {
       assert (saved.empty ());
       for (i = j; i != end; i++) {
 	const Watch w = *i;
-	if (w.binary) saved.push_back (w);
-	else *j++ = w;
+	if (w.binary) *j++ = w;
+	else saved.push_back (w);
       }
       ws.resize (j - ws.begin ());
       end = saved.end ();

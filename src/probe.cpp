@@ -213,7 +213,7 @@ void Internal::probe () {
     if (!propagate ()) {
       LOG ("propagating units after probing results in empty clause");
       learn_empty_clause ();
-    }
+    } else sort_watches ();
   }
 
   int failed = stats.failed - old_failed;
