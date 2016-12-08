@@ -95,6 +95,7 @@ class Internal {
   signed char * phases;         // saved assignment [1,max_var]
   Queue queue;                  // variable move to front decision queue
   Var * vtab;                   // variable table
+  int * doms;                   // dominator table
   Link * ltab;                  // table of links for decision queue
   Flags * ftab;                 // seen, poison, minimized flags table
   long * btab;                  // enqueue time stamps for queue
@@ -106,6 +107,8 @@ class Internal {
   Watches * wtab;               // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
   size_t propagated;            // next trail position to propagate
+  size_t probagated;            // next trail position to probagate
+  size_t probagated2;           // next binary trail position to probagate
   vector<int> trail;            // assigned literals
   vector<int> clause;           // temporary in parsing & learning
   vector<int> levels;           // decision levels in learned clause
@@ -254,7 +257,7 @@ class Internal {
 
   // Forward reasoning through propagation in 'propagate.cpp'.
   //
-  void inlined_assign (int lit, Clause *);
+  void search_assign (int lit, Clause *);
   void assign_driving (int lit, Clause * reason);
   void assign_decision (int decision);
   void assign_unit (int lit);
@@ -262,7 +265,7 @@ class Internal {
 
   // Undo and restart in 'backtrack.cpp'.
   //
-  void unassign (int lit);
+  void search_unassign (int lit);
   void backtrack (int target_level = 0);
 
   // Minimized learned clauses in 'minimize.cpp'.
@@ -342,12 +345,14 @@ class Internal {
 
   // Set-up occurrence list counters and containers.
   //
+  void init_doms ();
   void init_occs ();
   void init_bins ();
   void init_noccs ();
   void init_noccs2 ();
   void init_watches ();
   void connect_watches ();
+  void reset_doms ();
   void reset_occs ();
   void reset_bins ();
   void reset_noccs ();
@@ -431,7 +436,11 @@ class Internal {
   void analyze_failed_literal (int lit, int & open);
   void analyze_failed_reason (int lit, Clause * reason, int & open);
   void failed_literal (int lit);
-  void generate_probe ();
+  void probe_assign (int lit, Clause * reason);
+  void probe_unassign (int lit);
+  void packtrack (int probe);
+  bool probagate ();
+  void generate_probes ();
   int next_probe ();
   void probe ();
 

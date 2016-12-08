@@ -6,7 +6,9 @@
 
 namespace CaDiCaL {
 
-inline void Internal::inlined_assign (int lit, Clause * reason) {
+inline void Internal::search_assign (int lit, Clause * reason) {
+
+  assert (!simplifying);
 
   int idx = vidx (lit);
 
@@ -25,8 +27,7 @@ inline void Internal::inlined_assign (int lit, Clause * reason) {
   vals[-idx] = -tmp;
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
-
-  if (!simplifying) phases[idx] = tmp;   // phase saving during search
+  phases[idx] = tmp;  			 // phase saving during search
 
   propfixed (lit) = stats.fixed;         // avoids too much probing
 
@@ -54,23 +55,23 @@ inline void Internal::inlined_assign (int lit, Clause * reason) {
 // External versions of 'assign' which are not inlined.  They either are
 // used to assign unit clauses on the root-level, in 'decide' to assign a
 // decision or in 'analyze' to assign literal "driven" by a learned clause.
-// This happens far less frequently than the 'inlined_assign' above, which
+// This happens far less frequently than the 'search_assign' above, which
 // is called directly in 'propagate' below.
 
 void Internal::assign_unit (int lit) {
   assert (!level);
-  inlined_assign (lit, 0);
+  search_assign (lit, 0);
 }
 
 void Internal::assign_decision (int lit) {
   assert (level > 0);
   assert (propagated == trail.size ());
-  inlined_assign (lit, 0);
+  search_assign (lit, 0);
 }
 
 void Internal::assign_driving (int lit, Clause * c) {
   assert (c);
-  inlined_assign (lit, c);
+  search_assign (lit, c);
 }
 
 /*------------------------------------------------------------------------*/
@@ -93,7 +94,10 @@ void Internal::assign_driving (int lit, Clause * c) {
 // more bytes for long clauses (where it does not matter much).
 
 bool Internal::propagate () {
+
+  assert (!simplifying);
   assert (!unsat);
+
   START (propagate);
 
   // Updating the statistics counter in the propagation loops is costly so
@@ -124,7 +128,7 @@ bool Internal::propagate () {
         // there also only to simplify the code).
 
         if (b < 0) conflict = w.clause;          // but continue ...
-        else inlined_assign (w.blit, w.clause);
+        else search_assign (w.blit, w.clause);
 
       } else {
 
@@ -135,7 +139,7 @@ bool Internal::propagate () {
         // expensive statistics are required (actually costs quite a bit
         // having this enabled all the time).
 
-        EXPENSIVE_STATS_ADD (simplifying, visits, 1);
+        EXPENSIVE_STATS_ADD (visits, 1);
 
         if (w.clause->garbage) continue;
 
@@ -179,7 +183,7 @@ bool Internal::propagate () {
 	  k = start;
 	  while (k != end && (v = val (*k)) < 0) k++;
 
-	  EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
+	  EXPENSIVE_STATS_ADD (traversed, k - start);
 
 	  if (have_pos) {
 
@@ -190,7 +194,7 @@ bool Internal::propagate () {
 	      assert (w.clause->pos () <= size);
 	      while (k != middle && (v = val (*k)) < 0) k++;
 
-	      EXPENSIVE_STATS_ADD (simplifying, traversed, k - (lits + 2));
+	      EXPENSIVE_STATS_ADD (traversed, k - (lits + 2));
 	    }
 
 	    w.clause->pos () = k - lits;  // always save position
@@ -217,7 +221,7 @@ bool Internal::propagate () {
 	    // The other watch is unassigned ('!u') and all other literals
 	    // assigned to false (still 'v < 0'), thus we found a unit.
 	    //
-	    inlined_assign (lits[0], w.clause);
+	    search_assign (lits[0], w.clause);
 
 	  } else {
 
@@ -237,13 +241,8 @@ bool Internal::propagate () {
     ws.resize (j - ws.begin ());
   }
   long delta = propagated - before;
-  if (simplifying) stats.probagations += delta;
-  else             stats.propagations += delta;
-  //                        ^ !!!!!
-  if (conflict) {
-    if (!simplifying) stats.conflicts++;
-    LOG (conflict, "conflict");
-  }
+  stats.propagations += delta;
+  if (conflict) { stats.conflicts++; LOG (conflict, "conflict"); }
   STOP (propagate);
   return !conflict;
 }

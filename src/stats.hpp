@@ -85,13 +85,12 @@ struct Stats {
 /*------------------------------------------------------------------------*/
 
 #ifdef STATS
-#define EXPENSIVE_STATS_ADD(COND,STAT,INC) \
+#define EXPENSIVE_STATS_ADD(STAT,INC) \
 do { \
-  if (!(COND)) break; \
   stats.STAT += (INC); \
 } while (0)
 #else
-#define EXPENSIVE_STATS_ADD(COND,STAT,INC) do { } while (0)
+#define EXPENSIVE_STATS_ADD(STAT,INC) do { } while (0)
 #endif
 
 /*------------------------------------------------------------------------*/

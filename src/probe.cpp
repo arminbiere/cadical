@@ -50,7 +50,6 @@ void Internal::failed_literal (int failed) {
   assert (!unsat);
   assert (conflict);
   assert (level == 1);
-  assert (control[1].decision == failed);
   assert (analyzed.empty ());
 
   START (analyze);
@@ -75,17 +74,17 @@ void Internal::failed_literal (int failed) {
   LOG ("found %ld UIPs", (long) uips.size ());
   assert (!uips.empty ());
 
-  backtrack ();
+  packtrack (failed);
   clear_seen ();
   conflict = 0;
 
   const const_int_iterator end = uips.end ();
   for (const_int_iterator i = uips.begin (); i != end; i++)
-    assign_unit (-*i);
+    probe_assign (-*i, 0);
 
   STOP (analyze);
 
-  if (!propagate ()) learn_empty_clause ();
+  if (!probagate ()) learn_empty_clause ();
 
   assert (unsat || val (failed) < 0);
 }
@@ -105,7 +104,7 @@ struct less_negated_bins {
   }
 };
 
-void Internal::generate_probe () {
+void Internal::generate_probes () {
 
   assert (probes.empty ());
 
@@ -155,7 +154,7 @@ int Internal::next_probe () {
   for (;;) {
     if (probes.empty ()) {
       if (generated++) return 0;
-      generate_probe ();
+      generate_probes ();
     }
     while (!probes.empty ()) {
       int probe = probes.back ();
@@ -170,6 +169,8 @@ void Internal::probe () {
 
   SWITCH_AND_START (search, simplify, probe);
 
+  if (level) backtrack ();
+
   assert (!simplifying);
   simplifying = true;
   stats.probings++;
@@ -177,7 +178,10 @@ void Internal::probe () {
   int old_failed = stats.failed;
   long old_probed = stats.probed;
 
-  backtrack ();
+  assert (propagated == trail.size ());
+  probagated = probagated2 = trail.size ();
+
+  init_doms ();
 
   // Probing is limited in terms of non-probing propagations
   // 'stats.propagations'. We allow a certain percentage 'opts.probereleff'
@@ -192,24 +196,36 @@ void Internal::probe () {
   while (!unsat && stats.probagations < limit && (probe = next_probe ())) {
     LOG ("probing %d", probe);
     stats.probed++;
-    assume_decision (probe);
-    if (propagate ()) backtrack ();
+    level++;
+    probe_assign (probe, 0);
+    if (probagate ()) packtrack (probe);
     else failed_literal (probe);
+  }
+
+  reset_doms ();
+
+  assert (simplifying);
+  simplifying = false;
+
+  if (unsat) LOG ("probing derived empty clause");
+  else if (propagated < trail.size ()) {
+    LOG ("probing produced %ld units", trail.size () - propagated);
+    if (!propagate ()) {
+      LOG ("propagating units after probing results in empty clause");
+      learn_empty_clause ();
+    }
   }
 
   int failed = stats.failed - old_failed;
   long probed = stats.probed - old_probed;
 
-  VRB ("probe", stats.probings,
-    "probed %ld and found %d failed literals",
-    probed, failed);
-
-  assert (simplifying);
-  simplifying = false;
-
   if (!failed) inc.probe *= 2;
   else inc.probe += opts.probeint;
   lim.probe = stats.conflicts + inc.probe;
+
+  VRB ("probe", stats.probings,
+    "probed %ld and found %d failed literals",
+    probed, failed);
 
   report ('p');
 
