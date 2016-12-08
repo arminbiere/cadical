@@ -350,7 +350,6 @@ void Internal::check_clause_stats () {
 #ifdef BCE
   assert (stats.redblocked == blocked);
 #endif
-#endif
 }
 
 /*------------------------------------------------------------------------*/

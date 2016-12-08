@@ -27,7 +27,7 @@ inline void Internal::search_assign (int lit, Clause * reason) {
   vals[-idx] = -tmp;
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
-  phases[idx] = tmp;  			 // phase saving during search
+  phases[idx] = tmp;                     // phase saving during search
 
   propfixed (lit) = stats.fixed;         // avoids too much probing
 
@@ -146,7 +146,7 @@ bool Internal::propagate () {
         literal_iterator lits = w.clause->begin ();
 
         // Simplify the code by assuming 'lit' is first literal in clause.
-	// This is also implemented in MiniSAT.
+        // This is also implemented in MiniSAT.
         //
         if (lits[0] == lit) swap (lits[0], lits[1]);
         assert (lits[1] == lit);
@@ -156,49 +156,49 @@ bool Internal::propagate () {
         if (u > 0) j[-1].blit = lits[0];  // satisfied, just replace blit
         else {
 
-	  const int size = w.clause->size;
+          const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
-	  const bool have_pos = w.clause->have.pos;
+          const bool have_pos = w.clause->have.pos;
           literal_iterator k;
           int v = -1;
 
-	  // Now try to find a replacement watch.
+          // Now try to find a replacement watch.
 
-	  // This follows Ian Gent's idea of saving the position of the last
-	  // watch replacement.  In essence it needs two copies of the
-	  // default search for a watch replacement (in essence the code in
-	  // the 'else' branch below), one starting at the saved position
-	  // until the end of the clause and then if that one failed to find
-	  // a replacement another one starting at the first non-watched
-	  // literal until the saved position.
+          // This follows Ian Gent's idea of saving the position of the last
+          // watch replacement.  In essence it needs two copies of the
+          // default search for a watch replacement (in essence the code in
+          // the 'else' branch below), one starting at the saved position
+          // until the end of the clause and then if that one failed to find
+          // a replacement another one starting at the first non-watched
+          // literal until the saved position.
 
-	  // For shorter clauses of say size 3 (see 'opts.posize'), we do
-	  // not save the position and actually do not even have the memory
-	  // allocated for the '_pos' field in a clause.  For those we
-	  // simply start at the first unwatched literal.
+          // For shorter clauses of say size 3 (see 'opts.posize'), we do
+          // not save the position and actually do not even have the memory
+          // allocated for the '_pos' field in a clause.  For those we
+          // simply start at the first unwatched literal.
 
-	  literal_iterator start = lits;
-	  start += have_pos ? w.clause->pos () : 2;
+          literal_iterator start = lits;
+          start += have_pos ? w.clause->pos () : 2;
 
-	  k = start;
-	  while (k != end && (v = val (*k)) < 0) k++;
+          k = start;
+          while (k != end && (v = val (*k)) < 0) k++;
 
-	  EXPENSIVE_STATS_ADD (traversed, k - start);
+          EXPENSIVE_STATS_ADD (traversed, k - start);
 
-	  if (have_pos) {
+          if (have_pos) {
 
-	    if (v < 0) {  // need second search starting at the head?
+            if (v < 0) {  // need second search starting at the head?
 
-	      const const_literal_iterator middle = lits + w.clause->pos ();
-	      k = lits + 2;
-	      assert (w.clause->pos () <= size);
-	      while (k != middle && (v = val (*k)) < 0) k++;
+              const const_literal_iterator middle = lits + w.clause->pos ();
+              k = lits + 2;
+              assert (w.clause->pos () <= size);
+              while (k != middle && (v = val (*k)) < 0) k++;
 
-	      EXPENSIVE_STATS_ADD (traversed, k - (lits + 2));
-	    }
+              EXPENSIVE_STATS_ADD (traversed, k - (lits + 2));
+            }
 
-	    w.clause->pos () = k - lits;  // always save position
-	  }
+            w.clause->pos () = k - lits;  // always save position
+          }
 
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
 
@@ -216,24 +216,24 @@ bool Internal::propagate () {
 
           } else if (!u) {
 
-	    assert (v < 0);
+            assert (v < 0);
 
-	    // The other watch is unassigned ('!u') and all other literals
-	    // assigned to false (still 'v < 0'), thus we found a unit.
-	    //
-	    search_assign (lits[0], w.clause);
+            // The other watch is unassigned ('!u') and all other literals
+            // assigned to false (still 'v < 0'), thus we found a unit.
+            //
+            search_assign (lits[0], w.clause);
 
-	  } else {
+          } else {
 
-	    assert (u < 0);
-	    assert (v < 0);
+            assert (u < 0);
+            assert (v < 0);
 
-	    // The other watch is assigned false ('u < 0') and all other
-	    // literals as well (still 'v < 0'), thus we found a conflict.
+            // The other watch is assigned false ('u < 0') and all other
+            // literals as well (still 'v < 0'), thus we found a conflict.
 
-	    conflict = w.clause;
-	    break;                       // (*)
-	  }
+            conflict = w.clause;
+            break;                       // (*)
+          }
         }
       }
     }

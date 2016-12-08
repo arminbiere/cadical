@@ -66,12 +66,12 @@ bool Internal::probagate () {
       const_watch_iterator i = ws.begin ();
       watch_iterator j = ws.begin ();
       while (!conflict && i != ws.end ()) {
-	const Watch w = *j++ = *i++;
-	if (!w.binary) continue;
-	const int b = val (w.blit);
-	if (b > 0) continue;
-	if (b < 0) conflict = w.clause;
-	else probe_assign (w.blit, w.clause);
+        const Watch w = *j++ = *i++;
+        if (!w.binary) continue;
+        const int b = val (w.blit);
+        if (b > 0) continue;
+        if (b < 0) conflict = w.clause;
+        else probe_assign (w.blit, w.clause);
       }
     } else if (probagated < trail.size ()) {
       const int lit = -trail[probagated++];
@@ -80,10 +80,10 @@ bool Internal::probagate () {
       const_watch_iterator i = ws.begin ();
       watch_iterator j = ws.begin ();
       while (i != ws.end ()) {
-	const Watch w = *j++ = *i++;
-	if (w.binary) continue;
-	const int b = val (w.blit);
-	if (b > 0) continue;
+        const Watch w = *j++ = *i++;
+        if (w.binary) continue;
+        const int b = val (w.blit);
+        if (b > 0) continue;
         if (w.clause->garbage) continue;
         literal_iterator lits = w.clause->begin ();
         if (lits[0] == lit) swap (lits[0], lits[1]);
@@ -91,7 +91,7 @@ bool Internal::probagate () {
         const int u = val (lits[0]);
         if (u > 0) j[-1].blit = lits[0];
         else {
-	  const int size = w.clause->size;
+          const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
           const bool have_pos = w.clause->have.pos;
           literal_iterator k;
@@ -117,7 +117,7 @@ bool Internal::probagate () {
             watch_literal (lits[1], lit, w.clause, size);
             j--;
           } else if (!u) probe_assign (lits[0], w.clause);
-	  else { conflict = w.clause; break; }
+          else { conflict = w.clause; break; }
         }
       }
       while (i != ws.end ()) *j++ = *i++;

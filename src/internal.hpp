@@ -103,7 +103,7 @@ class Internal {
   long * ntab;                  // table number one sided occurrences
   long * ntab2;                 // table number two sided occurrences
   int * ptab;                   // propagated table
-  Bins * big;			// binary implication graph
+  Bins * big;                   // binary implication graph
   Watches * wtab;               // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
   size_t propagated;            // next trail position to propagate

@@ -219,14 +219,14 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
       const const_bins_iterator eb = bs.end ();
       const_bins_iterator b;
       for (b = bs.begin (); !d && b != eb; b++) {
-	const int other = *b, tmp = marked (other);
-	if (tmp <= 0) continue;
-	binary_subsuming.literals[0] = sign*lit;
-	binary_subsuming.literals[1] = other;
-	flipped = (sign < 0) ? -lit : INT_MIN;
-	assert (binary_subsuming.size == 2);
-	assert (!binary_subsuming.redundant);
-	d = &binary_subsuming;
+        const int other = *b, tmp = marked (other);
+        if (tmp <= 0) continue;
+        binary_subsuming.literals[0] = sign*lit;
+        binary_subsuming.literals[1] = other;
+        flipped = (sign < 0) ? -lit : INT_MIN;
+        assert (binary_subsuming.size == 2);
+        assert (!binary_subsuming.redundant);
+        d = &binary_subsuming;
       }
 
       if (d) break;
@@ -457,7 +457,7 @@ void Internal::subsume_round () {
       if (minsize > (size_t) opts.subsumeocclim) continue;
 
       LOG (c, "watching %d with %ld current and total %ld occurrences",
-	minlit, (long) minsize, minoccs);
+        minlit, (long) minsize, minoccs);
 
       occs (minlit).push_back (c);
 
@@ -478,7 +478,7 @@ void Internal::subsume_round () {
       if (minsize > (size_t) opts.subsumebinlim) continue;
 
       LOG (c, "watching %d with %ld current binary and total %ld occurrences",
-	minlit, (long) minsize, minoccs);
+        minlit, (long) minsize, minoccs);
 
       const int minlit_pos = (c->literals[1] == minlit);
       const int other = c->literals[!minlit_pos];

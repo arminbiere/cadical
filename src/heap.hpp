@@ -123,14 +123,14 @@ template<class C> class heap {
       if (l < array.size ()) assert (!less (array[i], array[l]));
       if (r < array.size ()) assert (!less (array[i], array[r]));
 #ifdef BCE
-      if (array[i] >= 0) 
+      if (array[i] >= 0)
 #else
       assert (array[i] >= 0);
 #endif
       {
         assert ((size_t) array[i] < pos.size ());
         assert (i == (size_t) pos[array[i]]);
-      } 
+      }
 #ifdef BCE
       if (array[i] < 0) {
         assert ((size_t) - (long) array[i] < neg.size ());
@@ -149,7 +149,6 @@ template<class C> class heap {
       assert (neg[i] < array.size ());
       assert (array[neg[i]] == (int) - (long) i);
     }
-#endif
 #endif
   }
 
