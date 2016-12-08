@@ -142,62 +142,59 @@ bool Internal::propagate () {
         literal_iterator lits = w.clause->begin ();
 
         // Simplify the code by assuming 'lit' is first literal in clause.
+	// This is also implemented in MiniSAT.
         //
         if (lits[0] == lit) swap (lits[0], lits[1]);
         assert (lits[1] == lit);
 
-        const int u = val (lits[0]);
+        const int u = val (lits[0]);      // value of the other watch
 
         if (u > 0) j[-1].blit = lits[0];  // satisfied, just replace blit
         else {
 
 	  const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
+	  const bool have_pos = w.clause->have.pos;
           literal_iterator k;
           int v = -1;
 
-          if (w.clause->have.pos) {
+	  // Now try to find a replacement watch.
 
-            // This follows Ian Gent's idea of saving the position of the
-            // last watch replacement.  In essence it needs two copies of
-            // the default search for a watch replacement (in essence the
-            // code in the 'else' branch below), one starting at the saved
-            // position until the end of the clause and then if that one
-            // failed to find a replacement another one starting at the
-            // first non-watched literal until the saved position.
+	  // This follows Ian Gent's idea of saving the position of the last
+	  // watch replacement.  In essence it needs two copies of the
+	  // default search for a watch replacement (in essence the code in
+	  // the 'else' branch below), one starting at the saved position
+	  // until the end of the clause and then if that one failed to find
+	  // a replacement another one starting at the first non-watched
+	  // literal until the saved position.
 
-            literal_iterator start = lits + w.clause->pos ();
-            k = start;
-            while (k != end && (v = val (*k)) < 0) k++;
+	  // For shorter clauses of say size 3 (see 'opts.posize'), we do
+	  // not save the position and actually do not even have the memory
+	  // allocated for the '_pos' field in a clause.  For those we
+	  // simply start at the first unwatched literal.
 
-            EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
+	  literal_iterator start = lits;
+	  start += have_pos ? w.clause->pos () : 2;
 
-            if (v < 0) {  // need second search starting at the head?
+	  k = start;
+	  while (k != end && (v = val (*k)) < 0) k++;
 
-              const const_literal_iterator middle = lits + w.clause->pos ();
-              k = lits + 2;
-              assert (w.clause->pos () <= size);
-              while (k != middle && (v = val (*k)) < 0) k++;
+	  EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
 
-              EXPENSIVE_STATS_ADD (simplifying, traversed, k - (lits + 2));
-            }
+	  if (have_pos) {
 
-            w.clause->pos () = k - lits;  // always save position
+	    if (v < 0) {  // need second search starting at the head?
 
-          } else {
+	      const const_literal_iterator middle = lits + w.clause->pos ();
+	      k = lits + 2;
+	      assert (w.clause->pos () <= size);
+	      while (k != middle && (v = val (*k)) < 0) k++;
 
-            // For short clauses (particularly if they are of size 3), we do
-            // not want to save the position.  This saves space but also
-            // avoids a second search.  We do pay by the branch of this
-            // 'else' branch though, but some initial testing seems to show
-            // that it is useful to have this 'else' branch separately.
+	      EXPENSIVE_STATS_ADD (simplifying, traversed, k - (lits + 2));
+	    }
 
-            literal_iterator start = lits + 2;
-            k = start;
-            while (k != end && (v = val (*k)) < 0) k++;
-
-            EXPENSIVE_STATS_ADD (simplifying, traversed, k - start);
-          }
+	    w.clause->pos () = k - lits;  // always save position
+	  }
 
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
 
@@ -213,12 +210,30 @@ bool Internal::propagate () {
 
             j--;  // drop this watch from the watch list of 'lit'
 
-          } else if (!u) inlined_assign (lits[0], w.clause);
-          else { conflict = w.clause; break; }
+          } else if (!u) {
+
+	    assert (v < 0);
+
+	    // The other watch is unassigned ('!u') and all other literals
+	    // assigned to false (still 'v < 0'), thus we found a unit.
+	    //
+	    inlined_assign (lits[0], w.clause);
+
+	  } else {
+
+	    assert (u < 0);
+	    assert (v < 0);
+
+	    // The other watch is assigned false ('u < 0') and all other
+	    // literals as well (still 'v < 0'), thus we found a conflict.
+
+	    conflict = w.clause;
+	    break;                       // (*)
+	  }
         }
       }
     }
-    while (i != ws.end ()) *j++ = *i++;  // because of the last 'break'
+    while (i != ws.end ()) *j++ = *i++;  // because of the 'break' at (*)
     ws.resize (j - ws.begin ());
   }
   long delta = propagated - before;
