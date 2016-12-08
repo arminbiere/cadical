@@ -4,47 +4,50 @@
 namespace CaDiCaL {
 
 // These functions are used for probagating (note the 'b') during failed
-// literal probing in simplification mode, in contrast to the generic
-// propagation routine 'propagate' in 'propagate.cpp'.   See also the
-// comments there.
+// literal probing in simplification mode, as replacement of the generic
+// propagation routine 'propagate' in 'propagate.cpp'.
+
+// The code is mostly copied from 'propagate.cpp' and specialized.  We only
+// comment on difference here.  More explanations are in 'propagate.cpp'.
 
 inline void Internal::probe_assign (int lit, Clause * reason) {
-
   assert (simplifying);
-
   int idx = vidx (lit);
-
   assert (!vals[idx]);
   assert (!flags (idx).eliminated || !reason);
-
   Var & v = var (idx);
   v.level = level;
   v.reason = reason;
-
-  if (!level) learn_unit_clause (lit);   // increases 'stats.fixed'
-
+  if (!level) learn_unit_clause (lit);
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
-
-  propfixed (lit) = stats.fixed;         // avoids too much probing
-
+  // no phase saving here ...
+  propfixed (lit) = stats.fixed;
   trail.push_back (lit);
   LOG (reason, "assign %d", lit);
-
   assert (watches ());
   if (opts.prefetch)
     __builtin_prefetch (&*(watches (-lit).begin ()));
+}
+
+void Internal::probe_assign_decision (int lit) {
+  assert (level == 1);
+  probe_assign (lit, 0);
+}
+
+void Internal::probe_assign_unit (int lit) {
+  assert (!level);
+  assert (!active (lit));
+  probe_assign (lit, 0);
 }
 
 // This is essentially the same as 'propagate' except that we prioritize and
 // always propagated binary clauses first (see our CPAIOR paper on tree
 // based look ahead), stop at a conflict and of course use 'probe_assign'
 // instead of 'search_assign'.  Statistics counters are also different.
-
-// More explanations how this works are in 'propagate.cpp'.
 
 bool Internal::probagate () {
 

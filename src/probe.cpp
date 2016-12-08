@@ -80,7 +80,7 @@ void Internal::failed_literal (int failed) {
 
   const const_int_iterator end = uips.end ();
   for (const_int_iterator i = uips.begin (); i != end; i++)
-    probe_assign (-*i, 0);
+    probe_assign_unit (-*i);
 
   STOP (analyze);
 
@@ -194,10 +194,10 @@ void Internal::probe () {
 
   int probe;
   while (!unsat && stats.probagations < limit && (probe = next_probe ())) {
-    LOG ("probing %d", probe);
     stats.probed++;
+    LOG ("probing %d", probe);
     level++;
-    probe_assign (probe, 0);
+    probe_assign_decision (probe);
     if (probagate ()) packtrack (probe);
     else failed_literal (probe);
   }

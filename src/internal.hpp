@@ -436,6 +436,8 @@ class Internal {
   void analyze_failed_literal (int lit, int & open);
   void analyze_failed_reason (int lit, Clause * reason, int & open);
   void failed_literal (int lit);
+  void probe_assign_unit (int lit);
+  void probe_assign_decision (int lit);
   void probe_assign (int lit, Clause * reason);
   void probe_unassign (int lit);
   void packtrack (int probe);
