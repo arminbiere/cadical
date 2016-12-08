@@ -49,7 +49,7 @@ int Internal::probe_dominator (int a, int b) {
   while (c != d) {
     assert (val (c) > 0), assert (val (d) > 0);
     Var * u = &var (c), * v = &var (d);
-    assert (u->level > 0), assert (v.level > 0);
+    assert (u->level > 0), assert (v->level > 0);
     if (u->trail > v->trail) swap (c, d), swap (u, v);
     if (!u->reason) return c;
     Clause * c = v->reason;
@@ -151,13 +151,14 @@ bool Internal::probagate () {
 		non_root_level++;
 	      }
 	      if (non_root_level > 1) {
-		LOG ("hyper binary resolution %d %d", -other, lits[0]);
+		LOG ("hyper binary resolution %d %d", -dom, lits[0]);
 		size_t i_offset = i - ws.begin ();
 		size_t j_offset = j - ws.begin ();
 		// TODO new clause and reason
 		assert (clause.empty ());
-		clause.push_back (-other);
+		clause.push_back (-dom);
 		clause.push_back (lits[0]);
+		check_learned_clause ();
 		clause.clear ();
 		i = ws.begin () + i_offset;
 		j = ws.begin () + j_offset;
