@@ -8,7 +8,7 @@ namespace CaDiCaL {
 // propagation routine 'propagate' in 'propagate.cpp'.
 
 // The code is mostly copied from 'propagate.cpp' and specialized.  We only
-// comment on difference here.  More explanations are in 'propagate.cpp'.
+// comment on the differences.  More explanations are in 'propagate.cpp'.
 
 inline void Internal::probe_assign (int lit, Clause * reason) {
   assert (simplifying);
@@ -59,7 +59,6 @@ bool Internal::probagate () {
   long before = probagated2;
 
   while (!conflict) {
-
     if (probagated2 < trail.size ()) {
       const int lit = -trail[probagated2++];
       LOG ("probagating %d over binary clauses", -lit);
@@ -74,7 +73,6 @@ bool Internal::probagate () {
 	if (b < 0) conflict = w.clause;
 	else probe_assign (w.blit, w.clause);
       }
-
     } else if (probagated < trail.size ()) {
       const int lit = -trail[probagated++];
       LOG ("probagating %d over large clauses", -lit);
@@ -95,22 +93,22 @@ bool Internal::probagate () {
         else {
 	  const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
-	  const bool have_pos = w.clause->have.pos;
+          const bool have_pos = w.clause->have.pos;
           literal_iterator k;
           int v = -1;
-	  literal_iterator start = lits;
-	  start += have_pos ? w.clause->pos () : 2;
-	  k = start;
-	  while (k != end && (v = val (*k)) < 0) k++;
-	  if (have_pos) {
-	    if (v < 0) {
-	      const const_literal_iterator middle = lits + w.clause->pos ();
-	      k = lits + 2;
-	      assert (w.clause->pos () <= size);
-	      while (k != middle && (v = val (*k)) < 0) k++;
-	    }
-	    w.clause->pos () = k - lits;
-	  }
+          literal_iterator start = lits;
+          start += have_pos ? w.clause->pos () : 2;
+          k = start;
+          while (k != end && (v = val (*k)) < 0) k++;
+          if (have_pos) {
+            if (v < 0) {
+              const const_literal_iterator middle = lits + w.clause->pos ();
+              k = lits + 2;
+              assert (w.clause->pos () <= size);
+              while (k != middle && (v = val (*k)) < 0) k++;
+            }
+            w.clause->pos () = k - lits;
+          }
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
           if (v > 0) j[-1].blit = *k;
           else if (!v) {
@@ -124,11 +122,7 @@ bool Internal::probagate () {
       }
       while (i != ws.end ()) *j++ = *i++;
       ws.resize (j - ws.begin ());
-    } else {
-      assert (probagated == trail.size ());
-      assert (probagated2 == trail.size ());
-      break;
-    }
+    } else break;
   }
   long delta = probagated2 - before;
   stats.probagations += delta;
