@@ -351,6 +351,7 @@ class Internal {
   void init_noccs ();
   void init_noccs2 ();
   void init_watches ();
+  void sort_watches ();
   void connect_watches ();
   void reset_doms ();
   void reset_occs ();

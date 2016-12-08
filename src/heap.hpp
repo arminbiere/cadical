@@ -150,6 +150,7 @@ template<class C> class heap {
       assert (array[neg[i]] == (int) - (long) i);
     }
 #endif
+#endif // outer
   }
 
   bool pcontains (int e) const {

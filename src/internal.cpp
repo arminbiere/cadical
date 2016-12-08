@@ -208,6 +208,7 @@ int Internal::solve () {
     learn_empty_clause ();
     res = 20;
   } else {
+    sort_watches ();
     res = search ();
     if (res == 10) {
       if (!extension.empty ()) extend ();
