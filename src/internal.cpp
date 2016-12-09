@@ -25,7 +25,6 @@ Internal::Internal ()
   marks (0),
   phases (0),
   vtab (0),
-  doms (0),
   ltab (0),
   ftab (0),
   btab (0),
@@ -56,7 +55,6 @@ Internal::~Internal () {
     delete_clause (*i);
   if (proof) delete proof;
   if (vtab) delete [] vtab;
-  if (doms) delete [] doms;
   if (ltab) delete [] ltab;
   if (ftab) delete [] ftab;
   if (btab) delete [] btab;

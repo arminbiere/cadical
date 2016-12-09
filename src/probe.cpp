@@ -181,8 +181,6 @@ void Internal::probe () {
   assert (propagated == trail.size ());
   probagated = probagated2 = trail.size ();
 
-  init_doms ();
-
   // Probing is limited in terms of non-probing propagations
   // 'stats.propagations'. We allow a certain percentage 'opts.probereleff'
   // (say %5) of probing propagations (called 'probagations') in each
@@ -201,8 +199,6 @@ void Internal::probe () {
     if (probagate ()) packtrack (probe);
     else failed_literal (probe);
   }
-
-  reset_doms ();
 
   assert (simplifying);
   simplifying = false;

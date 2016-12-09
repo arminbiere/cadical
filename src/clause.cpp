@@ -279,6 +279,17 @@ Clause * Internal::new_learned_redundant_clause (int glue) {
   return res;
 }
 
+// Add hyper binary resolved clause during 'probing'.
+//
+Clause * Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
+  Clause * res = new_clause (red, glue);
+  if (proof) proof->trace_add_clause (res);
+  assert (watches ());
+  watch_clause (res);
+  return res;
+}
+
+
 // Add resolved clause during resolution, e.g., bounded variable
 // elimination, but do not connect its occurrences here.
 //

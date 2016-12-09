@@ -19,7 +19,14 @@ void Stats::print (Internal * internal) {
   Stats & stats = internal->stats;
   double t = process_time ();
   size_t m = maximum_resident_set_size ();
+#ifdef STATS
+  int verbose = 1;
+#else
   int verbose = internal->opts.verbose;
+#ifdef LOGGING
+  if (internal->opts.log) verbose = 1;
+#endif
+#endif//outer
   if (internal->opts.profile) internal->print_profile (t);
   SECTION ("statistics");
   MSG ("probings:        %15ld   %10.2f    conflicts per probing",
@@ -43,7 +50,7 @@ void Stats::print (Internal * internal) {
   long propagations = stats.propagations + stats.probagations;
   MSG ("propagations:    %15ld   %10.2f    millions per second",
     propagations, relative (propagations/1e6, t));
-  if (verbose)
+  if (verbose) {
   MSG ("  probagations:  %15ld   %10.2f %%  of propagations",
     stats.probagations, percent (stats.probagations, propagations));
 #ifdef STATS
@@ -52,38 +59,34 @@ void Stats::print (Internal * internal) {
   MSG ("  traversed:     %15ld   %10.2f    per visit",
     stats.traversed, relative (stats.traversed, stats.visits));
 #endif
+  }
   MSG ("probed:          %15ld   %10.2f    per failed",
     stats.probed, relative (stats.probed, stats.failed));
+  if (verbose)
+  MSG ("  hbrs:          %15ld   %10.2f    per probe",
+    stats.hbrs, relative (stats.hbrs, stats.probed));
   MSG ("reused:          %15ld   %10.2f %%  per restart",
     stats.reused, percent (stats.reused, stats.restarts));
   MSG ("resolutions:     %15ld   %10.2f    per eliminated",
     stats.elimres, relative (stats.elimres, stats.eliminated));
-#ifndef STATS
   if (verbose) {
-#endif
   MSG ("  elimres2:      %15ld   %10.2f %%  per resolved",
     stats.elimres2, percent (stats.elimres, stats.elimres));
   MSG ("  elimrestried:  %15ld   %10.2f %%  per resolved",
     stats.elimrestried, percent (stats.elimrestried, stats.elimres));
-#ifndef STATS
   }
-#endif
 #ifdef BCE
   MSG ("blockres:        %15ld   %10.2f    per blocked",
     stats.blockres, relative (stats.blockres, stats.blocked));
 #endif
-#ifndef STATS
   if (verbose) {
-#endif
 #ifdef BCE
   MSG ("  blockres2:     %15ld   %10.2f %%  per resolved",
     stats.blockres2, percent (stats.blockres2, stats.blockres));
   MSG ("  blocktried:    %15ld   %10.2f    per blocked",
     stats.blocktried, relative (stats.blocktried, stats.blocked));
 #endif
-#ifndef STATS
   }
-#endif
   MSG ("eliminated:      %15ld   %10.2f %%  of all variables",
     stats.eliminated, percent (stats.eliminated, internal->max_var));
   MSG ("failed:          %15ld   %10.2f %%  of all variables",
@@ -121,9 +124,7 @@ void Stats::print (Internal * internal) {
   MSG ("backward:        %15ld   %10.2f %%  per conflict",
     stats.sublast, percent (stats.sublast, stats.conflicts));
 #endif
-#ifndef STATS
   if (verbose) {
-#endif
   MSG ("  subirr:        %15ld   %10.2f %%  of subsumed",
     stats.subirr, percent (stats.subirr, stats.subsumed));
   MSG ("  subred:        %15ld   %10.2f %%  of subsumed",
@@ -134,9 +135,7 @@ void Stats::print (Internal * internal) {
     stats.subchecks, relative (stats.subchecks, stats.subtried));
   MSG ("  subchecks2:    %15ld   %10.2f %%  per subcheck",
     stats.subchecks2, percent (stats.subchecks2, stats.subchecks));
-#ifndef STATS
   }
-#endif
   MSG ("searched:        %15ld   %10.2f    per decision",
     stats.searched, relative (stats.searched, stats.decisions));
   MSG ("bumped:          %15ld   %10.2f    per conflict",

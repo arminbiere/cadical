@@ -95,7 +95,6 @@ class Internal {
   signed char * phases;         // saved assignment [1,max_var]
   Queue queue;                  // variable move to front decision queue
   Var * vtab;                   // variable table
-  int * doms;                   // dominator table
   Link * ltab;                  // table of links for decision queue
   Flags * ftab;                 // seen, poison, minimized flags table
   long * btab;                  // enqueue time stamps for queue
@@ -253,6 +252,7 @@ class Internal {
   bool tautological_clause ();
   void add_new_original_clause ();
   Clause * new_learned_redundant_clause (int glue);
+  Clause * new_hyper_binary_resolved_clause (bool red, int glue);
   Clause * new_resolved_irredundant_clause ();
 
   // Forward reasoning through propagation in 'propagate.cpp'.
@@ -442,6 +442,7 @@ class Internal {
   void probe_assign (int lit, Clause * reason);
   void probe_unassign (int lit);
   int probe_dominator (int a, int b);
+  Clause * hyper_binary_resolve (Clause*);
   void packtrack (int probe);
   bool probagate ();
   void generate_probes ();

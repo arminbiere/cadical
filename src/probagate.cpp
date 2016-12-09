@@ -3,9 +3,80 @@
 
 namespace CaDiCaL {
 
-// These functions are used for probagating (note the 'b') during failed
-// literal probing in simplification mode, as replacement of the generic
-// propagation routine 'propagate' in 'propagate.cpp'.
+/*------------------------------------------------------------------------*/
+
+// On-the-fly (dynamic) hyper binary resolution.
+
+int Internal::probe_dominator (int a, int b) {
+  int l = a, k = b;
+  while (l != k) {
+    assert (val (l) > 0), assert (val (k) > 0);
+    Var * u = &var (l), * v = &var (k);
+    assert (u->level > 0), assert (v->level > 0);
+    if (u->trail > v->trail) swap (l, k), swap (u, v);
+    if (!u->reason) return l;
+    Clause * c = v->reason;
+    assert (c);
+    const const_literal_iterator end = c->end ();
+    const_literal_iterator i;
+    int pred = 0;
+#if 0
+    for (i = c->begin (); !pred && i != end; i++) {
+#else
+    for (i = c->begin (); i != end; i++) {
+#endif
+      const int other = *i;
+      if (other == k) continue;
+      if (!var (other).level) continue;
+      assert (!pred);
+      pred = -other;
+    }
+    assert (pred);
+    k = pred;
+  }
+  LOG ("dominator %d of %d and %d", l, a, b);
+  return l;
+}
+
+Clause * Internal::hyper_binary_resolve (Clause * reason) {
+  LOG (reason, "hyper binary resolving");
+  assert (level == 1);
+  stats.hbrs++;
+  const int * lits = reason->literals;
+  const int lit = lits[1];
+  bool contained = true;
+  int dom = -lit;
+  Clause * res;
+  const const_literal_iterator end = reason->end ();
+  const_literal_iterator k;
+  for (k = lits + 2; k != end; k++) {
+    const int other = -*k;
+    assert (val (other) > 0);
+    if (!var (other).level) continue;
+    dom = probe_dominator (dom, other);
+    contained = (dom == other);
+  }
+  const bool red = !contained || reason->redundant;
+  LOG ("new %s hyper binary resolvent %d %d", 
+    (red ? "redundant" : "irredundant"), -dom, lits[0]);
+  assert (clause.empty ());
+  clause.push_back (-dom);
+  clause.push_back (lits[0]);
+  check_learned_clause ();
+  res = new_hyper_binary_resolved_clause (red, 2);
+  clause.clear ();
+  if (contained) { 
+    LOG (reason, "subsumed original");
+    mark_garbage (reason);
+  }
+  return res;
+}
+
+/*------------------------------------------------------------------------*/
+
+// The following functions 'probe_assign' are used for probagating (note the
+// 'b') during failed literal probing in simplification mode, as replacement
+// of the generic propagation routine 'propagate' and 'search_assign'.
 
 // The code is mostly copied from 'propagate.cpp' and specialized.  We only
 // comment on the differences.  More explanations are in 'propagate.cpp'.
@@ -17,6 +88,7 @@ inline void Internal::probe_assign (int lit, Clause * reason) {
   assert (!flags (idx).eliminated || !reason);
   Var & v = var (idx);
   v.level = level;
+  v.trail = (int) trail.size ();
   v.reason = reason;
   if (!level) learn_unit_clause (lit);
   const signed char tmp = sign (lit);
@@ -44,26 +116,7 @@ void Internal::probe_assign_unit (int lit) {
   probe_assign (lit, 0);
 }
 
-int Internal::probe_dominator (int a, int b) {
-  int c = a, d = b;
-  while (c != d) {
-    assert (val (c) > 0), assert (val (d) > 0);
-    Var * u = &var (c), * v = &var (d);
-    assert (u->level > 0), assert (v->level > 0);
-    if (u->trail > v->trail) swap (c, d), swap (u, v);
-    if (!u->reason) return c;
-    Clause * c = v->reason;
-    assert (c);
-    const const_literal_iterator end = c->end ();
-    const_literal_iterator i;
-    int pred = 0;
-    for (i = c->begin (); !pred && i != end; i++) {
-      const int lit = *i;
-    }
-    assert (pred);
-  }
-  return c;
-}
+/*------------------------------------------------------------------------*/
 
 // This is essentially the same as 'propagate' except that we prioritize and
 // always propagated binary clauses first (see our CPAIOR paper on tree
@@ -139,41 +192,18 @@ bool Internal::probagate () {
             j--;
           } else if (!u) {
 	    Clause * reason = w.clause;
-	    if (level) {
-	      int dom = -lit, non_root_level = 1;
-	      bool dom_in_clause = true;
-	      for (k = lits + 2; k != end; k++) {
-		const int other = -*k;
-		assert (val (other) > 0);
-		if (!var (other).level) continue;
-		dom = probe_dominator (dom, other);
-		dom_in_clause = (dom == other);
-		non_root_level++;
-	      }
-	      if (non_root_level > 1) {
-		LOG ("hyper binary resolution %d %d", -dom, lits[0]);
-		size_t i_offset = i - ws.begin ();
-		size_t j_offset = j - ws.begin ();
-		// TODO new clause and reason
-		assert (clause.empty ());
-		clause.push_back (-dom);
-		clause.push_back (lits[0]);
-		check_learned_clause ();
-		clause.clear ();
-		i = ws.begin () + i_offset;
-		j = ws.begin () + j_offset;
-		// TODO check whether 'w.clause' is subsumed
-		if (dom_in_clause) {
-		  // mark garbage
-		  // j--;
-		}
-	      } else {
-		assert (dom == -lit);
-		LOG (reason, "on-the-fly flushing falsified literals");
-		// TODO shrink clause
-		// w.binary = true;
-	      }
-	    }
+	    if (level == 1) {
+	      // If we assign a unit on decision level one through a long
+	      // clause, then we can always perform a hyper binary
+	      // resolution and use the resolvent binary reason as reason
+	      // instead.  However, since we add a new clause, we have to be
+	      // careful with our iterators, which have to be saved and
+	      // restored.
+	      //
+	      size_t p = i - ws.begin (), q = i - ws.begin ();
+	      reason = hyper_binary_resolve (w.clause);
+	      i = ws.begin () + p, j = ws.begin () + q;
+	    } else assert (!level);
 	    probe_assign (lits[0], reason);
 	  } else { conflict = w.clause; break; }
         }
