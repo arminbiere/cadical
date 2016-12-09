@@ -10,11 +10,17 @@ class Clause;
 struct Var {
 
   // Note that none of these members is valid unless the variable is
-  // assigned.  Thus during unassigning a variable we do not reset it.
+  // assigned.  During unassigning a variable we do not reset it.
 
-  int level;            // decision level
-  int trail;            // trail height at assignment
-  Clause * reason;      // implication graph edge through clause
+  int level;         // decision level
+  int trail;         // trail height at assignment
+
+  union {
+
+    Clause * reason; // implication graph edge during search
+    int parent;	     // implication graph parent during probing
+
+  };
 };
 
 };

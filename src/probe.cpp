@@ -13,33 +13,6 @@ bool Internal::probing () {
 
 /*------------------------------------------------------------------------*/
 
-// These are optimized versions of the corresponding 'analyze_literal' and
-// 'analyze_reason' functions in 'analyze.cpp' for the case 'level == 1'.
-
-inline void Internal::analyze_failed_literal (int lit, int & open) {
-  assert (lit);
-  Flags & f = flags (lit);
-  if (f.seen) return;
-  if (!var (lit).level) return;
-  f.seen = true;
-  analyzed.push_back (lit);
-  LOG ("analyzed failed literal %d", lit);
-  open++;
-}
-
-inline void
-Internal::analyze_failed_reason (int lit, Clause * reason, int & open) {
-  assert (reason);
-  const const_literal_iterator end = reason->end ();
-  const_literal_iterator j = reason->begin ();
-  int other;
-  while (j != end)
-    if ((other = *j++) != lit)
-      analyze_failed_literal (other, open);
-}
-
-/*------------------------------------------------------------------------*/
-
 // This a specialized instance of 'analyze'.
 
 void Internal::failed_literal (int failed) {
@@ -52,41 +25,33 @@ void Internal::failed_literal (int failed) {
   assert (level == 1);
   assert (analyzed.empty ());
 
-  START (analyze);
+  START (probalyze);
 
-  Clause * reason = conflict;
-  LOG (reason, "analyzing failed literal conflict");
-  int open = 0, uip = 0, other = 0;
-  const_int_iterator i = trail.end ();
-  vector<int> uips;
-  for (;;) {
-    if (reason) analyze_failed_reason (uip, reason, open);
-    else analyze_failed_literal (other, open);
-    while (!flags (uip = *--i).seen)
-      ;
-    if (!--open) {
-      LOG ("%ld. UIP %d", (long) uips.size (), uip);
-      uips.push_back (uip);
-    }
-    if (!(reason = var (uip).reason)) break;
-    LOG (reason, "analyzing %d reason", uip);
+  LOG (conflict, "analyzing failed literal conflict");
+
+  const const_literal_iterator end = conflict->end ();
+  const_literal_iterator i;
+  int uip = 0;
+  for (i = conflict->begin (); i != end; i++) {
+    const int other = -*i;
+    if (!var (other).level) continue;
+    uip = uip ? probe_dominator (uip, other) : other;
   }
-  LOG ("found %ld UIPs", (long) uips.size ());
-  assert (!uips.empty ());
+  LOG ("found probing UIP %d", uip);
+  assert (uip);
 
   packtrack (failed);
   clear_seen ();
   conflict = 0;
 
-  const const_int_iterator end = uips.end ();
-  for (const_int_iterator i = uips.begin (); i != end; i++)
-    probe_assign_unit (-*i);
-
-  STOP (analyze);
+  assert (!val (uip));
+  probe_assign_unit (-uip);
 
   if (!probagate ()) learn_empty_clause ();
 
-  assert (unsat || val (failed) < 0);
+  STOP (probalyze);
+
+  assert (unsat || !opts.hbr || val (failed) < 0);
 }
 
 /*------------------------------------------------------------------------*/

@@ -434,15 +434,13 @@ class Internal {
   // Failed literal probing.
   //
   bool probing ();
-  void analyze_failed_literal (int lit, int & open);
-  void analyze_failed_reason (int lit, Clause * reason, int & open);
   void failed_literal (int lit);
   void probe_assign_unit (int lit);
   void probe_assign_decision (int lit);
-  void probe_assign (int lit, Clause * reason);
+  void probe_assign (int lit, int parent);
   void probe_unassign (int lit);
   int probe_dominator (int a, int b);
-  Clause * hyper_binary_resolve (Clause*);
+  int hyper_binary_resolve (Clause*);
   void packtrack (int probe);
   bool probagate ();
   void generate_probes ();
