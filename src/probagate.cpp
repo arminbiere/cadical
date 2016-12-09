@@ -151,10 +151,9 @@ bool Internal::probagate () {
       const int lit = -trail[probagated++];
       LOG ("probagating %d over large clauses", -lit);
       Watches & ws = watches (lit);
-      const_watch_iterator i = ws.begin ();
-      watch_iterator j = ws.begin ();
-      while (i != ws.end ()) {
-        const Watch w = *j++ = *i++;
+      size_t i = 0, j = 0;
+      while (i != ws.size ()) {
+        const Watch w = ws[j++] = ws[i++];
         if (w.binary) continue;
         const int b = val (w.blit);
         if (b > 0) continue;
@@ -163,7 +162,7 @@ bool Internal::probagate () {
         if (lits[0] == lit) swap (lits[0], lits[1]);
         assert (lits[1] == lit);
         const int u = val (lits[0]);
-        if (u > 0) j[-1].blit = lits[0];
+        if (u > 0) ws[j-1].blit = lits[0];
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
@@ -184,7 +183,7 @@ bool Internal::probagate () {
             w.clause->pos () = k - lits;
           }
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
-          if (v > 0) j[-1].blit = *k;
+          if (v > 0) ws[j-1].blit = *k;
           else if (!v) {
             LOG (w.clause, "unwatch %d in", *k);
             swap (lits[1], *k);
@@ -195,21 +194,16 @@ bool Internal::probagate () {
 	    if (level == 1) {
 	      // If we assign a unit on decision level one through a long
 	      // clause, then we can always perform a hyper binary
-	      // resolution and use the resolvent binary reason as reason
-	      // instead.  However, since we add a new clause, we have to be
-	      // careful with our iterators, which have to be saved and
-	      // restored.
+	      // resolution and use the resolvent binary reason instead.
 	      //
-	      size_t p = i - ws.begin (), q = i - ws.begin ();
 	      reason = hyper_binary_resolve (w.clause);
-	      i = ws.begin () + p, j = ws.begin () + q;
 	    } else assert (!level);
 	    probe_assign (lits[0], reason);
 	  } else { conflict = w.clause; break; }
         }
       }
-      while (i != ws.end ()) *j++ = *i++;
-      ws.resize (j - ws.begin ());
+      while (i != ws.size ()) ws[j++] = ws[i++];
+      ws.resize (j);
     } else break;
   }
   long delta = probagated2 - before;
