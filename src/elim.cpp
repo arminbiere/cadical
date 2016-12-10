@@ -41,6 +41,10 @@ bool Internal::eliminating () {
   if (lim.fixed_at_last_elim == stats.fixed &&
       lim.removed_at_last_elim == stats.removed) return false;
 
+  // Wait until next 'reduce'.
+  //
+  if (stats.conflicts != lim.conflicts_at_last_reduce) return false;
+
   return lim.elim <= stats.conflicts;
 }
 

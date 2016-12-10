@@ -439,6 +439,7 @@ class Internal {
   void probe_assign_decision (int lit);
   void probe_assign (int lit, int parent);
   void probe_unassign (int lit);
+  void mark_duplicated_binary_clauses_as_garbage ();
   int probe_dominator (int a, int b);
   int hyper_binary_resolve (Clause*);
   void packtrack (int probe);

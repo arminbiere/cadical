@@ -93,7 +93,6 @@ OPTION(probemineff,   double,  1e6, 0,  1, "minimum probing efficiency") \
 OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
 OPTION(profile,          int,    2, 0,  4, "profiling level") \
 OPTION(quiet,           bool,    0, 0,  1, "disable all messages") \
-OPTION(reduce,          bool,    1, 0,  1, "garbage collect clauses") \
 OPTION(reduceglue,      bool,    1, 0,  1, "reduce on glue first") \
 OPTION(reduceinc,        int,  300, 1,1e6, "reduce limit increment") \
 OPTION(reduceinit,       int, 2000, 0,1e6, "initial reduce limit") \

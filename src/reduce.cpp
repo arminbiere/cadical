@@ -14,7 +14,6 @@ namespace CaDiCaL {
 // for a longer period.
 
 bool Internal::reducing () {
-  if (!opts.reduce) return false;
   return stats.conflicts >= lim.reduce;
 }
 

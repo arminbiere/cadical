@@ -25,7 +25,7 @@ struct Limit {
   long subsumptions_at_last_elim;
   long      removed_at_last_elim;
 
-  // Used to let 'subsume' wait until and right after next 'reduce'.
+  // Used to wait until and right after next 'reduce'.
   //
   long conflicts_at_last_reduce;
 

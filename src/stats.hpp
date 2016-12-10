@@ -42,6 +42,7 @@ struct Stats {
   long sublast;      // number of eagerly subsumed clauses
 #endif
   long subsumed;     // number of subsumed clauses
+  long duplicated;   // number of duplicated binary clauses
 #ifdef BCE
   long blockings;    // blocked clause elimination rounds
   long blocked;      // number of blocked clauses

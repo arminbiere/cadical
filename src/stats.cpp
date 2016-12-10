@@ -122,6 +122,9 @@ void Stats::print (Internal * internal) {
 #endif
   MSG ("subsumed:        %15ld   %10.2f    tried per subsumed",
     stats.subsumed, relative (stats.subtried, stats.subsumed));
+  // if (verbose)
+  MSG ("  duplicated:    %15ld   %10.2f %%  per subsumed",
+    stats.duplicated, percent (stats.duplicated, stats.subsumed));
   MSG ("strengthened:    %15ld   %10.2f    per subsumed",
     stats.strengthened, relative (stats.strengthened, stats.subsumed));
 #ifdef SHRINK

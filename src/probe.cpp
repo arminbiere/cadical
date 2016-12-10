@@ -8,6 +8,11 @@ namespace CaDiCaL {
 
 bool Internal::probing () {
   if (!opts.probe) return false;
+
+  // Wait until next 'reduce'.
+  //
+  if (stats.conflicts != lim.conflicts_at_last_reduce) return false;
+
   return lim.probe <= stats.conflicts;
 }
 
@@ -136,6 +141,8 @@ void Internal::probe () {
 
   if (level) backtrack ();
 
+  mark_duplicated_binary_clauses_as_garbage ();
+
   assert (!simplifying);
   simplifying = true;
   stats.probings++;
@@ -191,7 +198,6 @@ void Internal::probe () {
   report ('p');
 
   STOP_AND_SWITCH (probe, simplify, search);
-  if (stats.probings==4) exit (0);
 }
 
 };
