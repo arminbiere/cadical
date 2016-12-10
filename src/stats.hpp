@@ -31,6 +31,9 @@ struct Stats {
   long collected;    // number of collected bytes
   long collections;  // number of garbage collections
   long hbrs;         // hyper binary resolvents
+  long hbrsizes;     // sum of hyper resolved base clauses
+  long hbreds;       // redundant hyper binary resolvents
+  long hbrsubs;      // subsuming hyper binary resolvents
 #ifdef SHRINK
   long shrunken;     // removed literals in learned clauses
   long shrinktried;  // number of tried to shrink literals

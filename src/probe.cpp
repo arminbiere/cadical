@@ -191,6 +191,7 @@ void Internal::probe () {
   report ('p');
 
   STOP_AND_SWITCH (probe, simplify, search);
+  if (stats.probings==4) exit (0);
 }
 
 };

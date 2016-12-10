@@ -63,8 +63,16 @@ void Stats::print (Internal * internal) {
   MSG ("probed:          %15ld   %10.2f    per failed",
     stats.probed, relative (stats.probed, stats.failed));
   // if (verbose)
-  MSG ("  hbrs:          %15ld   %10.2f    per probe",
+  {
+  MSG ("  hbrs:          %15ld   %10.2f    per probed",
     stats.hbrs, relative (stats.hbrs, stats.probed));
+  MSG ("  hbrsizes:      %15ld   %10.2f    per hbr",
+    stats.hbrsizes, relative (stats.hbrsizes, stats.hbrs));
+  MSG ("  hbreds:        %15ld   %10.2f %%  per hbr",
+    stats.hbreds, percent (stats.hbreds, stats.hbrs));
+  MSG ("  hbrsubs:       %15ld   %10.2f %%  per hbr",
+    stats.hbrsubs, percent (stats.hbrsubs, stats.hbrs));
+  }
   MSG ("reused:          %15ld   %10.2f %%  per restart",
     stats.reused, percent (stats.reused, stats.restarts));
   MSG ("resolutions:     %15ld   %10.2f    per eliminated",

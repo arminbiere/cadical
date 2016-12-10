@@ -57,8 +57,10 @@ int Internal::probe_dominator (int a, int b) {
 // Note that (A) is actually subsumed by (B).  The possible optimization to
 // shrink the clause on-the-fly is difficult (need to update 'blit' and
 // 'binary' of the other watch at least) and also not really that important.
-// We simply add the new binary resolvent and mark the old subsumed clause as
-// garbage instead.
+// For (B) we simply add the new binary resolvent and mark the old subsumed
+// clause as garbage instead.  And since in the situation of (A) the
+// shrinking will be performed at the next  garbage collection anyhow, we
+// do not change clauses in (A).
 
 // The hyper binary resolvent clause is redundant unless it subsumes the
 // original reason and that one is irredundant.
@@ -88,19 +90,22 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
 #endif
   LOG (reason, "hyper binary resolving");
   stats.hbrs++;
+  stats.hbrsizes += reason->size;
   const int lit = lits[1];
-  int dom = -lit;
+  int dom = -lit, non_root_level_literals = 0;
   for (k = lits + 2; k != end; k++) {
     const int other = -*k;
     assert (val (other) > 0);
     if (!var (other).level) continue;
     dom = probe_dominator (dom, other);
+    non_root_level_literals++;
   }
-  if (opts.hbr) {
+  if (non_root_level_literals && opts.hbr) {  // !(A)
     bool contained = false;
     for (k = lits + 1; !contained && k != end; k++)
       contained = (*k == -dom);
     const bool red = !contained || reason->redundant;
+    if (red) stats.hbreds++;
     LOG ("new %s hyper binary resolvent %d %d", 
       (red ? "redundant" : "irredundant"), -dom, lits[0]);
     assert (clause.empty ());
@@ -110,6 +115,7 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
     new_hyper_binary_resolved_clause (red, 2);
     clause.clear ();
     if (contained) {
+      stats.hbrsubs++;
       LOG (reason, "subsumed original");
       mark_garbage (reason);
     }
