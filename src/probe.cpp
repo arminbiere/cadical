@@ -171,10 +171,11 @@ void Internal::probe () {
 
   if (level) backtrack ();
 
-  mark_duplicated_binary_clauses_as_garbage ();
-
   assert (!simplifying);
   simplifying = true;
+
+  mark_duplicated_binary_clauses_as_garbage ();
+
   stats.probings++;
 
   int old_failed = stats.failed;

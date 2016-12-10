@@ -9,16 +9,17 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
   assert (!level);
   assert (watches ());
   vector<int> stack;
-  for (int idx = 1; idx <= max_var; idx++) {
+  for (int idx = 1; !unsat && idx <= max_var; idx++) {
     if (!active (idx)) continue;
-    for (int sign = -1; sign <= 1; sign += 2) {
+    int unit = 0;
+    for (int sign = -1; !unit && sign <= 1; sign += 2) {
       const int lit = sign * idx;
       Watches & ws = watches (lit);
       const const_watch_iterator end = ws.end ();
       watch_iterator j = ws.begin ();
       const_watch_iterator i;
       assert (stack.empty ());
-      for (i = j; i != end; i++) {
+      for (i = j; !unit && i != end; i++) {
 	Watch w = *j++ = *i;
 	if (!w.binary) continue;
 	int other = w.blit;
@@ -46,7 +47,10 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
 	  mark_garbage (c);
 	  j--;
 	} else if (tmp < 0) {
-	  // TODO resolve and produce unit ...
+	  LOG ("found %d %d and %d %d which produces unit %d",
+	    lit, -other, lit, other, lit);
+	  unit = lit;
+	  j = ws.begin ();
 	} else {
 	  if (c->garbage) continue;
 	  mark (other);
@@ -57,6 +61,13 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
       while (!stack.empty ()) {
 	unmark (stack.back ());
 	stack.pop_back ();
+      }
+    }
+    if (unit) {
+      assign_unit (unit);
+      if (!propagate ()) {
+	LOG ("empty clause after propagating unit");
+	learn_empty_clause ();
       }
     }
   }
