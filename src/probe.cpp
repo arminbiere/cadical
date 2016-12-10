@@ -171,17 +171,17 @@ void Internal::probe () {
 
   if (level) backtrack ();
 
+  mark_duplicated_binary_clauses_as_garbage ();
+
   assert (!simplifying);
   simplifying = true;
-
-  mark_duplicated_binary_clauses_as_garbage ();
 
   stats.probings++;
 
   int old_failed = stats.failed;
   long old_probed = stats.probed;
 
-  assert (propagated == trail.size ());
+  assert (unsat || propagated == trail.size ());
   probagated = probagated2 = trail.size ();
 
   // Probing is limited in terms of non-probing propagations

@@ -5,7 +5,7 @@ namespace CaDiCaL {
 
 void Internal::mark_duplicated_binary_clauses_as_garbage () {
   START (deduplicate);
-  assert (simplifying);
+  assert (!simplifying);
   assert (!level);
   assert (watches ());
   vector<int> stack;
