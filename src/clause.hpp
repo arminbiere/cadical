@@ -25,9 +25,9 @@ namespace CaDiCaL {
 //   (2) The boolean flags only need one bit each and thus there is enough
 //   space left to merge them with a 'glue' bit field (which is less
 //   accessed than 'size').  This saves 4 bytes and also keeps the header
-//   without '_analyzed' and '_pos' nicely in 8 bytes.  We currently use 25
+//   without '_analyzed' and '_pos' nicely in 8 bytes.  We currently use 23
 //   bits and, actually, since we do not want to mess with 'unsigned' versus
-//   'signed' issues just use 24 out of them.  If more boolean flags are
+//   'signed' issues just use 22 out of them.  If more boolean flags are
 //   needed this number has to be adapted accordingly.
 //
 //   (3) Original clauses and clauses with small glue or size are kept
@@ -58,7 +58,7 @@ namespace CaDiCaL {
 // but is also guarded by making the actual '_analyzed' field private and
 // checking this contract in the 'analyzed ()' accessors functions.
 
-#define LD_MAX_GLUE 25
+#define LD_MAX_GLUE 23
 #define MAX_GLUE ((1 << (LD_MAX_GLUE-1)) - 1)
 
 class Clause {
@@ -74,6 +74,8 @@ public:
   bool garbage:1;   // can be garbage collected unless it is a 'reason'
   bool reason:1;    // reason / antecedent clause can not be collected
   bool moved:1;     // moved during garbage collector ('copy' valid)
+  bool hbr:1;
+  bool used:1;
 #ifdef BCE
   bool blocked:1;   // redundant but blocked clause
 #endif

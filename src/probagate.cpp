@@ -100,7 +100,8 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
     dom = probe_dominator (dom, other);
     non_root_level_literals++;
   }
-  if (non_root_level_literals && opts.hbr) {  // !(A)
+  if (non_root_level_literals && // !(A)
+      opts.hbr && reason->size <= opts.hbrsizelim) {
     bool contained = false;
     for (k = lits + 1; !contained && k != end; k++)
       contained = (*k == -dom);
@@ -112,7 +113,8 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
     clause.push_back (-dom);
     clause.push_back (lits[0]);
     check_learned_clause ();
-    new_hyper_binary_resolved_clause (red, 2);
+    Clause * c = new_hyper_binary_resolved_clause (red, 2);
+    if (red) c->hbr = true;
     clause.clear ();
     if (contained) {
       stats.hbrsubs++;

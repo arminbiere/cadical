@@ -77,6 +77,7 @@ OPTION(emaglueslow,   double, 1e-5, 0,  1, "alpha slow glue") \
 OPTION(emajump,       double, 1e-5, 0,  1, "alpha jump level") \
 OPTION(emasize,       double, 1e-5, 0,  1, "alpha learned clause size") \
 OPTION(hbr,             bool,    1, 0,  1, "learn hyper binary clauses") \
+OPTION(hbrsizelim,       int,   3, 3, 1e9, "max size HBR base clause") \
 OPTION(keepglue,         int,    2, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,         int,    3, 1,1e9, "size kept learned clauses") \
 OPTION(leak,            bool,    1, 0,  1, "leak solver memory") \

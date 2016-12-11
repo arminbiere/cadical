@@ -65,6 +65,11 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (!c->redundant) continue;                 // keep irredundant
+    if (c->hbr) {
+      if (!c->used) mark_garbage (c);
+      else c->used = false;
+      continue;
+    }
 #ifdef BCE
     if (c->blocked) continue;                    // keep blocked clauses
 #endif

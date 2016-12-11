@@ -136,6 +136,7 @@ inline void Internal::bump_resolved_clauses () {
 
 inline void Internal::save_as_resolved_clause (Clause * c) {
   if (!c->redundant) return;
+  if (c->hbr) c->used = true;
   if (!c->have.analyzed) return;
   resolved.push_back (c);
 }
@@ -247,12 +248,10 @@ void Internal::analyze () {
   //
   if (size > 1) {
     if (opts.minimize) minimize_clause ();
-
 #ifdef SHRINK
     if (opts.shrink && size <= opts.shrinksize && glue <= opts.shrinkglue)
       shrink_clause ();
 #endif
-
     size = (int) clause.size ();
   }
 
