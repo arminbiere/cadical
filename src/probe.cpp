@@ -46,15 +46,13 @@ void Internal::failed_literal (int failed) {
   assert (uip);
 
   vector<int> parents;
-  if (!opts.hbr) {
-    int parent = uip;
-    while (parent != failed) {
-      int next = var (parent).parent;
-      if (parent < 0) next = -next;
-      parent = next;
-      assert (parent);
-      parents.push_back (parent);
-    }
+  int parent = uip;
+  while (parent != failed) {
+    int next = var (parent).parent;
+    if (parent < 0) next = -next;
+    parent = next;
+    assert (parent);
+    parents.push_back (parent);
   }
 
   packtrack (failed);
@@ -66,23 +64,21 @@ void Internal::failed_literal (int failed) {
 
   if (!probagate ()) learn_empty_clause ();
 
-  if (!opts.hbr) {
-    while (!unsat && !parents.empty ()) {
-      const int parent = parents.back ();
-      parents.pop_back ();
-      const int tmp = val (parent);
-      if (tmp < 0) continue;
-      if (tmp > 0) {
-	LOG ("clashing failed parent %d", parent);
-	learn_empty_clause ();
-      } else {
-	LOG ("found unassigned failed parent %d", parent);
-	probe_assign_unit (-parent);
-	if (!probagate ()) learn_empty_clause ();
-      }
+  while (!unsat && !parents.empty ()) {
+    const int parent = parents.back ();
+    parents.pop_back ();
+    const int tmp = val (parent);
+    if (tmp < 0) continue;
+    if (tmp > 0) {
+      LOG ("clashing failed parent %d", parent);
+      learn_empty_clause ();
+    } else {
+      LOG ("found unassigned failed parent %d", parent);
+      probe_assign_unit (-parent);
+      if (!probagate ()) learn_empty_clause ();
     }
-    erase_vector (parents);
   }
+  erase_vector (parents);
 
   STOP (probalyze);
 
