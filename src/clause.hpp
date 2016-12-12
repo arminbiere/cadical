@@ -74,8 +74,8 @@ public:
   bool garbage:1;   // can be garbage collected unless it is a 'reason'
   bool reason:1;    // reason / antecedent clause can not be collected
   bool moved:1;     // moved during garbage collector ('copy' valid)
-  bool hbr:1;
   bool used:1;
+  bool hbr:1;
 #ifdef BCE
   bool blocked:1;   // redundant but blocked clause
 #endif

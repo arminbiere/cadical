@@ -136,8 +136,8 @@ Clause * Internal::new_clause (bool red, int glue) {
   c->garbage = false;
   c->reason = false;
   c->moved = false;
-  c->hbr = false;
   c->used = false;
+  c->hbr = false;
 #ifdef BCE
   c->blocked = false;
 #endif
