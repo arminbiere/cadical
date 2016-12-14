@@ -11,8 +11,15 @@ struct Flags {         // Variable flags.
   bool clause     : 1;  // part of learned clause in 'minimize/shrink'
   bool added      : 1;  // added since last 'subsume' round
   bool removed    : 1;  // removed since last 'elim' round
-  bool eliminated : 1;  // eliminated variable
-  bool fixed      : 1;  // fixed variable
+  
+  unsigned status : 2;
+
+  enum {
+    ACTIVE      = 0,
+    FIXED       = 1,
+    ELIMINATED  = 2,
+    SUBSTITUTED = 3,
+  };
 
   Flags () :
     seen (false),
@@ -21,11 +28,13 @@ struct Flags {         // Variable flags.
     clause (false),
     added (true),       // initially all variables are 'added'
     removed (true),     // and all variables are 'removed'
-    eliminated (false),
-    fixed (false)
+    status (ACTIVE)
   { }
 
-  bool active () const { return !eliminated && !fixed; }
+  bool active () const { return status == ACTIVE; }
+  bool fixed () const { return status == FIXED; }
+  bool eliminated () const { return status == ELIMINATED; }
+  bool substituted () const { return status == SUBSTITUTED; }
 };
 
 };

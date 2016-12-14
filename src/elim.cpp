@@ -132,7 +132,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   for (i = c->begin (); !satisfied && !eliminated && i != end; i++) {
     int lit = *i, tmp;
     if (lit == pivot || lit == -pivot) { p = lit; continue; }
-    if (flags (lit).eliminated) eliminated = lit;
+    if (flags (lit).eliminated ()) eliminated = lit;
     else if ((tmp = val (lit)) > 0) satisfied = lit;
     else if (tmp < 0) continue;
     else mark (lit), clause.push_back (lit);
@@ -171,7 +171,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
        i++) {
     int lit = *i, tmp;
     if (lit == pivot || lit == -pivot) { q = lit; continue; }
-    if (flags (lit).eliminated) eliminated = lit;
+    if (flags (lit).eliminated ()) eliminated = lit;
     else if ((tmp = val (lit)) > 0) satisfied = lit;
     else if (tmp < 0) continue;
     else if ((tmp = marked (lit)) < 0) tautological = lit;
@@ -458,7 +458,7 @@ inline void Internal::try_to_eliminate_variable (int pivot) {
   elim_add_resolvents (pivot);
   if (!unsat) mark_eliminated_clauses_as_garbage (pivot);
 
-  flags (pivot).eliminated = true;
+  flags (pivot).status = Flags::ELIMINATED;
   LOG ("eliminated %d", pivot);
   stats.eliminated++;
 }
@@ -600,7 +600,7 @@ bool Internal::elim_round () {
       const const_literal_iterator eol = c->end ();
       const_literal_iterator j;
       for (j = c->begin (); j != eol; j++)
-        if (flags (*j).eliminated) break;
+        if (flags (*j).eliminated ()) break;
       if (j != eol) mark_garbage (c);
     }
   }

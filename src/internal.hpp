@@ -36,9 +36,15 @@ namespace CaDiCaL {
 
 using namespace std;
 
-class Internal;
-class Proof;
 class File;
+class Proof;
+
+/*------------------------------------------------------------------------*/
+
+// Need the definition of 'more_noccs2' and 'ElimSchedule' here to be able
+// to define 'esched' as 'ElimSchedule' member inside 'Internal'.
+
+class Internal;
 
 struct more_noccs2 {
   Internal * internal;
@@ -48,17 +54,19 @@ struct more_noccs2 {
 
 typedef heap<more_noccs2> ElimSchedule;
 
+/*------------------------------------------------------------------------*/
+
 class Internal {
 
   /*----------------------------------------------------------------------*/
 
-  friend class Solver;
-
   friend class Arena;
+  friend class File;
   friend struct Logger;
   friend struct Message;
   friend class Parser;
   friend class Proof;
+  friend class Solver;
   friend struct Stats;
 
 #ifdef LOGGING
@@ -447,6 +455,11 @@ class Internal {
   void generate_probes ();
   int next_probe ();
   void probe ();
+
+  // Detect strongly connected components in the binary implication graph
+  // (BIG) and perform equivalent literal substitution (ELS).
+  //
+  void decompose ();
 
 #ifdef BCE
 

@@ -58,6 +58,7 @@ PROFILE(bump,4) \
 PROFILE(collect,2) \
 PROFILE(connect,2) \
 PROFILE(decide,3) \
+PROFILE(decompose,2) \
 PROFILE(elim,2) \
 PROFILE(extend,4) \
 PROFILE(minimize,4) \

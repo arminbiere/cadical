@@ -76,6 +76,7 @@ OPTION(emagluefast,   double, 3e-2, 0,  1, "alpha fast glue") \
 OPTION(emaglueslow,   double, 1e-5, 0,  1, "alpha slow glue") \
 OPTION(emajump,       double, 1e-5, 0,  1, "alpha jump level") \
 OPTION(emasize,       double, 1e-5, 0,  1, "alpha learned clause size") \
+OPTION(decompose,       bool,    1, 0,  1, "SCC decompose BIG and ELS") \
 OPTION(hbr,             bool,    1, 0,  1, "learn hyper binary clauses") \
 OPTION(hbrsizelim,       int, 1e9, 3, 1e9, "max size HBR base clause") \
 OPTION(keepglue,         int,    2, 1,1e9, "glue kept learned clauses") \

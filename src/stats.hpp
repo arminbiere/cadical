@@ -81,6 +81,7 @@ struct Stats {
 
   int fixed;         // number of top level assigned variables
   int eliminated;    // number of eliminated variables
+  int substituted;   // number of substituted variables
 
   Stats ();
 

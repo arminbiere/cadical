@@ -97,8 +97,6 @@ void Stats::print (Internal * internal) {
   }
   MSG ("eliminated:      %15ld   %10.2f %%  of all variables",
     stats.eliminated, percent (stats.eliminated, internal->max_var));
-  MSG ("failed:          %15ld   %10.2f %%  of all variables",
-    stats.failed, percent (stats.failed, internal->max_var));
   MSG ("fixed:           %15ld   %10.2f %%  of all variables",
     stats.fixed, percent (stats.fixed, internal->max_var));
   if (verbose) {
@@ -111,6 +109,12 @@ void Stats::print (Internal * internal) {
   MSG ("analyzed:        %15ld   %10.2f    per conflict",
     stats.analyzed, relative (stats.analyzed, stats.conflicts));
   }
+  MSG ("fixed:           %15ld   %10.2f %%  of all variables",
+    stats.fixed, percent (stats.fixed, internal->max_var));
+  MSG ("substituted:     %15ld   %10.2f %%  of all variables",
+    stats.substituted, percent (stats.substituted, internal->max_var));
+  MSG ("failed:          %15ld   %10.2f %%  of all variables",
+    stats.failed, percent (stats.failed, internal->max_var));
   long learned = stats.learned - stats.minimized;
   MSG ("learned:         %15ld   %10.2f    per conflict",
     learned, relative (learned, stats.conflicts));
