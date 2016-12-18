@@ -13,7 +13,7 @@ inline void Internal::search_assign (int lit, Clause * reason) {
   int idx = vidx (lit);
 
   assert (!vals[idx]);
-  assert (!flags (idx).eliminated || !reason);
+  assert (!flags (idx).eliminated () || !reason);
 
   Var & v = var (idx);
   v.level = level;

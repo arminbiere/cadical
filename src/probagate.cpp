@@ -139,7 +139,7 @@ inline void Internal::probe_assign (int lit, int parent) {
   assert (simplifying);
   int idx = vidx (lit);
   assert (!vals[idx]);
-  assert (!flags (idx).eliminated || !parent);
+  assert (!flags (idx).eliminated () || !parent);
   assert (!parent || val (parent) > 0);
   Var & v = var (idx);
   v.level = level;

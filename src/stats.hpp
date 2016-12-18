@@ -62,6 +62,7 @@ struct Stats {
   long elimres2;     // number of resolved binary clauses in BVE
   long elimrestried; // number of tried resolved clauses in BVE
   long eliminations; // number of elimination phases
+  long decompositions; // number of SCC + ELS
   long learned;      // learned literals
   long minimized;    // minimized literals
   long redundant;    // number of current redundant clauses

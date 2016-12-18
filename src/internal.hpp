@@ -15,7 +15,6 @@
 #include "flags.hpp"
 #include "format.hpp"
 #include "heap.hpp"
-#include "inc.hpp"
 #include "level.hpp"
 #include "limit.hpp"
 #include "link.hpp"

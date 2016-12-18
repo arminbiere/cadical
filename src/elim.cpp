@@ -235,7 +235,7 @@ bool Internal::elim_resolvents_are_bounded (int pivot, long pos, long neg) {
 
   assert (!unsat);
   assert (!val (pivot));
-  assert (!flags (pivot).eliminated);
+  assert (!flags (pivot).eliminated ());
 
   Occs & ps = occs (pivot), & ns = occs (-pivot);
   assert (pos <= (long) ps.size ());
@@ -341,7 +341,7 @@ inline void Internal::elim_add_resolvents (int pivot) {
   LOG ("adding all resolvents on %d", pivot);
 
   assert (!val (pivot));
-  assert (!flags (pivot).eliminated);
+  assert (!flags (pivot).eliminated ());
 
   long resolvents = 0;
 
@@ -428,7 +428,7 @@ inline void Internal::try_to_eliminate_variable (int pivot) {
   if (!active (pivot)) return;
 
   LOG ("trying to eliminate %d", pivot);
-  assert (!flags (pivot).eliminated);
+  assert (!flags (pivot).eliminated ());
 
   // First remove garbage clauses to get a (more) accurate count. There
   // might still be satisfied clauses included in this count which we have
