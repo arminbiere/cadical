@@ -72,7 +72,7 @@ void Internal::decompose () {
 		repr[vlit (other)] = parent;
 		size++;
 		if (other != parent) substituted++;
-#ifdef LOGGIGN
+#ifdef LOGGING
 		if (other == parent && size == 1)
 		  LOG ("trivial size 1 scc with %d", parent);
 		else
