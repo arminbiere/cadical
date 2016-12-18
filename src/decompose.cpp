@@ -1,5 +1,6 @@
 #include "internal.hpp"
 #include "macros.hpp"
+#include "message.hpp"
 
 #include <climits>
 
@@ -23,8 +24,11 @@ void Internal::decompose () {
   DFS * dfs = new DFS[2*(max_var + 1)];
   int * repr = new int[2*(max_var + 1)];
   ZERO (repr, int, 2*(max_var + 1));
-  vector<int> work, scc;
+
+  int non_trivial_sccs = 0, substituted = 0, original = active_variables ();
   unsigned dfs_idx = 0;
+
+  vector<int> work, scc;
 
   for (int root_idx = 1; root_idx <= max_var; root_idx++) {
     if (!active (root_idx)) continue;
@@ -47,6 +51,7 @@ void Internal::decompose () {
 	  const const_watch_iterator end = ws.end ();
 	  const_watch_iterator i;
 	  if (parent_dfs.idx) { 			// post-fix
+	    work.pop_back ();
 	    unsigned new_min = parent_dfs.min;
 	    for (i = ws.begin (); i != end; i++) {
 	      const Watch & w = *i;
@@ -58,16 +63,24 @@ void Internal::decompose () {
 	    LOG ("post dfs search %d index %u minimum %u",
 	      parent, parent_dfs.idx, new_min);
 	    if (parent_dfs.idx == new_min) {
-	      LOG ("scc of %d has size %ld", parent, (long) scc.size ());
-	      int other;
+	      int other, size = 0;
 	      do {
 		assert (!scc.empty ());
 		other = scc.back ();
 		scc.pop_back ();
 		dfs[vlit (other)].min = TRAVERSED;
 		repr[vlit (other)] = parent;
-		LOG ("literal %d in scc of %d", other, parent);
+		size++;
+		if (other != parent) substituted++;
+#ifdef LOGGIGN
+		if (other == parent && size == 1)
+		  LOG ("trivial size 1 scc with %d", parent);
+		else
+		  LOG ("literal %d in scc of %d", other, parent);
+#endif
 	      } while (other != parent);
+	      LOG ("scc of %d has size %d", parent, size);
+	      if (size > 1) non_trivial_sccs++;
 	    } else parent_dfs.min = new_min;
 	  } else {              			// pre-fix
 	    dfs_idx++;
@@ -88,6 +101,11 @@ void Internal::decompose () {
       }
     }
   }
+
+  VRB ("decompose",
+    stats.decompositions,
+    "%d non-trivial sccs, %d substituted %.2f%%",
+    non_trivial_sccs, substituted, percent (substituted, original));
 
   erase_vector (scc);
 

@@ -167,6 +167,7 @@ void Internal::probe () {
 
   if (level) backtrack ();
 
+  decompose ();
   mark_duplicated_binary_clauses_as_garbage ();
 
   assert (!simplifying);
@@ -223,6 +224,8 @@ void Internal::probe () {
     probed, failed);
 
   report ('p');
+
+  decompose ();
 
   STOP_AND_SWITCH (probe, simplify, search);
 }
