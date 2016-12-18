@@ -18,13 +18,6 @@ void Internal::decompose () {
   if (!opts.decompose) return;
 
   assert (!level);
-
-{
-  int remove;
-  if (stats.decompositions) return;
-  opts.log = true;
-}
-
   stats.decompositions++;
 
   START (decompose);
@@ -151,29 +144,35 @@ void Internal::decompose () {
   for (size_t i = 0; !unsat && i < clauses_size; i++) {
     Clause * c = clauses[i];
     if (c->garbage) continue;
-    int j, size = c->size;
-    for (j = 0; j < size; j++) {
-      const int lit = c->literals[j];
+    int substituted, size = c->size;
+    for (substituted = 0; substituted < size; substituted++) {
+      const int lit = c->literals[substituted];
       if (reprs [ vlit (lit) ] != lit) break;
     }
-    if (j == size) continue;
+    if (substituted == size) continue;
+    int substituted_watch =
+      (substituted < 2 ? c->literals[substituted] : 0);
     replaced++;
     LOG (c, "substituting");
     assert (clause.empty ());
     bool satisfied = false;
+    int falsified_watch = 0;
     for (int k = 0; !satisfied && k < size; k++) {
       const int lit = c->literals[k];
       int tmp = val (lit);
       if (tmp > 0) satisfied = true;
       else if (tmp < 0) {
-	if (k >= 2) continue;
-	mark (other);
-	clause.push_back (other);
+	if (clause.size () < 2 && !falsified_watch)
+	  falsified_watch = lit;
+	continue;
       } else {
 	const int other = reprs [vlit (lit)];
 	tmp = val (other);
-	if (tmp < 0) continue;
-	else if (tmp > 0) satisfied = true;
+	if (tmp < 0) {
+	  if (clause.size () < 2 && !falsified_watch)
+	    falsified_watch = lit;
+	  continue;
+	} else if (tmp > 0) satisfied = true;
 	else {
 	  tmp = marked (other);
 	  if (tmp < 0) satisfied = true;
@@ -196,9 +195,15 @@ void Internal::decompose () {
       assign_unit (clause[0]);
       mark_garbage (c);
       garbage++;
-    } else if (j < 2) {
-      LOG ("watched literal %d becomes %d at position %d",
-	c->literals[j], reprs [vlit (clause[j])], j);
+    } else if (1) { // substituted_watch || falsified_watch) {
+      {
+	int make_it_optional;
+      }
+      if (substituted_watch)
+	LOG ("watched literal %d becomes %d",
+	  substituted_watch, reprs [vlit (substituted_watch)]);
+      else
+	LOG ("falsified watched literal %d", falsified_watch);
       size_t d_clause_idx = clauses.size ();
       Clause * d = new_substituted_clause (c);
       assert (clauses[d_clause_idx] = d);
@@ -206,8 +211,7 @@ void Internal::decompose () {
       mark_garbage (c);
       garbage++;
     } else {
-      LOG ("first substituted literal %d becomes %d at position %d",
-	c->literals[j], reprs [vlit (clause[j])], j);
+      LOG ("shrinking since watches are not substituted nor falsified");
       assert (c->size > 2);
       size_t l;
       for (l = 2; l < clause.size (); l++)
@@ -233,18 +237,23 @@ void Internal::decompose () {
 
   erase_vector (scc);
 
-  delete [] reprs;
-
-  {
-    int remove;
-    opts.log = false;
-  }
-
   if (!unsat && propagated < trail.size () && !propagate ()) {
     LOG ("empty clause after propagating units from substitution");
     learn_empty_clause ();
   }
 
+  for (int idx = 1; !unsat && idx <= max_var; idx++) {
+    if (!active (idx)) continue;
+    int other = reprs [ vlit (idx) ];
+    if (other == idx) continue;
+    assert (active (other));
+    flags (idx).status = Flags::SUBSTITUTED;
+    stats.substituted++;
+  }
+
+  delete [] reprs;
+  
+  flush_all_occs_and_watches ();
   report ('d');
   STOP (decompose);
 }

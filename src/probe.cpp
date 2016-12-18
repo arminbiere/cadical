@@ -223,15 +223,11 @@ void CaDiCaL::Internal::probe () {
   if (level) backtrack ();
   assert (!unsat);
   decompose ();
-#if 0
   if (!unsat) {
     mark_duplicated_binary_clauses_as_garbage ();
     probe_core ();
     if (!unsat) decompose ();
   }
-#else
-  lim.probe = stats.conflicts + 1e12;
-#endif
   STOP_AND_SWITCH (probe, simplify, search);
 }
 
