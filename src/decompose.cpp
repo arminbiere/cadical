@@ -21,6 +21,7 @@ void Internal::decompose () {
 
 {
   int remove;
+  if (stats.decompositions) return;
   opts.log = true;
 }
 
@@ -29,8 +30,8 @@ void Internal::decompose () {
   START (decompose);
 
   DFS * dfs = new DFS[2*(max_var + 1)];
-  int * repr = new int[2*(max_var + 1)];
-  ZERO (repr, int, 2*(max_var + 1));
+  int * reprs = new int[2*(max_var + 1)];
+  ZERO (reprs, int, 2*(max_var + 1));
 
   int non_trivial_sccs = 0, substituted = 0;
   int original = active_variables ();
@@ -38,23 +39,23 @@ void Internal::decompose () {
 
   vector<int> work, scc;
 
-  for (int root_idx = 1; root_idx <= max_var; root_idx++) {
+  for (int root_idx = 1; !unsat && root_idx <= max_var; root_idx++) {
     if (!active (root_idx)) continue;
-    for (int root_sign = -1; root_sign <= 1; root_sign += 2) {
+    for (int root_sign = -1; !unsat && root_sign <= 1; root_sign += 2) {
       int root = root_sign * root_idx;
-      if (repr[vlit (root)]) continue;
+      if (dfs[vlit (root)].min == TRAVERSED) continue;
       LOG ("root dfs search %d", root);
       assert (work.empty ());
       assert (scc.empty ());
       work.push_back (root);
-      while (!work.empty ()) {
+      while (!unsat && !work.empty ()) {
 	int parent = work.back ();
 	DFS & parent_dfs = dfs[vlit (parent)];
 	if (parent_dfs.min == TRAVERSED) {		// skip traversed
-	  assert (repr [vlit (parent)]);
+	  assert (reprs [vlit (parent)]);
 	  work.pop_back ();
 	} else {
-	  assert (!repr [vlit (parent)]);
+	  assert (!reprs [vlit (parent)]);
 	  Watches & ws = watches (-parent);
 	  const const_watch_iterator end = ws.end ();
 	  const_watch_iterator i;
@@ -69,34 +70,45 @@ void Internal::decompose () {
 	      const DFS & child_dfs = dfs[vlit (child)];
 	      if (new_min > child_dfs.min) new_min = child_dfs.min;
 	    }
-	    LOG ("post dfs search %d index %u minimum %u",
+	    LOG ("post-fix work dfs search %d index %u minimum %u",
 	      parent, parent_dfs.idx, new_min);
 	    if (parent_dfs.idx == new_min) {
-	      int other, size = 0;
+	      int other, size = 0, repr = parent;
+	      assert (!scc.empty ());
+	      size_t j = scc.size ();
 	      do {
-		assert (!scc.empty ());
-		other = scc.back ();
-		scc.pop_back ();
-		dfs[vlit (other)].min = TRAVERSED;
-		repr[vlit (other)] = parent;
-		size++;
-		if (other != parent) substituted++;
-#ifdef LOGGING
-		if (other == parent && size == 1)
-		  LOG ("trivial size 1 scc with %d", parent);
-		else
-		  LOG ("literal %d in scc of %d", other, parent);
-#endif
-	      } while (other != parent);
-	      LOG ("scc of %d has size %d", parent, size);
-	      if (size > 1) non_trivial_sccs++;
+		assert (j > 0);
+		other = scc[--j];
+		if (other == -parent) {
+		  LOG ("both %d and %d in one scc", parent, -parent);
+		  learn_empty_clause ();
+		} else {
+		  if (abs (other) < abs (repr)) repr = other;
+		  size++;
+		}
+	      } while (!unsat && other != parent);
+	      if (!unsat) {
+		LOG ("scc of representative %d of size %d", repr, size);
+		do {
+		  assert (!scc.empty ());
+		  other = scc.back ();
+		  scc.pop_back ();
+		  dfs[vlit (other)].min = TRAVERSED;
+		  reprs[vlit (other)] = repr;
+		  if (other != repr) {
+		    substituted++;
+		    LOG ("literal %d in scc of %d", other, repr);
+		  }
+		} while (other != parent);
+		if (size > 1) non_trivial_sccs++;
+	      }
 	    } else parent_dfs.min = new_min;
 	  } else {              			// pre-fix
 	    dfs_idx++;
 	    assert (dfs_idx < TRAVERSED);
 	    parent_dfs.idx = parent_dfs.min = dfs_idx;
 	    scc.push_back (parent);
-	    LOG ("post dfs search %d index %u", parent, dfs_idx);
+	    LOG ("pre-fix work dfs search %d index %u", parent, dfs_idx);
 	    for (i = ws.begin (); i != end; i++) {
 	      const Watch & w = *i;
 	      if (!w.binary) continue;
@@ -112,6 +124,24 @@ void Internal::decompose () {
     }
   }
 
+  erase_vector (work);
+  erase_vector (scc);
+  delete [] dfs;
+
+  for (int idx = 1; !unsat && idx <= max_var; idx++) {
+    if (!active (idx)) continue;
+    int other = reprs [ vlit (idx) ];
+    if (other == idx) continue;
+    assert (active (other));
+    assert (reprs[vlit (-idx)] == -other);
+    extension.push_back (0);
+    extension.push_back (-idx);
+    extension.push_back (other);
+    extension.push_back (0);
+    extension.push_back (idx);
+    extension.push_back (-other);
+  }
+
   VRB ("decompose",
     stats.decompositions,
     "%d non-trivial sccs, %d substituted %.2f%%",
@@ -124,9 +154,10 @@ void Internal::decompose () {
     int j, size = c->size;
     for (j = 0; j < size; j++) {
       const int lit = c->literals[j];
-      if (repr [ vlit (lit) ] != lit) break;
+      if (reprs [ vlit (lit) ] != lit) break;
     }
     if (j == size) continue;
+    replaced++;
     LOG (c, "substituting");
     assert (clause.empty ());
     bool satisfied = false;
@@ -134,8 +165,9 @@ void Internal::decompose () {
       const int lit = c->literals[k];
       int tmp = val (lit);
       if (tmp > 0) satisfied = true;
+      else if (tmp < 0) continue;
       else {
-	const int other = repr [vlit (lit)];
+	const int other = reprs [vlit (lit)];
 	tmp = val (other);
 	if (tmp < 0) continue;
 	else if (tmp > 0) satisfied = true;
@@ -152,22 +184,31 @@ void Internal::decompose () {
     if (satisfied) {
       LOG (c, "satisfied after substitution");
       mark_garbage (c);
+      garbage++;
     } else if (!clause.size ()) {
       LOG ("learned empty clause during decompose");
       learn_empty_clause ();
     } else if (clause.size () == 1) {
       LOG (c, "unit %d after substitution", clause[0]);
-      learn_unit_clause (clause[0]);
+      assign_unit (clause[0]);
       mark_garbage (c);
-    } else if (j < 2) {
-      LOG ("watched literal %d becomes %d at position %d",
-        clause[j], repr [vlit (clause[j])], j);
+      garbage++;
     } else {
-      LOG ("first substituted literal %d becomes %d at position %d",
-        clause[j], repr [vlit (clause[j])], j);
+      if (j < 2) {
+	LOG ("watched literal %d becomes %d at position %d",
+	  clause[j], reprs [vlit (clause[j])], j);
+	garbage++;
+      } else {
+	LOG ("first substituted literal %d becomes %d at position %d",
+	  clause[j], reprs [vlit (clause[j])], j);
+      }
     }
-    for (size_t k = 0; k < clause.size (); k++) unmark (clause[k]);
-    clause.clear ();
+    while (!clause.empty ()) {
+      int lit = clause.back ();
+      clause.pop_back ();
+      assert (marked (lit) > 0);
+      unmark (lit);
+    }
   }
 
   VRB ("decompose",
@@ -178,8 +219,7 @@ void Internal::decompose () {
 
   erase_vector (scc);
 
-  delete [] dfs;
-  delete [] repr;
+  delete [] reprs;
 
   {
     int remove;
