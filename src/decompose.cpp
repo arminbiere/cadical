@@ -65,6 +65,7 @@ void Internal::decompose () {
 	      const Watch & w = *i;
 	      if (!w.binary) continue;
 	      const int child = w.blit;
+	      if (!active (child)) continue;
 	      const DFS & child_dfs = dfs[vlit (child)];
 	      if (new_min > child_dfs.min) new_min = child_dfs.min;
 	    }
@@ -100,6 +101,7 @@ void Internal::decompose () {
 	      const Watch & w = *i;
 	      if (!w.binary) continue;
 	      const int child = w.blit;
+	      if (!active (child)) continue;
 	      const DFS & child_dfs = dfs[vlit (child)];
 	      if (child_dfs.idx) continue;
 	      work.push_back (child);
@@ -130,16 +132,20 @@ void Internal::decompose () {
     bool satisfied = false;
     for (int k = 0; !satisfied && k < size; k++) {
       const int lit = c->literals[k];
-      const int other = repr [vlit (lit)];
-      int tmp = val (other);
-      if (tmp < 0) continue;
-      else if (tmp > 0) satisfied = true;
+      int tmp = val (lit);
+      if (tmp > 0) satisfied = true;
       else {
-	tmp = marked (other);
-	if (tmp < 0) satisfied = true;
-	else if (!tmp) {
-	  mark (other);
-	  clause.push_back (other);
+	const int other = repr [vlit (lit)];
+	tmp = val (other);
+	if (tmp < 0) continue;
+	else if (tmp > 0) satisfied = true;
+	else {
+	  tmp = marked (other);
+	  if (tmp < 0) satisfied = true;
+	  else if (!tmp) {
+	    mark (other);
+	    clause.push_back (other);
+	  }
 	}
       }
     }
@@ -160,7 +166,7 @@ void Internal::decompose () {
       LOG ("first substituted literal %d becomes %d at position %d",
         clause[j], repr [vlit (clause[j])], j);
     }
-    for (int k = 0; k < clause.size (); k++) unmark (clause[k]);
+    for (size_t k = 0; k < clause.size (); k++) unmark (clause[k]);
     clause.clear ();
   }
 
