@@ -165,7 +165,7 @@ class Internal {
   bool active (int lit) { return flags(lit).active (); }
 
   int active_variables () const {
-    return max_var - stats.fixed - stats.eliminated;
+    return max_var - stats.fixed - stats.eliminated - stats.substituted;
   }
 
   // Regularly reports what is going on in 'report.cpp'.
