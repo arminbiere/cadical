@@ -453,6 +453,7 @@ class Internal {
   bool probagate ();
   void generate_probes ();
   int next_probe ();
+  void probe_core ();
   void probe ();
 
   // Detect strongly connected components in the binary implication graph

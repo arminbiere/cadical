@@ -17,6 +17,13 @@ void Internal::decompose () {
   
   if (!opts.decompose) return;
 
+  assert (!level);
+
+{
+  int remove;
+  opts.log = true;
+}
+
   stats.decompositions++;
 
   START (decompose);
@@ -25,7 +32,8 @@ void Internal::decompose () {
   int * repr = new int[2*(max_var + 1)];
   ZERO (repr, int, 2*(max_var + 1));
 
-  int non_trivial_sccs = 0, substituted = 0, original = active_variables ();
+  int non_trivial_sccs = 0, substituted = 0;
+  int original = active_variables ();
   unsigned dfs_idx = 0;
 
   vector<int> work, scc;
@@ -107,10 +115,75 @@ void Internal::decompose () {
     "%d non-trivial sccs, %d substituted %.2f%%",
     non_trivial_sccs, substituted, percent (substituted, original));
 
+  size_t clauses_size = clauses.size (), garbage = 0, replaced = 0;
+  for (size_t i = 0; !unsat && i < clauses_size; i++) {
+    Clause * c = clauses[i];
+    if (c->garbage) continue;
+    int j, size = c->size;
+    for (j = 0; j < size; j++) {
+      const int lit = c->literals[j];
+      if (repr [ vlit (lit) ] != lit) break;
+    }
+    if (j == size) continue;
+    LOG (c, "substituting");
+    assert (clause.empty ());
+    bool satisfied = false;
+    for (int k = 0; !satisfied && k < size; k++) {
+      const int lit = c->literals[k];
+      const int other = repr [vlit (lit)];
+      int tmp = val (other);
+      if (tmp < 0) continue;
+      else if (tmp > 0) satisfied = true;
+      else {
+	tmp = marked (other);
+	if (tmp < 0) satisfied = true;
+	else if (!tmp) {
+	  mark (other);
+	  clause.push_back (other);
+	}
+      }
+    }
+    if (satisfied) {
+      LOG (c, "satisfied after substitution");
+      mark_garbage (c);
+    } else if (!clause.size ()) {
+      LOG ("learned empty clause during decompose");
+      learn_empty_clause ();
+    } else if (clause.size () == 1) {
+      LOG (c, "unit %d after substitution", clause[0]);
+      learn_unit_clause (clause[0]);
+      mark_garbage (c);
+    } else if (j < 2) {
+      LOG ("watched literal %d becomes %d at position %d",
+        clause[j], repr [vlit (clause[j])], j);
+    } else {
+      LOG ("first substituted literal %d becomes %d at position %d",
+        clause[j], repr [vlit (clause[j])], j);
+    }
+    for (int k = 0; k < clause.size (); k++) unmark (clause[k]);
+    clause.clear ();
+  }
+
+  VRB ("decompose",
+    stats.decompositions,
+    "%ld clauses replaced %.2f%% producing %ld garbage %.2f%% clauses",
+    replaced, percent (replaced, clauses_size),
+    garbage, percent (garbage, replaced));
+
   erase_vector (scc);
 
   delete [] dfs;
   delete [] repr;
+
+  {
+    int remove;
+    opts.log = false;
+  }
+
+  if (!unsat && propagated < trail.size () && !propagate ()) {
+    LOG ("empty clause after propagating units from substitution");
+    learn_empty_clause ();
+  }
 
   report ('d');
   STOP (decompose);

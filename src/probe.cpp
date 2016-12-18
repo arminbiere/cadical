@@ -161,15 +161,7 @@ int Internal::next_probe () {
   }
 }
 
-void Internal::probe () {
-
-  SWITCH_AND_START (search, simplify, probe);
-
-  if (level) backtrack ();
-
-  decompose ();
-  mark_duplicated_binary_clauses_as_garbage ();
-
+void Internal::probe_core () {
   assert (!simplifying);
   simplifying = true;
 
@@ -224,9 +216,18 @@ void Internal::probe () {
     probed, failed);
 
   report ('p');
+}
 
+void CaDiCaL::Internal::probe () {
+  SWITCH_AND_START (search, simplify, probe);
+  if (level) backtrack ();
+  assert (!unsat);
   decompose ();
-
+  if (!unsat) {
+    mark_duplicated_binary_clauses_as_garbage ();
+    probe_core ();
+    if (!unsat) decompose ();
+  }
   STOP_AND_SWITCH (probe, simplify, search);
 }
 
