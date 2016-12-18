@@ -291,6 +291,18 @@ Clause * Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
   return res;
 }
 
+// Add a substituted clause with same glue and redundancy as 'orig' but
+// literals are assumed to be in 'clause' as usual during 'decompose'.
+//
+Clause * Internal::new_substituted_clause (const Clause * orig) {
+  int glue = orig->glue, size = (int) clause.size ();
+  if (size < glue) glue = size;
+  Clause * res = new_clause (orig->redundant, glue);
+  if (proof) proof->trace_add_clause (res);
+  assert (watches ());
+  watch_clause (res);
+  return res;
+}
 
 // Add resolved clause during resolution, e.g., bounded variable
 // elimination, but do not connect its occurrences here.

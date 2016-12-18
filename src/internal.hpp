@@ -260,6 +260,7 @@ class Internal {
   void add_new_original_clause ();
   Clause * new_learned_redundant_clause (int glue);
   Clause * new_hyper_binary_resolved_clause (bool red, int glue);
+  Clause * new_substituted_clause (const Clause * orig);
   Clause * new_resolved_irredundant_clause ();
 
   // Forward reasoning through propagation in 'propagate.cpp'.

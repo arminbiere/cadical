@@ -165,8 +165,11 @@ void Internal::decompose () {
       const int lit = c->literals[k];
       int tmp = val (lit);
       if (tmp > 0) satisfied = true;
-      else if (tmp < 0) continue;
-      else {
+      else if (tmp < 0) {
+	if (k >= 2) continue;
+	mark (other);
+	clause.push_back (other);
+      } else {
 	const int other = reprs [vlit (lit)];
 	tmp = val (other);
 	if (tmp < 0) continue;
@@ -193,15 +196,26 @@ void Internal::decompose () {
       assign_unit (clause[0]);
       mark_garbage (c);
       garbage++;
+    } else if (j < 2) {
+      LOG ("watched literal %d becomes %d at position %d",
+	c->literals[j], reprs [vlit (clause[j])], j);
+      size_t d_clause_idx = clauses.size ();
+      Clause * d = new_substituted_clause (c);
+      assert (clauses[d_clause_idx] = d);
+      swap (clauses[i], clauses[d_clause_idx]);
+      mark_garbage (c);
+      garbage++;
     } else {
-      if (j < 2) {
-	LOG ("watched literal %d becomes %d at position %d",
-	  clause[j], reprs [vlit (clause[j])], j);
-	garbage++;
-      } else {
-	LOG ("first substituted literal %d becomes %d at position %d",
-	  clause[j], reprs [vlit (clause[j])], j);
-      }
+      LOG ("first substituted literal %d becomes %d at position %d",
+	c->literals[j], reprs [vlit (clause[j])], j);
+      assert (c->size > 2);
+      size_t l;
+      for (l = 2; l < clause.size (); l++)
+	c->literals[l] = clause[l];
+      c->literals[l] = 0;
+      c->size = l;
+      c->update_after_shrinking ();
+      LOG (c, "substituted");
     }
     while (!clause.empty ()) {
       int lit = clause.back ();
