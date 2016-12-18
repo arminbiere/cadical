@@ -5,21 +5,21 @@ namespace CaDiCaL {
 
 struct Flags {         // Variable flags.
 
-  bool seen       : 1;  // seen in generating first UIP clause in 'analyze'
-  bool poison     : 1;  // can not be removed in 'minimize/shrink'
-  bool removable  : 1;  // can be removed in 'minimize/shrink'
-  bool clause     : 1;  // part of learned clause in 'minimize/shrink'
-  bool added      : 1;  // added since last 'subsume' round
-  bool removed    : 1;  // removed since last 'elim' round
+  bool seen      : 1; // seen in generating first UIP clause in 'analyze'
+  bool poison    : 1; // can not be removed in 'minimize/shrink'
+  bool removable : 1; // can be removed in 'minimize/shrink'
+  bool clause    : 1; // part of learned clause in 'minimize/shrink'
+  bool added     : 1; // added since last 'subsume' round
+  bool removed   : 1; // removed since last 'elim' round
   
-  unsigned status : 2;
-
   enum {
     ACTIVE      = 0,
     FIXED       = 1,
     ELIMINATED  = 2,
     SUBSTITUTED = 3,
   };
+
+  unsigned char status : 2;
 
   Flags () :
     seen (false),

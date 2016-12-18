@@ -28,7 +28,7 @@ void Internal::learn_empty_clause () {
 void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   if (proof) proof->trace_unit_clause (lit);
-  assert (!flags (lit).active ());
+  assert (flags (lit).active ());
   flags (lit).status = Flags::FIXED;
   stats.fixed++;
 }
