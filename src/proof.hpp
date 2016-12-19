@@ -29,6 +29,7 @@ public:
 
   void trace_empty_clause ();
   void trace_unit_clause (int unit);
+  void trace_add_clause ();
   void trace_add_clause (Clause *);
   void trace_delete_clause (Clause *);
   void trace_flushing_clause (Clause *);

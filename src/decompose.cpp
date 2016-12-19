@@ -1,6 +1,7 @@
 #include "internal.hpp"
 #include "macros.hpp"
 #include "message.hpp"
+#include "proof.hpp"
 
 #include <climits>
 
@@ -74,6 +75,7 @@ void Internal::decompose () {
 		other = scc[--j];
 		if (other == -parent) {
 		  LOG ("both %d and %d in one scc", parent, -parent);
+		  assign_unit (parent);
 		  learn_empty_clause ();
 		} else {
 		  if (abs (other) < abs (repr)) repr = other;
@@ -181,10 +183,7 @@ void Internal::decompose () {
       assign_unit (clause[0]);
       mark_garbage (c);
       garbage++;
-    } else if (1) { // substituted_watch || falsified_watch) {
-      {
-	int make_it_optional;
-      }
+    } else if (substituted_watch || falsified_watch) {
       if (substituted_watch)
 	LOG ("watched literal %d becomes %d",
 	  substituted_watch, reprs [vlit (substituted_watch)]);
@@ -200,12 +199,18 @@ void Internal::decompose () {
     } else {
       LOG ("shrinking since watches are not substituted nor falsified");
       assert (c->size > 2);
+      if (proof) {
+	proof->trace_add_clause ();
+	proof->trace_delete_clause (c);
+      }
       size_t l;
       for (l = 2; l < clause.size (); l++)
 	c->literals[l] = clause[l];
-      c->literals[l] = 0;
-      c->size = l;
-      c->update_after_shrinking ();
+      if (l < (size_t) c->size) {
+	c->literals[l] = 0;
+	c->size = l;
+	c->update_after_shrinking ();
+      }
       LOG (c, "substituted");
     }
     while (!clause.empty ()) {
