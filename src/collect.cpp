@@ -372,6 +372,7 @@ void Internal::garbage_collection () {
   if (opts.arena) copy_non_garbage_clauses ();
   else delete_garbage_clauses ();
   check_clause_stats ();
+  check_var_stats ();
   report ('C', 1);
   STOP (collect);
 }

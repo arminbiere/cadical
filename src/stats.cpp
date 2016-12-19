@@ -39,6 +39,9 @@ void Stats::print (Internal * internal) {
     stats.eliminations, relative (stats.conflicts, stats.eliminations));
   MSG ("subsumptions:    %15ld   %10.2f    conflicts per subsumption",
     stats.subsumptions, relative (stats.conflicts, stats.subsumptions));
+  MSG ("decompositions:  %15ld   %10.2f    decompositions per probing",
+    stats.decompositions,
+    relative (stats.decompositions, stats.probings));
   MSG ("reductions:      %15ld   %10.2f    conflicts per reduction",
     stats.reductions, relative (stats.conflicts, stats.reductions));
   MSG ("restarts:        %15ld   %10.2f    conflicts per restart",

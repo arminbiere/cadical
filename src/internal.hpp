@@ -340,6 +340,7 @@ class Internal {
   void copy_non_garbage_clauses ();
   void delete_garbage_clauses ();
   void check_clause_stats ();
+  void check_var_stats ();
   void garbage_collection ();
 
 #ifdef BACKWARD
@@ -460,6 +461,7 @@ class Internal {
   // Detect strongly connected components in the binary implication graph
   // (BIG) and perform equivalent literal substitution (ELS).
   //
+  bool decompose_round ();
   void decompose ();
 
 #ifdef BCE

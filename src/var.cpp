@@ -17,4 +17,20 @@ void Internal::reset_added () {
     flags (idx).added = false;
 }
 
+void Internal::check_var_stats () {
+#ifndef NDEBUG
+  int fixed = 0, eliminated = 0, substituted = 0;
+  for (int idx = 1; idx <= max_var; idx++) {
+    Flags & f = flags (idx);
+    if (f.active ()) continue;
+    if (f.fixed ()) fixed++;
+    if (f.eliminated ()) eliminated++;
+    if (f.substituted ()) substituted++;
+  }
+  assert (stats.fixed == fixed);
+  assert (stats.eliminated == eliminated);
+  assert (stats.substituted == substituted);
+#endif
+}
+
 };

@@ -14,14 +14,10 @@ struct DFS {
   DFS () : idx (0), min (0) { }
 };
 
-void Internal::decompose () {
+bool Internal::decompose_round () {
   
-  if (!opts.decompose) return;
-
   assert (!level);
   stats.decompositions++;
-
-  START (decompose);
 
   DFS * dfs = new DFS[2*(max_var + 1)];
   int * reprs = new int[2*(max_var + 1)];
@@ -219,6 +215,7 @@ void Internal::decompose () {
 	}
       }
       LOG (c, "substituted");
+      if (likely_to_be_kept_clause (c)) mark_added (c);
     }
     while (!clause.empty ()) {
       int lit = clause.back ();
@@ -260,6 +257,15 @@ void Internal::decompose () {
   
   flush_all_occs_and_watches ();
   report ('d');
+
+  return substituted > 0;
+}
+
+void Internal::decompose () {
+  if (!opts.decompose) return;
+  START (decompose);
+  for (int round = 1; round <= opts.decomposerounds; round++)
+    if (!decompose_round ()) break;
   STOP (decompose);
 }
 
