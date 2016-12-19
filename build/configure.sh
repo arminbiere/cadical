@@ -14,11 +14,9 @@ profile=no
 
 # Options do disable code, which usually is not included.
 #
-bce=yes
+bce=no
 shrink=no
 backward=no
-
-echo "WARNING: bce=yes"
 
 #--------------------------------------------------------------------------#
 
