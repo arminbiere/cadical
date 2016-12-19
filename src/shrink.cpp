@@ -21,7 +21,7 @@ bool Internal::shrink_literal (int lit, int depth) {
   assert (val (lit) > 0);
   Flags & f = flags (lit);
   Var & v = var (lit);
-  if (!v.level || f.removable || f.clause) return true;
+  if (!v.level || f.removable || f.keep) return true;
   if (!v.reason || f.poison || v.level == level) return false;
   const Level & l = control[v.level];
   if (!depth && l.seen < 2) return false;
@@ -69,7 +69,7 @@ void Internal::shrink_clause () {
   int_iterator j = clause.begin ();
   for (const_int_iterator i = j; i != clause.end (); i++)
     if (shrink_literal (-*i)) stats.shrunken++;
-    else flags (*j++ = *i).clause = true;
+    else flags (*j++ = *i).keep = true;
   LOG ("shrunken %d literals", (long)(clause.end () - j));
   clause.resize (j - clause.begin ());
   clear_minimized ();

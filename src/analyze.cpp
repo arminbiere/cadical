@@ -190,8 +190,8 @@ void Internal::clear_seen () {
     Flags & f = flags (*i);
     assert (f.seen);
     f.seen = false;
-    assert (!f.poison),
-    assert (!f.clause);
+    assert (!f.keep);
+    assert (!f.poison);
     assert (!f.removable);
   }
   analyzed.clear ();

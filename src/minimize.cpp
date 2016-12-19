@@ -23,7 +23,7 @@ namespace CaDiCaL {
 bool Internal::minimize_literal (int lit, int depth) {
   Flags & f = flags (lit);
   Var & v = var (lit);
-  if (!v.level || f.removable || f.clause) return true;
+  if (!v.level || f.removable || f.keep) return true;
   if (!v.reason || f.poison || v.level == level) return false;
   const Level & l = control[v.level];
   if (!depth && l.seen < 2) return false;         // Don Knuth's idea
@@ -51,7 +51,7 @@ void Internal::minimize_clause () {
   int_iterator j = clause.begin ();
   for (const_int_iterator i = j; i != clause.end (); i++)
     if (minimize_literal (-*i)) stats.minimized++;
-    else flags (*j++ = *i).clause = true;
+    else flags (*j++ = *i).keep = true;
   LOG ("minimized %d literals", (long)(clause.end () - j));
   clause.resize (j - clause.begin ());
   clear_minimized ();
@@ -66,7 +66,7 @@ void Internal::clear_minimized () {
     f.poison = f.removable = false;
   }
   for (i = clause.begin (); i != clause.end (); i++)
-    flags (*i).clause = false;
+    flags (*i).keep = false;
   minimized.clear ();
 }
 

@@ -102,6 +102,17 @@ void Proof::trace_delete_clause (Clause * c) {
   trace_clause (c, false);
 }
 
+void Proof::trace_add_clause () {
+  if (binary) file->put ('a');
+  const const_int_iterator end = internal->clause.end ();
+  const_int_iterator i = internal->clause.begin ();
+  while (i != end)
+    if (binary) put_binary_lit (*i++);
+    else file->put (*i++), file->put (" ");
+  if (binary) put_binary_zero ();
+  else file->put ("0\n");
+}
+
 /*------------------------------------------------------------------------*/
 
 // During garbage collection clauses are shrunken by removing falsified

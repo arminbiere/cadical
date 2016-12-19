@@ -6,9 +6,9 @@ namespace CaDiCaL {
 struct Flags {         // Variable flags.
 
   bool seen      : 1; // seen in generating first UIP clause in 'analyze'
+  bool keep      : 1; // keep in learned clause in 'minimize/shrink'
   bool poison    : 1; // can not be removed in 'minimize/shrink'
   bool removable : 1; // can be removed in 'minimize/shrink'
-  bool clause    : 1; // part of learned clause in 'minimize/shrink'
   bool added     : 1; // added since last 'subsume' round
   bool removed   : 1; // removed since last 'elim' round
   
@@ -23,9 +23,9 @@ struct Flags {         // Variable flags.
 
   Flags () :
     seen (false),
+    keep (false),
     poison (false),
     removable (false),
-    clause (false),
     added (true),       // initially all variables are 'added'
     removed (true),     // and all variables are 'removed'
     status (ACTIVE)
