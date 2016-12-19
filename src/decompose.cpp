@@ -206,10 +206,17 @@ void Internal::decompose () {
       size_t l;
       for (l = 2; l < clause.size (); l++)
 	c->literals[l] = clause[l];
-      if (l < (size_t) c->size) {
-	c->literals[l] = 0;
+      int flushed = c->size - (int) l;
+      if (flushed) {
+	LOG ("flushed %d literals", flushed);
 	c->size = l;
+	c->literals[l] = 0;
 	c->update_after_shrinking ();
+	if (!c->redundant) {
+	  size_t bytes = flushed * sizeof (int);
+	  assert (stats.irrbytes >= (long) bytes);
+	  stats.irrbytes -= bytes;
+	}
       }
       LOG (c, "substituted");
     }
