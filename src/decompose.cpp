@@ -207,7 +207,8 @@ void Internal::decompose () {
       size_t d_clause_idx = clauses.size ();
       Clause * d = new_substituted_clause (c);
       assert (clauses[d_clause_idx] = d);
-      swap (clauses[i], clauses[d_clause_idx]);
+      clauses[d_clause_idx] = c;
+      clauses[i] = d;
       mark_garbage (c);
       garbage++;
     } else {
