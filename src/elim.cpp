@@ -458,6 +458,7 @@ inline void Internal::try_to_eliminate_variable (int pivot) {
   elim_add_resolvents (pivot);
   if (!unsat) mark_eliminated_clauses_as_garbage (pivot);
 
+  assert (active (pivot));
   flags (pivot).status = Flags::ELIMINATED;
   LOG ("eliminated %d", pivot);
   stats.eliminated++;

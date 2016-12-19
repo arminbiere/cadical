@@ -121,20 +121,6 @@ void Internal::decompose () {
   erase_vector (scc);
   delete [] dfs;
 
-  for (int idx = 1; !unsat && idx <= max_var; idx++) {
-    if (!active (idx)) continue;
-    int other = reprs [ vlit (idx) ];
-    if (other == idx) continue;
-    assert (active (other));
-    assert (reprs[vlit (-idx)] == -other);
-    extension.push_back (0);
-    extension.push_back (-idx);
-    extension.push_back (other);
-    extension.push_back (0);
-    extension.push_back (idx);
-    extension.push_back (-other);
-  }
-
   VRB ("decompose",
     stats.decompositions,
     "%d non-trivial sccs, %d substituted %.2f%%",
@@ -250,6 +236,12 @@ void Internal::decompose () {
     assert (active (other));
     flags (idx).status = Flags::SUBSTITUTED;
     stats.substituted++;
+    extension.push_back (0);
+    extension.push_back (-idx);
+    extension.push_back (other);
+    extension.push_back (0);
+    extension.push_back (idx);
+    extension.push_back (-other);
   }
 
   delete [] reprs;

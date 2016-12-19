@@ -104,13 +104,7 @@ void Stats::print (Internal * internal) {
     stats.units, relative (stats.conflicts, stats.units));
   MSG ("  binaries:      %15ld   %10.2f    conflicts per binary",
     stats.binaries, relative (stats.conflicts, stats.binaries));
-  MSG ("  trailbumped:   %15ld   %10.2f %%  per conflict",
-    stats.trailbumped, percent (stats.trailbumped, stats.conflicts));
-  MSG ("analyzed:        %15ld   %10.2f    per conflict",
-    stats.analyzed, relative (stats.analyzed, stats.conflicts));
   }
-  MSG ("fixed:           %15ld   %10.2f %%  of all variables",
-    stats.fixed, percent (stats.fixed, internal->max_var));
   MSG ("substituted:     %15ld   %10.2f %%  of all variables",
     stats.substituted, percent (stats.substituted, internal->max_var));
   MSG ("failed:          %15ld   %10.2f %%  of all variables",
@@ -118,6 +112,12 @@ void Stats::print (Internal * internal) {
   long learned = stats.learned - stats.minimized;
   MSG ("learned:         %15ld   %10.2f    per conflict",
     learned, relative (learned, stats.conflicts));
+  if (verbose) {
+  MSG ("  analyzed:      %15ld   %10.2f    per conflict",
+    stats.analyzed, relative (stats.analyzed, stats.conflicts));
+  MSG ("  trailbumped:   %15ld   %10.2f %%  per conflict",
+    stats.trailbumped, percent (stats.trailbumped, stats.conflicts));
+  }
   MSG ("minimized:       %15ld   %10.2f %%  of 1st-UIP-literals",
     stats.minimized, percent (stats.minimized, stats.learned));
 #ifdef BCE
