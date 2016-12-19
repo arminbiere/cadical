@@ -127,7 +127,7 @@ void Internal::block () {
 
   for (int idx = 1; idx <= max_var; idx++) {
     if (val (idx)) continue;
-    if (flags (idx).eliminated) continue;
+    if (!flags (idx).active ()) continue;
     if (stats.blockings > 1 && !flags (idx).removed) continue;
     schedule.push_back (idx);
     schedule.push_back (-idx);
