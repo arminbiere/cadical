@@ -65,7 +65,7 @@ void Stats::print (Internal * internal) {
   }
   MSG ("probed:          %15ld   %10.2f    per failed",
     stats.probed, relative (stats.probed, stats.failed));
-  // if (verbose)
+  if (verbose)
   {
   MSG ("  hbrs:          %15ld   %10.2f    per probed",
     stats.hbrs, relative (stats.hbrs, stats.probed));
@@ -129,7 +129,7 @@ void Stats::print (Internal * internal) {
 #endif
   MSG ("subsumed:        %15ld   %10.2f    tried per subsumed",
     stats.subsumed, relative (stats.subtried, stats.subsumed));
-  // if (verbose)
+  if (verbose)
   MSG ("  duplicated:    %15ld   %10.2f %%  per subsumed",
     stats.duplicated, percent (stats.duplicated, stats.subsumed));
   MSG ("strengthened:    %15ld   %10.2f    per subsumed",
