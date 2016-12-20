@@ -112,10 +112,10 @@ OPTION(strengthen,      bool,    1, 0,  1, "strengthen during subsume") \
 BWDOPT(sublast,          int,    5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,    1, 0,  1, "enable clause subsumption") \
 OPTION(subsumebinlim,    int,  1e4, 0,1e9, "watch list length limit") \
-OPTION(subsumeclslim,    int, 1000, 0,1e9, "clause length limit") \
+OPTION(subsumeclslim,    int,  1e3, 0,1e9, "clause length limit") \
 OPTION(subsumeinc,       int,  1e4, 1,1e9, "interval in conflicts") \
 OPTION(subsumeinit,      int,  1e4, 0,1e9, "initial subsume limit") \
-OPTION(subsumeocclim,    int,  100, 0,1e9, "watch list length limit") \
+OPTION(subsumeocclim,    int,  1e2, 0,1e9, "watch list length limit") \
 OPTION(trailbump,       bool,    1, 0,  1, "use trail + bumped") \
 OPTION(trailbumplast, double,   40, 0,100, "trail bump last level limit") \
 OPTION(trailbumprops, double,  200, 0,1e9, "trail bump propagation limit") \
