@@ -110,13 +110,8 @@ size_t Internal::flush_occs (int lit) {
     c = *i;
     if (c->collect ()) continue;
     *j++ = c->moved ? c->copy : c;
-#ifdef BCE
-    if (!c->redundant) res++;
-    else assert (c->blocked);
-#else
     assert (!c->redundant);
     res++;
-#endif
   }
   os.resize (j - os.begin ());
   shrink_occs (os);
@@ -338,27 +333,18 @@ void Internal::copy_non_garbage_clauses () {
 void Internal::check_clause_stats () {
 #ifndef NDEBUG
   long irredundant = 0, redundant = 0, irrbytes = 0;
-#ifdef BCE
-  long blocked = 0;
-#endif
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
     if (c->redundant) redundant++; else irredundant++;
-#ifdef BCE
-    if (c->blocked) blocked++;
-#endif
     if (!c->redundant) irrbytes += c->bytes ();
   }
   assert (stats.irredundant == irredundant);
   assert (stats.redundant == redundant);
   assert (stats.irrbytes == irrbytes);
-#ifdef BCE
-  assert (stats.redblocked == blocked);
 #endif
-#endif // NDEBUG
 }
 
 /*------------------------------------------------------------------------*/

@@ -34,23 +34,8 @@ struct Stats {
   long hbrsizes;     // sum of hyper resolved base clauses
   long hbreds;       // redundant hyper binary resolvents
   long hbrsubs;      // subsuming hyper binary resolvents
-#ifdef SHRINK
-  long shrunken;     // removed literals in learned clauses
-  long shrinktried;  // number of tried to shrink literals
-#endif
-#ifdef BACKWARD
-  long sublast;      // number of eagerly subsumed clauses
-#endif
   long subsumed;     // number of subsumed clauses
   long duplicated;   // number of duplicated binary clauses
-#ifdef BCE
-  long blockings;    // blocked clause elimination rounds
-  long blocked;      // number of blocked clauses
-  long blockres;     // number of resolved clauses in BCE
-  long blockres2;    // number of resolved binary clauses in BCE
-  long blocktried;   // number of tried clauses in BCE
-  long redblocked;   // number of blocked redundant clauses
-#endif
   long strengthened; // number of strengthened clauses
   long subirr;       // number of subsumed irredundant clauses
   long subred;       // number of subsumed redundant clauses

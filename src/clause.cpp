@@ -58,10 +58,7 @@ void Internal::unmark_clause () {
 // will trigger these variables to be considered again in the next bounded
 // variable elimination phase.  This is called from 'mark_garbage' below.
 
-#ifndef BCE
-inline
-#endif
-void Internal::mark_removed (Clause * c, int except) {
+inline void Internal::mark_removed (Clause * c, int except) {
   LOG (c, "marking removed");
   assert (!c->redundant);
   const const_literal_iterator end = c->end ();
@@ -138,9 +135,6 @@ Clause * Internal::new_clause (bool red, int glue) {
   c->moved = false;
   c->used = false;
   c->hbr = false;
-#ifdef BCE
-  c->blocked = false;
-#endif
   c->glue = glue;
   c->size = size;
   for (int i = 0; i < size; i++) c->literals[i] = clause[i];
@@ -200,16 +194,7 @@ void Internal::mark_garbage (Clause * c) {
   if (c->redundant) {
     assert (stats.redundant > 0);
     stats.redundant--;
-#ifdef BCE
-    if (c->blocked) {
-      assert (stats.redblocked > 0);
-      stats.redblocked--;
-    }
-#endif
   } else {
-#ifdef BCE
-    assert (!c->blocked);
-#endif
     assert (stats.irredundant > 0);
     assert (stats.irrbytes >= (long) bytes);
     stats.irrbytes -= bytes;

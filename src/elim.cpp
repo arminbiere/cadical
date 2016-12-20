@@ -29,11 +29,8 @@ namespace CaDiCaL {
 // in the 'eliminating' guard.
 
 bool Internal::eliminating () {
-#ifdef BCE
-  if (!opts.elim && !opts.block) return false;
-#else
+
   if (!opts.elim) return false;
-#endif
 
   // Wait until there has been a change in terms of new units or new removed
   // variables (in removed or shrunken irredundant clauses).
@@ -137,15 +134,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
     else if (tmp < 0) continue;
     else mark (lit), clause.push_back (lit);
   }
-#ifdef BCE
-  if (eliminated) {
-    assert (c->redundant);
-    assert (c->blocked);
-    LOG (c, "eliminated literal %d in", eliminated);
-  }
-#else
   assert (!eliminated);
-#endif
   if (satisfied) {
     LOG (c, "satisfied by %d antecedent", satisfied);
     if (!c->redundant) elim_update_removed (c);
@@ -182,15 +171,7 @@ bool Internal::resolve_clauses (Clause * c, int pivot, Clause * d) {
   const size_t size = clause.size ();
   if (tautological || satisfied || eliminated || size <= 1) clause.clear ();
 
-#ifdef BCE
-  if (eliminated) {
-    assert (d->redundant);
-    assert (c->blocked);
-    LOG (d, "eliminated literal %d in ", eliminated);
-  }
-#else
   assert (!eliminated);
-#endif
   if (satisfied) {
     LOG (d, "satisfied by %d antecedent", satisfied);
     if (!d->redundant) elim_update_removed (d);
@@ -297,19 +278,11 @@ bool Internal::elim_resolvents_are_bounded (int pivot, long pos, long neg) {
   //
   for (i = ps.begin (); needed >= 0 && i != pe; i++) {
     Clause * c = *i;
-#ifdef BCE
-    if (c->redundant) continue;
-#else
     assert (!c->redundant);
-#endif
     if (c->garbage) { needed -= neg; continue; }
     for (j = ns.begin (); needed >= 0 && j != ne; j++) {
       Clause * d = *j;
-#ifdef BCE
-      if (d->redundant) continue;
-#else
       assert (!d->redundant);
-#endif
       if (d->garbage) { needed--; continue; }
       stats.elimrestried++;
       if (resolve_clauses (c, pivot, d)) {
@@ -354,17 +327,10 @@ inline void Internal::elim_add_resolvents (int pivot) {
       Clause *d = *j;
       if (!resolve_clauses (c, pivot, d)) continue;
       check_learned_clause ();
-      if ((!c->redundant && !d->redundant)
-#ifdef BCE
-        || clause.size () <= (size_t) opts.blockeepsize
-#endif
-          ) {
+      if (!c->redundant && !d->redundant) {
         resolvents++;
         Clause * r = new_resolved_irredundant_clause ();
         if (!c->redundant && !d->redundant) elim_update_added (r);
-#ifdef BCE
-        else turn_into_redundant_blocked_clause (r);
-#endif
       }
       clause.clear ();
     }
@@ -552,11 +518,7 @@ bool Internal::elim_round () {
   for (i = clauses.begin (); i != eoc; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
-#ifdef BCE
-    if (c->redundant && !c->blocked) continue;
-#else
     if (c->redundant) continue;
-#endif
     const const_literal_iterator eol = c->end ();
     const_literal_iterator j;
     for (j = c->begin (); j != eol; j++) {
@@ -647,9 +609,6 @@ void Internal::elim () {
   //
   for (;;) {
     round++;
-#ifdef BCE
-    if (stats.eliminations >= opts.blockwait) block ();
-#endif
     if (!elim_round ()) break;
     if (unsat) break;
     if (round >= limit) break;             // stop after elimination

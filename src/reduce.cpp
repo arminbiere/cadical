@@ -66,14 +66,12 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     Clause * c = *i;
     if (!c->redundant) continue;                 // keep irredundant
     if (c->garbage) continue;                    // already marked
-    if (c->hbr) {
+    if (c->hbr) {				 // hyper binary resolvent?
+      assert (c->size == 2);
       if (!c->used) mark_garbage (c);
       else c->used = false;
       continue;
     }
-#ifdef BCE
-    if (c->blocked) continue;                    // keep blocked clauses
-#endif
     if (c->reason) continue;                     // need to keep reasons
     if (!c->have.analyzed) continue;             // statically deemed useful
     if (c->analyzed () > lim.analyzed) continue; // keep recent clauses

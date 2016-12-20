@@ -248,10 +248,6 @@ void Internal::analyze () {
   //
   if (size > 1) {
     if (opts.minimize) minimize_clause ();
-#ifdef SHRINK
-    if (opts.shrink && size <= opts.shrinksize && glue <= opts.shrinkglue)
-      shrink_clause ();
-#endif
     size = (int) clause.size ();
   }
 
@@ -260,14 +256,6 @@ void Internal::analyze () {
   stats.units    += (size == 1);
   stats.binaries += (size == 2);
   UPDATE_AVERAGE (size_avg, size);
-
-#ifdef BACKWARD
-
-  // Eager backward subsumption of learned clauses.
-  //
-  if (size > 1 && opts.sublast) eagerly_subsume_last_learned ();
-
-#endif
 
   // Update decision heuristics.
   //

@@ -12,12 +12,6 @@ check=no
 coverage=no
 profile=no
 
-# Options do disable code, which usually is not included.
-#
-bce=no
-shrink=no
-backward=no
-
 #--------------------------------------------------------------------------#
 
 die () {
@@ -46,9 +40,6 @@ where '<option>' is one of the following
 -l|--log     include logging code (but disabled by default)
 -s|--sats    include and enable expensive statistics code
 -a|--all     short cut for all above, e.g., '-g -l -s' (thus also '-c')
---bce        include BCE code
---shrink     include learned clause shrinking code
---backward   include eager backward subsumption code
 --coverage   compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile    compile with '-pg' to profile with 'gprof'
 EOF
@@ -64,9 +55,6 @@ do
     -l|--logging) logging=yes;;
     -s|--stats) stats=yes;;
     -a|--all) debug=yes;check=yes;logging=yes;stats=yes;;
-    --bce) bce=yes;;
-    --shrink) shrink=yes;;
-    --backward) backward=yes;;
     --coverage) coverage=yes;;
     --profile) profile=yes;;
     *) die "invalid option '$1' (try '-h')";;
@@ -99,9 +87,6 @@ fi
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
 [ $stats = yes ] && CXXFLAGS="$CXXFLAGS -DSTATS"
-[ $bce = yes ] && CXXFLAGS="$CXXFLAGS -DBCE"
-[ $shrink = yes ] && CXXFLAGS="$CXXFLAGS -DSHRINK"
-[ $backward = yes ] && CXXFLAGS="$CXXFLAGS -DBACKWARD"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
 

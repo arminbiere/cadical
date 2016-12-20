@@ -281,15 +281,6 @@ class Internal {
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
 
-#ifdef SHRINK
-
-  // Shrinking minimized clauses in 'shrink.cpp'.
-  //
-  bool shrink_literal (int lit, int depth = 0);
-  void shrink_clause ();
-
-#endif
-
   // Learning from conflicts in 'analyze.cc'.
   //
   void learn_empty_clause ();
@@ -343,15 +334,6 @@ class Internal {
   void check_var_stats ();
   void garbage_collection ();
 
-#ifdef BACKWARD
-
-  // Eager backward subsumption checking of learned clauses.
-  //
-  bool eagerly_subsume_last_learned (Clause *);
-  void eagerly_subsume_last_learned ();
-
-#endif
-
   // Set-up occurrence list counters and containers.
   //
   void init_doms ();
@@ -388,9 +370,6 @@ class Internal {
   //
   bool likely_to_be_kept_clause (Clause * c) {
     if (!c->redundant) return true;
-#ifdef BCE
-    if (!c->blocked) return true;
-#endif
     return c->size <= lim.keptsize && c->glue <= lim.keptglue;
   }
 
@@ -463,16 +442,6 @@ class Internal {
   //
   bool decompose_round ();
   void decompose ();
-
-#ifdef BCE
-
-  // Blocked clause elimination.
-  //
-  bool block_clause_on_literal (Clause *, int lit);
-  void turn_into_redundant_blocked_clause (Clause *);
-  void block ();
-
-#endif
 
   // Part on picking the next decision in 'decide.cpp'.
   //

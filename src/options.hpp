@@ -27,24 +27,6 @@
 #define LOGOPT(ARGS...) /**/
 #endif
 
-#ifdef BCE
-#define BCEOPT OPTION
-#else
-#define BCEOPT(ARGS...) /**/
-#endif
-
-#ifdef SHRINK
-#define SHROPT OPTION
-#else
-#define SHROPT(ARGS...) /**/
-#endif
-
-#ifdef BACKWARD
-#define BWDOPT OPTION
-#else
-#define BWDOPT(ARGS...) /**/
-#endif
-
 /*------------------------------------------------------------------------*/
 
 // In order to add new option, simply add a new line below.
@@ -54,12 +36,6 @@
 /*     NAME             TYPE, VAL, LO, HI, USAGE */ \
 \
 OPTION(arena,            int,    2, 0,  3, "1=clause,2=var,3=queue") \
-BCEOPT(block,           bool,    1, 0,  1, "blocked clause elimination") \
-BCEOPT(blockeepsize,     int,    3, 0,1e9, "max size kept blocked clauses") \
-BCEOPT(blockminclsize,   int,    2, 0,1e9, "minimum clause size for BVE") \
-BCEOPT(blockreleff,   double, 0.10, 0,  1, "relative block efficiency") \
-BCEOPT(blockmineff,   double,  1e6, 0,  1, "minimum block efficiency") \
-BCEOPT(blockwait,        int,    0, 0,1e9, "wait for blocking phase") \
 OPTION(binary,          bool,    1, 0,  1, "use binary proof format") \
 OPTION(check,           bool,DEBUG, 0,  1, "save & check original CNF") \
 OPTION(clim,             int,   -1, 0,1e9, "conflict limit (-1=none)") \
@@ -104,12 +80,7 @@ OPTION(restartint,       int,    4, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double,  1.1, 0, 10, "restart slow fast margin") \
 OPTION(reusetrail,      bool,    1, 0,  1, "enable trail reuse") \
 OPTION(simplify,        bool,    1, 0,  1, "enable simplifier") \
-SHROPT(shrink,          bool,    1, 0,  1, "shrink learned clause") \
-SHROPT(shrinkdepth,      int,    2, 0,1e9, "shrinking depth") \
-SHROPT(shrinkglue,       int,    5, 0,1e9, "glue limit for shrinking") \
-SHROPT(shrinksize,       int,   20, 0,1e9, "size limit for shrinking") \
 OPTION(strengthen,      bool,    1, 0,  1, "strengthen during subsume") \
-BWDOPT(sublast,          int,    5, 0,1e4, "eagerly subsume last") \
 OPTION(subsume,         bool,    1, 0,  1, "enable clause subsumption") \
 OPTION(subsumebinlim,    int,  1e4, 0,1e9, "watch list length limit") \
 OPTION(subsumeclslim,    int,  1e3, 0,1e9, "clause length limit") \

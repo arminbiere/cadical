@@ -11,78 +11,15 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-#ifdef BACKWARD
-
-// [PART 1] EAGER BACKWARD SUBSUMPTION
-
-// For certain instances it happens quite frequently that learned clauses
-// backward subsume some of the recently learned clauses.  Thus whenever we
-// learn a clause, we can eagerly check whether one of the last
-// 'opts.sublast' learned clauses is subsumed by the new learned clause.
-//
-// This observation and the idea for this code is due to Donald Knuth (even
-// though he originally only tried to subsume the very last clause).  Note
-// that 'backward' means the learned clause from which we start the
-// subsumption check is checked for subsuming earlier (larger) clauses.
-
-// Check whether the marked 'Internal.clause' subsumes the argument.
-
-inline bool Internal::eagerly_subsume_last_learned (Clause * c) {
-  const_literal_iterator end = c->end ();
-  size_t found = 0, remain = c->size - clause.size ();
-  for (const_literal_iterator i = c->begin (); i != end; i++) {
-    int tmp = marked (*i);
-    if (tmp < 0) break;
-    else if (tmp > 0) found++;
-    else if (!remain--) break;
-  }
-  assert (found <= clause.size ());
-  if (found < clause.size ()) return false;
-  LOG (c, "eagerly backward subsumed");
-  assert (c->redundant);
-  mark_garbage (c);
-  stats.sublast++;
-  return true;
-}
-
-// Go over the last 'opts.sublast' clauses and check whether they are
-// subsumed by the new clause in 'Internal.clause'.
-
-void Internal::eagerly_subsume_last_learned () {
-  START (sublast);
-  mark_clause ();
-  const_clause_iterator i = clauses.end ();
-  int subsumed = 0, tried = 0;
-  for (int j = 0; j < opts.sublast; j++) {
-    if (i == clauses.begin ()) break;
-    Clause * c = *--i;
-    if (c->garbage) continue;
-    if (!c->redundant) continue;
-    if ((size_t) c->size <= clause.size ()) continue;
-    LOG (c, "trying to eagerly backward subsume");
-    if (eagerly_subsume_last_learned (c)) subsumed++;
-    tried++;
-  }
-  unmark_clause ();
-  LOG ("subsumed backward %d clauses out of %d tried", subsumed, tried);
-  STOP (sublast);
-}
-
-#endif
-
-/*------------------------------------------------------------------------*/
-
-// [PART 2] GLOBAL FORWARD SUBSUMPTION IN PHASES
-
-// The rest of the file implements a global forward subsumption algorithm,
-// which is run frequently during search.  It works both on original
-// (irredundant) clauses and on 'sticky' learned clauses which are small
-// enough or have a small enough glue to be otherwise kept forever (see
-// 'opts.keepsize' and 'opts.keeglue', e.g., a redundant clause is not
-// extended and thus kept if its size is smaller equal to 'opts.keepsize' or
-// its glue is smaller equal than 'opts.keepsize').  Note, that 'forward'
-// means that the clause from which the subsumption check is started is
-// checked for being subsumed by other (smaller or equal size) clauses.
+// This file implements a global forward subsumption algorithm, which is run
+// frequently during search.  It works both on original (irredundant)
+// clauses and on 'sticky' learned clauses which are small enough or have a
+// small enough glue to be otherwise kept forever (see 'opts.keepsize' and
+// 'opts.keeglue', e.g., a redundant clause is not extended and thus kept if
+// its size is smaller equal to 'opts.keepsize' or its glue is smaller equal
+// than 'opts.keepsize').  Note, that 'forward' means that the clause from
+// which the subsumption check is started is checked for being subsumed by
+// other (smaller or equal size) clauses.
 
 bool Internal::subsuming () {
 
@@ -156,12 +93,6 @@ Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
   stats.irrbytes += subsuming->bytes ();
   assert (stats.redundant > 0);
   stats.redundant--;
-#ifdef BCE
-  if (!subsuming->blocked) return;
-  subsuming->blocked = false;
-  assert (stats.redblocked > 0);
-  stats.redblocked--;
-#endif
 }
 
 /*------------------------------------------------------------------------*/
