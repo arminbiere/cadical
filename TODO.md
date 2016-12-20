@@ -16,8 +16,6 @@ First we list things to simplify or to remove.
 
 Second things are listed related to additional features.
   
-  - Add equivalent literal substitution.
-
   - Add clause elimination procedures.
 
   - Add clause shrinking procedures.
@@ -27,4 +25,4 @@ Second things are listed related to additional features.
 There should be an ongoing process of refactoring and documenting the code
 and in particular remove part of the code which is not used anymore.
 
-Fri Dec  2 11:27:22 CET 2016
+Tuesday 20. December 20:26:26 CET 2016
