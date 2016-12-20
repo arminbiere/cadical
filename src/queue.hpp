@@ -3,6 +3,15 @@
 
 namespace CaDiCaL {
 
+// Links for double linked decision queue.
+
+struct Link {
+
+  int prev, next;    // variable indices
+
+  Link () : prev (0), next (0) { }
+};
+
 // Variable move to front (VMTF) decision queue ordered by 'bumped'.  See
 // our SAT'15 paper for an explanation on how this works.
 
