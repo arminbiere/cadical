@@ -21,10 +21,10 @@ struct DFS {
   DFS () : idx (0), min (0) { }
 };
 
-// This performs one algorithm, e.g., equivalent literal detection and
-// substitution on the whole formula.  We might want to repeat it since its
-// application might produce new binary clauses or units.  Such units might
-// even result in an empty clause.
+// This performs one round of Tarjan's algorithm, e.g., equivalent literal
+// detection and substitution, on the whole formula.  We might want to
+// repeat it since its application might produce new binary clauses or
+// units.  Such units might even result in an empty clause.
 
 bool Internal::decompose_round () {
   
