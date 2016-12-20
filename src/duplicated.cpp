@@ -2,6 +2,14 @@
 #include "macros.hpp"
 
 namespace CaDiCaL {
+ 
+// Hyper binary resolution tends to produce too many redundant clauses if we
+// do not eagerly remove duplicated binary clauses.  At the same time this
+// procedure detects hyper binary units, thus in summary implements
+// subsumption and strengthen for binary clauses, which complements
+// 'subsume' used only to subsume and strengthen non-binary clauses.
+
+// It also moves all the binary clauses to the front of watches.
 
 void Internal::mark_duplicated_binary_clauses_as_garbage () {
   START (deduplicate);
