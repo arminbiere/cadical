@@ -92,6 +92,9 @@ OPTION(trailbumplast, double,   40, 0,100, "trail bump last level limit") \
 OPTION(trailbumprops, double,  200, 0,1e9, "trail bump propagation limit") \
 OPTION(verbose,          int,    0, 0,  2, "more verbose messages") \
 OPTION(vivify,          bool,    1, 0,  1, "vivification") \
+OPTION(vivifyrtc,       bool,    1, 0,  1, "run-to-completion") \
+OPTION(vivifyreleff,  double, 0.05, 0,  1, "relative efficiency") \
+OPTION(vivifymineff,  double,  1e6, 0,  1, "minimum efficiency") \
 OPTION(witness,         bool,    1, 0,  1, "print witness") \
 
 /*------------------------------------------------------------------------*/

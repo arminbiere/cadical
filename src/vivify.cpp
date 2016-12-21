@@ -4,6 +4,16 @@
 
 namespace CaDiCaL {
 
+// Vivification, which is a special case of asymmetric tautology
+// elimination.  It strengthens and removes irredundant clauses, which are
+// proven redundant through unit propagation.  The original algorithm is
+// described in a paper by Piette, Hamadi and Sais published at ECAI'08.
+// This is an inprocessing version, e.g., does not necessarily
+// run-to-completion.  It only learns units in case of conflict and uses a
+// new heuristic for selecting clauses to vivify.
+
+/*------------------------------------------------------------------------*/
+
 struct ClauseScore {
   Clause * clause;
   long score;
@@ -30,16 +40,78 @@ struct less_negated_noccs2 {
   }
 };
 
+/*------------------------------------------------------------------------*/
+
+// This a specialized instance of 'analyze', which only concludes with a
+// learned unit (still a first UIP clause though), if one exists.  If the
+// learned clause would have a literal on a different non-zero level, we do
+// not learn anything.  The learned unit is returned.
+
+void Internal::vivify_analyze () {
+
+  assert (level);
+  assert (!unsat);
+  assert (conflict);
+  assert (analyzed.empty ());
+
+  START (analyze);
+
+  Clause * reason = conflict;
+  LOG (reason, "vivification analyzing conflict");
+  int open = 0, uip = 0;
+  const_int_iterator i = trail.end ();
+  for (;;) {
+    const const_literal_iterator end = reason->end ();
+    const_literal_iterator j = reason->begin ();
+    while (uip && j != end) {
+      const int other = *j++;
+      if (other == uip) continue;
+      Flags & f = flags (other);
+      if (f.seen) continue;
+      Var & v = var (other);
+      if (!v.level) continue;
+      if (v.level == level) {
+	analyzed.push_back (other);
+	f.seen = true;
+	open++;
+      } else uip = 0;		// and abort
+    }
+    if (!uip) break;
+    while (!flags (uip = *--i).seen)
+      ;
+    if (!--open) break;
+    reason = var (uip).reason;
+    LOG (reason, "vivification analyzing %d reason", uip);
+  }
+
+  backtrack ();
+  clear_seen ();
+  conflict = 0;
+
+  if (uip) {
+    LOG ("vivification first UIP %d", uip);
+    assert (!val (uip));
+    assign_unit (-uip);
+    if (!propagate ()) learn_empty_clause ();
+  } else LOG ("no unit learned");
+
+  STOP (analyze);
+}
+
+/*------------------------------------------------------------------------*/
+
 void Internal::vivify () {
 
   if (!opts.vivify) return;
 
   SWITCH_AND_START (search, simplify, vivify);
 
+#if 0
   {
     int remove;
-    //opts.log = true;
+    opts.log = true;
   }
+#endif
 
   assert (!vivifying);
   vivifying = true;
@@ -81,7 +153,6 @@ void Internal::vivify () {
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
-    if (c->redundant) continue;
     const const_literal_iterator eoc = c->end ();
     const_literal_iterator j;
     for (j = c->begin (); j != eoc; j++)
@@ -113,7 +184,13 @@ void Internal::vivify () {
   long tested = 0, subsumed = 0, strengthened = 0;
   vector<int> sorted;
 
-  while (!schedule.empty ()) {
+  long delta = opts.vivifyreleff * stats.propagations.search;
+  if (delta < opts.vivifymineff) delta = opts.vivifymineff;
+  long limit = stats.propagations.vivify + delta;
+
+  while (!unsat &&
+         !schedule.empty () &&
+         stats.propagations.vivify < limit) {
     Clause * c = schedule.back ().clause;
     schedule.pop_back ();
     assert (c->vivify);
@@ -125,6 +202,8 @@ void Internal::vivify () {
     const_literal_iterator j;
     assert (sorted.empty ());
     bool satisfied = false;
+    tested++;
+    assert (!level);
     for (j = c->begin (); !satisfied && j != eoc; j++) {
       const int lit = *j, tmp = val (lit);
       if (tmp > 0) satisfied = true;
@@ -134,6 +213,7 @@ void Internal::vivify () {
     else {
       assert (sorted.size () >= 2);
       if (sorted.size () > 2) {
+	LOG (c, "vivifying");
 	sort (sorted.begin (), sorted.end (), less_negated_noccs2 (this));
 	c->ignore = true;
 	bool redundant = false;
@@ -145,37 +225,73 @@ void Internal::vivify () {
 	    LOG ("redundant since literal %d already true", lit);
 	    redundant = true;
 	  } else if (tmp < 0) {
-	    LOG ("redundant since literal %d already false", lit);
+	    LOG ("removing literal %d which is already false", lit);
 	    remove = lit;
 	  } else {
 	    assume_decision (-lit);
 	    if (propagate ()) continue;
 	    LOG ("redundant since conflict produced");
-	    backtrack ();
-	    conflict = 0;
+	    vivify_analyze ();
 	    redundant = true;
 	  }
 	}
-	if (level) backtrack ();
 	if (redundant) {
+REDUNDANT:
+	  if (level) backtrack ();
 	  LOG (c, "redundant asymmetric tautology");
 	  mark_garbage (c);
-	}
-	// TODO 'remove'?
-	{
-	  int what_if_remove_is_non_zero;
-	}
+	  subsumed++;
+	} else if (remove) {
+	  strengthened++;
+	  assert (level);
+	  assert (clause.empty ());
+	  for (j = c->begin (); j != eoc; j++) {
+	    const int other = *j, tmp = val (other);
+	    Var & v = var (other);
+	    if (tmp > 0) {
+	      clause.clear ();
+	      goto REDUNDANT;
+	    }
+	    if (tmp < 0 && !v.level) continue;
+	    if (tmp < 0 && v.level && v.reason) {
+	      assert (v.level);
+	      assert (v.reason);
+	      LOG ("flushing literal %d", other);
+	      mark_removed (other);
+	    } else clause.push_back (other);
+	  }
+	  assert (!clause.empty ());
+	  backtrack ();
+	  if (clause.size () == 1) {
+	    const int unit = clause[0];
+	    LOG (c, "vivification shrunken to unit %d", unit);
+	    assert (!val (unit));
+	    assign_unit (unit);
+	    if (!propagate ()) learn_empty_clause ();
+	  } else {
+#ifdef LOGGING
+	    Clause * d = 
+#endif
+	    new_clause_as (c);
+	    LOG (c, "before vivification");
+	    LOG (d, "after vivification");
+	  }
+	  clause.clear ();
+	  mark_garbage (c);
+	} else backtrack ();
 	c->ignore = false;
       }
     }
     sorted.clear ();
   }
 
-  erase_vector (sorted);
-  reset_noccs2 ();
-  erase_vector (schedule);
-  disconnect_watches ();
-  connect_watches ();
+  if (!unsat) {
+    erase_vector (sorted);
+    reset_noccs2 ();
+    erase_vector (schedule);
+    disconnect_watches ();
+    connect_watches ();
+  }
 
   VRB ("vivification", stats.vivifications,
     "tested %ld clauses %.02f%% out of scheduled",
@@ -190,10 +306,12 @@ void Internal::vivify () {
   assert (vivifying);
   vivifying = false;
 
+#if 0
   {
     int remove;
-    // opts.log = false;
+    opts.log = false;
   }
+#endif
 
   report ('v');
   STOP_AND_SWITCH (vivify, simplify, search);

@@ -254,7 +254,7 @@ bool Internal::decompose_round () {
       LOG ("need new clause since at least one watched literal changed");
       if (clauses.size () == 2) new_binary_clause = true;
       size_t d_clause_idx = clauses.size ();
-      Clause * d = new_substituted_clause (c);
+      Clause * d = new_clause_as (c);
       assert (clauses[d_clause_idx] = d);
       clauses[d_clause_idx] = c;
       clauses[i] = d;

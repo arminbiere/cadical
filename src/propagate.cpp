@@ -27,7 +27,7 @@ inline void Internal::search_assign (int lit, Clause * reason) {
   vals[-idx] = -tmp;
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
-  phases[idx] = tmp;                     // phase saving during search
+  if (!vivifying) phases[idx] = tmp;     // phase saving during search
 
   propfixed (lit) = stats.fixed;         // avoids too much probing
 

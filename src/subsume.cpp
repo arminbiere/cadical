@@ -100,7 +100,6 @@ Internal::subsume_clause (Clause * subsuming, Clause * subsumed) {
 // Candidate clause 'c' is strengthened by removing 'remove'.
 
 inline void Internal::strengthen_clause (Clause * c, int remove) {
-  assert (!watches ());
   stats.strengthened++;
   assert (c->size > 2);
   LOG (c, "removing %d in", remove);

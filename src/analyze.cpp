@@ -217,11 +217,10 @@ void Internal::analyze () {
   //
   Clause * reason = conflict;
   LOG (reason, "analyzing conflict");
-  int open = 0, uip = 0, other = 0;
+  int open = 0, uip = 0;
   const_int_iterator i = trail.end ();
   for (;;) {
-    if (reason) analyze_reason (uip, reason, open);
-    else analyze_literal (other, open);
+    analyze_reason (uip, reason, open);
     while (!flags (uip = *--i).seen)
       ;
     if (!--open) break;

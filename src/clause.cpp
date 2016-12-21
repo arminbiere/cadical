@@ -345,10 +345,10 @@ Clause * Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
   return res;
 }
 
-// Add a substituted clause with same glue and redundancy as 'orig' but
-// literals are assumed to be in 'clause' as usual during 'decompose'.
+// Add a new clause with same glue and redundancy as 'orig' but literals are
+// assumed to be in 'clause' in 'decompose' and 'vivify'.
 //
-Clause * Internal::new_substituted_clause (const Clause * orig) {
+Clause * Internal::new_clause_as (const Clause * orig) {
   int glue = orig->glue, size = (int) clause.size ();
   if (size < glue) glue = size;
   Clause * res = new_clause (orig->redundant, glue);
