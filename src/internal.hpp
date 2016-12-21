@@ -63,6 +63,7 @@ class Internal {
   friend struct bumped_earlier;
   friend struct more_noccs2;
   friend struct less_negated_bins;
+  friend struct less_negated_noccs2;
   friend struct less_noccs;
   friend struct more_negated_occs;
   friend struct trail_bumped_smaller;

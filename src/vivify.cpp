@@ -16,11 +16,30 @@ struct less_clause_score {
   }
 };
 
+struct less_negated_noccs2 {
+  Internal * internal;
+  less_negated_noccs2 (Internal * i) : internal (i) { }
+  bool operator () (int a, int b) {
+    long u = internal->noccs2 (-a), v = internal->noccs2 (-b);
+    if (u < v) return true;
+    if (u > v) return false;
+    int i = abs (a), j = abs (b);
+    if (i < j) return true;
+    if (i > j) return false;
+    return a < b;
+  }
+};
+
 void Internal::vivify () {
 
   if (!opts.vivify) return;
 
   SWITCH_AND_START (search, simplify, vivify);
+
+  {
+    int remove;
+    //opts.log = true;
+  }
 
   assert (!vivifying);
   vivifying = true;
@@ -40,12 +59,14 @@ void Internal::vivify () {
       Clause * c = *i;
       if (c->garbage) continue;
       if (c->redundant) continue;
+      if (c->size == 2) continue;
       int fixed;
       if (no_new_units || round) fixed = 0;
       else fixed = clause_contains_fixed_literal (c);
       if (fixed > 0) mark_garbage (c);
       else {
 	if (fixed < 0) remove_falsified_literals (c);
+	if (c->size == 2) continue;
 	if (!round && !c->vivify) continue;
 	schedule.push_back (c);
 	c->vivify = true;
@@ -97,6 +118,57 @@ void Internal::vivify () {
     schedule.pop_back ();
     assert (c->vivify);
     c->vivify = false;
+    assert (!c->garbage);
+    assert (!c->redundant);
+    assert (c->size > 2);
+    const const_literal_iterator eoc = c->end ();
+    const_literal_iterator j;
+    assert (sorted.empty ());
+    bool satisfied = false;
+    for (j = c->begin (); !satisfied && j != eoc; j++) {
+      const int lit = *j, tmp = val (lit);
+      if (tmp > 0) satisfied = true;
+      else if (!tmp) sorted.push_back (lit);
+    }
+    if (satisfied) mark_garbage (c);
+    else {
+      assert (sorted.size () >= 2);
+      if (sorted.size () > 2) {
+	sort (sorted.begin (), sorted.end (), less_negated_noccs2 (this));
+	c->ignore = true;
+	bool redundant = false;
+	int remove = 0;
+	while (!redundant && !remove && !sorted.empty ()) {
+	  const int lit = sorted.back (), tmp = val (lit);
+	  sorted.pop_back ();
+	  if (tmp > 0) {
+	    LOG ("redundant since literal %d already true", lit);
+	    redundant = true;
+	  } else if (tmp < 0) {
+	    LOG ("redundant since literal %d already false", lit);
+	    remove = lit;
+	  } else {
+	    assume_decision (-lit);
+	    if (propagate ()) continue;
+	    LOG ("redundant since conflict produced");
+	    backtrack ();
+	    conflict = 0;
+	    redundant = true;
+	  }
+	}
+	if (level) backtrack ();
+	if (redundant) {
+	  LOG (c, "redundant asymmetric tautology");
+	  mark_garbage (c);
+	}
+	// TODO 'remove'?
+	{
+	  int what_if_remove_is_non_zero;
+	}
+	c->ignore = false;
+      }
+    }
+    sorted.clear ();
   }
 
   erase_vector (sorted);
@@ -117,6 +189,11 @@ void Internal::vivify () {
 
   assert (vivifying);
   vivifying = false;
+
+  {
+    int remove;
+    // opts.log = false;
+  }
 
   report ('v');
   STOP_AND_SWITCH (vivify, simplify, search);

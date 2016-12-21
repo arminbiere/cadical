@@ -62,8 +62,8 @@ void Stats::print (Internal * internal) {
     stats.propagations.vivify,
     percent (stats.propagations.vivify, propagations));
 #ifdef STATS
-  MSG ("  visits:        %15ld   %10.2f    per propagation",
-    stats.visits, relative (stats.visits, stats.propagations));
+  MSG ("  visits:        %15ld   %10.2f    per searchprop",
+    stats.visits, relative (stats.visits, stats.propagations.search));
   MSG ("  traversed:     %15ld   %10.2f    per visit",
     stats.traversed, relative (stats.traversed, stats.visits));
 #endif
