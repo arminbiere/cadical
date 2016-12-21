@@ -226,7 +226,7 @@ bool Internal::probagate () {
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
-          const bool have_pos = w.clause->have.pos;
+          const bool have_pos = w.clause->have_pos;
           literal_iterator k;
           int v = -1;
           literal_iterator start = lits;

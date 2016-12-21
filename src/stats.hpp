@@ -1,6 +1,8 @@
 #ifndef _stats_hpp_INCLUDED
 #define _stats_hpp_INCLUDED
 
+#include "util.hpp"
+
 #include <cstdlib>
 
 namespace CaDiCaL {

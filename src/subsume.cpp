@@ -111,10 +111,9 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   for (const_literal_iterator i = j; i != end; i++)
     if ((*j++ = *i) == remove) j--;
   assert (j + 1 == end);
-  c->size--;
-  if (!c->redundant) assert (stats.irrbytes >= 4), stats.irrbytes -= 4;
-  c->update_after_shrinking ();
-  if (c->have.analyzed) c->analyzed () = ++stats.analyzed;
+  shrink_clause_size (c, c->size - 1);
+  if (likely_to_be_kept_clause (c)) mark_added (c);
+  if (c->have_analyzed) c->analyzed () = ++stats.analyzed;
   LOG (c, "strengthened");
   check_shrunken_clause (c);
 }

@@ -121,7 +121,7 @@ void Internal::bump_variables () {
 // sorting them first.
 
 inline void Internal::bump_clause (Clause * c) {
-  assert (c->have.analyzed);
+  assert (c->have_analyzed);
   c->analyzed () = ++stats.analyzed;
 }
 
@@ -137,7 +137,7 @@ inline void Internal::bump_resolved_clauses () {
 inline void Internal::save_as_resolved_clause (Clause * c) {
   if (!c->redundant) return;
   if (c->hbr) c->used = true;
-  if (!c->have.analyzed) return;
+  if (!c->have_analyzed) return;
   resolved.push_back (c);
 }
 

@@ -73,7 +73,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
       continue;
     }
     if (c->reason) continue;                     // need to keep reasons
-    if (!c->have.analyzed) continue;             // statically deemed useful
+    if (!c->have_analyzed) continue;             // statically deemed useful
     if (c->analyzed () > lim.analyzed) continue; // keep recent clauses
     stack.push_back (c);
   }

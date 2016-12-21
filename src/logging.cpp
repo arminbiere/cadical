@@ -32,7 +32,7 @@ void Logger::log (Internal * internal, const Clause * c, const char *fmt, ...) {
   if (c) {
     if (c->redundant) {
       printf (" redundant glue %d", c->glue);
-      if (c->have.analyzed) printf (" analyzed %ld", c->analyzed ());
+      if (c->have_analyzed) printf (" analyzed %ld", c->analyzed ());
     } else printf (" irredundant");
     printf (" size %d clause", c->size);
     if (internal->opts.logsort) {

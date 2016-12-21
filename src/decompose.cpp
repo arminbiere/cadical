@@ -273,14 +273,7 @@ bool Internal::decompose_round () {
       if (flushed) {
 	if (l == 2) new_binary_clause = true;
 	LOG ("flushed %d literals", flushed);
-	c->size = l;
-	c->literals[l] = 0;
-	c->update_after_shrinking ();
-	if (!c->redundant) {
-	  size_t bytes = flushed * sizeof (int);
-	  assert (stats.irrbytes >= (long) bytes);
-	  stats.irrbytes -= bytes;
-	}
+	shrink_clause_size (c, l);
       }
       LOG (c, "substituted");
       if (likely_to_be_kept_clause (c)) mark_added (c);

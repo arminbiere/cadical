@@ -34,6 +34,19 @@ inline bool is_power_of_two (unsigned n) {
 
 /*------------------------------------------------------------------------*/
 
+inline bool aligned (size_t bytes, size_t alignment) {
+  assert (is_power_of_two (alignment));
+  return !(bytes & (alignment - 1));
+}
+
+inline size_t align (size_t bytes, size_t alignment) {
+  assert (is_power_of_two (alignment));
+  if (aligned (bytes, alignment)) return bytes;
+  else return (bytes | (alignment - 1)) + 1;
+}
+
+/*------------------------------------------------------------------------*/
+
 // The standard 'Effective STL' way (though not guaranteed) to clear a
 // vector and reduce its capacity to zero, thus deallocating all its
 // internal memory.  This is quite important for keeping the actual

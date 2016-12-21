@@ -5,6 +5,7 @@
 #include <cassert>
 
 #include "iterator.hpp"
+#include "util.hpp"
 
 namespace CaDiCaL {
 
@@ -25,9 +26,9 @@ namespace CaDiCaL {
 //   (2) The boolean flags only need one bit each and thus there is enough
 //   space left to merge them with a 'glue' bit field (which is less
 //   accessed than 'size').  This saves 4 bytes and also keeps the header
-//   without '_analyzed' and '_pos' nicely in 8 bytes.  We currently use 24
+//   without '_analyzed' and '_pos' nicely in 8 bytes.  We currently use 23
 //   bits and, actually, since we do not want to mess with 'unsigned' versus
-//   'signed' issues just use 23 out of them.  If more boolean flags are
+//   'signed' issues just use 22 out of them.  If more boolean flags are
 //   needed this number has to be adapted accordingly.
 //
 //   (3) Original clauses and clauses with small glue or size are kept
@@ -58,7 +59,7 @@ namespace CaDiCaL {
 // but is also guarded by making the actual '_analyzed' field private and
 // checking this contract in the 'analyzed ()' accessors functions.
 
-#define LD_MAX_GLUE 24
+#define LD_MAX_GLUE 23
 #define MAX_GLUE ((1 << (LD_MAX_GLUE-1)) - 1)
 
 class Clause {
@@ -68,14 +69,26 @@ public:
   long _analyzed;   // time stamp when analyzed last time if redundant
   int _pos;         // position of last watch replacement
 
-  struct { bool analyzed : 1; bool pos : 1; } have;
+  // Keep start of clause and 'copy' field (and thus 'literals[0]' at 64-bit
+  // aligned offsets, no matter whether we have an '_analyzed' or '_pos'
+  // field.  Otherwise a binary clause does not have 16 bytes.  Keeping
+  // clauses at 64-bit aligned addresses gives around 5% speed improvement.
+  //
+  int dummy;        // unused four bytes alignment
+
+  bool have_analyzed : 1;
+  bool have_pos : 1;
 
   bool redundant:1; // aka 'learned' so not 'irredundant' (original)
+
   bool garbage:1;   // can be garbage collected unless it is a 'reason'
   bool reason:1;    // reason / antecedent clause can not be collected
   bool moved:1;     // moved during garbage collector ('copy' valid)
-  bool used:1;
-  bool hbr:1;
+
+  bool hbr:1;	    // redundant hyper binary resolved clause (size == 2)
+  bool used:1;      // 'hbr' resolved during conflict analysis
+
+  bool vivify:1;    // irredundant clause scheduled to be vivified
 
   signed int glue : LD_MAX_GLUE;
 
@@ -92,21 +105,15 @@ public:
     // Otherwise 'literals' is valid.
   };
 
-  long & analyzed () { assert (have.analyzed); return _analyzed; }
+  long & analyzed () { assert (have_analyzed); return _analyzed; }
 
   const long & analyzed () const {
-    assert (have.analyzed);
+    assert (have_analyzed);
     return _analyzed;
   }
 
-        int & pos ()       { assert (have.pos); return _pos; }
-  const int & pos () const { assert (have.pos); return _pos; }
-
-  void update_after_shrinking () {
-    assert (size >= 2);
-    if (have.pos && _pos >= size) _pos = 2;
-    if (glue > size) glue = size;
-  }
+        int & pos ()       { assert (have_pos); return _pos; }
+  const int & pos () const { assert (have_pos); return _pos; }
 
   literal_iterator       begin ()       { return literals; }
   literal_iterator         end ()       { return literals + size; }
@@ -148,13 +155,18 @@ struct smaller_size {
 
 inline size_t Clause::offset () const {
   size_t res = 0;
-  if (!have.pos) res += sizeof _pos;
-  if (!have.analyzed) res += sizeof _analyzed;
+  if (!have_pos) res += sizeof _pos + sizeof dummy;
+  if (!have_analyzed) res += sizeof _analyzed;
+  assert (aligned (res, 8));
   return res;
 }
 
 inline size_t Clause::bytes () const {
-  return sizeof (Clause) + (size - 2) * sizeof (int) - offset ();
+  size_t res = sizeof (Clause);
+  res += (size - 2) * sizeof (int);
+  res -= offset ();
+  res = align (res, 8);
+  return res;
 }
 
 inline char * Clause::start () const {

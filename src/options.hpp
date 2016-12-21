@@ -57,13 +57,13 @@ OPTION(decomposerounds,  int,    1, 1,1e9, "number of decompose rounds") \
 OPTION(hbr,             bool,    1, 0,  1, "learn hyper binary clauses") \
 OPTION(hbrsizelim,       int, 1e9, 3, 1e9, "max size HBR base clause") \
 OPTION(keepglue,         int,    2, 1,1e9, "glue kept learned clauses") \
-OPTION(keepsize,         int,    3, 1,1e9, "size kept learned clauses") \
+OPTION(keepsize,         int,    3, 2,1e9, "size kept learned clauses") \
 OPTION(leak,            bool,    1, 0,  1, "leak solver memory") \
 LOGOPT(log,             bool,    0, 0,  1, "enable logging") \
 LOGOPT(logsort,         bool,    0, 0,  1, "sort logged clauses") \
 OPTION(minimize,        bool,    1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,    int, 1000, 0,1e9, "minimization depth") \
-OPTION(posize,           int,    4, 1,1e9, "size for saving position") \
+OPTION(posize,           int,    4, 4,1e9, "size for saving position") \
 OPTION(probe,           bool,    1, 0,  1, "failed literal probing" ) \
 OPTION(probeinit,        int,  500, 0,1e9, "initial probing interval" ) \
 OPTION(probeint,         int,  1e4, 1,1e9, "probing interval increment" ) \

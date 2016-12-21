@@ -26,7 +26,7 @@ void Internal::watch_clause (Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
-// Sigend mark or unmark a clause or the global 'clause'.
+// Signed marking or unmarking of a clause or the global 'clause'.
 
 void Internal::mark (Clause * c) {
   const const_literal_iterator end = c->end ();
@@ -100,6 +100,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   // Since 'glue' is a bit-field, we cap the 'glue' value at 'MAX_GLUE'.
   //
   if (glue > MAX_GLUE) glue = MAX_GLUE;
+  if (glue > size) glue = size;
 
   // Determine whether this clauses uses a '_pos' and '_analyzed' field.
   //
@@ -116,9 +117,10 @@ Clause * Internal::new_clause (bool red, int glue) {
   //
   Clause * c;
   size_t offset = 0;
-  if (!have_pos) offset += sizeof c->_pos;
+  if (!have_pos) offset += sizeof c->_pos + sizeof c->dummy;
   if (!have_analyzed) offset += sizeof c->_analyzed;
   size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int) - offset;
+  bytes = align (bytes, 8);
   char * ptr = new char[bytes];
   ptr -= offset;
   c = (Clause*) ptr;
@@ -126,20 +128,35 @@ Clause * Internal::new_clause (bool red, int glue) {
   // Initialize all clause data and copy literals from global 'clause'.
   //
   if (have_analyzed) c->_analyzed = ++stats.analyzed;
-  if (have_pos) c->_pos = 2;
-  c->have.analyzed = have_analyzed;
-  c->have.pos = have_pos;
+  if (have_pos) c->_pos = 2, c->dummy = 0;
+  c->have_analyzed = have_analyzed;
+  c->have_pos = have_pos;
   c->redundant = red;
   c->garbage = false;
   c->reason = false;
   c->moved = false;
   c->used = false;
   c->hbr = false;
+  c->vivify = false;
   c->glue = glue;
   c->size = size;
   for (int i = 0; i < size; i++) c->literals[i] = clause[i];
 
+  // Just checking that we did not mess up our sophisticated memory layout.
+  // This might be compiler dependent though. Crucial for correctness.
+  // 
   assert (c->offset () == offset);
+  assert (c->bytes () == bytes);
+
+  // Beside 64-bit alignment, the main purpose of our sophisticated memory
+  // layout for clauses is to keep binary clauses as small as possible,
+  // e.g., fit them into 16 bytes.  If this assertion fails, then first
+  // check that 'LD_MAX_GLUE' is set appropriately.  If the problem persists
+  // and maybe is compiler dependent, then just uncomment the assertion.
+  // This property does not need to hold from a correctness point of view
+  // but is desirable from performance point of view.
+  //
+  if (size == 2) assert (bytes == 16);
 
   if (red) stats.redundant++;
   else stats.irredundant++, stats.irrbytes += bytes;
@@ -150,6 +167,57 @@ Clause * Internal::new_clause (bool red, int glue) {
   if (likely_to_be_kept_clause (c)) mark_added (c);
 
   return c;
+}
+
+// Shrinking a clause, e.g., removing one or more literals, requires to fix
+// the '_pos' field, if it exists and points after the new last literal, has
+// to adjust the global statistics counter of allocated bytes for
+// irredundant clauses, and also adjust the glue value of redundant clauses
+// if the size becomes smaller than the glue.  Also mark the literals in the
+// resulting clause as 'added'.  The result is the number of (aligned)
+// removed bytes, resulting from shrinking the clause.
+//
+size_t Internal::shrink_clause_size (Clause * c, int new_size) {
+
+  size_t res = 0;
+
+#ifndef NDEBUG
+  int old_size = c->size;
+  for (int i = old_size; i < new_size; i++)
+    c->literals[i] = 0;
+#endif
+  assert (new_size >= 2);
+  assert (new_size < old_size);
+
+  if (c->have_pos && c->_pos >= new_size) c->_pos = 2;
+
+  if (c->redundant) {
+    if (c->glue > new_size) c->glue = new_size;
+    c->size = new_size;
+  } else {
+    size_t old_bytes = c->bytes ();
+    c->size = new_size;
+    size_t new_bytes = c->bytes ();
+    if (old_bytes > new_bytes) {
+      res = old_bytes - new_bytes;
+      assert (aligned (res, 8));
+      assert (stats.irrbytes >= (long) res);
+      stats.irrbytes -= res;
+    } else {
+
+      assert (old_bytes == new_bytes);
+      assert (new_size + 1 == old_size);
+
+      // Not really crucial assertions, but should hold for our
+      // sophisticated clause memory layout.
+      //
+      assert (!(old_size & 1));
+      assert (new_size & 1);
+    }
+  }
+  assert (c->size == new_size);
+
+  return res;
 }
 
 // This is the 'raw' deallocation of a clause.  If the clause is in the

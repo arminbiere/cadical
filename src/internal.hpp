@@ -26,7 +26,6 @@
 #include "stats.hpp"
 #include "util.hpp"
 #include "var.hpp"
-#include "vivify.hpp"
 #include "watch.hpp"
 
 /*------------------------------------------------------------------------*/
@@ -112,7 +111,6 @@ class Internal {
   vector<Clause*> clauses;      // ordered collection of all clauses
   vector<Clause*> resolved;     // resolved clauses in 'analyze'
   ElimSchedule esched;          // bounded variable elimination schedule
-  VivifySchedule vsched;        // vivification clause schedule
   vector<Timer> timers;         // active timers for profiling functions
   EMA fast_glue_avg;            // fast glue average
   EMA slow_glue_avg;            // slow glue average
@@ -237,8 +235,8 @@ class Internal {
   // these functions work on the global temporary 'clause'.
   //
   void watch_clause (Clause *);
-  size_t bytes_clause (int size);
   Clause * new_clause (bool red, int glue = 0);
+  size_t shrink_clause_size (Clause *, int new_size);
   void deallocate_clause (Clause *);
   void delete_clause (Clause *);
   void mark_garbage (Clause *);
