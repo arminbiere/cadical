@@ -454,6 +454,7 @@ void Internal::subsume () {
   connect_watches ();
   inc.subsume += opts.subsumeinc;
   lim.subsume = stats.conflicts + inc.subsume;
+  vivify ();
 }
 
 };

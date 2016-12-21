@@ -312,6 +312,8 @@ void Internal::copy_non_garbage_clauses () {
   clauses.resize (j - clauses.begin ());
   if (clauses.size () < clauses.capacity ()/2) shrink_vector (clauses);
 
+  // Replace and flush references in the vivification schedule.
+
   // Release 'from' space completely and then swap 'to' with 'from'.
   //
   arena.swap ();

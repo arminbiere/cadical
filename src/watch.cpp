@@ -72,4 +72,27 @@ void Internal::sort_watches () {
   }
 }
 
+void Internal::disconnect_watches () {
+  for (int idx = 1; idx <= max_var; idx++)
+    for (int sign = -1; sign <= 1; sign += 2)
+      watches (sign * idx).clear ();
+}
+
+void Internal::flush_redundant_watches () {
+  for (int idx = 1; idx <= max_var; idx++) {
+    for (int sign = -1; sign <= 1; sign += 2) {
+      const int lit = sign * idx;
+      Watches & ws = watches (lit);
+      const const_watch_iterator end = ws.end ();
+      const_watch_iterator i;
+      watch_iterator j = ws.begin ();
+      for (i = j; i != end; i++) {
+	const Watch w = *i;
+	if (!w.clause->redundant) *j++ = w;
+      }
+      ws.resize (j - ws.begin ());
+    }
+  }
+}
+
 };

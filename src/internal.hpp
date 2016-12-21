@@ -11,10 +11,10 @@
 #include "arena.hpp"
 #include "bins.hpp"
 #include "clause.hpp"
+#include "elim.hpp"
 #include "ema.hpp"
 #include "flags.hpp"
 #include "format.hpp"
-#include "heap.hpp"
 #include "level.hpp"
 #include "limit.hpp"
 #include "logging.hpp"
@@ -26,6 +26,7 @@
 #include "stats.hpp"
 #include "util.hpp"
 #include "var.hpp"
+#include "vivify.hpp"
 #include "watch.hpp"
 
 /*------------------------------------------------------------------------*/
@@ -36,21 +37,6 @@ using namespace std;
 
 class File;
 class Proof;
-
-/*------------------------------------------------------------------------*/
-
-// Need the definition of 'more_noccs2' and 'ElimSchedule' here to be able
-// to define 'esched' as 'ElimSchedule' member inside 'Internal'.
-
-class Internal;
-
-struct more_noccs2 {
-  Internal * internal;
-  more_noccs2 (Internal * i) : internal (i) { }
-  bool operator () (int a, int b);
-};
-
-typedef heap<more_noccs2> ElimSchedule;
 
 /*------------------------------------------------------------------------*/
 
@@ -126,6 +112,7 @@ class Internal {
   vector<Clause*> clauses;      // ordered collection of all clauses
   vector<Clause*> resolved;     // resolved clauses in 'analyze'
   ElimSchedule esched;          // bounded variable elimination schedule
+  VivifySchedule vsched;        // vivification clause schedule
   vector<Timer> timers;         // active timers for profiling functions
   EMA fast_glue_avg;            // fast glue average
   EMA slow_glue_avg;            // slow glue average
@@ -341,14 +328,19 @@ class Internal {
   void init_noccs ();
   void init_noccs2 ();
   void init_watches ();
-  void sort_watches ();
-  void connect_watches ();
   void reset_doms ();
   void reset_occs ();
   void reset_bins ();
   void reset_noccs ();
   void reset_noccs2 ();
   void reset_watches ();
+
+  // Operators on watches.
+  //
+  void sort_watches ();
+  void connect_watches ();
+  void disconnect_watches ();
+  void flush_redundant_watches ();
 
   // Regular forward subsumption checking.
   //
@@ -360,6 +352,10 @@ class Internal {
   void subsume_round ();
   void reset_added ();
   void subsume ();
+
+  // Strengthening through vivification and asymmetric tautology elimination.
+  //
+  void vivify ();
 
   // We monitor the maximum glue and maximum size of clauses during 'reduce'
   // and thus can predict if a redundant extended clause is likely to be
