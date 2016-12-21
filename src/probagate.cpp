@@ -188,7 +188,7 @@ bool Internal::probagate () {
   assert (simplifying);
   assert (!unsat);
 
-  START (probagate);
+  START (propagate);
 
   long before = probagated2;
 
@@ -262,9 +262,9 @@ bool Internal::probagate () {
     } else break;
   }
   long delta = probagated2 - before;
-  stats.probagations += delta;
+  stats.propagations.probe += delta;
   if (conflict) LOG (conflict, "conflict");
-  STOP (probagate);
+  STOP (propagate);
   return !conflict;
 }
 

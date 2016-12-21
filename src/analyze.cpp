@@ -75,8 +75,10 @@ struct trail_bumped_smaller {
 void Internal::bump_variables () {
   START (bump);
 
+  double properdec = relative (stats.propagations.search, stats.decisions);
+
   if (opts.trailbump &&
-      relative (stats.propagations, stats.decisions) > opts.trailbumprops &&
+      properdec > opts.trailbumprops &&
       percent (stats.bumplast, stats.bumped) > opts.trailbumplast) {
 
     // There are some instances (for instance the 'newton...' instances),

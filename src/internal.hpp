@@ -77,6 +77,7 @@ class Internal {
   bool iterating;               // report learned unit (iteration)
   bool clashing;                // found clashing units in during parsing
   bool simplifying;             // outside of CDCL loop
+  bool vivifying;               // during vivification
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // maximum variable index
   int level;                    // decision level ('control.size () - 1')

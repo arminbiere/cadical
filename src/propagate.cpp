@@ -8,7 +8,7 @@ namespace CaDiCaL {
 
 inline void Internal::search_assign (int lit, Clause * reason) {
 
-  assert (!simplifying);
+  assert (!simplifying || vivifying);
 
   int idx = vidx (lit);
 
@@ -95,7 +95,7 @@ void Internal::assign_driving (int lit, Clause * c) {
 
 bool Internal::propagate () {
 
-  assert (!simplifying);
+  assert (!simplifying || vivifying);
   assert (!unsat);
 
   START (propagate);
@@ -241,8 +241,12 @@ bool Internal::propagate () {
     ws.resize (j - ws.begin ());
   }
   long delta = propagated - before;
-  stats.propagations += delta;
-  if (conflict) { stats.conflicts++; LOG (conflict, "conflict"); }
+  if (vivifying) stats.propagations.vivify += delta;
+  else stats.propagations.search += delta;
+  if (conflict) {
+    if (!vivifying) stats.conflicts++;
+    LOG (conflict, "conflict");
+  }
   STOP (propagate);
   return !conflict;
 }

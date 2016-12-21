@@ -46,12 +46,21 @@ void Stats::print (Internal * internal) {
     stats.conflicts, relative (stats.conflicts, t));
   MSG ("decisions:       %15ld   %10.2f    per second",
     stats.decisions, relative (stats.decisions, t));
-  long propagations = stats.propagations + stats.probagations;
+  long propagations = stats.propagations.probe;
+  propagations += stats.propagations.search;
+  propagations += stats.propagations.vivify;
   MSG ("propagations:    %15ld   %10.2f    millions per second",
     propagations, relative (propagations/1e6, t));
   if (verbose) {
-  MSG ("  probagations:  %15ld   %10.2f %%  of propagations",
-    stats.probagations, percent (stats.probagations, propagations));
+  MSG ("  searchprops:   %15ld   %10.2f %%  of propagations",
+    stats.propagations.search,
+    percent (stats.propagations.search, propagations));
+  MSG ("  probeprops:    %15ld   %10.2f %%  of propagations",
+    stats.propagations.probe,
+    percent (stats.propagations.probe, propagations));
+  MSG ("  vivifyprops:   %15ld   %10.2f %%  of propagations",
+    stats.propagations.vivify,
+    percent (stats.propagations.vivify, propagations));
 #ifdef STATS
   MSG ("  visits:        %15ld   %10.2f    per propagation",
     stats.visits, relative (stats.visits, stats.propagations));

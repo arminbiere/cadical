@@ -15,8 +15,13 @@ struct Stats {
 
   long conflicts;    // generated conflicts in 'propagate'
   long decisions;    // number of decisions in 'decide'
-  long propagations; // propagated literals in 'propagate'
-  long probagations; // propagated during 'probe'
+
+  struct {
+    long probe;      // propagated during probing
+    long search;     // propagated literals during search
+    long vivify;     // propagated during vivification
+  } propagations;
+
   long restarts;     // actual number of happened restarts
   long reused;       // number of reused trails
   long reports;      // 'report' counter
@@ -50,6 +55,7 @@ struct Stats {
   long elimrestried; // number of tried resolved clauses in BVE
   long eliminations; // number of elimination phases
   long decompositions; // number of SCC + ELS
+  long vivifications;  // number of vivifications
   long learned;      // learned literals
   long minimized;    // minimized literals
   long redundant;    // number of current redundant clauses

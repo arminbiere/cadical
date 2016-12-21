@@ -46,8 +46,6 @@ PROFILE(minimize,4) \
 PROFILE(parse,1) \
 PROFILE(probe,2) \
 PROFILE(deduplicate,2) \
-PROFILE(probagate,4) \
-PROFILE(probalyze,4) \
 PROFILE(propagate,4) \
 PROFILE(reduce,2) \
 PROFILE(restart,3) \

@@ -17,6 +17,7 @@ Internal::Internal ()
   iterating (false),
   clashing (false),
   simplifying (false),
+  vivifying (false),
   vsize (0),
   max_var (0),
   level (0),

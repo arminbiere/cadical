@@ -30,7 +30,7 @@ void Internal::failed_literal (int failed) {
   assert (level == 1);
   assert (analyzed.empty ());
 
-  START (probalyze);
+  START (analyze);
 
   LOG (conflict, "analyzing failed literal conflict");
 
@@ -80,7 +80,7 @@ void Internal::failed_literal (int failed) {
   }
   erase_vector (parents);
 
-  STOP (probalyze);
+  STOP (analyze);
 
   assert (unsat || val (failed) < 0);
 }
@@ -178,12 +178,14 @@ void Internal::probe_core () {
   // (say %5) of probing propagations (called 'probagations') in each
   // probing with a lower bound of 'opts.probmineff'.
   //
-  long delta = opts.probereleff * stats.propagations;
+  long delta = opts.probereleff * stats.propagations.search;
   if (delta < opts.probemineff) delta = opts.probemineff;
-  long limit = stats.probagations + delta;
+  long limit = stats.propagations.probe + delta;
 
   int probe;
-  while (!unsat && stats.probagations < limit && (probe = next_probe ())) {
+  while (!unsat &&
+         stats.propagations.probe < limit &&
+	 (probe = next_probe ())) {
     stats.probed++;
     LOG ("probing %d", probe);
     level++;
