@@ -58,44 +58,53 @@ void Internal::vivify () {
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
 
-  bool no_new_units = (lim.fixed_at_last_collect >= stats.fixed);
+  // After an arithmetic increasing number of calls to 'vivify' we
+  // reschedule all clauses, instead of only those not tried before.  Then
+  // this limit is increased by one. The argument is that we should focus on
+  // clauses with many occurrences of their negated literals (also long
+  // clauses), but in the limit eventually still should vivify all clauses.
+  //
   bool reschedule_all = !lim.vivifywaitreset;
   if (reschedule_all) lim.vivifywaitreset = ++inc.vivifywaitreset;
   else lim.vivifywaitreset--;
 
+  // In the first round check whether there are still clauses left, which
+  // are scheduled to but have not been vivified yet.  In the second round
+  // if no such clauses are found in the first round.  This is also
+  // performed if rescheduling is forced because 'reschedule_all' is  true.
+  //
   for (int round = 0; schedule.empty () && round <= 1; round++) {
     for (i = clauses.begin (); i != end; i++) {
       Clause * c = *i;
       if (c->garbage) continue;
       if (c->redundant) continue;
-      if (c->size == 2) continue;
-      int fixed;
-      if (no_new_units || round) fixed = 0;
-      else fixed = clause_contains_fixed_literal (c);
-      if (fixed > 0) mark_garbage (c);
-      else {
-	if (fixed < 0) remove_falsified_literals (c);
-	if (c->size == 2) continue;
-	if (!reschedule_all && !round && !c->vivify) continue;
-	schedule.push_back (c);
-	c->vivify = true;
-      }
+      if (c->size == 2) continue;	// see also (NO-BINARY) below
+      if (!reschedule_all && !round && !c->vivify) continue;
+      schedule.push_back (c);
+      c->vivify = true;
     }
   }
-
   shrink_vector (schedule);
 
+  // Count the number of occurrences of literals in all irredundant clauses,
+  // particularly the irredundant binary clauses, responsible for most of
+  // the propagation usually.
+  //
   init_noccs2 ();
 
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
+    if (c->redundant) continue;
     const const_literal_iterator eoc = c->end ();
     const_literal_iterator j;
     for (j = c->begin (); j != eoc; j++)
       noccs2 (*j)++;
   }
 
+  // Then update the score of the candidate clauses by adding up the number
+  // of occurrences of the negation of its literals.
+  //
   const vector<ClauseScore>::const_iterator eos = schedule.end ();
   vector<ClauseScore>::iterator k;
 
@@ -109,6 +118,8 @@ void Internal::vivify () {
     cs.score = score;
   }
 
+  // Then sort candidates, with best clause (many negative occurrences) last.
+  //
   stable_sort (schedule.begin (), schedule.end (), less_clause_score ());
 
   long scheduled = schedule.size ();
@@ -116,6 +127,8 @@ void Internal::vivify () {
     "scheduled irredundant %ld clauses to be vivified %.0f%%",
     scheduled, percent (scheduled, stats.irredundant));
 
+  // We need to make sure to propagate only over irredundant clauses.
+  //
   flush_redundant_watches ();
 
   long checked = 0, subsumed = 0, strengthened = 0, units = 0;
@@ -160,8 +173,6 @@ void Internal::vivify () {
 
     if (satisfied) { mark_garbage (c); continue; }
 
-    // if (sorted.size () == 2) continue;
-
     // The actual vivification checking is performed here, by assuming the
     // negation of each of the remaining literals of the clause in turn and
     // propagating it.  If a conflict occurs or another literal in the
@@ -182,7 +193,7 @@ void Internal::vivify () {
     // binary clauses which are subsumed.  Those are hyper binary
     // resolvents and should be kept as learned clauses instead (TODO).
     //
-    c->ignore = true;
+    c->ignore = true;		// see also (NO-BINARY) above
 
     bool redundant = false;	// determined to be redundant / subsumed
     int remove = 0;		// at least literal 'remove' can be removed
@@ -207,9 +218,9 @@ void Internal::vivify () {
 
     if (redundant) {
 REDUNDANT:
+      subsumed++;
       LOG (c, "redundant asymmetric tautology");
       mark_garbage (c);
-      subsumed++;
     } else if (remove) {
       strengthened++;
       assert (level);
@@ -217,6 +228,9 @@ REDUNDANT:
 #ifndef NDEBUG
       bool found = false;
 #endif
+      // There might be other literals implied to false (or even root level
+      // falsified).  Those should be removed in addition to 'remove'.
+      //
       for (j = c->begin (); j != eoc; j++) {
 	const int other = *j, tmp = val (other);
 	Var & v = var (other);
