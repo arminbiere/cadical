@@ -186,6 +186,7 @@ void Internal::vivify () {
 
   long delta = opts.vivifyreleff * stats.propagations.search;
   if (delta < opts.vivifymineff) delta = opts.vivifymineff;
+  if (delta > opts.vivifymaxeff) delta = opts.vivifymaxeff;
   long limit = stats.propagations.vivify + delta;
 
   while (!unsat &&

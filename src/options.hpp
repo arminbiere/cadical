@@ -67,7 +67,8 @@ OPTION(posize,           int,    4, 4,1e9, "size for saving position") \
 OPTION(probe,           bool,    1, 0,  1, "failed literal probing" ) \
 OPTION(probeinit,        int,  500, 0,1e9, "initial probing interval" ) \
 OPTION(probeint,         int,  1e4, 1,1e9, "probing interval increment" ) \
-OPTION(probereleff,   double, 0.03, 0,  1, "relative probing efficiency") \
+OPTION(probereleff,   double, 0.02, 0,  1, "relative probing efficiency") \
+OPTION(probemaxeff,   double,  1e8, 0,  1, "maximum probing efficiency") \
 OPTION(probemineff,   double,  1e6, 0,  1, "minimum probing efficiency") \
 OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
 OPTION(profile,          int,    2, 0,  4, "profiling level") \
@@ -93,7 +94,8 @@ OPTION(trailbumprops, double,  200, 0,1e9, "trail bump propagation limit") \
 OPTION(verbose,          int,    0, 0,  2, "more verbose messages") \
 OPTION(vivify,          bool,    1, 0,  1, "vivification") \
 OPTION(vivifyrtc,       bool,    1, 0,  1, "run-to-completion") \
-OPTION(vivifyreleff,  double, 0.05, 0,  1, "relative efficiency") \
+OPTION(vivifyreleff,  double, 0.03, 0,  1, "relative efficiency") \
+OPTION(vivifymaxeff,  double,  1e8, 0,  1, "maximum efficiency") \
 OPTION(vivifymineff,  double,  1e6, 0,  1, "minimum efficiency") \
 OPTION(witness,         bool,    1, 0,  1, "print witness") \
 

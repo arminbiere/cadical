@@ -180,6 +180,7 @@ void Internal::probe_core () {
   //
   long delta = opts.probereleff * stats.propagations.search;
   if (delta < opts.probemineff) delta = opts.probemineff;
+  if (delta > opts.probemaxeff) delta = opts.probemaxeff;
   long limit = stats.propagations.probe + delta;
 
   int probe;
