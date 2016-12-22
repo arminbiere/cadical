@@ -87,6 +87,8 @@ int Internal::vivify_analyze () {
   clear_seen ();
   conflict = 0;
 
+	  COVER (uip);
+
   if (uip) {
     LOG ("vivification first UIP %d", uip);
     assert (!val (uip));
@@ -103,7 +105,7 @@ int Internal::vivify_analyze () {
 
 void Internal::vivify () {
 
-  if (!opts.vivify) return;
+  assert (opts.vivify);
 
   SWITCH_AND_START (search, simplify, vivify);
 

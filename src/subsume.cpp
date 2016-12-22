@@ -19,11 +19,14 @@ namespace CaDiCaL {
 // its size is smaller equal to 'opts.keepsize' or its glue is smaller equal
 // than 'opts.keepsize').  Note, that 'forward' means that the clause from
 // which the subsumption check is started is checked for being subsumed by
-// other (smaller or equal size) clauses.
+// other (smaller or equal size) clauses.  Since 'vivification' is an
+// extended version of subsume, more powerful, but also slower, we schedule
+// 'vivify' right after 'subsume', which in contrast to 'subsume' is not run
+// until to completion (even though it only works on irredundant clauses).
 
 bool Internal::subsuming () {
 
-  if (!opts.subsume) return false;
+  if (!opts.subsume && !opts.vivify) return false;
 
   // Only perform global subsumption checking immediately after a clause
   // reduction happened where the overall allocated memory is small and we
@@ -436,6 +439,10 @@ void Internal::subsume_round () {
     mark_added (*i);
   erase_vector (shrunken);
 
+  // This function 'subsume_round' is also called from 'elim' and thus we
+  // should delay the next call to 'subsume' in any case.  If it is called
+  // from 'subsume' below, then this limit will again be overwritten.
+  //
   lim.subsume = stats.conflicts + inc.subsume;
 
   report ('s');
@@ -443,16 +450,25 @@ void Internal::subsume_round () {
 }
 
 void Internal::subsume () {
-  assert (opts.subsume);
-  assert (!unsat);
-  backtrack ();
-  reset_watches ();
-  subsume_round ();
-  init_watches ();
-  connect_watches ();
+
+  if (opts.subsume) {
+    assert (!unsat);
+    backtrack ();
+    reset_watches ();
+    subsume_round ();
+    init_watches ();
+    connect_watches ();
+  }
+
+  if (opts.vivify) vivify ();	// schedule 'vivification' after 'subsume'
+
+  // Simple arithmetic series of conflict intervals between 'subsume'.
+  // Note that 'elim' triggers 'subsume_round' too and has a more aggressive
+  // scheduling policy.  So subsumptions in general are more often called
+  // than 'vivification' and potentially much more frequently.
+  //
   inc.subsume += opts.subsumeinc;
   lim.subsume = stats.conflicts + inc.subsume;
-  vivify ();
 }
 
 };

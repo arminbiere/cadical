@@ -31,6 +31,8 @@ void Stats::print (Internal * internal) {
   SECTION ("statistics");
   MSG ("probings:        %15ld   %10.2f    conflicts per probing",
     stats.probings, relative (stats.conflicts, stats.probings));
+  MSG ("vivifications:   %15ld   %10.2f    conflicts per vivification",
+    stats.vivifications, relative (stats.conflicts, stats.vivifications));
   MSG ("eliminations:    %15ld   %10.2f    conflicts per elimination",
     stats.eliminations, relative (stats.conflicts, stats.eliminations));
   MSG ("subsumptions:    %15ld   %10.2f    conflicts per subsumption",
