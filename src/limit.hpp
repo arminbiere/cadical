@@ -34,6 +34,11 @@ struct Limit {
   //
   int fixed_at_last_collect;
 
+  // Wait that many 'vivify' calls before scheduling all clauses for
+  // vivification again.
+  //
+  int vivifywaitreset;	
+
   Limit ();
 };
 
@@ -43,6 +48,8 @@ struct Inc {
   long subsume; // subsumption interval increment
   long elim;    // elimination interval increment
   long probe;   // failed literal probing interval increment
+
+  int vivifywaitreset;	// how many vivifications before reset
 
   Inc () : reduce (0), redinc (0), subsume (0), elim (0) { }
 };

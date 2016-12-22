@@ -7,9 +7,9 @@ namespace CaDiCaL {
 // Vivification is a special case of asymmetric tautology elimination.  It
 // strengthens and removes irredundant clauses proven redundant through unit
 // propagation.  The original algorithm is due to a paper by Piette, Hamadi
-// and Sais published at ECAI'08.  This is an inprocessing version, e.g.,
-// does not necessarily run-to-completion.  It only learns units in case of
-// conflict and uses a new heuristic for selecting clauses to vivify.
+// published at ECAI'08.  We have an inprocessing version, e.g., it does not
+// necessarily run-to-completion.  It does no conflict analysis and uses a
+// new heuristic for selecting clauses to vivify.
 
 /*------------------------------------------------------------------------*/
 
@@ -41,68 +41,6 @@ struct less_negated_noccs2 {
 
 /*------------------------------------------------------------------------*/
 
-// This a specialized instance of 'analyze', which only concludes with a
-// learned unit (still a first UIP clause though), if one exists.  If the
-// learned clause would have a literal on a different non-zero level, we do
-// not learn anything.  The learned unit is returned.
-
-int Internal::vivify_analyze () {
-
-  assert (level);
-  assert (!unsat);
-  assert (conflict);
-  assert (analyzed.empty ());
-
-  START (analyze);
-
-  Clause * reason = conflict;
-  LOG (reason, "vivification analyzing conflict");
-  int open = 0, uip = 0;
-  const_int_iterator i = trail.end ();
-  for (;;) {
-    const const_literal_iterator end = reason->end ();
-    const_literal_iterator j = reason->begin ();
-    while (uip && j != end) {
-      const int other = *j++;
-      if (other == uip) continue;
-      Flags & f = flags (other);
-      if (f.seen) continue;
-      Var & v = var (other);
-      if (!v.level) continue;
-      if (v.level == level) {
-	analyzed.push_back (other);
-	f.seen = true;
-	open++;
-      } else uip = 0;		// and abort
-    }
-    if (!uip) break;
-    while (!flags (uip = *--i).seen)
-      ;
-    if (!--open) break;
-    reason = var (uip).reason;
-    LOG (reason, "vivification analyzing %d reason", uip);
-  }
-
-  backtrack ();
-  clear_seen ();
-  conflict = 0;
-
-	  COVER (uip);
-
-  if (uip) {
-    LOG ("vivification first UIP %d", uip);
-    assert (!val (uip));
-    assign_unit (-uip);
-    if (!propagate ()) learn_empty_clause ();
-  } else LOG ("no unit learned");
-
-  STOP (analyze);
-
-  return -uip;
-}
-
-/*------------------------------------------------------------------------*/
-
 void Internal::vivify () {
 
   assert (opts.vivify);
@@ -121,6 +59,9 @@ void Internal::vivify () {
   const_clause_iterator i;
 
   bool no_new_units = (lim.fixed_at_last_collect >= stats.fixed);
+  bool reschedule_all = !lim.vivifywaitreset;
+  if (reschedule_all) lim.vivifywaitreset = ++inc.vivifywaitreset;
+  else lim.vivifywaitreset--;
 
   for (int round = 0; schedule.empty () && round <= 1; round++) {
     for (i = clauses.begin (); i != end; i++) {
@@ -135,7 +76,7 @@ void Internal::vivify () {
       else {
 	if (fixed < 0) remove_falsified_literals (c);
 	if (c->size == 2) continue;
-	if (!round && !c->vivify) continue;
+	if (!reschedule_all && !round && !c->vivify) continue;
 	schedule.push_back (c);
 	c->vivify = true;
       }
@@ -191,6 +132,8 @@ void Internal::vivify () {
          !schedule.empty () &&
          stats.propagations.vivify < limit) {
 
+    // Next candidate clause to vivify.
+    //
     Clause * c = schedule.back ().clause;
     schedule.pop_back ();
     assert (c->vivify);
@@ -199,12 +142,15 @@ void Internal::vivify () {
     assert (!c->garbage);
     assert (!c->redundant);
     assert (c->size > 2);
-    assert (sorted.empty ());
     assert (!level);
 
+    // First check whether it is already satisfied.
+    //
     const const_literal_iterator eoc = c->end ();
     const_literal_iterator j;
     bool satisfied = false;
+
+    sorted.clear ();
 
     for (j = c->begin (); !satisfied && j != eoc; j++) {
       const int lit = *j, tmp = val (lit);
@@ -212,82 +158,108 @@ void Internal::vivify () {
       else if (!tmp) sorted.push_back (lit);
     }
 
-    if (satisfied) mark_garbage (c);
-    else {
-      assert (sorted.size () >= 2);
-      if (sorted.size () > 2) {
-	checked++;
-	LOG (c, "vivification checking");
-	sort (sorted.begin (), sorted.end (), less_negated_noccs2 (this));
-	c->ignore = true;
-	bool redundant = false;
-	int remove = 0;
-	while (!redundant && !remove && !sorted.empty ()) {
-	  const int lit = sorted.back (), tmp = val (lit);
-	  sorted.pop_back ();
-	  if (tmp > 0) {
-	    LOG ("redundant since literal %d already true", lit);
-	    redundant = true;
-	  } else if (tmp < 0) {
-	    LOG ("removing literal %d which is already false", lit);
-	    remove = lit;
-	  } else {
-	    assume_decision (-lit);
-	    if (propagate ()) continue;
-	    LOG ("redundant since conflict produced");
-	    if (vivify_analyze ()) units++;
-	    redundant = true;
-	  }
-	}
-	if (redundant) {
-REDUNDANT:
-	  if (level) backtrack ();
-	  LOG (c, "redundant asymmetric tautology");
-	  mark_garbage (c);
-	  subsumed++;
-	} else if (remove) {
-	  strengthened++;
-	  assert (level);
-	  assert (clause.empty ());
-	  for (j = c->begin (); j != eoc; j++) {
-	    const int other = *j, tmp = val (other);
-	    Var & v = var (other);
-	    if (tmp > 0) {
-	      clause.clear ();
-	      goto REDUNDANT;
-	    }
-	    if (tmp < 0 && !v.level) continue;
-	    if (tmp < 0 && v.level && v.reason) {
-	      assert (v.level);
-	      assert (v.reason);
-	      LOG ("flushing literal %d", other);
-	      mark_removed (other);
-	    } else clause.push_back (other);
-	  }
-	  assert (!clause.empty ());
-	  backtrack ();
-	  if (clause.size () == 1) {
-	    const int unit = clause[0];
-	    LOG (c, "vivification shrunken to unit %d", unit);
-	    assert (!val (unit));
-	    assign_unit (unit);
-	    units++;
-	    if (!propagate ()) learn_empty_clause ();
-	  } else {
-#ifdef LOGGING
-	    Clause * d = 
-#endif
-	    new_clause_as (c);
-	    LOG (c, "before vivification");
-	    LOG (d, "after vivification");
-	  }
-	  clause.clear ();
-	  mark_garbage (c);
-	} else backtrack ();
-	c->ignore = false;
+    if (satisfied) { mark_garbage (c); continue; }
+
+    // if (sorted.size () == 2) continue;
+
+    // The actual vivification checking is performed here, by assuming the
+    // negation of each of the remaining literals of the clause in turn and
+    // propagating it.  If a conflict occurs or another literal in the
+    // clause becomes assigned during propagation, we can stop.
+    //
+    LOG (c, "vivification checking");
+    checked++;
+
+    // Sort the literals of the candidate with respect to the largest number
+    // of negative occurrences.  The idea is that more negative occurrences
+    // lead to more propagations and thus potentially higher earlier effect.
+    //
+    sort (sorted.begin (), sorted.end (), less_negated_noccs2 (this));
+   
+    // Make sure to ignore this clause during propagation.  This is not that
+    // easy for binary clauses, e.g., ignoring binary clauses, without
+    // changing 'propagate' and actually we also do not want to remove
+    // binary clauses which are subsumed.  Those are hyper binary
+    // resolvents and should be kept as learned clauses instead (TODO).
+    //
+    c->ignore = true;
+
+    bool redundant = false;	// determined to be redundant / subsumed
+    int remove = 0;		// at least literal 'remove' can be removed
+
+    while (!redundant && !remove && !sorted.empty ()) {
+      const int lit = sorted.back (), tmp = val (lit);
+      sorted.pop_back ();
+      if (tmp > 0) {
+	LOG ("redundant since literal %d already true", lit);
+	redundant = true;
+      } else if (tmp < 0) {
+	LOG ("removing at least literal %d which is already false", lit);
+	remove = lit;
+      } else {
+	assume_decision (-lit);
+	if (propagate ()) continue;
+	LOG ("redundant since propagation produced conflict");
+	redundant = true;
+	conflict = 0;
       }
     }
-    sorted.clear ();
+
+    if (redundant) {
+REDUNDANT:
+      LOG (c, "redundant asymmetric tautology");
+      mark_garbage (c);
+      subsumed++;
+    } else if (remove) {
+      strengthened++;
+      assert (level);
+      assert (clause.empty ());
+#ifndef NDEBUG
+      bool found = false;
+#endif
+      for (j = c->begin (); j != eoc; j++) {
+	const int other = *j, tmp = val (other);
+	Var & v = var (other);
+	if (tmp > 0) {
+	  LOG ("redundant since literal %d already true", other);
+	  clause.clear ();
+	  goto REDUNDANT;
+	}
+	if (tmp < 0 && !v.level) continue;
+	if (tmp < 0 && v.level && v.reason) {
+	  assert (v.level);
+	  assert (v.reason);
+	  LOG ("flushing literal %d", other);
+	  mark_removed (other);
+#ifndef NDEBUG
+	  if (other == remove) found = true;
+#endif
+	} else clause.push_back (other);
+      }
+      assert (found);
+      assert (!clause.empty ());
+      backtrack ();
+      if (clause.size () == 1) {
+	const int unit = clause[0];
+	LOG (c, "vivification shrunken to unit %d", unit);
+	assert (!val (unit));
+	assign_unit (unit);
+	units++;
+	bool ok = propagate ();
+	if (!ok) learn_empty_clause ();
+      } else {
+#ifdef LOGGING
+	Clause * d = 
+#endif
+	new_clause_as (c);
+	LOG (c, "before vivification");
+	LOG (d, "after vivification");
+      }
+      clause.clear ();
+      mark_garbage (c);
+    }
+    if (level) backtrack ();
+    c->ignore = false;
   }
 
   if (!unsat) {
