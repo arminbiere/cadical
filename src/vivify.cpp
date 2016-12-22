@@ -25,6 +25,8 @@ struct less_clause_score {
   }
 };
 
+// Check whether negated literal occurs less often.
+//
 struct less_negated_noccs2 {
   Internal * internal;
   less_negated_noccs2 (Internal * i) : internal (i) { }
@@ -53,6 +55,9 @@ void Internal::vivify () {
   stats.vivifications++;
   if (level) backtrack ();
 
+  // Refill the schedule every time.  Unchecked clauses are 'saved' by
+  // setting their 'vivify' bit, such that they can be tried next time.
+  //
   vector<ClauseScore> schedule;
 
   const const_clause_iterator end = clauses.end ();
@@ -118,13 +123,13 @@ void Internal::vivify () {
     cs.score = score;
   }
 
-  // Then sort candidates, with best clause (many negative occurrences) last.
+  // Now sort candidates, with best clause (many negative occurrences) last.
   //
   stable_sort (schedule.begin (), schedule.end (), less_clause_score ());
 
   long scheduled = schedule.size ();
   VRB ("vivification", stats.vivifications,
-    "scheduled irredundant %ld clauses to be vivified %.0f%%",
+    "scheduled %ld clauses to be vivified %.0f%%",
     scheduled, percent (scheduled, stats.irredundant));
 
   // We need to make sure to propagate only over irredundant clauses.
@@ -132,7 +137,12 @@ void Internal::vivify () {
   flush_redundant_watches ();
   size_t old_propagated = propagated;	// see [RE-PROPAGATE] below.
 
+  // Counters, for what happened.
+  //
   long checked = 0, subsumed = 0, strengthened = 0, units = 0;
+
+  // Temporarily save and sort the candidate clause literals here.
+  //
   vector<int> sorted;
 
   // Limit the number of propagations during vivification as in 'probe'.
@@ -155,7 +165,7 @@ void Internal::vivify () {
 
     assert (!c->garbage);
     assert (!c->redundant);
-    assert (c->size > 2);
+    assert (c->size > 2);		// see 
     assert (!level);
 
     // First check whether it is already satisfied.
@@ -189,10 +199,11 @@ void Internal::vivify () {
     sort (sorted.begin (), sorted.end (), less_negated_noccs2 (this));
    
     // Make sure to ignore this clause during propagation.  This is not that
-    // easy for binary clauses, e.g., ignoring binary clauses, without
-    // changing 'propagate' and actually we also do not want to remove
-    // binary clauses which are subsumed.  Those are hyper binary
-    // resolvents and should be kept as learned clauses instead (TODO).
+    // easy for binary clauses (NO-BINARY), e.g., ignoring binary clauses,
+    // without changing 'propagate' and actually we also do not want to
+    // remove binary clauses which are subsumed.  Those are hyper binary
+    // resolvents and should be kept as learned clauses instead unless they
+    // are transitive in the binary implication graph (TODO).
     //
     c->ignore = true;		// see also (NO-BINARY) above
 
@@ -302,6 +313,7 @@ REDUNDANT:
   VRB ("vivification", stats.vivifications,
     "checked %ld clauses %.02f%% out of scheduled",
     checked, percent (checked, scheduled));
+  if (units)
   VRB ("vivification", stats.vivifications,
     "found %ld units %.02f%% out of checked",
     units, percent (units, checked));

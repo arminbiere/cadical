@@ -16,13 +16,11 @@ First we list things to simplify or to remove.
 
 Second things are listed related to additional features.
   
-  - Add clause elimination procedures.
-
-  - Add clause shrinking procedures.
+  - Add transitive reduction for binary implication graph.
 
 ## General
 
 There should be an ongoing process of refactoring and documenting the code
 and in particular remove part of the code which is not used anymore.
 
-Tuesday 20. December 20:26:26 CET 2016
+Thursday, 22. December 2016.
