@@ -130,6 +130,7 @@ void Internal::vivify () {
   // We need to make sure to propagate only over irredundant clauses.
   //
   flush_redundant_watches ();
+  size_t old_propagated = propagated;
 
   long checked = 0, subsumed = 0, strengthened = 0, units = 0;
   vector<int> sorted;
@@ -282,6 +283,13 @@ REDUNDANT:
     erase_vector (schedule);
     disconnect_watches ();
     connect_watches ();
+    if (old_propagated < propagated) {
+      propagated = old_propagated;
+      if (!propagate ()) {
+	LOG ("propagating vivified units leads to conflict");
+	learn_empty_clause ();
+      }
+    }
   }
 
   VRB ("vivification", stats.vivifications,
