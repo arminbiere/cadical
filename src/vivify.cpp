@@ -4,13 +4,12 @@
 
 namespace CaDiCaL {
 
-// Vivification, which is a special case of asymmetric tautology
-// elimination.  It strengthens and removes irredundant clauses, which are
-// proven redundant through unit propagation.  The original algorithm is
-// described in a paper by Piette, Hamadi and Sais published at ECAI'08.
-// This is an inprocessing version, e.g., does not necessarily
-// run-to-completion.  It only learns units in case of conflict and uses a
-// new heuristic for selecting clauses to vivify.
+// Vivification is a special case of asymmetric tautology elimination.  It
+// strengthens and removes irredundant clauses proven redundant through unit
+// propagation.  The original algorithm is due to a paper by Piette, Hamadi
+// and Sais published at ECAI'08.  This is an inprocessing version, e.g.,
+// does not necessarily run-to-completion.  It only learns units in case of
+// conflict and uses a new heuristic for selecting clauses to vivify.
 
 /*------------------------------------------------------------------------*/
 
@@ -47,7 +46,7 @@ struct less_negated_noccs2 {
 // learned clause would have a literal on a different non-zero level, we do
 // not learn anything.  The learned unit is returned.
 
-void Internal::vivify_analyze () {
+int Internal::vivify_analyze () {
 
   assert (level);
   assert (!unsat);
@@ -96,6 +95,8 @@ void Internal::vivify_analyze () {
   } else LOG ("no unit learned");
 
   STOP (analyze);
+
+  return -uip;
 }
 
 /*------------------------------------------------------------------------*/
@@ -105,13 +106,6 @@ void Internal::vivify () {
   if (!opts.vivify) return;
 
   SWITCH_AND_START (search, simplify, vivify);
-
-#if 0
-  {
-    int remove;
-    opts.log = true;
-  }
-#endif
 
   assert (!vivifying);
   vivifying = true;
@@ -181,9 +175,11 @@ void Internal::vivify () {
 
   flush_redundant_watches ();
 
-  long tested = 0, subsumed = 0, strengthened = 0;
+  long checked = 0, subsumed = 0, strengthened = 0, units = 0;
   vector<int> sorted;
 
+  // Limit the number of propagations during vivification as in 'probe'.
+  //
   long delta = opts.vivifyreleff * stats.propagations.search;
   if (delta < opts.vivifymineff) delta = opts.vivifymineff;
   if (delta > opts.vivifymaxeff) delta = opts.vivifymaxeff;
@@ -192,29 +188,34 @@ void Internal::vivify () {
   while (!unsat &&
          !schedule.empty () &&
          stats.propagations.vivify < limit) {
+
     Clause * c = schedule.back ().clause;
     schedule.pop_back ();
     assert (c->vivify);
     c->vivify = false;
+
     assert (!c->garbage);
     assert (!c->redundant);
     assert (c->size > 2);
+    assert (sorted.empty ());
+    assert (!level);
+
     const const_literal_iterator eoc = c->end ();
     const_literal_iterator j;
-    assert (sorted.empty ());
     bool satisfied = false;
-    tested++;
-    assert (!level);
+
     for (j = c->begin (); !satisfied && j != eoc; j++) {
       const int lit = *j, tmp = val (lit);
       if (tmp > 0) satisfied = true;
       else if (!tmp) sorted.push_back (lit);
     }
+
     if (satisfied) mark_garbage (c);
     else {
       assert (sorted.size () >= 2);
       if (sorted.size () > 2) {
-	LOG (c, "vivifying");
+	checked++;
+	LOG (c, "vivification checking");
 	sort (sorted.begin (), sorted.end (), less_negated_noccs2 (this));
 	c->ignore = true;
 	bool redundant = false;
@@ -232,7 +233,7 @@ void Internal::vivify () {
 	    assume_decision (-lit);
 	    if (propagate ()) continue;
 	    LOG ("redundant since conflict produced");
-	    vivify_analyze ();
+	    if (vivify_analyze ()) units++;
 	    redundant = true;
 	  }
 	}
@@ -268,6 +269,7 @@ REDUNDANT:
 	    LOG (c, "vivification shrunken to unit %d", unit);
 	    assert (!val (unit));
 	    assign_unit (unit);
+	    units++;
 	    if (!propagate ()) learn_empty_clause ();
 	  } else {
 #ifdef LOGGING
@@ -295,24 +297,28 @@ REDUNDANT:
   }
 
   VRB ("vivification", stats.vivifications,
-    "tested %ld clauses %.02f%% out of scheduled",
-    tested, percent (tested, scheduled));
+    "checked %ld clauses %.02f%% out of scheduled",
+    checked, percent (checked, scheduled));
   VRB ("vivification", stats.vivifications,
-    "subsumed %ld clauses %.02f%% out of tested",
-    subsumed, percent (subsumed, tested));
+    "found %ld units %.02f%% out of checked",
+    units, percent (units, checked));
   VRB ("vivification", stats.vivifications,
-    "strengthened %ld clauses %.02f%% out of tested",
-    strengthened, percent (strengthened, tested));
+    "subsumed %ld clauses %.02f%% out of checked",
+    subsumed, percent (subsumed, checked));
+  VRB ("vivification", stats.vivifications,
+    "strengthened %ld clauses %.02f%% out of checked",
+    strengthened, percent (strengthened, checked));
+
+  stats.vivifychecks += checked;
+  stats.vivifysubs += subsumed;
+  stats.vivifystrs += strengthened;
+  stats.vivifyunits += units;
+
+  stats.subsumed += subsumed;
+  stats.strengthened += strengthened;
 
   assert (vivifying);
   vivifying = false;
-
-#if 0
-  {
-    int remove;
-    opts.log = false;
-  }
-#endif
 
   report ('v');
   STOP_AND_SWITCH (vivify, simplify, search);

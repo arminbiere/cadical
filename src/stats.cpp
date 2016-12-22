@@ -81,6 +81,20 @@ void Stats::print (Internal * internal) {
   MSG ("  hbrsubs:       %15ld   %10.2f %%  per hbr",
     stats.hbrsubs, percent (stats.hbrsubs, stats.hbrs));
   }
+  long vivified = stats.vivifysubs + stats.vivifystrs;
+  MSG ("vivified:        %15ld   %10.2f %%  per vivify check",
+    vivified, percent (vivified, stats.vivifychecks));
+  //if (verbose) {
+  MSG (" vivifychecks:   %15ld   %10.2f %%  per conflict",
+    stats.vivifychecks, percent (stats.vivifychecks, stats.conflicts));
+  MSG (" vivifyunits:    %15ld   %10.2f %%  per vivify check",
+    stats.vivifyunits,
+    percent (stats.vivifyunits, stats.vivifychecks));
+  MSG (" vivifysubs:     %15ld   %10.2f %%  per subsumed",
+    stats.vivifysubs, percent (stats.vivifysubs, stats.subsumed));
+  MSG (" vivifystrs:     %15ld   %10.2f %%  per strengthened",
+    stats.vivifystrs, percent (stats.vivifystrs, stats.strengthened));
+  //}
   MSG ("reused:          %15ld   %10.2f %%  per restart",
     stats.reused, percent (stats.reused, stats.restarts));
   MSG ("resolutions:     %15ld   %10.2f    per eliminated",

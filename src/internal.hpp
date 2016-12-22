@@ -355,7 +355,7 @@ class Internal {
 
   // Strengthening through vivification and asymmetric tautology elimination.
   //
-  void vivify_analyze ();
+  int vivify_analyze ();
   void vivify ();
 
   // We monitor the maximum glue and maximum size of clauses during 'reduce'

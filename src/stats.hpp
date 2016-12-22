@@ -56,13 +56,17 @@ struct Stats {
   long eliminations; // number of elimination phases
   long decompositions; // number of SCC + ELS
   long vivifications;  // number of vivifications
+  long vivifychecks; // checked clauses during vivification
+  long vivifysubs;   // subsumed clauses during vivification
+  long vivifystrs;   // strengthened clauses during vivification
+  long vivifyunits;  // units during vivification
   long learned;      // learned literals
   long minimized;    // minimized literals
   long redundant;    // number of current redundant clauses
   long irredundant;  // number of current irredundant clauses
   long irrbytes;     // bytes of irredundant clauses
   long original;     // number of original irredundant clauses
-  long garbage;      // bytes of current garbage clauses
+  long garbage;      // bytes current irredundant garbage clauses
   long units;        // learned unit clauses
   long binaries;     // learned binary clauses
   long probings;     // number of probings
