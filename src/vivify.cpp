@@ -130,7 +130,7 @@ void Internal::vivify () {
   // We need to make sure to propagate only over irredundant clauses.
   //
   flush_redundant_watches ();
-  size_t old_propagated = propagated;
+  size_t old_propagated = propagated;	// see [RE-PROPAGATE] below.
 
   long checked = 0, subsumed = 0, strengthened = 0, units = 0;
   vector<int> sorted;
@@ -278,11 +278,18 @@ REDUNDANT:
   }
 
   if (!unsat) {
+
     erase_vector (sorted);
     reset_noccs2 ();
     erase_vector (schedule);
     disconnect_watches ();
     connect_watches ();
+
+    // [RE-PROPAGATE] Since redundant clause were disconnected during
+    // propagating vivified units above, we have propagate all those fixed
+    // literals again after connecting the redundant clauses back.
+    // Otherwise, the invariants for watching and blocking literals break.
+    //
     if (old_propagated < propagated) {
       propagated = old_propagated;
       if (!propagate ()) {
