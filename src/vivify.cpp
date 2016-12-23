@@ -279,9 +279,28 @@ REDUNDANT:
         } else clause.push_back (other);
       }
 
-      // TODO: do we want to assume the remaining literals and propagate
-      // them to see whether this clause is actually redundant.  Then there
-      // would be no point in strengthening it?
+      // Assume remaining literals and propagate them to see whether this
+      // clause is actually redundant and does not have to be strengthened.
+
+      if (!sorted.empty ()) {
+
+	do {
+	  const int lit = sorted.back (), tmp = val (lit);
+	  sorted.pop_back ();
+	  if (tmp < 0) continue;
+	  assert (!tmp);
+	  assume_decision (-lit);
+	} while (!sorted.empty ());
+
+	if (!propagate ()) {
+          LOG ("redundant since propagating rest produces conflict");
+	  clause.clear ();
+	  conflict = 0;
+	  goto REDUNDANT;
+	}
+
+	LOG ("propagating remaining negated literals without conflict");
+      }
 
       strengthened++; // only now because of 'goto REDUNDANT' above
 
