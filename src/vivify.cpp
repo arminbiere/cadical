@@ -15,7 +15,7 @@ namespace CaDiCaL {
 
 struct ClauseScore {
   Clause * clause;
-  long score;
+  double score;
   ClauseScore (Clause * c) : clause (c), score (0) { }
 };
 
@@ -101,10 +101,21 @@ void Internal::vivify () {
     Clause * c = *i;
     if (c->garbage) continue;
     if (c->redundant) continue;
+
+    // Compute score as 'pow (2, -c->size)' without 'math.h' (it actually
+    // could be faster even, since second argument is always an integer).
+    // This is the same score the Jeroslow-Wang heuristic would give.
+    //
+    double base = 0.5, score = 0.25;
+    for (int n = c->size - 2; n; n >>= 1) {
+      if (n & 1) score *= base;
+      base *= base;
+    }
+
     const const_literal_iterator eoc = c->end ();
     const_literal_iterator j;
     for (j = c->begin (); j != eoc; j++)
-      noccs2 (*j)++;
+      noccs2 (*j) += score;
   }
 
   // Then update the score of the candidate clauses by adding up the number
