@@ -39,8 +39,8 @@ struct Limit {
   //
   int vivify_wait_reschedule;	
 
-  // Wait that many 'probe_round' calls before scheduling all roots of
-  // binary implication graph for probing again.
+  // Wait that many 'probe' calls before scheduling all roots of binary
+  // implication graph for probing again.
   //
   int probe_wait_reschedule;
 

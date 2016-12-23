@@ -71,7 +71,7 @@ void Internal::vivify () {
   //
   bool reschedule_all = !lim.vivify_wait_reschedule;
   if (reschedule_all) {
-    VRB ("vivification", stats.vivifications,
+    VRB ("vivify", stats.vivifications,
       "forced to reschedule all clauses");
     lim.vivify_wait_reschedule = ++inc.vivify_wait_reschedule;
   } else lim.vivify_wait_reschedule--;
@@ -142,7 +142,7 @@ void Internal::vivify () {
   stable_sort (schedule.begin (), schedule.end (), less_clause_score ());
 
   long scheduled = schedule.size ();
-  VRB ("vivification", stats.vivifications,
+  VRB ("vivify", stats.vivifications,
     "scheduled %ld clauses to be vivified %.0f%%",
     scheduled, percent (scheduled, stats.irredundant));
 
@@ -324,17 +324,17 @@ REDUNDANT:
     }
   }
 
-  VRB ("vivification", stats.vivifications,
+  VRB ("vivify", stats.vivifications,
     "checked %ld clauses %.02f%% out of scheduled",
     checked, percent (checked, scheduled));
   if (units)
-  VRB ("vivification", stats.vivifications,
+  VRB ("vivify", stats.vivifications,
     "found %ld units %.02f%% out of checked",
     units, percent (units, checked));
-  VRB ("vivification", stats.vivifications,
+  VRB ("vivify", stats.vivifications,
     "subsumed %ld clauses %.02f%% out of checked",
     subsumed, percent (subsumed, checked));
-  VRB ("vivification", stats.vivifications,
+  VRB ("vivify", stats.vivifications,
     "strengthened %ld clauses %.02f%% out of checked",
     strengthened, percent (strengthened, checked));
 
