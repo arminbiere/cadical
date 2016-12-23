@@ -2,7 +2,7 @@
 #include "macros.hpp"
 
 namespace CaDiCaL {
- 
+
 // Hyper binary resolution tends to produce too many redundant clauses if we
 // do not eagerly remove duplicated binary clauses.  At the same time this
 // procedure detects hyper binary units, thus in summary implements
@@ -28,54 +28,54 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
       const_watch_iterator i;
       assert (stack.empty ());
       for (i = j; !unit && i != end; i++) {
-	Watch w = *j++ = *i;
-	if (!w.binary) continue;
-	int other = w.blit;
-	const int tmp = marked (other);
-	Clause * c = w.clause;
-	if (tmp > 0) {
-	  LOG (c, "found duplicated");
-	  if (c->garbage) { j--; continue; }
-	  if (!c->redundant) {
-	    watch_iterator k;
-	    for (k = ws.begin ();;k++) {
-	      assert (k != i);
-	      if (!k->binary) continue;
-	      if (k->blit != other) continue;
-	      Clause * d = k->clause;
-	      if (d->garbage) continue;
-	      c = d;
-	      break;
-	    }
-	    *k = w;
-	  }
-	  LOG (c, "mark garbage duplicated");
-	  stats.subsumed++;
-	  stats.duplicated++;
-	  mark_garbage (c);
-	  j--;
-	} else if (tmp < 0) {
-	  LOG ("found %d %d and %d %d which produces unit %d",
-	    lit, -other, lit, other, lit);
-	  unit = lit;
-	  j = ws.begin ();
-	} else {
-	  if (c->garbage) continue;
-	  mark (other);
-	  stack.push_back (other);
-	}
+        Watch w = *j++ = *i;
+        if (!w.binary) continue;
+        int other = w.blit;
+        const int tmp = marked (other);
+        Clause * c = w.clause;
+        if (tmp > 0) {
+          LOG (c, "found duplicated");
+          if (c->garbage) { j--; continue; }
+          if (!c->redundant) {
+            watch_iterator k;
+            for (k = ws.begin ();;k++) {
+              assert (k != i);
+              if (!k->binary) continue;
+              if (k->blit != other) continue;
+              Clause * d = k->clause;
+              if (d->garbage) continue;
+              c = d;
+              break;
+            }
+            *k = w;
+          }
+          LOG (c, "mark garbage duplicated");
+          stats.subsumed++;
+          stats.duplicated++;
+          mark_garbage (c);
+          j--;
+        } else if (tmp < 0) {
+          LOG ("found %d %d and %d %d which produces unit %d",
+            lit, -other, lit, other, lit);
+          unit = lit;
+          j = ws.begin ();
+        } else {
+          if (c->garbage) continue;
+          mark (other);
+          stack.push_back (other);
+        }
       }
       ws.resize (j - ws.begin ());
       while (!stack.empty ()) {
-	unmark (stack.back ());
-	stack.pop_back ();
+        unmark (stack.back ());
+        stack.pop_back ();
       }
     }
     if (unit) {
       assign_unit (unit);
       if (!propagate ()) {
-	LOG ("empty clause after propagating unit");
-	learn_empty_clause ();
+        LOG ("empty clause after propagating unit");
+        learn_empty_clause ();
       }
     }
   }

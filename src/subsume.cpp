@@ -460,7 +460,7 @@ void Internal::subsume () {
     connect_watches ();
   }
 
-  if (opts.vivify) vivify ();	// schedule 'vivification' after 'subsume'
+  if (opts.vivify) vivify ();   // schedule 'vivification' after 'subsume'
 
   // Simple arithmetic series of conflict intervals between 'subsume'.
   // Note that 'elim' triggers 'subsume_round' too and has a more aggressive

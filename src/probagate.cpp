@@ -107,7 +107,7 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
       contained = (*k == -dom);
     const bool red = !contained || reason->redundant;
     if (red) stats.hbreds++;
-    LOG ("new %s hyper binary resolvent %d %d", 
+    LOG ("new %s hyper binary resolvent %d %d",
       (red ? "redundant" : "irredundant"), -dom, lits[0]);
     assert (clause.empty ());
     clause.push_back (-dom);
@@ -250,11 +250,11 @@ bool Internal::probagate () {
             watch_literal (lits[1], lit, w.clause, size);
             j--;
           } else if (!u) {
-	    if (level == 1) {
-	      int dom = hyper_binary_resolve (w.clause);
-	      probe_assign (lits[0], dom);
-	    } else probe_assign_unit (lits[0]);
-	  } else { conflict = w.clause; break; }
+            if (level == 1) {
+              int dom = hyper_binary_resolve (w.clause);
+              probe_assign (lits[0], dom);
+            } else probe_assign_unit (lits[0]);
+          } else { conflict = w.clause; break; }
         }
       }
       while (i != ws.size ()) ws[j++] = ws[i++];

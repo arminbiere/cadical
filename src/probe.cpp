@@ -199,7 +199,7 @@ void Internal::probe_core () {
   int probe;
   while (!unsat &&
          stats.propagations.probe < limit &&
-	 (probe = next_probe ())) {
+         (probe = next_probe ())) {
     stats.probed++;
     LOG ("probing %d", probe);
     level++;

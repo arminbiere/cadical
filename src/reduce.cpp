@@ -66,7 +66,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     Clause * c = *i;
     if (!c->redundant) continue;                 // keep irredundant
     if (c->garbage) continue;                    // already marked
-    if (c->hbr) {				 // hyper binary resolvent?
+    if (c->hbr) {                                // hyper binary resolvent?
       assert (c->size == 2);
       if (!c->used) mark_garbage (c);
       else c->used = false;

@@ -85,7 +85,7 @@ public:
   bool reason:1;    // reason / antecedent clause can not be collected
   bool moved:1;     // moved during garbage collector ('copy' valid)
 
-  bool hbr:1;	    // redundant hyper binary resolved clause (size == 2)
+  bool hbr:1;       // redundant hyper binary resolved clause (size == 2)
   bool used:1;      // 'hbr' resolved during conflict analysis
 
   bool vivify:1;    // irredundant clause scheduled to be vivified

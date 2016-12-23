@@ -4,7 +4,7 @@
 
 namespace CaDiCaL {
 
-Limit::Limit () { 
+Limit::Limit () {
 
   memset (this, 0, sizeof *this);
 

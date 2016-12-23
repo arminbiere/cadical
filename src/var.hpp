@@ -18,7 +18,7 @@ struct Var {
   union {
 
     Clause * reason; // implication graph edge during search
-    int parent;	     // implication graph parent during probing
+    int parent;      // implication graph parent during probing
 
   };
 };

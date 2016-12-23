@@ -86,7 +86,7 @@ void Internal::vivify () {
       Clause * c = *i;
       if (c->garbage) continue;
       if (c->redundant) continue;
-      if (c->size == 2) continue;	// see also [NO-BINARY] below
+      if (c->size == 2) continue;       // see also [NO-BINARY] below
       if (!reschedule_all && !round && !c->vivify) continue;
       schedule.push_back (c);
       c->vivify = true;
@@ -149,7 +149,7 @@ void Internal::vivify () {
   // We need to make sure to propagate only over irredundant clauses.
   //
   flush_redundant_watches ();
-  size_t old_propagated = propagated;	// see [RE-PROPAGATE] below.
+  size_t old_propagated = propagated;   // see [RE-PROPAGATE] below.
 
   // Counters, for what happened.
   //
@@ -179,7 +179,7 @@ void Internal::vivify () {
 
     assert (!c->garbage);
     assert (!c->redundant);
-    assert (c->size > 2);		// see [NO-BINARY] above
+    assert (c->size > 2);               // see [NO-BINARY] above
     assert (!level);
 
     // First check whether it is already satisfied.
@@ -211,7 +211,7 @@ void Internal::vivify () {
     // lead to more propagations and thus potentially higher earlier effect.
     //
     sort (sorted.begin (), sorted.end (), less_negated_noccs2 (this));
-   
+
     // Make sure to ignore this clause during propagation.  This is not that
     // easy for binary clauses [NO-BINARY], e.g., ignoring binary clauses,
     // without changing 'propagate' and actually we also do not want to
@@ -219,26 +219,26 @@ void Internal::vivify () {
     // resolvents and should be kept as learned clauses instead unless they
     // are transitive in the binary implication graph (TODO).
     //
-    c->ignore = true;		// see also [NO-BINARY] above
+    c->ignore = true;           // see also [NO-BINARY] above
 
-    bool redundant = false;	// determined to be redundant / subsumed
-    int remove = 0;		// at least literal 'remove' can be removed
+    bool redundant = false;     // determined to be redundant / subsumed
+    int remove = 0;             // at least literal 'remove' can be removed
 
     while (!redundant && !remove && !sorted.empty ()) {
       const int lit = sorted.back (), tmp = val (lit);
       sorted.pop_back ();
       if (tmp > 0) {
-	LOG ("redundant since literal %d already true", lit);
-	redundant = true;
+        LOG ("redundant since literal %d already true", lit);
+        redundant = true;
       } else if (tmp < 0) {
-	LOG ("removing at least literal %d which is already false", lit);
-	remove = lit;
+        LOG ("removing at least literal %d which is already false", lit);
+        remove = lit;
       } else {
-	assume_decision (-lit);
-	if (propagate ()) continue;
-	LOG ("redundant since propagation produced conflict");
-	redundant = true;
-	conflict = 0;
+        assume_decision (-lit);
+        if (propagate ()) continue;
+        LOG ("redundant since propagation produced conflict");
+        redundant = true;
+        conflict = 0;
       }
     }
 
@@ -258,42 +258,42 @@ REDUNDANT:
       // falsified).  Those should be removed in addition to 'remove'.
       //
       for (j = c->begin (); j != eoc; j++) {
-	const int other = *j, tmp = val (other);
-	Var & v = var (other);
-	if (tmp > 0) {
-	  LOG ("redundant since literal %d already true", other);
-	  clause.clear ();
-	  goto REDUNDANT;
-	}
-	if (tmp < 0 && !v.level) continue;
-	if (tmp < 0 && v.level && v.reason) {
-	  assert (v.level);
-	  assert (v.reason);
-	  LOG ("flushing literal %d", other);
-	  mark_removed (other);
+        const int other = *j, tmp = val (other);
+        Var & v = var (other);
+        if (tmp > 0) {
+          LOG ("redundant since literal %d already true", other);
+          clause.clear ();
+          goto REDUNDANT;
+        }
+        if (tmp < 0 && !v.level) continue;
+        if (tmp < 0 && v.level && v.reason) {
+          assert (v.level);
+          assert (v.reason);
+          LOG ("flushing literal %d", other);
+          mark_removed (other);
 #ifndef NDEBUG
-	  if (other == remove) found = true;
+          if (other == remove) found = true;
 #endif
-	} else clause.push_back (other);
+        } else clause.push_back (other);
       }
       assert (found);
       assert (!clause.empty ());
       backtrack ();
       if (clause.size () == 1) {
-	const int unit = clause[0];
-	LOG (c, "vivification shrunken to unit %d", unit);
-	assert (!val (unit));
-	assign_unit (unit);
-	units++;
-	bool ok = propagate ();
-	if (!ok) learn_empty_clause ();
+        const int unit = clause[0];
+        LOG (c, "vivification shrunken to unit %d", unit);
+        assert (!val (unit));
+        assign_unit (unit);
+        units++;
+        bool ok = propagate ();
+        if (!ok) learn_empty_clause ();
       } else {
 #ifdef LOGGING
-	Clause * d = 
+        Clause * d =
 #endif
-	new_clause_as (c);
-	LOG (c, "before vivification");
-	LOG (d, "after vivification");
+        new_clause_as (c);
+        LOG (c, "before vivification");
+        LOG (d, "after vivification");
       }
       clause.clear ();
       mark_garbage (c);
@@ -318,8 +318,8 @@ REDUNDANT:
     if (old_propagated < propagated) {
       propagated = old_propagated;
       if (!propagate ()) {
-	LOG ("propagating vivified units leads to conflict");
-	learn_empty_clause ();
+        LOG ("propagating vivified units leads to conflict");
+        learn_empty_clause ();
       }
     }
   }

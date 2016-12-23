@@ -11,7 +11,7 @@ struct Flags {         // Variable flags.
   bool removable : 1; // can be removed in 'minimize/shrink'
   bool added     : 1; // added since last 'subsume' round
   bool removed   : 1; // removed since last 'elim' round
-  
+
   enum {
     ACTIVE      = 0,
     FIXED       = 1,

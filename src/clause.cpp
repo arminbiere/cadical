@@ -145,7 +145,7 @@ Clause * Internal::new_clause (bool red, int glue) {
 
   // Just checking that we did not mess up our sophisticated memory layout.
   // This might be compiler dependent though. Crucial for correctness.
-  // 
+  //
   assert (c->offset () == offset);
   assert (c->bytes () == bytes);
 

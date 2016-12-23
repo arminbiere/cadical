@@ -59,14 +59,14 @@ void Internal::sort_watches () {
       watch_iterator j = ws.begin ();
       assert (saved.empty ());
       for (i = j; i != end; i++) {
-	const Watch w = *i;
-	if (w.binary) *j++ = w;
-	else saved.push_back (w);
+        const Watch w = *i;
+        if (w.binary) *j++ = w;
+        else saved.push_back (w);
       }
       ws.resize (j - ws.begin ());
       end = saved.end ();
       for (i = saved.begin (); i != end; i++)
-	ws.push_back (*i);
+        ws.push_back (*i);
       saved.clear ();
     }
   }
@@ -87,8 +87,8 @@ void Internal::flush_redundant_watches () {
       const_watch_iterator i;
       watch_iterator j = ws.begin ();
       for (i = j; i != end; i++) {
-	const Watch w = *i;
-	if (!w.clause->redundant) *j++ = w;
+        const Watch w = *i;
+        if (!w.clause->redundant) *j++ = w;
       }
       ws.resize (j - ws.begin ());
     }

@@ -142,7 +142,7 @@ bool Internal::propagate () {
         EXPENSIVE_STATS_ADD (visits, 1);
 
         if (w.clause->garbage) continue;
-	if (w.clause->ignore) continue;
+        if (w.clause->ignore) continue;
 
         literal_iterator lits = w.clause->begin ();
 
