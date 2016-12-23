@@ -69,9 +69,12 @@ void Internal::vivify () {
   // clauses with many occurrences of their negated literals (also long
   // clauses), but in the limit eventually still should vivify all clauses.
   //
-  bool reschedule_all = !lim.vivifywaitreset;
-  if (reschedule_all) lim.vivifywaitreset = ++inc.vivifywaitreset;
-  else lim.vivifywaitreset--;
+  bool reschedule_all = !lim.vivify_wait_reschedule;
+  if (reschedule_all) {
+    VRB ("vivification", stats.vivifications,
+      "forced to reschedule all clauses");
+    lim.vivify_wait_reschedule = ++inc.vivify_wait_reschedule;
+  } else lim.vivify_wait_reschedule--;
 
   // In the first round check whether there are still clauses left, which
   // are scheduled to but have not been vivified yet.  In the second round

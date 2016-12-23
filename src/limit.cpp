@@ -12,4 +12,6 @@ bool Internal::terminating () {
   return false;
 }
 
+Inc::Inc () { memset (this, 0, sizeof *this); }
+
 };

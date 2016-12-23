@@ -37,7 +37,12 @@ struct Limit {
   // Wait that many 'vivify' calls before scheduling all clauses for
   // vivification again.
   //
-  int vivifywaitreset;	
+  int vivify_wait_reschedule;	
+
+  // Wait that many 'probe_round' calls before scheduling all roots of
+  // binary implication graph for probing again.
+  //
+  int probe_wait_reschedule;
 
   Limit ();
 };
@@ -49,9 +54,10 @@ struct Inc {
   long elim;    // elimination interval increment
   long probe;   // failed literal probing interval increment
 
-  int vivifywaitreset;	// how many vivifications before reset
+  int vivify_wait_reschedule;	// see above
+  int probe_wait_reschedule;	// see above
 
-  Inc () : reduce (0), redinc (0), subsume (0), elim (0) { }
+  Inc ();
 };
 
 };
