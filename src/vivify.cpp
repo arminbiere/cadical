@@ -86,7 +86,7 @@ void Internal::vivify () {
       Clause * c = *i;
       if (c->garbage) continue;
       if (c->redundant) continue;
-      if (c->size == 2) continue;	// see also (NO-BINARY) below
+      if (c->size == 2) continue;	// see also [NO-BINARY] below
       if (!reschedule_all && !round && !c->vivify) continue;
       schedule.push_back (c);
       c->vivify = true;
@@ -179,7 +179,7 @@ void Internal::vivify () {
 
     assert (!c->garbage);
     assert (!c->redundant);
-    assert (c->size > 2);		// see 
+    assert (c->size > 2);		// see [NO-BINARY] above
     assert (!level);
 
     // First check whether it is already satisfied.
@@ -213,13 +213,13 @@ void Internal::vivify () {
     sort (sorted.begin (), sorted.end (), less_negated_noccs2 (this));
    
     // Make sure to ignore this clause during propagation.  This is not that
-    // easy for binary clauses (NO-BINARY), e.g., ignoring binary clauses,
+    // easy for binary clauses [NO-BINARY], e.g., ignoring binary clauses,
     // without changing 'propagate' and actually we also do not want to
     // remove binary clauses which are subsumed.  Those are hyper binary
     // resolvents and should be kept as learned clauses instead unless they
     // are transitive in the binary implication graph (TODO).
     //
-    c->ignore = true;		// see also (NO-BINARY) above
+    c->ignore = true;		// see also [NO-BINARY] above
 
     bool redundant = false;	// determined to be redundant / subsumed
     int remove = 0;		// at least literal 'remove' can be removed
