@@ -462,6 +462,8 @@ void Internal::subsume () {
 
   if (opts.vivify) vivify ();   // schedule 'vivification' after 'subsume'
 
+  if (opts.transred) transred ();  // as well as transitive reduction
+
   // Simple arithmetic series of conflict intervals between 'subsume'.
   // Note that 'elim' triggers 'subsume_round' too and has a more aggressive
   // scheduling policy.  So subsumptions in general are more often called

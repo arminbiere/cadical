@@ -45,8 +45,9 @@ struct less_negated_noccs2 {
 
 void Internal::vivify () {
 
-  assert (opts.vivify);
+  if (unsat) return;
 
+  assert (opts.vivify);
   SWITCH_AND_START (search, simplify, vivify);
 
   assert (!vivifying);

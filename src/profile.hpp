@@ -52,6 +52,7 @@ PROFILE(restart,3) \
 PROFILE(search,1) \
 PROFILE(simplify,1) \
 PROFILE(subsume,2) \
+PROFILE(transred,2) \
 PROFILE(vivify,2) \
 
 /*------------------------------------------------------------------------*/

@@ -91,6 +91,7 @@ OPTION(subsumeocclim,    int,  1e2, 0,1e9, "watch list length limit") \
 OPTION(trailbump,       bool,    1, 0,  1, "use trail + bumped") \
 OPTION(trailbumplast, double,   40, 0,100, "trail bump last level limit") \
 OPTION(trailbumprops, double,  200, 0,1e9, "trail bump propagation limit") \
+OPTION(transred,        bool,    1, 0,  1, "transitive reduction of BIG") \
 OPTION(verbose,          int,    0, 0,  2, "more verbose messages") \
 OPTION(vivify,          bool,    1, 0,  1, "vivification") \
 OPTION(vivifyrtc,       bool,    1, 0,  1, "run-to-completion") \

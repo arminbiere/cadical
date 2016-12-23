@@ -60,6 +60,8 @@ struct Stats {
   long vivifysubs;   // subsumed clauses during vivification
   long vivifystrs;   // strengthened clauses during vivification
   long vivifyunits;  // units during vivification
+  long transreds;
+  long transitive;
   long learned;      // learned literals
   long minimized;    // minimized literals
   long redundant;    // number of current redundant clauses

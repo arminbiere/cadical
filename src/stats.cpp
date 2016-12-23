@@ -33,6 +33,8 @@ void Stats::print (Internal * internal) {
     stats.probings, relative (stats.conflicts, stats.probings));
   MSG ("vivifications:   %15ld   %10.2f    conflicts per vivification",
     stats.vivifications, relative (stats.conflicts, stats.vivifications));
+  MSG ("transreductions: %15ld   %10.2f    conflicts per reduction",
+    stats.transreds, relative (stats.conflicts, stats.transreds));
   MSG ("eliminations:    %15ld   %10.2f    conflicts per elimination",
     stats.eliminations, relative (stats.conflicts, stats.eliminations));
   MSG ("subsumptions:    %15ld   %10.2f    conflicts per subsumption",
@@ -137,6 +139,8 @@ void Stats::print (Internal * internal) {
   if (verbose)
   MSG ("  duplicated:    %15ld   %10.2f %%  per subsumed",
     stats.duplicated, percent (stats.duplicated, stats.subsumed));
+  MSG ("  transitive:    %15ld   %10.2f %%  per subsumed",
+    stats.transitive, percent (stats.transitive, stats.subsumed));
   MSG ("strengthened:    %15ld   %10.2f    per subsumed",
     stats.strengthened, relative (stats.strengthened, stats.subsumed));
   if (verbose) {

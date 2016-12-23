@@ -357,6 +357,10 @@ class Internal {
   //
   void vivify ();
 
+  // Transitive reduction of binary implication graph.
+  //
+  void transred ();
+
   // We monitor the maximum glue and maximum size of clauses during 'reduce'
   // and thus can predict if a redundant extended clause is likely to be
   // kept in the next 'reduce' phase.  These clauses are target of
