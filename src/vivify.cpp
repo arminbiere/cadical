@@ -279,6 +279,8 @@ REDUNDANT:
         } else clause.push_back (other);
       }
 
+      assert (found);
+
       // Assume remaining literals and propagate them to see whether this
       // clause is actually redundant and does not have to be strengthened.
 
@@ -288,23 +290,27 @@ REDUNDANT:
 	  const int lit = sorted.back (), tmp = val (lit);
 	  sorted.pop_back ();
 	  if (tmp < 0) continue;
-	  assert (!tmp);
-	  assume_decision (-lit);
-	} while (!sorted.empty ());
+	  if (tmp > 0) {
+	    LOG ("redundant since literal %d already true", lit);
+	    redundant = true;
+	  } else {
+	    assume_decision (-lit);
+	    redundant = !propagate ();
+	  }
+	} while (!redundant && !sorted.empty ());
 
-	if (!propagate ()) {
+	if (redundant) {
+	  if (conflict) conflict = 0;
           LOG ("redundant since propagating rest produces conflict");
 	  clause.clear ();
-	  conflict = 0;
 	  goto REDUNDANT;
 	}
 
 	LOG ("propagating remaining negated literals without conflict");
       }
 
-      strengthened++; // only now because of 'goto REDUNDANT' above
+      strengthened++; // only now because of 'goto REDUNDANT' above (twice)
 
-      assert (found);
       assert (!clause.empty ());
       backtrack ();
       if (clause.size () == 1) {
