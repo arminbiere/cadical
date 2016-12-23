@@ -248,14 +248,16 @@ REDUNDANT:
       LOG (c, "redundant asymmetric tautology");
       mark_garbage (c);
     } else if (remove) {
-      strengthened++;
       assert (level);
       assert (clause.empty ());
 #ifndef NDEBUG
       bool found = false;
 #endif
       // There might be other literals implied to false (or even root level
-      // falsified).  Those should be removed in addition to 'remove'.
+      // falsified).  Those should be removed in addition to 'remove'.  It
+      // might further be possible that a latter to be assumed literal is
+      // already forced to true in which case the clause is actually
+      // redundant (we solved this by bad style 'goto' programming).
       //
       for (j = c->begin (); j != eoc; j++) {
         const int other = *j, tmp = val (other);
@@ -276,6 +278,13 @@ REDUNDANT:
 #endif
         } else clause.push_back (other);
       }
+
+      // TODO: do we want to assume the remaining literals and propagate
+      // them to see whether this clause is actually redundant.  Then there
+      // would be no point in strengthening it?
+
+      strengthened++; // only now because of 'goto REDUNDANT' above
+
       assert (found);
       assert (!clause.empty ());
       backtrack ();
