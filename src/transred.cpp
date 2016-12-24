@@ -15,14 +15,40 @@ void Internal::transred () {
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
 
-  vector<int> work;
+  // Find first clause not checked for being transitive yet.
 
-  long units = 0, transitive = 0;
-
-  for (i = clauses.begin (); !unsat && i != end; i++) {
+  for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
     if (c->size != 2) continue;
+    if (c->redundant && c->hbr) continue;
+    if (!c->transred) break;
+  }
+
+  if (i == end) {
+    LOG ("rescheduling all clauses since no clauses to check left");
+    for (i = clauses.begin (); i != end; i++) {
+      Clause * c = *i;
+      if (c->transred) c->transred = false;
+    }
+    i = clauses.begin ();
+  }
+
+  vector<int> work;
+
+  long limit = opts.transredreleff * stats.propagations.search;
+  if (limit < opts.transredmineff) limit = opts.transredmineff;
+  if (limit > opts.transredmaxeff) limit = opts.transredmaxeff;
+
+  long propagations = 0, units = 0, removed = 0;
+
+  while (!unsat && i != end && propagations < limit) {
+    Clause * c = *i++;
+    if (c->garbage) continue;
+    if (c->size != 2) continue;
+    if (c->redundant && c->hbr) continue;
+    if (c->transred) continue;
+    c->transred = true;
     int src = -c->literals[0];
     int dst = c->literals[1];
     if (val (src) || val (dst)) continue;
@@ -30,7 +56,6 @@ void Internal::transred () {
       int tmp = dst;
       dst = -src; src = -tmp;
     }
-    if (c->redundant && c->hbr) continue;
     const bool irredundant = !c->redundant;
     LOG (c, "checking transitive reduction of");
     assert (work.empty ());
@@ -43,6 +68,7 @@ void Internal::transred () {
       const int lit = work[j++];
       assert (marked (lit) > 0);
       LOG ("visiting %d", lit);
+      propagations++;
       const Watches & ws = watches (-lit);
       const const_watch_iterator eow = ws.end ();
       const_watch_iterator k;
@@ -51,8 +77,9 @@ void Internal::transred () {
 	if (!w.binary) continue;
 	Clause * d = w.clause;
 	if (d == c) continue;
+	assert (w.redundant == d->redundant);
+	if (irredundant && w.redundant) continue;
 	if (d->garbage) continue;
-	if (irredundant && d->redundant) continue;
 	const int other = w.blit;
 	if (other == dst) transitive = true;
 	else {
@@ -74,11 +101,10 @@ void Internal::transred () {
       unmark (lit);
     }
     if (transitive) {
-      transitive++;
+      removed++;
       stats.transitive++;
       LOG (c, "transitive redundant");
       mark_garbage (c);
-      stats.transitive++;
     } else if (failed) {
       units++;
       LOG ("found failed literal %d during transitive reduction", src);
@@ -90,11 +116,12 @@ void Internal::transred () {
     }
   }
 
+  stats.propagations.transred += propagations;
   erase_vector (work);
 
   VRB ("transred", stats.transreds,
-    "found %ld transitive clauses, found %d units",
-    transitive, units);
+    "removed %ld transitive clauses, found %d units",
+    removed, units);
 
   report ('t');
   STOP_AND_SWITCH (transred, simplify, search);

@@ -26,9 +26,9 @@ namespace CaDiCaL {
 //   (2) The boolean flags only need one bit each and thus there is enough
 //   space left to merge them with a 'glue' bit field (which is less
 //   accessed than 'size').  This saves 4 bytes and also keeps the header
-//   without '_analyzed' and '_pos' nicely in 8 bytes.  We currently use 22
+//   without '_analyzed' and '_pos' nicely in 8 bytes.  We currently use 21
 //   bits and, actually, since we do not want to mess with 'unsigned' versus
-//   'signed' issues just use 21 out of them.  If more boolean flags are
+//   'signed' issues just use 20 out of them.  If more boolean flags are
 //   needed this number has to be adapted accordingly.
 //
 //   (3) Original clauses and clauses with small glue or size are kept
@@ -59,7 +59,7 @@ namespace CaDiCaL {
 // but is also guarded by making the actual '_analyzed' field private and
 // checking this contract in the 'analyzed ()' accessors functions.
 
-#define LD_MAX_GLUE 22
+#define LD_MAX_GLUE 21
 #define MAX_GLUE ((1 << (LD_MAX_GLUE-1)) - 1)
 
 class Clause {
@@ -90,6 +90,8 @@ public:
 
   bool vivify:1;    // irredundant clause scheduled to be vivified
   bool ignore:1;    // ignore during (vivify) propagation
+
+  bool transred:1;  // already checked for transitive reduction
 
   signed int glue : LD_MAX_GLUE;
 

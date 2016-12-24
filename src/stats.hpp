@@ -20,6 +20,7 @@ struct Stats {
     long probe;      // propagated during probing
     long search;     // propagated literals during search
     long vivify;     // propagated during vivification
+    long transred;   // propagated during transitive reduction
   } propagations;
 
   long restarts;     // actual number of happened restarts

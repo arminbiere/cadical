@@ -23,14 +23,12 @@ struct Watch {
 
   Clause * clause;
   signed int blit;
+  bool redundant;
   bool binary;
 
-  Watch (int b, Clause * c, int s)
-  :
-    clause (c), blit (b), binary (s == 2)
-  {
-    assert (b), assert (c), assert (c->size == s);
-  }
+  Watch (int b, Clause * c) :
+    clause (c), blit (b), redundant (c->redundant), binary (c->size == 2)
+  { }
 
   Watch () { }
 };

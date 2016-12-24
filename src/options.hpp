@@ -92,9 +92,11 @@ OPTION(trailbump,       bool,    1, 0,  1, "use trail + bumped") \
 OPTION(trailbumplast, double,   40, 0,100, "trail bump last level limit") \
 OPTION(trailbumprops, double,  200, 0,1e9, "trail bump propagation limit") \
 OPTION(transred,        bool,    1, 0,  1, "transitive reduction of BIG") \
-OPTION(verbose,          int,    0, 0,  2, "more verbose messages") \
+OPTION(transredreleff,double, 0.05, 0,  1, "relative efficiency") \
+OPTION(transredmaxeff,double,  5e8, 0,  1, "maximum efficiency") \
+OPTION(transredmineff,double,  1e6, 0,  1, "minimum efficiency") \
+OPTION(verbose,         int,    0, 0,  2, "more verbose messages") \
 OPTION(vivify,          bool,    1, 0,  1, "vivification") \
-OPTION(vivifyrtc,       bool,    1, 0,  1, "run-to-completion") \
 OPTION(vivifyreleff,  double, 0.03, 0,  1, "relative efficiency") \
 OPTION(vivifymaxeff,  double,  1e8, 0,  1, "maximum efficiency") \
 OPTION(vivifymineff,  double,  1e6, 0,  1, "minimum efficiency") \

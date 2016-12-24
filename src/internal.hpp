@@ -217,7 +217,7 @@ class Internal {
   //
   inline void watch_literal (int lit, int blit, Clause * c, int size) {
     Watches & ws = watches (lit);
-    ws.push_back (Watch (blit, c, size));
+    ws.push_back (Watch (blit, c));
     LOG (c, "watch %d blit %d in", lit, blit);
   }
 

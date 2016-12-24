@@ -139,6 +139,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   c->hbr = false;
   c->vivify = false;
   c->ignore = false;
+  c->transred = false;
   c->glue = glue;
   c->size = size;
   for (int i = 0; i < size; i++) c->literals[i] = clause[i];
