@@ -193,6 +193,7 @@ void Internal::copy_clause (Clause * c) {
   LOG (c, "moving");
   assert (!c->moved);
   char * p = c->start (), * q = arena.copy (p, c->bytes ());
+  assert (aligned (q, 8));
   Clause * d = c->copy = (Clause *) (q - c->offset ());
   if (d->reason) var (d->literals[val (d->literals[1]) > 0]).reason = d;
   c->moved = true;

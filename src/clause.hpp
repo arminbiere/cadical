@@ -93,6 +93,11 @@ public:
 
   bool transred:1;  // already checked for transitive reduction
 
+  // Glucose level, LBD, or just 'glue' stores for learned clauses the
+  // number of different levels of its literals during learning.  This is a
+  // good prediction for usefulness of a clause (see the IJCAR'09 paper by
+  // Audemard and Simon).
+  //
   signed int glue : LD_MAX_GLUE;
 
   int size;         // actual size of 'literals' (at least 2)

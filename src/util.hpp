@@ -39,6 +39,10 @@ inline bool aligned (size_t bytes, size_t alignment) {
   return !(bytes & (alignment - 1));
 }
 
+inline bool aligned (void * ptr, size_t alignment) {
+  return aligned ((size_t) ptr, alignment);
+}
+
 inline size_t align (size_t bytes, size_t alignment) {
   assert (is_power_of_two (alignment));
   if (aligned (bytes, alignment)) return bytes;

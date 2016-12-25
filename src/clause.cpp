@@ -122,6 +122,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int) - offset;
   bytes = align (bytes, 8);
   char * ptr = new char[bytes];
+  assert (aligned (ptr, 8));
   ptr -= offset;
   c = (Clause*) ptr;
 
