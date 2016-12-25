@@ -9,6 +9,7 @@ namespace CaDiCaL {
 void Internal::init_watches () {
   assert (!wtab);
   wtab = new Watches [2*vsize];
+  assert (sizeof (Watch) == 16);
 }
 
 void Internal::reset_watches () {
