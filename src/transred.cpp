@@ -16,7 +16,7 @@ void Internal::transred () {
   const_clause_iterator i;
 
   // Find first clause not checked for being transitive yet.
-
+  //
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
@@ -25,7 +25,10 @@ void Internal::transred () {
     if (!c->transred) break;
   }
 
+  // If all candidate clauses have been checked reschedule all.
+  //
   if (i == end) {
+
     LOG ("rescheduling all clauses since no clauses to check left");
     for (i = clauses.begin (); i != end; i++) {
       Clause * c = *i;
@@ -34,8 +37,14 @@ void Internal::transred () {
     i = clauses.begin ();
   }
 
+  // This working stack plays the same role as 'trail' during standard
+  // propagation.
+  //
   vector<int> work;
 
+  // Transitive reduction can not be run to completion for larger formulas
+  // with many binary clauses.  We bound it in the same way as 'prob_core'.
+  //
   long limit = opts.transredreleff * stats.propagations.search;
   if (limit < opts.transredmineff) limit = opts.transredmineff;
   if (limit > opts.transredmaxeff) limit = opts.transredmaxeff;
@@ -44,30 +53,58 @@ void Internal::transred () {
 
   while (!unsat && i != end && propagations < limit) {
     Clause * c = *i++;
+
+    // A clause is a candidate for being transitive if it is binary, and not
+    // the result of hyper binary resolution.  The reason for excluding
+    // those, is that they come in large numbers, most of them are reduced
+    // away anyhow and further are non-transitive at the point they are
+    // added anyhow (see the code in 'hyper_binary_resolve' in
+    // 'probagate.cpp' and also check out our CPAIOR paper on tree-based
+    // look ahead).
+    //
     if (c->garbage) continue;
     if (c->size != 2) continue;
     if (c->redundant && c->hbr) continue;
-    if (c->transred) continue;
-    c->transred = true;
+    if (c->transred) continue;			// checked before?
+    c->transred = true;				// marked as checked
+
+    LOG (c, "checking transitive reduction of");
+
+    // Find a different path from 'src' to 'dst' in the binary implication
+    // graph, not using 'c'.  Since this is the same as checking whether
+    // there is a path from '-dst' to '-src', we can do the reverse search
+    // if the number of watches of '-dst' is smaller than those of 'src'.
+    //
     int src = -c->literals[0];
     int dst = c->literals[1];
     if (val (src) || val (dst)) continue;
-    if (watches (src).size () > watches (dst).size ()) {
+    if (watches (src).size () > watches (-dst).size ()) {
       int tmp = dst;
       dst = -src; src = -tmp;
     }
-    const bool irredundant = !c->redundant;
-    LOG (c, "checking transitive reduction of");
-    assert (work.empty ());
+
     LOG ("searching path from %d to %d", src, dst);
+
+    // If the candidate clause is irredundant then we can not use redundant
+    // binary clauses in the implication graph.  See our inprocessing rules
+    // paper, why this restriction is required.
+    //
+    const bool irredundant = !c->redundant;
+
+    assert (work.empty ());
     mark (src);
     work.push_back (src);
-    size_t j = 0;
-    bool transitive = false, failed = false;
+    LOG ("transred assign %d", src;);
+
+    bool transitive = false;		// found path from 'src' to 'dst'?
+    bool failed = false;		// 'src' failed literal?
+
+    size_t j = 0;			// 'propagated' in BFS
+
     while (!transitive && !failed && j < work.size ()) {
       const int lit = work[j++];
       assert (marked (lit) > 0);
-      LOG ("visiting %d", lit);
+      LOG ("transred propagating %d", lit);
       propagations++;
       const Watches & ws = watches (-lit);
       const const_watch_iterator eow = ws.end ();
@@ -81,7 +118,7 @@ void Internal::transred () {
 	if (irredundant && w.redundant) continue;
 	if (d->garbage) continue;
 	const int other = w.blit;
-	if (other == dst) transitive = true;
+	if (other == dst) transitive = true;	// 'dst' reached
 	else {
 	  const int tmp = marked (other);
 	  if (tmp > 0) continue;
@@ -91,15 +128,20 @@ void Internal::transred () {
 	  } else {
 	    mark (other);
 	    work.push_back (other);
+	    LOG ("transred assign %d", other);
 	  }
 	}
       }
     }
+
+    // Unassign all assigned literals (aka 'backtrack').
+    //
     while (!work.empty ()) {
       const int lit = work.back ();
       work.pop_back ();
       unmark (lit);
     }
+
     if (transitive) {
       removed++;
       stats.transitive++;
