@@ -78,7 +78,7 @@ void Internal::transred () {
     int src = -c->literals[0];
     int dst = c->literals[1];
     if (val (src) || val (dst)) continue;
-    if (watches (src).size () > watches (-dst).size ()) {
+    if (watches (-src).size () > watches (dst).size ()) {
       int tmp = dst;
       dst = -src; src = -tmp;
     }
