@@ -180,11 +180,13 @@ void Internal::probe_core () {
   // in binary clauses of their negated literals but in the limit eventually
   // still should probe all roots.
   //
-  if (!lim.probe_wait_reschedule) {
-    VRB ("probe", stats.probings, "forced to reschedule all probes");
-    lim.probe_wait_reschedule = ++inc.probe_wait_reschedule;
-    probes.clear ();
-  } else lim.probe_wait_reschedule--;
+  if (opts.probereschedule) {
+    if (!lim.probe_wait_reschedule) {
+      VRB ("probe", stats.probings, "forced to reschedule all probes");
+      lim.probe_wait_reschedule = ++inc.probe_wait_reschedule;
+      probes.clear ();
+    } else lim.probe_wait_reschedule--;
+  }
 
   // Probing is limited in terms of non-probing propagations
   // 'stats.propagations'. We allow a certain percentage 'opts.probereleff'
