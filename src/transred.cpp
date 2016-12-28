@@ -73,12 +73,12 @@ void Internal::transred () {
     // Find a different path from 'src' to 'dst' in the binary implication
     // graph, not using 'c'.  Since this is the same as checking whether
     // there is a path from '-dst' to '-src', we can do the reverse search
-    // if the number of watches of '-dst' is smaller than those of 'src'.
+    // if the number of watches of '-dst' is larger than those of 'src'.
     //
     int src = -c->literals[0];
     int dst = c->literals[1];
     if (val (src) || val (dst)) continue;
-    if (watches (-src).size () > watches (dst).size ()) {
+    if (watches (-src).size () < watches (dst).size ()) {
       int tmp = dst;
       dst = -src; src = -tmp;
     }
