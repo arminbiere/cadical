@@ -193,7 +193,9 @@ void Internal::probe_core () {
   // (say %5) of probing propagations (called 'probagations') in each
   // probing with a lower bound of 'opts.probmineff'.
   //
-  long delta = opts.probereleff * stats.propagations.search;
+  long delta = stats.propagations.search;
+  delta -= lim.search_propagations.probe;
+  delta *= opts.probereleff;
   if (delta < opts.probemineff) delta = opts.probemineff;
   if (delta > opts.probemaxeff) delta = opts.probemaxeff;
   long limit = stats.propagations.probe + delta;
@@ -228,6 +230,8 @@ void Internal::probe_core () {
   if (!failed) inc.probe *= 2;
   else inc.probe += opts.probeint;
   lim.probe = stats.conflicts + inc.probe;
+
+  lim.search_propagations.probe = stats.propagations.search;
 
   VRB ("probe", stats.probings,
     "probed %ld and found %d failed literals",

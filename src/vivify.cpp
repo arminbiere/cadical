@@ -165,7 +165,9 @@ void Internal::vivify () {
 
   // Limit the number of propagations during vivification as in 'probe'.
   //
-  long delta = opts.vivifyreleff * stats.propagations.search;
+  long delta = stats.propagations.search;
+  delta -= lim.search_propagations.vivify;
+  delta *= opts.vivifyreleff;
   if (delta < opts.vivifymineff) delta = opts.vivifymineff;
   if (delta > opts.vivifymaxeff) delta = opts.vivifymaxeff;
   long limit = stats.propagations.vivify + delta;
@@ -383,6 +385,8 @@ REDUNDANT:
 
   stats.subsumed += subsumed;
   stats.strengthened += strengthened;
+
+  lim.search_propagations.vivify = stats.propagations.search;
 
   assert (vivifying);
   vivifying = false;

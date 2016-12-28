@@ -45,7 +45,9 @@ void Internal::transred () {
   // Transitive reduction can not be run to completion for larger formulas
   // with many binary clauses.  We bound it in the same way as 'prob_core'.
   //
-  long limit = opts.transredreleff * stats.propagations.search;
+  long limit = stats.propagations.search;
+  limit -= lim.search_propagations.transred;
+  limit *= opts.transredreleff;
   if (limit < opts.transredmineff) limit = opts.transredmineff;
   if (limit > opts.transredmaxeff) limit = opts.transredmaxeff;
 
@@ -158,6 +160,7 @@ void Internal::transred () {
     }
   }
 
+  lim.search_propagations.transred = stats.propagations.search;
   stats.propagations.transred += propagations;
   erase_vector (work);
 

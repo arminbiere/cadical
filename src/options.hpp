@@ -69,8 +69,8 @@ OPTION(probeinit,        int,  500, 0,1e9, "initial probing interval" ) \
 OPTION(probeint,         int,  1e4, 1,1e9, "probing interval increment" ) \
 OPTION(probereleff,   double, 0.02, 0,  1, "relative probing efficiency") \
 OPTION(probereschedule, bool,    0, 0,  1, "reschedule probing") \
-OPTION(probemaxeff,   double,  1e8, 0,  1, "maximum probing efficiency") \
-OPTION(probemineff,   double,  1e6, 0,  1, "minimum probing efficiency") \
+OPTION(probemaxeff,   double,  1e7, 0,  1, "maximum probing efficiency") \
+OPTION(probemineff,   double,  1e5, 0,  1, "minimum probing efficiency") \
 OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
 OPTION(profile,          int,    2, 0,  4, "profiling level") \
 OPTION(quiet,           bool,    0, 0,  1, "disable all messages") \
@@ -94,14 +94,14 @@ OPTION(trailbumplast, double,   40, 0,100, "trail bump last level limit") \
 OPTION(trailbumprops, double,  200, 0,1e9, "trail bump propagation limit") \
 OPTION(transred,        bool,    1, 0,  1, "transitive reduction of BIG") \
 OPTION(transredreleff,double, 0.05, 0,  1, "relative efficiency") \
-OPTION(transredmaxeff,double,  5e8, 0,  1, "maximum efficiency") \
-OPTION(transredmineff,double,  1e6, 0,  1, "minimum efficiency") \
+OPTION(transredmaxeff,double,  1e7, 0,  1, "maximum efficiency") \
+OPTION(transredmineff,double,  1e5, 0,  1, "minimum efficiency") \
 OPTION(verbose,         int,    0, 0,  2, "more verbose messages") \
 OPTION(vivify,          bool,    1, 0,  1, "vivification") \
 OPTION(vivifyreleff,  double, 0.03, 0,  1, "relative efficiency") \
 OPTION(vivifyreschedule,bool,    0, 0,  1, "reschedule vivification") \
-OPTION(vivifymaxeff,  double,  1e8, 0,  1, "maximum efficiency") \
-OPTION(vivifymineff,  double,  1e6, 0,  1, "minimum efficiency") \
+OPTION(vivifymaxeff,  double,  1e7, 0,  1, "maximum efficiency") \
+OPTION(vivifymineff,  double,  1e5, 0,  1, "minimum efficiency") \
 OPTION(witness,         bool,    1, 0,  1, "print witness") \
 
 /*------------------------------------------------------------------------*/

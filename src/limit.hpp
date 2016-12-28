@@ -44,6 +44,10 @@ struct Limit {
   //
   int probe_wait_reschedule;
 
+  // Search propagation last time the inprocessor was called.
+  //
+  struct { long transred, probe, vivify; } search_propagations;
+
   Limit ();
 };
 
