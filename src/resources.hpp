@@ -1,3 +1,4 @@
+#ifndef QUIET
 #ifndef _resources_hpp_INCLUDED
 #define _resources_hpp_INCLUDED
 
@@ -11,4 +12,5 @@ size_t current_resident_set_size ();
 
 };
 
-#endif
+#endif // ifndef _resources_hpp_INCLUDED
+#endif // ifndef QUIET

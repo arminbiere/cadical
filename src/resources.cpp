@@ -1,5 +1,12 @@
+#ifndef QUIET
+
 #include "internal.hpp"
 #include "macros.hpp"
+
+// This is pretty Linux specific code for reporting resource, that is
+// time and memory usage and if you can not compile it then just disable
+// it by specifying 'quiet', which disables all messages include resource
+// usage messages, e.g., with 'configure.sh -q'.
 
 extern "C" {
 #include <sys/time.h>
@@ -53,3 +60,5 @@ size_t current_resident_set_size () {
 }
 
 };
+
+#endif // ifndef QUIET

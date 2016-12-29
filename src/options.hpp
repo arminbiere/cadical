@@ -27,6 +27,12 @@
 #define LOGOPT(ARGS...) /**/
 #endif
 
+#ifdef QUIET
+#define QUTOPT(ARGS...) /**/
+#else
+#define QUTOPT OPTION
+#endif
+
 /*------------------------------------------------------------------------*/
 
 // In order to add new option, simply add a new line below.
@@ -73,7 +79,7 @@ OPTION(probemaxeff,   double,  1e7, 0,  1, "maximum probing efficiency") \
 OPTION(probemineff,   double,  1e5, 0,  1, "minimum probing efficiency") \
 OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
 OPTION(profile,          int,    2, 0,  4, "profiling level") \
-OPTION(quiet,           bool,    0, 0,  1, "disable all messages") \
+QUTOPT(quiet,           bool,    0, 0,  1, "disable all messages") \
 OPTION(reduceglue,      bool,    1, 0,  1, "reduce on glue first") \
 OPTION(reduceinc,        int,  300, 1,1e6, "reduce limit increment") \
 OPTION(reduceinit,       int, 2000, 0,1e6, "initial reduce limit") \
@@ -96,7 +102,7 @@ OPTION(transred,        bool,    1, 0,  1, "transitive reduction of BIG") \
 OPTION(transredreleff,double, 0.03, 0,  1, "relative efficiency") \
 OPTION(transredmaxeff,double,  1e7, 0,  1, "maximum efficiency") \
 OPTION(transredmineff,double,  1e5, 0,  1, "minimum efficiency") \
-OPTION(verbose,         int,    0, 0,  2, "more verbose messages") \
+QUTOPT(verbose,         int,    0, 0,  2, "more verbose messages") \
 OPTION(vivify,          bool,    1, 0,  1, "vivification") \
 OPTION(vivifyreleff,  double, 0.03, 0,  1, "relative efficiency") \
 OPTION(vivifyreschedule,bool,    0, 0,  1, "reschedule vivification") \

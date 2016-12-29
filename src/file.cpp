@@ -169,6 +169,7 @@ File::~File () {
     MSG ("closing pipe command on '%s'", name ());
     pclose (file);
   }
+#ifndef QUIET
   double mb = bytes () / (double) (1 << 20);
   if (writing) MSG ("after writing %ld bytes %.1f MB", bytes (), mb);
   else MSG ("after reading %ld bytes %.1f MB", bytes (), mb);
@@ -182,6 +183,7 @@ File::~File () {
       MSG ("inflated from %ld bytes %.1f MB by factor %.2f (%.2f%% compression)",
         s, mb, relative (bytes (), s), percent (bytes () - s, bytes ()));
   }
+#endif
 }
 
 };

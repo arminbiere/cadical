@@ -274,11 +274,13 @@ void Internal::check (int (Internal::*a)(int) const) {
     } else if (!satisfied && (this->*a) (lit) > 0) satisfied = true;
   }
 
+#ifndef QUIET
   if (opts.verbose) {
     MSG ("");
     MSG ("satisfying assignment checked");
     MSG ("");
   }
+#endif
 }
 
 // Currently only used for debugging purposes.

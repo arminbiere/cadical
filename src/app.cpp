@@ -27,7 +27,9 @@ void App::usage () {
 "\n"
 "  -h         print this command line option summary\n"
 "  -n         do not print witness (same as '--no-witness')\n"
+#ifndef QUIET
 "  -v         increase verbose level (see also '--verbose')\n"
+#endif
 #ifdef LOGGING
 "  -l         enable logging messages (same as '--log')\n"
 #endif
@@ -122,9 +124,11 @@ int App::main (int argc, char ** argv) {
       else if (solution_path) ERROR ("multiple solution files");
       else solution_path = argv[i];
     } else if (!strcmp (argv[i], "-n")) set ("--no-witness");
+#ifndef QUIET
     else if (!strcmp (argv[i], "-q")) set ("--quiet");
     else if (!strcmp (argv[i], "-v"))
       solver->set ("verbose", solver->get ("verbose") + 1);
+#endif
 #ifdef LOGGING
     else if (!strcmp (argv[i], "-l")) set ("--log");
 #endif

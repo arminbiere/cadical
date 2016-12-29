@@ -10,6 +10,8 @@
 
 namespace CaDiCaL {
 
+#ifndef QUIET
+
 // Provide nicely formatted progress report messages while running through
 // the 'report' function below.  The code is so complex, because it should
 // be easy to add and remove reporting of certain statistics, while at the
@@ -132,6 +134,12 @@ void Internal::report (char type, int verbose) {
   output->put ('\n');
   fflush (stdout);
 }
+
+#else // ifndef QUIET
+
+void Internal::report (char type, int verbose) { }
+
+#endif
 
 };
 
