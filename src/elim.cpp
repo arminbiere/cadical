@@ -506,7 +506,9 @@ bool Internal::elim_round () {
   //
   reset_removed ();
 
+#ifndef QUIET
   long scheduled = esched.size ();
+#endif
 
   VRB ("elim", stats.eliminations,
     "scheduled %ld variables %.0f%% for elimination",
@@ -531,7 +533,9 @@ bool Internal::elim_round () {
     }
   }
 
+#ifndef QUIET
   const long old_resolutions = stats.elimres;
+#endif
   const int old_eliminated = stats.eliminated;
 
   // Limit on garbage bytes during variable elimination. If the limit is hit
@@ -568,11 +572,13 @@ bool Internal::elim_round () {
     }
   }
 
-  long resolutions = stats.elimres - old_resolutions;
   int eliminated = stats.eliminated - old_eliminated;
+#ifndef QUIET
+  long resolutions = stats.elimres - old_resolutions;
   VRB ("elim", stats.eliminations,
     "eliminated %ld variables %.0f%% in %ld resolutions",
     eliminated, percent (eliminated, scheduled), resolutions);
+#endif
 
   lim.subsumptions_at_last_elim = stats.subsumptions;
 

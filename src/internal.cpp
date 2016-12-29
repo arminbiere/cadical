@@ -41,7 +41,9 @@ Internal::Internal ()
   esched (more_noccs2 (this)),
   proof (0),
   opts (this),
+#ifndef QUIET
   profiles (this),
+#endif
   arena (this),
   internal (this),
   output (File::write (this, stdout, "<stdou>"))

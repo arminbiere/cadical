@@ -9,16 +9,12 @@ class Internal;
 
 struct Message {
 
+#ifndef QUIET 
+
   // Non-verbose messages, e.g., always printed (unless 'quiet' set).
   //
   static void vmessage (Internal *, const char *, va_list &);
   static void message (Internal *, const char *, ...);
-
-  // Print error messages which are really always printed (even if 'quiet'
-  // is set).  This does lead to abort or exit the current process though.
-  //
-  static void verror (Internal *, const char *, va_list &);
-  static void error (Internal *, const char *, ...);
 
   // This is for printing section headers in the form
   //
@@ -46,8 +42,16 @@ struct Message {
   static void verbose (Internal *,
                        const char * phase, long count,
                        const char *, ...);
-};
-
-};
-
 #endif
+
+  // Print error messages which are really always printed (even if 'quiet'
+  // is set).  This does lead to abort or exit the current process though.
+  //
+  static void verror (Internal *, const char *, va_list &);
+  static void error (Internal *, const char *, ...);
+
+};
+
+};
+
+#endif // ifndef _message_h_INCLUDED

@@ -12,6 +12,8 @@
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
+#ifndef QUIET
+/*------------------------------------------------------------------------*/
 
 void Message::vmessage (Internal * internal, const char * fmt, va_list & ap) {
 #ifdef LOGGING
@@ -33,21 +35,6 @@ void Message::message (Internal * internal, const char * fmt, ...) {
   va_start (ap, fmt);
   vmessage (internal, fmt, ap);
   va_end (ap);
-}
-
-/*------------------------------------------------------------------------*/
-
-void Message::verror (Internal * internal, const char *fmt, va_list & ap) {
-  fputs ("*** cadical error: ", stderr);
-  vfprintf (stderr, fmt, ap);
-  fputc ('\n', stderr);
-}
-
-void Message::error (Internal * internal, const char *fmt, ...) {
-  va_list ap;
-  va_start (ap, fmt);
-  verror (internal, fmt, ap);
-  va_end (ap);                          // unreachable
 }
 
 /*------------------------------------------------------------------------*/
@@ -100,6 +87,23 @@ void Message::verbose (Internal * internal,
   va_end (ap);
   fputc ('\n', stdout);
   fflush (stdout);
+}
+
+/*------------------------------------------------------------------------*/
+#endif // ifndef QUIET
+/*------------------------------------------------------------------------*/
+
+void Message::verror (Internal * internal, const char *fmt, va_list & ap) {
+  fputs ("*** cadical error: ", stderr);
+  vfprintf (stderr, fmt, ap);
+  fputc ('\n', stderr);
+}
+
+void Message::error (Internal * internal, const char *fmt, ...) {
+  va_list ap;
+  va_start (ap, fmt);
+  verror (internal, fmt, ap);
+  va_end (ap);                          // unreachable
 }
 
 };

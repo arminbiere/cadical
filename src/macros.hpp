@@ -9,6 +9,8 @@
 
 // Profiling support.
 
+#ifndef QUIET
+
 #define START(P,ARGS...) \
 do { \
   if (internal->profiles.P.level > internal->opts.profile) break; \
@@ -39,6 +41,16 @@ do { \
   if (internal->profiles.T.level <= L) START (T, N); \
 } while (0)
 
+#else // ifndef QUIET
+
+#define START(ARGS...) do { } while (0)
+#define STOP(ARGS...) do { } while (0)
+
+#define SWITCH_AND_START(ARGS...) do { } while (0)
+#define STOP_AND_SWITCH(ARGS...) do { } while (0)
+
+#endif
+
 /*------------------------------------------------------------------------*/
 
 // Memory allocation.
@@ -64,9 +76,19 @@ do { \
 
 // Compact message code.
 
+#ifndef QUIET
+
 #define MSG(ARGS...) Message::message (internal, ##ARGS)
 #define VRB(ARGS...) Message::verbose (internal, ##ARGS)
 #define SECTION(ARGS...) Message::section (internal, ##ARGS)
+
+#else
+
+#define MSG(ARGS...) do { } while (0)
+#define VRB(ARGS...) do { } while (0)
+#define SECTION(ARGS...) do { } while (0)
+
+#endif
 
 // Parse error.
 

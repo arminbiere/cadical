@@ -168,7 +168,9 @@ void Internal::probe_core () {
   stats.probings++;
 
   int old_failed = stats.failed;
+#ifndef QUIET
   long old_probed = stats.probed;
+#endif
 
   assert (unsat || propagated == trail.size ());
   probagated = probagated2 = trail.size ();
@@ -225,7 +227,9 @@ void Internal::probe_core () {
   }
 
   int failed = stats.failed - old_failed;
+#ifndef QUIET
   long probed = stats.probed - old_probed;
+#endif
 
   if (!failed) inc.probe *= 2;
   else inc.probe += opts.probeint;

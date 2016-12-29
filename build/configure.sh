@@ -11,6 +11,7 @@ logging=no
 check=no
 coverage=no
 profile=no
+quiet=no
 
 #--------------------------------------------------------------------------#
 
@@ -40,6 +41,7 @@ where '<option>' is one of the following
 -l|--log     include logging code (but disabled by default)
 -s|--sats    include and enable expensive statistics code
 -a|--all     short cut for all above, e.g., '-g -l -s' (thus also '-c')
+-q|--quiet   disable messages and profiling (as well as logging and stats)
 --coverage   compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile    compile with '-pg' to profile with 'gprof'
 EOF
@@ -55,12 +57,19 @@ do
     -l|--logging) logging=yes;;
     -s|--stats) stats=yes;;
     -a|--all) debug=yes;check=yes;logging=yes;stats=yes;;
+    -q|--quiet) quiet=yes;;
     --coverage) coverage=yes;;
     --profile) profile=yes;;
     *) die "invalid option '$1' (try '-h')";;
   esac
   shift
 done
+
+if [ $quiet = yes ]
+then
+  logging=no
+  stats=no
+fi
 
 #--------------------------------------------------------------------------#
 
@@ -86,7 +95,9 @@ fi
 
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
+[ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
 [ $stats = yes ] && CXXFLAGS="$CXXFLAGS -DSTATS"
+[ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
 

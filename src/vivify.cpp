@@ -145,10 +145,12 @@ void Internal::vivify () {
   //
   stable_sort (schedule.begin (), schedule.end (), less_clause_score ());
 
+#ifndef QUIET
   long scheduled = schedule.size ();
   VRB ("vivify", stats.vivifications,
     "scheduled %ld clauses to be vivified %.0f%%",
     scheduled, percent (scheduled, stats.irredundant));
+#endif
 
   // We need to make sure to propagate only over irredundant clauses.
   //

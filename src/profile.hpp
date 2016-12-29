@@ -1,3 +1,4 @@
+#ifndef QUIET
 #ifndef _profiles_h_INCLUDED
 #define _profiles_h_INCLUDED
 
@@ -96,4 +97,5 @@ struct Profiles {
 
 };
 
-#endif
+#endif // ifndef _profiles_h_INCLUDED
+#endif // ifndef QUIET

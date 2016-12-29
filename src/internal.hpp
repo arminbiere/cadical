@@ -113,7 +113,6 @@ class Internal {
   vector<Clause*> clauses;      // ordered collection of all clauses
   vector<Clause*> resolved;     // resolved clauses in 'analyze'
   ElimSchedule esched;          // bounded variable elimination schedule
-  vector<Timer> timers;         // active timers for profiling functions
   EMA fast_glue_avg;            // fast glue average
   EMA slow_glue_avg;            // slow glue average
   EMA size_avg;                 // learned clause size average
@@ -123,7 +122,10 @@ class Internal {
   Proof * proof;                // trace clausal proof if non zero
   Options opts;                 // run-time options
   Stats stats;                  // statistics
+#ifndef QUIET
+  vector<Timer> timers;         // active timers for profiling functions
   Profiles profiles;            // global profiled time for functions
+#endif
   Arena arena;                  // memory arena for moving garbage collector
   Format error;                 // last (persistent) error message
   Internal * internal;          // proxy to 'this' in macros (redundant)
@@ -455,6 +457,7 @@ class Internal {
   void init_solving ();
   int solve ();
 
+#ifndef QUIET
   // Built in profiling in 'profile.cpp'.
   //
   void start_profiling (Profile * p, double);
@@ -465,6 +468,7 @@ class Internal {
 
   void update_all_timers (double now);
   void print_profile (double now);
+#endif
 
   // Checking solutions (see 'solution.cpp').
   //

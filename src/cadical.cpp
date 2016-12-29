@@ -135,10 +135,12 @@ const char * Solver::solution (const char * path) {
 void Solver::section (const char * title) { SECTION (title); }
 
 void Solver::message (const char * fmt, ...) {
+#ifndef QUIET
   va_list ap;
   va_start (ap, fmt);
   Message::vmessage (internal, fmt, ap);
   va_end (ap);
+#endif
 }
 
 void Solver::error (const char * fmt, ...) {

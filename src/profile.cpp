@@ -1,3 +1,5 @@
+#ifndef QUIET
+
 #include "internal.hpp"
 
 #include "macros.hpp"
@@ -66,3 +68,5 @@ void Internal::print_profile (double now) {
 }
 
 };
+
+#endif // ifndef QUIET

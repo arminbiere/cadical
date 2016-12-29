@@ -16,6 +16,7 @@ Stats::Stats () { memset (this, 0, sizeof *this); }
 /*------------------------------------------------------------------------*/
 
 void Stats::print (Internal * internal) {
+#ifndef QUIET
   Stats & stats = internal->stats;
   double t = process_time ();
   size_t m = maximum_resident_set_size ();
@@ -25,8 +26,8 @@ void Stats::print (Internal * internal) {
   int verbose = internal->opts.verbose;
 #ifdef LOGGING
   if (internal->opts.log) verbose = 1;
-#endif
-#endif//outer
+#endif // ifdef LOGGING
+#endif // ifdef STATS
   if (internal->opts.profile) internal->print_profile (t);
   SECTION ("statistics");
   MSG ("probings:        %15ld   %10.2f    conflicts per probing",
@@ -175,6 +176,7 @@ void Stats::print (Internal * internal) {
     m, m/(double)(1l<<20));
   MSG ("time:            %15s   %10.2f    seconds", "", t);
   MSG ("");
+#endif
 }
 
 };

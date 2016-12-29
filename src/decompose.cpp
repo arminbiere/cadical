@@ -36,7 +36,9 @@ bool Internal::decompose_round () {
   ZERO (reprs, int, 2*(max_var + 1));
 
   int non_trivial_sccs = 0, substituted = 0;
+#ifndef QUIET
   int original = active_variables ();
+#endif
   unsigned dfs_idx = 0;
 
   vector<int> work;                     // depth first search working stack
