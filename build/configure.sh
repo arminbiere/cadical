@@ -41,7 +41,7 @@ where '<option>' is one of the following
 -l|--log     include logging code (but disabled by default)
 -s|--sats    include and enable expensive statistics code
 -a|--all     short cut for all above, e.g., '-g -l -s' (thus also '-c')
--q|--quiet   disable messages and profiling (as well as logging and stats)
+-q|--quiet   exclude message and profiling code (logging and stats too)
 --coverage   compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile    compile with '-pg' to profile with 'gprof'
 EOF
