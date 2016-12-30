@@ -87,12 +87,12 @@ void Internal::failed_literal (int failed) {
 
 /*------------------------------------------------------------------------*/
 
-struct less_negated_bins {
+struct less_negated_occs {
   Internal * internal;
-  long * nbins;
-  less_negated_bins (Internal * i, long * b) : internal (i), nbins (b) { }
+  less_negated_occs (Internal * i) : internal (i) { }
   bool operator () (int a, int b) {
-    long l = nbins [internal->vlit (-a)], k = nbins [internal->vlit (-b)];
+    long l = internal->noccs (-a);
+    long k = internal->noccs (-b);
     if (l < k) return true;
     if (l > k) return false;
     assert (a != -b);
@@ -108,17 +108,15 @@ void Internal::generate_probes () {
   // way faster. To go over the clauses once, instead of walking the watch
   // lists for each literal.
   //
-  long * nbins;
-  NEW (nbins, long, 2*(max_var + 1));
-  ZERO (nbins, long, 2*(max_var + 1));
+  init_noccs ();
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
     if (c->size != 2) continue;
-    nbins[vlit (c->literals[0])]++;
-    nbins[vlit (c->literals[1])]++;
+    noccs (c->literals[0])++;
+    noccs (c->literals[1])++;
   }
 
   for (int idx = 1; idx <= max_var; idx++) {
@@ -128,17 +126,17 @@ void Internal::generate_probes () {
     // sense to probe this variable.  This assumes that equivalent literal
     // substitution was performed.
     //
-    bool have_pos_bin_occs = nbins[vlit (idx)] > 0;
-    bool have_neg_bin_occs = nbins[vlit (-idx)] > 0;
+    bool have_pos_bin_occs = noccs (idx) > 0;
+    bool have_neg_bin_occs = noccs (-idx) > 0;
     if (have_pos_bin_occs == have_neg_bin_occs) continue;
     int probe = have_neg_bin_occs ? idx : -idx;
     LOG ("scheduling probe %d", probe);
     probes.push_back (probe);
   }
 
-  sort (probes.begin (), probes.end (), less_negated_bins (this, nbins));
+  sort (probes.begin (), probes.end (), less_negated_occs (this));
 
-  DEL (nbins, long, 2*(max_var + 1));
+  reset_noccs ();
   shrink_vector (probes);
 
   if (probes.empty ()) LOG ("no potential probes found");

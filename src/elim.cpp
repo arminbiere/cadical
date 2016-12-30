@@ -19,6 +19,22 @@ namespace CaDiCaL {
 // size we can run each elimination round until completion.  See the code of
 // 'elim' for the actual scheduling of 'subsumption' and 'elimination'.
 
+/*------------------------------------------------------------------------*/
+
+// Has to be put here, e.g., not into 'elim.hpp', since we need the
+// definition of 'Internal::noccs2' which in turn requires that the
+// 'Internal' member 'esched' is defined.
+
+inline bool more_noccs2::operator () (int a, int b) {
+  size_t s = internal->noccs2 (a), t = internal->noccs2 (b);
+  if (s > t) return true;
+  if (s < t) return false;
+  assert (a > 0), assert (b > 0);
+  return a > b;
+}
+
+/*------------------------------------------------------------------------*/
+
 // Note that the new fast subsumption algorithm implemented in 'subsume'
 // does not distinguish between irredundant and redundant clauses and is
 // also run during search to strengthen and remove 'sticky' redundant

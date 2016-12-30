@@ -207,6 +207,14 @@ void Internal::clear_levels () {
 
 /*------------------------------------------------------------------------*/
 
+struct trail_larger {
+  Internal * internal;
+  trail_larger (Internal * s) : internal (s) { }
+  bool operator () (int a, int b) {
+    return internal->var (a).trail > internal->var (b).trail;
+  }
+};
+
 void Internal::analyze () {
   assert (conflict);
   if (!level) { learn_empty_clause (); return; }

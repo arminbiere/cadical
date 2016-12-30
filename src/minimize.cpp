@@ -43,6 +43,20 @@ bool Internal::minimize_literal (int lit, int depth) {
   return res;
 }
 
+// Sorting the clause before minimization with respect to the trail order
+// (literals with smaller trail height first) seems to be natural and could
+// help minimizing required recursion depth.   It might simplify the
+// algorithm too, but we still have to check that this as any effect in
+// practice (TODO).
+
+struct trail_smaller {
+  Internal * internal;
+  trail_smaller (Internal * s) : internal (s) { }
+  bool operator () (int a, int b) {
+    return internal->var (a).trail < internal->var (b).trail;
+  }
+};
+
 void Internal::minimize_clause () {
   START (minimize);
   LOG (clause, "minimizing first UIP clause");

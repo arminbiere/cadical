@@ -53,7 +53,6 @@ class Internal {
   friend struct Stats;
 
 #ifdef LOGGING
-  friend struct AVG;
   friend struct EMA;
   friend class Options;
 #endif
@@ -61,14 +60,13 @@ class Internal {
   // Comparison functors for sorting.
   //
   friend struct bumped_earlier;
+  friend struct less_negated_occs;
   friend struct more_noccs2;
-  friend struct less_negated_bins;
-  friend struct less_noccs2;
-  friend struct less_noccs;
-  friend struct more_negated_occs;
+  friend struct subsume_less_noccs;
   friend struct trail_bumped_smaller;
   friend struct trail_larger;
   friend struct trail_smaller;
+  friend struct vivify_less_noccs;
 
   /*----------------------------------------------------------------------*/
 
@@ -517,32 +515,6 @@ class Internal {
   //
   void dump ();
 };
-
-/*------------------------------------------------------------------------*/
-
-struct trail_larger {
-  Internal * internal;
-  trail_larger (Internal * s) : internal (s) { }
-  bool operator () (int a, int b) {
-    return internal->var (a).trail > internal->var (b).trail;
-  }
-};
-
-struct trail_smaller {
-  Internal * internal;
-  trail_smaller (Internal * s) : internal (s) { }
-  bool operator () (int a, int b) {
-    return internal->var (a).trail < internal->var (b).trail;
-  }
-};
-
-inline bool more_noccs2::operator () (int a, int b) {
-  size_t s = internal->noccs2 (a), t = internal->noccs2 (b);
-  if (s > t) return true;
-  if (s < t) return false;
-  assert (a > 0), assert (b > 0);
-  return a > b;
-}
 
 };
 

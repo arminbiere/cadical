@@ -31,21 +31,21 @@ struct less_clause_score {
   }
 };
 
-// Check whether negated literal occurs less often.
-//
-struct less_noccs2 {
+// Check whether literal occurs less often.
+
+struct vivify_less_noccs {
   Internal * internal;
-  less_noccs2 (Internal * i) : internal (i) { }
+  vivify_less_noccs (Internal * i) : internal (i) { }
   bool operator () (int a, int b) {
-    long u = internal->noccs2 (a);
-    long v = internal->noccs2 (b);
+    long u = internal->noccs (a);
+    long v = internal->noccs (b);
     if (u < v) return true;
     if (u > v) return false;
     int i = abs (a);
     int j = abs (b);
-    if (i < j) return true;
-    if (i > j) return false;
-    return a < b;
+    if (i > j) return true;
+    if (i < j) return false;
+    return a > b;
   }
 };
 
@@ -75,8 +75,8 @@ void Internal::vivify () {
   // After an arithmetic increasing number of calls to 'vivify' we
   // reschedule all clauses, instead of only those not tried before.  Then
   // this limit is increased by one. The argument is that we should focus on
-  // clauses with many occurrences of their negated literals (also long
-  // clauses), but in the limit eventually still should vivify all clauses.
+  // clauses with many occurrences of their literals (also long clauses),
+  // but in the limit eventually still should vivify all clauses.
   //
   bool reschedule_all;
   if (opts.vivifyreschedule) {
@@ -110,7 +110,7 @@ void Internal::vivify () {
   // particularly the irredundant binary clauses, responsible for most of
   // the propagation usually.
   //
-  init_noccs2 ();
+  init_noccs ();
 
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
@@ -136,7 +136,7 @@ void Internal::vivify () {
     const const_literal_iterator eoc = c->end ();
     const_literal_iterator j;
     for (j = c->begin (); j != eoc; j++)
-      noccs2 (*j) += score;
+      noccs (*j) += score;
   }
 
   // Then update the score of the candidate clauses by adding up the score.
@@ -150,7 +150,7 @@ void Internal::vivify () {
     const_literal_iterator j;
     long score = 0;
     for (j = cs.clause->begin (); j != eoc; j++)
-      score += noccs2 (*j);
+      score += noccs (*j);
     cs.score = score;
   }
 
@@ -228,10 +228,10 @@ void Internal::vivify () {
     checked++;
 
     // Sort the literals of the candidate with respect to the largest number
-    // of occurrences.  The idea is that more occurrences lead to more
+    // of occurrences.  The idea is that more occurrences leads to more
     // propagations and thus potentially higher earlier effect.
     //
-    sort (sorted.begin (), sorted.end (), less_noccs2 (this));
+    sort (sorted.begin (), sorted.end (), vivify_less_noccs (this));
 
     // Make sure to ignore this clause during propagation.  This is not that
     // easy for binary clauses [NO-BINARY], e.g., ignoring binary clauses,
@@ -360,7 +360,7 @@ REDUNDANT:
   if (!unsat) {
 
     erase_vector (sorted);
-    reset_noccs2 ();
+    reset_noccs ();
     erase_vector (schedule);
     disconnect_watches ();
     connect_watches ();

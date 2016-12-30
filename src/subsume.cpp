@@ -226,9 +226,9 @@ struct smaller_clause_size {
 
 /*------------------------------------------------------------------------*/
 
-struct less_noccs {
+struct subsume_less_noccs {
   Internal * internal;
-  less_noccs (Internal * i) : internal (i) { }
+  subsume_less_noccs (Internal * i) : internal (i) { }
   bool operator () (int a, int b) {
     int u = internal->val (a), v = internal->val (b);
     if (!u && v) return true;
@@ -402,7 +402,7 @@ void Internal::subsume_round () {
       // by a kind of merge sort, which we do not want to do.  It would
       // avoid 'marked' calls and thus might be slightly faster.
       //
-      sort (c->begin (), c->end (), less_noccs (this));
+      sort (c->begin (), c->end (), subsume_less_noccs (this));
 
     } else {
 
