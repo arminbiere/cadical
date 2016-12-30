@@ -15,6 +15,8 @@ void Internal::transred () {
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
 
+  assert (!level);
+
   // Find first clause not checked for being transitive yet.
   //
   for (i = clauses.begin (); i != end; i++) {
@@ -36,6 +38,10 @@ void Internal::transred () {
     }
     i = clauses.begin ();
   }
+
+  // Such that we can stop iterating watches as soon a long clause is watched.
+  //
+  sort_watches ();
 
   // This working stack plays the same role as 'trail' during standard
   // propagation.
@@ -113,7 +119,7 @@ void Internal::transred () {
       const_watch_iterator k;
       for (k = ws.begin (); !transitive && !failed && k != eow; k++) {
 	const Watch & w = *k;
-	if (!w.binary) continue;
+	if (!w.binary) break;		// since we sorted watches above
 	Clause * d = w.clause;
 	if (d == c) continue;
 	assert (w.redundant == d->redundant);

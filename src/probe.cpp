@@ -89,10 +89,10 @@ void Internal::failed_literal (int failed) {
 
 struct less_negated_bins {
   Internal * internal;
-  long * bins;
-  less_negated_bins (Internal * i, long * b) : internal (i), bins (b) { }
+  long * nbins;
+  less_negated_bins (Internal * i, long * b) : internal (i), nbins (b) { }
   bool operator () (int a, int b) {
-    long l = bins [internal->vlit (-a)], k = bins [internal->vlit (-b)];
+    long l = nbins [internal->vlit (-a)], k = nbins [internal->vlit (-b)];
     if (l < k) return true;
     if (l > k) return false;
     assert (a != -b);
@@ -108,17 +108,17 @@ void Internal::generate_probes () {
   // way faster. To go over the clauses once, instead of walking the watch
   // lists for each literal.
   //
-  long * bins;
-  NEW (bins, long, 2*(max_var + 1));
-  ZERO (bins, long, 2*(max_var + 1));
+  long * nbins;
+  NEW (nbins, long, 2*(max_var + 1));
+  ZERO (nbins, long, 2*(max_var + 1));
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
     if (c->size != 2) continue;
-    bins[vlit (c->literals[0])]++;
-    bins[vlit (c->literals[1])]++;
+    nbins[vlit (c->literals[0])]++;
+    nbins[vlit (c->literals[1])]++;
   }
 
   for (int idx = 1; idx <= max_var; idx++) {
@@ -128,17 +128,17 @@ void Internal::generate_probes () {
     // sense to probe this variable.  This assumes that equivalent literal
     // substitution was performed.
     //
-    bool have_pos_bin_occs = bins[vlit (idx)] > 0;
-    bool have_neg_bin_occs = bins[vlit (-idx)] > 0;
+    bool have_pos_bin_occs = nbins[vlit (idx)] > 0;
+    bool have_neg_bin_occs = nbins[vlit (-idx)] > 0;
     if (have_pos_bin_occs == have_neg_bin_occs) continue;
     int probe = have_neg_bin_occs ? idx : -idx;
     LOG ("scheduling probe %d", probe);
     probes.push_back (probe);
   }
 
-  sort (probes.begin (), probes.end (), less_negated_bins (this, bins));
+  sort (probes.begin (), probes.end (), less_negated_bins (this, nbins));
 
-  DEL (bins, long, 2*(max_var + 1));
+  DEL (nbins, long, 2*(max_var + 1));
   shrink_vector (probes);
 
   if (probes.empty ()) LOG ("no potential probes found");
