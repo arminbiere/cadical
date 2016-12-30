@@ -4,12 +4,18 @@
 
 namespace CaDiCaL {
 
-// Vivification is a special case of asymmetric tautology elimination.  It
-// strengthens and removes irredundant clauses proven redundant through unit
-// propagation.  The original algorithm is due to a paper by Piette, Hamadi
-// published at ECAI'08.  We have an inprocessing version, e.g., it does not
-// necessarily run-to-completion.  It does no conflict analysis and uses a
-// new heuristic for selecting clauses to vivify.
+// Vivification is a special case of asymmetric tautology elimination and
+// asymmetric literal elimination.  It strengthens and removes irredundant
+// clauses proven redundant through unit propagation.  The original
+// algorithm is due to a paper by Piette and Hamadi published at ECAI'08.
+// We have an inprocessing version, e.g., it does not necessarily
+// run-to-completion.  It does no conflict analysis and uses a new heuristic
+// for selecting clauses to vivify. The idea is to focus on long clauses
+// with many occurrences of its literals in other clauses.  This both
+// complements nicely our implementation of subsume, which is bounded, e.g.,
+// subsumption attempts are skipped for very long clauses with literals with
+// many occurrences and also is stronger in the sence that it enables to
+// remove more clauses.
 
 /*------------------------------------------------------------------------*/
 
@@ -27,14 +33,16 @@ struct less_clause_score {
 
 // Check whether negated literal occurs less often.
 //
-struct less_negated_noccs2 {
+struct less_noccs2 {
   Internal * internal;
-  less_negated_noccs2 (Internal * i) : internal (i) { }
+  less_noccs2 (Internal * i) : internal (i) { }
   bool operator () (int a, int b) {
-    long u = internal->noccs2 (-a), v = internal->noccs2 (-b);
+    long u = internal->noccs2 (a);
+    long v = internal->noccs2 (b);
     if (u < v) return true;
     if (u > v) return false;
-    int i = abs (a), j = abs (b);
+    int i = abs (a);
+    int j = abs (b);
     if (i < j) return true;
     if (i > j) return false;
     return a < b;
@@ -111,7 +119,13 @@ void Internal::vivify () {
 
     // Compute score as 'pow (2, -c->size)' without 'math.h' (it actually
     // could be faster even, since second argument is always an integer).
-    // This is the same score the Jeroslow-Wang heuristic would give.
+    //
+    // This is the same score as the Jeroslow-Wang heuristic would give.
+    //
+    // There is no point in pre-computing this since the following loop
+    // updating the score of all literals in the clause shoule be way more
+    // expensive since it is linear in the size of the clause (not
+    // logarithmic) and has to access much more memory.
     //
     double base = 0.5, score = 0.25;
     for (int n = c->size - 2; n; n >>= 1) {
@@ -125,8 +139,7 @@ void Internal::vivify () {
       noccs2 (*j) += score;
   }
 
-  // Then update the score of the candidate clauses by adding up the number
-  // of occurrences of the negation of its literals.
+  // Then update the score of the candidate clauses by adding up the score.
   //
   const vector<ClauseScore>::const_iterator eos = schedule.end ();
   vector<ClauseScore>::iterator k;
@@ -137,11 +150,11 @@ void Internal::vivify () {
     const_literal_iterator j;
     long score = 0;
     for (j = cs.clause->begin (); j != eoc; j++)
-      score += noccs2 (-*j);
+      score += noccs2 (*j);
     cs.score = score;
   }
 
-  // Now sort candidates, with best clause (many negative occurrences) last.
+  // Now sort candidates, with best clause (many occurrences) last.
   //
   stable_sort (schedule.begin (), schedule.end (), less_clause_score ());
 
@@ -215,10 +228,10 @@ void Internal::vivify () {
     checked++;
 
     // Sort the literals of the candidate with respect to the largest number
-    // of negative occurrences.  The idea is that more negative occurrences
-    // lead to more propagations and thus potentially higher earlier effect.
+    // of occurrences.  The idea is that more occurrences lead to more
+    // propagations and thus potentially higher earlier effect.
     //
-    sort (sorted.begin (), sorted.end (), less_negated_noccs2 (this));
+    sort (sorted.begin (), sorted.end (), less_noccs2 (this));
 
     // Make sure to ignore this clause during propagation.  This is not that
     // easy for binary clauses [NO-BINARY], e.g., ignoring binary clauses,
