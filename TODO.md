@@ -16,11 +16,13 @@ First we list things to simplify or to remove.
 
 Second things are listed related to additional features.
   
-  - Add transitive reduction for binary implication graph.
+  - Mapping or shrinking of external to internal variables.
+
+  - Bounded variable addition.
 
 ## General
 
 There should be an ongoing process of refactoring and documenting the code
 and in particular remove part of the code which is not used anymore.
 
-Thursday, 22. December 2016.
+Friday, 30. December 2016.
