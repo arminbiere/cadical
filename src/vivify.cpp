@@ -27,6 +27,10 @@ struct ClauseScore {
 
 struct less_clause_score {
   bool operator () (const ClauseScore & a, const ClauseScore & b) const {
+    int s = a.clause->size;
+    int t = b.clause->size;
+    if (s < t) return true;
+    if (s > t) return false;
     return a.score < b.score;
   }
 };
