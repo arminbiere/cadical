@@ -308,8 +308,8 @@ void Internal::subsume_round () {
   //
   sort (schedule.begin (), schedule.end (), smaller_clause_size ());
 
-#ifndef QUIET
   long scheduled = schedule.size ();
+#ifndef QUIET
   long total = stats.irredundant + stats.redundant;
   VRB ("subsume", stats.subsumptions,
     "scheduled %ld clauses %.0f%% out of %ld clauses",
@@ -332,7 +332,15 @@ void Internal::subsume_round () {
   init_occs ();
   init_bins ();
 
+  long delta = scheduled * opts.subsumechklim;
+  long limit = stats.subchecks + delta;
+
   for (s = schedule.begin (); s != eos; s++) {
+
+    if (stats.subchecks > limit) {
+      LOG ("limit of %ld subsumption checks hit", delta);
+      break;
+    }
 
     Clause * c = clauses[s->cidx];
     assert (!c->garbage);
