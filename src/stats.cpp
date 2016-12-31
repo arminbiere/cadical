@@ -94,7 +94,7 @@ void Stats::print (Internal * internal) {
   long vivified = stats.vivifysubs + stats.vivifystrs;
   MSG ("vivified:        %15ld   %10.2f %%  per vivify check",
     vivified, percent (vivified, stats.vivifychecks));
-  //if (verbose) {
+  if (verbose) {
   MSG ("  vivifychecks:  %15ld   %10.2f %%  per conflict",
     stats.vivifychecks, percent (stats.vivifychecks, stats.conflicts));
   MSG ("  vivifyunits:   %15ld   %10.2f %%  per vivify check",
@@ -104,7 +104,7 @@ void Stats::print (Internal * internal) {
     stats.vivifysubs, percent (stats.vivifysubs, stats.subsumed));
   MSG ("  vivifystrs:    %15ld   %10.2f %%  per strengthened",
     stats.vivifystrs, percent (stats.vivifystrs, stats.strengthened));
-  //}
+  }
   MSG ("reused:          %15ld   %10.2f %%  per restart",
     stats.reused, percent (stats.reused, stats.restarts));
   MSG ("resolutions:     %15ld   %10.2f    per eliminated",
@@ -149,7 +149,7 @@ void Stats::print (Internal * internal) {
     stats.transitive, percent (stats.transitive, stats.subsumed));
   MSG ("strengthened:    %15ld   %10.2f    per subsumed",
     stats.strengthened, relative (stats.strengthened, stats.subsumed));
-  if (verbose) {
+  //if (verbose) {
   MSG ("  subirr:        %15ld   %10.2f %%  of subsumed",
     stats.subirr, percent (stats.subirr, stats.subsumed));
   MSG ("  subred:        %15ld   %10.2f %%  of subsumed",
@@ -160,7 +160,7 @@ void Stats::print (Internal * internal) {
     stats.subchecks, relative (stats.subchecks, stats.subtried));
   MSG ("  subchecks2:    %15ld   %10.2f %%  per subcheck",
     stats.subchecks2, percent (stats.subchecks2, stats.subchecks));
-  }
+  //}
   MSG ("searched:        %15ld   %10.2f    per decision",
     stats.searched, relative (stats.searched, stats.decisions));
   MSG ("bumped:          %15ld   %10.2f    per conflict",

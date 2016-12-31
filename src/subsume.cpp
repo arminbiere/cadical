@@ -141,6 +141,7 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
   int flipped = 0;
   const const_literal_iterator ec = c->end ();
   for (const_literal_iterator i = c->begin (); !d && i != ec; i++) {
+
     int lit = *i;
     if (!flags (lit).added) continue;
 
@@ -166,10 +167,9 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
       const const_occs_iterator eo = os.end ();
       occs_iterator k = os.begin ();
       for (const_occs_iterator j = k; j != eo; j++) {
-        Clause * e = *j;
-        if (e->garbage) continue;
-        *k++ = e;
+        Clause * e = *k++ = *j;
         if (d) continue;                        // need to copy rest
+        if (e->garbage) { k--; continue; }
         flipped = subsume_check (e, c);
         if (!flipped) continue;
         d = e;                                  // leave outer loop
@@ -290,7 +290,7 @@ void Internal::subsume_round () {
       continue;
     }
 
-    // Further, if less than two  variables in the clause were added since
+    // Further, if less than two variables in the clause were added since
     // the last subsumption round, the clause is ignored too.
     //
     if (added < 2) {
