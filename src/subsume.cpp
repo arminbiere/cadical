@@ -332,15 +332,7 @@ void Internal::subsume_round () {
   init_occs ();
   init_bins ();
 
-  long delta = scheduled * opts.subsumechklim;
-  long limit = stats.subchecks + delta;
-
   for (s = schedule.begin (); s != eos; s++) {
-
-    if (stats.subchecks > limit) {
-      LOG ("limit of %ld subsumption checks hit", delta);
-      break;
-    }
 
     Clause * c = clauses[s->cidx];
     assert (!c->garbage);

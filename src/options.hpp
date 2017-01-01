@@ -91,7 +91,6 @@ OPTION(simplify,        bool,    1, 0,  1, "enable simplifier") \
 OPTION(strengthen,      bool,    1, 0,  1, "strengthen during subsume") \
 OPTION(subsume,         bool,    1, 0,  1, "enable clause subsumption") \
 OPTION(subsumebinlim,    int,  1e4, 0,1e9, "watch list length limit") \
-OPTION(subsumechklim, double,  1e2, 0,1e9, "checks per tried limit") \
 OPTION(subsumeclslim,    int,  1e3, 0,1e9, "clause length limit") \
 OPTION(subsumeinc,       int,  1e4, 1,1e9, "interval in conflicts") \
 OPTION(subsumeinit,      int,  1e4, 0,1e9, "initial subsume limit") \
