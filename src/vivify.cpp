@@ -201,21 +201,17 @@ void Internal::vivify () {
     const const_literal_iterator eoc = c->end ();
     const_literal_iterator j;
     int satisfied = 0;
-
     sorted.clear ();
-
     for (j = c->begin (); !satisfied && j != eoc; j++) {
       const int lit = *j, tmp = fixed (lit);
       if (tmp > 0) satisfied = *j;
-      else if (!tmp) sortred.push_back (lit);
+      else if (!tmp) sorted.push_back (lit);
     }
-
     if (satisfied) { 
       LOG (c, "satisfied by propagated unit %d", satisfied);
       mark_garbage (c);
       continue;
     }
-
     sort (sorted.begin (), sorted.end (), vivify_more_noccs (this));
 
     // The actual vivification checking is performed here, by assuming the
@@ -254,7 +250,10 @@ void Internal::vivify () {
 
     // TODO replace by iterating over 'sorted' again ...
 
-    for (j = c->begin (); j != eoc && l <= level; j++) {
+    const const_int_iterator eos = sorted.end ();
+    const_int_iterator k;
+
+    for (k = sorted.begin (); k != eos && l <= level; k++) {
       const int lit = *j;
       if (fixed (lit)) continue;
       const int decision = control[l].decision;
@@ -286,9 +285,7 @@ void Internal::vivify () {
     bool redundant = false;     // determined to be redundant / subsumed
     int remove = 0;             // at least literal 'remove' can be removed
 
-    // TODO replace by iterating over 'sorted' again ...
-
-    for (j = c->begin (); !redundant && !remove && j != eoc; j++) {
+    for (k = sorted.begin (); !redundant && !remove && k != eos; k++) {
       
       const int lit = *j, tmp = val (lit);
       if (tmp) {
