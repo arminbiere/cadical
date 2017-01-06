@@ -66,7 +66,8 @@ class Internal {
   friend struct trail_bumped_smaller;
   friend struct trail_larger;
   friend struct trail_smaller;
-  friend struct vivify_less_noccs;
+  friend struct vivify_less_clause;
+  friend struct vivify_more_noccs;
 
   /*----------------------------------------------------------------------*/
 
@@ -338,9 +339,9 @@ class Internal {
   // Operators on watches.
   //
   void sort_watches ();
-  void connect_watches ();
+  void connect_watches (bool irredundant_only = false);
+  void connect_irredundant_watches ();
   void disconnect_watches ();
-  void flush_redundant_watches ();
 
   // Regular forward subsumption checking.
   //

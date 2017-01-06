@@ -21,10 +21,11 @@ void Internal::reset_watches () {
 // This can be quite costly since lots of memory is accessed in a rather
 // random fashion, and thus we optionally profile it.
 
-void Internal::connect_watches () {
+void Internal::connect_watches (bool irredundant_only) {
   START (connect);
   assert (watches ());
-  LOG ("connecting all watches");
+
+  LOG ("watching all %sclauses", irredundant_only ? "irredundant " : "");
 
   const const_clause_iterator end = clauses.end ();
 
@@ -32,6 +33,7 @@ void Internal::connect_watches () {
   //
   for (const_clause_iterator i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
+    if (irredundant_only && c->redundant) continue;
     if (c->garbage || c->size > 2) continue;
     watch_clause (c);
   }
@@ -40,6 +42,7 @@ void Internal::connect_watches () {
   //
   for (const_clause_iterator i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
+    if (irredundant_only && c->redundant) continue;
     if (c->garbage || c->size == 2) continue;
     watch_clause (c);
   }
@@ -78,24 +81,6 @@ void Internal::disconnect_watches () {
   for (int idx = 1; idx <= max_var; idx++)
     for (int sign = -1; sign <= 1; sign += 2)
       watches (sign * idx).clear ();
-}
-
-void Internal::flush_redundant_watches () {
-  LOG ("flushing redundant watches");
-  for (int idx = 1; idx <= max_var; idx++) {
-    for (int sign = -1; sign <= 1; sign += 2) {
-      const int lit = sign * idx;
-      Watches & ws = watches (lit);
-      const const_watch_iterator end = ws.end ();
-      const_watch_iterator i;
-      watch_iterator j = ws.begin ();
-      for (i = j; i != end; i++) {
-        const Watch w = *i;
-        if (!w.clause->redundant) *j++ = w;
-      }
-      ws.resize (j - ws.begin ());
-    }
-  }
 }
 
 };

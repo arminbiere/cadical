@@ -21,40 +21,54 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// Used to sort (schedule) candidate clauses.
-
-struct ClauseScore {
-
-  Clause * clause;
-  double score;			// sum number of occurrences of literals
-
-  ClauseScore (Clause * c) : clause (c), score (0) { }
-};
-
-struct less_clause_score {
-  bool operator () (const ClauseScore & a, const ClauseScore & b) const {
-    return a.score < b.score;
-  }
-};
-
 // Check whether literal occurs less often.
 
-struct vivify_less_noccs {
+struct vivify_more_noccs {
 
   Internal * internal;
 
-  vivify_less_noccs (Internal * i) : internal (i) { }
+  vivify_more_noccs (Internal * i) : internal (i) { }
 
   bool operator () (int a, int b) {
-
     long n = internal->noccs (a);
-    long m = internal->noccs (a);
-    if (n < m) return true;
-    if (n > m) return false;
+    long m = internal->noccs (b);
+    if (n > n) return true;
+    if (n < m) return false;
+    if (a == -b) return a > 0;
+    return abs (a) < abs (b);
+  }
+};
 
-    assert (a != b), assert (a != -b);
+// Sort candidate clauses by the number of occurrences of their literals,
+// with clauses to be vivified first last.   We assume that clauses are
+// sorted w.r.t. more occurring literals first (with 'vivify_more_noccs').
 
-    return abs (a) > abs (b);
+struct vivify_less_clause {
+
+  Internal * internal;
+
+  vivify_less_clause (Internal * i) : internal (i) { }
+
+  bool operator () (Clause * a, Clause * b) const {
+    assert (!a->redundant), assert (!b->redundant);
+    const const_literal_iterator eoa = a->end (), eob = b->end ();
+    const_literal_iterator i = a->begin (), j = b->begin ();
+    for (i = a->begin (), j = b->begin (); i != eoa && j != eob; i++, j++)
+      if (*i != *j) return vivify_more_noccs (internal) (*j, *i);
+    if (i == eoa) {
+      if (!b->garbage) {
+	LOG (b, "vivification sorting finds subsumed");
+	internal->mark_garbage (b);
+      }
+      return true;
+    } else {
+      assert (j == eob);
+      if (!a->garbage) {
+	LOG (a, "vivification sorting finds subsumed");
+	internal->mark_garbage (a);
+      }
+      return false;
+    }
   }
 };
 
@@ -73,19 +87,33 @@ void Internal::vivify () {
   stats.vivifications++;
   if (level) backtrack ();
 
-  // Refill the schedule every time.  Unchecked clauses are 'saved' by
-  // setting their 'vivify' bit, such that they can be tried next time.
+  // Disconnect all watches since we sort literals in irredundant clauses.
   //
-  vector<ClauseScore> schedule;
+  disconnect_watches ();
+
+  // Count the number of occurrences of literals in all irredundant clauses,
+  // particularly the irredundant binary clauses, usually responsible for
+  // most of the propagations.
+  //
+  init_noccs ();
 
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
 
-  // After an arithmetic increasing number of calls to 'vivify' we
-  // reschedule all clauses, instead of only those not tried before.  Then
-  // this limit is increased by one. The argument is that we should focus on
-  // clauses with many occurrences of their literals (also long clauses),
-  // but in the limit eventually still should vivify all clauses.
+  for (i = clauses.begin (); i != end; i++) {
+    Clause * c = *i;
+    if (c->garbage || c->redundant) continue;
+    const const_literal_iterator eoc = c->end ();
+    const_literal_iterator j;
+    for (j = c->begin (); j != eoc; j++)
+      noccs (*j)++;
+  }
+
+  // After an arithmetic increasing number of calls to 'vivify' reschedule
+  // all clauses, instead of only those not tried before.  Then this limit
+  // is increased by one. The argument is that we should focus on clauses
+  // with many occurrences of their literals (also long clauses), but in the
+  // limit eventually still should vivify all clauses.
   //
   bool reschedule_all;
   if (opts.vivifyreschedule) {
@@ -96,6 +124,11 @@ void Internal::vivify () {
       lim.vivify_wait_reschedule = ++inc.vivify_wait_reschedule;
     } else lim.vivify_wait_reschedule--;
   } else reschedule_all = false;
+
+  // Refill the schedule every time.  Unchecked clauses are 'saved' by
+  // setting their 'vivify' bit, such that they can be tried next time.
+  //
+  vector<Clause*> schedule;
 
   // In the first round check whether there are still clauses left, which
   // are scheduled but have not been vivified yet.  In the second round,
@@ -110,63 +143,16 @@ void Internal::vivify () {
       if (c->redundant) continue;
       if (c->size == 2) continue;       // see also [NO-BINARY] below
       if (!reschedule_all && !round && !c->vivify) continue;
+      sort (c->begin (), c->end (), vivify_more_noccs (this));
       schedule.push_back (c);
       c->vivify = true;
     }
   }
   shrink_vector (schedule);
 
-  // Count the number of occurrences of literals in all irredundant clauses,
-  // particularly the irredundant binary clauses, responsible for most of
-  // the propagation usually.
+  // Now sort candidates, with first candidate clause (many occurrences) last.
   //
-  init_noccs ();
-
-  for (i = clauses.begin (); i != end; i++) {
-    Clause * c = *i;
-    if (c->garbage) continue;
-    if (c->redundant) continue;
-
-    // Compute score as 'pow (2, -c->size)' without 'math.h' (it actually
-    // could be faster even, since second argument is always an integer).
-    //
-    // This is the same score as the Jeroslow-Wang heuristic would give.
-    //
-    // There is no point in pre-computing this since the following loop
-    // updating the score of all literals in the clause shoule be way more
-    // expensive since it is linear in the size of the clause (not
-    // logarithmic) and has to access much more memory.
-    //
-    double base = 0.5, score = 0.25;
-    for (int n = c->size - 2; n; n >>= 1) {
-      if (n & 1) score *= base;
-      base *= base;
-    }
-
-    const const_literal_iterator eoc = c->end ();
-    const_literal_iterator j;
-    for (j = c->begin (); j != eoc; j++)
-      noccs (*j) += score;
-  }
-
-  // Then update the score of the candidate clauses by adding up the score.
-  //
-  const vector<ClauseScore>::const_iterator eos = schedule.end ();
-  vector<ClauseScore>::iterator k;
-
-  for (k = schedule.begin (); k != eos; k++) {
-    ClauseScore & cs = *k;
-    const const_literal_iterator eoc = cs.clause->end ();
-    const_literal_iterator j;
-    long score = 0;
-    for (j = cs.clause->begin (); j != eoc; j++)
-      score += noccs (*j);
-    cs.score = score;
-  }
-
-  // Now sort candidates, with best clause (many occurrences) last.
-  //
-  stable_sort (schedule.begin (), schedule.end (), less_clause_score ());
+  stable_sort (schedule.begin (), schedule.end (), vivify_less_clause (this));
 
 #ifndef QUIET
   long scheduled = schedule.size ();
@@ -175,18 +161,13 @@ void Internal::vivify () {
     scheduled, percent (scheduled, stats.irredundant));
 #endif
 
-  // We need to make sure to propagate only over irredundant clauses.
+  // We need to make sure to propagate units also over redundant clauses.
   //
-  flush_redundant_watches ();
   size_t old_propagated = propagated;   // see [RE-PROPAGATE] below.
 
   // Counters, for what happened.
   //
   long checked = 0, subsumed = 0, strengthened = 0, units = 0;
-
-  // Temporarily save and sort the candidate clause literals here.
-  //
-  vector<int> sorted;
 
   // Limit the number of propagations during vivification as in 'probe'.
   //
@@ -197,13 +178,15 @@ void Internal::vivify () {
   if (delta > opts.vivifymaxeff) delta = opts.vivifymaxeff;
   long limit = stats.propagations.vivify + delta;
 
+  connect_watches (true);		// watch only irredundant clauses
+
   while (!unsat &&
          !schedule.empty () &&
          stats.propagations.vivify < limit) {
 
     // Next candidate clause to vivify.
     //
-    Clause * c = schedule.back ().clause;
+    Clause * c = schedule.back ();
     schedule.pop_back ();
     assert (c->vivify);
     c->vivify = false;
@@ -212,22 +195,20 @@ void Internal::vivify () {
     assert (!c->redundant);
     assert (c->size > 2);               // see [NO-BINARY] above
 
-    // First check whether it is already satisfied and at the same time copy
-    // the literals of the clause to the 'sorted' stack.
+    // First check whether the candidate clause is already satisfied.
     //
     const const_literal_iterator eoc = c->end ();
     const_literal_iterator j;
     bool satisfied = false;
 
-    sorted.clear ();
+    for (j = c->begin (); !satisfied && j != eoc; j++)
+      satisfied = (fixed (*j) > 0);
 
-    for (j = c->begin (); !satisfied && j != eoc; j++) {
-      const int lit = *j, tmp = fixed (lit);
-      if (tmp > 0) satisfied = true;
-      else if (!tmp) sorted.push_back (lit);
+    if (satisfied) { 
+      LOG (c, "satisfied by propagated unit");
+      mark_garbage (c);
+      continue;
     }
-
-    if (satisfied) { mark_garbage (c); continue; }
 
     // The actual vivification checking is performed here, by assuming the
     // negation of each of the remaining literals of the clause in turn and
@@ -237,25 +218,18 @@ void Internal::vivify () {
     LOG (c, "vivification checking");
     checked++;
 
-    // Sort the literals of the candidate with respect to the largest number
-    // of occurrences.  The idea is that more occurrences leads to more
-    // propagations and thus potentially higher earlier effect.
-    //
-    sort (sorted.begin (), sorted.end (), vivify_less_noccs (this));
-
-    // We are trying to reuse the decisions, the trail and the propagations
-    // of the previous vivification candidate.  The 'sorted' stack contains
-    // satisfied literals at the end in decreasing decision level order. As
-    // long those match decisions on trail we just reuse them.
+    // We are trying to reuse decisions, the trail and the propagations of
+    // the previous vivification candidate.  As long the literals of the
+    // clause match decisions on the trail we just reuse them.
     //
     int l = 1;
-    while (!sorted.empty () && l <= level) {
+    for (j = c->begin (); j != eoc && l <= level; j++) {
+      const int lit = *j;
+      if (fixed (lit)) continue;
       const int decision = control[l].decision;
-      const int lit = sorted.back ();
       if (-lit == decision) {
 	LOG ("reusing decision %d at decision level %d", decision, l);
 	stats.vivifyreused++;
-	sorted.pop_back ();
 	l++;
       } else { 
 	LOG ("literal %d does not match decision %d at decision level %d",
@@ -281,15 +255,20 @@ void Internal::vivify () {
     bool redundant = false;     // determined to be redundant / subsumed
     int remove = 0;             // at least literal 'remove' can be removed
 
-    while (!redundant && !remove && !sorted.empty ()) {
-      const int lit = sorted.back (), tmp = val (lit);
-      sorted.pop_back ();
-      if (tmp > 0) {
-        LOG ("redundant since literal %d already true", lit);
-        redundant = true;
-      } else if (tmp < 0) {
-        LOG ("removing at least literal %d which is already false", lit);
-        remove = lit;
+    for (j = c->begin (); !redundant && !remove && j != eoc; j++) {
+      const int lit = *j, tmp = val (lit);
+      if (tmp) {
+	const Var & v = var (lit);
+	if (!v.level) { LOG ("skipping fixed %d", lit); continue; }
+	if (!v.reason) { LOG ("skipping decision %d", lit); continue; }
+	if (tmp > 0) {
+	  LOG ("redundant since literal %d already true", lit);
+	  redundant = true;
+	} else {
+	  assert (tmp < 0);
+	  LOG ("removing at least literal %d which is already false", lit);
+	  remove = lit;
+	}
       } else {
 	stats.vivifydecs++;
         assume_decision (-lit);
@@ -319,10 +298,11 @@ REDUNDANT:
       // already forced to true in which case the clause is actually
       // redundant (we solved this by bad style 'goto' programming).
       //
-      for (j = c->begin (); j != eoc; j++) {
-        const int other = *j, tmp = val (other);
+      while (j != eoc) {
+        const int other = *j++, tmp = val (other);
         Var & v = var (other);
         if (tmp > 0) {
+	  assert (v.level), assert (v.reason);
           LOG ("redundant since literal %d already true", other);
           clause.clear ();
           goto REDUNDANT;
@@ -338,48 +318,15 @@ REDUNDANT:
 #endif
         } else clause.push_back (other);
       }
-
       assert (found);
 
-      // Assume remaining literals and propagate them to see whether this
-      // clause is actually redundant and does not have to be strengthened.
+      strengthened++; // only now because of 'goto REDUNDANT' above
 
-      if (!sorted.empty ()) {
-
-	do {
-	  const int lit = sorted.back (), tmp = val (lit);
-	  sorted.pop_back ();
-	  if (tmp < 0) continue;
-	  if (tmp > 0) {
-	    LOG ("redundant since literal %d already true", lit);
-	    redundant = true;
-	  } else {
-	    stats.vivifydecs++;
-	    assume_decision (-lit);
-	    redundant = !propagate ();
-	  }
-	} while (!redundant && !sorted.empty ());
-
-	if (redundant) {
-	  if (conflict) {
-	    assert (level > 0);
-	    backtrack (level - 1);
-	    conflict = 0;
-	  }
-          LOG ("redundant since propagating rest produces conflict");
-	  clause.clear ();
-	  goto REDUNDANT;
-	}
-
-	LOG ("propagating remaining negated literals without conflict");
-      }
-
-      strengthened++; // only now because of 'goto REDUNDANT' above (twice)
+      backtrack ();
 
       assert (!clause.empty ());
 
       if (clause.size () == 1) {
-	backtrack (0);
         const int unit = clause[0];
         LOG (c, "vivification shrunken to unit %d", unit);
         assert (!val (unit));
@@ -388,21 +335,6 @@ REDUNDANT:
         bool ok = propagate ();
         if (!ok) learn_empty_clause ();
       } else {
-	assert (clause.size () > 1);
-	int lit0 = clause[0];
-	int lit1 = clause[1];
-	int val0 = val (lit0);
-	int val1 = val (lit1);
-	int trail0 = var (lit0).level;
-	int trail1 = var (lit1).level;
-	int level0 = var (lit0).level;
-	int level1 = var (lit1).level;
-	int l;
-	if (val0 < 0 && val1 < 0) l = min (level0, level1) - 1;
-	else if (val0 < 0 && (!val1 || trail1 > trail0)) l = level0 - 1;
-	else if (val1 < 0 && (!val0 || trail0 > trail1)) l = level1 - 1;
-	else l = level;
-	if (l < level) backtrack (l);
 #ifdef LOGGING
         Clause * d =
 #endif
@@ -411,6 +343,7 @@ REDUNDANT:
         LOG (d, "after vivification");
       }
       clause.clear ();
+
       mark_garbage (c);
     }
     c->ignore = false;
@@ -420,7 +353,6 @@ REDUNDANT:
 
   if (!unsat) {
 
-    erase_vector (sorted);
     reset_noccs ();
     erase_vector (schedule);
     disconnect_watches ();
