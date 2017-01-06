@@ -6,7 +6,6 @@
 #include "proof.hpp"
 
 #include <algorithm>
-#include <cmath>
 
 namespace CaDiCaL {
 

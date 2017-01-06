@@ -74,12 +74,14 @@ void Internal::sort_watches () {
 }
 
 void Internal::disconnect_watches () {
+  LOG ("disconnecting watches");
   for (int idx = 1; idx <= max_var; idx++)
     for (int sign = -1; sign <= 1; sign += 2)
       watches (sign * idx).clear ();
 }
 
 void Internal::flush_redundant_watches () {
+  LOG ("flushing redundant watches");
   for (int idx = 1; idx <= max_var; idx++) {
     for (int sign = -1; sign <= 1; sign += 2) {
       const int lit = sign * idx;

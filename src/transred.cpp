@@ -102,7 +102,7 @@ void Internal::transred () {
     assert (work.empty ());
     mark (src);
     work.push_back (src);
-    LOG ("transred assign %d", src;);
+    LOG ("transred assign %d", src);
 
     bool transitive = false;		// found path from 'src' to 'dst'?
     bool failed = false;		// 'src' failed literal?
