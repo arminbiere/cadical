@@ -377,6 +377,10 @@ REDUNDANT:
         Clause * d = new_clause_as (c);
         LOG (c, "before vivification");
         LOG (d, "after vivification");
+	if (d->size > 2) {
+	  d->vivify = true;
+	  schedule.push_back (d);
+	}
       }
       clause.clear ();
 
