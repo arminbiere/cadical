@@ -78,7 +78,12 @@ void Internal::vivify () {
 
   if (unsat) return;
 
-  opts.log = true;
+#ifdef LOGGING
+  {
+    int remove;
+    opts.log = true;
+  }
+#endif
 
   assert (opts.vivify);
   SWITCH_AND_START (search, simplify, vivify);
@@ -177,6 +182,7 @@ void Internal::vivify () {
   long limit = stats.propagations.vivify + delta;
 
   connect_watches (true);		// watch only irredundant clauses
+  vector<int> sorted;			// sort literals of each candidate
 
   while (!unsat &&
          !schedule.empty () &&
@@ -192,20 +198,27 @@ void Internal::vivify () {
     c->vivify = false;
     if (c->garbage) continue;
 
-    // First check whether the candidate clause is already satisfied.
+    // First check whether the candidate clause is already satisfied and at
+    // the same time copy its non fixed literals to 'sorted'.  The literals
+    // in the candidate clause might not be sorted anymore due to replacing
+    // watches during propagation, even though we sorted them initially
+    // while pushing this onto the schedule.
     //
     const const_literal_iterator eoc = c->end ();
     const_literal_iterator j;
     int satisfied = 0;
-
-    for (j = c->begin (); !satisfied && j != eoc; j++)
-      if (fixed (*j) > 0) satisfied = *j;
-
+    sorted.clear ();
+    for (j = c->begin (); !satisfied && j != eoc; j++) {
+      const int lit = *j, tmp = fixed (lit);
+      if (tmp > 0) satisfied = *j;
+      else if (!tmp) sorted.push_back (lit);
+    }
     if (satisfied) { 
       LOG (c, "satisfied by propagated unit %d", satisfied);
       mark_garbage (c);
       continue;
     }
+    sort (sorted.begin (), sorted.end (), vivify_more_noccs (this));
 
     // The actual vivification checking is performed here, by assuming the
     // negation of each of the remaining literals of the clause in turn and
@@ -216,7 +229,9 @@ void Internal::vivify () {
     checked++;
 
     // First check whether this clause is actually a reason for forcing one
-    // of its literals to true and then backtrack appropriately.
+    // of its literals to true and then backtrack one level before that
+    // happened.  Otherwise this clause might be considered to be redundant
+    // and if not, redundancy by other clauses becomes impossible.
     //
     if (level) {
       int forced = 0;
@@ -238,8 +253,14 @@ void Internal::vivify () {
     // clause match decisions on the trail we just reuse them.
     //
     int l = 1;
-    for (j = c->begin (); j != eoc && l <= level; j++) {
-      const int lit = *j;
+
+    // TODO replace by iterating over 'sorted' again ...
+
+    const const_int_iterator eos = sorted.end ();
+    const_int_iterator k;
+
+    for (k = sorted.begin (); k != eos && l <= level; k++) {
+      const int lit = *k;
       if (fixed (lit)) continue;
       const int decision = control[l].decision;
       if (-lit == decision) {
@@ -270,8 +291,11 @@ void Internal::vivify () {
     bool redundant = false;     // determined to be redundant / subsumed
     int remove = 0;             // at least literal 'remove' can be removed
 
-    for (j = c->begin (); !redundant && !remove && j != eoc; j++) {
-      const int lit = *j, tmp = val (lit);
+    LOG (sorted, "sorted size %ld probing schedule", (long) sorted.size ());
+
+    for (k = sorted.begin (); !redundant && !remove && k != eos; k++) {
+      
+      const int lit = *k, tmp = val (lit);
       if (tmp) {
 	const Var & v = var (lit);
 	if (!v.level) { LOG ("skipping fixed %d", lit); continue; }
@@ -350,10 +374,7 @@ REDUNDANT:
         bool ok = propagate ();
         if (!ok) learn_empty_clause ();
       } else {
-#ifdef LOGGING
-        Clause * d =
-#endif
-        new_clause_as (c);
+        Clause * d = new_clause_as (c);
         LOG (c, "before vivification");
         LOG (d, "after vivification");
       }
@@ -415,7 +436,13 @@ REDUNDANT:
   report ('v');
   STOP_AND_SWITCH (vivify, simplify, search);
 
-  opts.log = false;
+#ifdef LOGGING
+  {
+    int remove;
+    opts.log = false;
+  }
+#endif
+
 }
 
 };
