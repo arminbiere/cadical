@@ -32,7 +32,7 @@ struct vivify_more_noccs {
   bool operator () (int a, int b) {
     long n = internal->noccs (a);
     long m = internal->noccs (b);
-    if (n > n) return true;
+    if (n > m) return true;
     if (n < m) return false;
     if (a == -b) return a > 0;
     return abs (a) < abs (b);
@@ -161,10 +161,6 @@ void Internal::vivify () {
     scheduled, percent (scheduled, stats.irredundant));
 #endif
 
-  // We need to make sure to propagate units also over redundant clauses.
-  //
-  size_t old_propagated = propagated;   // see [RE-PROPAGATE] below.
-
   // Counters, for what happened.
   //
   long checked = 0, subsumed = 0, strengthened = 0, units = 0;
@@ -188,24 +184,23 @@ void Internal::vivify () {
     //
     Clause * c = schedule.back ();
     schedule.pop_back ();
-    assert (c->vivify);
-    c->vivify = false;
-
-    assert (!c->garbage);
     assert (!c->redundant);
     assert (c->size > 2);               // see [NO-BINARY] above
+    assert (c->vivify);
+    c->vivify = false;
+    if (c->garbage) continue;
 
     // First check whether the candidate clause is already satisfied.
     //
     const const_literal_iterator eoc = c->end ();
     const_literal_iterator j;
-    bool satisfied = false;
+    int satisfied = 0;
 
     for (j = c->begin (); !satisfied && j != eoc; j++)
-      satisfied = (fixed (*j) > 0);
+      if (fixed (*j) > 0) satisfied = *j;
 
     if (satisfied) { 
-      LOG (c, "satisfied by propagated unit");
+      LOG (c, "satisfied by propagated unit %d", satisfied);
       mark_garbage (c);
       continue;
     }
@@ -217,6 +212,24 @@ void Internal::vivify () {
     //
     LOG (c, "vivification checking");
     checked++;
+
+    // First check whether this clause is actually a reason for forcing one
+    // of its literals to true and then backtrack appropriately.
+    //
+    if (level) {
+      int forced = 0;
+      for (j = c->begin (); !forced && j != eoc; j++) {
+	const int lit = *j, tmp = val (lit);
+	if (tmp < 0) continue;
+	if (tmp > 0 && var (lit).reason == c) forced = lit;
+	break;
+      }
+      if (forced) {
+	LOG ("clause is reason forcing %d", forced);
+	assert (var (forced).level);
+	backtrack (var (forced).level - 1);
+      }
+    }
 
     // We are trying to reuse decisions, the trail and the propagations of
     // the previous vivification candidate.  As long the literals of the
@@ -298,8 +311,8 @@ REDUNDANT:
       // already forced to true in which case the clause is actually
       // redundant (we solved this by bad style 'goto' programming).
       //
-      while (j != eoc) {
-        const int other = *j++, tmp = val (other);
+      for (j = c->begin (); j != eoc; j++) {
+        const int other = *j, tmp = val (other);
         Var & v = var (other);
         if (tmp > 0) {
 	  assert (v.level), assert (v.reason);
@@ -345,7 +358,8 @@ REDUNDANT:
       clause.clear ();
 
       mark_garbage (c);
-    }
+    } else LOG (c, "vivification failed on");
+    assert (c->ignore);
     c->ignore = false;
   }
 
@@ -359,16 +373,13 @@ REDUNDANT:
     connect_watches ();
 
     // [RE-PROPAGATE] Since redundant clause were disconnected during
-    // propagating vivified units above, we have propagate all those fixed
-    // literals again after connecting the redundant clauses back.
-    // Otherwise, the invariants for watching and blocking literals break.
+    // propagating vivified units above, and further irredundant clauses
+    // are arbitrarily sorted, we have to propagate all literals again.
     //
-    if (old_propagated < propagated) {
-      propagated = old_propagated;
-      if (!propagate ()) {
-        LOG ("propagating vivified units leads to conflict");
-        learn_empty_clause ();
-      }
+    propagated = 0;
+    if (!propagate ()) {
+      LOG ("propagating vivified units leads to conflict");
+      learn_empty_clause ();
     }
   }
 
