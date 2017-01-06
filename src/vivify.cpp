@@ -47,14 +47,6 @@ struct vivify_less_noccs {
 
   bool operator () (int a, int b) {
 
-    bool s = internal->val (a) > 0;
-    bool t = internal->val (b) > 0;
-    
-    if (!s & t) return true;
-    if (s & !t) return false;
-
-    if (s & t) return internal->var (a).level > internal->var (b).level;
-
     long n = internal->noccs (a);
     long m = internal->noccs (a);
     if (n < m) return true;
@@ -262,6 +254,7 @@ void Internal::vivify () {
       const int lit = sorted.back ();
       if (-lit == decision) {
 	LOG ("reusing decision %d at decision level %d", decision, l);
+	stats.vivifyreused++;
 	sorted.pop_back ();
 	l++;
       } else { 
@@ -274,8 +267,6 @@ void Internal::vivify () {
 
     if (level) LOG ("reused %d decision levels", level);
     else LOG ("no decision level reused");
-
-    // TODO add statistics on reusing decision levels.
 
     // Make sure to ignore this clause during propagation.  This is not that
     // easy for binary clauses [NO-BINARY], e.g., ignoring binary clauses,
@@ -300,6 +291,7 @@ void Internal::vivify () {
         LOG ("removing at least literal %d which is already false", lit);
         remove = lit;
       } else {
+	stats.vivifydecs++;
         assume_decision (-lit);
         if (propagate ()) continue;
         LOG ("redundant since propagation produced conflict");
@@ -362,6 +354,7 @@ REDUNDANT:
 	    LOG ("redundant since literal %d already true", lit);
 	    redundant = true;
 	  } else {
+	    stats.vivifydecs++;
 	    assume_decision (-lit);
 	    redundant = !propagate ();
 	  }

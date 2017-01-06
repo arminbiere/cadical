@@ -58,6 +58,8 @@ struct Stats {
   long decompositions; // number of SCC + ELS
   long vivifications;  // number of vivifications
   long vivifychecks; // checked clauses during vivification
+  long vivifydecs;   // vivification decisions
+  long vivifyreused; // reused vivification decisions
   long vivifysubs;   // subsumed clauses during vivification
   long vivifystrs;   // strengthened clauses during vivification
   long vivifyunits;  // units during vivification
