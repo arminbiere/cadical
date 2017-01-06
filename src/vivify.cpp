@@ -78,6 +78,8 @@ void Internal::vivify () {
 
   if (unsat) return;
 
+  opts.log = true;
+
   assert (opts.vivify);
   SWITCH_AND_START (search, simplify, vivify);
 
@@ -412,6 +414,8 @@ REDUNDANT:
 
   report ('v');
   STOP_AND_SWITCH (vivify, simplify, search);
+
+  opts.log = false;
 }
 
 };
