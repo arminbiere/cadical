@@ -78,18 +78,11 @@ void Internal::vivify () {
 
   if (unsat) return;
 
-#ifdef LOGGING
-  {
-    int remove;
-    opts.log = true;
-  }
-#endif
-
   assert (opts.vivify);
   SWITCH_AND_START (search, simplify, vivify);
 
   assert (!vivifying);
-  vivifying = true;
+  vivifying = true;	// forces vivify propagation counting in 'propagate'
 
   stats.vivifications++;
   if (level) backtrack ();
@@ -99,8 +92,8 @@ void Internal::vivify () {
   disconnect_watches ();
 
   // Count the number of occurrences of literals in all irredundant clauses,
-  // particularly the irredundant binary clauses, usually responsible for
-  // most of the propagations.
+  // particularly irredundant binary clauses, which are usually responsible
+  // for most of the propagations.
   //
   init_noccs ();
 
@@ -112,8 +105,12 @@ void Internal::vivify () {
     if (c->garbage || c->redundant) continue;
     const const_literal_iterator eoc = c->end ();
     const_literal_iterator j;
+
+    const int shift = 12 - c->size;
+    const long score = shift < 1 ? 1 : (1l << shift);
+
     for (j = c->begin (); j != eoc; j++)
-      noccs (*j)++;
+      noccs (*j) += score;
   }
 
   // After an arithmetic increasing number of calls to 'vivify' reschedule
@@ -383,9 +380,8 @@ REDUNDANT:
 	}
       }
       clause.clear ();
-
       mark_garbage (c);
-    } else LOG (c, "vivification failed on");
+    } else LOG ("vivification failed");
     assert (c->ignore);
     c->ignore = false;
   }
@@ -439,14 +435,6 @@ REDUNDANT:
 
   report ('v');
   STOP_AND_SWITCH (vivify, simplify, search);
-
-#ifdef LOGGING
-  {
-    int remove;
-    opts.log = false;
-  }
-#endif
-
 }
 
 };
