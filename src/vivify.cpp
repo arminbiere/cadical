@@ -21,7 +21,9 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// Check whether literal occurs less often.
+// Check whether literal occurs less often.  In the implementation below
+// (search for 'long score = ...') we actually compute a weighted occurrence
+// count similar to the Jeroslow Wang heuristic.
 
 struct vivify_more_noccs {
 
@@ -39,9 +41,46 @@ struct vivify_more_noccs {
   }
 };
 
-// Sort candidate clauses by the number of occurrences of their literals,
-// with clauses to be vivified first last.   We assume that clauses are
-// sorted w.r.t. more occurring literals first (with 'vivify_more_noccs').
+// Sort candidate clauses by the number of occurrences (actually by their
+// score) of their literals, with clauses to be vivified first last.   We
+// assume that clauses are sorted w.r.t. more occurring (higher score)
+// literals first (with respect to 'vivify_more_noccs').
+//
+// For example if there are the following (long irredundant) clauses
+//
+//   1 -3 -4      (A)
+//  -1 -2  3 4    (B)
+//   2 -3  4      (C)
+//
+// then we have the following literal scores using Jeroslow Wang scores and
+// normalizing it with 2^12 (which is the same as 1<<12):
+//
+//  nocc ( 1) = 2^12 * (2^-3       ) =  512  3.
+//  nocc (-1) = 2^12 * (2^-4       ) =  256  6.
+//  nocc ( 2) = 2^12 * (2^-3       ) =  512  4.
+//  nocc (-2) = 2^12 * (2^-4       ) =  256  7.
+//  nocc ( 3) = 2^12 * (2^-4       ) =  256  8.
+//  nocc (-3) = 2^12 * (2^-3 + 2^-3) = 1024  1.
+//  nocc ( 4) = 2^12 * (2^-3 + 2^-4) =  768  2.
+//  nocc (-4) = 2^12 * (2^-3       ) =  512  5.
+//
+// which gives the following literal order (according to 'vivify_more_noccs')
+//
+//  -3, 4, 1, 2, -4, -1, -2, 3
+//
+// Then sorting the literals in each clause gives
+//
+//  -3  1 -4     (A')
+//   4 -1 -2  3  (B')
+//  -3  4  2     (C')
+//
+// and finally sorting those clauses lexicographically w.r.t. scores is
+//
+//  -3  4  2     (C')
+//  -3  1 -4     (A')
+//   4 -1 -2  3  (B')
+//
+// This order is defined by the following comparison 'vivify_less_clause'.
 
 struct vivify_less_clause {
 
