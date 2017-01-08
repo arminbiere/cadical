@@ -137,7 +137,6 @@ void Internal::flush_vivification_schedule (vector<Clause*> & schedule) {
     schedule.resize (j - schedule.begin ());
     shrink_vector (schedule);
   } else assert (j == end);
-  COVER (subsumed);
 }
 
 /*------------------------------------------------------------------------*/
