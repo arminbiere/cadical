@@ -356,6 +356,7 @@ class Internal {
 
   // Strengthening through vivification and asymmetric tautology elimination.
   //
+  void flush_vivification_schedule (vector<Clause*> &);
   void vivify ();
 
   // Transitive reduction of binary implication graph.

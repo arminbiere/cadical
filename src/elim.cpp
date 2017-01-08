@@ -618,13 +618,13 @@ void Internal::elim () {
   else limit = opts.elimroundsinit;
   assert (limit > 0);
 
-  backtrack ();
-  reset_watches ();             // saves lots of memory
-
   // Make sure there was a subsumption attempt since last elimination.
   //
   if (lim.subsumptions_at_last_elim == stats.subsumptions)
-    subsume_round ();
+    subsume ();
+
+  if (level) backtrack ();
+  reset_watches ();             // saves lots of memory
 
   // Alternate variable elimination and subsumption until nothing changes or
   // the round limit is hit.

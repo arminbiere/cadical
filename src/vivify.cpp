@@ -92,30 +92,53 @@ struct vivify_less_clause {
     assert (!a->redundant), assert (!b->redundant);
 
     const const_literal_iterator eoa = a->end (), eob = b->end ();
-    const_literal_iterator i = a->begin (), j = b->begin ();
+    const_literal_iterator i, j;
 
     for (i = a->begin (), j = b->begin (); i != eoa && j != eob; i++, j++)
       if (*i != *j) return vivify_more_noccs (internal) (*j, *i);
 
-    // If get here, then one of the two clauses subsumes the other one or
-    // they are actually identical.
-    //
-    if (i == eoa) {
-      if (!b->garbage) {
-	LOG (b, "vivification sorting finds subsumed");
-	internal->mark_garbage (b);
-      }
-      return true;		// 'a' shorter or equal size
-    } else {
-      assert (j == eob);
-      if (!a->garbage) {
-	LOG (a, "vivification sorting finds subsumed");
-	internal->mark_garbage (a);
-      }
-      return false;		// 'b' shorter
-    }
+    return i == eoa;
   }
 };
+
+/*------------------------------------------------------------------------*/
+
+// On-the-fly subsumption during sorting in 'vivify_less_clause' above
+// turned out to be trouble some for identical clauses.  This is the single
+// point where 'vivify_less_clause' is not asymmetric and thus requires
+// 'stable' sorting for determinism.  It can also not be made 'complete'
+// on-the-fly and thus after sorting the schedule we go over it in a linear
+// scan again and remove subsumed clauses.
+
+void Internal::flush_vivification_schedule (vector<Clause*> & schedule) {
+  long subsumed = 0;
+  const const_clause_iterator end = schedule.end ();
+  clause_iterator j = schedule.begin ();
+  const_clause_iterator i;
+  Clause * prev = 0;
+  for (i = j; i != end; i++) {
+    Clause * c = *j++ = *i;
+    if (!prev || c->size < prev->size) { prev = c; continue; }
+    const const_literal_iterator eop = prev->end ();
+    const_literal_iterator k, l;
+    for (k = prev->begin (), l = c->begin (); k != eop; k++, l++)
+      if (*k != *l) break;
+    if (k == eop) {
+      assert (!c->garbage);
+      assert (!prev->garbage);
+      LOG (c, "found subsumed");
+      mark_garbage (c);
+      subsumed++;
+      j--;
+    } else prev = c;
+  }
+  LOG ("flushed %ld subsumed clauses from vivification schedule", subsumed);
+  if (subsumed) {
+    schedule.resize (j - schedule.begin ());
+    shrink_vector (schedule);
+  } else assert (j == end);
+  COVER (subsumed);
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -134,7 +157,7 @@ void Internal::vivify () {
 
   // Disconnect all watches since we sort literals in irredundant clauses.
   //
-  disconnect_watches ();
+  if (watches ()) disconnect_watches ();
 
   // Count the number of occurrences of literals in all irredundant clauses,
   // particularly irredundant binary clauses, which are usually responsible
@@ -199,17 +222,13 @@ void Internal::vivify () {
   }
   shrink_vector (schedule);
 
-  // Now sort candidates, with first candidate clause (many occurrences)
-  // last.  Note, that there is a certain risk in non-deterministic sorting
-  // here if we have identical clauses.  Then one of them is marked as
-  // garbage non-deterministically, depending in which order the comparison
-  // function is applied to them.  It is unclear whether 'stable' sorting
-  // can avoid this issue and thus we simply take the risk.  The alternative
-  // would be to disable on-the-fly subsumption during sorting (at least for
-  // identical clauses), use stable sorting instead, and then in a second
-  // pass, go over the scheduled clauses and check for identical clauses.
+  // Sort candidates, with first to be tried candidate clause (many
+  // occurrences and high score literals) last.
   //
-  sort (schedule.begin (), schedule.end (), vivify_less_clause (this));
+  stable_sort (schedule.begin (),
+               schedule.end (), vivify_less_clause (this));
+
+  flush_vivification_schedule (schedule);
 
 #ifndef QUIET
   long scheduled = schedule.size ();
