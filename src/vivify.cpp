@@ -402,6 +402,7 @@ void Internal::vivify () {
       } else {			// still uassigned
 	stats.vivifydecs++;
         assume_decision (-lit);
+	LOG ("negated decision %d score %ld", lit, noccs (lit));
         if (propagate ()) continue;
         LOG ("redundant since propagation produced conflict");
         redundant = true;
