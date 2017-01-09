@@ -105,7 +105,7 @@ void Internal::generate_probes () {
   assert (probes.empty ());
 
   // First determine all the literals which occur in binary clauses. It is
-  // way faster. To go over the clauses once, instead of walking the watch
+  // way faster to go over the clauses once, instead of walking the watch
   // lists for each literal.
   //
   init_noccs ();
@@ -130,7 +130,7 @@ void Internal::generate_probes () {
     bool have_neg_bin_occs = noccs (-idx) > 0;
     if (have_pos_bin_occs == have_neg_bin_occs) continue;
     int probe = have_neg_bin_occs ? idx : -idx;
-    LOG ("scheduling probe %d", probe);
+    LOG ("scheduling probe %d negated occs %ld", noccs (-probe));
     probes.push_back (probe);
   }
 
@@ -172,21 +172,6 @@ void Internal::probe_core () {
 
   assert (unsat || propagated == trail.size ());
   probagated = probagated2 = trail.size ();
-
-  // After an arithmetic increasing number of calls to 'probe_core' we
-  // reschedule all roots of the binary implication graph, instead of only
-  // those not tried before.  Then this limit is increased by one. The
-  // argument is that we should focus on those roots with many occurrences
-  // in binary clauses of their negated literals but in the limit eventually
-  // still should probe all roots.
-  //
-  if (opts.probereschedule) {
-    if (!lim.probe_wait_reschedule) {
-      VRB ("probe", stats.probings, "forced to reschedule all probes");
-      lim.probe_wait_reschedule = ++inc.probe_wait_reschedule;
-      probes.clear ();
-    } else lim.probe_wait_reschedule--;
-  }
 
   // Probing is limited in terms of non-probing propagations
   // 'stats.propagations'. We allow a certain percentage 'opts.probereleff'

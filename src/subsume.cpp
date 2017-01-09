@@ -135,7 +135,7 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
   assert (!level);
   LOG (c, "trying to subsume");
 
-  mark (c);
+  mark (c);	// signed!
 
   Clause * d = 0;
   int flipped = 0;
@@ -147,6 +147,18 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
 
     for (int sign = -1; !d && sign <= 1; sign += 2) {
 
+      // First we check against all binary clauses.  The other literals of
+      // all binary clauses of 'sign*lit' are stored in one consecutive
+      // array, which is way faster than storing clause pointers and
+      // dereferencing them.  Since this binary clause array is also not
+      // shrunken, we also can bail out earlier if subsumption or
+      // strengthening is determined.  In both cases the (self-)subsuming
+      // clauses is stored in 'd', which makes it nonzero and forced to
+      // abort the loop.  If the binary clause can strengthen the candidate
+      // clause 'c' (through self-subsuming resolution), then 'filled' is
+      // set to the literal which can be removed in 'c', otherwise to
+      // 'INT_MIN' which is a non-valid literal.
+      //
       Bins & bs = bins (sign*lit);
       const const_bins_iterator eb = bs.end ();
       const_bins_iterator b;
@@ -163,6 +175,12 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
 
       if (d) break;
 
+      // In this second loop we check for larger than binary clauses to
+      // subsume or strengthen the candidate clause.   This is more costly,
+      // and needs a call to 'subsume_check'.  Otherwise the same contract
+      // as above for communicating 'subsumption' or 'strengthening' to the
+      // code after the loop.
+      //
       Occs & os = occs (sign * lit);
       const const_occs_iterator eo = os.end ();
       occs_iterator k = os.begin ();
@@ -181,6 +199,7 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
       shrink_occs (os);
     }
   }
+
   unmark (c);
 
   if (flipped == INT_MIN) {

@@ -180,22 +180,6 @@ void Internal::vivify () {
       noccs (*j) += score;
   }
 
-  // After an arithmetic increasing number of calls to 'vivify' reschedule
-  // all clauses, instead of only those not tried before.  Then this limit
-  // is increased by one. The argument is that we should focus on clauses
-  // with many occurrences of their literals (also long clauses), but in the
-  // limit eventually still should vivify all clauses.
-  //
-  bool reschedule_all;
-  if (opts.vivifyreschedule) {
-    reschedule_all = !lim.vivify_wait_reschedule;
-    if (reschedule_all) {
-      VRB ("vivify", stats.vivifications,
-	"forced to reschedule all clauses");
-      lim.vivify_wait_reschedule = ++inc.vivify_wait_reschedule;
-    } else lim.vivify_wait_reschedule--;
-  } else reschedule_all = false;
-
   // Refill the schedule every time.  Unchecked clauses are 'saved' by
   // setting their 'vivify' bit, such that they can be tried next time.
   //
@@ -204,8 +188,7 @@ void Internal::vivify () {
   // In the first round check whether there are still clauses left, which
   // are scheduled but have not been vivified yet.  The second round is only
   // entered if no such clause was found in the first round.  In the second
-  // round all clauses are selected.  If 'reschedule_all' is true the all
-  // admissible claues are selected already in the first round.
+  // round all clauses are selected.
   //
   for (int round = 0; schedule.empty () && round <= 1; round++) {
     for (i = clauses.begin (); i != end; i++) {
@@ -213,7 +196,7 @@ void Internal::vivify () {
       if (c->garbage) continue;
       if (c->redundant) continue;
       if (c->size == 2) continue;       // see also [NO-BINARY] below
-      if (!reschedule_all && !round && !c->vivify) continue;
+      if (!round && !c->vivify) continue;
       sort (c->begin (), c->end (), vivify_more_noccs (this));
       schedule.push_back (c);
       c->vivify = true;

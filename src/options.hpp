@@ -74,7 +74,6 @@ OPTION(probe,           bool,    1, 0,  1, "failed literal probing" ) \
 OPTION(probeinit,        int,  500, 0,1e9, "initial probing interval" ) \
 OPTION(probeint,         int,  1e4, 1,1e9, "probing interval increment" ) \
 OPTION(probereleff,   double, 0.02, 0,  1, "relative probing efficiency") \
-OPTION(probereschedule, bool,    0, 0,  1, "reschedule probing") \
 OPTION(probemaxeff,   double,  1e7, 0,  1, "maximum probing efficiency") \
 OPTION(probemineff,   double,  1e5, 0,  1, "minimum probing efficiency") \
 OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
@@ -105,7 +104,6 @@ OPTION(transredmineff,double,  1e5, 0,  1, "minimum efficiency") \
 QUTOPT(verbose,         int,    0, 0,  2, "more verbose messages") \
 OPTION(vivify,          bool,    1, 0,  1, "vivification") \
 OPTION(vivifyreleff,  double, 0.30, 0,  1, "relative efficiency") \
-OPTION(vivifyreschedule,bool,    0, 0,  1, "reschedule vivification") \
 OPTION(vivifymaxeff,  double,  1e8, 0,  1, "maximum efficiency") \
 OPTION(vivifymineff,  double,  1e6, 0,  1, "minimum efficiency") \
 OPTION(witness,         bool,    1, 0,  1, "print witness") \

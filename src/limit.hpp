@@ -34,16 +34,6 @@ struct Limit {
   //
   int fixed_at_last_collect;
 
-  // Wait that many 'vivify' calls before scheduling all clauses for
-  // vivification again.
-  //
-  int vivify_wait_reschedule;
-
-  // Wait that many 'probe' calls before scheduling all roots of binary
-  // implication graph for probing again.
-  //
-  int probe_wait_reschedule;
-
   // Search propagation last time the inprocessor was called.
   //
   struct { long transred, probe, vivify; } search_propagations;
@@ -57,9 +47,6 @@ struct Inc {
   long subsume; // subsumption interval increment
   long elim;    // elimination interval increment
   long probe;   // failed literal probing interval increment
-
-  int vivify_wait_reschedule;   // see above
-  int probe_wait_reschedule;    // see above
 
   Inc ();
 };
