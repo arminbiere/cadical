@@ -15,7 +15,7 @@ void Internal::transred () {
   const const_clause_iterator end = clauses.end ();
   const_clause_iterator i;
 
-  assert (!level);
+  if (level) backtrack ();
 
   // Find first clause not checked for being transitive yet.
   //

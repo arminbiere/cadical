@@ -153,21 +153,30 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
       // dereferencing them.  Since this binary clause array is also not
       // shrunken, we also can bail out earlier if subsumption or
       // strengthening is determined.  In both cases the (self-)subsuming
-      // clauses is stored in 'd', which makes it nonzero and forced to
-      // abort the loop.  If the binary clause can strengthen the candidate
-      // clause 'c' (through self-subsuming resolution), then 'filled' is
-      // set to the literal which can be removed in 'c', otherwise to
-      // 'INT_MIN' which is a non-valid literal.
+      // clause is stored in 'd', which makes it nonzero and forces
+      // aborting both the outer and inner loop.  If the binary clause can
+      // strengthen the candidate clause 'c' (through self-subsuming
+      // resolution), then 'filled' is set to the literal which can be
+      // removed in 'c', otherwise to 'INT_MIN' which is a non-valid
+      // literal.
       //
       Bins & bs = bins (sign*lit);
       const const_bins_iterator eb = bs.end ();
       const_bins_iterator b;
       for (b = bs.begin (); !d && b != eb; b++) {
         const int other = *b, tmp = marked (other);
-        if (tmp <= 0) continue;
-        binary_subsuming.literals[0] = sign*lit;
-        binary_subsuming.literals[1] = other;
-        flipped = (sign < 0) ? -lit : INT_MIN;
+	if (!tmp) continue;
+	if (tmp < 0 && sign < 0) continue;
+	if (tmp < 0) {
+	  if (sign < 0) continue;		// tautological resolvent
+	  binary_subsuming.literals[0] = lit;
+	  binary_subsuming.literals[1] = other;
+	  flipped = other;
+	} else {
+	  binary_subsuming.literals[0] = sign*lit;
+	  binary_subsuming.literals[1] = other;
+	  flipped = (sign < 0) ? -lit : INT_MIN;
+	}
         assert (binary_subsuming.size == 2);
         assert (!binary_subsuming.redundant);
         d = &binary_subsuming;
