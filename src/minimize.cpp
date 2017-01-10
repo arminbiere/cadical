@@ -49,10 +49,11 @@ bool Internal::minimize_literal (int lit, int depth) {
 // algorithm too, but we still have to check that this as any effect in
 // practice (TODO).
 
-struct trail_smaller {
+struct trail_assigned_smaller {
   Internal * internal;
-  trail_smaller (Internal * s) : internal (s) { }
+  trail_assigned_smaller (Internal * s) : internal (s) { }
   bool operator () (int a, int b) {
+    assert (internal->val (a)), assert (internal->val (b));
     return internal->var (a).trail < internal->var (b).trail;
   }
 };
@@ -60,7 +61,7 @@ struct trail_smaller {
 void Internal::minimize_clause () {
   START (minimize);
   LOG (clause, "minimizing first UIP clause");
-  sort (clause.begin (), clause.end (), trail_smaller (this));
+  sort (clause.begin (), clause.end (), trail_assigned_smaller (this));
   assert (minimized.empty ());
   int_iterator j = clause.begin ();
   for (const_int_iterator i = j; i != clause.end (); i++)

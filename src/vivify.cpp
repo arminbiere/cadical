@@ -438,11 +438,12 @@ REDUNDANT:
       assert (found);
 
       strengthened++; // only now because of 'goto REDUNDANT' above
-      backtrack ();   // strengthening might give new propagations
+
 
       assert (!clause.empty ());	// at least one decision made
 
       if (clause.size () == 1) {
+	backtrack ();
         const int unit = clause[0];
         LOG (c, "vivification shrunken to unit %d", unit);
         assert (!val (unit));
@@ -451,6 +452,7 @@ REDUNDANT:
         bool ok = propagate ();
         if (!ok) learn_empty_clause ();
       } else {
+	backtrack ();			// sort by trail and fix level
         Clause * d = new_clause_as (c);
         LOG (c, "before vivification");
         LOG (d, "after vivification");
