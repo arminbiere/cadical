@@ -379,7 +379,7 @@ void Internal::vivify () {
 
     LOG (sorted, "sorted size %ld probing schedule", (long) sorted.size ());
 
-    for (k = sorted.begin (); !redundant && !remove && k != eos; k++) {
+    for (k = sorted.begin (); !redundant && k != eos; k++) {
       
       const int lit = *k, tmp = val (lit);
 
@@ -395,7 +395,7 @@ void Internal::vivify () {
 	  redundant = true;
 	} else {		// negative implied
 	  assert (tmp < 0);
-	  LOG ("removing at least literal %d which is already false", lit);
+	  LOG ("can remove literal %d which is already false", lit);
 	  remove = lit;
 	}
       } else {			// still uassigned
@@ -483,13 +483,12 @@ REDUNDANT:
 	    backtrack (level1 - 1);
 	  }
 	}
-        Clause * d = new_clause_as (c);
+#ifdef LOGGING
+        Clause * d =
+#endif
+	new_clause_as (c);
         LOG (c, "before vivification");
         LOG (d, "after vivification");
-	if (d->size > 2) {
-	  d->vivify = true;
-	  schedule.push_back (d);		// schedule strengthened
-	}
       }
       clause.clear ();
       mark_garbage (c);

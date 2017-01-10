@@ -206,11 +206,10 @@ void Internal::clear_levels () {
 
 /*------------------------------------------------------------------------*/
 
-struct trail_assigned_larger {
+struct trail_larger {
   Internal * internal;
-  trail_assigned_larger (Internal * s) : internal (s) { }
+  trail_larger (Internal * s) : internal (s) { }
   bool operator () (int a, int b) {
-    assert (!internval->val (a)), assert (!internval->val (b));
     return internal->var (a).trail > internal->var (b).trail;
   }
 };
@@ -273,7 +272,7 @@ void Internal::analyze () {
   // Determine back jump level, backtrack and assign flipped literal.
   //
   if (size > 1) {
-    sort (clause.begin (), clause.end (), trail_assigned_larger (this));
+    sort (clause.begin (), clause.end (), trail_larger (this));
     Clause * driving_clause = new_learned_redundant_clause (glue);
     const int jump = var (clause[1]).level;
     UPDATE_AVERAGE (jump_avg, jump);
