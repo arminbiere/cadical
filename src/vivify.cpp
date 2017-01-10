@@ -227,9 +227,10 @@ void Internal::vivify () {
                schedule.end (), vivify_less_clause (this));
 
   flush_vivification_schedule (schedule);
+  long scheduled = schedule.size ();
+  stats.vivifysched += scheduled;
 
 #ifndef QUIET
-  long scheduled = schedule.size ();
   VRB ("vivify", stats.vivifications,
     "scheduled %ld clauses to be vivified %.0f%%",
     scheduled, percent (scheduled, stats.irredundant));
@@ -454,7 +455,6 @@ REDUNDANT:
       assert (found);
 
       strengthened++; // only now because of 'goto REDUNDANT' above
-
 
       assert (!clause.empty ());	// at least one decision made
 

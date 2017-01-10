@@ -97,6 +97,8 @@ void Stats::print (Internal * internal) {
   //if (verbose) {
   MSG ("  vivifychecks:  %15ld   %10.2f %%  per conflict",
     stats.vivifychecks, percent (stats.vivifychecks, stats.conflicts));
+  MSG ("  vivifysched:   %15ld   %10.2f %%  checks per scheduled",
+    stats.vivifysched, percent (stats.vivifychecks, stats.vivifysched));
   MSG ("  vivifyunits:   %15ld   %10.2f %%  per vivify check",
     stats.vivifyunits,
     percent (stats.vivifyunits, stats.vivifychecks));

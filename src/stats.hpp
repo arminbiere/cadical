@@ -60,6 +60,7 @@ struct Stats {
   long vivifychecks; // checked clauses during vivification
   long vivifydecs;   // vivification decisions
   long vivifyreused; // reused vivification decisions
+  long vivifysched;  // scheduled clauses for vivification
   long vivifysubs;   // subsumed clauses during vivification
   long vivifystrs;   // strengthened clauses during vivification
   long vivifyunits;  // units during vivification
