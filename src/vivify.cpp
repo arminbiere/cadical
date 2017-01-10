@@ -396,7 +396,7 @@ void Internal::vivify () {
 	  redundant = true;
 	} else {		// negative implied
 	  assert (tmp < 0);
-	  LOG ("can remove literal %d which is already false", lit);
+	  LOG ("literal %d is already false and can be removed", lit);
 	  remove = lit;
 	}
       } else {			// still uassigned
@@ -413,49 +413,29 @@ void Internal::vivify () {
     }
 
     if (redundant) {
-REDUNDANT:
       subsumed++;
       LOG (c, "redundant asymmetric tautology");
       mark_garbage (c);
     } else if (remove) {
+      strengthened++;
       assert (level);
       assert (clause.empty ());
-#ifndef NDEBUG
-      bool found = false;
-#endif
+
       // There might be other literals implied to false (or even root level
-      // falsified).  Those should be removed in addition to 'remove'.  It
-      // might further be possible that a latter to be assumed literal is
-      // already forced to true in which case the clause is actually
-      // redundant (we solve this by bad style 'goto' programming).
+      // falsified).  Those should be removed in addition to 'remove'.
       //
       for (j = c->begin (); j != eoc; j++) {
         const int other = *j, tmp = val (other);
         Var & v = var (other);
-
-        if (tmp > 0) {				// positive implied
-	  assert (v.level), assert (v.reason);
-          LOG ("redundant since literal %d already true", other);
-          clause.clear ();
-          goto REDUNDANT;
-        }
-
+	assert (tmp <= 0);
         if (tmp < 0 && !v.level) continue;	// root-level fixed
-
         if (tmp < 0 && v.level && v.reason) {	// negative implied
           assert (v.level);
           assert (v.reason);
           LOG ("flushing literal %d", other);
           mark_removed (other);
-#ifndef NDEBUG
-          if (other == remove) found = true;
-#endif
         } else clause.push_back (other);	// decision or unassigned
       }
-      assert (found);
-
-      strengthened++; // only now because of 'goto REDUNDANT' above
-
       assert (!clause.empty ());	// at least one decision made
 
       if (clause.size () == 1) {
@@ -468,8 +448,9 @@ REDUNDANT:
         bool ok = propagate ();
         if (!ok) learn_empty_clause ();
       } else {
-	sort (clause.begin (), clause.end (),
-	  unassigned_or_trail_smaller (this));
+	sort (clause.begin (),
+	      clause.end (),
+	      unassigned_or_trail_smaller (this));
 	const int lit0 = clause[0], val0 = val (lit0);
 	if (val0 < 0) {
 	  const int level0 = var (lit0).level;
@@ -483,6 +464,8 @@ REDUNDANT:
 	    backtrack (level1 - 1);
 	  }
 	}
+	assert (val (clause[0]) >= 0);
+	assert (val (clause[1]) >= 0);
 #ifdef LOGGING
         Clause * d =
 #endif
