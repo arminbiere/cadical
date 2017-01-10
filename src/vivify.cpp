@@ -141,6 +141,22 @@ void Internal::flush_vivification_schedule (vector<Clause*> & schedule) {
 
 /*------------------------------------------------------------------------*/
 
+struct unassigned_or_trail_smaller {
+
+  Internal * internal;
+
+  unassigned_or_trail_smaller (Internal * i) : internal (i) { }
+
+  bool operator () (int a, int b) {
+    const int av = internal->val (a), bv = internal->val (b);
+    if (!av && bv) return true;
+    if (av && !bv) return false;
+    if (av && bv) return internal->var (a).trail < internal->var (b).trail;
+    assert (!av && !bv);
+    return abs (a) < abs (b);
+  }
+};
+
 void Internal::vivify () {
 
   if (unsat) return;
@@ -452,7 +468,21 @@ REDUNDANT:
         bool ok = propagate ();
         if (!ok) learn_empty_clause ();
       } else {
-	backtrack ();			// sort by trail and fix level
+	sort (clause.begin (), clause.end (),
+	  unassigned_or_trail_smaller (this));
+	const int lit0 = clause[0], val0 = val (lit0);
+	if (val0 < 0) {
+	  const int level0 = var (lit0).level;
+	  LOG ("1st watch %d negative at level %d", lit0, level0);
+	  backtrack (level0 - 1);
+	} else {
+	  const int lit1 = clause[1], val1 = val (lit1);
+	  if (val1 < 0) {
+	    const int level1 = var (lit1).level;
+	    LOG ("2nd watch %d negative at level %d", lit1, level1);
+	    backtrack (level1 - 1);
+	  }
+	}
         Clause * d = new_clause_as (c);
         LOG (c, "before vivification");
         LOG (d, "after vivification");

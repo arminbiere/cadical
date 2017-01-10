@@ -64,6 +64,7 @@ class Internal {
   friend struct more_noccs2;
   friend struct subsume_less_noccs;
   friend struct trail_bumped_smaller;
+  friend struct unassigned_or_trail_smaller;
   friend struct trail_assigned_larger;
   friend struct trail_assigned_smaller;
   friend struct vivify_less_clause;
