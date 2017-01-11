@@ -424,9 +424,9 @@ void Internal::vivify () {
       // falsified).  Those should be removed in addition to 'remove'.
       //
       for (j = c->begin (); j != eoc; j++) {
-        const int other = *j, tmp = val (other);
+        const int other = *j;
         Var & v = var (other);
-	assert (tmp < 0);
+	assert (val (other) < 0);
         if (!v.level) continue;	// root-level fixed
         if (v.reason) {		// negative implied
           assert (v.level);
