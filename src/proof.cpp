@@ -103,6 +103,7 @@ void Proof::trace_delete_clause (Clause * c) {
 }
 
 void Proof::trace_add_clause () {
+  LOG (internal->clause, "tracing addition");
   if (binary) file->put ('a');
   const const_int_iterator end = internal->clause.end ();
   const_int_iterator i = internal->clause.begin ();

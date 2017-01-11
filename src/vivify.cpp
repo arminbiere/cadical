@@ -149,14 +149,10 @@ struct better_watch {
 
   bool operator () (int a, int b) {
     const int av = internal->val (a), bv = internal->val (b);
-    COVER (!av);
-    COVER (!bv);
-    if (!av && bv) return true;
-    if (av && !bv) return false;
+    assert (av), assert (bv);
     if (av > 0 && bv < 0) return true;
     if (av < 0 && bv > 0) return false;
-    if (av && bv) return internal->var (a).trail > internal->var (b).trail;
-    return abs (a) < abs (b);
+    return internal->var (a).trail > internal->var (b).trail;
   }
 };
 
@@ -430,14 +426,18 @@ void Internal::vivify () {
       for (j = c->begin (); j != eoc; j++) {
         const int other = *j, tmp = val (other);
         Var & v = var (other);
-	assert (tmp <= 0);
-        if (tmp < 0 && !v.level) continue;	// root-level fixed
-        if (tmp < 0 && v.level && v.reason) {	// negative implied
+	assert (tmp < 0);
+        if (!v.level) continue;	// root-level fixed
+        if (v.reason) {		// negative implied
           assert (v.level);
           assert (v.reason);
           LOG ("flushing literal %d", other);
           mark_removed (other);
-        } else clause.push_back (other);	// decision or unassigned
+        } else {				// decision or unassigned
+          LOG ("keeping literal %d", other);
+	  clause.push_back (other);	
+	  mark_added (other);
+	}
       }
       assert (!clause.empty ());	// at least one decision made
 
@@ -452,10 +452,10 @@ void Internal::vivify () {
         if (!ok) learn_empty_clause ();
       } else {
 
-	// Move unassigned, and then true literals to the front, followed by
-	// false literals.   False literals are further sorted by
-	// reverse assignment order.  The goal is to find watches which
-	// requires to backtrack as few as possible decision levels.
+	// Move true literals to the front, followed by false literals.
+	// Note that all literals are assigned. False literals are further
+	// sorted by reverse assignment order.  The goal is to find watches
+	// which requires to backtrack as few as possible decision levels.
 	//
 	sort (clause.begin (), clause.end (), better_watch (this));
 
@@ -482,7 +482,7 @@ void Internal::vivify () {
 #ifdef LOGGING
         Clause * d =
 #endif
-	new_clause_as (c);
+       new_clause_as (c);
         LOG (c, "before vivification");
         LOG (d, "after vivification");
       }

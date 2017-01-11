@@ -103,9 +103,9 @@ OPTION(transredmaxeff,double,  1e7, 0,  1, "maximum efficiency") \
 OPTION(transredmineff,double,  1e5, 0,  1, "minimum efficiency") \
 QUTOPT(verbose,         int,    0, 0,  2, "more verbose messages") \
 OPTION(vivify,          bool,    1, 0,  1, "vivification") \
-OPTION(vivifyreleff,  double, 0.30, 0,  1, "relative efficiency") \
-OPTION(vivifymaxeff,  double,  1e8, 0,  1, "maximum efficiency") \
-OPTION(vivifymineff,  double,  1e6, 0,  1, "minimum efficiency") \
+OPTION(vivifyreleff,  double, 0.03, 0,  1, "relative efficiency") \
+OPTION(vivifymaxeff,  double,  1e7, 0,  1, "maximum efficiency") \
+OPTION(vivifymineff,  double,  1e5, 0,  1, "minimum efficiency") \
 OPTION(witness,         bool,    1, 0,  1, "print witness") \
 
 /*------------------------------------------------------------------------*/
