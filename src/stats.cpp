@@ -148,14 +148,15 @@ void Stats::print (Internal * internal) {
     stats.minimized, percent (stats.minimized, stats.learned));
   MSG ("subsumed:        %15ld   %10.2f    tried per subsumed",
     stats.subsumed, relative (stats.subtried, stats.subsumed));
-  if (verbose)
+  if (verbose) {
   MSG ("  duplicated:    %15ld   %10.2f %%  per subsumed",
     stats.duplicated, percent (stats.duplicated, stats.subsumed));
   MSG ("  transitive:    %15ld   %10.2f %%  per subsumed",
     stats.transitive, percent (stats.transitive, stats.subsumed));
+  }
   MSG ("strengthened:    %15ld   %10.2f    per subsumed",
     stats.strengthened, relative (stats.strengthened, stats.subsumed));
-  //if (verbose) {
+  if (verbose) {
   MSG ("  subirr:        %15ld   %10.2f %%  of subsumed",
     stats.subirr, percent (stats.subirr, stats.subsumed));
   MSG ("  subred:        %15ld   %10.2f %%  of subsumed",
@@ -166,7 +167,7 @@ void Stats::print (Internal * internal) {
     stats.subchecks, relative (stats.subchecks, stats.subtried));
   MSG ("  subchecks2:    %15ld   %10.2f %%  per subcheck",
     stats.subchecks2, percent (stats.subchecks2, stats.subchecks));
-  //}
+  }
   MSG ("searched:        %15ld   %10.2f    per decision",
     stats.searched, relative (stats.searched, stats.decisions));
   MSG ("bumped:          %15ld   %10.2f    per conflict",
