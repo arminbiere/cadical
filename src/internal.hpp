@@ -433,6 +433,7 @@ class Internal {
   int probe_dominator (int a, int b);
   int hyper_binary_resolve (Clause*);
   void packtrack (int probe);
+  void probagate2 ();
   bool probagate ();
   void generate_probes ();
   int next_probe ();

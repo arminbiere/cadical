@@ -94,7 +94,7 @@ void Stats::print (Internal * internal) {
   long vivified = stats.vivifysubs + stats.vivifystrs;
   MSG ("vivified:        %15ld   %10.2f %%  per vivify check",
     vivified, percent (vivified, stats.vivifychecks));
-  //if (verbose) {
+  if (verbose) {
   MSG ("  vivifychecks:  %15ld   %10.2f %%  per conflict",
     stats.vivifychecks, percent (stats.vivifychecks, stats.conflicts));
   MSG ("  vivifysched:   %15ld   %10.2f %%  checks per scheduled",
@@ -110,7 +110,7 @@ void Stats::print (Internal * internal) {
     stats.vivifydecs, relative (stats.vivifydecs, stats.vivifychecks));
   MSG ("  vivifyreused:  %15ld   %10.2f %%  per decision",
     stats.vivifyreused, percent (stats.vivifyreused, stats.vivifydecs));
-  //}
+  }
   MSG ("reused:          %15ld   %10.2f %%  per restart",
     stats.reused, percent (stats.reused, stats.restarts));
   MSG ("resolutions:     %15ld   %10.2f    per eliminated",

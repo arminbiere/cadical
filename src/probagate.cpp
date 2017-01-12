@@ -179,9 +179,28 @@ void Internal::probe_assign_unit (int lit) {
 // This is essentially the same as 'propagate' except that we prioritize and
 // always propagate binary clauses first (see our CPAIOR paper on tree based
 // look ahead), then immediately stop at a conflict and of course use
-// 'probe_assign' instead of 'search_assign'.  If a new unit is formed we
+// 'probe_assign' instead of 'search_assign'.  The binary propagation part
+// is factored out too.  If a new unit on decision level on is found we
 // perform hyper binary resolution and thus actually build an implication
 // tree instead of a DAG.  Statistics counters are also different.
+
+void Internal::probagate2 () {
+  while (!conflict && probagated2 < trail.size ()) {
+    const int lit = -trail[probagated2++];
+    LOG ("probagating %d over binary clauses", -lit);
+    Watches & ws = watches (lit);
+    const_watch_iterator i = ws.begin ();
+    watch_iterator j = ws.begin ();
+    while (!conflict && i != ws.end ()) {
+      const Watch w = *j++ = *i++;
+      if (!w.binary) continue;
+      const int b = val (w.blit);
+      if (b > 0) continue;
+      if (b < 0) conflict = w.clause;
+      else probe_assign (w.blit, -lit);
+    }
+  }
+}
 
 bool Internal::probagate () {
 
@@ -193,21 +212,8 @@ bool Internal::probagate () {
   long before = probagated2;
 
   while (!conflict) {
-    if (probagated2 < trail.size ()) {
-      const int lit = -trail[probagated2++];
-      LOG ("probagating %d over binary clauses", -lit);
-      Watches & ws = watches (lit);
-      const_watch_iterator i = ws.begin ();
-      watch_iterator j = ws.begin ();
-      while (!conflict && i != ws.end ()) {
-        const Watch w = *j++ = *i++;
-        if (!w.binary) continue;
-        const int b = val (w.blit);
-        if (b > 0) continue;
-        if (b < 0) conflict = w.clause;
-        else probe_assign (w.blit, -lit);
-      }
-    } else if (probagated < trail.size ()) {
+    if (probagated2 < trail.size ()) probagate2 ();
+    else if (probagated < trail.size ()) {
       const int lit = -trail[probagated++];
       LOG ("probagating %d over large clauses", -lit);
       Watches & ws = watches (lit);
@@ -254,6 +260,7 @@ bool Internal::probagate () {
               int dom = hyper_binary_resolve (w.clause);
               probe_assign (lits[0], dom);
             } else probe_assign_unit (lits[0]);
+	    probagate2 ();
           } else { conflict = w.clause; break; }
         }
       }
