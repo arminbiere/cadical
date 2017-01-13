@@ -80,12 +80,16 @@ class Internal {
   bool simplifying;             // outside of CDCL loop
   bool vivifying;               // during vivification
   size_t vsize;                 // actually allocated variable data size
-  int max_var;                  // maximum variable index
+  int max_var;                  // (internal) maximum variable index
+  int emax_var;                 // external maximum variable index
   int level;                    // decision level ('control.size () - 1')
-  signed char * vals;           // assignment       [-max_var,max_var]
-  signed char * solution;       // for debugging    [-max_var,max_var]
-  signed char * marks;          // signed marks     [1,max_var]
-  signed char * phases;         // saved assignment [1,max_var]
+  signed char * vals;           // assignment          [-max_var,max_var]
+  signed char * solution;       // for debugging       [-max_var,max_var]
+  signed char * marks;          // signed marks        [1,max_var]
+  signed char * phases;         // saved assignment    [1,max_var]
+  signed char * evals;	        // external assignment [1,max_var]
+  int * emap;			// export map: external idx to internal lit
+  int * imap;			// import map: internal idx to external lit
   Queue queue;                  // variable move to front decision queue
   Var * vtab;                   // variable table
   Link * ltab;                  // table of links for decision queue
@@ -482,11 +486,11 @@ class Internal {
   //
   void check (int (Internal::*assignment) (int) const);
 
-  // Get the value of a literal: -1 = false, 0 = unassigned, 1 = true.
+  // Get the value of an internal literal: -1=false, 0=unassigned, 1=true.
   // We use a redundant table for both negative and positive literals.  This
-  // however allows a branch-less check for the value of literal and is
-  // considered substantially faster than negating the result if the
-  // argument is negative.  We also avoid taking the absolute value.
+  // allows a branch-less check for the value of literal and is considered
+  // substantially faster than negating the result if the argument is
+  // negative.  We also avoid taking the absolute value.
   //
   int val (int lit) const {
     assert (lit), assert (abs (lit) <= max_var);
@@ -502,6 +506,27 @@ class Internal {
     if (res && vtab[idx].level) res = 0;
     if (lit < 0) res = -res;
     return res;
+  }
+
+  // Get the value of a an external literal as stored in the 'evals' map.
+  // This is used to obtain the actual (external) value of a variable and
+  // thus is not that time critical as 'val' above and we trade space for
+  // a small amount of time.
+  //
+  int eval (int lit) const {
+    const int idx = abs (lit);
+    assert (idx), assert (idx <= emax_var);
+    int res = evals[idx];
+    if (lit < 0) res = -res;
+    return res;
+  }
+
+  int import_literal (int lit) {
+    return 0;
+  }
+
+  int export_literal (int lit) {
+    return 0;
   }
 
   // Parsing functions (handed over to 'parse.cpp').
