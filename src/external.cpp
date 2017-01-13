@@ -71,8 +71,10 @@ void External::add (int elit) {
 
 int External::solve () {
   int res = internal->solve ();
-  if (res == 10) extend ();
-  if (internal->opts.check) check (&External::val);
+  if (res == 10) {
+    extend ();
+    if (internal->opts.check) check (&External::val);
+  }
   return res;
 }
 
