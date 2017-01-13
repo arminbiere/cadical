@@ -49,13 +49,10 @@ void External::extend () {
       last = lit;
     }
     if (satisfied) continue;
-    flipped++;
     assert (last);
     LOG ("flipping blocking literal %d", last);
-    const int idx = vidx (last);
-    const int tmp = sign (last);
-    vals[idx] = tmp;
-    vals[-idx] = -tmp;
+    vals[vidx (last)] = sign (last);
+    flipped++;
   }
   VRB ("extend", "flipped %ld literals during extension", flipped);
   STOP (extend);
