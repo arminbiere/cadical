@@ -1,4 +1,4 @@
-
+#include "external.hpp"
 #include "internal.hpp"
 #include "macros.hpp"
 #include "message.hpp"
@@ -342,7 +342,7 @@ inline void Internal::elim_add_resolvents (int pivot) {
     for (j = ns.begin (); !unsat && j != eon; j++) {
       Clause *d = *j;
       if (!resolve_clauses (c, pivot, d)) continue;
-      check_learned_clause ();
+      external->check_learned_clause ();
       if (!c->redundant && !d->redundant) {
         resolvents++;
         Clause * r = new_resolved_irredundant_clause ();
@@ -397,8 +397,8 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
   // forced to false and then if necessary fixed by checking the clauses in
   // which 'pivot' occurs to be falsified.
 
-  extension.push_back (0);
-  extension.push_back (-pivot);
+  external->extension.push_back (0);
+  external->extension.push_back (-pivot);
 }
 
 /*------------------------------------------------------------------------*/

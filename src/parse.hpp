@@ -6,11 +6,13 @@ namespace CaDiCaL {
 // Factors out common functions for parsing of DIMACS and solution files.
 
 class File;
+class External;
 class Internal;
 
 class Parser {
 
   Internal * internal;
+  External * external;
   File * file;
 
   void perr (const char * fmt, ...);
@@ -24,7 +26,9 @@ class Parser {
 
 public:
 
-  Parser (Internal * s, File * f) : internal (s), file (f) { }
+  Parser (Internal * i, External * e, File * f)
+  : internal (i), external (e), file (f)
+  { }
 
   // Parse a DIMACS file.  Return zero if successful. Otherwise parse error.
   // The clauses are added.

@@ -13,6 +13,12 @@ namespace CaDiCaL {
 // 'Internal' but hides everything else (except for the private member
 // functions below).  It makes it easier to understand and use the solver.
 
+// We further map external literals to internal literals, which is
+// particularly useful with many inactive variables, but also necessary, if
+// we want to include approaches based on extended resolution (such as
+// bounded variable addition).  The data structure necessary to maintain
+// this mapping is stored in the (here opaque) 'External' data structure.
+
 // It has the additional benefit to decouple this header file from all the
 // internal data structures, which is particularly useful if the rest of the
 // source is not available. For instance if only a CaDiCaL library is
@@ -23,12 +29,14 @@ namespace CaDiCaL {
 
 class File;
 class Internal;
+class External;
 
 /*------------------------------------------------------------------------*/
 
 class Solver {
 
   Internal * internal;
+  External * external;
 
 public:
 

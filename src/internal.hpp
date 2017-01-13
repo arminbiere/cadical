@@ -34,6 +34,7 @@ namespace CaDiCaL {
 
 using namespace std;
 
+class External;
 class File;
 class Proof;
 
@@ -44,6 +45,7 @@ class Internal {
   /*----------------------------------------------------------------------*/
 
   friend class Arena;
+  friend class External;
   friend class File;
   friend struct Logger;
   friend struct Message;
@@ -81,15 +83,11 @@ class Internal {
   bool vivifying;               // during vivification
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // (internal) maximum variable index
-  int emax_var;                 // external maximum variable index
   int level;                    // decision level ('control.size () - 1')
   signed char * vals;           // assignment          [-max_var,max_var]
-  signed char * solution;       // for debugging       [-max_var,max_var]
   signed char * marks;          // signed marks        [1,max_var]
   signed char * phases;         // saved assignment    [1,max_var]
-  signed char * evals;	        // external assignment [1,max_var]
-  int * emap;			// export map: external idx to internal lit
-  int * imap;			// import map: internal idx to external lit
+  int * map;			// internal idx to external lit
   Queue queue;                  // variable move to front decision queue
   Var * vtab;                   // variable table
   Link * ltab;                  // table of links for decision queue
@@ -110,8 +108,6 @@ class Internal {
   vector<int> levels;           // decision levels in learned clause
   vector<int> analyzed;         // analyzed literals in 'analyze'
   vector<int> minimized;        // removable or poison in 'minimize'
-  vector<int> original;         // original CNF for debugging
-  vector<int> extension;        // original CNF for debugging
   vector<int> probes;           // remaining scheduled probes
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
@@ -132,9 +128,11 @@ class Internal {
 #endif
   Arena arena;                  // memory arena for moving garbage collector
   Format error;                 // last (persistent) error message
-  Internal * internal;          // proxy to 'this' in macros (redundant)
   Clause binary_subsuming;      // communicate binary subsuming clause
   File * output;                // output file
+
+  Internal * internal;          // proxy to 'this' in macros (redundant)
+  External * external;		// proxy to 'external' buddy in 'Solver'
 
   /*----------------------------------------------------------------------*/
 
@@ -145,7 +143,7 @@ class Internal {
   //
   void resize_queue (int new_max_var);
   void resize (int new_max_var);
-  void add_original_lit (int lit);
+  void add_original_lit (int elit);
 
   // Enlarge tables.
   //
@@ -422,7 +420,6 @@ class Internal {
   void try_to_eliminate_variable (int pivot);
   void reset_removed ();
   bool elim_round ();
-  void extend ();
   void elim ();
 
   // Failed literal probing.
@@ -476,16 +473,6 @@ class Internal {
   void print_profile (double now);
 #endif
 
-  // Checking solutions (see 'solution.cpp').
-  //
-  int sol (int lit) const;
-  void check_shrunken_clause (Clause *);
-  void check_learned_clause ();
-
-  // Check that the assignment satisfies all saved original clauses.
-  //
-  void check (int (Internal::*assignment) (int) const);
-
   // Get the value of an internal literal: -1=false, 0=unassigned, 1=true.
   // We use a redundant table for both negative and positive literals.  This
   // allows a branch-less check for the value of literal and is considered
@@ -508,25 +495,13 @@ class Internal {
     return res;
   }
 
-  // Get the value of a an external literal as stored in the 'evals' map.
-  // This is used to obtain the actual (external) value of a variable and
-  // thus is not that time critical as 'val' above and we trade space for
-  // a small amount of time.
-  //
-  int eval (int lit) const {
+  int externalize (int lit) {
+    assert (lit != INT_MIN);
     const int idx = abs (lit);
-    assert (idx), assert (idx <= emax_var);
-    int res = evals[idx];
+    assert (idx), assert (idx <= max_var);
+    int res = map[idx];
     if (lit < 0) res = -res;
     return res;
-  }
-
-  int import_literal (int lit) {
-    return 0;
-  }
-
-  int export_literal (int lit) {
-    return 0;
   }
 
   // Parsing functions (handed over to 'parse.cpp').

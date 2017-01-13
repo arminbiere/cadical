@@ -1,5 +1,6 @@
 #include "file.hpp"
 #include "internal.hpp"
+#include "external.hpp"
 #include "logging.hpp"
 #include "macros.hpp"
 #include "message.hpp"
@@ -102,7 +103,7 @@ const char * Parser::parse_dimacs_non_profiled () {
   if (ch != '\n')
     PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
   MSG ("found 'p cnf %d %d' header", vars, clauses);
-  internal->resize (vars);
+  external->resize (vars);
   int lit = 0, parsed = 0;
   while ((ch = parse_char ()) != EOF) {
     if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r') continue;
@@ -115,7 +116,7 @@ COMMENT:
     err = parse_lit (ch, lit, vars);
     if (err) return err;
     if (ch == 'c') goto COMMENT;
-    internal->add_original_lit (lit);
+    external->add (lit);
     if (!lit && parsed++ >= clauses) PER ("too many clauses");
   }
   if (lit) PER ("last clause without '0'");
@@ -129,8 +130,8 @@ COMMENT:
 // Parsing function for a solution in competition output format.
 
 const char * Parser::parse_solution_non_profiled () {
-  NEW (internal->solution, signed char, internal->max_var + 1);
-  for (int i = 1; i <= internal->max_var; i++) internal->solution[i] = 0;
+  NEW (external->solution, signed char, external->max_var + 1);
+  for (int i = 1; i <= external->max_var; i++) external->solution[i] = 0;
   int ch;
   for (;;) {
     ch = parse_char ();
@@ -153,21 +154,21 @@ const char * Parser::parse_solution_non_profiled () {
     int lit = 0; ch = parse_char ();
     do {
       if (ch == ' ' || ch == '\t') { ch = parse_char (); continue; }
-      err = parse_lit (ch, lit, internal->max_var);
+      err = parse_lit (ch, lit, external->max_var);
       if (err) return err;
       if (ch == 'c') PER ("unexpected comment");
       if (!lit) break;
-      if (internal->solution[abs (lit)])
+      if (external->solution[abs (lit)])
         PER ("variable %d occurs twice", abs (lit));
       LOG ("solution %d", lit);
-      internal->solution [abs (lit)] = sign (lit);
+      external->solution [abs (lit)] = sign (lit);
       count++;
       if (ch == '\r') ch = parse_char ();
     } while (ch != '\n');
     if (!lit) break;
   }
   MSG ("parsed %d solutions %.2f%%",
-    count, percent (count, internal->max_var));
+    count, percent (count, external->max_var));
   return 0;
 }
 

@@ -1,4 +1,5 @@
 #include "clause.hpp"
+#include "external.hpp"
 #include "internal.hpp"
 #include "macros.hpp"
 #include "message.hpp"
@@ -117,7 +118,7 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   if (likely_to_be_kept_clause (c)) mark_added (c);
   if (c->have_analyzed) c->analyzed () = ++stats.analyzed;
   LOG (c, "strengthened");
-  check_shrunken_clause (c);
+  external->check_shrunken_clause (c);
 }
 
 /*------------------------------------------------------------------------*/

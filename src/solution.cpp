@@ -1,3 +1,4 @@
+#include "external.hpp"
 #include "internal.hpp"
 #include "iterator.hpp"
 
@@ -10,19 +11,20 @@ namespace CaDiCaL {
 // forward proof checking.  The incorrectly derived clause will raise an abort
 // signal and thus allows to debug the issue with a symbolic debugger immediately.
 
-int Internal::sol (int lit) const {
+int External::sol (int lit) const {
   assert (solution);
   int res = solution[vidx (lit)];
   if (lit < 0) res = -res;
   return res;
 }
 
-void Internal::check_learned_clause () {
-  if (!solution) return;
+void External::check_solution_on_learned_clause () {
+  assert (solution);
   bool satisfied = false;
+  vector<int> & clause = internal->clause;
   const const_int_iterator end = clause.end ();
   for (const_int_iterator i = clause.begin (); !satisfied && i != end; i++)
-    satisfied = (sol (*i) > 0);
+    satisfied = (sol (internal->externalize (*i)) > 0);
   if (satisfied) return;
   fflush (stdout);
   fputs (
@@ -35,12 +37,12 @@ void Internal::check_learned_clause () {
   abort ();
 }
 
-void Internal::check_shrunken_clause (Clause * c) {
-  if (!solution) return;
+void External::check_solution_on_shrunken_clause (Clause * c) {
+  assert (solution);
   bool satisfied = false;
   const const_literal_iterator end = c->end ();
   for (const_literal_iterator i = c->begin (); !satisfied && i != end; i++)
-    satisfied = (sol (*i) < 0);
+    satisfied = (sol (internal->externalize (*i)) < 0);
   if (satisfied) return;
   fflush (stdout);
   fputs (

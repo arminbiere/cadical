@@ -1,3 +1,4 @@
+#include "external.hpp"
 #include "internal.hpp"
 #include "macros.hpp"
 #include "message.hpp"
@@ -314,12 +315,12 @@ bool Internal::decompose_round () {
     assert (active (other));
     flags (idx).status = Flags::SUBSTITUTED;
     stats.substituted++;
-    extension.push_back (0);
-    extension.push_back (-idx);
-    extension.push_back (other);
-    extension.push_back (0);
-    extension.push_back (idx);
-    extension.push_back (-other);
+    external->extension.push_back (0);
+    external->extension.push_back (externalize (-idx));
+    external->extension.push_back (externalize (other));
+    external->extension.push_back (0);
+    external->extension.push_back (externalize (idx));
+    external->extension.push_back (externalize (-other));
   }
 
   delete [] reprs;

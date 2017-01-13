@@ -1,6 +1,7 @@
 #include "cadical.hpp"
 #include "file.hpp"
 #include "internal.hpp"
+#include "external.hpp"
 #include "macros.hpp"
 #include "message.hpp"
 #include "parse.hpp"
@@ -18,13 +19,20 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-Solver::Solver () { internal = new Internal (); }
-Solver::~Solver () { delete internal; }
+Solver::Solver () {
+  internal = new Internal ();
+  external = new External (internal);
+}
+
+Solver::~Solver () {
+  delete external;
+  delete internal;
+}
 
 /*------------------------------------------------------------------------*/
 
-int Solver::max () const { return internal->max_var; }
-void Solver::resize (int new_max) { internal->resize (new_max); }
+int Solver::max () const { return external->max_var; }
+void Solver::resize (int new_max) { external->resize (new_max); }
 
 /*------------------------------------------------------------------------*/
 
@@ -41,16 +49,20 @@ bool Solver::set (const char * arg) { return internal->opts.set (arg); }
 /*------------------------------------------------------------------------*/
 
 void Solver::add (int lit) {
-  if (abs (lit) > internal->max_var) internal->resize (abs (lit));
-  internal->add_original_lit (lit);
+  if (abs (lit) > external->max_var) external->resize (abs (lit));
+  external->add (lit);
 }
 
 int Solver::val (int lit) {
-  if (abs (lit) > internal->max_var) return 0;
-  else return internal->val (lit);
+  if (abs (lit) > external->max_var) return 0;
+  else return external->val (lit);
 }
 
-int Solver::solve () { return internal->solve (); }
+int Solver::solve () {
+  int res = internal->solve ();
+  if (res == 10) external->extend ();
+  return res;
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -93,7 +105,7 @@ void Solver::statistics () { internal->stats.print (internal); }
 /*------------------------------------------------------------------------*/
 
 const char * Solver::dimacs (File * file) {
-  Parser * parser = new Parser (internal, file);
+  Parser * parser = new Parser (internal, external, file);
   const char * err = parser->parse_dimacs ();
   delete parser;
   return err;
@@ -122,11 +134,11 @@ const char * Solver::solution (const char * path) {
   File * file = File::read (internal, path);
   if (!file)
     return internal->error.init ("failed to read solution file '%s'", path);
-  Parser * parser = new Parser (internal, file);
+  Parser * parser = new Parser (internal, external, file);
   const char * err = parser->parse_solution ();
   delete parser;
   delete file;
-  if (!err) internal->check (&Internal::sol);
+  if (!err) external->check (&External::sol);
   return err;
 }
 

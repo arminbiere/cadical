@@ -1,3 +1,4 @@
+#include "external.hpp"
 #include "internal.hpp"
 #include "macros.hpp"
 
@@ -112,7 +113,7 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
     assert (clause.empty ());
     clause.push_back (-dom);
     clause.push_back (lits[0]);
-    check_learned_clause ();
+    external->check_learned_clause ();
     Clause * c = new_hyper_binary_resolved_clause (red, 2);
     if (red) c->hbr = true;
     clause.clear ();

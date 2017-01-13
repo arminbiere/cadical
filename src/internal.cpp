@@ -1,11 +1,11 @@
+#include "clause.hpp"
+#include "external.hpp"
+#include "file.hpp"
 #include "internal.hpp"
-
 #include "iterator.hpp"
 #include "macros.hpp"
 #include "message.hpp"
-#include "clause.hpp"
 #include "proof.hpp"
-#include "file.hpp"
 
 namespace CaDiCaL {
 
@@ -22,7 +22,6 @@ Internal::Internal ()
   max_var (0),
   level (0),
   vals (0),
-  solution (0),
   marks (0),
   phases (0),
   vtab (0),
@@ -45,8 +44,9 @@ Internal::Internal ()
   profiles (this),
 #endif
   arena (this),
+  output (File::write (this, stdout, "<stdou>")),
   internal (this),
-  output (File::write (this, stdout, "<stdou>"))
+  external (0)
 {
   control.push_back (Level (0));
   binary_subsuming.redundant = false;
@@ -64,7 +64,6 @@ Internal::~Internal () {
   if (ptab) delete [] ptab;
   if (big) delete [] big;
   if (vals) vals -= vsize, delete [] vals;
-  if (solution) solution -= vsize, delete [] solution;
   if (marks) delete [] marks;
   if (phases) delete [] phases;
   if (otab) reset_occs ();
@@ -89,7 +88,8 @@ void Internal::enlarge_vals (int new_vsize) {
 void Internal::enlarge (int new_max_var) {
   size_t new_vsize = vsize ? 2*vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
-  VRB ("enlarge", "from size %ld to new size %ld", vsize, new_vsize);
+  VRB ("enlarge internal",
+    "from size %ld to new size %ld", vsize, new_vsize);
   // Ordered in the size of allocated memory (larger block first).
   ENLARGE (wtab, Watches, 2*vsize, 2*new_vsize);
   ENLARGE (vtab, Var, vsize, new_vsize);
@@ -139,7 +139,7 @@ void Internal::resize (int new_max_var) {
 
 void Internal::add_original_lit (int lit) {
   assert (abs (lit) <= max_var);
-  if (opts.check) original.push_back (lit);
+  // TODO remove: if (opts.check) original.push_back (lit);
   if (lit) clause.push_back (lit);
   else {
     if (!tautological_clause ()) add_new_original_clause ();
@@ -220,8 +220,8 @@ int Internal::solve () {
     garbage_collection ();
     res = search ();
     if (res == 10) {
-      if (!extension.empty ()) extend ();
-      if (opts.check) check (&Internal::val);
+      external->extend ();
+      // TODO add if (opts.check) check (&Internal::val);
     }
   }
   report ((res == 10) ? '1' : (res == 20 ? '0' : '?'));
@@ -230,7 +230,7 @@ int Internal::solve () {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::check (int (Internal::*a)(int) const) {
+void External::check (int (External::*a)(int) const) {
 
   // First check all assigned and 'vals[idx] == -vals[-idx]' consistency.
   //
@@ -275,7 +275,7 @@ void Internal::check (int (Internal::*a)(int) const) {
   }
 
 #ifndef QUIET
-  if (opts.verbose) {
+  if (internal->opts.verbose) {
     MSG ("");
     MSG ("satisfying assignment checked");
     MSG ("");

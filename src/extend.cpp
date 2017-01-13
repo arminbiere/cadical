@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "external.hpp"
 #include "message.hpp"
 #include "macros.hpp"
 
@@ -11,7 +12,7 @@ namespace CaDiCaL {
 // stack.  First the blocking or eliminated literal is added, and then the
 // rest of the clause.
 
-void Internal::push_on_extension_stack (Clause * c, int pivot) {
+void External::push_on_extension_stack (Clause * c, int pivot) {
   extension.push_back (0);
   const const_literal_iterator end = c->end ();
   const_literal_iterator l;
@@ -24,7 +25,7 @@ void Internal::push_on_extension_stack (Clause * c, int pivot) {
 // on the extension stack and flips the assignment of the last literal found
 // in a clause if the clause is falsified.
 
-void Internal::extend () {
+void External::extend () {
   START (extend);
   long flipped = 0;
   VRB ("extend",
@@ -48,7 +49,7 @@ void Internal::extend () {
     LOG ("flipping blocking literal %d", last);
     const int idx = vidx (last);
     const int tmp = sign (last);
-    vals[idx] = phases[idx] = tmp;
+    vals[idx] = tmp;
     vals[-idx] = -tmp;
   }
   VRB ("extend", "flipped %ld literals during extension", flipped);
