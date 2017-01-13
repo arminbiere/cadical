@@ -48,21 +48,9 @@ bool Solver::set (const char * arg) { return internal->opts.set (arg); }
 
 /*------------------------------------------------------------------------*/
 
-void Solver::add (int lit) {
-  if (abs (lit) > external->max_var) external->resize (abs (lit));
-  external->add (lit);
-}
-
-int Solver::val (int lit) {
-  if (abs (lit) > external->max_var) return 0;
-  else return external->val (lit);
-}
-
-int Solver::solve () {
-  int res = internal->solve ();
-  if (res == 10) external->extend ();
-  return res;
-}
+void Solver::add (int lit) { external->add (lit); }
+int Solver::val (int lit) { return external->val (lit); }
+int Solver::solve () { return external->solve (); }
 
 /*------------------------------------------------------------------------*/
 

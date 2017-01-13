@@ -11,13 +11,6 @@ namespace CaDiCaL {
 // forward proof checking.  The incorrectly derived clause will raise an abort
 // signal and thus allows to debug the issue with a symbolic debugger immediately.
 
-int External::sol (int lit) const {
-  assert (solution);
-  int res = solution[vidx (lit)];
-  if (lit < 0) res = -res;
-  return res;
-}
-
 void External::check_solution_on_learned_clause () {
   assert (solution);
   bool satisfied = false;

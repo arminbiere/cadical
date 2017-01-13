@@ -374,7 +374,7 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
     if (c->garbage) continue;
     mark_garbage (c);
     if (c->redundant) continue;
-    push_on_extension_stack (c, pivot);
+    external->push_on_extension_stack (c, pivot);
     elim_update_removed (c, pivot);
   }
   erase_occs (ps);

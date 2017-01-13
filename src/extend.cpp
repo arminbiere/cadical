@@ -29,8 +29,13 @@ void External::extend () {
   START (extend);
   long flipped = 0;
   VRB ("extend",
+    "mapping internal %d assignments to %d assignments",
+    internal->max_var, max_var);
+  for (int i = 1; i <= max_var; i++)
+    vals[i] = internal->val (internalize (i));
+  VRB ("extend",
     "extending through extension stack of size %ld",
-    extension.size ());
+    (long) extension.size ());
   const const_int_iterator begin = extension.begin ();
   const_int_iterator i = extension.end ();
   while (i != begin) {
