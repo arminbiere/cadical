@@ -41,6 +41,9 @@ void Internal::compact () {
     }
   }
 
+  int new_max_var = dst;
+  size_t new_vsize = dst + 1;
+
   COVER (vals);
   COVER (phases);
   COVER (i2e);
@@ -67,7 +70,12 @@ void Internal::compact () {
   assert (resolved.empty ());
   COVER (esched.size ());
 
+  COVER (external->e2i);
+
   DEL (map, int, max_var);
+
+  max_var = new_max_var;
+  vsize = new_vsize;
 
   inc.compact += opts.compactint;
   lim.compact = stats.conflicts + inc.compact;
