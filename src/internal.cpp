@@ -157,16 +157,16 @@ int Internal::search () {
   START (search);
   while (!res)
          if (unsat) res = 20;
-    else if (!propagate ()) analyze (); // analyze propagated conflict
-    else if (iterating) iterate ();     // report learned unit
-    else if (satisfied ()) res = 10;    // all variables satisfied
-    else if (terminating ()) break;     // limit hit or asynchronous abort
-    else if (restarting ()) restart (); // restart by backtracking
-    else if (reducing ()) reduce ();    // collect useless learned clauses
-    else if (probing ()) probe ();      // failed literal probing
-    else if (subsuming ()) subsume ();  // run subsumption algorithm
-    else if (eliminating ()) elim ();   // run bounded variable elimination
-    else decide ();                     // otherwise pick next decision
+    else if (!propagate ()) analyze ();    // analyze propagated conflict
+    else if (iterating) iterate ();        // report learned unit
+    else if (satisfied ()) res = 10;       // all variables satisfied
+    else if (terminating ()) break;        // limit hit or asynchronous abort
+    else if (restarting ()) restart ();    // restart by backtracking
+    else if (reducing ()) reduce ();       // collect useless learned clauses
+    else if (probing ()) probe ();         // failed literal probing
+    else if (subsuming ()) subsume ();     // subsumption algorithm
+    else if (eliminating ()) elim ();      // bounded variable elimination
+    else decide ();                        // otherwise pick next decision
   STOP (search);
   return res;
 }

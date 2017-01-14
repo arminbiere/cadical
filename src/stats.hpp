@@ -23,6 +23,7 @@ struct Stats {
     long transred;   // propagated during transitive reduction
   } propagations;
 
+  long compacts;     // number of compactifications
   long restarts;     // actual number of happened restarts
   long reused;       // number of reused trails
   long reports;      // 'report' counter

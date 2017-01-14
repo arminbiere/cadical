@@ -364,6 +364,11 @@ class Internal {
   void flush_vivification_schedule (vector<Clause*> &);
   void vivify ();
 
+  // Compactification (shrinking internal variable tables).
+  //
+  bool compactifying ();
+  void compact ();
+
   // Transitive reduction of binary implication graph.
   //
   void transred ();
