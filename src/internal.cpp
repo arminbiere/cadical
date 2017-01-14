@@ -93,15 +93,15 @@ void Internal::enlarge (int new_max_var) {
   // Ordered in the size of allocated memory (larger block first).
   ENLARGE (wtab, Watches, 2*vsize, 2*new_vsize);
   ENLARGE (vtab, Var, vsize, new_vsize);
+  ENLARGE (ltab, Link, vsize, new_vsize);
   ENLARGE (btab, long, vsize, new_vsize);
   ENLARGE (ptab, int, 2*vsize, 2*new_vsize);
-  ENLARGE (i2e, int, vsize, 2*new_vsize);
-  ENLARGE (ltab, Link, vsize, new_vsize);
-  ENLARGE (marks, signed char, vsize, new_vsize);
+  ENLARGE (i2e, int, vsize, new_vsize);
+  enlarge_vals (new_vsize);
   ENLARGE (phases, signed char, vsize, new_vsize);
+  ENLARGE (marks, signed char, vsize, new_vsize);
   ENLARGE (ftab, Flags, vsize, new_vsize);
   assert (sizeof (Flags) == 1);
-  enlarge_vals (new_vsize);
   vsize = new_vsize;
 }
 
