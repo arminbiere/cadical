@@ -19,6 +19,28 @@ void Internal::compact () {
 
   assert (!level);
 
+  // We produce a compactifying garbage collector like map of old 'src' to
+  // new 'dst' variables.  Inactive variables are just skipped except for
+  // fixed ones which will be mapped to the first fixed variable (in the
+  // appropriate phase).  This avoids to handle the case 'fixed value'
+  // seperately as it is done in Lingeling, where fixed variables are
+  // mapped to the internal variable '1'.
+  //
+  int * map, dst = 1, first_fixed = 0, first_fixed_val = 0;
+  NEW (map, int, max_var + 1);
+  map[0] = 0;
+  for (int src = 1; src <= max_var; src++) {
+    const Flags & f = flags (src);
+    if (f.active ()) map[src] = dst++;
+    else if (!f.fixed ()) map[src] = 0;
+    else {
+      const int tmp = val (src);
+      if (!first_fixed) first_fixed_val = tmp, first_fixed = dst;
+      map[src] = (tmp == first_fixed_val) ? first_fixed : -first_fixed;
+      dst++;
+    }
+  }
+
   COVER (vals);
   COVER (phases);
   COVER (i2e);
@@ -44,6 +66,8 @@ void Internal::compact () {
   COVER (clauses.size ());
   assert (resolved.empty ());
   COVER (esched.size ());
+
+  DEL (map, int, max_var);
 
   inc.compact += opts.compactint;
   lim.compact = stats.conflicts + inc.compact;
