@@ -32,7 +32,7 @@ Solver::~Solver () {
 /*------------------------------------------------------------------------*/
 
 int Solver::max () const { return external->max_var; }
-void Solver::resize (int new_max) { external->resize (new_max); }
+void Solver::init (int new_max) { external->init (new_max); }
 
 /*------------------------------------------------------------------------*/
 

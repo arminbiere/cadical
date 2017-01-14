@@ -139,10 +139,12 @@ class Internal {
   Internal ();
   ~Internal ();
 
-  // Internal delegates and helpers for corresponding functions in 'Solver'.
+  // Internal delegates and helpers for corresponding functions in
+  // 'External' and 'Solver'.  The 'init' function initializes variables up
+  // to and including the requested variable index.
   //
-  void resize_queue (int new_max_var);
-  void resize (int new_max_var);
+  void init_queue (int new_max_var);
+  void init (int new_max_var);
   void add_original_lit (int elit);
 
   // Enlarge tables.

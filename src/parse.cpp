@@ -103,7 +103,7 @@ const char * Parser::parse_dimacs_non_profiled () {
   if (ch != '\n')
     PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
   MSG ("found 'p cnf %d %d' header", vars, clauses);
-  external->resize (vars);
+  external->init (vars);
   int lit = 0, parsed = 0;
   while ((ch = parse_char ()) != EOF) {
     if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r') continue;

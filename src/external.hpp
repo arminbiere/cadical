@@ -10,6 +10,30 @@ namespace CaDiCaL {
 
 using namespace std;
 
+/*------------------------------------------------------------------------*/
+
+// The CaDiCal code is split into three layers:
+//
+//   Solver:       facade object providing the actual API of the solver
+//   External:     commmunication layer between 'Solver' and 'Internal'
+//   Internal:     the actual solver code
+//
+// Note, that 'App' (and any user of the library should) access the library
+// only through the 'Solver' API.  For the library internal 'Parser' code we
+// make an exception and allow access to both 'External' and 'Internal'.
+// The former to enforce the same external to internal mapping of variables
+// and the latter for profiling and messages.
+
+// The 'External' class provided here stores the information needed to map
+// external variable indices to internal variables (actually literals).
+// This is helpful for shrinking the working size of the internal solver if
+// after many variables become inactive.  It will also help to provide
+// support for extended resolution in the future, since it allows to
+// introduce variables only visible internally (even though we do not know
+// how to support generating incremental proofs in this situation yet).
+
+/*------------------------------------------------------------------------*/
+
 class Clause;
 class Internal;
 
@@ -41,7 +65,7 @@ class External {
   ~External ();
 
   void enlarge (int new_max_var);
-  void resize (int new_max_var);
+  void init (int new_max_var);
 
   int vidx (int lit) const {
     assert (lit != INT_MIN);
@@ -60,7 +84,7 @@ class External {
 
   int solve ();
 
-  int val (int lit) const {
+  inline int val (int lit) const {
     assert (lit != INT_MIN);
     int idx = abs (lit);
     if (idx > max_var) return 0;
@@ -69,7 +93,9 @@ class External {
     return res;
   }
 
-  int sol (int lit) const {
+  // For debugging and testing only.  See 'solution.hpp' for more details.
+  //
+  inline int sol (int lit) const {
     assert (solution);
     assert (lit != INT_MIN);
     int idx = abs (lit);

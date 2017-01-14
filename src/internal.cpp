@@ -109,7 +109,7 @@ void Internal::enlarge (int new_max_var) {
 // incorporates an initial variable order.  We currently simply assume that
 // variables with smaller index are more important.
 //
-void Internal::resize_queue (int new_max_var) {
+void Internal::init_queue (int new_max_var) {
   int prev = queue.last;
   assert ((size_t) new_max_var < vsize);
   for (int i = new_max_var; i > max_var; i--) {
@@ -123,7 +123,7 @@ void Internal::resize_queue (int new_max_var) {
   queue.last = queue.unassigned = prev;
 }
 
-void Internal::resize (int new_max_var) {
+void Internal::init (int new_max_var) {
   if (new_max_var <= max_var) return;
   if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
   for (int i = -new_max_var; i < -max_var; i++) vals[i] = 0;
@@ -133,7 +133,7 @@ void Internal::resize (int new_max_var) {
   for (int i = max_var + 1; i <= new_max_var; i++) btab[i] = 0;
   for (int i = 2*(max_var + 1); i <= 2*new_max_var+1; i++) ptab[i] = -1;
   if (!max_var) btab[0] = 0;
-  resize_queue (new_max_var);
+  init_queue (new_max_var);
   LOG ("initialized %d internal variables", new_max_var - max_var);
   max_var = new_max_var;
 }

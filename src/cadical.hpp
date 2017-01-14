@@ -43,7 +43,7 @@ public:
   Solver ();
   ~Solver ();
 
-  void resize (int new_max);    // explicitly set new maximum variable index
+  void init (int new_max);      // explicitly set new maximum variable index
   int max () const;             // return maximum variable index
 
   //------------------------------------------------------------------------

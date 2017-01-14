@@ -254,7 +254,8 @@ void Internal::analyze () {
   int size = (int) clause.size ();
   stats.learned += size;
 
-  // Minimize and optionally shrink 1st UIP clause.
+  // Minimize 1st UIP clause as pioneered by MiniSAT and described in our
+  // SAT'09 paper.
   //
   if (size > 1) {
     if (opts.minimize) minimize_clause ();

@@ -34,12 +34,12 @@ void External::enlarge (int new_max_var) {
   vsize = new_vsize;
 }
 
-void External::resize (int new_max_var) {
+void External::init (int new_max_var) {
   if (new_max_var <= max_var) return;
   int new_vars = new_max_var - max_var;
   int old_internal_max_var = internal->max_var;
   int new_internal_max_var = old_internal_max_var + new_vars;
-  internal->resize (new_internal_max_var);
+  internal->init (new_internal_max_var);
   if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
   for (int i = max_var + 1; i <= new_max_var;  i++) vals[i] = 0;
   LOG ("initialized %d external variables", new_vars);
@@ -60,7 +60,7 @@ void External::add (int elit) {
   if (elit) {
     assert (elit != INT_MIN);
     const int eidx = abs (elit);
-    if (eidx > max_var) resize (eidx);
+    if (eidx > max_var) init (eidx);
     ilit = map [eidx];
     if (elit < 0) ilit = -ilit;
     LOG ("adding external %d as internal %d", elit, ilit);
