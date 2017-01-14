@@ -87,7 +87,7 @@ class Internal {
   signed char * vals;           // assignment          [-max_var,max_var]
   signed char * marks;          // signed marks        [1,max_var]
   signed char * phases;         // saved assignment    [1,max_var]
-  int * map;			// internal idx to external lit
+  int * i2e;			// internal idx to external lit
   Queue queue;                  // variable move to front decision queue
   Var * vtab;                   // variable table
   Link * ltab;                  // table of links for decision queue
@@ -501,7 +501,7 @@ class Internal {
     assert (lit != INT_MIN);
     const int idx = abs (lit);
     assert (idx), assert (idx <= max_var);
-    int res = map[idx];
+    int res = i2e[idx];
     if (lit < 0) res = -res;
     return res;
   }

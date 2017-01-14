@@ -49,7 +49,7 @@ class External {
   int max_var;            // (exernal) maximum variable index
   signed char * vals;	  // external assignment [1,max_var]
   signed char * solution; // for debugging       [-max_var,max_var]
-  int * map;		  // external idx to internal lit [1,max_var]
+  int * e2i;		  // external idx to internal lit [1,max_var]
 
   vector<int> extension;
   vector<int> original;
@@ -75,7 +75,7 @@ class External {
   }
 
   int internalize (int lit) const {
-    int res = map[vidx (lit)];
+    int res = e2i[vidx (lit)];
     if (lit < 0) res = -res;
     return res;;
   }

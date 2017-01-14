@@ -66,7 +66,7 @@ Internal::~Internal () {
   if (vals) vals -= vsize, delete [] vals;
   if (marks) delete [] marks;
   if (phases) delete [] phases;
-  if (map) delete [] map;
+  if (i2e) delete [] i2e;
   if (otab) reset_occs ();
   if (ntab) reset_noccs ();
   if (ntab2) reset_noccs2 ();
@@ -95,7 +95,7 @@ void Internal::enlarge (int new_max_var) {
   ENLARGE (vtab, Var, vsize, new_vsize);
   ENLARGE (btab, long, vsize, new_vsize);
   ENLARGE (ptab, int, 2*vsize, 2*new_vsize);
-  ENLARGE (map, int, vsize, 2*new_vsize);
+  ENLARGE (i2e, int, vsize, 2*new_vsize);
   ENLARGE (ltab, Link, vsize, new_vsize);
   ENLARGE (marks, signed char, vsize, new_vsize);
   ENLARGE (phases, signed char, vsize, new_vsize);
