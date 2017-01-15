@@ -2,8 +2,6 @@
 #include "external.hpp"
 #include "macros.hpp"
 
-#include <cstring>
-
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
@@ -33,7 +31,7 @@ do { \
   for (int SRC = 1; SRC <= max_var; SRC++) { \
     const int DST = map[SRC]; \
     if (!DST) continue; \
-    memcpy (TMP + DST, NAME + SRC, sizeof (TYPE)); \
+    TMP[DST] = NAME[SRC]; \
   } \
   memset (TMP, 0, sizeof TMP[0]); \
   delete [] NAME; \
@@ -50,7 +48,8 @@ do { \
   for (int SRC = 1; SRC <= max_var; SRC++) { \
     const int DST = map[SRC]; \
     if (!DST) continue; \
-    memcpy (TMP + vlit (DST), NAME + vlit (SRC), 2*sizeof (TYPE)); \
+    TMP[2*DST] = NAME[2*SRC]; \
+    TMP[2*DST+1] = NAME[2*SRC+1]; \
   } \
   memset (TMP, 0, sizeof TMP[0]); \
   delete [] NAME; \
