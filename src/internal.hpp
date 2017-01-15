@@ -424,6 +424,7 @@ class Internal {
   bool eliminating ();
   bool resolve_clauses (Clause *, int pivot, Clause *);
   void mark_eliminated_clauses_as_garbage (int pivot);
+  void mark_redundant_clauses_with_eliminated_variables_as_garbage ();
   bool elim_resolvents_are_bounded (int pivot, long pos, long neg);
   void elim_update_removed (Clause *, int except = 0);
   void elim_update_added (Clause *);

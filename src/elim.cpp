@@ -433,6 +433,23 @@ inline void Internal::try_to_eliminate_variable (int pivot) {
 
 /*------------------------------------------------------------------------*/
 
+void
+Internal::mark_redundant_clauses_with_eliminated_variables_as_garbage () {
+  const const_clause_iterator end = clauses.end ();
+  const_clause_iterator i;
+  for (i = clauses.begin (); i != end; i++) {
+    Clause * c = *i;
+    if (c->garbage || !c->redundant) continue;
+    const const_literal_iterator eol = c->end ();
+    const_literal_iterator j;
+    for (j = c->begin (); j != eol; j++)
+      if (flags (*j).eliminated ()) break;
+    if (j != eol) mark_garbage (c);
+  }
+}
+
+/*------------------------------------------------------------------------*/
+
 bool Internal::elim_round () {
 
   SWITCH_AND_START (search, simplify, elim);
@@ -550,7 +567,9 @@ bool Internal::elim_round () {
     int idx = esched.front ();
     esched.pop_front ();
     flags (idx).removed = false;
-    if (stats.garbage > limit) garbage_collection ();
+    if (stats.garbage > limit) 
+      mark_redundant_clauses_with_eliminated_variables_as_garbage (),
+      garbage_collection ();
     try_to_eliminate_variable (idx);
   }
 
@@ -560,18 +579,8 @@ bool Internal::elim_round () {
 
   // Mark all redundant clauses with eliminated variables as garbage.
   //
-  if (!unsat) {
-    eoc = clauses.end ();
-    for (i = clauses.begin (); i != eoc; i++) {
-      Clause * c = *i;
-      if (c->garbage || !c->redundant) continue;
-      const const_literal_iterator eol = c->end ();
-      const_literal_iterator j;
-      for (j = c->begin (); j != eol; j++)
-        if (flags (*j).eliminated ()) break;
-      if (j != eol) mark_garbage (c);
-    }
-  }
+  if (!unsat)
+    mark_redundant_clauses_with_eliminated_variables_as_garbage ();
 
   int eliminated = stats.all.eliminated - old_eliminated;
 #ifndef QUIET
