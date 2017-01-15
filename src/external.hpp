@@ -74,10 +74,16 @@ class External {
     return res;
   }
 
-  int internalize (int lit) const {
-    int res = e2i[vidx (lit)];
-    if (lit < 0) res = -res;
-    return res;;
+  int internalize (int lit) {
+    int res;
+    if (lit) {
+      assert (lit != INT_MIN);
+      const int eidx = abs (lit);
+      if (eidx > max_var) init (eidx);
+      res = e2i [eidx];
+      if (lit < 0) res = -res;
+    } else res = 0;
+    return res;
   }
 
   void add (int lit);

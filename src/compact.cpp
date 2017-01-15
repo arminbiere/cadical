@@ -27,7 +27,7 @@ bool Internal::compactifying () {
 
 // Map data in old array 'NAME' to new position as given by 'map'.
 
-#define MAP(TYPE,NAME) \
+#define MAP_ARRAY(TYPE,NAME) \
 do { \
   TYPE * TMP = new TYPE [new_vsize]; \
   for (int SRC = 1; SRC <= max_var; SRC++) { \
@@ -42,9 +42,9 @@ do { \
 
 /*------------------------------------------------------------------------*/
 
-// Same as 'MAP' but two sided (positive & negative literal).
+// Same as 'MAP_ARRAY' but two sided (positive & negative literal).
 
-#define MAP2(TYPE,NAME) \
+#define MAP2_ARRAY(TYPE,NAME) \
 do { \
   TYPE * TMP = new TYPE [2*new_vsize]; \
   for (int SRC = 1; SRC <= max_var; SRC++) { \
@@ -62,7 +62,7 @@ do { \
 // Map a 'vector<int>' of literals, flush inactive literals, resize and
 // shrink it to fit its new size after flushing.
 
-#define FLUSH(V) \
+#define MAP_AND_FLUSH_INT_VECTOR(V) \
 do { \
   const const_int_iterator end = V.end (); \
   int_iterator j = V.begin (); \
@@ -77,7 +77,6 @@ do { \
   V.resize (j - V.begin ()); \
   shrink_vector (V); \
 } while (0)
-
 
 /*------------------------------------------------------------------------*/
 
@@ -102,14 +101,14 @@ void Internal::compact () {
   // seperately as it is done in Lingeling, where fixed variables are
   // mapped to the internal variable '1'.
   //
-  int * map, dst = 1, first_fixed = 0;
+  int * map, dst = 0, first_fixed = 0;
   NEW (map, int, max_var + 1);
   map[0] = 0;
   for (int src = 1; src <= max_var; src++) {
     const Flags & f = flags (src);
-    if (f.active ()) map[src] = dst++;
+    if (f.active ()) map[src] = ++dst;
     else if (!f.fixed () || first_fixed) map[src] = 0;
-    else map[first_fixed = src] = dst++;
+    else map[first_fixed = src] = ++dst;
   }
 
   if (first_fixed) LOG ("found first fixed %d", first_fixed);
@@ -117,6 +116,67 @@ void Internal::compact () {
 
   const int new_max_var = dst;
   const size_t new_vsize = dst + 1;	// Adjust to fit 'new_max_var'.
+
+  /*----------------------------------------------------------------------*/
+  // In this first part we only map stuff without reallocation.
+  /*----------------------------------------------------------------------*/
+
+  // Flush the external indices.  This has to occur before we map 'vals'.
+  {
+    const int first_fixed_val = first_fixed ? val (first_fixed) : 0;
+    for (int eidx = 1; eidx <= external->max_var; eidx++) {
+      const int src = external->e2i[eidx];
+      int dst, tmp;
+      if (!src) dst = 0;
+      else if (!(dst = map[src]) && (tmp = val (src))) {
+	assert (first_fixed_val);
+	dst = (tmp != first_fixed_val) ? -first_fixed : first_fixed;
+      }
+      LOG ("external %d mapped to internal %d", eidx, dst);
+      external->e2i[eidx] = dst;
+    }
+  }
+
+  // Map the literals in all clauses.
+  {
+    const const_clause_iterator end = clauses.end ();
+    const_clause_iterator i;
+    for (i = clauses.begin (); i != end; i++) {
+      Clause * c = *i;
+      assert (!c->garbage);
+      const const_literal_iterator eoc = c->end ();
+      literal_iterator j;
+      for (j = c->begin (); j != eoc; j++) {
+	const int lit = *j;
+	assert (active (lit));
+	int dst = map[abs (lit)];
+	if (lit < 0) dst = -dst;
+	assert (dst);
+	*j = dst;
+      }
+    }
+  }
+
+  // Map the blocking literals in all watches.
+  //
+  if (watches ()) {
+    for (int idx = 1; idx <= max_var; idx++) {
+      for (int sign = -1; sign <= 1; sign += 2) {
+	const int lit = sign*idx;
+	Watches & ws = watches (lit);
+	const const_watch_iterator end = ws.end ();
+	watch_iterator i;
+	for (i = ws.begin (); i != end; i++) {
+	  const int blit = i->blit;
+	  assert (active (blit));
+	  int dst = map[abs (blit)];
+	  if (blit < 0) dst = -dst;
+	  assert (dst);
+	  i->blit = dst;
+	}
+      }
+    }
+  }
 
   // We first flush inactive variables and map the links in the queue.  This
   // has to be done before we map the actual links data structure 'ltab'.
@@ -138,12 +198,16 @@ void Internal::compact () {
     queue.unassigned = queue.last = mapped_prev;
   }
 
+  /*----------------------------------------------------------------------*/
+  // In this second part we not only map stuff but also reallocate memory.
+  /*----------------------------------------------------------------------*/
+
   // Now we continue in reverse order of allocated bytes, e.g., see
   // 'Internal::enlarge' which reallocates in order of allocated bytes.
 
-  MAP (Flags, ftab);
-  MAP (signed char, marks);
-  MAP (signed char, phases);
+  MAP_ARRAY (Flags, ftab);
+  MAP_ARRAY (signed char, marks);
+  MAP_ARRAY (signed char, phases);
 
   // Special case for 'val' as always since for 'val' we trade branch less
   // code for memory and always allocated an [-maxvar,...,maxvar] array.
@@ -160,21 +224,22 @@ void Internal::compact () {
     vals = new_vals;
   }
 
-  MAP (int, i2e);
-  MAP2 (int, ptab);
-  MAP (long, btab);
-  if (ntab2) MAP (long, ntab2);
-  MAP (Link, ltab);
-  MAP (Var, vtab);
-  if (ntab) MAP2 (long, ntab);
-  if (wtab) MAP2 (Watches, wtab);
-  if (otab) MAP2 (Occs, otab);
-  if (big) MAP2 (Bins, big);
+  MAP_ARRAY (int, i2e);
+  MAP2_ARRAY (int, ptab);
+  MAP_ARRAY (long, btab);
+  if (ntab2) MAP_ARRAY (long, ntab2);
+  MAP_ARRAY (Link, ltab);
+  MAP_ARRAY (Var, vtab);
+  if (ntab) MAP2_ARRAY (long, ntab);
+  if (wtab) MAP2_ARRAY (Watches, wtab);
+  if (otab) MAP2_ARRAY (Occs, otab);
+  if (big) MAP2_ARRAY (Bins, big);
 
   assert (propagated == trail.size ());
-  FLUSH (trail);
-  FLUSH (probes);
+  MAP_AND_FLUSH_INT_VECTOR (trail);
   propagated = trail.size ();
+
+  if (!probes.empty ()) MAP_AND_FLUSH_INT_VECTOR (probes);
 
   // The simplest way to map the elimination schedule is to get all elements
   // from the heap and reinsert them.  This could be slightly improved in
@@ -182,7 +247,8 @@ void Internal::compact () {
   // is pretty complicated and would require that the 'Heap' knows that
   // mapped elements with 'zero' destination should be flushed.  Note that
   // we use stable heap sorting.
-  {
+  //
+  if (!esched.empty ()) {
     vector<int> saved;
     while (!esched.empty ()) {
       const int src = esched.front ();
@@ -198,57 +264,7 @@ void Internal::compact () {
     esched.shrink ();
   }
 
-  // Finally we flush the external indices.
-  {
-    const int first_fixed_val = first_fixed ? val (first_fixed) : 0;
-    for (int eidx = 1; eidx <= external->max_var; eidx++) {
-      const int src = external->e2i[eidx];
-      int dst, tmp;
-      if (!src) dst = 0;
-      else if (!(dst = map[src]) && (tmp = val (src))) {
-	assert (first_fixed_val);
-	dst = (tmp != first_fixed_val) ? -first_fixed : first_fixed;
-      }
-      LOG ("external %d mapped to internal %d", dst);
-      external->e2i[eidx] = dst;
-    }
-  }
-
-#ifndef NDEBUG
-
-  // Clauses contain only active non-mapped variables.
-  {
-    const const_clause_iterator end = clauses.end ();
-    const_clause_iterator i;
-    for (i = clauses.begin (); i != end; i++) {
-      Clause * c = *i;
-      assert (!c->garbage);
-      for (int j = 0; j < c->size; j++) {
-	const int lit = c->literals[j], idx = abs (lit);
-	assert (active (idx));
-	assert (!map[idx]);
-      }
-    }
-  }
-
-  // Blits in watches contain only active non-mapped variables.
-  //
-  if (watches ()) {
-    for (int idx = 1; idx <= max_var; idx++) {
-      for (int sign = -1; sign <= 1; sign += 2) {
-	const int lit = sign*idx;
-	const Watches & ws = watches (lit);
-	const const_watch_iterator end = ws.end ();
-	const_watch_iterator i;
-	for (i = ws.begin (); i != end; i++) {
-	  const int blit = i->blit, bidx = abs (blit);
-	  assert (active (bidx));
-	  assert (!map[bidx]);
-	}
-      }
-    }
-  }
-#endif
+  /*----------------------------------------------------------------------*/
 
   DEL (map, int, max_var);
 

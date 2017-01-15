@@ -27,17 +27,23 @@ void External::push_on_extension_stack (Clause * c, int pivot) {
 
 void External::extend () {
   START (extend);
-  long flipped = 0;
   VRB ("extend",
     "mapping internal %d assignments to %d assignments",
     internal->max_var, max_var);
-  for (int i = 1; i <= max_var; i++)
-    vals[i] = internal->val (internalize (i));
+  long updated = 0;
+  for (int i = 1; i <= max_var; i++) {
+    const int ilit = e2i[i];
+    if (!ilit) continue;
+    vals[i] = internal->val (ilit);
+    updated++;
+  }
+  VRB ("extend", "updated %ld external assignments", updated);
   VRB ("extend",
     "extending through extension stack of size %ld",
     (long) extension.size ());
   const const_int_iterator begin = extension.begin ();
   const_int_iterator i = extension.end ();
+  long flipped = 0;
   while (i != begin) {
     bool satisfied = false;
     int lit, last = 0;
