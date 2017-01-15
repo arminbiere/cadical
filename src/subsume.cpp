@@ -3,7 +3,6 @@
 #include "internal.hpp"
 #include "macros.hpp"
 #include "message.hpp"
-#include "proof.hpp"
 #include "macros.hpp"
 
 #include <algorithm>

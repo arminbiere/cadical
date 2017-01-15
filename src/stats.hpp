@@ -84,9 +84,11 @@ struct Stats {
   long traversed;    // traversed literals in propagation
 #endif
 
-  int fixed;         // number of top level assigned variables
-  int eliminated;    // number of eliminated variables
-  int substituted;   // number of substituted variables
+  struct {
+    int fixed;         // number of top level assigned variables
+    int eliminated;    // number of eliminated variables
+    int substituted;   // number of substituted variables
+  } all, now;
 
   Stats ();
 

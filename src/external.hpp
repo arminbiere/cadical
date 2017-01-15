@@ -42,6 +42,7 @@ class External {
   friend class Internal;
   friend class Parser;
   friend class Solver;
+  friend class Stats;
 
   /*----------------------------------------------------------------------*/
 
@@ -58,7 +59,9 @@ class External {
 
   /*----------------------------------------------------------------------*/
 
-  void push_on_extension_stack (Clause *, int pivot);
+  void push_clause_on_extension_stack (Clause *, int pivot);
+  void push_binary_on_extension_stack (int pivot, int other);
+  void push_unit_on_extension_stack (int pivot);
   void extend ();
 
   External (Internal *);

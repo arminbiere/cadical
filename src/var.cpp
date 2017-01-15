@@ -27,9 +27,9 @@ void Internal::check_var_stats () {
     if (f.eliminated ()) eliminated++;
     if (f.substituted ()) substituted++;
   }
-  assert (stats.fixed == fixed);
-  assert (stats.eliminated == eliminated);
-  assert (stats.substituted == substituted);
+  assert (stats.now.fixed == fixed);
+  assert (stats.now.eliminated == eliminated);
+  assert (stats.now.substituted == substituted);
 #endif
 }
 

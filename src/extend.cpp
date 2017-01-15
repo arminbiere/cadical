@@ -12,13 +12,37 @@ namespace CaDiCaL {
 // stack.  First the blocking or eliminated literal is added, and then the
 // rest of the clause.
 
-void External::push_on_extension_stack (Clause * c, int pivot) {
+void External::push_unit_on_extension_stack (int pivot) {
   extension.push_back (0);
+  LOG ("pushing 0 on extension stack");
+  const int epivot = internal->externalize (pivot);
+  assert (epivot);
+  extension.push_back (epivot);
+  LOG ("pushing pivot %d on extension stack (internal %d)", epivot, pivot);
+}
+
+void External::push_clause_on_extension_stack (Clause * c, int pivot) {
+  push_unit_on_extension_stack (pivot);
   const const_literal_iterator end = c->end ();
   const_literal_iterator l;
-  extension.push_back (pivot);
-  for (l = c->begin (); l != end; l++)
-    if (*l != pivot) extension.push_back (*l);
+  for (l = c->begin (); l != end; l++) {
+    const int lit = *l;
+    if (lit == pivot) continue;
+    const int elit = internal->externalize (lit);
+    assert (elit);
+    extension.push_back (elit);
+    LOG ("pushing %d on extension stack (internal %d)",
+      elit, lit);
+  }
+}
+
+void External::push_binary_on_extension_stack (int pivot, int other) {
+  push_unit_on_extension_stack (pivot);
+  const int eother = internal->externalize (other);
+  assert (other);
+  extension.push_back (eother);
+  LOG ("pushing %d on extension stack (internal %d)",
+    eother, other);
 }
 
 // This is the actual extension process. It goes backward over the clauses

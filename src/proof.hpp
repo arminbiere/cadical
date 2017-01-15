@@ -1,6 +1,8 @@
 #ifndef _proof_h_INCLUDED
 #define _proof_h_INCLUDED
 
+#include <cassert>
+
 namespace CaDiCaL {
 
 // Provides proof tracing in the DRAT format.
@@ -21,6 +23,8 @@ class Proof {
   void put_binary_lit (int lit);
 
   void trace_clause (Clause *, bool add);
+
+  int externalize (int lit);
 
 public:
 

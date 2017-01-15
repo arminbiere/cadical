@@ -154,7 +154,7 @@ inline void Internal::probe_assign (int lit, int parent) {
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
   // no phase saving here ...
-  propfixed (lit) = stats.fixed;
+  propfixed (lit) = stats.all.fixed;
   trail.push_back (lit);
   if (parent) LOG ("assign %d parent %d", lit, parent);
   else if (level) LOG ("assign %d probe", lit);

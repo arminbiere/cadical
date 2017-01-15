@@ -29,7 +29,7 @@ inline void Internal::search_assign (int lit, Clause * reason) {
   assert (val (-lit) < 0);
   if (!vivifying) phases[idx] = tmp;     // phase saving during search
 
-  propfixed (lit) = stats.fixed;         // avoids too much probing
+  propfixed (lit) = stats.all.fixed;         // avoids too much probing
 
   trail.push_back (lit);
   LOG (reason, "assign %d", lit);

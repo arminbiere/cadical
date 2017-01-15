@@ -154,7 +154,7 @@ int Internal::next_probe () {
       int probe = probes.back ();
       probes.pop_back ();
       if (!active (probe)) continue;
-      if (propfixed (probe) < stats.fixed) return probe;
+      if (propfixed (probe) < stats.all.fixed) return probe;
     }
   }
 }

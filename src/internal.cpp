@@ -5,7 +5,6 @@
 #include "iterator.hpp"
 #include "macros.hpp"
 #include "message.hpp"
-#include "proof.hpp"
 
 namespace CaDiCaL {
 

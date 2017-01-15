@@ -3,7 +3,6 @@
 #include "clause.hpp"
 #include "message.hpp"
 #include "macros.hpp"
-#include "proof.hpp"
 
 namespace CaDiCaL {
 
@@ -65,8 +64,8 @@ void Internal::remove_falsified_literals (Clause * c) {
 
 void Internal::mark_satisfied_clauses_as_garbage () {
 
-  if (lim.fixed_at_last_collect >= stats.fixed) return;
-  lim.fixed_at_last_collect = stats.fixed;
+  if (lim.fixed_at_last_collect >= stats.all.fixed) return;
+  lim.fixed_at_last_collect = stats.all.fixed;
 
   LOG ("marking satisfied clauses and removing falsified literals");
 

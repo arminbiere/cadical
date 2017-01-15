@@ -4,7 +4,6 @@
 #include "message.hpp"
 #include "profile.hpp"
 #include "iterator.hpp"
-#include "proof.hpp"
 
 #include <algorithm>
 
@@ -18,20 +17,6 @@ namespace CaDiCaL {
 // By bounding the maximum number of occurrences and the maximum clause
 // size we can run each elimination round until completion.  See the code of
 // 'elim' for the actual scheduling of 'subsumption' and 'elimination'.
-
-/*------------------------------------------------------------------------*/
-
-// Has to be put here, e.g., not into 'elim.hpp', since we need the
-// definition of 'Internal::noccs2' which in turn requires that the
-// 'Internal' member 'esched' is defined.
-
-inline bool more_noccs2::operator () (int a, int b) {
-  size_t s = internal->noccs2 (a), t = internal->noccs2 (b);
-  if (s > t) return true;
-  if (s < t) return false;
-  assert (a > 0), assert (b > 0);
-  return a > b;
-}
 
 /*------------------------------------------------------------------------*/
 
@@ -51,7 +36,7 @@ bool Internal::eliminating () {
   // Wait until there has been a change in terms of new units or new removed
   // variables (in removed or shrunken irredundant clauses).
   //
-  if (lim.fixed_at_last_elim == stats.fixed &&
+  if (lim.fixed_at_last_elim == stats.all.fixed &&
       lim.removed_at_last_elim == stats.removed) return false;
 
   // Wait until next 'reduce'.
@@ -374,7 +359,7 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
     if (c->garbage) continue;
     mark_garbage (c);
     if (c->redundant) continue;
-    external->push_on_extension_stack (c, pivot);
+    external->push_clause_on_extension_stack (c, pivot);
     elim_update_removed (c, pivot);
   }
   erase_occs (ps);
@@ -397,8 +382,7 @@ inline void Internal::mark_eliminated_clauses_as_garbage (int pivot) {
   // forced to false and then if necessary fixed by checking the clauses in
   // which 'pivot' occurs to be falsified.
 
-  external->extension.push_back (0);
-  external->extension.push_back (-pivot);
+  external->push_unit_on_extension_stack (-pivot);
 }
 
 /*------------------------------------------------------------------------*/
@@ -443,7 +427,8 @@ inline void Internal::try_to_eliminate_variable (int pivot) {
   assert (active (pivot));
   flags (pivot).status = Flags::ELIMINATED;
   LOG ("eliminated %d", pivot);
-  stats.eliminated++;
+  stats.all.eliminated++;
+  stats.now.eliminated++;
 }
 
 /*------------------------------------------------------------------------*/
@@ -552,7 +537,7 @@ bool Internal::elim_round () {
 #ifndef QUIET
   const long old_resolutions = stats.elimres;
 #endif
-  const int old_eliminated = stats.eliminated;
+  const int old_eliminated = stats.all.eliminated;
 
   // Limit on garbage bytes during variable elimination. If the limit is hit
   // a garbage collection is performed.
@@ -588,7 +573,7 @@ bool Internal::elim_round () {
     }
   }
 
-  int eliminated = stats.eliminated - old_eliminated;
+  int eliminated = stats.all.eliminated - old_eliminated;
 #ifndef QUIET
   long resolutions = stats.elimres - old_resolutions;
   VRB ("elim", stats.eliminations,
@@ -609,7 +594,7 @@ bool Internal::elim_round () {
 
 void Internal::elim () {
 
-  int old_eliminated = stats.eliminated;
+  int old_eliminated = stats.all.eliminated;
   int old_var = active_variables ();
 
   int round = 0, limit;
@@ -653,7 +638,7 @@ void Internal::elim () {
     }
   }
 
-  int eliminated = stats.eliminated - old_eliminated;
+  int eliminated = stats.all.eliminated - old_eliminated;
   double relelim = percent (eliminated, old_var);
   VRB ("elim", stats.eliminations,
     "eliminated %d variables %.2f%% in %d rounds",
@@ -680,7 +665,7 @@ void Internal::elim () {
     "next elimination scheduled in %ld conflicts at %ld conflicts",
     lim.elim - stats.conflicts, lim.elim);
 
-  lim.fixed_at_last_elim = stats.fixed;
+  lim.fixed_at_last_elim = stats.all.fixed;
 }
 
 };

@@ -1,4 +1,3 @@
-#include "proof.hpp"
 #include "internal.hpp"
 #include "logging.hpp"
 #include "clause.hpp"
@@ -74,8 +73,9 @@ void Proof::trace_empty_clause () {
 
 void Proof::trace_unit_clause (int unit) {
   LOG ("tracing unit clause %d", unit);
-  if (binary) file->put ('a'), put_binary_lit (unit), put_binary_zero ();
-  else file->put (unit), file->put (" 0\n");
+  const int elit = externalize (unit);
+  if (binary) file->put ('a'), put_binary_lit (elit), put_binary_zero ();
+  else file->put (elit), file->put (" 0\n");
 }
 
 /*------------------------------------------------------------------------*/
@@ -85,9 +85,11 @@ inline void Proof::trace_clause (Clause * c, bool add) {
   else if (!add) file->put ("d ");
   const const_literal_iterator end = c->end ();
   const_literal_iterator i = c->begin ();
-  while (i != end)
-    if (binary) put_binary_lit (*i++);
-    else file->put (*i++), file->put (" ");
+  while (i != end) {
+    const int elit = externalize (*i++);
+    if (binary) put_binary_lit (elit);
+    else file->put (elit), file->put (" ");
+  }
   if (binary) put_binary_zero ();
   else file->put ("0\n");
 }
@@ -107,9 +109,11 @@ void Proof::trace_add_clause () {
   if (binary) file->put ('a');
   const const_int_iterator end = internal->clause.end ();
   const_int_iterator i = internal->clause.begin ();
-  while (i != end)
-    if (binary) put_binary_lit (*i++);
-    else file->put (*i++), file->put (" ");
+  while (i != end) {
+    const int elit = externalize (*i++);
+    if (binary) put_binary_lit (elit);
+    else file->put (elit), file->put (" ");
+  }
   if (binary) put_binary_zero ();
   else file->put ("0\n");
 }
@@ -125,10 +129,11 @@ void Proof::trace_flushing_clause (Clause * c) {
   if (binary) file->put ('a');
   const const_literal_iterator end = c->end ();
   for (const_literal_iterator i = c->begin (); i != end; i++) {
-    const int lit = *i;
-    if (internal->fixed (lit) < 0) continue;
-    if (binary) put_binary_lit (lit);
-    else file->put (lit), file->put (" ");
+    const int ilit = *i;
+    if (internal->fixed (ilit) < 0) continue;
+    const int elit = externalize (ilit);
+    if (binary) put_binary_lit (elit);
+    else file->put (elit), file->put (" ");
   }
   if (binary) put_binary_zero ();
   else file->put ("0\n");
@@ -146,10 +151,11 @@ void Proof::trace_strengthen_clause (Clause * c, int remove) {
   if (binary) file->put ('a');
   const const_literal_iterator end = c->end ();
   for (const_literal_iterator i = c->begin (); i != end; i++) {
-    const int lit = *i;
-    if (lit == remove) continue;
-    if (binary) put_binary_lit (lit);
-    else file->put (lit), file->put (" ");
+    const int ilit = *i;
+    if (ilit == remove) continue;
+    const int elit = externalize (ilit);
+    if (binary) put_binary_lit (elit);
+    else file->put (elit), file->put (" ");
   }
   if (binary) put_binary_zero ();
   else file->put ("0\n");

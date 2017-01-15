@@ -1,5 +1,5 @@
+#include "external.hpp"
 #include "internal.hpp"
-
 #include "macros.hpp"
 #include "message.hpp"
 #include "util.hpp"
@@ -20,6 +20,7 @@ void Stats::print (Internal * internal) {
   Stats & stats = internal->stats;
   double t = process_time ();
   size_t m = maximum_resident_set_size ();
+  int max_var = internal->external->max_var;
 #ifdef STATS
   int verbose = 1;
 #else
@@ -47,6 +48,8 @@ void Stats::print (Internal * internal) {
     stats.reductions, relative (stats.conflicts, stats.reductions));
   MSG ("restarts:        %15ld   %10.2f    conflicts per restart",
     stats.restarts, relative (stats.conflicts, stats.restarts));
+  MSG ("compacts:        %15ld   %10.2f    conflicts per compact",
+    stats.compacts, relative (stats.compacts, stats.conflicts));
   MSG ("conflicts:       %15ld   %10.2f    per second",
     stats.conflicts, relative (stats.conflicts, t));
   MSG ("decisions:       %15ld   %10.2f    per second",
@@ -114,7 +117,7 @@ void Stats::print (Internal * internal) {
   MSG ("reused:          %15ld   %10.2f %%  per restart",
     stats.reused, percent (stats.reused, stats.restarts));
   MSG ("resolutions:     %15ld   %10.2f    per eliminated",
-    stats.elimres, relative (stats.elimres, stats.eliminated));
+    stats.elimres, relative (stats.elimres, stats.all.eliminated));
   if (verbose) {
   MSG ("  elimres2:      %15ld   %10.2f %%  per resolved",
     stats.elimres2, percent (stats.elimres, stats.elimres));
@@ -122,9 +125,9 @@ void Stats::print (Internal * internal) {
     stats.elimrestried, percent (stats.elimrestried, stats.elimres));
   }
   MSG ("eliminated:      %15ld   %10.2f %%  of all variables",
-    stats.eliminated, percent (stats.eliminated, internal->max_var));
+    stats.all.eliminated, percent (stats.all.eliminated, max_var));
   MSG ("fixed:           %15ld   %10.2f %%  of all variables",
-    stats.fixed, percent (stats.fixed, internal->max_var));
+    stats.all.fixed, percent (stats.all.fixed, max_var));
   if (verbose) {
   MSG ("  units:         %15ld   %10.2f    conflicts per unit",
     stats.units, relative (stats.conflicts, stats.units));
@@ -132,9 +135,9 @@ void Stats::print (Internal * internal) {
     stats.binaries, relative (stats.conflicts, stats.binaries));
   }
   MSG ("substituted:     %15ld   %10.2f %%  of all variables",
-    stats.substituted, percent (stats.substituted, internal->max_var));
+    stats.all.substituted, percent (stats.all.substituted, max_var));
   MSG ("failed:          %15ld   %10.2f %%  of all variables",
-    stats.failed, percent (stats.failed, internal->max_var));
+    stats.failed, percent (stats.failed, max_var));
   long learned = stats.learned - stats.minimized;
   MSG ("learned:         %15ld   %10.2f    per conflict",
     learned, relative (learned, stats.conflicts));

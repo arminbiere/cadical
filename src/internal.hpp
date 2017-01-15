@@ -21,6 +21,7 @@
 #include "occs.hpp"
 #include "options.hpp"
 #include "profile.hpp"
+#include "proof.hpp"
 #include "queue.hpp"
 #include "resources.hpp"
 #include "stats.hpp"
@@ -36,7 +37,6 @@ using namespace std;
 
 class External;
 class File;
-class Proof;
 
 /*------------------------------------------------------------------------*/
 
@@ -157,7 +157,12 @@ class Internal {
   bool active (int lit) { return flags(lit).active (); }
 
   int active_variables () const {
-    return max_var - stats.fixed - stats.eliminated - stats.substituted;
+    int res = max_var;
+    res -= stats.now.fixed;
+    res -= stats.now.eliminated;
+    res -= stats.now.substituted;
+    assert (res >= 0);
+    return res;
   }
 
   // Regularly reports what is going on in 'report.cpp'.
@@ -423,7 +428,6 @@ class Internal {
   void elim_update_removed (Clause *, int except = 0);
   void elim_update_added (Clause *);
   void elim_add_resolvents (int pivot);
-  void push_on_extension_stack (Clause *, int pivot);
   void try_to_eliminate_variable (int pivot);
   void reset_removed ();
   bool elim_round ();
@@ -526,6 +530,31 @@ class Internal {
   //
   void dump ();
 };
+
+/*------------------------------------------------------------------------*/
+
+// Has to be put here, e.g., not into 'elim.hpp', since we need the
+// definition of 'Internal::noccs2' which in turn requires that the
+// 'Internal' member 'esched' is defined.
+
+inline bool more_noccs2::operator () (int a, int b) {
+  size_t s = internal->noccs2 (a), t = internal->noccs2 (b);
+  if (s > t) return true;
+  if (s < t) return false;
+  assert (a > 0), assert (b > 0);
+  return a > b;
+}
+
+/*------------------------------------------------------------------------*/
+
+// Same here, e.g., we put this inlined function here such that we can
+// include the 'proof.hpp' header above without having 'Internal' yet.
+
+inline int Proof::externalize (int lit) {
+  int res = internal->externalize (lit);
+  assert (res);
+  return res;
+}
 
 };
 

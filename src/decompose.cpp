@@ -2,7 +2,6 @@
 #include "internal.hpp"
 #include "macros.hpp"
 #include "message.hpp"
-#include "proof.hpp"
 
 #include <climits>
 
@@ -314,13 +313,10 @@ bool Internal::decompose_round () {
     if (other == idx) continue;
     assert (active (other));
     flags (idx).status = Flags::SUBSTITUTED;
-    stats.substituted++;
-    external->extension.push_back (0);
-    external->extension.push_back (externalize (-idx));
-    external->extension.push_back (externalize (other));
-    external->extension.push_back (0);
-    external->extension.push_back (externalize (idx));
-    external->extension.push_back (externalize (-other));
+    stats.all.substituted++;
+    stats.now.substituted++;
+    external->push_binary_on_extension_stack (-idx, other);
+    external->push_binary_on_extension_stack (idx, -other);
   }
 
   delete [] reprs;

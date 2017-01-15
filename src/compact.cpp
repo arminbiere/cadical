@@ -1,6 +1,7 @@
 #include "internal.hpp"
 #include "external.hpp"
 #include "macros.hpp"
+#include "message.hpp"
 
 namespace CaDiCaL {
 
@@ -267,8 +268,15 @@ void Internal::compact () {
 
   DEL (map, int, max_var);
 
+  VRB ("compact", stats.compacts,
+    "reducing internal variables from %d to %d",
+    max_var, new_max_var);
+
   max_var = new_max_var;
   vsize = new_vsize;
+
+  stats.now.fixed = first_fixed ? 1 : 0;
+  stats.now.substituted = stats.now.eliminated = 0;
 
   inc.compact += opts.compactint;
   lim.compact = stats.conflicts + inc.compact;

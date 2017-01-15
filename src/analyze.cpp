@@ -4,7 +4,6 @@
 #include "iterator.hpp"
 #include "macros.hpp"
 #include "message.hpp"
-#include "proof.hpp"
 
 #include <algorithm>
 
@@ -30,7 +29,8 @@ void Internal::learn_unit_clause (int lit) {
   if (proof) proof->trace_unit_clause (lit);
   assert (flags (lit).active ());
   flags (lit).status = Flags::FIXED;
-  stats.fixed++;
+  stats.all.fixed++;
+  stats.now.fixed++;
 }
 
 /*------------------------------------------------------------------------*/
