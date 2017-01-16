@@ -26,7 +26,7 @@ bool Internal::compactifying () {
 /*------------------------------------------------------------------------*/
 
 // Map old internal literal 'SRC' to new internal literal 'DST'.  This would
-// be trivially just a look up into the 'map' created in 'compact' (caring
+// be trivially just a look-up into the 'map' created in 'compact' (caring
 // about signedness of 'SRC' though), except that fixed variables have all
 // to be mapped to the first fixed variable 'first_fixed', which makes it
 // more tricky.
@@ -39,12 +39,13 @@ do { \
   if (!RES) { \
     assert (!level); \
     const int TMP = val (OLD); \
-    assert (TMP); \
-    assert (first_fixed); \
-    RES = first_fixed; \
-    if (TMP != first_fixed_val) RES = -RES; \
+    if (TMP) { \
+      assert (first_fixed); \
+      RES = map_first_fixed; \
+      if (TMP != first_fixed_val) RES = -RES; \
+    } \
   } else if ((OLD) < 0) RES = -RES; \
-  assert (RES), assert (abs (RES) <= new_max_var); \
+  assert (abs (RES) <= new_max_var); \
   (DST) = RES; \
 } while (0)
 
@@ -106,6 +107,7 @@ void Internal::compact () {
   stats.compacts++;
 
   assert (!level);
+  assert (!unsat);
   assert (!conflict);
   assert (clause.empty ());
   assert (levels.empty ());
@@ -113,6 +115,8 @@ void Internal::compact () {
   assert (minimized.empty ());
   assert (control.size () == 1);
   assert (resolved.empty ());
+
+  garbage_collection ();
 
   // Remember whether this was 'triggered' from 'compactifying', since only
   // then we should increase the conflict limit.
@@ -126,14 +130,14 @@ void Internal::compact () {
   // seperately as it is done in Lingeling, where fixed variables are
   // mapped to the internal variable '1'.
   //
-  int * map, new_max_var = 0, first_fixed = 0;
+  int * map, new_max_var = 0, first_fixed = 0, map_first_fixed;
   NEW (map, int, max_var + 1);
   map[0] = 0;
   for (int src = 1; src <= max_var; src++) {
     const Flags & f = flags (src);
     if (f.active ()) map[src] = ++new_max_var;
     else if (!f.fixed () || first_fixed) map[src] = 0;
-    else map[first_fixed = src] = ++new_max_var;
+    else map[first_fixed = src] = map_first_fixed = ++new_max_var;
   }
 
   const int first_fixed_val = first_fixed ? val (first_fixed) : 0;
@@ -151,9 +155,9 @@ void Internal::compact () {
   // Flush the external indices.  This has to occur before we map 'vals'.
   {
     for (int eidx = 1; eidx <= external->max_var; eidx++) {
-      const int src = external->e2i[eidx];
-      int dst = 0;
-      if (src) MAP_LIT (src, dst);
+      int src = external->e2i[eidx], dst;
+      if (!src) continue;
+      MAP_LIT (src, dst);
       LOG ("compact %ld maps external %d to internal %d from %d",
         stats.compacts, eidx, dst, src);
       external->e2i[eidx] = dst;
@@ -209,7 +213,21 @@ void Internal::compact () {
   }
 
   /*----------------------------------------------------------------------*/
-  // In this second part we not only map stuff but also reallocate memory.
+  // In second part we map and flush arrays.
+  /*----------------------------------------------------------------------*/
+
+  assert (propagated == trail.size ());
+  MAP_AND_FLUSH_INT_VECTOR (trail);
+  propagated = trail.size ();
+  if (first_fixed) {
+    assert (trail.size () == 1);
+    var (first_fixed).trail = 0;		// before mapping 'vtab'
+  } else assert (trail.empty ());
+
+  if (!probes.empty ()) MAP_AND_FLUSH_INT_VECTOR (probes);
+
+  /*----------------------------------------------------------------------*/
+  // In third part we not only map stuff but also reallocate memory.
   /*----------------------------------------------------------------------*/
 
   // Now we continue in reverse order of allocated bytes, e.g., see
@@ -244,16 +262,6 @@ void Internal::compact () {
   if (wtab) MAP2_ARRAY (Watches, wtab);
   if (otab) MAP2_ARRAY (Occs, otab);
   if (big) MAP2_ARRAY (Bins, big);
-
-  assert (propagated == trail.size ());
-  MAP_AND_FLUSH_INT_VECTOR (trail);
-  propagated = trail.size ();
-  if (first_fixed) {
-    assert (trail.size () == 1);
-    var (first_fixed).trail = 0;
-  } else assert (trail.empty ());
-
-  if (!probes.empty ()) MAP_AND_FLUSH_INT_VECTOR (probes);
 
   // The simplest way to map the elimination schedule is to get all elements
   // from the heap and reinsert them.  This could be slightly improved in

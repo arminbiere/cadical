@@ -567,11 +567,10 @@ bool Internal::elim_round () {
     int idx = esched.front ();
     esched.pop_front ();
     flags (idx).removed = false;
-    if (stats.garbage > limit) 
-      mark_redundant_clauses_with_eliminated_variables_as_garbage (),
-      garbage_collection (),
-      compact ();
     try_to_eliminate_variable (idx);
+    if (stats.garbage <= limit) continue;
+    mark_redundant_clauses_with_eliminated_variables_as_garbage ();
+    garbage_collection ();
   }
 
   esched.erase ();
@@ -676,6 +675,8 @@ void Internal::elim () {
     lim.elim - stats.conflicts, lim.elim);
 
   lim.fixed_at_last_elim = stats.all.fixed;
+
+  if (!unsat && eliminated) compact ();
 }
 
 };
