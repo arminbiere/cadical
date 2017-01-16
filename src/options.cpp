@@ -83,13 +83,13 @@ bool Options::set (const char * arg) {
 
 /*------------------------------------------------------------------------*/
 
-#define printf_bool_FMT   "%s"
-#define printf_int_FMT    "%d"
-#define printf_double_FMT "%g"
+#define OPTION_FORMAT_bool   "%s"
+#define OPTION_FORMAT_int    "%d"
+#define OPTION_FORMAT_double "%g"
 
-#define printf_bool_CONV(V)    ((V) ? "true" : "false")
-#define printf_int_CONV(V)     ((int)(V))
-#define printf_double_CONV(V)  ((double)(V))
+#define OPTION_CONVERT_bool(V)    ((V) ? "true" : "false")
+#define OPTION_CONVERT_int(V)     ((int)(V))
+#define OPTION_CONVERT_double(V)  ((double)(V))
 
 /*------------------------------------------------------------------------*/
 
@@ -109,8 +109,8 @@ bool Options::set (const char * name, double val) {
     if (val < L) val = L; \
     if (val > H) val = H; \
     N = val; \
-    LOG ("set option --%s=" printf_ ## T ## _FMT " from (double) %g", \
-      printf_ ## T ## _CONV (N), val); \
+    LOG ("set option --%s=" OPTION_FORMAT_ ## T " from (double) %g", \
+      OPTION_CONVERT_ ## T (N), val); \
   }
   OPTIONS
 #undef OPTION
@@ -128,17 +128,26 @@ double Options::get (const char * name) {
 /*------------------------------------------------------------------------*/
 
 void Options::print () {
+  unsigned different = 0;
 #define OPTION(N,T,V,L,H,D) \
-  MSG ("--" #N "=" printf_ ## T ## _FMT, printf_ ## T ## _CONV (N));
+  if (N != (V)) different++; \
+  if (verbose || N != (V)) { \
+    MSG ("--" #N "=" OPTION_FORMAT_ ## T \
+         "  (%s default " OPTION_FORMAT_ ## T ")", \
+	 OPTION_CONVERT_ ## T (N), \
+	 (N == (V)) ? "same as" : "different from", \
+	 OPTION_CONVERT_ ## T (V)); \
+  }
   OPTIONS
 #undef OPTION
+  if (!different) MSG ("all options are set to their default value");
 }
 
 void Options::usage () {
 #define OPTION(N,T,V,L,H,D) \
   printf ( \
-    "  %-26s " D " [" printf_ ## T ## _FMT "]\n", \
-    "--" #N "=<" #T ">", printf_ ## T ## _CONV ((T)(V)));
+    "  %-26s " D " [" OPTION_FORMAT_ ## T "]\n", \
+    "--" #N "=<" #T ">", OPTION_CONVERT_ ## T ((T)(V)));
   OPTIONS
 #undef OPTION
 }
