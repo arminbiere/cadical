@@ -17,6 +17,7 @@ bool Internal::compactifying () {
   if (level) return false;
   if (!opts.compact) return false;
   if (stats.conflicts < lim.compact) return false;
+  if (lim.fixed_at_last_collect < stats.all.fixed) return false;
   int inactive = max_var - active_variables ();
   assert (inactive >= 0);
   if (inactive < opts.compactmin) return false;
@@ -115,8 +116,7 @@ void Internal::compact () {
   assert (minimized.empty ());
   assert (control.size () == 1);
   assert (resolved.empty ());
-
-  garbage_collection ();
+  assert (propagated == trail.size ());
 
   // Remember whether this was 'triggered' from 'compactifying', since only
   // then we should increase the conflict limit.
@@ -130,7 +130,7 @@ void Internal::compact () {
   // seperately as it is done in Lingeling, where fixed variables are
   // mapped to the internal variable '1'.
   //
-  int * map, new_max_var = 0, first_fixed = 0, map_first_fixed;
+  int * map, new_max_var = 0, first_fixed = 0, map_first_fixed = 0;
   NEW (map, int, max_var + 1);
   map[0] = 0;
   for (int src = 1; src <= max_var; src++) {
@@ -216,7 +216,6 @@ void Internal::compact () {
   // In second part we map and flush arrays.
   /*----------------------------------------------------------------------*/
 
-  assert (propagated == trail.size ());
   MAP_AND_FLUSH_INT_VECTOR (trail);
   propagated = trail.size ();
   if (first_fixed) {
@@ -300,7 +299,7 @@ void Internal::compact () {
   stats.now.fixed = first_fixed ? 1 : 0;
   stats.now.substituted = stats.now.eliminated = 0;
 
-  if (triggered) inc.compact += opts.compactint;
+  if (triggered || !inc.compact) inc.compact += opts.compactint;
   lim.compact = stats.conflicts + inc.compact;
   report ('c');
   STOP (compact);

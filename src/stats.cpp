@@ -49,7 +49,7 @@ void Stats::print (Internal * internal) {
   MSG ("restarts:        %15ld   %10.2f    conflicts per restart",
     stats.restarts, relative (stats.conflicts, stats.restarts));
   MSG ("compacts:        %15ld   %10.2f    conflicts per compact",
-    stats.compacts, relative (stats.compacts, stats.conflicts));
+    stats.compacts, relative (stats.conflicts, stats.compacts));
   MSG ("conflicts:       %15ld   %10.2f    per second",
     stats.conflicts, relative (stats.conflicts, t));
   MSG ("decisions:       %15ld   %10.2f    per second",
@@ -60,7 +60,7 @@ void Stats::print (Internal * internal) {
   propagations += stats.propagations.vivify;
   MSG ("propagations:    %15ld   %10.2f    millions per second",
     propagations, relative (propagations/1e6, t));
-  //if (verbose) 
+  if (verbose) 
   {
   MSG ("  searchprops:   %15ld   %10.2f %%  of propagations",
     stats.propagations.search,
@@ -180,8 +180,12 @@ void Stats::print (Internal * internal) {
   if (verbose)
   MSG ("  collections:   %15ld   %10.2f    conflicts per collection",
     stats.collections, relative (stats.conflicts, stats.collections));
-  MSG ("collected:       %15ld   %10.2f    bytes and MB",
-    stats.collected, stats.collected/(double)(1l<<20));
+  size_t extendbytes = internal->external->extension.capacity ();
+  extendbytes *= sizeof (int);
+  // if (verbose)
+  MSG ("  extendbytes:   %15ld   %10.2f    bytes and MB",
+    extendbytes,
+    extendbytes/(double)(1l<<20));
   MSG ("memory:          %15ld   %10.2f    bytes and MB",
     m, m/(double)(1l<<20));
   MSG ("time:            %15s   %10.2f    seconds", "", t);
