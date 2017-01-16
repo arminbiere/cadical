@@ -676,7 +676,7 @@ void Internal::elim () {
 
   lim.fixed_at_last_elim = stats.all.fixed;
 
-  if (!unsat && eliminated) compact ();
+  if (!unsat && eliminated && opts.compact) compact ();
 }
 
 };
