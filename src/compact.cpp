@@ -130,9 +130,11 @@ void Internal::compact () {
       if (!src) dst = 0;
       else if (!(dst = map[src]) && (tmp = val (src))) {
 	assert (first_fixed_val);
-	dst = (tmp != first_fixed_val) ? -first_fixed : first_fixed;
+	dst = map[first_fixed];
+	if (tmp != first_fixed_val) dst = -dst;
       }
-      LOG ("external %d mapped to internal %d", eidx, dst);
+      LOG ("compact %ld maps external %d to internal %d",
+        stats.compacts, eidx, dst);
       external->e2i[eidx] = dst;
     }
   }
