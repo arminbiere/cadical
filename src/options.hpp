@@ -47,7 +47,7 @@ OPTION(check,           bool,DEBUG, 0,  1, "save & check original CNF") \
 OPTION(clim,             int,   -1, 0,1e9, "conflict limit (-1=none)") \
 OPTION(compact,         bool,    1, 0,  1, "enable compactification") \
 OPTION(compactlim,    double,  0.1, 0,  1, "inactive variable limit") \
-OPTION(compactint,       int,  1e3, 0,1e9, "compactification conflic tlimit") \
+OPTION(compactint,       int,  1e3, 1,1e9, "compactification conflic tlimit") \
 OPTION(dlim,             int,   -1, 0,1e9, "decision limit (-1=none)") \
 OPTION(elim,            bool,    1, 0,  1, "bounded variable elimination") \
 OPTION(elimclslim,       int, 1000, 0,1e9, "ignore clauses of this size") \

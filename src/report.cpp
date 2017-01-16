@@ -1,3 +1,4 @@
+#include "external.hpp"
 #include "file.hpp"
 #include "internal.hpp"
 #include "util.hpp"
@@ -75,7 +76,7 @@ REPORT("glue",         1, 3, slow_glue_avg) \
 REPORT("size",         1, 4, size_avg) \
 REPORT("irredundant",  0, 4, stats.irredundant) \
 REPORT("variables",    0, 3, active_variables ()) \
-REPORT("remaining",   -1, 4, percent (active_variables (), max_var)) \
+REPORT("remaining",   -1, 4, percent (active_variables (), external->max_var)) \
 
 #if 0
 

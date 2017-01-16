@@ -569,7 +569,8 @@ bool Internal::elim_round () {
     flags (idx).removed = false;
     if (stats.garbage > limit) 
       mark_redundant_clauses_with_eliminated_variables_as_garbage (),
-      garbage_collection ();
+      garbage_collection (),
+      compact ();
     try_to_eliminate_variable (idx);
   }
 

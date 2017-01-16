@@ -167,6 +167,7 @@ int Internal::search () {
     else if (probing ()) probe ();         // failed literal probing
     else if (subsuming ()) subsume ();     // subsumption algorithm
     else if (eliminating ()) elim ();      // bounded variable elimination
+    else if (compactifying ()) compact (); // collect internal variables
     else decide ();                        // otherwise pick next decision
   STOP (search);
   return res;

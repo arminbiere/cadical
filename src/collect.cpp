@@ -351,7 +351,6 @@ void Internal::garbage_collection () {
   check_var_stats ();
   report ('C', 1);
   STOP (collect);
-  if (compactifying ()) compact ();
 }
 
 };

@@ -14,6 +14,7 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 bool Internal::compactifying () {
+  if (level) return false;
   if (!opts.compact) return false;
   if (stats.conflicts < lim.compact) return false;
   int inactive = max_var - active_variables ();
@@ -84,8 +85,7 @@ void Internal::compact () {
   START (compact);
   stats.compacts++;
 
-  if (level) backtrack ();
-
+  assert (!level);
   assert (!conflict);
   assert (clause.empty ());
   assert (levels.empty ());
@@ -126,12 +126,16 @@ void Internal::compact () {
     const int first_fixed_val = first_fixed ? val (first_fixed) : 0;
     for (int eidx = 1; eidx <= external->max_var; eidx++) {
       const int src = external->e2i[eidx];
-      int dst, tmp;
       if (!src) dst = 0;
-      else if (!(dst = map[src]) && (tmp = val (src))) {
-	assert (first_fixed_val);
-	dst = map[first_fixed];
-	if (tmp != first_fixed_val) dst = -dst;
+      else {
+	dst = map[abs (src)];
+	if (src < 0) dst = -dst;
+	const int tmp = val (src);
+	if (tmp) {
+	  assert (first_fixed_val);
+	  dst = map[first_fixed];
+	  if (tmp != first_fixed_val) dst = -dst;
+	}
       }
       LOG ("compact %ld maps external %d to internal %d",
         stats.compacts, eidx, dst);
@@ -166,6 +170,7 @@ void Internal::compact () {
       for (int sign = -1; sign <= 1; sign += 2) {
 	const int lit = sign*idx;
 	Watches & ws = watches (lit);
+	assert (active (lit) || ws.empty ());
 	const const_watch_iterator end = ws.end ();
 	watch_iterator i;
 	for (i = ws.begin (); i != end; i++) {
