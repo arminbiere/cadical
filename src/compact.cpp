@@ -25,8 +25,31 @@ bool Internal::compactifying () {
 
 /*------------------------------------------------------------------------*/
 
-// Map data in old array 'NAME' to new position as given by 'map'.
+// Map old internal literal 'SRC' to new internal literal 'DST'.  This would
+// be trivially just a look up into the 'map' created in 'compact' (caring
+// about signedness of 'SRC' though), except that fixed variables have all
+// to be mapped to the first fixed variable 'first_fixed', which makes it
+// more tricky.
+//
+#define MAP_LIT(SRC,DST) \
+do { \
+  int OLD = (SRC); \
+  assert (OLD), assert (abs (OLD) <= max_var); \
+  int RES = map[abs (OLD)]; \
+  if (!RES) { \
+    assert (!level); \
+    const int TMP = val (OLD); \
+    assert (TMP); \
+    assert (first_fixed); \
+    RES = first_fixed; \
+    if (TMP != first_fixed_val) RES = -RES; \
+  } else if ((OLD) < 0) RES = -RES; \
+  assert (RES), assert (abs (RES) <= new_max_var); \
+  (DST) = RES; \
+} while (0)
 
+// Map data in old array 'NAME' to new position as given by 'map'.
+//
 #define MAP_ARRAY(TYPE,NAME) \
 do { \
   TYPE * TMP = new TYPE [new_vsize]; \
@@ -40,10 +63,8 @@ do { \
   NAME = TMP; \
 } while (0)
 
-/*------------------------------------------------------------------------*/
-
 // Same as 'MAP_ARRAY' but two sided (positive & negative literal).
-
+//
 #define MAP2_ARRAY(TYPE,NAME) \
 do { \
   TYPE * TMP = new TYPE [2*new_vsize]; \
@@ -58,11 +79,9 @@ do { \
   NAME = TMP; \
 } while (0)
 
-/*------------------------------------------------------------------------*/
-
 // Map a 'vector<int>' of literals, flush inactive literals, resize and
 // shrink it to fit its new size after flushing.
-
+//
 #define MAP_AND_FLUSH_INT_VECTOR(V) \
 do { \
   const const_int_iterator end = V.end (); \
@@ -101,21 +120,23 @@ void Internal::compact () {
   // seperately as it is done in Lingeling, where fixed variables are
   // mapped to the internal variable '1'.
   //
-  int * map, dst = 0, first_fixed = 0;
+  int * map, new_max_var = 0, first_fixed = 0;
   NEW (map, int, max_var + 1);
   map[0] = 0;
   for (int src = 1; src <= max_var; src++) {
     const Flags & f = flags (src);
-    if (f.active ()) map[src] = ++dst;
+    if (f.active ()) map[src] = ++new_max_var;
     else if (!f.fixed () || first_fixed) map[src] = 0;
-    else map[first_fixed = src] = ++dst;
+    else map[first_fixed = src] = ++new_max_var;
   }
 
-  if (first_fixed) LOG ("found first fixed %d", first_fixed);
+  const int first_fixed_val = first_fixed ? val (first_fixed) : 0;
+
+  if (first_fixed)
+    LOG ("found first fixed %d", sign (first_fixed_val)*first_fixed);
   else LOG ("no variable fixed");
 
-  const int new_max_var = dst;
-  const size_t new_vsize = dst + 1;	// Adjust to fit 'new_max_var'.
+  const size_t new_vsize = new_max_var + 1;  // Adjust to fit 'new_max_var'.
 
   /*----------------------------------------------------------------------*/
   // In this first part we only map stuff without reallocation.
@@ -123,22 +144,12 @@ void Internal::compact () {
 
   // Flush the external indices.  This has to occur before we map 'vals'.
   {
-    const int first_fixed_val = first_fixed ? val (first_fixed) : 0;
     for (int eidx = 1; eidx <= external->max_var; eidx++) {
       const int src = external->e2i[eidx];
-      if (!src) dst = 0;
-      else {
-	dst = map[abs (src)];
-	if (src < 0) dst = -dst;
-	const int tmp = val (src);
-	if (tmp) {
-	  assert (first_fixed_val);
-	  dst = map[first_fixed];
-	  if (tmp != first_fixed_val) dst = -dst;
-	}
-      }
-      LOG ("compact %ld maps external %d to internal %d",
-        stats.compacts, eidx, dst);
+      int dst = 0;
+      if (src) MAP_LIT (src, dst);
+      LOG ("compact %ld maps external %d to internal %d from %d",
+        stats.compacts, eidx, dst, src);
       external->e2i[eidx] = dst;
     }
   }
@@ -149,17 +160,10 @@ void Internal::compact () {
     const_clause_iterator i;
     for (i = clauses.begin (); i != end; i++) {
       Clause * c = *i;
-      assert (!c->garbage);
       const const_literal_iterator eoc = c->end ();
       literal_iterator j;
-      for (j = c->begin (); j != eoc; j++) {
-	const int lit = *j;
-	assert (active (lit));
-	int dst = map[abs (lit)];
-	if (lit < 0) dst = -dst;
-	assert (dst);
-	*j = dst;
-      }
+      for (j = c->begin (); j != eoc; j++)
+	MAP_LIT (*j, *j);
     }
   }
 
@@ -170,17 +174,10 @@ void Internal::compact () {
       for (int sign = -1; sign <= 1; sign += 2) {
 	const int lit = sign*idx;
 	Watches & ws = watches (lit);
-	assert (active (lit) || ws.empty ());
 	const const_watch_iterator end = ws.end ();
 	watch_iterator i;
-	for (i = ws.begin (); i != end; i++) {
-	  const int blit = i->blit;
-	  assert (active (blit));
-	  int dst = map[abs (blit)];
-	  if (blit < 0) dst = -dst;
-	  assert (dst);
-	  i->blit = dst;
-	}
+	for (i = ws.begin (); i != end; i++)
+	  MAP_LIT (i->blit, i->blit);
       }
     }
   }
@@ -245,6 +242,10 @@ void Internal::compact () {
   assert (propagated == trail.size ());
   MAP_AND_FLUSH_INT_VECTOR (trail);
   propagated = trail.size ();
+  if (first_fixed) {
+    assert (trail.size () == 1);
+    var (first_fixed).trail = 0;
+  } else assert (trail.empty ());
 
   if (!probes.empty ()) MAP_AND_FLUSH_INT_VECTOR (probes);
 
