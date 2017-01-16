@@ -19,7 +19,7 @@ bool Internal::compactifying () {
   if (stats.conflicts < lim.compact) return false;
   int inactive = max_var - active_variables ();
   assert (inactive >= 0);
-  if (!inactive) return false;
+  if (inactive < opts.compactmin) return false;
   return inactive >= opts.compactlim * max_var;
 }
 
@@ -101,6 +101,7 @@ do { \
 /*------------------------------------------------------------------------*/
 
 void Internal::compact () {
+
   START (compact);
   stats.compacts++;
 
@@ -112,6 +113,11 @@ void Internal::compact () {
   assert (minimized.empty ());
   assert (control.size () == 1);
   assert (resolved.empty ());
+
+  // Remember whether this was 'triggered' from 'compactifying', since only
+  // then we should increase the conflict limit.
+  //
+  const bool triggered = compactifying ();
 
   // We produce a compactifying garbage collector like map of old 'src' to
   // new 'dst' variables.  Inactive variables are just skipped except for
@@ -286,7 +292,7 @@ void Internal::compact () {
   stats.now.fixed = first_fixed ? 1 : 0;
   stats.now.substituted = stats.now.eliminated = 0;
 
-  inc.compact += opts.compactint;
+  if (triggered) inc.compact += opts.compactint;
   lim.compact = stats.conflicts + inc.compact;
   report ('c');
   STOP (compact);
