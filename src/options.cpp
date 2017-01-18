@@ -129,6 +129,9 @@ double Options::get (const char * name) {
 
 void Options::print () {
   unsigned different = 0;
+#ifdef QUIET
+  const bool verbose = false;
+#endif
 #define OPTION(N,T,V,L,H,D) \
   if (N != (V)) different++; \
   if (verbose || N != (V)) { \

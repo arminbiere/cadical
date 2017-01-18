@@ -17,7 +17,6 @@ bool Internal::compactifying () {
   if (level) return false;
   if (!opts.compact) return false;
   if (stats.conflicts < lim.compact) return false;
-  if (lim.fixed_at_last_collect < stats.all.fixed) return false;
   int inactive = max_var - active_variables ();
   assert (inactive >= 0);
   if (inactive < opts.compactmin) return false;
@@ -118,6 +117,11 @@ void Internal::compact () {
   assert (resolved.empty ());
   assert (propagated == trail.size ());
 
+  if (lim.fixed_at_last_collect < stats.all.fixed) {
+    LOG ("forcing garbage collection");
+    garbage_collection ();
+  }
+
   // Remember whether this was 'triggered' from 'compactifying', since only
   // then we should increase the conflict limit.
   //
@@ -172,8 +176,14 @@ void Internal::compact () {
       Clause * c = *i;
       const const_literal_iterator eoc = c->end ();
       literal_iterator j;
-      for (j = c->begin (); j != eoc; j++)
-	MAP_LIT (*j, *j);
+      for (j = c->begin (); j != eoc; j++) {
+	const int src = *j;
+	assert (!val (src));
+	int dst;
+	MAP_LIT (src, dst);
+	assert (dst || c->garbage);
+	*j = dst;
+      }
     }
   }
 

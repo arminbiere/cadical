@@ -336,8 +336,8 @@ void Internal::subsume_round () {
   //
   sort (schedule.begin (), schedule.end (), smaller_clause_size ());
 
-  long scheduled = schedule.size ();
 #ifndef QUIET
+  long scheduled = schedule.size ();
   long total = stats.irredundant + stats.redundant;
   VRB ("subsume", stats.subsumptions,
     "scheduled %ld clauses %.0f%% out of %ld clauses",

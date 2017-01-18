@@ -191,6 +191,8 @@ bool Internal::decompose_round () {
 
   bool new_unit = false, new_binary_clause = false;
 
+  vector<Clause*> postponed_garbage;
+
   // Now go over all clauses and find clause which contain literals that
   // should be substituted by their representative.
 
@@ -239,8 +241,8 @@ bool Internal::decompose_round () {
     }
 
     if (satisfied) {
-      LOG (c, "satisfied after substitution");
-      mark_garbage (c);
+      LOG (c, "satisfied after substitution (postponed)");
+      postponed_garbage.push_back (c);
       garbage++;
     } else if (!clause.size ()) {
       LOG ("learned empty clause during decompose");
@@ -287,6 +289,16 @@ bool Internal::decompose_round () {
       unmark (lit);
     }
   }
+
+  if (!unsat && !postponed_garbage.empty ()) {
+    LOG ("now marking %ld postponed garbage clauses",
+      (long) postponed_garbage.size ());
+    const const_clause_iterator end = postponed_garbage.end ();
+    const_clause_iterator i;
+    for (i = postponed_garbage.begin (); i != end; i++)
+      mark_garbage (*i);
+  }
+  erase_vector (postponed_garbage);
 
   VRB ("decompose",
     stats.decompositions,

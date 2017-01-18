@@ -240,7 +240,6 @@ void Internal::delete_clause (Clause * c) {
     assert (stats.garbage >= (long) bytes);
     stats.garbage -= bytes;
   }
-  if (proof) proof->trace_delete_clause (c);
   deallocate_clause (c);
 }
 
@@ -259,6 +258,7 @@ void Internal::delete_clause (Clause * c) {
 //
 void Internal::mark_garbage (Clause * c) {
   assert (!c->garbage);
+  if (proof) proof->trace_delete_clause (c);
   size_t bytes = c->bytes ();
   if (c->redundant) {
     assert (stats.redundant > 0);
