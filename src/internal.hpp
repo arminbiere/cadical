@@ -79,7 +79,7 @@ class Internal {
   bool unsat;                   // empty clause found or learned
   bool iterating;               // report learned unit (iteration)
   bool clashing;                // found clashing units in during parsing
-  bool simplifying;             // outside of CDCL loop
+  bool simplifying;             // simplifying thus outside of CDCL loop
   bool vivifying;               // during vivification
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // (internal) maximum variable index
@@ -329,6 +329,7 @@ class Internal {
   void delete_garbage_clauses ();
   void check_clause_stats ();
   void check_var_stats ();
+  bool arenaing ();
   void garbage_collection ();
 
   // Set-up occurrence list counters and containers.

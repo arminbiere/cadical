@@ -339,13 +339,17 @@ void Internal::check_clause_stats () {
 
 /*------------------------------------------------------------------------*/
 
+bool Internal::arenaing () {
+  return opts.arena && (stats.collections > 1);  // TODO more sophisticated
+}
+
 void Internal::garbage_collection () {
   if (unsat) return;
   START (collect);
   report ('G', 1);
   stats.collections++;
   mark_satisfied_clauses_as_garbage ();
-  if (opts.arena) copy_non_garbage_clauses ();
+  if (arenaing ()) copy_non_garbage_clauses ();
   else delete_garbage_clauses ();
   check_clause_stats ();
   check_var_stats ();
