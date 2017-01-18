@@ -299,7 +299,7 @@ void Internal::compact () {
   stats.now.fixed = first_fixed ? 1 : 0;
   stats.now.substituted = stats.now.eliminated = 0;
 
-  if (triggered || !inc.compact) inc.compact += opts.compactint;
+  if (triggered) inc.compact += opts.compactint;
   lim.compact = stats.conflicts + inc.compact;
   report ('c');
   STOP (compact);

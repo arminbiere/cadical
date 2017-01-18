@@ -194,6 +194,9 @@ void Internal::init_solving () {
   lim.probe = opts.probeinit;
   inc.probe = (opts.probeint + 1)/2;
 
+  lim.compact = opts.compactint;
+  inc.compact = opts.compactint;
+
   lim.conflict = (opts.clim < 0) ? -1 : stats.conflicts + opts.clim;
   lim.decision = (opts.dlim < 0) ? -1 : stats.decisions + opts.dlim;
 
