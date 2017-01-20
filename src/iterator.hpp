@@ -1,9 +1,6 @@
 #ifndef _iterator_hpp_INCLUDED
 #define _iterator_hpp_INCLUDED
 
-#include <cassert>
-#include <vector>
-
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/

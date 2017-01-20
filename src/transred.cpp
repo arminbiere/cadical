@@ -1,6 +1,4 @@
 #include "internal.hpp"
-#include "macros.hpp"
-#include "message.hpp"
 
 namespace CaDiCaL {
 

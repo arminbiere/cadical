@@ -1,7 +1,5 @@
 #include "internal.hpp"
 
-#include <cstring>
-
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/

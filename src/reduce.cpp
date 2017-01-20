@@ -1,7 +1,5 @@
 #include "internal.hpp"
 
-#include <algorithm>
-
 namespace CaDiCaL {
 
 // Once in a while reduce, e.g., remove, learned clauses which are supposed

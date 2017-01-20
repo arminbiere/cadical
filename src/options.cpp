@@ -1,9 +1,5 @@
 #include "internal.hpp"
 
-#include <cassert>
-#include <cstring>
-#include <cstdlib>
-
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/

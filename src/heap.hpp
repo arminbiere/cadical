@@ -1,12 +1,6 @@
 #ifndef _heap_hpp_INCLUDED
 #define _heap_hpp_INCLUDED
 
-
-#include <cassert>
-#include <vector>
-#include <climits>
-#include <algorithm>
-
 namespace CaDiCaL {
 
 using namespace std;

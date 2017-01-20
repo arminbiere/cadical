@@ -1,8 +1,6 @@
 #ifndef _message_h_INCLUDED
 #define _message_h_INCLUDED
 
-#include <cstdarg>
-
 namespace CaDiCaL {
 
 class Internal;
@@ -49,7 +47,6 @@ struct Message {
   //
   static void verror (Internal *, const char *, va_list &);
   static void error (Internal *, const char *, ...);
-
 };
 
 };

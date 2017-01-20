@@ -1,7 +1,5 @@
 #include "internal.hpp"
 
-#include <algorithm>
-
 namespace CaDiCaL {
 
 // Code for conflict analysis, e.g., to generate the first UIP clause.  The

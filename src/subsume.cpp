@@ -1,11 +1,4 @@
-#include "clause.hpp"
-#include "external.hpp"
 #include "internal.hpp"
-#include "macros.hpp"
-#include "message.hpp"
-#include "macros.hpp"
-
-#include <algorithm>
 
 namespace CaDiCaL {
 

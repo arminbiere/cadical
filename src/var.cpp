@@ -1,7 +1,4 @@
 #include "internal.hpp"
-#include "macros.hpp"
-
-#include <cstring>
 
 namespace CaDiCaL {
 

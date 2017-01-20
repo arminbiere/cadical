@@ -1,9 +1,8 @@
 #include "internal.hpp"
 
-#include "../build/config.hpp"
+/*------------------------------------------------------------------------*/
 
-#include <cstring>
-#include <cstdio>
+#include "../build/config.hpp"
 
 namespace CaDiCaL {
 

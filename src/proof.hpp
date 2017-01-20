@@ -1,8 +1,6 @@
 #ifndef _proof_h_INCLUDED
 #define _proof_h_INCLUDED
 
-#include <cassert>
-
 namespace CaDiCaL {
 
 // Provides proof tracing in the DRAT format.

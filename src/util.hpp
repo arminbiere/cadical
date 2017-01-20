@@ -1,9 +1,6 @@
 #ifndef _util_hpp_INCLUDED
 #define _util_hpp_INCLUDED
 
-#include <cassert>
-#include <vector>
-
 namespace CaDiCaL {
 
 using namespace std;

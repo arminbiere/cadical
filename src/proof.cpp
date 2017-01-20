@@ -1,7 +1,5 @@
 #include "internal.hpp"
 
-#include <climits>
-
 namespace CaDiCaL {
 
 using namespace std;

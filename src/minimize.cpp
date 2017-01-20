@@ -1,7 +1,5 @@
 #include "internal.hpp"
 
-#include <algorithm>
-
 namespace CaDiCaL {
 
 // Functions for learned clause minimization. We only have the recursive

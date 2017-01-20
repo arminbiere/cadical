@@ -1,8 +1,6 @@
 #ifndef _ema_hpp_INCLUDED
 #define _ema_hpp_INCLUDED
 
-#include <cassert>
-
 namespace CaDiCaL {
 
 class Internal;

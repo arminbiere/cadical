@@ -1,7 +1,5 @@
 #include "internal.hpp"
 
-#include <climits>
-
 namespace CaDiCaL {
 
 // This implements Tarjan's algorithm for decomposing the binary implication

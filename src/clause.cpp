@@ -1,7 +1,5 @@
 #include "internal.hpp"
 
-#include <algorithm>
-
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/

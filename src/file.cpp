@@ -1,5 +1,9 @@
 #include "internal.hpp"
 
+/*------------------------------------------------------------------------*/
+
+// Some more low-level 'C' headers.
+
 extern "C" {
 #include <string.h>
 #include <sys/stat.h>
@@ -7,6 +11,8 @@ extern "C" {
 #include <unistd.h>
 #include <stdlib.h>
 };
+
+/*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
 

@@ -1,11 +1,17 @@
 #include "cadical.hpp"
 #include "signal.hpp"
 
+/*------------------------------------------------------------------------*/
+
 #include <csignal>
+
+/*------------------------------------------------------------------------*/
 
 extern "C" {
 #include <unistd.h>
 };
+
+/*------------------------------------------------------------------------*/
 
 // Signal handlers for printing statistics even if solver is interrupted.
 

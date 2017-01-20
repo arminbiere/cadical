@@ -1,9 +1,5 @@
 #include "internal.hpp"
 
-#include <cstring>
-#include <cstdarg>
-#include <cstdio>
-
 namespace CaDiCaL {
 
 void Format::enlarge () {

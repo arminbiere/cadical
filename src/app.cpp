@@ -1,15 +1,33 @@
+/*------------------------------------------------------------------------*/
+
+// Facade includes only ('internal.hpp' includes all internal headers).
+
 #include "app.hpp"
 #include "cadical.hpp"
 #include "file.hpp"
 #include "signal.hpp"
 
+/*------------------------------------------------------------------------*/
+
+// Need this for the 'banner' information (version etc).
+
 #include "../build/config.hpp"
 
+/*------------------------------------------------------------------------*/
+
+// The only common other 'C' header needed.
+
 #include <cstring>
+
+/*------------------------------------------------------------------------*/
+
+// Internal more specific 'C' header.
 
 extern "C" {
 #include "unistd.h"     // for 'isatty'
 };
+
+/*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
 

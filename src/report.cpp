@@ -1,11 +1,5 @@
 #include "internal.hpp"
 
-#include <cstring>
-
-#ifndef NDEBUG
-#include <cctype>
-#endif
-
 namespace CaDiCaL {
 
 #ifndef QUIET

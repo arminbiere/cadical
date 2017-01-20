@@ -1,10 +1,23 @@
 #ifndef _internal_hpp_INCLUDED
 #define _internal_hpp_INCLUDED
 
+/*------------------------------------------------------------------------*/
+
+// Common 'C' headers.
+
 #include <cassert>
 #include <climits>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cctype>
+
+/*------------------------------------------------------------------------*/
+
+// Common 'C++' headers.
+
 #include <vector>
+#include <algorithm>
 
 /*------------------------------------------------------------------------*/
 

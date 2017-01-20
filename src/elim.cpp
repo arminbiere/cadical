@@ -1,7 +1,5 @@
 #include "internal.hpp"
 
-#include <algorithm>
-
 namespace CaDiCaL {
 
 // Implements bounded variable elimination as pioneered in our SATeLite

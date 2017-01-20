@@ -2,10 +2,6 @@
 
 #include "internal.hpp"
 
-#include <cstdio>
-#include <cstdarg>
-#include <algorithm>
-
 namespace CaDiCaL {
 
 void Logger::log (Internal * internal, const char * fmt, ...) {

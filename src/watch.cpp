@@ -1,8 +1,4 @@
 #include "internal.hpp"
-#include "iterator.hpp"
-#include "macros.hpp"
-
-#include <algorithm>
 
 namespace CaDiCaL {
 

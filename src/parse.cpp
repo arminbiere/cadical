@@ -1,9 +1,12 @@
 #include "internal.hpp"
 
-#include <cstdarg>
-#include <cctype>
-#include <climits>
+/*------------------------------------------------------------------------*/
+
+// Only used here for error reporting, so also only included here.
+
 #include <string>
+
+/*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
 

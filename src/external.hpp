@@ -1,10 +1,17 @@
 #ifndef _external_hpp_INCLUDED
 #define _external_hpp_INCLUDED
 
-#include <vector>
+/*------------------------------------------------------------------------*/
+
+#include <cassert>
 #include <climits>
 #include <cstdlib>
-#include <cassert>
+
+/*------------------------------------------------------------------------*/
+
+#include <vector>
+
+/*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
 
