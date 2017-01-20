@@ -13,7 +13,7 @@ void Internal::init_occs () {
 
 void Internal::reset_occs () {
   assert (otab);
-  DEL (otab, Occs, 2*vsize);
+  DELETE (otab, Occs, 2*vsize);
   otab = 0;
 }
 
@@ -29,7 +29,7 @@ void Internal::init_noccs () {
 
 void Internal::reset_noccs () {
   assert (ntab);
-  DEL (ntab, long, 2*vsize);
+  DELETE (ntab, long, 2*vsize);
   ntab = 0;
 }
 
@@ -45,7 +45,7 @@ void Internal::init_noccs2 () {
 
 void Internal::reset_noccs2 () {
   assert (ntab2);
-  DEL (ntab2, long, vsize);
+  DELETE (ntab2, long, vsize);
   ntab2 = 0;
 }
 

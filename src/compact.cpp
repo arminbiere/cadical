@@ -325,7 +325,7 @@ void Internal::compact () {
 
   /*----------------------------------------------------------------------*/
 
-  DEL (map, int, max_var);
+  DELETE (map, int, max_var);
 
   VRB ("compact", stats.compacts,
     "reducing internal variables from %d to %d",

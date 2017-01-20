@@ -13,7 +13,7 @@ void Internal::init_bins () {
 
 void Internal::reset_bins () {
   assert (big);
-  DEL (big, Bins, 2*vsize);
+  DELETE (big, Bins, 2*vsize);
   big = 0;
 }
 

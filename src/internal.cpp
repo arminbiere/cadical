@@ -52,16 +52,16 @@ Internal::~Internal () {
   for (clause_iterator i = clauses.begin (); i != clauses.end (); i++)
     delete_clause (*i);
   if (proof) delete proof;
-  if (vtab) delete [] vtab;
-  if (ltab) delete [] ltab;
-  if (ftab) delete [] ftab;
-  if (btab) delete [] btab;
-  if (ptab) delete [] ptab;
-  if (big) delete [] big;
-  if (vals) vals -= vsize, delete [] vals;
-  if (marks) delete [] marks;
-  if (phases) delete [] phases;
-  if (i2e) delete [] i2e;
+  if (vtab) DELETE (vtab, Var, vsize);
+  if (ltab) DELETE (ltab, Link, vsize);
+  if (ftab) DELETE (ftab, FLags, vsize);
+  if (btab) DELETE (btab, long, vsize);
+  if (ptab) DELETE (ptab, long, 2*vsize);
+  if (big) DELETE (big, Bins, 2*vsize);
+  if (vals) { vals -= vsize; DELETE (vals, signed char, 2*vsize); }
+  if (marks) DELETE (marks, signed char, vsize);
+  if (phases) DELETE (phases, signed char, vsize);
+  if (i2e) DELETE (i2e, int, vsize);
   if (otab) reset_occs ();
   if (ntab) reset_noccs ();
   if (ntab2) reset_noccs2 ();

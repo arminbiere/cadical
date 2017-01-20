@@ -6,7 +6,7 @@
 #define NEW(P,T,N) \
 do { (P) = new T[N]; } while (0)
 
-#define DEL(P,T,N) \
+#define DELETE(P,T,N) \
 do { delete [] (P); } while (0)
 
 #define ZERO(P,T,N) \
