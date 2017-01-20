@@ -1,8 +1,4 @@
 #include "internal.hpp"
-#include "iterator.hpp"
-#include "clause.hpp"
-#include "message.hpp"
-#include "macros.hpp"
 
 namespace CaDiCaL {
 

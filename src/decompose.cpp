@@ -1,7 +1,4 @@
-#include "external.hpp"
 #include "internal.hpp"
-#include "macros.hpp"
-#include "message.hpp"
 
 #include <climits>
 

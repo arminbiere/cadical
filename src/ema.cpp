@@ -1,9 +1,4 @@
-#include "ema.hpp"
-#include "logging.hpp"
-
-#ifdef LOGGING
 #include "internal.hpp"
-#endif
 
 namespace CaDiCaL {
 

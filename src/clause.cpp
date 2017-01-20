@@ -1,7 +1,4 @@
-#include "clause.hpp"
 #include "internal.hpp"
-#include "macros.hpp"
-#include "message.hpp"
 
 #include <algorithm>
 

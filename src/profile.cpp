@@ -2,10 +2,6 @@
 
 #include "internal.hpp"
 
-#include "macros.hpp"
-#include "message.hpp"
-#include "util.hpp"
-
 namespace CaDiCaL {
 
 // Initialize all profile counters with constant name and profiling level.

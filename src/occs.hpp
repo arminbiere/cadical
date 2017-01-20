@@ -3,7 +3,6 @@
 
 #include <vector>
 
-#include "util.hpp"
 
 namespace CaDiCaL {
 

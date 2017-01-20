@@ -1,8 +1,5 @@
 #include "internal.hpp"
 
-#include "macros.hpp"
-#include "message.hpp"
-
 namespace CaDiCaL {
 
 // Restarts are scheduled by a variant of the Glucose scheme presented in

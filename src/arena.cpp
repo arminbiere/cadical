@@ -1,5 +1,4 @@
 #include "internal.hpp"
-#include "util.hpp"
 
 namespace CaDiCaL {
 

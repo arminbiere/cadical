@@ -1,14 +1,6 @@
-#include "file.hpp"
 #include "internal.hpp"
-#include "external.hpp"
-#include "logging.hpp"
-#include "macros.hpp"
-#include "message.hpp"
-#include "parse.hpp"
-#include "util.hpp"
 
 #include <cstdarg>
-#include <cassert>
 #include <cctype>
 #include <climits>
 #include <string>

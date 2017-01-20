@@ -1,7 +1,6 @@
 #ifndef _watch_hpp_INCLUDED
 #define _watch_hpp_INCLUDED
 
-#include "clause.hpp"
 
 #include <cassert>
 #include <vector>

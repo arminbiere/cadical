@@ -1,7 +1,4 @@
-#include "file.hpp"
 #include "internal.hpp"
-#include "macros.hpp"
-#include "message.hpp"
 
 extern "C" {
 #include <string.h>

@@ -1,7 +1,6 @@
 #ifndef QUIET
 
 #include "internal.hpp"
-#include "macros.hpp"
 
 // This is pretty Linux specific code for reporting resource, that is
 // time and memory usage and if you can not compile it then just disable

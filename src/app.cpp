@@ -1,7 +1,7 @@
 #include "app.hpp"
 #include "cadical.hpp"
-#include "signal.hpp"
 #include "file.hpp"
+#include "signal.hpp"
 
 #include "../build/config.hpp"
 

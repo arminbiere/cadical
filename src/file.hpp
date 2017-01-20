@@ -11,7 +11,6 @@
 
 /*------------------------------------------------------------------------*/
 
-#include "features.hpp"
 
 #ifndef HAVE_UNLOCKED_IO
 #define putc_unlocked putc

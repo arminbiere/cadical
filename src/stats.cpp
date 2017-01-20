@@ -1,11 +1,6 @@
-#include "external.hpp"
 #include "internal.hpp"
-#include "macros.hpp"
-#include "message.hpp"
-#include "util.hpp"
 
 #include <cstring>
-#include <cstdio>
 
 namespace CaDiCaL {
 

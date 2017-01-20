@@ -1,7 +1,6 @@
 #ifndef _heap_hpp_INCLUDED
 #define _heap_hpp_INCLUDED
 
-#include "util.hpp"
 
 #include <cassert>
 #include <vector>

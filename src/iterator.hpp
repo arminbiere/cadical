@@ -23,9 +23,6 @@ typedef vector<int>::const_iterator          const_int_iterator;
 typedef vector<Clause *>::iterator              clause_iterator;
 typedef vector<Clause *>::const_iterator  const_clause_iterator;
 
-typedef int *                                  literal_iterator;
-typedef const int *                      const_literal_iterator;
-
 /*------------------------------------------------------------------------*/
 
 }

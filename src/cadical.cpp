@@ -1,10 +1,4 @@
-#include "cadical.hpp"
-#include "file.hpp"
 #include "internal.hpp"
-#include "external.hpp"
-#include "macros.hpp"
-#include "message.hpp"
-#include "parse.hpp"
 
 #include "../build/config.hpp"
 

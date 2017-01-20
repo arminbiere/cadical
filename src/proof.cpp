@@ -1,9 +1,5 @@
 #include "internal.hpp"
-#include "logging.hpp"
-#include "clause.hpp"
-#include "file.hpp"
 
-#include <cassert>
 #include <climits>
 
 namespace CaDiCaL {

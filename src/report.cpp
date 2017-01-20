@@ -1,7 +1,4 @@
-#include "external.hpp"
-#include "file.hpp"
 #include "internal.hpp"
-#include "util.hpp"
 
 #include <cstring>
 

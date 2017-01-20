@@ -1,13 +1,18 @@
 #ifndef _clause_hpp_INCLUDED
 #define _clause_hpp_INCLUDED
 
-#include <cstdlib>
-#include <cassert>
-
-#include "iterator.hpp"
 #include "util.hpp"
 
+#include <cstdlib>
+
 namespace CaDiCaL {
+
+/*------------------------------------------------------------------------*/
+
+typedef int *                                  literal_iterator;
+typedef const int *                      const_literal_iterator;
+
+/*------------------------------------------------------------------------*/
 
 // The 'Clause' data structure is very important. There are usually many
 // clauses and accessing them is a hot-spot.  Thus we use three common
