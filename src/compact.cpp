@@ -15,6 +15,7 @@ namespace CaDiCaL {
 
 bool Internal::compactifying () {
   if (level) return false;
+  // if (!stats.compacts) return true; // TODO remove
   if (!opts.compact) return false;
   if (stats.conflicts < lim.compact) return false;
   int inactive = max_var - active_variables ();
@@ -62,6 +63,7 @@ do { \
   memset (TMP, 0, sizeof TMP[0]); \
   delete [] NAME; \
   NAME = TMP; \
+  PRINT ("mapped '" # NAME "'"); \
 } while (0)
 
 // Same as 'MAP_ARRAY' but two sided (positive & negative literal).
@@ -78,6 +80,7 @@ do { \
   memset (TMP, 0, sizeof TMP[0]); \
   delete [] NAME; \
   NAME = TMP; \
+  PRINT ("mapped '" # NAME "'"); \
 } while (0)
 
 // Map a 'vector<int>' of literals, flush inactive literals, resize and
@@ -97,11 +100,25 @@ do { \
   } \
   V.resize (j - V.begin ()); \
   shrink_vector (V); \
+  PRINT ("mapped '" # V "'"); \
 } while (0)
 
 /*------------------------------------------------------------------------*/
 
+#if 0
+#define PRINT(MSG) \
+do { \
+  if (!opts.verbose) break; \
+  printf ("c %s %.0f MB\n", (MSG), current_resident_set_size ()/(double)(1<<20) ); \
+  fflush (stdout); \
+} while (0)
+#else
+#define PRINT(MSG) do { } while (0)
+#endif
+
 void Internal::compact () {
+
+  PRINT ("BEFORE");
 
   START (compact);
   stats.compacts++;
@@ -152,6 +169,8 @@ void Internal::compact () {
 
   const size_t new_vsize = new_max_var + 1;  // Adjust to fit 'new_max_var'.
 
+  PRINT ("generated 'map'");
+
   /*----------------------------------------------------------------------*/
   // In this first part we only map stuff without reallocation.
   /*----------------------------------------------------------------------*/
@@ -167,6 +186,8 @@ void Internal::compact () {
       external->e2i[eidx] = dst;
     }
   }
+
+  PRINT ("mapped 'i2e'");
 
   // Map the literals in all clauses.
   {
@@ -187,6 +208,8 @@ void Internal::compact () {
     }
   }
 
+  PRINT ("mapped 'clauses'");
+
   // Map the blocking literals in all watches.
   //
   if (watches ()) {
@@ -201,6 +224,8 @@ void Internal::compact () {
       }
     }
   }
+
+  PRINT ("mapped 'blits'");
 
   // We first flush inactive variables and map the links in the queue.  This
   // has to be done before we map the actual links data structure 'ltab'.
@@ -221,6 +246,8 @@ void Internal::compact () {
     if (prev) ltab[prev].next = 0; else queue.first = 0;
     queue.unassigned = queue.last = mapped_prev;
   }
+
+  PRINT ("mapped 'queue'");
 
   /*----------------------------------------------------------------------*/
   // In second part we map and flush arrays.
@@ -261,6 +288,8 @@ void Internal::compact () {
     vals = new_vals;
   }
 
+  PRINT ("mapped 'vals'");
+
   MAP_ARRAY (int, i2e);
   MAP2_ARRAY (int, ptab);
   MAP_ARRAY (long, btab);
@@ -295,6 +324,8 @@ void Internal::compact () {
     esched.shrink ();
   }
 
+  PRINT ("mapped 'esched'");
+
   /*----------------------------------------------------------------------*/
 
   DEL (map, int, max_var);
@@ -313,6 +344,8 @@ void Internal::compact () {
   lim.compact = stats.conflicts + inc.compact;
   report ('c');
   STOP (compact);
+
+  PRINT ("AFTER");
 }
 
 };

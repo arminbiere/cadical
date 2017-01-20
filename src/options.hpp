@@ -41,7 +41,7 @@
 \
 /*     NAME             TYPE, VAL, LO, HI, USAGE */ \
 \
-OPTION(arena,            int,    3, 0,  3, "1=clause,2=var,3=queue") \
+OPTION(arena,            int,    1, 0,  3, "1=clause,2=var,3=queue") \
 OPTION(binary,          bool,    1, 0,  1, "use binary proof format") \
 OPTION(check,           bool,DEBUG, 0,  1, "save & check original CNF") \
 OPTION(clim,             int,   -1, 0,1e9, "conflict limit (-1=none)") \
