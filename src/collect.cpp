@@ -258,10 +258,9 @@ void Internal::copy_non_garbage_clauses () {
 
     // Localize according to decision queue order.
 
-    // This is second best for search. It allocates clauses in the order of
-    // the decision queue.  It also uses saved phases.  Intuitively it
-    // should be faster than MiniSAT version, but it seems that using the
-    // original variable order ('opts.arena==2') gives a small benefit.
+    // This is the default for search. It allocates clauses in the order of
+    // the decision queue.  It also uses saved phases.  It seems slightly 
+    // faster than the MiniSAT version and thus we keep 'opts.arena == 3'.
 
     assert (opts.arena == 3);
 
@@ -281,7 +280,7 @@ void Internal::copy_non_garbage_clauses () {
   for (i = clauses.begin (); i != end; i++)
     if (!(c = *i)->collect () && !c->moved) copy_clause (c);
 
-  // Updates watches or occurrence lists.
+  // Update watches or occurrence lists.
   //
   flush_all_occs_and_watches ();
 
@@ -295,8 +294,6 @@ void Internal::copy_non_garbage_clauses () {
   }
   clauses.resize (j - clauses.begin ());
   if (clauses.size () < clauses.capacity ()/2) shrink_vector (clauses);
-
-  // Replace and flush references in the vivification schedule.
 
   // Release 'from' space completely and then swap 'to' with 'from'.
   //
