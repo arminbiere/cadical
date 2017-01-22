@@ -37,11 +37,12 @@ void Internal::transred () {
     i = clauses.begin ();
   }
 
-  // Such that we can stop iterating watches as soon a long clause is watched.
+  // Move watches of binary clauses to the front. Thus we can stop iterating
+  // watches as soon a long clause is found during watch traversal.
   //
   sort_watches ();
 
-  // This working stack plays the same role as 'trail' during standard
+  // This working stack plays the same role as the 'trail' during standard
   // propagation.
   //
   vector<int> work;

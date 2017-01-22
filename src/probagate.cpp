@@ -179,7 +179,7 @@ void Internal::probe_assign_unit (int lit) {
 // always propagate binary clauses first (see our CPAIOR paper on tree based
 // look ahead), then immediately stop at a conflict and of course use
 // 'probe_assign' instead of 'search_assign'.  The binary propagation part
-// is factored out too.  If a new unit on decision level on is found we
+// is factored out too.  If a new unit on decision level one is found we
 // perform hyper binary resolution and thus actually build an implication
 // tree instead of a DAG.  Statistics counters are also different.
 
