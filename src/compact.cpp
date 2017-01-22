@@ -48,19 +48,38 @@ do { \
   (DST) = RES; \
 } while (0)
 
+// TODO remove
+#if 0
 // Map data in old array 'NAME' to new position as given by 'map'.
 //
+
 #define MAP_ARRAY(TYPE,NAME) \
 do { \
   TYPE * TMP = new TYPE [new_vsize]; \
   for (int SRC = 1; SRC <= max_var; SRC++) { \
     const int DST = map[SRC]; \
+    assert (abs (DST) <= abs (SRC)); \
     if (!DST) continue; \
     TMP[DST] = NAME[SRC]; \
   } \
   memset (TMP, 0, sizeof TMP[0]); \
   delete [] NAME; \
   NAME = TMP; \
+  PRINT ("mapped '" # NAME "'"); \
+} while (0)
+
+#endif
+
+#define MAP_ARRAY(TYPE,NAME) \
+do { \
+  for (int SRC = 1; SRC <= max_var; SRC++) { \
+    const int DST = map[SRC]; \
+    assert (abs (DST) <= abs (SRC)); \
+    assert (DST <= SRC); \
+    if (!DST) continue; \
+    NAME[DST] = NAME[SRC]; \
+  } \
+  SHRINK (NAME, TYPE, vsize, new_vsize); \
   PRINT ("mapped '" # NAME "'"); \
 } while (0)
 
@@ -71,6 +90,7 @@ do { \
   TYPE * TMP = new TYPE [2*new_vsize]; \
   for (int SRC = 1; SRC <= max_var; SRC++) { \
     const int DST = map[SRC]; \
+    assert (abs (DST) <= abs (SRC)); \
     if (!DST) continue; \
     TMP[2*DST] = NAME[2*SRC]; \
     TMP[2*DST+1] = NAME[2*SRC+1]; \
@@ -92,6 +112,7 @@ do { \
   for (i = j; i != end; i++) { \
     const int SRC = *i; \
     int DST = map[abs (SRC)]; \
+    assert (abs (DST) <= abs (SRC)); \
     if (!DST) continue; \
     if (SRC < 0) DST = -DST; \
     *j++ = DST; \

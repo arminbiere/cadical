@@ -14,9 +14,21 @@ do { memset ((P), 0, (N) * sizeof (T)); } while (0)
 
 #define ENLARGE(P,T,O,N) \
 do { \
+  assert ((O) <= (N)); \
+  if ((O) == (N)) break; \
   T * TMP = (P); \
   NEW (P, T, N); \
   for (size_t I = 0; I < (O); I++) (P)[I] = (TMP)[I]; \
+  delete [] TMP; \
+} while (0)
+
+#define SHRINK(P,T,O,N) \
+do { \
+  assert ((O) >= (N)); \
+  if ((O) == (N)) break; \
+  T * TMP = (P); \
+  NEW (P, T, N); \
+  for (size_t I = 0; I < (N); I++) (P)[I] = (TMP)[I]; \
   delete [] TMP; \
 } while (0)
 
