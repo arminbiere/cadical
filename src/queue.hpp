@@ -9,7 +9,7 @@ struct Link {
 
   int prev, next;    // variable indices
 
-  Link () : prev (0), next (0) { }
+  // initialized explicitly in 'init_queue'
 };
 
 // Variable move to front (VMTF) decision queue ordered by 'bumped'.  See

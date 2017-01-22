@@ -3,7 +3,7 @@
 
 namespace CaDiCaL {
 
-struct Flags {         // Variable flags.
+struct Flags {        // Variable flags.
 
   bool seen      : 1; // seen in generating first UIP clause in 'analyze'
   bool keep      : 1; // keep in learned clause in 'minimize/shrink'
@@ -21,15 +21,13 @@ struct Flags {         // Variable flags.
 
   unsigned char status : 2;
 
-  Flags () :
-    seen (false),
-    keep (false),
-    poison (false),
-    removable (false),
-    added (true),       // initially all variables are 'added'
-    removed (true),     // and all variables are 'removed'
-    status (ACTIVE)
-  { }
+  // initialized explicitly in 'Internal::init' through this
+
+  void init () {
+    assert (sizeof (Flags) == 1);
+    assert (!(char*) this);
+    added = removed = true;
+  }
 
   bool active () const { return status == ACTIVE; }
   bool fixed () const { return status == FIXED; }

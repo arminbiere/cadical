@@ -121,13 +121,19 @@ void Internal::init_queue (int new_max_var) {
 void Internal::init (int new_max_var) {
   if (new_max_var <= max_var) return;
   if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
+
   for (int i = -new_max_var; i < -max_var; i++) vals[i] = 0;
   for (int i = max_var + 1; i <= new_max_var; i++) vals[i] = 0;
+
   for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = -1;
-  for (int i = max_var + 1; i <= new_max_var; i++) marks[i] = 0;
-  for (int i = max_var + 1; i <= new_max_var; i++) btab[i] = 0;
+
+  // for (int i = max_var + 1; i <= new_max_var; i++) marks[i] = 0;
+  // for (int i = max_var + 1; i <= new_max_var; i++) btab[i] = 0;
   for (int i = 2*(max_var + 1); i <= 2*new_max_var+1; i++) ptab[i] = -1;
+  for (int i = max_var + 1; i <= new_max_var; i++) ftab[i].init ();
+
   if (!max_var) btab[0] = 0;
+
   init_queue (new_max_var);
   LOG ("initialized %d internal variables", new_max_var - max_var);
   max_var = new_max_var;

@@ -268,6 +268,7 @@ void Internal::compact () {
   MAP_ARRAY (signed_char, marks);
   MAP_ARRAY (signed_char, phases);
 
+#if 1
   // Special case for 'val' as always since for 'val' we trade branch less
   // code for memory and always allocated an [-maxvar,...,maxvar] array.
   {
@@ -282,6 +283,8 @@ void Internal::compact () {
     delete [] vals;
     vals = new_vals;
   }
+#else
+#endif
 
   PRINT ("mapped 'vals'");
 

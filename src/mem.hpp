@@ -1,18 +1,23 @@
 #ifndef _mem_hpp_INCLUDED
 #define _mem_hpp_INCLUDED
 
-// Memory allocation.
-
 #define ZERO(P,T,N) \
 do { \
   assert (sizeof (T) == sizeof *(P)); \
   memset ((P), 0, (N) * sizeof (T)); \
 } while (0)
 
+// Memory allocation.
+
 #if 0
 
+// C++ allocators (wastefull during shrinking)
+
 #define NEW(P,T,N) \
-do { (P) = new T[N]; } while (0)
+do { \
+  (P) = new T[N]; \
+  ZERO (P, T, N); \
+} while (0) 
 
 #define DELETE(P,T,N) \
 do { delete [] (P); } while (0)
@@ -24,6 +29,7 @@ do { \
   T * TMP = (P); \
   NEW (P, T, N); \
   for (size_t I = 0; I < (O); I++) (P)[I] = (TMP)[I]; \
+  ZERO ((P) + (O), T, (N) - (O)); \
   delete [] TMP; \
 } while (0)
 
@@ -38,6 +44,10 @@ do { \
 } while (0)
 
 #else
+
+// C allocators (can make use of 'calloc' & 'realloc').  They initialize
+// everything to zero and thus need explicit initialization afterwards if
+// the allocated objects need it (as 'Flags').
 
 #define NEW(P,T,N) \
 do { \
@@ -58,9 +68,12 @@ do { \
   assert (sizeof (T) == sizeof *(P)); \
   if ((O) == (N)) break; \
   assert ((O) < (N)); \
-  (P) = (T *) realloc ((P), (N) * sizeof (T)); \
-  if (!(P)) throw bad_alloc (); \
-  ZERO ((P) + (O), T, (N) - (O)); \
+  if (!(O)) NEW (P, T, N); /* 'calloc' is preferred */ \
+  else { \
+    (P) = (T *) realloc ((P), (N) * sizeof (T)); \
+    if (!(P)) throw bad_alloc (); \
+    ZERO ((P) + (O), T, (N) - (O)); \
+  } \
 } while (0)
 
 #define SHRINK(P,T,O,N) \
