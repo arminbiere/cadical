@@ -295,6 +295,8 @@ void Internal::copy_non_garbage_clauses () {
   clauses.resize (j - clauses.begin ());
   if (clauses.size () < clauses.capacity ()/2) shrink_vector (clauses);
 
+  if (opts.arenasort) sort (clauses.begin (), clauses.end ());
+
   // Release 'from' space completely and then swap 'to' with 'from'.
   //
   arena.swap ();
