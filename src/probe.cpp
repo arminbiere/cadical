@@ -5,6 +5,8 @@ namespace CaDiCaL {
 // Failed literal probing in phases.
 
 bool Internal::probing () {
+
+  if (!opts.simplify) return false;
   if (!opts.probe) return false;
 
   // Wait until next 'reduce'.

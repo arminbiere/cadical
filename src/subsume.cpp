@@ -19,6 +19,7 @@ namespace CaDiCaL {
 
 bool Internal::subsuming () {
 
+  if (!opts.simplify) return false;
   if (!opts.subsume && !opts.vivify) return false;
 
   // Only perform global subsumption checking immediately after a clause
