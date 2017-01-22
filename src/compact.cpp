@@ -13,7 +13,7 @@ namespace CaDiCaL {
 bool Internal::compactifying () {
   if (level) return false;
   if (!opts.simplify) return false;
-  // if (!stats.compacts) return true; // TODO remove
+  if (!stats.compacts) return true; // TODO remove
   if (!opts.compact) return false;
   if (stats.conflicts < lim.compact) return false;
   int inactive = max_var - active_variables ();
@@ -48,35 +48,13 @@ do { \
   (DST) = RES; \
 } while (0)
 
-// TODO remove
-#if 0
-// Map data in old array 'NAME' to new position as given by 'map'.
-//
-
-#define MAP_ARRAY(TYPE,NAME) \
-do { \
-  TYPE * TMP = new TYPE [new_vsize]; \
-  for (int SRC = 1; SRC <= max_var; SRC++) { \
-    const int DST = map[SRC]; \
-    assert (abs (DST) <= abs (SRC)); \
-    if (!DST) continue; \
-    TMP[DST] = NAME[SRC]; \
-  } \
-  memset (TMP, 0, sizeof TMP[0]); \
-  delete [] NAME; \
-  NAME = TMP; \
-  PRINT ("mapped '" # NAME "'"); \
-} while (0)
-
-#endif
-
 #define MAP_ARRAY(TYPE,NAME) \
 do { \
   for (int SRC = 1; SRC <= max_var; SRC++) { \
     const int DST = map[SRC]; \
-    assert (abs (DST) <= abs (SRC)); \
-    assert (DST <= SRC); \
     if (!DST) continue; \
+    assert (0 < DST), assert (DST <= SRC); \
+    assert (DST > 0); \
     NAME[DST] = NAME[SRC]; \
   } \
   SHRINK (NAME, TYPE, vsize, new_vsize); \
@@ -87,17 +65,14 @@ do { \
 //
 #define MAP2_ARRAY(TYPE,NAME) \
 do { \
-  TYPE * TMP = new TYPE [2*new_vsize]; \
   for (int SRC = 1; SRC <= max_var; SRC++) { \
     const int DST = map[SRC]; \
-    assert (abs (DST) <= abs (SRC)); \
     if (!DST) continue; \
-    TMP[2*DST] = NAME[2*SRC]; \
-    TMP[2*DST+1] = NAME[2*SRC+1]; \
+    assert (0 < DST), assert (DST <= SRC); \
+    NAME[2*DST] = NAME[2*SRC]; \
+    NAME[2*DST+1] = NAME[2*SRC+1]; \
   } \
-  memset (TMP, 0, sizeof TMP[0]); \
-  delete [] NAME; \
-  NAME = TMP; \
+  SHRINK (NAME, TYPE, 2*vsize, 2*new_vsize); \
   PRINT ("mapped '" # NAME "'"); \
 } while (0)
 
@@ -124,7 +99,7 @@ do { \
 
 /*------------------------------------------------------------------------*/
 
-#if 0
+#if 1
 #define PRINT(MSG) \
 do { \
   if (!opts.verbose) break; \
@@ -152,6 +127,7 @@ void Internal::compact () {
   assert (control.size () == 1);
   assert (resolved.empty ());
   assert (propagated == trail.size ());
+  assert (active_variables () < max_var);
 
   if (lim.fixed_at_last_collect < stats.all.fixed) {
     LOG ("forcing garbage collection");
@@ -289,8 +265,8 @@ void Internal::compact () {
   // 'Internal::enlarge' which reallocates in order of allocated bytes.
 
   MAP_ARRAY (Flags, ftab);
-  MAP_ARRAY (signed char, marks);
-  MAP_ARRAY (signed char, phases);
+  MAP_ARRAY (signed_char, marks);
+  MAP_ARRAY (signed_char, phases);
 
   // Special case for 'val' as always since for 'val' we trade branch less
   // code for memory and always allocated an [-maxvar,...,maxvar] array.

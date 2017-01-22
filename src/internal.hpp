@@ -96,6 +96,8 @@ class Internal {
   friend struct vivify_less_clause;
   friend struct vivify_more_noccs;
 
+  typedef signed char signed_char;
+
   /*----------------------------------------------------------------------*/
 
   // The actual state of the solver is in this section.

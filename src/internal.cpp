@@ -54,13 +54,13 @@ Internal::~Internal () {
   if (proof) delete proof;
   if (vtab) DELETE (vtab, Var, vsize);
   if (ltab) DELETE (ltab, Link, vsize);
-  if (ftab) DELETE (ftab, FLags, vsize);
+  if (ftab) DELETE (ftab, Flags, vsize);
   if (btab) DELETE (btab, long, vsize);
-  if (ptab) DELETE (ptab, long, 2*vsize);
+  if (ptab) DELETE (ptab, int, 2*vsize);
   if (big) DELETE (big, Bins, 2*vsize);
-  if (vals) { vals -= vsize; DELETE (vals, signed char, 2*vsize); }
-  if (marks) DELETE (marks, signed char, vsize);
-  if (phases) DELETE (phases, signed char, vsize);
+  if (vals) { vals -= vsize; DELETE (vals, signed_char, 2*vsize); }
+  if (marks) DELETE (marks, signed_char, vsize);
+  if (phases) DELETE (phases, signed_char, vsize);
   if (i2e) DELETE (i2e, int, vsize);
   if (otab) reset_occs ();
   if (ntab) reset_noccs ();
