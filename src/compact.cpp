@@ -12,6 +12,7 @@ namespace CaDiCaL {
 
 bool Internal::compactifying () {
   if (level) return false;
+  if (!opts.simplify) return false;
   // if (!stats.compacts) return true; // TODO remove
   if (!opts.compact) return false;
   if (stats.conflicts < lim.compact) return false;
