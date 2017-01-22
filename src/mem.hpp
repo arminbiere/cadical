@@ -47,7 +47,7 @@ do { \
 
 // C allocators (can make use of 'calloc' & 'realloc').  They initialize
 // everything to zero and thus need explicit initialization afterwards if
-// the allocated objects need it (as 'Flags').
+// the allocated objects need it (as for 'ftab' of 'Flags').
 
 #define NEW(P,T,N) \
 do { \
