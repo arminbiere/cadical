@@ -73,11 +73,11 @@ Internal::~Internal () {
 
 void Internal::enlarge_vals (int new_vsize) {
   signed char * new_vals;
-  NEW (new_vals, signed char, 2*new_vsize);
+  NEW_ONLY (new_vals, signed_char, 2*new_vsize);
   new_vals += new_vsize;
   if (vals) memcpy (new_vals - max_var, vals - max_var, 2*max_var + 1);
   vals -= vsize;
-  delete [] vals;
+  DELETE_ONLY (vals, signed_char, vsize);
   vals = new_vals;
 }
 
@@ -86,16 +86,16 @@ void Internal::enlarge (int new_max_var) {
   while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
   LOG ("enlarge internal from size %ld to new size %ld", vsize, new_vsize);
   // Ordered in the size of allocated memory (larger block first).
-  ENLARGE (wtab, Watches, 2*vsize, 2*new_vsize);
-  ENLARGE (vtab, Var, vsize, new_vsize);
-  ENLARGE (ltab, Link, vsize, new_vsize);
-  ENLARGE (btab, long, vsize, new_vsize);
-  ENLARGE (ptab, int, 2*vsize, 2*new_vsize);
-  ENLARGE (i2e, int, vsize, new_vsize);
+  ENLARGE_ZERO (wtab, Watches, 2*vsize, 2*new_vsize);
+  ENLARGE_ONLY (vtab, Var, vsize, new_vsize);
+  ENLARGE_ONLY (ltab, Link, vsize, new_vsize);
+  ENLARGE_ONLY (btab, long, vsize, new_vsize);
+  ENLARGE_ONLY (ptab, int, 2*vsize, 2*new_vsize);
+  ENLARGE_ONLY (i2e, int, vsize, new_vsize);
   enlarge_vals (new_vsize);
-  ENLARGE (phases, signed char, vsize, new_vsize);
-  ENLARGE (marks, signed char, vsize, new_vsize);
-  ENLARGE (ftab, Flags, vsize, new_vsize);
+  ENLARGE_ONLY (phases, signed_char, vsize, new_vsize);
+  ENLARGE_ONLY (marks, signed_char, vsize, new_vsize);
+  ENLARGE_ONLY (ftab, Flags, vsize, new_vsize);
   assert (sizeof (Flags) == 1);
   vsize = new_vsize;
 }

@@ -1,15 +1,19 @@
 #ifndef _mem_hpp_INCLUDED
 #define _mem_hpp_INCLUDED
 
+// Memory allocation.
+
+/*------------------------------------------------------------------------*/
+
 #define ZERO(P,T,N) \
 do { \
   assert (sizeof (T) == sizeof *(P)); \
-  memset ((P), 0, (N) * sizeof (T)); \
+  memset (P, 0, N * sizeof (T)); \
 } while (0)
 
-// Memory allocation.
-
-#if 1
+/*------------------------------------------------------------------------*/
+#ifdef NREALLOC // do not use no C style 'realloc' for any tables
+/*------------------------------------------------------------------------*/
 
 // C++ allocators are wastefull during shrinking memory blocks for variables
 // in 'compact'. They can not make use of implicit zero initialization as
@@ -35,32 +39,33 @@ do { delete [] (P); } while (0)
 do { \
   assert ((O) <= (N)); \
   if ((O) == (N)) break; \
-  T * TMP = (P); \
-  NEW (P, T, N); \
-  for (size_t I = 0; I < (O); I++) (P)[I] = (TMP)[I]; \
+  T * TMP = P; \
+  NEW_ONLY (P, T, N); \
+  for (size_t I = 0; I < (O); I++) P[I] = TMP[I]; \
   delete [] TMP; \
 } while (0)
 
 #define ENLARGE_ZERO(P,T,O,N) \
 do { \
-  ENLARGE_ONLY ((P),(T),(O),(N)); \
-  ZERO ((P) + (O), T, (N) - (O)); \
+  ENLARGE_ONLY (P, T, O, N); \
+  ZERO (P + O, T, N - O); \
 } while (0)
-
 
 #define RELEASE_SHRINK(P,T,O,N) \
 do { \
   assert ((O) >= (N)); \
   if ((O) == (N)) break; \
   T * TMP = (P); \
-  NEW (P, T, N); \
-  for (size_t I = 0; I < (N); I++) (P)[I] = (TMP)[I]; \
+  NEW_ZERO (P, T, N); \
+  for (size_t I = 0; I < (N); I++) P[I] = TMP[I]; \
   delete [] TMP; \
 } while (0)
 
 #define SHRINK_ONLY RELEASE_SHRINK
 
-#else
+/*------------------------------------------------------------------------*/
+#else // #ifdef NREALLOC
+/*------------------------------------------------------------------------*/
 
 // C allocators which can make use of 'calloc' & 'realloc'.  The former
 // 'calloc' allows allocation of implicit zero initialized memory (our tests
@@ -73,26 +78,48 @@ do { \
 // copy their internal data structures and also release them.  Our code
 // assumes that zero initialized memory for a 'std::vector' is fine.
 
-#define NEW(P,T,N) \
+#define NEW_ONLY(P,T,N) \
+do { \
+  assert (sizeof (T) == sizeof *(P)); \
+  (P) = (T *) malloc ((N) * sizeof (T)); \
+  if (!(P)) throw bad_alloc (); \
+} while (0)
+
+#define NEW_ZERO(P,T,N) \
 do { \
   assert (sizeof (T) == sizeof *(P)); \
   (P) = (T *) calloc ((N), sizeof (T)); \
   if (!(P)) throw bad_alloc (); \
 } while (0)
 
-#define DELETE(P,T,N) \
+#define RELEASE_DELETE(P,T,N) \
 do { \
   assert (sizeof (T) == sizeof *(P)); \
   for (size_t I = 0; I < (size_t) (N); I++) (P)[I] = T(); \
   free ((P)); \
 } while (0)
 
-#define ENLARGE(P,T,O,N) \
+#define DELETE_ONLY(P,T,N) \
+do { \
+  assert (sizeof (T) == sizeof *(P)); \
+  free ((P)); \
+} while (0)
+
+#define ENLARGE_ONLY(P,T,O,N) \
 do { \
   assert (sizeof (T) == sizeof *(P)); \
   if ((O) == (N)) break; \
   assert ((O) < (N)); \
-  if (!(O)) NEW (P, T, N); /* 'calloc' is preferred */ \
+  (P) = (T *) realloc ((P), (N) * sizeof (T)); \
+  if ((N) && !(P)) throw bad_alloc (); \
+} while (0)
+
+#define ENLARGE_ZERO(P,T,O,N) \
+do { \
+  assert (sizeof (T) == sizeof *(P)); \
+  if ((O) == (N)) break; \
+  assert ((O) < (N)); \
+  if (!(O)) NEW_ZERO (P, T, N); /* 'calloc' is preferred */ \
   else { \
     (P) = (T *) realloc ((P), (N) * sizeof (T)); \
     if (!(P)) throw bad_alloc (); \
@@ -100,7 +127,7 @@ do { \
   } \
 } while (0)
 
-#define SHRINK(P,T,O,N) \
+#define RELEASE_SHRINK(P,T,O,N) \
 do { \
   assert (sizeof (T) == sizeof *(P)); \
   if ((O) == (N)) break; \
@@ -110,5 +137,17 @@ do { \
   if ((N) && !(P)) throw bad_alloc (); \
 } while (0)
 
-#endif // if 0
+#define SHRINK_ONLY(P,T,O,N) \
+do { \
+  assert (sizeof (T) == sizeof *(P)); \
+  if ((O) == (N)) break; \
+  assert ((N) < (O)); \
+  (P) = (T *) realloc ((P), (N) * sizeof (T)); \
+  if ((N) && !(P)) throw bad_alloc (); \
+} while (0)
+
+/*------------------------------------------------------------------------*/
+#endif // #ifdef NREALLOC
+/*------------------------------------------------------------------------*/
+
 #endif // ifndef _mem_hpp_INCLUDED

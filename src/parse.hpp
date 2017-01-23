@@ -11,6 +11,8 @@ class Internal;
 
 class Parser {
 
+  typedef signed char signed_char;
+
   Internal * internal;
   External * external;
   File * file;

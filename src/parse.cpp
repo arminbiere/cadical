@@ -125,8 +125,7 @@ COMMENT:
 // Parsing function for a solution in competition output format.
 
 const char * Parser::parse_solution_non_profiled () {
-  NEW (external->solution, signed char, external->max_var + 1);
-  for (int i = 1; i <= external->max_var; i++) external->solution[i] = 0;
+  NEW_ZERO (external->solution, signed_char, external->max_var + 1);
   int ch;
   for (;;) {
     ch = parse_char ();

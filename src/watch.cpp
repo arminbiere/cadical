@@ -4,13 +4,13 @@ namespace CaDiCaL {
 
 void Internal::init_watches () {
   assert (!wtab);
-  NEW (wtab, Watches, 2*vsize);
+  NEW_ZERO (wtab, Watches, 2*vsize);
   assert (sizeof (Watch) == 16);
 }
 
 void Internal::reset_watches () {
   assert (wtab);
-  DELETE (wtab, Watches, 2*vsize);
+  RELEASE_DELETE (wtab, Watches, 2*vsize);
   wtab = 0;
 }
 

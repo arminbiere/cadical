@@ -11,6 +11,7 @@ logging=no
 check=no
 coverage=no
 profile=no
+realloc=yes
 quiet=no
 
 #--------------------------------------------------------------------------#
@@ -42,6 +43,7 @@ where '<option>' is one of the following
 -s|--sats    include and enable expensive statistics code
 -a|--all     short cut for all above, e.g., '-g -l -s' (thus also '-c')
 -q|--quiet   exclude message and profiling code (logging and stats too)
+--no-realloc use C++ style allocators for all tables
 --coverage   compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile    compile with '-pg' to profile with 'gprof'
 EOF
@@ -58,6 +60,7 @@ do
     -s|--stats) stats=yes;;
     -a|--all) debug=yes;check=yes;logging=yes;stats=yes;;
     -q|--quiet) quiet=yes;;
+    --no-realloc) realloc=no;;
     --coverage) coverage=yes;;
     --profile) profile=yes;;
     *) die "invalid option '$1' (try '-h')";;
@@ -95,9 +98,9 @@ fi
 
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
-[ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
 [ $stats = yes ] && CXXFLAGS="$CXXFLAGS -DSTATS"
 [ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
+[ $realloc = no ] && CXXFLAGS="$CXXFLAGS -DNREALLOC"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
 

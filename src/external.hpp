@@ -49,7 +49,7 @@ class External {
   friend class Internal;
   friend class Parser;
   friend class Solver;
-  friend class Stats;
+  friend struct Stats;
 
   /*----------------------------------------------------------------------*/
 

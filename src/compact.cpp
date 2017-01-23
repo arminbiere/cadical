@@ -49,7 +49,7 @@ do { \
   (DST) = RES; \
 } while (0)
 
-#define MAP_ARRAY(TYPE,NAME) \
+#define MAP_ARRAY_ONLY(TYPE,NAME) \
 do { \
   for (int SRC = 1; SRC <= max_var; SRC++) { \
     const int DST = map[SRC]; \
@@ -58,13 +58,19 @@ do { \
     assert (DST > 0); \
     NAME[DST] = NAME[SRC]; \
   } \
-  SHRINK (NAME, TYPE, vsize, new_vsize); \
+  SHRINK_ONLY (NAME, TYPE, vsize, new_vsize); \
   PRINT ("mapped '" # NAME "'"); \
 } while (0)
 
-// Same as 'MAP_ARRAY' but two sided (positive & negative literal).
-//
-#define MAP2_ARRAY(TYPE,NAME) \
+// Same as 'MAP_ARRAY_ONLY...' but two sided (positive & negative literal).
+// We need two versions here, one for arrays of 'std::vector' which need
+// proper initialization and release operations and then another one which
+// does not initialize anything.
+
+// This is the first version for arrays containing objects with destructor
+// (e.g., in our case only 'std::vector').
+
+#define RELEASE_MAP2_ARRAY(TYPE,NAME) \
 do { \
   for (int SRC = 1; SRC <= max_var; SRC++) { \
     const int DST = map[SRC]; \
@@ -73,8 +79,24 @@ do { \
     NAME[2*DST] = NAME[2*SRC]; \
     NAME[2*DST+1] = NAME[2*SRC+1]; \
   } \
-  SHRINK (NAME, TYPE, 2*vsize, 2*new_vsize); \
-  PRINT ("mapped '" # NAME "'"); \
+  RELEASE_SHRINK (NAME, TYPE, 2*vsize, 2*new_vsize); \
+  PRINT ("mapped '" # NAME "' (after release)"); \
+} while (0)
+
+// This is second first version for arrays containing objects which do not
+// have a destructor (such as 'noccs2')
+
+#define MAP2_ARRAY_ONLY(TYPE,NAME) \
+do { \
+  for (int SRC = 1; SRC <= max_var; SRC++) { \
+    const int DST = map[SRC]; \
+    if (!DST) continue; \
+    assert (0 < DST), assert (DST <= SRC); \
+    NAME[2*DST] = NAME[2*SRC]; \
+    NAME[2*DST+1] = NAME[2*SRC+1]; \
+  } \
+  SHRINK_ONLY (NAME, TYPE, 2*vsize, 2*new_vsize); \
+  PRINT ("mapped '" # NAME "' (no release)"); \
 } while (0)
 
 // Map a 'vector<int>' of literals, flush inactive literals, resize and
@@ -268,9 +290,9 @@ void Internal::compact () {
   // Now we continue in reverse order of allocated bytes, e.g., see
   // 'Internal::enlarge' which reallocates in order of allocated bytes.
 
-  MAP_ARRAY (Flags, ftab);
-  MAP_ARRAY (signed_char, marks);
-  MAP_ARRAY (signed_char, phases);
+  MAP_ARRAY_ONLY (Flags, ftab);
+  MAP_ARRAY_ONLY (signed_char, marks);
+  MAP_ARRAY_ONLY (signed_char, phases);
 
 #if 1
   // Special case for 'val' as always since for 'val' we trade branch less
@@ -292,16 +314,16 @@ void Internal::compact () {
 
   PRINT ("mapped 'vals'");
 
-  MAP_ARRAY (int, i2e);
-  MAP2_ARRAY (int, ptab);
-  MAP_ARRAY (long, btab);
-  if (ntab2) MAP_ARRAY (long, ntab2);
-  MAP_ARRAY (Link, ltab);
-  MAP_ARRAY (Var, vtab);
-  if (ntab) MAP2_ARRAY (long, ntab);
-  if (wtab) MAP2_ARRAY (Watches, wtab);
-  if (otab) MAP2_ARRAY (Occs, otab);
-  if (big) MAP2_ARRAY (Bins, big);
+  MAP_ARRAY_ONLY (int, i2e);
+  MAP2_ARRAY_ONLY (int, ptab);
+  MAP_ARRAY_ONLY (long, btab);
+  if (ntab2) MAP_ARRAY_ONLY (long, ntab2);
+  MAP_ARRAY_ONLY (Link, ltab);
+  MAP_ARRAY_ONLY (Var, vtab);
+  if (ntab) MAP2_ARRAY_ONLY (long, ntab);
+  if (wtab) RELEASE_MAP2_ARRAY (Watches, wtab);
+  if (otab) RELEASE_MAP2_ARRAY (Occs, otab);
+  if (big) RELEASE_MAP2_ARRAY (Bins, big);
 
   // The simplest way to map the elimination schedule is to get all elements
   // from the heap and reinsert them.  This could be slightly improved in
