@@ -25,8 +25,9 @@ struct Flags {        // Variable flags.
 
   void init () {
     assert (sizeof (Flags) == 1);
-    assert (!*(char*)this);
+    seen = keep = poison = removable = false;
     added = removed = true;
+    status = ACTIVE;
   }
 
   bool active () const { return status == ACTIVE; }

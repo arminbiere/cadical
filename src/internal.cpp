@@ -73,7 +73,7 @@ Internal::~Internal () {
 
 void Internal::enlarge_vals (int new_vsize) {
   signed char * new_vals;
-  NEW_ONLY (new_vals, signed_char, 2*new_vsize);
+  NEW_ZERO (new_vals, signed_char, 2*new_vsize);
   new_vals += new_vsize;
   if (vals) memcpy (new_vals - max_var, vals - max_var, 2*max_var + 1);
   vals -= vsize;
@@ -89,12 +89,12 @@ void Internal::enlarge (int new_max_var) {
   ENLARGE_ZERO (wtab, Watches, 2*vsize, 2*new_vsize);
   ENLARGE_ONLY (vtab, Var, vsize, new_vsize);
   ENLARGE_ONLY (ltab, Link, vsize, new_vsize);
-  ENLARGE_ONLY (btab, long, vsize, new_vsize);
+  ENLARGE_ZERO (btab, long, vsize, new_vsize);
   ENLARGE_ONLY (ptab, int, 2*vsize, 2*new_vsize);
   ENLARGE_ONLY (i2e, int, vsize, new_vsize);
   enlarge_vals (new_vsize);
   ENLARGE_ONLY (phases, signed_char, vsize, new_vsize);
-  ENLARGE_ONLY (marks, signed_char, vsize, new_vsize);
+  ENLARGE_ZERO (marks, signed_char, vsize, new_vsize);
   ENLARGE_ONLY (ftab, Flags, vsize, new_vsize);
   assert (sizeof (Flags) == 1);
   vsize = new_vsize;
@@ -121,12 +121,10 @@ void Internal::init_queue (int new_max_var) {
 void Internal::init (int new_max_var) {
   if (new_max_var <= max_var) return;
   if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
+  for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = -1;
 #ifndef NDEBUG
   for (int i = -new_max_var; i < -max_var; i++) assert (!vals[i]);
   for (int i = max_var + 1; i <= new_max_var; i++) assert (!vals[i]);
-#endif
-  for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = -1;
-#ifndef NDEBUG
   for (int i = max_var + 1; i <= new_max_var; i++) assert (!marks[i]);
   for (int i = max_var + 1; i <= new_max_var; i++) assert (!btab[i]);
 #endif
