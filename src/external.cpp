@@ -17,9 +17,9 @@ External::External (Internal * i)
 }
 
 External::~External () {
-  if (vals) delete [] vals;
-  if (solution) delete [] solution;
-  if (e2i) delete [] e2i;
+  if (vals) DELETE_ONLY (vals, signed_char, vsize);
+  if (solution) DELETE_ONLY (solution, signed_char, vsize);
+  if (e2i) DELETE_ONLY (e2i, int, vsize);
 }
 
 void External::enlarge (int new_max_var) {

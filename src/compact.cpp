@@ -13,7 +13,6 @@ namespace CaDiCaL {
 bool Internal::compactifying () {
   if (level) return false;
   if (!opts.simplify) return false;
-  if (!stats.compacts) return true; // TODO remove?
   if (!opts.compact) return false;
   if (stats.conflicts < lim.compact) return false;
   int inactive = max_var - active_variables ();
@@ -139,7 +138,6 @@ void Internal::compact () {
 
   START (compact);
 
-  if (stats.compacts) // TODO remove?
   assert (active_variables () < max_var);
 
   stats.compacts++;
@@ -298,7 +296,8 @@ void Internal::compact () {
   // Special case for 'val' as always since for 'val' we trade branch less
   // code for memory and always allocated an [-maxvar,...,maxvar] array.
   {
-    signed char * new_vals = new signed char [2*new_vsize];
+    signed char * new_vals;
+    NEW_ONLY (new_vals, signed_char, 2*new_vsize);
     new_vals += new_vsize;
     for (int src = -max_var; src <= -1; src++)
       new_vals[-map[-src]] = vals[src];
@@ -306,7 +305,7 @@ void Internal::compact () {
       new_vals[map[src]] = vals[src];
     new_vals[0] = 0;
     vals -= vsize;
-    delete [] vals;
+    DELETE_ONLY (vals, signed_char, 2*vsize);
     vals = new_vals;
   }
 #else

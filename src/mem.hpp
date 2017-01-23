@@ -95,7 +95,7 @@ do { \
 #define RELEASE_DELETE(P,T,N) \
 do { \
   assert (sizeof (T) == sizeof *(P)); \
-  for (size_t I = 0; I < (size_t) (N); I++) (P)[I] = T(); \
+  for (size_t I = 0; I < (size_t) (N); I++) T().swap (P[I]); \
   free ((P)); \
 } while (0)
 
@@ -132,7 +132,7 @@ do { \
   assert (sizeof (T) == sizeof *(P)); \
   if ((O) == (N)) break; \
   assert ((N) < (O)); \
-  for (size_t I = (size_t) N; I < (size_t) (O); I++) (P)[I] = T(); \
+  for (size_t I = (size_t) N; I < (size_t) (O); I++) T().swap (P[I]); \
   (P) = (T *) realloc ((P), (N) * sizeof (T)); \
   if ((N) && !(P)) throw bad_alloc (); \
 } while (0)
