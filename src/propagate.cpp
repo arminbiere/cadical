@@ -127,7 +127,7 @@ bool Internal::propagate () {
 
       } else {
 
-	// TODO what if there is a binary conflict already?
+	if (conflict) break; // Stop if there was a binary conflict already.
 
         // The first pointer access to a long (non-binary) clause is the
         // most expensive operation in a CDCL SAT solver.  We count this by
@@ -143,13 +143,14 @@ bool Internal::propagate () {
 
         literal_iterator lits = w.clause->begin ();
 
-	// Simplify the code by forcing 'lit' to be the second literal in
-	// clause.  This is also implemented in MiniSAT.  We use a
-	// branch-less version for conditionally swapping the first two
-	// literals, since it turned out to be substantially faster than the
-	// original:
+	// Simplify code by forcing 'lit' to be the second literal in the
+	// clause.  This goes back to MiniSAT.  We use a branch-less version
+	// for conditionally swapping the first two literals, since it
+	// turned out to be substantially faster than this one
         //
         //  if (lits[0] == lit) swap (lits[0], lits[1]);
+	//
+	// which achieves the same effect, but needs a branch.
         //
 	const int other = lits[0]^lits[1]^lit;
 	lits[0] = other, lits[1] = lit;
