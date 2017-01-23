@@ -171,7 +171,7 @@ bool Internal::propagate () {
 	    // that one failed to find a replacement another one starting at
 	    // the first non-watched literal until the saved position.
 
-	    literal_iterator start = lits + w.clause->pos ();;
+	    const literal_iterator start = lits + w.clause->pos ();;
 
 	    k = start;
 	    while (k != end && (v = val (*k)) < 0) k++;
@@ -197,7 +197,7 @@ bool Internal::propagate () {
 	    // memory allocated for the '_pos' field in a clause.  For those
 	    // short clauses we simply start at the first unwatched literal.
 
-	    literal_iterator start = lits + 2;
+	    const literal_iterator start = lits + 2;
 
 	    k = start;
 	    while (k != end && (v = val (*k)) < 0) k++;

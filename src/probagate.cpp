@@ -231,14 +231,12 @@ bool Internal::probagate () {
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
-          const bool have_pos = w.clause->have_pos;
           literal_iterator k;
           int v = -1;
-          literal_iterator start = lits;
-          start += have_pos ? w.clause->pos () : 2;
-          k = start;
-          while (k != end && (v = val (*k)) < 0) k++;
-          if (have_pos) {
+	  if (w.clause->have_pos) {
+	    const literal_iterator start = lits + w.clause->pos ();
+	    k = start;
+	    while (k != end && (v = val (*k)) < 0) k++;
             if (v < 0) {
               const const_literal_iterator middle = lits + w.clause->pos ();
               k = lits + 2;
@@ -246,7 +244,11 @@ bool Internal::probagate () {
               while (k != middle && (v = val (*k)) < 0) k++;
             }
             w.clause->pos () = k - lits;
-          }
+          } else {
+	    const literal_iterator start = lits + 2;
+	    k = start;
+	    while (k != end && (v = val (*k)) < 0) k++;
+	  }
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
           if (v > 0) ws[j-1].blit = *k;
           else if (!v) {
@@ -263,8 +265,10 @@ bool Internal::probagate () {
           } else { conflict = w.clause; break; }
         }
       }
-      while (i != ws.size ()) ws[j++] = ws[i++];
-      ws.resize (j);
+      if (j < i) {
+	while (i != ws.size ()) ws[j++] = ws[i++];
+	ws.resize (j);
+      }
     } else break;
   }
   long delta = probagated2 - before;
