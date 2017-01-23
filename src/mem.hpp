@@ -9,31 +9,46 @@ do { \
 
 // Memory allocation.
 
-#if 0
+#if 1
 
-// C++ allocators (wastefull during shrinking)
+// C++ allocators are wastefull during shrinking memory blocks for variables
+// in 'compact'. They can not make use of implicit zero initialization as
+// with 'ccmalloc' nor memory reuse as with 'realloc'.
 
-#define NEW(P,T,N) \
+#define NEW_ONLY(P,T,N) \
 do { \
   (P) = new T[N]; \
+} while (0) 
+
+#define NEW_ZERO(P,T,N) \
+do { \
+  NEW_ONLY (P, T, N); \
   ZERO (P, T, N); \
 } while (0) 
 
-#define DELETE(P,T,N) \
+#define RELEASE_DELETE(P,T,N) \
 do { delete [] (P); } while (0)
 
-#define ENLARGE(P,T,O,N) \
+#define DELETE_ONLY RELEASE_DELETE
+
+#define ENLARGE_ONLY(P,T,O,N) \
 do { \
   assert ((O) <= (N)); \
   if ((O) == (N)) break; \
   T * TMP = (P); \
   NEW (P, T, N); \
   for (size_t I = 0; I < (O); I++) (P)[I] = (TMP)[I]; \
-  ZERO ((P) + (O), T, (N) - (O)); \
   delete [] TMP; \
 } while (0)
 
-#define SHRINK(P,T,O,N) \
+#define ENLARGE_ZERO(P,T,O,N) \
+do { \
+  ENLARGE_ONLY ((P),(T),(O),(N)); \
+  ZERO ((P) + (O), T, (N) - (O)); \
+} while (0)
+
+
+#define RELEASE_SHRINK(P,T,O,N) \
 do { \
   assert ((O) >= (N)); \
   if ((O) == (N)) break; \
@@ -43,11 +58,20 @@ do { \
   delete [] TMP; \
 } while (0)
 
+#define SHRINK_ONLY RELEASE_SHRINK
+
 #else
 
-// C allocators (can make use of 'calloc' & 'realloc').  They initialize
-// everything to zero and thus need explicit initialization afterwards if
-// the allocated objects need it (as for 'ftab' of 'Flags').
+// C allocators which can make use of 'calloc' & 'realloc'.  The former
+// 'calloc' allows allocation of implicit zero initialized memory (our tests
+// suggest that the 'ccmalloc' implementation in Linux uses the same amount
+// of resident set size as 'malloc', but zero initialization on demand).
+// Similarly 'realloc' allows to really shrink an allocated memory in place.
+// This can save up-to half the memory w.r.t. resident size for those
+// blocks.  The largest allocated continous blocks are those containing C++
+// 'std::vector' objects ('wtab', 'big').  For those we carefully have to
+// copy their internal data structures and also release them.  Our code
+// assumes that zero initialized memory for a 'std::vector' is fine.
 
 #define NEW(P,T,N) \
 do { \

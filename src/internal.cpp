@@ -52,16 +52,16 @@ Internal::~Internal () {
   for (clause_iterator i = clauses.begin (); i != clauses.end (); i++)
     delete_clause (*i);
   if (proof) delete proof;
-  if (vtab) DELETE (vtab, Var, vsize);
-  if (ltab) DELETE (ltab, Link, vsize);
-  if (ftab) DELETE (ftab, Flags, vsize);
-  if (btab) DELETE (btab, long, vsize);
-  if (ptab) DELETE (ptab, int, 2*vsize);
-  if (big) DELETE (big, Bins, 2*vsize);
-  if (vals) { vals -= vsize; DELETE (vals, signed_char, 2*vsize); }
-  if (marks) DELETE (marks, signed_char, vsize);
-  if (phases) DELETE (phases, signed_char, vsize);
-  if (i2e) DELETE (i2e, int, vsize);
+  if (vtab) DELETE_ONLY (vtab, Var, vsize);
+  if (ltab) DELETE_ONLY (ltab, Link, vsize);
+  if (ftab) DELETE_ONLY (ftab, Flags, vsize);
+  if (btab) DELETE_ONLY (btab, long, vsize);
+  if (ptab) DELETE_ONLY (ptab, int, 2*vsize);
+  if (big) RELEASE_DELETE (big, Bins, 2*vsize);
+  if (vals) { vals -= vsize; DELETE_ONLY (vals, signed_char, 2*vsize); }
+  if (marks) DELETE_ONLY (marks, signed_char, vsize);
+  if (phases) DELETE_ONLY (phases, signed_char, vsize);
+  if (i2e) DELETE_ONLY (i2e, int, vsize);
   if (otab) reset_occs ();
   if (ntab) reset_noccs ();
   if (ntab2) reset_noccs2 ();
@@ -121,19 +121,18 @@ void Internal::init_queue (int new_max_var) {
 void Internal::init (int new_max_var) {
   if (new_max_var <= max_var) return;
   if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
-
-  for (int i = -new_max_var; i < -max_var; i++) vals[i] = 0;
-  for (int i = max_var + 1; i <= new_max_var; i++) vals[i] = 0;
-
+#ifndef NDEBUG
+  for (int i = -new_max_var; i < -max_var; i++) assert (!vals[i]);
+  for (int i = max_var + 1; i <= new_max_var; i++) assert (!vals[i]);
+#endif
   for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = -1;
-
-  // for (int i = max_var + 1; i <= new_max_var; i++) marks[i] = 0;
-  // for (int i = max_var + 1; i <= new_max_var; i++) btab[i] = 0;
+#ifndef NDEBUG
+  for (int i = max_var + 1; i <= new_max_var; i++) assert (!marks[i]);
+  for (int i = max_var + 1; i <= new_max_var; i++) assert (!btab[i]);
+#endif
   for (int i = 2*(max_var + 1); i <= 2*new_max_var+1; i++) ptab[i] = -1;
   for (int i = max_var + 1; i <= new_max_var; i++) ftab[i].init ();
-
-  if (!max_var) btab[0] = 0;
-
+  assert (!btab[0]);
   init_queue (new_max_var);
   LOG ("initialized %d internal variables", new_max_var - max_var);
   max_var = new_max_var;

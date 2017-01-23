@@ -8,12 +8,12 @@ namespace CaDiCaL {
 
 void Internal::init_bins () {
   assert (!big);
-  NEW (big, Bins, 2*vsize);
+  NEW_ZERO (big, Bins, 2*vsize);
 }
 
 void Internal::reset_bins () {
   assert (big);
-  DELETE (big, Bins, 2*vsize);
+  RELEASE_DELETE (big, Bins, 2*vsize);
   big = 0;
 }
 

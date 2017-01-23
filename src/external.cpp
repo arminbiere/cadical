@@ -26,8 +26,8 @@ void External::enlarge (int new_max_var) {
   size_t new_vsize = vsize ? 2*vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
   LOG ("enlarge external from size %ld to new size %ld", vsize, new_vsize);
-  ENLARGE (vals, signed char, vsize, new_vsize);
-  ENLARGE (e2i, int, vsize, new_vsize);
+  ENLARGE_ONLY (vals, signed_char, vsize, new_vsize);
+  ENLARGE_ONLY (e2i, int, vsize, new_vsize);
   vsize = new_vsize;
 }
 

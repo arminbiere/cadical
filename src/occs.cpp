@@ -8,12 +8,12 @@ namespace CaDiCaL {
 
 void Internal::init_occs () {
   assert (!otab);
-  NEW (otab, Occs, 2*vsize);
+  NEW_ZERO (otab, Occs, 2*vsize);
 }
 
 void Internal::reset_occs () {
   assert (otab);
-  DELETE (otab, Occs, 2*vsize);
+  RELEASE_DELETE (otab, Occs, 2*vsize);
   otab = 0;
 }
 
@@ -23,13 +23,12 @@ void Internal::reset_occs () {
 
 void Internal::init_noccs () {
   assert (!ntab);
-  NEW (ntab, long, 2*vsize);
-  ZERO (ntab, long, 2*vsize);
+  NEW_ZERO (ntab, long, 2*vsize);
 }
 
 void Internal::reset_noccs () {
   assert (ntab);
-  DELETE (ntab, long, 2*vsize);
+  DELETE_ONLY (ntab, long, 2*vsize);
   ntab = 0;
 }
 
@@ -39,13 +38,12 @@ void Internal::reset_noccs () {
 
 void Internal::init_noccs2 () {
   assert (!ntab2);
-  NEW (ntab2, long, vsize);
-  ZERO (ntab2, long, vsize);
+  NEW_ZERO (ntab2, long, vsize);
 }
 
 void Internal::reset_noccs2 () {
   assert (ntab2);
-  DELETE (ntab2, long, vsize);
+  DELETE_ONLY (ntab2, long, vsize);
   ntab2 = 0;
 }
 

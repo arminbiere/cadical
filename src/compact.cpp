@@ -151,7 +151,7 @@ void Internal::compact () {
   // mapped to the internal variable '1'.
   //
   int * map, new_max_var = 0, first_fixed = 0, map_first_fixed = 0;
-  NEW (map, int, max_var + 1);
+  NEW_ONLY (map, int, max_var + 1);
   map[0] = 0;
   for (int src = 1; src <= max_var; src++) {
     const Flags & f = flags (src);
@@ -330,7 +330,7 @@ void Internal::compact () {
 
   /*----------------------------------------------------------------------*/
 
-  DELETE (map, int, max_var);
+  DELETE_ONLY (map, int, max_var);
 
   VRB ("compact", stats.compacts,
     "reducing internal variables from %d to %d",

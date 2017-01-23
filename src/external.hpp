@@ -53,6 +53,10 @@ class External {
 
   /*----------------------------------------------------------------------*/
 
+  typedef signed char signed_char;
+
+  /*----------------------------------------------------------------------*/
+
   size_t vsize;           // actually allocated variable data size
   int max_var;            // (exernal) maximum variable index
   signed char * vals;	  // external assignment [1,max_var]
