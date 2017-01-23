@@ -38,9 +38,8 @@ inline void Internal::search_assign (int lit, Clause * reason) {
   // very high propagation per conflict rates, we saw a difference of 24
   // seconds for the version with prefetching versus 32 seconds for the one
   // without. This was for the first 10k conflicts and resulted of course in
-  // the same search space otherwise.  Even though this is a rather
-  // low-level optimization it is confined to the next line (and these
-  // comments), so we keep it.
+  // the same search space otherwise.  This low-level optimization is
+  // confined to the next two lines (and these comments) though.
   //
   if (opts.prefetch && watches ())
     __builtin_prefetch (&*(watches (-lit).begin ()));
@@ -50,9 +49,9 @@ inline void Internal::search_assign (int lit, Clause * reason) {
 
 // External versions of 'assign' which are not inlined.  They either are
 // used to assign unit clauses on the root-level, in 'decide' to assign a
-// decision or in 'analyze' to assign literal "driven" by a learned clause.
-// This happens far less frequently than the 'search_assign' above, which
-// is called directly in 'propagate' below.
+// decision or in 'analyze' to assign the literal "driven" by a learned
+// clause.  This happens far less frequently than the 'search_assign' above,
+// which is called directly in 'propagate' below and thus is inlined.
 
 void Internal::assign_unit (int lit) {
   assert (!level);
@@ -128,6 +127,8 @@ bool Internal::propagate () {
 
       } else {
 
+	// TODO what if there is a binary conflict already?
+
         // The first pointer access to a long (non-binary) clause is the
         // most expensive operation in a CDCL SAT solver.  We count this by
         // the 'visits' counter.  However, since this would be in the
@@ -155,34 +156,27 @@ bool Internal::propagate () {
 
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
-          const bool have_pos = w.clause->have_pos;
           literal_iterator k;
           int v = -1;
 
           // Now try to find a replacement watch.
 
-          // This follows Ian Gent's idea of saving the position of the last
-          // watch replacement.  In essence it needs two copies of the
-          // default search for a watch replacement (in essence the code in
-          // the 'else' branch below), one starting at the saved position
-          // until the end of the clause and then if that one failed to find
-          // a replacement another one starting at the first non-watched
-          // literal until the saved position.
+	  if (w.clause->have_pos) {
 
-          // For shorter clauses of say size 3 (see 'opts.posize'), we do
-          // not save the position and actually do not even have the memory
-          // allocated for the '_pos' field in a clause.  For those we
-          // simply start at the first unwatched literal.
+	    // This follows Ian Gent's (JAIR'13) idea of saving the position
+	    // of the last watch replacement.  In essence it needs two
+	    // copies of the default search for a watch replacement (in
+	    // essence the code in the 'else' branch below), one starting at
+	    // the saved position until the end of the clause and then if
+	    // that one failed to find a replacement another one starting at
+	    // the first non-watched literal until the saved position.
 
-          literal_iterator start = lits;
-          start += have_pos ? w.clause->pos () : 2;
+	    literal_iterator start = lits + w.clause->pos ();;
 
-          k = start;
-          while (k != end && (v = val (*k)) < 0) k++;
+	    k = start;
+	    while (k != end && (v = val (*k)) < 0) k++;
 
-          EXPENSIVE_STATS_ADD (traversed, k - start);
-
-          if (have_pos) {
+	    EXPENSIVE_STATS_ADD (traversed, k - start);
 
             if (v < 0) {  // need second search starting at the head?
 
@@ -195,12 +189,31 @@ bool Internal::propagate () {
             }
 
             w.clause->pos () = k - lits;  // always save position
-          }
+
+	  } else {
+
+	    // For shorter clauses of say size 3 (see 'opts.posize'), we do
+	    // not save the position and actually do not even have the
+	    // memory allocated for the '_pos' field in a clause.  For those
+	    // short clauses we simply start at the first unwatched literal.
+
+	    literal_iterator start = lits + 2;
+
+	    k = start;
+	    while (k != end && (v = val (*k)) < 0) k++;
+
+	    EXPENSIVE_STATS_ADD (traversed, k - start);
+	  }
 
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
 
-          if (v > 0) j[-1].blit = *k;    // satisfied, just replace 'blit'
-          else if (!v) {
+          if (v > 0) {
+
+	    // Replacement satisfied, so just replace 'blit'.
+
+	    j[-1].blit = *k;
+
+          } else if (!v) {
 
             // Found new unassigned replacement literal to be watched.
 
@@ -229,13 +242,15 @@ bool Internal::propagate () {
             // literals as well (still 'v < 0'), thus we found a conflict.
 
             conflict = w.clause;
-            break;                       // (*)
+            break;                         // (*)
           }
         }
       }
     }
-    while (i != ws.end ()) *j++ = *i++;  // because of the 'break' at (*)
-    ws.resize (j - ws.begin ());
+    if (j < i) {
+      while (i != ws.end ()) *j++ = *i++;  // because of the 'break' at (*)
+      ws.resize (j - ws.begin ());
+    }
   }
   long delta = propagated - before;
   if (vivifying) stats.propagations.vivify += delta;
