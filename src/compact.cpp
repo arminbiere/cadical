@@ -13,11 +13,12 @@ namespace CaDiCaL {
 bool Internal::compactifying () {
   if (level) return false;
   if (!opts.simplify) return false;
-  if (!stats.compacts) return true; // TODO remove
+  if (!stats.compacts) return true; // TODO remove?
   if (!opts.compact) return false;
   if (stats.conflicts < lim.compact) return false;
   int inactive = max_var - active_variables ();
   assert (inactive >= 0);
+  if (!inactive) return false;
   if (inactive < opts.compactmin) return false;
   return inactive >= opts.compactlim * max_var;
 }
@@ -115,6 +116,10 @@ void Internal::compact () {
   PRINT ("BEFORE");
 
   START (compact);
+
+  if (stats.compacts) // TODO remove?
+  assert (active_variables () < max_var);
+
   stats.compacts++;
 
   assert (!level);
@@ -127,7 +132,6 @@ void Internal::compact () {
   assert (control.size () == 1);
   assert (resolved.empty ());
   assert (propagated == trail.size ());
-  assert (active_variables () < max_var);
 
   if (lim.fixed_at_last_collect < stats.all.fixed) {
     LOG ("forcing garbage collection");

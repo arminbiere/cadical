@@ -224,43 +224,44 @@ bool Internal::probagate () {
         if (b > 0) continue;
         if (w.clause->garbage) continue;
         literal_iterator lits = w.clause->begin ();
-        if (lits[0] == lit) swap (lits[0], lits[1]);
-        assert (lits[1] == lit);
-        const int u = val (lits[0]);
-        if (u > 0) ws[j-1].blit = lits[0];
+	const int other = lits[0]^lits[1]^lit;
+	lits[0] = other, lits[1] = lit;
+        const int u = val (other);
+        if (u > 0) ws[j-1].blit = other;
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
           literal_iterator k;
-          int v = -1;
+          int v = -1, r = 0;
 	  if (w.clause->have_pos) {
 	    const literal_iterator start = lits + w.clause->pos ();
 	    k = start;
-	    while (k != end && (v = val (*k)) < 0) k++;
+	    while (k != end && (v = val (r = *k)) < 0) k++;
             if (v < 0) {
               const const_literal_iterator middle = lits + w.clause->pos ();
               k = lits + 2;
               assert (w.clause->pos () <= size);
-              while (k != middle && (v = val (*k)) < 0) k++;
+              while (k != middle && (v = val (r = *k)) < 0) k++;
             }
             w.clause->pos () = k - lits;
           } else {
 	    const literal_iterator start = lits + 2;
 	    k = start;
-	    while (k != end && (v = val (*k)) < 0) k++;
+	    while (k != end && (v = val (r = *k)) < 0) k++;
 	  }
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
-          if (v > 0) ws[j-1].blit = *k;
+          if (v > 0) ws[j-1].blit = r;
           else if (!v) {
-            LOG (w.clause, "unwatch %d in", *k);
-            swap (lits[1], *k);
-            watch_literal (lits[1], lit, w.clause, size);
+            LOG (w.clause, "unwatch %d in", r);
+	    *k = lit;
+	    lits[1] = r;
+            watch_literal (r, lit, w.clause, size);
             j--;
           } else if (!u) {
             if (level == 1) {
               int dom = hyper_binary_resolve (w.clause);
-              probe_assign (lits[0], dom);
-            } else probe_assign_unit (lits[0]);
+              probe_assign (other, dom);
+            } else probe_assign_unit (other);
 	    probagate2 ();
           } else { conflict = w.clause; break; }
         }

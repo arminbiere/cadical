@@ -139,25 +139,30 @@ bool Internal::propagate () {
         EXPENSIVE_STATS_ADD (visits, 1);
 
         if (w.clause->garbage) continue;
-        if (w.clause->ignore) continue;
+        if (w.clause->ignore) continue;		// for vivification
 
         literal_iterator lits = w.clause->begin ();
 
-        // Simplify the code by assuming 'lit' is first literal in clause.
-        // This is also implemented in MiniSAT.
+	// Simplify the code by forcing 'lit' to be the second literal in
+	// clause.  This is also implemented in MiniSAT.  We use a
+	// branch-less version for conditionally swapping the first two
+	// literals, since it turned out to be substantially faster than the
+	// original:
         //
-        if (lits[0] == lit) swap (lits[0], lits[1]);
-        assert (lits[1] == lit);
+        //  if (lits[0] == lit) swap (lits[0], lits[1]);
+        //
+	const int other = lits[0]^lits[1]^lit;
+	lits[0] = other, lits[1] = lit;
 
-        const int u = val (lits[0]);      // value of the other watch
+        const int u = val (other);      // value of the other watch
 
-        if (u > 0) j[-1].blit = lits[0];  // satisfied, just replace blit
+        if (u > 0) j[-1].blit = other;  // satisfied, just replace blit
         else {
 
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
           literal_iterator k;
-          int v = -1;
+          int v = -1, r = 0;
 
           // Now try to find a replacement watch.
 
@@ -174,7 +179,7 @@ bool Internal::propagate () {
 	    const literal_iterator start = lits + w.clause->pos ();;
 
 	    k = start;
-	    while (k != end && (v = val (*k)) < 0) k++;
+	    while (k != end && (v = val (r = *k)) < 0) k++;
 
 	    EXPENSIVE_STATS_ADD (traversed, k - start);
 
@@ -183,7 +188,7 @@ bool Internal::propagate () {
               const const_literal_iterator middle = lits + w.clause->pos ();
               k = lits + 2;
               assert (w.clause->pos () <= size);
-              while (k != middle && (v = val (*k)) < 0) k++;
+              while (k != middle && (v = val (r = *k)) < 0) k++;
 
               EXPENSIVE_STATS_ADD (traversed, k - (lits + 2));
             }
@@ -200,7 +205,7 @@ bool Internal::propagate () {
 	    const literal_iterator start = lits + 2;
 
 	    k = start;
-	    while (k != end && (v = val (*k)) < 0) k++;
+	    while (k != end && (v = val (r = *k)) < 0) k++;
 
 	    EXPENSIVE_STATS_ADD (traversed, k - start);
 	  }
@@ -211,16 +216,17 @@ bool Internal::propagate () {
 
 	    // Replacement satisfied, so just replace 'blit'.
 
-	    j[-1].blit = *k;
+	    j[-1].blit = r;
 
           } else if (!v) {
 
             // Found new unassigned replacement literal to be watched.
 
-            LOG (w.clause, "unwatch %d in", *k);
+            LOG (w.clause, "unwatch %d in", r);
 
-            swap (lits[1], *k);
-            watch_literal (lits[1], lit, w.clause, size);
+	    lits[1] = r;
+	    *k = lit;
+            watch_literal (r, lit, w.clause, size);
 
             j--;  // drop this watch from the watch list of 'lit'
 
@@ -231,7 +237,7 @@ bool Internal::propagate () {
             // The other watch is unassigned ('!u') and all other literals
             // assigned to false (still 'v < 0'), thus we found a unit.
             //
-            search_assign (lits[0], w.clause);
+            search_assign (other, w.clause);
 
           } else {
 

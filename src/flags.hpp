@@ -25,7 +25,7 @@ struct Flags {        // Variable flags.
 
   void init () {
     assert (sizeof (Flags) == 1);
-    assert (!(char*) this);
+    assert (!*(char*)this);
     added = removed = true;
   }
 
