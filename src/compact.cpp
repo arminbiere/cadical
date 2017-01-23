@@ -158,11 +158,6 @@ void Internal::compact () {
     garbage_collection ();
   }
 
-  // Remember whether this was 'triggered' from 'compactifying', since only
-  // then we should increase the conflict limit.
-  //
-  const bool triggered = compactifying ();
-
   // We produce a compactifying garbage collector like map of old 'src' to
   // new 'dst' variables.  Inactive variables are just skipped except for
   // fixed ones which will be mapped to the first fixed variable (in the
@@ -363,7 +358,7 @@ void Internal::compact () {
   stats.now.fixed = first_fixed ? 1 : 0;
   stats.now.substituted = stats.now.eliminated = 0;
 
-  if (triggered) inc.compact += opts.compactint;
+  inc.compact += opts.compactint;
   lim.compact = stats.conflicts + inc.compact;
   report ('c');
   STOP (compact);
