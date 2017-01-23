@@ -8,7 +8,7 @@
 #define ZERO(P,T,N) \
 do { \
   assert (sizeof (T) == sizeof *(P)); \
-  memset (P, 0, N * sizeof (T)); \
+  memset (P, 0, (N) * sizeof (T)); \
 } while (0)
 
 /*------------------------------------------------------------------------*/
