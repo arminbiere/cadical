@@ -221,6 +221,13 @@ void Internal::copy_non_garbage_clauses () {
   //
   arena.prepare (moved_bytes);
 
+  // Keep clauses in arena in the same order.
+  //
+  if (opts.arenacompact)
+    for (i = clauses.begin (); i != end; i++)
+      if (!(c = *i)->collect () && arena.contains (c))
+	copy_clause (c);
+
   if (opts.arena == 1 || !watches ()) {
 
     // Localize according to current clause order.
@@ -236,7 +243,7 @@ void Internal::copy_non_garbage_clauses () {
     // benefit due to better cache locality.
 
     for (i = clauses.begin (); i != end; i++)
-      if (!(c = *i)->collect ()) copy_clause (c);
+      if (!(c = *i)->moved && !c->collect ()) copy_clause (c);
 
   } else if (opts.arena == 2) {
 
