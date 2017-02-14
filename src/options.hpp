@@ -42,7 +42,7 @@
 /*     NAME             TYPE, VAL, LO, HI, USAGE */ \
 \
 OPTION(arena,            int,    3, 0,  3, "1=clause,2=var,3=queue") \
-OPTION(arenacompact,    bool,    0, 0,  1, "keep clauses compact") \
+OPTION(arenacompact,    bool,    1, 0,  1, "keep clauses compact") \
 OPTION(arenasort,        int,    1, 0,  1, "sort clauses after arenaing") \
 OPTION(binary,          bool,    1, 0,  1, "use binary proof format") \
 OPTION(check,           bool,DEBUG, 0,  1, "save & check original CNF") \
@@ -92,7 +92,7 @@ OPTION(restart,         bool,    1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,    4, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double,  1.1, 0, 10, "restart slow fast margin") \
 OPTION(reusetrail,      bool,    1, 0,  1, "enable trail reuse") \
-OPTION(simplify,        bool,    1, 0,  1, "enable simplifier") \
+OPTION(simplify,        bool,    0, 0,  1, "enable simplifier") \
 OPTION(strengthen,      bool,    1, 0,  1, "strengthen during subsume") \
 OPTION(subsume,         bool,    1, 0,  1, "enable clause subsumption") \
 OPTION(subsumebinlim,    int,  1e4, 0,1e9, "watch list length limit") \
