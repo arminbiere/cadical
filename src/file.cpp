@@ -150,7 +150,7 @@ File * File::write (Internal * internal, const char * path) {
   FILE * file;
   int close_input = 2;
   if (has_suffix (path, ".xz"))
-    file = write_pipe (internal, "xz -c -e > %s", path);
+    file = write_pipe (internal, "xz -c > %s", path);
   else if (has_suffix (path, ".bz2"))
     file = write_pipe (internal, "bzip2 -c > %s", path);
   else if (has_suffix (path, ".gz"))
