@@ -175,7 +175,7 @@ void Stats::print (Internal * internal) {
     stats.collections, relative (stats.conflicts, stats.collections));
   size_t extendbytes = internal->external->extension.capacity ();
   extendbytes *= sizeof (int);
-  // if (verbose)
+  if (verbose)
   MSG ("  extendbytes:   %15ld   %10.2f    bytes and MB",
     extendbytes,
     extendbytes/(double)(1l<<20));
