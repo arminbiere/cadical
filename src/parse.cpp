@@ -55,7 +55,7 @@ Parser::parse_lit (int & ch, int & lit, const int vars) {
     lit = 10*lit + digit;
   }
   if (ch == '\r') ch = parse_char ();
-  if (ch != 'c' && ch != ' ' && ch != '\t' && ch != '\n')
+  if (ch != 'c' && ch != ' ' && ch != '\t' && ch != '\n' && ch != EOF)
     PER ("expected white space after '%d'", sign*lit);
   if (lit > vars)
     PER ("literal %d exceeds maximum variable %d", sign*lit, vars);
