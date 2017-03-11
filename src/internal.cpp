@@ -121,7 +121,8 @@ void Internal::init_queue (int new_max_var) {
 void Internal::init (int new_max_var) {
   if (new_max_var <= max_var) return;
   if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
-  for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = -1;
+  signed char val = opts.phase ? 1 : -1;
+  for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = val;;
 #ifndef NDEBUG
   for (int i = -new_max_var; i < -max_var; i++) assert (!vals[i]);
   for (int i = max_var + 1; i <= new_max_var; i++) assert (!vals[i]);
