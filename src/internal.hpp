@@ -327,6 +327,10 @@ class Internal {
   int reuse_trail ();
   void restart ();
 
+  // Resetting the saved phased.
+  bool rephasing ();
+  void rephase ();
+
   // Asynchronous terminating check.
   //
   bool terminating ();

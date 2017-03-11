@@ -23,6 +23,7 @@ struct Stats {
   } propagations;
 
   long compacts;     // number of compactifications
+  long rephased;     // actual number of happened rephases
   long restarts;     // actual number of happened restarts
   long reused;       // number of reused trails
   long reports;      // 'report' counter

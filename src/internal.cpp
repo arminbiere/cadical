@@ -160,6 +160,7 @@ int Internal::search () {
     else if (satisfied ()) res = 10;       // all variables satisfied
     else if (terminating ()) break;        // limit hit or asynchronous abort
     else if (restarting ()) restart ();    // restart by backtracking
+    else if (rephasing ()) rephase ();     // reset phases
     else if (reducing ()) reduce ();       // collect useless learned clauses
     else if (probing ()) probe ();         // failed literal probing
     else if (subsuming ()) subsume ();     // subsumption algorithm
@@ -193,6 +194,9 @@ void Internal::init_solving () {
 
   lim.compact = opts.compactint;
   inc.compact = opts.compactint;
+
+  inc.rephase = opts.rephaseint;
+  lim.rephase = opts.rephaseint;
 
   lim.conflict = (opts.clim < 0) ? -1 : stats.conflicts + opts.clim;
   lim.decision = (opts.dlim < 0) ? -1 : stats.decisions + opts.dlim;

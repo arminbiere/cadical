@@ -37,6 +37,8 @@ void Stats::print (Internal * internal) {
   MSG ("decompositions:  %15ld   %10.2f    decompositions per probing",
     stats.decompositions,
     relative (stats.decompositions, stats.probings));
+  MSG ("rephased:        %15ld   %10.2f    conflicts per rephase",
+    stats.rephased, relative (stats.conflicts, stats.rephased));
   MSG ("reductions:      %15ld   %10.2f    conflicts per reduction",
     stats.reductions, relative (stats.conflicts, stats.reductions));
   MSG ("restarts:        %15ld   %10.2f    conflicts per restart",
