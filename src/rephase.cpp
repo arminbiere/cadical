@@ -17,6 +17,7 @@ void Internal::rephase () {
   inc.rephase *= 2;
   lim.rephase = stats.conflicts + inc.rephase;
   LOG ("next rephase after %ld conflicts", lim.rephase);
+  report ('~');
 }
 
 };
