@@ -121,7 +121,7 @@ do { \
 
 /*------------------------------------------------------------------------*/
 
-#if 1
+#ifndef QUIET
 #define PRINT(MSG) \
 do { \
   if (!opts.verbose) break; \
