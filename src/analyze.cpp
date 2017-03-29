@@ -127,12 +127,16 @@ inline void Internal::bump_resolved_clauses () {
     bump_clause (*i);
   STOP (bump);
   resolved.clear ();
+  if (wf > 1e100) abort ();
+  wi *= wf;
 }
 
 inline void Internal::save_as_resolved_clause (Clause * c) {
   if (!c->redundant) return;
   if (c->hbr) c->used = true;
   if (!c->have_analyzed) return;
+  double p = prop (c);
+  double og = wg, os = ws;
   resolved.push_back (c);
 }
 

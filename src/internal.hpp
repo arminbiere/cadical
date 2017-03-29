@@ -143,6 +143,7 @@ class Internal {
   EMA slow_glue_avg;            // slow glue average
   EMA size_avg;                 // learned clause size average
   EMA jump_avg;                 // jump average
+  double wg, ws, wf, wi;
   Limit lim;                    // limits for various phases
   Inc inc;                      // limit increments
   Proof * proof;                // trace clausal proof if non zero
@@ -418,6 +419,10 @@ class Internal {
   bool likely_to_be_kept_clause (Clause * c) {
     if (!c->redundant) return true;
     return c->size <= lim.keptsize && c->glue <= lim.keptglue;
+  }
+
+  double prop (Clause * c) {
+    return ws * c->size + wg * c->glue;
   }
 
   // We mark variables in added or shrunken clauses as being 'added' if the
