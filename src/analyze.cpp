@@ -127,8 +127,10 @@ inline void Internal::bump_resolved_clauses () {
     bump_clause (*i);
   STOP (bump);
   resolved.clear ();
+#if 0
   if (wi > 1e100) abort ();
   wi /= 1 - wa;
+#endif
 }
 
 inline void Internal::save_as_resolved_clause (Clause * c) {
