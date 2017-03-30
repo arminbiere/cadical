@@ -33,7 +33,7 @@ Internal::Internal ()
   probagated (0),
   probagated2 (0),
   esched (more_noccs2 (this)),
-  wg (0), ws (0), wf (1 - 1e-3), wi (1),
+  wg (0), ws (0), wa (1e-3), wi (1),
   proof (0),
   opts (this),
 #ifndef QUIET

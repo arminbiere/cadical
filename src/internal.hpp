@@ -143,7 +143,7 @@ class Internal {
   EMA slow_glue_avg;            // slow glue average
   EMA size_avg;                 // learned clause size average
   EMA jump_avg;                 // jump average
-  double wg, ws, wf, wi;
+  double wg, ws, wa, wi;
   Limit lim;                    // limits for various phases
   Inc inc;                      // limit increments
   Proof * proof;                // trace clausal proof if non zero

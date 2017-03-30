@@ -4,6 +4,7 @@ namespace CaDiCaL {
 
 bool Internal::rephasing () {
   if (!opts.rephase) return false;
+  if (stats.rephased >= opts.rephasemax) return false;
   return stats.conflicts > lim.rephase;
 }
 
