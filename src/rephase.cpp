@@ -4,7 +4,6 @@ namespace CaDiCaL {
 
 bool Internal::rephasing () {
   if (!opts.rephase) return false;
-  if (stats.rephased >= opts.rephasemax) return false;
   return stats.conflicts > lim.rephase;
 }
 
@@ -15,6 +14,7 @@ void Internal::rephase () {
   if (stats.rephased & 1) val = -val;
   for (int idx = 1; idx <= max_var; idx++) phases[idx] = val;
   backtrack ();
+  reset_queue ();
   inc.rephase *= 2;
   lim.rephase = stats.conflicts + inc.rephase;
   LOG ("next rephase after %ld conflicts", lim.rephase);
