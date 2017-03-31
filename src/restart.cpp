@@ -39,7 +39,9 @@ void Internal::restart () {
   stats.restarts++;
   LOG ("restart %ld", stats.restarts);
   backtrack (reuse_trail ());
-  lim.restart = stats.conflicts + opts.restartint;
+  long delta = opts.restartint;
+  if (stats.rephased % 3 == 2) delta *= 20;
+  lim.restart = stats.conflicts + delta;
   report ('R', 2);
   STOP (restart);
 }
