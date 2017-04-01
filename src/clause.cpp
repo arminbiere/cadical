@@ -121,7 +121,7 @@ Clause * Internal::new_clause (bool red, int glue) {
 
   // Initialize all clause data and copy literals from global 'clause'.
   //
-  if (have_analyzed) c->_analyzed = ++stats.analyzed;
+  // if (have_analyzed) c->_analyzed = ++stats.analyzed;
   if (have_pos) c->_pos = 2, c->dummy = 0;
   c->have_analyzed = have_analyzed;
   c->have_pos = have_pos;
