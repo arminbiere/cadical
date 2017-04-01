@@ -87,6 +87,7 @@ class Internal {
   //
   friend struct bumped_earlier;
   friend struct less_negated_occs;
+  friend struct less_usefull;
   friend struct more_noccs2;
   friend struct subsume_less_noccs;
   friend struct trail_bumped_smaller;
@@ -143,7 +144,7 @@ class Internal {
   EMA slow_glue_avg;            // slow glue average
   EMA size_avg;                 // learned clause size average
   EMA jump_avg;                 // jump average
-  double wg, ws, wa, wi;
+  double wg, ws;
   Limit lim;                    // limits for various phases
   Inc inc;                      // limit increments
   Proof * proof;                // trace clausal proof if non zero
@@ -343,6 +344,7 @@ class Internal {
   //
   bool reducing ();
   void protect_reasons ();
+  void update_clause_useful_probability (Clause*);
   void mark_useless_redundant_clauses_as_garbage ();
   void unprotect_reasons ();
   void reduce ();
@@ -421,9 +423,7 @@ class Internal {
     return c->size <= lim.keptsize && c->glue <= lim.keptglue;
   }
 
-  double prop (Clause * c) {
-    return ws * c->size + wg * c->glue;
-  }
+  double clause_useful (Clause * c) { return ws/c->size + wg/c->glue; }
 
   // We mark variables in added or shrunken clauses as being 'added' if the
   // clause is likely to be kept in the next 'reduce' phase (see last

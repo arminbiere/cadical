@@ -127,26 +127,12 @@ inline void Internal::bump_resolved_clauses () {
     bump_clause (*i);
   STOP (bump);
   resolved.clear ();
-#if 0
-  if (wi > 1e100) abort ();
-  wi /= 1 - wa;
-#endif
 }
 
 inline void Internal::save_as_resolved_clause (Clause * c) {
   if (!c->redundant) return;
   if (c->hbr) c->used = true;
   if (!c->have_analyzed) return;
-#if 0
-  MSG ("old: g = %d, s = %d, wg = %g, ws = %g, y = %g, t = %g, e = %g%%",
-    c->glue, c->size, wg, ws, prop (c), wi,
-    prop (c) - wi, percent (prop (c) - wi, wi));
-  ws += wa * (wi - prop (c)) * c->size;
-  wg += wa * (wi - prop (c)) * c->glue;
-  MSG ("new: g = %d, s = %d, wg = %g, ws = %g, y = %g, t = %g, e = %g%%",
-    c->glue, c->size, wg, ws, prop (c), wi,
-    prop (c) - wi, percent (prop (c) - wi, wi));
-#endif
   resolved.push_back (c);
 }
 

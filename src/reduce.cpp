@@ -41,12 +41,33 @@ void Internal::unprotect_reasons () {
 // kept if they have the same glue.
 
 struct less_usefull {
+  Internal * internal;
+  less_usefull (Internal * i) : internal (i) { }
   bool operator () (Clause * c, Clause * d) {
-    if (c->glue > d->glue) return true;
-    if (c->glue < d->glue) return false;
+    double p = internal->clause_useful (c);
+    double q = internal->clause_useful (d);
+    if (p < q) return true;
+    if (p > q) return false;
     return analyzed_earlier () (c, d);
   }
 };
+
+void Internal::update_clause_useful_probability (Clause * c) {
+  assert (c->have_analyzed);
+  double predicted = clause_useful (c);
+  double actual = (c->analyzed () > lim.analyzed);
+  double error = actual - predicted;
+  LOG ("glue %d, size %u, predicted %1.4f, actual %.0f, error %.0f%%",
+    c->glue, c->size, predicted, actual, percent (error, predicted));
+  LOG ("old prediction %1.4f = %f / %d + %f / %u",
+    predicted, wg, c->glue, ws, c->size);
+  wg += (error / c->glue) * 1e-5;
+  ws += (error / c->size) * 1e-5;
+  LOG ("new prediction %1.4f = %f / %d + %f / %u",
+    predicted, wg, c->glue, ws, c->size);
+  LOG ("actual prediction %1.4f = %f / %d + %f / %u",
+    clause_useful (c), wg, c->glue, ws, c->size);
+}
 
 // This function implements the important reduction policy. It determines
 // which redundant clauses are considered not useful and thus will be
@@ -60,19 +81,27 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     Clause * c = *i;
     if (!c->redundant) continue;                 // keep irredundant
     if (c->garbage) continue;                    // already marked
-    if (c->reason) continue;                     // need to keep reasons
     if (c->hbr) {                                // hyper binary resolvent?
       assert (c->size == 2);
-      if (!c->used) mark_garbage (c);
-      else c->used = false;
+      if (!c->used) mark_garbage (c);		 // keep it one round if
+      else c->used = false;                      // used at least once
       continue;
     }
     if (!c->have_analyzed) continue;             // statically deemed useful
+    update_clause_useful_probability (c);
+    if (c->reason) continue;                     // need to keep reasons
     if (c->analyzed () > lim.analyzed) continue; // keep recent clauses
     stack.push_back (c);
   }
 
-  if (opts.reduceglue) sort (stack.begin (), stack.end (), less_usefull ());
+#if 0
+  VRB ("reduce", stats.reductions, "wg %f, ws %f", wg, ws);
+#else
+  MSG ("[reduce-%ld] useful:  %f / glue + %f / size",
+    stats.reductions, wg, ws);
+#endif
+
+  if (opts.reduceglue) sort (stack.begin (), stack.end (), less_usefull (this));
   else sort (stack.begin (), stack.end (), analyzed_earlier ());
 
   const_clause_iterator target = stack.begin () + stack.size ()/2;

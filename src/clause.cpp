@@ -119,13 +119,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   ptr -= offset;
   c = (Clause*) ptr;
 
-  // Initialize all clause data and copy literals from global 'clause'.
-  //
-#if 0
-  if (have_analyzed) c->_analyzed = ++stats.analyzed;
-#else
-  if (have_analyzed) c->_analyzed = 1;
-#endif
+  if (have_analyzed) c->_analyzed = 0;
   if (have_pos) c->_pos = 2, c->dummy = 0;
   c->have_analyzed = have_analyzed;
   c->have_pos = have_pos;
