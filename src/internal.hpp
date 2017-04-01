@@ -173,7 +173,6 @@ class Internal {
   void init_queue (int new_max_var);
   void init (int new_max_var);
   void add_original_lit (int elit);
-  void reset_queue ();
 
   // Enlarge tables.
   //

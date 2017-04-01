@@ -119,19 +119,6 @@ void Internal::init_queue (int new_max_var) {
   queue.last = queue.unassigned = prev;
 }
 
-void Internal::reset_queue () {
-  int prev = 0;
-  for (int i = max_var; i > 0; i--) {
-    Link * l = ltab + i;
-    if ((l->prev = prev)) ltab[prev].next = i; else queue.first = i;
-    btab[i] = ++stats.bumped;
-    prev = i;
-  }
-  if (prev) ltab[prev].next = 0; else queue.first = 0;
-  queue.bumped = btab[prev];
-  queue.last = queue.unassigned = prev;
-}
-
 void Internal::init (int new_max_var) {
   if (new_max_var <= max_var) return;
   if ((size_t) new_max_var >= vsize) enlarge (new_max_var);

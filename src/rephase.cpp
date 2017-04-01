@@ -14,7 +14,6 @@ void Internal::rephase () {
   if (stats.rephased & 1) val = -val;
   for (int idx = 1; idx <= max_var; idx++) phases[idx] = val;
   backtrack ();
-  reset_queue ();
   inc.rephase *= 2;
   lim.rephase = stats.conflicts + inc.rephase;
   LOG ("next rephase after %ld conflicts", lim.rephase);
