@@ -50,10 +50,10 @@ struct less_usefull {
   }
 };
 
-void Internal::update_clause_useful_probability (Clause * c, bool used) {
+void Internal::update_clause_useful_probability (Clause * c) {
   assert (!c->keep);
   double predicted = clause_useful (c);
-  double actual = used ? 1 : 0;
+  double actual = c->used ? 1 : 0;
   double error = actual - predicted;
   LOG ("glue %d, size %u, predicted %1.4f, actual %.0f, error %.0f%%",
     c->glue, c->size, predicted, actual, percent (error, predicted));
@@ -79,16 +79,14 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     Clause * c = *i;
     if (!c->redundant) continue;                // keep irredundant
     if (c->garbage) continue;                   // already marked
-    const bool used = c->used;
-    c->used = false;
     if (c->hbr) {                               // hyper binary resolvent?
       assert (c->size == 2);
-      if (!used) mark_garbage (c);		// keep it for one round
+      if (!c->used) mark_garbage (c);		// keep it for one round
       continue;					// unless it was used
     }
     if (c->keep) continue;             		// statically considered useful
-    update_clause_useful_probability (c, used);
-    if (used) continue;				// keep recently used
+    update_clause_useful_probability (c);
+    if (c->used) continue;			// keep recently used
     if (c->reason) continue;                    // need to keep reasons
     stack.push_back (c);
   }
@@ -115,8 +113,12 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   end = stack.end ();
   for (i = target; i != end; i++) {
     Clause * c = *i;
-    if (c->size > lim.keptsize) lim.keptsize = c->size;
-    if (c->glue > lim.keptglue) lim.keptglue = c->glue;
+    if (c->used) c->used = false;
+    else {
+      assert (!c->keep);
+      if (c->size > lim.keptsize) lim.keptsize = c->size;
+      if (c->glue > lim.keptglue) lim.keptglue = c->glue;
+    }
   }
 
   VRB ("reduce", stats.reductions,
