@@ -138,7 +138,6 @@ class Internal {
   vector<int> probes;           // remaining scheduled probes
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
-  vector<Clause*> resolved;     // resolved clauses in 'analyze'
   ElimSchedule esched;          // bounded variable elimination schedule
   EMA fast_glue_avg;            // fast glue average
   EMA slow_glue_avg;            // slow glue average
@@ -313,8 +312,6 @@ class Internal {
   void bump_variable (int lit);
   void bump_variables ();
   void bump_clause (Clause *);
-  void bump_resolved_clauses ();
-  void save_as_resolved_clause (Clause *);
   void clear_seen ();
   void clear_levels ();
   void clear_minimized ();
@@ -344,7 +341,7 @@ class Internal {
   //
   bool reducing ();
   void protect_reasons ();
-  void update_clause_useful_probability (Clause*);
+  void update_clause_useful_probability (Clause*, bool used);
   void mark_useless_redundant_clauses_as_garbage ();
   void unprotect_reasons ();
   void reduce ();

@@ -68,8 +68,8 @@ OPTION(decompose,       bool,    1, 0,  1, "SCC decompose BIG and ELS") \
 OPTION(decomposerounds,  int,    1, 1,1e9, "number of decompose rounds") \
 OPTION(hbr,             bool,    1, 0,  1, "learn hyper binary clauses") \
 OPTION(hbrsizelim,       int, 1e9, 3, 1e9, "max size HBR base clause") \
-OPTION(keepglue,         int,    1, 1,1e9, "glue kept learned clauses") \
-OPTION(keepsize,         int,    2, 2,1e9, "size kept learned clauses") \
+OPTION(keepglue,         int,    2, 1,1e9, "glue kept learned clauses") \
+OPTION(keepsize,         int,    3, 2,1e9, "size kept learned clauses") \
 OPTION(leak,            bool,    1, 0,  1, "leak solver memory") \
 LOGOPT(log,             bool,    0, 0,  1, "enable logging") \
 LOGOPT(logsort,         bool,    0, 0,  1, "sort logged clauses") \
@@ -86,11 +86,10 @@ OPTION(probemineff,   double,  1e5, 0,  1, "minimum probing efficiency") \
 OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
 OPTION(profile,          int,    2, 0,  4, "profiling level") \
 QUTOPT(quiet,           bool,    0, 0,  1, "disable all messages") \
-OPTION(reduceglue,      bool,    1, 0,  1, "reduce on glue first") \
 OPTION(reduceinc,        int,  300, 1,1e6, "reduce limit increment") \
 OPTION(reduceinit,       int, 2000, 0,1e6, "initial reduce limit") \
 OPTION(rephase,         bool,    1, 0,  1, "enable rephasing") \
-OPTION(rephaseint,       int,  1e4, 0,1e9, "rephasing interval") \
+OPTION(rephaseint,       int,  1e4, 1,1e9, "rephasing interval") \
 OPTION(restart,         bool,    1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,    4, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double,  1.1, 0, 10, "restart slow fast margin") \
@@ -110,7 +109,7 @@ OPTION(transred,        bool,    1, 0,  1, "transitive reduction of BIG") \
 OPTION(transredreleff,double, 0.10, 0,  1, "relative efficiency") \
 OPTION(transredmaxeff,double,  1e7, 0,  1, "maximum efficiency") \
 OPTION(transredmineff,double,  1e5, 0,  1, "minimum efficiency") \
-QUTOPT(verbose,         int,    0, 0,  2, "more verbose messages") \
+QUTOPT(verbose,         int,     0, 0,  2, "more verbose messages") \
 OPTION(vivify,          bool,    1, 0,  1, "vivification") \
 OPTION(vivifyreleff,  double, 0.03, 0,  1, "relative efficiency") \
 OPTION(vivifymaxeff,  double,  1e7, 0,  1, "maximum efficiency") \

@@ -46,16 +46,14 @@ struct less_usefull {
   bool operator () (Clause * c, Clause * d) {
     double p = internal->clause_useful (c);
     double q = internal->clause_useful (d);
-    if (p < q) return true;
-    if (p > q) return false;
-    return analyzed_earlier () (c, d);
+    return p < q;
   }
 };
 
-void Internal::update_clause_useful_probability (Clause * c) {
+void Internal::update_clause_useful_probability (Clause * c, bool used) {
   assert (c->have_analyzed);
   double predicted = clause_useful (c);
-  double actual = (c->analyzed () > lim.analyzed);
+  double actual = used ? 1 : 0;
   double error = actual - predicted;
   LOG ("glue %d, size %u, predicted %1.4f, actual %.0f, error %.0f%%",
     c->glue, c->size, predicted, actual, percent (error, predicted));
@@ -81,28 +79,34 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     Clause * c = *i;
     if (!c->redundant) continue;                 // keep irredundant
     if (c->garbage) continue;                    // already marked
+    const bool used = c->used;
+    c->used = false;
     if (c->hbr) {                                // hyper binary resolvent?
       assert (c->size == 2);
-      if (!c->used) mark_garbage (c);		 // keep it one round if
-      else c->used = false;                      // used at least once
-      continue;
+      if (!used) mark_garbage (c);		 // keep it for one round
+      continue;					 // unless it was used
     }
     if (!c->have_analyzed) continue;             // statically deemed useful
-    update_clause_useful_probability (c);
+    update_clause_useful_probability (c, used);
     if (c->reason) continue;                     // need to keep reasons
+#if 0
     if (c->analyzed () > lim.analyzed) continue; // keep recent clauses
+#else
+    if (used) continue;
+#endif
     stack.push_back (c);
   }
 
 #if 0
-  VRB ("reduce", stats.reductions, "wg %f, ws %f", wg, ws);
+  VRB ("reduce", stats.reductions,
+    "useful:  %f / glue + %f / size",
+    stats.reductions, wg, ws);
 #else
   MSG ("[reduce-%ld] useful:  %f / glue + %f / size",
     stats.reductions, wg, ws);
 #endif
 
-  if (opts.reduceglue) sort (stack.begin (), stack.end (), less_usefull (this));
-  else sort (stack.begin (), stack.end (), analyzed_earlier ());
+  stable_sort (stack.begin (), stack.end (), less_usefull (this));
 
   const_clause_iterator target = stack.begin () + stack.size ()/2;
   for (const_clause_iterator i = stack.begin (); i != target; i++) {

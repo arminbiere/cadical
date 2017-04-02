@@ -42,9 +42,9 @@ typedef const int *                      const_literal_iterator;
 //   clauses of long size and with large glue have a '_analyzed' field.
 //   The same idea is used for the '_pos' 4 byte integer field which saves
 //   the position of the last exchanged watch in a long clause.  However,
-//   we always require '_pos' to present if we also need '_analyzed', which
-//   is not really an issue, since saving in '_pos' starts making sense for
-//   clauses of length 4 and we usually have 'opts.keepsize == 3'.
+//   we always require '_pos' to be present if we also need '_analyzed',
+//   which is not really an issue, since saving in '_pos' starts making
+//   sense for clauses of length 4 and we usually have 'opts.keepsize == 3'.
 //
 // With these three optimizations a binary clause only needs 16 bytes
 // instead of 44 bytes.  The last two optimizations reduce memory usage of
@@ -150,12 +150,6 @@ public:
   // code though for both situations and thus hide here this variance.
   //
   bool collect () const { return !reason && garbage; }
-};
-
-struct analyzed_earlier {
-  bool operator () (const Clause * a, const Clause * b) {
-    return a->analyzed () < b->analyzed ();
-  }
 };
 
 struct smaller_size {
