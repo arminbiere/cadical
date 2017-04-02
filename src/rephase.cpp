@@ -9,7 +9,7 @@ bool Internal::rephasing () {
 
 void Internal::rephase () {
   stats.rephased++;
-  LOG ("rephase %ld", stats.rephase);
+  LOG ("rephase %ld", stats.rephased);
   signed char val = opts.phase ? 1 : -1;
   if (stats.rephased & 1) val = -val;
   for (int idx = 1; idx <= max_var; idx++) phases[idx] = val;
