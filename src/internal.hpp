@@ -341,7 +341,7 @@ class Internal {
   //
   bool reducing ();
   void protect_reasons ();
-  void update_clause_useful_probability (Clause*);
+  void update_clause_useful_probability (Clause*, bool used);
   void mark_useless_redundant_clauses_as_garbage ();
   void unprotect_reasons ();
   void reduce ();
