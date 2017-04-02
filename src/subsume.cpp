@@ -109,7 +109,6 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   assert (j + 1 == end);
   shrink_clause_size (c, c->size - 1);
   if (likely_to_be_kept_clause (c)) mark_added (c);
-  if (c->have_analyzed) c->analyzed () = ++stats.analyzed;
   c->used = true;
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);

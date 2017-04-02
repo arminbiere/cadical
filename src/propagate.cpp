@@ -167,7 +167,7 @@ bool Internal::propagate () {
 
           // Now try to find a replacement watch.
 
-	  if (w.clause->have_pos) {
+	  if (w.clause->extended) {
 
 	    // This follows Ian Gent's (JAIR'13) idea of saving the position
 	    // of the last watch replacement.  In essence it needs two

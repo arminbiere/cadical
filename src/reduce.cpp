@@ -51,7 +51,7 @@ struct less_usefull {
 };
 
 void Internal::update_clause_useful_probability (Clause * c, bool used) {
-  assert (c->have_analyzed);
+  assert (!c->keep);
   double predicted = clause_useful (c);
   double actual = used ? 1 : 0;
   double error = actual - predicted;
@@ -77,23 +77,19 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   const_clause_iterator end = clauses.end (), i;
   for (i = clauses.begin (); i != end; i++) {
     Clause * c = *i;
-    if (!c->redundant) continue;                 // keep irredundant
-    if (c->garbage) continue;                    // already marked
+    if (!c->redundant) continue;                // keep irredundant
+    if (c->garbage) continue;                   // already marked
     const bool used = c->used;
     c->used = false;
-    if (c->hbr) {                                // hyper binary resolvent?
+    if (c->hbr) {                               // hyper binary resolvent?
       assert (c->size == 2);
-      if (!used) mark_garbage (c);		 // keep it for one round
-      continue;					 // unless it was used
+      if (!used) mark_garbage (c);		// keep it for one round
+      continue;					// unless it was used
     }
-    if (!c->have_analyzed) continue;             // statically deemed useful
+    if (c->keep) continue;             		// statically considered useful
     update_clause_useful_probability (c, used);
-    if (c->reason) continue;                     // need to keep reasons
-#if 0
-    if (c->analyzed () > lim.analyzed) continue; // keep recent clauses
-#else
-    if (used) continue;
-#endif
+    if (used) continue;				// keep recently used
+    if (c->reason) continue;                    // need to keep reasons
     stack.push_back (c);
   }
 
@@ -141,7 +137,6 @@ void Internal::reduce () {
   inc.reduce += inc.redinc;
   if (inc.redinc > 1) inc.redinc--;
   lim.reduce = stats.conflicts + inc.reduce;
-  lim.analyzed = stats.analyzed;
   lim.conflicts_at_last_reduce = stats.conflicts;
   report ('-');
   STOP (reduce);

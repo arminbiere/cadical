@@ -16,8 +16,6 @@ struct Limit {
   long subsume;   // conflict limit for next 'subsume'
   long compact;   // conflict limit for next 'compact'
 
-  long analyzed;  // limit on keeping recently analyzed clauses
-
   int keptglue;   // maximum kept glue in 'reduce'
   int keptsize;   // maximum kept size in 'reduce'
 

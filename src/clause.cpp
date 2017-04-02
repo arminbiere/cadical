@@ -78,8 +78,7 @@ void Internal::mark_added (Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
-// Redundant clauses of large glue and large size are extended to hold a
-// '_analyzed' time stamp, and similarly longer clauses need a '_pos' field.
+// Redundant clauses of large size are extended to hold a '_pos' field.
 // This makes memory allocation and deallocation a little bit tricky but
 // saves space and time.  Since the embedding of the literals is really
 // important and on the same level of complexity we keep both optimizations.
@@ -95,23 +94,24 @@ Clause * Internal::new_clause (bool red, int glue) {
   if (glue > MAX_GLUE) glue = MAX_GLUE;
   if (glue > size) glue = size;
 
-  // Determine whether this clauses uses a '_pos' and '_analyzed' field.
+  // Determine whether this clauses should be kept all the time.
   //
-  bool have_pos, have_analyzed;
-  if (!red) have_analyzed = false;
-  else if (size <= opts.keepsize) have_analyzed = false;
-  else if (glue <= opts.keepglue) have_analyzed = false;
-  else have_analyzed = true;
-  if (have_analyzed) have_pos = true;
-  else have_pos = (size >= opts.posize);
+  bool keep;
+  if (!red) keep = true;
+  else if (size <= opts.keepsize) keep = true;
+  else if (glue <= opts.keepglue) keep = true;
+  else keep = false;
+
+  // Determine whether this clauses is extended and uses a '_pos' field.
+  //
+  bool extended = (size >= opts.posize);
 
   // Now allocate the clause after ignored the 'offset' bytes, if '_pos' or
   // 'analyzed' fields are not used.
   //
   Clause * c;
   size_t offset = 0;
-  if (!have_pos) offset += sizeof c->_pos + sizeof c->dummy;
-  if (!have_analyzed) offset += sizeof c->_analyzed;
+  if (!extended) offset += sizeof c->_pos + sizeof c->dummy;
   size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int) - offset;
   bytes = align (bytes, 8);
   char * ptr = new char[bytes];
@@ -119,11 +119,10 @@ Clause * Internal::new_clause (bool red, int glue) {
   ptr -= offset;
   c = (Clause*) ptr;
 
-  if (have_analyzed) c->_analyzed = 0;
-  if (have_pos) c->_pos = 2, c->dummy = 0;
-  c->have_analyzed = have_analyzed;
-  c->have_pos = have_pos;
+  if (extended) c->_pos = 2, c->dummy = 0;
+  c->extended = extended;
   c->redundant = red;
+  c->keep = keep;
   c->garbage = false;
   c->reason = false;
   c->moved = false;
@@ -183,7 +182,7 @@ size_t Internal::shrink_clause_size (Clause * c, int new_size) {
   assert (new_size >= 2);
   assert (new_size < old_size);
 
-  if (c->have_pos && c->_pos >= new_size) c->_pos = 2;
+  if (c->extended && c->_pos >= new_size) c->_pos = 2;
 
   if (c->redundant) {
     if (c->glue > new_size) c->glue = new_size;

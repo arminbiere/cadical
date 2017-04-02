@@ -150,7 +150,6 @@ void Internal::compact () {
   assert (analyzed.empty ());
   assert (minimized.empty ());
   assert (control.size () == 1);
-  assert (resolved.empty ());
   assert (propagated == trail.size ());
 
   if (lim.fixed_at_last_collect < stats.all.fixed) {

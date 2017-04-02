@@ -137,8 +137,6 @@ void Stats::print (Internal * internal) {
   MSG ("learned:         %15ld   %10.2f    per conflict",
     learned, relative (learned, stats.conflicts));
   if (verbose) {
-  MSG ("  analyzed:      %15ld   %10.2f    per conflict",
-    stats.analyzed, relative (stats.analyzed, stats.conflicts));
   MSG ("  trailbumped:   %15ld   %10.2f %%  per conflict",
     stats.trailbumped, percent (stats.trailbumped, stats.conflicts));
   }

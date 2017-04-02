@@ -31,20 +31,16 @@ typedef const int *                      const_literal_iterator;
 //   (2) The boolean flags only need one bit each and thus there is enough
 //   space left to merge them with a 'glue' bit field (which is less
 //   accessed than 'size').  This saves 4 bytes and also keeps the header
-//   without '_analyzed' and '_pos' nicely in 8 bytes.  We currently use 21
-//   bits and, actually, since we do not want to mess with 'unsigned' versus
-//   'signed' issues just use 20 out of them.  If more boolean flags are
-//   needed this number has to be adapted accordingly.
+//   without nicely in 8 bytes.  We currently use 21 bits and, actually,
+//   since we do not want to mess with 'unsigned' versus 'signed' issues
+//   just use 20 out of them.  If more boolean flags are needed this number
+//   has to be adapted accordingly.
 //
-//   (3) Original clauses and clauses with small glue or size are kept
-//   anyhow and do not need the activity counter '_analyzed'.  Thus we can
-//   omit these 8 bytes used for '_analyzed' for these clauses.  Redundant
-//   clauses of long size and with large glue have a '_analyzed' field.
-//   The same idea is used for the '_pos' 4 byte integer field which saves
-//   the position of the last exchanged watch in a long clause.  However,
-//   we always require '_pos' to be present if we also need '_analyzed',
-//   which is not really an issue, since saving in '_pos' starts making
-//   sense for clauses of length 4 and we usually have 'opts.keepsize == 3'.
+//   (3) Clauses with size at least 'opts.posize' have a '_pos' field, which
+//   contains  the position of the last exchanged watch in a long clause.
+//   This field is only present if 'extended' is true.  Saving in '_pos'
+//   starts making sense for clauses of length 4 and we usually have
+//   'opts.keepsize == 3'.
 //
 // With these three optimizations a binary clause only needs 16 bytes
 // instead of 44 bytes.  The last two optimizations reduce memory usage of
@@ -59,10 +55,10 @@ typedef const int *                      const_literal_iterator;
 // Additional fields needed for all clauses are safely put between 'glue'
 // and 'size' without the need to change anything else.  In general these
 // optimizations are local to 'clause.[hc]pp' and otherwise can be ignored
-// except that you should for instance never access 'analyzed' of a clauses
+// except that you should for instance never access '_pos' of a clauses
 // which is not extended.  This can be checked with for instance 'valgrind'
-// but is also guarded by making the actual '_analyzed' field private and
-// checking this contract in the 'analyzed ()' accessors functions.
+// but is also guarded by making the actual '_pos' field private and
+// checking this contract in the 'pos ()' accessors functions.
 
 #define LD_MAX_GLUE 21
 #define MAX_GLUE ((1 << (LD_MAX_GLUE-1)) - 1)
@@ -71,20 +67,19 @@ class Clause {
 
 public:
 
-  long _analyzed;   // time stamp when analyzed last time if redundant
   int _pos;         // position of last watch replacement
 
   // Keep start of clause and 'copy' field (and thus 'literals[0]' at 64-bit
-  // aligned offsets, no matter whether we have an '_analyzed' or '_pos'
-  // field.  Otherwise a binary clause does not have 16 bytes.  Keeping
-  // clauses at 64-bit aligned addresses gives around 5% speed improvement.
+  // aligned offsets, no matter whether we have a '_pos' field or not.
+  // Otherwise a binary clause does not have 16 bytes.  Keeping clauses at
+  // 64-bit aligned addresses gives around 5% speed improvement.
   //
   int dummy;        // unused four bytes alignment
 
-  bool have_analyzed : 1;
-  bool have_pos : 1;
+  bool extended : 1;	// has this '_pos' field (and 'dummy')
 
   bool redundant:1; // aka 'learned' so not 'irredundant' (original)
+  bool keep : 1;    // always keep this clause (if redundant)
 
   bool garbage:1;   // can be garbage collected unless it is a 'reason'
   bool reason:1;    // reason / antecedent clause can not be collected
@@ -118,15 +113,8 @@ public:
     // Otherwise 'literals' is valid.
   };
 
-  long & analyzed () { assert (have_analyzed); return _analyzed; }
-
-  const long & analyzed () const {
-    assert (have_analyzed);
-    return _analyzed;
-  }
-
-        int & pos ()       { assert (have_pos); return _pos; }
-  const int & pos () const { assert (have_pos); return _pos; }
+        int & pos ()       { assert (extended); return _pos; }
+  const int & pos () const { assert (extended); return _pos; }
 
   literal_iterator       begin ()       { return literals; }
   literal_iterator         end ()       { return literals + size; }
@@ -162,8 +150,7 @@ struct smaller_size {
 
 inline size_t Clause::offset () const {
   size_t res = 0;
-  if (!have_pos) res += sizeof _pos + sizeof dummy;
-  if (!have_analyzed) res += sizeof _analyzed;
+  if (!extended) res += sizeof _pos + sizeof dummy;
   assert (aligned (res, 8));
   return res;
 }

@@ -233,7 +233,7 @@ bool Internal::probagate () {
           const const_literal_iterator end = lits + size;
           literal_iterator k;
           int v = -1, r = 0;
-	  if (w.clause->have_pos) {
+	  if (w.clause->extended) {
 	    const literal_iterator start = lits + w.clause->pos ();
 	    k = start;
 	    while (k != end && (v = val (r = *k)) < 0) k++;
