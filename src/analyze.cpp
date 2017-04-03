@@ -250,6 +250,7 @@ void Internal::analyze () {
   if (size > 1) {
     sort (clause.begin (), clause.end (), trail_larger (this));
     Clause * driving_clause = new_learned_redundant_clause (glue);
+    driving_clause->used = 1;
     const int jump = var (clause[1]).level;
     UPDATE_AVERAGE (jump_avg, jump);
     backtrack (jump);
