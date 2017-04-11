@@ -1,5 +1,8 @@
 #include "../../src/cadical.hpp"
 #include <iostream>
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <cassert>
 using namespace std;
 int main () {
