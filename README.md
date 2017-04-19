@@ -21,8 +21,7 @@ The default build process requires GNU make but simply issuing
 
 gives you a stand alone binary.  Using the generated 'makefile' with
 GNU make compiles separate object files, which can be cached, and also can
-be parallelized (for instance by setting the environment variables CORES,
-e.g., using 'CORES=4 make' on a 4 core machine or using 'make -j 4').
+be parallelized.
 
 The header file of the library is in 'src/cadical.hpp'.
 

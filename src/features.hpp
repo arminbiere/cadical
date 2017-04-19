@@ -3,11 +3,11 @@
 
 // Here we collect compile time configuration options using feature tests.
 
-#if 0
+// This is only working for Linux.
+
 extern "C" {
 #include <features.h>
 };
-#endif
 
 
 // According to the man page of 'putc_unlocked' this is its feature test.
