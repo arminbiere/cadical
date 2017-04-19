@@ -3,13 +3,16 @@
 
 // Here we collect compile time configuration options using feature tests.
 
+#if 0
 extern "C" {
 #include <features.h>
 };
+#endif
+
 
 // According to the man page of 'putc_unlocked' this is its feature test.
 
-#if _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _POSIX_SOURCE || _BSD_SOURCE || _SVID_SOURCE
+#if _POSIX_C_SOURCE >= 1 || defined(_XOPEN_SOURCE) || defined(_POSIX_SOURCE) || defined(_BSD_SOURCE) || defined(_SVID_SOURCE)
 #define HAVE_UNLOCKED_IO
 #endif
 
