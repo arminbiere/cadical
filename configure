@@ -34,8 +34,7 @@ msg () {
 
 # generate and enter 'build' directory if not already in sub-directory
 
-if [ -f configure -a -f makefile.in -a -f VERSION -a -d src ]
-then
+build_in_default_build_sub_directory () {
   if [ -d build ]
   then
     msg "reusing 'build' directory"
@@ -46,16 +45,24 @@ then
   cd build
   msg "building in '`pwd`/build'"
   build=build
+}
+
+if [ -f configure -a -f makefile.in -a -f VERSION -a -d src ]
+then
+  build_in_default_build_sub_directory
 elif [ -f ../configure -a -f ../makefile.in -a -f ../VERSION -a -d ../src ]
 then
   cwd=`pwd`
   build=`basename $cwd`
   case $build in
     src|test|scripts)
-      die "can not build in '$build' (in the '$build' sub-directory)"
+      cd ..
+      build_in_default_build_sub_directory
+      ;;
+    *)
+      msg "building in '$build' sub-directory"
       ;;
   esac
-  msg "building in '$build' sub-directory"
 else
   die "call 'configure' from root of CaDiCaL source or a sub-directory"
 fi
@@ -157,17 +164,19 @@ msg "generated '$build/makefile' from '../makefile.in'"
 
 #--------------------------------------------------------------------------#
 
+build=`pwd`
 cat <<EOF > ../makefile
+CADICALBUILD=$build
 all:
-	make -C $build
+	make -C \$(CADICALBUILD)
 clean:
-	make -C $build clean
-	rmdir $build
+	[ -f \$(CADICALBUILD)/makefile ] && make -C \$(CADICALBUILD) clean
+	rmdir \$(CADICALBUILD)
 	rm makefile
 test:
-	CADICAL=$cwd make -C test
+	CADICALBUILD=\$(CADICALBUILD) make -C test
 .PHONY: all clean test
 EOF
 
-msg "generated '../makefile' as proxy to '`pwd`/makefile'"
+msg "generated '../makefile' as proxy to '$build/makefile'"
 msg "run 'make'"

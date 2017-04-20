@@ -11,21 +11,21 @@ msg () {
   echo "[run-api-tests.sh] $*"
 }
 
-[ x"$CADICAL" = x ] && CADICAL=`pwd`/../build
+[ x"$CADICALBUILD" = x ] && CADICALBUILD=`pwd`/../build
 
-[ -f "$CADICAL/libcadical.a" ] || die "can not find '$CADICAL/libcadical.a"
-[ -f "$CADICAL/makefile" ] || die "can not find '$CADICAL/makefile"
+[ -f "$CADICALBUILD/libcadical.a" ] || die "can not find '$CADICALBUILD/libcadical.a"
+[ -f "$CADICALBUILD/makefile" ] || die "can not find '$CADICALBUILD/makefile"
 
-msg "API testing '$CADICAL/libcadical.a'" 
+msg "API testing '$CADICALBUILD/libcadical.a'" 
 
-CXX="`grep '^CXX=' $CADICAL/makefile|sed -e 's,CXX=,,'`"
+CXX="`grep '^CXX=' $CADICALBUILD/makefile|sed -e 's,CXX=,,'`"
 
 msg "using CXX=$CXX"
 
 run () {
   msg "compiling and executing $1"
   set -x
-  $CXX -g api/$1.cpp -o api/$1.exe -L$CADICAL -lcadical || exit 1
+  $CXX -g api/$1.cpp -o api/$1.exe -L$CADICALBUILD -lcadical || exit 1
   api/$1.exe > api/$1.log 2> api/$1.err || exit 1
   set +x
 }
@@ -34,7 +34,7 @@ crun () {
   msg "compiling and executing $1"
   set -x
   cc -c -g api/$1.c -o api/$1.o || exit 1
-  $CXX -g api/$1.o -o api/$1.exe -L$CADICAL -lcadical || exit 1
+  $CXX -g api/$1.o -o api/$1.exe -L$CADICALBUILD -lcadical || exit 1
   api/$1.exe > api/$1.log 2> api/$1.err || exit 1
   set +x
 }

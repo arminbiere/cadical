@@ -6,7 +6,7 @@ The goal of the development of CaDiCaL is to obtain a CDCL solver, which is
 easy to understand and change, while at the same time not being much slower
 than other state-of-the-art CDCL solvers.  Originally we wanted to also
 radically simplify the design and internal data structures, but that goal
-only achieved partially, for instance compared to Lingeling.
+was only achieved partially, for instance compared to Lingeling.
 
 Use './configure && make' to configure and build 'cadical' in the default
 'build' sub-directory.  This will also build the library 'libcadical.a'.
@@ -17,7 +17,7 @@ Use './configure && make' to configure and build 'cadical' in the default
 
 The default build process requires GNU make but simply issuing
 
-  - cd src; g++ -O3 -DNDEBUG -o ../build/cadical \*.cpp
+  - mkdir -p build; cd src; g++ -O3 -DNDEBUG -o ../build/cadical \*.cpp
 
 gives you a stand alone binary.  Using the generated 'makefile' with
 GNU make compiles separate object files, which can be cached, and also can

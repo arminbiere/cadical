@@ -11,7 +11,7 @@
 
 // Need this for the 'banner' information (version etc).
 
-#include "config.hpp"
+#include <config.hpp>
 
 /*------------------------------------------------------------------------*/
 

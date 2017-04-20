@@ -11,13 +11,13 @@ msg () {
   echo "[run-regression.sh] $*"
 }
 
-[ x"$CADICAL" = x ] && CADICAL=`pwd`/../build
+[ x"$CADICALBUILD" = x ] && CADICALBUILD=`pwd`/../build
 
-[ -x "$CADICAL/cadical" ] || die "can not find '$CADICAL/cadical"
+[ -x "$CADICALBUILD/cadical" ] || die "can not find '$CADICALBUILD/cadical"
 
-msg "regression testing '$CADICAL/cadical'" 
+msg "regression testing '$CADICALBUILD/cadical'" 
 
-binary=$CADICAL/cadical
+binary=$CADICALBUILD/cadical
 
 checker=none
 for d in `echo $PATH | tr : \ `
