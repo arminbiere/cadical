@@ -1,1 +1,1 @@
-Additional scripts not needed for the build process.
+Scripts needed for the build process as well as some helper scripts.
