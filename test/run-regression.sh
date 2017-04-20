@@ -7,9 +7,17 @@ die () {
   exit 1
 }
 
-binary=../build/cadical
+msg () {
+  echo "[run-regression.sh] $*"
+}
 
-[ -x $binary ] || die "make 'cadical' first"
+[ x"$CADICAL" = x ] && CADICAL=`pwd`/../build
+
+[ -x "$CADICAL/cadical" ] || die "can not find '$CADICAL/cadical"
+
+msg "regression testing '$CADICAL/cadical'" 
+
+binary=$CADICAL/cadical
 
 checker=none
 for d in `echo $PATH | tr : \ `
