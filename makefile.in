@@ -1,12 +1,13 @@
-# 'makefile' template with '@CXX@' and '@CXXFLAGS@' as parameters
-# relies on 'gmake' for dependency handling and '$(shell ...)' commands
+# This is a 'makefile.in' template with '@CXX@' and '@CXXFLAGS@' parameters.
+# Replacing them produces an actual 'makefile' in a sub-directory.
+# Relies on 'gmake' for dependency handling and '$(shell ...)' commands.
 .SUFFIXES: .cpp .o
 MAKEFLAGS=-j $(if $(CORES),$(CORES),1)
 OBJ=$(shell ls ../src/*.cpp|sed -e '/main/d' -e '/app/d' -e 's,../src/,,' -e 's,.cpp$$,.o,g')
 SRC=$(shell ls ../src/*.cpp ../src/*.hpp)
 CXX=@CXX@
 CXXFLAGS=@CXXFLAGS@
-COMPILE=$(CXX) $(CXXFLAGS)
+COMPILE=$(CXX) $(CXXFLAGS) -I`pwd`
 all: cadical libcadical.a
 %.o: ../src/%.cpp
 	$(COMPILE) -c $<
@@ -17,8 +18,8 @@ libcadical.a: $(OBJ) makefile
 	rm -f $@
 	ar rc $@ $(OBJ)
 	ranlib $@
-config.hpp: make-config-header.sh $(SRC) makefile
-	./make-config-header.sh > $@
+config.hpp: ../scripts/make-config-header.sh $(SRC) makefile
+	../scripts/make-config-header.sh > $@
 dependencies: config.hpp ../src/*.cpp makefile
 	$(COMPILE) -MM ../src/*.cpp|sed -e 's,:,: makefile,' >$@
 clean:

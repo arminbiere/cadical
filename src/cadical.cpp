@@ -2,7 +2,7 @@
 
 /*------------------------------------------------------------------------*/
 
-#include "../build/config.hpp"
+#include "config.hpp"
 
 namespace CaDiCaL {
 

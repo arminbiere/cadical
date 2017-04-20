@@ -1,10 +1,15 @@
 #!/bin/sh
 
-# Run './configure.sh' to produce a 'makefile' in the 'build' directory.
+#--------------------------------------------------------------------------#
+
+# Run './configure' to produce a 'makefile' in the 'build' sub-directory or
+# in any immediate sub-directory different from the 'src', 'scripts' and
+# 'test' directories.
 
 #--------------------------------------------------------------------------#
+
 # Common default options.
-#
+
 debug=no
 stats=no
 logging=no
@@ -17,14 +22,43 @@ quiet=no
 #--------------------------------------------------------------------------#
 
 die () {
-  echo "*** configure.sh: $*" 1>&2
+  echo "*** cadical/configure: $*" 1>&2
   exit 1
 }
 
-# Check that we are in the 'build' directory.
+msg () {
+  echo "[cadical/configure] $*"
+}
 
-[ -f ../VERSION -a -f makefile.in -a -f make-config-header.sh ] || \
-die "change to 'build' directory before calling this script"
+#--------------------------------------------------------------------------#
+
+# generate and enter 'build' directory if not already in sub-directory
+
+if [ -f configure -a -f makefile.in -a -f VERSION -a -d src ]
+then
+  if [ -d build ]
+  then
+    msg "reusing 'build' directory"
+  else
+    mkdir build 2>/dev/null || die "failed to generate 'build' directory"
+    msg "making 'build' directory"
+  fi
+  cd build
+  msg "building in '`pwd`/build'"
+  build=build
+elif [ -f ../configure -a -f ../makefile.in -a -f ../VERSION -a -d ../src ]
+then
+  cwd=`pwd`
+  build=`basename $cwd`
+  case $build in
+    src|test|scripts)
+      die "can not build in '$build' (in the '$build' sub-directory)"
+      ;;
+  esac
+  msg "building in '$build' sub-directory"
+else
+  die "call 'configure' from root of CaDiCaL source or a sub-directory"
+fi
 
 #--------------------------------------------------------------------------#
 
@@ -32,7 +66,7 @@ die "change to 'build' directory before calling this script"
 
 usage () {
 cat << EOF
-usage: configure.sh [ <option> ... ]
+usage: configure [ <option> ... ]
 
 where '<option>' is one of the following
 
@@ -106,8 +140,34 @@ fi
 
 #--------------------------------------------------------------------------#
 
-# Instantiate the 'makefile.in' template to produce 'makefile'.
+# Instantiate the '../makefile.in' template to produce 'makefile' in the
+# build directory.
 
-echo "$CXX $CXXFLAGS"
+msg "compiling with '$CXX $CXXFLAGS'"
 rm -f makefile
-sed -e "s,@CXX@,$CXX," -e "s,@CXXFLAGS@,$CXXFLAGS," makefile.in > makefile
+sed \
+  -e "1,2d" \
+  -e "1,1i# This 'makefile' is generated from '../makefile.in'." \
+  -e "s,@CXX@,$CXX," \
+  -e "s,@CXXFLAGS@,$CXXFLAGS," \
+  ../makefile.in > makefile
+
+
+msg "generated '$build/makefile' from '../makefile.in'"
+
+#--------------------------------------------------------------------------#
+
+cat <<EOF > ../makefile
+all:
+	make -C $build
+clean:
+	make -C $build clean
+	rmdir $build
+	rm makefile
+test:
+	CADICAL=$cwd make -C test
+.PHONY: all clean test
+EOF
+
+msg "generated '../makefile' as proxy to '`pwd`/makefile'"
+msg "run 'make'"

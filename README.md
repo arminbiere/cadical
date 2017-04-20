@@ -8,8 +8,8 @@ than other state-of-the-art CDCL solvers.  Originally we wanted to also
 radically simplify the design and internal data structures, but that goal
 only achieved partially, for instance compared to Lingeling.
 
-First go to the 'build' subdirectory and then run './configure.sh',
-followed by 'make'.  This will build the library and the executable
+Use './configure && make' to configure and build 'cadical' in the default
+'build' sub-directory.  This will also build the library 'libcadical.a'.
   
   - ./build/libcadical.a
 
@@ -25,7 +25,7 @@ be parallelized.
 
 The header file of the library is in 'src/cadical.hpp'.
 
-You might want to check out options of './configure.sh -h', such as
+You might want to check out options of './configure -h', such as
 
   - ./configure -c # include assertion checking code
 
@@ -45,4 +45,4 @@ A plain stable source release will eventually be found at
 
 Armin Biere
 
-Fri Dec  2 11:07:26 CET 2016
+Do 20. Apr 09:11:03 CEST 2017

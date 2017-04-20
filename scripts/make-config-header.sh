@@ -21,7 +21,7 @@ esac
 echo "#define CADICAL_VERSION \"`cat ../VERSION`\""
 
 # The unique GIT hash.
-echo "#define CADICAL_GITID \"`./get-git-id.sh`\""
+echo "#define CADICAL_GITID \"`../scripts/get-git-id.sh`\""
 
 # The C++ compiler as used in the current 'makefile'.
 echo "#define CADICAL_CXX \"$CXX\""
