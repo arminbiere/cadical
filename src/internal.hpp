@@ -28,7 +28,6 @@
 #include "elim.hpp"
 #include "ema.hpp"
 #include "external.hpp"
-#include "features.hpp"
 #include "file.hpp"
 #include "flags.hpp"
 #include "format.hpp"

@@ -36,9 +36,9 @@ done
 
 if [ x"$checker" = xnone ]
 then
-  echo "no proof checking (neither 'drabt' nor 'drat-trim' found)"
+  msg "no proof checking (neither 'drabt' nor 'drat-trim' found)"
 else
-  echo "checking DRAT proofs with '$checker'"
+  msg "checking DRAT proofs with '$checker'"
 fi
 
 ok=0
@@ -67,7 +67,7 @@ run () {
     then
       echo " ok"
       ok=`expr $ok + 1`
-    elif [ x"$checker" = x ]
+    elif [ x"$checker" = xnone ]
     then
       echo " ok"
       ok=`expr $ok + 1`
@@ -179,5 +179,5 @@ run add128 20
 
 run prime65537 20
 
-echo "regression results: $ok ok, $failed failed"
+msg "regression results: $ok ok, $failed failed"
 exit $failed

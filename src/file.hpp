@@ -10,13 +10,13 @@
 #endif
 
 /*------------------------------------------------------------------------*/
-
-
-#ifndef HAVE_UNLOCKED_IO
-#define putc_unlocked putc
-#define getc_unlocked getc
+#ifndef NUNLOCKED
+#define cadical_putc_unlocked putc_unlocked
+#define cadical_getc_unlocked getc_unlocked
+#else
+#define cadical_putc_unlocked putc
+#define cadical_getc_unlocked getc
 #endif
-
 /*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
@@ -80,7 +80,7 @@ public:
 
   int get () {
     assert (!writing);
-    int res = getc_unlocked (file);
+    int res = cadical_getc_unlocked (file);
     if (res == '\n') _lineno++;
     if (res != EOF) _bytes++;
     return res;
@@ -88,13 +88,13 @@ public:
 
   void put (char ch) {
     assert (writing);
-    putc_unlocked (ch, file);
+    cadical_putc_unlocked (ch, file);
     _bytes++;
   }
 
   void put (unsigned char ch) {
     assert (writing);
-    putc_unlocked (ch, file);
+    cadical_putc_unlocked (ch, file);
     _bytes++;
   }
 

@@ -17,6 +17,7 @@ check=no
 coverage=no
 profile=no
 realloc=yes
+unlocked=yes
 quiet=no
 
 #--------------------------------------------------------------------------#
@@ -32,18 +33,68 @@ msg () {
 
 #--------------------------------------------------------------------------#
 
+# Parse and handle command line options.
+
+usage () {
+cat << EOF
+usage: configure [ <option> ... ]
+
+where '<option>' is one of the following
+
+-h|--help      print this command line summary
+-g|--debug     compile with debugging information
+-c|--check     compile with assertion checking (default for '-g')
+-l|--log       include logging code (but disabled by default)
+-s|--sats      include and enable expensive statistics code
+-a|--all       short cut for all above, e.g., '-g -l -s' (thus also '-c')
+-q|--quiet     exclude message and profiling code (logging and stats too)
+--coverage     compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
+--profile      compile with '-pg' to profile with 'gprof'
+--no-realloc   use C++ style allocators for all tables
+--no-unlocked  no unlocked IO
+EOF
+exit 0
+}
+
+while [ $# -gt 0 ]
+do
+  case $1 in
+    -h|--help) usage;;
+    -g|--debug) debug=yes; check=yes;;
+    -c|--check) check=yes;;
+    -l|--logging) logging=yes;;
+    -s|--stats) stats=yes;;
+    -a|--all) debug=yes;check=yes;logging=yes;stats=yes;;
+    -q|--quiet) quiet=yes;;
+    --coverage) coverage=yes;;
+    --profile) profile=yes;;
+    --no-realloc) realloc=no;;
+    --no-unlocked) unlocked=no;;
+    *) die "invalid option '$1' (try '-h')";;
+  esac
+  shift
+done
+
+if [ $quiet = yes ]
+then
+  logging=no
+  stats=no
+fi
+
+#--------------------------------------------------------------------------#
+
 # generate and enter 'build' directory if not already in sub-directory
 
 build_in_default_build_sub_directory () {
   if [ -d build ]
   then
-    msg "reusing 'build' directory"
+    msg "reusing default 'build' directory"
   else
     mkdir build 2>/dev/null || die "failed to generate 'build' directory"
-    msg "making 'build' directory"
+    msg "making default 'build' directory"
   fi
   cd build
-  msg "building in '`pwd`/build'"
+  msg "building in default '`pwd`/build'"
   build=build
 }
 
@@ -65,54 +116,6 @@ then
   esac
 else
   die "call 'configure' from root of CaDiCaL source or a sub-directory"
-fi
-
-#--------------------------------------------------------------------------#
-
-# Parse and handle command line options.
-
-usage () {
-cat << EOF
-usage: configure [ <option> ... ]
-
-where '<option>' is one of the following
-
--h|--help    print this command line summary
--g|--debug   compile with debugging information
--c|--check   compile with assertion checking (default for '-g')
--l|--log     include logging code (but disabled by default)
--s|--sats    include and enable expensive statistics code
--a|--all     short cut for all above, e.g., '-g -l -s' (thus also '-c')
--q|--quiet   exclude message and profiling code (logging and stats too)
---no-realloc use C++ style allocators for all tables
---coverage   compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
---profile    compile with '-pg' to profile with 'gprof'
-EOF
-exit 0
-}
-
-while [ $# -gt 0 ]
-do
-  case $1 in
-    -h|--help) usage;;
-    -g|--debug) debug=yes; check=yes;;
-    -c|--check) check=yes;;
-    -l|--logging) logging=yes;;
-    -s|--stats) stats=yes;;
-    -a|--all) debug=yes;check=yes;logging=yes;stats=yes;;
-    -q|--quiet) quiet=yes;;
-    --no-realloc) realloc=no;;
-    --coverage) coverage=yes;;
-    --profile) profile=yes;;
-    *) die "invalid option '$1' (try '-h')";;
-  esac
-  shift
-done
-
-if [ $quiet = yes ]
-then
-  logging=no
-  stats=no
 fi
 
 #--------------------------------------------------------------------------#
@@ -144,6 +147,49 @@ fi
 [ $realloc = no ] && CXXFLAGS="$CXXFLAGS -DNREALLOC"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
+
+#--------------------------------------------------------------------------#
+
+if [ $unlocked = yes ]
+then
+  check=/tmp/cadical-have-unlocked-io-$$
+  trap "rm -f $check*" 2
+  cat <<EOF > $check.cpp
+#include <cstdio>
+int main () {
+  const char * path = "$check.log";
+  FILE * file = fopen (path, "w");
+  if (!file) return 1;
+  if (putc_unlocked (42, file) != 42) return 1;
+  if (fclose (file)) return 1;
+  file = fopen (path, "r");
+  if (!file) return 1;
+  if (getc_unlocked (file) != 42) return 1;
+  if (fclose (file)) return 1;
+  return 0;
+}
+EOF
+  if $CXX $CXXFLAGS -o $check.exe $check.cpp
+  then
+    $check.exe
+    res=$?
+    if [ $res ]
+    then
+      msg "unlocked IO with '{putc,getc}_unlocked' seems to work"
+    else
+      msg "not using unlocked IO (running '$check.exe' failed)"
+      unlocked=no
+    fi
+  else
+    msg "not using unlocked IO (failed to compile '$check.cpp')"
+    unlocked=no
+  fi
+  rm -f $check*
+else
+  msg "not using unlocked IO (since '--no-unlocked' specified)"
+fi
+
+[ $unlocked = no ] && CXXFLAGS="$CXXFLAGS -DNUNLOCKED"
 
 #--------------------------------------------------------------------------#
 
