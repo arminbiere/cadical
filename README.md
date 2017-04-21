@@ -15,13 +15,9 @@ Use './configure && make' to configure and build 'cadical' in the default
 
   - ./build/cadical
 
-The default build process requires GNU make but simply issuing
-
-  - mkdir -p build; cd src; g++ -O3 -DNDEBUG -o ../build/cadical \*.cpp
-
-gives you a stand alone binary.  Using the generated 'makefile' with
-GNU make compiles separate object files, which can be cached, and also can
-be parallelized.
+The build process requires GNU make.  Using the generated 'makefile' with
+GNU make compiles separate object files, which can be cached (for instance
+with 'ccache').  The 'makefile' uses parallel compilation by default ('-j').
 
 The header file of the library is in 'src/cadical.hpp'.
 
@@ -37,7 +33,7 @@ The latest version of CaDiCaL can be found on 'github'
 
   - http://github.com/arminbiere/cadical
 
-which also contains a test suite (use './run-regression.sh').
+which also contains a test suite.  Use 'make test' to run it.
 
 A plain stable source release will eventually be found at
 
@@ -45,4 +41,4 @@ A plain stable source release will eventually be found at
 
 Armin Biere
 
-Do 20. Apr 09:11:03 CEST 2017
+Fr 21. Apr 14:48:50 CEST 2017
