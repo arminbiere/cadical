@@ -200,8 +200,8 @@ msg "compiling with '$CXX $CXXFLAGS'"
 
 rm -f makefile
 sed \
--e "2a\\# This 'makefile' is generated from '../makefile.in'." \
--e "1,2d" \
+-e "1c\\
+# This 'makefile' is generated from '../makefile.in'." \
 -e "s,@CXX@,$CXX," \
 -e "s,@CXXFLAGS@,$CXXFLAGS," \
 ../makefile.in > makefile

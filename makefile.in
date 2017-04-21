@@ -1,5 +1,4 @@
 # This is a 'makefile.in' template with '@CXX@' and '@CXXFLAGS@' parameters.
-# Replacing them produces an actual 'makefile' in a sub-directory.
 # Relies on 'gmake' for dependency handling and '$(shell ...)' commands.
 .SUFFIXES: .cpp .o
 MAKEFLAGS=-j $(if $(CORES),$(CORES),1)
