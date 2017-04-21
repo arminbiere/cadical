@@ -1,10 +1,10 @@
 language: cpp
 compiler:
 - gcc
-#- clang
+- clang
 os:
-#- linux
+- linux
 - osx
 branches:
-- development
-#- master
+#- development
+- master
