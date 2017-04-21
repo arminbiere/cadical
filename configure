@@ -182,7 +182,7 @@ clean:
 	fi
 	rm makefile
 test:
-	CADICALBUILD=\$(CADICALBUILD) make -C test
+	make -C \$(CADICALBUILD) test
 .PHONY: all clean test
 EOF
 

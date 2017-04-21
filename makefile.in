@@ -26,3 +26,6 @@ dependencies: config.hpp ../src/*.cpp makefile
 clean:
 	rm -f *.o *.a cadical makefile config.hpp dependencies
 	rm -f *.gcda *.gcno *.gcov gmon.out
+test: all
+	CADICALBUILD=$(BUILD) make -C ../test
+.PHONY: all clean test
