@@ -66,6 +66,8 @@ public:
 
   //------------------------------------------------------------------------
 
+  const char * version ();	// return version string
+
   void banner ();       // print solver banner
   void usage ();        // print usage information for long options
   void options ();      // print current option and value list

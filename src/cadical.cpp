@@ -8,7 +8,7 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// See header file 'cadical.cpp' for more information.
+// See header file 'cadical.hpp' for more information.
 
 /*------------------------------------------------------------------------*/
 
@@ -78,6 +78,8 @@ void Solver::banner () {
   message (CADICAL_OS);
   message (CADICAL_CXX " " CADICAL_CXXFLAGS);
 }
+
+const char * Solver::version () { return CADICAL_VERSION; }
 
 void Solver::options () { internal->opts.print (); }
 void Solver::usage () { internal->opts.usage (); }
