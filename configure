@@ -197,14 +197,14 @@ fi
 # build directory.
 
 msg "compiling with '$CXX $CXXFLAGS'"
+
 rm -f makefile
 sed \
-  -e "1,2d" \
-  -e "1,1i# This 'makefile' is generated from '../makefile.in'." \
-  -e "s,@CXX@,$CXX," \
-  -e "s,@CXXFLAGS@,$CXXFLAGS," \
-  ../makefile.in > makefile
-
+-e "2a# This 'makefile' is generated from '../makefile.in'." \
+-e "1,2d" \
+-e "s,@CXX@,$CXX," \
+-e "s,@CXXFLAGS@,$CXXFLAGS," \
+../makefile.in > makefile
 
 msg "generated '$build/makefile' from '../makefile.in'"
 
