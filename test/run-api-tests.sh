@@ -13,8 +13,11 @@ msg () {
 
 [ x"$CADICALBUILD" = x ] && CADICALBUILD=`pwd`/../build
 
-[ -f "$CADICALBUILD/libcadical.a" ] || die "can not find '$CADICALBUILD/libcadical.a"
-[ -f "$CADICALBUILD/makefile" ] || die "can not find '$CADICALBUILD/makefile"
+[ -f "$CADICALBUILD/makefile" ] || \
+  die "can not find '$CADICALBUILD/makefile' (run 'configure' first)"
+
+[ -f "$CADICALBUILD/libcadical.a" ] || \
+  die "can not find '$CADICALBUILD/libcadical.a' (run 'make' first)"
 
 msg "API testing '$CADICALBUILD/libcadical.a'" 
 

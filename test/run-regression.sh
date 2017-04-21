@@ -13,7 +13,8 @@ msg () {
 
 [ x"$CADICALBUILD" = x ] && CADICALBUILD=`pwd`/../build
 
-[ -x "$CADICALBUILD/cadical" ] || die "can not find '$CADICALBUILD/cadical"
+[ -x "$CADICALBUILD/cadical" ] || \
+  die "can not find '$CADICALBUILD/cadical' (run 'make' first)"
 
 msg "regression testing '$CADICALBUILD/cadical'" 
 

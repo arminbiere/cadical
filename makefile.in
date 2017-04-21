@@ -5,9 +5,10 @@
 MAKEFLAGS=-j $(if $(CORES),$(CORES),1)
 OBJ=$(shell ls ../src/*.cpp|sed -e '/main/d' -e '/app/d' -e 's,../src/,,' -e 's,.cpp$$,.o,g')
 SRC=$(shell ls ../src/*.cpp ../src/*.hpp)
+BUILD=../$(shell pwd|xargs basename)
 CXX=@CXX@
 CXXFLAGS=@CXXFLAGS@
-COMPILE=$(CXX) $(CXXFLAGS) -I`pwd`
+COMPILE=$(CXX) $(CXXFLAGS) -I$(BUILD)
 all: cadical libcadical.a
 %.o: ../src/%.cpp
 	$(COMPILE) -c $<

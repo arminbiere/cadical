@@ -170,8 +170,16 @@ CADICALBUILD=$build
 all:
 	make -C \$(CADICALBUILD)
 clean:
-	[ -f \$(CADICALBUILD)/makefile ] && make -C \$(CADICALBUILD) clean
-	rmdir \$(CADICALBUILD)
+	@if [ -d \$(CADICALBUILD) ]; \\
+	then \\
+	  if [ -f \$(CADICALBUILD)/makefile ]; \\
+	  then \\
+	     touch \$(CADICALBUILD)/config.hpp; \\
+	     touch \$(CADICALBUILD)/dependencies; \\
+	     make -C \$(CADICALBUILD) clean; \\
+	  fi; \\
+	  rmdir \$(CADICALBUILD); \\
+	fi
 	rm makefile
 test:
 	CADICALBUILD=\$(CADICALBUILD) make -C test
@@ -179,4 +187,4 @@ test:
 EOF
 
 msg "generated '../makefile' as proxy to '$build/makefile'"
-msg "run 'make'"
+msg "now run 'make' to compile CaDiCaL and optionally test it with 'make test'"
