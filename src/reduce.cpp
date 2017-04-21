@@ -93,14 +93,9 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     stack.push_back (c);
   }
 
-#if 0
   VRB ("reduce", stats.reductions,
     "useful:  %f / glue + %f / size",
     stats.reductions, wg, ws);
-#else
-  MSG ("[reduce-%ld] useful:  %f / glue + %f / size",
-    stats.reductions, wg, ws);
-#endif
 
   stable_sort (stack.begin (), stack.end (), less_usefull (this));
 
