@@ -29,12 +29,12 @@ typedef const int *                      const_literal_iterator;
 //   memory access and thus is very costly.
 //
 //   (2) The boolean flags only need one bit each and thus there is enough
-//   space left to merge them with a 'glue' bit field (which is less
+//   space left to merge them with a 'glue' bit field (which is less often
 //   accessed than 'size').  This saves 4 bytes and also keeps the header
-//   without nicely in 8 bytes.  We currently use 21 bits and, actually,
-//   since we do not want to mess with 'unsigned' versus 'signed' issues
-//   just use 20 out of them.  If more boolean flags are needed this number
-//   has to be adapted accordingly.
+//   without '_pos' field (and alignment) nicely in 8 bytes.  We currently
+//   use 21 bits and, actually, since we do not want to mess with 'unsigned'
+//   versus 'signed' issues just use 20 out of them.  If more boolean flags
+//   are needed this number has to be adapted accordingly.
 //
 //   (3) Clauses with size at least 'opts.posize' have a '_pos' field, which
 //   contains  the position of the last exchanged watch in a long clause.
@@ -74,7 +74,7 @@ public:
   // Otherwise a binary clause does not have 16 bytes.  Keeping clauses at
   // 64-bit aligned addresses gives around 5% speed improvement.
   //
-  int dummy;        // unused four bytes alignment
+  int alignment;    // unused four bytes alignment
 
   bool extended : 1;	// has this '_pos' field (and 'dummy')
 
@@ -131,7 +131,7 @@ public:
   size_t offset () const;       // offset of valid bytes (start - this)
 
   // Check whether this clause is ready to be collected and deleted.  The
-  // 'reason' flag is only there for protecting reason clauses in 'reduce',
+  // 'reason' flag is only there to protect reason clauses in 'reduce',
   // which does not backtrack to the root level.  If garbage collection is
   // triggered from a preprocessor, which backtracks to the root level, then
   // 'reason' is false for sure. We want to use the same garbage collection
@@ -150,7 +150,7 @@ struct smaller_size {
 
 inline size_t Clause::offset () const {
   size_t res = 0;
-  if (!extended) res += sizeof _pos + sizeof dummy;
+  if (!extended) res += sizeof _pos + sizeof alignment;
   assert (aligned (res, 8));
   return res;
 }

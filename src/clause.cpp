@@ -111,7 +111,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   //
   Clause * c;
   size_t offset = 0;
-  if (!extended) offset += sizeof c->_pos + sizeof c->dummy;
+  if (!extended) offset += sizeof c->_pos + sizeof c->alignment;
   size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int) - offset;
   bytes = align (bytes, 8);
   char * ptr = new char[bytes];
@@ -119,7 +119,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   ptr -= offset;
   c = (Clause*) ptr;
 
-  if (extended) c->_pos = 2, c->dummy = 0;
+  if (extended) c->_pos = 2, c->alignment = 0;
   c->extended = extended;
   c->redundant = red;
   c->keep = keep;
