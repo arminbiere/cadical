@@ -224,7 +224,7 @@ clean:
 	     touch \$(CADICALBUILD)/dependencies; \\
 	     make -C \$(CADICALBUILD) clean; \\
 	  fi; \\
-	  rmdir \$(CADICALBUILD); \\
+	  rm -rf \$(CADICALBUILD); \\
 	fi
 	rm makefile
 test:
@@ -232,5 +232,7 @@ test:
 .PHONY: all clean test
 EOF
 
-msg "generated '../makefile' as proxy to '$build/makefile'"
-msg "now run 'make' to compile CaDiCaL and optionally test it with 'make test'"
+msg "generated '../makefile' as ..."
+msg "... proxy to '$build/makefile'"
+msg "now run 'make' to compile CaDiCaL"
+msg "optionally test it with 'make test'"
