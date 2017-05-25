@@ -63,7 +63,6 @@ void Stats::print (Internal * internal) {
   PRT ("  units:         %15ld   %10.2f    conflicts per unit", stats.units, relative (stats.conflicts, stats.units));
   PRT ("  binaries:      %15ld   %10.2f    conflicts per binary", stats.binaries, relative (stats.conflicts, stats.binaries));
   PRT ("learned:         %15ld   %10.2f    per conflict", learned, relative (learned, stats.conflicts));
-  PRT ("  trailbumped:   %15ld   %10.2f %%  per conflict", stats.trailbumped, percent (stats.trailbumped, stats.conflicts));
   PRT ("memory:          %15ld   %10.2f    bytes and MB", m, m/(double)(1l<<20));
   PRT ("minimized:       %15ld   %10.2f %%  of 1st-UIP-literals", stats.minimized, percent (stats.minimized, stats.learned));
   PRT ("probings:        %15ld   %10.2f    conflicts per probing", stats.probings, relative (stats.conflicts, stats.probings));

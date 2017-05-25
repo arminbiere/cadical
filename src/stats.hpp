@@ -32,7 +32,6 @@ struct Stats {
   long removed;      // literals in likely to be kept clauses
   long bumped;       // seen and bumped variables in 'analyze'
   long bumplast;     // bumped variables on last decision level
-  long trailbumped;  // bumped 'reverse' instead of 'earlier'
   long searched;     // searched decisions in 'decide'
   long reductions;   // 'reduce' counter
   long reduced;      // number of reduced clauses
