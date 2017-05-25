@@ -65,6 +65,7 @@ OPTION(emajump,       double, 1e-5, 0,  1, "alpha jump level") \
 OPTION(emasize,       double, 1e-5, 0,  1, "alpha learned clause size") \
 OPTION(decompose,       bool,    1, 0,  1, "SCC decompose BIG and ELS") \
 OPTION(decomposerounds,  int,    1, 1,1e9, "number of decompose rounds") \
+OPTION(force,           bool,    0, 0,  1, "force to read broken header") \
 OPTION(hbr,             bool,    1, 0,  1, "learn hyper binary clauses") \
 OPTION(hbrsizelim,       int, 1e9, 3, 1e9, "max size HBR base clause") \
 OPTION(keepglue,         int,    2, 1,1e9, "glue kept learned clauses") \

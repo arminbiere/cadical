@@ -112,10 +112,11 @@ COMMENT:
     if (err) return err;
     if (ch == 'c') goto COMMENT;
     external->add (lit);
-    if (!lit && parsed++ >= clauses) PER ("too many clauses");
+    if (!lit && parsed++ >= clauses && !internal->opts.force)
+      PER ("too many clauses");
   }
   if (lit) PER ("last clause without '0'");
-  if (parsed < clauses) PER ("clause missing");
+  if (parsed < clauses && !internal->opts.force) PER ("clause missing");
   MSG ("parsed %d clauses in %.2f seconds", parsed, process_time ());
   return 0;
 }

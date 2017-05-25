@@ -47,11 +47,12 @@ void App::usage () {
 "  -n         do not print witness (same as '--no-witness')\n"
 #ifndef QUIET
 "  -v         increase verbose level (see also '--verbose')\n"
+"  -q         quiet (same as '--quiet')\n"
 #endif
 #ifdef LOGGING
 "  -l         enable logging messages (same as '--log')\n"
 #endif
-"  -q         quiet (same as '--quiet')\n"
+"  -f         force to read broken DIMACS header (same as '--force')\n"
 "\n"
 "  -c         check witness on formula (same as '--check')\n"
 "\n"
@@ -151,6 +152,7 @@ int App::main (int argc, char ** argv) {
     else if (!strcmp (argv[i], "-l")) set ("--log");
 #endif
     else if (!strcmp (argv[i], "-c")) set ("--check");
+    else if (!strcmp (argv[i], "-f")) set ("--force");
     else if (set (argv[i])) { /* nothing do be done */ }
     else if (argv[i][0] == '-') ERROR ("invalid option '%s'", argv[i]);
     else if (proof_specified) ERROR ("too many arguments");
