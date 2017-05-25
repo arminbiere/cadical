@@ -53,13 +53,12 @@ OPTION(compactlim,    double,  0.1, 0,  1, "inactive variable limit") \
 OPTION(compactmin,       int,  100, 1,1e9, "inactive variable limit") \
 OPTION(dlim,             int,   -1, 0,1e9, "decision limit (-1=none)") \
 OPTION(elim,            bool,    1, 0,  1, "bounded variable elimination") \
-OPTION(elimclslim,       int, 1000, 0,1e9, "ignore clauses of this size") \
+OPTION(elimclslim,       int,  1e3, 0,1e9, "ignore clauses of this size") \
 OPTION(eliminit,         int,  1e3, 0,1e9, "initial conflict limit") \
 OPTION(elimint,          int,  1e4, 1,1e9, "initial conflict interval") \
 OPTION(elimocclim,       int,  100, 0,1e9, "one sided occurrence limit") \
 OPTION(elimroundsinit,   int,    5, 1,1e9, "initial number of rounds") \
 OPTION(elimrounds,       int,    2, 1,1e9, "usual number of rounds") \
-OPTION(emabumplast,   double, 1e-5, 0,  1, "alpha bump last percentage") \
 OPTION(emagluefast,   double, 3e-2, 0,  1, "alpha fast glue") \
 OPTION(emaglueslow,   double, 1e-5, 0,  1, "alpha slow glue") \
 OPTION(emajump,       double, 1e-5, 0,  1, "alpha jump level") \
@@ -74,7 +73,7 @@ OPTION(leak,            bool,    1, 0,  1, "leak solver memory") \
 LOGOPT(log,             bool,    0, 0,  1, "enable logging") \
 LOGOPT(logsort,         bool,    0, 0,  1, "sort logged clauses") \
 OPTION(minimize,        bool,    1, 0,  1, "minimize learned clauses") \
-OPTION(minimizedepth,    int, 1000, 0,1e9, "minimization depth") \
+OPTION(minimizedepth,    int,  1e3, 0,1e9, "minimization depth") \
 OPTION(phase,            int,    1, 0,  1, "initial phase: 0=neg,1=pos") \
 OPTION(posize,           int,    4, 4,1e9, "size for saving position") \
 OPTION(probe,           bool,    1, 0,  1, "failed literal probing" ) \
@@ -101,8 +100,8 @@ OPTION(subsumebinlim,    int,  1e4, 0,1e9, "watch list length limit") \
 OPTION(subsumeclslim,    int,  1e3, 0,1e9, "clause length limit") \
 OPTION(subsumeinc,       int,  1e4, 1,1e9, "interval in conflicts") \
 OPTION(subsumeinit,      int,  1e4, 0,1e9, "initial subsume limit") \
-OPTION(subsumeocclim,    int,  1e2, 0,1e9, "watch list length limit") \
-OPTION(trailbump,       bool,    1, 0,  1, "use trail + bumped") \
+OPTION(subsumeocclim,    int,  100, 0,1e9, "watch list length limit") \
+OPTION(trailbump,       bool,    0, 0,  1, "use trail + bumped") \
 OPTION(trailbumplast, double,   40, 0,100, "trail bump last level limit") \
 OPTION(trailbumprops, double,  200, 0,1e9, "trail bump propagation limit") \
 OPTION(transred,        bool,    1, 0,  1, "transitive reduction of BIG") \
