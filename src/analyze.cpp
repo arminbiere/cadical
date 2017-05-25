@@ -68,39 +68,12 @@ struct trail_bumped_smaller {
 void Internal::bump_variables () {
   START (bump);
 
-  double properdec = relative (stats.propagations.search, stats.decisions);
+  // Variables are bumpped in the order they are in the current decision
+  // queue.  This maintains relative order between bumped variables in the
+  // queue and seems to work best.  We also experimented with focusing on
+  // varaibles of the last decision level, but results were mixed.
 
-  if (opts.trailbump &&
-      properdec > opts.trailbumprops &&
-      percent (stats.bumplast, stats.bumped) > opts.trailbumplast) {
-
-    // There are some instances (for instance the 'newton...' instances),
-    // which have a very high number of propagations per decision if we try
-    // to maintain previous bump order as much as possible.  They go through
-    // easily if more recent propagated variables are bumped last, which
-    // also reduces propagations per decision by two orders of magnitude.
-    // It seems that this is related to the high percentage of bumped
-    // variables on the highest decision level.  So if this percentage is
-    // high and we have many propagations per decision, then we take the
-    // assignment order into account too by comparing with respect to the
-    // sum of bumped and trail order. For the instances mentioned above just
-    // comparing with respect to assignment order (e.g., trail height when
-    // assigned) would work too, but this is in general less robust and thus
-    // we use the sum instead with the trail height as (stable) tie-breaker.
-
-    sort (analyzed.begin (), analyzed.end (), trail_bumped_smaller (this));
-    stats.trailbumped++;
-
-  } else {
-
-    // Otherwise the default is to bump the variable in the order they are
-    // in the current decision queue.  This maintains relative order between
-    // bumped variables in the queue and seems to work best for those
-    // instance with smaller number of bumped variables on the last decision
-    // level.
-
-    sort (analyzed.begin (), analyzed.end (), bumped_earlier (this));
-  }
+  sort (analyzed.begin (), analyzed.end (), bumped_earlier (this));
   for (const_int_iterator i = analyzed.begin (); i != analyzed.end (); i++)
     bump_variable (*i);
 

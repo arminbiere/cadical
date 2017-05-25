@@ -102,9 +102,6 @@ OPTION(subsumeclslim,    int,  1e3, 0,1e9, "clause length limit") \
 OPTION(subsumeinc,       int,  1e4, 1,1e9, "interval in conflicts") \
 OPTION(subsumeinit,      int,  1e4, 0,1e9, "initial subsume limit") \
 OPTION(subsumeocclim,    int,  100, 0,1e9, "watch list length limit") \
-OPTION(trailbump,       bool,    0, 0,  1, "use trail + bumped") \
-OPTION(trailbumplast, double,   40, 0,100, "trail bump last level limit") \
-OPTION(trailbumprops, double,  200, 0,1e9, "trail bump propagation limit") \
 OPTION(transred,        bool,    1, 0,  1, "transitive reduction of BIG") \
 OPTION(transredreleff,double, 0.10, 0,  1, "relative efficiency") \
 OPTION(transredmaxeff,double,  1e7, 0,  1, "maximum efficiency") \
