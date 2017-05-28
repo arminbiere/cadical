@@ -77,13 +77,13 @@ OPTION(minimize,        bool,    1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,    int,  1e3, 0,1e9, "minimization depth") \
 OPTION(phase,            int,    1, 0,  1, "initial phase: 0=neg,1=pos") \
 OPTION(posize,           int,    4, 4,1e9, "size for saving position") \
+OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
 OPTION(probe,           bool,    1, 0,  1, "failed literal probing" ) \
 OPTION(probeinit,        int,  500, 0,1e9, "initial probing interval" ) \
 OPTION(probeint,         int,  1e4, 1,1e9, "probing interval increment" ) \
 OPTION(probereleff,   double, 0.02, 0,  1, "relative probing efficiency") \
 OPTION(probemaxeff,   double,  1e7, 0,  1, "maximum probing efficiency") \
 OPTION(probemineff,   double,  1e5, 0,  1, "minimum probing efficiency") \
-OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
 OPTION(profile,          int,    2, 0,  4, "profiling level") \
 QUTOPT(quiet,           bool,    0, 0,  1, "disable all messages") \
 OPTION(reduceinc,        int,  300, 1,1e6, "reduce limit increment") \

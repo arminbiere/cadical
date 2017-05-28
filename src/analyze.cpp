@@ -68,10 +68,10 @@ struct trail_bumped_smaller {
 void Internal::bump_variables () {
   START (bump);
 
-  // Variables are bumpped in the order they are in the current decision
+  // Variables are bumped in the order they are in the current decision
   // queue.  This maintains relative order between bumped variables in the
   // queue and seems to work best.  We also experimented with focusing on
-  // varaibles of the last decision level, but results were mixed.
+  // variables of the last decision level, but results were mixed.
 
   sort (analyzed.begin (), analyzed.end (), bumped_earlier (this));
   for (const_int_iterator i = analyzed.begin (); i != analyzed.end (); i++)

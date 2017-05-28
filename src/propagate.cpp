@@ -80,7 +80,7 @@ void Internal::assign_driving (int lit, Clause * c) {
 // literals at the beginning of the clause.  We also use 'blocking literals'
 // to reduce the number of times clauses have to be visited (2008 JSAT paper
 // by Chu, Harwood and Stuckey).  The watches know if a watched clause is
-// binary, in which case it never hast to be visited.  If a binary clause is
+// binary, in which case it never has to be visited.  If a binary clause is
 // falsified we continue propagating.
 
 // Finally, for long clauses we save the position of the last watch
@@ -96,7 +96,7 @@ bool Internal::propagate () {
   START (propagate);
 
   // Updating the statistics counter in the propagation loops is costly so
-  // we delay until propagation run to completion.
+  // we delay until propagation ran to completion.
   //
   long before = propagated;
 
@@ -137,6 +137,11 @@ bool Internal::propagate () {
         // having this enabled all the time).
 
         EXPENSIVE_STATS_ADD (visits, 1);
+
+	// The cache line with the clause data is forced to be loaded here
+	// and thus this first memory access below is the real hot-spot of
+	// the solver.  Note, that both checks are positive very rarely
+	// and thus branch prediction should be almost perfect.
 
         if (w.clause->garbage) continue;
         if (w.clause->ignore) continue;		// for vivification
@@ -198,7 +203,7 @@ bool Internal::propagate () {
 
 	  } else {
 
-	    // For shorter clauses of say size 3 (see 'opts.posize'), we do
+	    // For shorter clauses of say size 4 (see 'opts.posize'), we do
 	    // not save the position and actually do not even have the
 	    // memory allocated for the '_pos' field in a clause.  For those
 	    // short clauses we simply start at the first unwatched literal.
@@ -249,15 +254,13 @@ bool Internal::propagate () {
             // literals as well (still 'v < 0'), thus we found a conflict.
 
             conflict = w.clause;
-            break;                         // (*)
+	    while (i != ws.end ()) *j++ = *i++;
+            break;
           }
         }
       }
     }
-    if (j < i) {
-      while (i != ws.end ()) *j++ = *i++;  // because of the 'break' at (*)
-      ws.resize (j - ws.begin ());
-    }
+    if (j < i) ws.resize (j - ws.begin ());
   }
   long delta = propagated - before;
   if (vivifying) stats.propagations.vivify += delta;
