@@ -254,13 +254,15 @@ bool Internal::propagate () {
             // literals as well (still 'v < 0'), thus we found a conflict.
 
             conflict = w.clause;
-	    while (i != ws.end ()) *j++ = *i++;
             break;
           }
         }
       }
     }
-    if (j < i) ws.resize (j - ws.begin ());
+    if (j < i) {
+      while (i != ws.end ()) *j++ = *i++;
+      ws.resize (j - ws.begin ());
+    }
   }
   long delta = propagated - before;
   if (vivifying) stats.propagations.vivify += delta;

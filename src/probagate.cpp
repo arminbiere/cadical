@@ -263,14 +263,13 @@ bool Internal::probagate () {
               probe_assign (other, dom);
             } else probe_assign_unit (other);
 	    probagate2 ();
-          } else {
-	    conflict = w.clause;
-	    while (i != ws.size ()) ws[j++] = ws[i++];
-	    break;
-	  }
+          } else { conflict = w.clause; break; }
         }
       }
-      if (j < i) ws.resize (j);
+      if (j < i) {
+	while (i != ws.size ()) ws[j++] = ws[i++];
+	ws.resize (j);
+      }
     } else break;
   }
   long delta = probagated2 - before;
