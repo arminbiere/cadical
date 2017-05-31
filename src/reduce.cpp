@@ -79,6 +79,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     Clause * c = *i;
     if (!c->redundant) continue;                // keep irredundant
     if (c->garbage) continue;                   // already marked
+    if (c->reason) continue;                    // need to keep reasons
     const bool used = c->used;
     c->used = false;
     if (c->hbr) {                               // hyper binary resolvent?
@@ -88,7 +89,6 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     }
     if (c->keep) continue;             		// statically considered useful
     update_clause_useful_probability (c, used);
-    if (c->reason) continue;                    // need to keep reasons
     if (used) continue;				// keep recently used
     stack.push_back (c);
   }
