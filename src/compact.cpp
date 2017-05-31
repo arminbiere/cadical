@@ -205,7 +205,7 @@ void Internal::compact () {
     const_clause_iterator i;
     for (i = clauses.begin (); i != end; i++) {
       Clause * c = *i;
-      assert (!c->collect);
+      assert (!c->garbage);
       const const_literal_iterator eoc = c->end ();
       literal_iterator j;
       for (j = c->begin (); j != eoc; j++) {
