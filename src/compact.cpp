@@ -152,10 +152,7 @@ void Internal::compact () {
   assert (control.size () == 1);
   assert (propagated == trail.size ());
 
-  if (lim.fixed_at_last_collect < stats.all.fixed) {
-    LOG ("forcing garbage collection");
-    garbage_collection ();
-  }
+  garbage_collection ();
 
   // We produce a compactifying garbage collector like map of old 'src' to
   // new 'dst' variables.  Inactive variables are just skipped except for
@@ -208,6 +205,7 @@ void Internal::compact () {
     const_clause_iterator i;
     for (i = clauses.begin (); i != end; i++) {
       Clause * c = *i;
+      assert (!c->collect);
       const const_literal_iterator eoc = c->end ();
       literal_iterator j;
       for (j = c->begin (); j != eoc; j++) {
