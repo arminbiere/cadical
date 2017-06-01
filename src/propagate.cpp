@@ -118,6 +118,9 @@ bool Internal::propagate () {
 
       if (w.binary) {
 
+        if (w.clause->garbage) continue;
+        assert (!w.clause->ignore);
+
         // Binary clauses are treated separately since they do not require
         // to access the clause at all (only during conflict analysis, and
         // there also only to simplify the code).
