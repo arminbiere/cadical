@@ -69,6 +69,8 @@ OPTION(force,           bool,    0, 0,  1, "force to read broken header") \
 OPTION(hbr,             bool,    1, 0,  1, "learn hyper binary clauses") \
 OPTION(hbrsizelim,       int, 1e9, 3, 1e9, "max size HBR base clause") \
 OPTION(keepglue,         int,    3, 1,1e9, "glue kept learned clauses") \
+OPTION(keepglue1,        int,  1e6, 1,1e9, "keep higher glue limit 1") \
+OPTION(keepglue2,        int,  1e7, 1,1e9, "keep higher glue limit 2") \
 OPTION(keepsize,         int,    3, 2,1e9, "size kept learned clauses") \
 OPTION(leak,            bool,    1, 0,  1, "leak solver memory") \
 LOGOPT(log,             bool,    0, 0,  1, "enable logging") \

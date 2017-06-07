@@ -99,7 +99,9 @@ Clause * Internal::new_clause (bool red, int glue) {
   bool keep;
   if (!red) keep = true;
   else if (size <= opts.keepsize) keep = true;
-  else if (glue <= opts.keepglue) keep = true;
+  else if (glue <= opts.keepglue +
+           (stats.conflicts >= opts.keepglue1) +
+           (stats.conflicts >= opts.keepglue2)) keep = true;
   else keep = false;
 
   // Determine whether this clauses is extended and uses a '_pos' field.
