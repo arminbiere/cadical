@@ -11,7 +11,9 @@ mkdir $dir || exit 1
 cd $dir || exit 1
 git clone $root $dir || exit 1
 rm -rf /tmp/$name/.git
-sed -i -e 's,`./scripts/get-git-id.sh`,'"`./scripts/get-git-id.sh`", $dir/build/make-config-header.sh
+sed -i \
+  -e 's,`./scripts/get-git-id.sh`,'"`./scripts/get-git-id.sh`", \
+  $dir/scripts/make-config-header.sh
 sed -i -e '/rm -f test/d' $dir/build/makefile.in
 cd /tmp
 tar cJf $tar $name
