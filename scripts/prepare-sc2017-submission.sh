@@ -1,6 +1,8 @@
 #!/bin/sh
-cwd=`pwd`
+cd `dirname $0`/..
+root=`pwd`
 tmp=/tmp/prepare-cadical-sc2017-submission.log
+##########################################################################
 rm -f $tmp
 VERSION=`cat VERSION`
 base=cadical-${VERSION}-starexec-main
@@ -43,8 +45,7 @@ ls -l $archive
 rm -f $tmp
 rm -rf $dir/
 ##########################################################################
-cd $cwd
-VERSION=`cat VERSION`
+cd $root
 base=cadical-${VERSION}-starexec-notrace
 dir=/tmp/$base
 rm -rf $dir

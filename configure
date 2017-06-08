@@ -94,7 +94,7 @@ build_in_default_build_sub_directory () {
     msg "making default 'build' directory"
   fi
   cd build
-  msg "building in default '`pwd`/build'"
+  msg "building in default '`pwd`'"
   build=build
 }
 
@@ -232,7 +232,7 @@ test:
 .PHONY: all clean test
 EOF
 
-msg "generated '../makefile' as ..."
-msg "... proxy to '$build/makefile'"
+msg "generated '../makefile' as proxy to ..."
+msg "... '$build/makefile'"
 msg "now run 'make' to compile CaDiCaL"
 msg "optionally test it with 'make test'"

@@ -10,11 +10,14 @@ rm -rf $dir
 mkdir $dir || exit 1
 cd $dir || exit 1
 git clone $root $dir || exit 1
-sed -i \
-  -e 's,`../scripts/get-git-id.sh`,'"`./scripts/get-git-id.sh`", \
-  $dir/scripts/make-config-header.sh
-rm -rf $dir/test
+rm -rf TODO.md test $dir/scripts
 sed -i -e '/rm -f test/d' $dir/makefile.in
+sed -i -e '/optionally test it/d' $dir/configure
+mkdir $dir/scripts
+sed \
+  -e 's,`../scripts/get-git-id.sh`,'"`$root/scripts/get-git-id.sh`", \
+  $root/scripts/make-config-header.sh > $dir/scripts/make-config-header.sh
+chmod 755 $dir/scripts/*.sh
 cd /tmp
 rm -rf /tmp/$name/.git
 tar cJf $tar $name
