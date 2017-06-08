@@ -11,7 +11,7 @@ mkdir $dir || exit 1
 cd $dir || exit 1
 git clone $root $dir || exit 1
 sed -i \
-  -e 's,`./scripts/get-git-id.sh`,'"`./scripts/get-git-id.sh`", \
+  -e 's,`../scripts/get-git-id.sh`,'"`./scripts/get-git-id.sh`", \
   $dir/scripts/make-config-header.sh
 rm -rf $dir/test
 sed -i -e '/rm -f test/d' $dir/makefile.in
