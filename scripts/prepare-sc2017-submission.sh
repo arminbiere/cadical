@@ -1,9 +1,9 @@
 #!/bin/sh
 cwd=`pwd`
-tmp=/tmp/prepare-sc2015-submission.log
+tmp=/tmp/prepare-cadical-sc2017-submission.log
 rm -f $tmp
 VERSION=`cat VERSION`
-base=cadical-${VERSION}-sc2017-main
+base=cadical-${VERSION}-starexec-main
 dir=/tmp/$base
 rm -rf $dir
 mkdir $dir
@@ -45,7 +45,7 @@ rm -rf $dir/
 ##########################################################################
 cd $cwd
 VERSION=`cat VERSION`
-base=cadical-${VERSION}-sc2017-notrace
+base=cadical-${VERSION}-starexec-notrace
 dir=/tmp/$base
 rm -rf $dir
 mkdir $dir
