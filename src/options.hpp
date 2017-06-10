@@ -75,7 +75,7 @@ LOGOPT(log,             bool,    0, 0,  1, "enable logging") \
 LOGOPT(logsort,         bool,    0, 0,  1, "sort logged clauses") \
 OPTION(minimize,        bool,    1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,    int,  1e3, 0,1e9, "minimization depth") \
-OPTION(phase,            int,    0, 0,  1, "initial phase: 0=neg,1=pos") \
+OPTION(phase,            int,    1, 0,  1, "initial phase: 0=neg,1=pos") \
 OPTION(posize,           int,    4, 4,1e9, "size for saving position") \
 OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
 OPTION(probe,           bool,    1, 0,  1, "failed literal probing" ) \
