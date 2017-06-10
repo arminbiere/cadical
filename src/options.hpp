@@ -88,7 +88,7 @@ OPTION(profile,          int,    2, 0,  4, "profiling level") \
 QUTOPT(quiet,           bool,    0, 0,  1, "disable all messages") \
 OPTION(reduceinc,        int,  300, 1,1e6, "reduce limit increment") \
 OPTION(reduceinit,       int, 2000, 0,1e6, "initial reduce limit") \
-OPTION(rephase,         bool,    1, 0,  1, "enable rephasing") \
+OPTION(rephase,         bool,    0, 0,  1, "enable rephasing") \
 OPTION(rephaseint,       int,  1e5, 1,1e9, "rephasing interval") \
 OPTION(restart,         bool,    1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,  400, 1,1e9, "restart base interval") \
