@@ -75,7 +75,7 @@ LOGOPT(log,             bool,    0, 0,  1, "enable logging") \
 LOGOPT(logsort,         bool,    0, 0,  1, "sort logged clauses") \
 OPTION(minimize,        bool,    1, 0,  1, "minimize learned clauses") \
 OPTION(minimizedepth,    int,  1e3, 0,1e9, "minimization depth") \
-OPTION(phase,            int,    1, 0,  1, "initial phase: 0=neg,1=pos") \
+OPTION(phase,            int,    0, 0,  1, "initial phase: 0=neg,1=pos") \
 OPTION(posize,           int,    4, 4,1e9, "size for saving position") \
 OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
 OPTION(probe,           bool,    1, 0,  1, "failed literal probing" ) \
@@ -88,7 +88,7 @@ OPTION(profile,          int,    2, 0,  4, "profiling level") \
 QUTOPT(quiet,           bool,    0, 0,  1, "disable all messages") \
 OPTION(reduceinc,        int,  300, 1,1e6, "reduce limit increment") \
 OPTION(reduceinit,       int, 2000, 0,1e6, "initial reduce limit") \
-OPTION(rephase,         bool,    1, 0,  1, "enable rephasing") \
+OPTION(rephase,         bool,    0, 0,  1, "enable rephasing") \
 OPTION(rephaseint,       int,  1e5, 1,1e9, "rephasing interval") \
 OPTION(restart,         bool,    1, 0,  1, "enable restarting") \
 OPTION(restartint,       int,    6, 1,1e9, "restart base interval") \
