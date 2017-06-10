@@ -54,7 +54,7 @@ OPTION(compactmin,       int,  100, 1,1e9, "inactive variable limit") \
 OPTION(dlim,             int,   -1, 0,1e9, "decision limit (-1=none)") \
 OPTION(elim,            bool,    1, 0,  1, "bounded variable elimination") \
 OPTION(elimclslim,       int,  1e3, 0,1e9, "ignore clauses of this size") \
-OPTION(eliminit,         int,    0, 0,1e9, "initial conflict limit") \
+OPTION(eliminit,         int,  5e3, 0,1e9, "initial conflict limit") \
 OPTION(elimint,          int,  1e4, 1,1e9, "initial conflict interval") \
 OPTION(elimocclim,       int,  100, 0,1e9, "one sided occurrence limit") \
 OPTION(elimroundsinit,   int,    5, 1,1e9, "initial number of rounds") \
