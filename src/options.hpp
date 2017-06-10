@@ -54,7 +54,7 @@ OPTION(compactmin,       int,  100, 1,1e9, "inactive variable limit") \
 OPTION(dlim,             int,   -1, 0,1e9, "decision limit (-1=none)") \
 OPTION(elim,            bool,    1, 0,  1, "bounded variable elimination") \
 OPTION(elimclslim,       int,  1e3, 0,1e9, "ignore clauses of this size") \
-OPTION(eliminit,         int,  1e3, 0,1e9, "initial conflict limit") \
+OPTION(eliminit,         int,    0, 0,1e9, "initial conflict limit") \
 OPTION(elimint,          int,  1e4, 1,1e9, "initial conflict interval") \
 OPTION(elimocclim,       int,  100, 0,1e9, "one sided occurrence limit") \
 OPTION(elimroundsinit,   int,    5, 1,1e9, "initial number of rounds") \
@@ -91,7 +91,7 @@ OPTION(reduceinit,       int, 2000, 0,1e6, "initial reduce limit") \
 OPTION(rephase,         bool,    0, 0,  1, "enable rephasing") \
 OPTION(rephaseint,       int,  1e5, 1,1e9, "rephasing interval") \
 OPTION(restart,         bool,    1, 0,  1, "enable restarting") \
-OPTION(restartint,       int,  800, 1,1e9, "restart base interval") \
+OPTION(restartint,       int,  400, 1,1e9, "restart base interval") \
 OPTION(restartmargin, double,  1.1, 0, 10, "restart slow fast margin") \
 OPTION(reusetrail,      bool,    1, 0,  1, "enable trail reuse") \
 OPTION(simplify,        bool,    1, 0,  1, "enable simplifier") \
