@@ -4,7 +4,7 @@
 MAKEFLAGS=-j $(if $(CORES),$(CORES),1)
 OBJ=$(shell ls ../src/*.cpp|sed -e '/main/d' -e '/app/d' -e 's,../src/,,' -e 's,.cpp$$,.o,g')
 SRC=$(shell ls ../src/*.cpp ../src/*.hpp)
-BUILD=../$(shell pwd|xargs basename)
+BUILD=../$(shell pwd|sed -e 's,.*/,,')
 CXX=@CXX@
 CXXFLAGS=@CXXFLAGS@
 COMPILE=$(CXX) $(CXXFLAGS) -I$(BUILD)
@@ -26,5 +26,5 @@ clean:
 	rm -f *.o *.a cadical makefile config.hpp dependencies
 	rm -f *.gcda *.gcno *.gcov gmon.out
 test: all
-	CADICALBUILD=$(BUILD) make -C ../test
+	CADICALBUILD="$(BUILD)" make -C ../test
 .PHONY: all clean test

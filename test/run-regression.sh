@@ -11,14 +11,14 @@ msg () {
   echo "[run-regression.sh] $*"
 }
 
-[ x"$CADICALBUILD" = x ] && CADICALBUILD=`pwd`/../build
+[ x"$CADICALBUILD" = x ] && CADICALBUILD="`pwd`/../build"
 
 [ -x "$CADICALBUILD/cadical" ] || \
   die "can not find '$CADICALBUILD/cadical' (run 'make' first)"
 
 msg "regression testing '$CADICALBUILD/cadical'" 
 
-binary=$CADICALBUILD/cadical
+binary="$CADICALBUILD/cadical"
 
 checker=none
 for d in `echo $PATH | tr : \ `
@@ -59,7 +59,7 @@ run () {
   fi
   opts="cnfs/$1.cnf$solopts$proofopts"
   echo -n "$binary $opts # $2 ..."
-  $binary $opts 1>cnfs/$1.log 2>cnfs/$1.err
+  "$binary" $opts 1>cnfs/$1.log 2>cnfs/$1.err
   res=$?
   if [ $res = $2 ]
   then 

@@ -103,10 +103,10 @@ then
   build_in_default_build_sub_directory
 elif [ -f ../configure -a -f ../makefile.in -a -f ../VERSION -a -d ../src ]
 then
-  cwd=`pwd`
-  build=`basename $cwd`
-  case $build in
-    src|test|scripts)
+  cwd="`pwd`"
+  build=`basename "$cwd"`
+  case x"$build" in
+    xsrc|xtest|xscripts)
       cd ..
       build_in_default_build_sub_directory
       ;;
@@ -214,21 +214,21 @@ build=`pwd`
 cat <<EOF > ../makefile
 CADICALBUILD=$build
 all:
-	make -C \$(CADICALBUILD)
+	make -C "\$(CADICALBUILD)"
 clean:
-	@if [ -d \$(CADICALBUILD) ]; \\
+	@if [ -d "\$(CADICALBUILD)" ]; \\
 	then \\
-	  if [ -f \$(CADICALBUILD)/makefile ]; \\
+	  if [ -f "\$(CADICALBUILD)"/makefile ]; \\
 	  then \\
-	     touch \$(CADICALBUILD)/config.hpp; \\
-	     touch \$(CADICALBUILD)/dependencies; \\
-	     make -C \$(CADICALBUILD) clean; \\
+	     touch "\$(CADICALBUILD)"/config.hpp; \\
+	     touch "\$(CADICALBUILD)"/dependencies; \\
+	     make -C "\$(CADICALBUILD)" clean; \\
 	  fi; \\
-	  rm -rf \$(CADICALBUILD); \\
+	  rm -rf "\$(CADICALBUILD)"; \\
 	fi
 	rm makefile
 test:
-	make -C \$(CADICALBUILD) test
+	make -C "\$(CADICALBUILD)" test
 .PHONY: all clean test
 EOF
 
