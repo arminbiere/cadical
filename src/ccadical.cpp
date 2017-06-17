@@ -6,8 +6,13 @@ extern "C" {
 
 #include "ccadical.h"
 
-CCaDiCaL * ccadical_init () { return (CCaDiCaL*) new Solver (); }
-void ccadical_reset (CCaDiCaL * solver) { delete (Solver*) solver; }
+CCaDiCaL * ccadical_init () {
+  return (CCaDiCaL*) new Solver ();
+}
+
+void ccadical_reset (CCaDiCaL * solver) {
+  delete (Solver*) solver;
+}
 
 void ccadical_add (CCaDiCaL * solver, int lit) {
   ((Solver*) solver)->add (lit);

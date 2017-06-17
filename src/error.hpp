@@ -4,7 +4,7 @@
 #define ERROR_START(FMT,ARGS...) \
 do { \
   fflush (stdout); \
-  fputs ("*** 'cadical' error: ", stderr); \
+  fputs ("*** 'CaDiCaL' error: ", stderr); \
   fprintf (stderr, FMT, ##ARGS); \
 } while (0)
 

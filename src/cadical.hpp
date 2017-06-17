@@ -8,16 +8,25 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// External API of the CaDiCaL solver.  In essence 'Solver' is a 'facade'
-// object for 'Internal'.  It thus exposes the meant to be public API of
-// 'Internal' but hides everything else (except for the private member
+// Actual API of the CaDiCaL solver.  In essence 'Solver' is a 'facade'
+// object for 'External'.  It thus exposes the meant to be public API of
+// 'External' but hides everything else (except for the private member
 // functions below).  It makes it easier to understand and use the solver.
 
-// We further map external literals to internal literals, which is
-// particularly useful with many inactive variables, but also necessary, if
-// we want to include approaches based on extended resolution (such as
-// bounded variable addition).  The data structure necessary to maintain
-// this mapping is stored in the (here opaque) 'External' data structure.
+// The CaDiCaL code is split into three layers:
+//
+//   Solver:       facade object providing the actual API of the solver
+//   External:     communication layer between 'Solver' and 'Internal'
+//   Internal:     the actual solver code
+//
+// Note, that 'Solver' is defined in the 'cadical.{hpp,cpp}' files, while
+// 'External' and 'Internal' are in '{external,internal}.{hpp,cpp}'.
+
+// In particular, we map external literals to internal literals, which is
+// useful with many inactive variables, but also necessary, if we want to
+// include approaches based on extended resolution (such as bounded variable
+// addition).  The data structure necessary to maintain this mapping is
+// stored in the (here opaque) 'External' data structure.
 
 // It has the additional benefit to decouple this header file from all the
 // internal data structures, which is particularly useful if the rest of the
@@ -39,6 +48,12 @@ class Solver {
   External * external;
 
 public:
+
+  /*----------------------------------------------------------------------*/
+
+  static const char * version ();  // return version string
+
+  /*----------------------------------------------------------------------*/
 
   Solver ();
   ~Solver ();
@@ -65,8 +80,6 @@ public:
   int solve ();         // returns 10 = SAT, 20 = UNSAT
 
   //------------------------------------------------------------------------
-
-  const char * version ();	// return version string
 
   void banner ();       // print solver banner
   void usage ();        // print usage information for long options

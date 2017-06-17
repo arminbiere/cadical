@@ -19,11 +19,14 @@ using namespace std;
 
 /*------------------------------------------------------------------------*/
 
-// The CaDiCal code is split into three layers:
+// The CaDiCaL code is split into three layers:
 //
 //   Solver:       facade object providing the actual API of the solver
-//   External:     commmunication layer between 'Solver' and 'Internal'
+//   External:     communication layer between 'Solver' and 'Internal'
 //   Internal:     the actual solver code
+//
+// Note, that 'Solver' is defined in the 'cadical.{hpp,cpp}' files, while
+// 'External' and 'Internal' are in '{external,internal}.{hpp,cpp}'.
 //
 // Note, that 'App' (and any user of the library should) access the library
 // only through the 'Solver' API.  For the library internal 'Parser' code we
