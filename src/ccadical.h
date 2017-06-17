@@ -15,4 +15,6 @@ void ccadical_add (CCaDiCaL *, int lit);
 int ccadical_sat (CCaDiCaL *);
 int ccadical_deref (CCaDiCaL *, int lit);
 
+void ccadical_print_statistics (CCaDiCaL *);
+
 #endif

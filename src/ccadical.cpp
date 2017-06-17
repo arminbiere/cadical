@@ -35,5 +35,9 @@ int ccadical_deref (CCaDiCaL * solver, int lit) {
   return ((Solver*) solver)->val (lit);
 }
 
+void ccadical_print_statistics (CCaDiCaL * solver) {
+  ((Solver*) solver)->statistics ();
+}
+
 };
 
