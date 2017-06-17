@@ -30,4 +30,15 @@ struct EMA {
 
 };
 
+/*------------------------------------------------------------------------*/
+
+// Compact average update and initialization macros for better logging.
+
+#define UPDATE_AVERAGE(A,Y) \
+do { A.update (internal, (Y), #A); } while (0)
+
+#define INIT_EMA(E,V) \
+  E = EMA (V); \
+  LOG ("init " #E " EMA target alpha %g", (double) V)
+
 #endif

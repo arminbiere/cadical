@@ -45,7 +45,7 @@ static void log (Internal *, const vector<int> &, const char *fmt, ...);
 // '#ifdef') if logging code is not included.
 
 #define LOG(ARGS...) \
-do {  \
+do { \
   if (!internal->opts.log) break; \
   Logger::log (internal, ##ARGS); \
 } while (0)

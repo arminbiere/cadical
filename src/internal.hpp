@@ -27,6 +27,7 @@
 #include "clause.hpp"
 #include "elim.hpp"
 #include "ema.hpp"
+#include "error.hpp"
 #include "external.hpp"
 #include "file.hpp"
 #include "flags.hpp"

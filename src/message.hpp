@@ -51,4 +51,34 @@ struct Message {
 
 };
 
+/*------------------------------------------------------------------------*/
+
+// Macros for compact message code.
+
+#ifndef QUIET
+
+#define MSG(ARGS...) Message::message (internal, ##ARGS)
+#define VRB(ARGS...) Message::verbose (internal, ##ARGS)
+#define SECTION(ARGS...) Message::section (internal, ##ARGS)
+
+#else
+
+#define MSG(ARGS...) do { } while (0)
+#define VRB(ARGS...) do { } while (0)
+#define SECTION(ARGS...) do { } while (0)
+
+#endif
+
+// Parse error.
+
+#define PER(FMT,ARGS...) \
+do { \
+  internal->error.init (\
+    "%s:%d: parse error: ", \
+    file->name (), (int) file->lineno ()); \
+  return internal->error.append (FMT, ##ARGS); \
+} while (0)
+
+/*------------------------------------------------------------------------*/
+
 #endif // ifndef _message_h_INCLUDED
