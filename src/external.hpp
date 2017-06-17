@@ -3,16 +3,6 @@
 
 /*------------------------------------------------------------------------*/
 
-#include <cassert>
-#include <climits>
-#include <cstdlib>
-
-/*------------------------------------------------------------------------*/
-
-#include <vector>
-
-/*------------------------------------------------------------------------*/
-
 namespace CaDiCaL {
 
 using namespace std;
@@ -28,12 +18,12 @@ using namespace std;
 // Note, that 'Solver' is defined in the 'cadical.{hpp,cpp}' files, while
 // 'External' and 'Internal' are in '{external,internal}.{hpp,cpp}'.
 //
-// Note, that 'App' (and any user of the library should) access the library
-// only through the 'Solver' API.  For the library internal 'Parser' code we
-// make an exception and allow access to both 'External' and 'Internal'.
-// The former to enforce the same external to internal mapping of variables
-// and the latter for profiling and messages.
-
+// Note, that 'App' accesses (and any user of the library should access) the
+// library only through the 'Solver' API.  For the library internal 'Parser'
+// code we make an exception and allow access to both 'External' and
+// 'Internal'.  The former to enforce the same external to internal mapping
+// of variables and the latter for profiling and messages.
+//
 // The 'External' class provided here stores the information needed to map
 // external variable indices to internal variables (actually literals).
 // This is helpful for shrinking the working size of the internal solver if
@@ -129,6 +119,7 @@ class External {
   }
 
   void check_solution_on_learned_clause ();
+
   void check_solution_on_shrunken_clause (Clause *);
 
   void check_learned_clause () {

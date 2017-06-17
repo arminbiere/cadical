@@ -50,6 +50,12 @@ class Solver {
 public:
 
   /*----------------------------------------------------------------------*/
+  // Static members.
+
+  // If an API usage contract is violated, then this signal is raised
+  // (default is 'SIGUSR1').
+  //
+  static int contract_violation_signal;
 
   static const char * version ();  // return version string
 

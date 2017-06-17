@@ -1,10 +1,6 @@
 #ifndef _clause_hpp_INCLUDED
 #define _clause_hpp_INCLUDED
 
-#include "util.hpp"
-
-#include <cstdlib>
-
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/

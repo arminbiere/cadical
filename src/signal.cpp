@@ -5,6 +5,8 @@
 
 #include <csignal>
 
+int CaDiCaL::Solver::contract_violation_signal = SIGUSR1;
+
 /*------------------------------------------------------------------------*/
 
 extern "C" {
