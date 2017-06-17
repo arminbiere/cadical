@@ -6,7 +6,7 @@ do { \
   fflush (stdout); \
   fprintf (stderr, \
     "*** 'CaDiCaL' invalid API usage of '%s' in '%s': ", \
-    __FUNCTION__, __FILE__); \
+    __PRETTY_FUNCTION__, __FILE__); \
   fprintf (stderr, FMT, ##ARGS); \
   fputc ('\n', stderr); \
   raise (CaDiCaL::Solver::contract_violation_signal); \
@@ -21,7 +21,7 @@ do { \
 
 #define REQUIRE_INITIALIZED() \
 do { \
-  REQUIRE(this, "uninitialized"); \
+  REQUIRE(this, "solver uninitialized"); \
 } while (0)
 
 #define REQUIRE_VALID_LIT(LIT) \
