@@ -14,6 +14,15 @@ void ccadical_reset (CCaDiCaL * solver) {
   delete (Solver*) solver;
 }
 
+void ccadical_banner (CCaDiCaL * solver) {
+  ((Solver*) solver)->banner ();
+}
+
+void ccadical_set_option (CCaDiCaL * solver,
+                          const char * name, double val) {
+  ((Solver*) solver)->set (name, val);
+}
+
 void ccadical_add (CCaDiCaL * solver, int lit) {
   ((Solver*) solver)->add (lit);
 }
