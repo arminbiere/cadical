@@ -87,8 +87,8 @@ OPTION(probemaxeff,   double,  1e7, 0,  1, "maximum probing efficiency") \
 OPTION(probemineff,   double,  1e5, 0,  1, "minimum probing efficiency") \
 OPTION(profile,          int,    2, 0,  4, "profiling level") \
 QUTOPT(quiet,           bool,    0, 0,  1, "disable all messages") \
-OPTION(reduceinc,        int,  300, 1,1e6, "reduce limit increment") \
-OPTION(reduceinit,       int, 2000, 0,1e6, "initial reduce limit") \
+OPTION(reduceinc,        int,  450, 1,1e6, "reduce limit increment") \
+OPTION(reduceinit,       int, 3000, 0,1e6, "initial reduce limit") \
 OPTION(rephase,         bool,    1, 0,  1, "enable rephasing") \
 OPTION(rephaseint,       int,  1e5, 1,1e9, "rephasing interval") \
 OPTION(restart,         bool,    1, 0,  1, "enable restarting") \
