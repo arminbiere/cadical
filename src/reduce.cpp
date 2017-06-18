@@ -89,7 +89,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     }
     if (c->keep) continue;             		// statically considered useful
     update_clause_useful_probability (c, used);
-    if (used) continue;				// keep recently used
+    if (opts.keepused && used) continue;	// keep recently used
     stack.push_back (c);
   }
 
