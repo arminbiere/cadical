@@ -70,7 +70,7 @@ OPTION(hbr,             bool,    1, 0,  1, "learn hyper binary clauses") \
 OPTION(hbrsizelim,       int, 1e9, 3, 1e9, "max size HBR base clause") \
 OPTION(keepglue,         int,    3, 1,1e9, "glue kept learned clauses") \
 OPTION(keepsize,         int,    3, 2,1e9, "size kept learned clauses") \
-OPTION(keepused,        bool,    0, 0,  1, "keep clauses used around") \
+OPTION(keepused,        bool,    1, 0,  1, "keep clauses used around") \
 OPTION(leak,            bool,    1, 0,  1, "leak solver memory") \
 LOGOPT(log,             bool,    0, 0,  1, "enable logging") \
 LOGOPT(logsort,         bool,    0, 0,  1, "sort logged clauses") \
