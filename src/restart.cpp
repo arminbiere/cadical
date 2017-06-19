@@ -40,6 +40,7 @@ void Internal::restart () {
   LOG ("restart %ld", stats.restarts);
   backtrack (reuse_trail ());
   lim.restart = stats.conflicts + opts.restartint;
+  lim.conflicts_at_last_restart = stats.conflicts;
   report ('R', 2);
   STOP (restart);
 }

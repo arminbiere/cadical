@@ -29,6 +29,10 @@ struct Limit {
   //
   long conflicts_at_last_reduce;
 
+  // Wait for 'opts.reducewait' conflicts after 'restart'.
+  //
+  long conflicts_at_last_restart;
+
   // Determines whether marking satisfied clauses and removing falsified
   // literals during garbage collection would make sense or is required.
   //
