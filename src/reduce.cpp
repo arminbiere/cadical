@@ -8,7 +8,8 @@ namespace CaDiCaL {
 // for a longer period.
 
 bool Internal::reducing () {
-  if (stats.conflicts < lim.conflicts_at_last_restart + opts.reducewait)
+  if (stats.conflicts < lim.conflicts_at_last_restart +
+        opts.reducewait * relative (stats.conflicts, stats.restarts))
     return 0;
   return stats.conflicts >= lim.reduce;
 }
