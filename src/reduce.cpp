@@ -8,9 +8,10 @@ namespace CaDiCaL {
 // for a longer period.
 
 bool Internal::reducing () {
+  if (!opts.reduce) return false;
   if (stats.conflicts < lim.conflicts_at_last_restart +
         opts.reducewait * relative (stats.conflicts, stats.restarts))
-    return 0;
+    return false;
   return stats.conflicts >= lim.reduce;
 }
 
@@ -75,6 +76,8 @@ void Internal::update_clause_useful_probability (Clause * c, bool used) {
 // collected in a subsequent garbage collection phase.
 
 void Internal::mark_useless_redundant_clauses_as_garbage () {
+  if (opts.reduce == 1) wg = 0, ws = 1;
+  else if (opts.reduce == 2) wg = 1, ws = 0;
   vector<Clause*> stack;
   stack.reserve (stats.redundant);
   const_clause_iterator end = clauses.end (), i;
@@ -91,7 +94,8 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
       continue;
     }
     if (c->keep) continue;             		// statically considered useful
-    update_clause_useful_probability (c, used);
+    if (opts.reduce == 3)
+      update_clause_useful_probability (c, used);
     if (opts.keepused && used) continue;	// keep recently used
     stack.push_back (c);
   }

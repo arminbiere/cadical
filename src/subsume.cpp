@@ -26,7 +26,8 @@ bool Internal::subsuming () {
   // reduction happened where the overall allocated memory is small and we
   // got a limit on the number of kept clause in terms of size and glue.
   //
-  if (stats.conflicts != lim.conflicts_at_last_reduce) return false;
+  if (opts.reduce &&
+      stats.conflicts != lim.conflicts_at_last_reduce) return false;
 
   return stats.conflicts >= lim.subsume;
 }

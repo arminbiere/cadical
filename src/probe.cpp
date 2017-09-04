@@ -11,7 +11,8 @@ bool Internal::probing () {
 
   // Wait until next 'reduce'.
   //
-  if (stats.conflicts != lim.conflicts_at_last_reduce) return false;
+  if (opts.reduce &&
+      stats.conflicts != lim.conflicts_at_last_reduce) return false;
 
   return lim.probe <= stats.conflicts;
 }

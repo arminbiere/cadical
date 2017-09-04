@@ -91,7 +91,7 @@ public:
 
   // Glucose level, LBD, or just 'glue' stores for learned clauses the
   // number of different levels of its literals during learning.  This is a
-  // good prediction for usefulness of a clause (see the IJCAR'09 paper by
+  // good prediction for usefulness of a clause (see the IJCAI'09 paper by
   // Audemard and Simon).
   //
   signed int glue : LD_MAX_GLUE;
