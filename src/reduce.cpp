@@ -65,6 +65,9 @@ void Internal::update_clause_useful_probability (Clause * c, bool used) {
     predicted, wg, c->glue, ws, c->size);
   wg += (error / c->glue) * 1e-5;
   ws += (error / c->size) * 1e-5;
+  double sum = wg + ws;
+  if (!sum) sum = 1e-5;
+  wg /= sum, ws /= sum;
   LOG ("new prediction %1.4f = %f / %d + %f / %u",
     predicted, wg, c->glue, ws, c->size);
   LOG ("actual prediction %1.4f = %f / %d + %f / %u",
