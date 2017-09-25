@@ -318,10 +318,14 @@ bool Internal::decompose_round () {
     if (!active (idx)) continue;
     int other = reprs [ vlit (idx) ];
     if (other == idx) continue;
-    assert (active (other));
-    flags (idx).status = Flags::SUBSTITUTED;
-    stats.all.substituted++;
-    stats.now.substituted++;
+    assert (!flags (other).eliminated ());
+    assert (!flags (other).substituted ());
+    if (!flags (other).fixed ()) {
+      assert (active (other));
+      flags (idx).status = Flags::SUBSTITUTED;
+      stats.all.substituted++;
+      stats.now.substituted++;
+    }
     external->push_binary_on_extension_stack (-idx, other);
     external->push_binary_on_extension_stack (idx, -other);
   }
