@@ -45,6 +45,7 @@ OPTION(arena,            int,    3, 0,  3, "1=clause,2=var,3=queue") \
 OPTION(arenacompact,    bool,    1, 0,  1, "keep clauses compact") \
 OPTION(arenasort,        int,    1, 0,  1, "sort clauses after arenaing") \
 OPTION(binary,          bool,    1, 0,  1, "use binary proof format") \
+OPTION(bumpreasonlits,  bool,    1, 0,  1, "bump reason literals too") \
 OPTION(check,           bool,DEBUG, 0,  1, "save & check original CNF") \
 OPTION(clim,             int,   -1, 0,1e9, "conflict limit (-1=none)") \
 OPTION(compact,         bool,    1, 0,  1, "enable compactification") \

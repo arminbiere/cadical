@@ -111,6 +111,7 @@ void Stats::print (Internal * internal) {
   PRT ("  vivifystrs:    %15ld   %10.2f %%  per strengthened", stats.vivifystrs, percent (stats.vivifystrs, stats.strengthened));
   PRT ("  vivifydecs:    %15ld   %10.2f    per checks", stats.vivifydecs, relative (stats.vivifydecs, stats.vivifychecks));
   PRT ("  vivifyreused:  %15ld   %10.2f %%  per decision", stats.vivifyreused, percent (stats.vivifyreused, stats.vivifydecs));
+  PRT ("weights:         %15.2f %% %10.2f %%  glue and size", 100.0*internal->wg, 100.0*internal->ws);
 
   PRT ("");
 

@@ -317,6 +317,9 @@ class Internal {
   void clear_seen ();
   void clear_levels ();
   void clear_minimized ();
+  void bump_also_reason_literal (int lit);
+  void bump_also_reason_literals (int lit);
+  void bump_also_all_reason_literals ();
   void analyze_literal (int lit, int & open);
   void analyze_reason (int lit, Clause *, int & open);
   void analyze ();

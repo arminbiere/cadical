@@ -134,6 +134,44 @@ Internal::analyze_reason (int lit, Clause * reason, int & open) {
 
 /*------------------------------------------------------------------------*/
 
+// This is an idea which was implicit in MapleCOMSPS 2016.
+
+inline void
+Internal::bump_also_reason_literal (int lit) {
+  assert (lit);
+  Flags & f = flags (lit);
+  if (f.seen) return;
+  const Var & v = var (lit);
+  if (!v.level) return;
+  f.seen = true;
+  analyzed.push_back (lit);
+  LOG ("bumping also reason literal %d assigned at level %d", lit, v.level);
+}
+
+inline void
+Internal::bump_also_reason_literals (int lit) {
+  assert (lit);
+  Clause * reason = var (lit).reason;
+  if (!reason) return;
+  const const_literal_iterator end = reason->end ();
+  const_literal_iterator j = reason->begin ();
+  int other;
+  while (j != end)
+    if ((other = *j++) != lit)
+      bump_also_reason_literal (other);
+    else assert (other != -lit);
+}
+
+inline void
+Internal::bump_also_all_reason_literals () {
+  const const_int_iterator end = clause.end ();
+  const_int_iterator j = clause.begin ();
+  while (j != end)
+    bump_also_reason_literals (-*j++);
+}
+
+/*------------------------------------------------------------------------*/
+
 void Internal::clear_seen () {
   for (const_int_iterator i = analyzed.begin (); i != analyzed.end (); i++) {
     Flags & f = flags (*i);
@@ -216,6 +254,7 @@ void Internal::analyze () {
 
   // Update decision heuristics.
   //
+  if (opts.bumpreasonlits) bump_also_all_reason_literals ();
   bump_variables ();
 
   // Determine back jump level, backtrack and assign flipped literal.
