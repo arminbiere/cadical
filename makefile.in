@@ -1,7 +1,7 @@
 # This is a 'makefile.in' template with '@CXX@' and '@CXXFLAGS@' parameters.
 # Relies on 'gmake' for dependency handling and '$(shell ...)' commands.
 .SUFFIXES: .cpp .o
-MAKEFLAGS=-j $(if $(CORES),$(CORES),1)
+MAKEFLAGS=-j
 OBJ=$(shell ls ../src/*.cpp|sed -e '/main/d' -e '/app/d' -e 's,../src/,,' -e 's,.cpp$$,.o,g')
 SRC=$(shell ls ../src/*.cpp ../src/*.hpp)
 BUILD=../$(shell pwd|sed -e 's,.*/,,')
