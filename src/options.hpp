@@ -88,7 +88,7 @@ OPTION(probemaxeff,   double,  1e7, 0,  1, "maximum probing efficiency") \
 OPTION(probemineff,   double,  1e5, 0,  1, "minimum probing efficiency") \
 OPTION(profile,          int,    2, 0,  4, "profiling level") \
 QUTOPT(quiet,           bool,    0, 0,  1, "disable all messages") \
-OPTION(reduce,           int,    3, 0,  3, "1=bysize,2=byglue,3=dyn") \
+OPTION(reduce,           int,    2, 0,  3, "1=size,2=glue,3=dyn") \
 OPTION(reduceinc,        int,  300, 1,1e6, "reduce limit increment") \
 OPTION(reduceinit,       int, 2000, 0,1e6, "initial reduce limit") \
 OPTION(reducewait,    double, 0.01, 0,1e5, "conflicts after restart") \
