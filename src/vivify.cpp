@@ -15,7 +15,7 @@ namespace CaDiCaL {
 // clauses first.  This both complements nicely our implementation of
 // subsume, which is bounded, e.g., subsumption attempts are skipped for
 // very long clauses with literals with many occurrences and also is
-// stronger in the sence that it enables to remove more clauses.
+// stronger in the sense that it enables to remove more clauses.
 
 /*------------------------------------------------------------------------*/
 
@@ -299,7 +299,7 @@ void Internal::vivify () {
     const_int_iterator k;
 
     // If the decision 'level' is non-zero, then we can reuse decisions for
-    // the previous candidate, and avoid re-propagating them.  In prelimary
+    // the previous candidate, and avoid re-propagating them.  In preliminary
     // experiments this saved between 30%-50% decisions (and thus
     // propagations), which in turn lets us also vivify more clauses within
     // the same propagation bounds, or terminate earlier if vivify runs to
