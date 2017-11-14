@@ -68,4 +68,6 @@ int External::solve () {
   return res;
 }
 
+void External::terminate () { internal->terminate (); }
+
 };

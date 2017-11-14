@@ -60,6 +60,8 @@ void App::usage () {
 "             to check consistency of learned clauses\n"
 "             during testing and debugging (implies '-c')\n"
 "\n"
+"  -t <sec>   set a wall clock time limit in seconds\n"
+"\n"
 "or '<option>' can be one of the following long options\n"
 "\n",
   stdout);
@@ -127,7 +129,7 @@ int App::main (int argc, char ** argv) {
   const char * proof_path = 0, * solution_path = 0, * dimacs_path = 0;
   bool proof_specified = false, dimacs_specified = false;
   const char * dimacs_name, * err;
-  int i, res = 0;
+  int i, res = 0, time_limit = -1;
   solver = new Solver ();
   Signal::init (solver);
   for (i = 1; i < argc; i++) {
@@ -142,6 +144,11 @@ int App::main (int argc, char ** argv) {
       if (++i == argc) ERROR ("argument to '-s' missing");
       else if (solution_path) ERROR ("multiple solution files");
       else solution_path = argv[i];
+    } else if (!strcmp (argv[i], "-t")) {
+      if (++i == argc) ERROR ("argument to '-t' missing");
+      else if (time_limit >= 0) ERROR ("multiple time limits");
+      else if ((time_limit = atoi (argv[i])) < 0)
+	ERROR ("invalid time limit");
     } else if (!strcmp (argv[i], "-n")) set ("--no-witness");
 #ifndef QUIET
     else if (!strcmp (argv[i], "-q")) set ("--quiet");
@@ -167,6 +174,11 @@ int App::main (int argc, char ** argv) {
   if (solution_path && !solver->get ("check")) set ("--check");
   solver->section ("banner");
   solver->banner ();
+  if (time_limit >= 0) {
+    solver->section ("alarm");
+    solver->message ("setting time limit of %d seconds", time_limit);
+    Signal::alarm (time_limit);
+  }
   solver->section ("parsing input");
   dimacs_name = dimacs_path ? dimacs_path : "<stdin>";
   solver->message ("reading DIMACS file from '%s'", dimacs_name);

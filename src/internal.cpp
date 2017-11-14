@@ -11,6 +11,7 @@ Internal::Internal ()
   clashing (false),
   simplifying (false),
   vivifying (false),
+  termination (false),
   vsize (0),
   max_var (0),
   level (0),
@@ -229,6 +230,7 @@ int Internal::solve () {
     res = search ();
   }
   report ((res == 10) ? '1' : (res == 20 ? '0' : '?'));
+  if (!res) assert (termination), termination = 0;
   return res;
 }
 

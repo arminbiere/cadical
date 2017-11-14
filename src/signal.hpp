@@ -10,6 +10,8 @@ class Solver;
 class Signal {
 
   static bool catchedsig;
+  static bool alarmset;
+
   static Solver * solver;
   static const char * name (int sig);
   static void catchsig (int sig);
@@ -18,6 +20,7 @@ public:
 
   static void reset ();
   static void init (Solver *);
+  static void alarm (int seconds);
 };
 
 };

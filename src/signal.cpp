@@ -4,6 +4,7 @@
 /*------------------------------------------------------------------------*/
 
 #include <csignal>
+#include <cassert>
 
 int CaDiCaL::Solver::contract_violation_signal = SIGUSR1;
 
@@ -20,6 +21,7 @@ extern "C" {
 namespace CaDiCaL {
 
 bool Signal::catchedsig = false;
+bool Signal::alarmset = false;
 Solver * Signal::solver;
 
 #define SIGNALS \
@@ -33,21 +35,28 @@ SIGNAL(SIGBUS) \
 static void (*SIG ## _handler)(int);
 SIGNALS
 #undef SIGNAL
+static void (*SIGALRM_handler)(int);
 
 void Signal::reset () {
 #define SIGNAL(SIG) \
-  (void) signal (SIG, SIG ## _handler);
+  (void) signal (SIG, SIG ## _handler); \
+  SIG ## _handler = 0;
 SIGNALS
 #undef SIGNAL
+  if (alarmset)
+    (void) signal (SIGALRM, SIGALRM_handler),
+    SIGALRM_handler = 0,
+    alarmset = false;
   solver = 0;
   catchedsig = 0;
 }
 
 const char * Signal::name (int sig) {
 #define SIGNAL(SIG) \
-  if (sig == SIG) return # SIG; else
+  if (sig == SIG) return # SIG;
   SIGNALS
 #undef SIGNAL
+  if (sig == SIGALRM) return "SIGALRM";
   return "UNKNOWN";
 }
 
@@ -77,6 +86,13 @@ void Signal::init (Solver * s) {
 SIGNALS
 #undef SIGNAL
   solver = s;
+}
+
+void Signal::alarm (int seconds) {
+  assert (!alarmset);
+  SIGALRM_handler = signal (SIGALRM, Signal::catchsig);
+  alarmset = true;
+  ::alarm (seconds);
 }
 
 };

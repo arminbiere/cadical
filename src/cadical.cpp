@@ -78,6 +78,10 @@ int Solver::solve () {
 
 /*------------------------------------------------------------------------*/
 
+void Solver::terminate () { external->terminate (); }
+
+/*------------------------------------------------------------------------*/
+
 void Solver::close () {
   REQUIRE_INITIALIZED ();
   if (!internal->proof) return;
