@@ -107,6 +107,7 @@ class Internal {
   bool clashing;                // found clashing units in during parsing
   bool simplifying;             // simplifying thus outside of CDCL loop
   bool vivifying;               // during vivification
+  bool termination;		// forced to terminate
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // (internal) maximum variable index
   int level;                    // decision level ('control.size () - 1')
@@ -332,7 +333,7 @@ class Internal {
   // Asynchronous terminating check.
   //
   bool terminating ();
-  void terminate ();            // TODO: not implemented yet.
+  void terminate () { termination = 1; }
 
   // Reducing means determining useless clauses with 'reduce' in
   // 'reduce.cpp' as well as root level satisfied clause and then removing

@@ -62,7 +62,12 @@ public:
 
   void add (int lit);   // add literal, zero to terminate clause
   int val (int lit);    // get value (-1=false,1=true) of literal
-  int solve ();         // returns 10 = SAT, 20 = UNSAT
+  int solve ();         // returns 10 = SAT, 20 = UNSAT, 0 = UNKNOWN
+
+  //------------------------------------------------------------------------
+  // asynchronous forced termination of 'solve'
+
+  void terminate ();
 
   //------------------------------------------------------------------------
 

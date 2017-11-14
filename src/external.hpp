@@ -104,6 +104,8 @@ class External {
 
   int solve ();
 
+  void terminate ();
+
   inline int val (int lit) const {
     assert (lit != INT_MIN);
     int idx = abs (lit);

@@ -47,6 +47,10 @@ int Solver::solve () { return external->solve (); }
 
 /*------------------------------------------------------------------------*/
 
+void Solver::terminate () { external->terminate (); }
+
+/*------------------------------------------------------------------------*/
+
 void Solver::close () {
   if (!internal->proof) return;
   section ("closing proof");
