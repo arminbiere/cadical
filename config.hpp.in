@@ -1,0 +1,20 @@
+// The current version number.
+#define CADICAL_VERSION "${VERSION}"
+
+// The unique GIT hash.
+#define CADICAL_GITID "unknown"
+
+// The C++ compiler as used in the current 'makefile'.
+#define CADICAL_CXX "${CMAKE_CXX_COMPILER_ID}"
+
+// Compile flags as used in the current 'makefile'.
+#define CADICAL_CXXFLAGS "${CMAKE_CXX_FLAGS}"
+
+// The version of the compiler (currently works only for 'g++' and 'clang++')
+#define CADICAL_CXXVERSION "unknown"
+
+// The time and date we compiled the CaDiCaL library.
+#define CADICAL_COMPILED __DATE__ __TIME__
+
+// The operating system on which this compilation took place.
+#define CADICAL_OS "unknown"
