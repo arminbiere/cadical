@@ -139,7 +139,7 @@ void Internal::reduce () {
   mark_useless_redundant_clauses_as_garbage ();
   garbage_collection ();
   unprotect_reasons ();
-  inc.reduce += inc.redinc;
+  if (opts.learn) inc.reduce += inc.redinc;
   if (inc.redinc > 1) inc.redinc--;
   lim.reduce = stats.conflicts + inc.reduce;
   lim.conflicts_at_last_reduce = stats.conflicts;
