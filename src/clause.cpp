@@ -323,7 +323,8 @@ Clause * Internal::new_learned_redundant_clause (int glue) {
   Clause * res = new_clause (true, glue);
   if (proof) proof->trace_add_clause (res);
   assert (watches ());
-  watch_clause (res);
+  if (proof || opts.learn) watch_clause (res);
+  else mark_garbage (res);
   return res;
 }
 

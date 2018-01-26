@@ -118,7 +118,7 @@ bool Internal::propagate () {
 
       if (w.binary) {
 
-        if (w.clause->garbage) continue;
+        if (w.clause->garbage) { j--; continue; }
         assert (!w.clause->ignore);
 
         // Binary clauses are treated separately since they do not require
@@ -146,8 +146,8 @@ bool Internal::propagate () {
 	// the solver.  Note, that both checks are positive very rarely
 	// and thus branch prediction should be almost perfect.
 
-        if (w.clause->garbage) continue;
-        if (w.clause->ignore) continue;		// for vivification
+        if (w.clause->garbage) { j--; continue; }
+        if (w.clause->ignore) continue;		    // for vivification
 
         literal_iterator lits = w.clause->begin ();
 
