@@ -126,8 +126,8 @@ fi
 if [ x"$CXXFLAGS" ]
 then
   case x"$CXX" in
-    xg++*|xclang++*) CXXFLAGS="-Wall";;
-    *) CXXFLAGS="-W";;
+    xg++*|xclang++*) CXXFLAGS="$CXXFLAGS -Wall";;
+    *) CXXFLAGS="$CXXFLAGS -W";;
   esac
   if [ $debug = yes ]
   then
