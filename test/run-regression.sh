@@ -65,7 +65,7 @@ run () {
     proofopts=" ../test/cnfs/$1.proof"
   fi
   opts="../test/cnfs/$1.cnf$solopts$proofopts"
-  echo -n "$binary $opts # $2 ..."
+  printf "$binary $opts # $2 ..."
   "$binary" $opts 1>cnfs/$1.log 2>cnfs/$1.err
   res=$?
   if [ $res = $2 ]
