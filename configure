@@ -45,13 +45,13 @@ where '<option>' is one of the following
 -g|--debug     compile with debugging information
 -c|--check     compile with assertion checking (default for '-g')
 -l|--log       include logging code (but disabled by default)
--s|--sats      include and enable expensive statistics code
+-s|--stats     include and enable expensive statistics code
 -a|--all       short cut for all above, e.g., '-g -l -s' (thus also '-c')
 -q|--quiet     exclude message and profiling code (logging and stats too)
 --coverage     compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile      compile with '-pg' to profile with 'gprof'
 --no-realloc   use C++ style allocators for all tables
---no-unlocked  no unlocked IO
+--no-unlocked  force compilation without unlocked IO
 EOF
 exit 0
 }
@@ -83,7 +83,7 @@ fi
 
 #--------------------------------------------------------------------------#
 
-# generate and enter 'build' directory if not already in sub-directory
+# Generate and enter 'build' directory if not already in sub-directory.
 
 build_in_default_build_sub_directory () {
   if [ -d build ]
@@ -100,11 +100,13 @@ build_in_default_build_sub_directory () {
 
 if [ -f configure -a -f makefile.in -a -f VERSION -a -d src ]
 then
+  root="`pwd`"
   build_in_default_build_sub_directory
 elif [ -f ../configure -a -f ../makefile.in -a -f ../VERSION -a -d ../src ]
 then
   cwd="`pwd`"
   build=`basename "$cwd"`
+  root=`dirname "$cwd"`
   case x"$build" in
     xsrc|xtest|xscripts)
       cd ..
@@ -118,12 +120,14 @@ else
   die "call 'configure' from root of CaDiCaL source or a sub-directory"
 fi
 
+msg "root directory '$root'"
+
 #--------------------------------------------------------------------------#
 
 # Prepare '@CXX@' and '@CXXFLAGS@' parameters for 'makefile.in'
 
 [ x"$CXX" = x ] && CXX=g++
-if [ x"$CXXFLAGS" ]
+if [ x"$CXXFLAGS" = x ]
 then
   case x"$CXX" in
     xg++*|xclang++*) CXXFLAGS="-Wall";;
@@ -193,8 +197,7 @@ fi
 
 #--------------------------------------------------------------------------#
 
-# Instantiate the '../makefile.in' template to produce 'makefile' in the
-# build directory.
+# Instantiate '../makefile.in' template to produce 'makefile' in 'build'.
 
 msg "compiling with '$CXX $CXXFLAGS'"
 
@@ -212,6 +215,7 @@ msg "generated '$build/makefile' from '../makefile.in'"
 
 build=`pwd`
 cat <<EOF > ../makefile
+CADICALROOT=$root
 CADICALBUILD=$build
 all:
 	make -C "\$(CADICALBUILD)"
@@ -226,7 +230,7 @@ clean:
 	  fi; \\
 	  rm -rf "\$(CADICALBUILD)"; \\
 	fi
-	rm makefile
+	rm -f "\$(CADICALROOT)/makefile"
 test:
 	make -C "\$(CADICALBUILD)" test
 .PHONY: all clean test

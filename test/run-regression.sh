@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cd `dirname $0`
+#--------------------------------------------------------------------------#
 
 die () {
   echo "*** run-regression.sh: $*" 1>&2
@@ -11,12 +11,19 @@ msg () {
   echo "[run-regression.sh] $*"
 }
 
-[ x"$CADICALBUILD" = x ] && CADICALBUILD="`pwd`/../build"
+#--------------------------------------------------------------------------#
+
+cd `dirname $0`
+
+[ x"$CADICALBUILD" = x ] && \
+  CADICALBUILD="`pwd|xargs dirname`/build"
 
 [ -x "$CADICALBUILD/cadical" ] || \
   die "can not find '$CADICALBUILD/cadical' (run 'make' first)"
 
 msg "regression testing '$CADICALBUILD/cadical'" 
+
+#--------------------------------------------------------------------------#
 
 binary="$CADICALBUILD/cadical"
 
@@ -47,17 +54,17 @@ failed=0
 run () {
   if [ -f cnfs/$1.sol ]
   then
-    solopts=" -s cnfs/$1.sol"
+    solopts=" -s ../test/cnfs/$1.sol"
   else
     solopts=""
   fi
-  if [ $2 = 20 -a x"$checker" = xnone ]
+  if [ ! $2 = 20 -o x"$checker" = xnone ]
   then
     proofopts=""
   else
-    proofopts=" cnfs/$1.proof"
+    proofopts=" ../test/cnfs/$1.proof"
   fi
-  opts="cnfs/$1.cnf$solopts$proofopts"
+  opts="../test/cnfs/$1.cnf$solopts$proofopts"
   echo -n "$binary $opts # $2 ..."
   "$binary" $opts 1>cnfs/$1.log 2>cnfs/$1.err
   res=$?
