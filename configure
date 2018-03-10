@@ -48,10 +48,20 @@ where '<option>' is one of the following
 -s|--stats     include and enable expensive statistics code
 -a|--all       short cut for all above, e.g., '-g -l -s' (thus also '-c')
 -q|--quiet     exclude message and profiling code (logging and stats too)
+
 --coverage     compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile      compile with '-pg' to profile with 'gprof'
 --no-realloc   use C++ style allocators for all tables
 --no-unlocked  force compilation without unlocked IO
+
+The environment variable CXX can be used to set a different C++
+compiler than the default 'g++'.  Similarly you can add additional
+compilation options by setting CXXFLAGS.  For instance
+
+   CXX=clang++ CXXFLAGS="-fPIC" ./configure
+
+will enforce to use 'clang++' as C++ compiler and also produce
+position independent code.
 EOF
 exit 0
 }
@@ -127,21 +137,19 @@ msg "root directory '$root'"
 # Prepare '@CXX@' and '@CXXFLAGS@' parameters for 'makefile.in'
 
 [ x"$CXX" = x ] && CXX=g++
-if [ x"$CXXFLAGS" = x ]
+[ x"$CXXFLAGS" = x ] || CXXFLAGS="$CXXFLAGS "
+case x"$CXX" in
+  xg++*|xclang++*) CXXFLAGS="${CXXFLAGS}-Wall";;
+  *) CXXFLAGS="${CXXFLAGS}-W";;
+esac
+if [ $debug = yes ]
 then
+  CXXFLAGS="$CXXFLAGS -g"
+else
   case x"$CXX" in
-    xg++*|xclang++*) CXXFLAGS="-Wall";;
-    *) CXXFLAGS="-W";;
+    xg++*|xclang++*) CXXFLAGS="$CXXFLAGS -O3";;
+    *) CXXFLAGS="$CXXFLAGS -O";;
   esac
-  if [ $debug = yes ]
-  then
-    CXXFLAGS="$CXXFLAGS -g"
-  else
-    case x"$CXX" in
-      xg++*|xclang++*) CXXFLAGS="$CXXFLAGS -O3";;
-      *) CXXFLAGS="$CXXFLAGS -O";;
-    esac
-  fi
 fi
 
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
