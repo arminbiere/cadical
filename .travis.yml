@@ -6,5 +6,5 @@ os:
 - linux
 - osx
 branches:
-#- development
+- development
 - master
