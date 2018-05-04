@@ -70,4 +70,4 @@ int External::solve () {
 
 void External::terminate () { internal->terminate (); }
 
-};
+}

@@ -57,6 +57,6 @@ struct Inc {
   Inc ();
 };
 
-};
+}
 
 #endif

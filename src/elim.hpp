@@ -23,6 +23,6 @@ struct more_noccs2 {
 
 typedef heap<more_noccs2> ElimSchedule;
 
-};
+}
 
 #endif

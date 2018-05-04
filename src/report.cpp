@@ -133,5 +133,5 @@ void Internal::report (char type, int verbose) { }
 
 #endif
 
-};
 
+}

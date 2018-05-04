@@ -13,7 +13,7 @@ extern "C" {
 #include <sys/types.h>
 #include <unistd.h>
 #include <string.h>
-};
+}
 
 namespace CaDiCaL {
 
@@ -58,6 +58,6 @@ size_t current_resident_set_size () {
   return scanned == 2 ? rss * sysconf (_SC_PAGESIZE) : 0;
 }
 
-};
+}
 
 #endif // ifndef QUIET

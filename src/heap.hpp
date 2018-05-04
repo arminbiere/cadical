@@ -181,6 +181,6 @@ public:
   const_iterator end () const { return array.end (); }
 };
 
-};
+}
 
 #endif

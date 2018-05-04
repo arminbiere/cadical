@@ -45,5 +45,4 @@ void Internal::restart () {
   STOP (restart);
 }
 
-};
-
+}

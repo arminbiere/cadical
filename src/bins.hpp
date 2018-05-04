@@ -23,6 +23,6 @@ inline void erase_bins (Bins & bs) { erase_vector (bs); }
 typedef Bins::iterator bins_iterator;
 typedef Bins::const_iterator const_bins_iterator;
 
-};
+}
 
 #endif

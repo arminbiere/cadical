@@ -119,4 +119,4 @@ void Stats::print (Internal * internal) {
 
 }
 
-};
+}

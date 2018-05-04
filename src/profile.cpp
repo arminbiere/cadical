@@ -63,6 +63,6 @@ void Internal::print_profile (double now) {
   MSG ("%12.2f %7.2f%% all", now, 100.0);
 }
 
-};
+}
 
 #endif // ifndef QUIET

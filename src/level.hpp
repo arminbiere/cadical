@@ -20,6 +20,6 @@ struct Level {
   Level () { }
 };
 
-};
+}
 
 #endif

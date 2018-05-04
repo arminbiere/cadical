@@ -46,4 +46,4 @@ void External::check_solution_on_shrunken_clause (Clause * c) {
   abort ();
 }
 
-};
+}

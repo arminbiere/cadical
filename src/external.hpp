@@ -135,6 +135,6 @@ class External {
   void check (int (External::*assignment) (int) const);
 };
 
-};
+}
 
 #endif

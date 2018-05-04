@@ -241,4 +241,4 @@ void CaDiCaL::Internal::probe () {
   STOP_AND_SWITCH (probe, simplify, search);
 }
 
-};
+}

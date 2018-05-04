@@ -98,6 +98,6 @@ public:
   void swap ();
 };
 
-};
+}
 
 #endif

@@ -361,4 +361,4 @@ Clause * Internal::new_resolved_irredundant_clause () {
   return res;
 }
 
-};
+}

@@ -29,4 +29,4 @@ void Arena::swap () {
   to.start = to.top = to.end = 0;
 }
 
-};
+}

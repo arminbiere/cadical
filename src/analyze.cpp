@@ -291,4 +291,4 @@ void Internal::analyze () {
 
 void Internal::iterate () { iterating = false; report ('i'); }
 
-};
+}

@@ -278,4 +278,4 @@ bool Internal::propagate () {
   return !conflict;
 }
 
-};
+}

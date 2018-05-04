@@ -279,4 +279,4 @@ bool Internal::probagate () {
   return !conflict;
 }
 
-};
+}

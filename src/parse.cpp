@@ -186,4 +186,4 @@ const char * Parser::parse_solution () {
   return err;
 }
 
-};
+}

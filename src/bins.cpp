@@ -17,4 +17,4 @@ void Internal::reset_bins () {
   big = 0;
 }
 
-};
+}

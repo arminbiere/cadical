@@ -183,6 +183,6 @@ public:
   static void usage ();      // print usage message for all options
 };
 
-};
+}
 
 #endif

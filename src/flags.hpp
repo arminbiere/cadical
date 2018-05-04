@@ -36,6 +36,6 @@ struct Flags {        // Variable flags.
   bool substituted () const { return status == SUBSTITUTED; }
 };
 
-};
+}
 
 #endif

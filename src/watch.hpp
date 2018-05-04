@@ -39,6 +39,6 @@ inline void shrink_watches (Watches & ws) { shrink_vector (ws); }
 typedef Watches::iterator watch_iterator;
 typedef Watches::const_iterator const_watch_iterator;
 
-};
+}
 
 #endif

@@ -20,4 +20,4 @@ void Internal::rephase () {
   report ('~');
 }
 
-};
+}
