@@ -37,4 +37,4 @@ void EMA::update (Internal * internal, double y, const char * name) {
   LOG ("new %s EMA wait = period = %ld, beta = %g", name, wait, beta);
 }
 
-};
+}

@@ -544,4 +544,4 @@ void Internal::vivify () {
   STOP_AND_SWITCH (vivify, simplify, search);
 }
 
-};
+}

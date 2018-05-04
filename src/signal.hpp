@@ -23,6 +23,6 @@ public:
   static void alarm (int seconds);
 };
 
-};
+}
 
 #endif

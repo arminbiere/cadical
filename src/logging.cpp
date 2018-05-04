@@ -71,6 +71,6 @@ void Logger::log (Internal * internal,
   fflush (stdout);
 }
 
-};
+}
 
 #endif

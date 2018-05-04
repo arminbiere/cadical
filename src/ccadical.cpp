@@ -39,5 +39,4 @@ void ccadical_print_statistics (CCaDiCaL * solver) {
   ((Solver*) solver)->statistics ();
 }
 
-};
-
+}

@@ -22,4 +22,4 @@ bool Internal::terminating () {
 
 Inc::Inc () { memset (this, 0, sizeof *this); }
 
-};
+}

@@ -45,4 +45,4 @@ void Internal::decide () {
   STOP (decide);
 }
 
-};
+}

@@ -30,4 +30,4 @@ void Internal::check_var_stats () {
 #endif
 }
 
-};
+}

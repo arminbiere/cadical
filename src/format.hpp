@@ -25,6 +25,6 @@ public:
   operator const char * () const { return count ? buffer : 0; }
 };
 
-};
+}
 
 #endif

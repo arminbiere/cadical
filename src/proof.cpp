@@ -156,4 +156,4 @@ void Proof::trace_strengthen_clause (Clause * c, int remove) {
   trace_clause (c, false);
 }
 
-};
+}

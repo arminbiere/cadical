@@ -31,4 +31,4 @@ bool has_suffix (const char * str, const char * suffix) {
   return k > l && !strcmp (str + k - l, suffix);
 }
 
-};
+}

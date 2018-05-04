@@ -79,4 +79,4 @@ void Internal::clear_minimized () {
   minimized.clear ();
 }
 
-};
+}

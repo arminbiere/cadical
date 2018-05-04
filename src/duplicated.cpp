@@ -82,4 +82,4 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
   STOP (deduplicate);
 }
 
-};
+}

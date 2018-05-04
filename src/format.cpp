@@ -57,4 +57,4 @@ const char * Format::append (const char * fmt, ...) {
   return res;
 }
 
-};
+}

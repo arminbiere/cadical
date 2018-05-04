@@ -47,4 +47,4 @@ void Internal::reset_noccs2 () {
   ntab2 = 0;
 }
 
-};
+}

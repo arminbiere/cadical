@@ -672,4 +672,4 @@ void Internal::elim () {
   lim.fixed_at_last_elim = stats.all.fixed;
 }
 
-};
+}

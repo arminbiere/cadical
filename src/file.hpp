@@ -130,6 +130,6 @@ public:
   long bytes () const { return _bytes; }
 };
 
-};
+}
 
 #endif

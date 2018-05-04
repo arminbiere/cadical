@@ -177,4 +177,4 @@ void Internal::transred () {
   STOP_AND_SWITCH (transred, simplify, search);
 }
 
-};
+}

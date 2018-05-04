@@ -596,6 +596,6 @@ inline int Proof::externalize (int lit) {
   return res;
 }
 
-};
+}
 
 #endif

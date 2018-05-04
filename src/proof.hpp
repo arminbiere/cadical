@@ -38,6 +38,6 @@ public:
   void trace_strengthen_clause (Clause *, int);
 };
 
-};
+}
 
 #endif

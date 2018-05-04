@@ -23,6 +23,6 @@ struct Var {
   };
 };
 
-};
+}
 
 #endif

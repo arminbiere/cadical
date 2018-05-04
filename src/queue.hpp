@@ -44,6 +44,6 @@ struct Queue {
   }
 };
 
-};
+}
 
 #endif

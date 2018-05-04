@@ -498,4 +498,4 @@ void Internal::subsume () {
   lim.subsume = stats.conflicts + inc.subsume;
 }
 
-};
+}

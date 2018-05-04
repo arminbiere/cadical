@@ -12,7 +12,7 @@ int CaDiCaL::Solver::contract_violation_signal = SIGUSR1;
 
 extern "C" {
 #include <unistd.h>
-};
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -95,4 +95,4 @@ void Signal::alarm (int seconds) {
   ::alarm (seconds);
 }
 
-};
+}

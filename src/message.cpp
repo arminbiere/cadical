@@ -97,4 +97,4 @@ void Message::error (Internal * internal, const char *fmt, ...) {
   va_end (ap);                          // unreachable
 }
 
-};
+}

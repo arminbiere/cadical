@@ -46,6 +46,6 @@ public:
   const char * parse_solution ();
 };
 
-};
+}
 
 #endif

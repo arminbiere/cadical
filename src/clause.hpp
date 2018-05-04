@@ -176,6 +176,6 @@ struct lit_less_than {
   }
 };
 
-};
+}
 
 #endif

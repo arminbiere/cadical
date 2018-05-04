@@ -141,6 +141,6 @@ private:
   File * output ();             // get access to internal 'output' file
 };
 
-};
+}
 
 #endif

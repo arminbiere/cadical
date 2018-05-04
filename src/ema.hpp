@@ -28,7 +28,7 @@ struct EMA {
   void update (Internal *, double y, const char * name);
 };
 
-};
+}
 
 /*------------------------------------------------------------------------*/
 

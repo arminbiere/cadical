@@ -359,4 +359,4 @@ void Internal::garbage_collection () {
   STOP (collect);
 }
 
-};
+}

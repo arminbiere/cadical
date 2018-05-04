@@ -363,4 +363,4 @@ void Internal::compact () {
   PRINT ("AFTER");
 }
 
-};
+}

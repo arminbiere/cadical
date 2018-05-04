@@ -96,7 +96,7 @@ struct Profiles {
   Profiles (Internal *);
 };
 
-};
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -104,17 +104,11 @@ struct Profiles {
 
 #ifndef QUIET //...........................................................
 
-#define START(P,ARGS...) \
-do { \
-  if (internal->profiles.P.level > internal->opts.profile) break; \
-  internal->start_profiling (&internal->profiles.P, ##ARGS); \
-} while (0)
+#define START(...) \
+do { } while (0)
 
-#define STOP(P,ARGS...) \
-do { \
-  if (internal->profiles.P.level > internal->opts.profile) break; \
-  internal->stop_profiling (&internal->profiles.P, ##ARGS); \
-} while (0)
+#define STOP(...) \
+do { } while (0)
 
 #define SWITCH_AND_START(F,T,P) \
 do { \
@@ -136,11 +130,11 @@ do { \
 
 #else // ifndef QUIET //...................................................
 
-#define START(ARGS...) do { } while (0)
-#define STOP(ARGS...) do { } while (0)
+#define START(...) do { } while (0)
+#define STOP(...) do { } while (0)
 
-#define SWITCH_AND_START(ARGS...) do { } while (0)
-#define STOP_AND_SWITCH(ARGS...) do { } while (0)
+#define SWITCH_AND_START(...) do { } while (0)
+#define STOP_AND_SWITCH(...) do { } while (0)
 
 #endif
 /*------------------------------------------------------------------------*/

@@ -209,4 +209,4 @@ void Solver::error (const char * fmt, ...) {
   va_end (ap);
 }
 
-};
+}
