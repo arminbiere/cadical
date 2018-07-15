@@ -25,15 +25,19 @@ struct Stats {
   long compacts;     // number of compactifications
   long rephased;     // actual number of happened rephases
   long restarts;     // actual number of happened restarts
+  long stabchecks;   // number of checks for stabilizing
+  long stabphases;   // number of stabilization (no-restart) phases
+  long stabsuccess;  // number of positive stabilizing checks
   long reused;       // number of reused trails
   long reports;      // 'report' counter
   long sections;     // 'section' counter
   long added;        // irredundant clauses
   long removed;      // literals in likely to be kept clauses
   long bumped;       // seen and bumped variables in 'analyze'
-  long bumplast;     // bumped variables on last decision level
   long searched;     // searched decisions in 'decide'
   long reductions;   // 'reduce' counter
+  long flushings;    // flushings of learned clauses counter
+  long flushed;      // flushing learned clauses counter
   long reduced;      // number of reduced clauses
   long collected;    // number of collected bytes
   long collections;  // number of garbage collections
@@ -62,6 +66,10 @@ struct Stats {
   long vivifysched;  // scheduled clauses for vivification
   long vivifysubs;   // subsumed clauses during vivification
   long vivifystrs;   // strengthened clauses during vivification
+  long vivifystrirr; // strengthened irredundant clause
+  long vivifystred1; // strengthened redundant clause (1)
+  long vivifystred2; // strengthened redundant clause (2)
+  long vivifystred3; // strengthened redundant clause (3)
   long vivifyunits;  // units during vivification
   long transreds;
   long transitive;
@@ -80,6 +88,10 @@ struct Stats {
 #ifdef STATS
   long visits;       // visited clauses in propagation
   long traversed;    // traversed literals in propagation
+  struct {
+    long binary;
+    long large;
+  } blitsat, watchaccess;
 #endif
 
   struct {

@@ -14,12 +14,14 @@ void Internal::learn_empty_clause () {
   assert (!unsat);
   LOG ("learned empty clause");
   if (proof) proof->trace_empty_clause ();
+  external->check_learned_empty_clause ();
   unsat = true;
 }
 
 void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   if (proof) proof->trace_unit_clause (lit);
+  external->check_learned_unit_clause (lit);
   assert (flags (lit).active ());
   flags (lit).status = Flags::FIXED;
   stats.all.fixed++;
@@ -40,7 +42,6 @@ void Internal::bump_variable (int lit) {
   queue.dequeue (ltab, l);
   queue.enqueue (ltab, l);
   btab[idx] = ++stats.bumped;
-  if (var (idx).level == level) stats.bumplast++;
   LOG ("moved to front %d and bumped %ld", idx, btab[idx]);
   if (!vals[idx]) update_queue_unassigned (idx);
 }
@@ -82,11 +83,7 @@ void Internal::bump_variables () {
 
 /*------------------------------------------------------------------------*/
 
-// Clause activity is replaced by a move-to-front scheme as well with
-// 'analyzed' as time stamp.  Only long and high glue clauses are stamped
-// since small or low glue clauses are kept anyhow (and do not actually have
-// a 'analyzed' field).  We keep the relative order of bumped clauses by
-// sorting them first.
+// Redundant clauses resolved since the last reduction are marked as 'used'.
 
 inline void Internal::bump_clause (Clause * c) { c->used = true; }
 
@@ -228,18 +225,23 @@ void Internal::analyze () {
   // Update glue statistics.
   //
   const int glue = (int) levels.size ();
-  LOG ("1st UIP clause of size %ld and glue %d",
+  LOG (clause, "1st UIP size %ld and glue %d clause",
     (long) clause.size (), glue);
   UPDATE_AVERAGE (fast_glue_avg, glue);
   UPDATE_AVERAGE (slow_glue_avg, glue);
+
+  // Update decision heuristics.
+  //
+  if (opts.bumpreasonlits) bump_also_all_reason_literals ();
+  bump_variables ();
 
   // Update learned = 1st UIP literals counter.
   //
   int size = (int) clause.size ();
   stats.learned += size;
 
-  // Minimize 1st UIP clause as pioneered by MiniSAT and described in our
-  // SAT'09 paper.
+  // Minimize the 1st UIP clause as pioneered by Niklas Soerensson in
+  // MiniSAT and described in our joint SAT'09 paper.
   //
   if (size > 1) {
     if (opts.minimize) minimize_clause ();
@@ -251,11 +253,6 @@ void Internal::analyze () {
   stats.units    += (size == 1);
   stats.binaries += (size == 2);
   UPDATE_AVERAGE (size_avg, size);
-
-  // Update decision heuristics.
-  //
-  if (opts.bumpreasonlits) bump_also_all_reason_literals ();
-  bump_variables ();
 
   // Determine back jump level, backtrack and assign flipped literal.
   //

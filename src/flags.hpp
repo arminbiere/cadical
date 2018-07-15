@@ -9,8 +9,8 @@ struct Flags {        // Variable flags.
   bool keep      : 1; // keep in learned clause in 'minimize/shrink'
   bool poison    : 1; // can not be removed in 'minimize/shrink'
   bool removable : 1; // can be removed in 'minimize/shrink'
-  bool added     : 1; // added since last 'subsume' round
   bool removed   : 1; // removed since last 'elim' round
+  bool added     : 1; // added since last 'subsume' round
 
   enum {
     ACTIVE      = 0,

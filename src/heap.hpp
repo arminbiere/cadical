@@ -74,7 +74,7 @@ template<class C> class heap {
 
   // Very expensive checker for the main 'heap' invariant.  Can be enabled
   // to find violations of antisymmetry in the client implementation of
-  // 'less', as well of course, bugs in this heap implementation.
+  // 'less' and as well of course bugs in this heap implementation.
   //
   void check () {
 #if 0

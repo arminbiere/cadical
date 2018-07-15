@@ -26,8 +26,12 @@ void Stats::print (Internal * internal) {
 
 #ifndef QUIET
 
+  Stats & stats = internal->stats;
+
 #ifdef STATS
   int verbose = 1;
+  long blitsat = stats.blitsat.binary + stats.blitsat.large;
+  long watchaccess = stats.watchaccess.binary + stats.watchaccess.large;
 #else
   int verbose = internal->opts.verbose;
 #ifdef LOGGING
@@ -37,7 +41,6 @@ void Stats::print (Internal * internal) {
 
   double t = process_time ();
   if (internal->opts.profile) internal->print_profile (t);
-  Stats & stats = internal->stats;
   size_t m = maximum_resident_set_size ();
   int max_var = internal->external->max_var;
   long propagations = stats.propagations.search;
@@ -62,6 +65,8 @@ void Stats::print (Internal * internal) {
   PRT ("fixed:           %15ld   %10.2f %%  of all variables", stats.all.fixed, percent (stats.all.fixed, max_var));
   PRT ("  units:         %15ld   %10.2f    conflicts per unit", stats.units, relative (stats.conflicts, stats.units));
   PRT ("  binaries:      %15ld   %10.2f    conflicts per binary", stats.binaries, relative (stats.conflicts, stats.binaries));
+  PRT ("flushed:         %15ld   %10.2f    conflicts per flushed", stats.flushed, relative (stats.conflicts, stats.flushed));
+  PRT ("flushings:       %15ld   %10.2f    conflicts per flushing", stats.flushings, relative (stats.conflicts, stats.flushings));
   PRT ("learned:         %15ld   %10.2f    per conflict", learned, relative (learned, stats.conflicts));
   PRT ("memory:          %15ld   %10.2f    bytes and MB", m, m/(double)(1l<<20));
   PRT ("minimized:       %15ld   %10.2f %%  of 1st-UIP-literals", stats.minimized, percent (stats.minimized, stats.learned));
@@ -78,6 +83,12 @@ void Stats::print (Internal * internal) {
   PRT ("  vivifyprops:   %15ld   %10.2f %%  of propagations", stats.propagations.vivify, percent (stats.propagations.vivify, propagations));
   SSG ("  visits:        %15ld   %10.2f    per searchprop", stats.visits, relative (stats.visits, stats.propagations.search));
   SSG ("  traversed:     %15ld   %10.2f    per visit", stats.traversed, relative (stats.traversed, stats.visits));
+  SSG ("  watchaccess:   %15ld   %10.2f    per propagation", watchaccess, relative (watchaccess, propagations));
+  SSG ("  watchaccess2:  %15ld   %10.2f %%  of watch accesses", stats.watchaccess.binary, percent (stats.watchaccess.binary, watchaccess));
+  SSG ("  watchaccesslrg:%15ld   %10.2f %%  of watch accesses", stats.watchaccess.large, percent (stats.watchaccess.large, watchaccess));
+  SSG ("  blitsat:       %15ld   %10.2f %%  of watch accesses", blitsat, percent (blitsat, watchaccess));
+  SSG ("  blitsat2:      %15ld   %10.2f %%  of binary watch access", stats.blitsat.binary, percent (stats.blitsat.binary, stats.watchaccess.binary));
+  SSG ("  blitsatlarge:  %15ld   %10.2f %%  of large watch access large", stats.blitsat.large, percent (stats.blitsat.large, stats.watchaccess.large));
   PRT ("reduced:         %15ld   %10.2f %%  clauses per conflict", stats.reduced, percent (stats.reduced, stats.conflicts));
   PRT ("  collections:   %15ld   %10.2f    conflicts per collection", stats.collections, relative (stats.conflicts, stats.collections));
   PRT ("  extendbytes:   %15ld   %10.2f    bytes and MB", extendbytes, extendbytes/(double)(1l<<20));
@@ -89,6 +100,7 @@ void Stats::print (Internal * internal) {
   PRT ("restarts:        %15ld   %10.2f    conflicts per restart", stats.restarts, relative (stats.conflicts, stats.restarts));
   PRT ("reused:          %15ld   %10.2f %%  per restart", stats.reused, percent (stats.reused, stats.restarts));
   PRT ("searched:        %15ld   %10.2f    per decision", stats.searched, relative (stats.searched, stats.decisions));
+  PRT ("stabilizing:     %15ld   %10.2f %%  conflicts", stats.stabphases, relative (stats.stabsuccess, stats.stabchecks));
   PRT ("strengthened:    %15ld   %10.2f    per subsumed", stats.strengthened, relative (stats.strengthened, stats.subsumed));
   PRT ("  subirr:        %15ld   %10.2f %%  of subsumed", stats.subirr, percent (stats.subirr, stats.subsumed));
   PRT ("  subred:        %15ld   %10.2f %%  of subsumed", stats.subred, percent (stats.subred, stats.subsumed));
@@ -109,9 +121,12 @@ void Stats::print (Internal * internal) {
   PRT ("  vivifyunits:   %15ld   %10.2f %%  per vivify check", stats.vivifyunits, percent (stats.vivifyunits, stats.vivifychecks));
   PRT ("  vivifysubs:    %15ld   %10.2f %%  per subsumed", stats.vivifysubs, percent (stats.vivifysubs, stats.subsumed));
   PRT ("  vivifystrs:    %15ld   %10.2f %%  per strengthened", stats.vivifystrs, percent (stats.vivifystrs, stats.strengthened));
+  PRT ("  vivifystrirr:  %15ld   %10.2f %%  per vivify strengthened", stats.vivifystrirr, percent (stats.vivifystrirr, stats.vivifystrs));
+  PRT ("  vivifystred1:  %15ld   %10.2f %%  per vivify strengthened", stats.vivifystred1, percent (stats.vivifystred1, stats.vivifystrs));
+  PRT ("  vivifystred2:  %15ld   %10.2f %%  per vivify strengthened", stats.vivifystred2, percent (stats.vivifystred2, stats.vivifystrs));
+  PRT ("  vivifystred3:  %15ld   %10.2f %%  per vivify strengthened", stats.vivifystred3, percent (stats.vivifystred3, stats.vivifystrs));
   PRT ("  vivifydecs:    %15ld   %10.2f    per checks", stats.vivifydecs, relative (stats.vivifydecs, stats.vivifychecks));
   PRT ("  vivifyreused:  %15ld   %10.2f %%  per decision", stats.vivifyreused, percent (stats.vivifyreused, stats.vivifydecs));
-  PRT ("weights:         %15.2f %% %10.2f %%  glue and size", 100.0*internal->wg, 100.0*internal->ws);
 
   PRT ("");
 

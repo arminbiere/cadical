@@ -51,10 +51,10 @@ class External {
   /*----------------------------------------------------------------------*/
 
   size_t vsize;           // actually allocated variable data size
-  int max_var;            // (exernal) maximum variable index
+  int max_var;            // (external) maximum variable index
   signed char * vals;	  // external assignment [1,max_var]
   signed char * solution; // for debugging       [-max_var,max_var]
-  int * e2i;		  // external idx to internal lit [1,max_var]
+  int * e2i;		  // external 'idx' to internal 'lit' [1,max_var]
 
   vector<int> extension;
   vector<int> original;
@@ -121,8 +121,17 @@ class External {
   }
 
   void check_solution_on_learned_clause ();
-
   void check_solution_on_shrunken_clause (Clause *);
+  void check_solution_on_learned_unit_clause (int unit);
+  void check_no_solution_after_learning_empty_clause ();
+
+  void check_learned_empty_clause () {
+    if (solution) check_no_solution_after_learning_empty_clause ();
+  }
+
+  void check_learned_unit_clause (int unit) {
+    if (solution) check_solution_on_learned_unit_clause (unit);
+  }
 
   void check_learned_clause () {
     if (solution) check_solution_on_learned_clause ();

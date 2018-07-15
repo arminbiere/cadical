@@ -12,6 +12,7 @@ Internal::Internal ()
   simplifying (false),
   vivifying (false),
   termination (false),
+  stabilization (false),
   vsize (0),
   max_var (0),
   level (0),
@@ -34,14 +35,14 @@ Internal::Internal ()
   probagated (0),
   probagated2 (0),
   esched (more_noccs2 (this)),
-  wg (0.5), ws (0.5),
   proof (0),
   opts (this),
 #ifndef QUIET
   profiles (this),
 #endif
   arena (this),
-  output (File::write (this, stdout, "<stdou>")),
+  output (File::write (this, stdout, "<stdout>")),
+  prefix (strdup ("c ")),
   internal (this),
   external (0)
 {
@@ -124,7 +125,7 @@ void Internal::init (int new_max_var) {
   if (new_max_var <= max_var) return;
   if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
   signed char val = opts.phase ? 1 : -1;
-  for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = val;;
+  for (int i = max_var + 1; i <= new_max_var; i++) phases[i] = val;
 #ifndef NDEBUG
   for (int i = -new_max_var; i < -max_var; i++) assert (!vals[i]);
   for (int i = max_var + 1; i <= new_max_var; i++) assert (!vals[i]);
@@ -168,7 +169,7 @@ int Internal::search () {
     else if (probing ()) probe ();         // failed literal probing
     else if (subsuming ()) subsume ();     // subsumption algorithm
     else if (eliminating ()) elim ();      // bounded variable elimination
-    else if (compactifying ()) compact (); // collect internal variables
+    else if (compacting ()) compact ();    // collect internal variables
     else decide ();                        // otherwise pick next decision
   STOP (search);
   return res;
@@ -198,8 +199,12 @@ void Internal::init_solving () {
   lim.compact = opts.compactint;
   inc.compact = opts.compactint;
 
-  inc.rephase = opts.rephaseint;
-  lim.rephase = opts.rephaseint;
+  lim.rephase = opts.rephaseinit;
+  inc.rephase = opts.rephaseinit;
+  lim.stabilize = opts.stabinit;
+
+  lim.flush = opts.flushinit;
+  inc.flush = opts.flushinit;
 
   lim.conflict = (opts.clim < 0) ? -1 : stats.conflicts + opts.clim;
   lim.decision = (opts.dlim < 0) ? -1 : stats.decisions + opts.dlim;
@@ -230,7 +235,7 @@ int Internal::solve () {
     res = search ();
   }
   report ((res == 10) ? '1' : (res == 20 ? '0' : '?'));
-  if (!res) assert (termination), termination = 0;
+  if (!res && termination) termination = 0;
   return res;
 }
 

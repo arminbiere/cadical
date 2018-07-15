@@ -99,8 +99,7 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
     dom = probe_dominator (dom, other);
     non_root_level_literals++;
   }
-  if (non_root_level_literals && // !(A)
-      opts.hbr && reason->size <= opts.hbrsizelim) {
+  if (non_root_level_literals && opts.hbr) { // !(A)
     bool contained = false;
     for (k = lits + 1; !contained && k != end; k++)
       contained = (*k == -dom);

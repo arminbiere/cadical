@@ -15,9 +15,11 @@ struct Limit {
   long restart;   // conflict limit for next 'restart'
   long subsume;   // conflict limit for next 'subsume'
   long compact;   // conflict limit for next 'compact'
+  long stabilize; // conflict limit for next 'stabilize'
+  long flush;     // conflict limit for next 'flush'
 
-  int keptglue;   // maximum kept glue in 'reduce'
   int keptsize;   // maximum kept size in 'reduce'
+  int keptglue;   // maximum kept glue in 'reduce'
 
   // Used to schedule elimination and subsumption rounds.
   //
@@ -46,14 +48,14 @@ struct Limit {
 };
 
 struct Inc {
-  long reduce;  // reduce interval increment
-  long redinc;  // reduce increment increment
-  long subsume; // subsumption interval increment
-  long rephase; // rephase interval
-  long compact; // compact interval increment
-  long elim;    // elimination interval increment
-  long probe;   // failed literal probing interval increment
-
+  long reduce;    // reduce interval increment
+  long redinc;    // reduce increment increment
+  long subsume;   // subsumption interval increment
+  long compact;   // compact interval increment
+  long elim;      // elimination interval increment
+  long probe;     // failed literal probing interval increment
+  long rephase;   // rephasing interval increment (rephase=2)
+  long flush;     // flushing learned clauses interval
   Inc ();
 };
 

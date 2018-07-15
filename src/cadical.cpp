@@ -57,6 +57,11 @@ bool Solver::set (const char * arg) {
   return internal->opts.set (arg);
 }
 
+void Solver::prefix (const char * str) {
+  REQUIRE_INITIALIZED ();
+  internal->prefix = str;
+}
+
 /*------------------------------------------------------------------------*/
 
 void Solver::add (int lit) {

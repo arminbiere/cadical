@@ -2,19 +2,13 @@
 
 /*------------------------------------------------------------------------*/
 
-// Only used here for error reporting, so also only included here.
-
-#include <string>
-
-/*------------------------------------------------------------------------*/
-
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
 // Parsing utilities.
 
-int Parser::parse_char () { return file->get (); }
+inline int Parser::parse_char () { return file->get (); }
 
 // Return an non zero error string if a parse error occurred.
 
@@ -71,6 +65,7 @@ const char * Parser::parse_dimacs_non_profiled () {
   int ch, vars = 0, clauses = 0;
   for (;;) {
     ch = parse_char ();
+    if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r') continue;
     if (ch != 'c') break;
     string buf;
     while ((ch = parse_char ()) != '\n')
@@ -104,8 +99,9 @@ const char * Parser::parse_dimacs_non_profiled () {
     if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r') continue;
     if (ch == 'c') {
 COMMENT:
-      while ((ch = parse_char ()) != '\n')
-        if (ch == EOF) PER ("unexpected end-of-file in body comment");
+      while ((ch = parse_char ()) != '\n' && ch != EOF)
+	;
+      if (ch == EOF) break;
       continue;
     }
     err = parse_lit (ch, lit, vars);

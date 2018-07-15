@@ -1,6 +1,9 @@
-#ifndef QUIET
 #ifndef _profiles_h_INCLUDED
 #define _profiles_h_INCLUDED
+
+/*------------------------------------------------------------------------*/
+#ifndef QUIET
+/*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
 
@@ -102,8 +105,6 @@ struct Profiles {
 
 // Macros for Profiling support.
 
-#ifndef QUIET //...........................................................
-
 #define START(P,ARGS...) \
 do { \
   if (internal->profiles.P.level > internal->opts.profile) break; \
@@ -134,7 +135,9 @@ do { \
   if (internal->profiles.T.level <= L) START (T, N); \
 } while (0)
 
-#else // ifndef QUIET //...................................................
+/*------------------------------------------------------------------------*/
+#else // ifndef QUIET
+/*------------------------------------------------------------------------*/
 
 #define START(ARGS...) do { } while (0)
 #define STOP(ARGS...) do { } while (0)
@@ -142,8 +145,8 @@ do { \
 #define SWITCH_AND_START(ARGS...) do { } while (0)
 #define STOP_AND_SWITCH(ARGS...) do { } while (0)
 
-#endif
 /*------------------------------------------------------------------------*/
-
-#endif // ifndef _profiles_h_INCLUDED
 #endif // ifndef QUIET
+/*------------------------------------------------------------------------*/
+#endif // ifndef _profiles_h_INCLUDED
+

@@ -74,6 +74,8 @@ public:
   double get (const char * name);
   bool set (const char * name, double val);
 
+  void prefix (const char * verbose_message_prefix);
+
   // command line form: '--<name>=<val>', '--<name>', or '--no-<name>'
   //
   bool set (const char * arg);

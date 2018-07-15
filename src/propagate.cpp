@@ -114,7 +114,18 @@ bool Internal::propagate () {
       const Watch w = *j++ = *i++;
       const int b = val (w.blit);
 
-      if (b > 0) continue;                // blocking literal satisfied?
+#ifdef STATS
+      if (w.binary) EXPENSIVE_STATS_ADD (watchaccess.binary, 1);
+      else          EXPENSIVE_STATS_ADD (watchaccess.large, 1);
+#endif
+
+      if (b > 0) {
+#ifdef STATS
+	if (w.binary) EXPENSIVE_STATS_ADD (blitsat.binary, 1);
+	else          EXPENSIVE_STATS_ADD (blitsat.large, 1);
+#endif
+	continue;                // blocking literal satisfied
+      }
 
       if (w.binary) {
 

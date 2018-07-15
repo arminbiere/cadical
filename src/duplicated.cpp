@@ -78,7 +78,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
       }
     }
   }
-  report ('2', 0);
+  report ('2');
   STOP (deduplicate);
 }
 

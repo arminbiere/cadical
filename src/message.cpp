@@ -11,7 +11,7 @@ void Message::vmessage (Internal * internal, const char * fmt, va_list & ap) {
   if (!internal->opts.log)
 #endif
   if (internal->opts.quiet) return;
-  fputs ("c ", stdout);
+  fputs (internal->prefix.c_str (), stdout);
   vprintf (fmt, ap);
   fputc ('\n', stdout);
   fflush (stdout);
@@ -54,8 +54,9 @@ void Message::verbose (Internal * internal,
 #ifdef LOGGING
   if (!internal->opts.log)
 #endif
-  if (internal->opts.quiet || !internal->opts.verbose) return;
-  printf ("c [%s] ", phase);
+  if (internal->opts.quiet || internal->opts.verbose < 2) return;
+  fputs (internal->prefix.c_str (), stdout);
+  printf ("[%s] ", phase);
   va_list ap;
   va_start (ap, fmt);
   vprintf (fmt, ap);
@@ -70,7 +71,7 @@ void Message::verbose (Internal * internal,
 #ifdef LOGGING
   if (!internal->opts.log)
 #endif
-  if (internal->opts.quiet || !internal->opts.verbose) return;
+  if (internal->opts.quiet || internal->opts.verbose < 2) return;
   printf ("c [%s-%ld] ", phase, count);
   va_list ap;
   va_start (ap, fmt);

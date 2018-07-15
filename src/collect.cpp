@@ -49,8 +49,7 @@ void Internal::remove_falsified_literals (Clause * c) {
     LOG ("flushing %d", lit);
     j--;
   }
-  stats.collected += shrink_clause_size (c, j - c->begin ());
-  if (likely_to_be_kept_clause (c)) mark_added (c);
+  stats.collected += shrink_clause (c, j - c->begin ());
 }
 
 // If there are new units (fixed variables) since the last garbage
@@ -79,7 +78,7 @@ void Internal::mark_satisfied_clauses_as_garbage () {
 
 // Update occurrence lists before deleting garbage clauses in the context of
 // preprocessing, e.g., during bounded variable elimination 'elim'.  The
-// result is the number of remaining clauses, which in this context  means
+// result is the number of remaining clauses, which in this context means
 // the number of non-garbage clauses.
 
 size_t Internal::flush_occs (int lit) {
@@ -190,7 +189,9 @@ void Internal::copy_clause (Clause * c) {
   char * p = c->start (), * q = arena.copy (p, c->bytes ());
   assert (aligned (q, 8));
   Clause * d = c->copy = (Clause *) (q - c->offset ());
-  if (d->reason) var (d->literals[val (d->literals[1]) > 0]).reason = d;
+  if (d->reason)
+    assert (level > 0),
+    var (d->literals[val (d->literals[1]) > 0]).reason = d;
   c->moved = true;
 }
 
@@ -266,7 +267,7 @@ void Internal::copy_non_garbage_clauses () {
     // Localize according to decision queue order.
 
     // This is the default for search. It allocates clauses in the order of
-    // the decision queue.  It also uses saved phases.  It seems slightly 
+    // the decision queue.  It also uses saved phases.  It seems slightly
     // faster than the MiniSAT version and thus we keep 'opts.arena == 3'.
 
     assert (opts.arena == 3);

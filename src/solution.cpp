@@ -46,4 +46,24 @@ void External::check_solution_on_shrunken_clause (Clause * c) {
   abort ();
 }
 
+void External::check_no_solution_after_learning_empty_clause () {
+  assert (solution);
+  fflush (stdout);
+  fputs (
+    "*** cadical error: learned empty clause but got solution\n",
+    stderr);
+  abort ();
+}
+
+void External::check_solution_on_learned_unit_clause (int unit) {
+  assert (solution);
+  if (sol (internal->externalize (unit)) > 0) return;
+  fflush (stdout);
+  fprintf (stderr,
+    "*** cadical error: learned unit %d contradicts solution\n",
+    unit);
+  fflush (stderr);
+  abort ();
+}
+
 };

@@ -41,82 +41,92 @@
 \
 /*     NAME             TYPE, VAL, LO, HI, USAGE */ \
 \
-OPTION(arena,            int,    3, 0,  3, "1=clause,2=var,3=queue") \
-OPTION(arenacompact,    bool,    1, 0,  1, "keep clauses compact") \
-OPTION(arenasort,        int,    1, 0,  1, "sort clauses after arenaing") \
-OPTION(binary,          bool,    1, 0,  1, "use binary proof format") \
-OPTION(bumpreasonlits,  bool,    1, 0,  1, "bump reason literals too") \
-OPTION(check,           bool,DEBUG, 0,  1, "save & check original CNF") \
-OPTION(clim,             int,   -1, 0,1e9, "conflict limit (-1=none)") \
-OPTION(compact,         bool,    1, 0,  1, "enable compactification") \
-OPTION(compactint,       int,  1e3, 1,1e9, "compactification conflic tlimit") \
-OPTION(compactlim,    double,  0.1, 0,  1, "inactive variable limit") \
-OPTION(compactmin,       int,  100, 1,1e9, "inactive variable limit") \
-OPTION(dlim,             int,   -1, 0,1e9, "decision limit (-1=none)") \
-OPTION(elim,            bool,    1, 0,  1, "bounded variable elimination") \
-OPTION(elimclslim,       int,  1e3, 0,1e9, "ignore clauses of this size") \
-OPTION(eliminit,         int,  1e3, 0,1e9, "initial conflict limit") \
-OPTION(elimint,          int,  1e4, 1,1e9, "initial conflict interval") \
-OPTION(elimocclim,       int,  100, 0,1e9, "one sided occurrence limit") \
-OPTION(elimroundsinit,   int,    5, 1,1e9, "initial number of rounds") \
-OPTION(elimrounds,       int,    2, 1,1e9, "usual number of rounds") \
-OPTION(emagluefast,   double, 3e-2, 0,  1, "alpha fast glue") \
-OPTION(emaglueslow,   double, 1e-5, 0,  1, "alpha slow glue") \
-OPTION(emajump,       double, 1e-5, 0,  1, "alpha jump level") \
-OPTION(emasize,       double, 1e-5, 0,  1, "alpha learned clause size") \
-OPTION(decompose,       bool,    1, 0,  1, "SCC decompose BIG and ELS") \
-OPTION(decomposerounds,  int,    1, 1,1e9, "number of decompose rounds") \
-OPTION(force,           bool,    0, 0,  1, "force to read broken header") \
-OPTION(hbr,             bool,    1, 0,  1, "learn hyper binary clauses") \
-OPTION(hbrsizelim,       int, 1e9, 3, 1e9, "max size HBR base clause") \
-OPTION(keepglue,         int,    3, 1,1e9, "glue kept learned clauses") \
-OPTION(keepsize,         int,    3, 2,1e9, "size kept learned clauses") \
-OPTION(keepused,        bool,    1, 0,  1, "keep clauses used around") \
-OPTION(leak,            bool,    1, 0,  1, "leak solver memory") \
-OPTION(learn,           bool,    1, 0,  1, "learn clauses") \
-LOGOPT(log,             bool,    0, 0,  1, "enable logging") \
-LOGOPT(logsort,         bool,    0, 0,  1, "sort logged clauses") \
-OPTION(minimize,        bool,    1, 0,  1, "minimize learned clauses") \
-OPTION(minimizedepth,    int,  1e3, 0,1e9, "minimization depth") \
-OPTION(phase,            int,    1, 0,  1, "initial phase: 0=neg,1=pos") \
-OPTION(posize,           int,    4, 4,1e9, "size for saving position") \
-OPTION(prefetch,        bool,    1, 0,  1, "prefetch watches") \
-OPTION(probe,           bool,    1, 0,  1, "failed literal probing" ) \
-OPTION(probeinit,        int,  500, 0,1e9, "initial probing interval" ) \
-OPTION(probeint,         int,  1e4, 1,1e9, "probing interval increment" ) \
-OPTION(probereleff,   double, 0.02, 0,  1, "relative probing efficiency") \
-OPTION(probemaxeff,   double,  1e7, 0,  1, "maximum probing efficiency") \
-OPTION(probemineff,   double,  1e5, 0,  1, "minimum probing efficiency") \
-OPTION(profile,          int,    2, 0,  4, "profiling level") \
-QUTOPT(quiet,           bool,    0, 0,  1, "disable all messages") \
-OPTION(reduce,           int,    1, 0,  3, "1=size,2=glue,3=dyn") \
-OPTION(reduceinc,        int,  300, 1,1e6, "reduce limit increment") \
-OPTION(reduceinit,       int, 2000, 0,1e6, "initial reduce limit") \
-OPTION(reducewait,    double, 0.01, 0,1e5, "conflicts after restart") \
-OPTION(rephase,         bool,    1, 0,  1, "enable rephasing") \
-OPTION(rephaseint,       int,  1e5, 1,1e9, "rephasing interval") \
-OPTION(restart,         bool,    1, 0,  1, "enable restarting") \
-OPTION(restartint,       int,    2, 1,1e9, "restart base interval") \
-OPTION(restartmargin, double,  1.1, 0, 10, "restart slow fast margin") \
-OPTION(reusetrail,      bool,    1, 0,  1, "enable trail reuse") \
-OPTION(simplify,        bool,    1, 0,  1, "enable simplifier") \
-OPTION(strengthen,      bool,    1, 0,  1, "strengthen during subsume") \
-OPTION(subsume,         bool,    1, 0,  1, "enable clause subsumption") \
-OPTION(subsumebinlim,    int,  1e4, 0,1e9, "watch list length limit") \
-OPTION(subsumeclslim,    int,  1e3, 0,1e9, "clause length limit") \
-OPTION(subsumeinc,       int,  1e4, 1,1e9, "interval in conflicts") \
-OPTION(subsumeinit,      int,  1e4, 0,1e9, "initial subsume limit") \
-OPTION(subsumeocclim,    int,  100, 0,1e9, "watch list length limit") \
-OPTION(transred,        bool,    1, 0,  1, "transitive reduction of BIG") \
-OPTION(transredreleff,double, 0.10, 0,  1, "relative efficiency") \
-OPTION(transredmaxeff,double,  1e7, 0,  1, "maximum efficiency") \
-OPTION(transredmineff,double,  1e5, 0,  1, "minimum efficiency") \
-QUTOPT(verbose,         int,     0, 0,  2, "more verbose messages") \
-OPTION(vivify,          bool,    1, 0,  1, "vivification") \
-OPTION(vivifyreleff,  double, 0.03, 0,  1, "relative efficiency") \
-OPTION(vivifymaxeff,  double,  1e7, 0,  1, "maximum efficiency") \
-OPTION(vivifymineff,  double,  1e5, 0,  1, "minimum efficiency") \
-OPTION(witness,         bool,    1, 0,  1, "print witness") \
+OPTION(arena,            int,    3,  0,  3, "1=clause,2=var,3=queue") \
+OPTION(arenacompact,    bool,    1,  0,  1, "keep clauses compact") \
+OPTION(arenasort,        int,    1,  0,  1, "sort clauses after arenaing") \
+OPTION(binary,          bool,    1,  0,  1, "use binary proof format") \
+OPTION(bumpreasonlits,  bool,    1,  0,  1, "bump reason literals too") \
+OPTION(check,           bool,DEBUG,  0,  1, "save & check original CNF") \
+OPTION(clim,             int,   -1,  0,1e9, "conflict limit (-1=none)") \
+OPTION(compact,         bool,    1,  0,  1, "enable compactifying") \
+OPTION(compactint,       int,  1e3,  1,1e9, "compactifying conflict limit") \
+OPTION(compactlim,    double,  0.1,  0,  1, "inactive variable limit") \
+OPTION(compactmin,       int,  100,  1,1e9, "inactive variable limit") \
+OPTION(dlim,             int,   -1,  0,1e9, "decision limit (-1=none)") \
+OPTION(elim,            bool,    1,  0,  1, "bounded variable elimination") \
+OPTION(elimclslim,       int,  1e3,  0,1e9, "ignore clauses of this size") \
+OPTION(eliminit,         int,  1e3,  0,1e9, "initial conflict limit") \
+OPTION(elimint,          int,  1e4,  1,1e9, "initial conflict interval") \
+OPTION(elimocclim,       int,  100,  0,1e9, "one sided occurrence limit") \
+OPTION(elimroundsinit,   int,    5,  1,1e9, "initial number of rounds") \
+OPTION(elimrounds,       int,    2,  1,1e9, "usual number of rounds") \
+OPTION(flush,           bool,    1,  0,  1, "flush redundant clauses") \
+OPTION(flushinit,        int,  1e5,  1,1e9, "initial flushing interval") \
+OPTION(flushfactor,      int,    3,  1,1e9, "flushing interval factor") \
+OPTION(emagluefast,   double, 3e-2,  0,  1, "alpha fast glue") \
+OPTION(emaglueslow,   double, 1e-5,  0,  1, "alpha slow glue") \
+OPTION(emajump,       double, 1e-5,  0,  1, "alpha jump level") \
+OPTION(emasize,       double, 1e-5,  0,  1, "alpha learned clause size") \
+OPTION(decompose,       bool,    1,  0,  1, "SCC decompose BIG and ELS") \
+OPTION(decomposerounds,  int,    1,  1,1e9, "number of decompose rounds") \
+OPTION(force,           bool,    0,  0,  1, "force to read broken header") \
+OPTION(hbr,             bool,    1,  0,  1, "learn hyper binary clauses") \
+OPTION(keepglue,         int,    3,  1,1e9, "glue kept learned clauses") \
+OPTION(keepsize,         int,    3,  2,1e9, "size kept learned clauses") \
+OPTION(leak,            bool,    1,  0,  1, "leak solver memory") \
+OPTION(learn,           bool,    1,  0,  1, "learn clauses") \
+LOGOPT(log,             bool,    0,  0,  1, "enable logging") \
+LOGOPT(logsort,         bool,    0,  0,  1, "sort logged clauses") \
+OPTION(minimize,        bool,    1,  0,  1, "minimize learned clauses") \
+OPTION(minimizedepth,    int,  1e3,  0,1e9, "minimization depth") \
+OPTION(phase,            int,    1,  0,  1, "initial phase: 0=neg,1=pos") \
+OPTION(posize,           int,    4,  4,1e9, "size for saving position") \
+OPTION(prefetch,        bool,    1,  0,  1, "prefetch watches") \
+OPTION(probe,           bool,    1,  0,  1, "failed literal probing" ) \
+OPTION(probeinit,        int,  500,  0,1e9, "initial probing interval" ) \
+OPTION(probeint,         int,  1e4,  1,1e9, "probing interval increment" ) \
+OPTION(probereleff,   double, 0.02,  0,  1, "relative probing efficiency") \
+OPTION(probemaxeff,   double,  1e7,  0,  1, "maximum probing efficiency") \
+OPTION(probemineff,   double,  1e5,  0,  1, "minimum probing efficiency") \
+OPTION(profile,          int,    2,  0,  4, "profiling level") \
+QUTOPT(quiet,           bool,    0,  0,  1, "disable all messages") \
+OPTION(reduce,          bool,    1,  0,  1, "reduce useless clauses") \
+OPTION(reduceglue,       int,    0,  0,  2, "1=stable, 2=always") \
+OPTION(reduceinc,        int,  300,  1,1e6, "reduce limit increment") \
+OPTION(reduceinit,       int, 2000,  0,1e6, "initial reduce limit") \
+OPTION(reducemax,        int,  1e6,1e4,1e9, "maximal reduce limit") \
+OPTION(reducewait,    double, 0.01,  0,1e5, "conflicts after restart") \
+OPTION(rephase,         bool,    1,  0,  1, "enable resetting phase") \
+OPTION(rephaseinc,      int,   1e4,  0,1e9, "rephase interval increment") \
+OPTION(rephaseinit,      int,  3e4,  0,1e9, "rephase initial interval") \
+OPTION(restart,         bool,    1,  0,  1, "enable restarting") \
+OPTION(restartint,       int,    2,  1,1e9, "restart base interval") \
+OPTION(restartmargin, double,  1.1,  0, 10, "restart slow fast margin") \
+OPTION(reusetrail,      bool,    1,  0,  1, "enable trail reuse") \
+OPTION(seed,             int,    0,  0,1e9, "random seed") \
+OPTION(simplify,        bool,    1,  0,  1, "enable simplifier") \
+OPTION(strengthen,      bool,    1,  0,  1, "strengthen during subsume") \
+OPTION(stabilize,       bool,    1,  0,  1, "no-restart phases") \
+OPTION(stabinit,         int,  1e3,  0,1e9, "no-restart phase start") \
+OPTION(stabfactor,    double,   10,  0,1e9, "no-restart phase factor") \
+OPTION(stableglue,       int,    5,  1,1e9, "glue stable learned clauses") \
+OPTION(subsume,         bool,    1,  0,  1, "enable clause subsumption") \
+OPTION(subsumebinlim,    int,  1e4,  0,1e9, "watch list length limit") \
+OPTION(subsumeclslim,    int,  1e3,  0,1e9, "clause length limit") \
+OPTION(subsumeinc,       int,  1e4,  1,1e9, "interval in conflicts") \
+OPTION(subsumeinit,      int,  1e4,  0,1e9, "initial subsume limit") \
+OPTION(subsumeocclim,    int,  100,  0,1e9, "watch list length limit") \
+OPTION(transred,        bool,    1,  0,  1, "transitive reduction of BIG") \
+OPTION(transredreleff,double, 0.10,  0,  1, "relative efficiency") \
+OPTION(transredmaxeff,double,  1e7,  0,  1, "maximum efficiency") \
+OPTION(transredmineff,double,  1e5,  0,  1, "minimum efficiency") \
+QUTOPT(verbose,         int,     0,  0,  2, "more verbose messages") \
+OPTION(vivify,          bool,    1,  0,  1, "vivification") \
+OPTION(vivifyreleff,  double, 0.03,  0,  1, "relative efficiency") \
+OPTION(vivifymaxeff,  double,  1e7,  0,  1, "maximum efficiency") \
+OPTION(vivifymineff,  double,  1e5,  0,  1, "minimum efficiency") \
+OPTION(vivifyonce,      bool,    0,  0,  1, "vivify redundant once") \
+OPTION(witness,         bool,    1,  0,  1, "print witness") \
 
 /*------------------------------------------------------------------------*/
 

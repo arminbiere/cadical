@@ -89,10 +89,8 @@ Clause * Internal::new_clause (bool red, int glue) {
   const int size = (int) clause.size ();
   assert (size >= 2);
 
-  // Since 'glue' is a bit-field, we cap the 'glue' value at 'MAX_GLUE'.
-  //
-  if (glue > MAX_GLUE) glue = MAX_GLUE;
   if (glue > size) glue = size;
+  if (glue > MAX_GLUE) glue = MAX_GLUE;
 
   // Determine whether this clauses should be kept all the time.
   //
@@ -102,12 +100,20 @@ Clause * Internal::new_clause (bool red, int glue) {
   else if (glue <= opts.keepglue) keep = true;
   else keep = false;
 
+  // Determine whether this clauses should be kept during stabilization.
+  //
+  bool stable;
+  if (!red) stable = true;
+  else if (keep) stable = true;
+  else if (glue <= opts.stableglue) stable = true;
+  else stable = false;
+
   // Determine whether this clauses is extended and uses a '_pos' field.
   //
   bool extended = (size >= opts.posize);
 
-  // Now allocate the clause after ignored the 'offset' bytes, if '_pos' or
-  // 'analyzed' fields are not used.
+  // Now allocate the clause ignoring 'offset' bytes, if '_pos' or
+  // 'analyzed' fields are not used ('extended' is false).
   //
   Clause * c;
   size_t offset = 0;
@@ -122,6 +128,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   if (extended) c->_pos = 2, c->alignment = 0;
   c->extended = extended;
   c->redundant = red;
+  c->stable = stable;
   c->keep = keep;
   c->garbage = false;
   c->reason = false;
@@ -129,10 +136,11 @@ Clause * Internal::new_clause (bool red, int glue) {
   c->used = false;
   c->hbr = false;
   c->vivify = false;
+  c->vivified = false;
   c->ignore = false;
   c->transred = false;
-  c->glue = glue;
   c->size = size;
+  c->glue = glue;
   for (int i = 0; i < size; i++) c->literals[i] = clause[i];
 
   // Just checking that we did not mess up our sophisticated memory layout.
@@ -170,7 +178,7 @@ Clause * Internal::new_clause (bool red, int glue) {
 // resulting clause as 'added'.  The result is the number of (aligned)
 // removed bytes, resulting from shrinking the clause.
 //
-size_t Internal::shrink_clause_size (Clause * c, int new_size) {
+size_t Internal::shrink_clause (Clause * c, int new_size) {
 
   size_t res = 0;
 
@@ -182,11 +190,22 @@ size_t Internal::shrink_clause_size (Clause * c, int new_size) {
   assert (new_size >= 2);
   assert (new_size < old_size);
 
-  if (c->extended && c->_pos >= new_size) c->_pos = 2;
+  if (c->extended) {
+    if (c->_pos >= new_size) c->_pos = 2;
+  }
 
   if (c->redundant) {
-    if (c->glue > new_size) c->glue = new_size;
+    int new_glue = c->glue;
+    if (new_glue > new_size) new_glue = new_size;
+    if (!c->keep) {
+      if (new_size <= opts.keepsize) c->keep = true;
+      if (new_glue <= opts.keepglue) c->keep = true;
+    }
+    if (!c->stable) {
+      if (new_glue <= opts.stableglue) c->stable = true;
+    }
     c->size = new_size;
+    c->glue = new_glue;
   } else {
     size_t old_bytes = c->bytes ();
     c->size = new_size;
@@ -209,6 +228,8 @@ size_t Internal::shrink_clause_size (Clause * c, int new_size) {
     }
   }
   assert (c->size == new_size);
+
+  if (likely_to_be_kept_clause (c)) mark_added (c);
 
   return res;
 }
@@ -342,9 +363,21 @@ Clause * Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
 // assumed to be in 'clause' in 'decompose' and 'vivify'.
 //
 Clause * Internal::new_clause_as (const Clause * orig) {
-  int glue = orig->glue, size = (int) clause.size ();
-  if (size < glue) glue = size;
-  Clause * res = new_clause (orig->redundant, glue);
+#if 0
+  // TODO in version '095' size was better than 'orig->glue', why?
+  //
+  const int new_glue = (int) clause.size ();
+#else
+  const int new_glue = orig->glue;
+#endif
+  Clause * res = new_clause (orig->redundant, new_glue);
+#if 0
+  if (orig->redundant && orig->keep) res->keep = true;
+  if (orig->redundant && orig->stable) res->stable = true;
+#else
+  assert (!orig->redundant || !orig->keep || res->keep);
+  assert (!orig->redundant || !orig->stable || res->stable);
+#endif
   if (proof) proof->trace_add_clause (res);
   assert (watches ());
   watch_clause (res);

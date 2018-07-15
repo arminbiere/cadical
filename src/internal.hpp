@@ -19,6 +19,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <string>
 
 /*------------------------------------------------------------------------*/
 
@@ -89,7 +90,7 @@ class Internal {
   //
   friend struct bumped_earlier;
   friend struct less_negated_occs;
-  friend struct less_usefull;
+  friend struct less_useful;
   friend struct more_noccs2;
   friend struct subsume_less_noccs;
   friend struct trail_bumped_smaller;
@@ -100,6 +101,7 @@ class Internal {
   friend struct vivify_more_noccs;
 
   typedef signed char signed_char;
+  typedef unsigned char unsigned_char;
 
   /*----------------------------------------------------------------------*/
 
@@ -111,6 +113,7 @@ class Internal {
   bool simplifying;             // simplifying thus outside of CDCL loop
   bool vivifying;               // during vivification
   bool termination;		// forced to terminate
+  bool stabilization;           // no-restart phase
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // (internal) maximum variable index
   int level;                    // decision level ('control.size () - 1')
@@ -146,7 +149,6 @@ class Internal {
   EMA slow_glue_avg;            // slow glue average
   EMA size_avg;                 // learned clause size average
   EMA jump_avg;                 // jump average
-  double wg, ws;
   Limit lim;                    // limits for various phases
   Inc inc;                      // limit increments
   Proof * proof;                // trace clausal proof if non zero
@@ -160,6 +162,7 @@ class Internal {
   Format error;                 // last (persistent) error message
   Clause binary_subsuming;      // communicate binary subsuming clause
   File * output;                // output file
+  string prefix;                // verbose messages prefix
 
   Internal * internal;          // proxy to 'this' in macros (redundant)
   External * external;		// proxy to 'external' buddy in 'Solver'
@@ -173,8 +176,8 @@ class Internal {
   // 'External' and 'Solver'.  The 'init' function initializes variables up
   // to and including the requested variable index.
   //
-  void init_queue (int new_max_var);
   void init (int new_max_var);
+  void init_queue (int new_max_var);
   void add_original_lit (int elit);
 
   // Enlarge tables.
@@ -279,7 +282,7 @@ class Internal {
   //
   void watch_clause (Clause *);
   Clause * new_clause (bool red, int glue = 0);
-  size_t shrink_clause_size (Clause *, int new_size);
+  size_t shrink_clause (Clause *, int new_size);
   void deallocate_clause (Clause *);
   void delete_clause (Clause *);
   void mark_garbage (Clause *);
@@ -328,6 +331,7 @@ class Internal {
 
   // Restarting policy in 'restart.cc'.
   //
+  bool stabilizing ();
   bool restarting ();
   int reuse_trail ();
   void restart ();
@@ -345,9 +349,10 @@ class Internal {
   // 'reduce.cpp' as well as root level satisfied clause and then removing
   // those which are not used as reason anymore with garbage collection.
   //
+  bool flushing ();
   bool reducing ();
   void protect_reasons ();
-  void update_clause_useful_probability (Clause*, bool used);
+  void mark_clauses_to_be_flushed ();
   void mark_useless_redundant_clauses_as_garbage ();
   void unprotect_reasons ();
   void reduce ();
@@ -403,37 +408,45 @@ class Internal {
 
   // Strengthening through vivification and asymmetric tautology elimination.
   //
-  void flush_vivification_schedule (vector<Clause*> &);
+  void flush_vivification_schedule (vector<Clause*> &, long & subsumed);
+  bool try_to_vivify_clause (Clause *, bool redundant);
+  void vivify_analyze (Clause *);
+  void vivify_round (bool redundant, long delta);
   void vivify ();
 
-  // Compactification (shrinking internal variable tables).
+  // Compacting (shrinking internal variable tables).
   //
-  bool compactifying ();
+  bool compacting ();
   void compact ();
 
   // Transitive reduction of binary implication graph.
   //
   void transred ();
 
-  // We monitor the maximum glue and maximum size of clauses during 'reduce'
-  // and thus can predict if a redundant extended clause is likely to be
-  // kept in the next 'reduce' phase.  These clauses are target of
-  // subsumption checks, in addition to irredundant and non-extended
-  // clauses.  Their variables are marked as being 'added'.
+  // We monitor the maximum size and glue of clauses during 'reduce' and
+  // thus can predict if a redundant extended clause is likely to be kept in
+  // the next 'reduce' phase.  These clauses are target of subsumption and
+  // vivification checks, in addition to irredundant and non-extended
+  // clauses.  Their variables are also marked as being 'added'.
   //
   bool likely_to_be_kept_clause (Clause * c) {
     if (!c->redundant) return true;
-    return c->size <= lim.keptsize && c->glue <= lim.keptglue;
+    if (c->keep) return true;
+    if (stabilization && c->stable) return true;
+    if (c->size > lim.keptsize) return false;
+    if ( opts.reduceglue > 1 ||
+        (opts.reduceglue > 0 && stabilization)) {
+      if (c->glue > lim.keptglue) return false;
+    }
+    return true;
   }
-
-  double clause_useful (Clause * c) { return ws/c->size + wg/c->glue; }
 
   // We mark variables in added or shrunken clauses as being 'added' if the
   // clause is likely to be kept in the next 'reduce' phase (see last
   // function above).  This gives a persistent (across consecutive
-  // interleaved search and inprocessing phases) of variables which have to
-  // be reconsidered in subsumption checks, e.g., only clauses with 'added'
-  // variables are checked to be forward subsumed.
+  // interleaved search and inprocessing phases) set of variables which have
+  // to be reconsidered in subsumption checks, e.g., only clauses with
+  // 'added' variables are checked to be forward subsumed.
   //
   void mark_added (int lit) {
     Flags & f = flags (lit);
@@ -531,7 +544,7 @@ class Internal {
   // negative.  We also avoid taking the absolute value.
   //
   int val (int lit) const {
-    assert (lit), assert (abs (lit) <= max_var);
+    assert (-max_var <= lit), assert (lit), assert (lit <= max_var);
     return vals[lit];
   }
 
@@ -540,12 +553,15 @@ class Internal {
   // of the variable anyhow.
   //
   int fixed (int lit) {
+    assert (-max_var <= lit), assert (lit), assert (lit <= max_var);
     int idx = vidx (lit), res = vals[idx];
     if (res && vtab[idx].level) res = 0;
     if (lit < 0) res = -res;
     return res;
   }
 
+  // Map back an internal literal to an external.
+  //
   int externalize (int lit) {
     assert (lit != INT_MIN);
     const int idx = abs (lit);

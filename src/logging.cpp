@@ -26,7 +26,7 @@ void Logger::log (Internal * internal, const Clause * c, const char *fmt, ...) {
   vprintf (fmt, ap);
   va_end (ap);
   if (c) {
-    if (c->redundant) printf (" redundant glue %d", c->glue);
+    if (c->redundant) printf (" redundant");
     else printf (" irredundant");
     printf (" size %d clause", c->size);
     if (internal->opts.logsort) {
@@ -40,7 +40,6 @@ void Logger::log (Internal * internal, const Clause * c, const char *fmt, ...) {
       for (const_literal_iterator i = c->begin (); i != c->end (); i++)
         printf (" %d", *i);
     }
-    printf (" 0");
   } else if (internal->level) printf (" decision");
   else printf (" unit");
   fputc ('\n', stdout);
@@ -67,7 +66,7 @@ void Logger::log (Internal * internal,
     for (const_int_iterator i = c.begin (); i != c.end (); i++)
       printf (" %d", *i);
   }
-  printf (" 0\n");
+  fputc ('\n', stdout);
   fflush (stdout);
 }
 

@@ -11,11 +11,11 @@ typedef const int *                      const_literal_iterator;
 /*------------------------------------------------------------------------*/
 
 // The 'Clause' data structure is very important. There are usually many
-// clauses and accessing them is a hot-spot.  Thus we use three common
+// clauses and accessing them is a hot-spot.  Thus we use common
 // optimizations to reduce their memory foot print and improve cache usage.
 // Even though this induces some complexity in understanding the actual
 // implementation, arguably not the usage of this data-structure, we
-// consider these optimizations as essential.
+// consider two optimizations as essential.
 //
 //   (1) The most important optimization is to 'embed' the actual literals
 //   in the clause.  This requires a variadic size structure and thus
@@ -24,40 +24,41 @@ typedef const int *                      const_literal_iterator;
 //   not only needs more memory but more importantly also requires another
 //   memory access and thus is very costly.
 //
-//   (2) The boolean flags only need one bit each and thus there is enough
-//   space left to merge them with a 'glue' bit field (which is less often
-//   accessed than 'size').  This saves 4 bytes and also keeps the header
-//   without '_pos' field (and alignment) nicely in 8 bytes.  We currently
-//   use 21 bits and, actually, since we do not want to mess with 'unsigned'
-//   versus 'signed' issues just use 20 out of them.  If more boolean flags
-//   are needed this number has to be adapted accordingly.
-//
-//   (3) Clauses with size at least 'opts.posize' have a '_pos' field, which
+//   (2) Clauses with size at least 'opts.posize' have a '_pos' field, which
 //   contains  the position of the last exchanged watch in a long clause.
 //   This field is only present if 'extended' is true.  Saving in '_pos'
-//   starts making sense for clauses of length 4 and we usually have
-//   'opts.keepsize == 3'.
-//
-// With these three optimizations a binary clause only needs 16 bytes
-// instead of 44 bytes.  The last two optimizations reduce memory usage of
-// very large formulas measurably but are otherwise not that important.
+//   starts making sense for clauses of size 4 and we would typically have
+//   'opts.posize = 4'.
 //
 // If you want to add few additional boolean flags, add them after the
-// sequence of already existing ones.  This makes sure that these bits and
-// the following 'glue' field are put into a 4 byte word by the compiler. Of
-// course you need to adapt 'LD_MAX_GLUE' accordingly.  Adding one flag
-// reduces it by one.
-//
-// Additional fields needed for all clauses are safely put between 'glue'
-// and 'size' without the need to change anything else.  In general these
+// sequence of already existing ones and adjust 'LD_MAX_GLUE' accordingly,
+// i.e., adding one more flag reduces the latter by one.  In general these
 // optimizations are local to 'clause.[hc]pp' and otherwise can be ignored
 // except that you should for instance never access '_pos' of a clauses
 // which is not extended.  This can be checked with for instance 'valgrind'
 // but is also guarded by making the actual '_pos' field private and
-// checking this contract in the 'pos ()' accessors functions.
+// checking this contract in the 'pos ()' access functions.
 
-#define LD_MAX_GLUE 21
-#define MAX_GLUE ((1 << (LD_MAX_GLUE-1)) - 1)
+// The glucose level (LBD or short 'glue') is a heuristic value of the
+// usefulness of a learned clause, where smaller glue is consider more
+// useful.  During learning the 'glue' is determined as the number of
+// decisions needed to learn this clause, or equivalently the number of
+// decisions necessary to make it propagating (together with other clauses
+// in the formula).  See the IJCAI'09 paper by Audemard & Simon for more
+// details.  We switched back and forth between keeping the glue stored in
+// a clause and using it only initially to determine whether it is kept,
+// that is survives clause reduction.  The latter strategy is not bad but
+// also does not allow to use glue values elsewhere.  The glues are not big
+// anyhow and thus we keep it in the remaining 'LD_MAX_GLUE' bits in the
+// clause which make up a 32-bit word after accounting for boolean flags.
+// Thus 'LD_MAX_GLUE' should be '32 - #flags'.  The maximum glue value saved
+// is then put into this bit-field, and since we want to keep it signed
+// (in C bit-fields need explicit 'signed' or 'unsigned' attributes in C),
+// we waste another bit.  Currently with 13 boolean flags we have 19 bits
+// for the glue field, and thus have 'MAX_GLUE = 2^18 - 1'.
+
+#define LD_MAX_GLUE 19
+#define MAX_GLUE    ((1<<(LD_MAX_GLUE-1))-1)
 
 class Clause {
 
@@ -72,10 +73,11 @@ public:
   //
   int alignment;    // unused four bytes alignment
 
-  bool extended : 1;	// has this '_pos' field (and 'dummy')
+  bool extended:1;  // has this '_pos' field (and 'alignment')
 
   bool redundant:1; // aka 'learned' so not 'irredundant' (original)
-  bool keep : 1;    // always keep this clause (if redundant)
+  bool stable:1;    // keep this clause during stabilization (if redundant)
+  bool keep:1;      // always keep this clause (if redundant)
 
   bool garbage:1;   // can be garbage collected unless it is a 'reason'
   bool reason:1;    // reason / antecedent clause can not be collected
@@ -84,16 +86,12 @@ public:
   bool hbr:1;       // redundant hyper binary resolved clause (size == 2)
   bool used:1;      // 'hbr' resolved during conflict analysis
 
-  bool vivify:1;    // irredundant clause scheduled to be vivified
+  bool vivify:1;    // clause scheduled to be vivified
+  bool vivified:1;  // redundant clause already tried to vivify
   bool ignore:1;    // ignore during (vivify) propagation
 
   bool transred:1;  // already checked for transitive reduction
 
-  // Glucose level, LBD, or just 'glue' stores for learned clauses the
-  // number of different levels of its literals during learning.  This is a
-  // good prediction for usefulness of a clause (see the IJCAI'09 paper by
-  // Audemard and Simon).
-  //
   signed int glue : LD_MAX_GLUE;
 
   int size;         // actual size of 'literals' (at least 2)

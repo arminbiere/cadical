@@ -133,7 +133,7 @@ File * File::write (Internal * internal, FILE * f, const char * n) {
 File * File::read (Internal * internal, const char * path) {
   FILE * file;
   int close_input = 2;
-  if (has_suffix (path, ".xz"))
+  if (has_suffix (path, ".xz") || has_suffix (path, ".lzma"))
     file = read_pipe (internal, "xz -c -d %s", path);
   else if (has_suffix (path, ".bz2"))
     file = read_pipe (internal, "bzip2 -c -d %s", path);
@@ -149,7 +149,7 @@ File * File::read (Internal * internal, const char * path) {
 File * File::write (Internal * internal, const char * path) {
   FILE * file;
   int close_input = 2;
-  if (has_suffix (path, ".xz"))
+  if (has_suffix (path, ".xz") || has_suffix (path, ".lzma"))
     file = write_pipe (internal, "xz -c > %s", path);
   else if (has_suffix (path, ".bz2"))
     file = write_pipe (internal, "bzip2 -c > %s", path);

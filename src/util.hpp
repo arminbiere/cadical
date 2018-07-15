@@ -46,6 +46,8 @@ inline size_t align (size_t bytes, size_t alignment) {
   else return (bytes | (alignment - 1)) + 1;
 }
 
+inline bool contained (long c, long l, long u) { return l <= c && c <= u; }
+
 /*------------------------------------------------------------------------*/
 
 // The standard 'Effective STL' way (though not guaranteed) to clear a

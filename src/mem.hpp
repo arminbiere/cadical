@@ -22,13 +22,13 @@ do { \
 #define NEW_ONLY(P,T,N) \
 do { \
   (P) = new T[N]; \
-} while (0) 
+} while (0)
 
 #define NEW_ZERO(P,T,N) \
 do { \
   NEW_ONLY (P, T, N); \
   ZERO (P, T, N); \
-} while (0) 
+} while (0)
 
 #define RELEASE_DELETE(P,T,N) \
 do { delete [] (P); } while (0)

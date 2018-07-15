@@ -13,4 +13,5 @@ awk '{printf "%s %d %d %d\n", $1, $2, $3, $4}' | \
 grep -v 'check' | \
 grep -v 'clim' | \
 grep -v 'dlim' | \
+grep -v 'learn' | \
 grep -v 'witness'

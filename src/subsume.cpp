@@ -108,8 +108,7 @@ inline void Internal::strengthen_clause (Clause * c, int remove) {
   for (const_literal_iterator i = j; i != end; i++)
     if ((*j++ = *i) == remove) j--;
   assert (j + 1 == end);
-  shrink_clause_size (c, c->size - 1);
-  if (likely_to_be_kept_clause (c)) mark_added (c);
+  (void) shrink_clause (c, c->size - 1);
   c->used = true;
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);

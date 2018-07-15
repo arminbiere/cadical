@@ -272,10 +272,9 @@ bool Internal::decompose_round () {
       if (flushed) {
         if (l == 2) new_binary_clause = true;
         LOG ("flushed %d literals", flushed);
-        shrink_clause_size (c, l);
-      }
+        (void) shrink_clause (c, l);
+      } else if (likely_to_be_kept_clause (c)) mark_added (c);
       LOG (c, "substituted");
-      if (likely_to_be_kept_clause (c)) mark_added (c);
     }
     while (!clause.empty ()) {
       int lit = clause.back ();

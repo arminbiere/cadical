@@ -7,7 +7,7 @@ class Internal;
 
 struct Message {
 
-#ifndef QUIET 
+#ifndef QUIET
 
   // Non-verbose messages, e.g., always printed (unless 'quiet' set).
   //

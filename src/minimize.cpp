@@ -3,10 +3,10 @@
 namespace CaDiCaL {
 
 // Functions for learned clause minimization. We only have the recursive
-// version, which actually is implemented recursively.  We also played with
-// a non-recursive version, which however was more complex and slower.  The
-// trick to keep potential stack exhausting recursion under guards is to
-// explicitly limit the recursion depth.
+// version, which actually really is implemented recursively.  We also
+// played with a derecursified version, which however was more complex and
+// slower.  The trick to keep potential stack exhausting recursion under
+// guards is to explicitly limit the recursion depth.
 
 // Instead of signatures as in the original implementation in MiniSAT and
 // our corresponding paper, we use the 'poison' idea of Allen Van Gelder to
@@ -39,9 +39,9 @@ bool Internal::minimize_literal (int lit, int depth) {
 
 // Sorting the clause before minimization with respect to the trail order
 // (literals with smaller trail height first) seems to be natural and could
-// help minimizing required recursion depth.   It might simplify the
-// algorithm too, but we still have to check that this as any effect in
-// practice (TODO).
+// help minimizing required recursion depth.   It might have potential to
+// simplify the algorithm too, but we still have to check that this has any
+// effect in practice (TODO).
 
 struct trail_assigned_smaller {
   Internal * internal;
@@ -71,7 +71,8 @@ void Internal::minimize_clause () {
 void Internal::clear_minimized () {
   const_int_iterator i;
   for (i = minimized.begin (); i != minimized.end (); i++) {
-    Flags & f = flags (*i);
+    int lit = *i;
+    Flags & f = flags (lit);
     f.poison = f.removable = false;
   }
   for (i = clause.begin (); i != clause.end (); i++)

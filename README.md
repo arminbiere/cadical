@@ -2,11 +2,15 @@
 
 CaDiCaL Simplified Satisfiability Solver
 
-The goal of the development of CaDiCaL is to obtain a CDCL solver, which is
-easy to understand and change, while at the same time not being much slower
-than other state-of-the-art CDCL solvers.  Originally we wanted to also
-radically simplify the design and internal data structures, but that goal
-was only achieved partially, for instance compared to Lingeling.
+The original goal of the development of CaDiCaL was to obtain a CDCL solver,
+which is easy to understand and change, while at the same time not being
+much slower than other state-of-the-art CDCL solvers.  Originally we wanted
+to also radically simplify the design and internal data structures, but that
+goal was only achieved partially, at least for instance compared to
+Lingeling. On the other hand CaDiCaL actually became in general faster than
+Lingeling even though it is missing some preprocessors (mostly parity and
+cardinality constraint reasoning), which would be crucial to solve certain
+instances. The incremental API is incomplete.
 
 Use './configure && make' to configure and build 'cadical' in the default
 'build' sub-directory.  This will also build the library 'libcadical.a'.
@@ -44,10 +48,9 @@ The latest version of CaDiCaL can be found on 'github'
 
 which also contains a test suite.  Use 'make test' to run it.
 
-A plain stable source release will eventually be found at
+A plain stable source release can also be found at
 
   - http://fmv.jku.at/cadical
 
 Armin Biere
-
-Do 8. Jun 08:44:52 CEST 2017
+Sat Mar 24 11:52:12 CET 2018

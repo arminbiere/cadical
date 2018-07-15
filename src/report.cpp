@@ -27,7 +27,7 @@ struct Report {
 
 void Report::print_header (char * line) {
   int len = strlen (header);
-  for (int i = -1, j = pos - (len + 1)/2 - 1; i < len; i++, j++)
+  for (int i = -1, j = pos - (len + 1)/2 - 3; i < len; i++, j++)
     line[j] = i < 0 ? ' ' : header[i];
 }
 
@@ -73,11 +73,10 @@ REPORT("remaining",   -1, 4, percent (active_variables (), external->max_var)) \
 
 // These are some more interesting statistics ...
 
-REPORT("bumplast",    -1, 4, percent (stats.bumplast, stats.bumped)) \
-REPORT("propdec",     0, 2, relative (stats.propagations, stats.decisions)) \
-REPORT("propconf",    0, 2, relative (stats.propagations, stats.conflicts)) \
+REPORT("propdec",      0, 2, relative (stats.propagations, stats.decisions)) \
+REPORT("propconf",     0, 2, relative (stats.propagations, stats.conflicts)) \
 REPORT("glue-fast",    1, 4, fast_glue_avg) \
-REPORT("propconf",    0, 2, relative (stats.propagations, stats.conflicts)) \
+REPORT("propconf",     0, 2, relative (stats.propagations, stats.conflicts)) \
 REPORT("blocked",      0, 2, stats.redblocked) \
 
 #endif
@@ -85,7 +84,6 @@ REPORT("blocked",      0, 2, stats.redblocked) \
 /*------------------------------------------------------------------------*/
 
 void Internal::report (char type, int verbose) {
-  assert (!verbose || !isalpha (type) || isupper (type));
 #ifdef LOGGING
   if (!opts.log)
 #endif
@@ -99,7 +97,8 @@ void Internal::report (char type, int verbose) {
   REPORTS
 #undef REPORT
   if (!(stats.reports++ % 20)) {
-    output->put ("c\n");
+    output->put (prefix.c_str ());
+    output->put ('\n');
     int pos = 4;
     for (int i = 0; i < n; i++) {
       int len = strlen (reports[i].buffer);
@@ -111,16 +110,18 @@ void Internal::report (char type, int verbose) {
     for (int start = 0; start < nrows; start++) {
       int i;
       for (i = 0; i < max_line; i++) line[i] = ' ';
-      line[0] = 'c';
       for (i = start; i < n; i += nrows) reports[i].print_header (line);
       for (i = max_line-1; line[i-1] == ' '; i--) ;
       line[i] = 0;
+      output->put (prefix.c_str ());
       output->put (line);
       output->put ('\n');
     }
-    output->put ("c\n");
+    output->put (prefix.c_str ());
+    output->put ('\n');
   }
-  output->put ("c "), output->put (type);
+  output->put (prefix.c_str ());
+  output->put (type);
   for (int i = 0; i < n; i++)
     output->put (' '), output->put (reports[i].buffer);
   output->put ('\n');
