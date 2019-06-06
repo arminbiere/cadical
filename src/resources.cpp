@@ -1,11 +1,9 @@
-#ifndef QUIET
-
 #include "internal.hpp"
 
-// This is pretty Linux specific code for reporting resource, that is
-// time and memory usage and if you can not compile it then just disable
-// it by specifying 'quiet', which disables all messages include resource
-// usage messages, e.g., with 'configure.sh -q'.
+/*------------------------------------------------------------------------*/
+
+// This is pretty Linux specific code for reporting resource usage.
+// TODO: port these functions to different OS.
 
 extern "C" {
 #include <sys/time.h>
@@ -13,17 +11,27 @@ extern "C" {
 #include <sys/types.h>
 #include <unistd.h>
 #include <string.h>
-};
+}
 
 namespace CaDiCaL {
 
-// TODO: port these functions to different OS.
+double absolute_real_time () {
+  struct timeval tv;
+  if (gettimeofday (&tv, 0)) return 0;
+  return 1e-6 * tv.tv_usec + tv.tv_sec;
+}
 
-// We use 'getrusage' for the next two functions, which is pretty standard
-// on Unix but probably not available on Windows etc. For different variants
-// of Unix not all fields are meaningful (or even existing).
+double Internal::real_time () {
+  return absolute_real_time () - stats.time.real;
+}
 
-double process_time () {
+/*------------------------------------------------------------------------*/
+
+// We use 'getrusage' for 'process_time' and 'maximum_resident_set_size'
+// which is pretty standard on Unix but probably not available on Windows
+// etc.  For different variants of Unix not all fields are meaningful.
+
+double absolute_process_time () {
   struct rusage u;
   double res;
   if (getrusage (RUSAGE_SELF, &u)) return 0;
@@ -31,6 +39,12 @@ double process_time () {
   res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec; // + system time
   return res;
 }
+
+double Internal::process_time () {
+  return absolute_process_time () - stats.time.process;
+}
+
+/*------------------------------------------------------------------------*/
 
 // This seems to work on Linux (man page says since Linux 2.6.32).
 
@@ -58,6 +72,4 @@ size_t current_resident_set_size () {
   return scanned == 2 ? rss * sysconf (_SC_PAGESIZE) : 0;
 }
 
-};
-
-#endif // ifndef QUIET
+}

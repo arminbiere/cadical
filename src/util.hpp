@@ -1,6 +1,8 @@
 #ifndef _util_hpp_INCLUDED
 #define _util_hpp_INCLUDED
 
+#include <vector>
+
 namespace CaDiCaL {
 
 using namespace std;
@@ -12,41 +14,31 @@ using namespace std;
 inline double relative (double a, double b) { return b ? a / b : 0; }
 inline double percent (double a, double b) { return relative (100 * a, b); }
 inline int sign (int lit) { return (lit > 0) - (lit < 0); }
+inline unsigned bign (int lit) { return 1 + (lit < 0); }
 
 /*------------------------------------------------------------------------*/
 
-bool is_int_str (const char * str);
-bool is_double_str (const char * str);
+bool parse_int_str (const char * str, int &);
 bool has_suffix (const char * str, const char * suffix);
 
 /*------------------------------------------------------------------------*/
 
-inline unsigned next_power_of_two (unsigned n) {
-  return 1u << (32 - __builtin_clz (n - 1));
-}
+inline bool is_power_of_two (unsigned n) { return n && !(n & (n-1)); }
 
-inline bool is_power_of_two (unsigned n) {
-  return n && !(n & (n-1));
-}
+inline bool contained (long c, long l, long u) { return l <= c && c <= u; }
 
 /*------------------------------------------------------------------------*/
 
-inline bool aligned (size_t bytes, size_t alignment) {
-  assert (is_power_of_two (alignment));
-  return !(bytes & (alignment - 1));
+inline bool parity (unsigned a) {
+  assert (sizeof a == 4);
+  unsigned tmp = a;
+  tmp ^= (tmp >> 16);
+  tmp ^= (tmp >> 8);
+  tmp ^= (tmp >> 4);
+  tmp ^= (tmp >> 2);
+  tmp ^= (tmp >> 1);
+  return tmp & 1;
 }
-
-inline bool aligned (void * ptr, size_t alignment) {
-  return aligned ((size_t) ptr, alignment);
-}
-
-inline size_t align (size_t bytes, size_t alignment) {
-  assert (is_power_of_two (alignment));
-  if (aligned (bytes, alignment)) return bytes;
-  else return (bytes | (alignment - 1)) + 1;
-}
-
-inline bool contained (long c, long l, long u) { return l <= c && c <= u; }
 
 /*------------------------------------------------------------------------*/
 
@@ -57,7 +49,7 @@ inline bool contained (long c, long l, long u) { return l <= c && c <= u; }
 // bounded variable elimination where many clauses are added and removed.
 
 template<class T> void erase_vector (vector<T> & v) {
-  if (v.capacity ()) { vector<T>().swap (v); }
+  if (v.capacity ()) { std::vector<T>().swap (v); }
   assert (!v.capacity ());                          // not guaranteed though
 }
 
@@ -72,6 +64,16 @@ template<class T> void shrink_vector (vector<T> & v) {
 
 /*------------------------------------------------------------------------*/
 
-};
+// These are options both to 'cadical' and 'mobical'.  After wasting some
+// on not remembering the spelling (British vs American), nor singular vs
+// plural and then wanted to use '--color=false', and '--colours=0' too, I
+// just factored this out into these two utility functions.
+
+bool is_color_option (const char * arg);    // --color, --colour, ...
+bool is_no_color_option (const char * arg); // --no-color, --no-colour, ...
+
+/*------------------------------------------------------------------------*/
+
+}
 
 #endif

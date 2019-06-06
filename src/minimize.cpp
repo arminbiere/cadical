@@ -20,12 +20,13 @@ bool Internal::minimize_literal (int lit, int depth) {
   if (!v.level || f.removable || f.keep) return true;
   if (!v.reason || f.poison || v.level == level) return false;
   const Level & l = control[v.level];
-  if (!depth && l.seen < 2) return false;         // Don Knuth's idea
-  if (v.trail <= l.trail) return false;           // new early abort
+  if (!depth && l.seen.count < 2) return false;   // Don Knuth's idea
+  if (v.trail <= l.seen.trail) return false;      // new early abort
   if (depth > opts.minimizedepth) return false;
   bool res = true;
   assert (v.reason);
-  const_literal_iterator end = v.reason->end (), i;
+  const const_literal_iterator end = v.reason->end ();
+  const_literal_iterator i;
   for (i = v.reason->begin (); res && i != end; i++) {
     const int other = *i;
     if (other == lit) continue;
@@ -39,15 +40,24 @@ bool Internal::minimize_literal (int lit, int depth) {
 
 // Sorting the clause before minimization with respect to the trail order
 // (literals with smaller trail height first) seems to be natural and could
-// help minimizing required recursion depth.   It might have potential to
-// simplify the algorithm too, but we still have to check that this has any
-// effect in practice (TODO).
+// help minimizing required recursion depth.  This might have the potential
+// to simplify the algorithm too, but we still have to check that this has
+// any effect in practice.  It clearly seems not harmful, and learned
+// clauses have to be sorted anyhow.
 
-struct trail_assigned_smaller {
+struct minimize_trail_positive_rank {
   Internal * internal;
-  trail_assigned_smaller (Internal * s) : internal (s) { }
-  bool operator () (int a, int b) {
-    assert (internal->val (a)), assert (internal->val (b));
+  minimize_trail_positive_rank (Internal * s) : internal (s) { }
+  size_t operator () (const int & a) const {
+    assert (internal->val (a));
+    return internal->var (a).trail;
+  }
+};
+
+struct minimize_trail_smaller {
+  Internal * internal;
+  minimize_trail_smaller (Internal * s) : internal (s) { }
+  bool operator () (const int & a, const int & b) const {
     return internal->var (a).trail < internal->var (b).trail;
   }
 };
@@ -55,29 +65,36 @@ struct trail_assigned_smaller {
 void Internal::minimize_clause () {
   START (minimize);
   LOG (clause, "minimizing first UIP clause");
-  sort (clause.begin (), clause.end (), trail_assigned_smaller (this));
+
+  external->check_learned_clause (); // check 1st UIP learned clause first
+
+  // Sort the literals heuristically along assignment order with the hope to
+  // hit the recursion limit 'opts.minimizedepth' less frequently.
+  //
+  MSORT (clause.begin (), clause.end (),
+    minimize_trail_positive_rank (this), minimize_trail_smaller (this));
+
   assert (minimized.empty ());
-  int_iterator j = clause.begin ();
-  for (const_int_iterator i = j; i != clause.end (); i++)
+  const auto end = clause.end ();
+  auto j = clause.begin (), i = j;
+  for (; i != end; i++)
     if (minimize_literal (-*i)) stats.minimized++;
     else flags (*j++ = *i).keep = true;
   LOG ("minimized %d literals", (long)(clause.end () - j));
-  clause.resize (j - clause.begin ());
-  clear_minimized ();
-  external->check_learned_clause ();
+  if (j != end) clause.resize (j - clause.begin ());
+  clear_minimized_literals ();
   STOP (minimize);
 }
 
-void Internal::clear_minimized () {
-  const_int_iterator i;
-  for (i = minimized.begin (); i != minimized.end (); i++) {
-    int lit = *i;
+void Internal::clear_minimized_literals () {
+  LOG ("clearing %zd minimized literals", minimized.size ());
+  for (const auto & lit : minimized) {
     Flags & f = flags (lit);
     f.poison = f.removable = false;
   }
-  for (i = clause.begin (); i != clause.end (); i++)
-    flags (*i).keep = false;
+  for (const auto & lit : clause)
+    flags (lit).keep = false;
   minimized.clear ();
 }
 
-};
+}

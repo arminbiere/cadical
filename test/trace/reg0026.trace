@@ -1,0 +1,23 @@
+0 init
+1 set restartmargin 0
+2 set rephaseint 0
+3 set restartint 1
+4 add 5
+5 add 6
+6 add 0
+7 add 3
+8 add 1
+9 add 0
+10 add -3
+11 add 1
+12 add 0
+13 add 8
+14 add -6
+15 add 0
+16 add -8
+17 add -6
+18 add 0
+19 assume 7
+20 assume -4
+21 assume -2
+22 solve 0

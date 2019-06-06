@@ -1,0 +1,11 @@
+0 init
+1 set check 1
+2 set probeint 0
+3 add -2
+4 add -1
+5 add 0
+6 add 1
+7 add 2
+8 add 0
+9 assume 2
+10 solve 0

@@ -8,28 +8,62 @@
 
 #--------------------------------------------------------------------------#
 
+rm -f configure.log
+
+#--------------------------------------------------------------------------#
+
 # Common default options.
 
+all=no
 debug=no
-stats=no
 logging=no
 check=no
 coverage=no
 profile=no
-realloc=yes
 unlocked=yes
+stdint=unknown
+pedantic=no
+foptions=none
 quiet=no
 
 #--------------------------------------------------------------------------#
 
+if [ -f ./scripts/colors.sh ]
+then
+  . ./scripts/colors.sh
+elif [ -f ../scripts/colors.sh ]
+then
+  . ../scripts/colors.sh
+else
+  BAD=""
+  HILITE=""
+  BOLD=""
+  NORMAL=""
+fi
+
 die () {
-  echo "*** cadical/configure: $*" 1>&2
+  if [ -f configure.log ]
+  then
+    checklog=" (check also 'configure.log')"
+  else
+    checklog=""
+  fi
+  echo "${BOLD}configure:${NORMAL} ${BAD}error:${NORMAL} $*${checklog}"
   exit 1
 }
 
 msg () {
-  echo "[cadical/configure] $*"
+  echo "${BOLD}configure:${NORMAL} $*"
 }
+
+# if we can find the 'color.sh' script source it and overwrite color codes
+
+for dir in . ..
+do
+  [ -f $dir/scripts/colors.sh ] || continue
+  . $dir/scripts/colors.sh || exit 1
+  break
+done
 
 #--------------------------------------------------------------------------#
 
@@ -41,54 +75,111 @@ usage: configure [ <option> ... ]
 
 where '<option>' is one of the following
 
--h|--help      print this command line summary
--g|--debug     compile with debugging information
--c|--check     compile with assertion checking (default for '-g')
--l|--log       include logging code (but disabled by default)
--s|--stats     include and enable expensive statistics code
--a|--all       short cut for all above, e.g., '-g -l -s' (thus also '-c')
--q|--quiet     exclude message and profiling code (logging and stats too)
+-h|--help          print this command line summary
+-g|--debug         compile with debugging information
+-c|--check         compile with assertion checking (default for '-g')
+-l|--log[ging]     include logging code (but disabled by default)
+-a|--all           short cut for all above, e.g., '-g -l -s' (thus also '-c')
+-q|--quiet         exclude message and profiling code (logging too)
+-p|--pedantic      add '--pedantic' and '-Werror' compilation flag
 
---coverage     compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
---profile      compile with '-pg' to profile with 'gprof'
---no-realloc   use C++ style allocators for all tables
---no-unlocked  force compilation without unlocked IO
+--coverage         compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
+--profile          compile with '-pg' to profile with 'gprof'
+
+-f...              pass '-f<option>[=<val>]' options to the makefile
 
 The environment variable CXX can be used to set a different C++
 compiler than the default 'g++'.  Similarly you can add additional
-compilation options by setting CXXFLAGS.  For instance
+compilation options by setting CXXFLAGS.  For example
 
-   CXX=clang++ CXXFLAGS="-fPIC" ./configure
+  CXX=clang++ CXXFLAGS=-fPIC ./configure
 
 will enforce to use 'clang++' as C++ compiler and also produce
-position independent code.
+position independent code.  In order to be shell independent we also
+allow have the following form.  Thus for instance
+
+  ./configure CXX="g++-8" CXXFLAGS="-fPIC -fsanitize=address"
+
+will have the same effect as
+
+  CXX="g++-8" ./configure -fPIC -fsanitize=address
+
+The following configuration options might be usefull during porting the
+code to a new platform and are usually not necessary to change.
+
+--no-unlocked      force compilation without unlocked IO
+--no-[c]stdint     avoid trying to '#include <cstdint>'
+--[c]stdint        force '#include <cstdint>'
 EOF
 exit 0
 }
 
+#--------------------------------------------------------------------------#
+
 while [ $# -gt 0 ]
 do
   case $1 in
+
     -h|--help) usage;;
-    -g|--debug) debug=yes; check=yes;;
+
+    -a|--all) all=yes;;
+
+    -g|--debug) debug=yes;;
     -c|--check) check=yes;;
-    -l|--logging) logging=yes;;
-    -s|--stats) stats=yes;;
-    -a|--all) debug=yes;check=yes;logging=yes;stats=yes;;
+    -l|--log|--logging) logging=yes;;
+
+    -p|--pedantic) pedantic=yes;;
     -q|--quiet) quiet=yes;;
+
     --coverage) coverage=yes;;
     --profile) profile=yes;;
-    --no-realloc) realloc=no;;
+
     --no-unlocked) unlocked=no;;
+    --no-stdint) stdint=no;;
+    --stdint) stdint=yes;;
+
+    -f*)
+      if [ "$foptions" = none ]
+      then
+        foptions="$1"
+      else
+	foptions="$foptions $1"
+      fi
+      ;;
+
+    CXX=*)
+      CXX="`expr \"$1\" : 'CXX=\(.*\)'`"
+      ;;
+
+    CXXFLAGS=*)
+      CXXFLAGS="`expr \"$1\" : 'CXXFLAGS=\(.*\)'`"
+      ;;
+
     *) die "invalid option '$1' (try '-h')";;
+
   esac
   shift
 done
 
+#--------------------------------------------------------------------------#
+
 if [ $quiet = yes ]
 then
-  logging=no
-  stats=no
+  [ $logging = yes ] && die "can not combine '-q' with '-l'"
+fi
+
+if [ $all = yes ]
+then
+  [ $check = yes ] && die "'-a' subsumes '-c'"
+  [ $debug = yes ] && die "'-a' subsumes '-g'"
+  [ $logging = yes ] && die "'-a' subsumes '-l'"
+  check=yes
+  debug=yes
+  logging=yes
+elif [ $debug = yes ]
+then
+  [ $check = yes ] && die "'-g' subsumes '-c'"
+  check=yes
 fi
 
 #--------------------------------------------------------------------------#
@@ -100,19 +191,20 @@ build_in_default_build_sub_directory () {
   then
     msg "reusing default 'build' directory"
   else
-    mkdir build 2>/dev/null || die "failed to generate 'build' directory"
+    mkdir build 2>/dev/null || \
+    die "failed to generate 'build' directory"
     msg "making default 'build' directory"
   fi
   cd build
-  msg "building in default '`pwd`'"
+  msg "building in default ${HILITE}'`pwd`'${NORMAL}"
   build=build
 }
 
-if [ -f configure -a -f makefile.in -a -f VERSION -a -d src ]
+if [ -f configure -a -f makefile.in -a -d src ]
 then
   root="`pwd`"
   build_in_default_build_sub_directory
-elif [ -f ../configure -a -f ../makefile.in -a -f ../VERSION -a -d ../src ]
+elif [ -f ../configure -a -f ../makefile.in -a -d ../src ]
 then
   cwd="`pwd`"
   build=`basename "$cwd"`
@@ -123,7 +215,7 @@ then
       build_in_default_build_sub_directory
       ;;
     *)
-      msg "building in '$build' sub-directory"
+      msg "building in ${HILITE}'$build'${NORMAL} sub-directory"
       ;;
   esac
 else
@@ -139,7 +231,7 @@ msg "root directory '$root'"
 [ x"$CXX" = x ] && CXX=g++
 [ x"$CXXFLAGS" = x ] || CXXFLAGS="$CXXFLAGS "
 case x"$CXX" in
-  xg++*|xclang++*) CXXFLAGS="${CXXFLAGS}-Wall";;
+  xg++*|xclang++*) CXXFLAGS="${CXXFLAGS}-Wall -Wextra";;
   *) CXXFLAGS="${CXXFLAGS}-W";;
 esac
 if [ $debug = yes ]
@@ -154,22 +246,79 @@ fi
 
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
-[ $stats = yes ] && CXXFLAGS="$CXXFLAGS -DSTATS"
 [ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
-[ $realloc = no ] && CXXFLAGS="$CXXFLAGS -DNREALLOC"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
+[ $pedantic = yes ] && CXXFLAGS="$CXXFLAGS --pedantic -Werror"
+[ "$foptions" = none ] || CXXFLAGS="$CXXFLAGS $foptions"
 
 #--------------------------------------------------------------------------#
 
+# Since C99/C++0x is becoming the standard newer versions of 'g++' (7.3 for
+# instance) discourage certain GCC extensions, particularly the GCC version
+# of variadic macros, if the same concept exists in the standard.  This
+# forced us to replace all GCC style 'ARGS...' macros with '...' and
+# '__VA_ARGS__'.  Otherwise compiling the library with '--pedantic -Werror'
+# would fail (configuration flag '-p').  However, older versions of 'gcc'
+# (such as 4.8) would disallow these new forms of macros unless we
+# explicitly enforce the new standard with '-std=c++0x'.  Here we try to
+# figure out whether we need that flag.
+
+feature=./configure-requires-c++0x
+cat <<EOF > $feature.cpp
+#include <cstdio>
+#include <vector>
+
+// old variadic macro usage 'ARGS...' / '#ARGS' discouraged in g++-7...
+// new variadic macro usage '...' / '__VA_ARGS__' available in C99/C++0x
+//
+#define MACRO(FMT, ...) printf (FMT "\n", __VA_ARGS__)
+
+// we use ranged for loops which became available in gcc 4.6 and for
+// the gcc 4.6 as well as 4.8 requires '-std=c++0x' too.
+//
+unsigned f (const std::vector<unsigned> & a) {
+  unsigned res = 0;
+  for (auto i : a) res += i;
+  return res;
+}
+
+int main () { MACRO ("%d", 42); return 0; }
+EOF
+if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
+then
+  if [ "`$feature.exe 2>>configure.log`" = 42 ]
+  then
+    msg "compiler supports all required C99/C++0x extensions"
+  else
+    die "checking compilation without '-std=c++0x' failed"
+  fi
+else
+  CXXFLAGS="$CXXFLAGS -std=c++0x"
+  if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
+  then
+    if [ "`$feature.exe 2>>configure.log`" = 42 ]
+    then
+      msg "using '-std=c++0x' for all required C99/C++0x extensions"
+    else
+      die "checking compilation with '-std=c++0x' failed"
+    fi
+  else
+    die "compiler does not support C99/C++0x (even with '-std=c++0x')"
+  fi
+fi
+
+#--------------------------------------------------------------------------#
+
+# Unlocked IO is much faster but not necessarily supported.
+
 if [ $unlocked = yes ]
 then
-  check=/tmp/cadical-have-unlocked-io-$$
-  trap "rm -f $check*" 2
-  cat <<EOF > $check.cpp
+  feature=./configure-have-unlocked-io
+cat <<EOF > $feature.cpp
 #include <cstdio>
 int main () {
-  const char * path = "$check.log";
+  const char * path = "$feature.log";
   FILE * file = fopen (path, "w");
   if (!file) return 1;
   if (putc_unlocked (42, file) != 42) return 1;
@@ -181,22 +330,19 @@ int main () {
   return 0;
 }
 EOF
-  if $CXX $CXXFLAGS -o $check.exe $check.cpp
+  if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
   then
-    $check.exe
-    res=$?
-    if [ $res ]
+    if $feature.exe
     then
       msg "unlocked IO with '{putc,getc}_unlocked' seems to work"
     else
-      msg "not using unlocked IO (running '$check.exe' failed)"
+      msg "not using unlocked IO (running '$feature.exe' failed)"
       unlocked=no
     fi
   else
-    msg "not using unlocked IO (failed to compile '$check.cpp')"
+    msg "not using unlocked IO (failed to compile '$feature.cpp')"
     unlocked=no
   fi
-  rm -f $check*
 else
   msg "not using unlocked IO (since '--no-unlocked' specified)"
 fi
@@ -205,13 +351,85 @@ fi
 
 #--------------------------------------------------------------------------#
 
+# For 'Random.hpp' we really needed a clean unsigned 64 bit word type such
+# as 'uint64_t'. Since this requires 'cstdint' to be included, we feature
+# whether we can do that or otherwise try to find alternatives.
+
+if [ $stdint = unknown ]
+then
+  feature=./configure-have-stdint
+cat <<EOF > $feature.cpp
+#include <cstdint>
+EOF
+  if $CXX $CXXFLAGS -c $feature.cpp 2>>configure.log
+  then
+    msg "using '#include <cstdint>' for 'uint32_t' and 'uint64_t'"
+    stdint=yes
+  else
+    msg "can not use '#include <cstdint>'"
+    stdint=no
+    uint64_t=""
+    uint32_t=""
+    for type in "unsigned" "size_t" "unsigned long" "unsigned long long"
+    do
+      feature=./"configure-`echo $type|sed -e 's, ,-,g'`"
+cat <<EOF > $feature.cpp
+#include <cstdlib>
+#include <cstdio>
+int main () {
+  $type x = 0, y = x >> 1;
+  size_t bytes = sizeof x;
+  if (y & (1 << (bytes*8 - 1))) abort (); // signed type!
+  printf ("%ld\n", (long) bytes);
+  return 0;
+}
+EOF
+      if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>&1 2>>configure.log
+      then
+        bytes="`$feature.exe 2>>configure.log`"
+	msg "sizeof ($type) = $bytes"
+	case x"$bytes" in
+	  x4) [ "$uint32_t" ] || uint32_t="$type";;
+	  x8) [ "$uint64_t" ] || uint64_t="$type";;
+	esac
+      fi
+      [ "$uint32_t" -a "$uint64_t" ] && break
+    done
+    if [ "$uint32_t" ]
+    then
+      msg "using '$uint32_t' for 'uint32_t'"
+      [ "$uint32_t" = "unsigned" ] || \
+      CXXFLAGS="$CXXFLAGS -Duint32_t=\"$type\""
+    else
+      die "no 4 bytes unsigned type found for 'uint32_t'"
+    fi
+    if [ "$uint64_t" ]
+    then
+      msg "using '$uint64_t' for 'uint64_t'"
+      [ "$uint64_t" = "size_t" ] || \
+      CXXFLAGS="$CXXFLAGS -Duint64_t=\"$type\""
+    else
+      die "no 8 bytes unsigned type found for 'uint64_t'"
+    fi
+  fi
+elif [ $stdint = yes ]
+then
+  msg "forced to use '#include <cstdint>' for 'uint32_t' and 'uint64_t'"
+else
+  msg "will not use '#include <cstdint>' for 'uint32_t' and 'uint64_t'"
+fi
+
+[ $stdint = no ] && CXXFLAGS="$CXXFLAGS -DNSTDINT"
+
+#--------------------------------------------------------------------------#
+
 # Instantiate '../makefile.in' template to produce 'makefile' in 'build'.
 
-msg "compiling with '$CXX $CXXFLAGS'"
+msg "compiling with ${HILITE}'$CXX $CXXFLAGS'${NORMAL}"
 
 rm -f makefile
 sed \
--e "1c\\
+-e "2c\\
 # This 'makefile' is generated from '../makefile.in'." \
 -e "s,@CXX@,$CXX," \
 -e "s,@CXXFLAGS@,$CXXFLAGS," \
@@ -221,9 +439,9 @@ msg "generated '$build/makefile' from '../makefile.in'"
 
 #--------------------------------------------------------------------------#
 
-build=`pwd`
-cat <<EOF > ../makefile
-CADICALROOT=$root
+build="`pwd`"
+makefile="`dirname "$build"`/makefile"
+cat <<EOF > "$makefile"
 CADICALBUILD=$build
 all:
 	make -C "\$(CADICALBUILD)"
@@ -232,19 +450,25 @@ clean:
 	then \\
 	  if [ -f "\$(CADICALBUILD)"/makefile ]; \\
 	  then \\
-	     touch "\$(CADICALBUILD)"/config.hpp; \\
+	     touch "\$(CADICALBUILD)"/build.hpp; \\
 	     touch "\$(CADICALBUILD)"/dependencies; \\
 	     make -C "\$(CADICALBUILD)" clean; \\
 	  fi; \\
 	  rm -rf "\$(CADICALBUILD)"; \\
 	fi
-	rm -f "\$(CADICALROOT)/makefile"
+	rm -f "$makefile"
 test:
-	make -C "\$(CADICALBUILD)" test
-.PHONY: all clean test
+	make -j1 -C "\$(CADICALBUILD)" test
+cadical:
+	make -j1 -C "\$(CADICALBUILD)" cadical
+mobical:
+	make -j1 -C "\$(CADICALBUILD)" mobical
+update:
+	make -j1 -C "\$(CADICALBUILD)" update
+.PHONY: all cadical clean mobical test update
 EOF
 
 msg "generated '../makefile' as proxy to ..."
 msg "... '$build/makefile'"
-msg "now run 'make' to compile CaDiCaL"
-msg "optionally test it with 'make test'"
+msg "now run ${HILITE}'make'${NORMAL} to compile CaDiCaL"
+msg "optionally run 'make test'"

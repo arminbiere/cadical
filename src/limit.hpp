@@ -5,60 +5,58 @@ namespace CaDiCaL {
 
 struct Limit {
 
-  long conflict;  // conflict limit if non-negative
-  long decision;  // decision limit if non-negative
+  bool initialized;
 
-  long elim;      // conflict limit for next 'elim'
-  long probe;     // conflict limit for next 'probe'
-  long reduce;    // conflict limit for next 'reduce'
-  long rephase;   // conflict limit for next 'rephase'
-  long restart;   // conflict limit for next 'restart'
-  long subsume;   // conflict limit for next 'subsume'
-  long compact;   // conflict limit for next 'compact'
-  long stabilize; // conflict limit for next 'stabilize'
-  long flush;     // conflict limit for next 'flush'
+  long conflicts;       // conflict limit if non-negative
+  long decisions;       // decision limit if non-negative
+  long preprocessing;   // limit on preprocessing rounds
+  long localsearch;     // limit on local search rounds
 
-  int keptsize;   // maximum kept size in 'reduce'
-  int keptglue;   // maximum kept glue in 'reduce'
+  long compact;         // conflict limit for next 'compact'
+  long elim;            // conflict limit for next 'elim'
+  long flush;           // conflict limit for next 'flush'
+  long probe;           // conflict limit for next 'probe'
+  long reduce;          // conflict limit for next 'reduce'
+  long rephase;         // conflict limit for next 'rephase'
+  long report;          // report limit for header
+  long restart;         // conflict limit for next 'restart'
+  long stabilize;       // conflict limit for next 'stabilize'
+  long subsume;         // conflict limit for next 'subsume'
 
-  // Used to schedule elimination and subsumption rounds.
+  int keptsize;         // maximum kept size in 'reduce'
+  int keptglue;         // maximum kept glue in 'reduce'
+
+  // How often rephased during (1) or out (0) of stabilization.
   //
-  int         fixed_at_last_elim;
-  long subsumptions_at_last_elim;
-  long      removed_at_last_elim;
+  long rephased[2];
 
-  // Used to wait until and right after next 'reduce'.
+  // Current elimination bound per eliminated variable.
   //
-  long conflicts_at_last_reduce;
-
-  // Wait for 'opts.reducewait' conflicts after 'restart'.
-  //
-  long conflicts_at_last_restart;
-
-  // Determines whether marking satisfied clauses and removing falsified
-  // literals during garbage collection would make sense or is required.
-  //
-  int fixed_at_last_collect;
-
-  // Search propagation last time the inprocessor was called.
-  //
-  struct { long transred, probe, vivify; } search_propagations;
+  long elimbound;
 
   Limit ();
 };
 
+struct Last {
+  struct { long propagations; } transred, vivify;
+  struct { long fixed, subsumephases, marked; } elim;
+  struct { long propagations, reductions; } probe;
+  struct { long conflicts; } reduce, rephase;
+  struct { long marked; } ternary;
+  struct { long fixed; } collect;
+  Last ();
+};
+
 struct Inc {
-  long reduce;    // reduce interval increment
-  long redinc;    // reduce increment increment
-  long subsume;   // subsumption interval increment
-  long compact;   // compact interval increment
-  long elim;      // elimination interval increment
-  long probe;     // failed literal probing interval increment
-  long rephase;   // rephasing interval increment (rephase=2)
-  long flush;     // flushing learned clauses interval
+  long flush;           // flushing interval in terms of conflicts
+  long stabilize;       // stabilization interval increment
+  long conflicts;       // next conflict limit if non-negative
+  long decisions;       // next decision limit if non-negative
+  long preprocessing;   // next preprocessing limit if non-negative
+  long localsearch;     // next local search limit if non-negative
   Inc ();
 };
 
-};
+}
 
 #endif

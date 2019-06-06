@@ -5,9 +5,9 @@
 
 namespace CaDiCaL {
 
-// This class provides a 'printf' string formatting utility.
-// Only '%c', '%d', '%s' are supported at this time.
-// It is used to capture and save error message.
+// This class provides a 'printf' style formatting utility.
+// Only '%c', '%d', '%s' are supported at this point.
+// It is used to capture and save an error message.
 
 class Format {
   char * buffer;
@@ -25,6 +25,6 @@ public:
   operator const char * () const { return count ? buffer : 0; }
 };
 
-};
+}
 
 #endif

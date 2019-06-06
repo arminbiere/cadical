@@ -1,0 +1,28 @@
+0 init
+set restoreflush 1
+set cover 1
+1 set deduplicate 0
+2 set elimocclim 0
+3 set covermineff 0
+4 set decompose 0
+5 set lucky 0
+6 add 1
+7 add -2
+8 add -3
+9 add 0
+10 add -1
+11 add 2
+12 add 0
+13 add -2
+14 add -1
+15 add 0
+16 solve 0
+17 add 2
+18 add -3
+19 add 0
+20 add 3
+21 add 2
+22 add 0
+23 limit preprocessing 1
+24 limit localsearch 1
+25 solve 0

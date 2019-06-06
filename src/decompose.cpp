@@ -3,9 +3,9 @@
 namespace CaDiCaL {
 
 // This implements Tarjan's algorithm for decomposing the binary implication
-// graph intro strongly connected components (sccs).  Literals in one scc
+// graph intro strongly connected components (SCCs).  Literals in one SCC
 // are equivalent and we replace them all by the literal with the smallest
-// index in an scc.  This variables are marked 'substituted' and will be
+// index in the SCC.  These variables are marked 'substituted' and will be
 // removed from all clauses.  Their value will be fixed during 'extend'.
 
 #define TRAVERSED UINT_MAX              // mark completely traversed
@@ -23,7 +23,14 @@ struct DFS {
 
 bool Internal::decompose_round () {
 
+  if (!opts.decompose) return false;
+  if (unsat || terminating ()) return false;
+
+  assert (opts.simplify);
   assert (!level);
+
+  START_SIMPLIFIER (decompose, DECOMP);
+
   stats.decompositions++;
 
   DFS * dfs = new DFS[2*(max_var + 1)];
@@ -32,12 +39,12 @@ bool Internal::decompose_round () {
 
   int non_trivial_sccs = 0, substituted = 0;
 #ifndef QUIET
-  int original = active_variables ();
+  int before = active ();
 #endif
   unsigned dfs_idx = 0;
 
   vector<int> work;                     // depth first search working stack
-  vector<int> scc;                      // collects members of one scc
+  vector<int> scc;                      // collects members of one SCC
 
   // The binary implication graph might have disconnected components and
   // thus we have in general to start several depth first searches.
@@ -61,17 +68,14 @@ bool Internal::decompose_round () {
           assert (!reprs [vlit (parent)]);
 
           // Go over all implied literals, thus need to iterate over all
-          // binary watched clauses with the negation of the current node
-          // 'parent'.
+          // binary watched clauses with the negation of 'parent'.
 
           Watches & ws = watches (-parent);
-          const const_watch_iterator end = ws.end ();
-          const_watch_iterator i;
 
-          // Two cases: Either the node has never been visited before, e.g.,
+          // Two cases: Either the node has never been visited before, i.e.,
           // it's depth first search index is zero, then perform the
           // 'pre-fix' work before visiting it's children.  Otherwise all
-          // the children and nodes reachable from those children have been
+          // it's children and nodes reachable from those children have been
           // visited and their minimum reachable depth first search index
           // has been computed.  This second case is the 'post-fix' work.
 
@@ -83,21 +87,22 @@ bool Internal::decompose_round () {
             // from the children of 'parent'.
 
             unsigned new_min = parent_dfs.min;
-            for (i = ws.begin (); i != end; i++) {
-              const Watch & w = *i;
-              if (!w.binary) continue;
+
+            for (const auto & w : ws) {
+              if (!w.binary ()) continue;
               const int child = w.blit;
               if (!active (child)) continue;
               const DFS & child_dfs = dfs[vlit (child)];
               if (new_min > child_dfs.min) new_min = child_dfs.min;
             }
+
             LOG ("post-fix work dfs search %d index %u reaches minimum %u",
               parent, parent_dfs.idx, new_min);
 
-            if (parent_dfs.idx == new_min) {            // entry to scc
+            if (parent_dfs.idx == new_min) {            // entry to SCC
 
               // All nodes on the 'scc' stack after and including 'parent'
-              // are in the same scc.  Their representative is computed as
+              // are in the same SCC.  Their representative is computed as
               // the smallest literal (index-wise) in the SCC.  If the SCC
               // contains both a literal and its negation, then the formula
               // becomes unsatisfiable.
@@ -109,7 +114,7 @@ bool Internal::decompose_round () {
                 assert (j > 0);
                 other = scc[--j];
                 if (other == -parent) {
-                  LOG ("both %d and %d in one scc", parent, -parent);
+                  LOG ("both %d and %d in one SCC", parent, -parent);
                   assign_unit (parent);
                   learn_empty_clause ();
                 } else {
@@ -120,17 +125,21 @@ bool Internal::decompose_round () {
 
               if (!unsat) {
 
-                LOG ("scc of representative %d of size %d", repr, size);
+                LOG ("SCC of representative %d of size %d", repr, size);
 
                 do {
                   assert (!scc.empty ());
                   other = scc.back ();
                   scc.pop_back ();
                   dfs[vlit (other)].min = TRAVERSED;
-                  reprs[vlit (other)] = repr;
-                  if (other != repr) {
-                    substituted++;
-                    LOG ("literal %d in scc of %d", other, repr);
+                  if (frozen (other)) {
+                    reprs[vlit (other) ] = other;
+                  } else {
+                    reprs[vlit (other)] = repr;
+                    if (other != repr) {
+                      substituted++;
+                      LOG ("literal %d in SCC of %d", other, repr);
+                    }
                   }
                 } while (other != parent);
 
@@ -139,9 +148,9 @@ bool Internal::decompose_round () {
 
             } else {
 
-              // Current node 'parent' is in a non-trivial scc but is not
-              // the entry point of the scc in this depth first search, so
-              // keep it on the scc stack until the entry point is reached.
+              // Current node 'parent' is in a non-trivial SCC but is not
+              // the entry point of the SCC in this depth first search, so
+              // keep it on the SCC stack until the entry point is reached.
 
               parent_dfs.min = new_min;
             }
@@ -158,9 +167,8 @@ bool Internal::decompose_round () {
             // Now traverse all the children in the binary implication
             // graph but keep 'parent' on the stack for 'post-fix' work.
 
-            for (i = ws.begin (); i != end; i++) {
-              const Watch & w = *i;
-              if (!w.binary) continue;
+            for (const auto & w : ws) {
+              if (!w.binary ()) continue;
               const int child = w.blit;
               if (!active (child)) continue;
               const DFS & child_dfs = dfs[vlit (child)];
@@ -179,10 +187,10 @@ bool Internal::decompose_round () {
 
   // Only keep the representatives 'repr' mapping.
 
-  VRB ("decompose",
+  PHASE ("decompose",
     stats.decompositions,
     "%d non-trivial sccs, %d substituted %.2f%%",
-    non_trivial_sccs, substituted, percent (substituted, original));
+    non_trivial_sccs, substituted, percent (substituted, before));
 
   bool new_unit = false, new_binary_clause = false;
 
@@ -195,13 +203,13 @@ bool Internal::decompose_round () {
   for (size_t i = 0; substituted && !unsat && i < clauses_size; i++) {
     Clause * c = clauses[i];
     if (c->garbage) continue;
-    int substituted, size = c->size;
-    for (substituted = 0; substituted < size; substituted++) {
-      const int lit = c->literals[substituted];
+    int j, size = c->size;
+    for (j = 0; j < size; j++) {
+      const int lit = c->literals[j];
       if (reprs [ vlit (lit) ] != lit) break;
     }
 
-    if (substituted == size) continue;
+    if (j == size) continue;
 
     replaced++;
     LOG (c, "first substituted literal %d in", substituted);
@@ -251,10 +259,10 @@ bool Internal::decompose_round () {
     } else if (c->literals[0] != clause[0] ||
                c->literals[1] != clause[1]) {
       LOG ("need new clause since at least one watched literal changed");
-      if (clauses.size () == 2) new_binary_clause = true;
+      if (clause.size () == 2) new_binary_clause = true;
       size_t d_clause_idx = clauses.size ();
       Clause * d = new_clause_as (c);
-      assert (clauses[d_clause_idx] = d);
+      assert (clauses[d_clause_idx] == d);
       clauses[d_clause_idx] = c;
       clauses[i] = d;
       mark_garbage (c);
@@ -262,9 +270,11 @@ bool Internal::decompose_round () {
     } else {
       LOG ("simply shrinking clause since watches did not change");
       assert (c->size > 2);
-      if (proof)
-        proof->trace_add_clause (),
-        proof->trace_delete_clause (c);
+      if (!c->redundant) mark_removed (c);
+      if (proof) {
+        proof->add_derived_clause (clause);
+        proof->delete_clause (c);
+      }
       size_t l;
       for (l = 2; l < clause.size (); l++)
         c->literals[l] = clause[l];
@@ -287,16 +297,14 @@ bool Internal::decompose_round () {
   if (!unsat && !postponed_garbage.empty ()) {
     LOG ("now marking %ld postponed garbage clauses",
       (long) postponed_garbage.size ());
-    const const_clause_iterator end = postponed_garbage.end ();
-    const_clause_iterator i;
-    for (i = postponed_garbage.begin (); i != end; i++)
-      mark_garbage (*i);
+    for (const auto & c : postponed_garbage)
+      mark_garbage (c);
   }
   erase_vector (postponed_garbage);
 
-  VRB ("decompose",
+  PHASE ("decompose",
     stats.decompositions,
-    "%ld clauses replaced %.2f%% producing %ld garbage %.2f%% clauses",
+    "%ld clauses replaced %.2f%% producing %ld garbage clauses %.2f%%",
     replaced, percent (replaced, clauses_size),
     garbage, percent (garbage, replaced));
 
@@ -312,6 +320,10 @@ bool Internal::decompose_round () {
   // Finally, mark substituted literals as such and push the equivalences of
   // the substituted literals to their representative on the extension
   // stack to fix an assignment during 'extend'.
+  //
+  // TODO instead of adding the clauses to the extension stack one could
+  // also just simply use the 'e2i' map as a union find data structure.
+  // This would avoid the need to restore these clauses.
 
   for (int idx = 1; !unsat && idx <= max_var; idx++) {
     if (!active (idx)) continue;
@@ -319,30 +331,28 @@ bool Internal::decompose_round () {
     if (other == idx) continue;
     assert (!flags (other).eliminated ());
     assert (!flags (other).substituted ());
-    if (!flags (other).fixed ()) {
-      assert (active (other));
-      flags (idx).status = Flags::SUBSTITUTED;
-      stats.all.substituted++;
-      stats.now.substituted++;
-    }
-    external->push_binary_on_extension_stack (-idx, other);
-    external->push_binary_on_extension_stack (idx, -other);
+    if (!flags (other).fixed ()) mark_substituted (idx);
+    external->push_binary_clause_on_extension_stack (-idx, other);
+    external->push_binary_clause_on_extension_stack (idx, -other);
   }
 
   delete [] reprs;
 
   flush_all_occs_and_watches ();  // particularly the 'blit's
-  report ('d');
 
-  return substituted > 0 && (new_unit || new_binary_clause);
+  bool success = unsat ||
+    (substituted > 0 && (new_unit || new_binary_clause));
+  report ('d', !opts.reportall && !success);
+
+  STOP_SIMPLIFIER (decompose, DECOMP);
+
+  return success;
 }
 
 void Internal::decompose () {
-  if (!opts.decompose) return;
-  START (decompose);
   for (int round = 1; round <= opts.decomposerounds; round++)
-    if (!decompose_round ()) break;
-  STOP (decompose);
+    if (!decompose_round ())
+      break;
 }
 
 }

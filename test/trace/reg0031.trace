@@ -1,0 +1,44 @@
+init
+set block 1
+set check 1
+set compactint 1
+set compactlim 0
+set compactmin 1
+set elimint 0
+set elimint 1
+set reduceint 0
+set elimclslim 3
+add -4
+add -2
+add 0
+add -1
+add -16
+add 0
+add 6
+add 4
+add 0
+add 2
+add 16
+add 0
+add 8
+add -11
+add 1
+add 0
+add -8
+add 5
+add 0
+add 3
+add -6
+add 0
+assume -3
+add -5
+add -11
+add -10
+add 0
+add 11
+add 7
+add 0
+assume 10
+assume -94
+assume -7
+solve 0

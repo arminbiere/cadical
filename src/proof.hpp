@@ -3,41 +3,60 @@
 
 namespace CaDiCaL {
 
-// Provides proof tracing in the DRAT format.
+/*------------------------------------------------------------------------*/
 
 class File;
-class Clause;
-class Internal;
+struct Clause;
+struct Internal;
+class Observer;
+
+/*------------------------------------------------------------------------*/
+
+// Provides proof checking and writing through observers.
 
 class Proof {
 
   Internal * internal;
 
-  File * file;
-  bool binary;
-  bool owned;
+  vector<int> clause;           // of external literals
+  vector<Observer *> observers; // owned, so deleted in destructor
 
-  void put_binary_zero ();
-  void put_binary_lit (int lit);
+  void add_literal (int internal_lit);  // add to 'clause'
+  void add_literals (Clause *);         // add to 'clause'
 
-  void trace_clause (Clause *, bool add);
+  void add_literals (const vector<int> &);      // ditto
 
-  int externalize (int lit);
+  void add_original_clause ();  // notify observers of original clauses
+  void add_derived_clause ();   // notify observers of derived clauses
+  void delete_clause ();        // notify observers of deleted clauses
 
 public:
 
-  Proof (Internal *, File *, bool b, bool o);
+  Proof (Internal *);
   ~Proof ();
 
-  void trace_empty_clause ();
-  void trace_unit_clause (int unit);
-  void trace_add_clause ();
-  void trace_add_clause (Clause *);
-  void trace_delete_clause (Clause *);
-  void trace_flushing_clause (Clause *);
-  void trace_strengthen_clause (Clause *, int);
+  void connect (Observer * v) { observers.push_back (v); }
+
+  // Add original clauses to the proof (for online proof checking).
+  //
+  void add_original_clause (const vector<int> &);
+
+  // Add derived (such as learned) clauses to the proof.
+  //
+  void add_derived_empty_clause ();
+  void add_derived_unit_clause (int unit);
+  void add_derived_clause (Clause *);
+  void add_derived_clause (const vector<int> &);
+
+  void delete_clause (const vector<int> &);
+  void delete_clause (Clause *);
+
+  // These two actually pretend to add and remove a clause.
+  //
+  void flush_clause (Clause *);           // remove falsified literals
+  void strengthen_clause (Clause *, int); // remove second argument
 };
 
-};
+}
 
 #endif

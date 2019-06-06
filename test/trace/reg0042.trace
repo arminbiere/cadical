@@ -1,0 +1,35 @@
+init
+limit preprocessing 1
+set probe 0
+set vivify 0
+set subsume 0
+set transred 0
+freeze 1
+freeze 2
+freeze 4
+freeze 5
+add -3
+add 1
+add 0
+add -3
+add 2
+add 0
+add 3
+add -1
+add -2
+add 0
+add -3
+add 4
+add 0
+add 3
+add 5
+add 0
+add -4
+add -5
+add 0
+dump
+limit conflicts 0
+solve
+dump
+stats
+reset

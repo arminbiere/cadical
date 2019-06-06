@@ -26,13 +26,18 @@ namespace CaDiCaL {
 // Compression and decompression relies on external utilities, e.g., 'gzip',
 // 'bzip2', 'xz', and '7z', which should be in the 'PATH'.
 
-class Internal;
+struct Internal;
 
 class File {
 
+#ifndef QUIET
   Internal * internal;
+#endif
+#if !defined(QUIET) || !defined(NDEBUG)
   bool writing;
-  int close_file;
+#endif
+
+  int close_file;       // need to close file (1=fclose, 2=pclose)
   FILE * file;
   const char * _name;
   long _lineno;
@@ -46,17 +51,25 @@ class File {
   static FILE * write_file (Internal *, const char * path);
 
   static FILE * open_pipe (Internal *,
-                           const char * fmt, const char * path,
+                           const char * fmt,
+                           const char * path,
                            const char * mode);
   static FILE * read_pipe (Internal *,
-                           const char * fmt, const char * path);
+                           const char * fmt,
+                           const int * sig,
+                           const char * path);
   static FILE * write_pipe (Internal *,
                             const char * fmt, const char * path);
 public:
 
   static char* find (const char * prg);    // search in 'PATH'
   static bool exists (const char * path);  // file exists?
+  static bool writable (const char * path);// can write to that file?
   static size_t size (const char * path);  // file size in bytes
+
+  // Does the file match the file type signature.
+  //
+  static bool match (Internal *, const char * path, const int * sig);
 
   // Read from existing file. Assume given name.
   //
@@ -86,29 +99,32 @@ public:
     return res;
   }
 
-  void put (char ch) {
+  bool put (char ch) {
     assert (writing);
-    cadical_putc_unlocked (ch, file);
+    if (cadical_putc_unlocked (ch, file) == EOF) return false;
     _bytes++;
+    return true;
   }
 
-  void put (unsigned char ch) {
+  bool put (unsigned char ch) {
     assert (writing);
-    cadical_putc_unlocked (ch, file);
+    if (cadical_putc_unlocked (ch, file) == EOF) return false;
     _bytes++;
+    return true;
   }
 
-  void put (const char * s) {
+  bool put (const char * s) {
     for (const char * p = s; *p; p++)
-      put (*p);
+      if (!put (*p)) return false;
+    return true;
   }
 
-  void put (int lit) {
+  bool put (int lit) {
     assert (writing);
-    if (!lit) put ('0');
+    if (!lit) return put ('0');
     else if (lit == -2147483648) {
       assert (lit == INT_MIN);
-      put ("-2147483648");
+      return put ("-2147483648");
     } else {
       char buffer[11];
       int i = sizeof buffer;
@@ -120,16 +136,42 @@ public:
         buffer[--i] = '0' + idx % 10;
         idx /= 10;
       }
-      if (lit < 0) put ('-');
-      put (buffer + i);
+      if (lit < 0 && !put ('-')) return false;
+      return put (buffer + i);
+    }
+  }
+
+  bool put (long l) {
+    assert (writing);
+    if (!l) return put ('0');
+    else if (l == LONG_MIN) {
+      assert (sizeof l == 8);
+      assert (l == LONG_MIN);
+      return put ("-9223372036854775808");
+    } else {
+      char buffer[21];
+      int i = sizeof buffer;
+      buffer[--i] = 0;
+      assert (l != LONG_MIN);
+      unsigned long k = l < 0 ? -l : l;
+      while (k) {
+        assert (i > 0);
+        buffer[--i] = '0' + k % 10;
+        k /= 10;
+      }
+      if (l < 0 && !put ('-')) return false;
+      return put (buffer + i);
     }
   }
 
   const char * name () const { return _name; }
   long lineno () const { return _lineno; }
   long bytes () const { return _bytes; }
+
+  bool closed () { return !file; }
+  void close ();
 };
 
-};
+}
 
 #endif

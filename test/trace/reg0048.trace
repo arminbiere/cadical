@@ -1,0 +1,69 @@
+init
+set check 1
+set cover 1
+set elimint 11
+set elimocclim 0
+set restoreflush 1
+set subsumemineff 0
+set subsumestr 0
+set vivifymineff 0
+add 2
+add -3
+add -6
+add 0
+add 2
+add 5
+add -3
+add 0
+add 5
+add -2
+add 4
+add 3
+add 0
+add 4
+add -2
+add -3
+add 0
+add -4
+add 3
+add 6
+add 0
+add -4
+add 3
+add -2
+add 0
+add -6
+add -8
+add 2
+add -4
+add -7
+add 0
+add -3
+add -4
+add -2
+add 0
+add -8
+add 4
+add 3
+add 2
+add 0
+add 3
+add -7
+add 8
+add 0
+add -2
+add -7
+add 3
+add -5
+add 0
+add -5
+add -3
+add 2
+add 0
+add 7
+add 2
+add 0
+solve 0
+add 7
+add 0
+solve 0

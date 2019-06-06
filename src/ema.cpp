@@ -6,7 +6,9 @@ namespace CaDiCaL {
 // log both updates and phases of initialization, thus need 'LOG'.
 
 void EMA::update (Internal * internal, double y, const char * name) {
-
+#ifndef LOGGING
+  (void) internal, (void) name;
+#endif
   // This is the common exponential moving average update.
 
   value += beta * (y - value);
@@ -37,4 +39,4 @@ void EMA::update (Internal * internal, double y, const char * name) {
   LOG ("new %s EMA wait = period = %ld, beta = %g", name, wait, beta);
 }
 
-};
+}

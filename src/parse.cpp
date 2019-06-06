@@ -6,6 +6,18 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
+// Parse error.
+
+#define PER(...) \
+do { \
+  internal->error_message.init (\
+    "%s:%d: parse error: ", \
+    file->name (), (int) file->lineno ()); \
+  return internal->error_message.append (__VA_ARGS__); \
+} while (0)
+
+/*------------------------------------------------------------------------*/
+
 // Parsing utilities.
 
 inline int Parser::parse_char () { return file->get (); }
@@ -34,7 +46,7 @@ Parser::parse_positive_int (int & ch, int & res, const char * name) {
 }
 
 inline const char *
-Parser::parse_lit (int & ch, int & lit, const int vars) {
+Parser::parse_lit (int & ch, int & lit, const int vars, int strict) {
   int sign = 0;
   if (ch == '-') {
     if (!isdigit (ch = parse_char ())) PER ("expected digit after '-'");
@@ -51,7 +63,7 @@ Parser::parse_lit (int & ch, int & lit, const int vars) {
   if (ch == '\r') ch = parse_char ();
   if (ch != 'c' && ch != ' ' && ch != '\t' && ch != '\n' && ch != EOF)
     PER ("expected white space after '%d'", sign*lit);
-  if (lit > vars)
+  if (lit > vars && strict > 0)
     PER ("literal %d exceeds maximum variable %d", sign*lit, vars);
   lit *= sign;
   return 0;
@@ -59,10 +71,19 @@ Parser::parse_lit (int & ch, int & lit, const int vars) {
 
 /*------------------------------------------------------------------------*/
 
-// Parsing function for CNF in DIMACS format.
+// Parsing CNF in DIMACS format.
 
-const char * Parser::parse_dimacs_non_profiled () {
-  int ch, vars = 0, clauses = 0;
+const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
+
+#ifndef QUIET
+  const double start = internal->time ();
+#endif
+
+  int ch, clauses = 0;
+  vars = 0;
+
+  // First read comments before header with possibly embedded options.
+  //
   for (;;) {
     ch = parse_char ();
     if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r') continue;
@@ -75,51 +96,96 @@ const char * Parser::parse_dimacs_non_profiled () {
     for (o = buf.c_str (); *o && *o != '-'; o++)
       ;
     if (!*o) continue;
-    VRB ("parse-dimacs", "found option '%s'", o);
-    if (*o) internal->opts.set (o);
+    PHASE ("parse-dimacs", "found option '%s'", o);
+    if (*o) solver->set_long_option (o);
   }
+
+  // Now read 'p cnf <var> <clauses>' header of DIMACS file.
+  //
   if (ch != 'p') PER ("expected 'c' or 'p'");
-  const char * err = parse_string (" cnf ", 'p');
-  if (err) return err;
-  if (!isdigit (ch = parse_char ())) PER ("expected digit after 'p cnf '");
-  err = parse_positive_int (ch, vars, "<max-var>");
-  if (err) return err;
-  if (ch != ' ') PER ("expected ' ' after 'p cnf %d'", vars);
-  if (!isdigit (ch = parse_char ()))
-    PER ("expected digit after 'p cnf %d '", vars);
-  err = parse_positive_int (ch, clauses, "<num-clauses>");
-  if (err) return err;
-  while (ch == ' ' || ch == '\r') ch = parse_char ();
-  if (ch != '\n')
-    PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
-  MSG ("found 'p cnf %d %d' header", vars, clauses);
-  external->init (vars);
+
+  if (strict > 1) {
+    const char * err = parse_string (" cnf ", 'p');
+    if (err) return err;
+    ch = parse_char ();
+    if (!isdigit (ch)) PER ("expected digit after 'p cnf '");
+    err = parse_positive_int (ch, vars, "<max-var>");
+    if (err) return err;
+    if (ch != ' ') PER ("expected ' ' after 'p cnf %d'", vars);
+    if (!isdigit (ch = parse_char ()))
+      PER ("expected digit after 'p cnf %d '", vars);
+    err = parse_positive_int (ch, clauses, "<num-clauses>");
+    if (err) return err;
+    if (ch != '\n')
+      PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
+  } else {
+    ch = parse_char ();
+    if (!isspace (ch)) PER ("expected space after 'p'");
+    do ch = parse_char (); while (isspace (ch));
+    if (ch != 'c') PER ("expected 'c' after 'p '");
+    if (parse_char () != 'n') PER ("expected 'n' after 'p c'");
+    if (parse_char () != 'f') PER ("expected 'f' after 'p cn'");
+    ch = parse_char ();
+    if (!isspace (ch)) PER ("expected space after 'p cnf'");
+    do ch = parse_char (); while (isspace (ch));
+    if (!isdigit (ch)) PER ("expected digit after 'p cnf '");
+    const char * err = parse_positive_int (ch, vars, "<max-var>");
+    if (err) return err;
+    if (!isspace (ch)) PER ("expected space after 'p cnf %d'", vars);
+    do ch = parse_char (); while (isspace (ch));
+    if (!isdigit (ch)) PER ("expected digit after 'p cnf %d '", vars);
+    err = parse_positive_int (ch, clauses, "<num-clauses>");
+    if (err) return err;
+    while (ch != '\n') {
+      if (ch != '\r' && !isspace (ch))
+	PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
+      ch = parse_char ();
+    }
+  }
+
+  MSG ("found %s'p cnf %d %d'%s header",
+    tout.green_code (), vars, clauses, tout.normal_code ());
+
+  solver->reserve (vars);
+
+  // Now read body of DIMACS file.
+  //
+  // external->init (vars);
   int lit = 0, parsed = 0;
   while ((ch = parse_char ()) != EOF) {
     if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r') continue;
     if (ch == 'c') {
-COMMENT:
       while ((ch = parse_char ()) != '\n' && ch != EOF)
-	;
+        ;
       if (ch == EOF) break;
       continue;
     }
-    err = parse_lit (ch, lit, vars);
+    const char * err = parse_lit (ch, lit, vars, strict);
     if (err) return err;
-    if (ch == 'c') goto COMMENT;
-    external->add (lit);
-    if (!lit && parsed++ >= clauses && !internal->opts.force)
+    if (ch == 'c') {
+      while ((ch = parse_char ()) != '\n')
+	if (ch == EOF)
+	  PER ("unexpected end-of-file in comment");
+    }
+    solver->add (lit);
+    if (!lit && parsed++ >= clauses && strict > 0)
       PER ("too many clauses");
   }
-  if (lit) PER ("last clause without '0'");
-  if (parsed < clauses && !internal->opts.force) PER ("clause missing");
-  MSG ("parsed %d clauses in %.2f seconds", parsed, process_time ());
+  if (lit) PER ("last clause without terminating '0'");
+  if (parsed < clauses && strict > 0) PER ("clause missing");
+
+#ifndef QUIET
+  const double end = internal->time ();
+  MSG ("parsed %d clauses in %.2f seconds %s time",
+    parsed, end - start, internal->opts.realtime ? "real" : "process");
+#endif
+
   return 0;
 }
 
 /*------------------------------------------------------------------------*/
 
-// Parsing function for a solution in competition output format.
+// Parsing solution in competition output format.
 
 const char * Parser::parse_solution_non_profiled () {
   NEW_ZERO (external->solution, signed_char, external->max_var + 1);
@@ -145,7 +211,7 @@ const char * Parser::parse_solution_non_profiled () {
     int lit = 0; ch = parse_char ();
     do {
       if (ch == ' ' || ch == '\t') { ch = parse_char (); continue; }
-      err = parse_lit (ch, lit, external->max_var);
+      err = parse_lit (ch, lit, external->max_var, false);
       if (err) return err;
       if (ch == 'c') PER ("unexpected comment");
       if (!lit) break;
@@ -158,7 +224,7 @@ const char * Parser::parse_solution_non_profiled () {
     } while (ch != '\n');
     if (!lit) break;
   }
-  MSG ("parsed %d solutions %.2f%%",
+  MSG ("parsed %d values %.2f%%",
     count, percent (count, external->max_var));
   return 0;
 }
@@ -168,9 +234,9 @@ const char * Parser::parse_solution_non_profiled () {
 // Wrappers to profile parsing and at the same time use the convenient
 // implicit 'return' in PER in the non-profiled versions.
 
-const char * Parser::parse_dimacs () {
+const char * Parser::parse_dimacs (int & vars, int strict) {
   START (parse);
-  const char * err = parse_dimacs_non_profiled ();
+  const char * err = parse_dimacs_non_profiled (vars, strict);
   STOP (parse);
   return err;
 }
@@ -182,4 +248,4 @@ const char * Parser::parse_solution () {
   return err;
 }
 
-};
+}

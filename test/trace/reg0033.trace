@@ -1,0 +1,27 @@
+init
+set elimint 0
+freeze -1
+add 1
+add 2
+add 0
+freeze 1
+freeze 2
+melt -1
+add -1
+add -2
+add 0
+frozen 1
+frozen 2
+solve
+frozen 1
+frozen 2
+val 1
+val 2
+melt 1
+frozen 1
+frozen 2
+solve
+val 1
+val 2
+frozen 1
+frozen 2

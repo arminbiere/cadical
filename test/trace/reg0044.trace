@@ -1,0 +1,10 @@
+init
+set phase 0
+set walk 1
+add 1
+add 2
+add 0
+assume -2
+assume -1
+limit localsearch 1
+solve 0

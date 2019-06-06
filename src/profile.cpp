@@ -16,53 +16,92 @@ Profiles::Profiles (Internal * s)
 {
 }
 
-void Internal::start_profiling (Profile * p, double s) {
-  assert (p->level <= opts.profile);
-  timers.push_back (Timer (s, p));
+void Internal::start_profiling (Profile & profile, double s) {
+  assert (profile.level <= opts.profile);
+  assert (!profile.active);
+  profile.started = s;
+  profile.active = true;
 }
 
-void Internal::stop_profiling (Profile * p, double s) {
-  assert (p->level <= opts.profile);
-  assert (!timers.empty ());
-  Timer & t = timers.back ();
-  assert (p == t.profile), (void) p;
-  t.update (s);
-  timers.pop_back ();
+void Internal::stop_profiling (Profile & profile, double s) {
+  assert (profile.level <= opts.profile);
+  assert (profile.active);
+  profile.value += s - profile.started;
+  profile.active = false;
 }
 
-void Internal::update_all_timers (double now) {
-  const vector<Timer>::iterator end = timers.end ();
-  vector<Timer>::iterator i = timers.begin ();
-  while (i != end) (*i++).update (now);
+double Internal::update_profiles () {
+  double now = time ();
+# define PROFILE(NAME,LEVEL) \
+do { \
+  Profile & profile = profiles.NAME; \
+  if (profile.active) { \
+    assert (profile.level <= opts.profile); \
+    profile.value += now - profile.started; \
+    profile.started = now; \
+  } \
+} while (0);
+  PROFILES
+# undef PROFILE
+  return now;
 }
 
-void Internal::print_profile (double now) {
-  update_all_timers (now);
-  SECTION ("run-time profiling data");
+double Internal::solve_time () {
+  (void) update_profiles ();
+  return profiles.solve.value;
+}
+
+#define PRT(S,T) \
+  MSG ("%s" S "%s", tout.magenta_code (), T, tout.normal_code ())
+
+void Internal::print_profile () {
+  double now = update_profiles ();
+  const char * time_type = opts.realtime ? "real" : "process";
+  SECTION ("run-time profiling");
+  PRT ("%s time taken by individual solving procedures", time_type);
+  PRT ("(percentage relative to %s time for solving)", time_type);
+  MSG ("");
   const size_t size = sizeof profiles / sizeof (Profile);
   struct Profile * profs[size];
   size_t n = 0;
 #define PROFILE(NAME,LEVEL) \
-  if (LEVEL <= opts.profile) \
-    profs[n++] = &profiles.NAME;
+do { \
+  if (LEVEL > opts.profile) break; \
+  if (&profiles.NAME == &profiles.solve) break; \
+  if (!profiles.NAME.value && \
+      &profiles.NAME != &profiles.parse && \
+      &profiles.NAME != &profiles.search && \
+      &profiles.NAME != &profiles.simplify) break; \
+  profs[n++] = &profiles.NAME; \
+} while (0);
   PROFILES
 #undef PROFILE
+
   assert (n <= size);
+
   // Explicit bubble sort to avoid heap allocation since 'print_profile'
   // is also called during catching a signal after out of heap memory.
   // This only makes sense if 'profs' is allocated on the stack, and
   // not the heap, which should be the case.
+
+  double solve = profiles.solve.value;
+
   for (size_t i = 0; i < n; i++) {
     for (size_t j = i + 1; j < n; j++)
       if (profs[j]->value > profs[i]->value)
         swap (profs[i], profs[j]);
     MSG ("%12.2f %7.2f%% %s",
-      profs[i]->value, percent (profs[i]->value, now), profs[i]->name);
+      profs[i]->value, percent (profs[i]->value, solve), profs[i]->name);
   }
-  MSG ("  ===============================");
-  MSG ("%12.2f %7.2f%% all", now, 100.0);
+
+  MSG ("  =================================");
+  MSG ("%12.2f %7.2f%% solve", solve, percent (solve, now));
+
+  MSG ("");
+  PRT ("last line shows %s time for solving", time_type);
+  PRT ("(percentage relative to total %s time)", time_type);
 }
 
-};
+}
 
 #endif // ifndef QUIET

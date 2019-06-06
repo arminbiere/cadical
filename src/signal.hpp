@@ -3,26 +3,28 @@
 
 namespace CaDiCaL {
 
-// Helper class for handling signals in 'App'.
+// Helper class for handling signals in applications.
 
-class Solver;
+class Handler {
+public:
+  Handler () { }
+  virtual ~Handler () { }
+  virtual void catch_signal (int sig) = 0;
+  virtual void catch_alarm ();
+};
 
 class Signal {
 
-  static bool catchedsig;
-  static bool alarmset;
-
-  static Solver * solver;
-  static const char * name (int sig);
-  static void catchsig (int sig);
-
 public:
 
-  static void reset ();
-  static void init (Solver *);
+  static void set (Handler *);
   static void alarm (int seconds);
+  static void reset ();
+  static void reset_alarm ();
+
+  static const char * name (int sig);
 };
 
-};
+}
 
 #endif

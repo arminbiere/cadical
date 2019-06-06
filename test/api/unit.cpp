@@ -9,7 +9,6 @@ int main () {
   CaDiCaL::Solver solver;
   solver.add (1);
   solver.add (0);
-  solver.init (2);
   int res = solver.solve ();
   cout << "solver.solve () = " << res << endl << flush;
   assert (res == 10);

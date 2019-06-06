@@ -1,0 +1,61 @@
+0 init
+2 set minimizedepth 0
+3 set restartint 1
+4 set restartmargin 0
+5 set restartreusetrail 0
+6 add 1
+7 add -4
+8 add 2
+9 add 0
+10 add 4
+11 add -1
+12 add 2
+13 add 0
+14 add 1
+15 add -2
+16 add 0
+17 add -1
+18 add 2
+19 add -5
+20 add 0
+21 add -1
+22 add 3
+23 add -2
+24 add 0
+25 assume 4
+26 add -4
+27 add -3
+28 add 0
+29 add -10
+30 add 6
+31 add 0
+32 add 3
+33 add -11
+34 add 0
+35 add 6
+36 add 11
+37 add 10
+38 add 0
+39 add 9
+40 add 0
+41 add -10
+42 add -8
+43 add 0
+44 add -6
+45 add 8
+46 add 0
+47 add 5
+48 add -8
+49 add 0
+50 solve 0
+51 add 1
+52 add 2
+53 add 0
+54 add 7
+55 add -8
+56 add 0
+57 add -7
+58 add -6
+59 add 0
+60 assume 9
+61 solve 0

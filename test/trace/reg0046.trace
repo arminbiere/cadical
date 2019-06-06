@@ -1,0 +1,12 @@
+init
+set walk 1
+set walkmineff 10
+add 1
+add 2
+add 0
+add 1
+add -2
+add 0
+assume -1
+limit localsearch 1
+solve 0

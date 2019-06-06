@@ -4,45 +4,26 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// Add two watches to a clause.  This is used initially  during allocation
-// of a clause and during connecting back all watches after preprocessing.
-// Since that happens quite infrequently (in contrast to 'watch_literal'
-// called from 'propagate') we can keep this function here.
-
-void Internal::watch_clause (Clause * c) {
-  const int size = c->size;
-  const int l0 = c->literals[0];
-  const int l1 = c->literals[1];
-  watch_literal (l0, l1, c, size);
-  watch_literal (l1, l0, c, size);
-}
-
-/*------------------------------------------------------------------------*/
-
 // Signed marking or unmarking of a clause or the global 'clause'.
 
 void Internal::mark (Clause * c) {
-  const const_literal_iterator end = c->end ();
-  const_literal_iterator k;
-  for (k = c->begin (); k != end; k++) mark (*k);
+  for (const auto & lit : *c) mark (lit);
+}
+
+void Internal::mark2 (Clause * c) {
+  for (const auto & lit : *c) mark2 (lit);
 }
 
 void Internal::unmark (Clause * c) {
-  const const_literal_iterator end = c->end ();
-  const_literal_iterator k;
-  for (k = c->begin (); k != end; k++) unmark (*k);
+  for (const auto & lit : *c) unmark (lit);
 }
 
 void Internal::mark_clause () {
-  const const_int_iterator end = clause.end ();
-  const_int_iterator k;
-  for (k = clause.begin (); k != end; k++) mark (*k);
+  for (const auto & lit : clause) mark (lit);
 }
 
 void Internal::unmark_clause () {
-  const const_int_iterator end = clause.end ();
-  const_int_iterator k;
-  for (k = clause.begin (); k != end; k++) unmark (*k);
+  for (const auto & lit : clause) unmark (lit);
 }
 
 /*------------------------------------------------------------------------*/
@@ -50,14 +31,15 @@ void Internal::unmark_clause () {
 // Mark the variables of an irredundant clause to 'have been removed', which
 // will trigger these variables to be considered again in the next bounded
 // variable elimination phase.  This is called from 'mark_garbage' below.
+// Note that 'mark_removed (int lit)' will also mark the blocking flag of
+// '-lit' to trigger reconsidering blocking clauses on '-lit'.
 
-inline void Internal::mark_removed (Clause * c, int except) {
+void Internal::mark_removed (Clause * c, int except) {
   LOG (c, "marking removed");
   assert (!c->redundant);
-  const const_literal_iterator end = c->end ();
-  const_literal_iterator i;
-  for (i = c->begin (); i != end; i++)
-    if (*i != except) mark_removed (*i);
+  for (const auto & lit : *c)
+    if (lit != except)
+      mark_removed (lit);
 }
 
 // Mark the variables of a (redundant or irredundant) clause to 'have been
@@ -65,23 +47,26 @@ inline void Internal::mark_removed (Clause * c, int except) {
 // both as a subsumed or subsuming clause in the next subsumption phase.
 // This function is called from 'new_clause' below as well as in situations
 // where a clause is shrunken (and thus needs to be at least considered
-// again to subsume a larger clause).
+// again to subsume a larger clause).  We also use this to tell
+// 'ternary' preprocessing reconsider clauses on an added literal as well as
+// trying to block clauses on it.
+
+inline void Internal::mark_added (int lit, int size, bool redundant) {
+  mark_subsume (lit);
+  if (size == 3)
+    mark_ternary (lit);
+  if (!redundant)
+    mark_block (lit);
+}
 
 void Internal::mark_added (Clause * c) {
   LOG (c, "marking added");
   assert (likely_to_be_kept_clause (c));
-  const const_literal_iterator end = c->end ();
-  const_literal_iterator i;
-  for (i = c->begin (); i != end; i++)
-    mark_added (*i);
+  for (const auto & lit : *c)
+    mark_added (lit, c->size, c->redundant);
 }
 
 /*------------------------------------------------------------------------*/
-
-// Redundant clauses of large size are extended to hold a '_pos' field.
-// This makes memory allocation and deallocation a little bit tricky but
-// saves space and time.  Since the embedding of the literals is really
-// important and on the same level of complexity we keep both optimizations.
 
 Clause * Internal::new_clause (bool red, int glue) {
 
@@ -90,77 +75,59 @@ Clause * Internal::new_clause (bool red, int glue) {
   assert (size >= 2);
 
   if (glue > size) glue = size;
-  if (glue > MAX_GLUE) glue = MAX_GLUE;
 
   // Determine whether this clauses should be kept all the time.
   //
   bool keep;
   if (!red) keep = true;
-  else if (size <= opts.keepsize) keep = true;
-  else if (glue <= opts.keepglue) keep = true;
+  else if (glue <= opts.reducekeepglue) keep = true;
   else keep = false;
 
-  // Determine whether this clauses should be kept during stabilization.
-  //
-  bool stable;
-  if (!red) stable = true;
-  else if (keep) stable = true;
-  else if (glue <= opts.stableglue) stable = true;
-  else stable = false;
+  size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int);
+  Clause * c = (Clause *) new char[bytes];
 
-  // Determine whether this clauses is extended and uses a '_pos' field.
-  //
-  bool extended = (size >= opts.posize);
-
-  // Now allocate the clause ignoring 'offset' bytes, if '_pos' or
-  // 'analyzed' fields are not used ('extended' is false).
-  //
-  Clause * c;
-  size_t offset = 0;
-  if (!extended) offset += sizeof c->_pos + sizeof c->alignment;
-  size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int) - offset;
-  bytes = align (bytes, 8);
-  char * ptr = new char[bytes];
-  assert (aligned (ptr, 8));
-  ptr -= offset;
-  c = (Clause*) ptr;
-
-  if (extended) c->_pos = 2, c->alignment = 0;
-  c->extended = extended;
-  c->redundant = red;
-  c->stable = stable;
-  c->keep = keep;
+  stats.added.total++;
+#ifdef LOGGING
+  c->id = stats.added.total;
+#endif
+  c->covered = false;
+  c->enqueued = false;
+  c->frozen = false;
   c->garbage = false;
-  c->reason = false;
+  c->gate = false;
+  c->hyper = false;
+  c->keep = keep;
   c->moved = false;
-  c->used = false;
-  c->hbr = false;
-  c->vivify = false;
-  c->vivified = false;
-  c->ignore = false;
+  c->reason = false;
+  c->redundant = red;
   c->transred = false;
-  c->size = size;
+  c->subsume = false;
+  c->used = false;
+  c->vivified = false;
+  c->vivify = false;
+
   c->glue = glue;
+  c->size = size;
+  c->pos = 2;
+
   for (int i = 0; i < size; i++) c->literals[i] = clause[i];
 
   // Just checking that we did not mess up our sophisticated memory layout.
   // This might be compiler dependent though. Crucial for correctness.
   //
-  assert (c->offset () == offset);
   assert (c->bytes () == bytes);
 
-  // Beside 64-bit alignment, the main purpose of our sophisticated memory
-  // layout for clauses is to keep binary clauses as small as possible,
-  // e.g., fit them into 16 bytes.  If this assertion fails, then first
-  // check that 'LD_MAX_GLUE' is set appropriately.  If the problem persists
-  // and maybe is compiler dependent, then just uncomment the assertion.
-  // This property does not need to hold from a correctness point of view
-  // but is desirable from performance point of view.
-  //
-  if (size == 2) assert (bytes == 16);
+  stats.current.total++;
+  stats.added.total++;
 
-  if (red) stats.redundant++;
-  else stats.irredundant++, stats.irrbytes += bytes;
+  if (red) {
+    stats.current.redundant++;
+    stats.added.redundant++;
+  } else {
+    stats.irrbytes += bytes;
+    stats.current.irredundant++;
+    stats.added.irredundant++;
+  }
 
   clauses.push_back (c);
   LOG (c, "new");
@@ -171,7 +138,7 @@ Clause * Internal::new_clause (bool red, int glue) {
 }
 
 // Shrinking a clause, e.g., removing one or more literals, requires to fix
-// the '_pos' field, if it exists and points after the new last literal, has
+// the 'pos' field, if it exists and points after the new last literal, has
 // to adjust the global statistics counter of allocated bytes for
 // irredundant clauses, and also adjust the glue value of redundant clauses
 // if the size becomes smaller than the glue.  Also mark the literals in the
@@ -190,20 +157,12 @@ size_t Internal::shrink_clause (Clause * c, int new_size) {
   assert (new_size >= 2);
   assert (new_size < old_size);
 
-  if (c->extended) {
-    if (c->_pos >= new_size) c->_pos = 2;
-  }
+  if (c->pos >= new_size) c->pos = 2;
 
   if (c->redundant) {
     int new_glue = c->glue;
     if (new_glue > new_size) new_glue = new_size;
-    if (!c->keep) {
-      if (new_size <= opts.keepsize) c->keep = true;
-      if (new_glue <= opts.keepglue) c->keep = true;
-    }
-    if (!c->stable) {
-      if (new_glue <= opts.stableglue) c->stable = true;
-    }
+    if (!c->keep && new_glue <= opts.reducekeepglue) c->keep = true;
     c->size = new_size;
     c->glue = new_glue;
   } else {
@@ -212,7 +171,6 @@ size_t Internal::shrink_clause (Clause * c, int new_size) {
     size_t new_bytes = c->bytes ();
     if (old_bytes > new_bytes) {
       res = old_bytes - new_bytes;
-      assert (aligned (res, 8));
       assert (stats.irrbytes >= (long) res);
       stats.irrbytes -= res;
     } else {
@@ -239,7 +197,7 @@ size_t Internal::shrink_clause (Clause * c, int new_size) {
 // reclaimed immediately.
 
 void Internal::deallocate_clause (Clause * c) {
-  char * p = c->start ();
+  char * p = (char*) c;
   if (arena.contains (p)) return;
   LOG (c, "deallocate");
   delete [] p;
@@ -252,6 +210,17 @@ void Internal::delete_clause (Clause * c) {
   if (c->garbage) {
     assert (stats.garbage >= (long) bytes);
     stats.garbage -= bytes;
+
+    // See the discussion in 'propagate' on avoiding to eagerly trace binary
+    // clauses as deleted (produce 'd ...' lines) as soon they are marked
+    // garbage.  We avoid this and only trace them as deleted when they are
+    // actually deleted here.  This allows the solver to propagate binary
+    // garbage clauses without producing incorrect 'd' lines.  The effect
+    // from the proof perspective is that the deletion of these binary
+    // clauses occurs later in the proof file.
+    //
+    if (proof && c->size == 2)
+      proof->delete_clause (c);
   }
   deallocate_clause (c);
 }
@@ -260,6 +229,9 @@ void Internal::delete_clause (Clause * c) {
 // Otherwise 'report' for instance gives wrong numbers after 'subsume'
 // before the next 'reduce'.  Thus we factored out marking and accounting
 // for garbage clauses.
+//
+// Eagerly deleting clauses instead is problematic, since references to these
+// clauses need to be flushed, which is too costly to do eagerly.
 //
 // We also update garbage statistics at this point.  This helps to
 // determine whether the garbage collector should be called during for
@@ -271,69 +243,116 @@ void Internal::delete_clause (Clause * c) {
 //
 void Internal::mark_garbage (Clause * c) {
   assert (!c->garbage);
-  if (proof) proof->trace_delete_clause (c);
+
+  // Delay tracing deletion of binary clauses.  See the discussion above in
+  // 'delete_clause' and also in 'propagate'.
+  //
+  if (proof && c->size != 2)
+    proof->delete_clause (c);
+
+  assert (stats.current.total > 0);
+  stats.current.total--;
+
   size_t bytes = c->bytes ();
   if (c->redundant) {
-    assert (stats.redundant > 0);
-    stats.redundant--;
+    assert (stats.current.redundant > 0);
+    stats.current.redundant--;
   } else {
-    assert (stats.irredundant > 0);
+    assert (stats.current.irredundant > 0);
+    stats.current.irredundant--;
     assert (stats.irrbytes >= (long) bytes);
     stats.irrbytes -= bytes;
-    stats.irredundant--;
     mark_removed (c);
   }
   stats.garbage += bytes;
   c->garbage = true;
+  c->used = false;
 }
 
 /*------------------------------------------------------------------------*/
 
-// Check whether the next to be allocated 'clause' is actually tautological.
-// This is currently only used during adding original clauses (through the
-// API, e.g., while parsing the DIMACS file in the stand-alone solver).
+// Almost the same function as 'search_assign' except that we do not pretend
+// to learn a new unit clause (which was confusing in log files).
 
-bool Internal::tautological_clause () {
-  sort (clause.begin (), clause.end (), lit_less_than ());
-  const_int_iterator i = clause.begin ();
-  int_iterator j = clause.begin ();
-  int prev = 0;
-  while (i != clause.end ()) {
-    int lit = *i++;
-    if (lit == -prev) return true;
-    if (lit !=  prev) *j++ = prev = lit;
-  }
-  if (j != clause.end ()) {
-    LOG ("removing %d duplicates", (long)(clause.end () - j));
-    clause.resize (j - clause.begin ());
-  }
-  return false;
+void Internal::assign_original_unit (int lit) {
+  assert (!level);
+  const int idx = vidx (lit);
+  assert (!vals[idx]);
+  assert (!flags (idx).eliminated ());
+  Var & v = var (idx);
+  v.level = level;
+  v.trail = (int) trail.size ();
+  v.reason = 0;
+  const signed_char tmp = sign (lit);
+  vals[idx] = tmp;
+  vals[-idx] = -tmp;
+  assert (val (lit) > 0);
+  assert (val (-lit) < 0);
+  trail.push_back (lit);
+  LOG ("original unit assign %d", lit);
+  mark_fixed (lit);
 }
-
-/*------------------------------------------------------------------------*/
 
 // New clause added through the API, e.g., while parsing a DIMACS file.
-// Assume the clause has been simplified and checked with
-// 'tautological_clause' before.
 //
 void Internal::add_new_original_clause () {
-  stats.original++;
-  int size = (int) clause.size ();
-  if (!size) {
-    if (!unsat) {
-      MSG ("original empty clause");
-      unsat = true;
-    } else LOG ("original empty clause produces another inconsistency");
-  } else if (size == 1) {
-    int unit = clause[0], tmp = val (unit);
-    if (!tmp) assign_unit (unit);
-    else if (tmp < 0) {
+  if (level) backtrack ();
+  LOG (original, "original clause");
+  bool skip = false;
+  if (unsat) {
+    LOG ("skipping clause since formula already inconsistent");
+    skip = true;
+  } else {
+    assert (clause.empty ());
+    for (const auto & lit : original) {
+      int tmp = marked (lit);
+      if (tmp > 0) {
+        LOG ("removing duplicated literal %d", lit);
+      } else if (tmp < 0) {
+        LOG ("tautological since both %d and %d occur", -lit, lit);
+        skip = true;
+      } else {
+        mark (lit);
+        tmp = val (lit);
+        if (tmp < 0) {
+          LOG ("removing falsified literal %d", lit);
+        } else if (tmp > 0) {
+          LOG ("satisfied since literal %d true", lit);
+          skip = true;
+        } else {
+          clause.push_back (lit);
+          assert (flags (lit).status != Flags::UNUSED);
+        }
+      }
+    }
+    for (const auto & lit : original)
+      unmark (lit);
+  }
+  if (skip) {
+    if (proof) proof->delete_clause (original);
+  } else {
+    size_t size = clause.size ();
+    if (!size) {
       if (!unsat) {
-        MSG ("parsed clashing unit");
-        clashing = true;
-      } else LOG ("original clashing unit produces another inconsistency");
-    } else LOG ("original redundant unit");
-  } else watch_clause (new_clause (false));
+        if (!original.size ()) MSG ("found empty original clause");
+        else MSG ("found falsified original clause");
+        unsat = true;
+      }
+    } else if (size == 1) {
+      assign_original_unit (clause[0]);
+    } else {
+      Clause * c = new_clause (false);
+      watch_clause (c);
+    }
+    if (original.size () > size) {
+      external->check_learned_clause ();
+      if (proof) {
+        proof->add_derived_clause (clause);
+        proof->delete_clause (original);
+      }
+    }
+  }
+  clause.clear ();
 }
 
 // Add learned new clause during conflict analysis and watch it. Requires
@@ -341,21 +360,39 @@ void Internal::add_new_original_clause () {
 // are assigned at the highest decision level.
 //
 Clause * Internal::new_learned_redundant_clause (int glue) {
+  assert (clause.size () > 1);
+#ifndef NDEBUG
+  for (size_t i = 2; i < clause.size (); i++)
+    assert (var (clause[0]).level >= var (clause[i]).level),
+    assert (var (clause[1]).level >= var (clause[i]).level);
+#endif
+  external->check_learned_clause ();
   Clause * res = new_clause (true, glue);
-  if (proof) proof->trace_add_clause (res);
+  if (proof) proof->add_derived_clause (res);
   assert (watches ());
-  if (proof || opts.learn) watch_clause (res);
-  else mark_garbage (res);
+  watch_clause (res);
   return res;
 }
 
 // Add hyper binary resolved clause during 'probing'.
 //
 Clause * Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
+  external->check_learned_clause ();
   Clause * res = new_clause (red, glue);
-  if (proof) proof->trace_add_clause (res);
+  if (proof) proof->add_derived_clause (res);
   assert (watches ());
   watch_clause (res);
+  return res;
+}
+
+// Add hyper ternary resolved clause during 'ternary'.
+//
+Clause * Internal::new_hyper_ternary_resolved_clause (bool red) {
+  external->check_learned_clause ();
+  size_t size = clause.size ();
+  Clause * res = new_clause (red, size);
+  if (proof) proof->add_derived_clause (res);
+  assert (!watches ());
   return res;
 }
 
@@ -363,22 +400,11 @@ Clause * Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
 // assumed to be in 'clause' in 'decompose' and 'vivify'.
 //
 Clause * Internal::new_clause_as (const Clause * orig) {
-#if 0
-  // TODO in version '095' size was better than 'orig->glue', why?
-  //
-  const int new_glue = (int) clause.size ();
-#else
+  external->check_learned_clause ();
   const int new_glue = orig->glue;
-#endif
   Clause * res = new_clause (orig->redundant, new_glue);
-#if 0
-  if (orig->redundant && orig->keep) res->keep = true;
-  if (orig->redundant && orig->stable) res->stable = true;
-#else
   assert (!orig->redundant || !orig->keep || res->keep);
-  assert (!orig->redundant || !orig->stable || res->stable);
-#endif
-  if (proof) proof->trace_add_clause (res);
+  if (proof) proof->add_derived_clause (res);
   assert (watches ());
   watch_clause (res);
   return res;
@@ -388,10 +414,11 @@ Clause * Internal::new_clause_as (const Clause * orig) {
 // elimination, but do not connect its occurrences here.
 //
 Clause * Internal::new_resolved_irredundant_clause () {
+  external->check_learned_clause ();
   Clause * res = new_clause (false);
-  if (proof) proof->trace_add_clause (res);
+  if (proof) proof->add_derived_clause (res);
   assert (!watches ());
   return res;
 }
 
-};
+}

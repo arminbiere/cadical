@@ -2,17 +2,18 @@
 
 namespace CaDiCaL {
 
-// Once in a while reduce, e.g., remove, learned clauses which are supposed
-// to be less useful in the future.  This is done in increasing intervals,
-// which has the effect of allowing more and more learned clause to be kept
-// for a longer period.
+/*------------------------------------------------------------------------*/
+
+// Once in a while we reduce, e.g., we remove learned clauses which are
+// supposed to be less useful in the future.  This is done in increasing
+// intervals, which has the effect of allowing more and more learned clause
+// to be kept for a longer period.  The number of learned clauses kept
+// in memory corresponds to an upper bound on the 'space' of a resolution
+// proof needed to refute a formula in proof complexity sense.
 
 bool Internal::reducing () {
-  if (!opts.learn) return false;
   if (!opts.reduce) return false;
-  if (stats.conflicts < lim.conflicts_at_last_restart +
-        opts.reducewait * relative (stats.conflicts, stats.restarts))
-    return false;
+  if (!stats.current.redundant) return false;
   return stats.conflicts >= lim.reduce;
 }
 
@@ -31,16 +32,17 @@ bool Internal::flushing () {
 // We protect them before and unprotect them after garbage collection.
 
 void Internal::protect_reasons () {
-  for (const_int_iterator i = trail.begin (); i != trail.end (); i++) {
-    Var & v = var (*i);
+  for (const auto & lit : trail) {
+    Var & v = var (lit);
     if (!v.level || !v.reason) continue;
+    LOG (v.reason, "protecting");
     v.reason->reason = true;
   }
 }
 
 void Internal::unprotect_reasons () {
-  for (const_int_iterator i = trail.begin (); i != trail.end (); i++) {
-    Var & v = var (*i);
+  for (const auto & lit : trail) {
+    Var & v = var (lit);
     if (!v.level || !v.reason) continue;
     assert (v.reason->reason), v.reason->reason = false;
   }
@@ -49,42 +51,38 @@ void Internal::unprotect_reasons () {
 /*------------------------------------------------------------------------*/
 
 void Internal::mark_clauses_to_be_flushed () {
-  const_clause_iterator end = clauses.end (), i;
-  for (i = clauses.begin (); i != end; i++) {
-    Clause * c = *i;
+  for (const auto & c : clauses) {
     if (!c->redundant) continue; // keep irredundant
     if (c->garbage) continue;    // already marked as garbage
     if (c->reason) continue;     // need to keep reasons
     const bool used = c->used;
     c->used = false;
-    if (used) continue;
+    if (used) continue;          // but keep recently used clauses
     mark_garbage (c);            // flush unused clauses
-    stats.flushed++;
+    if (c->hyper) stats.flush.hyper++;
+    else stats.flush.learned++;
   }
-  // no change to 'lim.kept{size,glue}'
+  // No change to 'lim.kept{size,glue}'.
 }
 
 /*------------------------------------------------------------------------*/
 
-// Clauses of larger glue or size are considered less useful.  We partially
-// follow the observations made by the Glucose team in their IJCAI'09 paper
-// and keep all low glucose level clauses limited by 'options.keepglue'
-// (typically '3').  Recently unused candidate clauses to be collected
-// are sorted by size, which is a mix of glue, then activity, and then size
-// order.  Note, that during 'stabilization' phases with no restarts, we
-// keep 'options.stableglue' clauses, which by default is higher than
-// 'options.keepglue' (typically '5').  However, if the 'option.reduceglue'
-// is set we also compare glue, i.e., always if it is larger than one or
-// just during stabilization phases if it is only one.
+// Clauses of larger glue or larger size are considered less useful.
+//
+// We also follow the observations made by the Glucose team in their
+// IJCAI'09 paper and keep all low glue clauses limited by
+// 'options.keepglue' (typically '3').
+//
+// In earlier versions we pre-computed a 64-bit sort key per clause and
+// wrapped a pointer to the clause and the 64-bit sort key into a separate
+// data structure for sorting.  This was probably faster but awkward and
+// so we moved back to a simpler scheme which also uses 'stable_sort'
+// instead of 'rsort' below.  Sorting here is not a hot-spot anyhow.
 
-struct less_useful {
-  const bool compare_glue;
-  less_useful (Internal * i) :
-    compare_glue ( i->opts.reduceglue > 1 ||
-                  (i->opts.reduceglue > 0 && i->stabilization)) { }
-  bool operator () (Clause * c, Clause * d) {
-    if (compare_glue && c->glue > d->glue) return true;
-    if (compare_glue && c->glue < d->glue) return false;
+struct reduce_less_useful {
+  bool operator () (const Clause * c, const Clause * d) const {
+    if (c->glue > d->glue) return true;
+    if (c->glue < d->glue) return false;
     return c->size > d->size;
   }
 };
@@ -95,47 +93,68 @@ struct less_useful {
 
 void Internal::mark_useless_redundant_clauses_as_garbage () {
 
-  vector<Clause*> stack;
-  stack.reserve (stats.redundant);
-  const_clause_iterator end = clauses.end (), i;
+  // We use a separate stack for sorting candidates for removal.  This uses
+  // (slightly) more memory but has the advantage to keep the relative order
+  // in 'clauses' intact, which actually due to using stable sorting goes
+  // into the candidate selection (more recently learned clauses are kept if
+  // they otherwise have the same glue and size).
 
-  for (i = clauses.begin (); i != end; i++) {
-    Clause * c = *i;
-    if (!c->redundant) continue;    // keep irredundant
-    if (c->garbage) continue;       // skip already marked
-    if (c->reason) continue;        // need to keep reasons
+  vector<Clause *> stack;
+
+  stack.reserve (stats.current.redundant);
+
+  for (const auto & c : clauses) {
+    if (!c->redundant) continue;    // Keep irredundant.
+    if (c->garbage) continue;       // Skip already marked.
+    if (c->reason) continue;        // Need to keep reasons.
     const bool used = c->used;
     c->used = false;
-    if (c->hbr) {                   // Hyper binary resolvents are only
-      assert (c->size == 2);        // kept for one round (even though
-      if (!used) mark_garbage (c);  // 'c->keep' is true) unless they
-      continue;                     // were recently used.
+    if (c->hyper) {                 // Hyper binary and ternary resolvents
+      assert (c->size <= 3);        // are only kept for one reduce round
+      if (!used) mark_garbage (c);  // (even if 'c->keep' is true) unless
+      continue;                     //  used recently.
     }
-    if (used) continue;		    // keep recently used
-    if (c->keep) continue;          // forced to keep (see above)
-    if (stabilization && c->stable) // keep during stabilization
-      continue;
+    if (used) continue;             // Do keep recently used clauses.
+    if (c->keep) continue;          // Forced to keep (see above).
+
     stack.push_back (c);
   }
 
-  stable_sort (stack.begin (), stack.end (), less_useful (this));
+  stable_sort (stack.begin (), stack.end (), reduce_less_useful ());
 
-  const_clause_iterator target = stack.begin () + stack.size ()/2;
-  for (const_clause_iterator i = stack.begin (); i != target; i++) {
-    LOG (*i, "marking useless to be collected");
-    mark_garbage (*i);
+  size_t target = 1e-2 * opts.reducetarget * stack.size ();
+
+  // This is defensive code, which I usually consider a bug, but here I am
+  // just not sure that using floating points in the line above is precise
+  // in all situations and instead of figuring that out, I just use this.
+  //
+  if (target > stack.size ()) target = stack.size ();
+
+  PHASE ("reduce", stats.reductions, "reducing %zd clauses %.0f%%",
+    target, percent (target, stats.current.redundant));
+
+  auto i = stack.begin ();
+  const auto t = i + target;
+  while (i != t) {
+    Clause * c = *i++;
+    LOG (c, "marking useless to be collected");
+    mark_garbage (c);
     stats.reduced++;
   }
 
   lim.keptsize = lim.keptglue = 0;
-  end = stack.end ();
-  for (i = target; i != end; i++) {
-    const Clause * c = *i;
+
+  const auto end = stack.end ();
+  for (i = t; i != end; i++) {
+    Clause * c = *i;
+    LOG (c, "keeping");
     if (c->size > lim.keptsize) lim.keptsize = c->size;
     if (c->glue > lim.keptglue) lim.keptglue = c->glue;
   }
 
-  VRB ("reduce", stats.reductions,
+  erase_vector (stack);
+
+  PHASE ("reduce", stats.reductions,
     "maximum kept size %d glue %d", lim.keptsize, lim.keptglue);
 }
 
@@ -143,11 +162,30 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
 
 void Internal::reduce () {
   START (reduce);
+
   stats.reductions++;
   report ('+', 1);
 
   bool flush = flushing ();
-  if (flush) stats.flushings++;
+  if (flush) stats.flush.count++;
+
+  if (level) {
+    int ooo = 0;
+    for (size_t i = control[1].trail; !ooo && i < trail.size (); i++) {
+      const int lit = trail[i];
+      assert (val (lit) > 0);
+      if (var (lit).level) continue;
+      LOG ("found out-of-order assigned unit %d", ooo);
+      ooo = lit;
+    }
+    if (ooo) {
+      backtrack (0);
+      if (!propagate ()) {
+        learn_empty_clause ();
+        goto DONE;
+      }
+    }
+  }
 
   if (level) protect_reasons ();
   mark_satisfied_clauses_as_garbage ();
@@ -156,27 +194,31 @@ void Internal::reduce () {
   garbage_collection ();
   if (level) unprotect_reasons ();
 
-  assert (opts.learn);
-  inc.reduce += inc.redinc;
-  if (inc.reduce > opts.reducemax) inc.reduce = opts.reducemax;
-  else if (inc.redinc > 1l) inc.redinc--;
-  assert (inc.reduce > 0l);
-  VRB ("reduce", stats.reductions,
-    "new reduce increment %ld", inc.reduce);
-  lim.reduce = stats.conflicts + inc.reduce;
-  VRB ("reduce", stats.reductions,
-    "new reduce limit %ld", lim.reduce);
-  lim.conflicts_at_last_reduce = stats.conflicts;
+  {
+    long delta = opts.reduceint * (stats.reductions + 1);
+    if (irredundant () > 1e5) {
+      delta *= log (irredundant ()/1e4) / log (10);
+      if (delta < 1) delta = 1;
+    }
+    lim.reduce = stats.conflicts + delta;
+    PHASE ("reduce", stats.reductions,
+      "new reduce limit %ld after %ld conflicts",
+      lim.reduce, delta);
+  }
 
   if (flush) {
-    VRB ("flush", stats.flushed, "new flush increment %ld", inc.flush);
+    PHASE ("flush", stats.flush.count, "new flush increment %ld", inc.flush);
     inc.flush *= opts.flushfactor;
     lim.flush = stats.conflicts + inc.flush;
-    VRB ("flush", stats.flushed, "new flush limit %ld", lim.flush);
+    PHASE ("flush", stats.flush.count, "new flush limit %ld", lim.flush);
   }
+
+  last.reduce.conflicts = stats.conflicts;
+
+DONE:
 
   report (flush ? 'f' : '-');
   STOP (reduce);
 }
 
-};
+}

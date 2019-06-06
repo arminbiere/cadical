@@ -1,30 +1,85 @@
+#==========================================================================#
 # This is a 'makefile.in' template with '@CXX@' and '@CXXFLAGS@' parameters.
-# Relies on 'gmake' for dependency handling and '$(shell ...)' commands.
-.SUFFIXES: .cpp .o
-MAKEFLAGS=-j
-OBJ=$(shell ls ../src/*.cpp|sed -e '/main/d' -e '/app/d' -e 's,../src/,,' -e 's,.cpp$$,.o,g')
-SRC=$(shell ls ../src/*.cpp ../src/*.hpp)
-BUILD=../$(shell pwd|sed -e 's,.*/,,')
+# This makefile requires GNU make.
+#==========================================================================#
+
+# The '../scripts/make-build-header.sh' script searches for the next two
+# lines to figure out the compiler and compilation flags.  This information
+# is then used to generate corresponding macros in 'build.hpp'.
+
 CXX=@CXX@
 CXXFLAGS=@CXXFLAGS@
-COMPILE=$(CXX) $(CXXFLAGS) -I$(BUILD)
-all: cadical libcadical.a
-%.o: ../src/%.cpp
+
+############################################################################
+#    It is usually not necessary to change anything below this line!       #
+############################################################################
+
+MAKEFLAGS=-j
+APP=cadical.cpp mobical.cpp
+ALL=$(sort $(wildcard ../src/*.[ch]pp))
+SRC=$(filter %.cpp,$(subst ../src/,,$(ALL)))
+LIB=$(filter-out $(APP),$(SRC))
+OBJ=$(patsubst %.cpp,%.o,$(LIB))
+DIR=../$(shell pwd|sed -e 's,.*/,,')
+COMPILE=$(CXX) $(CXXFLAGS) -I$(DIR)
+
+#--------------------------------------------------------------------------#
+
+all: libcadical.a cadical mobical
+
+#--------------------------------------------------------------------------#
+
+.SUFFIXES: .cpp .o
+
+%.o: ../src/%.cpp ../src/*.hpp makefile
 	$(COMPILE) -c $<
--include dependencies
-cadical: main.o app.o libcadical.a makefile
-	$(COMPILE) -o $@ main.o app.o -L. -lcadical
+
+#--------------------------------------------------------------------------#
+
+# Application binaries (the stand alone solver 'cadical' and the model based
+# tester 'mobical') and the library are the main build targets.
+
+cadical: cadical.o libcadical.a makefile
+	$(COMPILE) -o $@ $< -L. -lcadical
+
+mobical: mobical.o libcadical.a makefile
+	$(COMPILE) -o $@ $< -L. -lcadical
+
 libcadical.a: $(OBJ) makefile
-	rm -f $@
 	ar rc $@ $(OBJ)
-	ranlib $@
-config.hpp: ../scripts/make-config-header.sh $(SRC) makefile
-	../scripts/make-config-header.sh > $@
-dependencies: config.hpp ../src/*.cpp makefile
-	$(COMPILE) -MM ../src/*.cpp|sed -e 's,:,: makefile,' >$@
+
+#--------------------------------------------------------------------------#
+
+# Note that 'build.hpp' is generated and resides in the build directory.
+
+build.hpp: always
+	../scripts/make-build-header.sh > build.hpp
+
+version.o: build.hpp
+
+update:
+	../scripts/update-version.sh
+
+#--------------------------------------------------------------------------#
+
+# These two 'C' interfaces include '.h' headers and thus require explicitly
+# defined additional dependencies.
+
+ccadical.o: ../src/ccadical.h
+ipasir.o: ../src/ipasir.h ../src/ccadical.h
+
+#--------------------------------------------------------------------------#
+
+analyze: all
+	$(COMPILE) --analyze ../src/*.cpp
+
 clean:
-	rm -f *.o *.a cadical makefile config.hpp dependencies
+	rm -f *.o *.a cadical mobical makefile build.hpp
 	rm -f *.gcda *.gcno *.gcov gmon.out
+
 test: all
-	CADICALBUILD="$(BUILD)" make -C ../test
-.PHONY: all clean test
+	CADICALBUILD="$(DIR)" make -j1 -C ../test
+
+#--------------------------------------------------------------------------#
+
+.PHONY: all always analyze clean test update

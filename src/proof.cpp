@@ -6,110 +6,115 @@ using namespace std;
 
 /*------------------------------------------------------------------------*/
 
-// Enable proof logging by allocating a 'Proof' object.
+// Enable proof logging and checking by allocating a 'Proof' object.
 
-void Internal::new_proof (File * file, bool owned) {
-  close_proof ();
-  proof = new Proof (this, file, opts.binary, owned);
-}
-
-// We want to close a proof trace as soon we are done.
-
-void Internal::close_proof () {
-  if (!proof) return;
-  LOG ("closing proof");
-  delete proof;
-  proof = 0;
-}
-
-/*------------------------------------------------------------------------*/
-
-Proof::Proof (Internal * s, File * f, bool b, bool o)
-:
-  internal (s), file (f), binary (b), owned (o)
-{
-}
-
-Proof::~Proof () { if (owned) delete file; }
-
-/*------------------------------------------------------------------------*/
-
-// Support for binary DRAT format.
-
-inline void Proof::put_binary_zero () {
-  assert (binary);
-  assert (file);
-  file->put ((unsigned char) 0);
-}
-
-inline void Proof::put_binary_lit (int lit) {
-  assert (binary);
-  assert (file);
-  assert (lit != INT_MIN);
-  unsigned x = 2*abs (lit) + (lit < 0);
-  unsigned char ch;
-  while (x & ~0x7f) {
-    ch = (x & 0x7f) | 0x80;
-    file->put (ch);
-    x >>= 7;
+void Internal::new_proof_on_demand () {
+  if (!proof) {
+    proof = new Proof (this);
+    LOG ("connecting proof to internal solver");
   }
-  ch = x;
-  file->put (ch);
+}
+
+// Enable proof tracing.
+
+void Internal::trace (File * file) {
+  assert (!tracer);
+  new_proof_on_demand ();
+  tracer = new Tracer (this, file, opts.binary);
+  LOG ("PROOF connecting proof tracer");
+  proof->connect (tracer);
+}
+
+// Enable proof checking.
+
+void Internal::check () {
+  assert (!checker);
+  new_proof_on_demand ();
+  checker = new Checker (this);
+  LOG ("PROOF connecting proof checker");
+  proof->connect (checker);
+}
+
+// We want to close a proof trace and stop checking as soon we are done.
+
+void Internal::close_trace () {
+  assert (tracer);
+  tracer->close ();
 }
 
 /*------------------------------------------------------------------------*/
 
-void Proof::trace_empty_clause () {
-  LOG ("tracing empty clause");
-  if (binary) file->put ('a'), put_binary_zero ();
-  else file->put ("0\n");
+Proof::Proof (Internal * s) : internal (s) { LOG ("PROOF new"); }
+
+Proof::~Proof () { LOG ("PROOF delete"); }
+
+/*------------------------------------------------------------------------*/
+
+inline void Proof::add_literal (int internal_lit) {
+  const int external_lit = internal->externalize (internal_lit);
+  clause.push_back (external_lit);
 }
 
-void Proof::trace_unit_clause (int unit) {
-  LOG ("tracing unit clause %d", unit);
-  const int elit = externalize (unit);
-  if (binary) file->put ('a'), put_binary_lit (elit), put_binary_zero ();
-  else file->put (elit), file->put (" 0\n");
+inline void Proof::add_literals (Clause * c) {
+  for (auto const & lit : * c)
+    add_literal (lit);
+}
+
+inline void Proof::add_literals (const vector<int> & c) {
+  for (auto const & lit : c)
+    add_literal (lit);
 }
 
 /*------------------------------------------------------------------------*/
 
-inline void Proof::trace_clause (Clause * c, bool add) {
-  if (binary) file->put (add ? 'a' : 'd');
-  else if (!add) file->put ("d ");
-  const const_literal_iterator end = c->end ();
-  const_literal_iterator i = c->begin ();
-  while (i != end) {
-    const int elit = externalize (*i++);
-    if (binary) put_binary_lit (elit);
-    else file->put (elit), file->put (" ");
-  }
-  if (binary) put_binary_zero ();
-  else file->put ("0\n");
+void Proof::add_original_clause (const vector<int> & c) {
+  LOG (c, "PROOF adding original internal clause");
+  add_literals (c);
+  add_original_clause ();
 }
 
-void Proof::trace_add_clause (Clause * c) {
-  LOG (c, "tracing addition");
-  trace_clause (c, true);
+void Proof::add_derived_empty_clause () {
+  LOG ("PROOF adding empty clause");
+  assert (clause.empty ());
+  add_derived_clause ();
 }
 
-void Proof::trace_delete_clause (Clause * c) {
-  LOG (c, "tracing deletion");
-  trace_clause (c, false);
+void Proof::add_derived_unit_clause (int internal_unit) {
+  LOG ("PROOF adding unit clause %d", internal_unit);
+  assert (clause.empty ());
+  add_literal (internal_unit);
+  add_derived_clause ();
 }
 
-void Proof::trace_add_clause () {
-  LOG (internal->clause, "tracing addition");
-  if (binary) file->put ('a');
-  const const_int_iterator end = internal->clause.end ();
-  const_int_iterator i = internal->clause.begin ();
-  while (i != end) {
-    const int elit = externalize (*i++);
-    if (binary) put_binary_lit (elit);
-    else file->put (elit), file->put (" ");
-  }
-  if (binary) put_binary_zero ();
-  else file->put ("0\n");
+/*------------------------------------------------------------------------*/
+
+void Proof::add_derived_clause (Clause * c) {
+  LOG (c, "PROOF adding to proof derived");
+  assert (clause.empty ());
+  add_literals (c);
+  add_derived_clause ();
+}
+
+void Proof::delete_clause (Clause * c) {
+  LOG (c, "PROOF deleting from proof");
+  assert (clause.empty ());
+  add_literals (c);
+  delete_clause ();
+}
+
+void Proof::delete_clause (const vector<int> & c) {
+  LOG (c, "PROOF deleting from proof");
+  assert (clause.empty ());
+  add_literals (c);
+  delete_clause ();
+}
+
+void Proof::add_derived_clause (const vector<int> & c) {
+  LOG (internal->clause, "PROOF adding derived clause");
+  assert (clause.empty ());
+  for (const auto & lit : c)
+    add_literal (lit);
+  add_derived_clause ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -118,20 +123,16 @@ void Proof::trace_add_clause () {
 // literals. To avoid copying the clause, we provide a specialized tracing
 // function here, which traces the required 'add' and 'remove' operations.
 
-void Proof::trace_flushing_clause (Clause * c) {
-  LOG (c, "tracing flushing fixed");
-  if (binary) file->put ('a');
-  const const_literal_iterator end = c->end ();
-  for (const_literal_iterator i = c->begin (); i != end; i++) {
-    const int ilit = *i;
-    if (internal->fixed (ilit) < 0) continue;
-    const int elit = externalize (ilit);
-    if (binary) put_binary_lit (elit);
-    else file->put (elit), file->put (" ");
+void Proof::flush_clause (Clause * c) {
+  LOG (c, "PROOF flushing falsified literals in");
+  assert (clause.empty ());
+  for (int i = 0; i < c->size; i++) {
+    int internal_lit = c->literals[i];
+    if (internal->fixed (internal_lit) < 0) continue;
+    add_literal (internal_lit);
   }
-  if (binary) put_binary_zero ();
-  else file->put ("0\n");
-  trace_clause (c, false);
+  add_derived_clause ();
+  delete_clause (c);
 }
 
 // While strengthening clauses, e.g., through self-subsuming resolutions,
@@ -140,20 +141,39 @@ void Proof::trace_flushing_clause (Clause * c) {
 // to avoid copying the clause and instead provides tracing of the required
 // 'add' and 'remove' operations.
 
-void Proof::trace_strengthen_clause (Clause * c, int remove) {
-  LOG (c, "tracing strengthen %d in", remove);
-  if (binary) file->put ('a');
-  const const_literal_iterator end = c->end ();
-  for (const_literal_iterator i = c->begin (); i != end; i++) {
-    const int ilit = *i;
-    if (ilit == remove) continue;
-    const int elit = externalize (ilit);
-    if (binary) put_binary_lit (elit);
-    else file->put (elit), file->put (" ");
+void Proof::strengthen_clause (Clause * c, int remove) {
+  LOG (c, "PROOF strengthen by removing %d in", remove);
+  assert (clause.empty ());
+  for (int i = 0; i < c->size; i++) {
+    int internal_lit = c->literals[i];
+    if (internal_lit == remove) continue;
+    add_literal (internal_lit);
   }
-  if (binary) put_binary_zero ();
-  else file->put ("0\n");
-  trace_clause (c, false);
+  add_derived_clause ();
+  delete_clause (c);
 }
 
-};
+/*------------------------------------------------------------------------*/
+
+void Proof::add_original_clause () {
+  LOG (clause, "PROOF adding original external clause");
+  for (size_t i = 0; i < observers.size (); i++)
+    observers[i]->add_original_clause (clause);
+  clause.clear ();
+}
+
+void Proof::add_derived_clause () {
+  LOG (clause, "PROOF adding derived external clause");
+  for (size_t i = 0; i < observers.size (); i++)
+    observers[i]->add_derived_clause (clause);
+  clause.clear ();
+}
+
+void Proof::delete_clause () {
+  LOG (clause, "PROOF deleting external clause");
+  for (size_t i = 0; i < observers.size (); i++)
+    observers[i]->delete_clause (clause);
+  clause.clear ();
+}
+
+}

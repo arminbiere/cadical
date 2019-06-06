@@ -1,4 +1,5 @@
 #include "cadical.hpp"
+#include "resources.hpp"
 #include "signal.hpp"
 
 /*------------------------------------------------------------------------*/
@@ -6,13 +7,11 @@
 #include <csignal>
 #include <cassert>
 
-int CaDiCaL::Solver::contract_violation_signal = SIGUSR1;
-
 /*------------------------------------------------------------------------*/
 
 extern "C" {
 #include <unistd.h>
-};
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -20,16 +19,20 @@ extern "C" {
 
 namespace CaDiCaL {
 
-bool Signal::catchedsig = false;
-bool Signal::alarmset = false;
-Solver * Signal::solver;
+static bool caught_signal = false;
+static bool caught_alarm = false;
+static bool alarm_set = false;
+static int alarm_time = -1;
+static Handler * signal_handler;
+
+void Handler::catch_alarm () { catch_signal (SIGALRM); }
 
 #define SIGNALS \
+SIGNAL(SIGABRT) \
+SIGNAL(SIGBUS) \
 SIGNAL(SIGINT) \
 SIGNAL(SIGSEGV) \
-SIGNAL(SIGABRT) \
 SIGNAL(SIGTERM) \
-SIGNAL(SIGBUS) \
 
 #define SIGNAL(SIG) \
 static void (*SIG ## _handler)(int);
@@ -37,18 +40,24 @@ SIGNALS
 #undef SIGNAL
 static void (*SIGALRM_handler)(int);
 
+void Signal::reset_alarm () {
+  if (!alarm_set) return;
+  (void) signal (SIGALRM, SIGALRM_handler);
+  SIGALRM_handler = 0;
+  caught_alarm = false;
+  alarm_set = false;
+  alarm_time = -1;
+}
+
 void Signal::reset () {
+  signal_handler = 0;
 #define SIGNAL(SIG) \
   (void) signal (SIG, SIG ## _handler); \
   SIG ## _handler = 0;
 SIGNALS
 #undef SIGNAL
-  if (alarmset)
-    (void) signal (SIGALRM, SIGALRM_handler),
-    SIGALRM_handler = 0,
-    alarmset = false;
-  solver = 0;
-  catchedsig = 0;
+  reset_alarm ();
+  caught_signal = false;
 }
 
 const char * Signal::name (int sig) {
@@ -64,35 +73,41 @@ const char * Signal::name (int sig) {
 // is raised during another print attempt (and locked IO is used).  To avoid
 // this we have to either run our own low-level printing routine here or in
 // 'Message' or just dump those statistics somewhere else were we have
-// exclusive access to.  All there solutions are painful and not elegant.
+// exclusive access to.  All these solutions are painful and not elegant.
 
-void Signal::catchsig (int sig) {
-  if (!catchedsig) {
-    catchedsig = true;
-    solver->message ("");
-    solver->message ("CAUGHT SIGNAL %d %s", sig, name (sig));
-    solver->section ("result");
-    solver->message ("s UNKNOWN");
-    solver->statistics ();
+static void catch_signal (int sig) {
+  if (sig == SIGALRM && absolute_real_time () >= alarm_time) {
+    if (!caught_alarm) {
+      caught_alarm = true;
+      if (signal_handler) signal_handler->catch_alarm ();
+    }
+    Signal::reset_alarm ();
+  } else {
+    if (!caught_signal) {
+      caught_signal = true;
+      if (signal_handler) signal_handler->catch_signal (sig);
+    }
+    Signal::reset ();
+    ::raise (sig);
   }
-  solver->message ("RERAISING SIGNAL %d %s", sig, name (sig));
-  reset ();
-  raise (sig);
 }
 
-void Signal::init (Solver * s) {
+void Signal::set (Handler * h) {
+  signal_handler = h;
 #define SIGNAL(SIG) \
-  SIG ## _handler = signal (SIG, Signal::catchsig);
+  SIG ## _handler = signal (SIG, catch_signal);
 SIGNALS
 #undef SIGNAL
-  solver = s;
 }
 
 void Signal::alarm (int seconds) {
-  assert (!alarmset);
-  SIGALRM_handler = signal (SIGALRM, Signal::catchsig);
-  alarmset = true;
+  assert (seconds >= 0);
+  assert (!alarm_set);
+  assert (alarm_time < 0);
+  SIGALRM_handler = signal (SIGALRM, catch_signal);
+  alarm_set = true;
+  alarm_time = absolute_real_time () + seconds;
   ::alarm (seconds);
 }
 
-};
+}

@@ -2,54 +2,92 @@
 
 namespace CaDiCaL {
 
-inline void Internal::search_assign (int lit, Clause * reason) {
+/*------------------------------------------------------------------------*/
 
-  assert (!simplifying || vivifying);
+// We are using the address of 'decision_reason' as pseudo reason for
+// decisions to distinguish assignment decisions from other assignments.
+// Before we added chronological backtracking all learned units were
+// assigned at decision level zero ('Solver.level == 0') and we just used a
+// zero pointer as reason.  After allowing chronological backtracking units
+// were also assigned at higher decision level (but with assignment level
+// zero), and it was not possible anymore to just distinguish the case
+// 'unit' versus 'decision' by just looking at the current level.  Both had
+// a zero pointer as reason.  Now only units have a zero reason and
+// decisions need to use the pseudo reason 'decision_reason'.
 
-  int idx = vidx (lit);
+static Clause decision_reason_clause;
+static Clause * decision_reason = &decision_reason_clause;
 
-  assert (!vals[idx]);
-  assert (!flags (idx).eliminated () || !reason);
+// If chronological backtracking is used the actual assignment level might
+// be lower than the current decision level. In this case the assignment
+// level is defined as the maximum level of the literals in the reason
+// clause except the literal for which the clause is a reason.  This
+// function determines this assignment level. For non-chronological
+// backtracking as in classical CDCL this function always returns the
+// current decision level, the concept of assignment level does not make
+// sense, and accordingly this function can be skipped.
 
-  Var & v = var (idx);
-  v.level = level;
-  v.trail = (int) trail.size ();
-  v.reason = reason;
+inline int Internal::assignment_level (int lit, Clause * reason) {
 
-  if (!level) learn_unit_clause (lit);   // increases 'stats.fixed'
+  assert (opts.chrono);
+  if (!reason) return level;
 
-  const signed char tmp = sign (lit);
-  vals[idx] = tmp;
-  vals[-idx] = -tmp;
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
-  if (!vivifying) phases[idx] = tmp;         // phase saving during search
+  int res = 0;
 
-  propfixed (lit) = stats.all.fixed;         // avoids too much probing
+  for (const auto & other : *reason) {
+    if (other == lit) continue;
+    assert (val (other));
+    int tmp = var (other).level;
+    if (tmp > res) res = tmp;
+  }
 
-  trail.push_back (lit);
-  LOG (reason, "assign %d", lit);
-
-  // As 'assign' is called most of the time from 'propagate' below and then
-  // the watches of '-lit' are accessed next during propagation it is wise
-  // to tell the processor to prefetch the memory of those watches.  This
-  // seems to give consistent speed-ups (both with 'g++' and 'clang++') in
-  // the order of 5%.  For instance on 'sokoban-p20.sas.ex.13', which has
-  // very high propagation per conflict rates, we saw a difference of 24
-  // seconds for the version with prefetching versus 32 seconds for the one
-  // without. This was for the first 10k conflicts and resulted of course in
-  // the same search space otherwise.  This low-level optimization is
-  // confined to the next two lines (and these comments) though.
-  //
-  if (opts.prefetch && watches ())
-    __builtin_prefetch (&*(watches (-lit).begin ()));
+  return res;
 }
 
 /*------------------------------------------------------------------------*/
 
-// External versions of 'assign' which are not inlined.  They either are
-// used to assign unit clauses on the root-level, in 'decide' to assign a
-// decision or in 'analyze' to assign the literal "driven" by a learned
+inline void Internal::search_assign (int lit, Clause * reason) {
+
+  if (level) require_mode (SEARCH);
+
+  const int idx = vidx (lit);
+  assert (!vals[idx]);
+  assert (!flags (idx).eliminated () || reason == decision_reason);
+  Var & v = var (idx);
+  int lit_level;
+
+  // The following cases are explained in the two comments above before
+  // 'decision_reason' and 'assignment_level'.
+  //
+  if (!reason) lit_level = 0;   // unit
+  else if (reason == decision_reason) lit_level = level, reason = 0;
+  else if (opts.chrono) lit_level = assignment_level (lit, reason);
+  else lit_level = level;
+  if (!lit_level) reason = 0;
+
+  v.level = lit_level;
+  v.trail = (int) trail.size ();
+  v.reason = reason;
+  if (!lit_level) learn_unit_clause (lit);  // increases 'stats.fixed'
+  const signed_char tmp = sign (lit);
+  vals[idx] = tmp;
+  vals[-idx] = -tmp;
+  assert (val (lit) > 0);
+  assert (val (-lit) < 0);
+  if (!searching_lucky_phases)
+    phases.saved[idx] = tmp;                // phase saving during search
+  trail.push_back (lit);
+#ifdef LOGGING
+  if (!lit_level) LOG ("root-level unit assign %d @ 0", lit);
+  else LOG (reason, "search assign %d @ %d", lit, lit_level);
+#endif
+}
+
+/*------------------------------------------------------------------------*/
+
+// External versions of 'search_assign' which are not inlined.  They either
+// are used to assign unit clauses on the root-level, in 'decide' to assign
+// a decision or in 'analyze' to assign the literal 'driven' by a learned
 // clause.  This happens far less frequently than the 'search_assign' above,
 // which is called directly in 'propagate' below and thus is inlined.
 
@@ -58,14 +96,20 @@ void Internal::assign_unit (int lit) {
   search_assign (lit, 0);
 }
 
-void Internal::assign_decision (int lit) {
-  assert (level > 0);
+// Just assume the given literal as decision (increase decision level and
+// assign it).  This is used below in 'decide'.
+
+void Internal::search_assume_decision (int lit) {
+  require_mode (SEARCH);
   assert (propagated == trail.size ());
-  search_assign (lit, 0);
+  level++;
+  control.push_back (Level (lit, trail.size ()));
+  LOG ("search decide %d", lit);
+  search_assign (lit, decision_reason);
 }
 
-void Internal::assign_driving (int lit, Clause * c) {
-  assert (c);
+void Internal::search_assign_driving (int lit, Clause * c) {
+  require_mode (SEARCH);
   search_assign (lit, c);
 }
 
@@ -74,7 +118,7 @@ void Internal::assign_driving (int lit, Clause * c) {
 // The 'propagate' function is usually the hot-spot of a CDCL SAT solver.
 // The 'trail' stack saves assigned variables and is used here as BFS queue
 // for checking clauses with the negation of assigned variables for being in
-// conflict or whether they produce additional assignments (units).
+// conflict or whether they produce additional assignments.
 
 // This version of 'propagate' uses lazy watches and keeps two watched
 // literals at the beginning of the clause.  We also use 'blocking literals'
@@ -90,47 +134,55 @@ void Internal::assign_driving (int lit, Clause * c) {
 
 bool Internal::propagate () {
 
-  assert (!simplifying || vivifying);
+  if (level) require_mode (SEARCH);
   assert (!unsat);
 
   START (propagate);
 
-  // Updating the statistics counter in the propagation loops is costly so
-  // we delay until propagation ran to completion.
+  // Updating statistics counter in the propagation loops is costly so we
+  // delay until propagation ran to completion.
   //
   long before = propagated;
 
-  while (!conflict && propagated < trail.size ()) {
+  while (!conflict && propagated != trail.size ()) {
 
     const int lit = -trail[propagated++];
     LOG ("propagating %d", -lit);
     Watches & ws = watches (lit);
 
+    const const_watch_iterator eow = ws.end ();
     const_watch_iterator i = ws.begin ();
     watch_iterator j = ws.begin ();
 
-    while (i != ws.end ()) {
+    while (i != eow) {
 
       const Watch w = *j++ = *i++;
       const int b = val (w.blit);
 
-#ifdef STATS
-      if (w.binary) EXPENSIVE_STATS_ADD (watchaccess.binary, 1);
-      else          EXPENSIVE_STATS_ADD (watchaccess.large, 1);
-#endif
+      if (b > 0) continue;                // blocking literal satisfied
 
-      if (b > 0) {
-#ifdef STATS
-	if (w.binary) EXPENSIVE_STATS_ADD (blitsat.binary, 1);
-	else          EXPENSIVE_STATS_ADD (blitsat.large, 1);
-#endif
-	continue;                // blocking literal satisfied
-      }
+      if (w.binary ()) {
 
-      if (w.binary) {
-
-        if (w.clause->garbage) { j--; continue; }
-        assert (!w.clause->ignore);
+        // In principle we can ignore garbage binary clauses too, but that
+        // would require to dereference the clause pointer all the time with
+        //
+        // if (w.clause->garbage) { j--; continue; } // (*)
+        //
+        // This is too costly.  It is however necessary to produce correct
+        // proof traces if binary clauses are traced to be deleted ('d ...'
+        // line) immediately as soon they are marked as garbage.  Actually
+        // finding instances where this happens is pretty difficult (six
+        // parallel fuzzing jobs in parallel took an hour), but it does
+        // occur.  Our strategy to avoid generating incorrect proofs now is
+        // to delay tracing the deletion of binary clauses marked as garbage
+        // until they are really deleted from memory.  For large clauses
+        // this is not necessary since we have to access the clause anyhow.
+        //
+        // Thanks go to Mathias Fleury, who wanted me to explain why the
+        // line '(*)' above was in the code. Removing it actually really
+        // improved running times and thus I tried to find concrete
+        // instances where this happens (which I found), and then
+        // implemented the described fix.
 
         // Binary clauses are treated separately since they do not require
         // to access the clause at all (only during conflict analysis, and
@@ -141,114 +193,83 @@ bool Internal::propagate () {
 
       } else {
 
-	if (conflict) break; // Stop if there was a binary conflict already.
+        if (conflict) break; // Stop if there was a binary conflict already.
 
-        // The first pointer access to a long (non-binary) clause is the
-        // most expensive operation in a CDCL SAT solver.  We count this by
-        // the 'visits' counter.  However, since this would be in the
-        // tightest loop of the solver, we only want to count it if
-        // expensive statistics are required (actually costs quite a bit
-        // having this enabled all the time).
-
-        EXPENSIVE_STATS_ADD (visits, 1);
-
-	// The cache line with the clause data is forced to be loaded here
-	// and thus this first memory access below is the real hot-spot of
-	// the solver.  Note, that both checks are positive very rarely
-	// and thus branch prediction should be almost perfect.
+        // The cache line with the clause data is forced to be loaded here
+        // and thus this first memory access below is the real hot-spot of
+        // the solver.  Note, that this check is positive very rarely and
+        // thus branch prediction should be almost perfect here.
 
         if (w.clause->garbage) { j--; continue; }
-        if (w.clause->ignore) continue;		    // for vivification
 
         literal_iterator lits = w.clause->begin ();
 
-	// Simplify code by forcing 'lit' to be the second literal in the
-	// clause.  This goes back to MiniSAT.  We use a branch-less version
-	// for conditionally swapping the first two literals, since it
-	// turned out to be substantially faster than this one
+        // Simplify code by forcing 'lit' to be the second literal in the
+        // clause.  This goes back to MiniSAT.  We use a branch-less version
+        // for conditionally swapping the first two literals, since it
+        // turned out to be substantially faster than this one
         //
         //  if (lits[0] == lit) swap (lits[0], lits[1]);
-	//
-	// which achieves the same effect, but needs a branch.
         //
-	const int other = lits[0]^lits[1]^lit;
-	lits[0] = other, lits[1] = lit;
+        // which achieves the same effect, but needs a branch.
+        //
+        const int other = lits[0]^lits[1]^lit;
+        lits[0] = other, lits[1] = lit;
 
         const int u = val (other);      // value of the other watch
 
         if (u > 0) j[-1].blit = other;  // satisfied, just replace blit
         else {
 
+          // This follows Ian Gent's (JAIR'13) idea of saving the position
+          // of the last watch replacement.  In essence it needs two copies
+          // of the default search for a watch replacement (in essence the
+          // code in the 'if (v < 0) { ... }' block below), one starting at
+          // the saved position until the end of the clause and then if that
+          // one failed to find a replacement another one starting at the
+          // first non-watched literal until the saved position.
+
           const int size = w.clause->size;
+          const literal_iterator middle = lits + w.clause->pos;
           const const_literal_iterator end = lits + size;
-          literal_iterator k;
+          literal_iterator k = middle;
+
+          // Find replacement watch 'r' at position 'k' with value 'v'.
+
           int v = -1, r = 0;
 
-          // Now try to find a replacement watch.
+          while (k != end && (v = val (r = *k)) < 0)
+            k++;
 
-	  if (w.clause->extended) {
+          if (v < 0) {  // need second search starting at the head?
 
-	    // This follows Ian Gent's (JAIR'13) idea of saving the position
-	    // of the last watch replacement.  In essence it needs two
-	    // copies of the default search for a watch replacement (in
-	    // essence the code in the 'else' branch below), one starting at
-	    // the saved position until the end of the clause and then if
-	    // that one failed to find a replacement another one starting at
-	    // the first non-watched literal until the saved position.
+            k = lits + 2;
+            assert (w.clause->pos <= size);
+            while (k != middle && (v = val (r = *k)) < 0)
+              k++;
+          }
 
-	    const literal_iterator start = lits + w.clause->pos ();;
-
-	    k = start;
-	    while (k != end && (v = val (r = *k)) < 0) k++;
-
-	    EXPENSIVE_STATS_ADD (traversed, k - start);
-
-            if (v < 0) {  // need second search starting at the head?
-
-              const const_literal_iterator middle = lits + w.clause->pos ();
-              k = lits + 2;
-              assert (w.clause->pos () <= size);
-              while (k != middle && (v = val (r = *k)) < 0) k++;
-
-              EXPENSIVE_STATS_ADD (traversed, k - (lits + 2));
-            }
-
-            w.clause->pos () = k - lits;  // always save position
-
-	  } else {
-
-	    // For shorter clauses of say size 4 (see 'opts.posize'), we do
-	    // not save the position and actually do not even have the
-	    // memory allocated for the '_pos' field in a clause.  For those
-	    // short clauses we simply start at the first unwatched literal.
-
-	    const literal_iterator start = lits + 2;
-
-	    k = start;
-	    while (k != end && (v = val (r = *k)) < 0) k++;
-
-	    EXPENSIVE_STATS_ADD (traversed, k - start);
-	  }
+          w.clause->pos = k - lits;  // always save position
 
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
 
           if (v > 0) {
 
-	    // Replacement satisfied, so just replace 'blit'.
+            // Replacement satisfied, so just replace 'blit'.
 
-	    j[-1].blit = r;
+            j[-1].blit = r;
 
           } else if (!v) {
 
             // Found new unassigned replacement literal to be watched.
 
-            LOG (w.clause, "unwatch %d in", r);
+            LOG (w.clause, "unwatch %d in", lit);
 
-	    lits[1] = r;
-	    *k = lit;
-            watch_literal (r, lit, w.clause, size);
+            lits[1] = r;
+            *k = lit;
+            watch_literal (r, lit, w.clause);
 
-            j--;  // drop this watch from the watch list of 'lit'
+            j--;  // Drop this watch from the watch list of 'lit'.
 
           } else if (!u) {
 
@@ -259,6 +280,43 @@ bool Internal::propagate () {
             //
             search_assign (other, w.clause);
 
+            // Similar code is in the implementation of the SAT'18 paper on
+            // chronological backtracking but in our experience, this code
+            // first does not really seem to be necessary for correctness,
+            // and further does not improve running time either.
+
+            if (opts.chrono) {
+
+              const int other_level = var (other).level;
+
+              if (other_level > var (lit).level) {
+
+                // The assignment level of the new unit 'other' is larger
+                // than the assignment level of 'lit'.  Thus we should find
+                // another literal in the clause at that higher assignment
+                // level and watch that instead of 'lit'.
+
+                assert (size > 2);
+                assert (lits[0] == other);
+                assert (lits[1] == lit);
+
+                int pos, s = 0;
+
+                for (pos = 2; pos < size; pos++)
+                  if (var (s = lits[pos]).level == other_level)
+                    break;
+
+                assert (s);
+                assert (pos < size);
+
+                LOG (w.clause, "unwatch %d in", lit);
+                lits[pos] = lit;
+                lits[1] = s;
+                watch_literal (s, other, w.clause);
+
+                j--;  // Drop this watch from the watch list of 'lit'.
+              }
+            }
           } else {
 
             assert (u < 0);
@@ -273,20 +331,44 @@ bool Internal::propagate () {
         }
       }
     }
-    if (j < i) {
-      while (i != ws.end ()) *j++ = *i++;
+
+    if (j != i) {
+
+      while (i != eow)
+        *j++ = *i++;
+
       ws.resize (j - ws.begin ());
     }
   }
-  long delta = propagated - before;
-  if (vivifying) stats.propagations.vivify += delta;
-  else stats.propagations.search += delta;
-  if (conflict) {
-    if (!vivifying) stats.conflicts++;
-    LOG (conflict, "conflict");
+
+  if (searching_lucky_phases) {
+
+    if (conflict)
+      LOG (conflict, "ignoring lucky conflict");
+
+  } else {
+
+    // Avoid updating stats eagerly in the hot-spot of the solver.
+    //
+    stats.propagations.search += propagated - before;
+
+    if (!conflict) no_conflict_until = propagated;
+    else {
+
+      if (stable) stats.stabconflicts++;
+      stats.conflicts++;
+
+      LOG (conflict, "conflict");
+
+      // The trail before the current decision level was conflict free.
+      //
+      no_conflict_until = control[level].trail;
+    }
   }
+
   STOP (propagate);
+
   return !conflict;
 }
 
-};
+}

@@ -1,7 +1,9 @@
 #ifndef _logging_hpp_INCLUDED
 #define _logging_hpp_INCLUDED
 
+/*------------------------------------------------------------------------*/
 #ifdef LOGGING
+/*------------------------------------------------------------------------*/
 
 #include <vector>
 
@@ -15,9 +17,11 @@ namespace CaDiCaL {
 using namespace std;
 
 struct Clause;
-class Internal;
+struct Internal;
 
 struct Logger {
+
+static void print_log_prefix (Internal *);
 
 // Simple logging of a C-style format string.
 //
@@ -35,25 +39,37 @@ static void log (Internal *, const Clause *, const char *fmt, ...);
 //
 static void log (Internal *, const vector<int> &, const char *fmt, ...);
 
-};
+// Another variant, to avoid copying (without logging).
+//
+static void log (Internal *,
+                 const vector<int>::const_iterator & begin,
+                 const vector<int>::const_iterator & end,
+                 const char *fmt, ...);
+
+static void log_empty_line (Internal *);
 
 };
+
+}
 
 /*------------------------------------------------------------------------*/
 
 // Make sure that 'logging' code is really not included (second case of the
 // '#ifdef') if logging code is not included.
 
-#define LOG(ARGS...) \
+#define LOG(...) \
 do { \
   if (!internal->opts.log) break; \
-  Logger::log (internal, ##ARGS); \
+  Logger::log (internal, __VA_ARGS__); \
 } while (0)
 
-#else
-#define LOG(ARGS...) do { } while (0)
-#endif
-
+/*------------------------------------------------------------------------*/
+#else   // end of 'then' part of 'ifdef LOGGING'
 /*------------------------------------------------------------------------*/
 
+#define LOG(...) do { } while (0)
+
+/*------------------------------------------------------------------------*/
+#endif // end of 'else' part of 'ifdef LOGGING'
+/*------------------------------------------------------------------------*/
 #endif

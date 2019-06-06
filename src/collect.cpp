@@ -4,26 +4,27 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// Returns positive number 1 ( > 0) if the given clause is root level
-// satisfied or the negative number -1 ( < 0) if it is not root level
-// satisfied but contains a root level falsified literal and 0 otherwise, if
-// it does not contain a root level fixed literal.
+// Returns the positive number '1' ( > 0) if the given clause is root level
+// satisfied or the negative number '-1' ( < 0) if it is not root level
+// satisfied but contains a root level falsified literal. Otherwise, if it
+// contains neither a satisfied nor falsified literal, then '0' is returned.
 
 int Internal::clause_contains_fixed_literal (Clause * c) {
-  const const_literal_iterator end = c->end ();
-  const_literal_iterator i = c->begin ();
-  int res = 0;
-  while (res <= 0 && i != end) {
-    const int lit = *i++, tmp = fixed (lit);
+  int satisfied = 0, falsified = 0;
+  for (const auto & lit : *c) {
+    const int tmp = fixed (lit);
     if (tmp > 0) {
       LOG (c, "root level satisfied literal %d in", lit);
-      res = 1;
-    } else if (!res && tmp < 0) {
+      satisfied++;
+    }
+    if (tmp < 0) {
       LOG (c, "root level falsified literal %d in", lit);
-      res = -1;
+      falsified++;
     }
   }
-  return res;
+       if (satisfied) return 1;
+  else if (falsified) return -1;
+  else                return 0;
 }
 
 // Assume that the clause is not root level satisfied but contains a literal
@@ -40,7 +41,7 @@ void Internal::remove_falsified_literals (Clause * c) {
   for (i = c->begin (); num_non_false < 2 && i != end; i++)
     if (fixed (*i) >= 0) num_non_false++;
   if (num_non_false < 2) return;
-  if (proof) proof->trace_flushing_clause (c);
+  if (proof) proof->flush_clause (c);
   literal_iterator j = c->begin ();
   for (i = j; i != end; i++) {
     const int lit = *j++ = *i, tmp = fixed (lit);
@@ -59,14 +60,12 @@ void Internal::remove_falsified_literals (Clause * c) {
 
 void Internal::mark_satisfied_clauses_as_garbage () {
 
-  if (lim.fixed_at_last_collect >= stats.all.fixed) return;
-  lim.fixed_at_last_collect = stats.all.fixed;
+  if (last.collect.fixed >= stats.all.fixed) return;
+  last.collect.fixed = stats.all.fixed;
 
   LOG ("marking satisfied clauses and removing falsified literals");
 
-  const_clause_iterator i;
-  for (i = clauses.begin (); i != clauses.end (); i++) {
-    Clause * c = *i;
+  for (const auto & c : clauses) {
     if (c->garbage) continue;
     const int tmp = clause_contains_fixed_literal (c);
          if (tmp > 0) mark_garbage (c);
@@ -109,7 +108,7 @@ size_t Internal::flush_occs (int lit) {
 inline void Internal::flush_watches (int lit, Watches & saved) {
   assert (saved.empty ());
   Watches & ws = watches (lit);
-  const_watch_iterator end = ws.end ();
+  const const_watch_iterator end = ws.end ();
   watch_iterator j = ws.begin ();
   const_watch_iterator i;
   for (i = j; i != end; i++) {
@@ -117,19 +116,17 @@ inline void Internal::flush_watches (int lit, Watches & saved) {
     Clause * c = w.clause;
     if (c->collect ()) continue;
     if (c->moved) c = w.clause = c->copy;
-    if (c->size == 2 && !w.binary) w.binary = true;
+    w.size = c->size;
     const int new_blit_pos = (c->literals[0] == lit);
     assert (c->literals[!new_blit_pos] == lit);
     w.blit = c->literals[new_blit_pos];
-    if (w.binary) *j++ = w;
+    if (w.binary ()) *j++ = w;
     else saved.push_back (w);
   }
   ws.resize (j - ws.begin ());
-  end = saved.end ();
-  for (i = saved.begin (); i != end; i++)
-    ws.push_back (*i);
+  for (const auto & w : saved) ws.push_back (w);
   saved.clear ();
-  shrink_watches (ws);
+  shrink_vector (ws);
 }
 
 void Internal::flush_all_occs_and_watches () {
@@ -157,9 +154,8 @@ void Internal::delete_garbage_clauses () {
 
   LOG ("deleting garbage clauses");
   long collected_bytes = 0, collected_clauses = 0;
-  const const_clause_iterator end = clauses.end ();
-  clause_iterator j = clauses.begin ();
-  const_clause_iterator i = j;
+  const auto end = clauses.end ();
+  auto j = clauses.begin (), i = j;
   while (i != end) {
     Clause * c = *j++ = *i++;
     if (!c->collect ()) continue;
@@ -171,7 +167,7 @@ void Internal::delete_garbage_clauses () {
   clauses.resize (j - clauses.begin ());
   shrink_vector (clauses);
 
-  VRB ("collect", stats.collections,
+  PHASE ("collect", stats.collections,
     "collected %ld bytes of %ld garbage clauses",
     collected_bytes, collected_clauses);
 }
@@ -186,12 +182,19 @@ void Internal::delete_garbage_clauses () {
 void Internal::copy_clause (Clause * c) {
   LOG (c, "moving");
   assert (!c->moved);
-  char * p = c->start (), * q = arena.copy (p, c->bytes ());
-  assert (aligned (q, 8));
-  Clause * d = c->copy = (Clause *) (q - c->offset ());
-  if (d->reason)
-    assert (level > 0),
-    var (d->literals[val (d->literals[1]) > 0]).reason = d;
+  char * p = (char*) c, * q = arena.copy (p, c->bytes ());
+  Clause * d = c->copy = (Clause *) q;
+  LOG ("copied clause[%p] to clause[%p]", c, d);
+  if (d->reason) {
+    assert (level > 0);
+    Var & v = var (d->literals[0]);
+    if (v.reason == c) v.reason = d;
+    else {
+      Var & u = var (d->literals[1]);
+      assert (u.reason == c);
+      u.reason = d;
+    }
+  }
   c->moved = true;
 }
 
@@ -199,20 +202,16 @@ void Internal::copy_clause (Clause * c) {
 
 void Internal::copy_non_garbage_clauses () {
 
-  Clause * c;
-
   size_t collected_clauses = 0, collected_bytes = 0;
   size_t     moved_clauses = 0,     moved_bytes = 0;
 
   // First determine 'moved_bytes' and 'collected_bytes'.
   //
-  const const_clause_iterator end = clauses.end ();
-  const_clause_iterator i;
-  for (i = clauses.begin (); i != end; i++)
-    if (!(c = *i)->collect ()) moved_bytes += c->bytes (), moved_clauses++;
+  for (const auto & c : clauses)
+    if (!c->collect ()) moved_bytes += c->bytes (), moved_clauses++;
     else collected_bytes += c->bytes (), collected_clauses++;
 
-  VRB ("collect", stats.collections,
+  PHASE ("collect", stats.collections,
     "moving %ld bytes %.0f%% of %ld non garbage clauses",
     (long) moved_bytes,
     percent (moved_bytes, collected_bytes + moved_bytes),
@@ -225,68 +224,65 @@ void Internal::copy_non_garbage_clauses () {
   // Keep clauses in arena in the same order.
   //
   if (opts.arenacompact)
-    for (i = clauses.begin (); i != end; i++)
-      if (!(c = *i)->collect () && arena.contains (c))
-	copy_clause (c);
+    for (const auto & c : clauses)
+      if (!c->collect () && arena.contains (c))
+        copy_clause (c);
 
-  if (opts.arena == 1 || !watches ()) {
+  if (opts.arenatype == 1 || !watches ()) {
 
     // Localize according to current clause order.
 
-    // If the option 'opts.arena == 1' is set, then this means the solver
-    // uses the original order of clauses.  If there are no watches, we can
-    // not use the watched based copying policies below.  This happens if
-    // garbage collection is triggered during bounded variable elimination.
+    // If the option 'opts.arenatype == 1' is set, then this means the
+    // solver uses the original order of clauses.  If there are no watches,
+    // we can not use the watched based copying policies below.  This
+    // happens if garbage collection is triggered during bounded variable
+    // elimination.
 
     // Copy clauses according to the order of calling 'copy_clause', which
     // in essence just gives a compacting garbage collector, since their
     // relative order is kept, and actually already gives the largest
     // benefit due to better cache locality.
 
-    for (i = clauses.begin (); i != end; i++)
-      if (!(c = *i)->moved && !c->collect ()) copy_clause (c);
+    for (const auto & c : clauses)
+      if (!c->moved && !c->collect ())
+        copy_clause (c);
 
-  } else if (opts.arena == 2) {
+  } else if (opts.arenatype == 2) {
 
     // Localize according to (original) variable order.
 
-    // This is almost the version used by MiniSAT and descendants and seems
-    // to work best for search.  Our version uses saved phases.
+    // This is almost the version used by MiniSAT and descendants.
+    // Our version uses saved phases too.
 
-    for (int sign = -1; sign <= 1; sign += 2) {
-      for (int idx = 1; idx <= max_var; idx++) {
-        const Watches & ws = watches (sign * phases[idx] * idx);
-        const const_watch_iterator ew = ws.end ();
-        for (const_watch_iterator i = ws.begin (); i != ew; i++)
-          if (!(c = i->clause)->moved && !c->collect ()) copy_clause (c);
-      }
-    }
+    for (int sign = -1; sign <= 1; sign += 2)
+      for (int idx = 1; idx <= max_var; idx++)
+        for (const auto & w : watches (sign * likely_phase (idx)))
+          if (!w.clause->moved && !w.clause->collect ())
+            copy_clause (w.clause);
 
   } else {
 
     // Localize according to decision queue order.
 
     // This is the default for search. It allocates clauses in the order of
-    // the decision queue.  It also uses saved phases.  It seems slightly
-    // faster than the MiniSAT version and thus we keep 'opts.arena == 3'.
+    // the decision queue and also uses saved phases.  It seems faster than
+    // the MiniSAT version and thus we keep 'opts.arenatype == 3'.
 
-    assert (opts.arena == 3);
+    assert (opts.arenatype == 3);
 
-    for (int sign = -1; sign <= 1; sign += 2) {
-      for (int idx = queue.last; idx; idx = link (idx).prev) {
-        const Watches & ws = watches (sign * phases[idx] * idx);
-        const const_watch_iterator ew = ws.end ();
-        for (const_watch_iterator i = ws.begin (); i != ew; i++)
-          if (!(c = i->clause)->moved && !c->collect ()) copy_clause (c);
-      }
-    }
+    for (int sign = -1; sign <= 1; sign += 2)
+      for (int idx = queue.last; idx; idx = link (idx).prev)
+        for (const auto & w : watches (sign * likely_phase (idx)))
+          if (!w.clause->moved && !w.clause->collect ())
+            copy_clause (w.clause);
   }
 
   // Do not forget to move clauses which are not watched, which happened in
   // a rare situation, and now is only left as defensive code.
   //
-  for (i = clauses.begin (); i != end; i++)
-    if (!(c = *i)->collect () && !c->moved) copy_clause (c);
+  for (const auto & c : clauses)
+    if (!c->collect () && !c->moved)
+      copy_clause (c);
 
   // Update watches or occurrence lists.
   //
@@ -294,22 +290,24 @@ void Internal::copy_non_garbage_clauses () {
 
   // Replace and flush clause references in 'clauses'.
   //
-  clause_iterator j = clauses.begin ();
-  assert (end == clauses.end ());
-  for (i = j; i != end; i++) {
-    if ((c = *i)->collect ()) delete_clause (c);
+  const auto end = clauses.end ();
+  auto j = clauses.begin (), i = j;
+  for (; i != end; i++) {
+    Clause * c = *i;
+    if (c->collect ()) delete_clause (c);
     else assert (c->moved), *j++ = c->copy, deallocate_clause (c);
   }
   clauses.resize (j - clauses.begin ());
   if (clauses.size () < clauses.capacity ()/2) shrink_vector (clauses);
 
-  if (opts.arenasort) sort (clauses.begin (), clauses.end ());
+  if (opts.arenasort)
+    rsort (clauses.begin (), clauses.end (), pointer_rank ());
 
   // Release 'from' space completely and then swap 'to' with 'from'.
   //
   arena.swap ();
 
-  VRB ("collect", stats.collections,
+  PHASE ("collect", stats.collections,
     "collected %ld bytes %.0f%% of %ld garbage clauses",
     (long) collected_bytes,
     percent (collected_bytes, collected_bytes + moved_bytes),
@@ -325,17 +323,16 @@ void Internal::copy_non_garbage_clauses () {
 
 void Internal::check_clause_stats () {
 #ifndef NDEBUG
-  long irredundant = 0, redundant = 0, irrbytes = 0;
-  const const_clause_iterator end = clauses.end ();
-  const_clause_iterator i;
-  for (i = clauses.begin (); i != end; i++) {
-    Clause * c = *i;
+  long irredundant = 0, redundant = 0, total = 0, irrbytes = 0;
+  for (const auto & c : clauses) {
     if (c->garbage) continue;
     if (c->redundant) redundant++; else irredundant++;
     if (!c->redundant) irrbytes += c->bytes ();
+    total++;
   }
-  assert (stats.irredundant == irredundant);
-  assert (stats.redundant == redundant);
+  assert (stats.current.irredundant == irredundant);
+  assert (stats.current.redundant == redundant);
+  assert (stats.current.total == total);
   assert (stats.irrbytes == irrbytes);
 #endif
 }
@@ -343,7 +340,7 @@ void Internal::check_clause_stats () {
 /*------------------------------------------------------------------------*/
 
 bool Internal::arenaing () {
-  return opts.arena && (stats.collections > 1);  // TODO more sophisticated
+  return opts.arena && (stats.collections > 1);
 }
 
 void Internal::garbage_collection () {
@@ -360,4 +357,4 @@ void Internal::garbage_collection () {
   STOP (collect);
 }
 
-};
+}

@@ -6,56 +6,97 @@ namespace CaDiCaL {
 #ifndef QUIET
 /*------------------------------------------------------------------------*/
 
-void Message::vmessage (Internal * internal, const char * fmt, va_list & ap) {
+void Internal::print_prefix () { fputs (prefix.c_str (), stdout); }
+
+void Internal::vmessage (const char * fmt, va_list & ap) {
 #ifdef LOGGING
-  if (!internal->opts.log)
+  if (!opts.log)
 #endif
-  if (internal->opts.quiet) return;
-  fputs (internal->prefix.c_str (), stdout);
+  if (opts.quiet) return;
+  print_prefix ();
   vprintf (fmt, ap);
   fputc ('\n', stdout);
   fflush (stdout);
 }
 
-void Message::message (Internal * internal, const char * fmt, ...) {
-#ifdef LOGGING
-  if (!internal->opts.log)
-#endif
-  if (internal->opts.quiet) return;
+void Internal::message (const char * fmt, ...) {
   va_list ap;
   va_start (ap, fmt);
-  vmessage (internal, fmt, ap);
+  vmessage (fmt, ap);
   va_end (ap);
 }
 
-/*------------------------------------------------------------------------*/
-
-void Message::section (Internal * internal, const char * title) {
+void Internal::message () {
 #ifdef LOGGING
-  if (!internal->opts.log)
+  if (!opts.log)
 #endif
-  if (internal->opts.quiet) return;
-  char line[160];
-  sprintf (line, "---- [ %s ] ", title);
-  assert (strlen (line) < sizeof line);
-  int i = 0;
-  for (i = strlen (line); i < 76; i++) line[i] = '-';
-  line[i] = 0;
-  if (internal->stats.sections++) MSG ("");
-  MSG (line);
-  MSG ("");
+  if (opts.quiet) return;
+  print_prefix ();
+  fputc ('\n', stdout);
+  fflush (stdout);
 }
 
 /*------------------------------------------------------------------------*/
 
-void Message::verbose (Internal * internal,
-                       const char * phase,
-                       const char * fmt, ...) {
+void Internal::vverbose (int level, const char * fmt, va_list & ap) {
 #ifdef LOGGING
-  if (!internal->opts.log)
+  if (!opts.log)
 #endif
-  if (internal->opts.quiet || internal->opts.verbose < 2) return;
-  fputs (internal->prefix.c_str (), stdout);
+  if (opts.quiet || level > opts.verbose) return;
+  print_prefix ();
+  vprintf (fmt, ap);
+  fputc ('\n', stdout);
+  fflush (stdout);
+}
+
+void Internal::verbose (int level, const char * fmt, ...) {
+  va_list ap;
+  va_start (ap, fmt);
+  vverbose (level, fmt, ap);
+  va_end (ap);
+}
+
+void Internal::verbose (int level) {
+#ifdef LOGGING
+  if (!opts.log)
+#endif
+  if (opts.quiet || level > opts.verbose) return;
+  print_prefix ();
+  fputc ('\n', stdout);
+  fflush (stdout);
+}
+
+/*------------------------------------------------------------------------*/
+
+void Internal::section (const char * title) {
+#ifdef LOGGING
+  if (!opts.log)
+#endif
+  if (opts.quiet) return;
+  if (stats.sections++) MSG ();
+  print_prefix ();
+  tout.blue ();
+  fputs ("--- [ ", stdout);
+  tout.blue (true);
+  fputs (title, stdout);
+  tout.blue ();
+  fputs (" ] ", stdout);
+  for (int i = strlen (title) + strlen (prefix.c_str ()) + 9; i < 78; i++)
+    fputc ('-' , stdout);
+  tout.normal ();
+  fputc ('\n', stdout);
+  MSG ();
+}
+
+/*------------------------------------------------------------------------*/
+
+void Internal::phase (const char * phase, const char * fmt, ...) {
+#ifdef LOGGING
+  if (!opts.log)
+#endif
+  if (opts.quiet ||
+      (!force_phase_messages && opts.verbose < 2)) return;
+  print_prefix ();
   printf ("[%s] ", phase);
   va_list ap;
   va_start (ap, fmt);
@@ -65,14 +106,15 @@ void Message::verbose (Internal * internal,
   fflush (stdout);
 }
 
-void Message::verbose (Internal * internal,
-                       const char * phase, long count,
-                       const char * fmt, ...) {
+void Internal::phase (const char * phase,
+                      long count, const char * fmt, ...) {
 #ifdef LOGGING
-  if (!internal->opts.log)
+  if (!opts.log)
 #endif
-  if (internal->opts.quiet || internal->opts.verbose < 2) return;
-  printf ("c [%s-%ld] ", phase, count);
+  if (opts.quiet ||
+      (!force_phase_messages && opts.verbose < 2)) return;
+  print_prefix ();
+  printf ("[%s-%ld] ", phase, count);
   va_list ap;
   va_start (ap, fmt);
   vprintf (fmt, ap);
@@ -85,17 +127,80 @@ void Message::verbose (Internal * internal,
 #endif // ifndef QUIET
 /*------------------------------------------------------------------------*/
 
-void Message::verror (Internal * internal, const char *fmt, va_list & ap) {
-  fputs ("*** cadical error: ", stderr);
-  vfprintf (stderr, fmt, ap);
-  fputc ('\n', stderr);
-}
-
-void Message::error (Internal * internal, const char *fmt, ...) {
+void Internal::warning (const char *fmt, ...) {
+  fflush (stdout);
+  terr.bold ();
+  fputs ("cadical: ", stderr);
+  terr.red (1);
+  fputs ("warning:", stderr);
+  terr.normal ();
+  fputc (' ', stderr);
   va_list ap;
   va_start (ap, fmt);
-  verror (internal, fmt, ap);
+  vfprintf (stderr, fmt, ap);
+  va_end (ap);
+  fputc ('\n', stderr);
+  fflush (stderr);
+}
+
+/*------------------------------------------------------------------------*/
+
+void Internal::error_message_start () {
+  fflush (stdout);
+  terr.bold ();
+  fputs ("cadical: ", stderr);
+  terr.red (1);
+  fputs ("error:", stderr);
+  terr.normal ();
+  fputc (' ', stderr);
+}
+
+void Internal::error_message_end () {
+  fputc ('\n', stderr);
+  fflush (stderr);
+  // TODO add possibility to use call back instead.
+  exit (1);
+}
+
+void Internal::verror (const char *fmt, va_list & ap) {
+  error_message_start ();
+  vfprintf (stderr, fmt, ap);
+  error_message_end ();
+}
+
+void Internal::error (const char *fmt, ...) {
+  va_list ap;
+  va_start (ap, fmt);
+  verror (fmt, ap);
   va_end (ap);                          // unreachable
 }
 
-};
+/*------------------------------------------------------------------------*/
+
+void Internal::fatal_message_start () {
+  fflush (stdout);
+  terr.bold ();
+  fputs ("cadical: ", stderr);
+  terr.red (1);
+  fputs ("fatal error:", stderr);
+  terr.normal ();
+  fputc (' ', stderr);
+}
+
+void Internal::fatal_message_end () {
+  fputc ('\n', stderr);
+  fflush (stderr);
+  abort ();
+}
+
+void Internal::fatal (const char *fmt, ...) {
+  fatal_message_start ();
+  va_list ap;
+  va_start (ap, fmt);
+  vfprintf (stderr, fmt, ap);
+  va_end (ap);
+  fatal_message_end ();
+  abort ();
+}
+
+}

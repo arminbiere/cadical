@@ -13,12 +13,10 @@ Arena::~Arena () {
 }
 
 void Arena::prepare (size_t bytes) {
-  assert (aligned (bytes, 8));
   LOG ("preparing 'to' space of arena with %ld bytes", (long) bytes);
   assert (!to.start);
   to.top = to.start = new char[bytes];
   to.end = to.start + bytes;
-  assert (aligned (to.start, 8));
 }
 
 void Arena::swap () {
@@ -29,4 +27,4 @@ void Arena::swap () {
   to.start = to.top = to.end = 0;
 }
 
-};
+}

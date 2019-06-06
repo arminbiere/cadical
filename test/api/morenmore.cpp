@@ -15,5 +15,6 @@ int main () {
     res = solver.val (i);
     assert (res > 0);
   }
+  (void) res;
   return 0;
 }

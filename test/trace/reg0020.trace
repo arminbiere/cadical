@@ -1,0 +1,16 @@
+0 init
+1 set check 1
+2 set elimint 0
+3 set phase 0
+4 add -2
+5 add 4
+6 add 1
+7 add 0
+8 add -4
+9 add -3
+10 add 0
+11 add -1
+12 add 3
+13 add 0
+14 assume 2
+15 solve 0

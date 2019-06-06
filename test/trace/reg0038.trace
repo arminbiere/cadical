@@ -1,0 +1,32 @@
+init
+vars
+active
+redundant
+irredundant
+fixed 1
+fixed 2
+reserve 2
+fixed 1
+fixed 2
+add 2
+add 0
+vars
+active
+redundant
+irredundant
+fixed 1
+fixed 2
+fixed -1
+fixed -2
+add 1
+add 4
+add 0
+vars
+active
+redundant
+irredundant
+fixed 1
+fixed 2
+fixed -1
+fixed -2
+reset

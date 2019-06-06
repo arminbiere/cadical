@@ -1,0 +1,19 @@
+0 init
+1 add 6
+2 add 4
+3 add -3
+4 add 0
+5 add -4
+6 add 0
+7 add -6
+8 add -2
+9 add 0
+10 add 5
+11 add 1
+12 add 0
+13 add -5
+14 add 2
+15 add 0
+16 assume -1
+17 assume 3
+18 solve 0

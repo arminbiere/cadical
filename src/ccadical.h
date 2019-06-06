@@ -1,20 +1,58 @@
 #ifndef _ccadical_h_INCLUDED
 #define _ccadical_h_INCLUDED
 
-// C wrapper for CaDiCaL's C++ API
+/*------------------------------------------------------------------------*/
+#ifdef __cplusplus
+extern "C" {
+#endif
+/*------------------------------------------------------------------------*/
+
+// C wrapper for CaDiCaL's C++ API following IPASIR.
 
 typedef struct CCaDiCaL CCaDiCaL;
 
-CCaDiCaL * ccadical_init ();
-void ccadical_reset (CCaDiCaL *);
-
-void ccadical_banner (CCaDiCaL *);
-void ccadical_set_option (CCaDiCaL *, const char * name, double val);
+const char * ccadical_signature (void);
+CCaDiCaL * ccadical_init (void);
+void ccadical_release (CCaDiCaL *);
 
 void ccadical_add (CCaDiCaL *, int lit);
-int ccadical_sat (CCaDiCaL *);
-int ccadical_deref (CCaDiCaL *, int lit);
+void ccadical_assume (CCaDiCaL *, int lit);
+int ccadical_solve (CCaDiCaL *);
+int ccadical_val (CCaDiCaL *, int lit);
+int ccadical_failed (CCaDiCaL *, int lit);
 
+void ccadical_set_terminate (CCaDiCaL *,
+  void * state, int (*terminate)(void * state));
+
+/*------------------------------------------------------------------------*/
+
+// Non-IPASIR conformant 'C' functions.
+
+void ccadical_set_option (CCaDiCaL *, const char * name, double val);
+void ccadical_limit (CCaDiCaL *, const char * name, long limit);
+int ccadical_get_option (CCaDiCaL *, const char * name);
 void ccadical_print_statistics (CCaDiCaL *);
+long ccadical_active (CCaDiCaL *);
+long ccadical_irredundant (CCaDiCaL *);
+int ccadical_fixed (CCaDiCaL *, int lit);
+void ccadical_terminate (CCaDiCaL *);
+void ccadical_freeze (CCaDiCaL *, int lit);
+int ccadical_frozen (CCaDiCaL *, int lit);
+void ccadical_melt (CCaDiCaL *, int lit);
+int ccadical_simplify (CCaDiCaL *);
+
+/*------------------------------------------------------------------------*/
+
+// Support legacy names used before moving to more IPASIR conforming names.
+
+#define ccadical_reset ccadical_release
+#define ccadical_sat ccadical_solve
+#define ccadical_deref ccadical_val
+
+/*------------------------------------------------------------------------*/
+#ifdef __cplusplus
+}
+#endif
+/*------------------------------------------------------------------------*/
 
 #endif

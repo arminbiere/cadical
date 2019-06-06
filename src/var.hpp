@@ -3,7 +3,7 @@
 
 namespace CaDiCaL {
 
-class Clause;
+struct Clause;
 
 // This structure captures data associated with an assigned variable.
 
@@ -23,6 +23,6 @@ struct Var {
   };
 };
 
-};
+}
 
 #endif

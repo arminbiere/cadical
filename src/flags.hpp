@@ -5,37 +5,60 @@ namespace CaDiCaL {
 
 struct Flags {        // Variable flags.
 
+  //  The first set of flags is related to 'analyze' and 'minimize'.
+  //
   bool seen      : 1; // seen in generating first UIP clause in 'analyze'
-  bool keep      : 1; // keep in learned clause in 'minimize/shrink'
-  bool poison    : 1; // can not be removed in 'minimize/shrink'
-  bool removable : 1; // can be removed in 'minimize/shrink'
-  bool removed   : 1; // removed since last 'elim' round
-  bool added     : 1; // added since last 'subsume' round
+  bool keep      : 1; // keep in learned clause in 'minimize'
+  bool poison    : 1; // can not be removed in 'minimize'
+  bool removable : 1; // can be removed in 'minimize'
+
+  // These three variable flags are used to schedule clauses in subsumption
+  // ('subsume'), variables in bounded variable elimination ('elim') and in
+  // hyper ternary resolution ('ternary').
+  //
+  bool elim      : 1; // removed since last 'elim' round
+  bool subsume   : 1; // added since last 'subsume' round
+  bool ternary   : 1; // added in ternary clause since last 'ternary'
+
+  // These literal flags are used by blocked clause elimination ('block').
+  //
+  unsigned char block : 2;   // removed since last 'block' round
+  unsigned char skip : 2;    // skip this literal as blocking literal
+
+  // Bits for handling assumptions.
+  //
+  unsigned char assumed : 2;
+  unsigned char failed : 2;
 
   enum {
-    ACTIVE      = 0,
-    FIXED       = 1,
-    ELIMINATED  = 2,
-    SUBSTITUTED = 3,
+    UNUSED      = 0,
+    ACTIVE      = 1,
+    FIXED       = 2,
+    ELIMINATED  = 3,
+    SUBSTITUTED = 4,
+    PURE        = 5
   };
 
-  unsigned char status : 2;
+  unsigned char status : 3;
 
-  // initialized explicitly in 'Internal::init' through this
-
+  // Initialized explicitly in 'Internal::init' through this function.
+  //
   void init () {
-    assert (sizeof (Flags) == 1);
     seen = keep = poison = removable = false;
-    added = removed = true;
-    status = ACTIVE;
+    subsume = elim = ternary = true;
+    block = 3u;
+    skip = assumed = failed = 0;
+    status = UNUSED;
   }
 
+  bool unused () const { return status == UNUSED; }
   bool active () const { return status == ACTIVE; }
   bool fixed () const { return status == FIXED; }
   bool eliminated () const { return status == ELIMINATED; }
   bool substituted () const { return status == SUBSTITUTED; }
+  bool pure () const { return status == PURE; }
 };
 
-};
+}
 
 #endif

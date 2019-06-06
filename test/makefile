@@ -1,6 +1,12 @@
-all:
-	./run-api-tests.sh
-	./run-regression.sh
-clean:
-	make -C cnfs clean
-	make -C api clean
+test: usage trace api cnf mbt
+api:
+	@api/run.sh
+cnf:
+	@cnf/run.sh
+mbt:
+	@mbt/run.sh
+trace:
+	@trace/run.sh
+usage:
+	@usage/run.sh
+.PHONY: test api cnf mbt trace usage

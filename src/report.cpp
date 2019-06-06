@@ -35,14 +35,15 @@ Report::Report (const char * h, int precision, int min, double value)
 :
   header (h)
 {
-  char fmt[10];
-  sprintf (fmt, "%%.%df", abs (precision));
-  if (precision < 0) strcat (fmt, "%%");
+  char fmt[32];
+  if (precision < 0) sprintf (fmt, "%%.%df", -precision - 1);
+  else sprintf (fmt, "%%.%df", precision);
   sprintf (buffer, fmt, value);
-  const int min_width = min;
-  if (strlen (buffer) >= (size_t) min_width) return;
-  sprintf (fmt, "%%%d.%df", min_width, abs (precision));
-  if (precision < 0) strcat (fmt, "%%");
+  const int width = strlen (buffer);
+  if (precision < 0) strcat (buffer, "%");
+  if (width >= min) return;
+  if (precision < 0) sprintf (fmt, "%%%d.%df%%%%", min, -precision - 1);
+  else sprintf (fmt, "%%%d.%df", min, precision);
   sprintf (buffer, fmt, value);
 }
 
@@ -54,51 +55,83 @@ Report::Report (const char * h, int precision, int min, double value)
 // prefix 'i'.  To add another statistics column, add a corresponding line
 // here.  If you want to report something else add 'report (..)' functions.
 
+#define TIME \
+  opts.reportsolve ? solve_time () : time ()
+
+#define MB \
+  (current_resident_set_size () / (double)(1l<<20))
+
+#define REMAINING \
+  (percent (active (), external->max_var))
+
+#define TRAIL \
+  (percent (averages.current.trail.slow, max_var))
+
+#define TARGET \
+  (percent (target_assigned, max_var))
+
+#define BEST \
+  (percent (best_assigned, max_var))
+
 #define REPORTS \
 /*     HEADER, PRECISION, MIN, VALUE */ \
-REPORT("seconds",      2, 5, process_time ()) \
-REPORT("MB",           0, 2, current_resident_set_size () / (double)(1l<<20)) \
-REPORT("level",        1, 4, jump_avg) \
-REPORT("reductions",   0, 2, stats.reductions) \
-REPORT("restarts",     0, 4, stats.restarts) \
-REPORT("conflicts",    0, 5, stats.conflicts) \
-REPORT("redundant",    0, 5, stats.redundant) \
-REPORT("glue",         1, 3, slow_glue_avg) \
-REPORT("size",         1, 4, size_avg) \
-REPORT("irredundant",  0, 4, stats.irredundant) \
-REPORT("variables",    0, 3, active_variables ()) \
-REPORT("remaining",   -1, 4, percent (active_variables (), external->max_var)) \
+REPORT("seconds",      2, 5, TIME) \
+REPORT("MB",           0, 2, MB) \
+REPORT("level",        0, 2, averages.current.level) \
+REPORT("reductions",   0, 1, stats.reductions) \
+REPORT("restarts",     0, 3, stats.restarts) \
+REPORT("conflicts",    0, 4, stats.conflicts) \
+REPORT("redundant",    0, 4, stats.current.redundant) \
+REPORT("trail",       -1, 2, TRAIL) \
+REPORT("glue",         0, 1, averages.current.glue.slow) \
+REPORT("irredundant",  0, 4, stats.current.irredundant) \
+REPORT("variables",    0, 3, active ()) \
+REPORT("remaining",   -1, 2, REMAINING) \
 
-#if 0
+// Note, keep an empty line before this line (because of '\')!
 
-// These are some more interesting statistics ...
+#if 0 // ADDITIONAL STATISTICS TO REPORT
 
-REPORT("propdec",      0, 2, relative (stats.propagations, stats.decisions)) \
-REPORT("propconf",     0, 2, relative (stats.propagations, stats.conflicts)) \
-REPORT("glue-fast",    1, 4, fast_glue_avg) \
-REPORT("propconf",     0, 2, relative (stats.propagations, stats.conflicts)) \
-REPORT("blocked",      0, 2, stats.redblocked) \
+REPORT("best",        -1, 2, BEST) \
+REPORT("target",      -1, 2, TARGET) \
+REPORT("maxvar",       0, 2, external->max_var) \
 
 #endif
+
+static const int num_reports =                  // as compile time constant
+#define REPORT(HEAD,PREC,MIN,EXPR) \
+  1 +
+REPORTS
+#undef REPORT
+0;
 
 /*------------------------------------------------------------------------*/
 
 void Internal::report (char type, int verbose) {
+  if (!opts.report) return;
 #ifdef LOGGING
   if (!opts.log)
 #endif
   if (opts.quiet || (verbose > opts.verbose)) return;
-  const int max_reports = 32;
-  Report reports[max_reports];
+  if (!reported) {
+    assert (!lim.report);
+    reported = true;
+    MSG ("%stime measured in %s time %s%s",
+      tout.magenta_code (),
+      internal->opts.realtime ? "real" : "process",
+      internal->opts.reportsolve ? "in solving" : "since initialization",
+      tout.normal_code ());
+  }
+  Report reports[num_reports];
   int n = 0;
 #define REPORT(HEAD,PREC,MIN,EXPR) \
-  assert (n < max_reports); \
+  assert (n < num_reports); \
   reports[n++] = Report (HEAD, PREC, MIN, (double)(EXPR));
   REPORTS
 #undef REPORT
-  if (!(stats.reports++ % 20)) {
-    output->put (prefix.c_str ());
-    output->put ('\n');
+  if (!lim.report) {
+    print_prefix ();
+    fputc ('\n', stdout);
     int pos = 4;
     for (int i = 0; i < n; i++) {
       int len = strlen (reports[i].buffer);
@@ -106,33 +139,58 @@ void Internal::report (char type, int verbose) {
       pos += len + 1;
     }
     const int max_line = pos + 20, nrows = 3;
-    char line[max_line];
+    char *line = new char[max_line];
     for (int start = 0; start < nrows; start++) {
       int i;
-      for (i = 0; i < max_line; i++) line[i] = ' ';
-      for (i = start; i < n; i += nrows) reports[i].print_header (line);
-      for (i = max_line-1; line[i-1] == ' '; i--) ;
+      for (i = 0; i < max_line; i++)
+        line[i] = ' ';
+      for (i = start; i < n; i += nrows)
+        reports[i].print_header (line);
+      for (i = max_line-1; line[i-1] == ' '; i--)
+        ;
       line[i] = 0;
-      output->put (prefix.c_str ());
-      output->put (line);
-      output->put ('\n');
+      print_prefix ();
+      tout.yellow ();
+      fputs (line, stdout);
+      tout.normal ();
+      fputc ('\n', stdout);
     }
-    output->put (prefix.c_str ());
-    output->put ('\n');
+    print_prefix ();
+    fputc ('\n', stdout);
+    delete [] line;
+    lim.report = 19;
+  } else lim.report--;
+  print_prefix ();
+  switch (type) {
+    case '[': case ']':           tout.magenta (true); break;
+    case 's': case 'v': case 'w':
+    case 't': case 'b': case 'c': tout.green (false); break;
+    case 'e':                     tout.green (true); break;
+    case 'p': case '2': case '3': tout.blue (false); break;
+    case 'd':                     tout.blue (true); break;
+    case 'z': case 'f':           tout.cyan (true); break;
+    case '-':                     tout.normal (); break;
+    case '/':                     tout.yellow (true); break;
+    case '0': case '1': case '?':
+    case 'i':                     tout.bold (); break;
+    case 'L': case 'P':           tout.bold (); tout.underline (); break;
   }
-  output->put (prefix.c_str ());
-  output->put (type);
-  for (int i = 0; i < n; i++)
-    output->put (' '), output->put (reports[i].buffer);
-  output->put ('\n');
+  fputc (type, stdout);
+  if (stable || type == ']') tout.magenta ();
+  else if (type != 'L' && type != 'P') tout.normal ();
+  for (int i = 0; i < n; i++) {
+    fputc (' ', stdout);
+    fputs (reports[i].buffer, stdout);
+  }
+  if (stable || type == 'L' || type == 'P' || type == ']') tout.normal ();
+  fputc ('\n', stdout);
   fflush (stdout);
 }
 
 #else // ifndef QUIET
 
-void Internal::report (char type, int verbose) { }
+void Internal::report (char, int) { }
 
 #endif
 
-};
-
+}

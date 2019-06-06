@@ -9,11 +9,13 @@ namespace CaDiCaL {
 void Internal::init_occs () {
   assert (!otab);
   NEW_ZERO (otab, Occs, 2*vsize);
+  LOG ("initialized occurrence lists");
 }
 
 void Internal::reset_occs () {
   assert (otab);
   RELEASE_DELETE (otab, Occs, 2*vsize);
+  LOG ("reset occurrence lists");
   otab = 0;
 }
 
@@ -24,27 +26,14 @@ void Internal::reset_occs () {
 void Internal::init_noccs () {
   assert (!ntab);
   NEW_ZERO (ntab, long, 2*vsize);
+  LOG ("initialized two-sided occurrence counters");
 }
 
 void Internal::reset_noccs () {
   assert (ntab);
   DELETE_ONLY (ntab, long, 2*vsize);
+  LOG ("reset two-sided occurrence counters");
   ntab = 0;
 }
 
-/*------------------------------------------------------------------------*/
-
-// Two-sided occurrence counter (each variable has one counter).
-
-void Internal::init_noccs2 () {
-  assert (!ntab2);
-  NEW_ZERO (ntab2, long, vsize);
 }
-
-void Internal::reset_noccs2 () {
-  assert (ntab2);
-  DELETE_ONLY (ntab2, long, vsize);
-  ntab2 = 0;
-}
-
-};

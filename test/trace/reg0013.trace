@@ -1,0 +1,9 @@
+0 init
+1 set elimint 0
+2 add 2
+3 add 0
+4 solve 0
+5 add 1
+6 add 0
+7 add -1
+8 add 0
