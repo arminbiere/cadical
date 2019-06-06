@@ -14,7 +14,7 @@ CXXFLAGS=@CXXFLAGS@
 #    It is usually not necessary to change anything below this line!       #
 ############################################################################
 
-MAKEFLAGS=-j
+MAKEFLAGS=-j12
 APP=cadical.cpp mobical.cpp
 ALL=$(sort $(wildcard ../src/*.[ch]pp))
 SRC=$(filter %.cpp,$(subst ../src/,,$(ALL)))
