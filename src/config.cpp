@@ -7,14 +7,14 @@ namespace CaDiCaL {
 struct NameVal { const char * name; int val; };
 
 static NameVal sat_config[] = {
-  "elimreleff", 10,
-  "stabilizeonly", 1,
-  "subsumereleff", 60,
+  { "elimreleff", 10 },
+  { "stabilizeonly", 1 },
+  { "subsumereleff", 60 },
 };
 
 static NameVal unsat_config[] = {
-  "stabilize", 0,
-  "walk", 0,
+  { "stabilize", 0 }, 
+  { "walk", 0 }, 
 };
 
 /*------------------------------------------------------------------------*/

@@ -57,7 +57,7 @@ static const char * COPYRIGHT =
 // GIT SHA2 identifier.
 //
 #ifndef IDENTIFIER
-#  define IDENTIFIER "9362f4982cb613599837677566b6c35c7ac9175e"
+#  define IDENTIFIER 0
 #endif
 
 // Compilation flags.
