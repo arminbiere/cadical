@@ -388,7 +388,7 @@ int Internal::preprocess () {
   if (opts.simplify)
     for (int i = 0; i < lim.preprocessing; i++)
       if (!preprocess_round (i))
-	break;
+        break;
   if (unsat) return 20;
   return 0;
 }
@@ -413,7 +413,7 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
       LOG ("saved phases do not satisfy redundant clauses");
       assert (level > 0);
       backtrack ();
-      conflict = 0;		// ignore conflict
+      conflict = 0;             // ignore conflict
       assert (!res);
       break;
     }
@@ -521,9 +521,9 @@ int Internal::solve () {
       external->restore_clauses ();
       internal->report ('r');
       if (!unsat && !propagate ()) {
-	LOG ("root level propagation after restore produces conflict");
-	learn_empty_clause ();
-	res = 20;
+        LOG ("root level propagation after restore produces conflict");
+        learn_empty_clause ();
+        res = 20;
       }
     }
 

@@ -142,7 +142,7 @@ struct Internal {
   bool iterating;               // report learned unit ('i' line)
   bool localsearching;          // true during local search
   bool preprocessing;           // true during preprocessing
-  bool force_saved_phase;	// force saved phase in decision
+  bool force_saved_phase;       // force saved phase in decision
   bool termination_forced;      // forced to terminate
   bool searching_lucky_phases;  // during 'lucky_phases'
   bool stable;                  // true during stabilization phase
@@ -475,8 +475,8 @@ struct Internal {
 
   // Functions to set and reset certain 'phases'.
   //
-  void clear_phases (Phase * &);	// reset to zero
-  void copy_phases (Phase * &);		// copy 'vals' to 'argument'
+  void clear_phases (Phase * &);        // reset to zero
+  void copy_phases (Phase * &);         // copy 'vals' to 'argument'
 
   // Resetting the saved phased in 'rephase.cpp'.
   //
@@ -833,11 +833,11 @@ struct Internal {
 
   // Internal functions to enable explicit search limits.
   //
-  void limit_decisions (int);		// Force decision limit.
-  void limit_conflicts (int);		// Force conflict limit.
-  void limit_preprocessing (int);	// Enable 'n' preprocessing rounds.
-  void limit_local_search (int);	// Enable 'n' local search rounds.
-  
+  void limit_decisions (int);           // Force decision limit.
+  void limit_conflicts (int);           // Force conflict limit.
+  void limit_preprocessing (int);       // Enable 'n' preprocessing rounds.
+  void limit_local_search (int);        // Enable 'n' local search rounds.
+
   // External versions can access limits by 'name'.
   //
   static bool is_valid_limit (const char *name);
@@ -876,7 +876,7 @@ struct Internal {
   //
   int cdcl_loop_with_inprocessing ();
   //
-  int solve ();		// Orchestrates the three functions above.
+  int solve ();         // Orchestrates the three functions above.
 
 #ifndef QUIET
   // Built in profiling in 'profile.cpp' (see also 'profile.hpp').

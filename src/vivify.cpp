@@ -546,7 +546,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
   assert (c->size > 2);                       // see (NO-BINARY) below
 
   c->vivify = false;                          // mark as checked / tried
-  c->vivified = true;			      // and globally remember
+  c->vivified = true;                         // and globally remember
 
   if (c->garbage) return;
 

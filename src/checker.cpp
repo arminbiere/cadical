@@ -514,7 +514,7 @@ void Checker::delete_clause (const vector<int> & c) {
       garbage = d;
       d->size = 0;
       // If there are enough garbage clauses collect them.
-      if (num_garbage > 0.5 * max (size_clauses, (size_t) size_vars))
+      if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
         collect_garbage_clauses ();
     } else {
       internal->fatal_message_start ();

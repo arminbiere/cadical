@@ -10,15 +10,15 @@ struct Walker {
 
   Internal * internal;
 
-  Random random;		// local random number generator
-  long propagations;		// number of propagations
-  long limit;			// limit on number of propagations
-  vector <Clause *> broken;	// currently unsatisfied clauses
-  double epsilon;		// smallest considered score
-  vector<double> table;		// break value to score table
-  vector<double> scores;	// scores of candidate literals
+  Random random;                // local random number generator
+  long propagations;            // number of propagations
+  long limit;                   // limit on number of propagations
+  vector <Clause *> broken;     // currently unsatisfied clauses
+  double epsilon;               // smallest considered score
+  vector<double> table;         // break value to score table
+  vector<double> scores;        // scores of candidate literals
 
-  double score (unsigned);	// compute score from break count
+  double score (unsigned);      // compute score from break count
 
   Walker (Internal *, double size, long limit);
 };
@@ -34,7 +34,7 @@ static double cbvals[][2] = {
   { 4.0, 2.85 },
   { 5.0, 3.70 },
   { 6.0, 5.10 },
-  { 7.0, 7.40 },	// Adrian has '5.4', but '7.4' looks better.
+  { 7.0, 7.40 },        // Adrian has '5.4', but '7.4' looks better.
 };
 
 static const int ncbvals = sizeof cbvals / sizeof cbvals[0];
@@ -65,11 +65,11 @@ inline static double fitcbval (double size) {
 
 Walker::Walker (Internal * i, double size, long l) :
   internal (i),
-  random (internal->opts.seed),		// global random seed
+  random (internal->opts.seed),         // global random seed
   propagations (0),
   limit (l)
 {
-  random += internal->stats.walk.count;	// different seed every time
+  random += internal->stats.walk.count; // different seed every time
 
   // This is the magic constant in ProbSAT (also called 'CB'), which we pick
   // according to the average size every second invocation and otherwise
@@ -78,7 +78,7 @@ Walker::Walker (Internal * i, double size, long l) :
   const bool use_size_based_cb = (internal->stats.walk.count & 1);
   const double cb = use_size_based_cb ? fitcbval (size) : 2.0;
   assert (cb);
-  const double base = 1/cb;	// scores are 'base^0,base^1,base^2,...
+  const double base = 1/cb;     // scores are 'base^0,base^1,base^2,...
 
   double next = 1;
   for (epsilon = next; next; next = epsilon*base)
@@ -120,7 +120,7 @@ unsigned Internal::walk_break_value (int lit) {
   require_mode (WALK);
   assert (val (lit) > 0);
 
-  unsigned res = 0;		// The computed break-count of 'lit'.
+  unsigned res = 0;             // The computed break-count of 'lit'.
 
   for (auto & w : watches (lit)) {
     assert (w.blit != lit);
@@ -148,13 +148,13 @@ unsigned Internal::walk_break_value (int lit) {
 
       // Found 'other' as second satisfying literal.
 
-      w.blit = other;			// Update 'blit'
-      *begin = other;			// and move to front.
+      w.blit = other;                   // Update 'blit'
+      *begin = other;                   // and move to front.
 
       break;
     }
 
-    if (i != end) continue;	// Double satisfied!
+    if (i != end) continue;     // Double satisfied!
 
     // Otherwise restore literals (undo shift to the right).
     //
@@ -164,7 +164,7 @@ unsigned Internal::walk_break_value (int lit) {
       prev = other;
     }
 
-    res++;	// Literal 'lit' single satisfies clause 'c'.
+    res++;      // Literal 'lit' single satisfies clause 'c'.
   }
 
   return res;
@@ -173,7 +173,7 @@ unsigned Internal::walk_break_value (int lit) {
 /*------------------------------------------------------------------------*/
 
 // Given an unsatisfied clause 'c', in which we want to flip a literal, we
-// first determine the exponential score based on the break-count of its 
+// first determine the exponential score based on the break-count of its
 // literals and then sample the literals based on these scores.  The CB
 // value is smaller than one and thus the score is exponentially decreasing
 // with the break-count increasing.  The sampling works as in 'ProbSAT' and
@@ -283,30 +283,30 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
       //
       const int size = d->size;
       for (int i = 0; i < size; i++) {
-	const int other = literals[i];
+        const int other = literals[i];
         assert (active (other));
-	literals[i] = prev;
-	prev = other;
-	if (other == lit) break;
-	assert (val (other) < 0);
+        literals[i] = prev;
+        prev = other;
+        if (other == lit) break;
+        assert (val (other) < 0);
       }
 
       // If 'lit' is in 'd' then move it to the front to watch it.
       //
       if (prev == lit) {
-	literals[0] = lit;
-	LOG (d, "made");
-	watch_literal (literals[0], literals[1], d);
-	made++;
-	j--;
+        literals[0] = lit;
+        LOG (d, "made");
+        watch_literal (literals[0], literals[1], d);
+        made++;
+        j--;
 
-      } else {	// Otherwise the clause is not satisfied, undo shift.
+      } else {  // Otherwise the clause is not satisfied, undo shift.
 
-	for (int i = size-1; i >= 0; i--) {
-	  int other = literals[i];
-	  literals[i] = prev;
-	  prev = other;
-	}
+        for (int i = size-1; i >= 0; i--) {
+          int other = literals[i];
+          literals[i] = prev;
+          prev = other;
+        }
       }
 
       if (count--) continue;
@@ -316,7 +316,7 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
       // chance of giving bogus statistics on the number of 'propagations'
       // in 'walk', if it is interrupted in this loop.
 
-      count = ratio;			// Starting counting down again.
+      count = ratio;                    // Starting counting down again.
       walker.propagations++;
       stats.propagations.walk++;
     }
@@ -326,8 +326,8 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
 
   // Finally add all new unsatisfied (broken) clauses.
   {
-    walker.propagations++;	// This really corresponds now to one
-    stats.propagations.walk++;	// propagation (in a one-watch scheme).
+    walker.propagations++;      // This really corresponds now to one
+    stats.propagations.walk++;  // propagation (in a one-watch scheme).
 
     long broken = 0;
     Watches & ws = watches (-lit);
@@ -341,30 +341,30 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
       assert (literals[0] == -lit);
       const int size = d->size;
       for (int i = 1; i < size; i++) {
-	const int other = literals[i];
+        const int other = literals[i];
         assert (active (other));
-	literals[i] = prev;		// shift all to right
-	prev = other;
-	const int tmp = val (other);
-	if (tmp < 0) continue;
-	replacement = other;		// satisfying literal
-	break;
+        literals[i] = prev;             // shift all to right
+        prev = other;
+        const int tmp = val (other);
+        if (tmp < 0) continue;
+        replacement = other;            // satisfying literal
+        break;
       }
       if (replacement) {
-	literals[1] = -lit;
-	literals[0] = replacement;
-	assert (-lit != replacement);
-	watch_literal (replacement, -lit, d);
+        literals[1] = -lit;
+        literals[0] = replacement;
+        assert (-lit != replacement);
+        watch_literal (replacement, -lit, d);
       } else {
-	for (int i = size-1; i > 0; i--) {	// undo shift
-	  const int other = literals[i];
-	  literals[i] = prev;
-	  prev = other;
-	}
-	assert (literals[0] == -lit);
-	LOG (d, "broken");
-	walker.broken.push_back (d);
-	broken++;
+        for (int i = size-1; i > 0; i--) {      // undo shift
+          const int other = literals[i];
+          literals[i] = prev;
+          prev = other;
+        }
+        assert (literals[0] == -lit);
+        LOG (d, "broken");
+        walker.broken.push_back (d);
+        broken++;
       }
     }
     LOG ("broken %ld clauses by flipping %d", broken, lit);
@@ -439,9 +439,9 @@ int Internal::walk_round (long limit, bool prev) {
   //
   Walker walker (internal, average_size, limit);
 
-  bool failed = false;	// Inconsistent assumptions?
+  bool failed = false;  // Inconsistent assumptions?
 
-  level = 1;	// Assumed variables assigned at level 1.
+  level = 1;    // Assumed variables assigned at level 1.
 
   if (assumptions.empty ()) {
     LOG ("no assumptions so assigning all variables to decision phase");
@@ -450,10 +450,10 @@ int Internal::walk_round (long limit, bool prev) {
     for (const auto lit : assumptions) {
       int tmp = val (lit);
       if (tmp > 0) continue;
-      if (tmp < 0) { 
-	LOG ("inconsistent assumption %d", lit);
-	failed = true;
-	break;
+      if (tmp < 0) {
+        LOG ("inconsistent assumption %d", lit);
+        failed = true;
+        break;
       }
       if (!active (lit)) continue;
       tmp = sign (lit);
@@ -469,19 +469,19 @@ int Internal::walk_round (long limit, bool prev) {
       LOG ("now assigning remaining variables to their decision phase");
   }
 
-  level = 2;	// All other non assumed variables assigned at level 2.
+  level = 2;    // All other non assumed variables assigned at level 2.
 
   if (!failed) {
 
     for (int idx = 1; idx <= max_var; idx++) {
       if (!active (idx)) {
-	LOG ("skipping inactive variable %d", idx);
-	continue;
+        LOG ("skipping inactive variable %d", idx);
+        continue;
       }
       if (vals[idx]) {
-	assert (var (idx).level == 1);
-	LOG ("skipping assumed variable %d", idx);
-	continue;
+        assert (var (idx).level == 1);
+        LOG ("skipping assumed variable %d", idx);
+        continue;
       }
       int tmp = 0;
       if (prev) tmp = phases.prev[idx];
@@ -502,12 +502,12 @@ int Internal::walk_round (long limit, bool prev) {
 
       if (c->garbage) continue;
       if (c->redundant) {
-	if (!opts.walkredundant) continue;
-	if (!likely_to_be_kept_clause (c)) continue;
+        if (!opts.walkredundant) continue;
+        if (!likely_to_be_kept_clause (c)) continue;
       }
 
-      bool satisfiable = false;		// contains not only assumptions
-      int satisfied = 0;		// clause satisfied?
+      bool satisfiable = false;         // contains not only assumptions
+      int satisfied = 0;                // clause satisfied?
 
       int * lits = c->literals;
       const int size = c->size;
@@ -516,33 +516,33 @@ int Internal::walk_round (long limit, bool prev) {
       // is at least one (non-assumed) literal that can be flipped.
       //
       for (int i = 0; satisfied < 2 && i < size; i++) {
-	const int lit = lits[i];
-	assert (active (lit));	// Due to garbage collection.
-	if (val (lit) > 0) {
-	  swap (lits[satisfied], lits[i]);
-	  if (!satisfied++) LOG ("first satisfying literal %d", lit);
-	} else if (!satisfiable && var (lit).level > 1) {
-	  LOG ("non-assumption potentially satisfying literal %d", lit);
-	  satisfiable = true;
-	}
+        const int lit = lits[i];
+        assert (active (lit));  // Due to garbage collection.
+        if (val (lit) > 0) {
+          swap (lits[satisfied], lits[i]);
+          if (!satisfied++) LOG ("first satisfying literal %d", lit);
+        } else if (!satisfiable && var (lit).level > 1) {
+          LOG ("non-assumption potentially satisfying literal %d", lit);
+          satisfiable = true;
+        }
       }
 
       if (!satisfied && !satisfiable) {
-	LOG (c, "due to assumptions unsatisfiable");
-	LOG ("stop local search since assumptions falsify a clause");
-	failed = true;
-	break;
+        LOG (c, "due to assumptions unsatisfiable");
+        LOG ("stop local search since assumptions falsify a clause");
+        failed = true;
+        break;
       }
 
       if (satisfied) {
-	watch_literal (lits[0], lits[1], c);
+        watch_literal (lits[0], lits[1], c);
 #ifdef LOGGING
-	watched++;
+        watched++;
 #endif
       } else {
-	assert (satisfiable);	// at least one non-assumed variable ...
-	LOG (c, "broken");
-	walker.broken.push_back (c);
+        assert (satisfiable);   // at least one non-assumed variable ...
+        LOG (c, "broken");
+        walker.broken.push_back (c);
       }
     }
 #ifdef LOGGING
@@ -557,7 +557,7 @@ int Internal::walk_round (long limit, bool prev) {
 
   long old_global_minimum = stats.walk.minimum;
 
-  int res;	// Tells caller to continue with local search.
+  int res;      // Tells caller to continue with local search.
 
   if (!failed) {
 
@@ -573,8 +573,8 @@ int Internal::walk_round (long limit, bool prev) {
 
     long flips = 0, minimum = broken;
     while (!terminating () &&
-	   !walker.broken.empty () && 
-	   walker.propagations < walker.limit) {
+           !walker.broken.empty () &&
+           walker.propagations < walker.limit) {
       flips++;
       stats.walk.flips++;
       stats.walk.broken += broken;
@@ -587,20 +587,20 @@ int Internal::walk_round (long limit, bool prev) {
       minimum = broken;
       VERBOSE (3,
         "new phase minimum %ld after %ld flips",
-	minimum, flips);
+        minimum, flips);
       copy_phases (phases.saved);
       walk_save_minimum (walker);
     }
 
     if (minimum < old_global_minimum)
       PHASE ("walk", stats.walk.count,
-	"%snew global minimum %ld%s in %ld flips and %ld propagations",
-	tout.bright_yellow_code (), minimum, tout.normal_code (),
-	flips, walker.propagations);
+        "%snew global minimum %ld%s in %ld flips and %ld propagations",
+        tout.bright_yellow_code (), minimum, tout.normal_code (),
+        flips, walker.propagations);
     else
       PHASE ("walk", stats.walk.count,
-	"best phase minimum %ld in %ld flips and %ld propagations",
-	minimum, flips, walker.propagations);
+        "best phase minimum %ld in %ld flips and %ld propagations",
+        minimum, flips, walker.propagations);
 
     PHASE ("walk", stats.walk.count,
       "%.2f million propagations per second",

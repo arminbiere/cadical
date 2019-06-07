@@ -132,8 +132,8 @@ bool Internal::is_blocked_clause (Clause * c, int lit) {
   if (res) {
     assert (i == end_of_os);
     const auto boc = os.begin ();
-    while (i-- != boc) {
-      Clause * d = *i;
+    while (i != boc) {
+      Clause * d = *--i;
       *i = prev_d;
       prev_d = d;
     }

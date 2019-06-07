@@ -138,7 +138,7 @@ const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
     if (err) return err;
     while (ch != '\n') {
       if (ch != '\r' && !isspace (ch))
-	PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
+        PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
       ch = parse_char ();
     }
   }
@@ -164,8 +164,8 @@ const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
     if (err) return err;
     if (ch == 'c') {
       while ((ch = parse_char ()) != '\n')
-	if (ch == EOF)
-	  PER ("unexpected end-of-file in comment");
+        if (ch == EOF)
+          PER ("unexpected end-of-file in comment");
     }
     solver->add (lit);
     if (!lit && parsed++ >= clauses && strict > 0)

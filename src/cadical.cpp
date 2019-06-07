@@ -30,7 +30,7 @@ class App : public Handler, public Terminator {
   int time_limit;
   int max_var;
   bool leak;
-  int strict;	// 0=force, 1=relaxed, 2=strict
+  int strict;   // 0=force, 1=relaxed, 2=strict
   bool timesup;
 
   // Printing.
@@ -338,10 +338,10 @@ int App::main (int argc, char ** argv) {
              !strcmp (argv[i], "--force=true")) strict = 0;
     else if (!strcmp (argv[i], "--strict") ||
              !strcmp (argv[i], "--strict=1") ||
-	     !strcmp (argv[i], "--strict=true")) strict = 2;
+             !strcmp (argv[i], "--strict=true")) strict = 2;
     else if (argv[i][0] == '-' && argv[i][1] == 'O') {
       if (!parse_int_str (argv[i] + 2, optimize) ||
-	    optimize < 0 || optimize > 9)
+            optimize < 0 || optimize > 9)
         APPERR ("invalid optimization option '%s' (expected '-O[0..9]')",
           argv[i]);
     } else if (argv[i][0] == '-' && argv[i][1] == 'P') {
@@ -355,8 +355,8 @@ int App::main (int argc, char ** argv) {
     } else if (argv[i][0] == '-' && argv[i][1] == '-' &&
                solver->is_valid_configuration (argv[i] + 2)) {
       if (config)
-	 APPERR ("can not use two configurations '--%s' and '%s'",
-	   config, argv[i]);
+         APPERR ("can not use two configurations '--%s' and '%s'",
+           config, argv[i]);
       config = argv[i] + 2;
     } else if (set (argv[i])) { /* nothing do be done */ }
     else if (argv[i][0] == '-') APPERR ("invalid option '%s'", argv[i]);

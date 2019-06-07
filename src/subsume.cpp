@@ -404,7 +404,7 @@ bool Internal::subsume_round () {
   if (!left_over_from_last_subsumption_round)
     for (auto cs : schedule)
       if (cs.clause->size > 2)
-	cs.clause->subsume = true;
+        cs.clause->subsume = true;
 
 #ifndef QUIET
   long scheduled = schedule.size ();

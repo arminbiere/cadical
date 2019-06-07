@@ -17,7 +17,7 @@
 // build process relies on 'VERSION' to be defined in 'build.hpp'.
 
 #ifndef VERSION
-#  define VERSION "sr2019"
+#  define VERSION "sr2019a"
 #endif
 
 /*------------------------------------------------------------------------*/

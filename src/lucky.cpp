@@ -211,7 +211,7 @@ int Internal::positive_horn_satisfiable () {
     LOG (c, "found positive literal %d in", positive_literal);
     search_assume_decision (positive_literal);
     if (propagate ()) continue;
-    LOG ("propagation of positive literal %d leads to conflict", 
+    LOG ("propagation of positive literal %d leads to conflict",
       positive_literal);
     assert (level > 0);
     backtrack ();
@@ -263,7 +263,7 @@ int Internal::negative_horn_satisfiable () {
     LOG (c, "found negative literal %d in", negative_literal);
     search_assume_decision (negative_literal);
     if (propagate ()) continue;
-    LOG ("propagation of negative literal %d leads to conflict", 
+    LOG ("propagation of negative literal %d leads to conflict",
       negative_literal);
     assert (level > 0);
     backtrack ();
@@ -309,7 +309,6 @@ int Internal::lucky_phases () {
   if (!res) res = forward_true_satisfiable ();
   if (!res) res = forward_false_satisfiable ();
   if (!res) res = backward_false_satisfiable ();
-  if (!res) res = backward_false_satisfiable ();
   if (!res) res = positive_horn_satisfiable ();
   if (!res) res = negative_horn_satisfiable ();
   if (res == 10) stats.lucky.succeeded++;
@@ -320,6 +319,5 @@ int Internal::lucky_phases () {
   STOP (search);
   return res;
 }
-
 
 }

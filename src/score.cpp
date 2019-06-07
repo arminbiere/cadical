@@ -27,7 +27,7 @@ void Internal::shuffle_scores () {
     for (int idx = max_var; idx; idx--)
       shuffle.push_back (idx);
     Random random (opts.seed);                  // global seed
-    random += stats.shuffled;			// different every time
+    random += stats.shuffled;                   // different every time
     for (int i = 0; i <= max_var-2; i++) {
       const int j = random.pick_int (i, max_var-1);
       swap (shuffle[i], shuffle[j]);

@@ -41,7 +41,7 @@ char Internal::rephase_original () {
 
 char Internal::rephase_inverted () {
   stats.rephased.inverted++;
-  signed char val = opts.phase ? -1 : 1;	// original = -initial
+  signed char val = opts.phase ? -1 : 1;        // original = -initial
   PHASE ("rephase", stats.rephased.total,
     "switching to inverted original phase %d", val);
   for (int idx = 1; idx <= max_var; idx++)

@@ -13,8 +13,8 @@ static NameVal sat_config[] = {
 };
 
 static NameVal unsat_config[] = {
-  { "stabilize", 0 }, 
-  { "walk", 0 }, 
+  { "stabilize", 0 },
+  { "walk", 0 },
 };
 
 /*------------------------------------------------------------------------*/

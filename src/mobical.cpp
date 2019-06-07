@@ -1045,16 +1045,16 @@ void Trace::generate_options (Random & random, Size size) {
     if (o.lo < hi) {
       bool uniform = random.generate_double () < 0.05;
       if (uniform) {
-	do val = random.pick_int (o.lo, hi);
-	while (val == o.def);
+        do val = random.pick_int (o.lo, hi);
+        while (val == o.def);
       } else {                            // log uniform
-	long range = hi - (long) o.lo;
-	int log;
-	assert (range <= INT_MAX);
-	for (log = 0; log < 30 && (1<<log) < range; log++)
-	  if (random.generate_bool ()) break;
-	if ((1<<log) < range) range = (1l<<log);
-	val = o.lo + random.pick_int (0, range);
+        long range = hi - (long) o.lo;
+        int log;
+        assert (range <= INT_MAX);
+        for (log = 0; log < 30 && (1<<log) < range; log++)
+          if (random.generate_bool ()) break;
+        if ((1<<log) < range) range = (1l<<log);
+        val = o.lo + random.pick_int (0, range);
       }
     } else val = o.lo;
     push_back (new SetCall (o.name, val));

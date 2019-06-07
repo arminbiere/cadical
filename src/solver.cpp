@@ -259,21 +259,22 @@ do { \
   trace_api_call (__VA_ARGS__); \
 } while (0)
 
-void Solver::trace_api_call (const char * s0) {
+void Solver::trace_api_call (const char * s0) const {
   assert (trace_api_file);
   LOG ("TRACE %s", s0);
   fprintf (trace_api_file, "%s\n", s0);
   fflush (trace_api_file);
 }
 
-void Solver::trace_api_call (const char * s0, int i1) {
+void Solver::trace_api_call (const char * s0, int i1) const {
   assert (trace_api_file);
   LOG ("TRACE %s %d", s0, i1);
   fprintf (trace_api_file, "%s %d\n", s0, i1);
   fflush (trace_api_file);
 }
 
-void Solver::trace_api_call (const char * s0, const char * s1, int i2) {
+void
+Solver::trace_api_call (const char * s0, const char * s1, int i2) const {
   assert (trace_api_file);
   LOG ("TRACE %s %s %d", s0, s1, i2);
   fprintf (trace_api_file, "%s %s %d\n", s0, s1, i2);
@@ -592,7 +593,7 @@ bool Solver::failed (int lit) {
   return res;
 }
 
-int Solver::fixed (int lit) {
+int Solver::fixed (int lit) const {
   TRACE ("fixed", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
@@ -639,7 +640,7 @@ void Solver::disconnect_terminator () {
 
 /*===== IPASIR END =======================================================*/
 
-int Solver::active () {
+int Solver::active () const {
   TRACE ("active");
   REQUIRE_VALID_STATE ();
   int res = internal->active ();
@@ -647,7 +648,7 @@ int Solver::active () {
   return res;
 }
 
-long Solver::redundant () {
+long Solver::redundant () const {
   TRACE ("redundant");
   REQUIRE_VALID_STATE ();
   long res = internal->redundant ();
@@ -655,7 +656,7 @@ long Solver::redundant () {
   return res;
 }
 
-long Solver::irredundant () {
+long Solver::irredundant () const {
   TRACE ("irredundant");
   REQUIRE_VALID_STATE ();
   long res = internal->irredundant ();
@@ -683,7 +684,7 @@ void Solver::melt (int lit) {
   LOG_API_CALL_END ("melt", lit);
 }
 
-bool Solver::frozen (int lit) {
+bool Solver::frozen (int lit) const {
   TRACE ("frozen", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);

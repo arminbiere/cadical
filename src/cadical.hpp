@@ -430,9 +430,9 @@ public:
   //   require (VALID)
   //   ensure (VALID)
   //
-  int active ();                // Number of active variables.
-  long redundant ();            // Number of active redundant clauses.
-  long irredundant ();          // Number of active irredundant clauses.
+  int active () const;          // Number of active variables.
+  long redundant () const;      // Number of active redundant clauses.
+  long irredundant () const;    // Number of active irredundant clauses.
 
   //------------------------------------------------------------------------
   // Same as 'solve' with 'limits ("conflicts", 0)' and
@@ -476,7 +476,7 @@ public:
   //   require (VALID)
   //   ensure (VALID)
   //
-  bool frozen (int lit);
+  bool frozen (int lit) const;
   void freeze (int lit);
   void melt (int lit);          // Also needs 'require (frozen (lit))'.
 
@@ -489,7 +489,7 @@ public:
   //   require (VALID)
   //   ensure (VALID)
   //
-  int fixed (int lit);
+  int fixed (int lit) const;
 
   //------------------------------------------------------------------------
 
@@ -642,9 +642,9 @@ private:
 
   static bool tracing_api_through_environment;
 
-  void trace_api_call (const char *);
-  void trace_api_call (const char *, int);
-  void trace_api_call (const char *, const char *, int);
+  void trace_api_call (const char *) const;
+  void trace_api_call (const char *, int) const;
+  void trace_api_call (const char *, const char *, int) const;
 
   void transition_to_unknown_state ();
 

@@ -264,7 +264,7 @@ public:
   bool set (const char * name, int);    // Explicit version.
   int  get (const char * name);         // Get current value.
 
-  void config (const char * name);	// Configuration.
+  void config (const char * name);      // Configuration.
 
   void print ();             // Print current values in command line form
   static void usage ();      // Print usage message for all options.
