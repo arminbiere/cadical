@@ -43,7 +43,7 @@ struct Flags {        // Variable flags.
 
   // Initialized explicitly in 'Internal::init' through this function.
   //
-  void init () {
+  Flags () {
     seen = keep = poison = removable = false;
     subsume = elim = ternary = true;
     block = 3u;

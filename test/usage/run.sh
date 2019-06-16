@@ -97,7 +97,7 @@ done
 
 # TODO:  still need to add test cases for these:
 
-for option in -O1 -O2 -O4 -O9
+for option in -O1 -O2 -O3
 do
   run 10 $option ../test/cnf/prime2209.cnf
 done

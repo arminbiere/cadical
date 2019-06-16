@@ -29,7 +29,6 @@ class App : public Handler, public Terminator {
   Solver * solver;
   int time_limit;
   int max_var;
-  bool leak;
   int strict;   // 0=force, 1=relaxed, 2=strict
   bool timesup;
 
@@ -117,7 +116,6 @@ void App::print_usage (bool all) {
 "\n"
 "  --colors       force colored output\n"
 "  --no-colors    disable colored output to terminal\n"
-"  --no-leak      delete solver before returning from main\n"
 "  --no-witness   do not print witness (see also '-n' above)\n"
 "\n"
 "  --build        print build configuration\n"
@@ -174,8 +172,9 @@ void App::print_usage (bool all) {
 "\n"
 "The input is assumed to be compressed if it is given explicitly\n"
 "and has a '.gz', '.bz2', '.xz' or '.7z' suffix.  The same applies\n"
-"to the output file.  For compression and decompression the\n"
-"utilities 'gzip', 'bzip', '7z', and 'xz' are needed.\n",
+"to the output file.  In order to use compression and decompression\n"
+"the corresponding utilities 'gzip', 'bzip', 'xz', and '7z' (depending\n"
+"on the format) are required and need to be installed on the system.\n",
     stdout);
   }
 }
@@ -283,14 +282,6 @@ int App::main (int argc, char ** argv) {
              !strcmp (argv[i], "--witness=false") ||
              !strcmp (argv[i], "--witness=0"))
       witness = false;
-    else if (!strcmp (argv[i], "--leak") ||
-             !strcmp (argv[i], "--leak=true") ||
-             !strcmp (argv[i], "--leak=1"))
-      leak = true;
-    else if (!strcmp (argv[i], "--no-leak") ||
-             !strcmp (argv[i], "--leak=false") ||
-             !strcmp (argv[i], "--leak=0"))
-      leak = false;
     else if (!strcmp (argv[i], "--less")) {             // EXPERIMENTAL!
       if (less) APPERR ("multiple '--less' options");
       else if (!isatty (1))
@@ -341,8 +332,8 @@ int App::main (int argc, char ** argv) {
              !strcmp (argv[i], "--strict=true")) strict = 2;
     else if (argv[i][0] == '-' && argv[i][1] == 'O') {
       if (!parse_int_str (argv[i] + 2, optimize) ||
-            optimize < 0 || optimize > 9)
-        APPERR ("invalid optimization option '%s' (expected '-O[0..9]')",
+          optimize < 0 || optimize > 3)
+        APPERR ("invalid optimization option '%s' (expected '-O[0..3]')",
           argv[i]);
     } else if (argv[i][0] == '-' && argv[i][1] == 'P') {
       if (!parse_int_str (argv[i] + 2, preprocessing) || preprocessing < 0)
@@ -537,17 +528,14 @@ int App::main (int argc, char ** argv) {
 
 App::App () :
   solver (new Solver), time_limit (-1), max_var (0),
-  leak (true), strict (1), timesup (false)
+  strict (1), timesup (false)
 {
   Signal::set (this);
 }
 
 App::~App () {
   Signal::reset ();
-  if (!leak) {
-    solver->verbose (1, "deleting solver (leaking disabled)");
-    delete solver;
-  }
+  delete solver;
 }
 
 #ifndef QUIET

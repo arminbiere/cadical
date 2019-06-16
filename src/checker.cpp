@@ -89,7 +89,7 @@ void Checker::enlarge_clauses () {
   LOG ("CHECKER enlarging clauses of checker from %" PRIu64 " to %" PRIu64,
     (size_t) size_clauses, (size_t) new_size_clauses);
   CheckerClause ** new_clauses;
-  NEW_ZERO (new_clauses, CheckerClause*, new_size_clauses);
+  new_clauses = new CheckerClause * [ new_size_clauses ] { 0 };
   for (uint64_t i = 0; i < size_clauses; i++) {
     for (CheckerClause * c = clauses[i], * next; c; c = next) {
       next = c->next;
@@ -98,7 +98,7 @@ void Checker::enlarge_clauses () {
       new_clauses[h] = c;
     }
   }
-  DELETE_ONLY (clauses, CheckerClause*, size_clauses);
+  delete [] clauses;
   clauses = new_clauses;
   size_clauses = new_size_clauses;
 }
@@ -187,13 +187,13 @@ Checker::Checker (Internal * i)
 Checker::~Checker () {
   LOG ("CHECKER delete");
   vals -= size_vars;
-  DELETE_ONLY (vals, signed char, 2*size_vars);
+  delete [] vals;
   for (size_t i = 0; i < size_clauses; i++)
     for (CheckerClause * c = clauses[i], * next; c; c = next)
       next = c->next, delete_clause (c);
   for (CheckerClause * c = garbage, * next; c; c = next)
     next = c->next, delete_clause (c);
-  DELETE_ONLY (clauses, CheckerClause*, size_clauses);
+  delete [] clauses;
 }
 
 /*------------------------------------------------------------------------*/
@@ -212,12 +212,12 @@ void Checker::enlarge_vars (long idx) {
     size_vars, new_size_vars);
 
   signed char * new_vals;
-  NEW_ZERO (new_vals, signed char, 2*new_size_vars);
+  new_vals = new signed char [ 2*new_size_vars ] { 0 };
   new_vals += new_size_vars;
   memcpy ((void*) (new_vals - size_vars),
           (void*) (vals - size_vars), 2*size_vars);
   vals -= size_vars;
-  DELETE_ONLY (vals, signed char, 2*size_vars);
+  delete [] vals;
   vals = new_vals;
 
   watchers.resize (2*new_size_vars);

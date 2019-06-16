@@ -36,10 +36,9 @@ void Internal::learn_unit_clause (int lit) {
 void Internal::bump_queue (int lit) {
   assert (opts.bump);
   const int idx = vidx (lit);
-  Link * l = ltab + idx;
-  if (!l->next) return;
-  queue.dequeue (ltab, l);
-  queue.enqueue (ltab, l);
+  if (!links[idx].next) return;
+  queue.dequeue (links, idx);
+  queue.enqueue (links, idx);
   btab[idx] = ++stats.bumped;
   LOG ("moved to front variable %d and bumped to %ld", idx, btab[idx]);
   if (!vals[idx]) update_queue_unassigned (idx);

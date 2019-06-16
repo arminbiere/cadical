@@ -694,8 +694,8 @@ bool Internal::block () {
   LOG ("block-%ld", stats.blockings);
 
   assert (!level);
-  assert (!watches ());
-  assert (!occs ());
+  assert (!watching ());
+  assert (!occurring ());
 
   mark_satisfied_clauses_as_garbage ();
 

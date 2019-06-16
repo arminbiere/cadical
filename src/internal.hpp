@@ -56,11 +56,11 @@ extern "C" {
 #include "flags.hpp"
 #include "format.hpp"
 #include "heap.hpp"
+#include "instantiate.hpp"
 #include "internal.hpp"
 #include "level.hpp"
 #include "limit.hpp"
 #include "logging.hpp"
-#include "mem.hpp"
 #include "message.hpp"
 #include "observer.hpp"
 #include "occs.hpp"
@@ -153,24 +153,24 @@ struct Internal {
   int max_var;                  // internal maximum variable index
   int level;                    // decision level ('control.size () - 1')
   signed char * vals;           // assignment [-max_var,max_var]
-  signed char * marks;          // signed marks [1,max_var]
+  vector<signed char> marks;    // signed marks [1,max_var]
   Phases phases;                // saved, target and best phases
-  unsigned * frozentab;         // frozen counters [1,max_var]
-  int * i2e;                    // maps internal idx to external lit
+  vector<unsigned> frozentab;   // frozen counters [1,max_var]
+  vector<int> i2e;              // maps internal idx to external lit
   Queue queue;                  // variable move to front decision queue
   double scinc;                 // current score increment
   ScoreSchedule scores;         // score based decision priority queue
-  double * stab;                // table of variable scores
-  Var * vtab;                   // variable table
-  Link * ltab;                  // table of links for decision queue
-  Flags * ftab;                 // variable and literal flags
-  long * btab;                  // enqueue time stamps for queue
-  Occs * otab;                  // table of occurrences for all literals
-  int * ptab;                   // table for caching probing attempts
-  long * ntab;                  // number of one-sided occurrences table
-  long * ntab2;                 // number of two-sided occurrences table
-  Bins * big;                   // binary implication graph
-  Watches * wtab;               // table of watches for all literals
+  vector<double> stab;          // table of variable scores [1,max_var]
+  vector<Var> vtab;             // variable table [1,max_var]
+  Links links;                  // table of links for decision queue
+  vector<Flags> ftab;           // variable and literal flags
+  vector<long> btab;            // enqueue time stamps for queue
+  vector<Occs> otab;            // table of occurrences for all literals
+  vector<int> ptab;             // table for caching probing attempts
+  vector<long> ntab;            // number of one-sided occurrences table
+  vector<long> ntab2;           // number of two-sided occurrences table
+  vector<Bins> big;             // binary implication graph
+  vector<Watches> wtab;         // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
   Clause * ignore;              // ignored during 'vivify_propagate'
   size_t propagated;            // next trail position to propagate
@@ -295,7 +295,7 @@ struct Internal {
   // Helper functions to access variable and literal data.
   //
   Var & var (int lit)         { return vtab[vidx (lit)]; }
-  Link & link (int lit)       { return ltab[vidx (lit)]; }
+  Link & link (int lit)       { return links[vidx (lit)]; }
   Flags & flags (int lit)     { return ftab[vidx (lit)]; }
   long & bumped (int lit)     { return btab[vidx (lit)]; }
   int & propfixed (int lit)   { return ptab[vlit (lit)]; }
@@ -303,14 +303,14 @@ struct Internal {
 
   const Flags & flags (int lit) const { return ftab[vidx (lit)]; }
 
-  bool occs () const { return otab != 0; }
-  bool watches () const { return wtab != 0; }
+  bool occurring () const { return !otab.empty (); }
+  bool watching () const { return !wtab.empty (); }
 
-  Bins & bins (int lit) { assert (big); return big[vlit (lit)]; }
-  Occs & occs (int lit) { assert (otab); return otab[vlit (lit)]; }
-  long & noccs (int lit) { assert (ntab); return ntab[vlit (lit)]; }
-  long & noccs2 (int lit) { assert (ntab2); return ntab2[vidx (lit)]; }
-  Watches & watches (int lit) { assert (wtab); return wtab[vlit (lit)]; }
+  Bins & bins (int lit) { assert (!big.empty ()); return big[vlit (lit)]; }
+  Occs & occs (int lit) { assert (!otab.empty ()); return otab[vlit (lit)]; }
+  long & noccs (int lit) { assert (!ntab.empty ()); return ntab[vlit (lit)]; }
+  long & noccs2 (int lit) { assert (!ntab2.empty ()); return ntab2[vidx (lit)]; }
+  Watches & watches (int lit) { assert (!wtab.empty ()); return wtab[vlit (lit)]; }
 
   // Variable bumping (through exponential VSIDS).
   //
@@ -381,6 +381,13 @@ struct Internal {
     const int l1 = c->literals[1];
     watch_literal (l0, l1, c);
     watch_literal (l1, l0, c);
+  }
+
+  inline void unwatch_clause (Clause * c) {
+    const int l0 = c->literals[0];
+    const int l1 = c->literals[1];
+    remove_watch (watches (l0), c);
+    remove_watch (watches (l1), c);
   }
 
   // Update queue to point to last potentially still unassigned variable.
@@ -475,8 +482,8 @@ struct Internal {
 
   // Functions to set and reset certain 'phases'.
   //
-  void clear_phases (Phase * &);        // reset to zero
-  void copy_phases (Phase * &);         // copy 'vals' to 'argument'
+  void clear_phases (vector<Phase> &);  // reset to zero
+  void copy_phases (vector<Phase> &);   // copy 'vals' to 'argument'
 
   // Resetting the saved phased in 'rephase.cpp'.
   //
@@ -574,6 +581,7 @@ struct Internal {
   bool cover_propagate_asymmetric (int lit, Clause * ignore, Coveror &);
   bool cover_propagate_covered (int lit, Coveror &);
   bool cover_clause (Clause * c, Coveror &);
+  long cover_round ();
   bool cover ();
 
   // Strengthening through vivification in 'vivify.cpp'.
@@ -755,6 +763,12 @@ struct Internal {
   void increase_elimination_bound ();
   bool elim_round ();
   void elim (bool update_limits = true);
+
+  void inst_assign (int lit);
+  bool inst_propagate ();
+  void collect_instantiation_candidates (Instantiator &);
+  bool instantiate_candidate (int lit, Clause *);
+  void instantiate (Instantiator &);
 
   // Hyper ternary resolution.
   //

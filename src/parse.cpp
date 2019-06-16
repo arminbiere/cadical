@@ -188,7 +188,7 @@ const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
 // Parsing solution in competition output format.
 
 const char * Parser::parse_solution_non_profiled () {
-  NEW_ZERO (external->solution, signed_char, external->max_var + 1);
+  external->solution = new signed char [ external->max_var + 1 ] { 0 };
   int ch;
   for (;;) {
     ch = parse_char ();

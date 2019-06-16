@@ -291,7 +291,7 @@ public:
   //
   // (for both this solver and its copy)
   //
-  void copy (Solver &);
+  void copy (Solver &) const;
 
   /*----------------------------------------------------------------------*/
   // Variables are usually added and initialized implicitly whenever a
@@ -537,8 +537,9 @@ public:
   //   require (VALID)
   //   ensure (VALID)
   //
-  bool traverse_clauses (ClauseIterator &);
-  bool traverse_witnesses (WitnessIterator &);
+  bool traverse_clauses (ClauseIterator &) const;
+  bool traverse_witnesses_backward (WitnessIterator &) const;
+  bool traverse_witnesses_forward (WitnessIterator &) const;
 
   //------------------------------------------------------------------------
   // Files with explicit path argument support compressed input and output

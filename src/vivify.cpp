@@ -276,7 +276,7 @@ struct vivify_clause_later {
 // identical clauses.  This is the single point where 'vivify_clause_later'
 // is not asymmetric and would require 'stable' sorting for determinism.  It
 // can also not be made 'complete' on-the-fly.  Instead of on-the-fly
-// subsumption we thus we go over the sorted scheduled in a linear scan
+// subsumption we thus go over the sorted scheduled in a linear scan
 // again and remove certain subsumed clauses (the subsuming clause is
 // syntactically a prefix of the subsumed clause), which includes
 // those troublesome syntactically identical clauses.
@@ -875,7 +875,7 @@ void Internal::vivify_round (bool redundant_mode, long propagation_limit) {
 
   // Disconnect all watches since we sort literals within clauses.
   //
-  if (watches ()) disconnect_watches ();
+  if (watching ()) disconnect_watches ();
 
   // Count the number of occurrences of literals in all clauses,
   // particularly binary clauses, which are usually responsible
@@ -1003,8 +1003,12 @@ void Internal::vivify_round (bool redundant_mode, long propagation_limit) {
     }
 
     vivifier.erase ();          // Reclaim  memory early.
-    disconnect_watches ();
-    connect_watches ();
+  }
+
+  disconnect_watches ();
+  connect_watches ();
+
+  if (!unsat) {
 
     // Since redundant clause were disconnected during propagating vivified
     // units in redundant mode, and further irredundant clauses are

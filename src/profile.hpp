@@ -47,11 +47,13 @@ PROFILE(cdcl,1) \
 PROFILE(collect,3) \
 PROFILE(compact,3) \
 PROFILE(connect,3) \
+PROFILE(copy,4) \
 PROFILE(cover,2) \
 PROFILE(decide,3) \
 PROFILE(decompose,3) \
 PROFILE(elim,2) \
 PROFILE(extend,3) \
+PROFILE(instantiate,2) \
 PROFILE(lucky,2) \
 PROFILE(minimize,4) \
 PROFILE(parse,3) \

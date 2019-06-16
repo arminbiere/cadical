@@ -4,8 +4,9 @@
 /*------------------------------------------------------------------------*/
 
 // This header only provides the 'COVER' macro for testing.  It is unrelated
-// to 'cover.cpp' which implements covered clause elimination, but we wanted
-// to use the name base name in both cases.
+// to 'cover.cpp' which implements covered clause elimination (CCE), but we
+// wanted to use the name base name in both cases.  More explanation on CCE
+// is provided in 'cover.cpp'.
 
 /*------------------------------------------------------------------------*/
 

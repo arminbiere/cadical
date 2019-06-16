@@ -50,8 +50,8 @@ struct External {
   Internal * internal;    // The actual internal solver.
   int max_var;            // External maximum variable index.
   size_t vsize;
-  vector<bool> vals2;
-  int * e2i;              // External 'idx' to internal 'lit' [1,max_var].
+  vector<bool> vals;      // Current external (extended) assignment.
+  vector<int> e2i;        // External 'idx' to internal 'lit' [1,max_var].
 
   vector<int> assumptions;      // External assumptions.
 
@@ -228,8 +228,8 @@ struct External {
     assert (elit != INT_MIN);
     int eidx = abs (elit), res;
     if (eidx > max_var) res = -1;
-    else if ((size_t) eidx >= vals2.size ()) res = -1;
-    else res = vals2[eidx] ? 1 : -1;
+    else if ((size_t) eidx >= vals.size ()) res = -1;
+    else res = vals[eidx] ? 1 : -1;
     if (elit < 0) res = -res;
     return res;
   }
@@ -303,7 +303,8 @@ struct External {
 
   bool traverse_all_frozen_units_as_clauses (ClauseIterator &);
   bool traverse_all_non_frozen_units_as_witnesses (WitnessIterator &);
-  bool traverse_witnesses (WitnessIterator &);
+  bool traverse_witnesses_backward (WitnessIterator &);
+  bool traverse_witnesses_forward (WitnessIterator &);
 };
 
 }

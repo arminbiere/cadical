@@ -2,14 +2,18 @@
 
 namespace CaDiCaL {
 
-void Internal::copy_phases (Phase * & dst) {
-  assert (sizeof (Phase) == 1);
-  memcpy (dst, vals, max_var + 1);
+void Internal::copy_phases (vector<Phase> & dst) {
+  START (copy);
+  for (int i = 1; i <= max_var; i++)
+    dst[i] = vals[i];
+  STOP (copy);
 }
 
-void Internal::clear_phases (Phase * & dst) {
-  assert (sizeof (Phase) == 1);
-  memset (dst, 0, max_var + 1);
+void Internal::clear_phases (vector<Phase> & dst) {
+  START (copy);
+  for (int i = 1; i <= max_var; i++)
+    dst[i] = 0;
+  STOP (copy);
 }
 
 }

@@ -23,7 +23,11 @@ inline double Internal::compute_elim_score (unsigned lit) {
   const unsigned uidx = 2*lit;
   const double pos = internal->ntab [uidx];
   const double neg = internal->ntab [uidx + 1];
-  return pos * neg + pos + neg;
+  if (!pos) return -neg;
+  if (!neg) return -pos;
+  double sum = pos + neg, prod = 0;
+  if (opts.elimprod) prod = opts.elimprod * pos * neg;
+  return prod + sum;
 }
 
 /*------------------------------------------------------------------------*/
@@ -367,6 +371,7 @@ Internal::elim_resolvents_are_bounded (Eliminator & eliminator, int pivot)
   const Occs & ns = occs (-pivot);
   const long pos = ps.size ();
   const long neg = ns.size ();
+  if (!pos || !neg) return lim.elimbound >= 0;
   const long bound = pos + neg + lim.elimbound;
 
   LOG ("checking number resolvents on %d bounded by %ld = %ld + %ld + %d",
@@ -531,7 +536,7 @@ Internal::try_to_eliminate_variable (Eliminator & eliminator, int pivot) {
   assert (!eliminator.schedule.contains (abs (pivot)));
   assert (pos <= neg);
 
-  if (neg > opts.elimocclim) {
+  if (pos && neg > opts.elimocclim) {
     LOG ("too many occurrences thus not eliminated %d", pivot);
     assert (!eliminator.schedule.contains (abs (pivot)));
     return;
@@ -546,7 +551,7 @@ Internal::try_to_eliminate_variable (Eliminator & eliminator, int pivot) {
   Occs & ns = occs (-pivot);
   stable_sort (ns.begin (), ns.end (), clause_smaller_size ());
 
-  find_gate_clauses (eliminator, pivot);
+  if (pos) find_gate_clauses (eliminator, pivot);
 
   if (!unsat && !val (pivot)) {
     if (elim_resolvents_are_bounded (eliminator, pivot)) {
@@ -579,9 +584,17 @@ Internal::mark_redundant_clauses_with_eliminated_variables_as_garbage () {
 
 /*------------------------------------------------------------------------*/
 
+// Perform one round of bounded variable elimination and return 'false' if
+// no variable was eliminated even though elimination ran to completion.
+// Thus the result is 'false' iff elimination completed for this
+// particular elimination bound (which will trigger its increase) and it is
+// 'true' if at least one variable was eliminated or the resolution limit
+// was hit and elimination did not run to completion.
+
 bool Internal::elim_round () {
 
-  if (unsat || !opts.elim || terminating ()) return false;
+  assert (opts.elim);
+  assert (!unsat);
 
   START_SIMPLIFIER (elim, ELIM);
   stats.elimrounds++;
@@ -709,8 +722,18 @@ bool Internal::elim_round () {
     tried, percent (tried, scheduled), remain);
 
   schedule.erase ();
-  reset_noccs ();
+
+  // Collect potential literal clause instantiation pairs, which needs full
+  // occurrence lists and thus we have it here before resetting them.
+  //
+  Instantiator instantiator;
+  if (!unsat &&
+      !terminating () &&
+      opts.instantiate)
+    collect_instantiation_candidates (instantiator);
+
   reset_occs ();
+  reset_noccs ();
 
   // Mark all redundant clauses with eliminated variables as garbage.
   //
@@ -730,10 +753,12 @@ bool Internal::elim_round () {
   report ('e', !opts.reportall && !(eliminated + units));
   STOP_SIMPLIFIER (elim, ELIM);
 
-  if (unsat) return false;
-  if (!completed) return true;
-  if (eliminated > 0) return true;
-  return terminating ();
+  if (!unsat &&
+      !terminating () &&
+      instantiator)                     // Do we have candidate pairs?
+    instantiate (instantiator);
+
+  return !completed || eliminated;
 }
 
 /*------------------------------------------------------------------------*/
@@ -798,7 +823,7 @@ void Internal::elim (bool update_limits) {
   bool completed = false, blocked = false, covered = false;
   int round = 1;
 
-  while (!terminating ()) {
+  while (!unsat && !terminating ()) {
 
     if (elim_round ()) {        // Elimination successful or limit hit.
 
@@ -843,10 +868,8 @@ void Internal::elim (bool update_limits) {
       stats.elimcompleted + 1, lim.elimbound);
   }
 
-  if (!unsat) {
-    init_watches ();
-    connect_watches ();
-  }
+  init_watches ();
+  connect_watches ();
 
   if (unsat) LOG ("elimination derived empty clause");
   else if (propagated < trail.size ()) {

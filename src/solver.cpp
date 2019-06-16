@@ -878,7 +878,7 @@ void Solver::dump_cnf () {
 
 /*------------------------------------------------------------------------*/
 
-bool Solver::traverse_clauses (ClauseIterator & it) {
+bool Solver::traverse_clauses (ClauseIterator & it) const {
   LOG_API_CALL_BEGIN ("traverse_clauses");
   REQUIRE_VALID_STATE ();
   bool res = external->traverse_all_frozen_units_as_clauses (it) &&
@@ -887,12 +887,21 @@ bool Solver::traverse_clauses (ClauseIterator & it) {
   return res;
 }
 
-bool Solver::traverse_witnesses (WitnessIterator & it) {
-  LOG_API_CALL_BEGIN ("traverse_witnesses");
+bool Solver::traverse_witnesses_backward (WitnessIterator & it) const {
+  LOG_API_CALL_BEGIN ("traverse_witnesses_backward");
   REQUIRE_VALID_STATE ();
   bool res = external->traverse_all_non_frozen_units_as_witnesses (it) &&
-             external->traverse_witnesses (it);
-  LOG_API_CALL_RETURNS ("traverse_witnesses", res);
+             external->traverse_witnesses_backward (it);
+  LOG_API_CALL_RETURNS ("traverse_witnesses_backward", res);
+  return res;
+}
+
+bool Solver::traverse_witnesses_forward (WitnessIterator & it) const {
+  LOG_API_CALL_BEGIN ("traverse_witnesses_forward");
+  REQUIRE_VALID_STATE ();
+  bool res = external->traverse_witnesses_forward (it) &&
+             external->traverse_all_non_frozen_units_as_witnesses (it);
+  LOG_API_CALL_RETURNS ("traverse_witnesses_forward", res);
   return res;
 }
 
@@ -1001,7 +1010,7 @@ const char * Solver::write_extension (const char * path) {
   File * file = File::write (internal, path);
   WitnessWriter writer (file);
   if (file) {
-    if (!traverse_witnesses (writer))
+    if (!traverse_witnesses_backward (writer))
       res = internal->error_message.init (
               "writing to DIMACS file '%s' failed", path);
     delete file;
@@ -1043,11 +1052,11 @@ public:
   }
 };
 
-void Solver::copy (Solver & other) {
+void Solver::copy (Solver & other) const {
   ClauseCopier clause_copier (other);
   traverse_clauses (clause_copier);
   WitnessCopier witness_copier (other.external);
-  traverse_witnesses (witness_copier);
+  traverse_witnesses_forward (witness_copier);
 }
 
 /*------------------------------------------------------------------------*/

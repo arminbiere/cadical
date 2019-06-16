@@ -130,11 +130,11 @@ inline void Internal::flush_watches (int lit, Watches & saved) {
 }
 
 void Internal::flush_all_occs_and_watches () {
-  if (occs ())
+  if (occurring ())
     for (int idx = 1; idx <= max_var; idx++)
       flush_occs (idx), flush_occs (-idx);
 
-  if (watches ()) {
+  if (watching ()) {
     Watches tmp;
     for (int idx = 1; idx <= max_var; idx++)
       flush_watches (idx, tmp), flush_watches (-idx, tmp);
@@ -228,7 +228,7 @@ void Internal::copy_non_garbage_clauses () {
       if (!c->collect () && arena.contains (c))
         copy_clause (c);
 
-  if (opts.arenatype == 1 || !watches ()) {
+  if (opts.arenatype == 1 || !watching ()) {
 
     // Localize according to current clause order.
 

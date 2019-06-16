@@ -58,17 +58,19 @@ public:
   void inverse () { code ("7m"); }
   void underline () { code ("4m"); }
 
-  const char * bright_magenta_code () { return use_colors ? "\033[1;35m" : ""; }
-  const char * magenta_code ()        { return use_colors ? "\033[0;35m" : ""; }
-  const char * blue_code ()           { return use_colors ? "\033[0;34m" : ""; }
-  const char * bright_blue_code ()    { return use_colors ? "\033[1;34m" : ""; }
-  const char * yellow_code ()         { return use_colors ? "\033[0;33m" : ""; }
-  const char * bright_yellow_code ()  { return use_colors ? "\033[1;33m" : ""; }
-  const char * green_code ()          { return use_colors ? "\033[0;32m" : ""; }
-  const char * red_code ()            { return use_colors ? "\033[0;31m" : ""; }
-  const char * bright_red_code ()     { return use_colors ? "\033[1;31m" : ""; }
-  const char * normal_code ()         { return use_colors ? "\033[0m"    : ""; }
-  const char * bold_code ()           { return use_colors ? "\033[1m"    : ""; }
+#define MODIFY(CODE) (use_colors ? "\033[" CODE "m" : "")
+
+  const char * bright_magenta_code () { return MODIFY ("1;35"); }
+  const char * magenta_code ()        { return MODIFY ("0;35"); }
+  const char * blue_code ()           { return MODIFY ("0;34"); }
+  const char * bright_blue_code ()    { return MODIFY ("1;34"); }
+  const char * yellow_code ()         { return MODIFY ("0;33"); }
+  const char * bright_yellow_code ()  { return MODIFY ("1;33"); }
+  const char * green_code ()          { return MODIFY ("0;32"); }
+  const char * red_code ()            { return MODIFY ("0;31"); }
+  const char * bright_red_code ()     { return MODIFY ("1;31"); }
+  const char * normal_code ()         { return MODIFY ("0"   ); }
+  const char * bold_code ()           { return MODIFY ("1"   ); }
 
   void cursor (bool on) { code (on ? "?25h" : "?25l"); }
 

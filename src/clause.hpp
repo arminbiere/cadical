@@ -32,6 +32,7 @@ struct Clause {
   bool garbage:1;     // can be garbage collected unless it is a 'reason'
   bool gate:1 ;       // Clause part of a gate (function definition).
   bool hyper:1;       // redundant hyper binary or ternary resolved
+  bool instantiated:1;// tried to instantiate
   bool keep:1;        // always keep this clause (if redundant)
   bool moved:1;       // moved during garbage collector ('copy' valid)
   bool reason:1;      // reason / antecedent clause can not be collected

@@ -26,7 +26,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
   stats.deduplications++;
 
   assert (!level);
-  assert (watches ());
+  assert (watching ());
 
   vector<int> stack;    // To save marked literals and unmark them later.
 

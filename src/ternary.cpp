@@ -24,7 +24,7 @@ namespace CaDiCaL {
 
 bool
 Internal::ternary_find_binary_clause (int a, int b) {
-  assert (occs ());
+  assert (occurring ());
   assert (active (a));
   assert (active (b));
   size_t s = occs (a).size ();
@@ -47,7 +47,7 @@ Internal::ternary_find_binary_clause (int a, int b) {
 
 bool
 Internal::ternary_find_ternary_clause (int a, int b, int c) {
-  assert (occs ());
+  assert (occurring ());
   assert (active (a));
   assert (active (b));
   assert (active (c));
@@ -293,7 +293,7 @@ bool Internal::ternary () {
   assert (!level);
 
   assert (!unsat);
-  if (watches ()) reset_watches ();
+  if (watching ()) reset_watches ();
 
   // The number of steps (see comment to 'ternary_lit' above) is global to
   // all rounds of producing ternary resolvents on all marked variables in
@@ -320,13 +320,13 @@ bool Internal::ternary () {
   //
   PHASE ("ternary", stats.ternary,
     "will run a maximum of %d rounds limited to %ld steps and %ld clauses",
-    opts.ternarymaxrounds, steps_limit, htrs_limit);
+    opts.ternaryrounds, steps_limit, htrs_limit);
 
   bool resolved_binary_clause = false;
   bool completed = false;
 
   for (int round = 0;
-       !terminating () && round < opts.ternarymaxrounds;
+       !terminating () && round < opts.ternaryrounds;
        round++)
   {
     if (htrs_limit < 0) break;
@@ -345,7 +345,7 @@ bool Internal::ternary () {
     if (!delta_htrs3) break;
   }
 
-  assert (!occs ());
+  assert (!occurring ());
   assert (!unsat);
   init_watches ();
   connect_watches ();

@@ -134,7 +134,7 @@ int main () {
 
   cout << "witnesses" << endl;
   WitnessChecker witness_checker;
-  cadical.traverse_witnesses (witness_checker);
+  cadical.traverse_witnesses_backward (witness_checker);
 
   return 0;
 }

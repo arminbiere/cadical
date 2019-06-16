@@ -34,14 +34,14 @@ trap "rm -f $prefix*" 2 9 15
 out=$prefix.out
 ext=$prefix.ext
 log=$prefix.log
-msg "$solver --no-leak -n -O1 -c 0 -o $out -e $ext $1 > $log"
-$solver --no-leak -n -O1 -c 0 -o $out -e $ext $1 > $log
+msg "$solver -n -O1 -c 0 -o $out -e $ext $1 > $log"
+$solver -n -O1 -c 0 -o $out -e $ext $1 > $log
 res=$?
 msg "simplifier exit code '$res'"
 msg "sed -e 's,^[vs],c,' -e 's,^c,c [simplifier],' $log"
 sed -e 's,^[vs],c,' -e 's,^c,c [simplifier],' $log
-msg "$solver --no-leak $out > $log"
-$solver --no-leak $out > $log
+msg "$solver $out > $log"
+$solver $out > $log
 res=$?
 msg "solver exit code '$res'"
 msg "sed -e 's,^[vs],c,' -e 's,^c,c [solver],' $log"

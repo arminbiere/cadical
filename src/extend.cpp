@@ -101,9 +101,9 @@ void External::extend () {
   for (unsigned i = 1; i <= (unsigned) max_var; i++) {
     const int ilit = e2i[i];
     if (!ilit) continue;
-    while (i >= vals2.size ())
-      vals2.push_back (false);
-    vals2[i] = (internal->val (ilit) > 0);
+    while (i >= vals.size ())
+      vals.push_back (false);
+    vals[i] = (internal->val (ilit) > 0);
     updated++;
   }
   PHASE ("extend", internal->stats.extensions,
@@ -135,9 +135,9 @@ void External::extend () {
           assert (lit);
           assert (lit != INT_MIN);
           int idx = abs (lit);
-          while ((size_t) idx >= vals2.size ())
-            vals2.push_back (false);
-          vals2[idx] = !vals2[idx];
+          while ((size_t) idx >= vals.size ())
+            vals.push_back (false);
+          vals[idx] = !vals[idx];
           internal->stats.extended++;
           flipped++;
         }
@@ -154,41 +154,48 @@ void External::extend () {
 
 /*------------------------------------------------------------------------*/
 
-bool External::traverse_witnesses (WitnessIterator & it) {
-
+bool External::traverse_witnesses_backward (WitnessIterator & it) {
   if (internal->unsat) return true;
-
   vector<int> clause, witness;
-
-  // Traverse the extension stack in reverse order.
-  //
   const auto begin = extension.begin ();
   auto i = extension.end ();
   while (i != begin) {
-    bool satisfied = false;
     int lit;
-    while ((lit = *--i)) {
-      if (satisfied) continue;
-      const int tmp = fixed (lit);
-      if (tmp < 0) continue;
-      if (tmp > 0) satisfied = true;
-      else clause.push_back (lit);
-    }
-    while ((lit = *--i)) {
-      if (satisfied) continue;
-      if (fixed (lit)) continue;
+    while ((lit = *--i))
+      clause.push_back (lit);
+    while ((lit = *--i))
       witness.push_back (lit);
-    }
-    if (!satisfied) {
-      reverse (clause.begin (), clause.end ());
-      reverse (witness.begin (), witness.end ());
-      if (!it.witness (clause, witness))
-        return false;
-    }
+    reverse (clause.begin (), clause.end ());
+    reverse (witness.begin (), witness.end ());
+    if (!it.witness (clause, witness))
+      return false;
     clause.clear ();
     witness.clear ();
   }
+  return true;
+}
 
+bool External::traverse_witnesses_forward (WitnessIterator & it) {
+  if (internal->unsat) return true;
+  vector<int> clause, witness;
+  const auto end = extension.end ();
+  auto i = extension.begin ();
+  if (i != end) {
+    int lit = *i++;
+    do {
+      assert (!lit);
+      while ((lit = *i++))
+        witness.push_back (lit);
+      assert (!lit);
+      assert (i != end);
+      while (i != end && (lit = *i++))
+        clause.push_back (lit);
+      if (!it.witness (clause, witness))
+        return false;
+      clause.clear ();
+      witness.clear ();
+    } while (i != end);
+  }
   return true;
 }
 

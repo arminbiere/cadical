@@ -164,7 +164,7 @@ void Internal::reduce () {
   START (reduce);
 
   stats.reductions++;
-  report ('+', 1);
+  report ('.', 1);
 
   bool flush = flushing ();
   if (flush) stats.flush.count++;

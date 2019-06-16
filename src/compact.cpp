@@ -24,134 +24,135 @@ bool Internal::compacting () {
 
 /*------------------------------------------------------------------------*/
 
-// Map old internal literal 'SRC' to new internal literal 'DST'.  This would
-// be trivially just a look-up into the 'map' created in 'compact' (caring
-// about signedness of 'SRC' though), except that fixed variables have all
-// to be mapped to the first fixed variable 'first_fixed', which makes it
-// more tricky.
-//
-#define MAP_LIT(SRC,DST) \
-do { \
-  int OLD = (SRC); \
-  assert (OLD), assert (abs (OLD) <= max_var); \
-  int RES = map[abs (OLD)]; \
-  if (!RES) { \
-    assert (!level); \
-    assert (vals_not_mapped_yet); \
-    const int TMP = val (OLD); \
-    if (TMP) { \
-      assert (first_fixed); \
-      RES = map_first_fixed; \
-      if (TMP != first_fixed_val) RES = -RES; \
-    } \
-  } else if ((OLD) < 0) RES = -RES; \
-  assert (abs (RES) <= new_max_var); \
-  (DST) = RES; \
-} while (0)
+struct Mapper {
 
-// Map the positive variable indices in array 'NAME' of element type 'TYPE'.
-//
-#define MAP_ARRAY_ONLY(TYPE,NAME) \
-do { \
-  for (int SRC = 1; SRC <= max_var; SRC++) { \
-    const int DST = map[SRC]; \
-    if (!DST) continue; \
-    assert (0 < DST), assert (DST <= SRC); \
-    assert (DST > 0); \
-    NAME[DST] = NAME[SRC]; \
-  } \
-  SHRINK_ONLY (NAME, TYPE, vsize, new_vsize); \
-  PRINT ("mapped '" # NAME "'"); \
-} while (0)
+  Internal * internal;
+  int new_max_var;              // New 'max_var' after compacting.
+  int * table;                  // Old variable index to new literal map.
+  int first_fixed;              // First fixed variable index.
+  int map_first_fixed;          // Mapped literal of first fixed variable.
+  int first_fixed_val;          // Value of first fixed variable.
+  size_t new_vsize;
 
-// Same as 'MAP_ARRAY_ONLY' but two sided (positive and negative literal).
-//
-// We need two versions here, one for arrays of 'std::vector' which need
-// proper initialization and release operations and then another one which
-// does not initialize anything.
-//
-// This is the first version for arrays containing objects with destructor
-// (e.g., in our case only 'std::vector').
-//
-#define RELEASE_MAP2_ARRAY(TYPE,NAME) \
-do { \
-  for (int SRC = 1; SRC <= max_var; SRC++) { \
-    const int DST = map[SRC]; \
-    if (!DST) continue; \
-    assert (0 < DST), assert (DST <= SRC); \
-    NAME[2*DST] = NAME[2*SRC]; \
-    NAME[2*DST+1] = NAME[2*SRC+1]; \
-  } \
-  RELEASE_SHRINK (NAME, TYPE, 2*vsize, 2*new_vsize); \
-  PRINT ("mapped '" # NAME "' (after release)"); \
-} while (0)
+  /*----------------------------------------------------------------------*/
+  // We produce a compacting garbage collector like map of old 'src' to
+  // new 'dst' variables.  Inactive variables are just skipped except for
+  // fixed ones which will be mapped to the first fixed variable (in the
+  // appropriate phase).  This avoids to handle the case 'fixed value'
+  // separately as it is done in Lingeling, where fixed variables are
+  // mapped to the internal variable '1'.
+  //
+  Mapper (Internal * i) :
+    internal (i),
+    new_max_var (0),
+    table (new int [ internal->max_var + 1 ] { 0 }),
+    first_fixed (0),
+    map_first_fixed (0),
+    first_fixed_val (0)
+  {
+    assert (!internal->level);
 
-// This is second version for arrays containing objects which do not have a
-// destructor (such as 'noccs2'). The only difference to the previous
-// 'RELEASE_MAP2_ARRAY' is to use 'SHRINK_ONLY' without 'RELEASE_SHRINK'.
-//
-#define MAP2_ARRAY_ONLY(TYPE,NAME) \
-do { \
-  for (int SRC = 1; SRC <= max_var; SRC++) { \
-    const int DST = map[SRC]; \
-    if (!DST) continue; \
-    assert (0 < DST), assert (DST <= SRC); \
-    NAME[2*DST] = NAME[2*SRC]; \
-    NAME[2*DST+1] = NAME[2*SRC+1]; \
-  } \
-  SHRINK_ONLY (NAME, TYPE, 2*vsize, 2*new_vsize); \
-  PRINT ("mapped '" # NAME "' (no release)"); \
-} while (0)
+    for (int src = 1; src <= internal->max_var; src++) {
+      const Flags & f = internal->flags (src);
+      if (f.active ()) table[src] = ++new_max_var;
+      else if (f.fixed () && !first_fixed)
+        table[first_fixed = src] = map_first_fixed = ++new_max_var;
+    }
 
-// Map a 'vector<int>' of literals, flush inactive literals, resize and
-// shrink it to fit its new size after flushing.
-//
-#define MAP_FLUSH_AND_SHRINK_INT_VECTOR(V) \
-do { \
-  const auto end = V.end (); \
-  auto j = V.begin (), i = j; \
-  for (; i != end; i++) { \
-    const int SRC = *i; \
-    int DST = map[abs (SRC)]; \
-    assert (abs (DST) <= abs (SRC)); \
-    if (!DST) continue; \
-    if (SRC < 0) DST = -DST; \
-    *j++ = DST; \
-  } \
-  V.resize (j - V.begin ()); \
-  shrink_vector (V); \
-  PRINT ("mapped '" # V "'"); \
-} while (0)
+    first_fixed_val = first_fixed ? internal->val (first_fixed) : 0;
+    new_vsize = new_max_var + 1;
+  }
 
-/*------------------------------------------------------------------------*/
+  ~Mapper () { delete [] table; }
 
-#ifndef QUIET
+  /*----------------------------------------------------------------------*/
+  // Map old variable indices.  A result of zero means not mapped.
+  //
+  int map_idx (int src) {
+    assert (0 < src), assert (src <= internal->max_var);
+    const int res = table[src];
+    assert (res <= new_max_var);
+    return res;
+  }
 
-#ifdef LOGGING
-#define PRINTVERBOSEGUARD !opts.log
-#else
-#define PRINTVERBOSEGUARD true
-#endif
+  /*----------------------------------------------------------------------*/
+  // The 'map_idx' above is just a look-up into the 'table'.  Here we have
+  // to care about signedness of 'src', and in addition that fixed variables
+  // have all to be mapped to the first fixed variable 'first_fixed'.
+  //
+  int map_lit (int src) {
+    int res = map_idx (abs (src));
+    if (!res) {
+      const int tmp = internal->val (src);
+      if (tmp) {
+        assert (first_fixed);
+        res = map_first_fixed;
+        if (tmp != first_fixed_val) res = -res;
+      }
+    } else if ((src) < 0) res = -res;
+    assert (abs (res) <= new_max_var);
+    return res;
+  }
 
-#define PRINT(MSG) \
-do { \
-  if (opts.quiet) break; \
-  if (PRINTVERBOSEGUARD && opts.verbose < 2) break; \
-  print_prefix (); \
-  printf ("[compact-%ld] %s %.0f MB\n", stats.compacts, \
-    (MSG), current_resident_set_size ()/(double)(1<<20) ); \
-  fflush (stdout); \
-} while (0)
+  /*----------------------------------------------------------------------*/
+  // Map positive variable indices in vector.
+  //
+  template<class T>
+  void map_vector (vector<T> & v) {
+    const int max_var = internal->max_var;
+    for (int src = 1; src <= max_var; src++) {
+      const int dst = map_idx (src);
+      if (!dst) continue;
+      assert (0 < dst);
+      assert (dst <= src);
+      v[dst] = v[src];
+    }
+    v.resize (new_vsize);
+    shrink_vector (v);
+  }
 
-#else
-#define PRINT(MSG) do { } while (0)
-#endif
+  /*----------------------------------------------------------------------*/
+  // Map positive and negative variable indices in two-sided vector.
+  //
+  template<class T>
+  void map2_vector (vector<T> & v) {
+    const int max_var = internal->max_var;
+    for (int src = 1; src <= max_var; src++) {
+      const int dst = map_idx (src);
+      if (!dst) continue;
+      assert (0 < dst);
+      assert (dst <= src);
+      v[2*dst] = v[2*src];
+      v[2*dst + 1] = v[2*src + 1];
+    }
+    v.resize (2*new_vsize);
+    shrink_vector (v);
+  }
+
+  /*----------------------------------------------------------------------*/
+  // Map a vector of literals, flush inactive literals, then resize and
+  // shrink it to fit the new size after flushing.
+  //
+  void map_flush_and_shrink_lits (vector<int> & v) {
+    const auto end = v.end ();
+    auto j = v.begin (), i = j;
+    for (; i != end; i++) {
+      const int src = *i;
+      int dst = map_idx (abs (src));
+      assert (abs (dst) <= abs (src));
+      if (!dst) continue;
+      if (src < 0) dst = -dst;
+      *j++ = dst;
+    }
+    v.resize (j - v.begin ());
+    shrink_vector (v);
+  }
+
+};
 
 /*------------------------------------------------------------------------*/
 
 void Internal::compact () {
-
-  PRINT ("BEFORE");
 
   START (compact);
 
@@ -171,34 +172,12 @@ void Internal::compact () {
 
   garbage_collection ();
 
-  /*----------------------------------------------------------------------*/
-  // We produce a compacting garbage collector like map of old 'src' to
-  // new 'dst' variables.  Inactive variables are just skipped except for
-  // fixed ones which will be mapped to the first fixed variable (in the
-  // appropriate phase).  This avoids to handle the case 'fixed value'
-  // separately as it is done in Lingeling, where fixed variables are
-  // mapped to the internal variable '1'.
-  //
-  int * map, new_max_var = 0, first_fixed = 0, map_first_fixed = 0;
-  NEW_ZERO (map, int, max_var + 1);
-  for (int src = 1; src <= max_var; src++) {
-    const Flags & f = flags (src);
-    if (f.active ()) map[src] = ++new_max_var;
-    else if (f.fixed () && !first_fixed)
-      map[first_fixed = src] = map_first_fixed = ++new_max_var;
-  }
-#ifndef NDEBUG
-  bool vals_not_mapped_yet = true;      // for testing & debugging
-#endif
-  const int first_fixed_val = first_fixed ? val (first_fixed) : 0;
+  Mapper mapper (this);
 
-  if (first_fixed)
-    LOG ("found first fixed %d", sign (first_fixed_val)*first_fixed);
+  if (mapper.first_fixed)
+    LOG ("found first fixed %d",
+      sign (mapper.first_fixed_val)*mapper.first_fixed);
   else LOG ("no variable fixed");
-
-  const size_t new_vsize = new_max_var + 1;  // Adjust to fit 'new_max_var'.
-
-  PRINT ("generated 'map'");
 
   if (!assumptions.empty ()) {
     assert (!external->assumptions.empty ());
@@ -206,22 +185,20 @@ void Internal::compact () {
     reset_assumptions ();
   }
 
-  /*----------------------------------------------------------------------*/
-  // In this first part we only map stuff without reallocation.
-  /*----------------------------------------------------------------------*/
+  /*======================================================================*/
+  // In this first part we only map stuff without reallocation / shrinking.
+  /*======================================================================*/
 
   // Flush the external indices.  This has to occur before we map 'vals'.
   //
   for (int eidx = 1; eidx <= external->max_var; eidx++) {
     int src = external->e2i[eidx], dst;
     if (!src) continue;
-    MAP_LIT (src, dst);
+    dst = mapper.map_lit (src);
     LOG ("compact %ld maps external %d to internal %d from internal %d",
       stats.compacts, eidx, dst, src);
     external->e2i[eidx] = dst;
   }
-
-  PRINT ("mapped 'i2e'");
 
   // Map the literals in all clauses.
   //
@@ -230,86 +207,82 @@ void Internal::compact () {
     for (auto & src : *c) {
       assert (!val (src));
       int dst;
-      MAP_LIT (src, dst);
+      dst = mapper.map_lit (src);
       assert (dst || c->garbage);
       src = dst;
     }
   }
 
-  PRINT ("mapped 'clauses'");
-
   // Map the blocking literals in all watches.
   //
-  if (watches ())
+  if (!wtab.empty ())
     for (int idx = 1; idx <= max_var; idx++)
       for (int sign = -1; sign <= 1; sign += 2)
         for (auto & w : watches (sign*idx))
-          MAP_LIT (w.blit, w.blit);
-
-  PRINT ("mapped 'blits'");
+          w.blit = mapper.map_lit (w.blit);
 
   // We first flush inactive variables and map the links in the queue.  This
-  // has to be done before we map the actual links data structure 'ltab'.
+  // has to be done before we map the actual links data structure 'links'.
   {
     int prev = 0, mapped_prev = 0, next;
     for (int idx = queue.first; idx; idx = next) {
-      Link * l = ltab + idx;
-      next = l->next;
-      if (idx == first_fixed) continue;
-      const int dst = map[idx];
+      next = links[idx].next;
+      if (idx == mapper.first_fixed) continue;
+      const int dst = mapper.map_idx (idx);
       if (!dst) continue;
       assert (active (idx));
-      if (prev) ltab[prev].next = dst; else queue.first = dst;
-      l->prev = mapped_prev;
+      if (prev) links[prev].next = dst; else queue.first = dst;
+      links[idx].prev = mapped_prev;
       mapped_prev = dst;
       prev = idx;
     }
-    if (prev) ltab[prev].next = 0; else queue.first = 0;
+    if (prev) links[prev].next = 0; else queue.first = 0;
     queue.unassigned = queue.last = mapped_prev;
   }
 
-  PRINT ("mapped 'queue'");
-
-  /*----------------------------------------------------------------------*/
+  /*======================================================================*/
   // In the second part we map, flush and shrink arrays.
-  /*----------------------------------------------------------------------*/
+  /*======================================================================*/
 
-  MAP_FLUSH_AND_SHRINK_INT_VECTOR (trail);
+  mapper.map_flush_and_shrink_lits (trail);
   propagated = trail.size ();
-  if (first_fixed) {
+  if (mapper.first_fixed) {
     assert (trail.size () == 1);
-    var (first_fixed).trail = 0;                // before mapping 'vtab'
+    var (mapper.first_fixed).trail = 0;            // before mapping 'vtab'
   } else assert (trail.empty ());
 
-  if (!probes.empty ()) MAP_FLUSH_AND_SHRINK_INT_VECTOR (probes);
+  if (!probes.empty ())
+    mapper.map_flush_and_shrink_lits (probes);
 
-  /*----------------------------------------------------------------------*/
+  /*======================================================================*/
   // In the third part we map stuff and also reallocate memory.
-  /*----------------------------------------------------------------------*/
+  /*======================================================================*/
 
   // Now we continue in reverse order of allocated bytes, e.g., see
   // 'Internal::enlarge' which reallocates in order of allocated bytes.
 
-  MAP_ARRAY_ONLY (Flags, ftab);
-  MAP_ARRAY_ONLY (signed_char, marks);
-  MAP_ARRAY_ONLY (Phase, phases.saved);
-  MAP_ARRAY_ONLY (Phase, phases.target);
-  MAP_ARRAY_ONLY (Phase, phases.best);
-  MAP_ARRAY_ONLY (Phase, phases.prev);
-  MAP_ARRAY_ONLY (Phase, phases.min);
+  mapper.map_vector (ftab);
+  mapper.map_vector (marks);
+  mapper.map_vector (phases.saved);
+  mapper.map_vector (phases.target);
+  mapper.map_vector (phases.best);
+  mapper.map_vector (phases.prev);
+  mapper.map_vector (phases.min);
 
   // Special code for 'frozentab'.
   //
-  {
-    unsigned * new_frozentab;
-    NEW_ZERO  (new_frozentab, unsigned, new_vsize);
-    for (int src = 1; src <= max_var; src++)
-      new_frozentab[map[src]] += frozentab[src];        // accumulate!
-    DELETE_ONLY (frozentab, unsigned, vsize);
-    frozentab = new_frozentab;
+  for (int src = 1; src <= max_var; src++) {
+    const int dst = mapper.map_idx (src);
+    if (!dst) continue;
+    if (src == dst) continue;
+    assert (dst < src);
+    frozentab[dst] += frozentab[src];
+    frozentab[src] = 0;
   }
+  frozentab.resize (mapper.new_vsize);
+  shrink_vector (frozentab);
 
-  PRINT ("mapped 'frozentab'");
+  /*----------------------------------------------------------------------*/
 
   if (!external->assumptions.empty ()) {
 
@@ -332,38 +305,32 @@ void Internal::compact () {
   // Special case for 'val' as for 'val' we trade branch less code for
   // memory and always allocated an [-maxvar,...,maxvar] array.
   {
-#ifndef NDEBUG
-    vals_not_mapped_yet = false;        // for testing & debugging
-#endif
-    signed_char * new_vals;
-    NEW_ONLY (new_vals, signed_char, 2*new_vsize);
-    new_vals += new_vsize;
+    signed_char * new_vals = new signed char [ 2*mapper.new_vsize ];
+    new_vals += mapper.new_vsize;
     for (int src = -max_var; src <= -1; src++)
-      new_vals[-map[-src]] = vals[src];
+      new_vals[-mapper.map_idx (-src)] = vals[src];
     for (int src = 1; src <= max_var; src++)
-      new_vals[map[src]] = vals[src];
+      new_vals[mapper.map_idx (src)] = vals[src];
     new_vals[0] = 0;
     vals -= vsize;
-    DELETE_ONLY (vals, signed_char, 2*vsize);
+    delete [] vals;
     vals = new_vals;
   }
 
-  PRINT ("mapped 'vals'");
+  mapper.map_vector (i2e);
+  mapper.map2_vector (ptab);
+  mapper.map_vector (btab);
+  mapper.map_vector (links);
+  mapper.map_vector (vtab);
+  if (!ntab.empty ()) mapper.map2_vector (ntab);
+  if (!ntab2.empty ()) mapper.map_vector (ntab2);
+  if (!wtab.empty ()) mapper.map2_vector (wtab);
+  if (!otab.empty ()) mapper.map2_vector (otab);
+  if (!big.empty ()) mapper.map2_vector (big);
 
-  MAP_ARRAY_ONLY (int, i2e);
-  MAP2_ARRAY_ONLY (int, ptab);
-  MAP_ARRAY_ONLY (long, btab);
-  MAP_ARRAY_ONLY (Link, ltab);
-  MAP_ARRAY_ONLY (Var, vtab);
-  if (ntab) MAP2_ARRAY_ONLY (long, ntab);
-  if (ntab2) MAP_ARRAY_ONLY (long, ntab2);
-  if (wtab) RELEASE_MAP2_ARRAY (Watches, wtab);
-  if (otab) RELEASE_MAP2_ARRAY (Occs, otab);
-  if (big) RELEASE_MAP2_ARRAY (Bins, big);
-
-  /*----------------------------------------------------------------------*/
+  /*======================================================================*/
   // In the fourth part we map the binary heap for scores.
-  /*----------------------------------------------------------------------*/
+  /*======================================================================*/
 
   // The simplest way to map a binary heap is to get all elements from the
   // heap and reinsert them.  This could be slightly improved in terms of
@@ -377,26 +344,25 @@ void Internal::compact () {
     while (!scores.empty ()) {
       const int src = scores.front ();
       scores.pop_front ();
-      const int dst = map [src];
-      if (dst && src != first_fixed) saved.push_back (dst);
+      const int dst = mapper.map_idx (src);
+      if (!dst) continue;
+      if (src == mapper.first_fixed) continue;
+      saved.push_back (dst);
     }
     scores.erase ();
   }
-  MAP_ARRAY_ONLY (double, stab);
+  mapper.map_vector (stab);
   if (!saved.empty ()) {
     for (const auto & idx : saved)
       scores.push_back (idx);
     scores.shrink ();
   }
-  PRINT ("mapped 'scores'");
 
   /*----------------------------------------------------------------------*/
 
-  DELETE_ONLY (map, int, max_var);
-
   PHASE ("compact", stats.compacts,
     "reducing internal variables from %d to %d",
-    max_var, new_max_var);
+    max_var, mapper.new_max_var);
 
   /*----------------------------------------------------------------------*/
 
@@ -404,7 +370,7 @@ void Internal::compact () {
 
   size_t new_target_assigned = 0, new_best_assigned = 0;
 
-  for (int idx = 1; idx <= new_max_var; idx++) {
+  for (int idx = 1; idx <= mapper.new_max_var; idx++) {
     if (phases.target[idx]) new_target_assigned++;
     if (phases.best[idx]) new_best_assigned++;
   }
@@ -423,11 +389,11 @@ void Internal::compact () {
 
   /*----------------------------------------------------------------------*/
 
-  max_var = new_max_var;
-  vsize = new_vsize;
+  max_var = mapper.new_max_var;
+  vsize = mapper.new_vsize;
 
   stats.unused = 0;
-  stats.inactive = stats.now.fixed = first_fixed ? 1 : 0;
+  stats.inactive = stats.now.fixed = mapper.first_fixed ? 1 : 0;
   stats.now.substituted = stats.now.eliminated = stats.now.pure = 0;
 
   check_var_stats ();
@@ -439,10 +405,7 @@ void Internal::compact () {
     "new compact limit %ld after %ld conflicts",
     lim.compact, delta);
 
-  report ('/');
   STOP (compact);
-
-  PRINT ("AFTER");
 }
 
 }

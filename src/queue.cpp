@@ -6,12 +6,12 @@ namespace CaDiCaL {
 // enqueued at all.
 
 inline void Internal::init_enqueue (int idx) {
-  Link * l = ltab + idx;
+  Link & l = links[idx];
   if (opts.reverse) {
-    l->prev = 0;
+    l.prev = 0;
     if (queue.first) {
-      assert (!ltab[queue.first].prev);
-      ltab[queue.first].prev = idx;
+      assert (!links[queue.first].prev);
+      links[queue.first].prev = idx;
       btab[idx] = btab[queue.first] - 1;
     } else {
       assert (!queue.last);
@@ -19,21 +19,21 @@ inline void Internal::init_enqueue (int idx) {
       btab[idx] = 0;
     }
     assert (btab[idx] <= stats.bumped);
-    l->next = queue.first;
+    l.next = queue.first;
     queue.first = idx;
     if (!queue.unassigned)
       update_queue_unassigned (queue.last);
   } else {
-    l->next = 0;
+    l.next = 0;
     if (queue.last) {
-      assert (!ltab[queue.last].next);
-      ltab[queue.last].next = idx;
+      assert (!links[queue.last].next);
+      links[queue.last].next = idx;
     } else {
       assert (!queue.first);
       queue.first = idx;
     }
     btab[idx] = ++stats.bumped;
-    l->prev = queue.last;
+    l.prev = queue.last;
     queue.last = idx;
     update_queue_unassigned (queue.last);
   }
@@ -71,14 +71,14 @@ void Internal::shuffle_queue () {
       swap (shuffle[i], shuffle[j]);
     }
   } else {
-    for (int idx = queue.last; idx; idx = ltab[idx].prev)
+    for (int idx = queue.last; idx; idx = links[idx].prev)
       shuffle.push_back (idx);
   }
   queue.first = queue.last = 0;
   for (const int idx : shuffle)
-    queue.enqueue (ltab, ltab + idx);
+    queue.enqueue (links, idx);
   long bumped = queue.bumped;
-  for (int idx = queue.last; idx; idx = ltab[idx].prev)
+  for (int idx = queue.last; idx; idx = links[idx].prev)
     btab[idx] = bumped--;
   queue.unassigned = queue.last;
 }

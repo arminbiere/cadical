@@ -12,8 +12,8 @@ namespace CaDiCaL {
 // until 1e4 = 2000 conflicts (if 'opts.stabilizefactor' is '200' percent)
 // have passed. After that we switch back to regular Glucose style restarts
 // until again 2 times more conflicts than the previous limit are reached.
-// Actually, we still perfrm restarts during stabilization but only in a
-// reluctant doubling scheme with a rather high interval.
+// Actually, in the latest version we still restarts during stabilization
+// but only in a reluctant doubling scheme with a rather high interval.
 
 bool Internal::stabilizing () {
   if (!opts.stabilize) return false;
@@ -102,7 +102,7 @@ void Internal::restart () {
   lim.restart = stats.conflicts + opts.restartint;
   LOG ("new restart limit at %ld conflicts", lim.restart);
 
-  report ('r', 2);
+  report ('R', 2);
   STOP (restart);
 }
 

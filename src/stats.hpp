@@ -18,6 +18,7 @@ struct Stats {
 
   struct {
     long cover;      // propagated during covered clause elimination
+    long instantiate;// propagated during variable instantiation
     long probe;      // propagated during probing
     long search;     // propagated literals during search
     long transred;   // propagated during transitive reduction
@@ -101,6 +102,9 @@ struct Stats {
   long hbrsizes;     // sum of hyper resolved base clauses
   long hbreds;       // redundant hyper binary resolvents
   long hbrsubs;      // subsuming hyper binary resolvents
+  long instried;     // number of tried instantiations
+  long instantiated; // number of successful instantiations
+  long instrounds;   // number of instantiation rounds
   long subsumed;     // number of subsumed clauses
   long deduplicated; // number of removed duplicated binary clauses
   long deduplications;//number of deduplication phases

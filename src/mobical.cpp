@@ -44,6 +44,12 @@ static const char * USAGE =
 "\n"
 "  --do-not-execute  just write to '<output>' without execution\n"
 "\n"
+"In order to check memory issues or collect coverage you can force\n"
+"execution within the main process, which however also means that\n"
+"the model based tester aborts as soon a test fails\n"
+"\n"
+"  --do-not-fork     execute all tests in main process directly\n"
+"\n"
 "In order to replay a trace which violates an API contract use\n"
 "\n"
 "  --do-not-enforce-contracts\n"
@@ -158,6 +164,7 @@ struct DoNot
   bool map;             // do not map variable indices                  'm'
   bool reduce;          // reduce option values                         'r'
   bool execute;         // do not execute trace
+  bool fork;            // do not fork sub-process
   bool enforce;         // do not enforce contracts on read trace
   bool seeds;
   bool ignore_resource_limits;
@@ -1457,45 +1464,59 @@ void Trace::init_child_signal_handlers () {
 }
 
 int Trace::fork_and_execute () {
-  executed++;
+
   cerr << flush;
-  pid_t child = fork (), other;
-  int res, status;
+  pid_t child = mobical.donot.fork ? 0 : fork ();
+  int res = 0;
+
   if (child) {
-    other = wait (&status);
+
+    executed++;
+
+    int status, other = wait (&status);
+    if (other != child) res = 0;
+    else if (WIFEXITED (status)) res = WEXITSTATUS (status);
+    else if (!WIFSIGNALED (status)) res = 0;
+    else if (mobical.donot.ignore_resource_limits) res = 1;
+    else res = (WTERMSIG (status) != SIGXCPU);
+
   } else {
-    if (mobical.time_limit) {
+
+    if (!mobical.donot.fork && mobical.time_limit) {
       struct rlimit rlim;
       if (!getrlimit (RLIMIT_CPU, &rlim)) {
         rlim.rlim_cur = mobical.time_limit;
         setrlimit (RLIMIT_CPU, &rlim);
       }
     }
-    if (mobical.space_limit) {
+
+    if (!mobical.donot.fork && mobical.space_limit) {
       struct rlimit rlim;
       if (!getrlimit (RLIMIT_AS, &rlim)) {
         rlim.rlim_cur = mobical.space_limit * (1l << 20);
         setrlimit (RLIMIT_AS, &rlim);
       }
     }
+
     init_child_signal_handlers ();
+    dup2 (1, 3);
+    dup2 (2, 4);
     int null = open ("/dev/null", O_WRONLY);
     assert (null);
     dup2 (null, 1);
     dup2 (null, 2);
     execute ();
-    int tmp = close (null); assert (!tmp); (void) tmp;
-        tmp = close (2);    assert (!tmp); (void) tmp;
-        tmp = close (1);    assert (!tmp); (void) tmp;
+    close (1);
+    close (2);
+    close (null);
+    dup2 (3, 1);
+    dup2 (4, 2);
+    close (3);
+    close (4);
     reset_child_signal_handlers ();
-    exit (0);
-  }
 
-  if (other != child) res = 0;
-  else if (WIFEXITED (status)) res = WEXITSTATUS (status);
-  else if (!WIFSIGNALED (status)) res = 0;
-  else if (mobical.donot.ignore_resource_limits) res = 1;
-  else res = (WTERMSIG (status) != SIGXCPU);
+    if (!mobical.donot.fork) exit (0);
+  }
 
   return res;
 }
@@ -2541,6 +2562,8 @@ int Mobical::main (int argc, char ** argv) {
       assert (!terminal);
     else if (!strcmp (argv[i], "--do-not-execute"))
       donot.execute = true;
+    else if (!strcmp (argv[i], "--do-not-fork"))
+      donot.fork = true;
     else if (!strcmp (argv[i], "--do-not-enforce-contracts"))
       donot.enforce = true;
     else if (!strcmp (argv[i], "--no-seeds"))
@@ -2714,7 +2737,9 @@ int Mobical::main (int argc, char ** argv) {
   // Print resource limits (per executed trace).
 
   prefix ();
-  if (time_limit == DEFAULT_TIME_LIMIT)
+  if (mobical.donot.fork)
+    cerr << "not using any time limit due to '--do-not-fork'";
+  else if (time_limit == DEFAULT_TIME_LIMIT)
     cerr << "using default time limit of "
          << time_limit << " seconds";
   else if (time_limit)
@@ -2725,7 +2750,9 @@ int Mobical::main (int argc, char ** argv) {
   cerr << endl << flush;
 
   prefix ();
-  if (space_limit == DEFAULT_SPACE_LIMIT)
+  if (mobical.donot.fork)
+    cerr << "not using any space limit due to '--do-not-fork'";
+  else if (space_limit == DEFAULT_SPACE_LIMIT)
     cerr << "using default space limit of "
          << space_limit << " MB";
   else if (space_limit)

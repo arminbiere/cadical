@@ -4,10 +4,56 @@ namespace CaDiCaL {
 
 #ifndef QUIET
 
+/*------------------------------------------------------------------------*/
+
 // Provide nicely formatted progress report messages while running through
 // the 'report' function below.  The code is so complex, because it should
 // be easy to add and remove reporting of certain statistics, while at the
 // same time proving a nicely looking format, including automatic headers.
+
+/*  The 'reports' are shown as 'c <char> ...' with '<char>' as follows:
+
+i  propagated learned unit clause
+O  backtracked after phases reset to original phase
+F  backtracked after flipping phases
+#  backtracked after randomly setting phases
+B  backtracked after resetting to best phases
+W  backtracked after local search improved phases
+b  blocked clause elimination
+G  before garbage collection
+C  after garbage collection
+/  compacted internal literals and remapped external to internal
+c  covered clause elimination
+d  decomposed binary implication graph and substituted equivalent literals
+2  removed duplicated binary clauses
+e  bounded variable elimination round
+I  variable instantiation
+[  start of stable search phase
+]  end of stable search phase
+{  start of unstable search phase
+j  end of unstable search phase
+P  preprocessing round
+L  local search round
+*  start of solving without the need to restore clauses
++  start of solving before restoring clauses
+r  start of solving after restoring clauses
+1  end of solving returns satisfiable
+0  end of solving returns unsatisfiable
+?  end of solving due to interrupt
+l  lucky phase solving
+p  failed literal probing round
+.  before reducing redundant clauses
+f  flushed redundant clauses
+-  reduced redundant clauses
+~  start of resetting phases
+R  restart
+s  subsumed clause removal round
+3  ternary resolution round
+t  transition reduction of binary implication graph
+w  vivified redundant and irredundant clauses
+v  vivified irredundant clauses
+
+*/
 
 /*------------------------------------------------------------------------*/
 

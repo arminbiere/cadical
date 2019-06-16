@@ -4,17 +4,40 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
+// Covered clause elimination (CCE) as described in our short LPAR-10 paper
+// and later in more detail in our JAIR'15 article.  This implementation
+// provides a simplified version of the one implemented in Lingeling. We
+// still follow quite closely the original description, which is based on
+// asymmetric literal addition (ALA) and covered literal addition (CLA).
+// Both can be seen as kind of propagation, where the clauses in the
+// original and then extended clause are assigned to false, and the literals
+// on the trail (actually we use our own 'added' stack for that) make up the
+// extended clause.   The ALA steps can be implemented by simple propagation
+// (copied from 'propagate.cpp') using watches, while the CLA steps need
+// full occurrence lists to determine the resolution candidate clauses.  The
+// CCE is successful if a conflict is found during ALA steps or if during
+// a CLA step all resolution candidates of a literal on the trail are
+// satisfied (the extended clause is blocked).
+
 struct Coveror {
-  std::vector<int> added;
-  std::vector<int> clause;
-  std::vector<int> extend;
-  std::vector<int> covered;
-  std::vector<int> intersection;
-  struct { size_t asymmetric, covered; } next;
+  std::vector<int> added;               // acts as trail
+  std::vector<int> clause;              // copy of the candidate clause
+  std::vector<int> extend;              // extension stack for witness
+  std::vector<int> covered;             // literals added through CLA
+  std::vector<int> intersection;        // of literals in resolution cands
+
+  struct { size_t asymmetric, covered; } next;  // propagate next ...
+
   Coveror () { next.asymmetric = next.covered = 0; }
 };
 
 /*------------------------------------------------------------------------*/
+
+// Push on the extension stack a clause made up of the given literal, the
+// original clause and all the added covered literals so far.  The given
+// literal will act as blocking literal for that clause, if CCE is
+// successful.  Only in this case, this private extension stack is copied to
+// the actual extension stack of the solver.
 
 inline void
 Internal::cover_push_extension (int lit, Coveror & coveror) {
@@ -31,6 +54,8 @@ Internal::cover_push_extension (int lit, Coveror & coveror) {
   (void) found;
 }
 
+// Successful CLA step.
+
 inline void
 Internal::covered_literal_addition (int lit, Coveror & coveror) {
   require_mode (COVER);
@@ -44,6 +69,8 @@ Internal::covered_literal_addition (int lit, Coveror & coveror) {
     coveror.added.push_back (other);
   }
 }
+
+// Successful ALA step.
 
 inline void
 Internal::asymmetric_literal_addition (int lit, Coveror & coveror)
@@ -136,7 +163,8 @@ Internal::cover_propagate_asymmetric (int lit,
   return subsumed;
 }
 
-// Covered literal addition (which needs full occurrence lists).
+// Covered literal addition (which needs full occurrence lists).  The
+// function returns 'true' if the extended clause is blocked on 'lit.'
 
 bool
 Internal::cover_propagate_covered (int lit, Coveror & coveror)
@@ -158,6 +186,12 @@ Internal::cover_propagate_covered (int lit, Coveror & coveror)
   const auto end = os.end ();
   bool first = true;
 
+  // Compute the intersection of the literals in all the clauses with
+  // '-lit'.  If all these clauses are already satisfied then we know that
+  // the extended clauses (in 'added') is blocked.  All literals in the
+  // intersection can be added as covered literal. As soon the intersection
+  // becomes empty (during traversal of clauses with '-lit') we abort.
+
   for (auto i = os.begin (); i != end; i++) {
     Clause * c = *i;
     if (c->garbage) continue;
@@ -167,35 +201,37 @@ Internal::cover_propagate_covered (int lit, Coveror & coveror)
       int tmp = val (other);
       if (tmp < 0) continue;
       if (tmp > 0) { blocked = true; break; }
-      if (first) {
+      if (first) {                              // copy & mark first
         coveror.intersection.push_back (other);
         mark (other);
-      } else {
+      } else {                                  // unmark latter
         tmp = marked (other);
         if (tmp > 0) unmark (other);
       }
     }
-    if (blocked) {
+    if (blocked) {                      // ... if 'c' is satisfied.
       LOG (c, "blocked");
       unmark (coveror.intersection);
       coveror.intersection.clear ();
-      continue;
+      continue;                         // with next clause with '-lit'.
     }
-    if (!first) {
+
+    if (first) first = false;           // first clause copied and marked
+    else {
       const auto end = coveror.intersection.end ();
       auto j = coveror.intersection.begin ();
       for (auto i = j; i != end; i++) {
         const int other = *j++ = *i;
         const int tmp = marked (other);
         assert (tmp >= 0);
-        if (tmp) j--, unmark (other);
-        else mark (other);
+        if (tmp) j--, unmark (other);   // remove marked and unmark it
+        else mark (other);              // keep unmarked and mark it
       }
       const size_t new_size = j - coveror.intersection.begin ();
       coveror.intersection.resize (new_size);
     }
-    first = false;
-    if (coveror.intersection.empty ()) {
+
+    if (coveror.intersection.empty ()) {  // no CLA candidates left ...
       auto begin = os.begin ();
       while (i != begin) {
         auto prev = i - 1;
@@ -203,7 +239,7 @@ Internal::cover_propagate_covered (int lit, Coveror & coveror)
         i = prev;
       }
       *begin = c;
-      break;
+      break;                    // early abort ...
     }
   }
 
@@ -290,6 +326,8 @@ bool Internal::cover_clause (Clause * c, Coveror & coveror) {
       mark_garbage (c);
     }
 
+    // Only copy extension stack if successful.
+
     int prev = INT_MIN;
     for (const auto & other : coveror.extend) {
       if (!prev) {
@@ -302,6 +340,8 @@ bool Internal::cover_clause (Clause * c, Coveror & coveror) {
       prev = other;
     }
   }
+
+  // Backtrack and 'unassign' all literals.
 
   assert (level == 1);
   for (const auto & lit : coveror.added)
@@ -316,6 +356,10 @@ bool Internal::cover_clause (Clause * c, Coveror & coveror) {
   return tautological;
 }
 
+/*------------------------------------------------------------------------*/
+
+// Not yet tried and larger clauses are tried first.
+
 struct clause_covered_or_smaller {
   bool operator () (const Clause * a, const Clause * b) {
     if (a->covered && !b->covered) return true;
@@ -323,6 +367,131 @@ struct clause_covered_or_smaller {
     return a->size < b->size;
   }
 };
+
+long Internal::cover_round () {
+
+  if (unsat) return 0;
+
+  init_watches ();
+  connect_watches (true);     // irredundant watches only is enough
+
+  long delta = stats.propagations.search;
+  delta *= 1e-3 * opts.coverreleff;
+  if (delta < opts.covermineff) delta = opts.covermineff;
+  if (delta > opts.covermaxeff) delta = opts.covermaxeff;
+  delta = max (delta, 2l * active ());
+
+  PHASE ("cover", stats.cover.count,
+    "covered clause elimination limit of %ld propagations", delta);
+
+  long limit = stats.propagations.cover + delta;
+
+  init_occs ();
+
+  vector<Clause *> schedule;
+  Coveror coveror;
+
+  // First connect all clauses and find all not yet tried clauses.
+  //
+  long untried = 0;
+  //
+  for (auto c : clauses) {
+    assert (!c->frozen);
+    if (c->garbage) continue;
+    if (c->redundant) continue;
+    bool satisfied = false, allfrozen = true;
+    for (const auto & lit : *c)
+      if (val (lit) > 0) { satisfied = true; break; }
+      else if (allfrozen && !frozen (lit)) allfrozen = false;
+    if (satisfied) { mark_garbage (c); continue; }
+    if (allfrozen) { c->frozen = true; continue; }
+    for (const auto & lit : *c)
+      occs (lit).push_back (c);
+    if (c->covered) continue;
+    schedule.push_back (c);
+    untried++;
+  }
+
+  if (schedule.empty ()) {
+
+    PHASE ("cover", stats.cover.count,
+      "no previously untried clause left");
+
+    for (auto c : clauses) {
+      if (c->garbage) continue;
+      if (c->redundant) continue;
+      if (c->frozen) { c->frozen = false; continue; }
+      assert (c->covered);
+      c->covered = false;
+      schedule.push_back (c);
+    }
+  } else {      // Mix of tried and not tried clauses ....
+
+    for (auto c : clauses) {
+      if (c->garbage) continue;
+      if (c->redundant) continue;
+      if (c->frozen) { c->frozen = false; continue; }
+      if (!c->covered) continue;
+      schedule.push_back (c);
+    }
+  }
+
+  stable_sort (schedule.begin (), schedule.end (),
+    clause_covered_or_smaller ());
+
+#ifndef QUIET
+  const size_t scheduled = schedule.size ();
+  PHASE ("cover", stats.cover.count,
+    "scheduled %zd clauses %.0f%% with %zd untried %.0f%%",
+    scheduled, percent (scheduled, stats.current.irredundant),
+    untried, percent (untried, scheduled));
+#endif
+
+  // Heuristically it should be beneficial to intersect with smaller clauses
+  // first, since then the chances are higher that the intersection of
+  // resolution candidates becomes emptier earlier.
+
+  for (int idx = 1; idx <= max_var; idx++) {
+    if (!active (idx)) continue;
+    for (int sign = -1; sign <= 1; sign += 2) {
+      const int lit = sign * idx;
+      Occs & os = occs (lit);
+      stable_sort (os.begin (), os.end (), clause_smaller_size ());
+    }
+  }
+
+  // This is the main loop of trying to do CCE of candidate clauses.
+  //
+  long covered = 0;
+  //
+  while (!terminating () &&
+         !schedule.empty () &&
+         stats.propagations.cover < limit) {
+    Clause * c = schedule.back ();
+    schedule.pop_back ();
+    c->covered = true;
+    if (cover_clause (c, coveror)) covered++;
+  }
+
+#ifndef QUIET
+  const size_t remain = schedule.size ();
+  const size_t tried = scheduled - remain;
+  PHASE ("cover", stats.cover.count,
+    "eliminated %ld covered clauses out of %zd tried %.0f%%",
+    covered, tried, percent (covered, tried));
+  if (remain)
+    PHASE ("cover", stats.cover.count,
+      "remaining %ld clauses %.0f%% untried",
+      remain, percent (remain, scheduled));
+  else
+    PHASE ("cover", stats.cover.count,
+      "all scheduled clauses tried");
+#endif
+  reset_occs ();
+  reset_watches ();
+
+  return covered;
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -348,8 +517,13 @@ bool Internal::cover () {
 
   stats.cover.count++;
 
-  long covered = 0;
-
+  // During variable elimination unit clauses can be generated which need to
+  // be propagated properly over redundant clauses too.  Since variable
+  // elimination avoids to have occurrence lists and watches at the same
+  // time this propagation is delayed until the end of variable elimination.
+  // Since we want to interleave CCE with it, we have to propagate here.
+  // Otherwise this triggers inconsistencies.
+  //
   if (propagated < trail.size ()) {
     init_watches ();
     connect_watches ();         // need to propagated over all clauses!
@@ -358,126 +532,14 @@ bool Internal::cover () {
       LOG ("propagating units before covered clause elimination "
         "results in empty clause");
       learn_empty_clause ();
+      assert (unsat);
     }
     reset_watches ();
-    if (unsat) goto DONE;
   }
-  assert (!unsat);
-  assert (propagated == trail.size ());
+  assert (unsat || propagated == trail.size ());
 
-  {
-    init_watches ();
-    connect_watches (true);     // irredundant watches only is enough
+  long covered = cover_round ();
 
-    long delta = stats.propagations.search;
-    delta *= 1e-3 * opts.coverreleff;
-    if (delta < opts.covermineff) delta = opts.covermineff;
-    if (delta > opts.covermaxeff) delta = opts.covermaxeff;
-    delta = max (delta, 2l * active ());
-
-    PHASE ("cover", stats.cover.count,
-      "covered clause elimination limit of %ld propagations", delta);
-
-    long limit = stats.propagations.cover + delta;
-
-    init_occs ();
-
-    vector<Clause *> schedule;
-    Coveror coveror;
-
-    // First find all not yet tried clauses.
-    //
-    long untried = 0;
-    //
-    for (auto c : clauses) {
-      assert (!c->frozen);
-      if (c->garbage) continue;
-      if (c->redundant) continue;
-      bool satisfied = false, allfrozen = true;
-      for (const auto & lit : *c)
-        if (val (lit) > 0) { satisfied = true; break; }
-        else if (allfrozen && !frozen (lit)) allfrozen = false;
-      if (satisfied) { mark_garbage (c); continue; }
-      if (allfrozen) { c->frozen = true; continue; }
-      for (const auto & lit : *c)
-        occs (lit).push_back (c);
-      if (c->covered) continue;
-      schedule.push_back (c);
-      untried++;
-    }
-
-    if (schedule.empty ()) {
-
-      PHASE ("cover", stats.cover.count,
-        "no previously untried clause left");
-
-      for (auto c : clauses) {
-        if (c->garbage) continue;
-        if (c->redundant) continue;
-        if (c->frozen) { c->frozen = false; continue; }
-        assert (c->covered);
-        c->covered = false;
-        schedule.push_back (c);
-      }
-    } else {
-
-      for (auto c : clauses) {
-        if (c->garbage) continue;
-        if (c->redundant) continue;
-        if (c->frozen) { c->frozen = false; continue; }
-        if (!c->covered) continue;
-        schedule.push_back (c);
-      }
-    }
-
-    stable_sort (schedule.begin (), schedule.end (),
-      clause_covered_or_smaller ());
-
-#ifndef QUIET
-    const size_t scheduled = schedule.size ();
-    PHASE ("cover", stats.cover.count,
-      "scheduled %zd clauses %.0f%% with %zd untried %.0f%%",
-      scheduled, percent (scheduled, stats.current.irredundant),
-      untried, percent (untried, scheduled));
-#endif
-
-    for (int idx = 1; idx <= max_var; idx++) {
-      if (!active (idx)) continue;
-      for (int sign = -1; sign <= 1; sign += 2) {
-        const int lit = sign * idx;
-        Occs & os = occs (lit);
-        stable_sort (os.begin (), os.end (), clause_smaller_size ());
-      }
-    }
-
-    while (!terminating () &&
-           !schedule.empty () &&
-           stats.propagations.cover < limit) {
-      Clause * c = schedule.back ();
-      schedule.pop_back ();
-      c->covered = true;
-      if (cover_clause (c, coveror)) covered++;
-    }
-
-#ifndef QUIET
-    const size_t remain = schedule.size ();
-    const size_t tried = scheduled - remain;
-    PHASE ("cover", stats.cover.count,
-      "eliminated %ld covered clauses out of %zd tried %.0f%%",
-      covered, tried, percent (covered, tried));
-    if (remain)
-      PHASE ("cover", stats.cover.count,
-        "remaining %ld clauses %.0f%% untried",
-        remain, percent (remain, scheduled));
-    else
-      PHASE ("cover", stats.cover.count,
-        "all scheduled clauses tried");
-#endif
-    reset_occs ();
-    reset_watches ();
-  }
-
-DONE:
   STOP_SIMPLIFIER (cover, COVER);
   report ('c', !opts.reportall && !covered);
 

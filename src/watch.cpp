@@ -3,8 +3,9 @@
 namespace CaDiCaL {
 
 void Internal::init_watches () {
-  assert (!wtab);
-  NEW_ZERO (wtab, Watches, 2*vsize);
+  assert (wtab.empty ());
+  while (wtab.size () < 2*vsize)
+    wtab.push_back (Watches ());
   LOG ("initialized watcher tables");
   assert (sizeof (Watch) == 16);
 }
@@ -16,10 +17,9 @@ void Internal::clear_watches () {
 }
 
 void Internal::reset_watches () {
-  assert (wtab);
-  RELEASE_DELETE (wtab, Watches, 2*vsize);
+  assert (!wtab.empty ());
+  erase_vector (wtab);
   LOG ("reset watcher tables");
-  wtab = 0;
 }
 
 // This can be quite costly since lots of memory is accessed in a rather
@@ -27,7 +27,7 @@ void Internal::reset_watches () {
 
 void Internal::connect_watches (bool irredundant_only) {
   START (connect);
-  assert (watches ());
+  assert (watching ());
 
   LOG ("watching all %sclauses", irredundant_only ? "irredundant " : "");
 
@@ -73,7 +73,7 @@ void Internal::connect_watches (bool irredundant_only) {
 }
 
 void Internal::sort_watches () {
-  assert (watches ());
+  assert (watching ());
   LOG ("sorting watches");
   Watches saved;
   for (int idx = 1; idx <= max_var; idx++) {

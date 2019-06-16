@@ -106,7 +106,7 @@ core () {
   else
     proofopts=" $prf"
   fi
-  opts="$cnf --check --no-leak$solopts$proofopts"
+  opts="$cnf --check$solopts$proofopts"
   echo "$coresolver \\"
   echo "$opts"
   echo -n "# $2 ..."

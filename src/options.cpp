@@ -231,23 +231,32 @@ void Options::print () {
   if (N != (V)) different++; \
   if (verbose || N != (V)) { \
     if ((L) == 0 && (H) == 1) { \
-      sprintf (buffer, "--" #N "=%s", N ? "true" : "false"); \
-      MSG ("  %-28s (%s default %s'%s'%s)", \
-        buffer, (N == (V)) ? "same as" : "different from", \
-        tout.yellow_code (), \
+      sprintf (buffer, "--" #N "=%s", (N ? "true" : "false")); \
+      MSG ("  %s%-30s%s (%s default %s'%s'%s)", \
+        ((N == (V)) ? "" : tout.bright_yellow_code ()), \
+        buffer, \
+        ((N == (V)) ? "" : tout.normal_code ()), \
+        ((N == (V)) ? "same as" : "different from"), \
+        ((N == (V)) ? tout.green_code () : tout.yellow_code ()), \
         (bool)(V) ? "true" : "false", \
         tout.normal_code ()); \
     } else { \
       sprintf (buffer, "--" #N "=%d", N); \
-      MSG ("  %-28s (%s default %s'" #V "'%s)", \
-        buffer, (N == (V)) ? "same as" : "different from", \
-        tout.yellow_code (), tout.normal_code ()); \
+      MSG ("  %s%-30s%s (%s default %s'" #V "'%s)", \
+        ((N == (V)) ? "" : tout.bright_yellow_code ()), \
+        buffer, \
+        ((N == (V)) ? "" : tout.normal_code ()), \
+        ((N == (V)) ? "same as" : "different from"), \
+        ((N == (V)) ? tout.green_code () : tout.yellow_code ()), \
+        tout.normal_code ()); \
     } \
   }
   OPTIONS
 #undef OPTION
   if (!different) MSG ("all options are set to their default value");
 }
+
+/*------------------------------------------------------------------------*/
 
 void Options::usage () {
   // We prefer the macro iteration here since '[VLH]' might be '1e9' etc.
@@ -265,24 +274,34 @@ void Options::usage () {
 /*------------------------------------------------------------------------*/
 
 void Options::optimize (int val) {
-  if (val <= 0) {
-    LOG ("ignoring non-positive turbo mode '%d'", val);
+
+  if (val < 0) {
+    LOG ("ignoring negative optimization mode '%d'", val);
     return;
   }
-  const int max_val = 9;
+
+  const int max_val = 3;
   if (val > max_val) {
-    LOG ("reducing turbo argument '%d' to '%d'", val, max_val);
+    LOG ("optimization argument '%d' reduced to '%d'", val, max_val);
     val = max_val;
   }
-  double factor = pow (10, val);
+
+  long factor;
+  switch (val) {
+    default: factor = 1; break;
+    case 1: factor = 10; break;
+    case 2: factor = 100; break;
+    case 3: factor = 1e9; break;
+  }
   int increased = 0;
 #define OPTION(N,V,L,H,O,D) \
   do { \
     if (!(O)) break; \
-    long new_val = factor * (int) (V); \
+    long new_val = factor * (long) (V); \
     if (new_val > (H)) new_val = (H); \
     if (new_val == (int) (V)) break; \
-    LOG ("turbo mode '10^%d' for '%s' gives '%ld' instead of '%d", \
+    LOG ("optimization mode '%d' for '%s' " \
+      "gives '%ld' instead of '%d", \
       val, #N, new_val, (int) (V)); \
     assert (new_val <= INT_MAX); \
     N = (int) new_val; \
@@ -290,8 +309,35 @@ void Options::optimize (int val) {
   } while (0);
   OPTIONS
 #undef OPTION
-  MSG ("optimization mode '-O%d' increases %d limits by '10^%d'",
-    val, increased, val);
+  if (increased)
+    MSG ("optimization mode '-O%d' increased %d limits by '%ld'",
+      val, increased, factor);
+
+  switch (val) {
+    default: factor = 1; break;
+    case 1: factor = 2; break;
+    case 2: factor = 4; break;
+    case 3: factor = 1024; break;
+  }
+  increased = 0;
+#define OPTION(N,V,L,H,O,D) \
+  do { \
+    if (!has_suffix (#N, "rounds")) break; \
+    long new_val = factor * (long) (V); \
+    if (new_val > (H)) new_val = (H); \
+    if (new_val == (int) (V)) break; \
+    LOG ("optimization mode '%d' for '%s' " \
+      "gives '%ld' instead of '%d", \
+      val, #N, new_val, (int) (V)); \
+    assert (new_val <= INT_MAX); \
+    N = (int) new_val; \
+    increased++; \
+  } while (0);
+  OPTIONS
+#undef OPTION
+  if (increased)
+    MSG ("optimization mode '-O%d' increased %d limits by '%ld'",
+      val, increased, factor);
 }
 
 /*------------------------------------------------------------------------*/

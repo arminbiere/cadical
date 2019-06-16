@@ -34,8 +34,7 @@ bool Internal::decompose_round () {
   stats.decompositions++;
 
   DFS * dfs = new DFS[2*(max_var + 1)];
-  int * reprs = new int[2*(max_var + 1)];
-  ZERO (reprs, int, 2*(max_var + 1));
+  int * reprs = new int[2*(max_var + 1)] { 0 };
 
   int non_trivial_sccs = 0, substituted = 0;
 #ifndef QUIET

@@ -23,7 +23,7 @@ profile=no
 unlocked=yes
 stdint=unknown
 pedantic=no
-foptions=none
+options=""
 quiet=no
 
 #--------------------------------------------------------------------------#
@@ -82,11 +82,14 @@ where '<option>' is one of the following
 -a|--all           short cut for all above, e.g., '-g -l -s' (thus also '-c')
 -q|--quiet         exclude message and profiling code (logging too)
 -p|--pedantic      add '--pedantic' and '-Werror' compilation flag
+-s|--symbols       add '-ggdb3' (even for optimized compilation)
 
 --coverage         compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile          compile with '-pg' to profile with 'gprof'
 
 -f...              pass '-f<option>[=<val>]' options to the makefile
+-ggdb3             pass '-ggdb3' to makefile (like '-s')
+-O|-O[123]         pass '-O' or '-O[123]' to the makefile
 
 The environment variable CXX can be used to set a different C++
 compiler than the default 'g++'.  Similarly you can add additional
@@ -96,7 +99,7 @@ compilation options by setting CXXFLAGS.  For example
 
 will enforce to use 'clang++' as C++ compiler and also produce
 position independent code.  In order to be shell independent we also
-allow have the following form.  Thus for instance
+allow to have the following form.  Thus for instance
 
   ./configure CXX="g++-8" CXXFLAGS="-fPIC -fsanitize=address"
 
@@ -138,14 +141,8 @@ do
     --no-stdint) stdint=no;;
     --stdint) stdint=yes;;
 
-    -f*)
-      if [ "$foptions" = none ]
-      then
-        foptions="$1"
-      else
-	foptions="$foptions $1"
-      fi
-      ;;
+    -f*|-ggdb3|-O|-O1|-O2|-O3) options="$options $1";;
+    -s|--symbols) options="$options -ggdb3";;
 
     CXX=*)
       CXX="`expr \"$1\" : 'CXX=\(.*\)'`"
@@ -250,7 +247,26 @@ fi
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
 [ $pedantic = yes ] && CXXFLAGS="$CXXFLAGS --pedantic -Werror"
-[ "$foptions" = none ] || CXXFLAGS="$CXXFLAGS $foptions"
+CXXFLAGS="$CXXFLAGS$options"
+
+#--------------------------------------------------------------------------#
+
+# Check that compilation flags work.
+
+feature=./configure-hello-world
+cat <<EOF > $feature.cpp
+#include <iostream>
+int main () { std::cout << "hello world" << std::endl; }
+EOF
+if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
+then
+  if [ ! "`$feature.exe 2>>configure.log`" = "hello world" ]
+  then
+    die "execution of '$feature.exe' failed"
+  fi
+else
+  die "test compilation '$feature.cpp'"
+fi
 
 #--------------------------------------------------------------------------#
 
@@ -304,7 +320,7 @@ else
       die "checking compilation with '-std=c++0x' failed"
     fi
   else
-    die "compiler does not support C99/C++0x (even with '-std=c++0x')"
+    die "compiler does not support C99/C++0x even with '-std=c++0x'"
   fi
 fi
 

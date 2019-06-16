@@ -7,7 +7,6 @@ External::External (Internal * i)
   internal (i),
   max_var (0),
   vsize (0),
-  e2i (0),
   extended (false),
   terminator (0),
   solution (0)
@@ -18,8 +17,7 @@ External::External (Internal * i)
 }
 
 External::~External () {
-  if (e2i) DELETE_ONLY (e2i, int, vsize);
-  if (solution) DELETE_ONLY (solution, signed_char, vsize);
+  if (solution) delete [] solution;
 }
 
 void External::enlarge (int new_max_var) {
@@ -28,11 +26,7 @@ void External::enlarge (int new_max_var) {
 
   size_t new_vsize = vsize ? 2*vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
-
   LOG ("enlarge external size from %ld to new size %ld", vsize, new_vsize);
-
-  ENLARGE_ONLY (e2i, int, vsize, new_vsize);
-
   vsize = new_vsize;
 }
 
@@ -45,14 +39,23 @@ void External::init (int new_max_var) {
   internal->init (new_internal_max_var);
   if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
   LOG ("initialized %d external variables", new_vars);
-  int eidx = max_var + 1;
-  int iidx = old_internal_max_var + 1;
-  for (int i = max_var + 1; i <= new_max_var; i++) {
+  if (!max_var) {
+    assert (e2i.empty ());
+    e2i.push_back (0);
+    assert (internal->i2e.empty ());
+    internal->i2e.push_back (0);
+  } else {
+    assert (e2i.size () == (size_t) max_var + 1);
+    assert (internal->i2e.size () == (size_t) old_internal_max_var + 1);
+  }
+  int iidx = old_internal_max_var + 1, eidx;
+  for (eidx = max_var + 1; eidx <= new_max_var; eidx++, iidx++) {
     LOG ("mapping external %d to internal %d", eidx, iidx);
-    e2i[eidx] = iidx;
-    internal->i2e[iidx] = eidx;
-    eidx++;
-    iidx++;
+    assert (e2i.size () == (size_t) eidx);
+    e2i.push_back (iidx);
+    internal->i2e.push_back (eidx);
+    assert (internal->i2e[iidx] == eidx);
+    assert (e2i[eidx] == iidx);
   }
   if (internal->opts.checkfrozen)
     while (new_max_var >= (long) moltentab.size ())
@@ -82,38 +85,40 @@ void External::reset_limits () {
 /*------------------------------------------------------------------------*/
 
 int External::internalize (int elit) {
-  int res;
+  int ilit;
   if (elit) {
     assert (elit != INT_MIN);
     const int eidx = abs (elit);
     if (eidx > max_var) init (eidx);
-    res = e2i [eidx];
-    if (elit < 0) res = -res;
-    if (!res) {
-      res = internal->max_var + 1;
-      internal->init (res);
-      e2i[eidx] = res;
-      LOG ("mapping external %d to internal %d", eidx, res);
-      e2i[eidx] = res;
-      internal->i2e[res] = eidx;
-      if (elit < 0) res = -res;
+    ilit = e2i [eidx];
+    if (elit < 0) ilit = -ilit;
+    if (!ilit) {
+      ilit = internal->max_var + 1;
+      internal->init (ilit);
+      e2i[eidx] = ilit;
+      LOG ("mapping external %d to internal %d", eidx, ilit);
+      e2i[eidx] = ilit;
+      internal->i2e.push_back (eidx);
+      assert (internal->i2e[ilit] == eidx);
+      assert (e2i[eidx] == ilit);
+      if (elit < 0) ilit = -ilit;
     }
     if (internal->opts.checkfrozen) {
       assert (eidx < (long) moltentab.size ());
       if (moltentab[eidx])
         FATAL ("can not reuse molten literal %d", eidx);
     }
-    Flags & f = internal->flags (res);
-    if (f.status == Flags::UNUSED) internal->mark_active (res);
+    Flags & f = internal->flags (ilit);
+    if (f.status == Flags::UNUSED) internal->mark_active (ilit);
     else if (f.status != Flags::ACTIVE &&
-             f.status != Flags::FIXED) internal->reactivate (res);
+             f.status != Flags::FIXED) internal->reactivate (ilit);
     if (!marked (tainted, elit) && marked (witness, -elit)) {
       assert (!internal->opts.checkfrozen);
       LOG ("marking tainted %d", elit);
       mark (tainted, elit);
     }
-  } else res = 0;
-  return res;
+  } else ilit = 0;
+  return ilit;
 }
 
 void External::add (int elit) {

@@ -21,22 +21,8 @@ Internal::Internal ()
   max_var (0),
   level (0),
   vals (0),
-  marks (0),
-  frozentab (0),
-  i2e (0),
   scinc (1.0),
   scores (this),
-  stab (0),
-  vtab (0),
-  ltab (0),
-  ftab (0),
-  btab (0),
-  otab (0),
-  ptab (0),
-  ntab (0),
-  ntab2 (0),
-  big (0),
-  wtab (0),
   conflict (0),
   ignore (0),
   propagated (0),
@@ -68,38 +54,61 @@ Internal::~Internal () {
   if (proof) delete proof;
   if (tracer) delete tracer;
   if (checker) delete checker;
-  if (vtab) DELETE_ONLY (vtab, Var, vsize);
-  if (ltab) DELETE_ONLY (ltab, Link, vsize);
-  if (ftab) DELETE_ONLY (ftab, Flags, vsize);
-  if (btab) DELETE_ONLY (btab, long, vsize);
-  if (stab) DELETE_ONLY (stab, double, vsize);
-  if (ptab) DELETE_ONLY (ptab, int, 2*vsize);
-  if (big) RELEASE_DELETE (big, Bins, 2*vsize);
-  if (vals) { vals -= vsize; DELETE_ONLY (vals, signed_char, 2*vsize); }
-  if (marks) DELETE_ONLY (marks, signed_char, vsize);
-  if (phases.saved) DELETE_ONLY (phases.saved, Phase, vsize);
-  if (phases.target) DELETE_ONLY (phases.target, Phase, vsize);
-  if (phases.best) DELETE_ONLY (phases.best, Phase, vsize);
-  if (phases.prev) DELETE_ONLY (phases.prev, Phase, vsize);
-  if (phases.min) DELETE_ONLY (phases.min, Phase, vsize);
-  if (i2e) DELETE_ONLY (i2e, int, vsize);
-  if (frozentab) DELETE_ONLY (frozentab, unsigned, vsize);
-  if (otab) reset_occs ();
-  if (ntab) reset_noccs ();
-  if (wtab) reset_watches ();
+  if (vals) { vals -= vsize; delete [] vals; }
 }
 
 /*------------------------------------------------------------------------*/
 
+// Values in 'vals' can be accessed in the range '[-max_var,max_var]' that
+// is directly by a literal.  This is crucial for performance.  By shifting
+// the start of 'vals' appropriately, we achieve that negative offsets from
+// the start of 'vals' can be used.  We also need to set both values at
+// 'lit' and '-lit' during assignments.  In MiniSAT integer literals are
+// encoded, using the least significant bit as negation.  This avoids taking
+// the 'abs ()' (as in our solution) and thus also avoids a branch in the
+// hot-spot of the solver (clause traversal in propagation).  That solution
+// requires another (branch less) negation of the values though and
+// debugging is harder since literals occur only encoded in clauses.
+// The main draw-back of our solution is that we have to shift the memory
+// and access it through negative indices, which looks less clean (but still
+// as far I can tell is properly defined C / C++).   You might a warning by
+// static analyzers though.  Clang with '--analyze' thought that this idiom
+// would generate memory leak.
+
 void Internal::enlarge_vals (size_t new_vsize) {
   signed_char * new_vals;
-  NEW_ZERO (new_vals, signed_char, 2*new_vsize);
+  new_vals = new signed char [ 2*new_vsize ] { 0 };
+
+  // Warning that this produces a memory leak can be ignored.
+  //
   new_vals += new_vsize;
+
   if (vals) memcpy (new_vals - max_var, vals - max_var, 2*max_var + 1);
   vals -= vsize;
-  DELETE_ONLY (vals, signed_char, 2*vsize);
+  delete [] vals;
   vals = new_vals;
 }
+
+/*------------------------------------------------------------------------*/
+
+template<class T>
+static void enlarge_init (vector<T> & v, size_t N, const T & i) {
+  while (v.size () < N)
+    v.push_back (i);
+}
+
+template<class T>
+static void enlarge_only (vector<T> & v, size_t N) {
+  while (v.size () < N)
+    v.push_back (T ());
+}
+
+template<class T>
+static void enlarge_zero (vector<T> & v, size_t N) {
+  enlarge_init (v, N, (const T &) 0);
+}
+
+/*------------------------------------------------------------------------*/
 
 void Internal::enlarge (int new_max_var) {
   assert (!level);
@@ -107,24 +116,22 @@ void Internal::enlarge (int new_max_var) {
   while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
   LOG ("enlarge internal size from %ld to new size %ld", vsize, new_vsize);
   // Ordered in the size of allocated memory (larger block first).
-  assert (!vsize || !otab);
-  if (!vsize || wtab)
-  ENLARGE_ZERO (wtab, Watches, 2*vsize, 2*new_vsize);
-  ENLARGE_ONLY (vtab, Var, vsize, new_vsize);
-  ENLARGE_ONLY (ltab, Link, vsize, new_vsize);
-  ENLARGE_ZERO (btab, long, vsize, new_vsize);
-  ENLARGE_ZERO (stab, double, vsize, new_vsize);
-  ENLARGE_ONLY (ptab, int, 2*vsize, 2*new_vsize);
-  ENLARGE_ONLY (i2e, int, vsize, new_vsize);
+  enlarge_only (wtab, 2*new_vsize);
+  enlarge_only (vtab, new_vsize);
+  enlarge_only (links, new_vsize);
+  enlarge_zero (btab, new_vsize);
+  enlarge_zero (stab, new_vsize);
+  enlarge_init (ptab, 2*new_vsize, -1);
+  enlarge_only (ftab, new_vsize);
   enlarge_vals (new_vsize);
-  ENLARGE_ZERO (frozentab, unsigned, vsize, new_vsize);
-  ENLARGE_ONLY (phases.saved, Phase, vsize, new_vsize);
-  ENLARGE_ZERO (phases.target, Phase, vsize, new_vsize);
-  ENLARGE_ZERO (phases.best, Phase, vsize, new_vsize);
-  ENLARGE_ZERO (phases.prev, Phase, vsize, new_vsize);
-  ENLARGE_ZERO (phases.min, Phase, vsize, new_vsize);
-  ENLARGE_ZERO (marks, signed_char, vsize, new_vsize);
-  ENLARGE_ONLY (ftab, Flags, vsize, new_vsize);
+  enlarge_zero (frozentab, new_vsize);
+  const Phase val = opts.phase ? 1 : -1;
+  enlarge_init (phases.saved, new_vsize, val);
+  enlarge_zero (phases.target, new_vsize);
+  enlarge_zero (phases.best, new_vsize);
+  enlarge_zero (phases.prev, new_vsize);
+  enlarge_zero (phases.min, new_vsize);
+  enlarge_zero (marks, new_vsize);
   vsize = new_vsize;
 }
 
@@ -134,18 +141,13 @@ void Internal::init (int new_max_var) {
   LOG ("initializing %d internal variables from %d to %d",
     new_max_var - max_var, max_var + 1, new_max_var);
   if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
-  signed_char val = opts.phase ? 1 : -1;
-  for (int i = max_var + 1; i <= new_max_var; i++)
-    phases.saved[i] = val;
 #ifndef NDEBUG
   for (int i = -new_max_var; i < -max_var; i++) assert (!vals[i]);
   for (int i = max_var + 1; i <= new_max_var; i++) assert (!vals[i]);
-  for (int i = max_var + 1; i <= new_max_var; i++) assert (!frozentab[i]);
-  for (int i = max_var + 1; i <= new_max_var; i++) assert (!marks[i]);
   for (int i = max_var + 1; i <= new_max_var; i++) assert (!btab[i]);
+  for (int i = 2*(max_var + 1); i <= 2*new_max_var+1; i++)
+    assert (ptab[i] == -1);
 #endif
-  for (int i = 2*(max_var + 1); i <= 2*new_max_var+1; i++) ptab[i] = -1;
-  for (int i = max_var + 1; i <= new_max_var; i++) ftab[i].init ();
   assert (!btab[0]);
   int old_max_var = max_var;
   max_var = new_max_var;
@@ -187,7 +189,7 @@ int Internal::cdcl_loop_with_inprocessing () {
     else if (!propagate ()) analyze ();      // propagate and analyze
     else if (iterating) iterate ();          // report learned unit
     else if (satisfied ()) res = 10;         // found model
-    else if (terminating ()) break;          // limit hit or sync abort
+    else if (terminating ()) break;          // limit hit or async abort
     else if (restarting ()) restart ();      // restart by backtracking
     else if (rephasing ()) rephase ();       // reset variable phases
     else if (reducing ()) reduce ();         // collect useless clauses
@@ -208,6 +210,10 @@ int Internal::cdcl_loop_with_inprocessing () {
 
 /*------------------------------------------------------------------------*/
 
+// Most of the limits are only initialized in the first 'solve' call and
+// increased as in a stand-alone non-incremental SAT call except for those
+// explicitly marked as being reset below.
+
 void Internal::init_limits () {
 
   const bool incremental = lim.initialized;
@@ -215,6 +221,8 @@ void Internal::init_limits () {
   else LOG ("initializing limits and increments");
 
   const char * mode = 0;
+
+  /*----------------------------------------------------------------------*/
 
   if (incremental) mode = "keeping";
   else {
@@ -226,6 +234,8 @@ void Internal::init_limits () {
   LOG ("%s reduce limit %ld after %ld conflicts",
     mode, lim.reduce, lim.reduce - stats.conflicts);
 
+  /*----------------------------------------------------------------------*/
+
   if (incremental) mode = "keeping";
   else {
     lim.flush = opts.flushint;
@@ -236,6 +246,8 @@ void Internal::init_limits () {
   LOG ("%s flush limit %ld interval %ld",
     mode, lim.flush, inc.flush);
 
+  /*----------------------------------------------------------------------*/
+
   if (incremental) mode = "keeping";
   else {
     lim.subsume = stats.conflicts + scale (opts.subsumeint);
@@ -244,6 +256,8 @@ void Internal::init_limits () {
   (void) mode;
   LOG ("%s subsume limit %ld after %ld conflicts",
     mode, lim.subsume, lim.subsume - stats.conflicts);
+
+  /*----------------------------------------------------------------------*/
 
   if (incremental) mode = "keeping";
   else {
@@ -255,8 +269,12 @@ void Internal::init_limits () {
   LOG ("%s elim limit %ld after %ld conflicts",
     mode, lim.elim, lim.elim - stats.conflicts);
 
+  // Initialize and reset elimination bounds in any case.
+
   lim.elimbound = opts.elimboundmin;
   LOG ("elimination bound %ld", lim.elimbound);
+
+  /*----------------------------------------------------------------------*/
 
   if (incremental) mode = "keeping";
   else {
@@ -267,26 +285,42 @@ void Internal::init_limits () {
   LOG ("%s probe limit %ld after %ld conflicts",
     mode, lim.probe, lim.probe - stats.conflicts);
 
+  /*----------------------------------------------------------------------*/
+
   if (!incremental) {
 
-    last.ternary.marked = -1;
+    last.ternary.marked = -1;   // TODO explain why this is necessary.
 
     lim.compact = stats.conflicts + opts.compactint;
     LOG ("initial compact limit %ld increment %ld",
       lim.compact, lim.compact - stats.conflicts);
   }
 
+  /*----------------------------------------------------------------------*/
+
+  // Initialize or reset 'rephase' limits in any case.
+
   lim.rephase = stats.conflicts + opts.rephaseint;
   lim.rephased[0] = lim.rephased[1] = 0;
   LOG ("new rephase limit %ld after %ld conflicts",
     lim.rephase, lim.rephase - stats.conflicts);
 
+  /*----------------------------------------------------------------------*/
+
+  // Initialize or reset 'restart' limits in any case.
+
   lim.restart = stats.conflicts + opts.restartint;
   LOG ("new restart limit %ld increment %ld",
     lim.restart, lim.restart - stats.conflicts);
 
+  /*----------------------------------------------------------------------*/
+
+  // Initialize or reset 'report' limits in any case.
+
   reported = false;
   lim.report = 0;
+
+  /*----------------------------------------------------------------------*/
 
   if (!incremental) {
     stable = opts.stabilize && opts.stabilizeonly;
@@ -313,6 +347,10 @@ void Internal::init_limits () {
     reluctant.enable (opts.reluctant, opts.reluctantmax);
   } else reluctant.disable ();
 
+  /*----------------------------------------------------------------------*/
+
+  // Conflict and decision limits.
+
   if (inc.conflicts < 0) {
     lim.conflicts = -1;
     LOG ("no limit on conflicts");
@@ -331,6 +369,10 @@ void Internal::init_limits () {
       inc.decisions, lim.decisions);
   }
 
+  /*----------------------------------------------------------------------*/
+
+  // Initial preprocessing and local search rounds.
+
   if (inc.preprocessing <= 0) {
     lim.preprocessing = 0;
     LOG ("no preprocessing");
@@ -346,6 +388,8 @@ void Internal::init_limits () {
     lim.localsearch = inc.localsearch;
     LOG ("limiting to %d local search rounds", lim.localsearch);
   }
+
+  /*----------------------------------------------------------------------*/
 
   lim.initialized = true;
 }
@@ -512,7 +556,7 @@ int Internal::solve () {
 
     init_limits ();
 
-    if (!opts.restoreall &&
+    if (opts.restoreall <= 1 &&
         external->tainted.empty ()) {
       LOG ("no tainted literals and nothing to restore");
       report ('*');

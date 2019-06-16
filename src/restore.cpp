@@ -62,7 +62,7 @@ void External::restore_clause (
 
 void External::restore_clauses () {
 
-  assert (internal->opts.restoreall || !tainted.empty ());
+  assert (internal->opts.restoreall == 2 || !tainted.empty ());
 
   START (restore);
   internal->stats.restorations++;
@@ -70,7 +70,7 @@ void External::restore_clauses () {
   struct { long weakened, satisfied, restored, removed; } clauses;
   memset (&clauses, 0, sizeof clauses);
 
-  if (internal->opts.restoreall)
+  if (internal->opts.restoreall && tainted.empty ())
     PHASE ("restore", internal->stats.restorations,
       "forced to restore all clauses");
 
@@ -161,17 +161,29 @@ void External::restore_clauses () {
   extension.resize (q - extension.begin ());
   shrink_vector (extension);
 
-  PHASE ("restore", internal->stats.restorations,
-    "removed %ld satisfied %.0f%% of %ld weakened clauses",
-    clauses.satisfied,
-    percent (clauses.satisfied, clauses.weakened),
-    clauses.weakened);
+#ifndef QUIET
+  if (clauses.satisfied)
+    PHASE ("restore", internal->stats.restorations,
+      "removed %ld satisfied %.0f%% of %ld weakened clauses",
+      clauses.satisfied,
+      percent (clauses.satisfied, clauses.weakened),
+      clauses.weakened);
+  else
+    PHASE ("restore", internal->stats.restorations,
+      "no satisfied clause removed out of %ld weakened clauses",
+      clauses.weakened);
 
-  PHASE ("restore", internal->stats.restorations,
-    "restored %ld clauses %.0f%% out of %ld weakened clauses",
-    clauses.restored,
-    percent (clauses.restored, clauses.weakened),
-    clauses.weakened);
+  if (clauses.restored)
+    PHASE ("restore", internal->stats.restorations,
+      "restored %ld clauses %.0f%% out of %ld weakened clauses",
+      clauses.restored,
+      percent (clauses.restored, clauses.weakened),
+      clauses.weakened);
+  else
+    PHASE ("restore", internal->stats.restorations,
+      "no clause restored out of %ld weakened clauses",
+      clauses.weakened);
+#endif
 
   numtainted = 0;
   for (const auto & b : tainted)

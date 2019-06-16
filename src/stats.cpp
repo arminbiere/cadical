@@ -116,6 +116,10 @@ void Stats::print (Internal * internal) {
   PRT ("  hyper:         %15ld   %10.2f %%  per conflict", stats.flush.hyper, relative (stats.flush.hyper, stats.conflicts));
   PRT ("  flushings:     %15ld   %10.2f    interval", stats.flush.count, relative (stats.conflicts, stats.flush.count));
   }
+  if (all || stats.instantiated) {
+  PRT ("instantiated:    %15ld   %10.2f %%  of tried", stats.instantiated, percent (stats.instantiated, stats.instried));
+  PRT ("x instrounds:    %15ld   %10.2f %%  of elimrounds", stats.instrounds, percent (stats.instrounds, stats.elimrounds));
+  }
   if (all || stats.conflicts) {
   PRT ("learned:         %15ld   %10.2f %%  per conflict", stats.learned.clauses, percent (stats.learned.clauses, stats.conflicts));
   PRT ("  bumped:        %15ld   %10.2f    per learned", stats.bumped, relative (stats.bumped, stats.learned.clauses));

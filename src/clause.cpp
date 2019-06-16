@@ -96,6 +96,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   c->garbage = false;
   c->gate = false;
   c->hyper = false;
+  c->instantiated = false;
   c->keep = keep;
   c->moved = false;
   c->reason = false;
@@ -369,7 +370,7 @@ Clause * Internal::new_learned_redundant_clause (int glue) {
   external->check_learned_clause ();
   Clause * res = new_clause (true, glue);
   if (proof) proof->add_derived_clause (res);
-  assert (watches ());
+  assert (watching ());
   watch_clause (res);
   return res;
 }
@@ -380,7 +381,7 @@ Clause * Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
   external->check_learned_clause ();
   Clause * res = new_clause (red, glue);
   if (proof) proof->add_derived_clause (res);
-  assert (watches ());
+  assert (watching ());
   watch_clause (res);
   return res;
 }
@@ -392,7 +393,7 @@ Clause * Internal::new_hyper_ternary_resolved_clause (bool red) {
   size_t size = clause.size ();
   Clause * res = new_clause (red, size);
   if (proof) proof->add_derived_clause (res);
-  assert (!watches ());
+  assert (!watching ());
   return res;
 }
 
@@ -405,7 +406,7 @@ Clause * Internal::new_clause_as (const Clause * orig) {
   Clause * res = new_clause (orig->redundant, new_glue);
   assert (!orig->redundant || !orig->keep || res->keep);
   if (proof) proof->add_derived_clause (res);
-  assert (watches ());
+  assert (watching ());
   watch_clause (res);
   return res;
 }
@@ -417,7 +418,7 @@ Clause * Internal::new_resolved_irredundant_clause () {
   external->check_learned_clause ();
   Clause * res = new_clause (false);
   if (proof) proof->add_derived_clause (res);
-  assert (!watches ());
+  assert (!watching ());
   return res;
 }
 

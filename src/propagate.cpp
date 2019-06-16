@@ -130,7 +130,7 @@ void Internal::search_assign_driving (int lit, Clause * c) {
 // Finally, for long clauses we save the position of the last watch
 // replacement in 'pos', which in turn reduces certain quadratic accumulated
 // propagation costs (2013 JAIR article by Ian Gent) at the expense of four
-// more bytes for long clauses (where it does not matter much).
+// more bytes for each clause.
 
 bool Internal::propagate () {
 

@@ -12,6 +12,8 @@ struct Link {
   // initialized explicitly in 'init_queue'
 };
 
+typedef vector<Link> Links;
+
 // Variable move to front (VMTF) decision queue ordered by 'bumped'.  See
 // our SAT'15 paper for an explanation on how this works.
 
@@ -32,15 +34,17 @@ struct Queue {
   // code here in this header file.  Otherwise they are just ordinary doubly
   // linked list 'dequeue' and 'enqueue' operations.
 
-  inline void dequeue (Link * ltab, Link * l) {
-    if (l->prev) ltab[l->prev].next = l->next; else first = l->next;
-    if (l->next) ltab[l->next].prev = l->prev; else last = l->prev;
+  inline void dequeue (Links & links, int idx) {
+    Link & l = links[idx];
+    if (l.prev) links[l.prev].next = l.next; else first = l.next;
+    if (l.next) links[l.next].prev = l.prev; else last = l.prev;
   }
 
-  inline void enqueue (Link * ltab, Link * l) {
-    if ((l->prev = last)) ltab[last].next = l - ltab; else first = l - ltab;
-    last = l - ltab;
-    l->next = 0;
+  inline void enqueue (Links & links, int idx) {
+    Link & l = links[idx];
+    if ((l.prev = last)) links[last].next = idx; else first = idx;
+    last = idx;
+    l.next = 0;
   }
 };
 
