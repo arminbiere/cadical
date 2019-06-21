@@ -87,7 +87,7 @@ template<class I, class Rank> void rsort (I first, I last, Rank rank)
     if (!v) {
       assert (c == a);
       v = new T [n];
-      b = I (v);
+      b = (I) v;
     }
 
     I d = (c == a) ? b : a;
