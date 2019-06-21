@@ -251,6 +251,11 @@ CXXFLAGS="$CXXFLAGS$options"
 
 #--------------------------------------------------------------------------#
 
+case "$CXX" in
+  g++* | clang++) WERROR="-Werror";;
+  *) WERROR="";;
+esac
+
 # Check that compilation flags work.
 
 feature=./configure-hello-world
@@ -258,7 +263,7 @@ cat <<EOF > $feature.cpp
 #include <iostream>
 int main () { std::cout << "hello world" << std::endl; }
 EOF
-if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
+if $CXX $CXXFLAGS $WERROR -o $feature.exe $feature.cpp 2>>configure.log
 then
   if [ ! "`$feature.exe 2>>configure.log`" = "hello world" ]
   then
@@ -301,7 +306,7 @@ unsigned f (const std::vector<unsigned> & a) {
 
 int main () { MACRO ("%d", 42); return 0; }
 EOF
-if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
+if $CXX $CXXFLAGS $WERROR -o $feature.exe $feature.cpp 2>>configure.log
 then
   if [ "`$feature.exe 2>>configure.log`" = 42 ]
   then
