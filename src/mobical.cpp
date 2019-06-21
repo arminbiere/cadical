@@ -2677,10 +2677,6 @@ int Mobical::main (int argc, char ** argv) {
 
   // Check illegal combinations of options.
 
-  if (seed_str && donot.seeds)
-    die ("can not use '--no-seeds' while specifying seed '%s' explicitly",
-      seed_str);
-
   if (input_path && donot.seeds)
     die ("can not use '--no-seeds' while specifying input '%s' explicitly",
       input_path);
