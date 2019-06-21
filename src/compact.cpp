@@ -45,11 +45,13 @@ struct Mapper {
   Mapper (Internal * i) :
     internal (i),
     new_max_var (0),
-    table (new int [ internal->max_var + 1 ] { 0 }),
     first_fixed (0),
     map_first_fixed (0),
     first_fixed_val (0)
   {
+    table = new int [ internal->max_var + 1 ];
+    clear_n (table, internal->max_var + 1);
+
     assert (!internal->level);
 
     for (int src = 1; src <= internal->max_var; src++) {

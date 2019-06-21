@@ -251,8 +251,8 @@ CXXFLAGS="$CXXFLAGS$options"
 
 #--------------------------------------------------------------------------#
 
-case "$CXX" in
-  g++* | clang++) WERROR="-Werror";;
+case x"$CXX" in
+  xg++* | xclang++*) WERROR="-Werror -pedantic";;
   *) WERROR="";;
 esac
 

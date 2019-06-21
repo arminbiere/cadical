@@ -89,7 +89,8 @@ void Checker::enlarge_clauses () {
   LOG ("CHECKER enlarging clauses of checker from %" PRIu64 " to %" PRIu64,
     (size_t) size_clauses, (size_t) new_size_clauses);
   CheckerClause ** new_clauses;
-  new_clauses = new CheckerClause * [ new_size_clauses ] { 0 };
+  new_clauses = new CheckerClause * [ new_size_clauses ];
+  clear_n (new_clauses, new_size_clauses);
   for (uint64_t i = 0; i < size_clauses; i++) {
     for (CheckerClause * c = clauses[i], * next; c; c = next) {
       next = c->next;
@@ -212,7 +213,8 @@ void Checker::enlarge_vars (long idx) {
     size_vars, new_size_vars);
 
   signed char * new_vals;
-  new_vals = new signed char [ 2*new_size_vars ] { 0 };
+  new_vals = new signed char [ 2*new_size_vars ];
+  clear_n (new_vals, 2*new_size_vars);
   new_vals += new_size_vars;
   memcpy ((void*) (new_vals - size_vars),
           (void*) (vals - size_vars), 2*size_vars);

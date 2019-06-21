@@ -64,6 +64,13 @@ template<class T> void shrink_vector (vector<T> & v) {
 
 /*------------------------------------------------------------------------*/
 
+template<class T>
+inline void clear_n (T * base, size_t n) {
+  memset (base, 0, sizeof (T) * n);
+}
+
+/*------------------------------------------------------------------------*/
+
 // These are options both to 'cadical' and 'mobical'.  After wasting some
 // on not remembering the spelling (British vs American), nor singular vs
 // plural and then wanted to use '--color=false', and '--colours=0' too, I
