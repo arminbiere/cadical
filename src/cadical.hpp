@@ -244,7 +244,7 @@ public:
   //
   int solve ();
 
-  // Get value (-1=false, 1=true) of valid non-zero literal.
+  // Get value (-lit=false, lit=true) of valid non-zero literal.
   //
   //   require (SATISFIED)
   //   ensure (SATISFIED)

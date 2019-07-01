@@ -229,7 +229,7 @@ struct External {
     int eidx = abs (elit), res;
     if (eidx > max_var) res = -1;
     else if ((size_t) eidx >= vals.size ()) res = -1;
-    else res = vals[eidx] ? 1 : -1;
+    else res = vals[eidx] ? eidx : -eidx;
     if (elit < 0) res = -res;
     return res;
   }
