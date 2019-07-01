@@ -46,6 +46,20 @@ void Internal::bump_queue (int lit) {
 
 /*------------------------------------------------------------------------*/
 
+// It would be better to use 'isinf' but there are some historical issues
+// with this function.  On some platforms it is a macro and even for C++ it
+// changed the scope (in pre 5.0 gcc) from '::isinf' to 'std::isinf'.  I do
+// not want to worry about these strange incompatibilities and thus use the
+// same trick as in older solvers (since the MiniSAT team invented EVSIDS)
+// and simply put a hard limit here.  It is less elegant but easy to port.
+
+static inline bool evsids_limit_hit (double score) {
+  assert (sizeof (score) == 8);	// assume IEEE 754 64-bit double
+  return score > 1e150;		// MAX_DOUBLE is around 1.8e308
+}
+
+/*------------------------------------------------------------------------*/
+
 // Classical exponential VSIDS as pioneered by MiniSAT.
 
 void Internal::rescore () {
@@ -71,16 +85,16 @@ void Internal::bump_score (int lit) {
   assert (opts.bump);
   int idx = vidx (lit);
   double old_score = score (idx);
-  assert (!isinf (old_score));
+  assert (!evsids_limit_hit (old_score));
   double new_score = old_score + scinc;
-  if (isinf (new_score)) {
-    LOG ("bumping %g score of %d leads to infinite score", old_score, idx);
+  if (evsids_limit_hit (new_score)) {
+    LOG ("bumping %g score of %d hits EVSIDS score limit", old_score, idx);
     rescore ();
     old_score = score (idx);
-    assert (!isinf (old_score));
+    assert (!evsids_limit_hit (old_score));
     new_score = old_score + scinc;
   }
-  assert (!isinf (new_score));
+  assert (!evsids_limit_hit (new_score));
   LOG ("new %g score of %d", new_score, idx);
   score (idx) = new_score;
   if (scores.contains (idx)) scores.update (idx);
@@ -97,15 +111,15 @@ void Internal::bump_variable (int lit) {
 
 void Internal::bump_scinc () {
   assert (use_scores ());
-  assert (!isinf (scinc));
+  assert (!evsids_limit_hit (scinc));
   double f = 1e3/opts.scorefactor;
   double new_scinc = scinc * f;
-  if (isinf (new_scinc)) {
-    LOG ("bumping %g increment by %g results in infinity", scinc, f);
+  if (evsids_limit_hit (new_scinc)) {
+    LOG ("bumping %g increment by %g hits EVSIDS score limit", scinc, f);
     rescore ();
     new_scinc = scinc * f;
   }
-  assert (!isinf (new_scinc));
+  assert (!evsids_limit_hit (new_scinc));
   LOG ("bumped score increment from %g to %g with factor %g",
     scinc, new_scinc, f);
   scinc = new_scinc;
