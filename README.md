@@ -1,6 +1,9 @@
-# CaDiCaL Overview
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build Status](https://travis-ci.org/armin.biere/cadical.svg?branch=master)](https://travis-ci.org/arminbiere/cadical)
+
 
 CaDiCaL Simplified Satisfiability Solver
+===============================================================================
 
 The original goal of the development of CaDiCaL was to obtain a CDCL solver,
 which is easy to understand and change, while at the same time not being
