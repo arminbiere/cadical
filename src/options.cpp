@@ -13,6 +13,16 @@ int Options::report_default_value;
 
 /*------------------------------------------------------------------------*/
 
+// The order of initializations of static objects is undefined and thus we
+// can not assume that this table is already initialized if a solver and
+// thus the constructor of 'Options' is called.  Therefore we just have to
+// reinitialize this table in every call to 'Options::Options'.  This does
+// not produce a data race even for parallel initialization since the
+// same values are written by all threads under the assumption that the
+// 'report_default_value' is set before any solver is initialized.  We do
+// have to perform this static initialization though, since 'has' is
+// static and does not require that the 'Options' constructor was called.
+
 Option Options::table [] = {
 #define OPTION(N,V,L,H,O,D) \
   { #N, (int) V, (int) L, (int) H, (int) O, D },
@@ -153,8 +163,10 @@ Options::Options (Internal * s) : internal (s)
     assert (&val (i) == &N); \
     /* The order of initializing static data is undefined and thus */ \
     /* it might be the case that the 'table' is not initialized yet. */ \
+    /* Thus this construction just reinitializes the table too even */ \
+    /* though it might not be necessary. */ \
     assert (!table[i].name || !strcmp (table[i].name, #N)); \
-    if (&N == &report) table[i].def = report_default_value; \
+    table[i] = { #N, (int)(V), (int)(L), (int)(H), (int)(O), D }; \
     prev = #N; \
     i++; \
   } while (0);
@@ -168,19 +180,6 @@ Options::Options (Internal * s) : internal (s)
   assert (!has ("aaaaa"));
   assert (!has ("non-existing-option"));
   assert (!has ("zzzzz"));
-# define OPTION(N,V,L,H,O,D) \
-  do {  \
-    Option * o = has (#N); \
-    assert (o); \
-    assert (!strcmp (o->name, #N)); \
-    assert (o->def == (int) V); \
-    assert (o->lo == (int) L); \
-    assert (o->hi == (int) H); \
-    assert (o->optimizable == (int) O); \
-    assert (o->val (this) == (int) V); \
-  } while (0);
-  OPTIONS
-# undef OPTION
 #endif
 
   // Now overwrite default options with environment values.
