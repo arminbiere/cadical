@@ -7,7 +7,6 @@ void Internal::init_watches () {
   while (wtab.size () < 2*vsize)
     wtab.push_back (Watches ());
   LOG ("initialized watcher tables");
-  assert (sizeof (Watch) == 16);
 }
 
 void Internal::clear_watches () {

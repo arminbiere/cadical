@@ -11,8 +11,8 @@ struct Walker {
   Internal * internal;
 
   Random random;                // local random number generator
-  long propagations;            // number of propagations
-  long limit;                   // limit on number of propagations
+  int64_t propagations;         // number of propagations
+  int64_t limit;                // limit on number of propagations
   vector <Clause *> broken;     // currently unsatisfied clauses
   double epsilon;               // smallest considered score
   vector<double> table;         // break value to score table
@@ -20,7 +20,7 @@ struct Walker {
 
   double score (unsigned);      // compute score from break count
 
-  Walker (Internal *, double size, long limit);
+  Walker (Internal *, double size, int64_t limit);
 };
 
 // These are in essence the CB values from Adrian Balint's thesis.  They
@@ -63,7 +63,7 @@ inline static double fitcbval (double size) {
 
 // Initialize the data structures for one local search round.
 
-Walker::Walker (Internal * i, double size, long l) :
+Walker::Walker (Internal * i, double size, int64_t l) :
   internal (i),
   random (internal->opts.seed),         // global random seed
   propagations (0),
@@ -73,7 +73,7 @@ Walker::Walker (Internal * i, double size, long l) :
 
   // This is the magic constant in ProbSAT (also called 'CB'), which we pick
   // according to the average size every second invocation and otherwise
-  // just the default '2.0', which turns into into the base '0.5'.
+  // just the default '2.0', which turns into the base '0.5'.
   //
   const bool use_size_based_cb = (internal->stats.walk.count & 1);
   const double cb = use_size_based_cb ? fitcbval (size) : 2.0;
@@ -102,7 +102,7 @@ inline double Walker::score (unsigned i) {
 Clause * Internal::walk_pick_clause (Walker & walker) {
   require_mode (WALK);
   assert (!walker.broken.empty ());
-  long size = walker.broken.size ();
+  int64_t size = walker.broken.size ();
   if (size > INT_MAX) size = INT_MAX;
   int pos = walker.random.pick_int (0, size-1);
   Clause * res = walker.broken[pos];
@@ -187,7 +187,7 @@ int Internal::walk_pick_lit (Walker & walker, Clause * c) {
   LOG ("picking literal by break-count");
   assert (walker.scores.empty ());
   double sum = 0;
-  long propagations = 0;
+  int64_t propagations = 0;
   for (const auto lit : *c) {
     assert (active (lit));
     if (var (lit).level == 1) {
@@ -271,7 +271,7 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
     const double ratio = clause_variable_ratio ();
     const auto eou = walker.broken.end ();
     auto j = walker.broken.begin (), i = j;
-    long made = 0, count = 0;
+    int64_t made = 0, count = 0;
 
     while (i != eou) {
 
@@ -320,7 +320,7 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
       walker.propagations++;
       stats.propagations.walk++;
     }
-    LOG ("made %ld clauses by flipping %d", made, lit);
+    LOG ("made %" PRId64 " clauses by flipping %d", made, lit);
     walker.broken.resize (j - walker.broken.begin ());
   }
 
@@ -329,7 +329,7 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
     walker.propagations++;      // This really corresponds now to one
     stats.propagations.walk++;  // propagation (in a one-watch scheme).
 
-    long broken = 0;
+    int64_t broken = 0;
     Watches & ws = watches (-lit);
 
     LOG ("trying to brake %zd watched clauses", ws.size ());
@@ -367,7 +367,7 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
         broken++;
       }
     }
-    LOG ("broken %ld clauses by flipping %d", broken, lit);
+    LOG ("broken %" PRId64 " clauses by flipping %d", broken, lit);
     ws.clear ();
   }
 }
@@ -377,16 +377,16 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
 // Check whether to save the current phases as new global minimum.
 
 inline void Internal::walk_save_minimum (Walker & walker) {
-  long broken = walker.broken.size ();
+  int64_t broken = walker.broken.size ();
   if (broken >= stats.walk.minimum) return;
-  VERBOSE (3, "new global minimum %ld", broken);
+  VERBOSE (3, "new global minimum %" PRId64 "", broken);
   stats.walk.minimum = broken;
   copy_phases (phases.min);
 }
 
 /*------------------------------------------------------------------------*/
 
-int Internal::walk_round (long limit, bool prev) {
+int Internal::walk_round (int64_t limit, bool prev) {
 
   backtrack ();
   if (propagated < trail.size () && !propagate ()) {
@@ -414,12 +414,12 @@ int Internal::walk_round (long limit, bool prev) {
 #endif
 
   PHASE ("walk", stats.walk.count,
-    "random walk limit of %ld propagations", limit);
+    "random walk limit of %" PRId64 " propagations", limit);
 
   // First compute the average clause size for picking the CB constant.
   //
   double size = 0;
-  long n = 0;
+  int64_t n = 0;
   for (const auto c : clauses) {
     if (c->garbage) continue;
     if (c->redundant) {
@@ -432,7 +432,7 @@ int Internal::walk_round (long limit, bool prev) {
   double average_size = relative (size, n);
 
   PHASE ("walk", stats.walk.count,
-    "%ld clauses average size %.2f over %d variables",
+    "%" PRId64 " clauses average size %.2f over %d variables",
     n, average_size, active ());
 
   // Instantiate data structures for this local search round.
@@ -496,7 +496,7 @@ int Internal::walk_round (long limit, bool prev) {
 
     LOG ("watching satisfied and registering broken clauses");
 #ifdef LOGGING
-    long watched = 0;
+    int64_t watched = 0;
 #endif
     for (const auto c : clauses) {
 
@@ -547,31 +547,31 @@ int Internal::walk_round (long limit, bool prev) {
     }
 #ifdef LOGGING
     if (!failed) {
-      long broken = walker.broken.size ();
-      long total = watched + broken;
-      LOG ("watching %ld clauses %.0f%% out of %ld (watched and broken)",
+      int64_t broken = walker.broken.size ();
+      int64_t total = watched + broken;
+      LOG ("watching %" PRId64 " clauses %.0f%% out of %" PRId64 " (watched and broken)",
         watched, percent (watched, total), total);
     }
 #endif
   }
 
-  long old_global_minimum = stats.walk.minimum;
+  int64_t old_global_minimum = stats.walk.minimum;
 
   int res;      // Tells caller to continue with local search.
 
   if (!failed) {
 
-    long broken = walker.broken.size ();
+    int64_t broken = walker.broken.size ();
 
     PHASE ("walk", stats.walk.count,
-     "starting with %ld unsatisfied clauses (%.0f%% out of %ld)",
+     "starting with %" PRId64 " unsatisfied clauses (%.0f%% out of %" PRId64 ")",
      broken, percent (broken, stats.current.irredundant),
      stats.current.irredundant);
 
     copy_phases (phases.saved);
     walk_save_minimum (walker);
 
-    long flips = 0, minimum = broken;
+    int64_t flips = 0, minimum = broken;
     while (!terminating () &&
            !walker.broken.empty () &&
            walker.propagations < walker.limit) {
@@ -582,11 +582,11 @@ int Internal::walk_round (long limit, bool prev) {
       const int lit = walk_pick_lit (walker, c);
       walk_flip_lit (walker, lit);
       broken = walker.broken.size ();
-      LOG ("now have %ld broken clauses in total", broken);
+      LOG ("now have %" PRId64 " broken clauses in total", broken);
       if (broken >= minimum) continue;
       minimum = broken;
       VERBOSE (3,
-        "new phase minimum %ld after %ld flips",
+        "new phase minimum %" PRId64 " after %" PRId64 " flips",
         minimum, flips);
       copy_phases (phases.saved);
       walk_save_minimum (walker);
@@ -594,12 +594,12 @@ int Internal::walk_round (long limit, bool prev) {
 
     if (minimum < old_global_minimum)
       PHASE ("walk", stats.walk.count,
-        "%snew global minimum %ld%s in %ld flips and %ld propagations",
+        "%snew global minimum %" PRId64 "%s in %" PRId64 " flips and %" PRId64 " propagations",
         tout.bright_yellow_code (), minimum, tout.normal_code (),
         flips, walker.propagations);
     else
       PHASE ("walk", stats.walk.count,
-        "best phase minimum %ld in %ld flips and %ld propagations",
+        "best phase minimum %" PRId64 " in %" PRId64 " flips and %" PRId64 " propagations",
         minimum, flips, walker.propagations);
 
     PHASE ("walk", stats.walk.count,
@@ -651,7 +651,7 @@ int Internal::walk_round (long limit, bool prev) {
 
 void Internal::walk () {
   START_INNER_WALK ();
-  long limit = stats.propagations.search;
+  int64_t limit = stats.propagations.search;
   limit *= 1e-3 * opts.walkreleff;
   if (limit < opts.walkmineff) limit = opts.walkmineff;
   if (limit > opts.walkmaxeff) limit = opts.walkmaxeff;

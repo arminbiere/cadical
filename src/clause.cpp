@@ -172,7 +172,7 @@ size_t Internal::shrink_clause (Clause * c, int new_size) {
     size_t new_bytes = c->bytes ();
     if (old_bytes > new_bytes) {
       res = old_bytes - new_bytes;
-      assert (stats.irrbytes >= (long) res);
+      assert (stats.irrbytes >= (int64_t) res);
       stats.irrbytes -= res;
     } else {
 
@@ -209,7 +209,7 @@ void Internal::delete_clause (Clause * c) {
   size_t bytes = c->bytes ();
   stats.collected += bytes;
   if (c->garbage) {
-    assert (stats.garbage >= (long) bytes);
+    assert (stats.garbage >= (int64_t) bytes);
     stats.garbage -= bytes;
 
     // See the discussion in 'propagate' on avoiding to eagerly trace binary
@@ -261,7 +261,7 @@ void Internal::mark_garbage (Clause * c) {
   } else {
     assert (stats.current.irredundant > 0);
     stats.current.irredundant--;
-    assert (stats.irrbytes >= (long) bytes);
+    assert (stats.irrbytes >= (int64_t) bytes);
     stats.irrbytes -= bytes;
     mark_removed (c);
   }

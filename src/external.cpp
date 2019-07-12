@@ -26,7 +26,7 @@ void External::enlarge (int new_max_var) {
 
   size_t new_vsize = vsize ? 2*vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
-  LOG ("enlarge external size from %ld to new size %ld", vsize, new_vsize);
+  LOG ("enlarge external size from %zd to new size %zd", vsize, new_vsize);
   vsize = new_vsize;
 }
 
@@ -58,7 +58,7 @@ void External::init (int new_max_var) {
     assert (e2i[eidx] == iidx);
   }
   if (internal->opts.checkfrozen)
-    while (new_max_var >= (long) moltentab.size ())
+    while (new_max_var >= (int64_t) moltentab.size ())
       moltentab.push_back (false);
   assert (iidx == new_internal_max_var + 1);
   assert (eidx == new_max_var + 1);
@@ -104,7 +104,7 @@ int External::internalize (int elit) {
       if (elit < 0) ilit = -ilit;
     }
     if (internal->opts.checkfrozen) {
-      assert (eidx < (long) moltentab.size ());
+      assert (eidx < (int64_t) moltentab.size ());
       if (moltentab[eidx])
         FATAL ("can not reuse molten literal %d", eidx);
     }
@@ -189,7 +189,7 @@ void External::check_solve_result (int res) {
 
 void External::update_molten_literals () {
   if (!internal->opts.checkfrozen) return;
-  assert (max_var + 1 == (long) moltentab.size ());
+  assert (max_var + 1 == (int64_t) moltentab.size ());
   int registered = 0, molten = 0;
   for (int lit = 1; lit <= max_var; lit++) {
     if (moltentab[lit]) {
@@ -210,7 +210,6 @@ void External::update_molten_literals () {
 
 int External::solve () {
   reset_extended ();
-  SECTION ("solving");
   update_molten_literals ();
   int res = internal->solve ();
   if (res == 10) extend ();
@@ -275,7 +274,7 @@ void External::check_assignment (int (External::*a)(int) const) {
   bool satisfied = false;
   const auto end = original.end ();
   auto start = original.begin (), i = start;
-  long count = 0;
+  int64_t count = 0;
   for (; i != end; i++) {
     int lit = *i;
     if (!lit) {
@@ -293,7 +292,7 @@ void External::check_assignment (int (External::*a)(int) const) {
     } else if (!satisfied && (this->*a) (lit) > 0) satisfied = true;
   }
   VERBOSE (1,
-    "satisfying assignment checked on %ld clauses",
+    "satisfying assignment checked on %" PRId64 " clauses",
     count);
 }
 

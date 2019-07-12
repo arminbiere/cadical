@@ -21,10 +21,10 @@ check=no
 coverage=no
 profile=no
 unlocked=yes
-stdint=unknown
 pedantic=no
 options=""
 quiet=no
+m32=no
 
 #--------------------------------------------------------------------------#
 
@@ -88,8 +88,11 @@ where '<option>' is one of the following
 --profile          compile with '-pg' to profile with 'gprof'
 
 -f...              pass '-f<option>[=<val>]' options to the makefile
+-m32               pass '-m32' to the compiler (compile for 32 bit)
 -ggdb3             pass '-ggdb3' to makefile (like '-s')
 -O|-O[123]         pass '-O' or '-O[123]' to the makefile
+
+-j|-j...           pass this option to the makefile (for parallel build)
 
 The environment variable CXX can be used to set a different C++
 compiler than the default 'g++'.  Similarly you can add additional
@@ -111,8 +114,6 @@ The following configuration options might be usefull during porting the
 code to a new platform and are usually not necessary to change.
 
 --no-unlocked      force compilation without unlocked IO
---no-[c]stdint     avoid trying to '#include <cstdint>'
---[c]stdint        force '#include <cstdint>'
 EOF
 exit 0
 }
@@ -138,9 +139,10 @@ do
     --profile) profile=yes;;
 
     --no-unlocked) unlocked=no;;
-    --no-stdint) stdint=no;;
-    --stdint) stdint=yes;;
 
+    -j*) MAKEFLAGS="$1";;
+
+    -m32) options="$options $1";m32=yes;;
     -f*|-ggdb3|-O|-O1|-O2|-O3) options="$options $1";;
     -s|--symbols) options="$options -ggdb3";;
 
@@ -227,10 +229,12 @@ msg "root directory '$root'"
 
 [ x"$CXX" = x ] && CXX=g++
 [ x"$CXXFLAGS" = x ] || CXXFLAGS="$CXXFLAGS "
+
 case x"$CXX" in
   xg++*|xclang++*) CXXFLAGS="${CXXFLAGS}-Wall -Wextra";;
   *) CXXFLAGS="${CXXFLAGS}-W";;
 esac
+
 if [ $debug = yes ]
 then
   CXXFLAGS="$CXXFLAGS -g"
@@ -241,12 +245,23 @@ else
   esac
 fi
 
+if [ $m32 = yes ]
+then
+  case x"$CXX" in
+    xg++*)
+      options="$options -mpc64"
+      msg "forcing portable 64-bit FPU mode ('-mpc64') for '$CXX'"
+      ;;
+  esac
+fi
+
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
 [ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
 [ $pedantic = yes ] && CXXFLAGS="$CXXFLAGS --pedantic -Werror"
+
 CXXFLAGS="$CXXFLAGS$options"
 
 #--------------------------------------------------------------------------#
@@ -372,78 +387,6 @@ fi
 
 #--------------------------------------------------------------------------#
 
-# For 'Random.hpp' we really needed a clean unsigned 64 bit word type such
-# as 'uint64_t'. Since this requires 'cstdint' to be included, we feature
-# whether we can do that or otherwise try to find alternatives.
-
-if [ $stdint = unknown ]
-then
-  feature=./configure-have-stdint
-cat <<EOF > $feature.cpp
-#include <cstdint>
-EOF
-  if $CXX $CXXFLAGS -c $feature.cpp 2>>configure.log
-  then
-    msg "using '#include <cstdint>' for 'uint32_t' and 'uint64_t'"
-    stdint=yes
-  else
-    msg "can not use '#include <cstdint>'"
-    stdint=no
-    uint64_t=""
-    uint32_t=""
-    for type in "unsigned" "size_t" "unsigned long" "unsigned long long"
-    do
-      feature=./"configure-`echo $type|sed -e 's, ,-,g'`"
-cat <<EOF > $feature.cpp
-#include <cstdlib>
-#include <cstdio>
-int main () {
-  $type x = 0, y = x >> 1;
-  size_t bytes = sizeof x;
-  if (y & (1 << (bytes*8 - 1))) abort (); // signed type!
-  printf ("%ld\n", (long) bytes);
-  return 0;
-}
-EOF
-      if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>&1 2>>configure.log
-      then
-        bytes="`$feature.exe 2>>configure.log`"
-	msg "sizeof ($type) = $bytes"
-	case x"$bytes" in
-	  x4) [ "$uint32_t" ] || uint32_t="$type";;
-	  x8) [ "$uint64_t" ] || uint64_t="$type";;
-	esac
-      fi
-      [ "$uint32_t" -a "$uint64_t" ] && break
-    done
-    if [ "$uint32_t" ]
-    then
-      msg "using '$uint32_t' for 'uint32_t'"
-      [ "$uint32_t" = "unsigned" ] || \
-      CXXFLAGS="$CXXFLAGS -Duint32_t=\"$type\""
-    else
-      die "no 4 bytes unsigned type found for 'uint32_t'"
-    fi
-    if [ "$uint64_t" ]
-    then
-      msg "using '$uint64_t' for 'uint64_t'"
-      [ "$uint64_t" = "size_t" ] || \
-      CXXFLAGS="$CXXFLAGS -Duint64_t=\"$type\""
-    else
-      die "no 8 bytes unsigned type found for 'uint64_t'"
-    fi
-  fi
-elif [ $stdint = yes ]
-then
-  msg "forced to use '#include <cstdint>' for 'uint32_t' and 'uint64_t'"
-else
-  msg "will not use '#include <cstdint>' for 'uint32_t' and 'uint64_t'"
-fi
-
-[ $stdint = no ] && CXXFLAGS="$CXXFLAGS -DNSTDINT"
-
-#--------------------------------------------------------------------------#
-
 # Instantiate '../makefile.in' template to produce 'makefile' in 'build'.
 
 msg "compiling with ${HILITE}'$CXX $CXXFLAGS'${NORMAL}"
@@ -454,6 +397,7 @@ sed \
 # This 'makefile' is generated from '../makefile.in'." \
 -e "s,@CXX@,$CXX," \
 -e "s,@CXXFLAGS@,$CXXFLAGS," \
+-e "s,@MAKEFLAGS@,$MAKEFLAGS," \
 ../makefile.in > makefile
 
 msg "generated '$build/makefile' from '../makefile.in'"

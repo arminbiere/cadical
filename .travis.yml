@@ -9,3 +9,4 @@ os:
 - osx
 branches:
 - master
+- development

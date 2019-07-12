@@ -107,14 +107,14 @@ void Internal::phase (const char * phase, const char * fmt, ...) {
 }
 
 void Internal::phase (const char * phase,
-                      long count, const char * fmt, ...) {
+                      int64_t count, const char * fmt, ...) {
 #ifdef LOGGING
   if (!opts.log)
 #endif
   if (opts.quiet ||
       (!force_phase_messages && opts.verbose < 2)) return;
   print_prefix ();
-  printf ("[%s-%ld] ", phase, count);
+  printf ("[%s-%" PRId64 "] ", phase, count);
   va_list ap;
   va_start (ap, fmt);
   vprintf (fmt, ap);

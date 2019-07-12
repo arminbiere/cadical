@@ -67,7 +67,7 @@ void External::restore_clauses () {
   START (restore);
   internal->stats.restorations++;
 
-  struct { long weakened, satisfied, restored, removed; } clauses;
+  struct { int64_t weakened, satisfied, restored, removed; } clauses;
   memset (&clauses, 0, sizeof clauses);
 
   if (internal->opts.restoreall && tainted.empty ())
@@ -164,24 +164,24 @@ void External::restore_clauses () {
 #ifndef QUIET
   if (clauses.satisfied)
     PHASE ("restore", internal->stats.restorations,
-      "removed %ld satisfied %.0f%% of %ld weakened clauses",
+      "removed %" PRId64 " satisfied %.0f%% of %" PRId64 " weakened clauses",
       clauses.satisfied,
       percent (clauses.satisfied, clauses.weakened),
       clauses.weakened);
   else
     PHASE ("restore", internal->stats.restorations,
-      "no satisfied clause removed out of %ld weakened clauses",
+      "no satisfied clause removed out of %" PRId64 " weakened clauses",
       clauses.weakened);
 
   if (clauses.restored)
     PHASE ("restore", internal->stats.restorations,
-      "restored %ld clauses %.0f%% out of %ld weakened clauses",
+      "restored %" PRId64 " clauses %.0f%% out of %" PRId64 " weakened clauses",
       clauses.restored,
       percent (clauses.restored, clauses.weakened),
       clauses.weakened);
   else
     PHASE ("restore", internal->stats.restorations,
-      "no clause restored out of %ld weakened clauses",
+      "no clause restored out of %" PRId64 " weakened clauses",
       clauses.weakened);
 #endif
 

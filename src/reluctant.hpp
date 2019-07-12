@@ -20,15 +20,15 @@ namespace CaDiCaL {
 
 class Reluctant {
 
-  unsigned long u, v, limit;
-  unsigned long period, countdown;
+  uint64_t u, v, limit;
+  uint64_t period, countdown;
   bool trigger, limited;
 
 public:
 
   Reluctant () : period (0), trigger (false) { }
 
-  void enable (int p, long l) {
+  void enable (int p, int64_t l) {
     assert (p > 0);
     u = v = 1;
     period = countdown = p;

@@ -40,8 +40,8 @@ class File {
   int close_file;       // need to close file (1=fclose, 2=pclose)
   FILE * file;
   const char * _name;
-  long _lineno;
-  long _bytes;
+  int64_t _lineno;
+  int64_t _bytes;
 
   File (Internal *, bool, int, FILE *, const char *);
 
@@ -141,19 +141,18 @@ public:
     }
   }
 
-  bool put (long l) {
+  bool put (int64_t l) {
     assert (writing);
     if (!l) return put ('0');
-    else if (l == LONG_MIN) {
+    else if (l == INT64_MIN) {
       assert (sizeof l == 8);
-      assert (l == LONG_MIN);
       return put ("-9223372036854775808");
     } else {
       char buffer[21];
       int i = sizeof buffer;
       buffer[--i] = 0;
-      assert (l != LONG_MIN);
-      unsigned long k = l < 0 ? -l : l;
+      assert (l != INT64_MIN);
+      uint64_t k = l < 0 ? -l : l;
       while (k) {
         assert (i > 0);
         buffer[--i] = '0' + k % 10;
@@ -165,8 +164,8 @@ public:
   }
 
   const char * name () const { return _name; }
-  long lineno () const { return _lineno; }
-  long bytes () const { return _bytes; }
+  int64_t lineno () const { return _lineno; }
+  int64_t bytes () const { return _bytes; }
 
   bool closed () { return !file; }
   void close ();

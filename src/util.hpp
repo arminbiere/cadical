@@ -25,7 +25,8 @@ bool has_suffix (const char * str, const char * suffix);
 
 inline bool is_power_of_two (unsigned n) { return n && !(n & (n-1)); }
 
-inline bool contained (long c, long l, long u) { return l <= c && c <= u; }
+inline bool
+contained (int64_t c, int64_t l, int64_t u) { return l <= c && c <= u; }
 
 /*------------------------------------------------------------------------*/
 

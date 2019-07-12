@@ -278,18 +278,18 @@ void File::close () {
   if (internal->opts.verbose > 1) return;
   double mb = bytes () / (double) (1 << 20);
   if (writing)
-    VERBOSE (1, "after writing %ld bytes %.1f MB", bytes (), mb);
+    VERBOSE (1, "after writing %" PRId64 " bytes %.1f MB", bytes (), mb);
   else
-    VERBOSE (1, "after reading %ld bytes %.1f MB", bytes (), mb);
+    VERBOSE (1, "after reading %" PRId64 " bytes %.1f MB", bytes (), mb);
   if (close_file == 2) {
-    long s = size (name ());
+    int64_t s = size (name ());
     double mb = s / (double) (1<<20);
     if (writing)
-      VERBOSE (1, "deflated to %ld bytes %.1f MB by factor %.2f "
+      VERBOSE (1, "deflated to %" PRId64 " bytes %.1f MB by factor %.2f "
         "(%.2f%% compression)",
         s, mb, relative (bytes (), s), percent (bytes () - s, bytes ()));
     else
-      VERBOSE (1, "inflated from %ld bytes %.1f MB by factor %.2f "
+      VERBOSE (1, "inflated from %" PRId64 " bytes %.1f MB by factor %.2f "
         "(%.2f%% compression)",
         s, mb, relative (bytes (), s), percent (bytes () - s, bytes ()));
   }

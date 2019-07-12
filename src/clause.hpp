@@ -24,7 +24,7 @@ typedef const int * const_literal_iterator;
 
 struct Clause {
 #ifdef LOGGING
-  long id;            // Only useful for debugging.
+  int64_t id;         // Only useful for debugging.
 #endif
   bool covered:1;     // Already considered for covered clause elimination.
   bool enqueued:1;    // Enqueued on backward queue.

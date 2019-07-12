@@ -295,8 +295,8 @@ bool Internal::decompose_round () {
   }
 
   if (!unsat && !postponed_garbage.empty ()) {
-    LOG ("now marking %ld postponed garbage clauses",
-      (long) postponed_garbage.size ());
+    LOG ("now marking %zd postponed garbage clauses",
+      postponed_garbage.size ());
     for (const auto & c : postponed_garbage)
       mark_garbage (c);
   }
@@ -304,7 +304,7 @@ bool Internal::decompose_round () {
 
   PHASE ("decompose",
     stats.decompositions,
-    "%ld clauses replaced %.2f%% producing %ld garbage clauses %.2f%%",
+    "%" PRId64 " clauses replaced %.2f%% producing %" PRId64 " garbage clauses %.2f%%",
     replaced, percent (replaced, clauses_size),
     garbage, percent (garbage, replaced));
 

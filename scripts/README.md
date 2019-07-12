@@ -3,7 +3,7 @@
 Scripts needed for the build process
 
     ./make-build-header.sh   # generates 'build.hpp'
-    ./get-git-id.sh          # get GIT id (needed by 'make-build-headers.sh')
+    ./get-git-id.sh          # get GIT id (needed by 'make-build-header.sh')
     ./update-version.sh      # synchronizes VERSION in '../src/version.cpp'
 
 and a script which builds and tests all configurations

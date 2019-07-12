@@ -232,7 +232,7 @@ bool Internal::probe_propagate () {
   require_mode (PROBE);
   assert (!unsat);
   START (propagate);
-  long before = propagated2 = propagated;
+  int64_t before = propagated2 = propagated;
   while (!conflict) {
     if (propagated2 != trail.size ()) probe_propagate2 ();
     else if (propagated != trail.size ()) {
@@ -290,7 +290,7 @@ bool Internal::probe_propagate () {
       }
     } else break;
   }
-  long delta = propagated2 - before;
+  int64_t delta = propagated2 - before;
   stats.propagations.probe += delta;
   if (conflict) LOG (conflict, "conflict");
   STOP (propagate);
@@ -434,7 +434,7 @@ void Internal::generate_probes () {
     //
     if (propfixed (probe) >= stats.all.fixed) continue;
 
-    LOG ("scheduling probe %d negated occs %ld", probe, noccs (-probe));
+    LOG ("scheduling probe %d negated occs %" PRId64 "", probe, noccs (-probe));
     probes.push_back (probe);
   }
 
@@ -444,7 +444,7 @@ void Internal::generate_probes () {
   shrink_vector (probes);
 
   PHASE ("probe-round", stats.probingrounds,
-    "scheduled %ld literals %.0f%%",
+    "scheduled %" PRId64 " literals %.0f%%",
     probes.size (), percent (probes.size (), 2*max_var));
 }
 
@@ -474,7 +474,7 @@ void Internal::flush_probes () {
     if (have_pos_bin_occs) lit = -lit;
     assert (!noccs (lit)), assert (noccs (-lit) > 0);
     if (propfixed (lit) >= stats.all.fixed) continue;
-    LOG ("keeping probe %d negated occs %ld", lit, noccs (-lit));
+    LOG ("keeping probe %d negated occs %" PRId64 "", lit, noccs (-lit));
     *j++ = lit;
   }
   size_t remain = j - probes.begin ();
@@ -540,7 +540,7 @@ bool Internal::probe_round () {
   // (say %5) of probing propagations in each probing with a lower bound of
   // 'opts.probmineff'.
   //
-  long delta = stats.propagations.search;
+  int64_t delta = stats.propagations.search;
   delta -= last.probe.propagations;
   delta *= 1e-3 * opts.probereleff;
   if (delta < opts.probemineff) delta = opts.probemineff;
@@ -548,15 +548,15 @@ bool Internal::probe_round () {
   delta += 2l * active ();
 
   PHASE ("probe-round", stats.probingrounds,
-    "probing limit of %ld propagations ", delta);
+    "probing limit of %" PRId64 " propagations ", delta);
 
-  long limit = stats.propagations.probe + delta;
+  int64_t limit = stats.propagations.probe + delta;
 
   int old_failed = stats.failed;
 #ifndef QUIET
-  long old_probed = stats.probed;
+  int64_t old_probed = stats.probed;
 #endif
-  long old_hbrs = stats.hbrs;
+  int64_t old_hbrs = stats.hbrs;
 
   if (!probes.empty ()) flush_probes ();
 
@@ -584,7 +584,7 @@ bool Internal::probe_round () {
 
   if (unsat) LOG ("probing derived empty clause");
   else if (propagated < trail.size ()) {
-    LOG ("probing produced %ld units", trail.size () - propagated);
+    LOG ("probing produced %" PRId64 " units", trail.size () - propagated);
     if (!propagate ()) {
       LOG ("propagating units after probing results in empty clause");
       learn_empty_clause ();
@@ -593,16 +593,16 @@ bool Internal::probe_round () {
 
   int failed = stats.failed - old_failed;
 #ifndef QUIET
-  long probed = stats.probed - old_probed;
+  int64_t probed = stats.probed - old_probed;
 #endif
-  long hbrs = stats.hbrs - old_hbrs;
+  int64_t hbrs = stats.hbrs - old_hbrs;
 
   PHASE ("probe-round", stats.probingrounds,
-    "probed %ld and found %d failed literals", probed, failed);
+    "probed %" PRId64 " and found %d failed literals", probed, failed);
 
   if (hbrs)
     PHASE ("probe-round", stats.probingrounds,
-      "found %ld hyper binary resolvents", hbrs);
+      "found %" PRId64 " hyper binary resolvents", hbrs);
 
   STOP_SIMPLIFIER (probe, PROBE);
 
@@ -643,11 +643,11 @@ void CaDiCaL::Internal::probe (bool update_limits) {
 
   if (!update_limits) return;
 
-  long delta = opts.probeint * (stats.probingphases + 1);
+  int64_t delta = opts.probeint * (stats.probingphases + 1);
   lim.probe = stats.conflicts + delta;
 
   PHASE ("probe-phase", stats.probingphases,
-    "new limit at %ld conflicts after %ld conflicts",
+    "new limit at %" PRId64 " conflicts after %" PRId64 " conflicts",
     lim.probe, delta);
 
   last.probe.reductions = stats.reductions;

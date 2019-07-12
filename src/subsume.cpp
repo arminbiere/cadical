@@ -303,7 +303,7 @@ struct subsume_less_noccs {
     int u = internal->val (a), v = internal->val (b);
     if (!u && v) return true;
     if (u && !v) return false;
-    long m = internal->noccs (a), n = internal ->noccs (b);
+    int64_t m = internal->noccs (a), n = internal ->noccs (b);
     if (m < n) return true;
     if (m > n) return false;
     return abs (a) < abs (b);
@@ -329,16 +329,16 @@ bool Internal::subsume_round () {
   START_SIMPLIFIER (subsume, SUBSUME);
   stats.subsumerounds++;
 
-  long check_limit;
+  int64_t check_limit;
   if (opts.subsumelimited) {
-    long delta = stats.propagations.search;
+    int64_t delta = stats.propagations.search;
     delta *= 1e-3 * opts.subsumereleff;
     if (delta < opts.subsumemineff) delta = opts.subsumemineff;
     if (delta > opts.subsumemaxeff) delta = opts.subsumemaxeff;
-    delta = max (delta, 2l * active ());
+    delta = max (delta, (int64_t) 2l * active ());
 
     PHASE ("subsume-round", stats.subsumerounds,
-      "limit of %ld subsumption checks", delta);
+      "limit of %" PRId64 " subsumption checks", delta);
 
     check_limit = stats.subchecks + delta;
   } else {
@@ -358,7 +358,7 @@ bool Internal::subsume_round () {
 
   // Determine candidate clauses and sort them by size.
   //
-  long left_over_from_last_subsumption_round = 0;
+  int64_t left_over_from_last_subsumption_round = 0;
 
   for (auto c : clauses) {
 
@@ -407,10 +407,10 @@ bool Internal::subsume_round () {
         cs.clause->subsume = true;
 
 #ifndef QUIET
-  long scheduled = schedule.size ();
-  long total = stats.current.irredundant + stats.current.redundant;
+  int64_t scheduled = schedule.size ();
+  int64_t total = stats.current.irredundant + stats.current.redundant;
   PHASE ("subsume-round", stats.subsumerounds,
-    "scheduled %ld clauses %.0f%% out of %ld clauses",
+    "scheduled %" PRId64 " clauses %.0f%% out of %" PRId64 " clauses",
     scheduled, percent (scheduled, total), total);
 #endif
 
@@ -421,7 +421,7 @@ bool Internal::subsume_round () {
   // of its literals (with smallest number of occurrences at this point) in
   // a one-watched scheme.
 
-  long subsumed = 0, strengthened = 0, checked = 0;
+  int64_t subsumed = 0, strengthened = 0, checked = 0;
 
   vector<Clause *> shrunken;
   init_occs ();
@@ -460,7 +460,7 @@ bool Internal::subsume_round () {
     // occurrences computed before and stored in 'noccs'.
     //
     int minlit = 0;
-    long minoccs = 0;
+    int64_t minoccs = 0;
     size_t minsize = 0;
     bool subsume = true;
     bool binary = (c->size == 2 && !c->redundant);
@@ -470,7 +470,7 @@ bool Internal::subsume_round () {
       if (!flags (lit).subsume) subsume = false;
       const size_t size = binary ? bins (lit).size () : occs (lit).size ();
       if (minlit && minsize <= size) continue;
-      const long tmp = noccs (lit);
+      const int64_t tmp = noccs (lit);
       if (minlit && minsize == size && tmp <= minoccs) continue;
       minlit = lit, minsize = size, minoccs = tmp;
     }
@@ -488,8 +488,8 @@ bool Internal::subsume_round () {
       //
       if (minsize > (size_t) opts.subsumeocclim) continue;
 
-      LOG (c, "watching %d with %ld current and total %ld occurrences",
-        minlit, (long) minsize, minoccs);
+      LOG (c, "watching %d with %zd current and total %" PRId64 " occurrences",
+        minlit, minsize, minoccs);
 
       occs (minlit).push_back (c);
 
@@ -511,8 +511,8 @@ bool Internal::subsume_round () {
       if (minsize > (size_t) opts.subsumebinlim) continue;
 
       LOG (c,
-        "watching %d with %ld current binary and total %ld occurrences",
-        minlit, (long) minsize, minoccs);
+        "watching %d with %zd current binary and total %" PRId64 " occurrences",
+        minlit, minsize, minoccs);
 
       const int minlit_pos = (c->literals[1] == minlit);
       const int other = c->literals[!minlit_pos];
@@ -521,19 +521,19 @@ bool Internal::subsume_round () {
   }
 
   PHASE ("subsume-round", stats.subsumerounds,
-    "subsumed %ld and strengthened %ld out of %ld clauses %.0f%%",
+    "subsumed %" PRId64 " and strengthened %" PRId64 " out of %" PRId64 " clauses %.0f%%",
     subsumed, strengthened, scheduled,
     percent (subsumed + strengthened, scheduled));
 
-  const long remain = schedule.size () - checked;
+  const int64_t remain = schedule.size () - checked;
   const bool completed = !remain;
 
   if (completed)
     PHASE ("subsume-round", stats.subsumerounds,
-      "checked all %ld scheduled clauses", checked);
+      "checked all %" PRId64 " scheduled clauses", checked);
   else
     PHASE ("subsume-round", stats.subsumerounds,
-      "checked %ld clauses %.0f%% of scheduled (%zd remain)",
+      "checked %" PRId64 " clauses %.0f%% of scheduled (%zd remain)",
       checked, percent (checked, scheduled), remain);
 
   // Release occurrence lists and schedule.
@@ -588,8 +588,7 @@ void Internal::subsume (bool update_limits) {
     }
   }
 
-  // Schedule 'vivification' in 'subsume' as well as 'transitive reduction'
-  // and 'covered clause elimination'.
+  // Schedule 'vivification' in 'subsume' as well as 'transitive reduction'.
   //
   if (opts.vivify) vivify ();
   if (opts.transred) transred ();
@@ -598,11 +597,12 @@ UPDATE_LIMITS:
 
   if (!update_limits) return;
 
-  long delta = scale (opts.subsumeint * (stats.subsumephases + 1));
+  int64_t delta = scale (opts.subsumeint * (stats.subsumephases + 1));
   lim.subsume = stats.conflicts + delta;
 
   PHASE ("subsume-phase", stats.subsumephases,
-    "new subsume limit %ld after %ld conflicts", lim.subsume, delta);
+    "new subsume limit %" PRId64 " after %" PRId64 " conflicts",
+    lim.subsume, delta);
 }
 
 }

@@ -175,9 +175,9 @@ log_api_call_returns (Internal * internal, const char * name, int res) {
 }
 
 static void
-log_api_call_returns (Internal * internal, const char * name, long res) {
+log_api_call_returns (Internal * internal, const char * name, int64_t res) {
   char fmt[32];
-  sprintf (fmt, "returns '%ld'", res);
+  sprintf (fmt, "returns '%" PRId64 "'", res);
   log_api_call (internal, name, fmt);
 }
 
@@ -648,18 +648,18 @@ int Solver::active () const {
   return res;
 }
 
-long Solver::redundant () const {
+int64_t Solver::redundant () const {
   TRACE ("redundant");
   REQUIRE_VALID_STATE ();
-  long res = internal->redundant ();
+  int64_t res = internal->redundant ();
   LOG_API_CALL_RETURNS ("redundant", res);
   return res;
 }
 
-long Solver::irredundant () const {
+int64_t Solver::irredundant () const {
   TRACE ("irredundant");
   REQUIRE_VALID_STATE ();
-  long res = internal->irredundant ();
+  int64_t res = internal->irredundant ();
   LOG_API_CALL_RETURNS ("irredundant", res);
   return res;
 }
@@ -910,7 +910,7 @@ bool Solver::traverse_witnesses_forward (WitnessIterator & it) const {
 class ClauseCounter : public ClauseIterator {
 public:
   int vars;
-  long clauses;
+  int64_t clauses;
   ClauseCounter () : vars (0), clauses (0) { }
   bool clause (const vector<int> & c) {
     for (const auto & lit : c) {
@@ -941,7 +941,7 @@ const char * Solver::write_dimacs (const char * path, int min_max_var) {
   REQUIRE_VALID_STATE ();
   ClauseCounter counter;
   (void) traverse_clauses (counter);
-  LOG ("found maximal variable %d and %ld clauses",
+  LOG ("found maximal variable %d and %" PRId64 " clauses",
     counter.vars, counter.clauses);
 #ifndef QUIET
   const double start = internal->time ();
@@ -950,7 +950,7 @@ const char * Solver::write_dimacs (const char * path, int min_max_var) {
   const char * res = 0;
   if (file) {
     int actual_max_vars = max (min_max_var, counter.vars);
-    MSG ("writing %s'p cnf %d %d'%s header",
+    MSG ("writing %s'p cnf %d %" PRId64 "'%s header",
       tout.green_code (), actual_max_vars, counter.clauses,
       tout.normal_code ());
     file->put ("p cnf ");
@@ -968,7 +968,7 @@ const char * Solver::write_dimacs (const char * path, int min_max_var) {
 #ifndef QUIET
   if (!res) {
     const double end = internal->time ();
-    MSG ("wrote %d clauses in %.2f seconds %s time",
+    MSG ("wrote %" PRId64 " clauses in %.2f seconds %s time",
       counter.clauses, end - start,
       internal->opts.realtime ? "real" : "process");
   }
@@ -981,7 +981,7 @@ const char * Solver::write_dimacs (const char * path, int min_max_var) {
 
 struct WitnessWriter : public WitnessIterator {
   File * file;
-  long witnesses;
+  int64_t witnesses;
   WitnessWriter (File * f) : file (f), witnesses (0) { }
   bool write (const vector<int> & a) {
     for (const auto & lit : a) {
@@ -1019,7 +1019,7 @@ const char * Solver::write_extension (const char * path) {
 #ifndef QUIET
   if (!res) {
     const double end = internal->time ();
-    MSG ("wrote %ld witnesses in %.2f seconds %s time",
+    MSG ("wrote %" PRId64 " witnesses in %.2f seconds %s time",
       writer.witnesses, end - start,
       internal->opts.realtime ? "real" : "process");
   }

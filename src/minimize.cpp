@@ -48,7 +48,7 @@ bool Internal::minimize_literal (int lit, int depth) {
 struct minimize_trail_positive_rank {
   Internal * internal;
   minimize_trail_positive_rank (Internal * s) : internal (s) { }
-  size_t operator () (const int & a) const {
+  int operator () (const int & a) const {
     assert (internal->val (a));
     return internal->var (a).trail;
   }
@@ -71,7 +71,8 @@ void Internal::minimize_clause () {
   // Sort the literals heuristically along assignment order with the hope to
   // hit the recursion limit 'opts.minimizedepth' less frequently.
   //
-  MSORT (clause.begin (), clause.end (),
+  MSORT (opts.radixsortlim,
+    clause.begin (), clause.end (),
     minimize_trail_positive_rank (this), minimize_trail_smaller (this));
 
   assert (minimized.empty ());
@@ -80,7 +81,7 @@ void Internal::minimize_clause () {
   for (; i != end; i++)
     if (minimize_literal (-*i)) stats.minimized++;
     else flags (*j++ = *i).keep = true;
-  LOG ("minimized %d literals", (long)(clause.end () - j));
+  LOG ("minimized %zd literals", (size_t)(clause.end () - j));
   if (j != end) clause.resize (j - clause.begin ());
   clear_minimized_literals ();
   STOP (minimize);

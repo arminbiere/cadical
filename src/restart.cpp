@@ -25,7 +25,7 @@ bool Internal::stabilizing () {
     stable = !stable;
     if (stable) stats.stabphases++;
     PHASE ("stabilizing", stats.stabphases,
-      "reached stabilization limit %ld after %ld conflicts",
+      "reached stabilization limit %" PRId64 " after %" PRId64 " conflicts",
       lim.stabilize, stats.conflicts);
     inc.stabilize *= opts.stabilizefactor*1e-2;
     if (inc.stabilize > opts.stabilizemaxint)
@@ -35,7 +35,7 @@ bool Internal::stabilizing () {
       lim.stabilize = stats.conflicts + 1;
     swap_averages ();
     PHASE ("stabilizing", stats.stabphases,
-      "new stabilization limit %ld at conflicts interval %ld",
+      "new stabilization limit %" PRId64 " at conflicts interval %" PRId64 "",
       lim.stabilize, inc.stabilize);
     report (stable ? '[' : '{');
     if (stable) START (stable);
@@ -78,7 +78,7 @@ int Internal::reuse_trail () {
            score_smaller (this)(decision, abs (control[res+1].decision)))
       res++;
   } else {
-    long limit = bumped (decision);
+    int64_t limit = bumped (decision);
     while (res < level && bumped (control[res+1].decision) > limit)
       res++;
   }
@@ -96,11 +96,11 @@ void Internal::restart () {
   stats.restarts++;
   stats.restartlevels += level;
   if (stable) stats.restartstable++;
-  LOG ("restart %ld", stats.restarts);
+  LOG ("restart %" PRId64 "", stats.restarts);
   backtrack (reuse_trail ());
 
   lim.restart = stats.conflicts + opts.restartint;
-  LOG ("new restart limit at %ld conflicts", lim.restart);
+  LOG ("new restart limit at %" PRId64 " conflicts", lim.restart);
 
   report ('R', 2);
   STOP (restart);

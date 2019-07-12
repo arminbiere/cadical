@@ -59,7 +59,7 @@ inline void Internal::inst_assign (int lit) {
 
 bool Internal::inst_propagate () {      // Adapted from 'propagate'.
   START (propagate);
-  long before = propagated;
+  int64_t before = propagated;
   bool ok = true;
   while (ok && propagated != trail.size ()) {
     const int lit = -trail[propagated++];
@@ -124,7 +124,7 @@ bool Internal::inst_propagate () {      // Adapted from 'propagate'.
       ws.resize (j - ws.begin ());
     }
   }
-  long delta = propagated - before;
+  int64_t delta = propagated - before;
   stats.propagations.instantiate += delta;
   STOP (propagate);
   return ok;
@@ -196,9 +196,9 @@ void Internal::instantiate (Instantiator & instantiator) {
   START (instantiate);
   stats.instrounds++;
 #ifndef QUIET
-  const long candidates = instantiator.candidates.size ();
+  const int64_t candidates = instantiator.candidates.size ();
 #endif
-  long instantiated = 0, tried = 0;
+  int64_t instantiated = 0, tried = 0;
   init_watches ();
   connect_watches ();
   if (propagated < trail.size ()) {
@@ -223,13 +223,13 @@ void Internal::instantiate (Instantiator & instantiator) {
       "%zd negative occurrences in", cand.lit, cand.negoccs);
     if (!instantiate_candidate (cand.lit, cand.clause)) continue;
     instantiated++;
-    VERBOSE (2, "instantiation %ld (%.1f%%) succeeded (%.1f%%) with "
+    VERBOSE (2, "instantiation %" PRId64 " (%.1f%%) succeeded (%.1f%%) with "
       "%zd negative occurrences in size %d clause",
       tried, percent (tried, candidates),
       percent (instantiated, tried), cand.negoccs, cand.size);
   }
   PHASE ("instantiate", stats.instrounds,
-    "instantiated %ld candidate successfully out of %ld tried %.1f%%",
+    "instantiated %" PRId64 " candidate successfully out of %" PRId64 " tried %.1f%%",
     instantiated, tried, percent (instantiated, tried));
   report ('I', !instantiated);
   reset_watches ();

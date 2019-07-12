@@ -486,6 +486,7 @@ int App::main (int argc, char ** argv) {
   }
   solver->options ();
 
+  solver->section ("solving");
   res = solver->solve ();
 
   if (proof_specified) solver->close_proof_trace ();
@@ -527,9 +528,10 @@ int App::main (int argc, char ** argv) {
 }
 
 App::App () :
-  solver (new Solver), time_limit (-1), max_var (0),
-  strict (1), timesup (false)
+  time_limit (-1), max_var (0), strict (1), timesup (false)
 {
+  CaDiCaL::Options::report_default_value = 1;
+  solver = new Solver;
   Signal::set (this);
 }
 

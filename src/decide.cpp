@@ -10,7 +10,7 @@ namespace CaDiCaL {
 // the assigned variables (if 'opts.restartreusetrail' is non-zero).
 
 int Internal::next_decision_variable_on_queue () {
-  long searched = 0;
+  int64_t searched = 0;
   int res = queue.unassigned;
   while (val (res))
     res = link (res).prev, searched++;
@@ -18,7 +18,7 @@ int Internal::next_decision_variable_on_queue () {
     stats.searched += searched;
     update_queue_unassigned (res);
   }
-  LOG ("next queue decision variable %d bumped %ld", res, bumped (res));
+  LOG ("next queue decision variable %d bumped %" PRId64 "", res, bumped (res));
   return res;
 }
 

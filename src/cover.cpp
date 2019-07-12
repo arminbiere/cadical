@@ -368,23 +368,23 @@ struct clause_covered_or_smaller {
   }
 };
 
-long Internal::cover_round () {
+int64_t Internal::cover_round () {
 
   if (unsat) return 0;
 
   init_watches ();
   connect_watches (true);     // irredundant watches only is enough
 
-  long delta = stats.propagations.search;
+  int64_t delta = stats.propagations.search;
   delta *= 1e-3 * opts.coverreleff;
   if (delta < opts.covermineff) delta = opts.covermineff;
   if (delta > opts.covermaxeff) delta = opts.covermaxeff;
-  delta = max (delta, 2l * active ());
+  delta = max (delta, ((int64_t) 2) * active ());
 
   PHASE ("cover", stats.cover.count,
-    "covered clause elimination limit of %ld propagations", delta);
+    "covered clause elimination limit of %" PRId64 " propagations", delta);
 
-  long limit = stats.propagations.cover + delta;
+  int64_t limit = stats.propagations.cover + delta;
 
   init_occs ();
 
@@ -393,7 +393,7 @@ long Internal::cover_round () {
 
   // First connect all clauses and find all not yet tried clauses.
   //
-  long untried = 0;
+  int64_t untried = 0;
   //
   for (auto c : clauses) {
     assert (!c->frozen);
@@ -462,7 +462,7 @@ long Internal::cover_round () {
 
   // This is the main loop of trying to do CCE of candidate clauses.
   //
-  long covered = 0;
+  int64_t covered = 0;
   //
   while (!terminating () &&
          !schedule.empty () &&
@@ -477,11 +477,11 @@ long Internal::cover_round () {
   const size_t remain = schedule.size ();
   const size_t tried = scheduled - remain;
   PHASE ("cover", stats.cover.count,
-    "eliminated %ld covered clauses out of %zd tried %.0f%%",
+    "eliminated %" PRId64 " covered clauses out of %zd tried %.0f%%",
     covered, tried, percent (covered, tried));
   if (remain)
     PHASE ("cover", stats.cover.count,
-      "remaining %ld clauses %.0f%% untried",
+      "remaining %" PRId64 " clauses %.0f%% untried",
       remain, percent (remain, scheduled));
   else
     PHASE ("cover", stats.cover.count,
@@ -527,7 +527,7 @@ bool Internal::cover () {
   if (propagated < trail.size ()) {
     init_watches ();
     connect_watches ();         // need to propagated over all clauses!
-    LOG ("elimination produced %ld units", trail.size () - propagated);
+    LOG ("elimination produced %" PRId64 " units", trail.size () - propagated);
     if (!propagate ()) {
       LOG ("propagating units before covered clause elimination "
         "results in empty clause");
@@ -538,7 +538,7 @@ bool Internal::cover () {
   }
   assert (unsat || propagated == trail.size ());
 
-  long covered = cover_round ();
+  int64_t covered = cover_round ();
 
   STOP_SIMPLIFIER (cover, COVER);
   report ('c', !opts.reportall && !covered);

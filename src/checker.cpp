@@ -203,13 +203,13 @@ Checker::~Checker () {
 // signed integer literal, comes with the price of slightly more complex
 // code in deleting and enlarging the checker data structures.
 
-void Checker::enlarge_vars (long idx) {
+void Checker::enlarge_vars (int64_t idx) {
 
   assert (0 < idx), assert (idx <= INT_MAX);
 
-  long new_size_vars = size_vars ? 2*size_vars : 2;
+  int64_t new_size_vars = size_vars ? 2*size_vars : 2;
   while (idx >= new_size_vars) new_size_vars *= 2;
-  LOG ("CHECKER enlarging variables of checker from %ld to %ld",
+  LOG ("CHECKER enlarging variables of checker from %" PRId64 " to %" PRId64 "",
     size_vars, new_size_vars);
 
   signed char * new_vals;

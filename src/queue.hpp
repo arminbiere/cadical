@@ -24,7 +24,7 @@ struct Queue {
 
   int first, last;    // anchors (head/tail) for doubly linked list
   int unassigned;     // all variables after this one are assigned
-  long bumped;        // see 'Internal.update_queue_unassigned'
+  int64_t bumped;     // see 'Internal.update_queue_unassigned'
 
   Queue () : first (0), last (0), unassigned (0), bumped (0) { }
 

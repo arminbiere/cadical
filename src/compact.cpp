@@ -197,7 +197,7 @@ void Internal::compact () {
     int src = external->e2i[eidx], dst;
     if (!src) continue;
     dst = mapper.map_lit (src);
-    LOG ("compact %ld maps external %d to internal %d from internal %d",
+    LOG ("compact %" PRId64 " maps external %d to internal %d from internal %d",
       stats.compacts, eidx, dst, src);
     external->e2i[eidx] = dst;
   }
@@ -400,11 +400,11 @@ void Internal::compact () {
 
   check_var_stats ();
 
-  long delta = opts.compactint * (stats.compacts + 1);
+  int64_t delta = opts.compactint * (stats.compacts + 1);
   lim.compact = stats.conflicts + delta;
 
   PHASE ("compact", stats.compacts,
-    "new compact limit %ld after %ld conflicts",
+    "new compact limit %" PRId64 " after %" PRId64 " conflicts",
     lim.compact, delta);
 
   STOP (compact);

@@ -34,7 +34,7 @@ OPTION( checkfailed,       1,  0,  1, 0, "check failed literals form core") \
 OPTION( checkfrozen,       0,  0,  1, 0, "check all frozen semantics") \
 OPTION( checkproof,        1,  0,  1, 0, "check proof internally") \
 OPTION( checkwitness,      1,  0,  1, 0, "check witness internally") \
-OPTION( chrono,            1,  0,  1, 0, "chronological backtracking") \
+OPTION( chrono,            1,  0,  2, 0, "chronological backtracking") \
 OPTION( chronoalways,      0,  0,  1, 0, "force always chronological") \
 OPTION( chronolevelim,   1e2,  0,1e9, 0, "chronological level limit") \
 OPTION( chronoreusetrail,  1,  0,  1, 0, "reuse trail chronologically") \
@@ -101,6 +101,7 @@ OPTION( probereleff,      20,  0,1e3, 1, "relative efficiency per mille") \
 OPTION( proberounds,       1,  1, 16, 0, "probing rounds" ) \
 OPTION( profile,           2,  0,  4, 0, "profiling level") \
 QUTOPT( quiet,             0,  0,  1, 0, "disable all messages") \
+OPTION( radixsortlim,    800,  0,1e9, 0, "radix sort limit") \
 OPTION( realtime,          0,  0,  1, 0, "real instead of process time") \
 OPTION( reduce,            1,  0,  1, 0, "reduce useless clauses") \
 OPTION( reduceint,       300, 10,1e6, 0, "reduce interval") \
@@ -110,7 +111,7 @@ OPTION( reluctant,      1024,  0,1e9, 0, "reluctant doubling period") \
 OPTION( reluctantmax,1048576,  0,1e9, 0, "reluctant doubling period") \
 OPTION( rephase,           1,  0,  1, 0, "enable resetting phase") \
 OPTION( rephaseint,      1e3,  1,1e9, 0, "rephase interval") \
-OPTION( report,            1,  0,  1, 0, "enable reporting") \
+OPTION( report,report_default_value,  0,  1, 0, "enable reporting") \
 OPTION( reportall,         0,  0,  1, 0, "report even if not successful") \
 OPTION( reportsolve,       0,  0,  1, 0, "use solving not process time") \
 OPTION( restart,           1,  0,  1, 0, "enable restarts") \
@@ -233,6 +234,12 @@ class Options {
     int & val, const char * name, const int L, const int H);
 
 public:
+  
+  // For library usage we disable reporting by default while for the stand
+  // alone SAT solver we enable it by default.  This default value has to
+  // be set before the constructor of 'Options' is called.
+  //
+  static int report_default_value;
 
   Options (Internal *);
 

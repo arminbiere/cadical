@@ -77,7 +77,7 @@ void Internal::shuffle_queue () {
   queue.first = queue.last = 0;
   for (const int idx : shuffle)
     queue.enqueue (links, idx);
-  long bumped = queue.bumped;
+  int64_t bumped = queue.bumped;
   for (int idx = queue.last; idx; idx = links[idx].prev)
     btab[idx] = bumped--;
   queue.unassigned = queue.last;

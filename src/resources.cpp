@@ -63,11 +63,11 @@ size_t maximum_resident_set_size () {
 
 size_t current_resident_set_size () {
   char path[40];
-  sprintf (path, "/proc/%ld/statm", (long) getpid ());
+  sprintf (path, "/proc/%" PRId64 "/statm", (int64_t) getpid ());
   FILE * file = fopen (path, "r");
   if (!file) return 0;
-  long dummy, rss;
-  int scanned = fscanf (file, "%ld %ld", &dummy, &rss);
+  int64_t dummy, rss;
+  int scanned = fscanf (file, "%" PRId64 " %" PRId64 "", &dummy, &rss);
   fclose (file);
   return scanned == 2 ? rss * sysconf (_SC_PAGESIZE) : 0;
 }

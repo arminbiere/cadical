@@ -29,7 +29,8 @@ using namespace std;
 // then as second parameter a function class (similar to the second 'less
 // than' parameter of 'sort') which can obtain a 'rank' from each element,
 // on which they are compared.  The 'rank' should be able to turn an element
-// into a number which can be automatically converted to 'size_t'.
+// into a number.  The type of these ranks is determined automatically but
+// should be 'unsigned'.
 
 struct pointer_rank {
   size_t operator () (void * ptr) { return (size_t) ptr; }
@@ -45,13 +46,14 @@ template<class I, class Rank> void rsort (I first, I last, Rank rank)
 
   const size_t l = 8;           // Radix 8, thus byte-wise.
   const size_t w = (1<<l);      // So many buckets.
-  const size_t mask = w - 1;    // Fast mod 'w'.
+
+  const unsigned mask = w - 1;  // Fast mod 'w'.
 
 // Uncomment the following define for large values of 'w' in order to keep
 // the large bucket array 'count' on the heap instead of the stack.
 //
 // #define CADICAL_RADIX_BUCKETS_ON_THE_HEAP
-
+//
 #ifdef CADICAL_RADIX_BUCKETS_ON_THE_HEAP
   size_t * count = new size_t[w];       // Put buckets on the heap.
 #else
@@ -62,16 +64,16 @@ template<class I, class Rank> void rsort (I first, I last, Rank rank)
   bool initialized = false;
   vector<T> v;
 
-  for (size_t i = 0; i < 8 * sizeof (size_t); i += l) {
+  for (size_t i = 0; i < 8 * sizeof (rank (*first)); i += l) {
 
     memset (count, 0, w * sizeof *count);
 
     const I end = c + n;
     size_t upper = 0, lower = ~upper;
     for (I p = c; p != end; p++) {
-      const size_t r = rank (*p);
-      const size_t s = r >> i;
-      const size_t m = s & mask;
+      const auto r = rank (*p);
+      const auto s = r >> i;
+      const auto m = s & mask;
       lower &= s, upper |= s;
       count[m]++;
     }
@@ -86,18 +88,18 @@ template<class I, class Rank> void rsort (I first, I last, Rank rank)
     }
 
     if (!initialized) {
-      assert (c == a);
-      v.reserve (n);
+      assert (&*c == &*a);	// MS VC++
+      v.resize (n);
       b = v.begin ();
       initialized = true;
     }
 
-    I d = (c == a) ? b : a;
+    I d = (&*c == &*a) ? b : a;	// MS VC++
 
     for (I p = c; p != end; p++) {
-      const size_t r = rank (*p);
-      const size_t s = r >> i;
-      const size_t m = s & mask;
+      const auto r = rank (*p);
+      const auto s = r >> i;
+      const auto m = s & mask;
       d[count[m]++] = *p;
     }
     c = d;
@@ -128,12 +130,15 @@ template<class I, class Rank> void rsort (I first, I last, Rank rank)
 // use it everywhere instead of 'rsort' since it requires a fourth
 // parameter, which is awkward, particular in those situation where we
 // expect large arrays to be sorted anyhow (such as during sorting the
-// clauses in arena or the probes during probing).
+// clauses in an arena or the probes during probing).  The first argument
+// is the limit up to which we use the standard sort.  Above the limit we
+// use radix sort.  As usual we do not want to hard code it here (default
+// is '800') in order to make fuzzing and delta debugging more effective.
 
-#define MSORT(FIRST,LAST,RANK,LESS) \
+#define MSORT(LIMIT,FIRST,LAST,RANK,LESS) \
 do { \
   const size_t N = LAST - FIRST; \
-  if (N <= 800) sort (FIRST, LAST, LESS); \
+  if (N <= (size_t) (LIMIT)) sort (FIRST, LAST, LESS); \
   else rsort (FIRST, LAST, RANK); \
 } while (0)
 

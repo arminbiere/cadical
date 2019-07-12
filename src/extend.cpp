@@ -97,7 +97,7 @@ void External::extend () {
     "mapping internal %d assignments to %d assignments",
     internal->max_var, max_var);
 
-  long updated = 0;
+  int64_t updated = 0;
   for (unsigned i = 1; i <= (unsigned) max_var; i++) {
     const int ilit = e2i[i];
     if (!ilit) continue;
@@ -107,13 +107,13 @@ void External::extend () {
     updated++;
   }
   PHASE ("extend", internal->stats.extensions,
-    "updated %ld external assignments", updated);
+    "updated %" PRId64 " external assignments", updated);
   PHASE ("extend", internal->stats.extensions,
-    "extending through extension stack of size %ld",
-    (long) extension.size ());
+    "extending through extension stack of size %zd",
+    extension.size ());
   const auto begin = extension.begin ();
   auto i = extension.end ();
-  long flipped = 0;
+  int64_t flipped = 0;
   while (i != begin) {
     bool satisfied = false;
     int lit;
@@ -146,7 +146,7 @@ void External::extend () {
     }
   }
   PHASE ("extend", internal->stats.extensions,
-    "flipped %ld literals during extension", flipped);
+    "flipped %" PRId64 " literals during extension", flipped);
   extended = true;
   LOG ("extended");
   STOP (extend);

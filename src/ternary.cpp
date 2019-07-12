@@ -128,7 +128,7 @@ Internal::hyper_ternary_resolve (Clause * c, int pivot, Clause * d) {
 // the effort spent in 'ternary' is that it should be similar to one
 // propagation step during search.
 
-void Internal::ternary_lit (int pivot, long & steps, long & htrs) {
+void Internal::ternary_lit (int pivot, int64_t & steps, int64_t & htrs) {
   LOG ("starting hyper ternary resolutions on pivot %d", pivot);
   for (const auto & c : occs (pivot)) {
     if (htrs < 0) break;
@@ -181,7 +181,7 @@ void Internal::ternary_lit (int pivot, long & steps, long & htrs) {
 // Same as 'ternary_lit' but pick the phase of the variable based on the
 // number of positive and negative occurrence.
 
-void Internal::ternary_idx (int idx, long & steps, long & htrs) {
+void Internal::ternary_idx (int idx, int64_t & steps, int64_t & htrs) {
   assert (0 < idx);
   assert (idx <= max_var);
   if (!active (idx)) return;
@@ -209,11 +209,11 @@ void Internal::ternary_idx (int idx, long & steps, long & htrs) {
 // This function goes over each variable just once.
 //
 
-bool Internal::ternary_round (long & steps_limit, long & htrs_limit) {
+bool Internal::ternary_round (int64_t & steps_limit, int64_t & htrs_limit) {
 
   assert (!unsat);
 
-  long bincon = 0, terncon = 0;
+  int64_t bincon = 0, terncon = 0;
 
   init_occs ();
 
@@ -238,7 +238,7 @@ bool Internal::ternary_round (long & steps_limit, long & htrs_limit) {
   }
 
   PHASE ("ternary", stats.ternary,
-    "connected %ld ternary %.0f%% and %ld binary clauses %.0f%%",
+    "connected %" PRId64 " ternary %.0f%% and %" PRId64 " binary clauses %.0f%%",
     terncon, percent (terncon, clauses.size ()),
     bincon, percent (bincon, clauses.size ()));
 
@@ -299,7 +299,7 @@ bool Internal::ternary () {
   // all rounds of producing ternary resolvents on all marked variables in
   // this call to the 'ternary' procedure.
   //
-  long steps_limit = stats.propagations.search;
+  int64_t steps_limit = stats.propagations.search;
   steps_limit *= 1e-3 * opts.ternaryreleff;
   if (steps_limit < opts.ternarymineff) steps_limit = opts.ternarymineff;
   if (steps_limit > opts.ternarymaxeff) steps_limit = opts.ternarymaxeff;
@@ -308,7 +308,7 @@ bool Internal::ternary () {
   // substantially, particularly for random formulas.  Thus we limit the
   // number of added clauses too (actually the number of 'htrs').
   //
-  long htrs_limit = stats.current.redundant + stats.current.irredundant;
+  int64_t htrs_limit = stats.current.redundant + stats.current.irredundant;
   htrs_limit *= opts.ternarymaxadd;
   htrs_limit /= 100;
 
@@ -319,7 +319,7 @@ bool Internal::ternary () {
   // it in the loop below.
   //
   PHASE ("ternary", stats.ternary,
-    "will run a maximum of %d rounds limited to %ld steps and %ld clauses",
+    "will run a maximum of %d rounds limited to %" PRId64 " steps and %" PRId64 " clauses",
     opts.ternaryrounds, steps_limit, htrs_limit);
 
   bool resolved_binary_clause = false;
@@ -338,7 +338,7 @@ bool Internal::ternary () {
     int delta_htrs2 = stats.htrs2 - old_htrs2;
     int delta_htrs3 = stats.htrs3 - old_htrs3;
     PHASE ("ternary", stats.ternary,
-      "derived %ld ternary and %ld binary resolvents",
+      "derived %" PRId64 " ternary and %" PRId64 " binary resolvents",
       delta_htrs3, delta_htrs2);
     report ('3', !opts.reportall && !(delta_htrs2 + delta_htrs2));
     if (delta_htrs2) resolved_binary_clause = true;

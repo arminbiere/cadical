@@ -195,22 +195,22 @@ void Internal::reduce () {
   if (level) unprotect_reasons ();
 
   {
-    long delta = opts.reduceint * (stats.reductions + 1);
+    int64_t delta = opts.reduceint * (stats.reductions + 1);
     if (irredundant () > 1e5) {
       delta *= log (irredundant ()/1e4) / log (10);
       if (delta < 1) delta = 1;
     }
     lim.reduce = stats.conflicts + delta;
     PHASE ("reduce", stats.reductions,
-      "new reduce limit %ld after %ld conflicts",
+      "new reduce limit %" PRId64 " after %" PRId64 " conflicts",
       lim.reduce, delta);
   }
 
   if (flush) {
-    PHASE ("flush", stats.flush.count, "new flush increment %ld", inc.flush);
+    PHASE ("flush", stats.flush.count, "new flush increment %" PRId64 "", inc.flush);
     inc.flush *= opts.flushfactor;
     lim.flush = stats.conflicts + inc.flush;
-    PHASE ("flush", stats.flush.count, "new flush limit %ld", lim.flush);
+    PHASE ("flush", stats.flush.count, "new flush limit %" PRId64 "", lim.flush);
   }
 
   last.reduce.conflicts = stats.conflicts;

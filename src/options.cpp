@@ -2,6 +2,17 @@
 
 namespace CaDiCaL {
 
+/*------------------------------------------------------------------------*/
+
+// By default, e.g., for library usage, the 'opts.report' value is zero
+// ('false') but can be set to '1' by the stand alone solver.  Using here
+// a static default value avoids that the stand alone solver reports that
+// '--report=1' is different from the default in 'print ()' below.
+//
+int Options::report_default_value;
+
+/*------------------------------------------------------------------------*/
+
 Option Options::table [] = {
 #define OPTION(N,V,L,H,O,D) \
   { #N, (int) V, (int) L, (int) H, (int) O, D },
@@ -124,7 +135,7 @@ Options::Options (Internal * s) : internal (s)
 {
   assert (number_of_options == sizeof Options::table / sizeof (Option));
 
-  // First initialize them according to default in 'options.hpp'.
+  // First initialize them according to defaults in 'options.hpp'.
   //
   const char * prev = "";
   size_t i = 0;
@@ -143,12 +154,12 @@ Options::Options (Internal * s) : internal (s)
     /* The order of initializing static data is undefined and thus */ \
     /* it might be the case that the 'table' is not initialized yet. */ \
     assert (!table[i].name || !strcmp (table[i].name, #N)); \
+    if (&N == &report) table[i].def = report_default_value; \
     prev = #N; \
     i++; \
   } while (0);
   OPTIONS
 # undef OPTION
-  (void) i;
 
   // Check consistency in debugging mode.
   //
@@ -286,7 +297,7 @@ void Options::optimize (int val) {
     val = max_val;
   }
 
-  long factor;
+  int64_t factor;
   switch (val) {
     default: factor = 1; break;
     case 1: factor = 10; break;
@@ -297,11 +308,11 @@ void Options::optimize (int val) {
 #define OPTION(N,V,L,H,O,D) \
   do { \
     if (!(O)) break; \
-    long new_val = factor * (long) (V); \
+    int64_t new_val = factor * (int64_t) (V); \
     if (new_val > (H)) new_val = (H); \
     if (new_val == (int) (V)) break; \
     LOG ("optimization mode '%d' for '%s' " \
-      "gives '%ld' instead of '%d", \
+      "gives '%" PRId64 "' instead of '%d", \
       val, #N, new_val, (int) (V)); \
     assert (new_val <= INT_MAX); \
     N = (int) new_val; \
@@ -310,7 +321,7 @@ void Options::optimize (int val) {
   OPTIONS
 #undef OPTION
   if (increased)
-    MSG ("optimization mode '-O%d' increased %d limits by '%ld'",
+    MSG ("optimization mode '-O%d' increased %d limits by '%" PRId64 "'",
       val, increased, factor);
 
   switch (val) {
@@ -323,11 +334,11 @@ void Options::optimize (int val) {
 #define OPTION(N,V,L,H,O,D) \
   do { \
     if (!has_suffix (#N, "rounds")) break; \
-    long new_val = factor * (long) (V); \
+    int64_t new_val = factor * (int64_t) (V); \
     if (new_val > (H)) new_val = (H); \
     if (new_val == (int) (V)) break; \
     LOG ("optimization mode '%d' for '%s' " \
-      "gives '%ld' instead of '%d", \
+      "gives '%" PRId64 "' instead of '%d", \
       val, #N, new_val, (int) (V)); \
     assert (new_val <= INT_MAX); \
     N = (int) new_val; \
@@ -336,7 +347,7 @@ void Options::optimize (int val) {
   OPTIONS
 #undef OPTION
   if (increased)
-    MSG ("optimization mode '-O%d' increased %d limits by '%ld'",
+    MSG ("optimization mode '-O%d' increased %d limits by '%" PRId64 "'",
       val, increased, factor);
 }
 

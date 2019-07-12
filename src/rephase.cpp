@@ -104,7 +104,7 @@ void Internal::rephase () {
 
   stats.rephased.total++;
   PHASE ("rephase", stats.rephased.total,
-    "reached rephase limit %ld after %ld conflicts",
+    "reached rephase limit %" PRId64 " after %" PRId64 " conflicts",
     lim.rephase, stats.conflicts);
 
   // Report current 'target' and 'best' and then set 'rephased' below, which
@@ -207,11 +207,11 @@ void Internal::rephase () {
   }
   assert (type);
 
-  long delta = opts.rephaseint * (stats.rephased.total + 1);
+  int64_t delta = opts.rephaseint * (stats.rephased.total + 1);
   lim.rephase = stats.conflicts + delta;
 
   PHASE ("rephase", stats.rephased.total,
-    "new rephase limit %ld after %ld conflicts",
+    "new rephase limit %" PRId64 " after %" PRId64 " conflicts",
     lim.rephase, delta);
 
   // This will trigger to report the effect of this new set of phases at the

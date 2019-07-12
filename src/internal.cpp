@@ -114,7 +114,7 @@ void Internal::enlarge (int new_max_var) {
   assert (!level);
   size_t new_vsize = vsize ? 2*vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
-  LOG ("enlarge internal size from %ld to new size %ld", vsize, new_vsize);
+  LOG ("enlarge internal size from %zd to new size %zd", vsize, new_vsize);
   // Ordered in the size of allocated memory (larger block first).
   enlarge_only (wtab, 2*new_vsize);
   enlarge_only (vtab, new_vsize);
@@ -231,7 +231,7 @@ void Internal::init_limits () {
     mode = "initial";
   }
   (void) mode;
-  LOG ("%s reduce limit %ld after %ld conflicts",
+  LOG ("%s reduce limit %" PRId64 " after %" PRId64 " conflicts",
     mode, lim.reduce, lim.reduce - stats.conflicts);
 
   /*----------------------------------------------------------------------*/
@@ -243,7 +243,7 @@ void Internal::init_limits () {
     mode = "initial";
   }
   (void) mode;
-  LOG ("%s flush limit %ld interval %ld",
+  LOG ("%s flush limit %" PRId64 " interval %" PRId64 "",
     mode, lim.flush, inc.flush);
 
   /*----------------------------------------------------------------------*/
@@ -254,7 +254,7 @@ void Internal::init_limits () {
     mode = "initial";
   }
   (void) mode;
-  LOG ("%s subsume limit %ld after %ld conflicts",
+  LOG ("%s subsume limit %" PRId64 " after %" PRId64 " conflicts",
     mode, lim.subsume, lim.subsume - stats.conflicts);
 
   /*----------------------------------------------------------------------*/
@@ -266,13 +266,13 @@ void Internal::init_limits () {
     mode = "initial";
   }
   (void) mode;
-  LOG ("%s elim limit %ld after %ld conflicts",
+  LOG ("%s elim limit %" PRId64 " after %" PRId64 " conflicts",
     mode, lim.elim, lim.elim - stats.conflicts);
 
   // Initialize and reset elimination bounds in any case.
 
   lim.elimbound = opts.elimboundmin;
-  LOG ("elimination bound %ld", lim.elimbound);
+  LOG ("elimination bound %" PRId64 "", lim.elimbound);
 
   /*----------------------------------------------------------------------*/
 
@@ -282,7 +282,7 @@ void Internal::init_limits () {
     mode = "initial";
   }
   (void) mode;
-  LOG ("%s probe limit %ld after %ld conflicts",
+  LOG ("%s probe limit %" PRId64 " after %" PRId64 " conflicts",
     mode, lim.probe, lim.probe - stats.conflicts);
 
   /*----------------------------------------------------------------------*/
@@ -292,7 +292,7 @@ void Internal::init_limits () {
     last.ternary.marked = -1;   // TODO explain why this is necessary.
 
     lim.compact = stats.conflicts + opts.compactint;
-    LOG ("initial compact limit %ld increment %ld",
+    LOG ("initial compact limit %" PRId64 " increment %" PRId64 "",
       lim.compact, lim.compact - stats.conflicts);
   }
 
@@ -302,7 +302,7 @@ void Internal::init_limits () {
 
   lim.rephase = stats.conflicts + opts.rephaseint;
   lim.rephased[0] = lim.rephased[1] = 0;
-  LOG ("new rephase limit %ld after %ld conflicts",
+  LOG ("new rephase limit %" PRId64 " after %" PRId64 " conflicts",
     lim.rephase, lim.rephase - stats.conflicts);
 
   /*----------------------------------------------------------------------*/
@@ -310,7 +310,7 @@ void Internal::init_limits () {
   // Initialize or reset 'restart' limits in any case.
 
   lim.restart = stats.conflicts + opts.restartint;
-  LOG ("new restart limit %ld increment %ld",
+  LOG ("new restart limit %" PRId64 " increment %" PRId64 "",
     lim.restart, lim.restart - stats.conflicts);
 
   /*----------------------------------------------------------------------*/
@@ -338,7 +338,7 @@ void Internal::init_limits () {
 
   inc.stabilize = opts.stabilizeint;
   lim.stabilize = stats.conflicts + inc.stabilize;
-  LOG ("new stabilize limit %ld after %ld conflicts",
+  LOG ("new stabilize limit %" PRId64 " after %" PRId64 " conflicts",
     lim.stabilize, inc.stabilize);
 
   if (opts.stabilize && opts.reluctant) {
@@ -356,7 +356,7 @@ void Internal::init_limits () {
     LOG ("no limit on conflicts");
   } else {
     lim.conflicts = stats.conflicts + inc.conflicts;
-    LOG ("conflict limit after %ld conflicts at %ld conflicts",
+    LOG ("conflict limit after %" PRId64 " conflicts at %" PRId64 " conflicts",
       inc.conflicts, lim.conflicts);
   }
 
@@ -365,7 +365,7 @@ void Internal::init_limits () {
     LOG ("no limit on decisions");
   } else {
     lim.decisions = stats.decisions + inc.decisions;
-    LOG ("conflict limit after %ld decisions at %ld decisions",
+    LOG ("conflict limit after %" PRId64 " decisions at %" PRId64 " decisions",
       inc.decisions, lim.decisions);
   }
 
@@ -401,14 +401,14 @@ bool Internal::preprocess_round (int round) {
   if (unsat) return false;
   if (!max_var) return false;
   START (preprocess);
-  struct { int vars; long clauses; } before, after;
+  struct { int64_t vars, clauses; } before, after;
   before.vars = active ();
   before.clauses = stats.current.irredundant;
   stats.preprocessings++;
   assert (!preprocessing);
   preprocessing = true;
   PHASE ("preprocessing", stats.preprocessings,
-    "starting round %d with %d variables and %ld clauses",
+    "starting round %" PRId64 " with %d variables and %" PRId64 " clauses",
     round, before.vars, before.clauses);
   int old_elimbound = lim.elimbound;
   if (opts.probe) probe (false);
@@ -418,7 +418,7 @@ bool Internal::preprocess_round (int round) {
   assert (preprocessing);
   preprocessing = false;
   PHASE ("preprocessing", stats.preprocessings,
-    "finished round %d with %d variables and %ld clauses",
+    "finished round %d with %" PRId64 " variables and %" PRId64 " clauses",
     round, after.vars, after.clauses);
   STOP (preprocess);
   report ('P');
@@ -498,7 +498,7 @@ int Internal::local_search_round (int round) {
 
   // Determine propagation limit quadratically scaled with rounds.
   //
-  long limit = opts.walkmineff;
+  int64_t limit = opts.walkmineff;
   limit *= round;
   if (LONG_MAX / round > limit) limit *= round;
   else limit = LONG_MAX;
@@ -608,12 +608,12 @@ void Internal::dump (Clause * c) {
 }
 
 void Internal::dump () {
-  long m = assumptions.size ();
+  int64_t m = assumptions.size ();
   for (int idx = 1; idx <= max_var; idx++)
     if (fixed (idx)) m++;
   for (const auto & c : clauses)
     if (!c->garbage) m++;
-  printf ("p cnf %d %ld\n", max_var, m);
+  printf ("p cnf %d %" PRId64 "\n", max_var, m);
   for (int idx = 1; idx <= max_var; idx++) {
     const int tmp = fixed (idx);
     if (tmp) printf ("%d 0\n", tmp < 0 ? -idx : idx);

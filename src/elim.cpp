@@ -9,8 +9,8 @@ namespace CaDiCaL {
 // inprocessing version, i.e., it is interleaved with search and triggers
 // blocked clause elimination, subsumption and strengthening rounds during
 // elimination rounds.  It focuses only those variables which occurred in
-// removed irredundant clauses since the last time an elimination round was
-// run.  By bounding the maximum the maximum resolvent size we can run each
+// removed irredundant clauses since the last time an elimination round
+// was run.  By bounding the maximum resolvent size we can run each
 // elimination round until completion.  See the code of 'elim' for how
 // elimination rounds are interleaved with blocked clause elimination and
 // subsumption (which in turn also calls vivification and transitive
@@ -33,8 +33,8 @@ inline double Internal::compute_elim_score (unsigned lit) {
 /*------------------------------------------------------------------------*/
 
 inline bool elim_more::operator () (unsigned a, unsigned b) {
-  const unsigned long s = internal->compute_elim_score (a);
-  const unsigned long t = internal->compute_elim_score (b);
+  const auto s = internal->compute_elim_score (a);
+  const auto t = internal->compute_elim_score (b);
   if (s > t) return true;
   if (s < t) return false;
   return a > b;
@@ -92,7 +92,7 @@ Internal::elim_update_added_clause (Eliminator & eliminator, Clause * c) {
 void Internal::elim_update_removed_lit (Eliminator & eliminator, int lit) {
   if (!active (lit)) return;
   if (frozen (lit)) return;
-  long & score = noccs (lit);
+  int64_t & score = noccs (lit);
   assert (score > 0);
   score--;
   const int idx = abs (lit);
@@ -270,7 +270,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   }
 
   unmark (c);
-  const long size = (long) clause.size ();
+  const int64_t size = clause.size ();
 
   if (satisfied) {
     LOG (d, "satisfied by %d antecedent", satisfied);
@@ -369,12 +369,12 @@ Internal::elim_resolvents_are_bounded (Eliminator & eliminator, int pivot)
 
   const Occs & ps = occs (pivot);
   const Occs & ns = occs (-pivot);
-  const long pos = ps.size ();
-  const long neg = ns.size ();
+  const int64_t pos = ps.size ();
+  const int64_t neg = ns.size ();
   if (!pos || !neg) return lim.elimbound >= 0;
-  const long bound = pos + neg + lim.elimbound;
+  const int64_t bound = pos + neg + lim.elimbound;
 
-  LOG ("checking number resolvents on %d bounded by %ld = %ld + %ld + %d",
+  LOG ("checking number resolvents on %d bounded by %" PRId64 " = %" PRId64 " + %" PRId64 " + %d",
     pivot, bound, pos, neg, lim.elimbound);
 
   // Try all resolutions between a positive occurrence (outer loop) of
@@ -382,7 +382,7 @@ Internal::elim_resolvents_are_bounded (Eliminator & eliminator, int pivot)
   // bound on non-tautological resolvents is not hit and the size of the
   // generated resolvents does not exceed the resolvent clause size limit.
 
-  long resolvents = 0;          // Non-tautological resolvents.
+  int64_t resolvents = 0;          // Non-tautological resolvents.
 
   for (const auto & c : ps) {
     assert (!c->redundant);
@@ -396,10 +396,10 @@ Internal::elim_resolvents_are_bounded (Eliminator & eliminator, int pivot)
         resolvents++;
         int size = clause.size ();
         clause.clear ();
-        LOG ("now at least %ld non-tautological resolvents on pivot %d",
+        LOG ("now at least %" PRId64 " non-tautological resolvents on pivot %d",
           resolvents, pivot);
         if (size > opts.elimclslim) {
-          LOG ("resolvent size %d too big after %ld resolvents on %d",
+          LOG ("resolvent size %d too big after %" PRId64 " resolvents on %d",
             size, resolvents, pivot);
           return false;
         }
@@ -412,7 +412,7 @@ Internal::elim_resolvents_are_bounded (Eliminator & eliminator, int pivot)
     }
   }
 
-  LOG ("need %ld <= %ld non-tautological resolvents", resolvents, bound);
+  LOG ("need %" PRId64 " <= %" PRId64 " non-tautological resolvents", resolvents, bound);
 
   return true;
 }
@@ -438,7 +438,7 @@ Internal::elim_add_resolvents (Eliminator & eliminator, int pivot) {
   const Occs & ps = occs (pivot);
   const Occs & ns = occs (-pivot);
 
-  long resolvents = 0;
+  int64_t resolvents = 0;
 
   for (auto & c : ps) {
     if (unsat) break;
@@ -458,7 +458,7 @@ Internal::elim_add_resolvents (Eliminator & eliminator, int pivot) {
     }
   }
 
-  LOG ("added %ld resolvents to eliminate %d", resolvents, pivot);
+  LOG ("added %" PRId64 " resolvents to eliminate %d", resolvents, pivot);
 }
 
 /*------------------------------------------------------------------------*/
@@ -474,11 +474,11 @@ Internal::mark_eliminated_clauses_as_garbage (Eliminator & eliminator,
 
   LOG ("marking irredundant clauses with %d as garbage", pivot);
 
-  const long substitute = eliminator.gates.size ();
+  const int64_t substitute = eliminator.gates.size ();
   if (substitute)
-    LOG ("pushing %ld gate clauses on extension stack", substitute);
+    LOG ("pushing %" PRId64 " gate clauses on extension stack", substitute);
 
-  long pushed = 0;
+  int64_t pushed = 0;
 
   Occs & ps = occs (pivot);
   for (const auto & c : ps) {
@@ -527,11 +527,11 @@ Internal::try_to_eliminate_variable (Eliminator & eliminator, int pivot) {
 
   // First flush garbage clauses.
   //
-  long pos = flush_occs (pivot);
-  long neg = flush_occs (-pivot);
+  int64_t pos = flush_occs (pivot);
+  int64_t neg = flush_occs (-pivot);
 
   if (pos > neg) { pivot = -pivot; swap (pos, neg); }
-  LOG ("pivot %d occurs positively %ld times and negatively %ld times",
+  LOG ("pivot %d occurs positively %" PRId64 " times and negatively %" PRId64 " times",
     pivot, pos, neg);
   assert (!eliminator.schedule.contains (abs (pivot)));
   assert (pos <= neg);
@@ -602,17 +602,17 @@ bool Internal::elim_round () {
   last.elim.marked = stats.mark.elim;
   assert (!level);
 
-  long resolution_limit;
+  int64_t resolution_limit;
 
   if (opts.elimlimited) {
-    long delta = stats.propagations.search;
+    int64_t delta = stats.propagations.search;
     delta *= 1e-3 * opts.elimreleff;
     if (delta < opts.elimineff) delta = opts.elimineff;
     if (delta > opts.elimaxeff) delta = opts.elimaxeff;
-    delta = max (delta, 2l * active ());
+    delta = max (delta, (int64_t) 2l * active ());
 
     PHASE ("elim-round", stats.elimrounds,
-      "limit of %ld resolutions", delta);
+      "limit of %" PRId64 " resolutions", delta);
 
      resolution_limit = stats.elimres + delta;
   } else {
@@ -667,11 +667,11 @@ bool Internal::elim_round () {
   schedule.shrink ();
 
 #ifndef QUIET
-  long scheduled = schedule.size ();
+  int64_t scheduled = schedule.size ();
 #endif
 
   PHASE ("elim-round", stats.elimrounds,
-    "scheduled %ld variables %.0f%% for elimination",
+    "scheduled %" PRId64 " variables %.0f%% for elimination",
     scheduled, percent (scheduled, active ()));
 
   // Connect irredundant clauses.
@@ -683,7 +683,7 @@ bool Internal::elim_round () {
           occs (lit).push_back (c);
 
 #ifndef QUIET
-  const long old_resolutions = stats.elimres;
+  const int64_t old_resolutions = stats.elimres;
 #endif
   const int old_eliminated = stats.all.eliminated;
   const int old_fixed = stats.all.fixed;
@@ -691,12 +691,12 @@ bool Internal::elim_round () {
   // Limit on garbage bytes during variable elimination. If the limit is hit
   // a garbage collection is performed.
   //
-  const long garbage_limit = (2*stats.irrbytes/3) + (1<<20);
+  const int64_t garbage_limit = (2*stats.irrbytes/3) + (1<<20);
 
   // Try eliminating variables according to the schedule.
   //
 #ifndef QUIET
-  long tried = 0;
+  int64_t tried = 0;
 #endif
   while (!unsat &&
          !terminating () &&
@@ -714,11 +714,11 @@ bool Internal::elim_round () {
     garbage_collection ();
   }
 
-  const long remain = schedule.size ();
+  const int64_t remain = schedule.size ();
   const bool completed = !remain;
 
   PHASE ("elim-round", stats.elimrounds,
-    "tried to eliminate %ld variables %.0f%% (%ld remain)",
+    "tried to eliminate %" PRId64 " variables %.0f%% (%" PRId64 " remain)",
     tried, percent (tried, scheduled), remain);
 
   schedule.erase ();
@@ -742,9 +742,9 @@ bool Internal::elim_round () {
 
   int eliminated = stats.all.eliminated - old_eliminated;
 #ifndef QUIET
-  long resolutions = stats.elimres - old_resolutions;
+  int64_t resolutions = stats.elimres - old_resolutions;
   PHASE ("elim-round", stats.elimrounds,
-    "eliminated %ld variables %.0f%% in %ld resolutions",
+    "eliminated %" PRId64 " variables %.0f%% in %" PRId64 " resolutions",
     eliminated, percent (eliminated, scheduled), resolutions);
 #endif
 
@@ -779,7 +779,7 @@ void Internal::increase_elimination_bound () {
     lim.elimbound = opts.elimboundmax;
 
   PHASE ("elim-phase", stats.elimphases,
-    "new elimination bound %ld", lim.elimbound);
+    "new elimination bound %" PRId64 "", lim.elimbound);
 
   // Now reschedule all active variables for elimination again.
   //
@@ -860,11 +860,11 @@ void Internal::elim (bool update_limits) {
   if (completed) {
     stats.elimcompleted++;
     PHASE ("elim-phase", stats.elimphases,
-      "fully completed elimination %ld at elimination bound %ld",
+      "fully completed elimination %" PRId64 " at elimination bound %" PRId64 "",
       stats.elimcompleted, lim.elimbound);
   } else {
     PHASE ("elim-phase", stats.elimphases,
-      "incomplete elimination %ld at elimination bound %ld",
+      "incomplete elimination %" PRId64 " at elimination bound %" PRId64 "",
       stats.elimcompleted + 1, lim.elimbound);
   }
 
@@ -873,7 +873,7 @@ void Internal::elim (bool update_limits) {
 
   if (unsat) LOG ("elimination derived empty clause");
   else if (propagated < trail.size ()) {
-    LOG ("elimination produced %ld units", trail.size () - propagated);
+    LOG ("elimination produced %" PRId64 " units", trail.size () - propagated);
     if (!propagate ()) {
       LOG ("propagating units after elimination results in empty clause");
       learn_empty_clause ();
@@ -891,11 +891,11 @@ void Internal::elim (bool update_limits) {
 
   if (!update_limits) return;
 
-  long delta = scale (opts.elimint * (stats.elimphases + 1));
+  int64_t delta = scale (opts.elimint * (stats.elimphases + 1));
   lim.elim = stats.conflicts + delta;
 
   PHASE ("elim-phase", stats.elimphases,
-    "new limit at %ld conflicts after %ld conflicts", lim.elim, delta);
+    "new limit at %" PRId64 " conflicts after %" PRId64 " conflicts", lim.elim, delta);
 
   last.elim.fixed = stats.all.fixed;
 }

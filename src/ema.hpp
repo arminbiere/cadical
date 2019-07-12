@@ -13,8 +13,8 @@ struct EMA {
   double value;         // current average value
   double alpha;         // percentage contribution of new values
   double beta;          // current upper approximation of alpha
-  long wait;            // count-down using 'beta' instead of 'alpha'
-  long period;          // length of current waiting phase
+  int64_t wait;         // count-down using 'beta' instead of 'alpha'
+  int64_t period;       // length of current waiting phase
 
   EMA () : value (0), alpha (0), beta (0), wait (0), period (0) { }
 

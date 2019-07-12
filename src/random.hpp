@@ -1,22 +1,5 @@
 /*------------------------------------------------------------------------*/
 
-// Since 'cstdint' and 'stdint.h' only became available with C11 we
-// provide a work-around which tries to figure out proper 64 bit values
-// during configuration and otherwise uses the types below.
-
-#if !defined (NSTDINT) && !defined(uint64_t) && !defined(uint32_t)
-#include <cstdint>
-#else
-#ifndef uint64_t
-typedef size_t uint64_t;
-#endif
-#ifndef uint32_t
-typedef unsigned uint32_t;
-#endif
-#endif // end of '#if !define(NSTDINT) ...'
-
-/*------------------------------------------------------------------------*/
-
 // Random number generator.
 
 namespace CaDiCaL {

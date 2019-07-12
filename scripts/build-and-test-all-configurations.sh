@@ -94,12 +94,10 @@ run -g -l -p
 
 # finally check that these also work to some extend
 
-run --no-unlocked -p
-run --no-stdint -p
-run --stdint -p
+run -m32 -q
+run -m32 -a -p
 
+run --no-unlocked -q
 run --no-unlocked -a -p
-run --no-stdint -a -p
-run --stdint -a -p
 
 echo "successfully compiled and tested ${GOOD}${ok}${NORMAL} configurations"

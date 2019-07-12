@@ -11,7 +11,7 @@ namespace CaDiCaL {
 
 class Format {
   char * buffer;
-  long count, size;
+  int64_t count, size;
   void enlarge ();
   void push_char (char);
   void push_string (const char *);

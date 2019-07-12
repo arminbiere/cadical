@@ -2,6 +2,7 @@
 #define _cadical_hpp_INCLUDED
 
 #include <cstdio>
+#include <cstdint>
 #include <vector>
 
 namespace CaDiCaL {
@@ -431,8 +432,8 @@ public:
   //   ensure (VALID)
   //
   int active () const;          // Number of active variables.
-  long redundant () const;      // Number of active redundant clauses.
-  long irredundant () const;    // Number of active irredundant clauses.
+  int64_t redundant () const;   // Number of active redundant clauses.
+  int64_t irredundant () const; // Number of active irredundant clauses.
 
   //------------------------------------------------------------------------
   // Same as 'solve' with 'limits ("conflicts", 0)' and

@@ -153,7 +153,7 @@ void Internal::delete_garbage_clauses () {
   flush_all_occs_and_watches ();
 
   LOG ("deleting garbage clauses");
-  long collected_bytes = 0, collected_clauses = 0;
+  int64_t collected_bytes = 0, collected_clauses = 0;
   const auto end = clauses.end ();
   auto j = clauses.begin (), i = j;
   while (i != end) {
@@ -168,7 +168,7 @@ void Internal::delete_garbage_clauses () {
   shrink_vector (clauses);
 
   PHASE ("collect", stats.collections,
-    "collected %ld bytes of %ld garbage clauses",
+    "collected %" PRId64 " bytes of %" PRId64 " garbage clauses",
     collected_bytes, collected_clauses);
 }
 
@@ -212,10 +212,10 @@ void Internal::copy_non_garbage_clauses () {
     else collected_bytes += c->bytes (), collected_clauses++;
 
   PHASE ("collect", stats.collections,
-    "moving %ld bytes %.0f%% of %ld non garbage clauses",
-    (long) moved_bytes,
+    "moving %zd bytes %.0f%% of %zd non garbage clauses",
+    moved_bytes,
     percent (moved_bytes, collected_bytes + moved_bytes),
-    (long) moved_clauses);
+    moved_clauses);
 
   // Prepare 'to' space of size 'moved_bytes'.
   //
@@ -308,10 +308,10 @@ void Internal::copy_non_garbage_clauses () {
   arena.swap ();
 
   PHASE ("collect", stats.collections,
-    "collected %ld bytes %.0f%% of %ld garbage clauses",
-    (long) collected_bytes,
+    "collected %zd bytes %.0f%% of %zd garbage clauses",
+    collected_bytes,
     percent (collected_bytes, collected_bytes + moved_bytes),
-    (long) collected_clauses);
+    collected_clauses);
 }
 
 /*------------------------------------------------------------------------*/
@@ -323,7 +323,7 @@ void Internal::copy_non_garbage_clauses () {
 
 void Internal::check_clause_stats () {
 #ifndef NDEBUG
-  long irredundant = 0, redundant = 0, total = 0, irrbytes = 0;
+  int64_t irredundant = 0, redundant = 0, total = 0, irrbytes = 0;
   for (const auto & c : clauses) {
     if (c->garbage) continue;
     if (c->redundant) redundant++; else irredundant++;

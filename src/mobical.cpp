@@ -190,12 +190,12 @@ struct DoNot
 /*------------------------------------------------------------------------*/
 
 struct Shared {
-  long solved;
-  long incremental;
-  long unsat;
-  long sat;
-  long memout;
-  long timeout;
+  int64_t solved;
+  int64_t incremental;
+  int64_t unsat;
+  int64_t sat;
+  int64_t memout;
+  int64_t timeout;
 };
 
 // This is the class for the Mobical application.
@@ -240,8 +240,8 @@ class Mobical : public Handler {
   bool shrinking;       // In the middle of shrinking.
   bool running;         // In the middle of running.
 
-  long time_limit;      // in seconds, none if zero
-  long space_limit;     // in MB, none if zero
+  int64_t time_limit;   // in seconds, none if zero
+  int64_t space_limit;  // in MB, none if zero
 
   Terminal & terminal;
 
@@ -290,8 +290,8 @@ class Mobical : public Handler {
 
   Shared * shared;              // shared among parent and child processes
 
-  long traces;
-  long spurious;
+  int64_t traces;
+  int64_t spurious;
 
   void print_statistics ();
 
@@ -458,7 +458,7 @@ struct Call {
   Type type;            // Explicit typing.
 
   int arg;              // Argument if necessary.
-  long res;             // Compute result if any.
+  int64_t res;          // Compute result if any.
   char * name;          // Option name for 'set'.
   int val;              // Option value for 'set'.
 
@@ -673,7 +673,7 @@ struct StatsCall : public Call {
 
 class Trace {
 
-  long id;
+  int64_t id;
   uint64_t seed;
 
   Solver * solver;
@@ -683,10 +683,10 @@ class Trace {
 
 public:
 
-  static long generated;
-  static long executed;
-  static long failed;
-  static long ok;
+  static int64_t generated;
+  static int64_t executed;
+  static int64_t failed;
+  static int64_t ok;
 
 #define SIGNALS \
   SIGNAL(SIGINT) \
@@ -703,7 +703,7 @@ public:
   static void init_child_signal_handlers ();
   static void reset_child_signal_handlers ();
 
-  Trace (long i = 0, uint64_t s = 0) : id (i), seed (s), solver (0) { }
+  Trace (int64_t i = 0, uint64_t s = 0) : id (i), seed (s), solver (0) { }
 
   void clear () {
     while (!calls.empty ()) {
@@ -751,8 +751,8 @@ public:
     return res;
   }
 
-  long clauses () {
-    long res = 0;
+  int64_t clauses () {
+    int64_t res = 0;
     for (size_t i = 0; i < calls.size (); i++) {
       Call * c = calls[i];
       if (c->type == Call::ADD && !c->arg) res++;
@@ -760,8 +760,8 @@ public:
     return res;
   }
 
-  long literals () {
-    long res = 0;
+  int64_t literals () {
+    int64_t res = 0;
     for (size_t i = 0; i < calls.size (); i++) {
       Call * c = calls[i];
       if (c->type == Call::ADD && c->arg) res++;
@@ -769,8 +769,8 @@ public:
     return res;
   }
 
-  long phases () {
-    long res = 0;
+  int64_t phases () {
+    int64_t res = 0;
     bool last = true;
     for (size_t i = 0; i < calls.size (); i++) {
       Call * c = calls[i];
@@ -798,7 +798,8 @@ public:
 
   static bool ignored_option (const char * name);
   bool ignore_option (const char *, int max_var);
-  long option_high_value (const char *, long def, long lo, long hi);
+  int64_t option_high_value (const char *,
+                             int64_t def, int64_t lo, int64_t hi);
 
 private:
 
@@ -982,8 +983,8 @@ bool Trace::ignore_option (const char * name, int max_var) {
 // For incomplete solving phases such as 'walk' we do not want to increase
 // the option value above the default.
 //
-long Trace::option_high_value (const char * name,
-                               long def, long lo, long hi) {
+int64_t Trace::option_high_value (const char * name,
+                                  int64_t def, int64_t lo, int64_t hi) {
   assert (lo <= def), assert (def <= hi);
   if (!strcmp (name, "walkmaxeff")) return def;
   if (!strcmp (name, "walkmineff")) return def;
@@ -1048,14 +1049,14 @@ void Trace::generate_options (Random & random, Size size) {
     if (ignore_option (o.name, size)) continue;
 
     int val;
-    long hi = option_high_value (o.name, o.def, o.lo, o.hi);
+    int64_t hi = option_high_value (o.name, o.def, o.lo, o.hi);
     if (o.lo < hi) {
       bool uniform = random.generate_double () < 0.05;
       if (uniform) {
         do val = random.pick_int (o.lo, hi);
         while (val == o.def);
       } else {                            // log uniform
-        long range = hi - (long) o.lo;
+        int64_t range = hi - (int64_t) o.lo;
         int log;
         assert (range <= INT_MAX);
         for (log = 0; log < 30 && (1<<log) < range; log++)
@@ -1228,7 +1229,7 @@ void Trace::generate_frozen (Random & random, int vars) {
 void Trace::generate_melt (Random & random) {
   if (random.generate_bool ()) return;
   int m = vars ();
-  long * frozen = new long [m + 1];
+  int64_t * frozen = new int64_t [m + 1];
   for (int i = 1; i <= m; i++) frozen[i] = 0;
   for (size_t i = 0; i < size (); i++) {
     Call * c = calls[i];
@@ -1418,10 +1419,10 @@ extern "C" {
 #include <sys/time.h>
 }
 
-long Trace::generated;
-long Trace::executed;
-long Trace::failed;
-long Trace::ok;
+int64_t Trace::generated;
+int64_t Trace::executed;
+int64_t Trace::failed;
+int64_t Trace::ok;
 
 #define SIGNAL(SIG) \
 void (*Trace::old_ ## SIG ## _handler) (int);
@@ -1438,7 +1439,7 @@ void Trace::reset_child_signal_handlers () {
 void Trace::child_signal_handler (int sig) {
   struct rusage u;
   if (!getrusage (RUSAGE_SELF, &u)) {
-    if ((long) u.ru_maxrss >> 10 >= mobical.space_limit) {
+    if ((int64_t) u.ru_maxrss >> 10 >= mobical.space_limit) {
       if (mobical.shared) mobical.shared->memout++;
       // Since there is no memout signal we just misuse SIXCPU to notify the
       // calling process that this is a out-of-resource situation.
@@ -1933,9 +1934,9 @@ bool Trace::reduce_values (int expected) {
       // kind of assumes monotonicity and if this is not the case might not
       // yield the smallest value, but remains logarithmic.
       //
-      long granularity = ((old_val - (long) lo) + 1l) / 2;
+      int64_t granularity = ((old_val - (int64_t) lo) + 1l) / 2;
       assert (granularity > 0);
-      for (long new_val = c->val - granularity;
+      for (int64_t new_val = c->val - granularity;
            new_val > lo;
            new_val -= granularity) {
         old_val = c->val;
@@ -2531,7 +2532,7 @@ int Mobical::main (int argc, char ** argv) {
   const char * input_path = 0;
   const char * output_path = 0;
 
-  long limit = -1;
+  int64_t limit = -1;
 
   // Error message in 'die' also uses colors.
   //

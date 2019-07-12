@@ -39,8 +39,9 @@ void Internal::bump_queue (int lit) {
   if (!links[idx].next) return;
   queue.dequeue (links, idx);
   queue.enqueue (links, idx);
+  assert (stats.bumped != INT64_MAX);
   btab[idx] = ++stats.bumped;
-  LOG ("moved to front variable %d and bumped to %ld", idx, btab[idx]);
+  LOG ("moved to front variable %d and bumped to %" PRId64 "", idx, btab[idx]);
   if (!vals[idx]) update_queue_unassigned (idx);
 }
 
@@ -77,7 +78,7 @@ void Internal::rescore () {
     stab[idx] *= factor;
   scinc *= factor;
   PHASE ("rescore", stats.rescored,
-    "new score increment %g after %ld conflicts",
+    "new score increment %g after %" PRId64 " conflicts",
     scinc, stats.conflicts);
 }
 
@@ -130,15 +131,17 @@ void Internal::bump_scinc () {
 struct analyze_bumped_rank {
   Internal * internal;
   analyze_bumped_rank (Internal * i) : internal (i) { }
-  size_t operator () (const int & a) const { return internal->bumped (a); }
+  uint64_t operator () (const int & a) const {
+    return internal->bumped (a);
+  }
 };
 
 struct analyze_bumped_smaller {
   Internal * internal;
   analyze_bumped_smaller (Internal * i) : internal (i) { }
   bool operator () (const int & a, const int & b) const {
-    const size_t s = analyze_bumped_rank (internal) (a);
-    const size_t t = analyze_bumped_rank (internal) (b);
+    const auto s = analyze_bumped_rank (internal) (a);
+    const auto t = analyze_bumped_rank (internal) (b);
     return s < t;
   }
 };
@@ -160,7 +163,8 @@ void Internal::bump_variables () {
     // queue and seems to work best.  We also experimented with focusing on
     // variables of the last decision level, but results were mixed.
 
-    MSORT (analyzed.begin (), analyzed.end (),
+    MSORT (opts.radixsortlim,
+      analyzed.begin (), analyzed.end (),
       analyze_bumped_rank (this), analyze_bumped_smaller (this));
   }
 
@@ -294,9 +298,9 @@ void Internal::clear_analyzed_levels () {
 struct analyze_trail_negative_rank {
   Internal * internal;
   analyze_trail_negative_rank (Internal * s) : internal (s) { }
-  size_t operator () (int a) {
+  uint64_t operator () (int a) {
     Var & v = internal->var (a);
-    size_t res = v.level;
+    uint64_t res = v.level;
     res <<= 32;
     res |= v.trail;
     return ~res;
@@ -344,7 +348,8 @@ Clause * Internal::new_driving_clause (const int glue, int & jump) {
     // the opposite order) with the hope to hit the recursion limit less
     // frequently.  Thus sorting effort is doubled here.
     //
-    MSORT (clause.begin (), clause.end (),
+    MSORT (opts.radixsortlim,
+      clause.begin (), clause.end (),
       analyze_trail_negative_rank (this), analyze_trail_larger (this));
 
     jump = var (clause[1]).level;
@@ -479,7 +484,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
         best_idx = idx;
         best_pos = i;
       }
-      LOG ("best variable bumped %ld", bumped (best_idx));
+      LOG ("best variable bumped %" PRId64 "", bumped (best_idx));
     }
     assert (best_idx);
     LOG ("best variable %d at trail position %d", best_idx, best_pos);
@@ -516,11 +521,11 @@ void Internal::eagerly_subsume_recently_learned_clauses (Clause * c) {
   assert (opts.eagersubsume);
   LOG (c, "trying eager subsumption with");
   mark (c);
-  long lim = stats.eagertried + opts.eagersubsumelim;
+  int64_t lim = stats.eagertried + opts.eagersubsumelim;
   const auto begin = clauses.begin ();
   auto it = clauses.end ();
 #ifdef LOGGING
-  long before = stats.eagersub;
+  int64_t before = stats.eagersub;
 #endif
   while (it != begin && stats.eagertried++ <= lim) {
     Clause * d =  *--it;
@@ -540,7 +545,7 @@ void Internal::eagerly_subsume_recently_learned_clauses (Clause * c) {
   }
   unmark (c);
 #ifdef LOGGING
-  long subsumed = stats.eagersub - before;
+  uint64_t subsumed = stats.eagersub - before;
   if (subsumed) LOG ("eagerly subsumed %d clauses", subsumed);
 #endif
 }
@@ -667,8 +672,8 @@ void Internal::analyze () {
   // Update glue statistics.
   //
   const int glue = (int) levels.size ();
-  LOG (clause, "1st UIP size %ld and glue %d clause",
-    (long) clause.size (), glue);
+  LOG (clause, "1st UIP size %zd and glue %d clause",
+    clause.size (), glue);
   UPDATE_AVERAGE (averages.current.glue.fast, glue);
   UPDATE_AVERAGE (averages.current.glue.slow, glue);
 

@@ -30,8 +30,8 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
 
   vector<int> stack;    // To save marked literals and unmark them later.
 
-  long subsumed = 0;
-  long units = 0;
+  int64_t subsumed = 0;
+  int64_t units = 0;
 
   for (int idx = 1; !unsat && idx <= max_var; idx++) {
 

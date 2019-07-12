@@ -7,7 +7,7 @@ namespace CaDiCaL {
 
 struct Averages {
 
-  long swapped;
+  int64_t swapped;
 
   struct {
 

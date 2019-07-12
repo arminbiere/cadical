@@ -54,7 +54,7 @@ class Checker : public Observer {
 
   // Capacity of variable values.
   //
-  long size_vars;
+  int64_t size_vars;
 
   // For the assignment we want to have an as fast access as possible and
   // thus we use an array which can also be indexed by negative literals and
@@ -87,7 +87,7 @@ class Checker : public Observer {
 
   unsigned next_to_propagate;   // next to propagate on trail
 
-  void enlarge_vars (long idx);
+  void enlarge_vars (int64_t idx);
   void import_literal (int lit);
   void import_clause (const vector<int> &);
   bool tautological ();
@@ -125,23 +125,23 @@ class Checker : public Observer {
 
   struct {
 
-    long added;                 // number of added clauses
-    long original;              // number of added original clauses
-    long derived;               // number of added derived clauses
+    int64_t added;                 // number of added clauses
+    int64_t original;              // number of added original clauses
+    int64_t derived;               // number of added derived clauses
 
-    long deleted;               // number of deleted clauses
+    int64_t deleted;               // number of deleted clauses
 
-    long assumptions;           // number of assumed literals
-    long propagations;          // number of propagated literals
+    int64_t assumptions;           // number of assumed literals
+    int64_t propagations;          // number of propagated literals
 
-    long insertions;            // number of clauses added to hash table
-    long collisions;            // number of hash collisions in 'find'
-    long searches;              // number of searched clauses in 'find'
+    int64_t insertions;            // number of clauses added to hash table
+    int64_t collisions;            // number of hash collisions in 'find'
+    int64_t searches;              // number of searched clauses in 'find'
 
-    long checks;                // number of implication checks
+    int64_t checks;                // number of implication checks
 
-    long collections;           // garbage collections
-    long units;
+    int64_t collections;           // garbage collections
+    int64_t units;
 
   } stats;
 

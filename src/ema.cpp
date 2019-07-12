@@ -36,7 +36,7 @@ void EMA::update (Internal * internal, double y, const char * name) {
   wait = period = 2*(period + 1) - 1;
   beta *= 0.5;
   if (beta < alpha) beta = alpha;
-  LOG ("new %s EMA wait = period = %ld, beta = %g", name, wait, beta);
+  LOG ("new %s EMA wait = period = %" PRId64 ", beta = %g", name, wait, beta);
 }
 
 }

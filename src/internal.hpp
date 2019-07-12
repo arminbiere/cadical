@@ -13,6 +13,7 @@
 #include <cstring>
 #include <cctype>
 #include <csignal>
+#include <cinttypes>
 
 // Less common 'C' header.
 
@@ -164,11 +165,11 @@ struct Internal {
   vector<Var> vtab;             // variable table [1,max_var]
   Links links;                  // table of links for decision queue
   vector<Flags> ftab;           // variable and literal flags
-  vector<long> btab;            // enqueue time stamps for queue
+  vector<int64_t> btab;         // enqueue time stamps for queue
   vector<Occs> otab;            // table of occurrences for all literals
   vector<int> ptab;             // table for caching probing attempts
-  vector<long> ntab;            // number of one-sided occurrences table
-  vector<long> ntab2;           // number of two-sided occurrences table
+  vector<int64_t> ntab;         // number of one-sided occurrences table
+  vector<int64_t> ntab2;        // number of two-sided occurrences table
   vector<Bins> big;             // binary implication graph
   vector<Watches> wtab;         // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
@@ -256,9 +257,9 @@ struct Internal {
 
   // Currently remaining active redundant and irredundant clauses.
 
-  long redundant () const { return stats.current.redundant; }
+  int64_t redundant () const { return stats.current.redundant; }
 
-  long irredundant () const { return stats.current.irredundant; }
+  int64_t irredundant () const { return stats.current.irredundant; }
 
   double clause_variable_ratio () const {
     return relative (irredundant (), active ());
@@ -297,7 +298,7 @@ struct Internal {
   Var & var (int lit)         { return vtab[vidx (lit)]; }
   Link & link (int lit)       { return links[vidx (lit)]; }
   Flags & flags (int lit)     { return ftab[vidx (lit)]; }
-  long & bumped (int lit)     { return btab[vidx (lit)]; }
+  int64_t & bumped (int lit) { return btab[vidx (lit)]; }
   int & propfixed (int lit)   { return ptab[vlit (lit)]; }
   double & score (int lit)    { return stab[vidx (lit)]; }
 
@@ -308,8 +309,8 @@ struct Internal {
 
   Bins & bins (int lit) { assert (!big.empty ()); return big[vlit (lit)]; }
   Occs & occs (int lit) { assert (!otab.empty ()); return otab[vlit (lit)]; }
-  long & noccs (int lit) { assert (!ntab.empty ()); return ntab[vlit (lit)]; }
-  long & noccs2 (int lit) { assert (!ntab2.empty ()); return ntab2[vidx (lit)]; }
+  int64_t & noccs (int lit) { assert (!ntab.empty ()); return ntab[vlit (lit)]; }
+  int64_t & noccs2 (int lit) { assert (!ntab2.empty ()); return ntab2[vidx (lit)]; }
   Watches & watches (int lit) { assert (!wtab.empty ()); return wtab[vlit (lit)]; }
 
   // Variable bumping (through exponential VSIDS).
@@ -399,7 +400,7 @@ struct Internal {
     assert (0 < idx), assert (idx <= max_var);
     queue.unassigned = idx;
     queue.bumped = btab[idx];
-    LOG ("queue unassigned now %d bumped %ld", idx, btab[idx]);
+    LOG ("queue unassigned now %d bumped %" PRId64 "", idx, btab[idx]);
   }
 
   void bump_queue (int idx);
@@ -581,7 +582,7 @@ struct Internal {
   bool cover_propagate_asymmetric (int lit, Clause * ignore, Coveror &);
   bool cover_propagate_covered (int lit, Coveror &);
   bool cover_clause (Clause * c, Coveror &);
-  long cover_round ();
+  int64_t cover_round ();
   bool cover ();
 
   // Strengthening through vivification in 'vivify.cpp'.
@@ -596,7 +597,7 @@ struct Internal {
   void vivify_assume (int lit);
   bool vivify_propagate ();
   void vivify_clause (Vivifier &, Clause * candidate);
-  void vivify_round (bool redundant_mode, long delta);
+  void vivify_round (bool redundant_mode, int64_t delta);
   void vivify ();
 
   // Compacting (shrinking internal variable tables) in 'compact.cpp'
@@ -776,9 +777,9 @@ struct Internal {
   bool ternary_find_ternary_clause (int, int, int);
   Clause * new_hyper_ternary_resolved_clause (bool red);
   bool hyper_ternary_resolve (Clause *, int, Clause *);
-  void ternary_lit (int pivot, long & steps, long & htrs);
-  void ternary_idx (int idx, long & steps, long & htrs);
-  bool ternary_round (long & steps, long & htrs);
+  void ternary_lit (int pivot, int64_t & steps, int64_t & htrs);
+  void ternary_idx (int idx, int64_t & steps, int64_t & htrs);
+  bool ternary_round (int64_t & steps, int64_t & htrs);
   bool ternary ();
 
   // Probing in 'probe.cpp'.
@@ -807,7 +808,7 @@ struct Internal {
   unsigned walk_break_value (int lit);
   int walk_pick_lit (Walker &, Clause *);
   void walk_flip_lit (Walker &, int lit);
-  int walk_round (long limit, bool prev);
+  int walk_round (int64_t limit, bool prev);
   void walk ();
 
   // Detect strongly connected components in the binary implication graph
@@ -1041,7 +1042,7 @@ struct Internal {
   //
   //  c [<phase>-<count>] ...
   //
-  void phase (const char * phase, long count, const char *, ...);
+  void phase (const char * phase, int64_t count, const char *, ...);
 #endif
 
   // Print error messages which are really always printed (even if 'quiet'

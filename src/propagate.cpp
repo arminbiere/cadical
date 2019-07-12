@@ -142,7 +142,7 @@ bool Internal::propagate () {
   // Updating statistics counter in the propagation loops is costly so we
   // delay until propagation ran to completion.
   //
-  long before = propagated;
+  int64_t before = propagated;
 
   while (!conflict && propagated != trail.size ()) {
 
@@ -284,8 +284,8 @@ bool Internal::propagate () {
             // chronological backtracking but in our experience, this code
             // first does not really seem to be necessary for correctness,
             // and further does not improve running time either.
-
-            if (opts.chrono) {
+	    //
+            if (opts.chrono > 1) {
 
               const int other_level = var (other).level;
 

@@ -54,7 +54,7 @@ do { \
 #define REQUIRE_VALID_LIT(LIT) \
 do { \
   REQUIRE ((int)(LIT) && ((int) (LIT)) != INT_MIN, \
-    "invalid literal '%ld'", (long)(LIT)); \
+    "invalid literal '%d'", (int)(LIT)); \
 } while (0)
 
 /*------------------------------------------------------------------------*/

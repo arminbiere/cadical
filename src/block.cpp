@@ -206,7 +206,7 @@ void Internal::block_schedule (Blocker & blocker)
       if (marked_skip (lit)) { skipped++; continue; }
       if (!marked_block (lit)) continue;
       unmark_block (lit);
-      LOG ("scheduling %d with %ld positive and %ld negative occurrences",
+      LOG ("scheduling %d with %" PRId64 " positive and %" PRId64 " negative occurrences",
         lit, noccs (lit), noccs (-lit));
       blocker.schedule.push_back (vlit (lit));
     }
@@ -242,7 +242,7 @@ void Internal::block_pure_literal (Blocker & blocker, int lit)
   stats.blockpurelits++;
   LOG ("found pure literal %d", lit);
 
-  long pured = 0;
+  int64_t pured = 0;
 
   for (const auto & c : pos) {
     if (c->garbage) continue;
@@ -260,7 +260,7 @@ void Internal::block_pure_literal (Blocker & blocker, int lit)
 
   mark_pure (lit);
   stats.blockpured++;
-  LOG ("blocking %ld clauses on pure literal %d", pured, lit);
+  LOG ("blocking %" PRId64 " clauses on pure literal %d", pured, lit);
 }
 
 /*------------------------------------------------------------------------*/
@@ -305,7 +305,7 @@ Internal::block_literal_with_one_negative_occ (Blocker & blocker, int lit)
   LOG (d, "common antecedent", lit);
   mark (d);
 
-  long blocked = 0, skipped = 0;
+  int64_t blocked = 0, skipped = 0;
 
   Occs & pos = occs (lit);
 
@@ -376,7 +376,7 @@ Internal::block_literal_with_one_negative_occ (Blocker & blocker, int lit)
   else pos.resize (j - pos.begin ());
 
   stats.blocked += blocked;
-  LOG ("blocked %ld clauses on %d (skipped %ld)", blocked, lit, skipped);
+  LOG ("blocked %" PRId64 " clauses on %d (skipped %" PRId64 ")", blocked, lit, skipped);
 
   unmark (d);
 }
@@ -547,10 +547,10 @@ void Internal::block_literal_with_at_least_two_negative_occs (
     return;
   }
 
-  LOG ("trying to block %zd clauses out of %ld with literal %d",
+  LOG ("trying to block %zd clauses out of %" PRId64 " with literal %d",
     candidates, noccs (lit), lit);
 
-  long blocked = 0;
+  int64_t blocked = 0;
 
   // Go over all remaining candidates and try to block them on 'lit'.
   //
@@ -565,7 +565,7 @@ void Internal::block_literal_with_at_least_two_negative_occs (
     mark_garbage (c);
   }
 
-  LOG ("blocked %ld clauses on %d out of %zd candidates in %zd occurrences",
+  LOG ("blocked %" PRId64 " clauses on %d out of %zd candidates in %zd occurrences",
     blocked, lit, blocker.candidates.size (), occs (lit).size ());
 
   blocker.candidates.clear ();
@@ -587,11 +587,11 @@ Internal::block_reschedule_clause (Blocker & blocker, int lit, Clause * c)
 
   for (const auto & other : *c) {
 
-    long & n = noccs (other);
+    int64_t & n = noccs (other);
     assert (n > 0);
     n--;
 
-    LOG ("updating %d with %ld positive and %ld negative occurrences",
+    LOG ("updating %d with %" PRId64 " positive and %" PRId64 " negative occurrences",
       other, noccs (other), noccs (-other));
 
     if (blocker.schedule.contains (vlit (-other)))
@@ -638,7 +638,7 @@ void Internal::block_literal (Blocker & blocker, int lit)
   if (noccs (-lit) > opts.blockocclim) return;
 
   LOG ("blocking literal candidate %d "
-    "with %ld positive and %ld negative occurrences",
+    "with %" PRId64 " positive and %" PRId64 " negative occurrences",
     lit, noccs (lit), noccs (-lit));
 
   stats.blockcands++;
@@ -691,7 +691,7 @@ bool Internal::block () {
 
   stats.blockings++;
 
-  LOG ("block-%ld", stats.blockings);
+  LOG ("block-%" PRId64 "", stats.blockings);
 
   assert (!level);
   assert (!watching ());
@@ -705,10 +705,10 @@ bool Internal::block () {
   Blocker blocker (this);
   block_schedule (blocker);
 
-  long blocked = stats.blocked;
-  long resolutions = stats.blockres;
-  long purelits = stats.blockpurelits;
-  long pured = stats.blockpured;
+  int64_t blocked = stats.blocked;
+  int64_t resolutions = stats.blockres;
+  int64_t purelits = stats.blockpurelits;
+  int64_t pured = stats.blockpured;
 
   while (!terminating () &&
          !blocker.schedule.empty ()) {
@@ -726,7 +726,7 @@ bool Internal::block () {
   blocked = stats.blocked - blocked;
 
   PHASE ("block", stats.blockings,
-    "blocked %ld clauses in %ld resolutions",
+    "blocked %" PRId64 " clauses in %" PRId64 " resolutions",
     blocked, resolutions);
 
   pured = stats.blockpured - pured;
@@ -737,7 +737,7 @@ bool Internal::block () {
 
   if (purelits)
     PHASE ("block", stats.blockings,
-      "found %ld pure literals in %ld clauses",
+      "found %" PRId64 " pure literals in %" PRId64 " clauses",
       purelits, pured);
   else
     PHASE ("block", stats.blockings,

@@ -85,7 +85,7 @@ bool Internal::vivify_propagate () {
   require_mode (VIVIFY);
   assert (!unsat);
   START (propagate);
-  long before = propagated2 = propagated;
+  int64_t before = propagated2 = propagated;
   for (;;) {
     if (propagated2 != trail.size ()) {
       const int lit = -trail[propagated2++];
@@ -158,7 +158,7 @@ bool Internal::vivify_propagate () {
       }
     } else break;
   }
-  long delta = propagated2 - before;
+  int64_t delta = propagated2 - before;
   stats.propagations.vivify += delta;
   if (conflict) LOG (conflict, "conflict");
   STOP (propagate);
@@ -168,8 +168,8 @@ bool Internal::vivify_propagate () {
 /*------------------------------------------------------------------------*/
 
 // Check whether a literal occurs less often.  In the implementation below
-// (search for 'long score = ...' or '@4') we actually compute a weighted
-// occurrence count similar to the Jeroslow Wang heuristic.
+// (search for 'int64_t score = ...' or '@4') we actually compute a
+// weighted occurrence count similar to the Jeroslow Wang heuristic.
 
 struct vivify_more_noccs {
 
@@ -178,8 +178,8 @@ struct vivify_more_noccs {
   vivify_more_noccs (Internal * i) : internal (i) { }
 
   bool operator () (int a, int b) {
-    long n = internal->noccs (a);
-    long m = internal->noccs (b);
+    int64_t n = internal->noccs (a);
+    int64_t m = internal->noccs (b);
     if (n > m) return true;     // larger occurrences / score first
     if (n < m) return false;    // smaller occurrences / score last
     if (a == -b) return a > 0;  // positive literal first
@@ -304,7 +304,7 @@ void Internal::flush_vivification_schedule (Vivifier & vivifier) {
   auto j = schedule.begin (), i = j;
 
   Clause * prev = 0;
-  long subsumed = 0;
+  int64_t subsumed = 0;
   for (; i != end; i++) {
     Clause * c = *j++ = *i;
     if (!prev || c->size < prev->size) { prev = c; continue; }
@@ -326,7 +326,7 @@ void Internal::flush_vivification_schedule (Vivifier & vivifier) {
 
   if (subsumed)
     PHASE ("vivify", stats.vivifications,
-       "flushed %ld subsumed scheduled clauses", subsumed);
+       "flushed %" PRId64 " subsumed scheduled clauses", subsumed);
 
   stats.vivifysubs += subsumed;
 
@@ -645,7 +645,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     LOG ("reused %d decision levels from %d", level, orig_level);
   }
 
-  LOG (sorted, "sorted size %ld probing schedule", (long) sorted.size ());
+  LOG (sorted, "sorted size %zd probing schedule", sorted.size ());
 
   // Make sure to ignore this clause during propagation.  This is not that
   // easy for binary clauses (NO-BINARY), e.g., ignoring binary clauses,
@@ -746,7 +746,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
 
       stats.vivifydecs++;
       vivify_assume (-lit);
-      LOG ("negated decision %d score %ld", lit, noccs (lit));
+      LOG ("negated decision %d score %" PRId64 "", lit, noccs (lit));
 
       if (vivify_propagate ()) continue;        // hot-spot
 
@@ -865,12 +865,12 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
 // tautologies (clauses subsumed through unit propagation), which in
 // redundant mode is incorrect (due to propagating over redundant clauses).
 
-void Internal::vivify_round (bool redundant_mode, long propagation_limit) {
+void Internal::vivify_round (bool redundant_mode, int64_t propagation_limit) {
 
   if (unsat || terminating ()) return;
 
   PHASE ("vivify", stats.vivifications,
-    "starting %s vivification round propagation limit %ld",
+    "starting %s vivification round propagation limit %" PRId64 "",
     redundant_mode ? "redundant" : "irredundant", propagation_limit);
 
   // Disconnect all watches since we sort literals within clauses.
@@ -897,7 +897,7 @@ void Internal::vivify_round (bool redundant_mode, long propagation_limit) {
     // See the example above (search for '@1').
     //
     const int shift = 12 - c->size;
-    const long score = shift < 1 ? 1 : (1l << shift);           // @4
+    const int64_t score = shift < 1 ? 1 : (1l << shift);           // @4
 
     for (const auto lit : *c)
       noccs (lit) += score;
@@ -944,21 +944,21 @@ void Internal::vivify_round (bool redundant_mode, long propagation_limit) {
   // Remember old values of counters to summarize after each round with
   // verbose messages what happened in that round.
   //
-  long checked      = stats.vivifychecks;
-  long subsumed     = stats.vivifysubs;
-  long strengthened = stats.vivifystrs;
-  long units        = stats.vivifyunits;
+  int64_t checked      = stats.vivifychecks;
+  int64_t subsumed     = stats.vivifysubs;
+  int64_t strengthened = stats.vivifystrs;
+  int64_t units        = stats.vivifyunits;
 
-  long scheduled = vivifier.schedule.size ();
+  int64_t scheduled = vivifier.schedule.size ();
   stats.vivifysched += scheduled;
 
   PHASE ("vivify", stats.vivifications,
-    "scheduled %ld clauses to be vivified %.0f%%",
+    "scheduled %" PRId64 " clauses to be vivified %.0f%%",
     scheduled, percent (scheduled, stats.current.irredundant));
 
   // Limit the number of propagations during vivification as in 'probe'.
   //
-  const long limit = stats.propagations.vivify + propagation_limit;
+  const int64_t limit = stats.propagations.vivify + propagation_limit;
 
   connect_watches (!redundant_mode);       // watch all relevant clauses
 
@@ -982,7 +982,7 @@ void Internal::vivify_round (bool redundant_mode, long propagation_limit) {
 
     reset_noccs ();
 
-    long still_need_to_be_vivified = 0;
+    int64_t still_need_to_be_vivified = 0;
     for (const auto & c : vivifier.schedule)
       if (c->vivify)
         still_need_to_be_vivified++;
@@ -991,7 +991,7 @@ void Internal::vivify_round (bool redundant_mode, long propagation_limit) {
     //
     if (still_need_to_be_vivified)
       PHASE ("vivify", stats.vivifications,
-        "still need to vivify %ld clauses %.02f%% of %ld scheduled",
+        "still need to vivify %" PRId64 " clauses %.02f%% of %" PRId64 " scheduled",
         still_need_to_be_vivified,
         percent (still_need_to_be_vivified, scheduled),
         scheduled);
@@ -1030,19 +1030,19 @@ void Internal::vivify_round (bool redundant_mode, long propagation_limit) {
   units        = stats.vivifyunits  - units;
 
   PHASE ("vivify", stats.vivifications,
-    "checked %ld clauses %.02f%% of %ld scheduled",
+    "checked %" PRId64 " clauses %.02f%% of %" PRId64 " scheduled",
     checked, percent (checked, scheduled), scheduled);
   if (units)
     PHASE ("vivify", stats.vivifications,
-      "found %ld units %.02f%% of %ld checked",
+      "found %" PRId64 " units %.02f%% of %" PRId64 " checked",
       units, percent (units, checked), checked);
   if (subsumed)
     PHASE ("vivify", stats.vivifications,
-      "subsumed %ld clauses %.02f%% of %ld checked",
+      "subsumed %" PRId64 " clauses %.02f%% of %" PRId64 " checked",
       subsumed, percent (subsumed, checked), checked);
   if (strengthened)
     PHASE ("vivify", stats.vivifications,
-      "strengthened %ld clauses %.02f%% of %ld checked",
+      "strengthened %" PRId64 " clauses %.02f%% of %" PRId64 " checked",
       strengthened, percent (strengthened, checked), checked);
 
   stats.subsumed     += subsumed;
@@ -1068,14 +1068,14 @@ void Internal::vivify () {
   START_SIMPLIFIER (vivify, VIVIFY);
   stats.vivifications++;
 
-  long limit = stats.propagations.search;
+  int64_t limit = stats.propagations.search;
   limit -= last.vivify.propagations;
   limit *= 1e-3 * opts.vivifyreleff;
   if (limit < opts.vivifymineff) limit = opts.vivifymineff;
   if (limit > opts.vivifymaxeff) limit = opts.vivifymaxeff;
 
   PHASE ("vivify", stats.vivifications,
-    "vivification limit of twice %ld propagations", limit);
+    "vivification limit of twice %" PRId64 " propagations", limit);
 
   vivify_round (false, limit); // Vivify only irredundant clauses.
 

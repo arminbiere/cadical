@@ -34,7 +34,7 @@ bool Internal::terminating () {
       !localsearching &&
       lim.conflicts >= 0 &&
       stats.conflicts >= lim.conflicts) {
-    LOG ("conflict limit %ld reached", lim.conflicts);
+    LOG ("conflict limit %" PRId64 " reached", lim.conflicts);
     return true;
   }
 
@@ -42,7 +42,7 @@ bool Internal::terminating () {
       !localsearching &&
       lim.decisions >= 0 &&
       stats.decisions >= lim.decisions) {
-    LOG ("decision limit %ld reached", lim.decisions);
+    LOG ("decision limit %" PRId64 " reached", lim.decisions);
     return true;
   }
 

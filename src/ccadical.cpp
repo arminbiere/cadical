@@ -32,12 +32,12 @@ void ccadical_release (CCaDiCaL * wrapper) {
 }
 
 void ccadical_set_option (CCaDiCaL * wrapper,
-                          const char * name, double val) {
+                          const char * name, int val) {
   ((Wrapper*) wrapper)->solver->set (name, val);
 }
 
 void ccadical_limit (CCaDiCaL * wrapper,
-                     const char * name, long val) {
+                     const char * name, int val) {
   ((Wrapper*) wrapper)->solver->limit (name, val);
 }
 
@@ -77,11 +77,11 @@ void ccadical_terminate (CCaDiCaL * wrapper) {
   ((Wrapper*) wrapper)->solver->terminate ();
 }
 
-long ccadical_active (CCaDiCaL * wrapper) {
+int64_t ccadical_active (CCaDiCaL * wrapper) {
   return ((Wrapper*) wrapper)->solver->active ();
 }
 
-long ccadical_irredundant (CCaDiCaL * wrapper) {
+int64_t ccadical_irredundant (CCaDiCaL * wrapper) {
   return ((Wrapper*) wrapper)->solver->irredundant ();
 }
 

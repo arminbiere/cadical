@@ -7,6 +7,8 @@ extern "C" {
 #endif
 /*------------------------------------------------------------------------*/
 
+#include <stdint.h>
+
 // C wrapper for CaDiCaL's C++ API following IPASIR.
 
 typedef struct CCaDiCaL CCaDiCaL;
@@ -28,12 +30,12 @@ void ccadical_set_terminate (CCaDiCaL *,
 
 // Non-IPASIR conformant 'C' functions.
 
-void ccadical_set_option (CCaDiCaL *, const char * name, double val);
-void ccadical_limit (CCaDiCaL *, const char * name, long limit);
+void ccadical_set_option (CCaDiCaL *, const char * name, int val);
+void ccadical_limit (CCaDiCaL *, const char * name, int limit);
 int ccadical_get_option (CCaDiCaL *, const char * name);
 void ccadical_print_statistics (CCaDiCaL *);
-long ccadical_active (CCaDiCaL *);
-long ccadical_irredundant (CCaDiCaL *);
+int64_t ccadical_active (CCaDiCaL *);
+int64_t ccadical_irredundant (CCaDiCaL *);
 int ccadical_fixed (CCaDiCaL *, int lit);
 void ccadical_terminate (CCaDiCaL *);
 void ccadical_freeze (CCaDiCaL *, int lit);
