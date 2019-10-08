@@ -26,9 +26,7 @@ struct Coveror {
   std::vector<int> covered;             // literals added through CLA
   std::vector<int> intersection;        // of literals in resolution cands
 
-  struct { size_t asymmetric, covered; } next;  // propagate next ...
-
-  Coveror () { next.asymmetric = next.covered = 0; }
+  struct { size_t added, clause, covered; } next; // propagate next ...
 };
 
 /*------------------------------------------------------------------------*/
@@ -47,9 +45,10 @@ Internal::cover_push_extension (int lit, Coveror & coveror) {
   for (const auto & other : coveror.clause)
     if (lit == other) assert (!found), found = true;
     else coveror.extend.push_back (other);
-  for (const auto & other : coveror.covered)
+  for (const auto & other : coveror.covered) {
     if (lit == other) assert (!found), found = true;
     else coveror.extend.push_back (other);
+  }
   assert (found);
   (void) found;
 }
@@ -68,6 +67,8 @@ Internal::covered_literal_addition (int lit, Coveror & coveror) {
     coveror.covered.push_back (other);
     coveror.added.push_back (other);
   }
+  coveror.next.covered = 0;
+  coveror.next.clause = 0;
 }
 
 // Successful ALA step.
@@ -81,6 +82,8 @@ Internal::asymmetric_literal_addition (int lit, Coveror & coveror)
   assert (!vals[lit]), assert (!vals[-lit]);
   vals[lit] = -1, vals[-lit] = 1;
   coveror.added.push_back (lit);
+  coveror.next.covered = 0;
+  coveror.next.clause = 0;
 }
 
 /*------------------------------------------------------------------------*/
@@ -297,17 +300,17 @@ bool Internal::cover_clause (Clause * c, Coveror & coveror) {
       coveror.clause.push_back (lit);
 
   bool tautological = false;
-  coveror.next.asymmetric = coveror.next.covered = 0;
+  coveror.next.added = coveror.next.clause = coveror.next.covered = 0;
 
   while (!tautological) {
-    if (coveror.next.asymmetric < coveror.added.size ()) {
-      while (!tautological &&
-        coveror.next.asymmetric < coveror.added.size ()) {
-        int lit = coveror.added[coveror.next.asymmetric++];
-        tautological = cover_propagate_asymmetric (lit, c, coveror);
-      }
-    } else if (coveror.next.covered < coveror.added.size ()) {
-      int lit = coveror.added[coveror.next.covered++];
+    if (coveror.next.added < coveror.added.size ()) {
+      const int lit = coveror.added[coveror.next.added++];
+      tautological = cover_propagate_asymmetric (lit, c, coveror);
+    } else if (coveror.next.clause < coveror.clause.size ()) {
+      const int lit = coveror.clause[coveror.next.clause++];
+      tautological = cover_propagate_covered (lit, coveror);
+    } else if (coveror.next.covered < coveror.covered.size ()) {
+      const int lit = coveror.covered[coveror.next.covered++];
       tautological = cover_propagate_covered (lit, coveror);
     } else break;
   }
