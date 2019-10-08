@@ -290,23 +290,25 @@ void Options::optimize (int val) {
     return;
   }
 
-  const int max_val = 3;
+  const int max_val = 31;
   if (val > max_val) {
     LOG ("optimization argument '%d' reduced to '%d'", val, max_val);
     val = max_val;
   }
 
-  int64_t factor;
-  switch (val) {
-    default: factor = 1; break;
-    case 1: factor = 10; break;
-    case 2: factor = 100; break;
-    case 3: factor = 1e9; break;
-  }
-  int increased = 0;
+  int64_t factor2 = 1;
+  for (int i = 0; i < val && factor2 <= INT_MAX; i++)
+    factor2 *= 2;
+
+  int64_t factor10 = 1;
+  for (int i = 0; i < val && factor10 <= INT_MAX; i++)
+    factor10 *= 10;
+
+  unsigned increased = 0;
 #define OPTION(N,V,L,H,O,D) \
   do { \
     if (!(O)) break; \
+    const int64_t factor = ((O) == 1 ? factor2 : factor10); \
     int64_t new_val = factor * (int64_t) (V); \
     if (new_val > (H)) new_val = (H); \
     if (new_val == (int) (V)) break; \
@@ -320,34 +322,7 @@ void Options::optimize (int val) {
   OPTIONS
 #undef OPTION
   if (increased)
-    MSG ("optimization mode '-O%d' increased %d limits by '%" PRId64 "'",
-      val, increased, factor);
-
-  switch (val) {
-    default: factor = 1; break;
-    case 1: factor = 2; break;
-    case 2: factor = 4; break;
-    case 3: factor = 1024; break;
-  }
-  increased = 0;
-#define OPTION(N,V,L,H,O,D) \
-  do { \
-    if (!has_suffix (#N, "rounds")) break; \
-    int64_t new_val = factor * (int64_t) (V); \
-    if (new_val > (H)) new_val = (H); \
-    if (new_val == (int) (V)) break; \
-    LOG ("optimization mode '%d' for '%s' " \
-      "gives '%" PRId64 "' instead of '%d", \
-      val, #N, new_val, (int) (V)); \
-    assert (new_val <= INT_MAX); \
-    N = (int) new_val; \
-    increased++; \
-  } while (0);
-  OPTIONS
-#undef OPTION
-  if (increased)
-    MSG ("optimization mode '-O%d' increased %d limits by '%" PRId64 "'",
-      val, increased, factor);
+    MSG ("optimization mode '-O%d' increased %u limits", val, increased);
 }
 
 /*------------------------------------------------------------------------*/

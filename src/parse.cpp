@@ -11,8 +11,8 @@ namespace CaDiCaL {
 #define PER(...) \
 do { \
   internal->error_message.init (\
-    "%s:%d: parse error: ", \
-    file->name (), (int) file->lineno ()); \
+    "%s:%U: parse error: ", /*'%U' internal version of 'PRIu64' */\
+    file->name (), (uint64_t) file->lineno ()); \
   return internal->error_message.append (__VA_ARGS__); \
 } while (0)
 

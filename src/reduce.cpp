@@ -71,7 +71,7 @@ void Internal::mark_clauses_to_be_flushed () {
 //
 // We also follow the observations made by the Glucose team in their
 // IJCAI'09 paper and keep all low glue clauses limited by
-// 'options.keepglue' (typically '3').
+// 'options.keepglue' (typically '2').
 //
 // In earlier versions we pre-computed a 64-bit sort key per clause and
 // wrapped a pointer to the clause and the 64-bit sort key into a separate
@@ -160,6 +160,31 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
 
 /*------------------------------------------------------------------------*/
 
+// If chronological backtracking produces out-of-order assigned units, then
+// it is necessary to completely propagate them at the root level in order
+// to derive all implied units.  Otherwise the blocking literals in
+// 'flush_watches' are messed up and assertion 'FW1' fails.
+
+bool Internal::propagate_out_of_order_units () {
+  if (!level) return true;
+  int oou = 0;
+  for (size_t i = control[1].trail; !oou && i < trail.size (); i++) {
+    const int lit = trail[i];
+    assert (val (lit) > 0);
+    if (var (lit).level) continue;
+    LOG ("found out-of-order assigned unit %d", oou);
+    oou = lit;
+  }
+  if (!oou) return true;
+  assert (opts.chrono);
+  backtrack (0);
+  if (propagate ()) return true;
+  learn_empty_clause ();
+  return false;
+}
+
+/*------------------------------------------------------------------------*/
+
 void Internal::reduce () {
   START (reduce);
 
@@ -169,23 +194,7 @@ void Internal::reduce () {
   bool flush = flushing ();
   if (flush) stats.flush.count++;
 
-  if (level) {
-    int ooo = 0;
-    for (size_t i = control[1].trail; !ooo && i < trail.size (); i++) {
-      const int lit = trail[i];
-      assert (val (lit) > 0);
-      if (var (lit).level) continue;
-      LOG ("found out-of-order assigned unit %d", ooo);
-      ooo = lit;
-    }
-    if (ooo) {
-      backtrack (0);
-      if (!propagate ()) {
-        learn_empty_clause ();
-        goto DONE;
-      }
-    }
-  }
+  if (!propagate_out_of_order_units ()) goto DONE;
 
   if (level) protect_reasons ();
   mark_satisfied_clauses_as_garbage ();

@@ -94,7 +94,7 @@ void App::print_usage (bool all) {
 "\n"
 "or one of the less common options\n"
 "\n"
-"  -O<level>      increase limits by '10^<level>' (default level '0')\n"
+"  -O<level>      increase limits by '{2,10}^<level>' (default '0')\n"
 "  -P<rounds>     enable preprocessing initially (default '0' rounds)\n"
 "  -L<rounds>     run local search initialially (default '0' rounds)\n"
 "\n"
@@ -332,8 +332,8 @@ int App::main (int argc, char ** argv) {
              !strcmp (argv[i], "--strict=true")) strict = 2;
     else if (argv[i][0] == '-' && argv[i][1] == 'O') {
       if (!parse_int_str (argv[i] + 2, optimize) ||
-          optimize < 0 || optimize > 3)
-        APPERR ("invalid optimization option '%s' (expected '-O[0..3]')",
+          optimize < 0 || optimize > 31)
+        APPERR ("invalid optimization option '%s' (expected '-O[0..31]')",
           argv[i]);
     } else if (argv[i][0] == '-' && argv[i][1] == 'P') {
       if (!parse_int_str (argv[i] + 2, preprocessing) || preprocessing < 0)
@@ -489,7 +489,11 @@ int App::main (int argc, char ** argv) {
   solver->section ("solving");
   res = solver->solve ();
 
-  if (proof_specified) solver->close_proof_trace ();
+  if (proof_specified) {
+    solver->section ("closing proof");
+    solver->flush_proof_trace ();
+    solver->close_proof_trace ();
+  }
 
   if (output_path) {
     solver->section ("writing output");

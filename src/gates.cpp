@@ -25,7 +25,7 @@ Internal::second_literal_in_binary_clause (Eliminator & eliminator,
   int second = 0;
   for (const auto & lit : *c) {
     if (lit == first) continue;
-    const int tmp = val (lit);
+    const signed char tmp = val (lit);
     if (tmp < 0) continue;
     if (tmp > 0) {
       mark_garbage (c);
@@ -190,7 +190,7 @@ void Internal::find_and_gate (Eliminator & eliminator, int pivot) {
     for (const auto & lit : *c) {
       if (lit == -pivot) continue;
       assert (lit != pivot);
-      int tmp = val (lit);
+      signed char tmp = val (lit);
       if (tmp < 0) continue;
       assert (!tmp);
       tmp = marked (lit);
@@ -229,7 +229,7 @@ void Internal::find_and_gate (Eliminator & eliminator, int pivot) {
     for (const auto & lit : *c) {
       if (lit == -pivot) continue;
       assert (lit != pivot);
-      int tmp = val (lit);
+      signed char tmp = val (lit);
       if (tmp < 0) continue;
       assert (!tmp);
       assert (marked (lit) < 0);

@@ -961,17 +961,15 @@ bool Trace::ignore_option (const char * name, int max_var) {
 
   if (ignored_option (name)) return true;
 
+  Call * c = find_option_by_name ("simplify");
+  if (c && !c->val && disabled_if_not_simplifying (name)) return true;
+
   // There are options which should be kept at their default value unless
   // the formula is really small.  Otherwise the solver might run 'forever'.
   //
-  if (!strcmp (name, "learn") && max_var > 5) return true;
-
   if (max_var > SMALL) {
     if (!strcmp (name, "reduce")) return true;
   }
-
-  Call * c = find_option_by_name ("simplify");
-  if (c && !c->val && disabled_if_not_simplifying (name)) return true;
 
   c = find_option_by_prefix (name);
   assert (!c || has_prefix (name, c->name));
@@ -981,13 +979,15 @@ bool Trace::ignore_option (const char * name, int max_var) {
 }
 
 // For incomplete solving phases such as 'walk' we do not want to increase
-// the option value above the default.
+// the option value above the default and similarly for elimination bounds.
 //
 int64_t Trace::option_high_value (const char * name,
                                   int64_t def, int64_t lo, int64_t hi) {
   assert (lo <= def), assert (def <= hi);
   if (!strcmp (name, "walkmaxeff")) return def;
   if (!strcmp (name, "walkmineff")) return def;
+  if (!strcmp (name, "elimboundmax")) return 256;
+  if (!strcmp (name, "elimboundmin")) return 256;
   (void) lo;
   return hi;
 }

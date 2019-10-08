@@ -6,7 +6,8 @@ namespace CaDiCaL {
 
 Tracer::Tracer (Internal * i, File * f, bool b) :
   internal (i),
-  file (f), binary (b)
+  file (f), binary (b),
+  added (0), deleted (0)
 {
   (void) internal;
   LOG ("TRACER new");
@@ -53,6 +54,7 @@ void Tracer::add_derived_clause (const vector<int> & clause) {
     else file->put (external_lit), file->put (' ');
   if (binary) put_binary_zero ();
   else file->put ("0\n");
+  added++;
 }
 
 void Tracer::delete_clause (const vector<int> & clause) {
@@ -65,6 +67,7 @@ void Tracer::delete_clause (const vector<int> & clause) {
     else file->put (external_lit), file->put (' ');
   if (binary) put_binary_zero ();
   else file->put ("0\n");
+  deleted++;
 }
 
 /*------------------------------------------------------------------------*/
@@ -72,5 +75,12 @@ void Tracer::delete_clause (const vector<int> & clause) {
 bool Tracer::closed () { return file->closed (); }
 
 void Tracer::close () { assert (!closed ()); file->close (); }
+
+void Tracer::flush () {
+  assert (!closed ());
+  file->flush ();
+  MSG ("traced %" PRId64 " added and %" PRId64 " deleted clauses",
+    added, deleted);
+}
 
 }

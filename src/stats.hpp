@@ -26,6 +26,19 @@ struct Stats {
     int64_t walk;       // propagated during local search
   } propagations;
 
+  long condassinit;  // initial assigned literals
+  long condassirem;  // initial assigned literals for blocked
+  long condassrem;   // remaining assigned literals for blocked
+  long condassvars;  // sum of active variables at initial assignment
+  long condautinit;  // initial literals in autarky part
+  long condautrem;   // remaining literals in autarky part for blocked
+  long condcands;    // globally blocked candidate clauses
+  long condcondinit; // initial literals in conditional part
+  long condcondrem;  // remaining literals in conditional part for blocked
+  long conditioned;  // globally blocked clauses eliminated
+  long conditionings;// globally blocked clause eliminations
+  long condprops;    // propagated unassigned literals
+
   struct {
     int64_t block;      // block marked literals
     int64_t elim;       // elim marked variables
@@ -92,7 +105,11 @@ struct Stats {
   int64_t sections;     // 'section' counter
   int64_t chrono;       // chronological backtracks
   int64_t backtracks;   // number of backtracks
+  int64_t improvedglue; // improved glue during bumping
+  int64_t promoted1;    // promoted clauses to tier one
+  int64_t promoted2;    // promoted clauses to tier two
   int64_t bumped;       // seen and bumped variables in 'analyze'
+  int64_t recomputed;   // recomputed glues 'recompute_glue'
   int64_t searched;     // searched decisions in 'decide'
   int64_t reductions;   // 'reduce' counter
   int64_t reduced;      // number of reduced clauses

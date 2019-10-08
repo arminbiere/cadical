@@ -42,6 +42,8 @@ namespace CaDiCaL {
 // 'opts.checkassumptions' all to 'true'.  The model based tester actually
 // prefers to enable the 'opts.check' option and the other two are 'true' by
 // default anyhow.
+//
+// See our SAT'19 paper [FazekasBiereScholl-SAT'19] for more details.
 
 /*------------------------------------------------------------------------*/
 

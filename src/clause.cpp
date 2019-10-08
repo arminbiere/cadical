@@ -80,7 +80,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   //
   bool keep;
   if (!red) keep = true;
-  else if (glue <= opts.reducekeepglue) keep = true;
+  else if (glue <= opts.reducetier1glue) keep = true;
   else keep = false;
 
   size_t bytes = sizeof (Clause) + (size - 2) * sizeof (int);
@@ -90,6 +90,8 @@ Clause * Internal::new_clause (bool red, int glue) {
 #ifdef LOGGING
   c->id = stats.added.total;
 #endif
+
+  c->conditioned = false;
   c->covered = false;
   c->enqueued = false;
   c->frozen = false;
@@ -103,9 +105,9 @@ Clause * Internal::new_clause (bool red, int glue) {
   c->redundant = red;
   c->transred = false;
   c->subsume = false;
-  c->used = 0;
   c->vivified = false;
   c->vivify = false;
+  c->used = 0;
 
   c->glue = glue;
   c->size = size;
@@ -138,6 +140,35 @@ Clause * Internal::new_clause (bool red, int glue) {
   return c;
 }
 
+/*------------------------------------------------------------------------*/
+
+void Internal::promote_clause (Clause * c, int new_glue) {
+  assert (c->redundant);
+  if (c->keep) return;
+  if (c->hyper) return;
+  int old_glue = c->glue;
+  if (new_glue >= old_glue) return;
+  if (!c->keep && new_glue <= opts.reducetier1glue) {
+    LOG (c, "promoting with new glue %d to tier1", new_glue);
+    stats.promoted1++;
+    c->keep = true;
+  } else if (old_glue > opts.reducetier2glue &&
+             new_glue <= opts.reducetier2glue) {
+    LOG (c, "promoting with new glue %d to tier2", new_glue);
+    stats.promoted2++;
+    c->used = 2;
+  } else if (c->keep)
+    LOG (c, "keeping with new glue %d in tier1", new_glue);
+  else if (old_glue <= opts.reducetier2glue)
+    LOG (c, "keeping with new glue %d in tier2", new_glue);
+  else
+    LOG (c, "keeping with new glue %d in tier3", new_glue);
+  stats.improvedglue++;
+  c->glue = new_glue;
+}
+
+/*------------------------------------------------------------------------*/
+
 // Shrinking a clause, e.g., removing one or more literals, requires to fix
 // the 'pos' field, if it exists and points after the new last literal, has
 // to adjust the global statistics counter of allocated bytes for
@@ -148,45 +179,25 @@ Clause * Internal::new_clause (bool red, int glue) {
 //
 size_t Internal::shrink_clause (Clause * c, int new_size) {
 
-  size_t res = 0;
-
+  assert (new_size >= 2);
+  assert (new_size < c->size);
 #ifndef NDEBUG
-  int old_size = c->size;
-  for (int i = old_size; i < new_size; i++)
+  for (int i = c->size; i < new_size; i++)
     c->literals[i] = 0;
 #endif
-  assert (new_size >= 2);
-  assert (new_size < old_size);
 
   if (c->pos >= new_size) c->pos = 2;
 
-  if (c->redundant) {
-    int new_glue = c->glue;
-    if (new_glue > new_size) new_glue = new_size;
-    if (!c->keep && new_glue <= opts.reducekeepglue) c->keep = true;
-    c->size = new_size;
-    c->glue = new_glue;
-  } else {
-    size_t old_bytes = c->bytes ();
-    c->size = new_size;
-    size_t new_bytes = c->bytes ();
-    if (old_bytes > new_bytes) {
-      res = old_bytes - new_bytes;
-      assert (stats.irrbytes >= (int64_t) res);
-      stats.irrbytes -= res;
-    } else {
+  size_t old_bytes = c->bytes ();
+  c->size = new_size;
+  size_t new_bytes = c->bytes ();
+  size_t res = old_bytes - new_bytes;
 
-      assert (old_bytes == new_bytes);
-      assert (new_size + 1 == old_size);
-
-      // Not really crucial assertions, but should hold for our
-      // sophisticated clause memory layout.
-      //
-      assert (!(old_size & 1));
-      assert (new_size & 1);
-    }
+  if (c->redundant) promote_clause (c, min (c->size-1, c->glue));
+  else if (old_bytes > new_bytes) {
+    assert (stats.irrbytes >= (int64_t) res);
+    stats.irrbytes -= res;
   }
-  assert (c->size == new_size);
 
   if (likely_to_be_kept_clause (c)) mark_added (c);
 
@@ -284,7 +295,7 @@ void Internal::assign_original_unit (int lit) {
   v.level = level;
   v.trail = (int) trail.size ();
   v.reason = 0;
-  const signed_char tmp = sign (lit);
+  const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
   assert (val (lit) > 0);

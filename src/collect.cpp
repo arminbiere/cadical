@@ -118,7 +118,7 @@ inline void Internal::flush_watches (int lit, Watches & saved) {
     if (c->moved) c = w.clause = c->copy;
     w.size = c->size;
     const int new_blit_pos = (c->literals[0] == lit);
-    assert (c->literals[!new_blit_pos] == lit);
+    assert (c->literals[!new_blit_pos] == lit);        /*FW1*/
     w.blit = c->literals[new_blit_pos];
     if (w.binary ()) *j++ = w;
     else saved.push_back (w);

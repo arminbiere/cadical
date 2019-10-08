@@ -55,8 +55,8 @@ void Internal::bump_queue (int lit) {
 // and simply put a hard limit here.  It is less elegant but easy to port.
 
 static inline bool evsids_limit_hit (double score) {
-  assert (sizeof (score) == 8);	// assume IEEE 754 64-bit double
-  return score > 1e150;		// MAX_DOUBLE is around 1.8e308
+  assert (sizeof (score) == 8); // assume IEEE 754 64-bit double
+  return score > 1e150;         // MAX_DOUBLE is around 1.8e308
 }
 
 /*------------------------------------------------------------------------*/
@@ -178,14 +178,35 @@ void Internal::bump_variables () {
 
 /*------------------------------------------------------------------------*/
 
-// Clauses resolved since the last reduction are marked as 'used'.
+// We use the glue time stamp table 'gtab' for fast glue computation.
+
+int Internal::recompute_glue (Clause * c) {
+  int res = 0;
+  const int64_t stamp = ++stats.recomputed;
+  for (const auto & lit : *c) {
+    int level = var (lit).level;
+    assert (gtab[level] <= stamp);
+    if (gtab[level] == stamp) continue;
+    gtab[level] = stamp;
+    res++;
+  }
+  return res;
+}
+
+// Clauses resolved since the last reduction are marked as 'used', their
+// glue is recomputed and they promoted if the glue shrinks.  Note that
+// promotion from 'tier3' to 'tier2' will set 'used' to '2'.
 
 inline void Internal::bump_clause (Clause * c) {
   LOG (c, "bumping");
-  if (c->hyper) c->used = 1;
-  else if (c->glue <= opts.reducekeepglue) c->used = 1;
-  else if (c->glue <= opts.reducetier2glue) c->used = 2;
-  else c->used = 1;
+  unsigned used = c->used;
+  c->used = 1;
+  if (c->keep) return;
+  if (c->hyper) return;
+  if (!c->redundant) return;
+  int new_glue = recompute_glue (c);
+  if (new_glue < c->glue) promote_clause (c, new_glue);
+  else if (used && c->glue <= opts.reducetier2glue) c->used = 2;
 }
 
 /*------------------------------------------------------------------------*/
@@ -347,7 +368,7 @@ Clause * Internal::new_driving_clause (const int glue, int & jump) {
     // We have to get the last assigned literals into the watch position.
     // Sorting all literals with respect to reverse assignment order is
     // overkill but seems to get slightly faster run-time.  For 'minimize'
-    // we sort the literals to heuristically along the trail order (so in
+    // we sort the literals too heuristically along the trail order (so in
     // the opposite order) with the hope to hit the recursion limit less
     // frequently.  Thus sorting effort is doubled here.
     //
@@ -357,7 +378,8 @@ Clause * Internal::new_driving_clause (const int glue, int & jump) {
 
     jump = var (clause[1]).level;
     res = new_learned_redundant_clause (glue);
-    bump_clause (res);
+    if (glue <= opts.reducetier2glue) res->used = 2;
+    else res->used = 1;
   }
 
   LOG ("jump level %d", jump);
@@ -654,7 +676,7 @@ void Internal::analyze () {
 
   int i = trail.size ();        // Start at end-of-trail.
   int open = 0;                 // Seen but not processed on this level.
-  int uip = 0;                  // The first uip literal.
+  int uip = 0;                  // The first UIP literal.
 
   for (;;) {
     analyze_reason (uip, reason, open);
@@ -672,23 +694,20 @@ void Internal::analyze () {
   LOG ("first UIP %d", uip);
   clause.push_back (-uip);
 
-  // Update glue statistics.
+  // Update glue and learned (1st UIP literals) statistics.
   //
-  const int glue = (int) levels.size ();
-  LOG (clause, "1st UIP size %zd and glue %d clause",
-    clause.size (), glue);
+  int size = (int) clause.size ();
+  const int glue = (int) levels.size () - 1;
+  LOG (clause, "1st UIP size %d and glue %d clause", size, glue);
   UPDATE_AVERAGE (averages.current.glue.fast, glue);
   UPDATE_AVERAGE (averages.current.glue.slow, glue);
+  stats.learned.literals += size;
+  stats.learned.clauses++;
+  assert (glue < size);
 
   // Update decision heuristics.
   //
   if (opts.bump) bump_variables ();
-
-  // Update learned = 1st UIP literals counter.
-  //
-  int size = (int) clause.size ();
-  stats.learned.literals += size;
-  stats.learned.clauses++;
 
   // Minimize the 1st UIP clause as pioneered by Niklas Soerensson in
   // MiniSAT and described in our joint SAT'09 paper.

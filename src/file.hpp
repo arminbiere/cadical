@@ -40,8 +40,8 @@ class File {
   int close_file;       // need to close file (1=fclose, 2=pclose)
   FILE * file;
   const char * _name;
-  int64_t _lineno;
-  int64_t _bytes;
+  uint64_t _lineno;
+  uint64_t _bytes;
 
   File (Internal *, bool, int, FILE *, const char *);
 
@@ -164,11 +164,12 @@ public:
   }
 
   const char * name () const { return _name; }
-  int64_t lineno () const { return _lineno; }
-  int64_t bytes () const { return _bytes; }
+  uint64_t lineno () const { return _lineno; }
+  uint64_t bytes () const { return _bytes; }
 
   bool closed () { return !file; }
   void close ();
+  void flush ();
 };
 
 }

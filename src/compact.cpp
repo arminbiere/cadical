@@ -31,7 +31,7 @@ struct Mapper {
   int * table;                  // Old variable index to new literal map.
   int first_fixed;              // First fixed variable index.
   int map_first_fixed;          // Mapped literal of first fixed variable.
-  int first_fixed_val;          // Value of first fixed variable.
+  signed char first_fixed_val;  // Value of first fixed variable.
   size_t new_vsize;
 
   /*----------------------------------------------------------------------*/
@@ -85,7 +85,7 @@ struct Mapper {
   int map_lit (int src) {
     int res = map_idx (abs (src));
     if (!res) {
-      const int tmp = internal->val (src);
+      const signed char tmp = internal->val (src);
       if (tmp) {
         assert (first_fixed);
         res = map_first_fixed;
@@ -153,6 +153,8 @@ struct Mapper {
 };
 
 /*------------------------------------------------------------------------*/
+
+static signed char * ignore_clang_analyze_memory_leak_warning;
 
 void Internal::compact () {
 
@@ -307,7 +309,8 @@ void Internal::compact () {
   // Special case for 'val' as for 'val' we trade branch less code for
   // memory and always allocated an [-maxvar,...,maxvar] array.
   {
-    signed_char * new_vals = new signed char [ 2*mapper.new_vsize ];
+    signed char * new_vals = new signed char [ 2*mapper.new_vsize ];
+    ignore_clang_analyze_memory_leak_warning = new_vals;
     new_vals += mapper.new_vsize;
     for (int src = -max_var; src <= -1; src++)
       new_vals[-mapper.map_idx (-src)] = vals[src];
@@ -322,6 +325,7 @@ void Internal::compact () {
   mapper.map_vector (i2e);
   mapper.map2_vector (ptab);
   mapper.map_vector (btab);
+  mapper.map_vector (gtab);
   mapper.map_vector (links);
   mapper.map_vector (vtab);
   if (!ntab.empty ()) mapper.map2_vector (ntab);

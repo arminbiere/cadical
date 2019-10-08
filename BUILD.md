@@ -16,7 +16,10 @@ The header file of the library is in
 
 The build process requires GNU make.  Using the generated `makefile` with
 GNU make compiles separate object files, which can be cached (for instance
-with `ccache`).  The `makefile` uses parallel compilation by default (`-j`).
+with `ccache`).  In order to force parallel build you can use the '-j'
+option either for 'configure' or with 'make'.  If the environment variable
+'MAKEFLAGS' is set, e.g., 'MAKEFLAGS=-j ./configure', the same effect
+is achieved and the generated makefile will use those flags.
 
 You might want to check out options of `./configure -h`, such as
 

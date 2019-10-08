@@ -164,7 +164,7 @@ inline void Internal::probe_assign (int lit, int parent) {
   Var & v = var (idx);
   v.level = level;
   v.trail = (int) trail.size ();
-  const signed_char tmp = sign (lit);
+  const signed char tmp = sign (lit);
   v.parent = tmp < 0 ? -parent : parent;
   if (!level) learn_unit_clause (lit);
   else assert (level == 1);
@@ -220,7 +220,7 @@ inline void Internal::probe_propagate2 () {
     Watches & ws = watches (lit);
     for (const auto & w : ws) {
       if (!w.binary ()) continue;
-      const int b = val (w.blit);
+      const signed char b = val (w.blit);
       if (b > 0) continue;
       if (b < 0) conflict = w.clause;                   // but continue
       else probe_assign (w.blit, -lit);
@@ -243,20 +243,21 @@ bool Internal::probe_propagate () {
       while (i != ws.size ()) {
         const Watch w = ws[j++] = ws[i++];
         if (w.binary ()) continue;
-        const int b = val (w.blit);
+        const signed char b = val (w.blit);
         if (b > 0) continue;
         if (w.clause->garbage) continue;
         const literal_iterator lits = w.clause->begin ();
         const int other = lits[0]^lits[1]^lit;
         lits[0] = other, lits[1] = lit;
-        const int u = val (other);
+        const signed char u = val (other);
         if (u > 0) ws[j-1].blit = other;
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
           const literal_iterator middle = lits + w.clause->pos;
           literal_iterator k = middle;
-          int v = -1, r = 0;
+          int r = 0;
+          signed char v = -1;
           while (k != end && (v = val (r = *k)) < 0)
             k++;
           if (v < 0) {
@@ -347,7 +348,7 @@ void Internal::failed_literal (int failed) {
   while (!unsat && !parents.empty ()) {
     const int parent = parents.back ();
     parents.pop_back ();
-    const int tmp = val (parent);
+    const signed char tmp = val (parent);
     if (tmp < 0) continue;
     if (tmp > 0) {
       LOG ("clashing failed parent %d", parent);
@@ -372,7 +373,7 @@ bool Internal::is_binary_clause (Clause * c, int & a, int & b) {
   if (c->garbage) return false;
   int first = 0, second = 0;
   for (const auto & lit : *c) {
-    const int tmp = val (lit);
+    const signed char tmp = val (lit);
     if (tmp > 0) return false;
     if (tmp < 0) continue;
     if (second) return false;

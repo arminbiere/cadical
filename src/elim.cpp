@@ -136,7 +136,7 @@ void Internal::elim_propagate (Eliminator & eliminator, int root) {
       if (c->garbage) continue;
       int unit = 0, satisfied = 0;
       for (const auto & other : *c) {
-        const int tmp = val (other);
+        const signed char tmp = val (other);
         if (tmp < 0) continue;
         if (tmp > 0) { satisfied = other; break; }
         if (unit) unit = INT_MIN;
@@ -185,7 +185,7 @@ void Internal::elim_on_the_fly_self_subsumption (Eliminator & eliminator,
   assert (clause.empty ());
   for (const auto & lit : *c) {
     if (lit == pivot) continue;
-    const int tmp = val (lit);
+    const signed char tmp = val (lit);
     assert (tmp <= 0);
     if (tmp < 0) continue;
     clause.push_back (lit);
@@ -240,7 +240,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   for (const auto & lit : *c) {
     if (lit == pivot) { s++; continue; }
     assert (lit != -pivot);
-    const int tmp = val (lit);
+    const signed char tmp = val (lit);
     if (tmp > 0) { satisfied = lit; break; }
     else if (tmp < 0) continue;
     else mark (lit), clause.push_back (lit), s++;
@@ -261,7 +261,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   for (const auto & lit : *d) {
     if (lit == -pivot) { t++; continue; }
     assert (lit != pivot);
-    int tmp = val (lit);
+    signed char tmp = val (lit);
     if (tmp > 0) { satisfied = lit; break; }
     else if (tmp < 0) continue;
     else if ((tmp = marked (lit)) < 0) { tautological = lit; break; }
@@ -631,7 +631,7 @@ bool Internal::elim_round () {
     if (c->garbage || c->redundant) continue;
     bool satisfied = false, falsified = false;
     for (const auto & lit : *c) {
-      const int tmp = val (lit);
+      const signed char tmp = val (lit);
       if (tmp > 0) satisfied = true;
       else if (tmp < 0) falsified = true;
       else assert (active (lit));
@@ -801,6 +801,8 @@ void Internal::elim (bool update_limits) {
   if (level) backtrack ();
   if (!propagate ()) { learn_empty_clause (); return; }
 
+  dump ();
+
   stats.elimphases++;
 
 #ifndef QUIET
@@ -860,11 +862,13 @@ void Internal::elim (bool update_limits) {
   if (completed) {
     stats.elimcompleted++;
     PHASE ("elim-phase", stats.elimphases,
-      "fully completed elimination %" PRId64 " at elimination bound %" PRId64 "",
+      "fully completed elimination %" PRId64
+      " at elimination bound %" PRId64 "",
       stats.elimcompleted, lim.elimbound);
   } else {
     PHASE ("elim-phase", stats.elimphases,
-      "incomplete elimination %" PRId64 " at elimination bound %" PRId64 "",
+      "incomplete elimination %" PRId64
+      " at elimination bound %" PRId64 "",
       stats.elimcompleted + 1, lim.elimbound);
   }
 
@@ -873,7 +877,8 @@ void Internal::elim (bool update_limits) {
 
   if (unsat) LOG ("elimination derived empty clause");
   else if (propagated < trail.size ()) {
-    LOG ("elimination produced %" PRId64 " units", trail.size () - propagated);
+    LOG ("elimination produced %" PRId64 " units",
+      trail.size () - propagated);
     if (!propagate ()) {
       LOG ("propagating units after elimination results in empty clause");
       learn_empty_clause ();
@@ -895,9 +900,12 @@ void Internal::elim (bool update_limits) {
   lim.elim = stats.conflicts + delta;
 
   PHASE ("elim-phase", stats.elimphases,
-    "new limit at %" PRId64 " conflicts after %" PRId64 " conflicts", lim.elim, delta);
+    "new limit at %" PRId64 " conflicts after %" PRId64 " conflicts",
+    lim.elim, delta);
 
   last.elim.fixed = stats.all.fixed;
+
+  dump ();
 }
 
 }

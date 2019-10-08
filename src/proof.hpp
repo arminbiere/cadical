@@ -55,6 +55,8 @@ public:
   //
   void flush_clause (Clause *);           // remove falsified literals
   void strengthen_clause (Clause *, int); // remove second argument
+
+  void flush ();
 };
 
 }

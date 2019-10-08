@@ -18,7 +18,7 @@ int Internal::trivially_false_satisfiable () {
     if (c->redundant) continue;
     bool satisfied = false, found_negative_literal = false;
     for (const auto & lit : *c) {
-      const int tmp = val (lit);
+      const signed char tmp = val (lit);
       if (tmp > 0) { satisfied = true; break; }
       if (tmp < 0) continue;
       if (lit > 0) continue;
@@ -53,7 +53,7 @@ int Internal::trivially_true_satisfiable () {
     if (c->redundant) continue;
     bool satisfied = false, found_positive_literal = false;
     for (const auto & lit : *c) {
-      const int tmp = val (lit);
+      const signed char tmp = val (lit);
       if (tmp > 0) { satisfied = true; break; }
       if (tmp < 0) continue;
       if (lit < 0) continue;
@@ -193,7 +193,7 @@ int Internal::positive_horn_satisfiable () {
     int positive_literal = 0;
     bool satisfied = false;
     for (const auto & lit : *c) {
-      const int tmp = val (lit);
+      const signed char tmp = val (lit);
       if (tmp > 0) { satisfied = true; break; }
       if (tmp < 0) continue;
       if (lit < 0) continue;
@@ -245,7 +245,7 @@ int Internal::negative_horn_satisfiable () {
     int negative_literal = 0;
     bool satisfied = false;
     for (const auto & lit : *c) {
-      const int tmp = val (lit);
+      const signed char tmp = val (lit);
       if (tmp > 0) { satisfied = true; break; }
       if (tmp < 0) continue;
       if (lit > 0) continue;

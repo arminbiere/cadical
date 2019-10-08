@@ -45,10 +45,10 @@ void Internal::connect_watches (bool irredundant_only) {
     if (c->garbage || c->size == 2) continue;
     watch_clause (c);
     if (!level) {
-      int lit0 = c->literals[0];
-      int lit1 = c->literals[1];
-      int tmp0 = val (lit0);
-      int tmp1 = val (lit1);
+      const int lit0 = c->literals[0];
+      const int lit1 = c->literals[1];
+      const signed char tmp0 = val (lit0);
+      const signed char tmp1 = val (lit1);
       if (tmp0 > 0) continue;
       if (tmp1 > 0) continue;
       if (tmp0 < 0) {

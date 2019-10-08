@@ -16,6 +16,7 @@ class Format {
   void push_char (char);
   void push_string (const char *);
   void push_int (int);
+  void push_uint64 (uint64_t);
   const char * add (const char * fmt, va_list &);
 public:
   Format () : buffer (0), count (0), size (0) { }

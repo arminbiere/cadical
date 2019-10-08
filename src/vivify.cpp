@@ -56,7 +56,7 @@ inline void Internal::vivify_assign (int lit, Clause * reason) {
   v.trail = (int) trail.size ();        // used in 'vivify_better_watch'
   v.reason = level ? reason : 0;        // for conflict analysis
   if (!level) learn_unit_clause (lit);
-  const signed_char tmp = sign (lit);
+  const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
   assert (val (lit) > 0);
@@ -93,7 +93,7 @@ bool Internal::vivify_propagate () {
       Watches & ws = watches (lit);
       for (const auto & w : ws) {
         if (!w.binary ()) continue;
-        const int b = val (w.blit);
+        const signed char b = val (w.blit);
         if (b > 0) continue;
         if (b < 0) conflict = w.clause;                 // but continue
         else vivify_assign (w.blit, w.clause);
@@ -114,14 +114,15 @@ bool Internal::vivify_propagate () {
         literal_iterator lits = w.clause->begin ();
         const int other = lits[0]^lits[1]^lit;
         lits[0] = other, lits[1] = lit;
-        const int u = val (other);
+        const signed char u = val (other);
         if (u > 0) j[-1].blit = other;
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
           const literal_iterator middle = lits + w.clause->pos;
           literal_iterator k = middle;
-          int v = -1, r = 0;
+          signed char v = -1;
+          int r = 0;
           while (k != end && (v = val (r = *k)) < 0)
             k++;
           if (v < 0) {
@@ -465,7 +466,7 @@ struct vivify_better_watch {
 
   bool operator () (int a, int b) {
 
-    const int av = internal->val (a), bv = internal->val (b);
+    const signed char av = internal->val (a), bv = internal->val (b);
 
     if (av >= 0 && bv < 0) return true;
     if (av < 0 && bv >= 0) return false;
@@ -502,14 +503,16 @@ void Internal::vivify_strengthen (Clause * c) {
 
     int new_level = level;
 
-    const int lit0 = clause[0], val0 = val (lit0);
+    const int lit0 = clause[0];
+    signed char val0 = val (lit0);
     if (val0 < 0) {
       const int level0 = var (lit0).level;
       LOG ("1st watch %d negative at level %d", lit0, level0);
       new_level = level0 - 1;
     }
 
-    const int lit1 = clause[1], val1 = val (lit1);
+    const int lit1 = clause[1];
+    const signed char val1 = val (lit1);
     if (val1 < 0 &&
         !(val0 > 0 && var (lit0).level <= var (lit1).level)) {
       const int level1 = var (lit1).level;
@@ -611,7 +614,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     // simply search here is probably easier to understand).
 
     for (const auto & lit : *c) {
-      const int tmp = val (lit);
+      const signed char tmp = val (lit);
       if (tmp < 0) continue;
       if (tmp > 0 && var (lit).reason == c) forced = lit;
       break;
@@ -686,7 +689,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     // In any case this might result in stronger vivified clauses.  As a
     // consequence continue with this loop even if 'remove' is non-zero.
 
-    const int tmp = val (lit);
+    const signed char tmp = val (lit);
 
     if (tmp) {                // literal already assigned
 

@@ -88,13 +88,13 @@ template<class I, class Rank> void rsort (I first, I last, Rank rank)
     }
 
     if (!initialized) {
-      assert (&*c == &*a);	// MS VC++
+      assert (&*c == &*a);      // MS VC++
       v.resize (n);
       b = v.begin ();
       initialized = true;
     }
 
-    I d = (&*c == &*a) ? b : a;	// MS VC++
+    I d = (&*c == &*a) ? b : a; // MS VC++
 
     for (I p = c; p != end; p++) {
       const auto r = rank (*p);

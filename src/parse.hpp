@@ -11,8 +11,6 @@ struct Internal;
 
 class Parser {
 
-  typedef signed char signed_char;
-
   Solver * solver;
   Internal * internal;
   External * external;

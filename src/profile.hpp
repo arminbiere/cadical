@@ -46,6 +46,7 @@ PROFILE(checking,2) \
 PROFILE(cdcl,1) \
 PROFILE(collect,3) \
 PROFILE(compact,3) \
+PROFILE(condition,2) \
 PROFILE(connect,3) \
 PROFILE(copy,4) \
 PROFILE(cover,2) \

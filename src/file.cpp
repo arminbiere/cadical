@@ -261,14 +261,14 @@ File * File::write (Internal * internal, const char * path) {
 void File::close () {
   assert (file);
   if (close_file == 0) {
-    VERBOSE (1, "disconnecting from '%s'", name ());
+    MSG ("disconnecting from '%s'", name ());
   }
   if (close_file == 1) {
-    VERBOSE (1, "closing file '%s'", name ());
+    MSG ("closing file '%s'", name ());
     fclose (file);
   }
   if (close_file == 2) {
-    VERBOSE (1, "closing pipe command on '%s'", name ());
+    MSG ("closing pipe command on '%s'", name ());
     pclose (file);
   }
 
@@ -278,22 +278,27 @@ void File::close () {
   if (internal->opts.verbose > 1) return;
   double mb = bytes () / (double) (1 << 20);
   if (writing)
-    VERBOSE (1, "after writing %" PRId64 " bytes %.1f MB", bytes (), mb);
+    MSG ("after writing %" PRIu64 " bytes %.1f MB", bytes (), mb);
   else
-    VERBOSE (1, "after reading %" PRId64 " bytes %.1f MB", bytes (), mb);
+    MSG ("after reading %" PRIu64 " bytes %.1f MB", bytes (), mb);
   if (close_file == 2) {
     int64_t s = size (name ());
     double mb = s / (double) (1<<20);
     if (writing)
-      VERBOSE (1, "deflated to %" PRId64 " bytes %.1f MB by factor %.2f "
+      MSG ("deflated to %" PRId64 " bytes %.1f MB by factor %.2f "
         "(%.2f%% compression)",
         s, mb, relative (bytes (), s), percent (bytes () - s, bytes ()));
     else
-      VERBOSE (1, "inflated from %" PRId64 " bytes %.1f MB by factor %.2f "
+      MSG ("inflated from %" PRId64 " bytes %.1f MB by factor %.2f "
         "(%.2f%% compression)",
         s, mb, relative (bytes (), s), percent (bytes () - s, bytes ()));
   }
 #endif
+}
+
+void File::flush () {
+  assert (file);
+  fflush (file);
 }
 
 File::~File () { if (file) close (); }

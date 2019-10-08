@@ -261,7 +261,7 @@ bool Checker::tautological () {
     int lit = *i;
     if (lit == prev) continue;          // duplicated literal
     if (lit == -prev) return true;      // tautological clause
-    const int tmp = val (lit);
+    const signed char tmp = val (lit);
     if (tmp > 0) return true;           // satisfied literal and clause
     *j++ = prev = lit;
   }
@@ -335,7 +335,7 @@ inline void Checker::assign (int lit) {
 }
 
 inline void Checker::assume (int lit) {
-  int tmp = val (lit);
+  signed char tmp = val (lit);
   if (tmp > 0) return;
   assert (!tmp);
   stats.assumptions++;
@@ -378,7 +378,7 @@ bool Checker::propagate () {
       CheckerWatch & w = *j++ = *i;
       const int blit = w.blit;
       assert (blit != -lit);
-      const int blit_val = val (blit);
+      const signed char blit_val = val (blit);
       if (blit_val > 0) continue;
       const unsigned size = w.size;
       if (size == 2) {                          // not precise since
@@ -392,11 +392,12 @@ bool Checker::propagate () {
         int * lits = c->literals;
         int other = lits[0]^lits[1]^(-lit);
         assert (other != -lit);
-        int other_val = val (other);
+        signed char other_val = val (other);
         if (other_val > 0) { j[-1].blit = other; continue; }
         lits[0] = other, lits[1] = -lit;
         unsigned k;
-        int replacement = 0, replacement_val = -1;
+        int replacement = 0;
+        signed char replacement_val = -1;
         for (k = 2; k < size; k++)
           if ((replacement_val = val (replacement = lits[k])) >= 0)
             break;
@@ -434,7 +435,7 @@ void Checker::add_clause (const char * type) {
 
   int unit = 0;
   for (const auto & lit : simplified) {
-    const int tmp = val (lit);
+    const signed char tmp = val (lit);
     if (tmp < 0) continue;
     assert (!tmp);
     if (unit) { unit = INT_MIN; break; }

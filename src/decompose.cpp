@@ -224,7 +224,7 @@ bool Internal::decompose_round () {
 
     for (int k = 0; !satisfied && k < size; k++) {
       const int lit = c->literals[k];
-      int tmp = val (lit);
+      signed char tmp = val (lit);
       if (tmp > 0) satisfied = true;
       else if (tmp < 0) continue;
       else {

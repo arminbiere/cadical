@@ -46,7 +46,7 @@ msg "generating and running $tests randomly generated tests"
 msg "changing to build directory '$CADICALBUILD' and running"
 cd $CADICALBUILD
 
-cmd="./mobical 42 --medium -L $tests --do-not-fork --no-seeds"
+cmd="./mobical 42 --medium -L $tests --do-not-fork"
 echo "${HILITE}$cmd${NORMAL}"
 $cmd
 res=$?

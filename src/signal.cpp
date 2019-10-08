@@ -19,9 +19,9 @@ extern "C" {
 
 namespace CaDiCaL {
 
-static bool caught_signal = false;
-static bool caught_alarm = false;
-static bool alarm_set = false;
+static volatile bool caught_signal = false;
+static volatile bool caught_alarm = false;
+static volatile bool alarm_set = false;
 static int alarm_time = -1;
 static Handler * signal_handler;
 

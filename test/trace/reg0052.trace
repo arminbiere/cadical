@@ -1,0 +1,67 @@
+0 init
+1 set check 1
+2 set elimint 2
+3 set phase 0
+4 set lucky 0
+5 add -67
+6 add -89
+7 add 0
+8 add 67
+9 add 75
+10 add 0
+11 add -70
+12 add 56
+13 add 0
+14 add -85
+15 add -75
+16 add 0
+17 add 85
+18 add -53
+19 add 0
+20 add 54
+21 add -53
+22 add 0
+23 add 50
+24 add 56
+25 add 70
+26 add 0
+27 add 82
+28 add -93
+29 add 0
+30 add -79
+31 add -62
+32 add 0
+33 add -82
+34 add -54
+35 add 89
+36 add 0
+37 add -62
+38 add -48
+39 add -50
+40 add 0
+41 add 53
+42 add 79
+43 add 0
+44 add -50
+45 add 62
+46 add 0
+47 assume 48
+48 assume -56
+49 freeze -79
+50 solve 0
+51 add 99
+52 add -112
+53 add 0
+54 add 97
+55 add 93
+56 add 0
+57 add 123
+58 add -97
+59 add 0
+60 add -99
+61 add 140
+62 add 0
+63 add 112
+64 add -123
+65 add 0
+66 solve 0

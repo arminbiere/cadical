@@ -8,10 +8,12 @@ namespace CaDiCaL {
 
 // Provide nicely formatted progress report messages while running through
 // the 'report' function below.  The code is so complex, because it should
-// be easy to add and remove reporting of certain statistics, while at the
-// same time proving a nicely looking format, including automatic headers.
+// be easy to add and remove reporting of certain statistics, while still
+// providing a nicely looking format with automatically aligned headers.
 
-/*  The 'reports' are shown as 'c <char> ...' with '<char>' as follows:
+/*------------------------------------------------------------------------*\
+
+The 'reports' are shown as 'c <char> ...' with '<char>' as follows:
 
 i  propagated learned unit clause
 O  backtracked after phases reset to original phase
@@ -32,7 +34,7 @@ I  variable instantiation
 ]  end of stable search phase
 {  start of unstable search phase
 j  end of unstable search phase
-P  preprocessing round
+P  preprocessing round (capital 'P')
 L  local search round
 *  start of solving without the need to restore clauses
 +  start of solving before restoring clauses
@@ -41,7 +43,7 @@ r  start of solving after restoring clauses
 0  end of solving returns unsatisfiable
 ?  end of solving due to interrupt
 l  lucky phase solving
-p  failed literal probing round
+p  failed literal probing round (lower case 'p')
 .  before reducing redundant clauses
 f  flushed redundant clauses
 -  reduced redundant clauses
@@ -53,9 +55,11 @@ t  transition reduction of binary implication graph
 w  vivified redundant and irredundant clauses
 v  vivified irredundant clauses
 
-*/
+The order of the list follows the occurrences of 'report' in the source
+files, i.e., obtained from "grep 'report (' *.cpp".   Note that some of the
+reports are only printed for higher verbosity level (for instance 'R').
 
-/*------------------------------------------------------------------------*/
+\*------------------------------------------------------------------------*/
 
 struct Report {
 

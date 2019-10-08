@@ -100,6 +100,7 @@ struct External {
   void push_clause_literal_on_extension_stack (int ilit);
   void push_witness_literal_on_extension_stack (int ilit);
 
+  void push_clause_on_extension_stack (Clause *);
   void push_clause_on_extension_stack (Clause *, int witness);
   void push_binary_clause_on_extension_stack (int witness, int other);
 
@@ -224,7 +225,11 @@ struct External {
   int solve ();
   void terminate ();
 
-  inline int val (int elit) const {
+  // We call it 'ival' as abbreviation for 'val' with 'int' return type to
+  // avoid bugs due to using 'signed char tmp = val (lit)', which might turn
+  // a negative value into a positive one (happened in 'extend').
+  // 
+  inline int ival (int elit) const {
     assert (elit != INT_MIN);
     int eidx = abs (elit), res;
     if (eidx > max_var) res = -1;

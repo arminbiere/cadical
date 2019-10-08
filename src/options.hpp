@@ -11,6 +11,9 @@
 // latter as prefix.  In addition, one explicitly has to tell 'mobical' if
 // an option becomes disabled if 'simplify' is set to zero.  The 'O' column
 // determines the options which are target to 'optimize' them ('-O[1-3]').
+// A zero value in the 'O' column means that this option is not optimized.
+// A value of '1' results in optimizing its value exponentially with
+// exponent base '2', and a value of '2' uses base '10'.
 
 #define OPTIONS \
 \
@@ -22,9 +25,9 @@ OPTION( arenasort,         1,  0,  1, 0, "sort clauses in arena") \
 OPTION( arenatype,         3,  1,  3, 0, "1=clause, 2=var, 3=queue") \
 OPTION( binary,            1,  0,  1, 0, "use binary proof format") \
 OPTION( block,             0,  0,  1, 0, "blocked clause elimination") \
-OPTION( blockmaxclslim,  1e3,  1,1e9, 1, "maximum clause size") \
-OPTION( blockminclslim,    2,  2,1e9, 0, "minimum clause size") \
-OPTION( blockocclim,     1e2,  1,1e9, 1, "occurrence limit") \
+OPTION( blockmaxclslim,  1e5,  1,2e9, 2, "maximum clause size") \
+OPTION( blockminclslim,    4,  2,2e9, 0, "minimum clause size") \
+OPTION( blockocclim,     1e2,  1,2e9, 2, "occurrence limit") \
 OPTION( bump,              1,  0,  1, 0, "bump variables") \
 OPTION( bumpreason,        1,  0,  1, 0, "bump reason literals too") \
 OPTION( bumpreasondepth,   1,  1,  3, 0, "bump reason depth") \
@@ -36,55 +39,63 @@ OPTION( checkproof,        1,  0,  1, 0, "check proof internally") \
 OPTION( checkwitness,      1,  0,  1, 0, "check witness internally") \
 OPTION( chrono,            1,  0,  2, 0, "chronological backtracking") \
 OPTION( chronoalways,      0,  0,  1, 0, "force always chronological") \
-OPTION( chronolevelim,   1e2,  0,1e9, 0, "chronological level limit") \
+OPTION( chronolevelim,   1e2,  0,2e9, 0, "chronological level limit") \
 OPTION( chronoreusetrail,  1,  0,  1, 0, "reuse trail chronologically") \
 OPTION( compact,           1,  0,  1, 0, "compact internal variables") \
-OPTION( compactint,      2e3,  1,1e9, 0, "compacting interval") \
+OPTION( compactint,      2e3,  1,2e9, 0, "compacting interval") \
 OPTION( compactlim,      1e2,  0,1e3, 0, "inactive limit in per mille") \
-OPTION( compactmin,      1e2,  1,1e9, 0, "minimum inactive limit") \
+OPTION( compactmin,      1e2,  1,2e9, 0, "minimum inactive limit") \
+OPTION( condition,         0,  0,  1, 0, "globally blocked clause elim") \
+OPTION( conditionint,    1e4,  1,2e9, 0, "initial conflict interval") \
+OPTION( conditionmaxeff, 1e7,  0,2e9, 1, "maximum condition efficiency") \
+OPTION( conditionmaxratio,100, 1,2e9, 1, "maximum clause variable ratio") \
+OPTION( conditionmineff, 1e6,  0,2e9, 1, "minimum condition efficiency") \
+OPTION( conditionreleff, 100,  1,1e5, 0, "relative efficiency in per mille") \
 OPTION( cover,             0,  0,  1, 0, "covered clause elimination") \
-OPTION( covermaxeff,     1e8,  0,1e9, 1, "maximum cover efficiency") \
-OPTION( covermineff,     1e6,  0,1e9, 1, "minimum cover efficiency") \
-OPTION( coverreleff,       4,  0,1e3, 1, "relative efficiency per mille") \
+OPTION( covermaxclslim,  1e5,  1,2e9, 2, "maximum clause size") \
+OPTION( covermaxeff,     1e8,  0,2e9, 1, "maximum cover efficiency") \
+OPTION( coverminclslim,    4,  2,2e9, 0, "minimum clause size") \
+OPTION( covermineff,     1e6,  0,2e9, 1, "minimum cover efficiency") \
+OPTION( coverreleff,       4,  1,1e5, 1, "relative efficiency per mille") \
 OPTION( decompose,         1,  0,  1, 0, "decompose BIG in SCCs and ELS") \
-OPTION( decomposerounds,   2,  1, 16, 0, "number of decompose rounds") \
+OPTION( decomposerounds,   2,  1, 16, 1, "number of decompose rounds") \
 OPTION( deduplicate,       1,  0,  1, 0, "remove duplicated binary clauses") \
 OPTION( eagersubsume,      1,  0,  1, 0, "subsume eagerly recently learned") \
 OPTION( eagersubsumelim,  20,  1,1e3, 0, "limit on subsumed candidates") \
 OPTION( elim,              1,  0,  1, 0, "bounded variable elimination") \
 OPTION( elimands,          1,  0,  1, 0, "find AND gates") \
-OPTION( elimaxeff,       1e9,  0,1e9, 1, "maximum elimination efficiency") \
+OPTION( elimaxeff,       2e9,  0,2e9, 1, "maximum elimination efficiency") \
 OPTION( elimbackward,      1,  0,  1, 0, "eager backward subsumption") \
-OPTION( elimboundmax,     16, -1,256, 1, "maximum elimination bound") \
-OPTION( elimboundmin,      0, -1,1e3, 0, "minimum elimination bound") \
-OPTION( elimclslim,      1e2,  2,1e9, 1, "resolvent size limit") \
+OPTION( elimboundmax,     16, -1,2e6, 1, "maximum elimination bound") \
+OPTION( elimboundmin,      0, -1,2e6, 0, "minimum elimination bound") \
+OPTION( elimclslim,      1e2,  2,2e9, 2, "resolvent size limit") \
 OPTION( elimequivs,        1,  0,  1, 0, "find equivalence gates") \
-OPTION( elimineff,       1e7,  0,1e9, 1, "minimum elimination efficiency") \
-OPTION( elimint,         2e3,  1,1e9, 0, "elimination interval") \
+OPTION( elimineff,       1e7,  0,2e9, 1, "minimum elimination efficiency") \
+OPTION( elimint,         2e3,  1,2e9, 0, "elimination interval") \
 OPTION( elimites,          1,  0,  1, 0, "find if-then-else gates") \
 OPTION( elimlimited,       1,  0,  1, 0, "limit resolutions") \
-OPTION( elimocclim,      1e3,  0,1e9, 1, "occurrence limit") \
+OPTION( elimocclim,      1e3,  0,2e9, 2, "occurrence limit") \
 OPTION( elimprod,          1,  0,1e4, 0, "elimination score product") \
-OPTION( elimreleff,      1e3,  0,1e4, 1, "relative efficiency per mille") \
-OPTION( elimrounds,        2,  1,512, 0, "usual number of rounds") \
+OPTION( elimreleff,      1e3,  1,1e5, 1, "relative efficiency per mille") \
+OPTION( elimrounds,        2,  1,512, 1, "usual number of rounds") \
 OPTION( elimsubst,         1,  0,  1, 0, "elimination by substitution") \
 OPTION( elimxorlim,        5,  2, 27, 1, "maximum XOR size") \
 OPTION( elimxors,          1,  0,  1, 0, "find XOR gates") \
-OPTION( emagluefast,      33,  1,1e9, 0, "window fast glue") \
-OPTION( emaglueslow,     1e5,  1,1e9, 0, "window slow glue") \
-OPTION( emajump,         1e5,  1,1e9, 0, "window back-jump level") \
-OPTION( emalevel,        1e5,  1,1e9, 0, "window back-track level") \
-OPTION( emasize,         1e5,  1,1e9, 0, "window learned clause size") \
-OPTION( ematrailfast,    1e2,  1,1e9, 0, "window fast trail") \
-OPTION( ematrailslow,    1e5,  1,1e9, 0, "window slow trail") \
-OPTION( flush,             1,  0,  1, 0, "flush redundant clauses") \
+OPTION( emagluefast,      33,  1,2e9, 0, "window fast glue") \
+OPTION( emaglueslow,     1e5,  1,2e9, 0, "window slow glue") \
+OPTION( emajump,         1e5,  1,2e9, 0, "window back-jump level") \
+OPTION( emalevel,        1e5,  1,2e9, 0, "window back-track level") \
+OPTION( emasize,         1e5,  1,2e9, 0, "window learned clause size") \
+OPTION( ematrailfast,    1e2,  1,2e9, 0, "window fast trail") \
+OPTION( ematrailslow,    1e5,  1,2e9, 0, "window slow trail") \
+OPTION( flush,             0,  0,  1, 0, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3, 0, "interval increase") \
-OPTION( flushint,        1e5,  1,1e9, 0, "initial limit") \
+OPTION( flushint,        1e5,  1,2e9, 0, "initial limit") \
 OPTION( forcephase,        0,  0,  1, 0, "always use initial phase") \
 OPTION( inprocessing,      1,  0,  1, 0, "enable inprocessing") \
 OPTION( instantiate,       0,  0,  1, 0, "variable instantiation") \
-OPTION( instantiateclslim, 3,  2,1e9, 0, "minimum clause size") \
-OPTION( instantiateocclim, 1,  1,1e9, 1, "maximum occurrence limit") \
+OPTION( instantiateclslim, 3,  2,2e9, 0, "minimum clause size") \
+OPTION( instantiateocclim, 1,  1,2e9, 2, "maximum occurrence limit") \
 OPTION( instantiateonce,   1,  0,  1, 0, "instantiate each clause once") \
 LOGOPT( log,               0,  0,  1, 0, "enable logging") \
 LOGOPT( logsort,           0,  0,  1, 0, "sort logged clauses") \
@@ -94,29 +105,29 @@ OPTION( minimizedepth,   1e3,  0,1e3, 0, "minimization depth") \
 OPTION( phase,             1,  0,  1, 0, "initial phase") \
 OPTION( probe,             1,  0,  1, 0, "failed literal probing" ) \
 OPTION( probehbr,          1,  0,  1, 0, "learn hyper binary clauses") \
-OPTION( probeint,        5e3,  1,1e9, 0, "probing interval" ) \
-OPTION( probemaxeff,     1e8,  0,1e9, 1, "maximum probing efficiency") \
-OPTION( probemineff,     1e6,  0,1e9, 1, "minimum probing efficiency") \
-OPTION( probereleff,      20,  0,1e3, 1, "relative efficiency per mille") \
-OPTION( proberounds,       1,  1, 16, 0, "probing rounds" ) \
+OPTION( probeint,        5e3,  1,2e9, 0, "probing interval" ) \
+OPTION( probemaxeff,     1e8,  0,2e9, 1, "maximum probing efficiency") \
+OPTION( probemineff,     1e6,  0,2e9, 1, "minimum probing efficiency") \
+OPTION( probereleff,      20,  1,1e5, 1, "relative efficiency per mille") \
+OPTION( proberounds,       1,  1, 16, 1, "probing rounds" ) \
 OPTION( profile,           2,  0,  4, 0, "profiling level") \
 QUTOPT( quiet,             0,  0,  1, 0, "disable all messages") \
-OPTION( radixsortlim,    800,  0,1e9, 0, "radix sort limit") \
+OPTION( radixsortlim,    800,  0,2e9, 0, "radix sort limit") \
 OPTION( realtime,          0,  0,  1, 0, "real instead of process time") \
 OPTION( reduce,            1,  0,  1, 0, "reduce useless clauses") \
 OPTION( reduceint,       300, 10,1e6, 0, "reduce interval") \
-OPTION( reducekeepglue,    3,  1,1e9, 0, "glue of kept learned clauses") \
-OPTION( reducetarget,     50, 10,1e2, 0, "reduce fraction in percent") \
-OPTION( reducetier2glue,   6,  1,1e9, 0, "glue of kept learned clauses") \
-OPTION( reluctant,      1024,  0,1e9, 0, "reluctant doubling period") \
-OPTION( reluctantmax,1048576,  0,1e9, 0, "reluctant doubling period") \
+OPTION( reducetarget,     75, 10,1e2, 0, "reduce fraction in percent") \
+OPTION( reducetier1glue,   2,  1,2e9, 0, "glue of kept learned clauses") \
+OPTION( reducetier2glue,   6,  1,2e9, 0, "glue of tier two clauses") \
+OPTION( reluctant,      1024,  0,2e9, 0, "reluctant doubling period") \
+OPTION( reluctantmax,1048576,  0,2e9, 0, "reluctant doubling period") \
 OPTION( rephase,           1,  0,  1, 0, "enable resetting phase") \
-OPTION( rephaseint,      1e3,  1,1e9, 0, "rephase interval") \
+OPTION( rephaseint,      1e3,  1,2e9, 0, "rephase interval") \
 OPTION( report,report_default_value,  0,  1, 0, "enable reporting") \
 OPTION( reportall,         0,  0,  1, 0, "report even if not successful") \
 OPTION( reportsolve,       0,  0,  1, 0, "use solving not process time") \
 OPTION( restart,           1,  0,  1, 0, "enable restarts") \
-OPTION( restartint,        2,  1,1e9, 0, "restart interval") \
+OPTION( restartint,        2,  1,2e9, 0, "restart interval") \
 OPTION( restartmargin,    10,  0,1e2, 0, "slow fast margin in percent") \
 OPTION( restartreusetrail, 1,  0,  1, 0, "enable trail reuse") \
 OPTION( restoreall,        0,  0,  2, 0, "restore all clauses (2=really)") \
@@ -124,52 +135,52 @@ OPTION( restoreflush,      0,  0,  1, 0, "remove satisfied clauses") \
 OPTION( reverse,           0,  0,  1, 0, "reverse variable ordering") \
 OPTION( score,             1,  0,  1, 0, "use EVSIDS scores") \
 OPTION( scorefactor,     950,500,1e3, 0, "score factor per mille") \
-OPTION( seed,              0,  0,1e9, 0, "random seed") \
+OPTION( seed,              0,  0,2e9, 0, "random seed") \
 OPTION( shuffle,           0,  0,  1, 0, "shuffle variables") \
 OPTION( shufflequeue,      1,  0,  1, 0, "shuffle variable queue") \
 OPTION( shufflerandom,     0,  0,  1, 0, "not reverse but random") \
 OPTION( shufflescores,     1,  0,  1, 0, "shuffle variable scores") \
 OPTION( simplify,          1,  0,  1, 0, "enable simplifier") \
 OPTION( stabilize,         1,  0,  1, 0, "enable stabilizing phases") \
-OPTION( stabilizefactor, 200,101,1e9, 0, "phase increase in percent") \
-OPTION( stabilizeint,    1e3,  1,1e9, 0, "stabilizing interval") \
-OPTION( stabilizemaxint, 1e9,  1,1e9, 0, "maximum stabilizing phase") \
+OPTION( stabilizefactor, 200,101,2e9, 0, "phase increase in percent") \
+OPTION( stabilizeint,    1e3,  1,2e9, 0, "stabilizing interval") \
+OPTION( stabilizemaxint, 2e9,  1,2e9, 0, "maximum stabilizing phase") \
 OPTION( stabilizeonly,     0,  0,  1, 0, "only stabilizing phases") \
 OPTION( stabilizephase,    1,  0,  1, 0, "use target variable phase") \
 OPTION( subsume,           1,  0,  1, 0, "enable clause subsumption") \
-OPTION( subsumebinlim,   1e4,  0,1e9, 1, "watch list length limit") \
-OPTION( subsumeclslim,   1e3,  0,1e9, 1, "clause length limit") \
-OPTION( subsumeint,      1e4,  1,1e9, 0, "subsume interval") \
+OPTION( subsumebinlim,   1e4,  0,2e9, 1, "watch list length limit") \
+OPTION( subsumeclslim,   1e3,  0,2e9, 2, "clause length limit") \
+OPTION( subsumeint,      1e4,  1,2e9, 0, "subsume interval") \
 OPTION( subsumelimited,    1,  0,  1, 0, "limit subsumption checks") \
-OPTION( subsumemaxeff,   1e8,  0,1e9, 1, "maximum subsuming efficiency") \
-OPTION( subsumemineff,   1e6,  0,1e9, 1, "minimum subsuming efficiency") \
-OPTION( subsumeocclim,   1e2,  0,1e9, 1, "watch list length limit") \
-OPTION( subsumereleff,   1e3,  0,1e4, 1, "relative efficiency per mille") \
+OPTION( subsumemaxeff,   1e8,  0,2e9, 1, "maximum subsuming efficiency") \
+OPTION( subsumemineff,   1e6,  0,2e9, 1, "minimum subsuming efficiency") \
+OPTION( subsumeocclim,   1e2,  0,2e9, 1, "watch list length limit") \
+OPTION( subsumereleff,   1e3,  1,1e5, 1, "relative efficiency per mille") \
 OPTION( subsumestr,        1,  0,  1, 0, "strengthen during subsume") \
 OPTION( ternary,           1,  0,  1, 0, "hyper ternary resolution") \
-OPTION( ternarymaxadd,   1e3,  0,1e4, 0, "maximum clauses added in percent") \
-OPTION( ternarymaxeff,   1e8,  0,1e9, 1, "ternary maximum efficiency") \
-OPTION( ternarymineff,   1e6,  1,1e9, 1, "minimum ternary efficiency") \
-OPTION( ternaryocclim,   1e2,  1,1e9, 1, "ternary occurrence limit") \
-OPTION( ternaryreleff,    10,  0,1e5, 1, "relative efficiency in per mille") \
-OPTION( ternaryrounds,     2,  1, 16, 0, "maximum ternary rounds") \
+OPTION( ternarymaxadd,   1e3,  0,1e4, 1, "maximum clauses added in percent") \
+OPTION( ternarymaxeff,   1e8,  0,2e9, 1, "ternary maximum efficiency") \
+OPTION( ternarymineff,   1e6,  1,2e9, 1, "minimum ternary efficiency") \
+OPTION( ternaryocclim,   1e2,  1,2e9, 2, "ternary occurrence limit") \
+OPTION( ternaryreleff,    10,  1,1e5, 1, "relative efficiency in per mille") \
+OPTION( ternaryrounds,     2,  1, 16, 1, "maximum ternary rounds") \
 OPTION( transred,          1,  0,  1, 0, "transitive reduction of BIG") \
-OPTION( transredmaxeff,  1e8,  0,1e9, 1, "maximum efficiency") \
-OPTION( transredmineff,  1e6,  0,1e9, 1, "minimum efficiency") \
-OPTION( transredreleff,  1e2,  0,1e3, 1, "relative efficiency per mille") \
+OPTION( transredmaxeff,  1e8,  0,2e9, 1, "maximum efficiency") \
+OPTION( transredmineff,  1e6,  0,2e9, 1, "minimum efficiency") \
+OPTION( transredreleff,  1e2,  1,1e5, 1, "relative efficiency per mille") \
 QUTOPT( verbose,           0,  0,  3, 0, "more verbose messages") \
 OPTION( vivify,            1,  0,  1, 0, "vivification") \
-OPTION( vivifymaxeff,    1e8,  0,1e9, 1, "maximum efficiency") \
-OPTION( vivifymineff,    1e5,  0,1e9, 1, "minimum efficiency") \
+OPTION( vivifymaxeff,    1e8,  0,2e9, 1, "maximum efficiency") \
+OPTION( vivifymineff,    1e5,  0,2e9, 1, "minimum efficiency") \
 OPTION( vivifyonce,        0,  0,  2, 0, "vivify once: 1=red, 2=red+irr") \
 OPTION( vivifyredeff,    300,  0,1e3, 1, "redundant efficiency per mille") \
-OPTION( vivifyreleff,     80,  0,1e3, 1, "relative efficiency per mille") \
+OPTION( vivifyreleff,     80,  1,1e5, 1, "relative efficiency per mille") \
 OPTION( walk,              1,  0,  1, 0, "enable random walks") \
-OPTION( walkmaxeff,      1e7,  0,1e9, 0, "maximum efficiency") \
-OPTION( walkmineff,      1e5,  0,1e7, 0, "minimum efficiency") \
+OPTION( walkmaxeff,      1e7,  0,2e9, 1, "maximum efficiency") \
+OPTION( walkmineff,      1e5,  0,1e7, 1, "minimum efficiency") \
 OPTION( walknonstable,     1,  0,  1, 0, "walk in non-stabilizing phase") \
 OPTION( walkredundant,     0,  0,  1, 0, "walk redundant clauses too") \
-OPTION( walkreleff,       20,  0,1e3, 1, "relative efficiency per mille") \
+OPTION( walkreleff,       20,  1,1e5, 1, "relative efficiency per mille") \
 
 // Note, keep an empty line right before this line because of the last '\'!
 // Also keep those single spaces after 'OPTION(' for proper sorting.
@@ -235,7 +246,7 @@ class Options {
     int & val, const char * name, const int L, const int H);
 
 public:
-  
+
   // For library usage we disable reporting by default while for the stand
   // alone SAT solver we enable it by default.  This default value has to
   // be set before the constructor of 'Options' is called.
@@ -283,7 +294,7 @@ public:
   void print ();             // Print current values in command line form
   static void usage ();      // Print usage message for all options.
 
-  void optimize (int val);   // increase some limits (val=0,1,2,3)
+  void optimize (int val);   // increase some limits (val=0..31)
 
   // Parse option value string in the form of
   //

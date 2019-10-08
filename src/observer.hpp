@@ -24,6 +24,8 @@ public:
   // Notify the observer that a clause is not used anymore.
   //
   virtual void delete_clause (const vector<int> &) { }
+
+  virtual void flush () { }
 };
 
 }

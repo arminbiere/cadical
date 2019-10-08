@@ -35,14 +35,18 @@ void External::push_witness_literal_on_extension_stack (int ilit) {
 // clause to this stack.  First the blocking or eliminated literal is added,
 // and then the rest of the clause.
 
-void External::push_clause_on_extension_stack (Clause * c, int pivot) {
+void External::push_clause_on_extension_stack (Clause * c) {
   internal->stats.weakened++;
   internal->stats.weakenedlen += c->size;
   push_zero_on_extension_stack ();
-  push_witness_literal_on_extension_stack (pivot);
-  push_zero_on_extension_stack ();
   for (const auto & lit : *c)
     push_clause_literal_on_extension_stack (lit);
+}
+
+void External::push_clause_on_extension_stack (Clause * c, int pivot) {
+  push_zero_on_extension_stack ();
+  push_witness_literal_on_extension_stack (pivot);
+  push_clause_on_extension_stack (c);
 }
 
 void
@@ -120,7 +124,7 @@ void External::extend () {
     assert (i != begin);
     while ((lit = *--i)) {
       if (satisfied) continue;
-      if (val (lit) > 0) satisfied = true;
+      if (ival (lit) > 0) satisfied = true;
       assert (i != begin);
     }
     assert (i != begin);
@@ -129,7 +133,7 @@ void External::extend () {
         assert (i != begin);
     else {
       while ((lit = *--i)) {
-        const int tmp = val (lit);
+        const int tmp = ival (lit);		// not 'signed char'!!!
         if (tmp < 0) {
           LOG ("flipping blocking literal %d", lit);
           assert (lit);
@@ -183,7 +187,7 @@ bool External::traverse_witnesses_forward (WitnessIterator & it) {
   if (i != end) {
     int lit = *i++;
     do {
-      assert (!lit);
+      assert (!lit), (void) lit;
       while ((lit = *i++))
         witness.push_back (lit);
       assert (!lit);

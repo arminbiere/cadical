@@ -207,7 +207,6 @@ void Internal::ternary_idx (int idx, int64_t & steps, int64_t & htrs) {
 // across multiple calls to 'ternary' as well as 'ternary_round' since this
 // 'ternary' variable flag is updated during adding (ternary) resolvents.
 // This function goes over each variable just once.
-//
 
 bool Internal::ternary_round (int64_t & steps_limit, int64_t & htrs_limit) {
 
@@ -238,7 +237,8 @@ bool Internal::ternary_round (int64_t & steps_limit, int64_t & htrs_limit) {
   }
 
   PHASE ("ternary", stats.ternary,
-    "connected %" PRId64 " ternary %.0f%% and %" PRId64 " binary clauses %.0f%%",
+    "connected %" PRId64 " ternary %.0f%% "
+    "and %" PRId64 " binary clauses %.0f%%",
     terncon, percent (terncon, clauses.size ()),
     bincon, percent (bincon, clauses.size ()));
 
@@ -319,7 +319,8 @@ bool Internal::ternary () {
   // it in the loop below.
   //
   PHASE ("ternary", stats.ternary,
-    "will run a maximum of %d rounds limited to %" PRId64 " steps and %" PRId64 " clauses",
+    "will run a maximum of %d rounds "
+    "limited to %" PRId64 " steps and %" PRId64 " clauses",
     opts.ternaryrounds, steps_limit, htrs_limit);
 
   bool resolved_binary_clause = false;

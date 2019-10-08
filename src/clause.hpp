@@ -26,6 +26,8 @@ struct Clause {
 #ifdef LOGGING
   int64_t id;         // Only useful for debugging.
 #endif
+
+  bool conditioned:1; // Tried for globally blocked clause elimination.
   bool covered:1;     // Already considered for covered clause elimination.
   bool enqueued:1;    // Enqueued on backward queue.
   bool frozen:1;      // Temporarily frozen (in covered clause elimination).
@@ -49,8 +51,8 @@ struct Clause {
   // decisions in the learned clause.  Thus the glue of a clause is a strict
   // upper limit on the smallest number of decisions needed to make it
   // propagate.  For instance a binary clause will propagate if one of its
-  // literals is set to false.  Similarly a learned clause with glue 2 can
-  // propagate after one decision, one with glue 3 after 2 decisions etc.
+  // literals is set to false.  Similarly a learned clause with glue 1 can
+  // propagate after one decision, one with glue 2 after 2 decisions etc.
   // In some sense the glue is an abstraction of the size of the clause.
   //
   // See the IJCAI'09 paper by Audemard & Simon for more details.  We
@@ -58,6 +60,24 @@ struct Clause {
   // using it only initially to determine whether it is kept, that is
   // survives clause reduction.  The latter strategy is not bad but also
   // does not allow to use glue values for instance in 'reduce'.
+  //
+  // More recently we also update the glue and promote clauses to lower
+  // level tiers during conflict analysis.  The idea of using three tiers is
+  // also due to Chanseok Oh and thus used in all recent 'Maple...' solvers.
+  // Tier one are the always kept clauses with low glue at most
+  // 'opts.reducetier1glue' (default '2'). The second tier contains all
+  // clauses with glue larger than 'opts.reducetier1glue' but smaller or
+  // equal than 'opts.reducetier2glue' (default '6').  The third tier
+  // consists of clauses with glue larger than 'opts.reducetier2glue'.
+  //
+  // Clauses in tier one are not deleted in 'reduce'. Clauses in tier
+  // two require to be unused in two consecutive 'reduce' intervals before
+  // being collected while for clauses in tier three not being used since
+  // the last 'reduce' call makes them deletion candidates.  Clauses derived
+  // by hyper binary or ternary resolution (even though small and thus with
+  // low glue) are always removed if they remain unused during one interval.
+  // See 'mark_useless_redundant_clauses_as_garbage' in 'reduce.cpp' and
+  // 'bump_clause' in 'analyze.cpp'.
   //
   int glue;
 

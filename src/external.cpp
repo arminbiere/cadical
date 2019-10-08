@@ -161,7 +161,7 @@ bool External::failed (int elit) {
 void External::check_satisfiable () {
   LOG ("checking satisfiable");
   if (internal->opts.checkwitness)
-    check_assignment (&External::val);
+    check_assignment (&External::ival);
   if (internal->opts.checkassumptions && !assumptions.empty ())
     check_assumptions_satisfied ();
 }
@@ -300,7 +300,8 @@ void External::check_assignment (int (External::*a)(int) const) {
 
 void External::check_assumptions_satisfied () {
   for (const auto & lit : assumptions) {
-    const int tmp = val (lit);
+    // Not 'signed char' !!!!
+    const int tmp = ival (lit);				
     if (tmp < 0) FATAL ("assumption %d falsified", lit);
     if (!tmp) FATAL ("assumption %d unassigned", lit);
   }

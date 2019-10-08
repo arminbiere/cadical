@@ -11,8 +11,8 @@ namespace CaDiCaL {
 // round.  The set of such literal clause candidate pairs is collected at
 // the end of a variable elimination round and tried before returning.  The
 // name of this technique is inspired by 'variable instantiation' as
-// described in [AnderssonBjesseCookHanna-DAC'02] and apparently used in the
-// 'Oepir' SAT solver.
+// described in [AnderssonBjesseCookHanna-DAC'02] and apparently
+// successfully used in the 'Oepir' SAT solver.
 
 struct Clause;
 struct Internal;

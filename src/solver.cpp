@@ -577,7 +577,7 @@ int Solver::val (int lit) {
   REQUIRE_VALID_LIT (lit);
   REQUIRE (state () == SATISFIED,
     "can only get value in satisfied state");
-  int res = external->val (lit);
+  int res = external->ival (lit);
   LOG_API_CALL_RETURNS ("val", lit, res);
   return res;
 }
@@ -721,6 +721,15 @@ bool Solver::trace_proof (const char * path) {
   internal->trace (internal_file);
   LOG_API_CALL_RETURNS ("trace_proof", path, res);
   return res;
+}
+
+void Solver::flush_proof_trace () {
+  LOG_API_CALL_BEGIN ("flush_proof_trace");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (internal->tracer, "proof is not traced");
+  REQUIRE (!internal->tracer->closed (), "proof trace already closed");
+  internal->flush_trace ();
+  LOG_API_CALL_END ("flush_proof_trace");
 }
 
 void Solver::close_proof_trace () {

@@ -25,6 +25,12 @@ void Format::push_int (int d) {
   push_string (tmp);
 }
 
+void Format::push_uint64 (uint64_t u) {
+  char tmp[12];
+  sprintf (tmp, "%" PRIu64, u);
+  push_string (tmp);
+}
+
 const char * Format::add (const char * fmt, va_list & ap) {
   const char * p = fmt;
   char ch;
@@ -33,6 +39,7 @@ const char * Format::add (const char * fmt, va_list & ap) {
     else if (*p == 'c') push_char (va_arg (ap, int)), p++;
     else if (*p == 'd') push_int (va_arg (ap, int)), p++;
     else if (*p == 's') push_string (va_arg (ap, const char*)), p++;
+    else if (*p == 'U') push_uint64 (va_arg (ap, uint64_t)), p++;
     else { push_char ('%'); push_char (*p); break; }  // unsupported
   }
   push_char (0);

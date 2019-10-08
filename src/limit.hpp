@@ -13,6 +13,7 @@ struct Limit {
   int64_t localsearch;     // limit on local search rounds
 
   int64_t compact;         // conflict limit for next 'compact'
+  int64_t condition;       // conflict limit for next 'condition'
   int64_t elim;            // conflict limit for next 'elim'
   int64_t flush;           // conflict limit for next 'flush'
   int64_t probe;           // conflict limit for next 'probe'

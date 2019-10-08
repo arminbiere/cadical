@@ -71,16 +71,16 @@ Internal::~Internal () {
 // debugging is harder since literals occur only encoded in clauses.
 // The main draw-back of our solution is that we have to shift the memory
 // and access it through negative indices, which looks less clean (but still
-// as far I can tell is properly defined C / C++).   You might a warning by
-// static analyzers though.  Clang with '--analyze' thought that this idiom
-// would generate memory leak.
+// as far I can tell is properly defined C / C++).   You might get a warning
+// by static analyzers though.  Clang with '--analyze' thought that this
+// idiom would generate a memory leak thus we use the following dummy.
+
+static signed char * ignore_clang_analyze_memory_leak_warning;
 
 void Internal::enlarge_vals (size_t new_vsize) {
-  signed_char * new_vals;
+  signed char * new_vals;
   new_vals = new signed char [ 2*new_vsize ] { 0 };
-
-  // Warning that this produces a memory leak can be ignored.
-  //
+  ignore_clang_analyze_memory_leak_warning = new_vals;
   new_vals += new_vsize;
 
   if (vals) memcpy (new_vals - max_var, vals - max_var, 2*max_var + 1);
@@ -120,12 +120,13 @@ void Internal::enlarge (int new_max_var) {
   enlarge_only (vtab, new_vsize);
   enlarge_only (links, new_vsize);
   enlarge_zero (btab, new_vsize);
+  enlarge_zero (gtab, new_vsize);
   enlarge_zero (stab, new_vsize);
   enlarge_init (ptab, 2*new_vsize, -1);
   enlarge_only (ftab, new_vsize);
   enlarge_vals (new_vsize);
   enlarge_zero (frozentab, new_vsize);
-  const Phase val = opts.phase ? 1 : -1;
+  const signed char val = opts.phase ? 1 : -1;
   enlarge_init (phases.saved, new_vsize, val);
   enlarge_zero (phases.target, new_vsize);
   enlarge_zero (phases.best, new_vsize);
@@ -145,6 +146,7 @@ void Internal::init (int new_max_var) {
   for (int i = -new_max_var; i < -max_var; i++) assert (!vals[i]);
   for (int i = max_var + 1; i <= new_max_var; i++) assert (!vals[i]);
   for (int i = max_var + 1; i <= new_max_var; i++) assert (!btab[i]);
+  for (int i = max_var + 1; i <= new_max_var; i++) assert (!gtab[i]);
   for (int i = 2*(max_var + 1); i <= 2*new_max_var+1; i++)
     assert (ptab[i] == -1);
 #endif
@@ -197,6 +199,7 @@ int Internal::cdcl_loop_with_inprocessing () {
     else if (subsuming ()) subsume ();       // subsumption algorithm
     else if (eliminating ()) elim ();        // variable elimination
     else if (compacting ()) compact ();      // collect variables
+    else if (conditioning ()) condition ();  // globally blocked clauses
     else res = decide ();                    // next decision
   }
 
@@ -295,6 +298,16 @@ void Internal::init_limits () {
     LOG ("initial compact limit %" PRId64 " increment %" PRId64 "",
       lim.compact, lim.compact - stats.conflicts);
   }
+
+  /*----------------------------------------------------------------------*/
+
+  if (incremental) mode = "keeping";
+  else {
+    lim.condition = stats.conflicts + opts.conditionint;
+    mode = "initial";
+  }
+  LOG ("%s condition limit %ld increment %ld",
+    mode, lim.condition, lim.condition - stats.conflicts);
 
   /*----------------------------------------------------------------------*/
 
@@ -413,6 +426,7 @@ bool Internal::preprocess_round (int round) {
   int old_elimbound = lim.elimbound;
   if (opts.probe) probe (false);
   if (opts.elim) elim (false);
+  if (opts.condition) condition (false);
   after.vars = active ();
   after.clauses = stats.current.irredundant;
   assert (preprocessing);

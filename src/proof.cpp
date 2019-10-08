@@ -42,6 +42,13 @@ void Internal::close_trace () {
   tracer->close ();
 }
 
+// We can flush a proof trace file before actually closing it.
+
+void Internal::flush_trace () {
+  assert (tracer);
+  tracer->flush ();
+}
+
 /*------------------------------------------------------------------------*/
 
 Proof::Proof (Internal * s) : internal (s) { LOG ("PROOF new"); }

@@ -83,10 +83,10 @@ Walker::Walker (Internal * i, double size, int64_t l) :
   double next = 1;
   for (epsilon = next; next; next = epsilon*base)
     table.push_back (epsilon = next);
+
   PHASE ("walk", internal->stats.walk.count,
     "CB %.2f with inverse %.2f as base and table size %zd",
     cb, base, table.size ());
-
 }
 
 // The scores are tabulated for faster computation (to avoid 'pow').
@@ -258,7 +258,7 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
     // We need to measure (and bound) the memory accesses during traversing
     // broken clauses in terms of 'propagations'. This is tricky since we
     // are not actually propagating literals.  Instead we use the clause
-    // variable 'ratio' as an approximation of the number of clauses used
+    // variable 'ratio' as an approximation to the number of clauses used
     // during propagating a literal.  Note that we use a one-watch scheme.
     // Accordingly the number of broken clauses traversed divided by that
     // ratio is an approximation of the number of propagation this would
@@ -345,7 +345,7 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
         assert (active (other));
         literals[i] = prev;             // shift all to right
         prev = other;
-        const int tmp = val (other);
+        const signed char tmp = val (other);
         if (tmp < 0) continue;
         replacement = other;            // satisfying literal
         break;
@@ -390,7 +390,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
   backtrack ();
   if (propagated < trail.size () && !propagate ()) {
-    LOG ("empty clause after root level propagating");
+    LOG ("empty clause after root level propagation");
     learn_empty_clause ();
     return 20;
   }
@@ -448,7 +448,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
   } else {
     LOG ("assigning assumptions to their forced phase first");
     for (const auto lit : assumptions) {
-      int tmp = val (lit);
+      signed char tmp = val (lit);
       if (tmp > 0) continue;
       if (tmp < 0) {
         LOG ("inconsistent assumption %d", lit);
@@ -529,7 +529,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
       if (!satisfied && !satisfiable) {
         LOG (c, "due to assumptions unsatisfiable");
-        LOG ("stop local search since assumptions falsify a clause");
+        LOG ("stopping local search since assumptions falsify a clause");
         failed = true;
         break;
       }
@@ -549,7 +549,8 @@ int Internal::walk_round (int64_t limit, bool prev) {
     if (!failed) {
       int64_t broken = walker.broken.size ();
       int64_t total = watched + broken;
-      LOG ("watching %" PRId64 " clauses %.0f%% out of %" PRId64 " (watched and broken)",
+      LOG ("watching %" PRId64 " clauses %.0f%% "
+           "out of %" PRId64 " (watched and broken)",
         watched, percent (watched, total), total);
     }
 #endif
@@ -564,7 +565,8 @@ int Internal::walk_round (int64_t limit, bool prev) {
     int64_t broken = walker.broken.size ();
 
     PHASE ("walk", stats.walk.count,
-     "starting with %" PRId64 " unsatisfied clauses (%.0f%% out of %" PRId64 ")",
+     "starting with %" PRId64 " unsatisfied clauses "
+     "(%.0f%% out of %" PRId64 ")",
      broken, percent (broken, stats.current.irredundant),
      stats.current.irredundant);
 
@@ -594,12 +596,14 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
     if (minimum < old_global_minimum)
       PHASE ("walk", stats.walk.count,
-        "%snew global minimum %" PRId64 "%s in %" PRId64 " flips and %" PRId64 " propagations",
+        "%snew global minimum %" PRId64 "%s in %" PRId64 " flips and "
+        "%" PRId64 " propagations",
         tout.bright_yellow_code (), minimum, tout.normal_code (),
         flips, walker.propagations);
     else
       PHASE ("walk", stats.walk.count,
-        "best phase minimum %" PRId64 " in %" PRId64 " flips and %" PRId64 " propagations",
+        "best phase minimum %" PRId64 " in %" PRId64 " flips and "
+        "%" PRId64 " propagations",
         minimum, flips, walker.propagations);
 
     PHASE ("walk", stats.walk.count,

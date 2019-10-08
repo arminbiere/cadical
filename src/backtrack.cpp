@@ -20,7 +20,7 @@ inline void Internal::unassign (int lit) {
   if (!scores.contains (idx)) scores.push_back (idx);
 
   // For VMTF we need to update the 'queue.unassigned' pointer in case this
-  // variables sits after the variable to which 'queue.unassigned' currently
+  // variable sits after the variable to which 'queue.unassigned' currently
   // points.  See our SAT'15 paper for more details on this aspect.
   //
   if (queue.bumped < btab[idx]) update_queue_unassigned (idx);
@@ -30,7 +30,7 @@ inline void Internal::unassign (int lit) {
 
 // Update the current target maximum assignment and also the very best
 // assignment.  Whether a trail produces a conflict is determined during
-// propagation, thus that all functions in the 'search' loop after
+// propagation.  Thus that all functions in the 'search' loop after
 // propagation can assume that 'no_conflict_until' is valid.  If a conflict
 // is found then the trail before the last decision is used (see the end of
 // 'propagate').  During backtracking we can then save this largest

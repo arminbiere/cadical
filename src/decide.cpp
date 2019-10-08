@@ -80,7 +80,7 @@ int Internal::decide () {
   if ((size_t) level < assumptions.size ()) {
     const int lit = assumptions[level];
     assert (assumed (lit));
-    const int tmp = val (lit);
+    const signed char tmp = val (lit);
     if (tmp < 0) {
       LOG ("assumption %d falsified", lit);
       failing ();

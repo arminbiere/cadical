@@ -63,14 +63,25 @@ void Stats::print (Internal * internal) {
   PRT ("  pure:          %15" PRId64 "   %10.2f %%  of all variables", stats.all.pure, percent (stats.all.pure, stats.vars));
   PRT ("  pureclauses:   %15" PRId64 "   %10.2f    per pure literal", stats.blockpured, relative (stats.blockpured, stats.all.pure));
   }
-  if (all || stats.backtracks)
-  PRT ("backtracked:     %15" PRId64 "   %10.2f %%  of conflicts", stats.backtracks, percent (stats.backtracks, stats.conflicts));
   if (all || stats.chrono)
-  PRT ("chronological:   %15" PRId64 "   %10.2f %%  of backtracks", stats.chrono, percent (stats.chrono, stats.backtracks));
+  PRT ("chronological:   %15" PRId64 "   %10.2f %%  of conflicts", stats.chrono, percent (stats.chrono, stats.conflicts));
   if (all)
   PRT ("compacts:        %15" PRId64 "   %10.2f    interval", stats.compacts, relative (stats.conflicts, stats.compacts));
   if (all || stats.conflicts) {
   PRT ("conflicts:       %15" PRId64 "   %10.2f    per second", stats.conflicts, relative (stats.conflicts, t));
+  PRT ("  backtracked:   %15" PRId64 "   %10.2f %%  of conflicts", stats.backtracks, percent (stats.backtracks, stats.conflicts));
+  }
+  if (all || stats.conditioned) {
+  PRT ("conditioned:     %15ld   %10.2f %%  of irredundant clauses", stats.conditioned, percent (stats.conditioned, stats.added.irredundant));
+  PRT ("  conditionings: %15ld   %10.2f    interval", stats.conditionings, relative (stats.conflicts, stats.conditionings));
+  PRT ("  condcands:     %15ld   %10.2f    candidate clauses", stats.condcands, relative (stats.condcands, stats.conditionings));
+  PRT ("  condassinit:   %17.1f  %9.2f %%  initial assigned", relative (stats.condassinit, stats.conditionings), percent (stats.condassinit, stats.condassvars));
+  PRT ("  condcondinit:  %17.1f  %9.2f %%  initial condition", relative (stats.condcondinit, stats.conditionings), percent (stats.condcondinit, stats.condassinit));
+  PRT ("  condautinit:   %17.1f  %9.2f %%  initial autarky", relative (stats.condautinit, stats.conditionings), percent (stats.condautinit, stats.condassinit));
+  PRT ("  condassrem:    %17.1f  %9.2f %%  final assigned", relative (stats.condassrem, stats.conditioned), percent (stats.condassrem, stats.condassirem));
+  PRT ("  condcondrem:   %19.3f  %7.2f %%  final conditional", relative (stats.condcondrem, stats.conditioned), percent (stats.condcondrem, stats.condassrem));
+  PRT ("  condautrem:    %19.3f  %7.2f %%  final autarky", relative (stats.condautrem, stats.conditioned), percent (stats.condautrem, stats.condassrem));
+  PRT ("  condprops:     %15ld   %10.2f    per candidate", stats.condprops, relative (stats.condprops, stats.condcands));
   }
   if (all || stats.cover.total) {
   PRT ("covered:         %15" PRId64 "   %10.2f %%  of irredundant clauses", stats.cover.total, percent (stats.cover.total, stats.added.irredundant));
@@ -118,11 +129,15 @@ void Stats::print (Internal * internal) {
   }
   if (all || stats.instantiated) {
   PRT ("instantiated:    %15" PRId64 "   %10.2f %%  of tried", stats.instantiated, percent (stats.instantiated, stats.instried));
-  PRT ("x instrounds:    %15" PRId64 "   %10.2f %%  of elimrounds", stats.instrounds, percent (stats.instrounds, stats.elimrounds));
+  PRT ("  instrounds:    %15" PRId64 "   %10.2f %%  of elimrounds", stats.instrounds, percent (stats.instrounds, stats.elimrounds));
   }
   if (all || stats.conflicts) {
   PRT ("learned:         %15" PRId64 "   %10.2f %%  per conflict", stats.learned.clauses, percent (stats.learned.clauses, stats.conflicts));
   PRT ("  bumped:        %15" PRId64 "   %10.2f    per learned", stats.bumped, relative (stats.bumped, stats.learned.clauses));
+  PRT ("  recomputed:    %15" PRId64 "   %10.2f %%  per learned", stats.recomputed, percent (stats.recomputed, stats.learned.clauses));
+  PRT ("  promoted1:     %15" PRId64 "   %10.2f %%  per learned", stats.promoted1, percent (stats.promoted1, stats.learned.clauses));
+  PRT ("  promoted2:     %15" PRId64 "   %10.2f %%  per learned", stats.promoted2, percent (stats.promoted2, stats.learned.clauses));
+  PRT ("  improvedglue:  %15" PRId64 "   %10.2f %%  per learned", stats.improvedglue, percent (stats.improvedglue, stats.learned.clauses));
   }
   if (all || stats.lucky.succeeded) {
   PRT ("lucky:           %15" PRId64 "   %10.2f %%  of tried", stats.lucky.succeeded, percent (stats.lucky.succeeded, stats.lucky.tried));

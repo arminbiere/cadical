@@ -69,7 +69,7 @@ inline void Internal::search_assign (int lit, Clause * reason) {
   v.trail = (int) trail.size ();
   v.reason = reason;
   if (!lit_level) learn_unit_clause (lit);  // increases 'stats.fixed'
-  const signed_char tmp = sign (lit);
+  const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
   assert (val (lit) > 0);
@@ -81,6 +81,14 @@ inline void Internal::search_assign (int lit, Clause * reason) {
   if (!lit_level) LOG ("root-level unit assign %d @ 0", lit);
   else LOG (reason, "search assign %d @ %d", lit, lit_level);
 #endif
+
+  if (watching ()) {
+    const Watches & ws = watches (-lit);
+    if (!ws.empty ()) {
+      const Watch & w = ws[0];
+      __builtin_prefetch (&w, 0, 1);
+    }
+  }
 }
 
 /*------------------------------------------------------------------------*/
@@ -157,7 +165,7 @@ bool Internal::propagate () {
     while (i != eow) {
 
       const Watch w = *j++ = *i++;
-      const int b = val (w.blit);
+      const signed char b = val (w.blit);
 
       if (b > 0) continue;                // blocking literal satisfied
 
@@ -216,9 +224,9 @@ bool Internal::propagate () {
         const int other = lits[0]^lits[1]^lit;
         lits[0] = other, lits[1] = lit;
 
-        const int u = val (other);      // value of the other watch
+        const signed char u = val (other); // value of the other watch
 
-        if (u > 0) j[-1].blit = other;  // satisfied, just replace blit
+        if (u > 0) j[-1].blit = other; // satisfied, just replace blit
         else {
 
           // This follows Ian Gent's (JAIR'13) idea of saving the position
@@ -236,7 +244,8 @@ bool Internal::propagate () {
 
           // Find replacement watch 'r' at position 'k' with value 'v'.
 
-          int v = -1, r = 0;
+          int r = 0;
+          signed char v = -1;
 
           while (k != end && (v = val (r = *k)) < 0)
             k++;
@@ -284,7 +293,7 @@ bool Internal::propagate () {
             // chronological backtracking but in our experience, this code
             // first does not really seem to be necessary for correctness,
             // and further does not improve running time either.
-	    //
+            //
             if (opts.chrono > 1) {
 
               const int other_level = var (other).level;

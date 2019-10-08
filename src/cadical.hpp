@@ -505,6 +505,13 @@ public:
   bool trace_proof (FILE * file, const char * name); // Write DRAT proof.
   bool trace_proof (const char * path);              // Open & write proof.
 
+  // Flush proof trace file.
+  //
+  //   require (VALID)
+  //   ensure (VALID)
+  //
+  void flush_proof_trace ();
+
   // Close proof trace early.
   //
   //   require (VALID)
@@ -736,10 +743,12 @@ public:
 /*------------------------------------------------------------------------*/
 
 // Allows to traverse all clauses on the extension stack together with their
-// witness cubes.  If the solver is inconsistent nothing is traversed.
+// witness cubes.  If the solver is inconsistent, i.e., an empty clause is
+// found and the formula is unsatisfiable, then nothing is traversed.
 //
 // The clauses traversed in 'traverse_clauses' together with the clauses on
 // the extension stack are logically equivalent to the original clauses.
+// See our SAT'19 paper for more details.
 //
 // The witness literals can be used to extend and fix an assignment on the
 // remaining clauses to satisfy the clauses on the extension stack too.

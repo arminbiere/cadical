@@ -396,7 +396,7 @@ sed \
 -e "2c\\
 # This 'makefile' is generated from '../makefile.in'." \
 -e "s,@CXX@,$CXX," \
--e "s,@CXXFLAGS@,$CXXFLAGS," \
+-e "s#@CXXFLAGS@#$CXXFLAGS#" \
 -e "s,@MAKEFLAGS@,$MAKEFLAGS," \
 ../makefile.in > makefile
 
@@ -409,7 +409,7 @@ makefile="`dirname "$build"`/makefile"
 cat <<EOF > "$makefile"
 CADICALBUILD=$build
 all:
-	make -C "\$(CADICALBUILD)"
+	\$(MAKE) -C "\$(CADICALBUILD)"
 clean:
 	@if [ -d "\$(CADICALBUILD)" ]; \\
 	then \\
@@ -417,19 +417,19 @@ clean:
 	  then \\
 	     touch "\$(CADICALBUILD)"/build.hpp; \\
 	     touch "\$(CADICALBUILD)"/dependencies; \\
-	     make -C "\$(CADICALBUILD)" clean; \\
+	     \$(MAKE) -C "\$(CADICALBUILD)" clean; \\
 	  fi; \\
 	  rm -rf "\$(CADICALBUILD)"; \\
 	fi
 	rm -f "$makefile"
 test:
-	make -j1 -C "\$(CADICALBUILD)" test
+	\$(MAKE) -j1 -C "\$(CADICALBUILD)" test
 cadical:
-	make -j1 -C "\$(CADICALBUILD)" cadical
+	\$(MAKE) -j1 -C "\$(CADICALBUILD)" cadical
 mobical:
-	make -j1 -C "\$(CADICALBUILD)" mobical
+	\$(MAKE) -j1 -C "\$(CADICALBUILD)" mobical
 update:
-	make -j1 -C "\$(CADICALBUILD)" update
+	\$(MAKE) -j1 -C "\$(CADICALBUILD)" update
 .PHONY: all cadical clean mobical test update
 EOF
 

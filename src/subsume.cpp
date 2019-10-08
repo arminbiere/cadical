@@ -300,10 +300,10 @@ struct subsume_less_noccs {
   Internal * internal;
   subsume_less_noccs (Internal * i) : internal (i) { }
   bool operator () (int a, int b) {
-    int u = internal->val (a), v = internal->val (b);
+    const signed char u = internal->val (a), v = internal->val (b);
     if (!u && v) return true;
     if (u && !v) return false;
-    int64_t m = internal->noccs (a), n = internal ->noccs (b);
+    const int64_t m = internal->noccs (a), n = internal ->noccs (b);
     if (m < n) return true;
     if (m > n) return false;
     return abs (a) < abs (b);

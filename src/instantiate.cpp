@@ -29,7 +29,7 @@ Internal::collect_instantiation_candidates (Instantiator & instantiator) {
         bool satisfied = false;
         int unassigned = 0;
         for (const auto & other : *c) {
-          const int tmp = val (other);
+          const signed char tmp = val (other);
           if (tmp > 0) satisfied = true;
           if (!tmp) unassigned++;
         }
@@ -70,7 +70,7 @@ bool Internal::inst_propagate () {      // Adapted from 'propagate'.
     watch_iterator j = ws.begin ();
     while (i != eow) {
       const Watch w = *j++ = *i++;
-      const int b = val (w.blit);
+      const signed char b = val (w.blit);
       if (b > 0) continue;
       if (w.binary ()) {
         if (b < 0) { ok = false; LOG (w.clause, "conflict"); break; }
@@ -79,14 +79,15 @@ bool Internal::inst_propagate () {      // Adapted from 'propagate'.
         literal_iterator lits = w.clause->begin ();
         const int other = lits[0]^lits[1]^lit;
         lits[0] = other, lits[1] = lit;
-        const int u = val (other);
+        const signed char u = val (other);
         if (u > 0) j[-1].blit = other;
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
           const literal_iterator middle = lits + w.clause->pos;
           literal_iterator k = middle;
-          int v = -1, r = 0;
+          signed char v = -1;
+          int r = 0;
           while (k != end && (v = val (r = *k)) < 0)
             k++;
           if (v < 0) {
@@ -142,7 +143,7 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
   int unassigned = 0;
   for (const auto & other : *c) {
     if (other == lit) found = true;
-    const int tmp = val (other);
+    const signed char tmp = val (other);
     if (tmp > 0) { satisfied = true; break; }
     if (!tmp && !active (other)) { inactive = true; break; }
     if (!tmp) unassigned++;
@@ -161,7 +162,7 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
   inst_assign (lit);                            // Assume 'lit' to true.
   for (const auto & other : *c) {
     if (other == lit) continue;
-    const int tmp = val (other);
+    const signed char tmp = val (other);
     if (tmp) { assert (tmp < 0); continue; }
     inst_assign (-other);                       // Assume other to false.
   }
@@ -223,13 +224,14 @@ void Internal::instantiate (Instantiator & instantiator) {
       "%zd negative occurrences in", cand.lit, cand.negoccs);
     if (!instantiate_candidate (cand.lit, cand.clause)) continue;
     instantiated++;
-    VERBOSE (2, "instantiation %" PRId64 " (%.1f%%) succeeded (%.1f%%) with "
-      "%zd negative occurrences in size %d clause",
+    VERBOSE (2, "instantiation %" PRId64 " (%.1f%%) succeeded "
+      "(%.1f%%) with %zd negative occurrences in size %d clause",
       tried, percent (tried, candidates),
       percent (instantiated, tried), cand.negoccs, cand.size);
   }
   PHASE ("instantiate", stats.instrounds,
-    "instantiated %" PRId64 " candidate successfully out of %" PRId64 " tried %.1f%%",
+    "instantiated %" PRId64 " candidate successfully "
+    "out of %" PRId64 " tried %.1f%%",
     instantiated, tried, percent (instantiated, tried));
   report ('I', !instantiated);
   reset_watches ();

@@ -101,33 +101,25 @@ struct Internal {
 
   /*----------------------------------------------------------------------*/
 
-  // There were some compilation issues with macros in 'compact' which
-  // require a 'type' argument.  It worked by hiding these two types behind
-  // behind 'typedef' names.
-
-  typedef signed char signed_char;
-  typedef unsigned char unsigned_char;
-
-  /*----------------------------------------------------------------------*/
-
   // The actual internal state of the solver is set and maintained in this
   // section.  This is currently only used for debugging and testing.
 
   enum Mode {
     BLOCK    = (1<<0),
-    COVER    = (1<<1),
-    DECOMP   = (1<<2),
-    DEDUP    = (1<<3),
-    ELIM     = (1<<4),
-    LUCKY    = (1<<5),
-    PROBE    = (1<<6),
-    SEARCH   = (1<<7),
-    SIMPLIFY = (1<<8),
-    SUBSUME  = (1<<9),
-    TERNARY  = (1<<10),
-    TRANSRED = (1<<11),
-    VIVIFY   = (1<<12),
-    WALK     = (1<<13),
+    CONDITION= (1<<1),
+    COVER    = (1<<2),
+    DECOMP   = (1<<3),
+    DEDUP    = (1<<4),
+    ELIM     = (1<<5),
+    LUCKY    = (1<<6),
+    PROBE    = (1<<7),
+    SEARCH   = (1<<8),
+    SIMPLIFY = (1<<9),
+    SUBSUME  = (1<<10),
+    TERNARY  = (1<<11),
+    TRANSRED = (1<<12),
+    VIVIFY   = (1<<13),
+    WALK     = (1<<14),
   };
 
   int mode;
@@ -166,6 +158,7 @@ struct Internal {
   Links links;                  // table of links for decision queue
   vector<Flags> ftab;           // variable and literal flags
   vector<int64_t> btab;         // enqueue time stamps for queue
+  vector<int64_t> gtab;         // time stamp table to recompute glue
   vector<Occs> otab;            // table of occurrences for all literals
   vector<int> ptab;             // table for caching probing attempts
   vector<int64_t> ntab;         // number of one-sided occurrences table
@@ -338,9 +331,62 @@ struct Internal {
     marks [ vidx (lit) ] = 0;
     assert (!marked (lit));
   }
+
+  // Use only bits 6 and 7 to store the sign or zero.  The remaining
+  // bits can be use as additional flags.
+  //
+  signed char marked67 (int lit) const {
+    signed char res = marks [ vidx (lit) ] >> 6;
+    if (lit < 0) res = -res;
+    return res;
+  }
+  void mark67 (int lit) {
+    signed char & m = marks[vidx (lit)];
+    const signed char mask = 0x3f;
+#ifndef NDEBUG
+    const signed char bits = m & mask;
+#endif
+    m = (m & mask) | (sign (lit) << 6);
+    assert (marked (lit) > 0);
+    assert (marked (-lit) < 0);
+    assert ((m & mask) == bits);
+    assert (marked67 (lit) > 0);
+    assert (marked67 (-lit) < 0);
+  }
+  void unmark67 (int lit) {
+    signed char & m = marks[vidx (lit)];
+    const signed char mask = 0x3f;
+#ifndef NDEBUG
+    const signed bits = m & mask;
+#endif
+    m &= mask;
+    assert ((m & mask) == bits);
+  }
+
   void unmark (vector<int> & lits) {
     for (const auto & lit : lits)
       unmark (lit);
+  }
+
+  // The other 6 bits of the 'marks' bytes can be used as additional
+  // (unsigned) marking bits.  Currently we only use the least significant
+  // bit in 'condition' to mark variables in the conditional part.
+  //
+  bool getbit (int lit, int bit) const {
+    assert (0 <= bit), assert (bit < 6);
+    return marks[vidx (lit)] & (1<<bit);
+  }
+  void setbit (int lit, int bit) {
+    assert (0 <= bit), assert (bit < 6);
+    assert (!getbit (lit, bit));
+    marks[vidx (lit)] |= (1<<bit);
+    assert (getbit (lit, bit));
+  }
+  void unsetbit (int lit, int bit) {
+    assert (0 <= bit), assert (bit < 6);
+    assert (getbit (lit, bit));
+    marks[vidx (lit)] &= ~(1<<bit);
+    assert (!getbit (lit, bit));
   }
 
   // Marking individual literals.
@@ -418,6 +464,7 @@ struct Internal {
   // these functions work on the global temporary 'clause'.
   //
   Clause * new_clause (bool red, int glue = 0);
+  void promote_clause (Clause *, int new_glue);
   size_t shrink_clause (Clause *, int new_size);
   void deallocate_clause (Clause *);
   void delete_clause (Clause *);
@@ -455,6 +502,7 @@ struct Internal {
   void learn_unit_clause (int lit);
   void bump_variable (int lit);
   void bump_variables ();
+  int recompute_glue (Clause *);
   void bump_clause (Clause *);
   void clear_analyzed_literals ();
   void clear_analyzed_levels ();
@@ -483,8 +531,8 @@ struct Internal {
 
   // Functions to set and reset certain 'phases'.
   //
-  void clear_phases (vector<Phase> &);  // reset to zero
-  void copy_phases (vector<Phase> &);   // copy 'vals' to 'argument'
+  void clear_phases (vector<signed char> &);  // reset to zero
+  void copy_phases (vector<signed char> &);   // copy 'vals' to 'argument'
 
   // Resetting the saved phased in 'rephase.cpp'.
   //
@@ -525,6 +573,7 @@ struct Internal {
   void protect_reasons ();
   void mark_clauses_to_be_flushed ();
   void mark_useless_redundant_clauses_as_garbage ();
+  bool propagate_out_of_order_units ();
   void unprotect_reasons ();
   void reduce ();
 
@@ -836,6 +885,24 @@ struct Internal {
     return (f.assumed & bit) != 0;
   }
 
+  // Globally blocked clause elimination.
+  //
+  bool is_autarky_literal (int lit) const;
+  bool is_conditional_literal (int lit) const;
+  void mark_as_conditional_literal (int lit);
+  void unmark_as_conditional_literal (int lit);
+  //
+  bool is_in_candidate_clause (int lit) const;
+  void mark_in_candidate_clause (int lit);
+  void unmark_in_candidate_clause (int lit);
+  //
+  void condition_assign (int lit);
+  void condition_unassign (int lit);
+  //
+  bool conditioning ();
+  long condition_round (long unassigned_literal_propagation_limit);
+  void condition (bool update_limits = true);
+
   // Part on picking the next decision in 'decide.cpp'.
   //
   bool satisfied ();
@@ -909,7 +976,7 @@ struct Internal {
   // substantially faster than negating the result if the argument is
   // negative.  We also avoid taking the absolute value.
   //
-  int val (int lit) const {
+  signed char val (int lit) const {
     assert (-max_var <= lit), assert (lit), assert (lit <= max_var);
     return vals[lit];
   }
@@ -970,6 +1037,7 @@ struct Internal {
   //
   void new_proof_on_demand ();
   void close_trace ();          // Stop proof tracing.
+  void flush_trace ();          // Flush proof trace file.
   void trace (File *);          // Start write proof file.
   void check ();                // Enable online proof checking.
 

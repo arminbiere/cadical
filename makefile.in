@@ -22,7 +22,7 @@ APP=cadical.cpp mobical.cpp
 ALL=$(sort $(wildcard ../src/*.[ch]pp))
 SRC=$(filter %.cpp,$(subst ../src/,,$(ALL)))
 LIB=$(filter-out $(APP),$(SRC))
-OBJ=$(patsubst %.cpp,%.o,$(LIB))
+OBJ=$(LIB:.cpp=.o)
 DIR=../$(shell pwd|sed -e 's,.*/,,')
 COMPILE=$(CXX) $(CXXFLAGS) -I$(DIR)
 
@@ -81,7 +81,7 @@ clean:
 	rm -f *.gcda *.gcno *.gcov gmon.out
 
 test: all
-	CADICALBUILD="$(DIR)" make -j1 -C ../test
+	CADICALBUILD="$(DIR)" $(MAKE) -j1 -C ../test
 
 #--------------------------------------------------------------------------#
 

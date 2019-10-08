@@ -44,7 +44,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
   int best = 0;
   bool satisfied = false;
   for (const auto & lit : *c) {
-    const int tmp = val (lit);
+    const signed char tmp = val (lit);
     if (tmp > 0) { satisfied = true; break; }
     if (tmp < 0) continue;
     size_t l = occs (lit).size ();
@@ -70,7 +70,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
       int negated = 0;
       unsigned found = 0;
       for (const auto & lit : *d) {
-        int tmp = val (lit);
+        signed char tmp = val (lit);
         if (tmp > 0) { satisfied = true; break; }
         if (tmp < 0) continue;
         tmp = marked (lit);
@@ -95,7 +95,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
         } else {
           int unit = 0;
           for (const auto & lit : * d) {
-            const int tmp = val (lit);
+            const signed char tmp = val (lit);
             if (tmp < 0) continue;
             if (tmp > 0) { satisfied = true; break; }
             if (lit == negated) continue;

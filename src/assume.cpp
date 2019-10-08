@@ -60,7 +60,7 @@ void Internal::failing () {
     // Find an assumption falsified at smallest decision level.
     //
     for (auto & lit : assumptions) {
-      const int tmp = val (lit);
+      const signed char tmp = val (lit);
       if (tmp >= 0) continue;
       if (!first || var (first).level > var (lit).level)
         first = lit;

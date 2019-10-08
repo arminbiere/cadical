@@ -13,6 +13,7 @@ class Tracer : public Observer {
   bool binary;
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
+  int64_t added, deleted;
 public:
 
   Tracer (Internal *, File * file, bool binary); // own and delete 'file'
@@ -22,6 +23,7 @@ public:
   void delete_clause (const vector<int> &);
   bool closed ();
   void close ();
+  void flush ();
 };
 
 }

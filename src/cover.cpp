@@ -4,59 +4,64 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// Covered clause elimination (CCE) as described in our short LPAR-10 paper
-// and later in more detail in our JAIR'15 article.  This implementation
-// provides a simplified version of the one implemented in Lingeling. We
-// still follow quite closely the original description, which is based on
-// asymmetric literal addition (ALA) and covered literal addition (CLA).
-// Both can be seen as kind of propagation, where the clauses in the
-// original and then extended clause are assigned to false, and the literals
-// on the trail (actually we use our own 'added' stack for that) make up the
-// extended clause.   The ALA steps can be implemented by simple propagation
-// (copied from 'propagate.cpp') using watches, while the CLA steps need
-// full occurrence lists to determine the resolution candidate clauses.  The
-// CCE is successful if a conflict is found during ALA steps or if during
-// a CLA step all resolution candidates of a literal on the trail are
-// satisfied (the extended clause is blocked).
+// Covered clause elimination (CCE) is described in our short LPAR-10 paper
+// and later in more detail in our JAIR'15 article.  Actually implement
+// the asymmetric version which adds asymmetric literals too but still call
+// it 'CCE' in the following (and not 'ACCE').  This implementation provides
+// a simplified and cleaner version of the one implemented before in
+// Lingeling. We still follow quite closely the original description in the
+// literature, which is based on asymmetric literal addition (ALA) and
+// covered literal addition (CLA).  Both can be seen as kind of propagation,
+// where the literals in the original and then extended clause are assigned
+// to false, and the literals on the trail (actually we use our own 'added'
+// stack for that) make up the extended clause.   The ALA steps can be
+// implemented by simple propagation (copied from 'propagate.cpp') using
+// watches, while the CLA steps need full occurrence lists to determine the
+// resolution candidate clauses.  The CCE is successful if a conflict is
+// found during ALA steps or if during a CLA step all resolution candidates
+// of a literal on the trail are satisfied (the extended clause is blocked).
 
-struct Coveror {
-  std::vector<int> added;               // acts as trail
-  std::vector<int> clause;              // copy of the candidate clause
-  std::vector<int> extend;              // extension stack for witness
-  std::vector<int> covered;             // literals added through CLA
-  std::vector<int> intersection;        // of literals in resolution cands
+struct Coveror
+{
+  std::vector<int> added;        // acts as trail
+  std::vector<int> extend;       // extension stack for witness
+  std::vector<int> covered;      // clause literals or added through CLA
+  std::vector<int> intersection; // of literals in resolution candidates
 
-  struct { size_t added, clause, covered; } next; // propagate next ...
+  size_t alas, clas;             // actual number of ALAs and CLAs
+
+  struct { size_t added, covered; } next;       // propagate next ...
+
+  Coveror () : alas (0), clas (0) { }
 };
 
 /*------------------------------------------------------------------------*/
 
 // Push on the extension stack a clause made up of the given literal, the
-// original clause and all the added covered literals so far.  The given
-// literal will act as blocking literal for that clause, if CCE is
-// successful.  Only in this case, this private extension stack is copied to
-// the actual extension stack of the solver.
+// original clause (initially copied to 'covered') and all the added covered
+// literals so far.  The given literal will act as blocking literal for that
+// clause, if CCE is successful.  Only in this case, this private extension
+// stack is copied to the actual extension stack of the solver.  Note, that
+// even though all 'added' clauses correspond to the extended clause, we
+// only need to save the original and added covered literals.
 
 inline void
 Internal::cover_push_extension (int lit, Coveror & coveror) {
   coveror.extend.push_back (0);
-  coveror.extend.push_back (lit);
+  coveror.extend.push_back (lit);       // blocking literal comes first
   bool found = false;
-  for (const auto & other : coveror.clause)
+  for (const auto & other : coveror.covered)
     if (lit == other) assert (!found), found = true;
     else coveror.extend.push_back (other);
-  for (const auto & other : coveror.covered) {
-    if (lit == other) assert (!found), found = true;
-    else coveror.extend.push_back (other);
-  }
   assert (found);
   (void) found;
 }
 
-// Successful CLA step.
+// Successful covered literal addition (CLA) step.
 
 inline void
-Internal::covered_literal_addition (int lit, Coveror & coveror) {
+Internal::covered_literal_addition (int lit, Coveror & coveror)
+{
   require_mode (COVER);
   assert (level == 1);
   cover_push_extension (lit, coveror);
@@ -66,12 +71,12 @@ Internal::covered_literal_addition (int lit, Coveror & coveror) {
     vals[other] = -1, vals[-other] = 1;
     coveror.covered.push_back (other);
     coveror.added.push_back (other);
+    coveror.clas++;
   }
   coveror.next.covered = 0;
-  coveror.next.clause = 0;
 }
 
-// Successful ALA step.
+// Successful asymmetric literal addition (ALA) step.
 
 inline void
 Internal::asymmetric_literal_addition (int lit, Coveror & coveror)
@@ -82,16 +87,16 @@ Internal::asymmetric_literal_addition (int lit, Coveror & coveror)
   assert (!vals[lit]), assert (!vals[-lit]);
   vals[lit] = -1, vals[-lit] = 1;
   coveror.added.push_back (lit);
+  coveror.alas++;
   coveror.next.covered = 0;
-  coveror.next.clause = 0;
 }
 
 /*------------------------------------------------------------------------*/
 
 // In essence copied and adapted from 'propagate' in 'propagate.cpp'. Since
-// this function is also a hot-spot here in 'cover' we specialize it here
-// (in the same spirit as 'probe_propagate' and 'vivify_propagate').  Please
-// refer to the detailed comments for 'propagate' for explanations.
+// this function is also a hot-spot here in 'cover' we specialize it in the
+// same spirit as 'probe_propagate' and 'vivify_propagate'.  Please refer to
+// the detailed comments for 'propagate' in 'propagate.cpp' for details.
 
 bool
 Internal::cover_propagate_asymmetric (int lit,
@@ -110,7 +115,7 @@ Internal::cover_propagate_asymmetric (int lit,
   while (!subsumed && i != eow) {
     const Watch w = *j++ = *i++;
     if (w.clause == ignore) continue;   // costly but necessary here ...
-    const int b = val (w.blit);
+    const signed char b = val (w.blit);
     if (b > 0) continue;
     if (w.clause->garbage) j--;
     else if (w.binary ()) {
@@ -122,14 +127,15 @@ Internal::cover_propagate_asymmetric (int lit,
       literal_iterator lits = w.clause->begin ();
       const int other = lits[0]^lits[1]^lit;
       lits[0] = other, lits[1] = lit;
-      const int u = val (other);
+      const signed char u = val (other);
       if (u > 0) j[-1].blit = other;
       else {
         const int size = w.clause->size;
         const const_literal_iterator end = lits + size;
         const literal_iterator middle = lits + w.clause->pos;
         literal_iterator k = middle;
-        int v = -1, r = 0;
+        signed char v = -1;
+        int r = 0;
         while (k != end && (v = val (r = *k)) < 0)
           k++;
         if (v < 0) {
@@ -176,7 +182,7 @@ Internal::cover_propagate_covered (int lit, Coveror & coveror)
 
   assert (val (lit) < 0);
   if (frozen (lit)) {
-    LOG ("no covered propagating on frozen literal %d", lit);
+    LOG ("no covered propagation on frozen literal %d", lit);
     return false;
   }
 
@@ -190,41 +196,64 @@ Internal::cover_propagate_covered (int lit, Coveror & coveror)
   bool first = true;
 
   // Compute the intersection of the literals in all the clauses with
-  // '-lit'.  If all these clauses are already satisfied then we know that
+  // '-lit'.  If all these clauses are double satisfied then we know that
   // the extended clauses (in 'added') is blocked.  All literals in the
   // intersection can be added as covered literal. As soon the intersection
   // becomes empty (during traversal of clauses with '-lit') we abort.
 
   for (auto i = os.begin (); i != end; i++) {
+
     Clause * c = *i;
     if (c->garbage) continue;
+
+    // First check whether clause is 'blocked', i.e., is double satisfied.
+
     bool blocked = false;
     for (const auto & other : *c) {
       if (other == -lit) continue;
-      int tmp = val (other);
+      const signed char tmp = val (other);
       if (tmp < 0) continue;
       if (tmp > 0) { blocked = true; break; }
-      if (first) {                              // copy & mark first
-        coveror.intersection.push_back (other);
-        mark (other);
-      } else {                                  // unmark latter
-        tmp = marked (other);
-        if (tmp > 0) unmark (other);
-      }
     }
-    if (blocked) {                      // ... if 'c' is satisfied.
+    if (blocked) {                      // ... if 'c' is double satisfied.
       LOG (c, "blocked");
-      unmark (coveror.intersection);
-      coveror.intersection.clear ();
       continue;                         // with next clause with '-lit'.
     }
 
-    if (first) first = false;           // first clause copied and marked
-    else {
+    if (first) {
+
+      // Copy and mark literals of first clause.
+
+      for (const auto & other : *c) {
+        if (other == -lit) continue;
+        const signed char tmp = val (other);
+        if (tmp < 0) continue;
+        assert (!tmp);
+        coveror.intersection.push_back (other);
+        mark (other);
+      }
+
+      first = false;
+
+    } else {
+
+      // Unmark all literals in current clause.
+
+      for (const auto & other : *c) {
+        if (other == -lit) continue;
+        signed char tmp = val (other);
+        if (tmp < 0) continue;
+        assert (!tmp);
+        tmp = marked (other);
+        if (tmp > 0) unmark (other);
+      }
+
+      // Then remove from intersection all marked literals.
+
       const auto end = coveror.intersection.end ();
       auto j = coveror.intersection.begin ();
-      for (auto i = j; i != end; i++) {
-        const int other = *j++ = *i;
+      for (auto k = j; k != end; k++) {
+        const int other = *j++ = *k;
         const int tmp = marked (other);
         assert (tmp >= 0);
         if (tmp) j--, unmark (other);   // remove marked and unmark it
@@ -232,9 +261,13 @@ Internal::cover_propagate_covered (int lit, Coveror & coveror)
       }
       const size_t new_size = j - coveror.intersection.begin ();
       coveror.intersection.resize (new_size);
-    }
 
-    if (coveror.intersection.empty ()) {  // no CLA candidates left ...
+      if (!coveror.intersection.empty ()) continue;
+
+      // No covered literal addition candidates in the intersection left!
+      // Move this clause triggering early abort to the beginning.
+      // This is a common move to front strategy to minimize effort.
+
       auto begin = os.begin ();
       while (i != begin) {
         auto prev = i - 1;
@@ -242,6 +275,7 @@ Internal::cover_propagate_covered (int lit, Coveror & coveror)
         i = prev;
       }
       *begin = c;
+
       break;                    // early abort ...
     }
   }
@@ -249,6 +283,7 @@ Internal::cover_propagate_covered (int lit, Coveror & coveror)
   bool res = false;
   if (first) {
     LOG ("all resolution candidates with %d blocked", -lit);
+    assert (coveror.intersection.empty ());
     cover_push_extension (lit, coveror);
     res = true;
   } else if (coveror.intersection.empty ()) {
@@ -259,6 +294,7 @@ Internal::cover_propagate_covered (int lit, Coveror & coveror)
     covered_literal_addition (lit, coveror);
     unmark (coveror.intersection);
     coveror.intersection.clear ();
+    coveror.next.covered = 0;           // Restart covering.
   }
 
   unmark (coveror.intersection);
@@ -288,27 +324,25 @@ bool Internal::cover_clause (Clause * c, Coveror & coveror) {
 
   assert (coveror.added.empty ());
   assert (coveror.extend.empty ());
-  assert (coveror.clause.empty ());
   assert (coveror.covered.empty ());
 
   assert (!level);
   level = 1;
   LOG ("assuming literals of candidate clause");
-  for (const auto & lit : *c)
-    if (!val (lit))
-      asymmetric_literal_addition (lit, coveror),
-      coveror.clause.push_back (lit);
+  for (const auto & lit : *c) {
+    if (val (lit)) continue;
+    asymmetric_literal_addition (lit, coveror);
+    coveror.covered.push_back (lit);
+  }
 
   bool tautological = false;
-  coveror.next.added = coveror.next.clause = coveror.next.covered = 0;
+
+  coveror.next.added = coveror.next.covered = 0;
 
   while (!tautological) {
     if (coveror.next.added < coveror.added.size ()) {
       const int lit = coveror.added[coveror.next.added++];
       tautological = cover_propagate_asymmetric (lit, c, coveror);
-    } else if (coveror.next.clause < coveror.clause.size ()) {
-      const int lit = coveror.clause[coveror.next.clause++];
-      tautological = cover_propagate_covered (lit, coveror);
     } else if (coveror.next.covered < coveror.covered.size ()) {
       const int lit = coveror.covered[coveror.next.covered++];
       tautological = cover_propagate_covered (lit, coveror);
@@ -316,31 +350,28 @@ bool Internal::cover_clause (Clause * c, Coveror & coveror) {
   }
 
   if (tautological) {
-
-    if (coveror.covered.empty ()) {
+    if (coveror.extend.empty ()) {
       stats.cover.asymmetric++;
       stats.cover.total++;
       LOG (c, "asymmetric tautological");
       mark_garbage (c);
-    } else {
+    } else if (tautological) {
       stats.cover.blocked++;
       stats.cover.total++;
       LOG (c, "covered tautological");
       mark_garbage (c);
-    }
-
-    // Only copy extension stack if successful.
-
-    int prev = INT_MIN;
-    for (const auto & other : coveror.extend) {
-      if (!prev) {
-        external->push_zero_on_extension_stack ();
-        external->push_witness_literal_on_extension_stack (other);
-        external->push_zero_on_extension_stack ();
+      // Only copy extension stack if successful.
+      int prev = INT_MIN;
+      for (const auto & other : coveror.extend) {
+        if (!prev) {
+          external->push_zero_on_extension_stack ();
+          external->push_witness_literal_on_extension_stack (other);
+          external->push_zero_on_extension_stack ();
+        }
+        if (other)
+          external->push_clause_literal_on_extension_stack (other);
+        prev = other;
       }
-      if (other)
-        external->push_clause_literal_on_extension_stack (other);
-      prev = other;
     }
   }
 
@@ -353,7 +384,6 @@ bool Internal::cover_clause (Clause * c, Coveror & coveror) {
 
   coveror.covered.clear ();
   coveror.extend.clear ();
-  coveror.clause.clear ();
   coveror.added.clear ();
 
   return tautological;
@@ -410,6 +440,8 @@ int64_t Internal::cover_round () {
     if (allfrozen) { c->frozen = true; continue; }
     for (const auto & lit : *c)
       occs (lit).push_back (c);
+    if (c->size < opts.coverminclslim) continue;
+    if (c->size > opts.covermaxclslim) continue;
     if (c->covered) continue;
     schedule.push_back (c);
     untried++;
@@ -424,6 +456,8 @@ int64_t Internal::cover_round () {
       if (c->garbage) continue;
       if (c->redundant) continue;
       if (c->frozen) { c->frozen = false; continue; }
+      if (c->size < opts.coverminclslim) continue;
+      if (c->size > opts.covermaxclslim) continue;
       assert (c->covered);
       c->covered = false;
       schedule.push_back (c);
@@ -434,6 +468,8 @@ int64_t Internal::cover_round () {
       if (c->garbage) continue;
       if (c->redundant) continue;
       if (c->frozen) { c->frozen = false; continue; }
+      if (c->size < opts.coverminclslim) continue;
+      if (c->size > opts.covermaxclslim) continue;
       if (!c->covered) continue;
       schedule.push_back (c);
     }
