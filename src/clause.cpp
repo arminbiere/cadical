@@ -103,7 +103,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   c->redundant = red;
   c->transred = false;
   c->subsume = false;
-  c->used = false;
+  c->used = 0;
   c->vivified = false;
   c->vivify = false;
 
@@ -267,7 +267,7 @@ void Internal::mark_garbage (Clause * c) {
   }
   stats.garbage += bytes;
   c->garbage = true;
-  c->used = false;
+  c->used = 0;
 }
 
 /*------------------------------------------------------------------------*/

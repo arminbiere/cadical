@@ -182,7 +182,10 @@ void Internal::bump_variables () {
 
 inline void Internal::bump_clause (Clause * c) {
   LOG (c, "bumping");
-  c->used = true;
+  if (c->hyper) c->used = 1;
+  else if (c->glue <= opts.reducekeepglue) c->used = 1;
+  else if (c->glue <= opts.reducetier2glue) c->used = 2;
+  else c->used = 1;
 }
 
 /*------------------------------------------------------------------------*/

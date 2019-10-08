@@ -106,7 +106,8 @@ OPTION( realtime,          0,  0,  1, 0, "real instead of process time") \
 OPTION( reduce,            1,  0,  1, 0, "reduce useless clauses") \
 OPTION( reduceint,       300, 10,1e6, 0, "reduce interval") \
 OPTION( reducekeepglue,    3,  1,1e9, 0, "glue of kept learned clauses") \
-OPTION( reducetarget,     75, 10,1e2, 0, "reduce fraction in percent") \
+OPTION( reducetarget,     50, 10,1e2, 0, "reduce fraction in percent") \
+OPTION( reducetier2glue,   6,  1,1e9, 0, "glue of kept learned clauses") \
 OPTION( reluctant,      1024,  0,1e9, 0, "reluctant doubling period") \
 OPTION( reluctantmax,1048576,  0,1e9, 0, "reluctant doubling period") \
 OPTION( rephase,           1,  0,  1, 0, "enable resetting phase") \

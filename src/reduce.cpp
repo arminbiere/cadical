@@ -55,8 +55,8 @@ void Internal::mark_clauses_to_be_flushed () {
     if (!c->redundant) continue; // keep irredundant
     if (c->garbage) continue;    // already marked as garbage
     if (c->reason) continue;     // need to keep reasons
-    const bool used = c->used;
-    c->used = false;
+    const unsigned used = c->used;
+    if (used) c->used--;
     if (used) continue;          // but keep recently used clauses
     mark_garbage (c);            // flush unused clauses
     if (c->hyper) stats.flush.hyper++;
@@ -107,8 +107,8 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     if (!c->redundant) continue;    // Keep irredundant.
     if (c->garbage) continue;       // Skip already marked.
     if (c->reason) continue;        // Need to keep reasons.
-    const bool used = c->used;
-    c->used = false;
+    const unsigned used = c->used;
+    if (used) c->used--;
     if (c->hyper) {                 // Hyper binary and ternary resolvents
       assert (c->size <= 3);        // are only kept for one reduce round
       if (!used) mark_garbage (c);  // (even if 'c->keep' is true) unless
