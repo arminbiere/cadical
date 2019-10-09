@@ -801,8 +801,6 @@ void Internal::elim (bool update_limits) {
   if (level) backtrack ();
   if (!propagate ()) { learn_empty_clause (); return; }
 
-  dump ();
-
   stats.elimphases++;
 
 #ifndef QUIET
@@ -904,8 +902,6 @@ void Internal::elim (bool update_limits) {
     lim.elim, delta);
 
   last.elim.fixed = stats.all.fixed;
-
-  dump ();
 }
 
 }
