@@ -9,7 +9,9 @@ External::External (Internal * i)
   vsize (0),
   extended (false),
   terminator (0),
-  solution (0)
+  learner (0),
+  solution (0),
+  vars (max_var)
 {
   assert (internal);
   assert (!internal->external);
@@ -36,7 +38,7 @@ void External::init (int new_max_var) {
   int new_vars = new_max_var - max_var;
   int old_internal_max_var = internal->max_var;
   int new_internal_max_var = old_internal_max_var + new_vars;
-  internal->init (new_internal_max_var);
+  internal->init_vars (new_internal_max_var);
   if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
   LOG ("initialized %d external variables", new_vars);
   if (!max_var) {
@@ -48,20 +50,22 @@ void External::init (int new_max_var) {
     assert (e2i.size () == (size_t) max_var + 1);
     assert (internal->i2e.size () == (size_t) old_internal_max_var + 1);
   }
-  int iidx = old_internal_max_var + 1, eidx;
-  for (eidx = max_var + 1; eidx <= new_max_var; eidx++, iidx++) {
-    LOG ("mapping external %d to internal %d", eidx, iidx);
-    assert (e2i.size () == (size_t) eidx);
+  unsigned iidx = old_internal_max_var + 1, eidx;
+  for (eidx = max_var + 1u;
+       eidx <= (unsigned) new_max_var;
+       eidx++, iidx++) {
+    LOG ("mapping external %u to internal %u", eidx, iidx);
+    assert (e2i.size () == eidx);
     e2i.push_back (iidx);
     internal->i2e.push_back (eidx);
-    assert (internal->i2e[iidx] == eidx);
-    assert (e2i[eidx] == iidx);
+    assert (internal->i2e[iidx] == (int) eidx);
+    assert (e2i[eidx] == (int) iidx);
   }
   if (internal->opts.checkfrozen)
     while (new_max_var >= (int64_t) moltentab.size ())
       moltentab.push_back (false);
-  assert (iidx == new_internal_max_var + 1);
-  assert (eidx == new_max_var + 1);
+  assert (iidx == (size_t) new_internal_max_var + 1);
+  assert (eidx == (size_t) new_max_var + 1);
   max_var = new_max_var;
 }
 
@@ -93,8 +97,9 @@ int External::internalize (int elit) {
     ilit = e2i [eidx];
     if (elit < 0) ilit = -ilit;
     if (!ilit) {
-      ilit = internal->max_var + 1;
-      internal->init (ilit);
+      assert (internal->max_var < INT_MAX);
+      ilit = internal->max_var + 1u;
+      internal->init_vars (ilit);
       e2i[eidx] = ilit;
       LOG ("mapping external %d to internal %d", eidx, ilit);
       e2i[eidx] = ilit;
@@ -154,6 +159,28 @@ bool External::failed (int elit) {
   return internal->failed (ilit);
 }
 
+void External::phase (int elit) {
+  assert (elit);
+  assert (elit != INT_MIN);
+  int eidx = abs (elit);
+  if (eidx > max_var) return;
+  int ilit = e2i[eidx];
+  if (!ilit) return;
+  if (elit < 0) ilit = -ilit;
+  internal->phase (ilit);
+}
+
+void External::unphase (int elit) {
+  assert (elit);
+  assert (elit != INT_MIN);
+  int eidx = abs (elit);
+  if (eidx > max_var) return;
+  int ilit = e2i[eidx];
+  if (!ilit) return;
+  if (elit < 0) ilit = -ilit;
+  internal->unphase (ilit);
+}
+
 /*------------------------------------------------------------------------*/
 
 // Internal checker if 'solve' claims the formula to be satisfiable.
@@ -189,9 +216,9 @@ void External::check_solve_result (int res) {
 
 void External::update_molten_literals () {
   if (!internal->opts.checkfrozen) return;
-  assert (max_var + 1 == (int64_t) moltentab.size ());
+  assert ((size_t) max_var + 1 == moltentab.size ());
   int registered = 0, molten = 0;
-  for (int lit = 1; lit <= max_var; lit++) {
+  for (auto lit : vars) {
     if (moltentab[lit]) {
       LOG ("skipping already molten literal %d", lit);
       molten++;
@@ -208,10 +235,10 @@ void External::update_molten_literals () {
   LOG ("reached in total %d molten literals", molten);
 }
 
-int External::solve () {
+int External::solve (bool preprocess_only) {
   reset_extended ();
   update_molten_literals ();
-  int res = internal->solve ();
+  int res = internal->solve (preprocess_only);
   if (res == 10) extend ();
   check_solve_result (res);
   reset_limits ();
@@ -219,6 +246,34 @@ int External::solve () {
 }
 
 void External::terminate () { internal->terminate (); }
+
+int External::lookahead () {
+  reset_extended ();
+  update_molten_literals ();
+  int ilit = internal->lookahead ();
+  const int elit = (ilit && ilit != INT_MIN) ? internal->externalize (ilit) : 0;
+  LOG ("lookahead internal %d external %d", ilit, elit);
+  return elit;
+}
+
+CaDiCaL::CubesWithStatus External::generate_cubes (int depth) {
+  reset_extended ();
+  update_molten_literals ();
+  reset_limits ();
+  auto cubes {internal->generate_cubes (depth)};
+  auto externalize = [this](int ilit) {
+    const int elit = ilit ? internal->externalize (ilit) : 0;
+    MSG ("lookahead internal %d external %d", ilit, elit);
+    return elit;
+  };
+  auto externalize_map = [this, externalize](std::vector<int> cube) {
+    MSG("Cube : ");
+    std::for_each(begin(cube), end(cube), externalize);
+  };
+    std::for_each(begin(cubes.cubes), end(cubes.cubes), externalize_map);
+
+    return cubes;
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -263,7 +318,7 @@ void External::check_assignment (int (External::*a)(int) const) {
 
   // First check all assigned and consistent.
   //
-  for (int idx = 1; idx <= max_var; idx++) {
+  for (auto idx : vars) {
     if (!(this->*a) (idx)) FATAL ("unassigned variable: %d", idx);
     if ((this->*a) (idx) != -(this->*a)(-idx))
       FATAL ("inconsistently assigned literals %d and %d", idx, -idx);
@@ -279,12 +334,12 @@ void External::check_assignment (int (External::*a)(int) const) {
     int lit = *i;
     if (!lit) {
       if (!satisfied) {
-        internal->fatal_message_start ();
+        fatal_message_start ();
         fputs ("unsatisfied clause:\n", stderr);
         for (auto j = start; j != i; j++)
           fprintf (stderr, "%d ", *j);
         fputc ('0', stderr);
-        internal->fatal_message_end ();
+        fatal_message_end ();
       }
       satisfied = false;
       start = i + 1;
@@ -301,7 +356,7 @@ void External::check_assignment (int (External::*a)(int) const) {
 void External::check_assumptions_satisfied () {
   for (const auto & lit : assumptions) {
     // Not 'signed char' !!!!
-    const int tmp = ival (lit);				
+    const int tmp = ival (lit);
     if (tmp < 0) FATAL ("assumption %d falsified", lit);
     if (!tmp) FATAL ("assumption %d unassigned", lit);
   }
@@ -340,7 +395,7 @@ bool External::traverse_all_frozen_units_as_clauses (ClauseIterator & it) {
 
   vector<int> clause;
 
-  for (int idx = 1; idx <= max_var; idx++) {
+  for (auto idx : vars) {
     const int tmp = fixed (idx);
     if (!tmp) continue;
     if (!frozen (idx)) continue;
@@ -363,7 +418,7 @@ External::traverse_all_non_frozen_units_as_witnesses (WitnessIterator & it)
 
   vector<int> clause_and_witness;
 
-  for (int idx = 1; idx <= max_var; idx++) {
+  for (auto idx : vars) {
     if (frozen (idx)) continue;
     const int tmp = fixed (idx);
     if (!tmp) continue;
@@ -375,6 +430,66 @@ External::traverse_all_non_frozen_units_as_witnesses (WitnessIterator & it)
   }
 
   return true;
+}
+
+/*------------------------------------------------------------------------*/
+
+void External::copy_flags (External & other) const {
+  const vector<Flags> & this_ftab = internal->ftab;
+  vector<Flags> & other_ftab = other.internal->ftab;
+  const unsigned limit = min (max_var, other.max_var);
+  for (unsigned eidx = 1; eidx <= limit; eidx++) {
+    const int this_ilit = e2i[eidx];
+    if (!this_ilit) continue;
+    const int other_ilit = other.e2i[eidx];
+    if (!other_ilit) continue;
+    if (!internal->active (this_ilit)) continue;
+    if (!other.internal->active (other_ilit)) continue;
+    assert (this_ilit != INT_MIN);
+    assert (other_ilit != INT_MIN);
+    const Flags & this_flags = this_ftab[abs (this_ilit)];
+    Flags & other_flags = other_ftab[abs (other_ilit)];
+    this_flags.copy (other_flags);
+  }
+}
+
+/*------------------------------------------------------------------------*/
+
+void External::export_learned_empty_clause () {
+  assert (learner);
+  if (learner->learning (0)) {
+    LOG ("exporting learned empty clause");
+    learner->learn (0);
+  } else
+    LOG ("not exporting learned empty clause");
+}
+
+void External::export_learned_unit_clause (int ilit) {
+  assert (learner);
+  if (learner->learning (1)) {
+    LOG ("exporting learned unit clause");
+    const int elit = internal->externalize (ilit);
+    assert (elit);
+    learner->learn (elit);
+    learner->learn (0);
+  } else
+    LOG ("not exporting learned unit clause");
+}
+
+void External::export_learned_large_clause (const vector<int> & clause) {
+  assert (learner);
+  size_t size = clause.size ();
+  assert (size <= (unsigned) INT_MAX);
+  if (learner->learning ((int) size)) {
+    LOG ("exporting learned clause of size %zu", size);
+    for (auto ilit : clause) {
+      const int elit = internal->externalize (ilit);
+      assert (elit);
+      learner->learn (elit);
+    }
+    learner->learn (0);
+  } else
+    LOG ("not exporting learned clause of size %zu", size);
 }
 
 }

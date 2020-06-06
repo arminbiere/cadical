@@ -216,8 +216,9 @@ void Checker::enlarge_vars (int64_t idx) {
   new_vals = new signed char [ 2*new_size_vars ];
   clear_n (new_vals, 2*new_size_vars);
   new_vals += new_size_vars;
-  memcpy ((void*) (new_vals - size_vars),
-          (void*) (vals - size_vars), 2*size_vars);
+  if (size_vars) // To make sanitizer happy (without '-O').
+    memcpy ((void*) (new_vals - size_vars),
+            (void*) (vals - size_vars), 2*size_vars);
   vals -= size_vars;
   delete [] vals;
   vals = new_vals;
@@ -484,12 +485,12 @@ void Checker::add_derived_clause (const vector<int> & c) {
   if (tautological ())
     LOG ("CHECKER ignoring satisfied derived clause");
   else if (!check ()) {
-    internal->fatal_message_start ();
+    fatal_message_start ();
     fputs ("failed to check derived clause:\n", stderr);
     for (const auto & lit : unsimplified)
       fprintf (stderr, "%d ", lit);
     fputc ('0', stderr);
-    internal->fatal_message_end ();
+    fatal_message_end ();
   } else add_clause ("derived");
   simplified.clear ();
   unsimplified.clear ();
@@ -520,17 +521,35 @@ void Checker::delete_clause (const vector<int> & c) {
       if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
         collect_garbage_clauses ();
     } else {
-      internal->fatal_message_start ();
+      fatal_message_start ();
       fputs ("deleted clause not in proof:\n", stderr);
       for (const auto & lit : unsimplified)
         fprintf (stderr, "%d ", lit);
       fputc ('0', stderr);
-      internal->fatal_message_end ();
+      fatal_message_end ();
     }
   }
   simplified.clear ();
   unsimplified.clear ();
   STOP (checking);
+}
+
+/*------------------------------------------------------------------------*/
+
+void Checker::dump () {
+  int max_var = 0;
+  for (uint64_t i = 0; i < size_clauses; i++)
+    for (CheckerClause * c = clauses[i]; c; c = c->next)
+      for (unsigned i = 0; i < c->size; i++)
+        if (abs (c->literals[i]) > max_var)
+          max_var = abs (c->literals[i]);
+  printf ("p cnf %d %" PRIu64 "\n", max_var, num_clauses);
+  for (uint64_t i = 0; i < size_clauses; i++)
+    for (CheckerClause * c = clauses[i]; c; c = c->next) {
+      for (unsigned i = 0; i < c->size; i++)
+        printf ("%d ", c->literals[i]);
+      printf ("0\n");
+    }
 }
 
 }

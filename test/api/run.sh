@@ -106,9 +106,12 @@ run morenmore
 run ctest
 run example
 run terminate
+run learn
 run cfreeze
 run traverse
-run apitrace
+run cipasir
+
+[ "`grep DNTRACING $makefile`" = "" ] && run apitrace
 
 #--------------------------------------------------------------------------#
 

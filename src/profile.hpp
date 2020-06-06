@@ -56,6 +56,7 @@ PROFILE(elim,2) \
 PROFILE(extend,3) \
 PROFILE(instantiate,2) \
 PROFILE(lucky,2) \
+PROFILE(lookahead,2) \
 PROFILE(minimize,4) \
 PROFILE(parse,3) \
 PROFILE(probe,2) \
@@ -125,7 +126,7 @@ do { \
 do { \
   const double N = time (); \
   const int L = internal->opts.profile; \
-  if (!preprocessing) { \
+  if (!preprocessing && !lookingahead) { \
     if (stable && internal->profiles.stable.level <= L) \
       internal->stop_profiling (internal->profiles.stable, N); \
     if (!stable && internal->profiles.unstable.level <= L) \
@@ -154,7 +155,7 @@ do { \
     internal->stop_profiling (internal->profiles.simplify, N); \
   reset_mode (M); \
   reset_mode (SIMPLIFY); \
-  if (!preprocessing) { \
+  if (!preprocessing && !lookingahead) { \
     if (internal->profiles.search.level <= L) \
       internal->start_profiling (internal->profiles.search, N); \
     if (stable && internal->profiles.stable.level <= L) \

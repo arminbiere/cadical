@@ -14,13 +14,7 @@ struct Var {
 
   int level;         // decision level
   int trail;         // trail height at assignment
-
-  union {
-
-    Clause * reason; // implication graph edge during search
-    int parent;      // implication graph parent during probing
-
-  };
+  Clause * reason;   // implication graph edge during search
 };
 
 }

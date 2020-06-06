@@ -10,9 +10,10 @@ Internal::Internal ()
   unsat (false),
   iterating (false),
   localsearching (false),
+  lookingahead (false),
   preprocessing (false),
+  protected_reasons (false),
   force_saved_phase (false),
-  termination_forced (false),
   searching_lucky_phases (false),
   stable (false),
   reported (false),
@@ -21,7 +22,7 @@ Internal::Internal ()
   max_var (0),
   level (0),
   vals (0),
-  scinc (1.0),
+  score_inc (1.0),
   scores (this),
   conflict (0),
   ignore (0),
@@ -41,11 +42,12 @@ Internal::Internal ()
   arena (this),
   prefix ("c "),
   internal (this),
-  external (0)
+  external (0),
+  termination_forced (false),
+  vars (this->max_var),
+  lits (this->max_var)
 {
   control.push_back (Level (0, 0));
-  binary_subsuming.redundant = false;
-  binary_subsuming.size = 2;
 }
 
 Internal::~Internal () {
@@ -83,7 +85,7 @@ void Internal::enlarge_vals (size_t new_vsize) {
   ignore_clang_analyze_memory_leak_warning = new_vals;
   new_vals += new_vsize;
 
-  if (vals) memcpy (new_vals - max_var, vals - max_var, 2*max_var + 1);
+  if (vals) memcpy (new_vals - max_var, vals - max_var, 2u*max_var + 1u);
   vals -= vsize;
   delete [] vals;
   vals = new_vals;
@@ -118,6 +120,7 @@ void Internal::enlarge (int new_max_var) {
   // Ordered in the size of allocated memory (larger block first).
   enlarge_only (wtab, 2*new_vsize);
   enlarge_only (vtab, new_vsize);
+  enlarge_zero (parents, new_vsize);
   enlarge_only (links, new_vsize);
   enlarge_zero (btab, new_vsize);
   enlarge_zero (gtab, new_vsize);
@@ -128,6 +131,7 @@ void Internal::enlarge (int new_max_var) {
   enlarge_zero (frozentab, new_vsize);
   const signed char val = opts.phase ? 1 : -1;
   enlarge_init (phases.saved, new_vsize, val);
+  enlarge_zero (phases.forced, new_vsize);
   enlarge_zero (phases.target, new_vsize);
   enlarge_zero (phases.best, new_vsize);
   enlarge_zero (phases.prev, new_vsize);
@@ -136,18 +140,22 @@ void Internal::enlarge (int new_max_var) {
   vsize = new_vsize;
 }
 
-void Internal::init (int new_max_var) {
+void Internal::init_vars (int new_max_var) {
   if (new_max_var <= max_var) return;
   if (level) backtrack ();
   LOG ("initializing %d internal variables from %d to %d",
     new_max_var - max_var, max_var + 1, new_max_var);
   if ((size_t) new_max_var >= vsize) enlarge (new_max_var);
 #ifndef NDEBUG
-  for (int i = -new_max_var; i < -max_var; i++) assert (!vals[i]);
-  for (int i = max_var + 1; i <= new_max_var; i++) assert (!vals[i]);
-  for (int i = max_var + 1; i <= new_max_var; i++) assert (!btab[i]);
-  for (int i = max_var + 1; i <= new_max_var; i++) assert (!gtab[i]);
-  for (int i = 2*(max_var + 1); i <= 2*new_max_var+1; i++)
+  for (int64_t i = -new_max_var; i < -max_var; i++) assert (!vals[i]);
+  for (unsigned i = max_var + 1; i <= (unsigned) new_max_var; i++)
+    assert (!vals[i]);
+  for (unsigned i = max_var + 1; i <= (unsigned) new_max_var; i++)
+    assert (!btab[i]);
+  for (unsigned i = max_var + 1; i <= (unsigned) new_max_var; i++)
+  for (uint64_t i = 2*((uint64_t)max_var + 1);
+       i <= 2*(uint64_t)new_max_var + 1;
+       i++)
     assert (ptab[i] == -1);
 #endif
   assert (!btab[0]);
@@ -191,7 +199,9 @@ int Internal::cdcl_loop_with_inprocessing () {
     else if (!propagate ()) analyze ();      // propagate and analyze
     else if (iterating) iterate ();          // report learned unit
     else if (satisfied ()) res = 10;         // found model
-    else if (terminating ()) break;          // limit hit or async abort
+    else if (search_limits_hit ()) break;    // decision or conflict limit
+    else if (terminated_asynchronously ())    // externally terminated
+      break;
     else if (restarting ()) restart ();      // restart by backtracking
     else if (rephasing ()) rephase ();       // reset variable phases
     else if (reducing ()) reduce ();         // collect useless clauses
@@ -217,37 +227,19 @@ int Internal::cdcl_loop_with_inprocessing () {
 // increased as in a stand-alone non-incremental SAT call except for those
 // explicitly marked as being reset below.
 
-void Internal::init_limits () {
+void Internal::init_report_limits () {
+  reported = false;
+  lim.report = 0;
+}
+
+void Internal::init_preprocessing_limits () {
 
   const bool incremental = lim.initialized;
-  if (incremental) LOG ("reinitializing limits incrementally");
-  else LOG ("initializing limits and increments");
+  if (incremental)
+    LOG ("reinitializing preprocessing limits incrementally");
+  else LOG ("initializing preprocessing limits and increments");
 
   const char * mode = 0;
-
-  /*----------------------------------------------------------------------*/
-
-  if (incremental) mode = "keeping";
-  else {
-    last.reduce.conflicts = -1;
-    lim.reduce = stats.conflicts + opts.reduceint;
-    mode = "initial";
-  }
-  (void) mode;
-  LOG ("%s reduce limit %" PRId64 " after %" PRId64 " conflicts",
-    mode, lim.reduce, lim.reduce - stats.conflicts);
-
-  /*----------------------------------------------------------------------*/
-
-  if (incremental) mode = "keeping";
-  else {
-    lim.flush = opts.flushint;
-    inc.flush = opts.flushint;
-    mode = "initial";
-  }
-  (void) mode;
-  LOG ("%s flush limit %" PRId64 " interval %" PRId64 "",
-    mode, lim.flush, inc.flush);
 
   /*----------------------------------------------------------------------*/
 
@@ -279,17 +271,6 @@ void Internal::init_limits () {
 
   /*----------------------------------------------------------------------*/
 
-  if (incremental) mode = "keeping";
-  else {
-    lim.probe = stats.conflicts + opts.probeint;
-    mode = "initial";
-  }
-  (void) mode;
-  LOG ("%s probe limit %" PRId64 " after %" PRId64 " conflicts",
-    mode, lim.probe, lim.probe - stats.conflicts);
-
-  /*----------------------------------------------------------------------*/
-
   if (!incremental) {
 
     last.ternary.marked = -1;   // TODO explain why this is necessary.
@@ -303,11 +284,68 @@ void Internal::init_limits () {
 
   if (incremental) mode = "keeping";
   else {
+    lim.probe = stats.conflicts + opts.probeint;
+    mode = "initial";
+  }
+  (void) mode;
+  LOG ("%s probe limit %" PRId64 " after %" PRId64 " conflicts",
+    mode, lim.probe, lim.probe - stats.conflicts);
+
+  /*----------------------------------------------------------------------*/
+
+  if (incremental) mode = "keeping";
+  else {
     lim.condition = stats.conflicts + opts.conditionint;
     mode = "initial";
   }
   LOG ("%s condition limit %ld increment %ld",
     mode, lim.condition, lim.condition - stats.conflicts);
+
+  /*----------------------------------------------------------------------*/
+
+  // Initial preprocessing rounds.
+
+  if (inc.preprocessing <= 0) {
+    lim.preprocessing = 0;
+    LOG ("no preprocessing");
+  } else {
+    lim.preprocessing = inc.preprocessing;
+    LOG ("limiting to %d preprocessing rounds", lim.preprocessing);
+  }
+
+}
+
+void Internal::init_search_limits () {
+
+  const bool incremental = lim.initialized;
+  if (incremental) LOG ("reinitializing search limits incrementally");
+  else LOG ("initializing search limits and increments");
+
+  const char * mode = 0;
+
+  /*----------------------------------------------------------------------*/
+
+  if (incremental) mode = "keeping";
+  else {
+    last.reduce.conflicts = -1;
+    lim.reduce = stats.conflicts + opts.reduceint;
+    mode = "initial";
+  }
+  (void) mode;
+  LOG ("%s reduce limit %" PRId64 " after %" PRId64 " conflicts",
+    mode, lim.reduce, lim.reduce - stats.conflicts);
+
+  /*----------------------------------------------------------------------*/
+
+  if (incremental) mode = "keeping";
+  else {
+    lim.flush = opts.flushint;
+    inc.flush = opts.flushint;
+    mode = "initial";
+  }
+  (void) mode;
+  LOG ("%s flush limit %" PRId64 " interval %" PRId64 "",
+    mode, lim.flush, inc.flush);
 
   /*----------------------------------------------------------------------*/
 
@@ -325,13 +363,6 @@ void Internal::init_limits () {
   lim.restart = stats.conflicts + opts.restartint;
   LOG ("new restart limit %" PRId64 " increment %" PRId64 "",
     lim.restart, lim.restart - stats.conflicts);
-
-  /*----------------------------------------------------------------------*/
-
-  // Initialize or reset 'report' limits in any case.
-
-  reported = false;
-  lim.report = 0;
 
   /*----------------------------------------------------------------------*/
 
@@ -384,15 +415,7 @@ void Internal::init_limits () {
 
   /*----------------------------------------------------------------------*/
 
-  // Initial preprocessing and local search rounds.
-
-  if (inc.preprocessing <= 0) {
-    lim.preprocessing = 0;
-    LOG ("no preprocessing");
-  } else {
-    lim.preprocessing = inc.preprocessing;
-    LOG ("limiting to %d preprocessing rounds", lim.preprocessing);
-  }
+  // Initial preprocessing rounds.
 
   if (inc.localsearch <= 0) {
     lim.localsearch = 0;
@@ -443,10 +466,9 @@ bool Internal::preprocess_round (int round) {
 }
 
 int Internal::preprocess () {
-  if (opts.simplify)
-    for (int i = 0; i < lim.preprocessing; i++)
-      if (!preprocess_round (i))
-        break;
+  for (int i = 0; i < lim.preprocessing; i++)
+    if (!preprocess_round (i))
+      break;
   if (unsat) return 20;
   return 0;
 }
@@ -554,59 +576,111 @@ int Internal::local_search () {
 
 /*------------------------------------------------------------------------*/
 
-int Internal::solve () {
+int Internal::solve (bool preprocess_only) {
   assert (clause.empty ());
   START (solve);
-  if (level) backtrack ();
+  if (preprocess_only) LOG ("internal solving in preprocessing only mode");
+  else LOG ("internal solving in full mode");
+  init_report_limits ();
+  int res = already_solved ();
+  if (!res) res = restore_clauses ();
+  if (!res) {
+    init_preprocessing_limits ();
+    if (!preprocess_only) init_search_limits ();
+  }
+  if (!res) res = preprocess ();
+  if (!preprocess_only) {
+    if (!res) res = local_search ();
+    if (!res) res = lucky_phases ();
+    if (!res) res = cdcl_loop_with_inprocessing ();
+  }
+  reset_solving ();
+  report_solving (res);
+  STOP (solve);
+  return res;
+}
+
+int Internal::already_solved () {
   int res = 0;
   if (unsat) {
     LOG ("already inconsistent");
     res = 20;
-  } else if (!propagate ()) {
-    LOG ("root level propagation produces conflict");
-    learn_empty_clause ();
-    res = 20;
   } else {
-
-    init_limits ();
-
-    if (opts.restoreall <= 1 &&
-        external->tainted.empty ()) {
-      LOG ("no tainted literals and nothing to restore");
-      report ('*');
-    } else {
-      report ('+');
-      external->restore_clauses ();
-      internal->report ('r');
-      if (!unsat && !propagate ()) {
-        LOG ("root level propagation after restore produces conflict");
-        learn_empty_clause ();
-        res = 20;
-      }
+    if (level) backtrack ();
+    if (!propagate ()) {
+      LOG ("root level propagation produces conflict");
+      learn_empty_clause ();
+      res = 20;
     }
-
-    if (!res) res = preprocess ();
-    if (!res) res = local_search ();
-    if (!res) res = lucky_phases ();
-    if (!res) {
-      if (terminating ()) res = 0;
-      else res = cdcl_loop_with_inprocessing ();
-    }
+    if(max_var == 0 && res == 0)
+      res = 10;
   }
-  if (termination_forced) {
-    termination_forced = false;
-    LOG ("reset forced termination");
-  }
+  return res;
+}
+void Internal::report_solving (int res) {
        if (res == 10) report ('1');
   else if (res == 20) report ('0');
   else                report ('?');
-  STOP (solve);
+}
+
+void Internal::reset_solving () {
+  if (termination_forced) {
+
+    // TODO this leads potentially to a data race if the external
+    // user is calling 'terminate' twice within one 'solve' call.
+    // A proper solution would be to guard / protect setting the
+    // 'termination_forced' flag and only allow it during solving and
+    // ignore it otherwise thus also the second time it is called during a
+    // 'solve' call.  We could move resetting it also the start of
+    // 'solve'.
+    //
+    termination_forced = false;
+
+    LOG ("reset forced termination");
+  }
+}
+
+int Internal::restore_clauses () {
+  int res = 0;
+  if (opts.restoreall <= 1 &&
+      external->tainted.empty ()) {
+    LOG ("no tainted literals and nothing to restore");
+    report ('*');
+  } else {
+    report ('+');
+    external->restore_clauses ();
+    internal->report ('r');
+    if (!unsat && !propagate ()) {
+      LOG ("root level propagation after restore produces conflict");
+      learn_empty_clause ();
+      res = 20;
+    }
+  }
+  return res;
+}
+
+
+int Internal::lookahead () {
+  assert (clause.empty ());
+  START (lookahead);
+  assert (!lookingahead);
+  lookingahead = true;
+  int tmp = already_solved ();
+  if (!tmp) tmp = restore_clauses ();
+  int res = 0;
+  if (!tmp) res = lookahead_probing ();
+  if (res == INT_MIN) res = 0;
+  reset_solving ();
+  report_solving (tmp);
+  assert (lookingahead);
+  lookingahead = false;
+  STOP(lookahead);
   return res;
 }
 
 /*------------------------------------------------------------------------*/
 
-void Internal::print_stats () {
+void Internal::print_statistics () {
   stats.print (this);
   if (checker) checker->print_stats ();
 }
@@ -623,12 +697,12 @@ void Internal::dump (Clause * c) {
 
 void Internal::dump () {
   int64_t m = assumptions.size ();
-  for (int idx = 1; idx <= max_var; idx++)
+  for (auto idx : vars)
     if (fixed (idx)) m++;
   for (const auto & c : clauses)
     if (!c->garbage) m++;
   printf ("p cnf %d %" PRId64 "\n", max_var, m);
-  for (int idx = 1; idx <= max_var; idx++) {
+  for (auto idx : vars) {
     const int tmp = fixed (idx);
     if (tmp) printf ("%d 0\n", tmp < 0 ? -idx : idx);
   }

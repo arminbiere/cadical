@@ -182,6 +182,7 @@ struct Stats {
   int64_t binaries;     // learned binary clauses
   int64_t probingphases;// number of scheduled probing phases
   int64_t probingrounds;// number of probing rounds
+  int64_t probesuccess; // number successful probing phases
   int64_t probed;       // number of probed literals
   int64_t failed;       // number of failed literals
   int64_t hyperunary;   // hyper unary resolved unit clauses

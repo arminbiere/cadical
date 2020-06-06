@@ -19,9 +19,9 @@ MAKEFLAGS=@MAKEFLAGS@
 ############################################################################
 
 APP=cadical.cpp mobical.cpp
-ALL=$(sort $(wildcard ../src/*.[ch]pp))
-SRC=$(filter %.cpp,$(subst ../src/,,$(ALL)))
-LIB=$(filter-out $(APP),$(SRC))
+SRC=$(sort $(wildcard ../src/*.cpp))
+SUB=$(subst ../src/,,$(SRC))
+LIB=$(filter-out $(APP),$(SUB))
 OBJ=$(LIB:.cpp=.o)
 DIR=../$(shell pwd|sed -e 's,.*/,,')
 COMPILE=$(CXX) $(CXXFLAGS) -I$(DIR)

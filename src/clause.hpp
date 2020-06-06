@@ -81,18 +81,18 @@ struct Clause {
   //
   int glue;
 
-  int size;         // actual size of 'literals' (at least 2)
-  int pos;          // position of last watch replacement
+  int size;         // Actual size of 'literals' (at least 2).
+  int pos;          // Position of last watch replacement [Gent'13].
 
   union {
 
-    int literals[2];    // of variadic 'size' (not just 2) in general
+    int literals[2];    // Of variadic 'size' (shrunken if strengthened).
 
-    Clause * copy;      // only valid if 'moved', then that's where to
+    Clause * copy;      // Only valid if 'moved', then that's where to.
     //
     // The 'copy' field is only valid for 'moved' clauses in the moving
     // garbage collector 'copy_non_garbage_clauses' for keeping clauses
-    // compactly in a contiguous memory arena.  Otherwise, that is most of
+    // compactly in a contiguous memory arena.  Otherwise, most of
     // the time, 'literals' is valid.  See 'collect.cpp' for details.
   };
 
@@ -102,7 +102,19 @@ struct Clause {
   const_literal_iterator begin () const { return literals; }
   const_literal_iterator   end () const { return literals + size; }
 
-  size_t bytes () const { return (size - 2) * sizeof (int) + sizeof *this; }
+  static size_t bytes (int size) {
+
+    // Memory sanitizer insists that clauses put into consecutive memory in
+    // the arena are still 8 byte aligned.  We could also allocate 8 byte
+    // aligned memory there.  However, assuming the real memory foot print
+    // of a clause is 8 bytes anyhow, we just allocate 8 byte aligned memory
+    // all the time (even if allocated outside of the arena).
+    //
+    assert (size > 1);
+    return align ((size - 2) * sizeof (int) + sizeof (Clause), 8);
+  }
+
+  size_t bytes () const { return bytes (size); }
 
   // Check whether this clause is ready to be collected and deleted.  The
   // 'reason' flag is only there to protect reason clauses in 'reduce',

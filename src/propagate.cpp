@@ -159,8 +159,8 @@ bool Internal::propagate () {
     Watches & ws = watches (lit);
 
     const const_watch_iterator eow = ws.end ();
-    const_watch_iterator i = ws.begin ();
     watch_iterator j = ws.begin ();
+    const_watch_iterator i = j;
 
     while (i != eow) {
 
@@ -221,9 +221,7 @@ bool Internal::propagate () {
         //
         // which achieves the same effect, but needs a branch.
         //
-        const int other = lits[0]^lits[1]^lit;
-        lits[0] = other, lits[1] = lit;
-
+        const int other = lits[0] ^ lits[1] ^ lit;
         const signed char u = val (other); // value of the other watch
 
         if (u > 0) j[-1].blit = other; // satisfied, just replace blit
@@ -274,8 +272,10 @@ bool Internal::propagate () {
 
             LOG (w.clause, "unwatch %d in", lit);
 
+            lits[0] = other;
             lits[1] = r;
             *k = lit;
+
             watch_literal (r, lit, w.clause);
 
             j--;  // Drop this watch from the watch list of 'lit'.
@@ -306,8 +306,6 @@ bool Internal::propagate () {
                 // level and watch that instead of 'lit'.
 
                 assert (size > 2);
-                assert (lits[0] == other);
-                assert (lits[1] == lit);
 
                 int pos, s = 0;
 
@@ -320,6 +318,7 @@ bool Internal::propagate () {
 
                 LOG (w.clause, "unwatch %d in", lit);
                 lits[pos] = lit;
+                lits[0] = other;
                 lits[1] = s;
                 watch_literal (s, other, w.clause);
 

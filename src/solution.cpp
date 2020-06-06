@@ -15,12 +15,12 @@ void External::check_solution_on_learned_clause () {
   for (const auto & lit : internal->clause)
     if (sol (internal->externalize (lit)) > 0)
       return;
-  internal->fatal_message_start ();
+  fatal_message_start ();
   fputs ("learned clause unsatisfied by solution:\n", stderr);
   for (const auto & lit : internal->clause)
     fprintf (stderr, "%d ", lit);
   fputc ('0', stderr);
-  internal->fatal_message_end ();
+  fatal_message_end ();
 }
 
 void External::check_solution_on_shrunken_clause (Clause * c) {
@@ -28,11 +28,11 @@ void External::check_solution_on_shrunken_clause (Clause * c) {
   for (const auto & lit : *c)
     if (sol (internal->externalize (lit)) > 0)
       return;
-  internal->fatal_message_start ();
+  fatal_message_start ();
   for (const auto & lit : *c)
     fprintf (stderr, "%d ", lit);
   fputc ('0', stderr);
-  internal->fatal_message_end ();
+  fatal_message_end ();
 }
 
 void External::check_no_solution_after_learning_empty_clause () {

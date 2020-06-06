@@ -280,8 +280,7 @@ bool Internal::get_ternary_clause (Clause * d, int & a, int & b, int & c)
   return found == 3;
 }
 
-// This function checks whether 'd' exists as ternary clause or as a binary
-// clause subsuming 'd' (contains only the given literals).
+// This function checks whether 'd' exists as ternary clause.
 
 bool Internal::match_ternary_clause (Clause * d, int a, int b, int c) {
   if (d->garbage) return false;

@@ -113,6 +113,7 @@ void Stats::print (Internal * internal) {
   PRT ("  probefailed:   %15" PRId64 "   %10.2f %%  per failed", stats.probefailed, percent (stats.probefailed, stats.failed));
   PRT ("  transredunits: %15" PRId64 "   %10.2f %%  per failed", stats.transredunits, percent (stats.transredunits, stats.failed));
   PRT ("  probingphases: %15" PRId64 "   %10.2f    interval", stats.probingphases, relative (stats.conflicts, stats.probingphases));
+  PRT ("  probesuccess:  %15" PRId64 "   %10.2f %%  phases", stats.probesuccess, percent (stats.probesuccess, stats.probingphases));
   PRT ("  probingrounds: %15" PRId64 "   %10.2f    per phase", stats.probingrounds, relative (stats.probingrounds, stats.probingphases));
   PRT ("  probed:        %15" PRId64 "   %10.2f    per failed", stats.probed, relative (stats.probed, stats.failed));
   PRT ("  hbrs:          %15" PRId64 "   %10.2f    per probed", stats.hbrs, relative (stats.hbrs, stats.probed));
@@ -261,17 +262,21 @@ void Stats::print (Internal * internal) {
 
   MSG ("");
   MSG ("%sseconds are measured in %s time for solving%s",
-    tout.magenta_code (), internal->opts.realtime ? "real" : "process", tout.normal_code ());
-
-  SECTION ("resources");
-
-  size_t m = maximum_resident_set_size ();
-  PRT ("total process time since initialization: %12.2f    seconds", internal->process_time ());
-  PRT ("total real time since initialization:    %12.2f    seconds", internal->real_time ());
-  PRT ("maximum resident set size of process:    %12.2f    MB", m/(double)(1l<<20));
+    tout.magenta_code (),
+      internal->opts.realtime ? "real" : "process",
+    tout.normal_code ());
 
 #endif // ifndef QUIET
+}
 
+void Internal::print_resource_usage () {
+#ifndef QUIET
+  SECTION ("resources");
+  uint64_t m = maximum_resident_set_size ();
+  MSG ("total process time since initialization: %12.2f    seconds", internal->process_time ());
+  MSG ("total real time since initialization:    %12.2f    seconds", internal->real_time ());
+  MSG ("maximum resident set size of process:    %12.2f    MB", m/(double)(1l<<20));
+#endif
 }
 
 /*------------------------------------------------------------------------*/

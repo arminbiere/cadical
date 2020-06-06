@@ -6,11 +6,11 @@ namespace CaDiCaL {
 
 // This file implements a global forward subsumption algorithm, which is run
 // frequently during search.  It works both on original (irredundant)
-// clauses and on 'sticky' learned clauses which are small enough or have a
-// small enough glue to be otherwise kept forever.  See 'opts.keepsize' and
-// 'opts.keeglue', e.g., a redundant clause is not extended and thus kept if
-// its size is smaller equal to 'opts.keepsize' or its glue is smaller equal
-// than 'opts.keepsize').
+// clauses and on 'sticky' learned clauses which are likely to be kept.
+// This is abstracted away in the 'likely_to_be_kept_clause' function, which
+// implicitly relies on 'opts.reducetier1lgue' (glucose level of clauses
+// which are not reduced) as well as dynamically determined size and glucose
+// level ('lim.keptglue' and 'lim.keptsize') of clauses kept in 'reduce'.
 //
 // Note, that 'forward' means that the clause from which the subsumption
 // check is started is checked for being subsumed by other (smaller or equal
@@ -22,19 +22,19 @@ namespace CaDiCaL {
 // subsumption algorithm in our SATeLite preprocessor in the context of
 // finding extremal sets in data mining and his suggested improvements.
 
-// Our original 'SATeLite' subsumption algorithm (and in MiniSAT and
-// descendants) is based on backward subsumption.  It uses the observation
-// that only the occurrence list of one literal of a clause has to traversed
-// in order to find all potential clauses which are subsumed by the
-// candidate.  Thus the literal with the smallest number of occurrences is
-// used.  However, that scheme requires to connect all literals of surviving
-// clauses, while forward algorithms only need to connect one literal. On
-// the other hand forward checking requires to traverse the occurrence lists
-// of all literals of the candidate clause to find subsuming clauses.
-// During connecting the single literal (similar to the one-watch scheme by
-// Lintao Zhang) one can connect a literal with a minimal number of
-// occurrence so far, which implicitly also reduces future occurrence list
-// traversal time.
+// Our original subsumption algorithm in 'Quantor' and 'SATeLite' (and in
+// MiniSAT and descendants) is based on backward subsumption.  It uses the
+// observation that only the occurrence list of one literal of a clause has
+// to be traversed in order to find all potential clauses which are subsumed
+// by the candidate.  Thus the literal with the smallest number of
+// occurrences is used.  However, that scheme requires to connect all
+// literals of surviving clauses, while forward algorithms only need to
+// connect one literal. On the other hand forward checking requires to
+// traverse the occurrence lists of all literals of the candidate clause to
+// find subsuming clauses.  During connecting the single literal (similar to
+// the one-watch scheme by Lintao Zhang) one can connect a literal with a
+// minimal number of occurrence so far, which implicitly also reduces future
+// occurrence list traversal time.
 
 // Also the actual subsumption check is cheaper since during backward
 // checking the short subsuming candidate clause is marked and all the
@@ -59,7 +59,6 @@ namespace CaDiCaL {
 
 bool Internal::subsuming () {
 
-  if (!opts.simplify) return false;
   if (!opts.subsume && !opts.vivify) return false;
   if (!preprocessing && !opts.inprocessing) return false;
   if (preprocessing) assert (lim.preprocessing);
@@ -188,6 +187,8 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
 
   mark (c);     // signed!
 
+  Clause dummy; // Communicate binary subsuming clause.
+
   Clause * d = 0;
   int flipped = 0;
 
@@ -222,17 +223,17 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
         if (tmp < 0 && sign < 0) continue;
         if (tmp < 0) {
           if (sign < 0) continue;               // tautological resolvent
-          binary_subsuming.literals[0] = lit;
-          binary_subsuming.literals[1] = other;
+          dummy.literals[0] = lit;
+          dummy.literals[1] = other;
           flipped = other;
         } else {
-          binary_subsuming.literals[0] = sign*lit;
-          binary_subsuming.literals[1] = other;
+          dummy.literals[0] = sign*lit;
+          dummy.literals[1] = other;
           flipped = (sign < 0) ? -lit : INT_MIN;
         }
-        assert (binary_subsuming.size == 2);
-        assert (!binary_subsuming.redundant);
-        d = &binary_subsuming;
+        dummy.redundant = false;
+        dummy.size = 2;
+        d = &dummy;
         break;
       }
 
@@ -323,7 +324,8 @@ struct subsume_less_noccs {
 bool Internal::subsume_round () {
 
   if (!opts.subsume) return false;
-  if (unsat || terminating ()) return false;
+  if (unsat) return false;
+  if (terminated_asynchronously ()) return false;
   if (!stats.current.redundant && !stats.current.irredundant) return false;
 
   START_SIMPLIFIER (subsume, SUBSUME);
@@ -429,7 +431,7 @@ bool Internal::subsume_round () {
 
   for (const auto & s : schedule) {
 
-    if (terminating ()) break;
+    if (terminated_asynchronously ()) break;
     if (stats.subchecks >= check_limit) break;
 
     Clause * c = s.clause;
@@ -521,7 +523,8 @@ bool Internal::subsume_round () {
   }
 
   PHASE ("subsume-round", stats.subsumerounds,
-    "subsumed %" PRId64 " and strengthened %" PRId64 " out of %" PRId64 " clauses %.0f%%",
+    "subsumed %" PRId64 " and strengthened %" PRId64
+    " out of %" PRId64 " clauses %.0f%%",
     subsumed, strengthened, scheduled,
     percent (subsumed + strengthened, scheduled));
 

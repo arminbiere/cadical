@@ -43,15 +43,18 @@ int Internal::next_decision_variable () {
 /*------------------------------------------------------------------------*/
 
 // Implements phase saving as well using a target phase during
-// stabilization unless decision phase is forced to the initial value.
+// stabilization unless decision phase is forced to the initial value
+// of a phase is forced through the 'phase' option.
 
 int Internal::decide_phase (int idx, bool target) {
   const int initial_phase = opts.phase ? 1 : -1;
   int phase = 0;
   if (force_saved_phase) phase = phases.saved[idx];
   if (!phase && opts.forcephase) phase = initial_phase;
-  if (!phase && target)  phase = phases.target[idx];
+  if (!phase) phase = phases.forced[idx];               // TODO swap?
+  if (!phase && target) phase = phases.target[idx];
   if (!phase) phase = phases.saved[idx];
+  COVER (!phase);
   if (!phase) phase = initial_phase;
   return phase * idx;
 }

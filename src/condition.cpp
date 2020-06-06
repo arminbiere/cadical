@@ -34,7 +34,6 @@ namespace CaDiCaL {
 
 bool Internal::conditioning () {
 
-  if (!opts.simplify) return false;
   if (!opts.condition) return false;
   if (!preprocessing && !opts.inprocessing) return false;
   if (preprocessing) assert (lim.preprocessing);
@@ -51,7 +50,7 @@ bool Internal::conditioning () {
   double remain = active ();
   if (!remain) return false;
   double ratio = stats.current.irredundant / remain;
-  return ratio <= opts.conditionmaxratio;
+  return ratio <= opts.conditionmaxrat;
 }
 
 /*------------------------------------------------------------------------*/
@@ -114,7 +113,7 @@ inline void Internal::unmark_as_conditional_literal (int lit) {
 
 /*------------------------------------------------------------------------*/
 
-// We also need to now the literals which are in the current clause.  These
+// We also need to know the literals which are in the current clause.  These
 // are just marked (also in 'marks' but with the (signed) upper two bits).
 // We need a signed mark here, since we have to distinguish positive and
 // negative occurrences of literals in the candidate clause.
@@ -159,11 +158,13 @@ long Internal::condition_round (long delta) {
 
   LOG ("initial trail level %zd", initial_trail_level);
 
+  protect_reasons ();
+
 #if defined(LOGGING) || !defined(NDEBUG)
   int additionally_assigned = 0;
 #endif
 
-  for (int idx = 1; idx <= max_var; idx++) {
+  for (auto idx : vars) {
     const signed char tmp = val (idx);
     Var & v = var (idx);
     if (tmp) {
@@ -218,7 +219,7 @@ long Internal::condition_round (long delta) {
   struct { size_t assigned, conditional, autarky; } initial, remain;
 
   initial.assigned = 0;
-  for (int idx = 1; idx <= max_var; idx++) {
+  for (auto idx : vars) {
     const signed char tmp = val (idx);
     if (!tmp) continue;
     if (!var (idx).level) continue;
@@ -417,7 +418,7 @@ long Internal::condition_round (long delta) {
   // Make sure to focus on clauses not tried before by marking clauses which
   // have been checked before using the 'conditioned' bit of clauses. If all
   // candidates have their bit set, we have to reset it.  Since the
-  // assignment might be completely different than last time and thus also
+  // assignment might be completely different then last time and thus also
   // the set of candidates this method does not really exactly lead to a
   // round robin scheme of scheduling clauses.
   //
@@ -457,8 +458,16 @@ long Internal::condition_round (long delta) {
 
     if (initial.autarky <= 0) break;
 
-    if (terminating () || stats.condprops >= limit) {
+    if (c->reason) continue;
+
+    bool terminated_or_limit_hit = true;
+    if (terminated_asynchronously ())
+      LOG ("asynchronous termination detected");
+    else if (stats.condprops >= limit)
       LOG ("condition propagation limit %ld hit", limit);
+    else terminated_or_limit_hit = false;
+
+    if (terminated_or_limit_hit) {
       PHASE ("condition", stats.conditionings,
         "%zd candidates %.0f%% not tried after %ld propagations",
         untried, percent (untried, candidates.size ()), props);
@@ -481,8 +490,8 @@ long Internal::condition_round (long delta) {
     int watched_autarky_literal = 0;
 
     // First mark all true literals in the candidate clause and find an
-    // autarky literal which witnesses that this clause can in principle be
-    // globally
+    // autarky literal which witnesses that this clause has still a chance
+    // to be globally blocked.
     //
     for (const_literal_iterator l = c->begin (); l != c->end (); l++)
     {
@@ -824,6 +833,8 @@ long Internal::condition_round (long delta) {
     level = initial_level;
   }
 
+  reset_occs ();
+
   // Reassign previously assigned variables again.
   //
   LOG ("reassigning previously assigned variables");
@@ -839,7 +850,7 @@ long Internal::condition_round (long delta) {
     assert (!marked (lit));
 #endif
 
-  reset_occs ();
+  unprotect_reasons ();
 
   return blocked;
 }

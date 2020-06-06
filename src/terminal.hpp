@@ -68,6 +68,7 @@ public:
   const char * bright_yellow_code ()  { return MODIFY ("1;33"); }
   const char * green_code ()          { return MODIFY ("0;32"); }
   const char * red_code ()            { return MODIFY ("0;31"); }
+  const char * cyan_code ()           { return MODIFY ("0;96"); }
   const char * bright_red_code ()     { return MODIFY ("1;31"); }
   const char * normal_code ()         { return MODIFY ("0"   ); }
   const char * bold_code ()           { return MODIFY ("1"   ); }

@@ -30,7 +30,7 @@ void Internal::init_noccs () {
 }
 
 void Internal::reset_noccs () {
-  assert (!ntab.empty ());
+  assert (!max_var || !ntab.empty ());
   erase_vector (ntab);
   LOG ("reset two-sided occurrence counters");
 }

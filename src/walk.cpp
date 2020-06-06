@@ -473,7 +473,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
   if (!failed) {
 
-    for (int idx = 1; idx <= max_var; idx++) {
+    for (auto idx : vars) {
       if (!active (idx)) {
         LOG ("skipping inactive variable %d", idx);
         continue;
@@ -574,7 +574,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
     walk_save_minimum (walker);
 
     int64_t flips = 0, minimum = broken;
-    while (!terminating () &&
+    while (!terminated_asynchronously () &&
            !walker.broken.empty () &&
            walker.propagations < walker.limit) {
       flips++;
@@ -633,7 +633,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
   copy_phases (phases.prev);
 
-  for (int idx = 1; idx <= max_var; idx++)
+  for (auto idx : vars)
     if (active (idx))
       vals[idx] = vals[-idx] = 0;
 

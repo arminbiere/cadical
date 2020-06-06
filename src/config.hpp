@@ -5,12 +5,15 @@ namespace CaDiCaL {
 
 class Options;
 
-namespace Config {
-  bool has (const char *);
-  const char * description (const char *);
-  bool set (Solver &, const char *);
-  void usage ();
-}
+struct Config {
+
+  static bool has (const char *);
+  static bool set (Options &, const char *);
+  static void usage ();
+
+  static const char ** begin ();
+  static const char ** end ();
+};
 
 }
 

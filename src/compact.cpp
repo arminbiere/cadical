@@ -12,7 +12,6 @@ namespace CaDiCaL {
 
 bool Internal::compacting () {
   if (level) return false;
-  if (!opts.simplify) return false;
   if (!opts.compact) return false;
   if (stats.conflicts < lim.compact) return false;
   int inactive = max_var - active ();
@@ -49,12 +48,12 @@ struct Mapper {
     map_first_fixed (0),
     first_fixed_val (0)
   {
-    table = new int [ internal->max_var + 1 ];
-    clear_n (table, internal->max_var + 1);
+    table = new int [ internal->max_var + 1u ];
+    clear_n (table, internal->max_var + 1u);
 
     assert (!internal->level);
 
-    for (int src = 1; src <= internal->max_var; src++) {
+    for (auto src : internal->vars) {
       const Flags & f = internal->flags (src);
       if (f.active ()) table[src] = ++new_max_var;
       else if (f.fixed () && !first_fixed)
@@ -62,7 +61,7 @@ struct Mapper {
     }
 
     first_fixed_val = first_fixed ? internal->val (first_fixed) : 0;
-    new_vsize = new_max_var + 1;
+    new_vsize = new_max_var + 1u;
   }
 
   ~Mapper () { delete [] table; }
@@ -71,7 +70,8 @@ struct Mapper {
   // Map old variable indices.  A result of zero means not mapped.
   //
   int map_idx (int src) {
-    assert (0 < src), assert (src <= internal->max_var);
+    assert (0 < src);
+    assert (src <= internal->max_var);
     const int res = table[src];
     assert (res <= new_max_var);
     return res;
@@ -101,8 +101,7 @@ struct Mapper {
   //
   template<class T>
   void map_vector (vector<T> & v) {
-    const int max_var = internal->max_var;
-    for (int src = 1; src <= max_var; src++) {
+    for (auto src : internal->vars) {
       const int dst = map_idx (src);
       if (!dst) continue;
       assert (0 < dst);
@@ -118,8 +117,7 @@ struct Mapper {
   //
   template<class T>
   void map2_vector (vector<T> & v) {
-    const int max_var = internal->max_var;
-    for (int src = 1; src <= max_var; src++) {
+    for (auto src : internal->vars) {
       const int dst = map_idx (src);
       if (!dst) continue;
       assert (0 < dst);
@@ -195,10 +193,10 @@ void Internal::compact () {
 
   // Flush the external indices.  This has to occur before we map 'vals'.
   //
-  for (int eidx = 1; eidx <= external->max_var; eidx++) {
-    int src = external->e2i[eidx], dst;
+  for (auto eidx : external->vars) {
+    int src = external->e2i[eidx];
     if (!src) continue;
-    dst = mapper.map_lit (src);
+    int dst = mapper.map_lit (src);
     LOG ("compact %" PRId64 " maps external %d to internal %d from internal %d",
       stats.compacts, eidx, dst, src);
     external->e2i[eidx] = dst;
@@ -220,10 +218,9 @@ void Internal::compact () {
   // Map the blocking literals in all watches.
   //
   if (!wtab.empty ())
-    for (int idx = 1; idx <= max_var; idx++)
-      for (int sign = -1; sign <= 1; sign += 2)
-        for (auto & w : watches (sign*idx))
-          w.blit = mapper.map_lit (w.blit);
+    for (auto lit : lits)
+      for (auto & w : watches (lit))
+        w.blit = mapper.map_lit (w.blit);
 
   // We first flush inactive variables and map the links in the queue.  This
   // has to be done before we map the actual links data structure 'links'.
@@ -266,8 +263,10 @@ void Internal::compact () {
   // 'Internal::enlarge' which reallocates in order of allocated bytes.
 
   mapper.map_vector (ftab);
+  mapper.map_vector (parents);
   mapper.map_vector (marks);
   mapper.map_vector (phases.saved);
+  mapper.map_vector (phases.forced);
   mapper.map_vector (phases.target);
   mapper.map_vector (phases.best);
   mapper.map_vector (phases.prev);
@@ -275,7 +274,7 @@ void Internal::compact () {
 
   // Special code for 'frozentab'.
   //
-  for (int src = 1; src <= max_var; src++) {
+  for (auto src : vars) {
     const int dst = mapper.map_idx (src);
     if (!dst) continue;
     if (src == dst) continue;
@@ -312,9 +311,9 @@ void Internal::compact () {
     signed char * new_vals = new signed char [ 2*mapper.new_vsize ];
     ignore_clang_analyze_memory_leak_warning = new_vals;
     new_vals += mapper.new_vsize;
-    for (int src = -max_var; src <= -1; src++)
-      new_vals[-mapper.map_idx (-src)] = vals[src];
-    for (int src = 1; src <= max_var; src++)
+    for (auto src : vars)
+      new_vals[-mapper.map_idx (src)] = vals[-src];
+    for (auto src : vars)
       new_vals[mapper.map_idx (src)] = vals[src];
     new_vals[0] = 0;
     vals -= vsize;
@@ -329,7 +328,6 @@ void Internal::compact () {
   mapper.map_vector (links);
   mapper.map_vector (vtab);
   if (!ntab.empty ()) mapper.map2_vector (ntab);
-  if (!ntab2.empty ()) mapper.map_vector (ntab2);
   if (!wtab.empty ()) mapper.map2_vector (wtab);
   if (!otab.empty ()) mapper.map2_vector (otab);
   if (!big.empty ()) mapper.map2_vector (big);
@@ -376,7 +374,7 @@ void Internal::compact () {
 
   size_t new_target_assigned = 0, new_best_assigned = 0;
 
-  for (int idx = 1; idx <= mapper.new_max_var; idx++) {
+  for (auto idx : Range (mapper.new_max_var)) {
     if (phases.target[idx]) new_target_assigned++;
     if (phases.best[idx]) new_best_assigned++;
   }

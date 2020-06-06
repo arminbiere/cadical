@@ -75,6 +75,62 @@ void Internal::mark_satisfied_clauses_as_garbage () {
 
 /*------------------------------------------------------------------------*/
 
+// Reason clauses can not be collected.
+//
+// We protect reasons before and release protection after garbage collection
+// (actually within garbage collection).
+//
+// For 'reduce' we still need to make sure that all clauses which should not
+// be removed are marked as such and thus we need to call it before marking
+// clauses to be flushed.
+
+void Internal::protect_reasons () {
+  LOG ("protecting reason clauses of all assigned variables on trail");
+  assert (!protected_reasons);
+  size_t count = 0;
+  for (const auto & lit : trail) {
+    if (!active (lit)) continue;
+    assert (val (lit));
+    Var & v = var (lit);
+    assert (v.level > 0);
+    Clause * reason = v.reason;
+    if (!reason) continue;
+    LOG (reason, "protecting assigned %d reason %p", lit, reason);
+    assert (!reason->reason);
+    reason->reason = true;
+    count++;
+  }
+  LOG ("protected %zd reason clauses referenced on trail", count);
+  protected_reasons = true;
+}
+
+/*------------------------------------------------------------------------*/
+
+// After garbage collection we reset the 'reason' flag of the reasons
+// of assigned literals on the trail.
+
+void Internal::unprotect_reasons () {
+  LOG ("unprotecting reasons clauses of all assigned variables on trail");
+  assert (protected_reasons);
+  size_t count = 0;
+  for (const auto & lit : trail) {
+    if (!active (lit)) continue;
+    assert (val (lit));
+    Var & v = var (lit);
+    assert (v.level > 0);
+    Clause * reason = v.reason;
+    if (!reason) continue;
+    LOG (reason, "unprotecting assigned %d reason %p", lit, reason);
+    assert (reason->reason);
+    reason->reason = false;
+    count++;
+  }
+  LOG ("unprotected %zd reason clauses referenced on trail", count);
+  protected_reasons = false;
+}
+
+/*------------------------------------------------------------------------*/
+
 // Update occurrence lists before deleting garbage clauses in the context of
 // preprocessing, e.g., during bounded variable elimination 'elim'.  The
 // result is the number of remaining clauses, which in this context means
@@ -131,14 +187,34 @@ inline void Internal::flush_watches (int lit, Watches & saved) {
 
 void Internal::flush_all_occs_and_watches () {
   if (occurring ())
-    for (int idx = 1; idx <= max_var; idx++)
+    for (auto idx : vars)
       flush_occs (idx), flush_occs (-idx);
 
   if (watching ()) {
     Watches tmp;
-    for (int idx = 1; idx <= max_var; idx++)
+    for (auto idx : vars)
       flush_watches (idx, tmp), flush_watches (-idx, tmp);
   }
+}
+
+/*------------------------------------------------------------------------*/
+
+void Internal::update_reason_references () {
+  LOG ("update assigned reason references");
+  size_t count = 0;
+  for (auto & lit : trail) {
+    if (!active (lit)) continue;
+    Var & v = var (lit);
+    Clause * c = v.reason;
+    if (!c) continue;
+    LOG (c, "updating assigned %d reason", lit);
+    assert (c->reason);
+    assert (c->moved);
+    Clause * d = c->copy;
+    v.reason = d;
+    count++;
+  }
+  LOG ("updated %zd assigned reason references", count);
 }
 
 /*------------------------------------------------------------------------*/
@@ -182,20 +258,11 @@ void Internal::delete_garbage_clauses () {
 void Internal::copy_clause (Clause * c) {
   LOG (c, "moving");
   assert (!c->moved);
-  char * p = (char*) c, * q = arena.copy (p, c->bytes ());
-  Clause * d = c->copy = (Clause *) q;
-  LOG ("copied clause[%p] to clause[%p]", c, d);
-  if (d->reason) {
-    assert (level > 0);
-    Var & v = var (d->literals[0]);
-    if (v.reason == c) v.reason = d;
-    else {
-      Var & u = var (d->literals[1]);
-      assert (u.reason == c);
-      u.reason = d;
-    }
-  }
+  char * p = (char*) c;
+  char * q = arena.copy (p, c->bytes ());
+  c->copy = (Clause *) q;
   c->moved = true;
+  LOG ("copied clause[%" PRId64 "] from %p to %p", c->id, c, c->copy);
 }
 
 // This is the moving garbage collector.
@@ -255,7 +322,7 @@ void Internal::copy_non_garbage_clauses () {
     // Our version uses saved phases too.
 
     for (int sign = -1; sign <= 1; sign += 2)
-      for (int idx = 1; idx <= max_var; idx++)
+      for (auto idx : vars)
         for (const auto & w : watches (sign * likely_phase (idx)))
           if (!w.clause->moved && !w.clause->collect ())
             copy_clause (w.clause);
@@ -284,9 +351,8 @@ void Internal::copy_non_garbage_clauses () {
     if (!c->collect () && !c->moved)
       copy_clause (c);
 
-  // Update watches or occurrence lists.
-  //
   flush_all_occs_and_watches ();
+  update_reason_references ();
 
   // Replace and flush clause references in 'clauses'.
   //
@@ -349,10 +415,12 @@ void Internal::garbage_collection () {
   report ('G', 1);
   stats.collections++;
   mark_satisfied_clauses_as_garbage ();
+  if (!protected_reasons) protect_reasons ();
   if (arenaing ()) copy_non_garbage_clauses ();
   else delete_garbage_clauses ();
   check_clause_stats ();
   check_var_stats ();
+  unprotect_reasons ();
   report ('C', 1);
   STOP (collect);
 }

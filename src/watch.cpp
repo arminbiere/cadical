@@ -10,9 +10,8 @@ void Internal::init_watches () {
 }
 
 void Internal::clear_watches () {
-  for (int idx = 1; idx <= max_var; idx++)
-    for (int sign = -1; sign <= 1; sign += 2)
-      watches (sign * idx).clear ();
+  for (auto lit : lits)
+    watches (lit).clear ();
 }
 
 void Internal::reset_watches () {
@@ -75,38 +74,27 @@ void Internal::sort_watches () {
   assert (watching ());
   LOG ("sorting watches");
   Watches saved;
-  for (int idx = 1; idx <= max_var; idx++) {
-    for (int sign = -1; sign <= 1; sign += 2) {
+  for (auto lit : lits) {
+    Watches & ws = watches (lit);
 
-      const int lit = sign * idx;
-      Watches & ws = watches (lit);
+    const const_watch_iterator end = ws.end ();
+    watch_iterator j = ws.begin ();
+    const_watch_iterator i;
 
-      const const_watch_iterator end = ws.end ();
-      watch_iterator j = ws.begin ();
-      const_watch_iterator i;
+    assert (saved.empty ());
 
-      assert (saved.empty ());
-
-      for (i = j; i != end; i++) {
-        const Watch w = *i;
-        if (w.binary ()) *j++ = w;
-        else saved.push_back (w);
-      }
-      ws.resize (j - ws.begin ());
-
-      for (const auto & w : saved)
-        ws.push_back (w);
-
-      saved.clear ();
+    for (i = j; i != end; i++) {
+      const Watch w = *i;
+      if (w.binary ()) *j++ = w;
+      else saved.push_back (w);
     }
-  }
-}
+    ws.resize (j - ws.begin ());
 
-void Internal::disconnect_watches () {
-  LOG ("disconnecting watches");
-  for (int idx = 1; idx <= max_var; idx++)
-    for (int sign = -1; sign <= 1; sign += 2)
-      watches (sign * idx).clear ();
+    for (const auto & w : saved)
+      ws.push_back (w);
+
+    saved.clear ();
+  }
 }
 
 }

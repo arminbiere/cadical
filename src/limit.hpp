@@ -7,8 +7,8 @@ struct Limit {
 
   bool initialized;
 
-  int64_t conflicts;        // conflict limit if non-negative
-  int64_t decisions;        // decision limit if non-negative
+  int64_t conflicts;       // conflict limit if non-negative
+  int64_t decisions;       // decision limit if non-negative
   int64_t preprocessing;   // limit on preprocessing rounds
   int64_t localsearch;     // limit on local search rounds
 
@@ -24,8 +24,8 @@ struct Limit {
   int64_t stabilize;       // conflict limit for next 'stabilize'
   int64_t subsume;         // conflict limit for next 'subsume'
 
-  int keptsize;         // maximum kept size in 'reduce'
-  int keptglue;         // maximum kept glue in 'reduce'
+  int keptsize;            // maximum kept size in 'reduce'
+  int keptglue;            // maximum kept glue in 'reduce'
 
   // How often rephased during (1) or out (0) of stabilization.
   //
@@ -34,6 +34,11 @@ struct Limit {
   // Current elimination bound per eliminated variable.
   //
   int64_t elimbound;
+
+  struct {
+    int check;             // countdown to next terminator call
+    int forced;            // forced termination for testing
+  } terminate;
 
   Limit ();
 };

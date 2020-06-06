@@ -82,7 +82,7 @@ void External::restore_clauses () {
 
   PHASE ("restore", internal->stats.restorations,
     "starting with %zd tainted literals %.0f%%",
-    numtainted, percent (numtainted, 2*max_var));
+    numtainted, percent (numtainted, 2u*max_var));
 
   auto end_of_extension = extension.end ();
   auto p = extension.begin (), q = p;
@@ -193,7 +193,7 @@ void External::restore_clauses () {
 
   PHASE ("restore", internal->stats.restorations,
     "finishing with %zd tainted literals %.0f%%",
-    numtainted, percent (numtainted, 2*max_var));
+    numtainted, percent (numtainted, 2u*max_var));
 
   LOG ("extension stack clean");
   tainted.clear ();

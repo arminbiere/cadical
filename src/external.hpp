@@ -3,6 +3,10 @@
 
 /*------------------------------------------------------------------------*/
 
+#include "range.hpp"
+
+/*------------------------------------------------------------------------*/
+
 namespace CaDiCaL {
 
 using namespace std;
@@ -18,11 +22,11 @@ using namespace std;
 // Note, that 'Solver' is defined in 'cadical.hpp' and 'solver.cpp', while
 // 'External' and 'Internal' in '{external,internal}.{hpp,cpp}'.
 //
-// Also note, that 'App' accesses (and any user of the library should
-// access) the library only through the 'Solver' API.  For the library
-// internal 'Parser' code we make an exception and allow access to both
-// 'External' and 'Internal'.  The former to enforce the same external to
-// internal mapping of variables and the latter for profiling and messages.
+// Also note, that any user should access the library only through the
+// 'Solver' API.  For the library internal 'Parser' code we make an
+// exception and allow access to both 'External' and 'Internal'.  The former
+// to enforce the same external to internal mapping of variables and the
+// latter for profiling and messages.  The same applies to 'App'.
 //
 // The 'External' class provided here stores the information needed to map
 // external variable indices to internal variables (actually literals).
@@ -38,24 +42,72 @@ using namespace std;
 
 struct Clause;
 struct Internal;
+struct CubesWithStatus;
+
+/*------------------------------------------------------------------------*/
+
+/*------------------------------------------------------------------------*/
 
 struct External {
 
-  /*----------------------------------------------------------------------*/
+  /*==== start of state ==================================================*/
 
-  typedef signed char signed_char;
+  Internal * internal;        // The actual internal solver.
 
-  /*----------------------------------------------------------------------*/
+  int max_var;                // External maximum variable index.
+  size_t vsize;               // Allocated external size.
 
-  Internal * internal;    // The actual internal solver.
-  int max_var;            // External maximum variable index.
-  size_t vsize;
-  vector<bool> vals;      // Current external (extended) assignment.
-  vector<int> e2i;        // External 'idx' to internal 'lit' [1,max_var].
+  vector<bool> vals;          // Current external (extended) assignment.
+  vector<int> e2i;            // External 'idx' to internal 'lit'.
 
-  vector<int> assumptions;      // External assumptions.
+  vector<int> assumptions;    // External assumptions.
 
-  /*----------------------------------------------------------------------*/
+  // The extension stack for reconstructing complete satisfying assignments
+  // (models) of the original external formula is kept in this external
+  // solver object. It keeps track of blocked clauses and clauses containing
+  // eliminated variable.  These irredundant clauses are stored in terms of
+  // external literals on the 'extension' stack after mapping the
+  // internal literals given as arguments with 'externalize'.
+
+  bool extended;              // Have been extended.
+  vector<int> extension;      // Solution reconstruction extension stack.
+
+  vector<bool> witness;       // Literal witness on extension stack.
+  vector<bool> tainted;       // Literal tainted in adding literals.
+
+  vector<unsigned> frozentab; // Reference counts for frozen variables.
+
+  // Regularly checked terminator if non-zero.  The terminator is set from
+  // 'Solver::set (Terminator *)' and checked by 'Internal::terminating ()'.
+
+  Terminator * terminator;
+
+  // If there is a learner export learned clauses.
+
+  Learner * learner;
+
+  void export_learned_empty_clause ();
+  void export_learned_unit_clause (int ilit);
+  void export_learned_large_clause (const vector<int> &);
+
+  //----------------------------------------------------------------------//
+
+  signed char * solution;     // Given solution checking for debugging.
+  vector<int> original;       // Saved original formula for checking.
+
+  // If 'opts.checkfrozen' is set make sure that only literals are added
+  // which were never completely molten before.  These molten literals are
+  // marked at the beginning of the 'solve' call.  Note that variables
+  // larger than 'max_var' are not molten and can thus always be used in the
+  // future.  Only needed to check and debug old style freeze semantics.
+  //
+  vector<bool> moltentab;
+
+  //----------------------------------------------------------------------//
+
+  const Range vars;           // Provides safe variable iterations.
+
+  /*==== end of state ====================================================*/
 
   // These two just factor out common sanity (assertion) checking code.
 
@@ -75,16 +127,6 @@ struct External {
   }
 
   /*----------------------------------------------------------------------*/
-
-  // The extension stack for reconstructing complete satisfying assignments
-  // (models) of the original external formula is kept in this external
-  // solver object. It keeps track of blocked clauses and clauses containing
-  // eliminated variable.  These irredundant clauses are stored in terms of
-  // external literals on the 'extension' stack after mapping the
-  // internal literals given as arguments with 'externalize'.
-
-  bool extended;          // Have been extended.
-  vector<int> extension;  // Extension stack for reconstructing solutions.
 
   // The following five functions push individual literals or clauses on the
   // extension stack.  They all take internal literals as argument, and map
@@ -137,16 +179,12 @@ struct External {
     if (ulit < map.size ()) map[ulit] = false;
   }
 
-  vector<bool> witness;
-  vector<bool> tainted;
-
   /*----------------------------------------------------------------------*/
 
   void push_external_clause_and_witness_on_extension_stack (
     const vector<int> & clause, const vector<int> & witness);
 
   // Restore a clause, which was pushed on the extension stack.
-  //
   void restore_clause (
     const vector<int>::const_iterator & begin,
     const vector<int>::const_iterator & end);
@@ -159,8 +197,6 @@ struct External {
   // internally and implicitly assumed literals).  Passes on freezing and
   // melting to the internal solver, which has separate frozen counters.
 
-  vector<unsigned> frozentab;
-
   void freeze (int elit);
   void melt (int elit);
 
@@ -172,13 +208,6 @@ struct External {
     if (eidx >= (int) frozentab.size ()) return false;
     return frozentab[eidx] > 0;
   }
-
-  // Used if 'checkfrozen' is set to make sure that only literals are added
-  // which were never completely molten before.  These molten literals are
-  // marked at the beginning of the 'solve' call.  Note that variables
-  // larger than 'max_var' are not molten and can be used in the future.
-  //
-  vector<bool> moltentab;
 
   /*----------------------------------------------------------------------*/
 
@@ -222,13 +251,13 @@ struct External {
 
   void add (int elit);
   void assume (int elit);
-  int solve ();
-  void terminate ();
+  int solve (bool preprocess_only);
+
 
   // We call it 'ival' as abbreviation for 'val' with 'int' return type to
   // avoid bugs due to using 'signed char tmp = val (lit)', which might turn
   // a negative value into a positive one (happened in 'extend').
-  // 
+  //
   inline int ival (int elit) const {
     assert (elit != INT_MIN);
     int eidx = abs (elit), res;
@@ -239,35 +268,41 @@ struct External {
     return res;
   }
 
-  int fixed (int elit) const;   // Implemented in 'internal.hpp'.
-
   bool failed (int elit);
 
-  /*----------------------------------------------------------------------*/
+  void terminate ();
 
-  // Regularly checked terminator if non-zero.  The terminator is set from
-  // 'Solver::set (Terminator *)' and checked by 'Internal::terminating ()'.
+  // Other important non IPASIR functions.
 
-  Terminator * terminator;
+  int lookahead();
+  CaDiCaL::CubesWithStatus generate_cubes(int);
 
-  /*----------------------------------------------------------------------*/
-
-  signed char * solution; // For checking & debugging [1,max_var]
-  vector<int> original;   // Saved original formula for checking.
-
-  // For debugging and testing only.  See 'solution.hpp' for more details.
-  //
-  inline int sol (int elit) const {
-    assert (solution);
-    assert (elit != INT_MIN);
-    int eidx = abs (elit);
-    if (eidx > max_var) return 0;
-    int res = solution[eidx];
-    if (elit < 0) res = -res;
-    return res;
-  }
+  int fixed (int elit) const;   // Implemented in 'internal.hpp'.
 
   /*----------------------------------------------------------------------*/
+
+  void phase (int elit);
+  void unphase (int elit);
+
+  /*----------------------------------------------------------------------*/
+
+  // Traversal functions.
+
+  bool traverse_all_frozen_units_as_clauses (ClauseIterator &);
+  bool traverse_all_non_frozen_units_as_witnesses (WitnessIterator &);
+  bool traverse_witnesses_backward (WitnessIterator &);
+  bool traverse_witnesses_forward (WitnessIterator &);
+
+  /*----------------------------------------------------------------------*/
+
+  // Copy flags for determining preprocessing state.
+
+  void copy_flags (External & other) const;
+
+
+  /*----------------------------------------------------------------------*/
+
+  // Check solver behaves as expected during testing and debugging.
 
   void check_assumptions_satisfied ();
   void check_assumptions_failing ();
@@ -304,12 +339,17 @@ struct External {
 
   /*----------------------------------------------------------------------*/
 
-  // Traversal functions.
-
-  bool traverse_all_frozen_units_as_clauses (ClauseIterator &);
-  bool traverse_all_non_frozen_units_as_witnesses (WitnessIterator &);
-  bool traverse_witnesses_backward (WitnessIterator &);
-  bool traverse_witnesses_forward (WitnessIterator &);
+  // For debugging and testing only.  See 'solution.hpp' for more details.
+  //
+  inline int sol (int elit) const {
+    assert (solution);
+    assert (elit != INT_MIN);
+    int eidx = abs (elit);
+    if (eidx > max_var) return 0;
+    int res = solution[eidx];
+    if (elit < 0) res = -res;
+    return res;
+  }
 };
 
 }

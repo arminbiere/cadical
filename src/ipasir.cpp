@@ -39,4 +39,11 @@ void ipasir_set_terminate (void * solver,
   ccadical_set_terminate ((CCaDiCaL *) solver, state, terminate);
 }
 
+void ipasir_set_learn (void * solver,
+                         void * state, int max_length,
+			 void (*learn)(void * state, int * clause)) {
+  ccadical_set_learn ((CCaDiCaL*) solver, state, max_length, learn);
+}
+
+
 }

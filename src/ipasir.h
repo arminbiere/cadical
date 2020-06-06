@@ -25,6 +25,10 @@ int ipasir_failed (void * solver, int lit);
 void ipasir_set_terminate (void * solver,
                            void * state, int (*terminate)(void * state));
 
+void ipasir_set_learn (void * solver,
+                       void * state, int max_length,
+		       void (*learn)(void * state, int * clause));
+
 /*------------------------------------------------------------------------*/
 #ifdef __cplusplus
 }

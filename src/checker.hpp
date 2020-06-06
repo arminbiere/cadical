@@ -125,22 +125,22 @@ class Checker : public Observer {
 
   struct {
 
-    int64_t added;                 // number of added clauses
-    int64_t original;              // number of added original clauses
-    int64_t derived;               // number of added derived clauses
+    int64_t added;              // number of added clauses
+    int64_t original;           // number of added original clauses
+    int64_t derived;            // number of added derived clauses
 
-    int64_t deleted;               // number of deleted clauses
+    int64_t deleted;            // number of deleted clauses
 
-    int64_t assumptions;           // number of assumed literals
-    int64_t propagations;          // number of propagated literals
+    int64_t assumptions;        // number of assumed literals
+    int64_t propagations;       // number of propagated literals
 
-    int64_t insertions;            // number of clauses added to hash table
-    int64_t collisions;            // number of hash collisions in 'find'
-    int64_t searches;              // number of searched clauses in 'find'
+    int64_t insertions;         // number of clauses added to hash table
+    int64_t collisions;         // number of hash collisions in 'find'
+    int64_t searches;           // number of searched clauses in 'find'
 
-    int64_t checks;                // number of implication checks
+    int64_t checks;             // number of implication checks
 
-    int64_t collections;           // garbage collections
+    int64_t collections;        // garbage collections
     int64_t units;
 
   } stats;
@@ -157,6 +157,7 @@ public:
   void delete_clause (const vector<int> &);
 
   void print_stats ();
+  void dump ();                 // for debugging purposes only
 };
 
 }

@@ -133,25 +133,27 @@ namespace CaDiCaL {
 //               terminate (asynchronously)
 //      SOLVING  ------------------------->  UNKNOWN
 //
-// The main restriction to remember is that adding or assuming a literal
-// immediately destroys the satisfying assignment in the 'SATISFIED' state
-// and vice versa resets all assumptions in the 'UNSATISFIED' state.
+// The important behaviour to remember is that adding or assuming a literal
+// (immediately) destroys the satisfying assignment in the 'SATISFIED' state
+// and vice versa resets all assumptions in the 'UNSATISFIED' state.  This
+// is exactly the behaviour required by the IPASIR interface.
 //
-// Further the model can only be queried through 'val' in the 'SATISFIED'
-// state, while extracting failed assumptions with 'val' only in the
-// 'UNSATISFIED' state.  Solving can only be started in the 'UNKNOWN' or
-// 'CONFIGURING' state or after the previous call to 'solve' yields an
+// Furthermore, the model can only be queried through 'val' in the
+// 'SATISFIED' state, while extracting failed assumptions with 'val' only in
+// the 'UNSATISFIED' state.  Solving can only be started in the 'UNKNOWN' or
+// 'CONFIGURING' state or after the previous call to 'solve' yielded an
 // 'UNKNOWN, 'SATISFIED' or 'UNSATISFIED' state.
 //
 // All literals have to be valid literals too, i.e., 32-bit integers
 // different from 'INT_MIN'.  If any of these requirements is violated the
-// solver aborts with an 'API contract violation' message.  If you do not
-// understand why the contract is violated you can run 'mobical' on the
-// failing API call trace.  Point the environment variable
+// solver aborts with an 'API contract violation' message.
+//
+// HINT: If you do not understand why a contract is violated you can run
+// 'mobical' on the failing API call trace.  Point the environment variable
 // 'CADICAL_API_TRACE' to the file where you want to save the trace during
-// execution of the library.  You might need for 'mobical' to use the option
-// '--do-not-enforce-contracts' though to force running into the same
-// contract violation.
+// execution of your program linking against the library.  You probably need
+// for 'mobical' to use the option '--do-not-enforce-contracts' though to
+// force running into the same contract violation.
 //
 // Additional API calls (like 'freeze' and 'melt') do not change the state
 // of the solver and are all described below.
@@ -180,7 +182,7 @@ enum State
 
 /*------------------------------------------------------------------------*/
 
-// Opaque classes declared in the same namespace needed in the API.
+// Opaque classes needed in the API and declared in the same namespace.
 
 class File;
 struct Internal;
@@ -190,6 +192,7 @@ struct External;
 
 // Forward declaration of call-back classes. See bottom of this file.
 
+class Learner;
 class Terminator;
 class ClauseIterator;
 class WitnessIterator;
@@ -222,7 +225,9 @@ public:
   //
   void add (int lit);
 
-  // Assume valid non zero literal for next call to 'solve'.
+  // Assume valid non zero literal for next call to 'solve'.  These
+  // assumptions are reset after the call to 'solve' as well as after
+  // returning from 'simplify' and 'lookahead.
   //
   //   require (READY)
   //   ensure (UNKNOWN)
@@ -261,8 +266,8 @@ public:
   //
   bool failed (int lit);
 
-  // Add call-back which is check regularly for termination.  There can only
-  // be one terminator be connected.  If a second (non-zero) one is added
+  // Add call-back which is checked regularly for termination.  There can
+  // only be one terminator connected.  If a second (non-zero) one is added
   // the first one is implicitly disconnected.
   //
   //   require (VALID)
@@ -271,28 +276,69 @@ public:
   void connect_terminator (Terminator * terminator);
   void disconnect_terminator ();
 
+  // Add call-back which allows to export learned clauses.
+  //
+  //   require (VALID)
+  //   ensure (VALID)
+  //
+  void connect_learner (Learner * learner);
+  void disconnect_learner ();
+
   // ====== END IPASIR =====================================================
+
+  //------------------------------------------------------------------------
+  // This function determines a good splitting literal.  The result can be
+  // zero if the formula is proven to be satisfiable or unsatisfiable.  This
+  // can then be checked by 'state ()'.  If the formula is empty and
+  // the function is not able to determine satisfiability also zero is
+  // returned but the state remains unknown.
+  //
+  //   require (READY)
+  //   ensure (UNKNOWN|SATISFIED|UNSATISFIED)
+  //
+  int lookahead(void);
+
+  struct CubesWithStatus {
+    int status;
+    std::vector<std::vector<int>> cubes;
+  };
+
+  CubesWithStatus generate_cubes(int);
+
+  void reset_assumptions();
 
   // Return the current state of the solver as defined above.
   //
   const State & state () const { return _state; }
+
+  // Similar to 'state ()' but using the staddard competition exit codes of
+  // '10' for 'SATISFIABLE', '20' for 'UNSATISFIABLE' and '0' otherwise.
+  //
+  int status () const {
+         if (_state == SATISFIED)   return 10;
+    else if (_state == UNSATISFIED) return 20;
+    else                            return 0;
+  }
 
   /*----------------------------------------------------------------------*/
 
   static const char * version ();    // return version string
 
   /*----------------------------------------------------------------------*/
-  // The copy constructor is not a deep clone, but only copies irredundant
-  // clauses and makes sure that witness reconstruction works with the copy
-  // as with the original formula.  Both have the same models.  Assumptions
-  // are not copied.
+  // Copy 'this' into a fresh 'other'.  The copy procedure is not a deep
+  // clone, but only copies irredundant clauses and units.  It also makes
+  // sure that witness reconstruction works with the copy as with the
+  // original formula such that both solvers have the same models.
+  // Assumptions are not copied.  Options however are copied as well as
+  // flags which remember the current state of variables in preprocessing.
   //
-  //   require (READY)
-  //   ensure (READY)
+  //   require (READY)          // for 'this'
+  //   ensure (READY)           // for 'this'
   //
-  // (for both this solver and its copy)
+  //   other.require (CONFIGURING)
+  //   other.ensure (CONFIGURING | UNKNOWN)
   //
-  void copy (Solver &) const;
+  void copy (Solver & other) const;
 
   /*----------------------------------------------------------------------*/
   // Variables are usually added and initialized implicitly whenever a
@@ -315,6 +361,7 @@ public:
   //
   void reserve (int min_max_var);
 
+#ifndef NTRACING
   //------------------------------------------------------------------------
   // This function can be used to write API calls to a file.  The same
   // format is used which 'mobical' can read, execute and also shrink
@@ -334,6 +381,7 @@ public:
   //   ensure (VALID)
   //
   void trace_api_calls (FILE * file);
+#endif
 
   //------------------------------------------------------------------------
   // Option handling.
@@ -341,6 +389,10 @@ public:
   // Determine whether 'name' is a valid option name.
   //
   static bool is_valid_option (const char * name);
+
+  // Determine whether 'name' enables a specific preprocessing technique.
+  //
+  static bool is_preprocessing_option (const char * name);
 
   // Determine whether 'arg' is a valid long option of the form '--<name>',
   // '--<name>=<val>' or '--no-<name>' similar to 'set_long_option' below.
@@ -412,8 +464,11 @@ public:
   // preprocessing rounds, which is zero by default.  Similarly, the local
   // search limit determines the number of local search rounds (also zero by
   // default).  As with 'set', the return value denotes whether the limit
-  // 'name' is valid.  These limits are only valid for the next 'solve' call
-  // and reset to their default after 'solve' returns.
+  // 'name' is valid.  These limits are only valid for the next 'solve' or
+  // 'simplify' call and reset to their default after 'solve' returns (as
+  // well as overwritten and reset during calls to 'simplify' and
+  // 'lookahead').  We actually also have an internal "terminate" limit
+  // which however should only be used for testing and debugging.
   //
   //   require (READY)
   //   ensure (READY)
@@ -436,8 +491,17 @@ public:
   int64_t irredundant () const; // Number of active irredundant clauses.
 
   //------------------------------------------------------------------------
-  // Same as 'solve' with 'limits ("conflicts", 0)' and
-  //                      'limits ("preprocessing", rounds)'.
+  // This function executes the given number of preprocessing rounds. It is
+  // similar to 'solve' with 'limits ("preprocessing", rounds)' except that
+  // no CDCL nor local search, nor lucky phases are executed.  The result
+  // values are also the same: 0=unknown, 10=satisfiable, 20=unsatisfiable.
+  // As 'solve' it resets current assumptions and limits before returning.
+  // The numbers of rounds should not be negative.  If the number of rounds
+  // is zero only clauses are restored (if necessary) and top level unit
+  // propagation is performed, which both take some time.
+  //
+  //   require (READY)
+  //   ensure (UNKNOWN | SATISFIED | UNSATISFIED)
   //
   int simplify (int rounds = 3);
 
@@ -474,6 +538,8 @@ public:
   // error message even if in principle the solver could just restore
   // clauses. Thus this option is disabled by default.
   //
+  // See our SAT'19 paper [FazekasBiereScholl-SAT'19] for more details.
+  //
   //   require (VALID)
   //   ensure (VALID)
   //
@@ -491,6 +557,12 @@ public:
   //   ensure (VALID)
   //
   int fixed (int lit) const;
+
+  //------------------------------------------------------------------------
+  // Force the default decision phase of a variable to a certain value.
+  //
+  void phase (int lit);
+  void unphase (int lit);
 
   //------------------------------------------------------------------------
 
@@ -529,6 +601,7 @@ public:
   //   ensure (!DELETING)
   //
   void statistics ();   // print statistics
+  void resources ();    // print resource usage (time and memory)
 
   //   require (VALID)
   //   ensure (VALID)
@@ -558,7 +631,7 @@ public:
   // clauses specified in the DIMACS headers are ignored, i.e., the header
   // 'p cnf 0 0' is always legal.  If the 'strict' argument is larger '1'
   // strict formatting of the header is required, i.e., single spaces
-  // everywhere and no trailing white space. Default is 'strict == 1'.
+  // everywhere and no trailing white space.
   //
   // Returns zero if successful and otherwise an error message.
   //
@@ -566,8 +639,22 @@ public:
   //   ensure (VALID)
   //
   const char * read_dimacs (FILE * file,
-                            const char * name, int & vars, int strict);
-  const char * read_dimacs (const char * path, int & vars, int strict);
+                            const char * name, int & vars, int strict = 1);
+
+  const char * read_dimacs (const char * path, int & vars, int strict = 1);
+
+  // The following routines work the same way but parse both DIMACS and
+  // INCCNF files (with 'p inccnf' header and 'a <cube>' lines).  If the
+  // parser finds and 'p inccnf' header or cubes then '*incremental' is set
+  // to true and the cubes are stored in the given vector (each cube
+  // terminated by a zero).
+
+  const char * read_dimacs (FILE * file,
+                            const char * name, int & vars, int strict,
+			    bool & incremental, std::vector<int> & cubes);
+
+  const char * read_dimacs (const char * path, int & vars, int strict,
+                            bool & incremental, std::vector<int> & cubes);
 
   //------------------------------------------------------------------------
   // Write current irredundant clauses and all derived unit clauses
@@ -594,6 +681,8 @@ public:
   static void build (FILE * file, const char * prefix = "c ");
 
 private:
+
+  //==== start of state ====================================================
 
   State _state;            // API states as discussed above.
 
@@ -636,6 +725,7 @@ private:
   Internal * internal;     // Hidden internal solver.
   External * external;     // Hidden API to internal solver mapping.
 
+#ifndef NTRACING
   // The API calls to the solver can be traced by setting the environment
   // variable 'CADICAL_API_TRACE' to point to the path of a file to which
   // API calls are written. The same format is used which 'mobical' can
@@ -651,9 +741,12 @@ private:
 
   static bool tracing_api_through_environment;
 
+  //===== end of state ====================================================
+
   void trace_api_call (const char *) const;
   void trace_api_call (const char *, int) const;
   void trace_api_call (const char *, const char *, int) const;
+#endif
 
   void transition_to_unknown_state ();
 
@@ -696,11 +789,13 @@ private:
   //   require (VALID)
   //   ensure (VALID)
   //
-  const char * read_dimacs (File *, int &, int strict);
+  const char * read_dimacs (File *, int &, int strict,
+                            bool * incremental = 0,
+			    std::vector<int> * = 0);
 
-  // Factored out common code for 'solve' and 'simplify'.
+  // Factored out common code for 'solve', 'simplify' and 'lookahead'.
   //
-  int call_external_solve_and_check_results ();
+  int call_external_solve_and_check_results (bool preprocess_only);
 
   //------------------------------------------------------------------------
   // Print DIMACS file to '<stdout>' for debugging and testing purposes,
@@ -717,7 +812,9 @@ private:
 
 /*========================================================================*/
 
-// Connected terminators are checked for termination regularly.
+// Connected terminators are checked for termination regularly.  If the
+// 'terminate' function of the terminator returns true the solver is
+// terminated synchronously as soon it calls this function.
 
 class Terminator {
 public:
@@ -725,15 +822,29 @@ public:
   virtual bool terminate () = 0;
 };
 
+// Connected learners which can be used to export learned clauses.
+// The 'learning' can check the size of the learn clause and only if it
+// returns true then the individual literals of the learned clause are given
+// to the learn through 'learn' one by one terminated by a zero literal.
+
+class Learner {
+public:
+  virtual ~Learner () { }
+  virtual bool learning (int size) = 0;
+  virtual void learn (int lit) = 0;
+};
+
+/*------------------------------------------------------------------------*/
+
 /*------------------------------------------------------------------------*/
 
 // Allows to traverse all remaining irredundant clauses.  Satisfied and
-// eliminated clauses are not included, nor any derived units unless the
-// unit variable is frozen. Falsified literals are skipped.  If the solver
+// eliminated clauses are not included, nor any derived units unless such
+// a unit literal is frozen. Falsified literals are skipped.  If the solver
 // is inconsistent only the empty clause is traversed.
 //
-// If 'clause' returns false traversal can abort early.
-//
+// If 'clause' returns false traversal aborts early.
+
 class ClauseIterator {
 public:
   virtual ~ClauseIterator () { }
@@ -754,6 +865,8 @@ public:
 // remaining clauses to satisfy the clauses on the extension stack too.
 //
 // All derived units of non-frozen variables are included too.
+//
+// If 'witness' returns false traversal aborts early.
 
 class WitnessIterator {
 public:

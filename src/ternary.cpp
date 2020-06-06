@@ -244,7 +244,8 @@ bool Internal::ternary_round (int64_t & steps_limit, int64_t & htrs_limit) {
 
   // Try ternary resolution on all variables once.
   //
-  for (int idx = 1; !terminating () && idx <= max_var; idx++) {
+  for (auto idx : vars) {
+    if (terminated_asynchronously ()) break;
     if (steps_limit < 0) break;
     if (htrs_limit < 0) break;
     ternary_idx (idx, steps_limit, htrs_limit);
@@ -255,7 +256,7 @@ bool Internal::ternary_round (int64_t & steps_limit, int64_t & htrs_limit) {
   // sense to run another round of ternary resolution over those variables.
   //
   int remain = 0;
-  for (int idx = 1; idx <= max_var; idx++) {
+  for (auto idx : vars) {
     if (!active (idx)) continue;
     if (!flags (idx).ternary) continue;
     remain++;
@@ -278,10 +279,9 @@ bool Internal::ternary_round (int64_t & steps_limit, int64_t & htrs_limit) {
 
 bool Internal::ternary () {
 
-  assert (opts.simplify);
-
   if (!opts.ternary) return false;
-  if (unsat || terminating ()) return false;
+  if (unsat) return false;
+  if (terminated_asynchronously ()) return false;
 
   // No new ternary clauses added since last time?
   //
@@ -327,7 +327,7 @@ bool Internal::ternary () {
   bool completed = false;
 
   for (int round = 0;
-       !terminating () && round < opts.ternaryrounds;
+       !terminated_asynchronously () && round < opts.ternaryrounds;
        round++)
   {
     if (htrs_limit < 0) break;

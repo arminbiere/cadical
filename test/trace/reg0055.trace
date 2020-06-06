@@ -1,0 +1,14 @@
+0 init
+1 add -1
+2 add 2
+3 add 0
+4 add -2
+5 add -1
+6 add 0
+7 add -2
+8 add 1
+9 add 0
+10 add 1
+11 add 2
+12 add 0
+13 lookahead 0

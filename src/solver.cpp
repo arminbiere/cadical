@@ -250,6 +250,10 @@ do { \
 #endif  // end of 'else' part of 'ifdef LOGGING'
 /*------------------------------------------------------------------------*/
 
+/*------------------------------------------------------------------------*/
+#ifndef NTRACING
+/*------------------------------------------------------------------------*/
+
 #define TRACE(...) \
 do { \
   if ((this == 0)) break; \
@@ -283,19 +287,31 @@ Solver::trace_api_call (const char * s0, const char * s1, int i2) const {
 
 /*------------------------------------------------------------------------*/
 
-// The global 'tracing_api' flag is used to ensure that only one solver
-// traces to a file.  Otherwise the method to use an environment variable to
-// point to the trace file is bogus, since those different solver instances
-// would all write to the same file producing garbage.  A more sophisticated
-// solution would use a different mechanism to tell the solver to which file
-// to trace to, but in our experience it is quite convenient to get traces
-// out of applications which use the solver as library by just setting an
-// environment variable without requiring to change any application code.
+// The global 'tracing_api_calls_through_environment_variable_method' flag
+// is used to ensure that only one solver traces to a file.  Otherwise the
+// method to use an environment variable to point to the trace file is
+// bogus, since those different solver instances would all write to the same
+// file producing garbage.  A more sophisticated solution would use a
+// different mechanism to tell the solver to which file to trace to, but in
+// our experience it is quite convenient to get traces out of applications
+// which use the solver as library by just setting an environment variable
+// without requiring to change any application code.
 //
 static bool tracing_api_calls_through_environment_variable_method;
 
+/*------------------------------------------------------------------------*/
+#else // NTRACING
+/*------------------------------------------------------------------------*/
+
+#define TRACE(...) do { } while (0)
+
+/*------------------------------------------------------------------------*/
+#endif
+/*------------------------------------------------------------------------*/
+
 Solver::Solver () {
 
+#ifndef NTRACING
   const char * path = getenv ("CADICAL_API_TRACE");
   if (!path) path = getenv ("CADICALAPITRACE");
   if (path) {
@@ -312,14 +328,17 @@ Solver::Solver () {
     close_trace_api_file = false;
     trace_api_file = 0;
   }
+#endif
 
   _state = INITIALIZING;
   internal = new Internal ();
   TRACE ("init");
   external = new External (internal);
   STATE (CONFIGURING);
+#ifndef NTRACING
   if (tracing_api_calls_through_environment_variable_method)
     message ("tracing API calls to '%s'", path);
+#endif
 }
 
 Solver::~Solver () {
@@ -340,6 +359,7 @@ Solver::~Solver () {
   delete internal;
   delete external;
 
+#ifndef NTRACING
   if (close_trace_api_file) {
     close_trace_api_file = false;
     assert (trace_api_file);
@@ -347,6 +367,7 @@ Solver::~Solver () {
     fclose (trace_api_file);
     tracing_api_calls_through_environment_variable_method = false;
   }
+#endif
 
 #ifdef LOGGING
   //
@@ -387,6 +408,7 @@ void Solver::reserve (int min_max_var) {
 }
 
 /*------------------------------------------------------------------------*/
+#ifndef NTRACING
 
 void Solver::trace_api_calls (FILE * file) {
   LOG_API_CALL_BEGIN ("trace_api_calls");
@@ -401,10 +423,15 @@ void Solver::trace_api_calls (FILE * file) {
   trace_api_call ("init");
 }
 
+#endif
 /*------------------------------------------------------------------------*/
 
 bool Solver::is_valid_option (const char * name) {
   return Options::has (name);
+}
+
+bool Solver::is_preprocessing_option (const char * name) {
+  return Options::is_preprocessing_option (name);
 }
 
 bool Solver::is_valid_long_option (const char * arg) {
@@ -423,6 +450,7 @@ bool Solver::set (const char * arg, int val) {
   REQUIRE_VALID_STATE ();
   if (strcmp (arg, "log") &&
       strcmp (arg, "quiet") &&
+      strcmp (arg, "report") &&
       strcmp (arg, "verbose")) {
     REQUIRE (state () == CONFIGURING,
       "can only set option 'set (\"%s\", %d)' right after initialization",
@@ -471,7 +499,7 @@ bool Solver::is_valid_limit (const char * arg) {
 
 void Solver::prefix (const char * str) {
   LOG_API_CALL_BEGIN ("prefix", str);
-  REQUIRE_VALID_STATE ();
+  REQUIRE_VALID_OR_SOLVING_STATE ();
   internal->prefix = str;
   LOG_API_CALL_END ("prefix", str);
 }
@@ -481,12 +509,12 @@ bool Solver::is_valid_configuration (const char * name) {
 }
 
 bool Solver::configure (const char * name) {
-  LOG_API_CALL_BEGIN ("config", name);
+  LOG_API_CALL_BEGIN ("configure", name);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
     "can only set configuration '%s' right after initialization", name);
-  bool res = Config::set (*this, name);
-  LOG_API_CALL_END ("config", name, res);
+  bool res = Config::set (internal->opts, name);
+  LOG_API_CALL_END ("configure", name, res);
   return res;
 }
 
@@ -512,13 +540,41 @@ void Solver::assume (int lit) {
   LOG_API_CALL_END ("assume", lit);
 }
 
+int Solver::lookahead () {
+  TRACE ("lookahead");
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  int lit = external->lookahead ();
+  TRACE ("lookahead");
+  return lit;
+}
+
+Solver::CubesWithStatus Solver::generate_cubes (int depth) {
+  TRACE ("lookahead_cubes");
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  auto cubes {external->generate_cubes (depth)};
+  TRACE ("lookahead_cubes");
+
+  CubesWithStatus cubes2;
+  cubes2.status = cubes.status;
+  cubes2.cubes = cubes.cubes;
+  return cubes2;
+}
+
+void Solver::reset_assumptions () {
+  TRACE ("reset_assumptions");
+  REQUIRE_VALID_STATE ();
+  transition_to_unknown_state ();
+  external->reset_assumptions ();
+  LOG_API_CALL_END ("reset_assumptions");
+}
+
 /*------------------------------------------------------------------------*/
 
-int Solver::call_external_solve_and_check_results () {
+int Solver::call_external_solve_and_check_results (bool preprocess_only) {
   transition_to_unknown_state ();
   assert (state () & READY);
   STATE (SOLVING);
-  int res = external->solve ();
+  const int res = external->solve (preprocess_only);
        if (res == 10) STATE (SATISFIED);
   else if (res == 20) STATE (UNSATISFIED);
   else                STATE (UNKNOWN);
@@ -547,24 +603,19 @@ int Solver::call_external_solve_and_check_results () {
 
 int Solver::solve () {
   TRACE ("solve");
-  REQUIRE_VALID_STATE ();
-  REQUIRE (state () != ADDING,
-    "clause incomplete (terminating zero not added)");
-  int res = call_external_solve_and_check_results ();
+  REQUIRE_READY_STATE ();
+  const int res = call_external_solve_and_check_results (false);
   LOG_API_CALL_RETURNS ("solve", res);
   return res;
 }
 
 int Solver::simplify (int rounds) {
   TRACE ("simplify", rounds);
-  REQUIRE_VALID_STATE ();
+  REQUIRE_READY_STATE ();
   REQUIRE (rounds >= 0,
     "negative number of simplification rounds '%d'", rounds);
-  REQUIRE (state () != ADDING,
-    "clause incomplete (terminating zero not added)");
-  internal->limit ("conflicts", 0);
   internal->limit ("preprocessing", rounds);
-  int res = call_external_solve_and_check_results ();
+  const int res = call_external_solve_and_check_results (true);
   LOG_API_CALL_RETURNS ("simplify", rounds, res);
   return res;
 }
@@ -602,6 +653,22 @@ int Solver::fixed (int lit) const {
   return res;
 }
 
+void Solver::phase (int lit) {
+  TRACE ("phase", lit);
+  REQUIRE_VALID_STATE ();
+  REQUIRE_VALID_LIT (lit);
+  external->phase (lit);
+  LOG_API_CALL_END ("phase", lit);
+}
+
+void Solver::unphase (int lit) {
+  TRACE ("unphase", lit);
+  REQUIRE_VALID_STATE ();
+  REQUIRE_VALID_LIT (lit);
+  external->unphase (lit);
+  LOG_API_CALL_END ("unphase", lit);
+}
+
 /*------------------------------------------------------------------------*/
 
 void Solver::terminate () {
@@ -636,6 +703,35 @@ void Solver::disconnect_terminator () {
 #endif
   external->terminator = 0;
   LOG_API_CALL_END ("disconnect_terminator");
+}
+
+/*------------------------------------------------------------------------*/
+
+void Solver::connect_learner (Learner * learner) {
+  LOG_API_CALL_BEGIN ("connect_learner");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (learner, "can not connect zero learner");
+#ifdef LOGGING
+  if (external->learner)
+    LOG ("connecting new learner (disconnecting previous one)");
+  else
+    LOG ("connecting new learner (no previous one)");
+#endif
+  external->learner = learner;
+  LOG_API_CALL_END ("connect_learner");
+}
+
+void Solver::disconnect_learner () {
+  LOG_API_CALL_BEGIN ("disconnect_learner");
+  REQUIRE_VALID_STATE ();
+#ifdef LOGGING
+    if (external->learner)
+      LOG ("disconnecting previous learner");
+    else
+      LOG ("ignoring to disconnect learner (no previous one)");
+#endif
+  external->learner = 0;
+  LOG_API_CALL_END ("disconnect_learner");
 }
 
 /*===== IPASIR END =======================================================*/
@@ -814,17 +910,27 @@ void Solver::statistics () {
   if (state () == DELETING) return;
   TRACE ("stats");
   REQUIRE_VALID_OR_SOLVING_STATE ();
-  internal->print_stats ();
+  internal->print_statistics ();
   LOG_API_CALL_END ("stats");
+}
+
+void Solver::resources () {
+  if (state () == DELETING) return;
+  TRACE ("resources");
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  internal->print_resource_usage ();
+  LOG_API_CALL_END ("resources");
 }
 
 /*------------------------------------------------------------------------*/
 
-const char * Solver::read_dimacs (File * file, int & vars, int strict) {
+const char * Solver::read_dimacs (File * file, int & vars, int strict,
+				  bool * incremental, vector<int> * cubes)
+{
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
     "can only read DIMACS file right after initialization");
-  Parser * parser = new Parser (this, file);
+  Parser * parser = new Parser (this, file, incremental, cubes);
   const char * err = parser->parse_dimacs (vars, strict);
   delete parser;
   return err;
@@ -861,13 +967,48 @@ Solver::read_dimacs (const char * path, int & vars, int strict) {
   return err;
 }
 
+const char *
+Solver::read_dimacs (FILE * external_file,
+                     const char * name, int & vars, int strict,
+		     bool & incremental, vector<int> & cubes) {
+  LOG_API_CALL_BEGIN ("read_dimacs", name);
+  REQUIRE_VALID_STATE ();
+  REQUIRE (state () == CONFIGURING,
+    "can only read DIMACS file right after initialization");
+  File * file = File::read (internal, external_file, name);
+  assert (file);
+  const char * err =
+    read_dimacs (file, vars, strict, &incremental, &cubes);
+  delete file;
+  LOG_API_CALL_RETURNS ("read_dimacs", name, err);
+  return err;
+}
+
+const char *
+Solver::read_dimacs (const char * path, int & vars, int strict,
+		     bool & incremental, vector<int> & cubes) {
+  LOG_API_CALL_BEGIN ("read_dimacs", path);
+  REQUIRE_VALID_STATE ();
+  REQUIRE (state () == CONFIGURING,
+    "can only read DIMACS file right after initialization");
+  File * file = File::read (internal, path);
+  if (!file)
+    return internal->error_message.init (
+             "failed to read DIMACS file '%s'", path);
+  const char * err =
+    read_dimacs (file, vars, strict, &incremental, &cubes);
+  delete file;
+  LOG_API_CALL_RETURNS ("read_dimacs", path, err);
+  return err;
+}
+
 const char * Solver::read_solution (const char * path) {
   LOG_API_CALL_BEGIN ("solution", path);
   REQUIRE_VALID_STATE ();
   File * file = File::read (internal, path);
   if (!file) return internal->error_message.init (
                       "failed to read solution file '%s'", path);
-  Parser * parser = new Parser (this, file);
+  Parser * parser = new Parser (this, file, 0, 0);
   const char * err = parser->parse_solution ();
   delete parser;
   delete file;
@@ -1062,10 +1203,15 @@ public:
 };
 
 void Solver::copy (Solver & other) const {
+  REQUIRE_READY_STATE ();
+  REQUIRE (other.state () & CONFIGURING,
+    "target solver already modified");
+  internal->opts.copy (other.internal->opts);
   ClauseCopier clause_copier (other);
   traverse_clauses (clause_copier);
   WitnessCopier witness_copier (other.external);
   traverse_witnesses_forward (witness_copier);
+  external->copy_flags (*other.external);
 }
 
 /*------------------------------------------------------------------------*/

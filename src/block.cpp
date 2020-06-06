@@ -178,14 +178,11 @@ void Internal::block_schedule (Blocker & blocker)
   // is expensive to remove references to garbage clauses from 'occs' during
   // blocked clause elimination, but decrementing 'noccs' is cheap.
 
-  for (int idx = 1; idx <= max_var; idx++) {
-    if (!active (idx)) continue;
-    assert (!val (idx));
-    for (int sign = -1; sign <= 1; sign += 2) {
-      const int lit = sign * idx;
-      Occs & os = occs (lit);
-      noccs (lit) = os.size ();
-    }
+  for (auto lit : lits) {
+    if (!active (lit)) continue;
+    assert (!val (lit));
+    Occs & os = occs (lit);
+    noccs (lit) = os.size ();
   }
 
   // Now we fill the schedule (priority queue) of candidate literals to be
@@ -197,7 +194,7 @@ void Internal::block_schedule (Blocker & blocker)
 
   int skipped = 0;
 
-  for (int idx = 1; idx <= max_var; idx++) {
+  for (auto idx : vars) {
     if (!active (idx)) continue;
     if (frozen (idx)) { skipped += 2; continue; }
     assert (!val (idx));
@@ -649,8 +646,9 @@ void Internal::block_literal (Blocker & blocker, int lit)
   if (!noccs (-lit)) block_pure_literal (blocker, lit);
   else if (!noccs (lit)) {
     // Rare situation, where the clause length limit was hit for 'lit' and
-    // '-lit' is skipped and then it becomes pure.  Can be ignored.
-    assert (frozen (lit) || marked_skip (-lit));
+    // '-lit' is skipped and then it becomes pure.  Can be ignored.  We also
+    // so it once happing for a 'elimboundmin=-1' and zero positive and one
+    // negative occurrence.
   } else if (noccs (-lit) == 1)
     block_literal_with_one_negative_occ (blocker, lit);
   else
@@ -669,9 +667,9 @@ void Internal::block_literal (Blocker & blocker, int lit)
 bool Internal::block () {
 
   if (!opts.block) return false;
-  if (unsat || terminating () || !stats.current.irredundant) return false;
-
-  assert (opts.simplify);
+  if (unsat) return false;
+  if (!stats.current.irredundant) return false;
+  if (terminated_asynchronously ()) return false;
 
   if (propagated < trail.size ()) {
     LOG ("need to propagate %zd units first", trail.size () - propagated);
@@ -682,7 +680,7 @@ bool Internal::block () {
       learn_empty_clause ();
       assert (unsat);
     }
-    disconnect_watches ();
+    clear_watches ();
     reset_watches ();
     if (unsat) return false;
   }
@@ -710,7 +708,7 @@ bool Internal::block () {
   int64_t purelits = stats.blockpurelits;
   int64_t pured = stats.blockpured;
 
-  while (!terminating () &&
+  while (!terminated_asynchronously () &&
          !blocker.schedule.empty ()) {
     int lit = u2i (blocker.schedule.front ());
     blocker.schedule.pop_front ();

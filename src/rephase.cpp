@@ -33,7 +33,7 @@ char Internal::rephase_original () {
   signed char val = opts.phase ? 1 : -1;        // original = initial
   PHASE ("rephase", stats.rephased.total,
     "switching to original phase %d", val);
-  for (int idx = 1; idx <= max_var; idx++)
+  for (auto idx : vars)
     phases.saved[idx] = val;
   return 'O';
 }
@@ -45,7 +45,7 @@ char Internal::rephase_inverted () {
   signed char val = opts.phase ? -1 : 1;        // original = -initial
   PHASE ("rephase", stats.rephased.total,
     "switching to inverted original phase %d", val);
-  for (int idx = 1; idx <= max_var; idx++)
+  for (auto idx : vars)
     phases.saved[idx] = val;
   return 'I';
 }
@@ -56,7 +56,7 @@ char Internal::rephase_flipping () {
   stats.rephased.flipped++;
   PHASE ("rephase", stats.rephased.total,
     "flipping all phases individually");
-  for (int idx = 1; idx <= max_var; idx++)
+  for (auto idx : vars)
     phases.saved[idx] *= -1;
   return 'F';
 }
@@ -69,7 +69,7 @@ char Internal::rephase_random () {
     "resetting all phases randomly");
   Random random (opts.seed);                    // global seed
   random += stats.rephased.random;              // different every time
-  for (int idx = 1; idx <= max_var; idx++)
+  for (auto idx : vars)
     phases.saved[idx] = random.generate_bool () ? -1 : 1;
   return '#';
 }
@@ -82,7 +82,7 @@ char Internal::rephase_best () {
   PHASE ("rephase", stats.rephased.total,
     "overwriting saved phases by best phases");
   signed char val;
-  for (int idx = 1; idx <= max_var; idx++)
+  for (auto idx : vars)
     if ((val = phases.best[idx]))
       phases.saved[idx] = val;
   return 'B';

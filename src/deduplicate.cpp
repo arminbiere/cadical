@@ -20,7 +20,8 @@ namespace CaDiCaL {
 void Internal::mark_duplicated_binary_clauses_as_garbage () {
 
   if (!opts.deduplicate) return;
-  if (unsat || terminating ()) return;
+  if (unsat) return;
+  if (terminated_asynchronously ()) return;
 
   START_SIMPLIFIER (deduplicate, DEDUP);
   stats.deduplications++;
@@ -33,8 +34,9 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
   int64_t subsumed = 0;
   int64_t units = 0;
 
-  for (int idx = 1; !unsat && idx <= max_var; idx++) {
+  for (auto idx : vars) {
 
+    if (unsat) break;
     if (!active (idx)) continue;
     int unit = 0;
 

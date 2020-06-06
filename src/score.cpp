@@ -9,8 +9,8 @@ namespace CaDiCaL {
 void Internal::init_scores (int old_max_var, int new_max_var) {
   LOG ("initializing EVSIDS scores from %d to %d",
     old_max_var + 1, new_max_var);
-  for (int i = old_max_var + 1; i <= new_max_var; i++)
-    scores.push_back (i);
+  for (int i = old_max_var; i < new_max_var; i++)
+    scores.push_back (i + 1);
 }
 
 // Shuffle the EVSIDS heap.
@@ -39,9 +39,9 @@ void Internal::shuffle_scores () {
       shuffle.push_back (idx);
     }
   }
-  scinc = 0;
+  score_inc = 0;
   for (const auto & idx : shuffle) {
-    stab[idx] = scinc++;
+    stab[idx] = score_inc++;
     scores.push_back (idx);
   }
 }

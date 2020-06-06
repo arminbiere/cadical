@@ -24,18 +24,19 @@ struct DFS {
 bool Internal::decompose_round () {
 
   if (!opts.decompose) return false;
-  if (unsat || terminating ()) return false;
+  if (unsat) return false;
+  if (terminated_asynchronously ()) return false;
 
-  assert (opts.simplify);
   assert (!level);
 
   START_SIMPLIFIER (decompose, DECOMP);
 
   stats.decompositions++;
 
-  DFS * dfs = new DFS[2*(max_var + 1)];
-  int * reprs = new int[2*(max_var + 1)];
-  clear_n (reprs, 2*(max_var + 1));
+  const size_t size_dfs = 2*(1 + (size_t) max_var);
+  DFS * dfs = new DFS[size_dfs];
+  int * reprs = new int[size_dfs];
+  clear_n (reprs, size_dfs);
 
   int non_trivial_sccs = 0, substituted = 0;
 #ifndef QUIET
@@ -49,7 +50,8 @@ bool Internal::decompose_round () {
   // The binary implication graph might have disconnected components and
   // thus we have in general to start several depth first searches.
 
-  for (int root_idx = 1; !unsat && root_idx <= max_var; root_idx++) {
+  for (auto root_idx : vars) {
+    if (unsat) break;
     if (!active (root_idx)) continue;
     for (int root_sign = -1; !unsat && root_sign <= 1; root_sign += 2) {
       int root = root_sign * root_idx;
@@ -325,7 +327,8 @@ bool Internal::decompose_round () {
   // also just simply use the 'e2i' map as a union find data structure.
   // This would avoid the need to restore these clauses.
 
-  for (int idx = 1; !unsat && idx <= max_var; idx++) {
+  for (auto idx : vars) {
+    if (unsat) break;
     if (!active (idx)) continue;
     int other = reprs [ vlit (idx) ];
     if (other == idx) continue;

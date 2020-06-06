@@ -1,5 +1,5 @@
 /*------------------------------------------------------------------------*/
-/* Copyright (C) 2018-2019, Armin Biere, Johannes Kepler University Linz  */
+/* Copyright (C) 2018-2020, Armin Biere, Johannes Kepler University Linz  */
 /*------------------------------------------------------------------------*/
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
@@ -384,17 +384,19 @@ void Mobical::warning (const char * fmt, ...) {
 //
 //   INIT
 //   (SET|ALWAYS)*
-//   ( (ADD|ASSUME|ALWAYS)* [ (SOLVE|SIMPLIFY) (VAL|FAILED|ALWAYS ] )* )*
+//   (   (ADD|ASSUME|ALWAYS)*
+//       [ (SOLVE|SIMPLIFY|LOOKAHEAD) (VAL|FAILED|ALWAYS)* ]
+//   )*
 //   [ RESET ]
 //
 // where 'ALWAYS' calls as defined below do not change the state.  With
 // the other short-cuts below we can abstract this to
 //
-//   CONFIG* (BEFORE* [ (SOLVE|SIMPLIFY) AFTER* ] )* [ RESET ]
+//   CONFIG* (BEFORE* [ PROCESS AFTER* ] )* [ RESET ]
 //
-// If traces are read then they are checked to have this structure.  We also
-// check that 'ADD' sequences always terminate with adding a zero literal
-// before another call is made ('ASSUME | ALWAYS | SOLVE | SIMPLIFY').
+// If traces are read then they are checked to have this structure.  We
+// check that 'ADD' sequences terminate by adding zero literal before
+// another call is made ('ASSUME|ALWAYS|SOLVE|SIMPLIFY|LOOKAHEAD').
 //
 // Furthermore the execution engine (both for read and generated traces)
 // makes sure that additional contract requirements are always met.  For
@@ -417,49 +419,52 @@ struct Call {
 
     INIT        = (1<<0),
     SET         = (1<<1),
+    CONFIGURE   = (1<<2),
 
-    VARS        = (1<<2),
-    ACTIVE      = (1<<3),
-    REDUNDANT   = (1<<4),
-    IRREDUNDANT = (1<<5),
-    RESERVE     = (1<<6),
+    VARS        = (1<<3),
+    ACTIVE      = (1<<4),
+    REDUNDANT   = (1<<5),
+    IRREDUNDANT = (1<<6),
+    RESERVE     = (1<<7),
 
-    ADD         = (1<<7),
-    ASSUME      = (1<<8),
+    ADD         = (1<<8),
+    ASSUME      = (1<<9),
 
-    SOLVE       = (1<<9),
-    SIMPLIFY    = (1<<10),
+    SOLVE       = (1<<10),
+    SIMPLIFY    = (1<<11),
+    LOOKAHEAD   = (1<<12),
+    CUBING      = (1<<13),
 
-    VAL         = (1<<11),
-    FAILED      = (1<<12),
-    FIXED       = (1<<13),
+    VAL         = (1<<14),
+    FAILED      = (1<<15),
+    FIXED       = (1<<16),
 
-    FREEZE      = (1<<14),
-    FROZEN      = (1<<15),
-    MELT        = (1<<16),
+    FREEZE      = (1<<17),
+    FROZEN      = (1<<18),
+    MELT        = (1<<19),
 
-    LIMIT       = (1<<17),
-    OPTIMIZE    = (1<<18),
+    LIMIT       = (1<<20),
+    OPTIMIZE    = (1<<21),
 
-    DUMP        = (1<<19),
-    STATS       = (1<<20),
+    DUMP        = (1<<22),
+    STATS       = (1<<23),
 
-    ALWAYS      =
-      VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN  |
-      MELT | LIMIT  | OPTIMIZE  | DUMP        | STATS  | RESERVE | FIXED,
+    RESET       = (1<<24),
 
-    CONFIG      = INIT | SET    | ALWAYS,
-    BEFORE      = ADD  | ASSUME | ALWAYS,
-    AFTER       = VAL  | FAILED | ALWAYS,
+    ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN | MELT |
+             LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED,
 
-    RESET       = (1<<21)
+    CONFIG = INIT | SET | CONFIGURE | ALWAYS,
+    BEFORE = ADD | ASSUME | ALWAYS,
+    PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING,
+    AFTER = VAL | FAILED | ALWAYS,
   };
 
   Type type;            // Explicit typing.
 
   int arg;              // Argument if necessary.
   int64_t res;          // Compute result if any.
-  char * name;          // Option name for 'set'.
+  char * name;          // Option name for 'set' and 'config'
   int val;              // Option value for 'set'.
 
   Call (Type t, int a = 0, int r = 0, const char * o = 0, int v = 0) :
@@ -472,6 +477,24 @@ struct Call {
   virtual const char * keyword ()  = 0;
   virtual Call * copy () = 0;
 };
+
+/*------------------------------------------------------------------------*/
+
+static bool config_type (Call::Type t) {
+  return (((int) t & (int) Call::CONFIG)) != 0;
+}
+
+static bool before_type (Call::Type t) {
+  return (((int) t & (int) Call::BEFORE)) != 0;
+}
+
+static bool process_type (Call::Type t) {
+  return (((int) t & (int) Call::PROCESS)) != 0;
+}
+
+static bool after_type (Call::Type t) {
+  return (((int) t & (int) Call::AFTER)) != 0;
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -538,6 +561,14 @@ struct SetCall : public Call {
   const char * keyword () { return "set"; }
 };
 
+struct ConfigureCall : public Call {
+  ConfigureCall (const char * o) : Call (CONFIGURE, 0, 0, o) { }
+  void execute (Solver * & s) { s->configure (name); }
+  void print (ostream & o) { o << "configure " << name << endl; }
+  Call * copy () { return new ConfigureCall (name); }
+  const char * keyword () { return "configure"; }
+};
+
 struct LimitCall : public Call {
   LimitCall (const char * o, int v) : Call (LIMIT, 0, 0, o, v) { }
   void execute (Solver * & s) { s->limit (name, val); }
@@ -589,9 +620,25 @@ struct SolveCall : public Call {
 struct SimplifyCall : public Call {
   SimplifyCall (int rounds, int r = 0) : Call (SIMPLIFY, rounds, r) { }
   void execute (Solver * & s) { res = s->simplify (arg); }
-  void print (ostream & o) { o << "solve " << arg << " " << res << endl; }
+  void print (ostream & o) { o << "simplify " << arg << " " << res << endl; }
   Call * copy () { return new SimplifyCall (arg, res); }
   const char * keyword () { return "simplify"; }
+};
+
+struct LookaheadCall : public Call {
+  LookaheadCall (int r = 0) : Call (LOOKAHEAD, 0, r) { }
+  void execute (Solver * & s) { res = s->lookahead (); }
+  void print (ostream & o) { o << "lookahead " << res << endl; }
+  Call * copy () { return new LookaheadCall (res); }
+  const char * keyword () { return "lookahead"; }
+};
+
+struct CubingCall : public Call {
+  CubingCall(int r = 1) : Call(CUBING, 0, r) {}
+  void execute(Solver *&s) { (void)s->generate_cubes(arg); }
+  void print(ostream &o) { o << "cubing " << res << endl; }
+  Call *copy() { return new CubingCall(res); }
+  const char *keyword() { return "cubing"; }
 };
 
 struct ValCall : public Call {
@@ -729,8 +776,7 @@ public:
     bool first = true;
     for (size_t i = 0; i < calls.size (); i++) {
       Call * c = calls[i];
-      if (mobical.shared &&
-          (c->type == Call::SOLVE || c->type == Call::SIMPLIFY)) {
+      if (mobical.shared && process_type (c->type)) {
         mobical.shared->solved++;
         if (first) first = false;
         else mobical.shared->incremental++;
@@ -779,8 +825,7 @@ public:
           c->type != Call::FAILED &&
           c->type != Call::FROZEN &&
           c->type != Call::RESET) res++, last = false;
-      if (c->type == Call::SOLVE ||
-          c->type == Call::SIMPLIFY) last = true;
+      if (process_type (c->type)) last = true;
     }
     return res;
   }
@@ -836,6 +881,7 @@ private:
   void generate_reserve (Random &, int vars);
   void generate_clause (Random &, int minvars, int maxvars, int uniform);
   void generate_assume (Random &, int vars);
+  void generate_process (Random &);
   void generate_values (Random &, int vars);
   void generate_frozen (Random &, int vars);
   void generate_failed (Random &, int vars);
@@ -881,27 +927,6 @@ public:
 
 /*------------------------------------------------------------------------*/
 
-static bool has_prefix (const char * str, const char * prefix) {
-  for (const char * p = str, * q = prefix; *q; p++, q++)
-    if (*p != *q)
-      return false;
-  return true;
-}
-
-static bool disabled_if_not_simplifying (const char * name) {
-  if (has_prefix (name, "block")) return true;
-  if (has_prefix (name, "compact")) return true;
-  if (has_prefix (name, "decompose")) return true;
-  if (has_prefix (name, "elim")) return true;
-  if (has_prefix (name, "inprocessing")) return true;
-  if (has_prefix (name, "probe")) return true;
-  if (has_prefix (name, "preprocessing")) return true;
-  if (has_prefix (name, "subsume")) return true;
-  if (has_prefix (name, "transred")) return true;
-  if (has_prefix (name, "vivify")) return true;
-  return false;
-}
-
 size_t Trace::first_option () {
   size_t res;
   for (res = 0; res < size (); res++)
@@ -946,6 +971,7 @@ Call * Trace::find_option_by_name (const char * name) {
 bool Trace::ignored_option (const char * name) {
 
   if (!strcmp (name, "checkfrozen")) return true;
+  if (!strcmp (name, "terminateint")) return true;
 
   return false;
 }
@@ -953,16 +979,11 @@ bool Trace::ignored_option (const char * name) {
 // Check whether the trace already contains an option which disables the
 // option 'name'.  Here we assume that an option disables another one if the
 // disabling one has as name proper prefix of the disabled one and the value
-// of the former is set to zero in the trace.  In addition we have to care
-// about all the inprocessing options, which are redundant if the 'simplify'
-// option is set to zero.
+// of the former is set to zero in the trace.
 //
 bool Trace::ignore_option (const char * name, int max_var) {
 
   if (ignored_option (name)) return true;
-
-  Call * c = find_option_by_name ("simplify");
-  if (c && !c->val && disabled_if_not_simplifying (name)) return true;
 
   // There are options which should be kept at their default value unless
   // the formula is really small.  Otherwise the solver might run 'forever'.
@@ -971,7 +992,7 @@ bool Trace::ignore_option (const char * name, int max_var) {
     if (!strcmp (name, "reduce")) return true;
   }
 
-  c = find_option_by_prefix (name);
+  const Call * c = find_option_by_prefix (name);
   assert (!c || has_prefix (name, c->name));
   if (c && strlen (c->name) < strlen (name) && !c->val) return true;
 
@@ -1000,13 +1021,6 @@ void Trace::generate_options (Random & random, Size size) {
   //
   if (random.generate_double () < 0.1) return;
 
-  // With 10% probability we disable simplification.  This option needs to
-  // be put out of sorting order, otherwise the tests in 'ignore_option' to
-  // ignore useless preprocessing options will not work.
-  //
-  if (random.generate_double () < 0.1)
-    push_back (new SetCall ("simplify", 0));
-
   // In order to increase throughput we enable 'walk' in 5% tests, which
   // means disabling it in 95% of the tests.
   //
@@ -1018,15 +1032,25 @@ void Trace::generate_options (Random & random, Size size) {
   if (random.generate_double () < 0.8)
     push_back (new SetCall ("check", 1));
 
+  // In 10% of the remaining cases we use a configuration.
+  //
+  if (random.generate_double () < 0.1) {
+    const auto configs = Config::begin ();
+    const int size = Config::end () - configs;
+    const int pos = random.pick_int (0, size-1);
+    const char * config = configs[pos];
+    assert (Config::has (config));
+    push_back (new ConfigureCall (config));
+  }
+
   // This is the fraction of options changed.
   //
   double fraction = random.generate_double ();
 
   // Generate a list of options, different from default values.
   //
-  for (Options::const_iterator it = Options::begin ();
-       it != Options::end ();
-       it++) {
+  for (auto it = Options::begin (); it != Options::end (); it++)
+  {
     const Option & o = *it;
 
     // This should not be reachable unless the low and high value of an
@@ -1094,16 +1118,18 @@ void Trace::generate_reserve (Random & random, int max_var) {
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_limits (Random & random) {
-  if (random.generate_double () < 0.3)
-    push_back (new LimitCall ("conflicts", random.pick_int (0, INT_MAX)));
-  if (random.generate_double () < 0.2)
-    push_back (new LimitCall ("decisions", random.pick_int (0, INT_MAX)));
+  if (random.generate_double () < 0.05)
+    push_back (new LimitCall ("terminate", random.pick_log (0, 1e5)));
+  if (random.generate_double () < 0.05)
+    push_back (new LimitCall ("conflicts", random.pick_log (0, 1e4)));
+  if (random.generate_double () < 0.05)
+    push_back (new LimitCall ("decisions", random.pick_log (0, 1e4)));
   if (random.generate_double () < 0.1)
     push_back (new LimitCall ("preprocessing", random.pick_int (0, 10)));
   if (random.generate_double () < 0.05)
     push_back (new LimitCall ("localsearch", random.pick_int (0, 1)));
   if (random.generate_double () < 0.02)
-    push_back (new OptimizeCall (random.pick_int (0, 9)));
+    push_back (new OptimizeCall (random.pick_int (0, 31)));
 }
 
 /*------------------------------------------------------------------------*/
@@ -1267,6 +1293,27 @@ void Trace::generate_freeze (Random & random, int vars) {
   }
 }
 
+void Trace::generate_process (Random & random) {
+  if (mobical.add_dump_before_solve)
+    push_back (new DumpCall ());
+
+  const double fraction = random.generate_double ();
+
+  if (fraction < 0.6) push_back(new SolveCall());
+  else if (fraction > 0.99) {
+    const int depth = random.pick_int (0, 10);
+    push_back(new CubingCall(depth));
+  }
+  else if (fraction > 0.9) push_back (new LookaheadCall ());
+  else {
+    const int rounds = random.pick_int (0, 10);
+    push_back (new SimplifyCall (rounds));
+  }
+
+  if (mobical.add_stats_after_solve)
+    push_back (new StatsCall ());
+}
+
 void Trace::generate (uint64_t i, uint64_t s) {
 
   id = i;
@@ -1333,9 +1380,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
     generate_freeze (random, maxvars);
     generate_limits (random);
 
-    if (mobical.add_dump_before_solve) push_back (new DumpCall ());
-    push_back (new SolveCall ());
-    if (mobical.add_stats_after_solve) push_back (new StatsCall ());
+    generate_process (random);
 
     generate_values (random, maxvars);
     generate_failed (random, maxvars);
@@ -1659,22 +1704,10 @@ void Mobical::notify (Trace & trace, signed char ch) {
 
 /*------------------------------------------------------------------------*/
 
-static bool config_type (Call::Type t) {
-  return (((int) t & (int) Call::CONFIG)) != 0;
-}
-
-static bool before_type (Call::Type t) {
-  return (((int) t & (int) Call::BEFORE)) != 0;
-}
-
-static bool after_type (Call::Type t) {
-  return (((int) t & (int) Call::AFTER)) != 0;
-}
-
 // Explicit grammar aware three-level hierarchical delta-debugging.
 // First level is in term of incremental solving phases where one phase
 // consists of maximal prefixes of intervals of calls of type
-// '(BEFORE*|SOLVE|SIMPLIFY|AFTER*)' or single non-configuration calls.
+// '(BEFORE*|PROCESS|AFTER*)' or single non-configuration calls.
 //
 bool Trace::shrink_phases (int expected) {
   if (mobical.donot.shrink.phases) return false;
@@ -1687,9 +1720,7 @@ bool Trace::shrink_phases (int expected) {
   for (; l < size (); l = r) {
     for (r = l; r < size () && before_type (calls[r]->type); r++)
       ;
-    if (r < size () &&
-      (calls[r]->type == Call::SOLVE ||
-       calls[r]->type == Call::SIMPLIFY)) r++;
+    if (r < size () && process_type (calls[r]->type)) r++;
     for (;r < size () && after_type (calls[r]->type); r++)
       ;
     if (l < r) segments.push_back (Segment (l, r));
@@ -1741,6 +1772,8 @@ static bool is_basic (Call * c) {
     case Call::ASSUME:
     case Call::SOLVE:
     case Call::SIMPLIFY:
+    case Call::LOOKAHEAD:
+    case Call::CUBING:
     case Call::VARS:
     case Call::ACTIVE:
     case Call::REDUNDANT:
@@ -1819,7 +1852,7 @@ bool Trace::shrink_disable (int expected) {
   vector<int> lower, saved;
   for (size_t i = first_option (); i < last; i++) {
     Call * c = calls[i];
-    assert (c->type == Call::SET);
+    if (c->type != Call::SET) continue;
     if (ignore_option (c->name, max_var)) continue;
     Option * o = Options::has (c->name);
     if (!o) continue;
@@ -1892,10 +1925,11 @@ bool Trace::reduce_values (int expected) {
         if (!strcmp (c->name, "conflicts") ||
             !strcmp (c->name, "decisions"))
           lo = -1, hi = INT_MAX;
-        else if (!strcmp (c->name, "preprocessing"))
+        else if (!strcmp (c->name, "terminate") ||
+                 !strcmp (c->name, "preprocessing"))
           lo = 0, hi = INT_MAX;
         else if (!strcmp (c->name, "localsearch"))
-          lo = 0, hi = c->val;
+          lo = 0, hi = c->val; // too costly otherwise
         else continue;
       } else if (c->type == Call::OPTIMIZE) {
         lo = 0, hi = 9;
@@ -2203,6 +2237,12 @@ void Reader::parse () {
       if (!parse_int_str (second, val))
         error ("invalid second argument '%s' to 'set'", second);
       c = new SetCall (first, val);
+    } else if (!strcmp (keyword, "configure")) {
+      if (!first) error ("first argument to 'configure' missing");
+      if (enforce && !Solver::is_valid_configuration (first))
+        error ("non-existing configuration '%s'", first);
+      if (second) error ("additional argument '%s' to 'configure'", second);
+      c = new ConfigureCall (first);
     } else if (!strcmp (keyword, "limit")) {
       if (!first) error ("first argument to 'limit' missing");
       if (!second) error ("second argument to 'limit' missing");
@@ -2211,7 +2251,7 @@ void Reader::parse () {
       c = new LimitCall (first, val);
     } else if (!strcmp (keyword, "optimize")) {
       if (!first) error ("argument to 'optimize' missing");
-      if (!parse_int_str (first, val) || val < 0 || val > 9)
+      if (!parse_int_str (first, val) || val < 0 || val > 31)
         error ("invalid argument '%s' to 'optimize'", first);
       c = new OptimizeCall (val);
     } else if (!strcmp (keyword, "vars")) {
@@ -2275,6 +2315,19 @@ void Reader::parse () {
       if (second) c = new SimplifyCall (rounds, tmp);
       else        c = new SimplifyCall (rounds);
       solved++;
+    } else if (!strcmp (keyword, "lookahead")) {
+      if (first && !parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'lookahead'", first);
+      assert (!second);
+      if (first) c = new LookaheadCall (lit);
+      else       c = new LookaheadCall ();
+      solved++;
+    }  else if (!strcmp (keyword, "cubing")) {
+      if (first && !parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'cubing'", first);
+      assert (!second);
+      c = new CubingCall (lit);
+      solved++;
     } else if (!strcmp (keyword, "val")) {
       if (!first) error ("first argument to 'val' missing");
       if (!parse_int_str (first, lit))
@@ -2321,103 +2374,115 @@ void Reader::parse () {
         error ("additional argument '%s' to 'freeze'", second);
       c = new FreezeCall (lit);
     } else if (!strcmp (keyword, "melt")) {
-      if (!first) error ("argument to 'melt' missing");
-      if (!parse_int_str (first, lit))
-        error ("invalid argument '%s' to 'melt'", first);
-      if (enforce && (!lit || lit == INT_MIN))
-        error ("invalid literal '%d' as argument to 'melt'", lit);
-      if (second) error ("additional argument '%s' to 'melt'", second);
-      c = new MeltCall (lit);
-    } else if (!strcmp (keyword, "frozen")) {
-      if (!first) error ("first argument to 'frozen' missing");
-      if (!parse_int_str (first, lit))
-        error ("invalid first argument '%s' to 'frozen'", first);
-      if (second && !parse_int_str (second, val))
-        error ("invalid second argument '%s' to 'frozen'", second);
-      if (second && val != 0 && val != 1)
-        error ("invalid result argument '%d' to 'frozen'", val);
-      if (second) c = new FrozenCall (lit, val);
-      else        c = new FrozenCall (lit);
-    } else if (!strcmp (keyword, "dump")) {
-      if (first)
-        error ("additional argument '%s' to 'dump'", first);
-      c = new DumpCall ();
-    } else if (!strcmp (keyword, "stats")) {
-      if (first)
-        error ("additional argument '%s' to 'stats'", first);
-      c = new StatsCall ();
-    } else if (!strcmp (keyword, "reset")) {
-      if (first)
-        error ("additional argument '%s' to 'reset'", first);
-      c = new ResetCall ();
-    } else error ("invalid keyword '%s'", keyword);
+      if (!first) error("argument to 'melt' missing");
+    if (!parse_int_str(first, lit))
+      error("invalid argument '%s' to 'melt'", first);
+    if (enforce && (!lit || lit == INT_MIN))
+      error("invalid literal '%d' as argument to 'melt'", lit);
+    if (second)
+      error("additional argument '%s' to 'melt'", second);
+    c = new MeltCall(lit);
+  }
+  else if (!strcmp(keyword, "frozen")) {
+    if (!first)
+      error("first argument to 'frozen' missing");
+    if (!parse_int_str(first, lit))
+      error("invalid first argument '%s' to 'frozen'", first);
+    if (second && !parse_int_str(second, val))
+      error("invalid second argument '%s' to 'frozen'", second);
+    if (second && val != 0 && val != 1)
+      error("invalid result argument '%d' to 'frozen'", val);
+    if (second)
+      c = new FrozenCall(lit, val);
+    else
+      c = new FrozenCall(lit);
+  }
+  else if (!strcmp(keyword, "dump")) {
+    if (first)
+      error("additional argument '%s' to 'dump'", first);
+    c = new DumpCall();
+  }
+  else if (!strcmp(keyword, "stats")) {
+    if (first)
+      error("additional argument '%s' to 'stats'", first);
+    c = new StatsCall();
+  }
+  else if (!strcmp(keyword, "reset")) {
+    if (first)
+      error("additional argument '%s' to 'reset'", first);
+    c = new ResetCall();
+  }
+  else error("invalid keyword '%s'", keyword);
 
-    // This checks the legal structure of traces described above.
-    //
-    if (enforce) {
+  // This checks the legal structure of traces described above.
+  //
+  if (enforce) {
 
-      if (!state && c->type != Call::INIT)
-        error ("first call has to be an 'init' call");
+    if (!state && c->type != Call::INIT)
+      error("first call has to be an 'init' call");
 
-      if (state == Call::RESET)
-        error ("'%s' after 'reset'", c->keyword ());
+    if (state == Call::RESET)
+      error("'%s' after 'reset'", c->keyword());
 
-      if (adding && c->type != Call::ADD && c->type != Call::RESET)
-        error ("'%s' after 'add %d' without 'add 0'",
-          c->keyword (), adding);
+    if (adding && c->type != Call::ADD && c->type != Call::RESET)
+      error("'%s' after 'add %d' without 'add 0'", c->keyword(), adding);
 
-      int new_state = state;
+    int new_state = state;
 
-      switch (c->type) {
+    switch (c->type) {
 
-        case Call::INIT:
-          if (state) error ("invalid second 'init' call");
-          new_state = Call::CONFIG;
-          break;
+    case Call::INIT:
+      if (state)
+        error("invalid second 'init' call");
+      new_state = Call::CONFIG;
+      break;
 
-        case Call::SET:
-          if (!solved && state == Call::BEFORE) {
-            assert (before_trigger);
-            error ("'set' can only be called after 'init' before '%s %d'",
-              before_trigger->keyword (), before_trigger->arg);
-          } else if (state != Call::CONFIG)
-            error ("'set' can only be called right after 'init'");
-          assert (new_state == Call::CONFIG);
-          break;
+    case Call::SET:
+    case Call::CONFIGURE:
+      if (!solved && state == Call::BEFORE) {
+        assert(before_trigger);
+        error("'%s' can only be called after 'init' before '%s %d'",
+              c->keyword(), before_trigger->keyword(), before_trigger->arg);
+      } else if (state != Call::CONFIG)
+        error("'%s' can only be called right after 'init'", c->keyword());
+      assert(new_state == Call::CONFIG);
+      break;
 
-        case Call::ADD:
-        case Call::ASSUME:
-          if (state != Call::BEFORE) before_trigger = c;
-          new_state = Call::BEFORE;
-          break;
+    case Call::ADD:
+    case Call::ASSUME:
+      if (state != Call::BEFORE)
+        before_trigger = c;
+      new_state = Call::BEFORE;
+      break;
 
-        case Call::VAL:
-        case Call::FAILED:
-          if (!solved && (state == Call::CONFIG || state == Call::BEFORE))
-            error ("'%s' can only be called after 'solve'", c->keyword ());
-          if (solved && state == Call::BEFORE) {
-            assert (before_trigger);
-            error ("'%s' only valid after last 'solve' and before '%s %d'",
-              c->keyword (),
-              before_trigger->keyword (), before_trigger->arg);
-          }
-          assert (state == Call::SOLVE ||
-                  state == Call::SIMPLIFY ||
-                  state == Call::AFTER);
-          new_state = Call::AFTER;
-          break;
-
-        case Call::SOLVE:
-        case Call::SIMPLIFY:
-        case Call::RESET:
-           new_state = c->type;
-           break;
-
-        default:
-          break;
+    case Call::VAL:
+    case Call::FAILED:
+      if (!solved && (state == Call::CONFIG || state == Call::BEFORE))
+        error("'%s' can only be called after 'solve'", c->keyword());
+      if (solved && state == Call::BEFORE) {
+        assert(before_trigger);
+        error("'%s' only valid after last 'solve' and before '%s %d'",
+              c->keyword(), before_trigger->keyword(), before_trigger->arg);
       }
+      assert(state == Call::SOLVE || state == Call::SIMPLIFY ||
+             state == Call::LOOKAHEAD || state == Call::CUBING ||
+             state == Call::AFTER);
+      new_state = Call::AFTER;
+      break;
 
-      state = new_state;
+    case Call::SOLVE:
+    case Call::SIMPLIFY:
+    case Call::LOOKAHEAD:
+    case Call::CUBING:
+    case Call::RESET:
+      new_state = c->type;
+      break;
+
+    default:
+      break;
+    }
+
+    state = new_state;
     }
 
 #ifdef LOGGING
@@ -2425,14 +2490,12 @@ void Reader::parse () {
       trace.push_back (new SetCall ("log", 1));
 #endif
 
-    if (c && mobical.add_dump_before_solve &&
-        (c->type == Call::SOLVE || c->type == Call::SIMPLIFY))
+    if (c && mobical.add_dump_before_solve && process_type (c->type))
       trace.push_back (new DumpCall ());
 
     trace.push_back (c);
 
-    if (c && mobical.add_stats_after_solve &&
-        (c->type == Call::SOLVE || c->type == Call::SIMPLIFY))
+    if (c && mobical.add_stats_after_solve && process_type (c->type))
       trace.push_back (new StatsCall ());
 
     lineno++;
@@ -2722,7 +2785,7 @@ int Mobical::main (int argc, char ** argv) {
   terminal.normal ();
   prefix ();
   terminal.magenta (1);
-  fputs ("Copyright (c) 2018-2019 Armin Biere, JKU Linz\n", stderr);
+  fputs ("Copyright (c) 2018-2020 Armin Biere, JKU Linz\n", stderr);
   terminal.normal ();
   empty_line ();
   Solver::build (stderr, prefix_string ());

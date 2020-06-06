@@ -6,6 +6,17 @@ namespace CaDiCaL {
 
 struct NameVal { const char * name; int val; };
 
+/*------------------------------------------------------------------------*/
+
+// These are dummy configurations, which require additional code.
+
+static NameVal default_config[1];       // With '-pedantic' just '[]' or
+static NameVal plain_config[1];         // '[0]' gave a warning.
+
+/*------------------------------------------------------------------------*/
+
+// Here we have the pre-defined default configurations.
+
 static NameVal sat_config[] = {
   { "elimreleff", 10 },
   { "stabilizeonly", 1 },
@@ -21,13 +32,22 @@ static NameVal unsat_config[] = {
 
 #define CONFIGS \
  \
-CONFIG(sat,"target satisfiable instances") \
-CONFIG(unsat,"target unsatisfiable instances") \
+CONFIG(default,"set default advanced internal options") \
+CONFIG(plain,"disable all internal preprocessing options") \
+CONFIG(sat,"set internal options to target satisfiable instances") \
+CONFIG(unsat,"set internal options to target unsatisfiable instances") \
+
+static const char * configs [] = {
+#define CONFIG(N,D) #N,
+CONFIGS
+#undef CONFIG
+};
+
+static size_t num_configs = sizeof configs / sizeof *configs;
 
 /*------------------------------------------------------------------------*/
 
 bool Config::has (const char * name) {
-  if (!strcmp (name, "default")) return true;
 #define CONFIG(N,D) \
   if (!strcmp (name, #N)) return true;
   CONFIGS
@@ -35,16 +55,23 @@ bool Config::has (const char * name) {
   return false;
 }
 
-bool Config::set (Solver & solver, const char * name) {
-  if (!strcmp (name, "default")) return true;
+bool Config::set (Options & opts, const char * name) {
+  if (!strcmp (name, "default")) {
+    opts.reset_default_values ();
+    return true;
+  }
+  if (!strcmp (name, "plain")) {
+    opts.disable_preprocessing ();
+    return true;
+  }
 #define CONFIG(N,D) \
   do { \
     if (strcmp (name, #N)) break; \
     const NameVal * BEGIN = N ## _config; \
     const NameVal * END = BEGIN + sizeof N ##_config / sizeof (NameVal); \
     for (const NameVal * P = BEGIN; P != END; P++) { \
-      assert (solver.is_valid_option (P->name)); \
-      solver.set (P->name, P->val); \
+      assert (Options::has (P->name)); \
+      opts.set (P->name, P->val); \
     } \
     return true; \
   } while (0);
@@ -53,21 +80,18 @@ bool Config::set (Solver & solver, const char * name) {
   return false;
 }
 
-const char * Config::description (const char * name) {
-  if (!strcmp (name, "default"))
-    return "should work in most situations";
-#define CONFIG(N,D) \
-  if (!strcmp (name, #N)) return D;
-  CONFIGS
-#undef CONFIG
-  return 0;
-}
+/*------------------------------------------------------------------------*/
 
 void Config::usage () {
 #define CONFIG(N,D) \
-  printf ("  %-26s " D "\n", "--" #N);
+  printf ("  %-14s " D "\n", "--" #N);
   CONFIGS
 #undef CONFIG
 }
+
+/*------------------------------------------------------------------------*/
+
+const char ** Config::begin () { return configs; }
+const char ** Config::end () { return &configs[num_configs]; }
 
 }

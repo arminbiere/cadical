@@ -7,10 +7,17 @@
 
 #ifndef QUIET
 
-#define MSG(...) internal->message (__VA_ARGS__)
-#define PHASE(...) internal->phase (__VA_ARGS__)
-#define SECTION(...) internal->section (__VA_ARGS__)
-#define VERBOSE(...) internal->verbose (__VA_ARGS__)
+#define MSG(...) \
+do { if (internal) internal->message (__VA_ARGS__); } while (0)
+
+#define PHASE(...) \
+do { if (internal) internal->phase (__VA_ARGS__); } while (0)
+
+#define SECTION(...) \
+do { if (internal) internal->section (__VA_ARGS__); } while (0)
+
+#define VERBOSE(...) \
+do { if (internal) internal->verbose (__VA_ARGS__); } while (0)
 
 #else
 
@@ -21,7 +28,7 @@
 
 #endif
 
-#define FATAL internal->fatal
+#define FATAL fatal
 #define WARNING(...) internal->warning (__VA_ARGS__)
 
 /*------------------------------------------------------------------------*/

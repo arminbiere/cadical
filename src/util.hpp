@@ -18,8 +18,23 @@ inline unsigned bign (int lit) { return 1 + (lit < 0); }
 
 /*------------------------------------------------------------------------*/
 
-bool parse_int_str (const char * str, int &);
 bool has_suffix (const char * str, const char * suffix);
+bool has_prefix (const char * str, const char * prefix);
+
+/*------------------------------------------------------------------------*/
+
+// Parse integer string in the form of
+//
+//   true
+//   false
+//   [-]<mantissa>[e<exponent>]
+//
+// and in the latter case '<val>' has to be within [-INT_MAX,INT_MAX].
+//
+// The function returns true if parsing is successful and then also sets
+// the second argument to the parsed value.
+
+bool parse_int_str (const char * str, int &);
 
 /*------------------------------------------------------------------------*/
 
@@ -27,6 +42,21 @@ inline bool is_power_of_two (unsigned n) { return n && !(n & (n-1)); }
 
 inline bool
 contained (int64_t c, int64_t l, int64_t u) { return l <= c && c <= u; }
+
+inline bool aligned (size_t n, size_t alignment) {
+  assert (is_power_of_two (alignment));
+  const size_t mask = alignment - 1;
+  return !(n & mask);
+}
+
+inline size_t align (size_t n, size_t alignment) {
+  size_t res = n;
+  assert (is_power_of_two (alignment));
+  const size_t mask = alignment - 1;
+  if (res & mask) res = (res | mask) + 1;
+  assert (aligned (res, alignment));
+  return res;
+}
 
 /*------------------------------------------------------------------------*/
 

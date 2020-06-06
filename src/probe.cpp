@@ -14,13 +14,27 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 bool Internal::probing () {
-  if (!opts.simplify) return false;
   if (!opts.probe) return false;
   if (!preprocessing && !opts.inprocessing) return false;
   if (preprocessing) assert (lim.preprocessing);
   if (stats.probingphases &&
       last.probe.reductions == stats.reductions) return false;
   return lim.probe <= stats.conflicts;
+}
+
+/*------------------------------------------------------------------------*/
+
+inline int Internal::get_parent_reason_literal (int lit) {
+  const int idx = vidx (lit);
+  int res = parents[idx];
+  if (lit < 0) res = -res;
+  return res;
+}
+
+inline void Internal::set_parent_reason_literal (int lit, int reason) {
+  const int idx = vidx (lit);
+  if (lit < 0) reason = -reason;
+  parents[idx] = reason;
 }
 
 /*------------------------------------------------------------------------*/
@@ -38,9 +52,8 @@ int Internal::probe_dominator (int a, int b) {
   assert (u->level == 1), assert (v->level == 1);
   while (l != k) {
     if (u->trail > v->trail) swap (l, k), swap (u, v);
-    if (!u->parent) return l;
-    int parent = v->parent;
-    if (k < 0) parent = -parent;
+    if (!get_parent_reason_literal (l)) return l;
+    int parent = get_parent_reason_literal (k);
     assert  (parent), assert (val (parent) > 0);
     v = &var (k = parent);
     assert (v->level == 1);
@@ -164,10 +177,10 @@ inline void Internal::probe_assign (int lit, int parent) {
   Var & v = var (idx);
   v.level = level;
   v.trail = (int) trail.size ();
-  const signed char tmp = sign (lit);
-  v.parent = tmp < 0 ? -parent : parent;
+  set_parent_reason_literal (lit, parent);
   if (!level) learn_unit_clause (lit);
   else assert (level == 1);
+  const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
   assert (val (lit) > 0);
@@ -248,7 +261,7 @@ bool Internal::probe_propagate () {
         if (w.clause->garbage) continue;
         const literal_iterator lits = w.clause->begin ();
         const int other = lits[0]^lits[1]^lit;
-        lits[0] = other, lits[1] = lit;
+        //lits[0] = other, lits[1] = lit;
         const signed char u = val (other);
         if (u > 0) ws[j-1].blit = other;
         else {
@@ -272,11 +285,13 @@ bool Internal::probe_propagate () {
           else if (!v) {
             LOG (w.clause, "unwatch %d in", r);
             *k = lit;
+            lits[0] = other;
             lits[1] = r;
             watch_literal (r, lit, w.clause);
             j--;
           } else if (!u) {
             if (level == 1) {
+              lits[0] = other, lits[1] = lit;
               int dom = hyper_binary_resolve (w.clause);
               probe_assign (other, dom);
             } else probe_assign_unit (other);
@@ -326,14 +341,13 @@ void Internal::failed_literal (int failed) {
   LOG ("found probing UIP %d", uip);
   assert (uip);
 
-  vector<int> parents;
+  vector<int> work;
   int parent = uip;
   while (parent != failed) {
-    int next = var (parent).parent;
-    if (parent < 0) next = -next;
+    const int next = get_parent_reason_literal (parent);
     parent = next;
     assert (parent);
-    parents.push_back (parent);
+    work.push_back (parent);
   }
 
   backtrack ();
@@ -345,9 +359,9 @@ void Internal::failed_literal (int failed) {
 
   if (!probe_propagate ()) learn_empty_clause ();
 
-  while (!unsat && !parents.empty ()) {
-    const int parent = parents.back ();
-    parents.pop_back ();
+  while (!unsat && !work.empty ()) {
+    const int parent = work.back ();
+    work.pop_back ();
     const signed char tmp = val (parent);
     if (tmp < 0) continue;
     if (tmp > 0) {
@@ -359,7 +373,7 @@ void Internal::failed_literal (int failed) {
       if (!probe_propagate ()) learn_empty_clause ();
     }
   }
-  erase_vector (parents);
+  erase_vector (work);
 
   STOP (analyze);
 
@@ -413,7 +427,7 @@ void Internal::generate_probes () {
     noccs (b)++;
   }
 
-  for (int idx = 1; idx <= max_var; idx++) {
+  for (auto idx : vars) {
 
     // Then focus on roots of the binary implication graph, which are
     // literals occurring negatively in a binary clause, but not positively.
@@ -446,7 +460,7 @@ void Internal::generate_probes () {
 
   PHASE ("probe-round", stats.probingrounds,
     "scheduled %" PRId64 " literals %.0f%%",
-    probes.size (), percent (probes.size (), 2*max_var));
+    probes.size (), percent (probes.size (), 2u*max_var));
 }
 
 // Follow the ideas in 'generate_probes' but flush non root probes and
@@ -531,7 +545,8 @@ int Internal::next_probe () {
 
 bool Internal::probe_round () {
 
-  if (unsat || terminating ()) return false;
+  if (unsat) return false;
+  if (terminated_asynchronously ()) return false;
 
   START_SIMPLIFIER (probe, PROBE);
   stats.probingrounds++;
@@ -565,7 +580,7 @@ bool Internal::probe_round () {
   // a new learned clause, which might produce new propagations (and hyper
   // binary resolvents).  During 'generate_probes' we keep the old value.
   //
-  for (int idx = 1; idx <= max_var; idx++)
+  for (auto idx : vars)
     propfixed (idx) = propfixed (-idx) = -1;
 
   assert (unsat || propagated == trail.size ());
@@ -573,7 +588,7 @@ bool Internal::probe_round () {
 
   int probe;
   while (!unsat &&
-         !terminating () &&
+         !terminated_asynchronously () &&
          stats.propagations.probe < limit &&
          (probe = next_probe ())) {
     stats.probed++;
@@ -622,6 +637,8 @@ void CaDiCaL::Internal::probe (bool update_limits) {
 
   stats.probingphases++;
 
+  const int before = active ();
+
   // We trigger equivalent literal substitution (ELS) before ...
   //
   decompose ();
@@ -644,7 +661,20 @@ void CaDiCaL::Internal::probe (bool update_limits) {
 
   if (!update_limits) return;
 
-  int64_t delta = opts.probeint * (stats.probingphases + 1);
+  const int after = active ();
+  const int removed = before - after;
+  assert (removed >= 0);
+
+  if (removed) {
+    stats.probesuccess++;
+    PHASE ("probe-phase", stats.probingphases,
+      "successfully removed %d active variables %.0f%%",
+      removed, percent (removed, before));
+  } else
+    PHASE ("probe-phase", stats.probingphases,
+      "could not remove any active variable");
+
+  const int64_t delta = opts.probeint * (stats.probingphases + 1);
   lim.probe = stats.conflicts + delta;
 
   PHASE ("probe-phase", stats.probingphases,

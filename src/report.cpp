@@ -29,11 +29,12 @@ c  covered clause elimination
 d  decomposed binary implication graph and substituted equivalent literals
 2  removed duplicated binary clauses
 e  bounded variable elimination round
+^  variable elimination bound increased
 I  variable instantiation
 [  start of stable search phase
 ]  end of stable search phase
 {  start of unstable search phase
-j  end of unstable search phase
+}  end of unstable search phase
 P  preprocessing round (capital 'P')
 L  local search round
 *  start of solving without the need to restore clauses
@@ -221,6 +222,7 @@ void Internal::report (char type, int verbose) {
     case 'z': case 'f':           tout.cyan (true); break;
     case '-':                     tout.normal (); break;
     case '/':                     tout.yellow (true); break;
+    case 'a': case 'n':           tout.red (false); break;
     case '0': case '1': case '?':
     case 'i':                     tout.bold (); break;
     case 'L': case 'P':           tout.bold (); tout.underline (); break;

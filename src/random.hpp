@@ -44,10 +44,30 @@ public:
   //
   int pick_int (int l, int r) {
     assert (l <= r);
-    int res = (r + 1.0 - l) * (generate () / 4294967296.0);
-    res += l;
+    const unsigned delta = 1 + r - (unsigned) l;
+    unsigned tmp = generate (), scaled;
+    if (delta) {
+      const double fraction = tmp / 4294967296.0;
+      scaled = delta * fraction;
+    } else scaled = tmp;
+    const int res = scaled + l;
     assert (l <= res);
     assert (res <= r);
+    return res;
+  }
+
+  int pick_log (int l, int r) {
+    assert (l <= r);
+    const unsigned delta = 1 + r - (unsigned) l;
+    int log_delta = delta ? 0 : 32;
+    while (log_delta < 32 && (1u << log_delta) < delta)
+      log_delta++;
+    const int log_res = pick_int (0, log_delta);
+    unsigned tmp = generate ();
+    if (log_res < 32) tmp &= (1u << log_res) - 1;
+    if (delta) tmp %= delta;
+    const int res = l + tmp;
+    assert (l <= res), assert (res <= r);
     return res;
   }
 

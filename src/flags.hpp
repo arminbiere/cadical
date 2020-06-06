@@ -16,13 +16,13 @@ struct Flags {        // Variable flags.
   // ('subsume'), variables in bounded variable elimination ('elim') and in
   // hyper ternary resolution ('ternary').
   //
-  bool elim      : 1; // removed since last 'elim' round
-  bool subsume   : 1; // added since last 'subsume' round
-  bool ternary   : 1; // added in ternary clause since last 'ternary'
+  bool elim      : 1; // removed since last 'elim' round (*)
+  bool subsume   : 1; // added since last 'subsume' round (*)
+  bool ternary   : 1; // added in ternary clause since last 'ternary' (*)
 
   // These literal flags are used by blocked clause elimination ('block').
   //
-  unsigned char block : 2;   // removed since last 'block' round
+  unsigned char block : 2;   // removed since last 'block' round (*)
   unsigned char skip : 2;    // skip this literal as blocking literal
 
   // Bits for handling assumptions.
@@ -57,6 +57,17 @@ struct Flags {        // Variable flags.
   bool eliminated () const { return status == ELIMINATED; }
   bool substituted () const { return status == SUBSTITUTED; }
   bool pure () const { return status == PURE; }
+
+  // The flags marked with '(*)' are copied during 'External::copy_flags',
+  // which in essence means they are reset in the copy if they were clear.
+  // This avoids the effort of fruitless preprocessing the copy.
+
+  void copy (Flags & dst) const {
+    dst.elim = elim;
+    dst.subsume = subsume;
+    dst.ternary = ternary;
+    dst.block = block;
+  }
 };
 
 }

@@ -177,7 +177,7 @@ void Internal::error (const char *fmt, ...) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::fatal_message_start () {
+void fatal_message_start () {
   fflush (stdout);
   terr.bold ();
   fputs ("cadical: ", stderr);
@@ -187,13 +187,13 @@ void Internal::fatal_message_start () {
   fputc (' ', stderr);
 }
 
-void Internal::fatal_message_end () {
+void fatal_message_end () {
   fputc ('\n', stderr);
   fflush (stderr);
   abort ();
 }
 
-void Internal::fatal (const char *fmt, ...) {
+void fatal (const char *fmt, ...) {
   fatal_message_start ();
   va_list ap;
   va_start (ap, fmt);

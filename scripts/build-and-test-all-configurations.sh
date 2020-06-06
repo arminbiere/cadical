@@ -60,8 +60,15 @@ run () {
 
 ############################################################################
 
-run		# default configuration
-run -p		# check pedantic first
+# start with these two for fast fail
+
+run -j		# default configuration with fast parallel compilation
+run -j -p	# check pedantic in parallel
+
+run		# default configuration (depends on 'MAKEFLAGS'!)
+run -p		# then check default pedantic first
+
+run -j1		# forced slow sequential compilation (checks '-j1' option)
 
 run -q		# library users might want to disable messages
 run -q -p	# also check '--quiet' pedantically
@@ -99,5 +106,11 @@ run -m32 -a -p
 
 run --no-unlocked -q
 run --no-unlocked -a -p
+
+run --no-contracts -q
+run --no-contracts -a -p
+
+run --no-tracing -q
+run --no-tracing -a -p
 
 echo "successfully compiled and tested ${GOOD}${ok}${NORMAL} configurations"

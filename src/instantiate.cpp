@@ -14,7 +14,7 @@ namespace CaDiCaL {
 void
 Internal::collect_instantiation_candidates (Instantiator & instantiator) {
   assert (occurring ());
-  for (int idx = 1; idx <= max_var; idx++) {
+  for (auto idx : vars) {
     if (frozen (idx)) continue;
     if (!active (idx)) continue;
     if (flags (idx).elim) continue;               // BVE attempt pending
@@ -213,7 +213,7 @@ void Internal::instantiate (Instantiator & instantiator) {
     "attempting to instantiate %zd candidate literal clause pairs",
     candidates);
   while (!unsat &&
-         !terminating () &&
+         !terminated_asynchronously () &&
          !instantiator.candidates.empty ()) {
     Instantiator::Candidate cand = instantiator.candidates.back ();
     instantiator.candidates.pop_back ();

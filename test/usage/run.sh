@@ -89,11 +89,17 @@ then
   run 10 -q ../test/cnf/empty.cnf
 fi
 
+run 1 ../test/usage/missing-clause.cnf
+run 1 ../test/usage/variable-too-large.cnf
+run 1 --strict relaxed-header.cnf
+
 for option in "-f" "--force" "--force=1" "--force=true"
 do
   run 10 $option ../test/usage/missing-clause.cnf
   run 10 $option ../test/usage/variable-too-large.cnf
 done
+
+run 20 ../test/usage/relaxed-header.cnf
 
 # TODO:  still need to add test cases for these:
 

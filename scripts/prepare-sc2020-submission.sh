@@ -1,7 +1,7 @@
 #!/bin/sh
 cd `dirname $0`/..
 root=`pwd`
-tmp=/tmp/prepare-cadical-sr2018-submission.log
+tmp=/tmp/prepare-cadical-sc2020-submission.log
 VERSION=`cat VERSION`
 rm -f $tmp
 ##########################################################################
@@ -25,7 +25,7 @@ cat <<EOF >$dir/build/build.sh
 tar xf ../archives/cadical*
 mv cadical* cadical
 cd cadical
-./configure
+./configure --competition
 make test
 install -s build/cadical ../../bin/
 EOF
@@ -41,6 +41,9 @@ cat <<EOF >$dir/bin/starexec_run_default
 exec ./cadical --$option \$1 \$2/proof.out
 EOF
 chmod 755 $dir/bin/starexec_run_default
+description=$dir/starexec_description.txt
+grep '^CaDiCaL' README.md|head -1 >$description
+cat $description
 archive=/tmp/$base.zip
 rm -f $archive
 cd $dir

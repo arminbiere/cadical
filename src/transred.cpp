@@ -5,16 +5,16 @@ namespace CaDiCaL {
 // Implement transitive reduction in the binary implication graph.  This is
 // important for hyper binary resolution, which has the risk to produce too
 // many hyper binary resolvents otherwise.  This algorithm only works on
-// binary clauses and is usually pretty fast, so we even do not limit it.
-// It will also find some failed literals (in the binary implication graph).
+// binary clauses and is usually pretty fast.  It will also find some failed
+// literals (in the binary implication graph).
 
 void Internal::transred () {
 
-  if (unsat || terminating ()) return;
+  if (unsat) return;
+  if (terminated_asynchronously ()) return;
   if (!stats.current.redundant && !stats.current.irredundant) return;
 
   assert (opts.transred);
-  assert (opts.simplify);
   assert (!level);
 
   START_SIMPLIFIER (transred, TRANSRED);
@@ -70,7 +70,11 @@ void Internal::transred () {
 
   int64_t propagations = 0, units = 0, removed = 0;
 
-  while (!unsat && i != end && !terminating () && propagations < limit) {
+  while (!unsat &&
+         i != end &&
+         !terminated_asynchronously () &&
+         propagations < limit)
+  {
     Clause * c = *i++;
 
     // A clause is a candidate for being transitive if it is binary, and not

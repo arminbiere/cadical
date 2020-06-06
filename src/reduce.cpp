@@ -28,28 +28,6 @@ bool Internal::flushing () {
 
 /*------------------------------------------------------------------------*/
 
-// Reason clauses (on non-zero decision level) can not be collected.
-// We protect them before and unprotect them after garbage collection.
-
-void Internal::protect_reasons () {
-  for (const auto & lit : trail) {
-    Var & v = var (lit);
-    if (!v.level || !v.reason) continue;
-    LOG (v.reason, "protecting");
-    v.reason->reason = true;
-  }
-}
-
-void Internal::unprotect_reasons () {
-  for (const auto & lit : trail) {
-    Var & v = var (lit);
-    if (!v.level || !v.reason) continue;
-    assert (v.reason->reason), v.reason->reason = false;
-  }
-}
-
-/*------------------------------------------------------------------------*/
-
 void Internal::mark_clauses_to_be_flushed () {
   for (const auto & c : clauses) {
     if (!c->redundant) continue; // keep irredundant
@@ -196,12 +174,11 @@ void Internal::reduce () {
 
   if (!propagate_out_of_order_units ()) goto DONE;
 
-  if (level) protect_reasons ();
   mark_satisfied_clauses_as_garbage ();
+  protect_reasons ();
   if (flush) mark_clauses_to_be_flushed ();
   else mark_useless_redundant_clauses_as_garbage ();
   garbage_collection ();
-  if (level) unprotect_reasons ();
 
   {
     int64_t delta = opts.reduceint * (stats.reductions + 1);
@@ -216,10 +193,12 @@ void Internal::reduce () {
   }
 
   if (flush) {
-    PHASE ("flush", stats.flush.count, "new flush increment %" PRId64 "", inc.flush);
+    PHASE ("flush", stats.flush.count,
+      "new flush increment %" PRId64 "", inc.flush);
     inc.flush *= opts.flushfactor;
     lim.flush = stats.conflicts + inc.flush;
-    PHASE ("flush", stats.flush.count, "new flush limit %" PRId64 "", lim.flush);
+    PHASE ("flush", stats.flush.count,
+      "new flush limit %" PRId64 "", lim.flush);
   }
 
   last.reduce.conflicts = stats.conflicts;

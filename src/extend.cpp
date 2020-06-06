@@ -133,7 +133,7 @@ void External::extend () {
         assert (i != begin);
     else {
       while ((lit = *--i)) {
-        const int tmp = ival (lit);		// not 'signed char'!!!
+        const int tmp = ival (lit);             // not 'signed char'!!!
         if (tmp < 0) {
           LOG ("flipping blocking literal %d", lit);
           assert (lit);

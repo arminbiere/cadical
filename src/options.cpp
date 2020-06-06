@@ -9,7 +9,7 @@ namespace CaDiCaL {
 // a static default value avoids that the stand alone solver reports that
 // '--report=1' is different from the default in 'print ()' below.
 //
-int Options::report_default_value;
+int Options::reportdefault;
 
 /*------------------------------------------------------------------------*/
 
@@ -19,13 +19,13 @@ int Options::report_default_value;
 // reinitialize this table in every call to 'Options::Options'.  This does
 // not produce a data race even for parallel initialization since the
 // same values are written by all threads under the assumption that the
-// 'report_default_value' is set before any solver is initialized.  We do
-// have to perform this static initialization though, since 'has' is
-// static and does not require that the 'Options' constructor was called.
+// 'reportdefault' is set before any solver is initialized.  We do have to
+// perform this static initialization though, since 'has' is static and does
+// not require that the 'Options' constructor was called.
 
 Option Options::table [] = {
-#define OPTION(N,V,L,H,O,D) \
-  { #N, (int) V, (int) L, (int) H, (int) O, D },
+#define OPTION(N,V,L,H,O,P,R,D) \
+  { #N, (int) V, (int) L, (int) H, (int) O, (bool) P, D },
   OPTIONS
 #undef OPTION
 };
@@ -50,56 +50,6 @@ Option * Options::has (const char * name) {
 
 /*------------------------------------------------------------------------*/
 
-bool Options::parse_option_value (const char * val_str, int & val) {
-  if (!strcmp (val_str, "true")) val = 1;
-  else if (!strcmp (val_str, "false")) val = 0;
-  else {
-    const char * p = val_str;
-    int sign;
-
-    if (*p == '-') sign = -1, p++;
-    else sign = 1;
-
-    int ch;
-    if (!isdigit ((ch = *p++))) return false;
-
-    const int64_t bound = - (int64_t) INT_MIN;
-    int64_t mantissa = ch - '0';
-
-    while (isdigit (ch = *p++)) {
-      if (bound / 10 < mantissa) mantissa = bound;
-      else mantissa *= 10;
-      const int digit = ch - '0';
-      if (bound - digit < mantissa) mantissa = bound;
-      else mantissa += digit;
-    }
-
-    int exponent = 0;
-    if (ch  == 'e') {
-      while (isdigit ((ch = *p++)))
-        exponent = exponent ? 10 : ch - '0';
-      if (ch) return false;
-    } else if (ch) return false;
-
-    assert (exponent <= 10);
-    int64_t val64 = mantissa;
-    for (int i = 0; i < exponent; i++) val64 *= 10;
-
-    if (sign < 0) {
-      val64 = -val64;
-      if (val64 < INT_MIN) val64 = INT_MIN;
-    } else {
-      if (val64 > INT_MAX) val64 = INT_MAX;
-    }
-
-    assert (INT_MIN <= val64);
-    assert (val64 <= INT_MAX);
-
-    val = val64;
-  }
-  return true;
-}
-
 bool Options::parse_long_option (const char * arg,
                                  string & name, int & val) {
   if (arg[0] != '-' || arg[1] != '-') return false;
@@ -113,7 +63,7 @@ bool Options::parse_long_option (const char * arg,
   if (pos == string::npos) val = !has_no_prefix;
   else {
     const char * val_str = name.c_str () + pos + 1;
-    if (!parse_option_value (val_str, val)) return false;
+    if (!parse_int_str (val_str, val)) return false;
   }
   return true;
 }
@@ -134,7 +84,7 @@ void Options::initialize_from_environment (
   *q = 0;
   const char * val_str = getenv (key);
   if (!val_str) return;
-  if (!parse_option_value (val_str, val)) return;
+  if (!parse_int_str (val_str, val)) return;
   if (val < L) val = L;
   if (val > H) val = H;
 }
@@ -149,7 +99,7 @@ Options::Options (Internal * s) : internal (s)
   //
   const char * prev = "";
   size_t i = 0;
-# define OPTION(N,V,L,H,O,D) \
+# define OPTION(N,V,L,H,O,P,R,D) \
   do { \
     if ((L) > (V)) \
       FATAL ("'" #N "' default '" #V "' " \
@@ -166,7 +116,7 @@ Options::Options (Internal * s) : internal (s)
     /* Thus this construction just reinitializes the table too even */ \
     /* though it might not be necessary. */ \
     assert (!table[i].name || !strcmp (table[i].name, #N)); \
-    table[i] = { #N, (int)(V), (int)(L), (int)(H), (int)(O), D }; \
+    table[i] = { #N, (int)(V), (int)(L), (int)(H), (int)(O), (bool)(P), D }; \
     prev = #N; \
     i++; \
   } while (0);
@@ -184,7 +134,7 @@ Options::Options (Internal * s) : internal (s)
 
   // Now overwrite default options with environment values.
   //
-# define OPTION(N,V,L,H,O,D) \
+# define OPTION(N,V,L,H,O,P,R,D) \
   initialize_from_environment (N, #N, L, H);
   OPTIONS
 # undef OPTION
@@ -237,7 +187,7 @@ void Options::print () {
 #endif
   char buffer[160];
   // We prefer the macro iteration here since '[VLH]' might be '1e9' etc.
-#define OPTION(N,V,L,H,O,D) \
+#define OPTION(N,V,L,H,O,P,R,D) \
   if (N != (V)) different++; \
   if (verbose || N != (V)) { \
     if ((L) == 0 && (H) == 1) { \
@@ -270,7 +220,7 @@ void Options::print () {
 
 void Options::usage () {
   // We prefer the macro iteration here since '[VLH]' might be '1e9' etc.
-#define OPTION(N,V,L,H,O,D) \
+#define OPTION(N,V,L,H,O,P,R,D) \
   if ((L) == 0 && (H) == 1) \
     printf ("  %-26s " D " [%s]\n", \
       "--" #N "=bool", (bool)(V) ? "true" : "false"); \
@@ -305,7 +255,7 @@ void Options::optimize (int val) {
     factor10 *= 10;
 
   unsigned increased = 0;
-#define OPTION(N,V,L,H,O,D) \
+#define OPTION(N,V,L,H,O,P,R,D) \
   do { \
     if (!(O)) break; \
     const int64_t factor = ((O) == 1 ? factor2 : factor10); \
@@ -326,5 +276,61 @@ void Options::optimize (int val) {
 }
 
 /*------------------------------------------------------------------------*/
+
+void Options::disable_preprocessing () {
+  size_t count = 0;
+#define OPTION(N,V,L,H,O,P,R,D) \
+  do { \
+    if (!(P)) break; \
+    if (!(N)) break; \
+    assert ((L) == 0); \
+    assert ((H) == 1); \
+    LOG ("plain mode disables '%s'", #N); \
+    count++; \
+    N = 0; \
+  } while (0);
+  OPTIONS
+#undef OPTION
+  LOG ("forced plain mode disabled %zd preprocessing options", count);
+}
+
+bool Options::is_preprocessing_option (const char * name) {
+  Option * o = has (name);
+  return o ? o->preprocessing : false;
+}
+
+/*------------------------------------------------------------------------*/
+
+void Options::reset_default_values () {
+  size_t count = 0;
+#define OPTION(N,V,L,H,O,P,R,D) \
+  do { \
+    if (!(R)) break; \
+    if (N == (V)) break; \
+    LOG ("resetting option '%s' to default %s", #N, #V); \
+    count++; \
+    N = (int)(V); \
+  } while (0);
+  OPTIONS
+#undef OPTION
+  LOG ("reset %zd options to their default values", count);
+}
+
+/*------------------------------------------------------------------------*/
+
+void Options::copy (Options & other) const {
+#ifdef LOGGING
+  Internal * internal = other.internal;
+#endif
+#define OPTION(N,V,L,H,O,P,R,D) \
+  if ((N) == (int)(V)) \
+    LOG ("keeping non default option '--%s=%s'", #N, #V); \
+  else if ((N) != (int)(V)) { \
+    LOG ("overwriting default option by '--%s=%d'", #N, N); \
+    other.N = N; \
+  }
+  OPTIONS
+#undef OPTION
+}
 
 }
