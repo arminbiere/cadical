@@ -51,12 +51,12 @@ die () {
   else
     checklog=""
   fi
-  echo "${BOLD}configure:${NORMAL} ${BAD}error:${NORMAL} $*${checklog}"
+  cecho "${BOLD}configure:${NORMAL} ${BAD}error:${NORMAL} $*${checklog}"
   exit 1
 }
 
 msg () {
-  echo "${BOLD}configure:${NORMAL} $*"
+  cecho "${BOLD}configure:${NORMAL} $*"
 }
 
 # if we can find the 'color.sh' script source it and overwrite color codes

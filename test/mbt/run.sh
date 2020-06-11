@@ -3,12 +3,12 @@
 #--------------------------------------------------------------------------#
 
 die () {
-  echo "${HIDE}test/mbt/run.sh:${NORMAL} ${BAD}error:${NORMAL} $*"
+  cecho "${HIDE}test/mbt/run.sh:${NORMAL} ${BAD}error:${NORMAL} $*"
   exit 1
 }
 
 msg () {
-  echo "${HIDE}test/mbt/run.sh:${NORMAL} $*"
+  cecho "${HIDE}test/mbt/run.sh:${NORMAL} $*"
 }
 
 for dir in . .. ../..
@@ -28,11 +28,11 @@ die "needs to be called from a top-level sub-directory of CaDiCaL"
 [ -x "$CADICALBUILD/cadical" ] || \
   die "can not find '$CADICALBUILD/cadical' (run 'make' first)"
 
-echo -n "$HILITE"
-echo "---------------------------------------------------------"
-echo "Model-Based Testing in '$CADICALBUILD'" 
-echo "---------------------------------------------------------"
-echo -n "$NORMAL"
+cecho -n "$HILITE"
+cecho "---------------------------------------------------------"
+cecho "Model-Based Testing in '$CADICALBUILD'" 
+cecho "---------------------------------------------------------"
+cecho -n "$NORMAL"
 
 make -C $CADICALBUILD
 res=$?
@@ -47,7 +47,7 @@ msg "changing to build directory '$CADICALBUILD' and running"
 cd $CADICALBUILD
 
 cmd="./mobical 42 --medium -L $tests --do-not-fork"
-echo "${HILITE}$cmd${NORMAL}"
+cecho "${HILITE}$cmd${NORMAL}"
 $cmd
 res=$?
 

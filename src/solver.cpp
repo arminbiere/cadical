@@ -1089,13 +1089,14 @@ public:
 const char * Solver::write_dimacs (const char * path, int min_max_var) {
   LOG_API_CALL_BEGIN ("write_dimacs", path, min_max_var);
   REQUIRE_VALID_STATE ();
+#ifndef QUIET
+  const double start = internal->time ();
+#endif
+  internal->restore_clauses ();
   ClauseCounter counter;
   (void) traverse_clauses (counter);
   LOG ("found maximal variable %d and %" PRId64 " clauses",
     counter.vars, counter.clauses);
-#ifndef QUIET
-  const double start = internal->time ();
-#endif
   File * file = File::write (internal, path);
   const char * res = 0;
   if (file) {

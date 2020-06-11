@@ -3,12 +3,12 @@
 #--------------------------------------------------------------------------#
 
 die () {
-  echo "${HIDE}test/cnf/run.sh:${NORMAL} ${BAD}error:${NORMAL} $*"
+  cecho "${HIDE}test/cnf/run.sh:${NORMAL} ${BAD}error:${NORMAL} $*"
   exit 1
 }
 
 msg () {
-  echo "${HIDE}test/cnf/run.sh:${NORMAL} $*"
+  cecho "${HIDE}test/cnf/run.sh:${NORMAL} $*"
 }
 
 for dir in . .. ../..
@@ -28,11 +28,11 @@ die "needs to be called from a top-level sub-directory of CaDiCaL"
 [ -x "$CADICALBUILD/cadical" ] || \
   die "can not find '$CADICALBUILD/cadical' (run 'make' first)"
 
-echo -n "$HILITE"
-echo "---------------------------------------------------------"
-echo "CNF testing in '$CADICALBUILD'" 
-echo "---------------------------------------------------------"
-echo -n "$NORMAL"
+cecho -n "$HILITE"
+cecho "---------------------------------------------------------"
+cecho "CNF testing in '$CADICALBUILD'" 
+cecho "---------------------------------------------------------"
+cecho -n "$NORMAL"
 
 make -C $CADICALBUILD
 res=$?
@@ -52,7 +52,7 @@ then
   if [ ! -f $solutionchecker -o ../test/cnf/precochk.c -nt $solutionchecker ]
   then
     cmd="cc -O -o $solutionchecker ../test/cnf/precochk.c -lz"
-    echo "$cmd"
+    cecho "$cmd"
     if $cmd 2>/dev/null
     then
       msg "external solution checking with '$solutionchecker'"
@@ -107,58 +107,58 @@ core () {
     proofopts=" $prf"
   fi
   opts="$cnf --check$solopts$proofopts"
-  echo "$coresolver \\"
-  echo "$opts"
-  echo -n "# $2 ..."
+  cecho "$coresolver \\"
+  cecho "$opts"
+  cecho -n "# $2 ..."
   "$coresolver" $opts 1>$log 2>$err
   res=$?
   if [ ! $res = $2 ] 
   then
-    echo " ${BAD}FAILED${NORMAL} (actual exit code $res)"
+    cecho " ${BAD}FAILED${NORMAL} (actual exit code $res)"
     failed=`expr $failed + 1`
   elif [ $res = 10 ]
   then
     if [ "$solopts" = "" ]
     then
-      echo " ${GOOD}ok${NORMAL} (without solution file)"
+      cecho " ${GOOD}ok${NORMAL} (without solution file)"
     else
-      echo " ${GOOD}ok${NORMAL} (solution file checked after parsing)"
+      cecho " ${GOOD}ok${NORMAL} (solution file checked after parsing)"
     fi
     if [ x"$solutionchecker" = xnone ]
     then
 	ok=`expr $ok + 1`
     else
-      echo "$solutionchecker \\"
-      echo "$cnf $log"
-      echo -n "# 0 ..."
+      cecho "$solutionchecker \\"
+      cecho "$cnf $log"
+      cecho -n "# 0 ..."
       if $solutionchecker $cnf $log 1>&2 >$chk
       then
-        echo " ${GOOD}ok${NORMAL} (solution checked externally too)"
+        cecho " ${GOOD}ok${NORMAL} (solution checked externally too)"
 	ok=`expr $ok + 1`
       else
-	echo " ${BAD}FAILED${NORMAL} (incorrect solution)"
+	cecho " ${BAD}FAILED${NORMAL} (incorrect solution)"
 	failed=`expr $failed + 1`
       fi
     fi
   elif [ $res = 20 ]
   then
-    echo " ${GOOD}ok${NORMAL} (exit code as expected)"
+    cecho " ${GOOD}ok${NORMAL} (exit code as expected)"
     if [ ! x"$proofchecker" = xnone ]
     then
-      echo "$proofchecker \\"
-      echo "$cnf $prf"
-      echo -n "# 0 ..."
+      cecho "$proofchecker \\"
+      cecho "$cnf $prf"
+      cecho -n "# 0 ..."
       if $proofchecker $cnf $prf 1>&2 >$chk
       then
-	echo " ${GOOD}ok${NORMAL} (proof checked)"
+	cecho " ${GOOD}ok${NORMAL} (proof checked)"
 	ok=`expr $ok + 1`
       else
-	echo " ${BAD}FAILED${NORMAL} (proof check '$proofchecker $cnf $prf' failed)"
+	cecho " ${BAD}FAILED${NORMAL} (proof check '$proofchecker $cnf $prf' failed)"
 	failed=`expr $failed + 1`
       fi
     fi
   else 
-    echo " ${BAD}FAILED${NORMAL} (unsupported exit code $res)"
+    cecho " ${BAD}FAILED${NORMAL} (unsupported exit code $res)"
     failed=`expr $failed + 1`
   fi
 }
@@ -171,31 +171,31 @@ simp () {
   err=$prefix-$1.err
   chk=$prefix-$1.chk
   opts="$cnf"
-  echo "$simpsolver \\"
-  echo "$opts"
-  echo -n "# $2 ..."
+  cecho "$simpsolver \\"
+  cecho "$opts"
+  cecho -n "# $2 ..."
   "$simpsolver" $opts 1>$log 2>$err
   res=$?
   if [ ! $res = $2 ] 
   then
-    echo " ${BAD}FAILED${NORMAL} (actual exit code $res)"
+    cecho " ${BAD}FAILED${NORMAL} (actual exit code $res)"
     failed=`expr $failed + 1`
   elif [ $res = 10 ]
   then
-    echo " ${GOOD}ok${NORMAL}"
+    cecho " ${GOOD}ok${NORMAL}"
     if [ x"$solutionchecker" = xnone ]
     then
 	ok=`expr $ok + 1`
     else
-      echo "$solutionchecker \\"
-      echo "$cnf $log"
-      echo -n "# 0 ..."
+      cecho "$solutionchecker \\"
+      cecho "$cnf $log"
+      cecho -n "# 0 ..."
       if $solutionchecker $cnf $log 1>&2 >$chk
       then
-        echo " ${GOOD}ok${NORMAL} (solution checked externally)"
+        cecho " ${GOOD}ok${NORMAL} (solution checked externally)"
 	ok=`expr $ok + 1`
       else
-	echo " ${BAD}FAILED${NORMAL} (incorrect solution)"
+	cecho " ${BAD}FAILED${NORMAL} (incorrect solution)"
 	failed=`expr $failed + 1`
       fi
     fi

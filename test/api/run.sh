@@ -3,12 +3,12 @@
 #--------------------------------------------------------------------------#
 
 die () {
-  echo "${HIDE}test/api/run.sh:${NORMAL} ${BAD}error:${NORMAL} $*"
+  cecho "${HIDE}test/api/run.sh:${NORMAL} ${BAD}error:${NORMAL} $*"
   exit 1
 }
 
 msg () {
-  echo "${HIDE}test/api/run.sh:${NORMAL} $*"
+  cecho "${HIDE}test/api/run.sh:${NORMAL} $*"
 }
 
 for dir in . .. ../..
@@ -31,11 +31,11 @@ die "needs to be called from a top-level sub-directory of CaDiCaL"
 [ -f "$CADICALBUILD/libcadical.a" ] || \
   die "can not find '$CADICALBUILD/libcadical.a' (run 'make' first)"
 
-echo -n "$HILITE"
-echo "---------------------------------------------------------"
-echo "API testing in '$CADICALBUILD'"
-echo "---------------------------------------------------------"
-echo -n "$NORMAL"
+cecho -n "$HILITE"
+cecho "---------------------------------------------------------"
+cecho "API testing in '$CADICALBUILD'"
+cecho "---------------------------------------------------------"
+cecho -n "$NORMAL"
 
 make -C $CADICALBUILD
 res=$?
@@ -62,7 +62,7 @@ failed=0
 
 cmd () {
   test $status = 1 && return
-  echo $*
+  cecho $*
   $* >> $name.log
   status=$?
 }
@@ -90,10 +90,10 @@ run () {
   cmd $name
   if test $status = 0
   then
-    echo "# 0 ... ${GOOD}ok${NORMAL} (zero exit code)"
+    cecho "# 0 ... ${GOOD}ok${NORMAL} (zero exit code)"
     ok=`expr $ok + 1`
   else
-    echo "# 0 ... ${BAD}failed${NORMAL} (non-zero exit code)"
+    cecho "# 0 ... ${BAD}failed${NORMAL} (non-zero exit code)"
     failed=`expr $failed + 1`
   fi
 }

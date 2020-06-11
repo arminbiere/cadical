@@ -3,12 +3,12 @@
 #--------------------------------------------------------------------------#
 
 die () {
-  echo "${HIDE}test/usage/run.sh:${NORMAL} ${BAD}error:${NORMAL} $*"
+  cecho "${HIDE}test/usage/run.sh:${NORMAL} ${BAD}error:${NORMAL} $*"
   exit 1
 }
 
 msg () {
-  echo "${HIDE}test/usage/run.sh:${NORMAL} $*"
+  cecho "${HIDE}test/usage/run.sh:${NORMAL} $*"
 }
 
 for dir in . .. ../..
@@ -28,11 +28,11 @@ die "needs to be called from a top-level sub-directory of CaDiCaL"
 [ -x "$CADICALBUILD/cadical" ] || \
   die "can not find '$CADICALBUILD/cadical' (run 'make' first)"
 
-echo -n "$HILITE"
-echo "---------------------------------------------------------"
-echo "usage testing in '$CADICALBUILD'" 
-echo "---------------------------------------------------------"
-echo -n "$NORMAL"
+cecho -n "$HILITE"
+cecho "---------------------------------------------------------"
+cecho "usage testing in '$CADICALBUILD'" 
+cecho "---------------------------------------------------------"
+cecho -n "$NORMAL"
 
 make -C $CADICALBUILD
 res=$?
@@ -44,7 +44,7 @@ solver="$CADICALBUILD/cadical"
 
 #--------------------------------------------------------------------------#
 
-echo "starting test run `pwd`"
+cecho "starting test run `pwd`"
 
 ok=0
 failed=0
@@ -58,15 +58,15 @@ run () {
   log="$buildprefix.log"
   err="$buildprefix.err"
   cmd="$solver $options"
-  echo -n "$cmd"
+  cecho -n "$cmd"
   $cmd 1>$log 2>$err
   res=$?
   if [ $res = $expected ]
   then
-    echo " # ${GOOD}ok${NORMAL} (expected exit code '$res')"
+    cecho " # ${GOOD}ok${NORMAL} (expected exit code '$res')"
     ok=`expr $ok + 1`
   else
-    echo " # ${BAD}FAILED${NORMAL} (unexpected exit code '$res')"
+    cecho " # ${BAD}FAILED${NORMAL} (unexpected exit code '$res')"
     failed=`expr $failed + 1`
   fi
 }

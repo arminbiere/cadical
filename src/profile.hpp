@@ -104,41 +104,59 @@ struct Profiles {
 
 }
 
+#define NON_QUIET_PROFILE_CODE(CODE) CODE
+
+#else // !defined(QUIET)
+
+#define NON_QUIET_PROFILE_CODE(CODE) /**/
+
+#endif
+
 /*------------------------------------------------------------------------*/
 
-// Macros for Profiling support.
+// Macros for Profiling support and checking and changing the mode.
 
 #define START(P) \
 do { \
-  if (internal->profiles.P.level > internal->opts.profile) break; \
-  internal->start_profiling (internal->profiles.P, internal->time ()); \
+  NON_QUIET_PROFILE_CODE ( \
+    if (internal->profiles.P.level <= internal->opts.profile) \
+      internal->start_profiling (internal->profiles.P, internal->time ()); \
+  ) \
 } while (0)
 
 #define STOP(P) \
 do { \
-  if (internal->profiles.P.level > internal->opts.profile) break; \
-  internal->stop_profiling (internal->profiles.P, internal->time ()); \
+  NON_QUIET_PROFILE_CODE ( \
+    if (internal->profiles.P.level <= internal->opts.profile) \
+      internal->stop_profiling (internal->profiles.P, internal->time ()); \
+  ) \
 } while (0)
 
 /*------------------------------------------------------------------------*/
 
 #define START_SIMPLIFIER(S,M) \
 do { \
-  const double N = time (); \
-  const int L = internal->opts.profile; \
+  NON_QUIET_PROFILE_CODE ( \
+    const double N = time (); \
+    const int L = internal->opts.profile; \
+  ) \
   if (!preprocessing && !lookingahead) { \
-    if (stable && internal->profiles.stable.level <= L) \
-      internal->stop_profiling (internal->profiles.stable, N); \
-    if (!stable && internal->profiles.unstable.level <= L) \
-      internal->stop_profiling (internal->profiles.unstable, N); \
-    if (internal->profiles.search.level <= L) \
-      internal->stop_profiling (internal->profiles.search, N); \
+    NON_QUIET_PROFILE_CODE ( \
+      if (stable && internal->profiles.stable.level <= L) \
+	internal->stop_profiling (internal->profiles.stable, N); \
+      if (!stable && internal->profiles.unstable.level <= L) \
+	internal->stop_profiling (internal->profiles.unstable, N); \
+      if (internal->profiles.search.level <= L) \
+	internal->stop_profiling (internal->profiles.search, N); \
+    ) \
     reset_mode (SEARCH); \
   } \
-  if (internal->profiles.simplify.level <= L) \
-    internal->start_profiling (internal->profiles.simplify, N); \
-  if (internal->profiles.S.level <= L) \
-    internal->start_profiling (internal->profiles.S, N); \
+  NON_QUIET_PROFILE_CODE ( \
+    if (internal->profiles.simplify.level <= L) \
+      internal->start_profiling (internal->profiles.simplify, N); \
+    if (internal->profiles.S.level <= L) \
+      internal->start_profiling (internal->profiles.S, N); \
+  ) \
   set_mode (SIMPLIFY); \
   set_mode (M); \
 } while (0)
@@ -147,21 +165,25 @@ do { \
 
 #define STOP_SIMPLIFIER(S,M) \
 do { \
-  const double N = time (); \
-  const int L = internal->opts.profile; \
-  if (internal->profiles.S.level <= L) \
-    internal->stop_profiling (internal->profiles.S, N); \
-  if (internal->profiles.simplify.level <= L) \
-    internal->stop_profiling (internal->profiles.simplify, N); \
+  NON_QUIET_PROFILE_CODE ( \
+    const double N = time (); \
+    const int L = internal->opts.profile; \
+    if (internal->profiles.S.level <= L) \
+      internal->stop_profiling (internal->profiles.S, N); \
+    if (internal->profiles.simplify.level <= L) \
+      internal->stop_profiling (internal->profiles.simplify, N); \
+  ) \
   reset_mode (M); \
   reset_mode (SIMPLIFY); \
   if (!preprocessing && !lookingahead) { \
-    if (internal->profiles.search.level <= L) \
-      internal->start_profiling (internal->profiles.search, N); \
-    if (stable && internal->profiles.stable.level <= L) \
-      internal->start_profiling (internal->profiles.stable, N); \
-    if (!stable && internal->profiles.unstable.level <= L) \
-      internal->start_profiling (internal->profiles.unstable, N); \
+    NON_QUIET_PROFILE_CODE ( \
+      if (internal->profiles.search.level <= L) \
+	internal->start_profiling (internal->profiles.search, N); \
+      if (stable && internal->profiles.stable.level <= L) \
+	internal->start_profiling (internal->profiles.stable, N); \
+      if (!stable && internal->profiles.unstable.level <= L) \
+	internal->start_profiling (internal->profiles.unstable, N); \
+    ) \
     set_mode (SEARCH); \
   } \
 } while (0)
@@ -173,14 +195,16 @@ do { \
 do { \
   require_mode (SEARCH); \
   assert (!preprocessing); \
-  const double N = time (); \
-  const int L = internal->opts.profile; \
-  if (stable && internal->profiles.stable.level <= L) \
-    internal->stop_profiling (internal->profiles.stable, N); \
-  if (!stable && internal->profiles.unstable.level <= L) \
-    internal->stop_profiling (internal->profiles.unstable, N); \
-  if (internal->profiles.walk.level <= L) \
-    internal->start_profiling (internal->profiles.walk, N); \
+  NON_QUIET_PROFILE_CODE ( \
+    const double N = time (); \
+    const int L = internal->opts.profile; \
+    if (stable && internal->profiles.stable.level <= L) \
+      internal->stop_profiling (internal->profiles.stable, N); \
+    if (!stable && internal->profiles.unstable.level <= L) \
+      internal->stop_profiling (internal->profiles.unstable, N); \
+    if (internal->profiles.walk.level <= L) \
+      internal->start_profiling (internal->profiles.walk, N); \
+  ) \
   set_mode (WALK); \
 } while (0)
 
@@ -192,14 +216,16 @@ do { \
   require_mode (SEARCH); \
   assert (!preprocessing); \
   reset_mode (WALK); \
-  const double N = time (); \
-  const int L = internal->opts.profile; \
-  if (internal->profiles.walk.level <= L) \
-    internal->stop_profiling (internal->profiles.walk, N); \
-  if (stable && internal->profiles.stable.level <= L) \
-    internal->start_profiling (internal->profiles.stable, N); \
-  if (!stable && internal->profiles.unstable.level <= L) \
-    internal->start_profiling (internal->profiles.unstable, N); \
+  NON_QUIET_PROFILE_CODE ( \
+    const double N = time (); \
+    const int L = internal->opts.profile; \
+    if (internal->profiles.walk.level <= L) \
+      internal->stop_profiling (internal->profiles.walk, N); \
+    if (stable && internal->profiles.stable.level <= L) \
+      internal->start_profiling (internal->profiles.stable, N); \
+    if (!stable && internal->profiles.unstable.level <= L) \
+      internal->start_profiling (internal->profiles.unstable, N); \
+  ) \
 } while (0)
 
 /*------------------------------------------------------------------------*/
@@ -209,7 +235,9 @@ do { \
 do { \
   require_mode (SEARCH); \
   assert (!preprocessing); \
-  START (walk); \
+  NON_QUIET_PROFILE_CODE ( \
+    START (walk); \
+  ) \
   set_mode (WALK); \
 } while (0)
 
@@ -221,27 +249,9 @@ do { \
   require_mode (SEARCH); \
   assert (!preprocessing); \
   reset_mode (WALK); \
-  STOP (walk); \
+  NON_QUIET_PROFILE_CODE ( \
+    STOP (walk); \
+  ) \
 } while (0)
-
-/*------------------------------------------------------------------------*/
-#else // ifndef QUIET
-/*------------------------------------------------------------------------*/
-
-#define START(...) do { } while (0)
-#define STOP(...) do { } while (0)
-
-#define START_SIMPLIFIER(...) do { } while (0)
-#define STOP_SIMPLIFIER(...) do { } while (0)
-
-#define START_OUTER_WALK(...) do { } while (0)
-#define STOP_OUTER_WALK(...) do { } while (0)
-
-#define START_INNER_WALK(...) do { } while (0)
-#define STOP_INNER_WALK(...) do { } while (0)
-
-/*------------------------------------------------------------------------*/
-#endif // ifndef QUIET
-/*------------------------------------------------------------------------*/
 
 #endif // ifndef _profiles_h_INCLUDED

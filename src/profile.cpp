@@ -67,12 +67,13 @@ void Internal::print_profile () {
 #define PROFILE(NAME,LEVEL) \
 do { \
   if (LEVEL > opts.profile) break; \
-  if (&profiles.NAME == &profiles.solve) break; \
+  Profile * p = &profiles.NAME; \
+  if (p == &profiles.solve) break; \
   if (!profiles.NAME.value && \
-      &profiles.NAME != &profiles.parse && \
-      &profiles.NAME != &profiles.search && \
-      &profiles.NAME != &profiles.simplify) break; \
-  profs[n++] = &profiles.NAME; \
+      p != &profiles.parse && \
+      p != &profiles.search && \
+      p != &profiles.simplify) break; \
+  profs[n++] = p; \
 } while (0);
   PROFILES
 #undef PROFILE

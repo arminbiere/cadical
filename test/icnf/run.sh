@@ -3,12 +3,12 @@
 #--------------------------------------------------------------------------#
 
 die () {
-  echo "${HIDE}test/icnf/run.sh:${NORMAL} ${BAD}error:${NORMAL} $*"
+  cecho "${HIDE}test/icnf/run.sh:${NORMAL} ${BAD}error:${NORMAL} $*"
   exit 1
 }
 
 msg () {
-  echo "${HIDE}test/icnf/run.sh:${NORMAL} $*"
+  cecho "${HIDE}test/icnf/run.sh:${NORMAL} $*"
 }
 
 for dir in . .. ../..
@@ -28,11 +28,11 @@ die "needs to be called from a top-level sub-directory of CaDiCaL"
 [ -x "$CADICALBUILD/cadical" ] || \
   die "can not find '$CADICALBUILD/cadical' (run 'make' first)"
 
-echo -n "$HILITE"
-echo "---------------------------------------------------------"
-echo "ICNF testing in '$CADICALBUILD'" 
-echo "---------------------------------------------------------"
-echo -n "$NORMAL"
+cecho -n "$HILITE"
+cecho "---------------------------------------------------------"
+cecho "ICNF testing in '$CADICALBUILD'" 
+cecho "---------------------------------------------------------"
+cecho -n "$NORMAL"
 
 make -C $CADICALBUILD
 res=$?
@@ -55,17 +55,17 @@ run () {
   err=$prefix-$1.err
   opts="$icnf --check"
   opts="$icnf"
-  echo "$solver \\"
-  echo "$opts"
-  echo -n "# $2 ..."
+  cecho "$solver \\"
+  cecho "$opts"
+  cecho -n "# $2 ..."
   "$solver" $opts 1>$log 2>$err
   res=$?
   if [ ! $res = $2 ] 
   then
-    echo " ${BAD}FAILED${NORMAL} (actual exit code $res)"
+    cecho " ${BAD}FAILED${NORMAL} (actual exit code $res)"
     failed=`expr $failed + 1`
   else
-    echo " ${GOOD}ok${NORMAL} (exit code '$res' as expected)"
+    cecho " ${GOOD}ok${NORMAL} (exit code '$res' as expected)"
     ok=`expr $ok + 1`
   fi
 }

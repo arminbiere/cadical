@@ -20,7 +20,7 @@
 
 #ifndef NBUILD
 #ifndef VERSION
-#  define VERSION "sc2020"
+#  define VERSION "1.3.0"
 #endif // NBUILD
 #endif // VERSION
 

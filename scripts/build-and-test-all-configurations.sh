@@ -92,12 +92,16 @@ run -l -p
 # ('-g' can not be combined '-c')
 
 run -c -l
+run -c -q
 run -g -l
+run -g -q
 
 # the same pairs but now with pedantic compilation
 
 run -c -l -p
+run -c -q -p
 run -g -l -p
+run -g -q -p
 
 # finally check that these also work to some extend
 

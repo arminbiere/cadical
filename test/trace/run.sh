@@ -1,12 +1,12 @@
 #!/bin/sh
 
 die () {
-  echo "${HIDE}test/trace/run.sh:${NORMAL} ${BAD}error:${NORMAL} $*"
+  cecho "${HIDE}test/trace/run.sh:${NORMAL} ${BAD}error:${NORMAL} $*"
   exit 1
 }
 
 msg () {
-  echo "${HIDE}test/trace/run.sh:${NORMAL} $*"
+  cecho "${HIDE}test/trace/run.sh:${NORMAL} $*"
 }
 
 for dir in . .. ../..
@@ -26,11 +26,11 @@ die "needs to be called from a top-level sub-directory of CaDiCaL"
 [ -x "$CADICALBUILD/cadical" ] || \
   die "can not find '$CADICALBUILD/cadical' (run 'make' first)"
 
-echo -n "$HILITE"
-echo "---------------------------------------------------------"
-echo "Regression Testing API traces in '$CADICALBUILD'" 
-echo "---------------------------------------------------------"
-echo -n "$NORMAL"
+cecho -n "$HILITE"
+cecho "---------------------------------------------------------"
+cecho "Regression Testing API traces in '$CADICALBUILD'" 
+cecho "---------------------------------------------------------"
+cecho -n "$NORMAL"
 
 cd $CADICALBUILD || exit 1
 make
@@ -48,16 +48,16 @@ run () {
   msg "running ${HILITE}'$1'${NORMAL}"
   trace=../test/trace/$1.trace
   executed=`expr $executed + 1`
-  echo "$CADICALBUILD/mobical $trace"
+  cecho "$CADICALBUILD/mobical $trace"
   $CADICALBUILD/mobical $trace 2>/dev/null 1>/dev/null
   res=$?
-  echo $res
+  cecho $res
   if [ $res = 0 ]
   then
-    echo "# ... ${GOOD}ok${NORMAL}"
+    cecho "# ... ${GOOD}ok${NORMAL}"
     ok=`expr $ok + 1`
   else
-    echo "# ... ${BAD}failed${NORMAL}"
+    cecho "# ... ${BAD}failed${NORMAL}"
     failed=`expr $failed + 1`
   fi
 }
