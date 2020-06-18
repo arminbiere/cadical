@@ -81,7 +81,9 @@ static signed char * ignore_clang_analyze_memory_leak_warning;
 
 void Internal::enlarge_vals (size_t new_vsize) {
   signed char * new_vals;
-  new_vals = new signed char [ 2*new_vsize ] { 0 };
+  const size_t bytes = 2u * new_vsize;
+  new_vals = new signed char [ bytes ];	// g++-4.8 does not like ... { 0 };
+  memset (new_vals, 0, bytes);
   ignore_clang_analyze_memory_leak_warning = new_vals;
   new_vals += new_vsize;
 

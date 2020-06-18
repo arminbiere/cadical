@@ -551,7 +551,7 @@ int Solver::lookahead () {
 Solver::CubesWithStatus Solver::generate_cubes (int depth) {
   TRACE ("lookahead_cubes");
   REQUIRE_VALID_OR_SOLVING_STATE ();
-  auto cubes {external->generate_cubes (depth)};
+  auto cubes = external->generate_cubes (depth);
   TRACE ("lookahead_cubes");
 
   CubesWithStatus cubes2;
