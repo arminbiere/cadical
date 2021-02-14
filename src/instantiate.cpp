@@ -38,7 +38,7 @@ Internal::collect_instantiation_candidates (Instantiator & instantiator) {
         size_t negoccs = occs (-lit).size ();
         LOG (c,
           "instantiation candidate literal %d "
-          "with %zd negative occurrences in");
+          "with %zu negative occurrences in", lit, negoccs);
         instantiator.candidate (lit, c, c->size, negoccs);
       }
     }
@@ -50,7 +50,7 @@ Internal::collect_instantiation_candidates (Instantiator & instantiator) {
 // Specialized propagation and assignment routines for instantiation.
 
 inline void Internal::inst_assign (int lit) {
-  LOG ("instantiate assign %d");
+  LOG ("instantiate assign %d", lit);
   assert (!val (lit));
   vals[lit] = 1;
   vals[-lit] = -1;
@@ -210,7 +210,7 @@ void Internal::instantiate (Instantiator & instantiator) {
     }
   }
   PHASE ("instantiate", stats.instrounds,
-    "attempting to instantiate %zd candidate literal clause pairs",
+    "attempting to instantiate %" PRId64 " candidate literal clause pairs",
     candidates);
   while (!unsat &&
          !terminated_asynchronously () &&

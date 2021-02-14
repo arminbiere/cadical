@@ -253,7 +253,6 @@ struct External {
   void assume (int elit);
   int solve (bool preprocess_only);
 
-
   // We call it 'ival' as abbreviation for 'val' with 'int' return type to
   // avoid bugs due to using 'signed char tmp = val (lit)', which might turn
   // a negative value into a positive one (happened in 'extend').
@@ -286,7 +285,8 @@ struct External {
 
   /*----------------------------------------------------------------------*/
 
-  // Traversal functions.
+  // Traversal functions for the witness stack and units.  The explanation
+  // in 'external.cpp' for why we have to distinguish these cases.
 
   bool traverse_all_frozen_units_as_clauses (ClauseIterator &);
   bool traverse_all_non_frozen_units_as_witnesses (WitnessIterator &);
@@ -298,7 +298,6 @@ struct External {
   // Copy flags for determining preprocessing state.
 
   void copy_flags (External & other) const;
-
 
   /*----------------------------------------------------------------------*/
 

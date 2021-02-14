@@ -381,7 +381,11 @@ inline void Internal::walk_save_minimum (Walker & walker) {
   if (broken >= stats.walk.minimum) return;
   VERBOSE (3, "new global minimum %" PRId64 "", broken);
   stats.walk.minimum = broken;
-  copy_phases (phases.min);
+  for (auto i : vars) {
+    const signed char tmp = vals[i];
+    if (tmp)
+      phases.min[i] = phases.saved[i] = tmp;
+  }
 }
 
 /*------------------------------------------------------------------------*/
@@ -458,8 +462,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
       if (!active (lit)) continue;
       tmp = sign (lit);
       const int idx = abs (lit);
-      LOG ("initial assign %d to assumption phase",
-        tmp < 0 ? -idx : idx);
+      LOG ("initial assign %d to assumption phase", tmp < 0 ? -idx : idx);
       vals[idx] = tmp;
       vals[-idx] = -tmp;
       assert (level == 1);
@@ -570,7 +573,6 @@ int Internal::walk_round (int64_t limit, bool prev) {
      broken, percent (broken, stats.current.irredundant),
      stats.current.irredundant);
 
-    copy_phases (phases.saved);
     walk_save_minimum (walker);
 
     int64_t flips = 0, minimum = broken;
@@ -590,7 +592,6 @@ int Internal::walk_round (int64_t limit, bool prev) {
       VERBOSE (3,
         "new phase minimum %" PRId64 " after %" PRId64 " flips",
         minimum, flips);
-      copy_phases (phases.saved);
       walk_save_minimum (walker);
     }
 
@@ -616,7 +617,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
       relative (1e-3*flips, time () - profiles.walk.started));
 
     if (minimum > 0) {
-      LOG ("minimum %d non-zero thus potentially continue", minimum);
+      LOG ("minimum %" PRId64 " non-zero thus potentially continue", minimum);
       res = 0;
     } else {
       LOG ("minimum is zero thus stop local search");

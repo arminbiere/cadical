@@ -31,6 +31,19 @@ void Format::push_uint64 (uint64_t u) {
   push_string (tmp);
 }
 
+static bool
+match_format (const char * & str, const char * pattern)
+{
+  assert (pattern);
+  const char * p = str;
+  const char * q = pattern;
+  while (*q)
+    if (*q++ != *p++)
+      return false;
+  str = p;
+  return true;
+}
+
 const char * Format::add (const char * fmt, va_list & ap) {
   const char * p = fmt;
   char ch;
@@ -39,7 +52,8 @@ const char * Format::add (const char * fmt, va_list & ap) {
     else if (*p == 'c') push_char (va_arg (ap, int)), p++;
     else if (*p == 'd') push_int (va_arg (ap, int)), p++;
     else if (*p == 's') push_string (va_arg (ap, const char*)), p++;
-    else if (*p == 'U') push_uint64 (va_arg (ap, uint64_t)), p++;
+    else if (match_format (p, PRIu64))
+      push_uint64 (va_arg (ap, uint64_t));
     else { push_char ('%'); push_char (*p); break; }  // unsupported
   }
   push_char (0);

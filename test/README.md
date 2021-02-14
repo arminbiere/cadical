@@ -17,12 +17,12 @@ The regression suite for CNF files
     ./cnf/run.sh
 
 is more thorough and should catch simple bugs.  It checks solutions and
-generated proofs too.  The third test driver uses a regression suite uses
-regression execution traces by replaying them through `mobical`
+checks generated proofs too.  The third test driver uses a regression suite
+uses execution traces by replaying them through `mobical`
 
     ./traces/run.sh
 
-Last but not least the model based tester `../src/mobical.cpp` however is
+Last but not least the model based tester `../src/mobical.cpp` is the
 most effective test driver and can be run through
 
     ./mbt/run.sh
@@ -45,7 +45,7 @@ For more information on external fuzz testing see
 > Robert Brummayer, Florian Lonsing, Armin Biere:
 > Automated Testing and Debugging of SAT and QBF Solvers. SAT 2010: 44-57
 
-and model based testing of SAT solvers is described in
+Model based testing of SAT solvers is described in
 
 > Cyrille Artho, Armin Biere, Martina Seidl:
 > Model-Based Testing for Verification Back-Ends. TAP 2013: 39-55

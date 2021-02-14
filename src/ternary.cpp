@@ -339,7 +339,7 @@ bool Internal::ternary () {
     int delta_htrs2 = stats.htrs2 - old_htrs2;
     int delta_htrs3 = stats.htrs3 - old_htrs3;
     PHASE ("ternary", stats.ternary,
-      "derived %" PRId64 " ternary and %" PRId64 " binary resolvents",
+      "derived %d ternary and %d binary resolvents",
       delta_htrs3, delta_htrs2);
     report ('3', !opts.reportall && !(delta_htrs2 + delta_htrs2));
     if (delta_htrs2) resolved_binary_clause = true;

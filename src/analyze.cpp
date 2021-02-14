@@ -132,7 +132,8 @@ void Internal::bump_variable_score_inc () {
 struct analyze_bumped_rank {
   Internal * internal;
   analyze_bumped_rank (Internal * i) : internal (i) { }
-  uint64_t operator () (const int & a) const {
+  typedef uint64_t Type;
+  Type operator () (const int & a) const {
     return internal->bumped (a);
   }
 };
@@ -301,7 +302,7 @@ inline void Internal::bump_also_all_reason_literals () {
   assert (opts.bumpreasondepth > 0);
   LOG ("bumping reasons up to depth %d", opts.bumpreasondepth);
   for (const auto & lit : clause)
-    bump_also_reason_literals (-lit, opts.bumpreasondepth);
+    bump_also_reason_literals (-lit, opts.bumpreasondepth + stable);
 }
 
 /*------------------------------------------------------------------------*/
@@ -336,7 +337,8 @@ void Internal::clear_analyzed_levels () {
 struct analyze_trail_negative_rank {
   Internal * internal;
   analyze_trail_negative_rank (Internal * s) : internal (s) { }
-  uint64_t operator () (int a) {
+  typedef uint64_t Type;
+  Type operator () (int a) {
     Var & v = internal->var (a);
     uint64_t res = v.level;
     res <<= 32;
@@ -453,9 +455,6 @@ inline int Internal::find_conflict_level (int & forced) {
       highest_position = j;
       highest_level = tmp;
       if (highest_level == res) break;
-#if 0
-      if (i && highest_level == res - 1) break;
-#endif
     }
 
     // No unwatched higher assignment level literal.
@@ -464,8 +463,8 @@ inline int Internal::find_conflict_level (int & forced) {
 
     if (highest_position > 1)
       {
-	LOG (conflict, "unwatch %d in", lit);
-	remove_watch (watches (lit), conflict);
+        LOG (conflict, "unwatch %d in", lit);
+        remove_watch (watches (lit), conflict);
       }
 
     lits[highest_position] = lit;
@@ -592,7 +591,7 @@ void Internal::eagerly_subsume_recently_learned_clauses (Clause * c) {
   unmark (c);
 #ifdef LOGGING
   uint64_t subsumed = stats.eagersub - before;
-  if (subsumed) LOG ("eagerly subsumed %d clauses", subsumed);
+  if (subsumed) LOG ("eagerly subsumed %" PRIu64 " clauses", subsumed);
 #endif
 }
 

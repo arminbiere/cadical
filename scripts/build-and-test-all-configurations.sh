@@ -62,13 +62,8 @@ run () {
 
 # start with these two for fast fail
 
-run -j		# default configuration with fast parallel compilation
-run -j -p	# check pedantic in parallel
-
 run		# default configuration (depends on 'MAKEFLAGS'!)
 run -p		# then check default pedantic first
-
-run -j1		# forced slow sequential compilation (checks '-j1' option)
 
 run -q		# library users might want to disable messages
 run -q -p	# also check '--quiet' pedantically

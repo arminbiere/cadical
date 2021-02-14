@@ -125,6 +125,10 @@ int main () {
 
   cadical.simplify (1);
 
+  // Now we expect '5' to be part of the witness, but '3' and '4' to be part
+  // the traversed clauses and check this too.  See the long comment on
+  // 'frozen' versus 'non-frozen' unit traversal in 'external.cpp'.
+
   cadical.write_dimacs (path ("clauses").c_str (), 5);
   cadical.write_extension (path ("extensions").c_str ());
 

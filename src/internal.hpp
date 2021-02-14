@@ -139,7 +139,7 @@ struct Internal {
   bool unsat;                   // empty clause found or learned
   bool iterating;               // report learned unit ('i' line)
   bool localsearching;          // true during local search
-  bool lookingahead;		// true during look ahead
+  bool lookingahead;            // true during look ahead
   bool preprocessing;           // true during preprocessing
   bool protected_reasons;       // referenced reasons are protected
   bool force_saved_phase;       // force saved phase in decision
@@ -550,8 +550,8 @@ struct Internal {
 
   // Functions to set and reset certain 'phases'.
   //
-  void clear_phases (vector<signed char> &);  // reset to zero
-  void copy_phases (vector<signed char> &);   // copy 'vals' to 'argument'
+  void clear_phases (vector<signed char> &);  // reset argument to zero
+  void copy_phases (vector<signed char> &);   // copy 'saved' to argument
 
   // Resetting the saved phased in 'rephase.cpp'.
   //
@@ -1122,7 +1122,6 @@ struct Internal {
   void print_statistics ();
   void print_resource_usage ();
 
-
   /*----------------------------------------------------------------------*/
 
 #ifndef QUIET
@@ -1135,14 +1134,16 @@ struct Internal {
   // such messages completely at compile-time.
   //
   void vmessage (const char *, va_list &);
-  void message (const char *, ...);
+  void message (const char *, ...)
+                CADICAL_ATTRIBUTE_FORMAT (2, 3);
   void message ();                              // empty line
 
   // Verbose messages with explicit verbose 'level' controlled by
   // 'opts.verbose' (verbose level '0' gives the same as 'message').
   //
   void vverbose (int level, const char * fmt, va_list &);
-  void verbose (int level, const char * fmt, ...);
+  void verbose (int level, const char * fmt, ...)
+                CADICAL_ATTRIBUTE_FORMAT (3, 4);
   void verbose (int level);
 
   // This is for printing section headers in the form
@@ -1160,13 +1161,15 @@ struct Internal {
   //
   //  c [<phase>] ...
   //
-  void phase (const char * phase, const char *, ...);
+  void phase (const char * phase, const char *, ...)
+              CADICAL_ATTRIBUTE_FORMAT (3, 4);
 
   // Same as the last 'phase' above except that the prefix gets a count:
   //
   //  c [<phase>-<count>] ...
   //
-  void phase (const char * phase, int64_t count, const char *, ...);
+  void phase (const char * phase, int64_t count, const char *, ...)
+              CADICAL_ATTRIBUTE_FORMAT (4, 5);
 #endif
 
   // Print error messages which are really always printed (even if 'quiet'
@@ -1176,19 +1179,22 @@ struct Internal {
   //
   void error_message_end ();
   void verror (const char *, va_list &);
-  void error (const char *, ...);
+  void error (const char *, ...)
+              CADICAL_ATTRIBUTE_FORMAT (2, 3);
   void error_message_start ();
 
   // Warning messages.
   //
-  void warning (const char *, ...);
+  void warning (const char *, ...)
+                CADICAL_ATTRIBUTE_FORMAT (2, 3);
 };
 
 // Fatal internal error which leads to abort.
 //
 void fatal_message_start ();
 void fatal_message_end ();
-void fatal (const char *, ...);
+void fatal (const char *, ...)
+            CADICAL_ATTRIBUTE_FORMAT (1, 2);
 
 /*------------------------------------------------------------------------*/
 
@@ -1260,7 +1266,7 @@ inline bool Internal::terminated_asynchronously (int factor)
       termination_forced = true;
       return true;
     }
-    LOG ("decremented internal forced termination limit to %" PRId64,
+    LOG ("decremented internal forced termination limit to %d",
       lim.terminate.forced);
   }
 

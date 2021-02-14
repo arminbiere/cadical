@@ -21,9 +21,27 @@ die () {
 msg () {
   echo "${HIDE}c [$name] $*${NORMAL}"
 }
-[ $# -eq 1 ] || \
-die "expected exactly one argument"
-msg "input '$1'"
+input=""
+options=""
+while [ $# -gt 0 ]
+do
+  case $1 in
+    -t) options="$1 $2"; shift;;
+    *)
+      if [ -f $1 ]
+      then
+        [ "$input" ] && die "too many inputs"
+        input="$1"
+      else
+	die "invalid option '$1'"
+      fi
+      ;;
+  esac
+  shift
+done
+msg "input '$input'"
+msg "options '$options'"
+[ "$input" ] || die "expected at least one input argument"
 [ -f $solver ] || \
 die "can not find '$solver' (build solver first)"
 msg "found '$solver'"
@@ -34,14 +52,14 @@ trap "rm -f $prefix*" 2 9 15
 out=$prefix.out
 ext=$prefix.ext
 log=$prefix.log
-msg "$solver -n -O1 -c 0 -o $out -e $ext $1 > $log"
-$solver -n -O1 -c 0 -o $out -e $ext $1 > $log
+msg "$solver $options -n -O1 -c 0 -o $out -e $ext $input > $log"
+$solver $options -n -O1 -c 0 -o $out -e $ext $input > $log
 res=$?
 msg "simplifier exit code '$res'"
 msg "sed -e 's,^[vs],c,' -e 's,^c,c [simplifier],' $log"
 sed -e 's,^[vs],c,' -e 's,^c,c [simplifier],' $log
-msg "$solver $out > $log"
-$solver $out > $log
+msg "$solver $options $out > $log"
+$solver $options $out > $log
 res=$?
 msg "solver exit code '$res'"
 msg "sed -e 's,^[vs],c,' -e 's,^c,c [solver],' $log"

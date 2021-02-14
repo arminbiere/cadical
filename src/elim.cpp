@@ -375,7 +375,7 @@ Internal::elim_resolvents_are_bounded (Eliminator & eliminator, int pivot)
   const int64_t bound = pos + neg + lim.elimbound;
 
   LOG ("checking number resolvents on %d bounded by "
-    "%" PRId64 " = %" PRId64 " + %" PRId64 " + %d",
+    "%" PRId64 " = %" PRId64 " + %" PRId64 " + %" PRId64,
     pivot, bound, pos, neg, lim.elimbound);
 
   // Try all resolutions between a positive occurrence (outer loop) of
@@ -750,7 +750,7 @@ int Internal::elim_round (bool & completed) {
 #ifndef QUIET
   int64_t resolutions = stats.elimres - old_resolutions;
   PHASE ("elim-round", stats.elimrounds,
-    "eliminated %" PRId64 " variables %.0f%% in %" PRId64 " resolutions",
+    "eliminated %d variables %.0f%% in %" PRId64 " resolutions",
     eliminated, percent (eliminated, scheduled), resolutions);
 #endif
 
@@ -908,8 +908,8 @@ void Internal::elim (bool update_limits) {
 
   if (unsat) LOG ("elimination derived empty clause");
   else if (propagated < trail.size ()) {
-    LOG ("elimination produced %" PRId64 " units",
-      trail.size () - propagated);
+    LOG ("elimination produced %zd units",
+      (size_t)(trail.size () - propagated));
     if (!propagate ()) {
       LOG ("propagating units after elimination results in empty clause");
       learn_empty_clause ();

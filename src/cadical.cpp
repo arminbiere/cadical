@@ -21,51 +21,12 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// Jobs for running multiple solvers (sequentially and later in parallel).
-
-struct Job
-{
-  int left;             // Number of discrepancies.
-  int depth;            // Splitting depth.
-  int64_t id;           // Unique identifier.
-  string path;          // Path from root node ('0'=left '1'=right).
-
-  Job * parent;         // Parent job.
-  Solver * solver;      // This solver (might be zero).
-
-  Job (Job * p, Solver * s) : parent  (p), solver (s) { }
-  ~Job () { if (solver) delete solver; }
-
-  // Compare jobs and prefer low discrepancy jobs (are smaller).
-  //
-  bool less (const Job & other) const {
-    if (solver && !other.solver) return true;
-    if (!solver && other.solver) return false;
-    if (solver) {
-      if (left > other.left) return true;
-      if (left < other.left) return false;
-    }
-    return id < other.id;
-  }
-};
-
-/*------------------------------------------------------------------------*/
-
 class App : public Handler, public Terminator {
 
-  Solver * root;                // Global root solver.
-  Solver * winner;              // Solver which found solution.
-
-  vector<Job *> jobs;           // Our job working queue.
-
-  bool multiple;                // Set implicitly by '-p', '-D' etc.
+  Solver * solver;                // Global solver.
 
   // Command line options.
   //
-  // bool parallel;             // '-p'
-  int max_depth;                // '-D<level>'
-  // int max_solvers;           // '-S<solvers>'
-  // int max_threads;           // '-T<threads>'
   int time_limit;               // '-t <sec>'
 
   // Strictness of (DIMACS) parsing:
@@ -81,14 +42,6 @@ class App : public Handler, public Terminator {
 
   bool force_writing;
   static bool most_likely_existing_cnf_file (const char * path);
-
-  // Shared global statistics over all solvers.
-  //
-  struct {
-    int64_t solvers;
-    int64_t decisions;
-    int64_t conflicts;
-  } stats;
 
   // Internal variables.
   //
@@ -110,29 +63,6 @@ class App : public Handler, public Terminator {
   bool set (const char*, int);
   int  get (const char*);
   bool verbose () { return get ("verbose") && !get ("quiet"); }
-
-  /*----------------------------------------------------------------------*/
-
-  void initialize_root () {
-    root = new Solver ();
-    Job * res = new Job (0, root);
-    jobs.push_back (res);
-    res->id = stats.solvers++;
-    res->depth = 0;
-    res->left = 0;
-  }
-
-  bool split () {
-    if (!max_depth) return false;
-    Job * best = 0;
-    for (auto & job : jobs)
-      if (job->solver && (!best || job->less (*best)))
-        best = job;
-    if (!best) return false;
-    // TODO check memory limit ...
-    // TODO split ...
-    return false;
-  }
 
   /*----------------------------------------------------------------------*/
 
@@ -174,9 +104,6 @@ void App::print_usage (bool all) {
 "  --help         print complete list of all options\n"
 "  --version      print version\n"
 "\n"
-#if 0
-"  -p             enable parallel solving\n"
-#endif
 "  -n             do not print witness\n"
 #ifndef QUIET
 "  -v             increase verbosity\n"
@@ -191,9 +118,6 @@ void App::print_usage (bool all) {
 "  --help         print this complete list of all options\n"
 "  --version      print version\n"
 "\n"
-#if 0
-"  -p             enable parallel solving\n"
-#endif
 "  -n             do not print witness (same as '--no-witness')\n"
 #ifndef QUIET
 "  -v             increase verbosity (see also '--verbose' below)\n"
@@ -206,12 +130,6 @@ void App::print_usage (bool all) {
 "  -L<rounds>     run local search initially (default '0' rounds)\n"
 "  -O<level>      increase limits by '2^<level>' or '10^<level>'\n"
 "  -P<rounds>     initial preprocessing (default '0' rounds)\n"
-#if 0
-"\n"
-"  -D<level>      maximum depth of multiple solvers (default '1')\n"
-"  -S<solvers>    maximum number of solvers solvers (default '1')\n"
-"  -T<threads>    number of threads (default '%d' on this machine)\n"
-#endif
 "\n"
 "Note there is no separating space for the options above while the\n"
 "following options require a space after the option name:\n"
@@ -228,9 +146,12 @@ void App::print_usage (bool all) {
 "  --force | -f   parsing broken DIMACS header and writing proofs\n"
 "  --strict       strict parsing (no white space in header)\n"
 "\n"
-"  -s <sol>       read solution in competition output format\n"
+"  -r <sol>       read solution in competition output format\n"
 "                 to check consistency of learned clauses\n"
 "                 during testing and debugging\n"
+"\n"
+"  -w <sol>       write result including a potential witness\n"
+"                 solution in competition format to the given file\n"
 "\n"
 "  --colors       force colored output\n"
 "  --no-colors    disable colored output to terminal\n"
@@ -238,9 +159,6 @@ void App::print_usage (bool all) {
 "\n"
 "  --build        print build configuration\n"
 "  --copyright    print copyright information\n"
-#if 0
-, number_of_cores ()
-#endif
     );
 
     printf (
@@ -248,13 +166,13 @@ void App::print_usage (bool all) {
 "There are pre-defined configurations of advanced internal options:\n"
 "\n");
 
-    root->configurations ();
+    solver->configurations ();
 
     printf (
 "\n"
 "Or '<option>' is one of the following advanced internal options:\n"
 "\n");
-    root->usage ();
+    solver->usage ();
 
     fputs (
 "\n"
@@ -319,12 +237,11 @@ void App::print_usage (bool all) {
 // Pretty print competition format witness with 'v' lines.
 
 void App::print_witness (FILE * file) {
-  assert (winner);
   int c = 0, i = 0, tmp;
   do {
     if (!c) fputc ('v', file), c = 1;
     if (i++ == max_var) tmp = 0;
-    else tmp = winner->val (i) < 0 ? -i : i;
+    else tmp = solver->val (i) < 0 ? -i : i;
     char str[20];
     sprintf (str, " %d", tmp);
     int l = strlen (str);
@@ -339,9 +256,9 @@ void App::print_witness (FILE * file) {
 
 // Wrapper around option setting.
 
-int App::get (const char * o) { return root->get (o); }
-bool App::set (const char * o, int v) { return root->set (o, v); }
-bool App::set (const char * arg) { return root->set_long_option (arg); }
+int App::get (const char * o) { return solver->get (o); }
+bool App::set (const char * o, int v) { return solver->set (o, v); }
+bool App::set (const char * arg) { return solver->set_long_option (arg); }
 
 /*------------------------------------------------------------------------*/
 
@@ -371,7 +288,7 @@ bool App::most_likely_existing_cnf_file (const char * path)
 // Short-cut for errors to avoid a hard 'exit'.
 
 #define APPERR(...) \
-do { root->error (__VA_ARGS__); } while (0)
+do { solver->error (__VA_ARGS__); } while (0)
 
 /*------------------------------------------------------------------------*/
 
@@ -400,22 +317,22 @@ int App::main (int argc, char ** argv) {
     }
   }
 
-  // Now initialize root solver.
+  // Now initialize solver.
 
   init ();
 
   // Set all argument option values to not used yet.
 
   const char * preprocessing_specified = 0, * optimization_specified = 0;
-  const char * proof_path = 0, * solution_path = 0, * dimacs_path = 0;
-  const char * parallel_specified = 0, * threads_specified = 0;
-  const char * depth_specified = 0, * localsearch_specified = 0;
+  const char * read_solution_path = 0, * write_result_path = 0;
+  const char * dimacs_path = 0, * proof_path = 0;
   bool proof_specified = false, dimacs_specified = false;
   int optimize = 0, preprocessing = 0, localsearch = 0;
   const char * output_path = 0, * extension_path = 0;
   int conflict_limit = -1, decision_limit = -1;
   const char * conflict_limit_specified = 0;
   const char * decision_limit_specified = 0;
+  const char * localsearch_specified = 0;
   const char * time_limit_specified = 0;
   bool witness = true, less = false;
   const char * dimacs_name, * err;
@@ -431,25 +348,27 @@ int App::main (int argc, char ** argv) {
       if (proof_specified) APPERR ("too many arguments");
       else if (!dimacs_specified) dimacs_specified = true;
       else                         proof_specified = true;
-    } else if (!strcmp (argv[i], "-s")) {
-      if (++i == argc) APPERR ("argument to '-s' missing");
-      else if (solution_path)
-        APPERR ("multiple solution file options '-s %s' and '-s %s'",
-          solution_path, argv[i]);
-      else solution_path = argv[i];
-    } else if (!strcmp (argv[i], "-p")) {
-      APPERR ("invalid option '-p' (not implemented yet)");
-      if (parallel_specified) APPERR ("multiple '-p' options");
-      parallel_specified = argv[i];
+    } else if (!strcmp (argv[i], "-r")) {
+      if (++i == argc) APPERR ("argument to '-r' missing");
+      else if (read_solution_path)
+        APPERR ("multiple read solution file options '-r %s' and '-r %s'",
+                read_solution_path, argv[i]);
+      else read_solution_path = argv[i];
+    } else if (!strcmp (argv[i], "-w")) {
+      if (++i == argc) APPERR ("argument to '-w' missing");
+      else if (write_result_path)
+        APPERR ("multiple solution file options '-w %s' and '-w %s'",
+                write_result_path, argv[i]);
+      else write_result_path = argv[i];
     } else if (!strcmp (argv[i], "-o")) {
       if (++i == argc) APPERR ("argument to '-o' missing");
       else if (output_path)
         APPERR ("multiple output file options '-o %s' and '-o %s'",
           output_path, argv[i]);
       else if (!force_writing &&
-               most_likely_existing_cnf_file (output_path))
+               most_likely_existing_cnf_file (argv[i]))
         APPERR ("output file '%s' most likely existing CNF (use '-f')",
-          output_path);
+                argv[i]);
       else if (!File::writable (argv[i]))
         APPERR ("output file '%s' not writable", argv[i]);
       else output_path = argv[i];
@@ -459,9 +378,9 @@ int App::main (int argc, char ** argv) {
         APPERR ("multiple extension file options '-e %s' and '-e %s'",
           extension_path, argv[i]);
       else if (!force_writing &&
-               most_likely_existing_cnf_file (extension_path))
+               most_likely_existing_cnf_file (argv[i]))
         APPERR ("extension file '%s' most likely existing CNF (use '-f')",
-          extension_path);
+                argv[i]);
       else if (!File::writable (argv[i]))
         APPERR ("extension file '%s' not writable", argv[i]);
       else extension_path = argv[i];
@@ -563,21 +482,9 @@ int App::main (int argc, char ** argv) {
       if (localsearch < 0)
         APPERR ("invalid argument in '%s' (expected non-negative number)",
           argv[i]);
-    } else if (has_prefix (argv[i], "-D")) {
-      if (depth_specified)
-        APPERR ("multiple depth options '%s' and '%s'",
-          depth_specified, argv[i]);
-      depth_specified = argv[i];
-      if (!parse_int_str (argv[i] + 2, max_depth))
-        APPERR ("invalid depth option '%s'", argv[i]);
-      if (max_depth <= 0)
-        APPERR ("invalid argument in '%s' (expected positive number)",
-          argv[i]);
-    } else if (has_prefix (argv[i], "-S") || has_prefix (argv[i], "-T")) {
-      APPERR ("invalid option '%s' (not implemented yet)", argv[i]);
     } else if (has_prefix (argv[i], "--") &&
-               root->is_valid_configuration (argv[i] + 2)) {
-      root->configure (argv[i] + 2);
+               solver->is_valid_configuration (argv[i] + 2)) {
+      solver->configure (argv[i] + 2);
     } else if (set (argv[i])) {
       /* nothing do be done */
     } else if (argv[i][0] == '-') APPERR ("invalid option '%s'", argv[i]);
@@ -598,40 +505,13 @@ int App::main (int argc, char ** argv) {
 
   if (dimacs_specified && dimacs_path && !File::exists (dimacs_path))
     APPERR ("DIMACS input file '%s' does not exist", dimacs_path);
-  if (solution_path && !File::exists (solution_path))
-    APPERR ("solution file '%s' does not exist", solution_path);
+  if (read_solution_path && !File::exists (read_solution_path))
+    APPERR ("solution file '%s' does not exist", read_solution_path);
   if (dimacs_specified && dimacs_path &&
       proof_specified && proof_path &&
       !strcmp (dimacs_path, proof_path) && strcmp (dimacs_path, "-"))
     APPERR ("DIMACS input file '%s' also specified as DRAT proof file",
       dimacs_path);
-
-  /*----------------------------------------------------------------------*/
-
-  const char * multiple_specified;
-       if (parallel_specified) multiple_specified = parallel_specified;
-  else if (threads_specified)  multiple_specified = threads_specified;
-  else if (depth_specified)    multiple_specified = depth_specified;
-  else                         multiple_specified = 0;
-
-  if (multiple_specified) {
-    multiple = true;
-    if (output_path)
-      APPERR ("can not combine '%s' and writing CNF with '-o %s'",
-        multiple_specified, output_path);
-    if (extension_path)
-      APPERR ("can not combine '%s' and writing extension with '-e %s'",
-        multiple_specified, extension_path);
-    if (proof_specified)
-      APPERR ("can not combine '%s' and writing proof to '%s'",
-        multiple_specified, proof_path ? proof_path : "<stdout>");
-    if (conflict_limit_specified)
-      APPERR ("can not combine '%s' and '-c %s'",
-        multiple_specified, conflict_limit_specified);
-    if (decision_limit_specified)
-      APPERR ("can not combine '%s' and '-d %s'",
-        multiple_specified, decision_limit_specified);
-  }
 
   /*----------------------------------------------------------------------*/
   // The '--less' option is not fully functional yet (it is also not
@@ -653,90 +533,76 @@ int App::main (int argc, char ** argv) {
 
   /*----------------------------------------------------------------------*/
 
-  if (solution_path && !get ("check")) set ("--check");
+  if (read_solution_path && !get ("check")) set ("--check");
 #ifndef QUIET
   if (!get ("quiet")) {
-    root->section ("banner");
-    root->message ("%sCaDiCaL Radically Simplified CDCL SAT Solver%s",
+    solver->section ("banner");
+    solver->message ("%sCaDiCaL Radically Simplified CDCL SAT Solver%s",
       tout.bright_magenta_code (), tout.normal_code ());
-    root->message ("%s%s%s",
+    solver->message ("%s%s%s",
       tout.bright_magenta_code (), copyright (), tout.normal_code ());
-    root->message ();
+    solver->message ();
     CaDiCaL::Solver::build (stdout, "c ");
   }
 #endif
   if (preprocessing > 0 || localsearch > 0 ||
       time_limit >= 0 || conflict_limit >= 0 || decision_limit >= 0) {
-    root->section ("limit");
+    solver->section ("limit");
     if (preprocessing > 0) {
-      root->message (
+      solver->message (
         "enabling %d initial rounds of preprocessing (due to '%s')",
         preprocessing, preprocessing_specified);
-      root->limit ("preprocessing", preprocessing);
+      solver->limit ("preprocessing", preprocessing);
     }
     if (localsearch > 0) {
-      root->message (
+      solver->message (
         "enabling %d initial rounds of local search (due to '%s')",
         localsearch, localsearch_specified);
-      root->limit ("localsearch", localsearch);
+      solver->limit ("localsearch", localsearch);
     }
     if (time_limit >= 0) {
-      root->message (
+      solver->message (
         "setting time limit to %d seconds real time (due to '-t %s')",
         time_limit, time_limit_specified);
       Signal::alarm (time_limit);
-      root->connect_terminator (this);
+      solver->connect_terminator (this);
     }
     if (conflict_limit >= 0) {
-      root->message (
+      solver->message (
         "setting conflict limit to %d conflicts (due to '%s')",
         conflict_limit, conflict_limit_specified);
-      bool succeeded = root->limit ("conflicts", conflict_limit);
+      bool succeeded = solver->limit ("conflicts", conflict_limit);
       assert (succeeded), (void) succeeded;
     }
     if (decision_limit >= 0) {
-      root->message (
+      solver->message (
         "setting decision limit to %d decisions (due to '%s')",
         decision_limit, decision_limit_specified);
-      bool succeeded = root->limit ("decisions", decision_limit);
+      bool succeeded = solver->limit ("decisions", decision_limit);
       assert (succeeded), (void) succeeded;
     }
   }
-  if (multiple) {
-    root->section ("multiple");
-    if (depth_specified)
-      root->message ("maximum depth %d (due to '%s')",
-        max_depth, depth_specified);
-#if 0
-    if (parallel_specified)
-      root->message ("parallel solving specified (due to '%s')",
-        parallel_specified);
-    if (threads_specified)
-      root->message ("maximum number of threads '%d' (due to '%s')",
-        max_threads, threads_specified);
-#endif
-  }
-  if (verbose () || proof_specified) root->section ("proof tracing");
+  if (verbose () || proof_specified) solver->section ("proof tracing");
   if (proof_specified) {
     if (!proof_path) {
       const bool force_binary = (isatty (1) && get ("binary"));
       if (force_binary) set ("--no-binary");
-      root->message ("writing %s proof trace to %s'<stdout>'%s",
+      solver->message ("writing %s proof trace to %s'<stdout>'%s",
         (get ("binary") ? "binary" : "non-binary"),
         tout.green_code (), tout.normal_code ());
       if (force_binary)
-        root->message (
+        solver->message (
           "connected to terminal thus non-binary proof forced");
-      root->trace_proof (stdout, "<stdout>");
-    } else if (!root->trace_proof (proof_path))
+      solver->trace_proof (stdout, "<stdout>");
+    } else if (!solver->trace_proof (proof_path))
       APPERR ("can not open and write DRAT proof to '%s'", proof_path);
     else
-      root->message (
+      solver->message (
         "writing %s proof trace to %s'%s'%s",
         (get ("binary") ? "binary" : "non-binary"),
         tout.green_code (), proof_path, tout.normal_code ());
-  } else root->verbose (1, "will not generate nor write DRAT proof");
-  root->section ("parsing input");
+  } else solver->verbose (1, "will not generate nor write DRAT proof");
+  solver->section ("parsing input");
   dimacs_name = dimacs_path ? dimacs_path : "<stdin>";
   string help;
   if (!dimacs_path) {
@@ -745,44 +611,37 @@ int App::main (int argc, char ** argv) {
     help += "(use '-h' for a list of common options)";
     help += tout.normal_code ();
   }
-  root->message ("reading DIMACS file from %s'%s'%s%s",
+  solver->message ("reading DIMACS file from %s'%s'%s%s",
     tout.green_code (), dimacs_name, tout.normal_code (), help.c_str ());
   bool incremental;
   vector<int> cube_literals;
   if (dimacs_path)
-    err = root->read_dimacs(dimacs_path, max_var, force_strict_parsing,
+    err = solver->read_dimacs(dimacs_path, max_var, force_strict_parsing,
                             incremental, cube_literals);
   else
-    err = root->read_dimacs(stdin, dimacs_name, max_var, force_strict_parsing,
+    err = solver->read_dimacs(stdin, dimacs_name, max_var, force_strict_parsing,
                             incremental, cube_literals);
   if (err) APPERR ("%s", err);
-  if (solution_path) {
-    root->section ("parsing solution");
-    root->message ("reading solution file from '%s'", solution_path);
-    if ((err = root->read_solution (solution_path)))
+  if (read_solution_path) {
+    solver->section ("parsing solution");
+    solver->message ("reading solution file from '%s'", read_solution_path);
+    if ((err = solver->read_solution (read_solution_path)))
       APPERR ("%s", err);
   }
 
-#if 0
-  root->section ("resources");
-  (void) number_of_cores (root->internal);
-  root->message ();
-  (void) memory_limit (root->internal);
-#endif
-
-  root->section ("options");
+  solver->section ("options");
   if (optimize > 0) {
-    root->optimize (optimize);
-    root->message ();
+    solver->optimize (optimize);
+    solver->message ();
   }
-  root->options ();
+  solver->options ();
 
   int res = 0;
 
   if (incremental) {
     bool reporting = get ("report") > 1 || get ("verbose") > 0;
     if (!reporting) set ("report", 0);
-    if (!reporting) root->section ("incremental solving");
+    if (!reporting) solver->section ("incremental solving");
     size_t cubes = 0, solved = 0;
     size_t satisfiable = 0, unsatisfiable = 0, inconclusive = 0;
 #ifndef QUIET
@@ -791,159 +650,169 @@ int App::main (int argc, char ** argv) {
 #endif
     for (auto lit : cube_literals)
       if (!lit)
-	cubes++;
+        cubes++;
     if (!reporting) {
     if (cubes)
-      root->message ("starting to solve %zu cubes", cubes),
-      root->message ();
+      solver->message ("starting to solve %zu cubes", cubes),
+      solver->message ();
     else
-      root->message ("no cube to solve");
+      solver->message ("no cube to solve");
     }
     vector<int> cube, failed;
     for (auto lit : cube_literals) {
       if (lit) cube.push_back (lit);
       else {
-	reverse (cube.begin (), cube.end ());
-	for (auto other : cube)
-	  root->assume (other);
-	if (solved++) {
-	  if (conflict_limit >= 0)
-	    (void) root->limit ("conflicts", conflict_limit);
-	  if (decision_limit >= 0)
-	    (void) root->limit ("decisions", decision_limit);
-	}
+        reverse (cube.begin (), cube.end ());
+        for (auto other : cube)
+          solver->assume (other);
+        if (solved++) {
+          if (conflict_limit >= 0)
+            (void) solver->limit ("conflicts", conflict_limit);
+          if (decision_limit >= 0)
+            (void) solver->limit ("decisions", decision_limit);
+        }
 #ifndef QUIET
-	char buffer[160];
-	if (!quiet) {
-	  if (reporting) {
-	    sprintf (buffer, "solving cube %zu / %zu %.0f%%",
-	       solved, cubes, percent (solved, cubes));
-	    root->section (buffer);
-	  }
-	  time.start = absolute_process_time ();
-	}
+        char buffer[160];
+        if (!quiet) {
+          if (reporting) {
+            sprintf (buffer, "solving cube %zu / %zu %.0f%%",
+               solved, cubes, percent (solved, cubes));
+            solver->section (buffer);
+          }
+          time.start = absolute_process_time ();
+        }
 #endif
-	res = root->solve ();
+        res = solver->solve ();
 #ifndef QUIET
-	if (!quiet) {
-	  time.delta = absolute_process_time () - time.start;
-	  time.sum += time.delta;
-	  sprintf (buffer,
-	    "%s"
-	    "in %.3f sec "
-	    "(%.0f%% after %.2f sec at %.0f ms/cube)"
-	    "%s",
-	    tout.magenta_code (),
-	    time.delta,
-	    percent (solved, cubes),
-	    time.sum,
-	    relative (1e3*time.sum, solved),
-	    tout.normal_code ());
-	  if (reporting)
-	    root->message ();
-	  const char * cube_str, * status_str, * color_code;
-	  if (res == 10) {
-	    cube_str = "CUBE";
-	    color_code = tout.green_code ();
-	    status_str = "SATISFIABLE";
-	  } else if (res == 20) {
-	    cube_str = "CUBE";
-	    color_code = tout.cyan_code ();
-	    status_str = "UNSATISFIABLE";
-	  } else {
-	    cube_str = "cube";
-	    color_code = tout.magenta_code ();
-	    status_str = "inconclusive";
-	  }
-	  const char * fmt;
-	  if (reporting) fmt = "%s%s %zu %s%s %s";
-	  else           fmt = "%s%s %zu %-13s%s %s";
-	  root->message (fmt,
-	    color_code, cube_str, solved, status_str, 
-	    tout.normal_code (), buffer);
-	}
+        if (!quiet) {
+          time.delta = absolute_process_time () - time.start;
+          time.sum += time.delta;
+          sprintf (buffer,
+            "%s"
+            "in %.3f sec "
+            "(%.0f%% after %.2f sec at %.0f ms/cube)"
+            "%s",
+            tout.magenta_code (),
+            time.delta,
+            percent (solved, cubes),
+            time.sum,
+            relative (1e3*time.sum, solved),
+            tout.normal_code ());
+          if (reporting)
+            solver->message ();
+          const char * cube_str, * status_str, * color_code;
+          if (res == 10) {
+            cube_str = "CUBE";
+            color_code = tout.green_code ();
+            status_str = "SATISFIABLE";
+          } else if (res == 20) {
+            cube_str = "CUBE";
+            color_code = tout.cyan_code ();
+            status_str = "UNSATISFIABLE";
+          } else {
+            cube_str = "cube";
+            color_code = tout.magenta_code ();
+            status_str = "inconclusive";
+          }
+          const char * fmt;
+          if (reporting) fmt = "%s%s %zu %s%s %s";
+          else           fmt = "%s%s %zu %-13s%s %s";
+          solver->message (fmt,
+            color_code, cube_str, solved, status_str,
+            tout.normal_code (), buffer);
+        }
 #endif
-	if (res == 10) {
-	  satisfiable++;
-	  break;
-	} else if (res == 20) {
-	  unsatisfiable++;
-	  for (auto other : cube)
-	    if (root->failed (other))
-	      failed.push_back (other);
-	  for (auto other : failed)
-	    root->add (-other);
-	  root->add (0);
-	  failed.clear ();
-	} else {
-	  assert (!res);
-	  inconclusive++;
-	  if (timesup)
-	    break;
-	}
-	cube.clear ();
+        if (res == 10) {
+          satisfiable++;
+          break;
+        } else if (res == 20) {
+          unsatisfiable++;
+          for (auto other : cube)
+            if (solver->failed (other))
+              failed.push_back (other);
+          for (auto other : failed)
+            solver->add (-other);
+          solver->add (0);
+          failed.clear ();
+        } else {
+          assert (!res);
+          inconclusive++;
+          if (timesup)
+            break;
+        }
+        cube.clear ();
       }
     }
-    root->section ("incremental summary");
-    root->message ("%zu cubes solved %.0f%%",
+    solver->section ("incremental summary");
+    solver->message ("%zu cubes solved %.0f%%",
       solved, percent (solved, cubes));
-    root->message ("%zu cubes inconclusive %.0f%%",
+    solver->message ("%zu cubes inconclusive %.0f%%",
       inconclusive, percent (inconclusive, solved));
-    root->message ("%zu cubes unsatisfiable %.0f%%",
+    solver->message ("%zu cubes unsatisfiable %.0f%%",
       unsatisfiable, percent (unsatisfiable, solved));
-    root->message ("%zu cubes satisfiable %.0f%%",
+    solver->message ("%zu cubes satisfiable %.0f%%",
       satisfiable, percent (satisfiable, solved));
 
     if (inconclusive && res == 20)
       res = 0;
   } else {
-    root->section ("solving");
-    res = root->solve ();
+    solver->section ("solving");
+    res = solver->solve ();
   }
 
-  if (res == 10) winner = root;
-
   if (proof_specified) {
-    root->section ("closing proof");
-    root->flush_proof_trace ();
-    root->close_proof_trace ();
+    solver->section ("closing proof");
+    solver->flush_proof_trace ();
+    solver->close_proof_trace ();
   }
 
   if (output_path) {
-    root->section ("writing output");
-    root->message ("writing simplified CNF to DIMACS file %s'%s'%s",
+    solver->section ("writing output");
+    solver->message ("writing simplified CNF to DIMACS file %s'%s'%s",
       tout.green_code (), output_path, tout.normal_code ());
-    err = root->write_dimacs (output_path, max_var);
+    err = solver->write_dimacs (output_path, max_var);
     if (err) APPERR ("%s", err);
   }
 
   if (extension_path) {
-    root->section ("writing extension");
-    root->message ("writing extension stack to %s'%s'%s",
+    solver->section ("writing extension");
+    solver->message ("writing extension stack to %s'%s'%s",
       tout.green_code (), extension_path, tout.normal_code ());
-    err = root->write_extension (extension_path);
+    err = solver->write_extension (extension_path);
     if (err) APPERR ("%s", err);
   }
 
-  root->section ("result");
-  if (res == 10) {
-    printf ("s SATISFIABLE\n");
-    if (witness) {
-      fflush (stdout);
-      print_witness (stdout);
+  solver->section ("result");
+
+  FILE * write_result_file = stdout;
+  if (write_result_path)
+    {
+      write_result_file = fopen (write_result_path, "w");
+      if (!write_result_file)
+        APPERR ("could not write solution to '%s'", write_result_path);
+      solver->message ("writing result to '%s'", write_result_path);
     }
-  } else if (res == 20) printf ("s UNSATISFIABLE\n");
-  else printf ("c UNKNOWN\n");
-  fflush (stdout);
-  root->statistics ();
-  if (multiple) root->prefix ("c ");
-  root->resources ();
-  root->section ("shutting down");
-  root->message ("exit %d", res);
+
+  if (res == 10) {
+    fputs ("s SATISFIABLE\n", write_result_file);
+    if (witness)
+      print_witness (write_result_file);
+  } else if (res == 20) fputs ("s UNSATISFIABLE\n", write_result_file);
+  else fputs ("c UNKNOWN\n", write_result_file);
+  fflush (write_result_file);
+  if (write_result_path)
+    fclose (write_result_file);
+  solver->statistics ();
+  solver->resources ();
+  solver->section ("shutting down");
+  solver->message ("exit %d", res);
   if (less_pipe) {
     close (1);
     pclose (less_pipe);
   }
+
+  if (time_limit > 0)
+    alarm (0);
 
   return res;
 }
@@ -954,21 +823,13 @@ int App::main (int argc, char ** argv) {
 
 void App::init () {
 
-  assert (!root);
+  assert (!solver);
 
-  winner = 0;
-  multiple = false;
-  // parallel = false;
-  max_depth = 0;
-  // max_threads = 0;
-  // max_solvers = 0;
   time_limit = -1;
   force_strict_parsing = 1;
   force_writing = false;
   max_var = 0;
   timesup = false;
-
-  memset (&stats, 0, sizeof stats);
 
   // Call 'new Solver' only after setting 'reportdefault' and do not
   // add this call to the member initialization above. This is because for
@@ -977,19 +838,18 @@ void App::init () {
   // 'options.hpp' related to 'reportdefault' for details.
 
   CaDiCaL::Options::reportdefault = 1;
-  initialize_root ();
+  solver = new Solver ();
   Signal::set (this);
 }
 
 /*------------------------------------------------------------------------*/
 
-App::App () : root (0) { }      // Only partially initialize the app.
+App::App () : solver (0) { }      // Only partially initialize the app.
 
 App::~App () {
-  if (!root) return;            // Only partially initialized.
+  if (!solver) return;            // Only partially initialized.
   Signal::reset ();
-  for (auto & job : jobs)
-    delete job;
+  delete solver;
 }
 
 /*------------------------------------------------------------------------*/
@@ -997,7 +857,7 @@ App::~App () {
 #ifndef QUIET
 
 void App::signal_message (const char * msg, int sig) {
-  root->message (
+  solver->message (
     "%s%s %ssignal %d%s (%s)%s",
     tout.red_code (), msg,
     tout.bright_red_code (), sig,
@@ -1010,14 +870,13 @@ void App::signal_message (const char * msg, int sig) {
 void App::catch_signal (int sig) {
 #ifndef QUIET
   if (!get ("quiet")) {
-    root->message ();
+    solver->message ();
     signal_message ("caught", sig);
-    root->section ("result");
-    root->message ("UNKNOWN");
-    root->statistics ();
-    if (multiple) root->prefix ("c ");
-    root->resources ();
-    root->message ();
+    solver->section ("result");
+    solver->message ("UNKNOWN");
+    solver->statistics ();
+    solver->resources ();
+    solver->message ();
     signal_message ("raising", sig);
   }
 #else
@@ -1028,9 +887,9 @@ void App::catch_signal (int sig) {
 void App::catch_alarm () {
   // Both approaches work. We keep them here for illustration purposes.
 #if 0 // THIS IS AN ALTERNATIVE WE WANT TO KEEP AROUND.
-  root->terminate (); // immediate asynchronous call into solver
+  solver->terminate (); // Immediate asynchronous call into solver.
 #else
-  timesup = true;       // wait for solver to call 'App::terminate ()'
+  timesup = true;       // Wait for solver to call 'App::terminate ()'.
 #endif
 }
 
@@ -1046,5 +905,6 @@ void App::catch_alarm () {
 
 int main (int argc, char ** argv) {
   CaDiCaL::App app;
-  return app.main (argc, argv);
+  int res = app.main (argc, argv);
+  return res;
 }

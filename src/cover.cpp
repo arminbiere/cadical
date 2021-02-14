@@ -481,7 +481,7 @@ int64_t Internal::cover_round () {
 #ifndef QUIET
   const size_t scheduled = schedule.size ();
   PHASE ("cover", stats.cover.count,
-    "scheduled %zd clauses %.0f%% with %zd untried %.0f%%",
+    "scheduled %zd clauses %.0f%% with %" PRId64 " untried %.0f%%",
     scheduled, percent (scheduled, stats.current.irredundant),
     untried, percent (untried, scheduled));
 #endif
@@ -517,7 +517,7 @@ int64_t Internal::cover_round () {
     covered, tried, percent (covered, tried));
   if (remain)
     PHASE ("cover", stats.cover.count,
-      "remaining %" PRId64 " clauses %.0f%% untried",
+      "remaining %zu clauses %.0f%% untried",
       remain, percent (remain, scheduled));
   else
     PHASE ("cover", stats.cover.count,
@@ -565,7 +565,8 @@ bool Internal::cover () {
   if (propagated < trail.size ()) {
     init_watches ();
     connect_watches ();         // need to propagated over all clauses!
-    LOG ("elimination produced %" PRId64 " units", trail.size () - propagated);
+    LOG ("elimination produced %zd units",
+         (size_t)(trail.size () - propagated));
     if (!propagate ()) {
       LOG ("propagating units before covered clause elimination "
         "results in empty clause");

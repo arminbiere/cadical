@@ -101,8 +101,6 @@ where '<option>' is one of the following
 -ggdb3             pass '-ggdb3' to makefile (like '-s')
 -O|-O[123]         pass '-O' or '-O[123]' to the makefile
 
--j|-j...           pass this option to the makefile (for parallel build)
-
 The environment variable CXX can be used to set a different C++
 compiler than the default 'g++'.  Similarly you can add additional
 compilation options by setting CXXFLAGS.  For example
@@ -153,8 +151,6 @@ do
     --competition) competition=yes;;
 
     --no-unlocked) unlocked=no;;
-
-    -j*) MAKEFLAGS="$1";;
 
     -m32) options="$options $1";m32=yes;;
     -f*|-ggdb3|-O|-O1|-O2|-O3) options="$options $1";;
@@ -420,7 +416,6 @@ sed \
 # This 'makefile' is generated from '../makefile.in'." \
 -e "s,@CXX@,$CXX," \
 -e "s#@CXXFLAGS@#$CXXFLAGS#" \
--e "s,@MAKEFLAGS@,$MAKEFLAGS," \
 ../makefile.in > makefile
 
 msg "generated '$build/makefile' from '../makefile.in'"
@@ -445,13 +440,13 @@ clean:
 	fi
 	rm -f "$makefile"
 test:
-	\$(MAKE) -j1 -C "\$(CADICALBUILD)" test
+	\$(MAKE) -C "\$(CADICALBUILD)" test
 cadical:
-	\$(MAKE) -j1 -C "\$(CADICALBUILD)" cadical
+	\$(MAKE) -C "\$(CADICALBUILD)" cadical
 mobical:
-	\$(MAKE) -j1 -C "\$(CADICALBUILD)" mobical
+	\$(MAKE) -C "\$(CADICALBUILD)" mobical
 update:
-	\$(MAKE) -j1 -C "\$(CADICALBUILD)" update
+	\$(MAKE) -C "\$(CADICALBUILD)" update
 .PHONY: all cadical clean mobical test update
 EOF
 

@@ -95,7 +95,7 @@ void Internal::protect_reasons () {
     assert (v.level > 0);
     Clause * reason = v.reason;
     if (!reason) continue;
-    LOG (reason, "protecting assigned %d reason %p", lit, reason);
+    LOG (reason, "protecting assigned %d reason %p", lit, (void*) reason);
     assert (!reason->reason);
     reason->reason = true;
     count++;
@@ -120,7 +120,7 @@ void Internal::unprotect_reasons () {
     assert (v.level > 0);
     Clause * reason = v.reason;
     if (!reason) continue;
-    LOG (reason, "unprotecting assigned %d reason %p", lit, reason);
+    LOG (reason, "unprotecting assigned %d reason %p", lit, (void*) reason);
     assert (reason->reason);
     reason->reason = false;
     count++;
@@ -262,7 +262,8 @@ void Internal::copy_clause (Clause * c) {
   char * q = arena.copy (p, c->bytes ());
   c->copy = (Clause *) q;
   c->moved = true;
-  LOG ("copied clause[%" PRId64 "] from %p to %p", c->id, c, c->copy);
+  LOG ("copied clause[%" PRId64 "] from %p to %p",
+       c->id, (void*) c, (void*) c->copy);
 }
 
 // This is the moving garbage collector.

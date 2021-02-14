@@ -148,7 +148,7 @@ void ccadical_set_terminate (CCaDiCaL * ptr,
 
 void ccadical_set_learn (CCaDiCaL * ptr,
                          void * state, int max_length,
-			 void (*learn)(void * state, int * clause)) {
+                         void (*learn)(void * state, int * clause)) {
   Wrapper * wrapper = (Wrapper *) ptr;
   wrapper->learner.state = state;
   wrapper->learner.max_length = max_length;
@@ -156,7 +156,6 @@ void ccadical_set_learn (CCaDiCaL * ptr,
   if (learn) wrapper->solver->connect_learner (wrapper);
   else wrapper->solver->disconnect_learner ();
 }
-
 
 void ccadical_freeze (CCaDiCaL * ptr, int lit) {
   ((Wrapper*) ptr)->solver->freeze (lit);

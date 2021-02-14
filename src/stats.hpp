@@ -26,18 +26,18 @@ struct Stats {
     int64_t walk;       // propagated during local search
   } propagations;
 
-  long condassinit;  // initial assigned literals
-  long condassirem;  // initial assigned literals for blocked
-  long condassrem;   // remaining assigned literals for blocked
-  long condassvars;  // sum of active variables at initial assignment
-  long condautinit;  // initial literals in autarky part
-  long condautrem;   // remaining literals in autarky part for blocked
-  long condcands;    // globally blocked candidate clauses
-  long condcondinit; // initial literals in conditional part
-  long condcondrem;  // remaining literals in conditional part for blocked
-  long conditioned;  // globally blocked clauses eliminated
-  long conditionings;// globally blocked clause eliminations
-  long condprops;    // propagated unassigned literals
+  int64_t condassinit;  // initial assigned literals
+  int64_t condassirem;  // initial assigned literals for blocked
+  int64_t condassrem;   // remaining assigned literals for blocked
+  int64_t condassvars;  // sum of active variables at initial assignment
+  int64_t condautinit;  // initial literals in autarky part
+  int64_t condautrem;   // remaining literals in autarky part for blocked
+  int64_t condcands;    // globally blocked candidate clauses
+  int64_t condcondinit; // initial literals in conditional part
+  int64_t condcondrem;  // remaining literals in conditional part for blocked
+  int64_t conditioned;  // globally blocked clauses eliminated
+  int64_t conditionings;// globally blocked clause eliminations
+  int64_t condprops;    // propagated unassigned literals
 
   struct {
     int64_t block;      // block marked literals

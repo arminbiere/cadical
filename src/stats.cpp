@@ -72,16 +72,16 @@ void Stats::print (Internal * internal) {
   PRT ("  backtracked:   %15" PRId64 "   %10.2f %%  of conflicts", stats.backtracks, percent (stats.backtracks, stats.conflicts));
   }
   if (all || stats.conditioned) {
-  PRT ("conditioned:     %15ld   %10.2f %%  of irredundant clauses", stats.conditioned, percent (stats.conditioned, stats.added.irredundant));
-  PRT ("  conditionings: %15ld   %10.2f    interval", stats.conditionings, relative (stats.conflicts, stats.conditionings));
-  PRT ("  condcands:     %15ld   %10.2f    candidate clauses", stats.condcands, relative (stats.condcands, stats.conditionings));
+  PRT ("conditioned:     %15" PRId64 "   %10.2f %%  of irredundant clauses", stats.conditioned, percent (stats.conditioned, stats.added.irredundant));
+  PRT ("  conditionings: %15" PRId64 "   %10.2f    interval", stats.conditionings, relative (stats.conflicts, stats.conditionings));
+  PRT ("  condcands:     %15" PRId64 "   %10.2f    candidate clauses", stats.condcands, relative (stats.condcands, stats.conditionings));
   PRT ("  condassinit:   %17.1f  %9.2f %%  initial assigned", relative (stats.condassinit, stats.conditionings), percent (stats.condassinit, stats.condassvars));
   PRT ("  condcondinit:  %17.1f  %9.2f %%  initial condition", relative (stats.condcondinit, stats.conditionings), percent (stats.condcondinit, stats.condassinit));
   PRT ("  condautinit:   %17.1f  %9.2f %%  initial autarky", relative (stats.condautinit, stats.conditionings), percent (stats.condautinit, stats.condassinit));
   PRT ("  condassrem:    %17.1f  %9.2f %%  final assigned", relative (stats.condassrem, stats.conditioned), percent (stats.condassrem, stats.condassirem));
   PRT ("  condcondrem:   %19.3f  %7.2f %%  final conditional", relative (stats.condcondrem, stats.conditioned), percent (stats.condcondrem, stats.condassrem));
   PRT ("  condautrem:    %19.3f  %7.2f %%  final autarky", relative (stats.condautrem, stats.conditioned), percent (stats.condautrem, stats.condassrem));
-  PRT ("  condprops:     %15ld   %10.2f    per candidate", stats.condprops, relative (stats.condprops, stats.condcands));
+  PRT ("  condprops:     %15" PRId64 "   %10.2f    per candidate", stats.condprops, relative (stats.condprops, stats.condcands));
   }
   if (all || stats.cover.total) {
   PRT ("covered:         %15" PRId64 "   %10.2f %%  of irredundant clauses", stats.cover.total, percent (stats.cover.total, stats.added.irredundant));
@@ -151,7 +151,7 @@ void Stats::print (Internal * internal) {
   PRT ("  positivehorn   %15" PRId64 "   %10.2f %%  of tried", stats.lucky.horn.positive, percent (stats.lucky.horn.positive, stats.lucky.tried));
   PRT ("  negativehorn   %15" PRId64 "   %10.2f %%  of tried", stats.lucky.horn.negative, percent (stats.lucky.horn.negative, stats.lucky.tried));
   }
-  PRT ("  extendbytes:   %15" PRId64 "   %10.2f    bytes and MB", extendbytes, extendbytes/(double)(1l<<20));
+  PRT ("  extendbytes:   %15zd   %10.2f    bytes and MB", extendbytes, extendbytes/(double)(1l<<20));
   if (all || stats.learned.clauses)
   PRT ("minimized:       %15" PRId64 "   %10.2f %%  learned literals", stats.minimized, percent (stats.minimized, stats.learned.literals));
   PRT ("propagations:    %15" PRId64 "   %10.2f M  per second", propagations, relative (propagations/1e6, t));
@@ -260,7 +260,7 @@ void Stats::print (Internal * internal) {
   PRT ("  flipped:       %15" PRId64 "   %10.2f    per weakened", stats.extended, relative (stats.extended, stats.weakened));
   }
 
-  MSG ("");
+  LINE ();
   MSG ("%sseconds are measured in %s time for solving%s",
     tout.magenta_code (),
       internal->opts.realtime ? "real" : "process",

@@ -82,7 +82,7 @@ static signed char * ignore_clang_analyze_memory_leak_warning;
 void Internal::enlarge_vals (size_t new_vsize) {
   signed char * new_vals;
   const size_t bytes = 2u * new_vsize;
-  new_vals = new signed char [ bytes ];	// g++-4.8 does not like ... { 0 };
+  new_vals = new signed char [ bytes ]; // g++-4.8 does not like ... { 0 };
   memset (new_vals, 0, bytes);
   ignore_clang_analyze_memory_leak_warning = new_vals;
   new_vals += new_vsize;
@@ -151,10 +151,7 @@ void Internal::init_vars (int new_max_var) {
 #ifndef NDEBUG
   for (int64_t i = -new_max_var; i < -max_var; i++) assert (!vals[i]);
   for (unsigned i = max_var + 1; i <= (unsigned) new_max_var; i++)
-    assert (!vals[i]);
-  for (unsigned i = max_var + 1; i <= (unsigned) new_max_var; i++)
-    assert (!btab[i]);
-  for (unsigned i = max_var + 1; i <= (unsigned) new_max_var; i++)
+    assert (!vals[i]), assert (!btab[i]), assert (!gtab[i]);
   for (uint64_t i = 2*((uint64_t)max_var + 1);
        i <= 2*(uint64_t)new_max_var + 1;
        i++)
@@ -300,7 +297,7 @@ void Internal::init_preprocessing_limits () {
     lim.condition = stats.conflicts + opts.conditionint;
     mode = "initial";
   }
-  LOG ("%s condition limit %ld increment %ld",
+  LOG ("%s condition limit %" PRId64 " increment %" PRId64,
     mode, lim.condition, lim.condition - stats.conflicts);
 
   /*----------------------------------------------------------------------*/
@@ -312,7 +309,7 @@ void Internal::init_preprocessing_limits () {
     LOG ("no preprocessing");
   } else {
     lim.preprocessing = inc.preprocessing;
-    LOG ("limiting to %d preprocessing rounds", lim.preprocessing);
+    LOG ("limiting to %" PRId64 " preprocessing rounds", lim.preprocessing);
   }
 
 }
@@ -424,7 +421,7 @@ void Internal::init_search_limits () {
     LOG ("no local search");
   } else {
     lim.localsearch = inc.localsearch;
-    LOG ("limiting to %d local search rounds", lim.localsearch);
+    LOG ("limiting to %" PRId64 " local search rounds", lim.localsearch);
   }
 
   /*----------------------------------------------------------------------*/
@@ -446,7 +443,7 @@ bool Internal::preprocess_round (int round) {
   assert (!preprocessing);
   preprocessing = true;
   PHASE ("preprocessing", stats.preprocessings,
-    "starting round %" PRId64 " with %d variables and %" PRId64 " clauses",
+    "starting round %d with %" PRId64 " variables and %" PRId64 " clauses",
     round, before.vars, before.clauses);
   int old_elimbound = lim.elimbound;
   if (opts.probe) probe (false);
@@ -660,7 +657,6 @@ int Internal::restore_clauses () {
   }
   return res;
 }
-
 
 int Internal::lookahead () {
   assert (clause.empty ());

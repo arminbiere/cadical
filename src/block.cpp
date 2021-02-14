@@ -299,7 +299,7 @@ Internal::block_literal_with_one_negative_occ (Blocker & blocker, int lit)
   assert (!d->redundant);
   assert (d->size <= opts.blockmaxclslim);
 
-  LOG (d, "common antecedent", lit);
+  LOG (d, "common %d antecedent", lit);
   mark (d);
 
   int64_t blocked = 0, skipped = 0;

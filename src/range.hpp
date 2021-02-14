@@ -11,10 +11,10 @@ struct Clause;
 // particularly for iterating over all variable indices.
 //
 //   Range vars (max_var);
-//   for (auto idx : vars) ....
+//   for (auto idx : vars) ...
 //
 // This iterates over '1, ..., max_var' and is safe for non-negative
-// numbers, such also for 'max_var == 0' or 'max_var == INT_MAX'.
+// numbers, thus also for 'max_var == 0' or 'max_var == INT_MAX'.
 //
 // Note that
 //

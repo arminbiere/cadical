@@ -361,7 +361,7 @@ long Internal::condition_round (long delta) {
         new_conditionals++;
       }
       if (new_conditionals > 0)
-        LOG (c, "marked %d negations of literals as conditional in",
+        LOG (c, "marked %zu negations of literals as conditional in",
           new_conditionals);
 
       initial.conditional += new_conditionals;
@@ -374,7 +374,7 @@ long Internal::condition_round (long delta) {
   PHASE ("condition", stats.conditionings,
     "found %zd candidate clauses", candidates.size ());
   PHASE ("condition", stats.conditionings,
-    "watching %ld literals and clauses", watched);
+    "watching %zu literals and clauses", watched);
   PHASE ("condition", stats.conditionings,
     "initially %zd conditional literals %.0f%%",
     initial.conditional, percent (initial.conditional, initial.assigned));
@@ -877,7 +877,7 @@ void Internal::condition (bool update_limits) {
   limit = max (limit, 2l* active ());
 
   PHASE ("condition", stats.conditionings,
-    "started after %ld conflicts limited by %ld propagations",
+    "started after %" PRIu64 " conflicts limited by %ld propagations",
     stats.conflicts, limit);
 
   long blocked = condition_round (limit);
@@ -891,7 +891,7 @@ void Internal::condition (bool update_limits) {
   lim.condition = stats.conflicts + delta;
 
   PHASE ("condition", stats.conditionings,
-    "next limit at %ld after %ld conflicts",
+    "next limit at %" PRIu64 " after %ld conflicts",
     lim.condition, delta);
 }
 

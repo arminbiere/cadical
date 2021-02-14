@@ -4,15 +4,17 @@ die () {
   exit 1
 }
 cd `dirname $0`/..
+[ -d .git ] || \
+die "does not seem to be under 'git' control ('.git' not found)"
 version="`awk '/define VERSION/{print $4}' src/version.cpp|sed -e 's,",,g'`"
 VERSION="`cat VERSION`"
 [ "$version" = "$VERSION" ] || \
 die "versions '$version' in 'src/version.cpp' and " \
-    "'$VERSION' in 'VERSION' do not match"
+    "'$VERSION' in 'VERSION' do not match (run 'scripts/update-version.sh')"
 fullgitid="`./scripts/get-git-id.sh`"
 gitid="`echo $fullgitid|sed -e 's,^\(.......\).*,\1,'`"
 branch=`git branch|grep '^\*'|head -1|awk '{print $2}'`
-[ "$branch" = "" ] && die "could not get branch"
+[ "$branch" = "" ] && die "could not get branch from 'git'"
 name=cadical-${version}-${gitid}
 [ "$branch" = "master" ] || name="$name-$branch"
 dir=/tmp/$name

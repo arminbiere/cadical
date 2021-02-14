@@ -21,8 +21,10 @@ class Format {
 public:
   Format () : buffer (0), count (0), size (0) { }
   ~Format () { if (buffer) delete [] buffer; }
-  const char * init (const char * fmt, ...);
-  const char * append (const char * fmt, ...);
+  const char * init (const char * fmt, ...)
+                     CADICAL_ATTRIBUTE_FORMAT (2, 3);
+  const char * append (const char * fmt, ...)
+                       CADICAL_ATTRIBUTE_FORMAT (2, 3);
   operator const char * () const { return count ? buffer : 0; }
 };
 

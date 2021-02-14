@@ -186,7 +186,7 @@ void Internal::transred () {
   erase_vector (work);
 
   PHASE ("transred", stats.transreds,
-    "removed %" PRId64 " transitive clauses, found %d units",
+    "removed %" PRId64 " transitive clauses, found %" PRId64 " units",
     removed, units);
 
   STOP_SIMPLIFIER (transred, TRANSRED);

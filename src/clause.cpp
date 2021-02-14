@@ -133,7 +133,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   }
 
   clauses.push_back (c);
-  LOG (c, "new pointer %p", c);
+  LOG (c, "new pointer %p", (void*) c);
 
   if (likely_to_be_kept_clause (c)) mark_added (c);
 
@@ -211,12 +211,12 @@ size_t Internal::shrink_clause (Clause * c, int new_size) {
 void Internal::deallocate_clause (Clause * c) {
   char * p = (char*) c;
   if (arena.contains (p)) return;
-  LOG (c, "deallocate pointer %p", c);
+  LOG (c, "deallocate pointer %p", (void*) c);
   delete [] p;
 }
 
 void Internal::delete_clause (Clause * c) {
-  LOG (c, "delete pointer %p", c);
+  LOG (c, "delete pointer %p", (void*) c);
   size_t bytes = c->bytes ();
   stats.collected += bytes;
   if (c->garbage) {
@@ -281,7 +281,7 @@ void Internal::mark_garbage (Clause * c) {
   c->garbage = true;
   c->used = 0;
 
-  LOG (c, "marked garbage pointer %p", c);
+  LOG (c, "marked garbage pointer %p", (void*) c);
 }
 
 /*------------------------------------------------------------------------*/

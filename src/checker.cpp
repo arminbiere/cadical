@@ -87,7 +87,7 @@ void Checker::enlarge_clauses () {
   assert (num_clauses == size_clauses);
   const uint64_t new_size_clauses = size_clauses ? 2*size_clauses : 1;
   LOG ("CHECKER enlarging clauses of checker from %" PRIu64 " to %" PRIu64,
-    (size_t) size_clauses, (size_t) new_size_clauses);
+    (uint64_t) size_clauses, (uint64_t) new_size_clauses);
   CheckerClause ** new_clauses;
   new_clauses = new CheckerClause * [ new_size_clauses ];
   clear_n (new_clauses, new_size_clauses);
@@ -136,7 +136,7 @@ void Checker::collect_garbage_clauses () {
     }
   }
 
-  LOG ("CHECKER collecting %zu garbage clauses %.0f%%",
+  LOG ("CHECKER collecting %" PRIu64 " garbage clauses %.0f%%",
     num_garbage, percent (num_garbage, num_clauses));
 
   for (int lit = -size_vars + 1; lit < size_vars; lit++) {

@@ -1,5 +1,6 @@
 /*------------------------------------------------------------------------*/
-/* Copyright (C) 2018-2020, Armin Biere, Johannes Kepler University Linz  */
+/* Copyright (C) 2018-2021, Armin Biere, Johannes Kepler University Linz  */
+/* Copyright (C) 2020, Mathias Fleury, Johannes Kepler University Linz    */
 /*------------------------------------------------------------------------*/
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
@@ -2785,7 +2786,8 @@ int Mobical::main (int argc, char ** argv) {
   terminal.normal ();
   prefix ();
   terminal.magenta (1);
-  fputs ("Copyright (c) 2018-2020 Armin Biere, JKU Linz\n", stderr);
+  fputs ("Copyright (c) 2018-2021 Armin Biere, Mathias Fleury, JKU Linz\n",
+         stderr);
   terminal.normal ();
   empty_line ();
   Solver::build (stderr, prefix_string ());
@@ -2960,7 +2962,7 @@ int Mobical::main (int argc, char ** argv) {
     if (seed_str) {
       uint64_t seed = parse_seed (seed_str);
       terminal.green ();
-      random = Random (seed);
+      random = seed;
     }
 
     prefix ();

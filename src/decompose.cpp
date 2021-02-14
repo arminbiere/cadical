@@ -306,7 +306,7 @@ bool Internal::decompose_round () {
 
   PHASE ("decompose",
     stats.decompositions,
-    "%" PRId64 " clauses replaced %.2f%% producing %" PRId64 " garbage clauses %.2f%%",
+    "%zd clauses replaced %.2f%% producing %zd garbage clauses %.2f%%",
     replaced, percent (replaced, clauses_size),
     garbage, percent (garbage, replaced));
 

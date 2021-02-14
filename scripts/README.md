@@ -17,7 +17,7 @@ the environment variable `CXX` (as for `../configure`).  Then there are
 scripts for producing a source release
 
     ./make-src-release.sh          # archive as 'cadical-VERSION-GITID.tar.xz'
-    ./prepare-sc2018-submission.sh # star-exec format for SAT competition
+    ./prepare-sc2021-submission.sh # star-exec format for SAT competition
 
 and scripts for testing and debugging
 

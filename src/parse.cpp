@@ -10,8 +10,7 @@ namespace CaDiCaL {
 
 #define PER(...) \
 do { \
-  internal->error_message.init (\
-    "%s:%U: parse error: ", /*'%U' internal version of 'PRIu64' */\
+  internal->error_message.init ("%s:%" PRIu64 ": parse error: ", \
     file->name (), (uint64_t) file->lineno ()); \
   return internal->error_message.append (__VA_ARGS__); \
 } while (0)
@@ -129,45 +128,45 @@ const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
     {
       assert (!found_inccnf_header);
       if (strict == STRICT) {
-	const char * err = parse_string ("nf ", 'c');
-	if (err) return err;
-	ch = parse_char ();
-	if (!isdigit (ch)) PER ("expected digit after 'p cnf '");
-	err = parse_positive_int (ch, vars, "<max-var>");
-	if (err) return err;
-	if (ch != ' ') PER ("expected ' ' after 'p cnf %d'", vars);
-	if (!isdigit (ch = parse_char ()))
-	  PER ("expected digit after 'p cnf %d '", vars);
-	err = parse_positive_int (ch, clauses, "<num-clauses>");
-	if (err) return err;
-	if (ch != '\n')
-	  PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
+        const char * err = parse_string ("nf ", 'c');
+        if (err) return err;
+        ch = parse_char ();
+        if (!isdigit (ch)) PER ("expected digit after 'p cnf '");
+        err = parse_positive_int (ch, vars, "<max-var>");
+        if (err) return err;
+        if (ch != ' ') PER ("expected ' ' after 'p cnf %d'", vars);
+        if (!isdigit (ch = parse_char ()))
+          PER ("expected digit after 'p cnf %d '", vars);
+        err = parse_positive_int (ch, clauses, "<num-clauses>");
+        if (err) return err;
+        if (ch != '\n')
+          PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
       } else {
-	if (parse_char () != 'n') PER ("expected 'n' after 'p c'");
-	if (parse_char () != 'f') PER ("expected 'f' after 'p cn'");
-	ch = parse_char ();
-	if (!isspace (ch)) PER ("expected space after 'p cnf'");
-	do ch = parse_char (); while (isspace (ch));
-	if (!isdigit (ch)) PER ("expected digit after 'p cnf '");
-	const char * err = parse_positive_int (ch, vars, "<max-var>");
-	if (err) return err;
-	if (!isspace (ch)) PER ("expected space after 'p cnf %d'", vars);
-	do ch = parse_char (); while (isspace (ch));
-	if (!isdigit (ch)) PER ("expected digit after 'p cnf %d '", vars);
-	err = parse_positive_int (ch, clauses, "<num-clauses>");
-	if (err) return err;
-	while (ch != '\n') {
-	  if (ch != '\r' && !isspace (ch))
-	    PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
-	  ch = parse_char ();
-	}
+        if (parse_char () != 'n') PER ("expected 'n' after 'p c'");
+        if (parse_char () != 'f') PER ("expected 'f' after 'p cn'");
+        ch = parse_char ();
+        if (!isspace (ch)) PER ("expected space after 'p cnf'");
+        do ch = parse_char (); while (isspace (ch));
+        if (!isdigit (ch)) PER ("expected digit after 'p cnf '");
+        const char * err = parse_positive_int (ch, vars, "<max-var>");
+        if (err) return err;
+        if (!isspace (ch)) PER ("expected space after 'p cnf %d'", vars);
+        do ch = parse_char (); while (isspace (ch));
+        if (!isdigit (ch)) PER ("expected digit after 'p cnf %d '", vars);
+        err = parse_positive_int (ch, clauses, "<num-clauses>");
+        if (err) return err;
+        while (ch != '\n') {
+          if (ch != '\r' && !isspace (ch))
+            PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
+          ch = parse_char ();
+        }
       }
 
       MSG ("found %s'p cnf %d %d'%s header",
-	tout.green_code (), vars, clauses, tout.normal_code ());
+        tout.green_code (), vars, clauses, tout.normal_code ());
 
       if (strict != FORCED)
-	solver->reserve (vars);
+        solver->reserve (vars);
     }
   else if (!parse_inccnf_too)
     PER ("expected 'c' after 'p '");
@@ -178,19 +177,19 @@ const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
       if (err) return err;
       ch = parse_char ();
       if (strict == STRICT) {
-	if (ch != '\n')
-	  PER ("expected new-line after 'p inccnf'");
+        if (ch != '\n')
+          PER ("expected new-line after 'p inccnf'");
       } else {
-	while (ch != '\n')
-	  {
-	    if (ch != '\r' && !isspace (ch))
-	      PER ("expected new-line after 'p inccnf'");
-	    ch = parse_char ();
-	  }
+        while (ch != '\n')
+          {
+            if (ch != '\r' && !isspace (ch))
+              PER ("expected new-line after 'p inccnf'");
+            ch = parse_char ();
+          }
       }
 
       MSG ("found %s'p inccnf'%s header",
-	tout.green_code (), tout.normal_code ());
+        tout.green_code (), tout.normal_code ());
 
       strict = FORCED;
     }
@@ -220,7 +219,7 @@ const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
           PER ("unexpected end-of-file in comment");
     }
     solver->add (lit);
-    if (!found_inccnf_header && 
+    if (!found_inccnf_header &&
         !lit && parsed++ >= clauses && strict != FORCED)
       PER ("too many clauses");
   }
@@ -247,42 +246,42 @@ const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
     for (;;) {
       ch = parse_char ();
       if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r')
-	continue;
+        continue;
       if (ch == 'c') {
-	while ((ch = parse_char ()) != '\n' && ch != EOF)
-	  ;
-	if (ch == EOF) break;
-	continue;
+        while ((ch = parse_char ()) != '\n' && ch != EOF)
+          ;
+        if (ch == EOF) break;
+        continue;
       }
       const char * err = parse_lit (ch, lit, vars, strict);
       if (err == cube_token) PER ("two 'a' in a row");
       else if (err) return err;
       if (ch == 'c') {
-	while ((ch = parse_char ()) != '\n')
-	  if (ch == EOF)
-	    PER ("unexpected end-of-file in comment");
+        while ((ch = parse_char ()) != '\n')
+          if (ch == EOF)
+            PER ("unexpected end-of-file in comment");
       }
       if (cubes)
-	cubes->push_back (lit);
+        cubes->push_back (lit);
       if (!lit) {
-	num_cubes++;
-	for (;;)
-	  {
-	    ch = parse_char ();
-	    if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r')
-	      continue;
-	    if (ch == 'c') {
-	      while ((ch = parse_char ()) != '\n' && ch != EOF)
-		;
-	      if (ch == EOF) break;
-	    }
-	    if (ch == EOF) break;
-	    if (ch != 'a')
-	      PER ("expected 'a' or end-of-file after zero");
-	    lit = INT_MIN;
-	    break;
-	  }
-	if (ch == EOF) break;
+        num_cubes++;
+        for (;;)
+          {
+            ch = parse_char ();
+            if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r')
+              continue;
+            if (ch == 'c') {
+              while ((ch = parse_char ()) != '\n' && ch != EOF)
+                ;
+              if (ch == EOF) break;
+            }
+            if (ch == EOF) break;
+            if (ch != 'a')
+              PER ("expected 'a' or end-of-file after zero");
+            lit = INT_MIN;
+            break;
+          }
+        if (ch == EOF) break;
       }
     }
     if (lit) PER ("last cube without terminating '0'");
@@ -292,7 +291,7 @@ const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
     {
       double end = internal->time ();
       MSG ("parsed %zd cubes in %.2f seconds %s time",
-	num_cubes, end - start, internal->opts.realtime ? "real" : "process");
+        num_cubes, end - start, internal->opts.realtime ? "real" : "process");
     }
 #endif
 

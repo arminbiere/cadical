@@ -19,7 +19,8 @@ class Parser {
   External * external;
   File * file;
 
-  void perr (const char * fmt, ...);
+  void perr (const char * fmt, ...)
+             CADICAL_ATTRIBUTE_FORMAT (2, 3);
   int parse_char ();
 
   enum {
@@ -49,7 +50,7 @@ public:
 
   // Parse a DIMACS file.  Return zero if successful. Otherwise a parse
   // error is return. The parsed clauses are added to the solver and the
-  // maximum variable index found is return in the 'vars' argument. The
+  // maximum variable index found is returned in the 'vars' argument. The
   // 'strict' argument can be '0' in which case the numbers in the header
   // can be arbitrary, e.g., 'p cnf 0 0' all the time, without producing a
   // parse error.  Only for this setting the parsed literals are not checked

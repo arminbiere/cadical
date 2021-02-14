@@ -81,7 +81,7 @@ void External::restore_clauses () {
     if (b) numtainted++;
 
   PHASE ("restore", internal->stats.restorations,
-    "starting with %zd tainted literals %.0f%%",
+    "starting with %u tainted literals %.0f%%",
     numtainted, percent (numtainted, 2u*max_var));
 
   auto end_of_extension = extension.end ();
@@ -192,7 +192,7 @@ void External::restore_clauses () {
     if (b) numtainted++;
 
   PHASE ("restore", internal->stats.restorations,
-    "finishing with %zd tainted literals %.0f%%",
+    "finishing with %u tainted literals %.0f%%",
     numtainted, percent (numtainted, 2u*max_var));
 
   LOG ("extension stack clean");

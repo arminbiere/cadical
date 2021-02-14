@@ -292,7 +292,8 @@ struct ClauseSize {
 };
 
 struct smaller_clause_size_rank {
-  size_t operator () (const ClauseSize & a) { return a.size; }
+  typedef size_t Type;
+  Type operator () (const ClauseSize & a) { return a.size; }
 };
 
 /*------------------------------------------------------------------------*/
@@ -536,7 +537,7 @@ bool Internal::subsume_round () {
       "checked all %" PRId64 " scheduled clauses", checked);
   else
     PHASE ("subsume-round", stats.subsumerounds,
-      "checked %" PRId64 " clauses %.0f%% of scheduled (%zd remain)",
+      "checked %" PRId64 " clauses %.0f%% of scheduled (%" PRId64 " remain)",
       checked, percent (checked, scheduled), remain);
 
   // Release occurrence lists and schedule.

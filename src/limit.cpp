@@ -60,7 +60,7 @@ void Internal::limit_decisions (int l) {
     LOG ("reset decision limit to be unbounded");
     inc.decisions = -1;
   } else {
-    inc.decisions = stats.decisions + l;
+    inc.decisions = l;
     LOG ("new decision limit of %d decisions", l);
   }
 }

@@ -58,7 +58,7 @@ PROFILE(instantiate,2) \
 PROFILE(lucky,2) \
 PROFILE(lookahead,2) \
 PROFILE(minimize,4) \
-PROFILE(parse,3) \
+PROFILE(parse,0) /*Set to '0' as 'opts.profile' might change in parsing*/ \
 PROFILE(probe,2) \
 PROFILE(deduplicate,3) \
 PROFILE(propagate,4) \
@@ -143,11 +143,11 @@ do { \
   if (!preprocessing && !lookingahead) { \
     NON_QUIET_PROFILE_CODE ( \
       if (stable && internal->profiles.stable.level <= L) \
-	internal->stop_profiling (internal->profiles.stable, N); \
+        internal->stop_profiling (internal->profiles.stable, N); \
       if (!stable && internal->profiles.unstable.level <= L) \
-	internal->stop_profiling (internal->profiles.unstable, N); \
+        internal->stop_profiling (internal->profiles.unstable, N); \
       if (internal->profiles.search.level <= L) \
-	internal->stop_profiling (internal->profiles.search, N); \
+        internal->stop_profiling (internal->profiles.search, N); \
     ) \
     reset_mode (SEARCH); \
   } \
@@ -178,11 +178,11 @@ do { \
   if (!preprocessing && !lookingahead) { \
     NON_QUIET_PROFILE_CODE ( \
       if (internal->profiles.search.level <= L) \
-	internal->start_profiling (internal->profiles.search, N); \
+        internal->start_profiling (internal->profiles.search, N); \
       if (stable && internal->profiles.stable.level <= L) \
-	internal->start_profiling (internal->profiles.stable, N); \
+        internal->start_profiling (internal->profiles.stable, N); \
       if (!stable && internal->profiles.unstable.level <= L) \
-	internal->start_profiling (internal->profiles.unstable, N); \
+        internal->start_profiling (internal->profiles.unstable, N); \
     ) \
     set_mode (SEARCH); \
   } \

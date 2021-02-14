@@ -101,4 +101,32 @@ bool is_no_color_option (const char * arg) {
          !strcmp (arg, "--colours=false");
 }
 
+/*------------------------------------------------------------------------*/
+
+static uint64_t primes[] = {
+  1111111111111111111lu,
+  2222222222222222249lu,
+  3333333333333333347lu,
+  4444444444444444537lu,
+  5555555555555555621lu,
+  6666666666666666677lu,
+  7777777777777777793lu,
+  8888888888888888923lu,
+  9999999999999999961lu,
+};
+
+uint64_t hash_string (const char * str) {
+  const unsigned size = sizeof primes / sizeof *primes;
+  uint64_t res = 0;
+  unsigned char ch;
+  unsigned i = 0;
+  for (const char * p = str; (ch = *p); p++) {
+    res += ch;
+    res *= primes[i++];
+    if (i == size)
+      i = 0;
+  }
+  return res;
+}
+
 }

@@ -96,7 +96,7 @@ core () {
   chk=$prefix-$1.chk
   if [ -f cnf/$1.sol ]
   then
-    solopts=" -s ../test/cnf/$1.sol"
+    solopts=" -r ../test/cnf/$1.sol"
   else
     solopts=""
   fi

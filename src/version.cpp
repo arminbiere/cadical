@@ -22,18 +22,18 @@
 // the file '../VERSION' with '../scripts/update-version.sh'.  The standard
 // build process relies on 'VERSION' to be defined in 'build.hpp'.
 
-#ifndef NBUILD
+#ifdef NBUILD
 #ifndef VERSION
-#  define VERSION "1.3.0"
-#endif // NBUILD
+#  define VERSION "1.4.0"
 #endif // VERSION
+#endif // NBUILD
 
 /*------------------------------------------------------------------------*/
 
 // The copyright of the code is here.
 
 static const char * COPYRIGHT =
-"Copyright (c) 2016-2020 Armin Biere, JKU Linz"
+"Copyright (c) 2016-2021 Armin Biere, Mathias Fleury, JKU Linz"
 ;
 
 /*------------------------------------------------------------------------*/

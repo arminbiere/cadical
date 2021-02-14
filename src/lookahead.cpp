@@ -41,9 +41,9 @@ int Internal::most_occurring_literal () {
 struct probe_negated_noccs_rank {
   Internal * internal;
   probe_negated_noccs_rank (Internal * i) : internal (i) { }
-  size_t operator () (int a) const { return internal->noccs (-a); }
+  typedef size_t Type;
+  Type operator () (int a) const { return internal->noccs (-a); }
 };
-
 
 // Follow the ideas in 'generate_probes' but flush non root probes and
 // reorder remaining probes.
@@ -152,7 +152,7 @@ void Internal::lookahead_generate_probes () {
   shrink_vector (probes);
 
   PHASE ("probe-round", stats.probingrounds,
-    "scheduled %" PRId64 " literals %.0f%%",
+    "scheduled %zd literals %.0f%%",
     probes.size (), percent (probes.size (), 2*max_var));
 }
 
@@ -220,7 +220,6 @@ bool Internal::terminating_asked() {
   return false;
 }
 
-
 // We run probing on all literals with some differences:
 //
 // * no limit on the number of propagations. We rely on terminating to stop()
@@ -234,10 +233,9 @@ int Internal::lookahead_probing() {
   if (!active ())
     return 0;
 
-  LOG ("lookahead-probe-round %d without propagations limit and %d assumptions",
+  LOG ("lookahead-probe-round %" PRId64
+       " without propagations limit and %zu assumptions",
        stats.probingrounds, assumptions.size());
-
-
 
   termination_forced = false;
 
@@ -300,7 +298,7 @@ int Internal::lookahead_probing() {
     else hbrs = 0, failed_literal (probe);
     if (max_hbrs < hbrs ||
         (max_hbrs == hbrs &&
-	 internal->bumped(probe) > internal->bumped(res))) {
+         internal->bumped(probe) > internal->bumped(res))) {
       res = probe;
       max_hbrs = hbrs;
     }
@@ -313,7 +311,8 @@ int Internal::lookahead_probing() {
     res = INT_MIN;
   }
   else if (propagated < trail.size ()) {
-    LOG ("probing produced %" PRId64 " units", trail.size () - propagated);
+    LOG ("probing produced %zd units",
+         (size_t)(trail.size () - propagated));
     if (!propagate ()) {
       MSG ("propagating units after probing results in empty clause");
       learn_empty_clause ();
@@ -327,7 +326,7 @@ int Internal::lookahead_probing() {
 #endif
   int64_t hbrs = stats.hbrs - old_hbrs;
 
-  MSG ("lookahead-probe-round %d probed %" PRId64
+  MSG ("lookahead-probe-round %" PRId64 " probed %" PRId64
        " and found %d failed literals",
        stats.probingrounds,
        probed, failed);

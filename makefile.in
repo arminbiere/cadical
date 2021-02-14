@@ -10,10 +10,6 @@
 CXX=@CXX@
 CXXFLAGS=@CXXFLAGS@
 
-# Mainly used for parallel build ('-j' option to 'configure')
-
-MAKEFLAGS=@MAKEFLAGS@
-
 ############################################################################
 #    It is usually not necessary to change anything below this line!       #
 ############################################################################

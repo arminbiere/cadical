@@ -50,8 +50,8 @@ build system based on GNU `make`, then this is easily doable as follows.
     cd build
     for f in ../src/*.cpp; do g++ -O3 -DNDEBUG -DNBUILD -c $f; done
     ar rc libcadical.a `ls *.o | grep -v ical.o`
-    g++ -O3 -DNDEBUG -DNBUILD -o cadical cadical.o -L. -lcadical
-    g++ -O3 -DNDEBUG -DNBUILD -o mobical mobical.o -L. -lcadical
+    g++ -o cadical cadical.o -L. -lcadical
+    g++ -o mobical mobical.o -L. -lcadical
 
 Note that application object files are excluded from the library.
 Of course you can use different compilation options as well.
@@ -61,6 +61,11 @@ necessary though, which avoids dependency of `version.cpp` on `build.hpp`.
 Consequently you will only get very basic version information compiled into
 the library and binaries (guaranteed is in essence just the version number
 of the library).
+
+And if you really do not care about compilation time nor caching and just
+want to build the solver once manually then the following also works.
+
+    g++ -O3 -DNDEBUG -DNBUILD -o cadical `ls *.cpp | grep -v mobical`
 
 Further note that the `configure` script provides some feature checks and
 might generate additional compiler flags necessary for compilation.  You

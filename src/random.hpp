@@ -20,12 +20,8 @@ public:
   Random ();
 
   Random (uint64_t seed) : state (seed) { }
+  void operator= (uint64_t seed) { state = seed; }
   Random (const Random & other) : state (other.seed ()) { }
-
-  // Without this explicit default copy assignment operator declaration GCC
-  // 9.3.0 issues a warning (C++11 semantics but not checked before GCC 9).
-  //
-  Random & operator = (const Random &) = default;
 
   void operator += (uint64_t a) { add (a); }
   uint64_t seed () const { return state; }

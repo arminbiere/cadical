@@ -406,7 +406,8 @@ bool Internal::is_binary_clause (Clause * c, int & a, int & b) {
 struct probe_negated_noccs_rank {
   Internal * internal;
   probe_negated_noccs_rank (Internal * i) : internal (i) { }
-  size_t operator () (int a) const { return internal->noccs (-a); }
+  typedef size_t Type;
+  Type operator () (int a) const { return internal->noccs (-a); }
 };
 
 // Fill the 'probes' schedule.
@@ -458,8 +459,7 @@ void Internal::generate_probes () {
   reset_noccs ();
   shrink_vector (probes);
 
-  PHASE ("probe-round", stats.probingrounds,
-    "scheduled %" PRId64 " literals %.0f%%",
+  PHASE ("probe-round", stats.probingrounds, "scheduled %zd literals %.0f%%",
     probes.size (), percent (probes.size (), 2u*max_var));
 }
 
@@ -600,7 +600,7 @@ bool Internal::probe_round () {
 
   if (unsat) LOG ("probing derived empty clause");
   else if (propagated < trail.size ()) {
-    LOG ("probing produced %" PRId64 " units", trail.size () - propagated);
+    LOG ("probing produced %zd units", (size_t)(trail.size () - propagated));
     if (!propagate ()) {
       LOG ("propagating units after probing results in empty clause");
       learn_empty_clause ();
