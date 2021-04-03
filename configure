@@ -277,7 +277,14 @@ fi
 [ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
-[ $pedantic = yes ] && CXXFLAGS="$CXXFLAGS --pedantic -Werror"
+if [ $pedantic = yes ]
+then
+  CXXFLAGS="$CXXFLAGS --pedantic -Werror"
+  case x"$CXX" in
+    xg++*|xclang++*) CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
+    ;;
+  esac
+fi
 [ $contracts = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRACTS"
 [ $tracing = no ] && CXXFLAGS="$CXXFLAGS -DNTRACING"
 
