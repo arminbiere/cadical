@@ -630,6 +630,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     int l = 1;        // This is the decision level we want to reuse.
 
     for (const auto & lit : sorted) {
+      if (!level) break;
       if (fixed (lit)) continue;
       const int decision = control[l].decision;
       if (-lit == decision) {
