@@ -389,8 +389,8 @@ Clause * Internal::new_driving_clause (const int glue, int & jump) {
     // frequently.  Thus sorting effort is doubled here.
     //
     MSORT (opts.radixsortlim,
-      clause.begin (), clause.end (),
-      analyze_trail_negative_rank (this), analyze_trail_larger (this));
+           clause.begin (), clause.end (),
+           analyze_trail_negative_rank (this), analyze_trail_larger (this));
 
     jump = var (clause[1]).level;
     res = new_learned_redundant_clause (glue);
@@ -726,18 +726,39 @@ void Internal::analyze () {
   stats.learned.clauses++;
   assert (glue < size);
 
-  // Update decision heuristics.
-  //
-  if (opts.bump) bump_variables ();
 
   // Minimize the 1st UIP clause as pioneered by Niklas Soerensson in
   // MiniSAT and described in our joint SAT'09 paper.
   //
   if (size > 1) {
-    if (opts.minimize) minimize_clause ();
+    if (opts.shrink)
+      {
+      shrink_and_minimize_clause();
+#if 0 // Useful to test if shrinking does fully minimize
+      minimize_sort_clause();
+#endif
+      } else
+      if (!opts.minimize)
+        minimize_clause();
+#if 0
+    else {
+      const int old_size = clause.size();
+      if (opts.minimize)
+        minimize_clause();
+      assert(!opts.shrink || old_size == clause.size());
+    }
+#endif
+
     size = (int) clause.size ();
+
+    // Update decision heuristics.
+    //
+    if (opts.bump)
+      bump_variables();
+
     if (external->learner) external->export_learned_large_clause (clause);
-  } else if (external->learner) external->export_learned_unit_clause (-uip);
+  } else if (external->learner)
+    external->export_learned_unit_clause(-uip);
 
   // Update actual size statistics.
   //

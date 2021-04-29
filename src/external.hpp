@@ -274,7 +274,7 @@ struct External {
   // Other important non IPASIR functions.
 
   int lookahead();
-  CaDiCaL::CubesWithStatus generate_cubes(int);
+  CaDiCaL::CubesWithStatus generate_cubes(int, int);
 
   int fixed (int elit) const;   // Implemented in 'internal.hpp'.
 
