@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#if __GNUC__ > 4
+#if __GNUC__ > 4 || defined(__llvm__)
 static const int n = 8;
 #else
 static const int n = 10;
@@ -84,7 +84,7 @@ int main () {
             ++round, active, learners[active].learned);
     fflush (stdout);
     saved = signal (SIGALRM, handler);
-#if __GNUC__ > 4
+#if __GNUC__ > 4 || defined(__llvm__)
     ualarm (2e4, 0);
 #else
     alarm (1);
