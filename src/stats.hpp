@@ -175,7 +175,10 @@ struct Stats {
     int64_t literals;
     int64_t clauses;
   } learned;
-  int64_t minimized;    // minimized literals
+  int64_t minimized; // minimized literals
+  int64_t shrunken;  // shrunken literals
+  int64_t minishrunken;  // shrunken during minimization literals
+
   int64_t irrbytes;     // bytes of irredundant clauses
   int64_t garbage;      // bytes current irredundant garbage clauses
   int64_t units;        // learned unit clauses

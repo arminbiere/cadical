@@ -303,7 +303,7 @@ public:
     std::vector<std::vector<int>> cubes;
   };
 
-  CubesWithStatus generate_cubes(int);
+  CubesWithStatus generate_cubes(int, int min_depth = 0);
 
   void reset_assumptions();
 

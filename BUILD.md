@@ -21,6 +21,9 @@ option either for 'configure' or with 'make'.  If the environment variable
 'MAKEFLAGS' is set, e.g., 'MAKEFLAGS=-j ./configure', the same effect
 is achieved and the generated makefile will use those flags.
 
+Options
+-------
+
 You might want to check out options of `./configure -h`, such as
 
     ./configure -c # include assertion checking code
@@ -42,6 +45,9 @@ All source files reside in the `src` directory.  The library `libcadical.a`
 is compiled from all the `.cpp` files except `cadical.cpp` and
 `mobical.cpp`, which provide the applications, i.e., the stand alone solver
 `cadical` and the model based tester `mobical`.
+
+Manual Build
+------------
 
 If you can not or do not want to rely on our `configure` script nor on our
 build system based on GNU `make`, then this is easily doable as follows.
@@ -75,3 +81,24 @@ This manual build process using object files is fast enough in combination
 with caching solutions such as `ccache`.  But it lacks the ability of our
 GNU make solution to run compilation in parallel without additional parallel
 process scheduling solutions.
+
+Cross-Compilation
+-----------------
+
+We have preliminary support for cross-compilation using MinGW32 (only
+tested for a Linux compilation host and Windows-64 target host at this
+point).
+
+There are two steps necessary to make this work.  First make
+sure to be able to execute binaries compiled with the cross-compiler
+directly.  For instance in order to use `wine` to execute the binaries
+on Linux you might want to look into the `binfmt_misc` module and
+registering the appropriate interpreter for `DOSWin`. As second step
+you simply tell the `configure` script to use the cross-compiler.
+
+    CXXFLAGS=-static CXX=i686-w64-mingw32-g++ ./configure
+
+Note the use of '-static', which was necessary for me since by default
+`wine` did not find `libstdc++` if dynamically linked.
+
+

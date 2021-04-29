@@ -18,7 +18,7 @@ The regression suite for CNF files
 
 is more thorough and should catch simple bugs.  It checks solutions and
 checks generated proofs too.  The third test driver uses a regression suite
-uses execution traces by replaying them through `mobical`
+and executes traces by replaying them through `mobical`
 
     ./traces/run.sh
 
@@ -40,7 +40,7 @@ will use the library and binaries in this `release` sub-directory for
 running all the tests.  The log files including generated proofs are all put
 into the `release` subdirectory too.
 
-For more information on external fuzz testing see
+For more information on external fuzz-testing see
 
 > Robert Brummayer, Florian Lonsing, Armin Biere:
 > Automated Testing and Debugging of SAT and QBF Solvers. SAT 2010: 44-57

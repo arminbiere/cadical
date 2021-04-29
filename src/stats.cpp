@@ -153,7 +153,11 @@ void Stats::print (Internal * internal) {
   }
   PRT ("  extendbytes:   %15zd   %10.2f    bytes and MB", extendbytes, extendbytes/(double)(1l<<20));
   if (all || stats.learned.clauses)
+  PRT ("learned_lits:    %15" PRId64 "   %10.2f %%  learned literals", stats.learned.literals, percent (stats.learned.literals, stats.learned.literals));
   PRT ("minimized:       %15" PRId64 "   %10.2f %%  learned literals", stats.minimized, percent (stats.minimized, stats.learned.literals));
+  PRT ("shrunken:        %15" PRId64 "   %10.2f %%  learned literals", stats.shrunken, percent(stats.shrunken, stats.learned.literals));
+  PRT ("minishrunken:    %15" PRId64 "   %10.2f %%  learned literals", stats.minishrunken, percent(stats.minishrunken, stats.learned.literals));
+
   PRT ("propagations:    %15" PRId64 "   %10.2f M  per second", propagations, relative (propagations/1e6, t));
   PRT ("  coverprops:    %15" PRId64 "   %10.2f %%  of propagations", stats.propagations.cover, percent (stats.propagations.cover, propagations));
   PRT ("  probeprops:    %15" PRId64 "   %10.2f %%  of propagations", stats.propagations.probe, percent (stats.propagations.probe, propagations));

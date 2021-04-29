@@ -85,6 +85,7 @@ extern "C" {
 #include "version.hpp"
 #include "vivify.hpp"
 #include "watch.hpp"
+#include "reap.hpp"
 
 /*------------------------------------------------------------------------*/
 
@@ -185,6 +186,9 @@ struct Internal {
   vector<int> levels;           // decision levels in learned clause
   vector<int> analyzed;         // analyzed literals in 'analyze'
   vector<int> minimized;        // removable or poison in 'minimize'
+  vector<int> shrinkable;       // removable or poison in 'shrink'
+  Reap reap;                    // radix heap for shrink
+
   vector<int> probes;           // remaining scheduled probes
   vector<Level> control;        // 'level + 1 == control.size ()'
   vector<Clause*> clauses;      // ordered collection of all clauses
@@ -485,7 +489,22 @@ struct Internal {
   Clause * new_clause (bool red, int glue = 0);
   void promote_clause (Clause *, int new_glue);
   size_t shrink_clause (Clause *, int new_size);
-  void deallocate_clause (Clause *);
+  void minimize_sort_clause();
+  void shrink_and_minimize_clause ();
+  void reset_shrinkable();
+  void mark_shrinkable_as_removable(int, std::vector<int>::size_type);
+  int shrink_literal(int, int, unsigned);
+  unsigned shrunken_block_uip(int, int, std::vector<int>::reverse_iterator &,
+                              std::vector<int>::reverse_iterator &,
+                              std::vector<int>::size_type, const int);
+  void shrunken_block_no_uip(const std::vector<int>::reverse_iterator&, const std::vector<int>::reverse_iterator&, unsigned&, const int);
+  void push_literals_of_block(const std::vector<int>::reverse_iterator&, const std::vector<int>::reverse_iterator&, int, unsigned);
+  unsigned shrink_next(unsigned&, unsigned&);
+  std::vector<int>::reverse_iterator minimize_and_shrink_block(std::vector<int>::reverse_iterator&, unsigned int&, unsigned int&, const int);
+  unsigned shrink_block(std::vector<int>::reverse_iterator&, std::vector<int>::reverse_iterator&, int, unsigned&, unsigned&, const int, unsigned);
+  unsigned shrink_along_reason(int, int, bool, bool&, unsigned);
+
+  void deallocate_clause(Clause *);
   void delete_clause (Clause *);
   void mark_garbage (Clause *);
   void assign_original_unit (int);
@@ -723,289 +742,294 @@ struct Internal {
   void mark_added (int lit, int size, bool redundant);
   void mark_added (Clause *);
 
-  bool marked_subsume (int lit) const { return flags (lit).subsume; }
+  bool marked_subsume(int lit) const { return flags(lit).subsume; }
 
-  // If irredundant clauses are removed or literals in clauses are removed,
-  // then variables in such clauses should be reconsidered to be eliminated
-  // through bounded variable elimination.  In contrast to 'subsume' the
-  // 'elim' flag is restricted to 'irredundant' clauses only. For blocked
-  // clause elimination it is better to have a more precise signed version,
-  // which allows to independently mark positive and negative literals.
-  //
-  void mark_elim (int lit) {
-    Flags & f = flags (lit);
-    if (f.elim) return;
-    LOG ("marking %d as elimination literal candidate", lit);
-    stats.mark.elim++;
-    f.elim = true;
-  }
-  void mark_block (int lit) {
-    Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    if (f.block & bit) return;
-    LOG ("marking %d as blocking literal candidate", lit);
-    stats.mark.block++;
-    f.block |= bit;
-  }
-  void mark_removed (int lit) {
-    mark_elim (lit);
-    mark_block (-lit);
-  }
-  void mark_removed (Clause *, int except = 0);
+    // If irredundant clauses are removed or literals in clauses are removed,
+    // then variables in such clauses should be reconsidered to be eliminated
+    // through bounded variable elimination.  In contrast to 'subsume' the
+    // 'elim' flag is restricted to 'irredundant' clauses only. For blocked
+    // clause elimination it is better to have a more precise signed version,
+    // which allows to independently mark positive and negative literals.
+    //
+    void mark_elim(int lit) {
+      Flags &f = flags(lit);
+      if (f.elim)
+        return;
+      LOG("marking %d as elimination literal candidate", lit);
+      stats.mark.elim++;
+      f.elim = true;
+    }
+    void mark_block(int lit) {
+      Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      if (f.block & bit)
+        return;
+      LOG("marking %d as blocking literal candidate", lit);
+      stats.mark.block++;
+      f.block |= bit;
+    }
+    void mark_removed(int lit) {
+      mark_elim(lit);
+      mark_block(-lit);
+    }
+    void mark_removed(Clause *, int except = 0);
 
-  // The following two functions are only used for testing & debugging.
+    // The following two functions are only used for testing & debugging.
 
-  bool marked_block (int lit) const {
-    const Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    return (f.block & bit) != 0;
-  }
-  void unmark_block (int lit) {
-    Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    f.block &= ~bit;
-  }
+    bool marked_block(int lit) const {
+      const Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      return (f.block & bit) != 0;
+    }
+    void unmark_block(int lit) {
+      Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      f.block &= ~bit;
+    }
 
-  // During scheduling literals for blocked clause elimination we skip those
-  // literals which occur negated in a too large clause.
-  //
-  void mark_skip (int lit) {
-    Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    if (f.skip & bit) return;
-    LOG ("marking %d to be skipped as blocking literal", lit);
-    f.skip |= bit;
-  }
-  bool marked_skip (int lit) {
-    const Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    return (f.skip & bit) != 0;
-  }
+    // During scheduling literals for blocked clause elimination we skip those
+    // literals which occur negated in a too large clause.
+    //
+    void mark_skip(int lit) {
+      Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      if (f.skip & bit)
+        return;
+      LOG("marking %d to be skipped as blocking literal", lit);
+      f.skip |= bit;
+    }
+    bool marked_skip(int lit) {
+      const Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      return (f.skip & bit) != 0;
+    }
 
-  // Blocked Clause elimination in 'block.cpp'.
-  //
-  bool is_blocked_clause (Clause *c, int pivot);
-  void block_schedule (Blocker &);
-  size_t block_candidates (Blocker &, int lit);
-  Clause * block_impossible (Blocker &, int lit);
-  void block_literal_with_at_least_two_negative_occs (Blocker &, int lit);
-  void block_literal_with_one_negative_occ (Blocker &, int lit);
-  void block_pure_literal (Blocker &, int lit);
-  void block_reschedule_clause (Blocker &, int lit, Clause *);
-  void block_reschedule (Blocker &, int lit);
-  void block_literal (Blocker &, int lit);
-  bool block ();
+    // Blocked Clause elimination in 'block.cpp'.
+    //
+    bool is_blocked_clause(Clause * c, int pivot);
+    void block_schedule(Blocker &);
+    size_t block_candidates(Blocker &, int lit);
+    Clause *block_impossible(Blocker &, int lit);
+    void block_literal_with_at_least_two_negative_occs(Blocker &, int lit);
+    void block_literal_with_one_negative_occ(Blocker &, int lit);
+    void block_pure_literal(Blocker &, int lit);
+    void block_reschedule_clause(Blocker &, int lit, Clause *);
+    void block_reschedule(Blocker &, int lit);
+    void block_literal(Blocker &, int lit);
+    bool block();
 
-  // Find gates in 'gates.cpp' for bounded variable substitution.
-  //
-  int second_literal_in_binary_clause (Eliminator &, Clause *, int first);
-  void mark_binary_literals (Eliminator &, int pivot);
-  void find_and_gate (Eliminator &, int pivot);
-  void find_equivalence (Eliminator &, int pivot);
+    // Find gates in 'gates.cpp' for bounded variable substitution.
+    //
+    int second_literal_in_binary_clause(Eliminator &, Clause *, int first);
+    void mark_binary_literals(Eliminator &, int pivot);
+    void find_and_gate(Eliminator &, int pivot);
+    void find_equivalence(Eliminator &, int pivot);
 
-  bool get_ternary_clause (Clause *, int &, int &, int &);
-  bool match_ternary_clause (Clause *, int, int, int);
-  Clause * find_ternary_clause (int, int, int);
+    bool get_ternary_clause(Clause *, int &, int &, int &);
+    bool match_ternary_clause(Clause *, int, int, int);
+    Clause *find_ternary_clause(int, int, int);
 
-  bool get_clause (Clause *, vector<int> &);
-  bool is_clause (Clause *, const vector<int> &);
-  Clause * find_clause (const vector<int> &);
-  void find_xor_gate (Eliminator &, int pivot);
+    bool get_clause(Clause *, vector<int> &);
+    bool is_clause(Clause *, const vector<int> &);
+    Clause *find_clause(const vector<int> &);
+    void find_xor_gate(Eliminator &, int pivot);
 
-  void find_if_then_else (Eliminator &, int pivot);
+    void find_if_then_else(Eliminator &, int pivot);
 
-  void find_gate_clauses (Eliminator &, int pivot);
-  void unmark_gate_clauses (Eliminator &);
+    void find_gate_clauses(Eliminator &, int pivot);
+    void unmark_gate_clauses(Eliminator &);
 
-  // Bounded variable elimination in 'elim.cpp'.
-  //
-  bool eliminating ();
-  double compute_elim_score (unsigned lit);
-  void mark_redundant_clauses_with_eliminated_variables_as_garbage ();
-  void unmark_binary_literals (Eliminator &);
-  bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *);
-  void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot);
-  bool elim_resolvents_are_bounded (Eliminator &, int pivot);
-  void elim_update_removed_lit (Eliminator &, int lit);
-  void elim_update_removed_clause (Eliminator &, Clause *, int except = 0);
-  void elim_update_added_clause (Eliminator &, Clause *);
-  void elim_add_resolvents (Eliminator &, int pivot);
-  void elim_backward_clause (Eliminator &, Clause *);
-  void elim_backward_clauses (Eliminator &);
-  void elim_propagate (Eliminator &, int unit);
-  void elim_on_the_fly_self_subsumption (Eliminator &, Clause *, int);
-  void try_to_eliminate_variable (Eliminator &, int pivot);
-  void increase_elimination_bound ();
-  int elim_round (bool & completed);
-  void elim (bool update_limits = true);
+    // Bounded variable elimination in 'elim.cpp'.
+    //
+    bool eliminating();
+    double compute_elim_score(unsigned lit);
+    void mark_redundant_clauses_with_eliminated_variables_as_garbage();
+    void unmark_binary_literals(Eliminator &);
+    bool resolve_clauses(Eliminator &, Clause *, int pivot, Clause *);
+    void mark_eliminated_clauses_as_garbage(Eliminator &, int pivot);
+    bool elim_resolvents_are_bounded(Eliminator &, int pivot);
+    void elim_update_removed_lit(Eliminator &, int lit);
+    void elim_update_removed_clause(Eliminator &, Clause *, int except = 0);
+    void elim_update_added_clause(Eliminator &, Clause *);
+    void elim_add_resolvents(Eliminator &, int pivot);
+    void elim_backward_clause(Eliminator &, Clause *);
+    void elim_backward_clauses(Eliminator &);
+    void elim_propagate(Eliminator &, int unit);
+    void elim_on_the_fly_self_subsumption(Eliminator &, Clause *, int);
+    void try_to_eliminate_variable(Eliminator &, int pivot);
+    void increase_elimination_bound();
+    int elim_round(bool &completed);
+    void elim(bool update_limits = true);
 
-  void inst_assign (int lit);
-  bool inst_propagate ();
-  void collect_instantiation_candidates (Instantiator &);
-  bool instantiate_candidate (int lit, Clause *);
-  void instantiate (Instantiator &);
+    void inst_assign(int lit);
+    bool inst_propagate();
+    void collect_instantiation_candidates(Instantiator &);
+    bool instantiate_candidate(int lit, Clause *);
+    void instantiate(Instantiator &);
 
-  // Hyper ternary resolution.
-  //
-  bool ternary_find_binary_clause (int, int);
-  bool ternary_find_ternary_clause (int, int, int);
-  Clause * new_hyper_ternary_resolved_clause (bool red);
-  bool hyper_ternary_resolve (Clause *, int, Clause *);
-  void ternary_lit (int pivot, int64_t & steps, int64_t & htrs);
-  void ternary_idx (int idx, int64_t & steps, int64_t & htrs);
-  bool ternary_round (int64_t & steps, int64_t & htrs);
-  bool ternary ();
+    // Hyper ternary resolution.
+    //
+    bool ternary_find_binary_clause(int, int);
+    bool ternary_find_ternary_clause(int, int, int);
+    Clause *new_hyper_ternary_resolved_clause(bool red);
+    bool hyper_ternary_resolve(Clause *, int, Clause *);
+    void ternary_lit(int pivot, int64_t &steps, int64_t &htrs);
+    void ternary_idx(int idx, int64_t &steps, int64_t &htrs);
+    bool ternary_round(int64_t & steps, int64_t & htrs);
+    bool ternary();
 
-  // Probing in 'probe.cpp'.
-  //
-  bool probing ();
-  void failed_literal (int lit);
-  void probe_assign_unit (int lit);
-  void probe_assign_decision (int lit);
-  void probe_assign (int lit, int parent);
-  void mark_duplicated_binary_clauses_as_garbage ();
-  int get_parent_reason_literal (int lit);
-  void set_parent_reason_literal (int lit, int reason);
-  int probe_dominator (int a, int b);
-  int hyper_binary_resolve (Clause*);
-  void probe_propagate2 ();
-  bool probe_propagate ();
-  bool is_binary_clause (Clause * c, int &, int &);
-  void generate_probes ();
-  void flush_probes ();
-  int next_probe ();
-  bool probe_round ();
-  void probe (bool update_limits = true);
+    // Probing in 'probe.cpp'.
+    //
+    bool probing();
+    void failed_literal(int lit);
+    void probe_assign_unit(int lit);
+    void probe_assign_decision(int lit);
+    void probe_assign(int lit, int parent);
+    void mark_duplicated_binary_clauses_as_garbage();
+    int get_parent_reason_literal(int lit);
+    void set_parent_reason_literal(int lit, int reason);
+    int probe_dominator(int a, int b);
+    int hyper_binary_resolve(Clause *);
+    void probe_propagate2();
+    bool probe_propagate();
+    bool is_binary_clause(Clause * c, int &, int &);
+    void generate_probes();
+    void flush_probes();
+    int next_probe();
+    bool probe_round();
+    void probe(bool update_limits = true);
 
-  // ProbSAT/WalkSAT implementation called initially or from 'rephase'.
-  //
-  void walk_save_minimum (Walker &);
-  Clause * walk_pick_clause (Walker &);
-  unsigned walk_break_value (int lit);
-  int walk_pick_lit (Walker &, Clause *);
-  void walk_flip_lit (Walker &, int lit);
-  int walk_round (int64_t limit, bool prev);
-  void walk ();
+    // ProbSAT/WalkSAT implementation called initially or from 'rephase'.
+    //
+    void walk_save_minimum(Walker &);
+    Clause *walk_pick_clause(Walker &);
+    unsigned walk_break_value(int lit);
+    int walk_pick_lit(Walker &, Clause *);
+    void walk_flip_lit(Walker &, int lit);
+    int walk_round(int64_t limit, bool prev);
+    void walk();
 
-  // Detect strongly connected components in the binary implication graph
-  // (BIG) and equivalent literal substitution (ELS) in 'decompose.cpp'.
-  //
-  bool decompose_round ();
-  void decompose ();
+    // Detect strongly connected components in the binary implication graph
+    // (BIG) and equivalent literal substitution (ELS) in 'decompose.cpp'.
+    //
+    bool decompose_round();
+    void decompose();
 
-  // Assumption handling.
-  //
-  void assume (int);                    // New assumption literal.
-  void reset_assumptions ();            // Reset after 'solve' call.
-  void reset_limits ();                 // Reset after 'solve' call.
-  void failing ();                      // Prepare failed assumptions.
+    // Assumption handling.
+    //
+    void assume(int);         // New assumption literal.
+    void reset_assumptions(); // Reset after 'solve' call.
+    void reset_limits();      // Reset after 'solve' call.
+    void failing();           // Prepare failed assumptions.
 
-  bool failed (int lit) {               // Literal failed assumption?
-    Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    return (f.failed & bit) != 0;
-  }
+    bool failed(int lit) { // Literal failed assumption?
+      Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      return (f.failed & bit) != 0;
+    }
 
-  bool assumed (int lit) {              // Marked as assumption.
-    Flags & f = flags (lit);
-    const unsigned bit = bign (lit);
-    return (f.assumed & bit) != 0;
-  }
+    bool assumed(int lit) { // Marked as assumption.
+      Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      return (f.assumed & bit) != 0;
+    }
 
-  // Forcing decision variables to a certain phase.
-  //
-  void phase (int lit);
-  void unphase (int lit);
+    // Forcing decision variables to a certain phase.
+    //
+    void phase(int lit);
+    void unphase(int lit);
 
-  // Globally blocked clause elimination.
-  //
-  bool is_autarky_literal (int lit) const;
-  bool is_conditional_literal (int lit) const;
-  void mark_as_conditional_literal (int lit);
-  void unmark_as_conditional_literal (int lit);
-  //
-  bool is_in_candidate_clause (int lit) const;
-  void mark_in_candidate_clause (int lit);
-  void unmark_in_candidate_clause (int lit);
-  //
-  void condition_assign (int lit);
-  void condition_unassign (int lit);
-  //
-  bool conditioning ();
-  long condition_round (long unassigned_literal_propagation_limit);
-  void condition (bool update_limits = true);
+    // Globally blocked clause elimination.
+    //
+    bool is_autarky_literal(int lit) const;
+    bool is_conditional_literal(int lit) const;
+    void mark_as_conditional_literal(int lit);
+    void unmark_as_conditional_literal(int lit);
+    //
+    bool is_in_candidate_clause(int lit) const;
+    void mark_in_candidate_clause(int lit);
+    void unmark_in_candidate_clause(int lit);
+    //
+    void condition_assign(int lit);
+    void condition_unassign(int lit);
+    //
+    bool conditioning();
+    long condition_round(long unassigned_literal_propagation_limit);
+    void condition(bool update_limits = true);
 
-  // Part on picking the next decision in 'decide.cpp'.
-  //
-  bool satisfied ();
-  int next_decision_variable_on_queue ();
-  int next_decision_variable_with_best_score ();
-  int next_decision_variable ();
-  int decide_phase (int idx, bool target);
-  int likely_phase (int idx);
-  int decide ();                        // 0=decision, 20=failed
+    // Part on picking the next decision in 'decide.cpp'.
+    //
+    bool satisfied();
+    int next_decision_variable_on_queue();
+    int next_decision_variable_with_best_score();
+    int next_decision_variable();
+    int decide_phase(int idx, bool target);
+    int likely_phase(int idx);
+    int decide(); // 0=decision, 20=failed
 
-  // Internal functions to enable explicit search limits.
-  //
-  void limit_terminate (int);
-  void limit_decisions (int);           // Force decision limit.
-  void limit_conflicts (int);           // Force conflict limit.
-  void limit_preprocessing (int);       // Enable 'n' preprocessing rounds.
-  void limit_local_search (int);        // Enable 'n' local search rounds.
+    // Internal functions to enable explicit search limits.
+    //
+    void limit_terminate(int);
+    void limit_decisions(int);     // Force decision limit.
+    void limit_conflicts(int);     // Force conflict limit.
+    void limit_preprocessing(int); // Enable 'n' preprocessing rounds.
+    void limit_local_search(int);  // Enable 'n' local search rounds.
 
-  // External versions can access limits by 'name'.
-  //
-  static bool is_valid_limit (const char *name);
-  bool limit (const char * name, int);  // 'true' if 'name' valid
+    // External versions can access limits by 'name'.
+    //
+    static bool is_valid_limit(const char *name);
+    bool limit(const char *name, int); // 'true' if 'name' valid
 
-  // Set all the CDCL search limits and increments for scheduling
-  // inprocessing, restarts, clause database reductions, etc.
-  //
-  void init_report_limits ();
-  void init_preprocessing_limits ();
-  void init_search_limits ();
+    // Set all the CDCL search limits and increments for scheduling
+    // inprocessing, restarts, clause database reductions, etc.
+    //
+    void init_report_limits();
+    void init_preprocessing_limits();
+    void init_search_limits();
 
-  // The computed averages are local to the 'stable' and 'unstable' phase.
-  // Their main use is to be reported in 'report', except for the 'glue'
-  // averages, which are used to schedule (prohibit actually) restarts
-  // during 'unstable' phases ('stable' phases use reluctant doubling).
-  //
-  void init_averages ();
-  void swap_averages ();
+    // The computed averages are local to the 'stable' and 'unstable' phase.
+    // Their main use is to be reported in 'report', except for the 'glue'
+    // averages, which are used to schedule (prohibit actually) restarts
+    // during 'unstable' phases ('stable' phases use reluctant doubling).
+    //
+    void init_averages();
+    void swap_averages();
 
-  int try_to_satisfy_formula_by_saved_phases ();
-  void produce_failed_assumptions ();
+    int try_to_satisfy_formula_by_saved_phases();
+    void produce_failed_assumptions();
 
-  // Main solve & search functions in 'internal.cpp'.
-  //
-  // We have three pre-solving techniques.  These consist of preprocessing,
-  // local search and searching for lucky phases, which in full solving
-  // mode except for the last are usually optional and then followed by
-  // the main CDCL search loop with inprocessing.  If only preprocessing
-  // is requested from 'External::simplifiy' only preprocessing is called
-  // though. This is all orchestrated by the 'solve' function.
-  //
-  int already_solved ();
-  int restore_clauses ();
-  bool preprocess_round (int round);
-  int preprocess ();
-  int local_search_round (int round);
-  int local_search ();
-  int lucky_phases ();
-  int cdcl_loop_with_inprocessing ();
-  void reset_solving ();
-  int solve (bool preprocess_only = false);
+    // Main solve & search functions in 'internal.cpp'.
+    //
+    // We have three pre-solving techniques.  These consist of preprocessing,
+    // local search and searching for lucky phases, which in full solving
+    // mode except for the last are usually optional and then followed by
+    // the main CDCL search loop with inprocessing.  If only preprocessing
+    // is requested from 'External::simplifiy' only preprocessing is called
+    // though. This is all orchestrated by the 'solve' function.
+    //
+    int already_solved();
+    int restore_clauses();
+    bool preprocess_round(int round);
+    int preprocess();
+    int local_search_round(int round);
+    int local_search();
+    int lucky_phases();
+    int cdcl_loop_with_inprocessing();
+    void reset_solving();
+    int solve(bool preprocess_only = false);
 
-  // Perform look ahead and return the most occurring literal.
-  //
-  int lookahead();
-  CubesWithStatus generate_cubes(int);
-  int most_occurring_literal();
-  int lookahead_probing();
-  int lookahead_next_probe();
-  void lookahead_flush_probes();
-  void lookahead_generate_probes();
-  bool terminating_asked();
+    //
+    int lookahead();
+    CubesWithStatus generate_cubes(int, int);
+    int most_occurring_literal();
+    int lookahead_probing();
+    int lookahead_next_probe();
+    void lookahead_flush_probes();
+    void lookahead_generate_probes();
+    std::vector<int> lookahead_populate_locc();
+    int lookahead_locc(const std::vector<int> &);
+
+    bool terminating_asked();
 
 #ifndef QUIET
   // Built in profiling in 'profile.cpp' (see also 'profile.hpp').
@@ -1187,7 +1211,7 @@ struct Internal {
   //
   void warning (const char *, ...)
                 CADICAL_ATTRIBUTE_FORMAT (2, 3);
-};
+  };
 
 // Fatal internal error which leads to abort.
 //

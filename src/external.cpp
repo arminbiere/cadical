@@ -256,11 +256,11 @@ int External::lookahead () {
   return elit;
 }
 
-CaDiCaL::CubesWithStatus External::generate_cubes (int depth) {
+CaDiCaL::CubesWithStatus External::generate_cubes (int depth, int min_depth = 0) {
   reset_extended ();
   update_molten_literals ();
   reset_limits ();
-  auto cubes = internal->generate_cubes (depth);
+  auto cubes = internal->generate_cubes (depth, min_depth);
   auto externalize = [this](int ilit) {
     const int elit = ilit ? internal->externalize (ilit) : 0;
     MSG ("lookahead internal %d external %d", ilit, elit);
@@ -271,9 +271,9 @@ CaDiCaL::CubesWithStatus External::generate_cubes (int depth) {
     MSG("Cube : ");
     std::for_each(begin(cube), end(cube), externalize);
   };
-    std::for_each(begin(cubes.cubes), end(cubes.cubes), externalize_map);
+  std::for_each(begin(cubes.cubes), end(cubes.cubes), externalize_map);
 
-    return cubes;
+  return cubes;
 }
 
 /*------------------------------------------------------------------------*/
