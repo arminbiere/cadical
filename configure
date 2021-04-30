@@ -362,22 +362,22 @@ if $CXX $CXXFLAGS $WERROR -o $feature.exe $feature.cpp 2>>configure.log
 then
   if [ "`$feature.exe 2>>configure.log|tr -d '\r'`" = 42 ]
   then
-    msg "compiler supports all required C99/C++11 extensions"
+    msg "compiler supports all required C99/C++14 extensions"
   else
-    die "checking compilation without '-std=c++11' failed"
+    die "checking compilation without '-std=c++14' failed"
   fi
 else
-  CXXFLAGS="$CXXFLAGS -std=c++11"
+  CXXFLAGS="$CXXFLAGS -std=c++14"
   if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
   then
     if [ "`$feature.exe 2>>configure.log|tr -d '\r'`" = 42 ]
     then
-      msg "using '-std=c++11' for all required C99/C++11 extensions"
+      msg "using '-std=c++14' for all required C99/C++14 extensions"
     else
-      die "checking compilation with '-std=c++11' failed"
+      die "checking compilation with '-std=c++14' failed"
     fi
   else
-    die "compiler does not support C99/C++11 even with '-std=c++11'"
+    die "compiler does not support C99/C++14 even with '-std=c++14'"
   fi
 fi
 
