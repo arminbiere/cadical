@@ -281,7 +281,7 @@ fi
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
 if [ $pedantic = yes ]
 then
-  CXXFLAGS="$CXXFLAGS --pedantic -Werror -std=c++14"
+  CXXFLAGS="$CXXFLAGS --pedantic -Werror -std=c++11"
   case x"$CXX" in
     xg++*|xclang++*) CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
     ;;
@@ -328,10 +328,9 @@ fi
 # explicitly enforce the new standard with '-std=c++11'.  Here we try to
 # figure out whether we need that flag.  In earlier versions we used
 # '-std=c++0x' but due to issues with older MacOS builds we switched to
-# '-std=c++11' instead and more recently, due to using reverse iterators
-# as well as 'std::rend' and 'std::rbegin', we even switched to 'C++14'.
+# '-std=c++11' instead.
 
-feature=./configure-requires-c++14
+feature=./configure-requires-c++11
 cat <<EOF > $feature.cpp
 #include <cstdio>
 #include <vector>
@@ -350,11 +349,6 @@ unsigned f (const std::vector<unsigned> & a) {
   return res;
 }
 
-// we want to use reverse iterators too available since C++14
-//
-bool g (const std::vector<int> & a) {
-  return std::rbegin (a) == std::rend (a);
-}
 
 int main () { MACRO ("%d", 42); return 0; }
 EOF
@@ -362,22 +356,22 @@ if $CXX $CXXFLAGS $WERROR -o $feature.exe $feature.cpp 2>>configure.log
 then
   if [ "`$feature.exe 2>>configure.log|tr -d '\r'`" = 42 ]
   then
-    msg "compiler supports all required C99/C++14 extensions"
+    msg "compiler supports all required C99/C++11 extensions"
   else
-    die "checking compilation without '-std=c++14' failed"
+    die "checking compilation without '-std=c++11' failed"
   fi
 else
-  CXXFLAGS="$CXXFLAGS -std=c++14"
+  CXXFLAGS="$CXXFLAGS -std=c++11"
   if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
   then
     if [ "`$feature.exe 2>>configure.log|tr -d '\r'`" = 42 ]
     then
-      msg "using '-std=c++14' for all required C99/C++14 extensions"
+      msg "using '-std=c++11' for all required C99/C++11 extensions"
     else
-      die "checking compilation with '-std=c++14' failed"
+      die "checking compilation with '-std=c++11' failed"
     fi
   else
-    die "compiler does not support C99/C++14 even with '-std=c++14'"
+    die "compiler does not support C99/C++11 even with '-std=c++11'"
   fi
 fi
 

@@ -28,7 +28,6 @@ template<class C> class heap {
   // Map an element to its position entry in the 'pos' map.
   //
   unsigned & index (unsigned e) {
-    assert (e >= 0);
     while ((size_t) e >= pos.size ()) pos.push_back (invalid_heap_position);
     unsigned & res = pos[e];
     assert (res == invalid_heap_position || (size_t) res < array.size ());
@@ -126,7 +125,6 @@ public:
   // Check whether 'e' is already in the heap.
   //
   bool contains (unsigned e) const {
-    assert (e >= 0);
     if ((size_t) e >= pos.size ()) return false;
     return pos[e] != invalid_heap_position;
   }
