@@ -73,7 +73,7 @@ run () {
   then
     src=$tests/$1.c
     language=" -x c"
-    COMPILE="$CXX `echo $CXXFLAGS|sed -e 's,-std=c++14,-std=c11,'`"
+    COMPILE="$CXX `echo $CXXFLAGS|sed -e 's,-std=c++11,-std=c11,'`"
   elif [ -f $tests/$1.cpp ]
   then
     src=$tests/$1.cpp

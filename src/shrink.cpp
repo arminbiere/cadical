@@ -106,7 +106,7 @@ namespace CaDiCaL {
 
     LOG("UIP on level %u, uip: %i (replacing by %i)", blevel, uip, uip0);
     assert(rend_block > rbegin_block);
-    assert(rend_block < rend(clause));
+    assert(rend_block < clause.rend());
     unsigned block_shrunken = 0;
     *rbegin_block = -uip;
     Var &v = var(-uip);
@@ -337,7 +337,7 @@ namespace CaDiCaL {
 
   {
     LOG("shrinking block");
-    assert(rbegin_block < rend(clause) -1);
+    assert(rbegin_block < clause.rend() -1);
     int blevel;
     unsigned open = 0;
     unsigned max_trail;
@@ -345,7 +345,7 @@ namespace CaDiCaL {
     // find begining of block;
     std::vector<int>::reverse_iterator rend_block;
     {
-      assert(rbegin_block <= rend(clause));
+      assert(rbegin_block <= clause.rend());
       const int lit = *rbegin_block;
       const int idx = vidx (lit);
       blevel = vtab[idx].level;
@@ -371,7 +371,7 @@ namespace CaDiCaL {
     assert(open > 0);
     assert(open < clause.size());
     assert(rbegin_block < clause.rend());
-    assert(rend_block < rend(clause));
+    assert(rend_block < clause.rend());
 
     unsigned block_shrunken = 0, block_minimized = 0;
     if (open < 2) {
@@ -403,8 +403,8 @@ namespace CaDiCaL {
 
     LOG(clause, "shrink first UIP clause (asserting lit: %i)", clause[0]);
 
-    auto rend_lits = std::rend(clause)-1;
-    auto rend_block = std::rbegin(clause);
+    auto rend_lits = clause.rend() -1;
+    auto rend_block = clause.rbegin();
     const int uip0 = clause[0];
 
     while (rend_block != rend_lits) {
