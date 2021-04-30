@@ -281,7 +281,7 @@ fi
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
 if [ $pedantic = yes ]
 then
-  CXXFLAGS="$CXXFLAGS --pedantic -Werror"
+  CXXFLAGS="$CXXFLAGS --pedantic -Werror -std=c++14"
   case x"$CXX" in
     xg++*|xclang++*) CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
     ;;
@@ -318,33 +318,42 @@ fi
 
 #--------------------------------------------------------------------------#
 
-# Since C99/C++0x is becoming the standard newer versions of 'g++' (7.3 for
+# Since C99/C++11 is becoming the standard newer versions of 'g++' (7.3 for
 # instance) discourage certain GCC extensions, particularly the GCC version
 # of variadic macros, if the same concept exists in the standard.  This
 # forced us to replace all GCC style 'ARGS...' macros with '...' and
 # '__VA_ARGS__'.  Otherwise compiling the library with '--pedantic -Werror'
 # would fail (configuration flag '-p').  However, older versions of 'gcc'
 # (such as 4.8) would disallow these new forms of macros unless we
-# explicitly enforce the new standard with '-std=c++0x'.  Here we try to
-# figure out whether we need that flag.
+# explicitly enforce the new standard with '-std=c++11'.  Here we try to
+# figure out whether we need that flag.  In earlier versions we used
+# '-std=c++0x' but due to issues with older MacOS builds we switched to
+# '-std=c++11' instead and more recently, due to using reverse iterators
+# as well as 'std::rend' and 'std::rbegin', we even switched to 'C++14'.
 
-feature=./configure-requires-c++0x
+feature=./configure-requires-c++14
 cat <<EOF > $feature.cpp
 #include <cstdio>
 #include <vector>
 
 // old variadic macro usage 'ARGS...' / '#ARGS' discouraged in g++-7...
-// new variadic macro usage '...' / '__VA_ARGS__' available in C99/C++0x
+// new variadic macro usage '...' / '__VA_ARGS__' available in C99/C++11
 //
 #define MACRO(FMT, ...) printf (FMT "\n", __VA_ARGS__)
 
 // we use ranged for loops which became available in gcc 4.6 and for
-// the gcc 4.6 as well as 4.8 requires '-std=c++0x' too.
+// the gcc 4.6 as well as 4.8 requires '-std=c++11' too.
 //
 unsigned f (const std::vector<unsigned> & a) {
   unsigned res = 0;
   for (auto i : a) res += i;
   return res;
+}
+
+// we want to use reverse iterators too available since C++14
+//
+bool g (const std::vector<int> & a) {
+  return std::rbegin (a) == std::rend (a);
 }
 
 int main () { MACRO ("%d", 42); return 0; }
@@ -353,22 +362,22 @@ if $CXX $CXXFLAGS $WERROR -o $feature.exe $feature.cpp 2>>configure.log
 then
   if [ "`$feature.exe 2>>configure.log|tr -d '\r'`" = 42 ]
   then
-    msg "compiler supports all required C99/C++0x extensions"
+    msg "compiler supports all required C99/C++11 extensions"
   else
-    die "checking compilation without '-std=c++0x' failed"
+    die "checking compilation without '-std=c++11' failed"
   fi
 else
-  CXXFLAGS="$CXXFLAGS -std=c++0x"
+  CXXFLAGS="$CXXFLAGS -std=c++11"
   if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
   then
     if [ "`$feature.exe 2>>configure.log|tr -d '\r'`" = 42 ]
     then
-      msg "using '-std=c++0x' for all required C99/C++0x extensions"
+      msg "using '-std=c++11' for all required C99/C++11 extensions"
     else
-      die "checking compilation with '-std=c++0x' failed"
+      die "checking compilation with '-std=c++11' failed"
     fi
   else
-    die "compiler does not support C99/C++0x even with '-std=c++0x'"
+    die "compiler does not support C99/C++11 even with '-std=c++11'"
   fi
 fi
 
