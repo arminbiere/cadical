@@ -436,6 +436,7 @@ msg "generated '$build/makefile' from '../makefile.in'"
 
 build="`pwd`"
 makefile="`dirname "$build"`/makefile"
+symlink="$root/src/makefile"
 cat <<EOF > "$makefile"
 CADICALBUILD=$build
 all:
@@ -451,6 +452,7 @@ clean:
 	  rm -rf "\$(CADICALBUILD)"; \\
 	fi
 	rm -f "$makefile"
+	rm -f "$symlink"
 test:
 	\$(MAKE) -C "\$(CADICALBUILD)" test
 cadical:
@@ -461,6 +463,7 @@ update:
 	\$(MAKE) -C "\$(CADICALBUILD)" update
 .PHONY: all cadical clean mobical test update
 EOF
+ln -s "$makefile" "$symlink"
 
 msg "generated '../makefile' as proxy to ..."
 msg "... '$build/makefile'"
