@@ -1,0 +1,393 @@
+0 init
+1 set check 1
+2 set vivify 0
+3 set elimboundmin -1
+4 set elimclslim 5
+5 set lucky 0
+6 set elimsubst 0
+7 set probe 0
+8 set arena 0
+9 set arenacompact 0
+10 set arenasort 0
+11 set arenatype 1
+12 set binary 0
+13 set block 0
+14 set bump 0
+15 set bumpreason 0
+16 set bumpreasondepth 1
+17 set checkassumptions 0
+18 set checkfailed 0
+19 set checkproof 0
+20 set checkwitness 1
+21 set chrono 0
+22 set chronoalways 0
+23 set chronolevelim 0
+24 set chronoreusetrail 0
+25 set compact 0
+26 set compactint 1
+27 set compactlim 0
+28 set compactmin 1
+29 set condition 0
+30 set cover 0
+31 set decompose 0
+32 set decomposerounds 1
+33 set deduplicate 0
+34 set eagersubsume 0
+35 set eagersubsumelim 1
+36 set elim 1
+37 set elimands 0
+38 set elimaxeff 0
+39 set elimbackward 0
+40 set elimboundmax -1
+41 set elimequivs 0
+42 set elimineff 0
+43 set elimint 1
+44 set elimites 0
+45 set elimlimited 0
+46 set elimocclim 25
+47 set elimprod 1
+48 set elimreleff 1
+49 set elimrounds 1
+50 set elimsum 0
+51 set elimxorlim 2
+52 set elimxors 0
+53 set emagluefast 1
+54 set emaglueslow 1
+55 set emajump 1
+56 set emalevel 1
+57 set emasize 1
+58 set ematrailfast 1
+59 set ematrailslow 1
+60 set flush 0
+61 set forcephase 0
+62 set inprocessing 0
+63 set instantiate 0
+64 set minimize 0
+65 set minimizedepth 0
+66 set phase 1
+67 set profile 0
+68 set quiet 0
+69 set radixsortlim 0
+70 set realtime 0
+71 set reduceint 10
+72 set reducetarget 10
+73 set reducetier1glue 1
+74 set reducetier2glue 1
+75 set reluctant 0
+76 set reluctantmax 0
+77 set rephase 0
+78 set rephaseint 1
+79 set report 0
+80 set restart 0
+81 set restartint 1
+82 set restartmargin 0
+83 set restartreusetrail 0
+84 set restoreall 0
+85 set restoreflush 0
+86 set reverse 0
+87 set score 0
+88 set scorefactor 500
+89 set seed 0
+90 set shrink 0
+91 set shrinkreap 0
+92 set shuffle 0
+93 set stabilize 0
+94 set stabilizefactor 101
+95 set stabilizeint 1
+96 set stabilizemaxint 1
+97 set stabilizeonly 0
+98 set subsume 1
+99 set subsumebinlim 0
+100 set subsumeclslim 6
+101 set subsumeint 1
+102 set subsumelimited 0
+103 set subsumemaxeff 0
+104 set subsumemineff 0
+105 set subsumeocclim 3
+106 set subsumereleff 1
+107 set subsumestr 1
+108 set target 0
+109 set ternary 0
+110 set ternarymaxadd 0
+111 set ternarymaxeff 0
+112 set ternarymineff 1
+113 set ternaryocclim 1
+114 set ternaryreleff 1
+115 set ternaryrounds 1
+116 set transred 0
+117 set transredmaxeff 0
+118 set transredmineff 0
+119 set transredreleff 1
+120 set verbose 4
+120 set log 1
+121 set walk 0
+122 set walkmaxeff 0
+123 set walkmineff 0
+124 set walknonstable 0
+125 set walkredundant 0
+126 set walkreleff 1
+127 add -4
+128 add 1
+129 add 0
+130 add 5
+131 add -3
+132 add 0
+133 add 1
+134 add 3
+135 add 7
+136 add 0
+137 add -6
+138 add 4
+139 add 8
+140 add -7
+141 add -1
+142 add 0
+143 add 3
+144 add 4
+145 add 0
+146 add 3
+147 add -5
+148 add 6
+149 add 0
+150 add 2
+151 add -3
+152 add 1
+153 add 0
+154 add -4
+155 add -5
+156 add 0
+157 add 5
+158 add 2
+159 add 0
+160 add 6
+161 add 2
+162 add 4
+163 add 0
+164 solve 0
+165 add 12
+166 add 11
+167 add 7
+168 add 1
+169 add 0
+170 add -10
+171 add -7
+172 add -11
+173 add 0
+174 add 12
+175 add -11
+176 add 7
+177 add 9
+178 add -8
+179 add 0
+180 add 7
+181 add 8
+182 add -12
+183 add -11
+184 add 0
+185 add 11
+186 add 12
+187 add 1
+188 add -9
+189 add 8
+190 add 0
+191 add 8
+192 add -11
+193 add 7
+194 add 10
+195 add 0
+196 add 7
+197 add -12
+198 add -11
+199 add 10
+200 add -8
+201 add 0
+202 add -10
+203 add -8
+204 add 11
+205 add 7
+206 add -9
+207 add 0
+208 add 9
+209 add -12
+210 add -10
+211 add 7
+212 add -8
+213 add 0
+214 add 11
+215 add 7
+216 add -12
+217 add 10
+218 add -8
+219 add 0
+220 add 9
+221 add 7
+222 add 8
+223 add 11
+224 add -10
+225 add 0
+226 add 10
+227 add 11
+228 add -12
+229 add -8
+230 add -7
+231 add 0
+232 add 9
+233 add -8
+234 add 11
+235 add -7
+236 add 0
+237 add -9
+238 add 12
+239 add 8
+240 add 11
+241 add 7
+242 add 0
+243 add 10
+244 add 12
+245 add -9
+246 add 11
+247 add -8
+248 add 0
+249 add -8
+250 add -10
+251 add -9
+252 add -7
+253 add -12
+254 add 0
+255 add 11
+256 add 12
+257 add -10
+258 add -9
+259 add -7
+260 add 0
+261 add 12
+262 add 8
+263 add 9
+264 add 7
+265 add 10
+266 add 0
+267 add -12
+268 add 9
+269 add -10
+270 add 7
+271 add -11
+272 add 0
+273 add 11
+274 add 9
+275 add 10
+276 add -8
+277 add 0
+278 add -12
+279 add -9
+280 add -10
+281 add 8
+282 add 0
+283 add -8
+284 add -10
+285 add -11
+286 add 7
+287 add 9
+288 add 0
+289 add -10
+290 add 9
+291 add 11
+292 add 8
+293 add -12
+294 add 0
+295 add -8
+296 add -7
+297 add 2
+298 add 0
+299 add -8
+300 add 12
+301 add -10
+302 add -9
+303 add 0
+304 add 10
+305 add -8
+306 add 7
+307 add 12
+308 add -9
+309 add 0
+310 add 12
+311 add -9
+312 add 8
+313 add -7
+314 add 10
+315 add 0
+316 add -11
+317 add -8
+318 add 10
+319 add -12
+320 add 9
+321 add 0
+322 add -11
+323 add -7
+324 add 9
+325 add 8
+326 add 0
+327 add 1
+328 add -8
+329 add 9
+330 add 12
+331 add 10
+332 add 0
+333 add 8
+334 add -7
+335 add -12
+336 add 10
+337 add 0
+338 add 12
+339 add 7
+340 add 1
+341 add 8
+342 add 0
+343 add -9
+344 add 7
+345 add -12
+346 add -11
+347 add 0
+348 add -10
+349 add -8
+350 add 9
+351 add 11
+352 add 12
+353 add 0
+354 add -7
+355 add -9
+356 add 10
+357 add -8
+358 add 0
+359 add -11
+360 add 12
+361 add -8
+362 add 10
+363 add 0
+364 add -10
+365 add -11
+366 add 8
+367 add -12
+368 add 0
+369 add 10
+370 add 7
+371 add -9
+372 add -12
+373 add 0
+374 add -10
+375 add 12
+376 add 9
+377 add -7
+378 add 0
+379 add 8
+380 add 11
+381 add 7
+382 add 10
+383 add -12
+384 add 0
+385 add -11
+386 add 7
+387 add 8
+388 add -1
+389 add 0
+390 limit preprocessing 1
+391 solve 0

@@ -732,22 +732,9 @@ void Internal::analyze () {
   //
   if (size > 1) {
     if (opts.shrink)
-      {
       shrink_and_minimize_clause();
-#if 0 // Useful to test if shrinking does fully minimize
-      minimize_sort_clause();
-#endif
-      } else
-      if (!opts.minimize)
-        minimize_clause();
-#if 0
-    else {
-      const int old_size = clause.size();
-      if (opts.minimize)
-        minimize_clause();
-      assert(!opts.shrink || old_size == clause.size());
-    }
-#endif
+    else if (opts.minimize)
+      minimize_clause();
 
     size = (int) clause.size ();
 

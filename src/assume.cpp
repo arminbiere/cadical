@@ -20,8 +20,7 @@ void Internal::assume (int lit) {
 
 // Find all failing assumptions starting from the one on the assumption
 // stack with the lowest decision level.  This goes back to MiniSAT and is
-// called 'analyze_final' there.  We always return '20' to simplify the code
-// in the main search loop in 'Internal::search', which also terminates it.
+// called 'analyze_final' there.
 
 void Internal::failing () {
 
@@ -44,6 +43,9 @@ void Internal::failing () {
 
   if (first) {
 
+    // TODO: if 'first' is on the root-level, then, as below, we probably
+    // want an empty core.
+
     clause.push_back (first);
     clause.push_back (-first);
 
@@ -65,11 +67,15 @@ void Internal::failing () {
       if (!first || var (first).level > var (lit).level)
         first = lit;
     }
+
     assert (first);
     LOG ("starting with assumption %d falsified on decision level %d",
       first, var (first).level);
 
     if (!var (first).level) {
+
+      // TODO: I think marking this should yield an empty core
+      // and not mark 'first' as failed (similarly above).
 
       LOG ("failed assumption %d", first);
       clause.push_back (-first);

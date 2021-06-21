@@ -627,21 +627,23 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     // As long the (remaining) literals of the sorted clause match
     // decisions on the trail we just reuse them.
     //
-    int l = 1;        // This is the decision level we want to reuse.
+    if (level) {
 
-    for (const auto & lit : sorted) {
-      if (!level) break;
-      if (fixed (lit)) continue;
-      const int decision = control[l].decision;
-      if (-lit == decision) {
-        LOG ("reusing decision %d at decision level %d", decision, l);
-        stats.vivifyreused++;
-        if (++l > level) break;
-      } else {
-        LOG ("literal %d does not match decision %d at decision level %d",
-          lit, decision, l);
-        backtrack (l-1);
-        break;
+      int l = 1;        // This is the decision level we want to reuse.
+
+      for (const auto & lit : sorted) {
+	if (fixed (lit)) continue;
+	const int decision = control[l].decision;
+	if (-lit == decision) {
+	  LOG ("reusing decision %d at decision level %d", decision, l);
+	  stats.vivifyreused++;
+	  if (++l > level) break;
+	} else {
+	  LOG ("literal %d does not match decision %d at decision level %d",
+	    lit, decision, l);
+	  backtrack (l-1);
+	  break;
+	}
       }
     }
 

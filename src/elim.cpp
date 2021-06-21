@@ -212,10 +212,26 @@ void Internal::elim_on_the_fly_self_subsumption (Eliminator & eliminator,
 // resolvent is not redundant and for instance has to be taken into account
 // during bounded variable elimination.
 
-// Detected units are immediately assigned but not propagated yet.
+// Detected units are immediately assigned and in case the last argument is
+// true also propagated eagerly in a elimination specific propagation
+// routine, which not only finds units but also updates the schedule.
+
+// When this function is called during computation of the number of
+// non-trivial (or non-satisfied) resolvents we can eagerly propagate units.
+// But during actually adding the resolvents this results in problems as we
+// found one rare test case '../test/trace/reg0056.trace' (out of billions),
+// where the pivot itself was assigned during such a propagation while
+// adding resolvents and lead to pushing a clause to the reconstruction
+// stack that later flipped the value of the pivot (while all other literals
+// in that clause were unit implied too).  Not pushing the pivot clauses to
+// the reconstruction stack produced a wrong model too.  Our fix is to only
+// eagerly propagate during computation of the number of resolvents and
+// otherwise delay propagation until the end of elimination (which is less
+// precise regarding scheduling but very rarely happens).
 
 bool Internal::resolve_clauses (Eliminator & eliminator,
-                                Clause * c, int pivot, Clause * d) {
+                                Clause * c, int pivot, Clause * d,
+				const bool propagate_eagerly) {
 
   assert (!c->redundant);
   assert (!d->redundant);
@@ -301,7 +317,8 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     LOG ("unit resolvent %d", unit);
     clause.clear ();
     assign_unit (unit);
-    elim_propagate (eliminator, unit);
+    if (propagate_eagerly)
+      elim_propagate (eliminator, unit);
     return false;
   }
 
@@ -393,7 +410,7 @@ Internal::elim_resolvents_are_bounded (Eliminator & eliminator, int pivot)
       if (d->garbage) continue;
       if (substitute && c->gate == d->gate) continue;
       stats.elimrestried++;
-      if (resolve_clauses (eliminator, c, pivot, d)) {
+      if (resolve_clauses (eliminator, c, pivot, d, true)) {
         resolvents++;
         int size = clause.size ();
         clause.clear ();
@@ -451,7 +468,7 @@ Internal::elim_add_resolvents (Eliminator & eliminator, int pivot) {
       if (unsat) break;
       if (d->garbage) continue;
       if (substitute && c->gate == d->gate) continue;
-      if (!resolve_clauses (eliminator, c, pivot, d)) continue;
+      if (!resolve_clauses (eliminator, c, pivot, d, false)) continue;
       Clause * r = new_resolved_irredundant_clause ();
       elim_update_added_clause (eliminator, r);
       eliminator.enqueue (r);

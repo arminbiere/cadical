@@ -2,6 +2,7 @@
 #define _reap_h_INCLUDED
 
 #include <vector>
+#include <cstddef>
 
 class Reap {
 public:

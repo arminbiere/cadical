@@ -81,16 +81,15 @@ void Internal::minimize_clause () {
   STOP (minimize);
 }
 
-void Internal::minimize_sort_clause ()
-{
-
-  // Sort the literals in reverse assignment order (thus trail order) to
-  // establish the base case of the recursive minimization algorithm
-  // in the positive case (where a literal with 'keep' true is hit).
-  //
+// Sort the literals in reverse assignment order (thus trail order) to
+// establish the base case of the recursive minimization algorithm in the
+// positive case (where a literal with 'keep' true is hit).
+//
+void Internal::minimize_sort_clause () {
   MSORT(opts.radixsortlim, clause.begin(), clause.end(),
         minimize_trail_positive_rank(this), minimize_trail_smaller(this));
 }
+
 void Internal::clear_minimized_literals () {
   LOG ("clearing %zd minimized literals", minimized.size ());
   for (const auto & lit : minimized) {

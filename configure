@@ -237,6 +237,17 @@ msg "root directory '$root'"
 
 #--------------------------------------------------------------------------#
 
+src="$root/src"
+
+if [ -d "$src" ]
+then
+  msg "source directory '$src'"
+else
+  die "could not find source director '$src'"
+fi
+
+#--------------------------------------------------------------------------#
+
 # Prepare '@CXX@' and '@CXXFLAGS@' parameters for 'makefile.in'
 
 [ x"$CXX" = x ] && CXX=g++
@@ -252,7 +263,7 @@ then
   CXXFLAGS="$CXXFLAGS -g"
 else
   case x"$CXX" in
-    xg++*|xclang++*) CXXFLAGS="$CXXFLAGS -O3";;
+    x*g++*|x*clang++*) CXXFLAGS="$CXXFLAGS -O3";;
     *) CXXFLAGS="$CXXFLAGS -O";;
   esac
 fi
@@ -260,7 +271,7 @@ fi
 if [ $m32 = yes ]
 then
   case x"$CXX" in
-    xg++*)
+    x*g++*)
       options="$options -mpc64"
       msg "forcing portable 64-bit FPU mode ('-mpc64') for '$CXX'"
       ;;
@@ -283,7 +294,7 @@ if [ $pedantic = yes ]
 then
   CXXFLAGS="$CXXFLAGS --pedantic -Werror -std=c++11"
   case x"$CXX" in
-    xg++*|xclang++*) CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
+    x*g++*|x*clang++*) CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
     ;;
   esac
 fi
@@ -295,7 +306,7 @@ CXXFLAGS="$CXXFLAGS$options"
 #--------------------------------------------------------------------------#
 
 case x"$CXX" in
-  xg++* | xclang++*) WERROR="-Werror -pedantic";;
+  x*g++* | x*clang++*) WERROR="-Werror -pedantic";;
   *) WERROR="";;
 esac
 
@@ -450,6 +461,7 @@ clean:
 	  fi; \\
 	  rm -rf "\$(CADICALBUILD)"; \\
 	fi
+	rm -f "$src/makefile"
 	rm -f "$makefile"
 test:
 	\$(MAKE) -C "\$(CADICALBUILD)" test
@@ -464,5 +476,19 @@ EOF
 
 msg "generated '../makefile' as proxy to ..."
 msg "... '$build/makefile'"
+
+#--------------------------------------------------------------------------#
+
+if [ -f $src/makefile ]
+then
+  msg "removing '$src/makefile'"
+  rm -f $src/makefile
+fi
+
+msg "linking '$root/makefile'"
+ln -s $root/makefile $src/makefile
+
+#--------------------------------------------------------------------------#
+
 msg "now run ${HILITE}'make'${NORMAL} to compile CaDiCaL"
 msg "optionally run 'make test'"

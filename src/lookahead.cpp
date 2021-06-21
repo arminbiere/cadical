@@ -18,7 +18,10 @@ struct literal_occ {
 };
 
 std::vector<int> Internal::lookahead_populate_locc() {
-  std::vector<literal_occ> loccs(max_var+1);
+  std::vector<literal_occ> loccs((std::size_t)max_var+1);
+  for (std::size_t lit = 0; lit < loccs.size(); ++lit) {
+    loccs[lit].lit = lit;
+  }
   for (const auto &c : clauses)
     if (!c->redundant)
       for (const auto &lit : *c)
