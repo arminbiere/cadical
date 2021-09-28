@@ -55,7 +55,7 @@ int Internal::decide_phase (int idx, bool target) {
   if (!phase && target) phase = phases.target[idx];
   if (!phase) phase = phases.saved[idx];
 
-  // The following should no be necessary and in some version we had even
+  // The following should not be necessary and in some version we had even
   // a hard 'COVER' assertion here to check for this.   Unfortunately it
   // triggered for some users and we could not get to the root cause of
   // 'phase' still not being set here.  The logic for phase and target
@@ -79,7 +79,7 @@ int Internal::likely_phase (int idx) { return decide_phase (idx, false); }
 bool Internal::satisfied () {
   size_t assigned = trail.size ();
   if (propagated < assigned) return false;
-  if ((size_t) level < assumptions.size ()) return false;
+  if ((size_t) level < assumptions.size () + (!!constraint.size ())) return false;
   return (assigned == (size_t) max_var);
 }
 
@@ -96,7 +96,6 @@ int Internal::decide () {
     const signed char tmp = val (lit);
     if (tmp < 0) {
       LOG ("assumption %d falsified", lit);
-      failing ();
       res = 20;
     } else if (tmp > 0) {
       LOG ("assumption %d already satisfied", lit);
@@ -107,6 +106,33 @@ int Internal::decide () {
       LOG ("deciding assumption %d", lit);
       search_assume_decision (lit);
     }
+  } else if ((size_t) level == assumptions.size () && constraint.size ()) {
+    bool satisfied_constraint = false;
+    int unassigned_lit = 0;
+    for (const auto lit : constraint) {
+      const signed char tmp = val (lit);
+      if (tmp < 0) {
+        LOG ("constraint lit %d falsified", lit);
+      } else if (tmp > 0) {
+        LOG ("literal %d satisfies constraint and is implied by assumptions", lit);
+        level++;
+        control.push_back (Level (0, trail.size ()));
+        LOG ("added pseudo decision level for constraint");
+        satisfied_constraint = true;
+        break;
+      } else if (!unassigned_lit)
+        unassigned_lit = lit;
+    }
+    if (!satisfied_constraint) {
+      if (unassigned_lit) {
+        LOG ("deciding %d to satisfy constraint", unassigned_lit);
+        search_assume_decision (unassigned_lit);
+      } else {
+        LOG ("failing constraint");
+        unsat_constraint = true;
+        res = 20;
+      }
+    }
   } else {
     stats.decisions++;
     int idx = next_decision_variable ();
@@ -114,6 +140,7 @@ int Internal::decide () {
     int decision = decide_phase (idx, target);
     search_assume_decision (decision);
   }
+  if (res) marked_failed = false;
   STOP (decide);
   return res;
 }

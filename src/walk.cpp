@@ -334,7 +334,7 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
 
     LOG ("trying to brake %zd watched clauses", ws.size ());
 
-    for (const auto w : ws) {
+    for (const auto & w : ws) {
       Clause * d = w.clause;
       LOG (d, "unwatch %d in", -lit);
       int * literals = d->literals, replacement = 0, prev = -lit;

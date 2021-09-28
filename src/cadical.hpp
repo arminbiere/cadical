@@ -133,13 +133,13 @@ namespace CaDiCaL {
 //               terminate (asynchronously)
 //      SOLVING  ------------------------->  UNKNOWN
 //
-// The important behaviour to remember is that adding or assuming a literal
-// (immediately) destroys the satisfying assignment in the 'SATISFIED' state
-// and vice versa resets all assumptions in the 'UNSATISFIED' state.  This
+// The important behaviour to remember is that adding, assuming or constraining
+// a literal (immediately) destroys the satisfying assignment in the 'SATISFIED'
+// state and vice versa resets all assumptions in the 'UNSATISFIED' state. This
 // is exactly the behaviour required by the IPASIR interface.
 //
 // Furthermore, the model can only be queried through 'val' in the
-// 'SATISFIED' state, while extracting failed assumptions with 'val' only in
+// 'SATISFIED' state, while extracting failed assumptions with 'failed' only in
 // the 'UNSATISFIED' state.  Solving can only be started in the 'UNKNOWN' or
 // 'CONFIGURING' state or after the previous call to 'solve' yielded an
 // 'UNKNOWN, 'SATISFIED' or 'UNSATISFIED' state.
@@ -287,6 +287,30 @@ public:
   // ====== END IPASIR =====================================================
 
   //------------------------------------------------------------------------
+  // Adds a literal to the constraint clause. Same functionality as 'add' but
+  // the clause only exists for the next call to solve (same lifetime as
+  // assumptions). Only one constraint may exists at a time. A new constraint
+  // replaces the old.
+  // The main application of this functonality is the model checking algorithm
+  // IC3. See our FMCAD'21 paper [FroleyksBiere-FMCAD'19] for more details.
+  //
+  // Add valid literal to the constraint clause or zero to terminate it.
+  //
+  //   require (VALID)                     // recall 'VALID = READY | ADDING'
+  //   if (lit) ensure (ADDING)            // and thus VALID but not READY
+  //   if (!lit) && !adding_clause ensure (UNKNOWN) // and thus READY
+  //
+  void constrain (int lit);
+
+  // Determine whether the constraint was used to proof the unsatisfiability.
+  // Note that the formula might still be unsatisfiable without the constraint.
+  //
+  //   require (UNSATISFIED)
+  //   ensure (UNSATISFIED)
+  //
+  bool constraint_failed ();
+
+  //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be
   // zero if the formula is proven to be satisfiable or unsatisfiable.  This
   // can then be checked by 'state ()'.  If the formula is empty and
@@ -305,7 +329,8 @@ public:
 
   CubesWithStatus generate_cubes(int, int min_depth = 0);
 
-  void reset_assumptions();
+  void reset_assumptions ();
+  void reset_constraint ();
 
   // Return the current state of the solver as defined above.
   //
@@ -683,6 +708,11 @@ public:
 private:
 
   //==== start of state ====================================================
+
+  // The solver is in the state ADDING if either the current clause or the
+  // constraint (or both) is not yet terminated.
+  bool adding_clause;
+  bool adding_constraint;
 
   State _state;            // API states as discussed above.
 

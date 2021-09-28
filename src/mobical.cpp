@@ -452,11 +452,13 @@ struct Call {
 
     RESET       = (1<<24),
 
+    CONSTRAIN    = (1<<25),
+
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN | MELT |
              LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED,
 
     CONFIG = INIT | SET | CONFIGURE | ALWAYS,
-    BEFORE = ADD | ASSUME | ALWAYS,
+    BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING,
     AFTER = VAL | FAILED | ALWAYS,
   };
@@ -600,6 +602,14 @@ struct AddCall : public Call {
   void print (ostream & o) { o << "add " << arg << endl; }
   Call * copy () { return new AddCall (arg); }
   const char * keyword () { return "add"; }
+};
+
+struct ConstrainCall : public Call {
+  ConstrainCall (int l) : Call (CONSTRAIN, l) { }
+  void execute (Solver * & s) { s->constrain (arg); }
+  void print (ostream & o) { o << "constrain " << arg << endl; }
+  Call * copy () { return new ConstrainCall (arg); }
+  const char * keyword () { return "constrain"; }
 };
 
 struct AssumeCall : public Call {
@@ -881,6 +891,7 @@ private:
   void generate_queries (Random &);
   void generate_reserve (Random &, int vars);
   void generate_clause (Random &, int minvars, int maxvars, int uniform);
+  void generate_constraint (Random &, int minvars, int maxvars, int uniform);
   void generate_assume (Random &, int vars);
   void generate_process (Random &);
   void generate_values (Random &, int vars);
@@ -1183,6 +1194,21 @@ void Trace::generate_clause (Random & random,
   push_back (new AddCall (0));
 }
 
+void Trace::generate_constraint (Random & random,
+                             int minvars, int maxvars,
+                             int uniform) {
+  assert (minvars <= maxvars);
+  int maxsize = maxvars - minvars + 1;
+  int size = uniform ? uniform : pick_size (random, maxsize);
+  vector<int> clause;
+  for (int i = 0; i < size; i++) {
+    int lit = pick_literal (random, minvars, maxvars, clause);
+    push_back (new ConstrainCall (lit));
+    clause.push_back (lit);
+  }
+  push_back (new ConstrainCall (0));
+}
+
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_assume (Random & random, int vars) {
@@ -1376,6 +1402,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
       generate_reserve (random, maxvars),
       generate_clause (random, minvars, maxvars, uniform);
 
+    generate_constraint (random, minvars, maxvars, uniform);
     generate_assume (random, maxvars);
     generate_melt (random);
     generate_freeze (random, maxvars);
@@ -1996,6 +2023,7 @@ bool Trace::reduce_values (int expected) {
 static bool has_lit_arg_type (Call * c) {
   switch (c->type) {
     case Call::ADD:
+    case Call::CONSTRAIN:
     case Call::ASSUME:
     case Call::FREEZE:
     case Call::MELT:
@@ -2023,8 +2051,8 @@ void Trace::map_variables (int expected) {
       if (!c->arg) continue;
       if (c->arg == INT_MIN) continue;
       int idx = abs (c->arg);
-      while (variables.size () <= (size_t) idx)
-        variables.push_back (0);
+      if (variables.size () <= (size_t) idx)
+        variables.resize (1 + (size_t) idx, 0);
       variables[idx]++;
     }
     int gaps = 0, max_idx = 0;
@@ -2164,7 +2192,7 @@ static bool is_valid_char (int ch) {
 }
 
 void Reader::parse () {
-  int ch, lit = 0, val = 0, state = 0, adding = 0, solved = 0;
+  int ch, lit = 0, val = 0, state = 0, adding = 0, constraining = 0, solved = 0;
   const bool enforce = !mobical.donot.enforce;
   Call * before_trigger = 0;
   char line[80];
@@ -2284,6 +2312,15 @@ void Reader::parse () {
         error ("invalid literal '%d' as argument to 'add'", lit);
       adding = lit;
       c = new AddCall (lit);
+    } else if (!strcmp (keyword, "constrain")) {
+      if (!first) error ("argument to 'constrain' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'constrain'", first);
+      if (second) error ("additional argument '%s' to 'constrain'", second);
+      if (enforce && lit == INT_MIN)
+        error ("invalid literal '%d' as argument to 'constrain'", lit);
+      constraining = lit;
+      c = new ConstrainCall (lit);
     } else if (!strcmp (keyword, "assume")) {
       if (!first) error ("argument to 'assume' missing");
       if (!parse_int_str (first, lit))
@@ -2427,6 +2464,9 @@ void Reader::parse () {
 
     if (adding && c->type != Call::ADD && c->type != Call::RESET)
       error("'%s' after 'add %d' without 'add 0'", c->keyword(), adding);
+
+    if (constraining && c->type != Call::CONSTRAIN && c->type != Call::RESET)
+      error("'%s' after 'constrain %d' without 'constrain 0'", c->keyword(), constraining);
 
     int new_state = state;
 

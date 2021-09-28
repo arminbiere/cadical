@@ -105,8 +105,8 @@ void External::extend () {
   for (unsigned i = 1; i <= (unsigned) max_var; i++) {
     const int ilit = e2i[i];
     if (!ilit) continue;
-    while (i >= vals.size ())
-      vals.push_back (false);
+    if (i >= vals.size ())
+      vals.resize (i + 1, false);
     vals[i] = (internal->val (ilit) > 0);
     updated++;
   }
@@ -138,9 +138,9 @@ void External::extend () {
           LOG ("flipping blocking literal %d", lit);
           assert (lit);
           assert (lit != INT_MIN);
-          int idx = abs (lit);
-          while ((size_t) idx >= vals.size ())
-            vals.push_back (false);
+          size_t idx = abs (lit);
+	  if (idx >= vals.size ())
+	    vals.resize (idx + 1, false);
           vals[idx] = !vals[idx];
           internal->stats.extended++;
           flipped++;

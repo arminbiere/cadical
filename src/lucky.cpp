@@ -277,8 +277,8 @@ int Internal::lucky_phases () {
 
   // TODO: Some of the lucky assignments can also be found if there are
   // assumptions, but this is not completely implemented nor tested yet.
-  //
-  if (!assumptions.empty ()) return 0;
+  // Nothing done for constraint either.
+  if (!assumptions.empty () || !constraint.empty ()) return 0;
 
   START (search);
   START (lucky);

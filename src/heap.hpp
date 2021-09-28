@@ -28,7 +28,8 @@ template<class C> class heap {
   // Map an element to its position entry in the 'pos' map.
   //
   unsigned & index (unsigned e) {
-    while ((size_t) e >= pos.size ()) pos.push_back (invalid_heap_position);
+    if (e >= pos.size ())
+      pos.resize (1 + (size_t) e, invalid_heap_position);
     unsigned & res = pos[e];
     assert (res == invalid_heap_position || (size_t) res < array.size ());
     return res;

@@ -21,9 +21,9 @@ namespace CaDiCaL {
 //
 // This old method is better than the initializations described in our
 // [BiereFroehlich-POS'15] paper and actually faster than the ADAM method,
-// but less precise.  This old method, which we consider obsolete but it
-// could still be useful for implementations relying on integers instead of
-// floating points thus only needs shifts and integer arithmetic.
+// but less precise.  We consider this old method obsolete now but it
+// could still be useful for implementations relying on integers instead
+// of floating points because it only needs shifts and integer arithmetic.
 //
 // Our new method for unbiased initialization of the exponential averages
 // works as follows.  First the biased moving average is computed as usual.

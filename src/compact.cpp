@@ -187,6 +187,13 @@ void Internal::compact () {
     reset_assumptions ();
   }
 
+  const bool is_constraint = !constraint.empty ();
+  if (is_constraint) {
+    assert (!external->constraint.empty ());
+    LOG ("temporarily reset internal constraint");
+    reset_constraint ();
+  }
+
   /*======================================================================*/
   // In this first part we only map stuff without reallocation / shrinking.
   /*======================================================================*/
@@ -321,6 +328,25 @@ void Internal::compact () {
     vals = new_vals;
   }
 
+  // 'constrain' uses 'val', so this code has to be after remapping that
+  if (is_constraint) {
+    assert (!level);
+    assert (!external->constraint.back ());
+    for (auto elit : external->constraint){
+      assert (elit != INT_MIN);
+      int eidx = abs (elit);
+      assert (eidx <= external->max_var);
+      int ilit = external->e2i[eidx];
+      assert (!ilit == !elit);
+      if (elit < 0)
+        ilit = -ilit;
+      LOG ("re adding lit extrenal %d internal %d to constraint", elit, ilit);
+      constrain (ilit);
+    }
+    PHASE ("compact", stats.compacts, "added %zd external literals to constraint",
+           external->constraint.size () -  1);
+  }
+
   mapper.map_vector (i2e);
   mapper.map2_vector (ptab);
   mapper.map_vector (btab);
@@ -357,7 +383,7 @@ void Internal::compact () {
   }
   mapper.map_vector (stab);
   if (!saved.empty ()) {
-    for (const auto & idx : saved)
+    for (const auto idx : saved)
       scores.push_back (idx);
     scores.shrink ();
   }

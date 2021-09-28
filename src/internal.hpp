@@ -182,6 +182,9 @@ struct Internal {
   vector<int> trail;            // currently assigned literals
   vector<int> clause;           // simplified in parsing & learning
   vector<int> assumptions;      // assumed literals
+  vector<int> constraint;       // literals of the constraint
+  bool unsat_constraint;        // constraint used for unsatisfiability?
+  bool marked_failed;           // are the failed assumptions marked?
   vector<int> original;         // original added literals
   vector<int> levels;           // decision levels in learned clause
   vector<int> analyzed;         // analyzed literals in 'analyze'
@@ -915,24 +918,26 @@ struct Internal {
     bool decompose_round();
     void decompose();
 
+    void reset_limits();      // Reset after 'solve' call.
+
     // Assumption handling.
     //
     void assume(int);         // New assumption literal.
+    bool failed(int lit);     // Literal failed assumption?
     void reset_assumptions(); // Reset after 'solve' call.
-    void reset_limits();      // Reset after 'solve' call.
     void failing();           // Prepare failed assumptions.
 
-    bool failed(int lit) { // Literal failed assumption?
-      Flags &f = flags(lit);
-      const unsigned bit = bign(lit);
-      return (f.failed & bit) != 0;
-    }
-
-    bool assumed(int lit) { // Marked as assumption.
+    bool assumed(int lit) {   // Marked as assumption.
       Flags &f = flags(lit);
       const unsigned bit = bign(lit);
       return (f.assumed & bit) != 0;
     }
+
+    // Add temporary clause as constraint.
+    //
+    void constrain(int);      // Add literal to constraint.
+    bool failed_constraint(); // Was constraint used to proof unsatisfiablity?
+    void reset_constraint();  // Reset after 'solve' call.
 
     // Forcing decision variables to a certain phase.
     //

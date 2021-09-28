@@ -79,6 +79,14 @@ void ccadical_release (CCaDiCaL * wrapper) {
   delete (Wrapper*) wrapper;
 }
 
+void ccadical_constrain (CCaDiCaL *wrapper, int lit){
+  ((Wrapper*) wrapper)->solver->constrain (lit);
+}
+
+int ccadical_constraint_failed (CCaDiCaL * wrapper) {
+  return ((Wrapper*) wrapper)->solver->constraint_failed ();
+}
+
 void ccadical_set_option (CCaDiCaL * wrapper,
                           const char * name, int val) {
   ((Wrapper*) wrapper)->solver->set (name, val);

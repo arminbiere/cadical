@@ -4,8 +4,8 @@ namespace CaDiCaL {
 
 void Internal::init_watches () {
   assert (wtab.empty ());
-  while (wtab.size () < 2*vsize)
-    wtab.push_back (Watches ());
+  if (wtab.size () < 2*vsize)
+    wtab.resize (2*vsize, Watches ());
   LOG ("initialized watcher tables");
 }
 
@@ -88,10 +88,8 @@ void Internal::sort_watches () {
       if (w.binary ()) *j++ = w;
       else saved.push_back (w);
     }
-    ws.resize (j - ws.begin ());
 
-    for (const auto & w : saved)
-      ws.push_back (w);
+    std::copy (saved.cbegin (), saved.cend (), j);
 
     saved.clear ();
   }

@@ -1,0 +1,54 @@
+0 init
+1 set elimequivs 0
+2 set elimint 1
+3 set elimprod 0
+4 set elimsum 0
+5 set vivifymineff 0
+6 set elimboundmin -1
+7 set lucky 0
+8 add -2
+9 add -7
+10 add 0
+11 add -8
+12 add 1
+13 add 0
+14 add -4
+15 add -5
+16 add 0
+17 add 8
+18 add 1
+19 add 4
+20 add 0
+21 add 3
+22 add 6
+23 add 0
+24 add -3
+25 add -9
+26 add 0
+27 add 1
+28 add 3
+29 add 9
+30 add 0
+31 add 8
+32 add 1
+33 add 0
+34 add 5
+35 add -4
+36 add 0
+37 add 2
+38 add -3
+39 add 1
+40 add 0
+41 add 4
+42 add 3
+43 add -9
+44 add 0
+45 add -3
+46 add 6
+47 add 0
+48 add 7
+49 add 9
+50 add 0
+51 assume -6
+52 solve 0
+53 solve 0

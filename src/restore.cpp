@@ -77,7 +77,7 @@ void External::restore_clauses () {
       "forced to restore all clauses");
 
   unsigned numtainted = 0;
-  for (const auto & b : tainted)
+  for (const auto b : tainted)
     if (b) numtainted++;
 
   PHASE ("restore", internal->stats.restorations,
