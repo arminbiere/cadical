@@ -1,10 +1,12 @@
+Version 1.5.1
+-------------
+
+- fixed copyright and added two regression traces
+
 Version 1.5.0
 -------------
 
-- added constrain interface to optimize use with IC3
-
-Version 1.4.2
--------------
+- added 'constrain' API call described in our FMCAD'21 paper
 
 - replaced "`while () push_back ()`" with "`if () resize ()`" idiom
   (thanks go to Alexander Smal for pointing this out)

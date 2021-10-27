@@ -1,6 +1,7 @@
 /*------------------------------------------------------------------------*/
-/* Copyright (C) 2018-2021, Armin Biere, Johannes Kepler University Linz  */
-/* Copyright (C) 2020, Mathias Fleury, Johannes Kepler University Linz    */
+/* Copyright (C) 2018-2021 Armin Biere, Johannes Kepler University Linz   */
+/* Copyright (C) 2020 Mathias Fleury, Johannes Kepler University Linz     */
+/* Copyright (c) 2020-2021 Nils Froleyks, Johannes Kepler University Linz */
 /*------------------------------------------------------------------------*/
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
