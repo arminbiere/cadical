@@ -98,8 +98,8 @@ For instance in order to use `wine` to execute the binaries
 on Linux you might want to look into the `binfmt_misc` module and
 as root register the appropriate interpreter for `DOSWin`.
 
-  cd /proc/sys/fs/binfmt_misc
-  echo ':DOSWin:M::MZ::/usr/local/bin/wine:' > register
+    cd /proc/sys/fs/binfmt_misc
+    echo ':DOSWin:M::MZ::/usr/local/bin/wine:' > register
 
 The simply tell the `configure` script to use the cross-compiler.
 
