@@ -42,9 +42,10 @@ SIGNAL(SIGTERM) \
 static void (*SIG ## _handler)(int);
 SIGNALS
 #undef SIGNAL
-static void (*SIGALRM_handler)(int);
 
 #ifndef __WIN32
+
+static void (*SIGALRM_handler)(int);
 
 void Signal::reset_alarm () {
   if (!alarm_set) return;

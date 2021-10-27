@@ -797,12 +797,27 @@ private:
   //
   const char * read_solution (const char * path);
 
+  // Cross-compilation with 'MinGW' needs some work-around for 'printf'
+  // style printing of 64-bit numbers including warning messages.  The
+  // followings lines are copies of similar code in 'inttypes.hpp' but we
+  // want to keep the 'cadical.hpp' header file stand-alone.
+
+# ifndef PRINTF_FORMAT
+#   ifdef __MINGW32__
+#     define __USE_MINGW_ANSI_STDIO 1
+#     define PRINTF_FORMAT __MINGW_PRINTF_FORMAT
+#   else
+#     define PRINTF_FORMAT printf
+#   endif
+# endif
+
   // This gives warning messages for wrong 'printf' style format string usage.
   // Apparently (on 'gcc 9' at least) the first argument is 'this' here.
-  // TODO: support for other compilers (beside 'gcc' and 'clang').
   //
+  // TODO: support for other compilers (beside 'gcc' and 'clang').
+
 # define CADICAL_ATTRIBUTE_FORMAT(FORMAT_POSITION,VARIADIC_ARGUMENT_POSITION) \
-    __attribute__ ((format (printf, FORMAT_POSITION, VARIADIC_ARGUMENT_POSITION)))
+    __attribute__ ((format (PRINTF_FORMAT, FORMAT_POSITION, VARIADIC_ARGUMENT_POSITION)))
 
   // Messages in a common style.
   //

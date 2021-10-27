@@ -29,9 +29,6 @@
 */
 
 #ifdef DO_PRINT_HASH
-extern "C" {
-#include <inttypes.h>
-};
 #define PRINT_HASH(H) \
 do { \
   printf ("c PRINT_HASH %32s () = %020" PRIu64 "\n", __func__, H); \

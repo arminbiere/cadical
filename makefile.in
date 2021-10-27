@@ -10,6 +10,8 @@
 CXX=@CXX@
 CXXFLAGS=@CXXFLAGS@
 
+LIBS=@LIBS@
+
 ############################################################################
 #    It is usually not necessary to change anything below this line!       #
 ############################################################################
@@ -39,9 +41,9 @@ all: libcadical.a cadical mobical
 # tester 'mobical') and the library are the main build targets.
 
 cadical: cadical.o libcadical.a makefile
-	$(COMPILE) -o $@ $< -L. -lcadical
+	$(COMPILE) -o $@ $< -L. -lcadical $(LIBS)
 
-mobical: mobical.o libcadical.a makefile
+mobical: mobical.o libcadical.a makefile $(LIBS)
 	$(COMPILE) -o $@ $< -L. -lcadical
 
 libcadical.a: $(OBJ) makefile

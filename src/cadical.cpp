@@ -345,7 +345,9 @@ int App::main (int argc, char ** argv) {
   const char * conflict_limit_specified = 0;
   const char * decision_limit_specified = 0;
   const char * localsearch_specified = 0;
+#ifndef __MINGW32__
   const char * time_limit_specified = 0;
+#endif
   bool witness = true, less = false;
   const char * dimacs_name, * err;
 

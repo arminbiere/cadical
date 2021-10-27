@@ -16,6 +16,7 @@ rm -f configure.log
 
 all=no
 debug=no
+libs=""
 logging=no
 check=no
 competition=no
@@ -139,6 +140,8 @@ do
     -g|--debug) debug=yes;;
     -c|--check) check=yes;;
     -l|--log|--logging) logging=yes;;
+
+    -l*) libs="$libs $1";;
 
     -p|--pedantic) pedantic=yes;;
     -q|--quiet) quiet=yes;;
@@ -360,7 +363,6 @@ unsigned f (const std::vector<unsigned> & a) {
   return res;
 }
 
-
 int main () { MACRO ("%d", 42); return 0; }
 EOF
 if $CXX $CXXFLAGS $WERROR -o $feature.exe $feature.cpp 2>>configure.log
@@ -439,6 +441,7 @@ sed \
 # This 'makefile' is generated from '../makefile.in'." \
 -e "s,@CXX@,$CXX," \
 -e "s#@CXXFLAGS@#$CXXFLAGS#" \
+-e "s#@LIBS@#$libs#" \
 ../makefile.in > makefile
 
 msg "generated '$build/makefile' from '../makefile.in'"

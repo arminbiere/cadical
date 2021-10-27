@@ -1,9 +1,5 @@
 #include "internal.hpp"
 
-extern "C" {
-#include <inttypes.h>
-}
-
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/

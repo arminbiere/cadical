@@ -1,3 +1,9 @@
+Version 1.5.2
+-------------
+
+- more copyright updates in banner
+- fixed MinGW cross-compilation (see 'BUILD.md')
+
 Version 1.5.1
 -------------
 
