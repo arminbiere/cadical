@@ -271,7 +271,10 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
     const double ratio = clause_variable_ratio ();
     const auto eou = walker.broken.end ();
     auto j = walker.broken.begin (), i = j;
-    int64_t made = 0, count = 0;
+#ifdef LOGGING
+    int64_t made = 0;
+#endif
+    int64_t count = 0;
 
     while (i != eou) {
 
@@ -297,7 +300,9 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
         literals[0] = lit;
         LOG (d, "made");
         watch_literal (literals[0], literals[1], d);
+#ifdef LOGGING
         made++;
+#endif
         j--;
 
       } else {  // Otherwise the clause is not satisfied, undo shift.
@@ -329,7 +334,9 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
     walker.propagations++;      // This really corresponds now to one
     stats.propagations.walk++;  // propagation (in a one-watch scheme).
 
+#ifdef LOGGING
     int64_t broken = 0;
+#endif
     Watches & ws = watches (-lit);
 
     LOG ("trying to brake %zd watched clauses", ws.size ());
@@ -364,7 +371,9 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
         assert (literals[0] == -lit);
         LOG (d, "broken");
         walker.broken.push_back (d);
+#ifdef LOGGING
         broken++;
+#endif
       }
     }
     LOG ("broken %" PRId64 " clauses by flipping %d", broken, lit);
@@ -575,11 +584,16 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
     walk_save_minimum (walker);
 
-    int64_t flips = 0, minimum = broken;
+    int64_t minimum = broken;
+#ifndef QUIET
+    int64_t flips = 0;
+#endif
     while (!terminated_asynchronously () &&
            !walker.broken.empty () &&
            walker.propagations < walker.limit) {
+#ifndef QUIET
       flips++;
+#endif
       stats.walk.flips++;
       stats.walk.broken += broken;
       Clause * c = walk_pick_clause (walker);

@@ -20,14 +20,14 @@ void Format::push_string (const char * s) {
 }
 
 void Format::push_int (int d) {
-  char tmp[12];
-  sprintf (tmp, "%d", d);
+  char tmp[16];
+  snprintf (tmp, sizeof tmp, "%d", d);
   push_string (tmp);
 }
 
 void Format::push_uint64 (uint64_t u) {
-  char tmp[12];
-  sprintf (tmp, "%" PRIu64, u);
+  char tmp[16];
+  snprintf (tmp, sizeof tmp, "%" PRIu64, u);
   push_string (tmp);
 }
 

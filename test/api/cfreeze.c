@@ -32,7 +32,7 @@ void illegal (void (*f)(CCaDiCaL *, int), CCaDiCaL * cadical, int lit) {
   assert (WTERMSIG (status) == SIGABRT);
 }
 
-int main () {
+int main (void) {
 
   CCaDiCaL * cadical = ccadical_init ();
   int res;

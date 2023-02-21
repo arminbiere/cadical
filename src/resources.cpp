@@ -128,8 +128,9 @@ uint64_t maximum_resident_set_size () {
 // '_SC_PAGESIZE' are available).
 
 uint64_t current_resident_set_size () {
-  char path[40];
-  sprintf (path, "/proc/%" PRId64 "/statm", (int64_t) getpid ());
+  char path[64];
+  snprintf (path, sizeof path,
+            "/proc/%" PRId64 "/statm", (int64_t) getpid ());
   FILE * file = fopen (path, "r");
   if (!file) return 0;
   uint64_t dummy, rss;

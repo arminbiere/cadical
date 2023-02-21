@@ -212,7 +212,10 @@ bool Internal::ternary_round (int64_t & steps_limit, int64_t & htrs_limit) {
 
   assert (!unsat);
 
-  int64_t bincon = 0, terncon = 0;
+#ifndef QUIET
+  int64_t bincon = 0;
+  int64_t terncon = 0;
+#endif
 
   init_occs ();
 
@@ -225,11 +228,16 @@ bool Internal::ternary_round (int64_t & steps_limit, int64_t & htrs_limit) {
       if (flags (lit).ternary) marked = true;
     }
     if (assigned) continue;
-    if (c->size == 2) bincon++;
-    else {
+    if (c->size == 2) {
+#ifndef QUIET
+      bincon++;
+#endif
+    } else {
       assert (c->size == 3);
       if (!marked) continue;
+#ifndef QUIET
       terncon++;
+#endif
     }
 
     for (const auto & lit : *c)

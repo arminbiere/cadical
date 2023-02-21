@@ -103,7 +103,7 @@ struct External;
 struct Walker;
 
 struct CubesWithStatus {
-  int status;
+  int status = 0;
   std::vector<std::vector<int>> cubes;
 };
 

@@ -69,7 +69,7 @@ static void handler (int sig) {
 static void * solvers[2];
 static learner learners[2];
 
-int main () {
+int main (void) {
   printf ("signature '%s'\n", ipasir_signature ());
   for (int i = 0; i < 2; i++) {
     learners[i].solver = solvers[i] = ipasir_init ();

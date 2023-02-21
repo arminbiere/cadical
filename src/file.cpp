@@ -129,7 +129,7 @@ char * File::find (const char * prg) {
     *q++ = 0;
     size_t pathlen = (q - p) + prglen;
     char * path = new char [pathlen + 1];
-    sprintf (path, "%s/%s", p, prg);
+    snprintf (path, pathlen + 1, "%s/%s", p, prg);
     assert (strlen (path) == pathlen);
     if (exists (path)) res = path;
     else delete [] path;
@@ -175,8 +175,9 @@ FILE * File::open_pipe (Internal * internal,
   delete [] prg;
   if (!found) return 0;
   delete [] found;
-  char * cmd = new char [strlen (fmt) + strlen (path)];
-  sprintf (cmd, fmt, path);
+  size_t cmd_size = strlen (fmt) + strlen (path);
+  char * cmd = new char [cmd_size];
+  snprintf (cmd, cmd_size, fmt, path);
   FILE * res = popen (cmd, mode);
   delete [] cmd;
   return res;

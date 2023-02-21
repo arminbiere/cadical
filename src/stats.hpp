@@ -179,8 +179,12 @@ struct Stats {
   int64_t shrunken;  // shrunken literals
   int64_t minishrunken;  // shrunken during minimization literals
 
-  int64_t irrbytes;     // bytes of irredundant clauses
-  int64_t garbage;      // bytes current irredundant garbage clauses
+  int64_t irrlits;      // literals in irredundant clauses
+  struct {
+    int64_t bytes;
+    int64_t clauses;
+    int64_t literals;
+  } garbage;
   int64_t units;        // learned unit clauses
   int64_t binaries;     // learned binary clauses
   int64_t probingphases;// number of scheduled probing phases

@@ -198,8 +198,9 @@ void Internal::instantiate (Instantiator & instantiator) {
   stats.instrounds++;
 #ifndef QUIET
   const int64_t candidates = instantiator.candidates.size ();
+  int64_t tried = 0;
 #endif
-  int64_t instantiated = 0, tried = 0;
+  int64_t instantiated = 0;
   init_watches ();
   connect_watches ();
   if (propagated < trail.size ()) {
@@ -217,7 +218,9 @@ void Internal::instantiate (Instantiator & instantiator) {
          !instantiator.candidates.empty ()) {
     Instantiator::Candidate cand = instantiator.candidates.back ();
     instantiator.candidates.pop_back ();
+#ifndef QUIET
     tried++;
+#endif
     if (!active (cand.lit)) continue;
     LOG (cand.clause,
       "trying to instantiate %d with "

@@ -149,7 +149,10 @@ struct less_conditioned {
 
 long Internal::condition_round (long delta) {
 
-  long limit, props = 0;
+  long limit;
+#ifndef QUIET
+  long props = 0;
+#endif
   if (LONG_MAX - delta < stats.condprops) limit = LONG_MAX;
   else limit = stats.condprops + delta;
 
@@ -245,7 +248,9 @@ long Internal::condition_round (long delta) {
   vector<int> conditional;
 
   vector<Clause *> candidates;  // Gather candidate clauses.
+#ifndef QUIET
   size_t watched = 0;           // Number of watched clauses.
+#endif
 
   initial.autarky = initial.assigned;   // Initially all are in autarky
   initial.conditional = 0;              // and none in conditional part.
@@ -333,7 +338,9 @@ long Internal::condition_round (long delta) {
       Occs & os = occs (watch);
       assert (os.size () == minsize);
       os.push_back (c);
+#ifndef QUIET
       watched++;
+#endif
       LOG (c, "watching %d with %zd occurrences in", watch, minsize);
     }
 
@@ -453,7 +460,9 @@ long Internal::condition_round (long delta) {
   //
   long blocked = 0;             // Number of Successfully blocked clauses.
   //
+#ifndef QUIET
   size_t untried = candidates.size ();
+#endif
   for (const auto & c : candidates) {
 
     if (initial.autarky <= 0) break;
@@ -473,8 +482,9 @@ long Internal::condition_round (long delta) {
         untried, percent (untried, candidates.size ()), props);
       break;
     }
+#ifndef QUIET
     untried--;
-
+#endif
     assert (!c->garbage);
     assert (!c->redundant);
 
@@ -562,8 +572,9 @@ long Internal::condition_round (long delta) {
         const int unassigned_lit = unassigned[next.unassigned++];
         LOG ("processing next unassigned %d", unassigned_lit);
         assert (!val (unassigned_lit));
-
+#ifndef QUIET
         props++;
+#endif
         stats.condprops++;
 
         Occs & os = occs (unassigned_lit);
@@ -817,12 +828,16 @@ long Internal::condition_round (long delta) {
 
   // Unassign additionally assigned literals.
   //
+#if defined(LOGGING) || !defined(NDEBUG)
   int additionally_unassigned = 0;
+#endif
   while (trail.size () > initial_trail_level) {
     int lit = trail.back ();
     trail.pop_back ();
     condition_unassign (lit);
+#if defined(LOGGING) || !defined(NDEBUG)
     additionally_unassigned++;
+#endif
   }
   LOG ("unassigned %d additionally assigned literals",
     additionally_unassigned);

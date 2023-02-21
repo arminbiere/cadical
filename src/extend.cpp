@@ -101,14 +101,18 @@ void External::extend () {
     "mapping internal %d assignments to %d assignments",
     internal->max_var, max_var);
 
+#ifndef QUIET
   int64_t updated = 0;
+#endif
   for (unsigned i = 1; i <= (unsigned) max_var; i++) {
     const int ilit = e2i[i];
     if (!ilit) continue;
     if (i >= vals.size ())
       vals.resize (i + 1, false);
     vals[i] = (internal->val (ilit) > 0);
+#ifndef QUIET
     updated++;
+#endif
   }
   PHASE ("extend", internal->stats.extensions,
     "updated %" PRId64 " external assignments", updated);
@@ -117,7 +121,9 @@ void External::extend () {
     extension.size ());
   const auto begin = extension.begin ();
   auto i = extension.end ();
+#ifndef QUIET
   int64_t flipped = 0;
+#endif
   while (i != begin) {
     bool satisfied = false;
     int lit;
@@ -143,7 +149,9 @@ void External::extend () {
 	    vals.resize (idx + 1, false);
           vals[idx] = !vals[idx];
           internal->stats.extended++;
+#ifndef QUIET
           flipped++;
+#endif
         }
         assert (i != begin);
       }

@@ -38,8 +38,9 @@ bool Internal::decompose_round () {
   int * reprs = new int[size_dfs];
   clear_n (reprs, size_dfs);
 
-  int non_trivial_sccs = 0, substituted = 0;
+  int substituted = 0;
 #ifndef QUIET
+  int non_trivial_sccs = 0;
   int before = active ();
 #endif
   unsigned dfs_idx = 0;
@@ -109,7 +110,10 @@ bool Internal::decompose_round () {
               // contains both a literal and its negation, then the formula
               // becomes unsatisfiable.
 
-              int other, size = 0, repr = parent;
+	      int other, repr = parent;
+#ifndef QUIET
+              int size = 0;
+#endif
               assert (!scc.empty ());
               size_t j = scc.size ();
               do {
@@ -121,7 +125,9 @@ bool Internal::decompose_round () {
                   learn_empty_clause ();
                 } else {
                   if (abs (other) < abs (repr)) repr = other;
+#ifndef QUIET
                   size++;
+#endif
                 }
               } while (!unsat && other != parent);
 
@@ -144,8 +150,9 @@ bool Internal::decompose_round () {
                     }
                   }
                 } while (other != parent);
-
+#ifndef QUIET
                 if (size > 1) non_trivial_sccs++;
+#endif
               }
 
             } else {
@@ -201,7 +208,10 @@ bool Internal::decompose_round () {
   // Now go over all clauses and find clause which contain literals that
   // should be substituted by their representative.
 
-  size_t clauses_size = clauses.size (), garbage = 0, replaced = 0;
+  size_t clauses_size = clauses.size ();
+#ifndef QUIET
+  size_t garbage = 0, replaced = 0;
+#endif
   for (size_t i = 0; substituted && !unsat && i < clauses_size; i++) {
     Clause * c = clauses[i];
     if (c->garbage) continue;
@@ -213,7 +223,9 @@ bool Internal::decompose_round () {
 
     if (j == size) continue;
 
+#ifndef QUIET
     replaced++;
+#endif
     LOG (c, "first substituted literal %d in", substituted);
 
     // Now copy the result to 'clause'.  Substitute literals if they have a
@@ -248,7 +260,9 @@ bool Internal::decompose_round () {
     if (satisfied) {
       LOG (c, "satisfied after substitution (postponed)");
       postponed_garbage.push_back (c);
+#ifndef QUIET
       garbage++;
+#endif
     } else if (!clause.size ()) {
       LOG ("learned empty clause during decompose");
       learn_empty_clause ();
@@ -257,7 +271,9 @@ bool Internal::decompose_round () {
       assign_unit (clause[0]);
       mark_garbage (c);
       new_unit = true;
+#ifndef QUIET
       garbage++;
+#endif
     } else if (c->literals[0] != clause[0] ||
                c->literals[1] != clause[1]) {
       LOG ("need new clause since at least one watched literal changed");
@@ -268,7 +284,9 @@ bool Internal::decompose_round () {
       clauses[d_clause_idx] = c;
       clauses[i] = d;
       mark_garbage (c);
+#ifndef QUIET
       garbage++;
+#endif
     } else {
       LOG ("simply shrinking clause since watches did not change");
       assert (c->size > 2);

@@ -71,6 +71,10 @@ static const char * USAGE =
 "  --dump  | -d      force dumping the CNF before every 'solve'\n"
 "  --stats | -s      force printing statistics after every 'solve'\n"
 "\n"
+"Implicitly add 'configure plain' after setting options:\n"
+"\n"
+"  --plain | -p\n" // TODO all configurations?
+"\n"
 "Otherwise if no '<mode>' is specified the default is to generate\n"
 "random traces internally until the execution of a trace fails, which\n"
 "means it produces a non-zero exit code.  Then the trace is rerun and\n"
@@ -236,6 +240,7 @@ class Mobical : public Handler {
 #endif
   bool add_dump_before_solve;
   bool add_stats_after_solve;
+  bool add_plain_after_options;
 
   /*----------------------------------------------------------------------*/
 
@@ -1363,6 +1368,9 @@ void Trace::generate (uint64_t i, uint64_t s) {
   }
 
   generate_options (random, size);
+
+  if (mobical.add_plain_after_options)
+    push_back (new ConfigureCall ("plain"));
 
   int calls;
   if (mobical.force.phases < 0) calls = random.pick_int (1, 4);
@@ -2597,6 +2605,7 @@ Mobical::Mobical ()
 #endif
   add_dump_before_solve (false),
   add_stats_after_solve (false),
+  add_plain_after_options (false),
   shrinking (false),
   running (false),
   time_limit (DEFAULT_TIME_LIMIT),
@@ -2611,7 +2620,7 @@ Mobical::Mobical ()
 {
   const int prot = PROT_READ | PROT_WRITE;
   const int flags = MAP_ANONYMOUS | MAP_SHARED;
-  shared = (Shared*) mmap (0, sizeof *shared, prot, flags, 0, 0);
+  shared = (Shared*) mmap (0, sizeof *shared, prot, flags, -1, 0);
 }
 
 Mobical::~Mobical () {
@@ -2714,6 +2723,8 @@ int Mobical::main (int argc, char ** argv) {
       add_dump_before_solve = true;
     } else if (!strcmp (argv[i], "-s") || !strcmp (argv[i], "--stats")) {
       add_stats_after_solve = true;
+    } else if (!strcmp (argv[i], "-p") || !strcmp (argv[i], "--plain")) {
+      add_plain_after_options = true;
     } else if (!strcmp (argv[i], "-L")) {
       if (limit >= 0) die ("multiple '-L' options (try '-h')");
       if (++i == argc) die ("argument to '-L' missing (try '-h')");

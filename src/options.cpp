@@ -185,13 +185,14 @@ void Options::print () {
 #ifdef QUIET
   const bool verbose = false;
 #endif
-  char buffer[160];
+  char buffer[256];
   // We prefer the macro iteration here since '[VLH]' might be '1e9' etc.
 #define OPTION(N,V,L,H,O,P,R,D) \
   if (N != (V)) different++; \
   if (verbose || N != (V)) { \
     if ((L) == 0 && (H) == 1) { \
-      sprintf (buffer, "--" #N "=%s", (N ? "true" : "false")); \
+      snprintf (buffer, sizeof buffer, \
+                "--" #N "=%s", (N ? "true" : "false")); \
       MSG ("  %s%-30s%s (%s default %s'%s'%s)", \
         ((N == (V)) ? "" : tout.bright_yellow_code ()), \
         buffer, \
@@ -201,7 +202,7 @@ void Options::print () {
         (bool)(V) ? "true" : "false", \
         tout.normal_code ()); \
     } else { \
-      sprintf (buffer, "--" #N "=%d", N); \
+      snprintf (buffer, sizeof buffer, "--" #N "=%d", N); \
       MSG ("  %s%-30s%s (%s default %s'" #V "'%s)", \
         ((N == (V)) ? "" : tout.bright_yellow_code ()), \
         buffer, \
@@ -292,6 +293,9 @@ void Options::disable_preprocessing () {
   OPTIONS
 #undef OPTION
   LOG ("forced plain mode disabled %zd preprocessing options", count);
+#ifndef LOGGING
+  (void) count;
+#endif
 }
 
 bool Options::is_preprocessing_option (const char * name) {
@@ -314,6 +318,9 @@ void Options::reset_default_values () {
   OPTIONS
 #undef OPTION
   LOG ("reset %zd options to their default values", count);
+#ifndef LOGGING
+  (void) count;
+#endif
 }
 
 /*------------------------------------------------------------------------*/

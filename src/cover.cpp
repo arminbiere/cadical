@@ -426,7 +426,9 @@ int64_t Internal::cover_round () {
 
   // First connect all clauses and find all not yet tried clauses.
   //
+#ifndef QUIET
   int64_t untried = 0;
+#endif
   //
   for (auto c : clauses) {
     assert (!c->frozen);
@@ -444,7 +446,9 @@ int64_t Internal::cover_round () {
     if (c->size > opts.covermaxclslim) continue;
     if (c->covered) continue;
     schedule.push_back (c);
+#ifndef QUIET
     untried++;
+#endif
   }
 
   if (schedule.empty ()) {

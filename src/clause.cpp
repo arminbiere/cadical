@@ -86,10 +86,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   size_t bytes = Clause::bytes (size);
   Clause * c = (Clause *) new char[bytes];
 
-  stats.added.total++;
-#ifdef LOGGING
-  c->id = stats.added.total;
-#endif
+  c->id = stats.added.total++;
 
   c->conditioned = false;
   c->covered = false;
@@ -127,7 +124,7 @@ Clause * Internal::new_clause (bool red, int glue) {
     stats.current.redundant++;
     stats.added.redundant++;
   } else {
-    stats.irrbytes += bytes;
+    stats.irrlits += size;
     stats.current.irredundant++;
     stats.added.irredundant++;
   }
@@ -170,17 +167,18 @@ void Internal::promote_clause (Clause * c, int new_glue) {
 /*------------------------------------------------------------------------*/
 
 // Shrinking a clause, e.g., removing one or more literals, requires to fix
-// the 'pos' field, if it exists and points after the new last literal, has
-// to adjust the global statistics counter of allocated bytes for
-// irredundant clauses, and also adjust the glue value of redundant clauses
-// if the size becomes smaller than the glue.  Also mark the literals in the
-// resulting clause as 'added'.  The result is the number of (aligned)
-// removed bytes, resulting from shrinking the clause.
+// the 'pos' field, if it exists and points after the new last literal. We
+// also have adjust the global statistics counter of irredundant literals
+// for irredundant clauses, and also adjust the glue value of redundant
+// clauses if the size becomes smaller than the glue.  Also mark the
+// literals in the resulting clause as 'added'.  The result is the number of
+// (aligned) removed bytes, resulting from shrinking the clause.
 //
 size_t Internal::shrink_clause (Clause * c, int new_size) {
 
   assert (new_size >= 2);
-  assert (new_size < c->size);
+  int old_size = c->size;
+  assert (new_size < old_size);
 #ifndef NDEBUG
   for (int i = c->size; i < new_size; i++)
     c->literals[i] = 0;
@@ -194,9 +192,10 @@ size_t Internal::shrink_clause (Clause * c, int new_size) {
   size_t res = old_bytes - new_bytes;
 
   if (c->redundant) promote_clause (c, min (c->size-1, c->glue));
-  else if (old_bytes > new_bytes) {
-    assert (stats.irrbytes >= (int64_t) res);
-    stats.irrbytes -= res;
+  else {
+    int delta_size = old_size - new_size;
+    assert (stats.irrlits >= delta_size);
+    stats.irrlits -= delta_size;
   }
 
   if (likely_to_be_kept_clause (c)) mark_added (c);
@@ -220,8 +219,12 @@ void Internal::delete_clause (Clause * c) {
   size_t bytes = c->bytes ();
   stats.collected += bytes;
   if (c->garbage) {
-    assert (stats.garbage >= (int64_t) bytes);
-    stats.garbage -= bytes;
+    assert (stats.garbage.bytes >= (int64_t) bytes);
+    stats.garbage.bytes -= bytes;
+    assert (stats.garbage.clauses > 0);
+    stats.garbage.clauses--;
+    assert (stats.garbage.literals >= c->size);
+    stats.garbage.literals -= c->size;
 
     // See the discussion in 'propagate' on avoiding to eagerly trace binary
     // clauses as deleted (produce 'd ...' lines) as soon they are marked
@@ -273,11 +276,13 @@ void Internal::mark_garbage (Clause * c) {
   } else {
     assert (stats.current.irredundant > 0);
     stats.current.irredundant--;
-    assert (stats.irrbytes >= (int64_t) bytes);
-    stats.irrbytes -= bytes;
+    assert (stats.irrlits >= c->size);
+    stats.irrlits -= c->size;
     mark_removed (c);
   }
-  stats.garbage += bytes;
+  stats.garbage.bytes += bytes;
+  stats.garbage.clauses++;
+  stats.garbage.literals += c->size;
   c->garbage = true;
   c->used = 0;
 

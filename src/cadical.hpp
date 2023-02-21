@@ -775,6 +775,7 @@ private:
 
   void trace_api_call (const char *) const;
   void trace_api_call (const char *, int) const;
+  void trace_api_call (const char *, const char *) const;
   void trace_api_call (const char *, const char *, int) const;
 #endif
 

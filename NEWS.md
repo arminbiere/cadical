@@ -1,18 +1,49 @@
-Version 1.5.3
+Version 1.5.4
 -------------
 
-- more copyright updates in banner
-- fixed MinGW cross-compilation (see 'BUILD.md')
+- Fixed different garbage collection times with and without
+  clause IDs (with './configure -l' or just './configure').
+  This solves issue #44 by John Reeves.  At the same time
+  made sure to trigger garbage collection independent on the
+  number of clause header bytes by relying on the number of
+  garbage literals instead.
+
+- Fixed 'mmap' usage for FreeBSD (#48 issue of 'yurivict').
+
+- Removed several compiler warnings when using newer compilers,
+  including gcc-11, gcc-12, clang-14, and clang-15.
+
+- Replaced 'sprintf' by 'snprintf' to avoid warning on MacOS
+  (thanks to Marijn for bringing this up).
+
+- Assigning a C 'FILE' pointer to 'stdout' during initialization
+  fails on MacOS and thus separated declaration and initialization.
+
+- Fixed random seed initialization from MAC address issue #47
+  as used by 'mobical' which produces segmentation faults
+  (thanks to Sam Bayless for pointing this out).
+
+Version 1.5.2
+-------------
+
+- Updates to documentation and copyright.
+
+Version 1.5.2
+-------------
+
+- More copyright updates in banner.
+
+- Fixed MinGW cross-compilation (see 'BUILD.md').
 
 Version 1.5.1
 -------------
 
-- fixed copyright and added two regression traces
+- Fixed copyright and added two regression traces.
 
 Version 1.5.0
 -------------
 
-- added 'constrain' API call described in our FMCAD'21 paper
+- Added 'constrain' API call described in our FMCAD'21 paper.
 
-- replaced "`while () push_back ()`" with "`if () resize ()`" idiom
-  (thanks go to Alexander Smal for pointing this out)
+- Replaced "`while () push_back ()`" with "`if () resize ()`" idiom
+  (thanks go to Alexander Smal for pointing this out).

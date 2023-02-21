@@ -254,8 +254,8 @@ void App::print_witness (FILE * file) {
     if (!c) fputc ('v', file), c = 1;
     if (i++ == max_var) tmp = 0;
     else tmp = solver->val (i) < 0 ? -i : i;
-    char str[20];
-    sprintf (str, " %d", tmp);
+    char str[32];
+    snprintf (str, sizeof str, " %d", tmp);
     int l = strlen (str);
     if (c + l > 78) fputs ("\nv", file), c = 1;
     fputs (str, file);
@@ -694,11 +694,12 @@ int App::main (int argc, char ** argv) {
             (void) solver->limit ("decisions", decision_limit);
         }
 #ifndef QUIET
-        char buffer[160];
+        char buffer[256];
         if (!quiet) {
           if (reporting) {
-            sprintf (buffer, "solving cube %zu / %zu %.0f%%",
-               solved, cubes, percent (solved, cubes));
+            snprintf (buffer, sizeof buffer,
+	              "solving cube %zu / %zu %.0f%%",
+                      solved, cubes, percent (solved, cubes));
             solver->section (buffer);
           }
           time.start = absolute_process_time ();
@@ -709,7 +710,7 @@ int App::main (int argc, char ** argv) {
         if (!quiet) {
           time.delta = absolute_process_time () - time.start;
           time.sum += time.delta;
-          sprintf (buffer,
+          snprintf (buffer, sizeof buffer,
             "%s"
             "in %.3f sec "
             "(%.0f%% after %.2f sec at %.0f ms/cube)"
@@ -806,7 +807,8 @@ int App::main (int argc, char ** argv) {
 
   solver->section ("result");
 
-  FILE * write_result_file = stdout;
+  FILE * write_result_file;
+  write_result_file = stdout;
   if (write_result_path)
     {
       write_result_file = fopen (write_result_path, "w");

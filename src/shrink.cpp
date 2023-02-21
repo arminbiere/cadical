@@ -5,48 +5,54 @@ namespace CaDiCaL {
 
   void Internal::reset_shrinkable()
   {
+#ifdef LOGGING
     size_t reset = 0;
+#endif
     for(const auto & lit : shrinkable) {
       LOG("resetting lit %i", lit);
       Flags &f = flags(lit);
       assert(f.shrinkable);
       f.shrinkable = false;
+#ifdef LOGGING
       ++reset;
+#endif
     }
     LOG("resetting %zu shrinkable variables", reset);
   }
 
   void Internal::mark_shrinkable_as_removable(int blevel, std::vector<int>::size_type minimized_start) {
+#ifdef LOGGING
     size_t marked = 0, reset = 0;
+#endif
 #ifndef NDEBUG
-    unsigned kept = 0, minireset = 0;
     for(; minimized_start < minimized.size(); ++minimized_start) {
       const int lit = minimized[minimized_start];
       Flags &f = flags(lit);
       const Var &v = var(lit);
       if (v.level == blevel) {
         assert(!f.poison);
-        ++minireset;
       }
-      else ++kept;
     }
 #else
     (void) blevel;
     (void) minimized_start;
 #endif
 
-
     for (const int lit : shrinkable) {
       Flags &f = flags(lit);
       assert(f.shrinkable);
       assert(!f.poison);
       f.shrinkable = false;
+#ifdef LOGGING
       ++reset;
+#endif
       if(f.removable)
         continue;
       f.removable = true;
       minimized.push_back(lit);
+#ifdef LOGGING
       ++marked;
+#endif
     }
     LOG("resetting %zu shrinkable variables", reset);
     LOG("marked %zu removable variables", marked);

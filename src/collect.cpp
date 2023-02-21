@@ -87,7 +87,9 @@ void Internal::mark_satisfied_clauses_as_garbage () {
 void Internal::protect_reasons () {
   LOG ("protecting reason clauses of all assigned variables on trail");
   assert (!protected_reasons);
+#ifdef LOGGING
   size_t count = 0;
+#endif
   for (const auto & lit : trail) {
     if (!active (lit)) continue;
     assert (val (lit));
@@ -98,7 +100,9 @@ void Internal::protect_reasons () {
     LOG (reason, "protecting assigned %d reason %p", lit, (void*) reason);
     assert (!reason->reason);
     reason->reason = true;
+#ifdef LOGGING
     count++;
+#endif
   }
   LOG ("protected %zd reason clauses referenced on trail", count);
   protected_reasons = true;
@@ -112,7 +116,9 @@ void Internal::protect_reasons () {
 void Internal::unprotect_reasons () {
   LOG ("unprotecting reasons clauses of all assigned variables on trail");
   assert (protected_reasons);
+#ifdef LOGGING
   size_t count = 0;
+#endif
   for (const auto & lit : trail) {
     if (!active (lit)) continue;
     assert (val (lit));
@@ -123,7 +129,9 @@ void Internal::unprotect_reasons () {
     LOG (reason, "unprotecting assigned %d reason %p", lit, (void*) reason);
     assert (reason->reason);
     reason->reason = false;
+#ifdef LOGGING
     count++;
+#endif
   }
   LOG ("unprotected %zd reason clauses referenced on trail", count);
   protected_reasons = false;
@@ -201,7 +209,9 @@ void Internal::flush_all_occs_and_watches () {
 
 void Internal::update_reason_references () {
   LOG ("update assigned reason references");
+#ifdef LOGGING
   size_t count = 0;
+#endif
   for (auto & lit : trail) {
     if (!active (lit)) continue;
     Var & v = var (lit);
@@ -212,7 +222,9 @@ void Internal::update_reason_references () {
     assert (c->moved);
     Clause * d = c->copy;
     v.reason = d;
+#ifdef LOGGING
     count++;
+#endif
   }
   LOG ("updated %zd assigned reason references", count);
 }
@@ -229,14 +241,18 @@ void Internal::delete_garbage_clauses () {
   flush_all_occs_and_watches ();
 
   LOG ("deleting garbage clauses");
+#ifndef QUIET
   int64_t collected_bytes = 0, collected_clauses = 0;
+#endif
   const auto end = clauses.end ();
   auto j = clauses.begin (), i = j;
   while (i != end) {
     Clause * c = *j++ = *i++;
     if (!c->collect ()) continue;
+#ifndef QUIET
     collected_bytes += c->bytes ();
     collected_clauses++;
+#endif
     delete_clause (c);
     j--;
   }
@@ -269,10 +285,8 @@ void Internal::copy_clause (Clause * c) {
 // This is the moving garbage collector.
 
 void Internal::copy_non_garbage_clauses () {
-
   size_t collected_clauses = 0, collected_bytes = 0;
   size_t     moved_clauses = 0,     moved_bytes = 0;
-
   // First determine 'moved_bytes' and 'collected_bytes'.
   //
   for (const auto & c : clauses)
@@ -284,7 +298,7 @@ void Internal::copy_non_garbage_clauses () {
     moved_bytes,
     percent (moved_bytes, collected_bytes + moved_bytes),
     moved_clauses);
-
+  (void) moved_clauses, (void) collected_clauses, (void) collected_bytes;
   // Prepare 'to' space of size 'moved_bytes'.
   //
   arena.prepare (moved_bytes);
@@ -390,17 +404,17 @@ void Internal::copy_non_garbage_clauses () {
 
 void Internal::check_clause_stats () {
 #ifndef NDEBUG
-  int64_t irredundant = 0, redundant = 0, total = 0, irrbytes = 0;
+  int64_t irredundant = 0, redundant = 0, total = 0, irrlits = 0;
   for (const auto & c : clauses) {
     if (c->garbage) continue;
     if (c->redundant) redundant++; else irredundant++;
-    if (!c->redundant) irrbytes += c->bytes ();
+    if (!c->redundant) irrlits += c->size;
     total++;
   }
   assert (stats.current.irredundant == irredundant);
   assert (stats.current.redundant == redundant);
   assert (stats.current.total == total);
-  assert (stats.irrbytes == irrbytes);
+  assert (stats.irrlits == irrlits);
 #endif
 }
 

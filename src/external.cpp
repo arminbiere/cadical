@@ -244,18 +244,24 @@ void External::check_solve_result (int res) {
 void External::update_molten_literals () {
   if (!internal->opts.checkfrozen) return;
   assert ((size_t) max_var + 1 == moltentab.size ());
+#ifdef LOGGING
   int registered = 0, molten = 0;
+#endif
   for (auto lit : vars) {
     if (moltentab[lit]) {
       LOG ("skipping already molten literal %d", lit);
+#ifdef LOGGING
       molten++;
+#endif
     } else if (frozen (lit))
       LOG ("skipping currently frozen literal %d", lit);
     else {
       LOG ("new molten literal %d", lit);
       moltentab[lit] = true;
+#ifdef LOGGING
       registered++;
       molten++;
+#endif
     }
   }
   LOG ("registered %d new molten literals", registered);
@@ -356,7 +362,9 @@ void External::check_assignment (int (External::*a)(int) const) {
   bool satisfied = false;
   const auto end = original.end ();
   auto start = original.begin (), i = start;
+#ifndef QUIET
   int64_t count = 0;
+#endif
   for (; i != end; i++) {
     int lit = *i;
     if (!lit) {
@@ -370,7 +378,9 @@ void External::check_assignment (int (External::*a)(int) const) {
       }
       satisfied = false;
       start = i + 1;
+#ifndef QUIET
       count++;
+#endif
     } else if (!satisfied && (this->*a) (lit) > 0) satisfied = true;
   }
   VERBOSE (1,

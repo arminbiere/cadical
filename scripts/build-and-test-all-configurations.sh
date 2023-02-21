@@ -100,9 +100,6 @@ run -g -q -p
 
 # finally check that these also work to some extend
 
-run -m32 -q
-run -m32 -a -p
-
 run --no-unlocked -q
 run --no-unlocked -a -p
 
@@ -111,5 +108,8 @@ run --no-contracts -a -p
 
 run --no-tracing -q
 run --no-tracing -a -p
+
+run -m32 -q
+run -m32 -a -p
 
 echo "successfully compiled and tested ${GOOD}${ok}${NORMAL} configurations"

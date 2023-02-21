@@ -237,8 +237,8 @@ const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
 
 #ifndef QUIET
   start = end;
-#endif
   size_t num_cubes = 0;
+#endif
   if (ch == 'a') {
     assert (parse_inccnf_too);
     assert (found_inccnf_header);
@@ -264,7 +264,9 @@ const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
       if (cubes)
         cubes->push_back (lit);
       if (!lit) {
+#ifndef QUIET
         num_cubes++;
+#endif
         for (;;)
           {
             ch = parse_char ();
@@ -319,7 +321,9 @@ const char * Parser::parse_solution_non_profiled () {
   if (err) return err;
   if ((ch = parse_char ()) == '\r') ch = parse_char ();
   if (ch != '\n') PER ("expected new-line after 's SATISFIABLE'");
+#ifndef QUIET
   int count = 0;
+#endif
   for (;;) {
     ch = parse_char ();
     if (ch != 'v') PER ("expected 'v' at start-of-line");
@@ -335,7 +339,9 @@ const char * Parser::parse_solution_non_profiled () {
         PER ("variable %d occurs twice", abs (lit));
       LOG ("solution %d", lit);
       external->solution [abs (lit)] = sign (lit);
+#ifndef QUIET
       count++;
+#endif
       if (ch == '\r') ch = parse_char ();
     } while (ch != '\n');
     if (!lit) break;

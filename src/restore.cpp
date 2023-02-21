@@ -76,13 +76,17 @@ void External::restore_clauses () {
     PHASE ("restore", internal->stats.restorations,
       "forced to restore all clauses");
 
-  unsigned numtainted = 0;
-  for (const auto b : tainted)
-    if (b) numtainted++;
+#ifndef QUIET
+  {
+    unsigned numtainted = 0;
+    for (const auto b : tainted)
+      if (b) numtainted++;
 
-  PHASE ("restore", internal->stats.restorations,
-    "starting with %u tainted literals %.0f%%",
-    numtainted, percent (numtainted, 2u*max_var));
+    PHASE ("restore", internal->stats.restorations,
+      "starting with %u tainted literals %.0f%%",
+      numtainted, percent (numtainted, 2u*max_var));
+  }
+#endif
 
   auto end_of_extension = extension.end ();
   auto p = extension.begin (), q = p;
@@ -185,16 +189,17 @@ void External::restore_clauses () {
     PHASE ("restore", internal->stats.restorations,
       "no clause restored out of %" PRId64 " weakened clauses",
       clauses.weakened);
+  {
+    unsigned numtainted = 0;
+    for (const auto & b : tainted)
+      if (b) numtainted++;
+
+    PHASE ("restore", internal->stats.restorations,
+      "finishing with %u tainted literals %.0f%%",
+      numtainted, percent (numtainted, 2u*max_var));
+  }
+
 #endif
-
-  numtainted = 0;
-  for (const auto & b : tainted)
-    if (b) numtainted++;
-
-  PHASE ("restore", internal->stats.restorations,
-    "finishing with %u tainted literals %.0f%%",
-    numtainted, percent (numtainted, 2u*max_var));
-
   LOG ("extension stack clean");
   tainted.clear ();
 

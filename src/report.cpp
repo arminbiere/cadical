@@ -65,7 +65,7 @@ reports are only printed for higher verbosity level (for instance 'R').
 struct Report {
 
   const char * header;
-  char buffer[20];
+  char buffer[32];
   int pos;
 
   Report (const char * h, int precision, int min, double value);
@@ -87,15 +87,16 @@ Report::Report (const char * h, int precision, int min, double value)
   header (h)
 {
   char fmt[32];
-  if (precision < 0) sprintf (fmt, "%%.%df", -precision - 1);
-  else sprintf (fmt, "%%.%df", precision);
-  sprintf (buffer, fmt, value);
+  if (precision < 0) snprintf (fmt, sizeof fmt, "%%.%df", -precision - 1);
+  else snprintf (fmt, sizeof fmt, "%%.%df", precision);
+  snprintf (buffer, sizeof buffer, fmt, value);
   const int width = strlen (buffer);
   if (precision < 0) strcat (buffer, "%");
   if (width >= min) return;
-  if (precision < 0) sprintf (fmt, "%%%d.%df%%%%", min, -precision - 1);
-  else sprintf (fmt, "%%%d.%df", min, precision);
-  sprintf (buffer, fmt, value);
+  if (precision < 0)
+    snprintf (fmt, sizeof fmt, "%%%d.%df%%%%", min, -precision - 1);
+  else snprintf (fmt, sizeof fmt, "%%%d.%df", min, precision);
+  snprintf (buffer, sizeof buffer, fmt, value);
 }
 
 /*------------------------------------------------------------------------*/

@@ -192,15 +192,27 @@ void Internal::block_schedule (Blocker & blocker)
   // schedule can not be fused with the previous loop (easily) since we
   // first have to initialize 'noccs' for both 'lit' and '-lit'.
 
+#ifndef QUIET
   int skipped = 0;
+#endif
 
   for (auto idx : vars) {
     if (!active (idx)) continue;
-    if (frozen (idx)) { skipped += 2; continue; }
+    if (frozen (idx)) {
+#ifndef QUIET
+      skipped += 2;
+#endif
+      continue;
+    }
     assert (!val (idx));
     for (int sign = -1; sign <= 1; sign += 2) {
       const int lit = sign * idx;
-      if (marked_skip (lit)) { skipped++; continue; }
+      if (marked_skip (lit)) {
+#ifndef QUIET
+	skipped++;
+#endif
+	continue;
+      }
       if (!marked_block (lit)) continue;
       unmark_block (lit);
       LOG ("scheduling %d with %" PRId64 " positive and %" PRId64 " negative occurrences",
@@ -238,9 +250,9 @@ void Internal::block_pure_literal (Blocker & blocker, int lit)
 #endif
   stats.blockpurelits++;
   LOG ("found pure literal %d", lit);
-
+#ifdef LOGGING
   int64_t pured = 0;
-
+#endif
   for (const auto & c : pos) {
     if (c->garbage) continue;
     assert (!c->redundant);
@@ -249,7 +261,9 @@ void Internal::block_pure_literal (Blocker & blocker, int lit)
     external->push_clause_on_extension_stack (c, lit);
     stats.blockpured++;
     mark_garbage (c);
+#ifdef LOGGING
     pured++;
+#endif
   }
 
   erase_vector (pos);
@@ -301,9 +315,10 @@ Internal::block_literal_with_one_negative_occ (Blocker & blocker, int lit)
 
   LOG (d, "common %d antecedent", lit);
   mark (d);
-
-  int64_t blocked = 0, skipped = 0;
-
+  int64_t blocked = 0;
+#ifdef LOGGING
+  int64_t skipped = 0;
+#endif
   Occs & pos = occs (lit);
 
   // Again no 'auto' since 'pos' is update during traversal.
@@ -316,8 +331,18 @@ Internal::block_literal_with_one_negative_occ (Blocker & blocker, int lit)
     Clause * c = *j++ = *i;
 
     if (c->garbage) { j--; continue; }
-    if (c->size > opts.blockmaxclslim) { skipped++; continue; }
-    if (c->size < opts.blockminclslim) { skipped++; continue; }
+    if (c->size > opts.blockmaxclslim) {
+#ifdef LOGGING
+      skipped++;
+#endif
+      continue;
+    }
+    if (c->size < opts.blockminclslim) {
+#ifdef LOGGING
+      skipped++;
+#endif
+      continue;
+    }
 
     LOG (c, "trying to block on %d", lit);
 
