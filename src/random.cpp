@@ -103,6 +103,8 @@ static uint64_t hash_network_addresses () {
   struct ifaddrs * addrs;
   if (!getifaddrs (&addrs)) {
     for (struct ifaddrs * addr = addrs; addr; addr = addr->ifa_next) {
+      if (!addr->ifa_addr)
+	continue;
       const int family = addr->ifa_addr->sa_family;
       if (family == AF_INET || family == AF_INET6) {
         const int size = (family == AF_INET) ?
