@@ -282,7 +282,7 @@ void Internal::compact () {
   // Special code for 'frozentab'.
   //
   for (auto src : vars) {
-    const int dst = mapper.map_idx (src);
+    const int dst = abs(mapper.map_lit (src));
     if (!dst) continue;
     if (src == dst) continue;
     assert (dst < src);

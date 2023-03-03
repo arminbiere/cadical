@@ -123,6 +123,8 @@ void Internal::backtrack (int new_level) {
   if (propagated2 > assigned) propagated2 = assigned;
   if (no_conflict_until > assigned) no_conflict_until = assigned;
 
+  propergated = 0;	// Always go back to root-level.
+
   control.resize (new_level + 1);
   level = new_level;
 }

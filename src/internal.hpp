@@ -181,6 +181,7 @@ struct Internal {
   Clause * ignore;              // ignored during 'vivify_propagate'
   size_t propagated;            // next trail position to propagate
   size_t propagated2;           // next binary trail position to propagate
+  size_t propergated;		// propagated without blocking literals
   size_t best_assigned;         // best maximum assigned ever
   size_t target_assigned;       // maximum assigned without conflict
   size_t no_conflict_until;     // largest trail prefix without conflict
@@ -530,6 +531,8 @@ struct Internal {
   void search_assume_decision (int decision);
   void assign_unit (int lit);
   bool propagate ();
+
+  void propergate (); // Repropagate without blocking literals.
 
   // Undo and restart in 'backtrack.cpp'.
   //
@@ -925,9 +928,13 @@ struct Internal {
 
     void reset_limits();      // Reset after 'solve' call.
 
+    // Try flipping a literal while not falsifying a model.
+
+    bool flip (int lit);
+
     // Assumption handling.
     //
-    void assume(int);         // New assumption literal.
+    void assume(int lit);     // New assumption literal.
     bool failed(int lit);     // Literal failed assumption?
     void reset_assumptions(); // Reset after 'solve' call.
     void failing();           // Prepare failed assumptions.

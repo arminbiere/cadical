@@ -269,6 +269,8 @@ struct External {
     return res;
   }
 
+  bool flip (int elit);
+
   bool failed (int elit);
 
   void terminate ();

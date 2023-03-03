@@ -153,6 +153,19 @@ void External::assume (int elit) {
   internal->assume (ilit);
 }
 
+bool External::flip (int elit) {
+  assert (elit);
+  assert (elit != INT_MIN);
+  int eidx = abs (elit);
+  if (eidx > max_var) return false;
+  if (marked (witness, elit)) return false;
+  int ilit = e2i[eidx];
+  if (!ilit) return false;
+  bool res = internal->flip (ilit);
+  if (res && extended) reset_extended ();
+  return res;
+}
+
 bool External::failed (int elit) {
   assert (elit);
   assert (elit != INT_MIN);

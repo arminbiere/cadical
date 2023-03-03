@@ -379,4 +379,80 @@ bool Internal::propagate () {
   return !conflict;
 }
 
+/*------------------------------------------------------------------------*/
+
+void Internal::propergate () {
+
+  assert (!conflict);
+  assert (propagated == trail.size ());
+
+  while (propergated != trail.size ()) {
+
+    const int lit = -trail[propergated++];
+    LOG ("propergating %d", -lit);
+    Watches & ws = watches (lit);
+
+    const const_watch_iterator eow = ws.end ();
+    watch_iterator j = ws.begin ();
+    const_watch_iterator i = j;
+
+    while (i != eow) {
+
+      const Watch w = *j++ = *i++;
+
+      if (w.binary ()) { assert (val (w.blit) > 0); continue; }
+      if (w.clause->garbage) { j--; continue; }
+
+      literal_iterator lits = w.clause->begin ();
+
+      const int other = lits[0] ^ lits[1] ^ lit;
+      const signed char u = val (other);
+
+      if (u > 0) continue;
+      assert (u < 0);
+
+      const int size = w.clause->size;
+      const literal_iterator middle = lits + w.clause->pos;
+      const const_literal_iterator end = lits + size;
+      literal_iterator k = middle;
+
+      int r = 0;
+      signed char v = -1;
+
+      while (k != end && (v = val (r = *k)) < 0)
+	k++;
+
+      if (v < 0) {
+	k = lits + 2;
+	assert (w.clause->pos <= size);
+	while (k != middle && (v = val (r = *k)) < 0)
+	  k++;
+      }
+
+      assert (lits + 2 <= k), assert (k <= w.clause->end ());
+      w.clause->pos = k - lits;
+
+      assert (v > 0);
+
+      LOG (w.clause, "unwatch %d in", lit);
+
+      lits[0] = other;
+      lits[1] = r;
+      *k = lit;
+
+      watch_literal (r, lit, w.clause);
+
+      j--;
+    }
+
+    if (j != i) {
+
+      while (i != eow)
+        *j++ = *i++;
+
+      ws.resize (j - ws.begin ());
+    }
+  }
+}
+
 }

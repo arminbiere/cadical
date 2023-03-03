@@ -79,7 +79,8 @@ int Internal::likely_phase (int idx) { return decide_phase (idx, false); }
 bool Internal::satisfied () {
   size_t assigned = trail.size ();
   if (propagated < assigned) return false;
-  if ((size_t) level < assumptions.size () + (!!constraint.size ())) return false;
+  if ((size_t) level < assumptions.size () + (!!constraint.size ()))
+    return false;
   return (assigned == (size_t) max_var);
 }
 

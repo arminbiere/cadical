@@ -1,6 +1,8 @@
 Version 1.5.4
 -------------
 
+- Added 'bool flip (int lit)' to API.
+
 - Fixed different garbage collection times with and without
   clause IDs (with './configure -l' or just './configure').
   This solves issue #44 by John Reeves.  At the same time

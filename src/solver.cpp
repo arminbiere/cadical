@@ -664,6 +664,19 @@ int Solver::val (int lit) {
   if (!external->extended) external->extend ();
   int res = external->ival (lit);
   LOG_API_CALL_RETURNS ("val", lit, res);
+  assert (state () == SATISFIED);
+  return res;
+}
+
+bool Solver::flip (int lit) {
+  TRACE ("flip", lit);
+  REQUIRE_VALID_STATE ();
+  REQUIRE_VALID_LIT (lit);
+  REQUIRE (state () == SATISFIED,
+    "can only flip value in satisfied state");
+  bool res = external->flip (lit);
+  LOG_API_CALL_RETURNS ("flip", lit, res);
+  assert (state () == SATISFIED);
   return res;
 }
 
@@ -675,6 +688,7 @@ bool Solver::failed (int lit) {
     "can only get failed assumptions in unsatisfied state");
   bool res = external->failed (lit);
   LOG_API_CALL_RETURNS ("failed", lit, res);
+  assert (state () == UNSATISFIED);
   return res;
 }
 
@@ -685,6 +699,7 @@ bool Solver::constraint_failed () {
     "can only determine if constraint failed in unsatisfied state");
   bool res = external->failed_constraint ();
   LOG_API_CALL_RETURNS ("constraint_failed", res);
+  assert (state () == UNSATISFIED);
   return res;
 }
 

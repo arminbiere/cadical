@@ -214,6 +214,7 @@ class Mobical : public Handler {
   friend class Reader;
   friend class Trace;
   friend struct ValCall;
+  friend struct FlipCall;
   friend struct MeltCall;
 
   /*----------------------------------------------------------------------*/
@@ -392,7 +393,7 @@ void Mobical::warning (const char * fmt, ...) {
 //   INIT
 //   (SET|ALWAYS)*
 //   (   (ADD|ASSUME|ALWAYS)*
-//       [ (SOLVE|SIMPLIFY|LOOKAHEAD) (VAL|FAILED|ALWAYS)* ]
+//       [ (SOLVE|SIMPLIFY|LOOKAHEAD) (VAL|FLIP|FAILED|ALWAYS)* ]
 //   )*
 //   [ RESET ]
 //
@@ -443,22 +444,23 @@ struct Call {
     CUBING      = (1<<13),
 
     VAL         = (1<<14),
-    FAILED      = (1<<15),
-    FIXED       = (1<<16),
+    FLIP        = (1<<15),
+    FAILED      = (1<<16),
+    FIXED       = (1<<17),
 
-    FREEZE      = (1<<17),
-    FROZEN      = (1<<18),
-    MELT        = (1<<19),
+    FREEZE      = (1<<18),
+    FROZEN      = (1<<19),
+    MELT        = (1<<20),
 
-    LIMIT       = (1<<20),
-    OPTIMIZE    = (1<<21),
+    LIMIT       = (1<<21),
+    OPTIMIZE    = (1<<22),
 
-    DUMP        = (1<<22),
-    STATS       = (1<<23),
+    DUMP        = (1<<23),
+    STATS       = (1<<24),
 
-    RESET       = (1<<24),
+    RESET       = (1<<25),
 
-    CONSTRAIN    = (1<<25),
+    CONSTRAIN    = (1<<26),
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN | MELT |
              LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED,
@@ -466,7 +468,7 @@ struct Call {
     CONFIG = INIT | SET | CONFIGURE | ALWAYS,
     BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING,
-    AFTER = VAL | FAILED | ALWAYS,
+    AFTER = VAL | FLIP | FAILED | ALWAYS,
   };
 
   Type type;            // Explicit typing.
@@ -670,6 +672,18 @@ struct ValCall : public Call {
   const char * keyword () { return "val"; }
 };
 
+struct FlipCall : public Call {
+  FlipCall (int l, int r = 0) : Call (FLIP, l, r) { }
+  void execute (Solver * & s) {
+    if (mobical.donot.enforce) res = s->flip (arg);
+    else if (s->state () == SATISFIED) res = s->flip (arg);
+    else res = 0;
+  }
+  void print (ostream & o) { o << "flip " << arg << ' ' << res << endl; }
+  Call * copy () { return new FlipCall (arg, res); }
+  const char * keyword () { return "flip"; }
+};
+
 struct FixedCall : public Call {
   FixedCall (int l, int r = 0) : Call (FIXED, l, r) { }
   void execute (Solver * & s) { res = s->fixed (arg); }
@@ -839,6 +853,7 @@ public:
       Call * c = calls[i];
       if (last &&
           c->type != Call::VAL &&
+          c->type != Call::FLIP &&
           c->type != Call::FAILED &&
           c->type != Call::FROZEN &&
           c->type != Call::RESET) res++, last = false;
@@ -901,6 +916,7 @@ private:
   void generate_assume (Random &, int vars);
   void generate_process (Random &);
   void generate_values (Random &, int vars);
+  void generate_flipped (Random &, int vars);
   void generate_frozen (Random &, int vars);
   void generate_failed (Random &, int vars);
   void generate_freeze (Random &, int vars);
@@ -1255,6 +1271,21 @@ void Trace::generate_values (Random & random, int vars) {
   }
 }
 
+void Trace::generate_flipped (Random & random, int vars) {
+  if (random.generate_double () < 0.5) return;
+  double fraction = random.generate_double ();
+  for (int idx = 1; idx <= vars; idx++) {
+    if (fraction < random.generate_double ()) continue;
+    int lit = random.generate_bool () ? -idx : idx;
+    push_back (new FlipCall (lit));
+  }
+  if (random.generate_double () < 0.1) {
+    int idx = random.pick_int (vars + 1, vars*1.5 + 1);
+    int lit = random.generate_bool () ? -idx : idx;
+    push_back (new FlipCall (lit));
+  }
+}
+
 void Trace::generate_failed (Random & random, int vars) {
   if (random.generate_double () < 0.05) return;
   double fraction = random.generate_double ();
@@ -1420,6 +1451,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
     generate_process (random);
 
     generate_values (random, maxvars);
+    generate_flipped (random, maxvars);
     generate_failed (random, maxvars);
     generate_frozen (random, maxvars);
   }
@@ -1817,6 +1849,7 @@ static bool is_basic (Call * c) {
     case Call::IRREDUNDANT:
     case Call::RESERVE:
     case Call::VAL:
+    case Call::FLIP:
     case Call::FIXED:
     case Call::FAILED:
     case Call::FROZEN:
@@ -2037,7 +2070,7 @@ static bool has_lit_arg_type (Call * c) {
     case Call::FREEZE:
     case Call::MELT:
     case Call::FROZEN:
-    case Call::VAL:
+    case Call::FLIP:
     case Call::FIXED:
     case Call::FAILED:
     case Call::RESERVE:
@@ -2387,6 +2420,18 @@ void Reader::parse () {
         error ("invalid result argument '%d' to 'val", val);
       if (second) c = new ValCall (lit, val);
       else        c = new ValCall (lit);
+    } else if (!strcmp (keyword, "flip")) {
+      if (!first) error ("first argument to 'flip' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid first argument '%s' to 'flip'", first);
+      if (enforce && (!lit || lit == INT_MIN))
+        error ("invalid literal '%d' as argument to 'flip'", lit);
+      if (second && !parse_int_str (second, val))
+        error ("invalid second argument '%s' to 'flip'", second);
+      if (second && val != 0 && val != 1)
+        error ("invalid result argument '%d' to 'flip", val);
+      if (second) c = new FlipCall (lit, val);
+      else        c = new FlipCall (lit);
     } else if (!strcmp (keyword, "fixed")) {
       if (!first) error ("first argument to 'fixed' missing");
       if (!parse_int_str (first, lit))
@@ -2506,6 +2551,7 @@ void Reader::parse () {
       break;
 
     case Call::VAL:
+    case Call::FLIP:
     case Call::FAILED:
       if (!solved && (state == Call::CONFIG || state == Call::BEFORE))
         error("'%s' can only be called after 'solve'", c->keyword());

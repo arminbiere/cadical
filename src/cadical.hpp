@@ -257,6 +257,27 @@ public:
   //
   int val (int lit);
 
+  // Try to flip the value of the given literal without falsifying the
+  // formula.  Returns 'true' if this was successful. Otherwise the model is
+  // not changed and 'false' is returned.  If a literal was eliminated or
+  // substituted flipping will fail on that literal and in particular the
+  // solver will not taint it nor restore any clauses.
+  //
+  // As a side effect of calling this formula first all assigned variables
+  // are propagated again without using blocking literal.  Thus the first
+  // call to this function after obtaining a model is most expensive.
+  //
+  // Furthermore if the reconstruction stack is non-empty and has been used
+  // to reconstruct a full extended model for eliminated variables, the
+  // values of these variables become invalid if checked before.  The 'flip'
+  // function only guarantees that the value of a remaining variable not
+  // acting as witness on the reconstruction stack can be flipped.
+  //
+  //   require (SATISFIED)
+  //   ensure (SATISFIED)
+  //
+  bool flip (int lit);
+
   // Determine whether the valid non-zero literal is in the core.
   // Returns 'true' if the literal is in the core and 'false' otherwise.
   // Note that the core does not have to be minimal.
