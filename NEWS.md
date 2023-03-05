@@ -1,6 +1,12 @@
 Version 1.5.4
 -------------
 
+- Fixed 'val' to return 'lit' or '-lit' and not just '-1' and '1'.
+
+- Allowing 'fixed' between 'constrain' in 'mobical'.
+
+- Fixed LZMA magic header.
+
 - Added 'bool flip (int lit)' to API.
 
 - Fixed different garbage collection times with and without

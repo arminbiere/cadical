@@ -2519,8 +2519,11 @@ void Reader::parse () {
     if (adding && c->type != Call::ADD && c->type != Call::RESET)
       error("'%s' after 'add %d' without 'add 0'", c->keyword(), adding);
 
-    if (constraining && c->type != Call::CONSTRAIN && c->type != Call::RESET)
-      error("'%s' after 'constrain %d' without 'constrain 0'", c->keyword(), constraining);
+    if (constraining &&
+        c->type != Call::FIXED &&
+	c->type != Call::CONSTRAIN && c->type != Call::RESET)
+      error("'%s' after 'constrain %d' without 'constrain 0'",
+            c->keyword(), constraining);
 
     int new_state = state;
 

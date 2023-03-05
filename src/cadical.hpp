@@ -263,15 +263,22 @@ public:
   // substituted flipping will fail on that literal and in particular the
   // solver will not taint it nor restore any clauses.
   //
-  // As a side effect of calling this formula first all assigned variables
-  // are propagated again without using blocking literal.  Thus the first
-  // call to this function after obtaining a model is most expensive.
+  // The 'flip' function can only flip the value of a variables not acting
+  // as witness on the reconstruction stack.
   //
-  // Furthermore if the reconstruction stack is non-empty and has been used
-  // to reconstruct a full extended model for eliminated variables, the
-  // values of these variables become invalid if checked before.  The 'flip'
-  // function only guarantees that the value of a remaining variable not
-  // acting as witness on the reconstruction stack can be flipped.
+  // As a side effect of calling this function first all assigned variables
+  // are propagated again without using blocking literal.  Thus the first
+  // call to this function after obtaining a model adds a substantial
+  // overhead.  Subsequent calls will not need to properly propagate again.
+  //
+  // Furthermore if the reconstruction stack is non-empty and has been
+  // traversed to reconstruct a full extended model for eliminated
+  // variables (and to satisfy removed blocked clauses), the values of these
+  // witness variables obtained via 'val' before become invalid. The user
+  // thus will need to call 'val' again after calling 'flip' which will
+  // trigger then a traversal of the reconstruction stack.
+  //
+  // So try to avoid mixing 'flip' and 'val' (for efficiency only).
   //
   //   require (SATISFIED)
   //   ensure (SATISFIED)

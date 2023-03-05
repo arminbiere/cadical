@@ -665,6 +665,7 @@ int Solver::val (int lit) {
   int res = external->ival (lit);
   LOG_API_CALL_RETURNS ("val", lit, res);
   assert (state () == SATISFIED);
+  assert (res == lit || res == -lit);
   return res;
 }
 

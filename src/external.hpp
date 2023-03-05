@@ -262,8 +262,8 @@ struct External {
   inline int ival (int elit) const {
     assert (elit != INT_MIN);
     int eidx = abs (elit), res;
-    if (eidx > max_var) res = -1;
-    else if ((size_t) eidx >= vals.size ()) res = -1;
+    if (eidx > max_var) res = -eidx;
+    else if ((size_t) eidx >= vals.size ()) res = -eidx;
     else res = vals[eidx] ? eidx : -eidx;
     if (elit < 0) res = -res;
     return res;

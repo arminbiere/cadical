@@ -775,6 +775,7 @@ bool Internal::flip (int lit) {
     Var & v = var (idx);
     assert (trail[v.trail] == lit);
     trail[v.trail] = -lit;
+    phases.saved[idx] = -original_value;
   } else
     LOG ("flipping value of %d failed", lit);
 
