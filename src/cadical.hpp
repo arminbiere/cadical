@@ -285,6 +285,13 @@ public:
   //
   bool flip (int lit);
 
+  // Same as 'flip' without actually flipping it.
+  //
+  //   require (SATISFIED)
+  //   ensure (SATISFIED)
+  //
+  bool flippable (int lit);
+
   // Determine whether the valid non-zero literal is in the core.
   // Returns 'true' if the literal is in the core and 'false' otherwise.
   // Note that the core does not have to be minimal.

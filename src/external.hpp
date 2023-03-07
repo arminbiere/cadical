@@ -270,6 +270,7 @@ struct External {
   }
 
   bool flip (int elit);
+  bool flippable (int elit);
 
   bool failed (int elit);
 

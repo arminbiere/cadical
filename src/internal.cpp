@@ -681,7 +681,7 @@ int Internal::lookahead () {
   return res;
 }
 
-bool Internal::flip (int lit) {
+bool Internal::flippable (int lit) {
 
   // Do not try to flip inactive literals except for unused variables.
 
@@ -692,7 +692,8 @@ bool Internal::flip (int lit) {
 
   if (propergated < trail.size ()) propergate ();
 
-  LOG ("trying to flip %d", lit);
+  LOG ("checking whether %d can be flipped", lit);
+
   const int idx = vidx (lit);
   const signed char original_value = vals[idx];
   assert (original_value);
@@ -709,65 +710,99 @@ bool Internal::flip (int lit) {
 
   Watches & ws = watches (lit);
   const const_watch_iterator eow = ws.end ();
-  watch_iterator j = ws.begin ();
-  const_watch_iterator i = j;
+  watch_iterator bow = ws.begin ();
 
-  while (i != eow) {
+  // We first go over binary watches/clauses first as this is cheaper and
+  // has higher chance of failure.
 
-    const Watch w = *j++ = *i++;
-
-    if (w.binary ()) {
-      const signed char b = val (w.blit);
-      if (b > 0) continue;
-      assert (b < 0);
-      res = false;
-      break;
-    }
-
-    if (w.clause->garbage) { j--; continue; }
-
-    literal_iterator lits = w.clause->begin ();
-
-    const int other = lits[0] ^ lits[1] ^ lit;
-    const signed char u = val (other);
-    if (u > 0) continue;
-
-    const int size = w.clause->size;
-    const literal_iterator middle = lits + w.clause->pos;
-    const const_literal_iterator end = lits + size;
-    literal_iterator k = middle;
-
-    int r = 0;
-    signed char v = -1;
-    while (k != end && (v = val (r = *k)) < 0)
-      k++;
-    if (v < 0) {
-      k = lits + 2;
-      assert (w.clause->pos <= size);
-      while (k != middle && (v = val (r = *k)) < 0)
-	k++;
-    }
-
-    if (v < 0) { res = false; break; }
-
-    assert (v > 0);
-    assert (lits + 2 <= k), assert (k <= w.clause->end ());
-    w.clause->pos = k - lits;
-    lits[0] = other, lits[1] = r, *k = lit;
-    watch_literal (r, lit, w.clause);
-    j--;
+  for (const_watch_iterator i = bow; i != eow; i++) {
+    const Watch w = *i;
+    if (!w.binary ())
+      continue;
+    const signed char b = val (w.blit);
+    if (b > 0) continue;
+    assert (b < 0);
+    res = false;
+    break;
   }
 
-  if (j != i) {
+  if (res)
+    {
+      const_watch_iterator i = bow;
+      watch_iterator j = bow;
 
-    while (i != eow)
-      *j++ = *i++;
+      while (i != eow) {
 
-    ws.resize (j - ws.begin ());
-  }
+	const Watch w = *j++ = *i++;
+
+	if (w.binary ())
+	  continue;
+
+	if (w.clause->garbage) { j--; continue; }
+
+	literal_iterator lits = w.clause->begin ();
+
+	const int other = lits[0] ^ lits[1] ^ lit;
+	const signed char u = val (other);
+	if (u > 0) continue;
+
+	const int size = w.clause->size;
+	const literal_iterator middle = lits + w.clause->pos;
+	const const_literal_iterator end = lits + size;
+	literal_iterator k = middle;
+
+	int r = 0;
+	signed char v = -1;
+	while (k != end && (v = val (r = *k)) < 0)
+	  k++;
+	if (v < 0) {
+	  k = lits + 2;
+	  assert (w.clause->pos <= size);
+	  while (k != middle && (v = val (r = *k)) < 0)
+	    k++;
+	}
+
+	if (v < 0) { res = false; break; }
+
+	assert (v > 0);
+	assert (lits + 2 <= k), assert (k <= w.clause->end ());
+	w.clause->pos = k - lits;
+	lits[0] = other, lits[1] = r, *k = lit;
+	watch_literal (r, lit, w.clause);
+	j--;
+      }
+
+      if (j != i) {
+
+	while (i != eow)
+	  *j++ = *i++;
+
+	ws.resize (j - ws.begin ());
+      }
+    }
+#ifdef LOGGING
+  if (res)
+    LOG ("literal %d can be flipped", lit);
+  else
+    LOG ("literal %d can not be flipped", lit);
+#endif
+  return res;
+}
+
+bool Internal::flip (int lit) {
+
+  bool res = flippable (lit);
 
   if (res) {
+
+    const int idx = vidx (lit);
+    const signed char original_value = vals[idx];
+    assert (original_value);
+    lit = original_value < 0 ? -idx : idx;
+    assert (val (lit) > 0);
+
     LOG ("flipping value of %d = 1 to %d = -1", lit, lit);
+
     vals[idx] = -original_value;
     vals[-idx] = original_value;
     assert (val (-lit) > 0);
@@ -775,7 +810,6 @@ bool Internal::flip (int lit) {
     Var & v = var (idx);
     assert (trail[v.trail] == lit);
     trail[v.trail] = -lit;
-    phases.saved[idx] = -original_value;
   } else
     LOG ("flipping value of %d failed", lit);
 

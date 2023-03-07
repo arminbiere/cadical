@@ -166,6 +166,17 @@ bool External::flip (int elit) {
   return res;
 }
 
+bool External::flippable (int elit) {
+  assert (elit);
+  assert (elit != INT_MIN);
+  int eidx = abs (elit);
+  if (eidx > max_var) return false;
+  if (marked (witness, elit)) return false;
+  int ilit = e2i[eidx];
+  if (!ilit) return false;
+  return internal->flippable (ilit);
+}
+
 bool External::failed (int elit) {
   assert (elit);
   assert (elit != INT_MIN);

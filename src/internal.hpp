@@ -931,6 +931,7 @@ struct Internal {
     // Try flipping a literal while not falsifying a model.
 
     bool flip (int lit);
+    bool flippable (int lit);
 
     // Assumption handling.
     //

@@ -681,6 +681,18 @@ bool Solver::flip (int lit) {
   return res;
 }
 
+bool Solver::flippable (int lit) {
+  TRACE ("flippable", lit);
+  REQUIRE_VALID_STATE ();
+  REQUIRE_VALID_LIT (lit);
+  REQUIRE (state () == SATISFIED,
+    "can only flip value in satisfied state");
+  bool res = external->flippable (lit);
+  LOG_API_CALL_RETURNS ("flip", lit, res);
+  assert (state () == SATISFIED);
+  return res;
+}
+
 bool Solver::failed (int lit) {
   TRACE ("failed", lit);
   REQUIRE_VALID_STATE ();

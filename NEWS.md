@@ -1,6 +1,8 @@
 Version 1.5.4
 -------------
 
+- Added 'bool flippable (int lit)' to API.
+
 - Fixed 'val' to return 'lit' or '-lit' and not just '-1' and '1'.
 
 - Allowing 'fixed' between 'constrain' in 'mobical'.

@@ -215,6 +215,7 @@ class Mobical : public Handler {
   friend class Trace;
   friend struct ValCall;
   friend struct FlipCall;
+  friend struct FlippableCall;
   friend struct MeltCall;
 
   /*----------------------------------------------------------------------*/
@@ -393,7 +394,7 @@ void Mobical::warning (const char * fmt, ...) {
 //   INIT
 //   (SET|ALWAYS)*
 //   (   (ADD|ASSUME|ALWAYS)*
-//       [ (SOLVE|SIMPLIFY|LOOKAHEAD) (VAL|FLIP|FAILED|ALWAYS)* ]
+//       [ (SOLVE|SIMPLIFY|LOOKAHEAD) (VAL|FLIP|FLIPPABLE|FAILED|ALWAYS)* ]
 //   )*
 //   [ RESET ]
 //
@@ -445,22 +446,23 @@ struct Call {
 
     VAL         = (1<<14),
     FLIP        = (1<<15),
-    FAILED      = (1<<16),
-    FIXED       = (1<<17),
+    FLIPPABLE   = (1<<16),
+    FAILED      = (1<<17),
+    FIXED       = (1<<18),
 
-    FREEZE      = (1<<18),
-    FROZEN      = (1<<19),
-    MELT        = (1<<20),
+    FREEZE      = (1<<19),
+    FROZEN      = (1<<20),
+    MELT        = (1<<21),
 
-    LIMIT       = (1<<21),
-    OPTIMIZE    = (1<<22),
+    LIMIT       = (1<<22),
+    OPTIMIZE    = (1<<23),
 
-    DUMP        = (1<<23),
-    STATS       = (1<<24),
+    DUMP        = (1<<24),
+    STATS       = (1<<25),
 
-    RESET       = (1<<25),
+    RESET       = (1<<26),
 
-    CONSTRAIN    = (1<<26),
+    CONSTRAIN    = (1<<27),
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN | MELT |
              LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED,
@@ -684,6 +686,19 @@ struct FlipCall : public Call {
   const char * keyword () { return "flip"; }
 };
 
+struct FlippableCall : public Call {
+  FlippableCall (int l, int r = 0) : Call (FLIPPABLE, l, r) { }
+  void execute (Solver * & s) {
+    if (mobical.donot.enforce) res = s->flippable (arg);
+    else if (s->state () == SATISFIED) res = s->flippable (arg);
+    else res = 0;
+  }
+  void print (ostream & o) {
+    o << "flippable " << arg << ' ' << res << endl; }
+  Call * copy () { return new FlipCall (arg, res); }
+  const char * keyword () { return "flippable"; }
+};
+
 struct FixedCall : public Call {
   FixedCall (int l, int r = 0) : Call (FIXED, l, r) { }
   void execute (Solver * & s) { res = s->fixed (arg); }
@@ -854,6 +869,7 @@ public:
       if (last &&
           c->type != Call::VAL &&
           c->type != Call::FLIP &&
+          c->type != Call::FLIPPABLE &&
           c->type != Call::FAILED &&
           c->type != Call::FROZEN &&
           c->type != Call::RESET) res++, last = false;
@@ -1277,12 +1293,18 @@ void Trace::generate_flipped (Random & random, int vars) {
   for (int idx = 1; idx <= vars; idx++) {
     if (fraction < random.generate_double ()) continue;
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new FlipCall (lit));
+    if (random.generate_double () < 0.5)
+      push_back (new FlippableCall (lit));
+    else
+      push_back (new FlipCall (lit));
   }
   if (random.generate_double () < 0.1) {
     int idx = random.pick_int (vars + 1, vars*1.5 + 1);
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new FlipCall (lit));
+    if (random.generate_double () < 0.5)
+      push_back (new FlippableCall (lit));
+    else
+      push_back (new FlipCall (lit));
   }
 }
 
@@ -1850,6 +1872,7 @@ static bool is_basic (Call * c) {
     case Call::RESERVE:
     case Call::VAL:
     case Call::FLIP:
+    case Call::FLIPPABLE:
     case Call::FIXED:
     case Call::FAILED:
     case Call::FROZEN:
@@ -2071,6 +2094,7 @@ static bool has_lit_arg_type (Call * c) {
     case Call::MELT:
     case Call::FROZEN:
     case Call::FLIP:
+    case Call::FLIPPABLE:
     case Call::FIXED:
     case Call::FAILED:
     case Call::RESERVE:
@@ -2432,6 +2456,18 @@ void Reader::parse () {
         error ("invalid result argument '%d' to 'flip", val);
       if (second) c = new FlipCall (lit, val);
       else        c = new FlipCall (lit);
+    } else if (!strcmp (keyword, "flippable")) {
+      if (!first) error ("first argument to 'flippable' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid first argument '%s' to 'flippable'", first);
+      if (enforce && (!lit || lit == INT_MIN))
+        error ("invalid literal '%d' as argument to 'flippable'", lit);
+      if (second && !parse_int_str (second, val))
+        error ("invalid second argument '%s' to 'flippable'", second);
+      if (second && val != 0 && val != 1)
+        error ("invalid result argument '%d' to 'flippable", val);
+      if (second) c = new FlippableCall (lit, val);
+      else        c = new FlippableCall (lit);
     } else if (!strcmp (keyword, "fixed")) {
       if (!first) error ("first argument to 'fixed' missing");
       if (!parse_int_str (first, lit))
@@ -2555,6 +2591,7 @@ void Reader::parse () {
 
     case Call::VAL:
     case Call::FLIP:
+    case Call::FLIPPABLE:
     case Call::FAILED:
       if (!solved && (state == Call::CONFIG || state == Call::BEFORE))
         error("'%s' can only be called after 'solve'", c->keyword());
