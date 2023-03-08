@@ -137,7 +137,10 @@ bool Internal::flippable (int lit) {
 
   if (!active (lit) && !flags (lit).unused ()) return false;
 
-  // In contrast to 'flip' we do not need to 'propergate'.
+  // Need to reestablish proper watching invariants as if there are no
+  // blocking literals as flipping in principle does not work with them.
+
+  if (propergated < trail.size ()) propergate ();
 
   LOG ("checking whether %d is flippable", lit);
 
@@ -150,8 +153,8 @@ bool Internal::flippable (int lit) {
   // Here we go over all the clauses in which 'lit' is watched by 'lit' and
   // check whether assigning 'lit' to false would break watching invariants
   // or even make the clause false.  In contrast to 'flip' we do not try to
-  // find replacement literals but do (can) use blocking literals'.
-  // Therefore we also do not split the traversal code into two parts.
+  // find replacement literals but do use blocking literals'.  Therefore we
+  // also do not split the traversal code into two parts.
 
   bool res = true;
 
