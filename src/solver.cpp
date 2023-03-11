@@ -688,7 +688,7 @@ bool Solver::flippable (int lit) {
   REQUIRE (state () == SATISFIED,
     "can only flip value in satisfied state");
   bool res = external->flippable (lit);
-  LOG_API_CALL_RETURNS ("flip", lit, res);
+  LOG_API_CALL_RETURNS ("flippable", lit, res);
   assert (state () == SATISFIED);
   return res;
 }

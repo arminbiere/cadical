@@ -983,6 +983,7 @@ struct Internal {
     int next_decision_variable();
     int decide_phase(int idx, bool target);
     int likely_phase(int idx);
+    bool better_decision (int lit, int other);
     int decide(); // 0=decision, 20=failed
 
     // Internal functions to enable explicit search limits.

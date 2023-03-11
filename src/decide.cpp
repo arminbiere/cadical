@@ -84,6 +84,13 @@ bool Internal::satisfied () {
   return (assigned == (size_t) max_var);
 }
 
+bool Internal::better_decision (int lit, int other) {
+  int lit_idx = abs (lit);
+  int other_idx = abs (other);
+  if (stable) return stab[lit_idx] > stab[other_idx];
+  else        return btab[lit_idx] > btab[other_idx];
+}
+
 // Search for the next decision and assign it to the saved phase.  Requires
 // that not all variables are assigned.
 
@@ -108,32 +115,89 @@ int Internal::decide () {
       search_assume_decision (lit);
     }
   } else if ((size_t) level == assumptions.size () && constraint.size ()) {
-    bool satisfied_constraint = false;
-    int unassigned_lit = 0;
-    for (const auto lit : constraint) {
+
+    int satisfied_lit = 0;      // The literal satisfying the constrain.
+    int unassigned_lit = 0;     // Highest score unassigned literal.
+    int previous_lit = 0;	// Move satisfied literals to the front.
+
+    const size_t size_constraint = constraint.size ();
+
+#ifndef NDEBUG
+    unsigned sum = 0;
+    for (auto lit : constraint)
+      sum += lit;
+#endif
+    for (size_t i = 0; i != size_constraint; i++) {
+
+      // Get literal and move 'constraint[i] = constraint[i-1]'.
+
+      int lit = constraint[i];
+      constraint[i] = previous_lit;
+      previous_lit = lit;
+
       const signed char tmp = val (lit);
       if (tmp < 0) {
-        LOG ("constraint lit %d falsified", lit);
-      } else if (tmp > 0) {
-        LOG ("literal %d satisfies constraint and is implied by assumptions", lit);
-        level++;
-        control.push_back (Level (0, trail.size ()));
-        LOG ("added pseudo decision level for constraint");
-        satisfied_constraint = true;
-        break;
-      } else if (!unassigned_lit)
-        unassigned_lit = lit;
-    }
-    if (!satisfied_constraint) {
-      if (unassigned_lit) {
-        LOG ("deciding %d to satisfy constraint", unassigned_lit);
-        search_assume_decision (unassigned_lit);
-      } else {
-        LOG ("failing constraint");
-        unsat_constraint = true;
-        res = 20;
+        LOG ("constraint literal %d falsified", lit);
+	continue;
       }
+
+      if (tmp > 0) {
+        LOG ("constraint literal %d satisfied", lit);
+        satisfied_lit = lit;
+	break;
+      }
+
+      assert (!tmp);
+      LOG ("constraint literal %d unassigned", lit);
+
+      if (!unassigned_lit || better_decision (lit, unassigned_lit))
+	unassigned_lit = lit;
     }
+
+    if (satisfied_lit) {
+
+      constraint[0] = satisfied_lit;  // Move satisfied to the front.
+
+      LOG ("literal %d satisfies constraint and "
+	   "is implied by assumptions", satisfied_lit);
+
+      level++;
+      control.push_back (Level (0, trail.size ()));
+      LOG ("added pseudo decision level for constraint");
+
+    } else {
+
+      // Just move all the literals back.  If we found an unsatisfied
+      // literal then it will be satisfied (most likely) at the next
+      // decision and moved then to the first position.
+
+      if (size_constraint) {
+
+	for (size_t i = 0; i + 1 != size_constraint; i++)
+	  constraint[i] = constraint[i+1];
+
+	constraint[size_constraint-1] = previous_lit;
+      }
+
+      if (unassigned_lit) {
+
+	LOG ("deciding %d to satisfy constraint", unassigned_lit);
+	search_assume_decision (unassigned_lit);
+
+      } else {
+
+	LOG ("failing constraint");
+	unsat_constraint = true;
+	res = 20;
+      }  
+    }
+
+#ifndef NDEBUG
+    for (auto lit : constraint)
+      sum -= lit;
+    assert (!sum);	// Checksum of literal should not change!
+#endif
+
   } else {
     stats.decisions++;
     int idx = next_decision_variable ();

@@ -1,6 +1,9 @@
 Version 1.5.4
 -------------
 
+- Picking highest score literal in assumed clause ('constrain')
+  and caching of satisfied literal by moving them to the front.
+
 - Added 'bool flippable (int lit)' to API.
 
 - Fixed 'val' to return 'lit' or '-lit' and not just '-1' and '1'.
