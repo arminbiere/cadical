@@ -33,7 +33,10 @@ void Internal::phase (int lit) {
 void Internal::unphase (int lit) {
   const int idx = vidx (lit);
   signed char old_forced_phase = phases.forced[idx];
-  if (!old_forced_phase) return;
+  if (!old_forced_phase) {
+    LOG ("forced phase of %d already reset", lit);
+    return;
+  }
   LOG ("clearing old forced phase %d", old_forced_phase * idx);
   phases.forced[idx] = 0;
 }

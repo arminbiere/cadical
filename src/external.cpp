@@ -225,9 +225,13 @@ void External::unphase (int elit) {
   assert (elit);
   assert (elit != INT_MIN);
   int eidx = abs (elit);
-  if (eidx > max_var) return;
+  if (eidx > max_var) {
+UNUSED:
+    LOG ("resetting forced phase of unused external %d ignored", elit);
+    return;
+  }
   int ilit = e2i[eidx];
-  if (!ilit) return;
+  if (!ilit) goto UNUSED;
   if (elit < 0) ilit = -ilit;
   internal->unphase (ilit);
 }
