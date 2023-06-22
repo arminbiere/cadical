@@ -75,10 +75,10 @@ analyze: all
 	$(COMPILE) --analyze ../src/*.cpp
 
 format:
-	clang-format ../*/*.[ch]pp
-	clang-format ../*/*.[ch]
-	clang-format ../test/*/*.[ch]pp
-	clang-format ../test/*/*.[ch]
+	clang-format -i ../*/*.[ch]pp
+	clang-format -i ../*/*.[ch]
+	clang-format -i ../test/*/*.[ch]pp
+	clang-format -i ../test/*/*.[ch]
 
 clean:
 	rm -f *.o *.a cadical mobical makefile build.hpp
