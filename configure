@@ -474,7 +474,9 @@ mobical:
 	\$(MAKE) -C "\$(CADICALBUILD)" mobical
 update:
 	\$(MAKE) -C "\$(CADICALBUILD)" update
-.PHONY: all cadical clean mobical test update
+format:
+	\$(MAKE) -C "\$(CADICALBUILD)" format
+.PHONY: all cadical clean mobical test format
 EOF
 
 msg "generated '../makefile' as proxy to ..."
