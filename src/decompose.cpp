@@ -303,7 +303,11 @@ bool Internal::decompose_round () {
         if (l == 2) new_binary_clause = true;
         LOG ("flushed %d literals", flushed);
         (void) shrink_clause (c, l);
-      } else if (likely_to_be_kept_clause (c)) mark_added (c);
+      } else if (likely_to_be_kept_clause(c)) mark_added(c);
+      if(c->size == 2) { // cheaper to update only new binary clauses
+	update_watch_size (watches (c->literals[0]), c->literals[1], c);
+	update_watch_size (watches (c->literals[1]), c->literals[0], c);
+      }
       LOG (c, "substituted");
     }
     while (!clause.empty ()) {

@@ -200,6 +200,7 @@ bool Internal::propagate () {
         else search_assign (w.blit, w.clause);
 
       } else {
+	assert (w.clause->size > 2);
 
         if (conflict) break; // Stop if there was a binary conflict already.
 
