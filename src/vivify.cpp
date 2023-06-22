@@ -782,6 +782,29 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     }
   }
 
+  // Now we go over the very last literal of the clause and attempt to instantiate it
+  // refer to instantiate.hpp for more. As clauses as sorted by number of occurrence,
+  // we attempt to remove literals with few occurrences
+  assert (ignore == c);
+
+  const int lit = sorted.back();
+  if (opts.vivifyinst && !subsume && lit != remove) {
+    LOG ("now instantiation");
+    backtrack (level - 1);
+    assert (val (lit) == 0);
+    stats.vivifydecs++;
+    vivify_assume (lit);
+    bool ok = vivify_propagate ();
+    if (!ok) {
+      LOG ("instantiate can remove %d", lit);
+      remove = lit, ++stats.vivifyinstantiate;
+      conflict = 0;
+    }
+    else
+    LOG ("instantiation failed");
+    backtrack (level - 1);
+  }
+
   assert (ignore == c);
   ignore = 0;
 
@@ -839,17 +862,18 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     // falsified).  Those should be removed in addition to 'remove'.
     //
     for (const auto & other : *c) {
-      assert (val (other) < 0);
       Var & v = var (other);
       if (!v.level) continue; // Remove root-level fixed literals.
       if (v.reason) {         // Remove all negative implied literals.
         assert (v.level);
         assert (v.reason);
         LOG ("flushing literal %d", other);
-      } else {                                // Decision or unassigned.
-        LOG ("keeping literal %d", other);
-        clause.push_back (other);
+	continue;
       }
+      if (other == remove) continue; // Remove instantiated literals.
+      // Decision or unassigned.
+      LOG ("keeping literal %d", other);
+      clause.push_back (other);
     }
 
     if (redundant_mode) stats.vivifystred1++;

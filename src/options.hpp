@@ -104,6 +104,7 @@ LOGOPT( logsort,           0,  0,  1,0,0,0, "sort logged clauses") \
 OPTION( lucky,             1,  0,  1,0,0,1, "search for lucky phases") \
 OPTION( minimize,          1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \
+OPTION( otfs,              1,  0,  1,0,0,1, "on-the-fly self subsumption") \
 OPTION( phase,             1,  0,  1,0,0,1, "initial phase") \
 OPTION( probe,             1,  0,  1,0,1,1, "failed literal probing" ) \
 OPTION( probehbr,          1,  0,  1,0,0,1, "learn hyper binary clauses") \
@@ -149,6 +150,7 @@ OPTION( stabilizefactor, 200,101,2e9,0,0,1, "phase increase in percent") \
 OPTION( stabilizeint,    1e3,  1,2e9,0,0,1, "stabilizing interval") \
 OPTION( stabilizemaxint, 2e9,  1,2e9,0,0,1, "maximum stabilizing phase") \
 OPTION( stabilizeonly,     0,  0,  1,0,0,1, "only stabilizing phases") \
+OPTION( stats,             1,  0,  1,0,0,1, "print all statistics at the end of the run") \
 OPTION( subsume,           1,  0,  1,0,1,1, "enable clause subsumption") \
 OPTION( subsumebinlim,   1e4,  0,2e9,1,0,1, "watch list length limit") \
 OPTION( subsumeclslim,   1e2,  0,2e9,2,0,1, "clause length limit") \
@@ -174,6 +176,7 @@ OPTION( transredmineff,  1e6,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( transredreleff,  1e2,  1,1e5,1,0,1, "relative efficiency per mille") \
 QUTOPT( verbose,           0,  0,  3,0,0,0, "more verbose messages") \
 OPTION( vivify,            1,  0,  1,0,1,1, "vivification") \
+OPTION( vivifyinst,        1,  0,  1,0,0,1, "instantiate last literal when vivify") \
 OPTION( vivifymaxeff,    2e7,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( vivifymineff,    2e4,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( vivifyonce,        0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \

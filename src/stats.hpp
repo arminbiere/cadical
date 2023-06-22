@@ -169,6 +169,7 @@ struct Stats {
   int64_t vivifystred2; // strengthened redundant clause (2)
   int64_t vivifystred3; // strengthened redundant clause (3)
   int64_t vivifyunits;  // units during vivification
+  int64_t vivifyinstantiate; //instantiation during vivification
   int64_t transreds;
   int64_t transitive;
   struct {
@@ -218,6 +219,11 @@ struct Stats {
     int64_t substituted; // number of substituted variables
     int64_t pure;        // number of pure literals
   } all, now;
+
+  struct {
+    int64_t strengthened;// number of clauses strengthened during OTFS
+    int64_t subsumed;    // number of clauses subsumed by OTFS
+  } otfs;
 
   int64_t unused;        // number of unused variables
   int64_t active;        // number of active variables

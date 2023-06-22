@@ -31,7 +31,7 @@ void Stats::print (Internal * internal) {
 
   Stats & stats = internal->stats;
 
-  int all = internal->opts.verbose > 0;
+  int all = internal->opts.verbose > 0|| internal->opts.stats;
 #ifdef LOGGING
   if (internal->opts.log) all = true;
 #endif // ifdef LOGGING
@@ -158,6 +158,13 @@ void Stats::print (Internal * internal) {
   PRT ("shrunken:        %15" PRId64 "   %10.2f %%  learned literals", stats.shrunken, percent(stats.shrunken, stats.learned.literals));
   PRT ("minishrunken:    %15" PRId64 "   %10.2f %%  learned literals", stats.minishrunken, percent(stats.minishrunken, stats.learned.literals));
 
+  if (all || stats.conflicts) {
+    PRT ("otfs:            %15" PRId64 "   %10.2f %%  of conflict", stats.otfs.subsumed + stats.otfs.strengthened, percent (stats.otfs.subsumed + stats.otfs.strengthened, stats.conflicts));
+    PRT ("  subsumed       %15" PRId64 "   %10.2f %%  of conflict", stats.otfs.subsumed, percent (stats.otfs.subsumed, stats.conflicts));
+    PRT ("  strengthened   %15" PRId64 "   %10.2f %%  of conflict", stats.otfs.strengthened, percent (stats.otfs.strengthened, stats.conflicts));
+  }
+
+
   PRT ("propagations:    %15" PRId64 "   %10.2f M  per second", propagations, relative (propagations/1e6, t));
   PRT ("  coverprops:    %15" PRId64 "   %10.2f %%  of propagations", stats.propagations.cover, percent (stats.propagations.cover, propagations));
   PRT ("  probeprops:    %15" PRId64 "   %10.2f %%  of propagations", stats.propagations.probe, percent (stats.propagations.probe, propagations));
@@ -245,6 +252,7 @@ void Stats::print (Internal * internal) {
   PRT ("  vivifystred3:  %15" PRId64 "   %10.2f %%  per vivifystrs", stats.vivifystred3, percent (stats.vivifystred3, stats.vivifystrs));
   PRT ("  vivifydecs:    %15" PRId64 "   %10.2f    per checks", stats.vivifydecs, relative (stats.vivifydecs, stats.vivifychecks));
   PRT ("  vivifyreused:  %15" PRId64 "   %10.2f %%  per decision", stats.vivifyreused, percent (stats.vivifyreused, stats.vivifydecs));
+  PRT ("  vivifyinst:    %15" PRId64 "   %10.2f %%  per decision", stats.vivifyinstantiate, percent (stats.vivifyinstantiate, stats.vivifystrs));
   }
   if (all || stats.walk.count) {
   PRT ("walked:          %15" PRId64 "   %10.2f    interval", stats.walk.count, relative (stats.conflicts, stats.walk.count));

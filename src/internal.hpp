@@ -559,11 +559,14 @@ struct Internal {
   bool bump_also_reason_literal (int lit);
   void bump_also_reason_literals (int lit, int limit);
   void bump_also_all_reason_literals ();
-  void analyze_literal (int lit, int & open);
-  void analyze_reason (int lit, Clause *, int & open);
+  void analyze_literal (int lit, int & open, int &resolvent_size, int &antecedent_size);
+  void analyze_reason (int lit, Clause *, int & open, int &resolvent_size, int &antecedent_size);
   Clause * new_driving_clause (const int glue, int & jump);
   int find_conflict_level (int & forced);
   int determine_actual_backtrack_level (int jump);
+  void otfs_strengthen_clause (Clause *, int, int, const std::vector<int>&);
+  void otfs_subsume_clause (Clause * subsuming, Clause * subsumed);
+  Clause * on_the_fly_strengthen (Clause * conflict, int lit);
   void analyze ();
   void iterate ();       // report learned unit clause
 

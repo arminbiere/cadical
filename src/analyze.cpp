@@ -223,12 +223,14 @@ inline void Internal::bump_clause (Clause * c) {
 // called 'glue', or 'LBD').
 
 inline void
-Internal::analyze_literal (int lit, int & open) {
+Internal::analyze_literal (int lit, int & open, int &resolvent_size, int &antecedent_size) {
   assert (lit);
-  Flags & f = flags (lit);
-  if (f.seen) return;
   Var & v = var (lit);
   if (!v.level) return;
+  ++antecedent_size;
+
+  Flags & f = flags (lit);
+  if (f.seen) return;
   assert (val (lit) < 0);
   assert (v.level <= level);
   if (v.level < level) clause.push_back (lit);
@@ -240,17 +242,18 @@ Internal::analyze_literal (int lit, int & open) {
   if (v.trail < l.seen.trail) l.seen.trail = v.trail;
   f.seen = true;
   analyzed.push_back (lit);
+  ++resolvent_size;
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);
   if (v.level == level) open++;
 }
 
 inline void
-Internal::analyze_reason (int lit, Clause * reason, int & open) {
+Internal::analyze_reason (int lit, Clause * reason, int & open, int &resolvent_size, int &antecedent_size) {
   assert (reason);
   bump_clause (reason);
   for (const auto & other : *reason)
     if (other != lit)
-      analyze_literal (other, open);
+      analyze_literal (other, open, resolvent_size, antecedent_size);
 }
 
 /*------------------------------------------------------------------------*/
@@ -413,7 +416,7 @@ Clause * Internal::new_driving_clause (const int glue, int & jump) {
 inline int Internal::find_conflict_level (int & forced) {
 
   assert (conflict);
-  assert (opts.chrono);
+  assert (opts.chrono || opts.otfs);
 
   int res = 0, count = 0;
 
@@ -472,6 +475,7 @@ inline int Internal::find_conflict_level (int & forced) {
 
     if (highest_position > 1)
       watch_literal (highest_literal, lits[!i], conflict);
+
   }
 
   // Only if the number of highest level literals in the conflict is one
@@ -597,6 +601,119 @@ void Internal::eagerly_subsume_recently_learned_clauses (Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
+Clause * Internal::on_the_fly_strengthen (Clause * conflict, int uip) {
+  auto sorted = std::vector<int>();
+  sorted.reserve(conflict->size);
+  assert (sorted.empty());
+  LOG (conflict, "applying OTFS on lit %d", uip);
+  assert (conflict->size > 2);
+  assert (conflict);
+  ++stats.otfs.strengthened;
+
+  int * lits = conflict->literals;
+
+  assert (lits[0] == uip || lits[1] == uip);
+  const int other_init = lits[0] ^ lits[1] ^ uip;
+
+  const int old_size = conflict->size;
+  int new_size = 0;
+  for (int i = 0; i < old_size; ++i) {
+    const int other = lits[i];
+    sorted.push_back(other);
+    if (var (other).level)
+      lits[new_size++] = other;
+  }
+
+  LOG(conflict, "removing all units ");
+
+  assert (lits[0] == uip || lits[1] == uip);
+  const int other = lits[0] ^ lits[1] ^ uip;
+  lits[0] = other;
+  lits[1] = lits[--new_size];
+  LOG(conflict, "putting uip at pos 1");
+
+  if (other_init != other)
+    remove_watch(watches(other_init), conflict);
+  remove_watch(watches(uip), conflict);
+
+  // sort the clause
+  {
+    int highest_pos = 0;
+    int highest_level = 0;
+    for (int i = 1; i < new_size; i++)
+      {
+	const unsigned other = lits[i];
+	assert (val (other) < 0);
+	const int level = var (other).level;
+	assert (level);
+	LOG ("checking %d", other);
+	if (level <= highest_level)
+	  continue;
+	highest_pos = i;
+	highest_level = level;
+      }
+    LOG ("highest lit is %d", lits[highest_pos]);
+    if (highest_pos != 1)
+      swap (lits[1], lits[highest_pos]);
+    LOG ("removing %d literals", conflict->size - new_size);
+    otfs_strengthen_clause (conflict, uip, new_size, sorted);
+    assert (new_size == conflict->size);
+  }
+
+
+  if (other_init != other)
+    watch_literal(other, lits[1], conflict);
+  else {
+    update_watch_size (watches(other), lits[1], conflict);
+  }
+  watch_literal (lits[1], other, conflict);
+
+  LOG (conflict, "strengthened clause by OTFS");
+  sorted.clear();
+
+  return conflict;
+}
+
+
+/*------------------------------------------------------------------------*/
+inline void
+Internal::otfs_subsume_clause (Clause * subsuming, Clause * subsumed) {
+  stats.subsumed++;
+  assert (subsuming->size <= subsumed->size);
+  LOG (subsumed, "subsumed");
+  if (subsumed->redundant) stats.subred++; else stats.subirr++;
+  mark_garbage (subsumed);
+  if (subsumed->redundant || !subsuming->redundant) return;
+  LOG ("turning redundant subsuming clause into irredundant clause");
+  subsuming->redundant = false;
+  stats.current.irredundant++;
+  stats.added.irredundant++;
+  stats.irrlits += subsuming->size;
+  assert (stats.current.redundant > 0);
+  stats.current.redundant--;
+  assert (stats.added.redundant > 0);
+  stats.added.redundant--;
+  // ... and keep 'stats.added.total'.
+}
+
+/*------------------------------------------------------------------------*/
+
+// Candidate clause 'c' is strengthened by removing 'lit'.
+
+  void Internal::otfs_strengthen_clause (Clause * c, int lit, int new_size, const std::vector<int>&old) {
+  stats.strengthened++;
+  assert (c->size > 2);
+  (void) shrink_clause (c, new_size);
+  if (proof) proof->add_derived_clause (c);
+  if (!c->redundant) mark_removed (lit);
+  c->used = true;
+  LOG (c, "strengthened");
+  external->check_shrunken_clause (c);
+  if (proof) proof->delete_clause (old);
+}
+
+/*------------------------------------------------------------------------*/
+
 // This is the main conflict analysis routine.  It assumes that a conflict
 // was found.  Then we derive the 1st UIP clause, optionally minimize it,
 // add it as learned clause, and then uses the clause for conflict directed
@@ -698,9 +815,60 @@ void Internal::analyze () {
   int i = trail.size ();        // Start at end-of-trail.
   int open = 0;                 // Seen but not processed on this level.
   int uip = 0;                  // The first UIP literal.
+  int resolvent_size = 0;       // without the uip
+  int antecedent_size = 1;      // with the uip and without unit literals
+  int conflict_size = 0;        // size of the conflict without the uip and without unit literals
+  int resolved = 0;             // number of resolution (0 = clause in CNF)
+  const bool otfs = opts.otfs;
 
   for (;;) {
-    analyze_reason (uip, reason, open);
+    antecedent_size = 1; // for uip
+    analyze_reason (uip, reason, open, resolvent_size, antecedent_size);
+        if (resolved == 0)
+      conflict_size = antecedent_size - 1;
+    assert (resolvent_size == open + (int)clause.size());
+
+    if (otfs && resolved > 0 &&
+	antecedent_size > 2 && resolvent_size < antecedent_size) {
+      assert (reason != conflict);
+      LOG (analyzed, "found candidate for OTFS, conflict is: ");
+      LOG (reason, "found candidate (size %d) for OTFS, resolvent is: ", antecedent_size);
+      reason = on_the_fly_strengthen (reason, uip);
+      assert (conflict_size >= 2);
+      if (resolved == 1 && resolvent_size < conflict_size) {
+	otfs_subsume_clause (reason, conflict);
+	resolved = 0;
+	LOG (reason, "changing conflict to");
+	conflict = reason;
+	--conflict_size;
+	assert (conflict_size == conflict->size);
+	++stats.otfs.subsumed;
+	++stats.subsumed;
+
+	if (open == 1) {
+	  int forced;
+	  const int conflict_level = find_conflict_level (forced);
+	  int new_level = determine_actual_backtrack_level (conflict_level - 1);
+	  UPDATE_AVERAGE (averages.current.level, new_level);
+	  backtrack (new_level);
+
+	  LOG ("forcing %d", forced);
+	  search_assign_driving (forced, conflict);
+
+	  conflict = 0;
+	  // Clean up.
+	  //
+	  clear_analyzed_literals ();
+	  clear_analyzed_levels ();
+          clause.clear();
+	  STOP (analyze);
+	  return;
+	}
+      }
+    }
+
+    ++resolved;
+
     uip = 0;
     while (!uip) {
       assert (i > 0);
@@ -711,6 +879,8 @@ void Internal::analyze () {
     if (!--open) break;
     reason = var (uip).reason;
     LOG (reason, "analyzing %d reason", uip);
+    assert (resolvent_size);
+    --resolvent_size;
   }
   LOG ("first UIP %d", uip);
   clause.push_back (-uip);

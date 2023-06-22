@@ -44,6 +44,17 @@ inline void remove_watch (Watches & ws, Clause * clause) {
   ws.resize (i - ws.begin ());
 }
 
+  // search for the clause and updates the size marked in the watch lists
+  inline void update_watch_size (Watches & ws, int blit, Clause * conflict) {
+    bool found = false;
+    const int size = conflict->size;
+    for (Watch &w : ws) {
+      if (w.clause == conflict) w.size = size, w.blit = blit, found = true;
+      assert (w.clause->garbage || w.size==2 || w.clause->size!=2);
+    }
+    assert (found), (void)found;
+  }
+
 }
 
 #endif

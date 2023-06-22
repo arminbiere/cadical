@@ -1,3 +1,10 @@
+Version 1.5.5
+-------------
+
+ - Implementing OTFS during conflict analysis (--otfs)
+
+ - The last literal set by vivification is instantiated (--vivifyinst)
+
 Version 1.5.4
 -------------
 
