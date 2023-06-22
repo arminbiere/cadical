@@ -74,6 +74,12 @@ ipasir.o: ../src/ipasir.h ../src/ccadical.h
 analyze: all
 	$(COMPILE) --analyze ../src/*.cpp
 
+format:
+	clang-format ../*/*.[ch]pp
+	clang-format ../*/*.[ch]
+	clang-format ../test/*/*.[ch]pp
+	clang-format ../test/*/*.[ch]
+
 clean:
 	rm -f *.o *.a cadical mobical makefile build.hpp
 	rm -f *.gcda *.gcno *.gcov gmon.out
@@ -83,4 +89,4 @@ test: all
 
 #--------------------------------------------------------------------------#
 
-.PHONY: all always analyze clean test update
+.PHONY: all always analyze clean test update format
