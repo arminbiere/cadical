@@ -1,12 +1,15 @@
-Version 1.5.5
+Version 1.5.6
 -------------
 
- - Implementing OTFS during conflict analysis (--otfs)
+ - Clang formatted all source code (and fixed one failing regression
+   test by disabling 'otfs' for it).
 
- - The last literal set by vivification is instantiated (--vivifyinst)
+ - Implementing OTFS during conflict analysis (--otfs).
+
+ - The last literal set by vivification is instantiated (--vivifyinst).
 
  - more accurate tracking of binary clauses in watch lists by updating
-   the size in watch lists
+   the size in watch lists.
 
 Version 1.5.4
 -------------
