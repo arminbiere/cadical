@@ -14,11 +14,14 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 bool Internal::probing () {
-  if (!opts.probe) return false;
-  if (!preprocessing && !opts.inprocessing) return false;
-  if (preprocessing) assert (lim.preprocessing);
-  if (stats.probingphases &&
-      last.probe.reductions == stats.reductions) return false;
+  if (!opts.probe)
+    return false;
+  if (!preprocessing && !opts.inprocessing)
+    return false;
+  if (preprocessing)
+    assert (lim.preprocessing);
+  if (stats.probingphases && last.probe.reductions == stats.reductions)
+    return false;
   return lim.probe <= stats.conflicts;
 }
 
@@ -27,13 +30,15 @@ bool Internal::probing () {
 inline int Internal::get_parent_reason_literal (int lit) {
   const int idx = vidx (lit);
   int res = parents[idx];
-  if (lit < 0) res = -res;
+  if (lit < 0)
+    res = -res;
   return res;
 }
 
 inline void Internal::set_parent_reason_literal (int lit, int reason) {
   const int idx = vidx (lit);
-  if (lit < 0) reason = -reason;
+  if (lit < 0)
+    reason = -reason;
   parents[idx] = reason;
 }
 
@@ -47,14 +52,16 @@ inline void Internal::set_parent_reason_literal (int lit, int reason) {
 int Internal::probe_dominator (int a, int b) {
   require_mode (PROBE);
   int l = a, k = b;
-  Var * u = &var (l), * v = &var (k);
+  Var *u = &var (l), *v = &var (k);
   assert (val (l) > 0), assert (val (k) > 0);
   assert (u->level == 1), assert (v->level == 1);
   while (l != k) {
-    if (u->trail > v->trail) swap (l, k), swap (u, v);
-    if (!get_parent_reason_literal (l)) return l;
+    if (u->trail > v->trail)
+      swap (l, k), swap (u, v);
+    if (!get_parent_reason_literal (l))
+      return l;
     int parent = get_parent_reason_literal (k);
-    assert  (parent), assert (val (parent) > 0);
+    assert (parent), assert (val (parent) > 0);
     v = &var (k = parent);
     assert (v->level == 1);
   }
@@ -110,17 +117,18 @@ int Internal::probe_dominator (int a, int b) {
 // watch is a binary watch and will be skipped during propagating long
 // clauses anyhow.
 
-inline int Internal::hyper_binary_resolve (Clause * reason) {
+inline int Internal::hyper_binary_resolve (Clause *reason) {
   require_mode (PROBE);
   assert (level == 1);
   assert (reason->size > 2);
   const const_literal_iterator end = reason->end ();
-  const int * lits = reason->literals;
+  const int *lits = reason->literals;
   const_literal_iterator k;
 #ifndef NDEBUG
   // First literal unassigned, all others false.
   assert (!val (lits[0]));
-  for (k = lits + 1; k != end; k++) assert (val (*k) < 0);
+  for (k = lits + 1; k != end; k++)
+    assert (val (*k) < 0);
   assert (var (lits[1]).level == 1);
 #endif
   LOG (reason, "hyper binary resolving");
@@ -131,7 +139,8 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
   for (k = lits + 2; k != end; k++) {
     const int other = -*k;
     assert (val (other) > 0);
-    if (!var (other).level) continue;
+    if (!var (other).level)
+      continue;
     dom = probe_dominator (dom, other);
     non_root_level_literals++;
   }
@@ -140,14 +149,16 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
     for (k = lits + 1; !contained && k != end; k++)
       contained = (*k == -dom);
     const bool red = !contained || reason->redundant;
-    if (red) stats.hbreds++;
+    if (red)
+      stats.hbreds++;
     LOG ("new %s hyper binary resolvent %d %d",
-      (red ? "redundant" : "irredundant"), -dom, lits[0]);
+         (red ? "redundant" : "irredundant"), -dom, lits[0]);
     assert (clause.empty ());
     clause.push_back (-dom);
     clause.push_back (lits[0]);
-    Clause * c = new_hyper_binary_resolved_clause (red, 2);
-    if (red) c->hyper = true;
+    Clause *c = new_hyper_binary_resolved_clause (red, 2);
+    if (red)
+      c->hyper = true;
     clause.clear ();
     if (contained) {
       stats.hbrsubs++;
@@ -174,12 +185,14 @@ inline void Internal::probe_assign (int lit, int parent) {
   assert (!vals[idx]);
   assert (!flags (idx).eliminated () || !parent);
   assert (!parent || val (parent) > 0);
-  Var & v = var (idx);
+  Var &v = var (idx);
   v.level = level;
   v.trail = (int) trail.size ();
   set_parent_reason_literal (lit, parent);
-  if (!level) learn_unit_clause (lit);
-  else assert (level == 1);
+  if (!level)
+    learn_unit_clause (lit);
+  else
+    assert (level == 1);
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
@@ -192,11 +205,15 @@ inline void Internal::probe_assign (int lit, int parent) {
   // assigned.  This allows us to avoid some redundant failed literal
   // probing attempts.  Search for 'propfixed' in 'probe.cpp' for details.
   //
-  if (level) propfixed (lit) = stats.all.fixed;
+  if (level)
+    propfixed (lit) = stats.all.fixed;
 
-      if (parent) LOG ("probe assign %d parent %d", lit, parent);
-  else if (level) LOG ("probe assign %d probe", lit);
-  else            LOG ("probe assign %d negated failed literal UIP", lit);
+  if (parent)
+    LOG ("probe assign %d parent %d", lit, parent);
+  else if (level)
+    LOG ("probe assign %d probe", lit);
+  else
+    LOG ("probe assign %d negated failed literal UIP", lit);
 }
 
 void Internal::probe_assign_decision (int lit) {
@@ -230,13 +247,17 @@ inline void Internal::probe_propagate2 () {
   while (propagated2 != trail.size ()) {
     const int lit = -trail[propagated2++];
     LOG ("probe propagating %d over binary clauses", -lit);
-    Watches & ws = watches (lit);
-    for (const auto & w : ws) {
-      if (!w.binary ()) continue;
+    Watches &ws = watches (lit);
+    for (const auto &w : ws) {
+      if (!w.binary ())
+        continue;
       const signed char b = val (w.blit);
-      if (b > 0) continue;
-      if (b < 0) conflict = w.clause;                   // but continue
-      else probe_assign (w.blit, -lit);
+      if (b > 0)
+        continue;
+      if (b < 0)
+        conflict = w.clause; // but continue
+      else
+        probe_assign (w.blit, -lit);
     }
   }
 }
@@ -247,23 +268,28 @@ bool Internal::probe_propagate () {
   START (propagate);
   int64_t before = propagated2 = propagated;
   while (!conflict) {
-    if (propagated2 != trail.size ()) probe_propagate2 ();
+    if (propagated2 != trail.size ())
+      probe_propagate2 ();
     else if (propagated != trail.size ()) {
       const int lit = -trail[propagated++];
       LOG ("probe propagating %d over large clauses", -lit);
-      Watches & ws = watches (lit);
+      Watches &ws = watches (lit);
       size_t i = 0, j = 0;
       while (i != ws.size ()) {
         const Watch w = ws[j++] = ws[i++];
-        if (w.binary ()) continue;
+        if (w.binary ())
+          continue;
         const signed char b = val (w.blit);
-        if (b > 0) continue;
-        if (w.clause->garbage) continue;
+        if (b > 0)
+          continue;
+        if (w.clause->garbage)
+          continue;
         const literal_iterator lits = w.clause->begin ();
-        const int other = lits[0]^lits[1]^lit;
-        //lits[0] = other, lits[1] = lit;
+        const int other = lits[0] ^ lits[1] ^ lit;
+        // lits[0] = other, lits[1] = lit;
         const signed char u = val (other);
-        if (u > 0) ws[j-1].blit = other;
+        if (u > 0)
+          ws[j - 1].blit = other;
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
@@ -281,7 +307,8 @@ bool Internal::probe_propagate () {
           }
           w.clause->pos = k - lits;
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
-          if (v > 0) ws[j-1].blit = r;
+          if (v > 0)
+            ws[j - 1].blit = r;
           else if (!v) {
             LOG (w.clause, "unwatch %d in", r);
             *k = lit;
@@ -294,9 +321,11 @@ bool Internal::probe_propagate () {
               lits[0] = other, lits[1] = lit;
               int dom = hyper_binary_resolve (w.clause);
               probe_assign (other, dom);
-            } else probe_assign_unit (other);
+            } else
+              probe_assign_unit (other);
             probe_propagate2 ();
-          } else conflict = w.clause;
+          } else
+            conflict = w.clause;
         }
       }
       if (j != i) {
@@ -304,11 +333,13 @@ bool Internal::probe_propagate () {
           ws[j++] = ws[i++];
         ws.resize (j);
       }
-    } else break;
+    } else
+      break;
   }
   int64_t delta = propagated2 - before;
   stats.propagations.probe += delta;
-  if (conflict) LOG (conflict, "conflict");
+  if (conflict)
+    LOG (conflict, "conflict");
   STOP (propagate);
   return !conflict;
 }
@@ -333,9 +364,10 @@ void Internal::failed_literal (int failed) {
   LOG (conflict, "analyzing failed literal conflict");
 
   int uip = 0;
-  for (const auto & lit : *conflict) {
+  for (const auto &lit : *conflict) {
     const int other = -lit;
-    if (!var (other).level) continue;
+    if (!var (other).level)
+      continue;
     uip = uip ? probe_dominator (uip, other) : other;
   }
   LOG ("found probing UIP %d", uip);
@@ -357,20 +389,23 @@ void Internal::failed_literal (int failed) {
   assert (!val (uip));
   probe_assign_unit (-uip);
 
-  if (!probe_propagate ()) learn_empty_clause ();
+  if (!probe_propagate ())
+    learn_empty_clause ();
 
   while (!unsat && !work.empty ()) {
     const int parent = work.back ();
     work.pop_back ();
     const signed char tmp = val (parent);
-    if (tmp < 0) continue;
+    if (tmp < 0)
+      continue;
     if (tmp > 0) {
       LOG ("clashing failed parent %d", parent);
       learn_empty_clause ();
     } else {
       LOG ("found unassigned failed parent %d", parent);
       probe_assign_unit (-parent);
-      if (!probe_propagate ()) learn_empty_clause ();
+      if (!probe_propagate ())
+        learn_empty_clause ();
     }
   }
   erase_vector (work);
@@ -382,19 +417,26 @@ void Internal::failed_literal (int failed) {
 
 /*------------------------------------------------------------------------*/
 
-bool Internal::is_binary_clause (Clause * c, int & a, int & b) {
+bool Internal::is_binary_clause (Clause *c, int &a, int &b) {
   assert (!level);
-  if (c->garbage) return false;
+  if (c->garbage)
+    return false;
   int first = 0, second = 0;
-  for (const auto & lit : *c) {
+  for (const auto &lit : *c) {
     const signed char tmp = val (lit);
-    if (tmp > 0) return false;
-    if (tmp < 0) continue;
-    if (second) return false;
-    if (first) second = lit;
-    else first = lit;
+    if (tmp > 0)
+      return false;
+    if (tmp < 0)
+      continue;
+    if (second)
+      return false;
+    if (first)
+      second = lit;
+    else
+      first = lit;
   }
-  if (!second) return false;
+  if (!second)
+    return false;
   a = first, b = second;
   return true;
 }
@@ -404,10 +446,10 @@ bool Internal::is_binary_clause (Clause * c, int & a, int & b) {
 // less frequently come first.  Probes are taken from the back of the stack.
 
 struct probe_negated_noccs_rank {
-  Internal * internal;
-  probe_negated_noccs_rank (Internal * i) : internal (i) { }
+  Internal *internal;
+  probe_negated_noccs_rank (Internal *i) : internal (i) {}
   typedef size_t Type;
-  Type operator () (int a) const { return internal->noccs (-a); }
+  Type operator() (int a) const { return internal->noccs (-a); }
 };
 
 // Fill the 'probes' schedule.
@@ -421,9 +463,10 @@ void Internal::generate_probes () {
   // lists for each literal.
   //
   init_noccs ();
-  for (const auto & c : clauses) {
+  for (const auto &c : clauses) {
     int a, b;
-    if (!is_binary_clause (c, a, b)) continue;
+    if (!is_binary_clause (c, a, b))
+      continue;
     noccs (a)++;
     noccs (b)++;
   }
@@ -442,15 +485,18 @@ void Internal::generate_probes () {
     const bool have_pos_bin_occs = noccs (idx) > 0;
     const bool have_neg_bin_occs = noccs (-idx) > 0;
 
-    if (have_pos_bin_occs == have_neg_bin_occs) continue;
+    if (have_pos_bin_occs == have_neg_bin_occs)
+      continue;
 
     int probe = have_neg_bin_occs ? idx : -idx;
 
     // See the discussion where 'propfixed' is used below.
     //
-    if (propfixed (probe) >= stats.all.fixed) continue;
+    if (propfixed (probe) >= stats.all.fixed)
+      continue;
 
-    LOG ("scheduling probe %d negated occs %" PRId64 "", probe, noccs (-probe));
+    LOG ("scheduling probe %d negated occs %" PRId64 "", probe,
+         noccs (-probe));
     probes.push_back (probe);
   }
 
@@ -459,8 +505,9 @@ void Internal::generate_probes () {
   reset_noccs ();
   shrink_vector (probes);
 
-  PHASE ("probe-round", stats.probingrounds, "scheduled %zd literals %.0f%%",
-    probes.size (), percent (probes.size (), 2u*max_var));
+  PHASE ("probe-round", stats.probingrounds,
+         "scheduled %zd literals %.0f%%", probes.size (),
+         percent (probes.size (), 2u * max_var));
 }
 
 // Follow the ideas in 'generate_probes' but flush non root probes and
@@ -471,9 +518,10 @@ void Internal::flush_probes () {
   assert (!probes.empty ());
 
   init_noccs ();
-  for (const auto & c : clauses) {
+  for (const auto &c : clauses) {
     int a, b;
-    if (!is_binary_clause (c, a, b)) continue;
+    if (!is_binary_clause (c, a, b))
+      continue;
     noccs (a)++;
     noccs (b)++;
   }
@@ -482,13 +530,17 @@ void Internal::flush_probes () {
   auto j = probes.begin ();
   for (auto i = j; i != eop; i++) {
     int lit = *i;
-    if (!active (lit)) continue;
+    if (!active (lit))
+      continue;
     const bool have_pos_bin_occs = noccs (lit) > 0;
     const bool have_neg_bin_occs = noccs (-lit) > 0;
-    if (have_pos_bin_occs == have_neg_bin_occs) continue;
-    if (have_pos_bin_occs) lit = -lit;
+    if (have_pos_bin_occs == have_neg_bin_occs)
+      continue;
+    if (have_pos_bin_occs)
+      lit = -lit;
     assert (!noccs (lit)), assert (noccs (-lit) > 0);
-    if (propfixed (lit) >= stats.all.fixed) continue;
+    if (propfixed (lit) >= stats.all.fixed)
+      continue;
     LOG ("keeping probe %d negated occs %" PRId64 "", lit, noccs (-lit));
     *j++ = lit;
   }
@@ -504,8 +556,8 @@ void Internal::flush_probes () {
   shrink_vector (probes);
 
   PHASE ("probe-round", stats.probingrounds,
-    "flushed %zd literals %.0f%% remaining %zd",
-    flushed, percent (flushed, remain + flushed), remain);
+         "flushed %zd literals %.0f%% remaining %zd", flushed,
+         percent (flushed, remain + flushed), remain);
 }
 
 int Internal::next_probe () {
@@ -515,7 +567,8 @@ int Internal::next_probe () {
   for (;;) {
 
     if (probes.empty ()) {
-      if (generated++) return 0;
+      if (generated++)
+        return 0;
       generate_probes ();
     }
 
@@ -526,7 +579,8 @@ int Internal::next_probe () {
 
       // Eliminated or assigned.
       //
-      if (!active (probe)) continue;
+      if (!active (probe))
+        continue;
 
       // There is now new unit since the last time we propagated this probe,
       // thus we propagated it before without obtaining a conflict and
@@ -536,7 +590,8 @@ int Internal::next_probe () {
       // Alg. 4 in his JAIR article from 2002) and it has also been
       // contributed to the thesis work of Yacine Boufkhad.
       //
-      if (propfixed (probe) >= stats.all.fixed) continue;
+      if (propfixed (probe) >= stats.all.fixed)
+        continue;
 
       return probe;
     }
@@ -545,8 +600,10 @@ int Internal::next_probe () {
 
 bool Internal::probe_round () {
 
-  if (unsat) return false;
-  if (terminated_asynchronously ()) return false;
+  if (unsat)
+    return false;
+  if (terminated_asynchronously ())
+    return false;
 
   START_SIMPLIFIER (probe, PROBE);
   stats.probingrounds++;
@@ -559,12 +616,14 @@ bool Internal::probe_round () {
   int64_t delta = stats.propagations.search;
   delta -= last.probe.propagations;
   delta *= 1e-3 * opts.probereleff;
-  if (delta < opts.probemineff) delta = opts.probemineff;
-  if (delta > opts.probemaxeff) delta = opts.probemaxeff;
+  if (delta < opts.probemineff)
+    delta = opts.probemineff;
+  if (delta > opts.probemaxeff)
+    delta = opts.probemaxeff;
   delta += 2l * active ();
 
   PHASE ("probe-round", stats.probingrounds,
-    "probing limit of %" PRId64 " propagations ", delta);
+         "probing limit of %" PRId64 " propagations ", delta);
 
   int64_t limit = stats.propagations.probe + delta;
 
@@ -574,7 +633,8 @@ bool Internal::probe_round () {
 #endif
   int64_t old_hbrs = stats.hbrs;
 
-  if (!probes.empty ()) flush_probes ();
+  if (!probes.empty ())
+    flush_probes ();
 
   // We reset 'propfixed' since there was at least another conflict thus
   // a new learned clause, which might produce new propagations (and hyper
@@ -587,24 +647,27 @@ bool Internal::probe_round () {
   propagated = propagated2 = trail.size ();
 
   int probe;
-  while (!unsat &&
-         !terminated_asynchronously () &&
-         stats.propagations.probe < limit &&
-         (probe = next_probe ())) {
+  while (!unsat && !terminated_asynchronously () &&
+         stats.propagations.probe < limit && (probe = next_probe ())) {
     stats.probed++;
     LOG ("probing %d", probe);
     probe_assign_decision (probe);
-    if (probe_propagate ()) backtrack ();
-    else failed_literal (probe);
+    if (probe_propagate ())
+      backtrack ();
+    else
+      failed_literal (probe);
   }
 
-  if (unsat) LOG ("probing derived empty clause");
+  if (unsat)
+    LOG ("probing derived empty clause");
   else if (propagated < trail.size ()) {
-    LOG ("probing produced %zd units", (size_t)(trail.size () - propagated));
+    LOG ("probing produced %zd units",
+         (size_t) (trail.size () - propagated));
     if (!propagate ()) {
       LOG ("propagating units after probing results in empty clause");
       learn_empty_clause ();
-    } else sort_watches ();
+    } else
+      sort_watches ();
   }
 
   int failed = stats.failed - old_failed;
@@ -614,11 +677,11 @@ bool Internal::probe_round () {
   int64_t hbrs = stats.hbrs - old_hbrs;
 
   PHASE ("probe-round", stats.probingrounds,
-    "probed %" PRId64 " and found %d failed literals", probed, failed);
+         "probed %" PRId64 " and found %d failed literals", probed, failed);
 
   if (hbrs)
     PHASE ("probe-round", stats.probingrounds,
-      "found %" PRId64 " hyper binary resolvents", hbrs);
+           "found %" PRId64 " hyper binary resolvents", hbrs);
 
   STOP_SIMPLIFIER (probe, PROBE);
 
@@ -631,9 +694,14 @@ bool Internal::probe_round () {
 
 void CaDiCaL::Internal::probe (bool update_limits) {
 
-  if (unsat) return;
-  if (level) backtrack ();
-  if (!propagate ()) { learn_empty_clause (); return; }
+  if (unsat)
+    return;
+  if (level)
+    backtrack ();
+  if (!propagate ()) {
+    learn_empty_clause ();
+    return;
+  }
 
   stats.probingphases++;
 
@@ -643,8 +711,8 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   //
   decompose ();
 
-  if (ternary ())       // If we derived a binary clause
-    decompose ();       // then start another round of ELS.
+  if (ternary ()) // If we derived a binary clause
+    decompose (); // then start another round of ELS.
 
   // Remove duplicated binary clauses and perform in essence hyper unary
   // resolution, i.e., derive the unit '2' from '1 2' and '-1 2'.
@@ -655,11 +723,12 @@ void CaDiCaL::Internal::probe (bool update_limits) {
     if (!probe_round ())
       break;
 
-  decompose ();         // ... and (ELS) afterwards.
+  decompose (); // ... and (ELS) afterwards.
 
   last.probe.propagations = stats.propagations.search;
 
-  if (!update_limits) return;
+  if (!update_limits)
+    return;
 
   const int after = active ();
   const int removed = before - after;
@@ -668,20 +737,20 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   if (removed) {
     stats.probesuccess++;
     PHASE ("probe-phase", stats.probingphases,
-      "successfully removed %d active variables %.0f%%",
-      removed, percent (removed, before));
+           "successfully removed %d active variables %.0f%%", removed,
+           percent (removed, before));
   } else
     PHASE ("probe-phase", stats.probingphases,
-      "could not remove any active variable");
+           "could not remove any active variable");
 
   const int64_t delta = opts.probeint * (stats.probingphases + 1);
   lim.probe = stats.conflicts + delta;
 
   PHASE ("probe-phase", stats.probingphases,
-    "new limit at %" PRId64 " conflicts after %" PRId64 " conflicts",
-    lim.probe, delta);
+         "new limit at %" PRId64 " conflicts after %" PRId64 " conflicts",
+         lim.probe, delta);
 
   last.probe.reductions = stats.reductions;
 }
 
-}
+} // namespace CaDiCaL

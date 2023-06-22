@@ -10,8 +10,8 @@
 using namespace std;
 using namespace CaDiCaL;
 
-static string path (const char * name) {
-  const char * prefix = getenv ("CADICALBUILD");
+static string path (const char *name) {
+  const char *prefix = getenv ("CADICALBUILD");
   string res = prefix ? prefix : ".";
   res += "/test-api-apitrace-";
   res += name;
@@ -19,14 +19,14 @@ static string path (const char * name) {
   return res;
 }
 
-static FILE * trace (const char * name) {
+static FILE *trace (const char *name) {
   return fopen (path (name).c_str (), "w");
 }
 
 int main () {
 
   {
-    FILE * file = trace ("file1");
+    FILE *file = trace ("file1");
     {
       Solver solver;
       solver.trace_api_calls (file);
@@ -47,7 +47,7 @@ int main () {
   }
 
   {
-    FILE * file = trace ("file2");
+    FILE *file = trace ("file2");
     {
       Solver solver;
       solver.trace_api_calls (file);
@@ -71,7 +71,6 @@ int main () {
     }
     unsetenv ("CADICAL_API_TRACE");
   }
-
 
   return 0;
 }

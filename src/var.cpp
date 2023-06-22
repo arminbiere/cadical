@@ -12,13 +12,19 @@ void Internal::check_var_stats () {
 #ifndef NDEBUG
   int64_t fixed = 0, eliminated = 0, substituted = 0, pure = 0, unused = 0;
   for (auto idx : vars) {
-    Flags & f = flags (idx);
-    if (f.active ()) continue;
-    if (f.fixed ()) fixed++;
-    if (f.eliminated ()) eliminated++;
-    if (f.substituted ()) substituted++;
-    if (f.unused ()) unused++;
-    if (f.pure ()) pure++;
+    Flags &f = flags (idx);
+    if (f.active ())
+      continue;
+    if (f.fixed ())
+      fixed++;
+    if (f.eliminated ())
+      eliminated++;
+    if (f.substituted ())
+      substituted++;
+    if (f.unused ())
+      unused++;
+    if (f.pure ())
+      pure++;
   }
   assert (stats.now.fixed == fixed);
   assert (stats.now.eliminated == eliminated);
@@ -30,4 +36,4 @@ void Internal::check_var_stats () {
 #endif
 }
 
-}
+} // namespace CaDiCaL

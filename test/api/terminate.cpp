@@ -6,8 +6,8 @@
 
 extern "C" {
 #include <assert.h>
-#include <unistd.h>
 #include <signal.h>
+#include <unistd.h>
 }
 
 static int n = 11;
@@ -15,7 +15,7 @@ static int n = 11;
 static int ph (int p, int h) {
   assert (0 <= p), assert (p < n + 1);
   assert (0 <= h), assert (h < n);
-  return 1 + h * (n+1) + p;
+  return 1 + h * (n + 1) + p;
 }
 
 static CaDiCaL::Solver solver;
@@ -29,9 +29,7 @@ int main () {
   for (int h = 0; h < n; h++)
     for (int p1 = 0; p1 < n + 1; p1++)
       for (int p2 = p1 + 1; p2 < n + 1; p2++)
-	solver.add (-ph (p1, h)),
-	solver.add (-ph (p2, h)),
-	solver.add (0);
+        solver.add (-ph (p1, h)), solver.add (-ph (p2, h)), solver.add (0);
 
   for (int p = 0; p < n + 1; p++) {
     for (int h = 0; h < n; h++)

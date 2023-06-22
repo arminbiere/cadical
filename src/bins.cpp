@@ -8,8 +8,8 @@ namespace CaDiCaL {
 
 void Internal::init_bins () {
   assert (big.empty ());
-  if (big.size () < 2*vsize)
-    big.resize (2*vsize, Bins ());
+  if (big.size () < 2 * vsize)
+    big.resize (2 * vsize, Bins ());
   LOG ("initialized binary implication graph");
 }
 
@@ -19,4 +19,4 @@ void Internal::reset_bins () {
   LOG ("reset binary implication graph");
 }
 
-}
+} // namespace CaDiCaL

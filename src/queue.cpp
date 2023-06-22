@@ -6,7 +6,7 @@ namespace CaDiCaL {
 // enqueued at all.
 
 inline void Internal::init_enqueue (int idx) {
-  Link & l = links[idx];
+  Link &l = links[idx];
   if (opts.reverse) {
     l.prev = 0;
     if (queue.first) {
@@ -45,8 +45,8 @@ inline void Internal::init_enqueue (int idx) {
 // as in MiniSAT (implicitly) and also matches the 'scores' initialization.
 //
 void Internal::init_queue (int old_max_var, int new_max_var) {
-  LOG ("initializing VMTF queue from %d to %d",
-    old_max_var + 1, new_max_var);
+  LOG ("initializing VMTF queue from %d to %d", old_max_var + 1,
+       new_max_var);
   assert (old_max_var < new_max_var);
   assert (!level);
   for (int idx = old_max_var; idx < new_max_var; idx++)
@@ -56,18 +56,20 @@ void Internal::init_queue (int old_max_var, int new_max_var) {
 // Shuffle the VMTF queue.
 
 void Internal::shuffle_queue () {
-  if (!opts.shuffle) return;
-  if (!opts.shufflequeue) return;
+  if (!opts.shuffle)
+    return;
+  if (!opts.shufflequeue)
+    return;
   stats.shuffled++;
   LOG ("shuffling queue");
   vector<int> shuffle;
   if (opts.shufflerandom) {
     for (int idx = max_var; idx; idx--)
       shuffle.push_back (idx);
-    Random random (opts.seed);                  // global seed
-    random += stats.shuffled;                   // different every time
-    for (int i = 0; i <= max_var-2; i++) {
-      const int j = random.pick_int (i, max_var-1);
+    Random random (opts.seed); // global seed
+    random += stats.shuffled;  // different every time
+    for (int i = 0; i <= max_var - 2; i++) {
+      const int j = random.pick_int (i, max_var - 1);
       swap (shuffle[i], shuffle[j]);
     }
   } else {
@@ -83,4 +85,4 @@ void Internal::shuffle_queue () {
   queue.unassigned = queue.last;
 }
 
-}
+} // namespace CaDiCaL

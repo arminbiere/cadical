@@ -13,8 +13,8 @@ extern "C" {
 
 typedef struct CCaDiCaL CCaDiCaL;
 
-const char * ccadical_signature (void);
-CCaDiCaL * ccadical_init (void);
+const char *ccadical_signature (void);
+CCaDiCaL *ccadical_init (void);
 void ccadical_release (CCaDiCaL *);
 
 void ccadical_add (CCaDiCaL *, int lit);
@@ -23,11 +23,11 @@ int ccadical_solve (CCaDiCaL *);
 int ccadical_val (CCaDiCaL *, int lit);
 int ccadical_failed (CCaDiCaL *, int lit);
 
-void ccadical_set_terminate (CCaDiCaL *,
-  void * state, int (*terminate)(void * state));
+void ccadical_set_terminate (CCaDiCaL *, void *state,
+                             int (*terminate) (void *state));
 
-void ccadical_set_learn (CCaDiCaL *,
-  void * state, int max_length, void (*learn)(void * state, int * clause));
+void ccadical_set_learn (CCaDiCaL *, void *state, int max_length,
+                         void (*learn) (void *state, int *clause));
 
 /*------------------------------------------------------------------------*/
 
@@ -35,9 +35,9 @@ void ccadical_set_learn (CCaDiCaL *,
 
 void ccadical_constrain (CCaDiCaL *, int lit);
 int ccadical_constraint_failed (CCaDiCaL *);
-void ccadical_set_option (CCaDiCaL *, const char * name, int val);
-void ccadical_limit (CCaDiCaL *, const char * name, int limit);
-int ccadical_get_option (CCaDiCaL *, const char * name);
+void ccadical_set_option (CCaDiCaL *, const char *name, int val);
+void ccadical_limit (CCaDiCaL *, const char *name, int limit);
+int ccadical_get_option (CCaDiCaL *, const char *name);
 void ccadical_print_statistics (CCaDiCaL *);
 int64_t ccadical_active (CCaDiCaL *);
 int64_t ccadical_irredundant (CCaDiCaL *);

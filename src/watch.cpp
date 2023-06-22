@@ -4,8 +4,8 @@ namespace CaDiCaL {
 
 void Internal::init_watches () {
   assert (wtab.empty ());
-  if (wtab.size () < 2*vsize)
-    wtab.resize (2*vsize, Watches ());
+  if (wtab.size () < 2 * vsize)
+    wtab.resize (2 * vsize, Watches ());
   LOG ("initialized watcher tables");
 }
 
@@ -31,25 +31,31 @@ void Internal::connect_watches (bool irredundant_only) {
 
   // First connect binary clauses.
   //
-  for (const auto & c : clauses) {
-    if (irredundant_only && c->redundant) continue;
-    if (c->garbage || c->size > 2) continue;
+  for (const auto &c : clauses) {
+    if (irredundant_only && c->redundant)
+      continue;
+    if (c->garbage || c->size > 2)
+      continue;
     watch_clause (c);
   }
 
   // Then connect non-binary clauses.
   //
-  for (const auto & c : clauses) {
-    if (irredundant_only && c->redundant) continue;
-    if (c->garbage || c->size == 2) continue;
+  for (const auto &c : clauses) {
+    if (irredundant_only && c->redundant)
+      continue;
+    if (c->garbage || c->size == 2)
+      continue;
     watch_clause (c);
     if (!level) {
       const int lit0 = c->literals[0];
       const int lit1 = c->literals[1];
       const signed char tmp0 = val (lit0);
       const signed char tmp1 = val (lit1);
-      if (tmp0 > 0) continue;
-      if (tmp1 > 0) continue;
+      if (tmp0 > 0)
+        continue;
+      if (tmp1 > 0)
+        continue;
       if (tmp0 < 0) {
         const size_t pos0 = var (lit0).trail;
         if (pos0 < propagated) {
@@ -75,7 +81,7 @@ void Internal::sort_watches () {
   LOG ("sorting watches");
   Watches saved;
   for (auto lit : lits) {
-    Watches & ws = watches (lit);
+    Watches &ws = watches (lit);
 
     const const_watch_iterator end = ws.end ();
     watch_iterator j = ws.begin ();
@@ -85,8 +91,10 @@ void Internal::sort_watches () {
 
     for (i = j; i != end; i++) {
       const Watch w = *i;
-      if (w.binary ()) *j++ = w;
-      else saved.push_back (w);
+      if (w.binary ())
+        *j++ = w;
+      else
+        saved.push_back (w);
     }
 
     std::copy (saved.cbegin (), saved.cend (), j);
@@ -95,4 +103,4 @@ void Internal::sort_watches () {
   }
 }
 
-}
+} // namespace CaDiCaL

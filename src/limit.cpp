@@ -2,9 +2,7 @@
 
 namespace CaDiCaL {
 
-Limit::Limit () {
-  memset (this, 0, sizeof *this);
-}
+Limit::Limit () { memset (this, 0, sizeof *this); }
 
 /*------------------------------------------------------------------------*/
 
@@ -12,21 +10,20 @@ double Internal::scale (double v) const {
   const double ratio = clause_variable_ratio ();
   const double factor = (ratio <= 2) ? 1.0 : log (ratio) / log (2);
   double res = factor * v;
-  if (res < 1) res = 1;
+  if (res < 1)
+    res = 1;
   return res;
 }
 
 /*------------------------------------------------------------------------*/
 
-Last::Last () {
-  memset (this, 0, sizeof *this);
-}
+Last::Last () { memset (this, 0, sizeof *this); }
 
 /*------------------------------------------------------------------------*/
 
 Inc::Inc () {
   memset (this, 0, sizeof *this);
-  decisions = conflicts = -1;           // unlimited
+  decisions = conflicts = -1; // unlimited
 }
 
 void Internal::limit_terminate (int l) {
@@ -89,23 +86,34 @@ void Internal::limit_local_search (int l) {
   }
 }
 
-bool Internal::is_valid_limit (const char * name) {
-  if (!strcmp (name, "terminate")) return true;
-  if (!strcmp (name, "conflicts")) return true;
-  if (!strcmp (name, "decisions")) return true;
-  if (!strcmp (name, "preprocessing")) return true;
-  if (!strcmp (name, "localsearch")) return true;
+bool Internal::is_valid_limit (const char *name) {
+  if (!strcmp (name, "terminate"))
+    return true;
+  if (!strcmp (name, "conflicts"))
+    return true;
+  if (!strcmp (name, "decisions"))
+    return true;
+  if (!strcmp (name, "preprocessing"))
+    return true;
+  if (!strcmp (name, "localsearch"))
+    return true;
   return false;
 }
 
-bool Internal::limit (const char * name, int l) {
+bool Internal::limit (const char *name, int l) {
   bool res = true;
-       if (!strcmp (name, "terminate")) limit_terminate (l);
-  else if (!strcmp (name, "conflicts")) limit_conflicts (l);
-  else if (!strcmp (name, "decisions")) limit_decisions (l);
-  else if (!strcmp (name, "preprocessing")) limit_preprocessing (l);
-  else if (!strcmp (name, "localsearch")) limit_local_search (l);
-  else res = false;
+  if (!strcmp (name, "terminate"))
+    limit_terminate (l);
+  else if (!strcmp (name, "conflicts"))
+    limit_conflicts (l);
+  else if (!strcmp (name, "decisions"))
+    limit_decisions (l);
+  else if (!strcmp (name, "preprocessing"))
+    limit_preprocessing (l);
+  else if (!strcmp (name, "localsearch"))
+    limit_local_search (l);
+  else
+    res = false;
   return res;
 }
 
@@ -118,5 +126,4 @@ void Internal::reset_limits () {
   limit_local_search (0);
 }
 
-}
-
+} // namespace CaDiCaL

@@ -6,24 +6,22 @@ namespace CaDiCaL {
 
 // Initialize all profile counters with constant name and profiling level.
 
-Profiles::Profiles (Internal * s)
-:
-  internal (s)
-#define PROFILE(NAME, LEVEL) \
-  , NAME (#NAME, LEVEL)
-  PROFILES
+Profiles::Profiles (Internal *s)
+    : internal (s)
+#define PROFILE(NAME, LEVEL) , NAME (#NAME, LEVEL)
+          PROFILES
 #undef PROFILE
 {
 }
 
-void Internal::start_profiling (Profile & profile, double s) {
+void Internal::start_profiling (Profile &profile, double s) {
   assert (profile.level <= opts.profile);
   assert (!profile.active);
   profile.started = s;
   profile.active = true;
 }
 
-void Internal::stop_profiling (Profile & profile, double s) {
+void Internal::stop_profiling (Profile &profile, double s) {
   assert (profile.level <= opts.profile);
   assert (profile.active);
   profile.value += s - profile.started;
@@ -32,17 +30,17 @@ void Internal::stop_profiling (Profile & profile, double s) {
 
 double Internal::update_profiles () {
   double now = time ();
-# define PROFILE(NAME,LEVEL) \
-do { \
-  Profile & profile = profiles.NAME; \
-  if (profile.active) { \
-    assert (profile.level <= opts.profile); \
-    profile.value += now - profile.started; \
-    profile.started = now; \
-  } \
-} while (0);
+#define PROFILE(NAME, LEVEL) \
+  do { \
+    Profile &profile = profiles.NAME; \
+    if (profile.active) { \
+      assert (profile.level <= opts.profile); \
+      profile.value += now - profile.started; \
+      profile.started = now; \
+    } \
+  } while (0);
   PROFILES
-# undef PROFILE
+#undef PROFILE
   return now;
 }
 
@@ -51,30 +49,31 @@ double Internal::solve_time () {
   return profiles.solve.value;
 }
 
-#define PRT(S,T) \
+#define PRT(S, T) \
   MSG ("%s" S "%s", tout.magenta_code (), T, tout.normal_code ())
 
 void Internal::print_profile () {
   double now = update_profiles ();
-  const char * time_type = opts.realtime ? "real" : "process";
+  const char *time_type = opts.realtime ? "real" : "process";
   SECTION ("run-time profiling");
   PRT ("%s time taken by individual solving procedures", time_type);
   PRT ("(percentage relative to %s time for solving)", time_type);
   LINE ();
   const size_t size = sizeof profiles / sizeof (Profile);
-  struct Profile * profs[size];
+  struct Profile *profs[size];
   size_t n = 0;
-#define PROFILE(NAME,LEVEL) \
-do { \
-  if (LEVEL > opts.profile) break; \
-  Profile * p = &profiles.NAME; \
-  if (p == &profiles.solve) break; \
-  if (!profiles.NAME.value && \
-      p != &profiles.parse && \
-      p != &profiles.search && \
-      p != &profiles.simplify) break; \
-  profs[n++] = p; \
-} while (0);
+#define PROFILE(NAME, LEVEL) \
+  do { \
+    if (LEVEL > opts.profile) \
+      break; \
+    Profile *p = &profiles.NAME; \
+    if (p == &profiles.solve) \
+      break; \
+    if (!profiles.NAME.value && p != &profiles.parse && \
+        p != &profiles.search && p != &profiles.simplify) \
+      break; \
+    profs[n++] = p; \
+  } while (0);
   PROFILES
 #undef PROFILE
 
@@ -91,8 +90,8 @@ do { \
     for (size_t j = i + 1; j < n; j++)
       if (profs[j]->value > profs[i]->value)
         swap (profs[i], profs[j]);
-    MSG ("%12.2f %7.2f%% %s",
-      profs[i]->value, percent (profs[i]->value, solve), profs[i]->name);
+    MSG ("%12.2f %7.2f%% %s", profs[i]->value,
+         percent (profs[i]->value, solve), profs[i]->name);
   }
 
   MSG ("  =================================");
@@ -103,6 +102,6 @@ do { \
   PRT ("(percentage relative to total %s time)", time_type);
 }
 
-}
+} // namespace CaDiCaL
 
 #endif // ifndef QUIET

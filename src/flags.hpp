@@ -3,28 +3,28 @@
 
 namespace CaDiCaL {
 
-struct Flags {        // Variable flags.
+struct Flags { // Variable flags.
 
   //  The first set of flags is related to 'analyze' and 'minimize'.
   //
-  bool seen      : 1; // seen in generating first UIP clause in 'analyze'
-  bool keep      : 1; // keep in learned clause in 'minimize'
-  bool poison    : 1;    // can not be removed in 'minimize'
-  bool removable : 1;    // can be removed in 'minimize'
+  bool seen : 1;       // seen in generating first UIP clause in 'analyze'
+  bool keep : 1;       // keep in learned clause in 'minimize'
+  bool poison : 1;     // can not be removed in 'minimize'
+  bool removable : 1;  // can be removed in 'minimize'
   bool shrinkable : 1; // can be removed in 'shrink'
 
   // These three variable flags are used to schedule clauses in subsumption
   // ('subsume'), variables in bounded variable elimination ('elim') and in
   // hyper ternary resolution ('ternary').
   //
-  bool elim      : 1; // removed since last 'elim' round (*)
-  bool subsume   : 1; // added since last 'subsume' round (*)
-  bool ternary   : 1; // added in ternary clause since last 'ternary' (*)
+  bool elim : 1;    // removed since last 'elim' round (*)
+  bool subsume : 1; // added since last 'subsume' round (*)
+  bool ternary : 1; // added in ternary clause since last 'ternary' (*)
 
   // These literal flags are used by blocked clause elimination ('block').
   //
-  unsigned char block : 2;   // removed since last 'block' round (*)
-  unsigned char skip : 2;    // skip this literal as blocking literal
+  unsigned char block : 2; // removed since last 'block' round (*)
+  unsigned char skip : 2;  // skip this literal as blocking literal
 
   // Bits for handling assumptions.
   //
@@ -32,12 +32,12 @@ struct Flags {        // Variable flags.
   unsigned char failed : 2;
 
   enum {
-    UNUSED      = 0,
-    ACTIVE      = 1,
-    FIXED       = 2,
-    ELIMINATED  = 3,
+    UNUSED = 0,
+    ACTIVE = 1,
+    FIXED = 2,
+    ELIMINATED = 3,
     SUBSTITUTED = 4,
-    PURE        = 5
+    PURE = 5
   };
 
   unsigned char status : 3;
@@ -63,7 +63,7 @@ struct Flags {        // Variable flags.
   // which in essence means they are reset in the copy if they were clear.
   // This avoids the effort of fruitless preprocessing the copy.
 
-  void copy (Flags & dst) const {
+  void copy (Flags &dst) const {
     dst.elim = elim;
     dst.subsume = subsume;
     dst.ternary = ternary;
@@ -71,6 +71,6 @@ struct Flags {        // Variable flags.
   }
 };
 
-}
+} // namespace CaDiCaL
 
 #endif

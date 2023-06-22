@@ -4,7 +4,8 @@
 
 // This is operating system specific code.  We mostly develop on Linux and
 // there it should be fine and mostly works out-of-the-box on MacOS too but
-// Windows needs special treatment (as probably other operating systems too).
+// Windows needs special treatment (as probably other operating systems
+// too).
 
 extern "C" {
 
@@ -14,13 +15,13 @@ extern "C" {
 #define __WIN32_WINNT 0x0600
 #endif
 
-#include <windows.h>
 #include <psapi.h>
+#include <windows.h>
 
 #else
 
-#include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -37,7 +38,7 @@ namespace CaDiCaL {
 
 double absolute_real_time () {
   FILETIME f;
-  GetSystemTimeAsFileTime(&f);
+  GetSystemTimeAsFileTime (&f);
   ULARGE_INTEGER t;
   t.LowPart = f.dwLowDateTime;
   t.HighPart = f.dwHighDateTime;
@@ -65,7 +66,8 @@ double absolute_process_time () {
 
 double absolute_real_time () {
   struct timeval tv;
-  if (gettimeofday (&tv, 0)) return 0;
+  if (gettimeofday (&tv, 0))
+    return 0;
   return 1e-6 * tv.tv_usec + tv.tv_sec;
 }
 
@@ -76,7 +78,8 @@ double absolute_real_time () {
 double absolute_process_time () {
   double res;
   struct rusage u;
-  if (getrusage (RUSAGE_SELF, &u)) return 0;
+  if (getrusage (RUSAGE_SELF, &u))
+    return 0;
   res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;  // user time
   res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec; // + system time
   return res;
@@ -99,15 +102,17 @@ double Internal::process_time () {
 uint64_t current_resident_set_size () {
   PROCESS_MEMORY_COUNTERS pmc;
   if (GetProcessMemoryInfo (GetCurrentProcess (), &pmc, sizeof (pmc))) {
-     return pmc.WorkingSetSize;
-  } else return 0;
+    return pmc.WorkingSetSize;
+  } else
+    return 0;
 }
 
 uint64_t maximum_resident_set_size () {
   PROCESS_MEMORY_COUNTERS pmc;
   if (GetProcessMemoryInfo (GetCurrentProcess (), &pmc, sizeof (pmc))) {
-     return pmc.PeakWorkingSetSize;
-  } else return 0;
+    return pmc.PeakWorkingSetSize;
+  } else
+    return 0;
 }
 
 #else
@@ -116,7 +121,8 @@ uint64_t maximum_resident_set_size () {
 
 uint64_t maximum_resident_set_size () {
   struct rusage u;
-  if (getrusage (RUSAGE_SELF, &u)) return 0;
+  if (getrusage (RUSAGE_SELF, &u))
+    return 0;
   return ((uint64_t) u.ru_maxrss) << 10;
 }
 
@@ -129,10 +135,11 @@ uint64_t maximum_resident_set_size () {
 
 uint64_t current_resident_set_size () {
   char path[64];
-  snprintf (path, sizeof path,
-            "/proc/%" PRId64 "/statm", (int64_t) getpid ());
-  FILE * file = fopen (path, "r");
-  if (!file) return 0;
+  snprintf (path, sizeof path, "/proc/%" PRId64 "/statm",
+            (int64_t) getpid ());
+  FILE *file = fopen (path, "r");
+  if (!file)
+    return 0;
   uint64_t dummy, rss;
   int scanned = fscanf (file, "%" PRIu64 " %" PRIu64 "", &dummy, &rss);
   fclose (file);
@@ -143,4 +150,4 @@ uint64_t current_resident_set_size () {
 
 /*------------------------------------------------------------------------*/
 
-}
+} // namespace CaDiCaL

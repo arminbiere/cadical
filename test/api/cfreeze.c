@@ -8,14 +8,14 @@
 
 #include <assert.h>
 #include <fcntl.h>
-#include <stdlib.h>
 #include <signal.h>
-#include <sys/types.h>
+#include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
-void illegal (void (*f)(CCaDiCaL *, int), CCaDiCaL * cadical, int lit) {
+void illegal (void (*f) (CCaDiCaL *, int), CCaDiCaL *cadical, int lit) {
   pid_t child = fork (), other;
   int status;
   if (!child) {
@@ -34,7 +34,7 @@ void illegal (void (*f)(CCaDiCaL *, int), CCaDiCaL * cadical, int lit) {
 
 int main (void) {
 
-  CCaDiCaL * cadical = ccadical_init ();
+  CCaDiCaL *cadical = ccadical_init ();
   int res;
 
   ccadical_set_option (cadical, "check", 1);
@@ -42,52 +42,52 @@ int main (void) {
 
   ccadical_add (cadical, -14);
   ccadical_add (cadical, 2);
-  ccadical_add (cadical, 0);                              // binary clause
+  ccadical_add (cadical, 0); // binary clause
 
   ccadical_add (cadical, 14);
   ccadical_add (cadical, -1);
-  ccadical_add (cadical, 0);                             // binary clause
+  ccadical_add (cadical, 0); // binary clause
 
-  ccadical_assume (cadical, 1);                          // assume '1'
-  ccadical_freeze (cadical, 1);                          // will use '1' below
-  ccadical_freeze (cadical, 14);                         // will use '14 too
+  ccadical_assume (cadical, 1);  // assume '1'
+  ccadical_freeze (cadical, 1);  // will use '1' below
+  ccadical_freeze (cadical, 14); // will use '14 too
   assert (ccadical_frozen (cadical, 1));
   assert (ccadical_frozen (cadical, 14));
   res = ccadical_solve (cadical);
   assert (res == 10);
-  (void) ccadical_val (cadical, 1);                       // fine
-  (void) ccadical_val (cadical, 2);                       // fine
-  (void) ccadical_val (cadical, 3);                       // fine !
-  (void) ccadical_val (cadical, 14);                      // fine
+  (void) ccadical_val (cadical, 1);  // fine
+  (void) ccadical_val (cadical, 2);  // fine
+  (void) ccadical_val (cadical, 3);  // fine !
+  (void) ccadical_val (cadical, 14); // fine
 
-  illegal (ccadical_add, cadical, 2);                     // ILLEGAL
-  illegal (ccadical_assume, cadical, 2);                  // ILLEGAL
+  illegal (ccadical_add, cadical, 2);    // ILLEGAL
+  illegal (ccadical_assume, cadical, 2); // ILLEGAL
 
   ccadical_add (cadical, -14);
   ccadical_add (cadical, 1);
-  ccadical_add (cadical, 0);                              // binary clause
+  ccadical_add (cadical, 0); // binary clause
 
   ccadical_add (cadical, 15);
-  ccadical_add (cadical, 0);                              // fine!
-  ccadical_melt (cadical, 14);                            // '1' discarded
+  ccadical_add (cadical, 0);   // fine!
+  ccadical_melt (cadical, 14); // '1' discarded
 
   res = ccadical_solve (cadical);
   assert (res == 10);
   assert (ccadical_frozen (cadical, 1));
-  (void) ccadical_val (cadical, 1);                       // fine
-  (void) ccadical_val (cadical, 2);                       // fine
-  (void) ccadical_val (cadical, 3);                       // fine
-  (void) ccadical_val (cadical, 14);                      // fine
-  (void) ccadical_val (cadical, 15);                      // fine
+  (void) ccadical_val (cadical, 1);  // fine
+  (void) ccadical_val (cadical, 2);  // fine
+  (void) ccadical_val (cadical, 3);  // fine
+  (void) ccadical_val (cadical, 14); // fine
+  (void) ccadical_val (cadical, 15); // fine
 
-  illegal (ccadical_assume, cadical, 2);                  // ILLEGAL
-  illegal (ccadical_assume, cadical, 14);                 // ILLEGAL
+  illegal (ccadical_assume, cadical, 2);  // ILLEGAL
+  illegal (ccadical_assume, cadical, 14); // ILLEGAL
 
-  ccadical_add (cadical, 1);                              // still frozen
+  ccadical_add (cadical, 1); // still frozen
   ccadical_melt (cadical, 1);
   ccadical_add (cadical, 0);
   res = ccadical_solve (cadical);
-  assert (res == 10);                                     // TODO right?
+  assert (res == 10); // TODO right?
   ccadical_reset (cadical);
 
   return 0;

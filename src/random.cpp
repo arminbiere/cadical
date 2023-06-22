@@ -30,12 +30,14 @@
 
 #ifdef DO_PRINT_HASH
 #define PRINT_HASH(H) \
-do { \
-  printf ("c PRINT_HASH %32s () = %020" PRIu64 "\n", __func__, H); \
-  fflush (stdout); \
-} while (0)
+  do { \
+    printf ("c PRINT_HASH %32s () = %020" PRIu64 "\n", __func__, H); \
+    fflush (stdout); \
+  } while (0)
 #else
-#define PRINT_HASH(...) do { } while (0)
+#define PRINT_HASH(...) \
+  do { \
+  } while (0)
 #endif
 
 /*------------------------------------------------------------------------*/
@@ -47,7 +49,7 @@ do { \
 namespace CaDiCaL {
 
 static uint64_t hash_machine_identifier () {
-  FILE * file = fopen ("/var/lib/dbus/machine-id", "r");
+  FILE *file = fopen ("/var/lib/dbus/machine-id", "r");
   uint64_t res = 0;
   if (file) {
     char buffer[128];
@@ -55,7 +57,7 @@ static uint64_t hash_machine_identifier () {
     size_t bytes = fread (buffer, 1, sizeof buffer - 1, file);
     assert (bytes);
     fclose (file);
-    if (bytes && bytes< sizeof buffer) {
+    if (bytes && bytes < sizeof buffer) {
       buffer[bytes] = 0;
       res = hash_string (buffer);
     }
@@ -64,7 +66,7 @@ static uint64_t hash_machine_identifier () {
   return res;
 }
 
-}
+} // namespace CaDiCaL
 
 /*------------------------------------------------------------------------*/
 
@@ -79,11 +81,11 @@ static uint64_t hash_machine_identifier () {
 #ifndef __WIN32
 
 extern "C" {
-#include <sys/socket.h>
-#include <netdb.h>
 #include <ifaddrs.h>
+#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 }
 
 #endif
@@ -93,25 +95,25 @@ namespace CaDiCaL {
 static uint64_t hash_network_addresses () {
   uint64_t res = 0;
 
-// We still need to properly port this to Windows, but since accessing the
-// IP address is only required for better randomization during testing
-// (running 'mobical' on a cluster for instance) it is not crucial unless
-// you really need to run 'mobical' on a Windows cluster where each node has
-// identical IP addresses.
+  // We still need to properly port this to Windows, but since accessing the
+  // IP address is only required for better randomization during testing
+  // (running 'mobical' on a cluster for instance) it is not crucial unless
+  // you really need to run 'mobical' on a Windows cluster where each node
+  // has identical IP addresses.
 
 #ifndef __WIN32
-  struct ifaddrs * addrs;
+  struct ifaddrs *addrs;
   if (!getifaddrs (&addrs)) {
-    for (struct ifaddrs * addr = addrs; addr; addr = addr->ifa_next) {
+    for (struct ifaddrs *addr = addrs; addr; addr = addr->ifa_next) {
       if (!addr->ifa_addr)
-	continue;
+        continue;
       const int family = addr->ifa_addr->sa_family;
       if (family == AF_INET || family == AF_INET6) {
-        const int size = (family == AF_INET) ?
-          sizeof (struct sockaddr_in) : sizeof (struct sockaddr_in6);
+        const int size = (family == AF_INET) ? sizeof (struct sockaddr_in)
+                                             : sizeof (struct sockaddr_in6);
         char buffer[128];
-        if (!getnameinfo (addr->ifa_addr, size, buffer, sizeof buffer,
-                          0, 0, NI_NUMERICHOST)) {
+        if (!getnameinfo (addr->ifa_addr, size, buffer, sizeof buffer, 0, 0,
+                          NI_NUMERICHOST)) {
           uint64_t tmp = hash_string (buffer);
 #ifdef DO_PRINT_HASH
           printf ("c PRINT_HASH %35s = %020" PRIu64 "\n", buffer, tmp);
@@ -130,7 +132,7 @@ static uint64_t hash_network_addresses () {
   return res;
 }
 
-}
+} // namespace CaDiCaL
 
 /*------------------------------------------------------------------------*/
 
@@ -148,7 +150,7 @@ static uint64_t hash_time () {
   return res;
 }
 
-}
+} // namespace CaDiCaL
 
 /*------------------------------------------------------------------------*/
 
@@ -167,7 +169,7 @@ static uint64_t hash_process () {
   return res;
 }
 
-}
+} // namespace CaDiCaL
 
 /*------------------------------------------------------------------------*/
 
@@ -183,7 +185,7 @@ static uint64_t hash_clock_cycles () {
   return res;
 }
 
-}
+} // namespace CaDiCaL
 
 /*------------------------------------------------------------------------*/
 
@@ -201,4 +203,4 @@ Random::Random () : state (1) {
 #endif
 }
 
-}
+} // namespace CaDiCaL

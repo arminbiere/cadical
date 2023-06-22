@@ -11,34 +11,46 @@ namespace CaDiCaL {
 
 // Triggered at the end of a variable elimination round ('elim_round').
 
-void
-Internal::collect_instantiation_candidates (Instantiator & instantiator) {
+void Internal::collect_instantiation_candidates (
+    Instantiator &instantiator) {
   assert (occurring ());
   for (auto idx : vars) {
-    if (frozen (idx)) continue;
-    if (!active (idx)) continue;
-    if (flags (idx).elim) continue;               // BVE attempt pending
+    if (frozen (idx))
+      continue;
+    if (!active (idx))
+      continue;
+    if (flags (idx).elim)
+      continue; // BVE attempt pending
     for (int sign = -1; sign <= 1; sign += 2) {
       const int lit = sign * idx;
-      if (noccs (lit) > opts.instantiateocclim) continue;
-      Occs & os = occs (lit);
-      for (const auto & c : os) {
-        if (c->garbage) continue;
-        if (opts.instantiateonce && c->instantiated) continue;
-        if (c->size < opts.instantiateclslim) continue;
+      if (noccs (lit) > opts.instantiateocclim)
+        continue;
+      Occs &os = occs (lit);
+      for (const auto &c : os) {
+        if (c->garbage)
+          continue;
+        if (opts.instantiateonce && c->instantiated)
+          continue;
+        if (c->size < opts.instantiateclslim)
+          continue;
         bool satisfied = false;
         int unassigned = 0;
-        for (const auto & other : *c) {
+        for (const auto &other : *c) {
           const signed char tmp = val (other);
-          if (tmp > 0) satisfied = true;
-          if (!tmp) unassigned++;
+          if (tmp > 0)
+            satisfied = true;
+          if (!tmp)
+            unassigned++;
         }
-        if (satisfied) continue;
-        if (unassigned < 3) continue;           // avoid learning units
+        if (satisfied)
+          continue;
+        if (unassigned < 3)
+          continue; // avoid learning units
         size_t negoccs = occs (-lit).size ();
         LOG (c,
-          "instantiation candidate literal %d "
-          "with %zu negative occurrences in", lit, negoccs);
+             "instantiation candidate literal %d "
+             "with %zu negative occurrences in",
+             lit, negoccs);
         instantiator.candidate (lit, c, c->size, negoccs);
       }
     }
@@ -57,30 +69,36 @@ inline void Internal::inst_assign (int lit) {
   trail.push_back (lit);
 }
 
-bool Internal::inst_propagate () {      // Adapted from 'propagate'.
+bool Internal::inst_propagate () { // Adapted from 'propagate'.
   START (propagate);
   int64_t before = propagated;
   bool ok = true;
   while (ok && propagated != trail.size ()) {
     const int lit = -trail[propagated++];
     LOG ("instantiate propagating %d", -lit);
-    Watches & ws = watches (lit);
+    Watches &ws = watches (lit);
     const const_watch_iterator eow = ws.end ();
     const_watch_iterator i = ws.begin ();
     watch_iterator j = ws.begin ();
     while (i != eow) {
       const Watch w = *j++ = *i++;
       const signed char b = val (w.blit);
-      if (b > 0) continue;
+      if (b > 0)
+        continue;
       if (w.binary ()) {
-        if (b < 0) { ok = false; LOG (w.clause, "conflict"); break; }
-        else inst_assign (w.blit);
+        if (b < 0) {
+          ok = false;
+          LOG (w.clause, "conflict");
+          break;
+        } else
+          inst_assign (w.blit);
       } else {
         literal_iterator lits = w.clause->begin ();
-        const int other = lits[0]^lits[1]^lit;
+        const int other = lits[0] ^ lits[1] ^ lit;
         lits[0] = other, lits[1] = lit;
         const signed char u = val (other);
-        if (u > 0) j[-1].blit = other;
+        if (u > 0)
+          j[-1].blit = other;
         else {
           const int size = w.clause->size;
           const const_literal_iterator end = lits + size;
@@ -135,23 +153,36 @@ bool Internal::inst_propagate () {      // Adapted from 'propagate'.
 
 // This is the actual instantiation attempt.
 
-bool Internal::instantiate_candidate (int lit, Clause * c) {
+bool Internal::instantiate_candidate (int lit, Clause *c) {
   stats.instried++;
-  if (c->garbage) return false;
+  if (c->garbage)
+    return false;
   assert (!level);
   bool found = false, satisfied = false, inactive = false;
   int unassigned = 0;
-  for (const auto & other : *c) {
-    if (other == lit) found = true;
+  for (const auto &other : *c) {
+    if (other == lit)
+      found = true;
     const signed char tmp = val (other);
-    if (tmp > 0) { satisfied = true; break; }
-    if (!tmp && !active (other)) { inactive = true; break; }
-    if (!tmp) unassigned++;
+    if (tmp > 0) {
+      satisfied = true;
+      break;
+    }
+    if (!tmp && !active (other)) {
+      inactive = true;
+      break;
+    }
+    if (!tmp)
+      unassigned++;
   }
-  if (!found) return false;
-  if (inactive) return false;
-  if (satisfied) return false;
-  if (unassigned < 3) return false;
+  if (!found)
+    return false;
+  if (inactive)
+    return false;
+  if (satisfied)
+    return false;
+  if (unassigned < 3)
+    return false;
   size_t before = trail.size ();
   assert (propagated == before);
   assert (active (lit));
@@ -159,15 +190,19 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
   assert (!c->garbage);
   c->instantiated = true;
   level++;
-  inst_assign (lit);                            // Assume 'lit' to true.
-  for (const auto & other : *c) {
-    if (other == lit) continue;
+  inst_assign (lit); // Assume 'lit' to true.
+  for (const auto &other : *c) {
+    if (other == lit)
+      continue;
     const signed char tmp = val (other);
-    if (tmp) { assert (tmp < 0); continue; }
-    inst_assign (-other);                       // Assume other to false.
+    if (tmp) {
+      assert (tmp < 0);
+      continue;
+    }
+    inst_assign (-other); // Assume other to false.
   }
-  bool ok = inst_propagate ();                  // Propagate.
-  while (trail.size () > before) {              // Backtrack.
+  bool ok = inst_propagate ();     // Propagate.
+  while (trail.size () > before) { // Backtrack.
     const int other = trail.back ();
     LOG ("instantiate unassign %d", other);
     trail.pop_back ();
@@ -177,7 +212,10 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
   propagated = before;
   assert (level == 1);
   level = 0;
-  if (ok) { LOG ("instantiation failed"); return false; }
+  if (ok) {
+    LOG ("instantiation failed");
+    return false;
+  }
   unwatch_clause (c);
   strengthen_clause (c, lit);
   watch_clause (c);
@@ -192,7 +230,7 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
 // Try to instantiate all candidates collected before through the
 // 'collect_instantiation_candidates' routine.
 
-void Internal::instantiate (Instantiator & instantiator) {
+void Internal::instantiate (Instantiator &instantiator) {
   assert (opts.instantiate);
   START (instantiate);
   stats.instrounds++;
@@ -211,34 +249,38 @@ void Internal::instantiate (Instantiator & instantiator) {
     }
   }
   PHASE ("instantiate", stats.instrounds,
-    "attempting to instantiate %" PRId64 " candidate literal clause pairs",
-    candidates);
-  while (!unsat &&
-         !terminated_asynchronously () &&
+         "attempting to instantiate %" PRId64
+         " candidate literal clause pairs",
+         candidates);
+  while (!unsat && !terminated_asynchronously () &&
          !instantiator.candidates.empty ()) {
     Instantiator::Candidate cand = instantiator.candidates.back ();
     instantiator.candidates.pop_back ();
 #ifndef QUIET
     tried++;
 #endif
-    if (!active (cand.lit)) continue;
+    if (!active (cand.lit))
+      continue;
     LOG (cand.clause,
-      "trying to instantiate %d with "
-      "%zd negative occurrences in", cand.lit, cand.negoccs);
-    if (!instantiate_candidate (cand.lit, cand.clause)) continue;
+         "trying to instantiate %d with "
+         "%zd negative occurrences in",
+         cand.lit, cand.negoccs);
+    if (!instantiate_candidate (cand.lit, cand.clause))
+      continue;
     instantiated++;
-    VERBOSE (2, "instantiation %" PRId64 " (%.1f%%) succeeded "
-      "(%.1f%%) with %zd negative occurrences in size %d clause",
-      tried, percent (tried, candidates),
-      percent (instantiated, tried), cand.negoccs, cand.size);
+    VERBOSE (2,
+             "instantiation %" PRId64 " (%.1f%%) succeeded "
+             "(%.1f%%) with %zd negative occurrences in size %d clause",
+             tried, percent (tried, candidates),
+             percent (instantiated, tried), cand.negoccs, cand.size);
   }
   PHASE ("instantiate", stats.instrounds,
-    "instantiated %" PRId64 " candidate successfully "
-    "out of %" PRId64 " tried %.1f%%",
-    instantiated, tried, percent (instantiated, tried));
+         "instantiated %" PRId64 " candidate successfully "
+         "out of %" PRId64 " tried %.1f%%",
+         instantiated, tried, percent (instantiated, tried));
   report ('I', !instantiated);
   reset_watches ();
   STOP (instantiate);
 }
 
-}
+} // namespace CaDiCaL

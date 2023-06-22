@@ -2,14 +2,14 @@
 
 namespace CaDiCaL {
 
-void Internal::copy_phases (vector<signed char> & dst) {
+void Internal::copy_phases (vector<signed char> &dst) {
   START (copy);
   for (auto i : vars)
     dst[i] = phases.saved[i];
   STOP (copy);
 }
 
-void Internal::clear_phases (vector<signed char> & dst) {
+void Internal::clear_phases (vector<signed char> &dst) {
   START (copy);
   for (auto i : vars)
     dst[i] = 0;
@@ -41,4 +41,4 @@ void Internal::unphase (int lit) {
   phases.forced[idx] = 0;
 }
 
-}
+} // namespace CaDiCaL

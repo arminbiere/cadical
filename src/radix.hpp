@@ -2,8 +2,8 @@
 #define _radix_hpp_INCLUDED
 
 #include <cassert>
-#include <iterator>
 #include <cstring>
+#include <iterator>
 
 namespace CaDiCaL {
 
@@ -34,22 +34,22 @@ using namespace std;
 
 struct pointer_rank {
   typedef size_t Type;
-  Type operator () (void * ptr) { return (size_t) ptr; }
+  Type operator() (void *ptr) { return (size_t) ptr; }
 };
 
-template<class I, class Rank> void rsort (I first, I last, Rank rank)
-{
+template <class I, class Rank> void rsort (I first, I last, Rank rank) {
   typedef typename iterator_traits<I>::value_type T;
   typedef typename Rank::Type R;
 
   assert (first <= last);
   const size_t n = last - first;
-  if (n <= 1) return;
+  if (n <= 1)
+    return;
 
-  const size_t l = 8;           // Radix 8, thus byte-wise.
-  const size_t w = (1<<l);      // So many buckets.
+  const size_t l = 8;        // Radix 8, thus byte-wise.
+  const size_t w = (1 << l); // So many buckets.
 
-  const unsigned mask = w - 1;  // Fast mod 'w'.
+  const unsigned mask = w - 1; // Fast mod 'w'.
 
 // Uncomment the following define for large values of 'w' in order to keep
 // the large bucket array 'count' on the heap instead of the stack.
@@ -57,9 +57,9 @@ template<class I, class Rank> void rsort (I first, I last, Rank rank)
 // #define CADICAL_RADIX_BUCKETS_ON_THE_HEAP
 //
 #ifdef CADICAL_RADIX_BUCKETS_ON_THE_HEAP
-  size_t * count = new size_t[w];       // Put buckets on the heap.
+  size_t *count = new size_t[w]; // Put buckets on the heap.
 #else
-  size_t count[w];                      // Put buckets on the stack.
+  size_t count[w]; // Put buckets on the stack.
 #endif
 
   I a = first, b = last, c = a;
@@ -72,7 +72,8 @@ template<class I, class Rank> void rsort (I first, I last, Rank rank)
 
   R masked_lower = 0, masked_upper = mask;
 
-  for (size_t i = 0; i < 8 * sizeof (rank (*first)); i += l, shifted <<= l) {
+  for (size_t i = 0; i < 8 * sizeof (rank (*first));
+       i += l, shifted <<= l) {
 
     if (bounded && (lower & shifted) == (upper & shifted))
       continue;
@@ -84,7 +85,8 @@ template<class I, class Rank> void rsort (I first, I last, Rank rank)
 
     for (I p = c; p != end; p++) {
       const auto r = rank (*p);
-      if (!bounded) lower &= r, upper |= r;
+      if (!bounded)
+        lower &= r, upper |= r;
       const auto s = r >> i;
       const auto m = s & mask;
       count[m]++;
@@ -93,12 +95,11 @@ template<class I, class Rank> void rsort (I first, I last, Rank rank)
     masked_lower = (lower >> i) & mask;
     masked_upper = (upper >> i) & mask;
 
-    if (!bounded)
-      {
-        bounded = true;
-        if ((lower & shifted) == (upper & shifted))
-          continue;
-      }
+    if (!bounded) {
+      bounded = true;
+      if ((lower & shifted) == (upper & shifted))
+        continue;
+    }
 
     size_t pos = 0;
     for (R j = masked_lower; j <= masked_upper; j++) {
@@ -108,7 +109,7 @@ template<class I, class Rank> void rsort (I first, I last, Rank rank)
     }
 
     if (!initialized) {
-      assert (&*c == &*a);      // MS VC++
+      assert (&*c == &*a); // MS VC++
       v.resize (n);
       b = v.begin ();
       initialized = true;
@@ -131,7 +132,7 @@ template<class I, class Rank> void rsort (I first, I last, Rank rank)
   }
 
 #ifdef CADICAL_RADIX_BUCKETS_ON_THE_HEAP
-  delete [] count;
+  delete[] count;
 #endif
 
 #ifndef NDEBUG
@@ -155,13 +156,15 @@ template<class I, class Rank> void rsort (I first, I last, Rank rank)
 // use radix sort.  As usual we do not want to hard code it here (default
 // is '800') in order to make fuzzing and delta debugging more effective.
 
-#define MSORT(LIMIT,FIRST,LAST,RANK,LESS) \
-do { \
-  const size_t N = LAST - FIRST; \
-  if (N <= (size_t) (LIMIT)) sort (FIRST, LAST, LESS); \
-  else rsort (FIRST, LAST, RANK); \
-} while (0)
+#define MSORT(LIMIT, FIRST, LAST, RANK, LESS) \
+  do { \
+    const size_t N = LAST - FIRST; \
+    if (N <= (size_t) (LIMIT)) \
+      sort (FIRST, LAST, LESS); \
+    else \
+      rsort (FIRST, LAST, RANK); \
+  } while (0)
 
-}
+} // namespace CaDiCaL
 
 #endif

@@ -12,8 +12,8 @@
 using namespace std;
 using namespace CaDiCaL;
 
-static string path (const char * suffix) {
-  const char * prefix = getenv ("CADICALBUILD");
+static string path (const char *suffix) {
+  const char *prefix = getenv ("CADICALBUILD");
   string res = prefix ? prefix : ".";
   res += "/test-api-traverse.";
   res += suffix;
@@ -22,26 +22,39 @@ static string path (const char * suffix) {
 
 struct WitnessChecker : WitnessIterator {
   bool match (int a, int b) {
-    if (a == -3 && b == 1) return true;
-    if (a == 1 && b == -3) return true;
-    if (a == -3 && b == 2) return true;
-    if (a == 2 && b == -3) return true;
+    if (a == -3 && b == 1)
+      return true;
+    if (a == 1 && b == -3)
+      return true;
+    if (a == -3 && b == 2)
+      return true;
+    if (a == 2 && b == -3)
+      return true;
     return false;
   }
   bool match (int a, int b, int c) {
-    if (a == 3 && b == -1 && c == -2) return true;
-    if (a == 3 && b == -2 && c == -1) return true;
-    if (a == -1 && b == 3 && c == -2) return true;
-    if (a == -2 && b == 3 && c == -1) return true;
-    if (a == -1 && b == -2 && c == 3) return true;
-    if (a == -2 && b == -1 && c == 3) return true;
+    if (a == 3 && b == -1 && c == -2)
+      return true;
+    if (a == 3 && b == -2 && c == -1)
+      return true;
+    if (a == -1 && b == 3 && c == -2)
+      return true;
+    if (a == -2 && b == 3 && c == -1)
+      return true;
+    if (a == -1 && b == -2 && c == 3)
+      return true;
+    if (a == -2 && b == -1 && c == 3)
+      return true;
     return false;
   }
+
 public:
-  bool witness (const vector<int> & c, const vector<int> & w) {
-    for (const auto & lit : w) cout << lit << ' ';
+  bool witness (const vector<int> &c, const vector<int> &w) {
+    for (const auto &lit : w)
+      cout << lit << ' ';
     cout << "0 ";
-    for (const auto & lit : c) cout << lit << ' ';
+    for (const auto &lit : c)
+      cout << lit << ' ';
     cout << '0' << endl;
     if (c.size () == 1) {
       assert (c[0] == 5);
@@ -52,16 +65,19 @@ public:
       assert (w[0] != -3);
       assert (w[0] != 3);
       assert (abs (w[0]) == 1 || abs (w[0]) == 2);
-      if (c.size () == 2) assert (match (c[0], c[1]));
-      else assert (c.size () == 3), assert (match (c[0], c[1], c[2]));
+      if (c.size () == 2)
+        assert (match (c[0], c[1]));
+      else
+        assert (c.size () == 3), assert (match (c[0], c[1], c[2]));
     }
     return true;
   }
 };
 
 struct ClauseChecker : ClauseIterator {
-  bool clause (const vector<int> & c) {
-    for (const auto & lit : c) cout << lit << ' ';
+  bool clause (const vector<int> &c) {
+    for (const auto &lit : c)
+      cout << lit << ' ';
     cout << '0' << endl;
     assert (c.size () == 1);
     assert (c[0] == 4);

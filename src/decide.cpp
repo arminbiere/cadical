@@ -18,7 +18,8 @@ int Internal::next_decision_variable_on_queue () {
     stats.searched += searched;
     update_queue_unassigned (res);
   }
-  LOG ("next queue decision variable %d bumped %" PRId64 "", res, bumped (res));
+  LOG ("next queue decision variable %d bumped %" PRId64 "", res,
+       bumped (res));
   return res;
 }
 
@@ -28,7 +29,8 @@ int Internal::next_decision_variable_with_best_score () {
   int res = 0;
   for (;;) {
     res = scores.front ();
-    if (!val (res)) break;
+    if (!val (res))
+      break;
     (void) scores.pop_front ();
   }
   LOG ("next decision variable %d with score %g", res, score (res));
@@ -36,8 +38,10 @@ int Internal::next_decision_variable_with_best_score () {
 }
 
 int Internal::next_decision_variable () {
-  if (use_scores ()) return next_decision_variable_with_best_score ();
-  else               return next_decision_variable_on_queue ();
+  if (use_scores ())
+    return next_decision_variable_with_best_score ();
+  else
+    return next_decision_variable_on_queue ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -49,11 +53,16 @@ int Internal::next_decision_variable () {
 int Internal::decide_phase (int idx, bool target) {
   const int initial_phase = opts.phase ? 1 : -1;
   int phase = 0;
-  if (force_saved_phase) phase = phases.saved[idx];
-  if (!phase && opts.forcephase) phase = initial_phase;
-  if (!phase) phase = phases.forced[idx];               // TODO swap?
-  if (!phase && target) phase = phases.target[idx];
-  if (!phase) phase = phases.saved[idx];
+  if (force_saved_phase)
+    phase = phases.saved[idx];
+  if (!phase && opts.forcephase)
+    phase = initial_phase;
+  if (!phase)
+    phase = phases.forced[idx]; // TODO swap?
+  if (!phase && target)
+    phase = phases.target[idx];
+  if (!phase)
+    phase = phases.saved[idx];
 
   // The following should not be necessary and in some version we had even
   // a hard 'COVER' assertion here to check for this.   Unfortunately it
@@ -64,7 +73,8 @@ int Internal::decide_phase (int idx, bool target) {
   // now use this 'defensive' code here, even though such defensive code is
   // considered bad programming practice.
   //
-  if (!phase) phase = initial_phase;
+  if (!phase)
+    phase = initial_phase;
 
   return phase * idx;
 }
@@ -78,7 +88,8 @@ int Internal::likely_phase (int idx) { return decide_phase (idx, false); }
 
 bool Internal::satisfied () {
   size_t assigned = trail.size ();
-  if (propagated < assigned) return false;
+  if (propagated < assigned)
+    return false;
   if ((size_t) level < assumptions.size () + (!!constraint.size ()))
     return false;
   return (assigned == (size_t) max_var);
@@ -87,8 +98,10 @@ bool Internal::satisfied () {
 bool Internal::better_decision (int lit, int other) {
   int lit_idx = abs (lit);
   int other_idx = abs (other);
-  if (stable) return stab[lit_idx] > stab[other_idx];
-  else        return btab[lit_idx] > btab[other_idx];
+  if (stable)
+    return stab[lit_idx] > stab[other_idx];
+  else
+    return btab[lit_idx] > btab[other_idx];
 }
 
 // Search for the next decision and assign it to the saved phase.  Requires
@@ -116,9 +129,9 @@ int Internal::decide () {
     }
   } else if ((size_t) level == assumptions.size () && constraint.size ()) {
 
-    int satisfied_lit = 0;      // The literal satisfying the constrain.
-    int unassigned_lit = 0;     // Highest score unassigned literal.
-    int previous_lit = 0;	// Move satisfied literals to the front.
+    int satisfied_lit = 0;  // The literal satisfying the constrain.
+    int unassigned_lit = 0; // Highest score unassigned literal.
+    int previous_lit = 0;   // Move satisfied literals to the front.
 
     const size_t size_constraint = constraint.size ();
 
@@ -138,28 +151,29 @@ int Internal::decide () {
       const signed char tmp = val (lit);
       if (tmp < 0) {
         LOG ("constraint literal %d falsified", lit);
-	continue;
+        continue;
       }
 
       if (tmp > 0) {
         LOG ("constraint literal %d satisfied", lit);
         satisfied_lit = lit;
-	break;
+        break;
       }
 
       assert (!tmp);
       LOG ("constraint literal %d unassigned", lit);
 
       if (!unassigned_lit || better_decision (lit, unassigned_lit))
-	unassigned_lit = lit;
+        unassigned_lit = lit;
     }
 
     if (satisfied_lit) {
 
-      constraint[0] = satisfied_lit;  // Move satisfied to the front.
+      constraint[0] = satisfied_lit; // Move satisfied to the front.
 
       LOG ("literal %d satisfies constraint and "
-	   "is implied by assumptions", satisfied_lit);
+           "is implied by assumptions",
+           satisfied_lit);
 
       level++;
       control.push_back (Level (0, trail.size ()));
@@ -173,29 +187,29 @@ int Internal::decide () {
 
       if (size_constraint) {
 
-	for (size_t i = 0; i + 1 != size_constraint; i++)
-	  constraint[i] = constraint[i+1];
+        for (size_t i = 0; i + 1 != size_constraint; i++)
+          constraint[i] = constraint[i + 1];
 
-	constraint[size_constraint-1] = previous_lit;
+        constraint[size_constraint - 1] = previous_lit;
       }
 
       if (unassigned_lit) {
 
-	LOG ("deciding %d to satisfy constraint", unassigned_lit);
-	search_assume_decision (unassigned_lit);
+        LOG ("deciding %d to satisfy constraint", unassigned_lit);
+        search_assume_decision (unassigned_lit);
 
       } else {
 
-	LOG ("failing constraint");
-	unsat_constraint = true;
-	res = 20;
-      }  
+        LOG ("failing constraint");
+        unsat_constraint = true;
+        res = 20;
+      }
     }
 
 #ifndef NDEBUG
     for (auto lit : constraint)
       sum -= lit;
-    assert (!sum);	// Checksum of literal should not change!
+    assert (!sum); // Checksum of literal should not change!
 #endif
 
   } else {
@@ -205,9 +219,10 @@ int Internal::decide () {
     int decision = decide_phase (idx, target);
     search_assume_decision (decision);
   }
-  if (res) marked_failed = false;
+  if (res)
+    marked_failed = false;
   STOP (decide);
   return res;
 }
 
-}
+} // namespace CaDiCaL

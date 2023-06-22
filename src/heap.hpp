@@ -1,7 +1,7 @@
 #ifndef _heap_hpp_INCLUDED
 #define _heap_hpp_INCLUDED
 
-#include "util.hpp"     // Alphabetically after 'heap.hpp'.
+#include "util.hpp" // Alphabetically after 'heap.hpp'.
 
 namespace CaDiCaL {
 
@@ -19,7 +19,7 @@ using namespace std;
 
 const unsigned invalid_heap_position = UINT_MAX;
 
-template<class C> class heap {
+template <class C> class heap {
 
   vector<unsigned> array; // actual binary heap
   vector<unsigned> pos;   // positions of elements in array
@@ -27,37 +27,41 @@ template<class C> class heap {
 
   // Map an element to its position entry in the 'pos' map.
   //
-  unsigned & index (unsigned e) {
+  unsigned &index (unsigned e) {
     if (e >= pos.size ())
       pos.resize (1 + (size_t) e, invalid_heap_position);
-    unsigned & res = pos[e];
+    unsigned &res = pos[e];
     assert (res == invalid_heap_position || (size_t) res < array.size ());
     return res;
   }
 
   bool has_parent (unsigned e) { return index (e) > 0; }
-  bool has_left (unsigned e)   { return (size_t) 2*index (e) + 1 < size (); }
-  bool has_right (unsigned e)  { return (size_t) 2*index (e) + 2 < size (); }
+  bool has_left (unsigned e) {
+    return (size_t) 2 * index (e) + 1 < size ();
+  }
+  bool has_right (unsigned e) {
+    return (size_t) 2 * index (e) + 2 < size ();
+  }
 
   unsigned parent (unsigned e) {
-    assert(has_parent (e));
-    return array[(index(e)-1)/2];
+    assert (has_parent (e));
+    return array[(index (e) - 1) / 2];
   }
 
   unsigned left (unsigned e) {
-    assert(has_left (e));
-    return array[2*index(e)+1];
+    assert (has_left (e));
+    return array[2 * index (e) + 1];
   }
 
   unsigned right (unsigned e) {
-    assert(has_right (e));
-    return array[2*index(e)+2];
+    assert (has_right (e));
+    return array[2 * index (e) + 2];
   }
 
   // Exchange elements 'a' and 'b' in 'array' and fix their positions.
   //
   void exchange (unsigned a, unsigned b) {
-    unsigned & i = index (a), & j = index (b);
+    unsigned &i = index (a), &j = index (b);
     swap (array[i], array[j]);
     swap (i, j);
   }
@@ -77,9 +81,11 @@ template<class C> class heap {
       unsigned c = left (e);
       if (has_right (e)) {
         unsigned r = right (e);
-        if (less (c, r)) c = r;
+        if (less (c, r))
+          c = r;
       }
-      if (!less (e, c)) break;
+      if (!less (e, c))
+        break;
       exchange (e, c);
     }
   }
@@ -112,8 +118,7 @@ template<class C> class heap {
   }
 
 public:
-
-  heap (const C & c) : less (c) { }
+  heap (const C &c) : less (c) {}
 
   // Number of elements in the heap.
   //
@@ -126,7 +131,8 @@ public:
   // Check whether 'e' is already in the heap.
   //
   bool contains (unsigned e) const {
-    if ((size_t) e >= pos.size ()) return false;
+    if ((size_t) e >= pos.size ())
+      return false;
     return pos[e] != invalid_heap_position;
   }
 
@@ -145,17 +151,22 @@ public:
 
   // Returns the maximum element in the heap.
   //
-  unsigned front () const { assert (!empty ()); return array[0]; }
+  unsigned front () const {
+    assert (!empty ());
+    return array[0];
+  }
 
   // Removes the maximum element in the heap.
   //
   unsigned pop_front () {
     assert (!empty ());
     unsigned res = array[0], last = array.back ();
-    if (size () > 1) exchange (res, last);
+    if (size () > 1)
+      exchange (res, last);
     index (res) = invalid_heap_position;
     array.pop_back ();
-    if (size () > 1) down (last);
+    if (size () > 1)
+      down (last);
     check ();
     return res;
   }
@@ -194,6 +205,6 @@ public:
   const_iterator end () const { return array.end (); }
 };
 
-}
+} // namespace CaDiCaL
 
 #endif

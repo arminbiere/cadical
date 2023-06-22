@@ -25,23 +25,21 @@ class Instantiator {
     int lit;
     int size;
     size_t negoccs;
-    Clause * clause;
-    Candidate (int l, Clause * c, int s, size_t n) :
-      lit (l), size (s), negoccs (n), clause (c)
-    { }
+    Clause *clause;
+    Candidate (int l, Clause *c, int s, size_t n)
+        : lit (l), size (s), negoccs (n), clause (c) {}
   };
 
   vector<Candidate> candidates;
 
 public:
-
-  void candidate (int l, Clause * c, int s, size_t n) {
+  void candidate (int l, Clause *c, int s, size_t n) {
     candidates.push_back (Candidate (l, c, s, n));
   }
 
   operator bool () const { return !candidates.empty (); }
 };
 
-}
+} // namespace CaDiCaL
 
 #endif

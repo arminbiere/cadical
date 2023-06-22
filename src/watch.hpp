@@ -19,42 +19,45 @@ struct Clause;
 
 struct Watch {
 
-  Clause * clause; int blit;
+  Clause *clause;
+  int blit;
   int size;
 
-  Watch (int b, Clause * c) : clause (c), blit (b), size (c->size) { }
-  Watch () { }
+  Watch (int b, Clause *c) : clause (c), blit (b), size (c->size) {}
+  Watch () {}
 
   bool binary () const { return size == 2; }
 };
 
-typedef vector<Watch> Watches;          // of one literal
+typedef vector<Watch> Watches; // of one literal
 
 typedef Watches::iterator watch_iterator;
 typedef Watches::const_iterator const_watch_iterator;
 
-inline void remove_watch (Watches & ws, Clause * clause) {
+inline void remove_watch (Watches &ws, Clause *clause) {
   const auto end = ws.end ();
   auto i = ws.begin ();
   for (auto j = i; j != end; j++) {
-    const Watch & w = *i++ = *j;
-    if (w.clause == clause) i--;
+    const Watch &w = *i++ = *j;
+    if (w.clause == clause)
+      i--;
   }
   assert (i + 1 == end);
   ws.resize (i - ws.begin ());
 }
 
-  // search for the clause and updates the size marked in the watch lists
-  inline void update_watch_size (Watches & ws, int blit, Clause * conflict) {
-    bool found = false;
-    const int size = conflict->size;
-    for (Watch &w : ws) {
-      if (w.clause == conflict) w.size = size, w.blit = blit, found = true;
-      assert (w.clause->garbage || w.size==2 || w.clause->size!=2);
-    }
-    assert (found), (void)found;
+// search for the clause and updates the size marked in the watch lists
+inline void update_watch_size (Watches &ws, int blit, Clause *conflict) {
+  bool found = false;
+  const int size = conflict->size;
+  for (Watch &w : ws) {
+    if (w.clause == conflict)
+      w.size = size, w.blit = blit, found = true;
+    assert (w.clause->garbage || w.size == 2 || w.clause->size != 2);
   }
-
+  assert (found), (void) found;
 }
+
+} // namespace CaDiCaL
 
 #endif

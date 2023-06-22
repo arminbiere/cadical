@@ -19,15 +19,16 @@
 // with the constant 'COVER' of 'Internal::Mode' (surprisingly).
 
 #define COVER(COND) \
-do { \
-  if (!(COND)) break; \
-  fprintf (stderr, \
-    "%scadical%s: %s:%d: %s: Coverage goal %s`%s'%s reached.\n", \
-    terr.bold_code (), terr.normal_code (), \
-    __FUNCTION__, __LINE__, __FILE__, \
-    terr.green_code (), # COND, terr.normal_code ()); \
-  fflush (stderr); \
-  abort (); \
-} while (0)
+  do { \
+    if (!(COND)) \
+      break; \
+    fprintf (stderr, \
+             "%scadical%s: %s:%d: %s: Coverage goal %s`%s'%s reached.\n", \
+             terr.bold_code (), terr.normal_code (), __FUNCTION__, \
+             __LINE__, __FILE__, terr.green_code (), #COND, \
+             terr.normal_code ()); \
+    fflush (stderr); \
+    abort (); \
+  } while (0)
 
 #endif

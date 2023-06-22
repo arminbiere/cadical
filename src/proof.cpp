@@ -17,7 +17,7 @@ void Internal::new_proof_on_demand () {
 
 // Enable proof tracing.
 
-void Internal::trace (File * file) {
+void Internal::trace (File *file) {
   assert (!tracer);
   new_proof_on_demand ();
   tracer = new Tracer (this, file, opts.binary);
@@ -51,7 +51,7 @@ void Internal::flush_trace () {
 
 /*------------------------------------------------------------------------*/
 
-Proof::Proof (Internal * s) : internal (s) { LOG ("PROOF new"); }
+Proof::Proof (Internal *s) : internal (s) { LOG ("PROOF new"); }
 
 Proof::~Proof () { LOG ("PROOF delete"); }
 
@@ -62,19 +62,19 @@ inline void Proof::add_literal (int internal_lit) {
   clause.push_back (external_lit);
 }
 
-inline void Proof::add_literals (Clause * c) {
-  for (auto const & lit : * c)
+inline void Proof::add_literals (Clause *c) {
+  for (auto const &lit : *c)
     add_literal (lit);
 }
 
-inline void Proof::add_literals (const vector<int> & c) {
-  for (auto const & lit : c)
+inline void Proof::add_literals (const vector<int> &c) {
+  for (auto const &lit : c)
     add_literal (lit);
 }
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_original_clause (const vector<int> & c) {
+void Proof::add_original_clause (const vector<int> &c) {
   LOG (c, "PROOF adding original internal clause");
   add_literals (c);
   add_original_clause ();
@@ -95,31 +95,31 @@ void Proof::add_derived_unit_clause (int internal_unit) {
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_derived_clause (Clause * c) {
+void Proof::add_derived_clause (Clause *c) {
   LOG (c, "PROOF adding to proof derived");
   assert (clause.empty ());
   add_literals (c);
   add_derived_clause ();
 }
 
-void Proof::delete_clause (Clause * c) {
+void Proof::delete_clause (Clause *c) {
   LOG (c, "PROOF deleting from proof");
   assert (clause.empty ());
   add_literals (c);
   delete_clause ();
 }
 
-void Proof::delete_clause (const vector<int> & c) {
+void Proof::delete_clause (const vector<int> &c) {
   LOG (c, "PROOF deleting from proof");
   assert (clause.empty ());
   add_literals (c);
   delete_clause ();
 }
 
-void Proof::add_derived_clause (const vector<int> & c) {
+void Proof::add_derived_clause (const vector<int> &c) {
   LOG (internal->clause, "PROOF adding derived clause");
   assert (clause.empty ());
-  for (const auto & lit : c)
+  for (const auto &lit : c)
     add_literal (lit);
   add_derived_clause ();
 }
@@ -130,12 +130,13 @@ void Proof::add_derived_clause (const vector<int> & c) {
 // literals. To avoid copying the clause, we provide a specialized tracing
 // function here, which traces the required 'add' and 'remove' operations.
 
-void Proof::flush_clause (Clause * c) {
+void Proof::flush_clause (Clause *c) {
   LOG (c, "PROOF flushing falsified literals in");
   assert (clause.empty ());
   for (int i = 0; i < c->size; i++) {
     int internal_lit = c->literals[i];
-    if (internal->fixed (internal_lit) < 0) continue;
+    if (internal->fixed (internal_lit) < 0)
+      continue;
     add_literal (internal_lit);
   }
   add_derived_clause ();
@@ -148,12 +149,13 @@ void Proof::flush_clause (Clause * c) {
 // to avoid copying the clause and instead provides tracing of the required
 // 'add' and 'remove' operations.
 
-void Proof::strengthen_clause (Clause * c, int remove) {
+void Proof::strengthen_clause (Clause *c, int remove) {
   LOG (c, "PROOF strengthen by removing %d in", remove);
   assert (clause.empty ());
   for (int i = 0; i < c->size; i++) {
     int internal_lit = c->literals[i];
-    if (internal_lit == remove) continue;
+    if (internal_lit == remove)
+      continue;
     add_literal (internal_lit);
   }
   add_derived_clause ();
@@ -183,4 +185,4 @@ void Proof::delete_clause () {
   clause.clear ();
 }
 
-}
+} // namespace CaDiCaL

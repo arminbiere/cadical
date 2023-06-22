@@ -9,21 +9,21 @@ class Random {
   uint64_t state;
 
   void add (uint64_t a) {
-    if (!(state += a)) state = 1;
+    if (!(state += a))
+      state = 1;
     next ();
   }
 
 public:
-
   // Without argument use a machine, process and time dependent seed.
   //
   Random ();
 
-  Random (uint64_t seed) : state (seed) { }
+  Random (uint64_t seed) : state (seed) {}
   void operator= (uint64_t seed) { state = seed; }
-  Random (const Random & other) : state (other.seed ()) { }
+  Random (const Random &other) : state (other.seed ()) {}
 
-  void operator += (uint64_t a) { add (a); }
+  void operator+= (uint64_t a) { add (a); }
   uint64_t seed () const { return state; }
 
   uint64_t next () {
@@ -33,9 +33,12 @@ public:
     return state;
   }
 
-  uint32_t generate () { next (); return state >> 32; }
-  int      generate_int () { return (int) generate (); }
-  bool     generate_bool () { return generate () < 2147483648u; }
+  uint32_t generate () {
+    next ();
+    return state >> 32;
+  }
+  int generate_int () { return (int) generate (); }
+  bool generate_bool () { return generate () < 2147483648u; }
 
   // Generate 'double' value in the range '[0,1]'.
   //
@@ -50,7 +53,8 @@ public:
     if (delta) {
       const double fraction = tmp / 4294967296.0;
       scaled = delta * fraction;
-    } else scaled = tmp;
+    } else
+      scaled = tmp;
     const int res = scaled + l;
     assert (l <= res);
     assert (res <= r);
@@ -65,8 +69,10 @@ public:
       log_delta++;
     const int log_res = pick_int (0, log_delta);
     unsigned tmp = generate ();
-    if (log_res < 32) tmp &= (1u << log_res) - 1;
-    if (delta) tmp %= delta;
+    if (log_res < 32)
+      tmp &= (1u << log_res) - 1;
+    if (delta)
+      tmp %= delta;
     const int res = l + tmp;
     assert (l <= res), assert (res <= r);
     return res;
@@ -84,4 +90,4 @@ public:
   }
 };
 
-}
+} // namespace CaDiCaL

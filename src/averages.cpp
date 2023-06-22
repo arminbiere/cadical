@@ -22,9 +22,11 @@ void Internal::init_averages () {
 void Internal::swap_averages () {
   LOG ("saving current averages");
   swap (averages.current, averages.saved);
-  if (!averages.swapped) init_averages ();
-  else LOG ("swapping in previously saved averages");
+  if (!averages.swapped)
+    init_averages ();
+  else
+    LOG ("swapping in previously saved averages");
   averages.swapped++;
 }
 
-}
+} // namespace CaDiCaL

@@ -9,17 +9,20 @@ namespace CaDiCaL {
 // The eliminator maintains a queue of clauses that are new and have to be
 // checked to subsume or strengthen other (longer or same size) clauses.
 
-void Eliminator::enqueue (Clause * c) {
-  if (!internal->opts.elimbackward) return;
-  if (c->enqueued) return;
+void Eliminator::enqueue (Clause *c) {
+  if (!internal->opts.elimbackward)
+    return;
+  if (c->enqueued)
+    return;
   LOG (c, "backward enqueue");
   backward.push (c);
   c->enqueued = true;
 }
 
-Clause * Eliminator::dequeue () {
-  if (backward.empty ()) return 0;
-  Clause * res = backward.front ();
+Clause *Eliminator::dequeue () {
+  if (backward.empty ())
+    return 0;
+  Clause *res = backward.front ();
   backward.pop ();
   assert (res->enqueued);
   res->enqueued = false;
@@ -34,22 +37,28 @@ Eliminator::~Eliminator () {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
+void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
   assert (opts.elimbackward);
   assert (!c->redundant);
-  if (c->garbage) return;
+  if (c->garbage)
+    return;
   LOG (c, "attempting backward subsumption and strengthening with");
   size_t len = UINT_MAX;
   unsigned size = 0;
   int best = 0;
   bool satisfied = false;
-  for (const auto & lit : *c) {
+  for (const auto &lit : *c) {
     const signed char tmp = val (lit);
-    if (tmp > 0) { satisfied = true; break; }
-    if (tmp < 0) continue;
+    if (tmp > 0) {
+      satisfied = true;
+      break;
+    }
+    if (tmp < 0)
+      continue;
     size_t l = occs (lit).size ();
     LOG ("literal %d occurs %zd times", lit, l);
-    if (l < len) best = lit, len = l;
+    if (l < len)
+      best = lit, len = l;
     mark (lit);
     size++;
   }
@@ -63,23 +72,35 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
     assert (len);
     LOG ("literal %d has smallest number of occurrences %zd", best, len);
     LOG ("marked %d literals in clause of size %d", size, c->size);
-    for (auto & d : occs (best)) {
-      if (d == c) continue;
-      if (d->garbage) continue;
-      if ((unsigned) d->size < size) continue;
+    for (auto &d : occs (best)) {
+      if (d == c)
+        continue;
+      if (d->garbage)
+        continue;
+      if ((unsigned) d->size < size)
+        continue;
       int negated = 0;
       unsigned found = 0;
-      for (const auto & lit : *d) {
+      for (const auto &lit : *d) {
         signed char tmp = val (lit);
-        if (tmp > 0) { satisfied = true; break; }
-        if (tmp < 0) continue;
-        tmp = marked (lit);
-        if (!tmp) continue;
-        if (tmp < 0) {
-          if (negated) { size = UINT_MAX; break; }
-          else negated = lit;
+        if (tmp > 0) {
+          satisfied = true;
+          break;
         }
-        if (++found == size) break;
+        if (tmp < 0)
+          continue;
+        tmp = marked (lit);
+        if (!tmp)
+          continue;
+        if (tmp < 0) {
+          if (negated) {
+            size = UINT_MAX;
+            break;
+          } else
+            negated = lit;
+        }
+        if (++found == size)
+          break;
       }
       if (satisfied) {
         LOG (d, "found satisfied clause");
@@ -94,13 +115,21 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
           stats.elimbwsub++;
         } else {
           int unit = 0;
-          for (const auto & lit : * d) {
+          for (const auto &lit : *d) {
             const signed char tmp = val (lit);
-            if (tmp < 0) continue;
-            if (tmp > 0) { satisfied = true; break; }
-            if (lit == negated) continue;
-            if (unit) { unit = INT_MIN; break; }
-            else unit = lit;
+            if (tmp < 0)
+              continue;
+            if (tmp > 0) {
+              satisfied = true;
+              break;
+            }
+            if (lit == negated)
+              continue;
+            if (unit) {
+              unit = INT_MIN;
+              break;
+            } else
+              unit = lit;
           }
           assert (unit);
           if (satisfied) {
@@ -129,15 +158,15 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::elim_backward_clauses (Eliminator & eliminator) {
+void Internal::elim_backward_clauses (Eliminator &eliminator) {
   if (!opts.elimbackward) {
     assert (eliminator.backward.empty ());
     return;
   }
   START (backward);
   LOG ("attempting backward subsumption and strengthening with %zd clauses",
-    eliminator.backward.size ());
-  Clause * c;
+       eliminator.backward.size ());
+  Clause *c;
   while (!unsat && (c = eliminator.dequeue ()))
     elim_backward_clause (eliminator, c);
   STOP (backward);
@@ -145,4 +174,4 @@ void Internal::elim_backward_clauses (Eliminator & eliminator) {
 
 /*------------------------------------------------------------------------*/
 
-}
+} // namespace CaDiCaL

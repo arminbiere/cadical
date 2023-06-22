@@ -8,18 +8,19 @@ namespace CaDiCaL {
 
 void Internal::print_prefix () { fputs (prefix.c_str (), stdout); }
 
-void Internal::vmessage (const char * fmt, va_list & ap) {
+void Internal::vmessage (const char *fmt, va_list &ap) {
 #ifdef LOGGING
   if (!opts.log)
 #endif
-  if (opts.quiet) return;
+    if (opts.quiet)
+      return;
   print_prefix ();
   vprintf (fmt, ap);
   fputc ('\n', stdout);
   fflush (stdout);
 }
 
-void Internal::message (const char * fmt, ...) {
+void Internal::message (const char *fmt, ...) {
   va_list ap;
   va_start (ap, fmt);
   vmessage (fmt, ap);
@@ -30,7 +31,8 @@ void Internal::message () {
 #ifdef LOGGING
   if (!opts.log)
 #endif
-  if (opts.quiet) return;
+    if (opts.quiet)
+      return;
   print_prefix ();
   fputc ('\n', stdout);
   fflush (stdout);
@@ -38,18 +40,19 @@ void Internal::message () {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::vverbose (int level, const char * fmt, va_list & ap) {
+void Internal::vverbose (int level, const char *fmt, va_list &ap) {
 #ifdef LOGGING
   if (!opts.log)
 #endif
-  if (opts.quiet || level > opts.verbose) return;
+    if (opts.quiet || level > opts.verbose)
+      return;
   print_prefix ();
   vprintf (fmt, ap);
   fputc ('\n', stdout);
   fflush (stdout);
 }
 
-void Internal::verbose (int level, const char * fmt, ...) {
+void Internal::verbose (int level, const char *fmt, ...) {
   va_list ap;
   va_start (ap, fmt);
   vverbose (level, fmt, ap);
@@ -60,7 +63,8 @@ void Internal::verbose (int level) {
 #ifdef LOGGING
   if (!opts.log)
 #endif
-  if (opts.quiet || level > opts.verbose) return;
+    if (opts.quiet || level > opts.verbose)
+      return;
   print_prefix ();
   fputc ('\n', stdout);
   fflush (stdout);
@@ -68,12 +72,14 @@ void Internal::verbose (int level) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::section (const char * title) {
+void Internal::section (const char *title) {
 #ifdef LOGGING
   if (!opts.log)
 #endif
-  if (opts.quiet) return;
-  if (stats.sections++) MSG ();
+    if (opts.quiet)
+      return;
+  if (stats.sections++)
+    MSG ();
   print_prefix ();
   tout.blue ();
   fputs ("--- [ ", stdout);
@@ -82,7 +88,7 @@ void Internal::section (const char * title) {
   tout.blue ();
   fputs (" ] ", stdout);
   for (int i = strlen (title) + strlen (prefix.c_str ()) + 9; i < 78; i++)
-    fputc ('-' , stdout);
+    fputc ('-', stdout);
   tout.normal ();
   fputc ('\n', stdout);
   MSG ();
@@ -90,12 +96,12 @@ void Internal::section (const char * title) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::phase (const char * phase, const char * fmt, ...) {
+void Internal::phase (const char *phase, const char *fmt, ...) {
 #ifdef LOGGING
   if (!opts.log)
 #endif
-  if (opts.quiet ||
-      (!force_phase_messages && opts.verbose < 2)) return;
+    if (opts.quiet || (!force_phase_messages && opts.verbose < 2))
+      return;
   print_prefix ();
   printf ("[%s] ", phase);
   va_list ap;
@@ -106,13 +112,13 @@ void Internal::phase (const char * phase, const char * fmt, ...) {
   fflush (stdout);
 }
 
-void Internal::phase (const char * phase,
-                      int64_t count, const char * fmt, ...) {
+void Internal::phase (const char *phase, int64_t count, const char *fmt,
+                      ...) {
 #ifdef LOGGING
   if (!opts.log)
 #endif
-  if (opts.quiet ||
-      (!force_phase_messages && opts.verbose < 2)) return;
+    if (opts.quiet || (!force_phase_messages && opts.verbose < 2))
+      return;
   print_prefix ();
   printf ("[%s-%" PRId64 "] ", phase, count);
   va_list ap;
@@ -162,7 +168,7 @@ void Internal::error_message_end () {
   exit (1);
 }
 
-void Internal::verror (const char *fmt, va_list & ap) {
+void Internal::verror (const char *fmt, va_list &ap) {
   error_message_start ();
   vfprintf (stderr, fmt, ap);
   error_message_end ();
@@ -172,7 +178,7 @@ void Internal::error (const char *fmt, ...) {
   va_list ap;
   va_start (ap, fmt);
   verror (fmt, ap);
-  va_end (ap);                          // unreachable
+  va_end (ap); // unreachable
 }
 
 /*------------------------------------------------------------------------*/
@@ -203,4 +209,4 @@ void fatal (const char *fmt, ...) {
   abort ();
 }
 
-}
+} // namespace CaDiCaL

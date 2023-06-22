@@ -11,10 +11,10 @@ struct Config {
   static bool set (Options &, const char *);
   static void usage ();
 
-  static const char ** begin ();
-  static const char ** end ();
+  static const char **begin ();
+  static const char **end ();
 };
 
-}
+} // namespace CaDiCaL
 
 #endif

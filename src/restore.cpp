@@ -47,9 +47,8 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-void External::restore_clause (
-  const vector<int>::const_iterator & begin,
-  const vector<int>::const_iterator & end) {
+void External::restore_clause (const vector<int>::const_iterator &begin,
+                               const vector<int>::const_iterator &end) {
   LOG (begin, end, "restoring external clause");
   for (auto p = begin; p != end; p++) {
     int ilit = internalize (*p);
@@ -69,22 +68,25 @@ void External::restore_clauses () {
   START (restore);
   internal->stats.restorations++;
 
-  struct { int64_t weakened, satisfied, restored, removed; } clauses;
+  struct {
+    int64_t weakened, satisfied, restored, removed;
+  } clauses;
   memset (&clauses, 0, sizeof clauses);
 
   if (internal->opts.restoreall && tainted.empty ())
     PHASE ("restore", internal->stats.restorations,
-      "forced to restore all clauses");
+           "forced to restore all clauses");
 
 #ifndef QUIET
   {
     unsigned numtainted = 0;
     for (const auto b : tainted)
-      if (b) numtainted++;
+      if (b)
+        numtainted++;
 
     PHASE ("restore", internal->stats.restorations,
-      "starting with %u tainted literals %.0f%%",
-      numtainted, percent (numtainted, 2u*max_var));
+           "starting with %u tainted literals %.0f%%", numtainted,
+           percent (numtainted, 2u * max_var));
   }
 #endif
 
@@ -99,12 +101,12 @@ void External::restore_clauses () {
     clauses.weakened++;
 
     assert (!*p);
-    const auto saved = q;                       // Save old start.
-    *q++ = *p++;                                // Copy zero '0'.
+    const auto saved = q; // Save old start.
+    *q++ = *p++;          // Copy zero '0'.
 
     // Copy witness part and try to find a tainted witness literal in it.
     //
-    int tlit = 0;                               // Negation tainted.
+    int tlit = 0; // Negation tainted.
     int elit;
     //
     assert (p != end_of_extension);
@@ -134,8 +136,8 @@ void External::restore_clauses () {
     // if the corresponding option is set simply by resetting 'satisfied'.
     //
     if (satisfied && !internal->opts.restoreflush) {
-      LOG (p, end_of_clause,
-        "forced to not remove %d satisfied", satisfied);
+      LOG (p, end_of_clause, "forced to not remove %d satisfied",
+           satisfied);
       satisfied = 0;
     }
 
@@ -143,11 +145,11 @@ void External::restore_clauses () {
 
       if (satisfied) {
         LOG (p, end_of_clause,
-          "flushing implied clause satisfied by %d from extension stack",
-          satisfied);
+             "flushing implied clause satisfied by %d from extension stack",
+             satisfied);
         clauses.satisfied++;
       } else {
-        restore_clause (p, end_of_clause);      // Might taint literals.
+        restore_clause (p, end_of_clause); // Might taint literals.
         clauses.restored++;
       }
 
@@ -159,7 +161,7 @@ void External::restore_clauses () {
 
       LOG (p, end_of_clause, "keeping clause on extension stack");
 
-      while (p != end_of_clause)                // Copy clause too.
+      while (p != end_of_clause) // Copy clause too.
         *q++ = *p++;
     }
   }
@@ -170,33 +172,35 @@ void External::restore_clauses () {
 #ifndef QUIET
   if (clauses.satisfied)
     PHASE ("restore", internal->stats.restorations,
-      "removed %" PRId64 " satisfied %.0f%% of %" PRId64 " weakened clauses",
-      clauses.satisfied,
-      percent (clauses.satisfied, clauses.weakened),
-      clauses.weakened);
+           "removed %" PRId64 " satisfied %.0f%% of %" PRId64
+           " weakened clauses",
+           clauses.satisfied, percent (clauses.satisfied, clauses.weakened),
+           clauses.weakened);
   else
     PHASE ("restore", internal->stats.restorations,
-      "no satisfied clause removed out of %" PRId64 " weakened clauses",
-      clauses.weakened);
+           "no satisfied clause removed out of %" PRId64
+           " weakened clauses",
+           clauses.weakened);
 
   if (clauses.restored)
     PHASE ("restore", internal->stats.restorations,
-      "restored %" PRId64 " clauses %.0f%% out of %" PRId64 " weakened clauses",
-      clauses.restored,
-      percent (clauses.restored, clauses.weakened),
-      clauses.weakened);
+           "restored %" PRId64 " clauses %.0f%% out of %" PRId64
+           " weakened clauses",
+           clauses.restored, percent (clauses.restored, clauses.weakened),
+           clauses.weakened);
   else
     PHASE ("restore", internal->stats.restorations,
-      "no clause restored out of %" PRId64 " weakened clauses",
-      clauses.weakened);
+           "no clause restored out of %" PRId64 " weakened clauses",
+           clauses.weakened);
   {
     unsigned numtainted = 0;
-    for (const auto & b : tainted)
-      if (b) numtainted++;
+    for (const auto &b : tainted)
+      if (b)
+        numtainted++;
 
     PHASE ("restore", internal->stats.restorations,
-      "finishing with %u tainted literals %.0f%%",
-      numtainted, percent (numtainted, 2u*max_var));
+           "finishing with %u tainted literals %.0f%%", numtainted,
+           percent (numtainted, 2u * max_var));
   }
 
 #endif
@@ -222,4 +226,4 @@ void External::restore_clauses () {
   STOP (restore);
 }
 
-}
+} // namespace CaDiCaL

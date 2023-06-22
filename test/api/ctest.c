@@ -7,13 +7,13 @@
 #include <assert.h>
 
 int main (void) {
-  struct CCaDiCaL * solver = ccadical_init ();
+  struct CCaDiCaL *solver = ccadical_init ();
   int res = ccadical_solve (solver);
   assert (res == 10);
   ccadical_add (solver, -1);
   ccadical_add (solver, 2);
   ccadical_add (solver, 0);
-  ccadical_add (solver,  1);
+  ccadical_add (solver, 1);
   ccadical_add (solver, 2);
   ccadical_add (solver, 0);
   ccadical_add (solver, -1);

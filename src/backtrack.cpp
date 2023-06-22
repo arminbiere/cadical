@@ -17,13 +17,15 @@ inline void Internal::unassign (int lit) {
   // In the standard EVSIDS variable decision heuristic of MiniSAT, we need
   // to push variables which become unassigned back to the heap.
   //
-  if (!scores.contains (idx)) scores.push_back (idx);
+  if (!scores.contains (idx))
+    scores.push_back (idx);
 
   // For VMTF we need to update the 'queue.unassigned' pointer in case this
   // variable sits after the variable to which 'queue.unassigned' currently
   // points.  See our SAT'15 paper for more details on this aspect.
   //
-  if (queue.bumped < btab[idx]) update_queue_unassigned (idx);
+  if (queue.bumped < btab[idx])
+    update_queue_unassigned (idx);
 }
 
 /*------------------------------------------------------------------------*/
@@ -46,7 +48,8 @@ void Internal::update_target_and_best () {
 
   if (reset) {
     target_assigned = 0;
-    if (rephased == 'B') best_assigned = 0;     // update it again
+    if (rephased == 'B')
+      best_assigned = 0; // update it again
   }
 
   if (no_conflict_until > target_assigned) {
@@ -72,15 +75,16 @@ void Internal::update_target_and_best () {
 void Internal::backtrack (int new_level) {
 
   assert (new_level <= level);
-  if (new_level == level) return;
+  if (new_level == level)
+    return;
 
   stats.backtracks++;
   update_target_and_best ();
 
-  const size_t assigned = control[new_level+1].trail;
+  const size_t assigned = control[new_level + 1].trail;
 
   LOG ("backtracking to decision level %d with decision %d and trail %zd",
-    new_level, control[new_level].decision, assigned);
+       new_level, control[new_level].decision, assigned);
 
   const size_t end_of_trail = trail.size ();
   size_t i = assigned, j = i;
@@ -90,7 +94,7 @@ void Internal::backtrack (int new_level) {
 #endif
   while (i < end_of_trail) {
     int lit = trail[i++];
-    Var & v = var (lit);
+    Var &v = var (lit);
     if (v.level > new_level) {
       unassign (lit);
 #ifdef LOGGING
@@ -103,8 +107,10 @@ void Internal::backtrack (int new_level) {
       // modifications to 'analyze' - see 'opts.chrono' guarded code there).
       assert (opts.chrono);
 #ifdef LOGGING
-      if (!v.level) LOG ("reassign %d @ 0 unit clause %d", lit, lit);
-      else LOG (v.reason, "reassign %d @ %d", lit, v.level);
+      if (!v.level)
+        LOG ("reassign %d @ 0 unit clause %d", lit, lit);
+      else
+        LOG (v.reason, "reassign %d @ %d", lit, v.level);
 #endif
       trail[j] = lit;
       v.trail = j++;
@@ -114,19 +120,22 @@ void Internal::backtrack (int new_level) {
     }
   }
   trail.resize (j);
-  LOG ("unassigned %d literals %.0f%%",
-    unassigned, percent (unassigned, unassigned + reassigned));
-  LOG ("reassigned %d literals %.0f%%",
-    reassigned, percent (reassigned, unassigned + reassigned));
+  LOG ("unassigned %d literals %.0f%%", unassigned,
+       percent (unassigned, unassigned + reassigned));
+  LOG ("reassigned %d literals %.0f%%", reassigned,
+       percent (reassigned, unassigned + reassigned));
 
-  if (propagated > assigned) propagated = assigned;
-  if (propagated2 > assigned) propagated2 = assigned;
-  if (no_conflict_until > assigned) no_conflict_until = assigned;
+  if (propagated > assigned)
+    propagated = assigned;
+  if (propagated2 > assigned)
+    propagated2 = assigned;
+  if (no_conflict_until > assigned)
+    no_conflict_until = assigned;
 
-  propergated = 0;	// Always go back to root-level.
+  propergated = 0; // Always go back to root-level.
 
   control.resize (new_level + 1);
   level = new_level;
 }
 
-}
+} // namespace CaDiCaL

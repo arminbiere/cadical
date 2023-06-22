@@ -19,9 +19,12 @@ namespace CaDiCaL {
 
 void Internal::mark_duplicated_binary_clauses_as_garbage () {
 
-  if (!opts.deduplicate) return;
-  if (unsat) return;
-  if (terminated_asynchronously ()) return;
+  if (!opts.deduplicate)
+    return;
+  if (unsat)
+    return;
+  if (terminated_asynchronously ())
+    return;
 
   START_SIMPLIFIER (deduplicate, DEDUP);
   stats.deduplications++;
@@ -29,23 +32,25 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
   assert (!level);
   assert (watching ());
 
-  vector<int> stack;    // To save marked literals and unmark them later.
+  vector<int> stack; // To save marked literals and unmark them later.
 
   int64_t subsumed = 0;
   int64_t units = 0;
 
   for (auto idx : vars) {
 
-    if (unsat) break;
-    if (!active (idx)) continue;
+    if (unsat)
+      break;
+    if (!active (idx))
+      continue;
     int unit = 0;
 
     for (int sign = -1; !unit && sign <= 1; sign += 2) {
 
-      const int lit = sign * idx;       // Consider all literals.
+      const int lit = sign * idx; // Consider all literals.
 
       assert (stack.empty ());
-      Watches & ws = watches (lit);
+      Watches &ws = watches (lit);
 
       // We are removing references to garbage clause. Thus no 'auto'.
 
@@ -55,14 +60,18 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
 
       for (i = j; !unit && i != end; i++) {
         Watch w = *j++ = *i;
-        if (!w.binary ()) continue;
+        if (!w.binary ())
+          continue;
         int other = w.blit;
         const int tmp = marked (other);
-        Clause * c = w.clause;
+        Clause *c = w.clause;
 
-        if (tmp > 0) {                  // Found duplicated binary clause.
+        if (tmp > 0) { // Found duplicated binary clause.
 
-          if (c->garbage) { j--; continue; }
+          if (c->garbage) {
+            j--;
+            continue;
+          }
           LOG (c, "found duplicated");
 
           // The previous identical clause 'd' might be redundant and if the
@@ -71,12 +80,15 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
 
           if (!c->redundant) {
             watch_iterator k;
-            for (k = ws.begin ();;k++) {
+            for (k = ws.begin ();; k++) {
               assert (k != i);
-              if (!k->binary ()) continue;
-              if (k->blit != other) continue;
-              Clause * d = k->clause;
-              if (d->garbage) continue;
+              if (!k->binary ())
+                continue;
+              if (k->blit != other)
+                continue;
+              Clause *d = k->clause;
+              if (d->garbage)
+                continue;
               c = d;
               break;
             }
@@ -90,26 +102,28 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
           mark_garbage (c);
           j--;
 
-        } else if (tmp < 0) {           // Hyper unary resolution.
+        } else if (tmp < 0) { // Hyper unary resolution.
 
-          LOG ("found %d %d and %d %d which produces unit %d",
-            lit, -other, lit, other, lit);
+          LOG ("found %d %d and %d %d which produces unit %d", lit, -other,
+               lit, other, lit);
           unit = lit;
-          j = ws.begin ();              // Flush 'ws'.
+          j = ws.begin (); // Flush 'ws'.
           units++;
 
         } else {
-          if (c->garbage) continue;
+          if (c->garbage)
+            continue;
           mark (other);
           stack.push_back (other);
         }
       }
 
-      if (j == ws.begin ()) erase_vector (ws);
+      if (j == ws.begin ())
+        erase_vector (ws);
       else if (j != end)
-        ws.resize (j - ws.begin ());    // Shrink watchers.
+        ws.resize (j - ws.begin ()); // Shrink watchers.
 
-      for (const auto & other : stack)
+      for (const auto &other : stack)
         unmark (other);
 
       stack.clear ();
@@ -136,4 +150,4 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
   report ('2', !opts.reportall && !(subsumed + units));
 }
 
-}
+} // namespace CaDiCaL

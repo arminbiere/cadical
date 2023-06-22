@@ -3,9 +3,11 @@
 namespace CaDiCaL {
 
 void Internal::constrain (int lit) {
-  if (lit) constraint.push_back (lit);
+  if (lit)
+    constraint.push_back (lit);
   else {
-    if (level) backtrack ();
+    if (level)
+      backtrack ();
     LOG (constraint, "shrinking constraint");
     bool satisfied_constraint = false;
     const vector<int>::const_iterator end = constraint.end ();
@@ -15,7 +17,8 @@ void Internal::constrain (int lit) {
       if (tmp > 0) {
         LOG ("removing duplicated literal %d from constraint", *j);
       } else if (tmp < 0) {
-        LOG ("tautological since both %d and %d occur in constraint", -*j, *j);
+        LOG ("tautological since both %d and %d occur in constraint", -*j,
+             *j);
         satisfied_constraint = true;
         break;
       } else {
@@ -33,22 +36,26 @@ void Internal::constrain (int lit) {
       }
     }
     constraint.resize (i - constraint.begin ());
-    for (const auto &lit : constraint) unmark (lit);
-    if (satisfied_constraint) constraint.clear ();
-    else if (constraint.empty ()) unsat_constraint = true;
-    else for (const auto lit : constraint) freeze (lit);
+    for (const auto &lit : constraint)
+      unmark (lit);
+    if (satisfied_constraint)
+      constraint.clear ();
+    else if (constraint.empty ())
+      unsat_constraint = true;
+    else
+      for (const auto lit : constraint)
+        freeze (lit);
   }
 }
 
-bool Internal::failed_constraint () {
-  return unsat_constraint;
-}
+bool Internal::failed_constraint () { return unsat_constraint; }
 
 void Internal::reset_constraint () {
-  for (auto lit : constraint) melt (lit);
+  for (auto lit : constraint)
+    melt (lit);
   LOG ("cleared %zd constraint literals", constraint.size ());
   constraint.clear ();
   unsat_constraint = false;
 }
 
-}
+} // namespace CaDiCaL

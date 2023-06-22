@@ -55,12 +55,13 @@ struct Internal;
 
 class Arena {
 
-  Internal * internal;
+  Internal *internal;
 
-  struct { char * start, * top, * end; } from, to;
+  struct {
+    char *start, *top, *end;
+  } from, to;
 
 public:
-
   Arena (Internal *);
   ~Arena ();
 
@@ -73,8 +74,8 @@ public:
   // Does the memory pointed to by 'p' belong to this arena? More precisely
   // to the 'from' space, since that is the only one remaining after 'swap'.
   //
-  bool contains (void * p) const {
-    char * c = (char *) p;
+  bool contains (void *p) const {
+    char *c = (char *) p;
     return from.start <= c && c < from.top;
   }
 
@@ -83,8 +84,8 @@ public:
   // copy the memory pointed to by 'p' of size 'bytes'.  Note that it does
   // not matter whether 'p' is in 'from' or allocated outside of the arena.
   //
-  char * copy (const char * p, size_t bytes) {
-    char * res = to.top;
+  char *copy (const char *p, size_t bytes) {
+    char *res = to.top;
     to.top += bytes;
     assert (to.top <= to.end);
     memcpy (res, p, bytes);
@@ -98,6 +99,6 @@ public:
   void swap ();
 };
 
-}
+} // namespace CaDiCaL
 
 #endif

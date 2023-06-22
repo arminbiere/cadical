@@ -8,17 +8,17 @@ namespace CaDiCaL {
 
 struct Walker {
 
-  Internal * internal;
+  Internal *internal;
 
-  Random random;                // local random number generator
-  int64_t propagations;         // number of propagations
-  int64_t limit;                // limit on number of propagations
-  vector <Clause *> broken;     // currently unsatisfied clauses
-  double epsilon;               // smallest considered score
-  vector<double> table;         // break value to score table
-  vector<double> scores;        // scores of candidate literals
+  Random random;           // local random number generator
+  int64_t propagations;    // number of propagations
+  int64_t limit;           // limit on number of propagations
+  vector<Clause *> broken; // currently unsatisfied clauses
+  double epsilon;          // smallest considered score
+  vector<double> table;    // break value to score table
+  vector<double> scores;   // scores of candidate literals
 
-  double score (unsigned);      // compute score from break count
+  double score (unsigned); // compute score from break count
 
   Walker (Internal *, double size, int64_t limit);
 };
@@ -29,12 +29,8 @@ struct Walker {
 // the 'size', second the 'CB' value).
 
 static double cbvals[][2] = {
-  { 0.0, 2.00 },
-  { 3.0, 2.50 },
-  { 4.0, 2.85 },
-  { 5.0, 3.70 },
-  { 6.0, 5.10 },
-  { 7.0, 7.40 },        // Adrian has '5.4', but '7.4' looks better.
+    {0.0, 2.00}, {3.0, 2.50}, {4.0, 2.85}, {5.0, 3.70},
+    {6.0, 5.10}, {7.0, 7.40}, // Adrian has '5.4', but '7.4' looks better.
 };
 
 static const int ncbvals = sizeof cbvals / sizeof cbvals[0];
@@ -50,10 +46,11 @@ static const int ncbvals = sizeof cbvals / sizeof cbvals[0];
 
 inline static double fitcbval (double size) {
   int i = 0;
-  while (i+2 < ncbvals && (cbvals[i][0] > size || cbvals[i+1][0] < size))
+  while (i + 2 < ncbvals &&
+         (cbvals[i][0] > size || cbvals[i + 1][0] < size))
     i++;
-  const double x2 = cbvals[i+1][0], x1 = cbvals[i][0];
-  const double y2 = cbvals[i+1][1], y1 = cbvals[i][1];
+  const double x2 = cbvals[i + 1][0], x1 = cbvals[i][0];
+  const double y2 = cbvals[i + 1][1], y1 = cbvals[i][1];
   const double dx = x2 - x1, dy = y2 - y1;
   assert (dx);
   const double res = dy * (size - x1) / dx + y1;
@@ -63,12 +60,9 @@ inline static double fitcbval (double size) {
 
 // Initialize the data structures for one local search round.
 
-Walker::Walker (Internal * i, double size, int64_t l) :
-  internal (i),
-  random (internal->opts.seed),         // global random seed
-  propagations (0),
-  limit (l)
-{
+Walker::Walker (Internal *i, double size, int64_t l)
+    : internal (i), random (internal->opts.seed), // global random seed
+      propagations (0), limit (l) {
   random += internal->stats.walk.count; // different seed every time
 
   // This is the magic constant in ProbSAT (also called 'CB'), which we pick
@@ -78,15 +72,15 @@ Walker::Walker (Internal * i, double size, int64_t l) :
   const bool use_size_based_cb = (internal->stats.walk.count & 1);
   const double cb = use_size_based_cb ? fitcbval (size) : 2.0;
   assert (cb);
-  const double base = 1/cb;     // scores are 'base^0,base^1,base^2,...
+  const double base = 1 / cb; // scores are 'base^0,base^1,base^2,...
 
   double next = 1;
-  for (epsilon = next; next; next = epsilon*base)
+  for (epsilon = next; next; next = epsilon * base)
     table.push_back (epsilon = next);
 
   PHASE ("walk", internal->stats.walk.count,
-    "CB %.2f with inverse %.2f as base and table size %zd",
-    cb, base, table.size ());
+         "CB %.2f with inverse %.2f as base and table size %zd", cb, base,
+         table.size ());
 }
 
 // The scores are tabulated for faster computation (to avoid 'pow').
@@ -99,13 +93,14 @@ inline double Walker::score (unsigned i) {
 
 /*------------------------------------------------------------------------*/
 
-Clause * Internal::walk_pick_clause (Walker & walker) {
+Clause *Internal::walk_pick_clause (Walker &walker) {
   require_mode (WALK);
   assert (!walker.broken.empty ());
   int64_t size = walker.broken.size ();
-  if (size > INT_MAX) size = INT_MAX;
-  int pos = walker.random.pick_int (0, size-1);
-  Clause * res = walker.broken[pos];
+  if (size > INT_MAX)
+    size = INT_MAX;
+  int pos = walker.random.pick_int (0, size - 1);
+  Clause *res = walker.broken[pos];
   LOG (res, "picking random position %d", pos);
   return res;
 }
@@ -120,14 +115,18 @@ unsigned Internal::walk_break_value (int lit) {
   require_mode (WALK);
   assert (val (lit) > 0);
 
-  unsigned res = 0;             // The computed break-count of 'lit'.
+  unsigned res = 0; // The computed break-count of 'lit'.
 
-  for (auto & w : watches (lit)) {
+  for (auto &w : watches (lit)) {
     assert (w.blit != lit);
-    if (val (w.blit) > 0) continue;
-    if (w.binary ()) { res++; continue; }
+    if (val (w.blit) > 0)
+      continue;
+    if (w.binary ()) {
+      res++;
+      continue;
+    }
 
-    Clause * c = w.clause;
+    Clause *c = w.clause;
     assert (lit == c->literals[0]);
 
     // Now try to find a second satisfied literal starting at 'literals[1]'
@@ -144,17 +143,19 @@ unsigned Internal::walk_break_value (int lit) {
       const int other = *i;
       *i++ = prev;
       prev = other;
-      if (val (other) < 0) continue;
+      if (val (other) < 0)
+        continue;
 
       // Found 'other' as second satisfying literal.
 
-      w.blit = other;                   // Update 'blit'
-      *begin = other;                   // and move to front.
+      w.blit = other; // Update 'blit'
+      *begin = other; // and move to front.
 
       break;
     }
 
-    if (i != end) continue;     // Double satisfied!
+    if (i != end)
+      continue; // Double satisfied!
 
     // Otherwise restore literals (undo shift to the right).
     //
@@ -164,7 +165,7 @@ unsigned Internal::walk_break_value (int lit) {
       prev = other;
     }
 
-    res++;      // Literal 'lit' single satisfies clause 'c'.
+    res++; // Literal 'lit' single satisfies clause 'c'.
   }
 
   return res;
@@ -183,7 +184,7 @@ unsigned Internal::walk_break_value (int lit) {
 // SAT solving we can not flip assumed variables.  Those are assigned at
 // decision level one, while the other variables are assigned at two.
 
-int Internal::walk_pick_lit (Walker & walker, Clause * c) {
+int Internal::walk_pick_lit (Walker &walker, Clause *c) {
   LOG ("picking literal by break-count");
   assert (walker.scores.empty ());
   double sum = 0;
@@ -216,7 +217,8 @@ int Internal::walk_pick_lit (Walker & walker, Clause * c) {
   for (;;) {
     assert (i != end);
     res = *i++;
-    if (var (res).level > 1) break;
+    if (var (res).level > 1)
+      break;
     LOG ("skipping assumption %d without score", -res);
   }
   sum = *j++;
@@ -235,7 +237,7 @@ int Internal::walk_pick_lit (Walker & walker, Clause * c) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::walk_flip_lit (Walker & walker, int lit) {
+void Internal::walk_flip_lit (Walker &walker, int lit) {
 
   require_mode (WALK);
   LOG ("flipping assign %d", lit);
@@ -278,9 +280,9 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
 
     while (i != eou) {
 
-      Clause * d = *j++ = *i++;
+      Clause *d = *j++ = *i++;
 
-      int * literals = d->literals, prev = 0;
+      int *literals = d->literals, prev = 0;
 
       // Find 'lit' in 'd'.
       //
@@ -290,7 +292,8 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
         assert (active (other));
         literals[i] = prev;
         prev = other;
-        if (other == lit) break;
+        if (other == lit)
+          break;
         assert (val (other) < 0);
       }
 
@@ -305,23 +308,24 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
 #endif
         j--;
 
-      } else {  // Otherwise the clause is not satisfied, undo shift.
+      } else { // Otherwise the clause is not satisfied, undo shift.
 
-        for (int i = size-1; i >= 0; i--) {
+        for (int i = size - 1; i >= 0; i--) {
           int other = literals[i];
           literals[i] = prev;
           prev = other;
         }
       }
 
-      if (count--) continue;
+      if (count--)
+        continue;
 
       // Update these counters eagerly.  Otherwise if we delay the update
       // until all clauses are traversed, interrupting the solver has a high
       // chance of giving bogus statistics on the number of 'propagations'
       // in 'walk', if it is interrupted in this loop.
 
-      count = ratio;                    // Starting counting down again.
+      count = ratio; // Starting counting down again.
       walker.propagations++;
       stats.propagations.walk++;
     }
@@ -331,30 +335,31 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
 
   // Finally add all new unsatisfied (broken) clauses.
   {
-    walker.propagations++;      // This really corresponds now to one
-    stats.propagations.walk++;  // propagation (in a one-watch scheme).
+    walker.propagations++;     // This really corresponds now to one
+    stats.propagations.walk++; // propagation (in a one-watch scheme).
 
 #ifdef LOGGING
     int64_t broken = 0;
 #endif
-    Watches & ws = watches (-lit);
+    Watches &ws = watches (-lit);
 
     LOG ("trying to brake %zd watched clauses", ws.size ());
 
-    for (const auto & w : ws) {
-      Clause * d = w.clause;
+    for (const auto &w : ws) {
+      Clause *d = w.clause;
       LOG (d, "unwatch %d in", -lit);
-      int * literals = d->literals, replacement = 0, prev = -lit;
+      int *literals = d->literals, replacement = 0, prev = -lit;
       assert (literals[0] == -lit);
       const int size = d->size;
       for (int i = 1; i < size; i++) {
         const int other = literals[i];
         assert (active (other));
-        literals[i] = prev;             // shift all to right
+        literals[i] = prev; // shift all to right
         prev = other;
         const signed char tmp = val (other);
-        if (tmp < 0) continue;
-        replacement = other;            // satisfying literal
+        if (tmp < 0)
+          continue;
+        replacement = other; // satisfying literal
         break;
       }
       if (replacement) {
@@ -363,7 +368,7 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
         assert (-lit != replacement);
         watch_literal (replacement, -lit, d);
       } else {
-        for (int i = size-1; i > 0; i--) {      // undo shift
+        for (int i = size - 1; i > 0; i--) { // undo shift
           const int other = literals[i];
           literals[i] = prev;
           prev = other;
@@ -385,9 +390,10 @@ void Internal::walk_flip_lit (Walker & walker, int lit) {
 
 // Check whether to save the current phases as new global minimum.
 
-inline void Internal::walk_save_minimum (Walker & walker) {
+inline void Internal::walk_save_minimum (Walker &walker) {
   int64_t broken = walker.broken.size ();
-  if (broken >= stats.walk.minimum) return;
+  if (broken >= stats.walk.minimum)
+    return;
   VERBOSE (3, "new global minimum %" PRId64 "", broken);
   stats.walk.minimum = broken;
   for (auto i : vars) {
@@ -427,17 +433,20 @@ int Internal::walk_round (int64_t limit, bool prev) {
 #endif
 
   PHASE ("walk", stats.walk.count,
-    "random walk limit of %" PRId64 " propagations", limit);
+         "random walk limit of %" PRId64 " propagations", limit);
 
   // First compute the average clause size for picking the CB constant.
   //
   double size = 0;
   int64_t n = 0;
   for (const auto c : clauses) {
-    if (c->garbage) continue;
+    if (c->garbage)
+      continue;
     if (c->redundant) {
-      if (!opts.walkredundant) continue;
-      if (!likely_to_be_kept_clause (c)) continue;
+      if (!opts.walkredundant)
+        continue;
+      if (!likely_to_be_kept_clause (c))
+        continue;
     }
     size += c->size;
     n++;
@@ -445,16 +454,16 @@ int Internal::walk_round (int64_t limit, bool prev) {
   double average_size = relative (size, n);
 
   PHASE ("walk", stats.walk.count,
-    "%" PRId64 " clauses average size %.2f over %d variables",
-    n, average_size, active ());
+         "%" PRId64 " clauses average size %.2f over %d variables", n,
+         average_size, active ());
 
   // Instantiate data structures for this local search round.
   //
   Walker walker (internal, average_size, limit);
 
-  bool failed = false;  // Inconsistent assumptions?
+  bool failed = false; // Inconsistent assumptions?
 
-  level = 1;    // Assumed variables assigned at level 1.
+  level = 1; // Assumed variables assigned at level 1.
 
   if (assumptions.empty ()) {
     LOG ("no assumptions so assigning all variables to decision phase");
@@ -462,13 +471,15 @@ int Internal::walk_round (int64_t limit, bool prev) {
     LOG ("assigning assumptions to their forced phase first");
     for (const auto lit : assumptions) {
       signed char tmp = val (lit);
-      if (tmp > 0) continue;
+      if (tmp > 0)
+        continue;
       if (tmp < 0) {
         LOG ("inconsistent assumption %d", lit);
         failed = true;
         break;
       }
-      if (!active (lit)) continue;
+      if (!active (lit))
+        continue;
       tmp = sign (lit);
       const int idx = abs (lit);
       LOG ("initial assign %d to assumption phase", tmp < 0 ? -idx : idx);
@@ -481,7 +492,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
       LOG ("now assigning remaining variables to their decision phase");
   }
 
-  level = 2;    // All other non assumed variables assigned at level 2.
+  level = 2; // All other non assumed variables assigned at level 2.
 
   if (!failed) {
 
@@ -496,8 +507,10 @@ int Internal::walk_round (int64_t limit, bool prev) {
         continue;
       }
       int tmp = 0;
-      if (prev) tmp = phases.prev[idx];
-      if (!tmp) tmp = sign (decide_phase (idx, true));
+      if (prev)
+        tmp = phases.prev[idx];
+      if (!tmp)
+        tmp = sign (decide_phase (idx, true));
       assert (tmp == 1 || tmp == -1);
       vals[idx] = tmp;
       vals[-idx] = -tmp;
@@ -512,16 +525,19 @@ int Internal::walk_round (int64_t limit, bool prev) {
 #endif
     for (const auto c : clauses) {
 
-      if (c->garbage) continue;
+      if (c->garbage)
+        continue;
       if (c->redundant) {
-        if (!opts.walkredundant) continue;
-        if (!likely_to_be_kept_clause (c)) continue;
+        if (!opts.walkredundant)
+          continue;
+        if (!likely_to_be_kept_clause (c))
+          continue;
       }
 
-      bool satisfiable = false;         // contains not only assumptions
-      int satisfied = 0;                // clause satisfied?
+      bool satisfiable = false; // contains not only assumptions
+      int satisfied = 0;        // clause satisfied?
 
-      int * lits = c->literals;
+      int *lits = c->literals;
       const int size = c->size;
 
       // Move to front satisfied literals and determine whether there
@@ -529,10 +545,11 @@ int Internal::walk_round (int64_t limit, bool prev) {
       //
       for (int i = 0; satisfied < 2 && i < size; i++) {
         const int lit = lits[i];
-        assert (active (lit));  // Due to garbage collection.
+        assert (active (lit)); // Due to garbage collection.
         if (val (lit) > 0) {
           swap (lits[satisfied], lits[i]);
-          if (!satisfied++) LOG ("first satisfying literal %d", lit);
+          if (!satisfied++)
+            LOG ("first satisfying literal %d", lit);
         } else if (!satisfiable && var (lit).level > 1) {
           LOG ("non-assumption potentially satisfying literal %d", lit);
           satisfiable = true;
@@ -552,7 +569,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
         watched++;
 #endif
       } else {
-        assert (satisfiable);   // at least one non-assumed variable ...
+        assert (satisfiable); // at least one non-assumed variable ...
         LOG (c, "broken");
         walker.broken.push_back (c);
       }
@@ -563,24 +580,24 @@ int Internal::walk_round (int64_t limit, bool prev) {
       int64_t total = watched + broken;
       LOG ("watching %" PRId64 " clauses %.0f%% "
            "out of %" PRId64 " (watched and broken)",
-        watched, percent (watched, total), total);
+           watched, percent (watched, total), total);
     }
 #endif
   }
 
   int64_t old_global_minimum = stats.walk.minimum;
 
-  int res;      // Tells caller to continue with local search.
+  int res; // Tells caller to continue with local search.
 
   if (!failed) {
 
     int64_t broken = walker.broken.size ();
 
     PHASE ("walk", stats.walk.count,
-     "starting with %" PRId64 " unsatisfied clauses "
-     "(%.0f%% out of %" PRId64 ")",
-     broken, percent (broken, stats.current.irredundant),
-     stats.current.irredundant);
+           "starting with %" PRId64 " unsatisfied clauses "
+           "(%.0f%% out of %" PRId64 ")",
+           broken, percent (broken, stats.current.irredundant),
+           stats.current.irredundant);
 
     walk_save_minimum (walker);
 
@@ -588,50 +605,48 @@ int Internal::walk_round (int64_t limit, bool prev) {
 #ifndef QUIET
     int64_t flips = 0;
 #endif
-    while (!terminated_asynchronously () &&
-           !walker.broken.empty () &&
+    while (!terminated_asynchronously () && !walker.broken.empty () &&
            walker.propagations < walker.limit) {
 #ifndef QUIET
       flips++;
 #endif
       stats.walk.flips++;
       stats.walk.broken += broken;
-      Clause * c = walk_pick_clause (walker);
+      Clause *c = walk_pick_clause (walker);
       const int lit = walk_pick_lit (walker, c);
       walk_flip_lit (walker, lit);
       broken = walker.broken.size ();
       LOG ("now have %" PRId64 " broken clauses in total", broken);
-      if (broken >= minimum) continue;
+      if (broken >= minimum)
+        continue;
       minimum = broken;
-      VERBOSE (3,
-        "new phase minimum %" PRId64 " after %" PRId64 " flips",
-        minimum, flips);
+      VERBOSE (3, "new phase minimum %" PRId64 " after %" PRId64 " flips",
+               minimum, flips);
       walk_save_minimum (walker);
     }
 
     if (minimum < old_global_minimum)
       PHASE ("walk", stats.walk.count,
-        "%snew global minimum %" PRId64 "%s in %" PRId64 " flips and "
-        "%" PRId64 " propagations",
-        tout.bright_yellow_code (), minimum, tout.normal_code (),
-        flips, walker.propagations);
+             "%snew global minimum %" PRId64 "%s in %" PRId64 " flips and "
+             "%" PRId64 " propagations",
+             tout.bright_yellow_code (), minimum, tout.normal_code (),
+             flips, walker.propagations);
     else
       PHASE ("walk", stats.walk.count,
-        "best phase minimum %" PRId64 " in %" PRId64 " flips and "
-        "%" PRId64 " propagations",
-        minimum, flips, walker.propagations);
+             "best phase minimum %" PRId64 " in %" PRId64 " flips and "
+             "%" PRId64 " propagations",
+             minimum, flips, walker.propagations);
 
-    PHASE ("walk", stats.walk.count,
-      "%.2f million propagations per second",
-      relative (1e-6*walker.propagations,
-      time () - profiles.walk.started));
+    PHASE ("walk", stats.walk.count, "%.2f million propagations per second",
+           relative (1e-6 * walker.propagations,
+                     time () - profiles.walk.started));
 
-    PHASE ("walk", stats.walk.count,
-      "%.2f thousand flips per second",
-      relative (1e-3*flips, time () - profiles.walk.started));
+    PHASE ("walk", stats.walk.count, "%.2f thousand flips per second",
+           relative (1e-3 * flips, time () - profiles.walk.started));
 
     if (minimum > 0) {
-      LOG ("minimum %" PRId64 " non-zero thus potentially continue", minimum);
+      LOG ("minimum %" PRId64 " non-zero thus potentially continue",
+           minimum);
       res = 0;
     } else {
       LOG ("minimum is zero thus stop local search");
@@ -643,7 +658,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
     res = 20;
 
     PHASE ("walk", stats.walk.count,
-      "aborted due to inconsistent assumptions");
+           "aborted due to inconsistent assumptions");
   }
 
   copy_phases (phases.prev);
@@ -672,10 +687,12 @@ void Internal::walk () {
   START_INNER_WALK ();
   int64_t limit = stats.propagations.search;
   limit *= 1e-3 * opts.walkreleff;
-  if (limit < opts.walkmineff) limit = opts.walkmineff;
-  if (limit > opts.walkmaxeff) limit = opts.walkmaxeff;
+  if (limit < opts.walkmineff)
+    limit = opts.walkmineff;
+  if (limit > opts.walkmaxeff)
+    limit = opts.walkmaxeff;
   (void) walk_round (limit, false);
   STOP_INNER_WALK ();
 }
 
-}
+} // namespace CaDiCaL

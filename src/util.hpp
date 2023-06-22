@@ -18,8 +18,8 @@ inline unsigned bign (int lit) { return 1 + (lit < 0); }
 
 /*------------------------------------------------------------------------*/
 
-bool has_suffix (const char * str, const char * suffix);
-bool has_prefix (const char * str, const char * prefix);
+bool has_suffix (const char *str, const char *suffix);
+bool has_prefix (const char *str, const char *prefix);
 
 /*------------------------------------------------------------------------*/
 
@@ -34,14 +34,15 @@ bool has_prefix (const char * str, const char * prefix);
 // The function returns true if parsing is successful and then also sets
 // the second argument to the parsed value.
 
-bool parse_int_str (const char * str, int &);
+bool parse_int_str (const char *str, int &);
 
 /*------------------------------------------------------------------------*/
 
-inline bool is_power_of_two (unsigned n) { return n && !(n & (n-1)); }
+inline bool is_power_of_two (unsigned n) { return n && !(n & (n - 1)); }
 
-inline bool
-contained (int64_t c, int64_t l, int64_t u) { return l <= c && c <= u; }
+inline bool contained (int64_t c, int64_t l, int64_t u) {
+  return l <= c && c <= u;
+}
 
 inline bool aligned (size_t n, size_t alignment) {
   assert (is_power_of_two (alignment));
@@ -53,7 +54,8 @@ inline size_t align (size_t n, size_t alignment) {
   size_t res = n;
   assert (is_power_of_two (alignment));
   const size_t mask = alignment - 1;
-  if (res & mask) res = (res | mask) + 1;
+  if (res & mask)
+    res = (res | mask) + 1;
   assert (aligned (res, alignment));
   return res;
 }
@@ -79,24 +81,27 @@ inline bool parity (unsigned a) {
 // allocated size of watched and occurrence lists small particularly during
 // bounded variable elimination where many clauses are added and removed.
 
-template<class T> void erase_vector (vector<T> & v) {
-  if (v.capacity ()) { std::vector<T>().swap (v); }
-  assert (!v.capacity ());                          // not guaranteed though
+template <class T> void erase_vector (vector<T> &v) {
+  if (v.capacity ()) {
+    std::vector<T> ().swap (v);
+  }
+  assert (!v.capacity ()); // not guaranteed though
 }
 
 // The standard 'Effective STL' way (though not guaranteed) to shrink the
 // capacity of a vector to its size thus kind of releasing all the internal
 // excess memory not needed at the moment any more.
 
-template<class T> void shrink_vector (vector<T> & v) {
-  if (v.capacity () > v.size ()) { vector<T>(v).swap (v); }
-  assert (v.capacity () == v.size ());              // not guaranteed though
+template <class T> void shrink_vector (vector<T> &v) {
+  if (v.capacity () > v.size ()) {
+    vector<T> (v).swap (v);
+  }
+  assert (v.capacity () == v.size ()); // not guaranteed though
 }
 
 /*------------------------------------------------------------------------*/
 
-template<class T>
-inline void clear_n (T * base, size_t n) {
+template <class T> inline void clear_n (T *base, size_t n) {
   memset (base, 0, sizeof (T) * n);
 }
 
@@ -107,15 +112,15 @@ inline void clear_n (T * base, size_t n) {
 // plural and then wanted to use '--color=false', and '--colours=0' too, I
 // just factored this out into these two utility functions.
 
-bool is_color_option (const char * arg);    // --color, --colour, ...
-bool is_no_color_option (const char * arg); // --no-color, --no-colour, ...
+bool is_color_option (const char *arg);    // --color, --colour, ...
+bool is_no_color_option (const char *arg); // --no-color, --no-colour, ...
 
 /*------------------------------------------------------------------------*/
 
-uint64_t hash_string (const char * str);
+uint64_t hash_string (const char *str);
 
 /*------------------------------------------------------------------------*/
 
-}
+} // namespace CaDiCaL
 
 #endif

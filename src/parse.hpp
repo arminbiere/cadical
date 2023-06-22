@@ -14,39 +14,36 @@ struct Internal;
 
 class Parser {
 
-  Solver * solver;
-  Internal * internal;
-  External * external;
-  File * file;
+  Solver *solver;
+  Internal *internal;
+  External *external;
+  File *file;
 
-  void perr (const char * fmt, ...)
-             CADICAL_ATTRIBUTE_FORMAT (2, 3);
+  void perr (const char *fmt, ...) CADICAL_ATTRIBUTE_FORMAT (2, 3);
   int parse_char ();
 
   enum {
-    FORCED = 0,         // Force reading even if header is broken.
-    RELAXED = 1,        // Relaxed white space treatment in header.
-    STRICT = 2,         // Strict white space and header compliance.
+    FORCED = 0,  // Force reading even if header is broken.
+    RELAXED = 1, // Relaxed white space treatment in header.
+    STRICT = 2,  // Strict white space and header compliance.
   };
 
-  const char * parse_string (const char * str, char prev);
-  const char * parse_positive_int (int & ch, int & res, const char * name);
-  const char * parse_lit (int & ch, int & lit, int & vars, int strict);
-  const char * parse_dimacs_non_profiled (int & vars, int strict);
-  const char * parse_solution_non_profiled ();
+  const char *parse_string (const char *str, char prev);
+  const char *parse_positive_int (int &ch, int &res, const char *name);
+  const char *parse_lit (int &ch, int &lit, int &vars, int strict);
+  const char *parse_dimacs_non_profiled (int &vars, int strict);
+  const char *parse_solution_non_profiled ();
 
-  bool * parse_inccnf_too;
-  vector<int> * cubes;
+  bool *parse_inccnf_too;
+  vector<int> *cubes;
 
 public:
-
   // Parse a DIMACS CNF or ICNF file.
   //
   // Return zero if successful. Otherwise parse error.
-   Parser(Solver *s, File *f, bool *i, vector<int> *c) :
-     solver(s), internal(s->internal), external(s->external), file(f),
-    parse_inccnf_too (i), cubes (c)
-  {}
+  Parser (Solver *s, File *f, bool *i, vector<int> *c)
+      : solver (s), internal (s->internal), external (s->external),
+        file (f), parse_inccnf_too (i), cubes (c) {}
 
   // Parse a DIMACS file.  Return zero if successful. Otherwise a parse
   // error is return. The parsed clauses are added to the solver and the
@@ -59,7 +56,7 @@ public:
   // case the header can not have additional white space, while a value of
   // '1' exactly relaxes this, e.g., 'p cnf \t  1   3  \r\n' becomes legal.
   //
-  const char * parse_dimacs (int & vars, int strict);
+  const char *parse_dimacs (int &vars, int strict);
 
   // Parse a solution file as used in the SAT competition, e.g., with
   // comment lines 'c ...', a status line 's ...' and value lines 'v ...'.
@@ -67,9 +64,9 @@ public:
   // the parse error.  The parsed solution is saved in 'solution' and can be
   // accessed with 'sol (int lit)'.  We use it for checking learned clauses.
   //
-  const char * parse_solution ();
+  const char *parse_solution ();
 };
 
-}
+} // namespace CaDiCaL
 
 #endif

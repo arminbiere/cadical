@@ -10,9 +10,12 @@ namespace CaDiCaL {
 
 void Internal::transred () {
 
-  if (unsat) return;
-  if (terminated_asynchronously ()) return;
-  if (!stats.current.redundant && !stats.current.irredundant) return;
+  if (unsat)
+    return;
+  if (terminated_asynchronously ())
+    return;
+  if (!stats.current.redundant && !stats.current.irredundant)
+    return;
 
   assert (opts.transred);
   assert (!level);
@@ -26,11 +29,13 @@ void Internal::transred () {
   int64_t limit = stats.propagations.search;
   limit -= last.transred.propagations;
   limit *= 1e-3 * opts.transredreleff;
-  if (limit < opts.transredmineff) limit = opts.transredmineff;
-  if (limit > opts.transredmaxeff) limit = opts.transredmaxeff;
+  if (limit < opts.transredmineff)
+    limit = opts.transredmineff;
+  if (limit > opts.transredmaxeff)
+    limit = opts.transredmaxeff;
 
   PHASE ("transred", stats.transreds,
-    "transitive reduction limit of %" PRId64 " propagations", limit);
+         "transitive reduction limit of %" PRId64 " propagations", limit);
 
   const auto end = clauses.end ();
   auto i = clauses.begin ();
@@ -38,11 +43,15 @@ void Internal::transred () {
   // Find first clause not checked for being transitive yet.
   //
   for (; i != end; i++) {
-    Clause * c = *i;
-    if (c->garbage) continue;
-    if (c->size != 2) continue;
-    if (c->redundant && c->hyper) continue;
-    if (!c->transred) break;
+    Clause *c = *i;
+    if (c->garbage)
+      continue;
+    if (c->size != 2)
+      continue;
+    if (c->redundant && c->hyper)
+      continue;
+    if (!c->transred)
+      break;
   }
 
   // If all candidate clauses have been checked reschedule all.
@@ -50,10 +59,11 @@ void Internal::transred () {
   if (i == end) {
 
     PHASE ("transred", stats.transreds,
-      "rescheduling all clauses since no clauses to check left");
+           "rescheduling all clauses since no clauses to check left");
     for (i = clauses.begin (); i != end; i++) {
-      Clause * c = *i;
-      if (c->transred) c->transred = false;
+      Clause *c = *i;
+      if (c->transred)
+        c->transred = false;
     }
     i = clauses.begin ();
   }
@@ -70,12 +80,9 @@ void Internal::transred () {
 
   int64_t propagations = 0, units = 0, removed = 0;
 
-  while (!unsat &&
-         i != end &&
-         !terminated_asynchronously () &&
-         propagations < limit)
-  {
-    Clause * c = *i++;
+  while (!unsat && i != end && !terminated_asynchronously () &&
+         propagations < limit) {
+    Clause *c = *i++;
 
     // A clause is a candidate for being transitive if it is binary, and not
     // the result of hyper binary resolution.  The reason for excluding
@@ -84,11 +91,15 @@ void Internal::transred () {
     // added (see the code in 'hyper_binary_resolve' in 'prope.cpp' and
     // also check out our CPAIOR paper on tree-based look ahead).
     //
-    if (c->garbage) continue;
-    if (c->size != 2) continue;
-    if (c->redundant && c->hyper) continue;
-    if (c->transred) continue;                  // checked before?
-    c->transred = true;                         // marked as checked
+    if (c->garbage)
+      continue;
+    if (c->size != 2)
+      continue;
+    if (c->redundant && c->hyper)
+      continue;
+    if (c->transred)
+      continue;         // checked before?
+    c->transred = true; // marked as checked
 
     LOG (c, "checking transitive reduction of");
 
@@ -99,10 +110,12 @@ void Internal::transred () {
     //
     int src = -c->literals[0];
     int dst = c->literals[1];
-    if (val (src) || val (dst)) continue;
+    if (val (src) || val (dst))
+      continue;
     if (watches (-src).size () < watches (dst).size ()) {
       int tmp = dst;
-      dst = -src; src = -tmp;
+      dst = -src;
+      src = -tmp;
     }
 
     LOG ("searching path from %d to %d", src, dst);
@@ -118,31 +131,37 @@ void Internal::transred () {
     work.push_back (src);
     LOG ("transred assign %d", src);
 
-    bool transitive = false;            // found path from 'src' to 'dst'?
-    bool failed = false;                // 'src' failed literal?
+    bool transitive = false; // found path from 'src' to 'dst'?
+    bool failed = false;     // 'src' failed literal?
 
-    size_t j = 0;                       // 'propagated' in BFS
+    size_t j = 0; // 'propagated' in BFS
 
     while (!transitive && !failed && j < work.size ()) {
       const int lit = work[j++];
       assert (marked (lit) > 0);
       LOG ("transred propagating %d", lit);
       propagations++;
-      const Watches & ws = watches (-lit);
+      const Watches &ws = watches (-lit);
       const const_watch_iterator eow = ws.end ();
       const_watch_iterator k;
       for (k = ws.begin (); !transitive && !failed && k != eow; k++) {
-        const Watch & w = *k;
-        if (!w.binary ()) break;        // since we sorted watches above
-        Clause * d = w.clause;
-        if (d == c) continue;
-        if (irredundant && d->redundant) continue;
-        if (d->garbage) continue;
+        const Watch &w = *k;
+        if (!w.binary ())
+          break; // since we sorted watches above
+        Clause *d = w.clause;
+        if (d == c)
+          continue;
+        if (irredundant && d->redundant)
+          continue;
+        if (d->garbage)
+          continue;
         const int other = w.blit;
-        if (other == dst) transitive = true;    // 'dst' reached
+        if (other == dst)
+          transitive = true; // 'dst' reached
         else {
           const int tmp = marked (other);
-          if (tmp > 0) continue;
+          if (tmp > 0)
+            continue;
           else if (tmp < 0) {
             LOG ("found both %d and %d reachable", -other, other);
             failed = true;
@@ -186,11 +205,11 @@ void Internal::transred () {
   erase_vector (work);
 
   PHASE ("transred", stats.transreds,
-    "removed %" PRId64 " transitive clauses, found %" PRId64 " units",
-    removed, units);
+         "removed %" PRId64 " transitive clauses, found %" PRId64 " units",
+         removed, units);
 
   STOP_SIMPLIFIER (transred, TRANSRED);
   report ('t', !opts.reportall && !(removed + units));
 }
 
-}
+} // namespace CaDiCaL

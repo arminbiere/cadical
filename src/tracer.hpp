@@ -9,8 +9,8 @@ namespace CaDiCaL {
 
 class Tracer : public Observer {
 
-  Internal * internal;
-  File * file;
+  Internal *internal;
+  File *file;
   bool binary;
 
   int64_t added, deleted;
@@ -19,8 +19,7 @@ class Tracer : public Observer {
   void put_binary_lit (int external_lit);
 
 public:
-
-  Tracer (Internal *, File * file, bool binary); // own and delete 'file'
+  Tracer (Internal *, File *file, bool binary); // own and delete 'file'
   ~Tracer ();
 
   void add_derived_clause (const vector<int> &);
@@ -31,6 +30,6 @@ public:
   void flush ();
 };
 
-}
+} // namespace CaDiCaL
 
 #endif

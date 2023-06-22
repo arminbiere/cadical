@@ -6,12 +6,14 @@ bool Internal::flip (int lit) {
 
   // Do not try to flip inactive literals except for unused variables.
 
-  if (!active (lit) && !flags (lit).unused ()) return false;
+  if (!active (lit) && !flags (lit).unused ())
+    return false;
 
   // Need to reestablish proper watching invariants as if there are no
   // blocking literals as flipping in principle does not work with them.
 
-  if (propergated < trail.size ()) propergate ();
+  if (propergated < trail.size ())
+    propergate ();
 
   LOG ("trying to flip %d", lit);
 
@@ -29,7 +31,7 @@ bool Internal::flip (int lit) {
 
   bool res = true;
 
-  Watches & ws = watches (lit);
+  Watches &ws = watches (lit);
   const const_watch_iterator eow = ws.end ();
   watch_iterator bow = ws.begin ();
 
@@ -41,66 +43,73 @@ bool Internal::flip (int lit) {
     if (!w.binary ())
       continue;
     const signed char b = val (w.blit);
-    if (b > 0) continue;
+    if (b > 0)
+      continue;
     assert (b < 0);
     res = false;
     break;
   }
 
-  if (res)
-    {
-      const_watch_iterator i = bow;
-      watch_iterator j = bow;
+  if (res) {
+    const_watch_iterator i = bow;
+    watch_iterator j = bow;
 
-      while (i != eow) {
+    while (i != eow) {
 
-	const Watch w = *j++ = *i++;
+      const Watch w = *j++ = *i++;
 
-	if (w.binary ())
-	  continue;
+      if (w.binary ())
+        continue;
 
-	if (w.clause->garbage) { j--; continue; }
-
-	literal_iterator lits = w.clause->begin ();
-
-	const int other = lits[0] ^ lits[1] ^ lit;
-	const signed char u = val (other);
-	if (u > 0) continue;
-
-	const int size = w.clause->size;
-	const literal_iterator middle = lits + w.clause->pos;
-	const const_literal_iterator end = lits + size;
-	literal_iterator k = middle;
-
-	int r = 0;
-	signed char v = -1;
-	while (k != end && (v = val (r = *k)) < 0)
-	  k++;
-	if (v < 0) {
-	  k = lits + 2;
-	  assert (w.clause->pos <= size);
-	  while (k != middle && (v = val (r = *k)) < 0)
-	    k++;
-	}
-
-	if (v < 0) { res = false; break; }
-
-	assert (v > 0);
-	assert (lits + 2 <= k), assert (k <= w.clause->end ());
-	w.clause->pos = k - lits;
-	lits[0] = other, lits[1] = r, *k = lit;
-	watch_literal (r, lit, w.clause);
-	j--;
+      if (w.clause->garbage) {
+        j--;
+        continue;
       }
 
-      if (j != i) {
+      literal_iterator lits = w.clause->begin ();
 
-	while (i != eow)
-	  *j++ = *i++;
+      const int other = lits[0] ^ lits[1] ^ lit;
+      const signed char u = val (other);
+      if (u > 0)
+        continue;
 
-	ws.resize (j - ws.begin ());
+      const int size = w.clause->size;
+      const literal_iterator middle = lits + w.clause->pos;
+      const const_literal_iterator end = lits + size;
+      literal_iterator k = middle;
+
+      int r = 0;
+      signed char v = -1;
+      while (k != end && (v = val (r = *k)) < 0)
+        k++;
+      if (v < 0) {
+        k = lits + 2;
+        assert (w.clause->pos <= size);
+        while (k != middle && (v = val (r = *k)) < 0)
+          k++;
       }
+
+      if (v < 0) {
+        res = false;
+        break;
+      }
+
+      assert (v > 0);
+      assert (lits + 2 <= k), assert (k <= w.clause->end ());
+      w.clause->pos = k - lits;
+      lits[0] = other, lits[1] = r, *k = lit;
+      watch_literal (r, lit, w.clause);
+      j--;
     }
+
+    if (j != i) {
+
+      while (i != eow)
+        *j++ = *i++;
+
+      ws.resize (j - ws.begin ());
+    }
+  }
 #ifdef LOGGING
   if (res)
     LOG ("literal %d can be flipped", lit);
@@ -122,7 +131,7 @@ bool Internal::flip (int lit) {
     vals[-idx] = original_value;
     assert (val (-lit) > 0);
     assert (val (lit) < 0);
-    Var & v = var (idx);
+    Var &v = var (idx);
     assert (trail[v.trail] == lit);
     trail[v.trail] = -lit;
   } else
@@ -135,12 +144,14 @@ bool Internal::flippable (int lit) {
 
   // Can not check inactive literals except for unused variables.
 
-  if (!active (lit) && !flags (lit).unused ()) return false;
+  if (!active (lit) && !flags (lit).unused ())
+    return false;
 
   // Need to reestablish proper watching invariants as if there are no
   // blocking literals as flipping in principle does not work with them.
 
-  if (propergated < trail.size ()) propergate ();
+  if (propergated < trail.size ())
+    propergate ();
 
   LOG ("checking whether %d is flippable", lit);
 
@@ -158,24 +169,32 @@ bool Internal::flippable (int lit) {
 
   bool res = true;
 
-  Watches & ws = watches (lit);
+  Watches &ws = watches (lit);
   const const_watch_iterator eow = ws.end ();
   for (watch_iterator i = ws.begin (); i != eow; i++) {
 
     const Watch w = *i;
     const signed char b = val (w.blit);
-    if (b > 0) continue;
+    if (b > 0)
+      continue;
     assert (b < 0);
 
-    if (w.binary ()) { res = false; break; }
+    if (w.binary ()) {
+      res = false;
+      break;
+    }
 
-    if (w.clause->garbage) continue;
+    if (w.clause->garbage)
+      continue;
 
     literal_iterator lits = w.clause->begin ();
 
     const int other = lits[0] ^ lits[1] ^ lit;
     const signed char u = val (other);
-    if (u > 0) { i->blit = other; continue; }
+    if (u > 0) {
+      i->blit = other;
+      continue;
+    }
 
     const int size = w.clause->size;
     const literal_iterator middle = lits + w.clause->pos;
@@ -190,10 +209,13 @@ bool Internal::flippable (int lit) {
       k = lits + 2;
       assert (w.clause->pos <= size);
       while (k != middle && (v = val (r = *k)) < 0)
-	k++;
+        k++;
     }
 
-    if (v < 0) { res = false; break; }
+    if (v < 0) {
+      res = false;
+      break;
+    }
 
     assert (v > 0);
     assert (lits + 2 <= k);
@@ -212,4 +234,4 @@ bool Internal::flippable (int lit) {
   return res;
 }
 
-}
+} // namespace CaDiCaL

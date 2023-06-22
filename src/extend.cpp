@@ -12,8 +12,8 @@ void External::push_clause_literal_on_extension_stack (int ilit) {
   const int elit = internal->externalize (ilit);
   assert (elit);
   extension.push_back (elit);
-  LOG ("pushing clause literal %d on extension stack (internal %d)",
-    elit, ilit);
+  LOG ("pushing clause literal %d on extension stack (internal %d)", elit,
+       ilit);
 }
 
 void External::push_witness_literal_on_extension_stack (int ilit) {
@@ -21,9 +21,10 @@ void External::push_witness_literal_on_extension_stack (int ilit) {
   const int elit = internal->externalize (ilit);
   assert (elit);
   extension.push_back (elit);
-  LOG ("pushing witness literal %d on extension stack (internal %d)",
-    elit, ilit);
-  if (marked (witness, elit)) return;
+  LOG ("pushing witness literal %d on extension stack (internal %d)", elit,
+       ilit);
+  if (marked (witness, elit))
+    return;
   LOG ("marking witness %d", elit);
   mark (witness, elit);
 }
@@ -35,22 +36,22 @@ void External::push_witness_literal_on_extension_stack (int ilit) {
 // clause to this stack.  First the blocking or eliminated literal is added,
 // and then the rest of the clause.
 
-void External::push_clause_on_extension_stack (Clause * c) {
+void External::push_clause_on_extension_stack (Clause *c) {
   internal->stats.weakened++;
   internal->stats.weakenedlen += c->size;
   push_zero_on_extension_stack ();
-  for (const auto & lit : *c)
+  for (const auto &lit : *c)
     push_clause_literal_on_extension_stack (lit);
 }
 
-void External::push_clause_on_extension_stack (Clause * c, int pivot) {
+void External::push_clause_on_extension_stack (Clause *c, int pivot) {
   push_zero_on_extension_stack ();
   push_witness_literal_on_extension_stack (pivot);
   push_clause_on_extension_stack (c);
 }
 
-void
-External::push_binary_clause_on_extension_stack (int pivot, int other) {
+void External::push_binary_clause_on_extension_stack (int pivot,
+                                                      int other) {
   internal->stats.weakened++;
   internal->stats.weakenedlen += 2;
   push_zero_on_extension_stack ();
@@ -63,16 +64,16 @@ External::push_binary_clause_on_extension_stack (int pivot, int other) {
 /*------------------------------------------------------------------------*/
 
 void External::push_external_clause_and_witness_on_extension_stack (
-  const vector<int> & c, const vector<int> & w) {
+    const vector<int> &c, const vector<int> &w) {
   extension.push_back (0);
-  for (const auto & elit : w) {
+  for (const auto &elit : w) {
     assert (elit != INT_MIN);
     init (abs (elit));
     extension.push_back (elit);
     mark (witness, elit);
   }
   extension.push_back (0);
-  for (const auto & elit : c) {
+  for (const auto &elit : c) {
     assert (elit != INT_MIN);
     init (abs (elit));
     extension.push_back (elit);
@@ -98,15 +99,16 @@ void External::extend () {
   internal->stats.extensions++;
 
   PHASE ("extend", internal->stats.extensions,
-    "mapping internal %d assignments to %d assignments",
-    internal->max_var, max_var);
+         "mapping internal %d assignments to %d assignments",
+         internal->max_var, max_var);
 
 #ifndef QUIET
   int64_t updated = 0;
 #endif
   for (unsigned i = 1; i <= (unsigned) max_var; i++) {
     const int ilit = e2i[i];
-    if (!ilit) continue;
+    if (!ilit)
+      continue;
     if (i >= vals.size ())
       vals.resize (i + 1, false);
     vals[i] = (internal->val (ilit) > 0);
@@ -115,10 +117,10 @@ void External::extend () {
 #endif
   }
   PHASE ("extend", internal->stats.extensions,
-    "updated %" PRId64 " external assignments", updated);
+         "updated %" PRId64 " external assignments", updated);
   PHASE ("extend", internal->stats.extensions,
-    "extending through extension stack of size %zd",
-    extension.size ());
+         "extending through extension stack of size %zd",
+         extension.size ());
   const auto begin = extension.begin ();
   auto i = extension.end ();
 #ifndef QUIET
@@ -129,8 +131,10 @@ void External::extend () {
     int lit;
     assert (i != begin);
     while ((lit = *--i)) {
-      if (satisfied) continue;
-      if (ival (lit) > 0) satisfied = true;
+      if (satisfied)
+        continue;
+      if (ival (lit) > 0)
+        satisfied = true;
       assert (i != begin);
     }
     assert (i != begin);
@@ -139,14 +143,14 @@ void External::extend () {
         assert (i != begin);
     else {
       while ((lit = *--i)) {
-        const int tmp = ival (lit);             // not 'signed char'!!!
+        const int tmp = ival (lit); // not 'signed char'!!!
         if (tmp < 0) {
           LOG ("flipping blocking literal %d", lit);
           assert (lit);
           assert (lit != INT_MIN);
           size_t idx = abs (lit);
-	  if (idx >= vals.size ())
-	    vals.resize (idx + 1, false);
+          if (idx >= vals.size ())
+            vals.resize (idx + 1, false);
           vals[idx] = !vals[idx];
           internal->stats.extended++;
 #ifndef QUIET
@@ -158,7 +162,7 @@ void External::extend () {
     }
   }
   PHASE ("extend", internal->stats.extensions,
-    "flipped %" PRId64 " literals during extension", flipped);
+         "flipped %" PRId64 " literals during extension", flipped);
   extended = true;
   LOG ("extended");
   STOP (extend);
@@ -166,8 +170,9 @@ void External::extend () {
 
 /*------------------------------------------------------------------------*/
 
-bool External::traverse_witnesses_backward (WitnessIterator & it) {
-  if (internal->unsat) return true;
+bool External::traverse_witnesses_backward (WitnessIterator &it) {
+  if (internal->unsat)
+    return true;
   vector<int> clause, witness;
   const auto begin = extension.begin ();
   auto i = extension.end ();
@@ -187,8 +192,9 @@ bool External::traverse_witnesses_backward (WitnessIterator & it) {
   return true;
 }
 
-bool External::traverse_witnesses_forward (WitnessIterator & it) {
-  if (internal->unsat) return true;
+bool External::traverse_witnesses_forward (WitnessIterator &it) {
+  if (internal->unsat)
+    return true;
   vector<int> clause, witness;
   const auto end = extension.end ();
   auto i = extension.begin ();
@@ -213,4 +219,4 @@ bool External::traverse_witnesses_forward (WitnessIterator & it) {
 
 /*------------------------------------------------------------------------*/
 
-}
+} // namespace CaDiCaL

@@ -1,16 +1,16 @@
 #ifndef _block_hpp_INCLUDED
 #define _block_hpp_INCLUDED
 
-#include "heap.hpp"     // Alphabetically after 'block.hpp'.
+#include "heap.hpp" // Alphabetically after 'block.hpp'.
 
 namespace CaDiCaL {
 
 struct Internal;
 
 struct block_more_occs_size {
-  Internal * internal;
-  block_more_occs_size (Internal * i) : internal (i) { }
-  bool operator () (unsigned a, unsigned b);
+  Internal *internal;
+  block_more_occs_size (Internal *i) : internal (i) {}
+  bool operator() (unsigned a, unsigned b);
 };
 
 typedef heap<block_more_occs_size> BlockSchedule;
@@ -19,11 +19,11 @@ class Blocker {
 
   friend struct Internal;
 
-  vector<struct Clause*> candidates;
-  vector<struct Clause*> reschedule;
+  vector<struct Clause *> candidates;
+  vector<struct Clause *> reschedule;
   BlockSchedule schedule;
 
-  Blocker (Internal * i) : schedule (block_more_occs_size (i)) { }
+  Blocker (Internal *i) : schedule (block_more_occs_size (i)) {}
 
   void erase () {
     erase_vector (candidates);
@@ -32,6 +32,6 @@ class Blocker {
   }
 };
 
-}
+} // namespace CaDiCaL
 
 #endif

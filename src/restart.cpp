@@ -16,18 +16,24 @@ namespace CaDiCaL {
 // but only in a reluctant doubling scheme with a rather high interval.
 
 bool Internal::stabilizing () {
-  if (!opts.stabilize) return false;
-  if (stable && opts.stabilizeonly) return true;
+  if (!opts.stabilize)
+    return false;
+  if (stable && opts.stabilizeonly)
+    return true;
   if (stats.conflicts >= lim.stabilize) {
     report (stable ? ']' : '}');
-    if (stable) STOP (stable);
-    else        STOP (unstable);
+    if (stable)
+      STOP (stable);
+    else
+      STOP (unstable);
     stable = !stable;
-    if (stable) stats.stabphases++;
+    if (stable)
+      stats.stabphases++;
     PHASE ("stabilizing", stats.stabphases,
-      "reached stabilization limit %" PRId64 " after %" PRId64 " conflicts",
-      lim.stabilize, stats.conflicts);
-    inc.stabilize *= opts.stabilizefactor*1e-2;
+           "reached stabilization limit %" PRId64 " after %" PRId64
+           " conflicts",
+           lim.stabilize, stats.conflicts);
+    inc.stabilize *= opts.stabilizefactor * 1e-2;
     if (inc.stabilize > opts.stabilizemaxint)
       inc.stabilize = opts.stabilizemaxint;
     lim.stabilize = stats.conflicts + inc.stabilize;
@@ -35,11 +41,14 @@ bool Internal::stabilizing () {
       lim.stabilize = stats.conflicts + 1;
     swap_averages ();
     PHASE ("stabilizing", stats.stabphases,
-      "new stabilization limit %" PRId64 " at conflicts interval %" PRId64 "",
-      lim.stabilize, inc.stabilize);
+           "new stabilization limit %" PRId64
+           " at conflicts interval %" PRId64 "",
+           lim.stabilize, inc.stabilize);
     report (stable ? '[' : '{');
-    if (stable) START (stable);
-    else        START (unstable);
+    if (stable)
+      START (stable);
+    else
+      START (unstable);
   }
   return stable;
 }
@@ -52,12 +61,16 @@ bool Internal::stabilizing () {
 // a certain margin over the slow moving average then we restart.
 
 bool Internal::restarting () {
-  if (!opts.restart) return false;
-  if ((size_t) level < assumptions.size () + 2) return false;
-  if (stabilizing ()) return reluctant;
-  if (stats.conflicts <= lim.restart) return false;
+  if (!opts.restart)
+    return false;
+  if ((size_t) level < assumptions.size () + 2)
+    return false;
+  if (stabilizing ())
+    return reluctant;
+  if (stats.conflicts <= lim.restart)
+    return false;
   double f = averages.current.glue.fast;
-  double margin = (100.0 + opts.restartmargin)/100.0;
+  double margin = (100.0 + opts.restartmargin) / 100.0;
   double s = averages.current.glue.slow, l = margin * s;
   LOG ("EMA glue slow %.2f fast %.2f limit %.2f", s, f, l);
   return l <= f;
@@ -69,28 +82,31 @@ bool Internal::restarting () {
 // decision exists top (in which case we do not reuse any level).
 
 int Internal::reuse_trail () {
-  const int trivial_decisions = assumptions.size ()
-    // Plus 1 if the constraint is satisfied via implications of assumptions
-    // and a pseudo-decision level was introduced
-    + !control[assumptions.size () + 1].decision;
-  if (!opts.restartreusetrail) return trivial_decisions;
+  const int trivial_decisions =
+      assumptions.size ()
+      // Plus 1 if the constraint is satisfied via implications of
+      // assumptions and a pseudo-decision level was introduced
+      + !control[assumptions.size () + 1].decision;
+  if (!opts.restartreusetrail)
+    return trivial_decisions;
   int decision = next_decision_variable ();
   assert (1 <= decision);
   int res = trivial_decisions;
   if (use_scores ()) {
     while (res < level &&
-           score_smaller (this)(decision, abs (control[res+1].decision)))
+           score_smaller (this) (decision, abs (control[res + 1].decision)))
       res++;
   } else {
     int64_t limit = bumped (decision);
-    while (res < level && bumped (control[res+1].decision) > limit)
+    while (res < level && bumped (control[res + 1].decision) > limit)
       res++;
   }
   int reused = res - trivial_decisions;
   if (reused > 0) {
     stats.reused++;
     stats.reusedlevels += reused;
-    if (stable) stats.reusedstable++;
+    if (stable)
+      stats.reusedstable++;
   }
   return res;
 }
@@ -99,7 +115,8 @@ void Internal::restart () {
   START (restart);
   stats.restarts++;
   stats.restartlevels += level;
-  if (stable) stats.restartstable++;
+  if (stable)
+    stats.restartstable++;
   LOG ("restart %" PRId64 "", stats.restarts);
   backtrack (reuse_trail ());
 
@@ -110,4 +127,4 @@ void Internal::restart () {
   STOP (restart);
 }
 
-}
+} // namespace CaDiCaL
