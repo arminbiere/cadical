@@ -70,6 +70,7 @@ int inline Internal::shrink_literal (int lit, int blevel,
     LOG ("skipping root level assigned %d", (lit));
     return 0;
   }
+  assert (v.reason != external_reason);
   if (f.shrinkable) {
     LOG ("skipping already shrinkable literal %d", (lit));
     return 0;

@@ -1,3 +1,17 @@
+Version 1.6.0
+-------------
+
+  - Added IPASIR-UP functions to the API to support external propagation,
+    external decisions, and clause addition during search.
+    For more details see the following paper at SAT 2023:
+
+    Katalin Fazekas, Aina Niemetz, Mathias Preiner, Markus Kirchweger,
+    Stefan Szeider and Armin Biere. IPASIR-UP: User Propagators for CDCL.
+
+  - During decisions the phase set by 'void phase (int lit)' has now
+    higher precedence than the initial phase set by options 'phase' and
+    'forcephase'.
+
 Version 1.5.6
 -------------
 

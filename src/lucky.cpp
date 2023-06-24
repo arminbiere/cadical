@@ -344,7 +344,8 @@ int Internal::lucky_phases () {
   // TODO: Some of the lucky assignments can also be found if there are
   // assumptions, but this is not completely implemented nor tested yet.
   // Nothing done for constraint either.
-  if (!assumptions.empty () || !constraint.empty ())
+  // External propagator assumes a CDCL loop, so lucky is not tried here.
+  if (!assumptions.empty () || !constraint.empty () || external_prop)
     return 0;
 
   START (search);

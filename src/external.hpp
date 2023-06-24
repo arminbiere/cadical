@@ -63,6 +63,7 @@ struct External {
   vector<int> assumptions; // External assumptions.
   vector<int> constraint;  // External constraint. Terminated by zero.
 
+  vector<int> eclause; // External version of original input clause.
   // The extension stack for reconstructing complete satisfying assignments
   // (models) of the original external formula is kept in this external
   // solver object. It keeps track of blocked clauses and clauses containing
@@ -90,6 +91,20 @@ struct External {
   void export_learned_empty_clause ();
   void export_learned_unit_clause (int ilit);
   void export_learned_large_clause (const vector<int> &);
+
+  // If there is an external propagator.
+
+  ExternalPropagator *propagator;
+
+  vector<bool> is_observed; // Quick flag for each external variable
+
+  void add_observed_var (int elit);
+  void remove_observed_var (int elit);
+  void reset_observed_vars ();
+
+  bool observed (int elit);
+  bool is_witness (int elit);
+  bool is_decision (int elit);
 
   //----------------------------------------------------------------------//
 

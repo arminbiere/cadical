@@ -4,7 +4,8 @@ namespace CaDiCaL {
 
 External::External (Internal *i)
     : internal (i), max_var (0), vsize (0), extended (false),
-      terminator (0), learner (0), solution (0), vars (max_var) {
+      terminator (0), learner (0), propagator (0), solution (0),
+      vars (max_var) {
   assert (internal);
   assert (!internal->external);
   internal->external = this;
@@ -56,6 +57,8 @@ void External::init (int new_max_var) {
     assert (internal->i2e[iidx] == (int) eidx);
     assert (e2i[eidx] == (int) iidx);
   }
+  if (new_max_var >= (int64_t) is_observed.size ())
+    is_observed.resize (1 + (size_t) new_max_var, false);
   if (internal->opts.checkfrozen)
     if (new_max_var >= (int64_t) moltentab.size ())
       moltentab.resize (1 + (size_t) new_max_var, false);
@@ -136,11 +139,21 @@ void External::add (int elit) {
   if (internal->opts.check &&
       (internal->opts.checkwitness || internal->opts.checkfailed))
     original.push_back (elit);
+
+  // The external literals of the new clause must be saved for later
+  // when the proof is printed during add_original_lit (0)
+  if (elit && internal->proof)
+    eclause.push_back (elit);
+
   const int ilit = internalize (elit);
   assert (!elit == !ilit);
   if (elit)
     LOG ("adding external %d as internal %d", elit, ilit);
   internal->add_original_lit (ilit);
+
+  // Clean-up saved external literals once proof line is printed
+  if (!elit && internal->proof)
+    eclause.clear ();
 }
 
 void External::assume (int elit) {
@@ -156,6 +169,8 @@ void External::assume (int elit) {
 bool External::flip (int elit) {
   assert (elit);
   assert (elit != INT_MIN);
+  assert (!propagator);
+
   int eidx = abs (elit);
   if (eidx > max_var)
     return false;
@@ -173,6 +188,8 @@ bool External::flip (int elit) {
 bool External::flippable (int elit) {
   assert (elit);
   assert (elit != INT_MIN);
+  assert (!propagator);
+
   int eidx = abs (elit);
   if (eidx > max_var)
     return false;
@@ -249,6 +266,142 @@ void External::unphase (int elit) {
   if (elit < 0)
     ilit = -ilit;
   internal->unphase (ilit);
+}
+
+/*------------------------------------------------------------------------*/
+
+// External propagation related functions
+
+void External::add_observed_var (int elit) {
+  if (!propagator) {
+    LOG ("No connected propagator that could observe the variable, "
+         "observed flag is not set.");
+    return;
+  }
+
+  assert (elit);
+  assert (elit != INT_MIN);
+  reset_extended (); // tainting!
+
+  int eidx = abs (elit);
+  if (eidx <= max_var &&
+      (marked (witness, elit) || marked (witness, -elit))) {
+    LOG ("Error, only clean variables are allowed to become observed.");
+    assert (false);
+
+    // TODO: here needs to come the taint and restore of the newly
+    // observed variable. Restore_clauses must be called before continue.
+    // LOG ("marking tainted %d", elit);
+    // mark (tainted, elit);
+    // mark (tainted, -elit);
+    // restore_clauses ...
+  }
+
+  if (eidx >= (int64_t) is_observed.size ())
+    is_observed.resize (1 + (size_t) eidx, false);
+
+  if (is_observed[eidx])
+    return;
+
+  LOG ("marking %d as externally watched", eidx);
+
+  // Will do the necessary internalization
+  freeze (elit);
+  is_observed[eidx] = true;
+
+  int ilit = internalize (elit);
+  internal->add_observed_var (ilit);
+
+  if (propagator->is_lazy)
+    return;
+
+  // Fixed variables are notified only upon assignment. In case
+  // this variable was already assigned (e.g. via unit clause),
+  // it must be notified explicitly now. (-> Can cause a repeated fixed
+  // assignment notification, in case it was unobserved and observed again.)
+  const int tmp = fixed (elit);
+  if (!tmp)
+    return;
+  int unit = tmp < 0 ? -elit : elit;
+
+  LOG ("notify propagator about fixed assignment upon observe for %d",
+       unit);
+  propagator->notify_assignment (unit, true);
+}
+
+void External::remove_observed_var (int elit) {
+  if (!propagator) {
+    LOG ("No connected propagator that could have watched the variable");
+    return;
+  }
+  int eidx = abs (elit);
+
+  if (eidx > max_var)
+    return;
+
+  if (is_observed[eidx]) {
+    // Follow opposite order of add_observed_var, first remove internal
+    // is_observed
+    int ilit = e2i[eidx]; // internalize (elit);
+    internal->remove_observed_var (ilit);
+
+    melt (elit);
+    is_observed[eidx] = false;
+    LOG ("unmarking %d as externally watched", eidx);
+  }
+}
+
+void External::reset_observed_vars () {
+  // Shouldn't be called if there is no connected propagator
+  assert (propagator);
+  reset_extended ();
+  assert ((size_t) max_var + 1 == is_observed.size ());
+
+  for (auto elit : vars) {
+    int eidx = abs (elit);
+    assert (eidx <= max_var);
+    if (is_observed[eidx]) {
+      int ilit = internalize (elit);
+      internal->remove_observed_var (ilit);
+      LOG ("unmarking %d as externally watched", eidx);
+      melt (elit);
+    }
+    is_observed[eidx] = false;
+  }
+  internal->notified = 0;
+  LOG ("reset notified counter to 0");
+}
+
+bool External::observed (int elit) {
+  assert (elit);
+  assert (elit != INT_MIN);
+  int eidx = abs (elit);
+  if (eidx > max_var)
+    return false;
+  if (eidx >= (int) is_observed.size ())
+    return false;
+
+  return is_observed[eidx];
+}
+
+bool External::is_witness (int elit) {
+  assert (elit);
+  assert (elit != INT_MIN);
+  int eidx = abs (elit);
+  if (eidx > max_var)
+    return false;
+  return (marked (witness, elit) || marked (witness, -elit));
+}
+
+bool External::is_decision (int elit) {
+  assert (elit);
+  assert (elit != INT_MIN);
+  int eidx = abs (elit);
+  if (eidx > max_var)
+    return false;
+
+  int ilit = internalize (elit);
+  return internal->is_decision (ilit);
 }
 
 /*------------------------------------------------------------------------*/

@@ -50,12 +50,15 @@ namespace CaDiCaL {
 void External::restore_clause (const vector<int>::const_iterator &begin,
                                const vector<int>::const_iterator &end) {
   LOG (begin, end, "restoring external clause");
+  assert (eclause.empty ());
   for (auto p = begin; p != end; p++) {
+    eclause.push_back (*p);
     int ilit = internalize (*p);
     internal->add_original_lit (ilit);
     internal->stats.restoredlits++;
   }
   internal->add_original_lit (0);
+  eclause.clear ();
   internal->stats.restored++;
 }
 

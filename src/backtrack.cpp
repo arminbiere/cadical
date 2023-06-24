@@ -90,8 +90,18 @@ void Internal::backtrack (int new_level) {
   size_t i = assigned, j = i;
 
 #ifdef LOGGING
-  int reassigned = 0, unassigned = 0;
+  int unassigned = 0;
 #endif
+  int reassigned = 0;
+
+  notify_backtrack (new_level);
+  if (external_prop && !external_prop_is_lazy && notified > assigned) {
+    LOG ("external propagator is notified about some unassignments (trail: "
+         "%zd, notified: %zd).",
+         trail.size (), notified);
+    notified = assigned;
+  }
+
   while (i < end_of_trail) {
     int lit = trail[i++];
     Var &v = var (lit);
@@ -105,7 +115,7 @@ void Internal::backtrack (int new_level) {
       // backtracking.  It is possible to just keep out-of-order assigned
       // literals on the trail without breaking the solver (after some
       // modifications to 'analyze' - see 'opts.chrono' guarded code there).
-      assert (opts.chrono);
+      assert (opts.chrono || external_prop);
 #ifdef LOGGING
       if (!v.level)
         LOG ("reassign %d @ 0 unit clause %d", lit, lit);
@@ -133,6 +143,11 @@ void Internal::backtrack (int new_level) {
     no_conflict_until = assigned;
 
   propergated = 0; // Always go back to root-level.
+
+  assert (notified <= assigned + reassigned);
+  if (reassigned) {
+    notify_assignments ();
+  }
 
   control.resize (new_level + 1);
   level = new_level;

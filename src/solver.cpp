@@ -727,7 +727,7 @@ int Solver::fixed (int lit) const {
 
 void Solver::phase (int lit) {
   TRACE ("phase", lit);
-  REQUIRE_VALID_STATE ();
+  REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (lit);
   external->phase (lit);
   LOG_API_CALL_END ("phase", lit);
@@ -735,7 +735,7 @@ void Solver::phase (int lit) {
 
 void Solver::unphase (int lit) {
   TRACE ("unphase", lit);
-  REQUIRE_VALID_STATE ();
+  REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (lit);
   external->unphase (lit);
   LOG_API_CALL_END ("unphase", lit);
@@ -807,6 +807,72 @@ void Solver::disconnect_learner () {
 }
 
 /*===== IPASIR END =======================================================*/
+
+/*===== IPASIR-UP BEGIN ==================================================*/
+
+void Solver::connect_external_propagator (ExternalPropagator *propagator) {
+  LOG_API_CALL_BEGIN ("connect_external_propagator");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (propagator, "can not connect zero propagator");
+
+#ifdef LOGGING
+  if (external->propagator)
+    LOG ("connecting new external propagator (disconnecting previous one)");
+  else
+    LOG ("connecting new external propagator (no previous one)");
+#endif
+  if (external->propagator)
+    disconnect_external_propagator ();
+
+  external->propagator = propagator;
+  internal->external_prop = true;
+  internal->external_prop_is_lazy = propagator->is_lazy;
+  LOG_API_CALL_END ("connect_external_propagator");
+}
+
+void Solver::disconnect_external_propagator () {
+  LOG_API_CALL_BEGIN ("disconnect_external_propagator");
+  REQUIRE_VALID_STATE ();
+
+#ifdef LOGGING
+  if (external->propagator)
+    LOG ("disconnecting previous external propagator");
+  else
+    LOG ("ignoring to disconnect external propagator (no previous one)");
+#endif
+  if (external->propagator)
+    external->reset_observed_vars ();
+
+  external->propagator = 0;
+  internal->external_prop = false;
+  internal->external_prop_is_lazy = true;
+  LOG_API_CALL_END ("disconnect_external_propagator");
+}
+
+void Solver::add_observed_var (int idx) {
+  TRACE ("observe", idx);
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_VALID_LIT (idx);
+  external->add_observed_var (idx);
+  LOG_API_CALL_END ("observe", idx);
+}
+
+void Solver::remove_observed_var (int idx) {
+  TRACE ("unobserve", idx);
+  REQUIRE_VALID_STATE ();
+  REQUIRE_VALID_LIT (idx);
+  external->remove_observed_var (idx);
+  LOG_API_CALL_END ("unobserve", idx);
+}
+
+void Solver::reset_observed_vars () {
+  TRACE ("reset_observed_vars");
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  external->reset_observed_vars ();
+  LOG_API_CALL_END ("reset_observed_vars");
+}
+
+/*===== IPASIR-UP END ====================================================*/
 
 int Solver::active () const {
   TRACE ("active");
@@ -1106,6 +1172,39 @@ void Solver::dump_cnf () {
   REQUIRE_INITIALIZED ();
   internal->dump ();
   LOG_API_CALL_END ("dump");
+}
+
+/*------------------------------------------------------------------------*/
+
+ExternalPropagator *Solver::get_propagator () {
+  return external->propagator;
+}
+
+bool Solver::observed (int lit) {
+  TRACE ("observed", lit);
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_VALID_LIT (lit);
+  bool res = external->observed (lit);
+  LOG_API_CALL_RETURNS ("observed", lit, res);
+  return res;
+}
+
+bool Solver::is_witness (int lit) {
+  TRACE ("is_witness", lit);
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_VALID_LIT (lit);
+  bool res = external->is_witness (lit);
+  LOG_API_CALL_RETURNS ("is_witness", lit, res);
+  return res;
+}
+
+bool Solver::is_decision (int lit) {
+  TRACE ("is_decision", lit);
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_VALID_LIT (lit);
+  bool res = external->is_decision (lit);
+  LOG_API_CALL_RETURNS ("is_decision", lit, res);
+  return res;
 }
 
 /*------------------------------------------------------------------------*/

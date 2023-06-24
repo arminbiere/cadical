@@ -311,6 +311,22 @@ void Internal::compact () {
   frozentab.resize (mapper.new_vsize);
   shrink_vector (frozentab);
 
+  // Special code for 'relevanttab'.
+  //
+  for (auto src : vars) {
+    const int dst = abs (mapper.map_lit (src));
+    if (!dst)
+      continue;
+    if (src == dst)
+      continue;
+    assert (dst < src);
+
+    relevanttab[dst] += relevanttab[src];
+    relevanttab[src] = 0;
+  }
+  relevanttab.resize (mapper.new_vsize);
+  shrink_vector (relevanttab);
+
   /*----------------------------------------------------------------------*/
 
   if (!external->assumptions.empty ()) {
@@ -442,6 +458,7 @@ void Internal::compact () {
   target_assigned = new_target_assigned;
   best_assigned = new_best_assigned;
   no_conflict_until = 0;
+  notified = 0;
 
   INIT_EMA (averages.current.trail.fast, opts.ematrailfast);
   INIT_EMA (averages.current.trail.slow, opts.ematrailslow);

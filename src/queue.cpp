@@ -48,7 +48,7 @@ void Internal::init_queue (int old_max_var, int new_max_var) {
   LOG ("initializing VMTF queue from %d to %d", old_max_var + 1,
        new_max_var);
   assert (old_max_var < new_max_var);
-  assert (!level);
+  assert (!level || external_prop);
   for (int idx = old_max_var; idx < new_max_var; idx++)
     init_enqueue (idx + 1);
 }

@@ -372,8 +372,9 @@ void Internal::add_new_original_clause () {
       unmark (lit);
   }
   if (skip) {
-    if (proof)
-      proof->delete_clause (original);
+    if (proof) {
+      proof->delete_external_original_clause (external->eclause);
+    }
   } else {
     size_t size = clause.size ();
     if (!size) {
@@ -394,7 +395,7 @@ void Internal::add_new_original_clause () {
       external->check_learned_clause ();
       if (proof) {
         proof->add_derived_clause (clause);
-        proof->delete_clause (original);
+        proof->delete_external_original_clause (external->eclause);
       }
     }
   }

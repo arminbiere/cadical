@@ -55,10 +55,10 @@ int Internal::decide_phase (int idx, bool target) {
   int phase = 0;
   if (force_saved_phase)
     phase = phases.saved[idx];
+  if (!phase)
+    phase = phases.forced[idx]; // swapped with opts.forcephase case!
   if (!phase && opts.forcephase)
     phase = initial_phase;
-  if (!phase)
-    phase = phases.forced[idx]; // TODO swap?
   if (!phase && target)
     phase = phases.target[idx];
   if (!phase)
@@ -123,6 +123,7 @@ int Internal::decide () {
       level++;
       control.push_back (Level (0, trail.size ()));
       LOG ("added pseudo decision level");
+      notify_decision ();
     } else {
       LOG ("deciding assumption %d", lit);
       search_assume_decision (lit);
@@ -178,6 +179,7 @@ int Internal::decide () {
       level++;
       control.push_back (Level (0, trail.size ()));
       LOG ("added pseudo decision level for constraint");
+      notify_decision ();
 
     } else {
 
@@ -214,9 +216,12 @@ int Internal::decide () {
 
   } else {
     stats.decisions++;
-    int idx = next_decision_variable ();
-    const bool target = (opts.target > 1 || (stable && opts.target));
-    int decision = decide_phase (idx, target);
+    int decision = ask_decision ();
+    if (!decision) {
+      int idx = next_decision_variable ();
+      const bool target = (opts.target > 1 || (stable && opts.target));
+      decision = decide_phase (idx, target);
+    }
     search_assume_decision (decision);
   }
   if (res)

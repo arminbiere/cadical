@@ -251,6 +251,7 @@ inline void Internal::analyze_literal (int lit, int &open,
     return;
   assert (val (lit) < 0);
   assert (v.level <= level);
+  assert (v.reason != external_reason);
   if (v.level < level)
     clause.push_back (lit);
   Level &l = control[v.level];
@@ -272,6 +273,7 @@ inline void Internal::analyze_reason (int lit, Clause *reason, int &open,
                                       int &resolvent_size,
                                       int &antecedent_size) {
   assert (reason);
+  assert (reason != external_reason);
   bump_clause (reason);
   for (const auto &other : *reason)
     if (other != lit)
@@ -316,7 +318,7 @@ inline void Internal::bump_also_reason_literals (int lit, int limit) {
   if (!v.level)
     return;
   Clause *reason = v.reason;
-  if (!reason)
+  if (!reason || reason == external_reason)
     return;
   for (const auto &other : *reason) {
     if (other == lit)
@@ -443,7 +445,7 @@ Clause *Internal::new_driving_clause (const int glue, int &jump) {
 inline int Internal::find_conflict_level (int &forced) {
 
   assert (conflict);
-  assert (opts.chrono || opts.otfs);
+  assert (opts.chrono || opts.otfs || external_prop);
 
   int res = 0, count = 0;
 
@@ -523,7 +525,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
 
   assert (level > jump);
 
-  if (!opts.chrono) {
+  if (!opts.chrono && !external_prop) {
     res = jump;
     LOG ("chronological backtracking disabled using jump level %d", res);
   } else if (opts.chronoalways) {
@@ -777,7 +779,10 @@ void Internal::analyze () {
 
   /*----------------------------------------------------------------------*/
 
-  if (opts.chrono) {
+  if (external_prop && !external_prop_is_lazy)
+    explain_external_propagations ();
+
+  if (opts.chrono || external_prop) {
 
     int forced;
 
@@ -928,6 +933,7 @@ void Internal::analyze () {
     if (!--open)
       break;
     reason = var (uip).reason;
+    assert (reason != external_reason);
     LOG (reason, "analyzing %d reason", uip);
     assert (resolvent_size);
     --resolvent_size;

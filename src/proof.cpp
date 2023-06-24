@@ -80,6 +80,22 @@ void Proof::add_original_clause (const vector<int> &c) {
   add_original_clause ();
 }
 
+void Proof::add_external_original_clause (const vector<int> &c) {
+  // literals of c are already external
+  assert (clause.empty ());
+  for (auto const &lit : c)
+    clause.push_back (lit);
+  add_original_clause ();
+}
+
+void Proof::delete_external_original_clause (const vector<int> &c) {
+  // literals of c are already external
+  assert (clause.empty ());
+  for (auto const &lit : c)
+    clause.push_back (lit);
+  delete_clause ();
+}
+
 void Proof::add_derived_empty_clause () {
   LOG ("PROOF adding empty clause");
   assert (clause.empty ());

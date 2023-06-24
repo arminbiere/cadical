@@ -3,14 +3,17 @@
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
+static Clause external_reason_clause;
 
 Internal::Internal ()
     : mode (SEARCH), unsat (false), iterating (false),
       localsearching (false), lookingahead (false), preprocessing (false),
       protected_reasons (false), force_saved_phase (false),
       searching_lucky_phases (false), stable (false), reported (false),
-      rephased (0), vsize (0), max_var (0), level (0), vals (0),
-      score_inc (1.0), scores (this), conflict (0), ignore (0),
+      external_prop (false), external_prop_is_lazy (true), rephased (0),
+      vsize (0), max_var (0), level (0), vals (0), score_inc (1.0),
+      scores (this), conflict (0), ignore (0),
+      external_reason (&external_reason_clause), notified (0),
       propagated (0), propagated2 (0), propergated (0), best_assigned (0),
       target_assigned (0), no_conflict_until (0), unsat_constraint (false),
       marked_failed (true), proof (0), checker (0), tracer (0), opts (this),
@@ -93,7 +96,7 @@ template <class T> static void enlarge_zero (vector<T> &v, size_t N) {
 /*------------------------------------------------------------------------*/
 
 void Internal::enlarge (int new_max_var) {
-  assert (!level);
+  assert (!level || external_prop);
   size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var)
     new_vsize *= 2;
@@ -110,6 +113,7 @@ void Internal::enlarge (int new_max_var) {
   enlarge_only (ftab, new_vsize);
   enlarge_vals (new_vsize);
   enlarge_zero (frozentab, new_vsize);
+  enlarge_zero (relevanttab, new_vsize);
   const signed char val = opts.phase ? 1 : -1;
   enlarge_init (phases.saved, new_vsize, val);
   enlarge_zero (phases.forced, new_vsize);
@@ -124,7 +128,7 @@ void Internal::enlarge (int new_max_var) {
 void Internal::init_vars (int new_max_var) {
   if (new_max_var <= max_var)
     return;
-  if (level)
+  if (level && !external_prop)
     backtrack ();
   LOG ("initializing %d internal variables from %d to %d",
        new_max_var - max_var, max_var + 1, new_max_var);
@@ -156,8 +160,12 @@ void Internal::add_original_lit (int lit) {
   if (lit) {
     original.push_back (lit);
   } else {
-    if (proof)
-      proof->add_original_clause (original);
+    if (proof) {
+      // Use the external form of the clause for printing in proof
+      // Externalize(internalized literal) != external literal
+      assert (!original.size () || !external->eclause.empty ());
+      proof->add_external_original_clause (external->eclause);
+    }
     add_new_original_clause ();
     original.clear ();
   }
@@ -189,10 +197,21 @@ int Internal::cdcl_loop_with_inprocessing () {
     else if (!propagate ())
       analyze (); // propagate and analyze
     else if (iterating)
-      iterate (); // report learned unit
-    else if (satisfied ())
-      res = 10; // found model
-    else if (search_limits_hit ())
+      iterate ();                               // report learned unit
+    else if (!external_propagate () || unsat) { // external propagation
+      if (unsat)
+        continue;
+      else
+        analyze ();
+    } else if (satisfied ()) { // found model
+      if (!external_check_solution () || unsat) {
+        if (unsat)
+          continue;
+        else
+          analyze ();
+      } else if (satisfied ())
+        res = 10;
+    } else if (search_limits_hit ())
       break;                               // decision or conflict limit
     else if (terminated_asynchronously ()) // externally terminated
       break;
@@ -646,7 +665,7 @@ int Internal::solve (bool preprocess_only) {
       res = local_search ();
     if (!res)
       res = lucky_phases ();
-    if (!res)
+    if (!res || external_prop)
       res = cdcl_loop_with_inprocessing ();
   }
   reset_solving ();

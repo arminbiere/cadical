@@ -179,7 +179,7 @@ bool Internal::propagate_out_of_order_units () {
   }
   if (!oou)
     return true;
-  assert (opts.chrono);
+  assert (opts.chrono || external_prop);
   backtrack (0);
   if (propagate ())
     return true;

@@ -196,6 +196,7 @@ class Learner;
 class Terminator;
 class ClauseIterator;
 class WitnessIterator;
+class ExternalPropagator;
 
 /*------------------------------------------------------------------------*/
 
@@ -278,13 +279,16 @@ public:
   // trigger then a traversal of the reconstruction stack.
   //
   // So try to avoid mixing 'flip' and 'val' (for efficiency only).
+  // Further, this functionality is currently not supported in the presence
+  // of an external propagator.
   //
   //   require (SATISFIED)
   //   ensure (SATISFIED)
   //
   bool flip (int lit);
 
-  // Same as 'flip' without actually flipping it.
+  // Same as 'flip' without actually flipping it. This functionality is
+  // currently not supported in the presence of an external propagator.
   //
   //   require (SATISFIED)
   //   ensure (SATISFIED)
@@ -319,6 +323,63 @@ public:
   void disconnect_learner ();
 
   // ====== END IPASIR =====================================================
+
+  // ====== BEGIN IPASIR-UP ================================================
+
+  // Add call-back which allows to learn, propagate and backtrack based on
+  // external constraints. Only one external propagator can be connected
+  // and after connection every related variables must be 'observed' (use
+  // 'add_observed_var' function).
+  // Disconnection of the external propagator resets all the observed
+  // variables.
+  //
+  //   require (VALID)
+  //   ensure (VALID)
+  //
+  void connect_external_propagator (ExternalPropagator *propagator);
+  void disconnect_external_propagator ();
+
+  // Mark as 'observed' those variables that are relevant to the external
+  // propagator. External propagation, clause addition during search and
+  // notifications are all over these observed variabes.
+  // A variable can not be observed witouth having an external propagator
+  // connected. Observed variables are "frozen" internally, and so
+  // inprocessing will not consider them as candidates for elimination.
+  // An observed variable is allowed to be a fresh variable and it can be
+  // added also during solving.
+  //
+  //   require (VALID_OR_SOLVING)
+  //   ensure (VALID_OR_SOLVING)
+  //
+  void add_observed_var (int var);
+
+  // Removes the 'observed' flag from the given variable. A variable can be
+  // set unobserved only between solve calls, not during it (to guarantee
+  // that no yet unexplained external propagation involves it).
+  //
+  //   require (VALID)
+  //   ensure (VALID)
+  //
+  void remove_observed_var (int var);
+
+  // Removes all the 'observed' flags from the variables. Disconnecting the
+  // propagator invokes this step as well.
+  //
+  //   require (VALID)
+  //   ensure (VALID)
+  //
+  void reset_observed_vars ();
+
+  // Get reason of valid observed literal (true = it is an observed variable
+  // and it got assigned by a decision during the CDCL loop. Otherwise:
+  // false.
+  //
+  //   require (VALID_OR_SOLVING)
+  //   ensure (VALID_OR_SOLVING)
+  //
+  bool is_decision (int lit);
+
+  // ====== END IPASIR-UP ==================================================
 
   //------------------------------------------------------------------------
   // Adds a literal to the constraint clause. Same functionality as 'add'
@@ -904,6 +965,20 @@ private:
   //
   void dump_cnf ();
   friend struct DumpCall; // Mobical calls 'dump_cnf' in 'DumpCall::execute'
+
+  /*----------------------------------------------------------------------*/
+
+  // Used in mobical to test external propagation internally.
+  // These functions should not be called for any other purposes.
+  //
+  ExternalPropagator *get_propagator ();
+  bool observed (int lit);
+  bool is_witness (int lit);
+
+  friend struct LemmaCall;
+  friend struct ObserveCall;
+  friend struct DisconnectCall;
+  friend class MockPropagator;
 };
 
 /*========================================================================*/
@@ -928,6 +1003,83 @@ public:
   virtual ~Learner () {}
   virtual bool learning (int size) = 0;
   virtual void learn (int lit) = 0;
+};
+
+/*------------------------------------------------------------------------*/
+
+// Allows to connect an external propagator to propagate values to variables
+// with an external clause as a reason or to learn new clauses during the
+// CDCL loop (without restart).
+
+class ExternalPropagator {
+
+public:
+  // This flag is currently checked only when the propagator is connected.
+  bool is_lazy = false; // lazy propagator only checks complete assignments
+
+  virtual ~ExternalPropagator () {}
+
+  // Notify the propagator about assignments to observed variables.
+  // The notification is not necessarily eager. It usually happens before
+  // the call of propagator callbacks and when a driving clause is leading
+  // to an assignment.
+  //
+  virtual void notify_assignment (int lit, bool is_fixed) = 0;
+  virtual void notify_new_decision_level () = 0;
+  virtual void notify_backtrack (size_t new_level) = 0;
+
+  // Check by the external propagator the found complete solution (after
+  // solution reconstruction). If it returns false, the propagator must
+  // provide an external clause during the next callback.
+  //
+  virtual bool cb_check_found_model (const std::vector<int> &model) = 0;
+
+  // Ask the external propagator for the next decision literal. If it
+  // returns 0, the solver makes its own choice.
+  //
+  virtual int cb_decide () { return 0; };
+
+  // Ask the external propagator if there is an external propagation to make
+  // under the current assignment. It returns either a literal to be
+  // propagated or 0, indicating that there is no external propagation under
+  // the current assignment.
+  //
+  virtual int cb_propagate () { return 0; };
+
+  // Ask the external propagator for the reason clause of a previous
+  // external propagation step (done by cb_propagate). The clause must be
+  // added literal-by-literal closed with a 0. Further, the clause must
+  // contain the propagated literal.
+  //
+  virtual int cb_add_reason_clause_lit (int propagated_lit) {
+    (void) propagated_lit;
+    return 0;
+  };
+
+  // The following two functions are used to add external clauses to the
+  // solver during the CDCL loop. The external clause is added
+  // literal-by-literal and learned by the solver as an irredundant
+  // (original) input clause. The clause can be arbitrary, but if it is
+  // root-satisfied or tautology, the solver will ignore it without learning
+  // it. Root-falsified literals are eagerly removed from the clause.
+  // Falsified clauses trigger conflict analysis, propagating clauses
+  // trigger propagation. In case chrono is 0, the solver backtracks to
+  // propagate the new literal on the right decision level, otherwise it
+  // potentially will be an out-of-order assignment on the current level.
+  // Unit clauses always (unless root-satisfied, see above) trigger
+  // backtracking (independently from the value of the chrono option and
+  // independently from being falsified or satisfied or unassigned) to level
+  // 0. Empty clause (or root falsified clause, see above) makes the problem
+  // unsat and stops the search immediately. A literal 0 must close the
+  // clause.
+  //
+  // The external propagator indicates that there is a clause to add.
+  //
+  virtual bool cb_has_external_clause () = 0;
+
+  // The actual function called to add the external clause.
+  //
+  virtual int cb_add_external_clause_lit () = 0;
 };
 
 /*------------------------------------------------------------------------*/

@@ -56,6 +56,7 @@ void Internal::failing () {
       }
       if (failed_clashing)
         continue;
+      assert (v.reason != external_reason);
       if (!v.reason)
         failed_clashing = lit;
       else if (!first_failed || v.level < failed_level) {
@@ -144,6 +145,7 @@ void Internal::failing () {
 
       if (v.reason) {
         assert (v.level);
+        assert (v.reason != external_reason);
         LOG (v.reason, "analyze reason");
         for (const auto &other : *v.reason) {
           Flags &f = flags (other);

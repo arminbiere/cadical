@@ -162,6 +162,35 @@ void Stats::print (Internal *internal) {
     PRT ("  elimrestried:  %15" PRId64 "   %10.2f %%  per resolution",
          stats.elimrestried, percent (stats.elimrestried, stats.elimres));
   }
+  if (all || stats.ext_prop.ext_cb) {
+    PRT ("ext.prop. calls: %15" PRId64 "   %10.2f %%  of queries",
+         stats.ext_prop.eprop_call,
+         percent (stats.ext_prop.eprop_call, stats.ext_prop.ext_cb));
+    PRT ("  propagating:   %15" PRId64 "   %10.2f %%  per eprop-call",
+         stats.ext_prop.eprop_prop,
+         percent (stats.ext_prop.eprop_prop, stats.ext_prop.eprop_call));
+    PRT ("  explained:     %15" PRId64 "   %10.2f %%  per eprop-call",
+         stats.ext_prop.eprop_expl,
+         percent (stats.ext_prop.eprop_expl, stats.ext_prop.eprop_call));
+    PRT ("  falsified:     %15" PRId64 "   %10.2f %%  per eprop-call",
+         stats.ext_prop.eprop_conf,
+         percent (stats.ext_prop.eprop_conf, stats.ext_prop.eprop_call));
+    PRT ("ext.clause calls:%15" PRId64 "   %10.2f %%  of queries",
+         stats.ext_prop.elearn_call,
+         percent (stats.ext_prop.elearn_call, stats.ext_prop.ext_cb));
+    PRT ("  learned:       %15" PRId64 "   %10.2f %%  per called",
+         stats.ext_prop.elearned,
+         percent (stats.ext_prop.elearned, stats.ext_prop.elearn_call));
+    PRT ("  conflicting:   %15" PRId64 "   %10.2f %%  per learned",
+         stats.ext_prop.elearn_conf,
+         percent (stats.ext_prop.elearn_conf, stats.ext_prop.elearned));
+    PRT ("  propagating:   %15" PRId64 "   %10.2f %%  per learned",
+         stats.ext_prop.elearn_prop,
+         percent (stats.ext_prop.elearn_prop, stats.ext_prop.elearned));
+    PRT ("ext.final check: %15" PRId64 "   %10.2f %%  of queries",
+         stats.ext_prop.echeck_call,
+         percent (stats.ext_prop.echeck_call, stats.ext_prop.ext_cb));
+  }
   if (all || stats.all.fixed) {
     PRT ("fixed:           %15" PRId64 "   %10.2f %%  of all variables",
          stats.all.fixed, percent (stats.all.fixed, stats.vars));

@@ -26,6 +26,23 @@ struct Stats {
     int64_t walk;        // propagated during local search
   } propagations;
 
+  struct {
+    int64_t ext_cb;     // number of times any external callback was called
+    int64_t eprop_call; // number of times external_propagate was called
+    int64_t eprop_prop; // number of times external propagate propagated
+    int64_t
+        eprop_conf; // number of times ex-propagate was already falsified
+    int64_t eprop_expl; // number of times external propagate was explained
+    int64_t
+        elearn_call;  // number of times external clause learning was tried
+    int64_t elearned; // learned external clauses (incl. eprop explanations)
+    int64_t
+        elearn_prop; // number of learned and propagating external clauses
+    int64_t
+        elearn_conf; // number of learned and conflicting external clauses
+    int64_t echeck_call; // number of checking found complete solutions
+  } ext_prop;
+
   int64_t condassinit;  // initial assigned literals
   int64_t condassirem;  // initial assigned literals for blocked
   int64_t condassrem;   // remaining assigned literals for blocked

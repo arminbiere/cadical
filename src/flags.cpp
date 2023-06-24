@@ -3,6 +3,14 @@
 namespace CaDiCaL {
 
 void Internal::mark_fixed (int lit) {
+  if (external_prop && !external_prop_is_lazy && observed (lit)) {
+    int elit = externalize (lit);
+    assert (elit && external->observed (elit));
+
+    external->propagator->notify_assignment (elit, true);
+    // Does not increase the notified counter because
+    // it is a separated way of notification.
+  }
   Flags &f = flags (lit);
   assert (f.status == Flags::ACTIVE);
   f.status = Flags::FIXED;
