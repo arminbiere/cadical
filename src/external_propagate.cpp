@@ -387,8 +387,9 @@ Clause *Internal::add_external_clause (bool as_redundant,
   if (opts.check && (opts.checkwitness || opts.checkfailed)) {
     external->original.push_back (elit);
   }
+  uint64_t id = ++clause_id;
   if (proof)
-    proof->add_external_original_clause (external_original);
+    proof->add_external_original_clause (id, external_original);
 
   // Clean up marks
   for (const auto &lit : clause)
@@ -399,7 +400,7 @@ Clause *Internal::add_external_clause (bool as_redundant,
     // TODO: handle the error-case if a satisfied clause is given as reason
     // of propagation.
     if (proof)
-      proof->delete_external_original_clause (external_original);
+      proof->delete_external_original_clause (id, external_original);
     original.clear ();
     clause.clear ();
     external_original.clear ();
@@ -409,8 +410,10 @@ Clause *Internal::add_external_clause (bool as_redundant,
   if (original_size > lemma_size) {
     external->check_learned_clause ();
     if (proof) {
-      proof->add_derived_clause (clause);
-      proof->delete_external_original_clause (external_original);
+      uint64_t new_id = ++clause_id;
+      proof->add_derived_clause (new_id, clause);
+      proof->delete_external_original_clause (id, external_original);
+      id = new_id;
     }
   }
   original.clear ();
@@ -427,7 +430,7 @@ Clause *Internal::add_external_clause (bool as_redundant,
 #endif
 
     Clause *res = new_clause (as_redundant, glue);
-
+    res->id = id;
     assert (watching ());
     watch_clause (res);
 
@@ -437,6 +440,7 @@ Clause *Internal::add_external_clause (bool as_redundant,
 
     return res;
   } else {
+    // TODO: give ids to these...
     assert (clause.size () < 2);
     if (clause.empty ()) {
       if (!original_size)
@@ -444,6 +448,7 @@ Clause *Internal::add_external_clause (bool as_redundant,
       else
         MSG ("falsified clause is learnt from external propagator");
       unsat = true;
+      conflict_id = id;
     } else {
       assert (clause.size () == 1);
       LOG (clause, "unit clause is learnt from external propagator");
@@ -684,7 +689,8 @@ bool Internal::handle_external_clause (Clause *res) {
         stats.ext_prop.elearn_prop++;
         if (level)
           backtrack ();
-        assign_original_unit (clause[0]);
+        const uint64_t id = clause_id;
+        assign_original_unit (id, clause[0]);
         clause.clear ();
 
         if (unsat) {
@@ -806,8 +812,10 @@ bool Internal::external_check_solution () {
       else
         etrail.push_back (-i);
 #ifndef NDEBUG
+#ifdef LOGGING
       bool p = external->vals[i];
       LOG ("evals[%d]: %d ival(%d): %d", i, p, i, tmp);
+#endif
 #endif
     }
 

@@ -1,3 +1,8 @@
+Version 1.7.0
+-------------
+
+ - Added native LRAT support.
+
 Version 1.6.0
 -------------
 

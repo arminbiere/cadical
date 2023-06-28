@@ -1,0 +1,16 @@
+0 init
+1 set check 1
+2 add -3
+3 add 0
+4 constrain -3
+5 constrain -2
+6 constrain 1
+7 constrain 0
+8 add 5
+9 add 0
+10 constrain -5
+11 constrain 3
+12 constrain -4
+13 constrain 0
+14 assume 4
+15 solve 0

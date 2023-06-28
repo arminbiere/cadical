@@ -1,0 +1,12 @@
+0 init
+1 set check 1
+2 add -4
+3 add 0
+4 add -1
+5 add 4
+6 add 0
+7 constrain 3
+8 constrain 2
+9 constrain 4
+10 constrain -1
+11 constrain 0

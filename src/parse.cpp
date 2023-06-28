@@ -201,6 +201,7 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
 
     if (strict != FORCED)
       solver->reserve (vars);
+    internal->reserve_ids (clauses);
   } else if (!parse_inccnf_too)
     PER ("expected 'c' after 'p '");
   else if (ch == 'i') {

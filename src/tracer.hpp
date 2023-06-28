@@ -1,29 +1,56 @@
 #ifndef _tracer_h_INCLUDED
 #define _tracer_h_INCLUDED
 
-#include "observer.hpp" // Alphabetically after 'tracer'.
-
-// Proof tracing to a file (actually 'File') in DRAT format.
+// Proof tracing to a file (actually 'File') in DRAT/FRAT format.
 
 namespace CaDiCaL {
 
-class Tracer : public Observer {
+class Tracer {
 
   Internal *internal;
   File *file;
   bool binary;
+  bool lrat;
+  bool frat;
 
   int64_t added, deleted;
 
+  uint64_t latest_id;
+  vector<uint64_t> delete_ids;
+
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
+  void put_binary_id (uint64_t id);
+
+  // support LRAT
+  void lrat_add_clause (uint64_t, const vector<int> &,
+                        const vector<uint64_t> &);
+  void lrat_delete_clause (uint64_t);
+
+  // support FRAT
+  void frat_add_original_clause (uint64_t, const vector<int> &);
+  void frat_add_derived_clause (uint64_t, const vector<int> &);
+  void frat_add_derived_clause (uint64_t, const vector<int> &,
+                                const vector<uint64_t> &);
+  void frat_delete_clause (uint64_t, const vector<int> &);
+  void frat_finalize_clause (uint64_t, const vector<int> &);
+
+  // support DRAT
+  void drat_add_clause (const vector<int> &);
+  void drat_delete_clause (const vector<int> &);
 
 public:
-  Tracer (Internal *, File *file, bool binary); // own and delete 'file'
+  // own and delete 'file'
+  Tracer (Internal *, File *file, bool binary, bool lrat, bool frat);
   ~Tracer ();
 
-  void add_derived_clause (const vector<int> &);
-  void delete_clause (const vector<int> &);
+  void add_derived_clause (uint64_t, const vector<int> &);
+  void add_derived_clause (uint64_t, const vector<int> &,
+                           const vector<uint64_t> &);
+  void delete_clause (uint64_t, const vector<int> &);
+  void add_original_clause (uint64_t, const vector<int> &); // for frat
+  void finalize_clause (uint64_t, const vector<int> &);     // for frat
+  void set_first_id (uint64_t);
 
   bool closed ();
   void close ();

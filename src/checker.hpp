@@ -1,8 +1,6 @@
 #ifndef _checker_hpp_INCLUDED
 #define _checker_hpp_INCLUDED
 
-#include "observer.hpp" // Alphabetically after 'checker'.
-
 /*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
@@ -47,7 +45,7 @@ typedef vector<CheckerWatch> CheckerWatcher;
 
 /*------------------------------------------------------------------------*/
 
-class Checker : public Observer {
+class Checker {
 
   Internal *internal;
 
@@ -95,7 +93,8 @@ class Checker : public Observer {
 
   uint64_t nonces[num_nonces]; // random numbers for hashing
   uint64_t last_hash;          // last computed hash value of clause
-  uint64_t compute_hash ();    // compute and save hash value of clause
+  uint64_t last_id;
+  uint64_t compute_hash (); // compute and save hash value of clause
 
   // Reduce hash value to the actual size.
   //
@@ -148,11 +147,9 @@ public:
   Checker (Internal *);
   ~Checker ();
 
-  // The following three implement the 'Observer' interface.
-  //
-  void add_original_clause (const vector<int> &);
-  void add_derived_clause (const vector<int> &);
-  void delete_clause (const vector<int> &);
+  void add_original_clause (uint64_t, const vector<int> &);
+  void add_derived_clause (uint64_t, const vector<int> &);
+  void delete_clause (uint64_t, const vector<int> &);
 
   void print_stats ();
   void dump (); // for debugging purposes only

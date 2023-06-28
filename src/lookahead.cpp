@@ -346,6 +346,7 @@ int Internal::lookahead_probing () {
 
   MSG ("unsat = %d, terminating_asked () = %d ", unsat,
        terminating_asked ());
+  init_probehbr_lrat ();
   while (!unsat && !terminating_asked () &&
          (probe = lookahead_next_probe ())) {
     stats.probed++;
@@ -356,6 +357,7 @@ int Internal::lookahead_probing () {
       hbrs = trail.size (), backtrack ();
     else
       hbrs = 0, failed_literal (probe);
+    clean_probehbr_lrat ();
     if (max_hbrs < hbrs ||
         (max_hbrs == hbrs &&
          internal->bumped (probe) > internal->bumped (res))) {
@@ -402,6 +404,7 @@ int Internal::lookahead_probing () {
 CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
   if (!active () || depth == 0) {
     CubesWithStatus cubes;
+    cubes.status = 0;
     cubes.cubes.push_back (std::vector<int> ());
     return cubes;
   }

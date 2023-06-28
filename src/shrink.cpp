@@ -25,13 +25,16 @@ void Internal::mark_shrinkable_as_removable (
   size_t marked = 0, reset = 0;
 #endif
 #ifndef NDEBUG
+  unsigned kept = 0, minireset = 0;
   for (; minimized_start < minimized.size (); ++minimized_start) {
     const int lit = minimized[minimized_start];
     Flags &f = flags (lit);
     const Var &v = var (lit);
     if (v.level == blevel) {
       assert (!f.poison);
-    }
+      ++minireset;
+    } else
+      ++kept;
   }
 #else
   (void) blevel;
@@ -413,6 +416,13 @@ void Internal::shrink_and_minimize_clause () {
   auto rend_block = clause.rbegin ();
   const int uip0 = clause[0];
 
+  // for direct lrat we remember how the clause used to look
+  vector<int> old_clause_lrat;
+  assert (minimize_chain.empty ());
+  if (opts.lrat && !opts.lratexternal)
+    for (auto &i : clause)
+      old_clause_lrat.push_back (i);
+
   while (rend_block != rend_lits) {
     rend_block = minimize_and_shrink_block (rend_block, total_shrunken,
                                             total_minimized, uip0);
@@ -420,6 +430,7 @@ void Internal::shrink_and_minimize_clause () {
 
   LOG (clause,
        "post shrink pass (with uips, not removed) first UIP clause");
+  LOG (old_clause_lrat, "(used for lratdirect) before shrink: clause");
 #if defined(LOGGING) || !defined(NDEBUG)
   const unsigned old_size = clause.size ();
 #endif
@@ -428,8 +439,20 @@ void Internal::shrink_and_minimize_clause () {
     for (std::vector<int>::size_type j = 1; j < clause.size (); ++j) {
       assert (i <= j);
       clause[i] = clause[j];
-      if (clause[j] == uip0)
+      if (opts.lrat && !opts.lratexternal) {
+        assert (j < old_clause_lrat.size ());
+        assert (mini_chain.empty ());
+        if (clause[j] != old_clause_lrat[j]) {
+          calculate_minimize_chain (-old_clause_lrat[j]);
+          for (auto p : mini_chain) {
+            minimize_chain.push_back (p);
+          }
+          mini_chain.clear ();
+        }
+      }
+      if (clause[j] == uip0) {
         continue;
+      }
       assert (flags (clause[i]).keep);
       ++i;
       LOG ("keeping literal %i", clause[j]);
@@ -448,6 +471,10 @@ void Internal::shrink_and_minimize_clause () {
 
   START (minimize);
   clear_minimized_literals ();
+  for (auto p = minimize_chain.rbegin (); p < minimize_chain.rend (); p++) {
+    lrat_chain.push_back (*p);
+  }
+  minimize_chain.clear ();
   STOP (minimize);
 }
 

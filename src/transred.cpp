@@ -136,6 +136,12 @@ void Internal::transred () {
 
     size_t j = 0; // 'propagated' in BFS
 
+    assert (lrat_chain.empty ());
+    assert (mini_chain.empty ());
+    vector<int> parents;
+    // if (opts.lrat && !opts.lratexternal) lrat_chain.push_back (c->id); //
+    // TODO is this really unnecessary
+
     while (!transitive && !failed && j < work.size ()) {
       const int lit = work[j++];
       assert (marked (lit) > 0);
@@ -163,9 +169,18 @@ void Internal::transred () {
           if (tmp > 0)
             continue;
           else if (tmp < 0) {
+            if (opts.lrat && !opts.lratexternal) {
+              parents.push_back (lit);
+              mini_chain.push_back (d->id);
+              work.push_back (other);
+            }
             LOG ("found both %d and %d reachable", -other, other);
             failed = true;
           } else {
+            if (opts.lrat && !opts.lratexternal) {
+              parents.push_back (lit);
+              mini_chain.push_back (d->id);
+            }
             mark (other);
             work.push_back (other);
             LOG ("transred assign %d", other);
@@ -174,12 +189,35 @@ void Internal::transred () {
       }
     }
 
+    int failed_lit = work.back ();
+    int next_pos = 0;
+    int next_neg = 0;
+
     // Unassign all assigned literals (same as '[bp]acktrack').
     //
     while (!work.empty ()) {
       const int lit = work.back ();
       work.pop_back ();
+      if (opts.lrat && !opts.lratexternal && failed && !work.empty ()) {
+        assert (!parents.empty () && !mini_chain.empty ());
+        LOG ("transred lrat current lit %d next pos %d next neg %d", lit,
+             next_pos, next_neg);
+        if (lit == failed_lit || lit == next_pos) {
+          lrat_chain.push_back (mini_chain.back ());
+          next_pos = parents.back ();
+        } else if (lit == -failed_lit || lit == next_neg) {
+          lrat_chain.push_back (mini_chain.back ());
+          next_neg = parents.back ();
+        }
+        parents.pop_back ();
+        mini_chain.pop_back ();
+      }
       unmark (lit);
+    }
+    mini_chain.clear ();
+    assert (mini_chain.empty ());
+    if (opts.lrat && !opts.lratexternal && failed) {
+      reverse (lrat_chain.begin (), lrat_chain.end ());
     }
 
     if (transitive) {
@@ -198,6 +236,7 @@ void Internal::transred () {
         learn_empty_clause ();
       }
     }
+    lrat_chain.clear ();
   }
 
   last.transred.propagations = stats.propagations.search;

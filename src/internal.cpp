@@ -10,13 +10,19 @@ Internal::Internal ()
       localsearching (false), lookingahead (false), preprocessing (false),
       protected_reasons (false), force_saved_phase (false),
       searching_lucky_phases (false), stable (false), reported (false),
-      external_prop (false), external_prop_is_lazy (true), rephased (0),
-      vsize (0), max_var (0), level (0), vals (0), score_inc (1.0),
+      external_prop (false), external_prop_is_lazy (true),
+      rephased (0), vsize (0), max_var (0),
+      clause_id (0), original_id (0), reserved_ids (0),
+      level (0), vals (0), score_inc (1.0),
       scores (this), conflict (0), ignore (0),
       external_reason (&external_reason_clause), notified (0),
-      propagated (0), propagated2 (0), propergated (0), best_assigned (0),
-      target_assigned (0), no_conflict_until (0), unsat_constraint (false),
-      marked_failed (true), proof (0), checker (0), tracer (0), opts (this),
+      propagated (0), propagated2 (0),
+      propergated (0),
+      best_assigned (0), target_assigned (0), no_conflict_until (0),
+      unsat_constraint (false), marked_failed (true), proof (0),
+      checker (0), tracer (0),
+      lratchecker (0), lratbuilder (0),
+      opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
@@ -35,6 +41,10 @@ Internal::~Internal () {
     delete tracer;
   if (checker)
     delete checker;
+  if (lratchecker)
+    delete lratchecker;
+  if (lratbuilder)
+    delete lratbuilder;
   if (vals) {
     vals -= vsize;
     delete[] vals;
@@ -102,6 +112,7 @@ void Internal::enlarge (int new_max_var) {
     new_vsize *= 2;
   LOG ("enlarge internal size from %zd to new size %zd", vsize, new_vsize);
   // Ordered in the size of allocated memory (larger block first).
+  enlarge_zero (unit_clauses, 2 * new_vsize);
   enlarge_only (wtab, 2 * new_vsize);
   enlarge_only (vtab, new_vsize);
   enlarge_zero (parents, new_vsize);
@@ -160,15 +171,29 @@ void Internal::add_original_lit (int lit) {
   if (lit) {
     original.push_back (lit);
   } else {
+    const uint64_t id =
+        original_id < reserved_ids ? ++original_id : ++clause_id;
     if (proof) {
       // Use the external form of the clause for printing in proof
       // Externalize(internalized literal) != external literal
       assert (!original.size () || !external->eclause.empty ());
-      proof->add_external_original_clause (external->eclause);
+      proof->add_original_clause (id, original);
+      // proof->add_external_original_clause (id, external->eclause);
     }
-    add_new_original_clause ();
+    add_new_original_clause (id);
     original.clear ();
   }
+}
+
+/*------------------------------------------------------------------------*/
+
+void Internal::reserve_ids (int number) {
+  // return;
+  assert (number >= 0);
+  assert (!clause_id && !reserved_ids && !original_id);
+  clause_id = reserved_ids = number;
+  if (tracer)
+    tracer->set_first_id (reserved_ids);
 }
 
 /*------------------------------------------------------------------------*/
@@ -668,6 +693,7 @@ int Internal::solve (bool preprocess_only) {
     if (!res || external_prop)
       res = cdcl_loop_with_inprocessing ();
   }
+  finalize ();
   reset_solving ();
   report_solving (res);
   STOP (solve);
@@ -755,6 +781,29 @@ int Internal::lookahead () {
   lookingahead = false;
   STOP (lookahead);
   return res;
+}
+
+/*------------------------------------------------------------------------*/
+
+void Internal::finalize () {
+  if (!proof || !opts.lratfrat)
+    return;
+  LOG ("finalizing");
+  proof->finalize_clause (conflict_id, {});
+  for (const auto &lit : lits) {
+    // if (idx > (unsigned) max_var) break;
+    const auto uidx = vlit (lit);
+    const uint64_t id = unit_clauses[uidx];
+    if (!id)
+      continue;
+    // const int lit = u2i (uidx);
+    proof->finalize_unit (id, lit);
+  }
+  // See the discussion in 'propagate' on why garbage binary clauses stick
+  // around.
+  for (const auto &c : clauses)
+    if (!c->garbage || c->size == 2)
+      proof->finalize_clause (c);
 }
 
 /*------------------------------------------------------------------------*/

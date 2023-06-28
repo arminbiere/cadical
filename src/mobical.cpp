@@ -1365,6 +1365,7 @@ private:
 
   vector<int> observed_vars;
   bool in_connection = false;
+  bool is_lrat = false;
 
   void add_options (int expected);
   bool shrink_phases (int expected);
@@ -1564,6 +1565,21 @@ void Trace::generate_options (Random &random, Size size) {
   if (random.generate_double () < 0.8)
     push_back (new SetCall ("check", 1));
 
+  // There are two different internal checkers, one for lrat, one for drat
+  //
+  if (random.generate_double () < 0.3)
+    push_back (new SetCall ("checklrat", 0));
+
+  // LRAT is incompatible with external_propagator so we set lrat here.
+  //
+  if (!in_connection && random.generate_double () < 0.3) {
+    push_back (new SetCall ("lrat", 1));
+    is_lrat = true;
+  } else {      // TODO ist this correct?
+    push_back (new SetCall ("lrat", 0));
+    is_lrat = false;
+  }
+
   // In 10% of the remaining cases we use a configuration.
   //
   if (random.generate_double () < 0.1) {
@@ -1596,6 +1612,8 @@ void Trace::generate_options (Random &random, Size size) {
     if (!strcmp (o.name, "simplify"))
       continue;
     if (!strcmp (o.name, "walk"))
+      continue;
+    if (!strcmp (o.name, "lrat"))
       continue;
 
     // Probability to change an option is 'fraction'.
@@ -2096,7 +2114,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
       observed_vars.clear ();
       push_back (new DisconnectCall ());
       in_connection = false;
-    } else
+    } else if (!is_lrat)
       generate_propagator (random, minvars, maxvars);
 
     generate_constraint (random, minvars, maxvars, uniform);

@@ -175,8 +175,13 @@ void Internal::strengthen_clause (Clause *c, int lit) {
   stats.strengthened++;
   assert (c->size > 2);
   LOG (c, "removing %d in", lit);
-  if (proof)
-    proof->strengthen_clause (c, lit);
+  if (proof) {
+    LOG (lrat_chain, "strengthening clause with chain");
+    if (opts.lrat && !opts.lratexternal)
+      proof->strengthen_clause (c, lit, lrat_chain);
+    else
+      proof->strengthen_clause (c, lit);
+  }
   if (!c->redundant)
     mark_removed (lit);
   auto new_end = remove (c->begin (), c->end (), lit);
@@ -235,7 +240,8 @@ inline int Internal::try_to_subsume_clause (Clause *c,
       // removed in 'c', otherwise to 'INT_MIN' which is a non-valid
       // literal.
       //
-      for (const auto &other : bins (sign * lit)) {
+      for (const auto &bin : bins (sign * lit)) {
+        const auto &other = bin.lit;
         const int tmp = marked (other);
         if (!tmp)
           continue;
@@ -254,6 +260,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
         }
         dummy.redundant = false;
         dummy.size = 2;
+        dummy.id = bin.id;
         d = &dummy;
         break;
       }
@@ -294,7 +301,13 @@ inline int Internal::try_to_subsume_clause (Clause *c,
 
   if (flipped) {
     LOG (d, "strengthening");
+    if (opts.lrat && !opts.lratexternal) {
+      assert (lrat_chain.empty ());
+      lrat_chain.push_back (c->id);
+      lrat_chain.push_back (d->id);
+    }
     strengthen_clause (c, -flipped);
+    lrat_chain.clear ();
     assert (likely_to_be_kept_clause (c));
     shrunken.push_back (c);
     return -1;
@@ -574,7 +587,7 @@ bool Internal::subsume_round () {
 
       const int minlit_pos = (c->literals[1] == minlit);
       const int other = c->literals[!minlit_pos];
-      bins (minlit).push_back (other);
+      bins (minlit).push_back (Bin{other, c->id});
     }
   }
 

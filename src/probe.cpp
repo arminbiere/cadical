@@ -42,6 +42,105 @@ inline void Internal::set_parent_reason_literal (int lit, int reason) {
   parents[idx] = reason;
 }
 
+/*-----------------------------------------------------------------------*/
+
+// for opts.probehbr=false we need to do a lot of extra work to remember the
+// correct lrat_chains... This solution is also memory intensive I think
+// all corresponding functions are guarded to only work with the right
+// options so they can be called without checking for options
+//
+// call locally after failed_literal or backtracking
+//
+void Internal::clean_probehbr_lrat () {
+  if (!opts.lrat || opts.lratexternal || opts.probehbr)
+    return;
+  for (auto &field : probehbr_chains) {
+    for (auto &chain : field) {
+      chain.clear ();
+    }
+  }
+}
+
+// call globally before a probe round (or a lookahead round)
+//
+void Internal::init_probehbr_lrat () {
+  if (!opts.lrat || opts.lratexternal || opts.probehbr)
+    return;
+  const size_t size = 2 * (1 + (size_t) max_var);
+  probehbr_chains.resize (size);
+  for (size_t i = 0; i < size; i++) {
+    probehbr_chains[i].resize (size);
+    // commented because not needed... should be empty already
+    /*
+    for (size_t j = 0; j < size; j++) {
+      vector<uint64_t> empty;
+      probehbr_chains[i][j] = empty;
+    }
+    */
+  }
+}
+
+// sets lrat_chain to the stored chain in probehbr_chains.
+// this leads to conflict with unit reason uip
+//
+void Internal::get_probehbr_lrat (int lit, int uip) {
+  if (!opts.lrat || opts.lratexternal || opts.probehbr)
+    return;
+  assert (lit);
+  assert (lrat_chain.empty ());
+  assert (val (uip) < 0);
+  lrat_chain = probehbr_chains[vlit (lit)][vlit (uip)];
+  lrat_chain.push_back (unit_clauses[vlit (-uip)]);
+}
+
+// sets the corresponding probehbr_chain to what is currently stored in
+// lrat_chain. also clears lrat_chain.
+//
+void Internal::set_probehbr_lrat (int lit, int uip) {
+  if (!opts.lrat || opts.lratexternal || opts.probehbr)
+    return;
+  assert (lit);
+  assert (lrat_chain.size ());
+  assert (probehbr_chains[vlit (lit)][vlit (uip)].empty ());
+  probehbr_chains[vlit (lit)][vlit (uip)] = lrat_chain;
+  lrat_chain.clear ();
+}
+
+// compute lrat_chain for the part of the tree from lit to dom
+// use mini_chain because it needs to be reversed
+//
+void Internal::probe_dominator_lrat (int dom, Clause *reason) {
+  if (!opts.lrat || opts.lratexternal || !dom)
+    return;
+  LOG (reason, "probe dominator lrat for %d from", dom);
+  for (const auto lit : *reason) {
+    if (val (lit) >= 0)
+      continue;
+    const auto other = -lit;
+    if (other == dom)
+      continue;
+    Flags &f = flags (other);
+    if (f.seen)
+      continue;
+    f.seen = true;
+    analyzed.push_back (other);
+    Var u = var (other);
+    if (u.level) {
+      if (!u.reason) {
+        LOG ("this may be a problem %d", other);
+        continue;
+      }
+      probe_dominator_lrat (dom, u.reason);
+      continue;
+    }
+    const unsigned uidx = vlit (other);
+    uint64_t id = unit_clauses[uidx];
+    assert (id);
+    lrat_chain.push_back (id);
+  }
+  lrat_chain.push_back (reason->id);
+}
+
 /*------------------------------------------------------------------------*/
 
 // On-the-fly (dynamic) hyper binary resolution on decision level one can
@@ -144,6 +243,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
     dom = probe_dominator (dom, other);
     non_root_level_literals++;
   }
+  probe_reason = reason;
   if (non_root_level_literals && opts.probehbr) { // !(A)
     bool contained = false;
     for (k = lits + 1; !contained && k != end; k++)
@@ -156,15 +256,26 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
     assert (clause.empty ());
     clause.push_back (-dom);
     clause.push_back (lits[0]);
+    probe_dominator_lrat (dom, reason);
+    if (opts.lrat && !opts.lratexternal)
+      clear_analyzed_literals ();
     Clause *c = new_hyper_binary_resolved_clause (red, 2);
+    probe_reason = c;
     if (red)
       c->hyper = true;
     clause.clear ();
+    lrat_chain.clear ();
     if (contained) {
       stats.hbrsubs++;
       LOG (reason, "subsumed original");
       mark_garbage (reason);
     }
+  } else if (non_root_level_literals && opts.lrat && !opts.lratexternal) {
+    // still calculate lrat and remember for later
+    assert (!opts.probehbr);
+    probe_dominator_lrat (dom, reason);
+    clear_analyzed_literals ();
+    set_probehbr_lrat (dom, lits[0]);
   }
   return dom;
 }
@@ -188,6 +299,8 @@ inline void Internal::probe_assign (int lit, int parent) {
   Var &v = var (idx);
   v.level = level;
   v.trail = (int) trail.size ();
+  v.reason = level ? probe_reason : 0;
+  probe_reason = 0;
   set_parent_reason_literal (lit, parent);
   if (!level)
     learn_unit_clause (lit);
@@ -234,6 +347,31 @@ void Internal::probe_assign_unit (int lit) {
 
 /*------------------------------------------------------------------------*/
 
+// same as in propagate but inlined here
+//
+inline void Internal::probe_lrat_for_units (int lit) {
+  if (!opts.lrat || opts.lratexternal)
+    return;
+  if (level)
+    return; // not decision level 0
+  LOG ("building chain for units");
+  assert (lrat_chain.empty ());
+  assert (probe_reason);
+  for (auto &reason_lit : *probe_reason) {
+    if (lit == reason_lit)
+      continue;
+    assert (val (reason_lit));
+    if (!val (reason_lit))
+      continue;
+    const unsigned uidx = vlit (val (reason_lit) * reason_lit);
+    uint64_t id = unit_clauses[uidx];
+    lrat_chain.push_back (id);
+  }
+  lrat_chain.push_back (probe_reason->id);
+}
+
+/*------------------------------------------------------------------------*/
+
 // This is essentially the same as 'propagate' except that we prioritize and
 // always propagate binary clauses first (see our CPAIOR'13 paper on tree
 // based look ahead), then immediately stop at a conflict and of course use
@@ -256,8 +394,14 @@ inline void Internal::probe_propagate2 () {
         continue;
       if (b < 0)
         conflict = w.clause; // but continue
-      else
+      else {
+        assert (lrat_chain.empty ());
+        assert (!probe_reason);
+        probe_reason = w.clause;
+        probe_lrat_for_units (w.blit);
         probe_assign (w.blit, -lit);
+        lrat_chain.clear ();
+      }
     }
   }
 }
@@ -319,10 +463,18 @@ bool Internal::probe_propagate () {
           } else if (!u) {
             if (level == 1) {
               lits[0] = other, lits[1] = lit;
+              assert (lrat_chain.empty ());
+              assert (!probe_reason);
               int dom = hyper_binary_resolve (w.clause);
               probe_assign (other, dom);
-            } else
+            } else {
+              assert (lrat_chain.empty ());
+              assert (!probe_reason);
+              probe_reason = w.clause;
+              probe_lrat_for_units (other);
               probe_assign_unit (other);
+              lrat_chain.clear ();
+            }
             probe_propagate2 ();
           } else
             conflict = w.clause;
@@ -358,6 +510,7 @@ void Internal::failed_literal (int failed) {
   assert (conflict);
   assert (level == 1);
   assert (analyzed.empty ());
+  assert (lrat_chain.empty ());
 
   START (analyze);
 
@@ -366,14 +519,21 @@ void Internal::failed_literal (int failed) {
   int uip = 0;
   for (const auto &lit : *conflict) {
     const int other = -lit;
-    if (!var (other).level)
+    if (!var (other).level) {
+      assert (val (other) > 0);
       continue;
+    }
     uip = uip ? probe_dominator (uip, other) : other;
   }
+  probe_dominator_lrat (uip, conflict);
+  if (opts.lrat && !opts.lratexternal)
+    clear_analyzed_literals ();
+
   LOG ("found probing UIP %d", uip);
   assert (uip);
 
   vector<int> work;
+
   int parent = uip;
   while (parent != failed) {
     const int next = get_parent_reason_literal (parent);
@@ -383,31 +543,37 @@ void Internal::failed_literal (int failed) {
   }
 
   backtrack ();
-  clear_analyzed_literals ();
   conflict = 0;
 
   assert (!val (uip));
   probe_assign_unit (-uip);
+  lrat_chain.clear ();
 
   if (!probe_propagate ())
     learn_empty_clause ();
 
-  while (!unsat && !work.empty ()) {
-    const int parent = work.back ();
-    work.pop_back ();
+  size_t j = 0;
+  while (!unsat && j < work.size ()) {
+    // assert (!opts.probehbr);        assertion fails ...
+    const int parent = work[j++];
     const signed char tmp = val (parent);
-    if (tmp < 0)
-      continue;
     if (tmp > 0) {
+      assert (!opts.probehbr); // ... assertion should hold here
+      get_probehbr_lrat (parent, uip);
       LOG ("clashing failed parent %d", parent);
       learn_empty_clause ();
-    } else {
+    } else if (tmp == 0) {
+      assert (!opts.probehbr); // ... and here
       LOG ("found unassigned failed parent %d", parent);
-      probe_assign_unit (-parent);
+      get_probehbr_lrat (parent, uip); // this is computed during
+      probe_assign_unit (-parent);     // propagation and can include
+      lrat_chain.clear ();             // multiple chains where only one
       if (!probe_propagate ())
-        learn_empty_clause ();
+        learn_empty_clause (); // is needed!
     }
+    uip = parent;
   }
+  work.clear ();
   erase_vector (work);
 
   STOP (analyze);
@@ -647,6 +813,7 @@ bool Internal::probe_round () {
   propagated = propagated2 = trail.size ();
 
   int probe;
+  init_probehbr_lrat ();
   while (!unsat && !terminated_asynchronously () &&
          stats.propagations.probe < limit && (probe = next_probe ())) {
     stats.probed++;
@@ -656,6 +823,7 @@ bool Internal::probe_round () {
       backtrack ();
     else
       failed_literal (probe);
+    clean_probehbr_lrat ();
   }
 
   if (unsat)

@@ -166,6 +166,23 @@ public:
     }
   }
 
+  bool put (uint64_t l) {
+    assert (writing);
+    if (!l)
+      return put ('0');
+    else {
+      char buffer[22];
+      int i = sizeof buffer;
+      buffer[--i] = 0;
+      while (l) {
+        assert (i > 0);
+        buffer[--i] = '0' + l % 10;
+        l /= 10;
+      }
+      return put (buffer + i);
+    }
+  }
+
   const char *name () const { return _name; }
   uint64_t lineno () const { return _lineno; }
   uint64_t bytes () const { return _bytes; }

@@ -100,8 +100,11 @@ bool Internal::vivify_propagate () {
           continue;
         if (b < 0)
           conflict = w.clause; // but continue
-        else
+        else {
+          build_chain_for_units (w.blit, w.clause);
           vivify_assign (w.blit, w.clause);
+          lrat_chain.clear ();
+        }
       }
     } else if (!conflict && propagated != trail.size ()) {
       const int lit = -trail[propagated++];
@@ -155,7 +158,9 @@ bool Internal::vivify_propagate () {
             j--;
           } else if (!u) {
             assert (v < 0);
+            build_chain_for_units (other, w.clause);
             vivify_assign (other, w.clause);
+            lrat_chain.clear ();
           } else {
             assert (u < 0);
             assert (v < 0);
@@ -389,7 +394,7 @@ bool Internal::consider_to_vivify_clause (Clause *c, bool redundant_mode) {
 }
 
 // Conflict analysis from 'start' which learns a decision only clause.
-
+//
 void Internal::vivify_analyze_redundant (Vivifier &vivifier, Clause *start,
                                          bool &only_binary_reasons) {
   LOG ("analyzing conflict in redundant mode");
@@ -546,6 +551,7 @@ void Internal::vivify_strengthen (Clause *c) {
     LOG (c, "vivification shrunken to unit %d", unit);
     assert (!val (unit));
     assign_unit (unit);
+    // lrat_chain.clear ();   done in search_assign
     stats.vivifyunits++;
 
     bool ok = propagate ();
@@ -590,6 +596,7 @@ void Internal::vivify_strengthen (Clause *c) {
   }
   clause.clear ();
   mark_garbage (c);
+  lrat_chain.clear ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -805,6 +812,11 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
               stats.vivifystred2++;
           }
           clear_analyzed_literals ();
+          if (opts.lrat && !opts.lratexternal) {
+            assert (lrat_chain.empty ());
+            vivify_build_lrat (lit, v.reason);
+            clear_analyzed_literals ();
+          }
 
           backtrack (level - 1);
           assert (!conflict);
@@ -848,6 +860,11 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
             stats.vivifystred3++;
         }
         clear_analyzed_literals ();
+        if (opts.lrat && !opts.lratexternal) {
+          assert (lrat_chain.empty ());
+          vivify_build_lrat (0, conflict);
+          clear_analyzed_literals ();
+        }
       }
 
       backtrack (level - 1);
@@ -861,23 +878,34 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   // instantiate it refer to instantiate.hpp for more. As clauses as sorted
   // by number of occurrence, we attempt to remove literals with few
   // occurrences
-  assert (ignore == c);
 
-  const int lit = sorted.back ();
-  if (opts.vivifyinst && !subsume && lit != remove) {
-    LOG ("now instantiation");
-    backtrack (level - 1);
-    assert (val (lit) == 0);
-    stats.vivifydecs++;
-    vivify_assume (lit);
-    bool ok = vivify_propagate ();
-    if (!ok) {
-      LOG ("instantiate can remove %d", lit);
-      remove = lit, ++stats.vivifyinstantiate;
-      conflict = 0;
-    } else
-      LOG ("instantiation failed");
-    backtrack (level - 1);
+  if (opts.vivifyinst && !subsume) {
+    const int lit = sorted.back ();
+    if (remove != lit) {
+      LOG ("vivify instantiation");
+      backtrack (level - 1);
+      assert (val (lit) == 0);
+      stats.vivifydecs++;
+      vivify_assume (lit);
+      bool ok = vivify_propagate ();
+      if (!ok) {
+        LOG (c, "instantiate success with literal %d in", lit);
+        stats.vivifyinst++;
+        // strengthen clause
+        if (opts.lrat && !opts.lratexternal) {
+          assert (lrat_chain.empty ());
+          vivify_build_lrat (0, c);
+          vivify_build_lrat (0, conflict);
+          clear_analyzed_literals ();
+        }
+        remove = lit;
+        backtrack (level - 1);
+        conflict = 0;
+        assert (!conflict);
+      } else {
+        LOG ("instantiation failed");
+      }
+    }
   }
 
   assert (ignore == c);
@@ -891,6 +919,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
 
       if (!clause.empty ()) {
 
+        assert (!opts.lrat || opts.lratexternal || !lrat_chain.empty ());
         LOG ("strengthening instead of subsuming clause");
         vivify_strengthen (c);
 
@@ -936,17 +965,20 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     // falsified).  Those should be removed in addition to 'remove'.
     //
     for (const auto &other : *c) {
+      assert (val (other) || other == remove);
       Var &v = var (other);
-      if (!v.level)
-        continue;     // Remove root-level fixed literals.
+      if (!v.level) { // Remove root-level fixed literals.
+        continue;
+      }
       if (v.reason) { // Remove all negative implied literals.
         assert (v.level);
         assert (v.reason);
         LOG ("flushing literal %d", other);
         continue;
       }
-      if (other == remove)
-        continue; // Remove instantiated literals.
+      if (other == remove) {
+        continue;
+      }
       // Decision or unassigned.
       LOG ("keeping literal %d", other);
       clause.push_back (other);
@@ -957,11 +989,56 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     else
       stats.vivifystrirr++;
 
+    if (opts.lrat && !opts.lratexternal && lrat_chain.empty ()) {
+      assert (lrat_chain.empty ());
+      vivify_build_lrat (0, c);
+      clear_analyzed_literals ();
+    }
     vivify_strengthen (c);
 
   } else {
     LOG ("vivification failed");
   }
+  lrat_chain.clear ();
+}
+
+// when we can strengthen clause c we have to build lrat.
+// uses f.seen so do not forget to clear flags afterwards.
+// this can happen in three cases. (1), (2) are only sound in redundant mode
+// (1) literal l in c is positively implied. in this case we call the
+// function with (l, l.reason). This justifies the reduction because the new
+// clause c' will include l and all decisions so l.reason is a conflict
+// assuming -c' (2) conflict during vivify propagation. function is called
+// with (0, conflict) similar to (1) but more direct. (3) some literals in c
+// are negatively implied and can therefore be removed. in this case we call
+// the function with (0, c). originally we justified each literal in c on
+// its own but this is not actually necessary.
+//
+void Internal::vivify_build_lrat (int lit, Clause *reason) {
+  LOG (reason, "VIVIFY LRAT justifying %d with reason", lit);
+
+  for (const auto &other : *reason) {
+    if (other == lit)
+      continue;
+    Var &v = var (other);
+    Flags &f = flags (other);
+    if (f.seen)
+      continue;                 // we would like to assert this:
+    analyzed.push_back (other); // assert (val (other) < 0);
+    f.seen = true;              // but we cannot because we have
+    if (!v.level) {             // already backtracked (sometimes)
+      const unsigned uidx =
+          vlit (-other);                // nevertheless we can use var (l)
+      uint64_t id = unit_clauses[uidx]; // as if l was still assigned
+      assert (id);                      // because var is updated lazily
+      lrat_chain.push_back (id);
+      continue;
+    }
+    if (v.reason) { // recursive justification
+      vivify_build_lrat (other, v.reason);
+    }
+  }
+  lrat_chain.push_back (reason->id);
 }
 
 /*------------------------------------------------------------------------*/

@@ -23,15 +23,7 @@ typedef const int *const_literal_iterator;
 // is very costly.
 
 struct Clause {
-
-  // We made the clause ID permanent as in earlier version including it or
-  // not, i.e., './configure -l' or just './configure', gave different
-  // results.  This was due to the garbage collector triggered by memory
-  // usage was kicking in a different points of the search which then might
-  // have an influence on the order clauses are watched.
-
-  int64_t id; // Only useful for debugging.
-
+  uint64_t id;          // Used to create LRAT-style proofs
   bool conditioned : 1; // Tried for globally blocked clause elimination.
   bool covered : 1;  // Already considered for covered clause elimination.
   bool enqueued : 1; // Enqueued on backward queue.

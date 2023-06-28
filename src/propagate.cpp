@@ -55,6 +55,55 @@ inline int Internal::assignment_level (int lit, Clause *reason) {
   return res;
 }
 
+// calculate lrat_chain
+// inlined because mostly called inside of propagate hjm TODO :/
+// TODO: not inlined because its used in vivify. Bad??
+// also TODO: to avoid if branch in propagate use this in learn unit clause
+// need to rember reason clause for that
+//
+void Internal::build_chain_for_units (int lit, Clause *reason) {
+  if (!opts.lrat || opts.lratexternal)
+    return;
+  // LOG ("building chain for units");        bad line for debugging
+  // equivalence
+  if (opts.chrono && assignment_level (lit, reason))
+    return;
+  else if (!opts.chrono && level)
+    return; // not decision level 0
+  assert (lrat_chain.empty ());
+  for (auto &reason_lit : *reason) {
+    if (lit == reason_lit)
+      continue;
+    assert (val (reason_lit));
+    if (!val (reason_lit))
+      continue;
+    const unsigned uidx = vlit (val (reason_lit) * reason_lit);
+    uint64_t id = unit_clauses[uidx];
+    lrat_chain.push_back (id);
+  }
+  lrat_chain.push_back (reason->id);
+}
+
+// same code as above but reason is assumed to be conflict and lit is not
+// needed also not inlined as it is not called inside of propagate.
+// TODO: not inlined because its used in vivify. Bad??
+//
+void Internal::build_chain_for_empty () {
+  if (!opts.lrat || opts.lratexternal || !lrat_chain.empty ())
+    return;
+  assert (!level);
+  assert (lrat_chain.empty ());
+  assert (conflict);
+  LOG (conflict, "lrat for global empty clause with conflict");
+  for (auto &lit : *conflict) {
+    assert (val (lit) < 0);
+    const unsigned uidx = vlit (-lit);
+    uint64_t id = unit_clauses[uidx];
+    lrat_chain.push_back (id);
+  }
+  lrat_chain.push_back (conflict->id);
+}
+
 /*------------------------------------------------------------------------*/
 
 inline void Internal::search_assign (int lit, Clause *reason) {
@@ -68,7 +117,8 @@ inline void Internal::search_assign (int lit, Clause *reason) {
           reason == external_reason);
   Var &v = var (idx);
   int lit_level;
-
+  assert (!opts.lrat || opts.lratexternal || level || reason == external_reason
+          ||  reason == decision_reason || !lrat_chain.empty ());
   if (reason == external_reason &&
       ((size_t) level <= assumptions.size () + (!!constraint.size ()))) {
     // On the pseudo-decision levels every external propagation must be
@@ -126,6 +176,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
       __builtin_prefetch (&w, 0, 1);
     }
   }
+  lrat_chain.clear ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -245,8 +296,11 @@ bool Internal::propagate () {
 
         if (b < 0)
           conflict = w.clause; // but continue ...
-        else
+        else {
+          build_chain_for_units (w.blit, w.clause);
           search_assign (w.blit, w.clause);
+          // lrat_chain.clear (); done in search_assign
+        }
 
       } else {
         assert (w.clause->size > 2);
@@ -342,7 +396,9 @@ bool Internal::propagate () {
             // The other watch is unassigned ('!u') and all other literals
             // assigned to false (still 'v < 0'), thus we found a unit.
             //
+            build_chain_for_units (other, w.clause);
             search_assign (other, w.clause);
+            // lrat_chain.clear (); done in search_assign
 
             // Similar code is in the implementation of the SAT'18 paper on
             // chronological backtracking but in our experience, this code

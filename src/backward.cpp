@@ -47,6 +47,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
   unsigned size = 0;
   int best = 0;
   bool satisfied = false;
+  assert (mini_chain.empty ());
   for (const auto &lit : *c) {
     const signed char tmp = val (lit);
     if (tmp > 0) {
@@ -115,10 +116,22 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
           stats.elimbwsub++;
         } else {
           int unit = 0;
-          for (const auto &lit : *d) {
-            const signed char tmp = val (lit);
-            if (tmp < 0)
+          assert (minimize_chain.empty ());
+          assert (analyzed.empty ());
+          assert (lrat_chain.empty ());
+          for (const auto &lit : *d) {         // find out if we get
+            const signed char tmp = val (lit); // a new unit or just
+            if (tmp < 0) {                     // strengthen c
+              if (!opts.lrat || opts.lratexternal)
+                continue;
+              Flags &f = flags (lit);
+              assert (!f.seen);
+              if (f.seen)
+                continue;
+              f.seen = true;
+              analyzed.push_back (lit);
               continue;
+            }
             if (tmp > 0) {
               satisfied = true;
               break;
@@ -131,8 +144,45 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
             } else
               unit = lit;
           }
-          assert (unit);
+          if (opts.lrat && !opts.lratexternal && !satisfied) {
+            // if we found a unit we need to add all unit ids from
+            // {c\d}U{d\c} otherwise just the unit ids from {c\d}
+            for (const auto &lit : *c) {
+              const signed char tmp = val (lit);
+              assert (tmp <= 0);
+              if (tmp >= 0)
+                continue;
+              Flags &f = flags (lit);
+              if (f.seen && unit && unit == INT_MIN) {
+                f.seen = false;
+                continue;
+              } else if (!f.seen) {
+                f.seen = true;
+                analyzed.push_back (lit);
+              }
+            }
+            if (unit == INT_MIN) { // we do not need units from {d\c}
+              for (const auto &lit : *d) {
+                flags (lit).seen = false;
+              }
+            }
+            for (const auto &lit : analyzed) {
+              Flags &f = flags (lit);
+              if (!f.seen) {
+                f.seen = true;
+                continue;
+              }
+              const unsigned uidx = vlit (-lit);
+              uint64_t id = unit_clauses[uidx];
+              assert (id);
+              lrat_chain.push_back (id);
+            }
+            clear_analyzed_literals ();
+            lrat_chain.push_back (d->id);
+            lrat_chain.push_back (c->id);
+          }
           if (satisfied) {
+            assert (lrat_chain.empty ());
             mark_garbage (d);
             elim_update_removed_clause (eliminator, d);
           } else if (unit && unit != INT_MIN) {
@@ -140,6 +190,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
             LOG (d, "unit %d through hyper unary resolution with", unit);
             assign_unit (unit);
             elim_propagate (eliminator, unit);
+            lrat_chain.clear ();
             break;
           } else if (occs (negated).size () <= (size_t) opts.elimocclim) {
             strengthen_clause (d, negated);
@@ -149,10 +200,12 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
             assert (negated != best);
             eliminator.enqueue (d);
           }
+          lrat_chain.clear ();
         }
       }
     }
   }
+  mini_chain.clear ();
   unmark (c);
 }
 

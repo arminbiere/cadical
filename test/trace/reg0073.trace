@@ -1,0 +1,69 @@
+0 init
+1 set check 1
+2 set elimboundmax -1
+3 set elimboundmin -1
+4 set elimclslim 3
+5 set elimprod 0
+6 set elimsum 0
+7 set probehbr 0
+8 set probemaxeff 0
+9 set vivify 0
+10 add -10
+11 add -8
+12 add 0
+13 add 1
+14 add 0
+15 add 9
+16 add 12
+17 add 0
+18 add 10
+19 add -12
+20 add 0
+21 add -11
+22 add -3
+23 add 2
+24 add 0
+25 add 4
+26 add -9
+27 add 0
+28 add -5
+29 add 2
+30 add 0
+31 add -7
+32 add 10
+33 add 0
+34 add 4
+35 add 7
+36 add -2
+37 add 0
+38 add -4
+39 add -6
+40 add 0
+41 add 3
+42 add 8
+43 add 0
+44 add 2
+45 add -3
+46 add -4
+47 add 0
+48 add -6
+49 add -12
+50 add 0
+51 add -10
+52 add 6
+53 add 4
+54 add 0
+55 constrain 1
+56 constrain 12
+57 constrain 5
+58 constrain 0
+59 simplify 3 0
+60 add -7
+61 add 0
+62 add -4
+63 add 0
+64 constrain -15
+65 constrain 13
+66 constrain -14
+67 constrain 0
+68 solve 0

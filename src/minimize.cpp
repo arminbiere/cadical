@@ -45,8 +45,9 @@ bool Internal::minimize_literal (int lit, int depth) {
   else
     f.poison = true;
   minimized.push_back (lit);
-  if (!depth)
+  if (!depth) {
     LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
+  }
   return res;
 }
 
@@ -80,18 +81,66 @@ void Internal::minimize_clause () {
   minimize_sort_clause ();
 
   assert (minimized.empty ());
+  assert (minimize_chain.empty ());
   const auto end = clause.end ();
   auto j = clause.begin (), i = j;
-  for (; i != end; i++)
-    if (minimize_literal (-*i))
+  for (; i != end; i++) {
+    if (minimize_literal (-*i)) {
+      if (opts.lrat && !opts.lratexternal) {
+        assert (mini_chain.empty ());
+        calculate_minimize_chain (-*i);
+        for (auto p : mini_chain) {
+          minimize_chain.push_back (p);
+        }
+        mini_chain.clear ();
+      }
       stats.minimized++;
-    else
+    } else
       flags (*j++ = *i).keep = true;
+  }
   LOG ("minimized %zd literals", (size_t) (clause.end () - j));
   if (j != end)
     clause.resize (j - clause.begin ());
   clear_minimized_literals ();
+  for (auto p = minimize_chain.rbegin (); p < minimize_chain.rend (); p++) {
+    lrat_chain.push_back (*p);
+  }
+  minimize_chain.clear ();
   STOP (minimize);
+}
+
+// go backwards in reason graph and add ids
+// mini_chain is in correct order so we have to add it to minimize_chain
+// and then reverse when we put it on lrat_chain
+void Internal::calculate_minimize_chain (int lit) {
+  assert (val (lit) > 0);
+  Flags &f = flags (lit);
+  Var &v = var (lit);
+  assert (!v.level || f.removable || f.keep);
+  if (f.keep || f.added)
+    return;
+  if (!v.level) {
+    if (f.seen)
+      return;
+    f.seen = true;
+    analyzed.push_back (lit);
+    const unsigned uidx = vlit (lit); // I didn't clean added flag
+    uint64_t id = unit_clauses[uidx];
+    assert (id);
+    unit_chain.push_back (id);
+    return;
+  }
+  f.added = true;
+  assert (v.reason && f.removable);
+  const const_literal_iterator end = v.reason->end ();
+  const_literal_iterator i;
+  for (i = v.reason->begin (); i != end; i++) {
+    const int other = *i;
+    if (other == lit)
+      continue;
+    calculate_minimize_chain (-other);
+  }
+  mini_chain.push_back (v.reason->id);
 }
 
 // Sort the literals in reverse assignment order (thus trail order) to
@@ -108,11 +157,12 @@ void Internal::clear_minimized_literals () {
   LOG ("clearing %zd minimized literals", minimized.size ());
   for (const auto &lit : minimized) {
     Flags &f = flags (lit);
-    f.poison = f.removable = f.shrinkable = false;
+    f.poison = f.removable = f.shrinkable = f.added = false;
   }
   for (const auto &lit : clause)
-    assert (!flags (lit).shrinkable),
-        flags (lit).keep = flags (lit).shrinkable = false;
+    assert (!flags (lit).shrinkable), flags (lit).keep =
+                                          flags (lit).shrinkable =
+                                              flags (lit).added = false;
   minimized.clear ();
 }
 

@@ -55,6 +55,7 @@ extern "C" {
 #include "config.hpp"
 #include "contract.hpp"
 #include "cover.hpp"
+#include "decompose.hpp"
 #include "elim.hpp"
 #include "ema.hpp"
 #include "external.hpp"
@@ -67,8 +68,9 @@ extern "C" {
 #include "level.hpp"
 #include "limit.hpp"
 #include "logging.hpp"
+#include "lratbuilder.hpp"
+#include "lratchecker.hpp"
 #include "message.hpp"
-#include "observer.hpp"
 #include "occs.hpp"
 #include "options.hpp"
 #include "parse.hpp"
@@ -147,29 +149,41 @@ struct Internal {
 
   /*----------------------------------------------------------------------*/
 
-  int mode;                    // current internal state
-  bool unsat;                  // empty clause found or learned
-  bool iterating;              // report learned unit ('i' line)
-  bool localsearching;         // true during local search
-  bool lookingahead;           // true during look ahead
-  bool preprocessing;          // true during preprocessing
-  bool protected_reasons;      // referenced reasons are protected
-  bool force_saved_phase;      // force saved phase in decision
-  bool searching_lucky_phases; // during 'lucky_phases'
-  bool stable;                 // true during stabilization phase
-  bool reported;               // reported in this solving call
-  bool external_prop;         // true if an external propagator is connected
-  bool external_prop_is_lazy; // true if the external propagator is lazy
-  char rephased;              // last type of resetting phases
-  Reluctant reluctant;        // restart counter in stable mode
-  size_t vsize;               // actually allocated variable data size
-  int max_var;                // internal maximum variable index
-  int level;                  // decision level ('control.size () - 1')
-  Phases phases;              // saved, target and best phases
-  signed char *vals;          // assignment [-max_var,max_var]
-  vector<signed char> marks;  // signed marks [1,max_var]
-  vector<unsigned> frozentab; // frozen counters [1,max_var]
-  vector<int> i2e;            // maps internal 'idx' to external 'lit'
+  int mode;                       // current internal state
+  bool unsat;                     // empty clause found or learned
+  bool iterating;                 // report learned unit ('i' line)
+  bool localsearching;            // true during local search
+  bool lookingahead;              // true during look ahead
+  bool preprocessing;             // true during preprocessing
+  bool protected_reasons;         // referenced reasons are protected
+  bool force_saved_phase;         // force saved phase in decision
+  bool searching_lucky_phases;    // during 'lucky_phases'
+  bool stable;                    // true during stabilization phase
+  bool reported;                  // reported in this solving call
+  bool external_prop;             // true if an external propagator is connected
+  bool external_prop_is_lazy;     // true if the external propagator is lazy
+  char rephased;                  // last type of resetting phases
+  Reluctant reluctant;            // restart counter in stable mode
+  size_t vsize;                   // actually allocated variable data size
+  int max_var;                    // internal maximum variable index
+  uint64_t clause_id;             // last used id for clauses
+  uint64_t original_id;           // ids for original clauses to produce lrat
+  uint64_t reserved_ids;          // number of reserved ids for original clauses
+  uint64_t conflict_id;           // store conflict id for finalize (frat)
+  vector<uint64_t> unit_clauses;  // keep track of unit_clauses (lrat/frat)
+  vector<uint64_t> lrat_chain;    // create lrat in solver: option lratdirect
+  vector<uint64_t> mini_chain;    // used to create lrat in minimize
+  vector<uint64_t> minimize_chain;// used to create lrat in minimize
+  vector<uint64_t> unit_chain;    // used to avoid duplicate units
+  vector<Clause *> inst_chain;    // for lrat in instantiate
+  vector<vector<vector<uint64_t>>>
+      probehbr_chains;          // only used if opts.probehbr=false
+  int level;                    // decision level ('control.size () - 1')
+  Phases phases;                // saved, target and best phases
+  signed char *vals;            // assignment [-max_var,max_var]
+  vector<signed char> marks;    // signed marks [1,max_var]
+  vector<unsigned> frozentab;   // frozen counters [1,max_var]
+  vector<int> i2e;              // maps internal 'idx' to external 'lit'
   vector<unsigned> relevanttab; // Reference counts for observed variables.
   Queue queue;                  // variable move to front decision queue
   Links links;                  // table of links for decision queue
@@ -189,7 +203,8 @@ struct Internal {
   Clause *conflict;             // set in 'propagation', reset in 'analyze'
   Clause *ignore;               // ignored during 'vivify_propagate'
   Clause *external_reason;      // used as reason at external propagations
-  size_t notified;          // next trail position to notify external prop
+  size_t notified;              // next trail position to notify external prop
+  Clause *probe_reason;         // set during probing
   size_t propagated;        // next trail position to propagate
   size_t propagated2;       // next binary trail position to propagate
   size_t propergated;       // propagated without blocking literals
@@ -205,6 +220,8 @@ struct Internal {
   vector<int> original;     // original added literals
   vector<int> levels;       // decision levels in learned clause
   vector<int> analyzed;     // analyzed literals in 'analyze'
+  vector<int> unit_analyzed;// to avoid duplicate units in lrat_chain
+  vector<int> decomposed;   // literals skipped in 'decompose'
   vector<int> minimized;    // removable or poison in 'minimize'
   vector<int> shrinkable;   // removable or poison in 'shrink'
   Reap reap;                // radix heap for shrink
@@ -219,6 +236,8 @@ struct Internal {
   Proof *proof;             // clausal proof observers if non zero
   Checker *checker;         // online proof checker observing proof
   Tracer *tracer;           // proof to file tracer observing proof
+  LratChecker *lratchecker; // online lrat checker observing proof
+  LratBuilder *lratbuilder; // lrat proof chain builder observing proof
   Options opts;             // run-time options
   Stats stats;              // statistics
 #ifndef QUIET
@@ -263,6 +282,9 @@ struct Internal {
   void init_scores (int old_max_var, int new_max_var);
 
   void add_original_lit (int lit);
+
+  // Reserve ids for original clauses to produce lrat
+  void reserve_ids (int number);
 
   // Enlarge tables.
   //
@@ -538,8 +560,8 @@ struct Internal {
   void deallocate_clause (Clause *);
   void delete_clause (Clause *);
   void mark_garbage (Clause *);
-  void assign_original_unit (int);
-  void add_new_original_clause ();
+  void assign_original_unit (uint64_t, int);
+  void add_new_original_clause (uint64_t);
   Clause *new_learned_redundant_clause (int glue);
   Clause *new_hyper_binary_resolved_clause (bool red, int glue);
   Clause *new_clause_as (const Clause *orig);
@@ -548,6 +570,8 @@ struct Internal {
   // Forward reasoning through propagation in 'propagate.cpp'.
   //
   int assignment_level (int lit, Clause *);
+  void build_chain_for_units (int lit, Clause *reason);
+  void build_chain_for_empty ();
   void search_assign (int lit, Clause *);
   void search_assign_driving (int lit, Clause *reason);
   void search_assign_external (int lit);
@@ -567,6 +591,7 @@ struct Internal {
   //
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
+  void calculate_minimize_chain (int lit);
 
   // Learning from conflicts in 'analyze.cc'.
   //
@@ -576,6 +601,7 @@ struct Internal {
   void bump_variables ();
   int recompute_glue (Clause *);
   void bump_clause (Clause *);
+  void clear_unit_analyzed_literals ();
   void clear_analyzed_literals ();
   void clear_analyzed_levels ();
   void clear_minimized_literals ();
@@ -743,6 +769,7 @@ struct Internal {
   void flush_vivification_schedule (Vivifier &);
   bool consider_to_vivify_clause (Clause *candidate, bool redundant_mode);
   void vivify_analyze_redundant (Vivifier &, Clause *start, bool &);
+  void vivify_build_lrat (int, Clause *);
   bool vivify_all_decisions (Clause *candidate, int subsume);
   void vivify_post_process_analysis (Clause *candidate, int subsume);
   void vivify_strengthen (Clause *candidate);
@@ -870,6 +897,28 @@ struct Internal {
     return (f.skip & bit) != 0;
   }
 
+  // During decompose ignore literals where we already built lrat chains
+  //
+  void mark_decomposed (int lit) {
+    Flags &f = flags (lit);
+    const unsigned bit = bign (lit);
+    assert ((f.decompose & bit) == 0);
+    LOG ("marking lrat chain of %d to be skipped", lit);
+    decomposed.push_back (lit);
+    f.decompose |= bit;
+  }
+  void unmark_decompose (int lit) {
+    Flags &f = flags (lit);
+    const unsigned bit = bign (lit);
+    f.decompose &= ~bit;
+  }
+  bool marked_decompose (int lit) {
+    const Flags &f = flags (lit);
+    const unsigned bit = bign (lit);
+    return (f.decompose & bit) != 0;
+  }
+  void clear_decomposed_literals ();
+
   // Blocked Clause elimination in 'block.cpp'.
   //
   bool is_blocked_clause (Clause *c, int pivot);
@@ -886,6 +935,7 @@ struct Internal {
 
   // Find gates in 'gates.cpp' for bounded variable substitution.
   //
+  int second_literal_in_binary_clause_lrat (Clause *, int first);
   int second_literal_in_binary_clause (Eliminator &, Clause *, int first);
   void mark_binary_literals (Eliminator &, int pivot);
   void find_and_gate (Eliminator &, int pivot);
@@ -902,6 +952,7 @@ struct Internal {
 
   void find_if_then_else (Eliminator &, int pivot);
 
+  Clause *find_binary_clause (int, int);
   void find_gate_clauses (Eliminator &, int pivot);
   void unmark_gate_clauses (Eliminator &);
 
@@ -948,12 +999,19 @@ struct Internal {
   //
   bool probing ();
   void failed_literal (int lit);
+  void probe_lrat_for_units (int lit);
   void probe_assign_unit (int lit);
   void probe_assign_decision (int lit);
   void probe_assign (int lit, int parent);
   void mark_duplicated_binary_clauses_as_garbage ();
   int get_parent_reason_literal (int lit);
   void set_parent_reason_literal (int lit, int reason);
+  void clean_probehbr_lrat ();
+  void init_probehbr_lrat ();
+  void get_probehbr_lrat (int lit, int uip);
+  void set_probehbr_lrat (int lit, int uip);
+  void probe_post_dominator_lrat (vector<Clause *> &, int, int);
+  void probe_dominator_lrat (int dom, Clause *reason);
   int probe_dominator (int a, int b);
   int hyper_binary_resolve (Clause *);
   void probe_propagate2 ();
@@ -978,6 +1036,10 @@ struct Internal {
   // Detect strongly connected components in the binary implication graph
   // (BIG) and equivalent literal substitution (ELS) in 'decompose.cpp'.
   //
+  void decompose_conflicting_scc_lrat (DFS *dfs, vector<int> &);
+  vector<Clause *> decompose_analyze_binary_clauses (DFS *dfs, int from);
+  void decompose_analyze_binary_chain (DFS *dfs, int);
+  void decompose_analyze_lrat (DFS *dfs, Clause *reason);
   bool decompose_round ();
   void decompose ();
 
@@ -990,7 +1052,9 @@ struct Internal {
 
   // Assumption handling.
   //
-  void assume (int lit);     // New assumption literal.
+  void assume_analyze_literal (int lit);
+  void assume_analyze_reason (int lit, Clause *reason);
+  void assume (int);         // New assumption literal.
   bool failed (int lit);     // Literal failed assumption?
   void reset_assumptions (); // Reset after 'solve' call.
   void failing ();           // Prepare failed assumptions.
@@ -1092,6 +1156,7 @@ struct Internal {
   int cdcl_loop_with_inprocessing ();
   void reset_solving ();
   int solve (bool preprocess_only = false);
+  void finalize ();
 
   //
   int lookahead ();
@@ -1193,10 +1258,11 @@ struct Internal {
   // Enable and disable proof logging and checking.
   //
   void new_proof_on_demand ();
-  void close_trace (); // Stop proof tracing.
-  void flush_trace (); // Flush proof trace file.
-  void trace (File *); // Start write proof file.
-  void check ();       // Enable online proof checking.
+  void build_full_lrat (); // enable full lrat
+  void close_trace ();     // Stop proof tracing.
+  void flush_trace ();     // Flush proof trace file.
+  void trace (File *);     // Start write proof file.
+  void check ();           // Enable online proof checking.
 
   // Dump to '<stdout>' as DIMACS for debugging.
   //

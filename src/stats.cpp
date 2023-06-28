@@ -474,6 +474,8 @@ void Stats::print (Internal *internal) {
     PRT ("  vivifyunits:   %15" PRId64 "   %10.2f %%  per vivify check",
          stats.vivifyunits,
          percent (stats.vivifyunits, stats.vivifychecks));
+    PRT ("  vivifyinst:    %15" PRId64 "   %10.2f %%  per vivify check",
+         stats.vivifyinst, percent (stats.vivifyinst, stats.vivifychecks));
     PRT ("  vivifysubs:    %15" PRId64 "   %10.2f %%  per subsumed",
          stats.vivifysubs, percent (stats.vivifysubs, stats.subsumed));
     PRT ("  vivifystrs:    %15" PRId64 "   %10.2f %%  per strengthened",
@@ -495,9 +497,6 @@ void Stats::print (Internal *internal) {
     PRT ("  vivifyreused:  %15" PRId64 "   %10.2f %%  per decision",
          stats.vivifyreused,
          percent (stats.vivifyreused, stats.vivifydecs));
-    PRT ("  vivifyinst:    %15" PRId64 "   %10.2f %%  per decision",
-         stats.vivifyinstantiate,
-         percent (stats.vivifyinstantiate, stats.vivifystrs));
   }
   if (all || stats.walk.count) {
     PRT ("walked:          %15" PRId64 "   %10.2f    interval",

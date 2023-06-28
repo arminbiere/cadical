@@ -46,7 +46,7 @@ bool Internal::ternary_find_binary_clause (int a, int b) {
 /*------------------------------------------------------------------------*/
 
 // Check whether a ternary clause consisting of the permutation of the given
-// literals  already exists or is subsumed by an existing binary clause.
+// literals already exists or is subsumed by an existing binary clause.
 
 bool Internal::ternary_find_ternary_clause (int a, int b, int c) {
   assert (occurring ());
@@ -101,8 +101,8 @@ bool Internal::ternary_find_ternary_clause (int a, int b, int c) {
 
 // Try to resolve the two ternary clauses on the given pivot (assumed to
 // occur positively in the first clause, negatively in the second).  If the
-// resolvent hast four literals, is tautological, already exists or in the
-// case of a ternary resolvent is subsumed by an existing binary clause than
+// resolvent has four literals, is tautological, already exists or in the
+// case of a ternary resolvent is subsumed by an existing binary clause then
 // 'false' is returned.  The global 'clause' contains the resolvent and
 // needs to be cleared in any case.
 
@@ -191,9 +191,15 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
       if (hyper_ternary_resolve (c, pivot, d)) {
         size_t size = clause.size ();
         bool red = (size == 3 || (c->redundant && d->redundant));
+        if (opts.lrat && !opts.lratexternal) {
+          assert (lrat_chain.empty ());
+          lrat_chain.push_back (c->id);
+          lrat_chain.push_back (d->id);
+        }
         Clause *r = new_hyper_ternary_resolved_clause (red);
         if (red)
           r->hyper = true;
+        lrat_chain.clear ();
         clause.clear ();
         LOG (r, "hyper ternary resolved");
         stats.htrs++;

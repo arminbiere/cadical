@@ -316,8 +316,10 @@ void Internal::copy_clause (Clause *c) {
 // This is the moving garbage collector.
 
 void Internal::copy_non_garbage_clauses () {
+
   size_t collected_clauses = 0, collected_bytes = 0;
   size_t moved_clauses = 0, moved_bytes = 0;
+
   // First determine 'moved_bytes' and 'collected_bytes'.
   //
   for (const auto &c : clauses)
