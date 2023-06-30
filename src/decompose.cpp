@@ -66,12 +66,12 @@ void Internal::decompose_conflicting_scc_lrat (DFS *dfs, vector<int> &scc) {
     f.seen = true;
     analyzed.push_back (lit);
     decompose_analyze_binary_chain (dfs, lit);
-    for (auto p = mini_chain.rbegin (); p < mini_chain.rend (); p++) {
+    for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++) {
       lrat_chain.push_back (*p);
     }
     /*
     if (back)
-      for (auto p = mini_chain.rbegin (); p < mini_chain.rend (); p++) {
+      for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++) {
         lrat_chain.push_back (*p);
       }
     else
@@ -117,7 +117,7 @@ void Internal::decompose_analyze_lrat (DFS *dfs, Clause *reason) {
     }
     assert (mini_chain.empty ());
     decompose_analyze_binary_chain (dfs, other);
-    for (auto p = mini_chain.rbegin (); p < mini_chain.rend (); p++) {
+    for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++) {
       lrat_chain.push_back (*p);
     }
     mini_chain.clear ();

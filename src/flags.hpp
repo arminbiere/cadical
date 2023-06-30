@@ -53,7 +53,7 @@ struct Flags { // Variable flags.
     seen = keep = poison = removable = shrinkable = added = false;
     subsume = elim = ternary = true;
     block = 3u;
-    skip = assumed = failed = 0;
+    skip = assumed = failed = decompose = 0;
     status = UNUSED;
   }
 

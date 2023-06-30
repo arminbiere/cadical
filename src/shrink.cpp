@@ -471,7 +471,7 @@ void Internal::shrink_and_minimize_clause () {
 
   START (minimize);
   clear_minimized_literals ();
-  for (auto p = minimize_chain.rbegin (); p < minimize_chain.rend (); p++) {
+  for (auto p = minimize_chain.rbegin (); p != minimize_chain.rend (); p++) {
     lrat_chain.push_back (*p);
   }
   minimize_chain.clear ();
