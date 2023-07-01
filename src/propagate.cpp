@@ -117,8 +117,9 @@ inline void Internal::search_assign (int lit, Clause *reason) {
           reason == external_reason);
   Var &v = var (idx);
   int lit_level;
-  assert (!opts.lrat || opts.lratexternal || level || reason == external_reason
-          ||  reason == decision_reason || !lrat_chain.empty ());
+  assert (!opts.lrat || opts.lratexternal || level ||
+          reason == external_reason || reason == decision_reason ||
+          !lrat_chain.empty ());
   if (reason == external_reason &&
       ((size_t) level <= assumptions.size () + (!!constraint.size ()))) {
     // On the pseudo-decision levels every external propagation must be

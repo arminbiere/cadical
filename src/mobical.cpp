@@ -1575,7 +1575,7 @@ void Trace::generate_options (Random &random, Size size) {
   if (!in_connection && random.generate_double () < 0.3) {
     push_back (new SetCall ("lrat", 1));
     is_lrat = true;
-  } else {      // TODO ist this correct?
+  } else { // TODO ist this correct?
     push_back (new SetCall ("lrat", 0));
     is_lrat = false;
   }

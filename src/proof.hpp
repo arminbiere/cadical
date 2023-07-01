@@ -88,7 +88,8 @@ public:
   void flush_clause (Clause *);           // remove falsified literals
   void strengthen_clause (Clause *, int); // remove second argument
   void strengthen_clause (Clause *, int, const vector<uint64_t> &);
-  void otfs_strengthen_clause (Clause *, const vector<int> &, const vector<uint64_t> &);
+  void otfs_strengthen_clause (Clause *, const vector<int> &,
+                               const vector<uint64_t> &);
   void otfs_strengthen_clause (Clause *, const vector<int> &);
 
   void flush ();

@@ -458,11 +458,11 @@ bool Solver::set (const char *arg, int val) {
   }
   if (strcmp (arg, "lrat")) {
     REQUIRE (!internal->external_prop,
-      "lrat is currently not compatible with external propagation");
+             "lrat is currently not compatible with external propagation");
   }
   bool res = internal->opts.set (arg, val);
   LOG_API_CALL_END ("set", arg, val, res);
-  
+
   return res;
 }
 
@@ -820,7 +820,7 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
   REQUIRE_VALID_STATE ();
   REQUIRE (propagator, "can not connect zero propagator");
   REQUIRE (!internal->opts.lrat,
-    "lrat is currently not compatible with external propagation");
+           "lrat is currently not compatible with external propagation");
   // TODO: require opts.lrat = false
 
 #ifdef LOGGING

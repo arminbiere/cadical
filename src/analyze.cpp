@@ -729,10 +729,11 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
     remove_watch (watches (other_init), new_conflict);
   remove_watch (watches (uip), new_conflict);
 
-  assert (!opts.lrat || opts.lratexternal || lrat_chain.back () == new_conflict->id);
+  assert (!opts.lrat || opts.lratexternal ||
+          lrat_chain.back () == new_conflict->id);
   if (opts.lrat && !opts.lratexternal) {
     assert (!lrat_chain.empty ());
-    for (const auto & id : unit_chain) {
+    for (const auto &id : unit_chain) {
       mini_chain.push_back (id);
     }
     const auto end = lrat_chain.rend ();
@@ -741,7 +742,7 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
       const auto id = *i;
       mini_chain.push_back (id);
     }
-    lrat_chain.clear ();    // see if this is correct...
+    lrat_chain.clear (); // see if this is correct...
     clear_unit_analyzed_literals ();
     unit_chain.clear ();
   }
@@ -822,8 +823,7 @@ void Internal::otfs_strengthen_clause (Clause *c, int lit, int new_size,
     if (opts.lrat && !opts.lratexternal) {
       LOG (mini_chain, "otfs with chain");
       proof->otfs_strengthen_clause (c, old, mini_chain);
-    }
-    else
+    } else
       proof->otfs_strengthen_clause (c, old);
   }
   if (!c->redundant) {

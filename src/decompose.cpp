@@ -581,8 +581,8 @@ bool Internal::decompose_round () {
         mark_added (c);
       // we have assert (c->size > 2)
       if (c->size == 2) { // cheaper to update only new binary clauses
-       update_watch_size (watches (c->literals[0]), c->literals[1], c);
-       update_watch_size (watches (c->literals[1]), c->literals[0], c);
+        update_watch_size (watches (c->literals[0]), c->literals[1], c);
+        update_watch_size (watches (c->literals[1]), c->literals[0], c);
       }
       LOG (c, "substituted");
     }

@@ -149,33 +149,33 @@ struct Internal {
 
   /*----------------------------------------------------------------------*/
 
-  int mode;                       // current internal state
-  bool unsat;                     // empty clause found or learned
-  bool iterating;                 // report learned unit ('i' line)
-  bool localsearching;            // true during local search
-  bool lookingahead;              // true during look ahead
-  bool preprocessing;             // true during preprocessing
-  bool protected_reasons;         // referenced reasons are protected
-  bool force_saved_phase;         // force saved phase in decision
-  bool searching_lucky_phases;    // during 'lucky_phases'
-  bool stable;                    // true during stabilization phase
-  bool reported;                  // reported in this solving call
-  bool external_prop;             // true if an external propagator is connected
-  bool external_prop_is_lazy;     // true if the external propagator is lazy
-  char rephased;                  // last type of resetting phases
-  Reluctant reluctant;            // restart counter in stable mode
-  size_t vsize;                   // actually allocated variable data size
-  int max_var;                    // internal maximum variable index
-  uint64_t clause_id;             // last used id for clauses
-  uint64_t original_id;           // ids for original clauses to produce lrat
-  uint64_t reserved_ids;          // number of reserved ids for original clauses
-  uint64_t conflict_id;           // store conflict id for finalize (frat)
-  vector<uint64_t> unit_clauses;  // keep track of unit_clauses (lrat/frat)
-  vector<uint64_t> lrat_chain;    // create lrat in solver: option lratdirect
-  vector<uint64_t> mini_chain;    // used to create lrat in minimize
-  vector<uint64_t> minimize_chain;// used to create lrat in minimize
-  vector<uint64_t> unit_chain;    // used to avoid duplicate units
-  vector<Clause *> inst_chain;    // for lrat in instantiate
+  int mode;                    // current internal state
+  bool unsat;                  // empty clause found or learned
+  bool iterating;              // report learned unit ('i' line)
+  bool localsearching;         // true during local search
+  bool lookingahead;           // true during look ahead
+  bool preprocessing;          // true during preprocessing
+  bool protected_reasons;      // referenced reasons are protected
+  bool force_saved_phase;      // force saved phase in decision
+  bool searching_lucky_phases; // during 'lucky_phases'
+  bool stable;                 // true during stabilization phase
+  bool reported;               // reported in this solving call
+  bool external_prop;         // true if an external propagator is connected
+  bool external_prop_is_lazy; // true if the external propagator is lazy
+  char rephased;              // last type of resetting phases
+  Reluctant reluctant;        // restart counter in stable mode
+  size_t vsize;               // actually allocated variable data size
+  int max_var;                // internal maximum variable index
+  uint64_t clause_id;         // last used id for clauses
+  uint64_t original_id;       // ids for original clauses to produce lrat
+  uint64_t reserved_ids;      // number of reserved ids for original clauses
+  uint64_t conflict_id;       // store conflict id for finalize (frat)
+  vector<uint64_t> unit_clauses; // keep track of unit_clauses (lrat/frat)
+  vector<uint64_t> lrat_chain;   // create lrat in solver: option lratdirect
+  vector<uint64_t> mini_chain;   // used to create lrat in minimize
+  vector<uint64_t> minimize_chain; // used to create lrat in minimize
+  vector<uint64_t> unit_chain;     // used to avoid duplicate units
+  vector<Clause *> inst_chain;     // for lrat in instantiate
   vector<vector<vector<uint64_t>>>
       probehbr_chains;          // only used if opts.probehbr=false
   int level;                    // decision level ('control.size () - 1')
@@ -203,28 +203,28 @@ struct Internal {
   Clause *conflict;             // set in 'propagation', reset in 'analyze'
   Clause *ignore;               // ignored during 'vivify_propagate'
   Clause *external_reason;      // used as reason at external propagations
-  size_t notified;              // next trail position to notify external prop
-  Clause *probe_reason;         // set during probing
-  size_t propagated;        // next trail position to propagate
-  size_t propagated2;       // next binary trail position to propagate
-  size_t propergated;       // propagated without blocking literals
-  size_t best_assigned;     // best maximum assigned ever
-  size_t target_assigned;   // maximum assigned without conflict
-  size_t no_conflict_until; // largest trail prefix without conflict
-  vector<int> trail;        // currently assigned literals
-  vector<int> clause;       // simplified in parsing & learning
-  vector<int> assumptions;  // assumed literals
-  vector<int> constraint;   // literals of the constraint
-  bool unsat_constraint;    // constraint used for unsatisfiability?
-  bool marked_failed;       // are the failed assumptions marked?
-  vector<int> original;     // original added literals
-  vector<int> levels;       // decision levels in learned clause
-  vector<int> analyzed;     // analyzed literals in 'analyze'
-  vector<int> unit_analyzed;// to avoid duplicate units in lrat_chain
-  vector<int> decomposed;   // literals skipped in 'decompose'
-  vector<int> minimized;    // removable or poison in 'minimize'
-  vector<int> shrinkable;   // removable or poison in 'shrink'
-  Reap reap;                // radix heap for shrink
+  size_t notified;           // next trail position to notify external prop
+  Clause *probe_reason;      // set during probing
+  size_t propagated;         // next trail position to propagate
+  size_t propagated2;        // next binary trail position to propagate
+  size_t propergated;        // propagated without blocking literals
+  size_t best_assigned;      // best maximum assigned ever
+  size_t target_assigned;    // maximum assigned without conflict
+  size_t no_conflict_until;  // largest trail prefix without conflict
+  vector<int> trail;         // currently assigned literals
+  vector<int> clause;        // simplified in parsing & learning
+  vector<int> assumptions;   // assumed literals
+  vector<int> constraint;    // literals of the constraint
+  bool unsat_constraint;     // constraint used for unsatisfiability?
+  bool marked_failed;        // are the failed assumptions marked?
+  vector<int> original;      // original added literals
+  vector<int> levels;        // decision levels in learned clause
+  vector<int> analyzed;      // analyzed literals in 'analyze'
+  vector<int> unit_analyzed; // to avoid duplicate units in lrat_chain
+  vector<int> decomposed;    // literals skipped in 'decompose'
+  vector<int> minimized;     // removable or poison in 'minimize'
+  vector<int> shrinkable;    // removable or poison in 'shrink'
+  Reap reap;                 // radix heap for shrink
 
   vector<int> probes;       // remaining scheduled probes
   vector<Level> control;    // 'level + 1 == control.size ()'
