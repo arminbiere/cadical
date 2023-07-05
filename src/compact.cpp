@@ -248,7 +248,7 @@ void Internal::compact () {
     unit_clauses[2 * src] = 0;
     unit_clauses[2 * src + 1] = 0;
     assert (id);
-    if (proof)
+    if (proof && opts.lrat)
       proof->delete_unit_clause (id, lit);
   }
   unit_clauses.resize (2 * mapper.new_vsize);
