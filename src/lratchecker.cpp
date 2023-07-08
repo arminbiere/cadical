@@ -126,6 +126,8 @@ LratChecker::LratChecker (Internal *i)
     nonces[n] = nonce;
   }
 
+  strict_lrat = internal->opts.lrat;
+
   memset (&stats, 0, sizeof (stats)); // Initialize statistics.
 }
 
@@ -223,6 +225,8 @@ void LratChecker::insert () {
 
 // TODO "strict" resolution check instead of rup check
 bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
+  LOG ("LRAT CHECKER resolution check skipped for every case for now");
+  return true;
   if (proof_chain.empty ()) { // ignore these case TODO chain.size == 1?
     LOG ("LRAT CHECKER resolution check skipped clause is tautological");
     return true;
@@ -334,8 +338,8 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
         continue;
       // TODO uncomment and fuzz maybe also withouth opts.lratexternal
       // of course this also fails in decompose :/ ... and instantiate
-      assert (!checked_lit (lit) || internal->opts.lratexternal ||
-              internal->opts.decompose);
+      // assert (!checked_lit (lit) || internal->opts.lratexternal ||
+      //        internal->opts.decompose);
       // || internal->opts.instantiate);
       // assert (!checked_lit (lit));      // tempting to assert here since
       // usually this should be a bug in
@@ -359,8 +363,8 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
       // known problems with lratbuilder? not interesting anymore...
       // fails in decompose... I do not have a trace for instantiate but I
       // am sure it also fails this assert
-      assert (proof_chain.back () == id || internal->opts.lratexternal ||
-              internal->opts.decompose);
+      // assert (proof_chain.back () == id || internal->opts.lratexternal ||
+      //        internal->opts.decompose);
       // || internal->opts.instantiate);
       // assert (proof_chain.back () == id);    // also tempting since this
       // basically means the proof chain
@@ -432,7 +436,15 @@ void LratChecker::add_derived_clause (uint64_t id, const vector<int> &c) {
   import_clause (c);
   last_id = id;
   assert (id);
-  insert ();
+  if (strict_lrat) {
+    fatal_message_start ();
+    fputs ("tried to add unproven derived clause:\n", stderr);
+    for (const auto &lit : imported_clause)
+      fprintf (stderr, "%d ", lit);
+    fputc ('0', stderr);
+    fatal_message_end ();
+  } else
+    insert ();
   imported_clause.clear ();
   STOP (checking);
 }

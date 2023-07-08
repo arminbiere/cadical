@@ -282,24 +282,25 @@ void Internal::failing () {
         external->check_learned_clause ();
         if (proof) {
           if (opts.lrat && !opts.lratexternal) {
-            if (constraint_chains[vlit (lit)]
-                    .empty ()) {  // this should only happen when
-              clause.pop_back (); // the clause is tautological
+            /*
+            if (constraint_chains[vlit (lit)].empty ()) {
+              clause.pop_back ();
               continue;
             }
+            */
             for (auto p : constraint_chains[vlit (lit)]) {
               lrat_chain.push_back (p);
             }
             LOG (lrat_chain, "assume proof chain with constraints");
             // TODO this is no resolution proof and by construction
             // incompatible? therefore we do not add the clause
-            // proof->add_derived_clause (++clause_id, clause, lrat_chain);
+            proof->add_derived_clause (++clause_id, clause, lrat_chain);
             lrat_chain.clear ();
+            proof->delete_clause (clause_id, clause);
           } else {
             proof->add_derived_clause (++clause_id, clause);
-            proof->delete_clause (
-                clause_id, clause); // careful: if code above is uncommented
-          }                         // this needs to be below the else path
+            proof->delete_clause (clause_id, clause);
+          }                        
         }
         clause.pop_back ();
       }

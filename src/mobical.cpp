@@ -1565,11 +1565,6 @@ void Trace::generate_options (Random &random, Size size) {
   if (random.generate_double () < 0.8)
     push_back (new SetCall ("check", 1));
 
-  // There are two different internal checkers, one for lrat, one for drat
-  //
-  if (random.generate_double () < 0.3)
-    push_back (new SetCall ("checklrat", 0));
-
   // LRAT is incompatible with external_propagator so we set lrat here.
   //
   if (!in_connection && random.generate_double () < 0.3) {

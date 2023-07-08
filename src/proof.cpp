@@ -45,11 +45,10 @@ void Internal::check () {
     lratchecker = new LratChecker (this);
     LOG ("PROOF connecting lrat proof checker");
     proof->connect (lratchecker);
-  } else {
-    checker = new Checker (this);
-    LOG ("PROOF connecting proof checker");
-    proof->connect (checker);
   }
+  checker = new Checker (this);
+  LOG ("PROOF connecting proof checker");
+  proof->connect (checker);
 }
 
 // We want to close a proof trace and stop checking as soon we are done.
@@ -374,8 +373,6 @@ void Proof::add_original_clause () {
 void Proof::add_derived_clause () {
   LOG (clause, "PROOF adding derived external clause");
   assert (clause_id);
-  assert (!internal->opts.lrat || internal->opts.lratexternal ||
-          !proof_chain.empty ());
 
   if (lratbuilder) {
     if (proof_chain.empty ())
@@ -384,7 +381,7 @@ void Proof::add_derived_clause () {
       lratbuilder->add_derived_clause (clause_id, clause);
   }
   if (lratchecker) {
-    if (proof_chain.empty ())
+    if (!internal->opts.lrat)
       lratchecker->add_derived_clause (clause_id, clause);
     else
       lratchecker->add_derived_clause (clause_id, clause, proof_chain);

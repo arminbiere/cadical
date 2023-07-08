@@ -36,6 +36,7 @@ class LratChecker {
   // Capacity of variable values.
   //
   int64_t size_vars;
+  bool strict_lrat;
 
   // The 'watchers' and 'marks' data structures are not that time critical
   // and thus we access them by first mapping a literal to 'unsigned'.
