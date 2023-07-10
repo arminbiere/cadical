@@ -30,7 +30,8 @@ signed char &LratChecker::checked_lit (int lit) {
 LratCheckerClause *LratChecker::new_clause () {
   const size_t size = imported_clause.size ();
   assert (size <= UINT_MAX);
-  const size_t bytes = sizeof (LratCheckerClause) + size * sizeof (int);
+  const int off = size ? -1 : 0;
+  const size_t bytes = sizeof (LratCheckerClause) + (size - off) * sizeof (int);
   LratCheckerClause *res = (LratCheckerClause *) new char[bytes];
   res->garbage = false;
   res->next = 0;
