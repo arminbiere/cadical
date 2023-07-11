@@ -383,7 +383,7 @@ void Internal::add_new_original_clause (uint64_t id) {
   if (skip) {
     if (proof) {
       if (opts.lrat) {
-          proof->delete_clause (id, original);
+        proof->delete_clause (id, original);
       } else {
         proof->delete_external_original_clause (id, external->eclause);
       }

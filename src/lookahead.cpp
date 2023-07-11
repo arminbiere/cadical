@@ -5,7 +5,7 @@ namespace CaDiCaL {
 struct literal_occ {
   int lit;
   int count;
-  bool operator<(const literal_occ &locc) const {
+  bool operator< (const literal_occ &locc) const {
     return (count > locc.count) || (count == locc.count && lit < locc.lit);
   }
   literal_occ operator++ () {

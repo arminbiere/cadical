@@ -300,7 +300,7 @@ void Internal::failing () {
           } else {
             proof->add_derived_clause (++clause_id, clause);
             proof->delete_clause (clause_id, clause);
-          }                        
+          }
         }
         clause.pop_back ();
       }

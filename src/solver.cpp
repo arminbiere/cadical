@@ -544,6 +544,8 @@ void Solver::add (int lit) {
   LOG_API_CALL_END ("add", lit);
 }
 
+bool Solver::inconsistent () { return internal->unsat; }
+
 void Solver::constrain (int lit) {
   TRACE ("constrain", lit);
   REQUIRE_VALID_STATE ();

@@ -225,6 +225,8 @@ public:
   //
   void add (int lit);
 
+  bool inconsistent ();
+
   // Assume valid non zero literal for next call to 'solve'.  These
   // assumptions are reset after the call to 'solve' as well as after
   // returning from 'simplify' and 'lookahead.
