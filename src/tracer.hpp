@@ -12,6 +12,7 @@ class Tracer {
   bool binary;
   bool lrat;
   bool frat;
+  bool veripb;
 
   int64_t added, deleted;
 
@@ -35,13 +36,20 @@ class Tracer {
   void frat_delete_clause (uint64_t, const vector<int> &);
   void frat_finalize_clause (uint64_t, const vector<int> &);
 
+  // support veriPB
+  void veripb_finalize_clause (uint64_t id, const vector<int> &clause);
+  void veripb_add_derived_clause (uint64_t id, const vector<int> &clause,
+                              const vector<uint64_t> &chain);
+  void veripb_add_original_clause (uint64_t id, const vector<int> &clause);
+  void veripb_delete_clause (uint64_t id, const vector<int> &clause);
+
   // support DRAT
   void drat_add_clause (const vector<int> &);
   void drat_delete_clause (const vector<int> &);
 
 public:
   // own and delete 'file'
-  Tracer (Internal *, File *file, bool binary, bool lrat, bool frat);
+  Tracer (Internal *, File *file, bool binary, bool lrat, bool frat, bool veripb);
   ~Tracer ();
 
   void add_derived_clause (uint64_t, const vector<int> &);

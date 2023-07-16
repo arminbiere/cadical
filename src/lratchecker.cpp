@@ -283,7 +283,6 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
            "on "
            "variable %" PRId64,
            lit);
-      assert (false);
       return false;
     }
   }
