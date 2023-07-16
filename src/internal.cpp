@@ -784,6 +784,10 @@ int Internal::lookahead () {
 /*------------------------------------------------------------------------*/
 
 void Internal::finalize () {
+  if (tracer && opts.lratveripb) {
+    tracer->veripb_finalize_proof (conflict_id);
+    return;
+  }
   if (!proof || !opts.lratfrat)
     return;
   LOG ("finalizing");

@@ -37,11 +37,10 @@ class Tracer {
   void frat_finalize_clause (uint64_t, const vector<int> &);
 
   // support veriPB
-  void veripb_finalize_clause (uint64_t id, const vector<int> &clause);
-  void veripb_add_derived_clause (uint64_t id, const vector<int> &clause,
+  void veripb_add_derived_clause (const vector<int> &clause,
                               const vector<uint64_t> &chain);
-  void veripb_add_original_clause (uint64_t id, const vector<int> &clause);
-  void veripb_delete_clause (uint64_t id, const vector<int> &clause);
+  void veripb_begin_proof (uint64_t reserved_ids);
+  void veripb_delete_clause (uint64_t id);
 
   // support DRAT
   void drat_add_clause (const vector<int> &);
@@ -59,6 +58,7 @@ public:
   void add_original_clause (uint64_t, const vector<int> &); // for frat
   void finalize_clause (uint64_t, const vector<int> &);     // for frat
   void set_first_id (uint64_t);
+  void veripb_finalize_proof (uint64_t);
 
   bool closed ();
   void close ();

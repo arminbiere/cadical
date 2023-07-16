@@ -268,21 +268,32 @@ void Tracer::drat_delete_clause (const vector<int> &clause) {
 
 /*------------------------------------------------------------------------*/
 
-void Tracer::veripb_finalize_clause (uint64_t id, const vector<int> &clause) {
-  LOG ("TRACER veriPB tracing finalization of clause");
-  // TODO
+void Tracer::veripb_finalize_proof (uint64_t conflict_id) {
+  if (file->closed ())
+    return;
+  LOG ("TRACER veriPB tracing finalization of proof");
+  file->put ("output NONE\n");
+  file->put ("conclusion UNSAT [: ");
+  file->put (conflict_id);
+  file->put (" ]\n");
+  file->put ("end pseudo-Boolean proof\n");
 }
 
-void Tracer::veripb_add_derived_clause (uint64_t id, const vector<int> &clause,
+void Tracer::veripb_add_derived_clause (const vector<int> &clause,
                               const vector<uint64_t> &chain) {
   LOG ("TRACER veriPB tracing addition of derived clause");
   file->put ("pol ");
-  file->put (id);
+  bool first = true;
   for (auto p = chain.rbegin (); p != chain.rend (); p++) {
     auto cid = *p;
-    file->put (' ');
-    file->put (cid);
-    file->put (" + s");
+    if (first) {
+      first = false;
+      file->put (cid);
+    } else {
+      file->put (' ');
+      file->put (cid);
+      file->put (" + s");
+    }
   }
   file->put ("\n");
   file->put ("e -1 ");
@@ -298,14 +309,19 @@ void Tracer::veripb_add_derived_clause (uint64_t id, const vector<int> &clause,
   
 }
 
-void Tracer::veripb_add_original_clause (uint64_t id, const vector<int> &clause) {
-  LOG ("TRACER veriPB tracing addition of original clause");
-  // TODO
+void Tracer::veripb_begin_proof (uint64_t reserved_ids) {
+  LOG ("TRACER veriPB tracing start of proof");
+  file->put ("pseudo-Boolean proof version 2.0\n");
+  file->put ("f ");
+  file->put (reserved_ids);
+  file->put ("\n");
 }
 
-void Tracer::veripb_delete_clause (uint64_t id, const vector<int> &clause) {
+void Tracer::veripb_delete_clause (uint64_t id) {
   LOG ("TRACER veriPB tracing deletion of clause");
-  // TODO
+  file->put ("del ");
+  file->put (id);
+  file->put ("\n");
 }
 
 /*------------------------------------------------------------------------*/
@@ -313,8 +329,6 @@ void Tracer::veripb_delete_clause (uint64_t id, const vector<int> &clause) {
 void Tracer::add_original_clause (uint64_t id, const vector<int> &clause) {
   if (file->closed ())
     return;
-  if (veripb)
-    veripb_add_original_clause (id, clause);
   else if (frat)
     frat_add_original_clause (id, clause);
 }
@@ -336,7 +350,7 @@ void Tracer::add_derived_clause (uint64_t id, const vector<int> &clause,
   if (file->closed ())
     return;
   if (veripb)
-    veripb_add_derived_clause (id, clause, chain);
+    veripb_add_derived_clause (clause, chain);
   else if (frat)
     frat_add_derived_clause (id, clause, chain);
   else if (lrat)
@@ -350,7 +364,7 @@ void Tracer::delete_clause (uint64_t id, const vector<int> &clause) {
   if (file->closed ())
     return;
   if (veripb)
-    veripb_delete_clause (id, clause);
+    veripb_delete_clause (id);
   else if (frat)
     frat_delete_clause (id, clause);
   else if (lrat)
@@ -363,13 +377,17 @@ void Tracer::delete_clause (uint64_t id, const vector<int> &clause) {
 void Tracer::finalize_clause (uint64_t id, const vector<int> &clause) {
   if (file->closed ())
     return;
-  if (veripb)
-    veripb_finalize_clause (id, clause);
-  else if (frat)
+  if (frat)
     frat_finalize_clause (id, clause);
 }
 
-void Tracer::set_first_id (uint64_t id) { latest_id = id; }
+void Tracer::set_first_id (uint64_t id) {
+  latest_id = id;
+  if (file->closed ())
+    return;
+  if (veripb)
+    veripb_begin_proof (id);
+}
 
 /*------------------------------------------------------------------------*/
 
