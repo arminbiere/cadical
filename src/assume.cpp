@@ -50,9 +50,6 @@ void Internal::assume_analyze_literal (int lit) {
   assert (assumed (-lit));
   LOG ("failed assumption %d", -lit);
   clause.push_back (lit);
-  const unsigned bit = bign (-lit);
-  assert (!(f.failed & bit));
-  f.failed |= bit;
 }
 
 void Internal::assume_analyze_reason (int lit, Clause *reason) {
@@ -185,6 +182,8 @@ void Internal::failing () {
 
     // used for unsat_constraint lrat
     vector<vector<uint64_t>> constraint_chains;
+    vector<vector<int>> constraint_clauses;
+    vector<int> sum_constraints;
 
     // no lrat do bfs as it was before
     if (!opts.lrat || opts.lratexternal) {
@@ -223,34 +222,60 @@ void Internal::failing () {
       Var &v = var (lit);
       assert (v.reason);
       assume_analyze_reason (lit, v.reason);
+      for (auto & lit : clause) {
+        Flags &f = flags (lit);
+        const unsigned bit = bign (-lit);
+        if (!(f.failed & bit))
+          f.failed |= bit;
+      }
       clear_analyzed_literals ();
     } else { // lrat for unsat_constraint
       assert (clause.empty ());
       clear_analyzed_literals ();
       const size_t size = 2 * (1 + (size_t) max_var);
       constraint_chains.resize (size);
+      constraint_clauses.resize (size);
       for (size_t i = 0; i > size; i++) {
         vector<uint64_t> empty;
+        vector<int> empty2;
         constraint_chains[i] = empty;
+        constraint_clauses[i] = empty2;
       }
       for (auto lit : constraint) {
+        // make sure nothing gets marked failed twice
+        // also might shortcut the case where
+        // lrat_chain is empty because clause is tautological
         assert (lit != INT_MIN);
-        for (auto ign :
-             clause) { // make sure nothing gets marked failed twice
-          Flags &f = flags (ign); // also might shortcut the case where
+        /*
+        for (auto ign : clause) {
+          Flags &f = flags (ign);
           if (f.seen)
-            continue;    // lrat_chain is empty because clause
-          f.seen = true; // is tautological
+            continue;
+          f.seen = true;
           analyzed.push_back (ign);
         }
+        */
         assume_analyze_literal (lit);
         assert (constraint_chains[vlit (lit)].empty ());
+        for (auto ign : clause) {
+          constraint_clauses[vlit (lit)].push_back (ign);
+          Flags &f = flags (ign);
+          const unsigned bit = bign (-ign);
+          if (!(f.failed & bit)) {
+            sum_constraints.push_back (ign);
+            assert (!(f.failed & bit));
+            f.failed |= bit;
+          }
+        }
+        clause.clear ();
         clear_analyzed_literals ();
         for (auto p : lrat_chain) {
           constraint_chains[vlit (lit)].push_back (p);
         }
         lrat_chain.clear ();
       }
+      for (auto & lit : sum_constraints)
+        clause.push_back (lit);
     }
     clear_analyzed_literals ();
 
@@ -278,6 +303,11 @@ void Internal::failing () {
       }
     } else {
       for (auto lit : constraint) {
+        if (opts.lrat && !opts.lratexternal) {
+          clause.clear ();
+          for (auto & ign : constraint_clauses[vlit (lit)])
+            clause.push_back (ign);
+        }
         clause.push_back (-lit);
         external->check_learned_clause ();
         if (proof) {
