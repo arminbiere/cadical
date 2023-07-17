@@ -688,7 +688,7 @@ int Internal::solve (bool preprocess_only) {
       res = local_search ();
     if (!res)
       res = lucky_phases ();
-    if (!res || external_prop)
+    if (!res || (res == 10 && external_prop))
       res = cdcl_loop_with_inprocessing ();
   }
   finalize ();
