@@ -232,6 +232,7 @@ void Internal::failing () {
     } else { // lrat for unsat_constraint
       assert (clause.empty ());
       clear_analyzed_literals ();
+      /*
       const size_t size = 2 * (1 + (size_t) max_var);
       constraint_chains.resize (size);
       constraint_clauses.resize (size);
@@ -241,6 +242,7 @@ void Internal::failing () {
         constraint_chains[i] = empty;
         constraint_clauses[i] = empty2;
       }
+      */
       for (auto lit : constraint) {
         // make sure nothing gets marked failed twice
         // also might shortcut the case where
@@ -256,9 +258,12 @@ void Internal::failing () {
         }
         */
         assume_analyze_literal (lit);
-        assert (constraint_chains[vlit (lit)].empty ());
+        vector<uint64_t> empty;
+        vector<int> empty2;
+        constraint_chains.push_back (empty);
+        constraint_clauses.push_back (empty2);
         for (auto ign : clause) {
-          constraint_clauses[vlit (lit)].push_back (ign);
+          constraint_clauses.back ().push_back (ign);
           Flags &f = flags (ign);
           const unsigned bit = bign (-ign);
           if (!(f.failed & bit)) {
@@ -270,7 +275,7 @@ void Internal::failing () {
         clause.clear ();
         clear_analyzed_literals ();
         for (auto p : lrat_chain) {
-          constraint_chains[vlit (lit)].push_back (p);
+          constraint_chains.back ().push_back (p);
         }
         lrat_chain.clear ();
       }
@@ -302,28 +307,26 @@ void Internal::failing () {
         proof->delete_clause (clause_id, clause);
       }
     } else {
-      for (auto lit : constraint) {
+      assert (!opts.lrat || opts.lratexternal || 
+        (constraint.size () == constraint_clauses.size () &&
+        constraint.size () == constraint_chains.size ()));
+      for (auto p = constraint.rbegin (); p != constraint.rend (); p++) {
+        const auto & lit = *p;
         if (opts.lrat && !opts.lratexternal) {
           clause.clear ();
-          for (auto & ign : constraint_clauses[vlit (lit)])
+          for (auto & ign : constraint_clauses.back ())
             clause.push_back (ign);
+          constraint_clauses.pop_back ();
         }
         clause.push_back (-lit);
         external->check_learned_clause ();
         if (proof) {
           if (opts.lrat && !opts.lratexternal) {
-            /*
-            if (constraint_chains[vlit (lit)].empty ()) {
-              clause.pop_back ();
-              continue;
-            }
-            */
-            for (auto p : constraint_chains[vlit (lit)]) {
+            for (auto p : constraint_chains.back ()) {
               lrat_chain.push_back (p);
             }
+            constraint_chains.pop_back ();
             LOG (lrat_chain, "assume proof chain with constraints");
-            // TODO this is no resolution proof and by construction
-            // incompatible? therefore we do not add the clause
             proof->add_derived_clause (++clause_id, clause, lrat_chain);
             lrat_chain.clear ();
             proof->delete_clause (clause_id, clause);
