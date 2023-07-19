@@ -53,6 +53,14 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
   assert (eclause.empty ());
   for (auto p = begin; p != end; p++) {
     eclause.push_back (*p);
+    if (internal->opts.lrat && !internal->opts.lratexternal) {
+      const auto & elit = *p;
+      unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+      assert ((size_t) eidx < ext_units.size ());
+      if (ext_units[eidx]) {
+        internal->lrat_chain.push_back (ext_units[eidx]);
+      }
+    }
     int ilit = internalize (*p);
     internal->add_original_lit (ilit);
     internal->stats.restoredlits++;
