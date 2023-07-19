@@ -107,7 +107,7 @@ LOGOPT( logsort,           0,  0,  1,0,0,0, "sort logged clauses") \
 OPTION( lrat,              0,  0,  1,0,0,1, "use lrat proof format") \
 OPTION( lratexternal,      0,  0,  1,0,0,1, "external lrat") \
 OPTION( lratfrat,          0,  0,  1,0,0,1, "use frat proof format") \
-OPTION( lratveripb,        0,  0,  1,0,0,1, "use veriPB proof format") \
+OPTION( lratveripb,        0,  0,  1,0,0,1, "veriPB proofs. needs lrat=1") \
 OPTION( lucky,             1,  0,  1,0,0,1, "search for lucky phases") \
 OPTION( minimize,          1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \

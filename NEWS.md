@@ -1,3 +1,8 @@
+Version 1.7.1
+-------------
+
+ - Added support for VeriPB proofs (--lrat --lratveripb).
+
 Version 1.7.0
 -------------
 
