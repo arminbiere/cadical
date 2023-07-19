@@ -43,6 +43,7 @@ void External::init (int new_max_var) {
     e2i.push_back (0);
     ext_units.push_back (0);
     ext_units.push_back (0);
+    ext_flags.push_back (0);
     assert (internal->i2e.empty ());
     internal->i2e.push_back (0);
   } else {
@@ -57,6 +58,7 @@ void External::init (int new_max_var) {
     e2i.push_back (iidx);
     ext_units.push_back (0);
     ext_units.push_back (0);
+    ext_flags.push_back (0);
     internal->i2e.push_back (eidx);
     assert (internal->i2e[iidx] == (int) eidx);
     assert (e2i[eidx] == (int) iidx);
@@ -156,13 +158,22 @@ void External::add (int elit) {
       // actually find unit of -elit (flips elit < 0)
       unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
       assert ((size_t) eidx < ext_units.size ());
-      if (ext_units[eidx]) {
-        internal->lrat_chain.push_back (ext_units[eidx]);
+      const uint64_t id = ext_units[eidx];
+      bool added = ext_flags[abs (elit)];
+      if (id && !added) {
+        ext_flags[abs (elit)] = true;
+        internal->lrat_chain.push_back (id);
       }
     }
   }
 
-  
+  if (!elit && internal->proof &&
+    internal->opts.lrat && !internal->opts.lratexternal) {
+    for (const auto & elit : eclause) {
+      ext_flags[abs (elit)] = false;
+    }
+  }
+
   if (elit)
     LOG ("adding external %d as internal %d", elit, ilit);
   internal->add_original_lit (ilit);
