@@ -174,7 +174,7 @@ void Internal::add_original_lit (int lit) {
       // Externalize(internalized literal) != external literal
       assert (!original.size () || !external->eclause.empty ());
       if (opts.lrat)
-        proof->add_original_clause (id, original);
+        proof->add_external_original_clause (id, external->eclause);
       else
         proof->add_external_original_clause (id, external->eclause);
     }
@@ -792,15 +792,36 @@ void Internal::finalize () {
     return;
   LOG ("finalizing");
   proof->finalize_clause (conflict_id, {});
+  for (const auto &evar : external->vars) {
+    assert (evar > 0);
+    const auto eidx = 2*evar;
+    int sign = 1;
+    uint64_t id = external->ext_units[eidx];
+    if (!id) {
+      sign = -1;
+      id = external->ext_units[eidx+1];
+    }
+    if (id) {
+      proof->finalize_external_unit (id, evar * sign);
+    }
+  }
   for (const auto &lit : lits) {
-    // if (idx > (unsigned) max_var) break;
+    const auto elit = externalize (lit);
+    if (elit) {
+      const unsigned eidx = (elit < 0) + 2u * (unsigned) abs (elit);
+      const uint64_t id = external->ext_units[eidx];
+      if (id) {
+        assert (unit_clauses[vlit (lit)] == id);
+        continue;
+      }
+    }
     const auto uidx = vlit (lit);
     const uint64_t id = unit_clauses[uidx];
     if (!id)
       continue;
-    // const int lit = u2i (uidx);
     proof->finalize_unit (id, lit);
   }
+  // TODO finalize external units.
   // See the discussion in 'propagate' on why garbage binary clauses stick
   // around.
   for (const auto &c : clauses)

@@ -80,6 +80,7 @@ public:
   void delete_clause (Clause *);
 
   void finalize_unit (uint64_t, int);
+  void finalize_external_unit (uint64_t, int);
   void finalize_clause (uint64_t, const vector<int> &c);
   void finalize_clause (Clause *);
 

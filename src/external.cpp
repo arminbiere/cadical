@@ -41,6 +41,8 @@ void External::init (int new_max_var) {
   if (!max_var) {
     assert (e2i.empty ());
     e2i.push_back (0);
+    ext_units.push_back (0);
+    ext_units.push_back (0);
     assert (internal->i2e.empty ());
     internal->i2e.push_back (0);
   } else {
@@ -53,6 +55,8 @@ void External::init (int new_max_var) {
     LOG ("mapping external %u to internal %u", eidx, iidx);
     assert (e2i.size () == eidx);
     e2i.push_back (iidx);
+    ext_units.push_back (0);
+    ext_units.push_back (0);
     internal->i2e.push_back (eidx);
     assert (internal->i2e[iidx] == (int) eidx);
     assert (e2i[eidx] == (int) iidx);
@@ -64,6 +68,7 @@ void External::init (int new_max_var) {
       moltentab.resize (1 + (size_t) new_max_var, false);
   assert (iidx == (size_t) new_internal_max_var + 1);
   assert (eidx == (size_t) new_max_var + 1);
+  assert (ext_units.size () == (size_t) new_max_var * 2 + 2);
   max_var = new_max_var;
 }
 
@@ -140,13 +145,24 @@ void External::add (int elit) {
       (internal->opts.checkwitness || internal->opts.checkfailed))
     original.push_back (elit);
 
-  // The external literals of the new clause must be saved for later
-  // when the proof is printed during add_original_lit (0)
-  if (elit && internal->proof)
-    eclause.push_back (elit);
-
   const int ilit = internalize (elit);
   assert (!elit == !ilit);
+
+  // The external literals of the new clause must be saved for later
+  // when the proof is printed during add_original_lit (0)
+  if (elit && internal->proof) {
+    eclause.push_back (elit);
+    if (internal->opts.lrat && !internal->opts.lratexternal) {
+      // actually find unit of -elit (flips elit < 0)
+      unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+      assert (eidx < ext_units.size ());
+      if (ext_units[eidx]) {
+        internal->lrat_chain.push_back (ext_units[eidx]);
+      }
+    }
+  }
+
+  
   if (elit)
     LOG ("adding external %d as internal %d", elit, ilit);
   internal->add_original_lit (ilit);

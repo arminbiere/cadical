@@ -63,6 +63,7 @@ struct External {
   vector<int> assumptions; // External assumptions.
   vector<int> constraint;  // External constraint. Terminated by zero.
 
+  vector<uint64_t> ext_units; // External units. Needed to compute lrat for eclause
   vector<int> eclause; // External version of original input clause.
   // The extension stack for reconstructing complete satisfying assignments
   // (models) of the original external formula is kept in this external

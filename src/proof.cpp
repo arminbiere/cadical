@@ -251,6 +251,14 @@ void Proof::finalize_unit (uint64_t id, int lit) {
   finalize_clause ();
 }
 
+void Proof::finalize_external_unit (uint64_t id, int lit) {
+  LOG ("PROOF finalizing clause %d", lit);
+  assert (clause.empty ());
+  clause.push_back (lit);
+  clause_id = id;
+  finalize_clause ();
+}
+
 /*------------------------------------------------------------------------*/
 
 // During garbage collection clauses are shrunken by removing falsified

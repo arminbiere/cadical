@@ -350,7 +350,7 @@ void Internal::add_new_original_clause (uint64_t id) {
     skip = true;
   } else {
     assert (clause.empty ());
-    assert (lrat_chain.empty ());
+    // assert (lrat_chain.empty ());
     for (const auto &lit : original) {
       int tmp = marked (lit);
       if (tmp > 0) {
@@ -364,9 +364,13 @@ void Internal::add_new_original_clause (uint64_t id) {
         if (tmp < 0) {
           LOG ("removing falsified literal %d", lit);
           if (opts.lrat && !opts.lratexternal) {
-            uint64_t uid = (unit_clauses[vlit (-lit)]);
-            assert (uid);               // not sure if this holds.
-            lrat_chain.push_back (uid); // but it looks ok so far.
+            int elit = externalize (lit);
+            unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);      
+            if (!external->ext_units[eidx]) {
+              uint64_t uid = (unit_clauses[vlit (-lit)]);
+              assert (uid);
+              lrat_chain.push_back (uid);
+            }
           }
         } else if (tmp > 0) {
           LOG ("satisfied since literal %d true", lit);
@@ -383,7 +387,7 @@ void Internal::add_new_original_clause (uint64_t id) {
   if (skip) {
     if (proof) {
       if (opts.lrat) {
-        proof->delete_clause (id, original);
+        proof->delete_external_original_clause (id, external->eclause);
       } else {
         proof->delete_external_original_clause (id, external->eclause);
       }
@@ -401,7 +405,7 @@ void Internal::add_new_original_clause (uint64_t id) {
         } else
           proof->add_derived_clause (new_id, clause);
         if (opts.lrat)
-          proof->delete_clause (id, original);
+          proof->delete_external_original_clause (id, external->eclause);
         else
           proof->delete_external_original_clause (id, external->eclause);
       }
