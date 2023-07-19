@@ -273,9 +273,9 @@ void Tracer::veripb_finalize_proof (uint64_t conflict_id) {
     return;
   LOG ("TRACER veriPB tracing finalization of proof");
   file->put ("output NONE\n");
-  file->put ("conclusion UNSAT [: ");
+  file->put ("conclusion UNSAT : ");
   file->put (conflict_id);
-  file->put (" ]\n");
+  file->put (" \n");
   file->put ("end pseudo-Boolean proof\n");
 }
 
@@ -319,7 +319,7 @@ void Tracer::veripb_begin_proof (uint64_t reserved_ids) {
 
 void Tracer::veripb_delete_clause (uint64_t id) {
   LOG ("TRACER veriPB tracing deletion of clause");
-  file->put ("del ");
+  file->put ("del id ");
   file->put (id);
   file->put ("\n");
 }
