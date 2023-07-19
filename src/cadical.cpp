@@ -601,7 +601,7 @@ int App::main (int argc, char **argv) {
 #ifndef QUIET
   if (!get ("quiet")) {
     solver->section ("banner");
-    solver->message ("%sCaDiCaL Radically Simplified CDCL SAT Solver%s",
+    solver->message ("%sCaDiCaL SAT Solver%s",
                      tout.bright_magenta_code (), tout.normal_code ());
     solver->message ("%s%s%s", tout.bright_magenta_code (), copyright (),
                      tout.normal_code ());
