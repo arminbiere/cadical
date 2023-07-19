@@ -213,7 +213,7 @@ void Internal::compact () {
       continue;
     }
     assert (eidx > 0);
-    assert (external->ext_units.size () >= 2 * eidx + 1);
+    assert (external->ext_units.size () >= (size_t) 2 * eidx + 1);
     uint64_t id1 = external->ext_units[2 * eidx];
     uint64_t id2 = external->ext_units[2 * eidx + 1];
     assert (!id1 || !id2);
@@ -222,8 +222,6 @@ void Internal::compact () {
       uint64_t new_id2 = unit_clauses[2 * src + 1];
       external->ext_units[2 * eidx] = new_id1;
       external->ext_units[2 * eidx + 1] = new_id2;
-      uint64_t id = new_id1 > 0 ? new_id1 : new_id2;
-      LOG ("save id %" PRId64 " of external var %d", id, src);
     }
     int dst = mapper.map_lit (src);
     LOG ("compact %" PRId64

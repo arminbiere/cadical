@@ -155,7 +155,7 @@ void External::add (int elit) {
     if (internal->opts.lrat && !internal->opts.lratexternal) {
       // actually find unit of -elit (flips elit < 0)
       unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
-      assert (eidx < ext_units.size ());
+      assert ((size_t) eidx < ext_units.size ());
       if (ext_units[eidx]) {
         internal->lrat_chain.push_back (ext_units[eidx]);
       }
