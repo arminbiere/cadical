@@ -688,8 +688,11 @@ int Internal::solve (bool preprocess_only) {
       res = local_search ();
     if (!res)
       res = lucky_phases ();
-    if (!res || (res == 10 && external_prop))
+    if (!res || (res == 10 && external_prop)) {
+      if (res == 10 && external_prop && level)
+        backtrack ();
       res = cdcl_loop_with_inprocessing ();
+    }
   }
   finalize ();
   reset_solving ();
@@ -794,12 +797,12 @@ void Internal::finalize () {
   proof->finalize_clause (conflict_id, {});
   for (const auto &evar : external->vars) {
     assert (evar > 0);
-    const auto eidx = 2*evar;
+    const auto eidx = 2 * evar;
     int sign = 1;
     uint64_t id = external->ext_units[eidx];
     if (!id) {
       sign = -1;
-      id = external->ext_units[eidx+1];
+      id = external->ext_units[eidx + 1];
     }
     if (id) {
       proof->finalize_external_unit (id, evar * sign);
