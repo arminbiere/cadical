@@ -300,8 +300,10 @@ Clause *Internal::add_external_clause (bool as_redundant,
   // Read out the external lemma into original and simplify it into clause
   assert (clause.empty ());
   assert (original.empty ());
+  assert (lrat_chain.empty ());
 
   vector<int> external_original;
+  vector<int> marking;
   while (elit) {
     assert (external->is_observed[abs (elit)]);
     original_size++;
@@ -309,8 +311,22 @@ Clause *Internal::add_external_clause (bool as_redundant,
     if (opts.check && (opts.checkwitness || opts.checkfailed)) {
       external->original.push_back (elit);
     }
-    if (proof)
+    if (proof || (opts.lrat && !opts.lratexternal))
       external_original.push_back (elit);
+
+    bool added_id = false;
+    if (opts.lrat && !opts.lratexternal) {
+      // actually find unit of -elit (flips elit < 0)
+      unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+      assert ((size_t) eidx < external->ext_units.size ());
+      const uint64_t id = external->ext_units[eidx];
+      added_id = id > 0;
+      bool added = external->ext_flags[abs (elit)];
+      if (id && !added) {
+        external->ext_flags[abs (elit)] = true;
+        lrat_chain.push_back (id);
+      }
+    }
 
     // TODO: double-check the consequences of internalization (tainting!)
     const int ilit = external->internalize (elit);
@@ -329,6 +345,10 @@ Clause *Internal::add_external_clause (bool as_redundant,
              "propagation.");
       skip = true;
     } else {
+      // Mark lit to recognize tautology and duplication
+      mark (ilit);
+      marking.push_back (ilit);
+
       tmp = fixed (ilit);
       if (tmp > 0) {
         LOG ("root level satisfied literal %d", ilit);
@@ -346,6 +366,11 @@ Clause *Internal::add_external_clause (bool as_redundant,
 
       } else if (tmp < 0) {
         LOG ("root level falsified literal %d is ignored", ilit);
+        if (opts.lrat && !opts.lratexternal && !added_id) {
+          uint64_t uid = (unit_clauses[vlit (-ilit)]);
+          assert (uid);
+          lrat_chain.push_back (uid);
+        }
 
         if (propagated_elit)
           elit = external->propagator->cb_add_reason_clause_lit (
@@ -354,9 +379,6 @@ Clause *Internal::add_external_clause (bool as_redundant,
           elit = external->propagator->cb_add_external_clause_lit ();
         continue;
       }
-
-      // Mark lit to recognize tautology and duplication
-      mark (ilit);
 
       tmp = val (ilit);
       if (tmp)
@@ -390,9 +412,15 @@ Clause *Internal::add_external_clause (bool as_redundant,
   uint64_t id = ++clause_id;
   if (proof)
     proof->add_external_original_clause (id, external_original);
+  
+  if (opts.lrat && !opts.lratexternal) {
+    for (const auto &lit : external_original) {
+      external->ext_flags[abs (lit)] = false;
+    }
+  }
 
   // Clean up marks
-  for (const auto &lit : clause)
+  for (const auto &lit : marking)
     unmark (lit);
 
   if (skip) {
@@ -403,6 +431,7 @@ Clause *Internal::add_external_clause (bool as_redundant,
       proof->delete_external_original_clause (id, external_original);
     original.clear ();
     clause.clear ();
+    lrat_chain.clear ();
     external_original.clear ();
     return 0;
   }
@@ -411,11 +440,17 @@ Clause *Internal::add_external_clause (bool as_redundant,
     external->check_learned_clause ();
     if (proof) {
       uint64_t new_id = ++clause_id;
-      proof->add_derived_clause (new_id, clause);
+      if (opts.lrat && !opts.lratexternal) {
+        lrat_chain.push_back (id);
+        proof->add_derived_clause (new_id, clause, lrat_chain);
+      } else {
+        proof->add_derived_clause (new_id, clause);
+      }
       proof->delete_external_original_clause (id, external_original);
       id = new_id;
     }
   }
+  lrat_chain.clear ();
   original.clear ();
   external_original.clear ();
   int glue = (int) (learned_levels.size () + unassigned);
@@ -452,6 +487,11 @@ Clause *Internal::add_external_clause (bool as_redundant,
     } else {
       assert (clause.size () == 1);
       LOG (clause, "unit clause is learnt from external propagator");
+      const int lit = clause[0];
+      assert (lit);
+      assert (!unit_clauses[vlit (lit)]);
+      assert (!unsat);
+      unit_clauses[vlit (lit)] = id;
     }
     return 0;
   }
@@ -484,7 +524,7 @@ void Internal::explain_reason (int ilit, Clause *reason, int &open) {
       v.reason = learn_external_reason_clause (-other);
       if (!v.reason) {
         v.level = 0;
-        learn_unit_clause (-other);
+        learn_external_propagated_unit_clause (-other);
       }
     }
     if (v.level && v.reason) {
@@ -556,7 +596,9 @@ void Internal::explain_external_propagations () {
           real_level = tmp;
       }
       if (v.level && !real_level) {
+        build_chain_for_units (lit, v.reason, 1);
         learn_unit_clause (lit);
+        lrat_chain.clear ();
       }
       v.level = real_level;
     }

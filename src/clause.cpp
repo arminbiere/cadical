@@ -315,6 +315,7 @@ void Internal::mark_garbage (Clause *c) {
 
 void Internal::assign_original_unit (uint64_t id, int lit) {
   assert (!level);
+  assert (!unsat);
   const int idx = vidx (lit);
   assert (!vals[idx]);
   assert (!flags (idx).eliminated ());

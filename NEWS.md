@@ -8,6 +8,8 @@ Version 1.7.1
    (worked for user propagator but now also in combination with LRAT);
    further minor bug fixes.
 
+ - Added support for LRAT + external propagator in combination
+
 Version 1.7.0
 -------------
 

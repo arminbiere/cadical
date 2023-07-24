@@ -259,6 +259,18 @@ void Proof::finalize_external_unit (uint64_t id, int lit) {
   finalize_clause ();
 }
 
+void Proof::finalize_proof (uint64_t id) {
+  if (lratchecker)
+    lratchecker->finalize_check ();
+  if (tracer)
+    tracer->veripb_finalize_proof (id);
+}
+
+void Proof::set_first_id (uint64_t id) {
+  if (tracer)
+    tracer->set_first_id (id);
+}
+
 /*------------------------------------------------------------------------*/
 
 // During garbage collection clauses are shrunken by removing falsified
@@ -422,6 +434,8 @@ void Proof::delete_clause () {
 }
 
 void Proof::finalize_clause () {
+  if (lratchecker)
+    lratchecker->finalize_clause (clause_id, clause);
   if (tracer)
     tracer->finalize_clause (clause_id, clause);
   clause.clear ();

@@ -101,7 +101,7 @@ bool Internal::vivify_propagate () {
         if (b < 0)
           conflict = w.clause; // but continue
         else {
-          build_chain_for_units (w.blit, w.clause);
+          build_chain_for_units (w.blit, w.clause, 0);
           vivify_assign (w.blit, w.clause);
           lrat_chain.clear ();
         }
@@ -158,7 +158,7 @@ bool Internal::vivify_propagate () {
             j--;
           } else if (!u) {
             assert (v < 0);
-            build_chain_for_units (other, w.clause);
+            build_chain_for_units (other, w.clause, 0);
             vivify_assign (other, w.clause);
             lrat_chain.clear ();
           } else {

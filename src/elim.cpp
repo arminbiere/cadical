@@ -180,7 +180,7 @@ void Internal::elim_propagate (Eliminator &eliminator, int root) {
         break;
       } else if (unit != INT_MIN) {
         LOG ("new unit %d during elimination propagation of %d", unit, lit);
-        build_chain_for_units (unit, c);
+        build_chain_for_units (unit, c, 0);
         assign_unit (unit);
         work.push_back (unit);
       }

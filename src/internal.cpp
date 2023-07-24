@@ -11,8 +11,8 @@ Internal::Internal ()
       protected_reasons (false), force_saved_phase (false),
       searching_lucky_phases (false), stable (false), reported (false),
       external_prop (false), external_prop_is_lazy (true), rephased (0),
-      vsize (0), max_var (0), clause_id (0), original_id (0),
-      reserved_ids (0), level (0), vals (0), score_inc (1.0), scores (this),
+      vsize (0), max_var (0), clause_id (0), original_id (0), reserved_ids (0),
+      conflict_id (0), level (0), vals (0), score_inc (1.0), scores (this),
       conflict (0), ignore (0), external_reason (&external_reason_clause),
       notified (0), propagated (0), propagated2 (0), propergated (0),
       best_assigned (0), target_assigned (0), no_conflict_until (0),
@@ -190,8 +190,8 @@ void Internal::reserve_ids (int number) {
   assert (number >= 0);
   assert (!clause_id && !reserved_ids && !original_id);
   clause_id = reserved_ids = number;
-  if (tracer)
-    tracer->set_first_id (reserved_ids);
+  if (proof)
+    proof->set_first_id (reserved_ids);
 }
 
 /*------------------------------------------------------------------------*/
@@ -787,14 +787,10 @@ int Internal::lookahead () {
 /*------------------------------------------------------------------------*/
 
 void Internal::finalize () {
-  if (tracer && opts.lratveripb) {
-    tracer->veripb_finalize_proof (conflict_id);
-    return;
-  }
-  if (!proof || !opts.lratfrat)
+  if (!proof)
     return;
   LOG ("finalizing");
-  proof->finalize_clause (conflict_id, {});
+  // finalize external units
   for (const auto &evar : external->vars) {
     assert (evar > 0);
     const auto eidx = 2 * evar;
@@ -808,6 +804,7 @@ void Internal::finalize () {
       proof->finalize_external_unit (id, evar * sign);
     }
   }
+  // finalize internal units
   for (const auto &lit : lits) {
     const auto elit = externalize (lit);
     if (elit) {
@@ -824,12 +821,18 @@ void Internal::finalize () {
       continue;
     proof->finalize_unit (id, lit);
   }
-  // TODO finalize external units.
   // See the discussion in 'propagate' on why garbage binary clauses stick
   // around.
   for (const auto &c : clauses)
     if (!c->garbage || c->size == 2)
       proof->finalize_clause (c);
+
+  // finalize conflict and proof
+  if (conflict_id)
+    proof->finalize_clause (conflict_id, {});
+  if (proof) {
+    proof->finalize_proof (conflict_id);
+  }
 }
 
 /*------------------------------------------------------------------------*/

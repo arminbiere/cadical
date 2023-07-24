@@ -50,6 +50,7 @@ class LratChecker {
   vector<signed char> marks; // mark bits of literals
 
   uint64_t num_clauses;        // number of clauses in hash table
+  uint64_t num_finalized;
   uint64_t num_garbage;        // number of garbage clauses
   uint64_t size_clauses;       // size of clause hash table
   LratCheckerClause **clauses; // hash table of clauses
@@ -95,6 +96,7 @@ class LratChecker {
     int64_t derived;  // number of added derived clauses
 
     int64_t deleted; // number of deleted clauses
+    int64_t finalized; // number of finalized clauses
 
     int64_t insertions; // number of clauses added to hash table
     int64_t collisions; // number of hash collisions in 'find'
@@ -121,6 +123,12 @@ public:
 
   // check if the clause is present and delete it from the checker
   void delete_clause (uint64_t, const vector<int> &);
+
+  // check if the clause is present and delete it from the checker
+  void finalize_clause (uint64_t, const vector<int> &);
+
+  // check if all clauses have been deleted
+  void finalize_check ();
 
   void print_stats ();
   void dump (); // for debugging purposes only

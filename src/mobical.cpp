@@ -1567,6 +1567,9 @@ void Trace::generate_options (Random &random, Size size) {
 
   // LRAT is incompatible with external_propagator so we set lrat here.
   //
+  // try to make it compatible...
+  //
+  /*
   if (!in_connection && random.generate_double () < 0.3) {
     push_back (new SetCall ("lrat", 1));
     is_lrat = true;
@@ -1574,6 +1577,7 @@ void Trace::generate_options (Random &random, Size size) {
     push_back (new SetCall ("lrat", 0));
     is_lrat = false;
   }
+  */
 
   // In 10% of the remaining cases we use a configuration.
   //
@@ -1608,8 +1612,10 @@ void Trace::generate_options (Random &random, Size size) {
       continue;
     if (!strcmp (o.name, "walk"))
       continue;
+    /*
     if (!strcmp (o.name, "lrat"))
       continue;
+    */
 
     // Probability to change an option is 'fraction'.
     //
@@ -2109,8 +2115,9 @@ void Trace::generate (uint64_t i, uint64_t s) {
       observed_vars.clear ();
       push_back (new DisconnectCall ());
       in_connection = false;
-    } else if (!is_lrat)
+    } else {
       generate_propagator (random, minvars, maxvars);
+    }
 
     generate_constraint (random, minvars, maxvars, uniform);
     generate_assume (random, maxvars);

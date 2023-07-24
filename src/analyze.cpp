@@ -31,6 +31,7 @@ void Internal::learn_empty_clause () {
 }
 
 void Internal::learn_unit_clause (int lit) {
+  assert (!unsat);
   LOG ("learned unit clause %d", lit);
   external->check_learned_unit_clause (lit);
   int64_t id = ++clause_id;
@@ -45,6 +46,15 @@ void Internal::learn_unit_clause (int lit) {
   }
   mark_fixed (lit);
 }
+
+
+void Internal::learn_external_propagated_unit_clause (int lit) {
+  assert (!unsat);
+  LOG ("assume unit clause %d from external propagator was already checked", lit);
+  assert (unit_clauses[vlit (lit)]);
+  mark_fixed (lit);
+}
+
 
 /*------------------------------------------------------------------------*/
 
@@ -896,7 +906,7 @@ void Internal::analyze () {
       // level 0 this will not result in a valid chain).
       // we can just use build_chain_for_units in propagate
       //
-      build_chain_for_units (forced, conflict);
+      build_chain_for_units (forced, conflict, 0);
 
       LOG ("forcing %d", forced);
       search_assign_driving (forced, conflict);

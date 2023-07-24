@@ -61,14 +61,12 @@ inline int Internal::assignment_level (int lit, Clause *reason) {
 // also TODO: to avoid if branch in propagate use this in learn unit clause
 // need to rember reason clause for that
 //
-void Internal::build_chain_for_units (int lit, Clause *reason) {
+void Internal::build_chain_for_units (int lit, Clause *reason, bool forced) {
   if (!opts.lrat || opts.lratexternal)
     return;
-  // LOG ("building chain for units");        bad line for debugging
-  // equivalence
-  if (opts.chrono && assignment_level (lit, reason))
+  if (opts.chrono && assignment_level (lit, reason) && !forced)
     return;
-  else if (!opts.chrono && level)
+  else if (!opts.chrono && level && !forced)
     return; // not decision level 0
   assert (lrat_chain.empty ());
   for (auto &reason_lit : *reason) {
@@ -112,6 +110,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     require_mode (SEARCH);
 
   const int idx = vidx (lit);
+  const bool from_external = reason == external_reason;
   assert (!vals[idx]);
   assert (!flags (idx).eliminated () || reason == decision_reason ||
           reason == external_reason);
@@ -153,8 +152,11 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   v.level = lit_level;
   v.trail = (int) trail.size ();
   v.reason = reason;
-  if (!lit_level)
+  if (!lit_level && !from_external)
     learn_unit_clause (lit); // increases 'stats.fixed'
+  else if (!lit_level && from_external) {
+    learn_external_propagated_unit_clause (lit); // addition of unit was already checked
+  }
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
@@ -298,7 +300,7 @@ bool Internal::propagate () {
         if (b < 0)
           conflict = w.clause; // but continue ...
         else {
-          build_chain_for_units (w.blit, w.clause);
+          build_chain_for_units (w.blit, w.clause, 0);
           search_assign (w.blit, w.clause);
           // lrat_chain.clear (); done in search_assign
         }
@@ -397,7 +399,7 @@ bool Internal::propagate () {
             // The other watch is unassigned ('!u') and all other literals
             // assigned to false (still 'v < 0'), thus we found a unit.
             //
-            build_chain_for_units (other, w.clause);
+            build_chain_for_units (other, w.clause, 0);
             search_assign (other, w.clause);
             // lrat_chain.clear (); done in search_assign
 

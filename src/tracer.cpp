@@ -269,7 +269,7 @@ void Tracer::drat_delete_clause (const vector<int> &clause) {
 /*------------------------------------------------------------------------*/
 
 void Tracer::veripb_finalize_proof (uint64_t conflict_id) {
-  if (file->closed ())
+  if (file->closed () || !veripb)
     return;
   LOG ("TRACER veriPB tracing finalization of proof");
   file->put ("output NONE\n");
