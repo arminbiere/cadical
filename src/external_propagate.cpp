@@ -93,6 +93,8 @@ bool Internal::external_propagate () {
 
   assert (!unsat);
 
+  size_t before = trail.size();
+
   if (!conflict && external_prop && !external_prop_is_lazy) {
 #ifndef NDEBUG
     LOG ("external propagation starts (decision level: %d, trail size: "
@@ -198,7 +200,7 @@ bool Internal::external_propagate () {
          level, trail.size (), notified);
 #endif
   }
-
+  if (before < trail.size ()) did_external_prop = true;
   return !conflict;
 }
 

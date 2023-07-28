@@ -115,7 +115,7 @@ void Internal::backtrack (int new_level) {
       // backtracking.  It is possible to just keep out-of-order assigned
       // literals on the trail without breaking the solver (after some
       // modifications to 'analyze' - see 'opts.chrono' guarded code there).
-      assert (opts.chrono || external_prop);
+      assert (opts.chrono || external_prop || did_external_prop);
 #ifdef LOGGING
       if (!v.level)
         LOG ("reassign %d @ 0 unit clause %d", lit, lit);
@@ -151,6 +151,8 @@ void Internal::backtrack (int new_level) {
 
   control.resize (new_level + 1);
   level = new_level;
+
+  if (!level) did_external_prop = false;
 }
 
 } // namespace CaDiCaL
