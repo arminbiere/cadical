@@ -543,6 +543,8 @@ class Mobical : public Handler {
   friend struct FlippableCall;
   friend struct MeltCall;
   friend class MockPropagator;
+  friend struct ConnectCall;
+  friend struct DisconnectCall;
 
   /*----------------------------------------------------------------------*/
 
@@ -637,6 +639,11 @@ class Mobical : public Handler {
   void die (const char *fmt, ...);
   void warning (const char *fmt, ...);
 
+protected:
+  /*----------------------------------------------------------------------*/
+
+  MockPropagator *mock_pointer; // to be able to clean up withouth disconnect
+  
 public:
   Mobical ();
   ~Mobical ();
@@ -975,7 +982,14 @@ struct ConstrainCall : public Call {
 struct ConnectCall : public Call {
   ConnectCall () : Call (CONNECT) {}
   void execute (Solver *&s) {
-    s->connect_external_propagator (new MockPropagator (s));
+    // clean up if there was already one mock propagator
+    MockPropagator *prev_pointer = 0;
+    if (mobical.mock_pointer) prev_pointer = mobical.mock_pointer;
+
+    mobical.mock_pointer = new MockPropagator (s);
+    s->connect_external_propagator (mobical.mock_pointer);
+    
+    if (prev_pointer) delete prev_pointer;
   }
   void print (ostream &o) { o << "connect mock-propagator" << endl; }
   Call *copy () { return new ConnectCall (); }
@@ -1032,8 +1046,10 @@ struct DisconnectCall : public Call {
         static_cast<MockPropagator *> (s->get_propagator ());
     mp->remove_new_observed_var ();
     s->disconnect_external_propagator ();
-    if (mp)
+    if (mp) {      
       delete mp;
+      mobical.mock_pointer = 0;
+    }
   }
   void print (ostream &o) { o << "disconnect mock-propagator" << endl; }
   Call *copy () { return new DisconnectCall (); }
@@ -3594,6 +3610,7 @@ Mobical::Mobical ()
 Mobical::~Mobical () {
   if (shared)
     munmap (shared, sizeof *shared);
+  if (mock_pointer) delete mock_pointer;
 }
 
 void Mobical::catch_signal (int) {
