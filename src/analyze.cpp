@@ -1106,7 +1106,6 @@ void Internal::analyze () {
   UPDATE_AVERAGE (averages.current.jump, jump);
 
   int new_level = determine_actual_backtrack_level (jump);
-  ;
   UPDATE_AVERAGE (averages.current.level, new_level);
   backtrack (new_level);
 
