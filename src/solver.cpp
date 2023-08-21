@@ -456,7 +456,7 @@ bool Solver::set (const char *arg, int val) {
         "can only set option 'set (\"%s\", %d)' right after initialization",
         arg, val);
   }
-  if (strcmp (arg, "lrat")) {
+  if (!strcmp (arg, "lrat")) {
     REQUIRE (!internal->external_prop,
              "lrat is currently not compatible with external propagation");
   }
