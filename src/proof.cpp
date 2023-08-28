@@ -395,7 +395,7 @@ void Proof::add_derived_clause () {
   assert (clause_id);
 
   if (lratbuilder) {
-    if (proof_chain.empty ())
+    if (internal->opts.lrat && internal->opts.lratexternal)
       proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
     else
       lratbuilder->add_derived_clause (clause_id, clause);
@@ -409,7 +409,7 @@ void Proof::add_derived_clause () {
   if (checker)
     checker->add_derived_clause (clause_id, clause);
   if (tracer) {
-    if (proof_chain.empty ())
+    if (!internal->opts.lrat)
       tracer->add_derived_clause (clause_id, clause);
     else
       tracer->add_derived_clause (clause_id, clause, proof_chain);
