@@ -685,7 +685,8 @@ bool Solver::flip (int lit) {
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   REQUIRE (state () == SATISFIED, "can only flip value in satisfied state");
-  REQUIRE (!external->propagator, "can only flip when no external propagator is present");
+  REQUIRE (!external->propagator,
+           "can only flip when no external propagator is present");
   bool res = external->flip (lit);
   LOG_API_CALL_RETURNS ("flip", lit, res);
   assert (state () == SATISFIED);
@@ -697,7 +698,8 @@ bool Solver::flippable (int lit) {
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   REQUIRE (state () == SATISFIED, "can only flip value in satisfied state");
-  REQUIRE (!external->propagator, "can only flip when no external propagator is present");
+  REQUIRE (!external->propagator,
+           "can only flip when no external propagator is present");
   bool res = external->flippable (lit);
   LOG_API_CALL_RETURNS ("flippable", lit, res);
   assert (state () == SATISFIED);

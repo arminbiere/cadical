@@ -366,7 +366,7 @@ void Internal::add_new_original_clause (uint64_t id) {
           LOG ("removing falsified literal %d", lit);
           if (opts.lrat && !opts.lratexternal) {
             int elit = externalize (lit);
-            unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);      
+            unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
             if (!external->ext_units[eidx]) {
               uint64_t uid = (unit_clauses[vlit (-lit)]);
               assert (uid);

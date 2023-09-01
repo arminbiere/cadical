@@ -93,7 +93,7 @@ bool Internal::external_propagate () {
 
   assert (!unsat);
 
-  size_t before = trail.size();
+  size_t before = trail.size ();
 
   if (!conflict && external_prop && !external_prop_is_lazy) {
 #ifndef NDEBUG
@@ -200,7 +200,8 @@ bool Internal::external_propagate () {
          level, trail.size (), notified);
 #endif
   }
-  if (before < trail.size ()) did_external_prop = true;
+  if (before < trail.size ())
+    did_external_prop = true;
   return !conflict;
 }
 
@@ -414,7 +415,7 @@ Clause *Internal::add_external_clause (bool as_redundant,
   uint64_t id = ++clause_id;
   if (proof)
     proof->add_external_original_clause (id, external_original);
-  
+
   if (opts.lrat && !opts.lratexternal) {
     for (const auto &lit : external_original) {
       external->ext_flags[abs (lit)] = false;

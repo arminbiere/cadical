@@ -61,7 +61,8 @@ inline int Internal::assignment_level (int lit, Clause *reason) {
 // also TODO: to avoid if branch in propagate use this in learn unit clause
 // need to rember reason clause for that
 //
-void Internal::build_chain_for_units (int lit, Clause *reason, bool forced) {
+void Internal::build_chain_for_units (int lit, Clause *reason,
+                                      bool forced) {
   if (!opts.lrat || opts.lratexternal)
     return;
   if (opts.chrono && assignment_level (lit, reason) && !forced)
@@ -155,7 +156,8 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   if (!lit_level && !from_external)
     learn_unit_clause (lit); // increases 'stats.fixed'
   else if (!lit_level && from_external) {
-    learn_external_propagated_unit_clause (lit); // addition of unit was already checked
+    learn_external_propagated_unit_clause (
+        lit); // addition of unit was already checked
   }
   const signed char tmp = sign (lit);
   vals[idx] = tmp;

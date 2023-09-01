@@ -1243,9 +1243,11 @@ struct Internal {
     if (ref < UINT_MAX) {
       if (!--ref) {
         if (relevanttab[idx]) {
-          LOG ("variable %d is observed, can not be completely molten", idx);
+          LOG ("variable %d is observed, can not be completely molten",
+               idx);
           ref++;
-        } else LOG ("variable %d completely molten", idx);
+        } else
+          LOG ("variable %d completely molten", idx);
       } else
         LOG ("variable %d melted once but remains frozen %u times", lit,
              ref);

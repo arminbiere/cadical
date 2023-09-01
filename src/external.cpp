@@ -167,9 +167,9 @@ void External::add (int elit) {
     }
   }
 
-  if (!elit && internal->proof &&
-    internal->opts.lrat && !internal->opts.lratexternal) {
-    for (const auto & elit : eclause) {
+  if (!elit && internal->proof && internal->opts.lrat &&
+      !internal->opts.lratexternal) {
+    for (const auto &elit : eclause) {
       ext_flags[abs (elit)] = false;
     }
   }
@@ -392,7 +392,7 @@ void External::reset_observed_vars () {
       internal->remove_observed_var (ilit);
       LOG ("unmarking %d as externally watched", eidx);
       is_observed[eidx] = false;
-      melt (elit);  
+      melt (elit);
     }
   }
   internal->notified = 0;
@@ -570,12 +570,14 @@ void External::melt (int elit) {
   assert (ref > 0);
   if (ref < UINT_MAX) {
     if (!--ref) {
-      if (observed(elit)) {
+      if (observed (elit)) {
         ref++;
-        LOG ("external variable %d is observed, can not be completely molten", eidx);
-      } else 
-      LOG ("external variable %d melted once and now completely melted",
-           eidx);
+        LOG ("external variable %d is observed, can not be completely "
+             "molten",
+             eidx);
+      } else
+        LOG ("external variable %d melted once and now completely melted",
+             eidx);
     } else
       LOG ("external variable %d melted once but remains frozen %u times",
            eidx, ref);

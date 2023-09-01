@@ -4,9 +4,10 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-Tracer::Tracer (Internal *i, File *f, bool b, bool lrat, bool frat, bool veripb)
+Tracer::Tracer (Internal *i, File *f, bool b, bool lrat, bool frat,
+                bool veripb)
     : internal (i), file (f), binary (b), lrat (lrat), frat (frat),
-    veripb (veripb), added (0), deleted (0), latest_id (0) {
+      veripb (veripb), added (0), deleted (0), latest_id (0) {
   (void) internal;
   LOG ("TRACER new");
 }
@@ -280,7 +281,7 @@ void Tracer::veripb_finalize_proof (uint64_t conflict_id) {
 }
 
 void Tracer::veripb_add_derived_clause (const vector<int> &clause,
-                              const vector<uint64_t> &chain) {
+                                        const vector<uint64_t> &chain) {
   LOG ("TRACER veriPB tracing addition of derived clause");
   file->put ("pol ");
   bool first = true;
@@ -306,7 +307,6 @@ void Tracer::veripb_add_derived_clause (const vector<int> &clause,
     file->put (' ');
   }
   file->put (">= 1 ;\n");
-  
 }
 
 void Tracer::veripb_begin_proof (uint64_t reserved_ids) {

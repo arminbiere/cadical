@@ -31,7 +31,8 @@ LratCheckerClause *LratChecker::new_clause () {
   const size_t size = imported_clause.size ();
   assert (size <= UINT_MAX);
   const int off = size ? -1 : 0;
-  const size_t bytes = sizeof (LratCheckerClause) + (size - off) * sizeof (int);
+  const size_t bytes =
+      sizeof (LratCheckerClause) + (size - off) * sizeof (int);
   LratCheckerClause *res = (LratCheckerClause *) new char[bytes];
   res->garbage = false;
   res->next = 0;
@@ -246,7 +247,7 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
     assert (!checked_lit (-lit));
   }
   for (auto p = proof_chain.end () - 2; p >= proof_chain.begin (); p--) {
-    auto &id = *p; 
+    auto &id = *p;
     c = *find (id);
     assert (c); // since this is checked in check already
     for (int *i = c->literals; i < c->literals + c->size; i++) {
@@ -482,7 +483,6 @@ void LratChecker::delete_clause (uint64_t id, const vector<int> &c) {
   STOP (checking);
 }
 
-
 void LratChecker::finalize_clause (uint64_t id, const vector<int> &c) {
   START (checking);
   LOG (c, "LRAT CHECKER checking finalize of clause[%" PRIu64 "]", id);
@@ -526,7 +526,8 @@ void LratChecker::finalize_check () {
   START (checking);
   if (num_finalized == num_clauses) {
     num_finalized = 0;
-    LOG ("LRAT CHECKER successful finalize check, all clauses have been deleted");
+    LOG ("LRAT CHECKER successful finalize check, all clauses have been "
+         "deleted");
   } else {
     fatal_message_start ();
     fputs ("finalize check failed ", stderr);
@@ -537,7 +538,6 @@ void LratChecker::finalize_check () {
   STOP (checking);
 }
 
-  
 /*------------------------------------------------------------------------*/
 
 void LratChecker::dump () {

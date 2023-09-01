@@ -24,7 +24,7 @@ struct LratCheckerClause {
   unsigned size;
   bool used;
   bool tautological;
-  int literals[1];         // 'literals' of length 'size'
+  int literals[1]; // 'literals' of length 'size'
 };
 
 /*------------------------------------------------------------------------*/
@@ -49,7 +49,7 @@ class LratChecker {
   vector<signed char> checked_lits;
   vector<signed char> marks; // mark bits of literals
 
-  uint64_t num_clauses;        // number of clauses in hash table
+  uint64_t num_clauses; // number of clauses in hash table
   uint64_t num_finalized;
   uint64_t num_garbage;        // number of garbage clauses
   uint64_t size_clauses;       // size of clause hash table
@@ -95,7 +95,7 @@ class LratChecker {
     int64_t original; // number of added original clauses
     int64_t derived;  // number of added derived clauses
 
-    int64_t deleted; // number of deleted clauses
+    int64_t deleted;   // number of deleted clauses
     int64_t finalized; // number of finalized clauses
 
     int64_t insertions; // number of clauses added to hash table
