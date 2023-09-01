@@ -1384,7 +1384,10 @@ private:
 
   vector<int> observed_vars;
   bool in_connection = false;
+  // TODO remove this code eventually (see below where it is used).
+  /*
   bool is_lrat = false;
+  */
 
   void add_options (int expected);
   bool shrink_phases (int expected);
@@ -1586,7 +1589,7 @@ void Trace::generate_options (Random &random, Size size) {
 
   // LRAT is incompatible with external_propagator so we set lrat here.
   //
-  // try to make it compatible...
+  // TODO remove this uncommented code after making it compatible...
   //
   /*
   if (!in_connection && random.generate_double () < 0.3) {
