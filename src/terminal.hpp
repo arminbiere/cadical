@@ -26,6 +26,8 @@ class Terminal {
   }
 
   void code (const char *str) {
+    if (!use_colors)
+      return;
     if (!connected)
       return;
     escape ();
