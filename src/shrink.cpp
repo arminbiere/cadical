@@ -25,16 +25,12 @@ void Internal::mark_shrinkable_as_removable (
   size_t marked = 0, reset = 0;
 #endif
 #ifndef NDEBUG
-  unsigned kept = 0, minireset = 0;
   for (; minimized_start < minimized.size (); ++minimized_start) {
     const int lit = minimized[minimized_start];
     Flags &f = flags (lit);
     const Var &v = var (lit);
-    if (v.level == blevel) {
+    if (v.level == blevel)
       assert (!f.poison);
-      ++minireset;
-    } else
-      ++kept;
   }
 #else
   (void) blevel;
