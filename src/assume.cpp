@@ -6,7 +6,7 @@ namespace CaDiCaL {
 // adds an assumption literal onto the assumption stack.
 
 void Internal::assume (int lit) {
-  if (level) backtrack ();
+  if (val (lit) < 0) backtrack (max(0, var (lit).level - 1));
   Flags &f = flags (lit);
   const unsigned char bit = bign (lit);
   if (f.assumed & bit) {
@@ -374,4 +374,30 @@ void Internal::reset_assumptions () {
   marked_failed = true;
 }
 
+// sort the assumptions by the current position on the trail and backtrack to the first place where
+// the assumptions and the current trail differ.
+void Internal::sort_and_reuse_assumptions () {
+  assert (opts.ilbassumptions);
+  if (assumptions.empty())
+    return;
+  std::sort(begin(assumptions), end(assumptions), [this](int litA, int litB) {return ((uint64_t)var(litA).level << 32) + (uint64_t)var(litA).trail < ((uint64_t)var(litB).level << 32) + (uint64_t)var(litB).trail;});
+
+  const int max_level = var (assumptions.back ()).level;
+
+  const int size = min ((int) control.size(), max_level+1);
+  for (int i = 1; i < size; ++i) {
+    const Level& l = control[i];
+    const int lit = l.decision;
+    const unsigned char bit = bign (lit);
+    if (opts.reimply && var(l.decision).level != i)
+      continue;
+    assert (var(l.decision).level == i);
+    if (flags(lit).assumed != bit) {
+      LOG ("assumptions allow for reuse of trail up to level %d", var(lit).level-1);
+      backtrack (var(lit).level - 1);
+      break;
+    }
+  }
+  LOG ("assumptions allow for reuse of trail up to level %d", level);
+}
 } // namespace CaDiCaL

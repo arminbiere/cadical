@@ -1109,6 +1109,7 @@ struct Internal {
   void assume (int);         // New assumption literal.
   bool failed (int lit);     // Literal failed assumption?
   void reset_assumptions (); // Reset after 'solve' call.
+  void sort_and_reuse_assumptions();   // reorder the assumptions in order to reuse parts of the trail
   void failing ();           // Prepare failed assumptions.
 
   bool assumed (int lit) { // Marked as assumption.

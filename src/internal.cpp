@@ -673,6 +673,8 @@ int Internal::local_search () {
 int Internal::solve (bool preprocess_only) {
   assert (clause.empty ());
   START (solve);
+  if (opts.ilbassumptions)
+    sort_and_reuse_assumptions ();
   if (preprocess_only)
     LOG ("internal solving in preprocessing only mode");
   else
@@ -716,7 +718,7 @@ int Internal::already_solved () {
   } else {
     if (level && !opts.ilb)
       backtrack ();
-    if (!opts.ilb && !propagate ()) {
+    if (!level && !propagate ()) {
       LOG ("root level propagation produces conflict");
       learn_empty_clause ();
       res = 20;
