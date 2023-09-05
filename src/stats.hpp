@@ -24,6 +24,8 @@ struct Stats {
     int64_t transred;    // propagated during transitive reduction
     int64_t vivify;      // propagated during vivification
     int64_t walk;        // propagated during local search
+    int64_t clean;       // propagated on highest level (with multitrail)
+    int64_t dirty;       // propagated on highest level (with multitrail)
   } propagations;
 
   struct {
@@ -128,6 +130,7 @@ struct Stats {
   int64_t sections;       // 'section' counter
   int64_t chrono;         // chronological backtracks
   int64_t backtracks;     // number of backtracks
+  int64_t elevated;       // number of elevated literals (updated in backtrack)
   int64_t improvedglue;   // improved glue during bumping
   int64_t promoted1;      // promoted clauses to tier one
   int64_t promoted2;      // promoted clauses to tier two

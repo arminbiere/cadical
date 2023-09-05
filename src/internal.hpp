@@ -34,6 +34,7 @@ extern "C" {
 #include <queue>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 /*------------------------------------------------------------------------*/
 
@@ -202,30 +203,42 @@ struct Internal {
   vector<Bins> big;             // binary implication graph
   vector<Watches> wtab;         // table of watches for all literals
   Clause *conflict;             // set in 'propagation', reset in 'analyze'
+  vector<Clause *> conflicts;   // set in propagate for opts.reimply
   Clause *ignore;               // ignored during 'vivify_propagate'
   Clause *external_reason;      // used as reason at external propagations
-  size_t notified;           // next trail position to notify external prop
-  Clause *probe_reason;      // set during probing
-  size_t propagated;         // next trail position to propagate
-  size_t propagated2;        // next binary trail position to propagate
-  size_t propergated;        // propagated without blocking literals
-  size_t best_assigned;      // best maximum assigned ever
-  size_t target_assigned;    // maximum assigned without conflict
-  size_t no_conflict_until;  // largest trail prefix without conflict
-  vector<int> trail;         // currently assigned literals
-  vector<int> clause;        // simplified in parsing & learning
-  vector<int> assumptions;   // assumed literals
-  vector<int> constraint;    // literals of the constraint
-  bool unsat_constraint;     // constraint used for unsatisfiability?
-  bool marked_failed;        // are the failed assumptions marked?
-  vector<int> original;      // original added literals
-  vector<int> levels;        // decision levels in learned clause
-  vector<int> analyzed;      // analyzed literals in 'analyze'
-  vector<int> unit_analyzed; // to avoid duplicate units in lrat_chain
-  vector<int> decomposed;    // literals skipped in 'decompose'
-  vector<int> minimized;     // removable or poison in 'minimize'
-  vector<int> shrinkable;    // removable or poison in 'shrink'
-  Reap reap;                 // radix heap for shrink
+  Clause *newest_clause;        // used in external_propagate
+  bool force_no_backtrack;      // for new clauses with external propagator
+  bool from_propagator;         // differentiate new clauses...
+  int tainted_literal;          // used for ILB
+  vector<Clause *> fix_later;   // for reimply + external propagator
+  vector<int> notify_trail;     // for reimply + external propagator
+  size_t notified;              // next trail position to notify external prop
+  Clause *probe_reason;         // set during probing
+  size_t propagated;            // next trail position to propagate
+  size_t propagated2;         // next binary trail position to propagate
+  size_t propergated;         // propagated without blocking literals
+  size_t best_assigned;       // best maximum assigned ever
+  size_t target_assigned;     // maximum assigned without conflict
+  size_t no_conflict_until;   // largest trail prefix without conflict
+  vector<int> trail;          // currently assigned literals
+  vector<int> clause;         // simplified in parsing & learning
+  vector<int> assumptions;    // assumed literals
+  vector<int> constraint;     // literals of the constraint
+  bool unsat_constraint;      // constraint used for unsatisfiability?
+  bool marked_failed;         // are the failed assumptions marked?
+  vector<int> original;       // original added literals
+  vector<int> levels;         // decision levels in learned clause
+  vector<int> analyzed;       // analyzed literals in 'analyze'
+  vector<int> unit_analyzed;  // to avoid duplicate units in lrat_chain
+  vector<int> decomposed;     // literals skipped in 'decompose'
+  vector<int> minimized;      // removable or poison in 'minimize'
+  vector<int> shrinkable;     // removable or poison in 'shrink'
+  Reap reap;                  // radix heap for shrink
+
+  int multitrail_dirty;
+  vector<size_t> multitrail;  // "propagated" for each level
+  vector<vector<int>> trails; // all assignments on all levels
+  size_t num_assigned;        // check for satisfied
 
   vector<int> probes;       // remaining scheduled probes
   vector<Level> control;    // 'level + 1 == control.size ()'
@@ -487,6 +500,12 @@ struct Internal {
     LOG (c, "watch %d blit %d in", lit, blit);
   }
 
+  // for debugging...
+  // invariant from intel sat (see watch.hpp)
+  // assert (val (lit) >= 0 ||
+  //        (val (blit) > 0 && var (blit).level <= var (lit).level));
+  void test_watch_invariant ();
+
   // Add two watches to a clause.  This is used initially during allocation
   // of a clause and during connecting back all watches after preprocessing.
   //
@@ -549,7 +568,7 @@ struct Internal {
   void push_literals_of_block (const std::vector<int>::reverse_iterator &,
                                const std::vector<int>::reverse_iterator &,
                                int, unsigned);
-  unsigned shrink_next (unsigned &, unsigned &);
+  unsigned shrink_next (int, unsigned &, unsigned &);
   std::vector<int>::reverse_iterator
   minimize_and_shrink_block (std::vector<int>::reverse_iterator &,
                              unsigned int &, unsigned int &, const int);
@@ -581,6 +600,7 @@ struct Internal {
   bool propagate ();
 
   void propergate (); // Repropagate without blocking literals.
+  void propergate_reimply ();
 
   // Undo and restart in 'backtrack.cpp'.
   //
@@ -626,14 +646,18 @@ struct Internal {
 
   // Learning from external propagator in 'external_propagate.cpp'
   //
+  void elevate_lit_external (int, Clause *);
+  void elevate_original_unit (uint64_t, int);
   bool external_propagate ();
   bool external_check_solution ();
-  Clause *add_external_clause (bool as_redundant, int propagated_lit = 0);
-  Clause *learn_external_reason_clause (int lit, int falsified_elit = 0);
+  void add_external_clause (int propagated_lit = 0,
+                            bool no_backtrack = false);
+  Clause *learn_external_reason_clause (int lit, int falsified_elit = 0,
+                                        bool no_backtrack = false);
   void explain_external_propagations ();
   void explain_reason (int lit, Clause *, int &open);
   void move_literal_to_watch (bool other_watch);
-  bool handle_external_clause (Clause *);
+  void handle_external_clause (Clause *);
   void notify_assignments ();
   void notify_decision ();
   void notify_backtrack (size_t new_level);
@@ -643,6 +667,8 @@ struct Internal {
   bool observed (int ilit) const;
   bool is_decision (int ilit);
   void check_watched_literal_invariants ();
+  void set_tainted_literal ();
+  void connect_propagator ();
 
   // Use last learned clause to subsume some more.
   //
@@ -772,6 +798,7 @@ struct Internal {
   bool consider_to_vivify_clause (Clause *candidate, bool redundant_mode);
   void vivify_analyze_redundant (Vivifier &, Clause *start, bool &);
   void vivify_build_lrat (int, Clause *);
+  void vivify_chain_for_units (int lit, Clause *reason);
   bool vivify_all_decisions (Clause *candidate, int subsume);
   void vivify_post_process_analysis (Clause *candidate, int subsume);
   void vivify_strengthen (Clause *candidate);
@@ -980,11 +1007,34 @@ struct Internal {
   int elim_round (bool &completed);
   void elim (bool update_limits = true);
 
+  // instantiate
+  //
   void inst_assign (int lit);
   bool inst_propagate ();
   void collect_instantiation_candidates (Instantiator &);
   bool instantiate_candidate (int lit, Clause *);
   void instantiate (Instantiator &);
+
+  // multilevel trail in trail.cpp
+  // TODO: inline some of these in propagate.cpp
+  //
+  void new_trail_level (int lit);
+  void clear_trails (int level);
+  void multi_backtrack (int new_level);
+  int trail_size (int l);
+  int trails_sizes (int l);
+  void trail_push (int lit, int l);
+  int next_propagation_level (int last);
+  vector<int> *next_trail (int l);
+  int next_propagated (int l);
+  Clause *propagation_conflict (int l, Clause *c);
+  int conflicting_level (Clause *c);
+  void elevate_lit (int lit, Clause *reason);
+  int elevating_level (int lit, Clause *reason);
+  void set_propagated (int l, int prop);
+  bool propagate_conflicts ();
+  bool propagate_multitrail ();
+  bool propagate_clean ();
 
   // Hyper ternary resolution.
   //

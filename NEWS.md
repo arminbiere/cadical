@@ -1,3 +1,17 @@
+Version 1.7.2
+-------------
+
+ - ILB (--ilb)
+   Incremental lazy backtracking allows to add new clauses
+   incrementally while keeping the assignments on the trail.
+   Works especially well with reimplication.
+
+ - Reimplication (--reimply)
+   Fixes assignment levels of literals by elevating them.
+   Out of order assignments can happen because of chronological
+   backtracking, external propagation or ILB. Improves quality
+   of learned clauses and shortens search in these cases.
+
 Version 1.7.1
 -------------
 

@@ -456,12 +456,6 @@ bool Solver::set (const char *arg, int val) {
         "can only set option 'set (\"%s\", %d)' right after initialization",
         arg, val);
   }
-  /*
-  if (strcmp (arg, "lrat")) {
-    REQUIRE (!internal->external_prop,
-             "lrat is currently not compatible with external propagation");
-  }
-  */
   bool res = internal->opts.set (arg, val);
   LOG_API_CALL_END ("set", arg, val, res);
 
@@ -827,11 +821,6 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
   LOG_API_CALL_BEGIN ("connect_external_propagator");
   REQUIRE_VALID_STATE ();
   REQUIRE (propagator, "can not connect zero propagator");
-  /*
-  REQUIRE (!internal->opts.lrat,
-           "lrat is currently not compatible with external propagation");
-  // TODO: require opts.lrat = false
-  */
 
 #ifdef LOGGING
   if (external->propagator)
@@ -843,6 +832,7 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
     disconnect_external_propagator ();
 
   external->propagator = propagator;
+  internal->connect_propagator ();
   internal->external_prop = true;
   internal->external_prop_is_lazy = propagator->is_lazy;
   LOG_API_CALL_END ("connect_external_propagator");
@@ -862,6 +852,7 @@ void Solver::disconnect_external_propagator () {
     external->reset_observed_vars ();
 
   external->propagator = 0;
+  internal->set_tainted_literal ();
   internal->external_prop = false;
   internal->external_prop_is_lazy = true;
   LOG_API_CALL_END ("disconnect_external_propagator");

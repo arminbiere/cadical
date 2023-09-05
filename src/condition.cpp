@@ -205,6 +205,7 @@ long Internal::condition_round (long delta) {
       condition_assign (lit);
       v.level = level;
       trail.push_back (lit);
+      // num_assigned++; wrong!
 #if defined(LOGGING) || !defined(NDEBUG)
       additionally_assigned++;
 #endif
@@ -437,6 +438,17 @@ long Internal::condition_round (long delta) {
   for (const auto &lit : trail)
     if (fixed (lit))
       condition_unassign (lit);
+
+  // with reimply we might have more trails (which do not contain
+  // root assigned literals but might contain fixed literals anyways)
+  int l = 0;
+  for (auto &t : trails) {
+    l++;
+    for (const auto &lit : t) {
+      if (fixed (lit) && var (lit).level == l)
+        condition_unassign (lit);
+    }
+  }
 
   // Stack to save temporarily unassigned (conditional) literals.
   //
@@ -747,6 +759,31 @@ long Internal::condition_round (long delta) {
         assert (!is_conditional_literal (lit));
       }
     }
+    l = 0;
+    for (auto &t : trails) {
+      l++;
+      for (size_t i = 0; i < t.size (); i++) {
+        const int lit = (t)[i];
+        if (var (lit).level < l)
+          continue;
+        assert (var (lit).level == l);
+        if (val (lit)) {
+          check.assigned++;
+          if (is_conditional_literal (lit)) {
+            LOG ("remaining conditional %d", lit);
+            assert (!is_autarky_literal (lit));
+            check.conditional++;
+          } else {
+            assert (is_autarky_literal (lit));
+            LOG ("remaining autarky %d", lit);
+            check.autarky++;
+          }
+        } else {
+          assert (!is_autarky_literal (lit));
+          assert (!is_conditional_literal (lit));
+        }
+      }
+    }
     assert (remain.assigned == check.assigned);
     assert (remain.conditional == check.conditional);
     assert (remain.autarky == check.autarky);
@@ -791,6 +828,15 @@ long Internal::condition_round (long delta) {
       for (const auto &lit : trail)
         if (is_autarky_literal (lit))
           external->push_witness_literal_on_extension_stack (lit);
+      l = 0;
+      for (auto &t : trails) {
+        l++;
+        for (const auto &lit : t) {
+          if (is_autarky_literal (lit) && var (lit).level == l) {
+            external->push_witness_literal_on_extension_stack (lit);
+          }
+        }
+      }
       external->push_clause_on_extension_stack (c);
 
       mark_garbage (c);
@@ -881,10 +927,27 @@ long Internal::condition_round (long delta) {
     if (!tmp)
       condition_assign (lit);
   }
+  l = 0;
+  for (auto &t : trails) {
+    l++;
+    for (size_t i = 0; i < t.size (); i++) {
+      const int lit = (t)[i];
+      if (var (lit).level < l)
+        continue;
+      assert (var (lit).level == l);
+      const signed char tmp = val (lit);
+      assert (tmp >= 0);
+      if (!tmp)
+        condition_assign (lit);
+    }
+  }
 
 #ifndef NDEBUG
   for (const auto &lit : trail)
     assert (!marked (lit));
+  for (auto &t : trails)
+    for (const auto &lit : t)
+      assert (!marked (lit));
 #endif
 
   unprotect_reasons ();

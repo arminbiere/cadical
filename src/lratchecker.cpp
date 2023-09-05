@@ -334,17 +334,6 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
       int lit = *i;
       if (checked_lit (-lit))
         continue;
-      // TODO uncomment and fuzz maybe also withouth opts.lratexternal
-      // of course this also fails in decompose :/ ... and instantiate
-      // assert (!checked_lit (lit) || internal->opts.lratexternal); // ||
-      //        internal->opts.decompose);
-      // || internal->opts.instantiate);
-      // assert (!checked_lit (lit));      // tempting to assert here since
-      // usually this should be a bug in
-      // the proof chain but in some cases
-      // this can occur (e.g. when we prove
-      // the inconsistent clause to justify
-      // whatever
       if (unit && unit != lit) {
         unit = INT_MIN; // multiple unfalsified literals
         break;

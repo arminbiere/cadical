@@ -572,12 +572,9 @@ void External::melt (int elit) {
     if (!--ref) {
       if (observed (elit)) {
         ref++;
-        LOG ("external variable %d is observed, can not be completely "
-             "molten",
-             eidx);
-      } else
-        LOG ("external variable %d melted once and now completely melted",
-             eidx);
+        LOG ("external variable %d is observed, can not be completely molten", eidx);
+      } else 
+         LOG ("external variable %d melted once and now completely melted", eidx);
     } else
       LOG ("external variable %d melted once but remains frozen %u times",
            eidx, ref);

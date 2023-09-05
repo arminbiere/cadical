@@ -76,6 +76,9 @@ void Stats::print (Internal *internal) {
   if (all || stats.chrono)
     PRT ("chronological:   %15" PRId64 "   %10.2f %%  of conflicts",
          stats.chrono, percent (stats.chrono, stats.conflicts));
+  if (all || (stats.elevated && stats.chrono))
+    PRT ("elevated:        %15" PRId64 "   %10.2f    per chronological",
+         stats.elevated, relative (stats.elevated, stats.chrono));
   if (all)
     PRT ("compacts:        %15" PRId64 "   %10.2f    interval",
          stats.compacts, relative (stats.conflicts, stats.compacts));
@@ -323,6 +326,12 @@ void Stats::print (Internal *internal) {
   PRT ("  searchprops:   %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.search,
        percent (stats.propagations.search, propagations));
+  PRT ("    cleanprops:  %15" PRId64 "   %10.2f %%  of searchprops",
+       stats.propagations.clean,
+       percent (stats.propagations.clean, stats.propagations.search));
+  PRT ("    dirtyprops:  %15" PRId64 "   %10.2f %%  of searchprops",
+       stats.propagations.dirty,
+       percent (stats.propagations.dirty, stats.propagations.search));
   PRT ("  transredprops: %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.transred,
        percent (stats.propagations.transred, propagations));

@@ -367,7 +367,10 @@ public:
     add_new_observed_var ();
     if (must_add_clause) {
       assert (nof_added_clauses < nof_clauses);
+      if (!lemmas_per_queries[query_loc]) // TODO: bug with ext_prop or reimply?
+        query_loc++;
       assert (query_loc < lemmas_per_queries.size ());
+      assert (lemmas_per_queries[query_loc] > 0);
       lemmas_per_queries[query_loc]--;
       must_add_clause = false;
       return true;
@@ -1384,10 +1387,6 @@ private:
 
   vector<int> observed_vars;
   bool in_connection = false;
-  // TODO remove this code eventually (see below where it is used).
-  /*
-  bool is_lrat = false;
-  */
 
   void add_options (int expected);
   bool shrink_phases (int expected);
@@ -1586,20 +1585,6 @@ void Trace::generate_options (Random &random, Size size) {
   //
   if (random.generate_double () < 0.8)
     push_back (new SetCall ("check", 1));
-
-  // LRAT is incompatible with external_propagator so we set lrat here.
-  //
-  // TODO remove this uncommented code after making it compatible...
-  //
-  /*
-  if (!in_connection && random.generate_double () < 0.3) {
-    push_back (new SetCall ("lrat", 1));
-    is_lrat = true;
-  } else { // TODO ist this correct?
-    push_back (new SetCall ("lrat", 0));
-    is_lrat = false;
-  }
-  */
 
   // In 10% of the remaining cases we use a configuration.
   //
