@@ -489,6 +489,7 @@ void Internal::add_new_original_clause (uint64_t id) {
         Var &v = var (idx);
         v.level = 0;
         v.reason = 0;
+	v.trail = 0;
         const unsigned uidx = vlit (clause[0]);
         unit_clauses[uidx] = new_id;
         mark_fixed (clause[0]);
