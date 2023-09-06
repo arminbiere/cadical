@@ -135,6 +135,8 @@ void Internal::protect_reasons () {
       Clause *reason = v.reason;
       if (!reason)
         continue;
+      if (reason == external_reason)
+        continue;
       LOG (reason, "protecting assigned %d reason %p", lit,
            (void *) reason);
       assert (!reason->reason);
@@ -193,6 +195,8 @@ void Internal::unprotect_reasons () {
       assert (v.level > 0);
       Clause *reason = v.reason;
       if (!reason)
+        continue;
+      if (reason == external_reason)
         continue;
       LOG (reason, "unprotecting assigned %d reason %p", lit,
            (void *) reason);
