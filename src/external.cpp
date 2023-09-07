@@ -662,8 +662,7 @@ void External::check_failing () {
   if (internal->opts.log)
     checker->set ("log", true);
 #endif
-  for (const auto lit : original)
-    checker->add (lit);
+
   for (const auto lit : assumptions) {
     if (!failed (lit))
       continue;
@@ -677,6 +676,12 @@ void External::check_failing () {
       checker->add (lit);
   } else if (constraint.size ())
     LOG (constraint, "constraint satisfied and ignored");
+    
+  // Add original clauses as last step, failing () and failed_constraint ()
+  // might add more external clauses (due to lazy explanation)
+  for (const auto lit : original)
+    checker->add (lit);
+
   int res = checker->solve ();
   if (res != 20)
     FATAL ("failed assumptions do not form a core");

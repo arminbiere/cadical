@@ -685,6 +685,32 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 
 /*----------------------------------------------------------------------------*/
 //
+// Helper function to be able to call learn_external_reason_clause when the
+// internal clause is already used in the caller side (for example during proof
+// checking).
+// These calls are assumed to be without a falsified elit.
+// Dont use it in general instead of learn_external_reason_clause because it
+// does not support the corner cases where a literal remains in clause.
+//
+Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
+  if (clause.empty()) return learn_external_reason_clause (ilit);
+  
+  std::vector<int> clause_tmp{std::move (clause)};
+  clause.clear();
+    
+  Clause* res = learn_external_reason_clause (ilit);
+  // The learn_external_reason clause can leave a literal in clause when there
+  // there is a falsified elit arg. Here it is not allowed to happen.
+  assert (clause.empty());
+  
+  clause = std::move(clause_tmp);
+  clause_tmp.clear();
+  
+  return res;
+}
+
+/*----------------------------------------------------------------------------*/
+//
 // This function decides what to do upon learning a new clause from the
 // external propagator. The possible scenarios are:
 // 1. External clause is satisfied by root-level assignment.

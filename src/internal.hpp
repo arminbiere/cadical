@@ -599,6 +599,7 @@ struct Internal {
   void learn_empty_clause ();
   void learn_unit_clause (int lit);
   void learn_external_propagated_unit_clause (int lit);
+
   void bump_variable (int lit);
   void bump_variables ();
   int recompute_glue (Clause *);
@@ -630,6 +631,7 @@ struct Internal {
   bool external_check_solution ();
   Clause *add_external_clause (bool as_redundant, int propagated_lit = 0);
   Clause *learn_external_reason_clause (int lit, int falsified_elit = 0);
+  Clause *wrapped_learn_external_reason_clause (int lit);
   void explain_external_propagations ();
   void explain_reason (int lit, Clause *, int &open);
   void move_literal_to_watch (bool other_watch);

@@ -31,6 +31,16 @@ void Internal::assume_analyze_literal (int lit) {
   analyzed.push_back (lit);
   Var &v = var (lit);
   assert (val (lit) < 0);
+  if (v.reason == external_reason) {
+
+    v.reason = wrapped_learn_external_reason_clause (-lit);
+
+    if (!v.reason) {
+      v.level = 0;
+      learn_external_propagated_unit_clause (-lit);
+    }
+  }
+  assert (v.reason != external_reason);
   if (!v.level) {
     const unsigned uidx = vlit (-lit);
     uint64_t id = unit_clauses[uidx];
@@ -56,6 +66,7 @@ void Internal::assume_analyze_reason (int lit, Clause *reason) {
   assert (reason);
   assert (lrat_chain.empty ());
   assert (opts.lrat && !opts.lratexternal);
+  assert (reason != external_reason);
   for (const auto &other : *reason)
     if (other != lit)
       assume_analyze_literal (other);
@@ -101,6 +112,30 @@ void Internal::failing () {
       }
       if (failed_clashing)
         continue;
+       if (v.reason == external_reason) {
+        Var &ev = var(lit);
+        ev.reason = learn_external_reason_clause (-lit);
+        if (!ev.reason) {
+          ev.level = 0;
+          learn_external_propagated_unit_clause (-lit);
+          failed_unit = lit;
+          break;
+        }
+        ev.level = 0;
+        // Recalculate assignment level
+        for (const auto &other : *ev.reason) {
+          if (other == -lit)
+            continue;
+          assert (val (other));
+          int tmp = var (other).level;
+          if (tmp > ev.level)
+            ev.level = tmp;
+        }
+        if (!ev.level) {
+          failed_unit = lit;
+          break;
+        }
+      }
       assert (v.reason != external_reason);
       if (!v.reason)
         failed_clashing = lit;
@@ -109,6 +144,8 @@ void Internal::failing () {
         failed_level = v.level;
       }
     }
+
+    assert(clause.empty());
 
     // Get the 'failed' assumption from one of the three cases.
     int failed;
@@ -194,6 +231,16 @@ void Internal::failing () {
         Var &v = var (lit);
         if (!v.level)
           continue;
+        if (v.reason == external_reason) {
+          v.reason = wrapped_learn_external_reason_clause (lit);
+
+          if (!v.reason) {
+            v.level = 0;
+            learn_external_propagated_unit_clause (lit);
+            continue;
+          }
+        }
+        assert (v.reason != external_reason);
         if (v.reason) {
           assert (v.level);
           LOG (v.reason, "analyze reason");
@@ -221,6 +268,15 @@ void Internal::failing () {
       const int lit = clause[0];
       Var &v = var (lit);
       assert (v.reason);
+       if (v.reason == external_reason) {
+        v.reason = wrapped_learn_external_reason_clause (lit);
+
+        if (!v.reason) {
+          v.level = 0;
+          learn_external_propagated_unit_clause (lit);
+        }
+      }
+      assert (v.reason != external_reason);
       assume_analyze_reason (lit, v.reason);
       for (auto &lit : clause) {
         Flags &f = flags (lit);

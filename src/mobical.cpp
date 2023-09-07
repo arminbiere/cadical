@@ -260,6 +260,7 @@ public:
 
   /*-----------------functions for mobical -----------------------------*/
   void push_lemma_lit (int lit) {
+    query_loc = 0;
     clause.push_back (lit);
     if (!lit) {
       nof_clauses++;
