@@ -205,9 +205,12 @@ struct External {
   void push_external_clause_and_witness_on_extension_stack (
       const vector<int> &clause, const vector<int> &witness);
 
+  void push_id_on_extension_stack (uint64_t id);
+
   // Restore a clause, which was pushed on the extension stack.
   void restore_clause (const vector<int>::const_iterator &begin,
-                       const vector<int>::const_iterator &end);
+                       const vector<int>::const_iterator &end,
+		       const uint64_t id);
 
   void restore_clauses ();
 

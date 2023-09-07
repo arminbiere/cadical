@@ -383,6 +383,8 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
         if (!prev) {
           external->push_zero_on_extension_stack ();
           external->push_witness_literal_on_extension_stack (other);
+	  external->push_zero_on_extension_stack ();
+	  external->push_id_on_extension_stack(c->id);
           external->push_zero_on_extension_stack ();
         }
         if (other)

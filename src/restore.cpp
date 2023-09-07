@@ -48,7 +48,8 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 void External::restore_clause (const vector<int>::const_iterator &begin,
-                               const vector<int>::const_iterator &end) {
+                               const vector<int>::const_iterator &end,
+			       const uint64_t id) {
   LOG (begin, end, "restoring external clause");
   assert (eclause.empty ());
   for (auto p = begin; p != end; p++) {
@@ -75,7 +76,7 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
       ext_flags[abs (elit)] = false;
     }
   }
-  internal->add_original_lit (0);
+  internal->finish_added_clause_with_id (id);
   eclause.clear ();
   internal->stats.restored++;
 }
@@ -142,6 +143,14 @@ void External::restore_clauses () {
       assert (p != end_of_extension);
     }
 
+    // now copy the id of the clause
+    const uint64_t id = ((uint64_t)(*p) << 32) + (uint64_t) *(p+1);
+    LOG ("id is %ld", id);
+    *q++ = *p++;
+    *q++ = *p++;
+    assert (!*p);
+    *q++ = *p++;
+
     // Now find 'end_of_clause' (clause starts at 'p') and at the same time
     // figure out whether the clause is actually root level satisfied.
     //
@@ -170,7 +179,7 @@ void External::restore_clauses () {
              satisfied);
         clauses.satisfied++;
       } else {
-        restore_clause (p, end_of_clause); // Might taint literals.
+        restore_clause (p, end_of_clause, id); // Might taint literals.
         clauses.restored++;
       }
 
@@ -237,6 +246,13 @@ void External::restore_clauses () {
     while (*--p)
       assert (p != begin_of_extension);
     int elit;
+    assert (p != begin_of_extension);
+    --p;
+    assert (p != begin_of_extension);
+    --p;
+    assert (p != begin_of_extension);
+    assert (!*p);
+    --p;
     assert (p != begin_of_extension);
     while ((elit = *--p)) {
       mark (witness, elit);
