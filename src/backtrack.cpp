@@ -152,7 +152,8 @@ void Internal::backtrack (int new_level) {
   control.resize (new_level + 1);
   level = new_level;
 
-  if (!level) did_external_prop = false;
+  if (!level)
+    did_external_prop = false;
 }
 
 } // namespace CaDiCaL

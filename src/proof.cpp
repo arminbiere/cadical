@@ -30,7 +30,8 @@ void Internal::build_full_lrat () {
 void Internal::trace (File *file) {
   assert (!tracer);
   new_proof_on_demand ();
-  tracer = new Tracer (this, file, opts.binary, opts.lrat, opts.lratfrat, opts.lratveripb);
+  tracer = new Tracer (this, file, opts.binary, opts.lrat, opts.lratfrat,
+                       opts.lratveripb);
   LOG ("PROOF connecting proof tracer");
   proof->connect (tracer);
 }

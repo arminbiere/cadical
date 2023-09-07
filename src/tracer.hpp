@@ -38,7 +38,7 @@ class Tracer {
 
   // support veriPB
   void veripb_add_derived_clause (const vector<int> &clause,
-                              const vector<uint64_t> &chain);
+                                  const vector<uint64_t> &chain);
   void veripb_begin_proof (uint64_t reserved_ids);
   void veripb_delete_clause (uint64_t id);
 
@@ -48,7 +48,8 @@ class Tracer {
 
 public:
   // own and delete 'file'
-  Tracer (Internal *, File *file, bool binary, bool lrat, bool frat, bool veripb);
+  Tracer (Internal *, File *file, bool binary, bool lrat, bool frat,
+          bool veripb);
   ~Tracer ();
 
   void add_derived_clause (uint64_t, const vector<int> &);

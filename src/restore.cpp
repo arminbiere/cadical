@@ -53,8 +53,9 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
   assert (eclause.empty ());
   for (auto p = begin; p != end; p++) {
     eclause.push_back (*p);
-    if (internal->proof && internal->opts.lrat && !internal->opts.lratexternal) {
-      const auto & elit = *p;
+    if (internal->proof && internal->opts.lrat &&
+        !internal->opts.lratexternal) {
+      const auto &elit = *p;
       unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
       assert ((size_t) eidx < ext_units.size ());
       const uint64_t id = ext_units[eidx];
@@ -68,8 +69,9 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
     internal->add_original_lit (ilit);
     internal->stats.restoredlits++;
   }
-  if (internal->proof && internal->opts.lrat && !internal->opts.lratexternal) {
-    for (const auto & elit : eclause) {
+  if (internal->proof && internal->opts.lrat &&
+      !internal->opts.lratexternal) {
+    for (const auto &elit : eclause) {
       ext_flags[abs (elit)] = false;
     }
   }

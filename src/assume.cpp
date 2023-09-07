@@ -222,7 +222,7 @@ void Internal::failing () {
       Var &v = var (lit);
       assert (v.reason);
       assume_analyze_reason (lit, v.reason);
-      for (auto & lit : clause) {
+      for (auto &lit : clause) {
         Flags &f = flags (lit);
         const unsigned bit = bign (-lit);
         if (!(f.failed & bit))
@@ -279,7 +279,7 @@ void Internal::failing () {
         }
         lrat_chain.clear ();
       }
-      for (auto & lit : sum_constraints)
+      for (auto &lit : sum_constraints)
         clause.push_back (lit);
     }
     clear_analyzed_literals ();
@@ -307,14 +307,14 @@ void Internal::failing () {
         proof->delete_clause (clause_id, clause);
       }
     } else {
-      assert (!opts.lrat || opts.lratexternal || 
-        (constraint.size () == constraint_clauses.size () &&
-        constraint.size () == constraint_chains.size ()));
+      assert (!opts.lrat || opts.lratexternal ||
+              (constraint.size () == constraint_clauses.size () &&
+               constraint.size () == constraint_chains.size ()));
       for (auto p = constraint.rbegin (); p != constraint.rend (); p++) {
-        const auto & lit = *p;
+        const auto &lit = *p;
         if (opts.lrat && !opts.lratexternal) {
           clause.clear ();
-          for (auto & ign : constraint_clauses.back ())
+          for (auto &ign : constraint_clauses.back ())
             clause.push_back (ign);
           constraint_clauses.pop_back ();
         }

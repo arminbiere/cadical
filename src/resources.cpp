@@ -15,8 +15,8 @@ extern "C" {
 #define __WIN32_WINNT 0x0600
 #endif
 
-#include <psapi.h>
 #include <windows.h>
+#include <psapi.h>
 
 #else
 
