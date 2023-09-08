@@ -93,38 +93,6 @@ void Internal::clear_decomposed_literals () {
   decomposed.clear ();
 }
 
-// compute lrat_chain from a given starting reason to root
-//
-void Internal::decompose_analyze_lrat (DFS *dfs, Clause *reason) {
-  if (!lrat)
-    return;
-  assert (lrat_chain.empty ());
-  assert (reason); // not sure yet.
-  LOG (reason, "decompose analyze for");
-  for (const auto lit : *reason) {
-    const auto other = -lit;
-    Flags &f = flags (other);
-    if (f.seen)
-      continue;
-    f.seen = true;
-    analyzed.push_back (other);
-    if (val (other) > 0) {
-      const unsigned uidx = vlit (other);
-      uint64_t id = unit_clauses[uidx];
-      assert (id);
-      lrat_chain.push_back (id);
-      continue;
-    }
-    assert (mini_chain.empty ());
-    decompose_analyze_binary_chain (dfs, other);
-    for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++) {
-      lrat_chain.push_back (*p);
-    }
-    mini_chain.clear ();
-  }
-  lrat_chain.push_back (reason->id);
-  clear_analyzed_literals ();
-}
 
 // This performs one round of Tarjan's algorithm, e.g., equivalent literal
 // detection and substitution, on the whole formula.  We might want to
