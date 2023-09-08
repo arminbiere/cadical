@@ -303,7 +303,11 @@ Clause *Internal::add_external_clause (bool as_redundant,
   // Read out the external lemma into original and simplify it into clause
   assert (clause.empty ());
   assert (original.empty ());
-  assert (lrat_chain.empty ());
+
+  // we need to be build a new LRAT chain if we are already in the middle of the analysis (like
+  // during failed assumptions)
+  std::vector<uint64_t> lrat_chain_ext;
+  assert (lrat_chain_ext.empty ());
 
   vector<int> external_original;
   vector<int> marking;
@@ -327,7 +331,7 @@ Clause *Internal::add_external_clause (bool as_redundant,
       bool added = external->ext_flags[abs (elit)];
       if (id && !added) {
         external->ext_flags[abs (elit)] = true;
-        lrat_chain.push_back (id);
+        lrat_chain_ext.push_back (id);
       }
     }
 
@@ -372,7 +376,7 @@ Clause *Internal::add_external_clause (bool as_redundant,
         if (opts.lrat && !opts.lratexternal && !added_id) {
           uint64_t uid = (unit_clauses[vlit (-ilit)]);
           assert (uid);
-          lrat_chain.push_back (uid);
+          lrat_chain_ext.push_back (uid);
         }
 
         if (propagated_elit)
@@ -434,7 +438,7 @@ Clause *Internal::add_external_clause (bool as_redundant,
       proof->delete_external_original_clause (id, external_original);
     original.clear ();
     clause.clear ();
-    lrat_chain.clear ();
+    lrat_chain_ext.clear ();
     external_original.clear ();
     return 0;
   }
@@ -444,8 +448,8 @@ Clause *Internal::add_external_clause (bool as_redundant,
     if (proof) {
       uint64_t new_id = ++clause_id;
       if (opts.lrat && !opts.lratexternal) {
-        lrat_chain.push_back (id);
-        proof->add_derived_clause (new_id, clause, lrat_chain);
+        lrat_chain_ext.push_back (id);
+        proof->add_derived_clause (new_id, clause, lrat_chain_ext);
       } else {
         proof->add_derived_clause (new_id, clause);
       }
@@ -453,7 +457,7 @@ Clause *Internal::add_external_clause (bool as_redundant,
       id = new_id;
     }
   }
-  lrat_chain.clear ();
+  lrat_chain_ext.clear ();
   original.clear ();
   external_original.clear ();
   int glue = (int) (learned_levels.size () + unassigned);
