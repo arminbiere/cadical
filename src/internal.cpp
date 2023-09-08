@@ -13,12 +13,12 @@ Internal::Internal ()
       external_prop (false), did_external_prop (false),
       external_prop_is_lazy (true), rephased (0), vsize (0), max_var (0),
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
+      lrat (false),
       level (0), vals (0), score_inc (1.0), scores (this), conflict (0),
       ignore (0), external_reason (&external_reason_clause), notified (0),
       propagated (0), propagated2 (0), propergated (0), best_assigned (0),
       target_assigned (0), no_conflict_until (0), unsat_constraint (false),
-      marked_failed (true), proof (0), checker (0), tracer (0),
-      lratchecker (0), lratbuilder (0), opts (this),
+      marked_failed (true), proof (0), lratbuilder (0), opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
@@ -33,14 +33,14 @@ Internal::~Internal () {
     delete_clause (c);
   if (proof)
     delete proof;
-  if (tracer)
-    delete tracer;
-  if (checker)
-    delete checker;
-  if (lratchecker)
-    delete lratchecker;
   if (lratbuilder)
     delete lratbuilder;
+  for (auto & tracer : tracers)
+    delete tracer;
+  for (auto & filetracer : file_tracers)
+    delete filetracer;
+  for (auto & stattracer : stat_tracers)
+    delete stattracer;
   if (vals) {
     vals -= vsize;
     delete[] vals;
@@ -173,10 +173,7 @@ void Internal::add_original_lit (int lit) {
       // Use the external form of the clause for printing in proof
       // Externalize(internalized literal) != external literal
       assert (!original.size () || !external->eclause.empty ());
-      if (opts.lrat)
-        proof->add_external_original_clause (id, external->eclause);
-      else
-        proof->add_external_original_clause (id, external->eclause);
+      proof->add_external_original_clause (id, false, external->eclause);
     }
     add_new_original_clause (id);
     original.clear ();
@@ -191,7 +188,7 @@ void Internal::reserve_ids (int number) {
   assert (!clause_id && !reserved_ids && !original_id);
   clause_id = reserved_ids = number;
   if (proof)
-    proof->set_first_id (reserved_ids);
+    proof->begin_proof (reserved_ids);
 }
 
 /*------------------------------------------------------------------------*/
@@ -839,8 +836,8 @@ void Internal::finalize () {
 
 void Internal::print_statistics () {
   stats.print (this);
-  if (checker)
-    checker->print_stats ();
+  for (auto & st : stat_tracers)
+    st->print_stats ();
 }
 
 /*------------------------------------------------------------------------*/

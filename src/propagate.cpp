@@ -63,7 +63,7 @@ inline int Internal::assignment_level (int lit, Clause *reason) {
 //
 void Internal::build_chain_for_units (int lit, Clause *reason,
                                       bool forced) {
-  if (!opts.lrat || opts.lratexternal)
+  if (!lrat)
     return;
   if (opts.chrono && assignment_level (lit, reason) && !forced)
     return;
@@ -88,7 +88,7 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
 // TODO: not inlined because its used in vivify. Bad??
 //
 void Internal::build_chain_for_empty () {
-  if (!opts.lrat || opts.lratexternal || !lrat_chain.empty ())
+  if (!lrat || !lrat_chain.empty ())
     return;
   assert (!level);
   assert (lrat_chain.empty ());
@@ -117,7 +117,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
           reason == external_reason);
   Var &v = var (idx);
   int lit_level;
-  assert (!opts.lrat || opts.lratexternal || level ||
+  assert (!lrat || level ||
           reason == external_reason || reason == decision_reason ||
           !lrat_chain.empty ());
           

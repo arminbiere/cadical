@@ -318,11 +318,13 @@ Clause *Internal::add_external_clause (bool as_redundant,
     if (opts.check && (opts.checkwitness || opts.checkfailed)) {
       external->original.push_back (elit);
     }
-    if (proof || (opts.lrat && !opts.lratexternal))
+    if (proof || lrat) {
+      assert (proof && lrat);
       external_original.push_back (elit);
+    }
 
     bool added_id = false;
-    if (opts.lrat && !opts.lratexternal) {
+    if (lrat) {
       // actually find unit of -elit (flips elit < 0)
       unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
       assert ((size_t) eidx < external->ext_units.size ());
@@ -373,7 +375,7 @@ Clause *Internal::add_external_clause (bool as_redundant,
 
       } else if (tmp < 0) {
         LOG ("root level falsified literal %d is ignored", ilit);
-        if (opts.lrat && !opts.lratexternal && !added_id) {
+        if (lrat && !added_id) {
           uint64_t uid = (unit_clauses[vlit (-ilit)]);
           assert (uid);
           lrat_chain_ext.push_back (uid);
@@ -418,9 +420,9 @@ Clause *Internal::add_external_clause (bool as_redundant,
   }
   uint64_t id = ++clause_id;
   if (proof)
-    proof->add_external_original_clause (id, external_original);
+    proof->add_external_original_clause (id, false, external_original);
 
-  if (opts.lrat && !opts.lratexternal) {
+  if (lrat) {
     for (const auto &lit : external_original) {
       external->ext_flags[abs (lit)] = false;
     }
@@ -435,7 +437,7 @@ Clause *Internal::add_external_clause (bool as_redundant,
     // TODO: handle the error-case if a satisfied clause is given as reason
     // of propagation.
     if (proof)
-      proof->delete_external_original_clause (id, external_original);
+      proof->delete_external_original_clause (id, false, external_original);
     original.clear ();
     clause.clear ();
     lrat_chain_ext.clear ();
@@ -447,13 +449,10 @@ Clause *Internal::add_external_clause (bool as_redundant,
     external->check_learned_clause ();
     if (proof) {
       uint64_t new_id = ++clause_id;
-      if (opts.lrat && !opts.lratexternal) {
+      if (lrat)
         lrat_chain_ext.push_back (id);
-        proof->add_derived_clause (new_id, clause, lrat_chain_ext);
-      } else {
-        proof->add_derived_clause (new_id, clause);
-      }
-      proof->delete_external_original_clause (id, external_original);
+      proof->add_derived_clause (new_id, false, clause, lrat_chain_ext);
+      proof->delete_external_original_clause (id, false, external_original);
       id = new_id;
     }
   }

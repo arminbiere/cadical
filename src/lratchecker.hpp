@@ -1,7 +1,7 @@
 #ifndef _lratchecker_hpp_INCLUDED
 #define _lratchecker_hpp_INCLUDED
 
-/*------------------------------------------------------------------------*/
+#include "tracer.hpp" // Alphabetically after 'lratchecker'.
 
 namespace CaDiCaL {
 
@@ -29,7 +29,7 @@ struct LratCheckerClause {
 
 /*------------------------------------------------------------------------*/
 
-class LratChecker {
+class LratChecker : public Tracer {
 
   Internal *internal;
 
@@ -112,23 +112,22 @@ public:
   LratChecker (Internal *);
   ~LratChecker ();
 
-  void add_original_clause (uint64_t, const vector<int> &);
+  void begin_proof (uint64_t) {}  // skip
+ 
+  void add_original_clause (uint64_t, bool, const vector<int> &);
+
   // check the proof chain for the new clause and add it to the checker
-  void add_derived_clause (uint64_t, const vector<int> &,
+  void add_derived_clause (uint64_t, bool, const vector<int> &,
                            const vector<uint64_t> &);
 
-  // used for frat. just assume the clause is correct because we have no
-  // proof.
-  void add_derived_clause (uint64_t, const vector<int> &);
-
   // check if the clause is present and delete it from the checker
-  void delete_clause (uint64_t, const vector<int> &);
+  void delete_clause (uint64_t, bool, const vector<int> &);
 
   // check if the clause is present and delete it from the checker
   void finalize_clause (uint64_t, const vector<int> &);
 
   // check if all clauses have been deleted
-  void finalize_check ();
+  void finalize_proof (uint64_t);
 
   void print_stats ();
   void dump (); // for debugging purposes only

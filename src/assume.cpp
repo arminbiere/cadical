@@ -65,8 +65,8 @@ void Internal::assume_analyze_literal (int lit) {
 void Internal::assume_analyze_reason (int lit, Clause *reason) {
   assert (reason);
   assert (lrat_chain.empty ());
-  assert (opts.lrat && !opts.lratexternal);
   assert (reason != external_reason);
+  assert (lrat);
   for (const auto &other : *reason)
     if (other != lit)
       assume_analyze_literal (other);
@@ -223,7 +223,7 @@ void Internal::failing () {
     vector<int> sum_constraints;
 
     // no lrat do bfs as it was before
-    if (!opts.lrat || opts.lratexternal) {
+    if (!lrat) {
       size_t next = 0;
       while (next < analyzed.size ()) {
         const int lit = analyzed[next++];
@@ -355,20 +355,16 @@ void Internal::failing () {
     if (!unsat_constraint) {
       external->check_learned_clause ();
       if (proof) {
-        if (opts.lrat && !opts.lratexternal) {
-          LOG (lrat_chain, "assume proof chain without constraint");
-          proof->add_derived_clause (++clause_id, clause, lrat_chain);
-        } else
-          proof->add_derived_clause (++clause_id, clause);
-        proof->delete_clause (clause_id, clause);
+        proof->add_derived_clause (++clause_id, true, clause, lrat_chain);
+        proof->delete_clause (clause_id, true, clause);
       }
     } else {
-      assert (!opts.lrat || opts.lratexternal ||
+      assert (!lrat ||
               (constraint.size () == constraint_clauses.size () &&
                constraint.size () == constraint_chains.size ()));
       for (auto p = constraint.rbegin (); p != constraint.rend (); p++) {
         const auto &lit = *p;
-        if (opts.lrat && !opts.lratexternal) {
+        if (lrat) {
           clause.clear ();
           for (auto &ign : constraint_clauses.back ())
             clause.push_back (ign);
@@ -377,18 +373,18 @@ void Internal::failing () {
         clause.push_back (-lit);
         external->check_learned_clause ();
         if (proof) {
-          if (opts.lrat && !opts.lratexternal) {
+          if (lrat) {
             for (auto p : constraint_chains.back ()) {
               lrat_chain.push_back (p);
             }
             constraint_chains.pop_back ();
             LOG (lrat_chain, "assume proof chain with constraints");
-            proof->add_derived_clause (++clause_id, clause, lrat_chain);
+            proof->add_derived_clause (++clause_id, true, clause, lrat_chain);
             lrat_chain.clear ();
-            proof->delete_clause (clause_id, clause);
+            proof->delete_clause (clause_id, true, clause);
           } else {
-            proof->add_derived_clause (++clause_id, clause);
-            proof->delete_clause (clause_id, clause);
+            proof->add_derived_clause (++clause_id, true, clause, lrat_chain);
+            proof->delete_clause (clause_id, true, clause);
           }
         }
         clause.pop_back ();

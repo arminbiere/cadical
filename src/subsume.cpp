@@ -177,10 +177,7 @@ void Internal::strengthen_clause (Clause *c, int lit) {
   LOG (c, "removing %d in", lit);
   if (proof) {
     LOG (lrat_chain, "strengthening clause with chain");
-    if (opts.lrat && !opts.lratexternal)
-      proof->strengthen_clause (c, lit, lrat_chain);
-    else
-      proof->strengthen_clause (c, lit);
+    proof->strengthen_clause (c, lit, lrat_chain);
   }
   if (!c->redundant)
     mark_removed (lit);
@@ -301,7 +298,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
 
   if (flipped) {
     LOG (d, "strengthening");
-    if (opts.lrat && !opts.lratexternal) {
+    if (lrat) {
       assert (lrat_chain.empty ());
       lrat_chain.push_back (c->id);
       lrat_chain.push_back (d->id);

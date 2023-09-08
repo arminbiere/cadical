@@ -1,7 +1,7 @@
 #ifndef _checker_hpp_INCLUDED
 #define _checker_hpp_INCLUDED
 
-/*------------------------------------------------------------------------*/
+#include "stattracer.hpp" // Alphabetically after 'checker'.
 
 namespace CaDiCaL {
 
@@ -45,7 +45,7 @@ typedef vector<CheckerWatch> CheckerWatcher;
 
 /*------------------------------------------------------------------------*/
 
-class Checker {
+class Checker : public StatTracer {
 
   Internal *internal;
 
@@ -147,9 +147,13 @@ public:
   Checker (Internal *);
   ~Checker ();
 
-  void add_original_clause (uint64_t, const vector<int> &);
-  void add_derived_clause (uint64_t, const vector<int> &);
-  void delete_clause (uint64_t, const vector<int> &);
+  void add_original_clause (uint64_t, bool, const vector<int> &);
+  void add_derived_clause (uint64_t, bool,  const vector<int> &, const vector<uint64_t> &);
+  void delete_clause (uint64_t, bool, const vector<int> &);
+
+  void finalize_clause (uint64_t, const vector<int> &) {}  // skip
+  void finalize_proof (uint64_t) {}  // skip
+  void begin_proof (uint64_t) {}  // skip
 
   void print_stats ();
   void dump (); // for debugging purposes only

@@ -56,12 +56,15 @@ extern "C" {
 #include "contract.hpp"
 #include "cover.hpp"
 #include "decompose.hpp"
+#include "drattracer.hpp"
 #include "elim.hpp"
 #include "ema.hpp"
 #include "external.hpp"
 #include "file.hpp"
+#include "filetracer.hpp"
 #include "flags.hpp"
 #include "format.hpp"
+#include "frattracer.hpp"
 #include "heap.hpp"
 #include "instantiate.hpp"
 #include "internal.hpp"
@@ -70,6 +73,7 @@ extern "C" {
 #include "logging.hpp"
 #include "lratbuilder.hpp"
 #include "lratchecker.hpp"
+#include "lrattracer.hpp"
 #include "message.hpp"
 #include "occs.hpp"
 #include "options.hpp"
@@ -86,11 +90,13 @@ extern "C" {
 #include "resources.hpp"
 #include "score.hpp"
 #include "stats.hpp"
+#include "stattracer.hpp"
 #include "terminal.hpp"
 #include "tracer.hpp"
 #include "util.hpp"
 #include "var.hpp"
 #include "version.hpp"
+#include "veripbtracer.hpp"
 #include "vivify.hpp"
 #include "watch.hpp"
 
@@ -179,6 +185,7 @@ struct Internal {
   vector<Clause *> inst_chain;     // for lrat in instantiate
   vector<vector<vector<uint64_t>>>
       probehbr_chains;          // only used if opts.probehbr=false
+  bool lrat;                    // generate lrat internally
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
   signed char *vals;            // assignment [-max_var,max_var]
@@ -234,11 +241,20 @@ struct Internal {
   Limit lim;                // limits for various phases
   Last last;                // statistics at last occurrence
   Inc inc;                  // increments on limits
-  Proof *proof;             // clausal proof observers if non zero
+
+  Proof *proof;             // abstraction layer between solver and tracers
+  LratBuilder *lratbuilder; // special proof tracer
+  vector<Tracer*> tracers;   // proof tracing objects (ie interpolant calulator)
+  vector<FileTracer*> file_tracers; // file proof tracers (ie DRAT, LRAT...)
+  vector<StatTracer*> stat_tracers; // checkers
+
+  /* depricated
   Checker *checker;         // online proof checker observing proof
   Tracer *tracer;           // proof to file tracer observing proof
   LratChecker *lratchecker; // online lrat checker observing proof
   LratBuilder *lratbuilder; // lrat proof chain builder observing proof
+  */
+  
   Options opts;             // run-time options
   Stats stats;              // statistics
 #ifndef QUIET
@@ -1267,7 +1283,8 @@ struct Internal {
   // Enable and disable proof logging and checking.
   //
   void new_proof_on_demand ();
-  void build_full_lrat (); // enable full lrat
+  void setup_lrat_builder ();  // if opts.externallrat=true
+  void force_lrat ();      // sets lrat=true
   void close_trace ();     // Stop proof tracing.
   void flush_trace ();     // Flush proof trace file.
   void trace (File *);     // Start write proof file.

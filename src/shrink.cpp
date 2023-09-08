@@ -415,7 +415,7 @@ void Internal::shrink_and_minimize_clause () {
   // for direct lrat we remember how the clause used to look
   vector<int> old_clause_lrat;
   assert (minimize_chain.empty ());
-  if (opts.lrat && !opts.lratexternal)
+  if (lrat)
     for (auto &i : clause)
       old_clause_lrat.push_back (i);
 
@@ -435,7 +435,7 @@ void Internal::shrink_and_minimize_clause () {
     for (std::vector<int>::size_type j = 1; j < clause.size (); ++j) {
       assert (i <= j);
       clause[i] = clause[j];
-      if (opts.lrat && !opts.lratexternal) {
+      if (lrat) {
         assert (j < old_clause_lrat.size ());
         assert (mini_chain.empty ());
         if (clause[j] != old_clause_lrat[j]) {

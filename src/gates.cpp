@@ -128,7 +128,7 @@ void Internal::mark_binary_literals (Eliminator &eliminator, int first) {
       // had a bug where units could occur multiple times here
       // solved with flags
       LOG ("found binary resolved unit %d", first);
-      if (opts.lrat && !opts.lratexternal) {
+      if (lrat) {
         Clause *d = find_binary_clause (first, -second);
         assert (d);
         for (auto &lit : *d) {
@@ -230,7 +230,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
       LOG ("found binary resolved unit %d", second);
       // did not find a bug where units could occur multiple times here
       // still solved potential issues with flags
-      if (opts.lrat && !opts.lratexternal) {
+      if (lrat) {
         Clause *d = find_binary_clause (pivot, second);
         assert (d);
         for (auto &lit : *d) {

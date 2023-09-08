@@ -154,7 +154,7 @@ void External::add (int elit) {
   // when the proof is printed during add_original_lit (0)
   if (elit && internal->proof) {
     eclause.push_back (elit);
-    if (internal->opts.lrat && !internal->opts.lratexternal) {
+    if (internal->lrat) {
       // actually find unit of -elit (flips elit < 0)
       unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
       assert ((size_t) eidx < ext_units.size ());
@@ -167,8 +167,7 @@ void External::add (int elit) {
     }
   }
 
-  if (!elit && internal->proof && internal->opts.lrat &&
-      !internal->opts.lratexternal) {
+  if (!elit && internal->proof && internal->lrat) {
     for (const auto &elit : eclause) {
       ext_flags[abs (elit)] = false;
     }

@@ -812,7 +812,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
               stats.vivifystred2++;
           }
           clear_analyzed_literals ();
-          if (opts.lrat && !opts.lratexternal) {
+          if (lrat) {
             assert (lrat_chain.empty ());
             vivify_build_lrat (lit, v.reason);
             clear_analyzed_literals ();
@@ -860,7 +860,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
             stats.vivifystred3++;
         }
         clear_analyzed_literals ();
-        if (opts.lrat && !opts.lratexternal) {
+        if (lrat) {
           assert (lrat_chain.empty ());
           vivify_build_lrat (0, conflict);
           clear_analyzed_literals ();
@@ -892,7 +892,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
         LOG (c, "instantiate success with literal %d in", lit);
         stats.vivifyinst++;
         // strengthen clause
-        if (opts.lrat && !opts.lratexternal) {
+        if (lrat) {
           assert (lrat_chain.empty ());
           vivify_build_lrat (0, c);
           vivify_build_lrat (0, conflict);
@@ -919,7 +919,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
 
       if (!clause.empty ()) {
 
-        assert (!opts.lrat || opts.lratexternal || !lrat_chain.empty ());
+        assert (!lrat || !lrat_chain.empty ());
         LOG ("strengthening instead of subsuming clause");
         vivify_strengthen (c);
 
@@ -989,7 +989,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     else
       stats.vivifystrirr++;
 
-    if (opts.lrat && !opts.lratexternal && lrat_chain.empty ()) {
+    if (lrat && lrat_chain.empty ()) {
       assert (lrat_chain.empty ());
       vivify_build_lrat (0, c);
       clear_analyzed_literals ();
