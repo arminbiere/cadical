@@ -25,7 +25,7 @@ class VeripbTracer : public FileTracer {
                                   const vector<uint64_t> &chain);
   void veripb_add_derived_clause (bool redundant, const vector<int> &clause);
   void veripb_begin_proof (uint64_t reserved_ids);
-  void veripb_delete_clause (bool redundant, uint64_t id);
+  void veripb_delete_clause (uint64_t id, bool redundant);
   void veripb_finalize_proof (uint64_t conflict_id);
 
 

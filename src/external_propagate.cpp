@@ -319,7 +319,6 @@ Clause *Internal::add_external_clause (bool as_redundant,
       external->original.push_back (elit);
     }
     if (proof || lrat) {
-      assert (proof && lrat);
       external_original.push_back (elit);
     }
 

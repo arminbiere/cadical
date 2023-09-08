@@ -83,13 +83,12 @@ void VeripbTracer::veripb_add_derived_clause (bool redundant, const vector<int> 
     file->put (' ');
   }
   file->put (">= 1 ;\n");
+  if (!redundant)
+    file->put ("core id -1\n");
 }
 
 void VeripbTracer::veripb_add_derived_clause (bool redundant, const vector<int> &clause) {
-  file->put ("pol ");
-  bool first = true;
-  file->put ("\n");
-  file->put ("e -1 ");
+  file->put ("rup ");
   for (const auto &external_lit : clause) {
     file->put ("1 ");
     if (external_lit < 0)
@@ -99,6 +98,8 @@ void VeripbTracer::veripb_add_derived_clause (bool redundant, const vector<int> 
     file->put (' ');
   }
   file->put (">= 1 ;\n");
+  if (!redundant)
+    file->put ("core id -1\n");
 }
 
 void VeripbTracer::veripb_begin_proof (uint64_t reserved_ids) {
@@ -108,8 +109,11 @@ void VeripbTracer::veripb_begin_proof (uint64_t reserved_ids) {
   file->put ("\n");
 }
 
-void VeripbTracer::veripb_delete_clause (bool redundant, uint64_t id) {
-  file->put ("del id ");
+void VeripbTracer::veripb_delete_clause (uint64_t id, bool redundant) {
+  if (redundant)
+    file->put ("del id ");
+  else
+    file->put ("delc ");
   file->put (id);
   file->put ("\n");
 }
