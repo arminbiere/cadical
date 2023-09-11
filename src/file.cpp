@@ -217,11 +217,15 @@ FILE *File::read_pipe (Internal *internal, const char *fmt, const int *sig,
   return open_pipe (internal, fmt, path, "r");
 }
 
+#ifndef SAFE
+
 FILE *File::write_pipe (Internal *internal, const char *fmt,
                         const char *path) {
   MSG ("opening pipe to write '%s'", path);
   return open_pipe (internal, fmt, path, "w");
 }
+
+#endif
 
 /*------------------------------------------------------------------------*/
 
@@ -268,6 +272,7 @@ File *File::read (Internal *internal, const char *path) {
 File *File::write (Internal *internal, const char *path) {
   FILE *file;
   int close_input = 2;
+#ifndef SAFE
   if (has_suffix (path, ".xz"))
     file = write_pipe (internal, "xz -c > %s", path);
   else if (has_suffix (path, ".bz2"))
@@ -278,6 +283,7 @@ File *File::write (Internal *internal, const char *path) {
     file = write_pipe (internal, "7z a -an -txz -si -so > %s 2>/dev/null",
                        path);
   else
+#endif
     file = write_file (internal, path), close_input = 1;
 
   return file ? new File (internal, true, close_input, file, path) : 0;
