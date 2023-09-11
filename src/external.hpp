@@ -205,6 +205,8 @@ struct External {
   void push_external_clause_and_witness_on_extension_stack (
       const vector<int> &clause, const vector<int> &witness);
 
+  // Push the id of the clause on the stack, using 0 to indicate that the clause should not be
+  // restored.
   void push_id_on_extension_stack (uint64_t id);
 
   // Restore a clause, which was pushed on the extension stack.

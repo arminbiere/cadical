@@ -49,7 +49,6 @@ void External::push_clause_on_extension_stack (Clause *c) {
   internal->stats.weakenedlen += c->size;
   push_zero_on_extension_stack ();
   push_id_on_extension_stack(c->id);
-  push_zero_on_extension_stack ();
   for (const auto &lit : *c)
     push_clause_literal_on_extension_stack (lit);
 }
@@ -68,7 +67,6 @@ void External::push_binary_clause_on_extension_stack (uint64_t id, int pivot,
   push_witness_literal_on_extension_stack (pivot);
   push_zero_on_extension_stack ();
   push_id_on_extension_stack(id);
-  push_zero_on_extension_stack ();
   push_clause_literal_on_extension_stack (pivot);
   push_clause_literal_on_extension_stack (other);
 }
@@ -156,8 +154,6 @@ void External::extend () {
     assert (i != begin);
     --i;
     assert (i != begin);
-    --i;
-    assert (i != begin);
     if (satisfied)
       while (*--i)
         assert (i != begin);
@@ -200,7 +196,7 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
     int lit;
     while ((lit = *--i))
       clause.push_back (lit);
-    i -= 3;
+    i -= 2;
     assert (i != begin);
     while ((lit = *--i))
       witness.push_back (lit);
@@ -228,7 +224,7 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
         witness.push_back (lit);
       assert (!lit);
       assert (i != end);
-      i += 3;
+      i += 2;
       assert (i != end);
       while (i != end && (lit = *i++))
         clause.push_back (lit);
