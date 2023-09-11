@@ -60,6 +60,7 @@ LratCheckerClause *LratChecker::new_clause () {
 }
 
 void LratChecker::delete_clause (LratCheckerClause *c) {
+  LOG("LRAT CHECKER deleting clause id %ld", c->id);
   assert (c);
   if (!c->garbage) {
     assert (num_clauses);
