@@ -52,6 +52,7 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
 			       const uint64_t id) {
   LOG (begin, end, "restoring external clause");
   assert (eclause.empty ());
+  const bool irredundant_clause = (id != 0);
   for (auto p = begin; p != end; p++) {
     eclause.push_back (*p);
     if (internal->proof && internal->opts.lrat &&
@@ -67,8 +68,9 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
       }
     }
     int ilit = internalize (*p);
-    internal->add_original_lit (ilit);
-    internal->stats.restoredlits++;
+    if (irredundant_clause)
+      internal->add_original_lit (ilit),
+      internal->stats.restoredlits++;
   }
   if (internal->proof && internal->opts.lrat &&
       !internal->opts.lratexternal) {
@@ -76,7 +78,8 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
       ext_flags[abs (elit)] = false;
     }
   }
-  internal->finish_added_clause_with_id (id);
+  if (irredundant_clause)
+    internal->finish_added_clause_with_id (id);
   eclause.clear ();
   internal->stats.restored++;
 }

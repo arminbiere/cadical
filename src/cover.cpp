@@ -385,8 +385,8 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
           external->push_zero_on_extension_stack ();
           external->push_witness_literal_on_extension_stack (other);
 	  external->push_zero_on_extension_stack ();
-	  // TODO we here restore a clause that was never added!
-	  external->push_id_on_extension_stack(already_pushed ? ++clause_id : c->id);
+	  // only the original (first clause) needs to be added, the next ones are redundant
+	  external->push_id_on_extension_stack(already_pushed ? 0 : c->id);
           external->push_zero_on_extension_stack ();
 	  already_pushed = true;
         }
