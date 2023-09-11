@@ -50,7 +50,7 @@ namespace CaDiCaL {
 void External::restore_clause (const vector<int>::const_iterator &begin,
                                const vector<int>::const_iterator &end,
 			       const uint64_t id) {
-  LOG (begin, end, "restoring external clause");
+  LOG (begin, end, "restoring external clause[%ld]", id);
   assert (eclause.empty ());
   const bool irredundant_clause = (id != 0);
   for (auto p = begin; p != end; p++) {
@@ -80,6 +80,8 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
   }
   if (irredundant_clause)
     internal->finish_added_clause_with_id (id);
+  if (!irredundant_clause)
+    LOG (eclause, "do not restore clause, because it is redundant");
   eclause.clear ();
   internal->stats.restored++;
 }

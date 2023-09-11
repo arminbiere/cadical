@@ -385,17 +385,25 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
           external->push_zero_on_extension_stack ();
           external->push_witness_literal_on_extension_stack (other);
 	  external->push_zero_on_extension_stack ();
-	  // only the original (first clause) needs to be added, the next ones are redundant
-	  external->push_id_on_extension_stack(already_pushed ? 0 : c->id);
+	  const uint64_t id = ++clause_id;
+	  if (proof && opts.lrat && already_pushed) {
+	    proof->add_derived_clause (id, clause, lrat_chain);
+            proof->delete_clause (id, clause);
+          }
+	  external->push_id_on_extension_stack(already_pushed ? id : c->id);
           external->push_zero_on_extension_stack ();
 	  already_pushed = true;
+	  clause.clear();
         }
-        if (other)
+        if (other) {
           external->push_clause_literal_on_extension_stack (other);
+	  clause.push_back(other);
+	}
         prev = other;
       }
     }
   }
+  clause.clear();
 
   // Backtrack and 'unassign' all literals.
 

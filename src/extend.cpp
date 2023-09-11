@@ -151,11 +151,12 @@ void External::extend () {
       assert (i != begin);
     }
     assert (i != begin);
-    LOG ("skipping %d %d", *i, *(i-1));
+    LOG ("id=%ld", ((uint64_t)*i << 32) + *(i-1));
     --i;
     assert (i != begin);
     --i;
     assert (i != begin);
+    assert (!*i);
     --i;
     assert (i != begin);
     if (satisfied)
