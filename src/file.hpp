@@ -53,7 +53,9 @@ class File {
                           const char *mode);
   static FILE *read_pipe (Internal *, const char *fmt, const int *sig,
                           const char *path);
+#ifndef SAFE
   static FILE *write_pipe (Internal *, const char *fmt, const char *path);
+#endif
 
 public:
   static char *find (const char *prg);     // search in 'PATH'
