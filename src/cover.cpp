@@ -379,13 +379,16 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       mark_garbage (c);
       // Only copy extension stack if successful.
       int prev = INT_MIN;
+      bool already_pushed = false;
       for (const auto &other : coveror.extend) {
         if (!prev) {
           external->push_zero_on_extension_stack ();
           external->push_witness_literal_on_extension_stack (other);
 	  external->push_zero_on_extension_stack ();
-	  external->push_id_on_extension_stack(c->id);
+	  // TODO we here restore a clause that was never added!
+	  external->push_id_on_extension_stack(already_pushed ? ++clause_id : c->id);
           external->push_zero_on_extension_stack ();
+	  already_pushed = true;
         }
         if (other)
           external->push_clause_literal_on_extension_stack (other);
@@ -641,6 +644,9 @@ bool Internal::cover () {
 
   int64_t covered = cover_round ();
 
+  // this is only necessary when activating lrat to ensure that ids are not reused even for binary
+  // clauses that are only deleted now
+  garbage_collection ();
   STOP_SIMPLIFIER (cover, COVER);
   report ('c', !opts.reportall && !covered);
 
