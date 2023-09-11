@@ -1091,6 +1091,7 @@ struct Internal {
   // (BIG) and equivalent literal substitution (ELS) in 'decompose.cpp'.
   //
   void decompose_conflicting_scc_lrat (DFS *dfs, vector<int> &);
+  void build_lrat_for_clause (const vector<vector<Clause *>> &dfs_chains);
   vector<Clause *> decompose_analyze_binary_clauses (DFS *dfs, int from);
   void decompose_analyze_binary_chain (DFS *dfs, int);
   void decompose_analyze_lrat (DFS *dfs, Clause *reason);

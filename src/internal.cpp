@@ -199,6 +199,7 @@ void Internal::finish_added_clause_with_id (uint64_t id) {
 
 void Internal::reserve_ids (int number) {
   // return;
+  LOG ("reserving %d ids", number);
   assert (number >= 0);
   assert (!clause_id && !reserved_ids && !original_id);
   clause_id = reserved_ids = number;

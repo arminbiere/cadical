@@ -163,7 +163,7 @@ struct External {
 
   void push_clause_on_extension_stack (Clause *);
   void push_clause_on_extension_stack (Clause *, int witness);
-  void push_binary_clause_on_extension_stack (int witness, int other);
+  void push_binary_clause_on_extension_stack (uint64_t id, int witness, int other);
 
   // The main 'extend' function which extends an internal assignment to an
   // external assignment using the extension stack (and sets 'extended').

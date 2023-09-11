@@ -60,14 +60,14 @@ void External::push_clause_on_extension_stack (Clause *c, int pivot) {
   push_clause_on_extension_stack (c);
 }
 
-void External::push_binary_clause_on_extension_stack (int pivot,
+void External::push_binary_clause_on_extension_stack (uint64_t id, int pivot,
                                                       int other) {
   internal->stats.weakened++;
   internal->stats.weakenedlen += 2;
   push_zero_on_extension_stack ();
   push_witness_literal_on_extension_stack (pivot);
   push_zero_on_extension_stack ();
-  push_id_on_extension_stack(0);
+  push_id_on_extension_stack(id);
   push_zero_on_extension_stack ();
   push_clause_literal_on_extension_stack (pivot);
   push_clause_literal_on_extension_stack (other);
