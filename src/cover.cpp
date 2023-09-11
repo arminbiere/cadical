@@ -387,6 +387,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
 	  external->push_zero_on_extension_stack ();
 	  // only the original (first clause) needs to be added, the next ones are redundant
 	  external->push_id_on_extension_stack(already_pushed ? 0 : c->id);
+          external->push_zero_on_extension_stack ();
 	  already_pushed = true;
         }
         if (other)
