@@ -306,7 +306,7 @@ void File::close () {
   file = 0; // mark as closed
 
 #ifndef QUIET
-  if (internal->opts.verbose > 1)
+  if (internal->opts.verbose < 2)
     return;
   double mb = bytes () / (double) (1 << 20);
   if (writing)
