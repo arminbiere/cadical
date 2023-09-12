@@ -317,13 +317,11 @@ void File::close () {
     int64_t s = size (name ());
     double mb = s / (double) (1 << 20);
     if (writing)
-      MSG ("deflated to %" PRId64 " bytes %.1f MB by factor %.2f "
-           "(%.2f%% compression)",
-           s, mb, relative (bytes (), s), percent (bytes () - s, bytes ()));
+      MSG ("deflated to %" PRId64 " bytes %.1f MB", s, mb);
     else
-      MSG ("inflated from %" PRId64 " bytes %.1f MB by factor %.2f "
-           "(%.2f%% compression)",
-           s, mb, relative (bytes (), s), percent (bytes () - s, bytes ()));
+      MSG ("inflated from %" PRId64 " bytes %.1f MB", s, mb);
+    MSG ("factor %.2f (%.2f%% compression)", relative (bytes (), s),
+         percent (bytes () - s, bytes ()));
   }
 #endif
 }
