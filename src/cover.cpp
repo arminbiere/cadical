@@ -371,42 +371,57 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       stats.cover.asymmetric++;
       stats.cover.total++;
       LOG (c, "asymmetric tautological");
-      mark_garbage (c);
     } else {
       stats.cover.blocked++;
       stats.cover.total++;
       // Only copy extension stack if successful.
       int prev = INT_MIN;
       bool already_pushed = false;
+      uint64_t last_id = c->id;
+      LOG (c, "covered tautological");
+      assert (clause.empty());
+      LOG (coveror.extend, "extension = ");
       for (const auto &other : coveror.extend) {
         if (!prev) {
+          // are we finishing a clause?
+          if (proof && opts.lrat && already_pushed) {
+            lrat_chain.push_back (c->id);
+            last_id = ++clause_id;
+            proof->add_derived_clause (last_id, clause, lrat_chain);
+            proof->delete_clause_to_restore (last_id, clause);
+            lrat_chain.clear ();
+          }
+
           external->push_zero_on_extension_stack ();
           external->push_witness_literal_on_extension_stack (other);
-	  external->push_zero_on_extension_stack ();
-	  if (proof && opts.lrat && already_pushed) {
-	    const uint64_t id = ++clause_id;
-	    lrat_chain.push_back(c->id);
-	    proof->add_derived_clause (id, clause, lrat_chain);
-            proof->delete_clause (id, clause);
-	    lrat_chain.clear();
-	    external->push_id_on_extension_stack(id);
-          } else external->push_id_on_extension_stack(c->id);
           external->push_zero_on_extension_stack ();
-	  already_pushed = true;
-	  clause.clear();
+          external->push_id_on_extension_stack (last_id);
+          external->push_zero_on_extension_stack ();
+          clause.clear ();
+          already_pushed = true;
         }
         if (other) {
           external->push_clause_literal_on_extension_stack (other);
 	  clause.push_back(other);
+	  LOG(clause, "current clause is ");
 	}
         prev = other;
       }
-      LOG (c, "covered tautological");
+
+      if (proof && opts.lrat) {
+	LOG ("left overs");
+        lrat_chain.push_back (c->id);
+        last_id = ++clause_id;
+        proof->add_derived_clause (last_id, clause, lrat_chain);
+        proof->delete_clause_to_restore (last_id, clause);
+	lrat_chain.clear();
+      }
+
+      clause.clear ();
       c->garbagerestore = true;
       mark_garbage (c);
     }
   }
-  clause.clear();
 
   // Backtrack and 'unassign' all literals.
 

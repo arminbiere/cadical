@@ -298,14 +298,12 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
   for (auto &b : checked_lits)
     b = false;                              // assert here but fails for
   for (const auto &lit : imported_clause) { // tautological clauses
-    LOG ("marking lit %d as false (checked)", -lit);
     checked_lit (-lit) = true;
     if (checked_lit (lit)) {
       LOG (imported_clause, "LRAT CHECKER clause tautological");
       assert (!proof_chain.size ()); // would be unnecessary hence a bug
       return true;
     }
-    LOG ("lit after marking: %d (checked yet: %d)", -lit, checked_lit (-lit));
   }
   assert (proof_chain.size ()); // but we can assert it here :)
 
@@ -335,7 +333,6 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     int unit = 0;
     for (int *i = c->literals; i < c->literals + c->size; i++) {
       int lit = *i;
-      LOG ("lit : %d (checked yet: %d)", -lit, checked_lit (-lit));
       if (checked_lit (-lit))
         continue;
       if (unit && unit != lit) {
@@ -346,10 +343,6 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     }
     if (unit == INT_MIN) {
       LOG ("LRAT CHECKER check failed, found non unit clause %" PRIu64, id);
-      for  (int *i = c->literals; i < c->literals + c->size; i++) {
-	int lit = *i;
-	LOG ("lit : %d (checked: %d)", *i, checked_lit (-lit));
-      }
       break;
     }
     if (!unit) {
