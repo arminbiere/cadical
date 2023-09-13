@@ -509,17 +509,28 @@ bool Internal::decompose_round () {
       build_lrat_for_clause (dfs_chains);
       assert (!lrat_chain.empty ());
       const uint64_t id2 = ++clause_id;
-      proof->add_derived_clause (id2, clause, lrat_chain);
-      proof->delete_clause_to_restore (id2, clause);
+      if (proof){
+	proof->add_derived_clause (id2, clause, lrat_chain);
+	proof->delete_clause_to_restore (id2, clause);
+      }
       external->push_binary_clause_on_extension_stack (id2, idx, -other);
 
       clause.clear ();
       lrat_chain.clear ();
     } else {
-      external->push_binary_clause_on_extension_stack (++clause_id, -idx,
-                                                       other);
-      external->push_binary_clause_on_extension_stack (++clause_id, idx,
-                                                       -other);
+      const uint64_t id1 = ++clause_id;
+      const uint64_t id2 = ++clause_id;
+      if (opts.lratexternal && proof) {
+	clause.push_back(-idx); clause.push_back(other);
+	proof->add_derived_clause (id1, clause, lrat_chain);
+	proof->delete_clause_to_restore (id1, clause);
+	clause.clear(); clause.push_back(idx); clause.push_back(-other);
+	proof->add_derived_clause (id2, clause, lrat_chain);
+	proof->delete_clause_to_restore (id2, clause);
+	clause.clear();
+      }
+      external->push_binary_clause_on_extension_stack (id1, -idx, other);
+      external->push_binary_clause_on_extension_stack (id2, idx, -other);
     }
   }
 
