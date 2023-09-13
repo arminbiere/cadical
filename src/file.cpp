@@ -133,7 +133,6 @@ char *File::find (const char *prg) {
   const char *c = getenv ("PATH");
   if (!c)
     return 0;
-  ;
   size_t len = strlen (c);
   char *e = new char[len + 1];
   strcpy (e, c);
@@ -306,7 +305,7 @@ void File::close () {
   file = 0; // mark as closed
 
 #ifndef QUIET
-  if (internal->opts.verbose > 1)
+  if (internal->opts.verbose < 2)
     return;
   double mb = bytes () / (double) (1 << 20);
   if (writing)
@@ -317,13 +316,11 @@ void File::close () {
     int64_t s = size (name ());
     double mb = s / (double) (1 << 20);
     if (writing)
-      MSG ("deflated to %" PRId64 " bytes %.1f MB by factor %.2f "
-           "(%.2f%% compression)",
-           s, mb, relative (bytes (), s), percent (bytes () - s, bytes ()));
+      MSG ("deflated to %" PRId64 " bytes %.1f MB", s, mb);
     else
-      MSG ("inflated from %" PRId64 " bytes %.1f MB by factor %.2f "
-           "(%.2f%% compression)",
-           s, mb, relative (bytes (), s), percent (bytes () - s, bytes ()));
+      MSG ("inflated from %" PRId64 " bytes %.1f MB", s, mb);
+    MSG ("factor %.2f (%.2f%% compression)", relative (bytes (), s),
+         percent (bytes () - s, bytes ()));
   }
 #endif
 }
