@@ -22,7 +22,6 @@ check=no
 competition=no
 coverage=no
 profile=no
-safe=no
 contracts=yes
 tracing=yes
 unlocked=yes
@@ -98,9 +97,6 @@ where '<option>' is one of the following
 --competition      configure for the competition
                    ('--quiet', '--no-contracts', '--no-tracing')
 
---safe             disable writing through 'popen' for more
-                   safe usage of the library in applications
-
 -f...              pass '-f<option>[=<val>]' options to the makefile
 -m32               pass '-m32' to the compiler (compile for 32 bit)
 -ggdb3             pass '-ggdb3' to makefile (like '-s')
@@ -157,8 +153,6 @@ do
     --profile) profile=yes;;
 
     --competition) competition=yes;;
-
-    --safe) safe=yes;;
 
     --no-unlocked) unlocked=no;;
 
@@ -296,7 +290,6 @@ fi
 
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
 [ $logging = yes ] && CXXFLAGS="$CXXFLAGS -DLOGGING"
-[ $safe = yes ] && CXXFLAGS="$CXXFLAGS -DSAFE"
 [ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"

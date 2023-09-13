@@ -243,8 +243,6 @@ FILE *File::read_pipe (Internal *internal, const char *fmt, const int *sig,
   return open_pipe (internal, fmt, path, "r");
 }
 
-#ifndef SAFE
-
 FILE *File::write_pipe (Internal *internal, const char *command,
                         const char *path, int &child_pid) {
   assert (command[0] && command[0] != ' ');
@@ -285,8 +283,6 @@ FILE *File::write_pipe (Internal *internal, const char *command,
   delete_str_vector (args);
   return res;
 }
-
-#endif
 
 /*------------------------------------------------------------------------*/
 
@@ -336,7 +332,6 @@ File *File::read (Internal *internal, const char *path) {
 File *File::write (Internal *internal, const char *path) {
   FILE *file;
   int close_output = 3, child_pid = 0;
-#ifndef SAFE
   if (has_suffix (path, ".xz"))
     file = write_pipe (internal, "xz -c", path, child_pid);
   else if (has_suffix (path, ".bz2"))
@@ -346,7 +341,6 @@ File *File::write (Internal *internal, const char *path) {
   else if (has_suffix (path, ".7z"))
     file = write_pipe (internal, "7z a -an -txz -si -so", path, child_pid);
   else
-#endif
     file = write_file (internal, path), close_output = 1;
 
   if (!file)
