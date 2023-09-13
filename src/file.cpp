@@ -397,7 +397,7 @@ void File::close () {
           // unless we wait long enough (for isntance set a break-point in
           // 'File::size'.  This probably has to do with file synching
 	  // when 'exec' finishes and that is handled differentely for
-	  // 'pipe' than for our version of 'pipe/fork/exec/wait' here.
+	  // 'popen' than for our version of 'pipe/fork/exec/wait' here.
         }
       }
     } else {
@@ -411,9 +411,9 @@ void File::close () {
         MSG ("factor %.2f (%.2f%% compression)",
              relative (read_bytes, actual_bytes),
              percent (actual_bytes, read_bytes));
-	// It seems that 'pipe' syncs the written 'stdout' to the file and
-	// we can get the actual file size on disk while above with
-	// 'pipe/fork/exec/wait' on writing to a pipe it fails.
+	// It seems that 'popen' syncs the written 'stdout' to the file and
+	// we can get the actual file size on disk immediately after
+	// 'pclose' while above with 'pipe/fork/exec/wait' we need to wait.
       }
     }
   }
