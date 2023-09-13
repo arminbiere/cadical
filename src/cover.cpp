@@ -383,14 +383,28 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       LOG (coveror.extend, "extension = ");
       for (const auto &other : coveror.extend) {
         if (!prev) {
+	  LOG ("proof? %d, lrat? %d", !!proof, opts.lrat);
           // are we finishing a clause?
+          if (already_pushed) {
+            // add missing literals that are not needed for covering
+            // but avoid RAT proofs
+            // TODO this is quadratic and is very bad
+            for (auto lit : *c) {
+              if (find (begin (clause), end (clause), lit) ==
+                  end (clause)) {
+                LOG ("adding lit %d not needed for ATA", lit);
+                clause.push_back (lit);
+              }
+            }
+          }
           if (proof && opts.lrat && already_pushed) {
             lrat_chain.push_back (c->id);
-            last_id = ++clause_id;
             proof->add_derived_clause (last_id, clause, lrat_chain);
             proof->delete_clause_to_restore (last_id, clause);
             lrat_chain.clear ();
           }
+	  if (already_pushed)
+	    last_id = ++clause_id;
 
           external->push_zero_on_extension_stack ();
           external->push_witness_literal_on_extension_stack (other);
@@ -410,16 +424,25 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
 
       if (proof && opts.lrat) {
 	LOG ("left overs");
+        // add missing literals that are not needed for covering
+        // but avoid RAT proofs
+        // TODO this is quadratic and is very bad
+        for (auto lit : *c) {
+          if (find (begin (clause), end (clause), lit) == end (clause)) {
+            LOG ("adding lit %d not needed for ATA", lit);
+            clause.push_back (lit);
+          }
+        }
+
         lrat_chain.push_back (c->id);
-        last_id = ++clause_id;
         proof->add_derived_clause (last_id, clause, lrat_chain);
         proof->delete_clause_to_restore (last_id, clause);
 	lrat_chain.clear();
       }
-
       clause.clear ();
-      c->garbagerestore = true;
+      c->garbagerestore = false;
       mark_garbage (c);
+      c->garbagerestore = false;
     }
   }
 

@@ -185,13 +185,13 @@ void Internal::add_original_lit (int lit) {
   }
 }
 
-void Internal::finish_added_clause_with_id (uint64_t id) {
+void Internal::finish_added_clause_with_id (uint64_t id, bool restore) {
   if (proof) {
       // Use the external form of the clause for printing in proof
       // Externalize(internalized literal) != external literal
       assert (!original.size () || !external->eclause.empty ());
-      const bool restore = (id < clause_id);
-      proof->add_external_original_clause (id, external->eclause, restore);
+      const bool restore2 = (id < clause_id) || restore;
+      proof->add_external_original_clause (id, external->eclause, restore2);
     }
   add_new_original_clause(id);
   original.clear ();

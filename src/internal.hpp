@@ -297,7 +297,7 @@ struct Internal {
 
   void add_original_lit (int lit);
 
-  void finish_added_clause_with_id (uint64_t lit);
+  void finish_added_clause_with_id (uint64_t lit, bool restore = false);
 
   // Reserve ids for original clauses to produce lrat
   void reserve_ids (int number);

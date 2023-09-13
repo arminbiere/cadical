@@ -478,6 +478,15 @@ void LratChecker::delete_clause (uint64_t id, const vector<int> &c) {
 void LratChecker::delete_clause_but_keep (uint64_t id,
                                           const vector<int> &c) {
   LOG (c, "LRAT CHECKER saving clause[%" PRIu64 "] to restore later", id);
+  if (clauses_to_reconstruct.find(id) != end (clauses_to_reconstruct)) {
+    fatal_message_start ();
+    fputs ("this clause id was already used:\n", stderr);
+    for (const auto &lit : c)
+        fprintf (stderr, "%d ", lit);
+    fputc ('0', stderr);
+    fatal_message_end ();
+  }
+
   vector<int> d = c;
   sort (begin(d), end (d));
   clauses_to_reconstruct[id] = d;
@@ -485,6 +494,7 @@ void LratChecker::delete_clause_but_keep (uint64_t id,
 }
 
   void LratChecker::restore_clause (uint64_t id, const vector<int> &c) {
+    LOG (c, "LRAT CHECKER check of restoration of clause[%" PRIu64 "]", id);
     if (!strict_lrat && clauses_to_reconstruct.find(id) == end (clauses_to_reconstruct)) {
       add_original_clause(id, c);
       return;
@@ -522,6 +532,7 @@ void LratChecker::delete_clause_but_keep (uint64_t id,
       fatal_message_end ();
     }
 
+    clauses_to_reconstruct.erase(id);
     add_original_clause(id, c);
 }
 

@@ -79,7 +79,7 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
     }
   }
   if (irredundant_clause)
-    internal->finish_added_clause_with_id (id);
+    internal->finish_added_clause_with_id (id, true);
   if (!irredundant_clause)
     LOG (eclause, "do not restore clause, because it is redundant");
   eclause.clear ();
