@@ -133,7 +133,6 @@ char *File::find (const char *prg) {
   const char *c = getenv ("PATH");
   if (!c)
     return 0;
-  ;
   size_t len = strlen (c);
   char *e = new char[len + 1];
   strcpy (e, c);
