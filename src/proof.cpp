@@ -103,13 +103,13 @@ void Proof::add_original_clause (uint64_t id, const vector<int> &c) {
 }
 
 void Proof::add_external_original_clause (uint64_t id,
-                                          const vector<int> &c) {
+                                          const vector<int> &c, bool restore) {
   // literals of c are already external
   assert (clause.empty ());
   for (auto const &lit : c)
     clause.push_back (lit);
   clause_id = id;
-  add_original_clause ();
+  add_original_clause (restore);
 }
 
 void Proof::delete_external_original_clause (uint64_t id,
@@ -217,6 +217,22 @@ void Proof::delete_clause (uint64_t id, const vector<int> &c) {
   add_literals (c);
   clause_id = id;
   delete_clause ();
+}
+
+void Proof::delete_clause_to_restore (Clause *c) {
+  LOG (c, "PROOF deleting from proof (but keeping to restore)");
+  assert (clause.empty ());
+  add_literals (c);
+  clause_id = c->id;
+  delete_clause_to_restore ();
+}
+
+void Proof::delete_clause_to_restore (uint64_t id, const vector<int> &c) {
+  LOG (c, "PROOF deleting from proof");
+  assert (clause.empty ());
+  add_literals (c);
+  clause_id = id;
+  delete_clause_to_restore ();
 }
 
 void Proof::delete_unit_clause (uint64_t id, const int lit) {
@@ -375,13 +391,15 @@ void Proof::otfs_strengthen_clause (Clause *c, const std::vector<int> &old,
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_original_clause () {
+void Proof::add_original_clause (bool restore) {
   LOG (clause, "PROOF adding original external clause");
   assert (clause_id);
 
   if (lratbuilder)
     lratbuilder->add_original_clause (clause_id, clause);
-  if (lratchecker)
+  if (lratchecker && restore)
+    lratchecker->restore_clause (clause_id, clause);
+  if (lratchecker && !restore)
     lratchecker->add_original_clause (clause_id, clause);
   if (checker)
     checker->add_original_clause (clause_id, clause);
@@ -426,6 +444,20 @@ void Proof::delete_clause () {
     lratbuilder->delete_clause (clause_id, clause);
   if (lratchecker)
     lratchecker->delete_clause (clause_id, clause);
+  if (checker)
+    checker->delete_clause (clause_id, clause);
+  if (tracer)
+    tracer->delete_clause (clause_id, clause);
+  clause.clear ();
+  clause_id = 0;
+}
+
+void Proof::delete_clause_to_restore () {
+  LOG (clause, "PROOF deleting external clause (LRAT: keeping to restore)");
+  if (lratbuilder)
+    lratbuilder->delete_clause (clause_id, clause);
+  if (lratchecker)
+    lratchecker->delete_clause_but_keep (clause_id, clause);
   if (checker)
     checker->delete_clause (clause_id, clause);
   if (tracer)

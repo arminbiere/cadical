@@ -839,6 +839,7 @@ long Internal::condition_round (long delta) {
       }
       external->push_clause_on_extension_stack (c);
 
+      c->garbagerestore = true;
       mark_garbage (c);
 
       stats.condassrem += remain.assigned;

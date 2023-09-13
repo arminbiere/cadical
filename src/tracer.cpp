@@ -140,6 +140,7 @@ void Tracer::frat_add_original_clause (uint64_t id,
   else
     file->put ("0\n");
 }
+
 void Tracer::frat_add_derived_clause (uint64_t id,
                                       const vector<int> &clause) {
   LOG (

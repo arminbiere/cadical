@@ -36,9 +36,10 @@ class Proof {
 
   void add_literals (const vector<int> &); // ditto
 
-  void add_original_clause (); // notify observers of original clauses
+  void add_original_clause (bool restore = false); // notify observers of original clauses
   void add_derived_clause ();  // notify observers of derived clauses
   void delete_clause ();       // notify observers of deleted clauses
+  void delete_clause_to_restore ();       // notify observers of deleted clauses
   void finalize_clause ();
 
 public:
@@ -56,7 +57,7 @@ public:
 
   // Add/delete original clauses to/from the proof using their original
   //  external literals (from external->eclause)
-  void add_external_original_clause (uint64_t, const vector<int> &);
+  void add_external_original_clause (uint64_t, const vector<int> &, bool restore = false);
   void delete_external_original_clause (uint64_t, const vector<int> &);
 
   // Add derived (such as learned) clauses to the proof.
@@ -74,8 +75,10 @@ public:
                            const vector<uint64_t> &);
 
   void delete_clause (uint64_t, const vector<int> &);
+  void delete_clause_to_restore (uint64_t, const vector<int> &);
   void delete_unit_clause (uint64_t id, const int lit);
   void delete_clause (Clause *);
+  void delete_clause_to_restore (Clause *);
 
   void finalize_unit (uint64_t, int);
   void finalize_external_unit (uint64_t, int);

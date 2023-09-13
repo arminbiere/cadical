@@ -375,8 +375,6 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
     } else {
       stats.cover.blocked++;
       stats.cover.total++;
-      LOG (c, "covered tautological");
-      mark_garbage (c);
       // Only copy extension stack if successful.
       int prev = INT_MIN;
       bool already_pushed = false;
@@ -385,12 +383,14 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
           external->push_zero_on_extension_stack ();
           external->push_witness_literal_on_extension_stack (other);
 	  external->push_zero_on_extension_stack ();
-	  const uint64_t id = ++clause_id;
 	  if (proof && opts.lrat && already_pushed) {
+	    const uint64_t id = ++clause_id;
+	    lrat_chain.push_back(c->id);
 	    proof->add_derived_clause (id, clause, lrat_chain);
             proof->delete_clause (id, clause);
-          }
-	  external->push_id_on_extension_stack(already_pushed ? id : c->id);
+	    lrat_chain.clear();
+	    external->push_id_on_extension_stack(id);
+          } else external->push_id_on_extension_stack(c->id);
           external->push_zero_on_extension_stack ();
 	  already_pushed = true;
 	  clause.clear();
@@ -401,6 +401,9 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
 	}
         prev = other;
       }
+      LOG (c, "covered tautological");
+      c->garbagerestore = true;
+      mark_garbage (c);
     }
   }
   clause.clear();

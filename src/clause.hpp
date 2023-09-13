@@ -29,6 +29,7 @@ struct Clause {
   bool enqueued : 1; // Enqueued on backward queue.
   bool frozen : 1;   // Temporarily frozen (in covered clause elimination).
   bool garbage : 1;  // can be garbage collected unless it is a 'reason'
+  bool garbagerestore : 1;  // is garbage but on the restoration stack
   bool gate : 1;     // Clause part of a gate (function definition).
   bool hyper : 1;    // redundant hyper binary or ternary resolved
   bool instantiated : 1; // tried to instantiate

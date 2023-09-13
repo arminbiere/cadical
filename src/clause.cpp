@@ -103,6 +103,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   c->enqueued = false;
   c->frozen = false;
   c->garbage = false;
+  c->garbagerestore = false;
   c->gate = false;
   c->hyper = false;
   c->instantiated = false;
@@ -253,8 +254,11 @@ void Internal::delete_clause (Clause *c) {
     // from the proof perspective is that the deletion of these binary
     // clauses occurs later in the proof file.
     //
-    if (proof && c->size == 2)
-      proof->delete_clause (c);
+    if (proof && c->size == 2) {
+      if (c->garbagerestore)
+	proof->delete_clause_to_restore(c);
+      else proof->delete_clause (c);
+    }
   }
   deallocate_clause (c);
 }
@@ -282,8 +286,12 @@ void Internal::mark_garbage (Clause *c) {
   // Delay tracing deletion of binary clauses.  See the discussion above in
   // 'delete_clause' and also in 'propagate'.
   //
-  if (proof && c->size != 2)
-    proof->delete_clause (c);
+  if (proof && c->size != 2) {
+    if (c->garbagerestore)
+      proof->delete_clause_to_restore (c);
+    else
+      proof->delete_clause (c);
+  }
 
   assert (stats.current.total > 0);
   stats.current.total--;

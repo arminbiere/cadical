@@ -614,6 +614,7 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
   for (const auto &c : ps) {
     if (c->garbage)
       continue;
+    c->garbagerestore = true;
     mark_garbage (c);
     assert (!c->redundant);
     if (!substitute || c->gate) {
@@ -632,6 +633,7 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
   for (const auto &d : ns) {
     if (d->garbage)
       continue;
+    d->garbagerestore = true;
     mark_garbage (d);
     assert (!d->redundant);
     if (!substitute || d->gate) {
