@@ -6,10 +6,12 @@
 
 extern "C" {
 #include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 }
 
@@ -21,7 +23,7 @@ namespace CaDiCaL {
 
 // Private constructor.
 
-File::File (Internal *i, bool w, int c, FILE *f, const char *n)
+File::File (Internal *i, bool w, int c, int p, FILE *f, const char *n)
     :
 #ifndef QUIET
       internal (i),
@@ -29,7 +31,8 @@ File::File (Internal *i, bool w, int c, FILE *f, const char *n)
 #if !defined(QUIET) || !defined(NDEBUG)
       writing (w),
 #endif
-      close_file (c), file (f), _name (n), _lineno (1), _bytes (0) {
+      close_file (c), child_pid (p), file (f), _name (n), _lineno (1),
+      _bytes (0) {
   (void) i, (void) w;
   assert (f), assert (n);
 }
@@ -126,9 +129,9 @@ size_t File::size (const char *path) {
 }
 
 // Check that 'prg' is in the 'PATH' and thus can be found if executed
-// through 'popen'.
+// through 'popen' or 'exec'.
 
-char *File::find (const char *prg) {
+char *File::find_program (const char *prg) {
   size_t prglen = strlen (prg);
   const char *c = getenv ("PATH");
   if (!c)
@@ -174,6 +177,30 @@ FILE *File::write_file (Internal *internal, const char *path) {
 
 /*------------------------------------------------------------------------*/
 
+void File::split_str (const char *command, std::vector<char *> &argv) {
+  const char *c = command;
+  while (*c && *c == ' ')
+    c++;
+  while (*c) {
+    const char *p = c;
+    while (*p && *p != ' ')
+      p++;
+    const size_t bytes = p - c;
+    char *arg = new char[bytes + 1];
+    (void) strncpy (arg, c, bytes);
+    arg[bytes] = 0;
+    argv.push_back (arg);
+    while (*p && *p == ' ')
+      p++;
+    c = p;
+  }
+}
+
+void File::delete_str_vector (std::vector<char *> &argv) {
+  for (auto str : argv)
+    delete[] str;
+}
+
 FILE *File::open_pipe (Internal *internal, const char *fmt,
                        const char *path, const char *mode) {
 #ifdef QUIET
@@ -185,7 +212,7 @@ FILE *File::open_pipe (Internal *internal, const char *fmt,
   char *prg = new char[prglen + 1];
   strncpy (prg, fmt, prglen);
   prg[prglen] = 0;
-  char *found = find (prg);
+  char *found = find_program (prg);
   if (found)
     MSG ("found '%s' in path for '%s'", found, prg);
   if (!found)
@@ -218,10 +245,45 @@ FILE *File::read_pipe (Internal *internal, const char *fmt, const int *sig,
 
 #ifndef SAFE
 
-FILE *File::write_pipe (Internal *internal, const char *fmt,
-                        const char *path) {
-  MSG ("opening pipe to write '%s'", path);
-  return open_pipe (internal, fmt, path, "w");
+FILE *File::write_pipe (Internal *internal, const char *command,
+                        const char *path, int &child_pid) {
+  assert (command[0] && command[0] != ' ');
+  MSG ("writing through command '%s' to '%s'", command, path);
+  std::vector<char *> args;
+  split_str (command, args);
+  assert (!args.empty ());
+  char **argv = args.data ();
+  char *absolute_command_path = find_program (argv[0]);
+  int pipe_fds[2];
+  FILE *res = 0;
+  if (!absolute_command_path)
+    MSG ("could not find '%s' in 'PATH' environment variable", argv[0]);
+  else if (pipe (pipe_fds) < 0)
+    MSG ("could not generate pipe to '%s' command", command);
+  else if ((child_pid = fork ()) < 0)
+    MSG ("could not fork process to execute '%s' command", command);
+  else if (child_pid) {
+    ::close (pipe_fds[0]);
+    res = ::fdopen (pipe_fds[1], "w");
+  } else {
+    ::close (pipe_fds[1]);
+    ::close (0);
+    ::close (1);
+    if (command[0] == '7') // Surpress '7z' verbose output on 'stderr'.
+      ::close (2);
+    int new_in = dup (pipe_fds[0]);
+    assert (!new_in), (void) new_in;
+    int new_out = ::open (path, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+    if (new_out == 1)
+      execv (absolute_command_path, argv);
+    else
+      MSG ("opening '%s' for writing failed", path);
+    _exit (1);
+  }
+  if (absolute_command_path)
+    delete[] absolute_command_path;
+  delete_str_vector (args);
+  return res;
 }
 
 #endif
@@ -229,11 +291,11 @@ FILE *File::write_pipe (Internal *internal, const char *fmt,
 /*------------------------------------------------------------------------*/
 
 File *File::read (Internal *internal, FILE *f, const char *n) {
-  return new File (internal, false, 0, f, n);
+  return new File (internal, false, 0, 0, f, n);
 }
 
 File *File::write (Internal *internal, FILE *f, const char *n) {
-  return new File (internal, true, 0, f, n);
+  return new File (internal, true, 0, 0, f, n);
 }
 
 File *File::read (Internal *internal, const char *path) {
@@ -265,27 +327,32 @@ File *File::read (Internal *internal, const char *path) {
     close_input = 1;
   }
 
-  return file ? new File (internal, false, close_input, file, path) : 0;
+  if (!file)
+    return 0;
+
+  return new File (internal, false, close_input, 0, file, path);
 }
 
 File *File::write (Internal *internal, const char *path) {
   FILE *file;
-  int close_input = 2;
+  int close_output = 3, child_pid = 0;
 #ifndef SAFE
   if (has_suffix (path, ".xz"))
-    file = write_pipe (internal, "xz -c > %s", path);
+    file = write_pipe (internal, "xz -c", path, child_pid);
   else if (has_suffix (path, ".bz2"))
-    file = write_pipe (internal, "bzip2 -c > %s", path);
+    file = write_pipe (internal, "bzip2 -c", path, child_pid);
   else if (has_suffix (path, ".gz"))
-    file = write_pipe (internal, "gzip -c > %s", path);
+    file = write_pipe (internal, "gzip -c", path, child_pid);
   else if (has_suffix (path, ".7z"))
-    file = write_pipe (internal, "7z a -an -txz -si -so > %s 2>/dev/null",
-                       path);
+    file = write_pipe (internal, "7z a -an -txz -si -so", path, child_pid);
   else
 #endif
-    file = write_file (internal, path), close_input = 1;
+    file = write_file (internal, path), close_output = 1;
 
-  return file ? new File (internal, true, close_input, file, path) : 0;
+  if (!file)
+    return 0;
+
+  return new File (internal, true, close_output, child_pid, file, path);
 }
 
 void File::close () {
@@ -298,29 +365,57 @@ void File::close () {
     fclose (file);
   }
   if (close_file == 2) {
-    MSG ("closing pipe command on '%s'", name ());
+    MSG ("closing input pipe to read '%s'", name ());
     pclose (file);
   }
-
+  if (close_file == 3) {
+    MSG ("closing output pipe to write '%s'", name ());
+    fclose (file);
+    waitpid (child_pid, 0, WEXITED);
+  }
   file = 0; // mark as closed
 
+  // TODO what about error checking for 'fclose', 'pclose' or 'waitpid'?
+
 #ifndef QUIET
-  if (internal->opts.verbose < 2)
-    return;
-  double mb = bytes () / (double) (1 << 20);
-  if (writing)
-    MSG ("after writing %" PRIu64 " bytes %.1f MB", bytes (), mb);
-  else
-    MSG ("after reading %" PRIu64 " bytes %.1f MB", bytes (), mb);
-  if (close_file == 2) {
-    int64_t s = size (name ());
-    double mb = s / (double) (1 << 20);
-    if (writing)
-      MSG ("deflated to %" PRId64 " bytes %.1f MB", s, mb);
-    else
-      MSG ("inflated from %" PRId64 " bytes %.1f MB", s, mb);
-    MSG ("factor %.2f (%.2f%% compression)", relative (bytes (), s),
-         percent (bytes () - s, bytes ()));
+  if (internal->opts.verbose > 1) {
+    if (writing) {
+      uint64_t written_bytes = bytes ();
+      double written_mb = written_bytes / (double) (1 << 20);
+      MSG ("after writing %" PRIu64 " bytes %.1f MB", written_bytes,
+           written_mb);
+      if (close_file == 3) {
+        size_t actual_bytes = size (name ());
+        if (actual_bytes) {
+          double actual_mb = actual_bytes / (double) (1 << 20);
+          MSG ("deflated to %zd bytes %.1f MB", actual_bytes, actual_mb);
+          MSG ("factor %.2f (%.2f%% compression)",
+               relative (written_bytes, actual_bytes),
+               percent (actual_bytes, written_bytes));
+        } else {
+          // TODO it seems that 'size' does not work for us here anymore
+          // unless we wait long enough (for isntance set a break-point in
+          // 'File::size'.  This probably has to do with file synching
+	  // when 'exec' finishes and that is handled differentely for
+	  // 'pipe' than for our version of 'pipe/fork/exec/wait' here.
+        }
+      }
+    } else {
+      uint64_t read_bytes = bytes ();
+      double read_mb = read_bytes / (double) (1 << 20);
+      MSG ("after reading %" PRIu64 " bytes %.1f MB", read_bytes, read_mb);
+      if (close_file == 2) {
+        size_t actual_bytes = size (name ());
+        double actual_mb = actual_bytes / (double) (1 << 20);
+        MSG ("inflated from %zd bytes %.1f MB", actual_bytes, actual_mb);
+        MSG ("factor %.2f (%.2f%% compression)",
+             relative (read_bytes, actual_bytes),
+             percent (actual_bytes, read_bytes));
+	// It seems that 'pipe' syncs the written 'stdout' to the file and
+	// we can get the actual file size on disk while above with
+	// 'pipe/fork/exec/wait' on writing to a pipe it fails.
+      }
+    }
   }
 #endif
 }
