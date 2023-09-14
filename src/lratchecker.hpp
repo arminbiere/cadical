@@ -127,7 +127,7 @@ public:
   // check if the clause is present and delete it from the checker
   void delete_clause (uint64_t, const vector<int> &);
   // check if the clause is present and delete it from the checker
-  void delete_clause_but_keep (uint64_t, const vector<int> &);
+  void weaken_minus (uint64_t, const vector<int> &);
 
   // check if the clause is present and delete it from the checker
   void finalize_clause (uint64_t, const vector<int> &);

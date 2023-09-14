@@ -402,7 +402,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
           if (proof && opts.lrat && already_pushed) {
             lrat_chain.push_back (c->id);
             proof->add_derived_clause (last_id, clause, lrat_chain);
-            proof->delete_clause_to_restore (last_id, clause);
+            proof->weaken_plus (last_id, clause);
             lrat_chain.clear ();
           }
 	  if (already_pushed)
@@ -440,13 +440,11 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
         }
         lrat_chain.push_back (c->id);
         proof->add_derived_clause (last_id, clause, lrat_chain);
-        proof->delete_clause_to_restore (last_id, clause);
+        proof->weaken_plus (last_id, clause);
 	lrat_chain.clear();
       }
       clause.clear ();
-      c->garbagerestore = false;
       mark_garbage (c);
-      c->garbagerestore = false;
     }
   }
 

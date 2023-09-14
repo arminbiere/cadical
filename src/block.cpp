@@ -270,9 +270,11 @@ void Internal::block_pure_literal (Blocker &blocker, int lit) {
     assert (!c->redundant);
     LOG (c, "pure literal %d in", lit);
     blocker.reschedule.push_back (c);
+    if (opts.lrat && proof) {
+      proof->weaken_minus(c);
+    }
     external->push_clause_on_extension_stack (c, lit);
     stats.blockpured++;
-    c->garbagerestore = true;
     mark_garbage (c);
 #ifdef LOGGING
     pured++;
@@ -404,9 +406,11 @@ void Internal::block_literal_with_one_negative_occ (Blocker &blocker,
 
     blocked++;
     LOG (c, "blocked");
+    if (opts.lrat && proof) {
+      proof->weaken_minus(c);
+    }
     external->push_clause_on_extension_stack (c, lit);
     blocker.reschedule.push_back (c);
-    c->garbagerestore = true;
     mark_garbage (c);
     j--;
   }
@@ -618,9 +622,11 @@ void Internal::block_literal_with_at_least_two_negative_occs (
       continue;
     blocked++;
     LOG (c, "blocked");
+    if (opts.lrat && proof) {
+      proof->weaken_minus(c);
+    }
     external->push_clause_on_extension_stack (c, lit);
     blocker.reschedule.push_back (c);
-    c->garbagerestore = true;
     mark_garbage (c);
   }
 

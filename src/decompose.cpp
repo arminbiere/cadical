@@ -496,7 +496,7 @@ bool Internal::decompose_round () {
       // TODO: we currently do not reuse the id if identical to one in the problem
       const uint64_t id1 = ++clause_id;
       proof->add_derived_clause (id1, clause, lrat_chain);
-      proof->delete_clause_to_restore (id1, clause);
+      proof->weaken_plus (id1, clause);
       external->push_binary_clause_on_extension_stack (id1, -idx, other);
 
       lrat_chain.clear ();
@@ -509,10 +509,8 @@ bool Internal::decompose_round () {
       build_lrat_for_clause (dfs_chains);
       assert (!lrat_chain.empty ());
       const uint64_t id2 = ++clause_id;
-      if (proof){
-	proof->add_derived_clause (id2, clause, lrat_chain);
-	proof->delete_clause_to_restore (id2, clause);
-      }
+      proof->add_derived_clause (id2, clause, lrat_chain);
+      proof->weaken_plus (id2, clause);
       external->push_binary_clause_on_extension_stack (id2, idx, -other);
 
       clause.clear ();
@@ -523,10 +521,10 @@ bool Internal::decompose_round () {
       if (opts.lratexternal && proof) {
 	clause.push_back(-idx); clause.push_back(other);
 	proof->add_derived_clause (id1, clause, lrat_chain);
-	proof->delete_clause_to_restore (id1, clause);
+	proof->weaken_plus (id1, clause);
 	clause.clear(); clause.push_back(idx); clause.push_back(-other);
 	proof->add_derived_clause (id2, clause, lrat_chain);
-	proof->delete_clause_to_restore (id2, clause);
+	proof->weaken_plus (id2, clause);
 	clause.clear();
       }
       external->push_binary_clause_on_extension_stack (id1, -idx, other);

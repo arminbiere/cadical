@@ -475,7 +475,7 @@ void LratChecker::delete_clause (uint64_t id, const vector<int> &c) {
 
 /*------------------------------------------------------------------------*/
 
-void LratChecker::delete_clause_but_keep (uint64_t id,
+void LratChecker::weaken_minus (uint64_t id,
                                           const vector<int> &c) {
   LOG (c, "LRAT CHECKER saving clause[%" PRIu64 "] to restore later", id);
   if (clauses_to_reconstruct.find(id) != end (clauses_to_reconstruct)) {
@@ -490,7 +490,6 @@ void LratChecker::delete_clause_but_keep (uint64_t id,
   vector<int> d = c;
   sort (begin(d), end (d));
   clauses_to_reconstruct[id] = d;
-  delete_clause(id, c);
 }
 
   void LratChecker::restore_clause (uint64_t id, const vector<int> &c) {
