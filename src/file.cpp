@@ -253,15 +253,18 @@ FILE *File::write_pipe (Internal *internal, const char *command,
   args.push_back (0);
   char **argv = args.data ();
   char *absolute_command_path = find_program (argv[0]);
-  int pipe_fds[2];
+  int pipe_fds[2], out;
   FILE *res = 0;
   if (!absolute_command_path)
     MSG ("could not find '%s' in 'PATH' environment variable", argv[0]);
   else if (pipe (pipe_fds) < 0)
     MSG ("could not generate pipe to '%s' command", command);
-  else if ((child_pid = fork ()) < 0)
+  else if ((out = ::open (path, O_CREAT | O_TRUNC | O_WRONLY, 0644)) < 0)
+    MSG ("could not open '%s' for writing", path);
+  else if ((child_pid = fork ()) < 0) {
     MSG ("could not fork process to execute '%s' command", command);
-  else if (child_pid) {
+    ::close (out);
+  } else if (child_pid) {
     ::close (pipe_fds[0]);
     res = ::fdopen (pipe_fds[1], "w");
   } else {
@@ -270,15 +273,11 @@ FILE *File::write_pipe (Internal *internal, const char *command,
     ::close (1);
     if (command[0] == '7') // Surpress '7z' verbose output on 'stderr'.
       ::close (2);
-    int new_in = dup (pipe_fds[0]);
-    assert (!new_in), (void) new_in;
-    int new_out = ::open (path, O_CREAT | O_TRUNC | O_WRONLY, 0644);
-    if (new_out == 1)
-      execv (absolute_command_path, argv);
-    else {
-      MSG ("opening '%s' for writing failed", path);
-      assert (new_out < 0);
-    }
+    int in = dup (pipe_fds[0]);
+    assert (in == 0), (void) in;
+    int tmp = dup2 (out, 1);
+    assert (tmp == 1), (void) tmp;
+    execv (absolute_command_path, argv);
     _exit (1);
   }
   if (absolute_command_path)
