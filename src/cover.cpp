@@ -388,13 +388,14 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
           if (already_pushed) {
             // add missing literals that are not needed for covering
             // but avoid RAT proofs
-            // TODO this is quadratic and is very bad
-            for (auto lit : *c) {
-              if (find (begin (clause), end (clause), lit) ==
-                  end (clause)) {
+            for (auto i = 0, j = 0; i < c->size; ++i, ++j) {
+              const int lit = c->literals[i];
+              if (j >= (int) coveror.covered.size () ||
+                  c->literals[i] != coveror.covered[j]) {
+                --j;
                 LOG ("adding lit %d not needed for ATA", lit);
                 clause.push_back (lit);
-		external->push_clause_literal_on_extension_stack (lit);
+                external->push_clause_literal_on_extension_stack (lit);
               }
             }
           }
@@ -427,15 +428,16 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
 	LOG ("left overs");
         // add missing literals that are not needed for covering
         // but avoid RAT proofs
-        // TODO this is quadratic and is very bad
-        for (auto lit : *c) {
-          if (find (begin (clause), end (clause), lit) == end (clause)) {
+        for (auto i = 0, j = 0; i < c->size; ++i, ++j) {
+          const int lit = c->literals[i];
+          if (j >= (int) coveror.covered.size () ||
+              c->literals[i] != coveror.covered[j]) {
+            --j;
             LOG ("adding lit %d not needed for ATA", lit);
             clause.push_back (lit);
-	    external->push_clause_literal_on_extension_stack (lit);
+            external->push_clause_literal_on_extension_stack (lit);
           }
         }
-
         lrat_chain.push_back (c->id);
         proof->add_derived_clause (last_id, clause, lrat_chain);
         proof->delete_clause_to_restore (last_id, clause);
