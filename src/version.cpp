@@ -24,7 +24,7 @@
 
 #ifdef NBUILD
 #ifndef VERSION
-#define VERSION "1.7.3-safe-popen.1"
+#define VERSION "1.7.3-safe-popen.2"
 #endif // VERSION
 #endif // NBUILD
 
