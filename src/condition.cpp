@@ -837,9 +837,10 @@ long Internal::condition_round (long delta) {
           }
         }
       }
+      if (proof && opts.lrat)
+	proof->weaken_minus (c);
       external->push_clause_on_extension_stack (c);
 
-      c->garbagerestore = true;
       mark_garbage (c);
 
       stats.condassrem += remain.assigned;
