@@ -250,6 +250,7 @@ FILE *File::write_pipe (Internal *internal, const char *command,
   std::vector<char *> args;
   split_str (command, args);
   assert (!args.empty ());
+  args.push_back (0);
   char **argv = args.data ();
   char *absolute_command_path = find_program (argv[0]);
   int pipe_fds[2];
@@ -274,8 +275,10 @@ FILE *File::write_pipe (Internal *internal, const char *command,
     int new_out = ::open (path, O_CREAT | O_TRUNC | O_WRONLY, 0644);
     if (new_out == 1)
       execv (absolute_command_path, argv);
-    else
+    else {
       MSG ("opening '%s' for writing failed", path);
+      assert (new_out < 0);
+    }
     _exit (1);
   }
   if (absolute_command_path)
