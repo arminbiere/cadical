@@ -368,7 +368,7 @@ void File::close () {
   if (close_file == 3) {
     MSG ("closing output pipe to write '%s'", name ());
     fclose (file);
-    waitpid (child_pid, 0, WEXITED);
+    waitpid (child_pid, 0, 0);
   }
   file = 0; // mark as closed
 
