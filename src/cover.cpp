@@ -394,6 +394,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
                   end (clause)) {
                 LOG ("adding lit %d not needed for ATA", lit);
                 clause.push_back (lit);
+		external->push_clause_literal_on_extension_stack (lit);
               }
             }
           }
@@ -431,6 +432,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
           if (find (begin (clause), end (clause), lit) == end (clause)) {
             LOG ("adding lit %d not needed for ATA", lit);
             clause.push_back (lit);
+	    external->push_clause_literal_on_extension_stack (lit);
           }
         }
 
