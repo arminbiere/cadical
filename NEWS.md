@@ -1,4 +1,4 @@
-Version 1.7.2
+Version 1.7.3
 -------------
 
 - Replaced the unsafe `popen` approach for compressed file writing
