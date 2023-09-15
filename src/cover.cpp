@@ -383,7 +383,6 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       LOG (coveror.extend, "extension = ");
       for (const auto &other : coveror.extend) {
         if (!prev) {
-	  LOG ("proof? %d, lrat? %d", !!proof, opts.lrat);
           // are we finishing a clause?
           if (already_pushed) {
             // add missing literals that are not needed for covering
@@ -425,7 +424,6 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       }
 
       if (proof && opts.lrat) {
-	LOG ("left overs");
         // add missing literals that are not needed for covering
         // but avoid RAT proofs
         for (auto i = 0, j = 0; i < c->size; ++i, ++j) {

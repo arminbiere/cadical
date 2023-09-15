@@ -638,7 +638,6 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
     assert (!d->redundant);
     if (!substitute || d->gate) {
       if (proof && opts.lrat) {
-	LOG (d, "weaken- the clause");
 	proof->weaken_minus (d);
       }
       external->push_clause_on_extension_stack (d, -pivot);

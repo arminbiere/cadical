@@ -220,7 +220,7 @@ void Proof::delete_clause (uint64_t id, const vector<int> &c) {
 }
 
 void Proof::weaken_minus (Clause *c) {
-  LOG (c, "PROOF deleting from proof (but keeping to restore)");
+  LOG (c, "PROOF weaken minus of ");
   assert (clause.empty ());
   add_literals (c);
   clause_id = c->id;

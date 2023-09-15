@@ -60,7 +60,6 @@ LratCheckerClause *LratChecker::new_clause () {
 }
 
 void LratChecker::delete_clause (LratCheckerClause *c) {
-  LOG("LRAT CHECKER deleting clause id %ld", c->id);
   assert (c);
   if (!c->garbage) {
     assert (num_clauses);
@@ -492,47 +491,47 @@ void LratChecker::weaken_minus (uint64_t id,
   clauses_to_reconstruct[id] = d;
 }
 
-  void LratChecker::restore_clause (uint64_t id, const vector<int> &c) {
-    LOG (c, "LRAT CHECKER check of restoration of clause[%" PRIu64 "]", id);
-    if (!strict_lrat && clauses_to_reconstruct.find(id) == end (clauses_to_reconstruct)) {
-      add_original_clause(id, c);
-      return;
-    }
-    if (clauses_to_reconstruct.find(id) == end (clauses_to_reconstruct)) {
-      fatal_message_start ();
-      fputs ("restoring clauses not deleted previously:\n", stderr);
-      for (const auto &lit : c)
-        fprintf (stderr, "%d ", lit);
-      fputc ('0', stderr);
-      fatal_message_end ();
-    }
-    vector<int> e = c;
-    sort(begin(e), end(e));
-    const vector<int> &d = clauses_to_reconstruct.find(id)->second;
-    bool eq = true;
-    if (c.size () != d.size ()) {
-      eq = false;
-    }
-
-    for (std::vector<int>::size_type i = 0; i < e.size() && eq; ++i) {
-      eq = (e[i] == d[i]);
-    }
-
-    if (!eq) {
-      fatal_message_start ();
-      fputs ("restoring clause that is different than the one imported:\n", stderr);
-      for (const auto &lit : c)
-        fprintf (stderr, "%d ", lit);
-      fputc ('0', stderr);
-      fputs ("vs:\n", stderr);
-      for (const auto &lit : d)
-        fprintf (stderr, "%d ", lit);
-      fputc ('0', stderr);
-      fatal_message_end ();
-    }
-
-    clauses_to_reconstruct.erase(id);
+void LratChecker::restore_clause (uint64_t id, const vector<int> &c) {
+  LOG (c, "LRAT CHECKER check of restoration of clause[%" PRIu64 "]", id);
+  if (!strict_lrat && clauses_to_reconstruct.find(id) == end (clauses_to_reconstruct)) {
     add_original_clause(id, c);
+    return;
+  }
+  if (clauses_to_reconstruct.find(id) == end (clauses_to_reconstruct)) {
+    fatal_message_start ();
+    fputs ("restoring clauses not deleted previously:\n", stderr);
+    for (const auto &lit : c)
+        fprintf (stderr, "%d ", lit);
+    fputc ('0', stderr);
+    fatal_message_end ();
+  }
+  vector<int> e = c;
+  sort(begin(e), end(e));
+  const vector<int> &d = clauses_to_reconstruct.find(id)->second;
+  bool eq = true;
+  if (c.size () != d.size ()) {
+    eq = false;
+  }
+
+  for (std::vector<int>::size_type i = 0; i < e.size() && eq; ++i) {
+    eq = (e[i] == d[i]);
+  }
+
+  if (!eq) {
+    fatal_message_start ();
+    fputs ("restoring clause that is different than the one imported:\n", stderr);
+    for (const auto &lit : c)
+        fprintf (stderr, "%d ", lit);
+    fputc ('0', stderr);
+    fputs ("vs:\n", stderr);
+    for (const auto &lit : d)
+        fprintf (stderr, "%d ", lit);
+    fputc ('0', stderr);
+    fatal_message_end ();
+  }
+
+  clauses_to_reconstruct.erase(id);
+  add_original_clause(id, c);
 }
 
 void LratChecker::finalize_clause (uint64_t id, const vector<int> &c) {
