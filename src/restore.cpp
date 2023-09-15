@@ -154,6 +154,7 @@ void External::restore_clauses () {
     *q++ = *p++;
     *q++ = *p++;
     assert (id);
+    assert (!*p);
     *q++ = *p++;
 
     // Now find 'end_of_clause' (clause starts at 'p') and at the same time
@@ -257,6 +258,7 @@ void External::restore_clauses () {
     assert (*p || *(p-1));
     --p;
     assert (p != begin_of_extension);
+    assert (!*p);
     --p;
     assert (p != begin_of_extension);
     while ((elit = *--p)) {
