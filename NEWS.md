@@ -1,6 +1,13 @@
 Version 1.7.2
 -------------
 
+- Replaced the unsafe `popen` approach for compressed file writing
+  with an explicit `pipe/fork/exec/waitpid` flow and accordingly
+  removed the `--safe` configuration option again.
+
+Version 1.7.2
+-------------
+
 - Configuration option `--safe` disables writing to a file
   through `popen` which makes library usage safer.
 
