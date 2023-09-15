@@ -773,7 +773,6 @@ int Internal::restore_clauses () {
     report ('*');
   } else {
     report ('+');
-    internal->garbage_collection();
     external->restore_clauses ();
     internal->report ('r');
     if (!unsat && !propagate ()) {
