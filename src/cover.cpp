@@ -695,9 +695,6 @@ bool Internal::cover () {
 
   int64_t covered = cover_round ();
 
-  // this is only necessary when activating lrat to ensure that ids are not reused even for binary
-  // clauses that are only deleted now
-  garbage_collection ();
   STOP_SIMPLIFIER (cover, COVER);
   report ('c', !opts.reportall && !covered);
 
