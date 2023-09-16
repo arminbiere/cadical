@@ -58,8 +58,10 @@ class File {
                           const char *mode);
   static FILE *read_pipe (Internal *, const char *fmt, const int *sig,
                           const char *path);
+#ifndef __WIN32
   static FILE *write_pipe (Internal *, const char *fmt, const char *path,
                            int &child_pid);
+#endif
 
 public:
   static char *find_program (const char *prg); // search in 'PATH'

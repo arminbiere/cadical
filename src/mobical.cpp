@@ -2227,12 +2227,19 @@ void Mobical::print_statistics () {
 
 extern "C" {
 #include <fcntl.h>
-#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 }
+
+#ifndef _WIN32
+
+extern "C" {
+#include <sys/resource.h>
+#include <sys/wait.h>
+};
+
+#endif
 
 int64_t Trace::generated;
 int64_t Trace::executed;

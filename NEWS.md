@@ -1,4 +1,16 @@
-Version 1.7.2
+Version 1.7.4
+-------------
+
+- As `fork` and `wait` do not exist on Windows writing compressed files
+  through `pipe/fork/exec/wait` has to be disabled for Windows cross
+  compilation to go through, which has the effect that compressed
+  file writing is not supported for Windows anymore.  Alternatively
+  one could go back to `popen` for writing compressed files on Windows
+  which however is not safe and therefore we simply decided to disable
+  that feature for windows.  Compressed file reading still (and as far
+  we now safely) uses `popen` and thus also compiles for Windows.
+
+Version 1.7.3
 -------------
 
 - Replaced the unsafe `popen` approach for compressed file writing
