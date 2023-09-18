@@ -77,7 +77,7 @@ void Stats::print (Internal *internal) {
     PRT ("chronological:   %15" PRId64 "   %10.2f %%  of conflicts",
          stats.chrono, percent (stats.chrono, stats.conflicts));
   if (all || (stats.elevated && stats.chrono))
-    PRT ("elevated:        %15" PRId64 "   %10.2f    per chronological",
+    PRT ("  elevated:        %15" PRId64 "   %10.2f    per chronological",
          stats.elevated, relative (stats.elevated, stats.chrono));
   if (all)
     PRT ("compacts:        %15" PRId64 "   %10.2f    interval",
@@ -468,6 +468,16 @@ void Stats::print (Internal *internal) {
          stats.htrs3, percent (stats.htrs3, stats.htrs));
     PRT ("  htr2:          %15" PRId64 "   %10.2f %%  binary hyper ternres",
          stats.htrs2, percent (stats.htrs2, stats.htrs));
+  }
+  if (all || stats.ilbtriggers) {
+    PRT ("trail reuses:    %15" PRId64 "   %10.2f %%  of incremental calls",
+         stats.ilbsuccess, percent (stats.ilbsuccess, stats.ilbtriggers));
+    PRT ("  levels:        %15" PRId64 "   %10.2f    per reuse",
+         stats.levelsreused, relative (stats.levelsreused, stats.ilbsuccess));
+    PRT ("  literals:      %15" PRId64 "   %10.2f    per reuse",
+         stats.literalsreused, relative (stats.literalsreused, stats.ilbsuccess));
+    PRT ("  assumptions:   %15" PRId64 "   %10.2f    per reuse",
+         stats.assumptionsreused, relative (stats.assumptionsreused, stats.ilbsuccess));
   }
   if (all || vivified) {
     PRT ("vivified:        %15" PRId64 "   %10.2f %%  of all clauses",

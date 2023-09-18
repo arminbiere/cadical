@@ -673,8 +673,19 @@ int Internal::local_search () {
 int Internal::solve (bool preprocess_only) {
   assert (clause.empty ());
   START (solve);
-  if (opts.ilbassumptions)
-    sort_and_reuse_assumptions ();
+  if (opts.ilb) {
+    if (opts.ilbassumptions)
+      sort_and_reuse_assumptions ();
+    stats.ilbtriggers++;
+    stats.ilbsuccess += (level > 0);
+    stats.levelsreused += level;
+    if (opts.reimply)
+      stats.literalsreused += num_assigned - trail.size ();
+    else if (level) {
+      assert (control.size () > 1);
+      stats.literalsreused += num_assigned - control[1].trail;
+    }
+  }
   if (preprocess_only)
     LOG ("internal solving in preprocessing only mode");
   else

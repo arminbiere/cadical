@@ -240,6 +240,12 @@ struct Stats {
 
   int64_t preprocessings;
 
+  int64_t ilbtriggers;
+  int64_t ilbsuccess;
+  int64_t levelsreused;
+  int64_t literalsreused;
+  int64_t assumptionsreused;
+
   struct {
     int64_t fixed;       // number of top level assigned variables
     int64_t eliminated;  // number of eliminated variables
