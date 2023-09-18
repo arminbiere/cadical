@@ -587,4 +587,29 @@ void Checker::print_stats () {
   MSG ("units:           %15" PRId64 "", stats.units);
 }
 
+void LratChecker::print_stats () {
+
+  if (!stats.added && !stats.deleted)
+    return;
+
+  SECTION ("lrat checker statistics");
+
+  MSG ("checks:          %15" PRId64 "", stats.checks);
+  MSG ("insertions:      %15" PRId64 "   %10.2f %%  of all clauses",
+       stats.insertions, percent (stats.insertions, stats.added));
+  MSG ("original:        %15" PRId64 "   %10.2f %%  of all clauses",
+       stats.original, percent (stats.original, stats.added));
+  MSG ("derived:         %15" PRId64 "   %10.2f %%  of all clauses",
+       stats.derived, percent (stats.derived, stats.added));
+  MSG ("deleted:         %15" PRId64 "   %10.2f %%  of all clauses",
+       stats.deleted, percent (stats.deleted, stats.added));
+  MSG ("finalized:       %15" PRId64 "   %10.2f %%  of all clauses",
+       stats.finalized, percent (stats.finalized, stats.added));
+  MSG ("collections:     %15" PRId64 "   %10.2f    deleted per collection",
+       stats.collections, relative (stats.collections, stats.deleted));
+  MSG ("collisions:      %15" PRId64 "   %10.2f    per search",
+       stats.collisions, relative (stats.collisions, stats.searches));
+  MSG ("searches:        %15" PRId64 "", stats.searches);
+}
+
 } // namespace CaDiCaL

@@ -29,7 +29,7 @@ struct LratCheckerClause {
 
 /*------------------------------------------------------------------------*/
 
-class LratChecker : public Tracer {
+class LratChecker : public StatTracer {
 
   Internal *internal;
 

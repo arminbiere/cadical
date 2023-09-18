@@ -63,11 +63,11 @@ void Internal::trace (File *file) {
 void Internal::check () {
   new_proof_on_demand ();
   if (opts.checkproof > 1) {
-    Tracer * lratchecker = new LratChecker (this);
+    StatTracer * lratchecker = new LratChecker (this);
     LOG ("PROOF connecting lrat proof checker");
     force_lrat ();
     proof->connect (lratchecker);
-    tracers.push_back (lratchecker);
+    stat_tracers.push_back (lratchecker);
   }
   if (opts.checkproof == 1 || opts.checkproof == 3) {
     StatTracer* checker = new Checker (this);
