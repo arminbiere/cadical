@@ -115,6 +115,8 @@ bool Internal::external_propagate () {
 
   assert (!unsat);
 
+  size_t before = num_assigned;
+
   if (!conflict && external_prop && !external_prop_is_lazy) {
 #ifndef NDEBUG
     if (opts.reimply)
@@ -240,7 +242,8 @@ bool Internal::external_propagate () {
            level, trail.size (), notified);
 #endif
   }
-
+  if (before < num_assigned)
+    did_external_prop = true;
   return !conflict;
 }
 
