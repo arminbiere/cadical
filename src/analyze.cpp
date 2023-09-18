@@ -19,11 +19,7 @@ void Internal::learn_empty_clause () {
   external->check_learned_empty_clause ();
   int64_t id = ++clause_id;
   if (proof) {
-    if (opts.lrat && !opts.lratexternal) {
-      LOG (lrat_chain, "learned empty clause with proof chain: ");
-      proof->add_derived_empty_clause (id, lrat_chain);
-    } else
-      proof->add_derived_empty_clause (id);
+    proof->add_derived_empty_clause (id, lrat_chain);
   }
   unsat = true;
   conflict_id = id;
@@ -38,11 +34,7 @@ void Internal::learn_unit_clause (int lit) {
   const unsigned uidx = vlit (lit);
   unit_clauses[uidx] = id;
   if (proof) {
-    if (opts.lrat && !opts.lratexternal) {
-      LOG (lrat_chain, "learned unit clause with proof chain: ");
-      proof->add_derived_unit_clause (id, lit, lrat_chain);
-    } else
-      proof->add_derived_unit_clause (id, lit);
+    proof->add_derived_unit_clause (id, lit, lrat_chain);
   }
   mark_fixed (lit);
 }
@@ -263,7 +255,7 @@ inline void Internal::analyze_literal (int lit, int &open,
   Flags &f = flags (lit);
 
   if (!v.level) {
-    if (f.seen || !opts.lrat || opts.lratexternal)
+    if (f.seen || !lrat)
       return;
     f.seen = true;
     unit_analyzed.push_back (lit);
@@ -304,7 +296,7 @@ inline void Internal::analyze_reason (int lit, Clause *reason, int &open,
   assert (reason);
   assert (reason != external_reason);
   bump_clause (reason);
-  if (opts.lrat && !opts.lratexternal)
+  if (lrat)
     lrat_chain.push_back (reason->id);
   for (const auto &other : *reason)
     if (other != lit)
@@ -748,14 +740,6 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
     sorted.push_back (other);
     if (var (other).level)
       lits[new_size++] = other;
-    /*
-    else if (other != uip && opts.lrat && !opts.lratexternal) {
-      assert (val (other) < 0);
-      const unsigned uidx = vlit (-other);
-      uint64_t id = unit_clauses[uidx];
-      mini_chain.push_back (id);
-    }
-    */
   }
 
   LOG (new_conflict, "removing all units ");
@@ -770,9 +754,8 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
     remove_watch (watches (other_init), new_conflict);
   remove_watch (watches (uip), new_conflict);
 
-  assert (!opts.lrat || opts.lratexternal ||
-          lrat_chain.back () == new_conflict->id);
-  if (opts.lrat && !opts.lratexternal) {
+  assert (!lrat || lrat_chain.back () == new_conflict->id);
+  if (lrat) {
     assert (!lrat_chain.empty ());
     for (const auto &id : unit_chain) {
       mini_chain.push_back (id);
@@ -821,7 +804,7 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
   LOG (new_conflict, "strengthened clause by OTFS");
   sorted.clear ();
 
-  if (opts.lrat && !opts.lratexternal)
+  if (lrat)
     lrat_chain.push_back (new_conflict->id);
   return new_conflict;
 }
@@ -861,11 +844,7 @@ void Internal::otfs_strengthen_clause (Clause *c, int lit, int new_size,
   assert (c->size > 2);
   (void) shrink_clause (c, new_size);
   if (proof) {
-    if (opts.lrat && !opts.lratexternal) {
-      LOG (mini_chain, "otfs with chain");
-      proof->otfs_strengthen_clause (c, old, mini_chain);
-    } else
-      proof->otfs_strengthen_clause (c, old);
+    proof->otfs_strengthen_clause (c, old, mini_chain);
   }
   if (!c->redundant) {
     mark_removed (lit);
@@ -1139,7 +1118,7 @@ void Internal::analyze () {
   // reverse lrat_chain. We could probably work with reversed iterators
   // (views) to be more efficient but we would have to distinguish in proof
   //
-  if (opts.lrat && !opts.lratexternal) {
+  if (lrat) {
     LOG (unit_chain, "unit chain: ");
     for (auto id : unit_chain)
       lrat_chain.push_back (id);
@@ -1155,7 +1134,6 @@ void Internal::analyze () {
   UPDATE_AVERAGE (averages.current.jump, jump);
 
   int new_level = determine_actual_backtrack_level (jump);
-  ;
   UPDATE_AVERAGE (averages.current.level, new_level);
   backtrack (new_level);
 

@@ -128,7 +128,7 @@ LratChecker::LratChecker (Internal *i)
     nonces[n] = nonce;
   }
 
-  strict_lrat = internal->opts.lrat;
+  strict_lrat = internal->lrat;
 
   memset (&stats, 0, sizeof (stats)); // Initialize statistics.
 }
@@ -231,9 +231,9 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
     LOG ("LRAT CHECKER resolution check skipped clause is tautological");
     return true;
   }
-  if (internal->opts.lratexternal) { // ignore this case
+  if (internal->opts.externallrat) { // ignore this case
     LOG ("LRAT CHECKER resolution check skipped because "
-         "opts.lratexternal=true");
+         "opts.externallrat=true");
     return true;
   }
   LOG (imported_clause, "LRAT CHECKER checking clause with resolution");
@@ -364,7 +364,7 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
 
 /*------------------------------------------------------------------------*/
 
-void LratChecker::add_original_clause (uint64_t id, const vector<int> &c) {
+void LratChecker::add_original_clause (uint64_t id, bool, const vector<int> &c) {
   START (checking);
   LOG (c, "LRAT CHECKER addition of original clause[%" PRIu64 "]", id);
   stats.added++;
@@ -377,7 +377,7 @@ void LratChecker::add_original_clause (uint64_t id, const vector<int> &c) {
   STOP (checking);
 }
 
-void LratChecker::add_derived_clause (uint64_t id, const vector<int> &c,
+void LratChecker::add_derived_clause (uint64_t id, bool, const vector<int> &c,
                                       const vector<uint64_t> &proof_chain) {
   START (checking);
   LOG (c, "LRAT CHECKER addition of derived clause[%" PRIu64 "]", id);
@@ -399,29 +399,9 @@ void LratChecker::add_derived_clause (uint64_t id, const vector<int> &c,
   STOP (checking);
 }
 
-void LratChecker::add_derived_clause (uint64_t id, const vector<int> &c) {
-  START (checking);
-  LOG (c, "LRAT CHECKER checking derived unproven clause[%" PRIu64 "]", id);
-  stats.added++;
-  import_clause (c);
-  last_id = id;
-  assert (id);
-  if (strict_lrat) {
-    fatal_message_start ();
-    fputs ("tried to add unproven derived clause:\n", stderr);
-    for (const auto &lit : imported_clause)
-      fprintf (stderr, "%d ", lit);
-    fputc ('0', stderr);
-    fatal_message_end ();
-  } else
-    insert ();
-  imported_clause.clear ();
-  STOP (checking);
-}
-
 /*------------------------------------------------------------------------*/
 
-void LratChecker::delete_clause (uint64_t id, const vector<int> &c) {
+void LratChecker::delete_clause (uint64_t id, bool, const vector<int> &c) {
   START (checking);
   LOG (c, "LRAT CHECKER checking deletion of clause[%" PRIu64 "]", id);
   stats.deleted++;
@@ -511,7 +491,7 @@ void LratChecker::finalize_clause (uint64_t id, const vector<int> &c) {
 }
 
 // check if all clauses have been deleted
-void LratChecker::finalize_check () {
+void LratChecker::finalize_proof (uint64_t) {
   START (checking);
   if (num_finalized == num_clauses) {
     num_finalized = 0;

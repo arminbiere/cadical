@@ -945,7 +945,7 @@ bool Solver::trace_proof (FILE *external_file, const char *name) {
       state () == CONFIGURING,
       "can only start proof tracing to '%s' right after initialization",
       name);
-  REQUIRE (!internal->tracer, "already tracing proof");
+  REQUIRE (internal->file_tracers.empty (), "already tracing proof");
   File *internal_file = File::write (internal, external_file, name);
   assert (internal_file);
   internal->trace (internal_file);
@@ -960,7 +960,7 @@ bool Solver::trace_proof (const char *path) {
       state () == CONFIGURING,
       "can only start proof tracing to '%s' right after initialization",
       path);
-  REQUIRE (!internal->tracer, "already tracing proof");
+  REQUIRE (internal->file_tracers.empty (), "already tracing proof");
   File *internal_file = File::write (internal, path);
   bool res = (internal_file != 0);
   internal->trace (internal_file);
@@ -971,8 +971,8 @@ bool Solver::trace_proof (const char *path) {
 void Solver::flush_proof_trace () {
   LOG_API_CALL_BEGIN ("flush_proof_trace");
   REQUIRE_VALID_STATE ();
-  REQUIRE (internal->tracer, "proof is not traced");
-  REQUIRE (!internal->tracer->closed (), "proof trace already closed");
+  REQUIRE (!internal->file_tracers.empty (), "proof is not traced");
+  REQUIRE (!internal->file_tracers.back ()->closed (), "proof trace already closed");
   internal->flush_trace ();
   LOG_API_CALL_END ("flush_proof_trace");
 }
@@ -980,8 +980,8 @@ void Solver::flush_proof_trace () {
 void Solver::close_proof_trace () {
   LOG_API_CALL_BEGIN ("close_proof_trace");
   REQUIRE_VALID_STATE ();
-  REQUIRE (internal->tracer, "proof is not traced");
-  REQUIRE (!internal->tracer->closed (), "proof trace already closed");
+  REQUIRE (!internal->file_tracers.empty (), "proof is not traced");
+  REQUIRE (!internal->file_tracers.back ()->closed (), "proof trace already closed");
   internal->close_trace ();
   LOG_API_CALL_END ("close_proof_trace");
 }

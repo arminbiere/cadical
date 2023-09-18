@@ -8,10 +8,9 @@ namespace CaDiCaL {
 class File;
 struct Clause;
 struct Internal;
-class Checker;
 class Tracer;
+class FileTracer;
 class LratBuilder;
-class LratChecker;
 
 /*------------------------------------------------------------------------*/
 
@@ -24,12 +23,12 @@ class Proof {
   vector<int> clause;           // of external literals
   vector<uint64_t> proof_chain; // lrat style proof chain of clause
   uint64_t clause_id;           // id of added clause
+  bool redundant;
 
-  // the 'observers'
-  Checker *checker;         // drat checker with unit propagation
-  Tracer *tracer;           // trace proof to file
-  LratBuilder *lratbuilder; // create lrat proof chain for any clause
-  LratChecker *lratchecker; // lrat checker
+  // the 'tracers'
+  vector<Tracer*> tracers;             // tracers (ie checker)
+  vector<FileTracer*> file_tracers;    // file tracers (ie lrat tracer)
+  LratBuilder *lratbuilder;            // special tracer
 
   void add_literal (int internal_lit); // add to 'clause'
   void add_literals (Clause *);        // add to 'clause'
@@ -45,35 +44,31 @@ public:
   Proof (Internal *);
   ~Proof ();
 
-  void connect (Tracer *t) { tracer = t; }
   void connect (LratBuilder *lb) { lratbuilder = lb; }
-  void connect (LratChecker *lc) { lratchecker = lc; }
-  void connect (Checker *c) { checker = c; }
+  void connect (FileTracer *t) { file_tracers.push_back (t); }
+  void connect (Tracer *t) { tracers.push_back (t); }
 
   // Add original clauses to the proof (for online proof checking).
   //
-  void add_original_clause (uint64_t, const vector<int> &);
+  void add_original_clause (uint64_t, bool, const vector<int> &);
 
   // Add/delete original clauses to/from the proof using their original
   //  external literals (from external->eclause)
-  void add_external_original_clause (uint64_t, const vector<int> &);
-  void delete_external_original_clause (uint64_t, const vector<int> &);
+  //
+  void add_external_original_clause (uint64_t, bool, const vector<int> &);
+  void delete_external_original_clause (uint64_t, bool, const vector<int> &);
 
   // Add derived (such as learned) clauses to the proof.
   //
-  void add_derived_empty_clause (uint64_t);
-  void add_derived_unit_clause (uint64_t, int unit);
-  void add_derived_clause (Clause *);
-  void add_derived_clause (uint64_t, const vector<int> &);
-
   void add_derived_empty_clause (uint64_t, const vector<uint64_t> &);
   void add_derived_unit_clause (uint64_t, int unit,
                                 const vector<uint64_t> &);
   void add_derived_clause (Clause *c, const vector<uint64_t> &);
-  void add_derived_clause (uint64_t, const vector<int> &,
+  void add_derived_clause (uint64_t, bool, const vector<int> &,
                            const vector<uint64_t> &);
 
-  void delete_clause (uint64_t, const vector<int> &);
+
+  void delete_clause (uint64_t, bool, const vector<int> &);
   void delete_unit_clause (uint64_t id, const int lit);
   void delete_clause (Clause *);
 
@@ -83,16 +78,14 @@ public:
   void finalize_clause (Clause *);
 
   void finalize_proof (uint64_t);
-  void set_first_id (uint64_t);
+  void begin_proof (uint64_t);
 
   // These two actually pretend to add and remove a clause.
   //
   void flush_clause (Clause *);           // remove falsified literals
-  void strengthen_clause (Clause *, int); // remove second argument
   void strengthen_clause (Clause *, int, const vector<uint64_t> &);
   void otfs_strengthen_clause (Clause *, const vector<int> &,
                                const vector<uint64_t> &);
-  void otfs_strengthen_clause (Clause *, const vector<int> &);
 
   void flush ();
 };

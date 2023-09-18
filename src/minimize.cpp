@@ -109,7 +109,7 @@ void Internal::minimize_clause () {
   auto j = clause.begin (), i = j;
   for (; i != end; i++) {
     if (minimize_literal (-*i)) {
-      if (opts.lrat && !opts.lratexternal) {
+      if (lrat) {
         assert (mini_chain.empty ());
         calculate_minimize_chain (-*i);
         for (auto p : mini_chain) {

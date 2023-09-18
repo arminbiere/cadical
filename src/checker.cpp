@@ -489,7 +489,7 @@ void Checker::add_clause (const char *type) {
     insert ();
 }
 
-void Checker::add_original_clause (uint64_t id, const vector<int> &c) {
+void Checker::add_original_clause (uint64_t id, bool, const vector<int> &c) {
   if (inconsistent)
     return;
   START (checking);
@@ -507,7 +507,7 @@ void Checker::add_original_clause (uint64_t id, const vector<int> &c) {
   STOP (checking);
 }
 
-void Checker::add_derived_clause (uint64_t id, const vector<int> &c) {
+void Checker::add_derived_clause (uint64_t id, bool, const vector<int> &c, const vector<uint64_t>&) {
   if (inconsistent)
     return;
   START (checking);
@@ -534,7 +534,7 @@ void Checker::add_derived_clause (uint64_t id, const vector<int> &c) {
 
 /*------------------------------------------------------------------------*/
 
-void Checker::delete_clause (uint64_t id, const vector<int> &c) {
+void Checker::delete_clause (uint64_t id, bool, const vector<int> &c) {
   if (inconsistent)
     return;
   START (checking);

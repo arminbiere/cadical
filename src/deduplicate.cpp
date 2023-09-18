@@ -107,7 +107,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
           LOG ("found %d %d and %d %d which produces unit %d", lit, -other,
                lit, other, lit);
           unit = lit;
-          if (opts.lrat && !opts.lratexternal) {
+          if (lrat) {
             // taken from fradical
             assert (lrat_chain.empty ());
             lrat_chain.push_back (c->id);

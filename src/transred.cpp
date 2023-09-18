@@ -139,8 +139,6 @@ void Internal::transred () {
     assert (lrat_chain.empty ());
     assert (mini_chain.empty ());
     vector<int> parents;
-    // if (opts.lrat && !opts.lratexternal) lrat_chain.push_back (c->id); //
-    // TODO is this really unnecessary
 
     while (!transitive && !failed && j < work.size ()) {
       const int lit = work[j++];
@@ -169,7 +167,7 @@ void Internal::transred () {
           if (tmp > 0)
             continue;
           else if (tmp < 0) {
-            if (opts.lrat && !opts.lratexternal) {
+            if (lrat) {
               parents.push_back (lit);
               mini_chain.push_back (d->id);
               work.push_back (other);
@@ -177,7 +175,7 @@ void Internal::transred () {
             LOG ("found both %d and %d reachable", -other, other);
             failed = true;
           } else {
-            if (opts.lrat && !opts.lratexternal) {
+            if (lrat) {
               parents.push_back (lit);
               mini_chain.push_back (d->id);
             }
@@ -198,7 +196,7 @@ void Internal::transred () {
     while (!work.empty ()) {
       const int lit = work.back ();
       work.pop_back ();
-      if (opts.lrat && !opts.lratexternal && failed && !work.empty ()) {
+      if (lrat && failed && !work.empty ()) {
         assert (!parents.empty () && !mini_chain.empty ());
         LOG ("transred lrat current lit %d next pos %d next neg %d", lit,
              next_pos, next_neg);
@@ -216,7 +214,7 @@ void Internal::transred () {
     }
     mini_chain.clear ();
     assert (mini_chain.empty ());
-    if (opts.lrat && !opts.lratexternal && failed) {
+    if (lrat && failed) {
       reverse (lrat_chain.begin (), lrat_chain.end ());
     }
 

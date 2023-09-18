@@ -32,6 +32,16 @@ void Internal::assume_analyze_literal (int lit) {
   analyzed.push_back (lit);
   Var &v = var (lit);
   assert (val (lit) < 0);
+  if (v.reason == external_reason) {
+
+    v.reason = wrapped_learn_external_reason_clause (-lit);
+
+    if (!v.reason) {
+      v.level = 0;
+      learn_external_propagated_unit_clause (-lit);
+    }
+  }
+  assert (v.reason != external_reason);
   if (!v.level) {
     const unsigned uidx = vlit (-lit);
     uint64_t id = unit_clauses[uidx];
@@ -56,7 +66,8 @@ void Internal::assume_analyze_literal (int lit) {
 void Internal::assume_analyze_reason (int lit, Clause *reason) {
   assert (reason);
   assert (lrat_chain.empty ());
-  assert (opts.lrat && !opts.lratexternal);
+  assert (reason != external_reason);
+  assert (lrat);
   for (const auto &other : *reason)
     if (other != lit)
       assume_analyze_literal (other);
@@ -102,6 +113,30 @@ void Internal::failing () {
       }
       if (failed_clashing)
         continue;
+       if (v.reason == external_reason) {
+        Var &ev = var(lit);
+        ev.reason = learn_external_reason_clause (-lit);
+        if (!ev.reason) {
+          ev.level = 0;
+          learn_external_propagated_unit_clause (-lit);
+          failed_unit = lit;
+          break;
+        }
+        ev.level = 0;
+        // Recalculate assignment level
+        for (const auto &other : *ev.reason) {
+          if (other == -lit)
+            continue;
+          assert (val (other));
+          int tmp = var (other).level;
+          if (tmp > ev.level)
+            ev.level = tmp;
+        }
+        if (!ev.level) {
+          failed_unit = lit;
+          break;
+        }
+      }
       assert (v.reason != external_reason);
       if (!v.reason)
         failed_clashing = lit;
@@ -110,6 +145,8 @@ void Internal::failing () {
         failed_level = v.level;
       }
     }
+
+    assert(clause.empty());
 
     // Get the 'failed' assumption from one of the three cases.
     int failed;
@@ -187,7 +224,7 @@ void Internal::failing () {
     vector<int> sum_constraints;
 
     // no lrat do bfs as it was before
-    if (!opts.lrat || opts.lratexternal) {
+    if (!lrat) {
       size_t next = 0;
       while (next < analyzed.size ()) {
         const int lit = analyzed[next++];
@@ -195,6 +232,16 @@ void Internal::failing () {
         Var &v = var (lit);
         if (!v.level)
           continue;
+        if (v.reason == external_reason) {
+          v.reason = wrapped_learn_external_reason_clause (lit);
+
+          if (!v.reason) {
+            v.level = 0;
+            learn_external_propagated_unit_clause (lit);
+            continue;
+          }
+        }
+        assert (v.reason != external_reason);
         if (v.reason) {
           assert (v.level);
           LOG (v.reason, "analyze reason");
@@ -222,6 +269,15 @@ void Internal::failing () {
       const int lit = clause[0];
       Var &v = var (lit);
       assert (v.reason);
+       if (v.reason == external_reason) {
+        v.reason = wrapped_learn_external_reason_clause (lit);
+
+        if (!v.reason) {
+          v.level = 0;
+          learn_external_propagated_unit_clause (lit);
+        }
+      }
+      assert (v.reason != external_reason);
       assume_analyze_reason (lit, v.reason);
       for (auto &lit : clause) {
         Flags &f = flags (lit);
@@ -300,20 +356,16 @@ void Internal::failing () {
     if (!unsat_constraint) {
       external->check_learned_clause ();
       if (proof) {
-        if (opts.lrat && !opts.lratexternal) {
-          LOG (lrat_chain, "assume proof chain without constraint");
-          proof->add_derived_clause (++clause_id, clause, lrat_chain);
-        } else
-          proof->add_derived_clause (++clause_id, clause);
-        proof->delete_clause (clause_id, clause);
+        proof->add_derived_clause (++clause_id, true, clause, lrat_chain);
+        proof->delete_clause (clause_id, true, clause);
       }
     } else {
-      assert (!opts.lrat || opts.lratexternal ||
+      assert (!lrat ||
               (constraint.size () == constraint_clauses.size () &&
                constraint.size () == constraint_chains.size ()));
       for (auto p = constraint.rbegin (); p != constraint.rend (); p++) {
         const auto &lit = *p;
-        if (opts.lrat && !opts.lratexternal) {
+        if (lrat) {
           clause.clear ();
           for (auto &ign : constraint_clauses.back ())
             clause.push_back (ign);
@@ -322,18 +374,18 @@ void Internal::failing () {
         clause.push_back (-lit);
         external->check_learned_clause ();
         if (proof) {
-          if (opts.lrat && !opts.lratexternal) {
+          if (lrat) {
             for (auto p : constraint_chains.back ()) {
               lrat_chain.push_back (p);
             }
             constraint_chains.pop_back ();
             LOG (lrat_chain, "assume proof chain with constraints");
-            proof->add_derived_clause (++clause_id, clause, lrat_chain);
+            proof->add_derived_clause (++clause_id, true, clause, lrat_chain);
             lrat_chain.clear ();
-            proof->delete_clause (clause_id, clause);
+            proof->delete_clause (clause_id, true, clause);
           } else {
-            proof->add_derived_clause (++clause_id, clause);
-            proof->delete_clause (clause_id, clause);
+            proof->add_derived_clause (++clause_id, true, clause, lrat_chain);
+            proof->delete_clause (clause_id, true, clause);
           }
         }
         clause.pop_back ();

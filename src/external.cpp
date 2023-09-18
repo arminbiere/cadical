@@ -154,7 +154,7 @@ void External::add (int elit) {
   // when the proof is printed during add_original_lit (0)
   if (elit && internal->proof) {
     eclause.push_back (elit);
-    if (internal->opts.lrat && !internal->opts.lratexternal) {
+    if (internal->lrat) {
       // actually find unit of -elit (flips elit < 0)
       unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
       assert ((size_t) eidx < ext_units.size ());
@@ -167,8 +167,7 @@ void External::add (int elit) {
     }
   }
 
-  if (!elit && internal->proof && internal->opts.lrat &&
-      !internal->opts.lratexternal) {
+  if (!elit && internal->proof && internal->lrat) {
     for (const auto &elit : eclause) {
       ext_flags[abs (elit)] = false;
     }
@@ -659,8 +658,7 @@ void External::check_failing () {
   if (internal->opts.log)
     checker->set ("log", true);
 #endif
-  for (const auto lit : original)
-    checker->add (lit);
+
   for (const auto lit : assumptions) {
     if (!failed (lit))
       continue;
@@ -674,6 +672,12 @@ void External::check_failing () {
       checker->add (lit);
   } else if (constraint.size ())
     LOG (constraint, "constraint satisfied and ignored");
+    
+  // Add original clauses as last step, failing () and failed_constraint ()
+  // might add more external clauses (due to lazy explanation)
+  for (const auto lit : original)
+    checker->add (lit);
+
   int res = checker->solve ();
   if (res != 20)
     FATAL ("failed assumptions do not form a core");

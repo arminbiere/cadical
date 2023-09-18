@@ -3,7 +3,7 @@
 namespace CaDiCaL {
 
 void Internal::decompose_analyze_binary_chain (DFS *dfs, int from) {
-  if (!opts.lrat || opts.lratexternal)
+  if (!lrat)
     return;
   LOG ("binary chain starting at %d", from);
   DFS &from_dfs = dfs[vlit (from)];
@@ -55,7 +55,7 @@ vector<Clause *> Internal::decompose_analyze_binary_clauses (DFS *dfs,
 }
 
 void Internal::decompose_conflicting_scc_lrat (DFS *dfs, vector<int> &scc) {
-  if (!opts.lrat || opts.lratexternal)
+  if (!lrat)
     return;
   assert (lrat_chain.empty ());
   assert (mini_chain.empty ());
@@ -93,38 +93,6 @@ void Internal::clear_decomposed_literals () {
   decomposed.clear ();
 }
 
-// compute lrat_chain from a given starting reason to root
-//
-void Internal::decompose_analyze_lrat (DFS *dfs, Clause *reason) {
-  if (!opts.lrat || opts.lratexternal)
-    return;
-  assert (lrat_chain.empty ());
-  assert (reason); // not sure yet.
-  LOG (reason, "decompose analyze for");
-  for (const auto lit : *reason) {
-    const auto other = -lit;
-    Flags &f = flags (other);
-    if (f.seen)
-      continue;
-    f.seen = true;
-    analyzed.push_back (other);
-    if (val (other) > 0) {
-      const unsigned uidx = vlit (other);
-      uint64_t id = unit_clauses[uidx];
-      assert (id);
-      lrat_chain.push_back (id);
-      continue;
-    }
-    assert (mini_chain.empty ());
-    decompose_analyze_binary_chain (dfs, other);
-    for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++) {
-      lrat_chain.push_back (*p);
-    }
-    mini_chain.clear ();
-  }
-  lrat_chain.push_back (reason->id);
-  clear_analyzed_literals ();
-}
 
 // This performs one round of Tarjan's algorithm, e.g., equivalent literal
 // detection and substitution, on the whole formula.  We might want to
@@ -152,7 +120,7 @@ bool Internal::decompose_round () {
   clear_n (reprs, size_dfs);
   vector<vector<Clause *>> dfs_chains;
   dfs_chains.resize (size_dfs);
-  if (opts.lrat && !opts.lratexternal) {
+  if (lrat) {
     for (size_t i = 0; i > size_dfs; i++) {
       vector<Clause *> empty;
       dfs_chains[i] = empty;
@@ -237,7 +205,7 @@ bool Internal::decompose_round () {
               // contains both a literal and its negation, then the formula
               // becomes unsatisfiable.
 
-              if (opts.lrat && !opts.lratexternal) {
+              if (lrat) {
                 assert (analyzed.empty ());
                 int other, first = 0;
                 bool conflicting = false;
@@ -299,7 +267,7 @@ bool Internal::decompose_round () {
                 other = scc[--j];
                 if (other == -parent) {
                   LOG ("both %d and %d in one SCC", parent, -parent);
-                  if (opts.lrat && !opts.lratexternal) {
+                  if (lrat) {
                     Flags &f = flags (-parent);
                     f.seen = true;
                     analyzed.push_back (-parent);
@@ -309,12 +277,8 @@ bool Internal::decompose_round () {
                     mini_chain.clear ();
                   }
                   assign_unit (parent);
-                  if (opts.lrat && !opts.lratexternal) {
-                    // bool ok = propagate ();                  // TODO
-                    // differentiate between
-                    propagate (); // normal usage and logging/debugging
-                    // assert (!ok);                            // to avoid
-                    // compiler warnings
+                  if (lrat) {
+                    propagate ();
                   }
                   learn_empty_clause ();
                   lrat_chain.clear ();
@@ -346,7 +310,7 @@ bool Internal::decompose_round () {
                   continue;
                 substituted++;
                 LOG ("literal %d in SCC of %d", other, repr);
-                if (!opts.lrat || opts.lratexternal)
+                if (!lrat)
                   continue;
                 assert (mini_chain.empty ());
                 Flags &f = flags (repr);
@@ -478,7 +442,7 @@ bool Internal::decompose_round () {
       }
     }
     // build lrat
-    if (opts.lrat && !opts.lratexternal) {
+    if (lrat) {
       LOG ("building chain for not subsumed clause");
       assert (lrat_chain.empty ());
       assert (decomposed.empty ());
@@ -561,10 +525,7 @@ bool Internal::decompose_round () {
       if (!c->redundant)
         mark_removed (c);
       if (proof) {
-        if (opts.lrat && !opts.lratexternal)
-          proof->add_derived_clause (++clause_id, clause, lrat_chain);
-        else
-          proof->add_derived_clause (++clause_id, clause);
+        proof->add_derived_clause (++clause_id, true, clause, lrat_chain);
         proof->delete_clause (c);
         c->id = clause_id;
       }
