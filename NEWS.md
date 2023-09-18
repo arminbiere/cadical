@@ -1,23 +1,43 @@
-Version 1.7.4
+Version 1.7.5
 -------------
 
  - ILB (--ilb)
    Incremental lazy backtracking allows to add new clauses
    incrementally while keeping the assignments on the trail.
-   Works especially well with reimplication.
+   Also works for assumptions (--ilbassumptions)
 
  - Reimplication (--reimply)
    Fixes assignment levels of literals by elevating them.
    Out of order assignments can happen because of chronological
    backtracking, external propagation or ILB. Improves quality
    of learned clauses and shortens search in these cases.
+   
+ - Proof Tracer Interface
+   Tracers can be added through the API (connect_proof_tracer)
+   This allows using custom proof tracers to trace and process
+   clausal proofs with or without antecedents on the fly.
+   
+ - Reworked options for proof tracing to be less confusing.
+   Support for DRAT, LRAT, FRAT and VeriPB (with or without
+   antecedents).
+
+Version 1.7.4
+-------------
+
+ - As `fork` and `wait` do not exist on Windows writing compressed files
+   through `pipe/fork/exec/wait` has to be disabled for Windows cross
+   compilation to go through.  Alternatively one could go back to `popen`
+   for writing compressed files on Windows which however is not safe and
+   therefore we simply decided to disable that feature for windows.
+   Compressed file reading still (and as far we are aware safely) uses
+   `popen` and thus also compiles for Windows.
 
 Version 1.7.3
 -------------
 
-- Replaced the unsafe `popen` approach for compressed file writing
-  with an explicit `pipe/fork/exec/waitpid` flow and accordingly
-  removed the `--safe` configuration option again.
+ - Replaced the unsafe `popen` approach for compressed file writing
+   with an explicit `pipe/fork/exec/waitpid` flow and accordingly
+   removed the `--safe` configuration option again.
 
 Version 1.7.2
 -------------
@@ -45,16 +65,16 @@ Version 1.7.0
 Version 1.6.0
 -------------
 
-  - Added IPASIR-UP functions to the API to support external propagation,
-    external decisions, and clause addition during search.
-    For more details see the following paper at SAT 2023:
+ - Added IPASIR-UP functions to the API to support external propagation,
+   external decisions, and clause addition during search.
+   For more details see the following paper at SAT 2023:
 
-    Katalin Fazekas, Aina Niemetz, Mathias Preiner, Markus Kirchweger,
-    Stefan Szeider and Armin Biere. IPASIR-UP: User Propagators for CDCL.
+   Katalin Fazekas, Aina Niemetz, Mathias Preiner, Markus Kirchweger,
+   Stefan Szeider and Armin Biere. IPASIR-UP: User Propagators for CDCL.
 
-  - During decisions the phase set by 'void phase (int lit)' has now
-    higher precedence than the initial phase set by options 'phase' and
-    'forcephase'.
+ - During decisions the phase set by 'void phase (int lit)' has now
+   higher precedence than the initial phase set by options 'phase' and
+   'forcephase'.
 
 Version 1.5.6
 -------------
