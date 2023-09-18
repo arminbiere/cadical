@@ -36,10 +36,12 @@ void Internal::assume_analyze_literal (int lit) {
 
     v.reason = wrapped_learn_external_reason_clause (-lit);
 
+    /*
     if (!v.reason) {
       v.level = 0;
       learn_external_propagated_unit_clause (-lit);
     }
+    */
   }
   assert (v.reason != external_reason);
   if (!v.level) {
@@ -118,7 +120,7 @@ void Internal::failing () {
         ev.reason = learn_external_reason_clause (-lit);
         if (!ev.reason) {
           ev.level = 0;
-          learn_external_propagated_unit_clause (-lit);
+          // learn_external_propagated_unit_clause (-lit);
           failed_unit = lit;
           break;
         }
@@ -237,7 +239,7 @@ void Internal::failing () {
 
           if (!v.reason) {
             v.level = 0;
-            learn_external_propagated_unit_clause (lit);
+            // learn_external_propagated_unit_clause (lit);
             continue;
           }
         }
@@ -272,10 +274,12 @@ void Internal::failing () {
        if (v.reason == external_reason) {
         v.reason = wrapped_learn_external_reason_clause (lit);
 
+        /*
         if (!v.reason) {
           v.level = 0;
-          learn_external_propagated_unit_clause (lit);
+          learn_external_propagated_unit_clause (-lit);
         }
+        */
       }
       assert (v.reason != external_reason);
       assume_analyze_reason (lit, v.reason);

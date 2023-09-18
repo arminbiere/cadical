@@ -4,8 +4,9 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-VeripbTracer::VeripbTracer (Internal *i, File *f, bool b, bool a)
+VeripbTracer::VeripbTracer (Internal *i, File *f, bool b, bool a, bool c)
     : internal (i), file (f), binary (b), with_antecedents (a),
+      checked_deletions (c),
       added (0), deleted (0) {
   (void) internal;
   LOG ("VERIPB TRACER new");
@@ -73,7 +74,7 @@ void VeripbTracer::veripb_add_derived_clause (bool redundant, const vector<int> 
     }
   }
   file->put ("\n");
-  file->put ("e -1 ");
+  file->put ("e ");
   for (const auto &external_lit : clause) {
     file->put ("1 ");
     if (external_lit < 0)

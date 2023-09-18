@@ -11,6 +11,7 @@ class VeripbTracer : public FileTracer {
   File *file;
   bool binary;
   bool with_antecedents;
+  bool checked_deleteions;
 
   int64_t added, deleted;
 

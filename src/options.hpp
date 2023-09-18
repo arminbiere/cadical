@@ -183,7 +183,7 @@ OPTION( transredmaxeff,  1e8,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transredmineff,  1e6,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( transredreleff,  1e2,  1,1e5,1,0,1, "relative efficiency per mille") \
 QUTOPT( verbose,           0,  0,  3,0,0,0, "more verbose messages") \
-OPTION( veripb,            0,  0,  2,0,0,1, "1=veripb(lrat), 2=veripb(drat)") \
+OPTION( veripb,            0,  0,  4,0,0,1, "odd=checkdeletions, > 2=drat") \
 OPTION( vivify,            1,  0,  1,0,1,1, "vivification") \
 OPTION( vivifyinst,        1,  0,  1,0,0,1, "instantiate last literal when vivify") \
 OPTION( vivifymaxeff,    2e7,  0,2e9,1,0,1, "maximum efficiency") \

@@ -37,8 +37,10 @@ void Internal::trace (File *file) {
   FileTracer * ft;
   if (opts.veripb) {
     LOG ("PROOF connecting veripb tracer");
-    ft = new VeripbTracer (this, file, opts.binary, opts.veripb == 1);    
-    if (opts.veripb == 1) force_lrat ();
+    bool antecedents = opts.veripb == 1 || opts.veripb == 2;
+    bool deletions = opts.veripb == 2 || opts.veripb == 4;
+    ft = new VeripbTracer (this, file, opts.binary, antecedents, deletions);    
+    if (antecedents) force_lrat ();
   } else if (opts.frat) {
     LOG ("PROOF connecting frat tracer");
     ft = new FratTracer (this, file, opts.binary, opts.frat == 1);

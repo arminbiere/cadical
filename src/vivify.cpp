@@ -1046,7 +1046,7 @@ void Internal::vivify_build_lrat (int lit, Clause *reason) {
 // calculate lrat_chain
 //
 inline void Internal::vivify_chain_for_units (int lit, Clause *reason) {
-  if (!opts.lrat || opts.lratexternal)
+  if (!lrat)
     return;
   // LOG ("building chain for units");        bad line for debugging
   // equivalence if (opts.chrono && assignment_level (lit, reason)) return;
