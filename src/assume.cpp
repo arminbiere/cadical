@@ -439,20 +439,22 @@ void Internal::sort_and_reuse_assumptions () {
   std::sort(begin(assumptions), end(assumptions), [this](int litA, int litB) {return ((uint64_t)var(litA).level << 32) + (uint64_t)var(litA).trail < ((uint64_t)var(litB).level << 32) + (uint64_t)var(litB).trail;});
 
   const int max_level = var (assumptions.back ()).level;
-
-  const int size = min ((int) control.size(), max_level+1);
+  const int size = min (level + 1, max_level + 1);
+  assert ((size_t) level == control.size () - 1);
   for (int i = 1; i < size; ++i) {
     const Level& l = control[i];
     const int lit = l.decision;
-    const unsigned char bit = bign (lit);
-    if (opts.reimply && var(l.decision).level != i)
-      continue;
-    assert (var(l.decision).level == i);
-    if (flags(lit).assumed != bit) {
-      LOG ("assumptions allow for reuse of trail up to level %d", var(lit).level-1);
-      backtrack (var(lit).level - 1);
+    const int alit = assumptions[i-1];
+    if (!lit || var(lit).level != i) {
+      if (val (alit) > 0 && var (alit).level < i)
+        continue;
+      backtrack (i-1);
       break;
     }
+    if (l.decision == alit)
+      continue;
+    backtrack (i - 1);
+    break;
   }
   LOG ("assumptions allow for reuse of trail up to level %d", level);
   if ((size_t) level > assumptions.size ())
