@@ -1,7 +1,7 @@
 #ifndef _checker_hpp_INCLUDED
 #define _checker_hpp_INCLUDED
 
-#include "stattracer.hpp" // Alphabetically after 'checker'.
+#include "tracer.hpp" // Alphabetically after 'checker'.
 
 namespace CaDiCaL {
 

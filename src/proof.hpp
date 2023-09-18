@@ -45,8 +45,8 @@ public:
   ~Proof ();
 
   void connect (LratBuilder *lb) { lratbuilder = lb; }
-  void connect (FileTracer *t) { file_tracers.push_back (t); }
   void connect (Tracer *t) { tracers.push_back (t); }
+  void disconnect (Tracer *t);
 
   // Add original clauses to the proof (for online proof checking).
   //

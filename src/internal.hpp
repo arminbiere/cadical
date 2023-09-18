@@ -62,7 +62,6 @@ extern "C" {
 #include "ema.hpp"
 #include "external.hpp"
 #include "file.hpp"
-#include "filetracer.hpp"
 #include "flags.hpp"
 #include "format.hpp"
 #include "frattracer.hpp"
@@ -91,7 +90,6 @@ extern "C" {
 #include "resources.hpp"
 #include "score.hpp"
 #include "stats.hpp"
-#include "stattracer.hpp"
 #include "terminal.hpp"
 #include "tracer.hpp"
 #include "util.hpp"
@@ -110,6 +108,9 @@ using namespace std;
 struct Coveror;
 struct External;
 struct Walker;
+class Tracer;
+class FileTracer;
+class StatTracer;
 
 struct CubesWithStatus {
   int status = 0;
@@ -1332,6 +1333,12 @@ struct Internal {
   void flush_trace ();     // Flush proof trace file.
   void trace (File *);     // Start write proof file.
   void check ();           // Enable online proof checking.
+  void connect_proof_tracer (Tracer *tracer, bool antecedents);
+  void connect_proof_tracer (StatTracer *tracer, bool antecedents);
+  void connect_proof_tracer (FileTracer *tracer, bool antecedents);
+  bool disconnect_proof_tracer (Tracer *tracer);
+  bool disconnect_proof_tracer (StatTracer *tracer);
+  bool disconnect_proof_tracer (FileTracer *tracer);
 
   // Dump to '<stdout>' as DIMACS for debugging.
   //

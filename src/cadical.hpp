@@ -197,6 +197,9 @@ class Terminator;
 class ClauseIterator;
 class WitnessIterator;
 class ExternalPropagator;
+class Tracer;
+class FileTracer;
+class StatTracer;
 
 /*------------------------------------------------------------------------*/
 
@@ -716,6 +719,26 @@ public:
   //   ensure (VALID)
   //
   void close_proof_trace ();
+
+  // Enables clausal proof tracing with or without antecedents using
+  // Tracer, StatTracer, FileTracer
+  //
+  //   require (CONFIGURING)
+  //   ensure (CONFIGURING)
+  //
+  void connect_proof_tracer (Tracer *tracer, bool antecedents);
+  void connect_proof_tracer (StatTracer *tracer, bool antecedents);
+  void connect_proof_tracer (FileTracer *tracer, bool antecedents);
+
+  // Disconnect proof tracer. If this is not done before deleting
+  // the tracer will be deleted. Returns true if successful.
+  //
+  //   require (VALID)
+  //   ensure (VALID)
+  //
+  bool disconnect_proof_tracer (Tracer *tracer);
+  bool disconnect_proof_tracer (StatTracer *tracer);
+  bool disconnect_proof_tracer (FileTracer *tracer);
 
   //------------------------------------------------------------------------
 

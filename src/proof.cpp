@@ -30,6 +30,64 @@ void Internal::force_lrat () {
   lrat = true;
 }
 
+void Internal::connect_proof_tracer (Tracer *tracer, bool antecedents) {
+  if (antecedents) force_lrat ();
+  proof->connect (tracer);
+  tracers.push_back (tracer);
+}
+
+void Internal::connect_proof_tracer (StatTracer *tracer, bool antecedents) {
+  if (antecedents) force_lrat ();
+  proof->connect (tracer);
+  stat_tracers.push_back (tracer);
+}
+
+void Internal::connect_proof_tracer (FileTracer *tracer, bool antecedents) {
+  if (antecedents) force_lrat ();
+  proof->connect (tracer);
+  file_tracers.push_back (tracer);
+}
+
+bool Internal::disconnect_proof_tracer (Tracer *tracer) {
+  auto t = tracers.begin ();
+  while (t != tracers.end ()) {
+    if (*t == tracer) {
+      tracers.erase (t);
+      return true;
+    }
+    t++;
+  }
+  return false;
+}
+
+bool Internal::disconnect_proof_tracer (StatTracer *tracer) {
+  auto t = stat_tracers.begin ();
+  while (t != stat_tracers.end ()) {
+    if (*t == tracer) {
+      stat_tracers.erase (t);
+      return true;
+    }
+    t++;
+  }
+  return false;
+}
+
+bool Internal::disconnect_proof_tracer (FileTracer *tracer) {
+  auto t = file_tracers.begin ();
+  while (t != file_tracers.end ()) {
+    if (*t == tracer) {
+      file_tracers.erase (t);
+      return true;
+    }
+    t++;
+  }
+  return false;
+}
+
+void Proof::disconnect (Tracer *t) {
+  tracers.erase (std::remove (tracers.begin (), tracers.end (), t), tracers.end ());
+}
+
 // Enable proof tracing.
 
 void Internal::trace (File *file) {
@@ -346,9 +404,6 @@ void Proof::add_original_clause () {
   for (auto & tracer : tracers) {
     tracer->add_original_clause (clause_id, redundant, clause);
   }
-  for (auto & tracer : file_tracers) {
-    tracer->add_original_clause (clause_id, redundant, clause);
-  }
   clause.clear ();
   clause_id = 0;
 }
@@ -360,9 +415,6 @@ void Proof::add_derived_clause () {
     proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
   }
   for (auto & tracer : tracers) {
-    tracer->add_derived_clause (clause_id, redundant, clause, proof_chain);
-  }
-  for (auto & tracer : file_tracers) {
     tracer->add_derived_clause (clause_id, redundant, clause, proof_chain);
   }
   proof_chain.clear ();
@@ -377,18 +429,12 @@ void Proof::delete_clause () {
   for (auto & tracer : tracers) {
     tracer->delete_clause (clause_id, redundant, clause);
   }
-  for (auto & tracer : file_tracers) {
-    tracer->delete_clause (clause_id, redundant, clause);
-  }
   clause.clear ();
   clause_id = 0;
 }
 
 void Proof::finalize_clause () {
   for (auto & tracer : tracers) {
-    tracer->finalize_clause (clause_id, clause);
-  }
-  for (auto & tracer : file_tracers) {
     tracer->finalize_clause (clause_id, clause);
   }
   clause.clear ();
@@ -399,16 +445,10 @@ void Proof::finalize_proof (uint64_t id) {
   for (auto & tracer : tracers) {
     tracer->finalize_proof (id);
   }
-  for (auto & tracer : file_tracers) {
-    tracer->finalize_proof (id);
-  }
 }
 
 void Proof::begin_proof (uint64_t id) {
   for (auto & tracer : tracers) {
-    tracer->begin_proof (id);
-  }
-  for (auto & tracer : file_tracers) {
     tracer->begin_proof (id);
   }
 }

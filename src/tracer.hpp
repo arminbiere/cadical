@@ -49,6 +49,29 @@ public:
 
 };
 
+class StatTracer : public Tracer {
+
+public:
+  StatTracer () {}
+  virtual ~StatTracer () {}
+  
+  virtual void print_stats () {}
+
+};
+
+class FileTracer : public Tracer {
+
+public:
+  FileTracer () {}
+  virtual ~FileTracer () {}
+  
+  virtual bool closed () { return true; }
+  virtual void close () {}
+  virtual void flush () {}
+
+};
+
+
 } // namespace CaDiCaL
 
 #endif

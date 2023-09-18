@@ -1,7 +1,7 @@
 #ifndef _drattracer_h_INCLUDED
 #define _drattracer_h_INCLUDED
 
-#include "filetracer.hpp"
+#include "tracer.hpp"
 
 namespace CaDiCaL {
 
