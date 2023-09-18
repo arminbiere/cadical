@@ -11,7 +11,7 @@ class VeripbTracer : public FileTracer {
   File *file;
   bool binary;
   bool with_antecedents;
-  bool checked_deleteions;
+  bool checked_deletions;
 
   int64_t added, deleted;
 
@@ -32,7 +32,7 @@ class VeripbTracer : public FileTracer {
 
 public:
   // own and delete 'file'
-  VeripbTracer (Internal *, File *file, bool binary, bool antecedents);
+  VeripbTracer (Internal *, File *file, bool, bool, bool);
   ~VeripbTracer ();
 
   void begin_proof (uint64_t);

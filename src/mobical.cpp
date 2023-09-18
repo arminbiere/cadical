@@ -368,7 +368,10 @@ public:
     add_new_observed_var ();
     if (must_add_clause) {
       assert (nof_added_clauses < nof_clauses);
+      if (!lemmas_per_queries[query_loc]) // TODO: bug with ext_prop or reimply?
+        query_loc++;
       assert (query_loc < lemmas_per_queries.size ());
+      assert (lemmas_per_queries[query_loc] > 0);
       lemmas_per_queries[query_loc]--;
       must_add_clause = false;
       return true;
