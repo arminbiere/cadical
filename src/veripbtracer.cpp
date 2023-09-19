@@ -110,13 +110,13 @@ bool VeripbTracer::find_and_delete (const uint64_t id) {
     if (c->hash == hash && c->id == id) {
       break;
     }
+    if (!c->next) return false;
   }
-  if (res) {
-    *res = c->next;
-    delete c;
-    return true;
-  }
-  return false;
+  if (!c) return false;
+  assert (c && res);
+  *res = c->next;
+  delete c;
+  return true;
 }
 
 void VeripbTracer::insert () {
