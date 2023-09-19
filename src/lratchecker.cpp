@@ -459,18 +459,40 @@ void LratChecker::delete_clause (uint64_t id, bool, const vector<int> &c) {
 void LratChecker::weaken_minus (uint64_t id,
                                           const vector<int> &c) {
   LOG (c, "LRAT CHECKER saving clause[%" PRIu64 "] to restore later", id);
-  if (clauses_to_reconstruct.find(id) != end (clauses_to_reconstruct)) {
+  import_clause (c);
+
+  last_id = id;
+  LratCheckerClause **p = find (id), *d = *p;
+  if (d) {
+    for (const auto &lit : imported_clause)
+      mark (lit) = true;
+    const int *dp = d->literals;
+    for (unsigned i = 0; i < d->size; i++) {
+      int lit = *(dp + i);
+      if (!mark (lit)) {        // should never happen since ids
+        fatal_message_start (); // are unique.
+        fputs ("deleted clause not in proof:\n", stderr);
+        for (const auto &lit : imported_clause)
+          fprintf (stderr, "%d ", lit);
+        fputc ('0', stderr);
+        fatal_message_end ();
+      }
+    }
+    for (const auto &lit : imported_clause)
+      mark (lit) = false;
+  } else {
     fatal_message_start ();
-    fputs ("this clause id was already used:\n", stderr);
-    for (const auto &lit : c)
-        fprintf (stderr, "%d ", lit);
+    fputs ("weakened clause not in proof:\n", stderr);
+    for (const auto &lit : imported_clause)
+      fprintf (stderr, "%d ", lit);
     fputc ('0', stderr);
     fatal_message_end ();
   }
+  imported_clause.clear ();
 
-  vector<int> d = c;
-  sort (begin(d), end (d));
-  clauses_to_reconstruct[id] = d;
+  vector<int> e = c;
+  sort (begin (e), end (e));
+  clauses_to_reconstruct[id] = e;
 }
 
 void LratChecker::restore_clause (uint64_t id, const vector<int> &c) {
