@@ -651,6 +651,7 @@ struct Internal {
   void otfs_strengthen_clause (Clause *, int, int,
                                const std::vector<int> &);
   void otfs_subsume_clause (Clause *subsuming, Clause *subsumed);
+  int otfs_find_backtrack_level (int &forced);
   Clause *on_the_fly_strengthen (Clause *conflict, int lit);
   void analyze ();
   void iterate (); // report learned unit clause
