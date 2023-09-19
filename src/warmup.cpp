@@ -2,6 +2,65 @@
 
 namespace CaDiCaL {
 
+// specific warmup version without 
+inline void Internal::warmup_assign (int lit, Clause *reason) {
+
+  if (level)
+    require_mode (SEARCH);
+
+  const int idx = vidx (lit);
+  assert (reason != external_reason);
+  const bool from_external = false;
+  assert (reason != external_reason);
+  assert (!vals[idx]);
+  assert (!flags (idx).eliminated ());
+  Var &v = var (idx);
+  int lit_level;
+  assert (!(reason == external_reason &&
+	    ((size_t) level <= assumptions.size () + (!!constraint.size ()))));
+  assert (reason);
+  assert (level);
+  // we  purely assign in order here
+  lit_level = level;
+
+  v.level = lit_level;
+  v.trail = trail_size (lit_level);
+  v.reason = reason;
+  assert ((int) num_assigned < max_var);
+  assert (opts.reimply || num_assigned == trail.size ());
+  num_assigned++;
+  if (!lit_level && !from_external)
+    learn_unit_clause (lit); // increases 'stats.fixed'
+  const signed char tmp = sign (lit);
+  vals[idx] = tmp;
+  vals[-idx] = -tmp;
+  assert (val (lit) > 0);
+  assert (val (-lit) < 0);
+
+  if (!opts.reimply || level == 0) {
+    trail.push_back (lit);
+    return;
+  }
+  assert (level > 0 && trails.size () >= (size_t) level);
+  trails[level - 1].push_back (lit);
+#ifdef LOGGING
+  if (!lit_level)
+    LOG ("root-level unit assign %d @ 0", lit);
+  else
+    LOG (reason, "search assign %d @ %d", lit, lit_level);
+#endif
+
+  if (watching ()) {
+    const Watches &ws = watches (-lit);
+    if (!ws.empty ()) {
+      const Watch &w = ws[0];
+      __builtin_prefetch (&w, 0, 1);
+    }
+  }
+  lrat_chain.clear ();
+}
+
+
 void Internal::propagate_beyond_conflicts () {
 
   assert (!unsat);
@@ -59,7 +118,7 @@ void Internal::propagate_beyond_conflicts () {
           ;// conflict = w.clause; // ignoring conflict
         else {
           build_chain_for_units (w.blit, w.clause, 0);
-          search_assign (w.blit, w.clause);
+          warmup_assign (w.blit, w.clause);
           // lrat_chain.clear (); done in search_assign
         }
 
@@ -155,7 +214,7 @@ void Internal::propagate_beyond_conflicts () {
             // assigned to false (still 'v < 0'), thus we found a unit.
             //
             build_chain_for_units (other, w.clause, 0);
-            search_assign (other, w.clause);
+            warmup_assign (other, w.clause);
             // lrat_chain.clear (); done in search_assign
 
             // Similar code is in the implementation of the SAT'18 paper on
@@ -206,16 +265,23 @@ void Internal::propagate_beyond_conflicts () {
     }
   }
 
-  stats.walk.propagated += (trail.size() - before);
+  stats.walk.warmupset += (trail.size() - before);
   STOP (propagate);
 }
 
 void Internal::warmup () {
   assert (!unsat);
   assert (!level);
+  assert (opts.walkwarmup);
+  ++stats.walk.warmup;
+  int res = 0;
 
-  while (num_assigned < (size_t) max_var) {
-    (void) decide ();
+  LOG ("propagating beyond conflicts to warm-up walk");
+  while (!res && num_assigned < (size_t) max_var) {
+    if (satisfied())
+      break;
+    res = decide ();
+    ++stats.walk.warmupset;
     propagate_beyond_conflicts ();
   }
   backtrack ();

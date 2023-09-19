@@ -414,6 +414,9 @@ int Internal::walk_round (int64_t limit, bool prev) {
     return 20;
   }
 
+  if (opts.walkwarmup)
+    warmup ();
+
   stats.walk.count++;
 
   clear_watches ();

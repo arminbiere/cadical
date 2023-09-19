@@ -1098,6 +1098,11 @@ struct Internal {
   int walk_round (int64_t limit, bool prev);
   void walk ();
 
+  // warm-up
+  void warmup_assign (int lit, Clause *);
+  void propagate_beyond_conflicts ();
+  void warmup ();
+
   // Detect strongly connected components in the binary implication graph
   // (BIG) and equivalent literal substitution (ELS) in 'decompose.cpp'.
   //

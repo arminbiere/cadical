@@ -584,7 +584,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
 
   assert (level > jump);
 
-  if (!opts.chrono && !external_prop) {
+  if (!opts.chrono) {
     res = jump;
     LOG ("chronological backtracking disabled using jump level %d", res);
   } else if (opts.chronoalways) {
