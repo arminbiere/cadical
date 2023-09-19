@@ -473,6 +473,28 @@ Clause *Internal::new_driving_clause (const int glue, int &jump) {
 
 /*------------------------------------------------------------------------*/
 
+// determine the OTFS level for OTFS. Unlike the find_conflict_level, we do not have to fix the
+// clause
+
+inline int Internal::otfs_find_backtrack_level (int &forced) {
+  assert (opts.otfs);
+  int res = 0;
+
+  for (const auto &lit : *conflict) {
+    const int tmp = var (lit).level;
+    if (tmp == level) {
+      forced = lit;
+    }
+    else if (tmp > res) {
+      res = tmp;
+      LOG ("bt level is now %d due to %d", res, lit);
+    }
+  }
+  return res;
+}
+
+/*------------------------------------------------------------------------*/
+
 // If chronological backtracking is enabled we need to find the actual
 // conflict level and then potentially can also reuse the conflict clause
 // as driving clause instead of deriving a redundant new driving clause
@@ -894,7 +916,7 @@ void Internal::analyze () {
     }
   }
 
-  if (opts.chrono || external_prop || opts.otfs) {
+  if (opts.chrono || external_prop) {
 
     int forced;
 
@@ -1025,9 +1047,9 @@ void Internal::analyze () {
 
         if (open == 1) {
           int forced;
-          const int conflict_level = find_conflict_level (forced);
+          const int conflict_level = otfs_find_backtrack_level (forced);
           int new_level =
-              determine_actual_backtrack_level (conflict_level - 1);
+              determine_actual_backtrack_level (conflict_level);
           UPDATE_AVERAGE (averages.current.level, new_level);
           backtrack (new_level);
 
