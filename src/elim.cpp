@@ -614,7 +614,6 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
   for (const auto &c : ps) {
     if (c->garbage)
       continue;
-    mark_garbage (c);
     assert (!c->redundant);
     if (!substitute || c->gate) {
       if (proof)
@@ -624,6 +623,7 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
       pushed++;
 #endif
     }
+    mark_garbage (c);
     elim_update_removed_clause (eliminator, c, pivot);
   }
   erase_occs (ps);
@@ -634,7 +634,6 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
   for (const auto &d : ns) {
     if (d->garbage)
       continue;
-    mark_garbage (d);
     assert (!d->redundant);
     if (!substitute || d->gate) {
       if (proof) {
@@ -645,6 +644,7 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
       pushed++;
 #endif
     }
+    mark_garbage (d);
     elim_update_removed_clause (eliminator, d, -pivot);
   }
   erase_occs (ns);

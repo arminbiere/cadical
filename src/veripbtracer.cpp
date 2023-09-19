@@ -222,11 +222,11 @@ void VeripbTracer::veripb_begin_proof (uint64_t reserved_ids) {
 }
 
 void VeripbTracer::veripb_delete_clause (uint64_t id, bool redundant) {
+  if (!redundant && checked_deletions && find_and_delete (id)) return;
   if (redundant || !checked_deletions)
     file->put ("del id ");
   else {
-    if (!find_and_delete (id))
-      file->put ("delc ");
+    file->put ("delc ");
   }
   file->put (id);
   file->put ("\n");
