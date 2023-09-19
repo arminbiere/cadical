@@ -186,14 +186,14 @@ void Proof::add_original_clause (uint64_t id, bool r, const vector<int> &c) {
 }
 
 void Proof::add_external_original_clause (uint64_t id, bool r,
-                                          const vector<int> &c) {
+                                          const vector<int> &c, bool restore) {
   // literals of c are already external
   assert (clause.empty ());
   for (auto const &lit : c)
     clause.push_back (lit);
   clause_id = id;
   redundant = r;
-  add_original_clause ();
+  add_original_clause (restore);
 }
 
 void Proof::delete_external_original_clause (uint64_t id, bool r,
@@ -276,6 +276,32 @@ void Proof::delete_clause (uint64_t id, bool r, const vector<int> &c) {
   clause_id = id;
   redundant = r;
   delete_clause ();
+}
+
+void Proof::weaken_minus (Clause *c) {
+  LOG (c, "PROOF weaken minus of ");
+  assert (clause.empty ());
+  add_literals (c);
+  clause_id = c->id;
+  weaken_minus ();
+}
+
+void Proof::weaken_minus (uint64_t id, const vector<int> &c) {
+  LOG (c, "PROOF deleting from proof");
+  assert (clause.empty ());
+  add_literals (c);
+  clause_id = id;
+  weaken_minus ();
+}
+
+void Proof::weaken_plus (Clause *c) {
+  weaken_minus (c);
+  delete_clause(c);
+}
+
+void Proof::weaken_plus (uint64_t id, const vector<int> &c) {
+  weaken_minus (id, c);
+  delete_clause(id, false, c);
 }
 
 void Proof::delete_unit_clause (uint64_t id, const int lit) {
@@ -395,14 +421,14 @@ void Proof::otfs_strengthen_clause (Clause *c, const std::vector<int> &old,
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_original_clause () {
+void Proof::add_original_clause (bool restore) {
   LOG (clause, "PROOF adding original external clause");
   assert (clause_id);
 
   if (lratbuilder)
     lratbuilder->add_original_clause (clause_id, clause);
   for (auto & tracer : tracers) {
-    tracer->add_original_clause (clause_id, redundant, clause);
+    tracer->add_original_clause (clause_id, redundant, clause, restore);
   }
   clause.clear ();
   clause_id = 0;
@@ -428,6 +454,15 @@ void Proof::delete_clause () {
     lratbuilder->delete_clause (clause_id, clause);
   for (auto & tracer : tracers) {
     tracer->delete_clause (clause_id, redundant, clause);
+  }
+  clause.clear ();
+  clause_id = 0;
+}
+
+void Proof::weaken_minus () {
+  LOG (clause, "PROOF deleting external clause (LRAT: keeping to restore)");
+  for (auto & tracer : tracers) {
+    tracer->weaken_minus (clause_id, clause);
   }
   clause.clear ();
   clause_id = 0;

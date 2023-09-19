@@ -16,7 +16,7 @@ public:
   // Notify the tracer that a original clause has been added.
   // Includes ID and wether the clause is redundant or irredundant
   //
-  virtual void add_original_clause (uint64_t, bool, const vector<int> &) {}
+  virtual void add_original_clause (uint64_t, bool, const vector<int> &, bool = false) {}
 
   // Notify the observer that a new clause has been derived.
   // Includes ID and wether the clause is redundant or irredundant
@@ -46,6 +46,9 @@ public:
   // Given ID is the first derived clause ID.
   //
   virtual void begin_proof (uint64_t) {}
+
+  // Notify the observer to remember that the clause might be restored later
+  virtual void weaken_minus (uint64_t, const vector<int> &) {}
 
 };
 

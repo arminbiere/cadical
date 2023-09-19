@@ -307,6 +307,9 @@ struct Internal {
 
   void add_original_lit (int lit);
 
+  // only able to restore irredundant clause
+  void finish_added_clause_with_id (uint64_t lit, bool restore = false);
+
   // Reserve ids for original clauses to produce lrat
   void reserve_ids (int number);
 
@@ -1101,6 +1104,7 @@ struct Internal {
   // (BIG) and equivalent literal substitution (ELS) in 'decompose.cpp'.
   //
   void decompose_conflicting_scc_lrat (DFS *dfs, vector<int> &);
+  void build_lrat_for_clause (const vector<vector<Clause *>> &dfs_chains, bool invert = false);
   vector<Clause *> decompose_analyze_binary_clauses (DFS *dfs, int from);
   void decompose_analyze_binary_chain (DFS *dfs, int);
   bool decompose_round ();

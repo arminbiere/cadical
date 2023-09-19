@@ -1,7 +1,8 @@
 #ifndef _lratchecker_hpp_INCLUDED
 #define _lratchecker_hpp_INCLUDED
 
-#include "tracer.hpp" // Alphabetically after 'lratchecker'.
+/*------------------------------------------------------------------------*/
+#include <unordered_map>
 
 namespace CaDiCaL {
 
@@ -48,6 +49,7 @@ class LratChecker : public StatTracer {
 
   vector<signed char> checked_lits;
   vector<signed char> marks; // mark bits of literals
+  unordered_map<uint64_t, vector<int>> clauses_to_reconstruct;
 
   uint64_t num_clauses; // number of clauses in hash table
   uint64_t num_finalized;
@@ -114,7 +116,8 @@ public:
 
   void begin_proof (uint64_t) {}  // skip
  
-  void add_original_clause (uint64_t, bool, const vector<int> &);
+  void add_original_clause (uint64_t, bool, const vector<int> &, bool restore);
+  void restore_clause (uint64_t, const vector<int> &);
 
   // check the proof chain for the new clause and add it to the checker
   void add_derived_clause (uint64_t, bool, const vector<int> &,
@@ -122,6 +125,8 @@ public:
 
   // check if the clause is present and delete it from the checker
   void delete_clause (uint64_t, bool, const vector<int> &);
+  // check if the clause is present and delete it from the checker
+  void weaken_minus (uint64_t, const vector<int> &);
 
   // check if the clause is present and delete it from the checker
   void finalize_clause (uint64_t, const vector<int> &);

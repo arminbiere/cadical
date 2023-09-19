@@ -617,6 +617,8 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
     mark_garbage (c);
     assert (!c->redundant);
     if (!substitute || c->gate) {
+      if (proof && opts.lrat)
+	proof->weaken_minus(c);
       external->push_clause_on_extension_stack (c, pivot);
 #ifndef NDEBUG
       pushed++;
@@ -635,6 +637,9 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
     mark_garbage (d);
     assert (!d->redundant);
     if (!substitute || d->gate) {
+      if (proof && opts.lrat) {
+	proof->weaken_minus (d);
+      }
       external->push_clause_on_extension_stack (d, -pivot);
 #ifndef NDEBUG
       pushed++;

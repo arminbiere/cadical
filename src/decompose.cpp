@@ -84,6 +84,57 @@ void Internal::decompose_conflicting_scc_lrat (DFS *dfs, vector<int> &scc) {
   clear_analyzed_literals ();
 }
 
+void Internal::build_lrat_for_clause (const vector<vector<Clause *>> &dfs_chains, bool invert) {
+  assert (lrat);
+  LOG ("building chain for not subsumed clause");
+  assert (lrat_chain.empty ());
+  assert (decomposed.empty ());
+  for (const auto lit : clause) { // build chain for each replaced literal
+    auto other = lit;
+    if (val (other) > 0) {
+      if (marked_decompose (other))
+        continue;
+      mark_decomposed (other);
+      const unsigned uidx = vlit (other);
+      uint64_t id = unit_clauses[uidx];
+      assert (id);
+      lrat_chain.push_back (id);
+      continue;
+    }
+    assert (mini_chain.empty ());
+    for (auto p : dfs_chains[vlit (other)]) {
+      if (marked_decompose (other))
+        continue;
+      mark_decomposed (other);
+      int implied = p->literals[0];
+      implied = implied == other ? -p->literals[1] : -implied;
+      LOG ("ADDED %d -> %d (%" PRIu64 ")", implied, other, p->id);
+      other = implied;
+      mini_chain.push_back (p->id);
+      if (val (implied) <= 0)
+        continue;
+      if (marked_decompose (implied))
+        break;
+      mark_decomposed (implied);
+      const unsigned uidx = vlit (implied);
+      uint64_t id = unit_clauses[uidx];
+      assert (id);
+      mini_chain.push_back (id);
+      break;
+    }
+    if(invert)
+      for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++)
+	lrat_chain.push_back (*p);
+    else
+      for (auto p = mini_chain.begin (); p != mini_chain.end (); p++)
+	lrat_chain.push_back (*p);
+    mini_chain.clear ();
+  }
+  // clear_analyzed_literals ();
+  clear_decomposed_literals ();
+  LOG (lrat_chain, "lrat_chain: ");
+}
+
 void Internal::clear_decomposed_literals () {
   LOG ("clearing %zd decomposed literals", decomposed.size ());
   for (const auto &lit : decomposed) {
@@ -378,6 +429,73 @@ bool Internal::decompose_round () {
 
   bool new_unit = false, new_binary_clause = false;
 
+
+  // Finally, mark substituted literals as such and push the equivalences of
+  // the substituted literals to their representative on the extension
+  // stack to fix an assignment during 'extend'.
+  //
+  // TODO instead of adding the clauses to the extension stack one could
+  // also just simply use the 'e2i' map as a union find data structure.
+  // This would avoid the need to restore these clauses.
+
+  for (auto idx : vars) {
+    if (unsat)
+      break;
+    if (!active (idx))
+      continue;
+    int other = reprs[vlit (idx)];
+    if (other == idx)
+      continue;
+    assert (!flags (other).eliminated ());
+    assert (!flags (other).substituted ());
+
+    if (lrat && proof) {
+      LOG ("marking equivalence of %d and %d", idx, other);
+      assert (clause.empty ());
+      assert (lrat_chain.empty ());
+      clause.push_back (other);
+      clause.push_back (-idx);
+      build_lrat_for_clause (dfs_chains);
+      assert (!lrat_chain.empty ());
+      // TODO: we currently do not reuse the id if identical to one in the problem
+      const uint64_t id1 = ++clause_id;
+      proof->add_derived_clause (id1, true, clause, lrat_chain);
+      proof->weaken_plus (id1, clause);
+      external->push_binary_clause_on_extension_stack (id1, -idx, other);
+
+      lrat_chain.clear ();
+      clause.clear ();
+
+      assert (clause.empty ());
+      assert (lrat_chain.empty ());
+      clause.push_back (idx);
+      clause.push_back (-other);
+      build_lrat_for_clause (dfs_chains);
+      assert (!lrat_chain.empty ());
+      const uint64_t id2 = ++clause_id;
+      proof->add_derived_clause (id2, true, clause, lrat_chain);
+      proof->weaken_plus (id2, clause);
+      external->push_binary_clause_on_extension_stack (id2, idx, -other);
+
+      clause.clear ();
+      lrat_chain.clear ();
+    } else {
+      const uint64_t id1 = ++clause_id;
+      const uint64_t id2 = ++clause_id;
+      if (proof) {
+	clause.push_back(-idx); clause.push_back(other);
+	proof->add_derived_clause (id1, true, clause, lrat_chain);
+	proof->weaken_plus (id1, clause);
+	clause.clear(); clause.push_back(idx); clause.push_back(-other);
+	proof->add_derived_clause (id2, true, clause, lrat_chain);
+	proof->weaken_plus (id2, clause);
+	clause.clear();
+      }
+      external->push_binary_clause_on_extension_stack (id1, -idx, other);
+      external->push_binary_clause_on_extension_stack (id2, idx, -other);
+    }
+  }
+
   vector<Clause *> postponed_garbage;
 
   // Now go over all clauses and find clause which contain literals that
@@ -578,14 +696,6 @@ bool Internal::decompose_round () {
     learn_empty_clause ();
   }
 
-  // Finally, mark substituted literals as such and push the equivalences of
-  // the substituted literals to their representative on the extension
-  // stack to fix an assignment during 'extend'.
-  //
-  // TODO instead of adding the clauses to the extension stack one could
-  // also just simply use the 'e2i' map as a union find data structure.
-  // This would avoid the need to restore these clauses.
-
   for (auto idx : vars) {
     if (unsat)
       break;
@@ -598,8 +708,6 @@ bool Internal::decompose_round () {
     assert (!flags (other).substituted ());
     if (!flags (other).fixed ())
       mark_substituted (idx);
-    external->push_binary_clause_on_extension_stack (-idx, other);
-    external->push_binary_clause_on_extension_stack (idx, -other);
   }
 
   delete[] reprs;

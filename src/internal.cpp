@@ -184,10 +184,22 @@ void Internal::add_original_lit (int lit) {
   }
 }
 
+void Internal::finish_added_clause_with_id (uint64_t id, bool restore) {
+  if (proof) {
+      // Use the external form of the clause for printing in proof
+      // Externalize(internalized literal) != external literal
+      assert (!original.size () || !external->eclause.empty ());
+      proof->add_external_original_clause (id, false, external->eclause, restore);
+    }
+  add_new_original_clause(id);
+  original.clear ();
+}
+
 /*------------------------------------------------------------------------*/
 
 void Internal::reserve_ids (int number) {
   // return;
+  LOG ("reserving %d ids", number);
   assert (number >= 0);
   assert (!clause_id && !reserved_ids && !original_id);
   clause_id = reserved_ids = number;
