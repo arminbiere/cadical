@@ -94,12 +94,15 @@ uint64_t VeripbTracer::compute_hash (const uint64_t id) {
 }
 
 bool VeripbTracer::find_and_delete (const uint64_t id) {
-  if (last_clause->id == id) {
+  if (!num_clauses) return false;
+  /*
+  if (last_clause && last_clause->id == id) {
     const uint64_t h = reduce_hash (last_clause->hash, size_clauses);
     clauses[h] = last_clause->next;
     delete last_clause;
     return true;
   }
+  */
   HashId **res = 0, *c;
   const uint64_t hash = compute_hash (id);
   const uint64_t h = reduce_hash (hash, size_clauses);
