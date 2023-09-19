@@ -147,15 +147,15 @@ public:
   Checker (Internal *);
   ~Checker ();
 
-  void add_original_clause (uint64_t, bool, const vector<int> &);
-  void add_derived_clause (uint64_t, bool,  const vector<int> &, const vector<uint64_t> &);
-  void delete_clause (uint64_t, bool, const vector<int> &);
+  void add_original_clause (uint64_t, bool, const vector<int> &, bool = false) override;
+  void add_derived_clause (uint64_t, bool,  const vector<int> &, const vector<uint64_t> &) override;
+  void delete_clause (uint64_t, bool, const vector<int> &) override;
 
-  void finalize_clause (uint64_t, const vector<int> &) {}  // skip
-  void finalize_proof (uint64_t) {}  // skip
-  void begin_proof (uint64_t) {}  // skip
+  void finalize_clause (uint64_t, const vector<int> &) override {}  // skip
+  void finalize_proof (uint64_t) override {}  // skip
+  void begin_proof (uint64_t) override {}  // skip
 
-  void print_stats ();
+  void print_stats () override;
   void dump (); // for debugging purposes only
 };
 

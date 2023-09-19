@@ -489,7 +489,7 @@ void Checker::add_clause (const char *type) {
     insert ();
 }
 
-void Checker::add_original_clause (uint64_t id, bool, const vector<int> &c) {
+void Checker::add_original_clause (uint64_t id, bool, const vector<int> &c, bool) {
   if (inconsistent)
     return;
   START (checking);

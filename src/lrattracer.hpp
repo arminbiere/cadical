@@ -29,21 +29,21 @@ public:
   LratTracer (Internal *, File *file, bool binary);
   ~LratTracer ();
 
-  void begin_proof (uint64_t);
+  void begin_proof (uint64_t) override;
 
-  void add_original_clause (uint64_t, bool, const vector<int> &) {} // skip
+  void add_original_clause (uint64_t, bool, const vector<int> &, bool = false) override {} // skip
 
-  void add_derived_clause (uint64_t, bool, const vector<int> &, const vector<uint64_t> &);
+  void add_derived_clause (uint64_t, bool, const vector<int> &, const vector<uint64_t> &) override;
   
-  void delete_clause (uint64_t, bool, const vector<int> &);
+  void delete_clause (uint64_t, bool, const vector<int> &) override;
   
-  void finalize_clause (uint64_t, const vector<int> &) {} // skip
+  void finalize_clause (uint64_t, const vector<int> &) override {} // skip
   
-  void finalize_proof (uint64_t) {} // skip
+  void finalize_proof (uint64_t) override {} // skip
 
-  bool closed ();
-  void close ();
-  void flush ();
+  bool closed () override;
+  void close () override;
+  void flush () override;
 };
 
 } // namespace CaDiCaL

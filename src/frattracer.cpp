@@ -172,7 +172,7 @@ void FratTracer::frat_finalize_clause (uint64_t id, const vector<int> &clause) {
 /*------------------------------------------------------------------------*/
 
 
-void FratTracer::add_original_clause (uint64_t id, bool, const vector<int> &clause) {
+void FratTracer::add_original_clause (uint64_t id, bool, const vector<int> &clause, bool) {
   if (file->closed ())
     return;
   LOG ("FRAT TRACER tracing addition of original clause");

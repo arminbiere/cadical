@@ -428,14 +428,14 @@ void Proof::add_original_clause (bool restore) {
   if (lratbuilder)
     lratbuilder->add_original_clause (clause_id, clause);
   for (auto & tracer : tracers) {
-    tracer->add_original_clause (clause_id, redundant, clause, restore);
+    tracer->add_original_clause (clause_id, false, clause, restore);
   }
   clause.clear ();
   clause_id = 0;
 }
 
 void Proof::add_derived_clause () {
-  LOG (clause, "PROOF adding derived external clause");
+  LOG (clause, "PROOF adding derived external clause (redundant: %d)", redundant);
   assert (clause_id);
   if (lratbuilder) {
     proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
@@ -460,7 +460,7 @@ void Proof::delete_clause () {
 }
 
 void Proof::weaken_minus () {
-  LOG (clause, "PROOF deleting external clause (LRAT: keeping to restore)");
+  LOG (clause, "PROOF marking as clause to restore");
   for (auto & tracer : tracers) {
     tracer->weaken_minus (clause_id, clause);
   }
