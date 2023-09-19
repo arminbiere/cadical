@@ -270,7 +270,7 @@ void Internal::block_pure_literal (Blocker &blocker, int lit) {
     assert (!c->redundant);
     LOG (c, "pure literal %d in", lit);
     blocker.reschedule.push_back (c);
-    if (opts.lrat && proof) {
+    if (proof) {
       proof->weaken_minus(c);
     }
     external->push_clause_on_extension_stack (c, lit);
@@ -406,7 +406,7 @@ void Internal::block_literal_with_one_negative_occ (Blocker &blocker,
 
     blocked++;
     LOG (c, "blocked");
-    if (opts.lrat && proof) {
+    if (proof) {
       proof->weaken_minus(c);
     }
     external->push_clause_on_extension_stack (c, lit);
@@ -622,7 +622,7 @@ void Internal::block_literal_with_at_least_two_negative_occs (
       continue;
     blocked++;
     LOG (c, "blocked");
-    if (opts.lrat && proof) {
+    if (proof) {
       proof->weaken_minus(c);
     }
     external->push_clause_on_extension_stack (c, lit);

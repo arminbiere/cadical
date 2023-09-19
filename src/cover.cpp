@@ -398,8 +398,9 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
               }
             }
           }
-          if (proof && opts.lrat && already_pushed) {
-            lrat_chain.push_back (c->id);
+          if (proof && already_pushed) {
+	    if (lrat)
+              lrat_chain.push_back (c->id);
             proof->add_derived_clause (last_id, false, clause, lrat_chain);
             proof->weaken_plus (last_id, clause);
             lrat_chain.clear ();
@@ -423,7 +424,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
         prev = other;
       }
 
-      if (proof && opts.lrat) {
+      if (proof) {
         // add missing literals that are not needed for covering
         // but avoid RAT proofs
         for (auto i = 0, j = 0; i < c->size; ++i, ++j) {
@@ -436,7 +437,8 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
             external->push_clause_literal_on_extension_stack (lit);
           }
         }
-        lrat_chain.push_back (c->id);
+	if (lrat)
+          lrat_chain.push_back (c->id);
         proof->add_derived_clause (last_id, false, clause, lrat_chain);
         proof->weaken_plus (last_id, clause);
 	lrat_chain.clear();
