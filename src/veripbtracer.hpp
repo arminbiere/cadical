@@ -5,6 +5,13 @@ class FileTracer;
 
 namespace CaDiCaL {
 
+  
+struct HashId {
+  HashId *next;        // collision chain link for hash table
+  uint64_t hash;       // previously computed full 64-bit hash
+  uint64_t id;         // id of clause
+};
+
 class VeripbTracer : public FileTracer {
 
   Internal *internal;
@@ -12,6 +19,32 @@ class VeripbTracer : public FileTracer {
   bool binary;
   bool with_antecedents;
   bool checked_deletions;
+
+  // hash table for checked deletions
+  //
+  uint64_t num_clauses; // number of clauses in hash table
+  uint64_t size_clauses;       // size of clause hash table
+  HashId **clauses; // hash table of clauses
+
+  static const unsigned num_nonces = 4;
+
+  uint64_t nonces[num_nonces];      // random numbers for hashing
+  uint64_t last_hash;               // last computed hash value of clause
+  uint64_t last_id;                 // id of the last added clause
+  HashId *last_clause;
+  uint64_t compute_hash (uint64_t); // compute and save hash value of clause
+
+  HashId *new_clause ();
+  void delete_clause (HashId *);
+
+  // Reduce hash value to the actual size.
+  //
+  static uint64_t reduce_hash (uint64_t hash, uint64_t size);
+
+  void enlarge_clauses ();        // enlarge hash table for clauses
+  void insert ();                 // insert clause in hash table
+  bool find_and_delete (const uint64_t); // find clause position in hash table
+
 
   int64_t added, deleted;
 
@@ -45,6 +78,8 @@ public:
   void finalize_clause (uint64_t, const vector<int> &) override {} // skip
   
   void finalize_proof (uint64_t) override;
+  
+  void weaken_minus (uint64_t, const vector<int> &) override;
 
   bool closed () override;
   void close () override;
