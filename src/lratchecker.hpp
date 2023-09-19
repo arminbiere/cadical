@@ -114,27 +114,27 @@ public:
   LratChecker (Internal *);
   ~LratChecker ();
 
-  void begin_proof (uint64_t) {}  // skip
+  void begin_proof (uint64_t) override {}  // skip
  
-  void add_original_clause (uint64_t, bool, const vector<int> &, bool restore);
+  void add_original_clause (uint64_t, bool, const vector<int> &, bool restore) override;
   void restore_clause (uint64_t, const vector<int> &);
 
   // check the proof chain for the new clause and add it to the checker
   void add_derived_clause (uint64_t, bool, const vector<int> &,
-                           const vector<uint64_t> &);
+                           const vector<uint64_t> &) override;
 
   // check if the clause is present and delete it from the checker
-  void delete_clause (uint64_t, bool, const vector<int> &);
+  void delete_clause (uint64_t, bool, const vector<int> &) override;
   // check if the clause is present and delete it from the checker
-  void weaken_minus (uint64_t, const vector<int> &);
+  void weaken_minus (uint64_t, const vector<int> &) override;
 
   // check if the clause is present and delete it from the checker
-  void finalize_clause (uint64_t, const vector<int> &);
+  void finalize_clause (uint64_t, const vector<int> &) override;
 
   // check if all clauses have been deleted
-  void finalize_proof (uint64_t);
+  void finalize_proof (uint64_t) override;
 
-  void print_stats ();
+  void print_stats () override;
   void dump (); // for debugging purposes only
 };
 
