@@ -428,6 +428,11 @@ void Proof::otfs_strengthen_clause (Clause *c, const std::vector<int> &old,
   c->id = id;
 }
 
+void Proof::strengthen (uint64_t id) {
+  clause_id = id;
+  strengthen ();
+}
+
 /*------------------------------------------------------------------------*/
 
 void Proof::add_original_clause (bool restore) {
@@ -474,6 +479,14 @@ void Proof::weaken_minus () {
     tracer->weaken_minus (clause_id, clause);
   }
   clause.clear ();
+  clause_id = 0;
+}
+
+void Proof::strengthen () {
+  LOG ("PROOF strengthen clause with id %" PRId64, clause_id);
+  for (auto & tracer : tracers) {
+    tracer->strengthen (clause_id);
+  }
   clause_id = 0;
 }
 

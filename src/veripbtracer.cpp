@@ -245,6 +245,12 @@ void VeripbTracer::veripb_finalize_proof (uint64_t conflict_id) {
   file->put ("end pseudo-Boolean proof\n");
 }
 
+void VeripbTracer::veripb_strengthen (uint64_t id) {
+  if (!checked_deletions) return;
+  file->put ("core id ");
+  file->put (id);
+  file->put ("\n");
+}
 
 
 /*------------------------------------------------------------------------*/
@@ -292,6 +298,12 @@ void VeripbTracer::weaken_minus (uint64_t id, const vector<int> &) {
   LOG ("VERIPB TRACER tracing weaken minus of clause");
   last_id = id;
   insert ();
+}
+
+void VeripbTracer::strengthen (uint64_t id) {
+  if (file->closed ())
+    return;
+  veripb_strengthen (id);
 }
 
 /*------------------------------------------------------------------------*/

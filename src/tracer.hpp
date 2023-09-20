@@ -52,7 +52,12 @@ public:
   virtual void begin_proof (uint64_t) {}
 
   // Notify the observer to remember that the clause might be restored later
+  //
   virtual void weaken_minus (uint64_t, const vector<int> &) {}
+
+  // Notify the observer that a clause is strengthened
+  //
+  virtual void strengthen (uint64_t) {}
 
 };
 

@@ -61,6 +61,7 @@ class VeripbTracer : public FileTracer {
   void veripb_begin_proof (uint64_t reserved_ids);
   void veripb_delete_clause (uint64_t id, bool redundant);
   void veripb_finalize_proof (uint64_t conflict_id);
+  void veripb_strengthen (uint64_t);
 
 
 public:
@@ -81,6 +82,7 @@ public:
   void finalize_proof (uint64_t) override;
   
   void weaken_minus (uint64_t, const vector<int> &) override;
+  void strengthen (uint64_t) override;
 
   bool closed () override;
   void close () override;

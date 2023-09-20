@@ -36,9 +36,10 @@ class Proof {
   void add_literals (const vector<int> &); // ditto
 
   void add_original_clause (bool restore = false); // notify observers of original clauses
-  void add_derived_clause ();  // notify observers of derived clauses
-  void delete_clause ();       // notify observers of deleted clauses
-  void weaken_minus ();       // notify observers of deleted clauses
+  void add_derived_clause ();  
+  void delete_clause ();       
+  void weaken_minus ();
+  void strengthen ();
   void finalize_clause ();
 
 public:
@@ -77,6 +78,7 @@ public:
   void delete_clause (Clause *);
   void weaken_minus (Clause *);
   void weaken_plus (Clause *);
+  void strengthen (uint64_t);
 
   void finalize_unit (uint64_t, int);
   void finalize_external_unit (uint64_t, int);
