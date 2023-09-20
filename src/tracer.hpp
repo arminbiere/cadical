@@ -13,6 +13,10 @@ public:
   Tracer () {}
   virtual ~Tracer () {}
   
+  // For logging, stats and file writing it is necessary to have access to internal.
+  //
+  virtual void connect_internal (Internal *) {}
+  
   // Notify the tracer that a original clause has been added.
   // Includes ID and wether the clause is redundant or irredundant
   //
@@ -53,11 +57,9 @@ public:
 };
 
 class StatTracer : public Tracer {
-
 public:
   StatTracer () {}
-  virtual ~StatTracer () {}
-  
+  virtual ~StatTracer () {}  
   virtual void print_stats () {}
 
 };
@@ -67,7 +69,7 @@ class FileTracer : public Tracer {
 public:
   FileTracer () {}
   virtual ~FileTracer () {}
-  
+
   virtual bool closed () { return true; }
   virtual void close () {}
   virtual void flush () {}

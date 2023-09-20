@@ -27,6 +27,7 @@ public:
   DratTracer (Internal *, File *file, bool binary);
   ~DratTracer ();
 
+  void connect_internal (Internal *i) override;
   void begin_proof (uint64_t) override {} // skip
 
   void add_original_clause (uint64_t, bool, const vector<int> &, bool = false) override {} // skip

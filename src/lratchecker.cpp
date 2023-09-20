@@ -115,7 +115,6 @@ LratChecker::LratChecker (Internal *i)
     : internal (i), size_vars (0), num_clauses (0), num_finalized (0),
       num_garbage (0), size_clauses (0), clauses (0), garbage (0),
       last_hash (0), last_id (0) {
-  LOG ("LRAT CHECKER new");
 
   // Initialize random number table for hash function.
   //
@@ -128,9 +127,15 @@ LratChecker::LratChecker (Internal *i)
     nonces[n] = nonce;
   }
 
-  strict_lrat = internal->lrat;
+  strict_lrat = internal ? internal->lrat : 0;
 
   memset (&stats, 0, sizeof (stats)); // Initialize statistics.
+}
+
+void LratChecker::connect_internal (Internal *i) {
+  internal = i;
+  LOG ("connected to internal");
+  strict_lrat = internal->lrat;
 }
 
 LratChecker::~LratChecker () {
@@ -231,7 +236,7 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
     LOG ("LRAT CHECKER resolution check skipped clause is tautological");
     return true;
   }
-  if (internal->opts.externallrat) { // ignore this case
+  if (strict_lrat) { // ignore this case
     LOG ("LRAT CHECKER resolution check skipped because "
          "opts.externallrat=true");
     return true;
@@ -267,7 +272,6 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
     }
     if (!checked_lit (lit)) {
       // learned clause is subsumed by resolvents
-      // assert (internal->opts.instantiate || internal->opts.decompose);
       checked_lit (lit) = true;
     }
     checked_lit (-lit) = true;

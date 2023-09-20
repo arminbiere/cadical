@@ -29,6 +29,7 @@ public:
   LratTracer (Internal *, File *file, bool binary);
   ~LratTracer ();
 
+  void connect_internal (Internal *i) override;
   void begin_proof (uint64_t) override;
 
   void add_original_clause (uint64_t, bool, const vector<int> &, bool = false) override {} // skip

@@ -31,19 +31,25 @@ void Internal::force_lrat () {
 }
 
 void Internal::connect_proof_tracer (Tracer *tracer, bool antecedents) {
+  new_proof_on_demand ();
   if (antecedents) force_lrat ();
+  tracer->connect_internal (this);
   proof->connect (tracer);
   tracers.push_back (tracer);
 }
 
 void Internal::connect_proof_tracer (StatTracer *tracer, bool antecedents) {
+  new_proof_on_demand ();
   if (antecedents) force_lrat ();
+  tracer->connect_internal (this);
   proof->connect (tracer);
   stat_tracers.push_back (tracer);
 }
 
 void Internal::connect_proof_tracer (FileTracer *tracer, bool antecedents) {
+  new_proof_on_demand ();
   if (antecedents) force_lrat ();
+  tracer->connect_internal (this);
   proof->connect (tracer);
   file_tracers.push_back (tracer);
 }
@@ -53,6 +59,7 @@ bool Internal::disconnect_proof_tracer (Tracer *tracer) {
   while (t != tracers.end ()) {
     if (*t == tracer) {
       tracers.erase (t);
+      proof->disconnect (tracer);
       return true;
     }
     t++;
@@ -65,6 +72,7 @@ bool Internal::disconnect_proof_tracer (StatTracer *tracer) {
   while (t != stat_tracers.end ()) {
     if (*t == tracer) {
       stat_tracers.erase (t);
+      proof->disconnect (tracer);
       return true;
     }
     t++;
@@ -77,6 +85,7 @@ bool Internal::disconnect_proof_tracer (FileTracer *tracer) {
   while (t != file_tracers.end ()) {
     if (*t == tracer) {
       file_tracers.erase (t);
+      proof->disconnect (tracer);
       return true;
     }
     t++;

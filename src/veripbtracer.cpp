@@ -10,7 +10,6 @@ VeripbTracer::VeripbTracer (Internal *i, File *f, bool b, bool a, bool c)
       last_hash (0), last_id (0), last_clause (0),
       added (0), deleted (0) {
   (void) internal;
-  LOG ("VERIPB TRACER new");
 
   // Initialize random number table for hash function.
   //
@@ -22,6 +21,12 @@ VeripbTracer::VeripbTracer (Internal *i, File *f, bool b, bool a, bool c)
     assert (nonce), assert (nonce & 1);
     nonces[n] = nonce;
   }
+}
+
+void VeripbTracer::connect_internal (Internal *i) {
+  internal = i;
+  file->connect_internal (internal);
+  LOG ("VERIPB TRACER connected to internal");
 }
 
 VeripbTracer::~VeripbTracer () {

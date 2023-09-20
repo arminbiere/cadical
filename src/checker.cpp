@@ -171,7 +171,6 @@ Checker::Checker (Internal *i)
     : internal (i), size_vars (0), vals (0), inconsistent (false),
       num_clauses (0), num_garbage (0), size_clauses (0), clauses (0),
       garbage (0), next_to_propagate (0), last_hash (0) {
-  LOG ("CHECKER new");
 
   // Initialize random number table for hash function.
   //
@@ -185,6 +184,11 @@ Checker::Checker (Internal *i)
   }
 
   memset (&stats, 0, sizeof (stats)); // Initialize statistics.
+}
+
+void Checker::connect_internal (Internal *i) {
+  internal = i;
+  LOG ("CHECKER connected to internal");
 }
 
 Checker::~Checker () {
