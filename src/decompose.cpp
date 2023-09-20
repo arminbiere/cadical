@@ -635,7 +635,7 @@ bool Internal::decompose_round () {
       if (!c->redundant)
         mark_removed (c);
       if (proof) {
-        proof->add_derived_clause (++clause_id, true, clause, lrat_chain);
+        proof->add_derived_clause (++clause_id, c->redundant, clause, lrat_chain);
         proof->delete_clause (c);
         c->id = clause_id;
       }
