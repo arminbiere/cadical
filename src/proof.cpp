@@ -62,40 +62,34 @@ void Internal::connect_proof_tracer (FileTracer *tracer, bool antecedents) {
 }
 
 bool Internal::disconnect_proof_tracer (Tracer *tracer) {
-  auto t = tracers.begin ();
-  while (t != tracers.end ()) {
-    if (*t == tracer) {
-      tracers.erase (t);
-      proof->disconnect (tracer);
-      return true;
-    }
-    t++;
+  auto it = std::find(tracers.begin (), tracers.end (), tracer);
+  if (it != tracers.end ()) {
+    tracers.erase (it);
+    assert (proof);
+    proof->disconnect (tracer);
+    return true;
   }
   return false;
 }
 
 bool Internal::disconnect_proof_tracer (StatTracer *tracer) {
-  auto t = stat_tracers.begin ();
-  while (t != stat_tracers.end ()) {
-    if (*t == tracer) {
-      stat_tracers.erase (t);
-      proof->disconnect (tracer);
-      return true;
-    }
-    t++;
+  auto it = std::find(stat_tracers.begin (), stat_tracers.end (), tracer);
+  if (it != stat_tracers.end ()) {
+    stat_tracers.erase (it);
+    assert (proof);
+    proof->disconnect (tracer);
+    return true;
   }
   return false;
 }
 
 bool Internal::disconnect_proof_tracer (FileTracer *tracer) {
-  auto t = file_tracers.begin ();
-  while (t != file_tracers.end ()) {
-    if (*t == tracer) {
-      file_tracers.erase (t);
-      proof->disconnect (tracer);
-      return true;
-    }
-    t++;
+  auto it = std::find(file_tracers.begin (), file_tracers.end (), tracer);
+  if (it != file_tracers.end ()) {
+    file_tracers.erase (it);
+    assert (proof);
+    proof->disconnect (tracer);
+    return true;
   }
   return false;
 }
@@ -107,29 +101,26 @@ void Proof::disconnect (Tracer *t) {
 // Enable proof tracing.
 
 void Internal::trace (File *file) {
-  new_proof_on_demand ();
-  FileTracer * ft;
   if (opts.veripb) {
     LOG ("PROOF connecting veripb tracer");
     bool antecedents = opts.veripb == 1 || opts.veripb == 2;
     bool deletions = opts.veripb == 2 || opts.veripb == 4;
-    ft = new VeripbTracer (this, file, opts.binary, antecedents, deletions);    
-    if (antecedents) force_lrat ();
+    FileTracer *ft = new VeripbTracer (this, file, opts.binary, antecedents, deletions);    
+    connect_proof_tracer (ft, antecedents);
   } else if (opts.frat) {
     LOG ("PROOF connecting frat tracer");
-    ft = new FratTracer (this, file, opts.binary, opts.frat == 1);
-    if (opts.frat == 1) force_lrat ();
+    bool antecedents = opts.frat == 1;
+    FileTracer * ft = new FratTracer (this, file, opts.binary, opts.frat == 1);
+    connect_proof_tracer (ft, antecedents);
   } else if (opts.lrat) {
     LOG ("PROOF connecting lrat tracer");
-    ft = new LratTracer (this, file, opts.binary);  
-    force_lrat ();
+    FileTracer * ft = new LratTracer (this, file, opts.binary);  
+    connect_proof_tracer (ft, true);
   } else {
     LOG ("PROOF connecting drat tracer");
-    ft = new DratTracer (this, file, opts.binary);    
+    FileTracer * ft = new DratTracer (this, file, opts.binary);    
+    connect_proof_tracer (ft, false);
   }
-  assert (ft);
-  proof->connect (ft);
-  file_tracers.push_back (ft);
 }
 
 // Enable proof checking.
