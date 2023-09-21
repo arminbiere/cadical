@@ -258,16 +258,16 @@ void VeripbTracer::veripb_strengthen (uint64_t id) {
 void VeripbTracer::begin_proof (uint64_t id) {
   if (file->closed ())
     return;
-  LOG ("VERIPB TRACER tracing start of proof");
+  LOG ("VERIPB TRACER tracing start of proof with %" PRId64 "original clauses", id);
   veripb_begin_proof (id);
 }
 
 
-void VeripbTracer::add_derived_clause (uint64_t, bool redundant, const vector<int> &clause,
+void VeripbTracer::add_derived_clause (uint64_t id, bool redundant, const vector<int> &clause,
                                  const vector<uint64_t> &chain) {
   if (file->closed ())
     return;
-  LOG ("VERIPB TRACER tracing addition of derived clause");
+  LOG ("VERIPB TRACER tracing addition of derived clause[%" PRId64 "]", id);
   if (with_antecedents)
     veripb_add_derived_clause (redundant, clause, chain);
   else
@@ -278,7 +278,7 @@ void VeripbTracer::add_derived_clause (uint64_t, bool redundant, const vector<in
 void VeripbTracer::delete_clause (uint64_t id, bool redundant, const vector<int> &) {
   if (file->closed ())
     return;
-  LOG ("VERIPB TRACER tracing deletion of clause");
+  LOG ("VERIPB TRACER tracing deletion of clause[%" PRId64 "]", id);
   veripb_delete_clause (id, redundant);
   deleted++;
 }
@@ -287,7 +287,7 @@ void VeripbTracer::delete_clause (uint64_t id, bool redundant, const vector<int>
 void VeripbTracer::finalize_proof (uint64_t conflict_id) {
   if (file->closed ())
     return;
-  LOG ("VERIPB TRACER tracing finalization of proof");
+  LOG ("VERIPB TRACER tracing finalization of proof with empty clause[%" PRId64 "]", conflict_id);
   veripb_finalize_proof (conflict_id);
 }
 
@@ -295,7 +295,7 @@ void VeripbTracer::weaken_minus (uint64_t id, const vector<int> &) {
   if (!checked_deletions) return;
   if (file->closed ())
     return;
-  LOG ("VERIPB TRACER tracing weaken minus of clause");
+  LOG ("VERIPB TRACER tracing weaken minus of clause[%" PRId64 "]", id);
   last_id = id;
   insert ();
 }
@@ -303,6 +303,7 @@ void VeripbTracer::weaken_minus (uint64_t id, const vector<int> &) {
 void VeripbTracer::strengthen (uint64_t id) {
   if (file->closed ())
     return;
+  LOG ("VERIPB TRACER tracing strengthen of clause[%" PRId64 "]", id);
   veripb_strengthen (id);
 }
 
