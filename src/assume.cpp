@@ -436,12 +436,12 @@ void Internal::conclude () {
     marked_failed = true;
   }
   proof->conclude_proof (conclusion);
-  conclusion.clear ();
 }
 
 void Internal::reset_concluded () {
   if (!concluded) return;
   LOG ("reset concluded");
+  conclusion.clear ();
   concluded = true;
 }
 
