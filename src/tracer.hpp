@@ -41,6 +41,12 @@ public:
   //
   virtual void finalize_proof (uint64_t) {}
 
+  // Notify the observer that conclude proof was requested.
+  // will give either the id of the empty clause, the id of a failing
+  // assumption clause or the ids of the failing constrain clauses
+  //
+  virtual void conclude_proof (const vector<uint64_t>&) {}
+
   // Notify the observer that the proof begins with a set of reserved ids for
   // original clauses.
   // Given ID is the first derived clause ID.
@@ -54,6 +60,7 @@ public:
   // Notify the observer that a clause is strengthened
   //
   virtual void strengthen (uint64_t) {}
+
 
 };
 

@@ -517,5 +517,10 @@ void Proof::begin_proof (uint64_t id) {
   }
 }
 
+void Proof::conclude_proof (const vector<uint64_t>& conclusion) {
+  for (auto & tracer : tracers) {
+    tracer->conclude_proof (conclusion);
+  }
+}
 
 } // namespace CaDiCaL

@@ -414,6 +414,24 @@ bool Internal::failed (int lit) {
   return (f.failed & bit) != 0;
 }
 
+void Internal::conclude () {
+  if (!proof || concluded) return;
+  concluded = true;
+  if (conclusion.empty ()) {
+    assert (!marked_failed);
+    failing ();
+    marked_failed = true;
+  }
+  proof->conclude_proof (conclusion);
+  conclusion.clear ();
+}
+
+void Internal::reset_concluded () {
+  if (!concluded) return;
+  LOG ("reset concluded");
+  concluded = true;
+}
+
 // Add the start of each incremental phase (leaving the state
 // 'UNSATISFIABLE' actually) we reset all assumptions.
 

@@ -475,6 +475,7 @@ void Internal::add_new_original_clause (uint64_t id) {
         MSG ("found falsified original clause");
       unsat = true;
       conflict_id = new_id;
+      conclusion.push_back (id);
     } else if (size == 1) {
       if (force_no_backtrack) {
         assert (level);

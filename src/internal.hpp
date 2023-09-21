@@ -179,6 +179,8 @@ struct Internal {
   uint64_t original_id;       // ids for original clauses to produce lrat
   uint64_t reserved_ids;      // number of reserved ids for original clauses
   uint64_t conflict_id;       // store conflict id for finalize (frat)
+  bool concluded;                // keeps track of conclude
+  vector<uint64_t> conclusion;   // store ids of conclusion clauses
   vector<uint64_t> unit_clauses; // keep track of unit_clauses (lrat/frat)
   vector<uint64_t> lrat_chain;   // create lrat in solver: option lratdirect
   vector<uint64_t> mini_chain;   // used to create lrat in minimize
@@ -1337,6 +1339,7 @@ struct Internal {
   void flush_trace ();     // Flush proof trace file.
   void trace (File *);     // Start write proof file.
   void check ();           // Enable online proof checking.
+
   void connect_proof_tracer (Tracer *tracer, bool antecedents);
   void connect_proof_tracer (InternalTracer *tracer, bool antecedents);
   void connect_proof_tracer (StatTracer *tracer, bool antecedents);
@@ -1344,6 +1347,8 @@ struct Internal {
   bool disconnect_proof_tracer (Tracer *tracer);
   bool disconnect_proof_tracer (StatTracer *tracer);
   bool disconnect_proof_tracer (FileTracer *tracer);
+  void conclude ();
+  void reset_concluded ();
 
   // Dump to '<stdout>' as DIMACS for debugging.
   //

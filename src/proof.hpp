@@ -87,7 +87,7 @@ public:
 
   void finalize_proof (uint64_t);
   void begin_proof (uint64_t);
-
+  void conclude_proof (const vector<uint64_t>&);
   // These two actually pretend to add and remove a clause.
   //
   void flush_clause (Clause *);           // remove falsified literals

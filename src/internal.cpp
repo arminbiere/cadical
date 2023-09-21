@@ -13,7 +13,7 @@ Internal::Internal ()
       external_prop (false), did_external_prop (false),
       external_prop_is_lazy (true), rephased (0), vsize (0), max_var (0),
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
-      lrat (false),
+      concluded (false), lrat (false),
       level (0), vals (0), score_inc (1.0), scores (this), conflict (0),
       ignore (0), external_reason (&external_reason_clause),
       newest_clause (0), force_no_backtrack (false), from_propagator (false),
@@ -739,6 +739,7 @@ int Internal::already_solved () {
     LOG ("already inconsistent");
     res = 20;
   } else {
+    reset_concluded ();
     if (level && !opts.ilb)
       backtrack ();
     if (!level && !propagate ()) {
@@ -860,9 +861,8 @@ void Internal::finalize () {
       proof->finalize_clause (c);
 
   // finalize conflict and proof
-  if (conflict_id)
+  if (conflict_id) {
     proof->finalize_clause (conflict_id, {});
-  if (proof) {
     proof->finalize_proof (conflict_id);
   }
 }
