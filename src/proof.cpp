@@ -33,6 +33,13 @@ void Internal::force_lrat () {
 void Internal::connect_proof_tracer (Tracer *tracer, bool antecedents) {
   new_proof_on_demand ();
   if (antecedents) force_lrat ();
+  proof->connect (tracer);
+  tracers.push_back (tracer);
+}
+
+void Internal::connect_proof_tracer (InternalTracer *tracer, bool antecedents) {
+  new_proof_on_demand ();
+  if (antecedents) force_lrat ();
   tracer->connect_internal (this);
   proof->connect (tracer);
   tracers.push_back (tracer);

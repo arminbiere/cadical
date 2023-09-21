@@ -198,6 +198,7 @@ class ClauseIterator;
 class WitnessIterator;
 class ExternalPropagator;
 class Tracer;
+class InternalTracer;
 class FileTracer;
 class StatTracer;
 
@@ -721,12 +722,15 @@ public:
   void close_proof_trace ();
 
   // Enables clausal proof tracing with or without antecedents using
-  // Tracer, StatTracer, FileTracer
+  // the Tracer interface defined in 'tracer.hpp'
+  //
+  // InternalTracer, StatTracer and FileTracer for internal use
   //
   //   require (CONFIGURING)
   //   ensure (CONFIGURING)
   //
   void connect_proof_tracer (Tracer *tracer, bool antecedents);
+  void connect_proof_tracer (InternalTracer *tracer, bool antecedents);
   void connect_proof_tracer (StatTracer *tracer, bool antecedents);
   void connect_proof_tracer (FileTracer *tracer, bool antecedents);
 

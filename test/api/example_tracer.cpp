@@ -28,8 +28,8 @@ int main () {
   File *f1 = File::write (0, "/tmp/lrat.proof");
   File *f2 = File::write (0, "/tmp/frat.proof");
   
-  Tracer *t1 = new LratChecker (0);
-  Tracer *t2 = new Checker (0);
+  InternalTracer *t1 = new LratChecker (0);
+  InternalTracer *t2 = new Checker (0);
   FileTracer *ft1 = new LratTracer (0, f1, 0);
   FileTracer *ft2 = new FratTracer (0, f2, 0, 0);
   StatTracer *st1 = new LratChecker (0);
@@ -37,11 +37,11 @@ int main () {
 
   // ------------------------------------------------------------------
 
-  solver->set ("veripb", 4);
-  solver->trace_proof ("/tmp/veripb.proof");
   solver->connect_proof_tracer (t1, 1);
   solver->connect_proof_tracer (t2, 0);
   solver->connect_proof_tracer (ft1, 1);
+  solver->set ("veripb", 4);
+  solver->trace_proof ("/tmp/veripb.proof");
   solver->connect_proof_tracer (ft2, 0);
   solver->connect_proof_tracer (st1, 1);
   solver->connect_proof_tracer (st2, 0);

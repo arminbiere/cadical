@@ -1338,6 +1338,7 @@ struct Internal {
   void trace (File *);     // Start write proof file.
   void check ();           // Enable online proof checking.
   void connect_proof_tracer (Tracer *tracer, bool antecedents);
+  void connect_proof_tracer (InternalTracer *tracer, bool antecedents);
   void connect_proof_tracer (StatTracer *tracer, bool antecedents);
   void connect_proof_tracer (FileTracer *tracer, bool antecedents);
   bool disconnect_proof_tracer (Tracer *tracer);

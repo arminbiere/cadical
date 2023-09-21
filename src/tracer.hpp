@@ -6,16 +6,12 @@ namespace CaDiCaL {
 // Proof tracer class to observer all possible proof events,
 // such as added or deleted clauses.
 // An implementation can decide on which events to act.
-
+// 
 class Tracer {
 
 public:
   Tracer () {}
   virtual ~Tracer () {}
-  
-  // For logging, stats and file writing it is necessary to have access to internal.
-  //
-  virtual void connect_internal (Internal *) {}
   
   // Notify the tracer that a original clause has been added.
   // Includes ID and wether the clause is redundant or irredundant
@@ -61,15 +57,28 @@ public:
 
 };
 
-class StatTracer : public Tracer {
+
+/*--------------------------------------------------------------------------*/
+
+// Following tracers for internal use.
+
+class InternalTracer : public Tracer {
+public:
+  InternalTracer () {}
+  virtual ~InternalTracer () {}  
+
+  virtual void connect_internal (Internal *) {}
+};
+
+class StatTracer : public InternalTracer {
 public:
   StatTracer () {}
   virtual ~StatTracer () {}  
-  virtual void print_stats () {}
 
+  virtual void print_stats () {}  
 };
 
-class FileTracer : public Tracer {
+class FileTracer : public InternalTracer {
 
 public:
   FileTracer () {}
