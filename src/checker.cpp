@@ -576,6 +576,11 @@ void Checker::delete_clause (uint64_t id, bool, const vector<int> &c) {
   STOP (checking);
 }
 
+void Checker::add_assumption_clause (uint64_t id, const vector<int> & c, const vector<uint64_t> &chain) {
+  add_derived_clause (id, true, c, chain);
+  delete_clause (id, true, c);
+}
+
 /*------------------------------------------------------------------------*/
 
 void Checker::dump () {

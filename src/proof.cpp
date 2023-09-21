@@ -264,7 +264,7 @@ void Proof::add_derived_clause (Clause *c, const vector<uint64_t> &chain) {
 
 void Proof::add_derived_clause (uint64_t id, bool r, const vector<int> &c,
                                 const vector<uint64_t> &chain) {
-  LOG (internal->clause, "PROOF adding derived clause");
+  LOG (c, "PROOF adding derived clause");
   assert (clause.empty ());
   assert (proof_chain.empty ());
   for (const auto &lit : c)
@@ -274,6 +274,29 @@ void Proof::add_derived_clause (uint64_t id, bool r, const vector<int> &c,
   clause_id = id;
   redundant = r;
   add_derived_clause ();
+}
+
+void Proof::add_assumption_clause (uint64_t id, const vector<int> &c,
+                                const vector<uint64_t> &chain) {
+  assert (clause.empty ());
+  assert (proof_chain.empty ());
+  for (const auto &lit : c)
+    add_literal (lit);
+  for (const auto &cid : chain)
+    proof_chain.push_back (cid);
+  clause_id = id;
+  add_assumption_clause ();
+}
+
+void Proof::add_assumption_clause (uint64_t id, int lit,
+                                const vector<uint64_t> &chain) {
+  assert (clause.empty ());
+  assert (proof_chain.empty ());
+  add_literal (lit);
+  for (const auto &cid : chain)
+    proof_chain.push_back (cid);
+  clause_id = id;
+  add_assumption_clause ();
 }
 
 void Proof::delete_clause (Clause *c) {
@@ -498,6 +521,7 @@ void Proof::strengthen () {
 }
 
 void Proof::finalize_clause () {
+  LOG (clause, "PROOF finalizing clause");
   for (auto & tracer : tracers) {
     tracer->finalize_clause (clause_id, clause);
   }
@@ -505,19 +529,36 @@ void Proof::finalize_clause () {
   clause_id = 0;
 }
 
+void Proof::add_assumption_clause () {
+  LOG (clause, "PROOF adding assumption clause");
+  if (lratbuilder) {
+    proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
+    lratbuilder->delete_clause (clause_id, clause);
+  }
+  for (auto & tracer : tracers) {
+    tracer->add_assumption_clause (clause_id, clause, proof_chain);
+  }
+  proof_chain.clear ();
+  clause.clear ();
+  clause_id = 0;
+}
+
 void Proof::finalize_proof (uint64_t id) {
+  LOG (clause, "PROOF finalizing proof");
   for (auto & tracer : tracers) {
     tracer->finalize_proof (id);
   }
 }
 
 void Proof::begin_proof (uint64_t id) {
+  LOG (clause, "PROOF begin proof");
   for (auto & tracer : tracers) {
     tracer->begin_proof (id);
   }
 }
 
 void Proof::conclude_proof (const vector<uint64_t>& conclusion) {
+  LOG (clause, "PROOF conclude proof");
   for (auto & tracer : tracers) {
     tracer->conclude_proof (conclusion);
   }

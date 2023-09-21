@@ -48,11 +48,13 @@ void Solver::transition_to_unknown_state () {
     LOG ("API leaves state %sSATISFIED%s", tout.emph_code (),
          tout.normal_code ());
     external->reset_assumptions ();
+    external->reset_concluded ();
     external->reset_constraint ();
   } else if (state () == UNSATISFIED) {
     LOG ("API leaves state %sUNSATISFIED%s", tout.emph_code (),
          tout.normal_code ());
     external->reset_assumptions ();
+    external->reset_concluded ();
     external->reset_constraint ();
   }
   if (state () != UNKNOWN)

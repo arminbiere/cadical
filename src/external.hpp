@@ -257,6 +257,12 @@ struct External {
 
   void reset_assumptions ();
 
+  // similarily to 'failed', 'conclude' needs to know about failing
+  // assumptions and therefore needs to be reset when leaving the
+  // 'UNSATISFIED' state.
+  //
+  void reset_concluded ();
+
   // Similarly a valid external assignment obtained through 'extend' has to
   // be reset at each point it risks to become invalid.  This is done
   // in the external layer in 'external.cpp' functions..

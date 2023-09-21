@@ -24,6 +24,12 @@ public:
   //
   virtual void add_derived_clause (uint64_t, bool, const vector<int> &, const vector<uint64_t> &) {}
 
+  // Notify the observer that this clause could be derived, which
+  // is the negation of a core of failing assumptions/constraints.
+  // If antecedents are derived they will be included here.
+  //
+  virtual void add_assumption_clause (uint64_t, const vector<int> &, const vector<uint64_t> &) {}
+
   // Notify the observer that a clause is deleted.
   // Includes ID and redundant/irredundant
   //

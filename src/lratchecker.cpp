@@ -405,6 +405,40 @@ void LratChecker::add_derived_clause (uint64_t id, bool, const vector<int> &c,
   STOP (checking);
 }
 
+void LratChecker::add_assumption_clause (uint64_t id, const vector<int> & c, const vector<uint64_t> &chain) {
+  add_derived_clause (id, true, c, chain);
+  delete_clause (id, true, c);
+  assumption_clauses.push_back (id);
+}
+
+
+void LratChecker::conclude_proof (const vector<uint64_t>& ids) {
+  if (ids.empty ()) {
+    fatal_message_start ();
+    fputs ("no conclusion given:\n", stderr);
+    fatal_message_end ();
+  }
+  if (assumption_clauses.empty ()) {
+    assert (ids.size () == 1);
+    LratCheckerClause **p = find (ids.back ()), *d = *p;
+    if (!d || d->size) {
+      fatal_message_start ();
+      fputs ("empty clause not in proof:\n", stderr);
+      fatal_message_end ();
+    }
+    return;
+  }
+  assert (ids.size () == assumption_clauses.size ());
+  for (auto & id : ids) {
+    if (std::find (assumption_clauses.begin (),
+      assumption_clauses.end (), id) != assumption_clauses.end ()) continue;
+    fatal_message_start (); 
+    fputs ("assumption clause not in proof:\n", stderr);
+    fatal_message_end ();
+  }
+  assumption_clauses.clear ();
+}
+
 /*------------------------------------------------------------------------*/
 
 void LratChecker::delete_clause (uint64_t id, bool, const vector<int> &c) {

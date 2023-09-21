@@ -156,7 +156,7 @@ public:
   void finalize_clause (uint64_t, const vector<int> &) override {}  // skip
   void finalize_proof (uint64_t) override {}  // skip
   void begin_proof (uint64_t) override {}  // skip
-
+  void add_assumption_clause (uint64_t, const vector<int> &, const vector<uint64_t> &) override;
   void print_stats () override;
   void dump (); // for debugging purposes only
 };

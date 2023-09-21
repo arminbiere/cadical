@@ -37,6 +37,7 @@ class Proof {
 
   void add_original_clause (bool restore = false); // notify observers of original clauses
   void add_derived_clause ();  
+  void add_assumption_clause ();  
   void delete_clause ();       
   void weaken_minus ();
   void strengthen ();
@@ -53,6 +54,9 @@ public:
   // Add original clauses to the proof (for online proof checking).
   //
   void add_original_clause (uint64_t, bool, const vector<int> &);
+
+  void add_assumption_clause (uint64_t, const vector<int> &, const vector<uint64_t>&);
+  void add_assumption_clause (uint64_t, int, const vector<uint64_t>&);
 
   // Add/delete original clauses to/from the proof using their original
   //  external literals (from external->eclause)

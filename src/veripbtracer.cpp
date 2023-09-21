@@ -287,6 +287,7 @@ void VeripbTracer::delete_clause (uint64_t id, bool redundant, const vector<int>
 void VeripbTracer::finalize_proof (uint64_t conflict_id) {
   if (file->closed ())
     return;
+  if (!conflict_id) return;
   LOG ("VERIPB TRACER tracing finalization of proof with empty clause[%" PRId64 "]", conflict_id);
   veripb_finalize_proof (conflict_id);
 }

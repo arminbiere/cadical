@@ -739,7 +739,6 @@ int Internal::already_solved () {
     LOG ("already inconsistent");
     res = 20;
   } else {
-    reset_concluded ();
     if (level && !opts.ilb)
       backtrack ();
     if (!level && !propagate ()) {
@@ -863,8 +862,8 @@ void Internal::finalize () {
   // finalize conflict and proof
   if (conflict_id) {
     proof->finalize_clause (conflict_id, {});
-    proof->finalize_proof (conflict_id);
   }
+  proof->finalize_proof (conflict_id);
 }
 
 /*------------------------------------------------------------------------*/

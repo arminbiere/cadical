@@ -172,6 +172,17 @@ void Internal::failing () {
     if (failed_unit) {
       assert (failed == failed_unit);
       LOG ("root-level falsified assumption %d", failed);
+      if (proof) {
+        if (lrat) {
+          const unsigned uidx = vlit (-failed_unit);
+          uint64_t id = unit_clauses[uidx];
+          assert (id);
+          lrat_chain.push_back (id);
+        }
+        proof->add_assumption_clause (++clause_id, -failed_unit, lrat_chain);
+        conclusion.push_back (clause_id);
+        lrat_chain.clear ();
+      }
       goto DONE;
     }
 
@@ -183,6 +194,11 @@ void Internal::failing () {
       const unsigned bit = bign (-failed);
       assert (!(f.failed & bit));
       f.failed |= bit;
+      if (proof) {
+        vector<int> clash = { failed, -failed };
+        proof->add_assumption_clause (++clause_id, clash, lrat_chain);
+        conclusion.push_back (clause_id);
+      }
       goto DONE;
     }
 
@@ -360,8 +376,8 @@ void Internal::failing () {
     if (!unsat_constraint) {
       external->check_learned_clause ();
       if (proof) {
-        proof->add_derived_clause (++clause_id, true, clause, lrat_chain);
-        proof->delete_clause (clause_id, true, clause);
+        proof->add_assumption_clause (++clause_id, clause, lrat_chain);
+        conclusion.push_back (clause_id);
       }
     } else {
       assert (!lrat ||
@@ -384,13 +400,10 @@ void Internal::failing () {
             }
             constraint_chains.pop_back ();
             LOG (lrat_chain, "assume proof chain with constraints");
-            proof->add_derived_clause (++clause_id, true, clause, lrat_chain);
-            lrat_chain.clear ();
-            proof->delete_clause (clause_id, true, clause);
-          } else {
-            proof->add_derived_clause (++clause_id, true, clause, lrat_chain);
-            proof->delete_clause (clause_id, true, clause);
           }
+          proof->add_assumption_clause (++clause_id, clause, lrat_chain);
+          conclusion.push_back (clause_id);
+          lrat_chain.clear ();
         }
         clause.pop_back ();
       }
@@ -417,8 +430,8 @@ bool Internal::failed (int lit) {
 void Internal::conclude () {
   if (!proof || concluded) return;
   concluded = true;
-  if (conclusion.empty ()) {
-    assert (!marked_failed);
+  if (!marked_failed) {
+    assert (!conclusion.empty ());
     failing ();
     marked_failed = true;
   }

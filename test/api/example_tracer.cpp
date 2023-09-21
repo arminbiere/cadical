@@ -57,12 +57,23 @@ int main () {
   solver->add (1);
   solver->add (-2);
   solver->add (0);
+  
+  solver->constrain (-1);
+  solver->constrain (2);
+  solver->constrain (0);
 
+  solver->solve ();
+  
+  solver->failed (1);
+  solver->conclude ();
+  
   solver->add (-1);
   solver->add (2);
   solver->add (0);
 
   solver->solve ();
+  
+  solver->conclude ();
 
   // tracers that are not disconnected are deleted when deleting solver
   //

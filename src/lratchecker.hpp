@@ -59,6 +59,7 @@ class LratChecker : public StatTracer {
   LratCheckerClause *garbage;  // linked list of garbage clauses
 
   vector<int> imported_clause; // original clause for reporting
+  vector<uint64_t> assumption_clauses;
 
   void enlarge_vars (int64_t idx);
   void import_literal (int lit);
@@ -132,8 +133,13 @@ public:
   // check if the clause is present and delete it from the checker
   void finalize_clause (uint64_t, const vector<int> &) override;
 
+  // check the proof chain for the assumption clause and delete it immediately
+  void add_assumption_clause (uint64_t, const vector<int> &, const vector<uint64_t> &) override;
+
   // check if all clauses have been deleted
   void finalize_proof (uint64_t) override;
+  
+  void conclude_proof (const vector<uint64_t>&) override;
 
   void print_stats () override;
   void dump (); // for debugging purposes only
