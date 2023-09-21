@@ -825,7 +825,7 @@ struct Call {
         ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING,
     DURING = LEMMA, // | CONTINUE,
-    AFTER = VAL | FLIP | FAILED | ALWAYS,
+    AFTER = VAL | FLIP | FAILED | CONCLUDE | ALWAYS,
   };
 
   Type type; // Explicit typing.
@@ -1436,7 +1436,7 @@ private:
   void generate_flipped (Random &, int vars);
   void generate_frozen (Random &, int vars);
   void generate_failed (Random &, int vars);
-  void generate_conclude (Random &, int vars);
+  void generate_conclude (Random &);
   void generate_freeze (Random &, int vars);
   void generate_melt (Random &);
 
@@ -1961,15 +1961,9 @@ void Trace::generate_failed (Random &random, int vars) {
   }
 }
 
-void Trace::generate_conclude (Random &random, int vars) {
+void Trace::generate_conclude (Random &random) {
   if (random.generate_double () < 0.05)
     return;
-  double fraction = random.generate_double ();
-  for (int idx = 1; idx <= vars; idx++) {
-    if (fraction < random.generate_double ())
-      continue;
-    push_back (new ConcludeCall ());
-  }
   if (random.generate_double () < 0.05) {
     push_back (new ConcludeCall ());
   }
@@ -2171,7 +2165,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
     if (!in_connection)
       generate_flipped (random, maxvars);
     generate_failed (random, maxvars);
-    generate_conclude (random, maxvars);
+    generate_conclude (random);
     generate_frozen (random, maxvars);
   }
 
@@ -2663,6 +2657,7 @@ static bool is_basic (Call *c) {
   case Call::FIXED:
   case Call::FAILED:
   case Call::FROZEN:
+  case Call::CONCLUDE:
   case Call::FREEZE:
   case Call::MELT:
   case Call::LIMIT:
@@ -3520,6 +3515,7 @@ void Reader::parse () {
       case Call::FLIP:
       case Call::FLIPPABLE:
       case Call::FAILED:
+      case Call::CONCLUDE:
         if (!solved && (state == Call::CONFIG || state == Call::BEFORE))
           error ("'%s' can only be called after 'solve'", c->keyword ());
         if (solved && state == Call::BEFORE) {
