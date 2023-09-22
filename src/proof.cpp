@@ -512,7 +512,6 @@ void Proof::strengthen () {
 }
 
 void Proof::finalize_clause () {
-  LOG (clause, "PROOF finalizing clause");
   for (auto & tracer : tracers) {
     tracer->finalize_clause (clause_id, clause);
   }

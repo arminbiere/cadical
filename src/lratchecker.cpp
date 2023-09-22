@@ -377,6 +377,16 @@ void LratChecker::add_original_clause (uint64_t id, bool, const vector<int> &c, 
   stats.original++;
   import_clause (c);
   last_id = id;
+  if (size_clauses && !restore) {
+    LratCheckerClause **p = find (id), *d = *p;
+    if (d) {
+      fatal_message_start ();
+      fputs ("different clause with id ", stderr);
+      fprintf (stderr, "%" PRId64, id);
+      fputs (" already present\n", stderr);
+      fatal_message_end ();
+    }
+  }
   assert (id);
   insert ();
   imported_clause.clear ();
@@ -391,6 +401,16 @@ void LratChecker::add_derived_clause (uint64_t id, bool, const vector<int> &c,
   stats.derived++;
   import_clause (c);
   last_id = id;
+  if (size_clauses) {
+    LratCheckerClause **p = find (id), *d = *p;
+    if (d) {
+      fatal_message_start ();
+      fputs ("different clause with id ", stderr);
+      fprintf (stderr, "%" PRId64, id);
+      fputs (" already present\n", stderr);
+      fatal_message_end ();
+    }
+  }
   assert (id);
   if (!check (proof_chain) || !check_resolution (proof_chain)) {
     fatal_message_start ();
@@ -415,26 +435,18 @@ void LratChecker::add_assumption_clause (uint64_t id, const vector<int> & c, con
 void LratChecker::conclude_proof (const vector<uint64_t>& ids) {
   if (ids.empty ()) {
     fatal_message_start ();
-    fputs ("no conclusion given:\n", stderr);
+    fputs ("no conclusion given\n", stderr);
     fatal_message_end ();
   }
-  if (assumption_clauses.empty ()) {
-    assert (ids.size () == 1);
-    LratCheckerClause **p = find (ids.back ()), *d = *p;
-    if (!d || d->size) {
-      fatal_message_start ();
-      fputs ("empty clause not in proof:\n", stderr);
-      fatal_message_end ();
-    }
-    return;
-  }
-  assert (ids.size () == assumption_clauses.size ());
   for (auto & id : ids) {
     if (std::find (assumption_clauses.begin (),
       assumption_clauses.end (), id) != assumption_clauses.end ()) continue;
-    fatal_message_start (); 
-    fputs ("assumption clause not in proof:\n", stderr);
-    fatal_message_end ();
+    LratCheckerClause **p = find (ids.back ()), *d = *p;
+    if (!d || d->size) {
+      fatal_message_start ();
+      fputs ("empty or assumption clause not in proof\n", stderr);
+      fatal_message_end ();
+    }
   }
   assumption_clauses.clear ();
 }

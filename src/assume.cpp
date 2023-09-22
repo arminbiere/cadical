@@ -439,7 +439,7 @@ void Internal::conclude () {
 }
 
 void Internal::reset_concluded () {
-  if (!concluded) return;
+  if (!concluded || conflict_id) return;
   LOG ("reset concluded");
   conclusion.clear ();
   concluded = true;

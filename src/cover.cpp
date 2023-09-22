@@ -384,6 +384,8 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       for (const auto &other : coveror.extend) {
         if (!prev) {
           // are we finishing a clause?
+          if (already_pushed)
+            last_id = ++clause_id;
           if (already_pushed) {
             // add missing literals that are not needed for covering
             // but avoid RAT proofs
@@ -399,15 +401,13 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
             }
           }
           if (proof && already_pushed) {
-	    if (lrat)
+	          if (lrat)
               lrat_chain.push_back (c->id);
+            LOG ("LEARNING clause with id %" PRId64, last_id);
             proof->add_derived_clause (last_id, false, clause, lrat_chain);
             proof->weaken_plus (last_id, clause);
             lrat_chain.clear ();
           }
-	  if (already_pushed)
-	    last_id = ++clause_id;
-
           external->push_zero_on_extension_stack ();
           external->push_witness_literal_on_extension_stack (other);
           external->push_zero_on_extension_stack ();
@@ -418,9 +418,9 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
         }
         if (other) {
           external->push_clause_literal_on_extension_stack (other);
-	  clause.push_back(other);
-	  LOG(clause, "current clause is ");
-	}
+          clause.push_back(other);
+          LOG(clause, "current clause is ");
+        }
         prev = other;
       }
 
@@ -437,11 +437,12 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
             external->push_clause_literal_on_extension_stack (lit);
           }
         }
-	if (lrat)
+        if (lrat)
           lrat_chain.push_back (c->id);
+        last_id = ++clause_id;
         proof->add_derived_clause (last_id, false, clause, lrat_chain);
         proof->weaken_plus (last_id, clause);
-	lrat_chain.clear();
+        lrat_chain.clear();
       }
       clause.clear ();
       mark_garbage (c);

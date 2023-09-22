@@ -191,7 +191,7 @@ void Internal::finish_added_clause_with_id (uint64_t id, bool restore) {
       assert (!original.size () || !external->eclause.empty ());
       proof->add_external_original_clause (id, false, external->eclause, restore);
     }
-  add_new_original_clause(id);
+  add_new_original_clause (id);
   original.clear ();
 }
 
