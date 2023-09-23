@@ -439,9 +439,13 @@ void Internal::conclude () {
 }
 
 void Internal::reset_concluded () {
-  if (!concluded || conflict_id) return;
-  LOG ("reset concluded");
+  if (conflict_id) {
+    assert (conclusion.size () == 1);
+    return;
+  }
   conclusion.clear ();
+  if (!concluded) return;
+  LOG ("reset concluded");
   concluded = true;
 }
 
