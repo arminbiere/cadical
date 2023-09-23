@@ -431,7 +431,7 @@ void Internal::conclude () {
   if (!proof || concluded) return;
   concluded = true;
   if (!marked_failed) {
-    assert (!conclusion.empty ());
+    assert (conclusion.empty ());
     failing ();
     marked_failed = true;
   }
