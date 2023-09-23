@@ -24,7 +24,9 @@ void Internal::constrain (int lit) {
       } else {
         tmp = val (*j);
         if (tmp < 0) {
-          LOG ("removing falsified literal %d from constraint clause", *j);
+          LOG ("NOT removing falsified literal %d from constraint clause", *j);
+          *i++=*j;
+          mark (*j);
         } else if (tmp > 0) {
           LOG ("satisfied constraint with literal %d", *j);
           satisfied_constraint = true;
