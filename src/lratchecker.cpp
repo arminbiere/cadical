@@ -434,6 +434,8 @@ void LratChecker::add_assumption_clause (uint64_t id, const vector<int> & c, con
 
 void LratChecker::conclude_proof (const vector<uint64_t>& ids) {
   if (ids.empty ()) {
+    if (internal->constraint.empty () && internal->unsat_constraint)
+      return;
     fatal_message_start ();
     fputs ("no conclusion given\n", stderr);
     fatal_message_end ();
