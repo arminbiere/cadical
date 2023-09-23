@@ -191,6 +191,8 @@ void VeripbTracer::veripb_add_derived_clause (uint64_t id, bool redundant, const
   }
   file->put ("\n");
   file->put ("e ");
+  file->put (id);
+  file->put (" : ");
   for (const auto &external_lit : clause) {
     file->put ("1 ");
     if (external_lit < 0)
