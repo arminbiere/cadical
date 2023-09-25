@@ -246,6 +246,8 @@ private:
 
   size_t decision_loc = 0;
 
+  unsigned verbosity = 0;
+
   std::map<int, int> reason_map;
   std::map<int, size_t> prop_reason_loc;
 
@@ -260,11 +262,17 @@ public:
 
   /*-----------------functions for mobical -----------------------------*/
   void push_lemma_lit (int lit) {
-    query_loc = 0;
+
     clause.push_back (lit);
     if (!lit) {
       nof_clauses++;
       lemma_count++;
+
+      if (verbosity > 2) {
+       std::cout << "push lemma to position " << all_external_clauses.size() << ": ";
+       for (auto const& l: clause) std::cout << l << " ";
+       std::cout << std::endl;
+      }
 
       all_external_clauses.push_back (clause);
       clause.clear ();
@@ -327,6 +335,7 @@ public:
     // 'all_external_clauses' contains also the propagating (but not
     // necessarily learnt) clauses. The final solution must satisfy only the
     // initial input set of clauses.
+    if (verbosity > 2) std::cout << "cb_check_found_model (" << model.size() << ") returns: ";
     assert (model.size () == observed_variables.size ());
     assert (nof_added_clauses <= nof_clauses);
 
@@ -358,13 +367,21 @@ public:
         // unsatisfied one, just simply the next clause.
         must_add_clause = true;
         must_add_idx = i;
+        if (verbosity > 2) {
+          std::cout << "false (external clause  " << i << "/";
+          std::cout << all_external_clauses.size() << " is not satisfied: ";
+          for(auto const& l : all_external_clauses[i]) std::cout << l  << " ";
+          std::cout << ")" << std::endl;
+        }
         return false;
       }
     }
+    if (verbosity > 2) std::cout << "true" << std::endl;
     return true;
   }
 
   bool cb_has_external_clause () {
+    if (verbosity > 2) std::cout << "cb_has_external_clause returns: ";
     add_new_observed_var ();
     if (must_add_clause) {
       assert (nof_added_clauses < nof_clauses);
@@ -374,43 +391,59 @@ public:
       assert (lemmas_per_queries[query_loc] > 0);
       lemmas_per_queries[query_loc]--;
       must_add_clause = false;
+      if (verbosity > 2) std::cout << "true (must add clause case)." << std::endl;
       return true;
     }
-    if (query_loc >= lemmas_per_queries.size ())
+    if (query_loc >= lemmas_per_queries.size ()) {
+      if (verbosity > 2) std::cout << "false (all lemmas are added already)." << std::endl;
       return false;
+    }
     if (lemmas_per_queries[query_loc] > 0) {
       add_new_observed_var ();
       lemmas_per_queries[query_loc]--;
+      if (verbosity > 2) std::cout << "true (there is a lemma for this query)." << std::endl;
       return true;
     } else {
-      query_loc++;
+      if (query_loc < lemmas_per_queries.size ()-1) query_loc++;
+      if (verbosity > 2) std::cout << "false (all lemmas per this query are added already)." << std::endl;
       return false;
     }
   }
 
   int cb_add_external_clause_lit () {
+    
     assert (lemma_loc < all_external_clauses.size ());
     assert (lemma_lit_loc < all_external_clauses[lemma_loc].size ());
+    if (verbosity > 2 && !lemma_lit_loc) {
+      std::cout << "add external clause " << lemma_loc;
+      std::cout << "/" << all_external_clauses.size() << ": ";
+    }
     int lit = all_external_clauses[lemma_loc][lemma_lit_loc++];
-
+    if (verbosity > 2) std::cout << lit << " ";
     if (!lit) {
       lemma_loc++;
       lemma_lit_loc = 0;
       nof_added_clauses++;
+      if (verbosity > 2) std::cout <<  std::endl;
     }
 
     return lit;
   }
 
   int cb_decide () {
-    if (observed_variables.empty () || observed_variables.size () <= 4)
+    if (verbosity > 2) std::cout << "cb_decide returns ";
+    if (observed_variables.empty () || observed_variables.size () <= 4) {
+      if (verbosity > 2) std::cout << "0" << std::endl;
       return 0;
+    }
 
     if (!(observed_variables.size () % 5) &&
         new_observed_variables.size ()) {
       int new_var = add_new_observed_var ();
-      if (new_var)
+      if (new_var) {
+        if (verbosity > 2) std::cout << -1 * new_var << std::endl;
         return -1 * new_var;
+      }
     }
     decision_loc++;
 
@@ -418,15 +451,19 @@ public:
       size_t n = decision_loc / observed_variables.size ();
       if (n < observed_variables.size ()) {
         int lit = *std::next (observed_variables.begin (), n);
+        if (verbosity > 2) std::cout << -1 * lit << std::endl;
         return -1 * lit;
-      } else
+      } else {
+        if (verbosity > 2) std::cout << "0" << std::endl;
         return 0;
+      }
     }
+    if (verbosity > 2) std::cout << "0" << std::endl;
     return 0;
   }
 
   int cb_propagate () {
-
+    if (verbosity > 2) std::cout << "cb_propagate " << std::endl;
     if (observed_trail.size () < 2)
       return 0;
     std::set<int> satisfied_literals;
@@ -513,6 +550,7 @@ public:
   }
 
   void notify_assignment (int lit, bool is_fixed) {
+    if (verbosity > 2) std::cout << "notify assignment: " << lit << " (" << is_fixed << ")" << std::endl;
     if (is_fixed) {
       observed_trail.front ().push_back (lit);
     } else {
@@ -521,10 +559,12 @@ public:
   }
 
   void notify_new_decision_level () {
+    if (verbosity > 2) std::cout << "notify new decision level " << std::endl;
     observed_trail.push_back (std::vector<int> ());
   }
 
   void notify_backtrack (size_t new_level) {
+    if (verbosity > 2) std::cout << "notify backtrack: " << observed_trail.size ()-1 << "->" << new_level << std::endl;
     assert (observed_trail.size () == 1 ||
             observed_trail.size () >= new_level + 1);
     while (observed_trail.size () > new_level + 1) {
