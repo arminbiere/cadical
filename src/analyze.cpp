@@ -1050,7 +1050,7 @@ void Internal::analyze () {
         ++stats.subsumed;
 
         if (open == 1) {
-          int forced;
+          int forced = 0;
           const int conflict_level = otfs_find_backtrack_level (forced);
           int new_level =
               determine_actual_backtrack_level (conflict_level);
