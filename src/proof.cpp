@@ -269,10 +269,11 @@ void Proof::add_derived_clause (uint64_t id, bool r, const vector<int> &c,
 
 void Proof::add_assumption_clause (uint64_t id, const vector<int> &c,
                                 const vector<uint64_t> &chain) {
+  // literals of c are already external
   assert (clause.empty ());
   assert (proof_chain.empty ());
   for (const auto &lit : c)
-    add_literal (lit);
+    clause.push_back (lit);
   for (const auto &cid : chain)
     proof_chain.push_back (cid);
   clause_id = id;
@@ -280,17 +281,19 @@ void Proof::add_assumption_clause (uint64_t id, const vector<int> &c,
 }
 
 void Proof::add_assumption (int a) {
+  // a is already external
   assert (clause.empty ());
   assert (proof_chain.empty ());
-  add_literal (a);
+  clause.push_back (a);
   add_assumption ();
 }
 
 void Proof::add_constraint (const vector<int> &c) {
+  // literals of c are already external
   assert (clause.empty ());
   assert (proof_chain.empty ());
   for (const auto &lit : c)
-    add_literal (lit);
+    clause.push_back (lit);
   add_constraint ();
 }
 
@@ -298,7 +301,7 @@ void Proof::add_assumption_clause (uint64_t id, int lit,
                                 const vector<uint64_t> &chain) {
   assert (clause.empty ());
   assert (proof_chain.empty ());
-  add_literal (lit);
+  clause.push_back (lit);
   for (const auto &cid : chain)
     proof_chain.push_back (cid);
   clause_id = id;

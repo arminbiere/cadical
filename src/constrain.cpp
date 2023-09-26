@@ -24,9 +24,7 @@ void Internal::constrain (int lit) {
       } else {
         tmp = val (*j);
         if (tmp < 0) {
-          LOG ("NOT removing falsified literal %d from constraint clause", *j);
-          *i++=*j;
-          mark (*j);
+          LOG ("removing falsified literal %d from constraint clause", *j);
         } else if (tmp > 0) {
           LOG ("satisfied constraint with literal %d", *j);
           satisfied_constraint = true;
@@ -42,13 +40,13 @@ void Internal::constrain (int lit) {
       unmark (lit);
     if (satisfied_constraint)
       constraint.clear ();
-    else if (constraint.empty ())
+    else if (constraint.empty ()) {
       unsat_constraint = true;
-    else
+      if (!unsat)
+        marked_failed = false;   // allow to trigger failing ()
+    } else
       for (const auto lit : constraint)
         freeze (lit);
-    if (proof)
-      proof->add_constraint (constraint);
   }
 }
 

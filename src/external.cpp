@@ -189,6 +189,8 @@ void External::add (int elit) {
 void External::assume (int elit) {
   assert (elit);
   reset_extended ();
+  if (internal->proof)
+    internal->proof->add_assumption (elit);
   assumptions.push_back (elit);
   const int ilit = internalize (elit);
   assert (ilit);
@@ -257,6 +259,8 @@ void External::constrain (int elit) {
   assert (!elit == !ilit);
   if (elit)
     LOG ("adding external %d as internal %d to constraint", elit, ilit);
+  else if (!elit && internal->proof)
+    internal->proof->add_constraint (constraint);
   internal->constrain (ilit);
 }
 

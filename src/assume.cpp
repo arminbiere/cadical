@@ -13,8 +13,6 @@ void Internal::assume (int lit) {
     LOG ("ignoring already assumed %d", lit);
     return;
   }
-  if (proof)
-    proof->add_assumption (lit);
   LOG ("assume %d", lit);
   f.assumed |= bit;
   assumptions.push_back (lit);
@@ -35,15 +33,7 @@ void Internal::assume_analyze_literal (int lit) {
   Var &v = var (lit);
   assert (val (lit) < 0);
   if (v.reason == external_reason) {
-
     v.reason = wrapped_learn_external_reason_clause (-lit);
-
-    /*
-    if (!v.reason) {
-      v.level = 0;
-      learn_external_propagated_unit_clause (-lit);
-    }
-    */
   }
   assert (v.reason != external_reason);
   if (!v.level) {
@@ -91,6 +81,7 @@ void Internal::failing () {
   assert (analyzed.empty ());
   assert (clause.empty ());
   assert (lrat_chain.empty ());
+  assert (!marked_failed);
 
   if (!unsat_constraint) {
     // Search for failing assumptions in the (internal) assumption stack.
@@ -106,13 +97,16 @@ void Internal::failing () {
     int failed_clashing = 0;
     int first_failed = 0;
     int failed_level = INT_MAX;
+    int efailed;
 
-    for (auto &lit : assumptions) {
+    for (auto &elit : external->assumptions) {
+      const auto & lit = external->internalize (elit);
       if (val (lit) >= 0)
         continue;
       const Var &v = var (lit);
       if (!v.level) {
         failed_unit = lit;
+        efailed = elit;
         break;
       }
       if (failed_clashing)
@@ -124,6 +118,7 @@ void Internal::failing () {
           ev.level = 0;
           // learn_external_propagated_unit_clause (-lit);
           failed_unit = lit;
+          efailed = elit;
           break;
         }
         ev.level = 0;
@@ -138,14 +133,17 @@ void Internal::failing () {
         }
         if (!ev.level) {
           failed_unit = lit;
+          efailed = elit;
           break;
         }
       }
       assert (v.reason != external_reason);
-      if (!v.reason)
+      if (!v.reason) {
         failed_clashing = lit;
-      else if (!first_failed || v.level < failed_level) {
+        efailed = elit;
+      } else if (!first_failed || v.level < failed_level) {
         first_failed = lit;
+        efailed = elit;
         failed_level = v.level;
       }
     }
@@ -176,12 +174,19 @@ void Internal::failing () {
       LOG ("root-level falsified assumption %d", failed);
       if (proof) {
         if (lrat) {
-          const unsigned uidx = vlit (-failed_unit);
-          uint64_t id = unit_clauses[uidx];
-          assert (id);
-          lrat_chain.push_back (id);
+          unsigned eidx = (efailed > 0) + 2u * (unsigned) abs (efailed);
+          assert ((size_t) eidx < external->ext_units.size ());
+          const uint64_t id = external->ext_units[eidx];
+          if (id) {
+            lrat_chain.push_back (id);
+          } else {
+            const unsigned uidx = vlit (-failed_unit);
+            uint64_t id = unit_clauses[uidx];
+            assert (id);
+            lrat_chain.push_back (id);
+          }
         }
-        proof->add_assumption_clause (++clause_id, -failed_unit, lrat_chain);
+        proof->add_assumption_clause (++clause_id, -efailed, lrat_chain);
         conclusion.push_back (clause_id);
         lrat_chain.clear ();
       }
@@ -197,7 +202,7 @@ void Internal::failing () {
       assert (!(f.failed & bit));
       f.failed |= bit;
       if (proof) {
-        vector<int> clash = { failed, -failed };
+        vector<int> clash = { externalize (failed), externalize (-failed) };
         proof->add_assumption_clause (++clause_id, clash, lrat_chain);
         conclusion.push_back (clause_id);
       }
@@ -225,7 +230,8 @@ void Internal::failing () {
       analyzed.push_back (-first_failed);
       clause.push_back (-first_failed);
     }
-  } else { // unsat_constraint
+  } else {
+    // unsat_constraint
     // The assumptions necessary to fail each literal in the constraint are
     // collected.
     for (auto lit : constraint) {
@@ -242,6 +248,12 @@ void Internal::failing () {
     vector<vector<uint64_t>> constraint_chains;
     vector<vector<int>> constraint_clauses;
     vector<int> sum_constraints;
+    vector<int> econstraints;
+    for (auto & elit : external->constraint) {
+      const int lit = external->internalize (elit);
+      if (!lit || flags (lit).seen) continue;
+      econstraints.push_back (elit);
+    }
 
     // no lrat do bfs as it was before
     if (!lrat) {
@@ -257,7 +269,6 @@ void Internal::failing () {
 
           if (!v.reason) {
             v.level = 0;
-            // learn_external_propagated_unit_clause (lit);
             continue;
           }
         }
@@ -291,13 +302,6 @@ void Internal::failing () {
       assert (v.reason);
        if (v.reason == external_reason) {
         v.reason = wrapped_learn_external_reason_clause (lit);
-
-        /*
-        if (!v.reason) {
-          v.level = 0;
-          learn_external_propagated_unit_clause (-lit);
-        }
-        */
       }
       assert (v.reason != external_reason);
       assume_analyze_reason (lit, v.reason);
@@ -311,31 +315,11 @@ void Internal::failing () {
     } else { // lrat for unsat_constraint
       assert (clause.empty ());
       clear_analyzed_literals ();
-      /*
-      const size_t size = 2 * (1 + (size_t) max_var);
-      constraint_chains.resize (size);
-      constraint_clauses.resize (size);
-      for (size_t i = 0; i > size; i++) {
-        vector<uint64_t> empty;
-        vector<int> empty2;
-        constraint_chains[i] = empty;
-        constraint_clauses[i] = empty2;
-      }
-      */
       for (auto lit : constraint) {
         // make sure nothing gets marked failed twice
         // also might shortcut the case where
         // lrat_chain is empty because clause is tautological
         assert (lit != INT_MIN);
-        /*
-        for (auto ign : clause) {
-          Flags &f = flags (ign);
-          if (f.seen)
-            continue;
-          f.seen = true;
-          analyzed.push_back (ign);
-        }
-        */
         assume_analyze_literal (lit);
         vector<uint64_t> empty;
         vector<int> empty2;
@@ -378,7 +362,10 @@ void Internal::failing () {
     if (!unsat_constraint) {
       external->check_learned_clause ();
       if (proof) {
-        proof->add_assumption_clause (++clause_id, clause, lrat_chain);
+        vector<int> eclause;
+        for (auto & lit : clause)
+          eclause.push_back (externalize (lit));
+        proof->add_assumption_clause (++clause_id, eclause, lrat_chain);
         conclusion.push_back (clause_id);
       }
     } else {
@@ -403,11 +390,34 @@ void Internal::failing () {
             constraint_chains.pop_back ();
             LOG (lrat_chain, "assume proof chain with constraints");
           }
-          proof->add_assumption_clause (++clause_id, clause, lrat_chain);
+          vector<int> eclause;
+          for (auto & lit : clause)
+            eclause.push_back (externalize (lit));
+          proof->add_assumption_clause (++clause_id, eclause, lrat_chain);
           conclusion.push_back (clause_id);
           lrat_chain.clear ();
         }
         clause.pop_back ();
+      }
+      if (proof) {
+        for (auto & elit : econstraints) {
+          if (lrat) {
+            unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+            assert ((size_t) eidx < external->ext_units.size ());
+            const uint64_t id = external->ext_units[eidx];
+            if (id) {
+              lrat_chain.push_back (id);
+            } else {
+              const unsigned uidx = vlit (-external->internalize (elit));
+              uint64_t id = unit_clauses[uidx];
+              assert (id);
+              lrat_chain.push_back (id);
+            }
+          }
+          proof->add_assumption_clause (++clause_id, -elit, lrat_chain);         
+          conclusion.push_back (clause_id);
+          lrat_chain.clear ();
+        }
       }
     }
     lrat_chain.clear ();
