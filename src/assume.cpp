@@ -82,6 +82,7 @@ void Internal::failing () {
   assert (clause.empty ());
   assert (lrat_chain.empty ());
   assert (!marked_failed);
+  assert (!conflict_id);
 
   if (!unsat_constraint) {
     // Search for failing assumptions in the (internal) assumption stack.
