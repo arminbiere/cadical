@@ -138,7 +138,9 @@ bool Internal::external_propagate () {
     stats.ext_prop.eprop_call++;
     while (elit) {
       assert (external->is_observed[abs (elit)]);
-      const int ilit = external->internalize (elit); // TODO: try e2i
+      int ilit = external->e2i[abs (elit)];
+      if (elit < 0)
+        ilit = -ilit;
       int tmp = val (ilit);
 #ifndef NDEBUG
       assert (fixed (ilit) || observed (ilit));
@@ -565,19 +567,20 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 // does not support the corner cases where a literal remains in clause.
 //
 Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
-  if (clause.empty()) return learn_external_reason_clause (ilit);
-  
-  std::vector<int> clause_tmp{std::move (clause)};
-  clause.clear();
+  Clause* res;
+  if (clause.empty()) {
+    res = learn_external_reason_clause (ilit, 0, true);
+  } else {
+    std::vector<int> clause_tmp{std::move (clause)};
+    clause.clear();
+    res = learn_external_reason_clause (ilit, 0, true);
+    // The learn_external_reason clause can leave a literal in clause when there
+    // there is a falsified elit arg. Here it is not allowed to happen.
+    assert (clause.empty());
     
-  Clause* res = learn_external_reason_clause (ilit);
-  // The learn_external_reason clause can leave a literal in clause when there
-  // there is a falsified elit arg. Here it is not allowed to happen.
-  assert (clause.empty());
-  
-  clause = std::move(clause_tmp);
-  clause_tmp.clear();
-  
+    clause = std::move(clause_tmp);
+    clause_tmp.clear();
+  }
   return res;
 }
 
@@ -904,7 +907,9 @@ int Internal::ask_decision () {
   if (!external->is_observed[abs (elit)])
     return 0;
 
-  const int ilit = external->internalize (elit);
+  int ilit = external->e2i[abs (elit)];
+  if (elit < 0)
+    ilit = -ilit;
 
   assert (fixed (ilit) || observed (ilit));
 

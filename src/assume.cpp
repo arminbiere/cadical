@@ -100,7 +100,9 @@ void Internal::failing () {
     int efailed;
 
     for (auto &elit : external->assumptions) {
-      const auto & lit = external->internalize (elit);
+      int lit = external->e2i[abs (elit)];
+      if (elit < 0)
+        lit = -lit;
       if (val (lit) >= 0)
         continue;
       const Var &v = var (lit);
@@ -243,14 +245,15 @@ void Internal::failing () {
   }
 
   {
-
     // used for unsat_constraint lrat
     vector<vector<uint64_t>> constraint_chains;
     vector<vector<int>> constraint_clauses;
     vector<int> sum_constraints;
     vector<int> econstraints;
     for (auto & elit : external->constraint) {
-      const int lit = external->internalize (elit);
+      int lit = external->e2i[abs (elit)];
+      if (elit < 0)
+        lit = -lit;
       if (!lit || flags (lit).seen) continue;
       econstraints.push_back (elit);
     }
@@ -266,7 +269,6 @@ void Internal::failing () {
           continue;
         if (v.reason == external_reason) {
           v.reason = wrapped_learn_external_reason_clause (lit);
-
           if (!v.reason) {
             v.level = 0;
             continue;
@@ -408,7 +410,10 @@ void Internal::failing () {
             if (id) {
               lrat_chain.push_back (id);
             } else {
-              const unsigned uidx = vlit (-external->internalize (elit));
+              int lit = external->e2i[abs (elit)];
+              if (elit < 0)
+                lit = -lit;
+              const unsigned uidx = vlit (-lit);
               uint64_t id = unit_clauses[uidx];
               assert (id);
               lrat_chain.push_back (id);
