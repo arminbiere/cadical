@@ -47,6 +47,8 @@ void Internal::constrain (int lit) {
     else
       for (const auto lit : constraint)
         freeze (lit);
+    if (proof)
+      proof->add_constraint (constraint);
   }
 }
 

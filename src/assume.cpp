@@ -13,6 +13,8 @@ void Internal::assume (int lit) {
     LOG ("ignoring already assumed %d", lit);
     return;
   }
+  if (proof)
+    proof->add_assumption (lit);
   LOG ("assume %d", lit);
   f.assumed |= bit;
   assumptions.push_back (lit);
@@ -435,10 +437,18 @@ void Internal::conclude () {
     failing ();
     marked_failed = true;
   }
-  proof->conclude_proof (conclusion);
+  Conclusion con;
+  if (conflict_id)
+    con = CONFLICT;
+  else if (unsat_constraint)
+    con = CONSTRAINT;
+  else
+    con = ASSUMPTIONS;
+  proof->conclude_proof (con, conclusion);
 }
 
 void Internal::reset_concluded () {
+  if (proof) proof->reset_assumptions ();
   if (conflict_id) {
     assert (conclusion.size () == 1);
     return;

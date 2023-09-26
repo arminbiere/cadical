@@ -50,6 +50,9 @@ class LratChecker : public StatTracer {
   vector<signed char> checked_lits;
   vector<signed char> marks; // mark bits of literals
   unordered_map<uint64_t, vector<int>> clauses_to_reconstruct;
+  vector<int> assumptions;
+  vector<int> constraint;
+  bool concluded;
 
   uint64_t num_clauses; // number of clauses in hash table
   uint64_t num_finalized;
@@ -133,13 +136,22 @@ public:
   // check if the clause is present and delete it from the checker
   void finalize_clause (uint64_t, const vector<int> &) override;
 
-  // check the proof chain for the assumption clause and delete it immediately
+  // check the proof chain of the assumption clause and delete it immediately
+  // also check that they contain only assumptions and constraints
   void add_assumption_clause (uint64_t, const vector<int> &, const vector<uint64_t> &) override;
+
+  // mark lit as assumption
+  void add_assumption (int) override;
+
+  // mark lits as constraint
+  void add_constraint (const vector<int> &) override;
+
+  void reset_assumptions () override;
 
   // check if all clauses have been deleted
   void finalize_proof (uint64_t) override;
   
-  void conclude_proof (const vector<uint64_t>&) override;
+  void conclude_proof (Conclusion, const vector<uint64_t>&) override;
 
   void print_stats () override;
   void dump (); // for debugging purposes only

@@ -112,8 +112,8 @@ void LratChecker::collect_garbage_clauses () {
 /*------------------------------------------------------------------------*/
 
 LratChecker::LratChecker (Internal *i)
-    : internal (i), size_vars (0), num_clauses (0), num_finalized (0),
-      num_garbage (0), size_clauses (0), clauses (0), garbage (0),
+    : internal (i), size_vars (0), strict_lrat (false), concluded (false), num_clauses (0),
+      num_finalized (0), num_garbage (0), size_clauses (0), clauses (0), garbage (0),
       last_hash (0), last_id (0) {
 
   // Initialize random number table for hash function.
@@ -426,31 +426,82 @@ void LratChecker::add_derived_clause (uint64_t id, bool, const vector<int> &c,
 }
 
 void LratChecker::add_assumption_clause (uint64_t id, const vector<int> & c, const vector<uint64_t> &chain) {
+  for (auto & lit : c) {
+    if (std::find (assumptions.begin (),
+        assumptions.end (), -lit) != assumptions.end ()) continue;
+    if (std::find (constraint.begin (),
+        constraint.end (), -lit) != constraint.end ()) continue;
+    fatal_message_start ();
+    fputs ("clause contains non assumptions or constraint literals\n", stderr);
+    fatal_message_end ();
+  }
   add_derived_clause (id, true, c, chain);
   delete_clause (id, true, c);
   assumption_clauses.push_back (id);
 }
 
+void LratChecker::add_assumption (int a) {
+  assumptions.push_back (a);
+}
 
-void LratChecker::conclude_proof (const vector<uint64_t>& ids) {
-  if (ids.empty ()) {
-    if (internal->constraint.empty () && internal->unsat_constraint)
-      return;
+void LratChecker::add_constraint (const vector<int> & c) {
+  constraint.clear ();
+  for (auto & lit : c) {
+    constraint.push_back (lit);
+  }
+}
+
+void LratChecker::reset_assumptions () {
+  assumption_clauses.clear ();
+  assumptions.clear ();
+  concluded = false;
+  constraint.clear ();
+}
+
+void LratChecker::conclude_proof (Conclusion conclusion, const vector<uint64_t>& ids) {
+  if (concluded) {
     fatal_message_start ();
-    fputs ("no conclusion given\n", stderr);
+    fputs ("already concluded\n", stderr);
     fatal_message_end ();
   }
-  for (auto & id : ids) {
-    if (std::find (assumption_clauses.begin (),
-      assumption_clauses.end (), id) != assumption_clauses.end ()) continue;
+  concluded = true;
+  if (conclusion == CONFLICT) {
     LratCheckerClause **p = find (ids.back ()), *d = *p;
     if (!d || d->size) {
       fatal_message_start ();
-      fputs ("empty or assumption clause not in proof\n", stderr);
+      fputs ("empty clause not in proof\n", stderr);
+      fatal_message_end ();
+    }
+    return;
+  }
+  else if (conclusion == ASSUMPTIONS) {
+    if (ids.size () != 1 || assumption_clauses.size () != 1) {
+      fatal_message_start ();
+      fputs ("expected exactly one assumption clause\n", stderr);
+      fatal_message_end ();
+    }
+    if (ids.back () != assumption_clauses.back ()) {
+      fatal_message_start ();
+      fputs ("conclusion is not an assumption clause\n", stderr);
+      fatal_message_end ();
+    }
+    return;
+  }
+  else {
+    assert (conclusion == CONSTRAINT);
+    if (constraint.size () != ids.size ()) {
+      fatal_message_start ();
+      fputs ("not complete conclusion given for constraint\n", stderr);
+      fatal_message_end ();
+    }
+    for (auto & id : ids) {
+      if (std::find (assumption_clauses.begin (),
+        assumption_clauses.end (), id) != assumption_clauses.end ()) continue;
+      fatal_message_start ();
+      fputs ("assumption clause for constraint missing\n", stderr);
       fatal_message_end ();
     }
   }
-  assumption_clauses.clear ();
 }
 
 /*------------------------------------------------------------------------*/

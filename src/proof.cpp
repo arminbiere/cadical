@@ -279,6 +279,21 @@ void Proof::add_assumption_clause (uint64_t id, const vector<int> &c,
   add_assumption_clause ();
 }
 
+void Proof::add_assumption (int a) {
+  assert (clause.empty ());
+  assert (proof_chain.empty ());
+  add_literal (a);
+  add_assumption ();
+}
+
+void Proof::add_constraint (const vector<int> &c) {
+  assert (clause.empty ());
+  assert (proof_chain.empty ());
+  for (const auto &lit : c)
+    add_literal (lit);
+  add_constraint ();
+}
+
 void Proof::add_assumption_clause (uint64_t id, int lit,
                                 const vector<uint64_t> &chain) {
   assert (clause.empty ());
@@ -533,6 +548,30 @@ void Proof::add_assumption_clause () {
   clause_id = 0;
 }
 
+void Proof::add_assumption () {
+  LOG (clause, "PROOF adding assumption");
+  assert (clause.size () == 1);
+  for (auto & tracer : tracers) {
+    tracer->add_assumption (clause.back ());
+  }
+  clause.clear ();
+}
+
+void Proof::add_constraint () {
+  LOG (clause, "PROOF adding constraint");
+  for (auto & tracer : tracers) {
+    tracer->add_constraint (clause);
+  }
+  clause.clear ();
+}
+
+void Proof::reset_assumptions () {
+  LOG ("PROOF reset assumptions");
+  for (auto & tracer : tracers) {
+    tracer->reset_assumptions ();
+  }  
+}
+
 void Proof::finalize_proof (uint64_t id) {
   LOG (clause, "PROOF finalizing proof");
   for (auto & tracer : tracers) {
@@ -547,10 +586,10 @@ void Proof::begin_proof (uint64_t id) {
   }
 }
 
-void Proof::conclude_proof (const vector<uint64_t>& conclusion) {
+void Proof::conclude_proof (Conclusion con, const vector<uint64_t>& conclusion) {
   LOG (clause, "PROOF conclude proof");
   for (auto & tracer : tracers) {
-    tracer->conclude_proof (conclusion);
+    tracer->conclude_proof (con, conclusion);
   }
 }
 

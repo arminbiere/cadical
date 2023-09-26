@@ -42,6 +42,8 @@ class Proof {
   void weaken_minus ();
   void strengthen ();
   void finalize_clause ();
+  void add_assumption ();
+  void add_constraint ();
 
 public:
   Proof (Internal *);
@@ -50,13 +52,15 @@ public:
   void connect (LratBuilder *lb) { lratbuilder = lb; }
   void connect (Tracer *t) { tracers.push_back (t); }
   void disconnect (Tracer *t);
-
   // Add original clauses to the proof (for online proof checking).
   //
   void add_original_clause (uint64_t, bool, const vector<int> &);
 
   void add_assumption_clause (uint64_t, const vector<int> &, const vector<uint64_t>&);
   void add_assumption_clause (uint64_t, int, const vector<uint64_t>&);
+  void add_assumption (int);
+  void add_constraint (const vector<int>&);
+  void reset_assumptions ();
 
   // Add/delete original clauses to/from the proof using their original
   //  external literals (from external->eclause)
@@ -91,7 +95,7 @@ public:
 
   void finalize_proof (uint64_t);
   void begin_proof (uint64_t);
-  void conclude_proof (const vector<uint64_t>&);
+  void conclude_proof (Conclusion, const vector<uint64_t>&);
   // These two actually pretend to add and remove a clause.
   //
   void flush_clause (Clause *);           // remove falsified literals
