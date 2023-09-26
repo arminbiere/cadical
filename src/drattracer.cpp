@@ -8,7 +8,12 @@ DratTracer::DratTracer (Internal *i, File *f, bool b)
     : internal (i), file (f), binary (b),
       added (0), deleted (0) {
   (void) internal;
-  LOG ("DRAT TRACER new");
+}
+
+void DratTracer::connect_internal (Internal *i) {
+  internal = i;
+  file->connect_internal (internal);
+  LOG ("DRAT TRACER connected to internal");
 }
 
 DratTracer::~DratTracer () {

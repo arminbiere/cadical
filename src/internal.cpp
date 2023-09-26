@@ -13,7 +13,7 @@ Internal::Internal ()
       external_prop (false), did_external_prop (false),
       external_prop_is_lazy (true), rephased (0), vsize (0), max_var (0),
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
-      lrat (false),
+      concluded (false), lrat (false),
       level (0), vals (0), score_inc (1.0), scores (this), conflict (0),
       ignore (0), external_reason (&external_reason_clause),
       newest_clause (0), force_no_backtrack (false), from_propagator (false),
@@ -184,10 +184,22 @@ void Internal::add_original_lit (int lit) {
   }
 }
 
+void Internal::finish_added_clause_with_id (uint64_t id, bool restore) {
+  if (proof) {
+      // Use the external form of the clause for printing in proof
+      // Externalize(internalized literal) != external literal
+      assert (!original.size () || !external->eclause.empty ());
+      proof->add_external_original_clause (id, false, external->eclause, restore);
+    }
+  add_new_original_clause (id);
+  original.clear ();
+}
+
 /*------------------------------------------------------------------------*/
 
 void Internal::reserve_ids (int number) {
   // return;
+  LOG ("reserving %d ids", number);
   assert (number >= 0);
   assert (!clause_id && !reserved_ids && !original_id);
   clause_id = reserved_ids = number;
@@ -848,11 +860,10 @@ void Internal::finalize () {
       proof->finalize_clause (c);
 
   // finalize conflict and proof
-  if (conflict_id)
+  if (conflict_id) {
     proof->finalize_clause (conflict_id, {});
-  if (proof) {
-    proof->finalize_proof (conflict_id);
   }
+  proof->finalize_proof (conflict_id);
 }
 
 /*------------------------------------------------------------------------*/

@@ -8,8 +8,14 @@ FratTracer::FratTracer (Internal *i, File *f, bool b, bool a)
     : internal (i), file (f), binary (b), with_antecedents (a),
       added (0), deleted (0), finalized (0), original (0) {
   (void) internal;
-  LOG ("FRAT TRACER new");
 }
+
+void FratTracer::connect_internal (Internal *i) {
+  internal = i;
+  file->connect_internal (internal);
+  LOG ("FRAT TRACER connected to internal");
+}
+
 
 FratTracer::~FratTracer () {
   LOG ("FRAT TRACER delete");
@@ -172,7 +178,7 @@ void FratTracer::frat_finalize_clause (uint64_t id, const vector<int> &clause) {
 /*------------------------------------------------------------------------*/
 
 
-void FratTracer::add_original_clause (uint64_t id, bool, const vector<int> &clause) {
+void FratTracer::add_original_clause (uint64_t id, bool, const vector<int> &clause, bool) {
   if (file->closed ())
     return;
   LOG ("FRAT TRACER tracing addition of original clause");

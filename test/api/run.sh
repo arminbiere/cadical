@@ -105,6 +105,8 @@ run unit
 run morenmore
 run ctest
 run example
+run example_constraint
+run example_tracer
 run terminate
 run learn
 run cfreeze

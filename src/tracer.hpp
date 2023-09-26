@@ -6,7 +6,7 @@ namespace CaDiCaL {
 // Proof tracer class to observer all possible proof events,
 // such as added or deleted clauses.
 // An implementation can decide on which events to act.
-
+// 
 class Tracer {
 
 public:
@@ -16,13 +16,19 @@ public:
   // Notify the tracer that a original clause has been added.
   // Includes ID and wether the clause is redundant or irredundant
   //
-  virtual void add_original_clause (uint64_t, bool, const vector<int> &) {}
+  virtual void add_original_clause (uint64_t, bool, const vector<int> &, bool = false) {}
 
   // Notify the observer that a new clause has been derived.
   // Includes ID and wether the clause is redundant or irredundant
   // If antecedents are derived they will be included here.
   //
   virtual void add_derived_clause (uint64_t, bool, const vector<int> &, const vector<uint64_t> &) {}
+
+  // Notify the observer that this clause could be derived, which
+  // is the negation of a core of failing assumptions/constraints.
+  // If antecedents are derived they will be included here.
+  //
+  virtual void add_assumption_clause (uint64_t, const vector<int> &, const vector<uint64_t> &) {}
 
   // Notify the observer that a clause is deleted.
   // Includes ID and redundant/irredundant
@@ -41,30 +47,56 @@ public:
   //
   virtual void finalize_proof (uint64_t) {}
 
+  // Notify the observer that conclude proof was requested.
+  // will give either the id of the empty clause, the id of a failing
+  // assumption clause or the ids of the failing constrain clauses
+  //
+  virtual void conclude_proof (const vector<uint64_t>&) {}
+
   // Notify the observer that the proof begins with a set of reserved ids for
   // original clauses.
   // Given ID is the first derived clause ID.
   //
   virtual void begin_proof (uint64_t) {}
 
+  // Notify the observer to remember that the clause might be restored later
+  //
+  virtual void weaken_minus (uint64_t, const vector<int> &) {}
+
+  // Notify the observer that a clause is strengthened
+  //
+  virtual void strengthen (uint64_t) {}
+
+
 };
 
-class StatTracer : public Tracer {
 
+/*--------------------------------------------------------------------------*/
+
+// Following tracers for internal use.
+
+class InternalTracer : public Tracer {
+public:
+  InternalTracer () {}
+  virtual ~InternalTracer () {}  
+
+  virtual void connect_internal (Internal *) {}
+};
+
+class StatTracer : public InternalTracer {
 public:
   StatTracer () {}
-  virtual ~StatTracer () {}
-  
-  virtual void print_stats () {}
+  virtual ~StatTracer () {}  
 
+  virtual void print_stats () {}  
 };
 
-class FileTracer : public Tracer {
+class FileTracer : public InternalTracer {
 
 public:
   FileTracer () {}
   virtual ~FileTracer () {}
-  
+
   virtual bool closed () { return true; }
   virtual void close () {}
   virtual void flush () {}

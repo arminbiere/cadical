@@ -193,6 +193,7 @@ public:
   uint64_t lineno () const { return _lineno; }
   uint64_t bytes () const { return _bytes; }
 
+  void connect_internal (Internal *i) { internal = i; }
   bool closed () { return !file; }
   void close ();
   void flush ();

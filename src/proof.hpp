@@ -35,9 +35,12 @@ class Proof {
 
   void add_literals (const vector<int> &); // ditto
 
-  void add_original_clause (); // notify observers of original clauses
-  void add_derived_clause ();  // notify observers of derived clauses
-  void delete_clause ();       // notify observers of deleted clauses
+  void add_original_clause (bool restore = false); // notify observers of original clauses
+  void add_derived_clause ();  
+  void add_assumption_clause ();  
+  void delete_clause ();       
+  void weaken_minus ();
+  void strengthen ();
   void finalize_clause ();
 
 public:
@@ -52,10 +55,13 @@ public:
   //
   void add_original_clause (uint64_t, bool, const vector<int> &);
 
+  void add_assumption_clause (uint64_t, const vector<int> &, const vector<uint64_t>&);
+  void add_assumption_clause (uint64_t, int, const vector<uint64_t>&);
+
   // Add/delete original clauses to/from the proof using their original
   //  external literals (from external->eclause)
   //
-  void add_external_original_clause (uint64_t, bool, const vector<int> &);
+  void add_external_original_clause (uint64_t, bool, const vector<int> &, bool restore = false);
   void delete_external_original_clause (uint64_t, bool, const vector<int> &);
 
   // Add derived (such as learned) clauses to the proof.
@@ -67,10 +73,16 @@ public:
   void add_derived_clause (uint64_t, bool, const vector<int> &,
                            const vector<uint64_t> &);
 
-
+  // deletion of clauses. It comes in several variants, depending if the clause should be restored
+  // or not
   void delete_clause (uint64_t, bool, const vector<int> &);
+  void weaken_minus (uint64_t, const vector<int> &);
+  void weaken_plus (uint64_t, const vector<int> &);
   void delete_unit_clause (uint64_t id, const int lit);
   void delete_clause (Clause *);
+  void weaken_minus (Clause *);
+  void weaken_plus (Clause *);
+  void strengthen (uint64_t);
 
   void finalize_unit (uint64_t, int);
   void finalize_external_unit (uint64_t, int);
@@ -79,7 +91,7 @@ public:
 
   void finalize_proof (uint64_t);
   void begin_proof (uint64_t);
-
+  void conclude_proof (const vector<uint64_t>&);
   // These two actually pretend to add and remove a clause.
   //
   void flush_clause (Clause *);           // remove falsified literals

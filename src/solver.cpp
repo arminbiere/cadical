@@ -48,11 +48,13 @@ void Solver::transition_to_unknown_state () {
     LOG ("API leaves state %sSATISFIED%s", tout.emph_code (),
          tout.normal_code ());
     external->reset_assumptions ();
+    external->reset_concluded ();
     external->reset_constraint ();
   } else if (state () == UNSATISFIED) {
     LOG ("API leaves state %sUNSATISFIED%s", tout.emph_code (),
          tout.normal_code ());
     external->reset_assumptions ();
+    external->reset_concluded ();
     external->reset_constraint ();
   }
   if (state () != UNKNOWN)
@@ -997,6 +999,17 @@ void Solver::connect_proof_tracer (Tracer *tracer, bool antecedents) {
   LOG_API_CALL_END ("connect proof tracer");
 }
 
+void Solver::connect_proof_tracer (InternalTracer *tracer, bool antecedents) {
+  LOG_API_CALL_BEGIN ("connect proof tracer");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (
+      state () == CONFIGURING,
+      "can only start proof tracing to right after initialization");
+  REQUIRE (tracer, "can not connect zero tracer");
+  internal->connect_proof_tracer (tracer, antecedents);
+  LOG_API_CALL_END ("connect proof tracer");
+}
+
 void Solver::connect_proof_tracer (StatTracer *tracer, bool antecedents) {
   LOG_API_CALL_BEGIN ("connect proof tracer with stats");
   REQUIRE_VALID_STATE ();
@@ -1044,6 +1057,16 @@ bool Solver::disconnect_proof_tracer (FileTracer *tracer) {
   bool res = internal->disconnect_proof_tracer (tracer);
   LOG_API_CALL_RETURNS ("disconnect proof tracer", res);
   return res;
+}
+
+/*------------------------------------------------------------------------*/
+void Solver::conclude () {
+  LOG_API_CALL_BEGIN ("conclude");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (state () == UNSATISFIED, "can only conclude in unsatisfied state");
+  internal->conclude ();
+  assert (state () == UNSATISFIED);
+  LOG_API_CALL_END ("conclude");
 }
 
 /*------------------------------------------------------------------------*/

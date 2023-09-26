@@ -580,6 +580,7 @@ class Mobical : public Handler {
   /*----------------------------------------------------------------------*/
 
   friend struct FailedCall;
+  friend struct ConcludeCall;
   friend class Reader;
   friend class Trace;
   friend struct ValCall;
@@ -808,7 +809,7 @@ void Mobical::warning (const char *fmt, ...) {
 
 struct Call {
 
-  enum Type {
+  enum Type : uint64_t {
 
     INIT = (1 << 0),
     SET = (1 << 1),
@@ -851,8 +852,10 @@ struct Call {
     CONNECT = (1 << 28),
     OBSERVE = (1 << 29),
     LEMMA = (1 << 30),
+
     // CONTINUE = (1 << 31),
-    DISCONNECT = (1 << 31),
+    CONCLUDE = (1u << 31),
+    DISCONNECT = ((uint64_t)1 << 32),
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED,
@@ -862,7 +865,7 @@ struct Call {
         ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING,
     DURING = LEMMA, // | CONTINUE,
-    AFTER = VAL | FLIP | FAILED | ALWAYS,
+    AFTER = VAL | FLIP | FAILED | CONCLUDE | ALWAYS,
   };
 
   Type type; // Explicit typing.
@@ -1213,6 +1216,20 @@ struct FailedCall : public Call {
   const char *keyword () { return "failed"; }
 };
 
+struct ConcludeCall : public Call {
+  ConcludeCall () : Call (CONCLUDE) {}
+  void execute (Solver *&s) {
+    if (mobical.donot.enforce)
+      s->conclude ();
+    else if (s->state () == UNSATISFIED)
+      s->conclude ();
+    res = 0;
+  }
+  void print (ostream &o) { o << "conclude" << endl; }
+  Call *copy () { return new ConcludeCall (); }
+  const char *keyword () { return "conclude"; }
+};
+
 struct FreezeCall : public Call {
   FreezeCall (int l) : Call (FREEZE, l) {}
   void execute (Solver *&s) { s->freeze (arg); }
@@ -1459,6 +1476,7 @@ private:
   void generate_flipped (Random &, int vars);
   void generate_frozen (Random &, int vars);
   void generate_failed (Random &, int vars);
+  void generate_conclude (Random &);
   void generate_freeze (Random &, int vars);
   void generate_melt (Random &);
 
@@ -1983,6 +2001,14 @@ void Trace::generate_failed (Random &random, int vars) {
   }
 }
 
+void Trace::generate_conclude (Random &random) {
+  if (random.generate_double () < 0.05)
+    return;
+  if (random.generate_double () < 0.05) {
+    push_back (new ConcludeCall ());
+  }
+}
+
 void Trace::generate_frozen (Random &random, int vars) {
   if (random.generate_double () < 0.05)
     return;
@@ -2179,6 +2205,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
     if (!in_connection)
       generate_flipped (random, maxvars);
     generate_failed (random, maxvars);
+    generate_conclude (random);
     generate_frozen (random, maxvars);
   }
 
@@ -2670,6 +2697,7 @@ static bool is_basic (Call *c) {
   case Call::FIXED:
   case Call::FAILED:
   case Call::FROZEN:
+  case Call::CONCLUDE:
   case Call::FREEZE:
   case Call::MELT:
   case Call::LIMIT:
@@ -3109,8 +3137,9 @@ static bool is_valid_char (int ch) {
 }
 
 void Reader::parse () {
-  int ch, lit = 0, val = 0, state = 0, adding = 0, constraining = 0,
+  int ch, lit = 0, val = 0, adding = 0, constraining = 0,
           lemma_adding = 0, solved = 0;
+  uint64_t state = 0;
   const bool enforce = !mobical.donot.enforce;
   Call *before_trigger = 0;
   char line[80];
@@ -3416,6 +3445,10 @@ void Reader::parse () {
         c = new FailedCall (lit, val);
       else
         c = new FailedCall (lit);
+    } else if (!strcmp (keyword, "conclude")) {
+      if (first)
+        error ("additional argument '%s' to 'conclude'", first);
+      c = new ConcludeCall ();
     } else if (!strcmp (keyword, "freeze")) {
       if (!first)
         error ("argument to 'freeze' missing");
@@ -3487,7 +3520,7 @@ void Reader::parse () {
         error ("'%s' after 'constrain %d' without 'constrain 0'",
                c->keyword (), constraining);
 
-      int new_state = state;
+      uint64_t new_state = state;
 
       switch (c->type) {
 
@@ -3522,6 +3555,7 @@ void Reader::parse () {
       case Call::FLIP:
       case Call::FLIPPABLE:
       case Call::FAILED:
+      case Call::CONCLUDE:
         if (!solved && (state == Call::CONFIG || state == Call::BEFORE))
           error ("'%s' can only be called after 'solve'", c->keyword ());
         if (solved && state == Call::BEFORE) {

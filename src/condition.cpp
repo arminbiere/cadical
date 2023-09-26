@@ -836,6 +836,8 @@ long Internal::condition_round (long delta) {
           }
         }
       }
+      if (proof)
+	proof->weaken_minus (c);
       external->push_clause_on_extension_stack (c);
 
       mark_garbage (c);

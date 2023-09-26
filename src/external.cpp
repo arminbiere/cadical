@@ -81,6 +81,10 @@ void External::reset_assumptions () {
   internal->reset_assumptions ();
 }
 
+void External::reset_concluded () {
+  internal->reset_concluded ();
+}
+
 void External::reset_constraint () {
   constraint.clear ();
   internal->reset_constraint ();

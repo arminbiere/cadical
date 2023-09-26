@@ -23,6 +23,7 @@ void Internal::learn_empty_clause () {
   }
   unsat = true;
   conflict_id = id;
+  conclusion.push_back (id);
   lrat_chain.clear ();
 }
 
@@ -841,11 +842,14 @@ inline void Internal::otfs_subsume_clause (Clause *subsuming,
     stats.subred++;
   else
     stats.subirr++;
-  mark_garbage (subsumed);
-  if (subsumed->redundant || !subsuming->redundant)
+  if (subsumed->redundant || !subsuming->redundant) {
+    mark_garbage (subsumed);
     return;
+  }
   LOG ("turning redundant subsuming clause into irredundant clause");
   subsuming->redundant = false;
+  if (proof) proof->strengthen (subsuming->id);
+  mark_garbage (subsumed);
   stats.current.irredundant++;
   stats.added.irredundant++;
   stats.irrlits += subsuming->size;
