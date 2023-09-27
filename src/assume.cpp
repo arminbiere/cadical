@@ -98,7 +98,7 @@ void Internal::failing () {
     int failed_clashing = 0;
     int first_failed = 0;
     int failed_level = INT_MAX;
-    int efailed;
+    int efailed = 0;
 
     for (auto &elit : external->assumptions) {
       int lit = external->e2i[abs (elit)];
@@ -119,7 +119,6 @@ void Internal::failing () {
         ev.reason = learn_external_reason_clause (-lit);
         if (!ev.reason) {
           ev.level = 0;
-          // learn_external_propagated_unit_clause (-lit);
           failed_unit = lit;
           efailed = elit;
           break;
@@ -162,6 +161,7 @@ void Internal::failing () {
     else
       failed = first_failed;
     assert (failed);
+    assert (efailed);
 
     // In any case mark literal 'failed' as failed assumption.
     {
@@ -472,7 +472,7 @@ void Internal::reset_concluded () {
   conclusion.clear ();
   if (!concluded) return;
   LOG ("reset concluded");
-  concluded = true;
+  concluded = false;
 }
 
 // Add the start of each incremental phase (leaving the state

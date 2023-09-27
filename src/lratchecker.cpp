@@ -458,7 +458,7 @@ void LratChecker::reset_assumptions () {
   assumption_clauses.clear ();
   assumptions.clear ();
   concluded = false;
-  constraint.clear ();
+  // constraint.clear ();
 }
 
 void LratChecker::conclude_proof (ConclusionType conclusion, const vector<uint64_t>& ids) {
