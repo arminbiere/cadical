@@ -590,57 +590,6 @@ bool Internal::decompose_round () {
     }
     if (lrat) lrat_chain.push_back (c->id);
     clear_analyzed_literals ();
-    // build lrat
-    /*
-    if (lrat) {
-      LOG ("building chain for not subsumed clause");
-      assert (lrat_chain.empty ());
-      assert (decomposed.empty ());
-      for (const auto lit : *c) { // build chain for each replaced literal
-        
-        auto other = -lit;
-        if (val (other) > 0) {
-          if (marked_decompose (other))
-            continue;
-          mark_decomposed (other);
-          const unsigned uidx = vlit (other);
-          uint64_t id = unit_clauses[uidx];
-          assert (id);
-          lrat_chain.push_back (id);
-          continue;
-        }
-        assert (mini_chain.empty ());
-        for (auto p : dfs_chains[vlit (other)]) {
-          if (marked_decompose (other))
-            continue;
-          mark_decomposed (other);
-          int implied = p->literals[0];
-          implied = implied == other ? -p->literals[1] : -implied;
-          LOG ("ADDED %d -> %d (%" PRIu64 ")", implied, other, p->id);
-          other = implied;
-          mini_chain.push_back (p->id);
-          if (val (implied) <= 0)
-            continue;
-          if (marked_decompose (implied))
-            break;
-          mark_decomposed (implied);
-          // if (val (implied) == 0) continue;
-          const unsigned uidx = vlit (implied);
-          uint64_t id = unit_clauses[uidx];
-          assert (id);
-          mini_chain.push_back (id);
-          break;
-        }
-        for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++)
-          lrat_chain.push_back (*p);
-        mini_chain.clear ();
-      }
-      // clear_analyzed_literals ();
-      clear_decomposed_literals ();
-      lrat_chain.push_back (c->id);
-      LOG (lrat_chain, "lrat_chain: ");
-    }
-    */
     LOG (lrat_chain, "lrat_chain: ");
     if (satisfied) {
       LOG (c, "satisfied after substitution (postponed)");
