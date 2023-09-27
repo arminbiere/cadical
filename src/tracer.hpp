@@ -3,7 +3,7 @@
 
 namespace CaDiCaL {
 
-enum Conclusion {
+enum ConclusionType {
   CONFLICT = 1,
   ASSUMPTIONS = 2,
   CONSTRAINT = 4
@@ -69,7 +69,7 @@ public:
   // will give either the id of the empty clause, the id of a failing
   // assumption clause or the ids of the failing constrain clauses
   //
-  virtual void conclude_proof (Conclusion, const vector<uint64_t>&) {}
+  virtual void conclude_proof (ConclusionType, const vector<uint64_t>&) {}
 
   // Notify the observer that the proof begins with a set of reserved ids for
   // original clauses.

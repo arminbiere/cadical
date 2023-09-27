@@ -461,7 +461,7 @@ void LratChecker::reset_assumptions () {
   constraint.clear ();
 }
 
-void LratChecker::conclude_proof (Conclusion conclusion, const vector<uint64_t>& ids) {
+void LratChecker::conclude_proof (ConclusionType conclusion, const vector<uint64_t>& ids) {
   if (concluded) {
     fatal_message_start ();
     fputs ("already concluded\n", stderr);

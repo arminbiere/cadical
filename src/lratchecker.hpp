@@ -151,7 +151,7 @@ public:
   // check if all clauses have been deleted
   void finalize_proof (uint64_t) override;
   
-  void conclude_proof (Conclusion, const vector<uint64_t>&) override;
+  void conclude_proof (ConclusionType, const vector<uint64_t>&) override;
 
   void print_stats () override;
   void dump (); // for debugging purposes only

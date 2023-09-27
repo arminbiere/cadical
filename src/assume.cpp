@@ -453,7 +453,7 @@ void Internal::conclude () {
     failing ();
     marked_failed = true;
   }
-  Conclusion con;
+  ConclusionType con;
   if (conflict_id)
     con = CONFLICT;
   else if (unsat_constraint)

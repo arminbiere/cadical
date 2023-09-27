@@ -589,7 +589,7 @@ void Proof::begin_proof (uint64_t id) {
   }
 }
 
-void Proof::conclude_proof (Conclusion con, const vector<uint64_t>& conclusion) {
+void Proof::conclude_proof (ConclusionType con, const vector<uint64_t>& conclusion) {
   LOG (clause, "PROOF conclude proof");
   for (auto & tracer : tracers) {
     tracer->conclude_proof (con, conclusion);
