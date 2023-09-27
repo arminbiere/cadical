@@ -495,6 +495,15 @@ void LratChecker::conclude_proof (Conclusion conclusion, const vector<uint64_t>&
     if (constraint.size () != ids.size ()) {
       fatal_message_start ();
       fputs ("not complete conclusion given for constraint\n", stderr);
+      fputs ("The constraint contains the literals: ", stderr);
+      for (auto c : constraint) {
+	fprintf (stderr, "%d ", c);
+      }
+
+      fputs ("\nThe ids are: ", stderr);
+      for (auto c : ids) {
+	fprintf (stderr, "%" PRIu64 " ", c);
+      }
       fatal_message_end ();
     }
     for (auto & id : ids) {
