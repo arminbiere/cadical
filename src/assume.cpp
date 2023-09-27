@@ -258,17 +258,9 @@ void Internal::failing () {
       if (!lit) continue;
       Flags &f = flags (lit);
       if (f.seen) continue;
-      f.seen = true;
+      if (std::find (econstraints.begin (),
+          econstraints.end (), elit) != econstraints.end ()) continue;
       econstraints.push_back (elit);
-    }
-    for (auto & elit : econstraints) {
-      int lit = external->e2i[abs (elit)];
-      if (elit < 0)
-        lit = -lit;
-      assert (lit);
-      Flags &f = flags (lit);
-      assert (f.seen);
-      f.seen = false;
     }
 
     // no lrat do bfs as it was before
