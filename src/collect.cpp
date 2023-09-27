@@ -325,6 +325,8 @@ void Internal::update_reason_references () {
       Clause *c = v.reason;
       if (!c)
         continue;
+      if (c == external_reason)
+	continue;
       LOG (c, "updating assigned %d reason", lit);
       assert (c->reason);
       assert (c->moved);
