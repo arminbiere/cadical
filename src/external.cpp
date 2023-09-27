@@ -254,7 +254,8 @@ void External::constrain (int elit) {
   }
   assert (elit != INT_MIN);
   reset_extended ();
-  constraint.push_back (elit);
+  if (elit)
+    constraint.push_back (elit);
   const int ilit = internalize (elit);
   assert (!elit == !ilit);
   if (elit)
