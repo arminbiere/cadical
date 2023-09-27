@@ -447,7 +447,7 @@ void LratChecker::add_assumption (int a) {
 void LratChecker::add_constraint (const vector<int> & c) {
   constraint.clear ();
   for (auto & lit : c) {
-    assert (lit);
+    if (!lit) continue;
     if (std::find (constraint.begin (),
         constraint.end (), lit) != constraint.end ()) continue;
     constraint.push_back (lit);
