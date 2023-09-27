@@ -438,6 +438,10 @@ bool Internal::decompose_round () {
   // also just simply use the 'e2i' map as a union find data structure.
   // This would avoid the need to restore these clauses.
 
+  vector<uint64_t> decompose_ids;
+  const size_t size = 2 * (1 + (size_t) max_var);
+  decompose_ids.resize (size);
+  
   for (auto idx : vars) {
     if (unsat)
       break;
@@ -462,9 +466,11 @@ bool Internal::decompose_round () {
     const uint64_t id1 = ++clause_id;
     if (proof) {
       proof->add_derived_clause (id1, true, clause, lrat_chain);
-      proof->weaken_plus (id1, clause);
+      proof->weaken_minus (id1, clause);
     }
     external->push_binary_clause_on_extension_stack (id1, -idx, other);
+    
+    decompose_ids[vlit (-idx)] = id1;
 
     lrat_chain.clear ();
     clause.clear ();
@@ -480,9 +486,10 @@ bool Internal::decompose_round () {
     const uint64_t id2 = ++clause_id;
     if (proof) {
       proof->add_derived_clause (id2, true, clause, lrat_chain);
-      proof->weaken_plus (id2, clause);
+      proof->weaken_minus (id2, clause);
     }
     external->push_binary_clause_on_extension_stack (id2, idx, -other);
+    decompose_ids[vlit (idx)] = id2;
 
     clause.clear ();
     lrat_chain.clear ();
@@ -531,13 +538,38 @@ bool Internal::decompose_round () {
       signed char tmp = val (lit);
       if (tmp > 0)
         satisfied = true;
-      else if (tmp < 0)
+      else if (tmp < 0) {
+        if (!lrat) continue;
+        Flags &f = flags (lit);
+        if (f.seen) continue;
+        f.seen = true;
+        analyzed.push_back (lit);
+        const unsigned uidx = vlit (-lit);
+        uint64_t id = unit_clauses[uidx];
+        assert (id);
+        lrat_chain.push_back (id);
         continue;
+      }
       else {
         const int other = reprs[vlit (lit)];
         tmp = val (other);
-        if (tmp < 0)
+        if (tmp < 0) {
+          if (!lrat) continue;
+          Flags &f = flags (other);
+          if (!f.seen) {
+            f.seen = true;
+            analyzed.push_back (other);
+            const unsigned uidx = vlit (-other);
+            uint64_t id = unit_clauses[uidx];
+            assert (id);
+            lrat_chain.push_back (id);
+          }
+          if (other == lit) continue;
+          uint64_t id = decompose_ids[vlit (-lit)];
+          assert (id);
+          lrat_chain.push_back (id);
           continue;
+        }
         else if (tmp > 0)
           satisfied = true;
         else {
@@ -548,15 +580,24 @@ bool Internal::decompose_round () {
             mark (other);
             clause.push_back (other);
           }
+          if (other == lit) continue;
+          if (!lrat) continue;
+          uint64_t id = decompose_ids[vlit (-lit)];
+          assert (id);
+          lrat_chain.push_back (id);
         }
       }
     }
+    if (lrat) lrat_chain.push_back (c->id);
+    clear_analyzed_literals ();
     // build lrat
+    /*
     if (lrat) {
       LOG ("building chain for not subsumed clause");
       assert (lrat_chain.empty ());
       assert (decomposed.empty ());
       for (const auto lit : *c) { // build chain for each replaced literal
+        
         auto other = -lit;
         if (val (other) > 0) {
           if (marked_decompose (other))
@@ -599,6 +640,8 @@ bool Internal::decompose_round () {
       lrat_chain.push_back (c->id);
       LOG (lrat_chain, "lrat_chain: ");
     }
+    */
+    LOG (lrat_chain, "lrat_chain: ");
     if (satisfied) {
       LOG (c, "satisfied after substitution (postponed)");
       postponed_garbage.push_back (c);
@@ -665,7 +708,31 @@ bool Internal::decompose_round () {
     }
     lrat_chain.clear ();
   }
-
+  
+  if (proof) {
+    for (auto idx : vars) {
+      if (!active (idx))
+        continue;
+      const uint64_t id1 = decompose_ids[vlit (-idx)];
+      if (!id1) continue;
+      int other = reprs[vlit (idx)];
+      assert (other != idx);
+      assert (!flags (other).eliminated ());
+      assert (!flags (other).substituted ());
+    
+      clause.push_back (other);
+      clause.push_back (-idx);
+      proof->delete_clause (id1, true, clause);
+      clause.clear ();
+    
+      clause.push_back (idx);
+      clause.push_back (-other);
+      const uint64_t id2 = decompose_ids[vlit (idx)];
+      proof->delete_clause (id2, true, clause);
+      clause.clear ();
+    }
+  }
+  
   if (!unsat && !postponed_garbage.empty ()) {
     LOG ("now marking %zd postponed garbage clauses",
          postponed_garbage.size ());
