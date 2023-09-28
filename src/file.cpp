@@ -31,8 +31,7 @@ namespace CaDiCaL {
 // Private constructor.
 
 File::File (Internal *i, bool w, int c, int p, FILE *f, const char *n)
-    :
-      internal (i),
+    : internal (i),
 #if !defined(QUIET) || !defined(NDEBUG)
       writing (w),
 #endif

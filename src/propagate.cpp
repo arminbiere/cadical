@@ -924,8 +924,8 @@ bool Internal::propagate_multitrail () {
     size_t current = before;
     while (!conflict && current != t->size ()) {
       assert (opts.reimply || t == &trail);
-      LOG ("propagating level %d from %" PRId64 " to %zu", proplevel, before,
-           t->size ());
+      LOG ("propagating level %d from %" PRId64 " to %zu", proplevel,
+           before, t->size ());
 
       assert (current < t->size ());
       const int lit = -(*t)[current++];

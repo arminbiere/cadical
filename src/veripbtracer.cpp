@@ -5,9 +5,9 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 VeripbTracer::VeripbTracer (Internal *i, File *f, bool b, bool a, bool c)
-    : internal (i), file (f), with_antecedents (a),
-      checked_deletions (c), num_clauses (0), size_clauses (0),
-      last_hash (0), last_id (0), last_clause (0), added (0), deleted (0) {
+    : internal (i), file (f), with_antecedents (a), checked_deletions (c),
+      num_clauses (0), size_clauses (0), last_hash (0), last_id (0),
+      last_clause (0), added (0), deleted (0) {
   (void) internal;
 
   // Initialize random number table for hash function.
