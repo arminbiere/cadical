@@ -11,9 +11,16 @@ extern "C" {
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <unistd.h>
 }
+
+#ifndef _WIN32
+
+extern "C" {
+#include <sys/wait.h>
+};
+
+#endif
 
 /*------------------------------------------------------------------------*/
 
@@ -241,6 +248,8 @@ FILE *File::read_pipe (Internal *internal, const char *fmt, const int *sig,
   return open_pipe (internal, fmt, path, "r");
 }
 
+#ifndef _WIN32
+
 FILE *File::write_pipe (Internal *internal, const char *command,
                         const char *path, int &child_pid) {
   assert (command[0] && command[0] != ' ');
@@ -286,6 +295,8 @@ FILE *File::write_pipe (Internal *internal, const char *command,
 #endif
   return res;
 }
+
+#endif
 
 /*------------------------------------------------------------------------*/
 
@@ -335,6 +346,7 @@ File *File::read (Internal *internal, const char *path) {
 File *File::write (Internal *internal, const char *path) {
   FILE *file;
   int close_output = 3, child_pid = 0;
+#ifndef _WIN32
   if (has_suffix (path, ".xz"))
     file = write_pipe (internal, "xz -c", path, child_pid);
   else if (has_suffix (path, ".bz2"))
@@ -344,6 +356,7 @@ File *File::write (Internal *internal, const char *path) {
   else if (has_suffix (path, ".7z"))
     file = write_pipe (internal, "7z a -an -txz -si -so", path, child_pid);
   else
+#endif
     file = write_file (internal, path), close_output = 1;
 
   if (!file)
@@ -365,11 +378,13 @@ void File::close () {
     MSG ("closing input pipe to read '%s'", name ());
     pclose (file);
   }
+#ifndef _WIN32
   if (close_file == 3) {
     MSG ("closing output pipe to write '%s'", name ());
     fclose (file);
     waitpid (child_pid, 0, 0);
   }
+#endif
   file = 0; // mark as closed
 
   // TODO what about error checking for 'fclose', 'pclose' or 'waitpid'?

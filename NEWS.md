@@ -1,4 +1,21 @@
-Version 1.7.5
+Version 2.0.0-rc-2
+------------------
+
+- Making progress to formal 2.0 release with minor fixes for
+  different platforms and compilers.
+
+Version 1.7.4
+-------------
+
+- As `fork` and `wait` do not exist on Windows writing compressed files
+  through `pipe/fork/exec/wait` has to be disabled for Windows cross
+  compilation to go through.  Alternatively one could go back to `popen`
+  for writing compressed files on Windows which however is not safe and
+  therefore we simply decided to disable that feature for windows.
+  Compressed file reading still (and as far we are aware safely) uses
+  `popen` and thus also compiles for Windows.
+
+Version 1.7.3
 -------------
 
  - Incremental lazy backtracking (ILB) enabled by `--ilb` allows
@@ -24,24 +41,6 @@ Version 1.7.5
  - Reworked options for proof tracing to be less confusing.
    Support for DRAT, LRAT, FRAT and VeriPB (with or without
    antecedents).
-
-Version 1.7.4
--------------
-
- - As `fork` and `wait` do not exist on Windows writing compressed files
-   through `pipe/fork/exec/wait` has to be disabled for Windows cross
-   compilation to go through.  Alternatively one could go back to `popen`
-   for writing compressed files on Windows which however is not safe and
-   therefore we simply decided to disable that feature for windows.
-   Compressed file reading still (and as far we are aware safely) uses
-   `popen` and thus also compiles for Windows.
-
-Version 1.7.3
--------------
-
- - Replaced the unsafe `popen` approach for compressed file writing
-   with an explicit `pipe/fork/exec/waitpid` flow and accordingly
-   removed the `--safe` configuration option again.
 
 Version 1.7.2
 -------------
