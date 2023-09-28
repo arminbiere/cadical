@@ -583,7 +583,7 @@ void LratBuilder::construct_chain () {
 }
 
 void LratBuilder::proof_tautological_clause () {
-  LOG (simplified, "LRAT BUILDER tautological clause needs no proof: ");
+  LOG (simplified, "LRAT BUILDER tautological clause needs no proof:");
 }
 
 void LratBuilder::proof_satisfied_literal (int lit) {

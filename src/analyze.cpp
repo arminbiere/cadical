@@ -765,7 +765,7 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
       lits[new_size++] = other;
   }
 
-  LOG (new_conflict, "removing all units ");
+  LOG (new_conflict, "removing all units in");
 
   assert (lits[0] == uip || lits[1] == uip);
   const int other = lits[0] ^ lits[1] ^ uip;
@@ -1034,8 +1034,8 @@ void Internal::analyze () {
     if (otfs && resolved > 0 && antecedent_size > 2 &&
         resolvent_size < antecedent_size) {
       assert (reason != conflict);
-      LOG (analyzed, "found candidate for OTFS, conflict is: ");
-      LOG (reason, "found candidate (size %d) for OTFS, resolvent is: ",
+      LOG (analyzed, "found candidate for OTFS conflict");
+      LOG (reason, "found candidate (size %d) for OTFS resolvent",
            antecedent_size);
       reason = on_the_fly_strengthen (reason, uip);
       assert (conflict_size >= 2);

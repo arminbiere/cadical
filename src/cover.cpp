@@ -420,7 +420,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
         if (other) {
           external->push_clause_literal_on_extension_stack (other);
           clause.push_back(other);
-          LOG(clause, "current clause is ");
+          LOG(clause, "current clause is");
         }
         prev = other;
       }

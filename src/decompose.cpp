@@ -132,7 +132,7 @@ void Internal::build_lrat_for_clause (const vector<vector<Clause *>> &dfs_chains
   }
   // clear_analyzed_literals ();
   clear_decomposed_literals ();
-  LOG (lrat_chain, "lrat_chain: ");
+  LOG (lrat_chain, "lrat_chain:");
 }
 
 void Internal::clear_decomposed_literals () {
@@ -590,7 +590,7 @@ bool Internal::decompose_round () {
     }
     if (lrat) lrat_chain.push_back (c->id);
     clear_analyzed_literals ();
-    LOG (lrat_chain, "lrat_chain: ");
+    LOG (lrat_chain, "lrat_chain:");
     if (satisfied) {
       LOG (c, "satisfied after substitution (postponed)");
       postponed_garbage.push_back (c);
