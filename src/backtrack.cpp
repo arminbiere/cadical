@@ -211,6 +211,10 @@ void Internal::multi_backtrack (int new_level) {
        percent (unassigned, unassigned + elevated));
   LOG ("elevated %d literals %.0f%%", elevated,
        percent (elevated, unassigned + elevated));
+#ifndef LOGGING
+  (void) unassigned;
+#endif
+
   stats.elevated += elevated;
 
   if (external_prop && !external_prop_is_lazy) {
