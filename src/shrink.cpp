@@ -36,6 +36,8 @@ void Internal::mark_shrinkable_as_removable (
     } else
       ++kept;
   }
+  (void) kept;
+  (void) minireset;
 #else
   (void) blevel;
   (void) minimized_start;
