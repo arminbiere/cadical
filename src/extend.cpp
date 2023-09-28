@@ -8,11 +8,11 @@ void External::push_zero_on_extension_stack () {
 }
 
 void External::push_id_on_extension_stack (uint64_t id) {
-  const uint higher_bits = static_cast<int>(id << 32);
-  const uint lower_bits = (id & (((uint64_t)1 << 32) - 1));
+  const uint higher_bits = static_cast<int> (id << 32);
+  const uint lower_bits = (id & (((uint64_t) 1 << 32) - 1));
   extension.push_back (higher_bits);
   extension.push_back (lower_bits);
-  LOG("pushing id %ld = %d + %d", id, higher_bits, lower_bits);
+  LOG ("pushing id %ld = %d + %d", id, higher_bits, lower_bits);
 }
 
 void External::push_clause_literal_on_extension_stack (int ilit) {
@@ -48,7 +48,7 @@ void External::push_clause_on_extension_stack (Clause *c) {
   internal->stats.weakened++;
   internal->stats.weakenedlen += c->size;
   push_zero_on_extension_stack ();
-  push_id_on_extension_stack(c->id);
+  push_id_on_extension_stack (c->id);
   push_zero_on_extension_stack ();
   for (const auto &lit : *c)
     push_clause_literal_on_extension_stack (lit);
@@ -60,14 +60,15 @@ void External::push_clause_on_extension_stack (Clause *c, int pivot) {
   push_clause_on_extension_stack (c);
 }
 
-void External::push_binary_clause_on_extension_stack (uint64_t id, int pivot,
+void External::push_binary_clause_on_extension_stack (uint64_t id,
+                                                      int pivot,
                                                       int other) {
   internal->stats.weakened++;
   internal->stats.weakenedlen += 2;
   push_zero_on_extension_stack ();
   push_witness_literal_on_extension_stack (pivot);
   push_zero_on_extension_stack ();
-  push_id_on_extension_stack(id);
+  push_id_on_extension_stack (id);
   push_zero_on_extension_stack ();
   push_clause_literal_on_extension_stack (pivot);
   push_clause_literal_on_extension_stack (other);
@@ -150,8 +151,8 @@ void External::extend () {
       assert (i != begin);
     }
     assert (i != begin);
-    LOG ("id=%ld", ((uint64_t)*i << 32) + *(i-1));
-    assert (*i || *(i-1));
+    LOG ("id=%ld", ((uint64_t) *i << 32) + *(i - 1));
+    assert (*i || *(i - 1));
     --i;
     assert (i != begin);
     --i;

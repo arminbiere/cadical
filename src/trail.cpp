@@ -42,8 +42,6 @@ int Internal::trail_size (int l) {
   return (int) trails[l - 1].size ();
 }
 
-
-
 // returns the trail that needs to be propagated
 //
 vector<int> *Internal::next_trail (int l) {
@@ -65,7 +63,6 @@ int Internal::next_propagated (int l) {
   assert (l > 0 && trails.size () >= (size_t) l);
   return multitrail[l - 1];
 }
-
 
 // returns the lowest level within some conflicting clause
 //

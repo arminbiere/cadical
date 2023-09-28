@@ -33,8 +33,8 @@ extern "C" {
 #include <algorithm>
 #include <queue>
 #include <string>
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
 /*------------------------------------------------------------------------*/
 
@@ -94,8 +94,8 @@ extern "C" {
 #include "tracer.hpp"
 #include "util.hpp"
 #include "var.hpp"
-#include "version.hpp"
 #include "veripbtracer.hpp"
+#include "version.hpp"
 #include "vivify.hpp"
 #include "watch.hpp"
 
@@ -179,7 +179,7 @@ struct Internal {
   uint64_t original_id;       // ids for original clauses to produce lrat
   uint64_t reserved_ids;      // number of reserved ids for original clauses
   uint64_t conflict_id;       // store conflict id for finalize (frat)
-  bool concluded;                // keeps track of conclude
+  bool concluded;             // keeps track of conclude
   vector<uint64_t> conclusion;   // store ids of conclusion clauses
   vector<uint64_t> unit_clauses; // keep track of unit_clauses (lrat/frat)
   vector<uint64_t> lrat_chain;   // create lrat in solver: option lratdirect
@@ -222,28 +222,28 @@ struct Internal {
   int tainted_literal;          // used for ILB
   vector<Clause *> fix_later;   // for reimply + external propagator
   vector<int> notify_trail;     // for reimply + external propagator
-  size_t notified;              // next trail position to notify external prop
-  Clause *probe_reason;         // set during probing
-  size_t propagated;            // next trail position to propagate
-  size_t propagated2;         // next binary trail position to propagate
-  size_t propergated;         // propagated without blocking literals
-  size_t best_assigned;       // best maximum assigned ever
-  size_t target_assigned;     // maximum assigned without conflict
-  size_t no_conflict_until;   // largest trail prefix without conflict
-  vector<int> trail;          // currently assigned literals
-  vector<int> clause;         // simplified in parsing & learning
-  vector<int> assumptions;    // assumed literals
-  vector<int> constraint;     // literals of the constraint
-  bool unsat_constraint;      // constraint used for unsatisfiability?
-  bool marked_failed;         // are the failed assumptions marked?
-  vector<int> original;       // original added literals
-  vector<int> levels;         // decision levels in learned clause
-  vector<int> analyzed;       // analyzed literals in 'analyze'
-  vector<int> unit_analyzed;  // to avoid duplicate units in lrat_chain
-  vector<int> decomposed;     // literals skipped in 'decompose'
-  vector<int> minimized;      // removable or poison in 'minimize'
-  vector<int> shrinkable;     // removable or poison in 'shrink'
-  Reap reap;                  // radix heap for shrink
+  size_t notified;           // next trail position to notify external prop
+  Clause *probe_reason;      // set during probing
+  size_t propagated;         // next trail position to propagate
+  size_t propagated2;        // next binary trail position to propagate
+  size_t propergated;        // propagated without blocking literals
+  size_t best_assigned;      // best maximum assigned ever
+  size_t target_assigned;    // maximum assigned without conflict
+  size_t no_conflict_until;  // largest trail prefix without conflict
+  vector<int> trail;         // currently assigned literals
+  vector<int> clause;        // simplified in parsing & learning
+  vector<int> assumptions;   // assumed literals
+  vector<int> constraint;    // literals of the constraint
+  bool unsat_constraint;     // constraint used for unsatisfiability?
+  bool marked_failed;        // are the failed assumptions marked?
+  vector<int> original;      // original added literals
+  vector<int> levels;        // decision levels in learned clause
+  vector<int> analyzed;      // analyzed literals in 'analyze'
+  vector<int> unit_analyzed; // to avoid duplicate units in lrat_chain
+  vector<int> decomposed;    // literals skipped in 'decompose'
+  vector<int> minimized;     // removable or poison in 'minimize'
+  vector<int> shrinkable;    // removable or poison in 'shrink'
+  Reap reap;                 // radix heap for shrink
 
   int multitrail_dirty;
   vector<size_t> multitrail;  // "propagated" for each level
@@ -260,12 +260,14 @@ struct Internal {
 
   Proof *proof;             // abstraction layer between solver and tracers
   LratBuilder *lratbuilder; // special proof tracer
-  vector<Tracer*> tracers;   // proof tracing objects (ie interpolant calulator)
-  vector<FileTracer*> file_tracers; // file proof tracers (ie DRAT, LRAT...)
-  vector<StatTracer*> stat_tracers; // checkers
-  
-  Options opts;             // run-time options
-  Stats stats;              // statistics
+  vector<Tracer *>
+      tracers; // proof tracing objects (ie interpolant calulator)
+  vector<FileTracer *>
+      file_tracers; // file proof tracers (ie DRAT, LRAT...)
+  vector<StatTracer *> stat_tracers; // checkers
+
+  Options opts; // run-time options
+  Stats stats;  // statistics
 #ifndef QUIET
   Profiles profiles;         // time profiles for various functions
   bool force_phase_messages; // force 'phase (...)' messages
@@ -1107,7 +1109,8 @@ struct Internal {
   // (BIG) and equivalent literal substitution (ELS) in 'decompose.cpp'.
   //
   void decompose_conflicting_scc_lrat (DFS *dfs, vector<int> &);
-  void build_lrat_for_clause (const vector<vector<Clause *>> &dfs_chains, bool invert = false);
+  void build_lrat_for_clause (const vector<vector<Clause *>> &dfs_chains,
+                              bool invert = false);
   vector<Clause *> decompose_analyze_binary_clauses (DFS *dfs, int from);
   void decompose_analyze_binary_chain (DFS *dfs, int);
   bool decompose_round ();
@@ -1124,11 +1127,12 @@ struct Internal {
   //
   void assume_analyze_literal (int lit);
   void assume_analyze_reason (int lit, Clause *reason);
-  void assume (int);         // New assumption literal.
-  bool failed (int lit);     // Literal failed assumption?
-  void reset_assumptions (); // Reset after 'solve' call.
-  void sort_and_reuse_assumptions();   // reorder the assumptions in order to reuse parts of the trail
-  void failing ();           // Prepare failed assumptions.
+  void assume (int);                  // New assumption literal.
+  bool failed (int lit);              // Literal failed assumption?
+  void reset_assumptions ();          // Reset after 'solve' call.
+  void sort_and_reuse_assumptions (); // reorder the assumptions in order to
+                                      // reuse parts of the trail
+  void failing ();                    // Prepare failed assumptions.
 
   bool assumed (int lit) { // Marked as assumption.
     Flags &f = flags (lit);
@@ -1334,12 +1338,12 @@ struct Internal {
   // Enable and disable proof logging and checking.
   //
   void new_proof_on_demand ();
-  void setup_lrat_builder ();  // if opts.externallrat=true
-  void force_lrat ();      // sets lrat=true
-  void close_trace ();     // Stop proof tracing.
-  void flush_trace ();     // Flush proof trace file.
-  void trace (File *);     // Start write proof file.
-  void check ();           // Enable online proof checking.
+  void setup_lrat_builder (); // if opts.externallrat=true
+  void force_lrat ();         // sets lrat=true
+  void close_trace ();        // Stop proof tracing.
+  void flush_trace ();        // Flush proof trace file.
+  void trace (File *);        // Start write proof file.
+  void check ();              // Enable online proof checking.
 
   void connect_proof_tracer (Tracer *tracer, bool antecedents);
   void connect_proof_tracer (InternalTracer *tracer, bool antecedents);

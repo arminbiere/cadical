@@ -5,8 +5,8 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 FratTracer::FratTracer (Internal *i, File *f, bool b, bool a)
-    : internal (i), file (f), binary (b), with_antecedents (a),
-      added (0), deleted (0), finalized (0), original (0) {
+    : internal (i), file (f), binary (b), with_antecedents (a), added (0),
+      deleted (0), finalized (0), original (0) {
   (void) internal;
 }
 
@@ -16,14 +16,12 @@ void FratTracer::connect_internal (Internal *i) {
   LOG ("FRAT TRACER connected to internal");
 }
 
-
 FratTracer::~FratTracer () {
   LOG ("FRAT TRACER delete");
   delete file;
 }
 
 /*------------------------------------------------------------------------*/
-
 
 inline void FratTracer::put_binary_zero () {
   assert (binary);
@@ -63,7 +61,7 @@ inline void FratTracer::put_binary_id (uint64_t id) {
 /*------------------------------------------------------------------------*/
 
 void FratTracer::frat_add_original_clause (uint64_t id,
-                                       const vector<int> &clause) {
+                                           const vector<int> &clause) {
   if (binary)
     file->put ('o');
   else
@@ -84,7 +82,7 @@ void FratTracer::frat_add_original_clause (uint64_t id,
 }
 
 void FratTracer::frat_add_derived_clause (uint64_t id,
-                                      const vector<int> &clause) {
+                                          const vector<int> &clause) {
   if (binary)
     file->put ('a');
   else
@@ -105,8 +103,8 @@ void FratTracer::frat_add_derived_clause (uint64_t id,
 }
 
 void FratTracer::frat_add_derived_clause (uint64_t id,
-                                      const vector<int> &clause,
-                                      const vector<uint64_t> &chain) {
+                                          const vector<int> &clause,
+                                          const vector<uint64_t> &chain) {
   if (binary)
     file->put ('a');
   else
@@ -135,7 +133,8 @@ void FratTracer::frat_add_derived_clause (uint64_t id,
     file->put ("0\n"); // this is just 2c here
 }
 
-void FratTracer::frat_delete_clause (uint64_t id, const vector<int> &clause) {
+void FratTracer::frat_delete_clause (uint64_t id,
+                                     const vector<int> &clause) {
   if (binary)
     file->put ('d');
   else
@@ -155,7 +154,8 @@ void FratTracer::frat_delete_clause (uint64_t id, const vector<int> &clause) {
     file->put ("0\n");
 }
 
-void FratTracer::frat_finalize_clause (uint64_t id, const vector<int> &clause) {
+void FratTracer::frat_finalize_clause (uint64_t id,
+                                       const vector<int> &clause) {
   if (binary)
     file->put ('f');
   else
@@ -177,17 +177,17 @@ void FratTracer::frat_finalize_clause (uint64_t id, const vector<int> &clause) {
 
 /*------------------------------------------------------------------------*/
 
-
-void FratTracer::add_original_clause (uint64_t id, bool, const vector<int> &clause, bool) {
+void FratTracer::add_original_clause (uint64_t id, bool,
+                                      const vector<int> &clause, bool) {
   if (file->closed ())
     return;
   LOG ("FRAT TRACER tracing addition of original clause");
   frat_add_original_clause (id, clause);
 }
 
-
-void FratTracer::add_derived_clause (uint64_t id, bool, const vector<int> &clause,
-                                 const vector<uint64_t> &chain) {
+void FratTracer::add_derived_clause (uint64_t id, bool,
+                                     const vector<int> &clause,
+                                     const vector<uint64_t> &chain) {
   if (file->closed ())
     return;
   LOG ("FRAT TRACER tracing addition of derived clause");
@@ -198,7 +198,8 @@ void FratTracer::add_derived_clause (uint64_t id, bool, const vector<int> &claus
   added++;
 }
 
-void FratTracer::delete_clause (uint64_t id, bool, const vector<int> &clause) {
+void FratTracer::delete_clause (uint64_t id, bool,
+                                const vector<int> &clause) {
   if (file->closed ())
     return;
   LOG ("FRAT TRACER tracing deletion of clause");
@@ -213,7 +214,6 @@ void FratTracer::finalize_clause (uint64_t id, const vector<int> &clause) {
   frat_finalize_clause (id, clause);
 }
 
-
 /*------------------------------------------------------------------------*/
 
 bool FratTracer::closed () { return file->closed (); }
@@ -226,9 +226,9 @@ void FratTracer::close () {
 void FratTracer::flush () {
   assert (!closed ());
   file->flush ();
-  MSG ("traced %" PRId64 " original, %" PRId64 " added clauses, %"
-        PRId64 " deleted clauses and %" PRId64 " finalized clauses",
-        original, added, deleted, finalized);
+  MSG ("traced %" PRId64 " original, %" PRId64 " added clauses, %" PRId64
+       " deleted clauses and %" PRId64 " finalized clauses",
+       original, added, deleted, finalized);
 }
 
 } // namespace CaDiCaL

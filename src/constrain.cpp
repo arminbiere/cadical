@@ -43,7 +43,7 @@ void Internal::constrain (int lit) {
     else if (constraint.empty ()) {
       unsat_constraint = true;
       if (!conflict_id)
-        marked_failed = false;   // allow to trigger failing ()
+        marked_failed = false; // allow to trigger failing ()
     } else
       for (const auto lit : constraint)
         freeze (lit);

@@ -96,8 +96,8 @@ bool Internal::satisfied () {
     return false;
   if (opts.reimply && multitrail_dirty < level)
     return false;
-  if (opts.reimply && level && 
-     (size_t) multitrail[level-1] < trails[level-1].size ())
+  if (opts.reimply && level &&
+      (size_t) multitrail[level - 1] < trails[level - 1].size ())
     return false;
 #ifndef NDEBUG
   if (opts.reimply)

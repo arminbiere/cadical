@@ -284,7 +284,7 @@ void Internal::mark_garbage (Clause *c) {
   // 'delete_clause' and also in 'propagate'.
   //
   if (proof && c->size != 2) {
-      proof->delete_clause (c);
+    proof->delete_clause (c);
   }
 
   assert (stats.current.total > 0);
@@ -333,7 +333,8 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   trail.push_back (lit);
   num_assigned++;
   if (opts.reimply) {
-    bool use_notify = (external_prop && !external_prop_is_lazy) || !from_propagator;
+    bool use_notify =
+        (external_prop && !external_prop_is_lazy) || !from_propagator;
     if (use_notify)
       notify_trail.push_back (lit);
   }
@@ -342,7 +343,8 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   LOG ("original unit assign %d", lit);
   assert (num_assigned == trail.size () || level);
   mark_fixed (lit);
-  if (level) return;
+  if (level)
+    return;
   if (propagate ())
     return;
   assert (conflict);
@@ -459,7 +461,8 @@ void Internal::add_new_original_clause (uint64_t id) {
         if (lrat)
           lrat_chain.push_back (id);
         proof->add_derived_clause (new_id, false, clause, lrat_chain);
-        proof->delete_external_original_clause (id, false, external->eclause);
+        proof->delete_external_original_clause (id, false,
+                                                external->eclause);
       }
       external->check_learned_clause ();
     }
@@ -485,7 +488,7 @@ void Internal::add_new_original_clause (uint64_t id) {
         Var &v = var (idx);
         v.level = 0;
         v.reason = 0;
-	v.trail = 0;
+        v.trail = 0;
         const unsigned uidx = vlit (clause[0]);
         unit_clauses[uidx] = new_id;
         mark_fixed (clause[0]);
@@ -493,7 +496,8 @@ void Internal::add_new_original_clause (uint64_t id) {
       } else {
         const int lit = clause[0];
         assert (!val (lit) || var (lit).level);
-        if (val (lit) < 0) backtrack (var (lit).level - 1);
+        if (val (lit) < 0)
+          backtrack (var (lit).level - 1);
         assert (val (lit) >= 0);
         handle_external_clause (0);
         multitrail_dirty = 0;

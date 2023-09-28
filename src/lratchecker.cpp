@@ -112,9 +112,9 @@ void LratChecker::collect_garbage_clauses () {
 /*------------------------------------------------------------------------*/
 
 LratChecker::LratChecker (Internal *i)
-    : internal (i), size_vars (0), strict_lrat (false), concluded (false), num_clauses (0),
-      num_finalized (0), num_garbage (0), size_clauses (0), clauses (0), garbage (0),
-      last_hash (0), last_id (0) {
+    : internal (i), size_vars (0), strict_lrat (false), concluded (false),
+      num_clauses (0), num_finalized (0), num_garbage (0), size_clauses (0),
+      clauses (0), garbage (0), last_hash (0), last_id (0) {
 
   // Initialize random number table for hash function.
   //
@@ -368,11 +368,12 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
 
 /*------------------------------------------------------------------------*/
 
-void LratChecker::add_original_clause (uint64_t id, bool, const vector<int> &c, bool restore) {
+void LratChecker::add_original_clause (uint64_t id, bool,
+                                       const vector<int> &c, bool restore) {
   START (checking);
   LOG (c, "LRAT CHECKER addition of original clause[%" PRIu64 "]", id);
   if (restore)
-    restore_clause(id, c);
+    restore_clause (id, c);
   stats.added++;
   stats.original++;
   import_clause (c);
@@ -393,7 +394,8 @@ void LratChecker::add_original_clause (uint64_t id, bool, const vector<int> &c, 
   STOP (checking);
 }
 
-void LratChecker::add_derived_clause (uint64_t id, bool, const vector<int> &c,
+void LratChecker::add_derived_clause (uint64_t id, bool,
+                                      const vector<int> &c,
                                       const vector<uint64_t> &proof_chain) {
   START (checking);
   LOG (c, "LRAT CHECKER addition of derived clause[%" PRIu64 "]", id);
@@ -425,14 +427,18 @@ void LratChecker::add_derived_clause (uint64_t id, bool, const vector<int> &c,
   STOP (checking);
 }
 
-void LratChecker::add_assumption_clause (uint64_t id, const vector<int> & c, const vector<uint64_t> &chain) {
-  for (auto & lit : c) {
-    if (std::find (assumptions.begin (),
-        assumptions.end (), -lit) != assumptions.end ()) continue;
-    if (std::find (constraint.begin (),
-        constraint.end (), -lit) != constraint.end ()) continue;
+void LratChecker::add_assumption_clause (uint64_t id, const vector<int> &c,
+                                         const vector<uint64_t> &chain) {
+  for (auto &lit : c) {
+    if (std::find (assumptions.begin (), assumptions.end (), -lit) !=
+        assumptions.end ())
+      continue;
+    if (std::find (constraint.begin (), constraint.end (), -lit) !=
+        constraint.end ())
+      continue;
     fatal_message_start ();
-    fputs ("clause contains non assumptions or constraint literals\n", stderr);
+    fputs ("clause contains non assumptions or constraint literals\n",
+           stderr);
     fatal_message_end ();
   }
   add_derived_clause (id, true, c, chain);
@@ -440,16 +446,15 @@ void LratChecker::add_assumption_clause (uint64_t id, const vector<int> & c, con
   assumption_clauses.push_back (id);
 }
 
-void LratChecker::add_assumption (int a) {
-  assumptions.push_back (a);
-}
+void LratChecker::add_assumption (int a) { assumptions.push_back (a); }
 
-void LratChecker::add_constraint (const vector<int> & c) {
+void LratChecker::add_constraint (const vector<int> &c) {
   constraint.clear ();
-  for (auto & lit : c) {
+  for (auto &lit : c) {
     assert (lit);
-    if (std::find (constraint.begin (),
-        constraint.end (), lit) != constraint.end ()) continue;
+    if (std::find (constraint.begin (), constraint.end (), lit) !=
+        constraint.end ())
+      continue;
     constraint.push_back (lit);
   }
 }
@@ -461,7 +466,8 @@ void LratChecker::reset_assumptions () {
   // constraint.clear ();
 }
 
-void LratChecker::conclude_proof (ConclusionType conclusion, const vector<uint64_t>& ids) {
+void LratChecker::conclude_proof (ConclusionType conclusion,
+                                  const vector<uint64_t> &ids) {
   if (concluded) {
     fatal_message_start ();
     fputs ("already concluded\n", stderr);
@@ -476,8 +482,7 @@ void LratChecker::conclude_proof (ConclusionType conclusion, const vector<uint64
       fatal_message_end ();
     }
     return;
-  }
-  else if (conclusion == ASSUMPTIONS) {
+  } else if (conclusion == ASSUMPTIONS) {
     if (ids.size () != 1 || assumption_clauses.size () != 1) {
       fatal_message_start ();
       fputs ("expected exactly one assumption clause\n", stderr);
@@ -489,26 +494,26 @@ void LratChecker::conclude_proof (ConclusionType conclusion, const vector<uint64
       fatal_message_end ();
     }
     return;
-  }
-  else {
+  } else {
     assert (conclusion == CONSTRAINT);
     if (constraint.size () != ids.size ()) {
       fatal_message_start ();
       fputs ("not complete conclusion given for constraint\n", stderr);
       fputs ("The constraint contains the literals: ", stderr);
       for (auto c : constraint) {
-	fprintf (stderr, "%d ", c);
+        fprintf (stderr, "%d ", c);
       }
 
       fputs ("\nThe ids are: ", stderr);
       for (auto c : ids) {
-	fprintf (stderr, "%" PRIu64 " ", c);
+        fprintf (stderr, "%" PRIu64 " ", c);
       }
       fatal_message_end ();
     }
-    for (auto & id : ids) {
-      if (std::find (assumption_clauses.begin (),
-        assumption_clauses.end (), id) != assumption_clauses.end ()) continue;
+    for (auto &id : ids) {
+      if (std::find (assumption_clauses.begin (), assumption_clauses.end (),
+                     id) != assumption_clauses.end ())
+        continue;
       fatal_message_start ();
       fputs ("assumption clause for constraint missing\n", stderr);
       fatal_message_end ();
@@ -571,8 +576,7 @@ void LratChecker::delete_clause (uint64_t id, bool, const vector<int> &c) {
 
 /*------------------------------------------------------------------------*/
 
-void LratChecker::weaken_minus (uint64_t id,
-                                          const vector<int> &c) {
+void LratChecker::weaken_minus (uint64_t id, const vector<int> &c) {
   LOG (c, "LRAT CHECKER saving clause[%" PRIu64 "] to restore later", id);
   import_clause (c);
 
@@ -612,43 +616,45 @@ void LratChecker::weaken_minus (uint64_t id,
 
 void LratChecker::restore_clause (uint64_t id, const vector<int> &c) {
   LOG (c, "LRAT CHECKER check of restoration of clause[%" PRIu64 "]", id);
-  if (!strict_lrat && clauses_to_reconstruct.find(id) == end (clauses_to_reconstruct)) {
+  if (!strict_lrat &&
+      clauses_to_reconstruct.find (id) == end (clauses_to_reconstruct)) {
     return;
   }
-  if (clauses_to_reconstruct.find(id) == end (clauses_to_reconstruct)) {
+  if (clauses_to_reconstruct.find (id) == end (clauses_to_reconstruct)) {
     fatal_message_start ();
     fputs ("restoring clauses not deleted previously:\n", stderr);
     for (const auto &lit : c)
-        fprintf (stderr, "%d ", lit);
+      fprintf (stderr, "%d ", lit);
     fputc ('0', stderr);
     fatal_message_end ();
   }
   vector<int> e = c;
-  sort(begin(e), end(e));
-  const vector<int> &d = clauses_to_reconstruct.find(id)->second;
+  sort (begin (e), end (e));
+  const vector<int> &d = clauses_to_reconstruct.find (id)->second;
   bool eq = true;
   if (c.size () != d.size ()) {
     eq = false;
   }
 
-  for (std::vector<int>::size_type i = 0; i < e.size() && eq; ++i) {
+  for (std::vector<int>::size_type i = 0; i < e.size () && eq; ++i) {
     eq = (e[i] == d[i]);
   }
 
   if (!eq) {
     fatal_message_start ();
-    fputs ("restoring clause that is different than the one imported:\n", stderr);
+    fputs ("restoring clause that is different than the one imported:\n",
+           stderr);
     for (const auto &lit : c)
-        fprintf (stderr, "%d ", lit);
+      fprintf (stderr, "%d ", lit);
     fputc ('0', stderr);
     fputs ("vs:\n", stderr);
     for (const auto &lit : d)
-        fprintf (stderr, "%d ", lit);
+      fprintf (stderr, "%d ", lit);
     fputc ('0', stderr);
     fatal_message_end ();
   }
 
-  clauses_to_reconstruct.erase(id);
+  clauses_to_reconstruct.erase (id);
 }
 
 void LratChecker::finalize_clause (uint64_t id, const vector<int> &c) {

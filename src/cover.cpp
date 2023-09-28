@@ -379,7 +379,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       bool already_pushed = false;
       uint64_t last_id = ++clause_id;
       LOG (c, "covered tautological");
-      assert (clause.empty());
+      assert (clause.empty ());
       LOG (coveror.extend, "extension = ");
       for (const auto &other : coveror.extend) {
         if (!prev) {
@@ -399,7 +399,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
             }
           }
           if (proof && already_pushed) {
-	          if (lrat)
+            if (lrat)
               lrat_chain.push_back (c->id);
             LOG ("LEARNING clause with id %" PRId64, last_id);
             proof->add_derived_clause (last_id, false, clause, lrat_chain);
@@ -419,8 +419,8 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
         }
         if (other) {
           external->push_clause_literal_on_extension_stack (other);
-          clause.push_back(other);
-          LOG(clause, "current clause is");
+          clause.push_back (other);
+          LOG (clause, "current clause is");
         }
         prev = other;
       }
@@ -443,10 +443,10 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
         last_id = ++clause_id;
         proof->add_derived_clause (last_id, false, clause, lrat_chain);
         proof->weaken_plus (last_id, clause);
-        lrat_chain.clear();
+        lrat_chain.clear ();
       }
       clause.clear ();
-      
+
       mark_garbage (c);
     }
   }

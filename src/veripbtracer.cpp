@@ -6,9 +6,8 @@ namespace CaDiCaL {
 
 VeripbTracer::VeripbTracer (Internal *i, File *f, bool b, bool a, bool c)
     : internal (i), file (f), binary (b), with_antecedents (a),
-      checked_deletions (c), num_clauses (0), size_clauses (0), 
-      last_hash (0), last_id (0), last_clause (0),
-      added (0), deleted (0) {
+      checked_deletions (c), num_clauses (0), size_clauses (0),
+      last_hash (0), last_id (0), last_clause (0), added (0), deleted (0) {
   (void) internal;
 
   // Initialize random number table for hash function.
@@ -99,7 +98,8 @@ uint64_t VeripbTracer::compute_hash (const uint64_t id) {
 }
 
 bool VeripbTracer::find_and_delete (const uint64_t id) {
-  if (!num_clauses) return false;
+  if (!num_clauses)
+    return false;
   /*
   if (last_clause && last_clause->id == id) {
     const uint64_t h = reduce_hash (last_clause->hash, size_clauses);
@@ -115,9 +115,11 @@ bool VeripbTracer::find_and_delete (const uint64_t id) {
     if (c->hash == hash && c->id == id) {
       break;
     }
-    if (!c->next) return false;
+    if (!c->next)
+      return false;
   }
-  if (!c) return false;
+  if (!c)
+    return false;
   assert (c && res);
   *res = c->next;
   delete c;
@@ -132,7 +134,6 @@ void VeripbTracer::insert () {
   c->next = clauses[h];
   clauses[h] = c;
 }
-
 
 /*------------------------------------------------------------------------*/
 
@@ -173,9 +174,9 @@ inline void VeripbTracer::put_binary_id (uint64_t id) {
 
 /*------------------------------------------------------------------------*/
 
-
-void VeripbTracer::veripb_add_derived_clause (uint64_t id, bool redundant, const vector<int> &clause,
-                                        const vector<uint64_t> &chain) {
+void VeripbTracer::veripb_add_derived_clause (
+    uint64_t id, bool redundant, const vector<int> &clause,
+    const vector<uint64_t> &chain) {
   file->put ("pol ");
   bool first = true;
   for (auto p = chain.rbegin (); p != chain.rend (); p++) {
@@ -209,7 +210,8 @@ void VeripbTracer::veripb_add_derived_clause (uint64_t id, bool redundant, const
   }
 }
 
-void VeripbTracer::veripb_add_derived_clause (uint64_t id, bool redundant, const vector<int> &clause) {
+void VeripbTracer::veripb_add_derived_clause (uint64_t id, bool redundant,
+                                              const vector<int> &clause) {
   file->put ("rup ");
   for (const auto &external_lit : clause) {
     file->put ("1 ");
@@ -235,7 +237,8 @@ void VeripbTracer::veripb_begin_proof (uint64_t reserved_ids) {
 }
 
 void VeripbTracer::veripb_delete_clause (uint64_t id, bool redundant) {
-  if (!redundant && checked_deletions && find_and_delete (id)) return;
+  if (!redundant && checked_deletions && find_and_delete (id))
+    return;
   if (redundant || !checked_deletions)
     file->put ("del id ");
   else {
@@ -254,25 +257,27 @@ void VeripbTracer::veripb_finalize_proof (uint64_t conflict_id) {
 }
 
 void VeripbTracer::veripb_strengthen (uint64_t id) {
-  if (!checked_deletions) return;
+  if (!checked_deletions)
+    return;
   file->put ("core id ");
   file->put (id);
   file->put ("\n");
 }
-
 
 /*------------------------------------------------------------------------*/
 
 void VeripbTracer::begin_proof (uint64_t id) {
   if (file->closed ())
     return;
-  LOG ("VERIPB TRACER tracing start of proof with %" PRId64 "original clauses", id);
+  LOG ("VERIPB TRACER tracing start of proof with %" PRId64
+       "original clauses",
+       id);
   veripb_begin_proof (id);
 }
 
-
-void VeripbTracer::add_derived_clause (uint64_t id, bool redundant, const vector<int> &clause,
-                                 const vector<uint64_t> &chain) {
+void VeripbTracer::add_derived_clause (uint64_t id, bool redundant,
+                                       const vector<int> &clause,
+                                       const vector<uint64_t> &chain) {
   if (file->closed ())
     return;
   LOG ("VERIPB TRACER tracing addition of derived clause[%" PRId64 "]", id);
@@ -283,7 +288,8 @@ void VeripbTracer::add_derived_clause (uint64_t id, bool redundant, const vector
   added++;
 }
 
-void VeripbTracer::delete_clause (uint64_t id, bool redundant, const vector<int> &) {
+void VeripbTracer::delete_clause (uint64_t id, bool redundant,
+                                  const vector<int> &) {
   if (file->closed ())
     return;
   LOG ("VERIPB TRACER tracing deletion of clause[%" PRId64 "]", id);
@@ -291,17 +297,20 @@ void VeripbTracer::delete_clause (uint64_t id, bool redundant, const vector<int>
   deleted++;
 }
 
-
 void VeripbTracer::finalize_proof (uint64_t conflict_id) {
   if (file->closed ())
     return;
-  if (!conflict_id) return;
-  LOG ("VERIPB TRACER tracing finalization of proof with empty clause[%" PRId64 "]", conflict_id);
+  if (!conflict_id)
+    return;
+  LOG ("VERIPB TRACER tracing finalization of proof with empty "
+       "clause[%" PRId64 "]",
+       conflict_id);
   veripb_finalize_proof (conflict_id);
 }
 
 void VeripbTracer::weaken_minus (uint64_t id, const vector<int> &) {
-  if (!checked_deletions) return;
+  if (!checked_deletions)
+    return;
   if (file->closed ())
     return;
   LOG ("VERIPB TRACER tracing weaken minus of clause[%" PRId64 "]", id);

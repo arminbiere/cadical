@@ -846,7 +846,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
       LOG ("subsumed since propagation produced conflict");
 
       subsume = INT_MIN; // will be able to subsume candidate '@6'
-      
+
       // Again try to strengthen instead of subsuming in redundant mode.
       //
       if (redundant_mode) {

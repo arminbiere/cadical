@@ -81,9 +81,7 @@ void External::reset_assumptions () {
   internal->reset_assumptions ();
 }
 
-void External::reset_concluded () {
-  internal->reset_concluded ();
-}
+void External::reset_concluded () { internal->reset_concluded (); }
 
 void External::reset_constraint () {
   constraint.clear ();
@@ -580,9 +578,12 @@ void External::melt (int elit) {
     if (!--ref) {
       if (observed (elit)) {
         ref++;
-        LOG ("external variable %d is observed, can not be completely molten", eidx);
-      } else 
-         LOG ("external variable %d melted once and now completely melted", eidx);
+        LOG ("external variable %d is observed, can not be completely "
+             "molten",
+             eidx);
+      } else
+        LOG ("external variable %d melted once and now completely melted",
+             eidx);
     } else
       LOG ("external variable %d melted once but remains frozen %u times",
            eidx, ref);
@@ -681,7 +682,7 @@ void External::check_failing () {
       checker->add (lit);
   } else if (constraint.size ())
     LOG (constraint, "constraint satisfied and ignored");
-    
+
   // Add original clauses as last step, failing () and failed_constraint ()
   // might add more external clauses (due to lazy explanation)
   for (const auto lit : original)

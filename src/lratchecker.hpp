@@ -119,9 +119,10 @@ public:
   ~LratChecker ();
 
   void connect_internal (Internal *i) override;
-  void begin_proof (uint64_t) override {}  // skip
- 
-  void add_original_clause (uint64_t, bool, const vector<int> &, bool restore) override;
+  void begin_proof (uint64_t) override {} // skip
+
+  void add_original_clause (uint64_t, bool, const vector<int> &,
+                            bool restore) override;
   void restore_clause (uint64_t, const vector<int> &);
 
   // check the proof chain for the new clause and add it to the checker
@@ -136,9 +137,11 @@ public:
   // check if the clause is present and delete it from the checker
   void finalize_clause (uint64_t, const vector<int> &) override;
 
-  // check the proof chain of the assumption clause and delete it immediately
-  // also check that they contain only assumptions and constraints
-  void add_assumption_clause (uint64_t, const vector<int> &, const vector<uint64_t> &) override;
+  // check the proof chain of the assumption clause and delete it
+  // immediately also check that they contain only assumptions and
+  // constraints
+  void add_assumption_clause (uint64_t, const vector<int> &,
+                              const vector<uint64_t> &) override;
 
   // mark lit as assumption
   void add_assumption (int) override;
@@ -150,8 +153,8 @@ public:
 
   // check if all clauses have been deleted
   void finalize_proof (uint64_t) override;
-  
-  void conclude_proof (ConclusionType, const vector<uint64_t>&) override;
+
+  void conclude_proof (ConclusionType, const vector<uint64_t> &) override;
 
   void print_stats () override;
   void dump (); // for debugging purposes only

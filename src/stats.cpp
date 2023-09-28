@@ -473,11 +473,14 @@ void Stats::print (Internal *internal) {
     PRT ("trail reuses:    %15" PRId64 "   %10.2f %%  of incremental calls",
          stats.ilbsuccess, percent (stats.ilbsuccess, stats.ilbtriggers));
     PRT ("  levels:        %15" PRId64 "   %10.2f    per reuse",
-         stats.levelsreused, relative (stats.levelsreused, stats.ilbsuccess));
+         stats.levelsreused,
+         relative (stats.levelsreused, stats.ilbsuccess));
     PRT ("  literals:      %15" PRId64 "   %10.2f    per reuse",
-         stats.literalsreused, relative (stats.literalsreused, stats.ilbsuccess));
+         stats.literalsreused,
+         relative (stats.literalsreused, stats.ilbsuccess));
     PRT ("  assumptions:   %15" PRId64 "   %10.2f    per reuse",
-         stats.assumptionsreused, relative (stats.assumptionsreused, stats.ilbsuccess));
+         stats.assumptionsreused,
+         relative (stats.assumptionsreused, stats.ilbsuccess));
   }
   if (all || vivified) {
     PRT ("vivified:        %15" PRId64 "   %10.2f %%  of all clauses",

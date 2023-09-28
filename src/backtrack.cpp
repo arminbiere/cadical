@@ -88,7 +88,7 @@ void Internal::backtrack (int new_level) {
     multi_backtrack (new_level);
     return;
   }
-  
+
   assert (num_assigned == trail.size ());
 
   const size_t assigned = control[new_level + 1].trail;
@@ -178,7 +178,6 @@ void Internal::multi_backtrack (int new_level) {
   LOG ("backtracking on multitrail to decision level %d with decision %d",
        new_level, control[new_level].decision);
 
-  
   int elevated = 0, unassigned = 0;
 
   for (int i = new_level; i < level; i++) {
@@ -189,7 +188,7 @@ void Internal::multi_backtrack (int new_level) {
     auto &t = trails[i];
     for (auto &lit : t) {
       LOG ("unassigning literal %d", lit);
-      if (!lit) {  // cannot happen
+      if (!lit) { // cannot happen
         assert (false);
         LOG ("empty space on trail level %d", l);
         elevated++;
@@ -213,10 +212,10 @@ void Internal::multi_backtrack (int new_level) {
   LOG ("elevated %d literals %.0f%%", elevated,
        percent (elevated, unassigned + elevated));
   stats.elevated += elevated;
-  
+
   if (external_prop && !external_prop_is_lazy) {
     notify_backtrack (new_level);
-    notified = control[new_level+1].trail;
+    notified = control[new_level + 1].trail;
     assert (notified <= notify_trail.size ());
     LOG ("external propagator is notified about some unassignments (trail: "
          "%zd, notified: %zd).",
@@ -228,7 +227,8 @@ void Internal::multi_backtrack (int new_level) {
       const int lit = notify_trail[i++];
       const char tmp = val (lit);
       assert (tmp >= 0);
-      if (!tmp) continue;
+      if (!tmp)
+        continue;
       notify_trail[j++] = lit;
     }
     notify_trail.resize (j);

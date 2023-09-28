@@ -8,12 +8,12 @@
 
 using namespace CaDiCaL;
 using namespace std;
-#include "../../src/tracer.hpp"
-#include "../../src/lrattracer.hpp"
-#include "../../src/frattracer.hpp"
-#include "../../src/lratchecker.hpp"
 #include "../../src/checker.hpp"
 #include "../../src/file.hpp"
+#include "../../src/frattracer.hpp"
+#include "../../src/lratchecker.hpp"
+#include "../../src/lrattracer.hpp"
+#include "../../src/tracer.hpp"
 
 #define LOG(...) \
   do { \
@@ -24,10 +24,10 @@ using namespace std;
 int main () {
 
   Solver *solver = new Solver;
-  
+
   File *f1 = File::write (0, "/tmp/lrat.proof");
   File *f2 = File::write (0, "/tmp/frat.proof");
-  
+
   InternalTracer *t1 = new LratChecker (0);
   InternalTracer *t2 = new Checker (0);
   FileTracer *ft1 = new LratTracer (0, f1, 0);
@@ -57,22 +57,22 @@ int main () {
   solver->add (1);
   solver->add (-2);
   solver->add (0);
-  
+
   solver->constrain (-1);
   solver->constrain (2);
   solver->constrain (0);
 
   solver->solve ();
-  
+
   solver->failed (1);
   solver->conclude ();
-  
+
   solver->add (-1);
   solver->add (2);
   solver->add (0);
 
   solver->solve ();
-  
+
   solver->conclude ();
 
   // tracers that are not disconnected are deleted when deleting solver
@@ -81,7 +81,6 @@ int main () {
   solver->disconnect_proof_tracer (ft1);
   solver->disconnect_proof_tracer (st1);
 
-  
   // ------------------------------------------------------------------
 
   delete solver;

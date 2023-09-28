@@ -49,7 +49,7 @@ namespace CaDiCaL {
 
 void External::restore_clause (const vector<int>::const_iterator &begin,
                                const vector<int>::const_iterator &end,
-			       const uint64_t id) {
+                               const uint64_t id) {
   LOG (begin, end, "restoring external clause[%ld]", id);
   assert (eclause.empty ());
   const bool irredundant_clause = (id != 0);
@@ -68,8 +68,7 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
     }
     int ilit = internalize (*p);
     if (irredundant_clause)
-      internal->add_original_lit (ilit),
-      internal->stats.restoredlits++;
+      internal->add_original_lit (ilit), internal->stats.restoredlits++;
   }
   if (internal->proof && internal->lrat) {
     for (const auto &elit : eclause) {
@@ -147,7 +146,7 @@ void External::restore_clauses () {
     }
 
     // now copy the id of the clause
-    const uint64_t id = ((uint64_t)(*p) << 32) + (uint64_t) *(p+1);
+    const uint64_t id = ((uint64_t) (*p) << 32) + (uint64_t) * (p + 1);
     LOG ("id is %ld", id);
     *q++ = *p++;
     *q++ = *p++;
@@ -253,7 +252,7 @@ void External::restore_clauses () {
     assert (p != begin_of_extension);
     --p;
     assert (p != begin_of_extension);
-    assert (*p || *(p-1));
+    assert (*p || *(p - 1));
     --p;
     assert (p != begin_of_extension);
     assert (!*p);

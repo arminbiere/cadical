@@ -84,7 +84,8 @@ void Internal::decompose_conflicting_scc_lrat (DFS *dfs, vector<int> &scc) {
   clear_analyzed_literals ();
 }
 
-void Internal::build_lrat_for_clause (const vector<vector<Clause *>> &dfs_chains, bool invert) {
+void Internal::build_lrat_for_clause (
+    const vector<vector<Clause *>> &dfs_chains, bool invert) {
   assert (lrat);
   LOG ("building chain for not subsumed clause");
   assert (lrat_chain.empty ());
@@ -122,12 +123,12 @@ void Internal::build_lrat_for_clause (const vector<vector<Clause *>> &dfs_chains
       mini_chain.push_back (id);
       break;
     }
-    if(invert)
+    if (invert)
       for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++)
-	lrat_chain.push_back (*p);
+        lrat_chain.push_back (*p);
     else
       for (auto p = mini_chain.begin (); p != mini_chain.end (); p++)
-	lrat_chain.push_back (*p);
+        lrat_chain.push_back (*p);
     mini_chain.clear ();
   }
   // clear_analyzed_literals ();
@@ -143,7 +144,6 @@ void Internal::clear_decomposed_literals () {
   }
   decomposed.clear ();
 }
-
 
 // This performs one round of Tarjan's algorithm, e.g., equivalent literal
 // detection and substitution, on the whole formula.  We might want to
@@ -429,7 +429,6 @@ bool Internal::decompose_round () {
 
   bool new_unit = false, new_binary_clause = false;
 
-
   // Finally, mark substituted literals as such and push the equivalences of
   // the substituted literals to their representative on the extension
   // stack to fix an assignment during 'extend'.
@@ -441,7 +440,7 @@ bool Internal::decompose_round () {
   vector<uint64_t> decompose_ids;
   const size_t size = 2 * (1 + (size_t) max_var);
   decompose_ids.resize (size);
-  
+
   for (auto idx : vars) {
     if (unsat)
       break;
@@ -469,7 +468,7 @@ bool Internal::decompose_round () {
       proof->weaken_minus (id1, clause);
     }
     external->push_binary_clause_on_extension_stack (id1, -idx, other);
-    
+
     decompose_ids[vlit (-idx)] = id1;
 
     lrat_chain.clear ();
@@ -539,9 +538,11 @@ bool Internal::decompose_round () {
       if (tmp > 0)
         satisfied = true;
       else if (tmp < 0) {
-        if (!lrat) continue;
+        if (!lrat)
+          continue;
         Flags &f = flags (lit);
-        if (f.seen) continue;
+        if (f.seen)
+          continue;
         f.seen = true;
         analyzed.push_back (lit);
         const unsigned uidx = vlit (-lit);
@@ -549,12 +550,12 @@ bool Internal::decompose_round () {
         assert (id);
         lrat_chain.push_back (id);
         continue;
-      }
-      else {
+      } else {
         const int other = reprs[vlit (lit)];
         tmp = val (other);
         if (tmp < 0) {
-          if (!lrat) continue;
+          if (!lrat)
+            continue;
           Flags &f = flags (other);
           if (!f.seen) {
             f.seen = true;
@@ -564,13 +565,13 @@ bool Internal::decompose_round () {
             assert (id);
             lrat_chain.push_back (id);
           }
-          if (other == lit) continue;
+          if (other == lit)
+            continue;
           uint64_t id = decompose_ids[vlit (-lit)];
           assert (id);
           lrat_chain.push_back (id);
           continue;
-        }
-        else if (tmp > 0)
+        } else if (tmp > 0)
           satisfied = true;
         else {
           tmp = marked (other);
@@ -580,15 +581,18 @@ bool Internal::decompose_round () {
             mark (other);
             clause.push_back (other);
           }
-          if (other == lit) continue;
-          if (!lrat) continue;
+          if (other == lit)
+            continue;
+          if (!lrat)
+            continue;
           uint64_t id = decompose_ids[vlit (-lit)];
           assert (id);
           lrat_chain.push_back (id);
         }
       }
     }
-    if (lrat) lrat_chain.push_back (c->id);
+    if (lrat)
+      lrat_chain.push_back (c->id);
     clear_analyzed_literals ();
     LOG (lrat_chain, "lrat_chain:");
     if (satisfied) {
@@ -627,7 +631,8 @@ bool Internal::decompose_round () {
       if (!c->redundant)
         mark_removed (c);
       if (proof) {
-        proof->add_derived_clause (++clause_id, c->redundant, clause, lrat_chain);
+        proof->add_derived_clause (++clause_id, c->redundant, clause,
+                                   lrat_chain);
         proof->delete_clause (c);
         c->id = clause_id;
       }
@@ -657,23 +662,24 @@ bool Internal::decompose_round () {
     }
     lrat_chain.clear ();
   }
-  
+
   if (proof) {
     for (auto idx : vars) {
       if (!active (idx))
         continue;
       const uint64_t id1 = decompose_ids[vlit (-idx)];
-      if (!id1) continue;
+      if (!id1)
+        continue;
       int other = reprs[vlit (idx)];
       assert (other != idx);
       assert (!flags (other).eliminated ());
       assert (!flags (other).substituted ());
-    
+
       clause.push_back (other);
       clause.push_back (-idx);
       proof->delete_clause (id1, true, clause);
       clause.clear ();
-    
+
       clause.push_back (idx);
       clause.push_back (-other);
       const uint64_t id2 = decompose_ids[vlit (idx)];
@@ -681,7 +687,7 @@ bool Internal::decompose_round () {
       clause.clear ();
     }
   }
-  
+
   if (!unsat && !postponed_garbage.empty ()) {
     LOG ("now marking %zd postponed garbage clauses",
          postponed_garbage.size ());

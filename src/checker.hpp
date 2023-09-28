@@ -149,14 +149,17 @@ public:
 
   void connect_internal (Internal *i) override;
 
-  void add_original_clause (uint64_t, bool, const vector<int> &, bool = false) override;
-  void add_derived_clause (uint64_t, bool,  const vector<int> &, const vector<uint64_t> &) override;
+  void add_original_clause (uint64_t, bool, const vector<int> &,
+                            bool = false) override;
+  void add_derived_clause (uint64_t, bool, const vector<int> &,
+                           const vector<uint64_t> &) override;
   void delete_clause (uint64_t, bool, const vector<int> &) override;
 
-  void finalize_clause (uint64_t, const vector<int> &) override {}  // skip
-  void finalize_proof (uint64_t) override {}  // skip
-  void begin_proof (uint64_t) override {}  // skip
-  void add_assumption_clause (uint64_t, const vector<int> &, const vector<uint64_t> &) override;
+  void finalize_clause (uint64_t, const vector<int> &) override {} // skip
+  void finalize_proof (uint64_t) override {}                       // skip
+  void begin_proof (uint64_t) override {}                          // skip
+  void add_assumption_clause (uint64_t, const vector<int> &,
+                              const vector<uint64_t> &) override;
   void print_stats () override;
   void dump (); // for debugging purposes only
 };

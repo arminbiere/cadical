@@ -5,8 +5,7 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 DratTracer::DratTracer (Internal *i, File *f, bool b)
-    : internal (i), file (f), binary (b),
-      added (0), deleted (0) {
+    : internal (i), file (f), binary (b), added (0), deleted (0) {
   (void) internal;
 }
 
@@ -22,7 +21,6 @@ DratTracer::~DratTracer () {
 }
 
 /*------------------------------------------------------------------------*/
-
 
 inline void DratTracer::put_binary_zero () {
   assert (binary);
@@ -92,9 +90,9 @@ void DratTracer::drat_delete_clause (const vector<int> &clause) {
 
 /*------------------------------------------------------------------------*/
 
-
-void DratTracer::add_derived_clause (uint64_t, bool, const vector<int> &clause,
-                                 const vector<uint64_t> &) {
+void DratTracer::add_derived_clause (uint64_t, bool,
+                                     const vector<int> &clause,
+                                     const vector<uint64_t> &) {
   if (file->closed ())
     return;
   LOG ("DRAT TRACER tracing addition of derived clause");
@@ -109,7 +107,6 @@ void DratTracer::delete_clause (uint64_t, bool, const vector<int> &clause) {
   drat_delete_clause (clause);
   deleted++;
 }
-
 
 /*------------------------------------------------------------------------*/
 

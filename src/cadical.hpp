@@ -300,7 +300,7 @@ public:
   //   ensure (SATISFIED)
   //
   bool flippable (int lit);
-  
+
   // Determine whether the valid non-zero literal is in the core.
   // Returns 'true' if the literal is in the core and 'false' otherwise.
   // Note that the core does not have to be minimal.
@@ -309,7 +309,6 @@ public:
   //   ensure (UNSATISFIED)
   //
   bool failed (int lit);
-
 
   // Add call-back which is checked regularly for termination.  There can
   // only be one terminator connected.  If a second (non-zero) one is added

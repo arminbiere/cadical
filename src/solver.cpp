@@ -972,7 +972,8 @@ void Solver::flush_proof_trace () {
   LOG_API_CALL_BEGIN ("flush_proof_trace");
   REQUIRE_VALID_STATE ();
   REQUIRE (!internal->file_tracers.empty (), "proof is not traced");
-  REQUIRE (!internal->file_tracers.back ()->closed (), "proof trace already closed");
+  REQUIRE (!internal->file_tracers.back ()->closed (),
+           "proof trace already closed");
   internal->flush_trace ();
   LOG_API_CALL_END ("flush_proof_trace");
 }
@@ -981,7 +982,8 @@ void Solver::close_proof_trace () {
   LOG_API_CALL_BEGIN ("close_proof_trace");
   REQUIRE_VALID_STATE ();
   REQUIRE (!internal->file_tracers.empty (), "proof is not traced");
-  REQUIRE (!internal->file_tracers.back ()->closed (), "proof trace already closed");
+  REQUIRE (!internal->file_tracers.back ()->closed (),
+           "proof trace already closed");
   internal->close_trace ();
   LOG_API_CALL_END ("close_proof_trace");
 }
@@ -991,20 +993,19 @@ void Solver::close_proof_trace () {
 void Solver::connect_proof_tracer (Tracer *tracer, bool antecedents) {
   LOG_API_CALL_BEGIN ("connect proof tracer");
   REQUIRE_VALID_STATE ();
-  REQUIRE (
-      state () == CONFIGURING,
-      "can only start proof tracing to right after initialization");
+  REQUIRE (state () == CONFIGURING,
+           "can only start proof tracing to right after initialization");
   REQUIRE (tracer, "can not connect zero tracer");
   internal->connect_proof_tracer (tracer, antecedents);
   LOG_API_CALL_END ("connect proof tracer");
 }
 
-void Solver::connect_proof_tracer (InternalTracer *tracer, bool antecedents) {
+void Solver::connect_proof_tracer (InternalTracer *tracer,
+                                   bool antecedents) {
   LOG_API_CALL_BEGIN ("connect proof tracer");
   REQUIRE_VALID_STATE ();
-  REQUIRE (
-      state () == CONFIGURING,
-      "can only start proof tracing to right after initialization");
+  REQUIRE (state () == CONFIGURING,
+           "can only start proof tracing to right after initialization");
   REQUIRE (tracer, "can not connect zero tracer");
   internal->connect_proof_tracer (tracer, antecedents);
   LOG_API_CALL_END ("connect proof tracer");
@@ -1013,9 +1014,8 @@ void Solver::connect_proof_tracer (InternalTracer *tracer, bool antecedents) {
 void Solver::connect_proof_tracer (StatTracer *tracer, bool antecedents) {
   LOG_API_CALL_BEGIN ("connect proof tracer with stats");
   REQUIRE_VALID_STATE ();
-  REQUIRE (
-      state () == CONFIGURING,
-      "can only start proof tracing to right after initialization");
+  REQUIRE (state () == CONFIGURING,
+           "can only start proof tracing to right after initialization");
   REQUIRE (tracer, "can not connect zero tracer");
   internal->connect_proof_tracer (tracer, antecedents);
   LOG_API_CALL_END ("connect proof tracer with stats");
@@ -1024,9 +1024,8 @@ void Solver::connect_proof_tracer (StatTracer *tracer, bool antecedents) {
 void Solver::connect_proof_tracer (FileTracer *tracer, bool antecedents) {
   LOG_API_CALL_BEGIN ("connect proof tracer with file");
   REQUIRE_VALID_STATE ();
-  REQUIRE (
-      state () == CONFIGURING,
-      "can only start proof tracing right after initialization");
+  REQUIRE (state () == CONFIGURING,
+           "can only start proof tracing right after initialization");
   REQUIRE (tracer, "can not connect zero tracer");
   internal->connect_proof_tracer (tracer, antecedents);
   LOG_API_CALL_END ("connect proof tracer with file");
@@ -1063,7 +1062,8 @@ bool Solver::disconnect_proof_tracer (FileTracer *tracer) {
 void Solver::conclude () {
   LOG_API_CALL_BEGIN ("conclude");
   REQUIRE_VALID_STATE ();
-  REQUIRE (state () == UNSATISFIED, "can only conclude in unsatisfied state");
+  REQUIRE (state () == UNSATISFIED,
+           "can only conclude in unsatisfied state");
   internal->conclude ();
   assert (state () == UNSATISFIED);
   LOG_API_CALL_END ("conclude");

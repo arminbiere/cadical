@@ -269,9 +269,11 @@ public:
       lemma_count++;
 
       if (verbosity > 2) {
-       std::cout << "push lemma to position " << all_external_clauses.size() << ": ";
-       for (auto const& l: clause) std::cout << l << " ";
-       std::cout << std::endl;
+        std::cout << "push lemma to position "
+                  << all_external_clauses.size () << ": ";
+        for (auto const &l : clause)
+          std::cout << l << " ";
+        std::cout << std::endl;
       }
 
       all_external_clauses.push_back (clause);
@@ -335,7 +337,9 @@ public:
     // 'all_external_clauses' contains also the propagating (but not
     // necessarily learnt) clauses. The final solution must satisfy only the
     // initial input set of clauses.
-    if (verbosity > 2) std::cout << "cb_check_found_model (" << model.size() << ") returns: ";
+    if (verbosity > 2)
+      std::cout << "cb_check_found_model (" << model.size ()
+                << ") returns: ";
     assert (model.size () == observed_variables.size ());
     assert (nof_added_clauses <= nof_clauses);
 
@@ -369,71 +373,86 @@ public:
         must_add_idx = i;
         if (verbosity > 2) {
           std::cout << "false (external clause  " << i << "/";
-          std::cout << all_external_clauses.size() << " is not satisfied: ";
-          for(auto const& l : all_external_clauses[i]) std::cout << l  << " ";
+          std::cout << all_external_clauses.size ()
+                    << " is not satisfied: ";
+          for (auto const &l : all_external_clauses[i])
+            std::cout << l << " ";
           std::cout << ")" << std::endl;
         }
         return false;
       }
     }
-    if (verbosity > 2) std::cout << "true" << std::endl;
+    if (verbosity > 2)
+      std::cout << "true" << std::endl;
     return true;
   }
 
   bool cb_has_external_clause () {
-    if (verbosity > 2) std::cout << "cb_has_external_clause returns: ";
+    if (verbosity > 2)
+      std::cout << "cb_has_external_clause returns: ";
     add_new_observed_var ();
     if (must_add_clause) {
       assert (nof_added_clauses < nof_clauses);
-      if (!lemmas_per_queries[query_loc]) // TODO: bug with ext_prop or reimply?
+      if (!lemmas_per_queries[query_loc]) // TODO: bug with ext_prop or
+                                          // reimply?
         query_loc++;
       assert (query_loc < lemmas_per_queries.size ());
       assert (lemmas_per_queries[query_loc] > 0);
       lemmas_per_queries[query_loc]--;
       must_add_clause = false;
-      if (verbosity > 2) std::cout << "true (must add clause case)." << std::endl;
+      if (verbosity > 2)
+        std::cout << "true (must add clause case)." << std::endl;
       return true;
     }
     if (query_loc >= lemmas_per_queries.size ()) {
-      if (verbosity > 2) std::cout << "false (all lemmas are added already)." << std::endl;
+      if (verbosity > 2)
+        std::cout << "false (all lemmas are added already)." << std::endl;
       return false;
     }
     if (lemmas_per_queries[query_loc] > 0) {
       add_new_observed_var ();
       lemmas_per_queries[query_loc]--;
-      if (verbosity > 2) std::cout << "true (there is a lemma for this query)." << std::endl;
+      if (verbosity > 2)
+        std::cout << "true (there is a lemma for this query)." << std::endl;
       return true;
     } else {
-      if (query_loc < lemmas_per_queries.size ()-1) query_loc++;
-      if (verbosity > 2) std::cout << "false (all lemmas per this query are added already)." << std::endl;
+      if (query_loc < lemmas_per_queries.size () - 1)
+        query_loc++;
+      if (verbosity > 2)
+        std::cout << "false (all lemmas per this query are added already)."
+                  << std::endl;
       return false;
     }
   }
 
   int cb_add_external_clause_lit () {
-    
+
     assert (lemma_loc < all_external_clauses.size ());
     assert (lemma_lit_loc < all_external_clauses[lemma_loc].size ());
     if (verbosity > 2 && !lemma_lit_loc) {
       std::cout << "add external clause " << lemma_loc;
-      std::cout << "/" << all_external_clauses.size() << ": ";
+      std::cout << "/" << all_external_clauses.size () << ": ";
     }
     int lit = all_external_clauses[lemma_loc][lemma_lit_loc++];
-    if (verbosity > 2) std::cout << lit << " ";
+    if (verbosity > 2)
+      std::cout << lit << " ";
     if (!lit) {
       lemma_loc++;
       lemma_lit_loc = 0;
       nof_added_clauses++;
-      if (verbosity > 2) std::cout <<  std::endl;
+      if (verbosity > 2)
+        std::cout << std::endl;
     }
 
     return lit;
   }
 
   int cb_decide () {
-    if (verbosity > 2) std::cout << "cb_decide returns ";
+    if (verbosity > 2)
+      std::cout << "cb_decide returns ";
     if (observed_variables.empty () || observed_variables.size () <= 4) {
-      if (verbosity > 2) std::cout << "0" << std::endl;
+      if (verbosity > 2)
+        std::cout << "0" << std::endl;
       return 0;
     }
 
@@ -441,7 +460,8 @@ public:
         new_observed_variables.size ()) {
       int new_var = add_new_observed_var ();
       if (new_var) {
-        if (verbosity > 2) std::cout << -1 * new_var << std::endl;
+        if (verbosity > 2)
+          std::cout << -1 * new_var << std::endl;
         return -1 * new_var;
       }
     }
@@ -451,19 +471,23 @@ public:
       size_t n = decision_loc / observed_variables.size ();
       if (n < observed_variables.size ()) {
         int lit = *std::next (observed_variables.begin (), n);
-        if (verbosity > 2) std::cout << -1 * lit << std::endl;
+        if (verbosity > 2)
+          std::cout << -1 * lit << std::endl;
         return -1 * lit;
       } else {
-        if (verbosity > 2) std::cout << "0" << std::endl;
+        if (verbosity > 2)
+          std::cout << "0" << std::endl;
         return 0;
       }
     }
-    if (verbosity > 2) std::cout << "0" << std::endl;
+    if (verbosity > 2)
+      std::cout << "0" << std::endl;
     return 0;
   }
 
   int cb_propagate () {
-    if (verbosity > 2) std::cout << "cb_propagate " << std::endl;
+    if (verbosity > 2)
+      std::cout << "cb_propagate " << std::endl;
     if (observed_trail.size () < 2)
       return 0;
     std::set<int> satisfied_literals;
@@ -550,7 +574,9 @@ public:
   }
 
   void notify_assignment (int lit, bool is_fixed) {
-    if (verbosity > 2) std::cout << "notify assignment: " << lit << " (" << is_fixed << ")" << std::endl;
+    if (verbosity > 2)
+      std::cout << "notify assignment: " << lit << " (" << is_fixed << ")"
+                << std::endl;
     if (is_fixed) {
       observed_trail.front ().push_back (lit);
     } else {
@@ -559,12 +585,15 @@ public:
   }
 
   void notify_new_decision_level () {
-    if (verbosity > 2) std::cout << "notify new decision level " << std::endl;
+    if (verbosity > 2)
+      std::cout << "notify new decision level " << std::endl;
     observed_trail.push_back (std::vector<int> ());
   }
 
   void notify_backtrack (size_t new_level) {
-    if (verbosity > 2) std::cout << "notify backtrack: " << observed_trail.size ()-1 << "->" << new_level << std::endl;
+    if (verbosity > 2)
+      std::cout << "notify backtrack: " << observed_trail.size () - 1
+                << "->" << new_level << std::endl;
     assert (observed_trail.size () == 1 ||
             observed_trail.size () >= new_level + 1);
     while (observed_trail.size () > new_level + 1) {
@@ -855,7 +884,7 @@ struct Call {
 
     // CONTINUE = (1 << 31),
     CONCLUDE = (1u << 31),
-    DISCONNECT = ((uint64_t)1 << 32),
+    DISCONNECT = ((uint64_t) 1 << 32),
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED,
@@ -3137,8 +3166,8 @@ static bool is_valid_char (int ch) {
 }
 
 void Reader::parse () {
-  int ch, lit = 0, val = 0, adding = 0, constraining = 0,
-          lemma_adding = 0, solved = 0;
+  int ch, lit = 0, val = 0, adding = 0, constraining = 0, lemma_adding = 0,
+          solved = 0;
   uint64_t state = 0;
   const bool enforce = !mobical.donot.enforce;
   Call *before_trigger = 0;
