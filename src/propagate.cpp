@@ -924,7 +924,7 @@ bool Internal::propagate_multitrail () {
     size_t current = before;
     while (!conflict && current != t->size ()) {
       assert (opts.reimply || t == &trail);
-      LOG ("propagating level %d from %zd to %zd", proplevel, before,
+      LOG ("propagating level %d from %" PRId64 " to %zu", proplevel, before,
            t->size ());
 
       assert (current < t->size ());
