@@ -17,6 +17,15 @@ void Internal::add_observed_var (int ilit) {
     LOG ("variable %d is observed %u times", idx, ref);
   } else
     LOG ("variable %d remains observed forever", idx);
+    
+  if (val (ilit) && level && !fixed (ilit)) {
+    // The variable is already assigned, but we can not send a notification
+    // about it because it happened on an earlier decision level. 
+    // To not break the stack-like view of the trail, we simply backtrack to
+    // undo this unnotifiable assignment.
+    const int assignment_level = var (ilit).level;
+    backtrack (assignment_level - 1);
+  }
 }
 
 /*----------------------------------------------------------------------------*/
