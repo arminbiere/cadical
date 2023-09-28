@@ -8,8 +8,8 @@ void External::push_zero_on_extension_stack () {
 }
 
 void External::push_id_on_extension_stack (uint64_t id) {
-  const uint higher_bits = static_cast<int> (id << 32);
-  const uint lower_bits = (id & (((uint64_t) 1 << 32) - 1));
+  const uint32_t higher_bits = static_cast<int> (id << 32);
+  const uint32_t lower_bits = (id & (((uint65_t) 1 << 32) - 1));
   extension.push_back (higher_bits);
   extension.push_back (lower_bits);
   LOG ("pushing id %ld = %d + %d", id, higher_bits, lower_bits);
