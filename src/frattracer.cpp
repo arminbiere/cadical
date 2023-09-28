@@ -6,7 +6,11 @@ namespace CaDiCaL {
 
 FratTracer::FratTracer (Internal *i, File *f, bool b, bool a)
     : internal (i), file (f), binary (b), with_antecedents (a), added (0),
-      deleted (0), finalized (0), original (0) {
+      deleted (0)
+#ifndef QUIET
+      , finalized (0), original (0)
+#endif
+      {
   (void) internal;
 }
 

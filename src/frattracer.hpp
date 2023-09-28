@@ -10,7 +10,10 @@ class FratTracer : public FileTracer {
   bool binary;
   bool with_antecedents;
 
-  int64_t added, deleted, finalized, original;
+  int64_t added, deleted;
+#ifndef QUIET
+  int64_t finalized, original;
+#endif
 
   vector<uint64_t> delete_ids;
 
