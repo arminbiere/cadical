@@ -31,9 +31,7 @@ struct Internal;
 
 class File {
 
-#ifndef QUIET
   Internal *internal;
-#endif
 #if !defined(QUIET) || !defined(NDEBUG)
   bool writing;
 #endif

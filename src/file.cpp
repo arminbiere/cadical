@@ -25,15 +25,13 @@ namespace CaDiCaL {
 
 File::File (Internal *i, bool w, int c, int p, FILE *f, const char *n)
     :
-#ifndef QUIET
       internal (i),
-#endif
 #if !defined(QUIET) || !defined(NDEBUG)
       writing (w),
 #endif
       close_file (c), child_pid (p), file (f), _name (n), _lineno (1),
       _bytes (0) {
-  (void) i, (void) w;
+  (void) w;
   assert (f), assert (n);
 }
 
@@ -283,6 +281,9 @@ FILE *File::write_pipe (Internal *internal, const char *command,
   if (absolute_command_path)
     delete[] absolute_command_path;
   delete_str_vector (args);
+#ifdef QUIET
+  (void) internal;
+#endif
   return res;
 }
 
