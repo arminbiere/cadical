@@ -12,7 +12,7 @@ void External::push_id_on_extension_stack (uint64_t id) {
   const uint32_t lower_bits = (id & (((uint64_t) 1 << 32) - 1));
   extension.push_back (higher_bits);
   extension.push_back (lower_bits);
-  LOG ("pushing id %ld = %d + %d", id, higher_bits, lower_bits);
+  LOG ("pushing id %" PRIu64 " = %d + %d", id, higher_bits, lower_bits);
 }
 
 void External::push_clause_literal_on_extension_stack (int ilit) {
@@ -151,7 +151,7 @@ void External::extend () {
       assert (i != begin);
     }
     assert (i != begin);
-    LOG ("id=%ld", ((uint64_t) *i << 32) + *(i - 1));
+    LOG ("id=%" PRIu64, ((uint64_t) *i << 32) + *(i - 1));
     assert (*i || *(i - 1));
     --i;
     assert (i != begin);
