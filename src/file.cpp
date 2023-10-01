@@ -389,7 +389,7 @@ void File::close () {
   // TODO what about error checking for 'fclose', 'pclose' or 'waitpid'?
 
 #ifndef QUIET
-  if (internal->opts.verbose > 1) {
+  if (internal->opts.verbose >= 0) {
     if (writing) {
       uint64_t written_bytes = bytes ();
       double written_mb = written_bytes / (double) (1 << 20);

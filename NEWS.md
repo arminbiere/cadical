@@ -1,3 +1,8 @@
+Version 1.7.5
+-------------
+
+- Decreased verbosity level for printing proof size.
+
 Version 1.7.4
 -------------
 
