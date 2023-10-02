@@ -740,8 +740,8 @@ public:
 
   // Close proof trace early.  Similar to 'flush' we allow the user to
   // control with 'print' in a more fine-grained way whether statistics
-  // about the size of the written proof file and if compressed on-the-fly the
-  // number of actual bytes written (including deflation percentage) are
+  // about the size of the written proof file and if compressed on-the-fly
+  // the number of actual bytes written (including deflation percentage) are
   // printed printed.  Before actually closing (or detaching in case of
   // writing to '<stdout>') we check whether 'flush_proof_trace'
   // was called since the last time a proof step (addition or
