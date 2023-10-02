@@ -6,8 +6,8 @@ namespace CaDiCaL {
 
 Tracer::Tracer (Internal *i, File *f, bool b, bool lrat, bool frat,
                 bool veripb)
-    : internal (i), file (f), binary (b), lrat (lrat), frat (frat),
-      veripb (veripb), added (0), deleted (0), latest_id (0) {
+    : internal (i), file (f), binary (b), lrat (lrat), _flushed (false),
+      frat (frat), veripb (veripb), added (0), deleted (0), latest_id (0) {
   (void) internal;
   LOG ("TRACER new");
 }
@@ -343,6 +343,7 @@ void Tracer::add_derived_clause (uint64_t id, const vector<int> &clause) {
     drat_add_clause (clause);
   }
   added++;
+  _flushed = false;
 }
 
 void Tracer::add_derived_clause (uint64_t id, const vector<int> &clause,
@@ -358,6 +359,7 @@ void Tracer::add_derived_clause (uint64_t id, const vector<int> &clause,
   else
     drat_add_clause (clause);
   added++;
+  _flushed = false;
 }
 
 void Tracer::delete_clause (uint64_t id, const vector<int> &clause) {
@@ -372,6 +374,7 @@ void Tracer::delete_clause (uint64_t id, const vector<int> &clause) {
   else
     drat_delete_clause (clause);
   deleted++;
+  _flushed = false;
 }
 
 void Tracer::finalize_clause (uint64_t id, const vector<int> &clause) {
@@ -393,16 +396,25 @@ void Tracer::set_first_id (uint64_t id) {
 
 bool Tracer::closed () { return file->closed (); }
 
-void Tracer::close () {
+void Tracer::close (bool print) {
   assert (!closed ());
-  file->close ();
+  if (!flushed ())
+    flush (print);
+  file->close (print);
 }
 
-void Tracer::flush () {
+void Tracer::flush (bool print) {
+  if (flushed ())
+    return;
   assert (!closed ());
   file->flush ();
+#ifndef QUIET
+  if (!internal->opts.quiet)
+#endif
+    if (print || internal->opts.verbose > 0)
   MSG ("traced %" PRId64 " added and %" PRId64 " deleted clauses", added,
        deleted);
+  _flushed = true;
 }
 
 } // namespace CaDiCaL

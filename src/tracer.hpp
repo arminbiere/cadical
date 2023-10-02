@@ -11,6 +11,7 @@ class Tracer {
   File *file;
   bool binary;
   bool lrat;
+  bool _flushed;
   bool frat;
   bool veripb;
 
@@ -61,9 +62,11 @@ public:
   void set_first_id (uint64_t);
   void veripb_finalize_proof (uint64_t);
 
+  bool flushed () { return _flushed; }
   bool closed ();
-  void close ();
-  void flush ();
+
+  void close (bool print);
+  void flush (bool print);
 };
 
 } // namespace CaDiCaL

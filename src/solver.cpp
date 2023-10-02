@@ -546,6 +546,51 @@ void Solver::add (int lit) {
   LOG_API_CALL_END ("add", lit);
 }
 
+void Solver::clause (int a) {
+  REQUIRE_VALID_LIT (a);
+  add (a), add (0);
+}
+
+void Solver::clause (int a, int b) {
+  REQUIRE_VALID_LIT (a);
+  REQUIRE_VALID_LIT (b);
+  add (a), add (b), add (0);
+}
+
+void Solver::clause (int a, int b, int c) {
+  REQUIRE_VALID_LIT (a);
+  REQUIRE_VALID_LIT (b);
+  REQUIRE_VALID_LIT (c);
+  add (a), add (b), add (c), add (0);
+}
+
+void Solver::clause (int a, int b, int c, int d) {
+  REQUIRE_VALID_LIT (a);
+  REQUIRE_VALID_LIT (b);
+  REQUIRE_VALID_LIT (c);
+  add (a), add (b), add (c), add (d), add (0);
+}
+
+void Solver::clause (const int *lits, size_t size) {
+  REQUIRE (!size || lits,
+           "first argument 'lits' zero while second argument 'size' not");
+  const int *end = lits + size;
+  for (const int *p = lits; p != end; p++) {
+    const int lit = *p;
+    REQUIRE_VALID_LIT (lit);
+    add (lit);
+  }
+  add (0);
+}
+
+void Solver::clause (const std::vector<int> &lits) {
+  for (auto lit : lits) {
+    REQUIRE_VALID_LIT (lit);
+    add (lit);
+  }
+  add (0);
+}
+
 bool Solver::inconsistent () { return internal->unsat; }
 
 void Solver::constrain (int lit) {
@@ -977,21 +1022,21 @@ bool Solver::trace_proof (const char *path) {
   return res;
 }
 
-void Solver::flush_proof_trace () {
+void Solver::flush_proof_trace (bool print) {
   LOG_API_CALL_BEGIN ("flush_proof_trace");
   REQUIRE_VALID_STATE ();
   REQUIRE (internal->tracer, "proof is not traced");
   REQUIRE (!internal->tracer->closed (), "proof trace already closed");
-  internal->flush_trace ();
+  internal->flush_trace (print);
   LOG_API_CALL_END ("flush_proof_trace");
 }
 
-void Solver::close_proof_trace () {
+void Solver::close_proof_trace (bool print_statistics_unless_quiet) {
   LOG_API_CALL_BEGIN ("close_proof_trace");
   REQUIRE_VALID_STATE ();
   REQUIRE (internal->tracer, "proof is not traced");
   REQUIRE (!internal->tracer->closed (), "proof trace already closed");
-  internal->close_trace ();
+  internal->close_trace (print_statistics_unless_quiet);
   LOG_API_CALL_END ("close_proof_trace");
 }
 

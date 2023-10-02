@@ -54,16 +54,16 @@ void Internal::check () {
 
 // We want to close a proof trace and stop checking as soon we are done.
 
-void Internal::close_trace () {
+void Internal::close_trace (bool print) {
   assert (tracer);
-  tracer->close ();
+  tracer->close (print);
 }
 
 // We can flush a proof trace file before actually closing it.
 
-void Internal::flush_trace () {
+void Internal::flush_trace (bool print) {
   assert (tracer);
-  tracer->flush ();
+  tracer->flush (print);
 }
 
 /*------------------------------------------------------------------------*/

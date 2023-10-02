@@ -840,8 +840,7 @@ int App::main (int argc, char **argv) {
 
   if (proof_specified) {
     solver->section ("closing proof");
-    solver->flush_proof_trace ();
-    solver->close_proof_trace ();
+    solver->close_proof_trace (true);
   }
 
   if (output_path) {

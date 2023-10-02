@@ -1,3 +1,16 @@
+Version 1.8.0
+-------------
+
+- Explicit `Solver::clause` functions to simplify clause addition.
+
+- More fine-grained handling of printing proof size information by
+  adding `bool print = false` flags to the `flush_proof_trace` and
+  the `close_proof_trace` API calls.  The former prints the number
+  of addition and deletion steps, while the latter prints the size
+  of the proof size (and the actual number of bytes if compressed).
+  The main effect is that by default printing of proof size disabled
+  for API usage but enabled for the stand-alone solver.
+
 Version 1.7.5
 -------------
 

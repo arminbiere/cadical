@@ -364,22 +364,32 @@ File *File::write (Internal *internal, const char *path) {
   return new File (internal, true, close_output, child_pid, file, path);
 }
 
-void File::close () {
+void File::close (bool print) {
   assert (file);
+#ifndef QUIET
+  if (internal->opts.quiet)
+    print = false;
+  else if (internal->opts.verbose > 0)
+    print = true;
+#endif
   if (close_file == 0) {
-    MSG ("disconnecting from '%s'", name ());
+    if (print)
+      MSG ("disconnecting from '%s'", name ());
   }
   if (close_file == 1) {
-    MSG ("closing file '%s'", name ());
+    if (print)
+      MSG ("closing file '%s'", name ());
     fclose (file);
   }
   if (close_file == 2) {
-    MSG ("closing input pipe to read '%s'", name ());
+    if (print)
+      MSG ("closing input pipe to read '%s'", name ());
     pclose (file);
   }
 #ifndef _WIN32
   if (close_file == 3) {
-    MSG ("closing output pipe to write '%s'", name ());
+    if (print)
+      MSG ("closing output pipe to write '%s'", name ());
     fclose (file);
     waitpid (child_pid, 0, 0);
   }
@@ -389,7 +399,7 @@ void File::close () {
   // TODO what about error checking for 'fclose', 'pclose' or 'waitpid'?
 
 #ifndef QUIET
-  if (internal->opts.verbose >= 0) {
+  if (print) {
     if (writing) {
       uint64_t written_bytes = bytes ();
       double written_mb = written_bytes / (double) (1 << 20);

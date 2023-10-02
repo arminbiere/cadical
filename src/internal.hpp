@@ -1265,11 +1265,11 @@ struct Internal {
   // Enable and disable proof logging and checking.
   //
   void new_proof_on_demand ();
-  void build_full_lrat (); // enable full lrat
-  void close_trace ();     // Stop proof tracing.
-  void flush_trace ();     // Flush proof trace file.
-  void trace (File *);     // Start write proof file.
-  void check ();           // Enable online proof checking.
+  void build_full_lrat ();       // enable full lrat
+  void close_trace (bool print); // Stop proof tracing.
+  void flush_trace (bool print); // Flush proof trace file.
+  void trace (File *);           // Start write proof file.
+  void check ();                 // Enable online proof checking.
 
   // Dump to '<stdout>' as DIMACS for debugging.
   //

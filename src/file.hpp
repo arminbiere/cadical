@@ -196,7 +196,8 @@ public:
   uint64_t bytes () const { return _bytes; }
 
   bool closed () { return !file; }
-  void close ();
+
+  void close (bool print = false);
   void flush ();
 };
 
