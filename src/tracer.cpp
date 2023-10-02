@@ -410,10 +410,10 @@ void Tracer::flush (bool print) {
   file->flush ();
 #ifndef QUIET
   if (!internal->opts.quiet)
-#endif
     if (print || internal->opts.verbose > 0)
       MSG ("traced %" PRId64 " added and %" PRId64 " deleted clauses",
            added, deleted);
+#endif
   _flushed = true;
 }
 

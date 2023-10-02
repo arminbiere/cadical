@@ -256,6 +256,9 @@ FILE *File::write_pipe (Internal *internal, const char *command,
                         const char *path, int &child_pid) {
   assert (command[0] && command[0] != ' ');
   MSG ("writing through command '%s' to '%s'", command, path);
+#ifdef QUIET
+  (void) internal;
+#endif
   std::vector<char *> args;
   split_str (command, args);
   assert (!args.empty ());
