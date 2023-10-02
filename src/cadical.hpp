@@ -742,11 +742,11 @@ public:
   // control with 'print' in a more fine-grained way whether statistics
   // about the size of the written proof file and if compressed on-the-fly
   // the number of actual bytes written (including deflation percentage) are
-  // printed printed.  Before actually closing (or detaching in case of
-  // writing to '<stdout>') we check whether 'flush_proof_trace'
-  // was called since the last time a proof step (addition or
-  // deletion) was traced.  If this is not the case we would call
-  // 'flush_proof_trace' with the same 'print' argument.
+  // printed.  Before actually closing (or detaching in case of writing to
+  // '<stdout>') we check whether 'flush_proof_trace' was called since the
+  // last time a proof step (addition or deletion) was traced.  If this is
+  // not the case we would call 'flush_proof_trace' with the same 'print'
+  // argument.
   //
   //   require (VALID)
   //   ensure (VALID)
