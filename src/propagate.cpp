@@ -256,6 +256,15 @@ void Internal::search_assume_decision (int lit) {
   search_assign (lit, decision_reason);
 }
 
+void Internal::search_assume_decision_no_notification (int lit) {
+  require_mode (SEARCH);
+  assert (opts.reimply || propagated == trail.size ());
+  assert (!opts.reimply || multitrail_dirty == level);
+  new_trail_level (lit);
+  LOG ("search decide %d", lit);
+  search_assign (lit, decision_reason);
+}
+  
 void Internal::search_assign_driving (int lit, Clause *c) {
   require_mode (SEARCH);
   search_assign (lit, c);

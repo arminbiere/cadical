@@ -413,11 +413,13 @@ int Internal::walk_round (int64_t limit, bool prev) {
     learn_empty_clause ();
     return 20;
   }
+  warmup ();
 
   if (opts.walkwarmup)
     warmup ();
 
   stats.walk.count++;
+
 
   clear_watches ();
 
@@ -486,6 +488,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
       tmp = sign (lit);
       const int idx = abs (lit);
       LOG ("initial assign %d to assumption phase", tmp < 0 ? -idx : idx);
+
       vals[idx] = tmp;
       vals[-idx] = -tmp;
       assert (level == 1);
@@ -498,7 +501,6 @@ int Internal::walk_round (int64_t limit, bool prev) {
   level = 2; // All other non assumed variables assigned at level 2.
 
   if (!failed) {
-
     for (auto idx : vars) {
       if (!active (idx)) {
         LOG ("skipping inactive variable %d", idx);

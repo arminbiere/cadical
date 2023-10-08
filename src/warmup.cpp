@@ -2,6 +2,7 @@
 
 namespace CaDiCaL {
 
+<<<<<<< Updated upstream
 // specific warmup version without 
 inline void Internal::warmup_assign (int lit, Clause *reason) {
 
@@ -32,10 +33,32 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
   if (!lit_level && !from_external)
     learn_unit_clause (lit); // increases 'stats.fixed'
   const signed char tmp = sign (lit);
+=======
+// For warmup we have a separate propagation routine. We overwrite the target phase by using a
+// failing BCP and ignoring all conflicts. Remark that we do not notify the external for
+// assignements.
+
+inline void Internal::warmup_assign (int lit, Clause *reason) {
+  require_mode (WALK);
+  const int idx = vidx (lit);
+  assert (!vals[idx]);
+  assert (!flags (idx).eliminated () || !reason);
+  Var &v = var (idx);
+  v.level = level;               // required to reuse decisions
+  v.trail = (int) trail.size (); // used in 'warmup_better_watch'
+  assert ((int) num_assigned < max_var);
+  num_assigned++;
+  v.reason = level ? reason : 0; // for conflict analysis
+  if (!level)
+    learn_unit_clause (lit);
+  const signed char tmp = sign (lit);
+  phases.target[idx] = tmp;
+>>>>>>> Stashed changes
   vals[idx] = tmp;
   vals[-idx] = -tmp;
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
+<<<<<<< Updated upstream
 
   if (!opts.reimply || level == 0) {
     trail.push_back (lit);
@@ -130,10 +153,58 @@ void Internal::propagate_beyond_conflicts () {
         // the solver.  Note, that this check is positive very rarely and
         // thus branch prediction should be almost perfect here.
 
+=======
+  trail.push_back (lit);
+  LOG (reason, "warmup assign %d", lit);
+}
+
+
+// Dedicated routine similar to 'propagate' in 'propagate.cpp' and
+// 'probe_propagate' with 'probe_propagate2' in 'probe.cpp'.  Please refer
+// to that code for more explanation on how propagation is implemented.
+// 
+
+void Internal::warmup_propagate () {
+  require_mode (WALK);
+  assert (!unsat);
+  START (propagate);
+  int64_t before = propagated2 = propagated;
+  for (;;) {
+    if (propagated2 != trail.size ()) {
+      const int lit = -trail[propagated2++];
+      LOG ("warmup propagating %d over binary clauses", -lit);
+      Watches &ws = watches (lit);
+      for (const auto &w : ws) {
+        if (!w.binary ())
+          continue;
+        const signed char b = val (w.blit);
+        if (b > 0)
+          continue;
+        if (b < 0)
+          ; // but continue
+        else {
+          warmup_assign (w.blit, w.clause);
+        }
+      }
+    } else if (propagated != trail.size ()) {
+      const int lit = -trail[propagated++];
+      LOG ("warmup propagating %d over large clauses", -lit);
+      Watches &ws = watches (lit);
+      const const_watch_iterator eow = ws.end ();
+      const_watch_iterator i = ws.begin ();
+      watch_iterator j = ws.begin ();
+      while (i != eow) {
+        const Watch w = *j++ = *i++;
+        if (w.binary ())
+          continue;
+        if (val (w.blit) > 0)
+          continue;
+>>>>>>> Stashed changes
         if (w.clause->garbage) {
           j--;
           continue;
         }
+<<<<<<< Updated upstream
 
         literal_iterator lits = w.clause->begin ();
 
@@ -176,11 +247,31 @@ void Internal::propagate_beyond_conflicts () {
 
           if (v < 0) { // need second search starting at the head?
 
+=======
+        if (w.clause == ignore)
+          continue;
+        literal_iterator lits = w.clause->begin ();
+        const int other = lits[0] ^ lits[1] ^ lit;
+        const signed char u = val (other);
+        if (u > 0)
+          j[-1].blit = other;
+        else {
+          const int size = w.clause->size;
+          const const_literal_iterator end = lits + size;
+          const literal_iterator middle = lits + w.clause->pos;
+          literal_iterator k = middle;
+          signed char v = -1;
+          int r = 0;
+          while (k != end && (v = val (r = *k)) < 0)
+            k++;
+          if (v < 0) {
+>>>>>>> Stashed changes
             k = lits + 2;
             assert (w.clause->pos <= size);
             while (k != middle && (v = val (r = *k)) < 0)
               k++;
           }
+<<<<<<< Updated upstream
 
           w.clause->pos = k - lits; // always save position
 
@@ -287,4 +378,76 @@ void Internal::warmup () {
   backtrack ();
 }
 
+=======
+          w.clause->pos = k - lits;
+          assert (lits + 2 <= k), assert (k <= w.clause->end ());
+          if (v > 0)
+            j[-1].blit = r;
+          else if (!v) {
+            LOG (w.clause, "unwatch %d in", r);
+            lits[0] = other;
+            lits[1] = r;
+            *k = lit;
+            watch_literal (r, lit, w.clause);
+            j--;
+          } else if (!u) {
+            assert (v < 0);
+            warmup_assign (other, w.clause);
+          } else {
+            assert (u < 0);
+            assert (v < 0);
+            ;
+            break;
+          }
+        }
+      }
+      if (j != i) {
+        while (i != eow)
+          *j++ = *i++;
+        ws.resize (j - ws.begin ());
+      }
+    } else
+      break;
+  }
+  int64_t delta = propagated2 - before;
+  stats.propagations.vivify += delta;
+  STOP (propagate);
+}
+
+void Internal::warmup_decide () {
+  stats.decisions++;
+  int idx = next_decision_variable ();
+  int decision = decide_phase (idx, true);
+
+  // search_assume_decision (decision); without considering the multitrail:
+  search_assume_decision_no_notification (decision);
+}
+
+  // warming up by propagating while ignoring all conflicts.
+  //
+  // One special case is that we find conflicts of assumptiongs during deciding, hence the extra
+  // check.
+void Internal::warmup () {
+  assert (!level);
+  assert (!conflict);
+  if (!opts.warmup)
+    return;
+
+  propagate ();
+
+  if (unsat)
+    return;
+
+  LOG ("running warm up now");
+  int res = 0;
+  while (num_assigned < (size_t) max_var && !res) {
+    warmup_decide ();
+    warmup_propagate ();
+  }
+
+  backtrack ();
+  LOG ("end of warmup");
+  assert (!conflict);
+}
+>>>>>>> Stashed changes
 }

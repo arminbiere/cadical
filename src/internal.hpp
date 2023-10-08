@@ -606,6 +606,7 @@ struct Internal {
   void search_assign_driving (int lit, Clause *reason);
   void search_assign_external (int lit);
   void search_assume_decision (int decision);
+  void search_assume_decision_no_notification (int decision);
   void assign_unit (int lit);
   bool propagate ();
 
@@ -1097,6 +1098,11 @@ struct Internal {
   void walk_flip_lit (Walker &, int lit);
   int walk_round (int64_t limit, bool prev);
   void walk ();
+  void warmup_decide ();
+  void warmup_backtrack(int level = 0);
+  void warmup_assign (int lit, Clause *reason);
+  void warmup_propagate ();
+  void warmup ();
 
   // warm-up
   void warmup_assign (int lit, Clause *);
