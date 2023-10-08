@@ -51,7 +51,7 @@ int main () {
   res = solver->solve (); // Solve again incrementally.
   assert (res == 20);     // Check it is 'UNSATISFIABLE'.
 
-  res = solver->failed_constraint (); // Check constraint responsible.
+  res = solver->constraint_failed (); // Check constraint responsible.
   assert (res);                       // Yes, constraint was used.
 
   // ------------------------------------------------------------------

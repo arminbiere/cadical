@@ -1,43 +1,46 @@
-Version 1.7.5
--------------
+Version 2.0.0-rc-2
+------------------
 
- - ILB (--ilb)
-   Incremental lazy backtracking allows to add new clauses
-   incrementally while keeping the assignments on the trail.
-   Also works for assumptions (--ilbassumptions)
-
- - Reimplication (--reimply)
-   Fixes assignment levels of literals by elevating them.
-   Out of order assignments can happen because of chronological
-   backtracking, external propagation or ILB. Improves quality
-   of learned clauses and shortens search in these cases.
-   
- - Proof Tracer Interface
-   Tracers can be added through the API (connect_proof_tracer)
-   This allows using custom proof tracers to trace and process
-   clausal proofs with or without antecedents on the fly.
-   
- - Reworked options for proof tracing to be less confusing.
-   Support for DRAT, LRAT, FRAT and VeriPB (with or without
-   antecedents).
+- Making progress to formal 2.0 release with minor fixes for
+  different platforms and compilers.
 
 Version 1.7.4
 -------------
 
- - As `fork` and `wait` do not exist on Windows writing compressed files
-   through `pipe/fork/exec/wait` has to be disabled for Windows cross
-   compilation to go through.  Alternatively one could go back to `popen`
-   for writing compressed files on Windows which however is not safe and
-   therefore we simply decided to disable that feature for windows.
-   Compressed file reading still (and as far we are aware safely) uses
-   `popen` and thus also compiles for Windows.
+- As `fork` and `wait` do not exist on Windows writing compressed files
+  through `pipe/fork/exec/wait` has to be disabled for Windows cross
+  compilation to go through.  Alternatively one could go back to `popen`
+  for writing compressed files on Windows which however is not safe and
+  therefore we simply decided to disable that feature for windows.
+  Compressed file reading still (and as far we are aware safely) uses
+  `popen` and thus also compiles for Windows.
 
 Version 1.7.3
 -------------
 
- - Replaced the unsafe `popen` approach for compressed file writing
-   with an explicit `pipe/fork/exec/waitpid` flow and accordingly
-   removed the `--safe` configuration option again.
+ - Incremental lazy backtracking (ILB) enabled by `--ilb` allows
+   to add new clauses incrementally while keeping the assignments
+   on the trail.  Also works for assumptions (`--ilbassumptions`).
+
+ - Reimplication (`--reimply`) fixes assignment levels of literals
+   by "elevating" them (assigning a lower decision level and propating
+   them out-of-order on this lower decision level).  Out-of-order
+   assignments are introduced by chronological backtracking, adding
+   external clauses during solving (e.g., by a user propagation)
+   or simply by ILB. Reimplication improves quality of learned
+   clauses and potentially shortens search in such cases.
+   
+ - A new proof tracer interface allows to add a proof `Tracer`
+   through the API (via `connect_proof_tracer`). This feature
+   allows to use custom proof tracers to process
+   clausal proofs on-the-fly while solving.  Both proofs steps
+   with proof antecedents (needed for instance for interpolation)
+   as well as without (working direclty on DRAT level) are
+   supported.
+   
+ - Reworked options for proof tracing to be less confusing.
+   Support for DRAT, LRAT, FRAT and VeriPB (with or without
+   antecedents).
 
 Version 1.7.2
 -------------

@@ -1,7 +1,6 @@
 #ifndef _lrattracer_h_INCLUDED
 #define _lrattracer_h_INCLUDED
 
-
 namespace CaDiCaL {
 
 class LratTracer : public FileTracer {
@@ -18,32 +17,34 @@ class LratTracer : public FileTracer {
   void put_binary_lit (int external_lit);
   void put_binary_id (uint64_t id);
 
- // support LRAT
+  // support LRAT
   void lrat_add_clause (uint64_t, const vector<int> &,
                         const vector<uint64_t> &);
   void lrat_delete_clause (uint64_t);
-
 
 public:
   // own and delete 'file'
   LratTracer (Internal *, File *file, bool binary);
   ~LratTracer ();
 
-  void begin_proof (uint64_t);
+  void connect_internal (Internal *i) override;
+  void begin_proof (uint64_t) override;
 
-  void add_original_clause (uint64_t, bool, const vector<int> &) {} // skip
+  void add_original_clause (uint64_t, bool, const vector<int> &,
+                            bool = false) override {} // skip
 
-  void add_derived_clause (uint64_t, bool, const vector<int> &, const vector<uint64_t> &);
-  
-  void delete_clause (uint64_t, bool, const vector<int> &);
-  
-  void finalize_clause (uint64_t, const vector<int> &) {} // skip
-  
-  void finalize_proof (uint64_t) {} // skip
+  void add_derived_clause (uint64_t, bool, const vector<int> &,
+                           const vector<uint64_t> &) override;
 
-  bool closed ();
-  void close ();
-  void flush ();
+  void delete_clause (uint64_t, bool, const vector<int> &) override;
+
+  void finalize_clause (uint64_t, const vector<int> &) override {} // skip
+
+  void finalize_proof (uint64_t) override {} // skip
+
+  bool closed () override;
+  void close () override;
+  void flush () override;
 };
 
 } // namespace CaDiCaL

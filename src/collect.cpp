@@ -259,6 +259,7 @@ inline void Internal::flush_watches (int lit, Watches &saved) {
       c = w.clause = c->copy;
     w.size = c->size;
     const int new_blit_pos = (c->literals[0] == lit);
+    LOG (c, "clause in flush_watch starting from %d", lit);
     assert (c->literals[!new_blit_pos] == lit); /*FW1*/
     w.blit = c->literals[new_blit_pos];
     if (w.binary ())
@@ -323,6 +324,8 @@ void Internal::update_reason_references () {
       assert (v.level == l);
       Clause *c = v.reason;
       if (!c)
+        continue;
+      if (c == external_reason)
         continue;
       LOG (c, "updating assigned %d reason", lit);
       assert (c->reason);

@@ -149,9 +149,8 @@ inline void Internal::search_assign (int lit, Clause *reason) {
           reason == external_reason);
   Var &v = var (idx);
   int lit_level;
-  assert (!lrat || level ||
-          reason == external_reason || reason == decision_reason ||
-          !lrat_chain.empty ());
+  assert (!lrat || level || reason == external_reason ||
+          reason == decision_reason || !lrat_chain.empty ());
   if (reason == external_reason &&
       ((size_t) level <= assumptions.size () + (!!constraint.size ()))) {
     // On the pseudo-decision levels every external propagation must be
@@ -218,7 +217,6 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   lrat_chain.clear ();
 }
 
-
 // pushes lit on trail for level l
 //
 inline void Internal::trail_push (int lit, int l) {
@@ -281,7 +279,6 @@ void Internal::elevate_lit_external (int lit, Clause *reason) {
   assert (opts.reimply);
   elevate_lit (lit, reason);
 }
-
 
 /*------------------------------------------------------------------------*/
 
@@ -565,7 +562,8 @@ bool Internal::propagate () {
 void Internal::propergate () {
 
   assert (!conflict);
-  if (opts.reimply) return propergate_reimply ();
+  if (opts.reimply)
+    return propergate_reimply ();
   assert (propagated == trail.size ());
 
   while (propergated != trail.size ()) {
@@ -648,9 +646,9 @@ void Internal::propergate_reimply () {
 
   assert (!conflict);
   propergated = num_assigned;
-  
+
   for (auto idx : vars) {
-    
+
     const char tmp = val (idx);
     assert (tmp);
     assert (tmp == -1 || tmp == 1);
@@ -731,7 +729,6 @@ void Internal::propergate_reimply () {
 // process them in order to not miss any implications.
 // this entails fixing watches and possibly assigning or elevating literals.
 // Afterwards we propagate as usual.
-
 
 bool Internal::propagate_conflicts () {
   if (conflicts.empty ())
@@ -855,7 +852,6 @@ bool Internal::propagate_conflicts () {
   return conflicts.empty ();
 }
 
-
 // returns the next level that needs to be propagated
 //
 inline int Internal::next_propagation_level (int last) {
@@ -910,18 +906,17 @@ bool Internal::propagate_multitrail () {
   assert (!conflict);
   START (propagate);
 
-
 #ifndef NDEBUG
   assert (!multitrail_dirty || (size_t) propagated == trail.size ());
   if (multitrail_dirty) {
-    for (int i = 0; i < multitrail_dirty-1; i++) {
+    for (int i = 0; i < multitrail_dirty - 1; i++) {
       assert ((size_t) multitrail[i] == trails[i].size ());
     }
   }
 #endif
 
   // we can start propagation at level multitrail_dirty
-  int proplevel = multitrail_dirty-1;
+  int proplevel = multitrail_dirty - 1;
 
   while (!conflict) {
     proplevel = next_propagation_level (proplevel);
@@ -938,8 +933,8 @@ bool Internal::propagate_multitrail () {
     size_t current = before;
     while (!conflict && current != t->size ()) {
       assert (opts.reimply || t == &trail);
-      LOG ("propagating level %d from %zd to %zd", proplevel, before,
-           t->size ());
+      LOG ("propagating level %d from %" PRId64 " to %zu", proplevel,
+           before, t->size ());
 
       assert (current < t->size ());
       const int lit = -(*t)[current++];
@@ -1319,8 +1314,6 @@ inline int Internal::trails_sizes (int l) {
   return res;
 }
 
-
-
 bool Internal::propagate_clean () {
 
   bool res;
@@ -1341,7 +1334,7 @@ bool Internal::propagate_clean () {
 #ifndef NDEBUG
   assert (!level || (size_t) propagated == trail.size ());
   if (level) {
-    for (int i = 0; i < level-1; i++) {
+    for (int i = 0; i < level - 1; i++) {
       assert ((size_t) multitrail[i] == trails[i].size ());
     }
   }

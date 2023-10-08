@@ -40,9 +40,11 @@ void Internal::constrain (int lit) {
       unmark (lit);
     if (satisfied_constraint)
       constraint.clear ();
-    else if (constraint.empty ())
+    else if (constraint.empty ()) {
       unsat_constraint = true;
-    else
+      if (!conflict_id)
+        marked_failed = false; // allow to trigger failing ()
+    } else
       for (const auto lit : constraint)
         freeze (lit);
   }
@@ -56,6 +58,7 @@ void Internal::reset_constraint () {
   LOG ("cleared %zd constraint literals", constraint.size ());
   constraint.clear ();
   unsat_constraint = false;
+  marked_failed = true;
 }
 
 } // namespace CaDiCaL

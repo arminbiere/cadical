@@ -17,6 +17,15 @@ void Internal::add_observed_var (int ilit) {
     LOG ("variable %d is observed %u times", idx, ref);
   } else
     LOG ("variable %d remains observed forever", idx);
+
+  if (val (ilit) && level && !fixed (ilit)) {
+    // The variable is already assigned, but we can not send a notification
+    // about it because it happened on an earlier decision level.
+    // To not break the stack-like view of the trail, we simply backtrack to
+    // undo this unnotifiable assignment.
+    const int assignment_level = var (ilit).level;
+    backtrack (assignment_level - 1);
+  }
 }
 
 /*----------------------------------------------------------------------------*/
@@ -120,7 +129,8 @@ bool Internal::external_propagate () {
   if (!conflict && external_prop && !external_prop_is_lazy) {
 #ifndef NDEBUG
     if (opts.reimply)
-      LOG ("External propagation starts (decision level: %d, notified trail %zd, "
+      LOG ("External propagation starts (decision level: %d, notified "
+           "trail %zd, "
            "notified %zd)",
            level, notify_trail.size (), notified);
     else
@@ -138,7 +148,9 @@ bool Internal::external_propagate () {
     stats.ext_prop.eprop_call++;
     while (elit) {
       assert (external->is_observed[abs (elit)]);
-      const int ilit = external->internalize (elit); // TODO: try e2i
+      int ilit = external->e2i[abs (elit)];
+      if (elit < 0)
+        ilit = -ilit;
       int tmp = val (ilit);
 #ifndef NDEBUG
       assert (fixed (ilit) || observed (ilit));
@@ -169,7 +181,8 @@ bool Internal::external_propagate () {
 #endif
         (void) res;
         bool trail_changed =
-            (num_assigned != assigned || level != level_before || multitrail_dirty < level);
+            (num_assigned != assigned || level != level_before ||
+             multitrail_dirty < level);
 
         if (unsat || conflict)
           break;
@@ -188,13 +201,15 @@ bool Internal::external_propagate () {
 
 #ifndef NDEBUG
     if (opts.reimply)
-      LOG ("External propagation ends (decision level: %d, notified trail %zd, "
+      LOG ("External propagation ends (decision level: %d, notified trail "
+           "%zd, "
            "notified %zd)",
            level, notify_trail.size (), notified);
     else
-      LOG ("External propagation ends (decision level: %d, trail size: %zd, "
-           "notified %zd)",
-           level, trail.size (), notified);
+      LOG (
+          "External propagation ends (decision level: %d, trail size: %zd, "
+          "notified %zd)",
+          level, trail.size (), notified);
 #endif
     if (!unsat && !conflict) {
       bool has_external_clause =
@@ -214,7 +229,8 @@ bool Internal::external_propagate () {
 
         add_external_clause (0);
         bool trail_changed =
-            (num_assigned != assigned || level != level_before || multitrail_dirty < level);
+            (num_assigned != assigned || level != level_before ||
+             multitrail_dirty < level);
 
         if (unsat || conflict)
           break;
@@ -233,11 +249,13 @@ bool Internal::external_propagate () {
     }
 #ifndef NDEBUG
     if (opts.reimply)
-      LOG ("External clause addition ends (decision level %d, notified trail %zd, "
+      LOG ("External clause addition ends (decision level %d, notified "
+           "trail %zd, "
            "notified %zd)",
            level, notify_trail.size (), notified);
     else
-      LOG ("External clause addition ends on decision level %d at trail size "
+      LOG ("External clause addition ends on decision level %d at trail "
+           "size "
            "%zd (notified %zd)",
            level, trail.size (), notified);
 #endif
@@ -344,8 +362,8 @@ void Internal::add_external_clause (int propagated_elit,
   assert (clause.empty ());
   assert (original.empty ());
 
-  // we need to be build a new LRAT chain if we are already in the middle of the analysis (like
-  // during failed assumptions)
+  // we need to be build a new LRAT chain if we are already in the middle of
+  // the analysis (like during failed assumptions)
   std::vector<uint64_t> lrat_chain_ext;
   assert (lrat_chain_ext.empty ());
 
@@ -431,11 +449,11 @@ void Internal::explain_external_propagations () {
 
   Clause *reason = conflict;
   std::vector<int> seen_lits;
-  int open = 0;          // Seen but not explained literal
+  int open = 0; // Seen but not explained literal
 
   explain_reason (0, reason, open); // marks conflict clause lits as seen
   if (!opts.reimply) {
-  
+
     int i = trail.size (); // Start at end-of-trail
     while (i > 0) {
       const int lit = trail[--i];
@@ -454,7 +472,7 @@ void Internal::explain_external_propagations () {
     }
   } else {
     for (int l = level; l >= 0; l--) {
-      const auto & t = next_trail (l);
+      const auto &t = next_trail (l);
       for (auto p = (*t).rbegin (); p != (*t).rend (); p++) {
         const int lit = *p;
         if (!flags (lit).seen)
@@ -558,26 +576,27 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 /*----------------------------------------------------------------------------*/
 //
 // Helper function to be able to call learn_external_reason_clause when the
-// internal clause is already used in the caller side (for example during proof
-// checking).
-// These calls are assumed to be without a falsified elit.
+// internal clause is already used in the caller side (for example during
+// proof checking). These calls are assumed to be without a falsified elit.
 // Dont use it in general instead of learn_external_reason_clause because it
 // does not support the corner cases where a literal remains in clause.
 //
 Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
-  if (clause.empty()) return learn_external_reason_clause (ilit);
-  
-  std::vector<int> clause_tmp{std::move (clause)};
-  clause.clear();
-    
-  Clause* res = learn_external_reason_clause (ilit);
-  // The learn_external_reason clause can leave a literal in clause when there
-  // there is a falsified elit arg. Here it is not allowed to happen.
-  assert (clause.empty());
-  
-  clause = std::move(clause_tmp);
-  clause_tmp.clear();
-  
+  Clause *res;
+  if (clause.empty ()) {
+    res = learn_external_reason_clause (ilit, 0, true);
+  } else {
+    std::vector<int> clause_tmp{std::move (clause)};
+    clause.clear ();
+    res = learn_external_reason_clause (ilit, 0, true);
+    // The learn_external_reason clause can leave a literal in clause when
+    // there there is a falsified elit arg. Here it is not allowed to
+    // happen.
+    assert (clause.empty ());
+
+    clause = std::move (clause_tmp);
+    clause_tmp.clear ();
+  }
   return res;
 }
 
@@ -648,8 +667,7 @@ void Internal::handle_external_clause (Clause *res) {
     if (from_propagator)
       stats.ext_prop.elearn_conf++;
     return;
-  }
-  else if (val (pos1) < 0 && opts.reimply) {
+  } else if (val (pos1) < 0 && opts.reimply) {
     assert (val (pos0) > 0);
     elevate_lit_external (pos0, res);
     if (var (pos0).level < multitrail_dirty)
@@ -738,7 +756,8 @@ bool Internal::external_check_solution () {
       size_t assigned = num_assigned;
       add_external_clause (0);
       bool trail_changed =
-          (num_assigned != assigned || level != level_before || multitrail_dirty < level);
+          (num_assigned != assigned || level != level_before ||
+           multitrail_dirty < level);
       added_new_clauses = true;
       //
       // There are many possible scenarios here:
@@ -820,22 +839,22 @@ void Internal::notify_assignments () {
   }
 #ifndef NDEBUG
   for (auto idx : vars) {
-    Flags & f = flags (idx);
+    Flags &f = flags (idx);
     assert (!f.poison);
   }
   for (auto lit : notify_trail) {
-    Flags & f = flags (lit);
+    Flags &f = flags (lit);
     f.poison = true;
   }
   for (auto idx : vars) {
-    Flags & f = flags (idx);
+    Flags &f = flags (idx);
     if (val (idx))
       assert (f.poison);
     else
       assert (!f.poison);
   }
   for (auto lit : notify_trail) {
-    Flags & f = flags (lit);
+    Flags &f = flags (lit);
     f.poison = false;
   }
 #endif
@@ -846,7 +865,8 @@ void Internal::notify_assignments () {
 // properly initialize notify_trail to the current assignments
 //
 void Internal::connect_propagator () {
-  if (!opts.reimply) return;
+  if (!opts.reimply)
+    return;
   if (level)
     backtrack ();
   notify_trail.clear ();
@@ -854,9 +874,10 @@ void Internal::connect_propagator () {
     flags (lit).seen = true;
     notify_trail.push_back (lit);
   }
-  for (auto & t : trails) {
+  for (auto &t : trails) {
     for (auto lit : t) {
-      if (flags (lit).seen) continue;
+      if (flags (lit).seen)
+        continue;
       flags (lit).seen = true;
       notify_trail.push_back (lit);
     }
@@ -904,7 +925,9 @@ int Internal::ask_decision () {
   if (!external->is_observed[abs (elit)])
     return 0;
 
-  const int ilit = external->internalize (elit);
+  int ilit = external->e2i[abs (elit)];
+  if (elit < 0)
+    ilit = -ilit;
 
   assert (fixed (ilit) || observed (ilit));
 

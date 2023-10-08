@@ -121,7 +121,7 @@ void Internal::test_watch_invariant () {
         continue;
       // if (w.clause == conflict) continue;
       // int blit = w.blit;
-      LOG (w.clause, "watch lit %d, blit %d, ", lit, w.blit);
+      LOG (w.clause, "watch lit %d blit %d in", lit, w.blit);
       assert (w.clause->literals[0] == lit || w.clause->literals[1] == lit);
       int witness = 0;
       for (const auto &ok : *w.clause) {

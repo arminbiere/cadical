@@ -31,9 +31,7 @@ struct Internal;
 
 class File {
 
-#ifndef QUIET
   Internal *internal;
-#endif
 #if !defined(QUIET) || !defined(NDEBUG)
   bool writing;
 #endif
@@ -58,8 +56,10 @@ class File {
                           const char *mode);
   static FILE *read_pipe (Internal *, const char *fmt, const int *sig,
                           const char *path);
+#ifndef __WIN32
   static FILE *write_pipe (Internal *, const char *fmt, const char *path,
                            int &child_pid);
+#endif
 
 public:
   static char *find_program (const char *prg); // search in 'PATH'
@@ -193,6 +193,7 @@ public:
   uint64_t lineno () const { return _lineno; }
   uint64_t bytes () const { return _bytes; }
 
+  void connect_internal (Internal *i) { internal = i; }
   bool closed () { return !file; }
   void close ();
   void flush ();

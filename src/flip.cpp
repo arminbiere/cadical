@@ -134,8 +134,8 @@ bool Internal::flip (int lit) {
     Var &v = var (idx);
     if (opts.reimply) {
       assert (v.level);
-      assert (trails[v.level-1][v.trail] == lit);
-      trails[v.level-1][v.trail] = -lit;
+      assert (trails[v.level - 1][v.trail] == lit);
+      trails[v.level - 1][v.trail] = -lit;
     } else {
       assert (trail[v.trail] == lit);
       trail[v.trail] = -lit;

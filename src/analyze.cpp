@@ -23,6 +23,7 @@ void Internal::learn_empty_clause () {
   }
   unsat = true;
   conflict_id = id;
+  conclusion.push_back (id);
   lrat_chain.clear ();
 }
 
@@ -473,8 +474,8 @@ Clause *Internal::new_driving_clause (const int glue, int &jump) {
 
 /*------------------------------------------------------------------------*/
 
-// determine the OTFS level for OTFS. Unlike the find_conflict_level, we do not have to fix the
-// clause
+// determine the OTFS level for OTFS. Unlike the find_conflict_level, we do
+// not have to fix the clause
 
 inline int Internal::otfs_find_backtrack_level (int &forced) {
   assert (opts.otfs);
@@ -484,8 +485,7 @@ inline int Internal::otfs_find_backtrack_level (int &forced) {
     const int tmp = var (lit).level;
     if (tmp == level) {
       forced = lit;
-    }
-    else if (tmp > res) {
+    } else if (tmp > res) {
       res = tmp;
       LOG ("bt level is now %d due to %d", res, lit);
     }
@@ -764,7 +764,7 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
       lits[new_size++] = other;
   }
 
-  LOG (new_conflict, "removing all units ");
+  LOG (new_conflict, "removing all units in");
 
   assert (lits[0] == uip || lits[1] == uip);
   const int other = lits[0] ^ lits[1] ^ uip;
@@ -841,11 +841,15 @@ inline void Internal::otfs_subsume_clause (Clause *subsuming,
     stats.subred++;
   else
     stats.subirr++;
-  mark_garbage (subsumed);
-  if (subsumed->redundant || !subsuming->redundant)
+  if (subsumed->redundant || !subsuming->redundant) {
+    mark_garbage (subsumed);
     return;
+  }
   LOG ("turning redundant subsuming clause into irredundant clause");
   subsuming->redundant = false;
+  if (proof)
+    proof->strengthen (subsuming->id);
+  mark_garbage (subsumed);
   stats.current.irredundant++;
   stats.added.irredundant++;
   stats.irrlits += subsuming->size;
@@ -907,12 +911,14 @@ void Internal::analyze () {
     int change = multitrail_dirty;
     explain_external_propagations ();
     while (opts.reimply && multitrail_dirty < change) {
-      Clause * prev = conflict;
+      Clause *prev = conflict;
       conflict = 0;
       propagate_multitrail ();
       change = multitrail_dirty;
-      if (!conflict) conflict = prev;
-      else explain_external_propagations ();
+      if (!conflict)
+        conflict = prev;
+      else
+        explain_external_propagations ();
     }
   }
 
@@ -1010,9 +1016,9 @@ void Internal::analyze () {
   // level which is also level because we backtracked earlier.
 
   const auto &t = next_trail (level);
-  int i = t->size (); // Start at end-of-trail.
-  int open = 0;       // Seen but not processed on this level.
-  int uip = 0;        // The first UIP literal.
+  int i = t->size ();      // Start at end-of-trail.
+  int open = 0;            // Seen but not processed on this level.
+  int uip = 0;             // The first UIP literal.
   int resolvent_size = 0;  // without the uip
   int antecedent_size = 1; // with the uip and without unit literals
   int conflict_size =
@@ -1030,8 +1036,8 @@ void Internal::analyze () {
     if (otfs && resolved > 0 && antecedent_size > 2 &&
         resolvent_size < antecedent_size) {
       assert (reason != conflict);
-      LOG (analyzed, "found candidate for OTFS, conflict is: ");
-      LOG (reason, "found candidate (size %d) for OTFS, resolvent is: ",
+      LOG (analyzed, "found candidate for OTFS conflict");
+      LOG (reason, "found candidate (size %d) for OTFS resolvent",
            antecedent_size);
       reason = on_the_fly_strengthen (reason, uip);
       assert (conflict_size >= 2);
@@ -1046,10 +1052,9 @@ void Internal::analyze () {
         ++stats.subsumed;
 
         if (open == 1) {
-          int forced;
+          int forced = 0;
           const int conflict_level = otfs_find_backtrack_level (forced);
-          int new_level =
-              determine_actual_backtrack_level (conflict_level);
+          int new_level = determine_actual_backtrack_level (conflict_level);
           UPDATE_AVERAGE (averages.current.level, new_level);
           backtrack (new_level);
 
@@ -1170,8 +1175,7 @@ void Internal::analyze () {
     search_assign_driving (-uip, driving_clause);
     if (opts.reimply && multitrail_dirty > var (uip).level)
       multitrail_dirty = var (uip).level;
-  }
-  else
+  } else
     learn_empty_clause ();
 
   if (stable)
