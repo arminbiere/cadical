@@ -1057,8 +1057,6 @@ inline void Internal::vivify_chain_for_units (int lit, Clause *reason) {
     if (lit == reason_lit)
       continue;
     assert (val (reason_lit));
-    if (!val (reason_lit))
-      continue;
     const unsigned uidx = vlit (val (reason_lit) * reason_lit);
     uint64_t id = unit_clauses[uidx];
     lrat_chain.push_back (id);
