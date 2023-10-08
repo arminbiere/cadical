@@ -1098,15 +1098,9 @@ struct Internal {
   void walk_flip_lit (Walker &, int lit);
   int walk_round (int64_t limit, bool prev);
   void walk ();
-  void warmup_decide ();
-  void warmup_backtrack(int level = 0);
+  //warmup
   void warmup_assign (int lit, Clause *reason);
   void warmup_propagate ();
-  void warmup ();
-
-  // warm-up
-  void warmup_assign (int lit, Clause *);
-  void propagate_beyond_conflicts ();
   void warmup ();
 
   // Detect strongly connected components in the binary implication graph

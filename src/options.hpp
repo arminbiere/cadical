@@ -197,11 +197,7 @@ OPTION( walkmineff,      1e5,  0,1e7,1,0,1, "minimum efficiency") \
 OPTION( walknonstable,     1,  0,  1,0,0,1, "walk in non-stabilizing phase") \
 OPTION( walkredundant,     0,  0,  1,0,0,1, "walk redundant clauses too") \
 OPTION( walkreleff,       20,  1,1e5,1,0,1, "relative efficiency per mille") \
-<<<<<<< Updated upstream
-OPTION( walkwarmup,        1,  0,  1,0,0,1, "propagate before random walk") \
-=======
 OPTION( warmup,            1,  0,  1,0,0,1, "enable warmup before walk") \
->>>>>>> Stashed changes
 
 // Note, keep an empty line right before this line because of the last '\'!
 // Also keep those single spaces after 'OPTION(' for proper sorting.
