@@ -881,32 +881,6 @@ void Internal::otfs_strengthen_clause (Clause *c, int lit, int new_size,
   external->check_shrunken_clause (c);
 }
 
-void Internal::otfs_remove_analyzed_literals_above_current_uip (int lit)
-{
-  int j = 0;
-  const int size = analyzed.size();
-  const int pos = var (lit).trail;
-  for (int i = 0; i < size; ++i) {
-    assert  (j <= i);
-    const int other = analyzed[i];
-    const int opos = var (other).trail;
-
-    assert (flags(other).seen);
-    if (opos < pos) {
-      LOG ("OTFS keeping analyzed literal %d", other);
-      analyzed[j] = analyzed[i];
-      ++j;
-    } else {
-      LOG ("OTFS removing analyzed literal %d", other);
-      flags(other).seen = false;
-    }
-
-  }
-
-  analyzed.resize(j);
-  LOG (analyzed, "keeping lits to analyze");
-}
-
 /*------------------------------------------------------------------------*/
 
 // This is the main conflict analysis routine.  It assumes that a conflict
@@ -1106,19 +1080,15 @@ void Internal::analyze () {
       // remove marked for all lits of higher level
       if (opts.bump)
         bump_variables ();
-#if 1
-	clear_analyzed_literals ();
-	//clear_analyzed_levels (); not needed because marking the exact same again
-	clause.clear();
-	resolvent_size = 0;
-	antecedent_size = 1;
-	open = 0;
-	analyze_reason (0, reason, open, resolvent_size, antecedent_size);
-	conflict_size = antecedent_size - 1;
-#else
-      otfs_remove_analyzed_literals_above_current_uip (uip);
-      // analyze_reason (0, reason, open, resolvent_size, antecedent_size);
-#endif
+      clear_analyzed_literals ();
+      // clear_analyzed_levels (); not needed because marking the exact same
+      // again
+      clause.clear ();
+      resolvent_size = 0;
+      antecedent_size = 1;
+      open = 0;
+      analyze_reason (0, reason, open, resolvent_size, antecedent_size);
+      conflict_size = antecedent_size - 1;
     }
 
   ++resolved;
