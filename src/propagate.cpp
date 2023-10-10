@@ -258,7 +258,8 @@ void Internal::search_assume_decision_no_notification (int lit) {
   require_mode (SEARCH);
   assert (opts.reimply || propagated == trail.size ());
   assert (!opts.reimply || multitrail_dirty == level);
-  new_trail_level (lit);
+  level++;
+  control.push_back (Level (lit, trail.size ()));
   LOG ("search decide %d", lit);
   search_assign (lit, decision_reason);
 }

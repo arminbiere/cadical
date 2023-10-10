@@ -1108,6 +1108,7 @@ struct Internal {
   //warmup
   void warmup_assign (int lit, Clause *reason);
   void warmup_propagate ();
+  int warmup_decide ();
   void warmup ();
 
   // Detect strongly connected components in the binary implication graph

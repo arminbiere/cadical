@@ -10,8 +10,6 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
 
   const int idx = vidx (lit);
   assert (reason != external_reason);
-  const bool from_external = false;
-  assert (reason != external_reason);
   assert (!vals[idx]);
   assert (!flags (idx).eliminated ());
   Var &v = var (idx);
@@ -30,8 +28,6 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
   assert (opts.reimply || num_assigned == trail.size ());
   num_assigned++;
   stats.walk.warmupset++;
-  if (!lit_level && !from_external)
-    learn_unit_clause (lit); // increases 'stats.fixed'
   const signed char tmp = sign (lit);
   phases.target[idx] = tmp;
   vals[idx] = tmp;
@@ -119,9 +115,7 @@ void Internal::warmup_propagate () {
         if (b < 0)
           ;// conflict = w.clause; // ignoring conflict
         else {
-          build_chain_for_units (w.blit, w.clause, 0);
           warmup_assign (w.blit, w.clause);
-          // lrat_chain.clear (); done in search_assign
         }
 
       } else {
@@ -246,6 +240,126 @@ void Internal::warmup_propagate () {
   STOP (propagate);
 }
 
+
+int Internal::warmup_decide () {
+  assert (!satisfied ());
+  assert (!opts.reimply || multitrail_dirty == level);
+  START (decide);
+  int res = 0;
+  if ((size_t) level < assumptions.size ()) {
+    const int lit = assumptions[level];
+    assert (assumed (lit));
+    const signed char tmp = val (lit);
+    if (tmp < 0) {
+      LOG ("assumption %d falsified", lit);
+      res = 20;
+    } else if (tmp > 0) {
+      LOG ("assumption %d already satisfied", lit);
+      new_trail_level (0);
+      LOG ("added pseudo decision level");
+      notify_decision ();
+    } else {
+      LOG ("deciding assumption %d", lit);
+      search_assume_decision_no_notification (lit);
+    }
+  } else if ((size_t) level == assumptions.size () && constraint.size ()) {
+
+    int satisfied_lit = 0;  // The literal satisfying the constrain.
+    int unassigned_lit = 0; // Highest score unassigned literal.
+    int previous_lit = 0;   // Move satisfied literals to the front.
+
+    const size_t size_constraint = constraint.size ();
+
+#ifndef NDEBUG
+    unsigned sum = 0;
+    for (auto lit : constraint)
+      sum += lit;
+#endif
+    for (size_t i = 0; i != size_constraint; i++) {
+
+      // Get literal and move 'constraint[i] = constraint[i-1]'.
+
+      int lit = constraint[i];
+      constraint[i] = previous_lit;
+      previous_lit = lit;
+
+      const signed char tmp = val (lit);
+      if (tmp < 0) {
+        LOG ("constraint literal %d falsified", lit);
+        continue;
+      }
+
+      if (tmp > 0) {
+        LOG ("constraint literal %d satisfied", lit);
+        satisfied_lit = lit;
+        break;
+      }
+
+      assert (!tmp);
+      LOG ("constraint literal %d unassigned", lit);
+
+      if (!unassigned_lit || better_decision (lit, unassigned_lit))
+        unassigned_lit = lit;
+    }
+
+    if (satisfied_lit) {
+
+      constraint[0] = satisfied_lit; // Move satisfied to the front.
+
+      LOG ("literal %d satisfies constraint and "
+           "is implied by assumptions",
+           satisfied_lit);
+
+      new_trail_level (0);
+      LOG ("added pseudo decision level for constraint");
+      notify_decision ();
+
+    } else {
+
+      // Just move all the literals back.  If we found an unsatisfied
+      // literal then it will be satisfied (most likely) at the next
+      // decision and moved then to the first position.
+
+      if (size_constraint) {
+
+        for (size_t i = 0; i + 1 != size_constraint; i++)
+          constraint[i] = constraint[i + 1];
+
+        constraint[size_constraint - 1] = previous_lit;
+      }
+
+      if (unassigned_lit) {
+
+        LOG ("deciding %d to satisfy constraint", unassigned_lit);
+        search_assume_decision (unassigned_lit);
+
+      } else {
+
+        LOG ("failing constraint");
+        unsat_constraint = true;
+        res = 20;
+      }
+    }
+
+#ifndef NDEBUG
+    for (auto lit : constraint)
+      sum -= lit;
+    assert (!sum); // Checksum of literal should not change!
+#endif
+
+  } else {
+    stats.decisions++;
+    int idx = next_decision_variable ();
+    const bool target = true;
+    int decision = decide_phase (idx, target);
+    search_assume_decision_no_notification (decision);
+  }
+  if (res)
+    marked_failed = false;
+  STOP (decide);
+  return res;
+}
+
 void Internal::warmup () {
   assert (!unsat);
   assert (!level);
@@ -256,7 +370,7 @@ void Internal::warmup () {
 
   LOG ("propagating beyond conflicts to warm-up walk");
   while (!res && num_assigned < (size_t) max_var) {
-    res = decide ();
+    res = warmup_decide ();
     ++stats.walk.warmupset;
     warmup_propagate();
   }
