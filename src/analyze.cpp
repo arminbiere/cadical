@@ -1076,8 +1076,6 @@ void Internal::analyze () {
       }
       conflict = reason;
       resolved = 0;
-      LOG (analyzed, "lits to analyze");
-      // remove marked for all lits of higher level
       if (opts.bump)
         bump_variables ();
       clear_analyzed_literals ();
