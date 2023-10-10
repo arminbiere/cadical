@@ -1068,11 +1068,11 @@ void Internal::analyze () {
       reason = on_the_fly_strengthen (reason, uip);
       assert (conflict_size >= 2);
       if (resolved == 1 && resolvent_size < conflict_size) {
+	// in this case both clauses are part of the CNF, so one subsumes the other
         otfs_subsume_clause (reason, conflict);
-        resolved = 0;
         LOG (reason, "changing conflict to");
-        conflict = reason;
         --conflict_size;
+	conflict = reason;
         assert (conflict_size == conflict->size);
         ++stats.otfs.subsumed;
         ++stats.subsumed;
@@ -1099,11 +1099,14 @@ void Internal::analyze () {
           STOP (analyze);
           return;
         }
-	LOG (analyzed, "lits to analyze");
-	// remove marked for all lits of higher level
-	if (opts.bump)
-          bump_variables ();
-#if 0
+      }
+      conflict = reason;
+      resolved = 0;
+      LOG (analyzed, "lits to analyze");
+      // remove marked for all lits of higher level
+      if (opts.bump)
+        bump_variables ();
+#if 1
 	clear_analyzed_literals ();
 	//clear_analyzed_levels (); not needed because marking the exact same again
 	clause.clear();
@@ -1111,31 +1114,31 @@ void Internal::analyze () {
 	antecedent_size = 1;
 	open = 0;
 	analyze_reason (0, reason, open, resolvent_size, antecedent_size);
+	conflict_size = antecedent_size - 1;
 #else
-	otfs_remove_analyzed_literals_above_current_uip (uip);
-	//analyze_reason (0, reason, open, resolvent_size, antecedent_size);
+      otfs_remove_analyzed_literals_above_current_uip (uip);
+      // analyze_reason (0, reason, open, resolvent_size, antecedent_size);
 #endif
-      }
     }
 
-    ++resolved;
+  ++resolved;
 
-    uip = 0;
-    while (!uip) {
-      assert (i > 0);
-      const int lit = (*t)[--i];
-      if (!flags (lit).seen)
-        continue;
-      if (var (lit).level == level)
-        uip = lit;
-    }
-    if (!--open)
-      break;
-    reason = var (uip).reason;
-    assert (reason != external_reason);
-    LOG (reason, "analyzing %d reason", uip);
-    assert (resolvent_size);
-    --resolvent_size;
+  uip = 0;
+  while (!uip) {
+    assert (i > 0);
+    const int lit = (*t)[--i];
+    if (!flags (lit).seen)
+      continue;
+    if (var (lit).level == level)
+      uip = lit;
+  }
+  if (!--open)
+    break;
+  reason = var (uip).reason;
+  assert (reason != external_reason);
+  LOG (reason, "analyzing %d reason", uip);
+  assert (resolvent_size);
+  --resolvent_size;
   }
   LOG ("first UIP %d", uip);
   clause.push_back (-uip);
