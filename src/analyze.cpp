@@ -1041,6 +1041,8 @@ void Internal::analyze () {
            antecedent_size);
       reason = on_the_fly_strengthen (reason, uip);
       assert (conflict_size >= 2);
+      if (opts.bump)
+        bump_variables ();
       if (resolved == 1 && resolvent_size < conflict_size) {
 	// in this case both clauses are part of the CNF, so one subsumes the other
         otfs_subsume_clause (reason, conflict);
@@ -1076,8 +1078,6 @@ void Internal::analyze () {
       }
       conflict = reason;
       resolved = 0;
-      if (opts.bump)
-        bump_variables ();
       clear_analyzed_literals ();
       // clear_analyzed_levels (); not needed because marking the exact same
       // again
