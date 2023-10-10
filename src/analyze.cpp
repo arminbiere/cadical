@@ -1050,6 +1050,7 @@ void Internal::analyze () {
         assert (conflict_size == conflict->size);
         ++stats.otfs.subsumed;
         ++stats.subsumed;
+	++stats.conflicts;
 
         if (open == 1) {
           int forced = 0;
@@ -1072,6 +1073,16 @@ void Internal::analyze () {
           STOP (analyze);
           return;
         }
+	// remove marked for all lits of higher level
+	if (opts.bump)
+          bump_variables ();
+	clear_analyzed_literals ();
+	//clear_analyzed_levels (); not needed because marking the exact same again
+	clause.clear();
+	resolvent_size = 0;
+	antecedent_size = 1;
+	open = 0;
+	analyze_reason (0, reason, open, resolvent_size, antecedent_size);
       }
     }
 
