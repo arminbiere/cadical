@@ -660,7 +660,6 @@ struct Internal {
   void otfs_subsume_clause (Clause *subsuming, Clause *subsumed);
   int otfs_find_backtrack_level (int &forced);
   Clause *on_the_fly_strengthen (Clause *conflict, int lit);
-  void otfs_remove_analyzed_literals_above_current_uip (int);
   void analyze ();
   void iterate (); // report learned unit clause
 
