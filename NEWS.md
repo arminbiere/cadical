@@ -1,3 +1,9 @@
+Upcoming
+--------
+
+- improving the OTFS heuristic (properly bumping literals and
+  considering that the conflict clause is updated)
+
 Version 2.0.0-rc-2
 ------------------
 
