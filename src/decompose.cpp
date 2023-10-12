@@ -464,7 +464,7 @@ bool Internal::decompose_round () {
 
     const uint64_t id1 = ++clause_id;
     if (proof) {
-      proof->add_derived_clause (id1, true, clause, lrat_chain);
+      proof->add_derived_clause (id1, false, clause, lrat_chain);
       proof->weaken_minus (id1, clause);
     }
     external->push_binary_clause_on_extension_stack (id1, -idx, other);
@@ -484,7 +484,7 @@ bool Internal::decompose_round () {
     }
     const uint64_t id2 = ++clause_id;
     if (proof) {
-      proof->add_derived_clause (id2, true, clause, lrat_chain);
+      proof->add_derived_clause (id2, false, clause, lrat_chain);
       proof->weaken_minus (id2, clause);
     }
     external->push_binary_clause_on_extension_stack (id2, idx, -other);
@@ -677,13 +677,13 @@ bool Internal::decompose_round () {
 
       clause.push_back (other);
       clause.push_back (-idx);
-      proof->delete_clause (id1, true, clause);
+      proof->delete_clause (id1, false, clause);
       clause.clear ();
 
       clause.push_back (idx);
       clause.push_back (-other);
       const uint64_t id2 = decompose_ids[vlit (idx)];
-      proof->delete_clause (id2, true, clause);
+      proof->delete_clause (id2, false, clause);
       clause.clear ();
     }
   }
