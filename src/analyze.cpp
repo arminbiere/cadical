@@ -826,8 +826,6 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
   LOG (new_conflict, "strengthened clause by OTFS");
   sorted.clear ();
 
-  if (lrat)
-    lrat_chain.push_back (new_conflict->id);
   return new_conflict;
 }
 
