@@ -72,7 +72,8 @@ class LratChecker : public StatTracer {
 
   uint64_t nonces[num_nonces];      // random numbers for hashing
   uint64_t last_hash;               // last computed hash value of clause
-  uint64_t last_id;                 // id of the last added clause
+  uint64_t last_id;                 // id of the last added/deleted clause
+  uint64_t current_id;              // id of the last added clause
   uint64_t compute_hash (uint64_t); // compute and save hash value of clause
 
   // Reduce hash value to the actual size.

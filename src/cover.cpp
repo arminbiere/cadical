@@ -377,7 +377,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       // Only copy extension stack if successful.
       int prev = INT_MIN;
       bool already_pushed = false;
-      uint64_t last_id = ++clause_id;
+      uint64_t last_id = 0;
       LOG (c, "covered tautological");
       assert (clause.empty ());
       LOG (coveror.extend, "extension = ");
@@ -406,9 +406,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
             proof->weaken_plus (last_id, clause);
             lrat_chain.clear ();
           }
-          if (already_pushed) {
-            last_id = ++clause_id;
-          }
+	  last_id = ++clause_id;
           external->push_zero_on_extension_stack ();
           external->push_witness_literal_on_extension_stack (other);
           external->push_zero_on_extension_stack ();
@@ -440,7 +438,6 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
         }
         if (lrat)
           lrat_chain.push_back (c->id);
-        last_id = ++clause_id;
         proof->add_derived_clause (last_id, false, clause, lrat_chain);
         proof->weaken_plus (last_id, clause);
         lrat_chain.clear ();

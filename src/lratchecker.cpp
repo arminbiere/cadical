@@ -114,7 +114,7 @@ void LratChecker::collect_garbage_clauses () {
 LratChecker::LratChecker (Internal *i)
     : internal (i), size_vars (0), strict_lrat (false), concluded (false),
       num_clauses (0), num_finalized (0), num_garbage (0), size_clauses (0),
-      clauses (0), garbage (0), last_hash (0), last_id (0) {
+      clauses (0), garbage (0), last_hash (0), last_id (0), current_id (0) {
 
   // Initialize random number table for hash function.
   //
@@ -378,6 +378,10 @@ void LratChecker::add_original_clause (uint64_t id, bool,
   stats.original++;
   import_clause (c);
   last_id = id;
+  assert (current_id <= id || id+1==current_id || restore);
+  if (!restore && id == 1 + current_id)
+    current_id = id;
+
   if (size_clauses && !restore) {
     LratCheckerClause **p = find (id), *d = *p;
     if (d) {
@@ -403,6 +407,8 @@ void LratChecker::add_derived_clause (uint64_t id, bool,
   stats.derived++;
   import_clause (c);
   last_id = id;
+  assert (id == current_id + 1);
+  current_id = id;
   if (size_clauses) {
     LratCheckerClause **p = find (id), *d = *p;
     if (d) {
@@ -580,6 +586,7 @@ void LratChecker::weaken_minus (uint64_t id, const vector<int> &c) {
   LOG (c, "LRAT CHECKER saving clause[%" PRIu64 "] to restore later", id);
   import_clause (c);
 
+  assert (id <= current_id);
   last_id = id;
   LratCheckerClause **p = find (id), *d = *p;
   if (d) {
@@ -663,6 +670,7 @@ void LratChecker::finalize_clause (uint64_t id, const vector<int> &c) {
   stats.finalized++;
   num_finalized++;
   import_clause (c);
+  assert (id <= current_id);
   last_id = id;
   LratCheckerClause **p = find (id), *d = *p;
   if (d) {
