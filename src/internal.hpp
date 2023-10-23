@@ -68,6 +68,7 @@ extern "C" {
 #include "heap.hpp"
 #include "instantiate.hpp"
 #include "internal.hpp"
+#include "iruptracer.hpp"
 #include "level.hpp"
 #include "limit.hpp"
 #include "logging.hpp"
