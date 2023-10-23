@@ -13,12 +13,15 @@ Internal::Internal ()
       external_prop (false), did_external_prop (false),
       external_prop_is_lazy (true), rephased (0), vsize (0), max_var (0),
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
-      lrat (false),
-      level (0), vals (0), score_inc (1.0), scores (this), conflict (0),
-      ignore (0), external_reason (&external_reason_clause), notified (0),
-      propagated (0), propagated2 (0), propergated (0), best_assigned (0),
+      concluded (false), lrat (false), level (0), vals (0), score_inc (1.0),
+      scores (this), conflict (0), ignore (0),
+      external_reason (&external_reason_clause), newest_clause (0),
+      force_no_backtrack (false), from_propagator (false),
+      tainted_literal (0), notified (0), probe_reason (0), propagated (0),
+      propagated2 (0), propergated (0), best_assigned (0),
       target_assigned (0), no_conflict_until (0), unsat_constraint (false),
-      marked_failed (true), proof (0), lratbuilder (0), opts (this),
+      marked_failed (true), multitrail_dirty (0), num_assigned (0),
+      proof (0), lratbuilder (0), opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
@@ -35,16 +38,17 @@ Internal::~Internal () {
     delete proof;
   if (lratbuilder)
     delete lratbuilder;
-  for (auto & tracer : tracers)
+  for (auto &tracer : tracers)
     delete tracer;
-  for (auto & filetracer : file_tracers)
+  for (auto &filetracer : file_tracers)
     delete filetracer;
-  for (auto & stattracer : stat_tracers)
+  for (auto &stattracer : stat_tracers)
     delete stattracer;
   if (vals) {
     vals -= vsize;
     delete[] vals;
   }
+  clear_trails (0);
 }
 
 /*------------------------------------------------------------------------*/
@@ -180,10 +184,23 @@ void Internal::add_original_lit (int lit) {
   }
 }
 
+void Internal::finish_added_clause_with_id (uint64_t id, bool restore) {
+  if (proof) {
+    // Use the external form of the clause for printing in proof
+    // Externalize(internalized literal) != external literal
+    assert (!original.size () || !external->eclause.empty ());
+    proof->add_external_original_clause (id, false, external->eclause,
+                                         restore);
+  }
+  add_new_original_clause (id);
+  original.clear ();
+}
+
 /*------------------------------------------------------------------------*/
 
 void Internal::reserve_ids (int number) {
   // return;
+  LOG ("reserving %d ids", number);
   assert (number >= 0);
   assert (!clause_id && !reserved_ids && !original_id);
   clause_id = reserved_ids = number;
@@ -662,15 +679,34 @@ int Internal::local_search () {
 
 /*------------------------------------------------------------------------*/
 
+// if preprocess_only is false and opts.ilb is true we do not preprocess
+// such that we do not have to backtrack to level 0.
+// TODO: check restore_clauses works on higher level
+//
 int Internal::solve (bool preprocess_only) {
   assert (clause.empty ());
   START (solve);
+  if (opts.ilb) {
+    if (opts.ilbassumptions)
+      sort_and_reuse_assumptions ();
+    stats.ilbtriggers++;
+    stats.ilbsuccess += (level > 0);
+    stats.levelsreused += level;
+    if (opts.reimply)
+      stats.literalsreused += num_assigned - trail.size ();
+    else if (level) {
+      assert (control.size () > 1);
+      stats.literalsreused += num_assigned - control[1].trail;
+    }
+  }
   if (preprocess_only)
     LOG ("internal solving in preprocessing only mode");
   else
     LOG ("internal solving in full mode");
   init_report_limits ();
   int res = already_solved ();
+  if (!res && preprocess_only && level)
+    backtrack ();
   if (!res)
     res = restore_clauses ();
   if (!res) {
@@ -678,12 +714,12 @@ int Internal::solve (bool preprocess_only) {
     if (!preprocess_only)
       init_search_limits ();
   }
-  if (!res)
+  if (!res && !level)
     res = preprocess ();
   if (!preprocess_only) {
-    if (!res)
+    if (!res && !level)
       res = local_search ();
-    if (!res)
+    if (!res && !level)
       res = lucky_phases ();
     if (!res || (res == 10 && external_prop)) {
       if (res == 10 && external_prop && level)
@@ -704,9 +740,9 @@ int Internal::already_solved () {
     LOG ("already inconsistent");
     res = 20;
   } else {
-    if (level)
+    if (level && !opts.ilb)
       backtrack ();
-    if (!propagate ()) {
+    if (!level && !propagate ()) {
       LOG ("root level propagation produces conflict");
       learn_empty_clause ();
       res = 20;
@@ -825,18 +861,17 @@ void Internal::finalize () {
       proof->finalize_clause (c);
 
   // finalize conflict and proof
-  if (conflict_id)
+  if (conflict_id) {
     proof->finalize_clause (conflict_id, {});
-  if (proof) {
-    proof->finalize_proof (conflict_id);
   }
+  proof->finalize_proof (conflict_id);
 }
 
 /*------------------------------------------------------------------------*/
 
 void Internal::print_statistics () {
   stats.print (this);
-  for (auto & st : stat_tracers)
+  for (auto &st : stat_tracers)
     st->print_stats ();
 }
 

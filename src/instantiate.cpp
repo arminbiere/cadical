@@ -64,6 +64,8 @@ void Internal::collect_instantiation_candidates (
 inline void Internal::inst_assign (int lit) {
   LOG ("instantiate assign %d", lit);
   assert (!val (lit));
+  assert ((int) num_assigned < max_var);
+  num_assigned++;
   vals[lit] = 1;
   vals[-lit] = -1;
   trail.push_back (lit);
@@ -242,6 +244,7 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
     LOG ("instantiate unassign %d", other);
     trail.pop_back ();
     assert (val (other) > 0);
+    num_assigned--;
     vals[other] = vals[-other] = 0;
     // this is a variant of conflict analysis which is only needed for lrat
     if (!ok && inst_chain.size () && lrat) {

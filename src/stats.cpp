@@ -76,6 +76,9 @@ void Stats::print (Internal *internal) {
   if (all || stats.chrono)
     PRT ("chronological:   %15" PRId64 "   %10.2f %%  of conflicts",
          stats.chrono, percent (stats.chrono, stats.conflicts));
+  if (all || (stats.elevated && stats.chrono))
+    PRT ("  elevated:      %15" PRId64 "   %10.2f    per chronological",
+         stats.elevated, relative (stats.elevated, stats.chrono));
   if (all)
     PRT ("compacts:        %15" PRId64 "   %10.2f    interval",
          stats.compacts, relative (stats.conflicts, stats.compacts));
@@ -323,6 +326,12 @@ void Stats::print (Internal *internal) {
   PRT ("  searchprops:   %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.search,
        percent (stats.propagations.search, propagations));
+  PRT ("    cleanprops:  %15" PRId64 "   %10.2f %%  of searchprops",
+       stats.propagations.clean,
+       percent (stats.propagations.clean, stats.propagations.search));
+  PRT ("    dirtyprops:  %15" PRId64 "   %10.2f %%  of searchprops",
+       stats.propagations.dirty,
+       percent (stats.propagations.dirty, stats.propagations.search));
   PRT ("  transredprops: %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.transred,
        percent (stats.propagations.transred, propagations));
@@ -460,6 +469,19 @@ void Stats::print (Internal *internal) {
     PRT ("  htr2:          %15" PRId64 "   %10.2f %%  binary hyper ternres",
          stats.htrs2, percent (stats.htrs2, stats.htrs));
   }
+  if (all || stats.ilbtriggers) {
+    PRT ("trail reuses:    %15" PRId64 "   %10.2f %%  of incremental calls",
+         stats.ilbsuccess, percent (stats.ilbsuccess, stats.ilbtriggers));
+    PRT ("  levels:        %15" PRId64 "   %10.2f    per reuse",
+         stats.levelsreused,
+         relative (stats.levelsreused, stats.ilbsuccess));
+    PRT ("  literals:      %15" PRId64 "   %10.2f    per reuse",
+         stats.literalsreused,
+         relative (stats.literalsreused, stats.ilbsuccess));
+    PRT ("  assumptions:   %15" PRId64 "   %10.2f    per reuse",
+         stats.assumptionsreused,
+         relative (stats.assumptionsreused, stats.ilbsuccess));
+  }
   if (all || vivified) {
     PRT ("vivified:        %15" PRId64 "   %10.2f %%  of all clauses",
          vivified, percent (vivified, stats.added.total));
@@ -576,6 +598,31 @@ void Checker::print_stats () {
        stats.collisions, relative (stats.collisions, stats.searches));
   MSG ("searches:        %15" PRId64 "", stats.searches);
   MSG ("units:           %15" PRId64 "", stats.units);
+}
+
+void LratChecker::print_stats () {
+
+  if (!stats.added && !stats.deleted)
+    return;
+
+  SECTION ("lrat checker statistics");
+
+  MSG ("checks:          %15" PRId64 "", stats.checks);
+  MSG ("insertions:      %15" PRId64 "   %10.2f %%  of all clauses",
+       stats.insertions, percent (stats.insertions, stats.added));
+  MSG ("original:        %15" PRId64 "   %10.2f %%  of all clauses",
+       stats.original, percent (stats.original, stats.added));
+  MSG ("derived:         %15" PRId64 "   %10.2f %%  of all clauses",
+       stats.derived, percent (stats.derived, stats.added));
+  MSG ("deleted:         %15" PRId64 "   %10.2f %%  of all clauses",
+       stats.deleted, percent (stats.deleted, stats.added));
+  MSG ("finalized:       %15" PRId64 "   %10.2f %%  of all clauses",
+       stats.finalized, percent (stats.finalized, stats.added));
+  MSG ("collections:     %15" PRId64 "   %10.2f    deleted per collection",
+       stats.collections, relative (stats.collections, stats.deleted));
+  MSG ("collisions:      %15" PRId64 "   %10.2f    per search",
+       stats.collisions, relative (stats.collisions, stats.searches));
+  MSG ("searches:        %15" PRId64 "", stats.searches);
 }
 
 } // namespace CaDiCaL

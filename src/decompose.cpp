@@ -84,6 +84,58 @@ void Internal::decompose_conflicting_scc_lrat (DFS *dfs, vector<int> &scc) {
   clear_analyzed_literals ();
 }
 
+void Internal::build_lrat_for_clause (
+    const vector<vector<Clause *>> &dfs_chains, bool invert) {
+  assert (lrat);
+  LOG ("building chain for not subsumed clause");
+  assert (lrat_chain.empty ());
+  assert (decomposed.empty ());
+  for (const auto lit : clause) { // build chain for each replaced literal
+    auto other = lit;
+    if (val (other) > 0) {
+      if (marked_decompose (other))
+        continue;
+      mark_decomposed (other);
+      const unsigned uidx = vlit (other);
+      uint64_t id = unit_clauses[uidx];
+      assert (id);
+      lrat_chain.push_back (id);
+      continue;
+    }
+    assert (mini_chain.empty ());
+    for (auto p : dfs_chains[vlit (other)]) {
+      if (marked_decompose (other))
+        continue;
+      mark_decomposed (other);
+      int implied = p->literals[0];
+      implied = implied == other ? -p->literals[1] : -implied;
+      LOG ("ADDED %d -> %d (%" PRIu64 ")", implied, other, p->id);
+      other = implied;
+      mini_chain.push_back (p->id);
+      if (val (implied) <= 0)
+        continue;
+      if (marked_decompose (implied))
+        break;
+      mark_decomposed (implied);
+      const unsigned uidx = vlit (implied);
+      uint64_t id = unit_clauses[uidx];
+      assert (id);
+      mini_chain.push_back (id);
+      break;
+    }
+    if (invert)
+      for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++)
+        lrat_chain.push_back (*p);
+    else
+      for (auto p = mini_chain.begin (); p != mini_chain.end (); p++)
+        lrat_chain.push_back (*p);
+    mini_chain.clear ();
+  }
+  // clear_analyzed_literals ();
+  clear_decomposed_literals ();
+  LOG (lrat_chain, "lrat_chain:");
+}
+
 void Internal::clear_decomposed_literals () {
   LOG ("clearing %zd decomposed literals", decomposed.size ());
   for (const auto &lit : decomposed) {
@@ -92,7 +144,6 @@ void Internal::clear_decomposed_literals () {
   }
   decomposed.clear ();
 }
-
 
 // This performs one round of Tarjan's algorithm, e.g., equivalent literal
 // detection and substitution, on the whole formula.  We might want to
@@ -378,6 +429,71 @@ bool Internal::decompose_round () {
 
   bool new_unit = false, new_binary_clause = false;
 
+  // Finally, mark substituted literals as such and push the equivalences of
+  // the substituted literals to their representative on the extension
+  // stack to fix an assignment during 'extend'.
+  //
+  // TODO instead of adding the clauses to the extension stack one could
+  // also just simply use the 'e2i' map as a union find data structure.
+  // This would avoid the need to restore these clauses.
+
+  vector<uint64_t> decompose_ids;
+  const size_t size = 2 * (1 + (size_t) max_var);
+  decompose_ids.resize (size);
+
+  for (auto idx : vars) {
+    if (unsat)
+      break;
+    if (!active (idx))
+      continue;
+    int other = reprs[vlit (idx)];
+    if (other == idx)
+      continue;
+    assert (!flags (other).eliminated ());
+    assert (!flags (other).substituted ());
+
+    LOG ("marking equivalence of %d and %d", idx, other);
+    assert (clause.empty ());
+    assert (lrat_chain.empty ());
+    clause.push_back (other);
+    clause.push_back (-idx);
+    if (lrat) {
+      build_lrat_for_clause (dfs_chains);
+      assert (!lrat_chain.empty ());
+    }
+
+    const uint64_t id1 = ++clause_id;
+    if (proof) {
+      proof->add_derived_clause (id1, false, clause, lrat_chain);
+      proof->weaken_minus (id1, clause);
+    }
+    external->push_binary_clause_on_extension_stack (id1, -idx, other);
+
+    decompose_ids[vlit (-idx)] = id1;
+
+    lrat_chain.clear ();
+    clause.clear ();
+
+    assert (clause.empty ());
+    assert (lrat_chain.empty ());
+    clause.push_back (idx);
+    clause.push_back (-other);
+    if (lrat) {
+      build_lrat_for_clause (dfs_chains);
+      assert (!lrat_chain.empty ());
+    }
+    const uint64_t id2 = ++clause_id;
+    if (proof) {
+      proof->add_derived_clause (id2, false, clause, lrat_chain);
+      proof->weaken_minus (id2, clause);
+    }
+    external->push_binary_clause_on_extension_stack (id2, idx, -other);
+    decompose_ids[vlit (idx)] = id2;
+
+    clause.clear ();
+    lrat_chain.clear ();
+  }
+
   vector<Clause *> postponed_garbage;
 
   // Now go over all clauses and find clause which contain literals that
@@ -421,14 +537,41 @@ bool Internal::decompose_round () {
       signed char tmp = val (lit);
       if (tmp > 0)
         satisfied = true;
-      else if (tmp < 0)
+      else if (tmp < 0) {
+        if (!lrat)
+          continue;
+        Flags &f = flags (lit);
+        if (f.seen)
+          continue;
+        f.seen = true;
+        analyzed.push_back (lit);
+        const unsigned uidx = vlit (-lit);
+        uint64_t id = unit_clauses[uidx];
+        assert (id);
+        lrat_chain.push_back (id);
         continue;
-      else {
+      } else {
         const int other = reprs[vlit (lit)];
         tmp = val (other);
-        if (tmp < 0)
+        if (tmp < 0) {
+          if (!lrat)
+            continue;
+          Flags &f = flags (other);
+          if (!f.seen) {
+            f.seen = true;
+            analyzed.push_back (other);
+            const unsigned uidx = vlit (-other);
+            uint64_t id = unit_clauses[uidx];
+            assert (id);
+            lrat_chain.push_back (id);
+          }
+          if (other == lit)
+            continue;
+          uint64_t id = decompose_ids[vlit (-lit)];
+          assert (id);
+          lrat_chain.push_back (id);
           continue;
-        else if (tmp > 0)
+        } else if (tmp > 0)
           satisfied = true;
         else {
           tmp = marked (other);
@@ -438,57 +581,20 @@ bool Internal::decompose_round () {
             mark (other);
             clause.push_back (other);
           }
-        }
-      }
-    }
-    // build lrat
-    if (lrat) {
-      LOG ("building chain for not subsumed clause");
-      assert (lrat_chain.empty ());
-      assert (decomposed.empty ());
-      for (const auto lit : *c) { // build chain for each replaced literal
-        auto other = -lit;
-        if (val (other) > 0) {
-          if (marked_decompose (other))
+          if (other == lit)
             continue;
-          mark_decomposed (other);
-          const unsigned uidx = vlit (other);
-          uint64_t id = unit_clauses[uidx];
+          if (!lrat)
+            continue;
+          uint64_t id = decompose_ids[vlit (-lit)];
           assert (id);
           lrat_chain.push_back (id);
-          continue;
         }
-        assert (mini_chain.empty ());
-        for (auto p : dfs_chains[vlit (other)]) {
-          if (marked_decompose (other))
-            continue;
-          mark_decomposed (other);
-          int implied = p->literals[0];
-          implied = implied == other ? -p->literals[1] : -implied;
-          LOG ("ADDED %d -> %d (%" PRIu64 ")", implied, other, p->id);
-          other = implied;
-          mini_chain.push_back (p->id);
-          if (val (implied) <= 0)
-            continue;
-          if (marked_decompose (implied))
-            break;
-          mark_decomposed (implied);
-          // if (val (implied) == 0) continue;
-          const unsigned uidx = vlit (implied);
-          uint64_t id = unit_clauses[uidx];
-          assert (id);
-          mini_chain.push_back (id);
-          break;
-        }
-        for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++)
-          lrat_chain.push_back (*p);
-        mini_chain.clear ();
       }
-      // clear_analyzed_literals ();
-      clear_decomposed_literals ();
-      lrat_chain.push_back (c->id);
-      LOG (lrat_chain, "lrat_chain: ");
     }
+    if (lrat)
+      lrat_chain.push_back (c->id);
+    clear_analyzed_literals ();
+    LOG (lrat_chain, "lrat_chain:");
     if (satisfied) {
       LOG (c, "satisfied after substitution (postponed)");
       postponed_garbage.push_back (c);
@@ -525,7 +631,8 @@ bool Internal::decompose_round () {
       if (!c->redundant)
         mark_removed (c);
       if (proof) {
-        proof->add_derived_clause (++clause_id, true, clause, lrat_chain);
+        proof->add_derived_clause (++clause_id, c->redundant, clause,
+                                   lrat_chain);
         proof->delete_clause (c);
         c->id = clause_id;
       }
@@ -556,6 +663,31 @@ bool Internal::decompose_round () {
     lrat_chain.clear ();
   }
 
+  if (proof) {
+    for (auto idx : vars) {
+      if (!active (idx))
+        continue;
+      const uint64_t id1 = decompose_ids[vlit (-idx)];
+      if (!id1)
+        continue;
+      int other = reprs[vlit (idx)];
+      assert (other != idx);
+      assert (!flags (other).eliminated ());
+      assert (!flags (other).substituted ());
+
+      clause.push_back (other);
+      clause.push_back (-idx);
+      proof->delete_clause (id1, false, clause);
+      clause.clear ();
+
+      clause.push_back (idx);
+      clause.push_back (-other);
+      const uint64_t id2 = decompose_ids[vlit (idx)];
+      proof->delete_clause (id2, false, clause);
+      clause.clear ();
+    }
+  }
+
   if (!unsat && !postponed_garbage.empty ()) {
     LOG ("now marking %zd postponed garbage clauses",
          postponed_garbage.size ());
@@ -578,14 +710,6 @@ bool Internal::decompose_round () {
     learn_empty_clause ();
   }
 
-  // Finally, mark substituted literals as such and push the equivalences of
-  // the substituted literals to their representative on the extension
-  // stack to fix an assignment during 'extend'.
-  //
-  // TODO instead of adding the clauses to the extension stack one could
-  // also just simply use the 'e2i' map as a union find data structure.
-  // This would avoid the need to restore these clauses.
-
   for (auto idx : vars) {
     if (unsat)
       break;
@@ -598,8 +722,6 @@ bool Internal::decompose_round () {
     assert (!flags (other).substituted ());
     if (!flags (other).fixed ())
       mark_substituted (idx);
-    external->push_binary_clause_on_extension_stack (-idx, other);
-    external->push_binary_clause_on_extension_stack (idx, -other);
   }
 
   delete[] reprs;

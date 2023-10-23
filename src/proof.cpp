@@ -17,7 +17,8 @@ void Internal::new_proof_on_demand () {
 }
 
 void Internal::setup_lrat_builder () {
-  if (lratbuilder) return;
+  if (lratbuilder)
+    return;
   if (opts.externallrat) {
     lratbuilder = new LratBuilder (this);
     LOG ("PROOF connecting lrat proof chain builder");
@@ -26,34 +27,110 @@ void Internal::setup_lrat_builder () {
 }
 
 void Internal::force_lrat () {
-  if (lrat || lratbuilder) return;
+  if (lrat || lratbuilder)
+    return;
   lrat = true;
+}
+
+void Internal::connect_proof_tracer (Tracer *tracer, bool antecedents) {
+  new_proof_on_demand ();
+  if (antecedents)
+    force_lrat ();
+  proof->connect (tracer);
+  tracers.push_back (tracer);
+}
+
+void Internal::connect_proof_tracer (InternalTracer *tracer,
+                                     bool antecedents) {
+  new_proof_on_demand ();
+  if (antecedents)
+    force_lrat ();
+  tracer->connect_internal (this);
+  proof->connect (tracer);
+  tracers.push_back (tracer);
+}
+
+void Internal::connect_proof_tracer (StatTracer *tracer, bool antecedents) {
+  new_proof_on_demand ();
+  if (antecedents)
+    force_lrat ();
+  tracer->connect_internal (this);
+  proof->connect (tracer);
+  stat_tracers.push_back (tracer);
+}
+
+void Internal::connect_proof_tracer (FileTracer *tracer, bool antecedents) {
+  new_proof_on_demand ();
+  if (antecedents)
+    force_lrat ();
+  tracer->connect_internal (this);
+  proof->connect (tracer);
+  file_tracers.push_back (tracer);
+}
+
+bool Internal::disconnect_proof_tracer (Tracer *tracer) {
+  auto it = std::find (tracers.begin (), tracers.end (), tracer);
+  if (it != tracers.end ()) {
+    tracers.erase (it);
+    assert (proof);
+    proof->disconnect (tracer);
+    return true;
+  }
+  return false;
+}
+
+bool Internal::disconnect_proof_tracer (StatTracer *tracer) {
+  auto it = std::find (stat_tracers.begin (), stat_tracers.end (), tracer);
+  if (it != stat_tracers.end ()) {
+    stat_tracers.erase (it);
+    assert (proof);
+    proof->disconnect (tracer);
+    return true;
+  }
+  return false;
+}
+
+bool Internal::disconnect_proof_tracer (FileTracer *tracer) {
+  auto it = std::find (file_tracers.begin (), file_tracers.end (), tracer);
+  if (it != file_tracers.end ()) {
+    file_tracers.erase (it);
+    assert (proof);
+    proof->disconnect (tracer);
+    return true;
+  }
+  return false;
+}
+
+void Proof::disconnect (Tracer *t) {
+  tracers.erase (std::remove (tracers.begin (), tracers.end (), t),
+                 tracers.end ());
 }
 
 // Enable proof tracing.
 
 void Internal::trace (File *file) {
-  new_proof_on_demand ();
-  FileTracer * ft;
   if (opts.veripb) {
     LOG ("PROOF connecting veripb tracer");
-    ft = new VeripbTracer (this, file, opts.binary, opts.veripb == 1);    
-    if (opts.veripb == 1) force_lrat ();
+    bool antecedents = opts.veripb == 1 || opts.veripb == 2;
+    bool deletions = opts.veripb == 2 || opts.veripb == 4;
+    FileTracer *ft =
+        new VeripbTracer (this, file, opts.binary, antecedents, deletions);
+    connect_proof_tracer (ft, antecedents);
   } else if (opts.frat) {
     LOG ("PROOF connecting frat tracer");
-    ft = new FratTracer (this, file, opts.binary, opts.frat == 1);
-    if (opts.frat == 1) force_lrat ();
+    bool antecedents = opts.frat == 1;
+    FileTracer *ft =
+        new FratTracer (this, file, opts.binary, opts.frat == 1);
+    connect_proof_tracer (ft, antecedents);
   } else if (opts.lrat) {
     LOG ("PROOF connecting lrat tracer");
-    ft = new LratTracer (this, file, opts.binary);  
-    force_lrat ();
+    FileTracer *ft = new LratTracer (this, file, opts.binary);
+    connect_proof_tracer (ft, true);
   } else {
     LOG ("PROOF connecting drat tracer");
-    ft = new DratTracer (this, file, opts.binary);    
+    FileTracer *ft = new DratTracer (this, file, opts.binary);
+    connect_proof_tracer (ft, false);
   }
-  assert (ft);
-  proof->connect (ft);
-  file_tracers.push_back (ft);
 }
 
 // Enable proof checking.
@@ -61,14 +138,14 @@ void Internal::trace (File *file) {
 void Internal::check () {
   new_proof_on_demand ();
   if (opts.checkproof > 1) {
-    Tracer * lratchecker = new LratChecker (this);
+    StatTracer *lratchecker = new LratChecker (this);
     LOG ("PROOF connecting lrat proof checker");
     force_lrat ();
     proof->connect (lratchecker);
-    tracers.push_back (lratchecker);
+    stat_tracers.push_back (lratchecker);
   }
   if (opts.checkproof == 1 || opts.checkproof == 3) {
-    StatTracer* checker = new Checker (this);
+    StatTracer *checker = new Checker (this);
     LOG ("PROOF connecting proof checker");
     proof->connect (checker);
     stat_tracers.push_back (checker);
@@ -78,21 +155,20 @@ void Internal::check () {
 // We want to close a proof trace and stop checking as soon we are done.
 
 void Internal::close_trace () {
-  for (auto & tracer : file_tracers)
+  for (auto &tracer : file_tracers)
     tracer->close ();
 }
 
 // We can flush a proof trace file before actually closing it.
 
 void Internal::flush_trace () {
-  for (auto & tracer : file_tracers)
+  for (auto &tracer : file_tracers)
     tracer->flush ();
 }
 
 /*------------------------------------------------------------------------*/
 
-Proof::Proof (Internal *s)
-    : internal (s), lratbuilder (0) {
+Proof::Proof (Internal *s) : internal (s), lratbuilder (0) {
   LOG ("PROOF new");
 }
 
@@ -117,7 +193,8 @@ inline void Proof::add_literals (const vector<int> &c) {
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_original_clause (uint64_t id, bool r, const vector<int> &c) {
+void Proof::add_original_clause (uint64_t id, bool r,
+                                 const vector<int> &c) {
   LOG (c, "PROOF adding original internal clause");
   add_literals (c);
   clause_id = id;
@@ -126,14 +203,15 @@ void Proof::add_original_clause (uint64_t id, bool r, const vector<int> &c) {
 }
 
 void Proof::add_external_original_clause (uint64_t id, bool r,
-                                          const vector<int> &c) {
+                                          const vector<int> &c,
+                                          bool restore) {
   // literals of c are already external
   assert (clause.empty ());
   for (auto const &lit : c)
     clause.push_back (lit);
   clause_id = id;
   redundant = r;
-  add_original_clause ();
+  add_original_clause (restore);
 }
 
 void Proof::delete_external_original_clause (uint64_t id, bool r,
@@ -188,7 +266,7 @@ void Proof::add_derived_clause (Clause *c, const vector<uint64_t> &chain) {
 
 void Proof::add_derived_clause (uint64_t id, bool r, const vector<int> &c,
                                 const vector<uint64_t> &chain) {
-  LOG (internal->clause, "PROOF adding derived clause");
+  LOG (c, "PROOF adding derived clause");
   assert (clause.empty ());
   assert (proof_chain.empty ());
   for (const auto &lit : c)
@@ -198,6 +276,47 @@ void Proof::add_derived_clause (uint64_t id, bool r, const vector<int> &c,
   clause_id = id;
   redundant = r;
   add_derived_clause ();
+}
+
+void Proof::add_assumption_clause (uint64_t id, const vector<int> &c,
+                                   const vector<uint64_t> &chain) {
+  // literals of c are already external
+  assert (clause.empty ());
+  assert (proof_chain.empty ());
+  for (const auto &lit : c)
+    clause.push_back (lit);
+  for (const auto &cid : chain)
+    proof_chain.push_back (cid);
+  clause_id = id;
+  add_assumption_clause ();
+}
+
+void Proof::add_assumption (int a) {
+  // a is already external
+  assert (clause.empty ());
+  assert (proof_chain.empty ());
+  clause.push_back (a);
+  add_assumption ();
+}
+
+void Proof::add_constraint (const vector<int> &c) {
+  // literals of c are already external
+  assert (clause.empty ());
+  assert (proof_chain.empty ());
+  for (const auto &lit : c)
+    clause.push_back (lit);
+  add_constraint ();
+}
+
+void Proof::add_assumption_clause (uint64_t id, int lit,
+                                   const vector<uint64_t> &chain) {
+  assert (clause.empty ());
+  assert (proof_chain.empty ());
+  clause.push_back (lit);
+  for (const auto &cid : chain)
+    proof_chain.push_back (cid);
+  clause_id = id;
+  add_assumption_clause ();
 }
 
 void Proof::delete_clause (Clause *c) {
@@ -216,6 +335,32 @@ void Proof::delete_clause (uint64_t id, bool r, const vector<int> &c) {
   clause_id = id;
   redundant = r;
   delete_clause ();
+}
+
+void Proof::weaken_minus (Clause *c) {
+  LOG (c, "PROOF weaken minus of");
+  assert (clause.empty ());
+  add_literals (c);
+  clause_id = c->id;
+  weaken_minus ();
+}
+
+void Proof::weaken_minus (uint64_t id, const vector<int> &c) {
+  LOG (c, "PROOF deleting from proof");
+  assert (clause.empty ());
+  add_literals (c);
+  clause_id = id;
+  weaken_minus ();
+}
+
+void Proof::weaken_plus (Clause *c) {
+  weaken_minus (c);
+  delete_clause (c);
+}
+
+void Proof::weaken_plus (uint64_t id, const vector<int> &c) {
+  weaken_minus (id, c);
+  delete_clause (id, false, c);
 }
 
 void Proof::delete_unit_clause (uint64_t id, const int lit) {
@@ -333,34 +478,34 @@ void Proof::otfs_strengthen_clause (Clause *c, const std::vector<int> &old,
   c->id = id;
 }
 
+void Proof::strengthen (uint64_t id) {
+  clause_id = id;
+  strengthen ();
+}
+
 /*------------------------------------------------------------------------*/
 
-void Proof::add_original_clause () {
+void Proof::add_original_clause (bool restore) {
   LOG (clause, "PROOF adding original external clause");
   assert (clause_id);
 
   if (lratbuilder)
     lratbuilder->add_original_clause (clause_id, clause);
-  for (auto & tracer : tracers) {
-    tracer->add_original_clause (clause_id, redundant, clause);
-  }
-  for (auto & tracer : file_tracers) {
-    tracer->add_original_clause (clause_id, redundant, clause);
+  for (auto &tracer : tracers) {
+    tracer->add_original_clause (clause_id, false, clause, restore);
   }
   clause.clear ();
   clause_id = 0;
 }
 
 void Proof::add_derived_clause () {
-  LOG (clause, "PROOF adding derived external clause");
+  LOG (clause, "PROOF adding derived external clause (redundant: %d)",
+       redundant);
   assert (clause_id);
   if (lratbuilder) {
     proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
   }
-  for (auto & tracer : tracers) {
-    tracer->add_derived_clause (clause_id, redundant, clause, proof_chain);
-  }
-  for (auto & tracer : file_tracers) {
+  for (auto &tracer : tracers) {
     tracer->add_derived_clause (clause_id, redundant, clause, proof_chain);
   }
   proof_chain.clear ();
@@ -372,44 +517,96 @@ void Proof::delete_clause () {
   LOG (clause, "PROOF deleting external clause");
   if (lratbuilder)
     lratbuilder->delete_clause (clause_id, clause);
-  for (auto & tracer : tracers) {
-    tracer->delete_clause (clause_id, redundant, clause);
-  }
-  for (auto & tracer : file_tracers) {
+  for (auto &tracer : tracers) {
     tracer->delete_clause (clause_id, redundant, clause);
   }
   clause.clear ();
+  clause_id = 0;
+}
+
+void Proof::weaken_minus () {
+  LOG (clause, "PROOF marking as clause to restore");
+  for (auto &tracer : tracers) {
+    tracer->weaken_minus (clause_id, clause);
+  }
+  clause.clear ();
+  clause_id = 0;
+}
+
+void Proof::strengthen () {
+  LOG ("PROOF strengthen clause with id %" PRId64, clause_id);
+  for (auto &tracer : tracers) {
+    tracer->strengthen (clause_id);
+  }
   clause_id = 0;
 }
 
 void Proof::finalize_clause () {
-  for (auto & tracer : tracers) {
-    tracer->finalize_clause (clause_id, clause);
-  }
-  for (auto & tracer : file_tracers) {
+  for (auto &tracer : tracers) {
     tracer->finalize_clause (clause_id, clause);
   }
   clause.clear ();
   clause_id = 0;
 }
 
-void Proof::finalize_proof (uint64_t id) {
-  for (auto & tracer : tracers) {
-    tracer->finalize_proof (id);
+void Proof::add_assumption_clause () {
+  LOG (clause, "PROOF adding assumption clause");
+  if (lratbuilder) {
+    proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
+    lratbuilder->delete_clause (clause_id, clause);
   }
-  for (auto & tracer : file_tracers) {
+  for (auto &tracer : tracers) {
+    tracer->add_assumption_clause (clause_id, clause, proof_chain);
+  }
+  proof_chain.clear ();
+  clause.clear ();
+  clause_id = 0;
+}
+
+void Proof::add_assumption () {
+  LOG (clause, "PROOF adding assumption");
+  assert (clause.size () == 1);
+  for (auto &tracer : tracers) {
+    tracer->add_assumption (clause.back ());
+  }
+  clause.clear ();
+}
+
+void Proof::add_constraint () {
+  LOG (clause, "PROOF adding constraint");
+  for (auto &tracer : tracers) {
+    tracer->add_constraint (clause);
+  }
+  clause.clear ();
+}
+
+void Proof::reset_assumptions () {
+  LOG ("PROOF reset assumptions");
+  for (auto &tracer : tracers) {
+    tracer->reset_assumptions ();
+  }
+}
+
+void Proof::finalize_proof (uint64_t id) {
+  LOG (clause, "PROOF finalizing proof");
+  for (auto &tracer : tracers) {
     tracer->finalize_proof (id);
   }
 }
 
 void Proof::begin_proof (uint64_t id) {
-  for (auto & tracer : tracers) {
-    tracer->begin_proof (id);
-  }
-  for (auto & tracer : file_tracers) {
+  LOG (clause, "PROOF begin proof");
+  for (auto &tracer : tracers) {
     tracer->begin_proof (id);
   }
 }
 
+void Proof::conclude_proof (ConclusionType con,
+                            const vector<uint64_t> &conclusion) {
+  LOG (clause, "PROOF conclude proof");
+  for (auto &tracer : tracers) {
+    tracer->conclude_proof (con, conclusion);
+  }
+}
 
 } // namespace CaDiCaL

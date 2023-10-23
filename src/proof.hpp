@@ -26,37 +26,51 @@ class Proof {
   bool redundant;
 
   // the 'tracers'
-  vector<Tracer*> tracers;             // tracers (ie checker)
-  vector<FileTracer*> file_tracers;    // file tracers (ie lrat tracer)
-  LratBuilder *lratbuilder;            // special tracer
+  vector<Tracer *> tracers;          // tracers (ie checker)
+  vector<FileTracer *> file_tracers; // file tracers (ie lrat tracer)
+  LratBuilder *lratbuilder;          // special tracer
 
   void add_literal (int internal_lit); // add to 'clause'
   void add_literals (Clause *);        // add to 'clause'
 
   void add_literals (const vector<int> &); // ditto
 
-  void add_original_clause (); // notify observers of original clauses
-  void add_derived_clause ();  // notify observers of derived clauses
-  void delete_clause ();       // notify observers of deleted clauses
+  void add_original_clause (
+      bool restore = false); // notify observers of original clauses
+  void add_derived_clause ();
+  void add_assumption_clause ();
+  void delete_clause ();
+  void weaken_minus ();
+  void strengthen ();
   void finalize_clause ();
+  void add_assumption ();
+  void add_constraint ();
 
 public:
   Proof (Internal *);
   ~Proof ();
 
   void connect (LratBuilder *lb) { lratbuilder = lb; }
-  void connect (FileTracer *t) { file_tracers.push_back (t); }
   void connect (Tracer *t) { tracers.push_back (t); }
-
+  void disconnect (Tracer *t);
   // Add original clauses to the proof (for online proof checking).
   //
   void add_original_clause (uint64_t, bool, const vector<int> &);
 
+  void add_assumption_clause (uint64_t, const vector<int> &,
+                              const vector<uint64_t> &);
+  void add_assumption_clause (uint64_t, int, const vector<uint64_t> &);
+  void add_assumption (int);
+  void add_constraint (const vector<int> &);
+  void reset_assumptions ();
+
   // Add/delete original clauses to/from the proof using their original
   //  external literals (from external->eclause)
   //
-  void add_external_original_clause (uint64_t, bool, const vector<int> &);
-  void delete_external_original_clause (uint64_t, bool, const vector<int> &);
+  void add_external_original_clause (uint64_t, bool, const vector<int> &,
+                                     bool restore = false);
+  void delete_external_original_clause (uint64_t, bool,
+                                        const vector<int> &);
 
   // Add derived (such as learned) clauses to the proof.
   //
@@ -67,10 +81,16 @@ public:
   void add_derived_clause (uint64_t, bool, const vector<int> &,
                            const vector<uint64_t> &);
 
-
+  // deletion of clauses. It comes in several variants, depending if the
+  // clause should be restored or not
   void delete_clause (uint64_t, bool, const vector<int> &);
+  void weaken_minus (uint64_t, const vector<int> &);
+  void weaken_plus (uint64_t, const vector<int> &);
   void delete_unit_clause (uint64_t id, const int lit);
   void delete_clause (Clause *);
+  void weaken_minus (Clause *);
+  void weaken_plus (Clause *);
+  void strengthen (uint64_t);
 
   void finalize_unit (uint64_t, int);
   void finalize_external_unit (uint64_t, int);
@@ -79,10 +99,10 @@ public:
 
   void finalize_proof (uint64_t);
   void begin_proof (uint64_t);
-
+  void conclude_proof (ConclusionType, const vector<uint64_t> &);
   // These two actually pretend to add and remove a clause.
   //
-  void flush_clause (Clause *);           // remove falsified literals
+  void flush_clause (Clause *); // remove falsified literals
   void strengthen_clause (Clause *, int, const vector<uint64_t> &);
   void otfs_strengthen_clause (Clause *, const vector<int> &,
                                const vector<uint64_t> &);

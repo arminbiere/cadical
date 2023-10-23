@@ -316,13 +316,22 @@ void Internal::compact () {
   // In the second part we map, flush and shrink arrays.
   /*======================================================================*/
 
+  assert (trail.size () == num_assigned);
   mapper.map_flush_and_shrink_lits (trail);
   propagated = trail.size ();
+  num_assigned = trail.size ();
   if (mapper.first_fixed) {
     assert (trail.size () == 1);
     var (mapper.first_fixed).trail = 0; // before mapping 'vtab'
   } else
     assert (trail.empty ());
+
+  if (opts.reimply) {
+    if (notify_trail.size () != notified)
+      notify_assignments ();
+    mapper.map_flush_and_shrink_lits (notify_trail);
+    notified = notify_trail.size ();
+  }
 
   if (!probes.empty ())
     mapper.map_flush_and_shrink_lits (probes);

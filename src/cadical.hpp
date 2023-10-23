@@ -197,6 +197,10 @@ class Terminator;
 class ClauseIterator;
 class WitnessIterator;
 class ExternalPropagator;
+class Tracer;
+class InternalTracer;
+class FileTracer;
+class StatTracer;
 
 /*------------------------------------------------------------------------*/
 
@@ -716,6 +720,43 @@ public:
   //   ensure (VALID)
   //
   void close_proof_trace ();
+
+  // Enables clausal proof tracing with or without antecedents using
+  // the Tracer interface defined in 'tracer.hpp'
+  //
+  // InternalTracer, StatTracer and FileTracer for internal use
+  //
+  //   require (CONFIGURING)
+  //   ensure (CONFIGURING)
+  //
+  void connect_proof_tracer (Tracer *tracer, bool antecedents);
+  void connect_proof_tracer (InternalTracer *tracer, bool antecedents);
+  void connect_proof_tracer (StatTracer *tracer, bool antecedents);
+  void connect_proof_tracer (FileTracer *tracer, bool antecedents);
+
+  // Triggers the conclusion of incremental proofs.
+  // If it has not been triggered otherwise, this will trigger
+  // failing () which will learn new clauses as explained below:
+  // In case of failed assumptions will provide a core negated
+  // as a clause through the proof tracer interface.
+  // With a failing contraint these can be multiple clauses.
+  // Then it will trigger a conclude_proof event with the id(s)
+  // of the newly learnt clauses or the id of the global conflict.
+  //
+  //   require (UNSATISFIED)
+  //   ensure (UNSATISFIED)
+  //
+  void conclude ();
+
+  // Disconnect proof tracer. If this is not done before deleting
+  // the tracer will be deleted. Returns true if successful.
+  //
+  //   require (VALID)
+  //   ensure (VALID)
+  //
+  bool disconnect_proof_tracer (Tracer *tracer);
+  bool disconnect_proof_tracer (StatTracer *tracer);
+  bool disconnect_proof_tracer (FileTracer *tracer);
 
   //------------------------------------------------------------------------
 

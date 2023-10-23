@@ -81,6 +81,8 @@ void External::reset_assumptions () {
   internal->reset_assumptions ();
 }
 
+void External::reset_concluded () { internal->reset_concluded (); }
+
 void External::reset_constraint () {
   constraint.clear ();
   internal->reset_constraint ();
@@ -185,6 +187,8 @@ void External::add (int elit) {
 void External::assume (int elit) {
   assert (elit);
   reset_extended ();
+  if (internal->proof)
+    internal->proof->add_assumption (elit);
   assumptions.push_back (elit);
   const int ilit = internalize (elit);
   assert (ilit);
@@ -248,11 +252,14 @@ void External::constrain (int elit) {
   }
   assert (elit != INT_MIN);
   reset_extended ();
-  constraint.push_back (elit);
   const int ilit = internalize (elit);
   assert (!elit == !ilit);
   if (elit)
     LOG ("adding external %d as internal %d to constraint", elit, ilit);
+  else if (!elit && internal->proof) {
+    internal->proof->add_constraint (constraint);
+  }
+  constraint.push_back (elit);
   internal->constrain (ilit);
 }
 
@@ -675,7 +682,7 @@ void External::check_failing () {
       checker->add (lit);
   } else if (constraint.size ())
     LOG (constraint, "constraint satisfied and ignored");
-    
+
   // Add original clauses as last step, failing () and failed_constraint ()
   // might add more external clauses (due to lazy explanation)
   for (const auto lit : original)

@@ -1,7 +1,7 @@
 #ifndef _drattracer_h_INCLUDED
 #define _drattracer_h_INCLUDED
 
-#include "filetracer.hpp"
+#include "tracer.hpp"
 
 namespace CaDiCaL {
 
@@ -21,27 +21,29 @@ class DratTracer : public FileTracer {
   void drat_add_clause (const vector<int> &);
   void drat_delete_clause (const vector<int> &);
 
-
 public:
   // own and delete 'file'
   DratTracer (Internal *, File *file, bool binary);
   ~DratTracer ();
 
-  void begin_proof (uint64_t) {} // skip
+  void connect_internal (Internal *i) override;
+  void begin_proof (uint64_t) override {} // skip
 
-  void add_original_clause (uint64_t, bool, const vector<int> &) {} // skip
+  void add_original_clause (uint64_t, bool, const vector<int> &,
+                            bool = false) override {} // skip
 
-  void add_derived_clause (uint64_t, bool, const vector<int> &, const vector<uint64_t> &);
-  
-  void delete_clause (uint64_t, bool, const vector<int> &);
-  
-  void finalize_clause (uint64_t, const vector<int> &) {} // skip
-  
-  void finalize_proof (uint64_t) {} // skip
+  void add_derived_clause (uint64_t, bool, const vector<int> &,
+                           const vector<uint64_t> &) override;
 
-  bool closed ();
-  void close ();
-  void flush ();
+  void delete_clause (uint64_t, bool, const vector<int> &) override;
+
+  void finalize_clause (uint64_t, const vector<int> &) override {} // skip
+
+  void finalize_proof (uint64_t) override {} // skip
+
+  bool closed () override;
+  void close () override;
+  void flush () override;
 };
 
 } // namespace CaDiCaL

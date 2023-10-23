@@ -5,19 +5,23 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 LratTracer::LratTracer (Internal *i, File *f, bool b)
-    : internal (i), file (f), binary (b),
-      added (0), deleted (0), latest_id (0) {
+    : internal (i), file (f), binary (b), added (0), deleted (0),
+      latest_id (0) {
   (void) internal;
-  LOG ("DRAT TRACER new");
+}
+
+void LratTracer::connect_internal (Internal *i) {
+  internal = i;
+  file->connect_internal (internal);
+  LOG ("LRAT TRACER connected to internal");
 }
 
 LratTracer::~LratTracer () {
-  LOG ("DRAT TRACER delete");
+  LOG ("LRAT TRACER delete");
   delete file;
 }
 
 /*------------------------------------------------------------------------*/
-
 
 inline void LratTracer::put_binary_zero () {
   assert (binary);
@@ -57,7 +61,7 @@ inline void LratTracer::put_binary_id (uint64_t id) {
 /*------------------------------------------------------------------------*/
 
 void LratTracer::lrat_add_clause (uint64_t id, const vector<int> &clause,
-                              const vector<uint64_t> &chain) {
+                                  const vector<uint64_t> &chain) {
   if (delete_ids.size ()) {
     if (!binary)
       file->put (latest_id), file->put (" ");
@@ -109,9 +113,9 @@ void LratTracer::lrat_delete_clause (uint64_t id) {
 
 /*------------------------------------------------------------------------*/
 
-
-void LratTracer::add_derived_clause (uint64_t id, bool, const vector<int> &clause,
-                                 const vector<uint64_t> &chain) {
+void LratTracer::add_derived_clause (uint64_t id, bool,
+                                     const vector<int> &clause,
+                                     const vector<uint64_t> &chain) {
   if (file->closed ())
     return;
   LOG ("LRAT TRACER tracing addition of derived clause");
@@ -133,8 +137,6 @@ void LratTracer::begin_proof (uint64_t id) {
   LOG ("LRAT TRACER tracing begin of proof");
   latest_id = id;
 }
-
-
 
 /*------------------------------------------------------------------------*/
 

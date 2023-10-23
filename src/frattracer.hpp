@@ -10,7 +10,10 @@ class FratTracer : public FileTracer {
   bool binary;
   bool with_antecedents;
 
-  int64_t added, deleted, finalized, original;
+  int64_t added, deleted;
+#ifndef QUIET
+  int64_t finalized, original;
+#endif
 
   vector<uint64_t> delete_ids;
 
@@ -26,27 +29,29 @@ class FratTracer : public FileTracer {
   void frat_delete_clause (uint64_t, const vector<int> &);
   void frat_finalize_clause (uint64_t, const vector<int> &);
 
-
 public:
   // own and delete 'file'
   FratTracer (Internal *, File *file, bool binary, bool antecedents);
   ~FratTracer ();
 
-  void begin_proof (uint64_t) {} // skip
+  void connect_internal (Internal *i) override;
+  void begin_proof (uint64_t) override {} // skip
 
-  void add_original_clause (uint64_t, bool, const vector<int> &);
+  void add_original_clause (uint64_t, bool, const vector<int> &,
+                            bool = false) override;
 
-  void add_derived_clause (uint64_t, bool, const vector<int> &, const vector<uint64_t> &);
-  
-  void delete_clause (uint64_t, bool, const vector<int> &);
-  
-  void finalize_clause (uint64_t, const vector<int> &);
-  
-  void finalize_proof (uint64_t) {} // skip
+  void add_derived_clause (uint64_t, bool, const vector<int> &,
+                           const vector<uint64_t> &) override;
 
-  bool closed ();
-  void close ();
-  void flush ();
+  void delete_clause (uint64_t, bool, const vector<int> &) override;
+
+  void finalize_clause (uint64_t, const vector<int> &) override;
+
+  void finalize_proof (uint64_t) override {} // skip
+
+  bool closed () override;
+  void close () override;
+  void flush () override;
 };
 
 } // namespace CaDiCaL
