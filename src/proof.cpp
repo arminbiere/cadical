@@ -126,6 +126,10 @@ void Internal::trace (File *file) {
     LOG ("PROOF connecting lrat tracer");
     FileTracer *ft = new LratTracer (this, file, opts.binary);
     connect_proof_tracer (ft, true);
+  } else if (opts.irup) {
+    LOG ("PROOF connecting irup tracer");
+    FileTracer *ft = new IrupTracer (this, file, opts.binary);
+    connect_proof_tracer (ft, true);
   } else {
     LOG ("PROOF connecting drat tracer");
     FileTracer *ft = new DratTracer (this, file, opts.binary);
