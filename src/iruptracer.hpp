@@ -54,7 +54,9 @@ class IrupTracer : public FileTracer {
   void irup_delete_clause (uint64_t id, const vector<int> &clause);
   void irup_add_restored_clause (const vector<int> &clause);
   void irup_conclude_and_delete (const vector<uint64_t> &conclusion);
-
+  void irup_report_status (StatusType status);
+  void irup_conclude_sat (const vector<int> &model);
+  
 public:
 
   IrupTracer (Internal *, File *file, bool);
@@ -67,10 +69,11 @@ public:
                                       const vector<uint64_t> &) override;
   void weaken_minus (uint64_t, const vector<int> &) override;
   void delete_clause (uint64_t, bool, const vector<int> &) override;
-  void conclude_proof (ConclusionType, const vector<uint64_t> &) override;
   void add_original_clause (uint64_t, bool, const vector<int> &,
                                     bool = false) override;
   void report_status (StatusType, uint64_t) override;
+  void conclude_sat (const vector<int> &) override;
+  void conclude_unsat (ConclusionType, const vector<uint64_t> &) override;
 
   // skip
   void begin_proof (uint64_t) override {}

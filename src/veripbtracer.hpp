@@ -63,7 +63,7 @@ class VeripbTracer : public FileTracer {
                                   const vector<int> &clause);
   void veripb_begin_proof (uint64_t reserved_ids);
   void veripb_delete_clause (uint64_t id, bool redundant);
-  void veripb_report_status (uint64_t conflict_id);
+  void veripb_report_status (bool unsat, uint64_t conflict_id);
   void veripb_strengthen (uint64_t);
 
 public:

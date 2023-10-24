@@ -802,6 +802,7 @@ int App::main (int argc, char **argv) {
 #endif
         if (res == 10) {
           satisfiable++;
+          solver->conclude ();
           break;
         } else if (res == 20) {
           unsatisfiable++;

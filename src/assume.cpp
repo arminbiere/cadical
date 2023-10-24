@@ -452,7 +452,7 @@ bool Internal::failed (int lit) {
   return (f.failed & bit) != 0;
 }
 
-void Internal::conclude () {
+void Internal::conclude_unsat () {
   if (!proof || concluded)
     return;
   concluded = true;
@@ -468,7 +468,7 @@ void Internal::conclude () {
     con = CONSTRAINT;
   else
     con = ASSUMPTIONS;
-  proof->conclude_proof (con, conclusion);
+  proof->conclude_unsat (con, conclusion);
 }
 
 void Internal::reset_concluded () {

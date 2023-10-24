@@ -610,11 +610,18 @@ void Proof::begin_proof (uint64_t id) {
   }
 }
 
-void Proof::conclude_proof (ConclusionType con,
+void Proof::conclude_unsat (ConclusionType con,
                             const vector<uint64_t> &conclusion) {
-  LOG (clause, "PROOF conclude proof");
+  LOG (clause, "PROOF conclude unsat");
   for (auto &tracer : tracers) {
-    tracer->conclude_proof (con, conclusion);
+    tracer->conclude_unsat (con, conclusion);
+  }
+}
+
+void Proof::conclude_sat (const vector<int> &model) {
+  LOG (clause, "PROOF conclude sat");
+  for (auto &tracer : tracers) {
+    tracer->conclude_sat (model);
   }
 }
 

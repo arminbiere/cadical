@@ -155,7 +155,7 @@ public:
   // check if all clauses have been deleted
   void report_status (StatusType, uint64_t) override;
 
-  void conclude_proof (ConclusionType, const vector<uint64_t> &) override;
+  void conclude_unsat (ConclusionType, const vector<uint64_t> &) override;
 
   void print_stats () override;
   void dump (); // for debugging purposes only

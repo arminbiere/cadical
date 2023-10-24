@@ -267,6 +267,38 @@ void IrupTracer::irup_conclude_and_delete (const vector<uint64_t> & conclusion) 
   }
 }
 
+
+void IrupTracer::irup_report_status (StatusType status) {
+  if (binary)
+    file->put ('s');
+  else
+    file->put ("s ");
+  if (status == UNSAT) {
+    file->put ("UN");
+  }
+  file->put ("SATISFIABLE");
+  if (!binary)
+    file->put ("\n");
+}
+
+
+void IrupTracer::irup_conclude_sat (const vector<int> &model) {
+  if (binary)
+    file->put ('v');
+  else
+    file->put ("v ");
+  for (auto & lit : model) {
+    if (binary)
+      put_binary_lit (lit);
+    else
+      file->put (lit), file->put (' ');
+  }
+  if (binary)
+    put_binary_zero ();
+  else
+    file->put ("0\n");
+}
+
 /*------------------------------------------------------------------------*/
 
 
@@ -312,7 +344,7 @@ void IrupTracer::weaken_minus (uint64_t id, const vector<int> &) {
   insert ();
 }
 
-void IrupTracer::conclude_proof (ConclusionType, const vector<uint64_t> & conclusion) {
+void IrupTracer::conclude_unsat (ConclusionType, const vector<uint64_t> & conclusion) {
   if (file->closed ())
     return;
   assert (imported_clause.empty ());
@@ -326,13 +358,26 @@ void IrupTracer::add_original_clause (uint64_t, bool, const vector<int> &clause,
     return;
   if (!restored)
     return;
+  LOG (clause, "IRUP TRACER tracing addition of restored clause");
   irup_add_restored_clause (clause);
 }
 
-void IrupTracer::report_status (StatusType, uint64_t) {
-  return;
+void IrupTracer::report_status (StatusType status, uint64_t) {
+  if (file->closed ())
+    return;
+  if (status == OTHER)
+    return;
+  LOG ("IRUP TRACER tracing report of status %d", status);
+  irup_report_status (status);
 }
-  
+ 
+void IrupTracer::conclude_sat (const vector<int> &model) {
+  if (file->closed ())
+    return;
+  LOG (model, "IRUP TRACER tracing conclusion of model");
+  irup_conclude_sat (model);
+}
+
 /*------------------------------------------------------------------------*/
 
 bool IrupTracer::closed () { return file->closed (); }

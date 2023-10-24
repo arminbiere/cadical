@@ -1250,7 +1250,7 @@ struct ConcludeCall : public Call {
   void execute (Solver *&s) {
     if (mobical.donot.enforce)
       s->conclude ();
-    else if (s->state () == UNSATISFIED)
+    else if (s->state () == UNSATISFIED || s->state () == SATISFIED)
       s->conclude ();
     res = 0;
   }

@@ -107,12 +107,16 @@ public:
   virtual void add_assumption_clause (uint64_t, const vector<int> &,
                                       const vector<uint64_t> &) {}
 
-  // Notify the observer that conclude proof was requested.
+  // Notify the observer that conclude unsat was requested.
   // will give either the id of the empty clause, the id of a failing
   // assumption clause or the ids of the failing constrain clauses
   // Arguments: conclusion_type, clause_ids
   //
-  virtual void conclude_proof (ConclusionType, const vector<uint64_t> &) {}
+  virtual void conclude_unsat (ConclusionType, const vector<uint64_t> &) {}
+
+  // Notify the observer that conclude sat was requested.
+  // will give the complete model as a vector
+  virtual void conclude_sat (const vector<int> &) {}
 };
 
 /*--------------------------------------------------------------------------*/

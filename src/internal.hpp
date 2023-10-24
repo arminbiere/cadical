@@ -1353,7 +1353,7 @@ struct Internal {
   bool disconnect_proof_tracer (Tracer *tracer);
   bool disconnect_proof_tracer (StatTracer *tracer);
   bool disconnect_proof_tracer (FileTracer *tracer);
-  void conclude ();
+  void conclude_unsat ();
   void reset_concluded ();
 
   // Dump to '<stdout>' as DIMACS for debugging.
