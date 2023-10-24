@@ -704,7 +704,7 @@ void LratChecker::finalize_clause (uint64_t id, const vector<int> &c) {
 }
 
 // check if all clauses have been deleted
-void LratChecker::finalize_proof (uint64_t) {
+void LratChecker::report_status (StatusType, uint64_t) {
   START (checking);
   if (num_finalized == num_clauses) {
     num_finalized = 0;

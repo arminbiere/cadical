@@ -97,7 +97,7 @@ public:
   void finalize_clause (uint64_t, const vector<int> &c);
   void finalize_clause (Clause *);
 
-  void finalize_proof (uint64_t);
+  void report_status (int, uint64_t);
   void begin_proof (uint64_t);
   void conclude_proof (ConclusionType, const vector<uint64_t> &);
   // These two actually pretend to add and remove a clause.

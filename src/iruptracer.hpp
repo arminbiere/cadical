@@ -70,11 +70,11 @@ public:
   void conclude_proof (ConclusionType, const vector<uint64_t> &) override;
   void add_original_clause (uint64_t, bool, const vector<int> &,
                                     bool = false) override;
+  void report_status (StatusType, uint64_t) override;
 
   // skip
   void begin_proof (uint64_t) override {}
   void finalize_clause (uint64_t, const vector<int> &) override {}
-  void finalize_proof (uint64_t) override {}
   void strengthen (uint64_t) override {}
   void add_assumption (int) override {}
   void add_constraint (const vector<int> &) override {}

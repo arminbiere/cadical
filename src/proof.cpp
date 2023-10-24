@@ -591,10 +591,15 @@ void Proof::reset_assumptions () {
   }
 }
 
-void Proof::finalize_proof (uint64_t id) {
-  LOG (clause, "PROOF finalizing proof");
+void Proof::report_status (int res, uint64_t id) {
+  LOG ("PROOF reporting status %d", res);
+  StatusType status = OTHER;
+  if (res == 10)
+    status = SAT;
+  else if (res == 20)
+    status = UNSAT;
   for (auto &tracer : tracers) {
-    tracer->finalize_proof (id);
+    tracer->report_status (status, id);
   }
 }
 

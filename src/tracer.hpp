@@ -4,6 +4,7 @@
 namespace CaDiCaL {
 
 enum ConclusionType { CONFLICT = 1, ASSUMPTIONS = 2, CONSTRAINT = 4 };
+enum StatusType { SAT = 10, UNSAT = 20, OTHER = 0 };
 
 // Proof tracer class to observer all possible proof events,
 // such as added or deleted clauses.
@@ -52,6 +53,15 @@ public:
   //
   virtual void strengthen (uint64_t) {}
 
+  // Notify the observer that the solve call ends with status StatusType
+  // If the status is UNSAT and an empty clause has been derived, the second
+  // argument will contain its id.
+  // Note that the empty clause is already added through add_derived_clause
+  // and finalized with finalize_clause
+  // Arguments: StatusType, ID
+  //
+  virtual void report_status (StatusType, uint64_t) {}
+
   /*------------------------------------------------------------------------*/
   /*                                                                        */
   /*                   Specifically non-incremental */
@@ -62,13 +72,6 @@ public:
   // Arguments: ID, clause
   //
   virtual void finalize_clause (uint64_t, const vector<int> &) {}
-
-  // Notify the observer that the proof ends with global empty clause
-  // Note that the empty clause is already added through add_derived_clause
-  // and finalized with finalize_clause
-  // Arguments: ID
-  //
-  virtual void finalize_proof (uint64_t) {}
 
   // Notify the observer that the proof begins with a set of reserved ids
   // for original clauses. Given ID is the first derived clause ID.

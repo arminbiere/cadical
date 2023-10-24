@@ -253,7 +253,7 @@ void VeripbTracer::veripb_delete_clause (uint64_t id, bool redundant) {
   file->put ("\n");
 }
 
-void VeripbTracer::veripb_finalize_proof (uint64_t conflict_id) {
+void VeripbTracer::veripb_report_status (uint64_t conflict_id) {
   file->put ("output NONE\n");
   file->put ("conclusion UNSAT : ");
   file->put (conflict_id);
@@ -302,7 +302,7 @@ void VeripbTracer::delete_clause (uint64_t id, bool redundant,
   deleted++;
 }
 
-void VeripbTracer::finalize_proof (uint64_t conflict_id) {
+void VeripbTracer::report_status (StatusType status, uint64_t conflict_id) {
   if (file->closed ())
     return;
   if (!conflict_id)
@@ -310,7 +310,7 @@ void VeripbTracer::finalize_proof (uint64_t conflict_id) {
   LOG ("VERIPB TRACER tracing finalization of proof with empty "
        "clause[%" PRId64 "]",
        conflict_id);
-  veripb_finalize_proof (conflict_id);
+  veripb_report_status (conflict_id);
 }
 
 void VeripbTracer::weaken_minus (uint64_t id, const vector<int> &) {

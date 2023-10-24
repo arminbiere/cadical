@@ -40,7 +40,7 @@ public:
 
   void finalize_clause (uint64_t, const vector<int> &) override {} // skip
 
-  void finalize_proof (uint64_t) override {} // skip
+  void report_status (StatusType, uint64_t) override {} // skip
 
   bool closed () override;
   void close () override;

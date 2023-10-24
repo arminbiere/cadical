@@ -329,7 +329,10 @@ void IrupTracer::add_original_clause (uint64_t, bool, const vector<int> &clause,
   irup_add_restored_clause (clause);
 }
 
-
+void IrupTracer::report_status (StatusType, uint64_t) {
+  return;
+}
+  
 /*------------------------------------------------------------------------*/
 
 bool IrupTracer::closed () { return file->closed (); }
