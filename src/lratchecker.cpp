@@ -378,7 +378,6 @@ void LratChecker::add_original_clause (uint64_t id, bool,
   stats.original++;
   import_clause (c);
   last_id = id;
-  assert (current_id <= id || id+1==current_id || restore);
   if (!restore && id == 1 + current_id)
     current_id = id;
 
@@ -736,6 +735,10 @@ void LratChecker::dump () {
         printf ("%d ", c->literals[i]);
       printf ("0\n");
     }
+}
+
+void LratChecker::begin_proof (uint64_t id) {
+  current_id = id;
 }
 
 } // namespace CaDiCaL
