@@ -238,13 +238,14 @@ void IrupTracer::irup_delete_clause (uint64_t id, const vector<int> &clause) {
 }
 
 void IrupTracer::irup_conclude_and_delete (const vector<uint64_t> & conclusion) {
-  if (conclusion.size () > 1) {
+  uint64_t size = conclusion.size ();
+  if (size > 1) {
     if (binary) {
       file->put ('J');
-      put_binary_id (conclusion.size ());  // TODO: put_binary_id ok for size?
+      put_binary_id (size);  // TODO: put_binary_id ok for size?
     } else {
       file->put ("J ");
-      file->put (conclusion.size ()), file->put ("\n");
+      file->put (size), file->put ("\n");
     }
   }
   for (auto & id : conclusion) {
