@@ -188,6 +188,8 @@ inline void IrupTracer::put_binary_id (uint64_t id) {
 void IrupTracer::irup_add_restored_clause (const vector<int> &clause) {
   if (binary)
     file->put ('r');
+  else
+    file->put ("r ");    
   for (const auto &external_lit : clause)
     if (binary)
       put_binary_lit (external_lit);
