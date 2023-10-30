@@ -133,8 +133,7 @@ bool IrupTracer::find_and_delete (const uint64_t id) {
   for (size_t i = 0; i < c->size; i++) {
     imported_clause.push_back (begin[i]);
   }
-  num_clauses--;
-  delete[](char *) c;
+  delete_clause (c);
   return true;
 }
 

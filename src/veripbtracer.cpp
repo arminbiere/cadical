@@ -127,7 +127,7 @@ bool VeripbTracer::find_and_delete (const uint64_t id) {
     return false;
   assert (c && res);
   *res = c->next;
-  delete c;
+  delete_clause (c);
   return true;
 }
 
