@@ -89,7 +89,7 @@ IrupClause *IrupTracer::new_clause () {
 void IrupTracer::delete_clause (IrupClause *c) {
   assert (c);
   num_clauses--;
-  delete c;
+  delete[](char *) c;
 }
 
 uint64_t IrupTracer::reduce_hash (uint64_t hash, uint64_t size) {
@@ -133,7 +133,8 @@ bool IrupTracer::find_and_delete (const uint64_t id) {
   for (size_t i = 0; i < c->size; i++) {
     imported_clause.push_back (begin[i]);
   }
-  delete c;
+  num_clauses--;
+  delete[](char *) c;
   return true;
 }
 
