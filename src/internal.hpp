@@ -68,6 +68,7 @@ extern "C" {
 #include "heap.hpp"
 #include "instantiate.hpp"
 #include "internal.hpp"
+#include "iruptracer.hpp"
 #include "level.hpp"
 #include "limit.hpp"
 #include "logging.hpp"
@@ -1231,7 +1232,7 @@ struct Internal {
   int cdcl_loop_with_inprocessing ();
   void reset_solving ();
   int solve (bool preprocess_only = false);
-  void finalize ();
+  void finalize (int);
 
   //
   int lookahead ();
@@ -1352,7 +1353,7 @@ struct Internal {
   bool disconnect_proof_tracer (Tracer *tracer);
   bool disconnect_proof_tracer (StatTracer *tracer);
   bool disconnect_proof_tracer (FileTracer *tracer);
-  void conclude ();
+  void conclude_unsat ();
   void reset_concluded ();
 
   // Dump to '<stdout>' as DIMACS for debugging.

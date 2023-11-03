@@ -378,7 +378,6 @@ void LratChecker::add_original_clause (uint64_t id, bool,
   stats.original++;
   import_clause (c);
   last_id = id;
-  assert (current_id <= id || id+1==current_id || restore);
   if (!restore && id == 1 + current_id)
     current_id = id;
 
@@ -472,7 +471,7 @@ void LratChecker::reset_assumptions () {
   // constraint.clear ();
 }
 
-void LratChecker::conclude_proof (ConclusionType conclusion,
+void LratChecker::conclude_unsat (ConclusionType conclusion,
                                   const vector<uint64_t> &ids) {
   if (concluded) {
     fatal_message_start ();
@@ -704,7 +703,7 @@ void LratChecker::finalize_clause (uint64_t id, const vector<int> &c) {
 }
 
 // check if all clauses have been deleted
-void LratChecker::finalize_proof (uint64_t) {
+void LratChecker::report_status (StatusType, uint64_t) {
   START (checking);
   if (num_finalized == num_clauses) {
     num_finalized = 0;
@@ -736,6 +735,10 @@ void LratChecker::dump () {
         printf ("%d ", c->literals[i]);
       printf ("0\n");
     }
+}
+
+void LratChecker::begin_proof (uint64_t id) {
+  current_id = id;
 }
 
 } // namespace CaDiCaL

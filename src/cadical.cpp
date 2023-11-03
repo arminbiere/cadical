@@ -802,9 +802,11 @@ int App::main (int argc, char **argv) {
 #endif
         if (res == 10) {
           satisfiable++;
+          solver->conclude ();
           break;
         } else if (res == 20) {
           unsatisfiable++;
+          solver->conclude ();
           for (auto other : cube)
             if (solver->failed (other))
               failed.push_back (other);

@@ -120,7 +120,7 @@ public:
   ~LratChecker ();
 
   void connect_internal (Internal *i) override;
-  void begin_proof (uint64_t) override {} // skip
+  void begin_proof (uint64_t) override;
 
   void add_original_clause (uint64_t, bool, const vector<int> &,
                             bool restore) override;
@@ -153,9 +153,9 @@ public:
   void reset_assumptions () override;
 
   // check if all clauses have been deleted
-  void finalize_proof (uint64_t) override;
+  void report_status (StatusType, uint64_t) override;
 
-  void conclude_proof (ConclusionType, const vector<uint64_t> &) override;
+  void conclude_unsat (ConclusionType, const vector<uint64_t> &) override;
 
   void print_stats () override;
   void dump (); // for debugging purposes only

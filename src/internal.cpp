@@ -727,7 +727,7 @@ int Internal::solve (bool preprocess_only) {
       res = cdcl_loop_with_inprocessing ();
     }
   }
-  finalize ();
+  finalize (res);
   reset_solving ();
   report_solving (res);
   STOP (solve);
@@ -819,7 +819,7 @@ int Internal::lookahead () {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::finalize () {
+void Internal::finalize (int res) {
   if (!proof)
     return;
   LOG ("finalizing");
@@ -864,7 +864,7 @@ void Internal::finalize () {
   if (conflict_id) {
     proof->finalize_clause (conflict_id, {});
   }
-  proof->finalize_proof (conflict_id);
+  proof->report_status (res, conflict_id);
 }
 
 /*------------------------------------------------------------------------*/

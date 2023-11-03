@@ -126,6 +126,10 @@ void Internal::trace (File *file) {
     LOG ("PROOF connecting lrat tracer");
     FileTracer *ft = new LratTracer (this, file, opts.binary);
     connect_proof_tracer (ft, true);
+  } else if (opts.irup) {
+    LOG ("PROOF connecting irup tracer");
+    FileTracer *ft = new IrupTracer (this, file, opts.binary);
+    connect_proof_tracer (ft, true);
   } else {
     LOG ("PROOF connecting drat tracer");
     FileTracer *ft = new DratTracer (this, file, opts.binary);
@@ -587,10 +591,15 @@ void Proof::reset_assumptions () {
   }
 }
 
-void Proof::finalize_proof (uint64_t id) {
-  LOG (clause, "PROOF finalizing proof");
+void Proof::report_status (int res, uint64_t id) {
+  LOG ("PROOF reporting status %d", res);
+  StatusType status = OTHER;
+  if (res == 10)
+    status = SAT;
+  else if (res == 20)
+    status = UNSAT;
   for (auto &tracer : tracers) {
-    tracer->finalize_proof (id);
+    tracer->report_status (status, id);
   }
 }
 
@@ -601,11 +610,18 @@ void Proof::begin_proof (uint64_t id) {
   }
 }
 
-void Proof::conclude_proof (ConclusionType con,
+void Proof::conclude_unsat (ConclusionType con,
                             const vector<uint64_t> &conclusion) {
-  LOG (clause, "PROOF conclude proof");
+  LOG (clause, "PROOF conclude unsat");
   for (auto &tracer : tracers) {
-    tracer->conclude_proof (con, conclusion);
+    tracer->conclude_unsat (con, conclusion);
+  }
+}
+
+void Proof::conclude_sat (const vector<int> &model) {
+  LOG (clause, "PROOF conclude sat");
+  for (auto &tracer : tracers) {
+    tracer->conclude_sat (model);
   }
 }
 

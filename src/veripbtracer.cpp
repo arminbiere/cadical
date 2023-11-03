@@ -6,7 +6,7 @@ namespace CaDiCaL {
 
 VeripbTracer::VeripbTracer (Internal *i, File *f, bool b, bool a, bool c)
     : internal (i), file (f), with_antecedents (a), checked_deletions (c),
-      num_clauses (0), size_clauses (0), last_hash (0), last_id (0),
+      num_clauses (0), size_clauses (0), clauses (0), last_hash (0), last_id (0),
       last_clause (0), added (0), deleted (0) {
   (void) internal;
 
@@ -127,7 +127,7 @@ bool VeripbTracer::find_and_delete (const uint64_t id) {
     return false;
   assert (c && res);
   *res = c->next;
-  delete c;
+  delete_clause (c);
   return true;
 }
 
@@ -253,11 +253,14 @@ void VeripbTracer::veripb_delete_clause (uint64_t id, bool redundant) {
   file->put ("\n");
 }
 
-void VeripbTracer::veripb_finalize_proof (uint64_t conflict_id) {
+void VeripbTracer::veripb_report_status (bool unsat, uint64_t conflict_id) {
   file->put ("output NONE\n");
-  file->put ("conclusion UNSAT : ");
-  file->put (conflict_id);
-  file->put (" \n");
+  if (unsat) {
+    file->put ("conclusion UNSAT : ");
+    file->put (conflict_id);
+    file->put (" \n");
+  } else
+    file->put ("conclusion NONE\n");
   file->put ("end pseudo-Boolean proof\n");
 }
 
@@ -302,15 +305,16 @@ void VeripbTracer::delete_clause (uint64_t id, bool redundant,
   deleted++;
 }
 
-void VeripbTracer::finalize_proof (uint64_t conflict_id) {
+void VeripbTracer::report_status (StatusType status, uint64_t conflict_id) {
   if (file->closed ())
     return;
-  if (!conflict_id)
-    return;
-  LOG ("VERIPB TRACER tracing finalization of proof with empty "
-       "clause[%" PRId64 "]",
-       conflict_id);
-  veripb_finalize_proof (conflict_id);
+#ifdef LOGGING
+  if (conflict_id)
+    LOG ("VERIPB TRACER tracing finalization of proof with empty "
+         "clause[%" PRId64 "]",
+         conflict_id);
+#endif
+  veripb_report_status (status == UNSAT, conflict_id);
 }
 
 void VeripbTracer::weaken_minus (uint64_t id, const vector<int> &) {
