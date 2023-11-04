@@ -6,7 +6,7 @@ namespace CaDiCaL {
 
 IrupTracer::IrupTracer (Internal *i, File *f, bool b)
     : internal (i), file (f), binary (b),
-      num_clauses (0), size_clauses (0), last_hash (0), last_id (0),
+      num_clauses (0), size_clauses (0), clauses (0), last_hash (0), last_id (0),
       last_clause (0), added (0), deleted (0) {
   (void) internal;
 
@@ -89,7 +89,7 @@ IrupClause *IrupTracer::new_clause () {
 void IrupTracer::delete_clause (IrupClause *c) {
   assert (c);
   num_clauses--;
-  delete c;
+  delete[](char *) c;
 }
 
 uint64_t IrupTracer::reduce_hash (uint64_t hash, uint64_t size) {
@@ -133,7 +133,7 @@ bool IrupTracer::find_and_delete (const uint64_t id) {
   for (size_t i = 0; i < c->size; i++) {
     imported_clause.push_back (begin[i]);
   }
-  delete c;
+  delete_clause (c);
   return true;
 }
 
@@ -188,6 +188,8 @@ inline void IrupTracer::put_binary_id (uint64_t id) {
 void IrupTracer::irup_add_restored_clause (const vector<int> &clause) {
   if (binary)
     file->put ('r');
+  else
+    file->put ("r ");    
   for (const auto &external_lit : clause)
     if (binary)
       put_binary_lit (external_lit);
@@ -238,13 +240,14 @@ void IrupTracer::irup_delete_clause (uint64_t id, const vector<int> &clause) {
 }
 
 void IrupTracer::irup_conclude_and_delete (const vector<uint64_t> & conclusion) {
-  if (conclusion.size () > 1) {
+  uint64_t size = conclusion.size ();
+  if (size > 1) {
     if (binary) {
       file->put ('J');
-      put_binary_id (conclusion.size ());  // TODO: put_binary_id ok for size?
+      put_binary_id (size);  // TODO: put_binary_id ok for size?
     } else {
       file->put ("J ");
-      file->put (conclusion.size ()), file->put ("\n");
+      file->put (size), file->put ("\n");
     }
   }
   for (auto & id : conclusion) {

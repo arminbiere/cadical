@@ -75,7 +75,7 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
       ext_flags[abs (elit)] = false;
     }
   }
-  if (irredundant_clause)
+  if (irredundant_clause) // Can a restored clause be redundant?
     internal->finish_added_clause_with_id (id, true);
   if (!irredundant_clause)
     LOG (eclause, "do not restore clause, because it is redundant");

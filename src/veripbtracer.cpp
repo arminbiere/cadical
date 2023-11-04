@@ -6,7 +6,7 @@ namespace CaDiCaL {
 
 VeripbTracer::VeripbTracer (Internal *i, File *f, bool b, bool a, bool c)
     : internal (i), file (f), with_antecedents (a), checked_deletions (c),
-      num_clauses (0), size_clauses (0), last_hash (0), last_id (0),
+      num_clauses (0), size_clauses (0), clauses (0), last_hash (0), last_id (0),
       last_clause (0), added (0), deleted (0) {
   (void) internal;
 
@@ -127,7 +127,7 @@ bool VeripbTracer::find_and_delete (const uint64_t id) {
     return false;
   assert (c && res);
   *res = c->next;
-  delete c;
+  delete_clause (c);
   return true;
 }
 

@@ -25,6 +25,8 @@ for API usage.
 See [`BUILD.md`](BUILD.md) for options and more details related to the build
 process and [`test/README.md`](test/README.md) for testing the library and
 the solver.  Since release 1.5.1 we have a [`NEWS.md`](NEWS.md) file.
+You might also want to check out [`CONTRIBUTING.md`](CONTRIBUTING.md) on
+if you want to contribute.
 
 The solver has the following usage `cadical [ dimacs [ proof ] ]`.
 See `cadical -h` for more options.

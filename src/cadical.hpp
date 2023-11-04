@@ -229,6 +229,23 @@ public:
   //
   void add (int lit);
 
+  // Here are functions simplifying clause addition. The given literals
+  // should all be valid (different from 'INT_MIN' and different from '0').
+  //
+  //   require (VALID)
+  //   ensure (UNKNOWN)
+  //
+  void clause (int);                      // Add unit clause.
+  void clause (int, int);                 // Add binary clause.
+  void clause (int, int, int);            // Add ternary clause.
+  void clause (int, int, int, int);       // Add quaternary clause.
+  void clause (const std::vector<int> &); // Add literal vector as clause.
+  void clause (const int *, size_t);      // Add literal array as clause.
+
+  // This function can be used to check if the formula is already
+  // inconsistent (contains the empty clause or was proven to be
+  // root-level unsatisfiable).
+
   bool inconsistent ();
 
   // Assume valid non zero literal for next call to 'solve'.  These
@@ -707,19 +724,38 @@ public:
   bool trace_proof (FILE *file, const char *name); // Write DRAT proof.
   bool trace_proof (const char *path);             // Open & write proof.
 
-  // Flush proof trace file.
+  // Flushing the proof trace file eventually calls 'fflush' on the actual
+  // file or pipe and thus if this function returns all the proof steps
+  // should have been written (with the same guarantees as 'fflush').
+  //
+  // The additional optional argument forces to print the number of addition
+  // and deletion steps in the proof even if the verbosity level is zero but
+  // not if quiet is set as well.  The default for the stand-alone solver is
+  // to print this information (in the 'closing proof' section) but for API
+  // usage of the library we want to stay silent unless explicitly requested
+  // or verbosity is non-zero (and as explained quiet is not set).
+  //
+  // This function can be called multiple times.
   //
   //   require (VALID)
   //   ensure (VALID)
   //
-  void flush_proof_trace ();
+  void flush_proof_trace (bool print = false);
 
-  // Close proof trace early.
+  // Close proof trace early.  Similar to 'flush' we allow the user to
+  // control with 'print' in a more fine-grained way whether statistics
+  // about the size of the written proof file and if compressed on-the-fly
+  // the number of actual bytes written (including deflation percentage) are
+  // printed.  Before actually closing (or detaching in case of writing to
+  // '<stdout>') we check whether 'flush_proof_trace' was called since the
+  // last time a proof step (addition or deletion) was traced.  If this is
+  // not the case we would call 'flush_proof_trace' with the same 'print'
+  // argument.
   //
   //   require (VALID)
   //   ensure (VALID)
   //
-  void close_proof_trace ();
+  void close_proof_trace (bool print = false);
 
   // Enables clausal proof tracing with or without antecedents using
   // the Tracer interface defined in 'tracer.hpp'

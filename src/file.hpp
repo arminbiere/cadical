@@ -195,7 +195,8 @@ public:
 
   void connect_internal (Internal *i) { internal = i; }
   bool closed () { return !file; }
-  void close ();
+
+  void close (bool print = false);
   void flush ();
 };
 

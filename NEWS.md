@@ -7,6 +7,11 @@ Upcoming
 - Making progress to formal 2.0 release with minor fixes for
   different platforms and compilers.
 
+Version 1.8.0
+-------------
+
+- Explicit `Solver::clause` functions to simplify clause addition.
+
 - More fine-grained handling of printing proof size information by
   adding `bool print = false` flags to the `flush_proof_trace` and
   the `close_proof_trace` API calls.  The former prints the number
@@ -15,9 +20,10 @@ Upcoming
   The main effect is that by default printing of proof size disabled
   for API usage but enabled for the stand-alone solver.
 
-- Replaced the unsafe `popen` approach for compressed file writing
-  with an explicit `pipe/fork/exec/waitpid` flow and accordingly
-  removed the `--safe` configuration option again.
+Version 1.7.5
+-------------
+
+- Decreased verbosity level for printing proof size.
 
 Version 1.7.4
 -------------
@@ -33,29 +39,33 @@ Version 1.7.4
 Version 1.7.3
 -------------
 
- - Incremental lazy backtracking (ILB) enabled by `--ilb` allows
-   to add new clauses incrementally while keeping the assignments
-   on the trail.  Also works for assumptions (`--ilbassumptions`).
+- Replaced the unsafe `popen` approach for compressed file writing
+  with an explicit `pipe/fork/exec/waitpid` flow and accordingly
+  removed the `--safe` configuration option again.
 
- - Reimplication (`--reimply`) fixes assignment levels of literals
-   by "elevating" them (assigning a lower decision level and propating
-   them out-of-order on this lower decision level).  Out-of-order
-   assignments are introduced by chronological backtracking, adding
-   external clauses during solving (e.g., by a user propagation)
-   or simply by ILB. Reimplication improves quality of learned
-   clauses and potentially shortens search in such cases.
-   
- - A new proof tracer interface allows to add a proof `Tracer`
-   through the API (via `connect_proof_tracer`). This feature
-   allows to use custom proof tracers to process
-   clausal proofs on-the-fly while solving.  Both proofs steps
-   with proof antecedents (needed for instance for interpolation)
-   as well as without (working direclty on DRAT level) are
-   supported.
-   
- - Reworked options for proof tracing to be less confusing.
-   Support for DRAT, LRAT, FRAT and VeriPB (with or without
-   antecedents).
+- Incremental lazy backtracking (ILB) enabled by `--ilb` allows
+ to add new clauses incrementally while keeping the assignments
+ on the trail.  Also works for assumptions (`--ilbassumptions`).
+
+- Reimplication (`--reimply`) fixes assignment levels of literals
+ by "elevating" them (assigning a lower decision level and propating
+ them out-of-order on this lower decision level).  Out-of-order
+ assignments are introduced by chronological backtracking, adding
+ external clauses during solving (e.g., by a user propagation)
+ or simply by ILB. Reimplication improves quality of learned
+ clauses and potentially shortens search in such cases.
+ 
+- A new proof tracer interface allows to add a proof `Tracer`
+ through the API (via `connect_proof_tracer`). This feature
+ allows to use custom proof tracers to process
+ clausal proofs on-the-fly while solving.  Both proofs steps
+ with proof antecedents (needed for instance for interpolation)
+ as well as without (working direclty on DRAT level) are
+ supported.
+ 
+- Reworked options for proof tracing to be less confusing.
+ Support for DRAT, LRAT, FRAT and VeriPB (with or without
+ antecedents).
 
 Version 1.7.2
 -------------
@@ -66,46 +76,46 @@ Version 1.7.2
 Version 1.7.1
 -------------
 
- - Added support for VeriPB proofs (--lrat --lratveripb).
+- Added support for VeriPB proofs (--lrat --lratveripb).
 
- - Various fixes: LRAT proofs for constrain (which previously were
-   not traced correctly); internal-external mapping issues for LRAT
-   (worked for user propagator but now also in combination with LRAT);
-   further minor bug fixes.
+- Various fixes: LRAT proofs for constrain (which previously were
+ not traced correctly); internal-external mapping issues for LRAT
+ (worked for user propagator but now also in combination with LRAT);
+ further minor bug fixes.
 
- - Added support for LRAT + external propagator in combination.
+- Added support for LRAT + external propagator in combination.
 
 Version 1.7.0
 -------------
 
- - Added native LRAT support.
+- Added native LRAT support.
 
 Version 1.6.0
 -------------
 
- - Added IPASIR-UP functions to the API to support external propagation,
-   external decisions, and clause addition during search.
-   For more details see the following paper at SAT 2023:
+- Added IPASIR-UP functions to the API to support external propagation,
+ external decisions, and clause addition during search.
+ For more details see the following paper at SAT 2023:
 
-   Katalin Fazekas, Aina Niemetz, Mathias Preiner, Markus Kirchweger,
-   Stefan Szeider and Armin Biere. IPASIR-UP: User Propagators for CDCL.
+ Katalin Fazekas, Aina Niemetz, Mathias Preiner, Markus Kirchweger,
+ Stefan Szeider and Armin Biere. IPASIR-UP: User Propagators for CDCL.
 
- - During decisions the phase set by 'void phase (int lit)' has now
-   higher precedence than the initial phase set by options 'phase' and
-   'forcephase'.
+- During decisions the phase set by 'void phase (int lit)' has now
+ higher precedence than the initial phase set by options 'phase' and
+ 'forcephase'.
 
 Version 1.5.6
 -------------
 
- - Clang formatted all source code (and fixed one failing regression
-   test by disabling 'otfs' for it).
+- Clang formatted all source code (and fixed one failing regression
+ test by disabling 'otfs' for it).
 
- - Implementing OTFS during conflict analysis (--otfs).
+- Implementing OTFS during conflict analysis (--otfs).
 
- - The last literal set by vivification is instantiated (--vivifyinst).
+- The last literal set by vivification is instantiated (--vivifyinst).
 
- - more accurate tracking of binary clauses in watch lists by updating
-   the size in watch lists.
+- more accurate tracking of binary clauses in watch lists by updating
+ the size in watch lists.
 
 Version 1.5.4
 -------------
