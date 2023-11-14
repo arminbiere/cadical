@@ -69,6 +69,8 @@ Version 1.9.0
 - Making progress to formal 1.9 release with minor fixes for
   different platforms and compilers.
 
+- Refine IPASIR-UP based on feedback from users. 
+
 Version 1.8.0
 -------------
 
