@@ -1,5 +1,7 @@
 #include "internal.hpp"
 
+#include "cover.hpp"
+
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
@@ -212,6 +214,16 @@ struct vivify_more_noccs {
   }
 };
 
+static bool same_clause (Clause *a, Clause *b) {
+  if (a->size != b->size)
+    return false;
+  for (auto i = a->begin (), j = b->begin (), end = a->end (); i != end;
+       i++, j++)
+    if (*i != *j)
+      return false;
+  return true;
+}
+
 // Sort candidate clauses by the number of occurrences (actually by their
 // score) of their literals, with clauses to be vivified first last.   We
 // assume that clauses are sorted w.r.t. more occurring (higher score)
@@ -262,6 +274,8 @@ struct vivify_clause_later {
 
   bool operator() (Clause *a, Clause *b) const {
 
+    COVER (same_clause (a, b));
+
     // First focus on clauses scheduled in the last vivify round but not
     // checked yet since then.
     //
@@ -292,10 +306,12 @@ struct vivify_clause_later {
     // decreasingly with respect to that order.
     //
     const auto eoa = a->end (), eob = b->end ();
-    auto j = b->begin ();
-    for (auto i = a->begin (); i != eoa && j != eob; i++, j++)
+    auto j = b->begin (), i = a->begin ();
+    for (; i != eoa && j != eob; i++, j++)
       if (*i != *j)
         return vivify_more_noccs (internal) (*j, *i);
+
+    COVER (i == eoa && j == eob);
 
     return j == eob; // Prefer shorter clauses to be vivified first.
   }
