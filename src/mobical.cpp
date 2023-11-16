@@ -254,7 +254,6 @@ private:
   // Forced lemme addition (falsified lemma in model)
   bool must_add_clause = false;
   size_t must_add_idx;
-
   // Next decision to make
   size_t decision_loc = 0;
 
@@ -379,7 +378,6 @@ public:
       observed_variables.insert (lit);
 
       s->add_observed_var (lit);
-
       return lit;
     }
     return 0;
@@ -657,12 +655,38 @@ public:
       size_t id = add_new_lemma (true);
       external_lemmas[id]->propagation_reason = true;
       reason_map[propagated_lit] = id;
-      clause.clear ();
+      clause.clear();
     }
 
-    MLOG ("cb_propagate returns " << propagated_lit << std::endl);
+    if (verbosity > 2)
+      std::cout << propagated_lit
+        << " (there are no unassigned observed variables)."
+        << std::endl;
 
     return propagated_lit;
+  }
+
+  std::set<int> current_observed_satisfied_set (size_t& lit_sum, int& lowest_lit, int& highest_lit) {
+    
+    lit_sum = 0;
+    lowest_lit = 0;
+    highest_lit = 0;
+    std::set<int> satisfied_literals;
+    
+    for (auto level_lits : observed_trail) {
+      for (auto lit : level_lits) {
+        if (!s->observed (lit))
+          continue;
+
+        satisfied_literals.insert (lit);
+        lit_sum += abs (lit);
+
+        if (!lowest_lit) lowest_lit = lit;
+        highest_lit = lit;
+      }
+    }
+
+    return satisfied_literals;
   }
 
   int cb_add_reason_clause_lit (int plit) {
@@ -725,31 +749,31 @@ public:
   /* ----------------- ExternalPropagator functions end ------------------*/
 
   /* -------------------------- Helper functions ---------------------- */
-  std::set<int> current_observed_satisfied_set (size_t &lit_sum,
-                                                int &lowest_lit,
-                                                int &highest_lit) {
+  // std::set<int> current_observed_satisfied_set (size_t &lit_sum,
+  //                                               int &lowest_lit,
+  //                                               int &highest_lit) {
 
-    lit_sum = 0;
-    lowest_lit = 0;
-    highest_lit = 0;
-    std::set<int> satisfied_literals;
+  //   lit_sum = 0;
+  //   lowest_lit = 0;
+  //   highest_lit = 0;
+  //   std::set<int> satisfied_literals;
 
-    for (auto level_lits : observed_trail) {
-      for (auto lit : level_lits) {
-        if (!s->observed (lit))
-          continue;
+  //   for (auto level_lits : observed_trail) {
+  //     for (auto lit : level_lits) {
+  //       if (!s->observed (lit))
+  //         continue;
 
-        satisfied_literals.insert (lit);
-        lit_sum += abs (lit);
+  //       satisfied_literals.insert (lit);
+  //       lit_sum += abs (lit);
 
-        if (!lowest_lit)
-          lowest_lit = lit;
-        highest_lit = lit;
-      }
-    }
+  //       if (!lowest_lit)
+  //         lowest_lit = lit;
+  //       highest_lit = lit;
+  //     }
+  //   }
 
-    return satisfied_literals;
-  }
+  //   return satisfied_literals;
+  // }
 
   /* ------------------------ Helper functions end -------------------- */
 };
@@ -2106,13 +2130,13 @@ void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
 void Trace::generate_lemmas (Random &random) {
   if (!observed_vars.size ())
     return;
-  int nof_user_propagation_phases = random.pick_int (3, 7);
+  int nof_user_propagation_phases = random.pick_int (4, 7);
 
   for (int p = 0; p < nof_user_propagation_phases; p++) {
     if (random.generate_double () < 0.05) {
       // push_back (new ContinueCall ());
     } else {
-      const int nof_lemmas = random.pick_int (4, 11);
+      const int nof_lemmas = random.pick_int (5, 11);
       const int ovars = observed_vars.size ();
       for (int i = 0; i < nof_lemmas; i++) {
         // Tiny tiny chance to generate an empty lemma
