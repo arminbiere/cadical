@@ -121,7 +121,6 @@ bool Internal::is_decision (int ilit) {
 bool Internal::external_propagate () {
   if (level)
     require_mode (SEARCH);
-
   assert (!unsat);
 
   size_t before = num_assigned;
@@ -204,8 +203,7 @@ bool Internal::external_propagate () {
          level, trail.size (), notified);
 #endif
     if (!unsat && !conflict) {
-      bool has_external_clause =
-          external->propagator->cb_has_external_clause ();
+      bool has_external_clause = ask_external_clause ();
       stats.ext_prop.ext_cb++;
       stats.ext_prop.elearn_call++;
 #ifndef NDEBUG
@@ -233,8 +231,7 @@ bool Internal::external_propagate () {
             break;
           notify_assignments ();
         }
-        has_external_clause =
-            external->propagator->cb_has_external_clause ();
+        has_external_clause = ask_external_clause ();   
         stats.ext_prop.ext_cb++;
         stats.ext_prop.elearn_call++;
       }
@@ -251,6 +248,23 @@ bool Internal::external_propagate () {
   return !conflict;
 }
 
+/*----------------------------------------------------------------------------*/
+//
+// Helper function, calls 'cb_has_external_clause', while maintains the related
+// redundancy type of the clause.
+//
+
+bool Internal::ask_external_clause () {
+  // ext_clause_red should always tell the redundancy of the last added clause
+  unsigned prev_red = ext_clause_red;
+  ext_clause_red = 0;
+  bool res = external->propagator->cb_has_external_clause (ext_clause_red);
+  if (res) {
+    if (ext_clause_red > 3) ext_clause_red = 0;
+  } else ext_clause_red = prev_red; // Set back to previous value
+
+  return res;
+}
 /*----------------------------------------------------------------------------*/
 //
 // Literals of the externally learned clause must be reordered based on the
@@ -337,6 +351,10 @@ void Internal::add_external_clause (int propagated_elit,
   int elit = 0;
 
   if (propagated_elit) {
+    // Propagation reason clauses are assumed to be forgettable irredundant.
+    // In case they would be unforgettably important, the propagator would
+    // have added them as an explicit external clause with type 0.
+    ext_clause_red = 1;
 #ifndef NDEBUG
     LOG ("add external reason of propagated lit: %d", propagated_elit);
 #endif
@@ -380,7 +398,7 @@ void Internal::add_external_clause (int propagated_elit,
 //
 void Internal::explain_reason (int ilit, Clause *reason, int &open) {
 #ifndef NDEBUG
-  LOG (reason, "explain_reason %d (open: %d)", ilit, open);
+  LOG (reason, "explain_reason of %d (open: %d)", ilit, open);
 #endif
   assert (reason);
   assert (reason != external_reason);
@@ -682,8 +700,8 @@ bool Internal::external_check_solution () {
       return true;
     }
 
-    bool has_external_clause =
-        external->propagator->cb_has_external_clause ();
+    bool has_external_clause = ask_external_clause ();
+
     stats.ext_prop.ext_cb++;
     stats.ext_prop.elearn_call++;
     assert (has_external_clause);
@@ -717,7 +735,7 @@ bool Internal::external_check_solution () {
       //
       if (unsat || conflict || trail_changed)
         break;
-      has_external_clause = external->propagator->cb_has_external_clause ();
+      has_external_clause = ask_external_clause ();
       stats.ext_prop.ext_cb++;
       stats.ext_prop.elearn_call++;
     }
@@ -821,6 +839,30 @@ int Internal::ask_decision () {
   }
 
   return ilit;
+}
+
+/*----------------------------------------------------------------------------*/
+//
+// Check if the clause is a forgettable clause coming from the external
+// propagator.
+//
+bool Internal::is_external_forgettable (int64_t id) {
+  return (external->forgettable_original.find(id) != external->forgettable_original.end());
+}
+
+/*----------------------------------------------------------------------------*/
+//
+// When an external forgettable clause is deleted, it is marked in the
+// 'forgettable_original' hash, so that the internal model checking can ignore
+// it.
+//
+void Internal::mark_garbage_external_forgettable (int64_t id) {
+  assert (is_external_forgettable(id));
+  
+  LOG(external->forgettable_original[id],"forgettable external lemma is deleted:");
+  // Mark as removed by flipping the first flag to false.
+  external->forgettable_original[id][0] = 0;
+
 }
 
 /*----------------------------------------------------------------------------*/
