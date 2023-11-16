@@ -102,6 +102,12 @@ struct External {
 
   vector<bool> is_observed; // Quick flag for each external variable
 
+  // Saved 'forgettable' original clauses coming from the external propagator.
+  // The value of the map starts with a Boolean flag indicating if the clause
+  // is still present or got already deleted, and then followed by the literals
+  // of the clause.
+  unordered_map<uint64_t, vector<int>> forgettable_original;
+
   void add_observed_var (int elit);
   void remove_observed_var (int elit);
   void reset_observed_vars ();
