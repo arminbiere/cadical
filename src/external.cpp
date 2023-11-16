@@ -149,16 +149,29 @@ int External::internalize (int elit) {
 void External::add (int elit) {
   assert (elit != INT_MIN);
   reset_extended ();
-  if (internal->opts.check &&
-      (internal->opts.checkwitness || internal->opts.checkfailed))
-    original.push_back (elit);
 
+  bool forgettable = false;
+
+  if (internal->opts.check &&
+      (internal->opts.checkwitness || internal->opts.checkfailed)) {
+    
+    forgettable = internal->from_propagator && 
+      ( internal->ext_clause_red == 1 || internal->ext_clause_red == 2 );
+    
+    // Forgettable clauses (coming from the external propagator) are not saved
+    // into the external 'original' stack. They are stored separately in
+    // external 'forgettable_original', from where they are deleted when the
+    // corresponding clause is deleted (actually deleted, not just marked as
+    // garbage).
+    if (!forgettable) original.push_back (elit);
+  }
+  
   const int ilit = internalize (elit);
   assert (!elit == !ilit);
 
   // The external literals of the new clause must be saved for later
   // when the proof is printed during add_original_lit (0)
-  if (elit && internal->proof) {
+  if (elit && (internal->proof || forgettable)) {
     eclause.push_back (elit);
     if (internal->lrat) {
       // actually find unit of -elit (flips elit < 0)
@@ -184,7 +197,7 @@ void External::add (int elit) {
   internal->add_original_lit (ilit);
 
   // Clean-up saved external literals once proof line is printed
-  if (!elit && internal->proof)
+  if (!elit && (internal->proof || forgettable))
     eclause.clear ();
 }
 
@@ -639,6 +652,42 @@ void External::check_assignment (int (External::*a) (int) const) {
     } else if (!satisfied && (this->*a) (lit) == lit)
       satisfied = true;
   }
+
+  bool presence_flag;
+  // Check those forgettable external clauses that are still present
+  for (const auto& forgettables : forgettable_original) {
+    presence_flag = true;
+    satisfied = false;
+    count++;
+    std::vector<int> literals;
+    for (const auto lit : forgettables.second) {
+      if (presence_flag) {
+        // First integer is a Boolean flag, not a literal
+        if (!lit) {
+          // Deleted clauses can be ignored, they count as satisfied
+          satisfied = true;
+          break;
+        }
+        presence_flag = false;
+        continue;
+      }
+      
+      if ((this->*a) (lit) > 0) {
+        satisfied = true;
+        break;
+      }
+    }
+
+    if (!satisfied) {
+        fatal_message_start ();
+        fputs ("unsatisfied external forgettable clause:\n", stderr);
+        for (size_t j = 1; j < forgettables.second.size(); j++)
+          fprintf (stderr, "%d ", forgettables.second[j]);
+        fputc ('0', stderr);
+        fatal_message_end ();
+    }
+  }
+
   VERBOSE (1, "satisfying assignment checked on %" PRId64 " clauses",
            count);
 }
@@ -694,6 +743,20 @@ void External::check_failing () {
   // might add more external clauses (due to lazy explanation)
   for (const auto lit : original)
     checker->add (lit);
+
+  // Add every forgettable external clauses
+  for (const auto& forgettables : forgettable_original) {
+    bool presence_flag = true;
+    for (const auto lit : forgettables.second) {
+      if (presence_flag) {
+        // First integer is a Boolean flag, not a literal, ignore it here
+        presence_flag = false;
+        continue;
+      }
+      checker->add (lit);
+    }
+    checker->add (0);
+  }
 
   int res = checker->solve ();
   if (res != 20)
