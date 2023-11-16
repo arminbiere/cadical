@@ -286,6 +286,12 @@ void Internal::mark_garbage (Clause *c) {
     proof->delete_clause (c);
   }
 
+  // Because of the internal model checking, external forgettable clauses must
+  // be marked as removed already upon mark_garbage, can not wait until actual
+  // deletion.
+  if (is_external_forgettable (c->id))
+    mark_garbage_external_forgettable (c->id);
+  
   assert (stats.current.total > 0);
   stats.current.total--;
 
@@ -349,6 +355,8 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
 // sometimes the pointer to the new clause is needed, therefore it is
 // made sure that newest_clause points to the new clause upon return.
 //
+// TODO: Find another name for 'tainted' in the context of ilb, tainted
+// is reconstruction related already and they should not mix.
 void Internal::add_new_original_clause (uint64_t id) {
 
   if (!from_propagator && level && !opts.ilb) {
@@ -367,7 +375,7 @@ void Internal::add_new_original_clause (uint64_t id) {
   size_t unassigned = 0;
   newest_clause = 0;
   if (unsat) {
-    LOG ("skipping clause since formula already inconsistent");
+    LOG ("skipping clause since formula is already inconsistent");
     skip = true;
   } else {
     assert (clause.empty ());
@@ -410,8 +418,16 @@ void Internal::add_new_original_clause (uint64_t id) {
       unmark (lit);
   }
   if (skip) {
-    if (from_propagator)
+    if (from_propagator) {
       stats.ext_prop.elearn_conf++;
+
+      // In case it was a skipped external forgettable, we need to mark it
+      // immediately as removed
+
+      if (is_external_forgettable (id))
+        mark_garbage_external_forgettable (id);
+
+    }
     if (proof) {
       proof->delete_external_original_clause (id, false, external->eclause);
     }
@@ -428,6 +444,14 @@ void Internal::add_new_original_clause (uint64_t id) {
                                                 external->eclause);
       }
       external->check_learned_clause ();
+
+      if (from_propagator) {
+        // The original form of the added clause is immediately forgotten
+        // TODO: shall we save and check the simplified form? (one with new_id)
+        if (is_external_forgettable (id))
+          mark_garbage_external_forgettable (id);
+      }
+
     }
     external->eclause.clear ();
     lrat_chain.clear ();
@@ -473,7 +497,12 @@ void Internal::add_new_original_clause (uint64_t id) {
 #endif
       int glue = (int) (learned_levels.size () + unassigned);
       assert (glue <= (int) clause.size ());
-      Clause *c = new_clause (false, glue);
+      bool clause_redundancy = false;
+      if (from_propagator) {
+        if (ext_clause_red == 1 || ext_clause_red == 2) 
+          clause_redundancy = true;
+      }
+      Clause *c = new_clause (clause_redundancy, glue);
       c->id = new_id;
       clause_id--;
       watch_clause (c);
