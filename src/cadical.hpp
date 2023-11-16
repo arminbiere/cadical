@@ -1145,6 +1145,9 @@ public:
   // added literal-by-literal closed with a 0. Further, the clause must
   // contain the propagated literal.
   //
+  // The clause will be learned as an Irredundant Non-Forgettable Clause (see
+  // below at 'cb_has_external_clause' more details about it).
+  //
   virtual int cb_add_reason_clause_lit (int propagated_lit) {
     (void) propagated_lit;
     return 0;
@@ -1168,8 +1171,76 @@ public:
   // clause.
   //
   // The external propagator indicates that there is a clause to add.
+  // The parameter of the function allows the user to indicate the redundancy
+  // and that how 'forgettable' is the external clause. There are four possible
+  // values of it (ordered by frequency of use):
+  // - 0: Irredundant Non-Forgettable Clause [default value].
+  //    - Policy to Forget: The clause will not be deleted, unless it is
+  //      directly implied by some of the other irredundant clauses (e.g. root
+  //      satisfied).
+  //    - Redundancy: The clause will be considered as irredundant and thus the
+  //      literals of it will be tainted and might trigger restore steps (except
+  //      frozen literals).
+  //    - Example: It is always safe and correct to use this clause type.
+  // - 1: Irredundant Forgettable Clause.
+  //    - Policy to Forget: The clause will be considered for deletion during
+  //      clause database reduction rounds.
+  //    - Redundancy: The clause will be considered as irredundant and thus the
+  //      literals of it will be tainted and might trigger restore steps (except
+  //      frozen literals).
+  //    - Example usage: Theory lemmas in SMT solvers. Anything that is
+  //      irredundant from the SAT perspective (hence must be considered for
+  //      tainting), but allowed to be deleted because the external propagator
+  //      (e.g. theory solver) can always re-derive it.
+  // - 2: Redundant Forgettable Clause.
+  //    - Policy to Forget: The clause is saved as redundant and might be
+  //      deleted at any point of time.
+  //    - Redundancy: The clause is assumed to be derivable in propositional
+  //      logic from the current set of irredundant and redundant clauses (i.e.
+  //      (\phi \land \rho) \implies C, as in the side condition of Learn- in
+  //      incremental inprocessing), therefore the literals of it are not
+  //      tainted and do not trigger restore steps.
+  //    - Example usage: Use it ONLY to share learned clauses between parallel
+  //      SAT solvers. It is NOT correct to use this clause type unless the
+  //      clause is indeed directly derivable by the SAT solver alone.
+  // - 3: Redundant Non-Forgettable Clause:
+  //    - Policy to Forget: The clause will not be deleted, unless it is
+  //      directly implied by some of the other irredundant clauses (e.g. root
+  //      satisfied).
+  //    - Redundancy: The clause is assumed to be derivable in propositional 
+  //      logic from the current set of irredundant and redundant clauses (i.e.
+  //      (\phi \land \rho) \implies C, as in the side condition of Learn- in
+  //      incremental inprocessing), therefore the literals of it are not
+  //      tainted and do not trigger restore steps.
+  //    - Example usage: Same as type 2, the only difference is that the clauses
+  //      will be kept around (can be useful in cases where their derivation
+  //      was expensive).
   //
-  virtual bool cb_has_external_clause () = 0;
+  // In case the parameter is set to a not supported value, the default value
+  // will be used (i.e., 0).
+  //
+  // Reason clauses of external propagation steps are assumed to be
+  // forgettable irredundant (i.e. type 0).
+  // In case they are meant to be more important, the propagator should add
+  // them as an explicit external clause with type 0.
+  //
+  // DISCLAIMER: Any clause type beyond 0 is correct to be added ONLY if it is
+  // guaranteed that the SAT solver uses only RUP-based clause addition 
+  // techniques (so no BVA) and the literals are either tainted or frozen.
+  // See our Incremental Inprocessing SAT'19 paper for more details on it.
+  //
+  // The naming of the clause types will probably change later, so it is now
+  // only an unsigned int.
+  //
+  // TODO: fix a proper enum for it, in coordination with IPASIR-2 names.
+  enum ExternalClauseType {
+    IrredundantRemember = 0,
+    IrredundantForget = 1,
+    RedundantForget = 2,
+    RedundantRemember = 3
+  };
+  //
+  virtual bool cb_has_external_clause (unsigned& ct) = 0;
 
   // The actual function called to add the external clause.
   //
