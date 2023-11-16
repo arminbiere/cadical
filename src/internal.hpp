@@ -221,6 +221,7 @@ struct Internal {
   Clause *newest_clause;        // used in external_propagate
   bool force_no_backtrack;      // for new clauses with external propagator
   bool from_propagator;         // differentiate new clauses...
+  unsigned ext_clause_red;      // redundancy of new clause from propagator
   int tainted_literal;          // used for ILB
   size_t notified;           // next trail position to notify external prop
   Clause *probe_reason;      // set during probing
@@ -669,6 +670,7 @@ struct Internal {
   void notify_decision ();
   void notify_backtrack (size_t new_level);
   int ask_decision ();
+  bool ask_external_clause ();
   void add_observed_var (int ilit);
   void remove_observed_var (int ilit);
   bool observed (int ilit) const;
@@ -676,6 +678,8 @@ struct Internal {
   void check_watched_literal_invariants ();
   void set_tainted_literal ();
   void connect_propagator ();
+  void mark_garbage_external_forgettable (int64_t id);
+  bool is_external_forgettable (int64_t id);
 
   // Use last learned clause to subsume some more.
   //

@@ -16,7 +16,7 @@ Internal::Internal ()
       concluded (false), lrat (false), level (0), vals (0), score_inc (1.0),
       scores (this), conflict (0), ignore (0), dummy_binary (0),
       external_reason (&external_reason_clause), newest_clause (0),
-      force_no_backtrack (false), from_propagator (false),
+      force_no_backtrack (false), from_propagator (false), ext_clause_red (0),
       tainted_literal (0), notified (0), probe_reason (0), propagated (0),
       propagated2 (0), propergated (0), best_assigned (0),
       target_assigned (0), no_conflict_until (0), unsat_constraint (false),
@@ -194,6 +194,23 @@ void Internal::add_original_lit (int lit) {
       assert (!original.size () || !external->eclause.empty ());
       proof->add_external_original_clause (id, false, external->eclause);
     }
+    if (internal->opts.check &&
+      (internal->opts.checkwitness || internal->opts.checkfailed)) {
+      bool forgettable = 
+        from_propagator && (ext_clause_red == 1 || ext_clause_red == 2);
+      if (forgettable) {
+        assert (!original.size () || !external->eclause.empty ());
+
+        // First integer is the presence-flag (even if the clause is empty)
+        external->forgettable_original[id] = {1};
+       
+        for (auto const& elit : external->eclause)
+          external->forgettable_original[id].push_back(elit);
+        
+        LOG (external->eclause, "clause added to external forgettable map:");
+      }
+    }
+    
     add_new_original_clause (id);
     original.clear ();
   }
