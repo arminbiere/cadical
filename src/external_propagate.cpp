@@ -270,53 +270,52 @@ bool Internal::ask_external_clause () {
 // Literals of the externally learned clause must be reordered based on the
 // assignment levels of the literals.
 //
-void Internal::move_literal_to_watch (bool other_watch) {
+void Internal::move_literals_to_watch () {
   if (clause.size () < 2)
     return;
   if (!level)
     return;
-  int i = 0;
-  if (other_watch)
-    i++;
+  
+  for (int i = 0; i < 2; i++) {
+    int highest_position = i;
+    int highest_literal = clause[i];
 
-  int highest_position = i;
-  int highest_literal = clause[i];
+    int highest_level = var (highest_literal).level;
+    int highest_value = val (highest_literal);
 
-  int highest_level = var (highest_literal).level;
-  int highest_value = val (highest_literal);
+    for (size_t j = i + 1; j < clause.size (); j++) {
+      const int other = clause[j];
+      const int other_level = var (other).level;
+      const int other_value = val (other);
 
-  for (size_t j = i + 1; j < clause.size (); j++) {
-    const int other = clause[j];
-    const int other_level = var (other).level;
-    const int other_value = val (other);
+      if (other_value < 0) {
+        if (highest_value >= 0)
+          continue;
+        if (other_level <= highest_level)
+          continue;
+      } else if (other_value > 0) {
+        if (highest_value > 0 && other_level >= highest_level)
+          continue;
+      } else {
+        if (highest_value >= 0)
+          continue;
+      }
 
-    if (other_value < 0) {
-      if (highest_value >= 0)
-        continue;
-      if (other_level <= highest_level)
-        continue;
-    } else if (other_value > 0) {
-      if (highest_value > 0 && other_level >= highest_level)
-        continue;
-    } else {
-      if (highest_value >= 0)
-        continue;
+      highest_position = j;
+      highest_literal = other;
+      highest_level = other_level;
+      highest_value = other_value;
     }
+  #ifndef NDEBUG
+    LOG ("highest position: %d highest level: %d highest value: %d",
+        highest_position, highest_level, highest_value);
+  #endif
 
-    highest_position = j;
-    highest_literal = other;
-    highest_level = other_level;
-    highest_value = other_value;
-  }
-#ifndef NDEBUG
-  LOG ("highest position: %d highest level: %d highest value: %d",
-       highest_position, highest_level, highest_value);
-#endif
-
-  if (highest_position == i)
-    return;
-  if (highest_position > i) {
-    std::swap (clause[i], clause[highest_position]);
+    if (highest_position == i)
+      continue;
+    if (highest_position > i) {
+      std::swap (clause[i], clause[highest_position]);
+    }
   }
 }
 
