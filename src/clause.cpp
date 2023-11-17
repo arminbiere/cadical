@@ -490,8 +490,7 @@ void Internal::add_new_original_clause (uint64_t id) {
         assign_original_unit (new_id, lit);
       }
     } else {
-      move_literal_to_watch (false);
-      move_literal_to_watch (true);
+      move_literals_to_watch ();
 #ifndef NDEBUG
       check_watched_literal_invariants ();
 #endif
