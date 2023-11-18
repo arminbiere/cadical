@@ -68,7 +68,7 @@ inline void Internal::covered_literal_addition (int lit, Coveror &coveror) {
   for (const auto &other : coveror.intersection) {
     LOG ("covered literal addition %d", other);
     assert (!vals[other]), assert (!vals[-other]);
-    vals[other] = -1, vals[-other] = 1;
+    set_val (other, -1);
     coveror.covered.push_back (other);
     coveror.added.push_back (other);
     coveror.clas++;
@@ -84,7 +84,7 @@ inline void Internal::asymmetric_literal_addition (int lit,
   assert (level == 1);
   LOG ("initial asymmetric literal addition %d", lit);
   assert (!vals[lit]), assert (!vals[-lit]);
-  vals[lit] = -1, vals[-lit] = 1;
+  set_val (lit, -1);
   coveror.added.push_back (lit);
   coveror.alas++;
   coveror.next.covered = 0;
@@ -371,24 +371,80 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       stats.cover.asymmetric++;
       stats.cover.total++;
       LOG (c, "asymmetric tautological");
-      mark_garbage (c);
     } else {
       stats.cover.blocked++;
       stats.cover.total++;
-      LOG (c, "covered tautological");
-      mark_garbage (c);
       // Only copy extension stack if successful.
       int prev = INT_MIN;
+      bool already_pushed = false;
+      uint64_t last_id = 0;
+      LOG (c, "covered tautological");
+      assert (clause.empty ());
+      LOG (coveror.extend, "extension = ");
       for (const auto &other : coveror.extend) {
         if (!prev) {
+          // are we finishing a clause?
+          if (already_pushed) {
+            // add missing literals that are not needed for covering
+            // but avoid RAT proofs
+            for (auto i = 0, j = 0; i < c->size; ++i, ++j) {
+              const int lit = c->literals[i];
+              if (j >= (int) coveror.covered.size () ||
+                  c->literals[i] != coveror.covered[j]) {
+                --j;
+                LOG ("adding lit %d not needed for ATA", lit);
+                clause.push_back (lit);
+                external->push_clause_literal_on_extension_stack (lit);
+              }
+            }
+          }
+          if (proof && already_pushed) {
+            if (lrat)
+              lrat_chain.push_back (c->id);
+            LOG ("LEARNING clause with id %" PRId64, last_id);
+            proof->add_derived_clause (last_id, false, clause, lrat_chain);
+            proof->weaken_plus (last_id, clause);
+            lrat_chain.clear ();
+          }
+	  last_id = ++clause_id;
           external->push_zero_on_extension_stack ();
           external->push_witness_literal_on_extension_stack (other);
           external->push_zero_on_extension_stack ();
+          external->push_id_on_extension_stack (last_id);
+          external->push_zero_on_extension_stack ();
+          clause.clear ();
+          already_pushed = true;
         }
-        if (other)
+        if (other) {
           external->push_clause_literal_on_extension_stack (other);
+          clause.push_back (other);
+          LOG (clause, "current clause is");
+        }
         prev = other;
       }
+
+      if (proof) {
+        // add missing literals that are not needed for covering
+        // but avoid RAT proofs
+        for (auto i = 0, j = 0; i < c->size; ++i, ++j) {
+          const int lit = c->literals[i];
+          if (j >= (int) coveror.covered.size () ||
+              c->literals[i] != coveror.covered[j]) {
+            --j;
+            LOG ("adding lit %d not needed for ATA", lit);
+            clause.push_back (lit);
+            external->push_clause_literal_on_extension_stack (lit);
+          }
+        }
+        if (lrat)
+          lrat_chain.push_back (c->id);
+        proof->add_derived_clause (last_id, false, clause, lrat_chain);
+        proof->weaken_plus (last_id, clause);
+        lrat_chain.clear ();
+      }
+      clause.clear ();
+
+      mark_garbage (c);
     }
   }
 
@@ -396,7 +452,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
 
   assert (level == 1);
   for (const auto &lit : coveror.added)
-    vals[lit] = vals[-lit] = 0;
+    set_val (lit, 0);
   level = 0;
 
   coveror.covered.clear ();

@@ -15,6 +15,15 @@ namespace CaDiCaL {
 // to use at least one more bit (either taken away from the variable space
 // or the clauses) to denote whether the watch is binary.
 
+// in fashion of Intel Sat 10.4230/LIPIcs.SAT.2022.8 we try to
+// guarantee the following invariant:
+// For both watches:
+// if     the watched literal is negatively assigned
+// either it will be propagated in the future
+// or     the corresponding blocking literal is positively assigned
+// and    its level is smaller than the level of the watched literal
+//
+
 struct Clause;
 
 struct Watch {

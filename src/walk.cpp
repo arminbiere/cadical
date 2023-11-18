@@ -247,8 +247,7 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
   //
   const int tmp = sign (lit);
   const int idx = abs (lit);
-  vals[idx] = tmp;
-  vals[-idx] = -tmp;
+  set_val (idx, tmp);
   assert (val (lit) > 0);
 
   // Then remove 'c' and all other now satisfied (made) clauses.
@@ -483,8 +482,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
       tmp = sign (lit);
       const int idx = abs (lit);
       LOG ("initial assign %d to assumption phase", tmp < 0 ? -idx : idx);
-      vals[idx] = tmp;
-      vals[-idx] = -tmp;
+      set_val (idx, tmp);
       assert (level == 1);
       var (idx).level = 1;
     }
@@ -512,8 +510,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
       if (!tmp)
         tmp = sign (decide_phase (idx, true));
       assert (tmp == 1 || tmp == -1);
-      vals[idx] = tmp;
-      vals[-idx] = -tmp;
+      set_val (idx, tmp);
       assert (level == 2);
       var (idx).level = 2;
       LOG ("initial assign %d to decision phase", tmp < 0 ? -idx : idx);
@@ -665,7 +662,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
   for (auto idx : vars)
     if (active (idx))
-      vals[idx] = vals[-idx] = 0;
+      set_val (idx, 0);
 
   assert (level == 2);
   level = 0;

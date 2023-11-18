@@ -7,6 +7,14 @@ void External::push_zero_on_extension_stack () {
   LOG ("pushing 0 on extension stack");
 }
 
+void External::push_id_on_extension_stack (uint64_t id) {
+  const uint32_t higher_bits = static_cast<int> (id << 32);
+  const uint32_t lower_bits = (id & (((uint64_t) 1 << 32) - 1));
+  extension.push_back (higher_bits);
+  extension.push_back (lower_bits);
+  LOG ("pushing id %" PRIu64 " = %d + %d", id, higher_bits, lower_bits);
+}
+
 void External::push_clause_literal_on_extension_stack (int ilit) {
   assert (ilit);
   const int elit = internal->externalize (ilit);
@@ -40,6 +48,8 @@ void External::push_clause_on_extension_stack (Clause *c) {
   internal->stats.weakened++;
   internal->stats.weakenedlen += c->size;
   push_zero_on_extension_stack ();
+  push_id_on_extension_stack (c->id);
+  push_zero_on_extension_stack ();
   for (const auto &lit : *c)
     push_clause_literal_on_extension_stack (lit);
 }
@@ -50,12 +60,15 @@ void External::push_clause_on_extension_stack (Clause *c, int pivot) {
   push_clause_on_extension_stack (c);
 }
 
-void External::push_binary_clause_on_extension_stack (int pivot,
+void External::push_binary_clause_on_extension_stack (uint64_t id,
+                                                      int pivot,
                                                       int other) {
   internal->stats.weakened++;
   internal->stats.weakenedlen += 2;
   push_zero_on_extension_stack ();
   push_witness_literal_on_extension_stack (pivot);
+  push_zero_on_extension_stack ();
+  push_id_on_extension_stack (id);
   push_zero_on_extension_stack ();
   push_clause_literal_on_extension_stack (pivot);
   push_clause_literal_on_extension_stack (other);
@@ -138,6 +151,15 @@ void External::extend () {
       assert (i != begin);
     }
     assert (i != begin);
+    LOG ("id=%" PRIu64, ((uint64_t) *i << 32) + *(i - 1));
+    assert (*i || *(i - 1));
+    --i;
+    assert (i != begin);
+    --i;
+    assert (i != begin);
+    assert (!*i);
+    --i;
+    assert (i != begin);
     if (satisfied)
       while (*--i)
         assert (i != begin);
@@ -180,6 +202,8 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
     int lit;
     while ((lit = *--i))
       clause.push_back (lit);
+    i -= 3;
+    assert (i != begin);
     while ((lit = *--i))
       witness.push_back (lit);
     reverse (clause.begin (), clause.end ());
@@ -206,6 +230,8 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
         witness.push_back (lit);
       assert (!lit);
       assert (i != end);
+      i += 3;
+      assert (i != end);
       while (i != end && (lit = *i++))
         clause.push_back (lit);
       if (!it.witness (clause, witness))
@@ -219,4 +245,21 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
 
 /*------------------------------------------------------------------------*/
 
+void External::conclude_sat () {
+  if (!internal->proof || concluded) return;
+  concluded = true;
+  if (!extended)
+    extend ();
+  // TODO: give model to the proof...
+  vector<int> model;
+  for (int i = 1; i <= max_var; i++) {
+    int lit = i;
+    const int value = ival (lit);
+    assert (value);
+    if (value < 0) lit = -lit;
+    model.push_back (lit);
+  }
+  internal->proof->conclude_sat (model);
+}  
+  
 } // namespace CaDiCaL

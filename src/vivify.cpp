@@ -1,5 +1,7 @@
 #include "internal.hpp"
 
+#include "cover.hpp"
+
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
@@ -54,14 +56,13 @@ inline void Internal::vivify_assign (int lit, Clause *reason) {
   Var &v = var (idx);
   v.level = level;               // required to reuse decisions
   v.trail = (int) trail.size (); // used in 'vivify_better_watch'
+  assert ((int) num_assigned < max_var);
+  num_assigned++;
   v.reason = level ? reason : 0; // for conflict analysis
   if (!level)
     learn_unit_clause (lit);
   const signed char tmp = sign (lit);
-  vals[idx] = tmp;
-  vals[-idx] = -tmp;
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
+  set_val (idx, tmp);
   trail.push_back (lit);
   LOG (reason, "vivify assign %d", lit);
 }
@@ -158,7 +159,7 @@ bool Internal::vivify_propagate () {
             j--;
           } else if (!u) {
             assert (v < 0);
-            build_chain_for_units (other, w.clause, 0);
+            vivify_chain_for_units (other, w.clause);
             vivify_assign (other, w.clause);
             lrat_chain.clear ();
           } else {
@@ -210,6 +211,16 @@ struct vivify_more_noccs {
   }
 };
 
+static bool same_clause (Clause *a, Clause *b) {
+  if (a->size != b->size)
+    return false;
+  for (auto i = a->begin (), j = b->begin (), end = a->end (); i != end;
+       i++, j++)
+    if (*i != *j)
+      return false;
+  return true;
+}
+
 // Sort candidate clauses by the number of occurrences (actually by their
 // score) of their literals, with clauses to be vivified first last.   We
 // assume that clauses are sorted w.r.t. more occurring (higher score)
@@ -260,6 +271,8 @@ struct vivify_clause_later {
 
   bool operator() (Clause *a, Clause *b) const {
 
+    COVER (same_clause (a, b));
+
     // First focus on clauses scheduled in the last vivify round but not
     // checked yet since then.
     //
@@ -290,10 +303,12 @@ struct vivify_clause_later {
     // decreasingly with respect to that order.
     //
     const auto eoa = a->end (), eob = b->end ();
-    auto j = b->begin ();
-    for (auto i = a->begin (); i != eoa && j != eob; i++, j++)
+    auto j = b->begin (), i = a->begin ();
+    for (; i != eoa && j != eob; i++, j++)
       if (*i != *j)
         return vivify_more_noccs (internal) (*j, *i);
+
+    COVER (i == eoa && j == eob);
 
     return j == eob; // Prefer shorter clauses to be vivified first.
   }
@@ -812,7 +827,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
               stats.vivifystred2++;
           }
           clear_analyzed_literals ();
-          if (opts.lrat && !opts.lratexternal) {
+          if (lrat) {
             assert (lrat_chain.empty ());
             vivify_build_lrat (lit, v.reason);
             clear_analyzed_literals ();
@@ -860,7 +875,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
             stats.vivifystred3++;
         }
         clear_analyzed_literals ();
-        if (opts.lrat && !opts.lratexternal) {
+        if (lrat) {
           assert (lrat_chain.empty ());
           vivify_build_lrat (0, conflict);
           clear_analyzed_literals ();
@@ -892,7 +907,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
         LOG (c, "instantiate success with literal %d in", lit);
         stats.vivifyinst++;
         // strengthen clause
-        if (opts.lrat && !opts.lratexternal) {
+        if (lrat) {
           assert (lrat_chain.empty ());
           vivify_build_lrat (0, c);
           vivify_build_lrat (0, conflict);
@@ -919,7 +934,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
 
       if (!clause.empty ()) {
 
-        assert (!opts.lrat || opts.lratexternal || !lrat_chain.empty ());
+        assert (!lrat || !lrat_chain.empty ());
         LOG ("strengthening instead of subsuming clause");
         vivify_strengthen (c);
 
@@ -989,7 +1004,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     else
       stats.vivifystrirr++;
 
-    if (opts.lrat && !opts.lratexternal && lrat_chain.empty ()) {
+    if (lrat && lrat_chain.empty ()) {
       assert (lrat_chain.empty ());
       vivify_build_lrat (0, c);
       clear_analyzed_literals ();
@@ -1037,6 +1052,27 @@ void Internal::vivify_build_lrat (int lit, Clause *reason) {
     if (v.reason) { // recursive justification
       vivify_build_lrat (other, v.reason);
     }
+  }
+  lrat_chain.push_back (reason->id);
+}
+
+// calculate lrat_chain
+//
+inline void Internal::vivify_chain_for_units (int lit, Clause *reason) {
+  if (!lrat)
+    return;
+  // LOG ("building chain for units");        bad line for debugging
+  // equivalence if (opts.chrono && assignment_level (lit, reason)) return;
+  if (level)
+    return; // not decision level 0
+  assert (lrat_chain.empty ());
+  for (auto &reason_lit : *reason) {
+    if (lit == reason_lit)
+      continue;
+    assert (val (reason_lit));
+    const unsigned uidx = vlit (val (reason_lit) * reason_lit);
+    uint64_t id = unit_clauses[uidx];
+    lrat_chain.push_back (id);
   }
   lrat_chain.push_back (reason->id);
 }

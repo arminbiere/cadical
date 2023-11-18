@@ -31,9 +31,7 @@ struct Internal;
 
 class File {
 
-#ifndef QUIET
   Internal *internal;
-#endif
 #if !defined(QUIET) || !defined(NDEBUG)
   bool writing;
 #endif
@@ -195,6 +193,7 @@ public:
   uint64_t lineno () const { return _lineno; }
   uint64_t bytes () const { return _bytes; }
 
+  void connect_internal (Internal *i) { internal = i; }
   bool closed () { return !file; }
 
   void close (bool print = false);

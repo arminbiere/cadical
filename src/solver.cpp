@@ -48,11 +48,13 @@ void Solver::transition_to_unknown_state () {
     LOG ("API leaves state %sSATISFIED%s", tout.emph_code (),
          tout.normal_code ());
     external->reset_assumptions ();
+    external->reset_concluded ();
     external->reset_constraint ();
   } else if (state () == UNSATISFIED) {
     LOG ("API leaves state %sUNSATISFIED%s", tout.emph_code (),
          tout.normal_code ());
     external->reset_assumptions ();
+    external->reset_concluded ();
     external->reset_constraint ();
   }
   if (state () != UNKNOWN)
@@ -456,12 +458,6 @@ bool Solver::set (const char *arg, int val) {
         "can only set option 'set (\"%s\", %d)' right after initialization",
         arg, val);
   }
-  /*
-  if (strcmp (arg, "lrat")) {
-    REQUIRE (!internal->external_prop,
-             "lrat is currently not compatible with external propagation");
-  }
-  */
   bool res = internal->opts.set (arg, val);
   LOG_API_CALL_END ("set", arg, val, res);
 
@@ -872,11 +868,6 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
   LOG_API_CALL_BEGIN ("connect_external_propagator");
   REQUIRE_VALID_STATE ();
   REQUIRE (propagator, "can not connect zero propagator");
-  /*
-  REQUIRE (!internal->opts.lrat,
-           "lrat is currently not compatible with external propagation");
-  // TODO: require opts.lrat = false
-  */
 
 #ifdef LOGGING
   if (external->propagator)
@@ -888,6 +879,7 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
     disconnect_external_propagator ();
 
   external->propagator = propagator;
+  internal->connect_propagator ();
   internal->external_prop = true;
   internal->external_prop_is_lazy = propagator->is_lazy;
   LOG_API_CALL_END ("connect_external_propagator");
@@ -907,6 +899,7 @@ void Solver::disconnect_external_propagator () {
     external->reset_observed_vars ();
 
   external->propagator = 0;
+  internal->set_tainted_literal ();
   internal->external_prop = false;
   internal->external_prop_is_lazy = true;
   LOG_API_CALL_END ("disconnect_external_propagator");
@@ -999,7 +992,6 @@ bool Solver::trace_proof (FILE *external_file, const char *name) {
       state () == CONFIGURING,
       "can only start proof tracing to '%s' right after initialization",
       name);
-  REQUIRE (!internal->tracer, "already tracing proof");
   File *internal_file = File::write (internal, external_file, name);
   assert (internal_file);
   internal->trace (internal_file);
@@ -1014,7 +1006,6 @@ bool Solver::trace_proof (const char *path) {
       state () == CONFIGURING,
       "can only start proof tracing to '%s' right after initialization",
       path);
-  REQUIRE (!internal->tracer, "already tracing proof");
   File *internal_file = File::write (internal, path);
   bool res = (internal_file != 0);
   internal->trace (internal_file);
@@ -1022,22 +1013,108 @@ bool Solver::trace_proof (const char *path) {
   return res;
 }
 
-void Solver::flush_proof_trace (bool print) {
+void Solver::flush_proof_trace (bool print_statistics_unless_quiet) {
   LOG_API_CALL_BEGIN ("flush_proof_trace");
   REQUIRE_VALID_STATE ();
-  REQUIRE (internal->tracer, "proof is not traced");
-  REQUIRE (!internal->tracer->closed (), "proof trace already closed");
-  internal->flush_trace (print);
+  REQUIRE (!internal->file_tracers.empty (), "proof is not traced");
+  REQUIRE (!internal->file_tracers.back ()->closed (),
+           "proof trace already closed");
+  internal->flush_trace (print_statistics_unless_quiet);
   LOG_API_CALL_END ("flush_proof_trace");
 }
 
 void Solver::close_proof_trace (bool print_statistics_unless_quiet) {
   LOG_API_CALL_BEGIN ("close_proof_trace");
   REQUIRE_VALID_STATE ();
-  REQUIRE (internal->tracer, "proof is not traced");
-  REQUIRE (!internal->tracer->closed (), "proof trace already closed");
+  REQUIRE (!internal->file_tracers.empty (), "proof is not traced");
+  REQUIRE (!internal->file_tracers.back ()->closed (),
+           "proof trace already closed");
   internal->close_trace (print_statistics_unless_quiet);
   LOG_API_CALL_END ("close_proof_trace");
+}
+
+/*------------------------------------------------------------------------*/
+
+void Solver::connect_proof_tracer (Tracer *tracer, bool antecedents) {
+  LOG_API_CALL_BEGIN ("connect proof tracer");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (state () == CONFIGURING,
+           "can only start proof tracing to right after initialization");
+  REQUIRE (tracer, "can not connect zero tracer");
+  internal->connect_proof_tracer (tracer, antecedents);
+  LOG_API_CALL_END ("connect proof tracer");
+}
+
+void Solver::connect_proof_tracer (InternalTracer *tracer,
+                                   bool antecedents) {
+  LOG_API_CALL_BEGIN ("connect proof tracer");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (state () == CONFIGURING,
+           "can only start proof tracing to right after initialization");
+  REQUIRE (tracer, "can not connect zero tracer");
+  internal->connect_proof_tracer (tracer, antecedents);
+  LOG_API_CALL_END ("connect proof tracer");
+}
+
+void Solver::connect_proof_tracer (StatTracer *tracer, bool antecedents) {
+  LOG_API_CALL_BEGIN ("connect proof tracer with stats");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (state () == CONFIGURING,
+           "can only start proof tracing to right after initialization");
+  REQUIRE (tracer, "can not connect zero tracer");
+  internal->connect_proof_tracer (tracer, antecedents);
+  LOG_API_CALL_END ("connect proof tracer with stats");
+}
+
+void Solver::connect_proof_tracer (FileTracer *tracer, bool antecedents) {
+  LOG_API_CALL_BEGIN ("connect proof tracer with file");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (state () == CONFIGURING,
+           "can only start proof tracing right after initialization");
+  REQUIRE (tracer, "can not connect zero tracer");
+  internal->connect_proof_tracer (tracer, antecedents);
+  LOG_API_CALL_END ("connect proof tracer with file");
+}
+
+bool Solver::disconnect_proof_tracer (Tracer *tracer) {
+  LOG_API_CALL_BEGIN ("disconnect proof tracer");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (tracer, "can not disconnect zero tracer");
+  bool res = internal->disconnect_proof_tracer (tracer);
+  LOG_API_CALL_RETURNS ("connect proof tracer", res);
+  return res;
+}
+
+bool Solver::disconnect_proof_tracer (StatTracer *tracer) {
+  LOG_API_CALL_BEGIN ("disconnect proof tracer");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (tracer, "can not disconnect zero tracer");
+  bool res = internal->disconnect_proof_tracer (tracer);
+  LOG_API_CALL_RETURNS ("disconnect proof tracer", res);
+  return res;
+}
+
+bool Solver::disconnect_proof_tracer (FileTracer *tracer) {
+  LOG_API_CALL_BEGIN ("disconnect proof tracer");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (tracer, "can not disconnect zero tracer");
+  bool res = internal->disconnect_proof_tracer (tracer);
+  LOG_API_CALL_RETURNS ("disconnect proof tracer", res);
+  return res;
+}
+
+/*------------------------------------------------------------------------*/
+void Solver::conclude () {
+  LOG_API_CALL_BEGIN ("conclude");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (state () == UNSATISFIED || state () == SATISFIED,
+           "can only conclude in satisfied or unsatisfied state");
+  if (state () == UNSATISFIED)
+    internal->conclude_unsat ();
+  else if (state () == SATISFIED)
+    external->conclude_sat ();
+  assert (state () == UNSATISFIED || state () == SATISFIED);
+  LOG_API_CALL_END ("conclude");
 }
 
 /*------------------------------------------------------------------------*/

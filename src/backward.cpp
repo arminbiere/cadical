@@ -122,7 +122,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
           for (const auto &lit : *d) {         // find out if we get
             const signed char tmp = val (lit); // a new unit or just
             if (tmp < 0) {                     // strengthen c
-              if (!opts.lrat || opts.lratexternal)
+              if (!lrat)
                 continue;
               Flags &f = flags (lit);
               assert (!f.seen);
@@ -144,7 +144,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
             } else
               unit = lit;
           }
-          if (opts.lrat && !opts.lratexternal && !satisfied) {
+          if (lrat && !satisfied) {
             // if we found a unit we need to add all unit ids from
             // {c\d}U{d\c} otherwise just the unit ids from {c\d}
             for (const auto &lit : *c) {

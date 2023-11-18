@@ -246,6 +246,8 @@ private:
 
   size_t decision_loc = 0;
 
+  unsigned verbosity = 0;
+
   std::map<int, int> reason_map;
   std::map<int, size_t> prop_reason_loc;
 
@@ -260,10 +262,19 @@ public:
 
   /*-----------------functions for mobical -----------------------------*/
   void push_lemma_lit (int lit) {
+
     clause.push_back (lit);
     if (!lit) {
       nof_clauses++;
       lemma_count++;
+
+      if (verbosity > 2) {
+        std::cout << "push lemma to position "
+                  << all_external_clauses.size () << ": ";
+        for (auto const &l : clause)
+          std::cout << l << " ";
+        std::cout << std::endl;
+      }
 
       all_external_clauses.push_back (clause);
       clause.clear ();
@@ -326,6 +337,9 @@ public:
     // 'all_external_clauses' contains also the propagating (but not
     // necessarily learnt) clauses. The final solution must satisfy only the
     // initial input set of clauses.
+    if (verbosity > 2)
+      std::cout << "cb_check_found_model (" << model.size ()
+                << ") returns: ";
     assert (model.size () == observed_variables.size ());
     assert (nof_added_clauses <= nof_clauses);
 
@@ -357,56 +371,99 @@ public:
         // unsatisfied one, just simply the next clause.
         must_add_clause = true;
         must_add_idx = i;
+        if (verbosity > 2) {
+          std::cout << "false (external clause  " << i << "/";
+          std::cout << all_external_clauses.size ()
+                    << " is not satisfied: ";
+          for (auto const &l : all_external_clauses[i])
+            std::cout << l << " ";
+          std::cout << ")" << std::endl;
+        }
         return false;
       }
     }
+    if (verbosity > 2)
+      std::cout << "true" << std::endl;
     return true;
   }
 
   bool cb_has_external_clause () {
+    if (verbosity > 2)
+      std::cout << "cb_has_external_clause returns: ";
     add_new_observed_var ();
     if (must_add_clause) {
       assert (nof_added_clauses < nof_clauses);
+      if (!lemmas_per_queries[query_loc]) // TODO: bug with ext_prop or
+                                          // reimply?
+        query_loc++;
       assert (query_loc < lemmas_per_queries.size ());
+      assert (lemmas_per_queries[query_loc] > 0);
       lemmas_per_queries[query_loc]--;
       must_add_clause = false;
+      if (verbosity > 2)
+        std::cout << "true (must add clause case)." << std::endl;
       return true;
     }
-    if (query_loc >= lemmas_per_queries.size ())
+    if (query_loc >= lemmas_per_queries.size ()) {
+      if (verbosity > 2)
+        std::cout << "false (all lemmas are added already)." << std::endl;
       return false;
+    }
     if (lemmas_per_queries[query_loc] > 0) {
       add_new_observed_var ();
       lemmas_per_queries[query_loc]--;
+      if (verbosity > 2)
+        std::cout << "true (there is a lemma for this query)." << std::endl;
       return true;
     } else {
-      query_loc++;
+      if (query_loc < lemmas_per_queries.size () - 1)
+        query_loc++;
+      if (verbosity > 2)
+        std::cout << "false (all lemmas per this query are added already)."
+                  << std::endl;
       return false;
     }
   }
 
   int cb_add_external_clause_lit () {
+
     assert (lemma_loc < all_external_clauses.size ());
     assert (lemma_lit_loc < all_external_clauses[lemma_loc].size ());
+    if (verbosity > 2 && !lemma_lit_loc) {
+      std::cout << "add external clause " << lemma_loc;
+      std::cout << "/" << all_external_clauses.size () << ": ";
+    }
     int lit = all_external_clauses[lemma_loc][lemma_lit_loc++];
-
+    if (verbosity > 2)
+      std::cout << lit << " ";
     if (!lit) {
       lemma_loc++;
       lemma_lit_loc = 0;
       nof_added_clauses++;
+      if (verbosity > 2)
+        std::cout << std::endl;
     }
 
     return lit;
   }
 
   int cb_decide () {
-    if (observed_variables.empty () || observed_variables.size () <= 4)
+    if (verbosity > 2)
+      std::cout << "cb_decide returns ";
+    if (observed_variables.empty () || observed_variables.size () <= 4) {
+      if (verbosity > 2)
+        std::cout << "0" << std::endl;
       return 0;
+    }
 
     if (!(observed_variables.size () % 5) &&
         new_observed_variables.size ()) {
       int new_var = add_new_observed_var ();
-      if (new_var)
+      if (new_var) {
+        if (verbosity > 2)
+          std::cout << -1 * new_var << std::endl;
         return -1 * new_var;
+      }
     }
     decision_loc++;
 
@@ -414,15 +471,23 @@ public:
       size_t n = decision_loc / observed_variables.size ();
       if (n < observed_variables.size ()) {
         int lit = *std::next (observed_variables.begin (), n);
+        if (verbosity > 2)
+          std::cout << -1 * lit << std::endl;
         return -1 * lit;
-      } else
+      } else {
+        if (verbosity > 2)
+          std::cout << "0" << std::endl;
         return 0;
+      }
     }
+    if (verbosity > 2)
+      std::cout << "0" << std::endl;
     return 0;
   }
 
   int cb_propagate () {
-
+    if (verbosity > 2)
+      std::cout << "cb_propagate " << std::endl;
     if (observed_trail.size () < 2)
       return 0;
     std::set<int> satisfied_literals;
@@ -509,6 +574,9 @@ public:
   }
 
   void notify_assignment (int lit, bool is_fixed) {
+    if (verbosity > 2)
+      std::cout << "notify assignment: " << lit << " (" << is_fixed << ")"
+                << std::endl;
     if (is_fixed) {
       observed_trail.front ().push_back (lit);
     } else {
@@ -517,10 +585,15 @@ public:
   }
 
   void notify_new_decision_level () {
+    if (verbosity > 2)
+      std::cout << "notify new decision level " << std::endl;
     observed_trail.push_back (std::vector<int> ());
   }
 
   void notify_backtrack (size_t new_level) {
+    if (verbosity > 2)
+      std::cout << "notify backtrack: " << observed_trail.size () - 1
+                << "->" << new_level << std::endl;
     assert (observed_trail.size () == 1 ||
             observed_trail.size () >= new_level + 1);
     while (observed_trail.size () > new_level + 1) {
@@ -536,6 +609,7 @@ class Mobical : public Handler {
   /*----------------------------------------------------------------------*/
 
   friend struct FailedCall;
+  friend struct ConcludeCall;
   friend class Reader;
   friend class Trace;
   friend struct ValCall;
@@ -764,7 +838,7 @@ void Mobical::warning (const char *fmt, ...) {
 
 struct Call {
 
-  enum Type {
+  enum Type : uint64_t {
 
     INIT = (1 << 0),
     SET = (1 << 1),
@@ -807,8 +881,10 @@ struct Call {
     CONNECT = (1 << 28),
     OBSERVE = (1 << 29),
     LEMMA = (1 << 30),
+
     // CONTINUE = (1 << 31),
-    DISCONNECT = (1 << 31),
+    CONCLUDE = (1u << 31),
+    DISCONNECT = ((uint64_t) 1 << 32),
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED,
@@ -818,7 +894,7 @@ struct Call {
         ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING,
     DURING = LEMMA, // | CONTINUE,
-    AFTER = VAL | FLIP | FAILED | ALWAYS,
+    AFTER = VAL | FLIP | FAILED | CONCLUDE | ALWAYS,
   };
 
   Type type; // Explicit typing.
@@ -1169,6 +1245,20 @@ struct FailedCall : public Call {
   const char *keyword () { return "failed"; }
 };
 
+struct ConcludeCall : public Call {
+  ConcludeCall () : Call (CONCLUDE) {}
+  void execute (Solver *&s) {
+    if (mobical.donot.enforce)
+      s->conclude ();
+    else if (s->state () == UNSATISFIED || s->state () == SATISFIED)
+      s->conclude ();
+    res = 0;
+  }
+  void print (ostream &o) { o << "conclude" << endl; }
+  Call *copy () { return new ConcludeCall (); }
+  const char *keyword () { return "conclude"; }
+};
+
 struct FreezeCall : public Call {
   FreezeCall (int l) : Call (FREEZE, l) {}
   void execute (Solver *&s) { s->freeze (arg); }
@@ -1384,10 +1474,6 @@ private:
 
   vector<int> observed_vars;
   bool in_connection = false;
-  // TODO remove this code eventually (see below where it is used).
-  /*
-  bool is_lrat = false;
-  */
 
   void add_options (int expected);
   bool shrink_phases (int expected);
@@ -1419,6 +1505,7 @@ private:
   void generate_flipped (Random &, int vars);
   void generate_frozen (Random &, int vars);
   void generate_failed (Random &, int vars);
+  void generate_conclude (Random &);
   void generate_freeze (Random &, int vars);
   void generate_melt (Random &);
 
@@ -1586,20 +1673,6 @@ void Trace::generate_options (Random &random, Size size) {
   //
   if (random.generate_double () < 0.8)
     push_back (new SetCall ("check", 1));
-
-  // LRAT is incompatible with external_propagator so we set lrat here.
-  //
-  // TODO remove this uncommented code after making it compatible...
-  //
-  /*
-  if (!in_connection && random.generate_double () < 0.3) {
-    push_back (new SetCall ("lrat", 1));
-    is_lrat = true;
-  } else { // TODO ist this correct?
-    push_back (new SetCall ("lrat", 0));
-    is_lrat = false;
-  }
-  */
 
   // In 10% of the remaining cases we use a configuration.
   //
@@ -1957,6 +2030,14 @@ void Trace::generate_failed (Random &random, int vars) {
   }
 }
 
+void Trace::generate_conclude (Random &random) {
+  if (random.generate_double () < 0.05)
+    return;
+  if (random.generate_double () < 0.05) {
+    push_back (new ConcludeCall ());
+  }
+}
+
 void Trace::generate_frozen (Random &random, int vars) {
   if (random.generate_double () < 0.05)
     return;
@@ -2153,6 +2234,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
     if (!in_connection)
       generate_flipped (random, maxvars);
     generate_failed (random, maxvars);
+    generate_conclude (random);
     generate_frozen (random, maxvars);
   }
 
@@ -2651,6 +2733,7 @@ static bool is_basic (Call *c) {
   case Call::FIXED:
   case Call::FAILED:
   case Call::FROZEN:
+  case Call::CONCLUDE:
   case Call::FREEZE:
   case Call::MELT:
   case Call::LIMIT:
@@ -3090,8 +3173,9 @@ static bool is_valid_char (int ch) {
 }
 
 void Reader::parse () {
-  int ch, lit = 0, val = 0, state = 0, adding = 0, constraining = 0,
-          lemma_adding = 0, solved = 0;
+  int ch, lit = 0, val = 0, adding = 0, constraining = 0, lemma_adding = 0,
+          solved = 0;
+  uint64_t state = 0;
   const bool enforce = !mobical.donot.enforce;
   Call *before_trigger = 0;
   char line[80];
@@ -3397,6 +3481,10 @@ void Reader::parse () {
         c = new FailedCall (lit, val);
       else
         c = new FailedCall (lit);
+    } else if (!strcmp (keyword, "conclude")) {
+      if (first)
+        error ("additional argument '%s' to 'conclude'", first);
+      c = new ConcludeCall ();
     } else if (!strcmp (keyword, "freeze")) {
       if (!first)
         error ("argument to 'freeze' missing");
@@ -3468,7 +3556,7 @@ void Reader::parse () {
         error ("'%s' after 'constrain %d' without 'constrain 0'",
                c->keyword (), constraining);
 
-      int new_state = state;
+      uint64_t new_state = state;
 
       switch (c->type) {
 
@@ -3503,6 +3591,7 @@ void Reader::parse () {
       case Call::FLIP:
       case Call::FLIPPABLE:
       case Call::FAILED:
+      case Call::CONCLUDE:
         if (!solved && (state == Call::CONFIG || state == Call::BEFORE))
           error ("'%s' can only be called after 'solve'", c->keyword ());
         if (solved && state == Call::BEFORE) {

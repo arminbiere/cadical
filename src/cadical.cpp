@@ -666,7 +666,7 @@ int App::main (int argc, char **argv) {
             "connected to terminal thus non-binary proof forced");
       solver->trace_proof (stdout, "<stdout>");
     } else if (!solver->trace_proof (proof_path))
-      APPERR ("can not open and write DRAT proof to '%s'", proof_path);
+      APPERR ("can not open and write proof trace to '%s'", proof_path);
     else
       solver->message ("writing %s proof trace to %s'%s'%s",
                        (get ("binary") ? "binary" : "non-binary"),
@@ -802,9 +802,11 @@ int App::main (int argc, char **argv) {
 #endif
         if (res == 10) {
           satisfiable++;
+          solver->conclude ();
           break;
         } else if (res == 20) {
           unsatisfiable++;
+          solver->conclude ();
           for (auto other : cube)
             if (solver->failed (other))
               failed.push_back (other);
@@ -840,7 +842,7 @@ int App::main (int argc, char **argv) {
 
   if (proof_specified) {
     solver->section ("closing proof");
-    solver->close_proof_trace (true);
+    solver->close_proof_trace (!get ("quiet"));
   }
 
   if (output_path) {

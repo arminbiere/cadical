@@ -56,6 +56,8 @@ die () {
   exit 1
 }
 
+rm -f configure.log
+
 msg () {
   cecho "${BOLD}configure:${NORMAL} $*"
 }

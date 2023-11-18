@@ -6,6 +6,8 @@ namespace CaDiCaL {
 // adds an assumption literal onto the assumption stack.
 
 void Internal::assume (int lit) {
+  if (val (lit) < 0)
+    backtrack (max (0, var (lit).level - 1));
   Flags &f = flags (lit);
   const unsigned char bit = bign (lit);
   if (f.assumed & bit) {
@@ -31,6 +33,10 @@ void Internal::assume_analyze_literal (int lit) {
   analyzed.push_back (lit);
   Var &v = var (lit);
   assert (val (lit) < 0);
+  if (v.reason == external_reason) {
+    v.reason = wrapped_learn_external_reason_clause (-lit);
+  }
+  assert (v.reason != external_reason);
   if (!v.level) {
     const unsigned uidx = vlit (-lit);
     uint64_t id = unit_clauses[uidx];
@@ -55,7 +61,8 @@ void Internal::assume_analyze_literal (int lit) {
 void Internal::assume_analyze_reason (int lit, Clause *reason) {
   assert (reason);
   assert (lrat_chain.empty ());
-  assert (opts.lrat && !opts.lratexternal);
+  assert (reason != external_reason);
+  assert (lrat);
   for (const auto &other : *reason)
     if (other != lit)
       assume_analyze_literal (other);
@@ -75,6 +82,8 @@ void Internal::failing () {
   assert (analyzed.empty ());
   assert (clause.empty ());
   assert (lrat_chain.empty ());
+  assert (!marked_failed);
+  assert (!conflict_id);
 
   if (!unsat_constraint) {
     // Search for failing assumptions in the (internal) assumption stack.
@@ -90,25 +99,59 @@ void Internal::failing () {
     int failed_clashing = 0;
     int first_failed = 0;
     int failed_level = INT_MAX;
+    int efailed = 0;
 
-    for (auto &lit : assumptions) {
+    for (auto &elit : external->assumptions) {
+      int lit = external->e2i[abs (elit)];
+      if (elit < 0)
+        lit = -lit;
       if (val (lit) >= 0)
         continue;
       const Var &v = var (lit);
       if (!v.level) {
         failed_unit = lit;
+        efailed = elit;
         break;
       }
       if (failed_clashing)
         continue;
+      if (v.reason == external_reason) {
+        Var &ev = var (lit);
+        ev.reason = learn_external_reason_clause (-lit);
+        if (!ev.reason) {
+          ev.level = 0;
+          failed_unit = lit;
+          efailed = elit;
+          break;
+        }
+        ev.level = 0;
+        // Recalculate assignment level
+        for (const auto &other : *ev.reason) {
+          if (other == -lit)
+            continue;
+          assert (val (other));
+          int tmp = var (other).level;
+          if (tmp > ev.level)
+            ev.level = tmp;
+        }
+        if (!ev.level) {
+          failed_unit = lit;
+          efailed = elit;
+          break;
+        }
+      }
       assert (v.reason != external_reason);
-      if (!v.reason)
+      if (!v.reason) {
         failed_clashing = lit;
-      else if (!first_failed || v.level < failed_level) {
+        efailed = elit;
+      } else if (!first_failed || v.level < failed_level) {
         first_failed = lit;
+        efailed = elit;
         failed_level = v.level;
       }
     }
+
+    assert (clause.empty ());
 
     // Get the 'failed' assumption from one of the three cases.
     int failed;
@@ -119,6 +162,7 @@ void Internal::failing () {
     else
       failed = first_failed;
     assert (failed);
+    assert (efailed);
 
     // In any case mark literal 'failed' as failed assumption.
     {
@@ -132,6 +176,24 @@ void Internal::failing () {
     if (failed_unit) {
       assert (failed == failed_unit);
       LOG ("root-level falsified assumption %d", failed);
+      if (proof) {
+        if (lrat) {
+          unsigned eidx = (efailed > 0) + 2u * (unsigned) abs (efailed);
+          assert ((size_t) eidx < external->ext_units.size ());
+          const uint64_t id = external->ext_units[eidx];
+          if (id) {
+            lrat_chain.push_back (id);
+          } else {
+            const unsigned uidx = vlit (-failed_unit);
+            uint64_t id = unit_clauses[uidx];
+            assert (id);
+            lrat_chain.push_back (id);
+          }
+        }
+        proof->add_assumption_clause (++clause_id, -efailed, lrat_chain);
+        conclusion.push_back (clause_id);
+        lrat_chain.clear ();
+      }
       goto DONE;
     }
 
@@ -143,6 +205,11 @@ void Internal::failing () {
       const unsigned bit = bign (-failed);
       assert (!(f.failed & bit));
       f.failed |= bit;
+      if (proof) {
+        vector<int> clash = {externalize (failed), externalize (-failed)};
+        proof->add_assumption_clause (++clause_id, clash, lrat_chain);
+        conclusion.push_back (clause_id);
+      }
       goto DONE;
     }
 
@@ -167,7 +234,8 @@ void Internal::failing () {
       analyzed.push_back (-first_failed);
       clause.push_back (-first_failed);
     }
-  } else { // unsat_constraint
+  } else {
+    // unsat_constraint
     // The assumptions necessary to fail each literal in the constraint are
     // collected.
     for (auto lit : constraint) {
@@ -179,14 +247,28 @@ void Internal::failing () {
   }
 
   {
-
     // used for unsat_constraint lrat
     vector<vector<uint64_t>> constraint_chains;
     vector<vector<int>> constraint_clauses;
     vector<int> sum_constraints;
+    vector<int> econstraints;
+    for (auto &elit : external->constraint) {
+      int lit = external->e2i[abs (elit)];
+      if (elit < 0)
+        lit = -lit;
+      if (!lit)
+        continue;
+      Flags &f = flags (lit);
+      if (f.seen)
+        continue;
+      if (std::find (econstraints.begin (), econstraints.end (), elit) !=
+          econstraints.end ())
+        continue;
+      econstraints.push_back (elit);
+    }
 
     // no lrat do bfs as it was before
-    if (!opts.lrat || opts.lratexternal) {
+    if (!lrat) {
       size_t next = 0;
       while (next < analyzed.size ()) {
         const int lit = analyzed[next++];
@@ -194,6 +276,14 @@ void Internal::failing () {
         Var &v = var (lit);
         if (!v.level)
           continue;
+        if (v.reason == external_reason) {
+          v.reason = wrapped_learn_external_reason_clause (lit);
+          if (!v.reason) {
+            v.level = 0;
+            continue;
+          }
+        }
+        assert (v.reason != external_reason);
         if (v.reason) {
           assert (v.level);
           LOG (v.reason, "analyze reason");
@@ -221,6 +311,10 @@ void Internal::failing () {
       const int lit = clause[0];
       Var &v = var (lit);
       assert (v.reason);
+      if (v.reason == external_reason) {
+        v.reason = wrapped_learn_external_reason_clause (lit);
+      }
+      assert (v.reason != external_reason);
       assume_analyze_reason (lit, v.reason);
       for (auto &lit : clause) {
         Flags &f = flags (lit);
@@ -232,31 +326,11 @@ void Internal::failing () {
     } else { // lrat for unsat_constraint
       assert (clause.empty ());
       clear_analyzed_literals ();
-      /*
-      const size_t size = 2 * (1 + (size_t) max_var);
-      constraint_chains.resize (size);
-      constraint_clauses.resize (size);
-      for (size_t i = 0; i > size; i++) {
-        vector<uint64_t> empty;
-        vector<int> empty2;
-        constraint_chains[i] = empty;
-        constraint_clauses[i] = empty2;
-      }
-      */
       for (auto lit : constraint) {
         // make sure nothing gets marked failed twice
         // also might shortcut the case where
         // lrat_chain is empty because clause is tautological
         assert (lit != INT_MIN);
-        /*
-        for (auto ign : clause) {
-          Flags &f = flags (ign);
-          if (f.seen)
-            continue;
-          f.seen = true;
-          analyzed.push_back (ign);
-        }
-        */
         assume_analyze_literal (lit);
         vector<uint64_t> empty;
         vector<int> empty2;
@@ -299,20 +373,18 @@ void Internal::failing () {
     if (!unsat_constraint) {
       external->check_learned_clause ();
       if (proof) {
-        if (opts.lrat && !opts.lratexternal) {
-          LOG (lrat_chain, "assume proof chain without constraint");
-          proof->add_derived_clause (++clause_id, clause, lrat_chain);
-        } else
-          proof->add_derived_clause (++clause_id, clause);
-        proof->delete_clause (clause_id, clause);
+        vector<int> eclause;
+        for (auto &lit : clause)
+          eclause.push_back (externalize (lit));
+        proof->add_assumption_clause (++clause_id, eclause, lrat_chain);
+        conclusion.push_back (clause_id);
       }
     } else {
-      assert (!opts.lrat || opts.lratexternal ||
-              (constraint.size () == constraint_clauses.size () &&
-               constraint.size () == constraint_chains.size ()));
+      assert (!lrat || (constraint.size () == constraint_clauses.size () &&
+                        constraint.size () == constraint_chains.size ()));
       for (auto p = constraint.rbegin (); p != constraint.rend (); p++) {
         const auto &lit = *p;
-        if (opts.lrat && !opts.lratexternal) {
+        if (lrat) {
           clause.clear ();
           for (auto &ign : constraint_clauses.back ())
             clause.push_back (ign);
@@ -321,21 +393,44 @@ void Internal::failing () {
         clause.push_back (-lit);
         external->check_learned_clause ();
         if (proof) {
-          if (opts.lrat && !opts.lratexternal) {
+          if (lrat) {
             for (auto p : constraint_chains.back ()) {
               lrat_chain.push_back (p);
             }
             constraint_chains.pop_back ();
             LOG (lrat_chain, "assume proof chain with constraints");
-            proof->add_derived_clause (++clause_id, clause, lrat_chain);
-            lrat_chain.clear ();
-            proof->delete_clause (clause_id, clause);
-          } else {
-            proof->add_derived_clause (++clause_id, clause);
-            proof->delete_clause (clause_id, clause);
           }
+          vector<int> eclause;
+          for (auto &lit : clause)
+            eclause.push_back (externalize (lit));
+          proof->add_assumption_clause (++clause_id, eclause, lrat_chain);
+          conclusion.push_back (clause_id);
+          lrat_chain.clear ();
         }
         clause.pop_back ();
+      }
+      if (proof) {
+        for (auto &elit : econstraints) {
+          if (lrat) {
+            unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+            assert ((size_t) eidx < external->ext_units.size ());
+            const uint64_t id = external->ext_units[eidx];
+            if (id) {
+              lrat_chain.push_back (id);
+            } else {
+              int lit = external->e2i[abs (elit)];
+              if (elit < 0)
+                lit = -lit;
+              const unsigned uidx = vlit (-lit);
+              uint64_t id = unit_clauses[uidx];
+              assert (id);
+              lrat_chain.push_back (id);
+            }
+          }
+          proof->add_assumption_clause (++clause_id, -elit, lrat_chain);
+          conclusion.push_back (clause_id);
+          lrat_chain.clear ();
+        }
       }
     }
     lrat_chain.clear ();
@@ -357,6 +452,39 @@ bool Internal::failed (int lit) {
   return (f.failed & bit) != 0;
 }
 
+void Internal::conclude_unsat () {
+  if (!proof || concluded)
+    return;
+  concluded = true;
+  if (!marked_failed) {
+    assert (conclusion.empty ());
+    failing ();
+    marked_failed = true;
+  }
+  ConclusionType con;
+  if (conflict_id)
+    con = CONFLICT;
+  else if (unsat_constraint)
+    con = CONSTRAINT;
+  else
+    con = ASSUMPTIONS;
+  proof->conclude_unsat (con, conclusion);
+}
+
+void Internal::reset_concluded () {
+  if (proof)
+    proof->reset_assumptions ();
+  if (conflict_id) {
+    assert (conclusion.size () == 1);
+    return;
+  }
+  conclusion.clear ();
+  if (!concluded)
+    return;
+  LOG ("reset concluded");
+  concluded = false;
+}
+
 // Add the start of each incremental phase (leaving the state
 // 'UNSATISFIABLE' actually) we reset all assumptions.
 
@@ -373,4 +501,42 @@ void Internal::reset_assumptions () {
   marked_failed = true;
 }
 
+// sort the assumptions by the current position on the trail and backtrack
+// to the first place where the assumptions and the current trail differ.
+void Internal::sort_and_reuse_assumptions () {
+  assert (opts.ilbassumptions);
+  if (assumptions.empty ())
+    return;
+  std::sort (begin (assumptions), end (assumptions),
+             [this] (int litA, int litB) {
+               return ((uint64_t) var (litA).level << 32) +
+                          (uint64_t) var (litA).trail <
+                      ((uint64_t) var (litB).level << 32) +
+                          (uint64_t) var (litB).trail;
+             });
+
+  const int max_level = var (assumptions.back ()).level;
+  const int size = min (level + 1, max_level + 1);
+  assert ((size_t) level == control.size () - 1);
+  for (int i = 1; i < size; ++i) {
+    const Level &l = control[i];
+    const int lit = l.decision;
+    const int alit = assumptions[i - 1];
+    if (!lit || var (lit).level != i) {
+      if (val (alit) > 0 && var (alit).level < i)
+        continue;
+      backtrack (i - 1);
+      break;
+    }
+    if (l.decision == alit)
+      continue;
+    backtrack (i - 1);
+    break;
+  }
+  LOG ("assumptions allow for reuse of trail up to level %d", level);
+  if ((size_t) level > assumptions.size ())
+    stats.assumptionsreused += assumptions.size ();
+  else
+    stats.assumptionsreused += level;
+}
 } // namespace CaDiCaL

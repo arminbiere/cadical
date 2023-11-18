@@ -87,11 +87,25 @@ int Internal::likely_phase (int idx) { return decide_phase (idx, false); }
 /*------------------------------------------------------------------------*/
 
 bool Internal::satisfied () {
-  size_t assigned = trail.size ();
-  if (propagated < assigned)
-    return false;
   if ((size_t) level < assumptions.size () + (!!constraint.size ()))
     return false;
+  if (num_assigned < (size_t) max_var)
+    return false;
+  assert (num_assigned == (size_t) max_var);
+  if (propagated < trail.size ())
+    return false;
+  if (opts.reimply && multitrail_dirty < level)
+    return false;
+  if (opts.reimply && level &&
+      (size_t) multitrail[level - 1] < trails[level - 1].size ())
+    return false;
+#ifndef NDEBUG
+  if (opts.reimply)
+    for (int i = 0; i < level; i++)
+      assert ((size_t) multitrail[i] == trails[i].size ());
+#endif
+
+  size_t assigned = num_assigned;
   return (assigned == (size_t) max_var);
 }
 
@@ -109,6 +123,7 @@ bool Internal::better_decision (int lit, int other) {
 
 int Internal::decide () {
   assert (!satisfied ());
+  assert (!opts.reimply || multitrail_dirty == level);
   START (decide);
   int res = 0;
   if ((size_t) level < assumptions.size ()) {
@@ -120,8 +135,7 @@ int Internal::decide () {
       res = 20;
     } else if (tmp > 0) {
       LOG ("assumption %d already satisfied", lit);
-      level++;
-      control.push_back (Level (0, trail.size ()));
+      new_trail_level (0);
       LOG ("added pseudo decision level");
       notify_decision ();
     } else {
@@ -176,8 +190,7 @@ int Internal::decide () {
            "is implied by assumptions",
            satisfied_lit);
 
-      level++;
-      control.push_back (Level (0, trail.size ()));
+      new_trail_level (0);
       LOG ("added pseudo decision level for constraint");
       notify_decision ();
 

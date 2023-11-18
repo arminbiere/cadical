@@ -300,7 +300,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
       satisfied = lit;
       break;
     } else if (tmp < 0) {
-      if (!opts.lrat || opts.lratexternal)
+      if (!lrat)
         continue;
       Flags &f = flags (lit);
       if (f.seen)
@@ -341,7 +341,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
       satisfied = lit;
       break;
     } else if (tmp < 0) {
-      if (!opts.lrat || opts.lratexternal)
+      if (!lrat)
         continue;
       Flags &f = flags (lit);
       if (f.seen)
@@ -366,7 +366,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
   unmark (c);
   const int64_t size = clause.size ();
 
-  if (opts.lrat && !opts.lratexternal) {
+  if (lrat) {
     lrat_chain.push_back (d->id);
     lrat_chain.push_back (c->id);
   }
@@ -412,7 +412,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
   }
 
   LOG (clause, "resolvent");
-  assert (!opts.lrat || opts.lratexternal || !lrat_chain.empty ());
+  assert (!lrat || !lrat_chain.empty ());
 
   // Double self-subsuming resolution.  The clauses 'c' and 'd' are
   // identical except for the pivot which occurs in different phase.  The
@@ -578,7 +578,7 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
         continue;
       if (!resolve_clauses (eliminator, c, pivot, d, false))
         continue;
-      assert (!opts.lrat || opts.lratexternal || !lrat_chain.empty ());
+      assert (!lrat || !lrat_chain.empty ());
       Clause *r = new_resolved_irredundant_clause ();
       elim_update_added_clause (eliminator, r);
       eliminator.enqueue (r);
@@ -614,14 +614,16 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
   for (const auto &c : ps) {
     if (c->garbage)
       continue;
-    mark_garbage (c);
     assert (!c->redundant);
     if (!substitute || c->gate) {
+      if (proof)
+        proof->weaken_minus (c);
       external->push_clause_on_extension_stack (c, pivot);
 #ifndef NDEBUG
       pushed++;
 #endif
     }
+    mark_garbage (c);
     elim_update_removed_clause (eliminator, c, pivot);
   }
   erase_occs (ps);
@@ -632,14 +634,17 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
   for (const auto &d : ns) {
     if (d->garbage)
       continue;
-    mark_garbage (d);
     assert (!d->redundant);
     if (!substitute || d->gate) {
+      if (proof) {
+        proof->weaken_minus (d);
+      }
       external->push_clause_on_extension_stack (d, -pivot);
 #ifndef NDEBUG
       pushed++;
 #endif
     }
+    mark_garbage (d);
     elim_update_removed_clause (eliminator, d, -pivot);
   }
   erase_occs (ns);

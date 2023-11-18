@@ -64,8 +64,9 @@ void Internal::collect_instantiation_candidates (
 inline void Internal::inst_assign (int lit) {
   LOG ("instantiate assign %d", lit);
   assert (!val (lit));
-  vals[lit] = 1;
-  vals[-lit] = -1;
+  assert ((int) num_assigned < max_var);
+  num_assigned++;
+  set_val (lit, 1);
   trail.push_back (lit);
 }
 
@@ -94,12 +95,12 @@ bool Internal::inst_propagate () { // Adapted from 'propagate'.
         if (b < 0) {
           ok = false;
           LOG (w.clause, "conflict");
-          if (opts.lrat && !opts.lratexternal) {
+          if (lrat) {
             inst_chain.push_back (w.clause);
           }
           break;
         } else {
-          if (opts.lrat && !opts.lratexternal) {
+          if (lrat) {
             inst_chain.push_back (w.clause);
           }
           inst_assign (w.blit);
@@ -138,14 +139,14 @@ bool Internal::inst_propagate () { // Adapted from 'propagate'.
             j--;
           } else if (!u) {
             assert (v < 0);
-            if (opts.lrat && !opts.lratexternal) {
+            if (lrat) {
               inst_chain.push_back (w.clause);
             }
             inst_assign (other);
           } else {
             assert (u < 0);
             assert (v < 0);
-            if (opts.lrat && !opts.lratexternal) {
+            if (lrat) {
               inst_chain.push_back (w.clause);
             }
             LOG (w.clause, "conflict");
@@ -225,7 +226,7 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
   assert (lrat_chain.empty ()); // chain will be built here
   if (ok) {
     inst_chain.clear ();
-  } else if (opts.lrat && !opts.lratexternal) { // analyze conflict for lrat
+  } else if (lrat) { // analyze conflict for lrat
     assert (inst_chain.size ());
     Clause *reason = inst_chain.back ();
     inst_chain.pop_back ();
@@ -242,9 +243,10 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
     LOG ("instantiate unassign %d", other);
     trail.pop_back ();
     assert (val (other) > 0);
-    vals[other] = vals[-other] = 0;
+    num_assigned--;
+    set_val (other, 0);
     // this is a variant of conflict analysis which is only needed for lrat
-    if (!ok && inst_chain.size () && opts.lrat && !opts.lratexternal) {
+    if (!ok && inst_chain.size () && lrat) {
       Flags &f = flags (other);
       if (f.seen) {
         Clause *reason = inst_chain.back ();
@@ -263,7 +265,7 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
   }
   assert (inst_chain.empty ());
   // post processing step for lrat
-  if (!ok && opts.lrat && !opts.lratexternal) {
+  if (!ok && lrat) {
     if (flags (lit).seen)
       lrat_chain.push_back (c->id);
     for (const auto &other : *c) {

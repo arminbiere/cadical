@@ -7,10 +7,7 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// This constructs lrat-style proof chains. Enabled by 'opts.checkprooflrat'
-// (requires 'opts.check' and 'opts.checkproof'). The main advantage of this
-// currently is that we can stream out frat proofs (enabled by 'opts.lrat')
-
+// This constructs lrat-style proof chains. Enabled by 'opts.externallrat'
 // in essence this implements the same propagation routine as the DRUP
 // checker but also stores the reason for each assignment. The proof chain
 // is then recreated from that.

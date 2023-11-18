@@ -73,6 +73,29 @@ struct minimize_trail_smaller {
   }
 };
 
+struct minimize_trail_level_positive_rank {
+  Internal *internal;
+  minimize_trail_level_positive_rank (Internal *s) : internal (s) {}
+  typedef uint64_t Type;
+  Type operator() (const int &a) const {
+    assert (internal->val (a));
+    Var &v = internal->var (a);
+    uint64_t res = v.level;
+    res <<= 32;
+    res |= v.trail;
+    return res;
+  }
+};
+
+struct minimize_trail_level_smaller {
+  Internal *internal;
+  minimize_trail_level_smaller (Internal *s) : internal (s) {}
+  bool operator() (const int &a, const int &b) const {
+    return minimize_trail_level_positive_rank (internal) (a) <
+           minimize_trail_level_positive_rank (internal) (b);
+  }
+};
+
 void Internal::minimize_clause () {
   START (minimize);
   LOG (clause, "minimizing first UIP clause");
@@ -86,7 +109,7 @@ void Internal::minimize_clause () {
   auto j = clause.begin (), i = j;
   for (; i != end; i++) {
     if (minimize_literal (-*i)) {
-      if (opts.lrat && !opts.lratexternal) {
+      if (lrat) {
         assert (mini_chain.empty ());
         calculate_minimize_chain (-*i);
         for (auto p : mini_chain) {
@@ -149,9 +172,15 @@ void Internal::calculate_minimize_chain (int lit) {
 // positive case (where a literal with 'keep' true is hit).
 //
 void Internal::minimize_sort_clause () {
-  MSORT (opts.radixsortlim, clause.begin (), clause.end (),
-         minimize_trail_positive_rank (this),
-         minimize_trail_smaller (this));
+  if (opts.reimply) {
+    MSORT (opts.radixsortlim, clause.begin (), clause.end (),
+           minimize_trail_level_positive_rank (this),
+           minimize_trail_level_smaller (this));
+  } else {
+    MSORT (opts.radixsortlim, clause.begin (), clause.end (),
+           minimize_trail_positive_rank (this),
+           minimize_trail_smaller (this));
+  }
 }
 
 void Internal::clear_minimized_literals () {

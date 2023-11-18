@@ -16,4 +16,6 @@ grep -v 'dlim' | \
 grep -v 'extend' | \
 grep -v 'learn' | \
 grep -v 'witness' | \
-grep -v 'lrat'
+grep -v 'lrat' | \
+grep -v 'frat' | \
+grep -v 'veripb'
