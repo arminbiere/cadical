@@ -1088,6 +1088,8 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     demote_clause (c);
     const int new_glue = recompute_glue(c);
     promote_clause(c, new_glue);
+    if (conflict)
+      backtrack (level - 1);
   } else {
     LOG (c, "vivification failed on");
     lrat_chain.clear();
