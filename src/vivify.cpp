@@ -703,7 +703,7 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
     reason = (conflict?conflict:candidate);
     assert (reason);
     assert (!reason->garbage);
-    mark2 (reason);
+    mark2 (candidate);
     subsumes = (candidate != reason && reason->size <= candidate->size); // TODO why is the second part required
     redundant = reason->redundant;
     LOG (reason, "resolving with");
@@ -751,7 +751,7 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
       LOG (candidate, "vivify subsumed 0");
       LOG (reason, "vivify subsuming 0");
       *subsuming = reason;
-      unmark (reason);
+      unmark (candidate);
       if (lrat)
 	lrat_chain.clear ();
       return subsumes;
