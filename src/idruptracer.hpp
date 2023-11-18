@@ -5,15 +5,15 @@ class FileTracer;
 
 namespace CaDiCaL {
 
-struct IrupClause {
-  IrupClause *next;  // collision chain link for hash table
+struct IdrupClause {
+  IdrupClause *next;  // collision chain link for hash table
   uint64_t hash; // previously computed full 64-bit hash
   uint64_t id;   // id of clause
   unsigned size;  
   int literals[1];
 };
 
-class IrupTracer : public FileTracer {
+class IdrupTracer : public FileTracer {
 
   Internal *internal;
   File *file;
@@ -23,7 +23,7 @@ class IrupTracer : public FileTracer {
   //
   uint64_t num_clauses;  // number of clauses in hash table
   uint64_t size_clauses; // size of clause hash table
-  IrupClause **clauses;      // hash table of clauses
+  IdrupClause **clauses;      // hash table of clauses
   vector<int> imported_clause;
   
   static const unsigned num_nonces = 4;
@@ -31,11 +31,11 @@ class IrupTracer : public FileTracer {
   uint64_t nonces[num_nonces]; // random numbers for hashing
   uint64_t last_hash;          // last computed hash value of clause
   uint64_t last_id;            // id of the last added clause
-  IrupClause *last_clause;
+  IdrupClause *last_clause;
   uint64_t compute_hash (uint64_t); // compute and save hash value of clause
 
-  IrupClause *new_clause ();
-  void delete_clause (IrupClause *);
+  IdrupClause *new_clause ();
+  void delete_clause (IdrupClause *);
 
   static uint64_t reduce_hash (uint64_t hash, uint64_t size);
 
@@ -60,8 +60,8 @@ class IrupTracer : public FileTracer {
   
 public:
 
-  IrupTracer (Internal *, File *file, bool);
-  ~IrupTracer ();
+  IdrupTracer (Internal *, File *file, bool);
+  ~IdrupTracer ();
   
   // proof section: 
   void add_derived_clause (uint64_t, bool, const vector<int> &,

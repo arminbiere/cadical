@@ -128,7 +128,7 @@ void Internal::trace (File *file) {
     connect_proof_tracer (ft, true);
   } else if (opts.irup) {
     LOG ("PROOF connecting irup tracer");
-    FileTracer *ft = new IrupTracer (this, file, opts.binary);
+    FileTracer *ft = new IdrupTracer (this, file, opts.binary);
     connect_proof_tracer (ft, true);
   } else {
     LOG ("PROOF connecting drat tracer");
