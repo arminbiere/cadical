@@ -216,8 +216,6 @@ bool Internal::vivify_propagate () {
           } else {
             assert (u < 0);
             assert (v < 0);
-	    LOG ("r=%d", r);
-	    LOG ("1=%d, 2=%d, lit=%d, other=%d, u=%d", lits[0], lits[1], lit, other, (int)u);
             conflict = w.clause;
             break;
           }
@@ -665,10 +663,9 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes, Clause **subsuming
 	if (mark_implied && other != implied) {
 	  LOG ("skipping non-implied literal %d on current level", other);
 	  continue;
-	}
-        const char tmp = val (other);
-        assert (tmp);
+        }
 
+        assert (val (other));
         if (f.seen)
           continue;
         LOG ("pushing lit %d", other);
@@ -883,6 +880,11 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     return false;
   }
 
+  if (sorted.size() == 2) {
+    LOG ("skipping actual binary");
+    return false;
+  }
+
   sort (sorted.begin (), sorted.end (), vivify_more_noccs (this));
 
   // The actual vivification checking is performed here, by assuming the
@@ -1065,7 +1067,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   if (subsuming) {
     assert (c != subsuming);
     LOG (c, "deleting subsumed clause");
-    subsume_clause (subsuming, c);
+    vivify_subsume_clause (subsuming, c);
     backtrack (level - 1);
     res = true;
     // TODO: reompute glue
@@ -1080,17 +1082,17 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     conflict = nullptr; // TODO dup from below
     vivify_strengthen(c);
     res = true;
-  } else if (subsume && !c->redundant && !redundant) {
+  } else if ((conflict || subsume) && !c->redundant && !redundant) {
     LOG ("demote clause from irredundant to redundant");
     res = true;
     demote_clause (c);
     const int new_glue = recompute_glue(c);
     promote_clause(c, new_glue);
   } else {
-    lrat_chain.clear();
     LOG (c, "vivification failed on");
-    LOG ("now trying instantiations");
+    lrat_chain.clear();
     if (!subsume && opts.vivifyinst) {
+      LOG ("now trying instantiation");
       conflict = nullptr;
       const int lit = sorted.back ();
       LOG ("vivify instantiation");
@@ -1105,28 +1107,31 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
         // strengthen clause
         if (lrat) {
 	  clear_analyzed_literals();
-	  for (auto var : vars) {
-	    assert (!flags(var).seen);
-	  }
           assert (lrat_chain.empty ());
           vivify_build_lrat (0, c);
           vivify_build_lrat (0, conflict);
           clear_analyzed_literals ();
         }
         remove = lit;
+        conflict = 0;
         backtrack (level - 1);
         unwatch_clause (c);
         strengthen_clause (c, remove);
         watch_clause (c);
-        conflict = 0;
         assert (!conflict);
         res = true;
       } else {
         LOG ("instantiation failed");
         res = false;
       }
-    } else
+    } else {
+      LOG ("cannot apply instantiation");
+      if (conflict) {
+	conflict = 0;
+	backtrack (level - 1);
+      }
       res = false;
+    }
   }
 
   clause.clear();
