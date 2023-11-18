@@ -1,7 +1,5 @@
 #include "internal.hpp"
 
-#include "cover.hpp"
-
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
@@ -40,7 +38,26 @@ namespace CaDiCaL {
 // respect to that literal order.
 
 /*------------------------------------------------------------------------*/
+  // demoting a clause (opposite is promote from subsume.cpp)
 
+inline void Internal::demote_clause (Clause *c) {
+  stats.subsumed++;
+  LOG (c, "demoting");
+  assert (!c->redundant);
+  c->redundant = true;
+  c->keep = false;
+  assert (stats.current.irredundant > 0);
+  stats.current.irredundant--;
+  assert (stats.added.irredundant > 0);
+  stats.added.irredundant--;
+  stats.irrlits -= c->size;
+  stats.current.redundant++;
+  stats.added.redundant++;
+  c->glue = c->size - 1;
+  // ... and keep 'stats.added.total'.
+}
+
+/*------------------------------------------------------------------------*/
 // For vivification we have a separate dedicated propagation routine, which
 // prefers to propagate binary clauses first.  It also uses its own
 // assignment procedure 'vivify_assign', which does not mess with phase
@@ -62,7 +79,10 @@ inline void Internal::vivify_assign (int lit, Clause *reason) {
   if (!level)
     learn_unit_clause (lit);
   const signed char tmp = sign (lit);
-  set_val (idx, tmp);
+  vals[idx] = tmp;
+  vals[-idx] = -tmp;
+  assert (val (lit) > 0);
+  assert (val (-lit) < 0);
   trail.push_back (lit);
   LOG (reason, "vivify assign %d", lit);
 }
@@ -165,6 +185,8 @@ bool Internal::vivify_propagate () {
           } else {
             assert (u < 0);
             assert (v < 0);
+	    LOG ("r=%d", r);
+	    LOG ("1=%d, 2=%d, lit=%d, other=%d, u=%d", lits[0], lits[1], lit, other, (int)u);
             conflict = w.clause;
             break;
           }
@@ -210,16 +232,6 @@ struct vivify_more_noccs {
     return abs (a) < abs (b); // smaller index first
   }
 };
-
-static bool same_clause (Clause *a, Clause *b) {
-  if (a->size != b->size)
-    return false;
-  for (auto i = a->begin (), j = b->begin (), end = a->end (); i != end;
-       i++, j++)
-    if (*i != *j)
-      return false;
-  return true;
-}
 
 // Sort candidate clauses by the number of occurrences (actually by their
 // score) of their literals, with clauses to be vivified first last.   We
@@ -271,8 +283,6 @@ struct vivify_clause_later {
 
   bool operator() (Clause *a, Clause *b) const {
 
-    COVER (same_clause (a, b));
-
     // First focus on clauses scheduled in the last vivify round but not
     // checked yet since then.
     //
@@ -303,12 +313,10 @@ struct vivify_clause_later {
     // decreasingly with respect to that order.
     //
     const auto eoa = a->end (), eob = b->end ();
-    auto j = b->begin (), i = a->begin ();
-    for (; i != eoa && j != eob; i++, j++)
+    auto j = b->begin ();
+    for (auto i = a->begin (); i != eoa && j != eob; i++, j++)
       if (*i != *j)
         return vivify_more_noccs (internal) (*j, *i);
-
-    COVER (i == eoa && j == eob);
 
     return j == eob; // Prefer shorter clauses to be vivified first.
   }
@@ -410,42 +418,9 @@ bool Internal::consider_to_vivify_clause (Clause *c, bool redundant_mode) {
 
 // Conflict analysis from 'start' which learns a decision only clause.
 //
-void Internal::vivify_analyze_redundant (Vivifier &vivifier, Clause *start,
-                                         bool &only_binary_reasons) {
-  LOG ("analyzing conflict in redundant mode");
+// We cannot use the stack-based implementation of Kissat, because we need to
+// iterate over the conflict in topological ordering to produce a valid LRAT proof
 
-  only_binary_reasons = true;
-
-  auto &stack = vivifier.stack;
-  stack.clear ();
-
-  stack.push_back (start);
-  while (!stack.empty ()) {
-    Clause *c = stack.back ();
-    if (c->size > 2)
-      only_binary_reasons = false;
-    stack.pop_back ();
-    LOG (c, "vivify analyze");
-    for (const auto &lit : *c) {
-      Var &v = var (lit);
-      if (!v.level)
-        continue;
-      Flags &f = flags (lit);
-      if (f.seen)
-        continue;
-      assert (val (lit) < 0);
-      f.seen = true;
-      analyzed.push_back (lit);
-      if (v.reason)
-        stack.push_back (v.reason);
-      else
-        LOG ("vivify seen %d", lit);
-    }
-  }
-
-  if (only_binary_reasons)
-    LOG ("all reasons are binary");
-}
 
 // Check whether we assigned all literals to false and none is implied.
 
@@ -597,6 +572,7 @@ void Internal::vivify_strengthen (Clause *c) {
       new_level = level1 - 1;
     }
 
+    assert (new_level >= 0);
     if (new_level < level)
       backtrack (new_level);
 
@@ -614,22 +590,242 @@ void Internal::vivify_strengthen (Clause *c) {
   lrat_chain.clear ();
 }
 
+void Internal::vivify_analyze (Clause *start, bool &subsumes, Clause **subsuming, int implied, bool &redundant) {
+  const auto &t = &trail; // normal trail, so next_trail is wrong
+  int i = t->size (); // Start at end-of-trail.
+  Clause *reason = start;
+  assert (reason);
+  assert (!trail.empty ());
+  int uip = trail.back();
+  bool mark_implied = (implied);
+
+  while (i >= 0) {
+    if (reason) {
+      redundant = (redundant || reason->redundant);
+      subsumes = (start != reason && reason->size <= start->size);
+      LOG (reason, "resolving on %d with", uip);
+      for (auto other : *reason) {
+        const Var v = var (other);
+        Flags &f = flags (other);
+        if (!marked2 (other)) {
+          LOG ("not subsuming due to lit %d", other);
+          subsumes = false;
+        }
+	if (!val (other)) {
+	  LOG ("skipping unset lit %d", other);
+	  continue;
+	}
+	if (other == uip){
+	  continue;
+	}
+        if (!v.level) {
+          if (f.seen || !lrat || reason == start)
+            continue;
+	  LOG ("unit reason for %d", other);
+          const unsigned uidx = vlit (-other);
+          uint64_t id = unit_clauses[uidx];
+          assert (id); // because var is updated lazily
+          LOG ("adding unit reason %zd for %d", id, other);
+          unit_chain.push_back (id);
+          f.seen = true;
+          analyzed.push_back (other);
+          continue;
+        }
+	if (mark_implied && other != implied) {
+	  LOG ("skipping non-implied literal %d on current level", other);
+	  continue;
+	}
+        const char tmp = val (other);
+        assert (tmp);
+
+        if (f.seen)
+          continue;
+        LOG ("pushing lit %d", other);
+        analyzed.push_back (other);
+        f.seen = true;
+      }
+      if (start->redundant) {
+        const int new_glue = recompute_glue (start);
+        promote_clause (start, new_glue);
+      }
+      if (subsumes) {
+        assert (reason);
+        LOG (reason, "clause found subsuming");
+        LOG (start, "clause found subsumed");
+        *subsuming = reason;
+        return;
+      }
+    } else {
+      LOG ("vivify analyzed decision %d", uip);
+      clause.push_back(-uip);
+    }
+    mark_implied = false;
+
+    uip = 0;
+    while (!uip && i > 0) {
+      assert (i > 0);
+      const int lit = (*t)[--i];
+      if (!var (lit).level)
+	continue;
+      if (flags (lit).seen)
+        uip = lit;
+    }
+    if (!uip)
+      break;
+    LOG ("uip is %d", uip);
+    Var &w = var (uip);
+    reason = w.reason;
+    if (lrat && reason)
+      lrat_chain.push_back (reason->id);
+  }
+}
+
+
+bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
+                              int implied, Clause **subsuming, bool &redundant) {
+  assert (lrat_chain.empty());
+  bool subsumes;
+  Clause *reason;
+
+  assert (clause.empty());
+  if (implied) {
+    reason = candidate;
+    mark2 (reason);
+    const int not_implied = -implied;
+    const Var v = var (not_implied);
+    assert (v.level);
+    Flags &f = flags (not_implied);
+    f.seen = true;
+    LOG ("pushing implied lit %d", not_implied);
+    analyzed.push_back(not_implied);
+    clause.push_back(implied);
+  } else {
+    reason = (conflict?conflict:candidate);
+    assert (reason);
+    assert (!reason->garbage);
+    mark2 (reason);
+    subsumes = (candidate != reason && reason->size <= candidate->size); // TODO why is the second part required
+    redundant = reason->redundant;
+    LOG (reason, "resolving with");
+    if (lrat)
+      lrat_chain.push_back (reason->id);
+    for (auto lit : *reason) {
+      const Var &v = var (lit);
+      const char tmp = val (lit);
+      assert (tmp < 0);
+      if (!marked (lit)) {
+        LOG ("lit %d is not marked", lit);
+        subsumes = false;
+      }
+      if (!v.level) {
+	if (!lrat)
+	  continue;
+	LOG ("adding unit %d", lit);
+        Flags &gf = flags (lit);
+        if (!gf.seen) {
+          const unsigned uidx =
+              vlit (-lit); // nevertheless we can use var (l)
+          uint64_t id = unit_clauses[uidx]; // as if l was still assigned
+          assert (id);                      // because var is updated lazily
+          LOG ("adding unit reason %zd for %d", id, lit);
+          unit_chain.push_back (id);
+        }
+	gf.seen = true;
+	analyzed.push_back (lit);
+        continue;
+      }
+      LOG ("analyzing lit %d", lit);
+      assert (v.level);
+      Flags &gf = flags (lit);
+      LOG ("pushing lit %d", lit);
+      analyzed.push_back (lit);
+      gf.seen = true;
+
+    }
+    if (reason != candidate && reason->redundant) {
+      const int new_glue = recompute_glue(reason);
+      promote_clause(reason, new_glue);
+    }
+    if (subsumes) {
+      assert (candidate != reason);
+      LOG (candidate, "vivify subsumed 0");
+      LOG (reason, "vivify subsuming 0");
+      *subsuming = reason;
+      unmark (reason);
+      if (lrat)
+	lrat_chain.clear ();
+      return subsumes;
+    }
+
+  }
+
+  vivify_analyze (reason, subsumes, subsuming, implied, redundant);
+  unmark(reason);
+  if (subsumes) {
+    assert (*subsuming);
+    LOG (reason, "vivify subsumed");
+    LOG (*subsuming, "vivify subsuming");
+    if (lrat)
+      lrat_chain.clear ();
+    return subsumes;
+  }
+
+
+  return subsumes;
+}
+/*------------------------------------------------------------------------*/
+
+bool Internal::vivify_shrinkable (const std::vector<int>&sorted,  Clause *conflict, int &implied) {
+
+  for (auto lit: sorted) {
+    const signed char value = val (lit);
+    if (!value) {
+      LOG ("vivification unassigned %d", lit);
+      return true;
+    }
+    if (value > 0) {
+      LOG ("vivification implied satisfied %d", lit);
+      if (conflict)
+        return true;
+      if (!implied) {
+	LOG ("changing implied from 0 to %d", lit);
+        implied = lit;
+      }
+    } else {
+      assert (value < 0);
+      const Var &v = var (lit);
+      const Flags &f = flags (lit);
+      if (!v.level)
+        continue;
+      if (!f.seen) {
+        LOG ("vivification non-analyzed %d", lit);
+        return true;
+      }
+      if (v.reason) {
+        LOG ("vivification implied falsified %d", lit);
+        return true;
+      }
+    }
+  }
+  return false;
+}
 /*------------------------------------------------------------------------*/
 
 // Main function: try to vivify this candidate clause in the given mode.
 
-void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
+bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
 
   const bool redundant_mode = vivifier.redundant_mode;
 
   assert (redundant_mode || !c->redundant);
   assert (c->size > 2); // see (NO-BINARY) below
+  assert (analyzed.empty ());
 
   c->vivify = false;  // mark as checked / tried
   c->vivified = true; // and globally remember
 
   if (c->garbage)
-    return;
+    return false;
 
   // First check whether the candidate clause is already satisfied and at
   // the same time copy its non fixed literals to 'sorted'.  The literals
@@ -653,7 +849,7 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   if (satisfied) {
     LOG (c, "satisfied by propagated unit %d", satisfied);
     mark_garbage (c);
-    return;
+    return false;
   }
 
   sort (sorted.begin (), sorted.end (), vivify_more_noccs (this));
@@ -760,7 +956,6 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   // the same argument as removing transitive clauses in the binary
   // implication graph during transitive reduction.
   //
-  bool only_binary_reasons = false;
 
   // Go over the literals in the candidate clause in sorted order.
   //
@@ -793,110 +988,80 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
         continue;
       }
 
-      if (tmp > 0) { // positively implied
-
-        LOG ("subsumed since literal %d already true", lit);
-
-        subsume = lit; // will be able to subsume candidate '@5'
-
-        // In redundant mode we want to strengthen clauses instead of
-        // subsuming them (actually incorrect for irredundant candidates).
-        // Thus we perform resolutions to find such a strengthening.
-        //
-        if (redundant_mode) {
-
-          assert (c->redundant);
-          assert (clause.empty ());
-          assert (analyzed.empty ());
-
-          // We start the analysis by adding the negation of the implied
-          // literal to the global 'clause'.
-          //
-          flags (lit).seen = true;
-          analyzed.push_back (-lit);
-          LOG ("vivify seen %d", -lit);
-          assert (v.reason);
-
-          // Continue the analysis with the reason of the implied literal.
-          //
-          vivify_analyze_redundant (vivifier, v.reason,
-                                    only_binary_reasons);
-          if (!only_binary_reasons) {
-            vivify_post_process_analysis (c, subsume);
-            if (!clause.empty ())
-              stats.vivifystred2++;
-          }
-          clear_analyzed_literals ();
-          if (lrat) {
-            assert (lrat_chain.empty ());
-            vivify_build_lrat (lit, v.reason);
-            clear_analyzed_literals ();
-          }
-
-          backtrack (level - 1);
-          assert (!conflict);
-
-          break;
-        }
-
-      } else { // negatively implied
-
-        assert (tmp < 0);
+      if (tmp < 0) {
+        assert (v.level);
         LOG ("literal %d is already false and can be removed", lit);
-
-        remove = lit; // will be able to remove this literal
+        remove = lit;
+        continue;
       }
 
-    } else { // still unassigned
-
-      stats.vivifydecs++;
-      vivify_assume (-lit);
-      LOG ("negated decision %d score %" PRId64 "", lit, noccs (lit));
-
-      if (vivify_propagate ())
-        continue; // hot-spot
-
-      LOG ("subsumed since propagation produced conflict");
-
-      subsume = INT_MIN; // will be able to subsume candidate '@6'
-
-      // Again try to strengthen instead of subsuming in redundant mode.
-      //
-      if (redundant_mode) {
-
-        assert (c->redundant);
-        assert (clause.empty ());
-        assert (analyzed.empty ());
-
-        vivify_analyze_redundant (vivifier, conflict, only_binary_reasons);
-        if (!only_binary_reasons) {
-          vivify_post_process_analysis (c, subsume);
-          if (!clause.empty ())
-            stats.vivifystred3++;
-        }
-        clear_analyzed_literals ();
-        if (lrat) {
-          assert (lrat_chain.empty ());
-          vivify_build_lrat (0, conflict);
-          clear_analyzed_literals ();
-        }
-      }
-
-      backtrack (level - 1);
-      conflict = 0;
-
+      assert (tmp > 0);
+      LOG ("subsumed since literal %d already true", lit);
+      subsume = lit; // will be able to subsume candidate '@5'
       break;
+
+    }
+
+    assert (!tmp);
+
+    stats.vivifydecs++;
+    vivify_assume (-lit);
+    LOG ("negated decision %d score %" PRId64 "", lit, noccs (lit));
+
+    if (!vivify_propagate ()){
+      break; // hot-spot
     }
   }
 
-  // Now we go over the very last literal of the clause and attempt to
-  // instantiate it refer to instantiate.hpp for more. As clauses as sorted
-  // by number of occurrence, we attempt to remove literals with few
-  // occurrences
+  Clause *subsuming = nullptr;
+  bool redundant = false;
+  vivify_deduce (c, conflict, subsume, &subsuming, redundant);
+  // should be already unmarked, but maybe put here
 
-  if (opts.vivifyinst && !subsume) {
-    const int lit = sorted.back ();
-    if (remove != lit) {
+  bool res;
+
+  // reverse lrat_chain. We could probably work with reversed iterators
+  // (views) to be more efficient but we would have to distinguish in proof
+  //
+  if (lrat){
+    for (auto id : unit_chain)
+      lrat_chain.push_back(id);
+    unit_chain.clear ();
+    reverse (lrat_chain.begin (), lrat_chain.end ());
+  }
+
+
+  if (subsuming) {
+    assert (c != subsuming);
+    LOG (c, "deleting subsumed clause");
+    subsume_clause (subsuming, c);
+    backtrack (level - 1);
+    res = true;
+    // TODO: reompute glue
+    // TODO statistics
+  }
+  else if (vivify_shrinkable(sorted, conflict, subsume)) {
+    //vivify_learn
+    LOG ("vivify succeeded, learning new clause");
+    clear_analyzed_literals ();
+    LOG (lrat_chain, "lrat");
+    LOG (clause, "learning clause");
+    conflict = nullptr; // TODO dup from below
+    vivify_strengthen(c);
+    res = true;
+  } else if (subsume && !c->redundant && !redundant) {
+    LOG ("demote clause from irredundant to redundant");
+    res = true;
+    demote_clause (c);
+    const int new_glue = recompute_glue(c);
+    promote_clause(c, new_glue);
+  } else {
+    lrat_chain.clear();
+    LOG (c, "vivification failed on");
+    LOG ("now trying instantiations");
+    if (!subsume && opts.vivifyinst) {
+      conflict = nullptr;
+      const int lit = sorted.back ();
       LOG ("vivify instantiation");
       backtrack (level - 1);
       assert (val (lit) == 0);
@@ -908,6 +1073,10 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
         stats.vivifyinst++;
         // strengthen clause
         if (lrat) {
+	  clear_analyzed_literals();
+	  for (auto var : vars) {
+	    assert (!flags(var).seen);
+	  }
           assert (lrat_chain.empty ());
           vivify_build_lrat (0, c);
           vivify_build_lrat (0, conflict);
@@ -915,108 +1084,27 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
         }
         remove = lit;
         backtrack (level - 1);
+        unwatch_clause (c);
+        strengthen_clause (c, remove);
+        watch_clause (c);
         conflict = 0;
         assert (!conflict);
+        res = true;
       } else {
         LOG ("instantiation failed");
+        res = false;
       }
-    }
+    } else
+      res = false;
   }
 
-  assert (ignore == c);
-  ignore = 0;
-
-  if (subsume) {
-
-    if (redundant_mode && !only_binary_reasons) {
-
-      assert (c->redundant);
-
-      if (!clause.empty ()) {
-
-        assert (!lrat || !lrat_chain.empty ());
-        LOG ("strengthening instead of subsuming clause");
-        vivify_strengthen (c);
-
-      } else { // triggered by '@7'
-
-        // In redundant mode, where candidates might be redundant and we
-        // allow to propagate over redundant clauses too, we do not remove
-        // unit implied clauses which we failed to strengthen.
-
-        LOG (c, "ignoring asymmetric tautology in redundant mode");
-
-        if (c->redundant) {
-
-          assert (redundant_mode);
-          assert (!c->vivify);
-
-        } else {
-
-          // For an irredundant clause the situation is different, since we
-          // might be able to remove it even if we only propagate over
-          // irredundant clauses.  Thus we schedule it again.
-
-          LOG (c, "rescheduling for irredundant round");
-          assert (!c->vivify);
-
-          c->vivify = true;
-        }
-      }
-
-    } else {
-
-      stats.vivifysubs++;
-      LOG (c, "redundant asymmetric tautology");
-      mark_garbage (c);
-    }
-
-  } else if (remove) {
-
-    assert (level);
-    assert (clause.empty ());
-
-    // There might be other literals implied to false (or even root level
-    // falsified).  Those should be removed in addition to 'remove'.
-    //
-    for (const auto &other : *c) {
-      assert (val (other) || other == remove);
-      Var &v = var (other);
-      if (!v.level) { // Remove root-level fixed literals.
-        continue;
-      }
-      if (v.reason) { // Remove all negative implied literals.
-        assert (v.level);
-        assert (v.reason);
-        LOG ("flushing literal %d", other);
-        continue;
-      }
-      if (other == remove) {
-        continue;
-      }
-      // Decision or unassigned.
-      LOG ("keeping literal %d", other);
-      clause.push_back (other);
-    }
-
-    if (redundant_mode)
-      stats.vivifystred1++;
-    else
-      stats.vivifystrirr++;
-
-    if (lrat && lrat_chain.empty ()) {
-      assert (lrat_chain.empty ());
-      vivify_build_lrat (0, c);
-      clear_analyzed_literals ();
-    }
-    vivify_strengthen (c);
-
-  } else {
-    LOG ("vivification failed");
-  }
-  lrat_chain.clear ();
+  clause.clear();
+  clear_analyzed_literals (); // TODO why needed?
+  lrat_chain.clear();
+  conflict = nullptr;
+  return res;
 }
-
+  
 // when we can strengthen clause c we have to build lrat.
 // uses f.seen so do not forget to clear flags afterwards.
 // this can happen in three cases. (1), (2) are only sound in redundant mode
@@ -1033,12 +1121,15 @@ void Internal::vivify_build_lrat (int lit, Clause *reason) {
   LOG (reason, "VIVIFY LRAT justifying %d with reason", lit);
 
   for (const auto &other : *reason) {
+    LOG ("VIVIFY LRAT checking %d", other);
     if (other == lit)
       continue;
     Var &v = var (other);
     Flags &f = flags (other);
-    if (f.seen)
+    if (f.seen){
+      LOG ("skipping already seen %d", other);
       continue;                 // we would like to assert this:
+    }
     analyzed.push_back (other); // assert (val (other) < 0);
     f.seen = true;              // but we cannot because we have
     if (!v.level) {             // already backtracked (sometimes)
