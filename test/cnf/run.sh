@@ -42,11 +42,12 @@ res=$?
 
 coresolver="$CADICALBUILD/cadical"
 simpsolver="$CADICALBUILD/../scripts/run-simplifier-and-extend-solution.sh"
-proofchecker=$CADICALBUILD/drat-trim
+dratchecker=$CADICALBUILD/drat-trim
+lratchecker=$CADICALBUILD/lrat-trim
 solutionchecker=$CADICALBUILD/precochk
 makefile=$CADICALBUILD/makefile
 
-if [ ! -f $proofchecker -o ! -f $solutionchecker ]
+if [ ! -f $solutionchecker -o ! -f $dratchecker -o ! -f $lratchecker ]
 then
 
   if [ ! -f $solutionchecker -o ../test/cnf/precochk.c -nt $solutionchecker ]
@@ -63,21 +64,35 @@ then
     fi
   fi
 
-  if [ ! -f $proofchecker -o ../test/cnf/drat-trim.c -nt $proofchecker ]
+  if [ ! -f $dratchecker -o ../test/cnf/drat-trim.c -nt $dratchecker ]
   then
-    cmd="cc -O -o $proofchecker ../test/cnf/drat-trim.c"
+    cmd="cc -O -o $dratchecker ../test/cnf/drat-trim.c"
     if $cmd 2>/dev/null
     then
-      msg "external proof checking with '$proofchecker'"
+      msg "external proof checking with '$dratchecker'"
     else
       msg "no external proof checking " \
           "(compiling '../test/cnf/drat-trim.c' failed)"
-      proofchecker=none
+      dratchecker=none
+    fi
+  fi
+
+  if [ ! -f $lratchecker -o ../test/cnf/lrat-trim.c -nt $lratchecker ]
+  then
+    cmd="cc -O -o $lratchecker ../test/cnf/lrat-trim.c"
+    if $cmd 2>/dev/null
+    then
+      msg "external proof checking with '$lratchecker'"
+    else
+      msg "no external proof checking " \
+          "(compiling '../test/cnf/lrat-trim.c' failed)"
+      lratchecker=none
     fi
   fi
 else
   msg "external solution checking with '$solutionchecker'"
-  msg "external proof checking with '$proofchecker'"
+  msg "external DRAT checking with '$dratchecker'"
+  msg "external LRAT checking with '$lratchecker'"
 fi
 
 
@@ -90,22 +105,22 @@ core () {
   msg "running CNF test core ${HILITE}'$1'${NORMAL}"
   prefix=$CADICALBUILD/test-cnf-core
   cnf=../test/cnf/$1.cnf
-  prf=$prefix-$1.prf
   log=$prefix-$1.log
   err=$prefix-$1.err
   chk=$prefix-$1.chk
+  prf=$prefix-$1.prf
+  proofchecker=$3
   if [ -f cnf/$1.sol ]
   then
     solopts=" -r ../test/cnf/$1.sol"
   else
     solopts=""
   fi
-  if [ ! $2 = 20 -o x"$proofchecker" = xnone ]
-  then
-    proofopts=""
-  else
-    proofopts=" $prf"
-  fi
+  case $proofchecker in
+    *drat*) proofopts=" $prf"; expectedcheckerstatus=0;;
+    *lrat*) proofopts=" --lrat $prf"; expectedcheckerstatus=20;;
+    *) proofopts="";;
+  esac
   opts="$cnf --check$solopts$proofopts"
   cecho "$coresolver \\"
   cecho "$opts"
@@ -148,7 +163,9 @@ core () {
       cecho "$proofchecker \\"
       cecho "$cnf $prf"
       cecho -n "# 0 ..."
-      if $proofchecker $cnf $prf 1>&2 >$chk
+      $proofchecker $cnf $prf 1>&2 >$chk
+      status=$?
+      if [ $status = $expectedcheckerstatus ]
       then
 	cecho " ${GOOD}ok${NORMAL} (proof checked)"
 	ok=`expr $ok + 1`
@@ -203,7 +220,9 @@ simp () {
 }
 
 run () {
-  core $*
+  core $* none
+  core $* $dratchecker
+  core $* $lratchecker
   simp $*
 }
 
