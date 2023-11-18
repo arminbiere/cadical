@@ -293,7 +293,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
 inline void Internal::probe_assign (int lit, int parent) {
   require_mode (PROBE);
   int idx = vidx (lit);
-  assert (!vals[idx]);
+  assert (!val (idx));
   assert (!flags (idx).eliminated () || !parent);
   assert (!parent || val (parent) > 0);
   Var &v = var (idx);
@@ -309,8 +309,7 @@ inline void Internal::probe_assign (int lit, int parent) {
   else
     assert (level == 1);
   const signed char tmp = sign (lit);
-  vals[idx] = tmp;
-  vals[-idx] = -tmp;
+  set_val (idx, tmp);
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
   trail.push_back (lit);

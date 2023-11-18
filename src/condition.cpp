@@ -80,16 +80,13 @@ bool Internal::conditioning () {
 void Internal::condition_unassign (int lit) {
   LOG ("condition unassign %d", lit);
   assert (val (lit) > 0);
-  vals[lit] = vals[-lit] = 0;
+  set_val (lit, 0);
 }
 
 void Internal::condition_assign (int lit) {
   LOG ("condition assign %d", lit);
   assert (!val (lit));
-  vals[lit] = 1;
-  vals[-lit] = -1;
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
+  set_val (lit, 1);
 }
 
 /*------------------------------------------------------------------------*/

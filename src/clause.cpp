@@ -326,10 +326,7 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   v.trail = (int) trail.size ();
   v.reason = 0;
   const signed char tmp = sign (lit);
-  vals[idx] = tmp;
-  vals[-idx] = -tmp;
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
+  set_val (idx, tmp);
   trail.push_back (lit);
   num_assigned++;
   if (opts.reimply) {

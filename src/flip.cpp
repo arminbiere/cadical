@@ -127,10 +127,10 @@ bool Internal::flip (int lit) {
 
     LOG ("flipping value of %d = 1 to %d = -1", lit, lit);
 
-    vals[idx] = -original_value;
-    vals[-idx] = original_value;
+    set_val (idx, -original_value);
     assert (val (-lit) > 0);
     assert (val (lit) < 0);
+
     Var &v = var (idx);
     if (opts.reimply) {
       assert (v.level);

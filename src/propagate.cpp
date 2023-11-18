@@ -115,7 +115,7 @@ inline int Internal::elevating_level (int lit, Clause *reason) {
 
 inline void Internal::elevate_lit (int lit, Clause *reason) {
   const int idx = vidx (lit);
-  assert (vals[idx]);
+  assert (val (idx));
   assert (reason);
   Var &v = var (idx);
   const int lit_level = elevating_level (lit, reason);
@@ -144,7 +144,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
 
   const int idx = vidx (lit);
   const bool from_external = reason == external_reason;
-  assert (!vals[idx]);
+  assert (!val (idx));
   assert (!flags (idx).eliminated () || reason == decision_reason ||
           reason == external_reason);
   Var &v = var (idx);
@@ -190,10 +190,9 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   if (!lit_level && !from_external)
     learn_unit_clause (lit); // increases 'stats.fixed'
   const signed char tmp = sign (lit);
-  vals[idx] = tmp;
-  vals[-idx] = -tmp;
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
+  set_val (idx, tmp);
+  assert (val (lit) > 0);  // Just a bit paranoid but useful.
+  assert (val (-lit) < 0); // Ditto.
   if (!searching_lucky_phases)
     phases.saved[idx] = tmp; // phase saving during search
   trail_push (lit, lit_level);

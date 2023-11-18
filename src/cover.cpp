@@ -68,7 +68,7 @@ inline void Internal::covered_literal_addition (int lit, Coveror &coveror) {
   for (const auto &other : coveror.intersection) {
     LOG ("covered literal addition %d", other);
     assert (!vals[other]), assert (!vals[-other]);
-    vals[other] = -1, vals[-other] = 1;
+    set_val (other, -1);
     coveror.covered.push_back (other);
     coveror.added.push_back (other);
     coveror.clas++;
@@ -84,7 +84,7 @@ inline void Internal::asymmetric_literal_addition (int lit,
   assert (level == 1);
   LOG ("initial asymmetric literal addition %d", lit);
   assert (!vals[lit]), assert (!vals[-lit]);
-  vals[lit] = -1, vals[-lit] = 1;
+  set_val (lit, -1);
   coveror.added.push_back (lit);
   coveror.alas++;
   coveror.next.covered = 0;
@@ -452,7 +452,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
 
   assert (level == 1);
   for (const auto &lit : coveror.added)
-    vals[lit] = vals[-lit] = 0;
+    set_val (lit, 0);
   level = 0;
 
   coveror.covered.clear ();

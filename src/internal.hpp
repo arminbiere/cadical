@@ -1270,6 +1270,19 @@ struct Internal {
     return vals[lit];
   }
 
+  // As suggested by Matt Ginsberg it might be useful to factor-out a common
+  // setter function for setting and resetting the value of a literal.
+  //
+  void set_val (int lit, signed char val) {
+    assert (-1 <= val);
+    assert (val <= 1);
+    assert (-max_var <= lit);
+    assert (lit);
+    assert (lit <= max_var);
+    vals[lit] = val;
+    vals[-lit] = -val;
+  }
+
   // As 'val' but restricted to the root-level value of a literal.
   // It is not that time critical and also needs to check the decision level
   // of the variable anyhow.

@@ -9,9 +9,9 @@ namespace CaDiCaL {
 
 inline void Internal::unassign (int lit) {
   assert (val (lit) > 0);
-  const int idx = vidx (lit);
-  vals[idx] = 0;
-  vals[-idx] = 0;
+  set_val (lit, 0);
+
+  int idx = vidx (lit);
   LOG ("unassign %d @ %d", lit, var (idx).level);
   num_assigned--;
 

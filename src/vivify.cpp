@@ -62,10 +62,7 @@ inline void Internal::vivify_assign (int lit, Clause *reason) {
   if (!level)
     learn_unit_clause (lit);
   const signed char tmp = sign (lit);
-  vals[idx] = tmp;
-  vals[-idx] = -tmp;
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
+  set_val (idx, tmp);
   trail.push_back (lit);
   LOG (reason, "vivify assign %d", lit);
 }
