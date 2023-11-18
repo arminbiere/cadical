@@ -17,7 +17,7 @@ class LratTracer : public FileTracer {
 
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
-  void put_binary_id (uint64_t id);
+  void put_binary_id (int64_t id);
 
   // support LRAT
   void lrat_add_clause (uint64_t, const vector<int> &,

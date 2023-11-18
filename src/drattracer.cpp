@@ -36,21 +36,9 @@ inline void DratTracer::put_binary_lit (int lit) {
   assert (binary);
   assert (file);
   assert (lit != INT_MIN);
-  unsigned x = 2 * abs (lit) + (lit < 0);
-  unsigned char ch;
-  while (x & ~0x7f) {
-    ch = (x & 0x7f) | 0x80;
-    file->put (ch);
-    x >>= 7;
-  }
-  ch = x;
-  file->put (ch);
-}
-
-inline void DratTracer::put_binary_id (uint64_t id) {
-  assert (binary);
-  assert (file);
-  uint64_t x = id;
+  unsigned idx = abs (lit);
+  assert (idx < (1u << 31));
+  unsigned x = 2u * idx + (lit < 0);
   unsigned char ch;
   while (x & ~0x7f) {
     ch = (x & 0x7f) | 0x80;

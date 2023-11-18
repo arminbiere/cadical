@@ -1,5 +1,7 @@
 #include "internal.hpp"
 
+#include <limits.h>
+
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
@@ -38,7 +40,9 @@ inline void LratTracer::put_binary_lit (int lit) {
   assert (binary);
   assert (file);
   assert (lit != INT_MIN);
-  unsigned x = 2 * abs (lit) + (lit < 0);
+  unsigned idx = abs (lit);
+  assert (idx < (1u << 31));
+  unsigned x = 2 * idx + (lit < 0);
   unsigned char ch;
   while (x & ~0x7f) {
     ch = (x & 0x7f) | 0x80;
@@ -49,10 +53,13 @@ inline void LratTracer::put_binary_lit (int lit) {
   file->put (ch);
 }
 
-inline void LratTracer::put_binary_id (uint64_t id) {
+inline void LratTracer::put_binary_id (int64_t id) {
   assert (binary);
   assert (file);
-  uint64_t x = id;
+  assert (id != std::numeric_limits<int64_t>::min ());
+  uint64_t u = (id < 0) ? -id : id;
+  assert (u < (((uint64_t) 1) << 63));
+  uint64_t x = 2*u + (id < 0);
   unsigned char ch;
   while (x & ~0x7f) {
     ch = (x & 0x7f) | 0x80;
@@ -76,7 +83,7 @@ void LratTracer::lrat_add_clause (uint64_t id, const vector<int> &clause,
       file->put ("d ");
     for (auto &did : delete_ids) {
       if (binary)
-        put_binary_id (2 * did); // to have the output format as drat-trim
+        put_binary_id (did);
       else
         file->put (did), file->put (" ");
     }
@@ -103,7 +110,7 @@ void LratTracer::lrat_add_clause (uint64_t id, const vector<int> &clause,
     file->put ("0 ");
   for (const auto &c : chain)
     if (binary)
-      put_binary_id (2 * c); // lrat can have negative ids
+      put_binary_id (c);
     else
       file->put (c), file->put (' '); // in proof chain, so they get
   if (binary)

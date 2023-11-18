@@ -15,7 +15,6 @@ class DratTracer : public FileTracer {
 #endif
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
-  void put_binary_id (uint64_t id);
 
   // support DRAT
   void drat_add_clause (const vector<int> &);
