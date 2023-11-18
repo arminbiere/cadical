@@ -737,8 +737,6 @@ void LratChecker::dump () {
     }
 }
 
-void LratChecker::begin_proof (uint64_t id) {
-  current_id = id;
-}
+void LratChecker::begin_proof (uint64_t id) { current_id = id; }
 
 } // namespace CaDiCaL

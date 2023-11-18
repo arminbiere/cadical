@@ -406,7 +406,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
             proof->weaken_plus (last_id, clause);
             lrat_chain.clear ();
           }
-	  last_id = ++clause_id;
+          last_id = ++clause_id;
           external->push_zero_on_extension_stack ();
           external->push_witness_literal_on_extension_stack (other);
           external->push_zero_on_extension_stack ();
