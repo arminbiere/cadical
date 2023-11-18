@@ -229,7 +229,7 @@ void Internal::multi_backtrack (int new_level) {
     while (i != eot) {
       assert (i < eot);
       const int lit = notify_trail[i++];
-      const char tmp = val (lit);
+      const signed char tmp = val (lit);
       assert (tmp >= 0);
       if (!tmp)
         continue;

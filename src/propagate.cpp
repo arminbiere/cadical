@@ -639,7 +639,7 @@ void Internal::propergate_reimply () {
 
   for (auto idx : vars) {
 
-    const char tmp = val (idx);
+    const signed char tmp = val (idx);
     assert (tmp);
     assert (tmp == -1 || tmp == 1);
     const int lit = (-tmp) * idx;
@@ -744,7 +744,7 @@ bool Internal::propagate_conflicts () {
     // find first, second
     for (; k < end; k++) {
       const int lit = *k;
-      const char tmp = val (lit);
+      const signed char tmp = val (lit);
       if (tmp < 0)
         continue;
       if (!first) {
