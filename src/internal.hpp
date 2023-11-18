@@ -796,7 +796,6 @@ struct Internal {
   bool subsuming ();
   void strengthen_clause (Clause *, int);
   void subsume_clause (Clause *subsuming, Clause *subsumed);
-  void demote_clause (Clause *);
   int subsume_check (Clause *subsuming, Clause *subsumed);
   int try_to_subsume_clause (Clause *, vector<Clause *> &shrunken);
   void reset_subsume_bits ();
@@ -816,8 +815,10 @@ struct Internal {
 
   // Strengthening through vivification in 'vivify.cpp'.
   //
+  void demote_clause (Clause *);
   void flush_vivification_schedule (Vivifier &);
   bool consider_to_vivify_clause (Clause *candidate, bool redundant_mode);
+  void vivify_subsume_clause (Clause *subsuming, Clause *subsumed);
   void vivify_build_lrat (int, Clause *);
   void vivify_chain_for_units (int lit, Clause *reason);
   bool vivify_all_decisions (Clause *candidate, int subsume);

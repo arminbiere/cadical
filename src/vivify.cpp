@@ -38,7 +38,38 @@ namespace CaDiCaL {
 // respect to that literal order.
 
 /*------------------------------------------------------------------------*/
-  // demoting a clause (opposite is promote from subsume.cpp)
+
+
+// Candidate clause 'subsumed' is subsumed by 'subsuming'.
+
+inline void Internal::vivify_subsume_clause (Clause *subsuming, Clause *subsumed) {
+  stats.subsumed++;
+  assert (subsuming->size <= subsumed->size);
+  LOG (subsumed, "subsumed");
+  if (subsumed->redundant)
+    stats.subred++;
+  else
+    stats.subirr++;
+  if (subsumed->redundant || !subsuming->redundant) {
+    mark_garbage (subsumed);
+    return;
+  }
+  LOG ("turning redundant subsuming clause into irredundant clause");
+  subsuming->redundant = false;
+  if (proof)
+    proof->strengthen (subsuming->id);
+  mark_garbage (subsumed);
+  stats.current.irredundant++;
+  stats.added.irredundant++;
+  stats.irrlits += subsuming->size;
+  assert (stats.current.redundant > 0);
+  stats.current.redundant--;
+  assert (stats.added.redundant > 0);
+  stats.added.redundant--;
+  // ... and keep 'stats.added.total'.
+}
+
+// demoting a clause (opposite is promote from subsume.cpp)
 
 inline void Internal::demote_clause (Clause *c) {
   stats.subsumed++;
