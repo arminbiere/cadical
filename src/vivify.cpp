@@ -690,7 +690,7 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
   assert (clause.empty());
   if (implied) {
     reason = candidate;
-    mark2 (reason);
+    mark2 (candidate);
     const int not_implied = -implied;
     const Var v = var (not_implied);
     assert (v.level);
@@ -760,7 +760,7 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
   }
 
   vivify_analyze (reason, subsumes, subsuming, implied, redundant);
-  unmark(reason);
+  unmark(candidate);
   if (subsumes) {
     assert (*subsuming);
     LOG (reason, "vivify subsumed");
