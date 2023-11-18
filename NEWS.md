@@ -1,6 +1,8 @@
 Version 1.9.0
 -------------
 
+- Clause IDs in binary LRAT proofs are now always signed.
+
 - Internal CNF regression suite also checks LRAT proofs now.
 
 - Improving the OTFS heuristic (properly bumping literals and
