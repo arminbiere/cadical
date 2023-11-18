@@ -1,7 +1,7 @@
 Version 1.9.0
 -------------
 
--
+- Internal CNF regression suite also checks LRAT proofs now.
 
 - Improving the OTFS heuristic (properly bumping literals and
   considering that the conflict clause is updated).
