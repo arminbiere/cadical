@@ -1070,6 +1070,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     vivify_subsume_clause (subsuming, c);
     backtrack (level - 1);
     res = true;
+    stats.vivifysubs++;
     // TODO: reompute glue
     // TODO statistics
   }
@@ -1082,6 +1083,10 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     conflict = nullptr; // TODO dup from below
     vivify_strengthen(c);
     res = true;
+    if (c->redundant)
+      ++stats.vivifystred1;
+    else
+      ++stats.vivifystrirr;
   } else if ((conflict || subsume) && !c->redundant && !redundant) {
     LOG ("demote clause from irredundant to redundant");
     res = true;
@@ -1090,6 +1095,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     promote_clause(c, new_glue);
     if (conflict)
       backtrack (level - 1);
+    ++stats.vivifystred1;
   } else {
     LOG (c, "vivification failed on");
     lrat_chain.clear();
@@ -1324,11 +1330,17 @@ void Internal::vivify_round (bool redundant_mode,
     learn_empty_clause ();
   }
 
+  int retry = 0;
   while (!unsat && !terminated_asynchronously () &&
          !vivifier.schedule.empty () && stats.propagations.vivify < limit) {
     Clause *c = vivifier.schedule.back (); // Next candidate.
     vivifier.schedule.pop_back ();
-    vivify_clause (vivifier, c);
+    if (vivify_clause (vivifier, c)) {
+      if (!c->garbage && c->redundant == redundant_mode && c->size > 2) {
+	++retry;
+	vivifier.schedule.push_back(c);
+      } else retry = 0;
+    } else retry = 0;
   }
 
   if (level)
