@@ -787,7 +787,7 @@ int Internal::restore_clauses () {
     report ('+');
     external->restore_clauses ();
     internal->report ('r');
-    if (!unsat && !propagate ()) {
+    if (!unsat && !level && !propagate ()) {
       LOG ("root level propagation after restore produces conflict");
       learn_empty_clause ();
       res = 20;
