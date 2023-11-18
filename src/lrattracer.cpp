@@ -56,10 +56,14 @@ inline void LratTracer::put_binary_lit (int lit) {
 inline void LratTracer::put_binary_id (int64_t id) {
   assert (binary);
   assert (file);
-  assert (id != std::numeric_limits<int64_t>::min ());
+#ifndef NDEBUG
+  // Unfortunately 'std::numeric_limits<int64_t>::min ()' does not seem to
+  // be available for pedantic compilation.
+  assert ((uint64_t) id != ((~(uint64_t)0) >> 1));
+#endif
   uint64_t u = (id < 0) ? -id : id;
   assert (u < (((uint64_t) 1) << 63));
-  uint64_t x = 2*u + (id < 0);
+  uint64_t x = 2 * u + (id < 0);
   unsigned char ch;
   while (x & ~0x7f) {
     ch = (x & 0x7f) | 0x80;
