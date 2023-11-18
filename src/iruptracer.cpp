@@ -7,7 +7,11 @@ namespace CaDiCaL {
 IrupTracer::IrupTracer (Internal *i, File *f, bool b)
     : internal (i), file (f), binary (b),
       num_clauses (0), size_clauses (0), clauses (0), last_hash (0), last_id (0),
-      last_clause (0), added (0), deleted (0) {
+      last_clause (0)
+#ifndef QUIET
+      , added (0), deleted (0)
+#endif
+      {
   (void) internal;
 
   // Initialize random number table for hash function.
@@ -312,7 +316,9 @@ void IrupTracer::add_derived_clause (uint64_t, bool, const vector<int> &clause,
   assert (imported_clause.empty ());
   LOG (clause, "IRUP TRACER tracing addition of derived clause");
   irup_add_derived_clause (clause);
+#ifndef QUIET
   added++;
+#endif
 }
 
 void IrupTracer::add_assumption_clause (uint64_t id, const vector<int> &clause,
@@ -335,7 +341,9 @@ void IrupTracer::delete_clause (uint64_t id, bool,
   assert (imported_clause.empty ());
   LOG ("IRUP TRACER tracing deletion of clause[%" PRId64 "]", id);
   irup_delete_clause (id, clause);
+#ifndef QUIET
   deleted++;
+#endif
 }
 
 void IrupTracer::weaken_minus (uint64_t id, const vector<int> &) {
@@ -385,16 +393,46 @@ void IrupTracer::conclude_sat (const vector<int> &model) {
 
 bool IrupTracer::closed () { return file->closed (); }
 
-void IrupTracer::close () {
-  assert (!closed ());
-  file->close ();
+#ifndef QUIET
+
+void IrupTracer::print_statistics () {
+  // TODO complete this.
+  uint64_t bytes = file->bytes ();
+  uint64_t total = added + deleted;
+  MSG ("IDRUP %" PRId64 " added clauses %.2f%%", added,
+       percent (added, total));
+  MSG ("IDRUP %" PRId64 " deleted clauses %.2f%%", deleted,
+       percent (deleted, total));
+  MSG ("IDRUP %" PRId64 " bytes (%.2f MB)", bytes,
+       bytes / (double) (1 << 20));
 }
 
-void IrupTracer::flush () {
+#endif
+
+void IrupTracer::close (bool print) {
+  assert (!closed ());
+  file->close ();
+#ifndef QUIET
+  if (print) {
+    MSG ("IDRUP proof file '%s' closed", file->name ());
+    print_statistics ();
+  }
+#else
+  (void) print;
+#endif
+}
+
+void IrupTracer::flush (bool print) {
   assert (!closed ());
   file->flush ();
-  MSG ("traced %" PRId64 " added and %" PRId64 " deleted clauses", added,
-       deleted);
+#ifndef QUIET
+  if (print) {
+    MSG ("IDRUP proof file '%s' flushed", file->name ());
+    print_statistics ();
+  }
+#else
+  (void) print;
+#endif
 }
 
 } // namespace CaDiCaL

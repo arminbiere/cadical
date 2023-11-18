@@ -142,12 +142,12 @@ public:
 class FileTracer : public InternalTracer {
 
 public:
-  FileTracer () {}
+  FileTracer () { }
   virtual ~FileTracer () {}
 
-  virtual bool closed () { return true; }
-  virtual void close () {}
-  virtual void flush () {}
+  virtual bool closed () = 0;
+  virtual void close (bool print = false) = 0;
+  virtual void flush (bool print = false) = 0;
 };
 
 } // namespace CaDiCaL

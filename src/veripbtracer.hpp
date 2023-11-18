@@ -47,8 +47,9 @@ class VeripbTracer : public FileTracer {
   bool
   find_and_delete (const uint64_t); // find clause position in hash table
 
+#ifndef QUIET
   int64_t added, deleted;
-
+#endif
   vector<uint64_t> delete_ids;
 
   void put_binary_zero ();
@@ -88,9 +89,12 @@ public:
   void weaken_minus (uint64_t, const vector<int> &) override;
   void strengthen (uint64_t) override;
 
+#ifndef QUIET
+  void print_statistics ();
+#endif
   bool closed () override;
-  void close () override;
-  void flush () override;
+  void close (bool) override;
+  void flush (bool) override;
 };
 
 } // namespace CaDiCaL

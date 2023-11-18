@@ -10,8 +10,8 @@ class FratTracer : public FileTracer {
   bool binary;
   bool with_antecedents;
 
-  int64_t added, deleted;
 #ifndef QUIET
+  int64_t added, deleted;
   int64_t finalized, original;
 #endif
 
@@ -49,9 +49,12 @@ public:
 
   void report_status (StatusType, uint64_t) override {} // skip
 
+#ifndef QUIET
+  void print_statistics ();
+#endif
   bool closed () override;
-  void close () override;
-  void flush () override;
+  void close (bool) override;
+  void flush (bool) override;
 };
 
 } // namespace CaDiCaL

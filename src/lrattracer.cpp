@@ -5,7 +5,12 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 LratTracer::LratTracer (Internal *i, File *f, bool b)
-    : internal (i), file (f), binary (b), added (0), deleted (0),
+    : internal (i), file (f), binary (b)
+#ifndef QUIET
+      ,
+      added (0), deleted (0)
+#endif
+      ,
       latest_id (0) {
   (void) internal;
 }
@@ -120,7 +125,9 @@ void LratTracer::add_derived_clause (uint64_t id, bool,
     return;
   LOG ("LRAT TRACER tracing addition of derived clause");
   lrat_add_clause (id, clause, chain);
+#ifndef QUIET
   added++;
+#endif
 }
 
 void LratTracer::delete_clause (uint64_t id, bool, const vector<int> &) {
@@ -128,7 +135,9 @@ void LratTracer::delete_clause (uint64_t id, bool, const vector<int> &) {
     return;
   LOG ("LRAT TRACER tracing deletion of clause");
   lrat_delete_clause (id);
+#ifndef QUIET
   deleted++;
+#endif
 }
 
 void LratTracer::begin_proof (uint64_t id) {
@@ -142,16 +151,45 @@ void LratTracer::begin_proof (uint64_t id) {
 
 bool LratTracer::closed () { return file->closed (); }
 
-void LratTracer::close () {
-  assert (!closed ());
-  file->close ();
+#ifndef QUIET
+
+void LratTracer::print_statistics () {
+  uint64_t bytes = file->bytes ();
+  uint64_t total = added + deleted;
+  MSG ("LRAT %" PRId64 " added clauses %.2f%%", added,
+       percent (added, total));
+  MSG ("LRAT %" PRId64 " deleted clauses %.2f%%", deleted,
+       percent (deleted, total));
+  MSG ("LRAT %" PRId64 " bytes (%.2f MB)", bytes,
+       bytes / (double) (1 << 20));
 }
 
-void LratTracer::flush () {
+#endif
+
+void LratTracer::close (bool print) {
+  assert (!closed ());
+  file->close ();
+#ifndef QUIET
+  if (print) {
+    MSG ("LRAT proof file '%s' closed", file->name ());
+    print_statistics ();
+  }
+#else
+  (void) print;
+#endif
+}
+
+void LratTracer::flush (bool print) {
   assert (!closed ());
   file->flush ();
-  MSG ("traced %" PRId64 " added and %" PRId64 " deleted clauses", added,
-       deleted);
+#ifndef QUIET
+  if (print) {
+    MSG ("LRAT proof file '%s' flushed", file->name ());
+    print_statistics ();
+  }
+#else
+  (void) print;
+#endif
 }
 
 } // namespace CaDiCaL

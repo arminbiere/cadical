@@ -1013,13 +1013,13 @@ bool Solver::trace_proof (const char *path) {
   return res;
 }
 
-void Solver::flush_proof_trace (bool print) {
+void Solver::flush_proof_trace (bool print_statistics_unless_quiet) {
   LOG_API_CALL_BEGIN ("flush_proof_trace");
   REQUIRE_VALID_STATE ();
   REQUIRE (!internal->file_tracers.empty (), "proof is not traced");
   REQUIRE (!internal->file_tracers.back ()->closed (),
            "proof trace already closed");
-  internal->flush_trace ();
+  internal->flush_trace (print_statistics_unless_quiet);
   LOG_API_CALL_END ("flush_proof_trace");
 }
 
@@ -1029,7 +1029,7 @@ void Solver::close_proof_trace (bool print_statistics_unless_quiet) {
   REQUIRE (!internal->file_tracers.empty (), "proof is not traced");
   REQUIRE (!internal->file_tracers.back ()->closed (),
            "proof trace already closed");
-  internal->close_trace ();
+  internal->close_trace (print_statistics_unless_quiet);
   LOG_API_CALL_END ("close_proof_trace");
 }
 

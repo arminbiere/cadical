@@ -158,16 +158,16 @@ void Internal::check () {
 
 // We want to close a proof trace and stop checking as soon we are done.
 
-void Internal::close_trace () {
+void Internal::close_trace (bool print) {
   for (auto &tracer : file_tracers)
-    tracer->close ();
+    tracer->close (print);
 }
 
 // We can flush a proof trace file before actually closing it.
 
-void Internal::flush_trace () {
+void Internal::flush_trace (bool print) {
   for (auto &tracer : file_tracers)
-    tracer->flush ();
+    tracer->flush (print);
 }
 
 /*------------------------------------------------------------------------*/
@@ -329,7 +329,7 @@ void Proof::delete_clause (Clause *c) {
   add_literals (c);
   clause_id = c->id;
   redundant = c->redundant;
-  delete_clause ();
+  delete_clause (); // Increments 'statistics.deleted'.
 }
 
 void Proof::delete_clause (uint64_t id, bool r, const vector<int> &c) {
@@ -338,7 +338,7 @@ void Proof::delete_clause (uint64_t id, bool r, const vector<int> &c) {
   add_literals (c);
   clause_id = id;
   redundant = r;
-  delete_clause ();
+  delete_clause (); // Increments 'statistics.deleted'.
 }
 
 void Proof::weaken_minus (Clause *c) {
@@ -359,12 +359,12 @@ void Proof::weaken_minus (uint64_t id, const vector<int> &c) {
 
 void Proof::weaken_plus (Clause *c) {
   weaken_minus (c);
-  delete_clause (c);
+  delete_clause (c); // Increments 'statistics.deleted'.
 }
 
 void Proof::weaken_plus (uint64_t id, const vector<int> &c) {
   weaken_minus (id, c);
-  delete_clause (id, false, c);
+  delete_clause (id, false, c); // Increments 'statistics.deleted'.
 }
 
 void Proof::delete_unit_clause (uint64_t id, const int lit) {

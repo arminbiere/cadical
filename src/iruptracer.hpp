@@ -43,8 +43,9 @@ class IrupTracer : public FileTracer {
   void insert ();          // insert clause in hash table
   bool find_and_delete (const uint64_t); // find clause position in hash table
 
-
+#ifndef QUIET
   int64_t added, deleted;
+#endif
 
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
@@ -87,9 +88,12 @@ public:
   // logging and file io
   void connect_internal (Internal *i) override;
 
+#ifndef QUIET
+  void print_statistics ();
+#endif
   bool closed () override;
-  void close () override;
-  void flush () override;
+  void close (bool) override;
+  void flush (bool) override;
 };
 
 } // namespace CaDiCaL

@@ -6,8 +6,13 @@ namespace CaDiCaL {
 
 VeripbTracer::VeripbTracer (Internal *i, File *f, bool b, bool a, bool c)
     : internal (i), file (f), with_antecedents (a), checked_deletions (c),
-      num_clauses (0), size_clauses (0), clauses (0), last_hash (0), last_id (0),
-      last_clause (0), added (0), deleted (0) {
+      num_clauses (0), size_clauses (0), clauses (0), last_hash (0),
+      last_id (0), last_clause (0)
+#ifndef QUIET
+      ,
+      added (0), deleted (0)
+#endif
+{
   (void) internal;
 
   // Initialize random number table for hash function.
@@ -47,8 +52,7 @@ VeripbTracer::~VeripbTracer () {
 void VeripbTracer::enlarge_clauses () {
   assert (num_clauses == size_clauses);
   const uint64_t new_size_clauses = size_clauses ? 2 * size_clauses : 1;
-  LOG ("VeriPB Tracer enlarging clauses of tracer from %" PRIu64
-       " to %" PRIu64,
+  LOG ("VeriPB Tracer enlarging clauses from %" PRIu64 " to %" PRIu64,
        (uint64_t) size_clauses, (uint64_t) new_size_clauses);
   HashId **new_clauses;
   new_clauses = new HashId *[new_size_clauses];
@@ -293,7 +297,9 @@ void VeripbTracer::add_derived_clause (uint64_t id, bool redundant,
     veripb_add_derived_clause (id, redundant, clause, chain);
   else
     veripb_add_derived_clause (id, redundant, clause);
+#ifndef QUIET
   added++;
+#endif
 }
 
 void VeripbTracer::delete_clause (uint64_t id, bool redundant,
@@ -302,7 +308,9 @@ void VeripbTracer::delete_clause (uint64_t id, bool redundant,
     return;
   LOG ("VERIPB TRACER tracing deletion of clause[%" PRId64 "]", id);
   veripb_delete_clause (id, redundant);
+#ifndef QUIET
   deleted++;
+#endif
 }
 
 void VeripbTracer::report_status (StatusType status, uint64_t conflict_id) {
@@ -338,16 +346,46 @@ void VeripbTracer::strengthen (uint64_t id) {
 
 bool VeripbTracer::closed () { return file->closed (); }
 
-void VeripbTracer::close () {
-  assert (!closed ());
-  file->close ();
+#ifndef QUIET
+
+void VeripbTracer::print_statistics () {
+  // TODO complete
+  uint64_t bytes = file->bytes ();
+  uint64_t total = added + deleted;
+  MSG ("VeriPB %" PRId64 " added clauses %.2f%%", added,
+       percent (added, total));
+  MSG ("VeriPB %" PRId64 " deleted clauses %.2f%%", deleted,
+       percent (deleted, total));
+  MSG ("VeriPB %" PRId64 " bytes (%.2f MB)", bytes,
+       bytes / (double) (1 << 20));
 }
 
-void VeripbTracer::flush () {
+#endif
+
+void VeripbTracer::close (bool print) {
+  assert (!closed ());
+  file->close ();
+#ifndef QUIET
+  if (print) {
+    MSG ("VeriPB proof file '%s' closed", file->name ());
+    print_statistics ();
+  }
+#else
+  (void) print;
+#endif
+}
+
+void VeripbTracer::flush (bool print) {
   assert (!closed ());
   file->flush ();
-  MSG ("traced %" PRId64 " added and %" PRId64 " deleted clauses", added,
-       deleted);
+#ifndef QUIET
+  if (print) {
+    MSG ("VeriPB proof file '%s' flushed", file->name ());
+    print_statistics ();
+  }
+#else
+  (void) print;
+#endif
 }
 
 } // namespace CaDiCaL

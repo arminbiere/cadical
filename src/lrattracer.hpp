@@ -9,7 +9,9 @@ class LratTracer : public FileTracer {
   File *file;
   bool binary;
 
+#ifndef QUIET
   int64_t added, deleted;
+#endif
   uint64_t latest_id;
   vector<uint64_t> delete_ids;
 
@@ -42,9 +44,12 @@ public:
 
   void report_status (StatusType, uint64_t) override {} // skip
 
+#ifndef QUIET
+  void print_statistics ();
+#endif
   bool closed () override;
-  void close () override;
-  void flush () override;
+  void close (bool) override;
+  void flush (bool) override;
 };
 
 } // namespace CaDiCaL

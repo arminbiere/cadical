@@ -10,9 +10,9 @@ class DratTracer : public FileTracer {
   Internal *internal;
   File *file;
   bool binary;
-
+#ifndef QUIET
   int64_t added, deleted;
-
+#endif
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
   void put_binary_id (uint64_t id);
@@ -41,9 +41,12 @@ public:
 
   void report_status (StatusType, uint64_t) override {} // skip
 
+#ifndef QUIET
+  void print_statistics ();
+#endif
   bool closed () override;
-  void close () override;
-  void flush () override;
+  void close (bool) override;
+  void flush (bool) override;
 };
 
 } // namespace CaDiCaL

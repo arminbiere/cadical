@@ -5,7 +5,11 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 DratTracer::DratTracer (Internal *i, File *f, bool b)
-    : internal (i), file (f), binary (b), added (0), deleted (0) {
+    : internal (i), file (f), binary (b)
+#ifndef QUIET
+      , added (0), deleted (0)
+#endif
+{
   (void) internal;
 }
 
@@ -97,7 +101,9 @@ void DratTracer::add_derived_clause (uint64_t, bool,
     return;
   LOG ("DRAT TRACER tracing addition of derived clause");
   drat_add_clause (clause);
+#ifndef QUIET
   added++;
+#endif
 }
 
 void DratTracer::delete_clause (uint64_t, bool, const vector<int> &clause) {
@@ -105,23 +111,54 @@ void DratTracer::delete_clause (uint64_t, bool, const vector<int> &clause) {
     return;
   LOG ("DRAT TRACER tracing deletion of clause");
   drat_delete_clause (clause);
+#ifndef QUIET
   deleted++;
+#endif
 }
 
 /*------------------------------------------------------------------------*/
 
 bool DratTracer::closed () { return file->closed (); }
 
-void DratTracer::close () {
-  assert (!closed ());
-  file->close ();
+#ifndef QUIET
+
+void DratTracer::print_statistics () {
+  uint64_t bytes = file->bytes ();
+  uint64_t total = added + deleted;
+  MSG ("DRAT %" PRId64 " added clauses %.2f%%", added,
+       percent (added, total));
+  MSG ("DRAT %" PRId64 " deleted clauses %.2f%%", deleted,
+       percent (deleted, total));
+  MSG ("DRAT %" PRId64 " bytes (%.2f MB)", bytes,
+       bytes / (double) (1 << 20));
 }
 
-void DratTracer::flush () {
+#endif
+
+void DratTracer::close (bool print) {
+  assert (!closed ());
+  file->close ();
+#ifndef QUIET
+  if (print) {
+    MSG ("DRAT proof file '%s' closed", file->name ());
+    print_statistics ();
+  }
+#else
+  (void) print;
+#endif
+}
+
+void DratTracer::flush (bool print) {
   assert (!closed ());
   file->flush ();
-  MSG ("traced %" PRId64 " added and %" PRId64 " deleted clauses", added,
-       deleted);
+#ifndef QUIET
+  if (print) {
+    MSG ("DRAT proof file '%s' flushed", file->name ());
+    print_statistics ();
+  }
+#else
+  (void) print;
+#endif
 }
 
 } // namespace CaDiCaL

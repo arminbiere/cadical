@@ -1352,12 +1352,12 @@ struct Internal {
   // Enable and disable proof logging and checking.
   //
   void new_proof_on_demand ();
-  void setup_lrat_builder (); // if opts.externallrat=true
-  void force_lrat ();         // sets lrat=true
-  void close_trace ();        // Stop proof tracing.
-  void flush_trace ();        // Flush proof trace file.
-  void trace (File *);        // Start write proof file.
-  void check ();              // Enable online proof checking.
+  void setup_lrat_builder ();            // if opts.externallrat=true
+  void force_lrat ();                    // sets lrat=true
+  void close_trace (bool stats = false); // Stop proof tracing.
+  void flush_trace (bool stats = false); // Flush proof trace file.
+  void trace (File *);                   // Start write proof file.
+  void check ();                         // Enable online proof checking.
 
   void connect_proof_tracer (Tracer *tracer, bool antecedents);
   void connect_proof_tracer (InternalTracer *tracer, bool antecedents);

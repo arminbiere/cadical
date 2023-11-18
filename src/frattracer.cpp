@@ -5,11 +5,10 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 FratTracer::FratTracer (Internal *i, File *f, bool b, bool a)
-    : internal (i), file (f), binary (b), with_antecedents (a), added (0),
-      deleted (0)
+    : internal (i), file (f), binary (b), with_antecedents (a)
 #ifndef QUIET
       ,
-      finalized (0), original (0)
+      added (0), deleted (0), finalized (0), original (0)
 #endif
 {
   (void) internal;
@@ -200,7 +199,9 @@ void FratTracer::add_derived_clause (uint64_t id, bool,
     frat_add_derived_clause (id, clause, chain);
   else
     frat_add_derived_clause (id, clause);
+#ifndef QUIET
   added++;
+#endif
 }
 
 void FratTracer::delete_clause (uint64_t id, bool,
@@ -209,7 +210,9 @@ void FratTracer::delete_clause (uint64_t id, bool,
     return;
   LOG ("FRAT TRACER tracing deletion of clause");
   frat_delete_clause (id, clause);
+#ifndef QUIET
   deleted++;
+#endif
 }
 
 void FratTracer::finalize_clause (uint64_t id, const vector<int> &clause) {
@@ -223,17 +226,49 @@ void FratTracer::finalize_clause (uint64_t id, const vector<int> &clause) {
 
 bool FratTracer::closed () { return file->closed (); }
 
-void FratTracer::close () {
-  assert (!closed ());
-  file->close ();
+#ifndef QUIET
+
+void FratTracer::print_statistics () {
+  uint64_t bytes = file->bytes ();
+  uint64_t total = original + added + deleted + finalized;
+  MSG ("FRAT %" PRId64 " original clauses %.2f%%", original,
+       percent (original, total));
+  MSG ("FRAT %" PRId64 " added clauses %.2f%%", added,
+       percent (added, total));
+  MSG ("FRAT %" PRId64 " deleted clauses %.2f%%", deleted,
+       percent (deleted, total));
+  MSG ("FRAT %" PRId64 " finalized clauses %.2f%%", finalized,
+       percent (finalized, total));
+  MSG ("FRAT %" PRId64 " bytes (%.2f MB)", bytes,
+       bytes / (double) (1 << 20));
 }
 
-void FratTracer::flush () {
+#endif
+
+void FratTracer::close (bool print) {
+  assert (!closed ());
+  file->close ();
+#ifndef QUIET
+  if (print) {
+    MSG ("FRAT proof file '%s' closed", file->name ());
+    print_statistics ();
+  }
+#else
+  (void) print;
+#endif
+}
+
+void FratTracer::flush (bool print) {
   assert (!closed ());
   file->flush ();
-  MSG ("traced %" PRId64 " original, %" PRId64 " added clauses, %" PRId64
-       " deleted clauses and %" PRId64 " finalized clauses",
-       original, added, deleted, finalized);
+#ifndef QUIET
+  if (print) {
+    MSG ("FRAT proof file '%s' flushed", file->name ());
+    print_statistics ();
+  }
+#else
+  (void) print;
+#endif
 }
 
 } // namespace CaDiCaL
