@@ -37,6 +37,28 @@ namespace CaDiCaL {
 // with more occurrences first.  Then we sort clauses lexicographically with
 // respect to that literal order.
 
+bool Internal::vivifying () {
+
+  if (!opts.vivify)
+    return false;
+  if (!preprocessing && !opts.inprocessing)
+    return false;
+  if (preprocessing)
+    assert (lim.preprocessing);
+
+  // Only perform global subsumption checking immediately after a clause
+  // reduction happened where the overall allocated memory is small and we
+  // got a limit on the number of kept clause in terms of size and glue.
+  //
+  if (opts.reduce && stats.conflicts != last.reduce.conflicts)
+    return false;
+
+  if (stats.conflicts < lim.vivify)
+    return false;
+
+  return true;
+}
+
 /*------------------------------------------------------------------------*/
 
 
@@ -1391,7 +1413,8 @@ void Internal::vivify () {
     return;
   if (!stats.current.irredundant)
     return;
-
+  if (level)
+    backtrack ();
   assert (opts.vivify);
   assert (!level);
 
@@ -1454,9 +1477,13 @@ void Internal::vivify () {
     vivify_round (vivifier, limit);
   }
 
+
   STOP_SIMPLIFIER (vivify, VIVIFY);
 
   last.vivify.propagations = stats.propagations.search;
+
+  int64_t delta = scale (opts.vivifyint * (stats.vivifications + 1));
+  lim.vivify = stats.conflicts + delta;
 }
 
 } // namespace CaDiCaL

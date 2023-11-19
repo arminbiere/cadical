@@ -260,8 +260,10 @@ int Internal::cdcl_loop_with_inprocessing () {
       reduce (); // collect useless clauses
     else if (probing ())
       probe (); // failed literal probing
-    else if (subsuming ())
-      subsume (); // subsumption algorithm
+    else if (vivifying ())
+      vivify (); // subsumption algorithm
+    // else if (subsuming ())
+    //   subsume (); // subsumption algorithm
     else if (eliminating ())
       elim (); // variable elimination
     else if (compacting ())

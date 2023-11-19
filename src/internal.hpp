@@ -815,6 +815,7 @@ struct Internal {
 
   // Strengthening through vivification in 'vivify.cpp'.
   //
+  bool vivifying ();
   void demote_clause (Clause *);
   void flush_vivification_schedule (Vivifier &);
   void vivify_subsume_clause (Clause *subsuming, Clause *subsumed);
