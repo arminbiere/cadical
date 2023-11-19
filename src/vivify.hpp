@@ -5,11 +5,14 @@ namespace CaDiCaL {
 
 struct Clause;
 
+enum class Vivify_Mode { TIER1, TIER2, TIER3, IRREDUNDANT };
+
 struct Vivifier {
   vector<Clause *> schedule, stack;
   vector<int> sorted;
-  bool redundant_mode;
-  Vivifier (bool mode) : redundant_mode (mode) {}
+  Vivify_Mode tier;
+  char tag;
+  Vivifier (Vivify_Mode mode_tier) : tier (mode_tier) {}
 
   void erase () {
     erase_vector (schedule);

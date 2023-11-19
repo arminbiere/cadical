@@ -817,12 +817,11 @@ struct Internal {
   //
   void demote_clause (Clause *);
   void flush_vivification_schedule (Vivifier &);
-  bool consider_to_vivify_clause (Clause *candidate, bool redundant_mode);
   void vivify_subsume_clause (Clause *subsuming, Clause *subsumed);
+  bool consider_to_vivify_clause (Clause *candidate, bool, int, int);
+  void vivify_analyze_redundant (Vivifier &, Clause *start, bool &);
   void vivify_build_lrat (int, Clause *);
   void vivify_chain_for_units (int lit, Clause *reason);
-  bool vivify_all_decisions (Clause *candidate, int subsume);
-  void vivify_post_process_analysis (Clause *candidate, int subsume);
   void vivify_strengthen (Clause *candidate);
   void vivify_assign (int lit, Clause *);
   void vivify_assume (int lit);
@@ -831,7 +830,7 @@ struct Internal {
   bool vivify_clause (Vivifier &, Clause *candidate);
   void vivify_analyze (Clause *start, bool &, Clause **, int implied, bool&);
   bool vivify_shrinkable (const std::vector<int>&sorted,  Clause *c, int &implied);
-  void vivify_round (bool redundant_mode, int64_t delta);
+  void vivify_round (Vivifier&, int64_t delta);
   void vivify ();
 
   // Compacting (shrinking internal variable tables) in 'compact.cpp'
