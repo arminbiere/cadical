@@ -819,6 +819,7 @@ struct Internal {
   void demote_clause (Clause *);
   void flush_vivification_schedule (Vivifier &);
   void vivify_subsume_clause (Clause *subsuming, Clause *subsumed);
+  void compute_tier_limits (Vivifier &);
   bool consider_to_vivify_clause (Clause *candidate, bool, int, int);
   void vivify_analyze_redundant (Vivifier &, Clause *start, bool &);
   void vivify_build_lrat (int, Clause *);

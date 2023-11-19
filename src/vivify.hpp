@@ -12,6 +12,8 @@ struct Vivifier {
   vector<int> sorted;
   Vivify_Mode tier;
   char tag;
+  int tier1;
+  int tier2;
   Vivifier (Vivify_Mode mode_tier) : tier (mode_tier) {}
 
   void erase () {

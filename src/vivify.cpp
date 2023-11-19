@@ -1,4 +1,6 @@
 #include "internal.hpp"
+#include <algorithm>
+#include <utility>
 
 namespace CaDiCaL {
 
@@ -1076,7 +1078,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
         assert (!conflict);
         res = true;
       } else {
-        LOG ("instantiation failed");
+        LOG ("vivify instantiation failed");
         res = false;
       }
     } else {
@@ -1190,8 +1192,8 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   init_noccs ();
 
   unsigned lower_glue_limit, upper_glue_limit;
-  const unsigned tier1 = 2;
-  const unsigned tier2 = 6;
+  const unsigned tier1 = vivifier.tier1;
+  const unsigned tier2 = vivifier.tier2;
   switch (vivifier.tier) {
   case Vivify_Mode::TIER1:
     lower_glue_limit = 0;
@@ -1405,6 +1407,61 @@ void set_vivifier_mode (Vivifier &vivifier, Vivify_Mode tier) {
 }
 /*------------------------------------------------------------------------*/
 
+
+void Internal::compute_tier_limits (Vivifier & vivifier) {
+  if (!opts.vivifycalctier) {
+    vivifier.tier1 = 2;
+    vivifier.tier2 = 6;
+    return;
+  }
+  uint64_t total_used = 0;
+  int tier1 = 0;
+  int tier2 = 0;
+  stable_sort (begin (clauses), end (clauses), [] (Clause *c, Clause *d) {
+    return c->glue < d->glue;
+  });
+
+  for (auto c : clauses) {
+    if (!c->redundant)
+      continue;
+    const int used = c->used;
+    if (used)
+      total_used += used;
+  }
+
+  uint64_t accumulated_used = 0;
+  uint64_t accu_tier1 = 0;
+  uint64_t accu_tier2 = 0;
+  const uint64_t tier1_used_limit = total_used / 2;
+  const uint64_t tier2_used_limit = ceil (3.0* (double)total_used / 4.0);
+  for (auto c : clauses) {
+    if (!c->redundant)
+      continue;
+    if (!c->used)
+      continue;
+    accumulated_used += c->used;
+    if (accumulated_used <= tier1_used_limit && tier1 < c->glue) {
+      tier1 = max (tier1, c->glue);
+      accu_tier1 = accumulated_used;
+    }
+    if (accumulated_used <= tier2_used_limit && tier2 < c->glue) {
+      tier2 = max (tier2, c->glue);
+      accu_tier2 = accumulated_used;
+    }
+  }
+  assert (accumulated_used == total_used);
+
+  vivifier.tier1 = tier1;
+  vivifier.tier2 = tier2;
+  PHASE ("vivify", stats.vivifications,
+	 "recalculating tier 1 and 2 with glue limits %d (%.2f%%) and %d (%.2f%%)",
+	 tier1, (double)accu_tier1 / (double)accumulated_used * 100.0,
+	 tier2, (double)accu_tier2 / (double)accumulated_used * 100.0);
+}
+
+
+/*------------------------------------------------------------------------*/
+
 void Internal::vivify () {
 
   if (unsat)
@@ -1440,6 +1497,13 @@ void Internal::vivify () {
   PHASE ("vivify", stats.vivifications,
          "vivification limit of %" PRId64 " propagations", total);
   Vivifier vivifier (Vivify_Mode::TIER1);
+  compute_tier_limits (vivifier);
+
+  if (vivifier.tier1 == vivifier.tier2) {
+    tier1 += tier2;
+    tier2 = 0;
+    LOG ("skipping tier 2 after recalculating");
+  }
 
   {
     // Refill the schedule every time.  Unchecked clauses are 'saved' by
@@ -1452,18 +1516,18 @@ void Internal::vivify () {
   }
 
   finished = (end >= last.vivify.propagations);
-  if (!unsat && !finished) {
+  if (!unsat && !finished && tier2) {
     vivifier.erase();
-    const int64_t limit =  (total * tier1) / sum  * 1e-3 * (double) opts.vivifyredeff;
+    const int64_t limit =  (total * tier2) / sum  * 1e-3 * (double) opts.vivifyredeff;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::TIER2);
     vivify_round (vivifier, limit);
   }
 
   finished = (end >= last.vivify.propagations);
-  if (!unsat && !finished) {
+  if (!unsat && !finished && irr) {
     vivifier.erase();
-    const int64_t limit =  (total * tier1) / sum  * 1e-3 * (double) opts.vivifyreleff;
+    const int64_t limit =  (total * irr) / sum  * 1e-3 * (double) opts.vivifyreleff;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::IRREDUNDANT);
     vivify_round (vivifier, limit);
@@ -1472,7 +1536,7 @@ void Internal::vivify () {
   finished = (end >= last.vivify.propagations);
   if (!unsat && !finished) {
     vivifier.erase();
-    const int64_t limit =  (total * tier1) / sum * 1e-3 * (double) opts.vivifyredeff;
+    const int64_t limit = end - last.vivify.propagations;
     set_vivifier_mode(vivifier, Vivify_Mode::TIER3);
     vivify_round (vivifier, limit);
   }
