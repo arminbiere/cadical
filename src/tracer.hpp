@@ -43,6 +43,12 @@ public:
   //
   virtual void delete_clause (uint64_t, bool, const vector<int> &) {}
 
+  // Notify the observer that a clause is deleted.
+  // Includes ID and redundant/irredundant
+  // Arguments: ID, redundant, clause
+  //
+  virtual void demote_clause (uint64_t, const vector<int> &) {}
+
   // Notify the observer to remember that the clause might be restored later
   // Arguments: ID, clause
   //
