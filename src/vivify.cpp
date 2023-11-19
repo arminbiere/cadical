@@ -650,8 +650,7 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
     reason = candidate;
     mark2 (candidate);
     const int not_implied = -implied;
-    const Var v = var (not_implied);
-    assert (v.level);
+    assert (var (not_implied).level);
     Flags &f = flags (not_implied);
     f.seen = true;
     LOG ("pushing implied lit %d", not_implied);
@@ -669,8 +668,7 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
       lrat_chain.push_back (reason->id);
     for (auto lit : *reason) {
       const Var &v = var (lit);
-      const char tmp = val (lit);
-      assert (tmp < 0);
+      assert (val (lit) < 0);
       if (!marked (lit)) {
         LOG ("lit %d is not marked", lit);
         subsumes = false;
