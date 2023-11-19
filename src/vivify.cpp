@@ -1266,7 +1266,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   //
   const int64_t limit = stats.propagations.vivify + propagation_limit;
 
-  connect_watches (vivifier.tier == Vivify_Mode::IRREDUNDANT); // watch all relevant clauses
+  connect_watches (); // watch all relevant clauses
 
   if (!unsat && !propagate ()) {
     LOG ("propagation after connecting watches in inconsistency");
