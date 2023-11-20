@@ -217,8 +217,10 @@ void Internal::report (char type, int verbose) {
     tout.magenta (true);
     break;
   case 's':
+  case 'u':
   case 'v':
   case 'w':
+  case 'x':
   case 't':
   case 'b':
   case 'c':
