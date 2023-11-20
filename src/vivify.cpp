@@ -99,6 +99,7 @@ inline void Internal::demote_clause (Clause *c) {
   stats.subsumed++;
   LOG (c, "demoting");
   assert (!c->redundant);
+  mark_removed (c);
   c->redundant = true;
   c->keep = false;
   assert (stats.current.irredundant > 0);
