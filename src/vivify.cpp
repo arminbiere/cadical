@@ -463,9 +463,12 @@ bool Internal::consider_to_vivify_clause (Clause *c, bool irredundant, int lower
     return false;
   if (opts.vivifyonce >= 2 && !c->redundant && c->vivified)
     return false;
-  if (irredundant && !c->redundant)
-    return true;
-  if (!irredundant && !c->redundant)
+  if (irredundant)
+    return !c->redundant;
+  assert (!irredundant);
+  if (!c->redundant)
+    return false;
+  if (irredundant && c->redundant)
     return false;
   assert (c->redundant);
   if (c->glue >= upper_glue_limit)
@@ -1198,23 +1201,26 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   switch (vivifier.tier) {
   case Vivify_Mode::TIER1:
     lower_glue_limit = 0;
-    upper_glue_limit = tier1;
+    upper_glue_limit = tier1 + 1;
     break;
   case Vivify_Mode::TIER2:
-    lower_glue_limit = tier1 + 1;
-    upper_glue_limit = tier2;
+    lower_glue_limit = tier1;
+    upper_glue_limit = tier2 + 1;
     break;
   case Vivify_Mode::TIER3:
-    lower_glue_limit = tier2 + 1;
-    upper_glue_limit = UINT32_MAX;
+    lower_glue_limit = tier2;
+    upper_glue_limit = INT32_MAX;
     break;
   default:
     lower_glue_limit = 0;
-    upper_glue_limit = UINT32_MAX;
+    upper_glue_limit = INT32_MAX;
     break;
   }
-  
+
   for (const auto &c : clauses) {
+
+    if (c->size == 2)
+      continue; // see also (NO-BINARY) above
 
     if (!consider_to_vivify_clause (c, vivifier.tier == Vivify_Mode::IRREDUNDANT, lower_glue_limit, upper_glue_limit))
       continue;
