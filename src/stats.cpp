@@ -514,6 +514,9 @@ void Stats::print (Internal *internal) {
     PRT ("  vivifystred3:  %15" PRId64 "   %10.2f %%  per vivifystrs",
          stats.vivifystred3,
          percent (stats.vivifystred3, stats.vivifystrs));
+    PRT ("  vivifydemote:  %15" PRId64 "   %10.2f %%  per vivifystrs",
+         stats.vivifydemote,
+         percent (stats.vivifydemote, stats.vivifystrs));
     PRT ("  vivifydecs:    %15" PRId64 "   %10.2f    per checks",
          stats.vivifydecs, relative (stats.vivifydecs, stats.vivifychecks));
     PRT ("  vivifyreused:  %15" PRId64 "   %10.2f %%  per decision",

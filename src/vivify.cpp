@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "vivify.hpp"
 #include <algorithm>
 #include <utility>
 
@@ -68,6 +69,7 @@ bool Internal::vivifying () {
 
 inline void Internal::vivify_subsume_clause (Clause *subsuming, Clause *subsumed) {
   stats.subsumed++;
+  stats.vivifysubs++;
   assert (subsuming->size <= subsumed->size);
   LOG (subsumed, "subsumed");
   if (subsumed->redundant)
@@ -97,6 +99,7 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming, Clause *subsumed
 
 inline void Internal::demote_clause (Clause *c) {
   stats.subsumed++;
+  stats.vivifydemote++;
   LOG (c, "demoting");
   assert (!c->redundant);
   mark_removed (c);
@@ -512,7 +515,6 @@ struct vivify_better_watch {
 void Internal::vivify_strengthen (Clause *c) {
 
   assert (!clause.empty ());
-  stats.vivifystrs++;
 
   if (clause.size () == 1) {
 
@@ -796,6 +798,24 @@ bool Internal::vivify_shrinkable (const std::vector<int>&sorted,  Clause *confli
 }
 /*------------------------------------------------------------------------*/
 
+inline void Internal::vivify_increment_stats (const Vivifier &vivifier) {
+  switch (vivifier.tier) {
+  case Vivify_Mode::TIER1:
+    ++stats.vivifystred1;
+    break;
+  case Vivify_Mode::TIER2:
+    ++stats.vivifystred2;
+    break;
+  case Vivify_Mode::TIER3:
+    ++stats.vivifystred3;
+    break;
+  default:
+    ++stats.vivifystrirr;
+    break;
+  }
+}
+/*------------------------------------------------------------------------*/
+
 // Main function: try to vivify this candidate clause in the given mode.
 
 bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
@@ -1029,6 +1049,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     // TODO statistics
   }
   else if (vivify_shrinkable (sorted, conflict, subsume)) {
+    vivify_increment_stats (vivifier);
     //vivify_learn
     LOG ("vivify succeeded, learning new clause");
     clear_analyzed_literals ();
@@ -1037,10 +1058,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     conflict = nullptr; // TODO dup from below
     vivify_strengthen(c);
     res = true;
-    if (c->redundant)
-      ++stats.vivifystred1;
-    else
-      ++stats.vivifystrirr;
   } else if ((conflict || subsume) && !c->redundant && !redundant) {
     LOG ("demote clause from irredundant to redundant");
     res = true;
@@ -1049,7 +1066,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     promote_clause(c, new_glue);
     if (conflict)
       backtrack (level - 1);
-    ++stats.vivifystred1;
   } else {
     LOG (c, "vivification failed on");
     lrat_chain.clear();
@@ -1102,7 +1118,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   conflict = nullptr;
   return res;
 }
-  
+
 // when we can strengthen clause c we have to build lrat.
 // uses f.seen so do not forget to clear flags afterwards.
 // this can happen in three cases. (1), (2) are only sound in redundant mode

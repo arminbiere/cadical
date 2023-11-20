@@ -197,6 +197,7 @@ struct Stats {
   int64_t vivifystred3;   // strengthened redundant clause (3)
   int64_t vivifyunits;    // units during vivification
   int64_t vivifyinst;     // instantiation during vivification
+  int64_t vivifydemote;   //demoting during vivification
   int64_t transreds;
   int64_t transitive;
   struct {
