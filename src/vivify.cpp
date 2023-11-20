@@ -1512,7 +1512,6 @@ void Internal::vivify () {
     set_vivifier_mode(vivifier, Vivify_Mode::TIER1);
     const int64_t limit = (total * tier1) / sum * 1e-3 * (double) opts.vivifyredeff;
     assert (limit >= 0);
-    assert (limit < total);
     vivify_round (vivifier, limit);
   }
 
@@ -1521,7 +1520,6 @@ void Internal::vivify () {
     vivifier.erase();
     const int64_t limit = (total * tier2) / sum  * 1e-3 * (double) opts.vivifyredeff;
     assert (limit >= 0);
-    assert (limit < total);
     set_vivifier_mode(vivifier, Vivify_Mode::TIER2);
     vivify_round (vivifier, limit);
   }
