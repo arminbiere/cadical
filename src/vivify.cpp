@@ -1382,7 +1382,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   stats.subsumed += subsumed;
   stats.strengthened += strengthened;
 
-  last.vivify.propagations = stats.propagations.search;
+//  last.vivify.propagations = stats.propagations.search;
 
   bool unsuccessful = !(subsumed + strengthened + units);
   report (vivifier.tag, unsuccessful);
@@ -1477,9 +1477,9 @@ void Internal::vivify () {
 
   START_SIMPLIFIER (vivify, VIVIFY);
   stats.vivifications++;
-  bool finished;
-  const int64_t end = stats.propagations.search;
-  int64_t total = 2 * (end - last.vivify.propagations); // '2' is from previous scheduling
+  bool continue_vivi;
+  int64_t total = stats.propagations.search - last.vivify.propagations;
+  const int64_t end = stats.propagations.vivify + total;
   if (total < opts.vivifymineff)
     total = opts.vivifymineff;
   if (total > opts.vivifymaxeff)
@@ -1512,31 +1512,34 @@ void Internal::vivify () {
     set_vivifier_mode(vivifier, Vivify_Mode::TIER1);
     const int64_t limit = (total * tier1) / sum * 1e-3 * (double) opts.vivifyredeff;
     assert (limit >= 0);
+    assert (limit < total);
     vivify_round (vivifier, limit);
   }
 
-  finished = (end >= last.vivify.propagations);
-  if (!unsat && !finished && tier2) {
+  continue_vivi = (end >= stats.propagations.vivify);
+  if (!unsat && continue_vivi && tier2) {
     vivifier.erase();
-    const int64_t limit =  (total * tier2) / sum  * 1e-3 * (double) opts.vivifyredeff;
+    const int64_t limit = (total * tier2) / sum  * 1e-3 * (double) opts.vivifyredeff;
     assert (limit >= 0);
+    assert (limit < total);
     set_vivifier_mode(vivifier, Vivify_Mode::TIER2);
     vivify_round (vivifier, limit);
   }
 
-  finished = (end >= last.vivify.propagations);
-  if (!unsat && !finished && irr) {
+  continue_vivi = (end >= stats.propagations.vivify);
+  if (!unsat && continue_vivi && irr) {
     vivifier.erase();
-    const int64_t limit =  (total * irr) / sum  * 1e-3 * (double) opts.vivifyreleff;
+    const int64_t limit = (total * irr) / sum  * 1e-3 * (double) opts.vivifyreleff;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::IRREDUNDANT);
     vivify_round (vivifier, limit);
   }
 
-  finished = (end >= last.vivify.propagations);
-  if (!unsat && !finished) {
+  continue_vivi = (end >= stats.propagations.vivify);
+  if (!unsat && continue_vivi) {
     vivifier.erase();
-    const int64_t limit = end - last.vivify.propagations;
+    const int64_t limit = end - stats.propagations.vivify;
+    assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::TIER3);
     vivify_round (vivifier, limit);
   }
@@ -1548,6 +1551,14 @@ void Internal::vivify () {
 
   int64_t delta = scale (opts.vivifyint * (stats.vivifications + 1));
   lim.vivify = stats.conflicts + delta;
+
+  if (opts.transred)
+    transred ();
+
+  PHASE ("vivify-phase", stats.vivifications,
+         "new vivify limit %" PRId64 " after %" PRId64 " conflicts",
+         lim.vivify, delta);
+
 }
 
 } // namespace CaDiCaL
