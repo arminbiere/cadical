@@ -53,8 +53,10 @@ R  restart
 s  subsumed clause removal round
 3  ternary resolution round
 t  transition reduction of binary implication graph
-w  vivified redundant and irredundant clauses
-v  vivified irredundant clauses
+u  vivified tier1 clauses
+v  vivified tier2 clauses
+x  vivified tier3 clauses
+w  vivified irredundant clauses
 
 The order of the list follows the occurrences of 'report' in the source
 files, i.e., obtained from "grep 'report (' *.cpp".   Note that some of the
