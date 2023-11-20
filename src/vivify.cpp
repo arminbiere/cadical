@@ -1531,7 +1531,7 @@ void Internal::vivify () {
     LOG ("skipping tier 2 after recalculating");
   }
 
-  {
+  if (opts.vivifytier1) {
     // Refill the schedule every time.  Unchecked clauses are 'saved' by
     // setting their 'vivify' bit, such that they can be tried next time.
     //
@@ -1542,7 +1542,7 @@ void Internal::vivify () {
   }
 
   continue_vivi = (end >= stats.propagations.vivify);
-  if (!unsat && continue_vivi && tier2) {
+  if (!unsat && continue_vivi && tier2 && opts.vivifytier2) {
     vivifier.erase();
     const int64_t limit = (total * tier2) / sum  * 1e-3 * (double) opts.vivifyredeff;
     assert (limit >= 0);
@@ -1551,7 +1551,7 @@ void Internal::vivify () {
   }
 
   continue_vivi = (end >= stats.propagations.vivify);
-  if (!unsat && continue_vivi && irr) {
+  if (!unsat && continue_vivi && irr && opts.vivifyirred) {
     vivifier.erase();
     const int64_t limit = (total * irr) / sum  * 1e-3 * (double) opts.vivifyreleff;
     assert (limit >= 0);
@@ -1560,7 +1560,7 @@ void Internal::vivify () {
   }
 
   continue_vivi = (end >= stats.propagations.vivify);
-  if (!unsat && continue_vivi) {
+  if (!unsat && continue_vivi && opts.vivifytier3) {
     vivifier.erase();
     const int64_t limit = end - stats.propagations.vivify;
     assert (limit >= 0);
