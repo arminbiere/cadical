@@ -251,7 +251,6 @@ void External::conclude_sat () {
   concluded = true;
   if (!extended)
     extend ();
-  // TODO: give model to the proof...
   vector<int> model;
   for (int i = 1; i <= max_var; i++) {
     int lit = i;
