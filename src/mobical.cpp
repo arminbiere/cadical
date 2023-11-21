@@ -203,7 +203,7 @@ struct Shared {
 
 /*------------------------------------------------------------------------*/
 
-class MockPropagator : public ExternalPropagator {
+class MockPropagator : public ExternalPropagator, public Observer {
 private:
   Solver *s = 0;
 
@@ -1268,9 +1268,12 @@ struct ConnectCall : public Call {
 
     mobical.mock_pointer = new MockPropagator (s);
     s->connect_external_propagator (mobical.mock_pointer);
+    s->connect_observer(mobical.mock_pointer);
 
-    if (prev_pointer)
+    if (prev_pointer) {
+      mobical.mock_pointer->add_prev_fixed (prev_pointer->observed_fixed);
       delete prev_pointer;
+    }
   }
   void print (ostream &o) { o << "connect mock-propagator" << endl; }
   Call *copy () { return new ConnectCall (); }
@@ -1306,20 +1309,6 @@ struct LemmaCall : public Call {
   const char *keyword () { return "lemma"; }
 };
 
-// struct ContinueCall : public Call {
-//   ContinueCall () : Call (CONTINUE) {}
-//   void execute (Solver *&s) {
-//     MockPropagator *mp =
-//         static_cast<MockPropagator *> (s->get_propagator ());
-
-//     if (mp) // || mobical.donot.enforce
-//       mp->push_continue ();
-//   }
-//   void print (ostream &o) { o << "continue" << endl; }
-//   Call *copy () { return new ContinueCall (); }
-//   const char *keyword () { return "continue"; }
-// };
-
 struct DisconnectCall : public Call {
   DisconnectCall () : Call (DISCONNECT) {}
   void execute (Solver *&s) {
@@ -1327,6 +1316,7 @@ struct DisconnectCall : public Call {
         static_cast<MockPropagator *> (s->get_propagator ());
     if (mp)
       mp->remove_new_observed_var ();
+    s->disconnect_observer ();
     s->disconnect_external_propagator ();
     if (mp) {
       delete mp;

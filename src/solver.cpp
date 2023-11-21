@@ -883,6 +883,37 @@ void Solver::disconnect_learner () {
 
 /*===== IPASIR END =======================================================*/
 
+void Solver::connect_observer (Observer *observer) {
+  LOG_API_CALL_BEGIN ("connect_observer");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (observer, "can not connect zero observer");
+
+#ifdef LOGGING
+  if (external->observer)
+    LOG ("connecting new observer (disconnecting previous one)");
+  else
+    LOG ("connecting new observer (no previous one)");
+#endif  
+  
+  external->observer = observer;
+  // Observers are treated as real-time observers, thus previously found fixed
+  // assignments are not sent out
+  LOG_API_CALL_END ("connect_observer");
+}
+
+void Solver::disconnect_observer () {
+  LOG_API_CALL_BEGIN ("disconnect_observer");
+  REQUIRE_VALID_STATE ();
+#ifdef LOGGING
+  if (external->observer)
+    LOG ("disconnecting previous observer");
+  else
+    LOG ("ignoring to disconnect observer (no previous one)");
+#endif
+  external->observer = 0;
+  LOG_API_CALL_END ("disconnect_observer");
+}
+
 /*===== IPASIR-UP BEGIN ==================================================*/
 
 void Solver::connect_external_propagator (ExternalPropagator *propagator) {
