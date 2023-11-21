@@ -743,11 +743,11 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
 
   }
 
-  vivify_analyze (reason, subsumes, subsuming, implied, redundant);
+  vivify_analyze (reason, subsumes, subsuming, candidate, implied, redundant);
   unmark(candidate);
   if (subsumes) {
     assert (*subsuming);
-    LOG (reason, "vivify subsumed");
+    LOG (candidate, "vivify subsumed");
     LOG (*subsuming, "vivify subsuming");
     if (lrat)
       lrat_chain.clear ();
@@ -1027,7 +1027,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     // TODO: reompute glue
     // TODO statistics
   }
-  else if (vivify_shrinkable(sorted, conflict, subsume)) {
+  else if (vivify_shrinkable (sorted, conflict, subsume)) {
     //vivify_learn
     LOG ("vivify succeeded, learning new clause");
     clear_analyzed_literals ();
@@ -1397,6 +1397,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
 
 
 void set_vivifier_mode (Vivifier &vivifier, Vivify_Mode tier) {
+    vivifier.tier = tier;
     switch (tier) {
     case Vivify_Mode::TIER1:
       vivifier.tag = 'u';
@@ -1408,6 +1409,7 @@ void set_vivifier_mode (Vivifier &vivifier, Vivify_Mode tier) {
       vivifier.tag = 'x';
       break;
     default:
+      assert (tier == Vivify_Mode::IRREDUNDANT);
       vivifier.tag = 'w';
       break;
     }
