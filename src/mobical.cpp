@@ -210,7 +210,7 @@ private:
   // MockPropagator parameters
   size_t lemma_per_cb = 2;
   bool logging = false;
-
+  
   struct ExternalLemma {
     size_t id;
     size_t add_count;
@@ -337,6 +337,7 @@ public:
       clause.push_back (lit);
     else {
       nof_clauses++;
+<<<<<<< HEAD
 
       MLOG ("push lemma to position " << external_lemmas.size () << ": ");
       for (auto const &l : clause) {
@@ -346,6 +347,15 @@ public:
       MLOGC ("0" << std::endl);
 
       add_new_lemma (false);
+=======
+      
+      MLOG ("push lemma to position " << external_lemmas.size () << ": ");
+      for (auto const &l : clause) MLOGC (l << " ");
+      MLOGC ( "0" << std::endl );
+      
+      //add_new_lemma((nof_clauses % 2 == 0));
+      add_new_lemma(true);
+>>>>>>> 52a8b4b (MockPropagator refinements)
       clause.clear ();
     }
   }
@@ -521,12 +531,13 @@ public:
         if (external_lemmas[add_lemma_idx]->forgettable)
           clause_redundancy = 1;
 
-        MLOGC ("true (new lemma was found, "
-               << "forgettable: " << clause_redundancy
-               << " id: " << add_lemma_idx << ")." << std::endl);
 
-        added_lemma_count++;
-        return true;
+          MLOGC ("true (new lemma was found, "
+              << "forgettable: " << clause_redundancy
+              << " id: " << add_lemma_idx << ")." <<  std::endl);
+          
+          added_lemma_count++;
+          return true;
       }
 
       // Forgettable lemmas are added repeatedly to the solver only when
@@ -534,14 +545,15 @@ public:
 
       add_lemma_idx++;
     }
-
     MLOGC ("false." << std::endl);
+
 
     return false;
   }
 
   int cb_add_external_clause_lit () {
     int lit = external_lemmas[add_lemma_idx]->next_lit ();
+
 
     MLOG ("cb_add_external_clause_lit "
           << lit << " (lemma " << add_lemma_idx << "/"
@@ -658,10 +670,7 @@ public:
       clause.clear();
     }
 
-    if (verbosity > 2)
-      std::cout << propagated_lit
-        << " (there are no unassigned observed variables)."
-        << std::endl;
+    MLOG( "cb_propagate returns " << propagated_lit << std::endl );
 
     return propagated_lit;
   }
@@ -720,8 +729,8 @@ public:
   }
 
   void notify_new_decision_level () {
-    MLOG ("notify new decision level " << observed_trail.size () - 1
-                                       << " -> " << observed_trail.size ()
+    MLOG ("notify new decision level " << observed_trail.size () -1 << " -> "
+                                       << observed_trail.size ()
                                        << std::endl);
     observed_trail.push_back (std::vector<int> ());
   }
@@ -1265,8 +1274,11 @@ struct ConnectCall : public Call {
     MockPropagator *prev_pointer = 0;
     if (mobical.mock_pointer)
       prev_pointer = mobical.mock_pointer;
-
+#ifdef LOGGING
+    mobical.mock_pointer = new MockPropagator (s, mobical.add_set_log_to_true);
+#else
     mobical.mock_pointer = new MockPropagator (s);
+#endif
     s->connect_external_propagator (mobical.mock_pointer);
     s->connect_observer(mobical.mock_pointer);
 

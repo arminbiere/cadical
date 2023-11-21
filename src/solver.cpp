@@ -894,7 +894,8 @@ void Solver::connect_observer (Observer *observer) {
   else
     LOG ("connecting new observer (no previous one)");
 #endif  
-  
+  if (external->observer)
+    disconnect_observer ();
   external->observer = observer;
   // Observers are treated as real-time observers, thus previously found fixed
   // assignments are not sent out
