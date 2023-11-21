@@ -11,7 +11,11 @@ void Internal::mark_fixed (int lit) {
     // Does not increase the notified counter because
     // it is a separated way of notification.
   }
-  if (external->observer) external->observer->notify_fixed_assigment (lit);
+  if (external->observer) {
+    int elit = externalize (lit);
+    assert (elit);
+    external->observer->notify_fixed_assigment (elit);
+  }
   Flags &f = flags (lit);
   assert (f.status == Flags::ACTIVE);
   f.status = Flags::FIXED;
