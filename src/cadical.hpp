@@ -205,6 +205,7 @@ struct External;
 // Forward declaration of call-back classes. See bottom of this file.
 
 class Learner;
+class Observer;
 class Terminator;
 class ClauseIterator;
 class WitnessIterator;
@@ -359,6 +360,14 @@ public:
   void disconnect_learner ();
 
   // ====== END IPASIR =====================================================
+
+// Add call-back which allows to observe when a variable is fixed.
+  //
+  //   require (VALID)
+  //   ensure (VALID)
+  //
+  void connect_observer (Observer *observer);
+  void disconnect_observer ();
 
   // ====== BEGIN IPASIR-UP ================================================
 
@@ -1098,6 +1107,17 @@ public:
   virtual bool learning (int size) = 0;
   virtual void learn (int lit) = 0;
 };
+
+// Connected observer gets notified whenever the truth value of a variable is
+// fixed (for example during inprocessing or due to some derived unit clauses).
+
+class Observer {
+public:
+  virtual ~Observer () {}
+
+  virtual void notify_fixed_assigment (int) = 0;
+};
+
 
 /*------------------------------------------------------------------------*/
 

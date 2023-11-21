@@ -96,6 +96,10 @@ struct External {
   void export_learned_unit_clause (int ilit);
   void export_learned_large_clause (const vector<int> &);
 
+  // If there is an observer.
+
+  Observer *observer;
+  
   // If there is an external propagator.
 
   ExternalPropagator *propagator;
