@@ -210,7 +210,6 @@ private:
   // MockPropagator parameters
   size_t lemma_per_cb = 2;
   bool logging = false;
-  
   struct ExternalLemma {
     size_t id;
     size_t add_count;
@@ -337,7 +336,6 @@ public:
       clause.push_back (lit);
     else {
       nof_clauses++;
-<<<<<<< HEAD
 
       MLOG ("push lemma to position " << external_lemmas.size () << ": ");
       for (auto const &l : clause) {
@@ -347,15 +345,6 @@ public:
       MLOGC ("0" << std::endl);
 
       add_new_lemma (false);
-=======
-      
-      MLOG ("push lemma to position " << external_lemmas.size () << ": ");
-      for (auto const &l : clause) MLOGC (l << " ");
-      MLOGC ( "0" << std::endl );
-      
-      //add_new_lemma((nof_clauses % 2 == 0));
-      add_new_lemma(true);
->>>>>>> 52a8b4b (MockPropagator refinements)
       clause.clear ();
     }
   }
@@ -553,7 +542,6 @@ public:
 
   int cb_add_external_clause_lit () {
     int lit = external_lemmas[add_lemma_idx]->next_lit ();
-
 
     MLOG ("cb_add_external_clause_lit "
           << lit << " (lemma " << add_lemma_idx << "/"
