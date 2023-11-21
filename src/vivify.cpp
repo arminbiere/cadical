@@ -577,7 +577,8 @@ void Internal::vivify_strengthen (Clause *c) {
 // to iterate over the conflict in topological ordering to produce a valid
 // LRAT proof
 
-void Internal::vivify_analyze (Clause *start, bool &subsumes, Clause **subsuming, int implied, bool &redundant) {
+void Internal::vivify_analyze (Clause *start, bool &subsumes, Clause **subsuming,
+				 const Clause *const candidate, int implied, bool &redundant) {
   const auto &t = &trail; // normal trail, so next_trail is wrong
   int i = t->size (); // Start at end-of-trail.
   Clause *reason = start;
