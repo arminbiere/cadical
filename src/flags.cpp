@@ -14,7 +14,7 @@ void Internal::mark_fixed (int lit) {
   if (external->observer) {
     int elit = externalize (lit);
     assert (elit);
-    external->observer->notify_fixed_assigment (elit);
+    external->observer->notify_fixed_assignment (elit);
   }
   Flags &f = flags (lit);
   assert (f.status == Flags::ACTIVE);
