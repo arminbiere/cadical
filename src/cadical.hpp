@@ -1115,7 +1115,7 @@ class Observer {
 public:
   virtual ~Observer () {}
 
-  virtual void notify_fixed_assigment (int) = 0;
+  virtual void notify_fixed_assignment (int) = 0;
 };
 
 
