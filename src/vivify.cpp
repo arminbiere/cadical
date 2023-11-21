@@ -637,7 +637,7 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes, Clause **subsuming
       if (subsumes) {
         assert (reason);
         LOG (reason, "clause found subsuming");
-        LOG (start, "clause found subsumed");
+        LOG (candidate, "clause found subsumed");
         *subsuming = reason;
         return;
       }
