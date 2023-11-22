@@ -189,7 +189,7 @@ inline void IdrupTracer::put_binary_id (uint64_t id) {
 
 /*------------------------------------------------------------------------*/
 
-void IdrupTracer::irup_add_restored_clause (const vector<int> &clause) {
+void IdrupTracer::idrup_add_restored_clause (const vector<int> &clause) {
   if (binary)
     file->put ('r');
   else
@@ -205,7 +205,7 @@ void IdrupTracer::irup_add_restored_clause (const vector<int> &clause) {
     file->put ("0\n");
 }
 
-void IdrupTracer::irup_add_derived_clause (const vector<int> &clause) {
+void IdrupTracer::idrup_add_derived_clause (const vector<int> &clause) {
   if (binary)
     file->put ('a');
   for (const auto &external_lit : clause)
@@ -219,7 +219,7 @@ void IdrupTracer::irup_add_derived_clause (const vector<int> &clause) {
     file->put ("0\n");
 }
 
-void IdrupTracer::irup_delete_clause (uint64_t id, const vector<int> &clause) {
+void IdrupTracer::idrup_delete_clause (uint64_t id, const vector<int> &clause) {
   if (find_and_delete (id)) {
     assert (imported_clause.empty ());
     if (binary)
@@ -243,7 +243,7 @@ void IdrupTracer::irup_delete_clause (uint64_t id, const vector<int> &clause) {
     file->put ("0\n");
 }
 
-void IdrupTracer::irup_conclude_and_delete (const vector<uint64_t> & conclusion) {
+void IdrupTracer::idrup_conclude_and_delete (const vector<uint64_t> & conclusion) {
   uint64_t size = conclusion.size ();
   if (size > 1) {
     if (binary) {
@@ -275,7 +275,7 @@ void IdrupTracer::irup_conclude_and_delete (const vector<uint64_t> & conclusion)
 }
 
 
-void IdrupTracer::irup_report_status (StatusType status) {
+void IdrupTracer::idrup_report_status (StatusType status) {
   if (binary)
     file->put ('s');
   else
@@ -289,7 +289,7 @@ void IdrupTracer::irup_report_status (StatusType status) {
 }
 
 
-void IdrupTracer::irup_conclude_sat (const vector<int> &model) {
+void IdrupTracer::idrup_conclude_sat (const vector<int> &model) {
   if (binary)
     file->put ('v');
   else
@@ -315,7 +315,7 @@ void IdrupTracer::add_derived_clause (uint64_t, bool, const vector<int> &clause,
     return;
   assert (imported_clause.empty ());
   LOG (clause, "IDRUP TRACER tracing addition of derived clause");
-  irup_add_derived_clause (clause);
+  idrup_add_derived_clause (clause);
 #ifndef QUIET
   added++;
 #endif
@@ -340,7 +340,7 @@ void IdrupTracer::delete_clause (uint64_t id, bool,
     return;
   assert (imported_clause.empty ());
   LOG ("IDRUP TRACER tracing deletion of clause[%" PRId64 "]", id);
-  irup_delete_clause (id, clause);
+  idrup_delete_clause (id, clause);
 #ifndef QUIET
   deleted++;
 #endif
@@ -360,7 +360,7 @@ void IdrupTracer::conclude_unsat (ConclusionType, const vector<uint64_t> & concl
     return;
   assert (imported_clause.empty ());
   LOG (conclusion, "IDRUP TRACER tracing conclusion of clause(s)");
-  irup_conclude_and_delete (conclusion);
+  idrup_conclude_and_delete (conclusion);
 }
 
 void IdrupTracer::add_original_clause (uint64_t, bool, const vector<int> &clause,
@@ -370,7 +370,7 @@ void IdrupTracer::add_original_clause (uint64_t, bool, const vector<int> &clause
   if (!restored)
     return;
   LOG (clause, "IDRUP TRACER tracing addition of restored clause");
-  irup_add_restored_clause (clause);
+  idrup_add_restored_clause (clause);
 }
 
 void IdrupTracer::report_status (StatusType status, uint64_t) {
@@ -379,14 +379,14 @@ void IdrupTracer::report_status (StatusType status, uint64_t) {
   if (status == OTHER)
     return;
   LOG ("IDRUP TRACER tracing report of status %d", status);
-  irup_report_status (status);
+  idrup_report_status (status);
 }
  
 void IdrupTracer::conclude_sat (const vector<int> &model) {
   if (file->closed ())
     return;
   LOG (model, "IDRUP TRACER tracing conclusion of model");
-  irup_conclude_sat (model);
+  idrup_conclude_sat (model);
 }
 
 /*------------------------------------------------------------------------*/
