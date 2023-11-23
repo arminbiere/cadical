@@ -700,7 +700,7 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
     for (auto lit : *reason) {
       const Var &v = var (lit);
       assert (val (lit) < 0);
-      if (!marked (lit)) {
+      if (!marked2 (lit)) {
         LOG ("lit %d is not marked", lit);
         subsumes = false;
       }
@@ -731,7 +731,7 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
     }
     if (reason != candidate && reason->redundant) {
       const int new_glue = recompute_glue(reason);
-      promote_clause(reason, new_glue);
+      promote_clause (reason, new_glue);
     }
     if (subsumes) {
       assert (candidate != reason);
@@ -1056,7 +1056,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     LOG (lrat_chain, "lrat");
     LOG (clause, "learning clause");
     conflict = nullptr; // TODO dup from below
-    vivify_strengthen(c);
+    vivify_strengthen (c);
     res = true;
   } else if ((conflict || subsume) && !c->redundant && !redundant) {
     LOG ("demote clause from irredundant to redundant");
