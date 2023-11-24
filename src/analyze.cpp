@@ -1042,15 +1042,16 @@ void Internal::analyze () {
       if (opts.bump)
         bump_variables ();
       if (resolved == 1 && resolvent_size < conflict_size) {
-	// in this case both clauses are part of the CNF, so one subsumes the other
+        // in this case both clauses are part of the CNF, so one subsumes
+        // the other
         otfs_subsume_clause (reason, conflict);
         LOG (reason, "changing conflict to");
         --conflict_size;
-	conflict = reason;
+        conflict = reason;
         assert (conflict_size == conflict->size);
         ++stats.otfs.subsumed;
         ++stats.subsumed;
-	++stats.conflicts;
+        ++stats.conflicts;
 
         if (open == 1) {
           int forced = 0;
@@ -1087,24 +1088,24 @@ void Internal::analyze () {
       conflict_size = antecedent_size - 1;
     }
 
-  ++resolved;
+    ++resolved;
 
-  uip = 0;
-  while (!uip) {
-    assert (i > 0);
-    const int lit = (*t)[--i];
-    if (!flags (lit).seen)
-      continue;
-    if (var (lit).level == level)
-      uip = lit;
-  }
-  if (!--open)
-    break;
-  reason = var (uip).reason;
-  assert (reason != external_reason);
-  LOG (reason, "analyzing %d reason", uip);
-  assert (resolvent_size);
-  --resolvent_size;
+    uip = 0;
+    while (!uip) {
+      assert (i > 0);
+      const int lit = (*t)[--i];
+      if (!flags (lit).seen)
+        continue;
+      if (var (lit).level == level)
+        uip = lit;
+    }
+    if (!--open)
+      break;
+    reason = var (uip).reason;
+    assert (reason != external_reason);
+    LOG (reason, "analyzing %d reason", uip);
+    assert (resolvent_size);
+    --resolvent_size;
   }
   LOG ("first UIP %d", uip);
   clause.push_back (-uip);

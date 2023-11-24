@@ -7,7 +7,8 @@ namespace CaDiCaL {
 DratTracer::DratTracer (Internal *i, File *f, bool b)
     : internal (i), file (f), binary (b)
 #ifndef QUIET
-      , added (0), deleted (0)
+      ,
+      added (0), deleted (0)
 #endif
 {
   (void) internal;

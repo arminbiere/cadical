@@ -148,7 +148,7 @@ public:
 class FileTracer : public InternalTracer {
 
 public:
-  FileTracer () { }
+  FileTracer () {}
   virtual ~FileTracer () {}
 
   virtual bool closed () = 0;

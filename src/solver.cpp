@@ -714,6 +714,7 @@ int Solver::val (int lit) {
   REQUIRE (state () == SATISFIED, "can only get value in satisfied state");
   if (!external->extended)
     external->extend ();
+  external->conclude_sat ();
   int res = external->ival (lit);
   LOG_API_CALL_RETURNS ("val", lit, res);
   assert (state () == SATISFIED);

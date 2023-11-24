@@ -1,8 +1,8 @@
 # Contributing
 
-CaDiCaL is distributed under the MIT license (see [LICENSE]() file).
+CaDiCaL is distributed under the MIT license (see [LICENSE](LICENSE) file).
 By submitting a contribution you automatically accept the conditions
-described in [LICENSE](). Additionally, we ask you to certify that
+described in [LICENSE](LICENSE). Additionally, we ask you to certify that
 you have the right to submit such contributions. To manage this
 process we use a mechanism known as Developer Certificate of Origin,
 which can be acknowledged by signing-off your commits with `git

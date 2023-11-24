@@ -246,20 +246,21 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
 /*------------------------------------------------------------------------*/
 
 void External::conclude_sat () {
-  if (!internal->proof || concluded) return;
+  if (!internal->proof || concluded)
+    return;
   concluded = true;
   if (!extended)
     extend ();
-  // TODO: give model to the proof...
   vector<int> model;
   for (int i = 1; i <= max_var; i++) {
     int lit = i;
     const int value = ival (lit);
     assert (value);
-    if (value < 0) lit = -lit;
+    if (value < 0)
+      lit = -lit;
     model.push_back (lit);
   }
   internal->proof->conclude_sat (model);
-}  
-  
+}
+
 } // namespace CaDiCaL
