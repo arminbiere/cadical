@@ -74,7 +74,7 @@ struct External {
   // external literals on the 'extension' stack after mapping the
   // internal literals given as arguments with 'externalize'.
 
-  bool extended;         // Have been extended.
+  bool extended; // Have been extended.
   bool concluded;
   vector<int> extension; // Solution reconstruction extension stack.
 
@@ -172,7 +172,7 @@ struct External {
   //
   void extend ();
   void conclude_sat ();
-  
+
   /*----------------------------------------------------------------------*/
 
   // Marking external literals.

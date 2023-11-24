@@ -59,7 +59,7 @@ inline void LratTracer::put_binary_id (int64_t id) {
 #ifndef NDEBUG
   // Unfortunately 'std::numeric_limits<int64_t>::min ()' does not seem to
   // be available for pedantic compilation.
-  assert ((uint64_t) id != ((~(uint64_t)0) >> 1));
+  assert ((uint64_t) id != ((~(uint64_t) 0) >> 1));
 #endif
   uint64_t u = (id < 0) ? -id : id;
   assert (u < (((uint64_t) 1) << 63));

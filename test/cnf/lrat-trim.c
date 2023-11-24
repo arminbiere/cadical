@@ -1,4 +1,4 @@
-static const char *version = "0.2.0-rc.4";
+static const char *version = "0.2.0";
 
 // clang-format off
 
@@ -292,9 +292,9 @@ static char *next_pretty_buffer () {
 
 static const char *pretty_bytes (size_t bytes) {
   char *buffer = next_pretty_buffer ();
-  double kb = bytes / (double)(1u << 10);
-  double mb = bytes / (double)(1u << 20);
-  double gb = bytes / (double)(1u << 30);
+  double kb = bytes / (double) (1u << 10);
+  double mb = bytes / (double) (1u << 20);
+  double gb = bytes / (double) (1u << 30);
   if (kb < 1)
     snprintf (buffer, size_pretty_buffer, "%zu bytes", bytes);
   else if (mb < 1)
@@ -322,7 +322,7 @@ static const char *pretty_bytes (size_t bytes) {
 // after a given number of allocated bytes specified through the environment
 // variable 'LRAT_TRIM_ALLOCATION_LIMIT'.
 
-#define size_allocation_lines ((size_t)(1u << 12))
+#define size_allocation_lines ((size_t) (1u << 12))
 
 static size_t allocation_lines[size_allocation_lines];
 static bool allocation_limit_set;
@@ -333,7 +333,7 @@ static bool check_allocation (size_t line, size_t bytes) {
   assert (bytes);
   if (!allocation_limit_set) {
     const char *env = getenv ("LRAT_TRIM_ALLOCATION_LIMIT");
-    allocation_limit = env ? atol (env) : ~(size_t)0;
+    allocation_limit = env ? atol (env) : ~(size_t) 0;
     printf ("c COVERED allocated bytes limit %zu\n", allocation_limit);
     allocation_limit_set = true;
   }
@@ -411,7 +411,7 @@ static void *coverage_realloc (size_t line, void *p, size_t bytes) {
 
 #define ADJUST(MAP, N) \
   do { \
-    size_t NEEDED_SIZE = (size_t)(N) + 1; \
+    size_t NEEDED_SIZE = (size_t) (N) + 1; \
     size_t OLD_SIZE = SIZE (MAP); \
     if (OLD_SIZE >= NEEDED_SIZE) \
       break; \
@@ -428,7 +428,7 @@ static void *coverage_realloc (size_t line, void *p, size_t bytes) {
         die ("out-of-memory resizing '" #MAP "' map"); \
       size_t OLD_BYTES = OLD_SIZE * sizeof *(MAP).begin; \
       size_t DELTA_BYTES = NEW_BYTES - OLD_BYTES; \
-      memset ((char *)NEW_BEGIN + OLD_BYTES, 0, DELTA_BYTES); \
+      memset ((char *) NEW_BEGIN + OLD_BYTES, 0, DELTA_BYTES); \
     } else { \
       assert (!OLD_BEGIN); \
       NEW_BEGIN = calloc (NEW_SIZE, sizeof *(MAP).begin); \
@@ -559,6 +559,7 @@ static inline int read_ascii (void) {
   if (res == EOF)
     input.eof = true;
   if (res == '\r') {
+    count_ascii (res);
     res = read_buffer ();
     if (res == EOF)
       input.eof = true;
@@ -567,6 +568,35 @@ static inline int read_ascii (void) {
   }
   count_ascii (res);
   return res;
+}
+
+// To skip 'c', 's' and 'v' lines in case the proof is interleaved with the
+// standard output of a SAT solver use this function.  We have a similar
+// function below in 'open_input_files' but there we actually really skip
+// the start of the input file and only save the first character of a
+// non-comment character.  Here we have to be careful with statistics too
+// and also can not use 'read_ascii' or 'read_binary' as this function is
+// shared between ASCII and binary mode.
+
+static inline void read_until_new_line (void) {
+  assert (input.file);
+  assert (input.saved == EOF);
+  int ch;
+  while ((ch = read_buffer ()) != '\n') {
+    if (ch == EOF)
+      prr ("unexpected end-of-file before new-line");
+    input.bytes++;
+    if (ch == '\r') {
+      ch = getc (input.file);
+      if (ch != EOF)
+        input.bytes++;
+      if (ch == '\n')
+        break;
+      prr ("carriage-return without following new-line");
+    }
+  }
+  if (!input.binary)
+    input.lines++;
 }
 
 static inline void count_binary (int ch) {
@@ -655,7 +685,7 @@ static inline void write_unsigned (unsigned u) {
 
 static inline void write_signed (int i) {
   assert (i != INT_MIN);
-  write_unsigned ((i < 0) + 2 * (unsigned)abs (i));
+  write_unsigned ((i < 0) + 2 * (unsigned) abs (i));
 }
 
 static inline void write_ascii (unsigned char)
@@ -721,7 +751,7 @@ static inline void write_size_t (size_t i) {
 static double process_time () {
   struct rusage u;
   double res;
-  (void)getrusage (RUSAGE_SELF, &u);
+  (void) getrusage (RUSAGE_SELF, &u);
   res = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec;
   res += u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec;
   return res;
@@ -729,12 +759,12 @@ static double process_time () {
 
 static size_t maximum_resident_set_size (void) {
   struct rusage u;
-  (void)getrusage (RUSAGE_SELF, &u);
-  return ((size_t)u.ru_maxrss) << 10;
+  (void) getrusage (RUSAGE_SELF, &u);
+  return ((size_t) u.ru_maxrss) << 10;
 }
 
 static double mega_bytes (void) {
-  return maximum_resident_set_size () / (double)(1 << 20);
+  return maximum_resident_set_size () / (double) (1 << 20);
 }
 
 static double average (double a, double b) { return b ? a / b : 0; }
@@ -903,7 +933,7 @@ static void check_clause_strictly_by_resolution (int id, int *literals,
         continue;
       }
       if (lit < 0)
-	mark = -mark;
+        mark = -mark;
       if (mark > 0)
         continue;
       assert (mark < 0);
@@ -933,7 +963,7 @@ static void check_clause_strictly_by_resolution (int id, int *literals,
   for (int *l = literals, lit; (lit = *l); l++) {
     assert (lit != INT_MIN);
     int idx = abs (lit);
-    signed char * m = &ACCESS (variables.marks, idx);
+    signed char *m = &ACCESS (variables.marks, idx);
     signed char mark = *m;
     if (!mark)
       crr (id, "literal '%d' not in resolvent", lit);
@@ -1315,21 +1345,24 @@ static void parse_proof () {
   msg ("reading proof from '%s'", input.path);
 
   int ch = read_first_char ();
+  while (ch == 'c' || ch == 's' || ch == 'v') {
+    read_until_new_line ();
+    ch = read_ascii ();
+  }
   if (ch == 'a' || ch == 'd') {
     vrb ("first character '%c' indicates binary proof format", ch);
     input.binary = true;
   } else if (ISDIGIT (ch)) {
     vrb ("first character '%c' indicates ASCII proof format", ch);
     assert (!input.binary);
-  } else if (ch == 'c' || ch == 'p')
-    prr ("unexpected '%c' as first character: "
-         "did you use a CNF instead of a proof file?",
-         ch);
+  } else if (ch == 'p')
+    prr ("unexpected 'p': "
+         "did you use a CNF instead of a proof file?");
   else if (ch != EOF) {
     if (isprint (ch))
       prr ("unexpected first character '%c'", ch);
     else
-      prr ("unexpected first byte '0x%02x'", (unsigned)ch);
+      prr ("unexpected first byte '0x%02x'", (unsigned) ch);
   }
 
   // To track in the binary proof format we use byte offsets instead of line
@@ -1342,6 +1375,12 @@ static void parse_proof () {
   int last_id = 0;
 
   while (ch != EOF) {
+
+    if (ch == 'c' || ch == 's' || ch == 'v') {
+      read_until_new_line ();
+      goto READ_NEXT_CH;
+      continue;
+    }
 
     const size_t info = (binary ? input.bytes : input.lines) + 1;
     int id, type = 0;
@@ -1371,10 +1410,10 @@ static void parse_proof () {
           if (ch == EOF)
             prr ("end-of-file parsing clause identifier");
         }
-	if (uid & 1)
-	  prr ("negative identifier in clause addition");
-	uid >>= 1;
-        if (uid > (unsigned)INT_MAX)
+        if (uid & 1)
+          prr ("negative identifier in clause addition");
+        uid >>= 1;
+        if (uid > (unsigned) INT_MAX)
           prr ("clause identifier %u too large", uid);
         id = uid;
         dbg ("parsed clause identifier %d at byte %zu", id, info);
@@ -1662,7 +1701,7 @@ static void parse_proof () {
               prr ("end-of-file parsing antecedent in clause %d", id);
           }
           int other = (uother >> 1);
-	  int signed_other = (uother & 1) ? -other : other;
+          int signed_other = (uother & 1) ? -other : other;
           if (other) {
             if (other >= id)
               prr ("antecedent '%d' in clause %d exceeds clause",
@@ -1683,7 +1722,7 @@ static void parse_proof () {
                      "(run with '--track' for more information)",
                      other, id);
             }
-	  }
+          }
           PUSH (parsed_antecedents, signed_other);
         }
       } else { // !binary
@@ -1786,6 +1825,7 @@ static void parse_proof () {
       ACCESS (clauses.status, id) = 1;
     }
     last_id = id;
+  READ_NEXT_CH:
     if (binary) {
       ch = read_binary ();
       input.lines++;
@@ -2323,14 +2363,30 @@ static void open_input_files () {
     input = *read_file (file);
     int ch;
     if (input.file) {
-      ch = getc (input.file);
+      while ((ch = getc (input.file)) == 'c') {
+        input.bytes++;
+        while ((ch = getc (input.file)) != '\n') {
+          if (ch == EOF)
+            prr ("unexpected end-of-file in comment before new-line");
+          input.bytes++;
+          if (ch == '\r') {
+            ch = getc (input.file);
+            if (ch != EOF)
+              input.bytes++;
+            if (ch == '\n')
+              break;
+            prr ("carriage-return without following new-line");
+          }
+        }
+        input.lines++;
+      }
       input.saved = ch;
     } else {
       assert (input.saved == EOF);
       ch = EOF;
     }
     *file = input;
-    if (ch == 'c' || ch == 'p') {
+    if (ch == 'p') {
       cnf.input = file;
       proof.input = read_file (&files[1]);
       if (force)
