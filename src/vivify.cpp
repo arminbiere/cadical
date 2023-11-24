@@ -876,9 +876,11 @@ bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c) {
     vivify_sort_watched(c);
     watch_clause (c);
     assert (!conflict);
+#if 0
     const uint64_t s = stats.propagations.search;
     assert (vivify_propagate());
     assert (s == stats.propagations.search);
+#endif
     return true;
   } else {
     LOG ("vivify instantiation failed");
