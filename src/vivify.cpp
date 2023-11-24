@@ -573,6 +573,37 @@ void Internal::vivify_strengthen (Clause *c) {
 }
 
 
+void Internal::vivify_sort_watched (Clause *c) {
+
+    sort (c->begin (), c->end (), vivify_better_watch (this));
+
+    int new_level = level;
+
+    const int lit0 = c->literals[0];
+    signed char val0 = val (lit0);
+    if (val0 < 0) {
+      const int level0 = var (lit0).level;
+      LOG ("1st watch %d negative at level %d", lit0, level0);
+      new_level = level0 - 1;
+    }
+
+    const int lit1 = c->literals[1];
+    const signed char val1 = val (lit1);
+    if (val1 < 0 && !(val0 > 0 && var (lit0).level <= var (lit1).level)) {
+      const int level1 = var (lit1).level;
+      LOG ("2nd watch %d negative at level %d", lit1, level1);
+      new_level = level1 - 1;
+    }
+
+    assert (new_level >= 0);
+    if (new_level < level)
+      backtrack (new_level);
+
+    assert (val (lit0) >= 0);
+    assert (val (lit1) >= 0 || (val (lit0) > 0 && val (lit1) < 0 &&
+                                var (lit0).level <= var (lit1).level));
+
+}
 // Conflict analysis from 'start' which learns a decision only clause.
 //
 // We cannot use the stack-based implementation of Kissat, because we need
@@ -814,6 +845,47 @@ inline void Internal::vivify_increment_stats (const Vivifier &vivifier) {
     break;
   }
 }
+/*------------------------------------------------------------------------*/
+
+bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c) {
+  LOG ("now trying instantiation");
+  conflict = nullptr;
+  const int lit = sorted.back ();
+  LOG ("vivify instantiation");
+  backtrack (level - 1);
+  assert (val (lit) == 0);
+  stats.vivifydecs++;
+  vivify_assume (lit);
+  bool ok = vivify_propagate ();
+  if (!ok) {
+    LOG (c, "instantiate success with literal %d in", lit);
+    stats.vivifyinst++;
+    // strengthen clause
+    if (lrat) {
+      clear_analyzed_literals ();
+      assert (lrat_chain.empty ());
+      vivify_build_lrat (0, c);
+      vivify_build_lrat (0, conflict);
+      clear_analyzed_literals ();
+    }
+    int remove = lit;
+    conflict = 0;
+    backtrack (level - 1);
+    unwatch_clause (c);
+    strengthen_clause (c, remove);
+    vivify_sort_watched(c);
+    watch_clause (c);
+    assert (!conflict);
+    const uint64_t s = stats.propagations.search;
+    assert (vivify_propagate());
+    assert (s == stats.propagations.search);
+    return true;
+  } else {
+    LOG ("vivify instantiation failed");
+    return false;
+  }
+}
+
 /*------------------------------------------------------------------------*/
 
 // Main function: try to vivify this candidate clause in the given mode.
@@ -1070,38 +1142,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     LOG (c, "vivification failed on");
     lrat_chain.clear();
     if (!subsume && opts.vivifyinst) {
-      LOG ("now trying instantiation");
-      conflict = nullptr;
-      const int lit = sorted.back ();
-      LOG ("vivify instantiation");
-      backtrack (level - 1);
-      assert (val (lit) == 0);
-      stats.vivifydecs++;
-      vivify_assume (lit);
-      bool ok = vivify_propagate ();
-      if (!ok) {
-        LOG (c, "instantiate success with literal %d in", lit);
-        stats.vivifyinst++;
-        // strengthen clause
-        if (lrat) {
-	  clear_analyzed_literals();
-          assert (lrat_chain.empty ());
-          vivify_build_lrat (0, c);
-          vivify_build_lrat (0, conflict);
-          clear_analyzed_literals ();
-        }
-        remove = lit;
-        conflict = 0;
-        backtrack (level - 1);
-        unwatch_clause (c);
-        strengthen_clause (c, remove);
-        watch_clause (c);
-        assert (!conflict);
-        res = true;
-      } else {
-        LOG ("vivify instantiation failed");
-        res = false;
-      }
+      res = vivify_instantiate(sorted, c);
     } else {
       LOG ("cannot apply instantiation");
       if (conflict) {
