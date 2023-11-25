@@ -1111,7 +1111,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     reverse (lrat_chain.begin (), lrat_chain.end ());
   }
 
-
   if (subsuming) {
     assert (c != subsuming);
     LOG (c, "deleting subsumed clause");
@@ -1131,7 +1130,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     LOG (clause, "learning clause");
     conflict = nullptr; // TODO dup from below
     vivify_strengthen (c);
-    res = false;
+    res = true;
   } else if ((conflict || subsume) && !c->redundant && !redundant) {
     LOG ("demote clause from irredundant to redundant");
     res = false;
