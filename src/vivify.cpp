@@ -203,8 +203,6 @@ bool Internal::vivify_propagate () {
           j--;
           continue;
         }
-        if (w.clause == ignore)
-          continue;
         literal_iterator lits = w.clause->begin ();
         const int other = lits[0] ^ lits[1] ^ lit;
         const signed char u = val (other);
@@ -237,11 +235,19 @@ bool Internal::vivify_propagate () {
             watch_literal (r, lit, w.clause);
             j--;
           } else if (!u) {
+	    if (w.clause == ignore) {
+	      LOG ("ignoring propagation due to clause to vivify");
+	      continue;
+	    }
             assert (v < 0);
             vivify_chain_for_units (other, w.clause);
             vivify_assign (other, w.clause);
             lrat_chain.clear ();
           } else {
+	    if (w.clause == ignore) {
+	      LOG ("ignoring conflict due to clause to vivify");
+	      continue;
+	    }
             assert (u < 0);
             assert (v < 0);
             conflict = w.clause;
@@ -877,7 +883,7 @@ bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c) {
     watch_clause (c);
     assert (!conflict);
 #if 1
-    const uint64_t s = stats.propagations.vivify;
+    const int64_t s = stats.propagations.vivify;
     assert (vivify_propagate());
     assert (s == stats.propagations.vivify);
 #endif
@@ -1000,7 +1006,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
           LOG ("reusing decision %d at decision level %d", decision, l);
           stats.vivifyreused++;
 #if 1
-          const uint64_t s = stats.propagations.vivify;
+          const int64_t s = stats.propagations.vivify;
           assert (vivify_propagate ());
           assert (s == stats.propagations.vivify);
 #endif
