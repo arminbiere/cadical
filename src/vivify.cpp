@@ -877,9 +877,9 @@ bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c) {
     watch_clause (c);
     assert (!conflict);
 #if 1
-    const uint64_t s = stats.propagations.search;
+    const uint64_t s = stats.propagations.vivify;
     assert (vivify_propagate());
-    assert (s == stats.propagations.search);
+    assert (s == stats.propagations.vivify);
 #endif
     return true;
   } else {
@@ -1000,9 +1000,9 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
           LOG ("reusing decision %d at decision level %d", decision, l);
           stats.vivifyreused++;
 #if 1
-          const uint64_t s = stats.propagations.search;
+          const uint64_t s = stats.propagations.vivify;
           assert (vivify_propagate ());
-          assert (s == stats.propagations.search);
+          assert (s == stats.propagations.vivify);
 #endif
           if (++l > level)
             break;
