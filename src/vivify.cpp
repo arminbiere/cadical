@@ -1117,7 +1117,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     LOG (c, "deleting subsumed clause");
     vivify_subsume_clause (subsuming, c);
     backtrack (level - 1);
-    res = true;
+    res = false;
     stats.vivifysubs++;
     // TODO: reompute glue
     // TODO statistics
@@ -1131,10 +1131,10 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     LOG (clause, "learning clause");
     conflict = nullptr; // TODO dup from below
     vivify_strengthen (c);
-    res = true;
+    res = false;
   } else if ((conflict || subsume) && !c->redundant && !redundant) {
     LOG ("demote clause from irredundant to redundant");
-    res = true;
+    res = false;
     demote_clause (c);
     const int new_glue = recompute_glue(c);
     promote_clause(c, new_glue);
