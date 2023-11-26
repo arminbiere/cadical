@@ -70,7 +70,23 @@ bool Internal::vivifying () {
 inline void Internal::vivify_subsume_clause (Clause *subsuming, Clause *subsumed) {
   stats.subsumed++;
   stats.vivifysubs++;
-  assert (subsuming->size <= subsumed->size);
+#ifndef NDEBUG
+  // size after removeing units;
+  int real_size_subsuming = 0, real_size_subsumed = 0;
+  for (auto lit : *subsuming) {
+    if (!val (lit) || var (lit).level)
+      ++real_size_subsuming;
+    else
+      assert (val (lit) < 0);
+  }
+  for (auto lit : *subsumed) {
+    if (!val (lit) || var (lit).level)
+      ++real_size_subsumed;
+    else
+      assert (val (lit) < 0);
+  }
+  assert (real_size_subsuming <= real_size_subsumed);
+#endif
   LOG (subsumed, "subsumed");
   if (subsumed->redundant)
     stats.subred++;
