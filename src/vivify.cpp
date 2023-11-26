@@ -624,11 +624,52 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes, Clause **subsuming
   assert (reason);
   assert (!trail.empty ());
   int uip = trail.back();
+  bool mark_implied = (implied);
 
   while (i >= 0) {
     if (reason) {
-      vivify_resolve_clause (start, reason, subsumes, redundant, uip,
-                             implied);
+      redundant = (redundant || reason->redundant);
+      subsumes = (start != reason && reason->size <= start->size);
+      LOG (reason, "resolving on %d with", uip);
+      for (auto other : *reason) {
+        const Var v = var (other);
+        Flags &f = flags (other);
+        if (!marked2 (other)) {
+          LOG ("not subsuming due to lit %d", other);
+          subsumes = false;
+        }
+	if (!val (other)) {
+	  LOG ("skipping unset lit %d", other);
+	  continue;
+	}
+	if (other == uip){
+	  continue;
+	}
+        if (!v.level) {
+          if (f.seen || !lrat || reason == start)
+            continue;
+	  LOG ("unit reason for %d", other);
+          const unsigned uidx = vlit (-other);
+          uint64_t id = unit_clauses[uidx];
+          assert (id); // because var is updated lazily
+          LOG ("adding unit reason %zd for %d", id, other);
+          unit_chain.push_back (id);
+          f.seen = true;
+          analyzed.push_back (other);
+          continue;
+        }
+	if (mark_implied && other != implied) {
+	  LOG ("skipping non-implied literal %d on current level", other);
+	  continue;
+        }
+
+        assert (val (other));
+        if (f.seen)
+          continue;
+        LOG ("pushing lit %d", other);
+        analyzed.push_back (other);
+        f.seen = true;
+      }
       if (start->redundant) {
         const int new_glue = recompute_glue (start);
         promote_clause (start, new_glue);
@@ -644,7 +685,7 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes, Clause **subsuming
       LOG ("vivify analyzed decision %d", uip);
       clause.push_back(-uip);
     }
-    implied = 0;
+    mark_implied = false;
 
     uip = 0;
     while (!uip && i > 0) {
@@ -665,57 +706,6 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes, Clause **subsuming
   }
 }
 
-inline void Internal::vivify_resolve_clause (Clause *candidate, Clause *reason, bool &subsumes,
-  					     bool &redundant, int uip, int implied) {
-  subsumes = (candidate != reason &&
-              reason->size <=
-                  candidate->size); // TODO why is the second part required
-  redundant = (redundant || reason->redundant);
-  LOG (reason, "resolving with");
-  for (auto lit : *reason) {
-    const Var &v = var (lit);
-    Flags &f = flags (lit);
-    if (!marked2 (lit) && v.level) {
-      LOG ("lit %d is not marked, not subsuming", lit);
-      subsumes = false;
-    }
-    if (!val (lit)) {
-      LOG ("skipping unset lit %d", lit);
-      continue;
-    }
-    if (lit == uip) {
-      continue;
-    }
-    if (!v.level) {
-      if (!lrat)
-        continue;
-      LOG ("adding unit %d", lit);
-      if (!f.seen) {
-        const unsigned uidx =
-            vlit (-lit);                  // nevertheless we can use var (l)
-        uint64_t id = unit_clauses[uidx]; // as if l was still assigned
-        assert (id);                      // because var is updated lazily
-        LOG ("adding unit reason %zd for %d", id, lit);
-        unit_chain.push_back (id);
-	f.seen = true;
-	analyzed.push_back (lit);
-      }
-      continue;
-    }
-    if (implied && lit != implied) {
-      LOG ("skipping non-implied literal %d on current level", lit);
-      continue;
-    }
-    assert (val (lit));
-    if (f.seen)
-      continue;
-    LOG ("analyzing lit %d", lit);
-    assert (v.level);
-    LOG ("pushing lit %d", lit);
-    analyzed.push_back (lit);
-    f.seen = true;
-  }
-}
 
 bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
                               int implied, Clause **subsuming, bool &redundant) {
@@ -739,9 +729,43 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
     assert (reason);
     assert (!reason->garbage);
     mark2 (candidate);
+    subsumes = (candidate != reason && reason->size <= candidate->size); // TODO why is the second part required
+    redundant = reason->redundant;
+    LOG (reason, "resolving with");
     if (lrat)
       lrat_chain.push_back (reason->id);
-    vivify_resolve_clause (candidate, reason, subsumes, redundant, 0);
+    for (auto lit : *reason) {
+      const Var &v = var (lit);
+      assert (val (lit) < 0);
+      if (!marked2 (lit)) {
+        LOG ("lit %d is not marked", lit);
+        subsumes = false;
+      }
+      if (!v.level) {
+	if (!lrat)
+	  continue;
+	LOG ("adding unit %d", lit);
+        Flags &gf = flags (lit);
+        if (!gf.seen) {
+          const unsigned uidx =
+              vlit (-lit); // nevertheless we can use var (l)
+          uint64_t id = unit_clauses[uidx]; // as if l was still assigned
+          assert (id);                      // because var is updated lazily
+          LOG ("adding unit reason %zd for %d", id, lit);
+          unit_chain.push_back (id);
+        }
+	gf.seen = true;
+	analyzed.push_back (lit);
+        continue;
+      }
+      LOG ("analyzing lit %d", lit);
+      assert (v.level);
+      Flags &gf = flags (lit);
+      LOG ("pushing lit %d", lit);
+      analyzed.push_back (lit);
+      gf.seen = true;
+
+    }
     if (reason != candidate && reason->redundant) {
       const int new_glue = recompute_glue(reason);
       promote_clause (reason, new_glue);
