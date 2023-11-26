@@ -1117,6 +1117,20 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     }
   }
 
+  if (subsume) {
+    int better_subsume_trail = var (subsume).trail;
+    for (auto lit : sorted) {
+      if (val (lit) <= 0)
+	continue;
+      const Var v = var (lit);
+      if (v.trail < better_subsume_trail) {
+	LOG ("improving subsume from %d at %d to %d at %d", subsume, better_subsume_trail, lit, v.trail);
+	better_subsume_trail = v.trail;
+	subsume = lit;
+      }
+    }
+  }
+
   Clause *subsuming = nullptr;
   bool redundant = false;
   vivify_deduce (c, conflict, subsume, &subsuming, redundant);
