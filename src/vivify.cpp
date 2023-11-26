@@ -634,7 +634,7 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes, Clause **subsuming
       for (auto other : *reason) {
         const Var v = var (other);
         Flags &f = flags (other);
-        if (!marked2 (other)) {
+        if (!marked2 (other) && v.level) {
           LOG ("not subsuming due to lit %d", other);
           subsumes = false;
         }
@@ -736,17 +736,13 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
       lrat_chain.push_back (reason->id);
     for (auto lit : *reason) {
       const Var &v = var (lit);
+      Flags &f = flags (lit);
       assert (val (lit) < 0);
-      if (!marked2 (lit)) {
-        LOG ("lit %d is not marked", lit);
-        subsumes = false;
-      }
       if (!v.level) {
 	if (!lrat)
 	  continue;
 	LOG ("adding unit %d", lit);
-        Flags &gf = flags (lit);
-        if (!gf.seen) {
+        if (!f.seen) {
           const unsigned uidx =
               vlit (-lit); // nevertheless we can use var (l)
           uint64_t id = unit_clauses[uidx]; // as if l was still assigned
@@ -754,17 +750,19 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
           LOG ("adding unit reason %zd for %d", id, lit);
           unit_chain.push_back (id);
         }
-	gf.seen = true;
+	f.seen = true;
 	analyzed.push_back (lit);
         continue;
       }
-      LOG ("analyzing lit %d", lit);
       assert (v.level);
-      Flags &gf = flags (lit);
+      if (!marked2 (lit)) {
+        LOG ("lit %d is not marked", lit);
+        subsumes = false;
+      }
+      LOG ("analyzing lit %d", lit);
       LOG ("pushing lit %d", lit);
       analyzed.push_back (lit);
-      gf.seen = true;
-
+      f.seen = true;
     }
     if (reason != candidate && reason->redundant) {
       const int new_glue = recompute_glue(reason);
@@ -1037,7 +1035,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   ignore = c;
 
   int subsume = 0; // determined to be redundant / subsumed
-  int remove = 0;  // at least literal 'remove' can be removed
 
   // If the candidate is redundant, i.e., we are in redundant mode, the
   // clause is subsumed (in one of the two cases below where 'subsume' is
@@ -1083,7 +1080,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
       if (tmp < 0) {
         assert (v.level);
         LOG ("literal %d is already false and can be removed", lit);
-        remove = lit;
         continue;
       }
 
