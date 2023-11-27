@@ -38,7 +38,7 @@ void Internal::assume_analyze_literal (int lit) {
     assert (v.reason || !v.level);
     if (!v.reason) {
       if (opts.reimply) {
-        trail.push_back (lit);
+        trail.push_back (-lit);
         v.trail = trail.size ();
       }
     }
