@@ -322,12 +322,18 @@ void Internal::failing () {
       const int lit = clause[0];
       Var &v = var (lit);
       assert (v.reason);
-      if (v.reason == external_reason) {
+      if (v.reason == external_reason) { // does this even happen?
         v.reason = wrapped_learn_external_reason_clause (lit);
-        assert (v.reason);
       }
       assert (v.reason != external_reason);
-      assume_analyze_reason (lit, v.reason);
+      if (v.reason)
+        assume_analyze_reason (lit, v.reason);
+      else {
+        const unsigned uidx = vlit (lit);
+        uint64_t id = unit_clauses[uidx];
+        assert (id);
+        lrat_chain.push_back (id);
+      }
       for (auto &lit : clause) {
         Flags &f = flags (lit);
         const unsigned bit = bign (-lit);
