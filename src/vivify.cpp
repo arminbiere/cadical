@@ -1125,8 +1125,10 @@ void Internal::vivify_round (bool redundant_mode,
     const int shift = 12 - c->size;
     const int64_t score = shift < 1 ? 1 : (1l << shift); // @4
 
-    for (const auto lit : *c)
-      noccs (lit) += score;
+    for (const auto lit : *c) {
+      if (!fixed (lit))
+	noccs (lit) += score;
+    }
   }
 
   // Refill the schedule every time.  Unchecked clauses are 'saved' by
