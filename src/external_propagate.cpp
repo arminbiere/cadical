@@ -583,6 +583,8 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 //
 Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
   Clause *res;
+  std::vector<uint64_t> chain_tmp{std::move (lrat_chain)};
+  lrat_chain.clear ();
   if (clause.empty ()) {
     res = learn_external_reason_clause (ilit, 0, true);
   } else {
@@ -597,6 +599,9 @@ Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
     clause = std::move (clause_tmp);
     clause_tmp.clear ();
   }
+  assert (lrat_chain.empty ());
+  lrat_chain = std::move (chain_tmp);
+  chain_tmp.clear ();
   return res;
 }
 

@@ -35,6 +35,7 @@ void Internal::assume_analyze_literal (int lit) {
   assert (val (lit) < 0);
   if (v.reason == external_reason) {
     v.reason = wrapped_learn_external_reason_clause (-lit);
+    assert (v.reason || !v.level);
   }
   assert (v.reason != external_reason);
   if (!v.level) {
