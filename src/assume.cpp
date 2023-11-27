@@ -36,6 +36,12 @@ void Internal::assume_analyze_literal (int lit) {
   if (v.reason == external_reason) {
     v.reason = wrapped_learn_external_reason_clause (-lit);
     assert (v.reason || !v.level);
+    if (!v.reason) {
+      if (opts.reimply) {
+        trail.push_back (lit);
+        v.trail = trail.size ();
+      }
+    }
   }
   assert (v.reason != external_reason);
   if (!v.level) {
@@ -281,6 +287,10 @@ void Internal::failing () {
           v.reason = wrapped_learn_external_reason_clause (lit);
           if (!v.reason) {
             v.level = 0;
+            if (opts.reimply) {
+              trail.push_back (lit);
+              v.trail = trail.size ();
+            }
             continue;
           }
         }
@@ -314,6 +324,7 @@ void Internal::failing () {
       assert (v.reason);
       if (v.reason == external_reason) {
         v.reason = wrapped_learn_external_reason_clause (lit);
+        assert (v.reason);
       }
       assert (v.reason != external_reason);
       assume_analyze_reason (lit, v.reason);

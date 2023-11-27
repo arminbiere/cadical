@@ -390,6 +390,13 @@ void Internal::clear_analyzed_literals () {
     assert (!f.removable);
   }
   analyzed.clear ();
+#ifndef NDEBUG
+  if (unit_analyzed.size ()) return;
+  for (auto idx : vars) {
+    Flags &f = flags (idx);
+    assert (!f.seen);
+  }
+#endif
 }
 
 void Internal::clear_analyzed_levels () {

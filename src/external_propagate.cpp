@@ -875,21 +875,34 @@ void Internal::connect_propagator () {
   if (level)
     backtrack ();
   notify_trail.clear ();
+#ifndef NDEBUG
+  for (auto idx : vars) {
+    Flags &f = flags (idx);
+    assert (!f.poison);
+  }
+#endif
   for (auto lit : trail) {
-    flags (lit).seen = true;
+    assert (!flags (lit).poison);
+    flags (lit).poison = true;
     notify_trail.push_back (lit);
   }
   for (auto &t : trails) {
     for (auto lit : t) {
-      if (flags (lit).seen)
+      if (flags (lit).poison)
         continue;
-      flags (lit).seen = true;
+      flags (lit).poison = true;
       notify_trail.push_back (lit);
     }
   }
   for (auto lit : notify_trail) {
-    flags (lit).seen = false;
+    flags (lit).poison = false;
   }
+#ifndef NDEBUG
+  for (auto idx : vars) {
+    Flags &f = flags (idx);
+    assert (!f.poison);
+  }
+#endif
 }
 
 /*----------------------------------------------------------------------------*/
