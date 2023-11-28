@@ -81,7 +81,7 @@ int Internal::second_literal_in_binary_clause_lrat (Clause *c, int first) {
 }
 
 // I needed to find the second clause for hyper unary resultion to build
-// lrat this is not efficient but I could not find a better way then just
+// LRAT this is not efficient but I could not find a better way then just
 // finding the corresponding clause in all possible clauses
 //
 Clause *Internal::find_binary_clause (int first, int second) {

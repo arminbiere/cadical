@@ -1,5 +1,5 @@
-#ifndef _iruptracer_h_INCLUDED
-#define _iruptracer_h_INCLUDED
+#ifndef _idruptracer_h_INCLUDED
+#define _idruptracer_h_INCLUDED
 
 class FileTracer;
 
@@ -52,12 +52,12 @@ class IdrupTracer : public FileTracer {
   void put_binary_lit (int external_lit);
   void put_binary_id (uint64_t id);
 
-  void irup_add_derived_clause (const vector<int> &clause);
-  void irup_delete_clause (uint64_t id, const vector<int> &clause);
-  void irup_add_restored_clause (const vector<int> &clause);
-  void irup_conclude_and_delete (const vector<uint64_t> &conclusion);
-  void irup_report_status (StatusType status);
-  void irup_conclude_sat (const vector<int> &model);
+  void idrup_add_derived_clause (const vector<int> &clause);
+  void idrup_delete_clause (uint64_t id, const vector<int> &clause);
+  void idrup_add_restored_clause (const vector<int> &clause);
+  void idrup_conclude_and_delete (const vector<uint64_t> &conclusion);
+  void idrup_report_status (StatusType status);
+  void idrup_conclude_sat (const vector<int> &model);
 
 public:
   IdrupTracer (Internal *, File *file, bool);

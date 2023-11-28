@@ -21,13 +21,13 @@ class Proof {
   Internal *internal;
 
   vector<int> clause;           // of external literals
-  vector<uint64_t> proof_chain; // lrat style proof chain of clause
+  vector<uint64_t> proof_chain; // LRAT style proof chain of clause
   uint64_t clause_id;           // id of added clause
   bool redundant;
 
   // the 'tracers'
   vector<Tracer *> tracers;          // tracers (ie checker)
-  vector<FileTracer *> file_tracers; // file tracers (ie lrat tracer)
+  vector<FileTracer *> file_tracers; // file tracers (ie LRAT tracer)
   LratBuilder *lratbuilder;          // special tracer
 
   void add_literal (int internal_lit); // add to 'clause'

@@ -198,7 +198,7 @@ void Internal::transred () {
       work.pop_back ();
       if (lrat && failed && !work.empty ()) {
         assert (!parents.empty () && !mini_chain.empty ());
-        LOG ("transred lrat current lit %d next pos %d next neg %d", lit,
+        LOG ("transred LRAT current lit %d next pos %d next neg %d", lit,
              next_pos, next_neg);
         if (lit == failed_lit || lit == next_pos) {
           lrat_chain.push_back (mini_chain.back ());

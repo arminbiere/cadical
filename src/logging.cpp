@@ -133,7 +133,7 @@ void Logger::log (Internal *internal,
   fflush (stdout);
 }
 
-// for lrat proof chains
+// for LRAT proof chains
 
 void Logger::log (Internal *internal, const vector<uint64_t> &c,
                   const char *fmt, ...) {

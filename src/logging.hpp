@@ -48,7 +48,7 @@ struct Logger {
                    const vector<int>::const_iterator &end, const char *fmt,
                    ...) CADICAL_ATTRIBUTE_FORMAT (4, 5);
 
-  // used for logging lrat proof chains
+  // used for logging LRAT proof chains
   //
   static void log (Internal *, const vector<uint64_t> &, const char *fmt,
                    ...) CADICAL_ATTRIBUTE_FORMAT (3, 4);

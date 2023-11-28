@@ -177,20 +177,20 @@ struct Internal {
   size_t vsize;               // actually allocated variable data size
   int max_var;                // internal maximum variable index
   uint64_t clause_id;         // last used id for clauses
-  uint64_t original_id;       // ids for original clauses to produce lrat
+  uint64_t original_id;       // ids for original clauses to produce LRAT
   uint64_t reserved_ids;      // number of reserved ids for original clauses
   uint64_t conflict_id;       // store conflict id for finalize (frat)
   bool concluded;             // keeps track of conclude
   vector<uint64_t> conclusion;   // store ids of conclusion clauses
-  vector<uint64_t> unit_clauses; // keep track of unit_clauses (lrat/frat)
-  vector<uint64_t> lrat_chain;   // create lrat in solver: option lratdirect
-  vector<uint64_t> mini_chain;   // used to create lrat in minimize
-  vector<uint64_t> minimize_chain; // used to create lrat in minimize
+  vector<uint64_t> unit_clauses; // keep track of unit_clauses (LRAT/FRAT)
+  vector<uint64_t> lrat_chain;   // create LRAT in solver: option lratdirect
+  vector<uint64_t> mini_chain;   // used to create LRAT in minimize
+  vector<uint64_t> minimize_chain; // used to create LRAT in minimize
   vector<uint64_t> unit_chain;     // used to avoid duplicate units
-  vector<Clause *> inst_chain;     // for lrat in instantiate
+  vector<Clause *> inst_chain;     // for LRAT in instantiate
   vector<vector<vector<uint64_t>>>
       probehbr_chains;          // only used if opts.probehbr=false
-  bool lrat;                    // generate lrat internally
+  bool lrat;                    // generate LRAT internally
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
   signed char *vals;            // assignment [-max_var,max_var]
@@ -947,13 +947,13 @@ struct Internal {
     return (f.skip & bit) != 0;
   }
 
-  // During decompose ignore literals where we already built lrat chains
+  // During decompose ignore literals where we already built LRAT chains
   //
   void mark_decomposed (int lit) {
     Flags &f = flags (lit);
     const unsigned bit = bign (lit);
     assert ((f.decompose & bit) == 0);
-    LOG ("marking lrat chain of %d to be skipped", lit);
+    LOG ("marking LRAT chain of %d to be skipped", lit);
     decomposed.push_back (lit);
     f.decompose |= bit;
   }

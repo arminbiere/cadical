@@ -112,7 +112,7 @@ void Internal::set_probehbr_lrat (int lit, int uip) {
 void Internal::probe_dominator_lrat (int dom, Clause *reason) {
   if (!lrat || !dom)
     return;
-  LOG (reason, "probe dominator lrat for %d from", dom);
+  LOG (reason, "probe dominator LRAT for %d from", dom);
   for (const auto lit : *reason) {
     if (val (lit) >= 0)
       continue;
@@ -271,7 +271,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
       mark_garbage (reason);
     }
   } else if (non_root_level_literals && lrat) {
-    // still calculate lrat and remember for later
+    // still calculate LRAT and remember for later
     assert (!opts.probehbr);
     probe_dominator_lrat (dom, reason);
     clear_analyzed_literals ();

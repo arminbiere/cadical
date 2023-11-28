@@ -153,7 +153,7 @@ bool LratBuilder::clause_falsified (LratBuilderClause *c) {
 // lists until garbage collection (even though we remove garbage clauses on
 // the fly during propagation too).  We also remove satisfied clauses.
 //
-// Problem: this should only happen in drat not in lrat!! Done.
+// Problem: this should only happen in DRAT not in lrat!! Done.
 //
 void LratBuilder::collect_garbage_clauses () {
 
