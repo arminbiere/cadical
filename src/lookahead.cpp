@@ -427,7 +427,6 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
     MSG ("Solved during preprocessing");
     CubesWithStatus cubes;
     cubes.status = res;
-    cubes.status = 20;
     lookingahead = false;
     STOP (lookahead);
     return cubes;
@@ -508,7 +507,6 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
     LOG ("Solved during preprocessing");
     CubesWithStatus cubes;
     cubes.status = 20;
-    cubes.status = res;
     return cubes;
   }
 
