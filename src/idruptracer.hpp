@@ -58,8 +58,9 @@ class IdrupTracer : public FileTracer {
   void idrup_conclude_and_delete (const vector<uint64_t> &conclusion);
   void idrup_report_status (StatusType status);
   void idrup_conclude_sat (const vector<int> &model);
-
+  
 public:
+
   IdrupTracer (Internal *, File *file, bool);
   ~IdrupTracer ();
 

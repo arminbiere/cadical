@@ -1,5 +1,7 @@
-Version 1.9.0
+Version 1.9.1
 -------------
+
+- Fixed position of 'idrup' option.
 
 - Clause IDs in binary LRAT proofs are now always signed.
 
