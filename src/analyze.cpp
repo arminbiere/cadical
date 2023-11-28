@@ -922,8 +922,8 @@ void Internal::analyze () {
       change = multitrail_dirty;
       if (!conflict)
         conflict = prev;
-      else
-        explain_external_propagations ();
+      // levels can change even if conflict has not
+      explain_external_propagations ();
     }
   }
 
