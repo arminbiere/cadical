@@ -1334,8 +1334,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     const int64_t score = shift < 1 ? 1 : (1l << shift); // @4
 
     for (const auto lit : *c) {
-      if (!fixed (lit))
-	noccs (lit) += score;
+      noccs (lit) += score;
     }
   }
 
@@ -1394,6 +1393,9 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   const int64_t limit = stats.propagations.vivify + propagation_limit;
 
   connect_watches (); // watch all relevant clauses
+
+  // the clauses might still contain set literals, so propagation since the beginning
+  propagated2 = propagated = 0;
 
   if (!unsat && !propagate ()) {
     LOG ("propagation after connecting watches in inconsistency");
