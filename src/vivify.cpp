@@ -1125,8 +1125,9 @@ void Internal::vivify_round (bool redundant_mode,
     const int shift = 12 - c->size;
     const int64_t score = shift < 1 ? 1 : (1l << shift); // @4
 
-    for (const auto lit : *c)
+    for (const auto lit : *c) {
       noccs (lit) += score;
+    }
   }
 
   // Refill the schedule every time.  Unchecked clauses are 'saved' by
@@ -1189,6 +1190,9 @@ void Internal::vivify_round (bool redundant_mode,
   const int64_t limit = stats.propagations.vivify + propagation_limit;
 
   connect_watches (!redundant_mode); // watch all relevant clauses
+
+  // the clauses might still contain set literals, so propagation since the beginning
+  propagated2 = propagated = 0;
 
   if (!unsat && !propagate ()) {
     LOG ("propagation after connecting watches in inconsistency");

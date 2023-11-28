@@ -151,15 +151,6 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   int lit_level;
   assert (!lrat || level || reason == external_reason ||
           reason == decision_reason || !lrat_chain.empty ());
-  if (reason == external_reason &&
-      ((size_t) level <= assumptions.size () + (!!constraint.size ()))) {
-    // On the pseudo-decision levels every external propagation must be
-    // explained eagerly, in order to avoid complications during conflict
-    // analysis.
-    // TODO: refine this eager explanation step.
-    LOG ("Too low decision level to store external reason of: %d", lit);
-    reason = learn_external_reason_clause (lit, 0, true);
-  }
   // The following cases are explained in the two comments above before
   // 'decision_reason' and 'assignment_level'.
   //
@@ -323,6 +314,8 @@ bool Internal::propagate () {
         continue; // blocking literal satisfied
 
       if (w.binary ()) {
+        
+        // assert (w.clause->redundant || !w.clause->garbage);
 
         // In principle we can ignore garbage binary clauses too, but that
         // would require to dereference the clause pointer all the time with

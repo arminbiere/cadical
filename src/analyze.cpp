@@ -390,6 +390,13 @@ void Internal::clear_analyzed_literals () {
     assert (!f.removable);
   }
   analyzed.clear ();
+#ifndef NDEBUG
+  if (unit_analyzed.size ()) return;
+  for (auto idx : vars) {
+    Flags &f = flags (idx);
+    assert (!f.seen);
+  }
+#endif
 }
 
 void Internal::clear_analyzed_levels () {
@@ -915,8 +922,8 @@ void Internal::analyze () {
       change = multitrail_dirty;
       if (!conflict)
         conflict = prev;
-      else
-        explain_external_propagations ();
+      // levels can change even if conflict has not
+      explain_external_propagations ();
     }
   }
 
