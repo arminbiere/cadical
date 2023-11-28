@@ -255,6 +255,7 @@ void Internal::multi_backtrack (int new_level) {
       tainted_literal = 0;
     }
   }
+  assert (num_assigned >= trail.size ());
 }
 
 } // namespace CaDiCaL

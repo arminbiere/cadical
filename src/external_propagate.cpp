@@ -583,6 +583,8 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 //
 Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
   Clause *res;
+  std::vector<uint64_t> chain_tmp{std::move (lrat_chain)};
+  lrat_chain.clear ();
   if (clause.empty ()) {
     res = learn_external_reason_clause (ilit, 0, true);
   } else {
@@ -597,6 +599,9 @@ Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
     clause = std::move (clause_tmp);
     clause_tmp.clear ();
   }
+  assert (lrat_chain.empty ());
+  lrat_chain = std::move (chain_tmp);
+  chain_tmp.clear ();
   return res;
 }
 
@@ -870,21 +875,34 @@ void Internal::connect_propagator () {
   if (level)
     backtrack ();
   notify_trail.clear ();
+#ifndef NDEBUG
+  for (auto idx : vars) {
+    Flags &f = flags (idx);
+    assert (!f.poison);
+  }
+#endif
   for (auto lit : trail) {
-    flags (lit).seen = true;
+    assert (!flags (lit).poison);
+    flags (lit).poison = true;
     notify_trail.push_back (lit);
   }
   for (auto &t : trails) {
     for (auto lit : t) {
-      if (flags (lit).seen)
+      if (flags (lit).poison)
         continue;
-      flags (lit).seen = true;
+      flags (lit).poison = true;
       notify_trail.push_back (lit);
     }
   }
   for (auto lit : notify_trail) {
-    flags (lit).seen = false;
+    flags (lit).poison = false;
   }
+#ifndef NDEBUG
+  for (auto idx : vars) {
+    Flags &f = flags (idx);
+    assert (!f.poison);
+  }
+#endif
 }
 
 /*----------------------------------------------------------------------------*/

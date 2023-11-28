@@ -1333,8 +1333,10 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     const int shift = 12 - c->size;
     const int64_t score = shift < 1 ? 1 : (1l << shift); // @4
 
-    for (const auto lit : *c)
-      noccs (lit) += score;
+    for (const auto lit : *c) {
+      if (!fixed (lit))
+	noccs (lit) += score;
+    }
   }
 
   // In the first round of filling the schedule check whether there are
