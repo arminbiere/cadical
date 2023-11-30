@@ -644,9 +644,9 @@ bool LratBuilder::build_chain_if_possible () {
   }
 
   reverse_chain.clear ();
-  for (auto b : justified)
+  for (auto & b : justified)
     b = false;
-  for (auto b : todo_justify)
+  for (auto & b : todo_justify)
     b = false;
 
   if (inconsistent) {
