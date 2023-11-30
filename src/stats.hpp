@@ -247,6 +247,7 @@ struct Stats {
   int64_t levelsreused;
   int64_t literalsreused;
   int64_t assumptionsreused;
+  int64_t tierecomputed; // number of tier recomputation;
 
   struct {
     int64_t fixed;       // number of top level assigned variables

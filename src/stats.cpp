@@ -461,6 +461,11 @@ void Stats::print (Internal *internal) {
     PRT ("  elimbwstr:     %15" PRId64 "   %10.2f %%  of strengthened",
          stats.elimbwstr, percent (stats.elimbwstr, stats.strengthened));
   }
+  if (all) {
+    PRT ("tier recomputed: %15" PRId64 "   %10.2f    interval",
+         stats.tierecomputed,
+         relative (stats.conflicts, stats.tierecomputed));
+  }
   if (all || stats.htrs) {
     PRT ("ternary:         %15" PRId64 "   %10.2f %%  of resolved",
          stats.htrs, percent (stats.htrs, stats.ternres));
@@ -511,7 +516,7 @@ void Stats::print (Internal *internal) {
     PRT ("  vivifystred1:  %15" PRId64 "   %10.2f %%  per vivifystrs",
          stats.vivifystred1,
          percent (stats.vivifystred1, stats.vivifystrs));
-    PRT ("  vivifystred2:  %15" PRId64 "   %10.2f %%  per vivifystrs",
+    PRT ("  vivifystred2:  %15" PRId64 "   %10.2f %%  per viviyfstrs",
          stats.vivifystred2,
          percent (stats.vivifystred2, stats.vivifystrs));
     PRT ("  vivifystred3:  %15" PRId64 "   %10.2f %%  per vivifystrs",

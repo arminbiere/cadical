@@ -296,6 +296,7 @@ int Internal::cdcl_loop_with_inprocessing () {
 void Internal::init_report_limits () {
   reported = false;
   lim.report = 0;
+  lim.recompute_tier = 5000;
 }
 
 void Internal::init_preprocessing_limits () {

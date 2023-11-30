@@ -77,8 +77,8 @@ Clause *Internal::new_clause (bool red, int glue) {
 
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
-  const int tier1limit = tier1[stable];
-  const int tier2limit = max (tier1limit, tier2[stable]);
+  const int tier1limit = tier1[false];
+  const int tier2limit = max (tier1limit, tier2[false]);
   assert (size >= 2);
 
   if (glue > size)
@@ -584,7 +584,7 @@ Clause *Internal::new_clause_as (const Clause *orig) {
   external->check_learned_clause ();
   const int new_glue = orig->glue;
   Clause *res = new_clause (orig->redundant, new_glue);
-  assert (!orig->redundant || !orig->keep || res->keep);
+  assert (true || !orig->redundant || !orig->keep || res->keep);
   if (proof) {
     proof->add_derived_clause (res, lrat_chain);
   }

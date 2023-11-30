@@ -5,6 +5,11 @@ namespace CaDiCaL {
 void Internal::recompute_tier () {
   if (!opts.recomputetier)
     return;
+
+  ++stats.tierecomputed;
+  const int64_t delta = stats.tierecomputed >= 16 ? 1u << 16 : (1u << stats.tierecomputed);
+  lim.recompute_tier = stats.conflicts + delta;
+  LOG ("rescheduling in %zd at %zd (conflicts at %zd)", delta, lim.recompute_tier, stats.conflicts);
   uint64_t total_used = 0;
   for (auto u: stats.used[stable])
     total_used += u;
@@ -19,7 +24,7 @@ void Internal::recompute_tier () {
     uint64_t accumulated_tier1_limit = total_used * 50 / 100;
     uint64_t accumulated_tier2_limit = total_used * 90 / 100;
     uint64_t accumulated_used = 0;
-    for (int glue = 0; glue < stats.used[stable].size (); ++glue) {
+    for (size_t glue = 0; glue < stats.used[stable].size (); ++glue) {
       const uint64_t u = stats.used[stable][glue];
       accumulated_used += u;
       if (accumulated_used <= accumulated_tier1_limit) {
@@ -271,8 +276,6 @@ inline void Internal::bump_clause (Clause *c) {
   else if (used && c->glue <= opts.reducetier2glue)
     c->used = 2;
 
-  if (!stable)
-    return;
   const size_t glue = std::min ((size_t)c->glue, stats.used[stable].size());
   ++stats.used[stable][glue];
 }
@@ -1254,7 +1257,7 @@ void Internal::analyze () {
   if (driving_clause && opts.eagersubsume)
     eagerly_subsume_recently_learned_clauses (driving_clause);
 
-  if ((stats.conflicts % 10000) == 1)
+  if (lim.recompute_tier <= stats.conflicts)
     recompute_tier();
 }
 
