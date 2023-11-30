@@ -2,6 +2,40 @@
 
 namespace CaDiCaL {
 
+void Internal::recompute_tier () {
+  if (!opts.recomputetier)
+    return;
+  uint64_t total_used = 0;
+  for (auto u: stats.used[stable])
+    total_used += u;
+
+  if (!total_used) {
+    tier1[stable] = opts.reducetier1glue;
+    tier2[stable] = opts.reducetier2glue;
+    LOG ("tier1 limit = %d", tier1[stable]);
+    LOG ("tier2 limit = %d", tier2[stable]);
+    return;
+  } else {
+    uint64_t accumulated_tier1_limit = total_used * 50 / 100;
+    uint64_t accumulated_tier2_limit = total_used * 90 / 100;
+    uint64_t accumulated_used = 0;
+    for (int glue = 0; glue < stats.used[stable].size (); ++glue) {
+      const uint64_t u = stats.used[stable][glue];
+      accumulated_used += u;
+      if (accumulated_used <= accumulated_tier1_limit) {
+        tier1[stable] = glue;
+      }
+      if (accumulated_used >= accumulated_tier2_limit) {
+        tier2[stable] = glue;
+        break;
+      }
+    }
+  }
+
+  LOG ("tier1 limit = %d in %s mode", tier1[stable], stable ? "stable" : "focused");
+  LOG ("tier2 limit = %d in %s mode", tier2[stable], stable ? "stable" : "focused");
+
+}
 /*------------------------------------------------------------------------*/
 
 // Code for conflict analysis, i.e., to generate the first UIP clause.  The
@@ -236,6 +270,11 @@ inline void Internal::bump_clause (Clause *c) {
     promote_clause (c, new_glue);
   else if (used && c->glue <= opts.reducetier2glue)
     c->used = 2;
+
+  if (!stable)
+    return;
+  const size_t glue = std::min ((size_t)c->glue, stats.used[stable].size());
+  ++stats.used[stable][glue];
 }
 
 /*------------------------------------------------------------------------*/
@@ -1214,6 +1253,9 @@ void Internal::analyze () {
 
   if (driving_clause && opts.eagersubsume)
     eagerly_subsume_recently_learned_clauses (driving_clause);
+
+  if ((stats.conflicts % 10000) == 1)
+    recompute_tier();
 }
 
 // We wait reporting a learned unit until propagation of that unit is

@@ -11,6 +11,9 @@ Stats::Stats () {
   time.real = absolute_real_time ();
   time.process = absolute_process_time ();
   walk.minimum = LONG_MAX;
+  used.resize(2);
+  used[0].resize(127);
+  used[1].resize(127);
 }
 
 /*------------------------------------------------------------------------*/

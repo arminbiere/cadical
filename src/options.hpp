@@ -125,6 +125,7 @@ OPTION( profile,           2,  0,  4,0,0,0, "profiling level") \
 QUTOPT( quiet,             0,  0,  1,0,0,0, "disable all messages") \
 OPTION( radixsortlim,    800,  0,2e9,0,0,1, "radix sort limit") \
 OPTION( realtime,          0,  0,  1,0,0,0, "real instead of process time") \
+OPTION( recomputetier,     1,  0,  1,0,0,1, "recompute tiers") \
 OPTION( reduce,            1,  0,  1,0,0,1, "reduce useless clauses") \
 OPTION( reduceint,       300, 10,1e6,0,0,1, "reduce interval") \
 OPTION( reducetarget,     75, 10,1e2,0,0,1, "reduce fraction in percent") \

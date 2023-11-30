@@ -2,6 +2,7 @@
 #define _stats_hpp_INCLUDED
 
 #include <cstdlib>
+#include <vector>
 
 namespace CaDiCaL {
 
@@ -262,6 +263,7 @@ struct Stats {
   int64_t unused;   // number of unused variables
   int64_t active;   // number of active variables
   int64_t inactive; // number of inactive variables
+  std::vector<std::vector<int64_t>> used; // used clauses in focused mode
 
   Stats ();
 

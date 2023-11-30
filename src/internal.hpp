@@ -159,6 +159,8 @@ struct Internal {
   /*----------------------------------------------------------------------*/
 
   int mode;                    // current internal state
+  int tier1[2] = {2,2};
+  int tier2[2] = {6,6};
   bool unsat;                  // empty clause found or learned
   bool iterating;              // report learned unit ('i' line)
   bool localsearching;         // true during local search
@@ -691,6 +693,7 @@ struct Internal {
   void set_tainted_literal ();
   void connect_propagator ();
 
+  void recompute_tier ();
   // Use last learned clause to subsume some more.
   //
   void eagerly_subsume_recently_learned_clauses (Clause *);
