@@ -610,6 +610,13 @@ void Proof::begin_proof (uint64_t id) {
   }
 }
 
+void Proof::solve_query () {
+  LOG (clause, "PROOF solve query");
+  for (auto &tracer : tracers) {
+    tracer->solve_query ();
+  }
+}
+
 void Proof::conclude_unsat (ConclusionType con,
                             const vector<uint64_t> &conclusion) {
   LOG (clause, "PROOF conclude unsat");

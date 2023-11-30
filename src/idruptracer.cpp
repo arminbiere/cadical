@@ -206,7 +206,9 @@ void IdrupTracer::idrup_add_restored_clause (const vector<int> &clause) {
 
 void IdrupTracer::idrup_add_derived_clause (const vector<int> &clause) {
   if (binary)
-    file->put ('a');
+    file->put ('l');
+  else
+    file->put ("l ");
   for (const auto &external_lit : clause)
     if (binary)
       put_binary_lit (external_lit);
@@ -217,6 +219,23 @@ void IdrupTracer::idrup_add_derived_clause (const vector<int> &clause) {
   else
     file->put ("0\n");
 }
+
+void IdrupTracer::idrup_add_original_clause (const vector<int> &clause) {
+  if (binary)
+    file->put ('i');
+  else
+    file->put ("i ");
+  for (const auto &external_lit : clause)
+    if (binary)
+      put_binary_lit (external_lit);
+    else
+      file->put (external_lit), file->put (' ');
+  if (binary)
+    put_binary_zero ();
+  else
+    file->put ("0\n");
+}
+
 
 void IdrupTracer::idrup_delete_clause (uint64_t id,
                                       const vector<int> &clause) {
@@ -305,6 +324,23 @@ void IdrupTracer::idrup_conclude_sat (const vector<int> &model) {
     file->put ("0\n");
 }
 
+void IdrupTracer::idrup_solve_query () {
+  if (binary)
+    file->put ('q');
+  else
+    file->put ("q ");
+  for (auto &lit : assumptions) {
+    if (binary)
+      put_binary_lit (lit);
+    else
+      file->put (lit), file->put (' ');
+  }
+  if (binary)
+    put_binary_zero ();
+  else
+    file->put ("0\n");
+}
+
 /*------------------------------------------------------------------------*/
 
 void IdrupTracer::add_derived_clause (uint64_t, bool,
@@ -369,8 +405,10 @@ void IdrupTracer::add_original_clause (uint64_t, bool,
                                        bool restored) {
   if (file->closed ())
     return;
-  if (!restored)
-    return;
+  if (!restored) {
+    LOG (clause, "IDRUP TRACER tracing addition of original clause");
+    return idrup_add_original_clause (clause);
+  }
   LOG (clause, "IDRUP TRACER tracing addition of restored clause");
   idrup_add_restored_clause (clause);
 }
@@ -389,6 +427,23 @@ void IdrupTracer::conclude_sat (const vector<int> &model) {
     return;
   LOG (model, "IDRUP TRACER tracing conclusion of model");
   idrup_conclude_sat (model);
+}
+
+void IdrupTracer::solve_query () {
+  if (file->closed ())
+    return;
+  LOG (assumptions, "IDRUP TRACER tracing solve query with assumptions");
+  idrup_solve_query ();
+}
+
+void IdrupTracer::add_assumption (int lit) {
+  LOG ("IDRUP TRACER tracing addition of assumption %d", lit);
+  assumptions.push_back (lit);
+}
+
+void IdrupTracer::reset_assumptions () {
+  LOG (assumptions, "IDRUP TRACER tracing reset of assumptions");
+  assumptions.clear ();
 }
 
 /*------------------------------------------------------------------------*/

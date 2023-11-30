@@ -25,6 +25,7 @@ class IdrupTracer : public FileTracer {
   uint64_t size_clauses; // size of clause hash table
   IdrupClause **clauses; // hash table of clauses
   vector<int> imported_clause;
+  vector<int> assumptions;
 
   static const unsigned num_nonces = 4;
 
@@ -55,9 +56,11 @@ class IdrupTracer : public FileTracer {
   void idrup_add_derived_clause (const vector<int> &clause);
   void idrup_delete_clause (uint64_t id, const vector<int> &clause);
   void idrup_add_restored_clause (const vector<int> &clause);
+  void idrup_add_original_clause (const vector<int> &clause);
   void idrup_conclude_and_delete (const vector<uint64_t> &conclusion);
   void idrup_report_status (StatusType status);
   void idrup_conclude_sat (const vector<int> &model);
+  void idrup_solve_query ();
   
 public:
 
@@ -77,13 +80,15 @@ public:
   void conclude_sat (const vector<int> &) override;
   void conclude_unsat (ConclusionType, const vector<uint64_t> &) override;
 
+  void solve_query () override;
+  void add_assumption (int) override;
+  void reset_assumptions () override;
+  
   // skip
   void begin_proof (uint64_t) override {}
   void finalize_clause (uint64_t, const vector<int> &) override {}
   void strengthen (uint64_t) override {}
-  void add_assumption (int) override {}
   void add_constraint (const vector<int> &) override {}
-  void reset_assumptions () override {}
 
   // logging and file io
   void connect_internal (Internal *i) override;

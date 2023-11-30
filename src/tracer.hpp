@@ -88,6 +88,11 @@ public:
   // Notify the observer that an assumption has been added
   // Arguments: assumption_literal
   //
+  virtual void solve_query () {}
+
+  // Notify the observer that an assumption has been added
+  // Arguments: assumption_literal
+  //
   virtual void add_assumption (int) {}
 
   // Notify the observer that a constraint has been added

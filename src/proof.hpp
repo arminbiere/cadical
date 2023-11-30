@@ -101,6 +101,7 @@ public:
   void begin_proof (uint64_t);
   void conclude_unsat (ConclusionType, const vector<uint64_t> &);
   void conclude_sat (const vector<int> &model);
+  void solve_query ();
   // These two actually pretend to add and remove a clause.
   //
   void flush_clause (Clause *); // remove falsified literals
