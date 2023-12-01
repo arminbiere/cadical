@@ -472,7 +472,7 @@ void Internal::add_new_original_clause (uint64_t id) {
       if (!original.size ())
         VERBOSE (1, "found empty original clause");
       else
-        MSG ("found falsified original clause");
+        VERBOSE (1, "found falsified original clause");
       unsat = true;
       conflict_id = new_id;
       conclusion.push_back (new_id);
