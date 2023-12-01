@@ -173,4 +173,17 @@ void ccadical_melt (CCaDiCaL *ptr, int lit) {
 int ccadical_frozen (CCaDiCaL *ptr, int lit) {
   return ((Wrapper *) ptr)->solver->frozen (lit);
 }
+
+int ccadical_trace_proof (CCaDiCaL * ptr, FILE * file, const char * path) {
+  return ((Wrapper *) ptr)->solver->trace_proof (file, path);
+}
+
+void ccadical_close_proof (CCaDiCaL * ptr) {
+  ((Wrapper *) ptr)->solver->close_proof_trace ();
+}
+
+void ccadical_conclude (CCaDiCaL * ptr) {
+  ((Wrapper *) ptr)->solver->conclude ();
+}
+
 }

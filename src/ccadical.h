@@ -7,6 +7,7 @@ extern "C" {
 #endif
 /*------------------------------------------------------------------------*/
 
+#include <stdio.h>
 #include <stdint.h>
 
 // C wrapper for CaDiCaL's C++ API following IPASIR.
@@ -42,6 +43,9 @@ void ccadical_print_statistics (CCaDiCaL *);
 int64_t ccadical_active (CCaDiCaL *);
 int64_t ccadical_irredundant (CCaDiCaL *);
 int ccadical_fixed (CCaDiCaL *, int lit);
+int ccadical_trace_proof (CCaDiCaL *, FILE *, const char *);
+void ccadical_close_proof (CCaDiCaL *);
+void ccadical_conclude (CCaDiCaL *);
 void ccadical_terminate (CCaDiCaL *);
 void ccadical_freeze (CCaDiCaL *, int lit);
 int ccadical_frozen (CCaDiCaL *, int lit);
