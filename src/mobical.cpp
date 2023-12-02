@@ -792,10 +792,13 @@ void Mobical::warning (const char *fmt, ...) {
 //
 //   INIT
 //   (SET|TRACEPROOF|ALWAYS)*
-//   (   (ADD|ASSUME|ALWAYS)*
-//       [ (SOLVE|SIMPLIFY|LOOKAHEAD)
-//         (LEMMA|CONTINUE)*
-//         (VAL|FLIP|FAILED|ALWAYS|FLUSHPROOFTRACE|CLOSEPROOFTRACE)* ]
+//   (
+//     (ADD|ASSUME|ALWAYS)*
+//     [ 
+//       (SOLVE|SIMPLIFY|LOOKAHEAD)
+//       (LEMMA|CONTINUE)*
+//       (VAL|FLIP|FAILED|ALWAYS|CONCLUDE|FLUSHPROOFTRACE|CLOSEPROOFTRACE)*
+//     ]
 //   )*
 //   [ RESET ]
 //
