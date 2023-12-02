@@ -3,6 +3,7 @@
 /* Copyright (C) 2020 Mathias Fleury, Johannes Kepler University Linz     */
 /* Copyright (c) 2020-2021 Nils Froleyks, Johannes Kepler University Linz */
 /* Copyright (C) 2022-2023 Katalin Fazekas, Technical University of Vienna*/
+/* Copyright (C) 2021-2023 Armin Biere, University of Freiburg            */
 /*------------------------------------------------------------------------*/
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
@@ -58,6 +59,10 @@ static const char *USAGE =
     "In order to replay a trace which violates an API contract use\n"
     "\n"
     "  --do-not-enforce-contracts\n"
+    "\n"
+    "You might want to write a proof to the given file:\n"
+    "\n"
+    "  --proof <path>\n"
     "\n"
     "To read from '<stdin>' use '-' as '<input>' and also '-' instead of\n"
     "'<output>' to write to '<stdout>'.\n"
@@ -130,6 +135,7 @@ static const char *USAGE =
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <vector>
 
 // MockPropagator
@@ -608,6 +614,7 @@ class Mobical : public Handler {
 
   /*----------------------------------------------------------------------*/
 
+  friend struct InitCall;
   friend struct FailedCall;
   friend struct ConcludeCall;
   friend class Reader;
@@ -645,6 +652,7 @@ class Mobical : public Handler {
   bool add_dump_before_solve;
   bool add_stats_after_solve;
   bool add_plain_after_options;
+  const char *proof;
 
   /*----------------------------------------------------------------------*/
 
@@ -805,10 +813,11 @@ void Mobical::warning (const char *fmt, ...) {
 // have the following structure
 //
 //   INIT
-//   (SET|ALWAYS)*
+//   (SET|TRACEPROOF|ALWAYS)*
 //   (   (ADD|ASSUME|ALWAYS)*
-//       [ (SOLVE|SIMPLIFY|LOOKAHEAD) (LEMMA|CONTINUE)*
-//       (VAL|FLIP|FAILED|ALWAYS)* ]
+//       [ (SOLVE|SIMPLIFY|LOOKAHEAD)
+//         (LEMMA|CONTINUE)*
+//         (VAL|FLIP|FAILED|ALWAYS|FLUSHPROOFTRACE|CLOSEPROOFTRACE)* ]
 //   )*
 //   [ RESET ]
 //
@@ -839,6 +848,8 @@ void Mobical::warning (const char *fmt, ...) {
 struct Call {
 
   enum Type : uint64_t {
+
+#define SHIFT(BIT) (((uint64_t) 1) << (BIT))
 
     INIT = (1 << 0),
     SET = (1 << 1),
@@ -884,17 +895,22 @@ struct Call {
 
     // CONTINUE = (1 << 31),
     CONCLUDE = (1u << 31),
-    DISCONNECT = ((uint64_t) 1 << 32),
+    DISCONNECT = SHIFT (32),
+
+    TRACEPROOF = SHIFT (33),
+    FLUSHPROOFTRACE = SHIFT (34),
+    CLOSEPROOFTRACE = SHIFT (35),
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED,
 
-    CONFIG = INIT | SET | CONFIGURE | ALWAYS,
+    CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
     BEFORE =
         ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING,
     DURING = LEMMA, // | CONTINUE,
-    AFTER = VAL | FLIP | FAILED | CONCLUDE | ALWAYS,
+    AFTER = VAL | FLIP | FAILED | CONCLUDE | ALWAYS | FLUSHPROOFTRACE |
+            CLOSEPROOFTRACE,
   };
 
   Type type; // Explicit typing.
@@ -1300,6 +1316,31 @@ struct StatsCall : public Call {
   void print (ostream &o) { o << "stats" << endl; }
   Call *copy () { return new StatsCall (); }
   const char *keyword () { return "stats"; }
+};
+
+struct TraceProofCall : public Call {
+  std::string path;
+  TraceProofCall (const string &p) : Call (TRACEPROOF), path (p) {}
+  void execute (Solver *&s) { s->trace_proof (path.c_str ()); }
+  void print (ostream &o) { o << "trace_proof" << ' ' << path << endl; }
+  Call *copy () { return new TraceProofCall (path); }
+  const char *keyword () { return "trace_proof"; }
+};
+
+struct FlushProofTraceCall : public Call {
+  FlushProofTraceCall () : Call (FLUSHPROOFTRACE) {}
+  void execute (Solver *&s) { s->flush_proof_trace (); }
+  void print (ostream &o) { o << "flush_proof_trace" << endl; }
+  Call *copy () { return new FlushProofTraceCall (); }
+  const char * keyword () { return "flush_proof_trace"; }
+};
+
+struct CloseProofTraceCall : public Call {
+  CloseProofTraceCall () : Call (CLOSEPROOFTRACE) {}
+  void execute (Solver *&s) { s->close_proof_trace (); }
+  void print (ostream &o) { o << "close_proof_trace" << endl; }
+  Call *copy () { return new CloseProofTraceCall (); }
+  const char * keyword () { return "close_proof_trace"; }
 };
 
 /*------------------------------------------------------------------------*/
@@ -3530,6 +3571,20 @@ void Reader::parse () {
       if (first)
         error ("additional argument '%s' to 'reset'", first);
       c = new ResetCall ();
+    } else if (!strcmp (keyword, "trace_proof")) {
+      if (!first)
+        error ("first argument to 'trace_proof' missing");
+      if (second)
+        error ("additional argument '%s' to 'trace_proof'", second);
+      c = new TraceProofCall (first);
+    } else if (!strcmp (keyword, "flush_proof_trace")) {
+      if (first)
+        error ("additional argument '%s' to 'flush_proof_trace'", first);
+      c = new FlushProofTraceCall ();
+    } else if (!strcmp (keyword, "close_proof_trace")) {
+      if (first)
+        error ("additional argument '%s' to 'close_proof_trace'", first);
+      c = new CloseProofTraceCall ();
     } else
       error ("invalid keyword '%s'", keyword);
 
@@ -3697,9 +3752,9 @@ Mobical::Mobical ()
       add_set_log_to_true (false),
 #endif
       add_dump_before_solve (false), add_stats_after_solve (false),
-      add_plain_after_options (false), shrinking (false), running (false),
-      time_limit (DEFAULT_TIME_LIMIT), space_limit (DEFAULT_SPACE_LIMIT),
-      terminal (terr),
+      add_plain_after_options (false), proof (0), shrinking (false),
+      running (false), time_limit (DEFAULT_TIME_LIMIT),
+      space_limit (DEFAULT_SPACE_LIMIT), terminal (terr),
 #ifndef QUIET
       progress_counter (0), last_progress_time (0),
 #endif
@@ -3818,6 +3873,12 @@ int Mobical::main (int argc, char **argv) {
       add_stats_after_solve = true;
     } else if (!strcmp (argv[i], "-p") || !strcmp (argv[i], "--plain")) {
       add_plain_after_options = true;
+    } else if (!strcmp (argv[i], "--proof")) {
+      if (++i == argc)
+        die ("argument to '--proof' missing (try '-h')");
+      if (proof)
+        die ("multiple '--proof' arguments");
+      proof = argv[i];
     } else if (!strcmp (argv[i], "-L")) {
       if (limit >= 0)
         die ("multiple '-L' options (try '-h')");
