@@ -426,7 +426,7 @@ void Internal::shrink_and_minimize_clause () {
   auto rend_block = clause.rbegin ();
   const int uip0 = clause[0];
 
-  // for direct lrat we remember how the clause used to look
+  // for direct LRAT we remember how the clause used to look
   vector<int> old_clause_lrat;
   assert (minimize_chain.empty ());
   if (lrat)

@@ -112,8 +112,12 @@ run learn
 run cfreeze
 run traverse
 run cipasir
+run incproof
 
-[ "`grep DNTRACING $makefile`" = "" ] && run apitrace
+if [ "`grep DNTRACING $makefile`" = "" ]
+then
+  run apitrace
+fi
 
 #--------------------------------------------------------------------------#
 

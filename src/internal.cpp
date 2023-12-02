@@ -689,6 +689,8 @@ int Internal::local_search () {
 int Internal::solve (bool preprocess_only) {
   assert (clause.empty ());
   START (solve);
+  if (proof)
+    proof->solve_query ();
   if (opts.ilb) {
     if (opts.ilbassumptions)
       sort_and_reuse_assumptions ();

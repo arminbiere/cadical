@@ -70,7 +70,7 @@ class LratBuilder {
   vector<signed char> checked_lits; // this is implemented same as marks
   LratBuilderClause *conflict;
 
-  vector<uint64_t> chain; // lrat style proof chain
+  vector<uint64_t> chain; // LRAT style proof chain
   vector<uint64_t> reverse_chain;
   vector<uint64_t> inconsistent_chain; // store proof to reuse
   unsigned unjustified;                // number of lits to justify

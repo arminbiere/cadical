@@ -24,7 +24,7 @@ struct Flags { // Variable flags.
   bool subsume : 1; // added since last 'subsume' round (*)
   bool ternary : 1; // added in ternary clause since last 'ternary' (*)
 
-  unsigned char decompose : 2; // generate correct lrat chains in decompose
+  unsigned char decompose : 2; // generate correct LRAT chains in decompose
 
   // These literal flags are used by blocked clause elimination ('block').
   //

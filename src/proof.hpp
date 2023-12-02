@@ -21,13 +21,13 @@ class Proof {
   Internal *internal;
 
   vector<int> clause;           // of external literals
-  vector<uint64_t> proof_chain; // lrat style proof chain of clause
+  vector<uint64_t> proof_chain; // LRAT style proof chain of clause
   uint64_t clause_id;           // id of added clause
   bool redundant;
 
   // the 'tracers'
   vector<Tracer *> tracers;          // tracers (ie checker)
-  vector<FileTracer *> file_tracers; // file tracers (ie lrat tracer)
+  vector<FileTracer *> file_tracers; // file tracers (ie LRAT tracer)
   LratBuilder *lratbuilder;          // special tracer
 
   void add_literal (int internal_lit); // add to 'clause'
@@ -102,6 +102,7 @@ public:
   void begin_proof (uint64_t);
   void conclude_unsat (ConclusionType, const vector<uint64_t> &);
   void conclude_sat (const vector<int> &model);
+  void solve_query ();
   // These two actually pretend to add and remove a clause.
   //
   void flush_clause (Clause *); // remove falsified literals

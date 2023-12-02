@@ -20,7 +20,7 @@ void Internal::assume (int lit) {
   freeze (lit);
 }
 
-// for lrat we actually need to implement recursive dfs
+// for LRAT we actually need to implement recursive dfs
 // I don't know how to do this non-recursively...
 // for non-lrat use bfs
 //
@@ -274,7 +274,7 @@ void Internal::failing () {
       econstraints.push_back (elit);
     }
 
-    // no lrat do bfs as it was before
+    // no LRAT do bfs as it was before
     if (!lrat) {
       size_t next = 0;
       while (next < analyzed.size ()) {
@@ -317,7 +317,7 @@ void Internal::failing () {
         }
       }
       clear_analyzed_literals ();
-    } else if (!unsat_constraint) { // lrat for case (3)
+    } else if (!unsat_constraint) { // LRAT for case (3)
       assert (clause.size () == 1);
       const int lit = clause[0];
       Var &v = var (lit);
@@ -341,7 +341,7 @@ void Internal::failing () {
           f.failed |= bit;
       }
       clear_analyzed_literals ();
-    } else { // lrat for unsat_constraint
+    } else { // LRAT for unsat_constraint
       assert (clause.empty ());
       clear_analyzed_literals ();
       for (auto lit : constraint) {

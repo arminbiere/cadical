@@ -64,7 +64,7 @@ struct External {
   vector<int> constraint;  // External constraint. Terminated by zero.
 
   vector<uint64_t>
-      ext_units; // External units. Needed to compute lrat for eclause
+      ext_units; // External units. Needed to compute LRAT for eclause
   vector<bool> ext_flags; // to avoid duplicate units
   vector<int> eclause;    // External version of original input clause.
   // The extension stack for reconstructing complete satisfying assignments

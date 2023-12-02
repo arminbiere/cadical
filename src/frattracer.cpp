@@ -128,7 +128,7 @@ void FratTracer::frat_add_derived_clause (uint64_t id,
     file->put ("0  l ");
   for (const auto &c : chain)
     if (binary)
-      put_binary_id (2 * c); // lrat can have negative ids
+      put_binary_id (2 * c); // LRAT can have negative ids
     else
       file->put (c), file->put (' '); // in proof chain, so they get
   if (binary)

@@ -39,7 +39,7 @@ class File {
   int close_file; // need to close file (1=fclose, 2=pclose, 3=pipe)
   int child_pid;
   FILE *file;
-  const char *_name;
+  char *_name;
   uint64_t _lineno;
   uint64_t _bytes;
 

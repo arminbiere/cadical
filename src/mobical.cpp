@@ -3,117 +3,117 @@
 /* Copyright (C) 2020 Mathias Fleury, Johannes Kepler University Linz     */
 /* Copyright (c) 2020-2021 Nils Froleyks, Johannes Kepler University Linz */
 /* Copyright (C) 2022-2023 Katalin Fazekas, Technical University of Vienna*/
+/* Copyright (C) 2021-2023 Armin Biere, University of Freiburg            */
 /*------------------------------------------------------------------------*/
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
 
 namespace CaDiCaL {
 
+// clang-format off
+
 static const char *USAGE =
-    "usage: mobical [ <option> ... ] [ <mode> ]\n"
-    "\n"
-    "where '<option>' can be one of the following:\n"
-    "\n"
-    "  --help    | -h    print this command line option summary and exit\n"
-    "  --version         print CaDiCaL's three character version and exit\n"
-    "  --build           print build configuration\n"
-    "\n"
-    "  -v                increase verbosity\n"
-    "  --colors          force colors for both '<stdout>' and '<stderr>'\n"
-    "  --no-colors       disable colors if '<stderr>' is connected to "
-    "terminal\n"
-    "  --no-terminal     assume '<stderr>' is not connected to terminal\n"
-    "  --no-seeds        do not print seeds in random mode\n"
-    "\n"
-    "  -<n>              specify the number of solving phases explicitly\n"
-    "  --time <seconds>  set time limit per trace (none=0, default=%d)\n"
-    "  --space <MB>      set space limit (none=0, default=%d)\n"
-    "\n"
-    "  --do-not-ignore-resource-limits  consider out-of-time or memory as "
-    "error\n"
-    "\n"
-    "  --small           generate small formulas only\n"
-    "  --medium          generate medium sized formulas only\n"
-    "  --big             generate big formulas only\n"
-    "\n"
-    "Then '<mode>' is one of these\n"
-    "\n"
-    "  <seed>            generate and execute trace for given 64-bit seed\n"
-    "  <seed>  <output>  generate trace, shrink and write it to file\n"
-    "  <input> <output>  read trace, shrink and write it to output file\n"
-    "  <input>           read and replay the specified input trace\n"
-    "\n"
-    "The output trace is not shrunken if it is not failing.  However,\n"
-    "before it is written it is executed, unless '--do-not-execute'\n"
-    "is specified:\n"
-    "\n"
-    "  --do-not-execute  just write to '<output>' without execution\n"
-    "\n"
-    "In order to check memory issues or collect coverage you can force\n"
-    "execution within the main process, which however also means that\n"
-    "the model based tester aborts as soon a test fails\n"
-    "\n"
-    "  --do-not-fork     execute all tests in main process directly\n"
-    "\n"
-    "In order to replay a trace which violates an API contract use\n"
-    "\n"
-    "  --do-not-enforce-contracts\n"
-    "\n"
-    "To read from '<stdin>' use '-' as '<input>' and also '-' instead of\n"
-    "'<output>' to write to '<stdout>'.\n"
-    "\n"
+"usage: mobical [ <option> ... ] [ <mode> ]\n"
+"\n"
+"where '<option>' can be one of the following:\n"
+"\n"
+"  --help    | -h    print this command line option summary and exit\n"
+"  --version         print CaDiCaL's three character version and exit\n"
+"  --build           print build configuration\n"
+"\n"
+"  -v                increase verbosity\n"
+"  --colors          force colors for both '<stdout>' and '<stderr>'\n"
+"  --no-colors       disable colors if '<stderr>' is connected to "
+"terminal\n"
+"  --no-terminal     assume '<stderr>' is not connected to terminal\n"
+"  --no-seeds        do not print seeds in random mode\n"
+"\n"
+"  -<n>              specify the number of solving phases explicitly\n"
+"  --time <seconds>  set time limit per trace (none=0, default=%d)\n"
+"  --space <MB>      set space limit (none=0, default=%d)\n"
+"\n"
+"  --do-not-ignore-resource-limits  consider out-of-time or memory as "
+"error\n"
+"\n"
+"  --small           generate small formulas only\n"
+"  --medium          generate medium sized formulas only\n"
+"  --big             generate big formulas only\n"
+"\n"
+"Then '<mode>' is one of these\n"
+"\n"
+"  <seed>            generate and execute trace for given 64-bit seed\n"
+"  <seed>  <output>  generate trace, shrink and write it to file\n"
+"  <input> <output>  read trace, shrink and write it to output file\n"
+"  <input>           read and replay the specified input trace\n"
+"\n"
+"The output trace is not shrunken if it is not failing.  However, before\n"
+"it is written it is executed, unless '--do-not-execute' is specified:\n"
+"\n"
+"  --do-not-execute  just write to '<output>' without execution\n"
+"\n"
+"In order to check memory issues or collect coverage you can force\n"
+"execution within the main process, which however also means that the\n"
+"model based tester aborts as soon a test fails\n"
+"\n"
+"  --do-not-fork     execute all tests in main process directly\n"
+"\n"
+"In order to replay a trace which violates an API contract use\n"
+"\n"
+"  --do-not-enforce-contracts\n"
+"\n"
+"To read from '<stdin>' use '-' as '<input>' and also '-' instead of\n"
+"'<output>' to write to '<stdout>'.\n"
+"\n"
 #ifdef LOGGING
-    "As the library is compiled with logging support ('-DLOGGING')\n"
-    "one can force to add the 'set log 1' call to the trace with\n"
-    "\n"
-    "  --log | -l        force low-level logging for detailed debugging\n"
-    "\n"
+"As the library is compiled with logging support ('-DLOGGING')\n"
+"one can force to add the 'set log 1' call to the trace with\n"
+"\n"
+"  --log | -l        force low-level logging for detailed debugging\n"
+"\n"
 #endif
-    "Implicitly add 'dump' and 'stats' calls to traces:\n"
-    "\n"
-    "  --dump  | -d      force dumping the CNF before every 'solve'\n"
-    "  --stats | -s      force printing statistics after every 'solve'\n"
-    "\n"
-    "Implicitly add 'configure plain' after setting options:\n"
-    "\n"
-    "  --plain | -p\n" // TODO all configurations?
-    "\n"
-    "Otherwise if no '<mode>' is specified the default is to generate\n"
-    "random traces internally until the execution of a trace fails, which\n"
-    "means it produces a non-zero exit code.  Then the trace is rerun and\n"
-    "shrunken through delta-debugging to produce a smaller trace.  The\n"
-    "shrunken failing trace is written as 'red-<seed>.trace' to the\n"
-    "current working directory.\n"
-    "\n"
-    "The following options disable certain parts of the shrinking "
-    "algorithm:\n"
-    "\n"
-    "  --do-not-shrink[-at-all]\n"
-    "  --do-not-add-options[-before-shrinking]\n"
-    "  --do-not-shrink-phases\n"
-    "  --do-not-shrink-clauses\n"
-    "  --do-not-shrink-literals\n"
-    "  --do-not-shrink-basic[-calls]\n"
-    "  --do-not-disable[-options]\n"
-    "  --do-not-reduce[[-option]-values]\n"
-    "  --do-not-shrink-variables\n"
-    "  --do-not-shrink-options\n"
-    "\n"
-    "The standard mode of using the model based tester is to start it in\n"
-    "random testing mode without '<input>', '<seed>' nor '<output>' "
-    "option.\n"
-    "If a failing trace is found it will be shrunken and the resulting "
-    "trace\n"
-    "written to the current working directory.  Then the model based "
-    "tester\n"
-    "can be interrupted and then called again with the produced failing "
-    "trace\n"
-    "as single argument.  This invocation will execute the trace within "
-    "the\n"
-    "same process and thus can directly be investigated with a symbolic\n"
-    "debugger such as 'gdb' or maybe first checked for memory issues with\n"
-    "'valgrind' or recompilation with memory checking "
-    "'-fsanitize=address'.\n";
+"Implicitly add 'dump' and 'stats' calls to traces:\n"
+"\n"
+"  --dump  | -d      force dumping the CNF before every 'solve'\n"
+"  --stats | -s      force printing statistics after every 'solve'\n"
+"\n"
+"Implicitly add 'configure plain' after setting options:\n"
+"\n"
+"  --plain | -p\n" // TODO all configurations?
+"\n"
+"Otherwise if no '<mode>' is specified the default is to generate random\n"
+"traces internally until the execution of a trace fails, which means it\n"
+"produces a non-zero exit code.  Then the trace is rerun and shrunken\n"
+"through delta-debugging to produce a smaller trace.  The shrunken failing\n"
+"trace is written as 'red-<seed>.trace' to the current working directory.\n"
+"\n"
+"The following options disable certain parts of the shrinking "
+"algorithm:\n"
+"\n"
+"  --do-not-shrink[-at-all]\n"
+"  --do-not-add-options[-before-shrinking]\n"
+"  --do-not-shrink-phases\n"
+"  --do-not-shrink-clauses\n"
+"  --do-not-shrink-literals\n"
+"  --do-not-shrink-basic[-calls]\n"
+"  --do-not-disable[-options]\n"
+"  --do-not-reduce[[-option]-values]\n"
+"  --do-not-shrink-variables\n"
+"  --do-not-shrink-options\n"
+"\n"
+"The standard mode of using the model based tester is to start it in\n"
+"random testing mode without '<input>', '<seed>' nor '<output>' option.\n"
+"If a failing trace is found it will be shrunken and the resulting\n"
+"trace written to the current working directory.  Then the model based\n"
+"tester can be interrupted and then called again with the produced\n"
+"failing trace as single argument.\n"
+"\n"
+"This second invocation will execute the trace within the same process\n"
+"and thus can directly be investigated with a symbolic debugger such\n"
+"as 'gdb' or maybe first checked for memory issues with 'valgrind'\n"
+"or recompilation with memory checking '-fsanitize=address'.\n"
+;
+
+// clang-format on
 
 } // namespace CaDiCaL
 
@@ -130,6 +130,7 @@ static const char *USAGE =
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <vector>
 
 // MockPropagator
@@ -162,47 +163,31 @@ class Trace;
 enum Size { NOSIZE = 0, SMALL = 10, MEDIUM = 30, BIG = 50 };
 
 struct Force {
-  Size size;
-  int phases;
-  Force () : size (NOSIZE), phases (-1) {}
+  Size size = NOSIZE;
+  int phases = -1;
+  ;
 };
 
 // Options to shrink traces.
 
 struct DoNot {
-  bool add; // add all options before shrinking             'a'
-  struct {
-    bool atall;    // do not shrink anything                       's'
-    bool phases;   // shrink complete incremental solving phases   'p'
-    bool clauses;  // shrink full clauses                          'c'
-    bool literals; // shrink literals which shrinks                'l'
-    bool basic;    // shrink other basic calls                     'b'
-    bool options;  // shrink option calls                          'o'
-  } shrink;
-  bool disable; // try to eagerly disable all options           'd'
-  bool map;     // do not map variable indices                  'm'
-  bool reduce;  // reduce option values                         'r'
-  bool execute; // do not execute trace
-  bool fork;    // do not fork sub-process
-  bool enforce; // do not enforce contracts on read trace
-  bool seeds;
-  bool ignore_resource_limits;
-
-  DoNot () {
-    add = false;
-    shrink.atall = false;
-    shrink.phases = false;
-    shrink.clauses = false;
-    shrink.literals = false;
-    shrink.basic = false;
-    shrink.options = false;
-    disable = false;
-    map = false;
-    reduce = false;
-    seeds = false;
-    ignore_resource_limits = false;
-    execute = false;
-  }
+  bool add = false;        // add all options before shrinking    'a'
+  struct {                 //
+    bool atall = false;    // do not shrink anything              's'
+    bool phases = false;   // shrink complete incremental solving 'p'
+    bool clauses = false;  // shrink full clauses                 'c'
+    bool literals = false; // shrink literals which shrinks       'l'
+    bool basic = false;    // shrink other basic calls            'b'
+    bool options = false;  // shrink option calls                 'o'
+  } shrink;                //
+  bool disable = false;    // try to eagerly disable all options  'd'
+  bool map = false;        // do not map variable indices         'm'
+  bool reduce = false;     // reduce option values                'r'
+  bool execute = false;    // do not execute trace
+  bool fork = false;       // do not fork sub-process
+  bool enforce = false;    // do not enforce contracts on read trace
+  bool seeds = false;
+  bool ignore_resource_limits = false;
 };
 
 /*------------------------------------------------------------------------*/
@@ -608,6 +593,7 @@ class Mobical : public Handler {
 
   /*----------------------------------------------------------------------*/
 
+  friend struct InitCall;
   friend struct FailedCall;
   friend struct ConcludeCall;
   friend class Reader;
@@ -628,7 +614,7 @@ class Mobical : public Handler {
 
   enum { RANDOM = 1, SEED = 2, INPUT = 4, OUTPUT = 8 };
 
-  int mode; // No 'Mode mode' due to 'mode |= ...' below.
+  int mode = 0; // No 'Mode mode' due to 'mode |= ...' below.
 
   void check_mode_valid ();
 
@@ -638,23 +624,23 @@ class Mobical : public Handler {
 
   DoNot donot;
   Force force;
-  bool verbose;
+  bool verbose = false;
 #ifdef LOGGING
-  bool add_set_log_to_true;
+  bool add_set_log_to_true = false;
 #endif
-  bool add_dump_before_solve;
-  bool add_stats_after_solve;
-  bool add_plain_after_options;
+  bool add_dump_before_solve = false;
+  bool add_stats_after_solve = false;
+  bool add_plain_after_options = false;
 
   /*----------------------------------------------------------------------*/
 
-  bool shrinking; // In the middle of shrinking.
-  bool running;   // In the middle of running.
+  bool shrinking = false; // In the middle of shrinking.
+  bool running = false;   // In the middle of running.
 
-  int64_t time_limit;  // in seconds, none if zero
-  int64_t space_limit; // in MB, none if zero
+  int64_t time_limit = DEFAULT_TIME_LIMIT;   // in seconds, none if zero
+  int64_t space_limit = DEFAULT_SPACE_LIMIT; // in MB, none if zero
 
-  Terminal &terminal;
+  Terminal &terminal = terr;
 
   void header (); // Print right part of header.
 
@@ -693,8 +679,8 @@ class Mobical : public Handler {
   string notified;
 
 #ifndef QUIET
-  int progress_counter;
-  double last_progress_time;
+  int progress_counter = 0;
+  double last_progress_time = 0;
 #endif
 
   void notify (Trace &trace, signed char ch = 0);
@@ -703,8 +689,8 @@ class Mobical : public Handler {
 
   Shared *shared; // shared among parent and child processes
 
-  int64_t traces;
-  int64_t spurious;
+  int64_t traces = 0;
+  int64_t spurious = 0;
 
   void print_statistics ();
 
@@ -805,10 +791,14 @@ void Mobical::warning (const char *fmt, ...) {
 // have the following structure
 //
 //   INIT
-//   (SET|ALWAYS)*
-//   (   (ADD|ASSUME|ALWAYS)*
-//       [ (SOLVE|SIMPLIFY|LOOKAHEAD) (LEMMA|CONTINUE)*
-//       (VAL|FLIP|FAILED|ALWAYS)* ]
+//   (SET|TRACEPROOF|ALWAYS)*
+//   (
+//     (ADD|ASSUME|ALWAYS)*
+//     [ 
+//       (SOLVE|SIMPLIFY|LOOKAHEAD)
+//       (LEMMA|CONTINUE)*
+//       (VAL|FLIP|FAILED|ALWAYS|CONCLUDE|FLUSHPROOFTRACE|CLOSEPROOFTRACE)*
+//     ]
 //   )*
 //   [ RESET ]
 //
@@ -835,6 +825,8 @@ void Mobical::warning (const char *fmt, ...) {
 // produce all these possible call sequences.  For instance it first adds
 // all clauses before making assumptions and also does not mix in these
 // 'ALWAYS' calls in all possible ways.
+
+constexpr uint64_t shift (uint64_t bit) { return (uint64_t) 1 << bit; }
 
 struct Call {
 
@@ -884,17 +876,22 @@ struct Call {
 
     // CONTINUE = (1 << 31),
     CONCLUDE = (1u << 31),
-    DISCONNECT = ((uint64_t) 1 << 32),
+    DISCONNECT = shift (32),
+
+    TRACEPROOF = shift (33),
+    FLUSHPROOFTRACE = shift (34),
+    CLOSEPROOFTRACE = shift (35),
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED,
 
-    CONFIG = INIT | SET | CONFIGURE | ALWAYS,
+    CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
     BEFORE =
         ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING,
     DURING = LEMMA, // | CONTINUE,
-    AFTER = VAL | FLIP | FAILED | CONCLUDE | ALWAYS,
+    AFTER = VAL | FLIP | FAILED | CONCLUDE | ALWAYS | FLUSHPROOFTRACE |
+            CLOSEPROOFTRACE,
   };
 
   Type type; // Explicit typing.
@@ -1300,6 +1297,31 @@ struct StatsCall : public Call {
   void print (ostream &o) { o << "stats" << endl; }
   Call *copy () { return new StatsCall (); }
   const char *keyword () { return "stats"; }
+};
+
+struct TraceProofCall : public Call {
+  std::string path;
+  TraceProofCall (const string &p) : Call (TRACEPROOF), path (p) {}
+  void execute (Solver *&s) { s->trace_proof (path.c_str ()); }
+  void print (ostream &o) { o << "trace_proof" << ' ' << path << endl; }
+  Call *copy () { return new TraceProofCall (path); }
+  const char *keyword () { return "trace_proof"; }
+};
+
+struct FlushProofTraceCall : public Call {
+  FlushProofTraceCall () : Call (FLUSHPROOFTRACE) {}
+  void execute (Solver *&s) { s->flush_proof_trace (); }
+  void print (ostream &o) { o << "flush_proof_trace" << endl; }
+  Call *copy () { return new FlushProofTraceCall (); }
+  const char *keyword () { return "flush_proof_trace"; }
+};
+
+struct CloseProofTraceCall : public Call {
+  CloseProofTraceCall () : Call (CLOSEPROOFTRACE) {}
+  void execute (Solver *&s) { s->close_proof_trace (); }
+  void print (ostream &o) { o << "close_proof_trace" << endl; }
+  Call *copy () { return new CloseProofTraceCall (); }
+  const char *keyword () { return "close_proof_trace"; }
 };
 
 /*------------------------------------------------------------------------*/
@@ -3169,6 +3191,13 @@ static bool is_valid_char (int ch) {
     return true;
   if ('0' <= ch && ch <= '9')
     return true;
+
+  // For now proof file paths can only have these additional characters.
+  // We should probably have an escape mechamism (quotes) for paths.
+
+  if (ch == '_' || ch == '/' || ch == '.' || ('A' <= ch && ch <= 'Z'))
+    return true;
+
   return false;
 }
 
@@ -3209,7 +3238,8 @@ void Reader::parse () {
     const char *keyword = p;
     if ((ch = *p) < 'a' || 'z' < ch)
       error ("expected keyword to start with lower case letter");
-    while (p < line + n && (ch = *++p) && 'a' <= ch && ch <= 'z')
+    while (p < line + n && (ch = *++p) &&
+           (('a' <= ch && ch <= 'z') || ch == '_'))
       ;
     const char *first = 0, *second = 0;
     if ((ch = *p) == ' ') {
@@ -3530,6 +3560,20 @@ void Reader::parse () {
       if (first)
         error ("additional argument '%s' to 'reset'", first);
       c = new ResetCall ();
+    } else if (!strcmp (keyword, "trace_proof")) {
+      if (!first)
+        error ("first argument to 'trace_proof' missing");
+      if (second)
+        error ("additional argument '%s' to 'trace_proof'", second);
+      c = new TraceProofCall (first);
+    } else if (!strcmp (keyword, "flush_proof_trace")) {
+      if (first)
+        error ("additional argument '%s' to 'flush_proof_trace'", first);
+      c = new FlushProofTraceCall ();
+    } else if (!strcmp (keyword, "close_proof_trace")) {
+      if (first)
+        error ("additional argument '%s' to 'close_proof_trace'", first);
+      c = new CloseProofTraceCall ();
     } else
       error ("invalid keyword '%s'", keyword);
 
@@ -3691,19 +3735,7 @@ extern "C" {
 #include <sys/mman.h>
 }
 
-Mobical::Mobical ()
-    : mode (0), verbose (false),
-#ifdef LOGGING
-      add_set_log_to_true (false),
-#endif
-      add_dump_before_solve (false), add_stats_after_solve (false),
-      add_plain_after_options (false), shrinking (false), running (false),
-      time_limit (DEFAULT_TIME_LIMIT), space_limit (DEFAULT_SPACE_LIMIT),
-      terminal (terr),
-#ifndef QUIET
-      progress_counter (0), last_progress_time (0),
-#endif
-      traces (0), spurious (0) {
+Mobical::Mobical () {
   const int prot = PROT_READ | PROT_WRITE;
   const int flags = MAP_ANONYMOUS | MAP_SHARED;
   shared = (Shared *) mmap (0, sizeof *shared, prot, flags, -1, 0);

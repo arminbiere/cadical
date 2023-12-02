@@ -1,3 +1,8 @@
+Version 1.9.1
+-------------
+
+- Fixed position of 'idrup' option.
+
 Version 1.9.0
 -------------
 

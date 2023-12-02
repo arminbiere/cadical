@@ -422,7 +422,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
     assert (s == size + 1);
     assert (t == size + 1);
     clause.clear ();
-    // TODO: lrat is c + d (+ eventual units)
+    // TODO: LRAT is c + d (+ eventual units)
     elim_on_the_fly_self_subsumption (eliminator, c, pivot);
     LOG (d, "double pivot %d on-the-fly self-subsuming resolution", -pivot);
     stats.elimotfsub++;
@@ -439,7 +439,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
   if (s > size) {
     assert (s == size + 1);
     clause.clear ();
-    // TODO: lrat is c + d (+ eventual units) -> not 100% sure.
+    // TODO: LRAT is c + d (+ eventual units) -> not 100% sure.
     elim_on_the_fly_self_subsumption (eliminator, c, pivot);
     return false;
   }
@@ -449,7 +449,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
   if (t > size) {
     assert (t == size + 1);
     clause.clear ();
-    // TODO: lrat is c + d (+ eventual units) -> same.
+    // TODO: LRAT is c + d (+ eventual units) -> same.
     elim_on_the_fly_self_subsumption (eliminator, d, -pivot);
     return false;
   }

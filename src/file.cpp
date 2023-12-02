@@ -35,7 +35,7 @@ File::File (Internal *i, bool w, int c, int p, FILE *f, const char *n)
 #if !defined(QUIET) || !defined(NDEBUG)
       writing (w),
 #endif
-      close_file (c), child_pid (p), file (f), _name (n), _lineno (1),
+      close_file (c), child_pid (p), file (f), _name (strdup (n)), _lineno (1),
       _bytes (0) {
   (void) w;
   assert (f), assert (n);
@@ -442,6 +442,7 @@ void File::flush () {
 }
 
 File::~File () {
+  free (_name);
   if (file)
     close ();
 }
