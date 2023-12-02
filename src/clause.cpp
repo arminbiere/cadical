@@ -78,7 +78,6 @@ Clause *Internal::new_clause (bool red, int glue) {
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
   const int tier1limit = tier1[false];
-  const int tier2limit = max (tier1limit, tier2[false]);
   assert (size >= 2);
 
   if (glue > size)
