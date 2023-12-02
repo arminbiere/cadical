@@ -840,11 +840,11 @@ void Mobical::warning (const char *fmt, ...) {
 // all clauses before making assumptions and also does not mix in these
 // 'ALWAYS' calls in all possible ways.
 
+constexpr uint64_t shift (uint64_t bit) { return (uint64_t) 1 << bit; }
+
 struct Call {
 
   enum Type : uint64_t {
-
-#define SHIFT(BIT) (((uint64_t) 1) << (BIT))
 
     INIT = (1 << 0),
     SET = (1 << 1),
@@ -890,11 +890,11 @@ struct Call {
 
     // CONTINUE = (1 << 31),
     CONCLUDE = (1u << 31),
-    DISCONNECT = SHIFT (32),
+    DISCONNECT = shift (32),
 
-    TRACEPROOF = SHIFT (33),
-    FLUSHPROOFTRACE = SHIFT (34),
-    CLOSEPROOFTRACE = SHIFT (35),
+    TRACEPROOF = shift (33),
+    FLUSHPROOFTRACE = shift (34),
+    CLOSEPROOFTRACE = shift (35),
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED,
