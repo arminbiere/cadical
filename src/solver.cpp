@@ -1105,8 +1105,9 @@ bool Solver::disconnect_proof_tracer (FileTracer *tracer) {
 }
 
 /*------------------------------------------------------------------------*/
+
 void Solver::conclude () {
-  LOG_API_CALL_BEGIN ("conclude");
+  TRACE ("conclude");
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == UNSATISFIED || state () == SATISFIED,
            "can only conclude in satisfied or unsatisfied state");
