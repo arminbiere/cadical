@@ -493,15 +493,15 @@ void Internal::conclude_unsat () {
 void Internal::reset_concluded () {
   if (proof)
     proof->reset_assumptions ();
+  if (concluded) {
+    LOG ("reset concluded");
+    concluded = false;
+  }
   if (conflict_id) {
     assert (conclusion.size () == 1);
     return;
   }
   conclusion.clear ();
-  if (!concluded)
-    return;
-  LOG ("reset concluded");
-  concluded = false;
 }
 
 // Add the start of each incremental phase (leaving the state
