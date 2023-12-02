@@ -60,10 +60,6 @@ static const char *USAGE =
     "\n"
     "  --do-not-enforce-contracts\n"
     "\n"
-    "You might want to write a proof to the given file:\n"
-    "\n"
-    "  --proof <path>\n"
-    "\n"
     "To read from '<stdin>' use '-' as '<input>' and also '-' instead of\n"
     "'<output>' to write to '<stdout>'.\n"
     "\n"
@@ -652,7 +648,6 @@ class Mobical : public Handler {
   bool add_dump_before_solve;
   bool add_stats_after_solve;
   bool add_plain_after_options;
-  const char *proof;
 
   /*----------------------------------------------------------------------*/
 
@@ -1332,7 +1327,7 @@ struct FlushProofTraceCall : public Call {
   void execute (Solver *&s) { s->flush_proof_trace (); }
   void print (ostream &o) { o << "flush_proof_trace" << endl; }
   Call *copy () { return new FlushProofTraceCall (); }
-  const char * keyword () { return "flush_proof_trace"; }
+  const char *keyword () { return "flush_proof_trace"; }
 };
 
 struct CloseProofTraceCall : public Call {
@@ -1340,7 +1335,7 @@ struct CloseProofTraceCall : public Call {
   void execute (Solver *&s) { s->close_proof_trace (); }
   void print (ostream &o) { o << "close_proof_trace" << endl; }
   Call *copy () { return new CloseProofTraceCall (); }
-  const char * keyword () { return "close_proof_trace"; }
+  const char *keyword () { return "close_proof_trace"; }
 };
 
 /*------------------------------------------------------------------------*/
@@ -3210,6 +3205,13 @@ static bool is_valid_char (int ch) {
     return true;
   if ('0' <= ch && ch <= '9')
     return true;
+
+  // For now proof file paths can only have these additional characters.
+  // We should probably have an escape mechamism (quotes) for paths.
+
+  if (ch == '_' || ch == '/' || ch == '.' || ('A' <= ch && ch <= 'Z'))
+    return true;
+
   return false;
 }
 
@@ -3250,7 +3252,8 @@ void Reader::parse () {
     const char *keyword = p;
     if ((ch = *p) < 'a' || 'z' < ch)
       error ("expected keyword to start with lower case letter");
-    while (p < line + n && (ch = *++p) && 'a' <= ch && ch <= 'z')
+    while (p < line + n && (ch = *++p) &&
+           (('a' <= ch && ch <= 'z') || ch == '_'))
       ;
     const char *first = 0, *second = 0;
     if ((ch = *p) == ' ') {
@@ -3752,9 +3755,9 @@ Mobical::Mobical ()
       add_set_log_to_true (false),
 #endif
       add_dump_before_solve (false), add_stats_after_solve (false),
-      add_plain_after_options (false), proof (0), shrinking (false),
-      running (false), time_limit (DEFAULT_TIME_LIMIT),
-      space_limit (DEFAULT_SPACE_LIMIT), terminal (terr),
+      add_plain_after_options (false), shrinking (false), running (false),
+      time_limit (DEFAULT_TIME_LIMIT), space_limit (DEFAULT_SPACE_LIMIT),
+      terminal (terr),
 #ifndef QUIET
       progress_counter (0), last_progress_time (0),
 #endif
@@ -3873,12 +3876,6 @@ int Mobical::main (int argc, char **argv) {
       add_stats_after_solve = true;
     } else if (!strcmp (argv[i], "-p") || !strcmp (argv[i], "--plain")) {
       add_plain_after_options = true;
-    } else if (!strcmp (argv[i], "--proof")) {
-      if (++i == argc)
-        die ("argument to '--proof' missing (try '-h')");
-      if (proof)
-        die ("multiple '--proof' arguments");
-      proof = argv[i];
     } else if (!strcmp (argv[i], "-L")) {
       if (limit >= 0)
         die ("multiple '-L' options (try '-h')");

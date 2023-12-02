@@ -987,7 +987,7 @@ bool Solver::frozen (int lit) const {
 /*------------------------------------------------------------------------*/
 
 bool Solver::trace_proof (FILE *external_file, const char *name) {
-  LOG_API_CALL_BEGIN ("trace_proof", name);
+  TRACE ("trace_proof", name);
   REQUIRE_VALID_STATE ();
   REQUIRE (
       state () == CONFIGURING,
@@ -1001,7 +1001,7 @@ bool Solver::trace_proof (FILE *external_file, const char *name) {
 }
 
 bool Solver::trace_proof (const char *path) {
-  LOG_API_CALL_BEGIN ("trace_proof", path);
+  TRACE ("trace_proof", path);
   REQUIRE_VALID_STATE ();
   REQUIRE (
       state () == CONFIGURING,
@@ -1015,7 +1015,7 @@ bool Solver::trace_proof (const char *path) {
 }
 
 void Solver::flush_proof_trace (bool print_statistics_unless_quiet) {
-  LOG_API_CALL_BEGIN ("flush_proof_trace");
+  TRACE ("flush_proof_trace");
   REQUIRE_VALID_STATE ();
   REQUIRE (!internal->file_tracers.empty (), "proof is not traced");
   REQUIRE (!internal->file_tracers.back ()->closed (),
@@ -1025,7 +1025,7 @@ void Solver::flush_proof_trace (bool print_statistics_unless_quiet) {
 }
 
 void Solver::close_proof_trace (bool print_statistics_unless_quiet) {
-  LOG_API_CALL_BEGIN ("close_proof_trace");
+  TRACE ("close_proof_trace");
   REQUIRE_VALID_STATE ();
   REQUIRE (!internal->file_tracers.empty (), "proof is not traced");
   REQUIRE (!internal->file_tracers.back ()->closed (),
