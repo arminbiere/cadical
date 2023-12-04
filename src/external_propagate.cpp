@@ -413,6 +413,7 @@ void Internal::explain_reason (int ilit, Clause *reason, int &open) {
       v.reason = learn_external_reason_clause (-other, 0, true);
       if (!v.reason && opts.reimply) {
         assert (!v.level);
+        v.trail = trail.size ();
         trail.push_back (-other);
       }
     }
