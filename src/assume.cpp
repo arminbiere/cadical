@@ -556,12 +556,14 @@ void Internal::sort_and_reuse_assumptions () {
   const int size = min (level + 1, max_level + 1);
   assert ((size_t) level == control.size () - 1);
   LOG (assumptions, "sorted assumptions");
+  int target = 0;
   for (int i = 1, j = 0; i < size; ) {
     assert (j < i);
     const Level &l = control[i];
     const int lit = l.decision;
     const int alit = assumptions[j];
     const int lev = i;
+    target = lev-1;
     if (val (alit) && var (alit).level < lev) { // we can ignore propagated assumptions
       ++j;
       continue;
@@ -571,17 +573,17 @@ void Internal::sort_and_reuse_assumptions () {
       assert (opts.reimply);
       if (val (alit) > 0 && var (alit).level < lev)
         continue;
-      backtrack (lev-1);
       break;
     }
     if (l.decision == alit) {
       continue;
     }
-    backtrack (lev-1);
     break;
   }
 
-  LOG ("assumptions allow for reuse of trail up to level %d\n\n", level);
+  if (target < level)
+    backtrack (target);
+  LOG ("assumptions allow for reuse of trail up to level %d", level);
   if ((size_t) level > assumptions.size ())
     stats.assumptionsreused += assumptions.size ();
   else
