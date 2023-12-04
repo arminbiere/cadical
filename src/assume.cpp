@@ -558,7 +558,6 @@ void Internal::sort_and_reuse_assumptions () {
   LOG (assumptions, "sorted assumptions");
   int target = 0;
   for (int i = 1, j = 0; i < size; ) {
-    assert (j < i);
     const Level &l = control[i];
     const int lit = l.decision;
     const int alit = assumptions[j];
