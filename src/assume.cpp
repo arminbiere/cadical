@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "options.hpp"
 
 namespace CaDiCaL {
 
@@ -526,33 +527,61 @@ void Internal::sort_and_reuse_assumptions () {
   assert (opts.ilbassumptions);
   if (assumptions.empty ())
     return;
+  // set assumptions first, then sorted by position on the trail
+  // unset literals are sorted by literal value
   std::sort (begin (assumptions), end (assumptions),
              [this] (int litA, int litB) {
+               if (!val (litA) && val (litB))
+                 return false;
+               if (val (litA) && !val (litB))
+                 return true;
+               if (!val (litA) && !val (litB))
+                 return litA < litB;
+               assert (val (litA) && val (litB));
+	       LOG ("%d -> %zd", litA, ((uint64_t) var (litA).level << 32) +
+               (uint64_t) var (litA).trail);
                return ((uint64_t) var (litA).level << 32) +
                           (uint64_t) var (litA).trail <
                       ((uint64_t) var (litB).level << 32) +
                           (uint64_t) var (litB).trail;
              });
+  int max_level = 0;
+  for (auto lit : assumptions) {
+    if (val (lit))
+      max_level = var (lit).level;
+    else
+      break;
+  }
 
-  const int max_level = var (assumptions.back ()).level;
   const int size = min (level + 1, max_level + 1);
   assert ((size_t) level == control.size () - 1);
-  for (int i = 1; i < size; ++i) {
+  LOG (assumptions, "sorted assumptions");
+  for (int i = 1, j = 0; i < size; ) {
+    assert (j < i);
     const Level &l = control[i];
     const int lit = l.decision;
-    const int alit = assumptions[i - 1];
-    if (!lit || var (lit).level != i) {
-      if (val (alit) > 0 && var (alit).level < i)
+    const int alit = assumptions[j];
+    const int lev = i;
+    if (val (alit) && var (alit).level < lev) { // we can ignore propagated assumptions
+      ++j;
+      continue;
+    }
+    ++i, ++j;
+    if (!lit || var (lit).level != lev) { // removed literals
+      assert (opts.reimply);
+      if (val (alit) > 0 && var (alit).level < lev)
         continue;
-      backtrack (i - 1);
+      backtrack (lev-1);
       break;
     }
-    if (l.decision == alit)
+    if (l.decision == alit) {
       continue;
-    backtrack (i - 1);
+    }
+    backtrack (lev-1);
     break;
   }
-  LOG ("assumptions allow for reuse of trail up to level %d", level);
+
+  LOG ("assumptions allow for reuse of trail up to level %d\n\n", level);
   if ((size_t) level > assumptions.size ())
     stats.assumptionsreused += assumptions.size ();
   else
