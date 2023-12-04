@@ -815,6 +815,7 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
 
 bool Internal::vivify_shrinkable (const std::vector<int>&sorted,  Clause *conflict, int &implied) {
 
+  unsigned count_implied = 0;
   for (auto lit: sorted) {
     const signed char value = val (lit);
     if (!value) {
@@ -825,9 +826,10 @@ bool Internal::vivify_shrinkable (const std::vector<int>&sorted,  Clause *confli
       LOG ("vivification implied satisfied %d", lit);
       if (conflict)
         return true;
-      if (!implied) {
-	LOG ("changing implied from 0 to %d", lit);
-        implied = lit;
+      assert (implied);
+      if (count_implied++) {
+        LOG ("at least one implied literal with conflict thus shrinking");
+        return true;
       }
     } else {
       assert (value < 0);
