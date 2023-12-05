@@ -98,8 +98,10 @@ int Internal::reuse_trail () {
       res++;
   } else {
     int64_t limit = bumped (decision);
-    while (res < level && bumped (control[res + 1].decision) > limit)
+    while (res < level && control[res + 1].decision && bumped (control[res + 1].decision) > limit) {
+      assert (control[res + 1].decision || opts.reimply);
       res++;
+    }
   }
   int reused = res - trivial_decisions;
   if (reused > 0) {
