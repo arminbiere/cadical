@@ -466,8 +466,8 @@ bool Internal::failed (int lit) {
   if (!marked_failed) {
     failing ();
     marked_failed = true;
-    conclude_unsat ();
   }
+  conclude_unsat ();
   Flags &f = flags (lit);
   const unsigned bit = bign (lit);
   return (f.failed & bit) != 0;
