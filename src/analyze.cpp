@@ -927,7 +927,7 @@ void Internal::analyze () {
     }
   }
 
-  if (opts.chrono || external_prop) {
+  if (opts.chrono || external_prop || (opts.reimply && multitrail_dirty != level)) {
 
     int forced;
 
