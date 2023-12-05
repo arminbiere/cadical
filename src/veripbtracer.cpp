@@ -313,7 +313,7 @@ void VeripbTracer::delete_clause (uint64_t id, bool redundant,
 #endif
 }
 
-void VeripbTracer::report_status (StatusType status, uint64_t conflict_id) {
+void VeripbTracer::report_status (int status, uint64_t conflict_id) {
   if (file->closed ())
     return;
 #ifdef LOGGING
@@ -322,7 +322,7 @@ void VeripbTracer::report_status (StatusType status, uint64_t conflict_id) {
          "clause[%" PRId64 "]",
          conflict_id);
 #endif
-  veripb_report_status (status == UNSAT, conflict_id);
+  veripb_report_status (status == UNSATISFIABLE, conflict_id);
 }
 
 void VeripbTracer::weaken_minus (uint64_t id, const vector<int> &) {

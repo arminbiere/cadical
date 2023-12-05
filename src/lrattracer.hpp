@@ -42,7 +42,7 @@ public:
 
   void finalize_clause (uint64_t, const vector<int> &) override {} // skip
 
-  void report_status (StatusType, uint64_t) override {} // skip
+  void report_status (int, uint64_t) override {} // skip
 
 #ifndef QUIET
   void print_statistics ();

@@ -17,6 +17,18 @@ namespace CaDiCaL {
 
 /*========================================================================*/
 
+// The SAT competition standardized the exit code of SAT solvers to the
+// following which then is also used return code for 'solve' functions.
+// In the following example we use those constants for brevity though.
+
+enum Status {
+  SATISFIABLE = 10,
+  UNSATISFIABLE = 20,
+  UNKNOWN = 0,
+};
+
+/*========================================================================*/
+
 // [Example]
 //
 // The internal solver state follows the IPASIR API model used in the
@@ -100,10 +112,10 @@ namespace CaDiCaL {
 //        VALID --------------------------> ADDING
 //
 //               add (zero literal)
-//        VALID --------------------------> UNKNOWN
+//        VALID --------------------------> STEADY
 //
 //               assume (non zero literal)
-//        READY --------------------------> UNKNOWN
+//        READY --------------------------> STEADY
 //
 //                        solve
 //        READY --------------------------> SOLVING
@@ -122,7 +134,7 @@ namespace CaDiCaL {
 //
 // where
 //
-//        READY = CONFIGURING  | UNKNOWN | SATISFIED | UNSATISFIED
+//        READY = CONFIGURING  | STEADY  | SATISFIED | UNSATISFIED
 //        VALID = READY        | ADDING
 //      INVALID = INITIALIZING | DELETING
 //
@@ -131,7 +143,7 @@ namespace CaDiCaL {
 // 'terminate'.  Here is the only asynchronous transition:
 //
 //               terminate (asynchronously)
-//      SOLVING  ------------------------->  UNKNOWN
+//      SOLVING  ------------------------->  STEADY
 //
 // The important behaviour to remember is that adding, assuming or
 // constraining a literal (immediately) destroys the satisfying assignment
@@ -141,9 +153,9 @@ namespace CaDiCaL {
 //
 // Furthermore, the model can only be queried through 'val' in the
 // 'SATISFIED' state, while extracting failed assumptions with 'failed' only
-// in the 'UNSATISFIED' state.  Solving can only be started in the 'UNKNOWN'
+// in the 'UNSATISFIED' state.  Solving can only be started in the 'STEADY '
 // or 'CONFIGURING' state or after the previous call to 'solve' yielded an
-// 'UNKNOWN, 'SATISFIED' or 'UNSATISFIED' state.
+// 'STEADY , 'SATISFIED' or 'UNSATISFIED' state.
 //
 // All literals have to be valid literals too, i.e., 32-bit integers
 // different from 'INT_MIN'.  If any of these requirements is violated the
@@ -166,7 +178,7 @@ namespace CaDiCaL {
 enum State {
   INITIALIZING = 1, // during initialization (invalid)
   CONFIGURING = 2,  // configure options (with 'set')
-  UNKNOWN = 4,      // ready to call 'solve'
+  STEADY = 4,       // ready to call 'solve'
   ADDING = 8,       // adding clause literals (zero missing)
   SOLVING = 16,     // while solving (within 'solve')
   SATISFIED = 32,   // satisfiable allows 'val'
@@ -175,7 +187,7 @@ enum State {
 
   // These combined states are used to check contracts.
 
-  READY = CONFIGURING | UNKNOWN | SATISFIED | UNSATISFIED,
+  READY = CONFIGURING | STEADY | SATISFIED | UNSATISFIED,
   VALID = READY | ADDING,
   INVALID = INITIALIZING | DELETING
 };
@@ -217,7 +229,7 @@ public:
   static const char *signature (); // name of this library
 
   // Core functionality as in the IPASIR incremental SAT solver interface.
-  // (recall 'READY = CONFIGURING | UNKNOWN | SATISFIED | UNSATISFIED').
+  // (recall 'READY = CONFIGURING | STEADY  | SATISFIED | UNSATISFIED').
   // Further note that 'lit' is required to be different from 'INT_MIN' and
   // different from '0' except for 'add'.
 
@@ -225,7 +237,7 @@ public:
   //
   //   require (VALID)                  // recall 'VALID = READY | ADDING'
   //   if (lit) ensure (ADDING)         // and thus VALID but not READY
-  //   if (!lit) ensure (UNKNOWN)       // and thus READY
+  //   if (!lit) ensure (STEADY )       // and thus READY
   //
   void add (int lit);
 
@@ -233,7 +245,7 @@ public:
   // should all be valid (different from 'INT_MIN' and different from '0').
   //
   //   require (VALID)
-  //   ensure (UNKNOWN)
+  //   ensure (STEADY )
   //
   void clause (int);                      // Add unit clause.
   void clause (int, int);                 // Add binary clause.
@@ -253,18 +265,18 @@ public:
   // returning from 'simplify' and 'lookahead.
   //
   //   require (READY)
-  //   ensure (UNKNOWN)
+  //   ensure (STEADY )
   //
   void assume (int lit);
 
   // Try to solve the current formula.  Returns
   //
-  //    0 = UNSOLVED     (limit reached or interrupted through 'terminate')
+  //    0 = UNKNOWN      (limit reached or interrupted through 'terminate')
   //   10 = SATISFIABLE
   //   20 = UNSATISFIABLE
   //
   //   require (READY)
-  //   ensure (UNKNOWN | SATISFIED | UNSATISFIED)
+  //   ensure (STEADY  | SATISFIED | UNSATISFIED)
   //
   // Note, that while in this call the solver actually transitions to state
   // 'SOLVING', which however is only visible from a different context,
@@ -416,7 +428,7 @@ public:
   //
   //   require (VALID)                     // recall 'VALID = READY |
   //   ADDING' if (lit) ensure (ADDING)            // and thus VALID but not
-  //   READY if (!lit) && !adding_clause ensure (UNKNOWN) // and thus READY
+  //   READY if (!lit) && !adding_clause ensure (STEADY ) // and thus READY
   //
   void constrain (int lit);
 
@@ -434,10 +446,10 @@ public:
   // zero if the formula is proven to be satisfiable or unsatisfiable.  This
   // can then be checked by 'state ()'.  If the formula is empty and
   // the function is not able to determine satisfiability also zero is
-  // returned but the state remains unknown.
+  // returned but the state remains steady.
   //
   //   require (READY)
-  //   ensure (UNKNOWN|SATISFIED|UNSATISFIED)
+  //   ensure (STEADY |SATISFIED|UNSATISFIED)
   //
   int lookahead (void);
 
@@ -483,7 +495,7 @@ public:
   //   ensure (READY)           // for 'this'
   //
   //   other.require (CONFIGURING)
-  //   other.ensure (CONFIGURING | UNKNOWN)
+  //   other.ensure (CONFIGURING | STEADY )
   //
   void copy (Solver &other) const;
 
@@ -504,7 +516,7 @@ public:
   // and has the same state transition and conditions as 'assume' etc.
   //
   //   require (READY)
-  //   ensure (UNKNOWN)
+  //   ensure (STEADY )
   //
   void reserve (int min_max_var);
 
@@ -641,14 +653,14 @@ public:
   // This function executes the given number of preprocessing rounds. It is
   // similar to 'solve' with 'limits ("preprocessing", rounds)' except that
   // no CDCL nor local search, nor lucky phases are executed.  The result
-  // values are also the same: 0=unknown, 10=satisfiable, 20=unsatisfiable.
+  // values are also the same: 0=UNKNOWN, 10=SATISFIABLE, 20=UNSATISFIABLE.
   // As 'solve' it resets current assumptions and limits before returning.
   // The numbers of rounds should not be negative.  If the number of rounds
   // is zero only clauses are restored (if necessary) and top level unit
   // propagation is performed, which both take some time.
   //
   //   require (READY)
-  //   ensure (UNKNOWN | SATISFIED | UNSATISFIED)
+  //   ensure (STEADY  | SATISFIED | UNSATISFIED)
   //
   int simplify (int rounds = 3);
 
@@ -656,7 +668,7 @@ public:
   // Force termination of 'solve' asynchronously.
   //
   //  require (SOLVING | READY)
-  //  ensure (UNKNOWN)           // actually not immediately (synchronously)
+  //  ensure (STEADY )           // actually not immediately (synchronously)
   //
   void terminate ();
 
@@ -958,7 +970,7 @@ private:
   void trace_api_call (const char *, const char *, int) const;
 #endif
 
-  void transition_to_unknown_state ();
+  void transition_to_steady_state ();
 
   //------------------------------------------------------------------------
   // Used in the stand alone solver application 'App' and the model based
@@ -1200,7 +1212,7 @@ public:
   virtual ~WitnessIterator () {}
   virtual bool witness (const std::vector<int> &clause,
                         const std::vector<int> &witness,
-			uint64_t id = 0) = 0;
+                        uint64_t id = 0) = 0;
 };
 
 /*------------------------------------------------------------------------*/

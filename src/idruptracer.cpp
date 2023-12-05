@@ -296,14 +296,14 @@ void IdrupTracer::idrup_conclude_and_delete (
   }
 }
 
-void IdrupTracer::idrup_report_status (StatusType status) {
+void IdrupTracer::idrup_report_status (int status) {
   if (binary)
     file->put ('s');
   else
     file->put ("s ");
-  if (status == SAT)
+  if (status == SATISFIABLE)
     file->put ("SATISFIABLE");
-  else if (status == UNSAT)
+  else if (status == UNSATISFIABLE)
     file->put ("UNSATISFIABLE");
   else
     file->put ("UNKNOWN");
@@ -417,7 +417,7 @@ void IdrupTracer::add_original_clause (uint64_t, bool,
   idrup_add_restored_clause (clause);
 }
 
-void IdrupTracer::report_status (StatusType status, uint64_t) {
+void IdrupTracer::report_status (int status, uint64_t) {
   if (file->closed ())
     return;
   LOG ("IDRUP TRACER tracing report of status %d", status);

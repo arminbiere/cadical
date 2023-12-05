@@ -37,7 +37,7 @@ namespace CaDiCaL {
          tout.normal_code ()); \
   } while (0)
 
-void Solver::transition_to_unknown_state () {
+void Solver::transition_to_steady_state () {
   if (state () == CONFIGURING) {
     LOG ("API leaves state %sCONFIGURING%s", tout.emph_code (),
          tout.normal_code ());
@@ -57,8 +57,8 @@ void Solver::transition_to_unknown_state () {
     external->reset_concluded ();
     external->reset_constraint ();
   }
-  if (state () != UNKNOWN)
-    STATE (UNKNOWN);
+  if (state () != STEADY)
+    STATE (STEADY);
 }
 
 /*------------------------------------------------------------------------*/
@@ -404,7 +404,7 @@ int Solver::vars () {
 void Solver::reserve (int min_max_var) {
   TRACE ("reserve", min_max_var);
   REQUIRE_VALID_STATE ();
-  transition_to_unknown_state ();
+  transition_to_steady_state ();
   external->reset_extended ();
   external->init (min_max_var);
   LOG_API_CALL_END ("reserve", min_max_var);
@@ -532,13 +532,13 @@ void Solver::add (int lit) {
   REQUIRE_VALID_STATE ();
   if (lit)
     REQUIRE_VALID_LIT (lit);
-  transition_to_unknown_state ();
+  transition_to_steady_state ();
   external->add (lit);
   adding_clause = lit;
   if (adding_clause)
     STATE (ADDING);
   else if (!adding_constraint)
-    STATE (UNKNOWN);
+    STATE (STEADY);
   LOG_API_CALL_END ("add", lit);
 }
 
@@ -594,13 +594,13 @@ void Solver::constrain (int lit) {
   REQUIRE_VALID_STATE ();
   if (lit)
     REQUIRE_VALID_LIT (lit);
-  transition_to_unknown_state ();
+  transition_to_steady_state ();
   external->constrain (lit);
   adding_constraint = lit;
   if (adding_constraint)
     STATE (ADDING);
   else if (!adding_clause)
-    STATE (UNKNOWN);
+    STATE (STEADY);
   LOG_API_CALL_END ("constrain", lit);
 }
 
@@ -608,7 +608,7 @@ void Solver::assume (int lit) {
   TRACE ("assume", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
-  transition_to_unknown_state ();
+  transition_to_steady_state ();
   external->assume (lit);
   LOG_API_CALL_END ("assume", lit);
 }
@@ -636,7 +636,7 @@ Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
 void Solver::reset_assumptions () {
   TRACE ("reset_assumptions");
   REQUIRE_VALID_STATE ();
-  transition_to_unknown_state ();
+  transition_to_steady_state ();
   external->reset_assumptions ();
   LOG_API_CALL_END ("reset_assumptions");
 }
@@ -644,7 +644,7 @@ void Solver::reset_assumptions () {
 void Solver::reset_constraint () {
   TRACE ("reset_constraint");
   REQUIRE_VALID_STATE ();
-  transition_to_unknown_state ();
+  transition_to_steady_state ();
   external->reset_constraint ();
   LOG_API_CALL_END ("reset_constraint");
 }
@@ -652,7 +652,7 @@ void Solver::reset_constraint () {
 /*------------------------------------------------------------------------*/
 
 int Solver::call_external_solve_and_check_results (bool preprocess_only) {
-  transition_to_unknown_state ();
+  transition_to_steady_state ();
   assert (state () & READY);
   STATE (SOLVING);
   const int res = external->solve (preprocess_only);
@@ -661,7 +661,7 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
   else if (res == 20)
     STATE (UNSATISFIED);
   else
-    STATE (UNKNOWN);
+    STATE (STEADY);
 #if 0 // EXPENSIVE ALTERNATIVE ASSUMPTION CHECKING
   // This checks that the set of failed assumptions form a core using the
   // external 'copy (...)' function to copy the solver, which can be trusted
@@ -716,7 +716,8 @@ int Solver::val (int lit) {
   TRACE ("val", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
-  REQUIRE (state () == SATISFIED, "can only get value in satisfied state");
+  REQUIRE (state () == SATISFIED,
+           "can only get value in satisfied state");
   if (!external->extended)
     external->extend ();
   external->conclude_sat ();
@@ -731,7 +732,8 @@ bool Solver::flip (int lit) {
   TRACE ("flip", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
-  REQUIRE (state () == SATISFIED, "can only flip value in satisfied state");
+  REQUIRE (state () == SATISFIED,
+           "can only flip value in satisfied state");
   REQUIRE (!external->propagator,
            "can only flip when no external propagator is present");
   bool res = external->flip (lit);
@@ -744,7 +746,8 @@ bool Solver::flippable (int lit) {
   TRACE ("flippable", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
-  REQUIRE (state () == SATISFIED, "can only flip value in satisfied state");
+  REQUIRE (state () == SATISFIED,
+           "can only flip value in satisfied state");
   REQUIRE (!external->propagator,
            "can only flip when no external propagator is present");
   bool res = external->flippable (lit);
@@ -1361,7 +1364,7 @@ bool Solver::traverse_clauses (ClauseIterator &it) const {
   REQUIRE_VALID_STATE ();
   bool res = external->traverse_all_frozen_units_as_clauses (it) &&
              internal->traverse_clauses (it) &&
-	     internal->traverse_constraint (it);
+             internal->traverse_constraint (it);
   LOG_API_CALL_RETURNS ("traverse_clauses", res);
   return res;
 }
@@ -1547,7 +1550,8 @@ public:
 
 void Solver::copy (Solver &other) const {
   REQUIRE_READY_STATE ();
-  REQUIRE (other.state () & CONFIGURING, "target solver already modified");
+  REQUIRE (other.state () & CONFIGURING,
+           "target solver already modified");
   internal->opts.copy (other.internal->opts);
   ClauseCopier clause_copier (other);
   traverse_clauses (clause_copier);

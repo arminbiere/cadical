@@ -84,7 +84,7 @@ public:
   void delete_clause (uint64_t, bool, const vector<int> &) override;
   void finalize_clause (uint64_t, const vector<int> &) override {} // skip
 
-  void report_status (StatusType, uint64_t) override;
+  void report_status (int, uint64_t) override;
 
   void weaken_minus (uint64_t, const vector<int> &) override;
   void strengthen (uint64_t) override;

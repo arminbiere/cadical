@@ -58,7 +58,7 @@ class IdrupTracer : public FileTracer {
   void idrup_add_restored_clause (const vector<int> &clause);
   void idrup_add_original_clause (const vector<int> &clause);
   void idrup_conclude_and_delete (const vector<uint64_t> &conclusion);
-  void idrup_report_status (StatusType status);
+  void idrup_report_status (int status);
   void idrup_conclude_sat (const vector<int> &model);
   void idrup_solve_query ();
   
@@ -76,7 +76,7 @@ public:
   void delete_clause (uint64_t, bool, const vector<int> &) override;
   void add_original_clause (uint64_t, bool, const vector<int> &,
                             bool = false) override;
-  void report_status (StatusType, uint64_t) override;
+  void report_status (int, uint64_t) override;
   void conclude_sat (const vector<int> &) override;
   void conclude_unsat (ConclusionType, const vector<uint64_t> &) override;
 
