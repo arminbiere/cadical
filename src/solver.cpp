@@ -662,7 +662,7 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
     STATE (UNSATISFIED);
   else
     STATE (UNKNOWN);
-#if 1 // EXPENSIVE ALTERNATIVE ASSUMPTION CHECKING
+#if 0 // EXPENSIVE ALTERNATIVE ASSUMPTION CHECKING
   // This checks that the set of failed assumptions form a core using the
   // external 'copy (...)' function to copy the solver, which can be trusted
   // less, since it involves copying the extension stack too.  The
