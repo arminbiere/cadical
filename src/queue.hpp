@@ -1,6 +1,8 @@
 #ifndef _queue_hpp_INCLUDED
 #define _queue_hpp_INCLUDED
 
+#include <vector>
+
 namespace CaDiCaL {
 
 // Links for double linked decision queue.
@@ -12,7 +14,7 @@ struct Link {
   // initialized explicitly in 'init_queue'
 };
 
-typedef vector<Link> Links;
+typedef std::vector<Link> Links;
 
 // Variable move to front (VMTF) decision queue ordered by 'bumped'.  See
 // our SAT'15 paper for an explanation on how this works.

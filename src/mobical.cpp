@@ -165,7 +165,6 @@ enum Size { NOSIZE = 0, SMALL = 10, MEDIUM = 30, BIG = 50 };
 struct Force {
   Size size = NOSIZE;
   int phases = -1;
-  ;
 };
 
 // Options to shrink traces.

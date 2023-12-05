@@ -1,4 +1,7 @@
-/*------------------------------------------------------------------------*/
+#ifndef _random_hpp_INCLUDED
+#define _random_hpp_INCLUDED
+
+#include <cstdint>
 
 // Random number generator.
 
@@ -91,3 +94,5 @@ public:
 };
 
 } // namespace CaDiCaL
+
+#endif

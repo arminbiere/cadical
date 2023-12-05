@@ -1,6 +1,8 @@
 #ifndef _range_hpp_INCLUDED
 #define _range_hpp_INCLUDED
 
+#include <cassert>
+
 namespace CaDiCaL {
 
 struct Clause;

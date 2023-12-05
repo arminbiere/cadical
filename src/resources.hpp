@@ -1,6 +1,8 @@
 #ifndef _resources_hpp_INCLUDED
 #define _resources_hpp_INCLUDED
 
+#include <cstdint>
+
 namespace CaDiCaL {
 
 double absolute_real_time ();
