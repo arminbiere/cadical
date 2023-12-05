@@ -7,7 +7,8 @@ namespace CaDiCaL {
 // adds an assumption literal onto the assumption stack.
 
 void Internal::assume (int lit) {
-  if (val (lit) < 0)
+  if (level && !opts.ilbassumptions) backtrack ();
+  else if (val (lit) < 0)
     backtrack (max (0, var (lit).level - 1));
   Flags &f = flags (lit);
   const unsigned char bit = bign (lit);
