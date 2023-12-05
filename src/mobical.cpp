@@ -1871,6 +1871,8 @@ void Trace::generate_clause (Random &random, int minvars, int maxvars,
 
 void Trace::generate_constraint (Random &random, int minvars, int maxvars,
                                  int uniform) {
+  if (random.generate_double () < 0.95)
+    return;
   assert (minvars <= maxvars);
   int maxsize = maxvars - minvars + 1;
   int size = uniform ? uniform : pick_size (random, maxsize);
@@ -1886,7 +1888,7 @@ void Trace::generate_constraint (Random &random, int minvars, int maxvars,
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
-  if (random.generate_double () < 0.15)
+  if (random.generate_double () < 0.9)
     return;
 
   assert (minvars <= maxvars);

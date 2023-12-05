@@ -7,7 +7,8 @@ namespace CaDiCaL {
 // adds an assumption literal onto the assumption stack.
 
 void Internal::assume (int lit) {
-  if (val (lit) < 0)
+  if (level && !opts.ilbassumptions) backtrack ();
+  else if (val (lit) < 0)
     backtrack (max (0, var (lit).level - 1));
   Flags &f = flags (lit);
   const unsigned char bit = bign (lit);
@@ -558,7 +559,6 @@ void Internal::sort_and_reuse_assumptions () {
   LOG (assumptions, "sorted assumptions");
   int target = 0;
   for (int i = 1, j = 0; i < size; ) {
-    assert (j < i);
     const Level &l = control[i];
     const int lit = l.decision;
     const int alit = assumptions[j];
@@ -569,8 +569,7 @@ void Internal::sort_and_reuse_assumptions () {
       continue;
     }
     ++i, ++j;
-    if (!lit || var (lit).level != lev) { // removed literals
-      assert (opts.reimply);
+    if (!lit || var (lit).level != lev) { // removed literals or pseudo decision level
       if (val (alit) > 0 && var (alit).level < lev)
         continue;
       break;
