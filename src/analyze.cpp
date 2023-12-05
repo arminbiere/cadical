@@ -511,7 +511,7 @@ inline int Internal::otfs_find_backtrack_level (int &forced) {
 inline int Internal::find_conflict_level (int &forced) {
 
   assert (conflict);
-  assert (opts.chrono || opts.otfs || external_prop);
+  assert (opts.chrono || opts.otfs || external_prop || (opts.reimply && multitrail_dirty != level));
 
   int res = 0, count = 0;
 
