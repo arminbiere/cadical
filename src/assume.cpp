@@ -464,7 +464,8 @@ DONE:
 
 bool Internal::failed (int lit) {
   if (!marked_failed) {
-    failing ();
+    if (!conflict_id)
+      failing ();
     marked_failed = true;
   }
   conclude_unsat ();
@@ -479,7 +480,8 @@ void Internal::conclude_unsat () {
   concluded = true;
   if (!marked_failed) {
     assert (conclusion.empty ());
-    failing ();
+    if (!conflict_id)
+      failing ();
     marked_failed = true;
   }
   ConclusionType con;
