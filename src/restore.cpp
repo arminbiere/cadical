@@ -52,7 +52,7 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
                                const uint64_t id) {
   LOG (begin, end, "restoring external clause[%" PRIu64 "]", id);
   assert (eclause.empty ());
-  const bool irredundant_clause = (id != 0);
+  assert (id);
   for (auto p = begin; p != end; p++) {
     eclause.push_back (*p);
     if (internal->proof && internal->lrat) {
@@ -67,18 +67,14 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
       }
     }
     int ilit = internalize (*p);
-    if (irredundant_clause)
-      internal->add_original_lit (ilit), internal->stats.restoredlits++;
+    internal->add_original_lit (ilit), internal->stats.restoredlits++;
   }
   if (internal->proof && internal->lrat) {
     for (const auto &elit : eclause) {
       ext_flags[abs (elit)] = false;
     }
   }
-  if (irredundant_clause) // Can a restored clause be redundant?
-    internal->finish_added_clause_with_id (id, true);
-  if (!irredundant_clause)
-    LOG (eclause, "do not restore clause, because it is redundant");
+  internal->finish_added_clause_with_id (id, true);
   eclause.clear ();
   internal->stats.restored++;
 }
@@ -164,6 +160,7 @@ void External::restore_clauses () {
         satisfied = elit;
       end_of_clause++;
     }
+    assert (id);
 
     // Do not apply our 'FLUSH' rule to remove satisfied (implied) clauses
     // if the corresponding option is set simply by resetting 'satisfied'.

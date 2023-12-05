@@ -465,8 +465,8 @@ bool Internal::failed (int lit) {
   if (!marked_failed) {
     failing ();
     marked_failed = true;
-    conclude_unsat ();
   }
+  conclude_unsat ();
   Flags &f = flags (lit);
   const unsigned bit = bign (lit);
   return (f.failed & bit) != 0;
@@ -568,8 +568,7 @@ void Internal::sort_and_reuse_assumptions () {
       continue;
     }
     ++i, ++j;
-    if (!lit || var (lit).level != lev) { // removed literals
-      assert (opts.reimply);
+    if (!lit || var (lit).level != lev) { // removed literals or pseudo decision level
       if (val (alit) > 0 && var (alit).level < lev)
         continue;
       break;
