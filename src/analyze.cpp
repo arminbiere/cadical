@@ -23,6 +23,7 @@ void Internal::learn_empty_clause () {
   }
   unsat = true;
   conflict_id = id;
+  marked_failed = true;
   conclusion.push_back (id);
   lrat_chain.clear ();
 }
