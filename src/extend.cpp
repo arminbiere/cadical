@@ -77,7 +77,8 @@ void External::push_binary_clause_on_extension_stack (uint64_t id,
 /*------------------------------------------------------------------------*/
 
 void External::push_external_clause_and_witness_on_extension_stack (
-    const vector<int> &c, const vector<int> &w) {
+    const vector<int> &c, const vector<int> &w, uint64_t id) {
+  assert (id);
   extension.push_back (0);
   for (const auto &elit : w) {
     assert (elit != INT_MIN);
@@ -85,6 +86,11 @@ void External::push_external_clause_and_witness_on_extension_stack (
     extension.push_back (elit);
     mark (witness, elit);
   }
+  extension.push_back (0);
+  const uint32_t higher_bits = static_cast<int> (id << 32);
+  const uint32_t lower_bits = (id & (((uint64_t) 1 << 32) - 1));
+  extension.push_back (higher_bits);
+  extension.push_back (lower_bits);
   extension.push_back (0);
   for (const auto &elit : c) {
     assert (elit != INT_MIN);
@@ -202,13 +208,19 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
     int lit;
     while ((lit = *--i))
       clause.push_back (lit);
-    i -= 3;
+    assert (!lit);
+    --i;
+    const uint64_t id = ((uint64_t) *(i-1) << 32) + static_cast<uint64_t>(*i);
+    assert (id);
+    i -= 2;
+    assert (!*i);
     assert (i != begin);
     while ((lit = *--i))
       witness.push_back (lit);
     reverse (clause.begin (), clause.end ());
     reverse (witness.begin (), witness.end ());
-    if (!it.witness (clause, witness))
+    LOG (clause, "traversing clause");
+    if (!it.witness (clause, witness, id))
       return false;
     clause.clear ();
     witness.clear ();
@@ -230,11 +242,15 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
         witness.push_back (lit);
       assert (!lit);
       assert (i != end);
+      assert (!*i);
+      const uint64_t id = ((uint64_t) *i << 32) + static_cast<uint64_t>(*(i + 1));
+      assert (id > 0);
       i += 3;
+      assert (*i);
       assert (i != end);
       while (i != end && (lit = *i++))
         clause.push_back (lit);
-      if (!it.witness (clause, witness))
+      if (!it.witness (clause, witness, id))
         return false;
       clause.clear ();
       witness.clear ();

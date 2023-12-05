@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "options.hpp"
 
 namespace CaDiCaL {
 
@@ -6,7 +7,8 @@ namespace CaDiCaL {
 // adds an assumption literal onto the assumption stack.
 
 void Internal::assume (int lit) {
-  if (val (lit) < 0)
+  if (level && !opts.ilbassumptions) backtrack ();
+  else if (val (lit) < 0)
     backtrack (max (0, var (lit).level - 1));
   Flags &f = flags (lit);
   const unsigned char bit = bign (lit);
@@ -493,15 +495,15 @@ void Internal::conclude_unsat () {
 void Internal::reset_concluded () {
   if (proof)
     proof->reset_assumptions ();
+  if (concluded) {
+    LOG ("reset concluded");
+    concluded = false;
+  }
   if (conflict_id) {
     assert (conclusion.size () == 1);
     return;
   }
   conclusion.clear ();
-  if (!concluded)
-    return;
-  LOG ("reset concluded");
-  concluded = false;
 }
 
 // Add the start of each incremental phase (leaving the state
@@ -526,32 +528,60 @@ void Internal::sort_and_reuse_assumptions () {
   assert (opts.ilbassumptions);
   if (assumptions.empty ())
     return;
+  // set assumptions first, then sorted by position on the trail
+  // unset literals are sorted by literal value
   std::sort (begin (assumptions), end (assumptions),
              [this] (int litA, int litB) {
+               if (!val (litA) && val (litB))
+                 return false;
+               if (val (litA) && !val (litB))
+                 return true;
+               if (!val (litA) && !val (litB))
+                 return litA < litB;
+               assert (val (litA) && val (litB));
+	       LOG ("%d -> %zd", litA, ((uint64_t) var (litA).level << 32) +
+               (uint64_t) var (litA).trail);
                return ((uint64_t) var (litA).level << 32) +
                           (uint64_t) var (litA).trail <
                       ((uint64_t) var (litB).level << 32) +
                           (uint64_t) var (litB).trail;
              });
+  int max_level = 0;
+  for (auto lit : assumptions) {
+    if (val (lit))
+      max_level = var (lit).level;
+    else
+      break;
+  }
 
-  const int max_level = var (assumptions.back ()).level;
   const int size = min (level + 1, max_level + 1);
   assert ((size_t) level == control.size () - 1);
-  for (int i = 1; i < size; ++i) {
+  LOG (assumptions, "sorted assumptions");
+  int target = 0;
+  for (int i = 1, j = 0; i < size; ) {
     const Level &l = control[i];
     const int lit = l.decision;
-    const int alit = assumptions[i - 1];
-    if (!lit || var (lit).level != i) {
-      if (val (alit) > 0 && var (alit).level < i)
+    const int alit = assumptions[j];
+    const int lev = i;
+    target = lev-1;
+    if (val (alit) && var (alit).level < lev) { // we can ignore propagated assumptions
+      ++j;
+      continue;
+    }
+    ++i, ++j;
+    if (!lit || var (lit).level != lev) { // removed literals or pseudo decision level
+      if (val (alit) > 0 && var (alit).level < lev)
         continue;
-      backtrack (i - 1);
       break;
     }
-    if (l.decision == alit)
+    if (l.decision == alit) {
       continue;
-    backtrack (i - 1);
+    }
     break;
   }
+
+  if (target < level)
+    backtrack (target);
   LOG ("assumptions allow for reuse of trail up to level %d", level);
   if ((size_t) level > assumptions.size ())
     stats.assumptionsreused += assumptions.size ();

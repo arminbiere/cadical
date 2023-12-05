@@ -267,24 +267,26 @@ void IdrupTracer::idrup_conclude_and_delete (
   uint64_t size = conclusion.size ();
   if (size > 1) {
     if (binary) {
-      file->put ('J');
+      file->put ('U');
       put_binary_id (size); // TODO: put_binary_id ok for size?
     } else {
-      file->put ("J ");
+      file->put ("U ");
       file->put (size), file->put ("\n");
     }
   }
   for (auto &id : conclusion) {
     if (binary)
-      file->put ('j');
+      file->put ('u');
     else
-      file->put ("j ");
+      file->put ("u ");
     (void) find_and_delete (id);
     for (const auto &external_lit : imported_clause) {
+      // flip sign...
+      const auto not_elit = -external_lit;
       if (binary)
-        put_binary_lit (external_lit);
+        put_binary_lit (not_elit);
       else
-        file->put (external_lit), file->put (' ');
+        file->put (not_elit), file->put (' ');
     }
     if (binary)
       put_binary_zero ();
@@ -309,9 +311,9 @@ void IdrupTracer::idrup_report_status (StatusType status) {
 
 void IdrupTracer::idrup_conclude_sat (const vector<int> &model) {
   if (binary)
-    file->put ('v');
+    file->put ('m');
   else
-    file->put ("v ");
+    file->put ("m ");
   for (auto &lit : model) {
     if (binary)
       put_binary_lit (lit);

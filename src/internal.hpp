@@ -1389,6 +1389,10 @@ struct Internal {
   //
   bool traverse_clauses (ClauseIterator &);
 
+  // Export and traverse all irredundant (non-unit) clauses.
+  //
+  bool traverse_constraint (ClauseIterator &);
+
   /*----------------------------------------------------------------------*/
 
   double solve_time (); // accumulated time spent in 'solve ()'

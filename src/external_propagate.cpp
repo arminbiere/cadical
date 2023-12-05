@@ -413,6 +413,7 @@ void Internal::explain_reason (int ilit, Clause *reason, int &open) {
       v.reason = learn_external_reason_clause (-other, 0, true);
       if (!v.reason && opts.reimply) {
         assert (!v.level);
+        v.trail = trail.size ();
         trail.push_back (-other);
       }
     }
@@ -870,10 +871,10 @@ void Internal::notify_assignments () {
 // properly initialize notify_trail to the current assignments
 //
 void Internal::connect_propagator () {
-  if (!opts.reimply)
-    return;
   if (level)
     backtrack ();
+  if (!opts.reimply)
+    return;
   notify_trail.clear ();
 #ifndef NDEBUG
   for (auto idx : vars) {

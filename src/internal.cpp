@@ -914,6 +914,34 @@ void Internal::dump () {
 
 /*------------------------------------------------------------------------*/
 
+bool Internal::traverse_constraint (ClauseIterator &it) {
+  if (constraint.empty() && !unsat_constraint)
+    return true;
+
+  vector<int> eclause;
+  if (unsat)
+    return it.clause (eclause);
+
+  LOG (constraint, "traversing constraint");
+  bool satisfied = false;
+  for (auto ilit : constraint) {
+      const int tmp = fixed (ilit);
+      if (tmp > 0) {
+        satisfied = true;
+        break;
+      }
+      if (tmp < 0)
+        continue;
+      const int elit = externalize (ilit);
+      eclause.push_back (elit);
+  }
+  if (!satisfied && !it.clause (eclause))
+    return false;
+
+  return true;
+}
+/*------------------------------------------------------------------------*/
+
 bool Internal::traverse_clauses (ClauseIterator &it) {
   vector<int> eclause;
   if (unsat)
