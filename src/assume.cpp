@@ -569,8 +569,7 @@ void Internal::sort_and_reuse_assumptions () {
       continue;
     }
     ++i, ++j;
-    if (!lit || var (lit).level != lev) { // removed literals
-      assert (opts.reimply);
+    if (!lit || var (lit).level != lev) { // removed literals or pseudo decision level
       if (val (alit) > 0 && var (alit).level < lev)
         continue;
       break;
