@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include <cstdint>
 
 namespace CaDiCaL {
 
@@ -774,7 +775,6 @@ bool External::traverse_all_non_frozen_units_as_witnesses (
   if (internal->unsat)
     return true;
 
-  uint64_t id = 1;
   vector<int> clause_and_witness;
   for (auto idx : vars) {
     if (frozen (idx))
@@ -783,10 +783,14 @@ bool External::traverse_all_non_frozen_units_as_witnesses (
     if (!tmp)
       continue;
     int unit = tmp < 0 ? -idx : idx;
-    LOG ("found unit %d", unit);
+    clause_and_witness.push_back (unit);
+    const int ilit = e2i[idx] * (tmp < 0 ? -1 : 1);
+    const uint64_t id = internal->opts.lrat ? internal->unit_clauses[internal->vlit (ilit)] : 1;
+    LOG ("found unit %d and putting id %zd", unit, id);
+    assert (id);
     clause_and_witness.push_back (unit);
     // We cannot reuse the same id here, so we give ids that are hopefully not used in the solver
-    if (!it.witness (clause_and_witness, clause_and_witness, id++))
+    if (!it.witness (clause_and_witness, clause_and_witness, id))
       return false;
     clause_and_witness.clear ();
   }
