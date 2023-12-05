@@ -871,10 +871,10 @@ void Internal::notify_assignments () {
 // properly initialize notify_trail to the current assignments
 //
 void Internal::connect_propagator () {
-  if (!opts.reimply)
-    return;
   if (level)
     backtrack ();
+  if (!opts.reimply)
+    return;
   notify_trail.clear ();
 #ifndef NDEBUG
   for (auto idx : vars) {
