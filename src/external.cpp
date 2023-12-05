@@ -774,8 +774,8 @@ bool External::traverse_all_non_frozen_units_as_witnesses (
   if (internal->unsat)
     return true;
 
+  uint64_t id = 1;
   vector<int> clause_and_witness;
-
   for (auto idx : vars) {
     if (frozen (idx))
       continue;
@@ -783,8 +783,10 @@ bool External::traverse_all_non_frozen_units_as_witnesses (
     if (!tmp)
       continue;
     int unit = tmp < 0 ? -idx : idx;
+    LOG ("found unit %d", unit);
     clause_and_witness.push_back (unit);
-    if (!it.witness (clause_and_witness, clause_and_witness))
+    // We cannot reuse the same id here, so we give ids that are hopefully not used in the solver
+    if (!it.witness (clause_and_witness, clause_and_witness, id++))
       return false;
     clause_and_witness.clear ();
   }

@@ -662,7 +662,7 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
     STATE (UNSATISFIED);
   else
     STATE (UNKNOWN);
-#if 0 // EXPENSIVE ALTERNATIVE ASSUMPTION CHECKING
+#if 1 // EXPENSIVE ALTERNATIVE ASSUMPTION CHECKING
   // This checks that the set of failed assumptions form a core using the
   // external 'copy (...)' function to copy the solver, which can be trusted
   // less, since it involves copying the extension stack too.  The
@@ -672,8 +672,13 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
   //
   if (res == 20 && !external->assumptions.empty ()) {
     Solver checker;
+    // checking restored clauses does not work (because the clauses are not added)
+    checker.set("checkproof", 1);
+    checker.set("lratexternal", 0);
+    checker.set("lrat", 0);
     checker.prefix ("checker ");
     copy (checker);
+    checker.set("log", 1);
     for (const auto & lit : external->assumptions)
       if (failed (lit))
         checker.add (lit), checker.add (0);
@@ -1355,7 +1360,8 @@ bool Solver::traverse_clauses (ClauseIterator &it) const {
   LOG_API_CALL_BEGIN ("traverse_clauses");
   REQUIRE_VALID_STATE ();
   bool res = external->traverse_all_frozen_units_as_clauses (it) &&
-             internal->traverse_clauses (it);
+             internal->traverse_clauses (it) &&
+	     internal->traverse_constraint (it);
   LOG_API_CALL_RETURNS ("traverse_clauses", res);
   return res;
 }
@@ -1470,7 +1476,7 @@ struct WitnessWriter : public WitnessIterator {
     }
     return file->put ('0');
   }
-  bool witness (const vector<int> &c, const vector<int> &w) {
+  bool witness (const vector<int> &c, const vector<int> &w, uint64_t) {
     if (!write (c))
       return false;
     if (!file->put (' '))
