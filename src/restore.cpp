@@ -53,7 +53,6 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
   LOG (begin, end, "restoring external clause[%" PRIu64 "]", id);
   assert (eclause.empty ());
   assert (id);
-  const bool irredundant_clause = true;
   for (auto p = begin; p != end; p++) {
     eclause.push_back (*p);
     if (internal->proof && internal->lrat) {

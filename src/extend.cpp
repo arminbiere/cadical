@@ -77,7 +77,6 @@ void External::push_binary_clause_on_extension_stack (uint64_t id,
 /*------------------------------------------------------------------------*/
 
 void External::push_external_clause_and_witness_on_extension_stack (
-    const vector<int> &c, const vector<int> &w) {
     const vector<int> &c, const vector<int> &w, uint64_t id) {
   assert (id);
   extension.push_back (0);
