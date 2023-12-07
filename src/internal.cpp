@@ -792,8 +792,6 @@ int Internal::restore_clauses () {
     report ('*');
   } else {
     report ('+');
-    propagate ();
-    garbage_collection ();
     external->restore_clauses ();
     internal->report ('r');
     if (!unsat && !level && !propagate ()) {
