@@ -549,9 +549,12 @@ void Internal::remove_garbage_binaries () {
     return;
   START (collect);
 
+  if (!protected_reasons)
+    protect_reasons ();
+  int backtrack_level = level + 1;
   Watches saved;
-  for (auto var : vars) {
-    for (auto lit : {-var, var}) {
+  for (auto v : vars) {
+    for (auto lit : {-v, v}) {
       assert (saved.empty());
       Watches &ws = watches (lit);
       const const_watch_iterator end = ws.end ();
@@ -560,6 +563,11 @@ void Internal::remove_garbage_binaries () {
       for (i = j; i != end; i++) {
         Watch w = *i;
         Clause *c = w.clause;
+	if (c->reason && c->collect ()) {
+	  assert (c->size == 2);
+	  backtrack_level = min (backtrack_level, var(c->literals[0]).level);
+	  LOG ("need to backtrack to before level %d", backtrack_level);
+	}
         if (c->collect ())
           continue;
 	assert (!c->moved);
@@ -581,6 +589,9 @@ void Internal::remove_garbage_binaries () {
     }
   }
   delete_garbage_clauses ();
+  unprotect_reasons ();
+  if (backtrack_level < level)
+    backtrack (backtrack_level);
   STOP (collect);
 }
 
