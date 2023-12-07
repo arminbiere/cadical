@@ -241,11 +241,6 @@ int Internal::cdcl_loop_with_inprocessing () {
       else
         analyze ();
     } else if (satisfied ()) { // found model
-      bool c_satisfied = constraint_satisfied ();
-      if (!c_satisfied) {
-        res = 20;
-        break;
-      }
       if (!external_check_solution () || unsat) {
         if (unsat)
           continue;

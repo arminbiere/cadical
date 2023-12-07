@@ -1150,7 +1150,6 @@ struct Internal {
   bool
   failed_constraint ();     // Was constraint used to proof unsatisfiablity?
   void reset_constraint (); // Reset after 'solve' call.
-  bool constraint_satisfied (); // checks if the constraint is satisfied
 
   // Forcing decision variables to a certain phase.
   //
