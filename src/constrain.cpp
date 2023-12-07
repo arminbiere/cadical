@@ -61,23 +61,4 @@ void Internal::reset_constraint () {
   marked_failed = true;
 }
 
-bool Internal::constraint_satisfied () {
-  assert (satisfied ());
-  bool satisfied = false;
-  if (!opts.reimply || !constraint.size())
-    return true;
-  for (auto lit : constraint) {
-    if (val (lit) >= 0) {
-      satisfied = true;
-      break;
-    }
-  }
-  if (!satisfied) {
-    LOG ("failing constraint");
-    unsat_constraint = true;
-    return false;
-  }
-  return true;
-}
-
 } // namespace CaDiCaL

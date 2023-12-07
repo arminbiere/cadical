@@ -774,6 +774,9 @@ struct Internal {
   bool arenaing ();
   void garbage_collection ();
 
+  // only remove binary clauses from the watches
+  void remove_garbage_binaries ();
+
   // Set-up occurrence list counters and containers.
   //
   void init_occs ();
@@ -1147,7 +1150,6 @@ struct Internal {
   bool
   failed_constraint ();     // Was constraint used to proof unsatisfiablity?
   void reset_constraint (); // Reset after 'solve' call.
-  bool constraint_satisfied (); // checks if the constraint is satisfied
 
   // Forcing decision variables to a certain phase.
   //

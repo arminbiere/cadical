@@ -241,11 +241,6 @@ int Internal::cdcl_loop_with_inprocessing () {
       else
         analyze ();
     } else if (satisfied ()) { // found model
-      bool c_satisfied = constraint_satisfied ();
-      if (!c_satisfied) {
-        res = 20;
-        break;
-      }
       if (!external_check_solution () || unsat) {
         if (unsat)
           continue;
@@ -792,6 +787,7 @@ int Internal::restore_clauses () {
     report ('*');
   } else {
     report ('+');
+    remove_garbage_binaries();
     external->restore_clauses ();
     internal->report ('r');
     if (!unsat && !level && !propagate ()) {
