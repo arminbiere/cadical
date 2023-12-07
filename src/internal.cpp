@@ -792,6 +792,7 @@ int Internal::restore_clauses () {
     report ('*');
   } else {
     report ('+');
+    remove_garbage_binaries();
     external->restore_clauses ();
     internal->report ('r');
     if (!unsat && !level && !propagate ()) {

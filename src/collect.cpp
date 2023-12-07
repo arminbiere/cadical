@@ -543,6 +543,50 @@ void Internal::check_clause_stats () {
 
 /*------------------------------------------------------------------------*/
 
+// only delete binary clauses from watch list that are already mark as deleted.
+void Internal::remove_garbage_binaries () {
+  if (unsat)
+    return;
+  START (collect);
+
+  Watches saved;
+  for (auto var : vars) {
+    for (auto lit : {-var, var}) {
+      assert (saved.empty());
+      Watches &ws = watches (lit);
+      const const_watch_iterator end = ws.end ();
+      watch_iterator j = ws.begin ();
+      const_watch_iterator i;
+      for (i = j; i != end; i++) {
+        Watch w = *i;
+        Clause *c = w.clause;
+        if (c->collect ())
+          continue;
+	assert (!c->moved);
+        w.size = c->size;
+        const int new_blit_pos = (c->literals[0] == lit);
+        LOG (c, "clause in flush_watch starting from %d", lit);
+        assert (c->literals[!new_blit_pos] == lit); /*FW1*/
+        w.blit = c->literals[new_blit_pos];
+        if (w.binary ())
+          *j++ = w;
+        else
+          saved.push_back (w);
+      }
+      ws.resize (j - ws.begin ());
+      for (const auto &w : saved)
+        ws.push_back (w);
+      saved.clear ();
+      shrink_vector (ws);
+    }
+  }
+  delete_garbage_clauses ();
+  STOP (collect);
+}
+
+
+/*------------------------------------------------------------------------*/
+
 bool Internal::arenaing () { return opts.arena && (stats.collections > 1); }
 
 void Internal::garbage_collection () {
