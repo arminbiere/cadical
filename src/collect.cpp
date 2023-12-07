@@ -590,8 +590,8 @@ void Internal::remove_garbage_binaries () {
   }
   delete_garbage_clauses ();
   unprotect_reasons ();
-  if (backtrack_level < level)
-    backtrack (backtrack_level);
+  if (backtrack_level - 1 < level)
+    backtrack (backtrack_level - 1);
   STOP (collect);
 }
 
