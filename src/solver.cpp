@@ -564,7 +564,17 @@ void Solver::clause (int a, int b, int c, int d) {
   REQUIRE_VALID_LIT (a);
   REQUIRE_VALID_LIT (b);
   REQUIRE_VALID_LIT (c);
+  REQUIRE_VALID_LIT (d);
   add (a), add (b), add (c), add (d), add (0);
+}
+
+void Solver::clause (int a, int b, int c, int d, int e) {
+  REQUIRE_VALID_LIT (a);
+  REQUIRE_VALID_LIT (b);
+  REQUIRE_VALID_LIT (c);
+  REQUIRE_VALID_LIT (d);
+  REQUIRE_VALID_LIT (e);
+  add (a), add (b), add (c), add (d), add (e), add (0);
 }
 
 void Solver::clause (const int *lits, size_t size) {
@@ -718,8 +728,7 @@ int Solver::val (int lit) {
   TRACE ("val", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
-  REQUIRE (state () == SATISFIED,
-           "can only get value in satisfied state");
+  REQUIRE (state () == SATISFIED, "can only get value in satisfied state");
   if (!external->extended)
     external->extend ();
   external->conclude_sat ();
@@ -734,8 +743,7 @@ bool Solver::flip (int lit) {
   TRACE ("flip", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
-  REQUIRE (state () == SATISFIED,
-           "can only flip value in satisfied state");
+  REQUIRE (state () == SATISFIED, "can only flip value in satisfied state");
   REQUIRE (!external->propagator,
            "can only flip when no external propagator is present");
   bool res = external->flip (lit);
@@ -748,8 +756,7 @@ bool Solver::flippable (int lit) {
   TRACE ("flippable", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
-  REQUIRE (state () == SATISFIED,
-           "can only flip value in satisfied state");
+  REQUIRE (state () == SATISFIED, "can only flip value in satisfied state");
   REQUIRE (!external->propagator,
            "can only flip when no external propagator is present");
   bool res = external->flippable (lit);
@@ -1552,8 +1559,7 @@ public:
 
 void Solver::copy (Solver &other) const {
   REQUIRE_READY_STATE ();
-  REQUIRE (other.state () & CONFIGURING,
-           "target solver already modified");
+  REQUIRE (other.state () & CONFIGURING, "target solver already modified");
   internal->opts.copy (other.internal->opts);
   ClauseCopier clause_copier (other);
   traverse_clauses (clause_copier);

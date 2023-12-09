@@ -251,6 +251,7 @@ public:
   void clause (int, int);                 // Add binary clause.
   void clause (int, int, int);            // Add ternary clause.
   void clause (int, int, int, int);       // Add quaternary clause.
+  void clause (int, int, int, int, int);  // Add quinternary clause.
   void clause (const std::vector<int> &); // Add literal vector as clause.
   void clause (const int *, size_t);      // Add literal array as clause.
 
