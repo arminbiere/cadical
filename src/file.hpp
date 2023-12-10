@@ -68,6 +68,8 @@ public:
   static bool writable (const char *path);     // can write to that file?
   static size_t size (const char *path);       // file size in bytes
 
+  bool piping ();		// Is opened file a pipe?
+
   // Does the file match the file type signature.
   //
   static bool match (Internal *, const char *path, const int *sig);

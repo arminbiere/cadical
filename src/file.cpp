@@ -95,6 +95,14 @@ bool File::writable (const char *path) {
   return !res;
 }
 
+bool File::piping () {
+  struct stat stat;
+  int fd = fileno (file);
+  if (fstat (fd,  &stat))
+    return true;
+  return S_ISFIFO (stat.st_mode);
+}
+
 // These are signatures for supported compressed file types.  In 2018 the
 // SAT Competition was running on StarExec and used internally 'bzip2'
 // compressed files, but gave them uncompressed to the solver using exactly
