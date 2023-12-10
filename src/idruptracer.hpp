@@ -18,6 +18,7 @@ class IdrupTracer : public FileTracer {
   Internal *internal;
   File *file;
   bool binary;
+  bool piping; // The 'file' is a pipe and needs eagerly flushing.
 
   // hash table for conclusion
   //
@@ -49,6 +50,8 @@ class IdrupTracer : public FileTracer {
   int64_t added, deleted;
 #endif
 
+  void flush_if_piping ();
+
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
   void put_binary_id (uint64_t id);
@@ -61,9 +64,8 @@ class IdrupTracer : public FileTracer {
   void idrup_report_status (int status);
   void idrup_conclude_sat (const vector<int> &model);
   void idrup_solve_query ();
-  
-public:
 
+public:
   IdrupTracer (Internal *, File *file, bool);
   ~IdrupTracer ();
 
@@ -83,7 +85,7 @@ public:
   void solve_query () override;
   void add_assumption (int) override;
   void reset_assumptions () override;
-  
+
   // skip
   void begin_proof (uint64_t) override {}
   void finalize_clause (uint64_t, const vector<int> &) override {}

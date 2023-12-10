@@ -29,6 +29,7 @@ IdrupTracer::IdrupTracer (Internal *i, File *f, bool b)
 #else
   (void) b;
 #endif
+  piping = file->piping ();
 }
 
 void IdrupTracer::connect_internal (Internal *i) {
@@ -151,6 +152,11 @@ void IdrupTracer::insert () {
 
 /*------------------------------------------------------------------------*/
 
+inline void IdrupTracer::flush_if_piping () { 
+  if (piping)
+    file->flush ();
+}
+
 inline void IdrupTracer::put_binary_zero () {
   assert (binary);
   assert (file);
@@ -202,6 +208,7 @@ void IdrupTracer::idrup_add_restored_clause (const vector<int> &clause) {
     put_binary_zero ();
   else
     file->put ("0\n");
+  flush_if_piping ();
 }
 
 void IdrupTracer::idrup_add_derived_clause (const vector<int> &clause) {
@@ -218,6 +225,7 @@ void IdrupTracer::idrup_add_derived_clause (const vector<int> &clause) {
     put_binary_zero ();
   else
     file->put ("0\n");
+  flush_if_piping ();
 }
 
 void IdrupTracer::idrup_add_original_clause (const vector<int> &clause) {
@@ -234,6 +242,7 @@ void IdrupTracer::idrup_add_original_clause (const vector<int> &clause) {
     put_binary_zero ();
   else
     file->put ("0\n");
+  flush_if_piping ();
 }
 
 
@@ -260,6 +269,7 @@ void IdrupTracer::idrup_delete_clause (uint64_t id,
     put_binary_zero ();
   else
     file->put ("0\n");
+  flush_if_piping ();
 }
 
 void IdrupTracer::idrup_conclude_and_delete (
@@ -294,6 +304,7 @@ void IdrupTracer::idrup_conclude_and_delete (
       file->put ("0\n");
     imported_clause.clear ();
   }
+  flush_if_piping ();
 }
 
 void IdrupTracer::idrup_report_status (int status) {
@@ -309,6 +320,7 @@ void IdrupTracer::idrup_report_status (int status) {
     file->put ("UNKNOWN");
   if (!binary)
     file->put ("\n");
+  flush_if_piping ();
 }
 
 void IdrupTracer::idrup_conclude_sat (const vector<int> &model) {
@@ -326,6 +338,7 @@ void IdrupTracer::idrup_conclude_sat (const vector<int> &model) {
     put_binary_zero ();
   else
     file->put ("0\n");
+  flush_if_piping ();
 }
 
 void IdrupTracer::idrup_solve_query () {
@@ -343,6 +356,7 @@ void IdrupTracer::idrup_solve_query () {
     put_binary_zero ();
   else
     file->put ("0\n");
+  flush_if_piping ();
 }
 
 /*------------------------------------------------------------------------*/
