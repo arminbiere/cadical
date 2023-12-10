@@ -208,7 +208,7 @@ void IdrupTracer::idrup_add_restored_clause (const vector<int> &clause) {
     put_binary_zero ();
   else
     file->put ("0\n");
-  flush_if_piping ();
+  // flush_if_piping ();
 }
 
 void IdrupTracer::idrup_add_derived_clause (const vector<int> &clause) {
@@ -225,7 +225,7 @@ void IdrupTracer::idrup_add_derived_clause (const vector<int> &clause) {
     put_binary_zero ();
   else
     file->put ("0\n");
-  flush_if_piping ();
+  // flush_if_piping ();
 }
 
 void IdrupTracer::idrup_add_original_clause (const vector<int> &clause) {
@@ -242,7 +242,7 @@ void IdrupTracer::idrup_add_original_clause (const vector<int> &clause) {
     put_binary_zero ();
   else
     file->put ("0\n");
-  flush_if_piping ();
+  // flush_if_piping ();
 }
 
 
@@ -269,7 +269,7 @@ void IdrupTracer::idrup_delete_clause (uint64_t id,
     put_binary_zero ();
   else
     file->put ("0\n");
-  flush_if_piping ();
+  // flush_if_piping ();
 }
 
 void IdrupTracer::idrup_conclude_and_delete (
