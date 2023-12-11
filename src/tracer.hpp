@@ -9,7 +9,6 @@ namespace CaDiCaL {
 struct Internal;
 
 enum ConclusionType { CONFLICT = 1, ASSUMPTIONS = 2, CONSTRAINT = 4 };
-enum StatusType { SAT = 10, UNSAT = 20, OTHER = 0 };
 
 // Proof tracer class to observer all possible proof events,
 // such as added or deleted clauses.
@@ -69,9 +68,9 @@ public:
   // argument will contain its id.
   // Note that the empty clause is already added through add_derived_clause
   // and finalized with finalize_clause
-  // Arguments: StatusType, ID
+  // Arguments: int, ID
   //
-  virtual void report_status (StatusType, uint64_t) {}
+  virtual void report_status (int, uint64_t) {}
 
   /*------------------------------------------------------------------------*/
   /*                                                                        */

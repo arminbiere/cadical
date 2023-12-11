@@ -601,13 +601,8 @@ void Proof::reset_assumptions () {
   }
 }
 
-void Proof::report_status (int res, uint64_t id) {
-  LOG ("PROOF reporting status %d", res);
-  StatusType status = OTHER;
-  if (res == 10)
-    status = SAT;
-  else if (res == 20)
-    status = UNSAT;
+void Proof::report_status (int status, uint64_t id) {
+  LOG ("PROOF reporting status %d", status);
   for (auto &tracer : tracers) {
     tracer->report_status (status, id);
   }

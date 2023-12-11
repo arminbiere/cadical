@@ -153,7 +153,7 @@ public:
   void reset_assumptions () override;
 
   // check if all clauses have been deleted
-  void report_status (StatusType, uint64_t) override;
+  void report_status (int, uint64_t) override;
 
   void conclude_unsat (ConclusionType, const vector<uint64_t> &) override;
 

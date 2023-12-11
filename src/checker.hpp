@@ -158,7 +158,7 @@ public:
   void delete_clause (uint64_t, bool, const vector<int> &) override;
 
   void finalize_clause (uint64_t, const vector<int> &) override {} // skip
-  void report_status (StatusType, uint64_t) override {}            // skip
+  void report_status (int, uint64_t) override {}            // skip
   void begin_proof (uint64_t) override {}                          // skip
   void add_assumption_clause (uint64_t, const vector<int> &,
                               const vector<uint64_t> &) override;

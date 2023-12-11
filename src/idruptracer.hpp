@@ -18,6 +18,7 @@ class IdrupTracer : public FileTracer {
   Internal *internal;
   File *file;
   bool binary;
+  bool piping; // The 'file' is a pipe and needs eagerly flushing.
 
   // hash table for conclusion
   //
@@ -49,6 +50,8 @@ class IdrupTracer : public FileTracer {
   int64_t added, deleted;
 #endif
 
+  void flush_if_piping ();
+
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
   void put_binary_id (uint64_t id);
@@ -58,12 +61,11 @@ class IdrupTracer : public FileTracer {
   void idrup_add_restored_clause (const vector<int> &clause);
   void idrup_add_original_clause (const vector<int> &clause);
   void idrup_conclude_and_delete (const vector<uint64_t> &conclusion);
-  void idrup_report_status (StatusType status);
+  void idrup_report_status (int status);
   void idrup_conclude_sat (const vector<int> &model);
   void idrup_solve_query ();
-  
-public:
 
+public:
   IdrupTracer (Internal *, File *file, bool);
   ~IdrupTracer ();
 
@@ -76,14 +78,14 @@ public:
   void delete_clause (uint64_t, bool, const vector<int> &) override;
   void add_original_clause (uint64_t, bool, const vector<int> &,
                             bool = false) override;
-  void report_status (StatusType, uint64_t) override;
+  void report_status (int, uint64_t) override;
   void conclude_sat (const vector<int> &) override;
   void conclude_unsat (ConclusionType, const vector<uint64_t> &) override;
 
   void solve_query () override;
   void add_assumption (int) override;
   void reset_assumptions () override;
-  
+
   // skip
   void begin_proof (uint64_t) override {}
   void finalize_clause (uint64_t, const vector<int> &) override {}
