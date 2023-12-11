@@ -790,6 +790,7 @@ int Internal::restore_clauses () {
     report ('*');
   } else {
     report ('+');
+    remove_garbage_binaries();
     external->restore_clauses ();
     internal->report ('r');
     if (!unsat && !level && !propagate ()) {
@@ -870,6 +871,10 @@ void Internal::finalize (int res) {
     proof->finalize_clause (conflict_id, {});
   }
   proof->report_status (res, conflict_id);
+  if (res == 10)
+    external->conclude_sat ();
+  else if (res == 20)
+    conclude_unsat ();
 }
 
 /*------------------------------------------------------------------------*/

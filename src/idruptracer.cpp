@@ -301,10 +301,12 @@ void IdrupTracer::idrup_report_status (StatusType status) {
     file->put ('s');
   else
     file->put ("s ");
-  if (status == UNSAT) {
-    file->put ("UN");
-  }
-  file->put ("SATISFIABLE");
+  if (status == SAT)
+    file->put ("SATISFIABLE");
+  else if (status == UNSAT)
+    file->put ("UNSATISFIABLE");
+  else
+    file->put ("UNKNOWN");
   if (!binary)
     file->put ("\n");
 }
@@ -402,7 +404,7 @@ void IdrupTracer::conclude_unsat (ConclusionType,
   idrup_conclude_and_delete (conclusion);
 }
 
-void IdrupTracer::add_original_clause (uint64_t, bool,
+void IdrupTracer::add_original_clause (uint64_t id, bool,
                                        const vector<int> &clause,
                                        bool restored) {
   if (file->closed ())
@@ -411,14 +413,17 @@ void IdrupTracer::add_original_clause (uint64_t, bool,
     LOG (clause, "IDRUP TRACER tracing addition of original clause");
     return idrup_add_original_clause (clause);
   }
+  assert (restored);
+  if (find_and_delete (id)) {
+    LOG (clause, "IDRUP TRACER the clause was not yet weakened, so no restore");
+    return;
+  }
   LOG (clause, "IDRUP TRACER tracing addition of restored clause");
   idrup_add_restored_clause (clause);
 }
 
 void IdrupTracer::report_status (StatusType status, uint64_t) {
   if (file->closed ())
-    return;
-  if (status == OTHER)
     return;
   LOG ("IDRUP TRACER tracing report of status %d", status);
   idrup_report_status (status);

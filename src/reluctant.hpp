@@ -1,6 +1,9 @@
 #ifndef _reluctant_hpp_INCLUDED
 #define _reluctant_hpp_INCLUDED
 
+#include <cassert>
+#include <cstdint>
+
 namespace CaDiCaL {
 
 // This is Donald Knuth's version of the Luby restart sequence which he

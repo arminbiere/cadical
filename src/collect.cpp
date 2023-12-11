@@ -543,6 +543,61 @@ void Internal::check_clause_stats () {
 
 /*------------------------------------------------------------------------*/
 
+// only delete binary clauses from watch list that are already mark as deleted.
+void Internal::remove_garbage_binaries () {
+  if (unsat)
+    return;
+  START (collect);
+
+  if (!protected_reasons)
+    protect_reasons ();
+  int backtrack_level = level + 1;
+  Watches saved;
+  for (auto v : vars) {
+    for (auto lit : {-v, v}) {
+      assert (saved.empty());
+      Watches &ws = watches (lit);
+      const const_watch_iterator end = ws.end ();
+      watch_iterator j = ws.begin ();
+      const_watch_iterator i;
+      for (i = j; i != end; i++) {
+        Watch w = *i;
+        Clause *c = w.clause;
+	if (c->reason && c->collect ()) {
+	  assert (c->size == 2);
+	  backtrack_level = min (backtrack_level, var(c->literals[0]).level);
+	  LOG ("need to backtrack to before level %d", backtrack_level);
+	}
+        if (c->collect ())
+          continue;
+	assert (!c->moved);
+        w.size = c->size;
+        const int new_blit_pos = (c->literals[0] == lit);
+        LOG (c, "clause in flush_watch starting from %d", lit);
+        assert (c->literals[!new_blit_pos] == lit); /*FW1*/
+        w.blit = c->literals[new_blit_pos];
+        if (w.binary ())
+          *j++ = w;
+        else
+          saved.push_back (w);
+      }
+      ws.resize (j - ws.begin ());
+      for (const auto &w : saved)
+        ws.push_back (w);
+      saved.clear ();
+      shrink_vector (ws);
+    }
+  }
+  delete_garbage_clauses ();
+  unprotect_reasons ();
+  if (backtrack_level - 1 < level)
+    backtrack (backtrack_level - 1);
+  STOP (collect);
+}
+
+
+/*------------------------------------------------------------------------*/
+
 bool Internal::arenaing () { return opts.arena && (stats.collections > 1); }
 
 void Internal::garbage_collection () {

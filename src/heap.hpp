@@ -3,6 +3,8 @@
 
 #include "util.hpp" // Alphabetically after 'heap.hpp'.
 
+#include <cassert>
+
 namespace CaDiCaL {
 
 using namespace std;

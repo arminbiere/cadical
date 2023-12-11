@@ -777,6 +777,9 @@ struct Internal {
   bool arenaing ();
   void garbage_collection ();
 
+  // only remove binary clauses from the watches
+  void remove_garbage_binaries ();
+
   // Set-up occurrence list counters and containers.
   //
   void init_occs ();
@@ -1059,7 +1062,7 @@ struct Internal {
   int next_propagation_level (int last);
   vector<int> *next_trail (int l);
   int next_propagated (int l);
-  Clause *propagation_conflict (int l, Clause *c);
+  Clause *propagation_conflict (int *l, Clause *c, bool exact=false);
   int conflicting_level (Clause *c);
   void elevate_lit (int lit, Clause *reason);
   int elevating_level (int lit, Clause *reason);

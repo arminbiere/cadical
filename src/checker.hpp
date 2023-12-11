@@ -3,6 +3,8 @@
 
 #include "tracer.hpp" // Alphabetically after 'checker'.
 
+#include <cstdint>
+
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/

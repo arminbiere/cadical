@@ -1,7 +1,12 @@
 #ifndef _tracer_hpp_INCLUDED
 #define _tracer_hpp_INCLUDED
 
+#include <cstdint>
+#include <vector>
+
 namespace CaDiCaL {
+
+struct Internal;
 
 enum ConclusionType { CONFLICT = 1, ASSUMPTIONS = 2, CONSTRAINT = 4 };
 enum StatusType { SAT = 10, UNSAT = 20, OTHER = 0 };
@@ -26,7 +31,7 @@ public:
   // Includes ID and wether the clause is redundant or irredundant
   // Arguments: ID, redundant, clause, restored
   //
-  virtual void add_original_clause (uint64_t, bool, const vector<int> &,
+  virtual void add_original_clause (uint64_t, bool, const std::vector<int> &,
                                     bool = false) {}
 
   // Notify the observer that a new clause has been derived.
@@ -34,14 +39,14 @@ public:
   // If antecedents are derived they will be included here.
   // Arguments: ID, redundant, clause, antecedents
   //
-  virtual void add_derived_clause (uint64_t, bool, const vector<int> &,
-                                   const vector<uint64_t> &) {}
+  virtual void add_derived_clause (uint64_t, bool, const std::vector<int> &,
+                                   const std::vector<uint64_t> &) {}
 
   // Notify the observer that a clause is deleted.
   // Includes ID and redundant/irredundant
   // Arguments: ID, redundant, clause
   //
-  virtual void delete_clause (uint64_t, bool, const vector<int> &) {}
+  virtual void delete_clause (uint64_t, bool, const std::vector<int> &) {}
 
   // Notify the observer that a clause is deleted.
   // Includes ID and redundant/irredundant
@@ -52,7 +57,7 @@ public:
   // Notify the observer to remember that the clause might be restored later
   // Arguments: ID, clause
   //
-  virtual void weaken_minus (uint64_t, const vector<int> &) {}
+  virtual void weaken_minus (uint64_t, const std::vector<int> &) {}
 
   // Notify the observer that a clause is strengthened
   // Arguments: ID
@@ -77,7 +82,7 @@ public:
   // Notify the observer that a clause is finalized.
   // Arguments: ID, clause
   //
-  virtual void finalize_clause (uint64_t, const vector<int> &) {}
+  virtual void finalize_clause (uint64_t, const std::vector<int> &) {}
 
   // Notify the observer that the proof begins with a set of reserved ids
   // for original clauses. Given ID is the first derived clause ID.
@@ -104,7 +109,7 @@ public:
   // Notify the observer that a constraint has been added
   // Arguments: constraint_clause
   //
-  virtual void add_constraint (const vector<int> &) {}
+  virtual void add_constraint (const std::vector<int> &) {}
 
   // Notify the observer that assumptions and constraints are reset
   //
@@ -115,19 +120,20 @@ public:
   // If antecedents are derived they will be included here.
   // Arguments: ID, clause, antecedents
   //
-  virtual void add_assumption_clause (uint64_t, const vector<int> &,
-                                      const vector<uint64_t> &) {}
+  virtual void add_assumption_clause (uint64_t, const std::vector<int> &,
+                                      const std::vector<uint64_t> &) {}
 
   // Notify the observer that conclude unsat was requested.
   // will give either the id of the empty clause, the id of a failing
   // assumption clause or the ids of the failing constrain clauses
   // Arguments: conclusion_type, clause_ids
   //
-  virtual void conclude_unsat (ConclusionType, const vector<uint64_t> &) {}
+  virtual void conclude_unsat (ConclusionType, const std::vector<uint64_t> &) {}
 
   // Notify the observer that conclude sat was requested.
-  // will give the complete model as a vector
-  virtual void conclude_sat (const vector<int> &) {}
+  // will give the complete model as a vector.
+  //
+  virtual void conclude_sat (const std::vector<int> &) {}
 };
 
 /*--------------------------------------------------------------------------*/

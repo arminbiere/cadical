@@ -2,6 +2,7 @@
 #define _format_hpp_INCLUDED
 
 #include <cstdarg>
+#include <cstdint>
 
 namespace CaDiCaL {
 

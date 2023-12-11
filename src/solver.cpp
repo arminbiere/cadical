@@ -686,8 +686,10 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
       FATAL ("copying assumption checker failed");
   }
 #endif
-  if (!res)
+  if (!res) {
     external->reset_assumptions ();
+    external->reset_constraint ();
+  }
   return res;
 }
 

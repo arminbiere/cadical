@@ -62,6 +62,7 @@ void Internal::learn_empty_clause () {
   }
   unsat = true;
   conflict_id = id;
+  marked_failed = true;
   conclusion.push_back (id);
   lrat_chain.clear ();
 }
@@ -969,11 +970,12 @@ void Internal::analyze () {
     }
   }
 
-  if (opts.chrono || external_prop || (opts.reimply && multitrail_dirty != level)) {
+  if ((!opts.reimply && opts.chrono) || external_prop || (opts.reimply && multitrail_dirty != level)) {
 
     int forced;
 
     const int conflict_level = find_conflict_level (forced);
+    assert (conflict_level == multitrail_dirty || !opts.reimply || external_prop);
 
     // In principle we can perform conflict analysis as in non-chronological
     // backtracking except if there is only one literal with the maximum
@@ -1026,6 +1028,7 @@ void Internal::analyze () {
     //
     backtrack (conflict_level);
   }
+  assert (conflicting_level (conflict) == level);
 
   // Actual conflict on root level, thus formula unsatisfiable.
   //

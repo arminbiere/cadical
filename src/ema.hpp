@@ -1,6 +1,8 @@
 #ifndef _ema_hpp_INCLUDED
 #define _ema_hpp_INCLUDED
 
+#include <cstdint>
+
 namespace CaDiCaL {
 
 struct Internal;
