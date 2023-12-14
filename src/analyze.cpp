@@ -274,10 +274,10 @@ inline void Internal::bump_clause (Clause *c) {
   int new_glue = recompute_glue (c);
   if (new_glue < c->glue)
     promote_clause (c, new_glue);
-  else if (used && c->glue <= opts.reducetier2glue)
+  else if (used && c->glue <= tier1[false])
     c->used = 2;
 
-  const size_t glue = std::min ((size_t)c->glue, stats.used[stable].size());
+  const size_t glue = std::min ((size_t)c->glue, stats.used[stable].size() - 1);
   ++stats.used[stable][glue];
 }
 
