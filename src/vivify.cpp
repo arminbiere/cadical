@@ -1525,49 +1525,8 @@ void Internal::compute_tier_limits (Vivifier & vivifier) {
     vivifier.tier2 = 6;
     return;
   }
-  uint64_t total_used = 0;
-  int tier1 = 0;
-  int tier2 = 0;
-  stable_sort (begin (clauses), end (clauses), [] (Clause *c, Clause *d) {
-    return c->glue < d->glue;
-  });
-
-  for (auto c : clauses) {
-    if (!c->redundant)
-      continue;
-    const int used = c->used;
-    if (used)
-      total_used += used;
-  }
-
-  uint64_t accumulated_used = 0;
-  uint64_t accu_tier1 = 0;
-  uint64_t accu_tier2 = 0;
-  const uint64_t tier1_used_limit = total_used / 2;
-  const uint64_t tier2_used_limit = ceil (3.0* (double)total_used / 4.0);
-  for (auto c : clauses) {
-    if (!c->redundant)
-      continue;
-    if (!c->used)
-      continue;
-    accumulated_used += c->used;
-    if (accumulated_used <= tier1_used_limit && tier1 < c->glue) {
-      tier1 = max (tier1, c->glue);
-      accu_tier1 = accumulated_used;
-    }
-    if (accumulated_used <= tier2_used_limit && tier2 < c->glue) {
-      tier2 = max (tier2, c->glue);
-      accu_tier2 = accumulated_used;
-    }
-  }
-  assert (accumulated_used == total_used);
-
-  vivifier.tier1 = tier1;
-  vivifier.tier2 = tier2;
-  PHASE ("vivify", stats.vivifications,
-	 "recalculating tier 1 and 2 with glue limits %d (%.2f%%) and %d (%.2f%%)",
-	 tier1, (double)accu_tier1 / (double)accumulated_used * 100.0,
-	 tier2, (double)accu_tier2 / (double)accumulated_used * 100.0);
+  vivifier.tier1 = tier1[stable];
+  vivifier.tier2 = tier2[stable];
 }
 
 
@@ -1596,14 +1555,14 @@ void Internal::vivify () {
   if (total > opts.vivifymaxeff)
     total = opts.vivifymaxeff;
 
-  double tier1 = 1;
-  double tier2 = 1;
-  double irr = 1;
-  double sum = tier1 + tier2 + irr;
+  double tier1effort = 1;
+  double tier2effort = 1;
+  double irreffort = 1;
+  double sumeffort = tier1effort + tier2effort + irreffort;
   if (!stats.current.redundant)
-    tier1 = tier2 = 0;
-  if (!sum)
-    sum = irr = 1;
+    tier1effort = tier2effort = 0;
+  if (!sumeffort)
+    sumeffort = irreffort = 1;
 
   PHASE ("vivify", stats.vivifications,
          "vivification limit of %" PRId64 " propagations", total);
@@ -1611,8 +1570,8 @@ void Internal::vivify () {
   compute_tier_limits (vivifier);
 
   if (vivifier.tier1 == vivifier.tier2) {
-    tier1 += tier2;
-    tier2 = 0;
+    tier1effort += tier2effort;
+    tier2effort = 0;
     LOG ("skipping tier 2 after recalculating");
   }
 
@@ -1621,24 +1580,24 @@ void Internal::vivify () {
     // setting their 'vivify' bit, such that they can be tried next time.
     //
     set_vivifier_mode(vivifier, Vivify_Mode::TIER1);
-    const int64_t limit = (total * tier1) / sum * 1e-3 * (double) opts.vivifyredeff;
+    const int64_t limit = (total * tier1effort) / sumeffort * 1e-3 * (double) opts.vivifyredeff;
     assert (limit >= 0);
     vivify_round (vivifier, limit);
   }
 
   continue_vivi = (end >= stats.propagations.vivify);
-  if (!unsat && continue_vivi && tier2 && opts.vivifytier2) {
+  if (!unsat && continue_vivi && tier2effort && opts.vivifytier2) {
     vivifier.erase();
-    const int64_t limit = (total * tier2) / sum  * 1e-3 * (double) opts.vivifyredeff;
+    const int64_t limit = (total * tier2effort) / sumeffort  * 1e-3 * (double) opts.vivifyredeff;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::TIER2);
     vivify_round (vivifier, limit);
   }
 
   continue_vivi = (end >= stats.propagations.vivify);
-  if (!unsat && continue_vivi && irr && opts.vivifyirred) {
+  if (!unsat && continue_vivi && irreffort && opts.vivifyirred) {
     vivifier.erase();
-    const int64_t limit = (total * irr) / sum  * 1e-3 * (double) opts.vivifyreleff;
+    const int64_t limit = (total * irreffort) / sumeffort  * 1e-3 * (double) opts.vivifyreleff;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::IRREDUNDANT);
     vivify_round (vivifier, limit);

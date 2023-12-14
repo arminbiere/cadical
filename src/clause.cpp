@@ -77,7 +77,6 @@ Clause *Internal::new_clause (bool red, int glue) {
 
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
-  const int tier1limit = tier1[false];
   assert (size >= 2);
 
   if (glue > size)
@@ -87,8 +86,6 @@ Clause *Internal::new_clause (bool red, int glue) {
   //
   bool keep;
   if (!red)
-    keep = true;
-  else if (glue <= tier1limit)
     keep = true;
   else
     keep = false;
@@ -154,8 +151,8 @@ Clause *Internal::new_clause (bool red, int glue) {
 
 void Internal::promote_clause (Clause *c, int new_glue) {
   assert (c->redundant);
-  const int tier1limit = tier1[stable];
-  const int tier2limit = max (tier1limit, tier2[stable]);
+  const int tier1limit = tier1[false];
+  const int tier2limit = max (tier1limit, tier2[false]);
   if (c->keep)
     return;
   if (c->hyper)
@@ -166,7 +163,7 @@ void Internal::promote_clause (Clause *c, int new_glue) {
   if (!c->keep && new_glue <= tier1limit) {
     LOG (c, "promoting with new glue %d to tier1", new_glue);
     stats.promoted1++;
-    c->keep = true;
+    c->used = 2;
   } else if (old_glue > tier2limit &&
              new_glue <= tier2limit) {
     LOG (c, "promoting with new glue %d to tier2", new_glue);

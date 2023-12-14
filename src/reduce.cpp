@@ -90,6 +90,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   // they otherwise have the same glue and size).
 
   vector<Clause *> stack;
+  const int tier1limit = tier1[false];
 
   stack.reserve (stats.current.redundant);
 
@@ -100,6 +101,8 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
       continue; // Skip already marked.
     if (c->reason)
       continue; // Need to keep reasons.
+    if (c->glue <= tier1limit)
+      continue;
     const unsigned used = c->used;
     if (used)
       c->used--;
