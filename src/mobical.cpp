@@ -307,7 +307,10 @@ public:
     logging = logging || with_logging;
   }
 
-  ~MockPropagator () {}
+  ~MockPropagator () {
+    for (auto l : external_lemmas)
+      delete[] l;
+  }
 
   /*-----------------functions for mobical -----------------------------*/
   void push_lemma_lit (int lit) {
