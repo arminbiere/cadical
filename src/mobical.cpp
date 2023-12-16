@@ -461,18 +461,12 @@ public:
 
     clause_redundancy = 0;
 
-    if (added_lemma_count > lemma_per_cb) {
-      added_lemma_count = 0;
-      MLOGC( "false (lemma per CB treshold reached)." << std::endl );
-      return false;
-    }
-
-    add_new_observed_var ();
-
     if (external_lemmas.empty()) {
       MLOGC( "false (there are no external lemmas)." << std::endl );
       return false;
     }
+
+    add_new_observed_var ();
 
     if (must_add_clause) {
       must_add_clause = false;
@@ -489,7 +483,16 @@ public:
       return true;
     }
 
-    assert (add_lemma_idx <= external_lemmas.size());
+    if (added_lemma_count > lemma_per_cb) {
+      added_lemma_count = 0;
+      MLOGC( "false (lemma per CB treshold reached)." << std::endl );
+      return false;
+    }
+
+    // Final model check will force to jump over some lemmas without
+    // adding them. But if any of them is unsatisfied, it will force also
+    // to set back the add_lemma_idx to them. So we do not need to start
+    // the search here from 0.
     
     while (add_lemma_idx < external_lemmas.size()) {
       
@@ -520,10 +523,12 @@ public:
 
   int cb_add_external_clause_lit () {
     int lit = external_lemmas[add_lemma_idx]->next_lit ();
+    
+    MLOG ("cb_add_external_clause_lit " << lit
+      << " (lemma " << add_lemma_idx << "/"
+      << external_lemmas.size() << ")" << std::endl);
 
     if (!lit) external_lemmas[add_lemma_idx++]->add_count++;
-    
-    MLOG ("cb_add_external_clause_lit" << lit << std::endl);
 
     return lit;
   }
