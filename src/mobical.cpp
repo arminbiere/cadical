@@ -220,7 +220,10 @@ private:
     bool tainting;
     bool propagation_reason;
 
-    int literals[]; // variadic size
+    // Flexible array members are a C99 feature and not in C++11!
+    // Thus pedantic compilation fails for 'int literals[]'.
+    //
+    int *literals;
 
     int *begin () { return literals; }
     int *end () { return literals + size; }
@@ -267,9 +270,8 @@ private:
     assert (external_lemmas.size () <= (size_t) INT_MAX);
 
     size_t size = clause.size ();
-    size_t bytes = sizeof (struct ExternalLemma) + size * sizeof (int);
-
-    ExternalLemma *lemma = (ExternalLemma *) new char[bytes];
+    ExternalLemma *lemma = new ExternalLemma;
+    lemma->literals = new int[size];
 
     lemma->id = external_lemmas.size ();
     lemma->add_count = 0;
@@ -320,7 +322,10 @@ public:
     logging = logging || with_logging;
   }
 
-  ~MockPropagator () {}
+  ~MockPropagator () {
+    for (auto l : external_lemmas)
+      delete l->literals, delete l;
+  }
 
   /*-----------------functions for mobical -----------------------------*/
   void push_lemma_lit (int lit) {
