@@ -134,9 +134,7 @@ void Internal::backtrack (int new_level) {
 #endif
       trail[j] = lit;
       v.trail = j++;
-#ifdef LOGGING
       reassigned++;
-#endif
     }
   }
   trail.resize (j);
