@@ -7,8 +7,8 @@ extern "C" {
 #endif
 /*------------------------------------------------------------------------*/
 
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 
 // C wrapper for CaDiCaL's C++ API following IPASIR.
 

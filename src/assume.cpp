@@ -7,7 +7,8 @@ namespace CaDiCaL {
 // adds an assumption literal onto the assumption stack.
 
 void Internal::assume (int lit) {
-  if (level && !opts.ilbassumptions) backtrack ();
+  if (level && !opts.ilbassumptions)
+    backtrack ();
   else if (val (lit) < 0)
     backtrack (max (0, var (lit).level - 1));
   Flags &f = flags (lit);
@@ -541,8 +542,9 @@ void Internal::sort_and_reuse_assumptions () {
                if (!val (litA) && !val (litB))
                  return litA < litB;
                assert (val (litA) && val (litB));
-	       LOG ("%d -> %zd", litA, ((uint64_t) var (litA).level << 32) +
-               (uint64_t) var (litA).trail);
+               LOG ("%d -> %zd", litA,
+                    ((uint64_t) var (litA).level << 32) +
+                        (uint64_t) var (litA).trail);
                return ((uint64_t) var (litA).level << 32) +
                           (uint64_t) var (litA).trail <
                       ((uint64_t) var (litB).level << 32) +
@@ -560,18 +562,20 @@ void Internal::sort_and_reuse_assumptions () {
   assert ((size_t) level == control.size () - 1);
   LOG (assumptions, "sorted assumptions");
   int target = 0;
-  for (int i = 1, j = 0; i < size; ) {
+  for (int i = 1, j = 0; i < size;) {
     const Level &l = control[i];
     const int lit = l.decision;
     const int alit = assumptions[j];
     const int lev = i;
-    target = lev-1;
-    if (val (alit) && var (alit).level < lev) { // we can ignore propagated assumptions
+    target = lev - 1;
+    if (val (alit) &&
+        var (alit).level < lev) { // we can ignore propagated assumptions
       ++j;
       continue;
     }
     ++i, ++j;
-    if (!lit || var (lit).level != lev) { // removed literals or pseudo decision level
+    if (!lit || var (lit).level !=
+                    lev) { // removed literals or pseudo decision level
       if (val (alit) > 0 && var (alit).level < lev)
         continue;
       break;

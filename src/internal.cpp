@@ -787,7 +787,7 @@ int Internal::restore_clauses () {
     report ('*');
   } else {
     report ('+');
-    remove_garbage_binaries();
+    remove_garbage_binaries ();
     external->restore_clauses ();
     internal->report ('r');
     if (!unsat && !level && !propagate ()) {
@@ -917,7 +917,7 @@ void Internal::dump () {
 /*------------------------------------------------------------------------*/
 
 bool Internal::traverse_constraint (ClauseIterator &it) {
-  if (constraint.empty() && !unsat_constraint)
+  if (constraint.empty () && !unsat_constraint)
     return true;
 
   vector<int> eclause;
@@ -927,15 +927,15 @@ bool Internal::traverse_constraint (ClauseIterator &it) {
   LOG (constraint, "traversing constraint");
   bool satisfied = false;
   for (auto ilit : constraint) {
-      const int tmp = fixed (ilit);
-      if (tmp > 0) {
-        satisfied = true;
-        break;
-      }
-      if (tmp < 0)
-        continue;
-      const int elit = externalize (ilit);
-      eclause.push_back (elit);
+    const int tmp = fixed (ilit);
+    if (tmp > 0) {
+      satisfied = true;
+      break;
+    }
+    if (tmp < 0)
+      continue;
+    const int elit = externalize (ilit);
+    eclause.push_back (elit);
   }
   if (!satisfied && !it.clause (eclause))
     return false;

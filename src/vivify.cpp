@@ -1191,7 +1191,8 @@ void Internal::vivify_round (bool redundant_mode,
 
   connect_watches (!redundant_mode); // watch all relevant clauses
 
-  // the clauses might still contain set literals, so propagation since the beginning
+  // the clauses might still contain set literals, so propagation since the
+  // beginning
   propagated2 = propagated = 0;
 
   if (!unsat && !propagate ()) {
