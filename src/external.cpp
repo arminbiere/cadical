@@ -392,7 +392,7 @@ void External::reset_observed_vars () {
   // Shouldn't be called if there is no connected propagator
   assert (propagator);
   reset_extended ();
-  assert ((size_t) max_var + 1 == is_observed.size ());
+  assert (!max_var || (size_t) max_var + 1 == is_observed.size ());
 
   for (auto elit : vars) {
     int eidx = abs (elit);
