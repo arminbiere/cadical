@@ -1,9 +1,11 @@
 Version 1.9.2
 -------------
 
-- Fixes for ILB, trail-reuse and external propagation with assumptions.
+- Important fixes for ILB, trail-reuse and external propagation with
+  assumptions.
 
-- Restored effectiveness of Mobical and improved external mock propagator.
+- Restored effectiveness of Mobical and improved external mock
+  propagator.
 
 - Forced garbage collection of binary clauses before restore.
 
