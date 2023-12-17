@@ -542,7 +542,7 @@ void Internal::sort_and_reuse_assumptions () {
                if (!val (litA) && !val (litB))
                  return litA < litB;
                assert (val (litA) && val (litB));
-               LOG ("%d -> %zd", litA,
+               LOG ("%d -> %" PRIu64, litA,
                     ((uint64_t) var (litA).level << 32) +
                         (uint64_t) var (litA).trail);
                return ((uint64_t) var (litA).level << 32) +
