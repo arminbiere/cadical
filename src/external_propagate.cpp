@@ -182,7 +182,8 @@ bool Internal::external_propagate () {
         (void) res;
         bool trail_changed =
             (num_assigned != assigned || level != level_before ||
-             (opts.reimply && multitrail_dirty < level) || (!opts.reimply && propagated < trail.size()));
+             (opts.reimply && multitrail_dirty < level) ||
+             (!opts.reimply && propagated < trail.size ()));
 
         if (unsat || conflict)
           break;
@@ -230,7 +231,8 @@ bool Internal::external_propagate () {
         add_external_clause (0);
         bool trail_changed =
             (num_assigned != assigned || level != level_before ||
-             (opts.reimply && multitrail_dirty < level) || (!opts.reimply && propagated < trail.size()));
+             (opts.reimply && multitrail_dirty < level) ||
+             (!opts.reimply && propagated < trail.size ()));
 
         if (unsat || conflict)
           break;
@@ -763,7 +765,8 @@ bool Internal::external_check_solution () {
       add_external_clause (0);
       bool trail_changed =
           (num_assigned != assigned || level != level_before ||
-           (opts.reimply && multitrail_dirty < level) || (!opts.reimply && propagated < trail.size()));
+           (opts.reimply && multitrail_dirty < level) ||
+           (!opts.reimply && propagated < trail.size ()));
       added_new_clauses = true;
       //
       // There are many possible scenarios here:

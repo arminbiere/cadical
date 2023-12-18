@@ -220,33 +220,37 @@ private:
     bool tainting;
     bool propagation_reason;
 
-    int literals[]; //variadic size
+    // Flexible array members are a C99 feature and not in C++11!
+    // Thus pedantic compilation fails for 'int literals[]'.
+    //
+    int *literals;
 
-    int * begin () { return literals; }
-    int * end () { return literals + size; }
+    int *begin () { return literals; }
+    int *end () { return literals + size; }
 
     int next_lit () {
-      if (next < size) return literals[next++];
+      if (next < size)
+        return literals[next++];
       else {
         next = 0;
         return 0;
       }
     }
   };
-  
+
   // The list of all external lemmas (including reason clauses)
-  std::vector<ExternalLemma*> external_lemmas;
-  
+  std::vector<ExternalLemma *> external_lemmas;
+
   // The reasons of present external propagations
   std::map<int, int> reason_map;
- 
+
   // Next lemma to add
   size_t add_lemma_idx = 0;
 
   // Forced lemme addition (falsified lemma in model)
   bool must_add_clause = false;
   size_t must_add_idx;
-  
+
   // Next decision to make
   size_t decision_loc = 0;
 
@@ -254,21 +258,20 @@ private:
   std::set<int> observed_variables;
   std::vector<int> new_observed_variables;
   std::deque<std::vector<int>> observed_trail;
-  
+
   // Helpers
   size_t added_lemma_count = 0;
   size_t nof_clauses = 0;
   std::vector<int> clause;
   bool new_ovars = false;
 
-  size_t add_new_lemma(bool forgettable) {
-    assert (clause.size() <= (size_t) INT_MAX);
+  size_t add_new_lemma (bool forgettable) {
+    assert (clause.size () <= (size_t) INT_MAX);
     assert (external_lemmas.size () <= (size_t) INT_MAX);
 
     size_t size = clause.size ();
-    size_t bytes = sizeof (struct ExternalLemma) + size * sizeof (int);
-
-    ExternalLemma * lemma = (ExternalLemma*) new char [bytes];
+    ExternalLemma *lemma = new ExternalLemma;
+    lemma->literals = new int[size];
 
     lemma->id = external_lemmas.size ();
     lemma->add_count = 0;
@@ -278,8 +281,8 @@ private:
     lemma->tainting = true;
     lemma->propagation_reason = false;
 
-    int * q = lemma->literals;
-    for (const auto& lit : clause)
+    int *q = lemma->literals;
+    for (const auto &lit : clause)
       *q++ = lit;
 
     external_lemmas.push_back (lemma);
@@ -287,15 +290,27 @@ private:
     return lemma->id;
   }
 
-    // Helper to print very verbose log during debugging
+  // Helper to print very verbose log during debugging
 
-  #ifdef LOGGING
-    #define MLOG(str) do { if (logging) std::cout << "[mock-propagator] " << str; } while( false )
-    #define MLOGC(str) do { if (logging) std::cout << str; } while( false )
-  #else
-    #define MLOG(str) do { } while ( false )
-    #define MLOGC(str) do { } while ( false )
-  #endif
+#ifdef LOGGING
+#define MLOG(str) \
+  do { \
+    if (logging) \
+      std::cout << "[mock-propagator] " << str; \
+  } while (false)
+#define MLOGC(str) \
+  do { \
+    if (logging) \
+      std::cout << str; \
+  } while (false)
+#else
+#define MLOG(str) \
+  do { \
+  } while (false)
+#define MLOGC(str) \
+  do { \
+  } while (false)
+#endif
 
 public:
   // It is public, so it can be shared easily between different propagators
@@ -309,29 +324,30 @@ public:
 
   ~MockPropagator () {
     for (auto l : external_lemmas)
-      delete[] l;
+      delete l->literals, delete l;
   }
 
   /*-----------------functions for mobical -----------------------------*/
   void push_lemma_lit (int lit) {
 
-    if (lit) clause.push_back (lit);
+    if (lit)
+      clause.push_back (lit);
     else {
       nof_clauses++;
-      
+
       MLOG ("push lemma to position " << external_lemmas.size () << ": ");
-      for (auto const &l : clause) { 
-        (void)l;
+      for (auto const &l : clause) {
+        (void) l;
         MLOGC (l << " ");
       }
-      MLOGC ( "0" << std::endl );
-      
-      add_new_lemma(false);
+      MLOGC ("0" << std::endl);
+
+      add_new_lemma (false);
       clause.clear ();
     }
   }
 
-   void add_observed_lit (int lit) {
+  void add_observed_lit (int lit) {
     // Zero lit indicates that the new observed variables start here
     if (!lit) {
       assert (!new_ovars);
@@ -359,7 +375,7 @@ public:
       observed_variables.insert (lit);
 
       s->add_observed_var (lit);
-      
+
       return lit;
     }
     return 0;
@@ -371,26 +387,27 @@ public:
   }
 
   bool is_observed_now (int lit) {
-    return (observed_variables.find(abs(lit)) != observed_variables.end());
+    return (observed_variables.find (abs (lit)) !=
+            observed_variables.end ());
   }
 
-  bool compare_trails () {
-    return true;
-  }
+  bool compare_trails () { return true; }
   /*-----------------functions for mobical ends ------------------------*/
 
   /*-------------------------- Observer functions ----------------------*/
   void notify_fixed_assignment (int lit) {
     MLOG ("notify_fixed_assignment: " << lit << " (current level: "
-      << observed_trail.size()-1 << ")" << std::endl);
+                                      << observed_trail.size () - 1 << ")"
+                                      << std::endl);
 
-    assert (std::find(observed_fixed.begin(),observed_fixed.end(), lit) ==
-      observed_fixed.end());
+    assert (std::find (observed_fixed.begin (), observed_fixed.end (),
+                       lit) == observed_fixed.end ());
     observed_fixed.push_back (lit);
   };
 
   void add_prev_fixed (const std::vector<int> &fixed_assignments) {
-    for (auto const& lit: fixed_assignments) notify_fixed_assignment (lit);
+    for (auto const &lit : fixed_assignments)
+      notify_fixed_assignment (lit);
   }
 
   /* ------------------------ Observer functions end -------------------*/
@@ -401,11 +418,11 @@ public:
     MLOG ("cb_check_found_model (" << model.size () << ") returns: ");
 
     // Model reconstruction can change the assignments of certain variables,
-    // but the internal trail of the solver and the propagator should be still
-    // in synchron.
+    // but the internal trail of the solver and the propagator should be
+    // still in synchron.
     assert (compare_trails ());
-    
-    for (const auto lemma: external_lemmas) {
+
+    for (const auto lemma : external_lemmas) {
       bool satisfied = false;
 
       for (const auto lit : *lemma) {
@@ -419,7 +436,8 @@ public:
         } else {
           // if not satisfied, it must be falsified.
           search = std::find (model.begin (), model.end (), -lit);
-          assert (search != model.end ());       }
+          assert (search != model.end ());
+        }
       }
 
       if (!satisfied) {
@@ -428,23 +446,22 @@ public:
         must_add_clause = true;
         must_add_idx = lemma->id;
 
-        
-        MLOGC ("false (external clause  " << lemma->id << "/" 
-              << external_lemmas.size ()
-              << " is not satisfied: (forgettable: "
-              << lemma->forgettable << ", size: " << lemma->size << "): " );
+        MLOGC ("false (external clause  "
+               << lemma->id << "/" << external_lemmas.size ()
+               << " is not satisfied: (forgettable: " << lemma->forgettable
+               << ", size: " << lemma->size << "): ");
         for (auto const &l : *lemma) {
           MLOGC (l << " ");
           (void) l;
         }
         MLOGC (std::endl);
-      
+
         return false;
       }
     }
-  
-    MLOGC( "true" << std::endl );
-  
+
+    MLOGC ("true" << std::endl);
+
     return true;
   }
 
@@ -454,15 +471,15 @@ public:
     return cb_has_external_clause (red);
   }
 
-  bool cb_has_external_clause (unsigned& clause_redundancy) {
+  bool cb_has_external_clause (unsigned &clause_redundancy) {
     MLOG ("cb_has_external_clause returns: ");
 
     assert (compare_trails ());
 
     clause_redundancy = 0;
 
-    if (external_lemmas.empty()) {
-      MLOGC( "false (there are no external lemmas)." << std::endl );
+    if (external_lemmas.empty ()) {
+      MLOGC ("false (there are no external lemmas)." << std::endl);
       return false;
     }
 
@@ -475,17 +492,17 @@ public:
       if (external_lemmas[must_add_idx]->forgettable)
         clause_redundancy = 1;
 
-       MLOGC( "true (forced clause addition, "
-          << "forgettable: " << clause_redundancy
-          << " id: " << add_lemma_idx << ")." <<  std::endl );
-      
+      MLOGC ("true (forced clause addition, "
+             << "forgettable: " << clause_redundancy
+             << " id: " << add_lemma_idx << ")." << std::endl);
+
       added_lemma_count++;
       return true;
     }
 
     if (added_lemma_count > lemma_per_cb) {
       added_lemma_count = 0;
-      MLOGC( "false (lemma per CB treshold reached)." << std::endl );
+      MLOGC ("false (lemma per CB treshold reached)." << std::endl);
       return false;
     }
 
@@ -493,21 +510,21 @@ public:
     // adding them. But if any of them is unsatisfied, it will force also
     // to set back the add_lemma_idx to them. So we do not need to start
     // the search here from 0.
-    
-    while (add_lemma_idx < external_lemmas.size()) {
-      
+
+    while (add_lemma_idx < external_lemmas.size ()) {
+
       if (!external_lemmas[add_lemma_idx]->add_count &&
-        !external_lemmas[add_lemma_idx]->propagation_reason) {
+          !external_lemmas[add_lemma_idx]->propagation_reason) {
 
-          if (external_lemmas[add_lemma_idx]->forgettable)
-            clause_redundancy = 1;
+        if (external_lemmas[add_lemma_idx]->forgettable)
+          clause_redundancy = 1;
 
-          MLOGC ("true (new lemma was found, "
-              << "forgettable: " << clause_redundancy
-              << " id: " << add_lemma_idx << ")." <<  std::endl );
-          
-          added_lemma_count++;
-          return true;
+        MLOGC ("true (new lemma was found, "
+               << "forgettable: " << clause_redundancy
+               << " id: " << add_lemma_idx << ")." << std::endl);
+
+        added_lemma_count++;
+        return true;
       }
 
       // Forgettable lemmas are added repeatedly to the solver only when
@@ -515,27 +532,28 @@ public:
 
       add_lemma_idx++;
     }
-    
-    MLOGC( "false." << std::endl );
+
+    MLOGC ("false." << std::endl);
 
     return false;
   }
 
   int cb_add_external_clause_lit () {
     int lit = external_lemmas[add_lemma_idx]->next_lit ();
-    
-    MLOG ("cb_add_external_clause_lit " << lit
-      << " (lemma " << add_lemma_idx << "/"
-      << external_lemmas.size() << ")" << std::endl);
 
-    if (!lit) external_lemmas[add_lemma_idx++]->add_count++;
+    MLOG ("cb_add_external_clause_lit "
+          << lit << " (lemma " << add_lemma_idx << "/"
+          << external_lemmas.size () << ")" << std::endl);
+
+    if (!lit)
+      external_lemmas[add_lemma_idx++]->add_count++;
 
     return lit;
   }
 
   int cb_decide () {
-    MLOG ( "cb_decide starts." << std::endl);
-    
+    MLOG ("cb_decide starts." << std::endl);
+
     assert (compare_trails ());
 
     if (observed_variables.empty () || observed_variables.size () <= 4) {
@@ -569,27 +587,27 @@ public:
   }
 
   int cb_propagate () {
-    MLOGC ( "cb_propagate starts" << std::endl );
+    MLOGC ("cb_propagate starts" << std::endl);
     assert (compare_trails ());
     if (observed_trail.size () < 2) {
-      MLOG( "cb_propagate returns 0"
-        << " (less than two observed variables are assigned)."
-        << std::endl);
+      MLOG ("cb_propagate returns 0"
+            << " (less than two observed variables are assigned)."
+            << std::endl);
 
       return 0;
     }
-      
+
     size_t lit_sum = 0;  // sum of variables of satisfied observed literals
-    int lowest_lit = 0;  // the lowest satisfied observed literal 
-    int highest_lit = 0; // the highest satisfied observed literal 
+    int lowest_lit = 0;  // the lowest satisfied observed literal
+    int highest_lit = 0; // the highest satisfied observed literal
 
     std::set<int> satisfied_literals =
-      current_observed_satisfied_set(lit_sum, lowest_lit, highest_lit);
-    
-    if (satisfied_literals.empty()) {
-      MLOGC( "cb_propagate returns 0"
-        << " (there are no observed satisfied literals)."
-        << std::endl);
+        current_observed_satisfied_set (lit_sum, lowest_lit, highest_lit);
+
+    if (satisfied_literals.empty ()) {
+      MLOGC ("cb_propagate returns 0"
+             << " (there are no observed satisfied literals)."
+             << std::endl);
       return 0;
     }
 
@@ -610,42 +628,43 @@ public:
     }
 
     if (!unassigned_var) {
-      MLOG( "cb_propagate returns 0"
-        << " (there are no unassigned observed variables)."
-        << std::endl);
+      MLOG ("cb_propagate returns 0"
+            << " (there are no unassigned observed variables)."
+            << std::endl);
       return 0;
     }
 
-    assert (clause.empty());
+    assert (clause.empty ());
     int propagated_lit = 0;
 
     if (lit_sum % 5 == 0 && satisfied_literals.size () > 1) {
-      clause = { unassigned_var, -1 * lowest_lit, -1 * highest_lit};
+      clause = {unassigned_var, -1 * lowest_lit, -1 * highest_lit};
     } else if (lit_sum % 7 == 0 && satisfied_literals.size () > 0) {
-      clause = { unassigned_var, -1 * highest_lit};
+      clause = {unassigned_var, -1 * highest_lit};
     } else if (lit_sum % 11 == 0) {
-      clause = { unassigned_var };
+      clause = {unassigned_var};
     } else if (lit_sum > 15 && lowest_lit) {
       // Propagate a falsified literal, ok if lowest == highest
-      clause = {-1 * lowest_lit, -1 * highest_lit };
+      clause = {-1 * lowest_lit, -1 * highest_lit};
     }
 
-    if (!clause.empty()) {
+    if (!clause.empty ()) {
       propagated_lit = clause[0];
       size_t id = add_new_lemma (true);
       external_lemmas[id]->propagation_reason = true;
       reason_map[propagated_lit] = id;
-      clause.clear();
+      clause.clear ();
     }
 
-    MLOG( "cb_propagate returns " << propagated_lit << std::endl );
+    MLOG ("cb_propagate returns " << propagated_lit << std::endl);
 
     return propagated_lit;
   }
 
   int cb_add_reason_clause_lit (int plit) {
 
-    // At that point there is no need to assume that the trails are in synchron.
+    // At that point there is no need to assume that the trails are in
+    // synchron.
     assert (reason_map.find (plit) != reason_map.end ());
 
     size_t reason_id = reason_map[plit];
@@ -654,16 +673,17 @@ public:
 
     if (!lit) {
       external_lemmas[reason_id]->add_count++;
-      MLOG ( "reason clause (id: " << reason_id << ") is added." << std::endl );
+      MLOG ("reason clause (id: " << reason_id << ") is added."
+                                  << std::endl);
     }
 
     return lit;
   }
 
   void notify_assignment (int lit, bool is_fixed) {
-    MLOG ( "notify assignment: " << lit << " (current level: "
-      << observed_trail.size()-1 << ", is_fixed: "  
-      << is_fixed << ")" << std::endl );
+    MLOG ("notify assignment: "
+          << lit << " (current level: " << observed_trail.size () - 1
+          << ", is_fixed: " << is_fixed << ")" << std::endl);
     if (is_fixed) {
       observed_trail.front ().push_back (lit);
     } else {
@@ -672,43 +692,44 @@ public:
   }
 
   void notify_new_decision_level () {
-    MLOG ( "notify new decision level "
-      << observed_trail.size() << " -> "
-      << observed_trail.size() + 1 << std::endl );
+    MLOG ("notify new decision level " << observed_trail.size () -1 << " -> "
+                                       << observed_trail.size ()
+                                       << std::endl);
     observed_trail.push_back (std::vector<int> ());
   }
 
   void notify_backtrack (size_t new_level) {
-    MLOG ( "notify backtrack: " << observed_trail.size () - 1
-            << " -> " << new_level << std::endl );
+    MLOG ("notify backtrack: " << observed_trail.size () - 1 << " -> "
+                               << new_level << std::endl);
     assert (observed_trail.size () == 1 ||
             observed_trail.size () >= new_level + 1);
     while (observed_trail.size () > new_level + 1) {
-        // Remove reason clause of backtracked assignments (keep it as lemma)
-        for (auto lit : observed_trail.back()) {  
-          if (reason_map.find (lit) != reason_map.end ()) {
-            size_t reason_id = reason_map[lit];
-            assert (reason_id < external_lemmas.size());
-            external_lemmas[reason_id]->propagation_reason = false;
-            external_lemmas[reason_id]->forgettable = true;
-            reason_map.erase (lit);
-          }
+      // Remove reason clause of backtracked assignments (keep it as lemma)
+      for (auto lit : observed_trail.back ()) {
+        if (reason_map.find (lit) != reason_map.end ()) {
+          size_t reason_id = reason_map[lit];
+          assert (reason_id < external_lemmas.size ());
+          external_lemmas[reason_id]->propagation_reason = false;
+          external_lemmas[reason_id]->forgettable = true;
+          reason_map.erase (lit);
         }
-        observed_trail.pop_back ();
+      }
+      observed_trail.pop_back ();
     }
   }
 
-/* ----------------- ExternalPropagator functions end ------------------*/
-
+  /* ----------------- ExternalPropagator functions end ------------------*/
 
   /* -------------------------- Helper functions ---------------------- */
-  std::set<int> current_observed_satisfied_set (size_t& lit_sum, int& lowest_lit, int& highest_lit) {
-    
+  std::set<int> current_observed_satisfied_set (size_t &lit_sum,
+                                                int &lowest_lit,
+                                                int &highest_lit) {
+
     lit_sum = 0;
     lowest_lit = 0;
     highest_lit = 0;
     std::set<int> satisfied_literals;
-    
+
     for (auto level_lits : observed_trail) {
       for (auto lit : level_lits) {
         if (!s->observed (lit))
@@ -717,7 +738,8 @@ public:
         satisfied_literals.insert (lit);
         lit_sum += abs (lit);
 
-        if (!lowest_lit) lowest_lit = lit;
+        if (!lowest_lit)
+          lowest_lit = lit;
         highest_lit = lit;
       }
     }
@@ -2043,7 +2065,7 @@ void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
 
   // Give a chance to add no observed variables at all
   if (random.generate_double () < 0.05)
-      return;
+    return;
 
   for (int idx = minvars; idx <= maxvars; idx++) {
     if (random.generate_double () < 0.6)

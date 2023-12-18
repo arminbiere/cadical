@@ -1,3 +1,20 @@
+Version 1.9.2
+-------------
+
+- Important fixes for ILB, trail-reuse and external propagation with
+  assumptions.
+
+- Restored effectiveness of Mobical and improved external mock
+  propagator.
+
+- Forced garbage collection of binary clauses before restore.
+
+- Merge internal status and state encodings and made them consistent.
+
+- Disabled non-verbose message if empty clause found in input.
+
+- Improved support for IDRUP.
+
 Version 1.9.1
 -------------
 

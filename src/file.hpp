@@ -2,8 +2,8 @@
 #define _file_hpp_INCLUDED
 
 #include <cassert>
-#include <cstdio>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <vector>
 
@@ -68,7 +68,7 @@ public:
   static bool writable (const char *path);     // can write to that file?
   static size_t size (const char *path);       // file size in bytes
 
-  bool piping ();		// Is opened file a pipe?
+  bool piping (); // Is opened file a pipe?
 
   // Does the file match the file type signature.
   //

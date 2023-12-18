@@ -314,7 +314,7 @@ bool Internal::propagate () {
         continue; // blocking literal satisfied
 
       if (w.binary ()) {
-        
+
         // assert (w.clause->redundant || !w.clause->garbage);
 
         // In principle we can ignore garbage binary clauses too, but that
@@ -854,7 +854,8 @@ inline int Internal::next_propagation_level (int last) {
 
 // returns a conflict of conflicting_level at most l
 //
-inline Clause *Internal::propagation_conflict (int *lp, Clause *c, bool exact) {
+inline Clause *Internal::propagation_conflict (int *lp, Clause *c,
+                                               bool exact) {
   int l = *lp;
   if (c)
     conflicts.push_back (c);

@@ -30,7 +30,8 @@ public:
   // Includes ID and wether the clause is redundant or irredundant
   // Arguments: ID, redundant, clause, restored
   //
-  virtual void add_original_clause (uint64_t, bool, const std::vector<int> &,
+  virtual void add_original_clause (uint64_t, bool,
+                                    const std::vector<int> &,
                                     bool = false) {}
 
   // Notify the observer that a new clause has been derived.
@@ -121,7 +122,8 @@ public:
   // assumption clause or the ids of the failing constrain clauses
   // Arguments: conclusion_type, clause_ids
   //
-  virtual void conclude_unsat (ConclusionType, const std::vector<uint64_t> &) {}
+  virtual void conclude_unsat (ConclusionType,
+                               const std::vector<uint64_t> &) {}
 
   // Notify the observer that conclude sat was requested.
   // will give the complete model as a vector.

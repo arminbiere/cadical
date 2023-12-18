@@ -35,8 +35,8 @@ File::File (Internal *i, bool w, int c, int p, FILE *f, const char *n)
 #if !defined(QUIET) || !defined(NDEBUG)
       writing (w),
 #endif
-      close_file (c), child_pid (p), file (f), _name (strdup (n)), _lineno (1),
-      _bytes (0) {
+      close_file (c), child_pid (p), file (f), _name (strdup (n)),
+      _lineno (1), _bytes (0) {
   (void) w;
   assert (f), assert (n);
 }
@@ -98,7 +98,7 @@ bool File::writable (const char *path) {
 bool File::piping () {
   struct stat stat;
   int fd = fileno (file);
-  if (fstat (fd,  &stat))
+  if (fstat (fd, &stat))
     return true;
   return S_ISFIFO (stat.st_mode);
 }
