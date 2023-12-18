@@ -692,8 +692,8 @@ public:
   }
 
   void notify_new_decision_level () {
-    MLOG ("notify new decision level " << observed_trail.size () << " -> "
-                                       << observed_trail.size () + 1
+    MLOG ("notify new decision level " << observed_trail.size () -1 << " -> "
+                                       << observed_trail.size ()
                                        << std::endl);
     observed_trail.push_back (std::vector<int> ());
   }

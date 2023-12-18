@@ -602,11 +602,13 @@ void Internal::produce_failed_assumptions () {
   assert (!assumptions.empty ());
   while (!unsat) {
     assert (!satisfied ());
+    notify_assignments ();
     if (decide ())
       break;
     while (!unsat && !propagate ())
       analyze ();
   }
+  notify_assignments ();
   if (unsat)
     LOG ("formula is actually unsatisfiable unconditionally");
   else
