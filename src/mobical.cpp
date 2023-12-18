@@ -340,9 +340,9 @@ public:
         (void) l;
         MLOGC (l << " ");
       }
-      MLOGC ( "0" << std::endl );
+      MLOGC ("0" << std::endl);
 
-      add_new_lemma(false);
+      add_new_lemma (false);
       clause.clear ();
     }
   }
@@ -692,8 +692,8 @@ public:
   }
 
   void notify_new_decision_level () {
-    MLOG ("notify new decision level " << observed_trail.size () -1 << " -> "
-                                       << observed_trail.size ()
+    MLOG ("notify new decision level " << observed_trail.size () - 1
+                                       << " -> " << observed_trail.size ()
                                        << std::endl);
     observed_trail.push_back (std::vector<int> ());
   }
