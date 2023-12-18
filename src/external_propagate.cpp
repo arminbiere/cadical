@@ -945,4 +945,45 @@ void Internal::check_watched_literal_invariants () {
   }
 }
 
+#ifndef NDEBUG
+
+/*----------------------------------------------------------------------------*/
+//
+// An expensive function that can be used for deep-debug trail-related
+// issues in mobical. Do not use it unless it is really unavoidable.
+//
+// eq_class contains all the merged external literals that are currently
+// compacted to the internal literal of trail[0] and return true.
+//
+// In case trail[0] does not exists or is not on the root level, the function
+// returns false (indicating that there was no merger literal found).
+//
+bool Internal::get_merged_literals (std::vector<int>& eq_class) {
+  eq_class.clear();
+  
+  if (!trail.size()) return false;
+
+  int ilit = trail[0];
+  size_t lit_level = var (ilit).level;
+
+  if (!lit_level) {
+    // Collect all the variables that are merged and mapped to that ilit
+    size_t e2i_size = external->e2i.size();
+    int ivar = abs(ilit);
+    for(size_t i = 0; i < e2i_size; i++) {
+      int other = abs(external->e2i[i]);
+      if (other == ivar) {
+        if (external->e2i[i] == ilit) eq_class.push_back(i);
+        else eq_class.push_back(-1*i);
+      }
+    }
+  
+    return true;
+  }
+
+  return false;
+}
+
+#endif
+
 } // namespace CaDiCaL
