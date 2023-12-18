@@ -660,7 +660,9 @@ void External::check_assignment (int (External::*a) (int) const) {
   for (const auto& forgettables : forgettable_original) {
     presence_flag = true;
     satisfied = false;
+#ifndef QUIET
     count++;
+#endif
     std::vector<int> literals;
     for (const auto lit : forgettables.second) {
       if (presence_flag) {
@@ -689,9 +691,10 @@ void External::check_assignment (int (External::*a) (int) const) {
         fatal_message_end ();
     }
   }
-
+#ifndef QUIET
   VERBOSE (1, "satisfying assignment checked on %" PRId64 " clauses",
            count);
+#endif
 }
 
 /*------------------------------------------------------------------------*/
