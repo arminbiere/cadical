@@ -517,16 +517,17 @@ public:
       if (!external_lemmas[add_lemma_idx]->add_count &&
           !external_lemmas[add_lemma_idx]->propagation_reason) {
 
-        if (external_lemmas[add_lemma_idx]->forgettable)
+        if (external_lemmas[add_lemma_idx]->forgettable) {
           clause_redundancy = 1;
+        }
 
 
-          MLOGC ("true (new lemma was found, "
-              << "forgettable: " << clause_redundancy
-              << " id: " << add_lemma_idx << ")." <<  std::endl);
-          
-          added_lemma_count++;
-          return true;
+        MLOGC ("true (new lemma was found, "
+            << "forgettable: " << clause_redundancy
+            << " id: " << add_lemma_idx << ")." <<  std::endl);
+        
+        added_lemma_count++;
+        return true;
       }
 
       // Forgettable lemmas are added repeatedly to the solver only when
