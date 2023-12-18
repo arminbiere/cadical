@@ -340,9 +340,9 @@ public:
         (void) l;
         MLOGC (l << " ");
       }
-      MLOGC ("0" << std::endl);
+      MLOGC ( "0" << std::endl );
 
-      add_new_lemma (false);
+      add_new_lemma(false);
       clause.clear ();
     }
   }
