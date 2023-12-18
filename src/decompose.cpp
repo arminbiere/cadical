@@ -344,9 +344,9 @@ bool Internal::decompose_round () {
 
               if (unsat)
                 break;
-
+#ifndef QUIET
               LOG ("SCC of representative %d of size %d", repr, size);
-
+#endif
               do {
                 assert (!scc.empty ());
                 other = scc.back ();
