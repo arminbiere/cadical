@@ -93,14 +93,16 @@ int Internal::reuse_trail () {
   assert (1 <= decision);
   int res = trivial_decisions;
   if (use_scores ()) {
-    while (res < level && control[res + 1].decision &&
-           score_smaller (this) (decision, abs (control[res + 1].decision))) {
+    while (
+        res < level && control[res + 1].decision &&
+        score_smaller (this) (decision, abs (control[res + 1].decision))) {
       assert (control[res + 1].decision || opts.reimply);
       res++;
     }
   } else {
     int64_t limit = bumped (decision);
-    while (res < level && control[res + 1].decision && bumped (control[res + 1].decision) > limit) {
+    while (res < level && control[res + 1].decision &&
+           bumped (control[res + 1].decision) > limit) {
       assert (control[res + 1].decision || opts.reimply);
       res++;
     }

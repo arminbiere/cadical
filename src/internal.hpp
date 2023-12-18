@@ -1062,7 +1062,7 @@ struct Internal {
   int next_propagation_level (int last);
   vector<int> *next_trail (int l);
   int next_propagated (int l);
-  Clause *propagation_conflict (int *l, Clause *c, bool exact=false);
+  Clause *propagation_conflict (int *l, Clause *c, bool exact = false);
   int conflicting_level (Clause *c);
   void elevate_lit (int lit, Clause *reason);
   int elevating_level (int lit, Clause *reason);

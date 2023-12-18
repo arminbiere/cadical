@@ -152,7 +152,7 @@ void IdrupTracer::insert () {
 
 /*------------------------------------------------------------------------*/
 
-inline void IdrupTracer::flush_if_piping () { 
+inline void IdrupTracer::flush_if_piping () {
   if (piping)
     file->flush ();
 }
@@ -245,9 +245,8 @@ void IdrupTracer::idrup_add_original_clause (const vector<int> &clause) {
   // flush_if_piping ();
 }
 
-
 void IdrupTracer::idrup_delete_clause (uint64_t id,
-                                      const vector<int> &clause) {
+                                       const vector<int> &clause) {
   if (find_and_delete (id)) {
     assert (imported_clause.empty ());
     if (binary)
@@ -429,7 +428,8 @@ void IdrupTracer::add_original_clause (uint64_t id, bool,
   }
   assert (restored);
   if (find_and_delete (id)) {
-    LOG (clause, "IDRUP TRACER the clause was not yet weakened, so no restore");
+    LOG (clause,
+         "IDRUP TRACER the clause was not yet weakened, so no restore");
     return;
   }
   LOG (clause, "IDRUP TRACER tracing addition of restored clause");

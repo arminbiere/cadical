@@ -392,7 +392,13 @@ void External::reset_observed_vars () {
   // Shouldn't be called if there is no connected propagator
   assert (propagator);
   reset_extended ();
-  assert ((size_t) max_var + 1 == is_observed.size ());
+  
+  internal->notified = 0;
+  LOG ("reset notified counter to 0");
+
+  if (!is_observed.size ()) return;
+  
+  assert (!max_var || (size_t) max_var + 1 == is_observed.size ());
 
   for (auto elit : vars) {
     int eidx = abs (elit);
@@ -405,8 +411,8 @@ void External::reset_observed_vars () {
       melt (elit);
     }
   }
-  internal->notified = 0;
-  LOG ("reset notified counter to 0");
+  
+  
 }
 
 bool External::observed (int elit) {
@@ -785,7 +791,9 @@ bool External::traverse_all_non_frozen_units_as_witnesses (
     int unit = tmp < 0 ? -idx : idx;
     const int ilit = e2i[idx] * (tmp < 0 ? -1 : 1);
     // heurstically add + max_var to the id to avoid reusing ids
-    const uint64_t id = internal->opts.lrat ? internal->unit_clauses[internal->vlit (ilit)] : 1;
+    const uint64_t id = internal->opts.lrat
+                            ? internal->unit_clauses[internal->vlit (ilit)]
+                            : 1;
     assert (id);
     clause_and_witness.push_back (unit);
     if (!it.witness (clause_and_witness, clause_and_witness, id + max_var))

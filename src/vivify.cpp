@@ -1396,7 +1396,8 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
 
   connect_watches (); // watch all relevant clauses
 
-  // the clauses might still contain set literals, so propagation since the beginning
+  // the clauses might still contain set literals, so propagation since the
+  // beginning
   propagated2 = propagated = 0;
 
   if (!unsat && !propagate ()) {

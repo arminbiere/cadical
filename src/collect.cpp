@@ -543,7 +543,8 @@ void Internal::check_clause_stats () {
 
 /*------------------------------------------------------------------------*/
 
-// only delete binary clauses from watch list that are already mark as deleted.
+// only delete binary clauses from watch list that are already mark as
+// deleted.
 void Internal::remove_garbage_binaries () {
   if (unsat)
     return;
@@ -555,7 +556,7 @@ void Internal::remove_garbage_binaries () {
   Watches saved;
   for (auto v : vars) {
     for (auto lit : {-v, v}) {
-      assert (saved.empty());
+      assert (saved.empty ());
       Watches &ws = watches (lit);
       const const_watch_iterator end = ws.end ();
       watch_iterator j = ws.begin ();
@@ -563,14 +564,15 @@ void Internal::remove_garbage_binaries () {
       for (i = j; i != end; i++) {
         Watch w = *i;
         Clause *c = w.clause;
-	if (c->reason && c->collect ()) {
-	  assert (c->size == 2);
-	  backtrack_level = min (backtrack_level, var(c->literals[0]).level);
-	  LOG ("need to backtrack to before level %d", backtrack_level);
-	}
+        if (c->reason && c->collect ()) {
+          assert (c->size == 2);
+          backtrack_level =
+              min (backtrack_level, var (c->literals[0]).level);
+          LOG ("need to backtrack to before level %d", backtrack_level);
+        }
         if (c->collect ())
           continue;
-	assert (!c->moved);
+        assert (!c->moved);
         w.size = c->size;
         const int new_blit_pos = (c->literals[0] == lit);
         LOG (c, "clause in flush_watch starting from %d", lit);
@@ -594,7 +596,6 @@ void Internal::remove_garbage_binaries () {
     backtrack (backtrack_level - 1);
   STOP (collect);
 }
-
 
 /*------------------------------------------------------------------------*/
 

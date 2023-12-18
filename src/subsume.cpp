@@ -259,7 +259,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
           dummy.literals[1] = other;
           flipped = (sign < 0) ? -lit : INT_MIN;
         }
-	dummy.moved = false;
+        dummy.moved = false;
         dummy.redundant = false;
         dummy.size = 2;
         dummy.id = bin.id;

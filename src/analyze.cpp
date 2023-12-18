@@ -434,7 +434,8 @@ void Internal::clear_analyzed_literals () {
   }
   analyzed.clear ();
 #ifndef NDEBUG
-  if (unit_analyzed.size ()) return;
+  if (unit_analyzed.size ())
+    return;
   for (auto idx : vars) {
     Flags &f = flags (idx);
     assert (!f.seen);
@@ -554,7 +555,8 @@ inline int Internal::otfs_find_backtrack_level (int &forced) {
 inline int Internal::find_conflict_level (int &forced) {
 
   assert (conflict);
-  assert (opts.chrono || opts.otfs || external_prop || (opts.reimply && multitrail_dirty != level));
+  assert (opts.chrono || opts.otfs || external_prop ||
+          (opts.reimply && multitrail_dirty != level));
 
   int res = 0, count = 0;
 
@@ -970,12 +972,14 @@ void Internal::analyze () {
     }
   }
 
-  if ((!opts.reimply && opts.chrono) || external_prop || (opts.reimply && multitrail_dirty != level)) {
+  if ((!opts.reimply && opts.chrono) || external_prop ||
+      (opts.reimply && multitrail_dirty != level)) {
 
     int forced;
 
     const int conflict_level = find_conflict_level (forced);
-    assert (conflict_level == multitrail_dirty || !opts.reimply || external_prop);
+    assert (conflict_level == multitrail_dirty || !opts.reimply ||
+            external_prop);
 
     // In principle we can perform conflict analysis as in non-chronological
     // backtracking except if there is only one literal with the maximum

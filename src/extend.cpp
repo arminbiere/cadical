@@ -210,7 +210,8 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
       clause.push_back (lit);
     assert (!lit);
     --i;
-    const uint64_t id = ((uint64_t) *(i-1) << 32) + static_cast<uint64_t>(*i);
+    const uint64_t id =
+        ((uint64_t) * (i - 1) << 32) + static_cast<uint64_t> (*i);
     assert (id);
     i -= 2;
     assert (!*i);
@@ -243,7 +244,8 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
       assert (!lit);
       assert (i != end);
       assert (!*i);
-      const uint64_t id = ((uint64_t) *i << 32) + static_cast<uint64_t>(*(i + 1));
+      const uint64_t id =
+          ((uint64_t) *i << 32) + static_cast<uint64_t> (*(i + 1));
       assert (id > 0);
       i += 3;
       assert (*i);
