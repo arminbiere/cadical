@@ -521,7 +521,6 @@ public:
           clause_redundancy = 1;
         }
 
-
         MLOGC ("true (new lemma was found, "
             << "forgettable: " << clause_redundancy
             << " id: " << add_lemma_idx << ")." <<  std::endl);
