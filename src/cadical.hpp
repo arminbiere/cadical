@@ -1240,7 +1240,7 @@ public:
   // will be used (i.e., 0).
   //
   // Reason clauses of external propagation steps are assumed to be
-  // forgettable irredundant (i.e. type 0).
+  // forgettable irredundant (i.e. type 1).
   // In case they are meant to be more important, the propagator should add
   // them as an explicit external clause with type 0.
   //
