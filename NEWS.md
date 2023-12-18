@@ -1,3 +1,11 @@
+Version 1.9.3
+-------------
+
+- Fixed bogus notification if a user propagator is connected
+  with ILB and after local search preprocessing and a second incremental
+  call lead to an inconsistent trail to assumption mapping, which might
+  have lead to an infinite loop (in very rare cases).
+
 Version 1.9.2
 -------------
 
