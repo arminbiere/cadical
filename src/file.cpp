@@ -450,9 +450,9 @@ void File::flush () {
 }
 
 File::~File () {
-  free (_name);
   if (file)
     close ();
+  free (_name);
 }
 
 } // namespace CaDiCaL
