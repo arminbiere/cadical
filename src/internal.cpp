@@ -11,10 +11,10 @@ Internal::Internal ()
       protected_reasons (false), force_saved_phase (false),
       searching_lucky_phases (false), stable (false), reported (false),
       external_prop (false), did_external_prop (false),
-      external_prop_is_lazy (true), rephased (0), vsize (0), max_var (0),
-      clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
-      concluded (false), lrat (false), level (0), vals (0), score_inc (1.0),
-      scores (this), conflict (0), ignore (0), dummy_binary (0),
+      external_prop_is_lazy (true), private_steps (false), rephased (0),
+      vsize (0), max_var (0), clause_id (0), original_id (0), reserved_ids (0), 
+      conflict_id (0), concluded (false), lrat (false), level (0), vals (0),
+      score_inc (1.0), scores (this), conflict (0), ignore (0),
       external_reason (&external_reason_clause), newest_clause (0),
       force_no_backtrack (false), from_propagator (false), ext_clause_red (0),
       tainted_literal (0), notified (0), probe_reason (0), propagated (0),
@@ -604,6 +604,10 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
   assert (!force_saved_phase);
   assert (propagated == trail.size ());
   force_saved_phase = true;
+  if (external_prop) {
+    LOG ("external notifications are turned off during preprocessing.");
+    private_steps = true;
+  }
   int res = 0;
   while (!res) {
     if (satisfied ()) {
@@ -623,6 +627,10 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
   }
   assert (force_saved_phase);
   force_saved_phase = false;
+  if (external_prop) {
+    private_steps = false;
+    LOG("external notifications are turned back on.");
+  }
   return res;
 }
 

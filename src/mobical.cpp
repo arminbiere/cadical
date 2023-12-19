@@ -210,6 +210,7 @@ private:
   // MockPropagator parameters
   size_t lemma_per_cb = 2;
   bool logging = false;
+  
   struct ExternalLemma {
     size_t id;
     size_t add_count;
@@ -392,7 +393,89 @@ public:
             observed_variables.end ());
   }
 
-  bool compare_trails () { return true; }
+  bool compare_trails () { 
+#ifndef NDEBUG
+    bool solver_reimplies = s->internal->opts.reimply;
+    
+    size_t etrail_inserted = 0;
+
+    std::set<int> etrail = {};  // Trail of solver
+    std::set<int> efixed = {};  // Fixed assignments in solver
+
+    size_t otrail_inserted = 0;
+    
+    std::set<int> otrail = {}; // Observed trail
+    std::set<int> ofixed = {}; // Observed fixed assignments
+
+    
+    size_t idx = 0;
+
+    // 1. Collect merged/eliminated variables in case there are:
+    std::vector<int> eq_class = {};
+    // can be an expensive call, avoid if possible
+    bool is_merger = s->internal->get_merged_literals (eq_class);
+    if (is_merger) {
+      for ( const auto& elit: eq_class ) {  
+        if (is_observed_now(elit)) {
+          etrail.insert (elit);
+          etrail_inserted ++;
+        }
+      }
+      idx++; // trail[0] is processed already
+    }
+  
+    // 2. Collect all other variables from trail
+    for (; idx < s->internal->trail.size(); idx++) {
+      int ilit = s->internal->trail[idx];
+      int elit = s->internal->externalize(ilit);
+      if (is_observed_now(elit)) {
+        etrail.insert (elit);
+        etrail_inserted ++;
+      }
+    }
+    
+    // 3. Collect all the variables from the multi-trail
+    if (solver_reimplies) {
+      size_t t_idx = 0;
+      for (const auto &t : s->internal->trails) {
+        t_idx++;
+        for (const auto &ilit : t) {
+          int elit = s->internal->externalize(ilit);
+          if (is_observed_now(elit)) {
+            etrail.insert (elit);
+            etrail_inserted ++;
+          }
+        }
+      }
+    }
+
+    // There can be duplicate assignments due to fixed variables
+    // TODO: add some additional checks for them
+    //assert (etrail_inserted == etrail.size() || solver_reimplies); 
+
+    size_t t_idx = 0;
+    for (const auto& level : observed_trail) {
+      for (const auto elit : level) {
+        if (is_observed_now(elit)) {
+          otrail.insert (elit);
+          otrail_inserted ++;
+        }
+
+      }
+      t_idx++;
+    }
+
+    // There can be duplicate assignments due to fixed variables
+    // TODO: add some additional checks for them
+    //assert (otrail_inserted == otrail.size() || solver_reimplies );
+
+    assert (etrail.size() == otrail.size() );
+  
+    assert (etrail == otrail);
+
+#endif
+    return true; 
+  }
   /*-----------------functions for mobical ends ------------------------*/
 
   /*-------------------------- Observer functions ----------------------*/

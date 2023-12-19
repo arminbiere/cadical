@@ -173,6 +173,7 @@ struct Internal {
   bool external_prop;         // true if an external propagator is connected
   bool did_external_prop;     // true if ext. propagation happened
   bool external_prop_is_lazy; // true if the external propagator is lazy
+  bool private_steps;         // no notification of ext. prop during these steps
   char rephased;              // last type of resetting phases
   Reluctant reluctant;        // restart counter in stable mode
   size_t vsize;               // actually allocated variable data size
