@@ -172,15 +172,9 @@ void Internal::calculate_minimize_chain (int lit) {
 // positive case (where a literal with 'keep' true is hit).
 //
 void Internal::minimize_sort_clause () {
-  if (opts.reimply) {
-    MSORT (opts.radixsortlim, clause.begin (), clause.end (),
-           minimize_trail_level_positive_rank (this),
-           minimize_trail_level_smaller (this));
-  } else {
-    MSORT (opts.radixsortlim, clause.begin (), clause.end (),
-           minimize_trail_positive_rank (this),
-           minimize_trail_smaller (this));
-  }
+  MSORT (opts.radixsortlim, clause.begin (), clause.end (),
+         minimize_trail_positive_rank (this),
+         minimize_trail_smaller (this));
 }
 
 void Internal::clear_minimized_literals () {

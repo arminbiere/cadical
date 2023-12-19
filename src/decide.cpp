@@ -86,6 +86,15 @@ int Internal::likely_phase (int idx) { return decide_phase (idx, false); }
 
 /*------------------------------------------------------------------------*/
 
+// adds new level to control and trail
+//
+void Internal::new_trail_level (int lit) {
+  level++;
+  control.push_back (Level (lit, trail.size ()));
+}
+
+/*------------------------------------------------------------------------*/
+
 bool Internal::satisfied () {
   if ((size_t) level < assumptions.size () + (!!constraint.size ()))
     return false;
@@ -94,17 +103,6 @@ bool Internal::satisfied () {
   assert (num_assigned == (size_t) max_var);
   if (propagated < trail.size ())
     return false;
-  if (opts.reimply && multitrail_dirty < level)
-    return false;
-  if (opts.reimply && level &&
-      (size_t) multitrail[level - 1] < trails[level - 1].size ())
-    return false;
-#ifndef NDEBUG
-  if (opts.reimply)
-    for (int i = 0; i < level; i++)
-      assert ((size_t) multitrail[i] == trails[i].size ());
-#endif
-
   size_t assigned = num_assigned;
   return (assigned == (size_t) max_var);
 }
@@ -123,7 +121,6 @@ bool Internal::better_decision (int lit, int other) {
 
 int Internal::decide () {
   assert (!satisfied ());
-  assert (!opts.reimply || multitrail_dirty == level);
   START (decide);
   int res = 0;
   if ((size_t) level < assumptions.size ()) {

@@ -132,14 +132,8 @@ bool Internal::flip (int lit) {
     assert (val (lit) < 0);
 
     Var &v = var (idx);
-    if (opts.reimply) {
-      assert (v.level);
-      assert (trails[v.level - 1][v.trail] == lit);
-      trails[v.level - 1][v.trail] = -lit;
-    } else {
-      assert (trail[v.trail] == lit);
-      trail[v.trail] = -lit;
-    }
+    assert (trail[v.trail] == lit);
+    trail[v.trail] = -lit;
     if (opts.ilb) {
       if (!tainted_literal)
         tainted_literal = lit;

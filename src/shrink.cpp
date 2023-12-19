@@ -100,9 +100,8 @@ int inline Internal::shrink_literal (int lit, int blevel,
   f.shrinkable = true;
   f.poison = false;
   shrinkable.push_back (lit);
-  if (opts.shrinkreap) { // different assertion for multitrail
-    assert (!opts.reimply || max_trail < trails[blevel - 1].size ());
-    assert (opts.reimply || max_trail < trail.size ());
+  if (opts.shrinkreap) {
+    assert (max_trail < trail.size ());
     const unsigned dist = max_trail - v.trail;
     reap.push (dist);
   }
@@ -190,7 +189,7 @@ void Internal::push_literals_of_block (
 
 unsigned inline Internal::shrink_next (int blevel, unsigned &open,
                                        unsigned &max_trail) {
-  const auto &t = next_trail (blevel);
+  const auto &t = &trail;
   if (opts.shrinkreap) {
     assert (!reap.empty ());
     const unsigned dist = reap.pop ();
@@ -200,7 +199,7 @@ unsigned inline Internal::shrink_next (int blevel, unsigned &open,
     assert (pos < t->size ());
     const int uip = (*t)[pos];
     assert (val (uip) > 0);
-    LOG ("trying to shrink literal %d at trail[%u]", uip, pos);
+    LOG ("trying to shrink literal %d at trail[%u] and level %d", uip, pos, blevel);
     return uip;
   } else {
     int uip;
@@ -212,9 +211,10 @@ unsigned inline Internal::shrink_next (int blevel, unsigned &open,
       uip = (*t)[max_trail--];
     } while (!flags (uip).shrinkable);
     --open;
-    LOG ("open is now %d, uip = %d", open, uip);
+    LOG ("open is now %d, uip = %d, level %d", open, uip, blevel);
     return uip;
   }
+  (void) blevel;
 }
 
 unsigned inline Internal::shrink_along_reason (int uip, int blevel,
@@ -271,7 +271,7 @@ Internal::shrink_block (std::vector<int>::reverse_iterator &rbegin_lits,
 
   LOG ("trying to shrink %u literals on level %u", open, blevel);
 
-  const auto &t = next_trail (blevel);
+  const auto &t = &trail;
 
   LOG ("maximum trail position %zd on level %u", t->size (), blevel);
   if (opts.shrinkreap)

@@ -128,15 +128,9 @@ bool Internal::external_propagate () {
 
   if (!conflict && external_prop && !external_prop_is_lazy) {
 #ifndef NDEBUG
-    if (opts.reimply)
-      LOG ("External propagation starts (decision level: %d, notified "
-           "trail %zd, "
-           "notified %zd)",
-           level, notify_trail.size (), notified);
-    else
-      LOG ("external propagation starts (decision level: %d, trail size: "
-           "%zd, notified %zd)",
-           level, trail.size (), notified);
+    LOG ("external propagation starts (decision level: %d, trail size: "
+         "%zd, notified %zd)",
+         level, trail.size (), notified);
 #endif
 
     // external->reset_extended (); //TODO for inprocessing
@@ -160,8 +154,6 @@ bool Internal::external_propagate () {
         // variable is not assigned, it can be propagated
         search_assign_external (ilit);
         stats.ext_prop.eprop_prop++;
-        if (opts.reimply && var (ilit).level < multitrail_dirty)
-          multitrail_dirty = var (ilit).level;
 
         if (unsat || conflict)
           break;
@@ -181,9 +173,7 @@ bool Internal::external_propagate () {
 #endif
         (void) res;
         bool trail_changed =
-            (num_assigned != assigned || level != level_before ||
-             (opts.reimply && multitrail_dirty < level) ||
-             (!opts.reimply && propagated < trail.size ()));
+            (num_assigned != assigned || level != level_before || propagated < trail.size ());
 
         if (unsat || conflict)
           break;
@@ -201,16 +191,10 @@ bool Internal::external_propagate () {
     }
 
 #ifndef NDEBUG
-    if (opts.reimply)
-      LOG ("External propagation ends (decision level: %d, notified trail "
-           "%zd, "
-           "notified %zd)",
-           level, notify_trail.size (), notified);
-    else
-      LOG (
-          "External propagation ends (decision level: %d, trail size: %zd, "
-          "notified %zd)",
-          level, trail.size (), notified);
+    LOG (
+        "External propagation ends (decision level: %d, trail size: %zd, "
+        "notified %zd)",
+        level, trail.size (), notified);
 #endif
     if (!unsat && !conflict) {
       bool has_external_clause =
@@ -230,9 +214,7 @@ bool Internal::external_propagate () {
 
         add_external_clause (0);
         bool trail_changed =
-            (num_assigned != assigned || level != level_before ||
-             (opts.reimply && multitrail_dirty < level) ||
-             (!opts.reimply && propagated < trail.size ()));
+            (num_assigned != assigned || level != level_before || propagated < trail.size ());
 
         if (unsat || conflict)
           break;
@@ -250,16 +232,10 @@ bool Internal::external_propagate () {
       }
     }
 #ifndef NDEBUG
-    if (opts.reimply)
-      LOG ("External clause addition ends (decision level %d, notified "
-           "trail %zd, "
-           "notified %zd)",
-           level, notify_trail.size (), notified);
-    else
-      LOG ("External clause addition ends on decision level %d at trail "
-           "size "
-           "%zd (notified %zd)",
-           level, trail.size (), notified);
+    LOG ("External clause addition ends on decision level %d at trail "
+         "size "
+         "%zd (notified %zd)",
+         level, trail.size (), notified);
 #endif
   }
   if (before < num_assigned)
@@ -413,11 +389,6 @@ void Internal::explain_reason (int ilit, Clause *reason, int &open) {
     assert (v.level <= level);
     if (v.reason == external_reason) {
       v.reason = learn_external_reason_clause (-other, 0, true);
-      if (!v.reason && opts.reimply) {
-        assert (!v.level);
-        v.trail = trail.size ();
-        trail.push_back (-other);
-      }
     }
     if (v.level && v.reason) {
       f.seen = true;
@@ -455,45 +426,21 @@ void Internal::explain_external_propagations () {
   int open = 0; // Seen but not explained literal
 
   explain_reason (0, reason, open); // marks conflict clause lits as seen
-  if (!opts.reimply) {
-
-    int i = trail.size (); // Start at end-of-trail
-    while (i > 0) {
-      const int lit = trail[--i];
-      if (!flags (lit).seen)
-        continue;
-      seen_lits.push_back (lit);
-      Var &v = var (lit);
-      if (!v.level)
-        continue;
-      if (v.reason) {
-        open--;
-        explain_reason (lit, v.reason, open);
-      }
-      if (!open)
-        break;
+  int i = trail.size (); // Start at end-of-trail
+  while (i > 0) {
+    const int lit = trail[--i];
+    if (!flags (lit).seen)
+      continue;
+    seen_lits.push_back (lit);
+    Var &v = var (lit);
+    if (!v.level)
+      continue;
+    if (v.reason) {
+      open--;
+      explain_reason (lit, v.reason, open);
     }
-  } else {
-    for (int l = level; l >= 0; l--) {
-      const auto &t = next_trail (l);
-      for (auto p = (*t).rbegin (); p != (*t).rend (); p++) {
-        const int lit = *p;
-        if (!flags (lit).seen)
-          continue;
-        seen_lits.push_back (lit);
-        Var &v = var (lit);
-        if (!v.level || v.level != l)
-          continue;
-        if (v.reason) {
-          open--;
-          explain_reason (lit, v.reason, open);
-        }
-        if (!open)
-          break;
-      }
-      if (!open)
-        break;
-    }
+    if (!open)
+      break;
   }
   assert (!open);
   // Traverse now in the opposite direction (from lower to higher levels)
@@ -520,18 +467,6 @@ void Internal::explain_external_propagations () {
       assert (v.level >= real_level);
       if (v.level > real_level) {
         v.level = real_level;
-        if (opts.reimply) {
-          if (!real_level) {
-            v.trail = trail.size ();
-            trail.push_back (lit);
-            multitrail_dirty = 0;
-          } else {
-            v.trail = trails[real_level - 1].size ();
-            trails[real_level - 1].push_back (lit);
-            if (real_level < multitrail_dirty)
-              multitrail_dirty = real_level;
-          }
-        }
       }
     }
     f.seen = false;
@@ -625,9 +560,9 @@ void Internal::handle_external_clause (Clause *res) {
     // new unit clause. For now just backtrack.
     assert (!force_no_backtrack);
     assert (level);
-    if (!opts.reimply) {
-      backtrack ();
-    }
+    // if (!opts.chrono) {
+    backtrack ();
+    // }
     return;
   }
   if (from_propagator)
@@ -658,8 +593,6 @@ void Internal::handle_external_clause (Clause *res) {
       }
     } else {
       search_assign_driving (pos0, res);
-      if (opts.reimply && var (pos0).level < multitrail_dirty)
-        multitrail_dirty = var (pos0).level;
     }
     if (from_propagator)
       stats.ext_prop.elearn_conf++;
@@ -670,16 +603,9 @@ void Internal::handle_external_clause (Clause *res) {
       backtrack (l1);
     }
     search_assign_driving (pos0, res);
-    if (opts.reimply && var (pos0).level < multitrail_dirty)
-      multitrail_dirty = var (pos0).level;
     if (from_propagator)
       stats.ext_prop.elearn_conf++;
     return;
-  } else if (val (pos1) < 0 && opts.reimply) {
-    assert (val (pos0) > 0);
-    elevate_lit_external (pos0, res);
-    if (var (pos0).level < multitrail_dirty)
-      multitrail_dirty = var (pos0).level;
   }
 }
 
@@ -764,9 +690,7 @@ bool Internal::external_check_solution () {
       size_t assigned = num_assigned;
       add_external_clause (0);
       bool trail_changed =
-          (num_assigned != assigned || level != level_before ||
-           (opts.reimply && multitrail_dirty < level) ||
-           (!opts.reimply && propagated < trail.size ()));
+          (num_assigned != assigned || level != level_before || propagated < trail.size ());
       added_new_clauses = true;
       //
       // There are many possible scenarios here:
@@ -814,30 +738,11 @@ void Internal::notify_assignments () {
   if (!external_prop || external_prop_is_lazy)
     return;
 
-  if (!opts.reimply) {
-    const size_t end_of_trail = trail.size ();
-    if (notified < end_of_trail)
-      LOG ("notify external propagator about new assignments");
-    while (notified < end_of_trail) {
-      int ilit = trail[notified++];
-      if (fixed (ilit) || !observed (ilit))
-        continue; // fixed literals are notified eagerly in mark_fixed, not
-                  // here
-      int elit = externalize (ilit); // TODO: double-check tainting
-      assert (elit);
-      assert (external->observed (elit));
-      external->propagator->notify_assignment (elit, false);
-    }
-    return;
-  }
-  // TODO: multitrail
-  assert (opts.reimply);
-  LOG (notify_trail, "notify_trail");
-  const size_t end_of_trail = notify_trail.size ();
+  const size_t end_of_trail = trail.size ();
   if (notified < end_of_trail)
     LOG ("notify external propagator about new assignments");
   while (notified < end_of_trail) {
-    int ilit = notify_trail[notified++];
+    int ilit = trail[notified++];
     if (fixed (ilit) || !observed (ilit))
       continue; // fixed literals are notified eagerly in mark_fixed, not
                 // here
@@ -846,27 +751,7 @@ void Internal::notify_assignments () {
     assert (external->observed (elit));
     external->propagator->notify_assignment (elit, false);
   }
-#ifndef NDEBUG
-  for (auto idx : vars) {
-    Flags &f = flags (idx);
-    assert (!f.poison);
-  }
-  for (auto lit : notify_trail) {
-    Flags &f = flags (lit);
-    f.poison = true;
-  }
-  for (auto idx : vars) {
-    Flags &f = flags (idx);
-    if (val (idx))
-      assert (f.poison);
-    else
-      assert (!f.poison);
-  }
-  for (auto lit : notify_trail) {
-    Flags &f = flags (lit);
-    f.poison = false;
-  }
-#endif
+  return;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -876,37 +761,6 @@ void Internal::notify_assignments () {
 void Internal::connect_propagator () {
   if (level)
     backtrack ();
-  if (!opts.reimply)
-    return;
-  notify_trail.clear ();
-#ifndef NDEBUG
-  for (auto idx : vars) {
-    Flags &f = flags (idx);
-    assert (!f.poison);
-  }
-#endif
-  for (auto lit : trail) {
-    assert (!flags (lit).poison);
-    flags (lit).poison = true;
-    notify_trail.push_back (lit);
-  }
-  for (auto &t : trails) {
-    for (auto lit : t) {
-      if (flags (lit).poison)
-        continue;
-      flags (lit).poison = true;
-      notify_trail.push_back (lit);
-    }
-  }
-  for (auto lit : notify_trail) {
-    flags (lit).poison = false;
-  }
-#ifndef NDEBUG
-  for (auto idx : vars) {
-    Flags &f = flags (idx);
-    assert (!f.poison);
-  }
-#endif
 }
 
 /*----------------------------------------------------------------------------*/

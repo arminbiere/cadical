@@ -216,15 +216,12 @@ struct Internal {
   vector<Bins> big;             // binary implication graph
   vector<Watches> wtab;         // table of watches for all literals
   Clause *conflict;             // set in 'propagation', reset in 'analyze'
-  vector<Clause *> conflicts;   // set in propagate for opts.reimply
   Clause *ignore;               // ignored during 'vivify_propagate'
   Clause *external_reason;      // used as reason at external propagations
   Clause *newest_clause;        // used in external_propagate
   bool force_no_backtrack;      // for new clauses with external propagator
   bool from_propagator;         // differentiate new clauses...
   int tainted_literal;          // used for ILB
-  vector<Clause *> fix_later;   // for reimply + external propagator
-  vector<int> notify_trail;     // for reimply + external propagator
   size_t notified;           // next trail position to notify external prop
   Clause *probe_reason;      // set during probing
   size_t propagated;         // next trail position to propagate
@@ -248,9 +245,6 @@ struct Internal {
   vector<int> shrinkable;    // removable or poison in 'shrink'
   Reap reap;                 // radix heap for shrink
 
-  int multitrail_dirty;
-  vector<size_t> multitrail;  // "propagated" for each level
-  vector<vector<int>> trails; // all assignments on all levels
   size_t num_assigned;        // check for satisfied
 
   vector<int> probes;       // remaining scheduled probes
@@ -520,11 +514,6 @@ struct Internal {
     LOG (c, "watch %d blit %d in", lit, blit);
   }
 
-  // for debugging...
-  // invariant from intel sat (see watch.hpp)
-  // assert (val (lit) >= 0 ||
-  //        (val (blit) > 0 && var (blit).level <= var (lit).level));
-  void test_watch_invariant ();
 
   // Add two watches to a clause.  This is used initially during allocation
   // of a clause and during connecting back all watches after preprocessing.
@@ -620,7 +609,6 @@ struct Internal {
   bool propagate ();
 
   void propergate (); // Repropagate without blocking literals.
-  void propergate_reimply ();
 
   // Undo and restart in 'backtrack.cpp'.
   //
@@ -1050,26 +1038,7 @@ struct Internal {
   bool instantiate_candidate (int lit, Clause *);
   void instantiate (Instantiator &);
 
-  // multilevel trail in trail.cpp
-  // TODO: inline some of these in propagate.cpp
-  //
   void new_trail_level (int lit);
-  void clear_trails (int level);
-  void multi_backtrack (int new_level);
-  int trail_size (int l);
-  int trails_sizes (int l);
-  void trail_push (int lit, int l);
-  int next_propagation_level (int last);
-  vector<int> *next_trail (int l);
-  int next_propagated (int l);
-  Clause *propagation_conflict (int *l, Clause *c, bool exact = false);
-  int conflicting_level (Clause *c);
-  void elevate_lit (int lit, Clause *reason);
-  int elevating_level (int lit, Clause *reason);
-  void set_propagated (int l, int prop);
-  bool propagate_conflicts ();
-  bool propagate_multitrail ();
-  bool propagate_clean ();
 
   // Hyper ternary resolution.
   //

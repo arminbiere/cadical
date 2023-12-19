@@ -392,12 +392,13 @@ void External::reset_observed_vars () {
   // Shouldn't be called if there is no connected propagator
   assert (propagator);
   reset_extended ();
-  
+
   internal->notified = 0;
   LOG ("reset notified counter to 0");
 
-  if (!is_observed.size ()) return;
-  
+  if (!is_observed.size ())
+    return;
+
   assert (!max_var || (size_t) max_var + 1 == is_observed.size ());
 
   for (auto elit : vars) {
@@ -411,8 +412,6 @@ void External::reset_observed_vars () {
       melt (elit);
     }
   }
-  
-  
 }
 
 bool External::observed (int elit) {

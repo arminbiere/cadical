@@ -83,10 +83,10 @@ int main () {
 
   // ------------------------------------------------------------------
 
-  delete solver;
   delete t1;
   delete ft1;
   delete st1;
+  delete solver;
 
   return 0;
 }

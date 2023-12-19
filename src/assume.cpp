@@ -39,12 +39,6 @@ void Internal::assume_analyze_literal (int lit) {
   if (v.reason == external_reason) {
     v.reason = wrapped_learn_external_reason_clause (-lit);
     assert (v.reason || !v.level);
-    if (!v.reason) {
-      if (opts.reimply) {
-        trail.push_back (-lit);
-        v.trail = trail.size ();
-      }
-    }
   }
   assert (v.reason != external_reason);
   if (!v.level) {
@@ -290,10 +284,6 @@ void Internal::failing () {
           v.reason = wrapped_learn_external_reason_clause (lit);
           if (!v.reason) {
             v.level = 0;
-            if (opts.reimply) {
-              trail.push_back (lit);
-              v.trail = trail.size ();
-            }
             continue;
           }
         }
@@ -525,31 +515,44 @@ void Internal::reset_assumptions () {
   marked_failed = true;
 }
 
+struct sort_assumptions_positive_rank {
+  Internal *internal;
+  const int max_level;
+  sort_assumptions_positive_rank (Internal *s) : internal (s), max_level (s->level + 1) {}
+
+  typedef int Type;
+  // set assumptions first, then sorted by position on the trail
+  // unset literals are sorted by literal value
+  Type operator() (const int &a) const {
+    const int val = internal->val (a);
+    const bool assigned = (val != 0);
+    const Var &v = internal->var (a);
+    uint64_t res = (assigned ? v.level : max_level);
+    res <<= 32;
+    res |= (assigned ? v.trail : abs(a));
+    return res;
+  }
+};
+
+struct sort_assumptions_smaller {
+  Internal *internal;
+  sort_assumptions_smaller (Internal *s) : internal (s) {}
+  bool operator() (const int &a, const int &b) const {
+    return sort_assumptions_positive_rank (internal) (a) <
+           sort_assumptions_positive_rank (internal) (b);
+  }
+};
+
 // sort the assumptions by the current position on the trail and backtrack
 // to the first place where the assumptions and the current trail differ.
 void Internal::sort_and_reuse_assumptions () {
   assert (opts.ilbassumptions);
   if (assumptions.empty ())
     return;
-  // set assumptions first, then sorted by position on the trail
-  // unset literals are sorted by literal value
-  std::sort (begin (assumptions), end (assumptions),
-             [this] (int litA, int litB) {
-               if (!val (litA) && val (litB))
-                 return false;
-               if (val (litA) && !val (litB))
-                 return true;
-               if (!val (litA) && !val (litB))
-                 return litA < litB;
-               assert (val (litA) && val (litB));
-               LOG ("%d -> %" PRIu64, litA,
-                    ((uint64_t) var (litA).level << 32) +
-                        (uint64_t) var (litA).trail);
-               return ((uint64_t) var (litA).level << 32) +
-                          (uint64_t) var (litA).trail <
-                      ((uint64_t) var (litB).level << 32) +
-                          (uint64_t) var (litB).trail;
-             });
+  MSORT (opts.radixsortlim, assumptions.begin (), assumptions.end (),
+           sort_assumptions_positive_rank (this),
+           sort_assumptions_smaller (this));
+
   int max_level = 0;
   for (auto lit : assumptions) {
     if (val (lit))
@@ -574,8 +577,8 @@ void Internal::sort_and_reuse_assumptions () {
       continue;
     }
     ++i, ++j;
-    if (!lit || var (lit).level !=
-                    lev) { // removed literals or pseudo decision level
+    // removed literals or pseudo decision level:
+    if (!lit || var (lit).level != lev) {
       if (val (alit) > 0 && var (alit).level < lev)
         continue;
       break;
