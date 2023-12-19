@@ -324,7 +324,7 @@ public:
 
   ~MockPropagator () {
     for (auto l : external_lemmas)
-      delete l->literals, delete l;
+      delete[] l->literals, delete l;
   }
 
   /*-----------------functions for mobical -----------------------------*/
