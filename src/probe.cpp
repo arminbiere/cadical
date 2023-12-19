@@ -313,8 +313,6 @@ inline void Internal::probe_assign (int lit, int parent) {
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
   trail.push_back (lit);
-  if (!level && opts.reimply && external_prop && !external_prop_is_lazy)
-    notify_trail.push_back (lit);
 
   // Do not save the current phase during inprocessing but remember the
   // number of units on the trail of the last time this literal was

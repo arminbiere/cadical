@@ -316,7 +316,7 @@ void Internal::mark_garbage (Clause *c) {
 // to learn a new unit clause (which was confusing in log files).
 
 void Internal::assign_original_unit (uint64_t id, int lit) {
-  assert (!level || opts.reimply);
+  assert (!level || opts.chrono);
   assert (!unsat);
   const int idx = vidx (lit);
   assert (!vals[idx]);
@@ -329,12 +329,6 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   set_val (idx, tmp);
   trail.push_back (lit);
   num_assigned++;
-  if (opts.reimply) {
-    bool use_notify =
-        (external_prop && !external_prop_is_lazy) || !from_propagator;
-    if (use_notify)
-      notify_trail.push_back (lit);
-  }
   const unsigned uidx = vlit (lit);
   unit_clauses[uidx] = id;
   LOG ("original unit assign %d", lit);
@@ -349,32 +343,6 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   learn_empty_clause ();
 }
 
-void Internal::elevate_original_unit (uint64_t id, int lit) {
-  assert (level);
-  assert (opts.reimply);
-  assert (!unsat);
-  const int idx = vidx (lit);
-  assert (val (lit) > 0);
-  assert (!flags (idx).eliminated ());
-  Var &v = var (idx);
-  v.level = 0;
-  v.trail = (int) trail.size ();
-  v.reason = 0;
-  assert (val (lit) > 0);
-  assert (val (-lit) < 0);
-  trail.push_back (lit);
-  const unsigned uidx = vlit (lit);
-  unit_clauses[uidx] = id;
-  LOG ("original unit elevation %d", lit);
-  mark_fixed (lit);
-  /*
-  if (propagate ())
-    return;
-  assert (false);
-  LOG ("propagation of original unit results in conflict");
-  learn_empty_clause ();
-  */
-}
 
 // New clause added through the API, e.g., while parsing a DIMACS file.
 // Also used by external_propagate in various different modes.
@@ -490,7 +458,6 @@ void Internal::add_new_original_clause (uint64_t id) {
         const unsigned uidx = vlit (clause[0]);
         unit_clauses[uidx] = new_id;
         mark_fixed (clause[0]);
-        multitrail_dirty = 0;
       } else {
         const int lit = clause[0];
         assert (!val (lit) || var (lit).level);
@@ -498,12 +465,7 @@ void Internal::add_new_original_clause (uint64_t id) {
           backtrack (var (lit).level - 1);
         assert (val (lit) >= 0);
         handle_external_clause (0);
-        multitrail_dirty = 0;
-        if (val (lit)) {
-          assert (opts.reimply);
-          elevate_original_unit (new_id, lit);
-        } else
-          assign_original_unit (new_id, lit);
+        assign_original_unit (new_id, lit);
       }
     } else {
       move_literal_to_watch (false);

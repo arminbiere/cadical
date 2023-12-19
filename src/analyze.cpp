@@ -513,8 +513,7 @@ inline int Internal::otfs_find_backtrack_level (int &forced) {
 inline int Internal::find_conflict_level (int &forced) {
 
   assert (conflict);
-  assert (opts.chrono || opts.otfs || external_prop ||
-          (opts.reimply && multitrail_dirty != level));
+  assert (opts.chrono || opts.otfs || external_prop);
 
   int res = 0, count = 0;
 
@@ -615,57 +614,24 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
          "thus backtracking chronologically to level %d",
          level - jump, opts.chronolevelim, res);
   } else if (opts.chronoreusetrail) {
-
-    int best_idx = 0, best_pos = 0, best_lvl = 0;
+    int best_idx = 0, best_pos = 0;
 
     if (use_scores ()) {
-      if (!opts.reimply) {
-        for (size_t i = control[jump + 1].trail; i < trail.size (); i++) {
-          const int idx = abs (trail[i]);
-          if (best_idx && !score_smaller (this) (best_idx, idx))
-            continue;
-          best_idx = idx;
-          best_pos = i;
-        }
-      } else {
-        for (int l = jump + 1; l <= level; l++) {
-          const auto &t = next_trail (l);
-          for (size_t i = 0; i < t->size (); i++) {
-            const auto idx = abs ((*t)[i]);
-            if (var (idx).level < l)
-              continue;
-            if (best_idx && !score_smaller (this) (best_idx, idx))
-              continue;
-            best_idx = idx;
-            best_pos = i;
-            best_lvl = l;
-          }
-        }
+      for (size_t i = control[jump + 1].trail; i < trail.size (); i++) {
+        const int idx = abs (trail[i]);
+        if (best_idx && !score_smaller (this) (best_idx, idx))
+          continue;
+        best_idx = idx;
+        best_pos = i;
       }
       LOG ("best variable score %g", score (best_idx));
     } else {
-      if (!opts.reimply) {
-        for (size_t i = control[jump + 1].trail; i < trail.size (); i++) {
-          const int idx = abs (trail[i]);
-          if (best_idx && bumped (best_idx) >= bumped (idx))
-            continue;
-          best_idx = idx;
-          best_pos = i;
-        }
-      } else {
-        for (int l = jump + 1; l <= level; l++) {
-          const auto &t = next_trail (l);
-          for (size_t i = 0; i < t->size (); i++) {
-            const auto idx = abs ((*t)[i]);
-            if (var (idx).level < l)
-              continue;
-            if (best_idx && bumped (best_idx) >= bumped (idx))
-              continue;
-            best_idx = idx;
-            best_pos = i;
-            best_lvl = l;
-          }
-        }
+      for (size_t i = control[jump + 1].trail; i < trail.size (); i++) {
+        const int idx = abs (trail[i]);
+        if (best_idx && bumped (best_idx) >= bumped (idx))
+          continue;
+        best_idx = idx;
+        best_pos = i;
       }
       LOG ("best variable bumped %" PRId64 "", bumped (best_idx));
     }
@@ -680,15 +646,8 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
     // of the control frame one higher than at the result level.
     //
     res = jump;
-    if (!opts.reimply)
-      while (res < level - 1 && control[res + 1].trail <= best_pos)
-        res++;
-    else {
-      if (best_lvl == level)
-        best_lvl = level - 1;
-      assert (0 < best_lvl && best_lvl < level);
-      res = best_lvl;
-    }
+    while (res < level - 1 && control[res + 1].trail <= best_pos)
+      res++;
 
     if (res == jump)
       LOG ("default non-chronological back-jumping to level %d", res);
@@ -916,28 +875,14 @@ void Internal::analyze () {
   /*----------------------------------------------------------------------*/
 
   if (external_prop && !external_prop_is_lazy) {
-    int change = multitrail_dirty;
     explain_external_propagations ();
-    while (opts.reimply && multitrail_dirty < change) {
-      Clause *prev = conflict;
-      conflict = 0;
-      propagate_multitrail ();
-      change = multitrail_dirty;
-      if (!conflict)
-        conflict = prev;
-      // levels can change even if conflict has not
-      explain_external_propagations ();
-    }
   }
 
-  if ((!opts.reimply && opts.chrono) || external_prop ||
-      (opts.reimply && multitrail_dirty != level)) {
+  if (opts.chrono || external_prop) {
 
     int forced;
 
     const int conflict_level = find_conflict_level (forced);
-    assert (conflict_level == multitrail_dirty || !opts.reimply ||
-            external_prop);
 
     // In principle we can perform conflict analysis as in non-chronological
     // backtracking except if there is only one literal with the maximum
@@ -970,8 +915,6 @@ void Internal::analyze () {
 
       LOG ("forcing %d", forced);
       search_assign_driving (forced, conflict);
-      if (opts.reimply && multitrail_dirty > var (forced).level)
-        multitrail_dirty = var (forced).level;
 
       conflict = 0;
       STOP (analyze);
@@ -990,7 +933,6 @@ void Internal::analyze () {
     //
     backtrack (conflict_level);
   }
-  assert (conflicting_level (conflict) == level);
 
   // Actual conflict on root level, thus formula unsatisfiable.
   //
@@ -1024,10 +966,7 @@ void Internal::analyze () {
   assert (clause.empty ());
   assert (lrat_chain.empty ());
 
-  // for multitrail we only need to analyze the trail with the conflicting
-  // level which is also level because we backtracked earlier.
-
-  const auto &t = next_trail (level);
+  const auto &t = &trail;
   int i = t->size ();      // Start at end-of-trail.
   int open = 0;            // Seen but not processed on this level.
   int uip = 0;             // The first UIP literal.
@@ -1079,8 +1018,6 @@ void Internal::analyze () {
 
         LOG ("forcing %d", forced);
         search_assign_driving (forced, conflict);
-        if (opts.reimply && multitrail_dirty > var (forced).level)
-          multitrail_dirty = var (forced).level;
 
         conflict = 0;
         // Clean up.
@@ -1203,8 +1140,6 @@ void Internal::analyze () {
   //
   if (uip) {
     search_assign_driving (-uip, driving_clause);
-    if (opts.reimply && multitrail_dirty > var (uip).level)
-      multitrail_dirty = var (uip).level;
   } else
     learn_empty_clause ();
 

@@ -326,12 +326,6 @@ void Stats::print (Internal *internal) {
   PRT ("  searchprops:   %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.search,
        percent (stats.propagations.search, propagations));
-  PRT ("    cleanprops:  %15" PRId64 "   %10.2f %%  of searchprops",
-       stats.propagations.clean,
-       percent (stats.propagations.clean, stats.propagations.search));
-  PRT ("    dirtyprops:  %15" PRId64 "   %10.2f %%  of searchprops",
-       stats.propagations.dirty,
-       percent (stats.propagations.dirty, stats.propagations.search));
   PRT ("  transredprops: %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.transred,
        percent (stats.propagations.transred, propagations));
