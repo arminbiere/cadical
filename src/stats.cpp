@@ -7,7 +7,6 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 Stats::Stats () {
-  memset (this, 0, sizeof *this);
   time.real = absolute_real_time ();
   time.process = absolute_process_time ();
   walk.minimum = LONG_MAX;
