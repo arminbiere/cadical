@@ -897,11 +897,6 @@ bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c) {
     vivify_sort_watched(c);
     watch_clause (c);
     assert (!conflict);
-#if 1
-    const int64_t s = stats.propagations.vivify;
-    assert (vivify_propagate());
-    assert (s == stats.propagations.vivify);
-#endif
     return true;
   } else {
     LOG ("vivify instantiation failed");
@@ -1020,11 +1015,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
         if (-lit == decision) {
           LOG ("reusing decision %d at decision level %d", decision, l);
           stats.vivifyreused++;
-#if 1
-          const int64_t s = stats.propagations.vivify;
-          assert (vivify_propagate ());
-          assert (s == stats.propagations.vivify);
-#endif
           if (++l > level)
             break;
         } else {
