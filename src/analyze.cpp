@@ -265,8 +265,6 @@ inline void Internal::bump_clause (Clause *c) {
   LOG (c, "bumping");
   unsigned used = c->used;
   c->used = 1;
-  if (c->keep)
-    return;
   if (c->hyper)
     return;
   if (!c->redundant)

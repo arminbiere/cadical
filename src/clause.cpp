@@ -82,14 +82,6 @@ Clause *Internal::new_clause (bool red, int glue) {
   if (glue > size)
     glue = size;
 
-  // Determine whether this clauses should be kept all the time.
-  //
-  bool keep;
-  if (!red)
-    keep = true;
-  else
-    keep = false;
-
   size_t bytes = Clause::bytes (size);
   Clause *c = (Clause *) new char[bytes];
 
@@ -104,7 +96,6 @@ Clause *Internal::new_clause (bool red, int glue) {
   c->gate = false;
   c->hyper = false;
   c->instantiated = false;
-  c->keep = keep;
   c->moved = false;
   c->reason = false;
   c->redundant = red;
@@ -153,14 +144,15 @@ void Internal::promote_clause (Clause *c, int new_glue) {
   assert (c->redundant);
   const int tier1limit = tier1[false];
   const int tier2limit = max (tier1limit, tier2[false]);
-  if (c->keep)
+  if (!c->redundant)
     return;
   if (c->hyper)
     return;
   int old_glue = c->glue;
   if (new_glue >= old_glue)
     return;
-  if (!c->keep && new_glue <= tier1limit) {
+  if (old_glue > tier1limit &&
+      new_glue <= tier1limit) {
     LOG (c, "promoting with new glue %d to tier1", new_glue);
     stats.promoted1++;
     c->used = 2;
@@ -169,8 +161,7 @@ void Internal::promote_clause (Clause *c, int new_glue) {
     LOG (c, "promoting with new glue %d to tier2", new_glue);
     stats.promoted2++;
     c->used = 2;
-  } else if (c->keep)
-    LOG (c, "keeping with new glue %d in tier1", new_glue);
+  }
   else if (old_glue <= tier2limit)
     LOG (c, "keeping with new glue %d in tier2", new_glue);
   else
@@ -543,7 +534,6 @@ Clause *Internal::new_clause_as (const Clause *orig) {
   external->check_learned_clause ();
   const int new_glue = orig->glue;
   Clause *res = new_clause (orig->redundant, new_glue);
-  assert (true || !orig->redundant || !orig->keep || res->keep);
   if (proof) {
     proof->add_derived_clause (res, lrat_chain);
   }

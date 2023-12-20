@@ -120,7 +120,6 @@ inline void Internal::demote_clause (Clause *c) {
   assert (!c->redundant);
   mark_removed (c);
   c->redundant = true;
-  c->keep = false;
   assert (stats.current.irredundant > 0);
   stats.current.irredundant--;
   assert (stats.added.irredundant > 0);
