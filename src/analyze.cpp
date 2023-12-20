@@ -238,6 +238,7 @@ inline void Internal::bump_clause (Clause *c) {
 
   const size_t glue = std::min ((size_t)c->glue, stats.used[stable].size() - 1);
   ++stats.used[stable][glue];
+  ++stats.bump_used[stable];
 }
 
 /*------------------------------------------------------------------------*/
