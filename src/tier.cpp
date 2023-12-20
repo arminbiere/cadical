@@ -18,7 +18,7 @@ void Internal::recompute_tier () {
   assert (total_used == stats.bump_used[stable]);
 #endif
 
-  if (!total_used) {
+  if (!stats.bump_used[stable]) {
     tier1[stable] = opts.reducetier1glue;
     tier2[stable] = opts.reducetier2glue;
     LOG ("tier1 limit = %d", tier1[stable]);

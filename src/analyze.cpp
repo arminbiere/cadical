@@ -224,8 +224,7 @@ int Internal::recompute_glue (Clause *c) {
 
 inline void Internal::bump_clause (Clause *c) {
   LOG (c, "bumping");
-  unsigned used = c->used;
-  c->used = 1;
+  c->used = max_used;
   if (c->hyper)
     return;
   if (!c->redundant)
@@ -233,8 +232,6 @@ inline void Internal::bump_clause (Clause *c) {
   int new_glue = recompute_glue (c);
   if (new_glue < c->glue)
     promote_clause (c, new_glue);
-  else if (used && c->glue <= tier1[false])
-    c->used = 2;
 
   const size_t glue = std::min ((size_t)c->glue, stats.used[stable].size() - 1);
   ++stats.used[stable][glue];

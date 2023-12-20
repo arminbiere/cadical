@@ -37,7 +37,7 @@ struct Clause {
   bool redundant : 1;    // aka 'learned' so not 'irredundant' (original)
   bool transred : 1;     // already checked for transitive reduction
   bool subsume : 1;      // not checked in last subsumption round
-  unsigned used : 2; // resolved in conflict analysis since last 'reduce'
+  unsigned used : 8; // resolved in conflict analysis since last 'reduce'
   bool vivified : 1; // clause already vivified
   bool vivify : 1;   // clause scheduled to be vivified
 
