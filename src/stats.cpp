@@ -344,6 +344,10 @@ void Stats::print (Internal *internal) {
   if (all || stats.reduced) {
     PRT ("reduced:         %15" PRId64 "   %10.2f %%  per conflict",
          stats.reduced, percent (stats.reduced, stats.conflicts));
+    PRT ("  tier1:         %15" PRId64 "   %10.2f %%  per reduction",
+         stats.reduced_tier1, percent (stats.reduced_tier1, stats.reduced));
+    PRT ("  tier2:         %15" PRId64 "   %10.2f %%  per reduction",
+         stats.reduced_tier2, percent (stats.reduced_tier2, stats.reduced));
     PRT ("  reductions:    %15" PRId64 "   %10.2f    interval",
          stats.reductions, relative (stats.conflicts, stats.reductions));
     PRT ("  collections:   %15" PRId64 "   %10.2f    interval",

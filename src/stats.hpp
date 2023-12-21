@@ -138,6 +138,8 @@ struct Stats {
   int64_t searched = 0;       // searched decisions in 'decide'
   int64_t reductions = 0;     // 'reduce' counter
   int64_t reduced = 0;        // number of reduced clauses
+  int64_t reduced_tier1 = 0;        // number of reduced clauses in tier1
+  int64_t reduced_tier2 = 0;        // number of reduced clauses in tier2
   int64_t collected = 0;      // number of collected bytes
   int64_t collections = 0;    // number of garbage collections
   int64_t hbrs = 0;           // hyper binary resolvents

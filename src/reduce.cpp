@@ -144,6 +144,10 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     Clause *c = *i++;
     LOG (c, "marking useless to be collected");
     mark_garbage (c);
+    if (c->redundant && c->glue <= tier1[false])
+      ++stats.reduced_tier1;
+    else if (c->redundant && c->glue <= tier2[false])
+      ++stats.reduced_tier2;
     stats.reduced++;
   }
 
