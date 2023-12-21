@@ -109,9 +109,9 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     const unsigned used = c->used;
     if (used)
       c->used--;
-    if (c->glue < tier1limit && used)
+    if (c->glue <= tier1limit && used)
       continue;
-    if (c->glue < tier2limit && used >= max_used - 1)
+    if (c->glue <= tier2limit && used >= max_used - 1)
       continue;
     if (c->hyper) {          // Hyper binary and ternary resolvents
       assert (c->size <= 3); // are only kept for one reduce round
