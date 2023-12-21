@@ -851,7 +851,7 @@ struct Internal {
   bool likely_to_be_kept_clause (Clause *c) {
     if (!c->redundant)
       return true;
-    if (c->glue < tier1[false])
+    if (c->glue <= tier1[false])
       return true;
     if (c->glue > lim.keptglue)
       return false;
