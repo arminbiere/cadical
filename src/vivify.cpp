@@ -1538,17 +1538,18 @@ void Internal::vivify () {
   START_SIMPLIFIER (vivify, VIVIFY);
   stats.vivifications++;
   bool continue_vivi;
-  int64_t total = stats.propagations.search - last.vivify.propagations;
+  int64_t total = (stats.propagations.search - last.vivify.propagations) * opts.vivifyeff;
   const int64_t end = stats.propagations.vivify + total;
   if (total < opts.vivifymineff)
     total = opts.vivifymineff;
   if (total > opts.vivifymaxeff)
     total = opts.vivifymaxeff;
 
-  double tier1effort = 1;
-  double tier2effort = 1;
-  double irreffort = 1;
-  double sumeffort = tier1effort + tier2effort + irreffort;
+  double tier1effort = 1e-3 * (double) opts.vivifytier1eff;
+  double tier2effort = 1e-3 * (double) opts.vivifytier2eff;
+  double tier3effort = 1e-3 * (double) opts.vivifytier3eff;
+  double irreffort = 1e-3 * (double) opts.vivifyirredeff;
+  double sumeffort = tier1effort + tier2effort + tier3effort + irreffort;
   if (!stats.current.redundant)
     tier1effort = tier2effort = 0;
   if (!sumeffort)
@@ -1570,7 +1571,7 @@ void Internal::vivify () {
     // setting their 'vivify' bit, such that they can be tried next time.
     //
     set_vivifier_mode(vivifier, Vivify_Mode::TIER1);
-    const int64_t limit = (total * tier1effort) / sumeffort * 1e-3 * (double) opts.vivifyredeff;
+    const int64_t limit = (total * tier1effort) / sumeffort;
     assert (limit >= 0);
     vivify_round (vivifier, limit);
   }
@@ -1578,7 +1579,7 @@ void Internal::vivify () {
   continue_vivi = (end >= stats.propagations.vivify);
   if (!unsat && continue_vivi && tier2effort && opts.vivifytier2) {
     vivifier.erase();
-    const int64_t limit = (total * tier2effort) / sumeffort  * 1e-3 * (double) opts.vivifyredeff;
+    const int64_t limit = (total * tier2effort) / sumeffort;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::TIER2);
     vivify_round (vivifier, limit);
@@ -1587,7 +1588,7 @@ void Internal::vivify () {
   continue_vivi = (end >= stats.propagations.vivify);
   if (!unsat && continue_vivi && irreffort && opts.vivifyirred) {
     vivifier.erase();
-    const int64_t limit = (total * irreffort) / sumeffort  * 1e-3 * (double) opts.vivifyreleff;
+    const int64_t limit = (total * irreffort) / sumeffort;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::IRREDUNDANT);
     vivify_round (vivifier, limit);

@@ -189,17 +189,20 @@ QUTOPT( verbose,           0,  0,  3,0,0,0, "more verbose messages") \
 OPTION( veripb,            0,  0,  4,0,0,1, "odd=checkdeletions, > 2=drat") \
 OPTION( vivify,            1,  0,  1,0,1,1, "vivification") \
 OPTION( vivifycalctier,    0,  0,  1,0,0,1, "recalculate tier limits") \
+OPTION( vivifyeff,        75,  0,1e5,1,0,1, "overall efficiency per mille") \
 OPTION( vivifyinst,        1,  0,  1,0,0,1, "instantiate last literal when vivify") \
 OPTION( vivifyint,       1e4,  1,2e9,0,0,1, "vivify interval") \
 OPTION( vivifyirred,       1,  0,  1,0,1,1, "vivification irred") \
+OPTION( vivifyirredeff,    3,  1,100,1,0,1, "irredundant efficiency per mille") \
 OPTION( vivifymaxeff,    2e7,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( vivifymineff,    2e4,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( vivifyonce,        0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \
-OPTION( vivifyredeff,     75,  0,1e3,1,0,1, "redundant efficiency per mille") \
-OPTION( vivifyreleff,     20,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( vivifytier1,       1,  0,  1,0,1,1, "vivification tier1") \
+OPTION( vivifytier1eff,    3,  0,100,1,0,1, "relative tier1 effort") \
 OPTION( vivifytier2,       1,  0,  1,0,1,1, "vivification tier2") \
+OPTION( vivifytier2eff,    3,  1,100,1,0,1, "relative tier2 effort") \
 OPTION( vivifytier3,       1,  0,  1,0,1,1, "vivification tier3") \
+OPTION( vivifytier3eff,    1,  1,100,1,0,1, "relative tier3 effort") \
 OPTION( walk,              1,  0,  1,0,0,1, "enable random walks") \
 OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( walkmineff,      1e5,  0,1e7,1,0,1, "minimum efficiency") \
