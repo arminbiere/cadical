@@ -243,7 +243,7 @@ struct Internal {
   vector<int> shrinkable;    // removable or poison in 'shrink'
   Reap reap;                 // radix heap for shrink
 
-  size_t num_assigned;        // check for satisfied
+  size_t num_assigned; // check for satisfied
 
   vector<int> probes;       // remaining scheduled probes
   vector<Level> control;    // 'level + 1 == control.size ()'
@@ -511,7 +511,6 @@ struct Internal {
     ws.push_back (Watch (blit, c));
     LOG (c, "watch %d blit %d in", lit, blit);
   }
-
 
   // Add two watches to a clause.  This is used initially during allocation
   // of a clause and during connecting back all watches after preprocessing.

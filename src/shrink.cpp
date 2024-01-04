@@ -199,7 +199,8 @@ unsigned inline Internal::shrink_next (int blevel, unsigned &open,
     assert (pos < t->size ());
     const int uip = (*t)[pos];
     assert (val (uip) > 0);
-    LOG ("trying to shrink literal %d at trail[%u] and level %d", uip, pos, blevel);
+    LOG ("trying to shrink literal %d at trail[%u] and level %d", uip, pos,
+         blevel);
     return uip;
   } else {
     int uip;

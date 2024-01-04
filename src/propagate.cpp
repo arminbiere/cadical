@@ -98,8 +98,6 @@ void Internal::build_chain_for_empty () {
   lrat_chain.push_back (conflict->id);
 }
 
-
-
 /*------------------------------------------------------------------------*/
 
 inline void Internal::search_assign (int lit, Clause *reason) {
@@ -565,6 +563,5 @@ void Internal::propergate () {
     }
   }
 }
-
 
 } // namespace CaDiCaL
