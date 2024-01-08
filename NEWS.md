@@ -1,3 +1,8 @@
+Version 2.0.0
+-------------
+
+- Added `Dockerfile` to support docker containers.
+
 Version 1.9.4
 -------------
 
