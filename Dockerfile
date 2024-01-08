@@ -15,7 +15,7 @@ COPY . /work
 
 WORKDIR /work
 RUN ./configure \
-  && make -j
+  && make
 
 # -----------------------------------------------------------------------------
 # Runtime container
