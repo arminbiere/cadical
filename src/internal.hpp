@@ -617,7 +617,7 @@ struct Internal {
   //
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
-  void calculate_minimize_chain (int lit);
+  void calculate_minimize_chain (int lit, std::vector<int> &stack);
 
   // Learning from conflicts in 'analyze.cc'.
   //
