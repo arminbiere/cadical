@@ -1539,11 +1539,11 @@ void Internal::vivify () {
   stats.vivifications++;
   bool continue_vivi;
   int64_t total = (stats.propagations.search - last.vivify.propagations) * opts.vivifyeff;
-  const int64_t end = stats.propagations.vivify + total;
   if (total < opts.vivifymineff)
     total = opts.vivifymineff;
   if (total > opts.vivifymaxeff)
     total = opts.vivifymaxeff;
+  const int64_t end = stats.propagations.vivify + total;
 
   double tier1effort = 1e-3 * (double) opts.vivifytier1eff;
   double tier2effort = 1e-3 * (double) opts.vivifytier2eff;
@@ -1563,7 +1563,8 @@ void Internal::vivify () {
   if (vivifier.tier1 == vivifier.tier2) {
     tier1effort += tier2effort;
     tier2effort = 0;
-    LOG ("skipping tier 2 after recalculating");
+    LOG ("vivification tier1 matches tier2 "
+         "thus using tier2 budget for tier1");
   }
 
   if (opts.vivifytier1) {
@@ -1586,6 +1587,15 @@ void Internal::vivify () {
   }
 
   continue_vivi = (end >= stats.propagations.vivify);
+  if (!unsat && continue_vivi && tier3effort && opts.vivifytier3) {
+    vivifier.erase();
+    const int64_t limit = (total * tier3effort) / sumeffort;
+    assert (limit >= 0);
+    set_vivifier_mode(vivifier, Vivify_Mode::TIER3);
+    vivify_round (vivifier, limit);
+  }
+
+  continue_vivi = (end >= stats.propagations.vivify);
   if (!unsat && continue_vivi && irreffort && opts.vivifyirred) {
     vivifier.erase();
     const int64_t limit = (total * irreffort) / sumeffort;
@@ -1593,16 +1603,6 @@ void Internal::vivify () {
     set_vivifier_mode(vivifier, Vivify_Mode::IRREDUNDANT);
     vivify_round (vivifier, limit);
   }
-
-  continue_vivi = (end >= stats.propagations.vivify);
-  if (!unsat && continue_vivi && opts.vivifytier3) {
-    vivifier.erase();
-    const int64_t limit = end - stats.propagations.vivify;
-    assert (limit >= 0);
-    set_vivifier_mode(vivifier, Vivify_Mode::TIER3);
-    vivify_round (vivifier, limit);
-  }
-
 
   STOP_SIMPLIFIER (vivify, VIVIFY);
 
