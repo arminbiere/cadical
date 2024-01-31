@@ -175,7 +175,7 @@ void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
     assert (v.reason && f.removable);
     const const_literal_iterator end = v.reason->end ();
     const_literal_iterator i;
-    LOG (v.reason, "LRAT chain for lit %d at depth %d by going over", lit,
+    LOG (v.reason, "LRAT chain for lit %d at depth %zd by going over", lit,
          stack.size());
     stack.push_back (-idx);
     for (i = v.reason->begin (); i != end; i++) {
