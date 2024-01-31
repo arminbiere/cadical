@@ -701,6 +701,7 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
   if (!res) {
     external->reset_assumptions ();
     external->reset_constraint ();
+    external->reset_concluded ();
   }
   return res;
 }
