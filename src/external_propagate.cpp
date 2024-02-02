@@ -353,7 +353,7 @@ void Internal::add_external_clause (int propagated_elit,
     // Propagation reason clauses are assumed to be forgettable irredundant.
     // In case they would be unforgettably important, the propagator would
     // have added them as an explicit external clause with type 0.
-    ext_clause_red = 1;
+    ext_clause_red = 0;
 #ifndef NDEBUG
     LOG ("add external reason of propagated lit: %d", propagated_elit);
 #endif
