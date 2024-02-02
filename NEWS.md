@@ -2,6 +2,8 @@ Version 2.0.0
 -------------
 
 - Added `Dockerfile` to support docker containers.
+- Added `--no-status` to skip printing "s SATISFIABLE" or "s
+  UNSATISFIABLE". This is useful for online proof checking.
 
 Version 1.9.4
 -------------
