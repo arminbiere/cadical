@@ -255,13 +255,10 @@ bool Internal::external_propagate () {
 //
 
 bool Internal::ask_external_clause () {
-  // ext_clause_red should always tell the redundancy of the last added clause
-  unsigned prev_red = ext_clause_red;
-  ext_clause_red = 0;
-  bool res = external->propagator->cb_has_external_clause (ext_clause_red);
-  if (res) {
-    if (ext_clause_red > 3) ext_clause_red = 0;
-  } else ext_clause_red = prev_red; // Set back to previous value
+  bool is_forgettable = false;
+  bool res = external->propagator->cb_has_external_clause (is_forgettable);
+
+
 
   return res;
 }
@@ -353,7 +350,7 @@ void Internal::add_external_clause (int propagated_elit,
     // Propagation reason clauses are assumed to be forgettable irredundant.
     // In case they would be unforgettably important, the propagator would
     // have added them as an explicit external clause with type 0.
-    ext_clause_red = 0;
+    ext_clause_forgettable = external->propagator->are_reasons_forgettable;
 #ifndef NDEBUG
     LOG ("add external reason of propagated lit: %d", propagated_elit);
 #endif
