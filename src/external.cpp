@@ -155,8 +155,7 @@ void External::add (int elit) {
   if (internal->opts.check &&
       (internal->opts.checkwitness || internal->opts.checkfailed)) {
     
-    forgettable = internal->from_propagator && 
-      ( internal->ext_clause_red == 1 || internal->ext_clause_red == 2 );
+    forgettable = internal->from_propagator && internal->ext_clause_forgettable;
     
     // Forgettable clauses (coming from the external propagator) are not saved
     // into the external 'original' stack. They are stored separately in

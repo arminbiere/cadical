@@ -16,7 +16,7 @@ Internal::Internal ()
       conflict_id (0), concluded (false), lrat (false), level (0), vals (0),
       score_inc (1.0), scores (this), conflict (0), ignore (0),
       external_reason (&external_reason_clause), newest_clause (0),
-      force_no_backtrack (false), from_propagator (false), ext_clause_red (0),
+      force_no_backtrack (false), from_propagator (false), ext_clause_forgettable (false),
       tainted_literal (0), notified (0), probe_reason (0), propagated (0),
       propagated2 (0), propergated (0), best_assigned (0),
       target_assigned (0), no_conflict_until (0), unsat_constraint (false),
@@ -196,8 +196,7 @@ void Internal::add_original_lit (int lit) {
     }
     if (internal->opts.check &&
       (internal->opts.checkwitness || internal->opts.checkfailed)) {
-      bool forgettable = 
-        from_propagator && (ext_clause_red == 1 || ext_clause_red == 2);
+      bool forgettable = from_propagator && ext_clause_forgettable;
       if (forgettable) {
         assert (!original.size () || !external->eclause.empty ());
 

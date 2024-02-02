@@ -222,7 +222,7 @@ struct Internal {
   Clause *newest_clause;        // used in external_propagate
   bool force_no_backtrack;      // for new clauses with external propagator
   bool from_propagator;         // differentiate new clauses...
-  unsigned ext_clause_red;      // redundancy of new clause from propagator
+  bool ext_clause_forgettable;  // Is new clause from propagator forgettable
   int tainted_literal;          // used for ILB
   size_t notified;           // next trail position to notify external prop
   Clause *probe_reason;      // set during probing
