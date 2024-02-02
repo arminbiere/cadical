@@ -496,11 +496,7 @@ void Internal::add_new_original_clause (uint64_t id) {
 #endif
       int glue = (int) (learned_levels.size () + unassigned);
       assert (glue <= (int) clause.size ());
-      bool clause_redundancy = false;
-      if (from_propagator) {
-        if (ext_clause_red == 1 || ext_clause_red == 2) 
-          clause_redundancy = true;
-      }
+      bool clause_redundancy = from_propagator && ext_clause_forgettable;
       Clause *c = new_clause (clause_redundancy, glue);
       c->id = new_id;
       clause_id--;
