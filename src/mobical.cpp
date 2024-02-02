@@ -394,9 +394,7 @@ public:
   }
 
   bool compare_trails () { 
-#ifndef NDEBUG
-    bool solver_reimplies = s->internal->opts.reimply;
-    
+#ifndef NDEBUG 
     size_t etrail_inserted = 0;
 
     std::set<int> etrail = {};  // Trail of solver
@@ -434,20 +432,20 @@ public:
       }
     }
     
-    // 3. Collect all the variables from the multi-trail
-    if (solver_reimplies) {
-      size_t t_idx = 0;
-      for (const auto &t : s->internal->trails) {
-        t_idx++;
-        for (const auto &ilit : t) {
-          int elit = s->internal->externalize(ilit);
-          if (is_observed_now(elit)) {
-            etrail.insert (elit);
-            etrail_inserted ++;
-          }
-        }
-      }
-    }
+    // // 3. Collect all the variables from the multi-trail
+    // if (solver_reimplies) {
+    //   size_t t_idx = 0;
+    //   for (const auto &t : s->internal->trails) {
+    //     t_idx++;
+    //     for (const auto &ilit : t) {
+    //       int elit = s->internal->externalize(ilit);
+    //       if (is_observed_now(elit)) {
+    //         etrail.insert (elit);
+    //         etrail_inserted ++;
+    //       }
+    //     }
+    //   }
+    // }
 
     // There can be duplicate assignments due to fixed variables
     // TODO: add some additional checks for them
@@ -551,16 +549,16 @@ public:
 
   // Before finalizing the new ipasir-up
   bool cb_has_external_clause () {
-    unsigned red = 0;
-    return cb_has_external_clause (red);
+    bool forgettable = true;
+    return cb_has_external_clause (forgettable);
   }
 
-  bool cb_has_external_clause (unsigned &clause_redundancy) {
+  bool cb_has_external_clause (bool& forgettable) {
     MLOG ("cb_has_external_clause returns: ");
 
     assert (compare_trails ());
 
-    clause_redundancy = 0;
+    forgettable = false;
 
     if (external_lemmas.empty ()) {
       MLOGC ("false (there are no external lemmas)." << std::endl);
@@ -573,9 +571,8 @@ public:
       must_add_clause = false;
       add_lemma_idx = must_add_idx;
 
-      if (external_lemmas[must_add_idx]->forgettable)
-        clause_redundancy = 1;
-
+      forgettable = external_lemmas[must_add_idx]->forgettable;
+        
       MLOGC ("true (forced clause addition, "
              << "forgettable: " << clause_redundancy
              << " id: " << add_lemma_idx << ")." << std::endl);
@@ -600,9 +597,7 @@ public:
       if (!external_lemmas[add_lemma_idx]->add_count &&
           !external_lemmas[add_lemma_idx]->propagation_reason) {
 
-        if (external_lemmas[add_lemma_idx]->forgettable) {
-          clause_redundancy = 1;
-        }
+        forgettable = external_lemmas[add_lemma_idx]->forgettable;
 
         MLOGC ("true (new lemma was found, "
             << "forgettable: " << clause_redundancy
@@ -618,7 +613,6 @@ public:
       add_lemma_idx++;
     }
     MLOGC ("false." << std::endl);
-
 
     return false;
   }
