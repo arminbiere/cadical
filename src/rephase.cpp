@@ -115,6 +115,7 @@ void Internal::rephase () {
   report ('~', 1);
 
   backtrack ();
+  autarky ();
   clear_phases (phases.target);
   target_assigned = 0;
 
