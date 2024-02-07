@@ -486,12 +486,14 @@ public:
   }
 
   void collect_prev_fixed () {
+#ifndef NDEBUG  
     MLOG ("collecting previously fixed assignments for the new observer: ");
     
     std::vector<int> fixed_lits = {};
     s->internal->get_all_fixed_literals (fixed_lits);
     MLOGC ("found: " << fixed_lits.size() << " fixed literals" << std::endl);
     add_prev_fixed(fixed_lits);
+#endif    
   }
 
   /* ------------------------ Observer functions end -------------------*/
@@ -1366,6 +1368,7 @@ struct ConnectCall : public Call {
       // explicitly -- EXPENSIVE
       // In practice Observer is there from the beginning if needed, in mobical
       // we do not want to wire in this.
+      
       mobical.mock_pointer->collect_prev_fixed ();
     }
   }
