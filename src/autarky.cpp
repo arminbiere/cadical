@@ -50,6 +50,7 @@ inline unsigned Internal::autarky_propagate_clause (Clause *c, std::vector<signe
     LOG ("unassigning lit %d", lit);
     autarky_val[vlit (idx)] = autarky_val[vlit (-idx)] = 0;
     work.push_back (-lit);
+
     ++unassigned;
   }
   assert (unassigned);
@@ -105,8 +106,7 @@ unsigned Internal::autarky_propagate (std::vector<signed char> &autarky_val, std
 }
 
 
-bool Internal::determine_autarky (std::vector<signed char> &autarky_val, std::vector<int> &work) {
-
+int Internal::determine_autarky (std::vector<signed char> &autarky_val, std::vector<int> &work) {
   unsigned assigned = 0;
   // importing phases
   for (auto idx : vars) {
@@ -236,8 +236,11 @@ bool Internal::determine_autarky (std::vector<signed char> &autarky_val, std::ve
 void Internal::autarky_apply (const std::vector<signed char> &autarky_val,
                               const std::vector<int> &actual_autarky) {
 
-  LOG (actual_autarky, "the autarky is ");
   int removed = 0;
+  bool compact = opts.autarkynonincr;
+  if (!compact)
+    LOG (actual_autarky, "the autarky is ");
+
   for (auto *c : clauses) {
     if (c->garbage)
       continue;
@@ -257,13 +260,29 @@ void Internal::autarky_apply (const std::vector<signed char> &autarky_val,
     LOG (c, "clause");
     assert (!falsified || satisfied);
     if (satisfied) {
-      external->push_zero_on_extension_stack ();
-      for (auto lit : actual_autarky)
-        external->push_witness_literal_on_extension_stack (lit);
-      external->push_clause_on_extension_stack (c);
+      if (!compact) {
+        external->push_zero_on_extension_stack ();
+        for (auto lit : actual_autarky)
+          external->push_witness_literal_on_extension_stack (lit);
+        external->push_clause_on_extension_stack (c);
+      }
       LOG (c, "autarky removed satisfied clause");
       mark_garbage (c);
       ++removed;
+    }
+  }
+
+  if (compact) {
+    for (auto lit : lits) {
+      const signed char v = autarky_val [vlit (lit)];
+      if (v > 0) {
+        external->push_zero_on_extension_stack ();
+        external->push_witness_literal_on_extension_stack (lit);
+	external->push_id_on_extension_stack (lit); //fake id
+        external->push_zero_on_extension_stack ();
+        external->push_clause_literal_on_extension_stack (lit);
+        external->push_zero_on_extension_stack ();
+      }
     }
   }
   LOG ("autarky removed %d clauses", removed);
@@ -275,6 +294,7 @@ bool Internal::autarky () {
     return false;
   START (autarky);
 
+  printf ("allocating %d\n", 2*max_var + 1);
   std::vector<signed char> autarky_val; autarky_val.resize (2*max_var + 1);
   std::vector<int> work;
 
@@ -286,18 +306,20 @@ bool Internal::autarky () {
   }
 
   std::vector<int> actual_autarky; actual_autarky.reserve (autarky_found);
+  const bool full_aut = !opts.autarkynonincr;
+
   for (auto idx : vars) {
     if (!autarky_val [vlit (idx)])
       continue;
     assert (active (idx));
     if (autarky_val [vlit (idx)] > 0){
-      actual_autarky.push_back(idx);
+      if (full_aut) actual_autarky.push_back(idx);
       mark_eliminated (idx);
     }
     else {
       assert (autarky_val [vlit (-idx)] > 0);
       assert (autarky_val [vlit (idx)] < 0);
-      actual_autarky.push_back(-idx);
+      if (full_aut) actual_autarky.push_back(-idx);
       mark_eliminated (idx);
     }
   }

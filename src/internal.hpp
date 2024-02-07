@@ -1126,7 +1126,7 @@ struct Internal {
   void unphase (int lit);
 
   // autarky detection
-  bool determine_autarky (std::vector<signed char> &, std::vector<int> &);
+  int determine_autarky (std::vector<signed char> &, std::vector<int> &);
   unsigned autarky_propagate_clause (Clause *c,
                                      std::vector<signed char> &autarky_val,
                                      std::vector<int> &work);
