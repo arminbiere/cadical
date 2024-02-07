@@ -255,10 +255,7 @@ bool Internal::external_propagate () {
 //
 
 bool Internal::ask_external_clause () {
-  bool is_forgettable = false;
-  bool res = external->propagator->cb_has_external_clause (is_forgettable);
-
-
+  bool res = external->propagator->cb_has_external_clause (ext_clause_forgettable);
 
   return res;
 }
@@ -779,7 +776,7 @@ void Internal::notify_assignments () {
     assert (external->observed (elit) || fixed(ilit));
     assigned.push_back(elit);
   }
-  
+
   external->propagator->notify_assignment (assigned);
   return;
 }
