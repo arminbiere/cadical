@@ -143,6 +143,7 @@ struct Internal {
     TRANSRED = (1 << 12),
     VIVIFY = (1 << 13),
     WALK = (1 << 14),
+    AUTARKY = (1 << 15),
   };
 
   bool in_mode (Mode m) const { return (mode & m) != 0; }

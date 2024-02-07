@@ -273,14 +273,17 @@ bool Internal::autarky () {
   assert (!level);
   if (!opts.autarkies)
     return false;
+  START (autarky);
 
   std::vector<signed char> autarky_val; autarky_val.resize (2*max_var + 1);
   std::vector<int> work;
 
   ++stats.autarkies.tries;
   int autarky_found = determine_autarky(autarky_val, work);
-  if (!autarky_found)
+  if (!autarky_found){
+    STOP (autarky);
     return false;
+  }
 
   std::vector<int> actual_autarky; actual_autarky.reserve (autarky_found);
   for (auto idx : vars) {
@@ -306,6 +309,7 @@ bool Internal::autarky () {
   mark_redundant_clauses_with_eliminated_variables_as_garbage ();
   connect_watches();
   report ('a');
+  STOP (autarky);
   return autarky_found;
 }
 

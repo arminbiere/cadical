@@ -39,6 +39,7 @@ struct Internal;
 
 #define PROFILES \
   PROFILE (analyze, 3) \
+  PROFILE (autarky, 2) \
   PROFILE (backward, 3) \
   PROFILE (block, 2) \
   PROFILE (bump, 4) \
