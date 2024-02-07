@@ -1128,7 +1128,6 @@ public:
 class ExternalPropagator {
 
 public:
-  // This flag is currently checked only when the propagator is connected.
   bool is_lazy = false; // lazy propagator only checks complete assignments
   bool are_reasons_forgettable = false; // Reason external clauses can be deleted
   bool is_tainting = true; // The external clauses must trigger restore (unless frozen)
@@ -1140,7 +1139,8 @@ public:
   // the call of propagator callbacks and when a driving clause is leading
   // to an assignment.
   //
-  virtual void notify_assignment (int lit, bool is_fixed) = 0;
+  //virtual void notify_assignment (int lit, bool is_fixed) = 0;
+  virtual void notify_assignment (const std::vector<int>& lits) = 0;
   virtual void notify_new_decision_level () = 0;
   virtual void notify_backtrack (size_t new_level) = 0;
 
