@@ -281,7 +281,6 @@ void Internal::autarky_apply (const std::vector<signed char> &autarky_val,
 	external->push_id_on_extension_stack (lit); //fake id
         external->push_zero_on_extension_stack ();
         external->push_clause_literal_on_extension_stack (lit);
-        external->push_zero_on_extension_stack ();
       }
     }
   }
@@ -294,7 +293,6 @@ bool Internal::autarky () {
     return false;
   START (autarky);
 
-  printf ("allocating %d\n", 2*max_var + 1);
   std::vector<signed char> autarky_val; autarky_val.resize (2*max_var + 1);
   std::vector<int> work;
 
