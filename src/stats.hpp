@@ -102,6 +102,12 @@ struct Stats {
   } rephased;
 
   struct {
+    int64_t tries;   // number of attempts to find an autarky
+    int64_t eliminated;// number of eliminated literals
+    int64_t rounds;
+  } autarkies;
+
+  struct {
     int64_t count;
     int64_t broken;
     int64_t flips;

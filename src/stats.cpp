@@ -58,6 +58,16 @@ void Stats::print (Internal *internal) {
 
   SECTION ("statistics");
 
+  if (all || stats.autarkies.rounds) {
+    PRT ("autarkies:       %15" PRId64
+         "   %10.2f %%  of vars",
+         stats.autarkies.rounds,
+         percent (stats.autarkies.eliminated, stats.vars));
+    PRT ("  autartried:    %15" PRId64 "   %10.2f    per interval",
+         stats.autarkies.tries, relative (stats.conflicts, stats.autarkies.tries));
+    PRT ("  autarrounds:   %15" PRId64 "   %10.2f    per tried",
+         stats.autarkies.rounds, relative (stats.autarkies.rounds, stats.autarkies.tries));
+  }
   if (all || stats.blocked) {
     PRT ("blocked:         %15" PRId64
          "   %10.2f %%  of irredundant clauses",
