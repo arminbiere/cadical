@@ -25,6 +25,8 @@ void Internal::add_observed_var (int ilit) {
     // undo this unnotifiable assignment.
     const int assignment_level = var (ilit).level;
     backtrack (assignment_level - 1);
+  } else if (level && fixed (ilit)) {
+    backtrack (0);
   }
 }
 

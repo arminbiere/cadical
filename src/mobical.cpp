@@ -345,7 +345,7 @@ public:
       }
       MLOGC ("0" << std::endl);
 
-      add_new_lemma (false);
+      add_new_lemma (true);
       clause.clear ();
     }
   }

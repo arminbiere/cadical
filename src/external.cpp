@@ -352,17 +352,20 @@ void External::add_observed_var (int elit) {
   is_observed[eidx] = true;
 
   int ilit = internalize (elit);
+  // internal add-observed-var backtracks to a lower decision level to unassign
+  // the variable in case it was already assigned previously (but not on the
+  // current level)
   internal->add_observed_var (ilit);
 
   if (propagator->is_lazy)
     return;
 
   // In case this variable was already assigned (e.g. via unit clause) and
-  // got compacted to map to another (not observed) variable, 
-  // it must be notified explicitly now. (-> Can lead to repeated fixed
-  // assignment notifications, in case it was unobserved and observed again.
-  // But a repeated notification is less error-prone than never notifying an
-  // assignment.)
+  // got compacted to map to another (not observed) variable, it can not be
+  // unnasigned so it must be notified explicitly now. (-> Can lead to repeated
+  // fixed assignment notifications, in case it was unobserved and observed
+  // again. But a repeated notification is less error-prone than never
+  // notifying an assignment.)
   const int tmp = fixed (elit);
   if (!tmp)
     return;
@@ -371,6 +374,7 @@ void External::add_observed_var (int elit) {
   LOG ("notify propagator about fixed assignment upon observe for %d",
        unit);
 
+  // internal add-observed-var had to backtrack to root-level already
   assert (!internal->level);
     
   std::vector<int> assigned = {unit};
