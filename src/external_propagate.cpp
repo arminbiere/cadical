@@ -759,18 +759,29 @@ void Internal::notify_assignments () {
     return;
 
   const size_t end_of_trail = trail.size ();
-  if (notified < end_of_trail)
-    LOG ("notify external propagator about new assignments");
+
+  if (notified >= end_of_trail) return;
+  
+  LOG ("notify external propagator about new assignments");
+  std::vector<int> assigned;
+
   while (notified < end_of_trail) {
     int ilit = trail[notified++];
-    if (fixed (ilit) || !observed (ilit))
-      continue; // fixed literals are notified eagerly in mark_fixed, not
-                // here
+    if (!observed (ilit))
+      continue;
+
     int elit = externalize (ilit); // TODO: double-check tainting
     assert (elit);
-    assert (external->observed (elit));
-    external->propagator->notify_assignment (elit, false);
+    // Fixed variables might get mapped (during compact) to another
+    // non-observed but fixed variable.
+    // This happens on root level, so notification about their assignment is
+    // already done.
+    assert (external->observed (elit) || fixed(ilit));
+    assigned.push_back(elit);
   }
+  
+  external->propagator->notify_assignment (assigned);
+  return;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -983,6 +994,29 @@ bool Internal::get_merged_literals (std::vector<int>& eq_class) {
   return false;
 }
 
+/*----------------------------------------------------------------------------*/
+//
+// Collect all external variables that are FIXED internally. Again an expensive
+// function that should be called only for debugging in mobical.
+//
+// Do not use it unless it is really unavoidable.
+//
+void Internal::get_all_fixed_literals (std::vector<int>& fixed_lits) {
+  fixed_lits.clear();
+  if (!trail.size()) return;
+
+  int e2i_size = external->e2i.size();
+  int ilit;
+  for(int eidx = 1; eidx < e2i_size; eidx++) {
+    ilit = external->e2i[eidx];
+    if (ilit) {
+      Flags &f = flags (ilit);
+      if (f.status == Flags::FIXED) {
+        fixed_lits.push_back(vals[abs(ilit)]*eidx);
+      }
+    }
+  }
+}
 #endif
 
 } // namespace CaDiCaL

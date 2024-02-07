@@ -397,8 +397,8 @@ public:
 #ifndef NDEBUG 
     size_t etrail_inserted = 0;
 
-    std::set<int> etrail = {};  // Trail of solver
-    std::set<int> efixed = {};  // Fixed assignments in solver
+    std::set<int> etrail = {};  // Trail of the solver
+    std::set<int> efixed = {};  // Fixed assignments in the solver
 
     size_t otrail_inserted = 0;
     
@@ -431,30 +431,18 @@ public:
         etrail_inserted ++;
       }
     }
-    
-    // // 3. Collect all the variables from the multi-trail
-    // if (solver_reimplies) {
-    //   size_t t_idx = 0;
-    //   for (const auto &t : s->internal->trails) {
-    //     t_idx++;
-    //     for (const auto &ilit : t) {
-    //       int elit = s->internal->externalize(ilit);
-    //       if (is_observed_now(elit)) {
-    //         etrail.insert (elit);
-    //         etrail_inserted ++;
-    //       }
-    //     }
-    //   }
-    // }
-
-    // There can be duplicate assignments due to fixed variables
-    // TODO: add some additional checks for them
-    //assert (etrail_inserted == etrail.size() || solver_reimplies); 
 
     size_t t_idx = 0;
     for (const auto& level : observed_trail) {
       for (const auto elit : level) {
         if (is_observed_now(elit)) {
+          // There can be duplicate assignments due to fixed variables
+          // so assert (otrail_inserted == otrail.size()) will not work.
+          assert (otrail.count(elit) == 0 || 
+                  std::find (
+                    observed_fixed.begin (), observed_fixed.end (),
+                    elit) != observed_fixed.end ());
+           
           otrail.insert (elit);
           otrail_inserted ++;
         }
@@ -462,11 +450,14 @@ public:
       }
       t_idx++;
     }
-
-    // There can be duplicate assignments due to fixed variables
-    // TODO: add some additional checks for them
-    //assert (otrail_inserted == otrail.size() || solver_reimplies );
-
+    
+    if (etrail.size() != otrail.size()) {
+      MLOG ("etrail: ");
+      for (auto const& lit: etrail) MLOGC (lit << " ");
+      MLOGC (std::endl << "otrail: ";);
+      for (auto const& lit: otrail) MLOGC (lit << " ");
+      MLOGC (std::endl);
+    }
     assert (etrail.size() == otrail.size() );
   
     assert (etrail == otrail);
@@ -479,7 +470,9 @@ public:
   /*-------------------------- Observer functions ----------------------*/
   void notify_fixed_assignment (int lit) {
     MLOG ("notify_fixed_assignment: " << lit << " (current level: "
-                                      << observed_trail.size () - 1 << ")"
+                                      << observed_trail.size () - 1
+                                      << ", current fixed count: "
+                                      << observed_fixed.size()
                                       << std::endl);
 
     assert (std::find (observed_fixed.begin (), observed_fixed.end (),
@@ -490,6 +483,15 @@ public:
   void add_prev_fixed (const std::vector<int> &fixed_assignments) {
     for (auto const &lit : fixed_assignments)
       notify_fixed_assignment (lit);
+  }
+
+  void collect_prev_fixed () {
+    MLOG ("collecting previously fixed assignments for the new observer: ");
+    
+    std::vector<int> fixed_lits = {};
+    s->internal->get_all_fixed_literals (fixed_lits);
+    MLOGC ("found: " << fixed_lits.size() << " fixed literals" << std::endl);
+    add_prev_fixed(fixed_lits);
   }
 
   /* ------------------------ Observer functions end -------------------*/
@@ -574,7 +576,7 @@ public:
       forgettable = external_lemmas[must_add_idx]->forgettable;
         
       MLOGC ("true (forced clause addition, "
-             << "forgettable: " << clause_redundancy
+             << "forgettable: " << forgettable
              << " id: " << add_lemma_idx << ")." << std::endl);
 
       added_lemma_count++;
@@ -600,7 +602,7 @@ public:
         forgettable = external_lemmas[add_lemma_idx]->forgettable;
 
         MLOGC ("true (new lemma was found, "
-            << "forgettable: " << clause_redundancy
+            << "forgettable: " << forgettable
             << " id: " << add_lemma_idx << ")." <<  std::endl);
         
         added_lemma_count++;
@@ -782,16 +784,25 @@ public:
     return lit;
   }
 
-  void notify_assignment (int lit, bool is_fixed) {
-    MLOG ("notify assignment: "
-          << lit << " (current level: " << observed_trail.size () - 1
-          << ", is_fixed: " << is_fixed << ")" << std::endl);
-    if (is_fixed) {
-      observed_trail.front ().push_back (lit);
-    } else {
+  void notify_assignment (const std::vector<int>& lits) override { 
+    for (const auto& lit: lits) {
       observed_trail.back ().push_back (lit);
     }
   }
+
+  //
+  // Old signature, remove once get merged.
+  //
+  // void notify_assignment (int lit, bool is_fixed) {
+  //   MLOG ("notify assignment: "
+  //         << lit << " (current level: " << observed_trail.size () - 1
+  //         << ", is_fixed: " << is_fixed << ")" << std::endl);
+  //   if (is_fixed) {
+  //     observed_trail.front ().push_back (lit);
+  //   } else {
+  //     observed_trail.back ().push_back (lit);
+  //   }
+  // }
 
   void notify_new_decision_level () {
     MLOG ("notify new decision level " << observed_trail.size () -1 << " -> "
@@ -1350,6 +1361,12 @@ struct ConnectCall : public Call {
     if (prev_pointer) {
       mobical.mock_pointer->add_prev_fixed (prev_pointer->observed_fixed);
       delete prev_pointer;
+    } else {
+      // Observer does not replay previous fixed assignment, collect them here
+      // explicitly -- EXPENSIVE
+      // In practice Observer is there from the beginning if needed, in mobical
+      // we do not want to wire in this.
+      mobical.mock_pointer->collect_prev_fixed ();
     }
   }
   void print (ostream &o) { o << "connect mock-propagator" << endl; }

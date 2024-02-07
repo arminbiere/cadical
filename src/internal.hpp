@@ -683,6 +683,7 @@ struct Internal {
   bool is_external_forgettable (int64_t id);
 #ifndef NDEBUG  
   bool get_merged_literals (std::vector<int>&);
+  void get_all_fixed_literals (std::vector<int>&);
 #endif
 
   // Use last learned clause to subsume some more.

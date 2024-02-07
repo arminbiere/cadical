@@ -310,7 +310,10 @@ void External::unphase (int elit) {
 /*------------------------------------------------------------------------*/
 
 // External propagation related functions
-
+// 
+// Note that when an already assigned variable is added as observed, the
+// solver will backtrack to undo this assignment.
+// 
 void External::add_observed_var (int elit) {
   if (!propagator) {
     LOG ("No connected propagator that could observe the variable, "
@@ -354,10 +357,12 @@ void External::add_observed_var (int elit) {
   if (propagator->is_lazy)
     return;
 
-  // Fixed variables are notified only upon assignment. In case
-  // this variable was already assigned (e.g. via unit clause),
-  // it must be notified explicitly now. (-> Can cause a repeated fixed
-  // assignment notification, in case it was unobserved and observed again.)
+  // In case this variable was already assigned (e.g. via unit clause) and
+  // got compacted to map to another (not observed) variable, 
+  // it must be notified explicitly now. (-> Can lead to repeated fixed
+  // assignment notifications, in case it was unobserved and observed again.
+  // But a repeated notification is less error-prone than never notifying an
+  // assignment.)
   const int tmp = fixed (elit);
   if (!tmp)
     return;
@@ -365,7 +370,11 @@ void External::add_observed_var (int elit) {
 
   LOG ("notify propagator about fixed assignment upon observe for %d",
        unit);
-  propagator->notify_assignment (unit, true);
+
+  assert (!internal->level);
+    
+  std::vector<int> assigned = {unit};
+  propagator->notify_assignment (assigned);
 }
 
 void External::remove_observed_var (int elit) {

@@ -898,7 +898,8 @@ void Solver::connect_observer (Observer *observer) {
     disconnect_observer ();
   external->observer = observer;
   // Observers are treated as real-time observers, thus previously found fixed
-  // assignments are not sent out
+  // assignments are not sent out (would be rather expensive to recover it
+  // retrospect, see external_propagate.cpp/get_fixed_literals () function).
   LOG_API_CALL_END ("connect_observer");
 }
 
