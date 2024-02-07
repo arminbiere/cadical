@@ -2,8 +2,9 @@
 #include <cstdint>
 
 namespace CaDiCaL {
-
-unsigned Internal::autarky_propagate_clause (Clause *c, std::vector<signed char> &autarky_val, std::vector<int> &work) {
+// Algorithm to find autarkies based on the phases.  For incremental SAT solving, this can be a
+// bootleneck, because the witness for the reconstruction stack can be huge.
+inline unsigned Internal::autarky_propagate_clause (Clause *c, std::vector<signed char> &autarky_val, std::vector<int> &work) {
   assert (!c->redundant);
   assert (!c->garbage);
   assert (!level);
@@ -55,17 +56,43 @@ unsigned Internal::autarky_propagate_clause (Clause *c, std::vector<signed char>
   return unassigned;
 }
 
+unsigned Internal::autarky_propagate_binary (Clause *c, std::vector<signed char> &autarky_val, std::vector<int> &work, int lit) {
+  assert (!c->redundant);
+  assert (!c->garbage);
+  assert (!level);
+  (void) c;
+  if (val (lit) > 0)
+    return 0;
+  const int v = autarky_val[vlit (lit)];
+  if (v >= 0) {
+    return 0;
+  }
+  assert (v < 0);
+  LOG ("unassigning lit %d", lit);
+  autarky_val[vlit (lit)] = autarky_val[vlit (-lit)] = 0;
+  work.push_back (-lit);
+  return 1;
+}
+
 unsigned Internal::autarky_propagate_unassigned (std::vector<signed char> &autarky_val, std::vector<int> &work, int lit) {
   int unassigned = 0;
+  assert (autarky_val[vlit (lit)] <= 0);
   const Watches &ws = watches (lit);
   for (auto &w : ws) {
     if (w.clause->garbage)
       continue;
     if (w.clause->redundant)
       continue;
+    LOG ("%d unassigned currently", unassigned);
     LOG (w.clause, "autarking working on clause");
-    unassigned += autarky_propagate_clause(w.clause, autarky_val, work);
+    if (w.binary()){
+      unassigned += autarky_propagate_binary (w.clause, autarky_val, work, w.blit);
+    LOG ("---%d unassigned currently", unassigned);
+    }
+    else
+      unassigned += autarky_propagate_clause (w.clause, autarky_val, work);
   }
+    LOG ("-++--%d unassigned currently", unassigned);
   return unassigned;
 }
 
@@ -84,7 +111,7 @@ unsigned Internal::autarky_propagate (std::vector<signed char> &autarky_val, std
 bool Internal::determine_autarky (std::vector<signed char> &autarky_val, std::vector<int> &work) {
 
   unsigned assigned = 0;
-  
+  // importing phases
   for (auto idx : vars) {
     autarky_val[vlit (idx)] = 0;
     autarky_val[vlit (-idx)] = 0;
@@ -135,12 +162,11 @@ bool Internal::determine_autarky (std::vector<signed char> &autarky_val, std::ve
     if (v > 0)
       continue;
     work.push_back(lit);
-    autarky_propagate (autarky_val, work);
+    assigned -= autarky_propagate (autarky_val, work);
   }
 
+  // final pass. This requires a one-watch literal scheme.
   clear_watches();
-  // let's not go over the watches like kissat and directly go over the clauses.
-  
   for (auto *c : clauses) {
     if (c->garbage)
       continue;
@@ -171,7 +197,7 @@ bool Internal::determine_autarky (std::vector<signed char> &autarky_val, std::ve
     LOG ("found autarky of size %d", assigned);
   } else {
     LOG ("empty autarky");
-    reset_watches();
+    connect_watches ();
   }
 
   return assigned;
@@ -214,9 +240,14 @@ void Internal::autarky_apply (const std::vector<signed char> &autarky_val,
 }
 
 bool Internal::autarky () {
+  assert (!level);
+  if (!opts.autarkies)
+    return false;
+
   std::vector<signed char> autarky_val; autarky_val.resize (2*max_var + 1);
   std::vector<int> work;
 
+  ++stats.autarkies.tries;
   int autarky_found = determine_autarky(autarky_val, work);
   if (!autarky_found)
     return false;
@@ -225,20 +256,27 @@ bool Internal::autarky () {
   for (auto idx : vars) {
     if (!autarky_val [vlit (idx)])
       continue;
+    assert (active (idx));
     LOG ("var %d is in the autarky", idx);
-    if (autarky_val [vlit (idx)] > 0)
+    if (autarky_val [vlit (idx)] > 0){
       actual_autarky.push_back(idx);
+      mark_eliminated (idx);
+    }
     else {
       assert (autarky_val [vlit (-idx)] > 0);
       assert (autarky_val [vlit (idx)] < 0);
       actual_autarky.push_back(-idx);
+      mark_eliminated (idx);
     }
   }
 
   autarky_apply (autarky_val, actual_autarky);
-  
+
+  ++stats.autarkies.rounds;
+  stats.autarkies.eliminated += autarky_found;
+  mark_redundant_clauses_with_eliminated_variables_as_garbage ();
   connect_watches();
-  
+  report ('a');
   return autarky_found;
 }
 

@@ -1126,7 +1126,10 @@ struct Internal {
 
   // autarky detection
   bool determine_autarky (std::vector<signed char> &, std::vector<int> &);
-  unsigned autarky_propagate_clause (Clause *c, std::vector<signed char> &autarky_val, std::vector<int> &work);
+  unsigned autarky_propagate_clause (Clause *c,
+                                     std::vector<signed char> &autarky_val,
+                                     std::vector<int> &work);
+  unsigned autarky_propagate_binary (Clause *c, std::vector<signed char> &autarky_val, std::vector<int> &work, int lit2);
   unsigned autarky_propagate_unassigned (std::vector<signed char> &autarky_val, std::vector<int> &work, int lit);
   unsigned autarky_propagate (std::vector<signed char> &autarky_val, std::vector<int> &work);
   void autarky_apply (const std::vector<signed char> &, const std::vector<int>&);
