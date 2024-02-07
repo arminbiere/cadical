@@ -83,16 +83,13 @@ unsigned Internal::autarky_propagate_unassigned (std::vector<signed char> &autar
       continue;
     if (w.clause->redundant)
       continue;
-    LOG ("%d unassigned currently", unassigned);
     LOG (w.clause, "autarking working on clause");
     if (w.binary()){
       unassigned += autarky_propagate_binary (w.clause, autarky_val, work, w.blit);
-    LOG ("---%d unassigned currently", unassigned);
     }
     else
       unassigned += autarky_propagate_clause (w.clause, autarky_val, work);
   }
-    LOG ("-++--%d unassigned currently", unassigned);
   return unassigned;
 }
 
@@ -101,7 +98,7 @@ unsigned Internal::autarky_propagate (std::vector<signed char> &autarky_val, std
   while (!work.empty()) {
     const int lit = work.back();
     work.pop_back();
-    LOG ("autarky unsetting lit %d", lit);
+    LOG ("autarky propagating lit %d (%d unassigned)", lit, unassigned);
     unassigned += autarky_propagate_unassigned (autarky_val, work, lit);
   }
   return unassigned;
@@ -129,6 +126,17 @@ bool Internal::determine_autarky (std::vector<signed char> &autarky_val, std::ve
     ++assigned;
   }
 
+#ifndef NDEBUG
+  {
+    unsigned i = 0;
+    for (auto lit : vars) {
+      if (autarky_val[vlit (lit)])
+        ++i;
+    }
+    assert (i == assigned);
+  }
+#endif
+
   // pre-filtering
   for (auto *c : clauses) {
     if (c->garbage)
@@ -136,7 +144,7 @@ bool Internal::determine_autarky (std::vector<signed char> &autarky_val, std::ve
     if (c->redundant)
       continue;
 
-    const  unsigned unassigned = autarky_propagate_clause(c, autarky_val, work);
+    const unsigned unassigned = autarky_propagate_clause(c, autarky_val, work);
     if (!unassigned)
       continue;
     assert (unassigned <= assigned);
@@ -152,6 +160,17 @@ bool Internal::determine_autarky (std::vector<signed char> &autarky_val, std::ve
     return false;
   }
 
+#ifndef NDEBUG
+  {
+    unsigned i = 0;
+    for (auto lit : vars) {
+      if (autarky_val[vlit (lit)])
+        ++i;
+    }
+    assert (i == assigned);
+  }
+#endif
+
   for (auto lit : lits) {
     if (!assigned)
       break;
@@ -164,6 +183,17 @@ bool Internal::determine_autarky (std::vector<signed char> &autarky_val, std::ve
     work.push_back(lit);
     assigned -= autarky_propagate (autarky_val, work);
   }
+
+#ifndef NDEBUG
+  {
+    unsigned i = 0;
+    for (auto lit : vars) {
+      if (autarky_val[vlit (lit)])
+        ++i;
+    }
+    assert (i == assigned);
+  }
+#endif
 
   // final pass. This requires a one-watch literal scheme.
   clear_watches();
@@ -232,7 +262,7 @@ void Internal::autarky_apply (const std::vector<signed char> &autarky_val,
         external->push_witness_literal_on_extension_stack (lit);
       external->push_clause_on_extension_stack (c);
       LOG (c, "autarky removed satisfied clause");
-      mark_garbage(c);
+      mark_garbage (c);
       ++removed;
     }
   }
@@ -257,7 +287,6 @@ bool Internal::autarky () {
     if (!autarky_val [vlit (idx)])
       continue;
     assert (active (idx));
-    LOG ("var %d is in the autarky", idx);
     if (autarky_val [vlit (idx)] > 0){
       actual_autarky.push_back(idx);
       mark_eliminated (idx);
