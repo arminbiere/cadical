@@ -221,7 +221,10 @@ private:
     bool propagation_reason;
 
     // Flexible array members are a C99 feature and not in C++11!
-    // Thus pedantic compilation fails for 'int literals[]'.
+    // Thus pedantic compilation fails for 'int literals[]'.  We could do
+    // the same conditional compilation as with the flexible array member
+    // in 'Clause', but here there is no need for making it fast as we are
+    // in testing mode anyhow.
     //
     int *literals;
 

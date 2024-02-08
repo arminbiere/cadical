@@ -102,7 +102,19 @@ struct Clause {
   // warnings.  After having the 'id' field mandatory we now overlay that
   // one with the copy field.
 
+  // However, it turns out that even though flexible array members are in
+  // C99 they are not in C11++, and therefore pedantic compilation with
+  // '--pedantic' fails completely. Therefore we still support as
+  // alternative faked flexible array members, which unfortunately need
+  // then again more care when accessing the literals outside the faked
+  // virtual sizes and the compiler can somehow figure that out, because
+  // that would in turn produce a warning.
+
+#ifndef NFLEXIBLE
   int literals[];
+#else
+  int literals[2];
+#endif
 
   // Supports simple range based for loops over clauses.
 
@@ -121,7 +133,15 @@ struct Clause {
     // all the time (even if allocated outside of the arena).
     //
     assert (size > 1);
-    return align (size * sizeof (int) + sizeof (Clause), 8);
+    const size_t header_bytes = sizeof (Clause);
+    const size_t actual_literal_bytes = size * sizeof (int);
+    size_t combined_bytes = header_bytes + actual_literal_bytes;
+#ifdef NFLEXIBLE
+    const size_t faked_literals_bytes = sizeof ((Clause *) 0)->literals;
+    combined_bytes -= faked_literals_bytes;
+#endif
+    size_t aligned_bytes = align (combined_bytes, 8);
+    return aligned_bytes;
   }
 
   size_t bytes () const { return bytes (size); }

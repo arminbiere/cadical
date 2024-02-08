@@ -21,6 +21,7 @@ logging=no
 check=no
 competition=no
 coverage=no
+flexible=yes
 profile=no
 contracts=yes
 tracing=yes
@@ -124,6 +125,7 @@ will have the same effect as
 The following configuration options might be usefull during porting the
 code to a new platform and are usually not necessary to change.
 
+--no-flexible      do not use flexible array members
 --no-unlocked      force compilation without unlocked IO
 EOF
 exit 0
@@ -156,6 +158,7 @@ do
 
     --competition) competition=yes;;
 
+    --no-flexible) flexible=no;;
     --no-unlocked) unlocked=no;;
 
     -m32) options="$options $1";m32=yes;;
@@ -389,6 +392,52 @@ else
     die "compiler does not support C99/C++11 even with '-std=c++11'"
   fi
 fi
+
+#--------------------------------------------------------------------------#
+
+# Flexible array members are in C99 but not in C++11 but essential.  Thus
+# with pedantic compilation we have to fake them which in turn might produce
+# warnings.  To control those build variances with respect to warnings
+# we check the support of flexible array members explicitly.
+
+if [ $flexible = yes ]
+then
+  feature=./configure-have-flexible-array-members
+cat <<EOF > $feature.cpp
+#include <cstdlib>
+struct S {
+  int size;
+  int flexible_array_member[];
+};
+int main () {
+  struct S * s = (struct S*) malloc (12);
+  s->size = 2;
+  s->flexible_array_member[0] = 1;
+  s->flexible_array_member[1] = -1;
+  int res = 0;
+  for (int i = 0; i != s->size; i++)
+    res += s->flexible_array_member[i];
+  return res;
+}
+EOF
+  if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
+  then
+    if $feature.exe
+    then
+      msg "compiler configuration supports flexible array members"
+    else
+      msg "no support for flexible array members (non zero exit code)"
+      flexible=no
+    fi
+  else
+    msg "no support for flexible array members (compilation failed)"
+    flexible=no
+  fi
+else
+  msg "not using flexible array members (since '--no-flexible' specified)"
+fi
+
+[ $flexible = no ] && CXXFLAGS="$CXXFLAGS -DNFLEXIBLE"
 
 #--------------------------------------------------------------------------#
 
