@@ -992,7 +992,7 @@ void Internal::analyze () {
            antecedent_size);
       reason = on_the_fly_strengthen (reason, uip);
       assert (conflict_size >= 2);
-      if (opts.bump)
+      if (opts.bump && opts.otfsbump)
         bump_variables ();
 
       if (resolved == 1 && resolvent_size < conflict_size) {
