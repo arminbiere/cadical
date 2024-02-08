@@ -1005,7 +1005,6 @@ void Internal::analyze () {
         assert (conflict_size == reason->size);
         ++stats.otfs.subsumed;
         ++stats.subsumed;
-        ++stats.conflicts;
       }
 
       LOG (reason, "changing conflict to");
