@@ -138,13 +138,14 @@ void Internal::minimize_clause () {
 // mini_chain is in correct order so we have to add it to minimize_chain
 // and then reverse when we put it on lrat_chain
 //
-// We have to use the non-recursive as we cannot limit the depth like the minimize version. Unlike
-// the minimize version, we have to keep literals on the stack in order to push its reason later.
+// We have to use the non-recursive as we cannot limit the depth like the
+// minimize version. Unlike the minimize version, we have to keep literals
+// on the stack in order to push its reason later.
 void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
-  assert (stack.empty());
+  assert (stack.empty ());
   stack.push_back (vidx (lit));
 
-  while (!stack.empty()) {
+  while (!stack.empty ()) {
     const int idx = stack.back ();
     assert (idx);
     stack.pop_back ();
@@ -156,7 +157,7 @@ void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
     assert (idx);
     Flags &f = flags (idx);
     Var &v = var (idx);
-    if (f.keep || f.added || f.poison){
+    if (f.keep || f.added || f.poison) {
       continue;
     }
     if (!v.level) {
@@ -176,7 +177,7 @@ void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
     const const_literal_iterator end = v.reason->end ();
     const_literal_iterator i;
     LOG (v.reason, "LRAT chain for lit %d at depth %zd by going over", lit,
-         stack.size());
+         stack.size ());
     stack.push_back (-idx);
     for (i = v.reason->begin (); i != end; i++) {
       const int other = *i;
@@ -185,7 +186,7 @@ void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
       stack.push_back (vidx (other));
     }
   }
-  assert (stack.empty());
+  assert (stack.empty ());
 }
 
 // Sort the literals in reverse assignment order (thus trail order) to

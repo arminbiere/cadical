@@ -450,8 +450,8 @@ int App::main (int argc, char **argv) {
              !strcmp (argv[i], "--witness=0"))
       witness = false;
     else if (!strcmp (argv[i], "--status") ||
-               !strcmp (argv[i], "--status=true") ||
-               !strcmp (argv[i], "--status=1"))
+             !strcmp (argv[i], "--status=true") ||
+             !strcmp (argv[i], "--status=1"))
       status = true;
     else if (!strcmp (argv[i], "-n") || !strcmp (argv[i], "--no-status") ||
              !strcmp (argv[i], "--status=false") ||

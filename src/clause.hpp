@@ -23,7 +23,15 @@ typedef const int *const_literal_iterator;
 // is very costly.
 
 struct Clause {
-  uint64_t id;          // Used to create LRAT-style proofs
+  union {
+    uint64_t id;  // Used to create LRAT-style proofs
+    Clause *copy; // Only valid if 'moved', then that's where to.
+    //
+    // The 'copy' field is only valid for 'moved' clauses in the moving
+    // garbage collector 'copy_non_garbage_clauses' for keeping clauses
+    // compactly in a contiguous memory arena.  Otherwise, so almost all of
+    // the time, 'id' is valid.  See 'collect.cpp' for details.
+  };
   bool conditioned : 1; // Tried for globally blocked clause elimination.
   bool covered : 1;  // Already considered for covered clause elimination.
   bool enqueued : 1; // Enqueued on backward queue.
@@ -81,17 +89,22 @@ struct Clause {
   int size; // Actual size of 'literals' (at least 2).
   int pos;  // Position of last watch replacement [Gent'13].
 
-  union {
+  // This 'flexible array member' is of variadic 'size' (and actually
+  // shrunken if strengthened) and keeps the literals close to the header of
+  // the clause to avoid another pointer dereference, which would be costly.
 
-    int literals[2]; // Of variadic 'size' (shrunken if strengthened).
+  // In earlier versions we used 'literals[2]' to fake it (in order to
+  // support older Microsoft compilers even though this feature is in C99)
+  // and at the same time being able to overlay the first two literals with
+  // the 'copy' field above, as having a flexible array member inside a
+  // union is not allowed.  Now compilers start to figure out that those
+  // literals can be accessed with indices larger than 1 and produce
+  // warnings.  After having the 'id' field mandatory we now overlay that
+  // one with the copy field.
 
-    Clause *copy; // Only valid if 'moved', then that's where to.
-    //
-    // The 'copy' field is only valid for 'moved' clauses in the moving
-    // garbage collector 'copy_non_garbage_clauses' for keeping clauses
-    // compactly in a contiguous memory arena.  Otherwise, most of
-    // the time, 'literals' is valid.  See 'collect.cpp' for details.
-  };
+  int literals[];
+
+  // Supports simple range based for loops over clauses.
 
   literal_iterator begin () { return literals; }
   literal_iterator end () { return literals + size; }
@@ -108,7 +121,7 @@ struct Clause {
     // all the time (even if allocated outside of the arena).
     //
     assert (size > 1);
-    return align ((size - 2) * sizeof (int) + sizeof (Clause), 8);
+    return align (size * sizeof (int) + sizeof (Clause), 8);
   }
 
   size_t bytes () const { return bytes (size); }
