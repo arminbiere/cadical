@@ -992,8 +992,9 @@ void Internal::analyze () {
            antecedent_size);
       reason = on_the_fly_strengthen (reason, uip);
       assert (conflict_size >= 2);
-      if (opts.bump && opts.otfsbump)
+      if (opts.bump)
         bump_variables ();
+      stats.conflicts++;
 
       if (resolved == 1 && resolvent_size < conflict_size) {
         // in this case both clauses are part of the CNF, so one subsumes
