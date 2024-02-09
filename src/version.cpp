@@ -24,7 +24,7 @@
 
 #ifdef NBUILD
 #ifndef VERSION
-#define VERSION "2.0.0-explore.4"
+#define VERSION "2.0.0-explore.5"
 #endif // VERSION
 #endif // NBUILD
 

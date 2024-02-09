@@ -335,7 +335,7 @@ inline bool Internal::bump_also_reason_literal (int lit) {
 inline void Internal::bump_also_reason_literals (int lit, int depth_limit,
                                                  size_t analyzed_limit) {
   assert (lit);
-  assert (limit > 0);
+  assert (depth_limit > 0);
   const Var &v = var (lit);
   assert (val (lit));
   if (!v.level)
@@ -376,7 +376,10 @@ inline void Internal::bump_also_all_reason_literals () {
   size_t saved_analyzed = analyzed.size ();
   size_t analyzed_limit = saved_analyzed * opts.bumpreasonlimit;
   for (const auto &lit : clause)
-    bump_also_reason_literals (-lit, depth_limit, analyzed_limit);
+    if (analyzed.size () <= analyzed_limit)
+      bump_also_reason_literals (-lit, depth_limit, analyzed_limit);
+    else
+      break;
   if (analyzed.size () > analyzed_limit) {
     LOG ("not bumping reason side literals as limit exhausted");
     for (size_t i = saved_analyzed; i != analyzed.size (); i++) {
