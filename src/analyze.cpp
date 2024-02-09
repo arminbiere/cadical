@@ -170,14 +170,11 @@ struct analyze_bumped_smaller {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::bump_variables (bool bumpreason) {
+void Internal::bump_variables () {
 
   assert (opts.bump);
 
   START (bump);
-
-  if (bumpreason && opts.bumpreason)
-    bump_also_all_reason_literals ();
 
   if (!use_scores ()) {
 
@@ -993,7 +990,7 @@ void Internal::analyze () {
       reason = on_the_fly_strengthen (reason, uip);
       assert (conflict_size >= 2);
       if (opts.bump)
-        bump_variables (false);
+        bump_variables ();
 
       if (resolved == 1 && resolvent_size < conflict_size) {
         // in this case both clauses are part of the CNF, so one subsumes
@@ -1096,8 +1093,11 @@ void Internal::analyze () {
 
     // Update decision heuristics.
     //
-    if (opts.bump)
-      bump_variables (true);
+    if (opts.bump) {
+      if (opts.bumpreason)
+        bump_also_all_reason_literals ();
+      bump_variables ();
+    }
 
     if (external->learner)
       external->export_learned_large_clause (clause);

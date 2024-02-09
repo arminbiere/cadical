@@ -627,7 +627,7 @@ struct Internal {
   void learn_external_propagated_unit_clause (int lit);
 
   void bump_variable (int lit);
-  void bump_variables (bool bumpreason);
+  void bump_variables ();
   int recompute_glue (Clause *);
   void bump_clause (Clause *);
   void clear_unit_analyzed_literals ();
