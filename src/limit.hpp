@@ -43,6 +43,12 @@ struct Limit {
   Limit ();
 };
 
+struct Delay {
+  struct {
+    int64_t interval = 0, limit = 0;
+  } bumpreasons;
+};
+
 struct Last {
   struct {
     int64_t propagations;

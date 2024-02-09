@@ -251,6 +251,7 @@ struct Internal {
   vector<Level> control;    // 'level + 1 == control.size ()'
   vector<Clause *> clauses; // ordered collection of all clauses
   Averages averages;        // glue, size, jump moving averages
+  Delay delay[2];	    // Delay certain functions
   Limit lim;                // limits for various phases
   Last last;                // statistics at last occurrence
   Inc inc;                  // increments on limits
@@ -636,7 +637,8 @@ struct Internal {
   void clear_analyzed_levels ();
   void clear_minimized_literals ();
   bool bump_also_reason_literal (int lit);
-  void bump_also_reason_literals (int lit, int limit);
+  void bump_also_reason_literals (int lit, int depth_limit,
+                                  size_t size_limit);
   void bump_also_all_reason_literals ();
   void analyze_literal (int lit, int &open, int &resolvent_size,
                         int &antecedent_size);
