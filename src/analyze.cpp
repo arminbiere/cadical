@@ -357,7 +357,7 @@ inline void Internal::bump_also_reason_literals (int lit, int depth_limit,
 }
 
 inline void Internal::bump_also_all_reason_literals () {
-  assert (opts.bumpreason);
+  assert (opts.bump);
   if (!opts.bumpreason)
     return;
   if (averages.current.decisions > opts.bumpreasonrate) {
