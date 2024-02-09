@@ -235,6 +235,7 @@ bool Internal::propagate () {
   // delay until propagation ran to completion.
   //
   int64_t before = propagated;
+  int64_t ticks = 0;
 
   while (!conflict && propagated != trail.size ()) {
 
@@ -245,6 +246,7 @@ bool Internal::propagate () {
     const const_watch_iterator eow = ws.end ();
     watch_iterator j = ws.begin ();
     const_watch_iterator i = j;
+    ticks += 1 + cache_lines (ws.size () * sizeof *i);
 
     while (i != eow) {
 
@@ -301,6 +303,8 @@ bool Internal::propagate () {
         // and thus this first memory access below is the real hot-spot of
         // the solver.  Note, that this check is positive very rarely and
         // thus branch prediction should be almost perfect here.
+
+	ticks++;
 
         if (w.clause->garbage) {
           j--;
@@ -459,6 +463,7 @@ bool Internal::propagate () {
     // Avoid updating stats eagerly in the hot-spot of the solver.
     //
     stats.propagations.search += propagated - before;
+    stats.ticks.search += ticks;
 
     if (!conflict)
       no_conflict_until = propagated;
