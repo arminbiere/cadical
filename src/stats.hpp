@@ -27,6 +27,10 @@ struct Stats {
   } propagations;
 
   struct {
+    int64_t search;
+  } ticks;
+
+  struct {
     int64_t ext_cb;     // number of times any external callback was called
     int64_t eprop_call; // number of times external_propagate was called
     int64_t eprop_prop; // number of times external propagate propagated

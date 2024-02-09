@@ -338,6 +338,8 @@ void Stats::print (Internal *internal) {
   PRT ("  walkprops:     %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.walk,
        percent (stats.propagations.walk, propagations));
+  PRT ("searchticks:     %15" PRId64 "   %10.2f    propagation",
+       stats.ticks.search, relative (stats.ticks.search, stats.propagations.search));
   if (all || stats.reactivated) {
     PRT ("reactivated:     %15" PRId64 "   %10.2f %%  of all variables",
          stats.reactivated, percent (stats.reactivated, stats.vars));

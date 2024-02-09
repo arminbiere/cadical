@@ -251,7 +251,7 @@ struct Internal {
   vector<Level> control;    // 'level + 1 == control.size ()'
   vector<Clause *> clauses; // ordered collection of all clauses
   Averages averages;        // glue, size, jump moving averages
-  Delay delay[2];	    // Delay certain functions
+  Delay delay[2];           // Delay certain functions
   Limit lim;                // limits for various phases
   Last last;                // statistics at last occurrence
   Inc inc;                  // increments on limits
@@ -606,6 +606,11 @@ struct Internal {
   void search_assign_external (int lit);
   void search_assume_decision (int decision);
   void assign_unit (int lit);
+  int64_t cache_lines (size_t bytes) { return (bytes + 127) / 128; }
+  int64_t cache_lines (const void *begin, const void *end) {
+    assert (begin <= end);
+    return cache_lines ((const char *) end - (const char *) begin);
+  }
   bool propagate ();
 
   void propergate (); // Repropagate without blocking literals.
