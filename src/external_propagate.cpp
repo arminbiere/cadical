@@ -17,7 +17,8 @@ void Internal::add_observed_var (int ilit) {
     LOG ("variable %d is observed %u times", idx, ref);
   } else
     LOG ("variable %d remains observed forever", idx);
-
+  // TODO: instead of actually backtracking, it would be enough to notify
+  // backtrack and re-play again every levels' notification to the propagator
   if (val (ilit) && level && !fixed (ilit)) {
     // The variable is already assigned, but we can not send a notification
     // about it because it happened on an earlier decision level.
@@ -257,6 +258,7 @@ bool Internal::external_propagate () {
 //
 
 bool Internal::ask_external_clause () {
+  ext_clause_forgettable = false;
   bool res = external->propagator->cb_has_external_clause (ext_clause_forgettable);
 
   return res;
