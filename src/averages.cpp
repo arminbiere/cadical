@@ -13,6 +13,8 @@ void Internal::init_averages () {
   INIT_EMA (averages.current.glue.fast, opts.emagluefast);
   INIT_EMA (averages.current.glue.slow, opts.emaglueslow);
 
+  INIT_EMA (averages.current.decisions, opts.emadecisions);
+
   INIT_EMA (averages.current.trail.fast, opts.ematrailfast);
   INIT_EMA (averages.current.trail.slow, opts.ematrailslow);
 

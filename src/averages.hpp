@@ -21,6 +21,8 @@ struct Averages {
       EMA slow; // average slow (large window) moving trail level
     } trail;
 
+    EMA decisions;
+
     EMA size;  // average learned clause size
     EMA jump;  // average (potential non-chronological) back-jump level
     EMA level; // average back track level after conflict

@@ -354,6 +354,7 @@ inline void Internal::bump_also_reason_literals (int lit, int limit) {
 }
 
 inline void Internal::bump_also_all_reason_literals () {
+  stats.bumpedreasons++;
   assert (opts.bumpreason);
   assert (opts.bumpreasondepth > 0);
   LOG ("bumping reasons up to depth %d", opts.bumpreasondepth);
@@ -847,6 +848,20 @@ void Internal::otfs_strengthen_clause (Clause *c, int lit, int new_size,
 
 /*------------------------------------------------------------------------*/
 
+// If the average number of decisions per conflict (analysis actually so not
+// taking OTFS conflicts into account) is high we do not bump reasons. This
+// is the function which updates the exponential moving decision rate
+// average.
+
+void Internal::update_decision_rate_average () {
+  int64_t current = stats.decisions;
+  int64_t decisions = current - saved_decisions;
+  UPDATE_AVERAGE (averages.current.decisions, decisions);
+  saved_decisions = current;
+}
+
+/*------------------------------------------------------------------------*/
+
 // This is the main conflict analysis routine.  It assumes that a conflict
 // was found.  Then we derive the 1st UIP clause, optionally minimize it,
 // add it as learned clause, and then uses the clause for conflict directed
@@ -868,6 +883,7 @@ void Internal::analyze () {
   //
   UPDATE_AVERAGE (averages.current.trail.fast, num_assigned);
   UPDATE_AVERAGE (averages.current.trail.slow, num_assigned);
+  update_decision_rate_average ();
 
   /*----------------------------------------------------------------------*/
 
@@ -1023,6 +1039,14 @@ void Internal::analyze () {
         return;
       }
 
+      int new_conflict_level = 0;
+      for (auto lit : *conflict) {
+        const int tmp = var (lit).level;
+        if (tmp > new_conflict_level)
+          new_conflict_level = tmp;
+      }
+      COVER (new_conflict_level < level);
+
       stats.conflicts++;
 
       clear_analyzed_literals ();
@@ -1091,7 +1115,8 @@ void Internal::analyze () {
     // Update decision heuristics.
     //
     if (opts.bump) {
-      if (opts.bumpreason)
+      if (opts.bumpreason &&
+          averages.current.decisions <= opts.bumpreasonrate)
         bump_also_all_reason_literals ();
       bump_variables ();
     }
