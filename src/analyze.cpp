@@ -969,9 +969,8 @@ void Internal::analyze () {
   int uip = 0;             // The first UIP literal.
   int resolvent_size = 0;  // without the uip
   int antecedent_size = 1; // with the uip and without unit literals
-  int conflict_size =
-      0; // size of the conflict without the uip and without unit literals
-  int resolved = 0; // number of resolution (0 = clause in CNF)
+  int conflict_size = 0;   // without the uip and without unit literals
+  int resolved = 0;        // number of resolution (0 = clause in CNF)
   const bool otfs = opts.otfs;
 
   for (;;) {
@@ -993,8 +992,7 @@ void Internal::analyze () {
         bump_variables ();
 
       if (resolved == 1 && resolvent_size < conflict_size) {
-        // in this case both clauses are part of the CNF, so one subsumes
-        // the other
+        // here both clauses are part of the CNF, so one subsumes the other
         otfs_subsume_clause (reason, conflict);
         LOG (reason, "changing conflict to");
         --conflict_size;
@@ -1015,9 +1013,9 @@ void Internal::analyze () {
         LOG ("forcing %d", forced);
         search_assign_driving (forced, conflict);
 
-        conflict = 0;
         // Clean up.
         //
+        conflict = 0;
         clear_analyzed_literals ();
         clear_analyzed_levels ();
         clause.clear ();
@@ -1027,13 +1025,12 @@ void Internal::analyze () {
 
       stats.conflicts++;
 
-      resolved = 0;
       clear_analyzed_literals ();
-      // clear_analyzed_levels (); not needed because marking the exact same
-      // again
+      clear_analyzed_levels ();
       clause.clear ();
       resolvent_size = 0;
       antecedent_size = 1;
+      resolved = 0;
       open = 0;
       analyze_reason (0, reason, open, resolvent_size, antecedent_size);
       conflict_size = antecedent_size - 1;
