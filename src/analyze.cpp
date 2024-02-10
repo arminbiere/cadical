@@ -372,7 +372,11 @@ inline void Internal::bump_also_all_reason_literals () {
     return;
   }
   assert (opts.bumpreasondepth > 0);
+#if 0
   const int depth_limit = opts.bumpreasondepth + stable;
+#else
+  const int depth_limit = opts.bumpreasondepth;
+#endif
   size_t saved_analyzed = analyzed.size ();
   size_t analyzed_limit = saved_analyzed * opts.bumpreasonlimit;
   for (const auto &lit : clause)
