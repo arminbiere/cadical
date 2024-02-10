@@ -152,7 +152,14 @@ bool Internal::external_propagate () {
 #endif
       if (!tmp) {
         // variable is not assigned, it can be propagated
-        search_assign_external (ilit);
+        if (!level) {
+          Clause *res = learn_external_reason_clause (ilit, elit);
+  #ifndef LOGGING
+          LOG (res, "reason clause of external propagation of %d:", elit);
+  #endif
+          (void) res;
+        } else
+          search_assign_external (ilit);
         stats.ext_prop.eprop_prop++;
 
         if (unsat || conflict)

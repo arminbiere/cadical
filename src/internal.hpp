@@ -624,7 +624,6 @@ struct Internal {
   //
   void learn_empty_clause ();
   void learn_unit_clause (int lit);
-  void learn_external_propagated_unit_clause (int lit);
 
   void bump_variable (int lit);
   void bump_variables ();

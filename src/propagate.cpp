@@ -143,6 +143,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   num_assigned++;
   if (!lit_level && !from_external)
     learn_unit_clause (lit); // increases 'stats.fixed'
+  assert (lit_level || !from_external);
   const signed char tmp = sign (lit);
   set_val (idx, tmp);
   assert (val (lit) > 0);  // Just a bit paranoid but useful.
