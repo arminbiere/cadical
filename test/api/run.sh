@@ -47,9 +47,13 @@ makefile=$CADICALBUILD/makefile
 
 CXX=`grep '^CXX=' "$makefile"|sed -e 's,CXX=,,'`
 CXXFLAGS=`grep '^CXXFLAGS=' "$makefile"|sed -e 's,CXXFLAGS=,,'`
+CPPFLAGS=`grep '^CPPFLAGS=' "$makefile"|sed -e 's,CPPFLAGS=,,'`
+LDFLAGS=`grep '^LDFLAGS=' "$makefile"|sed -e 's,LDFLAGS=,,'`
 
 msg "using CXX=$CXX"
 msg "using CXXFLAGS=$CXXFLAGS"
+msg "using CPPFLAGS=$CPPFLAGS"
+msg "using LDFLAGS=$LDFLAGS"
 
 tests=../test/api
 
@@ -73,12 +77,12 @@ run () {
   then
     src=$tests/$1.c
     language=" -x c"
-    COMPILE="$CXX `echo $CXXFLAGS|sed -e 's,-std=c++11,-std=c11,'`"
+    COMPILE="$CXX `echo $CXXFLAGS|sed -e 's,-std=c++11,-std=c11,'` $CPPFLAGS"
   elif [ -f $tests/$1.cpp ]
   then
     src=$tests/$1.cpp
     language=""
-    COMPILE="$CXX $CXXFLAGS"
+    COMPILE="$CXX $CXXFLAGS $CPPFLAGS"
   else
     die "can not find '$tests.c' nor '$tests.cpp'"
   fi
@@ -86,7 +90,7 @@ run () {
   rm -f $name.log $name.o $name
   status=0
   cmd $COMPILE$language -o $name.o -c $src
-  cmd $COMPILE -o $name $name.o -L$CADICALBUILD -lcadical
+  cmd $COMPILE -o $name $name.o $LDFLAGS -L$CADICALBUILD -lcadical
   cmd $name
   if test $status = 0
   then

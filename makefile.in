@@ -9,6 +9,8 @@
 
 CXX=@CXX@
 CXXFLAGS=@CXXFLAGS@
+CPPFLAGS=@CPPFLAGS@
+LDFLAGS=@LDFLAGS@
 
 LIBS=@LIBS@
 
@@ -22,7 +24,7 @@ SUB=$(subst ../src/,,$(SRC))
 LIB=$(filter-out $(APP),$(SUB))
 OBJ=$(LIB:.cpp=.o)
 DIR=../$(shell pwd|sed -e 's,.*/,,')
-COMPILE=$(CXX) $(CXXFLAGS) -I$(DIR)
+COMPILE=$(CXX) $(CXXFLAGS) $(CPPFLAGS) -I$(DIR)
 
 #--------------------------------------------------------------------------#
 
@@ -41,10 +43,10 @@ all: libcadical.a cadical mobical
 # tester 'mobical') and the library are the main build targets.
 
 cadical: cadical.o libcadical.a makefile
-	$(COMPILE) -o $@ $< -L. -lcadical $(LIBS)
+	$(COMPILE) -o $@ $< $(LDFLAGS) -L. -lcadical $(LIBS)
 
 mobical: mobical.o libcadical.a makefile $(LIBS)
-	$(COMPILE) -o $@ $< -L. -lcadical
+	$(COMPILE) -o $@ $< $(LDFLAGS) -L. -lcadical
 
 libcadical.a: $(OBJ) makefile
 	ar rc $@ $(OBJ)
