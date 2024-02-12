@@ -372,11 +372,7 @@ inline void Internal::bump_also_all_reason_literals () {
     return;
   }
   assert (opts.bumpreasondepth > 0);
-#if 0
   const int depth_limit = opts.bumpreasondepth + stable;
-#else
-  const int depth_limit = opts.bumpreasondepth;
-#endif
   size_t saved_analyzed = analyzed.size ();
   size_t analyzed_limit = saved_analyzed * opts.bumpreasonlimit;
   for (const auto &lit : clause)
@@ -393,11 +389,11 @@ inline void Internal::bump_also_all_reason_literals () {
       f.seen = false;
     }
     analyzed.resize (saved_analyzed);
-    delay[stable].bumpreasons.interval /= 2;
+    delay[stable].bumpreasons.interval++;
   } else {
     LOG ("bumping reasons up to depth %d", opts.bumpreasondepth);
     stats.bumpedreasons++;
-    delay[stable].bumpreasons.interval++;
+    delay[stable].bumpreasons.interval /= 2;
   }
   LOG ("delay internal %" PRId64, delay[stable].bumpreasons.interval);
   delay[stable].bumpreasons.limit = delay[stable].bumpreasons.interval;
