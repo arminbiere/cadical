@@ -605,7 +605,9 @@ struct Internal {
   void search_assume_decision (int decision);
   void assign_unit (int lit);
   int64_t cache_lines (size_t bytes) { return (bytes + 127) / 128; }
-  int64_t cache_lines (size_t n, size_t bytes) { cache_lines (n * bytes); }
+  int64_t cache_lines (size_t n, size_t bytes) {
+    return cache_lines (n * bytes);
+  }
 #if 0
   int64_t cache_lines (const void *begin, const void *end) {
     assert (begin <= end);
