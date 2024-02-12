@@ -24,7 +24,7 @@ bool Internal::stabilizing () {
     assert (!stable);
     if (stats.conflicts <= lim.stabilize)
       return false;
-  } else if (stats.ticks.search <= lim.stabilize)
+  } else if (stats.ticks.search[stable] <= lim.stabilize)
     return stable;
   report (stable ? ']' : '}');
   if (stable)
@@ -33,27 +33,36 @@ bool Internal::stabilizing () {
     STOP (unstable);
   const int64_t delta_conflicts =
       stats.conflicts - last.stabilize.conflicts;
-  const int64_t delta_ticks = stats.ticks.search - last.stabilize.ticks;
+  const int64_t delta_ticks =
+      stats.ticks.search[stable] - last.stabilize.ticks;
+  const char *current_mode = stable ? "stable" : "unstable";
+  const char *next_mode = stable ? "unstable" : "stable";
   PHASE ("stabilizing", stats.stabphases,
-         "reached stabilization limit %" PRId64 " after %" PRId64
+         "reached %s stabilization limit %" PRId64 " after %" PRId64
          " conflicts and %" PRId64 " ticks at %" PRId64
          " conflicts and %" PRId64 " ticks",
-         lim.stabilize, delta_conflicts, delta_ticks, stats.conflicts,
-         stats.ticks.search);
+         current_mode, lim.stabilize, delta_conflicts, delta_ticks,
+         stats.conflicts, stats.ticks.search[stable]);
   if (!inc.stabilize)
     inc.stabilize = delta_ticks;
-  else if (stable)
-    inc.stabilize *= opts.stabilizefactor * 1e-2;
-  lim.stabilize = stats.ticks.search + inc.stabilize;
-  if (lim.stabilize <= stats.ticks.search)
-    lim.stabilize = stats.ticks.search + 1;
-  stable = !stable;
+
+  stable = !stable; // Switch!!!!!
+
+  int64_t next_delta_ticks = inc.stabilize;
+  int64_t stabphases = stats.stabphases + 1;
+  next_delta_ticks *= stabphases * stabphases;
+
+  lim.stabilize = stats.ticks.search[stable] + next_delta_ticks;
+  if (lim.stabilize <= stats.ticks.search[stable])
+    lim.stabilize = stats.ticks.search[stable] + 1;
+
   if (stable)
     stats.stabphases++;
+
   swap_averages ();
   PHASE ("stabilizing", stats.stabphases,
-         "new stabilization limit %" PRId64 " at ticks interval %" PRId64,
-         lim.stabilize, inc.stabilize);
+         "next %s stabilization limit %" PRId64 " at ticks interval %" PRId64,
+         next_mode, lim.stabilize, next_delta_ticks);
   report (stable ? '[' : '{');
   if (stable)
     START (stable);
@@ -102,16 +111,14 @@ int Internal::reuse_trail () {
   assert (1 <= decision);
   int res = trivial_decisions;
   if (use_scores ()) {
-    while (
-        res < level &&
-        score_smaller (this) (decision, abs (control[res + 1].decision))) {
+    while (res < level && score_smaller (this) (
+                              decision, abs (control[res + 1].decision))) {
       assert (control[res + 1].decision);
       res++;
     }
   } else {
     int64_t limit = bumped (decision);
-    while (res < level &&
-           bumped (control[res + 1].decision) > limit) {
+    while (res < level && bumped (control[res + 1].decision) > limit) {
       assert (control[res + 1].decision);
       res++;
     }

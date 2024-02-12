@@ -27,7 +27,7 @@ struct Stats {
   } propagations;
 
   struct {
-    int64_t search;
+    int64_t search[2];
   } ticks;
 
   struct {

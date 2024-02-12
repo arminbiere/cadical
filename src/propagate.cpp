@@ -468,7 +468,7 @@ bool Internal::propagate () {
     // Avoid updating stats eagerly in the hot-spot of the solver.
     //
     stats.propagations.search += propagated - before;
-    stats.ticks.search += ticks;
+    stats.ticks.search[stable] += ticks;
 
     if (!conflict)
       no_conflict_until = propagated;
