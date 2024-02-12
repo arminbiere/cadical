@@ -58,10 +58,10 @@ bool Internal::minimize_literal (int lit, int depth) {
 struct minimize_trail_positive_rank {
   Internal *internal;
   minimize_trail_positive_rank (Internal *s) : internal (s) {}
-  typedef int Type;
+  typedef unsigned Type;
   Type operator() (const int &a) const {
     assert (internal->val (a));
-    return internal->var (a).trail;
+    return (unsigned) internal->var (a).trail;
   }
 };
 
