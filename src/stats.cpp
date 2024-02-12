@@ -73,9 +73,12 @@ void Stats::print (Internal *internal) {
     PRT ("  pureclauses:   %15" PRId64 "   %10.2f    per pure literal",
          stats.blockpured, relative (stats.blockpured, stats.all.pure));
   }
-  if (all || stats.chrono)
+  if (all || stats.chrono) {
     PRT ("chronological:   %15" PRId64 "   %10.2f %%  of conflicts",
          stats.chrono, percent (stats.chrono, stats.conflicts));
+    PRT ("  levels:        %15" PRId64 "   %10.2f    per chronological",
+         stats.chronolevels, relative (stats.chronolevels, stats.chrono));
+  }
   if (all || (stats.elevated && stats.chrono))
     PRT ("  elevated:      %15" PRId64 "   %10.2f    per chronological",
          stats.elevated, relative (stats.elevated, stats.chrono));

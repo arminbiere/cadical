@@ -598,8 +598,9 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
     res = jump;
     LOG ("chronological backtracking disabled using jump level %d", res);
   } else if (opts.chronoalways) {
-    stats.chrono++;
     res = level - 1;
+    stats.chrono += res != jump;
+    stats.chronolevels += res - jump;
     LOG ("forced chronological backtracking to level %d", res);
   } else if (jump >= level - 1) {
     res = jump;
@@ -611,6 +612,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
   } else if (level - jump > opts.chronolevelim) {
     stats.chrono++;
     res = level - 1;
+    stats.chronolevels += res - jump;
     LOG ("back-jumping over %d > %d levels prohibited"
          "thus backtracking chronologically to level %d",
          level - jump, opts.chronolevelim, res);
@@ -694,6 +696,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
       LOG ("default non-chronological back-jumping to level %d", res);
     else {
       stats.chrono++;
+      stats.chronolevels += res - jump;
       LOG ("chronological backtracking to level %d to reuse trail", res);
     }
 
