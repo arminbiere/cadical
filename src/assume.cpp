@@ -521,7 +521,7 @@ struct sort_assumptions_positive_rank {
   sort_assumptions_positive_rank (Internal *s)
       : internal (s), max_level (s->level + 1) {}
 
-  typedef int Type;
+  typedef uint64_t Type;
   // set assumptions first, then sorted by position on the trail
   // unset literals are sorted by literal value
   Type operator() (const int &a) const {
