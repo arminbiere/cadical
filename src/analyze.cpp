@@ -345,6 +345,7 @@ inline void Internal::bump_also_reason_literals (int lit, int limit) {
   Clause *reason = v.reason;
   if (!reason || reason == external_reason)
     return;
+  stats.ticks.search++;
   for (const auto &other : *reason) {
     if (other == lit)
       continue;

@@ -233,6 +233,9 @@ unsigned inline Internal::shrink_along_reason (int uip, int blevel,
   assert (v.level == blevel);
   assert (v.reason);
 
+  if (opts.minimizeticks)
+    stats.ticks.search++;
+
   if (resolve_large_clauses || v.reason->size == 2) {
     const Clause &c = *v.reason;
     LOG (v.reason, "resolving with reason");
