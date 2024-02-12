@@ -592,13 +592,13 @@ public:
   int cb_propagate () {
     MLOGC ("cb_propagate starts" << std::endl);
     assert (compare_trails ());
-    if (observed_trail.size () < 2) {
-      MLOG ("cb_propagate returns 0"
-            << " (less than two observed variables are assigned)."
-            << std::endl);
+    // if (observed_trail.size () < 2) {
+    //   MLOG ("cb_propagate returns 0"
+    //         << " (less than two observed variables are assigned)."
+    //         << std::endl);
 
-      return 0;
-    }
+    //   return 0;
+    // }
 
     size_t lit_sum = 0;  // sum of variables of satisfied observed literals
     int lowest_lit = 0;  // the lowest satisfied observed literal

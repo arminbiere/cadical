@@ -176,6 +176,9 @@ void Internal::bump_variables () {
 
   START (bump);
 
+  if (opts.bumpreason)
+    bump_also_all_reason_literals ();
+
   if (!use_scores ()) {
 
     // Variables are bumped in the order they are in the current decision
@@ -332,10 +335,9 @@ inline bool Internal::bump_also_reason_literal (int lit) {
 
 // We experimented with deeper reason bumping without much success though.
 
-inline void Internal::bump_also_reason_literals (int lit, int depth_limit,
-                                                 size_t analyzed_limit) {
+inline void Internal::bump_also_reason_literals (int lit, int limit) {
   assert (lit);
-  assert (depth_limit > 0);
+  assert (limit > 0);
   const Var &v = var (lit);
   assert (val (lit));
   if (!v.level)
@@ -348,55 +350,18 @@ inline void Internal::bump_also_reason_literals (int lit, int depth_limit,
       continue;
     if (!bump_also_reason_literal (other))
       continue;
-    if (depth_limit < 2)
+    if (limit < 2)
       continue;
-    bump_also_reason_literals (-other, depth_limit - 1, analyzed_limit);
-    if (analyzed.size () > analyzed_limit)
-      break;
+    bump_also_reason_literals (-other, limit - 1);
   }
 }
 
 inline void Internal::bump_also_all_reason_literals () {
-  assert (opts.bump);
-  if (!opts.bumpreason)
-    return;
-  if (averages.current.decisions > opts.bumpreasonrate) {
-    LOG ("decisions per conflict rate %g > limit %d",
-         (double) averages.current.decisions, opts.bumpreasonrate);
-    return;
-  }
-  if (delay[stable].bumpreasons.limit) {
-    LOG ("delaying reason bumping %" PRId64 " more times",
-         delay[stable].bumpreasons.limit);
-    delay[stable].bumpreasons.limit--;
-    return;
-  }
+  assert (opts.bumpreason);
   assert (opts.bumpreasondepth > 0);
-  const int depth_limit = opts.bumpreasondepth + stable;
-  size_t saved_analyzed = analyzed.size ();
-  size_t analyzed_limit = saved_analyzed * opts.bumpreasonlimit;
+  LOG ("bumping reasons up to depth %d", opts.bumpreasondepth);
   for (const auto &lit : clause)
-    if (analyzed.size () <= analyzed_limit)
-      bump_also_reason_literals (-lit, depth_limit, analyzed_limit);
-    else
-      break;
-  if (analyzed.size () > analyzed_limit) {
-    LOG ("not bumping reason side literals as limit exhausted");
-    for (size_t i = saved_analyzed; i != analyzed.size (); i++) {
-      const int lit = analyzed[i];
-      Flags &f = flags (lit);
-      assert (f.seen);
-      f.seen = false;
-    }
-    analyzed.resize (saved_analyzed);
-    delay[stable].bumpreasons.interval++;
-  } else {
-    LOG ("bumping reasons up to depth %d", opts.bumpreasondepth);
-    stats.bumpedreasons++;
-    delay[stable].bumpreasons.interval /= 2;
-  }
-  LOG ("delay internal %" PRId64, delay[stable].bumpreasons.interval);
-  delay[stable].bumpreasons.limit = delay[stable].bumpreasons.interval;
+    bump_also_reason_literals (-lit, opts.bumpreasondepth + stable);
 }
 
 /*------------------------------------------------------------------------*/
@@ -885,20 +850,6 @@ void Internal::otfs_strengthen_clause (Clause *c, int lit, int new_size,
 
 /*------------------------------------------------------------------------*/
 
-// If the average number of decisions per conflict (analysis actually so not
-// taking OTFS conflicts into account) is high we do not bump reasons. This
-// is the function which updates the exponential moving decision rate
-// average.
-
-void Internal::update_decision_rate_average () {
-  int64_t current = stats.decisions;
-  int64_t decisions = current - saved_decisions;
-  UPDATE_AVERAGE (averages.current.decisions, decisions);
-  saved_decisions = current;
-}
-
-/*------------------------------------------------------------------------*/
-
 // This is the main conflict analysis routine.  It assumes that a conflict
 // was found.  Then we derive the 1st UIP clause, optionally minimize it,
 // add it as learned clause, and then uses the clause for conflict directed
@@ -920,7 +871,6 @@ void Internal::analyze () {
   //
   UPDATE_AVERAGE (averages.current.trail.fast, num_assigned);
   UPDATE_AVERAGE (averages.current.trail.slow, num_assigned);
-  update_decision_rate_average ();
 
   /*----------------------------------------------------------------------*/
 
@@ -1076,14 +1026,6 @@ void Internal::analyze () {
         return;
       }
 
-      int new_conflict_level = 0;
-      for (auto lit : *conflict) {
-        const int tmp = var (lit).level;
-        if (tmp > new_conflict_level)
-          new_conflict_level = tmp;
-      }
-      COVER (new_conflict_level < level);
-
       stats.conflicts++;
 
       clear_analyzed_literals ();
@@ -1151,10 +1093,8 @@ void Internal::analyze () {
 
     // Update decision heuristics.
     //
-    if (opts.bump) {
-      bump_also_all_reason_literals ();
+    if (opts.bump)
       bump_variables ();
-    }
 
     if (external->learner)
       external->export_learned_large_clause (clause);

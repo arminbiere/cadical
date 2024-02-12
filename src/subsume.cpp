@@ -187,14 +187,7 @@ void Internal::strengthen_clause (Clause *c, int lit) {
     mark_removed (lit);
   auto new_end = remove (c->begin (), c->end (), lit);
   assert (new_end + 1 == c->end ()), (void) new_end;
-  const int old_glue = c->glue;
   (void) shrink_clause (c, c->size - 1);
-  if (c->glue == old_glue) { // no promotion happened, marking as used
-    unsigned used = c->used;
-    c->used = 1;
-    if (used && c->glue <= opts.reducetier2glue)
-      c->used = 2;
-  }
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
 }

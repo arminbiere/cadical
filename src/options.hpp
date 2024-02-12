@@ -33,8 +33,6 @@ OPTION( blockocclim,     1e2,  1,2e9,2,0,1, "occurrence limit") \
 OPTION( bump,              1,  0,  1,0,0,1, "bump variables") \
 OPTION( bumpreason,        1,  0,  1,0,0,1, "bump reason literals too") \
 OPTION( bumpreasondepth,   1,  1,  3,0,0,1, "bump reason depth") \
-OPTION( bumpreasonlimit,  10,  1,2e9,0,0,1, "bump reason limit") \
-OPTION( bumpreasonrate,   10,  1,2e9,0,0,1, "bump reason decision rate") \
 OPTION( check,             0,  0,  1,0,0,0, "enable internal checking") \
 OPTION( checkassumptions,  1,  0,  1,0,0,0, "check assumptions satisfied") \
 OPTION( checkconstraint,   1,  0,  1,0,0,0, "check constraint satisfied") \
@@ -87,7 +85,6 @@ OPTION( elimsubst,         1,  0,  1,0,0,1, "elimination by substitution") \
 OPTION( elimsum,           1,  0,1e4,0,0,1, "elimination score sum weight") \
 OPTION( elimxorlim,        5,  2, 27,1,0,1, "maximum XOR size") \
 OPTION( elimxors,          1,  0,  1,0,0,1, "find XOR gates") \
-OPTION( emadecisions,     33,  1,2e9,0,0,1, "window decision rate") \
 OPTION( emagluefast,      33,  1,2e9,0,0,1, "window fast glue") \
 OPTION( emaglueslow,     1e5,  1,2e9,0,0,1, "window slow glue") \
 OPTION( emajump,         1e5,  1,2e9,0,0,1, "window back-jump level") \
