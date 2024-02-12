@@ -214,6 +214,31 @@ void Internal::reserve_ids (int number) {
 
 /*------------------------------------------------------------------------*/
 
+// Separating these makes it easier to profile stable and unstable search.
+
+bool Internal::propagate_wrapper () {
+  if (stable)
+    return propagate_stable ();
+  else
+    return propagate_unstable ();
+}
+
+void Internal::analyze_wrapper () {
+  if (stable)
+    analyze_stable ();
+  else
+    analyze_unstable ();
+}
+
+int Internal::decide_wrapper () {
+  if (stable)
+    return decide_stable ();
+  else
+    return decide_unstable ();
+}
+
+/*------------------------------------------------------------------------*/
+
 // This is the main CDCL loop with interleaved inprocessing.
 
 int Internal::cdcl_loop_with_inprocessing () {
@@ -235,8 +260,8 @@ int Internal::cdcl_loop_with_inprocessing () {
       res = 20;
     else if (unsat_constraint)
       res = 20;
-    else if (!propagate ())
-      analyze (); // propagate and analyze
+    else if (!propagate_wrapper ())
+      analyze_wrapper (); // propagate and analyze
     else if (iterating)
       iterate ();                               // report learned unit
     else if (!external_propagate () || unsat) { // external propagation

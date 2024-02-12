@@ -605,11 +605,17 @@ struct Internal {
   void search_assume_decision (int decision);
   void assign_unit (int lit);
   int64_t cache_lines (size_t bytes) { return (bytes + 127) / 128; }
+  int64_t cache_lines (size_t n, size_t bytes) { cache_lines (n * bytes); }
+#if 0
   int64_t cache_lines (const void *begin, const void *end) {
     assert (begin <= end);
     return cache_lines ((const char *) end - (const char *) begin);
   }
+#endif
   bool propagate ();
+  bool propagate_wrapper ();
+  bool propagate_unstable ();
+  bool propagate_stable ();
 
   void propergate (); // Repropagate without blocking literals.
 
@@ -654,6 +660,9 @@ struct Internal {
   int otfs_find_backtrack_level (int &forced);
   Clause *on_the_fly_strengthen (Clause *conflict, int lit);
   void analyze ();
+  void analyze_wrapper ();
+  void analyze_unstable ();
+  void analyze_stable ();
   void iterate (); // report learned unit clause
 
   // Learning from external propagator in 'external_propagate.cpp'
@@ -1157,6 +1166,9 @@ struct Internal {
   int likely_phase (int idx);
   bool better_decision (int lit, int other);
   int decide (); // 0=decision, 20=failed
+  int decide_wrapper ();
+  int decide_stable ();
+  int decide_unstable ();
 
   // Internal functions to enable explicit search limits.
   //

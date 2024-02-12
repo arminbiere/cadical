@@ -247,7 +247,7 @@ bool Internal::propagate () {
     const const_watch_iterator eow = ws.end ();
     watch_iterator j = ws.begin ();
     const_watch_iterator i = j;
-    ticks += 1 + cache_lines (ws.size () * sizeof *i);
+    ticks += 1 + cache_lines (ws.size (), sizeof *i);
 
     while (i != eow) {
 
@@ -292,6 +292,7 @@ bool Internal::propagate () {
           build_chain_for_units (w.blit, w.clause, 0);
           search_assign (w.blit, w.clause);
           // lrat_chain.clear (); done in search_assign
+	  ticks++;
         }
 
       } else {
@@ -305,7 +306,7 @@ bool Internal::propagate () {
         // the solver.  Note, that this check is positive very rarely and
         // thus branch prediction should be almost perfect here.
 
-	ticks++;
+        ticks++;
 
         if (w.clause->garbage) {
           j--;
@@ -383,6 +384,8 @@ bool Internal::propagate () {
 
             j--; // Drop this watch from the watch list of 'lit'.
 
+	    ticks++;
+
           } else if (!u) {
 
             assert (v < 0);
@@ -393,6 +396,7 @@ bool Internal::propagate () {
             build_chain_for_units (other, w.clause, 0);
             search_assign (other, w.clause);
             // lrat_chain.clear (); done in search_assign
+	    ticks++;
 
             // Similar code is in the implementation of the SAT'18 paper on
             // chronological backtracking but in our experience, this code
