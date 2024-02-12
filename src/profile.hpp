@@ -59,8 +59,7 @@ struct Internal;
   PROFILE (lookahead, 2) \
   PROFILE (minimize, 4) \
   PROFILE (shrink, 4) \
-  PROFILE (parse, \
-           0) /*Set to '0' as 'opts.profile' might change in parsing*/ \
+  PROFILE (parse, 0) /* As 'opts.profile' might change in parsing*/ \
   PROFILE (probe, 2) \
   PROFILE (deduplicate, 3) \
   PROFILE (propagate, 4) \
