@@ -137,7 +137,6 @@ struct Stats {
   int64_t promoted1;      // promoted clauses to tier one
   int64_t promoted2;      // promoted clauses to tier two
   int64_t bumped;         // seen and bumped variables in 'analyze'
-  int64_t bumpedreasons;  // reason side bumpings 'analyze'
   int64_t recomputed;     // recomputed glues 'recompute_glue'
   int64_t searched;       // searched decisions in 'decide'
   int64_t reductions;     // 'reduce' counter
