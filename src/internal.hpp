@@ -559,6 +559,7 @@ struct Internal {
   //
   Clause *new_clause (bool red, int glue = 0);
   void promote_clause (Clause *, int new_glue);
+  void promote_clause_glue_only (Clause *, int new_glue);
   size_t shrink_clause (Clause *, int new_size);
   void minimize_sort_clause ();
   void shrink_and_minimize_clause ();
