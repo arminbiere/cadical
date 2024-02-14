@@ -91,7 +91,6 @@
 91 set shrinkreap 0
 92 set shuffle 0
 93 set stabilize 0
-94 set stabilizefactor 101
 95 set stabilizeinit 1
 97 set stabilizeonly 0
 98 set subsume 1
