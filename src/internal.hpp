@@ -180,6 +180,7 @@ struct Internal {
   uint64_t original_id;       // ids for original clauses to produce LRAT
   uint64_t reserved_ids;      // number of reserved ids for original clauses
   uint64_t conflict_id;       // store conflict id for finalize (frat)
+  int64_t saved_decisions;    // to compute decision rate average
   bool concluded;             // keeps track of conclude
   vector<uint64_t> conclusion;   // store ids of conclusion clauses
   vector<uint64_t> unit_clauses; // keep track of unit_clauses (LRAT/FRAT)
@@ -662,6 +663,7 @@ struct Internal {
   void otfs_subsume_clause (Clause *subsuming, Clause *subsumed);
   int otfs_find_backtrack_level (int &forced);
   Clause *on_the_fly_strengthen (Clause *conflict, int lit);
+  void update_decision_rate_average ();
   void analyze ();
   void analyze_wrapper ();
   void analyze_unstable ();
