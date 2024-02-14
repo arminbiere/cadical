@@ -52,7 +52,7 @@ bool Internal::stabilizing () {
   int64_t stabphases = stats.stabphases + 1;
   next_delta_ticks *= stabphases * stabphases;
   if (stable)
-    next_delta_ticks *= 1.1;
+    next_delta_ticks *= 0.9;
 
   lim.stabilize = stats.ticks.search[stable] + next_delta_ticks;
   if (lim.stabilize <= stats.ticks.search[stable])
