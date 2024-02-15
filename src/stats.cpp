@@ -248,6 +248,9 @@ void Stats::print (Internal *internal) {
          percent (stats.learned.clauses, stats.conflicts));
     PRT ("@ bumped:        %15" PRId64 "   %10.2f    per learned",
          stats.bumped, relative (stats.bumped, stats.learned.clauses));
+    PRT ("@ bumpedreasons: %15" PRId64 "   %10.2f %%  learned",
+         stats.bumpedreasons,
+         percent (stats.bumpedreasons, stats.learned.clauses));
     PRT ("  recomputed:    %15" PRId64 "   %10.2f %%  per learned",
          stats.recomputed,
          percent (stats.recomputed, stats.learned.clauses));
