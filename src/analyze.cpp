@@ -332,9 +332,10 @@ inline bool Internal::bump_also_reason_literal (int lit) {
 
 // We experimented with deeper reason bumping without much success though.
 
-inline void Internal::bump_also_reason_literals (int lit, int limit) {
+inline void Internal::bump_also_reason_literals (int lit, int depth_limit,
+                                                 size_t analyzed_limit) {
   assert (lit);
-  assert (limit > 0);
+  assert (depth_limit > 0);
   const Var &v = var (lit);
   assert (val (lit));
   if (!v.level)
@@ -348,19 +349,55 @@ inline void Internal::bump_also_reason_literals (int lit, int limit) {
       continue;
     if (!bump_also_reason_literal (other))
       continue;
-    if (limit < 2)
+    if (depth_limit < 2)
       continue;
-    bump_also_reason_literals (-other, limit - 1);
+    bump_also_reason_literals (-other, depth_limit - 1, analyzed_limit);
+    if (analyzed.size () > analyzed_limit)
+      break;
   }
 }
 
 inline void Internal::bump_also_all_reason_literals () {
-  assert (opts.bumpreason);
+  assert (opts.bump);
+  if (!opts.bumpreason)
+    return;
+  if (averages.current.decisions > opts.bumpreasonrate) {
+    LOG ("decisions per conflict rate %g > limit %d",
+         (double) averages.current.decisions, opts.bumpreasonrate);
+    return;
+  }
+  if (delay[stable].bumpreasons.limit) {
+    LOG ("delaying reason bumping %" PRId64 " more times",
+         delay[stable].bumpreasons.limit);
+    delay[stable].bumpreasons.limit--;
+    return;
+  }
   assert (opts.bumpreasondepth > 0);
-  LOG ("bumping reasons up to depth %d", opts.bumpreasondepth);
+  const int depth_limit = opts.bumpreasondepth + stable;
+  size_t saved_analyzed = analyzed.size ();
+  size_t analyzed_limit = saved_analyzed * opts.bumpreasonlimit;
   for (const auto &lit : clause)
-    bump_also_reason_literals (-lit,
-                               opts.bumpreasondepth); // + stable); TODO
+    if (analyzed.size () <= analyzed_limit)
+      bump_also_reason_literals (-lit, depth_limit, analyzed_limit);
+    else
+      break;
+  if (analyzed.size () > analyzed_limit) {
+    LOG ("not bumping reason side literals as limit exhausted");
+    for (size_t i = saved_analyzed; i != analyzed.size (); i++) {
+      const int lit = analyzed[i];
+      Flags &f = flags (lit);
+      assert (f.seen);
+      f.seen = false;
+    }
+    delay[stable].bumpreasons.interval++;
+    analyzed.resize (saved_analyzed);
+  } else {
+    LOG ("bumping reasons up to depth %d", opts.bumpreasondepth);
+    delay[stable].bumpreasons.interval /= 2;
+    stats.bumpedreasons++;
+  }
+  LOG ("delay internal %" PRId64, delay[stable].bumpreasons.interval);
+  delay[stable].bumpreasons.limit = delay[stable].bumpreasons.interval;
 }
 
 /*------------------------------------------------------------------------*/
@@ -1108,9 +1145,7 @@ void Internal::analyze () {
     // Update decision heuristics.
     //
     if (opts.bump) {
-      if (opts.bumpreason &&
-          averages.current.decisions <= opts.bumpreasonrate)
-        bump_also_all_reason_literals ();
+      bump_also_all_reason_literals ();
       bump_variables ();
     }
 

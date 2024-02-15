@@ -214,6 +214,8 @@ void Internal::reserve_ids (int number) {
 
 /*------------------------------------------------------------------------*/
 
+#ifdef PROFILE_MODE
+
 // Separating these makes it easier to profile stable and unstable search.
 
 bool Internal::propagate_wrapper () {
@@ -236,6 +238,8 @@ int Internal::decide_wrapper () {
   else
     return decide_unstable ();
 }
+
+#endif
 
 /*------------------------------------------------------------------------*/
 

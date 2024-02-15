@@ -43,6 +43,12 @@ struct Limit {
   Limit ();
 };
 
+struct Delay {
+  struct {
+    int64_t interval = 0, limit = 0;
+  } bumpreasons;
+};
+
 struct Last {
   struct {
     int64_t propagations;
@@ -71,7 +77,7 @@ struct Last {
 
 struct Inc {
   int64_t flush;         // flushing interval in terms of conflicts
-  int64_t stabilize;     // next conflict limit if non-negative
+  int64_t stabilize;     // base ticks limit after first mode switch
   int64_t conflicts;     // next conflict limit if non-negative
   int64_t decisions;     // next decision limit if non-negative
   int64_t preprocessing; // next preprocessing limit if non-negative

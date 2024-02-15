@@ -1,3 +1,4 @@
+#ifdef PROFILE_MODE
 #include "internal.hpp"
 
 namespace CaDiCaL {
@@ -23,3 +24,6 @@ int Internal::decide_unstable () {
 }
 
 }; // namespace CaDiCaL
+#else
+int unstable_if_no_profile_mode;
+#endif

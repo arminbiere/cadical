@@ -251,6 +251,7 @@ struct Internal {
   vector<Level> control;    // 'level + 1 == control.size ()'
   vector<Clause *> clauses; // ordered collection of all clauses
   Averages averages;        // glue, size, jump moving averages
+  Delay delay[2];	    // Delay certain functions
   Limit lim;                // limits for various phases
   Last last;                // statistics at last occurrence
   Inc inc;                  // increments on limits
@@ -610,16 +611,23 @@ struct Internal {
   int64_t cache_lines (size_t n, size_t bytes) {
     return cache_lines (n * bytes);
   }
-#if 0
-  int64_t cache_lines (const void *begin, const void *end) {
-    assert (begin <= end);
-    return cache_lines ((const char *) end - (const char *) begin);
-  }
-#endif
   bool propagate ();
+
+#ifdef PROFILE_MODE
   bool propagate_wrapper ();
   bool propagate_unstable ();
   bool propagate_stable ();
+  void analyze_wrapper ();
+  void analyze_unstable ();
+  void analyze_stable ();
+  int decide_wrapper ();
+  int decide_stable ();
+  int decide_unstable ();
+#else
+#define propagate_wrapper propagate
+#define analyze_wrapper analyze
+#define decide_wrapper decide
+#endif
 
   void propergate (); // Repropagate without blocking literals.
 
@@ -649,7 +657,8 @@ struct Internal {
   void clear_analyzed_levels ();
   void clear_minimized_literals ();
   bool bump_also_reason_literal (int lit);
-  void bump_also_reason_literals (int lit, int limit);
+  void bump_also_reason_literals (int lit, int depth_limit,
+                                  size_t size_limit);
   void bump_also_all_reason_literals ();
   void analyze_literal (int lit, int &open, int &resolvent_size,
                         int &antecedent_size);
@@ -665,9 +674,6 @@ struct Internal {
   Clause *on_the_fly_strengthen (Clause *conflict, int lit);
   void update_decision_rate_average ();
   void analyze ();
-  void analyze_wrapper ();
-  void analyze_unstable ();
-  void analyze_stable ();
   void iterate (); // report learned unit clause
 
   // Learning from external propagator in 'external_propagate.cpp'
@@ -1171,9 +1177,6 @@ struct Internal {
   int likely_phase (int idx);
   bool better_decision (int lit, int other);
   int decide (); // 0=decision, 20=failed
-  int decide_wrapper ();
-  int decide_stable ();
-  int decide_unstable ();
 
   // Internal functions to enable explicit search limits.
   //

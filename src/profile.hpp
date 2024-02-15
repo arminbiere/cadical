@@ -37,10 +37,16 @@ struct Internal;
 
 /*------------------------------------------------------------------------*/
 
+#ifdef PROFILE_MODE
+#define MROFILE PROFILE
+#else
+#define MROFILE(...) /**/
+#endif
+
 #define PROFILES \
   PROFILE (analyze, 3) \
-  PROFILE (analyzestable, 4) \
-  PROFILE (analyzeunstable, 4) \
+  MROFILE (analyzestable, 4) \
+  MROFILE (analyzeunstable, 4) \
   PROFILE (backward, 3) \
   PROFILE (block, 2) \
   PROFILE (bump, 4) \
@@ -65,8 +71,8 @@ struct Internal;
   PROFILE (probe, 2) \
   PROFILE (deduplicate, 3) \
   PROFILE (propagate, 4) \
-  PROFILE (propstable, 4) \
-  PROFILE (propunstable, 4) \
+  MROFILE (propstable, 4) \
+  MROFILE (propunstable, 4) \
   PROFILE (reduce, 3) \
   PROFILE (restart, 3) \
   PROFILE (restore, 2) \
