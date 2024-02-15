@@ -359,7 +359,8 @@ inline void Internal::bump_also_all_reason_literals () {
   assert (opts.bumpreasondepth > 0);
   LOG ("bumping reasons up to depth %d", opts.bumpreasondepth);
   for (const auto &lit : clause)
-    bump_also_reason_literals (-lit, opts.bumpreasondepth+ stable);
+    bump_also_reason_literals (-lit,
+                               opts.bumpreasondepth); // + stable); TODO
 }
 
 /*------------------------------------------------------------------------*/
