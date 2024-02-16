@@ -85,7 +85,6 @@ Clause *Internal::new_clause (bool red, int glue) {
   size_t bytes = Clause::bytes (size);
   Clause *c = (Clause *) new char[bytes];
 
-  stats.added.total++;
   c->id = ++clause_id;
 
   c->conditioned = false;
@@ -333,7 +332,6 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   LOG ("propagation of original unit results in conflict");
   learn_empty_clause ();
 }
-
 
 // New clause added through the API, e.g., while parsing a DIMACS file.
 // Also used by external_propagate in various different modes.

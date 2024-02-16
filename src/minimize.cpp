@@ -58,10 +58,10 @@ bool Internal::minimize_literal (int lit, int depth) {
 struct minimize_trail_positive_rank {
   Internal *internal;
   minimize_trail_positive_rank (Internal *s) : internal (s) {}
-  typedef int Type;
+  typedef unsigned Type;
   Type operator() (const int &a) const {
     assert (internal->val (a));
-    return internal->var (a).trail;
+    return (unsigned) internal->var (a).trail;
   }
 };
 
@@ -107,11 +107,12 @@ void Internal::minimize_clause () {
   assert (minimize_chain.empty ());
   const auto end = clause.end ();
   auto j = clause.begin (), i = j;
+  std::vector<int> stack;
   for (; i != end; i++) {
     if (minimize_literal (-*i)) {
       if (lrat) {
         assert (mini_chain.empty ());
-        calculate_minimize_chain (-*i);
+        calculate_minimize_chain (-*i, stack);
         for (auto p : mini_chain) {
           minimize_chain.push_back (p);
         }
@@ -136,35 +137,56 @@ void Internal::minimize_clause () {
 // go backwards in reason graph and add ids
 // mini_chain is in correct order so we have to add it to minimize_chain
 // and then reverse when we put it on lrat_chain
-void Internal::calculate_minimize_chain (int lit) {
-  assert (val (lit) > 0);
-  Flags &f = flags (lit);
-  Var &v = var (lit);
-  assert (!v.level || f.removable || f.keep);
-  if (f.keep || f.added)
-    return;
-  if (!v.level) {
-    if (f.seen)
-      return;
-    f.seen = true;
-    analyzed.push_back (lit);
-    const unsigned uidx = vlit (lit); // I didn't clean added flag
-    uint64_t id = unit_clauses[uidx];
-    assert (id);
-    unit_chain.push_back (id);
-    return;
-  }
-  f.added = true;
-  assert (v.reason && f.removable);
-  const const_literal_iterator end = v.reason->end ();
-  const_literal_iterator i;
-  for (i = v.reason->begin (); i != end; i++) {
-    const int other = *i;
-    if (other == lit)
+//
+// We have to use the non-recursive as we cannot limit the depth like the
+// minimize version. Unlike the minimize version, we have to keep literals
+// on the stack in order to push its reason later.
+void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
+  assert (stack.empty ());
+  stack.push_back (vidx (lit));
+
+  while (!stack.empty ()) {
+    const int idx = stack.back ();
+    assert (idx);
+    stack.pop_back ();
+    if (idx < 0) {
+      Var &v = var (idx);
+      mini_chain.push_back (v.reason->id);
       continue;
-    calculate_minimize_chain (-other);
+    }
+    assert (idx);
+    Flags &f = flags (idx);
+    Var &v = var (idx);
+    if (f.keep || f.added || f.poison) {
+      continue;
+    }
+    if (!v.level) {
+      if (f.seen)
+        continue;
+      f.seen = true;
+      analyzed.push_back (idx);
+      const int lit = val (idx) > 0 ? idx : -idx;
+      const unsigned uidx = vlit (lit); // I didn't clean added flag
+      uint64_t id = unit_clauses[uidx];
+      assert (id);
+      unit_chain.push_back (id);
+      continue;
+    }
+    f.added = true;
+    assert (v.reason && f.removable);
+    const const_literal_iterator end = v.reason->end ();
+    const_literal_iterator i;
+    LOG (v.reason, "LRAT chain for lit %d at depth %zd by going over", lit,
+         stack.size ());
+    stack.push_back (-idx);
+    for (i = v.reason->begin (); i != end; i++) {
+      const int other = *i;
+      if (other == idx)
+        continue;
+      stack.push_back (vidx (other));
+    }
   }
-  mini_chain.push_back (v.reason->id);
+  assert (stack.empty ());
 }
 
 // Sort the literals in reverse assignment order (thus trail order) to

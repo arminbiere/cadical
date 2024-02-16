@@ -518,9 +518,10 @@ void Internal::reset_assumptions () {
 struct sort_assumptions_positive_rank {
   Internal *internal;
   const int max_level;
-  sort_assumptions_positive_rank (Internal *s) : internal (s), max_level (s->level + 1) {}
+  sort_assumptions_positive_rank (Internal *s)
+      : internal (s), max_level (s->level + 1) {}
 
-  typedef int Type;
+  typedef uint64_t Type;
   // set assumptions first, then sorted by position on the trail
   // unset literals are sorted by literal value
   Type operator() (const int &a) const {
@@ -529,7 +530,7 @@ struct sort_assumptions_positive_rank {
     const Var &v = internal->var (a);
     uint64_t res = (assigned ? v.level : max_level);
     res <<= 32;
-    res |= (assigned ? v.trail : abs(a));
+    res |= (assigned ? v.trail : abs (a));
     return res;
   }
 };
@@ -550,8 +551,8 @@ void Internal::sort_and_reuse_assumptions () {
   if (assumptions.empty ())
     return;
   MSORT (opts.radixsortlim, assumptions.begin (), assumptions.end (),
-           sort_assumptions_positive_rank (this),
-           sort_assumptions_smaller (this));
+         sort_assumptions_positive_rank (this),
+         sort_assumptions_smaller (this));
 
   int max_level = 0;
   for (auto lit : assumptions) {

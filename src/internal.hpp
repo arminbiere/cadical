@@ -217,6 +217,7 @@ struct Internal {
   vector<Watches> wtab;         // table of watches for all literals
   Clause *conflict;             // set in 'propagation', reset in 'analyze'
   Clause *ignore;               // ignored during 'vivify_propagate'
+  Clause *dummy_binary;         // Dummy binary clause for subsumption
   Clause *external_reason;      // used as reason at external propagations
   Clause *newest_clause;        // used in external_propagate
   bool force_no_backtrack;      // for new clauses with external propagator
@@ -245,7 +246,7 @@ struct Internal {
   vector<int> shrinkable;    // removable or poison in 'shrink'
   Reap reap;                 // radix heap for shrink
 
-  size_t num_assigned;        // check for satisfied
+  size_t num_assigned; // check for satisfied
 
   vector<int> probes;       // remaining scheduled probes
   vector<Level> control;    // 'level + 1 == control.size ()'
@@ -515,7 +516,6 @@ struct Internal {
     LOG (c, "watch %d blit %d in", lit, blit);
   }
 
-
   // Add two watches to a clause.  This is used initially during allocation
   // of a clause and during connecting back all watches after preprocessing.
   //
@@ -621,13 +621,12 @@ struct Internal {
   //
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
-  void calculate_minimize_chain (int lit);
+  void calculate_minimize_chain (int lit, std::vector<int> &stack);
 
   // Learning from conflicts in 'analyze.cc'.
   //
   void learn_empty_clause ();
   void learn_unit_clause (int lit);
-  void learn_external_propagated_unit_clause (int lit);
 
   void bump_variable (int lit);
   void bump_variables ();

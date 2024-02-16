@@ -221,7 +221,10 @@ private:
     bool propagation_reason;
 
     // Flexible array members are a C99 feature and not in C++11!
-    // Thus pedantic compilation fails for 'int literals[]'.
+    // Thus pedantic compilation fails for 'int literals[]'.  We could do
+    // the same conditional compilation as with the flexible array member
+    // in 'Clause', but here there is no need for making it fast as we are
+    // in testing mode anyhow.
     //
     int *literals;
 
@@ -589,13 +592,13 @@ public:
   int cb_propagate () {
     MLOGC ("cb_propagate starts" << std::endl);
     assert (compare_trails ());
-    if (observed_trail.size () < 2) {
-      MLOG ("cb_propagate returns 0"
-            << " (less than two observed variables are assigned)."
-            << std::endl);
+    // if (observed_trail.size () < 2) {
+    //   MLOG ("cb_propagate returns 0"
+    //         << " (less than two observed variables are assigned)."
+    //         << std::endl);
 
-      return 0;
-    }
+    //   return 0;
+    // }
 
     size_t lit_sum = 0;  // sum of variables of satisfied observed literals
     int lowest_lit = 0;  // the lowest satisfied observed literal

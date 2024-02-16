@@ -152,7 +152,14 @@ bool Internal::external_propagate () {
 #endif
       if (!tmp) {
         // variable is not assigned, it can be propagated
-        search_assign_external (ilit);
+        if (!level) {
+          Clause *res = learn_external_reason_clause (ilit, elit);
+  #ifndef LOGGING
+          LOG (res, "reason clause of external propagation of %d:", elit);
+  #endif
+          (void) res;
+        } else
+          search_assign_external (ilit);
         stats.ext_prop.eprop_prop++;
 
         if (unsat || conflict)
@@ -173,7 +180,8 @@ bool Internal::external_propagate () {
 #endif
         (void) res;
         bool trail_changed =
-            (num_assigned != assigned || level != level_before || propagated < trail.size ());
+            (num_assigned != assigned || level != level_before ||
+             propagated < trail.size ());
 
         if (unsat || conflict)
           break;
@@ -191,10 +199,9 @@ bool Internal::external_propagate () {
     }
 
 #ifndef NDEBUG
-    LOG (
-        "External propagation ends (decision level: %d, trail size: %zd, "
-        "notified %zd)",
-        level, trail.size (), notified);
+    LOG ("External propagation ends (decision level: %d, trail size: %zd, "
+         "notified %zd)",
+         level, trail.size (), notified);
 #endif
     if (!unsat && !conflict) {
       bool has_external_clause =
@@ -214,7 +221,8 @@ bool Internal::external_propagate () {
 
         add_external_clause (0);
         bool trail_changed =
-            (num_assigned != assigned || level != level_before || propagated < trail.size ());
+            (num_assigned != assigned || level != level_before ||
+             propagated < trail.size ());
 
         if (unsat || conflict)
           break;
@@ -426,7 +434,7 @@ void Internal::explain_external_propagations () {
   int open = 0; // Seen but not explained literal
 
   explain_reason (0, reason, open); // marks conflict clause lits as seen
-  int i = trail.size (); // Start at end-of-trail
+  int i = trail.size ();            // Start at end-of-trail
   while (i > 0) {
     const int lit = trail[--i];
     if (!flags (lit).seen)
@@ -690,7 +698,8 @@ bool Internal::external_check_solution () {
       size_t assigned = num_assigned;
       add_external_clause (0);
       bool trail_changed =
-          (num_assigned != assigned || level != level_before || propagated < trail.size ());
+          (num_assigned != assigned || level != level_before ||
+           propagated < trail.size ());
       added_new_clauses = true;
       //
       // There are many possible scenarios here:
