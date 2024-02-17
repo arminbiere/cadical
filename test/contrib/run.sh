@@ -104,6 +104,8 @@ run () {
 
 if [ "`grep DNCONTRIB $makefile`" = "" ]
 then
+  run craigtracer
+  run craigtracer_incremental
 fi
 
 #--------------------------------------------------------------------------#
