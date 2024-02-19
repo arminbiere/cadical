@@ -70,6 +70,7 @@ extern "C" {
 #include "instantiate.hpp"
 #include "internal.hpp"
 #include "level.hpp"
+#include "lidruptracer.hpp"
 #include "limit.hpp"
 #include "logging.hpp"
 #include "lratbuilder.hpp"

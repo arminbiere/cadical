@@ -47,7 +47,7 @@ class IdrupTracer : public FileTracer {
   find_and_delete (const uint64_t); // find clause position in hash table
 
 #ifndef QUIET
-  int64_t added, deleted, weakened, restore, original, solved;
+  int64_t added, deleted;
 #endif
 
   void flush_if_piping ();
