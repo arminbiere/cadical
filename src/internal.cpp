@@ -492,7 +492,7 @@ void Internal::init_search_limits () {
     inc.stabilize = 0;
     lim.stabilize = stats.conflicts + opts.stabilizeinit;
     LOG ("initial stabilize limit %" PRId64 " after %d conflicts",
-         lim.stabilize, opts.stabilizinit);
+         lim.stabilize, (int) opts.stabilizeinit);
   }
 
   if (opts.stabilize && opts.reluctant) {
