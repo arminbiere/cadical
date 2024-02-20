@@ -240,6 +240,7 @@ bool Internal::propagate () {
   while (!conflict && propagated != trail.size ()) {
 
     const int lit = -trail[propagated++];
+    const int proplevel = var(lit).level;
     LOG ("propagating %d", -lit);
     Watches &ws = watches (lit);
 
@@ -322,7 +323,7 @@ bool Internal::propagate () {
         const int other = lits[0] ^ lits[1] ^ lit;
         const signed char u = val (other); // value of the other watch
 
-        if (u > 0)
+        if (u > 0 && (!opts.chrono || var(u).level <= proplevel))
           j[-1].blit = other; // satisfied, just replace blit
         else {
 
@@ -343,16 +344,17 @@ bool Internal::propagate () {
 
           int r = 0;
           signed char v = -1;
+	  int replacement_level = proplevel;
 
           while (k != end && (v = val (r = *k)) < 0)
-            k++;
+            k++, replacement_level = max (replacement_level, var (r).level);
 
           if (v < 0) { // need second search starting at the head?
 
             k = lits + 2;
             assert (w.clause->pos <= size);
             while (k != middle && (v = val (r = *k)) < 0)
-              k++;
+              k++, replacement_level = max (replacement_level, var (r).level);
           }
 
           w.clause->pos = k - lits; // always save position
@@ -379,6 +381,13 @@ bool Internal::propagate () {
 
             j--; // Drop this watch from the watch list of 'lit'.
 
+          } else if (u > 0) {
+            if (var (other).level > replacement_level) {
+              LOG (w.clause,
+                   "missed lower-level implication of %d at level %d", u, replacement_level);
+              assert (opts.chrono);
+              var (other).missed_implication = w.clause;
+            }
           } else if (!u) {
 
             assert (v < 0);

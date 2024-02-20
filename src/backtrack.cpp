@@ -10,6 +10,7 @@ namespace CaDiCaL {
 inline void Internal::unassign (int lit) {
   assert (val (lit) > 0);
   set_val (lit, 0);
+  var (lit).missed_implication = nullptr;
 
   int idx = vidx (lit);
   LOG ("unassign %d @ %d", lit, var (idx).level);
@@ -98,6 +99,7 @@ void Internal::backtrack (int new_level) {
   int reassigned = 0;
 
   notify_backtrack (new_level);
+  std::vector<int> missed_props;
   if (external_prop && !external_prop_is_lazy && notified > assigned) {
     LOG ("external propagator is notified about some unassignments (trail: "
          "%zd, notified: %zd).",
@@ -119,15 +121,27 @@ void Internal::backtrack (int new_level) {
       // literals on the trail without breaking the solver (after some
       // modifications to 'analyze' - see 'opts.chrono' guarded code there).
       assert (opts.chrono || external_prop || did_external_prop);
+      if (v.missed_implication && var(v.missed_implication->literals[0]).level <= new_level) {
+	LOG (v.missed_implication, "missed lower-level implication of %d at level %d", lit, var(v.missed_implication->literals[0]).level);
+        for (auto other : *v.missed_implication) {
+	  LOG ("lit %d at level %d", other, var (other).level);
+	  if (other != lit)
+	    assert (val (other) < 0);
+	}
+        missed_props.push_back (lit);
+        set_val (lit, 0); --num_assigned; // reassigning later
+      } else {
+        v.missed_implication = nullptr; //happens notably for units
 #ifdef LOGGING
-      if (!v.level)
-        LOG ("reassign %d @ 0 unit clause %d", lit, lit);
-      else
-        LOG (v.reason, "reassign %d @ %d", lit, v.level);
+        if (!v.level)
+          LOG ("reassign %d @ 0 unit clause %d", lit, lit);
+        else
+          LOG (v.reason, "reassign %d @ %d", lit, v.level);
 #endif
-      trail[j] = lit;
-      v.trail = j++;
-      reassigned++;
+        trail[j] = lit;
+        v.trail = j++;
+        reassigned++;
+      }
     }
   }
   trail.resize (j);
@@ -158,7 +172,16 @@ void Internal::backtrack (int new_level) {
       tainted_literal = 0;
     }
   }
+  
+  for (auto lit : missed_props) {
+    LOG ("repropagating lit %d", lit);
+    assert (var (lit).missed_implication);
+    search_assign(lit, var (lit).missed_implication);
+    var (lit).missed_implication = nullptr;
+    
+  }
   assert (num_assigned == trail.size ());
+  
 }
 
 } // namespace CaDiCaL
