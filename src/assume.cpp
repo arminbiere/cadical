@@ -563,9 +563,10 @@ void Internal::sort_and_reuse_assumptions () {
          sort_assumptions_smaller (this));
 
   unsigned max_level = 0;
+  // assumptions are sorted by level, with unset at the end
   for (auto lit : assumptions) {
     if (val (lit))
-      max_level = var (lit).level; // TODO: why not 'max (...,...)'?
+      max_level = var (lit).level;
     else
       break;
   }
@@ -579,28 +580,30 @@ void Internal::sort_and_reuse_assumptions () {
     const int lit = l.decision;
     const int alit = assumptions[j];
     const int lev = i;
-    target = lev - 1;
+    target = lev;
     if (val (alit) &&
         var (alit).level < lev) { // we can ignore propagated assumptions
+      LOG ("ILB skipping propagation %d", alit);
       ++j;
       continue;
     }
-    ++i, ++j;
-    // removed literals or pseudo decision level:
-    if (!lit || var (lit).level != lev) {
-      if (val (alit) > 0 && var (alit).level < lev)
-        continue;
+    if (!lit) { // skip fake decisions
+      target = lev - 1;
       break;
     }
+    ++i, ++j;
+    assert (var (lit).level == lev);
     if (l.decision == alit) {
       continue;
     }
+    target = lev - 1;
+    LOG ("first different literal %d on the trail and %d from the assumptions", lit, alit);
     break;
   }
-
   if (target < level)
     backtrack (target);
   LOG ("assumptions allow for reuse of trail up to level %d", level);
+//  COVER (target > 1);
   if ((size_t) level > assumptions.size ())
     stats.assumptionsreused += assumptions.size ();
   else
