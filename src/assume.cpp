@@ -517,18 +517,25 @@ void Internal::reset_assumptions () {
 
 struct sort_assumptions_positive_rank {
   Internal *internal;
-  const int max_level;
+
+  // Decision level could be 'INT_MAX' and thus 'level + 1' could overflow.
+  // Therefore we carefully have to use 'unsigned' for levels below.
+
+  const unsigned max_level;	
+
   sort_assumptions_positive_rank (Internal *s)
-      : internal (s), max_level (s->level + 1) {}
+      : internal (s), max_level (s->level + 1u) {}
 
   typedef uint64_t Type;
-  // set assumptions first, then sorted by position on the trail
-  // unset literals are sorted by literal value
+
+  // Set assumptions first, then sorted by position on the trail
+  // unset literals are sorted by literal value.
+
   Type operator() (const int &a) const {
     const int val = internal->val (a);
     const bool assigned = (val != 0);
     const Var &v = internal->var (a);
-    uint64_t res = (assigned ? v.level : max_level);
+    uint64_t res = (assigned ? (unsigned) v.level : max_level);
     res <<= 32;
     res |= (assigned ? v.trail : abs (a));
     return res;
@@ -544,8 +551,9 @@ struct sort_assumptions_smaller {
   }
 };
 
-// sort the assumptions by the current position on the trail and backtrack
+// Sort the assumptions by the current position on the trail and backtrack
 // to the first place where the assumptions and the current trail differ.
+
 void Internal::sort_and_reuse_assumptions () {
   assert (opts.ilbassumptions);
   if (assumptions.empty ())
@@ -554,19 +562,19 @@ void Internal::sort_and_reuse_assumptions () {
          sort_assumptions_positive_rank (this),
          sort_assumptions_smaller (this));
 
-  int max_level = 0;
+  unsigned max_level = 0;
   for (auto lit : assumptions) {
     if (val (lit))
-      max_level = var (lit).level;
+      max_level = var (lit).level; // TODO: why not 'max (...,...)'?
     else
       break;
   }
 
-  const int size = min (level + 1, max_level + 1);
+  const unsigned size = min (level + 1u, max_level + 1);
   assert ((size_t) level == control.size () - 1);
   LOG (assumptions, "sorted assumptions");
   int target = 0;
-  for (int i = 1, j = 0; i < size;) {
+  for (unsigned i = 1, j = 0; i < size;) {
     const Level &l = control[i];
     const int lit = l.decision;
     const int alit = assumptions[j];

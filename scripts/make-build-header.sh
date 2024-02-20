@@ -44,8 +44,11 @@ IDENTIFIER="`../scripts/get-git-id.sh`"
 if [ x"$IDENTIFIER" = x ]
 then
   warning "could not determine 'IDENTIFIER' (git id)"
+  SHORTID=""
 else
   echo "#define IDENTIFIER \"$IDENTIFIER\""
+  SHORTID=`echo $IDENTIFIER|cut -c 1-7`
+  echo "#define SHORTID \"$SHORTID\""
 fi
 
 #--------------------------------------------------------------------------#

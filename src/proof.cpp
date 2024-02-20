@@ -130,6 +130,10 @@ void Internal::trace (File *file) {
     LOG ("PROOF connecting IDRUP tracer");
     FileTracer *ft = new IdrupTracer (this, file, opts.binary);
     connect_proof_tracer (ft, true);
+  } else if (opts.lidrup) {
+    LOG ("PROOF connecting LIDRUP tracer");
+    FileTracer *ft = new LidrupTracer (this, file, opts.binary);
+    connect_proof_tracer (ft, true);
   } else {
     LOG ("PROOF connecting DRAT tracer");
     FileTracer *ft = new DratTracer (this, file, opts.binary);
