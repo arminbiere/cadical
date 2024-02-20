@@ -121,9 +121,9 @@ void Internal::backtrack (int new_level) {
       // literals on the trail without breaking the solver (after some
       // modifications to 'analyze' - see 'opts.chrono' guarded code there).
       assert (opts.chrono || external_prop || did_external_prop);
-      if (v.missed_implication)
+      if (!conflict && v.missed_implication)
 	assert (v.missed_level <= level && opts.chrono == 3);
-      if (v.missed_implication && v.missed_level <= new_level) {
+      if (!conflict && v.missed_implication && v.missed_level <= new_level) {
 	assert (opts.chrono == 3);
 	LOG (v.missed_implication, "missed lower-level implication of %d at level %d (was %d)", lit, var (lit).missed_level, var (lit).level);
         for (auto other : *v.missed_implication) {
