@@ -37,7 +37,7 @@ static Clause *decision_reason = &decision_reason_clause;
 
 inline int Internal::assignment_level (int lit, Clause *reason) {
 
-  assert (opts.chrono < 3 || external_prop);
+  assert (opts.chrono || external_prop);
   if (!reason || reason == external_reason)
     return level;
 
@@ -61,7 +61,7 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
                                       bool forced) {
   if (!lrat)
     return;
-  if (opts.chrono < 3 && assignment_level (lit, reason) && !forced)
+  if (opts.chrono && opts.chrono < 3 && assignment_level (lit, reason) && !forced)
     return;
   else if (!opts.chrono && level && !forced)
     return; // not decision level 0
@@ -129,7 +129,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     lit_level = 0; // unit
   else if (reason == decision_reason)
     lit_level = level, reason = 0;
-  else if (opts.chrono < 3)
+  else if (opts.chrono && opts.chrono < 3)
     lit_level = assignment_level (lit, reason);
   else
     lit_level = level;
@@ -158,6 +158,15 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   else
     LOG (reason, "search assign %d @ %d", lit, lit_level);
 #endif
+
+  if (reason && opts.chrono == 3) {
+    int real_level = assignment_level (lit, reason);
+    if (real_level < level) {
+      var (lit).missed_level = real_level;
+      var (lit).missed_implication = reason;
+      LOG (reason, "missed propagation of lit %d at level %d", lit, real_level);
+    }
+  }
 
   if (watching ()) {
     const Watches &ws = watches (-lit);
@@ -406,7 +415,7 @@ bool Internal::propagate () {
             // first does not really seem to be necessary for correctness,
             // and further does not improve running time either.
             //
-            if (opts.chrono > 1) {
+            if (opts.chrono == 2) {
 
               const int other_level = var (other).level;
 
