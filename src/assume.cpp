@@ -522,8 +522,10 @@ struct sort_assumptions_positive_rank {
       : internal (s), max_level (s->level + 1) {}
 
   typedef uint64_t Type;
-  // set assumptions first, then sorted by position on the trail
-  // unset literals are sorted by literal value
+
+  // Set assumptions first, then sorted by position on the trail
+  // unset literals are sorted by literal value.
+
   Type operator() (const int &a) const {
     const int val = internal->val (a);
     const bool assigned = (val != 0);
@@ -544,8 +546,9 @@ struct sort_assumptions_smaller {
   }
 };
 
-// sort the assumptions by the current position on the trail and backtrack
+// Sort the assumptions by the current position on the trail and backtrack
 // to the first place where the assumptions and the current trail differ.
+
 void Internal::sort_and_reuse_assumptions () {
   assert (opts.ilbassumptions);
   if (assumptions.empty ())
