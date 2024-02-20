@@ -979,6 +979,7 @@ void Internal::analyze () {
 
   for (;;) {
     antecedent_size = 1; // for uip
+    LOG ("open = %d", open);
     analyze_reason (uip, reason, open, resolvent_size, antecedent_size);
     if (resolved == 0)
       conflict_size = antecedent_size - 1;
@@ -1053,8 +1054,10 @@ void Internal::analyze () {
       if (var (lit).level == level)
         uip = lit;
     }
+    assert (val (uip) > 0);
     if (!--open)
       break;
+    LOG ("open = %d, uip = %d", open, uip);
     reason = var (uip).reason;
     assert (reason != external_reason);
     LOG (reason, "analyzing %d reason", uip);

@@ -16,6 +16,7 @@ struct Var {
   int trail;      // trail height at assignment
   Clause *reason; // implication graph edge during search
   Clause *missed_implication; // missed lower-level reason
+  int missed_level; // level of the missed implication
 };
 
 } // namespace CaDiCaL

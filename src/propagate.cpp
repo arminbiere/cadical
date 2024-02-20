@@ -37,7 +37,7 @@ static Clause *decision_reason = &decision_reason_clause;
 
 inline int Internal::assignment_level (int lit, Clause *reason) {
 
-  assert (opts.chrono || external_prop);
+  assert (opts.chrono < 3 || external_prop);
   if (!reason || reason == external_reason)
     return level;
 
@@ -61,7 +61,7 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
                                       bool forced) {
   if (!lrat)
     return;
-  if (opts.chrono && assignment_level (lit, reason) && !forced)
+  if (opts.chrono < 3 && assignment_level (lit, reason) && !forced)
     return;
   else if (!opts.chrono && level && !forced)
     return; // not decision level 0
@@ -101,7 +101,8 @@ void Internal::build_chain_for_empty () {
 /*------------------------------------------------------------------------*/
 
 inline void Internal::search_assign (int lit, Clause *reason) {
-
+//  if (lit == -39 && reason && reason->id ==31)
+//    return;
   if (level)
     require_mode (SEARCH);
 
@@ -128,7 +129,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     lit_level = 0; // unit
   else if (reason == decision_reason)
     lit_level = level, reason = 0;
-  else if (opts.chrono)
+  else if (opts.chrono < 3)
     lit_level = assignment_level (lit, reason);
   else
     lit_level = level;
@@ -382,11 +383,12 @@ bool Internal::propagate () {
             j--; // Drop this watch from the watch list of 'lit'.
 
           } else if (u > 0) {
-            if (var (other).level > replacement_level) {
+            if (opts.chrono == 3 && var (other).level > replacement_level) {
               LOG (w.clause,
-                   "missed lower-level implication of %d at level %d", u, replacement_level);
+                   "missed lower-level implication of %d at level %d (was: %d)", other, replacement_level, var (other).level);
               assert (opts.chrono);
               var (other).missed_implication = w.clause;
+              var (other).missed_level = replacement_level;
             }
           } else if (!u) {
 

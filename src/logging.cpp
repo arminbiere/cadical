@@ -66,8 +66,19 @@ void Logger::log (Internal *internal, const Clause *c, const char *fmt,
         for (const auto &lit : s)
           printf (" %d", lit);
       } else {
-        for (const auto &lit : *c)
-          printf (" %d", lit);
+        for (const auto &lit : *c) {
+	  std::string str;
+	  const signed char val = (lit && -internal->max_var <= lit && internal->max_var >= lit ? internal->val(lit) : 0);
+	  if(val > 0)
+	    str = "=1";
+	  else if (val < 0)
+	    str = "=-1";
+	  else str = "";
+	  if (val)
+            printf (" %d@%d%s", lit, internal->var(lit).level, str.c_str());
+	  else
+            printf (" %d", lit);
+	}
       }
     }
   } else if (internal->level)
@@ -94,11 +105,35 @@ void Logger::log (Internal *internal, const vector<int> &c, const char *fmt,
     for (const auto &lit : c)
       s.push_back (lit);
     sort (s.begin (), s.end (), clause_lit_less_than ());
-    for (const auto &lit : s)
-      printf (" %d", lit);
+    for (const auto &lit : s) {
+      std::string str;
+      const signed char val = (lit && -internal->max_var <= lit && internal->max_var >= lit ? internal->val(lit) : 0);
+      if (val > 0)
+        str = "=1";
+      else if (val < 0)
+        str = "=-1";
+      else
+        str = "";
+      if (val)
+        printf (" %d@%d%s", lit, internal->var (lit).level, str.c_str ());
+      else
+        printf (" %d", lit);
+    }
   } else {
-    for (const auto &lit : c)
-      printf (" %d", lit);
+    for (const auto &lit : c) {
+      std::string str;
+      const signed char val = (lit && -internal->max_var <= lit && internal->max_var >= lit ? internal->val(lit) : 0);
+      if (val > 0)
+        str = "=1";
+      else if (val < 0)
+        str = "=-1";
+      else
+        str = "";
+      if (val)
+        printf (" %d@%d%s", lit, internal->var (lit).level, str.c_str ());
+      else
+        printf (" %d", lit);
+    }
   }
   fputc ('\n', stdout);
   tout.normal ();
@@ -133,7 +168,7 @@ void Logger::log (Internal *internal,
   fflush (stdout);
 }
 
-// for LRAT proof chains
+// for lrat proof chains
 
 void Logger::log (Internal *internal, const vector<uint64_t> &c,
                   const char *fmt, ...) {

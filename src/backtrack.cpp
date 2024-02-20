@@ -121,8 +121,11 @@ void Internal::backtrack (int new_level) {
       // literals on the trail without breaking the solver (after some
       // modifications to 'analyze' - see 'opts.chrono' guarded code there).
       assert (opts.chrono || external_prop || did_external_prop);
-      if (v.missed_implication && var(v.missed_implication->literals[0]).level <= new_level) {
-	LOG (v.missed_implication, "missed lower-level implication of %d at level %d", lit, var(v.missed_implication->literals[0]).level);
+      if (v.missed_implication)
+	assert (v.missed_level <= level && opts.chrono == 3);
+      if (v.missed_implication && v.missed_level <= new_level) {
+	assert (opts.chrono == 3);
+	LOG (v.missed_implication, "missed lower-level implication of %d at level %d (was %d)", lit, var (lit).missed_level, var (lit).level);
         for (auto other : *v.missed_implication) {
 	  LOG ("lit %d at level %d", other, var (other).level);
 	  if (other != lit)
@@ -172,13 +175,16 @@ void Internal::backtrack (int new_level) {
       tainted_literal = 0;
     }
   }
-  
-  for (auto lit : missed_props) {
-    LOG ("repropagating lit %d", lit);
-    assert (var (lit).missed_implication);
-    search_assign(lit, var (lit).missed_implication);
-    var (lit).missed_implication = nullptr;
-    
+  if (!conflict && opts.chrono == 3) {
+    for (auto lit : missed_props) {
+      assert (var (lit).missed_implication);
+      LOG (var (lit).missed_implication,
+           "setting missed propagation lit %d with reason", lit);
+      search_assign (var (lit).missed_implication->literals[1],
+                     var (lit).missed_implication);
+      if (var (lit).missed_level >= level)
+        var (lit).missed_implication = nullptr;
+    }
   }
   assert (num_assigned == trail.size ());
   
