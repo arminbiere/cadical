@@ -363,7 +363,7 @@ Solver::Solver () {
     // Here we use the solver interface to setup non-binary IDRUP tracing to
     // the defined file. Options set by the user can and will overwrite
     // these settings if neeed be.
-    set ("idrup", 1);
+    set ("lidrup", 1);
     set ("binary", 0);
     trace_proof (lidrup_path);
     tracing_nb_lidrup_env_var_method = true;
