@@ -32,6 +32,7 @@ class LidrupTracer : public FileTracer {
   vector<uint64_t> imported_chain;
   vector<uint64_t> batch_weaken;
   vector<uint64_t> batch_delete;
+  vector<uint64_t> batch_restore;
 
   static const unsigned num_nonces = 4;
 
@@ -69,7 +70,7 @@ class LidrupTracer : public FileTracer {
   void lidrup_report_status (int status);
   void lidrup_conclude_sat (const vector<int> &model);
   void lidrup_solve_query ();
-  void lidrup_batch_weaken_and_delete ();
+  void lidrup_batch_weaken_restore_and_delete ();
 
 public:
   LidrupTracer (Internal *, File *file, bool);

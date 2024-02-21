@@ -207,25 +207,14 @@ inline void LidrupTracer::put_binary_id (uint64_t id) {
 /*------------------------------------------------------------------------*/
 
 void LidrupTracer::lidrup_add_restored_clause (uint64_t id) {
-  lidrup_batch_weaken_and_delete ();
-  if (binary) {
-    file->put ('r');
-    put_binary_id (id);
-  } else {
-    file->put ("r ");
-    file->put (id);
-    file->put (' ');
-  }
-  if (binary)
-    put_binary_zero ();
-  else
-    file->put ("0\n");
-  // flush_if_piping ();
+  if (!batch_weaken.empty () || !batch_delete.empty ())
+    lidrup_batch_weaken_restore_and_delete ();
+  batch_restore.push_back (id);
 }
 
 void LidrupTracer::lidrup_add_derived_clause (
     uint64_t id, const vector<int> &clause, const vector<uint64_t> &chain) {
-  lidrup_batch_weaken_and_delete ();
+  lidrup_batch_weaken_restore_and_delete ();
   if (binary) {
     file->put ('l');
     put_binary_id (id);
@@ -257,7 +246,7 @@ void LidrupTracer::lidrup_add_derived_clause (
 
 void LidrupTracer::lidrup_add_original_clause (uint64_t id,
                                                const vector<int> &clause) {
-  lidrup_batch_weaken_and_delete ();
+  lidrup_batch_weaken_restore_and_delete ();
   if (binary) {
     file->put ('i');
     put_binary_id (id);
@@ -278,7 +267,7 @@ void LidrupTracer::lidrup_add_original_clause (uint64_t id,
   // flush_if_piping ();
 }
 
-void LidrupTracer::lidrup_batch_weaken_and_delete () {
+void LidrupTracer::lidrup_batch_weaken_restore_and_delete () {
   assert (batch_weaken.empty () || batch_delete.empty ());
   if (!batch_weaken.empty ()) {
     if (binary) {
@@ -297,6 +286,9 @@ void LidrupTracer::lidrup_batch_weaken_and_delete () {
       put_binary_zero ();
     else
       file->put ("0\n");
+#ifndef QUIET
+    batched++;
+#endif
   }
   if (!batch_delete.empty ()) {
     if (binary) {
@@ -315,15 +307,36 @@ void LidrupTracer::lidrup_batch_weaken_and_delete () {
       put_binary_zero ();
     else
       file->put ("0\n");
-  }
 #ifndef QUIET
-  batched++;
+    batched++;
 #endif
+  }
+  if (!batch_restore.empty ()) {
+    if (binary) {
+      file->put ('r');
+    } else {
+      file->put ("r ");
+    }
+    for (const auto &id : batch_restore) {
+      if (binary)
+        put_binary_id (id);
+      else
+        file->put (id), file->put (' ');
+    }
+    batch_restore.clear ();
+    if (binary)
+      put_binary_zero ();
+    else
+      file->put ("0\n");
+#ifndef QUIET
+    batched++;
+#endif
+  }
 }
 
 void LidrupTracer::lidrup_conclude_and_delete (
     const vector<uint64_t> &conclusion) {
-  lidrup_batch_weaken_and_delete ();
+  lidrup_batch_weaken_restore_and_delete ();
   uint64_t size = conclusion.size ();
   if (size > 1) {
     if (binary) {
@@ -368,7 +381,7 @@ void LidrupTracer::lidrup_conclude_and_delete (
 }
 
 void LidrupTracer::lidrup_report_status (int status) {
-  lidrup_batch_weaken_and_delete ();
+  lidrup_batch_weaken_restore_and_delete ();
   if (binary)
     file->put ('s');
   else
@@ -385,7 +398,7 @@ void LidrupTracer::lidrup_report_status (int status) {
 }
 
 void LidrupTracer::lidrup_conclude_sat (const vector<int> &model) {
-  lidrup_batch_weaken_and_delete ();
+  lidrup_batch_weaken_restore_and_delete ();
   if (binary)
     file->put ('m');
   else
@@ -404,7 +417,7 @@ void LidrupTracer::lidrup_conclude_sat (const vector<int> &model) {
 }
 
 void LidrupTracer::lidrup_solve_query () {
-  lidrup_batch_weaken_and_delete ();
+  lidrup_batch_weaken_restore_and_delete ();
   if (binary)
     file->put ('q');
   else
@@ -461,15 +474,15 @@ void LidrupTracer::delete_clause (uint64_t id, bool, const vector<int> &) {
   LOG ("LIDRUP TRACER tracing deletion of clause[%" PRId64 "]", id);
   if (find_and_delete (id)) {
     assert (imported_clause.empty ());
-    if (!batch_delete.empty ())
-      lidrup_batch_weaken_and_delete ();
+    if (!batch_delete.empty () || !batch_restore.empty ())
+      lidrup_batch_weaken_restore_and_delete ();
     batch_weaken.push_back (id);
 #ifndef QUIET
     weakened++;
 #endif
   } else {
-    if (!batch_weaken.empty ())
-      lidrup_batch_weaken_and_delete ();
+    if (!batch_weaken.empty () || !batch_restore.empty ())
+      lidrup_batch_weaken_restore_and_delete ();
     batch_delete.push_back (id);
 #ifndef QUIET
     deleted++;
@@ -574,8 +587,8 @@ void LidrupTracer::print_statistics () {
        percent (weakened, total));
   MSG ("LIDRUP %" PRId64 " restored clauses %.2f%%", restore,
        percent (restore, total));
-  MSG ("LIDRUP %" PRId64 " batched deletions and restores %.2f", batched,
-       relative (batched, deleted + restore));
+  MSG ("LIDRUP %" PRId64 " batches of deletions, weaken and restores %.2f", batched,
+       relative (batched, deleted + restore + weakened));
   MSG ("LIDRUP %" PRId64 " queries %.2f", solved, relative (solved, total));
   MSG ("LIDRUP %" PRId64 " bytes (%.2f MB)", bytes,
        bytes / (double) (1 << 20));
@@ -598,6 +611,7 @@ void LidrupTracer::close (bool print) {
 
 void LidrupTracer::flush (bool print) {
   assert (!closed ());
+  lidrup_batch_weaken_restore_and_delete ();
   file->flush ();
 #ifndef QUIET
   if (print) {
