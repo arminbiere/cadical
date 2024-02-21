@@ -352,30 +352,43 @@ void LidrupTracer::lidrup_conclude_and_delete (
       file->put ('u');
     else
       file->put ("u ");
-    (void) find_and_delete (id);
-    for (const auto &external_lit : imported_clause) {
-      // flip sign...
-      const auto not_elit = -external_lit;
+    if (!find_and_delete (id)) {
+      assert (imported_clause.empty ());
+      assert (conclusion.size () == 1);
+      if (binary) {
+        put_binary_zero ();
+        put_binary_id (id);
+        put_binary_zero ();
+      } else {
+        file->put ("0 ");
+        file->put (id);
+        file->put (" 0\n");
+      }
+    } else {
+      for (const auto &external_lit : imported_clause) {
+        // flip sign...
+        const auto not_elit = -external_lit;
+        if (binary)
+          put_binary_lit (not_elit);
+        else
+          file->put (not_elit), file->put (' ');
+      }
       if (binary)
-        put_binary_lit (not_elit);
+        put_binary_zero ();
       else
-        file->put (not_elit), file->put (' ');
-    }
-    if (binary)
-      put_binary_zero ();
-    else
-      file->put ("0 ");
-    for (const auto &cid : imported_chain) {
+        file->put ("0 ");
+      for (const auto &cid : imported_chain) {
+        if (binary)
+          put_binary_id (cid);
+        else
+          file->put (cid), file->put (' ');
+      }
       if (binary)
-        put_binary_id (cid);
+        put_binary_zero ();
       else
-        file->put (cid), file->put (' ');
+        file->put ("0\n");
+      imported_clause.clear ();
     }
-    if (binary)
-      put_binary_zero ();
-    else
-      file->put ("0\n");
-    imported_clause.clear ();
   }
   flush_if_piping ();
 }
