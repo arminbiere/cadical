@@ -244,6 +244,11 @@ static void log_api_call_returns (Internal *internal, const char *name,
 #endif // end of 'else' part of 'ifdef LOGGING'
 /*------------------------------------------------------------------------*/
 
+
+static bool tracing_nb_lidrup_env_var_method;
+
+
+
 /*------------------------------------------------------------------------*/
 #ifndef NTRACING
 /*------------------------------------------------------------------------*/
@@ -347,6 +352,22 @@ Solver::Solver () {
   if (tracing_api_calls_through_environment_variable_method)
     message ("tracing API calls to '%s'", path);
 #endif
+
+  const char *lidrup_path = getenv ("CADICAL_LIDRUP_TRACE");
+  if (lidrup_path) {
+    if (tracing_nb_lidrup_env_var_method)
+    FATAL ("can not trace LIDRUP of two solver instances "
+      "using environment variable 'CADICAL_LIDRUP_TRACE'");
+    // Here we use the solver interface to setup non-binary IDRUP tracing to
+    // the defined file. Options set by the user can and will overwrite
+    // these settings if neeed be.
+    set ("idrup", 1);
+    set ("binary", 0);
+    trace_proof (lidrup_path);
+    tracing_nb_lidrup_env_var_method = true;
+  } else {
+    tracing_nb_lidrup_env_var_method = false;
+  }
 }
 
 Solver::~Solver () {
