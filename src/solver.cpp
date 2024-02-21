@@ -375,6 +375,8 @@ Solver::~Solver () {
   REQUIRE_VALID_OR_SOLVING_STATE ();
   STATE (DELETING);
 
+  tracing_nb_lidrup_env_var_method = false;
+
 #ifdef LOGGING
   //
   // After deleting 'internal' logging does not work anymore.
