@@ -450,7 +450,7 @@ public:
       }
       t_idx++;
     }
-    
+#ifdef LOGGING    
     if (etrail.size() != otrail.size()) {
       MLOG ("etrail: ");
       for (auto const& lit: etrail) MLOGC (lit << " ");
@@ -458,6 +458,7 @@ public:
       for (auto const& lit: otrail) MLOGC (lit << " ");
       MLOGC (std::endl);
     }
+#endif
     assert (etrail.size() == otrail.size() );
   
     assert (etrail == otrail);
