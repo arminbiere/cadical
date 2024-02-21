@@ -244,11 +244,6 @@ static void log_api_call_returns (Internal *internal, const char *name,
 #endif // end of 'else' part of 'ifdef LOGGING'
 /*------------------------------------------------------------------------*/
 
-
-static bool tracing_nb_lidrup_env_var_method;
-
-
-
 /*------------------------------------------------------------------------*/
 #ifndef NTRACING
 /*------------------------------------------------------------------------*/
@@ -317,6 +312,10 @@ static bool tracing_api_calls_through_environment_variable_method;
 /*------------------------------------------------------------------------*/
 #endif
 /*------------------------------------------------------------------------*/
+
+
+static bool tracing_nb_lidrup_env_var_method;
+
 
 Solver::Solver () {
 
@@ -732,6 +731,7 @@ int Solver::solve () {
   REQUIRE_READY_STATE ();
   const int res = call_external_solve_and_check_results (false);
   LOG_API_CALL_RETURNS ("solve", res);
+  if (tracing_nb_lidrup_env_var_method) flush_proof_trace(true); 
   return res;
 }
 
