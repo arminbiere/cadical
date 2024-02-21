@@ -314,7 +314,7 @@ static bool tracing_api_calls_through_environment_variable_method;
 /*------------------------------------------------------------------------*/
 
 
-static bool tracing_nb_lidrup_env_var_method;
+static bool tracing_nb_lidrup_env_var_method = false;
 
 
 Solver::Solver () {
@@ -353,7 +353,10 @@ Solver::Solver () {
 #endif
 
   const char *lidrup_path = getenv ("CADICAL_LIDRUP_TRACE");
+  if (!lidrup_path)
+    lidrup_path = getenv ("CADICALLIDRUPTRACE");
   if (lidrup_path) {
+
     if (tracing_nb_lidrup_env_var_method)
     FATAL ("can not trace LIDRUP of two solver instances "
       "using environment variable 'CADICAL_LIDRUP_TRACE'");
