@@ -357,9 +357,9 @@ Solver::Solver () {
     lidrup_path = getenv ("CADICALLIDRUPTRACE");
   if (lidrup_path) {
 
-    if (tracing_nb_lidrup_env_var_method)
-    FATAL ("can not trace LIDRUP of two solver instances "
-      "using environment variable 'CADICAL_LIDRUP_TRACE'");
+    // if (tracing_nb_lidrup_env_var_method)
+    // FATAL ("can not trace LIDRUP of two solver instances "
+    //   "using environment variable 'CADICAL_LIDRUP_TRACE'");
     // Here we use the solver interface to setup non-binary IDRUP tracing to
     // the defined file. Options set by the user can and will overwrite
     // these settings if neeed be.
