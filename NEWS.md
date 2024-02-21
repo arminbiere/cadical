@@ -1,3 +1,5 @@
+- Combine IPASIR-UP with LIDRUP generation.
+
 Version 2.0.0
 -------------
 
