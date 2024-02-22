@@ -72,26 +72,16 @@ void LidrupTracer::enlarge_clauses () {
 }
 
 LidrupClause *LidrupTracer::new_clause () {
-  const size_t size = imported_clause.size ();
-  const size_t chain = imported_chain.size ();
-  assert (size <= UINT_MAX);
-  const int off = size ? -1 : 0;
-  const int offc = chain ? -1 : 0;
-  const size_t bytes = sizeof (LidrupClause) + (size - off) * sizeof (int) +
-                       (chain - offc) * sizeof (uint64_t);
-  LidrupClause *res = (LidrupClause *) new char[bytes];
+  LidrupClause *res = new LidrupClause;
   res->next = 0;
   res->hash = last_hash;
   res->id = last_id;
-  res->size = size;
-  res->chain_size = chain;
-  int *literals = res->literals, *p = literals;
-  for (const auto &lit : imported_clause) {
-    *p++ = lit;
-  }
-  uint64_t *ids = res->chain, *pc = ids;
+  // res->chain = std::vector<uint64_t> ();
   for (const auto &id : imported_chain) {
-    *pc++ = id;
+    res->chain.push_back (id);
+  }
+  for (const auto &lit : imported_clause) {
+    res->literals.push_back (lit);
   }
   last_clause = res;
   num_clauses++;
@@ -101,7 +91,7 @@ LidrupClause *LidrupTracer::new_clause () {
 void LidrupTracer::delete_clause (LidrupClause *c) {
   assert (c);
   num_clauses--;
-  delete[](char *) c;
+  delete c;
 }
 
 uint64_t LidrupTracer::reduce_hash (uint64_t hash, uint64_t size) {
@@ -141,13 +131,11 @@ bool LidrupTracer::find_and_delete (const uint64_t id) {
     return false;
   assert (c && res);
   *res = c->next;
-  int *begin = c->literals;
-  for (size_t i = 0; i < c->size; i++) {
-    imported_clause.push_back (begin[i]);
+  for (auto & lit : c->literals) {
+    imported_clause.push_back (lit);
   }
-  uint64_t *cbegin = c->chain;
-  for (size_t i = 0; i < c->chain_size; i++) {
-    imported_chain.push_back (cbegin[i]);
+  for (auto & cid : c->chain) {
+    imported_chain.push_back (cid);
   }
   delete_clause (c);
   return true;
@@ -470,7 +458,7 @@ void LidrupTracer::add_assumption_clause (uint64_t id,
   if (file->closed ())
     return;
   assert (imported_clause.empty ());
-  LOG (clause, "LIDRUP TRACER tracing addition of assumption clause");
+  LOG (clause, "LIDRUP TRACER tracing addition of assumption clause[%" PRId64 "]", id);
   for (auto &lit : clause)
     imported_clause.push_back (lit);
   for (auto &cid : chain)

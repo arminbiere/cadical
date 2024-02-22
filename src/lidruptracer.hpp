@@ -9,10 +9,8 @@ struct LidrupClause {
   LidrupClause *next; // collision chain link for hash table
   uint64_t hash;     // previously computed full 64-bit hash
   uint64_t id;       // id of clause
-  unsigned size;
-  unsigned chain_size;
-  int literals[1];
-  uint64_t chain[1];
+  std::vector<uint64_t> chain;
+  std::vector<int> literals;
 };
 
 class LidrupTracer : public FileTracer {
