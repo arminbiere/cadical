@@ -127,6 +127,7 @@ struct Stats {
   int64_t reusedstable;  // number of reused trails during stabilizing
   int64_t sections;      // 'section' counter
   int64_t chrono;        // chronological backtracks
+  int64_t missedprops;   // missed propagations
   int64_t backtracks;    // number of backtracks
   int64_t elevated; // number of elevated literals (updated in backtrack)
   int64_t improvedglue;   // improved glue during bumping

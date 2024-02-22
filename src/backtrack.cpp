@@ -11,6 +11,7 @@ inline void Internal::unassign (int lit) {
   assert (val (lit) > 0);
   set_val (lit, 0);
   var (lit).missed_implication = nullptr;
+  var (lit).missed_level = -1;
 
   int idx = vidx (lit);
   LOG ("unassign %d @ %d", lit, var (idx).level);
@@ -123,9 +124,10 @@ void Internal::backtrack (int new_level) {
       assert (opts.chrono || external_prop || did_external_prop);
       if (!conflict && v.missed_implication)
 	assert (v.missed_level <= level && opts.chrono == 3);
-      if (!conflict && v.missed_implication && v.missed_level <= new_level) {
+      if (v.missed_implication && v.missed_level <= new_level) {
 	assert (opts.chrono == 3);
-	LOG (v.missed_implication, "missed lower-level implication of %d at level %d (was %d)", lit, var (lit).missed_level, var (lit).level);
+	LOG (v.missed_implication, "BT missed lower-level implication of %d at level %d (was %d)", lit, var (lit).missed_level, var (lit).level);
+	assert (var (lit).missed_level < var (lit).level);
         for (auto other : *v.missed_implication) {
 	  LOG ("lit %d at level %d", other, var (other).level);
 	  if (other != lit)
@@ -167,7 +169,7 @@ void Internal::backtrack (int new_level) {
     notify_assignments ();
   }
 
-  if (opts.chrono == 3 && reassigned) {
+  if (opts.chrono == 3) {
     // TODO: merge with above
     LOG ("strong chrono: skipping %ld repropagations", trail.size() - assigned);
     if (propagated > trail.size ())
@@ -186,16 +188,18 @@ void Internal::backtrack (int new_level) {
       tainted_literal = 0;
     }
   }
-  if (!conflict && opts.chrono == 3) {
+  if (opts.chrono == 3) {
     for (auto lit : missed_props) {
       assert (var (lit).missed_implication);
+      ++stats.missedprops;
       LOG (var (lit).missed_implication,
            "setting missed propagation lit %d with reason", lit);
-      search_assign (var (lit).missed_implication->literals[1],
-                     var (lit).missed_implication);
-      if (var (lit).missed_level >= level)
+      search_assign (lit, var (lit).missed_implication);
+      if (var (lit).missed_level >= new_level)
         var (lit).missed_implication = nullptr;
     }
+    if (!missed_props.empty())
+      notify_assignments();
   }
   assert (num_assigned == trail.size ());
   

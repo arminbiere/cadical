@@ -392,9 +392,9 @@ bool Internal::propagate () {
             j--; // Drop this watch from the watch list of 'lit'.
 
           } else if (u > 0) {
-            if (opts.chrono == 3 && var (other).level > replacement_level) {
+            if (opts.chrono == 3 && var (other).level > replacement_level && v < 0) {
               LOG (w.clause,
-                   "missed lower-level implication of %d at level %d (was: %d)", other, replacement_level, var (other).level);
+                   "missed lower-level implication of %d at level %d (was: %d) %d", other, replacement_level, var (other).level);
               assert (opts.chrono);
               var (other).missed_implication = w.clause;
               var (other).missed_level = replacement_level;
