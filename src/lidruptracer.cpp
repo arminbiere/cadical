@@ -388,6 +388,7 @@ void LidrupTracer::lidrup_conclude_and_delete (
       else
         file->put ("0\n");
       imported_clause.clear ();
+      imported_chain.clear ();
     }
   }
   flush_if_piping ();
