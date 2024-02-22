@@ -112,7 +112,25 @@ void Internal::backtrack (int new_level) {
   while (i < end_of_trail) {
     int lit = trail[i++];
     Var &v = var (lit);
-    if (v.level > new_level) {
+    if (opts.chrono == 3 && v.missed_implication && v.missed_level <= new_level) {
+      if (v.missed_implication)
+        assert (v.missed_level <= level && opts.chrono == 3);
+      assert (v.missed_level <= level && opts.chrono == 3);
+      assert (opts.chrono == 3);
+      LOG (v.missed_implication,
+           "BT missed lower-level implication of %d at level %d (was %d)",
+           lit, var (lit).missed_level, var (lit).level);
+      assert (external_prop || var (lit).missed_level < var (lit).level);
+      for (auto other : *v.missed_implication) {
+        LOG ("lit %d at level %d", other, var (other).level);
+        if (other != lit)
+          assert (val (other) < 0);
+      }
+      missed_props.push_back (lit);
+      set_val (lit, 0);
+      --num_assigned; // reassigning later
+    }
+    else if (v.level > new_level) {
       unassign (lit);
 #ifdef LOGGING
       unassigned++;
@@ -123,34 +141,20 @@ void Internal::backtrack (int new_level) {
       // literals on the trail without breaking the solver (after some
       // modifications to 'analyze' - see 'opts.chrono' guarded code there).
       assert (opts.chrono || external_prop || did_external_prop);
-      if (!conflict && v.missed_implication)
-        assert (v.missed_level <= level && opts.chrono == 3);
-      if (v.missed_implication && v.missed_level <= new_level) {
-        assert (opts.chrono == 3);
-        LOG (v.missed_implication,
-             "BT missed lower-level implication of %d at level %d (was %d)",
-             lit, var (lit).missed_level, var (lit).level);
-        assert (external_prop || var (lit).missed_level < var (lit).level);
-        for (auto other : *v.missed_implication) {
-          LOG ("lit %d at level %d", other, var (other).level);
-          if (other != lit)
-            assert (val (other) < 0);
-        }
-        missed_props.push_back (lit);
-        set_val (lit, 0);
-        --num_assigned; // reassigning later
-      } else {
-        v.missed_implication = nullptr; // happens notably for units
+      if (v.missed_implication)
+        LOG ("BT resetting missed of lit %d is not reused (expected level "
+             "%d)",
+             lit, v.missed_level);
+      v.missed_implication = nullptr; // happens notably for units
 #ifdef LOGGING
-        if (!v.level)
-          LOG ("reassign %d @ 0 unit clause %d", lit, lit);
-        else
-          LOG (v.reason, "reassign %d @ %d", lit, v.level);
+      if (!v.level)
+        LOG ("reassign %d @ 0 unit clause %d", lit, lit);
+      else
+        LOG (v.reason, "reassign %d @ %d", lit, v.level);
 #endif
-        trail[j] = lit;
-        v.trail = j++;
-        reassigned++;
-      }
+      trail[j] = lit;
+      v.trail = j++;
+      reassigned++;
     }
   }
   trail.resize (j);

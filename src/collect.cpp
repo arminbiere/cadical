@@ -253,6 +253,13 @@ void Internal::update_reason_references () {
     assert (c->moved);
     Clause *d = c->copy;
     v.reason = d;
+    Clause *e = v.missed_implication;
+    if (e && !e->garbage) {
+      assert (e->moved);
+      v.missed_implication = e->copy;
+    } else {
+      v.missed_implication = nullptr;
+    }
 #ifdef LOGGING
     count++;
 #endif

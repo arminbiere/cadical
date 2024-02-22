@@ -897,6 +897,8 @@ void Internal::analyze () {
 
       assert (forced);
       assert (conflict_level > 0);
+      // TODO
+      var (forced).missed_implication = nullptr;
       LOG ("single highest level literal %d", forced);
 
       // The pseudo code in the SAT'18 paper actually backtracks to the
@@ -1015,6 +1017,7 @@ void Internal::analyze () {
         const int conflict_level = otfs_find_backtrack_level (forced);
         int new_level = determine_actual_backtrack_level (conflict_level);
         UPDATE_AVERAGE (averages.current.level, new_level);
+	var (forced).missed_implication = nullptr;
         backtrack (new_level);
 
         LOG ("forcing %d", forced);
@@ -1132,6 +1135,11 @@ void Internal::analyze () {
 
   int new_level = determine_actual_backtrack_level (jump);
   UPDATE_AVERAGE (averages.current.level, new_level);
+  if (uip) {
+    // TODO when this happens we actually have a conflict
+    // that we should analyse
+    var(uip).missed_implication = nullptr;
+  }
   backtrack (new_level);
 
   // It should hold that (!level <=> size == 1)
