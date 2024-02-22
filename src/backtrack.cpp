@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "propagate.cpp"
 
 namespace CaDiCaL {
 
@@ -123,20 +124,23 @@ void Internal::backtrack (int new_level) {
       // modifications to 'analyze' - see 'opts.chrono' guarded code there).
       assert (opts.chrono || external_prop || did_external_prop);
       if (!conflict && v.missed_implication)
-	assert (v.missed_level <= level && opts.chrono == 3);
+        assert (v.missed_level <= level && opts.chrono == 3);
       if (v.missed_implication && v.missed_level <= new_level) {
-	assert (opts.chrono == 3);
-	LOG (v.missed_implication, "BT missed lower-level implication of %d at level %d (was %d)", lit, var (lit).missed_level, var (lit).level);
-	assert (var (lit).missed_level < var (lit).level);
+        assert (opts.chrono == 3);
+        LOG (v.missed_implication,
+             "BT missed lower-level implication of %d at level %d (was %d)",
+             lit, var (lit).missed_level, var (lit).level);
+        assert (external_prop || var (lit).missed_level < var (lit).level);
         for (auto other : *v.missed_implication) {
-	  LOG ("lit %d at level %d", other, var (other).level);
-	  if (other != lit)
-	    assert (val (other) < 0);
-	}
+          LOG ("lit %d at level %d", other, var (other).level);
+          if (other != lit)
+            assert (val (other) < 0);
+        }
         missed_props.push_back (lit);
-        set_val (lit, 0); --num_assigned; // reassigning later
+        set_val (lit, 0);
+        --num_assigned; // reassigning later
       } else {
-        v.missed_implication = nullptr; //happens notably for units
+        v.missed_implication = nullptr; // happens notably for units
 #ifdef LOGGING
         if (!v.level)
           LOG ("reassign %d @ 0 unit clause %d", lit, lit);
@@ -171,7 +175,8 @@ void Internal::backtrack (int new_level) {
 
   if (opts.chrono == 3) {
     // TODO: merge with above
-    LOG ("strong chrono: skipping %ld repropagations", trail.size() - assigned);
+    LOG ("strong chrono: skipping %ld repropagations",
+         trail.size () - assigned);
     if (propagated > trail.size ())
       propagated = trail.size ();
     if (propagated2 > trail.size ())
@@ -198,11 +203,10 @@ void Internal::backtrack (int new_level) {
       if (var (lit).missed_level >= new_level)
         var (lit).missed_implication = nullptr;
     }
-    if (!missed_props.empty())
-      notify_assignments();
+    if (!missed_props.empty ())
+      notify_assignments ();
   }
   assert (num_assigned == trail.size ());
-  
 }
 
 } // namespace CaDiCaL

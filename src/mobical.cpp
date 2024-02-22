@@ -2054,6 +2054,14 @@ void Trace::generate_constraint (Random &random, int minvars, int maxvars,
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
+  //
+  //
+  // TODO : for debugging purpose we deactivate the propagator
+  //
+  //
+  //
+  //
+  return;
   if (random.generate_double () < 0.9)
     return;
 
