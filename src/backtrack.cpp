@@ -177,18 +177,6 @@ void Internal::backtrack (int new_level) {
     notify_assignments ();
   }
 
-  if (opts.chrono == 3) {
-    // TODO: merge with above
-    LOG ("strong chrono: skipping %ld repropagations",
-         trail.size () - assigned);
-    if (propagated > trail.size ())
-      propagated = trail.size ();
-    if (propagated2 > trail.size ())
-      propagated2 = trail.size ();
-    if (no_conflict_until > trail.size ())
-      no_conflict_until = assigned;
-  }
-
   control.resize (new_level + 1);
   level = new_level;
   if (tainted_literal) {
@@ -209,6 +197,15 @@ void Internal::backtrack (int new_level) {
     }
     if (!missed_props.empty ())
       notify_assignments ();
+  }
+
+  if (opts.chrono == 3) {
+    // TODO: merge with above
+    LOG ("strong chrono: skipping %ld repropagations",
+         trail.size () - assigned);
+      propagated = trail.size ();
+      propagated2 = trail.size ();
+      no_conflict_until = assigned;
   }
   assert (num_assigned == trail.size ());
 }
