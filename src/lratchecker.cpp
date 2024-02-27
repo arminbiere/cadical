@@ -248,6 +248,7 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
   assert (c);
   for (int *i = c->literals; i < c->literals + c->size; i++) {
     int lit = *i;
+    LOG ("LRAT CHECKER marking lit %" PRId64, lit);
     checked_lit (lit) = true;
     assert (!checked_lit (-lit));
   }
@@ -255,8 +256,10 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
     auto &id = *p;
     c = *find (id);
     assert (c); // since this is checked in check already
+    LOG ("LRAT CHECKER clause of size %d", c->size);
     for (int *i = c->literals; i < c->literals + c->size; i++) {
       int lit = *i;
+      LOG ("LRAT CHECKER marking 2 lit %" PRId64, lit);
       if (!checked_lit (-lit))
         checked_lit (lit) = true;
       else

@@ -101,8 +101,6 @@ void Internal::build_chain_for_empty () {
 /*------------------------------------------------------------------------*/
 
 inline void Internal::search_assign (int lit, Clause *reason) {
-//  if (lit == -39 && reason && reason->id ==31)
-//    return;
   if (level)
     require_mode (SEARCH);
 

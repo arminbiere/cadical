@@ -396,9 +396,9 @@ void Internal::explain_reason (int ilit, Clause *reason, int &open) {
     assert (val (other) < 0);
     assert (v.level <= level);
     if (v.reason == external_reason) {
-      v.reason = learn_external_reason_clause (-other, 0, true);
+      v.missed_implication = learn_external_reason_clause (-other, 0, true);
     }
-    if (v.level && v.reason) {
+    if (v.level && v.missed_implication) {
       f.seen = true;
       open++;
     }
@@ -457,9 +457,10 @@ void Internal::explain_external_propagations () {
     const int lit = *it;
     Flags &f = flags (lit);
     Var &v = var (lit);
-    if (v.reason) {
+    if (v.reason) { // TODO with opts.chrono == 3 we should not need that anymore actually
       int real_level = 0;
-      for (const auto &other : *v.reason) {
+      Clause *const reason = v.missed_implication ? v.missed_implication : v.reason;
+      for (const auto &other : *reason) {
         if (other == lit)
           continue;
         int tmp = var (other).level;
@@ -474,7 +475,7 @@ void Internal::explain_external_propagations () {
       }
       assert (v.level >= real_level);
       if (v.level > real_level) {
-        v.level = real_level;
+        v.missed_level = real_level;
       }
     }
     f.seen = false;
@@ -585,6 +586,10 @@ void Internal::handle_external_clause (Clause *res) {
     // TODO: maybe fix levels
   }
   const int l1 = var (pos1).level;
+  // TODO remove, but the proper solution is to backtrack first, then hande those missed propagations
+  var (pos1).missed_implication = nullptr;
+  var (pos0).missed_implication = nullptr;
+  //
   if (val (pos0) < 0) { // conflicting or propagating clause
     assert (0 < l1 && l1 <= var (pos0).level);
     if (!opts.chrono) {

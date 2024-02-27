@@ -1,5 +1,6 @@
 #include "internal.hpp"
 #include "propagate.cpp"
+#include <vector>
 
 namespace CaDiCaL {
 
@@ -128,7 +129,6 @@ void Internal::backtrack (int new_level) {
       }
       missed_props.push_back (lit);
       set_val (lit, 0);
-      --num_assigned; // reassigning later
     }
     else if (v.level > new_level) {
       unassign (lit);
@@ -185,28 +185,45 @@ void Internal::backtrack (int new_level) {
       tainted_literal = 0;
     }
   }
-  if (opts.chrono == 3) {
-    for (auto lit : missed_props) {
-      assert (var (lit).missed_implication);
-      ++stats.missedprops;
-      LOG (var (lit).missed_implication,
-           "setting missed propagation lit %d with reason", lit);
-      search_assign (lit, var (lit).missed_implication);
-      if (var (lit).missed_level >= new_level)
-        var (lit).missed_implication = nullptr;
-    }
-    if (!missed_props.empty ())
-      notify_assignments ();
-  }
 
-  if (opts.chrono == 3) {
-    // TODO: merge with above
+  if (opts.chrono == 3 && new_level) {
+    // we only skip repropagation if we are not going back to level 0.  This is very important for
+    // inprocessing where we want to make sure that we are not missing propagations.
     LOG ("strong chrono: skipping %ld repropagations",
          trail.size () - assigned);
       propagated = trail.size ();
       propagated2 = trail.size ();
       no_conflict_until = assigned;
   }
+  if (opts.chrono) {
+    for (auto lit : missed_props) {
+      Var &v = var (lit);
+      assert (v.missed_implication);
+      ++stats.missedprops;
+      set_val (vidx(lit), sign (lit));
+      if (!v.missed_level) {
+	std::vector<uint64_t> lrat_chain_tmp (std::move (lrat_chain)); lrat_chain.clear();
+	build_chain_for_units (lit, v.missed_implication, true);
+	LOG (lrat_chain, "chain: ");
+	learn_unit_clause (lit);
+	lrat_chain = std::move (lrat_chain_tmp);
+	// not marking the clause garbage, because it can be involved in the conflict analysis
+	LOG (lrat_chain, "chain set back to: ");
+      }
+      v.reason = v.missed_level ? v.missed_implication : 0;
+      assert (level >= v.missed_level);
+      v.level = v.missed_level;
+      assert (new_level >= v.missed_level);
+      v.trail = trail.size();
+      LOG (v.reason,
+           "setting missed propagation lit %d at level %d with reason", lit, v.level);
+      trail.push_back (lit);
+      var (lit).missed_implication = nullptr;
+    }
+    if (!missed_props.empty ())
+      notify_assignments ();
+  }
+
   assert (num_assigned == trail.size ());
 }
 
