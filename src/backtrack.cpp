@@ -196,11 +196,13 @@ void Internal::backtrack (int new_level) {
       no_conflict_until = assigned;
   }
   if (opts.chrono) {
+#if 0
     std::sort (std::begin (missed_props), std::end (missed_props),
             [this] (int litA, int litB) {
               return var (litA).missed_level < var (litB).missed_level ||
 		     (var (litA).missed_level == var (litB).missed_level &&
 		      var (litA).trail < var (litB).trail);});
+#endif
     for (int i = missed_props.size() - 1; i >= 0; --i) {
       const int lit = missed_props[i];
       Var &v = var (lit);

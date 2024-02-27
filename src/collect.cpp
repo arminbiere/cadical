@@ -253,18 +253,36 @@ void Internal::update_reason_references () {
     assert (c->moved);
     Clause *d = c->copy;
     v.reason = d;
-    Clause *e = v.missed_implication;
-    if (e && !e->garbage) {
-      assert (e->moved);
-      v.missed_implication = e->copy;
-    } else {
-      v.missed_implication = nullptr;
-    }
 #ifdef LOGGING
     count++;
 #endif
   }
   LOG ("updated %zd assigned reason references", count);
+  if (opts.chrono == 3) {
+#ifdef LOGGING
+      count = 0;
+#endif
+    for (auto &lit : trail) {
+      if (!active (lit))
+        continue;
+      Var &v = var (lit);
+      Clause *c = v.missed_implication;
+      if (!c)
+        continue;
+      assert (c != external_reason);
+      LOG (c, "updating missed %d reason", lit);
+      // TODO: should not happen if repropagation is not too eager
+      // assert (!c->reason);
+      if (!c->moved)
+	continue;
+      Clause *d = c->copy;
+      v.missed_implication = d;
+#ifdef LOGGING
+      count++;
+#endif
+    }
+    LOG ("updated %zd assigned reason references", count);
+  }
 }
 
 /*------------------------------------------------------------------------*/
