@@ -128,7 +128,7 @@ void Internal::backtrack (int new_level) {
           assert (val (other) < 0);
       }
       missed_props.push_back (lit);
-      set_val (lit, 0);
+//      set_val (lit, 0);
     }
     else if (v.level > new_level) {
       unassign (lit);
@@ -196,11 +196,18 @@ void Internal::backtrack (int new_level) {
       no_conflict_until = assigned;
   }
   if (opts.chrono) {
-    for (auto lit : missed_props) {
+    std::sort (std::begin (missed_props), std::end (missed_props),
+            [this] (int litA, int litB) {
+              return var (litA).missed_level < var (litB).missed_level ||
+		     (var (litA).missed_level == var (litB).missed_level &&
+		      var (litA).trail < var (litB).trail);});
+    for (int i = missed_props.size() - 1; i >= 0; --i) {
+      const int lit = missed_props[i];
       Var &v = var (lit);
       assert (v.missed_implication);
       ++stats.missedprops;
-      set_val (vidx(lit), sign (lit));
+      assert (val (lit) > 0);
+      assert (val (-lit) < 0);
       if (!v.missed_level) {
 	std::vector<uint64_t> lrat_chain_tmp (std::move (lrat_chain)); lrat_chain.clear();
 	build_chain_for_units (lit, v.missed_implication, true);

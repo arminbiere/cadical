@@ -353,6 +353,7 @@ bool Internal::propagate () {
           int r = 0;
           signed char v = -1;
 	  int replacement_level = proplevel;
+	  LOG ("searching firt half");
 
           while (k != end && (v = val (r = *k)) < 0)
             k++, replacement_level = max (replacement_level, var (r).level);

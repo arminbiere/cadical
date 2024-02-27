@@ -898,6 +898,8 @@ void Internal::analyze () {
       assert (forced);
       assert (conflict_level > 0);
       // TODO
+      if (var(forced).missed_implication)
+	LOG  ("overwriting missed propagation %d", forced);
       var (forced).missed_implication = nullptr;
       LOG ("single highest level literal %d", forced);
 
@@ -1138,6 +1140,8 @@ void Internal::analyze () {
   if (uip) {
     // TODO when this happens we actually have a conflict
     // that we should analyse
+    if (var(uip).missed_implication)
+      LOG  ("overwriting missed propagation %d", uip);
     var(uip).missed_implication = nullptr;
   }
   backtrack (new_level);
