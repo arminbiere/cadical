@@ -79,6 +79,7 @@ void Internal::update_target_and_best () {
 
 void Internal::backtrack (int new_level) {
 
+  assert (new_level >= 0);
   assert (new_level <= level);
   if (new_level == level)
     return;
@@ -210,7 +211,7 @@ void Internal::backtrack (int new_level) {
       ++stats.missedprops;
       assert (val (lit) > 0);
       assert (val (-lit) < 0);
-      if (!v.missed_level) {
+      if (!v.missed_level && !unsat) {
 	std::vector<uint64_t> lrat_chain_tmp (std::move (lrat_chain)); lrat_chain.clear();
 	build_chain_for_units (lit, v.missed_implication, true);
 	LOG (lrat_chain, "chain: ");
@@ -224,8 +225,11 @@ void Internal::backtrack (int new_level) {
       v.level = v.missed_level;
       assert (new_level >= v.missed_level);
       v.trail = trail.size();
-      LOG (v.reason,
-           "setting missed propagation lit %d at level %d with reason", lit, v.level);
+      if (v.missed_level)
+	LOG (v.reason,
+             "setting missed propagation lit %d at level %d with reason", lit, v.level);
+      else
+	LOG ("setting missed propagation lit %d to root level", lit, v.level);
       trail.push_back (lit);
       var (lit).missed_implication = nullptr;
     }

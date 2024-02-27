@@ -460,10 +460,12 @@ void Internal::add_new_original_clause (uint64_t id) {
         const int lit = clause[0];
         assert (!val (lit) || var (lit).level);
         if (val (lit) < 0) {
-	  const int lev = opts.chrono == 3 && var (lit).missed_implication ? var (lit).missed_level : var (lit).level;
+	  const int lev = opts.chrono == 3 && var (lit).missed_implication ? min (0, var (lit).missed_level) : var (lit).level - 1;
 	  assert (opts.chrono != 3 || !var (lit).missed_implication || var (lit).level > var (lit).missed_level);
-          backtrack (lev - 1);
+	  var (lit).missed_implication = nullptr;
+          backtrack (lev);
 	}
+	var (lit).missed_implication = nullptr;
         assert (val (lit) >= 0);
         handle_external_clause (0);
         assign_original_unit (new_id, lit);

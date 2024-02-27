@@ -303,6 +303,7 @@ bool Internal::propagate () {
 
       } else {
         assert (w.clause->size > 2);
+	LOG (w.clause, "checking for propagation (blit: %d) on", w.blit);
 
         if (conflict)
           break; // Stop if there was a binary conflict already.
@@ -331,8 +332,10 @@ bool Internal::propagate () {
         const int other = lits[0] ^ lits[1] ^ lit;
         const signed char u = val (other); // value of the other watch
 
-        if (u > 0 && (!opts.chrono || var(u).level <= proplevel))
+        if (u > 0 && (opts.chrono != 3 || var(other).level <= proplevel)){
+	  LOG ("changing blit to %d (lev: %d)", other, var (other).level);
           j[-1].blit = other; // satisfied, just replace blit
+	}
         else {
 
           // This follows Ian Gent's (JAIR'13) idea of saving the position
@@ -353,7 +356,6 @@ bool Internal::propagate () {
           int r = 0;
           signed char v = -1;
 	  int replacement_level = proplevel;
-	  LOG ("searching firt half");
 
           while (k != end && (v = val (r = *k)) < 0)
             k++, replacement_level = max (replacement_level, var (r).level);
@@ -370,13 +372,14 @@ bool Internal::propagate () {
 
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
 
-          if (v > 0) {
+          if (v > 0 && (opts.chrono != 3 && var (r).level <= proplevel)) {
 
             // Replacement satisfied, so just replace 'blit'.
+	    LOG ("changing blit to %d (level %d)", r, var (r).level);
 
             j[-1].blit = r;
 
-          } else if (!v) {
+          } else if (!v || v > 0) {
 
             // Found new unassigned replacement literal to be watched.
 
@@ -399,7 +402,7 @@ bool Internal::propagate () {
             }
           } else if (!u) {
 
-            assert (v < 0);
+            assert (v < 0 || (opts.chrono == 3 && var (r).level > proplevel));
 
             // The other watch is unassigned ('!u') and all other literals
             // assigned to false (still 'v < 0'), thus we found a unit.
@@ -560,6 +563,9 @@ void Internal::propergate () {
       assert (lits + 2 <= k), assert (k <= w.clause->end ());
       w.clause->pos = k - lits;
 
+      if (!(v > 0)) {
+	LOG (w.clause, "offending clause");
+      }
       assert (v > 0);
 
       LOG (w.clause, "unwatch %d in", lit);
