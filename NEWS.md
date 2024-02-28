@@ -1,3 +1,9 @@
+Version 1.9.5
+-------------
+
+- Removes an unexpected performance regression on the anniversary track
+  due to marking forward strengthened redundant clauses as used.
+
 Version 1.9.4
 -------------
 
