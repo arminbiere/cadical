@@ -1039,6 +1039,7 @@ bool Internal::propagate_multitrail () {
             const literal_iterator middle = lits + w.clause->pos;
             const const_literal_iterator end = lits + size;
             literal_iterator k = middle;
+            const int old_pos = w.clause->pos;
 
             // Find replacement watch 'r' at position 'k' with value 'v'.
 
@@ -1071,9 +1072,13 @@ bool Internal::propagate_multitrail () {
               // proplevel and if var (other).level == proplevel then only
               // if var (other).trail < var (lit).trail there is a high
               // chance that this cannot happen...
-              if (!multisat) {
-                literal_iterator j = lits;
-                for (; j < end; j++) {
+              if (u > -1)
+                multisat = other;
+              else if (!multisat) {
+                literal_iterator j = lits + w.clause->pos + 1;
+                const const_literal_iterator end_too = lits + old_pos;
+                const const_literal_iterator end_three = j > end_too ? end : end_too;
+                for (; j < end_three; j++) {
                   int literal = *j;
                   if (literal == r)
                     continue;
@@ -1082,6 +1087,19 @@ bool Internal::propagate_multitrail () {
                     continue;
                   multisat = literal;
                   break;
+                }
+                if (!multisat && j != end_too) {
+                  j = lits + 2;
+                  for (; j < end_too; j++) {
+                    int literal = *j;
+                    if (literal == r)
+                      continue;
+                    const auto tmp = val (literal);
+                    if (tmp < 0)
+                      continue;
+                    multisat = literal;
+                    break;
+                  }
                 }
               }
               if (!multisat) {
