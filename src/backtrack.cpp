@@ -111,6 +111,8 @@ void Internal::backtrack (int new_level) {
     notified = assigned;
   }
 
+  int dirty_count = 0;
+
   while (i < end_of_trail) {
     int lit = trail[i++];
     Var &v = var (lit);
@@ -156,6 +158,8 @@ void Internal::backtrack (int new_level) {
       trail[j] = lit;
       v.trail = j++;
       reassigned++;
+      if (opts.chrono == 3 && v.dirty)
+        ++dirty_count;
     }
   }
   trail.resize (j);
@@ -192,9 +196,9 @@ void Internal::backtrack (int new_level) {
     // inprocessing where we want to make sure that we are not missing propagations.
     LOG ("strong chrono: skipping %ld repropagations",
          trail.size () - assigned);
-      propagated = trail.size ();
-      propagated2 = trail.size ();
-      no_conflict_until = assigned;
+      propagated = trail.size () - dirty_count;
+      propagated2 = trail.size () - dirty_count;
+      no_conflict_until = assigned - dirty_count;
   }
   if (opts.chrono) {
 #if 0

@@ -468,6 +468,7 @@ bool Internal::propagate () {
           }
         }
       }
+      var (lit).dirty = false;
     }
 
     if (j != i) {
