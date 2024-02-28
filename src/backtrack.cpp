@@ -131,6 +131,8 @@ void Internal::backtrack (int new_level) {
           assert (val (other) < 0);
       }
       missed_props.push_back (lit);
+      LOG ("setting to dirty");
+      v.dirty = true;
 //      set_val (lit, 0);
     }
     else if (v.level > new_level) {
@@ -160,7 +162,7 @@ void Internal::backtrack (int new_level) {
       reassigned++;
     }
     if (opts.chrono == 3 && v.dirty && j < dirty_count) {
-      LOG ("found dirty literal %d", j - 1);
+      LOG ("found dirty literal %d at %d", lit, j - 1);
       dirty_count = j - 1;
     }
   }
@@ -193,9 +195,9 @@ void Internal::backtrack (int new_level) {
     }
   }
 
-  if (opts.chrono == 3 && new_level) {//on level 0 we really need to fix the watching invariants
-    LOG ("strong chrono: skipping %ld repropagations",
-         trail.size () - assigned);
+  if (opts.chrono == 3) {//on level 0 we really need to fix the watching invariants
+    LOG ("strong chrono: %ld repropagations",
+         trail.size () - dirty_count);
     LOG ("setting propagated to %d", dirty_count);
     if (dirty_count > trail.size())
       dirty_count = num_assigned;
@@ -204,7 +206,7 @@ void Internal::backtrack (int new_level) {
     propagated2 = dirty_count;
     no_conflict_until = dirty_count;
   }
-  if (opts.chrono) {
+  if (opts.chrono == 3) {
 #if 0
     std::sort (std::begin (missed_props), std::end (missed_props),
             [this] (int litA, int litB) {

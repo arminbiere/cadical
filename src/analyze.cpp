@@ -900,10 +900,9 @@ void Internal::analyze () {
       // TODO
       Clause *otherconflict = var (forced).missed_implication;
       if (otherconflict) {
-	LOG  ("found conflicting missed propagation %d", forced);
+	LOG  ("found conflicting missed propagation %d (dirty)", forced);
       }
       var (forced).missed_implication = nullptr;
-      var (forced).dirty = true;
       LOG ("single highest level literal %d", forced);
 
       // The pseudo code in the SAT'18 paper actually backtracks to the
@@ -1157,7 +1156,6 @@ void Internal::analyze () {
       LOG  (otherconflict, "found conflicting missed propagation %d", uip);
     }
     var (uip).missed_implication = nullptr;
-    var (uip).dirty = true;
   }
   backtrack (new_level);
 

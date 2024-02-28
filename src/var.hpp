@@ -17,7 +17,7 @@ struct Var {
   Clause *reason; // implication graph edge during search
   Clause *missed_implication; // missed lower-level reason
   int missed_level; // level of the missed implication
-  bool dirty:1; // do we need to repropagate the literal with strong chrono
+  bool dirty = false; // do we need to repropagate the literal with strong chrono
 };
 
 } // namespace CaDiCaL

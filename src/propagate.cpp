@@ -127,7 +127,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     lit_level = 0; // unit
   else if (reason == decision_reason)
     lit_level = level, reason = 0;
-  else if (opts.chrono && opts.chrono < 3)
+  else if (opts.chrono)
     lit_level = assignment_level (lit, reason);
   else
     lit_level = level;
@@ -157,7 +157,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     LOG (reason, "search assign %d @ %d", lit, lit_level);
 #endif
 
-  if (reason && opts.chrono == 3) {
+  if (reason && opts.chrono == 3 && false) {
     int real_level = assignment_level (lit, reason);
     const bool replacing_missed = (var (lit).missed_implication && var (lit).missed_level > real_level);
     if (replacing_missed) {
@@ -479,8 +479,10 @@ bool Internal::propagate () {
           }
         }
       }
-      if (!conflict)
-	var (lit).dirty = false;
+    }
+    if (!conflict) {
+      LOG ("no conflict, so not dirty");
+      var (lit).dirty = false;
     }
 
     if (j != i) {
