@@ -159,7 +159,12 @@ inline void Internal::search_assign (int lit, Clause *reason) {
 
   if (reason && opts.chrono == 3) {
     int real_level = assignment_level (lit, reason);
-    if (real_level < level) {
+    const bool replacing_missed = (var (lit).missed_implication && var (lit).missed_level > real_level);
+    if (replacing_missed) {
+      LOG (var (lit).missed_implication, "changing missed reason from");
+      LOG (reason, "changing missed reason to");
+    }
+    if (real_level < level || replacing_missed) {
       var (lit).missed_level = real_level;
       var (lit).missed_implication = reason;
       LOG (reason, "missed propagation of lit %d at level %d", lit, real_level);
@@ -265,6 +270,7 @@ bool Internal::propagate () {
         continue; // blocking literal satisfied
 
       if (w.binary ()) {
+	LOG (w.clause, "checking for binary clause");
 
         // assert (w.clause->redundant || !w.clause->garbage);
 
@@ -394,7 +400,9 @@ bool Internal::propagate () {
             j--; // Drop this watch from the watch list of 'lit'.
 
           } else if (u > 0) {
-            if (opts.chrono == 3 && var (other).level > replacement_level) {
+	    
+	    const bool replacing_missed = (var (lit).missed_implication && var (lit).missed_level > replacement_level);
+            if (opts.chrono == 3 && var (other).level > replacement_level && replacing_missed) {
               LOG (w.clause,
                    "missed lower-level implication of %d at level %d (was: %d) %d", other, replacement_level, var (other).level);
               var (other).missed_implication = w.clause;
@@ -525,6 +533,9 @@ void Internal::propergate () {
       const Watch w = *j++ = *i++;
 
       if (w.binary ()) {
+	if (!(val (w.blit) > 0)) {
+	  LOG (w.clause, "offending clause:");
+	}
         assert (val (w.blit) > 0);
         continue;
       }

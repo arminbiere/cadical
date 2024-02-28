@@ -898,8 +898,10 @@ void Internal::analyze () {
       assert (forced);
       assert (conflict_level > 0);
       // TODO
-      if (var(forced).missed_implication)
-	LOG  ("overwriting missed propagation %d", forced);
+      Clause *otherconflict = var (forced).missed_implication;
+      if (otherconflict) {
+	LOG  ("found conflicting missed propagation %d", forced);
+      }
       var (forced).missed_implication = nullptr;
       LOG ("single highest level literal %d", forced);
 
@@ -921,6 +923,10 @@ void Internal::analyze () {
       search_assign_driving (forced, conflict);
 
       conflict = 0;
+      if (otherconflict) {
+	LOG (otherconflict, "changing conflict to");
+	conflict = otherconflict;
+      }
       STOP (analyze);
       return;
     }
@@ -1137,11 +1143,15 @@ void Internal::analyze () {
 
   int new_level = determine_actual_backtrack_level (jump);
   UPDATE_AVERAGE (averages.current.level, new_level);
+  Clause *otherconflict = var(uip).missed_implication;
   if (uip) {
     // TODO when this happens we actually have a conflict
     // that we should analyse
-    if (var(uip).missed_implication)
-      LOG  ("overwriting missed propagation %d", uip);
+    if (new_level < var (uip).missed_level) {
+      otherconflict = nullptr;
+    } else {
+      LOG  (otherconflict, "found conflicting missed propagation %d", uip);
+    }
     var(uip).missed_implication = nullptr;
   }
   backtrack (new_level);
@@ -1169,6 +1179,10 @@ void Internal::analyze () {
   clause.clear ();
   conflict = 0;
 
+  if (otherconflict) {
+    LOG (otherconflict, "changing conflict to");
+    conflict = otherconflict;
+  }
   lrat_chain.clear ();
   STOP (analyze);
 
