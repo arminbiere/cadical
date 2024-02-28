@@ -266,11 +266,22 @@ bool Internal::propagate () {
       const Watch w = *j++ = *i++;
       const signed char b = val (w.blit);
 
-      if (b > 0)
+      if (b > 0 && (opts.chrono != 3 || var(w.blit).level <= proplevel)){
+	LOG (w.clause, "already satisfied by blit");
         continue; // blocking literal satisfied
+      }
 
       if (w.binary ()) {
 	LOG (w.clause, "checking for binary clause");
+        if (b > 0) {
+	  assert (opts.chrono == 3);
+	  assert (var (w.blit).level > proplevel);
+          LOG (w.clause, "found missed propagation propagation at level %d",
+               proplevel);
+          var (w.blit).missed_implication = w.clause;
+          var (w.blit).missed_level = proplevel;
+          continue;
+        }
 
         // assert (w.clause->redundant || !w.clause->garbage);
 
@@ -468,7 +479,8 @@ bool Internal::propagate () {
           }
         }
       }
-      var (lit).dirty = false;
+      if (!conflict)
+	var (lit).dirty = false;
     }
 
     if (j != i) {

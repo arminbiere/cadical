@@ -903,6 +903,7 @@ void Internal::analyze () {
 	LOG  ("found conflicting missed propagation %d", forced);
       }
       var (forced).missed_implication = nullptr;
+      var (forced).dirty = true;
       LOG ("single highest level literal %d", forced);
 
       // The pseudo code in the SAT'18 paper actually backtracks to the
@@ -1025,6 +1026,9 @@ void Internal::analyze () {
         const int conflict_level = otfs_find_backtrack_level (forced);
         int new_level = determine_actual_backtrack_level (conflict_level);
         UPDATE_AVERAGE (averages.current.level, new_level);
+	if (var (forced).missed_implication) {
+	  LOG (var (forced).missed_implication, "overwriting missed");
+	}
 	var (forced).missed_implication = nullptr;
         backtrack (new_level);
 
@@ -1152,7 +1156,8 @@ void Internal::analyze () {
     } else {
       LOG  (otherconflict, "found conflicting missed propagation %d", uip);
     }
-    var(uip).missed_implication = nullptr;
+    var (uip).missed_implication = nullptr;
+    var (uip).dirty = true;
   }
   backtrack (new_level);
 

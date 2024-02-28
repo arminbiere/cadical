@@ -9,6 +9,8 @@ namespace CaDiCaL {
 void Internal::assume (int lit) {
   if (level && !opts.ilbassumptions)
     backtrack ();
+  else if (val (lit) < 0 && opts.chrono == 3 && var (lit).missed_implication)
+    backtrack (max (0, var (lit).missed_level - 1));
   else if (val (lit) < 0)
     backtrack (max (0, var (lit).level - 1));
   Flags &f = flags (lit);

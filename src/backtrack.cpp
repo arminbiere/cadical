@@ -111,7 +111,7 @@ void Internal::backtrack (int new_level) {
     notified = assigned;
   }
 
-  int dirty_count = 0;
+  int dirty_count = trail.size();
 
   while (i < end_of_trail) {
     int lit = trail[i++];
@@ -158,8 +158,10 @@ void Internal::backtrack (int new_level) {
       trail[j] = lit;
       v.trail = j++;
       reassigned++;
-      if (opts.chrono == 3 && v.dirty)
-        ++dirty_count;
+    }
+    if (opts.chrono == 3 && v.dirty && j < dirty_count) {
+      LOG ("found dirty literal %d", j - 1);
+      dirty_count = j - 1;
     }
   }
   trail.resize (j);
@@ -191,14 +193,16 @@ void Internal::backtrack (int new_level) {
     }
   }
 
-  if (opts.chrono == 3 && new_level) {
-    // we only skip repropagation if we are not going back to level 0.  This is very important for
-    // inprocessing where we want to make sure that we are not missing propagations.
+  if (opts.chrono == 3 && new_level) {//on level 0 we really need to fix the watching invariants
     LOG ("strong chrono: skipping %ld repropagations",
          trail.size () - assigned);
-      propagated = trail.size () - dirty_count;
-      propagated2 = trail.size () - dirty_count;
-      no_conflict_until = assigned - dirty_count;
+    LOG ("setting propagated to %d", dirty_count);
+    if (dirty_count > trail.size())
+      dirty_count = num_assigned;
+    LOG ("setting propagated to %d (first lit: %d)", dirty_count, dirty_count < trail.size() ? trail[dirty_count] : 0);
+    propagated = dirty_count;
+    propagated2 = dirty_count;
+    no_conflict_until = dirty_count;
   }
   if (opts.chrono) {
 #if 0
