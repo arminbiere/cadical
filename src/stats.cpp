@@ -79,9 +79,12 @@ void Stats::print (Internal *internal) {
     PRT ("  levels:        %15" PRId64 "   %10.2f    per chronological",
          stats.chronolevels, relative (stats.chronolevels, stats.chrono));
   }
-  if (all || (stats.elevated && stats.chrono))
-    PRT ("  elevated:      %15" PRId64 "   %10.2f    per chronological",
-         stats.elevated, relative (stats.elevated, stats.chrono));
+  if (all || (stats.elevated && stats.chrono)) {
+    PRT ("  elevate tried: %15" PRId64 "   %10.2f    per dirty propagation",
+         stats.elevate_tried, relative (stats.elevate_tried, stats.propagations.dirty));
+    PRT ("  elevated:      %15" PRId64 "   %10.2f    per tried",
+         stats.elevated, relative (stats.elevated, stats.elevate_tried));
+    }
   if (all)
     PRT ("compacts:        %15" PRId64 "   %10.2f    interval",
          stats.compacts, relative (stats.conflicts, stats.compacts));

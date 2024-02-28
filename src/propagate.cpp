@@ -759,9 +759,10 @@ bool Internal::propagate_conflicts () {
     if (!second) { // either elevate or assign first (or maybe there was a
                    // valid choice for second already, then elevate_lit
                    // will do nothing.
-      if (val (first) > 0)
+      if (val (first) > 0){
         elevate_lit (first, c);
-      else {
+        stats.elevate_tried++;
+      } else {
         build_chain_for_units (first, c, 0);
         search_assign (first, c);
       }
@@ -920,6 +921,7 @@ bool Internal::propagate_multitrail () {
     const auto &t = next_trail (proplevel);
     int64_t before = next_propagated (proplevel);
     size_t current = before;
+    uint64_t elevate_tried = 0;
     while (!conflict && current != t->size ()) {
       assert (opts.reimply || t == &trail);
       LOG ("propagating level %d from %" PRId64 " to %zu", proplevel,
@@ -981,6 +983,7 @@ bool Internal::propagate_multitrail () {
             assert (b > 0);
             // fix missed implication by elevating w.blit
             elevate_lit (w.blit, w.clause);
+            elevate_tried++; // should always succeed
           } else if (b < 0)
             conflict = propagation_conflict (&proplevel,
                                              w.clause); // but continue ...
@@ -1040,21 +1043,28 @@ bool Internal::propagate_multitrail () {
             const const_literal_iterator end = lits + size;
             literal_iterator k = middle;
             const int old_pos = w.clause->pos;
+            int lev = proplevel;
 
             // Find replacement watch 'r' at position 'k' with value 'v'.
 
             int r = 0;
             signed char v = -1;
 
-            while (k != end && (v = val (r = *k)) < 0)
+            while (k != end && (v = val (r = *k)) < 0) {
               k++;
+              if (lev < var (r).level)
+                lev = var (r).level;
+            }
 
             if (v < 0) { // need second search starting at the head?
 
               k = lits + 2;
               assert (w.clause->pos <= size);
-              while (k != middle && (v = val (r = *k)) < 0)
+              while (k != middle && (v = val (r = *k)) < 0) {
                 k++;
+                if (lev < var (r).level)
+                  lev = var (r).level;
+              }
             }
 
             w.clause->pos = k - lits; // always save position
@@ -1083,6 +1093,8 @@ bool Internal::propagate_multitrail () {
                   if (literal == r)
                     continue;
                   const auto tmp = val (literal);
+                  if (lev < var (r).level)
+                    lev = var (r).level;
                   if (tmp < 0)
                     continue;
                   multisat = literal;
@@ -1095,6 +1107,8 @@ bool Internal::propagate_multitrail () {
                     if (literal == r)
                       continue;
                     const auto tmp = val (literal);
+                    if (lev < var (r).level)
+                      lev = var (r).level;
                     if (tmp < 0)
                       continue;
                     multisat = literal;
@@ -1104,7 +1118,10 @@ bool Internal::propagate_multitrail () {
               }
               if (!multisat) {
                 // potentially elevating r...
-                elevate_lit (r, w.clause);
+                if (lev < var (r).level) {
+                  elevate_lit (r, w.clause);
+                  elevate_tried++;
+                }
                 multisat = other; // instead we could search for a better
                                   // blit (one with level == r.level)
               }
@@ -1199,7 +1216,10 @@ bool Internal::propagate_multitrail () {
               assert (multisat);
 
               // we might have to elevate...
-              elevate_lit (other, w.clause);
+              if (lev < var (other).level) {
+                elevate_lit (other, w.clause);
+                elevate_tried++;
+              }
 
               // now other_level might have changed
               int other_level = var (other).level;
@@ -1256,6 +1276,7 @@ bool Internal::propagate_multitrail () {
     if (!searching_lucky_phases) {
       stats.propagations.search += current - before;
       stats.propagations.dirty += current - before;
+      stats.elevate_tried += elevate_tried;
     }
   }
   if (!conflict) {

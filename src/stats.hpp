@@ -131,6 +131,7 @@ struct Stats {
   int64_t chrono;        // chronological backtracks
   int64_t backtracks;    // number of backtracks
   int64_t elevated;      // number of elevated literals (updated in backtrack)
+  int64_t elevate_tried; // number of times elevate was tried
   int64_t chronolevels;  // number of level differences 'chrono' vs 'non-chrono'
   int64_t improvedglue;   // improved glue during bumping
   int64_t promoted1;      // promoted clauses to tier one
