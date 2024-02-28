@@ -157,6 +157,10 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     LOG (reason, "search assign %d @ %d", lit, lit_level);
 #endif
 
+  if (opts.chrono == 3 && level != lit_level) {
+    LOG ("setting %d @ %d to dirty", lit, lit_level);
+    var (lit).dirty = true;
+  }
   if (reason && opts.chrono == 3 && false) {
     int real_level = assignment_level (lit, reason);
     const bool replacing_missed = (var (lit).missed_implication && var (lit).missed_level > real_level);
@@ -253,7 +257,7 @@ bool Internal::propagate () {
   while (!conflict && propagated != trail.size ()) {
 
     const int lit = -trail[propagated++];
-    const int proplevel = var(lit).level;
+    const int proplevel = var (lit).level;
     LOG ("propagating %d", -lit);
     Watches &ws = watches (lit);
 
@@ -266,16 +270,16 @@ bool Internal::propagate () {
       const Watch w = *j++ = *i++;
       const signed char b = val (w.blit);
 
-      if (b > 0 && (opts.chrono != 3 || var(w.blit).level <= proplevel)){
-	LOG (w.clause, "already satisfied by blit");
+      if (b > 0 && (opts.chrono != 3 || var (w.blit).level <= proplevel)) {
+        LOG (w.clause, "already satisfied by blit");
         continue; // blocking literal satisfied
       }
 
       if (w.binary ()) {
-	LOG (w.clause, "checking for binary clause");
+        LOG (w.clause, "checking for binary clause");
         if (b > 0) {
-	  assert (opts.chrono == 3);
-	  assert (var (w.blit).level > proplevel);
+          assert (opts.chrono == 3);
+          assert (var (w.blit).level > proplevel);
           LOG (w.clause, "found missed propagation propagation at level %d",
                proplevel);
           var (w.blit).missed_implication = w.clause;
@@ -320,7 +324,7 @@ bool Internal::propagate () {
 
       } else {
         assert (w.clause->size > 2);
-	LOG (w.clause, "checking for propagation (blit: %d) on", w.blit);
+        LOG (w.clause, "checking for propagation (blit: %d) on", w.blit);
 
         if (conflict)
           break; // Stop if there was a binary conflict already.
@@ -349,11 +353,10 @@ bool Internal::propagate () {
         const int other = lits[0] ^ lits[1] ^ lit;
         const signed char u = val (other); // value of the other watch
 
-        if (u > 0 && (opts.chrono != 3 || var(other).level <= proplevel)){
-	  LOG ("changing blit to %d (lev: %d)", other, var (other).level);
+        if (u > 0 && (opts.chrono != 3 || var (other).level <= proplevel)) {
+          LOG ("changing blit to %d (lev: %d)", other, var (other).level);
           j[-1].blit = other; // satisfied, just replace blit
-	}
-        else {
+        } else {
 
           // This follows Ian Gent's (JAIR'13) idea of saving the position
           // of the last watch replacement.  In essence it needs two copies
@@ -372,17 +375,28 @@ bool Internal::propagate () {
 
           int r = 0;
           signed char v = -1;
-	  int replacement_level = proplevel;
+          int replacement_level = proplevel;
+          int *highest_lit = &lits[1];
 
-          while (k != end && (v = val (r = *k)) < 0)
-            k++, replacement_level = max (replacement_level, var (r).level);
+          while (k != end && (v = val (r = *k)) < 0) {
+            if (replacement_level < var (r).level) {
+              replacement_level = var (r).level;
+              highest_lit = k;
+            }
+            k++;
+          }
 
           if (v < 0) { // need second search starting at the head?
 
             k = lits + 2;
             assert (w.clause->pos <= size);
-            while (k != middle && (v = val (r = *k)) < 0)
-              k++, replacement_level = max (replacement_level, var (r).level);
+            while (k != middle && (v = val (r = *k)) < 0) {
+              if (replacement_level < var (r).level) {
+                replacement_level = var (r).level;
+                highest_lit = k;
+              }
+              k++;
+            }
           }
 
           w.clause->pos = k - lits; // always save position
@@ -392,7 +406,7 @@ bool Internal::propagate () {
           if (v > 0 && (opts.chrono != 3 && var (r).level <= proplevel)) {
 
             // Replacement satisfied, so just replace 'blit'.
-	    LOG ("changing blit to %d (level %d)", r, var (r).level);
+            LOG ("changing blit to %d (level %d)", r, var (r).level);
 
             j[-1].blit = r;
 
@@ -410,78 +424,104 @@ bool Internal::propagate () {
 
             j--; // Drop this watch from the watch list of 'lit'.
 
-          } else if (u > 0) {
-	    
-	    const bool replacing_missed = (var (lit).missed_implication && var (lit).missed_level > replacement_level);
-            if (opts.chrono == 3 && var (other).level > replacement_level && replacing_missed) {
-              LOG (w.clause,
-                   "missed lower-level implication of %d at level %d (was: %d) %d", other, replacement_level, var (other).level);
-              var (other).missed_implication = w.clause;
-              var (other).missed_level = replacement_level;
-            }
-          } else if (!u) {
-
-            assert (v < 0 || (opts.chrono == 3 && var (r).level > proplevel));
-
-            // The other watch is unassigned ('!u') and all other literals
-            // assigned to false (still 'v < 0'), thus we found a unit.
-            //
-            build_chain_for_units (other, w.clause, 0);
-            search_assign (other, w.clause);
-            // lrat_chain.clear (); done in search_assign
-
-            // Similar code is in the implementation of the SAT'18 paper on
-            // chronological backtracking but in our experience, this code
-            // first does not really seem to be necessary for correctness,
-            // and further does not improve running time either.
-            //
-            if (opts.chrono == 2) {
-
-              const int other_level = var (other).level;
-
-              if (other_level > var (lit).level) {
-
-                // The assignment level of the new unit 'other' is larger
-                // than the assignment level of 'lit'.  Thus we should find
-                // another literal in the clause at that higher assignment
-                // level and watch that instead of 'lit'.
-
-                assert (size > 2);
-
-                int pos, s = 0;
-
-                for (pos = 2; pos < size; pos++)
-                  if (var (s = lits[pos]).level == other_level)
-                    break;
-
-                assert (s);
-                assert (pos < size);
-
-                LOG (w.clause, "unwatch %d in", lit);
-                lits[pos] = lit;
+          } else {
+            if (u > 0) {
+              if (opts.chrono == 3 && *highest_lit != other &&
+                  *highest_lit != lit) {
+                LOG ("swapping %d and %d", *highest_lit, other);
                 lits[0] = other;
-                lits[1] = s;
-                watch_literal (s, other, w.clause);
-
+                lits[1] = *highest_lit;
+                *highest_lit = lit;
+                watch_literal (lits[1], other, w.clause);
+                assert (j > ws.begin ());
                 j--; // Drop this watch from the watch list of 'lit'.
               }
+              const bool replacing_missed =
+                  (!var (lit).missed_implication ||
+                   var (lit).missed_level > replacement_level);
+              if (opts.chrono == 3 &&
+                  var (other).level > replacement_level &&
+                  replacing_missed) {
+                LOG (w.clause,
+                     "missed lower-level implication of %d at level %d "
+                     "(was: %d) %d",
+                     other, replacement_level, var (other).level);
+                var (other).missed_implication = w.clause;
+                var (other).missed_level = replacement_level;
+              } else {
+		LOG ("no lower level implication (replacement: %d)", replacement_level);
+	      }
+            } else if (!u) {
+
+              assert (v < 0 ||
+                      (opts.chrono == 3 && var (r).level > proplevel));
+
+              // The other watch is unassigned ('!u') and all other
+              // literals assigned to false (still 'v < 0'), thus we found
+              // a unit.
+              //
+              build_chain_for_units (other, w.clause, 0);
+              search_assign (other, w.clause);
+              // lrat_chain.clear (); done in search_assign
+
+              // Similar code is in the implementation of the SAT'18 paper
+              // on chronological backtracking but in our experience, this
+              // code first does not really seem to be necessary for
+              // correctness, and further does not improve running time
+              // either.
+              //
+              if (opts.chrono >= 2) {
+		LOG ("checking to fix level");
+
+                const int other_level = var (other).level;
+
+                if (other_level > var (lit).level) {
+
+                  // The assignment level of the new unit 'other' is
+                  // larger than the assignment level of 'lit'.  Thus we
+                  // should find another literal in the clause at that
+                  // higher assignment level and watch that instead of
+                  // 'lit'.
+
+                  assert (size > 2);
+
+                  int pos, s = 0;
+
+                  for (pos = 2; pos < size; pos++)
+                    if (var (s = lits[pos]).level == other_level)
+                      break;
+
+                  assert (s);
+                  assert (pos < size);
+
+                  LOG (w.clause, "unwatch %d in", lit);
+                  lits[pos] = lit;
+                  lits[0] = other;
+                  lits[1] = s;
+                  watch_literal (s, other, w.clause);
+
+                  j--; // Drop this watch from the watch list of 'lit'.
+                }
+              }
+            } else {
+
+              assert (u < 0);
+              assert (v < 0);
+
+              // The other watch is assigned false ('u < 0') and all other
+              // literals as well (still 'v < 0'), thus we found a
+              // conflict.
+
+              conflict = w.clause;
+              break;
             }
-          } else {
-
-            assert (u < 0);
-            assert (v < 0);
-
-            // The other watch is assigned false ('u < 0') and all other
-            // literals as well (still 'v < 0'), thus we found a conflict.
-
-            conflict = w.clause;
-            break;
           }
         }
       }
     }
     if (!conflict) {
-      LOG ("no conflict, so not dirty");
+      if (var (lit).dirty)
+	LOG ("removing dirty %d", lit);
       var (lit).dirty = false;
     }
 

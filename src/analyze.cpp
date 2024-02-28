@@ -520,7 +520,7 @@ inline int Internal::find_conflict_level (int &forced) {
   forced = 0;
 
   for (const auto &lit : *conflict) {
-    const int tmp = var (lit).level;
+    const int tmp = (false && var (lit).missed_implication) ? var (lit).missed_level : var (lit).level;
     if (tmp > res) {
       res = tmp;
       forced = lit;
@@ -942,6 +942,7 @@ void Internal::analyze () {
     // and 'analyze_literal' functions.
     //
     backtrack (conflict_level);
+
   }
 
   // Actual conflict on root level, thus formula unsatisfiable.
@@ -954,6 +955,7 @@ void Internal::analyze () {
     STOP (analyze);
     return;
   }
+
 
   /*----------------------------------------------------------------------*/
 
