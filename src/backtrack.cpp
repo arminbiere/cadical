@@ -124,6 +124,7 @@ void Internal::backtrack (int new_level) {
       LOG (v.missed_implication,
            "BT missed lower-level implication of %d at level %d (was %d)",
            lit, var (lit).missed_level, var (lit).level);
+      assert (!v.missed_implication->moved);
       LOG (v.reason, "other reason");
       assert (external_prop || var (lit).missed_level < var (lit).level);
       for (auto other : *v.missed_implication) {

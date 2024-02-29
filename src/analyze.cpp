@@ -1219,6 +1219,7 @@ void Internal::analyze () {
     else if (opts.minimize)
       minimize_clause ();
 
+    LOG (clause, "after mini-shrinknig");
     size = (int) clause.size ();
 
     // Update decision heuristics.
