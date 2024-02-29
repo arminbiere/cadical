@@ -277,6 +277,8 @@ bool Internal::propagate () {
 
       if (w.binary ()) {
         LOG (w.clause, "checking for binary clause");
+	if (var (w.blit).missed_implication)
+          LOG (var (w.blit).missed_implication, "old missed implication");
 	bool replacing = (!var (w.blit).missed_implication || var (w.blit).missed_level > proplevel);
         if (b > 0 && replacing) {
           assert (opts.chrono == 3);
@@ -441,8 +443,11 @@ bool Internal::propagate () {
                 j--; // Drop this watch from the watch list of 'lit'.
               }
               const bool replacing_missed =
-                  (!var (lit).missed_implication ||
-                   var (lit).missed_level > replacement_level);
+                  (!var (other).missed_implication ||
+                   var (other).missed_level > replacement_level);
+	      if (var (other).missed_implication) {
+		LOG (var (other).missed_implication, "old missed");
+	      }
               if (opts.chrono == 3 &&
                   var (other).level > replacement_level &&
                   replacing_missed) {
