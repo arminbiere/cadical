@@ -900,7 +900,7 @@ void Internal::analyze () {
       // TODO
       Clause *otherconflict = var (forced).missed_implication;
       if (otherconflict) {
-	LOG  ("found conflicting missed propagation %d (dirty)", forced);
+	LOG  (otherconflict, "found conflicting missed propagation %d (dirty)", forced);
       }
       var (forced).missed_implication = nullptr;
       LOG ("single highest level literal %d", forced);
@@ -1155,7 +1155,8 @@ void Internal::analyze () {
     if (new_level < var (uip).missed_level) {
       otherconflict = nullptr;
     } else {
-      LOG  (otherconflict, "found conflicting missed propagation %d", uip);
+      if (otherconflict)
+	LOG  (otherconflict, "found conflicting missed propagation %d, ignoring", uip);
     }
     var (uip).missed_implication = nullptr;
   }

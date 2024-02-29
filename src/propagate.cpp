@@ -242,7 +242,7 @@ void Internal::search_assign_external (int lit) {
 // more bytes for each clause.
 
 bool Internal::propagate () {
-
+  LOG ("propagating");
   if (level)
     require_mode (SEARCH);
   assert (!unsat);
@@ -277,15 +277,19 @@ bool Internal::propagate () {
 
       if (w.binary ()) {
         LOG (w.clause, "checking for binary clause");
-        if (b > 0) {
+	bool replacing = (!var (w.blit).missed_implication || var (w.blit).missed_level > proplevel);
+        if (b > 0 && replacing) {
           assert (opts.chrono == 3);
           assert (var (w.blit).level > proplevel);
-          LOG (w.clause, "found missed propagation propagation at level %d",
-               proplevel);
+          LOG (w.clause, "found missed propagation of %d propagation at level %d",
+               w.blit, proplevel);
           var (w.blit).missed_implication = w.clause;
           var (w.blit).missed_level = proplevel;
           continue;
-        }
+        } else if (b > 0) {
+	  LOG (var (w.blit).missed_implication, "found worse implication reason, ignoring");
+	  continue;
+	}
 
         // assert (w.clause->redundant || !w.clause->garbage);
 

@@ -1,5 +1,4 @@
 #include "internal.hpp"
-#include "propagate.cpp"
 #include <vector>
 
 namespace CaDiCaL {
@@ -112,7 +111,7 @@ void Internal::backtrack (int new_level) {
     notified = assigned;
   }
 
-  int dirty_count = trail.size();
+  int earliest_dirty = trail.size();
 
   while (i < end_of_trail) {
     int lit = trail[i++];
@@ -147,11 +146,15 @@ void Internal::backtrack (int new_level) {
       // literals on the trail without breaking the solver (after some
       // modifications to 'analyze' - see 'opts.chrono' guarded code there).
       assert (opts.chrono || external_prop || did_external_prop);
-      if (v.missed_implication)
-        LOG ("BT resetting missed of lit %d is not reused (expected level "
-             "%d)",
-             lit, v.missed_level);
-      v.missed_implication = nullptr; // happens notably for units
+      if (v.missed_implication && v.missed_level > new_level) {
+	//we are going further back that the missed suggests: deleting
+        LOG (v.missed_implication,
+             "BT resetting missed of lit %d @ %d is not reused (expected "
+             "level "
+             "%d), target level: %d",
+             lit, v.level, v.missed_level, new_level);
+        v.missed_implication = nullptr; // happens notably for units
+      }
 #ifdef LOGGING
       if (!v.level)
         LOG ("reassign %d @ 0 unit clause %d", lit, lit);
@@ -161,10 +164,10 @@ void Internal::backtrack (int new_level) {
       trail[j] = lit;
       v.trail = j++;
       reassigned++;
-    }
-    if (opts.chrono == 3 && v.dirty && j < dirty_count) {
-      LOG ("found dirty literal %d at %d", lit, j - 1);
-      dirty_count = j - 1;
+      if (opts.chrono == 3 && v.dirty && j < earliest_dirty) {
+        LOG ("found dirty literal %d at %d", lit, j - 1);
+        earliest_dirty = j - 1;
+      }
     }
   }
   trail.resize (j);
@@ -196,17 +199,6 @@ void Internal::backtrack (int new_level) {
     }
   }
 
-  if (opts.chrono == 3) {//on level 0 we really need to fix the watching invariants
-    LOG ("strong chrono: %ld repropagations",
-         trail.size () - dirty_count);
-    LOG ("setting propagated to %d", dirty_count);
-    if (dirty_count > trail.size())
-      dirty_count = num_assigned;
-    LOG ("setting propagated to %d (first lit: %d)", dirty_count, dirty_count < trail.size() ? trail[dirty_count] : 0);
-    propagated = dirty_count;
-    propagated2 = dirty_count;
-    no_conflict_until = dirty_count;
-  }
   if (opts.chrono == 3) {
 #if 0
     std::sort (std::begin (missed_props), std::end (missed_props),
@@ -240,6 +232,10 @@ void Internal::backtrack (int new_level) {
              "setting missed propagation lit %d at level %d with reason", lit, v.level);
       else
 	LOG ("setting missed propagation lit %d to root level", lit, v.level);
+      if (v.dirty) {
+	LOG ("lit %d is dirty", lit);
+	earliest_dirty = std::min (earliest_dirty, (int)trail.size());
+      }
       trail.push_back (lit);
       var (lit).missed_implication = nullptr;
     }
@@ -247,6 +243,17 @@ void Internal::backtrack (int new_level) {
       notify_assignments ();
   }
 
+  if (opts.chrono == 3) {
+    LOG ("strong chrono: %ld repropagations",
+         trail.size () - earliest_dirty);
+    LOG ("setting propagated to %d", earliest_dirty);
+    if (earliest_dirty > trail.size())
+      earliest_dirty = num_assigned;
+    LOG ("setting propagated to %d (first lit: %d)", earliest_dirty, earliest_dirty < trail.size() ? trail[earliest_dirty] : 0);
+    propagated = earliest_dirty;
+    propagated2 = earliest_dirty;
+    no_conflict_until = earliest_dirty;
+  }
   assert (num_assigned == trail.size ());
 }
 
