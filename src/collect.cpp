@@ -119,6 +119,23 @@ void Internal::protect_reasons () {
     count++;
 #endif
   }
+  if (opts.chrono == 3) {
+    for (const auto &lit : trail) {
+      if (!active (lit))
+        continue;
+      assert (val (lit));
+      Var &v = var (lit);
+      assert (v.level > 0);
+      Clause *reason = v.missed_implication;
+      if (!reason)
+        continue;
+      LOG (v.missed_implication, "protecting assigned %d missed reason %p", lit, (void *) reason);
+      reason->reason = true;
+    }
+#ifdef LOGGING
+    count++;
+#endif
+  }
   LOG ("protected %zd reason clauses referenced on trail", count);
   protected_reasons = true;
 }
@@ -152,6 +169,25 @@ void Internal::unprotect_reasons () {
 #ifdef LOGGING
     count++;
 #endif
+  }
+
+  if (opts.chrono == 3) {
+    for (const auto &lit : trail) {
+      if (!active (lit))
+        continue;
+      assert (val (lit));
+      Var &v = var (lit);
+      assert (v.level > 0);
+      Clause *reason = v.missed_implication;
+      if (!reason)
+        continue;
+      LOG (reason, "unprotecting assigned %d missed reason %p", lit,
+           (void *) reason);
+      reason->reason = false;
+#ifdef LOGGING
+      count++;
+#endif
+    }
   }
   LOG ("unprotected %zd reason clauses referenced on trail", count);
   protected_reasons = false;
@@ -282,6 +318,14 @@ void Internal::update_reason_references () {
 #endif
     }
     LOG ("updated %zd assigned reason references", count);
+  }
+
+  for (auto v : vars) {
+    if (!active (v))
+      continue;
+    const Var &w = var (v);
+    if (w.missed_implication)
+      assert (!w.missed_implication->moved);
   }
 }
 
