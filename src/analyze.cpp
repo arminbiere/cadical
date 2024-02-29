@@ -1256,13 +1256,6 @@ void Internal::analyze () {
   Clause *driving_clause = new_driving_clause (glue, jump);
   UPDATE_AVERAGE (averages.current.jump, jump);
 
-  LOG (tmp_clause, "trying to delete temporary clause");
-  if (!tmp_clause.empty()){
-    assert (opts.chrono == 3);
-    LOG ("deleting temporary clause with id %d", clause_id);
-    proof->delete_clause (tmp_id, false, tmp_clause);
-  }
-
   int new_level = determine_actual_backtrack_level (jump);
   UPDATE_AVERAGE (averages.current.level, new_level);
   Clause *otherconflict = var (uip).missed_implication;
@@ -1280,7 +1273,6 @@ void Internal::analyze () {
   }
   backtrack (new_level);
 
-  
   // It should hold that (!level <=> size == 1)
   //                 and (!uip   <=> size == 0)
   // this means either we have already learned a clause => size >= 2
@@ -1297,6 +1289,13 @@ void Internal::analyze () {
   if (stable)
     reluctant.tick (); // Reluctant has its own 'conflict' counter.
 
+
+  LOG (tmp_clause, "trying to delete temporary clause");
+  if (!tmp_clause.empty()){
+    assert (opts.chrono == 3);
+    LOG ("deleting temporary clause with id %d", clause_id);
+    proof->delete_clause (tmp_id, false, tmp_clause);
+  }
 
   // Clean up.
   //
