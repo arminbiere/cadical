@@ -1220,7 +1220,7 @@ bool Internal::propagate_multitrail () {
               // The other watch is unassigned ('!u') and all other literals
               // assigned to false (still 'v < 0'), thus we found a unit.
               //
-              int repl = lit, posl;
+              int repl = lit, posl = 0;
               build_chain_for_units (other, w.clause, 0);
               search_assign (other, w.clause, repl, posl);
               // lrat_chain.clear (); done in search_assign
