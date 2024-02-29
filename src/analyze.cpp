@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include <cstdio>
 
 namespace CaDiCaL {
 
@@ -303,6 +304,7 @@ inline void Internal::analyze_reason (int lit, Clause *reason, int &open,
   for (const auto &other : *reason)
     if (other != lit)
       analyze_literal (other, open, resolvent_size, antecedent_size);
+  LOG (lrat_chain, "lrat_chain:");
 }
 
 /*------------------------------------------------------------------------*/
@@ -933,6 +935,20 @@ void Internal::analyze () {
       // backtracking anyhow and thus we also do the latter.
       //
       backtrack (conflict_level - 1);
+      if (opts.chrono == 3&& forced != conflict->literals[0] && forced != conflict->literals[1]) {
+	const int size = conflict->size;
+	LOG ("updating watch for propagation");
+	for (int i = 2; i < size; ++i) {
+	  int lit = conflict->literals[i];
+	  if (lit == forced) {
+	    remove_watch (watches (conflict->literals[0]), conflict);
+	    watch_literal(forced, conflict->literals[0], conflict);
+	    conflict->literals[i] = conflict->literals[0];
+	    conflict->literals[0] = forced;
+	    break;
+	  }
+	}
+      }
 
       // if we are on decision level 0 search assign will learn unit
       // so we need a valid chain here (of course if we are not on decision
@@ -1011,6 +1027,8 @@ void Internal::analyze () {
   int resolved = 0; // number of resolution (0 = clause in CNF)
   const bool otfs = opts.otfs;
   bool resolve = true;
+  std::vector<int> tmp_clause;
+  int tmp_id;
 
   for (;;) {
     for (;;) {
@@ -1068,6 +1086,10 @@ void Internal::analyze () {
           clear_analyzed_literals ();
           clear_analyzed_levels ();
           clause.clear ();
+          if (!tmp_clause.empty ()) {
+            LOG ("deleting temporary clause with id %d", tmp_id);
+            proof->delete_clause (tmp_id, false, tmp_clause);
+          }
           STOP (analyze);
           return;
         }
@@ -1117,6 +1139,27 @@ void Internal::analyze () {
       LOG (clause, "conflict is");
     }
     if (opts.chrono==3 && var (uip).missed_implication && var (uip).missed_level && clause.size() != 1) {
+      if (proof) {
+	LOG ("adding temporary clause with id %d", clause_id+1);
+        if (lrat) {
+          LOG (unit_chain, "unit chain: ");
+          for (auto id : unit_chain)
+            lrat_chain.push_back (id);
+	  reverse (lrat_chain.begin (), lrat_chain.end ());
+	  LOG (lrat_chain, "lrat:");
+	  fflush(stdout);
+        }
+        proof->add_derived_clause (++clause_id, false, clause, lrat_chain);
+        lrat_chain.clear ();
+        unit_chain.clear ();
+        if (!tmp_clause.empty ()){
+	  LOG ("deleting temporary clause with id %d", tmp_id);
+          proof->delete_clause (tmp_id, false, tmp_clause);
+	}
+	tmp_id = clause_id;
+        tmp_clause = clause;
+	LOG (tmp_clause, "temporary");
+      }
       int new_level = var (uip).missed_level;
       for (auto lit : clause) {
 	const int lit_lev = var (lit).missed_implication ? var (lit).missed_level : var (lit).level;
@@ -1125,13 +1168,16 @@ void Internal::analyze () {
       reason = var (uip).missed_implication;
       //var (uip).missed_implication = nullptr;
       backtrack (new_level);
-      partial_clear_analyzed_literals ();
+      clear_analyzed_literals ();
+      clear_unit_analyzed_literals ();
       clear_analyzed_levels ();
       open = 0;
       std::vector<int> c = clause;
       clause.clear();
       antecedent_size = 1; // for uip
       resolvent_size = 0;
+      if (lrat)
+	lrat_chain.push_back(tmp_id);
       for (const auto &other : c) {
         analyze_literal (other, open, resolvent_size, antecedent_size);
       }
@@ -1144,6 +1190,7 @@ void Internal::analyze () {
     }
     break;
   }
+  
 
   // Update glue and learned (1st UIP literals) statistics.
   //
@@ -1199,6 +1246,7 @@ void Internal::analyze () {
       lrat_chain.push_back (id);
     unit_chain.clear ();
     reverse (lrat_chain.begin (), lrat_chain.end ());
+    LOG (lrat_chain, "lrat chain:");
   }
 
   // Determine back-jump level, learn driving clause, backtrack and assign
@@ -1207,6 +1255,13 @@ void Internal::analyze () {
   int jump;
   Clause *driving_clause = new_driving_clause (glue, jump);
   UPDATE_AVERAGE (averages.current.jump, jump);
+
+  LOG (tmp_clause, "trying to delete temporary clause");
+  if (!tmp_clause.empty()){
+    assert (opts.chrono == 3);
+    LOG ("deleting temporary clause with id %d", clause_id);
+    proof->delete_clause (tmp_id, false, tmp_clause);
+  }
 
   int new_level = determine_actual_backtrack_level (jump);
   UPDATE_AVERAGE (averages.current.level, new_level);
@@ -1225,6 +1280,7 @@ void Internal::analyze () {
   }
   backtrack (new_level);
 
+  
   // It should hold that (!level <=> size == 1)
   //                 and (!uip   <=> size == 0)
   // this means either we have already learned a clause => size >= 2
@@ -1240,6 +1296,7 @@ void Internal::analyze () {
 
   if (stable)
     reluctant.tick (); // Reluctant has its own 'conflict' counter.
+
 
   // Clean up.
   //
