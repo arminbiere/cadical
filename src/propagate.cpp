@@ -1071,15 +1071,15 @@ bool Internal::propagate_multitrail () {
             const literal_iterator middle = lits + w.clause->pos;
             const const_literal_iterator end = lits + size;
             literal_iterator k = middle;
-            literal_iterator k2;
+            //literal_iterator k2;
             int lev = proplevel;
 
             // Find replacement watch 'r' at position 'k' with value 'v'.
 
             int r = 0;
             signed char v = -1;
-            int r2 = other;
-            signed char v2 = u;
+            //int r2 = other;
+            //signed char v2 = u;
 
             while (k != end && (v = val (r = *k)) < 0) {
               k++;
@@ -1092,40 +1092,41 @@ bool Internal::propagate_multitrail () {
               while (k != middle && (v = val (r = *k)) < 0) {
                 k++;
               }
-              if (v2 < 0) {
-                k2 = k;
-                while (k2 != middle && ((v2 = val (r2 = *k2)) < 0 || r == r2)) {
-                  k2++;
-                }
-              }
-            } else if (v2 < 0) {
-              k2 = k;
-              while (k2 != end && ((v2 = val (r2 = *k2)) < 0 || r == r2)) {
-                k2++;
-              }
-              if (v2 < 0 || r == r2) {
-                k2 = lits + 2;
-                assert (w.clause->pos <= size);
-                while (k2 != middle && ((v2 = val (r2 = *k2)) < 0 || r == r2)) {
-                  k2++;
-                }
-              }
             }
+             // if (v2 < 0) {
+             //   k2 = k;
+             //   while (k2 != middle && ((v2 = val (r2 = *k2)) < 0 || r == r2)) {
+             //     k2++;
+             //   }
+             // }
+            //} else if (v2 < 0) {
+            //  k2 = k;
+            //  while (k2 != end && ((v2 = val (r2 = *k2)) < 0 || r == r2)) {
+            //    k2++;
+            //  }
+            //  if (v2 < 0 || r == r2) {
+            //    k2 = lits + 2;
+            //    assert (w.clause->pos <= size);
+            //    while (k2 != middle && ((v2 = val (r2 = *k2)) < 0 || r == r2)) {
+            //      k2++;
+            //    }
+            //  }
+            //}
 
             w.clause->pos = k - lits; // always save position
 
             assert (lits + 2 <= k), assert (k <= w.clause->end ());
             
             assert (v < 0 || *k == r);
-            if (r == r2) {
-              assert (u < 0);
-              r2 = other;
-              v2 = u;
-            }
+            //if (r == r2) {
+            //  assert (u < 0);
+            //  r2 = other;
+            //  v2 = u;
+            //}
  
-            if (v >= 0 && v2 >= 0) {
+            if (v >= 0) {// && v2 >= 0) {
               // replace watch
-              assert (r != r2);
+             // assert (r != r2);
               LOG (w.clause, "unwatch %d in", lit);
 
               lits[0] = other;
@@ -1133,61 +1134,62 @@ bool Internal::propagate_multitrail () {
               assert (*k == r);
               *k = lit;
 
-              watch_literal (r, r2, w.clause);
+              watch_literal (r, other, w.clause);
 
               j--; // Drop this watch from the watch list of 'lit'.
               continue;
 
             }
-            if (v > 0) {
-              assert (v2 < 0);
-              assert (u < 0);
-              int repl = lit, posl;
-              if (lev < var (r).level) {
-                elevate_lit (r, w.clause, repl, posl);
-                elevate_tried++;
-              }
-
-              // Found new unassigned replacement literal to be watched.
-
-              LOG (w.clause, "unwatch %d in", lit);
-
-              lits[0] = other;
-              lits[1] = r;
-              assert (*k == r);
-              *k = lit;
-              assert (repl <= max_var);
-              assert (repl >= -max_var);
-
-              watch_literal (r, repl, w.clause);
-
-              j--; // Drop this watch from the watch list of 'lit'.
-              continue;
-            }
-            if (!v) {
-              assert (v2 < 0);
-              assert (u < 0);
-              int repl = lit, posl;
-              build_chain_for_units (r, w.clause, 0);
-              search_assign (r, w.clause, repl, posl);
-              assert (repl <= max_var);
-              assert (repl >= -max_var);
-
-              // Found new unassigned replacement literal to be watched.
-
-              LOG (w.clause, "unwatch %d in", lit);
-
-              lits[0] = other;
-              lits[1] = r;
-              assert (*k == r);
-              *k = lit;
-
-              watch_literal (r, repl, w.clause);
-
-              j--; // Drop this watch from the watch list of 'lit'.
-              continue;
-            }
-            assert (v < 0 && r2 == other && v2 == u);
+            assert (v < 0);
+            //if (v > 0) {
+            //  assert (v2 < 0);
+            //  assert (u < 0);
+            //  int repl = lit, posl;
+            //  if (lev < var (r).level) {
+            //    elevate_lit (r, w.clause, repl, posl);
+            //    elevate_tried++;
+            //  }
+            //
+            //  // Found new unassigned replacement literal to be watched.
+            //
+            //  LOG (w.clause, "unwatch %d in", lit);
+            //
+            //  lits[0] = other;
+            //  lits[1] = r;
+            //  assert (*k == r);
+            //  *k = lit;
+            //  assert (repl <= max_var);
+            //  assert (repl >= -max_var);
+            //
+            //  watch_literal (r, repl, w.clause);
+            //
+            //  j--; // Drop this watch from the watch list of 'lit'.
+            //  continue;
+            //}
+            //if (!v) {
+            //  assert (v2 < 0);
+            //  assert (u < 0);
+            //  int repl = lit, posl;
+            //  build_chain_for_units (r, w.clause, 0);
+            //  search_assign (r, w.clause, repl, posl);
+            //  assert (repl <= max_var);
+            //  assert (repl >= -max_var);
+            //
+            //  // Found new unassigned replacement literal to be watched.
+            //
+            //  LOG (w.clause, "unwatch %d in", lit);
+            //
+            //  lits[0] = other;
+            //  lits[1] = r;
+            //  assert (*k == r);
+            //  *k = lit;
+            //
+            //  watch_literal (r, repl, w.clause);
+            //
+            //  j--; // Drop this watch from the watch list of 'lit'.
+            //  continue;
+            //}
+            //assert (v < 0 && r2 == other && v2 == u);
             if (u > 0) {
               int repl = lit, posl;
               if (lev < var (other).level) {
