@@ -1052,8 +1052,6 @@ bool Internal::propagate_multitrail () {
 
             while (k != end && (v = val (r = *k)) < 0) {
               k++;
-              if (lev < var (r).level)
-                lev = var (r).level;
             }
 
             if (v < 0) { // need second search starting at the head?
@@ -1062,8 +1060,6 @@ bool Internal::propagate_multitrail () {
               assert (w.clause->pos <= size);
               while (k != middle && (v = val (r = *k)) < 0) {
                 k++;
-                if (lev < var (r).level)
-                  lev = var (r).level;
               }
             }
 
@@ -1093,8 +1089,6 @@ bool Internal::propagate_multitrail () {
                   if (literal == r)
                     continue;
                   const auto tmp = val (literal);
-                  if (lev < var (r).level)
-                    lev = var (r).level;
                   if (tmp < 0)
                     continue;
                   multisat = literal;
@@ -1107,8 +1101,6 @@ bool Internal::propagate_multitrail () {
                     if (literal == r)
                       continue;
                     const auto tmp = val (literal);
-                    if (lev < var (r).level)
-                      lev = var (r).level;
                     if (tmp < 0)
                       continue;
                     multisat = literal;
