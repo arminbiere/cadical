@@ -380,6 +380,28 @@ void Internal::clear_unit_analyzed_literals () {
   unit_analyzed.clear ();
 }
 
+void Internal::partial_clear_analyzed_literals () {
+  LOG ("clearing %zd analyzed literals", analyzed.size ());
+  for (const auto &lit : analyzed) {
+    Flags &f = flags (lit);
+    if (!var(lit).level) // keep units in the lrat chain
+      continue;
+    LOG ("resetting literal %d", lit);
+    assert (f.seen);
+    f.seen = false;
+    assert (!f.keep);
+    assert (!f.poison);
+    assert (!f.removable);
+  }
+  int i = 0;
+  for (size_t j = 0; j < analyzed.size(); ++j) {
+    analyzed[i] = analyzed[j];
+    if (!var (analyzed[i]).level)
+      ++i;
+  }
+  analyzed.resize (i);
+}
+
 void Internal::clear_analyzed_literals () {
   LOG ("clearing %zd analyzed literals", analyzed.size ());
   for (const auto &lit : analyzed) {
@@ -520,7 +542,7 @@ inline int Internal::find_conflict_level (int &forced) {
   forced = 0;
 
   for (const auto &lit : *conflict) {
-    const int tmp = (false && var (lit).missed_implication) ? var (lit).missed_level : var (lit).level;
+    const int tmp = (var (lit).missed_implication) ? var (lit).missed_level : var (lit).level;
     if (tmp > res) {
       res = tmp;
       forced = lit;
@@ -923,7 +945,7 @@ void Internal::analyze () {
       search_assign_driving (forced, conflict);
 
       conflict = 0;
-      if (otherconflict) {
+      if (otherconflict && conflict_level <= var (forced).missed_level) {
 	LOG (otherconflict, "changing conflict to");
 	conflict = otherconflict;
       }
@@ -988,100 +1010,140 @@ void Internal::analyze () {
       0; // size of the conflict without the uip and without unit literals
   int resolved = 0; // number of resolution (0 = clause in CNF)
   const bool otfs = opts.otfs;
+  bool resolve = true;
 
   for (;;) {
-    antecedent_size = 1; // for uip
-    LOG ("open = %d", open);
-    analyze_reason (uip, reason, open, resolvent_size, antecedent_size);
-    if (resolved == 0)
-      conflict_size = antecedent_size - 1;
-    assert (resolvent_size == open + (int) clause.size ());
+    for (;;) {
+      antecedent_size = 1; // for uip
+      LOG ("open = %d", open);
+      if (resolve)
+	analyze_reason (uip, reason, open, resolvent_size, antecedent_size);
+      resolve = true;
+      if (resolved == 0)
+        conflict_size = antecedent_size - 1;
+      assert (resolvent_size == open + (int) clause.size ());
 
-    if (otfs && resolved > 0 && antecedent_size > 2 &&
-        resolvent_size < antecedent_size) {
-      assert (reason != conflict);
-      LOG (analyzed, "found candidate for OTFS conflict");
-      LOG (reason, "found candidate (size %d) for OTFS resolvent",
-           antecedent_size);
-      reason = on_the_fly_strengthen (reason, uip);
-      assert (conflict_size >= 2);
-      if (opts.bump)
-        bump_variables ();
+      if (otfs && resolved > 0 && antecedent_size > 2 &&
+          resolvent_size < antecedent_size) {
+        assert (reason != conflict);
+        LOG (analyzed, "found candidate for OTFS conflict");
+        LOG (reason, "found candidate (size %d) for OTFS resolvent",
+             antecedent_size);
+        reason = on_the_fly_strengthen (reason, uip);
+        assert (conflict_size >= 2);
+        if (opts.bump)
+          bump_variables ();
 
-      if (resolved == 1 && resolvent_size < conflict_size) {
-        // in this case both clauses are part of the CNF, so one subsumes
-        // the other
-        otfs_subsume_clause (reason, conflict);
+        if (resolved == 1 && resolvent_size < conflict_size) {
+          // in this case both clauses are part of the CNF, so one subsumes
+          // the other
+          otfs_subsume_clause (reason, conflict);
+          LOG (reason, "changing conflict to");
+          --conflict_size;
+          assert (conflict_size == reason->size);
+          ++stats.otfs.subsumed;
+          ++stats.subsumed;
+          ++stats.conflicts;
+        }
+
         LOG (reason, "changing conflict to");
-        --conflict_size;
-        assert (conflict_size == reason->size);
-        ++stats.otfs.subsumed;
-        ++stats.subsumed;
-        ++stats.conflicts;
-      }
+        conflict = reason;
+        if (open == 1) {
+          int forced = 0;
+          const int conflict_level = otfs_find_backtrack_level (forced);
+          int new_level = determine_actual_backtrack_level (conflict_level);
+          UPDATE_AVERAGE (averages.current.level, new_level);
+          if (var (forced).missed_implication) {
+            LOG (var (forced).missed_implication, "overwriting missed");
+          }
+          var (forced).missed_implication = nullptr;
+          backtrack (new_level);
 
-      LOG (reason, "changing conflict to");
-      conflict = reason;
-      if (open == 1) {
-        int forced = 0;
-        const int conflict_level = otfs_find_backtrack_level (forced);
-        int new_level = determine_actual_backtrack_level (conflict_level);
-        UPDATE_AVERAGE (averages.current.level, new_level);
-	if (var (forced).missed_implication) {
-	  LOG (var (forced).missed_implication, "overwriting missed");
-	}
-	var (forced).missed_implication = nullptr;
-        backtrack (new_level);
+          LOG ("forcing %d", forced);
+          search_assign_driving (forced, conflict);
 
-        LOG ("forcing %d", forced);
-        search_assign_driving (forced, conflict);
+          conflict = 0;
+          // Clean up.
+          //
+          clear_analyzed_literals ();
+          clear_analyzed_levels ();
+          clause.clear ();
+          STOP (analyze);
+          return;
+        }
 
-        conflict = 0;
-        // Clean up.
-        //
+        resolved = 0;
         clear_analyzed_literals ();
-        clear_analyzed_levels ();
+        // clear_analyzed_levels (); not needed because marking the exact
+        // same again
         clause.clear ();
-        STOP (analyze);
-        return;
+        resolvent_size = 0;
+        antecedent_size = 1;
+        open = 0;
+        analyze_reason (0, reason, open, resolvent_size, antecedent_size);
+        conflict_size = antecedent_size - 1;
+        assert (open > 1);
       }
 
-      resolved = 0;
-      clear_analyzed_literals ();
-      // clear_analyzed_levels (); not needed because marking the exact same
-      // again
-      clause.clear ();
-      resolvent_size = 0;
-      antecedent_size = 1;
+      ++resolved;
+
+      uip = 0;
+      while (!uip) {
+        assert (i > 0);
+        const int lit = (*t)[--i];
+        if (!flags (lit).seen)
+          continue;
+        if (var (lit).level == level)
+          uip = lit;
+      }
+      assert (val (uip) > 0);
+      if (!--open)
+        break;
+      LOG ("open = %d, uip = %d", open, uip);
+      reason = var (uip).reason;
+      if (opts.chrono == 3 && var (uip).missed_implication) {
+	LOG (var (uip).missed_implication, "changing to missed reason");
+	reason = var (uip).missed_implication;
+      }
+      assert (reason != external_reason);
+      LOG (reason, "analyzing %d reason", uip);
+      assert (resolvent_size);
+      --resolvent_size;
+    }
+    LOG ("first UIP %d", uip);
+    clause.push_back (-uip);
+    if (var (uip).missed_implication) {
+      LOG (var (uip).missed_implication, "could resolve with");
+      LOG (clause, "conflict is");
+    }
+    if (opts.chrono==3 && var (uip).missed_implication && var (uip).missed_level && clause.size() != 1) {
+      int new_level = var (uip).missed_level;
+      for (auto lit : clause) {
+	const int lit_lev = var (lit).missed_implication ? var (lit).missed_level : var (lit).level;
+	new_level = max (lit_lev, new_level);
+      }
+      reason = var (uip).missed_implication;
+      //var (uip).missed_implication = nullptr;
+      backtrack (new_level);
+      partial_clear_analyzed_literals ();
+      clear_analyzed_levels ();
       open = 0;
-      analyze_reason (0, reason, open, resolvent_size, antecedent_size);
-      conflict_size = antecedent_size - 1;
-      assert (open > 1);
+      std::vector<int> c = clause;
+      clause.clear();
+      antecedent_size = 1; // for uip
+      resolvent_size = 0;
+      for (const auto &other : c) {
+        analyze_literal (other, open, resolvent_size, antecedent_size);
+      }
+      assert (resolvent_size == open + (int) clause.size ());
+      i = t->size ();
+      resolve = false;
+      continue;
+    } else {
+      var (uip).missed_implication = nullptr;
     }
-
-    ++resolved;
-
-    uip = 0;
-    while (!uip) {
-      assert (i > 0);
-      const int lit = (*t)[--i];
-      if (!flags (lit).seen)
-        continue;
-      if (var (lit).level == level)
-        uip = lit;
-    }
-    assert (val (uip) > 0);
-    if (!--open)
-      break;
-    LOG ("open = %d, uip = %d", open, uip);
-    reason = var (uip).reason;
-    assert (reason != external_reason);
-    LOG (reason, "analyzing %d reason", uip);
-    assert (resolvent_size);
-    --resolvent_size;
+    break;
   }
-  LOG ("first UIP %d", uip);
-  clause.push_back (-uip);
 
   // Update glue and learned (1st UIP literals) statistics.
   //
@@ -1148,7 +1210,8 @@ void Internal::analyze () {
 
   int new_level = determine_actual_backtrack_level (jump);
   UPDATE_AVERAGE (averages.current.level, new_level);
-  Clause *otherconflict = var(uip).missed_implication;
+  Clause *otherconflict = var (uip).missed_implication;
+  assert (!var (uip).missed_implication);
   if (uip) {
     // TODO when this happens we actually have a conflict
     // that we should analyse
@@ -1170,6 +1233,7 @@ void Internal::analyze () {
   // then lrat_chain is still valid and we will learn a unit or empty clause
   //
   if (uip) {
+    LOG (lrat_chain, "chain set to:");
     search_assign_driving (-uip, driving_clause);
   } else
     learn_empty_clause ();

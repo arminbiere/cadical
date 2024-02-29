@@ -16,7 +16,7 @@ inline void Internal::unassign (int lit) {
   var (lit).dirty = false;
 
   int idx = vidx (lit);
-  LOG ("unassign %d @ %d", lit, var (idx).level);
+  LOG ("unassign %d @ %d", lit, var (lit).level);
   num_assigned--;
 
   // In the standard EVSIDS variable decision heuristic of MiniSAT, we need
@@ -116,7 +116,7 @@ void Internal::backtrack (int new_level) {
   while (i < end_of_trail) {
     int lit = trail[i++];
     Var &v = var (lit);
-    if (opts.chrono == 3 && v.missed_implication && v.level > new_level && v.missed_level <= new_level) {
+    if (opts.chrono == 3 && v.missed_implication && v.level >= new_level && v.missed_level <= new_level) {
       if (v.missed_implication)
         assert (v.missed_level <= level && opts.chrono == 3);
       assert (v.missed_level <= level && opts.chrono == 3);
@@ -214,6 +214,8 @@ void Internal::backtrack (int new_level) {
       ++stats.missedprops;
       assert (val (lit) > 0);
       assert (val (-lit) < 0);
+      v.reason = v.missed_implication;
+
       if (!v.missed_level && !unsat) {
 	std::vector<uint64_t> lrat_chain_tmp (std::move (lrat_chain)); lrat_chain.clear();
 	build_chain_for_units (lit, v.missed_implication, true);
@@ -221,6 +223,7 @@ void Internal::backtrack (int new_level) {
 	lrat_chain = std::move (lrat_chain_tmp);
 	// not marking the clause garbage, because it can be involved in the conflict analysis
 	LOG (lrat_chain, "chain set back to: ");
+	v.reason = 0;
       }
       v.reason = v.missed_level ? v.missed_implication : 0;
       assert (level >= v.missed_level);
@@ -230,8 +233,9 @@ void Internal::backtrack (int new_level) {
       if (v.missed_level)
 	LOG (v.reason,
              "setting missed propagation lit %d at level %d with reason", lit, v.level);
-      else
+      else {
 	LOG ("setting missed propagation lit %d to root level", lit, v.level);
+      }
       if (v.dirty) {
 	LOG ("lit %d is dirty", lit);
 	earliest_dirty = std::min (earliest_dirty, (int)trail.size());

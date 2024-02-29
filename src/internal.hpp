@@ -631,6 +631,7 @@ struct Internal {
   int recompute_glue (Clause *);
   void bump_clause (Clause *);
   void clear_unit_analyzed_literals ();
+  void partial_clear_analyzed_literals (); // only for current level, important to keep LRAT
   void clear_analyzed_literals ();
   void clear_analyzed_levels ();
   void clear_minimized_literals ();
