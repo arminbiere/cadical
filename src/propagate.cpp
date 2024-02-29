@@ -35,23 +35,32 @@ static Clause *decision_reason = &decision_reason_clause;
 // assignment level is the level of the literal (since the reason clause,
 // i.e., the set of other literals, is unknown).
 
-inline int Internal::assignment_level (int lit, Clause *reason) {
+inline int Internal::assignment_level (int lit, Clause *reason, int &repl, int &posl) {
 
   assert (opts.chrono || external_prop || opts.reimply);
   if (!reason || reason == external_reason)
     return level;
 
   int res = 0;
+  int repll = 0;
+  int posll = 0;
+  int posx = 0;
 
   for (const auto &other : *reason) {
+    posll++;
     if (other == lit)
       continue;
     assert (val (other));
     int tmp = var (other).level;
     if (tmp > res)
       res = tmp;
+    repl = res > repll ? other : repl;
+    posx = repl == other ? posll : posx;
+    repll = res;
   }
 
+  posx--;
+  posl = posx;
   return res;
 }
 
@@ -61,7 +70,8 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
                                       bool forced) {
   if (!lrat)
     return;
-  if (opts.chrono && assignment_level (lit, reason) && !forced)
+  int repl, posl;
+  if (opts.chrono && assignment_level (lit, reason, repl, posl) && !forced)
     return;
   else if (!opts.chrono && !opts.reimply && level && !forced)
     return; // not decision level 0
@@ -99,26 +109,35 @@ void Internal::build_chain_for_empty () {
 }
 
 /*------------------------------------------------------------------------*/
-inline int Internal::elevating_level (int lit, Clause *reason) {
+inline int Internal::elevating_level (int lit, Clause *reason, int &repl, int &posl) {
   int l = 0;
+  int repll = 0;
+  int posll = 0;
+  int posx = 0;
   for (const auto &literal : *reason) {
+    posll++;
     if (literal == lit)
       continue;
     assert (val (literal) < 0);
     const int ll = var (literal).level;
     l = l < ll ? ll : l;
+    repl = l > repll ? literal : repl;
+    posx = repl == literal ? posll : posx;
+    repll = l;
   }
+  posx--;
+  posl = posx;
   return l;
 }
 
 /*------------------------------------------------------------------------*/
 
-inline void Internal::elevate_lit (int lit, Clause *reason) {
+inline void Internal::elevate_lit (int lit, Clause *reason, int &repl, int &posl) {
   const int idx = vidx (lit);
   assert (val (idx));
   assert (reason);
   Var &v = var (idx);
-  const int lit_level = elevating_level (lit, reason);
+  const int lit_level = elevating_level (lit, reason, repl, posl);
   if (lit_level >= v.level)
     return;
   assert (lit_level < v.level);
@@ -137,7 +156,7 @@ inline void Internal::elevate_lit (int lit, Clause *reason) {
 
 /*------------------------------------------------------------------------*/
 
-inline void Internal::search_assign (int lit, Clause *reason) {
+inline void Internal::search_assign (int lit, Clause *reason, int &repl, int &posl) {
 
   if (level)
     require_mode (SEARCH);
@@ -166,7 +185,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   else if (reason == decision_reason)
     lit_level = level, reason = 0;
   else if (opts.chrono || opts.reimply)
-    lit_level = assignment_level (lit, reason);
+    lit_level = assignment_level (lit, reason, repl, posl);
   else
     lit_level = level;
   if (!lit_level)
@@ -228,7 +247,8 @@ inline void Internal::trail_push (int lit, int l) {
 
 void Internal::assign_unit (int lit) {
   assert (!level);
-  search_assign (lit, 0);
+  int repl, posl;
+  search_assign (lit, 0, repl, posl);
 }
 
 // Just assume the given literal as decision (increase decision level and
@@ -241,24 +261,28 @@ void Internal::search_assume_decision (int lit) {
   new_trail_level (lit);
   notify_decision ();
   LOG ("search decide %d", lit);
-  search_assign (lit, decision_reason);
+  int repl, posl;
+  search_assign (lit, decision_reason, repl, posl);
 }
 
 void Internal::search_assign_driving (int lit, Clause *c) {
   require_mode (SEARCH);
-  search_assign (lit, c);
+  int repl, posl;
+  search_assign (lit, c, repl, posl);
   notify_assignments ();
 }
 
 void Internal::search_assign_external (int lit) {
   require_mode (SEARCH);
-  search_assign (lit, external_reason);
+  int repl, posl;
+  search_assign (lit, external_reason, repl, posl);
   notify_assignments ();
 }
 
 void Internal::elevate_lit_external (int lit, Clause *reason) {
   assert (opts.reimply);
-  elevate_lit (lit, reason);
+  int repl, posl;
+  elevate_lit (lit, reason, repl, posl);
 }
 
 /*------------------------------------------------------------------------*/
@@ -345,8 +369,9 @@ bool Internal::propagate () {
         if (b < 0)
           conflict = w.clause; // but continue ...
         else {
+          int repl, posl;
           build_chain_for_units (w.blit, w.clause, 0);
-          search_assign (w.blit, w.clause);
+          search_assign (w.blit, w.clause, repl, posl);
           // lrat_chain.clear (); done in search_assign
         }
 
@@ -444,8 +469,9 @@ bool Internal::propagate () {
             // The other watch is unassigned ('!u') and all other literals
             // assigned to false (still 'v < 0'), thus we found a unit.
             //
+            int repl, posl;
             build_chain_for_units (other, w.clause, 0);
-            search_assign (other, w.clause);
+            search_assign (other, w.clause, repl, posl);
             // lrat_chain.clear (); done in search_assign
 
             // Similar code is in the implementation of the SAT'18 paper on
@@ -759,12 +785,13 @@ bool Internal::propagate_conflicts () {
     if (!second) { // either elevate or assign first (or maybe there was a
                    // valid choice for second already, then elevate_lit
                    // will do nothing.
+      int repl, posl;
       if (val (first) > 0){
-        elevate_lit (first, c);
+        elevate_lit (first, c, repl, posl);
         stats.elevate_tried++;
       } else {
         build_chain_for_units (first, c, 0);
-        search_assign (first, c);
+        search_assign (first, c, repl, posl);
       }
 
       int other_level = var (first).level;
@@ -982,14 +1009,16 @@ bool Internal::propagate_multitrail () {
           if (multisat) {
             assert (b > 0);
             // fix missed implication by elevating w.blit
-            elevate_lit (w.blit, w.clause);
+            int repl, posl;
+            elevate_lit (w.blit, w.clause, repl, posl);
             elevate_tried++; // should always succeed
           } else if (b < 0)
             conflict = propagation_conflict (&proplevel,
                                              w.clause); // but continue ...
           else {
+            int repl, posl;
             build_chain_for_units (w.blit, w.clause, 0);
-            search_assign (w.blit, w.clause);
+            search_assign (w.blit, w.clause, repl, posl);
             // lrat_chain.clear (); done in search_assign
           }
 
@@ -1042,13 +1071,15 @@ bool Internal::propagate_multitrail () {
             const literal_iterator middle = lits + w.clause->pos;
             const const_literal_iterator end = lits + size;
             literal_iterator k = middle;
-            const int old_pos = w.clause->pos;
+            literal_iterator k2;
             int lev = proplevel;
 
             // Find replacement watch 'r' at position 'k' with value 'v'.
 
             int r = 0;
             signed char v = -1;
+            int r2 = other;
+            signed char v2 = u;
 
             while (k != end && (v = val (r = *k)) < 0) {
               k++;
@@ -1061,78 +1092,61 @@ bool Internal::propagate_multitrail () {
               while (k != middle && (v = val (r = *k)) < 0) {
                 k++;
               }
+              if (v2 < 0) {
+                k2 = k;
+                while (k2 != middle && ((v2 = val (r2 = *k2)) < 0 || r == r2)) {
+                  k2++;
+                }
+              }
+            } else if (v2 < 0) {
+              k2 = k;
+              while (k2 != end && ((v2 = val (r2 = *k2)) < 0 || r == r2)) {
+                k2++;
+              }
+              if (v2 < 0 || r == r2) {
+                k2 = lits + 2;
+                assert (w.clause->pos <= size);
+                while (k2 != middle && ((v2 = val (r2 = *k2)) < 0 || r == r2)) {
+                  k2++;
+                }
+              }
             }
 
             w.clause->pos = k - lits; // always save position
 
             assert (lits + 2 <= k), assert (k <= w.clause->end ());
+            
+            assert (v < 0 || *k == r);
+            if (r == r2) {
+              assert (u < 0);
+              r2 = other;
+              v2 = u;
+            }
+ 
+            if (v >= 0 && v2 >= 0) {
+              // replace watch
+              assert (r != r2);
+              LOG (w.clause, "unwatch %d in", lit);
 
+              lits[0] = other;
+              lits[1] = r;
+              assert (*k == r);
+              *k = lit;
+
+              watch_literal (r, r2, w.clause);
+
+              j--; // Drop this watch from the watch list of 'lit'.
+              continue;
+
+            }
             if (v > 0) {
-              // check if w.clause is unisat
-              // if it is elevate literal
-              // fix watches
-              // the watch for lit has to be changed in case
-              // var (lit).level < var (x).level for all positively assigned
-              // literals x.
-              // for other similarly, but only if var (other).level <=
-              // proplevel and if var (other).level == proplevel then only
-              // if var (other).trail < var (lit).trail there is a high
-              // chance that this cannot happen...
-              if (u > -1)
-                multisat = other;
-              else if (!multisat) {
-                literal_iterator j = lits + w.clause->pos + 1;
-                const const_literal_iterator end_too = lits + old_pos;
-                const const_literal_iterator end_three = j > end_too ? end : end_too;
-                for (; j < end_three; j++) {
-                  int literal = *j;
-                  if (literal == r)
-                    continue;
-                  const auto tmp = val (literal);
-                  if (tmp < 0)
-                    continue;
-                  multisat = literal;
-                  break;
-                }
-                if (!multisat && j != end_too) {
-                  j = lits + 2;
-                  for (; j < end_too; j++) {
-                    int literal = *j;
-                    if (literal == r)
-                      continue;
-                    const auto tmp = val (literal);
-                    if (tmp < 0)
-                      continue;
-                    multisat = literal;
-                    break;
-                  }
-                }
+              assert (v2 < 0);
+              assert (u < 0);
+              int repl = lit, posl;
+              if (lev < var (r).level) {
+                elevate_lit (r, w.clause, repl, posl);
+                elevate_tried++;
               }
-              if (!multisat) {
-                // potentially elevating r...
-                if (lev < var (r).level) {
-                  elevate_lit (r, w.clause);
-                  elevate_tried++;
-                }
-                multisat = other; // instead we could search for a better
-                                  // blit (one with level == r.level)
-              }
-              if (multisat) {
-                // replace watch
-                LOG (w.clause, "unwatch %d in", lit);
-
-                lits[0] = other;
-                lits[1] = r;
-                *k = lit;
-
-                watch_literal (r, multisat, w.clause);
-
-                j--; // Drop this watch from the watch list of 'lit'.
-              } else
-                // Replacement satisfied, so just replace 'blit'.
-                j[-1].blit = r;
-
-            } else if (!v) {
 
               // Found new unassigned replacement literal to be watched.
 
@@ -1140,117 +1154,104 @@ bool Internal::propagate_multitrail () {
 
               lits[0] = other;
               lits[1] = r;
+              assert (*k == r);
               *k = lit;
+              assert (repl <= max_var);
+              assert (repl >= -max_var);
 
-              watch_literal (r, lit, w.clause);
+              watch_literal (r, repl, w.clause);
 
               j--; // Drop this watch from the watch list of 'lit'.
+              continue;
+            }
+            if (!v) {
+              assert (v2 < 0);
+              assert (u < 0);
+              int repl = lit, posl;
+              build_chain_for_units (r, w.clause, 0);
+              search_assign (r, w.clause, repl, posl);
+              assert (repl <= max_var);
+              assert (repl >= -max_var);
 
-            } else if (!u) {
+              // Found new unassigned replacement literal to be watched.
+
+              LOG (w.clause, "unwatch %d in", lit);
+
+              lits[0] = other;
+              lits[1] = r;
+              assert (*k == r);
+              *k = lit;
+
+              watch_literal (r, repl, w.clause);
+
+              j--; // Drop this watch from the watch list of 'lit'.
+              continue;
+            }
+            assert (v < 0 && r2 == other && v2 == u);
+            if (u > 0) {
+              int repl = lit, posl;
+              if (lev < var (other).level) {
+                elevate_lit (other, w.clause, repl, posl);
+                elevate_tried++;
+              }
+
+              // Found new unassigned replacement literal to be watched.
+              assert (repl <= max_var);
+              assert (repl >= -max_var);
+  
+              if (repl != lit) {
+                LOG (w.clause, "unwatch %d in", lit);
+  
+                lits[0] = other;
+                lits[1] = repl;
+                assert (lits[posl] == repl);
+                lits[posl] = lit;
+  
+                watch_literal (repl, other, w.clause);
+  
+                j--; // Drop this watch from the watch list of 'lit'.
+              }
+              continue;
+            }
+            if (!u) {
 
               assert (v < 0);
 
               // The other watch is unassigned ('!u') and all other literals
               // assigned to false (still 'v < 0'), thus we found a unit.
               //
+              int repl = lit, posl;
               build_chain_for_units (other, w.clause, 0);
-              search_assign (other, w.clause);
+              search_assign (other, w.clause, repl, posl);
               // lrat_chain.clear (); done in search_assign
+              assert (repl <= max_var);
+              assert (repl >= -max_var);
 
-              // we need to change the blocking lit anyways
-              // not really neccessary
-              j[-1].blit = other;
-
-              // Similar code is in the implementation of the SAT'18 paper
-              // on chronological backtracking but in our experience, this
-              // code first does not really seem to be necessary for
-              // correctness, and further does not improve running time
-              // either.
-              //
-              // this is actually necessary to preserve the invariant for
-              // opts.reimply. otherwise the watches break if we
-              // backtrack.
-
-              if (opts.reimply ||
-                  opts.chrono > 1) { // ... always do some variant ...
-
-                const int other_level = var (other).level;
-
-                if (other_level > var (lit).level) {
-
-                  // The assignment level of the new unit 'other' is larger
-                  // than the assignment level of 'lit'.  Thus we should
-                  // find another literal in the clause at that higher
-                  // assignment level and watch that instead of 'lit'.
-
-                  assert (size > 2);
-
-                  int pos, s = 0;
-
-                  for (pos = 2; pos < size; pos++)
-                    if (var (s = lits[pos]).level == other_level)
-                      break;
-
-                  assert (s);
-                  assert (pos < size);
-
-                  LOG (w.clause, "unwatch %d in", lit);
-                  lits[pos] = lit;
-                  lits[0] = other;
-                  lits[1] = s;
-                  watch_literal (s, other, w.clause);
-
-                  j--; // Drop this watch from the watch list of 'lit'.
-                }
-              }
-            } else if (u > 0) {
-              assert (v < 0);
-              assert (multisat);
-
-              // we might have to elevate...
-              if (lev < var (other).level) {
-                elevate_lit (other, w.clause);
-                elevate_tried++;
-              }
-
-              // now other_level might have changed
-              int other_level = var (other).level;
-
-              // if we elevated to proplevel we can just change blit to
-              // other
-              assert (other_level >= proplevel);
-              if (other_level == proplevel) {
-                j[-1].blit = other;
-              } else {          // otherwise we search for a new watch
-                int pos, s = 0; // which is guaranteed to exist because
-                                // of elevation.
-                for (pos = 2; pos < size; pos++) {
-                  if (var (s = lits[pos]).level >= other_level)
-                    break;
-                }
-                assert (s);
-                assert (pos < size);
-
+              if (repl != lit) {
                 LOG (w.clause, "unwatch %d in", lit);
-                lits[pos] = lit;
+  
                 lits[0] = other;
-                lits[1] = s;
-                watch_literal (s, other, w.clause);
-
+                lits[1] = repl;
+                assert (lits[posl] == repl);
+                lits[posl] = lit;
+  
+                watch_literal (repl, other, w.clause);
+  
                 j--; // Drop this watch from the watch list of 'lit'.
               }
-            } else {
+              continue;
 
-              assert (u < 0);
-              assert (v < 0);
-
-              // The other watch is assigned false ('u < 0') and all other
-              // literals as well (still 'v < 0'), thus we found a conflict.
-
-              conflict = propagation_conflict (&proplevel, w.clause);
-              if (conflict)
-                break;
             }
+            assert (u < 0 && v < 0 && v2 < 0);
+            assert (u < 0);
+            assert (v < 0);
+
+            // The other watch is assigned false ('u < 0') and all other
+            // literals as well (still 'v < 0'), thus we found a conflict.
+
+            conflict = propagation_conflict (&proplevel, w.clause);
+            if (conflict)
+              break;
           }
         }
       }
@@ -1427,8 +1428,9 @@ bool Internal::propagate_clean () {
         if (b < 0)
           conflict = w.clause; // but continue ...
         else {
+          int repl, posl;
           build_chain_for_units (w.blit, w.clause, 0);
-          search_assign (w.blit, w.clause);
+          search_assign (w.blit, w.clause, repl, posl);
           // lrat_chain.clear (); done in search_assign
         }
 
@@ -1525,8 +1527,9 @@ bool Internal::propagate_clean () {
             // The other watch is unassigned ('!u') and all other literals
             // assigned to false (still 'v < 0'), thus we found a unit.
             //
+            int repl, posl;
             build_chain_for_units (other, w.clause, 0);
-            search_assign (other, w.clause);
+            search_assign (other, w.clause, repl, posl);
             // lrat_chain.clear (); done in search_assign
 
             // commented code cannot happen

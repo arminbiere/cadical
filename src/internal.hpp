@@ -607,10 +607,10 @@ struct Internal {
 
   // Forward reasoning through propagation in 'propagate.cpp'.
   //
-  int assignment_level (int lit, Clause *);
+  int assignment_level (int lit, Clause *, int &repl, int &posl);
   void build_chain_for_units (int lit, Clause *reason, bool forced);
   void build_chain_for_empty ();
-  void search_assign (int lit, Clause *);
+  void search_assign (int lit, Clause *, int &repl, int &posl);
   void search_assign_driving (int lit, Clause *reason);
   void search_assign_external (int lit);
   void search_assume_decision (int decision);
@@ -1053,8 +1053,8 @@ struct Internal {
   int next_propagated (int l);
   Clause *propagation_conflict (int *l, Clause *c, bool exact = false);
   int conflicting_level (Clause *c);
-  void elevate_lit (int lit, Clause *reason);
-  int elevating_level (int lit, Clause *reason);
+  void elevate_lit (int lit, Clause *reason, int &repl, int &posl);
+  int elevating_level (int lit, Clause *reason, int &repl, int &posl);
   void set_propagated (int l, int prop);
   bool propagate_conflicts ();
   bool propagate_multitrail ();
