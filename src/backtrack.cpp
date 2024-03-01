@@ -208,6 +208,9 @@ void Internal::backtrack (int new_level) {
 		     (var (litA).missed_level == var (litB).missed_level &&
 		      var (litA).trail < var (litB).trail);});
 #endif
+    // Here we slowly bubble down the literals: they remain on current level
+    // with a missed propagation until reaching their final position.
+    // It is only once reached the final position that they do get real units 
     for (int i = missed_props.size() - 1; i >= 0; --i) {
       const int lit = missed_props[i];
       Var &v = var (lit);
@@ -216,8 +219,8 @@ void Internal::backtrack (int new_level) {
       assert (val (lit) > 0);
       assert (val (-lit) < 0);
       v.reason = v.missed_implication;
-
-      if (!v.missed_level && !unsat) {
+      const bool new_unit = !v.missed_level && !new_level;
+      if (new_unit) {
 	std::vector<uint64_t> lrat_chain_tmp (std::move (lrat_chain)); lrat_chain.clear();
 	build_chain_for_units (lit, v.missed_implication, true);
 	learn_unit_clause (lit);
@@ -226,23 +229,24 @@ void Internal::backtrack (int new_level) {
 	LOG (lrat_chain, "chain set back to: ");
 	v.reason = 0;
       }
-      v.reason = v.missed_level ? v.missed_implication : 0;
+      v.reason = new_unit ? 0 : v.missed_implication;
       assert (level >= v.missed_level);
-      v.level = v.missed_level;
+      v.level = new_unit ? 0 : new_level;
       assert (new_level >= v.missed_level);
       v.trail = trail.size();
-      if (v.missed_level)
+      if (new_unit)
 	LOG (v.reason,
-             "setting missed propagation lit %d at level %d with reason", lit, v.level);
+             "BT setting missed propagation lit %d at level %d with reason", lit, v.level);
       else {
-	LOG ("setting missed propagation lit %d to root level", lit, v.level);
+	LOG ("BT setting missed propagation lit %d to root level", lit);
       }
       if (v.dirty) {
 	LOG ("lit %d is dirty", lit);
 	earliest_dirty = std::min (earliest_dirty, (int)trail.size());
       }
       trail.push_back (lit);
-      var (lit).missed_implication = nullptr;
+      if (v.missed_level >= new_level)
+	var (lit).missed_implication = nullptr;
     }
     if (!missed_props.empty ())
       notify_assignments ();

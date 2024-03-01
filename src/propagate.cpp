@@ -98,6 +98,9 @@ void Internal::build_chain_for_empty () {
   lrat_chain.push_back (conflict->id);
 }
 inline void Internal::promote_to_unit (int lit) {
+  lrat_chain.clear();
+  return;
+#if 0
   assert (val (lit));
   const int idx = vidx (lit);
   Var &v = var (idx);
@@ -106,6 +109,7 @@ inline void Internal::promote_to_unit (int lit) {
   v.missed_implication = 0;
   v.dirty = true;
   lrat_chain.clear ();
+#endif
 }
 /*------------------------------------------------------------------------*/
 
@@ -136,7 +140,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     lit_level = 0; // unit
   else if (reason == decision_reason)
     lit_level = level, reason = 0;
-  else if (opts.chrono)
+  else if (opts.chrono && opts.chrono != 3)
     lit_level = assignment_level (lit, reason);
   else
     lit_level = level;
@@ -166,11 +170,13 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     LOG (reason, "search assign %d @ %d", lit, lit_level);
 #endif
 
+  lrat_chain.clear ();
   if (opts.chrono == 3 && level != lit_level) {
     LOG ("setting %d @ %d to dirty", lit, lit_level);
     var (lit).dirty = true;
   }
-  if (reason && opts.chrono == 3 && false) {
+  if (reason && opts.chrono == 3) {
+    assert (lrat_chain.empty());
     int real_level = assignment_level (lit, reason);
     const bool replacing_missed = (var (lit).missed_implication && var (lit).missed_level > real_level);
     if (replacing_missed) {
@@ -184,9 +190,10 @@ inline void Internal::search_assign (int lit, Clause *reason) {
       if (!real_level) {
         build_chain_for_units (lit, reason, 0);
         promote_to_unit (lit);
-	var (lit).missed_implication = nullptr;
       }
     }
+    assert (lrat_chain.empty());
+
   }
 
   if (watching ()) {
@@ -196,7 +203,6 @@ inline void Internal::search_assign (int lit, Clause *reason) {
       __builtin_prefetch (&w, 0, 1);
     }
   }
-  lrat_chain.clear ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -269,7 +275,7 @@ bool Internal::propagate () {
   int64_t before = propagated;
 
   while (!conflict && propagated != trail.size ()) {
-
+    assert (lrat_chain.empty());
     const int lit = -trail[propagated++];
     const int proplevel = var (lit).level;
     LOG ("propagating %d", -lit);
@@ -463,9 +469,9 @@ bool Internal::propagate () {
               const bool replacing_missed =
                   (!var (other).missed_implication ||
                    var (other).missed_level > replacement_level);
-	      if (var (other).missed_implication) {
-		LOG (var (other).missed_implication, "old missed");
-	      }
+              if (var (other).missed_implication) {
+                LOG (var (other).missed_implication, "old missed");
+              }
               if (opts.chrono == 3 &&
                   var (other).level > replacement_level &&
                   replacing_missed) {
@@ -481,8 +487,9 @@ bool Internal::propagate () {
                   promote_to_unit (other);
                 }
               } else {
-		LOG ("no lower level implication (replacement: %d)", replacement_level);
-	      }
+                LOG ("no lower level implication (replacement: %d)",
+                     replacement_level);
+              }
             } else if (!u) {
 
               assert (v < 0 ||
@@ -502,8 +509,8 @@ bool Internal::propagate () {
               // correctness, and further does not improve running time
               // either.
               //
-              if (opts.chrono >= 2) {
-		LOG ("checking to fix level");
+              if (opts.chrono < 3) {
+                LOG (w.clause, "checking to fix level");
 
                 const int other_level = var (other).level;
 
@@ -534,8 +541,19 @@ bool Internal::propagate () {
 
                   j--; // Drop this watch from the watch list of 'lit'.
                 }
+              } else if (opts.chrono == 3) {
+
+                if (*highest_lit != other && *highest_lit != lit) {
+                  LOG ("swapping %d and %d", *highest_lit, other);
+                  lits[0] = other;
+                  lits[1] = *highest_lit;
+                  *highest_lit = lit;
+                  watch_literal (lits[1], other, w.clause);
+                  assert (j > ws.begin ());
+                  j--; // Drop this watch from the watch list of 'lit'.
+                }
               }
-            } else {
+          } else {
 
               assert (u < 0);
               assert (v < 0);
