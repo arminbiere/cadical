@@ -359,6 +359,17 @@ void Internal::add_new_original_clause (uint64_t id) {
     assert (new_level >= 0);
     backtrack (new_level);
   }
+  if (opts.chrono == 3) {
+    int lev = level;
+    for (auto lit : original) {
+      if (var (lit).missed_implication){
+        lev = min (lev, var (lit).missed_level);
+	LOG (var (lit).missed_implication, "found missed %d, jumping back to %d", lit, lev);
+      }
+    }
+    if (lev != level)
+      backtrack (lev);
+  }
   assert (!tainted_literal);
   LOG (original, "original clause");
   assert (clause.empty ());
@@ -462,9 +473,11 @@ void Internal::add_new_original_clause (uint64_t id) {
         if (val (lit) < 0) {
 	  const int lev = opts.chrono == 3 && var (lit).missed_implication ? min (0, var (lit).missed_level) : var (lit).level - 1;
 	  assert (opts.chrono != 3 || !var (lit).missed_implication || var (lit).level > var (lit).missed_level);
+	  LOG ("resetting missed of lit %d", lit);
 	  var (lit).missed_implication = nullptr;
           backtrack (lev);
 	}
+	LOG ("resetting missed of lit %d", lit);
 	var (lit).missed_implication = nullptr;
         assert (val (lit) >= 0);
         handle_external_clause (0);

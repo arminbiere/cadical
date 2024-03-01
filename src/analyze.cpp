@@ -1186,6 +1186,7 @@ void Internal::analyze () {
       resolve = false;
       continue;
     } else {
+      LOG (var (uip).missed_implication, "ignoring missed of lit %d", uip);
       var (uip).missed_implication = nullptr;
     }
     break;

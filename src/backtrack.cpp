@@ -11,6 +11,8 @@ namespace CaDiCaL {
 inline void Internal::unassign (int lit) {
   assert (val (lit) > 0);
   set_val (lit, 0);
+  if (var (lit).missed_implication)
+    LOG (var (lit).missed_implication, "deleting missed %d on level %d (original: %d)", lit, var (lit).missed_level, var (lit).level);
   var (lit).missed_implication = nullptr;
   var (lit).missed_level = -1;
   var (lit).dirty = false;
@@ -154,7 +156,7 @@ void Internal::backtrack (int new_level) {
              "level "
              "%d), target level: %d",
              lit, v.level, v.missed_level, new_level);
-        v.missed_implication = nullptr; // happens notably for units
+        v.missed_implication = nullptr;
       }
 #ifdef LOGGING
       if (!v.level)

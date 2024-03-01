@@ -587,8 +587,8 @@ void Internal::handle_external_clause (Clause *res) {
   }
   const int l1 = var (pos1).level;
   // TODO remove, but the proper solution is to backtrack first, then hande those missed propagations
-  var (pos1).missed_implication = nullptr;
-  var (pos0).missed_implication = nullptr;
+  assert (!var (pos0).missed_implication);
+  assert (!var (pos1).missed_implication);
   //
   if (val (pos0) < 0) { // conflicting or propagating clause
     assert (0 < l1 && l1 <= var (pos0).level);
@@ -605,7 +605,7 @@ void Internal::handle_external_clause (Clause *res) {
         assert (!val (pos0) && !val (pos1));
       }
     } else {
-      search_assign_driving (pos0, res);
+      search_assign_driving (pos0, level ? res : 0);
     }
     if (from_propagator)
       stats.ext_prop.elearn_conf++;
@@ -615,7 +615,9 @@ void Internal::handle_external_clause (Clause *res) {
     if (!opts.chrono) {
       backtrack (l1);
     }
-    search_assign_driving (pos0, res);
+    if (!level)
+      build_chain_for_units(pos0, res, false);
+    search_assign_driving (pos0, level ? res : 0);
     if (from_propagator)
       stats.ext_prop.elearn_conf++;
     return;
