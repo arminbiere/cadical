@@ -220,7 +220,7 @@ void Internal::backtrack (int new_level) {
       assert (val (-lit) < 0);
       v.reason = v.missed_implication;
       const bool new_unit = !v.missed_level && !new_level;
-      if (new_unit) {
+      if (new_unit && !unsat) {
 	std::vector<uint64_t> lrat_chain_tmp (std::move (lrat_chain)); lrat_chain.clear();
 	build_chain_for_units (lit, v.missed_implication, true);
 	learn_unit_clause (lit);
