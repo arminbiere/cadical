@@ -1146,7 +1146,7 @@ void Internal::analyze () {
       LOG (var (uip).missed_implication, "could resolve with");
       LOG (clause, "conflict is");
     }
-    if (opts.chrono >= 4 && var (uip).missed_implication && clause.size() != 1) {
+    if (opts.chrono >= 4 && var (uip).missed_implication) {
       if (proof) {
 	LOG ("adding temporary clause with id %d", clause_id+1);
         if (lrat) {
@@ -1181,7 +1181,6 @@ void Internal::analyze () {
 	lrat_chain.push_back(tmp_id);
       if (!new_level) { // resolve for the lrat chain
 	LOG ("actually derived UNSAT, now building chain for it");
-	assert (clause.size () >= 2);
 	LOG(unit_chain, "unit_chain:");
 	for (auto lit : clause) {
 	  assert (var (lit).missed_implication &&  !var (lit).missed_level);
@@ -1204,6 +1203,7 @@ void Internal::analyze () {
           LOG ("deleting temporary clause with id %d", clause_id);
           proof->delete_clause (tmp_id, false, tmp_clause);
         }
+	clause.clear();
 
         STOP (analyze);
 	return;
