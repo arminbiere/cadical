@@ -1073,8 +1073,10 @@ void Internal::analyze () {
           UPDATE_AVERAGE (averages.current.level, new_level);
           if (var (forced).missed_implication &&
               new_level > var (forced).missed_level) {
+            LOG (var (forced).missed_implication, "missed was actually better, so changing");
             new_level = var (forced).missed_level;
             conflict = var (forced).missed_implication;
+	    forced = -forced;
           } else if (var (forced).missed_implication) {
             LOG (var (forced).missed_implication, "overwriting missed");
           }
