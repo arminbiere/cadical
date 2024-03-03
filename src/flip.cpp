@@ -130,6 +130,21 @@ bool Internal::flip (int lit) {
     set_val (idx, -original_value);
     assert (val (-lit) > 0);
     assert (val (lit) < 0);
+    if (opts.chrono >= 3) {
+      // if the literal to flip is in the trail then we have to remove those clauses containing it
+      var (lit).missed_implication = nullptr;
+      for (int other : trail) {
+        Clause *reason = var (other).missed_implication;
+	if (reason)
+	  for (auto l : *reason) {
+	    if (l == -lit) {
+	      LOG (var (other).missed_implication, "removing missed");
+	      var (other).missed_implication = nullptr;
+	      break;
+	    }
+	  }
+      }
+    }
 
     Var &v = var (idx);
     assert (trail[v.trail] == lit);
