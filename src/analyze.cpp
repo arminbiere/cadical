@@ -1138,7 +1138,7 @@ void Internal::analyze () {
       LOG (var (uip).missed_implication, "could resolve with");
       LOG (clause, "conflict is");
     }
-    if (opts.chrono==3 && var (uip).missed_implication && var (uip).missed_level && clause.size() != 1) {
+    if (opts.chrono==3 && var (uip).missed_implication && clause.size() != 1) {
       if (proof) {
 	LOG ("adding temporary clause with id %d", clause_id+1);
         if (lrat) {
@@ -1158,7 +1158,7 @@ void Internal::analyze () {
 	}
 	tmp_id = clause_id;
         tmp_clause = clause;
-	LOG (tmp_clause, "temporary");
+	LOG (tmp_clause, "temporary with id %d", tmp_id);
       }
       int new_level = var (uip).missed_level;
       for (auto lit : clause) {
@@ -1167,17 +1167,35 @@ void Internal::analyze () {
       }
       reason = var (uip).missed_implication;
       //var (uip).missed_implication = nullptr;
-      backtrack (new_level);
       clear_analyzed_literals ();
       clear_unit_analyzed_literals ();
       clear_analyzed_levels ();
+      if (lrat)
+	lrat_chain.push_back(tmp_id);
+      if (!new_level) { // resolve for the lrat chain
+	LOG ("backtrack to level 0, so just resolving for LRAT");
+	var (uip).missed_implication = nullptr;
+	assert (clause.size () >= 2);
+	assert (clause.back() == -uip);
+	clause.pop_back();
+	LOG(unit_chain, "unit_chain:");
+	if (lrat)
+	  analyze_reason (uip, reason, open, resolvent_size, antecedent_size);
+	uip = -clause.back();
+	var (uip).missed_implication = nullptr;
+	LOG(lrat_chain, "lrat_chain:");
+	LOG(unit_chain, "unit_chain:");
+	new_level = var(uip).level;
+	assert (new_level);
+	backtrack (new_level);
+	break;
+      }
+      backtrack (new_level);
       open = 0;
       std::vector<int> c = clause;
       clause.clear();
       antecedent_size = 1; // for uip
       resolvent_size = 0;
-      if (lrat)
-	lrat_chain.push_back(tmp_id);
       for (const auto &other : c) {
         analyze_literal (other, open, resolvent_size, antecedent_size);
       }
