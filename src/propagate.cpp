@@ -177,7 +177,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   }
   if (reason && opts.chrono >= 3) {
     assert (lrat_chain.empty());
-    int real_level = assignment_level (lit, reason); // should be var (reason->literals[1]).level; except for binary clauses
+    int real_level = reason->literals[1] == lit ? var(reason->literals[0]).level : var(reason->literals[1]).level;
     assert (real_level == assignment_level (lit, reason));
     const bool replacing_missed = (var (lit).missed_implication && var (lit).missed_level > real_level);
     if (replacing_missed) {
@@ -496,6 +496,18 @@ bool Internal::propagate () {
               assert (v < 0 ||
                       (opts.chrono >= 3 && var (r).level > proplevel));
 
+	      if (opts.chrono >= 3) { // this fix must be done before the assignement, not after
+                if (*highest_lit != other && *highest_lit != lit) {
+                  LOG ("swapping %d and %d", *highest_lit, other);
+                  lits[0] = other;
+                  lits[1] = *highest_lit;
+                  *highest_lit = lit;
+                  watch_literal (lits[1], other, w.clause);
+                  assert (j > ws.begin ());
+                  j--; // Drop this watch from the watch list of 'lit'.
+                }
+	      }
+
               // The other watch is unassigned ('!u') and all other
               // literals assigned to false (still 'v < 0'), thus we found
               // a unit.
@@ -542,19 +554,8 @@ bool Internal::propagate () {
 
                   j--; // Drop this watch from the watch list of 'lit'.
                 }
-              } else if (opts.chrono >= 3) {
-
-                if (*highest_lit != other && *highest_lit != lit) {
-                  LOG ("swapping %d and %d", *highest_lit, other);
-                  lits[0] = other;
-                  lits[1] = *highest_lit;
-                  *highest_lit = lit;
-                  watch_literal (lits[1], other, w.clause);
-                  assert (j > ws.begin ());
-                  j--; // Drop this watch from the watch list of 'lit'.
-                }
               }
-          } else {
+            } else {
 
               assert (u < 0);
               assert (v < 0);
