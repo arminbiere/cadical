@@ -1180,22 +1180,33 @@ void Internal::analyze () {
       if (lrat)
 	lrat_chain.push_back(tmp_id);
       if (!new_level) { // resolve for the lrat chain
-	LOG ("backtrack to level 0, so just resolving for LRAT");
-	var (uip).missed_implication = nullptr;
+	LOG ("actually derived UNSAT, now building chain for it");
 	assert (clause.size () >= 2);
-	assert (clause.back() == -uip);
-	clause.pop_back();
 	LOG(unit_chain, "unit_chain:");
-	if (lrat)
-	  analyze_reason (uip, reason, open, resolvent_size, antecedent_size);
-	uip = -clause.back();
-	var (uip).missed_implication = nullptr;
-	LOG(lrat_chain, "lrat_chain:");
-	LOG(unit_chain, "unit_chain:");
-	new_level = var(uip).level;
-	assert (new_level);
-	backtrack (new_level);
-	break;
+	for (auto lit : clause) {
+	  assert (var (lit).missed_implication &&  !var (lit).missed_level);
+	  LOG (var (lit).missed_implication, "resolving with missed reason of lit %d @@ %d", lit, var (lit).missed_level);
+	  analyze_reason (-lit, var (lit).missed_implication, open, resolvent_size, antecedent_size);
+	}
+        for (auto id : unit_chain)
+          lrat_chain.push_back (id);
+	reverse (lrat_chain.begin (), lrat_chain.end ());
+	learn_empty_clause();
+
+        lrat_chain.clear ();
+        clear_analyzed_literals ();
+        clear_unit_analyzed_literals ();
+        clear_analyzed_levels ();
+
+        LOG (tmp_clause, "trying to delete temporary clause");
+        if (!tmp_clause.empty ()) {
+          assert (opts.chrono >= 4);
+          LOG ("deleting temporary clause with id %d", clause_id);
+          proof->delete_clause (tmp_id, false, tmp_clause);
+        }
+
+        STOP (analyze);
+	return;
       }
       backtrack (new_level);
       open = 0;
@@ -1246,7 +1257,6 @@ void Internal::analyze () {
     else if (opts.minimize)
       minimize_clause ();
 
-    LOG (clause, "after mini-shrinknig");
     size = (int) clause.size ();
 
     // Update decision heuristics.
