@@ -1155,7 +1155,6 @@ void Internal::analyze () {
             lrat_chain.push_back (id);
 	  reverse (lrat_chain.begin (), lrat_chain.end ());
 	  LOG (lrat_chain, "lrat:");
-	  fflush(stdout);
         }
         proof->add_derived_clause (++clause_id, false, clause, lrat_chain);
         lrat_chain.clear ();
@@ -1221,10 +1220,6 @@ void Internal::analyze () {
       i = t->size ();
       resolve = false;
       continue;
-    } else {
-      if (var (uip).missed_implication)
-	LOG (var (uip).missed_implication, "ignoring missed of lit %d", uip);
-      var (uip).missed_implication = nullptr;
     }
     break;
   }
@@ -1297,7 +1292,6 @@ void Internal::analyze () {
   int new_level = determine_actual_backtrack_level (jump);
   UPDATE_AVERAGE (averages.current.level, new_level);
   Clause *otherconflict = var (uip).missed_implication;
-  assert (!var (uip).missed_implication);
   if (uip) {
     // TODO when this happens we actually have a conflict
     // that we should analyse
