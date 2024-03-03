@@ -77,7 +77,7 @@ void Stats::print (Internal *internal) {
     PRT ("chronological:   %15" PRId64 "   %10.2f %%  of conflicts",
          stats.chrono, percent (stats.chrono, stats.conflicts));
   if (all || stats.missedprops)
-    PRT ("  missed-props:   %15" PRId64 "   %10.2f %%  per conflict",
+    PRT ("  missed-props:  %15" PRId64 "   %10.2f %%  per conflict",
          stats.missedprops, percent (stats.missedprops, stats.conflicts));
   if (all || (stats.elevated && stats.chrono))
     PRT ("  elevated:      %15" PRId64 "   %10.2f    per chronological",

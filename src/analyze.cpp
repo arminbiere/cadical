@@ -1148,7 +1148,7 @@ void Internal::analyze () {
     }
     if (opts.chrono >= 4 && var (uip).missed_implication) {
       if (proof) {
-	LOG ("adding temporary clause with id %d", clause_id+1);
+	LOG ("adding temporary clause with id %" PRId64, clause_id+1);
         if (lrat) {
           LOG (unit_chain, "unit chain: ");
           for (auto id : unit_chain)
@@ -1199,7 +1199,7 @@ void Internal::analyze () {
         LOG (tmp_clause, "trying to delete temporary clause");
         if (!tmp_clause.empty ()) {
           assert (opts.chrono >= 4);
-          LOG ("deleting temporary clause with id %d", clause_id);
+          LOG ("deleting temporary clause with id %" PRId64, clause_id);
           proof->delete_clause (tmp_id, false, tmp_clause);
         }
 	clause.clear();
@@ -1325,7 +1325,7 @@ void Internal::analyze () {
   LOG (tmp_clause, "trying to delete temporary clause");
   if (!tmp_clause.empty()){
     assert (opts.chrono >= 4);
-    LOG ("deleting temporary clause with id %d", clause_id);
+    LOG ("deleting temporary clause with id %" PRId64 , clause_id);
     proof->delete_clause (tmp_id, false, tmp_clause);
   }
 
