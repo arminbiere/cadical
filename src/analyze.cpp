@@ -935,7 +935,7 @@ void Internal::analyze () {
       // backtracking anyhow and thus we also do the latter.
       //
       backtrack (conflict_level - 1);
-      if (opts.chrono == 3&& forced != conflict->literals[0] && forced != conflict->literals[1]) {
+      if (opts.chrono >= 3 && forced != conflict->literals[0] && forced != conflict->literals[1]) {
 	const int size = conflict->size;
 	LOG ("updating watch for propagation");
 	for (int i = 2; i < size; ++i) {
@@ -1129,7 +1129,7 @@ void Internal::analyze () {
         break;
       LOG ("open = %d, uip = %d", open, uip);
       reason = var (uip).reason;
-      if (opts.chrono == 3 && var (uip).missed_implication) {
+      if (opts.chrono >= 4 && var (uip).missed_implication) {
 	LOG (var (uip).missed_implication, "changing to missed reason");
 	reason = var (uip).missed_implication;
       }
@@ -1144,7 +1144,7 @@ void Internal::analyze () {
       LOG (var (uip).missed_implication, "could resolve with");
       LOG (clause, "conflict is");
     }
-    if (opts.chrono==3 && var (uip).missed_implication && clause.size() != 1) {
+    if (opts.chrono >= 4 && var (uip).missed_implication && clause.size() != 1) {
       if (proof) {
 	LOG ("adding temporary clause with id %d", clause_id+1);
         if (lrat) {
@@ -1209,7 +1209,8 @@ void Internal::analyze () {
       resolve = false;
       continue;
     } else {
-      LOG (var (uip).missed_implication, "ignoring missed of lit %d", uip);
+      if (var (uip).missed_implication)
+	LOG (var (uip).missed_implication, "ignoring missed of lit %d", uip);
       var (uip).missed_implication = nullptr;
     }
     break;
@@ -1317,7 +1318,7 @@ void Internal::analyze () {
 
   LOG (tmp_clause, "trying to delete temporary clause");
   if (!tmp_clause.empty()){
-    assert (opts.chrono == 3);
+    assert (opts.chrono >= 4);
     LOG ("deleting temporary clause with id %d", clause_id);
     proof->delete_clause (tmp_id, false, tmp_clause);
   }

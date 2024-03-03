@@ -359,7 +359,7 @@ void Internal::add_new_original_clause (uint64_t id) {
     assert (new_level >= 0);
     backtrack (new_level);
   }
-  if (opts.chrono == 3) {
+  if (opts.chrono >= 3) {
     int lev = level;
     for (auto lit : original) {
       if (var (lit).missed_implication){
@@ -471,7 +471,7 @@ void Internal::add_new_original_clause (uint64_t id) {
         const int lit = clause[0];
         assert (!val (lit) || var (lit).level);
         if (val (lit) < 0) {
-	  const int lev = opts.chrono == 3 && var (lit).missed_implication ? min (0, var (lit).missed_level) : var (lit).level - 1;
+	  const int lev = opts.chrono >= 3 && var (lit).missed_implication ? min (0, var (lit).missed_level) : var (lit).level - 1;
 	  assert (opts.chrono != 3 || !var (lit).missed_implication || var (lit).level > var (lit).missed_level);
 	  LOG ("resetting missed of lit %d", lit);
 	  var (lit).missed_implication = nullptr;

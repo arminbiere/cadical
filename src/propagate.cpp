@@ -171,11 +171,11 @@ inline void Internal::search_assign (int lit, Clause *reason) {
 #endif
 
   lrat_chain.clear ();
-  if (opts.chrono == 3 && level != lit_level) {
+  if (opts.chrono >= 3 && level != lit_level) {
     LOG ("setting %d @ %d to dirty", lit, lit_level);
     var (lit).dirty = true;
   }
-  if (reason && opts.chrono == 3) {
+  if (reason && opts.chrono >= 3) {
     assert (lrat_chain.empty());
     int real_level = assignment_level (lit, reason);
     const bool replacing_missed = (var (lit).missed_implication && var (lit).missed_level > real_level);
@@ -301,7 +301,7 @@ bool Internal::propagate () {
           LOG (var (w.blit).missed_implication, "old missed implication");
 	bool replacing = (!var (w.blit).missed_implication || var (w.blit).missed_level > proplevel);
         if (b > 0 && replacing && proplevel < var (w.blit).level) {
-          assert (opts.chrono == 3);
+          assert (opts.chrono >= 3);
           assert (var (w.blit).level > proplevel);
           LOG (w.clause, "found missed propagation of %d propagation at level %d",
                w.blit, proplevel);
@@ -456,7 +456,7 @@ bool Internal::propagate () {
 
           } else {
             if (u > 0) {
-              if (opts.chrono == 3 && *highest_lit != other &&
+              if (opts.chrono >= 3 && *highest_lit != other &&
                   *highest_lit != lit) {
                 LOG ("swapping %d and %d", *highest_lit, other);
                 lits[0] = other;
@@ -472,7 +472,7 @@ bool Internal::propagate () {
               if (var (other).missed_implication) {
                 LOG (var (other).missed_implication, "old missed");
               }
-              if (opts.chrono == 3 &&
+              if (opts.chrono >= 3 &&
                   var (other).level > replacement_level &&
                   replacing_missed) {
                 LOG (w.clause,
@@ -493,7 +493,7 @@ bool Internal::propagate () {
             } else if (!u) {
 
               assert (v < 0 ||
-                      (opts.chrono == 3 && var (r).level > proplevel));
+                      (opts.chrono >= 3 && var (r).level > proplevel));
 
               // The other watch is unassigned ('!u') and all other
               // literals assigned to false (still 'v < 0'), thus we found
@@ -541,7 +541,7 @@ bool Internal::propagate () {
 
                   j--; // Drop this watch from the watch list of 'lit'.
                 }
-              } else if (opts.chrono == 3) {
+              } else if (opts.chrono >= 3) {
 
                 if (*highest_lit != other && *highest_lit != lit) {
                   LOG ("swapping %d and %d", *highest_lit, other);

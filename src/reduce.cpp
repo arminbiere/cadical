@@ -172,7 +172,7 @@ bool Internal::propagate_out_of_order_units () {
   for (size_t i = control[1].trail; !oou && i < trail.size (); i++) {
     const int lit = trail[i];
     assert (val (lit) > 0);
-    bool missed_unit = opts.chrono == 3 && var (lit).missed_implication && !var (lit).missed_level;
+    bool missed_unit = opts.chrono >= 3 && var (lit).missed_implication && !var (lit).missed_level;
     if (var (lit).level && !missed_unit)
       continue;
     LOG ("found out-of-order assigned unit %d", oou);

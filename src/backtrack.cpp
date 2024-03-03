@@ -118,11 +118,11 @@ void Internal::backtrack (int new_level) {
   while (i < end_of_trail) {
     int lit = trail[i++];
     Var &v = var (lit);
-    if (opts.chrono == 3 && v.missed_implication && v.level >= new_level && v.missed_level <= new_level) {
+    if (opts.chrono >= 3 && v.missed_implication && v.level >= new_level && v.missed_level <= new_level) {
       if (v.missed_implication)
-        assert (v.missed_level <= level && opts.chrono == 3);
-      assert (v.missed_level <= level && opts.chrono == 3);
-      assert (opts.chrono == 3);
+        assert (v.missed_level <= level && opts.chrono >= 3);
+      assert (v.missed_level <= level && opts.chrono >= 3);
+      assert (opts.chrono >= 3);
       LOG (v.missed_implication,
            "BT missed lower-level implication of %d at level %d (was %d)",
            lit, var (lit).missed_level, var (lit).level);
@@ -167,7 +167,7 @@ void Internal::backtrack (int new_level) {
       trail[j] = lit;
       v.trail = j++;
       reassigned++;
-      if (opts.chrono == 3 && v.dirty && j < earliest_dirty) {
+      if (opts.chrono >= 3 && v.dirty && j < earliest_dirty) {
         LOG ("found dirty literal %d at %d", lit, j - 1);
         earliest_dirty = j - 1;
       }
@@ -202,7 +202,7 @@ void Internal::backtrack (int new_level) {
     }
   }
 
-  if (opts.chrono == 3) {
+  if (opts.chrono >= 3) {
 #if 0
     std::sort (std::begin (missed_props), std::end (missed_props),
             [this] (int litA, int litB) {
@@ -254,7 +254,7 @@ void Internal::backtrack (int new_level) {
       notify_assignments ();
   }
 
-  if (opts.chrono == 3) {
+  if (opts.chrono >= 3) {
     LOG ("strong chrono: %ld repropagations",
          trail.size () - earliest_dirty);
     LOG ("setting propagated to %d", earliest_dirty);

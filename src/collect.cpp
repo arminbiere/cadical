@@ -119,7 +119,7 @@ void Internal::protect_reasons () {
     count++;
 #endif
   }
-  if (opts.chrono == 3) {
+  if (opts.chrono >= 3) {
     for (const auto &lit : trail) {
       if (!active (lit))
         continue;
@@ -171,7 +171,7 @@ void Internal::unprotect_reasons () {
 #endif
   }
 
-  if (opts.chrono == 3) {
+  if (opts.chrono >= 3) {
     for (const auto &lit : trail) {
       if (!active (lit))
         continue;
@@ -294,7 +294,7 @@ void Internal::update_reason_references () {
 #endif
   }
   LOG ("updated %zd assigned reason references", count);
-  if (opts.chrono == 3) {
+  if (opts.chrono >= 3) {
 #ifdef LOGGING
       count = 0;
 #endif

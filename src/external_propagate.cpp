@@ -457,7 +457,7 @@ void Internal::explain_external_propagations () {
     const int lit = *it;
     Flags &f = flags (lit);
     Var &v = var (lit);
-    if (v.reason) { // TODO with opts.chrono == 3 we should not need that anymore actually
+    if (v.reason) { // TODO with opts.chrono >= 3 we should not need that anymore actually
       int real_level = 0;
       Clause *const reason = v.missed_implication ? v.missed_implication : v.reason;
       for (const auto &other : *reason) {
