@@ -1071,7 +1071,11 @@ void Internal::analyze () {
           const int conflict_level = otfs_find_backtrack_level (forced);
           int new_level = determine_actual_backtrack_level (conflict_level);
           UPDATE_AVERAGE (averages.current.level, new_level);
-          if (var (forced).missed_implication) {
+          if (var (forced).missed_implication &&
+              new_level > var (forced).missed_level) {
+            new_level = var (forced).missed_level;
+            conflict = var (forced).missed_implication;
+          } else if (var (forced).missed_implication) {
             LOG (var (forced).missed_implication, "overwriting missed");
           }
           var (forced).missed_implication = nullptr;
@@ -1166,7 +1170,6 @@ void Internal::analyze () {
 	new_level = max (lit_lev, new_level);
       }
       reason = var (uip).missed_implication;
-      //var (uip).missed_implication = nullptr;
       clear_analyzed_literals ();
       clear_unit_analyzed_literals ();
       clear_analyzed_levels ();
