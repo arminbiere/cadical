@@ -140,7 +140,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     lit_level = 0; // unit
   else if (reason == decision_reason)
     lit_level = level, reason = 0;
-  else if (opts.chrono && opts.chrono != 3)
+  else if (opts.chrono && opts.chrono < 3)
     lit_level = assignment_level (lit, reason);
   else
     lit_level = level;
@@ -177,7 +177,8 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   }
   if (reason && opts.chrono >= 3) {
     assert (lrat_chain.empty());
-    int real_level = assignment_level (lit, reason);
+    int real_level = assignment_level (lit, reason); // should be var (reason->literals[1]).level; except for binary clauses
+    assert (real_level == assignment_level (lit, reason));
     const bool replacing_missed = (var (lit).missed_implication && var (lit).missed_level > real_level);
     if (replacing_missed) {
       LOG (var (lit).missed_implication, "changing missed reason from");
@@ -290,7 +291,7 @@ bool Internal::propagate () {
       const Watch w = *j++ = *i++;
       const signed char b = val (w.blit);
 
-      if (b > 0 && (opts.chrono != 3 || var (w.blit).level <= proplevel)) {
+      if (b > 0 && (opts.chrono < 3 || var (w.blit).level <= proplevel)) {
         LOG (w.clause, "already satisfied by blit");
         continue; // blocking literal satisfied
       }
@@ -383,7 +384,7 @@ bool Internal::propagate () {
         const int other = lits[0] ^ lits[1] ^ lit;
         const signed char u = val (other); // value of the other watch
 
-        if (u > 0 && (opts.chrono != 3 || var (other).level <= proplevel)) {
+        if (u > 0 && (opts.chrono < 3 || var (other).level <= proplevel)) {
           LOG ("changing blit to %d (lev: %d)", other, var (other).level);
           j[-1].blit = other; // satisfied, just replace blit
         } else {
@@ -433,7 +434,7 @@ bool Internal::propagate () {
 
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
 
-          if (v > 0 && (opts.chrono != 3 && var (r).level <= proplevel)) {
+          if (v > 0 && (opts.chrono < 3 && var (r).level <= proplevel)) {
 
             // Replacement satisfied, so just replace 'blit'.
             LOG ("changing blit to %d (level %d)", r, var (r).level);
