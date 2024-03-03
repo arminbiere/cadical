@@ -1083,6 +1083,8 @@ void Internal::analyze () {
           var (forced).missed_implication = nullptr;
           backtrack (new_level);
 
+	  if (!new_level)
+            build_chain_for_units (forced, conflict, 0);
           LOG ("forcing %d", forced);
           search_assign_driving (forced, conflict);
 
