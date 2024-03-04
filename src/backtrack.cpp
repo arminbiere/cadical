@@ -150,16 +150,12 @@ void Internal::backtrack (int new_level) {
       // backtracking.  It is possible to just keep out-of-order assigned
       // literals on the trail without breaking the solver (after some
       // modifications to 'analyze' - see 'opts.chrono' guarded code there).
+      // 
+      // With strong chrono, this still happens for unit clauses, where we do not have a reason, so
+      // we cannot mark it as missed.
       assert (opts.chrono || external_prop || did_external_prop);
-      if (v.missed_implication && v.missed_level > new_level) {
-	//we are going further back that the missed suggests: deleting
-        LOG (v.missed_implication,
-             "BT resetting missed of lit %d @ %d is not reused (expected "
-             "level "
-             "%d), target level: %d",
-             lit, v.level, v.missed_level, new_level);
-        v.missed_implication = nullptr;
-      }
+      assert (!v.missed_implication);
+      assert (opts.chrono < 3 || !v.level);
 #ifdef LOGGING
       if (!v.level)
         LOG ("reassign %d @ 0 unit clause %d", lit, lit);
@@ -256,8 +252,6 @@ void Internal::backtrack (int new_level) {
   }
 
   if (opts.chrono >= 3) {
-    LOG ("strong chrono: %ld repropagations avoided",
-         trail.size () - earliest_dirty);
     if (earliest_dirty > trail.size())
       earliest_dirty = num_assigned;
     LOG ("setting propagated to %" PRId64 " (first lit: %d)", earliest_dirty, earliest_dirty < trail.size() ? trail[earliest_dirty] : 0);
