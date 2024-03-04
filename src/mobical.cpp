@@ -793,6 +793,7 @@ public:
   }
 
   void notify_assignment (const std::vector<int>& lits) override { 
+    MLOG ("notified " << lits.size() << " new assignments." << std::endl);
     for (const auto& lit: lits) {
       observed_trail.back ().push_back (lit);
     }

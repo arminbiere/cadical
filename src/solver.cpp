@@ -948,10 +948,6 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
   LOG_API_CALL_BEGIN ("connect_external_propagator");
   REQUIRE_VALID_STATE ();
   REQUIRE (propagator, "can not connect zero propagator");
-  REQUIRE (!internal->opts.ilb,
-           "External propagator with ILB is not supported.");
-  REQUIRE (!internal->opts.ilbassumptions,
-           "External propagator with ILB-assumptions is not supported.");
 #ifdef LOGGING
   if (external->propagator)
     LOG ("connecting new external propagator (disconnecting previous one)");

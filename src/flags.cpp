@@ -19,6 +19,14 @@ void Internal::mark_fixed (int lit) {
   stats.active--;
   assert (!active (lit));
   assert (f.fixed ());
+
+  if (external_prop && private_steps) {
+    // If pre/inprocessing found a fixed assignment, we want the propagator
+    // to know about it.
+    // But at that point it is not guaranteed to be already on the trail, so
+    // notification will happen only later.
+    assert (!level);
+  }
 }
 
 void Internal::mark_eliminated (int lit) {

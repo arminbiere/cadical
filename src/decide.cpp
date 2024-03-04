@@ -225,8 +225,18 @@ int Internal::decide () {
 #endif
 
   } else {
-    stats.decisions++;
+    
     int decision = ask_decision ();
+    if ((size_t) level < assumptions.size () ||
+      ((size_t) level == assumptions.size () && constraint.size ())) {
+        // forced backtrack below pseudo decision
+        // levels, one of the two branches above will handle it.
+        STOP (decide);
+        res = decide ();
+        STOP (decide);
+        return res;
+    }
+    stats.decisions++;
     if (!decision) {
       int idx = next_decision_variable ();
       const bool target = (opts.target > 1 || (stable && opts.target));

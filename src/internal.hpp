@@ -680,6 +680,9 @@ struct Internal {
   bool is_decision (int ilit);
   void check_watched_literal_invariants ();
   void set_tainted_literal ();
+  void renotify_trail_after_ilb ();
+  void renotify_trail_after_local_search ();
+  void renotify_full_trail ();
   void connect_propagator ();
   void mark_garbage_external_forgettable (int64_t id);
   bool is_external_forgettable (int64_t id);

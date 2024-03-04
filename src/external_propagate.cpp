@@ -90,6 +90,67 @@ void Internal::set_tainted_literal () {
   }
 }
 
+void Internal::renotify_trail_after_ilb () {
+  if (!external_prop || external_prop_is_lazy || !trail.size () || !opts.ilb ) {
+    return;
+  }
+  LOG ("notify external propagator about new assignments (after ilb)");
+#ifndef NDEBUG
+  LOG ("(decision level: %d, trail size: %zd, notified %zd)",level, trail.size (), notified);
+#endif
+  renotify_full_trail ();
+}
+
+void Internal::renotify_trail_after_local_search () {
+  if (!external_prop || external_prop_is_lazy || !trail.size () ) {
+    return;
+  }
+  LOG ("notify external propagator about new assignments (after local search)");
+#ifndef NDEBUG
+  LOG ("(decision level: %d, trail size: %zd, notified %zd)",level, trail.size (), notified);
+#endif
+  renotify_full_trail ();
+}
+
+// It repeats ALL assignments of the trail, so the already notified root-level
+// assignments will be notified multiple times.
+
+void Internal::renotify_full_trail () {
+  const size_t end_of_trail = trail.size ();
+  notified = 0;
+  size_t decision_level = 0;
+
+  notify_backtrack (0);
+
+  std::vector<int> assigned;
+  while (notified < end_of_trail) {
+    int ilit = trail[notified++];
+
+    if (is_decision (ilit)) {
+      if (assigned.size()) external->propagator->notify_assignment (assigned);
+      decision_level++;
+      external->propagator->notify_new_decision_level ();
+      assigned.clear ();
+    }
+
+    if (!observed (ilit))
+      continue;
+
+    int elit = externalize (ilit); // TODO: double-check tainting
+    assert (elit);
+    // Fixed variables might get mapped (during compact) to another
+    // non-observed but fixed variable.
+    // This happens on root level, so notification about their assignment is
+    // already done.
+    assert (external->observed (elit) || fixed(ilit));
+    assigned.push_back(elit);
+  }
+  if (assigned.size()) external->propagator->notify_assignment (assigned);
+  
+  return;
+
+}
+
 /*----------------------------------------------------------------------------*/
 //
 // Check if the variable is assigned by decision.
@@ -118,7 +179,7 @@ void Internal::force_backtrack (size_t new_level) {
   
 #ifndef NDEBUG
   LOG ("external propagator forces backtrack to decision level"
-        "%zd (from level %zd)",
+        "%zd (from level %d)",
          new_level, level);
 #endif
   backtrack(new_level);
@@ -833,11 +894,30 @@ int Internal::ask_decision () {
   if (!external_prop || external_prop_is_lazy || private_steps)
     return 0;
   
+  assert (!unsat);
+  assert (!conflict);
   notify_assignments ();
+  int level_before = level;
   forced_backt_allowed = true;
   int elit = external->propagator->cb_decide ();
   forced_backt_allowed = false;
   stats.ext_prop.ext_cb++;
+
+  if (level_before != level) {
+
+    propagate ();
+    assert (!unsat);
+    assert (!conflict);
+    notify_assignments ();
+    
+    // In case the external propagator forced to backtrack below the
+    // pseduo decision levels, we must go back to the CDCL loop instead of
+    // making a decision.
+    if ((size_t) level < assumptions.size () ||
+      ((size_t) level == assumptions.size () && constraint.size ())) {
+        return 0;
+    }
+  }
 
   if (!elit)
     return 0;
