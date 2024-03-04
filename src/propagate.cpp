@@ -279,7 +279,7 @@ bool Internal::propagate () {
     assert (lrat_chain.empty());
     const int lit = -trail[propagated++];
     const int proplevel = var (lit).level;
-    LOG ("propagating %d", -lit);
+    LOG ("propagating %d @ %d", -lit, var (lit).level);
     Watches &ws = watches (lit);
 
     const const_watch_iterator eow = ws.end ();

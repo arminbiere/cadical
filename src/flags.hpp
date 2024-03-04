@@ -10,7 +10,7 @@ struct Flags { // Variable flags.
   bool seen : 1;       // seen in generating first UIP clause in 'analyze'
   bool keep : 1;       // keep in learned clause in 'minimize'
   bool poison : 1;     // can not be removed in 'minimize'
-  bool removable : 1;  // can be removed in 'minimize'
+  unsigned removable : 2;  // can be removed in 'minimize'
   bool shrinkable : 1; // can be removed in 'shrink'
   bool added : 1; // has already been added to lrat_chain (in 'minimize')
   bool ignorepos : 1; // decompose need to dif between pos/neg lit

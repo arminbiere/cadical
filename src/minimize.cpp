@@ -19,15 +19,21 @@ bool Internal::minimize_literal (int lit, int depth) {
   assert (val (lit) > 0);
   Flags &f = flags (lit);
   Var &v = var (lit);
+  if (opts.chrono == 4 && v.missed_implication && !v.missed_level){
+    LOG ("minimizable %d by root missed", lit);
+    minimized.push_back (lit);
+    flags (lit).removable = 2;
+    return true;
+  }
   if (!v.level || f.removable || f.keep)
     return true;
   if (!v.reason || f.poison || v.level == level)
     return false;
   const Level &l = control[v.level];
-  if (!depth && l.seen.count < 2)
-    return false; // Don Knuth's idea
-  if (v.trail <= l.seen.trail)
-    return false; // new early abort
+  // if (!depth && l.seen.count < 2)
+  //   return false; // Don Knuth's idea
+  // if (v.trail <= l.seen.trail)
+  //   return false; // new early abort
   if (depth > opts.minimizedepth)
     return false;
   bool res = true;
@@ -42,7 +48,22 @@ bool Internal::minimize_literal (int lit, int depth) {
   }
   if (res)
     f.removable = true;
-  else
+  else if (opts.chrono == 4 && v.missed_implication) {
+    LOG ("now trying to minimize with the missed implication");
+    const const_literal_iterator end = v.missed_implication->end ();
+    const_literal_iterator i;
+    res = true;
+    for (i = v.missed_implication->begin (); res && i != end; i++) {
+      const int other = *i;
+      if (other == lit)
+        continue;
+      res = minimize_literal (-other, depth + 1);
+    }
+    if (res)
+      f.removable = 2;
+    else
+      f.poison = true;
+  } else
     f.poison = true;
   minimized.push_back (lit);
   if (!depth) {
@@ -151,13 +172,20 @@ void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
     stack.pop_back ();
     if (idx < 0) {
       Var &v = var (idx);
-      mini_chain.push_back (v.reason->id);
+      Clause *reason;
+      if (flags (idx).removable == 2)
+	reason = v.missed_implication;
+      else
+	reason = v.reason;
+      LOG ("pushing id %d", reason->id);
+      mini_chain.push_back (reason->id);
       continue;
     }
     assert (idx);
     Flags &f = flags (idx);
     Var &v = var (idx);
     if (f.keep || f.added || f.poison) {
+      LOG ("already seen lit %d with keep = %d, added = %d, poison = %d", idx, f.keep, f.added, f.poison);
       continue;
     }
     if (!v.level) {
@@ -170,19 +198,29 @@ void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
       uint64_t id = unit_clauses[uidx];
       assert (id);
       unit_chain.push_back (id);
+      LOG ("adding unit reason %d for lit %d", id, idx);
       continue;
     }
+    LOG ("marking %d as added", lit);
     f.added = true;
-    assert (v.reason && f.removable);
-    const const_literal_iterator end = v.reason->end ();
+    assert ((v.reason && f.removable == 1) || (v.missed_implication && f.removable == 2));
+    Clause *reason;
+    if (f.removable == 2){
+      LOG ("using missed");
+      reason = v.missed_implication;
+    }
+    else
+      reason = v.reason;
+    const const_literal_iterator end = reason->end ();
     const_literal_iterator i;
     LOG (v.reason, "LRAT chain for lit %d at depth %zd by going over", lit,
          stack.size ());
     stack.push_back (-idx);
-    for (i = v.reason->begin (); i != end; i++) {
+    for (i = reason->begin (); i != end; i++) {
       const int other = *i;
-      if (other == idx)
+      if (other == lit)
         continue;
+      LOG ("found %d", other);
       stack.push_back (vidx (other));
     }
   }
@@ -210,6 +248,11 @@ void Internal::clear_minimized_literals () {
                                           flags (lit).shrinkable =
                                               flags (lit).added = false;
   minimized.clear ();
+  for (auto v : vars) {
+    assert (!flags (v).shrinkable),
+    assert (!flags (v).added),
+    assert (!flags (v).keep);
+  }
 }
 
 } // namespace CaDiCaL

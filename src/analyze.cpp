@@ -1147,6 +1147,11 @@ void Internal::analyze () {
       LOG (clause, "conflict is");
     }
     if (opts.chrono >= 4 && var (uip).missed_implication) {
+#if 0
+      // TODO try that out (similar to OTFS actually)
+      if (opts.bump)
+        bump_variables ();
+#endif
       if (proof) {
 	LOG ("adding temporary clause with id %" PRId64, clause_id+1);
         if (lrat) {
