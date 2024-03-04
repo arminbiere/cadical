@@ -522,7 +522,7 @@ bool Internal::propagate () {
               // correctness, and further does not improve running time
               // either.
               //
-              if (opts.chrono < 3) {
+              if (opts.chrono == 2) {
                 LOG (w.clause, "checking to fix level");
 
                 const int other_level = var (other).level;
