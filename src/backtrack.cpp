@@ -128,15 +128,19 @@ void Internal::backtrack (int new_level) {
            lit, var (lit).missed_level, var (lit).level);
       assert (!v.missed_implication->moved);
       LOG (v.reason, "other reason");
-      assert (external_prop || var (lit).missed_level < var (lit).level);
+      assert (var (lit).missed_level < var (lit).level);
+#ifdef DEBUG
       for (auto other : *v.missed_implication) {
         LOG ("lit %d at level %d", other, var (other).level);
         if (other != lit)
           assert (val (other) < 0);
       }
+#endif
       missed_props.push_back (lit);
-      LOG ("setting literal %d dirty", lit);
-      v.dirty = true;
+      if (v.missed_level == new_level) {
+	LOG ("setting literal %d dirty", lit);
+	v.dirty = true;
+      }
     }
     else if (v.level > new_level) {
       unassign (lit);
@@ -203,13 +207,6 @@ void Internal::backtrack (int new_level) {
   }
 
   if (opts.chrono >= 3) {
-#if 0
-    std::sort (std::begin (missed_props), std::end (missed_props),
-            [this] (int litA, int litB) {
-              return var (litA).missed_level < var (litB).missed_level ||
-		     (var (litA).missed_level == var (litB).missed_level &&
-		      var (litA).trail < var (litB).trail);});
-#endif
     // Here we slowly bubble down the literals: they remain on current level
     // with a missed propagation until reaching their final position.
     // It is only once reached the final position that they do get real units 
@@ -222,16 +219,22 @@ void Internal::backtrack (int new_level) {
       assert (val (-lit) < 0);
       v.reason = v.missed_implication;
       const bool new_unit = !v.missed_level && !new_level;
+      std::vector<uint64_t> lrat_chain_tmp;
       if (new_unit && !unsat) {
-	std::vector<uint64_t> lrat_chain_tmp (std::move (lrat_chain)); lrat_chain.clear();
+	if (lrat) {
+	  // can be called during conflict analysis, so we need to copy the lrat_chain
+	  lrat_chain_tmp = (std::move (lrat_chain));
+	  lrat_chain.clear();
+	}
 	build_chain_for_units (lit, v.missed_implication, true);
 	learn_unit_clause (lit);
-	lrat_chain = std::move (lrat_chain_tmp);
-	// not marking the clause garbage, because it can be involved in the conflict analysis
-	LOG (lrat_chain, "chain set back to: ");
+	if (lrat) {
+	  lrat_chain = std::move (lrat_chain_tmp);
+	  // not marking the clause garbage, because it can be involved in the conflict analysis
+	  LOG (lrat_chain, "chain set back to: ");
+	}
 	v.reason = 0;
       }
-      v.reason = new_unit ? 0 : v.missed_implication;
       assert (level >= v.missed_level);
       v.level = new_unit ? 0 : new_level;
       assert (new_level >= v.missed_level);
@@ -242,9 +245,9 @@ void Internal::backtrack (int new_level) {
       else {
 	LOG ("BT setting missed propagation lit %d to root level", lit);
       }
-      if (v.dirty) {
+      if (v.dirty && trail.size() < earliest_dirty) {
 	LOG ("lit %d is dirty", lit);
-	earliest_dirty = std::min (earliest_dirty, (int)trail.size());
+	earliest_dirty = (int)trail.size();
       }
       trail.push_back (lit);
       if (v.missed_level >= new_level)
