@@ -113,7 +113,7 @@ void Internal::backtrack (int new_level) {
     notified = assigned;
   }
 
-  int earliest_dirty = trail.size();
+  size_t earliest_dirty = trail.size();
 
   while (i < end_of_trail) {
     int lit = trail[i++];
@@ -172,7 +172,7 @@ void Internal::backtrack (int new_level) {
       v.trail = j++;
       reassigned++;
       if (opts.chrono >= 3 && v.dirty && j < earliest_dirty) {
-        LOG ("found dirty literal %d at %d", lit, j - 1);
+        LOG ("found dirty literal %d at %" PRId64, lit, j - 1);
         earliest_dirty = j - 1;
       }
     }
@@ -247,7 +247,7 @@ void Internal::backtrack (int new_level) {
       }
       if (v.dirty && trail.size() < earliest_dirty) {
 	LOG ("lit %d is dirty", lit);
-	earliest_dirty = (int)trail.size();
+	earliest_dirty = trail.size();
       }
       trail.push_back (lit);
       if (v.missed_level >= new_level)
@@ -258,12 +258,11 @@ void Internal::backtrack (int new_level) {
   }
 
   if (opts.chrono >= 3) {
-    LOG ("strong chrono: %ld repropagations",
+    LOG ("strong chrono: %ld repropagations avoided",
          trail.size () - earliest_dirty);
-    LOG ("setting propagated to %d", earliest_dirty);
     if (earliest_dirty > trail.size())
       earliest_dirty = num_assigned;
-    LOG ("setting propagated to %d (first lit: %d)", earliest_dirty, earliest_dirty < trail.size() ? trail[earliest_dirty] : 0);
+    LOG ("setting propagated to %" PRId64 " (first lit: %d)", earliest_dirty, earliest_dirty < trail.size() ? trail[earliest_dirty] : 0);
     propagated = earliest_dirty;
     propagated2 = earliest_dirty;
     no_conflict_until = earliest_dirty;
