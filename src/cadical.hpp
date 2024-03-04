@@ -424,6 +424,17 @@ public:
   //
   bool is_decision (int lit);
 
+  // Force solve to backtrack to certain decision level. Can be called only
+  // during 'cb_decide' of a connected External Propagator.
+  // Invoking in any other time will not have an effect. 
+  // If the call had an effect, the External Propagator will be notified about
+  // the backtrack via 'notify_backtrack'.
+  //
+  //   require (SOLVING)
+  //   ensure (SOLVING)
+  //
+  void force_backtrack (size_t new_level);
+
   // ====== END IPASIR-UP ==================================================
 
   //------------------------------------------------------------------------

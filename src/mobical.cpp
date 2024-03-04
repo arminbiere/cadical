@@ -653,6 +653,11 @@ public:
         return -1 * new_var;
       }
     }
+
+    if (!(observed_variables.size () % 11)) {
+      MLOG ("cb_decide forces backtracking to level 1" << std::endl);
+      s->force_backtrack (1);
+    }
     decision_loc++;
 
     if ((decision_loc % observed_variables.size ()) == 0) {

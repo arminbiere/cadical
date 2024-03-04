@@ -112,6 +112,18 @@ bool Internal::is_decision (int ilit) {
   return true;
 }
 
+void Internal::force_backtrack (size_t new_level) {
+  if (!forced_backt_allowed || level <= 0 || new_level >= (size_t)level)
+    return;
+  
+#ifndef NDEBUG
+  LOG ("external propagator forces backtrack to decision level"
+        "%zd (from level %zd)",
+         new_level, level);
+#endif
+  backtrack(new_level);
+};
+
 /*----------------------------------------------------------------------------*/
 //
 // Call external propagator to check if there is a literal to be propagated.
@@ -822,7 +834,9 @@ int Internal::ask_decision () {
     return 0;
   
   notify_assignments ();
+  forced_backt_allowed = true;
   int elit = external->propagator->cb_decide ();
+  forced_backt_allowed = false;
   stats.ext_prop.ext_cb++;
 
   if (!elit)

@@ -461,6 +461,15 @@ bool External::is_decision (int elit) {
   return internal->is_decision (ilit);
 }
 
+void External::force_backtrack (size_t new_level) {
+  if (!propagator) {
+    LOG ("No connected propagator that could force backtracking");
+    return;
+  }
+  LOG ("force backtrack to level %zd",new_level);
+  internal->force_backtrack (new_level);
+}
+
 /*------------------------------------------------------------------------*/
 
 // Internal checker if 'solve' claims the formula to be satisfiable.
