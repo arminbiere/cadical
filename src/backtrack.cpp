@@ -137,10 +137,8 @@ void Internal::backtrack (int new_level) {
       }
 #endif
       missed_props.push_back (lit);
-      if (v.missed_level == new_level) {
-	LOG ("setting literal %d dirty", lit);
-	v.dirty = true;
-      }
+      LOG ("setting literal %d dirty", lit);
+      v.dirty = true;
     }
     else if (v.level > new_level) {
       unassign (lit);
