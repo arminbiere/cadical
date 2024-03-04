@@ -909,37 +909,37 @@ void Solver::disconnect_learner () {
 
 /*===== IPASIR END =======================================================*/
 
-void Solver::connect_observer (Observer *observer) {
-  LOG_API_CALL_BEGIN ("connect_observer");
+void Solver::connect_fixed_listener (FixedAssignmentListener *fixed_listener) {
+  LOG_API_CALL_BEGIN ("connect_fixed_listener");
   REQUIRE_VALID_STATE ();
-  REQUIRE (observer, "can not connect zero observer");
+  REQUIRE (fixed_listener, "can not connect zero fixed listener");
 
 #ifdef LOGGING
-  if (external->observer)
-    LOG ("connecting new observer (disconnecting previous one)");
+  if (external->fixed_listener)
+    LOG ("connecting new listener of fixed assignments (disconnecting previous one)");
   else
-    LOG ("connecting new observer (no previous one)");
+    LOG ("connecting new listener of fixed assigments (no previous one)");
 #endif  
-  if (external->observer)
-    disconnect_observer ();
-  external->observer = observer;
-  // Observers are treated as real-time observers, thus previously found fixed
+  if (external->fixed_listener)
+    disconnect_fixed_listener ();
+  external->fixed_listener = fixed_listener;
+  // Listeners are treated as real-time listeners, thus previously found fixed
   // assignments are not sent out (would be rather expensive to recover it
   // retrospect, see external_propagate.cpp/get_fixed_literals () function).
-  LOG_API_CALL_END ("connect_observer");
+  LOG_API_CALL_END ("connect_fixed_listener");
 }
 
-void Solver::disconnect_observer () {
-  LOG_API_CALL_BEGIN ("disconnect_observer");
+void Solver::disconnect_fixed_listener () {
+  LOG_API_CALL_BEGIN ("disconnect_fixed_listener");
   REQUIRE_VALID_STATE ();
 #ifdef LOGGING
-  if (external->observer)
-    LOG ("disconnecting previous observer");
+  if (external->fixed_listener)
+    LOG ("disconnecting previous listener of fixed assignments");
   else
-    LOG ("ignoring to disconnect observer (no previous one)");
+    LOG ("ignoring to disconnect listener of fixed assignments (no previous one)");
 #endif
-  external->observer = 0;
-  LOG_API_CALL_END ("disconnect_observer");
+  external->fixed_listener = 0;
+  LOG_API_CALL_END ("disconnect_fixed_listener");
 }
 
 /*===== IPASIR-UP BEGIN ==================================================*/

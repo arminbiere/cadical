@@ -97,9 +97,9 @@ struct External {
   void export_learned_unit_clause (int ilit);
   void export_learned_large_clause (const vector<int> &);
 
-  // If there is an observer.
+  // If there is a listener for fixed assignments.
 
-  Observer *observer;
+  FixedAssignmentListener *fixed_listener;
   
   // If there is an external propagator.
 

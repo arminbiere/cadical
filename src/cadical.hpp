@@ -205,7 +205,7 @@ struct External;
 // Forward declaration of call-back classes. See bottom of this file.
 
 class Learner;
-class Observer;
+class FixedAssignmentListener;
 class Terminator;
 class ClauseIterator;
 class WitnessIterator;
@@ -366,8 +366,8 @@ public:
   //   require (VALID)
   //   ensure (VALID)
   //
-  void connect_observer (Observer *observer);
-  void disconnect_observer ();
+  void connect_fixed_listener (FixedAssignmentListener *fixed_listener);
+  void disconnect_fixed_listener ();
 
   // ====== BEGIN IPASIR-UP ================================================
 
@@ -1108,12 +1108,12 @@ public:
   virtual void learn (int lit) = 0;
 };
 
-// Connected observer gets notified whenever the truth value of a variable is
+// Connected listener gets notified whenever the truth value of a variable is
 // fixed (for example during inprocessing or due to some derived unit clauses).
 
-class Observer {
+class FixedAssignmentListener {
 public:
-  virtual ~Observer () {}
+  virtual ~FixedAssignmentListener () {}
 
   virtual void notify_fixed_assignment (int) = 0;
 };
@@ -1193,7 +1193,7 @@ public:
   // clause.
   //
   // The external propagator indicates that there is a clause to add.
-  // The parameters of the function allows the user to indicate that how 
+  // The parameter of the function allows the user to indicate that how 
   // 'forgettable' is the external clause. Further, there is a member-parameter
   // called 'is_tainting' that indicates if the external clauses are irredundant
   // (almost always they are, see below the rare exceptions).

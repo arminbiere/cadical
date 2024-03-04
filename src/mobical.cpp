@@ -203,7 +203,7 @@ struct Shared {
 
 /*------------------------------------------------------------------------*/
 
-class MockPropagator : public ExternalPropagator, public Observer {
+class MockPropagator : public ExternalPropagator, public FixedAssignmentListener {
 private:
   Solver *s = 0;
 
@@ -468,7 +468,7 @@ public:
   }
   /*-----------------functions for mobical ends ------------------------*/
 
-  /*-------------------------- Observer functions ----------------------*/
+  /*------------------ FixedAssignmentListener functions ---------------------*/
   void notify_fixed_assignment (int lit) {
     MLOG ("notify_fixed_assignment: " << lit << " (current level: "
                                       << observed_trail.size () - 1
@@ -488,7 +488,7 @@ public:
 
   void collect_prev_fixed () {
 #ifndef NDEBUG  
-    MLOG ("collecting previously fixed assignments for the new observer: ");
+    MLOG ("collecting previously fixed assignments for the new FixedAssignmentListener: ");
     
     std::vector<int> fixed_lits = {};
     s->internal->get_all_fixed_literals (fixed_lits);
@@ -497,7 +497,7 @@ public:
 #endif    
   }
 
-  /* ------------------------ Observer functions end -------------------*/
+  /* ---------------- FixedAssignmentListener functions end ------------------*/
 
   /* -------------------- ExternalPropagator functions -----------------*/
 
@@ -1359,16 +1359,16 @@ struct ConnectCall : public Call {
     mobical.mock_pointer = new MockPropagator (s);
 #endif
     s->connect_external_propagator (mobical.mock_pointer);
-    s->connect_observer(mobical.mock_pointer);
+    s->connect_fixed_listener(mobical.mock_pointer);
 
     if (prev_pointer) {
       mobical.mock_pointer->add_prev_fixed (prev_pointer->observed_fixed);
       delete prev_pointer;
     } else {
-      // Observer does not replay previous fixed assignment, collect them here
-      // explicitly -- EXPENSIVE
-      // In practice Observer is there from the beginning if needed, in mobical
-      // we do not want to wire in this.
+      // FixedAssignmentListener does not replay previous fixed assignment,
+      // collect them here explicitly -- EXPENSIVE
+      // In practice FixedAssignmentListener is there from the beginning if 
+      // needed, in mobical we do not want to wire in this.
       
       mobical.mock_pointer->collect_prev_fixed ();
     }
@@ -1414,7 +1414,7 @@ struct DisconnectCall : public Call {
         static_cast<MockPropagator *> (s->get_propagator ());
     if (mp)
       mp->remove_new_observed_var ();
-    s->disconnect_observer ();
+    s->disconnect_fixed_listener ();
     s->disconnect_external_propagator ();
     if (mp) {
       delete mp;

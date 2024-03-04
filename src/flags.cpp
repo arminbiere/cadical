@@ -3,10 +3,10 @@
 namespace CaDiCaL {
 
 void Internal::mark_fixed (int lit) {
-  if (external->observer) {
+  if (external->fixed_listener) {
     int elit = externalize (lit);
     assert (elit);
-    external->observer->notify_fixed_assignment (elit);
+    external->fixed_listener->notify_fixed_assignment (elit);
   }
   Flags &f = flags (lit);
   assert (f.status == Flags::ACTIVE);
