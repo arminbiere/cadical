@@ -1028,7 +1028,7 @@ void Internal::analyze () {
   const bool otfs = opts.otfs;
   bool resolve = true;
   std::vector<int> tmp_clause;
-  int tmp_id;
+  int tmp_id = 0;
 
   for (;;) {
     for (;;) {
@@ -1096,6 +1096,7 @@ void Internal::analyze () {
           clause.clear ();
           if (!tmp_clause.empty ()) {
             LOG ("deleting temporary clause with id %d", tmp_id);
+	    assert (tmp_id);
             proof->delete_clause (tmp_id, false, tmp_clause);
           }
           STOP (analyze);
