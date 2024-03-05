@@ -112,16 +112,14 @@ void Internal::backtrack (int new_level) {
     notified = assigned;
   }
 
-  size_t earliest_dirty = trail.size();
+  size_t earliest_dirty = -1;
+  const bool strongchrono = (opts.chrono >= 3);
 
   while (i < end_of_trail) {
     int lit = trail[i++];
     Var &v = var (lit);
-    if (opts.chrono >= 3 && v.missed_implication && v.level >= new_level && v.missed_level <= new_level) {
-      if (v.missed_implication)
-        assert (v.missed_level <= level && opts.chrono >= 3);
-      assert (v.missed_level <= level && opts.chrono >= 3);
-      assert (opts.chrono >= 3);
+    if (strongchrono && v.missed_implication && v.level > new_level && v.missed_level <= new_level) {
+      assert (v.missed_level <= level);
       LOG (v.missed_implication,
            "BT missed lower-level implication of %d at level %d (was %d)",
            lit, var (lit).missed_level, var (lit).level);
@@ -154,7 +152,7 @@ void Internal::backtrack (int new_level) {
       // we cannot mark it as missed.
       assert (opts.chrono || external_prop || did_external_prop);
       assert (!v.missed_implication);
-      assert (opts.chrono < 3 || !v.level);
+      assert (!strongchrono || !v.level);
 #ifdef LOGGING
       if (!v.level)
         LOG ("reassign %d @ 0 unit clause %d", lit, lit);
@@ -164,13 +162,16 @@ void Internal::backtrack (int new_level) {
       trail[j] = lit;
       v.trail = j++;
       reassigned++;
-      if (opts.chrono >= 3 && v.dirty && j < earliest_dirty) {
-        LOG ("found dirty literal %d at %" PRId64, lit, j - 1);
-        earliest_dirty = j - 1;
+      if (strongchrono && v.dirty && earliest_dirty == -1) {
+        LOG ("found dirty literal %d at %" PRId64, lit, j-1);
+	assert (j-1 >= 0);
+        earliest_dirty = j-1;
       }
     }
   }
   trail.resize (j);
+  if (earliest_dirty != -1)
+    assert (earliest_dirty < trail.size());
   LOG ("unassigned %d literals %.0f%%", unassigned,
        percent (unassigned, unassigned + reassigned));
   LOG ("reassigned %d literals %.0f%%", reassigned,
@@ -199,7 +200,7 @@ void Internal::backtrack (int new_level) {
     }
   }
 
-  if (opts.chrono >= 3) {
+  if (strongchrono) {
     // Here we slowly bubble down the literals: they remain on current level
     // with a missed propagation until reaching their final position.
     // It is only once reached the final position that they do get real units 
@@ -238,7 +239,7 @@ void Internal::backtrack (int new_level) {
       else {
 	LOG ("BT setting missed propagation lit %d to root level", lit);
       }
-      if (v.dirty && trail.size() < earliest_dirty) {
+      if (v.dirty && earliest_dirty == -1) {
 	LOG ("lit %d is dirty", lit);
 	earliest_dirty = trail.size();
       }
@@ -251,8 +252,8 @@ void Internal::backtrack (int new_level) {
       notify_assignments ();
   }
 
-  if (opts.chrono >= 3) {
-    if (earliest_dirty > trail.size())
+  if (strongchrono) {
+    if (earliest_dirty == -1)
       earliest_dirty = num_assigned;
     LOG ("setting propagated to %" PRId64 " (first lit: %d)", earliest_dirty, earliest_dirty < trail.size() ? trail[earliest_dirty] : 0);
     propagated = earliest_dirty;
