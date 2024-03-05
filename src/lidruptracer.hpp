@@ -9,10 +9,8 @@ struct LidrupClause {
   LidrupClause *next; // collision chain link for hash table
   uint64_t hash;     // previously computed full 64-bit hash
   uint64_t id;       // id of clause
-  unsigned size;
-  unsigned chain_size;
-  int literals[1];
-  uint64_t chain[1];
+  std::vector<uint64_t> chain;
+  std::vector<int> literals;
 };
 
 class LidrupTracer : public FileTracer {
@@ -32,6 +30,7 @@ class LidrupTracer : public FileTracer {
   vector<uint64_t> imported_chain;
   vector<uint64_t> batch_weaken;
   vector<uint64_t> batch_delete;
+  vector<uint64_t> batch_restore;
 
   static const unsigned num_nonces = 4;
 
@@ -69,7 +68,7 @@ class LidrupTracer : public FileTracer {
   void lidrup_report_status (int status);
   void lidrup_conclude_sat (const vector<int> &model);
   void lidrup_solve_query ();
-  void lidrup_batch_weaken_and_delete ();
+  void lidrup_batch_weaken_restore_and_delete ();
 
 public:
   LidrupTracer (Internal *, File *file, bool);
