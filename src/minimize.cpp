@@ -30,10 +30,10 @@ bool Internal::minimize_literal (int lit, int depth) {
   if (!v.reason || f.poison || v.level == level)
     return false;
   const Level &l = control[v.level];
-  // if (!depth && l.seen.count < 2)
-  //   return false; // Don Knuth's idea
-  // if (v.trail <= l.seen.trail)
-  //   return false; // new early abort
+  if (!depth && l.seen.count < 2)
+    return false; // Don Knuth's idea
+  if (v.trail <= l.seen.trail)
+    return false; // new early abort
   if (depth > opts.minimizedepth)
     return false;
   bool res = true;
@@ -177,7 +177,6 @@ void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
 	reason = v.missed_implication;
       else
 	reason = v.reason;
-      LOG ("pushing id %d", reason->id);
       mini_chain.push_back (reason->id);
       continue;
     }
@@ -198,7 +197,6 @@ void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
       uint64_t id = unit_clauses[uidx];
       assert (id);
       unit_chain.push_back (id);
-      LOG ("adding unit reason %d for lit %d", id, idx);
       continue;
     }
     LOG ("marking %d as added", lit);
@@ -241,7 +239,7 @@ void Internal::clear_minimized_literals () {
   LOG ("clearing %zd minimized literals", minimized.size ());
   for (const auto &lit : minimized) {
     Flags &f = flags (lit);
-    f.poison = f.removable = f.shrinkable = f.added = false;
+    f.poison = (f.removable = (f.shrinkable = (f.added = false)));
   }
   for (const auto &lit : clause)
     assert (!flags (lit).shrinkable), flags (lit).keep =
