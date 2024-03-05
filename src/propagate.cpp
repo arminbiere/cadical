@@ -414,7 +414,7 @@ bool Internal::propagate () {
             j[-1].blit = r;
 
           } else if (!v || v > 0) {
-	    assert (v < 0 || weakchrono);
+	    assert (!weakchrono || v == 0);
 
             // Found new unassigned replacement literal to be watched.
 

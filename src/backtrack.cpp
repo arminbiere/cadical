@@ -112,7 +112,8 @@ void Internal::backtrack (int new_level) {
     notified = assigned;
   }
 
-  size_t earliest_dirty = -1;
+  const size_t default_dirty = (size_t) -1;
+  size_t earliest_dirty = default_dirty;
   const bool strongchrono = (opts.chrono >= 3);
 
   while (i < end_of_trail) {
@@ -162,15 +163,15 @@ void Internal::backtrack (int new_level) {
       trail[j] = lit;
       v.trail = j++;
       reassigned++;
-      if (strongchrono && v.dirty && earliest_dirty == -1) {
+      if (strongchrono && v.dirty && earliest_dirty == default_dirty) {
         LOG ("found dirty literal %d at %" PRId64, lit, j-1);
-	assert (j-1 >= 0);
+	assert (j>=1);
         earliest_dirty = j-1;
       }
     }
   }
   trail.resize (j);
-  if (earliest_dirty != -1)
+  if (earliest_dirty != default_dirty)
     assert (earliest_dirty < trail.size());
   LOG ("unassigned %d literals %.0f%%", unassigned,
        percent (unassigned, unassigned + reassigned));
@@ -239,7 +240,7 @@ void Internal::backtrack (int new_level) {
       else {
 	LOG ("BT setting missed propagation lit %d to root level", lit);
       }
-      if (v.dirty && earliest_dirty == -1) {
+      if (v.dirty && earliest_dirty == default_dirty) {
 	LOG ("lit %d is dirty", lit);
 	earliest_dirty = trail.size();
       }
@@ -253,7 +254,7 @@ void Internal::backtrack (int new_level) {
   }
 
   if (strongchrono) {
-    if (earliest_dirty == -1)
+    if (earliest_dirty == default_dirty)
       earliest_dirty = num_assigned;
     LOG ("setting propagated to %" PRId64 " (first lit: %d)", earliest_dirty, earliest_dirty < trail.size() ? trail[earliest_dirty] : 0);
     propagated = earliest_dirty;
