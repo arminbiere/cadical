@@ -1145,6 +1145,7 @@ void Internal::analyze () {
       LOG (clause, "conflict is");
     }
     if (opts.chrono >= 4 && var (uip).missed_implication) {
+      ++stats.missedreanalyze;
       if (opts.bump) {
 	const int b = opts.bumpreason;
 	opts.bumpreason = false;

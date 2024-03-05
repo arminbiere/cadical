@@ -79,6 +79,9 @@ void Stats::print (Internal *internal) {
   if (all || stats.missedprops)
     PRT ("  missed-props:  %15" PRId64 "   %10.2f %%  per conflict",
          stats.missedprops, percent (stats.missedprops, stats.conflicts));
+  if (all || stats.missedprops)
+    PRT ("  changed UIP:   %15" PRId64 "   %10.2f %%  per conflict",
+         stats.missedreanalyze, percent (stats.missedreanalyze, stats.conflicts));
   if (all || (stats.elevated && stats.chrono))
     PRT ("  elevated:      %15" PRId64 "   %10.2f    per chronological",
          stats.elevated, relative (stats.elevated, stats.chrono));
