@@ -304,7 +304,6 @@ inline void Internal::analyze_reason (int lit, Clause *reason, int &open,
   for (const auto &other : *reason)
     if (other != lit)
       analyze_literal (other, open, resolvent_size, antecedent_size);
-  LOG (lrat_chain, "lrat_chain:");
 }
 
 /*------------------------------------------------------------------------*/
@@ -1033,7 +1032,6 @@ void Internal::analyze () {
   for (;;) {
     for (;;) {
       antecedent_size = 1; // for uip
-      LOG ("open = %d", open);
       if (resolve)
 	analyze_reason (uip, reason, open, resolvent_size, antecedent_size);
       resolve = true;
@@ -1130,7 +1128,6 @@ void Internal::analyze () {
       assert (val (uip) > 0);
       if (!--open)
         break;
-      LOG ("open = %d, uip = %d", open, uip);
       reason = var (uip).reason;
       if (opts.chrono >= 4 && var (uip).missed_implication) {
 	LOG (var (uip).missed_implication, "changing to missed reason");
@@ -1199,8 +1196,8 @@ void Internal::analyze () {
         clear_unit_analyzed_literals ();
         clear_analyzed_levels ();
 
-        LOG (tmp_clause, "trying to delete temporary clause");
         if (!tmp_clause.empty ()) {
+        LOG (tmp_clause, "trying to delete temporary clause");
           assert (opts.chrono >= 4);
           LOG ("deleting temporary clause with id %" PRId64, clause_id);
           proof->delete_clause (tmp_id, false, tmp_clause);
@@ -1316,7 +1313,6 @@ void Internal::analyze () {
   // then lrat_chain is still valid and we will learn a unit or empty clause
   //
   if (uip) {
-    LOG (lrat_chain, "chain set to:");
     search_assign_driving (-uip, driving_clause);
   } else
     learn_empty_clause ();
@@ -1324,9 +1320,8 @@ void Internal::analyze () {
   if (stable)
     reluctant.tick (); // Reluctant has its own 'conflict' counter.
 
-
-  LOG (tmp_clause, "trying to delete temporary clause");
   if (!tmp_clause.empty()){
+    LOG (tmp_clause, "trying to delete temporary clause");
     assert (opts.chrono >= 4);
     LOG ("deleting temporary clause with id %" PRId64 , clause_id);
     proof->delete_clause (tmp_id, false, tmp_clause);

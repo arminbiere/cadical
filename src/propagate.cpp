@@ -245,7 +245,6 @@ void Internal::search_assign_external (int lit) {
 // more bytes for each clause.
 
 bool Internal::propagate () {
-  LOG ("propagating");
   if (level)
     require_mode (SEARCH);
   assert (!unsat);
@@ -260,8 +259,9 @@ bool Internal::propagate () {
   while (!conflict && propagated != trail.size ()) {
     assert (lrat_chain.empty());
     const int lit = -trail[propagated++];
+    LOG ("propagating %d", -lit);
     const int proplevel = var (lit).level;
-    LOG ("propagating %d @ %d", -lit, var (lit).level);
+    const bool weakchrono = (opts.chrono < 3);
     Watches &ws = watches (lit);
 
     const const_watch_iterator eow = ws.end ();
@@ -273,13 +273,11 @@ bool Internal::propagate () {
       const Watch w = *j++ = *i++;
       const signed char b = val (w.blit);
 
-      if (b > 0 && (opts.chrono < 3 || var (w.blit).level <= proplevel)) {
-        LOG (w.clause, "already satisfied by blit");
+      if (b > 0 && (weakchrono || var (w.blit).level <= proplevel)) {
         continue; // blocking literal satisfied
       }
 
       if (w.binary ()) {
-        LOG (w.clause, "checking for binary clause");
 	if (var (w.blit).missed_implication)
           LOG (var (w.blit).missed_implication, "old missed implication");
 	bool replacing = (!var (w.blit).missed_implication || var (w.blit).missed_level > proplevel);
@@ -333,7 +331,6 @@ bool Internal::propagate () {
 
       } else {
         assert (w.clause->size > 2);
-        LOG (w.clause, "checking for propagation (blit: %d) on", w.blit);
 
         if (conflict)
           break; // Stop if there was a binary conflict already.
@@ -362,8 +359,7 @@ bool Internal::propagate () {
         const int other = lits[0] ^ lits[1] ^ lit;
         const signed char u = val (other); // value of the other watch
 
-        if (u > 0 && (opts.chrono < 3 || var (other).level <= proplevel)) {
-          LOG ("changing blit to %d (lev: %d)", other, var (other).level);
+        if (u > 0 && (weakchrono || var (other).level <= proplevel)) {
           j[-1].blit = other; // satisfied, just replace blit
         } else {
 
@@ -412,14 +408,13 @@ bool Internal::propagate () {
 
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
 
-          if (v > 0 && (opts.chrono < 3 && var (r).level <= proplevel)) {
-
+          if (v > 0 && (weakchrono || var (r).level <= proplevel)) {
+            LOG (w.clause, "changing blit %d to", r);
             // Replacement satisfied, so just replace 'blit'.
-            LOG ("changing blit to %d (level %d)", r, var (r).level);
-
             j[-1].blit = r;
 
           } else if (!v || v > 0) {
+	    assert (v < 0 || weakchrono);
 
             // Found new unassigned replacement literal to be watched.
 
@@ -435,7 +430,7 @@ bool Internal::propagate () {
 
           } else {
             if (u > 0) {
-              if (opts.chrono >= 3 && *highest_lit != other &&
+              if (!weakchrono && *highest_lit != other &&
                   *highest_lit != lit) {
                 LOG ("swapping %d and %d", *highest_lit, other);
                 lits[0] = other;
@@ -469,7 +464,7 @@ bool Internal::propagate () {
               assert (v < 0 ||
                       (opts.chrono >= 3 && var (r).level > proplevel));
 
-	      if (opts.chrono >= 3) { // this fix must be done before the assignement, not after
+	      if (!weakchrono) { // this fix must be done before the assignement, not after
                 if (*highest_lit != other && *highest_lit != lit) {
                   LOG ("swapping %d and %d", *highest_lit, other);
                   lits[0] = other;
