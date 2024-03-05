@@ -189,6 +189,7 @@ struct Internal {
   vector<uint64_t> minimize_chain; // used to create LRAT in minimize
   vector<uint64_t> unit_chain;     // used to avoid duplicate units
   vector<Clause *> inst_chain;     // for LRAT in instantiate
+  std::vector<int> missed_props;// missed propagations to reenqueue
   vector<vector<vector<uint64_t>>>
       probehbr_chains;          // only used if opts.probehbr=false
   bool lrat;                    // generate LRAT internally

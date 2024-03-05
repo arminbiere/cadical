@@ -80,7 +80,7 @@ void Internal::update_target_and_best () {
 /*------------------------------------------------------------------------*/
 
 void Internal::backtrack (int new_level) {
-
+  assert (missed_props.empty());
   assert (new_level >= 0);
   assert (new_level <= level);
   if (new_level == level)
@@ -105,7 +105,6 @@ void Internal::backtrack (int new_level) {
   int reassigned = 0;
 
   notify_backtrack (new_level);
-  std::vector<int> missed_props;
   if (external_prop && !external_prop_is_lazy && notified > assigned) {
     LOG ("external propagator is notified about some unassignments (trail: "
          "%zd, notified: %zd).",
@@ -247,6 +246,7 @@ void Internal::backtrack (int new_level) {
       if (v.missed_level >= new_level)
 	var (lit).missed_implication = nullptr;
     }
+    missed_props.clear();
     if (!missed_props.empty ())
       notify_assignments ();
   }
