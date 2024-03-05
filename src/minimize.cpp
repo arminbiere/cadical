@@ -246,11 +246,13 @@ void Internal::clear_minimized_literals () {
                                           flags (lit).shrinkable =
                                               flags (lit).added = false;
   minimized.clear ();
+#ifdef DEBUG
   for (auto v : vars) {
     assert (!flags (v).shrinkable),
     assert (!flags (v).added),
     assert (!flags (v).keep);
   }
+#endif
 }
 
 } // namespace CaDiCaL

@@ -97,20 +97,6 @@ void Internal::build_chain_for_empty () {
   }
   lrat_chain.push_back (conflict->id);
 }
-inline void Internal::promote_to_unit (int lit) {
-  lrat_chain.clear();
-  return;
-#if 0
-  assert (val (lit));
-  const int idx = vidx (lit);
-  Var &v = var (idx);
-  v.level = 0;
-  learn_unit_clause (lit);
-  v.missed_implication = 0;
-  v.dirty = true;
-  lrat_chain.clear ();
-#endif
-}
 /*------------------------------------------------------------------------*/
 
 inline void Internal::search_assign (int lit, Clause *reason) {
@@ -188,10 +174,6 @@ inline void Internal::search_assign (int lit, Clause *reason) {
       var (lit).missed_level = real_level;
       var (lit).missed_implication = reason;
       LOG (reason, "missed propagation of lit %d at level %d", lit, real_level);
-      if (!real_level) {
-        build_chain_for_units (lit, reason, 0);
-        promote_to_unit (lit);
-      }
     }
     assert (lrat_chain.empty());
 
@@ -308,10 +290,6 @@ bool Internal::propagate () {
                w.blit, proplevel);
           var (w.blit).missed_implication = w.clause;
           var (w.blit).missed_level = proplevel;
-          if (!proplevel) {
-            build_chain_for_units (w.blit, w.clause, 0);
-            promote_to_unit (w.blit);
-          }
           continue;
         } else if (b > 0) {
 	  LOG (var (w.blit).missed_implication, "found worse implication reason, ignoring");
@@ -482,11 +460,6 @@ bool Internal::propagate () {
                      other, replacement_level, var (other).level);
                 var (other).missed_implication = w.clause;
                 var (other).missed_level = replacement_level;
-
-                if (!replacement_level) {
-                  build_chain_for_units (other, w.clause, 0);
-                  promote_to_unit (other);
-                }
               } else {
                 LOG ("no lower level implication (replacement: %d)",
                      replacement_level);
