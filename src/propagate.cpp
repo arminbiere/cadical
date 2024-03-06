@@ -365,7 +365,7 @@ bool Internal::propagate () {
 
         const bool other_missed = var (other).missed_implication;
         const int other_missed_level =
-            missed ? var (other).missed_level : 1 + proplevel;
+            other_missed ? var (other).missed_level : 1 + proplevel;
 
         if (u > 0 && (weakchrono || var (other).level <= proplevel || other_missed_level <= proplevel)) {
 	  LOG ("changing blit from %d to %d", w.blit, other);
