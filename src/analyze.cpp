@@ -539,11 +539,61 @@ inline int Internal::find_conflict_level (int &forced) {
   assert (opts.chrono || opts.otfs || external_prop);
 
   int res = 0, count = 0;
-
   forced = 0;
 
+  // this version is slightly more efficient as it allows to go only once
+  // over the clause
+  if (opts.chrono >= 3) {
+    const int lit = conflict->literals[0];
+    const int other = conflict->literals[1];
+    const int lev1 = var (lit).level;
+    const int lev2 = var (other).level;
+    LOG (conflict, "found level %d and %d", lev1, lev2);
+    if (lev1 == lev2)
+      return lev1;
+    int res, pos, other_watched, highest_lit;
+    if (lev1 < lev2) {
+      forced = other;
+      res = lev2;
+      other_watched = lit;
+      pos = 0;
+    } else {
+      forced = lit;
+      res = lev1;
+      other_watched = other;
+      pos = 1;
+    }
+
+    const size_t size = conflict->size;
+    LOG ("searching for replacement at level %d", res);
+    int highest_level = var (other_watched).level;
+    int highest_pos = pos;
+    for (size_t i = 2; i < size; ++i) {
+      const int l = conflict->literals[i];
+      if (var (l).level >= highest_level) {
+	highest_pos = i;
+	highest_level = var (l).level;
+	highest_lit = l;
+      }
+    }
+    if (highest_pos != pos) {
+      conflict->literals[pos] = highest_lit;
+      conflict->literals[highest_pos] = other_watched;
+      remove_watch (watches (other_watched), conflict);
+      watch_literal (highest_lit, forced, conflict);
+      assert (other_watched != highest_lit);
+      LOG (conflict, "swapping %d and %d from pos %d and %d", other_watched, highest_lit, pos, highest_pos);
+    }
+
+    assert (res >= highest_level);
+    if (res == highest_level) {
+      forced = 0;
+    }
+    return res;
+  }
+
   for (const auto &lit : *conflict) {
-    const int tmp = (var (lit).missed_implication) ? var (lit).missed_level : var (lit).level;
+    const int tmp = var (lit).level;
     if (tmp > res) {
       res = tmp;
       forced = lit;
@@ -923,7 +973,7 @@ void Internal::analyze () {
       // TODO
       Clause *otherconflict = var (forced).missed_implication;
       if (otherconflict) {
-	LOG  (otherconflict, "found conflicting missed propagation %d (dirty)", forced);
+	LOG  (otherconflict, "found conflicting missed propagation %d (dirty) on level %d", forced, var (forced).level);
       }
       var (forced).missed_implication = nullptr;
       LOG ("single highest level literal %d", forced);
