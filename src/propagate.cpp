@@ -284,7 +284,7 @@ bool Internal::propagate () {
       if (w.binary ()) {
 	if (var (w.blit).missed_implication)
           LOG (var (w.blit).missed_implication, "old missed implication");
-	bool replacing = (!missed || (var (w.blit).missed_level > proplevel && blit_missed_level > proplevel));
+	bool replacing = (!missed || (var (w.blit).level > proplevel && blit_missed_level > proplevel));
         if (b > 0 && replacing && proplevel < var (w.blit).level) {
           assert (opts.chrono >= 3);
           assert (var (w.blit).level > proplevel);
