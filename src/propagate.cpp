@@ -272,15 +272,19 @@ bool Internal::propagate () {
 
       const Watch w = *j++ = *i++;
       const signed char b = val (w.blit);
+      const bool missed = var (w.blit).missed_implication;
+      const int blit_missed_level = missed ? var (w.blit).missed_level : 1+proplevel;
 
-      if (b > 0 && (weakchrono || var (w.blit).level <= proplevel)) {
+      if (b > 0 && (weakchrono || var (w.blit).level <= proplevel || blit_missed_level <= proplevel)) {
+	LOG (w.clause, "blit %d is true on level %d vs proplevel %d and missed level %d", w.blit, var (w.blit).level, proplevel, blit_missed_level);
+	if (missed) LOG (var (w.blit).missed_implication, "missed implication is:");
         continue; // blocking literal satisfied
       }
 
       if (w.binary ()) {
 	if (var (w.blit).missed_implication)
           LOG (var (w.blit).missed_implication, "old missed implication");
-	bool replacing = (!var (w.blit).missed_implication || var (w.blit).missed_level > proplevel);
+	bool replacing = (!missed || (var (w.blit).missed_level > proplevel && blit_missed_level > proplevel));
         if (b > 0 && replacing && proplevel < var (w.blit).level) {
           assert (opts.chrono >= 3);
           assert (var (w.blit).level > proplevel);
@@ -359,7 +363,12 @@ bool Internal::propagate () {
         const int other = lits[0] ^ lits[1] ^ lit;
         const signed char u = val (other); // value of the other watch
 
-        if (u > 0 && (weakchrono || var (other).level <= proplevel)) {
+        const bool other_missed = var (other).missed_implication;
+        const int other_missed_level =
+            missed ? var (other).missed_level : 1 + proplevel;
+
+        if (u > 0 && (weakchrono || var (other).level <= proplevel || other_missed_level <= proplevel)) {
+	  LOG ("changing blit from %d to %d", w.blit, other);
           j[-1].blit = other; // satisfied, just replace blit
         } else {
 
