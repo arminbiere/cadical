@@ -163,6 +163,9 @@ void Internal::backtrack (int new_level) {
       trail[j] = lit;
       v.trail = j++;
       reassigned++;
+#if 0
+      if (!new_level)
+#endif
       v.dirty = true;
       if (strongchrono && v.dirty && earliest_dirty == default_dirty) {
         LOG ("found dirty literal %d at %" PRId64, lit, j-1);
