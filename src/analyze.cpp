@@ -549,9 +549,12 @@ inline int Internal::find_conflict_level (int &forced) {
     const int lev1 = var (lit).level;
     const int lev2 = var (other).level;
     LOG (conflict, "found level %d and %d", lev1, lev2);
-    if (lev1 == lev2)
-      return lev1;
     int res, pos, other_watched, highest_lit;
+    if (lev1 == lev2) {
+      res = lev1;
+      other_watched = lev2;
+      pos = 1;
+    }
     if (lev1 < lev2) {
       forced = other;
       res = lev2;
@@ -585,7 +588,8 @@ inline int Internal::find_conflict_level (int &forced) {
       LOG (conflict, "swapping %d and %d from pos %d and %d", other_watched, highest_lit, pos, highest_pos);
     }
 
-    assert (res >= highest_level);
+    if (res < highest_level)
+      res = highest_level;
     if (res == highest_level) {
       forced = 0;
     }
