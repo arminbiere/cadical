@@ -42,6 +42,7 @@ OPTION( checkproof,        3,  0,  3,0,0,0, "1=drat, 2=lrat, 3=both") \
 OPTION( checkwitness,      1,  0,  1,0,0,0, "check witness internally") \
 OPTION( chrono,            5,  0,  5,0,0,1, "chronological backtracking (1 = light, 2 = with invariant, 3 = strong prop-only, 4=3+analyze, 5=4+minimize)") \
 OPTION( chronoalways,      0,  0,  1,0,0,1, "force always chronological") \
+OPTION( chronohighest,     0,  0,  1,0,0,1, "highest WL (same as chrono==2 when chrono==1)") \
 OPTION( chronolevelim,   1e2,  0,2e9,0,0,1, "chronological level limit") \
 OPTION( chronoreusetrail,  1,  0,  1,0,0,1, "reuse trail chronologically") \
 OPTION( compact,           1,  0,  1,0,1,1, "compact internal variables") \

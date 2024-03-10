@@ -163,7 +163,11 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   }
   if (reason && opts.chrono >= 3) {
     assert (lrat_chain.empty());
-    int real_level = reason->literals[1] == lit ? var(reason->literals[0]).level : var(reason->literals[1]).level;
+    int real_level;
+    if (opts.chronohighest)
+      real_level = reason->literals[1] == lit ? var(reason->literals[0]).level : var(reason->literals[1]).level;
+    else
+      real_level = assignment_level(lit, reason);
     assert (real_level == assignment_level (lit, reason));
     const bool replacing_missed = (var (lit).missed_implication && var (lit).missed_level > real_level);
     if (replacing_missed) {
@@ -473,7 +477,7 @@ bool Internal::propagate () {
               assert (v < 0 ||
                       (opts.chrono >= 3 && var (r).level > proplevel));
 
-	      if (!weakchrono) { // this fix must be done before the assignement, not after
+	      if (!weakchrono && opts.chronohighest) { // this fix must be done before the assignement, not after
                 if (*highest_lit != other && *highest_lit != lit) {
                   LOG ("swapping %d and %d", *highest_lit, other);
                   lits[0] = other;
