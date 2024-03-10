@@ -933,7 +933,7 @@ void Internal::analyze () {
       // backtracking anyhow and thus we also do the latter.
       //
       backtrack (conflict_level - 1);
-      if (opts.chrono >= 3 && forced != conflict->literals[0] && forced != conflict->literals[1]) {
+      if (opts.chrono >= 3 && forced != conflict->literals[0] && forced != conflict->literals[1] && opts.chronohighest) {
 	const int size = conflict->size;
 	LOG ("updating watch for propagation");
 	for (int i = 2; i < size; ++i) {
