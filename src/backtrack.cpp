@@ -135,10 +135,8 @@ void Internal::backtrack (int new_level) {
       }
 #endif
       missed_props.push_back (lit);
-      if (!v.dirty) {
-	LOG ("setting literal %d dirty if missed for the first time", lit);
-	v.dirty = (v.reason != v.missed_implication);
-      }
+      LOG ("setting literal %d dirty if missed for the first time", lit);
+      v.dirty = (v.reason != v.missed_implication);
     }
     else if (v.level > new_level) {
       unassign (lit);
