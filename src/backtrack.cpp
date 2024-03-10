@@ -135,8 +135,8 @@ void Internal::backtrack (int new_level) {
       }
 #endif
       missed_props.push_back (lit);
-      LOG ("setting literal %d dirty", lit);
-      v.dirty = true;
+      LOG ("setting literal %d dirty if missed for the first time", lit);
+      v.dirty = (v.reason != v.missed_implication);
     }
     else if (v.level > new_level) {
       unassign (lit);
@@ -163,10 +163,8 @@ void Internal::backtrack (int new_level) {
       trail[j] = lit;
       v.trail = j++;
       reassigned++;
-#if 0
-      if (!new_level)
-#endif
-      v.dirty = true;
+      if (!new_level) // at level 0, we really have to repropagate, otherwise compacting does not work
+	v.dirty = true;
       if (strongchrono && v.dirty && earliest_dirty == default_dirty) {
         LOG ("found dirty literal %d at %" PRId64, lit, j-1);
 	assert (j>=1);
