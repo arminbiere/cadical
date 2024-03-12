@@ -609,95 +609,97 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
     res = jump;
     LOG ("using jump level %d since it is lower than assumption level %zd",
          res, assumptions.size ());
-  } else if (level - jump > opts.chronolevelim) {
-    stats.chrono++;
-    res = level - 1;
-    stats.chronolevels += res - jump;
-    LOG ("back-jumping over %d > %d levels prohibited"
-         "thus backtracking chronologically to level %d",
-         level - jump, opts.chronolevelim, res);
-  } else if (opts.chronoreusetrail) {
-
-    int best_idx = 0, best_pos = 0, best_lvl = 0;
-
-    if (use_scores ()) {
-      if (!opts.reimply) {
-        for (size_t i = control[jump + 1].trail; i < trail.size (); i++) {
-          const int idx = abs (trail[i]);
-          if (best_idx && !score_smaller (this) (best_idx, idx))
-            continue;
-          best_idx = idx;
-          best_pos = i;
-        }
-      } else {
-        for (int l = jump + 1; l <= level; l++) {
-          const auto &t = next_trail (l);
-          for (size_t i = 0; i < t->size (); i++) {
-            const auto idx = abs ((*t)[i]);
-            if (var (idx).level < l)
-              continue;
+  } else if (level - jump > opts.chronolevelim || opts.chronoreusetrail == 1) {
+    if (level - jump > opts.chronolevelim && opts.chronoreusetrail != 2) {
+      stats.chrono++;
+      res = level - 1;
+      stats.chronolevels += res - jump;
+      LOG ("back-jumping over %d > %d levels prohibited"
+           "thus backtracking chronologically to level %d",
+           level - jump, opts.chronolevelim, res);
+    } else {
+      int best_idx = 0, best_pos = 0, best_lvl = 0;
+  
+      if (use_scores ()) {
+        if (!opts.reimply) {
+          for (size_t i = control[jump + 1].trail; i < trail.size (); i++) {
+            const int idx = abs (trail[i]);
             if (best_idx && !score_smaller (this) (best_idx, idx))
               continue;
             best_idx = idx;
             best_pos = i;
-            best_lvl = l;
+          }
+        } else {
+          for (int l = jump + 1; l <= level; l++) {
+            const auto &t = next_trail (l);
+            for (size_t i = 0; i < t->size (); i++) {
+              const auto idx = abs ((*t)[i]);
+              if (var (idx).level < l)
+                continue;
+              if (best_idx && !score_smaller (this) (best_idx, idx))
+                continue;
+              best_idx = idx;
+              best_pos = i;
+              best_lvl = l;
+            }
           }
         }
-      }
-      LOG ("best variable score %g", score (best_idx));
-    } else {
-      if (!opts.reimply) {
-        for (size_t i = control[jump + 1].trail; i < trail.size (); i++) {
-          const int idx = abs (trail[i]);
-          if (best_idx && bumped (best_idx) >= bumped (idx))
-            continue;
-          best_idx = idx;
-          best_pos = i;
-        }
+        LOG ("best variable score %g", score (best_idx));
       } else {
-        for (int l = jump + 1; l <= level; l++) {
-          const auto &t = next_trail (l);
-          for (size_t i = 0; i < t->size (); i++) {
-            const auto idx = abs ((*t)[i]);
-            if (var (idx).level < l)
-              continue;
+        if (!opts.reimply) {
+          for (size_t i = control[jump + 1].trail; i < trail.size (); i++) {
+            const int idx = abs (trail[i]);
             if (best_idx && bumped (best_idx) >= bumped (idx))
               continue;
             best_idx = idx;
             best_pos = i;
-            best_lvl = l;
+          }
+        } else {
+          for (int l = jump + 1; l <= level; l++) {
+            const auto &t = next_trail (l);
+            for (size_t i = 0; i < t->size (); i++) {
+              const auto idx = abs ((*t)[i]);
+              if (var (idx).level < l)
+                continue;
+              if (best_idx && bumped (best_idx) >= bumped (idx))
+                continue;
+              best_idx = idx;
+              best_pos = i;
+              best_lvl = l;
+            }
           }
         }
+        LOG ("best variable bumped %" PRId64 "", bumped (best_idx));
       }
-      LOG ("best variable bumped %" PRId64 "", bumped (best_idx));
-    }
-    assert (best_idx);
-    LOG ("best variable %d at trail position %d", best_idx, best_pos);
-
-    // Now find the frame and decision level in the control stack of that
-    // best variable index.  Note that, as in 'reuse_trail', the frame
-    // 'control[i]' for decision level 'i' contains the trail before that
-    // decision level, i.e., the decision 'control[i].decision' sits at
-    // 'control[i].trail' in the trail and we thus have to check the level
-    // of the control frame one higher than at the result level.
-    //
-    res = jump;
-    if (!opts.reimply)
-      while (res < level - 1 && control[res + 1].trail <= best_pos)
-        res++;
-    else {
-      if (best_lvl == level)
-        best_lvl = level - 1;
-      assert (0 < best_lvl && best_lvl < level);
-      res = best_lvl;
-    }
-
-    if (res == jump)
-      LOG ("default non-chronological back-jumping to level %d", res);
-    else {
-      stats.chrono++;
-      stats.chronolevels += res - jump;
-      LOG ("chronological backtracking to level %d to reuse trail", res);
+      assert (best_idx);
+      LOG ("best variable %d at trail position %d", best_idx, best_pos);
+  
+      // Now find the frame and decision level in the control stack of that
+      // best variable index.  Note that, as in 'reuse_trail', the frame
+      // 'control[i]' for decision level 'i' contains the trail before that
+      // decision level, i.e., the decision 'control[i].decision' sits at
+      // 'control[i].trail' in the trail and we thus have to check the level
+      // of the control frame one higher than at the result level.
+      //
+      res = jump;
+      if (!opts.reimply)
+        while (res < level - 1 && control[res + 1].trail <= best_pos)
+          res++;
+      else {
+        if (best_lvl == level)
+          best_lvl = level - 1;
+        assert (0 < best_lvl && best_lvl < level);
+        res = best_lvl;
+      }
+  
+      if (res == jump)
+        LOG ("default non-chronological back-jumping to level %d", res);
+      else {
+        stats.chrono++;
+        stats.chronolevels += res - jump;
+        LOG ("chronological backtracking to level %d to reuse trail", res);
+      }
+      
     }
 
   } else {

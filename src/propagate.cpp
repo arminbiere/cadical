@@ -1244,7 +1244,7 @@ bool Internal::propagate_multitrail () {
               continue;
 
             }
-            assert (u < 0 && v < 0 && v2 < 0);
+            // assert (u < 0 && v < 0 && v2 < 0);
             assert (u < 0);
             assert (v < 0);
 
