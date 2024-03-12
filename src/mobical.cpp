@@ -654,13 +654,14 @@ public:
       }
     }
 
-    if (!(observed_variables.size () % 11)) {
-      MLOG ("cb_decide forces backtracking to level 1" << std::endl);
-      s->force_backtrack (1);
-    }
+
     decision_loc++;
 
     if ((decision_loc % observed_variables.size ()) == 0) {
+      if (!(observed_variables.size () % 11)) {
+        MLOG ("cb_decide forces backtracking to level 1" << std::endl);
+        s->force_backtrack (observed_variables.size () % 5);
+      }
       size_t n = decision_loc / observed_variables.size ();
       if (n < observed_variables.size ()) {
         int lit = *std::next (observed_variables.begin (), n);
