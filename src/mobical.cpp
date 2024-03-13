@@ -824,6 +824,7 @@ public:
   void notify_backtrack (size_t new_level) {
     MLOG ("notify backtrack: " << observed_trail.size () - 1 << " -> "
                                << new_level << std::endl);
+    assert (observed_trail.size () > 1 || !new_level);                
     assert (observed_trail.size () == 1 ||
             observed_trail.size () >= new_level + 1);
     while (observed_trail.size () > new_level + 1) {

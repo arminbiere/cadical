@@ -199,14 +199,14 @@ bool Internal::external_propagate () {
   assert (!unsat);
 
   size_t before = num_assigned;
-
-  if (!conflict && external_prop && !external_prop_is_lazy && !private_steps) {
+  bool cb_repropagate_needed = true;
+  while (cb_repropagate_needed && !conflict && external_prop && !external_prop_is_lazy && !private_steps) {
 #ifndef NDEBUG
     LOG ("external propagation starts (decision level: %d, trail size: "
          "%zd, notified %zd)",
          level, trail.size (), notified);
 #endif
-
+    cb_repropagate_needed = false;
     // external->reset_extended (); //TODO for inprocessing
 
     notify_assignments ();
@@ -296,14 +296,20 @@ bool Internal::external_propagate () {
         bool trail_changed =
             (num_assigned != assigned || level != level_before ||
              propagated < trail.size ());
-
-        if (unsat || conflict)
+        cb_repropagate_needed = true;
+        
+        if (unsat || conflict) {
+          cb_repropagate_needed = false;
           break;
+        }
 
         if (trail_changed) {
           propagate ();
-          if (unsat || conflict)
+          if (unsat || conflict) {
+            cb_repropagate_needed = false;
             break;
+          }
+            
           notify_assignments ();
         }
         has_external_clause = ask_external_clause ();   
