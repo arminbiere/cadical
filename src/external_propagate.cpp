@@ -117,10 +117,10 @@ void Internal::renotify_trail_after_local_search () {
 
 void Internal::renotify_full_trail () {
   const size_t end_of_trail = trail.size ();
-  notified = 0;
-  size_t decision_level = 0;
-
-  notify_backtrack (0);
+  if (level) {
+    notified = 0;  // TODO: save the last notified root-level position somewhere and use it here
+    notify_backtrack (0);
+  }
 
   std::vector<int> assigned;
   while (notified < end_of_trail) {
@@ -128,7 +128,6 @@ void Internal::renotify_full_trail () {
 
     if (is_decision (ilit)) {
       if (assigned.size()) external->propagator->notify_assignment (assigned);
-      decision_level++;
       external->propagator->notify_new_decision_level ();
       assigned.clear ();
     }
