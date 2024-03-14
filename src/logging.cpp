@@ -49,7 +49,9 @@ void Logger::log (Internal *internal, const Clause *c, const char *fmt,
   va_start (ap, fmt);
   vprintf (fmt, ap);
   va_end (ap);
-  if (c) {
+  if (c == internal->mli_reason)
+    printf (" unit MLI");
+  else if (c) {
     if (c->redundant)
       printf (" glue %d redundant", c->glue);
     else

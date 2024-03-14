@@ -135,8 +135,13 @@ void Internal::backtrack (int new_level) {
       }
 #endif
       missed_props.push_back (lit);
-      LOG ("setting literal %d dirty", lit);
-      v.dirty = true;
+
+#if 0
+      if (v.missed_level == new_level) {
+        LOG ("setting literal %d dirty", lit);
+        v.dirty = true;
+      }
+#endif
     }
     else if (v.level > new_level) {
       unassign (lit);
@@ -165,8 +170,8 @@ void Internal::backtrack (int new_level) {
       reassigned++;
 #if 0
       if (!new_level)
+	v.dirty = true;
 #endif
-      v.dirty = true;
       if (strongchrono && v.dirty && earliest_dirty == default_dirty) {
         LOG ("found dirty literal %d at %" PRId64, lit, j-1);
 	assert (j>=1);

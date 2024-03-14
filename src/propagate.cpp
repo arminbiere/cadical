@@ -157,8 +157,14 @@ inline void Internal::search_assign (int lit, Clause *reason) {
 #endif
 
   lrat_chain.clear ();
-  if (opts.chrono >= 3 && level != lit_level) {
+  if (opts.chrono >= 3) {
     LOG ("setting %d @ %d to dirty", lit, lit_level);
+    var (lit).dirty = true;
+  }
+  if (!reason && opts.chrono >= 3 && !level) {
+    LOG ("missed unit for lit %d", lit);
+    var (lit).missed_level = 0;
+    var (lit).missed_implication = mli_reason;
     var (lit).dirty = true;
   }
   if (reason && opts.chrono >= 3) {
@@ -177,6 +183,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     if (real_level < level || replacing_missed) {
       var (lit).missed_level = real_level;
       var (lit).missed_implication = reason;
+      var (lit).dirty = true;
       LOG (reason, "missed propagation of lit %d at level %d", lit, real_level);
     }
     assert (lrat_chain.empty());
@@ -296,6 +303,7 @@ bool Internal::propagate () {
                w.blit, proplevel);
           var (w.blit).missed_implication = w.clause;
           var (w.blit).missed_level = proplevel;
+	  var (w.blit).dirty = true;
           continue;
         } else if (b > 0) {
 	  LOG (var (w.blit).missed_implication, "found worse implication reason, ignoring");
@@ -468,6 +476,7 @@ bool Internal::propagate () {
                      other, replacement_level, var (other).level);
                 var (other).missed_implication = w.clause;
                 var (other).missed_level = replacement_level;
+		var (other).dirty = true;
               } else {
                 LOG ("no lower level implication (replacement: %d)",
                      replacement_level);

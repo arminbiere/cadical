@@ -4,6 +4,7 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 static Clause external_reason_clause;
+static Clause mli_reason_clause;
 
 Internal::Internal ()
     : mode (SEARCH), unsat (false), iterating (false),
@@ -15,7 +16,7 @@ Internal::Internal ()
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
       concluded (false), lrat (false), level (0), vals (0), score_inc (1.0),
       scores (this), conflict (0), ignore (0), dummy_binary (0),
-      external_reason (&external_reason_clause), newest_clause (0),
+      external_reason (&external_reason_clause), mli_reason(&mli_reason_clause), newest_clause (0),
       force_no_backtrack (false), from_propagator (false),
       tainted_literal (0), notified (0), probe_reason (0), propagated (0),
       propagated2 (0), propergated (0), best_assigned (0),

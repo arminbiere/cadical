@@ -219,6 +219,7 @@ struct Internal {
   Clause *ignore;               // ignored during 'vivify_propagate'
   Clause *dummy_binary;         // Dummy binary clause for subsumption
   Clause *external_reason;      // used as reason at external propagations
+  Clause *mli_reason;      // used as reason at external propagations
   Clause *newest_clause;        // used in external_propagate
   bool force_no_backtrack;      // for new clauses with external propagator
   bool from_propagator;         // differentiate new clauses...
