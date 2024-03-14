@@ -126,6 +126,10 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     lit_level = 0; // unit
   else if (reason == decision_reason)
     lit_level = level, reason = 0;
+  else if (opts.chrono >= 3) {
+    lit_level = var (lit ^ reason->literals[0] ^ reason->literals[1]).level;
+    assert (lit_level == assignment_level (lit, reason));
+  }
   else if (opts.chrono)
     lit_level = assignment_level (lit, reason);
   else
