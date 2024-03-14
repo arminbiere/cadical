@@ -135,13 +135,6 @@ void Internal::backtrack (int new_level) {
       }
 #endif
       missed_props.push_back (lit);
-
-#if 0
-      if (v.missed_level == new_level) {
-        LOG ("setting literal %d dirty", lit);
-        v.dirty = true;
-      }
-#endif
     }
     else if (v.level > new_level) {
       unassign (lit);
@@ -157,31 +150,23 @@ void Internal::backtrack (int new_level) {
       // With strong chrono, this still happens for unit clauses, where we do not have a reason, so
       // we cannot mark it as missed.
       assert (opts.chrono || external_prop || did_external_prop);
-      assert (!v.missed_implication);
-      assert (!strongchrono || !v.level);
 #ifdef LOGGING
       if (!v.level)
-        LOG ("reassign %d @ 0 unit clause %d", lit, lit);
+        LOG ("reassign %d @ 0 unit clause %d (dirty: %d)", lit, lit, var (lit).dirty);
       else
         LOG (v.reason, "reassign %d @ %d", lit, v.level);
 #endif
       trail[j] = lit;
       v.trail = j++;
       reassigned++;
-#if 0
-      if (!new_level)
-	v.dirty = true;
-#endif
       if (strongchrono && v.dirty && earliest_dirty == default_dirty) {
-        LOG ("found dirty literal %d at %" PRId64, lit, j-1);
-	assert (j>=1);
-        earliest_dirty = j-1;
+        LOG ("found dirty literal %d at %" PRId64, lit, j - 1);
+        assert (j >= 1);
+        earliest_dirty = j - 1;
       }
     }
   }
   trail.resize (j);
-  if (earliest_dirty != default_dirty)
-    assert (earliest_dirty < trail.size());
   LOG ("unassigned %d literals %.0f%%", unassigned,
        percent (unassigned, unassigned + reassigned));
   LOG ("reassigned %d literals %.0f%%", reassigned,
@@ -210,6 +195,14 @@ void Internal::backtrack (int new_level) {
     }
   }
 
+  if (strongchrono) {
+    if (earliest_dirty == default_dirty)
+      earliest_dirty = j;
+    propagated = earliest_dirty;
+    propagated2 = earliest_dirty;
+    no_conflict_until = earliest_dirty;
+  }
+  
   if (strongchrono) {
     // Here we slowly bubble down the literals: they remain on current level
     // with a missed propagation until reaching their final position.
@@ -249,10 +242,6 @@ void Internal::backtrack (int new_level) {
       else {
 	LOG ("BT setting missed propagation lit %d to root level", lit);
       }
-      if (v.dirty && earliest_dirty == default_dirty) {
-	LOG ("lit %d is dirty", lit);
-	earliest_dirty = trail.size();
-      }
       trail.push_back (lit);
       if (v.missed_level >= new_level)
 	var (lit).missed_implication = nullptr;
@@ -262,15 +251,8 @@ void Internal::backtrack (int new_level) {
       notify_assignments ();
   }
 
-  if (strongchrono) {
-    if (earliest_dirty == default_dirty)
-      earliest_dirty = num_assigned;
-    LOG ("setting propagated to %" PRId64 " (first lit: %d)", earliest_dirty, earliest_dirty < trail.size() ? trail[earliest_dirty] : 0);
-    propagated = earliest_dirty;
-    propagated2 = earliest_dirty;
-    no_conflict_until = earliest_dirty;
-  }
   assert (num_assigned == trail.size ());
+  assert (propagated <= trail.size());
 }
 
 } // namespace CaDiCaL

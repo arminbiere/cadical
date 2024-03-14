@@ -126,7 +126,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     lit_level = 0; // unit
   else if (reason == decision_reason)
     lit_level = level, reason = 0;
-  else if (opts.chrono && opts.chrono < 3)
+  else if (opts.chrono)
     lit_level = assignment_level (lit, reason);
   else
     lit_level = level;
@@ -157,38 +157,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
 #endif
 
   lrat_chain.clear ();
-  if (opts.chrono >= 3) {
-    LOG ("setting %d @ %d to dirty", lit, lit_level);
-    var (lit).dirty = true;
-  }
-  if (!reason && opts.chrono >= 3 && !level) {
-    LOG ("missed unit for lit %d", lit);
-    var (lit).missed_level = 0;
-    var (lit).missed_implication = mli_reason;
-    var (lit).dirty = true;
-  }
-  if (reason && opts.chrono >= 3) {
-    assert (lrat_chain.empty());
-    int real_level;
-    if (opts.chronohighest)
-      real_level = reason->literals[1] == lit ? var(reason->literals[0]).level : var(reason->literals[1]).level;
-    else
-      real_level = assignment_level(lit, reason);
-    assert (real_level == assignment_level (lit, reason));
-    const bool replacing_missed = (var (lit).missed_implication && var (lit).missed_level > real_level);
-    if (replacing_missed) {
-      LOG (var (lit).missed_implication, "changing missed reason from");
-      LOG (reason, "changing missed reason to");
-    }
-    if (real_level < level || replacing_missed) {
-      var (lit).missed_level = real_level;
-      var (lit).missed_implication = reason;
-      var (lit).dirty = true;
-      LOG (reason, "missed propagation of lit %d at level %d", lit, real_level);
-    }
-    assert (lrat_chain.empty());
-
-  }
+  var (lit).dirty = true;
 
   if (watching ()) {
     const Watches &ws = watches (-lit);
