@@ -39,7 +39,7 @@ struct missed_level_rank {
   Internal *internal;
   missed_level_rank (Internal *i) : internal (i) {}
   typedef uint64_t Type;
-  Type operator() (const int &a) const { return internal->bumped (a); }
+  Type operator() (const int &a) const { return internal->var (a).level; }
 };
 
 struct missed_level_smaller {

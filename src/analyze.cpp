@@ -1142,11 +1142,11 @@ void Internal::analyze () {
     }
     LOG ("first UIP %d", uip);
     clause.push_back (-uip);
-    if (var (uip).missed_implication) {
+    if (var (uip).missed_implication && var(uip).missed_level < level) {
       LOG (var (uip).missed_implication, "could resolve with");
       LOG (clause, "conflict is");
     }
-    if (opts.chrono >= 4 && var (uip).missed_implication) {
+    if (opts.chrono >= 4 && var (uip).missed_implication && var(uip).missed_level < level) {
       ++stats.missedreanalyze;
       if (opts.bump) {
 	const int b = opts.bumpreason;
