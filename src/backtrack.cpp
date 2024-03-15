@@ -231,6 +231,7 @@ void Internal::backtrack (int new_level) {
       assert (val (lit) > 0);
       assert (val (-lit) < 0);
       v.reason = v.missed_implication;
+      v.dirty = true; // necessary if a conflict is immediately found before repropagating that literal
       const bool new_unit = (!v.missed_level && v.missed_implication != mli_reason);
       std::vector<uint64_t> lrat_chain_tmp;
       if (new_unit && !unsat) {
