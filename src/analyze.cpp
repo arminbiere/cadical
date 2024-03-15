@@ -577,8 +577,9 @@ inline int Internal::find_conflict_level (int &forced) {
       highest_literal = other;
       highest_position = j;
       highest_level = tmp;
-      if (highest_level == res)
-        break;
+      if (highest_level == res){
+	LOG ("break reaching %d at %d", res, j);
+        break;}
     }
 
     // No unwatched higher assignment level literal.
@@ -593,6 +594,7 @@ inline int Internal::find_conflict_level (int &forced) {
 
     lits[highest_position] = lit;
     lits[i] = highest_literal;
+    LOG (conflict, "after swapping");
 
     if (highest_position > 1)
       watch_literal (highest_literal, lits[!i], conflict);
@@ -924,8 +926,8 @@ void Internal::analyze () {
       if (otherconflict) {
 	LOG  (otherconflict, "found conflicting missed propagation %d (dirty) on level %d", forced, var (forced).level);
       }
+      LOG (var (forced).missed_implication, "single highest level literal %d, missed: ", forced);
       var (forced).missed_implication = nullptr;
-      LOG ("single highest level literal %d", forced);
 
       // The pseudo code in the SAT'18 paper actually backtracks to the
       // 'second highest decision' level, while their code backtracks

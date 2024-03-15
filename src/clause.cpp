@@ -367,8 +367,12 @@ void Internal::add_new_original_clause (uint64_t id) {
 	LOG (var (lit).missed_implication, "found missed %d, jumping back to %d", lit, lev);
       }
     }
-    if (lev != level)
-      backtrack (lev);
+    if (lev - 1 != level){
+      if (lev)
+	backtrack (lev - 1);
+      else
+	backtrack (0);
+    }
   }
   assert (!tainted_literal);
   LOG (original, "original clause");

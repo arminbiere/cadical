@@ -35,6 +35,22 @@ inline void Internal::unassign (int lit) {
     update_queue_unassigned (idx);
 }
 
+struct missed_level_rank {
+  Internal *internal;
+  missed_level_rank (Internal *i) : internal (i) {}
+  typedef uint64_t Type;
+  Type operator() (const int &a) const { return internal->bumped (a); }
+};
+
+struct missed_level_smaller {
+  Internal *internal;
+  missed_level_smaller (Internal *i) : internal (i) {}
+  bool operator() (const int &a, const int &b) const {
+    const auto s = missed_level_rank (internal) (a);
+    const auto t = missed_level_rank (internal) (b);
+    return s < t;
+  }
+};
 /*------------------------------------------------------------------------*/
 
 // Update the current target maximum assignment and also the very best
@@ -120,13 +136,11 @@ void Internal::backtrack (int new_level) {
     int lit = trail[i++];
     Var &v = var (lit);
     if (strongchrono && v.missed_implication && v.level > new_level && v.missed_level <= new_level) {
-      assert (v.missed_level <= level);
       LOG (v.missed_implication,
            "BT missed lower-level implication of %d at level %d (was %d)",
            lit, var (lit).missed_level, var (lit).level);
       assert (!v.missed_implication->moved);
       LOG (v.reason, "other reason");
-      assert (var (lit).missed_level < var (lit).level);
 #ifdef DEBUG
       for (auto other : *v.missed_implication) {
         LOG ("lit %d at level %d", other, var (other).level);
@@ -201,12 +215,14 @@ void Internal::backtrack (int new_level) {
     propagated = earliest_dirty;
     propagated2 = earliest_dirty;
     no_conflict_until = earliest_dirty;
+    stats.avoidedprops += reassigned;
   }
   
   if (strongchrono) {
     // Here we slowly bubble down the literals: they remain on current level
     // with a missed propagation until reaching their final position.
-    // It is only once reached the final position that they do get real units 
+    // It is only once reached the final position that they do get real units
+    MSORT (opts.radixsortlim, begin (missed_props), end (missed_props), missed_level_rank(this), missed_level_smaller(this));
     for (int i = missed_props.size() - 1; i >= 0; --i) {
       const int lit = missed_props[i];
       Var &v = var (lit);
@@ -215,10 +231,10 @@ void Internal::backtrack (int new_level) {
       assert (val (lit) > 0);
       assert (val (-lit) < 0);
       v.reason = v.missed_implication;
-      const bool new_unit = !v.missed_level && !new_level;
+      const bool new_unit = (!v.missed_level && v.missed_implication != mli_reason);
       std::vector<uint64_t> lrat_chain_tmp;
       if (new_unit && !unsat) {
-	if (lrat) {
+	if (lrat) { // build units early, but still keep them as missed
 	  // can be called during conflict analysis, so we need to copy the lrat_chain
 	  lrat_chain_tmp = (std::move (lrat_chain));
 	  lrat_chain.clear();
@@ -231,12 +247,13 @@ void Internal::backtrack (int new_level) {
 	  LOG (lrat_chain, "chain set back to: ");
 	}
 	v.reason = 0;
+	v.missed_implication = mli_reason;
       }
       assert (level >= v.missed_level);
-      v.level = new_unit ? 0 : new_level;
+      v.level = v.missed_level;
       assert (new_level >= v.missed_level);
       v.trail = trail.size();
-      if (new_unit)
+      if (v.missed_level)
 	LOG (v.reason,
              "BT setting missed propagation lit %d at level %d with reason", lit, v.level);
       else {
@@ -245,6 +262,9 @@ void Internal::backtrack (int new_level) {
       trail.push_back (lit);
       if (v.missed_level >= new_level)
 	var (lit).missed_implication = nullptr;
+      else {
+	LOG ("keeping missed propagation");
+      }
     }
     missed_props.clear();
     if (!missed_props.empty ())

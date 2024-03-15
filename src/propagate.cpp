@@ -126,10 +126,11 @@ inline void Internal::search_assign (int lit, Clause *reason) {
     lit_level = 0; // unit
   else if (reason == decision_reason)
     lit_level = level, reason = 0;
-  else if (opts.chrono >= 3) {
+  else if (opts.chrono >= 3 && opts.chronohighest) {
     lit_level = var (lit ^ reason->literals[0] ^ reason->literals[1]).level;
     assert (lit_level == assignment_level (lit, reason));
-  }
+  } else if (opts.chrono >= 3 && !opts.chronohighest)
+    lit_level = assignment_level (lit, reason);
   else if (opts.chrono)
     lit_level = assignment_level (lit, reason);
   else
@@ -140,6 +141,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   v.level = lit_level;
   v.trail = trail.size ();
   v.reason = reason;
+  v.dirty = true;
   assert ((int) num_assigned < max_var);
   assert (num_assigned == trail.size ());
   num_assigned++;
@@ -161,7 +163,6 @@ inline void Internal::search_assign (int lit, Clause *reason) {
 #endif
 
   lrat_chain.clear ();
-  var (lit).dirty = true;
 
   if (watching ()) {
     const Watches &ws = watches (-lit);
@@ -261,7 +262,7 @@ bool Internal::propagate () {
 
       if (b > 0 && (weakchrono || var (w.blit).level <= proplevel || blit_missed_level <= proplevel)) {
 	LOG (w.clause, "blit %d is true on level %d vs proplevel %d and missed level %d", w.blit, var (w.blit).level, proplevel, blit_missed_level);
-	if (missed) LOG (var (w.blit).missed_implication, "missed implication is:");
+	if (missed) LOG (var (w.blit).missed_implication, "missed implication is (level %d)", var (w.blit).missed_level);
         continue; // blocking literal satisfied
       }
 
