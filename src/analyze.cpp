@@ -962,7 +962,7 @@ void Internal::analyze () {
       search_assign_driving (forced, conflict);
 
       conflict = 0;
-      if (otherconflict && conflict_level >= mil_level) {
+      if (otherconflict && level >= mil_level) {
 	LOG (otherconflict, "changing conflict to");
 	conflict = otherconflict;
       }
