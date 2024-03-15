@@ -923,6 +923,7 @@ void Internal::analyze () {
       assert (conflict_level > 0);
       // TODO
       Clause *otherconflict = var (forced).missed_implication;
+      const int mil_level = var (forced).missed_level;
       if (otherconflict) {
 	LOG  (otherconflict, "found conflicting missed propagation %d (dirty) on level %d", forced, var (forced).level);
       }
@@ -961,7 +962,7 @@ void Internal::analyze () {
       search_assign_driving (forced, conflict);
 
       conflict = 0;
-      if (otherconflict && conflict_level <= var (forced).missed_level) {
+      if (otherconflict && conflict_level >= mil_level) {
 	LOG (otherconflict, "changing conflict to");
 	conflict = otherconflict;
       }
