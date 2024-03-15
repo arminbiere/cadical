@@ -654,8 +654,6 @@ struct Internal {
 
   // Learning from external propagator in 'external_propagate.cpp'
   //
-  void elevate_lit_external (int, Clause *);
-  void elevate_original_unit (uint64_t, int);
   bool external_propagate ();
   bool external_check_solution ();
   void add_external_clause (int propagated_lit = 0,

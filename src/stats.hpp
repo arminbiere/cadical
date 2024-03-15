@@ -128,7 +128,6 @@ struct Stats {
   int64_t sections;      // 'section' counter
   int64_t chrono;        // chronological backtracks
   int64_t backtracks;    // number of backtracks
-  int64_t elevated; // number of elevated literals (updated in backtrack)
   int64_t improvedglue;   // improved glue during bumping
   int64_t promoted1;      // promoted clauses to tier one
   int64_t promoted2;      // promoted clauses to tier two
