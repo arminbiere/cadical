@@ -135,6 +135,7 @@ void Internal::backtrack (int new_level) {
   while (i < end_of_trail) {
     int lit = trail[i++];
     Var &v = var (lit);
+    assert (!v.reason || v.reason != v.missed_implication);
     if (strongchrono && v.missed_implication && v.level > new_level && v.missed_level <= new_level) {
       LOG (v.missed_implication,
            "BT missed lower-level implication of %d at level %d (was %d)",
@@ -223,7 +224,7 @@ void Internal::backtrack (int new_level) {
     // with a missed propagation until reaching their final position.
     // It is only once reached the final position that they do get real
     // units
-#if 0
+#if 1
     MSORT (opts.radixsortlim, begin (missed_props), end (missed_props), missed_level_rank(this), missed_level_smaller(this));
 #endif
     for (int i = missed_props.size() - 1; i >= 0; --i) {
