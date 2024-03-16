@@ -50,7 +50,6 @@ bool Internal::minimize_literal (int lit, int depth) {
     f.removable = true;
   else if (opts.chrono >= 4 && v.missed_implication) {
     LOG ("now trying to minimize with the missed implication");
-    assert (v.missed_implication != mli_reason);
     const const_literal_iterator end = v.missed_implication->end ();
     const_literal_iterator i;
     res = true;
@@ -207,7 +206,6 @@ void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
     if (f.removable == 2){
       LOG ("using missed");
       reason = v.missed_implication;
-      assert (v.missed_implication != mli_reason);
     }
     else
       reason = v.reason;

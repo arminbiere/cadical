@@ -221,8 +221,11 @@ void Internal::backtrack (int new_level) {
   if (strongchrono) {
     // Here we slowly bubble down the literals: they remain on current level
     // with a missed propagation until reaching their final position.
-    // It is only once reached the final position that they do get real units
+    // It is only once reached the final position that they do get real
+    // units
+#if 0
     MSORT (opts.radixsortlim, begin (missed_props), end (missed_props), missed_level_rank(this), missed_level_smaller(this));
+#endif
     for (int i = missed_props.size() - 1; i >= 0; --i) {
       const int lit = missed_props[i];
       Var &v = var (lit);
@@ -232,7 +235,7 @@ void Internal::backtrack (int new_level) {
       assert (val (-lit) < 0);
       v.reason = v.missed_implication;
       v.dirty = true; // necessary if a conflict is immediately found before repropagating that literal
-      const bool new_unit = (!v.missed_level && v.missed_implication != mli_reason);
+      const bool new_unit = (!v.missed_level);
       std::vector<uint64_t> lrat_chain_tmp;
       if (new_unit && !unsat) {
 	if (lrat) { // build units early, but still keep them as missed
@@ -248,7 +251,6 @@ void Internal::backtrack (int new_level) {
 	  LOG (lrat_chain, "chain set back to: ");
 	}
 	v.reason = 0;
-	v.missed_implication = mli_reason;
       }
       assert (level >= v.missed_level);
       v.level = v.missed_level;
@@ -261,11 +263,7 @@ void Internal::backtrack (int new_level) {
 	LOG ("BT setting missed propagation lit %d to root level", lit);
       }
       trail.push_back (lit);
-      if (v.missed_level >= new_level)
-	var (lit).missed_implication = nullptr;
-      else {
-	LOG ("keeping missed propagation");
-      }
+      var (lit).missed_implication = nullptr;
     }
     missed_props.clear();
     if (!missed_props.empty ())
