@@ -446,7 +446,7 @@ bool Internal::propagate () {
                   replacing_missed) {
                 LOG (w.clause,
                      "missed lower-level implication of %d at level %d "
-                     "(was: %d) %d",
+                     "(was: %d)",
                      other, replacement_level, var (other).level);
                 var (other).missed_implication = w.clause;
                 var (other).missed_level = replacement_level;
