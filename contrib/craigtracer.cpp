@@ -115,7 +115,8 @@ private:
 
 AigEdge Aig::create_var (int variable) {
   // Try to check if there is a node for the literal already
-  if (auto it = varHashMap.find (variable); it != varHashMap.end ()) {
+  auto it = varHashMap.find (variable);
+  if (it != varHashMap.end ()) {
     return AigEdge (it->second);
   }
 
@@ -146,7 +147,8 @@ AigEdge Aig::create_and (const AigEdge &edge1, const AigEdge &edge2) {
   // Order edge indices to increase hit rate
   auto pair = (edge1 > edge2) ? std::make_tuple (edge2, edge1)
                               : std::make_tuple (edge1, edge2);
-  if (auto it = andHashMap.find (pair); it != andHashMap.end ()) {
+  auto it = andHashMap.find (pair);
+  if (it != andHashMap.end ()) {
     return AigEdge (it->second);
   }
 
@@ -205,7 +207,8 @@ CraigCnfType Aig::create_cnf (const AigEdge &root,
 
   // A fixed single literal => No Tseitin variables are required
   // and we can take a fast path without building an index.
-  if (auto node = nodes[root.get_node_index ()]; node.isVariable ()) {
+  auto node = nodes[root.get_node_index ()];
+  if (node.isVariable ()) {
     auto rootLiteral = node.get_variable () * (root.is_negated () ? -1 : 1);
     cnf.push_back ({rootLiteral});
     return CraigCnfType::NORMAL;
@@ -226,7 +229,8 @@ CraigCnfType Aig::create_cnf (const AigEdge &root,
     const auto &node = nodes[nodeIndex];
 
     // Check if node was already converted to Tseitin variable.
-    if (auto it = node_to_var.find (nodeIndex); it != node_to_var.end ()) {
+    auto it = node_to_var.find (nodeIndex);
+    if (it != node_to_var.end ()) {
       pending.pop ();
       continue;
     }
@@ -236,11 +240,11 @@ CraigCnfType Aig::create_cnf (const AigEdge &root,
     const auto &edge2 = node.get_edge2 ();
     const size_t node1Index = edge1.get_node_index ();
     const size_t node2Index = edge2.get_node_index ();
-    if (auto itNode1 = node_to_var.find (node1Index);
-        itNode1 == node_to_var.end ()) {
+    auto itNode1 = node_to_var.find (node1Index);
+    auto itNode2 = node_to_var.find (node2Index);
+    if (itNode1 == node_to_var.end ()) {
       pending.push (node1Index);
-    } else if (auto itNode2 = node_to_var.find (node2Index);
-               itNode2 == node_to_var.end ()) {
+    } else if (itNode2 == node_to_var.end ()) {
       pending.push (node2Index);
     } else {
       // Edges have been processed, now do Tseiting transformation.
@@ -337,8 +341,8 @@ CraigTracer::CraigTracer ()
       craig_aig_dual_asym (new Aig ()) {}
 
 CraigTracer::~CraigTracer () {
-  for (auto &[id, interpolant] : craig_interpolants)
-    delete interpolant;
+  for (auto it : craig_interpolants)
+    delete it.second;
   if (craig_interpolant)
     delete craig_interpolant;
 
@@ -580,28 +584,20 @@ CraigData *CraigTracer::create_interpolant_for_assumption (int literal) {
   CraigVarType varType = craig_var_labels[abs (literal)];
   if (varType == CraigVarType::A_LOCAL) {
     return new CraigData (
-        {.partial_interpolant_sym = craig_aig_sym->get_false (),
-         .partial_interpolant_asym = craig_aig_asym->get_false (),
-         .partial_interpolant_dual_sym = craig_aig_dual_sym->get_true (),
-         .partial_interpolant_dual_asym = craig_aig_dual_asym->get_false (),
-         .clause_type = CraigClauseType::A_CLAUSE,
-         .craig_id = craig_id++});
+        {craig_aig_sym->get_false (), craig_aig_asym->get_false (),
+         craig_aig_dual_sym->get_true (), craig_aig_dual_asym->get_false (),
+         CraigClauseType::A_CLAUSE, craig_id++});
   } else if (varType == CraigVarType::B_LOCAL) {
     return new CraigData (
-        {.partial_interpolant_sym = craig_aig_sym->get_true (),
-         .partial_interpolant_asym = craig_aig_asym->get_true (),
-         .partial_interpolant_dual_sym = craig_aig_dual_sym->get_false (),
-         .partial_interpolant_dual_asym = craig_aig_dual_asym->get_true (),
-         .clause_type = CraigClauseType::B_CLAUSE,
-         .craig_id = craig_id++});
+        {craig_aig_sym->get_true (), craig_aig_asym->get_true (),
+         craig_aig_dual_sym->get_false (), craig_aig_dual_asym->get_true (),
+         CraigClauseType::B_CLAUSE, craig_id++});
   } else if (varType == CraigVarType::GLOBAL) {
-    return new CraigData (
-        {.partial_interpolant_sym = craig_aig_sym->get_true (),
-         .partial_interpolant_asym = craig_aig_asym->get_true (),
-         .partial_interpolant_dual_sym = craig_aig_dual_sym->get_false (),
-         .partial_interpolant_dual_asym = craig_aig_dual_asym->get_false (),
-         .clause_type = CraigClauseType::L_CLAUSE,
-         .craig_id = craig_id++});
+    return new CraigData ({craig_aig_sym->get_true (),
+                           craig_aig_asym->get_true (),
+                           craig_aig_dual_sym->get_false (),
+                           craig_aig_dual_asym->get_false (),
+                           CraigClauseType::L_CLAUSE, craig_id++});
   } else {
     assert (false); // Encountered invalid variable type!
     __builtin_unreachable ();
@@ -612,12 +608,9 @@ CraigData *
 CraigTracer::create_interpolant_for_clause (const std::vector<int> &clause,
                                             CraigClauseType clause_type) {
   auto result = new CraigData (
-      {.partial_interpolant_sym = craig_aig_sym->get_true (),
-       .partial_interpolant_asym = craig_aig_asym->get_true (),
-       .partial_interpolant_dual_sym = craig_aig_dual_sym->get_true (),
-       .partial_interpolant_dual_asym = craig_aig_dual_asym->get_true (),
-       .clause_type = clause_type,
-       .craig_id = craig_id++});
+      {craig_aig_sym->get_true (), craig_aig_asym->get_true (),
+       craig_aig_dual_sym->get_true (), craig_aig_dual_asym->get_true (),
+       clause_type, craig_id++});
 
   if (is_construction_enabled (CraigConstruction::SYMMETRIC)) {
     if (clause_type == CraigClauseType::A_CLAUSE) {
@@ -867,12 +860,12 @@ CraigTracer::create_craig_interpolant (CraigInterpolant interpolant,
   // We have at least two Craig interpolants for the following computations.
   if (interpolant == CraigInterpolant::UNION) {
     bool allConstantOne = true;
-    for (auto [craigCnf, craigCnfType] : craig_cnfs) {
-      if (craigCnfType == CraigCnfType::CONSTANT0) {
-        cnf = std::move (*craigCnf);
+    for (auto &it : craig_cnfs) {
+      if (std::get<1> (it) == CraigCnfType::CONSTANT0) {
+        cnf = std::move (*std::get<0> (it));
         return CraigCnfType::CONSTANT0;
       }
-      allConstantOne &= (craigCnfType == CraigCnfType::CONSTANT1);
+      allConstantOne &= (std::get<1> (it) == CraigCnfType::CONSTANT1);
     }
     if (allConstantOne) {
       cnf = {};
@@ -882,19 +875,19 @@ CraigTracer::create_craig_interpolant (CraigInterpolant interpolant,
     // Create trigger (t) that enforces all CNF parts.
     int craig_trigger = nextFreeVariable++;
     std::vector<int> craig_trigger_clause{craig_trigger};
-    for (auto [craigCnf, craigCnfType] : craig_cnfs) {
-      if (craigCnfType == CraigCnfType::NORMAL) {
+    for (auto &it : craig_cnfs) {
+      if (std::get<1> (it) == CraigCnfType::NORMAL) {
         size_t i = 0, j = cnf.size ();
-        cnf.resize (cnf.size () + craigCnf->size ());
-        for (; i < craigCnf->size () - 1u; i++, j++)
-          cnf[j] = std::move ((*craigCnf)[i]);
+        cnf.resize (cnf.size () + std::get<0> (it)->size ());
+        for (; i < std::get<0> (it)->size () - 1u; i++, j++)
+          cnf[j] = std::move ((*std::get<0> (it))[i]);
         // The positive trigger implies that all CNF parts are enabled: (t
         // -> t_1) = (-t v t_1)
-        cnf[j] = {-craig_trigger, (*craigCnf)[i][0]};
+        cnf[j] = {-craig_trigger, (*std::get<0> (it))[i][0]};
         // The negative trigger implies that at least one of the CNF parts
         // is not enabled: (-t -> (-t_1 v ... v -t_n)) = (t v -t_1 v ...
         // -t_n)
-        craig_trigger_clause.push_back (-(*craigCnf)[i][0]);
+        craig_trigger_clause.push_back (-(*std::get<0> (it))[i][0]);
       }
     }
 
@@ -904,12 +897,12 @@ CraigTracer::create_craig_interpolant (CraigInterpolant interpolant,
     return CraigCnfType::NORMAL;
   } else if (interpolant == CraigInterpolant::INTERSECTION) {
     bool allConstantZero = true;
-    for (auto [craigCnf, craigCnfType] : craig_cnfs) {
-      if (craigCnfType == CraigCnfType::CONSTANT1) {
-        cnf = std::move (*craigCnf);
+    for (auto &it : craig_cnfs) {
+      if (std::get<1> (it) == CraigCnfType::CONSTANT1) {
+        cnf = std::move (*std::get<0> (it));
         return CraigCnfType::CONSTANT1;
       }
-      allConstantZero &= (craigCnfType == CraigCnfType::CONSTANT0);
+      allConstantZero &= (std::get<1> (it) == CraigCnfType::CONSTANT0);
     }
     if (allConstantZero) {
       cnf = {{}};
@@ -919,18 +912,18 @@ CraigTracer::create_craig_interpolant (CraigInterpolant interpolant,
     // Create trigger (t) that enforces all CNF parts.
     int craig_trigger = nextFreeVariable++;
     std::vector<int> craig_trigger_clause{-craig_trigger};
-    for (auto [craigCnf, craigCnfType] : craig_cnfs) {
-      if (craigCnfType == CraigCnfType::NORMAL) {
+    for (auto &it : craig_cnfs) {
+      if (std::get<1> (it) == CraigCnfType::NORMAL) {
         size_t i = 0, j = cnf.size ();
-        cnf.resize (cnf.size () + craigCnf->size ());
-        for (; i < craigCnf->size () - 1u; i++, j++)
-          cnf[j] = std::move ((*craigCnf)[i]);
+        cnf.resize (cnf.size () + std::get<0> (it)->size ());
+        for (; i < std::get<0> (it)->size () - 1u; i++, j++)
+          cnf[j] = std::move ((*std::get<0> (it))[i]);
         // The positive trigger implies that one of the CNF parts is
         // enabled: (t -> (t_1 v ... v t_n)) = (-t v t_1 v ... t_n)
-        craig_trigger_clause.push_back ((*craigCnf)[i][0]);
+        craig_trigger_clause.push_back ((*std::get<0> (it))[i][0]);
         // The negative trigger implies that at all CNF parts are not
         // enabled: (-t -> -t_1) = (t v -t_1)
-        cnf[j] = {craig_trigger, -(*craigCnf)[i][0]};
+        cnf[j] = {craig_trigger, -(*std::get<0> (it))[i][0]};
       }
     }
 
@@ -939,27 +932,27 @@ CraigTracer::create_craig_interpolant (CraigInterpolant interpolant,
 
     return CraigCnfType::NORMAL;
   } else if (interpolant == CraigInterpolant::SMALLEST) {
-    auto compare = [] (auto const &elem1, auto const &elem2) {
-      auto const &[elem1Cnf, elem1CnfType] = elem1;
-      auto const &[elem2Cnf, elem2CnfType] = elem2;
-      return (elem1Cnf->size () < elem2Cnf->size ());
+    auto compare = [] (const std::tuple<std::vector<std::vector<int>> *,
+                                        CraigCnfType> &elem1,
+                       const std::tuple<std::vector<std::vector<int>> *,
+                                        CraigCnfType> &elem2) {
+      return (std::get<0> (elem1)->size () < std::get<0> (elem2)->size ());
     };
     auto minimum =
         std::min_element (craig_cnfs.begin (), craig_cnfs.end (), compare);
-    auto [minCnf, minCnfType] = *minimum;
-    cnf = std::move (*minCnf);
-    return minCnfType;
+    cnf = std::move (*std::get<0> (*minimum));
+    return std::get<1> (*minimum);
   } else if (interpolant == CraigInterpolant::LARGEST) {
-    auto compare = [] (auto const &elem1, auto const &elem2) {
-      auto const &[elem1Cnf, elem1CnfType] = elem1;
-      auto const &[elem2Cnf, elem2CnfType] = elem2;
-      return (elem1Cnf->size () < elem2Cnf->size ());
+    auto compare = [] (const std::tuple<std::vector<std::vector<int>> *,
+                                        CraigCnfType> &elem1,
+                       const std::tuple<std::vector<std::vector<int>> *,
+                                        CraigCnfType> &elem2) {
+      return (std::get<0> (elem1)->size () < std::get<0> (elem2)->size ());
     };
     auto maximum =
         std::max_element (craig_cnfs.begin (), craig_cnfs.end (), compare);
-    auto [maxCnf, maxCnfType] = *maximum;
-    cnf = std::move (*maxCnf);
-    return maxCnfType;
+    cnf = std::move (*std::get<0> (*maximum));
+    return std::get<1> (*maximum);
   } else {
     assert (false); // Seleted craig interpolation type not supported!
     __builtin_unreachable ();
