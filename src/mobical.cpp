@@ -998,7 +998,7 @@ struct Call {
 
   enum Type : uint64_t {
 
-// clang-format off
+    // clang-format off
 
     INIT            = shift (  0 ),
     SET             = shift (  1 ),
@@ -1051,7 +1051,7 @@ struct Call {
     FLUSHPROOFTRACE = shift ( 35 ),
     CLOSEPROOFTRACE = shift ( 36 ),
 
-// clang-format on
+    // clang-format on
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED |

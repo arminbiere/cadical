@@ -34,9 +34,7 @@ public:
   bool operator== (const AigEdge &other) const {
     return index == other.index;
   }
-  bool operator< (const AigEdge &other) const {
-    return index < other.index;
-  }
+  bool operator<(const AigEdge &other) const { return index < other.index; }
   bool operator> (const AigEdge &other) const {
     return index > other.index;
   }
@@ -762,22 +760,28 @@ CraigTracer::create_craig_interpolant (CraigInterpolant interpolant,
     build_cnf_sym = is_construction_enabled (CraigConstruction::SYMMETRIC);
     break;
   case CraigInterpolant::ASYMMETRIC:
-    build_cnf_asym = is_construction_enabled (CraigConstruction::ASYMMETRIC);
+    build_cnf_asym =
+        is_construction_enabled (CraigConstruction::ASYMMETRIC);
     break;
   case CraigInterpolant::DUAL_SYMMETRIC:
-    build_cnf_dual_sym = is_construction_enabled (CraigConstruction::DUAL_SYMMETRIC);
+    build_cnf_dual_sym =
+        is_construction_enabled (CraigConstruction::DUAL_SYMMETRIC);
     break;
   case CraigInterpolant::DUAL_ASYMMETRIC:
-    build_cnf_dual_asym = is_construction_enabled (CraigConstruction::DUAL_ASYMMETRIC);
+    build_cnf_dual_asym =
+        is_construction_enabled (CraigConstruction::DUAL_ASYMMETRIC);
     break;
   case CraigInterpolant::INTERSECTION:
   case CraigInterpolant::UNION:
   case CraigInterpolant::SMALLEST:
   case CraigInterpolant::LARGEST:
     build_cnf_sym = is_construction_enabled (CraigConstruction::SYMMETRIC);
-    build_cnf_asym = is_construction_enabled (CraigConstruction::ASYMMETRIC);
-    build_cnf_dual_sym = is_construction_enabled (CraigConstruction::DUAL_SYMMETRIC);
-    build_cnf_dual_asym = is_construction_enabled (CraigConstruction::DUAL_ASYMMETRIC);
+    build_cnf_asym =
+        is_construction_enabled (CraigConstruction::ASYMMETRIC);
+    build_cnf_dual_sym =
+        is_construction_enabled (CraigConstruction::DUAL_SYMMETRIC);
+    build_cnf_dual_asym =
+        is_construction_enabled (CraigConstruction::DUAL_ASYMMETRIC);
     break;
 
   default:
@@ -796,16 +800,16 @@ CraigTracer::create_craig_interpolant (CraigInterpolant interpolant,
 
   if (build_cnf_sym)
     craig_cnf_type_sym = craig_aig_sym->create_cnf (
-        craig_interpolant->partial_interpolant_sym,
-        craig_cnf_sym, nextFreeVariable);
+        craig_interpolant->partial_interpolant_sym, craig_cnf_sym,
+        nextFreeVariable);
   if (build_cnf_asym)
     craig_cnf_type_asym = craig_aig_asym->create_cnf (
-        craig_interpolant->partial_interpolant_asym,
-        craig_cnf_asym, nextFreeVariable);
+        craig_interpolant->partial_interpolant_asym, craig_cnf_asym,
+        nextFreeVariable);
   if (build_cnf_dual_sym)
     craig_cnf_type_dual_sym = craig_aig_dual_sym->create_cnf (
-        craig_interpolant->partial_interpolant_dual_sym,
-        craig_cnf_dual_sym, nextFreeVariable);
+        craig_interpolant->partial_interpolant_dual_sym, craig_cnf_dual_sym,
+        nextFreeVariable);
   if (build_cnf_dual_asym)
     craig_cnf_type_dual_asym = craig_aig_dual_asym->create_cnf (
         craig_interpolant->partial_interpolant_dual_asym,

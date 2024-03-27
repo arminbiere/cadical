@@ -1031,16 +1031,21 @@ void Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
 // the function with (0, c). originally we justified each literal in c on
 // its own but this is not actually necessary.
 //
-// Non-recursive version, as some bugs have been found.  DFS over the reasons with preordering
-// (aka we explore the entire reason before exploring deeper)
-void Internal::vivify_build_lrat (int lit, Clause *reason, std::vector<std::tuple<int,Clause*,bool>>& stack) {
-  assert (stack.empty());
+// Non-recursive version, as some bugs have been found.  DFS over the
+// reasons with preordering (aka we explore the entire reason before
+// exploring deeper)
+void Internal::vivify_build_lrat (
+    int lit, Clause *reason,
+    std::vector<std::tuple<int, Clause *, bool>> &stack) {
+  assert (stack.empty ());
   stack.push_back ({lit, reason, false});
-  while (!stack.empty())  {
-    int lit;  Clause *reason; bool finished;
-    std::tie (lit, reason, finished) = stack.back();
+  while (!stack.empty ()) {
+    int lit;
+    Clause *reason;
+    bool finished;
+    std::tie (lit, reason, finished) = stack.back ();
     LOG ("VIVIFY LRAT justifying %d", lit);
-    stack.pop_back();
+    stack.pop_back ();
     if (lit && flags (lit).seen) {
       LOG ("skipping already justified");
       continue;
@@ -1048,40 +1053,41 @@ void Internal::vivify_build_lrat (int lit, Clause *reason, std::vector<std::tupl
     if (finished) {
       lrat_chain.push_back (reason->id);
       if (lit && reason) {
-	Flags &f = flags (lit);
-	f.seen = true;
-	analyzed.push_back (lit); // assert (val (other) < 0);
-	assert (flags (lit).seen);
+        Flags &f = flags (lit);
+        f.seen = true;
+        analyzed.push_back (lit); // assert (val (other) < 0);
+        assert (flags (lit).seen);
       }
       continue;
     } else
-      stack.push_back({lit, reason, true});
+      stack.push_back ({lit, reason, true});
     for (const auto &other : *reason) {
       if (other == lit)
         continue;
       Var &v = var (other);
       Flags &f = flags (other);
       if (f.seen)
-        continue;                 // we would lik // assert (val (other) < 0);e to assert this:
-      //analyzed.push_back (other); // assert (val (other) < 0);
-      //f.seen = true;              // but we cannot because we have
-      if (!v.level) {             // already backtracked (sometimes)
+        continue; // we would lik // assert (val (other) < 0);e to assert
+                  // this:
+      // analyzed.push_back (other); // assert (val (other) < 0);
+      // f.seen = true;              // but we cannot because we have
+      if (!v.level) { // already backtracked (sometimes)
         const unsigned uidx =
             vlit (-other);                // nevertheless we can use var (l)
         uint64_t id = unit_clauses[uidx]; // as if l was still assigned
         assert (id);                      // because var is updated lazily
         lrat_chain.push_back (id);
-	f.seen = true;
-	analyzed.push_back (other);
+        f.seen = true;
+        analyzed.push_back (other);
         continue;
       }
       if (v.reason) { // recursive justification
-	LOG ("VIVIFY LRAT pushing %d", other);
-	stack.push_back({other,v.reason,false});
+        LOG ("VIVIFY LRAT pushing %d", other);
+        stack.push_back ({other, v.reason, false});
       }
     }
   }
-  stack.clear();
+  stack.clear ();
 }
 
 // calculate lrat_chain

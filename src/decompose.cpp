@@ -637,7 +637,7 @@ bool Internal::decompose_round () {
         c->id = clause_id;
       }
       size_t l;
-      int * literals = c->literals;
+      int *literals = c->literals;
       for (l = 2; l < clause.size (); l++)
         literals[l] = clause[l];
       int flushed = c->size - (int) l;

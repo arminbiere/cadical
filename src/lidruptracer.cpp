@@ -131,10 +131,10 @@ bool LidrupTracer::find_and_delete (const uint64_t id) {
     return false;
   assert (c && res);
   *res = c->next;
-  for (auto & lit : c->literals) {
+  for (auto &lit : c->literals) {
     imported_clause.push_back (lit);
   }
-  for (auto & cid : c->chain) {
+  for (auto &cid : c->chain) {
     imported_chain.push_back (cid);
   }
   delete_clause (c);
@@ -458,7 +458,9 @@ void LidrupTracer::add_assumption_clause (uint64_t id,
   if (file->closed ())
     return;
   assert (imported_clause.empty ());
-  LOG (clause, "LIDRUP TRACER tracing addition of assumption clause[%" PRId64 "]", id);
+  LOG (clause,
+       "LIDRUP TRACER tracing addition of assumption clause[%" PRId64 "]",
+       id);
   for (auto &lit : clause)
     imported_clause.push_back (lit);
   for (auto &cid : chain)
@@ -589,8 +591,8 @@ void LidrupTracer::print_statistics () {
        percent (weakened, total));
   MSG ("LIDRUP %" PRId64 " restored clauses %.2f%%", restore,
        percent (restore, total));
-  MSG ("LIDRUP %" PRId64 " batches of deletions, weaken and restores %.2f", batched,
-       relative (batched, deleted + restore + weakened));
+  MSG ("LIDRUP %" PRId64 " batches of deletions, weaken and restores %.2f",
+       batched, relative (batched, deleted + restore + weakened));
   MSG ("LIDRUP %" PRId64 " queries %.2f", solved, relative (solved, total));
   MSG ("LIDRUP %" PRId64 " bytes (%.2f MB)", bytes,
        bytes / (double) (1 << 20));

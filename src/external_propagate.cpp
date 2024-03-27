@@ -154,9 +154,9 @@ bool Internal::external_propagate () {
         // variable is not assigned, it can be propagated
         if (!level) {
           Clause *res = learn_external_reason_clause (ilit, elit);
-  #ifndef LOGGING
+#ifndef LOGGING
           LOG (res, "reason clause of external propagation of %d:", elit);
-  #endif
+#endif
           (void) res;
         } else
           search_assign_external (ilit);

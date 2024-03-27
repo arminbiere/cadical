@@ -254,7 +254,7 @@ void IdrupTracer::idrup_delete_clause (uint64_t id,
     else
       file->put ("w ");
 #ifndef QUIET
-  weakened++;
+    weakened++;
 #endif
   } else {
     if (binary)
@@ -262,7 +262,7 @@ void IdrupTracer::idrup_delete_clause (uint64_t id,
     else
       file->put ("d ");
 #ifndef QUIET
-  deleted++;
+    deleted++;
 #endif
   }
   for (const auto &external_lit : clause)
@@ -431,7 +431,7 @@ void IdrupTracer::add_original_clause (uint64_t id, bool,
   if (!restored) {
     LOG (clause, "IDRUP TRACER tracing addition of original clause");
 #ifndef QUIET
-  original++;
+    original++;
 #endif
     return idrup_add_original_clause (clause);
   }
@@ -502,8 +502,7 @@ void IdrupTracer::print_statistics () {
        percent (weakened, total));
   MSG ("LIDRUP %" PRId64 " restored clauses %.2f%%", restore,
        percent (restore, total));
-  MSG ("LIDRUP %" PRId64 " queries %.2f", solved,
-       relative (solved, total));
+  MSG ("LIDRUP %" PRId64 " queries %.2f", solved, relative (solved, total));
   MSG ("IDRUP %" PRId64 " bytes (%.2f MB)", bytes,
        bytes / (double) (1 << 20));
 }

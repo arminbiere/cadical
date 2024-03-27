@@ -19,8 +19,10 @@ int main () {
   tracer->label_variable (3, CaDiCraig::CraigVarType::GLOBAL);
   tracer->label_clause (1, CaDiCraig::CraigClauseType::A_CLAUSE);
   tracer->label_clause (2, CaDiCraig::CraigClauseType::B_CLAUSE);
-  solver->add (1); solver->add (0);
-  solver->add (2); solver->add (0);
+  solver->add (1);
+  solver->add (0);
+  solver->add (2);
+  solver->add (0);
 
   // ------------------------------------------------
   // A side is UNSATISFIABLE => Craig interpolant is CONSTANT0
@@ -49,8 +51,12 @@ int main () {
   // ------------------------------------------------
   tracer->label_clause (3, CaDiCraig::CraigClauseType::A_CLAUSE);
   tracer->label_constraint (CaDiCraig::CraigClauseType::B_CLAUSE);
-  solver->add (-1); solver->add (3); solver->add (0);
-  solver->constrain (-2); solver->constrain (-3); solver->constrain (0);
+  solver->add (-1);
+  solver->add (3);
+  solver->add (0);
+  solver->constrain (-2);
+  solver->constrain (-3);
+  solver->constrain (0);
   assert (solver->solve () == CaDiCaL::Status::UNSATISFIABLE);
 
   result = tracer->create_craig_interpolant (

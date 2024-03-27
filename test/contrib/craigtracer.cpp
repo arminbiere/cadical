@@ -17,8 +17,10 @@ int main () {
   tracer->label_variable (1, CaDiCraig::CraigVarType::GLOBAL);
   tracer->label_clause (1, CaDiCraig::CraigClauseType::A_CLAUSE);
   tracer->label_clause (2, CaDiCraig::CraigClauseType::B_CLAUSE);
-  solver->add (-1); solver->add (0);
-  solver->add (1); solver->add (0);
+  solver->add (-1);
+  solver->add (0);
+  solver->add (1);
+  solver->add (0);
   assert (solver->solve () == CaDiCaL::Status::UNSATISFIABLE);
 
   int next_var = 2;

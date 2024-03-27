@@ -521,7 +521,7 @@ struct sort_assumptions_positive_rank {
   // Decision level could be 'INT_MAX' and thus 'level + 1' could overflow.
   // Therefore we carefully have to use 'unsigned' for levels below.
 
-  const unsigned max_level;	
+  const unsigned max_level;
 
   sort_assumptions_positive_rank (Internal *s)
       : internal (s), max_level (s->level + 1u) {}
@@ -597,13 +597,15 @@ void Internal::sort_and_reuse_assumptions () {
       continue;
     }
     target = lev - 1;
-    LOG ("first different literal %d on the trail and %d from the assumptions", lit, alit);
+    LOG ("first different literal %d on the trail and %d from the "
+         "assumptions",
+         lit, alit);
     break;
   }
   if (target < level)
     backtrack (target);
   LOG ("assumptions allow for reuse of trail up to level %d", level);
-//  COVER (target > 1);
+  //  COVER (target > 1);
   if ((size_t) level > assumptions.size ())
     stats.assumptionsreused += assumptions.size ();
   else
