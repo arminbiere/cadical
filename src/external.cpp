@@ -274,17 +274,7 @@ bool External::failed_constraint () {
 void External::phase (int elit) {
   assert (elit);
   assert (elit != INT_MIN);
-  int eidx = abs (elit);
-  if (eidx > max_var) {
-  UNUSED:
-    LOG ("forcing phase of unused external %d ignored", elit);
-    return;
-  }
-  int ilit = e2i[eidx];
-  if (!ilit)
-    goto UNUSED;
-  if (elit < 0)
-    ilit = -ilit;
+  const int ilit = internalize (elit);
   internal->phase (ilit);
 }
 
