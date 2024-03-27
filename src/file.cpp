@@ -18,7 +18,7 @@ extern "C" {
 
 extern "C" {
 #include <sys/wait.h>
-};
+}
 
 #endif
 

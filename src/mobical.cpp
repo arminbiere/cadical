@@ -2527,7 +2527,7 @@ extern "C" {
 extern "C" {
 #include <sys/resource.h>
 #include <sys/wait.h>
-};
+}
 
 #endif
 

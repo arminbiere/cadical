@@ -350,7 +350,7 @@ CraigTracer::~CraigTracer () {
   delete craig_aig_asym;
   delete craig_aig_dual_sym;
   delete craig_aig_dual_asym;
-};
+}
 
 void CraigTracer::set_craig_construction (
     CraigConstruction craig_construction) {
