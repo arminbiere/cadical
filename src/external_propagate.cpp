@@ -760,13 +760,10 @@ void Internal::notify_assignments () {
     assert (external->observed (elit));
     external->propagator->notify_assignment (elit, false);
   }
-  return;
 }
 
 /*----------------------------------------------------------------------------*/
-//
-// properly initialize notify_trail to the current assignments
-//
+
 void Internal::connect_propagator () {
   if (level)
     backtrack ();

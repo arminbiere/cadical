@@ -1356,8 +1356,8 @@ struct Internal {
 
   double solve_time (); // accumulated time spent in 'solve ()'
 
-  double process_time (); // since solver was initialized
-  double real_time ();    // since solver was initialized
+  double process_time () const; // since solver was initialized
+  double real_time () const;    // since solver was initialized
 
   double time () { return opts.realtime ? real_time () : process_time (); }
 
