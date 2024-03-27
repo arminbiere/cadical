@@ -76,9 +76,6 @@ void Stats::print (Internal *internal) {
   if (all || stats.chrono)
     PRT ("chronological:   %15" PRId64 "   %10.2f %%  of conflicts",
          stats.chrono, percent (stats.chrono, stats.conflicts));
-  if (all || (stats.elevated && stats.chrono))
-    PRT ("  elevated:      %15" PRId64 "   %10.2f    per chronological",
-         stats.elevated, relative (stats.elevated, stats.chrono));
   if (all)
     PRT ("compacts:        %15" PRId64 "   %10.2f    interval",
          stats.compacts, relative (stats.conflicts, stats.compacts));

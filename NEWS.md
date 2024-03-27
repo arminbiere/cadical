@@ -1,7 +1,21 @@
+Version 2.0.0
+-------------
+
+- We moved back to use the C99 flexible array member feature in
+  'Clause' which however is not supported by all C++ compiler
+  configurations, particularly if compiling in pedantic mode.
+  Therefore the `configure` script checks for support of flexible
+  array members and also has a new `--no-flexible` option.
+
+- Added `Dockerfile` to support docker containers.
+
+- Added `--no-status` to skip printing "s SATISFIABLE" or "s
+  UNSATISFIABLE". This is useful for online proof checking.
+
 Version 1.9.5
 -------------
 
-- Removes an unexpected performance regression on the anniversary track
+- Removed an unexpected performance regression on the anniversary track
   due to marking forward strengthened redundant clauses as used.
 
 Version 1.9.4

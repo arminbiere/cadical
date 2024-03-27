@@ -9,6 +9,7 @@ struct Vivifier {
   vector<Clause *> schedule, stack;
   vector<int> sorted;
   bool redundant_mode;
+  std::vector<std::tuple<int, Clause *, bool>> lrat_stack;
   Vivifier (bool mode) : redundant_mode (mode) {}
 
   void erase () {

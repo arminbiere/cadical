@@ -253,11 +253,17 @@ void IdrupTracer::idrup_delete_clause (uint64_t id,
       file->put ('w');
     else
       file->put ("w ");
+#ifndef QUIET
+    weakened++;
+#endif
   } else {
     if (binary)
       file->put ('d');
     else
       file->put ("d ");
+#ifndef QUIET
+    deleted++;
+#endif
   }
   for (const auto &external_lit : clause)
     if (binary)
@@ -394,9 +400,6 @@ void IdrupTracer::delete_clause (uint64_t id, bool,
   assert (imported_clause.empty ());
   LOG ("IDRUP TRACER tracing deletion of clause[%" PRId64 "]", id);
   idrup_delete_clause (id, clause);
-#ifndef QUIET
-  deleted++;
-#endif
 }
 
 void IdrupTracer::weaken_minus (uint64_t id, const vector<int> &) {
@@ -406,6 +409,9 @@ void IdrupTracer::weaken_minus (uint64_t id, const vector<int> &) {
   LOG ("IDRUP TRACER tracing weaken minus of clause[%" PRId64 "]", id);
   last_id = id;
   insert ();
+#ifndef QUIET
+  weakened++;
+#endif
 }
 
 void IdrupTracer::conclude_unsat (ConclusionType,
@@ -424,6 +430,9 @@ void IdrupTracer::add_original_clause (uint64_t id, bool,
     return;
   if (!restored) {
     LOG (clause, "IDRUP TRACER tracing addition of original clause");
+#ifndef QUIET
+    original++;
+#endif
     return idrup_add_original_clause (clause);
   }
   assert (restored);
@@ -434,6 +443,9 @@ void IdrupTracer::add_original_clause (uint64_t id, bool,
   }
   LOG (clause, "IDRUP TRACER tracing addition of restored clause");
   idrup_add_restored_clause (clause);
+#ifndef QUIET
+  restore++;
+#endif
 }
 
 void IdrupTracer::report_status (int status, uint64_t) {
@@ -455,6 +467,9 @@ void IdrupTracer::solve_query () {
     return;
   LOG (assumptions, "IDRUP TRACER tracing solve query with assumptions");
   idrup_solve_query ();
+#ifndef QUIET
+  solved++;
+#endif
 }
 
 void IdrupTracer::add_assumption (int lit) {
@@ -476,11 +491,18 @@ bool IdrupTracer::closed () { return file->closed (); }
 void IdrupTracer::print_statistics () {
   // TODO complete this.
   uint64_t bytes = file->bytes ();
-  uint64_t total = added + deleted;
-  MSG ("IDRUP %" PRId64 " added clauses %.2f%%", added,
+  uint64_t total = added + deleted + weakened + restore + original;
+  MSG ("LIDRUP %" PRId64 " original clauses %.2f%%", original,
+       percent (original, total));
+  MSG ("LIDRUP %" PRId64 " learned clauses %.2f%%", added,
        percent (added, total));
-  MSG ("IDRUP %" PRId64 " deleted clauses %.2f%%", deleted,
+  MSG ("LIDRUP %" PRId64 " deleted clauses %.2f%%", deleted,
        percent (deleted, total));
+  MSG ("LIDRUP %" PRId64 " weakened clauses %.2f%%", weakened,
+       percent (weakened, total));
+  MSG ("LIDRUP %" PRId64 " restored clauses %.2f%%", restore,
+       percent (restore, total));
+  MSG ("LIDRUP %" PRId64 " queries %.2f", solved, relative (solved, total));
   MSG ("IDRUP %" PRId64 " bytes (%.2f MB)", bytes,
        bytes / (double) (1 << 20));
 }

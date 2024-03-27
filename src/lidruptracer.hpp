@@ -1,19 +1,19 @@
-#ifndef _idruptracer_h_INCLUDED
-#define _idruptracer_h_INCLUDED
+#ifndef _lidruptracer_h_INCLUDED
+#define _lidruptracer_h_INCLUDED
 
 class FileTracer;
 
 namespace CaDiCaL {
 
-struct IdrupClause {
-  IdrupClause *next; // collision chain link for hash table
-  uint64_t hash;     // previously computed full 64-bit hash
-  uint64_t id;       // id of clause
-  unsigned size;
-  int literals[1];
+struct LidrupClause {
+  LidrupClause *next; // collision chain link for hash table
+  uint64_t hash;      // previously computed full 64-bit hash
+  uint64_t id;        // id of clause
+  std::vector<uint64_t> chain;
+  std::vector<int> literals;
 };
 
-class IdrupTracer : public FileTracer {
+class LidrupTracer : public FileTracer {
 
   Internal *internal;
   File *file;
@@ -22,22 +22,26 @@ class IdrupTracer : public FileTracer {
 
   // hash table for conclusion
   //
-  uint64_t num_clauses;  // number of clauses in hash table
-  uint64_t size_clauses; // size of clause hash table
-  IdrupClause **clauses; // hash table of clauses
+  uint64_t num_clauses;   // number of clauses in hash table
+  uint64_t size_clauses;  // size of clause hash table
+  LidrupClause **clauses; // hash table of clauses
   vector<int> imported_clause;
   vector<int> assumptions;
+  vector<uint64_t> imported_chain;
+  vector<uint64_t> batch_weaken;
+  vector<uint64_t> batch_delete;
+  vector<uint64_t> batch_restore;
 
   static const unsigned num_nonces = 4;
 
   uint64_t nonces[num_nonces]; // random numbers for hashing
   uint64_t last_hash;          // last computed hash value of clause
   uint64_t last_id;            // id of the last added clause
-  IdrupClause *last_clause;
+  LidrupClause *last_clause;
   uint64_t compute_hash (uint64_t); // compute and save hash value of clause
 
-  IdrupClause *new_clause ();
-  void delete_clause (IdrupClause *);
+  LidrupClause *new_clause ();
+  void delete_clause (LidrupClause *);
 
   static uint64_t reduce_hash (uint64_t hash, uint64_t size);
 
@@ -47,7 +51,7 @@ class IdrupTracer : public FileTracer {
   find_and_delete (const uint64_t); // find clause position in hash table
 
 #ifndef QUIET
-  int64_t added, deleted, weakened, restore, original, solved;
+  int64_t added, deleted, weakened, restore, original, solved, batched;
 #endif
 
   void flush_if_piping ();
@@ -56,18 +60,21 @@ class IdrupTracer : public FileTracer {
   void put_binary_lit (int external_lit);
   void put_binary_id (uint64_t id);
 
-  void idrup_add_derived_clause (const vector<int> &clause);
-  void idrup_delete_clause (uint64_t id, const vector<int> &clause);
-  void idrup_add_restored_clause (const vector<int> &clause);
-  void idrup_add_original_clause (const vector<int> &clause);
-  void idrup_conclude_and_delete (const vector<uint64_t> &conclusion);
-  void idrup_report_status (int status);
-  void idrup_conclude_sat (const vector<int> &model);
-  void idrup_solve_query ();
+  void lidrup_add_derived_clause (uint64_t id, const vector<int> &clause,
+                                  const vector<uint64_t> &chain);
+  void lidrup_delete_clause (uint64_t id); //, const vector<int> &clause);
+  void
+  lidrup_add_restored_clause (uint64_t id); //, const vector<int> &clause);
+  void lidrup_add_original_clause (uint64_t id, const vector<int> &clause);
+  void lidrup_conclude_and_delete (const vector<uint64_t> &conclusion);
+  void lidrup_report_status (int status);
+  void lidrup_conclude_sat (const vector<int> &model);
+  void lidrup_solve_query ();
+  void lidrup_batch_weaken_restore_and_delete ();
 
 public:
-  IdrupTracer (Internal *, File *file, bool);
-  ~IdrupTracer ();
+  LidrupTracer (Internal *, File *file, bool);
+  ~LidrupTracer ();
 
   // proof section:
   void add_derived_clause (uint64_t, bool, const vector<int> &,

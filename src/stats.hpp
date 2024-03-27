@@ -114,21 +114,20 @@ struct Stats {
     int64_t hyper;   // flushed hyper binary/ternary clauses
   } flush;
 
-  int64_t compacts;      // number of compactifications
-  int64_t shuffled;      // shuffled queues and scores
-  int64_t restarts;      // actual number of happened restarts
-  int64_t restartlevels; // levels at restart
-  int64_t restartstable; // actual number of happened restarts
-  int64_t stabphases;    // number of stabilization phases
-  int64_t stabconflicts; // number of search conflicts during stabilizing
-  int64_t rescored;      // number of times scores were rescored
-  int64_t reused;        // number of reused trails
-  int64_t reusedlevels;  // reused levels at restart
-  int64_t reusedstable;  // number of reused trails during stabilizing
-  int64_t sections;      // 'section' counter
-  int64_t chrono;        // chronological backtracks
-  int64_t backtracks;    // number of backtracks
-  int64_t elevated; // number of elevated literals (updated in backtrack)
+  int64_t compacts;       // number of compactifications
+  int64_t shuffled;       // shuffled queues and scores
+  int64_t restarts;       // actual number of happened restarts
+  int64_t restartlevels;  // levels at restart
+  int64_t restartstable;  // actual number of happened restarts
+  int64_t stabphases;     // number of stabilization phases
+  int64_t stabconflicts;  // number of search conflicts during stabilizing
+  int64_t rescored;       // number of times scores were rescored
+  int64_t reused;         // number of reused trails
+  int64_t reusedlevels;   // reused levels at restart
+  int64_t reusedstable;   // number of reused trails during stabilizing
+  int64_t sections;       // 'section' counter
+  int64_t chrono;         // chronological backtracks
+  int64_t backtracks;     // number of backtracks
   int64_t improvedglue;   // improved glue during bumping
   int64_t promoted1;      // promoted clauses to tier one
   int64_t promoted2;      // promoted clauses to tier two

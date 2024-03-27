@@ -106,6 +106,7 @@ OPTION( instantiate,       0,  0,  1,0,1,1, "variable instantiation") \
 OPTION( instantiateclslim, 3,  2,2e9,0,0,1, "minimum clause size") \
 OPTION( instantiateocclim, 1,  1,2e9,2,0,1, "maximum occurrence limit") \
 OPTION( instantiateonce,   1,  0,  1,0,0,1, "instantiate each clause once") \
+OPTION( lidrup,            0,  0,  1,0,0,1, "linear incremental proof format") \
 LOGOPT( log,               0,  0,  1,0,0,0, "enable logging") \
 LOGOPT( logsort,           0,  0,  1,0,0,0, "sort logged clauses") \
 OPTION( lrat,              0,  0,  1,0,0,1, "use LRAT proof format") \
@@ -123,7 +124,7 @@ OPTION( probereleff,      20,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( proberounds,       1,  1, 16,1,0,1, "probing rounds" ) \
 OPTION( profile,           2,  0,  4,0,0,0, "profiling level") \
 QUTOPT( quiet,             0,  0,  1,0,0,0, "disable all messages") \
-OPTION( radixsortlim,    800,  0,2e9,0,0,1, "radix sort limit") \
+OPTION( radixsortlim,     32,  0,2e9,0,0,1, "radix sort limit") \
 OPTION( realtime,          0,  0,  1,0,0,0, "real instead of process time") \
 OPTION( reduce,            1,  0,  1,0,0,1, "reduce useless clauses") \
 OPTION( reduceint,       300, 10,1e6,0,0,1, "reduce interval") \

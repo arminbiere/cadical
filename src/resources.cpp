@@ -94,11 +94,11 @@ double absolute_process_time () {
 
 #endif
 
-double Internal::real_time () {
+double Internal::real_time () const {
   return absolute_real_time () - stats.time.real;
 }
 
-double Internal::process_time () {
+double Internal::process_time () const {
   return absolute_process_time () - stats.time.process;
 }
 

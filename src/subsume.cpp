@@ -8,7 +8,7 @@ namespace CaDiCaL {
 // frequently during search.  It works both on original (irredundant)
 // clauses and on 'sticky' learned clauses which are likely to be kept.
 // This is abstracted away in the 'likely_to_be_kept_clause' function, which
-// implicitly relies on 'opts.reducetier1lgue' (glucose level of clauses
+// implicitly relies on 'opts.reducetier1glue' (glucose level of clauses
 // which are not reduced) as well as dynamically determined size and glucose
 // level ('lim.keptglue' and 'lim.keptsize') of clauses kept in 'reduce'.
 //
@@ -209,8 +209,6 @@ inline int Internal::try_to_subsume_clause (Clause *c,
 
   mark (c); // signed!
 
-  Clause dummy; // Communicate binary subsuming clause.
-
   Clause *d = 0;
   int flipped = 0;
 
@@ -250,19 +248,16 @@ inline int Internal::try_to_subsume_clause (Clause *c,
         if (tmp < 0) {
           if (sign < 0)
             continue; // tautological resolvent
-          dummy.literals[0] = lit;
-          dummy.literals[1] = other;
+          dummy_binary->literals[0] = lit;
+          dummy_binary->literals[1] = other;
           flipped = other;
         } else {
-          dummy.literals[0] = sign * lit;
-          dummy.literals[1] = other;
+          dummy_binary->literals[0] = sign * lit;
+          dummy_binary->literals[1] = other;
           flipped = (sign < 0) ? -lit : INT_MIN;
         }
-        dummy.moved = false;
-        dummy.redundant = false;
-        dummy.size = 2;
-        dummy.id = bin.id;
-        d = &dummy;
+        dummy_binary->id = bin.id;
+        d = dummy_binary;
         break;
       }
 

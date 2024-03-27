@@ -85,25 +85,26 @@ int Internal::reuse_trail () {
   const int trivial_decisions =
       assumptions.size ()
       // Plus 1 if the constraint is satisfied via implications of
-      // assumptions and a pseudo-decision level was introduced
+      // assumptions and a pseudo-decision level was introduced.
       + !control[assumptions.size () + 1].decision;
   if (!opts.restartreusetrail)
     return trivial_decisions;
-  int decision = next_decision_variable ();
-  assert (1 <= decision);
+  int next_decision = next_decision_variable ();
+  assert (1 <= next_decision);
   int res = trivial_decisions;
   if (use_scores ()) {
-    while (
-        res < level && control[res + 1].decision &&
-        score_smaller (this) (decision, abs (control[res + 1].decision))) {
-      assert (control[res + 1].decision);
+    while (res < level) {
+      int decision = control[res + 1].decision;
+      if (decision && score_smaller (this) (abs (decision), next_decision))
+        break;
       res++;
     }
   } else {
-    int64_t limit = bumped (decision);
-    while (res < level && control[res + 1].decision &&
-           bumped (control[res + 1].decision) > limit) {
-      assert (control[res + 1].decision);
+    int64_t limit = bumped (next_decision);
+    while (res < level) {
+      int decision = control[res + 1].decision;
+      if (decision && bumped (decision) < limit)
+        break;
       res++;
     }
   }

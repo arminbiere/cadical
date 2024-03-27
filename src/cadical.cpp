@@ -378,7 +378,7 @@ int App::main (int argc, char **argv) {
 #ifndef __MINGW32__
   const char *time_limit_specified = 0;
 #endif
-  bool witness = true, less = false;
+  bool witness = true, less = false, status = true;
   const char *dimacs_name, *err;
 
   for (int i = 1; i < argc; i++) {
@@ -449,6 +449,14 @@ int App::main (int argc, char **argv) {
              !strcmp (argv[i], "--witness=false") ||
              !strcmp (argv[i], "--witness=0"))
       witness = false;
+    else if (!strcmp (argv[i], "--status") ||
+             !strcmp (argv[i], "--status=true") ||
+             !strcmp (argv[i], "--status=1"))
+      status = true;
+    else if (!strcmp (argv[i], "-n") || !strcmp (argv[i], "--no-status") ||
+             !strcmp (argv[i], "--status=false") ||
+             !strcmp (argv[i], "--status=0"))
+      status = false;
     else if (!strcmp (argv[i], "--less")) { // EXPERIMENTAL!
       if (less)
         APPERR ("multiple '--less' options");
@@ -876,12 +884,13 @@ int App::main (int argc, char **argv) {
   }
 
   if (res == 10) {
-    fputs ("s SATISFIABLE\n", write_result_file);
+    if (status)
+      fputs ("s SATISFIABLE\n", write_result_file);
     if (witness)
       print_witness (write_result_file);
-  } else if (res == 20)
+  } else if (res == 20 && status)
     fputs ("s UNSATISFIABLE\n", write_result_file);
-  else
+  else if (status)
     fputs ("c UNKNOWN\n", write_result_file);
   fflush (write_result_file);
   if (write_result_path)

@@ -34,7 +34,9 @@ struct Flags { // Variable flags.
   // Bits for handling assumptions.
   //
   unsigned char assumed : 2;
-  unsigned char failed : 2;
+  unsigned char failed : 2; // 0 if not part of failure
+                            // 1 if positive lit is in failure
+                            // 2 if negated lit is in failure
 
   enum {
     UNUSED = 0,
