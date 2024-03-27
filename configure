@@ -30,6 +30,7 @@ pedantic=no
 options=""
 quiet=no
 m32=no
+contrib=yes
 
 #--------------------------------------------------------------------------#
 
@@ -96,6 +97,7 @@ where '<option>' is one of the following
 
 --no-contracts     compile without API contract checking code
 --no-tracing       compile without API call tracing code
+--no-contrib       compile without contributed code
 
 --competition      configure for the competition
                    ('--quiet', '--no-contracts', '--no-tracing')
@@ -152,6 +154,7 @@ do
 
     --no-contracts | --no-contract) contracts=no;;
     --no-tracing | --no-trace) tracing=no;;
+    --no-contrib) contrib=no;;
 
     --coverage) coverage=yes;;
     --profile) profile=yes;;
@@ -291,6 +294,7 @@ then
   quiet=yes
   contracts=no
   tracing=no
+  contrib=no
 fi
 
 [ $check = no ] && CXXFLAGS="$CXXFLAGS -DNDEBUG"
@@ -308,6 +312,7 @@ then
 fi
 [ $contracts = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRACTS"
 [ $tracing = no ] && CXXFLAGS="$CXXFLAGS -DNTRACING"
+[ $contrib = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRIB"
 
 CXXFLAGS="$CXXFLAGS$options"
 
@@ -493,6 +498,8 @@ sed \
 -e "s,@CXX@,$CXX," \
 -e "s#@CXXFLAGS@#$CXXFLAGS#" \
 -e "s#@LIBS@#$libs#" \
+-e "s#@CONTRIB@#$contrib#" \
+-e "s#@ROOT@#$root#" \
 ../makefile.in > makefile
 
 msg "generated '$build/makefile' from '../makefile.in'"

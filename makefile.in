@@ -11,18 +11,26 @@ CXX=@CXX@
 CXXFLAGS=@CXXFLAGS@
 
 LIBS=@LIBS@
+ROOT=@ROOT@
+CONTRIB=@CONTRIB@
 
 ############################################################################
 #    It is usually not necessary to change anything below this line!       #
 ############################################################################
 
-APP=cadical.cpp mobical.cpp
-SRC=$(sort $(wildcard ../src/*.cpp))
-SUB=$(subst ../src/,,$(SRC))
-LIB=$(filter-out $(APP),$(SUB))
-OBJ=$(LIB:.cpp=.o)
+SRC_APP=src/cadical.cpp src/mobical.cpp
+SRC_SOLVER=$(subst $(ROOT)/,,$(sort $(wildcard $(ROOT)/src/*.cpp)))
+SRC_CONTRIB=$(subst $(ROOT)/,,$(sort $(wildcard $(ROOT)/contrib/*.cpp)))
+
+FILT_SOLVER=$(filter-out $(SRC_APP),$(SRC_SOLVER))
+FILT_CONTRIB=$(if $(filter-out no,$(CONTRIB)),$(SRC_CONTRIB),)
+OBJ_SOLVER=$(FILT_SOLVER:.cpp=.o)
+OBJ_CONTRIB=$(FILT_CONTRIB:.cpp=.o)
+
+# Include for current build directory is required for including the
+# generated build header build.hpp.
 DIR=../$(shell pwd|sed -e 's,.*/,,')
-COMPILE=$(CXX) $(CXXFLAGS) -I$(DIR)
+COMPILE=$(CXX) $(CXXFLAGS) -I$(DIR) -I$(ROOT)/src
 
 #--------------------------------------------------------------------------#
 
@@ -32,60 +40,66 @@ all: libcadical.a cadical mobical
 
 .SUFFIXES: .cpp .o
 
-%.o: ../src/%.cpp ../src/*.hpp makefile
-	$(COMPILE) -c $<
+src/%.o: $(ROOT)/src/%.cpp $(ROOT)/src/*.hpp makefile
+	@mkdir -p $(dir $@)
+	$(COMPILE) -c $< -o $@
+
+contrib/%.o: $(ROOT)/contrib/%.cpp $(ROOT)/contrib/%.hpp $(ROOT)/src/*.hpp makefile
+	@mkdir -p $(dir $@)
+	$(COMPILE) -c $< -o $@
 
 #--------------------------------------------------------------------------#
 
 # Application binaries (the stand alone solver 'cadical' and the model based
 # tester 'mobical') and the library are the main build targets.
 
-cadical: cadical.o libcadical.a makefile
+cadical: src/cadical.o libcadical.a makefile
 	$(COMPILE) -o $@ $< -L. -lcadical $(LIBS)
 
-mobical: mobical.o libcadical.a makefile $(LIBS)
+mobical: src/mobical.o libcadical.a makefile $(LIBS)
 	$(COMPILE) -o $@ $< -L. -lcadical
 
-libcadical.a: $(OBJ) makefile
-	ar rc $@ $(OBJ)
+libcadical.a: $(OBJ_SOLVER) $(OBJ_CONTRIB) makefile
+	ar rc $@ $(OBJ_SOLVER) $(OBJ_CONTRIB)
 
 #--------------------------------------------------------------------------#
 
 # Note that 'build.hpp' is generated and resides in the build directory.
 
 build.hpp: always
-	../scripts/make-build-header.sh > build.hpp
+	$(ROOT)/scripts/make-build-header.sh > build.hpp
 
-version.o: build.hpp
+src/version.o: build.hpp
 
 update:
-	../scripts/update-version.sh
+	$(ROOT)/scripts/update-version.sh
 
 #--------------------------------------------------------------------------#
 
 # These two 'C' interfaces include '.h' headers and thus require explicitly
 # defined additional dependencies.
 
-ccadical.o: ../src/ccadical.h
-ipasir.o: ../src/ipasir.h ../src/ccadical.h
+ccadical.o: $(ROOT)/src/ccadical.h
+ipasir.o: $(ROOT)/src/ipasir.h $(ROOT)/src/ccadical.h
 
 #--------------------------------------------------------------------------#
 
 analyze: all
-	$(COMPILE) --analyze ../src/*.cpp
+	$(COMPILE) --analyze $(ROOT)/src/*.cpp
+	$(COMPILE) --analyze $(ROOT)/contrib/*.cpp
 
 format:
-	clang-format -i ../*/*.[ch]pp
-	clang-format -i ../*/*.[ch]
-	clang-format -i ../test/*/*.[ch]pp
-	clang-format -i ../test/*/*.[ch]
+	clang-format -i $(ROOT)/*/*.[ch]pp
+	clang-format -i $(ROOT)/*/*.[ch]
+	clang-format -i $(ROOT)/test/*/*.[ch]pp
+	clang-format -i $(ROOT)/test/*/*.[ch]
 
 clean:
 	rm -f *.o *.a cadical mobical makefile build.hpp
 	rm -f *.gcda *.gcno *.gcov gmon.out
 
 test: all
-	CADICALBUILD="$(DIR)" $(MAKE) -j1 -C ../test
+	CADICALBUILD="$(DIR)" $(MAKE) -j1 -C $(ROOT)/test
 
 #--------------------------------------------------------------------------#
 
