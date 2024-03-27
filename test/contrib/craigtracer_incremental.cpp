@@ -47,6 +47,8 @@ int main () {
   assert (next_var == 2);
 
   // ------------------------------------------------
+  tracer->label_clause (3, CaDiCraig::CraigClauseType::A_CLAUSE);
+  tracer->label_constraint (CaDiCraig::CraigClauseType::B_CLAUSE);
   solver->add (-1); solver->add (3); solver->add (0);
   solver->constrain (-2); solver->constrain (-3); solver->constrain (0);
   assert (solver->solve () == CaDiCaL::Status::UNSATISFIABLE);
