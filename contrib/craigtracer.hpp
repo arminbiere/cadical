@@ -18,7 +18,7 @@
 namespace CaDiCraig {
 
 class Aig;
-class CraigData;
+struct CraigData;
 
 enum class CraigCnfType : uint8_t { NONE, CONSTANT0, CONSTANT1, NORMAL };
 
