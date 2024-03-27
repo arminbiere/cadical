@@ -998,58 +998,64 @@ struct Call {
 
   enum Type : uint64_t {
 
-    INIT = (1 << 0),
-    SET = (1 << 1),
-    CONFIGURE = (1 << 2),
+// clang-format off
 
-    VARS = (1 << 3),
-    ACTIVE = (1 << 4),
-    REDUNDANT = (1 << 5),
-    IRREDUNDANT = (1 << 6),
-    RESERVE = (1 << 7),
+    INIT            = shift (  0 ),
+    SET             = shift (  1 ),
+    CONFIGURE       = shift (  2 ),
 
-    ADD = (1 << 8),
-    ASSUME = (1 << 9),
+    VARS            = shift (  3 ),
+    ACTIVE          = shift (  4 ),
+    REDUNDANT       = shift (  5 ),
+    IRREDUNDANT     = shift (  6 ),
+    RESERVE         = shift (  7 ),
+                              
+    PHASE           = shift (  8 ),
+                              
+    ADD             = shift (  9 ),
+    ASSUME          = shift ( 10 ),
 
-    SOLVE = (1 << 10),
-    SIMPLIFY = (1 << 11),
-    LOOKAHEAD = (1 << 12),
-    CUBING = (1 << 13),
+    SOLVE           = shift ( 11 ),
+    SIMPLIFY        = shift ( 12 ),
+    LOOKAHEAD       = shift ( 13 ),
+    CUBING          = shift ( 14 ),
 
-    VAL = (1 << 14),
-    FLIP = (1 << 15),
-    FLIPPABLE = (1 << 16),
-    FAILED = (1 << 17),
-    FIXED = (1 << 18),
+    VAL             = shift ( 15 ),
+    FLIP            = shift ( 16 ),
+    FLIPPABLE       = shift ( 17 ),
+    FAILED          = shift ( 18 ),
+    FIXED           = shift ( 19 ),
 
-    FREEZE = (1 << 19),
-    FROZEN = (1 << 20),
-    MELT = (1 << 21),
+    FREEZE          = shift ( 20 ),
+    FROZEN          = shift ( 21 ),
+    MELT            = shift ( 22 ),
 
-    LIMIT = (1 << 22),
-    OPTIMIZE = (1 << 23),
+    LIMIT           = shift ( 23 ),
+    OPTIMIZE        = shift ( 24 ),
 
-    DUMP = (1 << 24),
-    STATS = (1 << 25),
+    DUMP            = shift ( 25 ),
+    STATS           = shift ( 26 ),
 
-    RESET = (1 << 26),
+    RESET           = shift ( 27 ),
 
-    CONSTRAIN = (1 << 27),
+    CONSTRAIN       = shift ( 28 ),
 
-    CONNECT = (1 << 28),
-    OBSERVE = (1 << 29),
-    LEMMA = (1 << 30),
+    CONNECT         = shift ( 29 ),
+    OBSERVE         = shift ( 30 ),
+    LEMMA           = shift ( 31 ),
 
-    // CONTINUE = (1 << 31),
-    CONCLUDE = (1u << 31),
-    DISCONNECT = shift (32),
+    CONCLUDE        = shift ( 32 ),
+    DISCONNECT      = shift ( 33 ),
 
-    TRACEPROOF = shift (33),
-    FLUSHPROOFTRACE = shift (34),
-    CLOSEPROOFTRACE = shift (35),
+    TRACEPROOF      = shift ( 34 ),
+    FLUSHPROOFTRACE = shift ( 35 ),
+    CLOSEPROOFTRACE = shift ( 36 ),
+
+// clang-format on
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
-             MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED,
+             MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED |
+             PHASE,
 
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
     BEFORE =
@@ -1158,6 +1164,14 @@ struct ReserveCall : public Call {
   void print (ostream &o) { o << "reserve " << arg << endl; }
   Call *copy () { return new ReserveCall (arg); }
   const char *keyword () { return "reserve"; }
+};
+
+struct PhaseCall : public Call {
+  PhaseCall (int max_var) : Call (PHASE, max_var) {}
+  void execute (Solver *&s) { s->phase (arg); }
+  void print (ostream &o) { o << "phase " << arg << endl; }
+  Call *copy () { return new PhaseCall (arg); }
+  const char *keyword () { return "phase"; }
 };
 
 struct SetCall : public Call {
@@ -3510,6 +3524,14 @@ void Reader::parse () {
       if (second)
         error ("additional argument '%s' to 'reserve'", second);
       c = new ReserveCall (lit);
+    } else if (!strcmp (keyword, "phase")) {
+      if (!first)
+        error ("argument to 'phase' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'phase'", first);
+      if (second)
+        error ("additional argument '%s' to 'phase'", second);
+      c = new PhaseCall (lit);
     } else if (!strcmp (keyword, "add")) {
       if (!first)
         error ("argument to 'add' missing");
