@@ -230,14 +230,15 @@ inline int Internal::try_to_subsume_clause (Clause *c,
       // array, which is way faster than storing clause pointers and
       // dereferencing them.  Since this binary clause array is also not
       // shrunken, we also can bail out earlier if subsumption or
-      // strengthening is determined.  In both cases the (self-)subsuming
-      // clause is stored in 'd', which makes it nonzero and forces
-      // aborting both the outer and inner loop.  If the binary clause can
-      // strengthen the candidate clause 'c' (through self-subsuming
-      // resolution), then 'filled' is set to the literal which can be
-      // removed in 'c', otherwise to 'INT_MIN' which is a non-valid
-      // literal.
-      //
+      // strengthening is determined.
+
+      // In both cases the (self-)subsuming clause is stored in 'd', which
+      // makes it nonzero and forces aborting both the outer and inner loop.
+      // If the binary clause can strengthen the candidate clause 'c'
+      // (through self-subsuming resolution), then 'filled' is set to the
+      // literal which can be removed in 'c', otherwise to 'INT_MIN' which
+      // is a non-valid literal.
+
       for (const auto &bin : bins (sign * lit)) {
         const auto &other = bin.lit;
         const int tmp = marked (other);
@@ -256,8 +257,16 @@ inline int Internal::try_to_subsume_clause (Clause *c,
           dummy_binary->literals[1] = other;
           flipped = (sign < 0) ? -lit : INT_MIN;
         }
+
+	// This dummy binary clauses is initialized in 'Internal::Internal'
+	// and only changes it literals in the lines above.   By using such
+	// a faked binary clause we can simply reuse 'subsume_clause' as
+	// well as the code around 'strengthen_clause' uniform for both real
+	// clauses and this special case for binary clauses
+
         dummy_binary->id = bin.id;
         d = dummy_binary;
+
         break;
       }
 

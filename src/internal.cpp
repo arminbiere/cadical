@@ -29,9 +29,20 @@ Internal::Internal ()
       termination_forced (false), vars (this->max_var),
       lits (this->max_var) {
   control.push_back (Level (0, 0));
+
+  // The 'dummy_binary' is used in 'try_to_subsume_clause' to fake a real
+  // clause, which then can be used to subsume or strengthen the given clause
+  // in one routine for both binary and non binary clauses.  This fake
+  // binary clause is always kept non-redundant (and not-moved etc.) due
+  // to the following 'memset'.  Only literals will be changed.
+
+  // In a previous version we used local automatic allocated 'Clause' on the
+  // stack, which became incompatible with several compilers (see the
+  // discussion on flexible array member in 'Clause.cpp').
+
   size_t bytes = Clause::bytes (2);
   dummy_binary = (Clause *) new char[bytes];
-  memset (dummy_binary, 0, bytes);
+  memset (dummy_binary, 0, bytes); 
   dummy_binary->size = 2;
 }
 
