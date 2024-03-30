@@ -258,11 +258,11 @@ inline int Internal::try_to_subsume_clause (Clause *c,
           flipped = (sign < 0) ? -lit : INT_MIN;
         }
 
-	// This dummy binary clauses is initialized in 'Internal::Internal'
-	// and only changes it literals in the lines above.   By using such
-	// a faked binary clause we can simply reuse 'subsume_clause' as
-	// well as the code around 'strengthen_clause' uniform for both real
-	// clauses and this special case for binary clauses
+        // This dummy binary clauses is initialized in 'Internal::Internal'
+        // and only changes it literals in the lines above.   By using such
+        // a faked binary clause we can simply reuse 'subsume_clause' as
+        // well as the code around 'strengthen_clause' uniform for both real
+        // clauses and this special case for binary clauses
 
         dummy_binary->id = bin.id;
         d = dummy_binary;
