@@ -33,7 +33,7 @@
 // The copyright of the code is here.
 
 static const char *COPYRIGHT =
-    "Copyright (c) 2016-2023 A. Biere, M. Fleury, N. Froleyks, K. Fazekas, "
+    "Copyright (c) 2016-2024 A. Biere, M. Fleury, N. Froleyks, K. Fazekas, "
     "F. Pollitt";
 
 /*------------------------------------------------------------------------*/
