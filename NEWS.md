@@ -1,8 +1,11 @@
 Version 2.0.0
 -------------
 
+- We have now a `contrib` directory and for starters there our
+  `CadiCraig` interpolator, which goes through the `Tracer` API.
+
 - We moved back to use the C99 flexible array member feature in
-  'Clause' which however is not supported by all C++ compiler
+  `Clause` which however is not supported by all C++ compiler
   configurations, particularly if compiling in pedantic mode.
   Therefore the `configure` script checks for support of flexible
   array members and also has a new `--no-flexible` option.
