@@ -25,6 +25,9 @@ die "needs to be called from a top-level sub-directory of CaDiCaL"
 
 [ x"$CADICALBUILD" = x ] && CADICALBUILD="../build"
 
+[ -f "$CADICALBUILD/makefile" ] || \
+  die "can not find '$CADICALBUILD/makefile' (run 'configure' first)"
+
 [ -x "$CADICALBUILD/cadical" ] || \
   die "can not find '$CADICALBUILD/cadical' (run 'make' first)"
 
@@ -47,12 +50,22 @@ lratchecker=$CADICALBUILD/lrat-trim
 solutionchecker=$CADICALBUILD/precochk
 makefile=$CADICALBUILD/makefile
 
+CXX=`grep '^CXX=' "$makefile"|sed -e 's,CXX=,,'`
+CXXFLAGS=`grep '^CXXFLAGS=' "$makefile"|sed -e 's,CXXFLAGS=,,'`
+CPPFLAGS=`grep '^CPPFLAGS=' "$makefile"|sed -e 's,CPPFLAGS=,,'`
+LDFLAGS=`grep '^LDFLAGS=' "$makefile"|sed -e 's,LDFLAGS=,,'`
+
+msg "using CXX=$CXX"
+msg "using CXXFLAGS=$CXXFLAGS"
+msg "using CPPFLAGS=$CPPFLAGS"
+msg "using LDFLAGS=$LDFLAGS"
+
 if [ ! -f $solutionchecker -o ! -f $dratchecker -o ! -f $lratchecker ]
 then
 
   if [ ! -f $solutionchecker -o ../test/cnf/precochk.c -nt $solutionchecker ]
   then
-    cmd="cc -O -o $solutionchecker ../test/cnf/precochk.c -lz"
+    cmd="cc -O `echo $CXXFLAGS|sed -e 's,-std=c++11,-std=c11,'` $CPPFLAGS -o $solutionchecker ../test/cnf/precochk.c -lz $LDFLAGS"
     cecho "$cmd"
     if $cmd 2>/dev/null
     then
@@ -66,7 +79,7 @@ then
 
   if [ ! -f $dratchecker -o ../test/cnf/drat-trim.c -nt $dratchecker ]
   then
-    cmd="cc -O -o $dratchecker ../test/cnf/drat-trim.c"
+    cmd="cc -O `echo $CXXFLAGS|sed -e 's,-std=c++11,-std=c11,'` $CPPFLAGS -o $dratchecker ../test/cnf/drat-trim.c $LDFLAGS"
     if $cmd 2>/dev/null
     then
       msg "external proof checking with '$dratchecker'"
@@ -79,7 +92,7 @@ then
 
   if [ ! -f $lratchecker -o ../test/cnf/lrat-trim.c -nt $lratchecker ]
   then
-    cmd="cc -O -o $lratchecker ../test/cnf/lrat-trim.c"
+    cmd="cc -O `echo $CXXFLAGS|sed -e 's,-std=c++11,-std=c11,'` $CPPFLAGS -o $lratchecker ../test/cnf/lrat-trim.c $LDFLAGS"
     if $cmd 2>/dev/null
     then
       msg "external proof checking with '$lratchecker'"
