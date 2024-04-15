@@ -891,6 +891,8 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   for (int round = 1; round <= opts.proberounds; round++)
     if (!probe_round ())
       break;
+    
+  transmute (); // transmutation
 
   decompose (); // ... and (ELS) afterwards.
 

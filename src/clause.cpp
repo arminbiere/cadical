@@ -110,6 +110,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   c->reason = false;
   c->redundant = red;
   c->transred = false;
+  c->transmuted = false;
   c->subsume = false;
   c->vivified = false;
   c->vivify = false;

@@ -94,6 +94,7 @@ extern "C" {
 #include "stats.hpp"
 #include "terminal.hpp"
 #include "tracer.hpp"
+#include "transmute.hpp"
 #include "util.hpp"
 #include "var.hpp"
 #include "veripbtracer.hpp"
@@ -144,6 +145,7 @@ struct Internal {
     TRANSRED = (1 << 12),
     VIVIFY = (1 << 13),
     WALK = (1 << 14),
+    TRANSMUTE = (1 << 15),
   };
 
   bool in_mode (Mode m) const { return (mode & m) != 0; }

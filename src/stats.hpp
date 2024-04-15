@@ -21,6 +21,7 @@ struct Stats {
     int64_t instantiate; // propagated during variable instantiation
     int64_t probe;       // propagated during probing
     int64_t search;      // propagated literals during search
+    int64_t transmute;   // propagated during transmutation
     int64_t transred;    // propagated during transitive reduction
     int64_t vivify;      // propagated during vivification
     int64_t walk;        // propagated during local search

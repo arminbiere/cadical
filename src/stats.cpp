@@ -47,6 +47,7 @@ void Stats::print (Internal *internal) {
   propagations += stats.propagations.cover;
   propagations += stats.propagations.probe;
   propagations += stats.propagations.search;
+  propagations += stats.propagations.transmute;
   propagations += stats.propagations.transred;
   propagations += stats.propagations.vivify;
   propagations += stats.propagations.walk;
@@ -323,6 +324,9 @@ void Stats::print (Internal *internal) {
   PRT ("  searchprops:   %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.search,
        percent (stats.propagations.search, propagations));
+  PRT ("  transmuteprops: %15" PRId64 "   %10.2f %%  of propagations",
+       stats.propagations.transmute,
+       percent (stats.propagations.transmute, propagations));
   PRT ("  transredprops: %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.transred,
        percent (stats.propagations.transred, propagations));
