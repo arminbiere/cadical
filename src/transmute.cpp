@@ -14,7 +14,7 @@ namespace CaDiCaL {
 // The code is mostly copied from 'probe.cpp'.
 // LRAT will be a pain! code currently without.
 
-inline void Internal::transmute_assign (int lit, clause *reason) {
+inline void Internal::transmute_assign (int lit, Clause *reason) {
   require_mode (TRANSMUTE);
   int idx = vidx (lit);
   assert (!val (idx));
@@ -41,6 +41,7 @@ void Internal::transmute_assign_decision (int lit) {
   assert (propagated == trail.size ());
   level++;
   control.push_back (Level (lit, trail.size ()));
+  stats.transmutedecs++;
   transmute_assign (lit, 0);
 }
 
@@ -48,6 +49,7 @@ void Internal::transmute_assign_unit (int lit) {
   require_mode (TRANSMUTE);
   assert (!level);
   assert (active (lit));
+  stats.transmuteunits++;
   transmute_assign (lit, 0);
 }
 
@@ -57,16 +59,14 @@ void Internal::transmute_assign_unit (int lit) {
 // This is essentially the same as 'propagate' except that we prioritize and
 // always propagate binary clauses first (see our CPAIOR'13 paper on tree
 // based look ahead), then immediately stop at a conflict and of course use
-// 'probe_assign' instead of 'search_assign'.  The binary propagation part
-// is factored out too.  If a new unit on decision level one is found we
-// perform hyper binary resolution and thus actually build an implication
-// tree instead of a DAG.  Statistics counters are also different.
+// 'transmute_assign' instead of 'search_assign'.  The binary propagation part
+// is factored out too. Statistics counters are also different.
 
 inline void Internal::transmute_propagate2 () {
   require_mode (TRANSMUTE);
   while (propagated2 != trail.size ()) {
     const int lit = -trail[propagated2++];
-    LOG ("probe propagating %d over binary clauses", -lit);
+    LOG ("transmute propagating %d over binary clauses", -lit);
     Watches &ws = watches (lit);
     for (const auto &w : ws) {
       if (!w.binary ())
@@ -78,10 +78,8 @@ inline void Internal::transmute_propagate2 () {
         conflict = w.clause; // but continue
       else {
         assert (lrat_chain.empty ());
-        assert (!probe_reason);
-        probe_reason = w.clause;
-        probe_lrat_for_units (w.blit);
-        probe_assign (w.blit, -lit);
+        // transmute_lrat_for_units (w.blit); TODO later
+        transmute_assign (w.blit, w.clause);
         lrat_chain.clear ();
       }
     }
@@ -95,10 +93,10 @@ bool Internal::transmute_propagate () {
   int64_t before = propagated2 = propagated;
   while (!conflict) {
     if (propagated2 != trail.size ())
-      probe_propagate2 ();
+      transmute_propagate2 ();
     else if (propagated != trail.size ()) {
       const int lit = -trail[propagated++];
-      LOG ("probe propagating %d over large clauses", -lit);
+      LOG ("transmute propagating %d over large clauses", -lit);
       Watches &ws = watches (lit);
       size_t i = 0, p = 0;
       while (i != ws.size ()) {
@@ -146,18 +144,14 @@ bool Internal::transmute_propagate () {
             if (level == 1) {
               lits[0] = other, lits[1] = lit;
               assert (lrat_chain.empty ());
-              assert (!probe_reason);
-              int dom = hyper_binary_resolve (w.clause);
-              probe_assign (other, dom);
+              transmute_assign (other, w.clause);
             } else {
               assert (lrat_chain.empty ());
-              assert (!probe_reason);
-              probe_reason = w.clause;
-              probe_lrat_for_units (other);
-              probe_assign_unit (other);
+              // transmute_lrat_for_units (other);
+              transmute_assign_unit (other);
               lrat_chain.clear ();
             }
-            probe_propagate2 ();
+            transmute_propagate2 ();
           } else
             conflict = w.clause;
         }
@@ -171,7 +165,7 @@ bool Internal::transmute_propagate () {
       break;
   }
   int64_t delta = propagated2 - before;
-  stats.propagations.probe += delta;
+  stats.propagations.transmute += delta;
   if (conflict)
     LOG (conflict, "conflict");
   STOP (propagate);
@@ -199,6 +193,50 @@ bool Internal::consider_to_transmute_clause (Clause *c) {
   return true;
 }
 
+uint64_t Internal::backward_check (Transmuter &transmuter, int lit) {
+  assert (!level);
+  assert (!val (lit));
+
+  transmute_assign_decision (-lit);
+
+  // hot spot
+  if (!transmute_propagate ()) {
+    LOG ("no need for helper clauses because %d unit under rup", lit);
+    backtrack (level - 1);
+    conflict = 0;
+    return UINT64_MAX;
+  }
+  uint64_t covered;
+  int idx = 0;
+  for (const auto & other : transmuter.current) {
+    idx++;
+    const auto &tmp = val (other);
+    if (tmp >= 0) continue;
+    // we have other -> lit and -lit -> -other by rup
+    covered += (uint64_t) 1 << (idx - 1);  // mark other
+  }
+  backtrack (level - 1);
+  return covered;
+}
+
+void Internal::learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t forward, uint64_t backward) {
+  int idx = 0;
+  assert (clause.empty ());
+  clause.push_back (lit);
+  for (const auto & other : transmuter.current) {
+    idx++;
+    if (!(forward & (1 << (idx - 1)))) continue;
+    if ((backward & (1 << (idx - 1)))) continue;
+    // learn binary -lit -> -other
+    clause.push_back (other);
+    new_hyper_binary_resolved_clause (true, 2);
+    stats.transmutehb++;
+    assert (!clause.empty ());
+    clause.pop_back ();
+  }
+  clause.clear ();
+}
+
 void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
 
   // at least length 4 glue 2 clauses
@@ -214,7 +252,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   // the same time copy its non fixed literals to 'current'.
   //
   int satisfied = 0;
-  auto &current = vivifier.current;
+  auto &current = transmuter.current;
   current.clear ();
 
   for (const auto &lit : *c) {
@@ -225,7 +263,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
     } else if (!tmp)
       current.push_back (lit);
   }
-  assert (current.size <= 64);
+  assert (current.size () <= 64);
 
   if (satisfied) {
     LOG (c, "satisfied by propagated unit %d", satisfied);
@@ -262,7 +300,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   // Go over the literals in the candidate clause.
   //
   while (q != end) {
-    const auto &lit = *p++ = q++;
+    const auto &lit = *p++ = *q++;
     idx++;
     assert (!conflict);
     if (val (lit) > 0) {
@@ -281,9 +319,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
       continue;
     }
     
-    stats.transmutedecs++;
-    transmute_assume (lit);
-    LOG ("decision %d score %" PRId64 "", lit, noccs (lit));
+    transmute_assign_decision (lit);
 
     // hot spot
     if (!transmute_propagate ()) {
@@ -291,7 +327,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
       backtrack (level - 1);
       conflict = 0;
       assert (!val (lit));
-      transmute_assign_unit (-lit);
+      transmute_assign_unit (-lit);  // might have unwanted side effects later
       p--;
       idx--;
       size--;
@@ -303,12 +339,17 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
         LOG (c, "too short after unit simplification");
         return;
       }
-      continue;
+      continue;  // TODO maybe return here because of unwanted side effects
     }
     
+    assert  (level == 1);
+    if (control[level].trail + 1 == (int) trail.size ()) {
+      backtrack (level - 1); // early abort because no propagations
+      return;
+    }
     for (size_t begin = control[level].trail + 1; begin < trail.size (); begin++) {
       const auto & other = trail[begin];
-      covered[vlit (other)] += (uint64_t) 1 << idx;  // mark other
+      covered[vlit (other)] += (uint64_t) 1 << (idx - 1);  // mark other
     }
 
     backtrack (level - 1);
@@ -322,7 +363,14 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
     current.resize (p - current.begin ());
   }
   assert (!conflict);
-
+  
+  // check that no lit in current is assigned (might break because of units)
+  // TODO: if this breaks need to improve.
+  //
+#ifndef NDEBUG
+  for (const auto & lit : current) assert (!val (lit));
+#endif
+  
   // now we have to analyze 'covered' in order to find out if there are
   // a pair of literals that covers the clause in the above described way.
   // This is quadratic in the number of literals. To improve performance we
@@ -330,27 +378,74 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   //
   vector<int> candidates;
   for (const auto & lit : lits) {
+    if (val (lit)) continue;  // do not consider unit assigned literals
     if (__builtin_popcount (covered[vlit (lit)]) < 2) // might not work with other compilers than gcc
       continue;
     candidates.push_back (lit);
   }
 
+  const uint64_t covering = ((uint64_t) 1 << current.size ()) - 1;
+  vector<int> units;
+
   // now only quadratic in the number of candidates.
   // We can ignore the symmetric case as well.
   for (unsigned i = 0; i < candidates.size (); i++) {
     const int lit = candidates[i];
-    vector<int> probe_i;
+    assert (!val (lit));  // TODO: might be a problem if this does not hold
+    uint64_t probe_i;
+    int probed = 0;
+    if (covered[vlit (lit)] == covering) {  // special case of unit
+#ifndef NDEBUG  // assert lit not in current
+      for (const auto & other : current) assert (other != lit && other != -lit);
+#endif
+      probe_i = backward_check (transmuter, lit);
+      learn_helper_binaries (transmuter, lit, covered[vlit (lit)], probe_i);
+      if (probe_i != UINT64_MAX) stats.transmutegoldunits++;
+      units.push_back (lit);
+      continue;
+    }
     for (unsigned j = i + 1; j < candidates.size (); j++) {
       const int other = candidates[j];
-      vector<int> probe_j;
+      assert (!val (other));
+      uint64_t probe_j;
       assert (lit != other);
       if (lit == -other) continue;
-      if (covered[vlit (lit)] ^ covered[vlit (other)] != UINT64_MAX) continue;
+      assert (covered[vlit (lit)] <= covering);
+      if ((covered[vlit (lit)] | covered[vlit (other)]) != covering) continue;
       // we have found a set of candidates we we check wether they are golden
-      
+      if (!probed) probe_i = backward_check (transmuter, lit);
+      if (probe_i == UINT64_MAX) {   // lit is unit by rup
+        units.push_back (lit);
+        break;
+      }
+      probed = 1;
+      probe_j = backward_check (transmuter, other); // may be probed again later
+      if (probe_j == UINT64_MAX) {   // other is unit by rup
+        units.push_back (other);  // in theory these could end up in units multiple times.
+        continue;
+      }
+      if (__builtin_popcount ((probe_j ^ probe_i) & probe_j) < 2) continue;
+      if (__builtin_popcount ((probe_i ^ probe_j) & probe_i) < 2) continue;
+      assert (probed);
+      if (probed == 1) learn_helper_binaries (transmuter, lit, covered[vlit (lit)], probe_i);
+      probed = 2;
+      learn_helper_binaries (transmuter, other, covered[vlit (other)], probe_i);
+      assert (clause.empty ());
+      clause.push_back (lit);
+      clause.push_back (other);
+      new_golden_binary ();
+      stats.transmutegold++;
+      clause.clear ();
     }
   }
-  
+  for (const auto & lit : units) {
+    if (val (lit)) continue;
+    transmute_assign_unit (lit);
+  }
+  if (!units.empty ()) {
+    if (!propagate ()) learn_empty_clause ();
+  }
+
 }
 
 
@@ -367,7 +462,7 @@ void CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
   // Fill the schedule. We sort neither the clauses nor the schedule.
   // Previously already transmuted clauses cannot be candidates again.
   //
-  Transmuter transmuter ();
+  Transmuter transmuter;
 
   for (const auto &c : clauses) {
     if (!consider_to_transmute_clause (c))
@@ -432,17 +527,14 @@ void CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
 
   last.transmute.propagations = stats.propagations.search;
 
-  stats.transmutechecks += checked;
-  stats.transmuteunits += units;
-  stats.transmutehb += hyperbinaries;
-  stats.transmutegold += golden;
-
   bool unsuccessful = !(hyperbinaries + golden + units);
   report ('m', unsuccessful); 
 }
 /*------------------------------------------------------------------------*/
 
 void CaDiCaL::Internal::transmute () {
+  if (lrat) // TODO remove for lrat, for now incompatible
+    return;
   if (!opts.transmute)
     return;
   if (unsat)

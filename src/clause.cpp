@@ -513,7 +513,24 @@ Clause *Internal::new_learned_redundant_clause (int glue) {
 //
 Clause *Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
   external->check_learned_clause ();
+  assert (clause.size () == 2);
   Clause *res = new_clause (red, glue);
+  if (proof) {
+    proof->add_derived_clause (res, lrat_chain);
+  }
+  assert (watching ());
+  watch_clause (res);
+  if (red)
+    res->hyper = true;
+  return res;
+}
+
+// Add transmuted binary clause during 'transmute'.
+//
+Clause *Internal::new_golden_binary () {
+  external->check_learned_clause ();
+  assert (clause.size () == 2);
+  Clause *res = new_clause (true, 2);
   if (proof) {
     proof->add_derived_clause (res, lrat_chain);
   }

@@ -74,6 +74,7 @@ struct Internal;
   PROFILE (simplify, 1) \
   PROFILE (subsume, 2) \
   PROFILE (ternary, 2) \
+  PROFILE (transmute, 2) \
   PROFILE (transred, 3) \
   PROFILE (unstable, 2) \
   PROFILE (vivify, 2) \

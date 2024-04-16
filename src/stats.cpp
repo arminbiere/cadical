@@ -515,6 +515,28 @@ void Stats::print (Internal *internal) {
          stats.vivifyreused,
          percent (stats.vivifyreused, stats.vivifydecs));
   }
+  if (all || stats.transmutations) { // TODO
+    uint64_t goldunits = stats.transmutegoldunits;
+    uint64_t probeunits = stats.transmuteunits - stats.transmutegoldunits;
+    PRT ("transmutations:  %15" PRId64 "   %10.2f    interval",
+         stats.transmutations, relative (stats.conflicts, stats.transmutations));
+    PRT ("  transmutesched:%15" PRId64 "   %10.2f %%  per conflict",
+         stats.transmutesched, percent (stats.transmutesched, stats.conflicts));
+    PRT ("  transmutecheck:%15" PRId64 "   %10.2f %%  of scheduled",
+         stats.transmutechecks, percent (stats.transmutechecks, stats.transmutesched));
+    PRT ("  transmutedecs: %15" PRId64 "   %10.2f    per check",
+         stats.transmutedecs, relative (stats.transmutedecs, stats.transmutechecks));
+    PRT ("  transmuteunits:%15" PRId64 "   %10.2f    per check",
+         stats.transmuteunits, relative (stats.transmuteunits, stats.transmutechecks));
+    PRT ("    probed units:%15" PRId64 "   %10.2f %%  of units",
+         probeunits, percent (probeunits, stats.transmuteunits));
+    PRT ("    golden units:%15" PRId64 "   %10.2f %%  of units",
+         goldunits, percent (goldunits, stats.transmuteunits));
+    PRT ("  transmutehb:   %15" PRId64 "   %10.2f    transmutations",
+         stats.transmutehb, relative (stats.transmutehb, stats.transmutations));
+    PRT ("  transmutegold: %15" PRId64 "   %10.2f    transmutations",
+         stats.transmutegold, relative (stats.transmutegold, stats.transmutations));
+  }
   if (all || stats.walk.count) {
     PRT ("walked:          %15" PRId64 "   %10.2f    interval",
          stats.walk.count, relative (stats.conflicts, stats.walk.count));

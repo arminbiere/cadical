@@ -261,8 +261,6 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
       clear_analyzed_literals ();
     Clause *c = new_hyper_binary_resolved_clause (red, 2);
     probe_reason = c;
-    if (red)
-      c->hyper = true;
     clause.clear ();
     lrat_chain.clear ();
     if (contained) {

@@ -8,7 +8,7 @@ struct Clause;
 struct Transmuter {
   vector<Clause *> schedule;
   vector<int> current;
-  Transmuter () :  {}
+  Transmuter () {}
 
   void erase () {
     erase_vector (schedule);

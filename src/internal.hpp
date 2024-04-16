@@ -1069,6 +1069,21 @@ struct Internal {
   bool probe_round ();
   void probe (bool update_limits = true);
 
+  // Transmutation in 'transmute.cpp'.
+  //
+  void transmute_round (uint64_t propagation_limit);
+  void transmute ();
+  uint64_t backward_check (Transmuter &transmuter, int lit);
+  void learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t forward, uint64_t backward);
+  void transmute_clause (Transmuter &transmuter, Clause *c);
+  bool consider_to_transmute_clause (Clause *c);
+  bool transmute_propagate ();
+  void transmute_propagate2 ();
+  void transmute_assign_unit (int lit);
+  void transmute_assign_decision (int lit);
+  void transmute_assign (int lit, Clause *reason);
+  Clause *new_golden_binary ();
+  
   // ProbSAT/WalkSAT implementation called initially or from 'rephase'.
   //
   void walk_save_minimum (Walker &);

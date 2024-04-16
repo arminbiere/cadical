@@ -195,6 +195,16 @@ struct Stats {
   int64_t vivifystred3;   // strengthened redundant clause (3)
   int64_t vivifyunits;    // units during vivification
   int64_t vivifyinst;     // instantiation during vivification
+
+  int64_t transmutations;
+  int64_t transmutechecks;    // for transmutation
+  int64_t transmutesched;
+  int64_t transmutedecs;
+  int64_t transmuteunits;     // for transmutation
+  int64_t transmutehb;        // for transmutation
+  int64_t transmutegold;      // for transmutation
+  int64_t transmutegoldunits;     // for transmutation
+  
   int64_t transreds;
   int64_t transitive;
   struct {
