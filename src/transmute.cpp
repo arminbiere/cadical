@@ -37,6 +37,7 @@ inline void Internal::transmute_assign (int lit, Clause *reason) {
 
 void Internal::transmute_assign_decision (int lit) {
   require_mode (TRANSMUTE);
+  LOG ("transmute decision %d", lit);
   assert (!level);
   assert (propagated == trail.size ());
   level++;
@@ -206,7 +207,7 @@ uint64_t Internal::backward_check (Transmuter &transmuter, int lit) {
     conflict = 0;
     return UINT64_MAX;
   }
-  uint64_t covered;
+  uint64_t covered = 0;
   int idx = 0;
   for (const auto & other : transmuter.current) {
     idx++;
@@ -289,7 +290,9 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
 
   // we use vlit for indexing the covered array.
   vector<uint64_t> covered;
-  covered.resize (max_var * 2 + 1);
+  covered.resize (max_var * 2 + 2);
+  // for (unsigned i = 0; i < covered.size (); i++)
+  //   covered[i] = 0;
 
   unsigned idx = 0;
   unsigned size = current.size ();
@@ -429,7 +432,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
       assert (probed);
       if (probed == 1) learn_helper_binaries (transmuter, lit, covered[vlit (lit)], probe_i);
       probed = 2;
-      learn_helper_binaries (transmuter, other, covered[vlit (other)], probe_i);
+      learn_helper_binaries (transmuter, other, covered[vlit (other)], probe_j);
       assert (clause.empty ());
       clause.push_back (lit);
       clause.push_back (other);
