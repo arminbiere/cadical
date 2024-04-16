@@ -243,6 +243,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   // at least length 4 glue 2 clauses
   assert (c->size > 3);
   assert (c->glue > 1);
+  assert (!c->transmuted);
 
   c->transmuted = true; // remember transmuted clauses
 
@@ -343,7 +344,9 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
         LOG (c, "too short after unit simplification");
         return;
       }
-      continue;  // TODO maybe return here because of unwanted side effects
+      c->transmuted = false;                // reschedule c and return
+      transmuter.schedule.push_back (c);
+      return;
     }
     
     assert  (level == 1);
@@ -390,6 +393,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
 
   const uint64_t covering = ((uint64_t) 1 << current.size ()) - 1;
   vector<int> units;
+  // bool delete_clause = false;
 
   // now only quadratic in the number of candidates.
   // We can ignore the symmetric case as well.
@@ -406,6 +410,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
       learn_helper_binaries (transmuter, lit, covered[vlit (lit)], probe_i);
       if (probe_i != UINT64_MAX) stats.transmutegoldunits++;
       units.push_back (lit);
+      // delete_clause = true;
       continue;
     }
     for (unsigned j = i + 1; j < candidates.size (); j++) {
@@ -439,6 +444,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
       clause.push_back (other);
       new_golden_binary ();
       stats.transmutegold++;
+      // delete_clause = true;
       clause.clear ();
     }
   }
@@ -449,7 +455,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   if (!units.empty ()) {
     if (!propagate ()) learn_empty_clause ();
   }
-
+  // if (delete_clause && c->redundant) mark_garbage (c);
 }
 
 
