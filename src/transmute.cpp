@@ -229,7 +229,7 @@ void Internal::learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t 
     if (!(forward & (1 << (idx - 1)))) continue;
     if ((backward & (1 << (idx - 1)))) continue;
     // learn binary -lit -> -other
-    clause.push_back (other);
+    clause.push_back (-other);
     new_hyper_binary_resolved_clause (true, 2);
     stats.transmutehb++;
     assert (!clause.empty ());
