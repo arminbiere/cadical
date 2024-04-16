@@ -337,6 +337,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
       if (!propagate ()) {
         LOG ("propagation after learning unit results in inconsistency");
         learn_empty_clause ();
+        return;
       }
       if (size < 4) {
         LOG (c, "too short after unit simplification");
@@ -452,13 +453,12 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
 }
 
 
-void CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
+int64_t CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
   if (unsat)
-    return;
+    return 0;
   if (terminated_asynchronously ())
-    return;
+    return 0;
     
-  last.transmute.propagations = stats.propagations.search;
   PHASE ("transmute", stats.transmutations,
          "starting transmutation round propagation limit %" PRId64 "", propagation_limit);
 
@@ -474,6 +474,14 @@ void CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
   }
 
   shrink_vector (transmuter.schedule);
+  if (transmuter.schedule.empty ()) {
+    for (const auto &c : clauses) {
+      c->transmuted = false;
+      if (!consider_to_transmute_clause (c))
+        continue;
+      transmuter.schedule.push_back (c);
+    }
+  }
 
   // Remember old values of counters to summarize after each round with
   // verbose messages what happened in that round.
@@ -529,9 +537,12 @@ void CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
            relative (golden, checked), checked);
 
   last.transmute.propagations = stats.propagations.search;
+  const int64_t remaining_limit = limit - stats.propagations.transmute;
 
   bool unsuccessful = !(hyperbinaries + golden + units);
-  report ('m', unsuccessful); 
+  report ('m', unsuccessful);
+  if (remaining_limit < 0) return 0;
+  return remaining_limit;
 }
 /*------------------------------------------------------------------------*/
 
@@ -563,7 +574,10 @@ void CaDiCaL::Internal::transmute () {
   PHASE ("transmute", stats.transmutations,
          "transmutation limit of %" PRId64 " propagations", limit);
 
-  transmute_round (limit);
+  limit = transmute_round (limit);
+  if (limit) {
+    transmute_round (limit);
+  }
 
   STOP_SIMPLIFIER (transmute, TRANSMUTE);
 }
