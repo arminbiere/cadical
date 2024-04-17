@@ -1314,8 +1314,6 @@ void Internal::vivify_round (bool redundant_mode,
 
   stats.subsumed += subsumed;
   stats.strengthened += strengthened;
-  stats.vivifystrs += strengthened;
-  stats.vivifyunits += units;
 
   last.vivify.propagations = stats.propagations.search;
 

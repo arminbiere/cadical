@@ -187,7 +187,7 @@ bool Internal::consider_to_transmute_clause (Clause *c) {
     return false;
   if (c->size < 4)
     return false;
-  if (c->size > 64)
+  if (c->size > opts.transmutesize)
     return false;
   if (c->transmuted)
     return false;
@@ -391,9 +391,10 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
     candidates.push_back (lit);
   }
 
+  stats.transmutedcandidates += (candidates.size () > 1);
   const uint64_t covering = ((uint64_t) 1 << current.size ()) - 1;
   vector<int> units;
-  // bool delete_clause = false;
+  bool candidate = false;
 
   // now only quadratic in the number of candidates.
   // We can ignore the symmetric case as well.
@@ -436,7 +437,12 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
       if (__builtin_popcount ((probe_j ^ probe_i) & probe_j) < 2) continue;
       if (__builtin_popcount ((probe_i ^ probe_j) & probe_i) < 2) continue;
       assert (probed);
-      if (probed == 1) learn_helper_binaries (transmuter, lit, covered[vlit (lit)], probe_i);
+      if (probed == 1)
+        learn_helper_binaries (transmuter, lit, covered[vlit (lit)], probe_i);
+      if (!candidate) {
+        stats.transmutedclauses++;
+        candidate = true;
+      }
       probed = 2;
       learn_helper_binaries (transmuter, other, covered[vlit (other)], probe_j);
       assert (clause.empty ());
@@ -488,6 +494,8 @@ int64_t CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
       transmuter.schedule.push_back (c);
     }
   }
+  
+  stable_sort (transmuter.schedule.begin (), transmuter.schedule.end (), clause_smaller_size ());
 
   // Remember old values of counters to summarize after each round with
   // verbose messages what happened in that round.
@@ -581,9 +589,9 @@ void CaDiCaL::Internal::transmute () {
          "transmutation limit of %" PRId64 " propagations", limit);
 
   limit = transmute_round (limit);
-  if (limit) {
+  /* if (limit) {
     transmute_round (limit);
-  }
+  } */
 
   STOP_SIMPLIFIER (transmute, TRANSMUTE);
 }

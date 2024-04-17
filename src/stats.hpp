@@ -200,6 +200,8 @@ struct Stats {
   int64_t transmutechecks;    // for transmutation
   int64_t transmutesched;
   int64_t transmutedecs;
+  int64_t transmutedclauses;
+  int64_t transmutedcandidates;
   int64_t transmuteunits;     // for transmutation
   int64_t transmutehb;        // for transmutation
   int64_t transmutegold;      // for transmutation

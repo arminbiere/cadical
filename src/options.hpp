@@ -183,6 +183,7 @@ OPTION( transmute,         1,  0,  1,0,1,1, "transmutations") \
 OPTION( transmutemaxeff, 2e7,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transmutemineff, 2e4,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( transmutereleff,  20,  1,1e5,1,0,1, "relative efficiency per mille") \
+OPTION( transmutesize,    64,  4, 64,0,0,1, "transmutations") \
 OPTION( transred,          1,  0,  1,0,1,1, "transitive reduction of BIG") \
 OPTION( transredmaxeff,  1e8,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transredmineff,  1e6,  0,2e9,1,0,1, "minimum efficiency") \

@@ -324,7 +324,7 @@ void Stats::print (Internal *internal) {
   PRT ("  searchprops:   %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.search,
        percent (stats.propagations.search, propagations));
-  PRT ("  transmuteprops: %15" PRId64 "   %10.2f %%  of propagations",
+  PRT ("  transmuteprops:%15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.transmute,
        percent (stats.propagations.transmute, propagations));
   PRT ("  transredprops: %15" PRId64 "   %10.2f %%  of propagations",
@@ -526,16 +526,20 @@ void Stats::print (Internal *internal) {
          stats.transmutechecks, percent (stats.transmutechecks, stats.transmutesched));
     PRT ("  transmutedecs: %15" PRId64 "   %10.2f    per check",
          stats.transmutedecs, relative (stats.transmutedecs, stats.transmutechecks));
+    PRT ("  transmutedcand:%15" PRId64 "   %10.2f    per check",
+         stats.transmutedcandidates, relative (stats.transmutedcandidates, stats.transmutechecks));
+    PRT ("  transmutedcls: %15" PRId64 "   %10.2f %%  of candidates",
+         stats.transmutedclauses, relative (stats.transmutedclauses, stats.transmutedcandidates));
     PRT ("  transmuteunits:%15" PRId64 "   %10.2f    per check",
          stats.transmuteunits, relative (stats.transmuteunits, stats.transmutechecks));
     PRT ("    probed units:%15" PRId64 "   %10.2f %%  of units",
          probeunits, percent (probeunits, stats.transmuteunits));
     PRT ("    golden units:%15" PRId64 "   %10.2f %%  of units",
          goldunits, percent (goldunits, stats.transmuteunits));
-    PRT ("  transmutehb:   %15" PRId64 "   %10.2f    transmutations",
-         stats.transmutehb, relative (stats.transmutehb, stats.transmutations));
-    PRT ("  transmutegold: %15" PRId64 "   %10.2f    transmutations",
-         stats.transmutegold, relative (stats.transmutegold, stats.transmutations));
+    PRT ("  transmutehb:   %15" PRId64 "   %10.2f    per clause",
+         stats.transmutehb, relative (stats.transmutehb, stats.transmutedclauses));
+    PRT ("  transmutegold: %15" PRId64 "   %10.2f    per clause",
+         stats.transmutegold, relative (stats.transmutegold, stats.transmutedclauses));
   }
   if (all || stats.walk.count) {
     PRT ("walked:          %15" PRId64 "   %10.2f    interval",
