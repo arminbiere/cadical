@@ -435,10 +435,8 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
         units.push_back (other);  // in theory these could end up in units multiple times.
         continue;
       }
-      //if (__builtin_popcount (probe_j) > current.size ()-2) break;
-      //if (__builtin_popcount (probe_i) >  current.size ()-2) continue;
-      //if (__builtin_popcount ((probe_j ^ probe_i) & probe_j) < 2) continue;
-      //if (__builtin_popcount ((probe_i ^ probe_j) & probe_i) < 2) continue;
+      if (__builtin_popcount ((probe_j ^ probe_i) & probe_j) < 2) continue;
+      if (__builtin_popcount ((probe_i ^ probe_j) & probe_i) < 2) continue;
       assert (probed);
       if (probed == 1)
         learn_helper_binaries (transmuter, lit, covered[vlit (lit)], probe_i);
