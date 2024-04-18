@@ -352,6 +352,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
     assert  (level == 1);
     if (control[level].trail + 1 == (int) trail.size ()) {
       backtrack (level - 1); // early abort because no propagations
+      stats.transmuteabort++;
       return;
     }
     for (size_t begin = control[level].trail + 1; begin < trail.size (); begin++) {
@@ -434,8 +435,10 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
         units.push_back (other);  // in theory these could end up in units multiple times.
         continue;
       }
-      if (__builtin_popcount ((probe_j ^ probe_i) & probe_j) < 2) continue;
-      if (__builtin_popcount ((probe_i ^ probe_j) & probe_i) < 2) continue;
+      //if (__builtin_popcount (probe_j) > current.size ()-2) break;
+      //if (__builtin_popcount (probe_i) >  current.size ()-2) continue;
+      //if (__builtin_popcount ((probe_j ^ probe_i) & probe_j) < 2) continue;
+      //if (__builtin_popcount ((probe_i ^ probe_j) & probe_i) < 2) continue;
       assert (probed);
       if (probed == 1)
         learn_helper_binaries (transmuter, lit, covered[vlit (lit)], probe_i);
@@ -479,24 +482,33 @@ int64_t CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
   //
   Transmuter transmuter;
 
+  vector<Clause *> pre_cand;
   for (const auto &c : clauses) {
+    if (c->size == 2) {
+      noccs (c->literals[0])++;
+      noccs (c->literals[1])++;
+    }
     if (!consider_to_transmute_clause (c))
       continue;
-    transmuter.schedule.push_back (c);
+    pre_cand.push_back (c);
   }
 
-  shrink_vector (transmuter.schedule);
-  if (transmuter.schedule.empty ()) {
-    for (const auto &c : clauses) {
-      c->transmuted = false;
-      if (!consider_to_transmute_clause (c))
-        continue;
-      transmuter.schedule.push_back (c);
+  for (const auto &c : pre_cand) {
+    bool cand = true;
+    for (int i = 0; i < c->size; i++) {
+      if (!noccs (-(c->literals[i]))) {
+        cand = false;
+        break;
+      }
     }
+    if (cand)
+      transmuter.schedule.push_back (c);
   }
   
-  stable_sort (transmuter.schedule.begin (), transmuter.schedule.end (), clause_smaller_size ());
-
+  shrink_vector (transmuter.schedule);
+  
+  stable_sort (transmuter.schedule.rbegin (), transmuter.schedule.rend (), clause_smaller_size ());
+  
   // Remember old values of counters to summarize after each round with
   // verbose messages what happened in that round.
   //
@@ -588,10 +600,13 @@ void CaDiCaL::Internal::transmute () {
   PHASE ("transmute", stats.transmutations,
          "transmutation limit of %" PRId64 " propagations", limit);
 
+  init_noccs ();
+
   limit = transmute_round (limit);
-  /* if (limit) {
-    transmute_round (limit);
-  } */
+  // if (limit) {
+  //   transmute_round (limit);
+  // }
+  reset_noccs ();
 
   STOP_SIMPLIFIER (transmute, TRANSMUTE);
 }

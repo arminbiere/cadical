@@ -515,7 +515,7 @@ void Stats::print (Internal *internal) {
          stats.vivifyreused,
          percent (stats.vivifyreused, stats.vivifydecs));
   }
-  if (all || stats.transmutations) { // TODO
+  if (all || stats.transmutations) { // TODO 
     uint64_t goldunits = stats.transmutegoldunits;
     uint64_t probeunits = stats.transmuteunits - stats.transmutegoldunits;
     PRT ("transmutations:  %15" PRId64 "   %10.2f    interval",
@@ -524,12 +524,14 @@ void Stats::print (Internal *internal) {
          stats.transmutesched, percent (stats.transmutesched, stats.conflicts));
     PRT ("  transmutecheck:%15" PRId64 "   %10.2f %%  of scheduled",
          stats.transmutechecks, percent (stats.transmutechecks, stats.transmutesched));
+    PRT ("  transmuteabort:%15" PRId64 "   %10.2f %%  of checked",
+         stats.transmuteabort, percent (stats.transmuteabort, stats.transmutechecks));
     PRT ("  transmutedecs: %15" PRId64 "   %10.2f    per check",
          stats.transmutedecs, relative (stats.transmutedecs, stats.transmutechecks));
-    PRT ("  transmutedcand:%15" PRId64 "   %10.2f    per check",
-         stats.transmutedcandidates, relative (stats.transmutedcandidates, stats.transmutechecks));
+    PRT ("  transmutedcand:%15" PRId64 "   %10.2f %%  of checked",
+         stats.transmutedcandidates, percent (stats.transmutedcandidates, stats.transmutechecks));
     PRT ("  transmutedcls: %15" PRId64 "   %10.2f %%  of candidates",
-         stats.transmutedclauses, relative (stats.transmutedclauses, stats.transmutedcandidates));
+         stats.transmutedclauses, percent (stats.transmutedclauses, stats.transmutedcandidates));
     PRT ("  transmuteunits:%15" PRId64 "   %10.2f    per check",
          stats.transmuteunits, relative (stats.transmuteunits, stats.transmutechecks));
     PRT ("    probed units:%15" PRId64 "   %10.2f %%  of units",
