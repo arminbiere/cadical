@@ -482,9 +482,12 @@ int64_t CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
 
   vector<Clause *> pre_cand;
   for (const auto &c : clauses) {
+    if (c->garbage) continue;
     if (c->size == 2) {
+      if (val (c->literals[0]) || val (c->literals[1])) continue;
       noccs (c->literals[0])++;
       noccs (c->literals[1])++;
+      continue;
     }
     if (!consider_to_transmute_clause (c))
       continue;
