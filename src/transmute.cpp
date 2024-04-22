@@ -392,60 +392,52 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
     candidates.push_back (lit);
   }
 
-  stats.transmutedcandidates += (candidates.size () > 1);
+  stats.transmutedcandidates += (candidates.size ());
   const uint64_t covering = ((uint64_t) 1 << current.size ()) - 1;
   vector<int> units;
   bool candidate = false;
+  vector<uint64_t> candidate_coverings;
+  candidate_coverings.resize (candidates.size ());
 
+  // probe negations of all candidates and learn hbr clauses if necessary
+  for (unsigned i = 0; i < candidates.size (); i++) {
+    const int lit = candidates[i];
+    candidate_coverings[i] = backward_check (transmuter, lit);
+    learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
+  }
+  
   // now only quadratic in the number of candidates.
   // We can ignore the symmetric case as well.
   for (unsigned i = 0; i < candidates.size (); i++) {
     const int lit = candidates[i];
-    assert (!val (lit));  // TODO: might be a problem if this does not hold
-    uint64_t probe_i;
-    int probed = 0;
+    assert (!val (lit));  // might be a problem if this does not hold
     if (covered[vlit (lit)] == covering) {  // special case of unit
 #ifndef NDEBUG  // assert lit not in current
       for (const auto & other : current) assert (other != lit && other != -lit);
 #endif
-      probe_i = backward_check (transmuter, lit);
-      learn_helper_binaries (transmuter, lit, covered[vlit (lit)], probe_i);
-      if (probe_i != UINT64_MAX) stats.transmutegoldunits++;
+      if (candidate_coverings[i] != UINT64_MAX) stats.transmutegoldunits++;
       units.push_back (lit);
-      // delete_clause = true;
+      continue;
+    } else if (candidate_coverings[i] == UINT64_MAX) {
+      units.push_back (lit);  // probing unit
       continue;
     }
     for (unsigned j = i + 1; j < candidates.size (); j++) {
       const int other = candidates[j];
       assert (!val (other));
-      uint64_t probe_j;
       assert (lit != other);
       if (lit == -other) continue;
       assert (covered[vlit (lit)] <= covering);
       if ((covered[vlit (lit)] | covered[vlit (other)]) != covering) continue;
       // we have found a set of candidates we we check wether they are golden
-      if (!probed) probe_i = backward_check (transmuter, lit);
-      if (probe_i == UINT64_MAX) {   // lit is unit by rup
-        units.push_back (lit);
-        break;
-      }
-      probed = 1;
-      probe_j = backward_check (transmuter, other); // may be probed again later
-      if (probe_j == UINT64_MAX) {   // other is unit by rup
-        units.push_back (other);  // in theory these could end up in units multiple times.
-        continue;
-      }
+      const uint64_t probe_i = candidate_coverings[i];
+      const uint64_t probe_j = candidate_coverings[j];
       if (__builtin_popcount ((probe_j ^ probe_i) & probe_j) < 2) continue;
       if (__builtin_popcount ((probe_i ^ probe_j) & probe_i) < 2) continue;
-      assert (probed);
-      if (probed == 1)
-        learn_helper_binaries (transmuter, lit, covered[vlit (lit)], probe_i);
       if (!candidate) {
         stats.transmutedclauses++;
         candidate = true;
       }
-      probed = 2;
-      learn_helper_binaries (transmuter, other, covered[vlit (other)], probe_j);
       assert (clause.empty ());
       clause.push_back (lit);
       clause.push_back (other);
@@ -456,7 +448,12 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
     }
   }
   for (const auto & lit : units) {
-    if (val (lit)) continue;
+    if (val (lit) > 0) continue;
+    else if (val (lit) < 0) { // conflict!
+      assert (false);
+      learn_empty_clause ();
+      return;
+    }
     transmute_assign_unit (lit);
   }
   if (!units.empty ()) {
