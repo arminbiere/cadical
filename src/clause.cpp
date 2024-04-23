@@ -168,6 +168,34 @@ void Internal::promote_clause (Clause *c, int new_glue) {
   stats.improvedglue++;
   c->glue = new_glue;
 }
+/*------------------------------------------------------------------------*/
+
+void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
+  assert (c->redundant);
+  if (c->keep)
+    return;
+  if (c->hyper)
+    return;
+  int old_glue = c->glue;
+  if (new_glue >= old_glue)
+    return;
+  if (!c->keep && new_glue <= opts.reducetier1glue) {
+    LOG (c, "promoting with new glue %d to tier1", new_glue);
+    stats.promoted1++;
+    c->keep = true;
+  } else if (old_glue > opts.reducetier2glue &&
+             new_glue <= opts.reducetier2glue) {
+    LOG (c, "promoting with new glue %d to tier2", new_glue);
+    stats.promoted2++;
+  } else if (c->keep)
+    LOG (c, "keeping with new glue %d in tier1", new_glue);
+  else if (old_glue <= opts.reducetier2glue)
+    LOG (c, "keeping with new glue %d in tier2", new_glue);
+  else
+    LOG (c, "keeping with new glue %d in tier3", new_glue);
+  stats.improvedglue++;
+  c->glue = new_glue;
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -198,7 +226,7 @@ size_t Internal::shrink_clause (Clause *c, int new_size) {
   size_t res = old_bytes - new_bytes;
 
   if (c->redundant)
-    promote_clause (c, min (c->size - 1, c->glue));
+    promote_clause_glue_only (c, min (c->size - 1, c->glue));
   else {
     int delta_size = old_size - new_size;
     assert (stats.irrlits >= delta_size);

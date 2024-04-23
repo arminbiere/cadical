@@ -13,15 +13,15 @@ Internal::Internal ()
       external_prop (false), did_external_prop (false),
       external_prop_is_lazy (true), rephased (0), vsize (0), max_var (0),
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
-      concluded (false), lrat (false), level (0), vals (0), score_inc (1.0),
-      scores (this), conflict (0), ignore (0), dummy_binary (0),
-      external_reason (&external_reason_clause), newest_clause (0),
-      force_no_backtrack (false), from_propagator (false),
-      tainted_literal (0), notified (0), probe_reason (0), propagated (0),
-      propagated2 (0), propergated (0), best_assigned (0),
-      target_assigned (0), no_conflict_until (0), unsat_constraint (false),
-      marked_failed (true), num_assigned (0), proof (0), lratbuilder (0),
-      opts (this),
+      saved_decisions (0), concluded (false), lrat (false), level (0),
+      vals (0), score_inc (1.0), scores (this), conflict (0), ignore (0),
+      dummy_binary (0), external_reason (&external_reason_clause),
+      newest_clause (0), force_no_backtrack (false),
+      from_propagator (false), tainted_literal (0), notified (0),
+      probe_reason (0), propagated (0), propagated2 (0), propergated (0),
+      best_assigned (0), target_assigned (0), no_conflict_until (0),
+      unsat_constraint (false), marked_failed (true), num_assigned (0),
+      proof (0), lratbuilder (0), opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
@@ -214,6 +214,35 @@ void Internal::reserve_ids (int number) {
 
 /*------------------------------------------------------------------------*/
 
+#ifdef PROFILE_MODE
+
+// Separating these makes it easier to profile stable and unstable search.
+
+bool Internal::propagate_wrapper () {
+  if (stable)
+    return propagate_stable ();
+  else
+    return propagate_unstable ();
+}
+
+void Internal::analyze_wrapper () {
+  if (stable)
+    analyze_stable ();
+  else
+    analyze_unstable ();
+}
+
+int Internal::decide_wrapper () {
+  if (stable)
+    return decide_stable ();
+  else
+    return decide_unstable ();
+}
+
+#endif
+
+/*------------------------------------------------------------------------*/
+
 // This is the main CDCL loop with interleaved inprocessing.
 
 int Internal::cdcl_loop_with_inprocessing () {
@@ -235,8 +264,8 @@ int Internal::cdcl_loop_with_inprocessing () {
       res = 20;
     else if (unsat_constraint)
       res = 20;
-    else if (!propagate ())
-      analyze (); // propagate and analyze
+    else if (!propagate_wrapper ())
+      analyze_wrapper (); // propagate and analyze
     else if (iterating)
       iterate ();                               // report learned unit
     else if (!external_propagate () || unsat) { // external propagation
@@ -462,10 +491,12 @@ void Internal::init_search_limits () {
   } else
     LOG ("keeping non-stable phase");
 
-  inc.stabilize = opts.stabilizeint;
-  lim.stabilize = stats.conflicts + inc.stabilize;
-  LOG ("new stabilize limit %" PRId64 " after %" PRId64 " conflicts",
-       lim.stabilize, inc.stabilize);
+  if (!incremental) {
+    inc.stabilize = 0;
+    lim.stabilize = stats.conflicts + opts.stabilizeinit;
+    LOG ("initial stabilize limit %" PRId64 " after %d conflicts",
+         lim.stabilize, (int) opts.stabilizeinit);
+  }
 
   if (opts.stabilize && opts.reluctant) {
     LOG ("new restart reluctant doubling sequence period %d",

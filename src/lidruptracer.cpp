@@ -4,7 +4,7 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-IdrupTracer::IdrupTracer (Internal *i, File *f, bool b)
+LidrupTracer::LidrupTracer (Internal *i, File *f, bool b)
     : internal (i), file (f), binary (b), num_clauses (0), size_clauses (0),
       clauses (0), last_hash (0), last_id (0), last_clause (0)
 #ifndef QUIET
@@ -32,34 +32,34 @@ IdrupTracer::IdrupTracer (Internal *i, File *f, bool b)
   piping = file->piping ();
 }
 
-void IdrupTracer::connect_internal (Internal *i) {
+void LidrupTracer::connect_internal (Internal *i) {
   internal = i;
   file->connect_internal (internal);
-  LOG ("IDRUP TRACER connected to internal");
+  LOG ("LIDRUP TRACER connected to internal");
 }
 
-IdrupTracer::~IdrupTracer () {
-  LOG ("IDRUP TRACER delete");
+LidrupTracer::~LidrupTracer () {
+  LOG ("LIDRUP TRACER delete");
   delete file;
   for (size_t i = 0; i < size_clauses; i++)
-    for (IdrupClause *c = clauses[i], *next; c; c = next)
+    for (LidrupClause *c = clauses[i], *next; c; c = next)
       next = c->next, delete_clause (c);
   delete[] clauses;
 }
 
 /*------------------------------------------------------------------------*/
 
-void IdrupTracer::enlarge_clauses () {
+void LidrupTracer::enlarge_clauses () {
   assert (num_clauses == size_clauses);
   const uint64_t new_size_clauses = size_clauses ? 2 * size_clauses : 1;
-  LOG ("IDRUP Tracer enlarging clauses of tracer from %" PRIu64
+  LOG ("LIDRUP Tracer enlarging clauses of tracer from %" PRIu64
        " to %" PRIu64,
        (uint64_t) size_clauses, (uint64_t) new_size_clauses);
-  IdrupClause **new_clauses;
-  new_clauses = new IdrupClause *[new_size_clauses];
+  LidrupClause **new_clauses;
+  new_clauses = new LidrupClause *[new_size_clauses];
   clear_n (new_clauses, new_size_clauses);
   for (uint64_t i = 0; i < size_clauses; i++) {
-    for (IdrupClause *c = clauses[i], *next; c; c = next) {
+    for (LidrupClause *c = clauses[i], *next; c; c = next) {
       next = c->next;
       const uint64_t h = reduce_hash (c->hash, new_size_clauses);
       c->next = new_clauses[h];
@@ -71,32 +71,39 @@ void IdrupTracer::enlarge_clauses () {
   size_clauses = new_size_clauses;
 }
 
-IdrupClause *IdrupTracer::new_clause () {
+LidrupClause *LidrupTracer::new_clause () {
   const size_t size = imported_clause.size ();
+  const size_t chain = imported_chain.size ();
   assert (size <= UINT_MAX);
   const int off = size ? -1 : 0;
-  const size_t bytes = sizeof (IdrupClause) + (size - off) * sizeof (int);
-  IdrupClause *res = (IdrupClause *) new char[bytes];
+  const int offc = chain ? -1 : 0;
+  const size_t bytes = sizeof (LidrupClause) + (size - off) * sizeof (int) + (chain - offc) * sizeof (uint64_t);
+  LidrupClause *res = (LidrupClause *) new char[bytes];
   res->next = 0;
   res->hash = last_hash;
   res->id = last_id;
   res->size = size;
+  res->chain_size = chain;
   int *literals = res->literals, *p = literals;
   for (const auto &lit : imported_clause) {
     *p++ = lit;
+  }
+  uint64_t *ids = res->chain, *pc = ids;
+  for (const auto &id : imported_chain) {
+    *pc++ = id;
   }
   last_clause = res;
   num_clauses++;
   return res;
 }
 
-void IdrupTracer::delete_clause (IdrupClause *c) {
+void LidrupTracer::delete_clause (LidrupClause *c) {
   assert (c);
   num_clauses--;
   delete[](char *) c;
 }
 
-uint64_t IdrupTracer::reduce_hash (uint64_t hash, uint64_t size) {
+uint64_t LidrupTracer::reduce_hash (uint64_t hash, uint64_t size) {
   assert (size > 0);
   unsigned shift = 32;
   uint64_t res = hash;
@@ -109,17 +116,17 @@ uint64_t IdrupTracer::reduce_hash (uint64_t hash, uint64_t size) {
   return res;
 }
 
-uint64_t IdrupTracer::compute_hash (const uint64_t id) {
+uint64_t LidrupTracer::compute_hash (const uint64_t id) {
   assert (id > 0);
   unsigned j = id % num_nonces;
   uint64_t tmp = nonces[j] * (uint64_t) id;
   return last_hash = tmp;
 }
 
-bool IdrupTracer::find_and_delete (const uint64_t id) {
+bool LidrupTracer::find_and_delete (const uint64_t id) {
   if (!num_clauses)
     return false;
-  IdrupClause **res = 0, *c;
+  LidrupClause **res = 0, *c;
   const uint64_t hash = compute_hash (id);
   const uint64_t h = reduce_hash (hash, size_clauses);
   for (res = clauses + h; (c = *res); res = &c->next) {
@@ -137,33 +144,37 @@ bool IdrupTracer::find_and_delete (const uint64_t id) {
   for (size_t i = 0; i < c->size; i++) {
     imported_clause.push_back (begin[i]);
   }
+  uint64_t *cbegin = c->chain;
+  for (size_t i = 0; i < c->chain_size; i++) {
+    imported_chain.push_back (cbegin[i]);
+  }
   delete_clause (c);
   return true;
 }
 
-void IdrupTracer::insert () {
+void LidrupTracer::insert () {
   if (num_clauses == size_clauses)
     enlarge_clauses ();
   const uint64_t h = reduce_hash (compute_hash (last_id), size_clauses);
-  IdrupClause *c = new_clause ();
+  LidrupClause *c = new_clause ();
   c->next = clauses[h];
   clauses[h] = c;
 }
 
 /*------------------------------------------------------------------------*/
 
-inline void IdrupTracer::flush_if_piping () {
+inline void LidrupTracer::flush_if_piping () {
   if (piping)
     file->flush ();
 }
 
-inline void IdrupTracer::put_binary_zero () {
+inline void LidrupTracer::put_binary_zero () {
   assert (binary);
   assert (file);
   file->put ((unsigned char) 0);
 }
 
-inline void IdrupTracer::put_binary_lit (int lit) {
+inline void LidrupTracer::put_binary_lit (int lit) {
   assert (binary);
   assert (file);
   assert (lit != INT_MIN);
@@ -178,7 +189,7 @@ inline void IdrupTracer::put_binary_lit (int lit) {
   file->put (ch);
 }
 
-inline void IdrupTracer::put_binary_id (uint64_t id) {
+inline void LidrupTracer::put_binary_id (uint64_t id) {
   assert (binary);
   assert (file);
   uint64_t x = id;
@@ -194,76 +205,60 @@ inline void IdrupTracer::put_binary_id (uint64_t id) {
 
 /*------------------------------------------------------------------------*/
 
-void IdrupTracer::idrup_add_restored_clause (const vector<int> &clause) {
-  if (binary)
+void LidrupTracer::lidrup_add_restored_clause (uint64_t id) {
+  lidrup_batch_weaken_and_delete ();
+  if (binary) {
     file->put ('r');
-  else
-    file->put ("r ");
-  for (const auto &external_lit : clause)
-    if (binary)
-      put_binary_lit (external_lit);
-    else
-      file->put (external_lit), file->put (' ');
-  if (binary)
-    put_binary_zero ();
-  else
-    file->put ("0\n");
-  // flush_if_piping ();
-}
-
-void IdrupTracer::idrup_add_derived_clause (const vector<int> &clause) {
-  if (binary)
-    file->put ('l');
-  else
-    file->put ("l ");
-  for (const auto &external_lit : clause)
-    if (binary)
-      put_binary_lit (external_lit);
-    else
-      file->put (external_lit), file->put (' ');
-  if (binary)
-    put_binary_zero ();
-  else
-    file->put ("0\n");
-  // flush_if_piping ();
-}
-
-void IdrupTracer::idrup_add_original_clause (const vector<int> &clause) {
-  if (binary)
-    file->put ('i');
-  else
-    file->put ("i ");
-  for (const auto &external_lit : clause)
-    if (binary)
-      put_binary_lit (external_lit);
-    else
-      file->put (external_lit), file->put (' ');
-  if (binary)
-    put_binary_zero ();
-  else
-    file->put ("0\n");
-  // flush_if_piping ();
-}
-
-void IdrupTracer::idrup_delete_clause (uint64_t id,
-                                       const vector<int> &clause) {
-  if (find_and_delete (id)) {
-    assert (imported_clause.empty ());
-    if (binary)
-      file->put ('w');
-    else
-      file->put ("w ");
-#ifndef QUIET
-  weakened++;
-#endif
+    put_binary_id (id);
   } else {
+    file->put ("r ");
+    file->put (id);
+  }
+  if (binary)
+    put_binary_zero ();
+  else
+    file->put ("0\n");
+  // flush_if_piping ();
+}
+
+void LidrupTracer::lidrup_add_derived_clause (uint64_t id, const vector<int> &clause, const vector<uint64_t> &chain) {
+  lidrup_batch_weaken_and_delete ();
+  if (binary) {
+    file->put ('l');
+    put_binary_id (id);
+  } else {
+    file->put ("l ");
+    file->put (id);
+  }
+  for (const auto &external_lit : clause)
     if (binary)
-      file->put ('d');
+      put_binary_lit (external_lit);
     else
-      file->put ("d ");
-#ifndef QUIET
-  deleted++;
-#endif
+      file->put (external_lit), file->put (' ');
+  if (binary)
+    put_binary_zero ();
+  else
+    file->put ("0 ");
+  for (const auto &cid : chain)
+    if (binary)
+      put_binary_id (cid);
+    else
+      file->put (cid), file->put (' ');
+  if (binary)
+    put_binary_zero ();
+  else
+    file->put ("0\n");
+  // flush_if_piping ();
+}
+
+void LidrupTracer::lidrup_add_original_clause (uint64_t id, const vector<int> &clause) {
+  lidrup_batch_weaken_and_delete ();
+  if (binary) {
+    file->put ('i');
+    put_binary_id (id);
+  } else {
+    file->put ("i ");
+    file->put (id);
   }
   for (const auto &external_lit : clause)
     if (binary)
@@ -277,8 +272,52 @@ void IdrupTracer::idrup_delete_clause (uint64_t id,
   // flush_if_piping ();
 }
 
-void IdrupTracer::idrup_conclude_and_delete (
+void LidrupTracer::lidrup_batch_weaken_and_delete () {
+  assert (batch_weaken.empty () || batch_delete.empty ());
+  if (!batch_weaken.empty ()) {
+    if (binary) {
+      file->put ('w');
+    } else {
+      file->put ("w ");
+    }
+    for (const auto &id : batch_weaken) {
+      if (binary)
+        put_binary_id (id);
+      else
+        file->put (id), file->put (' ');
+    }
+    batch_weaken.clear ();
+    if (binary)
+      put_binary_zero ();
+    else
+      file->put ("0\n");
+  }
+  if (!batch_delete.empty ()) {
+    if (binary) {
+      file->put ('d');
+    } else {
+      file->put ("d ");
+    }
+    for (const auto &id : batch_delete) {
+      if (binary)
+        put_binary_id (id);
+      else
+        file->put (id), file->put (' ');
+    }
+    batch_delete.clear ();
+    if (binary)
+      put_binary_zero ();
+    else
+      file->put ("0\n");
+  }
+#ifndef QUIET
+  batched++;
+#endif
+}
+
+void LidrupTracer::lidrup_conclude_and_delete (
     const vector<uint64_t> &conclusion) {
+  lidrup_batch_weaken_and_delete ();
   uint64_t size = conclusion.size ();
   if (size > 1) {
     if (binary) {
@@ -306,13 +345,24 @@ void IdrupTracer::idrup_conclude_and_delete (
     if (binary)
       put_binary_zero ();
     else
+      file->put ("0 ");
+    for (const auto &cid : imported_chain) {
+      if (binary)
+        put_binary_id (cid);
+      else
+        file->put (cid), file->put (' ');
+    }
+    if (binary)
+      put_binary_zero ();
+    else
       file->put ("0\n");
     imported_clause.clear ();
   }
   flush_if_piping ();
 }
 
-void IdrupTracer::idrup_report_status (int status) {
+void LidrupTracer::lidrup_report_status (int status) {
+  lidrup_batch_weaken_and_delete ();
   if (binary)
     file->put ('s');
   else
@@ -328,7 +378,8 @@ void IdrupTracer::idrup_report_status (int status) {
   flush_if_piping ();
 }
 
-void IdrupTracer::idrup_conclude_sat (const vector<int> &model) {
+void LidrupTracer::lidrup_conclude_sat (const vector<int> &model) {
+  lidrup_batch_weaken_and_delete ();
   if (binary)
     file->put ('m');
   else
@@ -346,7 +397,8 @@ void IdrupTracer::idrup_conclude_sat (const vector<int> &model) {
   flush_if_piping ();
 }
 
-void IdrupTracer::idrup_solve_query () {
+void LidrupTracer::lidrup_solve_query () {
+  lidrup_batch_weaken_and_delete ();
   if (binary)
     file->put ('q');
   else
@@ -366,129 +418,144 @@ void IdrupTracer::idrup_solve_query () {
 
 /*------------------------------------------------------------------------*/
 
-void IdrupTracer::add_derived_clause (uint64_t, bool,
+void LidrupTracer::add_derived_clause (uint64_t id, bool,
                                       const vector<int> &clause,
-                                      const vector<uint64_t> &) {
+                                      const vector<uint64_t> &chain) {
   if (file->closed ())
     return;
   assert (imported_clause.empty ());
-  LOG (clause, "IDRUP TRACER tracing addition of derived clause");
-  idrup_add_derived_clause (clause);
+  LOG (clause, "LIDRUP TRACER tracing addition of derived clause");
+  lidrup_add_derived_clause (id, clause, chain);
 #ifndef QUIET
   added++;
 #endif
 }
 
-void IdrupTracer::add_assumption_clause (uint64_t id,
+void LidrupTracer::add_assumption_clause (uint64_t id,
                                          const vector<int> &clause,
-                                         const vector<uint64_t> &) {
+                                         const vector<uint64_t> &chain) {
   if (file->closed ())
     return;
   assert (imported_clause.empty ());
-  LOG (clause, "IDRUP TRACER tracing addition of assumption clause");
+  LOG (clause, "LIDRUP TRACER tracing addition of assumption clause");
   for (auto &lit : clause)
     imported_clause.push_back (lit);
+  for (auto &cid : chain)
+    imported_chain.push_back (cid);
   last_id = id;
   insert ();
   imported_clause.clear ();
+  imported_chain.clear ();
 }
 
-void IdrupTracer::delete_clause (uint64_t id, bool,
-                                 const vector<int> &clause) {
+void LidrupTracer::delete_clause (uint64_t id, bool,
+                                 const vector<int> &) {
   if (file->closed ())
     return;
   assert (imported_clause.empty ());
-  LOG ("IDRUP TRACER tracing deletion of clause[%" PRId64 "]", id);
-  idrup_delete_clause (id, clause);
-}
-
-void IdrupTracer::weaken_minus (uint64_t id, const vector<int> &) {
-  if (file->closed ())
-    return;
-  assert (imported_clause.empty ());
-  LOG ("IDRUP TRACER tracing weaken minus of clause[%" PRId64 "]", id);
-  last_id = id;
-  insert ();
+  LOG ("LIDRUP TRACER tracing deletion of clause[%" PRId64 "]", id);
+  if (find_and_delete (id)) {
+    assert (imported_clause.empty ());
+    if (!batch_delete.empty ())
+      lidrup_batch_weaken_and_delete ();
+    batch_weaken.push_back (id);
 #ifndef QUIET
   weakened++;
 #endif
+  } else {
+    if (!batch_weaken.empty ())
+      lidrup_batch_weaken_and_delete ();
+    batch_delete.push_back (id);
+#ifndef QUIET
+  deleted++;
+#endif
+  }
 }
 
-void IdrupTracer::conclude_unsat (ConclusionType,
+void LidrupTracer::weaken_minus (uint64_t id, const vector<int> &) {
+  if (file->closed ())
+    return;
+  assert (imported_clause.empty ());
+  LOG ("LIDRUP TRACER tracing weaken minus of clause[%" PRId64 "]", id);
+  last_id = id;
+  insert ();
+}
+
+void LidrupTracer::conclude_unsat (ConclusionType,
                                   const vector<uint64_t> &conclusion) {
   if (file->closed ())
     return;
   assert (imported_clause.empty ());
-  LOG (conclusion, "IDRUP TRACER tracing conclusion of clause(s)");
-  idrup_conclude_and_delete (conclusion);
+  LOG (conclusion, "LIDRUP TRACER tracing conclusion of clause(s)");
+  lidrup_conclude_and_delete (conclusion);
 }
 
-void IdrupTracer::add_original_clause (uint64_t id, bool,
+void LidrupTracer::add_original_clause (uint64_t id, bool,
                                        const vector<int> &clause,
                                        bool restored) {
   if (file->closed ())
     return;
   if (!restored) {
-    LOG (clause, "IDRUP TRACER tracing addition of original clause");
+    LOG (clause, "LIDRUP TRACER tracing addition of original clause");
 #ifndef QUIET
-  original++;
+    original++;
 #endif
-    return idrup_add_original_clause (clause);
+    return lidrup_add_original_clause (id, clause);
   }
   assert (restored);
   if (find_and_delete (id)) {
     LOG (clause,
-         "IDRUP TRACER the clause was not yet weakened, so no restore");
+         "LIDRUP TRACER the clause was not yet weakened, so no restore");
     return;
   }
-  LOG (clause, "IDRUP TRACER tracing addition of restored clause");
-  idrup_add_restored_clause (clause);
+  LOG (clause, "LIDRUP TRACER tracing addition of restored clause");
+  lidrup_add_restored_clause (id);
 #ifndef QUIET
   restore++;
 #endif
 }
 
-void IdrupTracer::report_status (int status, uint64_t) {
+void LidrupTracer::report_status (int status, uint64_t) {
   if (file->closed ())
     return;
-  LOG ("IDRUP TRACER tracing report of status %d", status);
-  idrup_report_status (status);
+  LOG ("LIDRUP TRACER tracing report of status %d", status);
+  lidrup_report_status (status);
 }
 
-void IdrupTracer::conclude_sat (const vector<int> &model) {
+void LidrupTracer::conclude_sat (const vector<int> &model) {
   if (file->closed ())
     return;
-  LOG (model, "IDRUP TRACER tracing conclusion of model");
-  idrup_conclude_sat (model);
+  LOG (model, "LIDRUP TRACER tracing conclusion of model");
+  lidrup_conclude_sat (model);
 }
 
-void IdrupTracer::solve_query () {
+void LidrupTracer::solve_query () {
   if (file->closed ())
     return;
-  LOG (assumptions, "IDRUP TRACER tracing solve query with assumptions");
-  idrup_solve_query ();
+  LOG (assumptions, "LIDRUP TRACER tracing solve query with assumptions");
+  lidrup_solve_query ();
 #ifndef QUIET
   solved++;
 #endif
 }
 
-void IdrupTracer::add_assumption (int lit) {
-  LOG ("IDRUP TRACER tracing addition of assumption %d", lit);
+void LidrupTracer::add_assumption (int lit) {
+  LOG ("LIDRUP TRACER tracing addition of assumption %d", lit);
   assumptions.push_back (lit);
 }
 
-void IdrupTracer::reset_assumptions () {
-  LOG (assumptions, "IDRUP TRACER tracing reset of assumptions");
+void LidrupTracer::reset_assumptions () {
+  LOG (assumptions, "LIDRUP TRACER tracing reset of assumptions");
   assumptions.clear ();
 }
 
 /*------------------------------------------------------------------------*/
 
-bool IdrupTracer::closed () { return file->closed (); }
+bool LidrupTracer::closed () { return file->closed (); }
 
 #ifndef QUIET
 
-void IdrupTracer::print_statistics () {
+void LidrupTracer::print_statistics () {
   // TODO complete this.
   uint64_t bytes = file->bytes ();
   uint64_t total = added + deleted + weakened + restore + original;
@@ -502,20 +569,22 @@ void IdrupTracer::print_statistics () {
        percent (weakened, total));
   MSG ("LIDRUP %" PRId64 " restored clauses %.2f%%", restore,
        percent (restore, total));
+  MSG ("LIDRUP %" PRId64 " batched deletions and restores %.2f", batched,
+       relative (batched, deleted + restore));
   MSG ("LIDRUP %" PRId64 " queries %.2f", solved,
        relative (solved, total));
-  MSG ("IDRUP %" PRId64 " bytes (%.2f MB)", bytes,
+  MSG ("LIDRUP %" PRId64 " bytes (%.2f MB)", bytes,
        bytes / (double) (1 << 20));
 }
 
 #endif
 
-void IdrupTracer::close (bool print) {
+void LidrupTracer::close (bool print) {
   assert (!closed ());
   file->close ();
 #ifndef QUIET
   if (print) {
-    MSG ("IDRUP proof file '%s' closed", file->name ());
+    MSG ("LIDRUP proof file '%s' closed", file->name ());
     print_statistics ();
   }
 #else
@@ -523,12 +592,12 @@ void IdrupTracer::close (bool print) {
 #endif
 }
 
-void IdrupTracer::flush (bool print) {
+void LidrupTracer::flush (bool print) {
   assert (!closed ());
   file->flush ();
 #ifndef QUIET
   if (print) {
-    MSG ("IDRUP proof file '%s' flushed", file->name ());
+    MSG ("LIDRUP proof file '%s' flushed", file->name ());
     print_statistics ();
   }
 #else

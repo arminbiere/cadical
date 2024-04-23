@@ -248,8 +248,11 @@ void Stats::print (Internal *internal) {
     PRT ("learned:         %15" PRId64 "   %10.2f %%  per conflict",
          stats.learned.clauses,
          percent (stats.learned.clauses, stats.conflicts));
-    PRT ("  bumped:        %15" PRId64 "   %10.2f    per learned",
+    PRT ("@ bumped:        %15" PRId64 "   %10.2f    per learned",
          stats.bumped, relative (stats.bumped, stats.learned.clauses));
+    PRT ("@ bumpedreasons: %15" PRId64 "   %10.2f %%  learned",
+         stats.bumpedreasons,
+         percent (stats.bumpedreasons, stats.learned.clauses));
     PRT ("  recomputed:    %15" PRId64 "   %10.2f %%  per learned",
          stats.recomputed,
          percent (stats.recomputed, stats.learned.clauses));
@@ -337,6 +340,13 @@ void Stats::print (Internal *internal) {
   PRT ("  walkprops:     %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.walk,
        percent (stats.propagations.walk, propagations));
+  int64_t ticks = stats.ticks.search[0] + stats.ticks.search[1];
+  PRT ("searchticks:     %15" PRId64 "   %10.2f    propagation",
+       ticks, relative (ticks, stats.propagations.search));
+  PRT ("@ stableticks:   %15" PRId64 "   %10.2f %%  ticks",
+       stats.ticks.search[1], percent (stats.ticks.search[1], ticks));
+  PRT ("@ unstableticks: %15" PRId64 "   %10.2f %%  ticks",
+       stats.ticks.search[0], percent (stats.ticks.search[0], ticks));
   if (all || stats.reactivated) {
     PRT ("reactivated:     %15" PRId64 "   %10.2f %%  of all variables",
          stats.reactivated, percent (stats.reactivated, stats.vars));
