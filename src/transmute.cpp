@@ -226,8 +226,12 @@ void Internal::learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t 
   clause.push_back (lit);
   for (const auto & other : transmuter.current) {
     idx++;
-    if (!(forward & (1 << (idx - 1)))) continue;
-    if ((backward & (1 << (idx - 1)))) continue;
+    if (opts.transmuteall) {
+      if ((forward & (1 << (idx - 1))) == (backward & (1 << (idx - 1)))) continue;
+    } else {
+      if (!(forward & (1 << (idx - 1)))) continue;
+      if ((backward & (1 << (idx - 1)))) continue;
+    }
     // learn binary -lit -> -other
     clause.push_back (-other);
     new_hyper_binary_resolved_clause (true, 2);
@@ -282,9 +286,9 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   // the clause either implies l or k @1.
   // Furthermore, we only consider golden pairs, i.e.,
   // neither l nor k imply more than n-2 literals in a clause of size n @2.
+  // opts.transmuteall changes this check. instead of @2, candidates
+  // have to be an exact cover
   // Thus the smalles candidate size for transmutation is 4.
-  // Redundant clauses are deleted if a cover is found where c -> (l or k)
-  // and l -> c and k -> c @3.
   // Early abort happens when the clause becomes too short
   // because of learnt units @4 or if a literal does not propagate at all @5.
   
@@ -399,7 +403,6 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   const uint64_t covering = ((uint64_t) 1 << current.size ()) - 1;
   vector<int> units;
   bool candidate = false;
-  bool delete_clause = false;
   vector<uint64_t> candidate_coverings;
   candidate_coverings.resize (candidates.size ());
 
@@ -410,6 +413,8 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
     // after learning all hbr clauses the backward propagations are always stronger
     // this means we can assume covered[vlit (lit)] | candidate_coverings[i] at @2
     learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
+    if (opts.transmuteall)
+      candidate_coverings[i] = covered[vlit (lit)] = candidate_coverings[i] | covered[vlit (lit)];
   }
   
   // now only quadratic in the number of candidates.
@@ -423,7 +428,6 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
 #endif
       if (candidate_coverings[i] != UINT64_MAX) stats.transmutegoldunits++;
       units.push_back (lit);
-      delete_clause = true;
       continue;
     } else if (candidate_coverings[i] == UINT64_MAX) { // this does not imply @3
       units.push_back (lit);  // probing unit
@@ -435,20 +439,19 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
       assert (lit != other);
       if (lit == -other) continue;
       assert (covered[vlit (lit)] <= covering);
-      if ((covered[vlit (lit)] | covered[vlit (other)]) != covering) continue;
-      // we have found a set of candidates we we check wether they are golden
-      const uint64_t probe_i = candidate_coverings[i] | covered[vlit (lit)];
-      const uint64_t probe_j = candidate_coverings[j] | covered[vlit (other)];
-      if (__builtin_popcount (probe_i) >= current.size () &&
-          __builtin_popcount (probe_j) >= current.size ()) { // @3
-        assert (__builtin_popcount (probe_i) == current.size () || probe_i == UINT64_MAX);
-        assert (__builtin_popcount (probe_j) == current.size () || probe_j == UINT64_MAX);
-        delete_clause = true;
-        continue;
+      if (opts.transmuteall) {
+        if ((covered[vlit (lit)] ^ covered[vlit (other)]) != covering) continue;
+      } else {
+        if ((covered[vlit (lit)] | covered[vlit (other)]) != covering) continue;
       }
+      // we have found a set of candidates we we check wether they are golden
       // check below corresponds to @2
-      if (__builtin_popcount ((probe_j ^ probe_i) & probe_j) < 2) continue;
-      if (__builtin_popcount ((probe_i ^ probe_j) & probe_i) < 2) continue;
+      if (!opts.transmuteall) {
+        const uint64_t probe_i = candidate_coverings[i]; // | covered[vlit (lit)];
+        const uint64_t probe_j = candidate_coverings[j]; // | covered[vlit (other)];
+        if (__builtin_popcount ((probe_j ^ probe_i) & probe_j) < 2) continue;
+        if (__builtin_popcount ((probe_i ^ probe_j) & probe_i) < 2) continue;
+      }
       if (!candidate) {
         stats.transmutedclauses++;
         candidate = true;
@@ -458,7 +461,6 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
       clause.push_back (other);
       new_golden_binary ();
       stats.transmutegold++;
-      // delete_clause = true;
       clause.clear ();
     }
   }
@@ -474,10 +476,10 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   if (!units.empty ()) {
     if (!propagate ()) learn_empty_clause ();
   }
-  if (delete_clause && c->redundant) {
-    stats.transmutedeleted++;
-    mark_garbage (c);
-  }
+  // if (delete_clause && c->redundant) {
+  //   stats.transmutedeleted++;
+  //   mark_garbage (c);
+  // }
 }
 
 
