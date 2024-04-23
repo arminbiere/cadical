@@ -119,7 +119,6 @@ struct Stats {
     int64_t hyper = 0;   // flushed hyper binary/ternary clauses
   } flush;
 
-<<<<<<< HEAD
   int64_t compacts = 0;      // number of compactifications
   int64_t shuffled = 0;      // shuffled queues and scores
   int64_t restarts = 0;      // actual number of happened restarts
@@ -139,6 +138,7 @@ struct Stats {
   int64_t promoted1 = 0;      // promoted clauses to tier one
   int64_t promoted2 = 0;      // promoted clauses to tier two
   int64_t bumped = 0;         // seen and bumped variables in 'analyze'
+  int64_t bumpedreasons = 0;  // reason side bumpings 'analyze'
   int64_t recomputed = 0;     // recomputed glues 'recompute_glue'
   int64_t searched = 0;       // searched decisions in 'decide'
   int64_t reductions = 0;     // 'reduce' counter
@@ -158,45 +158,6 @@ struct Stats {
   int64_t deduplicated = 0;   // number of removed duplicated binary clauses
   int64_t deduplications = 0; // number of deduplication phases
   int64_t strengthened = 0;   // number of strengthened clauses
-=======
-  int64_t compacts;      // number of compactifications
-  int64_t shuffled;      // shuffled queues and scores
-  int64_t restarts;      // actual number of happened restarts
-  int64_t restartlevels; // levels at restart
-  int64_t restartstable; // actual number of happened restarts
-  int64_t stabphases;    // number of stabilization phases
-  int64_t stabconflicts; // number of search conflicts during stabilizing
-  int64_t rescored;      // number of times scores were rescored
-  int64_t reused;        // number of reused trails
-  int64_t reusedlevels;  // reused levels at restart
-  int64_t reusedstable;  // number of reused trails during stabilizing
-  int64_t sections;      // 'section' counter
-  int64_t chrono;        // chronological backtracks
-  int64_t backtracks;    // number of backtracks
-  int64_t elevated; // number of elevated literals (updated in backtrack)
-  int64_t improvedglue;   // improved glue during bumping
-  int64_t promoted1;      // promoted clauses to tier one
-  int64_t promoted2;      // promoted clauses to tier two
-  int64_t bumped;         // seen and bumped variables in 'analyze'
-  int64_t bumpedreasons;  // reason side bumpings 'analyze'
-  int64_t recomputed;     // recomputed glues 'recompute_glue'
-  int64_t searched;       // searched decisions in 'decide'
-  int64_t reductions;     // 'reduce' counter
-  int64_t reduced;        // number of reduced clauses
-  int64_t collected;      // number of collected bytes
-  int64_t collections;    // number of garbage collections
-  int64_t hbrs;           // hyper binary resolvents
-  int64_t hbrsizes;       // sum of hyper resolved base clauses
-  int64_t hbreds;         // redundant hyper binary resolvents
-  int64_t hbrsubs;        // subsuming hyper binary resolvents
-  int64_t instried;       // number of tried instantiations
-  int64_t instantiated;   // number of successful instantiations
-  int64_t instrounds;     // number of instantiation rounds
-  int64_t subsumed;       // number of subsumed clauses
-  int64_t deduplicated;   // number of removed duplicated binary clauses
-  int64_t deduplications; // number of deduplication phases
-  int64_t strengthened;   // number of strengthened clauses
->>>>>>> explore
   int64_t
       elimotfstr = 0;    // number of on-the-fly strengthened during elimination
   int64_t subirr = 0;    // number of subsumed irredundant clauses

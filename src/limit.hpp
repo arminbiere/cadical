@@ -48,6 +48,27 @@ struct Limit {
 struct Delay {
   struct {
     int64_t interval = 0, limit = 0;
+
+    bool delay () {
+      if (limit) {
+        --limit;
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+    void bump_delay () {
+      interval += interval < std::numeric_limits<unsigned>::max ();
+      limit = interval;
+    }
+
+    void reduce_delay () {
+      if (!interval)
+        return;
+      interval /= 2;
+      limit = interval;
+    }
   } bumpreasons;
 };
 

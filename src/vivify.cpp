@@ -1551,7 +1551,7 @@ void Internal::vivify () {
   double tier1effort = 1e-3 * (double) opts.vivifytier1eff;
   double tier2effort = 1e-3 * (double) opts.vivifytier2eff;
   double tier3effort = 1e-3 * (double) opts.vivifytier3eff;
-  double irreffort = delaying_vivify_irredundant.delay() ? 0 : 1e-3 * (double) opts.vivifyirredeff;
+  double irreffort = delaying_vivify_irredundant.bumpreasons.delay() ? 0 : 1e-3 * (double) opts.vivifyirredeff;
   double sumeffort = tier1effort + tier2effort + tier3effort + irreffort;
   if (!stats.current.redundant)
     tier1effort = tier2effort = tier3effort = 0;
@@ -1609,9 +1609,9 @@ void Internal::vivify () {
     vivify_round (vivifier, limit);
     if ((stats.vivifychecks - old_tried) &&
 	(float) (stats.vivifystrirr - old) / (float) (stats.vivifychecks - old_tried) < 0.01)
-      delaying_vivify_irredundant.bump_delay();
+      delaying_vivify_irredundant.bumpreasons.bump_delay();
     else
-      delaying_vivify_irredundant.reduce_delay();
+      delaying_vivify_irredundant.bumpreasons.reduce_delay();
   }
 
   STOP_SIMPLIFIER (vivify, VIVIFY);

@@ -57,7 +57,6 @@ extern "C" {
 #include "contract.hpp"
 #include "cover.hpp"
 #include "decompose.hpp"
-#include "delay.hpp"
 #include "drattracer.hpp"
 #include "elim.hpp"
 #include "ema.hpp"

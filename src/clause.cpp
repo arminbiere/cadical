@@ -172,24 +172,21 @@ void Internal::promote_clause (Clause *c, int new_glue) {
 
 void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
   assert (c->redundant);
-  if (c->keep)
-    return;
   if (c->hyper)
     return;
   int old_glue = c->glue;
+  const int tier1limit = tier1[false];
+  const int tier2limit = max (tier1limit, tier2[false]);
   if (new_glue >= old_glue)
     return;
-  if (!c->keep && new_glue <= opts.reducetier1glue) {
+  if (new_glue <= tier1limit) {
     LOG (c, "promoting with new glue %d to tier1", new_glue);
     stats.promoted1++;
-    c->keep = true;
-  } else if (old_glue > opts.reducetier2glue &&
-             new_glue <= opts.reducetier2glue) {
+  } else if (old_glue > tier2limit &&
+             new_glue <= tier2limit) {
     LOG (c, "promoting with new glue %d to tier2", new_glue);
     stats.promoted2++;
-  } else if (c->keep)
-    LOG (c, "keeping with new glue %d in tier1", new_glue);
-  else if (old_glue <= opts.reducetier2glue)
+  } else if (old_glue <= tier2limit)
     LOG (c, "keeping with new glue %d in tier2", new_glue);
   else
     LOG (c, "keeping with new glue %d in tier3", new_glue);
