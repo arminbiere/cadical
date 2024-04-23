@@ -226,12 +226,14 @@ void Internal::learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t 
   clause.push_back (lit);
   for (const auto & other : transmuter.current) {
     idx++;
+    if (other == lit) continue;
     if (opts.transmuteall) {
       if ((forward & (1 << (idx - 1))) == (backward & (1 << (idx - 1)))) continue;
     } else {
       if (!(forward & (1 << (idx - 1)))) continue;
       if ((backward & (1 << (idx - 1)))) continue;
     }
+    LOG ("learning helper binary %d %d", lit, -other);
     // learn binary -lit -> -other
     clause.push_back (-other);
     new_hyper_binary_resolved_clause (true, 2);
@@ -288,6 +290,8 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   // neither l nor k imply more than n-2 literals in a clause of size n @2.
   // opts.transmuteall changes this check. instead of @2, candidates
   // have to be an exact cover
+  // TODO: when we probe a literal a of the clause c and it implies c\{a} then we can
+  // learn c\{a} @3
   // Thus the smalles candidate size for transmutation is 4.
   // Early abort happens when the clause becomes too short
   // because of learnt units @4 or if a literal does not propagate at all @5.
@@ -591,6 +595,7 @@ int64_t CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
 /*------------------------------------------------------------------------*/
 
 void CaDiCaL::Internal::transmute () {
+  assert (!lrat); // for fuzzing
   if (lrat) // TODO remove for lrat, for now incompatible
     return;
   if (!opts.transmute)
