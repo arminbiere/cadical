@@ -229,7 +229,7 @@ bool Internal::propagate () {
   if (level)
     require_mode (SEARCH);
   assert (!unsat);
-
+  LOG ("starting propagate");
   START (propagate);
 
   // Updating statistics counter in the propagation loops is costly so we

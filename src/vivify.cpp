@@ -49,6 +49,9 @@ bool Internal::vivifying () {
   if (preprocessing)
     assert (lim.preprocessing);
 
+  if (!stats.current.irredundant)
+    return false;
+  
   // Only perform global subsumption checking immediately after a clause
   // reduction happened where the overall allocated memory is small and we
   // got a limit on the number of kept clause in terms of size and glue.
@@ -58,7 +61,7 @@ bool Internal::vivifying () {
 
   if (stats.conflicts < lim.vivify)
     return false;
-
+  LOG ("actually vivifying");
   return true;
 }
 
@@ -1548,10 +1551,10 @@ void Internal::vivify () {
   double tier1effort = 1e-3 * (double) opts.vivifytier1eff;
   double tier2effort = 1e-3 * (double) opts.vivifytier2eff;
   double tier3effort = 1e-3 * (double) opts.vivifytier3eff;
-  double irreffort = 1e-3 * (double) opts.vivifyirredeff;
+  double irreffort = delaying_vivify_irredundant.delay() ? 0 : 1e-3 * (double) opts.vivifyirredeff;
   double sumeffort = tier1effort + tier2effort + tier3effort + irreffort;
   if (!stats.current.redundant)
-    tier1effort = tier2effort = 0;
+    tier1effort = tier2effort = tier3effort = 0;
   if (!sumeffort)
     sumeffort = irreffort = 1;
 
@@ -1601,7 +1604,14 @@ void Internal::vivify () {
     const int64_t limit = (total * irreffort) / sumeffort;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::IRREDUNDANT);
+    const int old = stats.vivifystrirr;
+    const int old_tried = stats.vivifychecks;
     vivify_round (vivifier, limit);
+    if ((stats.vivifychecks - old_tried) &&
+	(float) (stats.vivifystrirr - old) / (float) (stats.vivifychecks - old_tried) < 0.01)
+      delaying_vivify_irredundant.bump_delay();
+    else
+      delaying_vivify_irredundant.reduce_delay();
   }
 
   STOP_SIMPLIFIER (vivify, VIVIFY);

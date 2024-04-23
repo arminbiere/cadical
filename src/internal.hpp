@@ -57,6 +57,7 @@ extern "C" {
 #include "contract.hpp"
 #include "cover.hpp"
 #include "decompose.hpp"
+#include "delay.hpp"
 #include "drattracer.hpp"
 #include "elim.hpp"
 #include "ema.hpp"
@@ -255,6 +256,8 @@ struct Internal {
   Limit lim;                // limits for various phases
   Last last;                // statistics at last occurrence
   Inc inc;                  // increments on limits
+
+  Delay delaying_vivify_irredundant;
 
   Proof *proof;             // abstraction layer between solver and tracers
   LratBuilder *lratbuilder; // special proof tracer
