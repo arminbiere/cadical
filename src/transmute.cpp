@@ -279,10 +279,14 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   // The actual transmutation checking is performed here, by probing
   // each of the literals of the clause.
   // The goal is to find two literals l, k, such that every literal c_i of
-  // the clause either implies l or k. Furthermore, we only consider golden
-  // pairs, i.e. neither l nor k imply more than n-2 literals in a clause of
-  // size n. Thus the smalles candidate size for transmutation is 4.
-  // Early abort happens when the clause becomes too short because of learnt units.
+  // the clause either implies l or k @1.
+  // Furthermore, we only consider golden pairs, i.e.,
+  // neither l nor k imply more than n-2 literals in a clause of size n @2.
+  // Thus the smalles candidate size for transmutation is 4.
+  // Redundant clauses are deleted if a cover is found where c -> (l or k)
+  // and l -> c and k -> c @3.
+  // Early abort happens when the clause becomes too short
+  // because of learnt units @4 or if a literal does not propagate at all @5.
   
   LOG (c, "transmutation checking");
   stats.transmutechecks++;
@@ -317,7 +321,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
       idx--;
       size--;
       if (size < 4) {
-        LOG (c, "too short after unit simplification");
+        LOG (c, "too short after unit simplification");  // @4
         return;
       }
       continue;
@@ -341,7 +345,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
         return;
       }
       if (size < 4) {
-        LOG (c, "too short after unit simplification");
+        LOG (c, "too short after unit simplification");   // @4
         return;
       }
       c->transmuted = false;                // reschedule c and return
@@ -351,7 +355,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
     
     assert  (level == 1);
     if (control[level].trail + 1 == (int) trail.size ()) {
-      backtrack (level - 1); // early abort because no propagations
+      backtrack (level - 1); // early abort because no propagations @5
       stats.transmuteabort++;
       return;
     }
@@ -373,7 +377,6 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   assert (!conflict);
   
   // check that no lit in current is assigned (might break because of units)
-  // TODO: if this breaks need to improve.
   //
 #ifndef NDEBUG
   for (const auto & lit : current) assert (!val (lit));
@@ -396,6 +399,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   const uint64_t covering = ((uint64_t) 1 << current.size ()) - 1;
   vector<int> units;
   bool candidate = false;
+  bool delete_clause = false;
   vector<uint64_t> candidate_coverings;
   candidate_coverings.resize (candidates.size ());
 
@@ -403,6 +407,8 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   for (unsigned i = 0; i < candidates.size (); i++) {
     const int lit = candidates[i];
     candidate_coverings[i] = backward_check (transmuter, lit);
+    // after learning all hbr clauses the backward propagations are always stronger
+    // this means we can assume covered[vlit (lit)] | candidate_coverings[i] at @2
     learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
   }
   
@@ -411,14 +417,15 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   for (unsigned i = 0; i < candidates.size (); i++) {
     const int lit = candidates[i];
     assert (!val (lit));  // might be a problem if this does not hold
-    if (covered[vlit (lit)] == covering) {  // special case of unit
+    if (covered[vlit (lit)] == covering) {  // special case of unit also implies @3
 #ifndef NDEBUG  // assert lit not in current
       for (const auto & other : current) assert (other != lit && other != -lit);
 #endif
       if (candidate_coverings[i] != UINT64_MAX) stats.transmutegoldunits++;
       units.push_back (lit);
+      delete_clause = true;
       continue;
-    } else if (candidate_coverings[i] == UINT64_MAX) {
+    } else if (candidate_coverings[i] == UINT64_MAX) { // this does not imply @3
       units.push_back (lit);  // probing unit
       continue;
     }
@@ -430,8 +437,16 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
       assert (covered[vlit (lit)] <= covering);
       if ((covered[vlit (lit)] | covered[vlit (other)]) != covering) continue;
       // we have found a set of candidates we we check wether they are golden
-      const uint64_t probe_i = candidate_coverings[i];
-      const uint64_t probe_j = candidate_coverings[j];
+      const uint64_t probe_i = candidate_coverings[i] | covered[vlit (lit)];
+      const uint64_t probe_j = candidate_coverings[j] | covered[vlit (other)];
+      if (__builtin_popcount (probe_i) >= current.size () &&
+          __builtin_popcount (probe_j) >= current.size ()) { // @3
+        assert (__builtin_popcount (probe_i) == current.size () || probe_i == UINT64_MAX);
+        assert (__builtin_popcount (probe_j) == current.size () || probe_j == UINT64_MAX);
+        delete_clause = true;
+        continue;
+      }
+      // check below corresponds to @2
       if (__builtin_popcount ((probe_j ^ probe_i) & probe_j) < 2) continue;
       if (__builtin_popcount ((probe_i ^ probe_j) & probe_i) < 2) continue;
       if (!candidate) {
@@ -459,7 +474,10 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   if (!units.empty ()) {
     if (!propagate ()) learn_empty_clause ();
   }
-  // if (delete_clause && c->redundant) mark_garbage (c);
+  if (delete_clause && c->redundant) {
+    stats.transmutedeleted++;
+    mark_garbage (c);
+  }
 }
 
 

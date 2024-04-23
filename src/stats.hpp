@@ -203,6 +203,7 @@ struct Stats {
   int64_t transmutedclauses;
   int64_t transmutedcandidates;
   int64_t transmuteabort;
+  int64_t transmutedeleted;
   int64_t transmuteunits;     // for transmutation
   int64_t transmutehb;        // for transmutation
   int64_t transmutegold;      // for transmutation

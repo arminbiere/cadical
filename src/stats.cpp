@@ -528,11 +528,13 @@ void Stats::print (Internal *internal) {
          stats.transmuteabort, percent (stats.transmuteabort, stats.transmutechecks));
     PRT ("  transmutedecs: %15" PRId64 "   %10.2f    per check",
          stats.transmutedecs, relative (stats.transmutedecs, stats.transmutechecks));
-    PRT ("  transmutedcand:%15" PRId64 "   %10.2f %%  of checked",
-         stats.transmutedcandidates, percent (stats.transmutedcandidates, stats.transmutechecks));
-    PRT ("  transmutedcls: %15" PRId64 "   %10.2f %%  of candidates",
-         stats.transmutedclauses, percent (stats.transmutedclauses, stats.transmutedcandidates));
-    PRT ("  transmuteunits:%15" PRId64 "   %10.2f    per check",
+    PRT ("  transmutedcand:%15" PRId64 "   %10.2f    per checked",
+         stats.transmutedcandidates, relative (stats.transmutedcandidates, stats.transmutechecks));
+    PRT ("  transmutedcls: %15" PRId64 "   %10.2f %%  of checked",
+         stats.transmutedclauses, percent (stats.transmutedclauses, stats.transmutechecks));
+    PRT ("  transmutedel:  %15" PRId64 "   %10.2f %%  of checked",
+         stats.transmutedeleted, percent (stats.transmutedeleted, stats.transmutechecks));
+    PRT ("  transmuteunits:%15" PRId64 "   %10.2f    per check", 
          stats.transmuteunits, relative (stats.transmuteunits, stats.transmutechecks));
     PRT ("    probed units:%15" PRId64 "   %10.2f %%  of units",
          probeunits, percent (probeunits, stats.transmuteunits));
