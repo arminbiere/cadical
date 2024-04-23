@@ -159,7 +159,6 @@ void Internal::promote_clause (Clause *c, int new_glue) {
              new_glue <= tier2limit) {
     LOG (c, "promoting with new glue %d to tier2", new_glue);
     stats.promoted2++;
-    c->used = max_used;
   }
   else if (old_glue <= tier2limit)
     LOG (c, "keeping with new glue %d in tier2", new_glue);
