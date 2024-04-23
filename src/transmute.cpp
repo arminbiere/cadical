@@ -244,7 +244,7 @@ void Internal::learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t 
   clause.clear ();
 }
 
-void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
+void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limit) {
 
   // at least length 4 glue 2 clauses
   assert (c->size > 3);
@@ -316,6 +316,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
   // Go over the literals in the candidate clause.
   //
   while (q != end) {
+    if (stats.propagations.transmute >= limit) return;
     const auto &lit = *p++ = *q++;
     idx++;
     assert (!conflict);
@@ -412,6 +413,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c) {
 
   // probe negations of all candidates and learn hbr clauses if necessary
   for (unsigned i = 0; i < candidates.size (); i++) {
+    if (stats.propagations.transmute >= limit) return;
     const int lit = candidates[i];
     candidate_coverings[i] = backward_check (transmuter, lit);
     // after learning all hbr clauses the backward propagations are always stronger
@@ -556,7 +558,7 @@ int64_t CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
          !transmuter.schedule.empty () && stats.propagations.transmute < limit) {
     Clause *c = transmuter.schedule.back ();
     transmuter.schedule.pop_back ();
-    transmute_clause (transmuter, c);
+    transmute_clause (transmuter, c, limit);
   }
 
   assert (!level);
@@ -594,16 +596,16 @@ int64_t CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
 }
 /*------------------------------------------------------------------------*/
 
-void CaDiCaL::Internal::transmute () {
+bool CaDiCaL::Internal::transmute () {
   assert (!lrat); // for fuzzing
   if (lrat) // TODO remove for lrat, for now incompatible
-    return;
+    return false;
   if (!opts.transmute)
-    return;
+    return false;
   if (unsat)
-    return;
+    return false;
   if (terminated_asynchronously ())
-    return;
+    return false;
 
   assert (!level);
 
@@ -625,6 +627,9 @@ void CaDiCaL::Internal::transmute () {
 
   init_noccs ();
 
+  int64_t hyperbinaries = stats.transmutehb;
+  int64_t golden = stats.transmutegold;
+
   limit = transmute_round (limit);
   // if (limit) {
   //   transmute_round (limit);
@@ -632,6 +637,7 @@ void CaDiCaL::Internal::transmute () {
   reset_noccs ();
 
   STOP_SIMPLIFIER (transmute, TRANSMUTE);
+  return golden != stats.transmutegold || hyperbinaries != stats.transmutehb;
 }
 
 } // namespace CaDiCaL

@@ -1072,10 +1072,10 @@ struct Internal {
   // Transmutation in 'transmute.cpp'.
   //
   int64_t transmute_round (uint64_t propagation_limit);
-  void transmute ();
+  bool transmute ();
   uint64_t backward_check (Transmuter &transmuter, int lit);
   void learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t forward, uint64_t backward);
-  void transmute_clause (Transmuter &transmuter, Clause *c);
+  void transmute_clause (Transmuter &transmuter, Clause *c, int64_t limit);
   bool consider_to_transmute_clause (Clause *c);
   bool transmute_propagate ();
   void transmute_propagate2 ();

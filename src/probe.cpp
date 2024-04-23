@@ -890,9 +890,10 @@ void CaDiCaL::Internal::probe (bool update_limits) {
     if (!probe_round ())
       break;
     
-  transmute (); // transmutation
-
   decompose (); // ... and (ELS) afterwards.
+
+  if (transmute ()) // transmutation
+    decompose ();
 
   last.probe.propagations = stats.propagations.search;
 
