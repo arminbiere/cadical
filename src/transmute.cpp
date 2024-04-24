@@ -495,7 +495,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
         stats.transmutedglue[c->glue - 1]++;
         candidate = true;
       }
-      golden_binaries.push_back (pair (i, j));
+      golden_binaries.push_back (pair<unsigned, unsigned> (i, j));
     }
   }
   if (level) backtrack ();
