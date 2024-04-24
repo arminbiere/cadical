@@ -244,6 +244,24 @@ void Internal::learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t 
   clause.clear ();
 }
 
+Clause *Internal::transmute_instantiate_clause (Clause *c, int lit, int other) {
+  stats.transmuteinstantiate++;
+  clause.push_back (-lit);
+  clause.push_back (other);
+  Clause *tmp = new_hyper_binary_resolved_clause (true, 2);
+  clause.clear ();
+  for (const auto &literal : *c) {
+    if (literal == lit) continue;
+    clause.push_back (literal);
+  }
+  assert (c->size == (int) clause.size () + 1);
+  Clause *d = new_clause_as (c);
+  clause.clear ();
+  mark_garbage (c);
+  mark_garbage (tmp);
+  return d;
+}
+
 void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limit) {
 
   // at least length 4 glue 2 clauses
@@ -361,7 +379,26 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
       transmuter.schedule.push_back (c);
       return;
     }
-    
+    if (opts.transmuteinst) {
+      for (const auto &other : *c) {
+        if (other == lit) continue;
+        if (val (other) > 0) {
+          assert (var (other).level == 1);
+          p--;
+          idx--;
+          size--;
+          backtrack (level - 1);
+          c = transmute_instantiate_clause (c, lit, other);  // @3
+          if (size < 4) {
+            LOG (c, "too short after unit simplification");  // @4
+            return;
+          }
+          break;
+        }
+      }
+      if (!level)
+        continue;
+    }
     assert  (level == 1);
     if (control[level].trail + 1 == (int) trail.size ()) {
       backtrack (level - 1); // early abort because no propagations @5
@@ -460,6 +497,8 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
       }
       if (!candidate) {
         stats.transmutedclauses++;
+        assert (c->glue - 1 < 64);
+        stats.transmutedglue[c->glue - 1]++;
         candidate = true;
       }
       assert (clause.empty ());

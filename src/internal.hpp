@@ -1082,6 +1082,7 @@ struct Internal {
   void transmute_assign_unit (int lit);
   void transmute_assign_decision (int lit);
   void transmute_assign (int lit, Clause *reason);
+  Clause *transmute_instantiate_clause (Clause *c, int lit, int other);
   Clause *new_golden_binary ();
   
   // ProbSAT/WalkSAT implementation called initially or from 'rephase'.
