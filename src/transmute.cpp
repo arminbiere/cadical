@@ -455,7 +455,8 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
     candidate_coverings[i] = backward_check (transmuter, lit);
     // after learning all hbr clauses the backward propagations are always stronger
     // this means we can assume covered[vlit (lit)] | candidate_coverings[i] at @2
-    learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
+    if (candidate_coverings[i] != UINT64_MAX)
+      learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
     if (opts.transmuteall)
       candidate_coverings[i] = covered[vlit (lit)] = candidate_coverings[i] | covered[vlit (lit)];
   }
