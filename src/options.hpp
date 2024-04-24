@@ -180,7 +180,6 @@ OPTION( ternaryocclim,   1e2,  1,2e9,2,0,1, "ternary occurrence limit") \
 OPTION( ternaryreleff,    10,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( ternaryrounds,     2,  1, 16,1,0,1, "maximum ternary rounds") \
 OPTION( transmute,         1,  0,  1,0,1,1, "transmutations") \
-OPTION( transmuteall,      0,  0,  1,0,1,1, "learn all transmute clauses not just golden") \
 OPTION( transmuteinst,     0,  0,  1,0,1,1, "shorten self subsuming clauses") \
 OPTION( transmutemaxeff, 2e7,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transmutemineff, 2e4,  0,2e9,1,0,1, "minimum efficiency") \

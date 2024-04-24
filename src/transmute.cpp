@@ -216,7 +216,7 @@ uint64_t Internal::backward_check (Transmuter &transmuter, int lit) {
     // we have other -> lit and -lit -> -other by rup
     covered += (uint64_t) 1 << (idx - 1);  // mark other
   }
-  backtrack (level - 1);
+  // backtrack (level - 1);
   return covered;
 }
 
@@ -227,12 +227,8 @@ void Internal::learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t 
   for (const auto & other : transmuter.current) {
     idx++;
     if (other == lit) continue;
-    if (opts.transmuteall) {
-      if ((forward & (1 << (idx - 1))) == (backward & (1 << (idx - 1)))) continue;
-    } else {
-      if (!(forward & (1 << (idx - 1)))) continue;
-      if ((backward & (1 << (idx - 1)))) continue;
-    }
+    if (!(forward & (1 << (idx - 1)))) continue;
+    if ((backward & (1 << (idx - 1)))) continue;
     LOG ("learning helper binary %d %d", lit, -other);
     // learn binary -lit -> -other
     clause.push_back (-other);
@@ -306,8 +302,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
   // the clause either implies l or k @1.
   // Furthermore, we only consider golden pairs, i.e.,
   // neither l nor k imply more than n-2 literals in a clause of size n @2.
-  // opts.transmuteall changes this check. instead of @2, candidates
-  // have to be an exact cover
+  // actually just check wether k -> l otherwise learn
   // TODO: when we probe a literal a of the clause c and it implies c\{a} then we can
   // learn c\{a} @3
   // Thus the smalles candidate size for transmutation is 4.
@@ -449,92 +444,61 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
   vector<bool> candidate_coverings_performed;
   candidate_coverings.resize (candidates.size ());
   candidate_coverings_performed.resize (candidates.size ());
+  // contains indices for golden binaries
+  vector<pair<unsigned, unsigned>> golden_binaries;
 
-  // probe negations of all candidates and learn hbr clauses if necessary
-  if (opts.transmuteall) {
-    for (unsigned i = 0; i < candidates.size (); i++) {
-      if (stats.propagations.transmute >= limit) return;
-      const int lit = candidates[i];
-      candidate_coverings_performed[i] = true;
-      candidate_coverings[i] = backward_check (transmuter, lit);
-      // after learning all hbr clauses the backward propagations are always stronger
-      if (candidate_coverings[i] != UINT64_MAX)
-        learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
-      // this means we can assume covered[vlit (lit)] | candidate_coverings[i] at @2
-      candidate_coverings[i] = covered[vlit (lit)] = candidate_coverings[i] | covered[vlit (lit)];
-    }
-  }
   
   // now only quadratic in the number of candidates.
   // We can ignore the symmetric case as well.
   for (unsigned i = 0; i < candidates.size (); i++) {
     const int lit = candidates[i];
+    if (level) backtrack ();
     assert (!val (lit));  // might be a problem if this does not hold
     if (covered[vlit (lit)] == covering) {  // special case of unit also implies @3
 #ifndef NDEBUG  // assert lit not in current
       for (const auto & other : current) assert (other != lit && other != -lit);
 #endif
-      if (!candidate_coverings_performed[i]) {
-        if (stats.propagations.transmute >= limit) return;
-        candidate_coverings_performed[i] = true;
-        candidate_coverings[i] = backward_check (transmuter, lit);
-        if (candidate_coverings[i] != UINT64_MAX)
-          learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
-      }
+      assert (!candidate_coverings_performed[i]);
+      assert (!level);
+      if (stats.propagations.transmute >= limit) return;
+      candidate_coverings_performed[i] = true;
+      candidate_coverings[i] = backward_check (transmuter, lit);
+      if (candidate_coverings[i] != UINT64_MAX)
+        learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
       if (candidate_coverings[i] != UINT64_MAX) stats.transmutegoldunits++;
       units.push_back (lit);
-      continue;
-    } else if (candidate_coverings[i] == UINT64_MAX) { // this does not imply @3
-      units.push_back (lit);  // probing unit
       continue;
     }
     for (unsigned j = i + 1; j < candidates.size (); j++) {
       const int other = candidates[j];
-      assert (!val (other));
+      if (val (other) > 0) continue;
       assert (lit != other);
       if (lit == -other) continue;
       assert (covered[vlit (lit)] <= covering);
-      if (opts.transmuteall) {
-        if ((covered[vlit (lit)] ^ covered[vlit (other)]) != covering) continue;
-      } else {
-        if ((covered[vlit (lit)] | covered[vlit (other)]) != covering) continue;
-      }
+      if ((covered[vlit (lit)] | covered[vlit (other)]) != covering) continue;
       if (!candidate_coverings_performed[i]) {
+        assert (!level);
         if (stats.propagations.transmute >= limit) return;
         candidate_coverings_performed[i] = true;
         candidate_coverings[i] = backward_check (transmuter, lit);
         if (candidate_coverings[i] != UINT64_MAX)
           learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
       }
-      if (!candidate_coverings_performed[j]) {
-        if (stats.propagations.transmute >= limit) return;
-        candidate_coverings_performed[j] = true;
-        candidate_coverings[j] = backward_check (transmuter, other);
-        if (candidate_coverings[j] != UINT64_MAX)
-          learn_helper_binaries (transmuter, other, covered[vlit (other)], candidate_coverings[j]);
-      }
+      assert (level);
+      assert (val (lit) < 0);
+      if (val (other) > 0) continue;  // TODO: edge case val (other) < 0 -> learn unit clause
       // we have found a set of candidates we we check wether they are golden
       // check below corresponds to @2
-      if (!opts.transmuteall) {
-        const uint64_t probe_i = candidate_coverings[i]; // | covered[vlit (lit)];
-        const uint64_t probe_j = candidate_coverings[j]; // | covered[vlit (other)];
-        if (__builtin_popcount ((probe_j ^ probe_i) & probe_j) < 2) continue;
-        if (__builtin_popcount ((probe_i ^ probe_j) & probe_i) < 2) continue;
-      }
       if (!candidate) {
         stats.transmutedclauses++;
         assert (c->glue - 1 < 64);
         stats.transmutedglue[c->glue - 1]++;
         candidate = true;
       }
-      assert (clause.empty ());
-      clause.push_back (lit);
-      clause.push_back (other);
-      new_golden_binary ();
-      stats.transmutegold++;
-      clause.clear ();
+      golden_binaries.push_back (pair (i, j));
     }
   }
+  if (level) backtrack ();
   for (const auto & lit : units) {
     if (val (lit) > 0) continue;
     else if (val (lit) < 0) { // conflict!
@@ -544,9 +508,35 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
     }
     transmute_assign_unit (lit);
   }
+  for (const auto & bin : golden_binaries) {
+    assert (clause.empty ());
+    const unsigned i = bin.first;
+    const unsigned j = bin.second;
+    const int lit = candidates[i];
+    const int other = candidates[j];
+    assert (candidate_coverings_performed[i]);
+    assert (!level);
+    // necessary to get rup proofs. Even though we get additional propagations
+    // here we do not abort!
+    if (!candidate_coverings_performed[j]) {
+      candidate_coverings_performed[j] = true;
+      candidate_coverings[j] = backward_check (transmuter, other);
+      backtrack ();
+      if (candidate_coverings[i] != UINT64_MAX)
+        learn_helper_binaries (transmuter, other, covered[vlit (other)], candidate_coverings[j]);
+    }
+    if (val (lit) > 0 || val (other) > 0) continue;
+    clause.push_back (lit);
+    clause.push_back (other);
+    new_golden_binary ();
+    stats.transmutegold++;
+    clause.clear ();
+  }
+
   if (!units.empty ()) {
     if (!propagate ()) learn_empty_clause ();
   }
+  assert (!level);
   // if (delete_clause && c->redundant) {
   //   stats.transmutedeleted++;
   //   mark_garbage (c);
