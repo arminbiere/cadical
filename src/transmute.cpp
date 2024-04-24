@@ -446,19 +446,23 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
   vector<int> units;
   bool candidate = false;
   vector<uint64_t> candidate_coverings;
+  vector<bool> candidate_coverings_performed;
   candidate_coverings.resize (candidates.size ());
+  candidate_coverings_performed.resize (candidates.size ());
 
   // probe negations of all candidates and learn hbr clauses if necessary
-  for (unsigned i = 0; i < candidates.size (); i++) {
-    if (stats.propagations.transmute >= limit) return;
-    const int lit = candidates[i];
-    candidate_coverings[i] = backward_check (transmuter, lit);
-    // after learning all hbr clauses the backward propagations are always stronger
-    // this means we can assume covered[vlit (lit)] | candidate_coverings[i] at @2
-    if (candidate_coverings[i] != UINT64_MAX)
-      learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
-    if (opts.transmuteall)
+  if (opts.transmuteall) {
+    for (unsigned i = 0; i < candidates.size (); i++) {
+      if (stats.propagations.transmute >= limit) return;
+      const int lit = candidates[i];
+      candidate_coverings_performed[i] = true;
+      candidate_coverings[i] = backward_check (transmuter, lit);
+      // after learning all hbr clauses the backward propagations are always stronger
+      if (candidate_coverings[i] != UINT64_MAX)
+        learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
+      // this means we can assume covered[vlit (lit)] | candidate_coverings[i] at @2
       candidate_coverings[i] = covered[vlit (lit)] = candidate_coverings[i] | covered[vlit (lit)];
+    }
   }
   
   // now only quadratic in the number of candidates.
@@ -470,6 +474,13 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
 #ifndef NDEBUG  // assert lit not in current
       for (const auto & other : current) assert (other != lit && other != -lit);
 #endif
+      if (!candidate_coverings_performed[i]) {
+        if (stats.propagations.transmute >= limit) return;
+        candidate_coverings_performed[i] = true;
+        candidate_coverings[i] = backward_check (transmuter, lit);
+        if (candidate_coverings[i] != UINT64_MAX)
+          learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
+      }
       if (candidate_coverings[i] != UINT64_MAX) stats.transmutegoldunits++;
       units.push_back (lit);
       continue;
@@ -487,6 +498,20 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
         if ((covered[vlit (lit)] ^ covered[vlit (other)]) != covering) continue;
       } else {
         if ((covered[vlit (lit)] | covered[vlit (other)]) != covering) continue;
+      }
+      if (!candidate_coverings_performed[i]) {
+        if (stats.propagations.transmute >= limit) return;
+        candidate_coverings_performed[i] = true;
+        candidate_coverings[i] = backward_check (transmuter, lit);
+        if (candidate_coverings[i] != UINT64_MAX)
+          learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
+      }
+      if (!candidate_coverings_performed[j]) {
+        if (stats.propagations.transmute >= limit) return;
+        candidate_coverings_performed[j] = true;
+        candidate_coverings[j] = backward_check (transmuter, other);
+        if (candidate_coverings[j] != UINT64_MAX)
+          learn_helper_binaries (transmuter, other, covered[vlit (other)], candidate_coverings[j]);
       }
       // we have found a set of candidates we we check wether they are golden
       // check below corresponds to @2
