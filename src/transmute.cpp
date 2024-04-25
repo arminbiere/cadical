@@ -523,6 +523,9 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
       assert (level);
       assert (val (lit) < 0);
       if (val (other) > 0) continue;  // TODO: edge case val (other) < 0 -> learn unit clause
+      else if (val (other) < 0) {
+        units.push_back (lit);
+      }
       // we have found a set of candidates we we check wether they are golden
       // check below corresponds to @2
       if (!candidate) {
