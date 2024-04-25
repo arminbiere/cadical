@@ -515,6 +515,10 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
         candidate_coverings[i] = backward_check (transmuter, lit);
         if (candidate_coverings[i] != UINT64_MAX)
           learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
+        else {
+          units.push_back (lit);
+          break;
+        }
       }
       assert (level);
       assert (val (lit) < 0);
@@ -531,6 +535,35 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
     }
   }
   if (level) backtrack ();
+  for (const auto & bin : golden_binaries) {
+    assert (clause.empty ());
+    const unsigned i = bin.first;
+    const unsigned j = bin.second;
+    const int lit = candidates[i];
+    const int other = candidates[j];
+    assert (candidate_coverings_performed[i]);
+    assert (!level);
+    assert (!val (lit) && !val (other));
+    // necessary to get rup proofs. Even though we get additional propagations
+    // here we do not abort!
+    if (!candidate_coverings_performed[j]) {
+      candidate_coverings_performed[j] = true;
+      candidate_coverings[j] = backward_check (transmuter, other);
+      backtrack ();
+      if (candidate_coverings[j] != UINT64_MAX)
+        learn_helper_binaries (transmuter, other, covered[vlit (other)], candidate_coverings[j]);
+      else {
+        units.push_back (other);
+        continue;
+      }
+    }
+    if (val (lit) > 0 || val (other) > 0) continue;
+    clause.push_back (lit);
+    clause.push_back (other);
+    new_golden_binary ();
+    stats.transmutegold++;
+    clause.clear ();
+  }
   for (const auto & lit : units) {
     if (val (lit) > 0) continue;
     else if (val (lit) < 0) { // conflict!
@@ -540,30 +573,6 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
     }
     transmute_assign_unit (lit);
   }
-  for (const auto & bin : golden_binaries) {
-    assert (clause.empty ());
-    const unsigned i = bin.first;
-    const unsigned j = bin.second;
-    const int lit = candidates[i];
-    const int other = candidates[j];
-    assert (candidate_coverings_performed[i]);
-    assert (!level);
-    // necessary to get rup proofs. Even though we get additional propagations
-    // here we do not abort!
-    if (!candidate_coverings_performed[j]) {
-      candidate_coverings_performed[j] = true;
-      candidate_coverings[j] = backward_check (transmuter, other);
-      backtrack ();
-      if (candidate_coverings[i] != UINT64_MAX)
-        learn_helper_binaries (transmuter, other, covered[vlit (other)], candidate_coverings[j]);
-    }
-    if (val (lit) > 0 || val (other) > 0) continue;
-    clause.push_back (lit);
-    clause.push_back (other);
-    new_golden_binary ();
-    stats.transmutegold++;
-    clause.clear ();
-  }
 
   if (!units.empty ()) {
     if (!propagate ()) learn_empty_clause ();
@@ -572,11 +581,11 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
 }
 
 
-int64_t CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
+void CaDiCaL::Internal::transmute_round (uint64_t propagation_limit, bool redundant) {
   if (unsat)
-    return 0;
+    return;
   if (terminated_asynchronously ())
-    return 0;
+    return;
     
   PHASE ("transmute", stats.transmutations,
          "starting transmutation round propagation limit %" PRId64 "", propagation_limit);
@@ -595,6 +604,7 @@ int64_t CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
       noccs (c->literals[1])++;
       continue;
     }
+    if (c->redundant != redundant) continue;
     if (!consider_to_transmute_clause (c))
       continue;
     pre_cand.push_back (c);
@@ -670,12 +680,10 @@ int64_t CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
            relative (golden, checked), checked);
 
   last.transmute.propagations = stats.propagations.search;
-  const int64_t remaining_limit = limit - stats.propagations.transmute;
 
   bool unsuccessful = !(hyperbinaries + golden + units);
   report ('m', !opts.reportall && unsuccessful);
-  if (remaining_limit < 0) return 0;
-  return remaining_limit;
+  return;
 }
 /*------------------------------------------------------------------------*/
 
@@ -705,8 +713,6 @@ bool CaDiCaL::Internal::transmute () {
   if (limit > opts.transmutemaxeff)
     limit = opts.transmutemaxeff;
 
-  // if (stats.transmutations == 1) limit = INT64_MAX;
-
   PHASE ("transmute", stats.transmutations,
          "transmutation limit of %" PRId64 " propagations", limit);
 
@@ -715,10 +721,10 @@ bool CaDiCaL::Internal::transmute () {
   int64_t hyperbinaries = stats.transmutehb;
   int64_t golden = stats.transmutegold;
 
-  limit = transmute_round (limit);
-  // if (limit) {
-  //   transmute_round (limit);
-  // }
+  transmute_round (limit, false);
+  limit *= 1e-3 * opts.transmuteredeff;
+  transmute_round (limit, true);
+
   reset_noccs ();
 
   STOP_SIMPLIFIER (transmute, TRANSMUTE);

@@ -418,7 +418,7 @@ bool Internal::ternary () {
     PHASE ("ternary", stats.ternary,
            "derived %d ternary and %d binary resolvents", delta_htrs3,
            delta_htrs2);
-    report ('3', !opts.reportall && !(delta_htrs2 + delta_htrs2));
+    report ('3', !opts.reportall && !(delta_htrs2 + delta_htrs3));
     if (delta_htrs2)
       resolved_binary_clause = true;
     if (!delta_htrs3)

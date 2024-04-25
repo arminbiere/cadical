@@ -1071,7 +1071,7 @@ struct Internal {
 
   // Transmutation in 'transmute.cpp'.
   //
-  int64_t transmute_round (uint64_t propagation_limit);
+  void transmute_round (uint64_t propagation_limit, bool redundant);
   bool transmute ();
   uint64_t backward_check (Transmuter &transmuter, int lit);
   void learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t forward, uint64_t backward);
