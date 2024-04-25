@@ -528,6 +528,14 @@ void Stats::print (Internal *internal) {
          stats.transmuteinstantiate, relative (stats.transmuteinstantiate, stats.transmutechecks));
     PRT ("  transmuteabort:%15" PRId64 "   %10.2f %%  of checked",
          stats.transmuteabort, percent (stats.transmuteabort, stats.transmutechecks));
+    if (stats.transmuteabort) {
+      PRT ("    abort short: %15" PRId64 "   %10.2f %%  of aborted",
+           stats.transmuteabortshort, percent (stats.transmuteabortshort, stats.transmuteabort));
+      PRT ("    abort limit: %15" PRId64 "   %10.2f %%  of aborted",
+           stats.transmuteabortlimit, percent (stats.transmuteabortlimit, stats.transmuteabort));
+      PRT ("    resched:     %15" PRId64 "   %10.2f %%  of aborted",
+           stats.transmuterescheduled, percent (stats.transmuterescheduled, stats.transmuteabort));
+    }
     PRT ("  transmutedecs: %15" PRId64 "   %10.2f    per check",
          stats.transmutedecs, relative (stats.transmutedecs, stats.transmutechecks));
     PRT ("  transmutedcand:%15" PRId64 "   %10.2f    per checked",
@@ -540,8 +548,6 @@ void Stats::print (Internal *internal) {
              stats.transmutedglue[i], percent (stats.transmutedglue[i], stats.transmutedclauses));
       }
     }
-    PRT ("  transmutedel:  %15" PRId64 "   %10.2f %%  of checked",
-         stats.transmutedeleted, percent (stats.transmutedeleted, stats.transmutechecks));
     PRT ("  transmuteunits:%15" PRId64 "   %10.2f    per check", 
          stats.transmuteunits, relative (stats.transmuteunits, stats.transmutechecks));
     PRT ("    probed units:%15" PRId64 "   %10.2f %%  of units",

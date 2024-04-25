@@ -183,7 +183,7 @@ bool Internal::transmute_propagate () {
 bool Internal::consider_to_transmute_clause (Clause *c) {
   if (c->garbage)
     return false;
-  if (c->glue < 2)
+  if (c->glue < 1)
     return false;
   if (c->size < 4)
     return false;
@@ -252,6 +252,7 @@ Clause *Internal::transmute_instantiate_clause (Clause *c, int lit, int other) {
   }
   assert (c->size == (int) clause.size () + 1);
   Clause *d = new_clause_as (c);
+  d->transmuted = true;
   clause.clear ();
   mark_garbage (c);
   mark_garbage (tmp);
@@ -262,7 +263,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
 
   // at least length 4 glue 2 clauses
   assert (c->size > 3);
-  assert (c->glue > 1);
+  // assert (c->glue > 1);
   assert (!c->transmuted);
 
   c->transmuted = true; // remember transmuted clauses
@@ -329,13 +330,20 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
   // Go over the literals in the candidate clause.
   //
   while (q != end) {
-    if (stats.propagations.transmute >= limit) return;
+    if (stats.propagations.transmute >= limit) {
+      stats.transmuteabort++;
+      stats.transmuteabortlimit++;
+      c->transmuted = false;                // reschedule c and return
+      stats.transmuterescheduled++;
+      return;
+    }
     const auto &lit = *p++ = *q++;
     idx++;
     assert (!conflict);
     if (val (lit) > 0) {
       LOG (c, "satisfied by propagated unit %d", lit);
       mark_garbage (c);
+      stats.transmuteabort++;
       return;
     } else if (val (lit) < 0) {
       LOG ("skipping falsified literal %d", lit);
@@ -344,6 +352,8 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
       size--;
       if (size < 4) {
         LOG (c, "too short after unit simplification");  // @4
+        stats.transmuteabort++;
+        stats.transmuteabortshort++;
         return;
       }
       continue;
@@ -368,9 +378,13 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
       }
       if (size < 4) {
         LOG (c, "too short after unit simplification");   // @4
+        stats.transmuteabort++;
+        stats.transmuteabortshort++;
         return;
       }
       c->transmuted = false;                // reschedule c and return
+      stats.transmuteabort++;
+      stats.transmuterescheduled++;
       transmuter.schedule.push_back (c);
       return;
     }
@@ -386,6 +400,8 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
           c = transmute_instantiate_clause (c, lit, other);  // @3
           if (size < 4) {
             LOG (c, "too short after unit simplification");  // @4
+            stats.transmuteabort++;
+            stats.transmuteabortshort++;
             return;
           }
           break;
@@ -453,6 +469,15 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
   for (unsigned i = 0; i < candidates.size (); i++) {
     const int lit = candidates[i];
     if (level) backtrack ();
+    if (stats.propagations.transmute >= limit) {
+      stats.transmuteabort++;
+      stats.transmuteabortlimit++;
+      c->transmuted = false;                // reschedule c and return
+      stats.transmuterescheduled++;
+      if (golden_binaries.empty () && units.empty ())
+        return;
+      break;
+    }
     assert (!val (lit));  // might be a problem if this does not hold
     if (covered[vlit (lit)] == covering) {  // special case of unit also implies @3
 #ifndef NDEBUG  // assert lit not in current
@@ -460,7 +485,6 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
 #endif
       assert (!candidate_coverings_performed[i]);
       assert (!level);
-      if (stats.propagations.transmute >= limit) return;
       candidate_coverings_performed[i] = true;
       candidate_coverings[i] = backward_check (transmuter, lit);
       if (candidate_coverings[i] != UINT64_MAX)
@@ -478,7 +502,15 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
       if ((covered[vlit (lit)] | covered[vlit (other)]) != covering) continue;
       if (!candidate_coverings_performed[i]) {
         assert (!level);
-        if (stats.propagations.transmute >= limit) return;
+        if (stats.propagations.transmute >= limit) {
+          stats.transmuteabort++;
+          stats.transmuteabortlimit++;
+          c->transmuted = false;                // reschedule c and return
+          stats.transmuterescheduled++;
+          if (golden_binaries.empty () && units.empty ())
+            return;
+          break;
+        }
         candidate_coverings_performed[i] = true;
         candidate_coverings[i] = backward_check (transmuter, lit);
         if (candidate_coverings[i] != UINT64_MAX)
@@ -537,10 +569,6 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
     if (!propagate ()) learn_empty_clause ();
   }
   assert (!level);
-  // if (delete_clause && c->redundant) {
-  //   stats.transmutedeleted++;
-  //   mark_garbage (c);
-  // }
 }
 
 
@@ -645,7 +673,7 @@ int64_t CaDiCaL::Internal::transmute_round (uint64_t propagation_limit) {
   const int64_t remaining_limit = limit - stats.propagations.transmute;
 
   bool unsuccessful = !(hyperbinaries + golden + units);
-  report ('m', unsuccessful);
+  report ('m', !opts.reportall && unsuccessful);
   if (remaining_limit < 0) return 0;
   return remaining_limit;
 }
@@ -676,6 +704,8 @@ bool CaDiCaL::Internal::transmute () {
     limit = opts.transmutemineff;
   if (limit > opts.transmutemaxeff)
     limit = opts.transmutemaxeff;
+
+  // if (stats.transmutations == 1) limit = INT64_MAX;
 
   PHASE ("transmute", stats.transmutations,
          "transmutation limit of %" PRId64 " propagations", limit);

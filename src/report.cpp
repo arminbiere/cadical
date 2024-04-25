@@ -235,6 +235,9 @@ void Internal::report (char type, int verbose) {
   case 'd':
     tout.blue (true);
     break;
+  case 'm':
+    tout.blue (true);
+    break;
   case 'z':
   case 'f':
     tout.cyan (true);
