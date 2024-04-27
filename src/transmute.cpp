@@ -300,15 +300,20 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
   // The actual transmutation checking is performed here, by probing
   // each of the literals of the clause.
   // The goal is to find two literals l, k, such that every literal c_i of
-  // the clause either implies l or k @1.
+  // the clause either implies l or k @1. (i.e. c->(l or k) which means we
+  // are allowed to learn the clause (l or k))
   // Furthermore, we only consider golden pairs, i.e.,
-  // neither l nor k imply more than n-2 literals in a clause of size n @2.
-  // actually just check wether k -> l otherwise learn
-  // TODO: when we probe a literal a of the clause c and it implies c\{a} then we can
-  // learn c\{a} @3
+  // neither -l nor -k imply more than n-2 literals in a clause of size n. @2
   // Thus the smalles candidate size for transmutation is 4.
-  // Early abort happens when the clause becomes too short
-  // because of learnt units @4 or if a literal does not propagate at all @5.
+  // @2 is subsumed by checking that -k -> l.
+  // Consider x y u v, with x,y->l and u,v->k. If -l -> (-x and -y and -u),
+  // then -l -> v. By transitivity we get -l -> k which would fail our check.
+  // We do instantiation on the fly: When we probe a literal a of the clause c
+  // and it implies c\{a} then we can learn c\{a} @3
+  // Early abort happens when the clause becomes too short @4,
+  // either because of probing units or through @3
+  // or if a literal does not propagate at all @5. However, @5 can only happen
+  // if a unit was learned in a previous iteration of transmute_clause.
   
   LOG (c, "transmutation checking");
   stats.transmutechecks++;
@@ -318,8 +323,6 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
   // we use vlit for indexing the covered array.
   vector<uint64_t> covered;
   covered.resize (max_var * 2 + 2);
-  // for (unsigned i = 0; i < covered.size (); i++)
-  //   covered[i] = 0;
 
   unsigned idx = 0;
   unsigned size = current.size ();
@@ -433,7 +436,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
   }
   assert (!conflict);
   
-  // check that no lit in current is assigned (might break because of units)
+  // check that no lit in current is assigned
   //
 #ifndef NDEBUG
   for (const auto & lit : current) assert (!val (lit));
@@ -520,14 +523,16 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
           break;
         }
       }
+      // we can avoid probing lit multiple times by not backtracking so we
+      // should be at level 1 here.
       assert (level);
       assert (val (lit) < 0);
-      if (val (other) > 0) continue;  // TODO: edge case val (other) < 0 -> learn unit clause
+
+      // improved check for -lit -> other (see discussion @2)
+      if (val (other) > 0) continue;
       else if (val (other) < 0) {
-        units.push_back (lit);
+        units.push_back (lit);  // edge case val (other) < 0 -> learn unit clause
       }
-      // we have found a set of candidates we we check wether they are golden
-      // check below corresponds to @2
       if (!candidate) {
         stats.transmutedclauses++;
         assert (c->glue - 1 < 64);
@@ -606,6 +611,21 @@ void CaDiCaL::Internal::transmute_round (uint64_t propagation_limit, bool redund
       noccs (c->literals[0])++;
       noccs (c->literals[1])++;
       continue;
+    } else {
+      bool ignore = 0;
+      unsigned first = 0;
+      unsigned second = 0;
+      for (const auto &lit : *c) {
+        if (val (lit) > 0) { ignore = true; break; }
+        else if (val (lit) < 0) continue;
+        else if (!first) first = lit;
+        else if (!second) second = lit;
+        else { ignore = true; break; }
+      }
+      if (!ignore) {
+        noccs (first)++;
+        noccs (second)++;
+      }
     }
     if (c->redundant != redundant) continue;
     if (!consider_to_transmute_clause (c))
