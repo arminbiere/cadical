@@ -458,7 +458,6 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
   stats.transmutedcandidates += (candidates.size ());
   const uint64_t covering = ((uint64_t) 1 << current.size ()) - 1;
   vector<int> units;
-  bool candidate = false;
   vector<uint64_t> candidate_coverings;
   vector<bool> candidate_coverings_performed;
   candidate_coverings.resize (candidates.size ());
@@ -533,16 +532,17 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
       else if (val (other) < 0) {
         units.push_back (lit);  // edge case val (other) < 0 -> learn unit clause
       }
-      if (!candidate) {
-        stats.transmutedclauses++;
-        assert (c->glue - 1 < 64);
-        stats.transmutedglue[c->glue - 1]++;
-        candidate = true;
-      }
       golden_binaries.push_back (pair<unsigned, unsigned> (i, j));
     }
   }
   if (level) backtrack ();
+  if (golden_binaries.size ()) {
+    stats.transmutedclauses++;
+    unsigned glue = c->glue;
+    if (!c->redundant) glue = c->size;
+    assert (glue - 1 < 64);
+    stats.transmutedglue[glue - 1]++;
+  }
   for (const auto & bin : golden_binaries) {
     assert (clause.empty ());
     const unsigned i = bin.first;

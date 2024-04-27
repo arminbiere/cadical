@@ -391,7 +391,7 @@ void Internal::clear_analyzed_literals () {
     assert (!f.removable);
   }
   analyzed.clear ();
-#ifndef NDEBUG
+#if 0
   if (unit_analyzed.size ())
     return;
   for (auto idx : vars) {
