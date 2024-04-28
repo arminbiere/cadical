@@ -516,9 +516,9 @@ void Stats::print (Internal *internal) {
          percent (stats.vivifyreused, stats.vivifydecs));
   }
   if (all || stats.transmutations) {
-    PRT ("transmutedcls: %15" PRId64 "   %10.2f %%  of checked",
-         stats.transmutedclauses, percent (stats.transmutedclauses, stats.transmutechecks));
-    PRT ("  transmutations:  %15" PRId64 "   %10.2f    interval",
+    PRT ("transmutegold:   %15" PRId64 "   %10.2f    per clause",
+         stats.transmutegold, relative (stats.transmutegold, stats.transmutedclauses));
+    PRT ("  transmutations:%15" PRId64 "   %10.2f    interval",
          stats.transmutations, relative (stats.conflicts, stats.transmutations));
     PRT ("  transmutesched:%15" PRId64 "   %10.2f %%  per conflict",
          stats.transmutesched, percent (stats.transmutesched, stats.conflicts));
@@ -556,8 +556,6 @@ void Stats::print (Internal *internal) {
          stats.transmuteunits, relative (stats.transmuteunits, stats.transmutechecks));
     PRT ("  transmutehb:   %15" PRId64 "   %10.2f    per clause",
          stats.transmutehb, relative (stats.transmutehb, stats.transmutedclauses));
-    PRT ("  transmutegold: %15" PRId64 "   %10.2f    per clause",
-         stats.transmutegold, relative (stats.transmutegold, stats.transmutedclauses));
   }
   if (all || stats.walk.count) {
     PRT ("walked:          %15" PRId64 "   %10.2f    interval",
