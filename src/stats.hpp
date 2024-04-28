@@ -209,9 +209,9 @@ struct Stats {
   int64_t transmuteunits;     // for transmutation
   int64_t transmutehb;        // for transmutation
   int64_t transmutegold;      // for transmutation
-  int64_t transmutegoldunits;     // for transmutation
   int64_t transmuteinstantiate;
   int64_t transmutedglue[64];
+  int64_t transmutedsize[64];
   
   int64_t transreds;
   int64_t transitive;

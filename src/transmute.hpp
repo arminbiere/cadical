@@ -6,7 +6,7 @@ namespace CaDiCaL {
 struct Clause;
 
 struct Transmuter {
-  vector<Clause *> schedule;
+  vector<pair<Clause *,int>> schedule;
   vector<int> current;
   Transmuter () {}
 

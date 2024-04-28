@@ -1073,8 +1073,8 @@ struct Internal {
   //
   void transmute_round (uint64_t propagation_limit, bool redundant);
   bool transmute ();
-  uint64_t backward_check (Transmuter &transmuter, int lit);
-  void learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t forward, uint64_t backward);
+  bool backward_check (Transmuter &transmuter, int lit, uint64_t forward);
+  bool learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t forward, uint64_t backward);
   void transmute_clause (Transmuter &transmuter, Clause *c, int64_t limit);
   bool consider_to_transmute_clause (Clause *c);
   bool transmute_propagate ();
@@ -1084,7 +1084,8 @@ struct Internal {
   void transmute_assign (int lit, Clause *reason);
   Clause *transmute_instantiate_clause (Clause *c, int lit, int other);
   Clause *new_golden_binary ();
-  
+  void fill_transmute_schedule (Transmuter &transmuter, bool redundant);
+
   // ProbSAT/WalkSAT implementation called initially or from 'rephase'.
   //
   void walk_save_minimum (Walker &);

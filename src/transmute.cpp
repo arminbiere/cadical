@@ -176,25 +176,8 @@ bool Internal::transmute_propagate () {
 
 /*------------------------------------------------------------------------*/
 
-// We consider all clauses of size >= 4 and glue >= 2 for transmutation.
-// Clauses bigger 64 are skipped in order to efficiently calculate set cover.
-// However, clauses can only be candidates once.
 
-bool Internal::consider_to_transmute_clause (Clause *c) {
-  if (c->garbage)
-    return false;
-  if (c->glue < 1)
-    return false;
-  if (c->size < 4)
-    return false;
-  if (c->size > opts.transmutesize)
-    return false;
-  if (c->transmuted)
-    return false;
-  return true;
-}
-
-uint64_t Internal::backward_check (Transmuter &transmuter, int lit) {
+bool Internal::backward_check (Transmuter &transmuter, int lit, uint64_t forward) {
   assert (!level);
   assert (!val (lit));
 
@@ -205,7 +188,7 @@ uint64_t Internal::backward_check (Transmuter &transmuter, int lit) {
     LOG ("no need for helper clauses because %d unit under rup", lit);
     backtrack (level - 1);
     conflict = 0;
-    return UINT64_MAX;
+    return false;
   }
   uint64_t covered = 0;
   int idx = 0;
@@ -216,14 +199,22 @@ uint64_t Internal::backward_check (Transmuter &transmuter, int lit) {
     // we have other -> lit and -lit -> -other by rup
     covered += (uint64_t) 1 << (idx - 1);  // mark other
   }
-  // backtrack (level - 1);
-  return covered;
+  if (learn_helper_binaries (transmuter, lit, forward, covered)) {
+    if (!transmute_propagate ()) {
+      backtrack (level - 1);
+      conflict = 0;
+      return false;
+    }
+  }
+  return true;
 }
 
-void Internal::learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t forward, uint64_t backward) {
+bool Internal::learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t forward, uint64_t backward) {
   int idx = 0;
+  bool repropagate = false;
   assert (clause.empty ());
   clause.push_back (lit);
+  assert (val (lit) < 0);
   for (const auto & other : transmuter.current) {
     idx++;
     if (other == lit) continue;
@@ -232,12 +223,15 @@ void Internal::learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t 
     LOG ("learning helper binary %d %d", lit, -other);
     // learn binary -lit -> -other
     clause.push_back (-other);
-    new_hyper_binary_resolved_clause (true, 2);
+    Clause *res = new_hyper_binary_resolved_clause (true, 2);
+    transmute_assign (-other, res);
+    repropagate = true;
     stats.transmutehb++;
     assert (!clause.empty ());
     clause.pop_back ();
   }
   clause.clear ();
+  return repropagate;
 }
 
 Clause *Internal::transmute_instantiate_clause (Clause *c, int lit, int other) {
@@ -388,7 +382,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
       c->transmuted = false;                // reschedule c and return
       stats.transmuteabort++;
       stats.transmuterescheduled++;
-      transmuter.schedule.push_back (c);
+      transmuter.schedule.push_back (pair<Clause*,int> (c, c->size-1));
       return;
     }
     if (opts.transmuteinst) {
@@ -458,10 +452,8 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
   stats.transmutedcandidates += (candidates.size ());
   const uint64_t covering = ((uint64_t) 1 << current.size ()) - 1;
   vector<int> units;
-  vector<uint64_t> candidate_coverings;
-  vector<bool> candidate_coverings_performed;
-  candidate_coverings.resize (candidates.size ());
-  candidate_coverings_performed.resize (candidates.size ());
+  vector<bool> backward_check_performed;
+  backward_check_performed.resize (candidates.size ());
   // contains indices for golden binaries
   vector<pair<unsigned, unsigned>> golden_binaries;
 
@@ -485,13 +477,10 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
 #ifndef NDEBUG  // assert lit not in current
       for (const auto & other : current) assert (other != lit && other != -lit);
 #endif
-      assert (!candidate_coverings_performed[i]);
+      assert (!backward_check_performed[i]);
       assert (!level);
-      candidate_coverings_performed[i] = true;
-      candidate_coverings[i] = backward_check (transmuter, lit);
-      if (candidate_coverings[i] != UINT64_MAX)
-        learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
-      if (candidate_coverings[i] != UINT64_MAX) stats.transmutegoldunits++;
+      backward_check_performed[i] = true;
+      backward_check (transmuter, lit, covered[vlit (lit)]);
       units.push_back (lit);
       continue;
     }
@@ -502,7 +491,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
       if (lit == -other) continue;
       assert (covered[vlit (lit)] <= covering);
       if ((covered[vlit (lit)] | covered[vlit (other)]) != covering) continue;
-      if (!candidate_coverings_performed[i]) {
+      if (!backward_check_performed[i]) {
         assert (!level);
         if (stats.propagations.transmute >= limit) {
           stats.transmuteabort++;
@@ -513,11 +502,8 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
             return;
           break;
         }
-        candidate_coverings_performed[i] = true;
-        candidate_coverings[i] = backward_check (transmuter, lit);
-        if (candidate_coverings[i] != UINT64_MAX)
-          learn_helper_binaries (transmuter, lit, covered[vlit (lit)], candidate_coverings[i]);
-        else {
+        backward_check_performed[i] = true;
+        if (!backward_check (transmuter, lit, covered[vlit (lit)])) {
           units.push_back (lit);
           break;
         }
@@ -538,10 +524,11 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
   if (level) backtrack ();
   if (golden_binaries.size ()) {
     stats.transmutedclauses++;
-    unsigned glue = c->glue;
-    if (!c->redundant) glue = c->size;
-    assert (glue - 1 < 64);
-    stats.transmutedglue[glue - 1]++;
+    if (c->redundant) {
+      assert (c->glue - 1 < 64);
+      stats.transmutedglue[c->glue - 1]++;
+    }
+    stats.transmutedsize[current.size ()]++;
   }
   for (const auto & bin : golden_binaries) {
     assert (clause.empty ());
@@ -549,21 +536,19 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
     const unsigned j = bin.second;
     const int lit = candidates[i];
     const int other = candidates[j];
-    assert (candidate_coverings_performed[i]);
+    assert (backward_check_performed[i]);
     assert (!level);
     assert (!val (lit) && !val (other));
     // necessary to get rup proofs. Even though we get additional propagations
     // here we do not abort!
-    if (!candidate_coverings_performed[j]) {
-      candidate_coverings_performed[j] = true;
-      candidate_coverings[j] = backward_check (transmuter, other);
-      backtrack ();
-      if (candidate_coverings[j] != UINT64_MAX)
-        learn_helper_binaries (transmuter, other, covered[vlit (other)], candidate_coverings[j]);
-      else {
+    if (!backward_check_performed[j]) {
+      backward_check_performed[j] = true;
+      if (!backward_check (transmuter, other, covered[vlit (other)])) {
+        assert (!level);
         units.push_back (other);
         continue;
       }
+      backtrack ();
     }
     if (val (lit) > 0 || val (other) > 0) continue;
     clause.push_back (lit);
@@ -589,12 +574,86 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
 }
 
 
+struct transmute_sort_clause {
+
+  bool operator() (pair<Clause*, int> p, pair<Clause*, int> q) const {
+    const auto & c = p.first;
+    const auto & d = q.first;
+    const auto & c_size = p.second;
+    const auto & d_size = q.second;
+    if (c_size < d_size) return false;
+    if (d_size < c_size) return true;
+    return c->glue > d->glue;
+  }
+};
+
+
+// We consider all clauses of size >= 4 and glue >= 1 for transmutation.
+// Clauses bigger 64 are skipped in order to efficiently calculate set cover.
+// However, we count non-falsified literals and do not take c->size
+// clauses can only be candidates once.
+//
+void Internal::fill_transmute_schedule (Transmuter &transmuter, bool redundant) {
+  vector<Clause *> pre_cand;
+  // fill noccs and pre-select candidates with the above criteria
+  for (const auto &c : clauses) {
+    if (c->garbage) continue;
+    bool sat = false;
+    int count = 0;
+    unsigned first = 0;
+    unsigned second = 0;
+    // fill noccs to filter for literals which do not propagate at all
+    for (const auto &lit : *c) {
+      if (val (lit) > 0) { sat = true; break; }
+      else if (val (lit) < 0) continue;
+      else if (!first) first = lit;
+      else if (!second) second = lit;
+      count++;
+      if (count > 2) break;
+    }
+    if (sat) continue;
+    assert (count > 1);
+    if (count == 2) {
+      noccs (first)++;
+      noccs (second)++;
+    }
+    if (c->size < 4) continue;
+    if (c->redundant != redundant) continue;
+    if (c->transmuted) continue;
+    pre_cand.push_back (c);
+  }
+
+  for (const auto &c : pre_cand) {
+    int count = 0;
+    bool cand = true;
+    for (int i = 0; i < c->size; i++) {
+      if (val (c->literals[i])) continue;
+      count++;
+      if (count > opts.transmutesize) {
+        cand = false;
+        break;
+      }
+      if (!noccs (-(c->literals[i]))) {
+        cand = false;
+        break;
+      }
+    }
+    if (cand && count > 3)
+      transmuter.schedule.push_back (pair<Clause*,int> (c, count));
+  }
+  
+  shrink_vector (transmuter.schedule);
+  
+  stable_sort (transmuter.schedule.begin (), transmuter.schedule.end (), transmute_sort_clause ());
+}
+
+
 void CaDiCaL::Internal::transmute_round (uint64_t propagation_limit, bool redundant) {
   if (unsat)
     return;
   if (terminated_asynchronously ())
     return;
-    
+
   PHASE ("transmute", stats.transmutations,
          "starting transmutation round propagation limit %" PRId64 "", propagation_limit);
 
@@ -603,51 +662,7 @@ void CaDiCaL::Internal::transmute_round (uint64_t propagation_limit, bool redund
   //
   Transmuter transmuter;
 
-  vector<Clause *> pre_cand;
-  for (const auto &c : clauses) {
-    if (c->garbage) continue;
-    if (c->size == 2) {
-      if (val (c->literals[0]) || val (c->literals[1])) continue;
-      noccs (c->literals[0])++;
-      noccs (c->literals[1])++;
-      continue;
-    } else {
-      bool ignore = 0;
-      unsigned first = 0;
-      unsigned second = 0;
-      for (const auto &lit : *c) {
-        if (val (lit) > 0) { ignore = true; break; }
-        else if (val (lit) < 0) continue;
-        else if (!first) first = lit;
-        else if (!second) second = lit;
-        else { ignore = true; break; }
-      }
-      if (!ignore) {
-        noccs (first)++;
-        noccs (second)++;
-      }
-    }
-    if (c->redundant != redundant) continue;
-    if (!consider_to_transmute_clause (c))
-      continue;
-    pre_cand.push_back (c);
-  }
-
-  for (const auto &c : pre_cand) {
-    bool cand = true;
-    for (int i = 0; i < c->size; i++) {
-      if (!noccs (-(c->literals[i]))) {
-        cand = false;
-        break;
-      }
-    }
-    if (cand)
-      transmuter.schedule.push_back (c);
-  }
-  
-  shrink_vector (transmuter.schedule);
-  
-  stable_sort (transmuter.schedule.rbegin (), transmuter.schedule.rend (), clause_smaller_size ());
+  fill_transmute_schedule (transmuter, redundant);
   
   // Remember old values of counters to summarize after each round with
   // verbose messages what happened in that round.
@@ -672,7 +687,7 @@ void CaDiCaL::Internal::transmute_round (uint64_t propagation_limit, bool redund
   //
   while (!unsat && !terminated_asynchronously () &&
          !transmuter.schedule.empty () && stats.propagations.transmute < limit) {
-    Clause *c = transmuter.schedule.back ();
+    Clause *c = transmuter.schedule.back ().first;
     transmuter.schedule.pop_back ();
     transmute_clause (transmuter, c, limit);
   }
