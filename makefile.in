@@ -13,16 +13,19 @@ CXXFLAGS=@CXXFLAGS@
 LIBS=@LIBS@
 ROOT=@ROOT@
 CONTRIB=@CONTRIB@
+IPASIR=@IPASIR@
 
 ############################################################################
 #    It is usually not necessary to change anything below this line!       #
 ############################################################################
 
 SRC_APP=src/cadical.cpp src/mobical.cpp
+SRC_IPASIR=src/ipasir.cpp
 SRC_SOLVER=$(subst $(ROOT)/,,$(sort $(wildcard $(ROOT)/src/*.cpp)))
 SRC_CONTRIB=$(subst $(ROOT)/,,$(sort $(wildcard $(ROOT)/contrib/*.cpp)))
 
 FILT_SOLVER=$(filter-out $(SRC_APP),$(SRC_SOLVER))
+FILT_SOLVER:=$(if $(filter-out no,$(IPASIR)),$(FILT_SOLVER),$(filter-out $(SRC_IPASIR), $(FILT_SOLVER)))
 FILT_CONTRIB=$(if $(filter-out no,$(CONTRIB)),$(SRC_CONTRIB),)
 OBJ_SOLVER=$(FILT_SOLVER:.cpp=.o)
 OBJ_CONTRIB=$(FILT_CONTRIB:.cpp=.o)
