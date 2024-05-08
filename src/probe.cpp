@@ -892,8 +892,8 @@ void CaDiCaL::Internal::probe (bool update_limits) {
     
   decompose (); // ... and (ELS) afterwards.
 
-  if (transmute ()) // transmutation
-    decompose ();
+  //if (transmute ()) // transmutation
+  //  decompose ();
 
   last.probe.propagations = stats.propagations.search;
 

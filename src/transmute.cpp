@@ -619,6 +619,8 @@ void Internal::fill_transmute_schedule (Transmuter &transmuter, bool redundant) 
     }
     if (c->size < 4) continue;
     if (c->redundant != redundant) continue;
+    // TODO: test
+    if (redundant && !likely_to_be_kept_clause (c)) continue;
     if (c->transmuted) continue;
     pre_cand.push_back (c);
   }
