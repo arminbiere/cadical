@@ -58,6 +58,10 @@ struct Closure {
 
   std::vector<bool> scheduled;
 
+  
+  std::vector<int> representative; // union-find
+  int find_representative(int lit) const;
+
   std::vector<int> lits; // result of definitions
   std::vector<int> rhs; // stack for storing RHS
   
@@ -65,11 +69,17 @@ struct Closure {
   void extract_and_gates (Closure&);
   void extract_gates (Closure&);
   std::unordered_set<Gate*, Hash> table;
-  void extract_and_gates_with_base_clause (Clause *c);
+  void extract_and_gates_with_base_clause (Clause *c) const;
 
   Gate* find_and_lits (unsigned, unsigned);
+  bool merge_literals (Closure &closure, int lit, int other);
+  void init_and_gate_extraction ();
+  Gate* find_first_and_gate (int lhs);
+  void extract_and_gates ();
   
   Gate* new_and_gate(int);
+
+  bool learn_congruence_unit(int unit);
   // negbincount (lit) -> noccs (-lit)
 };
 

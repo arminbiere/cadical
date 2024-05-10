@@ -50,7 +50,7 @@ Gate *Closure::new_and_gate (int lhs) {
   const unsigned arity = rhs.size();
   assert (arity + 1 == lits.size());
   Gate *g = find_and_lits (arity, 0);
-  return nullptr;
+  return g;
 }
 
 Gate* Internal::find_first_and_gate (const Closure &closure, int lhs) {
@@ -78,30 +78,114 @@ Gate* Internal::find_first_and_gate (const Closure &closure, int lhs) {
   // TODO  
   return nullptr; 
 }
- 
 
-void Internal::extract_and_gates_with_base_clause (const Closure &closure, Clause *c) {
-  std::vector<Clause *> &binaries = closure.binaries;
+int Closure::find_representative(int lit) const {
+  int res = lit;
+  int nxt;
+  do {
+    res = nxt;
+    nxt = this->representative[nxt];
+  } while (nxt != res);
+  return res;
+}
+
+bool Closure::learn_congruence_unit(int lit) {
+  const int val_lit = internal->val(lit);
+  if (lit > 0)
+    return true;
+  if (lit < 0) {
+    internal->unsat = true;
+    return false;
+  }
+
+  internal->assign_unit (lit);
+  int conflict = internal->propagate ();
+
+  return !conflict;
+}
+
+bool Closure::merge_literals (Closure &closure, int lit, int other) {
+  int repr_lit = find_representative(lit);
+  int repr_other = find_representative(other);
+
+  if (repr_lit == repr_other) {
+    LOG ("already merged %d and %d", lit, other);
+    return false;
+  }
+
+  const int val_lit = internal->val(lit);
+  const int val_other = internal->val(other);
+
+  if (val_lit) {
+    if (val_lit == val_other) {
+      LOG ("not merging lits %d and %d assigned to same value", lit, other);
+      return false;
+    }
+    if (val_lit == val_other) {
+      LOG ("merging lits %d and %d assigned to inconsistent value", lit, other);
+      internal->unsat = true;
+      internal->learn_empty_clause();
+      return false;
+    }
+
+    assert (!val_other);
+    LOG ("merging assigned %d and unassigned %d", lit, other);
+    const unsigned unit = (val_lit < 0) ? -other : other;
+    
+  }
+
+  if (!val_lit && val_other) {
+    LOG ("merging assigned %d and unassigned %d", lit, other);
+    const unsigned unit = (val_other < 0) ? -lit : lit;
+    learn_congruence_unit(unit);
+    return false;
+  }
+
+  int smaller = repr_lit;
+  int larger = repr_other;
+
+  if (smaller > larger)
+    std::swap (smaller, larger);
+
+  assert (find_representative(smaller) == smaller);
+  assert (find_representative(larger) == larger);
+
+  if (repr_lit == -repr_other) {
+    LOG ("merging clashing %d and %d", lit, other);
+    internal->assign_unit (smaller);
+    internal->unsat = true;
+    return false;
+  }
+
+  LOG ("merging %d and %d", lit, other);
+  // need i2u or something
+  representative[lit] = smaller;
+  return false;
+}
+
+
+void Closure::extract_and_gates_with_base_clause (Clause *c) const {
+  const std::vector<Clause *> &binaries = this->binaries;
   int size = 0;
   const unsigned arity_limit = min (5, MAX_ARITY); // TODO much larger in kissat
   const unsigned size_limit = arity_limit + 1;
   int64_t max_negbincount = 0;
-  clause.clear ();
+  internal->clause.clear ();
 
   for (int lit : *c) {
-    signed char v = val (lit);
+    signed char v = internal->val (lit);
     if (v < 0)
       continue;
     if (v > 0) {
-      assert (!level);
+      assert (!internal->level);
       LOG (c, "found satisfied clause");
-      mark_garbage (c);
+     internal->mark_garbage (c);
     }
     if (++size > size_limit) {
       LOG (c, "clause is actually too large, thus skipping");
       return;
     }
-    const int64_t count = noccs (-lit);
+    const int64_t count = internal->noccs (-lit);
     if (!count) {
       LOG (c, "%d negated does not occur in any binary clause, thus skipping");
       return;
@@ -109,7 +193,7 @@ void Internal::extract_and_gates_with_base_clause (const Closure &closure, Claus
 
     if (count > max_negbincount)
       max_negbincount = count;
-    clause.push_back(lit);
+    internal->clause.push_back(lit);
   }
 
   if (size < 3) {
@@ -126,16 +210,16 @@ void Internal::extract_and_gates_with_base_clause (const Closure &closure, Claus
   }
 
   int reduced = 0;
-  const size_t clause_size = clause.size();
+  const size_t clause_size = internal->clause.size();
   for (int i = 0; i < clause_size; ++i) {
-    const int lit = clause[i];
-    const unsigned count = noccs (-lit);
-    mark67 (lit);
-    analyzed.push_back (lit);
+    const int lit = internal->clause[i];
+    const unsigned count = internal->noccs (-lit);
+    internal->mark67 (lit);
+    internal->analyzed.push_back (lit);
     if (count < arity) {
       if (reduced < i) {
-	clause[i] = clause[reduced];
-	clause[reduced++] = lit;
+	internal->clause[i] = internal->clause[reduced];
+	internal->clause[reduced++] = lit;
       } else if (reduced == i)
 	++reduced;
     }
@@ -144,13 +228,13 @@ void Internal::extract_and_gates_with_base_clause (const Closure &closure, Claus
 
   
   for (int i = 0; i < clause_size; ++i) {
-    if (unsat)
+    if (internal->unsat)
       break;
     if (c->garbage)
       break;
-    const int lhs = clause[i];
+    const int lhs = internal->clause[i];
     const int not_lhs = -lhs;
-    for (auto rhs : clause) {
+    for (auto rhs : internal->clause) {
       if (lhs == rhs)
 	continue;
      

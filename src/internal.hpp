@@ -1317,10 +1317,6 @@ struct Internal {
   bool frozen (int lit) { return frozentab[vidx (lit)] > 0; }
 
   // Congruence closure
-  void init_and_gate_extraction (Closure &closure);
-  Gate* find_first_and_gate (const Closure &closure, int lhs);
-  void extract_and_gates_with_base_clause (Closure &closure, Clause *c);
-  void extract_and_gates (Closure &closure);
   void extract_gates ();
 
   // Parsing functions in 'parse.cpp'.
