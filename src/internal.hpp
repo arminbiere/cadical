@@ -54,6 +54,7 @@ extern "C" {
 #include "checker.hpp"
 #include "clause.hpp"
 #include "config.hpp"
+#include "congruence.hpp"
 #include "contract.hpp"
 #include "cover.hpp"
 #include "decompose.hpp"
@@ -1314,6 +1315,13 @@ struct Internal {
       LOG ("variable %d remains frozen forever", idx);
   }
   bool frozen (int lit) { return frozentab[vidx (lit)] > 0; }
+
+  // Congruence closure
+  void init_and_gate_extraction (Closure &closure);
+  Gate* find_first_and_gate (const Closure &closure, int lhs);
+  void extract_and_gates_with_base_clause (Closure &closure, Clause *c);
+  void extract_and_gates (Closure &closure);
+  void extract_gates ();
 
   // Parsing functions in 'parse.cpp'.
   //
