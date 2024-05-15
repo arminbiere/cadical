@@ -673,7 +673,7 @@ void Internal::subsume (bool update_limits) {
     vivify ();
   if (opts.transred)
     transred ();
-  if (transmute ()) decompose ();
+  //if (transmute ()) decompose ();
 
 UPDATE_LIMITS:
 
