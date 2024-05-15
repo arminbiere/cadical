@@ -210,6 +210,7 @@ bool Internal::backward_check (Transmuter &transmuter, int lit, uint64_t forward
 }
 
 bool Internal::learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t forward, uint64_t backward) {
+  if (opts.transmutefake) return false;
   int idx = 0;
   bool repropagate = false;
   assert (clause.empty ());
@@ -522,6 +523,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
     }
   }
   if (level) backtrack ();
+  if (opts.transmutefake) return;
   if (golden_binaries.size ()) {
     stats.transmutedclauses++;
     if (c->redundant) {
