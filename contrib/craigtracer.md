@@ -175,3 +175,39 @@ if (solver.solve () == CaDiCaL::Status::UNSATISFIABLE) {
 
 solver.disconnect_proof_tracer (&tracer);
 ```
+
+## Incremental solving with interpolation
+
+The Craig tracer supports handling assumptions and constraints.
+Assumptions are treated like equivalent temporary unit clauses with a
+clause label according to the variable label (`label_variable`).
+Global variables are handled like a B_CLAUSE.
+
+- Assuming a `A_LOCAL` variable is equivalent to a temporary `A_CLAUSE` clause.
+- Assuming a `B_LOCAL` variable is equivalent to a temporary `B_CLAUSE` clause.
+- Assuming a `GLOBAL` variable is equivalent to a temporary `B_CLAUSE` clause.
+
+The constraint is treated as a temporary clause.
+It has to be explicitly labeled by calling `label_constraint`.
+
+```cpp
+CaDiCaL::Solver solver;
+CaDiCraig::CraigTracer tracer;
+solver.connect_proof_tracer (&tracer, true);
+tracer.set_craig_construction (...);
+
+tracer.label_variable (1, CaDiCraig::CraigVarType::A_LOCAL);
+tracer.label_variable (2, CaDiCraig::CraigVarType::GLOBAL);
+solver.assume (-1);
+solver.assume (2);
+
+tracer.label_constraint (CaDiCraig::CraigClauseType::A_CLAUSE);
+solver.constrain (1);
+solver.constrain (-2);
+solver.constrain (0);
+
+assert (solver.solve () == CaDiCaL::Status::UNSATISFIABLE);
+tracer.create_craig_interpolant (...);
+
+solver.disconnect_proof_tracer (&tracer);
+```
