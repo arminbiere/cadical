@@ -271,6 +271,9 @@ struct vivify_clause_later {
 
   bool operator() (Clause *a, Clause *b) const {
 
+    if (a == b)
+      return false;
+
     COVER (same_clause (a, b));
 
     // First focus on clauses scheduled in the last vivify round but not
