@@ -1203,7 +1203,7 @@ void CaDiCaL::Internal::transmute_round (uint64_t propagation_limit, bool redund
     Clause *c = transmuter.schedule.back ().first;
     transmuter.schedule.pop_back ();
     if (opts.transmuteasym)
-      transmute_clause (transmuter, c, limit);
+      transmute_clause_asym (transmuter, c, limit);
     else
       transmute_clause (transmuter, c, limit);
     assert (!level);
