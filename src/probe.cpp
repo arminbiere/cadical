@@ -231,7 +231,6 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
   assert (var (lits[1]).level == 1);
 #endif
   LOG (reason, "hyper binary resolving");
-  stats.hbrs++;
   stats.hbrsizes += reason->size;
   const int lit = lits[1];
   int dom = -lit, non_root_level_literals = 0;
@@ -251,6 +250,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
     const bool red = !contained || reason->redundant;
     if (red)
       stats.hbreds++;
+    stats.hbrs++;
     LOG ("new %s hyper binary resolvent %d %d",
          (red ? "redundant" : "irredundant"), -dom, lits[0]);
     assert (clause.empty ());
@@ -654,6 +654,7 @@ void Internal::generate_probes () {
       continue;
 
     int probe = have_neg_bin_occs ? idx : -idx;
+    // int not_probe = have_pos_bin_occs ? -idx : 0;
 
     // See the discussion where 'propfixed' is used below.
     //
@@ -663,6 +664,8 @@ void Internal::generate_probes () {
     LOG ("scheduling probe %d negated occs %" PRId64 "", probe,
          noccs (-probe));
     probes.push_back (probe);
+    //if (not_probe && not_probe != probe && propfixed (not_probe) < stats.all.fixed)
+    //  probes.push_back (not_probe);
   }
 
   rsort (probes.begin (), probes.end (), probe_negated_noccs_rank (this));
@@ -854,7 +857,7 @@ bool Internal::probe_round () {
 
   report ('p', !opts.reportall && !(unsat + failed + hbrs));
 
-  return !unsat && failed;
+  return !unsat && (failed || hbrs);
 }
 
 /*------------------------------------------------------------------------*/
@@ -886,14 +889,22 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   //
   mark_duplicated_binary_clauses_as_garbage ();
 
-  for (int round = 1; round <= opts.proberounds; round++)
+  for (int round = 1; round <= opts.proberounds; round++) {
     if (!probe_round ())
       break;
-    
-  decompose (); // ... and (ELS) afterwards.
-
-  if (transmute ()) // transmutation
     decompose ();
+  }
+
+  // decompose (); // ... and (ELS) afterwards.
+
+  // transmutation 
+  if (transmute () && opts.transmuteprobe) {
+    for (int round = 1; round <= opts.proberounds; round++) {
+      if (!probe_round ())
+        break;
+      decompose ();
+    }
+  }
 
   last.probe.propagations = stats.propagations.search;
 

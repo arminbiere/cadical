@@ -121,7 +121,7 @@ OPTION( probeint,        5e3,  1,2e9,0,0,1, "probing interval" ) \
 OPTION( probemaxeff,     1e8,  0,2e9,1,0,1, "maximum probing efficiency") \
 OPTION( probemineff,     1e6,  0,2e9,1,0,1, "minimum probing efficiency") \
 OPTION( probereleff,      20,  1,1e5,1,0,1, "relative efficiency per mille") \
-OPTION( proberounds,       1,  0, 16,1,0,1, "probing rounds" ) \
+OPTION( proberounds,       1,  0,2e5,1,0,1, "probing rounds" ) \
 OPTION( profile,           2,  0,  4,0,0,0, "profiling level") \
 QUTOPT( quiet,             0,  0,  1,0,0,0, "disable all messages") \
 OPTION( radixsortlim,     32,  0,2e9,0,0,1, "radix sort limit") \
@@ -180,10 +180,13 @@ OPTION( ternaryocclim,   1e2,  1,2e9,2,0,1, "ternary occurrence limit") \
 OPTION( ternaryreleff,    10,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( ternaryrounds,     2,  1, 16,1,0,1, "maximum ternary rounds") \
 OPTION( transmute,         1,  0,  1,0,1,1, "transmutations") \
+OPTION( transmuteasym,     1,  0,  1,0,1,1, "asymmetric transmutation") \
+OPTION( transmutecheck,    0,  0,  1,0,1,1, "additional check before learning") \
 OPTION( transmutefake,     0,  0,  1,0,1,1, "fake transmutations") \
 OPTION( transmuteinst,     1,  0,  1,0,1,1, "shorten self subsuming clauses") \
 OPTION( transmutemaxeff, 2e7,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transmutemineff, 2e4,  0,2e9,1,0,1, "minimum efficiency") \
+OPTION( transmuteprobe,    1,  0,  1,0,1,1, "probe again after transmutation") \
 OPTION( transmuteredeff,  75,  1,1e3,1,0,1, "redundant efficiency per mille") \
 OPTION( transmutereleff,  20,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( transmutesize,    64,  4, 64,0,0,1, "max clause size") \

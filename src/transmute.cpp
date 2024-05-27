@@ -27,7 +27,7 @@ inline void Internal::transmute_assign (int lit, Clause *reason) {
   if (!level)
     learn_unit_clause (lit);
   else
-    assert (level == 1);
+    assert (level);
   const signed char tmp = sign (lit);
   set_val (idx, tmp);
   assert (val (lit) > 0);
@@ -38,7 +38,6 @@ inline void Internal::transmute_assign (int lit, Clause *reason) {
 void Internal::transmute_assign_decision (int lit) {
   require_mode (TRANSMUTE);
   LOG ("transmute decision %d", lit);
-  assert (!level);
   assert (propagated == trail.size ());
   level++;
   control.push_back (Level (lit, trail.size ()));
@@ -87,7 +86,7 @@ inline void Internal::transmute_propagate2 () {
   }
 }
 
-bool Internal::transmute_propagate () {
+bool Internal::transmute_propagate (Clause *ignore) {
   require_mode (TRANSMUTE);
   assert (!unsat);
   START (propagate);
@@ -109,6 +108,7 @@ bool Internal::transmute_propagate () {
           continue;
         if (w.clause->garbage)
           continue;
+        if (w.clause == ignore) continue;
         const literal_iterator lits = w.clause->begin ();
         const int other = lits[0] ^ lits[1] ^ lit;
         // lits[0] = other, lits[1] = lit;
@@ -142,7 +142,7 @@ bool Internal::transmute_propagate () {
             watch_literal (r, lit, w.clause);
             p--;
           } else if (!u) {
-            if (level == 1) {
+            if (level) {
               lits[0] = other, lits[1] = lit;
               assert (lrat_chain.empty ());
               transmute_assign (other, w.clause);
@@ -177,6 +177,24 @@ bool Internal::transmute_propagate () {
 /*------------------------------------------------------------------------*/
 
 
+bool Internal::backward_check_asym (int lit) {
+  assert (!level);
+  assert (!val (lit));
+
+  transmute_assign_decision (-lit);
+
+  // hot spot
+  if (!transmute_propagate (0)) {
+    LOG ("no need for helper clauses because %d unit under rup", lit);
+    backtrack (level - 1);
+    conflict = 0;
+    return false;
+  }
+  
+  return true;
+
+}
+
 bool Internal::backward_check (Transmuter &transmuter, int lit, uint64_t forward) {
   assert (!level);
   assert (!val (lit));
@@ -184,7 +202,7 @@ bool Internal::backward_check (Transmuter &transmuter, int lit, uint64_t forward
   transmute_assign_decision (-lit);
 
   // hot spot
-  if (!transmute_propagate ()) {
+  if (!transmute_propagate (0)) {
     LOG ("no need for helper clauses because %d unit under rup", lit);
     backtrack (level - 1);
     conflict = 0;
@@ -200,7 +218,7 @@ bool Internal::backward_check (Transmuter &transmuter, int lit, uint64_t forward
     covered += (uint64_t) 1 << (idx - 1);  // mark other
   }
   if (learn_helper_binaries (transmuter, lit, forward, covered)) {
-    if (!transmute_propagate ()) {
+    if (!transmute_propagate (0)) {
       backtrack (level - 1);
       conflict = 0;
       return false;
@@ -223,6 +241,7 @@ bool Internal::learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t 
     if ((backward & (1 << (idx - 1)))) continue;
     LOG ("learning helper binary %d %d", lit, -other);
     // learn binary -lit -> -other
+    if (val (other)) continue;
     clause.push_back (-other);
     Clause *res = new_hyper_binary_resolved_clause (true, 2);
     transmute_assign (-other, res);
@@ -235,12 +254,20 @@ bool Internal::learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t 
   return repropagate;
 }
 
+
 Clause *Internal::transmute_instantiate_clause (Clause *c, int lit, int other) {
   stats.transmuteinstantiate++;
-  clause.push_back (-lit);
-  clause.push_back (other);
-  Clause *tmp = new_hyper_binary_resolved_clause (true, 2);
-  clause.clear ();
+  vector<int> tmp_clause;
+  assert (level || other);
+  tmp_clause.push_back (-lit);
+  for (const auto & l : control) {
+    if (!l.decision) continue;
+    tmp_clause.push_back (-l.decision);
+  }
+  if (other) {
+    tmp_clause.push_back (other);
+  }
+  uint64_t tmp_id = temporary_redundant_clause (tmp_clause);
   for (const auto &literal : *c) {
     if (literal == lit) continue;
     clause.push_back (literal);
@@ -250,9 +277,24 @@ Clause *Internal::transmute_instantiate_clause (Clause *c, int lit, int other) {
   d->transmuted = true;
   clause.clear ();
   mark_garbage (c);
-  mark_garbage (tmp);
+  delete_temporary_clause (tmp_id, tmp_clause);
   return d;
 }
+
+Clause *Internal::transmute_subsume_clause (Clause *c, int lit) {
+  stats.transmutesubsume++;
+  clause.push_back (lit);
+  for (const auto & l : control) {
+    if (!l.decision) continue;
+    clause.push_back (-l.decision);
+  }
+  Clause *d = new_clause_as (c);
+  d->transmuted = true;
+  clause.clear ();
+  mark_garbage (c);
+  return d;
+}
+
 
 void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limit) {
 
@@ -360,7 +402,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
     transmute_assign_decision (lit);
 
     // hot spot
-    if (!transmute_propagate ()) {
+    if (!transmute_propagate (0)) {
       LOG ("learning %d and skipping now falsified %d", -lit, lit);
       backtrack (level - 1);
       conflict = 0;
@@ -543,16 +585,20 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
     assert (!val (lit) && !val (other));
     // necessary to get rup proofs. Even though we get additional propagations
     // here we do not abort!
-    if (!backward_check_performed[j]) {
+    if (val (lit) > 0 || val (other) > 0) continue;
+    if (opts.transmutecheck || !backward_check_performed[j]) {
       backward_check_performed[j] = true;
       if (!backward_check (transmuter, other, covered[vlit (other)])) {
         assert (!level);
         units.push_back (other);
         continue;
       }
+      if (val (lit) > 0) {
+        backtrack ();
+        continue;
+      }
       backtrack ();
     }
-    if (val (lit) > 0 || val (other) > 0) continue;
     clause.push_back (lit);
     clause.push_back (other);
     new_golden_binary ();
@@ -567,6 +613,469 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
       return;
     }
     transmute_assign_unit (lit);
+  }
+
+  if (!units.empty ()) {
+    if (!propagate ()) learn_empty_clause ();
+  }
+  assert (!level);
+}
+
+// Asymmetric transmutation. The idea is to negatively assume already propagated
+// literals in the order of the clause. Additonally to above we are not always
+// on level one and can get clause subsumption @6
+//
+void Internal::transmute_clause_asym (Transmuter &transmuter, Clause *c, int64_t limit) {
+
+  // at least length 4 glue 2 clauses
+  assert (c->size > 3);
+  // assert (c->glue > 1);
+  assert (!c->transmuted);
+
+  c->transmuted = true; // remember transmuted clauses
+
+  if (c->garbage)
+    return;
+
+  // First check whether the candidate clause is already satisfied and at
+  // the same time copy its non fixed literals to 'current'.
+  //
+  int satisfied = 0;
+  auto &current = transmuter.current;
+  current.clear ();
+
+  for (const auto &lit : *c) {
+    const int tmp = fixed (lit);
+    if (tmp > 0) {
+      satisfied = lit;
+      break;
+    } else if (!tmp)
+      current.push_back (lit);
+  }
+  assert (current.size () <= 64);
+
+  if (satisfied) {
+    LOG (c, "satisfied by propagated unit %d", satisfied);
+    mark_garbage (c);
+    return;
+  } else if (current.size () < 4) {
+    LOG (c, "too short after unit simplification");
+    return;
+  }
+  
+  LOG (c, "transmutation checking");
+  stats.transmutechecks++;
+
+  assert (!level);
+
+  // we use vlit for indexing the covered array.
+  vector<uint64_t> covered;
+  covered.resize (max_var * 2 + 2);
+
+  unsigned idx = 0;
+  unsigned size = current.size ();
+  const auto end = current.end ();
+  auto p = current.begin ();
+  auto q = p;
+  int previous = 0;
+
+  // Go over the literals in the candidate clause.
+  //
+  while (q != end) {
+    if (stats.propagations.transmute >= limit) {
+      stats.transmuteabort++;
+      stats.transmuteabortlimit++;
+      c->transmuted = false;                // reschedule c and return
+      stats.transmuterescheduled++;
+      backtrack ();
+      return;
+    }
+    const auto &lit = *p++ = *q++;
+    idx++;
+    assert (!conflict);
+    
+    if (previous) {
+      assert (!val (previous));
+      transmute_assign_decision (-previous);
+      if (!transmute_propagate (c)) {
+        backtrack (level - 1);
+        conflict = 0;
+        if (!level) {
+          transmute_assign_unit (previous);
+          mark_garbage (c);
+          if (!propagate ()) {
+            LOG ("propagation after learning unit results in inconsistency");
+            learn_empty_clause ();
+          }
+          return;
+        }
+        c = transmute_subsume_clause (c, previous);  // @6
+        if (c->size < 4) {
+          LOG (c, "too short after subsumption");  // @4
+          stats.transmuteabort++;
+          stats.transmuteabortshort++;
+          backtrack ();
+          return;
+        }
+        q = end;
+        continue;
+      }
+    }
+    if (val (lit) > 0) {
+      if (!level) {
+        mark_garbage (c);
+        return;
+      }
+      if (q != end) {
+        c = transmute_subsume_clause (c, lit); // @6
+        if (c->size < 4) {
+          LOG (c, "too short after subsumption");  // @4
+          stats.transmuteabort++;
+          stats.transmuteabortshort++;
+          backtrack ();
+          return;
+        }
+        q = end;
+        continue;
+      }
+      if (c->redundant)
+        mark_garbage (c);
+      backtrack ();
+      stats.transmuteabort++;
+      return;
+    } else if (val (lit) < 0) {
+      // self-subsuming resolution on lit
+      p--;
+      idx--;
+      size--;
+      if (level)
+        c = transmute_instantiate_clause (c, lit, 0);
+      if (size < 4) {
+        LOG (c, "too short after instantiation");  // @4
+        stats.transmuteabort++;
+        stats.transmuteabortshort++;
+        backtrack ();
+        return;
+      }
+      assert (!previous || val (previous));
+      previous = 0;
+      continue;
+    }
+
+    previous = lit;
+    transmute_assign_decision (lit);
+
+    // hot spot
+    if (!transmute_propagate (c)) {
+      if (level == 1) {
+        LOG ("learning %d and skipping now falsified %d", -lit, lit);
+        backtrack ();
+        conflict = 0;
+        assert (!val (lit));
+        transmute_assign_unit (-lit);  // might have unwanted side effects later
+        p--;
+        idx--;
+        size--;
+        if (!propagate ()) {
+          LOG ("propagation after learning unit results in inconsistency");
+          learn_empty_clause ();
+          return;
+        }
+        if (size < 4) {
+          LOG (c, "too short after unit simplification");   // @4
+          stats.transmuteabort++;
+          stats.transmuteabortshort++;
+          return;
+        }
+        c->transmuted = false;                // reschedule c and return
+        stats.transmuteabort++;
+        stats.transmuterescheduled++;
+        transmuter.schedule.push_back (pair<Clause*,int> (c, c->size-1));
+        return;
+      } else {
+        p--;
+        idx--;
+        size--;
+        backtrack (level - 1);
+        assert (level);
+        conflict = 0;
+        c = transmute_instantiate_clause (c, lit, 0);
+        if (size < 4) {
+          LOG (c, "too short after instantiation");  // @4
+          stats.transmuteabort++;
+          stats.transmuteabortshort++;
+          backtrack ();
+          return;
+        }
+        previous = 0;
+        continue;
+      }
+    }
+    if (opts.transmuteinst) {
+      bool inst = false;
+      for (const auto &other : *c) {
+        if (other == lit) continue;
+        if (val (other) > 0 && var (other).level == var (lit).level) {
+          inst = true;
+          assert (var (other).level == var (lit).level);
+          p--;
+          idx--;
+          size--;
+          backtrack (level - 1);
+          c = transmute_instantiate_clause (c, lit, other);  // @3
+          if (size < 4) {
+            LOG (c, "too short after instantiation");  // @4
+            stats.transmuteabort++;
+            stats.transmuteabortshort++;
+            backtrack ();
+            return;
+          }
+          previous = 0;
+          break;
+        } else if (val (other) > 0) {
+          if (var (other).level + 1 == (int) size) {
+            stats.transmuteabort++;
+            if (c->redundant)
+              mark_garbage (c);
+            backtrack ();
+            return;
+          }
+          inst = true;
+          backtrack (var (other).level);
+          c = transmute_subsume_clause (c, other); // @6
+          if (c->size < 4) {
+            LOG (c, "too short after subsumption");  // @4
+            stats.transmuteabort++;
+            stats.transmuteabortshort++;
+            backtrack ();
+            return;
+          }
+          q = end;
+          break;
+        }
+      }
+      if (inst) {
+        continue;
+      }
+    }
+    assert (level);
+    if (control[level].trail + 1 == (int) trail.size ()) {
+      backtrack (); // early abort because no propagations @5
+      stats.transmuteabort++;
+      return;
+    }
+    for (size_t begin = control[level].trail + 1; begin < trail.size (); begin++) {
+      const auto & other = trail[begin];
+      covered[vlit (other)] += (uint64_t) 1 << (idx - 1);  // mark other
+    }
+
+    backtrack (level - 1);
+
+  }
+  assert (size >= 4);
+  if (p != q) {
+    while (q != end)
+      *p++ = *q++;
+
+    current.resize (p - current.begin ());
+  }
+  assert (!conflict);
+  backtrack ();
+  
+  // check that no lit in current is assigned
+  //
+#ifndef NDEBUG
+  for (const auto & lit : current) assert (!val (lit));
+#endif
+  
+  // now we have to analyze 'covered' in order to find out if there are
+  // a pair of literals that covers the clause in the above described way.
+  // This is quadratic in the number of literals. To improve performance we
+  // filter for candidates which cover at least two literals first.
+  //
+  vector<int> candidates;
+  for (const auto & lit : lits) {
+    if (val (lit)) continue;  // do not consider unit assigned literals
+    if (__builtin_popcount (covered[vlit (lit)]) < 2) // might not work with other compilers than gcc
+      continue;
+    candidates.push_back (lit);
+  }
+
+  stats.transmutedcandidates += (candidates.size ());
+  const uint64_t covering = ((uint64_t) 1 << current.size ()) - 1;
+  vector<int> units;
+  vector<int> golden_units;
+  vector<bool> backward_check_performed;
+  backward_check_performed.resize (candidates.size ());
+  // contains indices for golden binaries
+  vector<pair<unsigned, unsigned>> golden_binaries;
+
+  
+  // now only quadratic in the number of candidates.
+  // We can ignore the symmetric case as well.
+  for (unsigned i = 0; i < candidates.size (); i++) {
+    const int lit = candidates[i];
+    if (level) backtrack ();
+    if (stats.propagations.transmute >= limit) {
+      stats.transmuteabort++;
+      stats.transmuteabortlimit++;
+      c->transmuted = false;                // reschedule c and return
+      stats.transmuterescheduled++;
+      if (golden_binaries.empty () && units.empty ())
+        return;
+      break;
+    }
+    assert (!val (lit));  // might be a problem if this does not hold
+    if (covered[vlit (lit)] == covering) {  // special case of unit also implies @3
+#ifndef NDEBUG  // assert lit not in current
+      for (const auto & other : current) assert (other != lit && other != -lit);
+#endif
+      assert (!backward_check_performed[i]);
+      assert (!level);
+      backward_check_performed[i] = true;
+      if (!backward_check_asym (lit))
+        units.push_back (lit);
+      else
+        golden_units.push_back (lit);
+      continue;
+    }
+    for (unsigned j = i + 1; j < candidates.size (); j++) {
+      const int other = candidates[j];
+      if (val (other) > 0) continue;
+      assert (lit != other);
+      if (lit == -other) continue;
+      assert (covered[vlit (lit)] <= covering);
+      if ((covered[vlit (lit)] | covered[vlit (other)]) != covering) continue;
+      if (!backward_check_performed[i]) {
+        assert (!level);
+        if (stats.propagations.transmute >= limit) {
+          stats.transmuteabort++;
+          stats.transmuteabortlimit++;
+          c->transmuted = false;                // reschedule c and return
+          stats.transmuterescheduled++;
+          if (golden_binaries.empty () && units.empty ())
+            return;
+          break;
+        }
+        backward_check_performed[i] = true;
+        if (!backward_check_asym (lit)) {
+          units.push_back (lit);
+          break;
+        }
+      }
+      // we can avoid probing lit multiple times by not backtracking so we
+      // should be at level 1 here.
+      assert (level);
+      assert (val (lit) < 0);
+
+      // improved check for -lit -> other (see discussion @2)
+      if (val (other) > 0) continue;
+      else if (val (other) < 0) {
+        units.push_back (lit);  // edge case val (other) < 0 -> learn unit clause
+      }
+      golden_binaries.push_back (pair<unsigned, unsigned> (i, j));
+    }
+  }
+  if (level) backtrack ();
+  if (opts.transmutefake) return;
+  if (golden_binaries.size ()) {
+    stats.transmutedclauses++;
+    if (c->redundant) {
+      assert (c->glue - 1 < 64);
+      stats.transmutedglue[c->glue - 1]++;
+    }
+    stats.transmutedsize[current.size ()]++;
+  }
+  for (const auto & bin : golden_binaries) {
+    assert (clause.empty ());
+    const unsigned i = bin.first;
+    const unsigned j = bin.second;
+    const int lit = candidates[i];
+    const int other = candidates[j];
+    assert (backward_check_performed[i]);
+    assert (!level);
+    assert (!val (lit) && !val (other));
+    // necessary to get rup proofs. Even though we get additional propagations
+    // here we do not abort!
+    if (val (lit) > 0 || val (other) > 0) continue;
+    if (opts.transmutecheck) { // || !backward_check_performed[j]) {
+      backward_check_performed[j] = true;
+      if (!backward_check_asym (other)) {
+        assert (!level);
+        units.push_back (other);
+        continue;
+      }
+      if (val (lit) > 0) {
+        backtrack ();
+        continue;
+      }
+      backtrack ();
+    }
+    vector<vector<int>> tmp_clauses;
+    vector<uint64_t> tmp_ids;
+    for (unsigned h = current.size (); h > 0; h--) {
+      const auto & clit = current[h-1];
+      for (auto & tmp_clause : tmp_clauses) {
+        tmp_clause.push_back (clit);
+      }
+      vector<int> empty;
+      tmp_clauses.push_back (empty);
+      tmp_clauses.back ().push_back (-clit);
+    }
+    unsigned h = 1 << (current.size () - 1);
+    for (auto & tmp_clause : tmp_clauses) {
+      if (covered[vlit (lit)] & h) tmp_clause.push_back (lit);
+      else tmp_clause.push_back (other);
+      tmp_ids.push_back (temporary_redundant_clause (tmp_clause));
+      h >>= 1;
+    }
+    clause.push_back (lit);
+    clause.push_back (other);
+    new_golden_binary ();
+    stats.transmutegold++;
+    clause.clear ();
+    assert (tmp_ids.size () == tmp_clauses.size ());
+    for (size_t i = 0; i < tmp_ids.size (); i++) {
+      delete_temporary_clause (tmp_ids[i], tmp_clauses[i]);
+    }
+  }
+  for (const auto & lit : units) {
+    if (val (lit) > 0) continue;
+    else if (val (lit) < 0) { // conflict!
+      assert (false);
+      learn_empty_clause ();
+      return;
+    }
+    transmute_assign_unit (lit);
+  }
+  for (const auto & lit : golden_units) {
+    if (val (lit) > 0) continue;
+    stats.transmutegoldunits++;
+    vector<vector<int>> tmp_clauses;
+    vector<uint64_t> tmp_ids;
+    for (unsigned h = current.size (); h > 0; h--) {
+      const auto & clit = current[h-1];
+      for (auto & tmp_clause : tmp_clauses) {
+        tmp_clause.push_back (clit);
+      }
+      vector<int> empty;
+      tmp_clauses.push_back (empty);
+      tmp_clauses.back ().push_back (-clit);
+    }
+    for (auto & tmp_clause : tmp_clauses) {
+      tmp_clause.push_back (lit);
+      tmp_ids.push_back (temporary_redundant_clause (tmp_clause));
+    }
+    if (val (lit) < 0) { // conflict!
+      assert (false);
+      learn_empty_clause ();
+      return;
+    }
+    transmute_assign_unit (lit);
+    assert (tmp_ids.size () == tmp_clauses.size ());
+    for (size_t i = 0; i < tmp_ids.size (); i++) {
+      delete_temporary_clause (tmp_ids[i], tmp_clauses[i]);
+    }
   }
 
   if (!units.empty ()) {
@@ -693,7 +1202,11 @@ void CaDiCaL::Internal::transmute_round (uint64_t propagation_limit, bool redund
          !transmuter.schedule.empty () && stats.propagations.transmute < limit) {
     Clause *c = transmuter.schedule.back ().first;
     transmuter.schedule.pop_back ();
-    transmute_clause (transmuter, c, limit);
+    if (opts.transmuteasym)
+      transmute_clause (transmuter, c, limit);
+    else
+      transmute_clause (transmuter, c, limit);
+    assert (!level);
   }
 
   assert (!level);

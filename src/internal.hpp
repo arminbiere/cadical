@@ -1074,17 +1074,22 @@ struct Internal {
   void transmute_round (uint64_t propagation_limit, bool redundant);
   bool transmute ();
   bool backward_check (Transmuter &transmuter, int lit, uint64_t forward);
+  bool backward_check_asym (int lit);
   bool learn_helper_binaries (Transmuter &transmuter, int lit, uint64_t forward, uint64_t backward);
   void transmute_clause (Transmuter &transmuter, Clause *c, int64_t limit);
+  void transmute_clause_asym (Transmuter &transmuter, Clause *c, int64_t limit);
   bool consider_to_transmute_clause (Clause *c);
-  bool transmute_propagate ();
+  bool transmute_propagate (Clause*);
   void transmute_propagate2 ();
   void transmute_assign_unit (int lit);
   void transmute_assign_decision (int lit);
   void transmute_assign (int lit, Clause *reason);
   Clause *transmute_instantiate_clause (Clause *c, int lit, int other);
+  Clause *transmute_subsume_clause (Clause *c, int lit);
   Clause *new_golden_binary ();
   void fill_transmute_schedule (Transmuter &transmuter, bool redundant);
+  uint64_t temporary_redundant_clause (vector<int> &);
+  void delete_temporary_clause (uint64_t, vector<int> &);
 
   // ProbSAT/WalkSAT implementation called initially or from 'rephase'.
   //

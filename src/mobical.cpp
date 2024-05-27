@@ -1301,7 +1301,8 @@ struct DisconnectCall : public Call {
   void execute (Solver *&s) {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
-    mp->remove_new_observed_var ();
+    if (mp)
+      mp->remove_new_observed_var ();
     s->disconnect_external_propagator ();
     if (mp) {
       delete mp;

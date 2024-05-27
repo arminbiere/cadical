@@ -526,6 +526,8 @@ void Stats::print (Internal *internal) {
          stats.transmutechecks, percent (stats.transmutechecks, stats.transmutesched));
     PRT ("  transmuteinst: %15" PRId64 "   %10.2f    per checked",
          stats.transmuteinstantiate, relative (stats.transmuteinstantiate, stats.transmutechecks));
+    PRT ("  transmutesubs: %15" PRId64 "   %10.2f    per checked",
+         stats.transmutesubsume, relative (stats.transmutesubsume, stats.transmutechecks));
     PRT ("  transmuteabort:%15" PRId64 "   %10.2f %%  of checked",
          stats.transmuteabort, percent (stats.transmuteabort, stats.transmutechecks));
     if (stats.transmuteabort) {
@@ -554,6 +556,8 @@ void Stats::print (Internal *internal) {
     }
     PRT ("  transmuteunits:%15" PRId64 "   %10.2f    per check", 
          stats.transmuteunits, relative (stats.transmuteunits, stats.transmutechecks));
+    PRT ("    goldunits:   %15" PRId64 "   %10.2f  %% of units", 
+         stats.transmutegoldunits, relative (stats.transmutegoldunits, stats.transmuteunits));
     PRT ("  transmutehb:   %15" PRId64 "   %10.2f    per clause",
          stats.transmutehb, relative (stats.transmutehb, stats.transmutedclauses));
   }

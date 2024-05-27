@@ -509,6 +509,22 @@ Clause *Internal::new_learned_redundant_clause (int glue) {
   return res;
 }
 
+// for transmute instantiate
+uint64_t Internal::temporary_redundant_clause (vector<int> & c) {
+  assert (c.size () > 1);
+  // external->check_learned_clause ();  TODO
+  if (proof) {
+    proof->add_derived_clause (++clause_id, false, c, lrat_chain);
+  }
+  return clause_id;
+}
+
+void Internal::delete_temporary_clause (uint64_t id, vector<int> & c) {
+  if (proof) {
+    proof->delete_clause (id, true, c);
+  }
+}
+
 // Add hyper binary resolved clause during 'probing'.
 //
 Clause *Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
