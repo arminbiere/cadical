@@ -621,6 +621,25 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
   assert (!level);
 }
 
+struct transmute_more_noccs {
+
+  Internal *internal;
+
+  transmute_more_noccs (Internal *i) : internal (i) {}
+
+  bool operator() (int a, int b) {
+    int64_t n = internal->noccs (-a);
+    int64_t m = internal->noccs (-b);
+    if (n > m)
+      return true; // larger occurrences / score first
+    if (n < m)
+      return false; // smaller occurrences / score last
+    if (a == -b)
+      return a > 0;           // positive literal first
+    return abs (a) < abs (b); // smaller index first
+  }
+};
+
 // Asymmetric transmutation. The idea is to negatively assume already propagated
 // literals in the order of the clause. Additonally to above we are not always
 // on level one and can get clause subsumption @6
@@ -671,6 +690,8 @@ void Internal::transmute_clause_asym (Transmuter &transmuter, Clause *c, int64_t
   // we use vlit for indexing the covered array.
   vector<uint64_t> covered;
   covered.resize (max_var * 2 + 2);
+  
+  sort (current.begin (), current.end (), transmute_more_noccs (this));
 
   unsigned idx = 0;
   unsigned size = current.size ();
