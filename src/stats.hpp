@@ -162,19 +162,24 @@ struct Stats {
   int64_t eagertried;    // number of traversed eager subsumed candidates
   int64_t eagersub; // number of eagerly subsumed recently learned clauses
   int64_t elimres;  // number of resolved clauses in BVE
-  int64_t elimrestried;   // number of tried resolved clauses in BVE
-  int64_t elimrounds;     // number of elimination rounds
-  int64_t elimphases;     // number of scheduled elimination phases
-  int64_t elimcompleted;  // number complete elimination procedures
-  int64_t elimtried;      // number of variable elimination attempts
-  int64_t elimsubst;      // number of eliminations through substitutions
-  int64_t elimgates;      // number of gates found during elimination
-  int64_t elimequivs;     // number of equivalences found during elimination
-  int64_t elimands;       // number of AND gates found during elimination
-  int64_t elimites;       // number of ITE gates found during elimination
-  int64_t elimxors;       // number of XOR gates found during elimination
-  int64_t elimbwsub;      // number of eager backward subsumed clauses
-  int64_t elimbwstr;      // number of eager backward strengthened clauses
+  int64_t elimrestried;  // number of tried resolved clauses in BVE
+  int64_t elimrounds;    // number of elimination rounds
+  int64_t elimphases;    // number of scheduled elimination phases
+  int64_t elimcompleted; // number complete elimination procedures
+  int64_t elimtried;     // number of variable elimination attempts
+  int64_t elimsubst;     // number of eliminations through substitutions
+  int64_t elimgates;     // number of gates found during elimination
+  int64_t elimequivs;    // number of equivalences found during elimination
+  int64_t elimands;      // number of AND gates found during elimination
+  int64_t elimites;      // number of ITE gates found during elimination
+  int64_t elimxors;      // number of XOR gates found during elimination
+  int64_t elimbwsub;     // number of eager backward subsumed clauses
+  int64_t elimbwstr;     // number of eager backward strengthened clauses
+  int64_t equivalences_checked;
+  int64_t equivalences_extracted;
+  int64_t definitions_checked;
+  int64_t definitions_extracted;
+  int64_t definition_units;
   int64_t ternary;        // number of ternary resolution phases
   int64_t ternres;        // number of ternary resolutions
   int64_t htrs;           // number of hyper ternary resolvents
@@ -234,7 +239,26 @@ struct Stats {
   int64_t restored;      // number of restored clauses
   int64_t reactivated;   // number of reactivated clauses
   int64_t restoredlits;  // number of restored literals
-
+  
+  int64_t sweep_units;
+  int64_t sweep_flip_backbone;
+  int64_t sweep_fixed_backbone;
+  int64_t sweep_flipped_backbone;
+  int64_t sweep_solved_backbone;
+  int64_t sweep_sat_backbone;
+  int64_t sweep_unsat_backbone;
+  int64_t sweep_unknown_backbone;
+  int64_t sweep_flip_equivalences;
+  int64_t sweep_flipped_equivalences;
+  int64_t sweep_sat_equivalences;
+  int64_t sweep_unsat_equivalences;
+  int64_t sweep_unknown_equivalences;
+  int64_t sweep_solved_equivalences;
+  int64_t sweep_equivalences;
+  int64_t sweep_variables;
+  int64_t sweep_completed;
+  int64_t sweep;
+  
   int64_t preprocessings;
 
   int64_t ilbtriggers;

@@ -473,6 +473,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
 bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
                                             int pivot) {
   const bool substitute = !eliminator.gates.empty ();
+  const bool resolve_gates = eliminator.definition_unit;
   if (substitute)
     LOG ("trying to substitute %d", pivot);
 
@@ -488,7 +489,7 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
   if (!pos || !neg)
     return lim.elimbound >= 0;
   const int64_t bound = pos + neg + lim.elimbound;
-
+  
   LOG ("checking number resolvents on %d bounded by "
        "%" PRId64 " = %" PRId64 " + %" PRId64 " + %" PRId64,
        pivot, bound, pos, neg, lim.elimbound);
@@ -508,7 +509,7 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
       assert (!d->redundant);
       if (d->garbage)
         continue;
-      if (substitute && c->gate == d->gate)
+      if (!resolve_gates && substitute && c->gate == d->gate)
         continue;
       stats.elimrestried++;
       if (resolve_clauses (eliminator, c, pivot, d, true)) {
@@ -548,6 +549,7 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
                                            int pivot) {
 
   const bool substitute = !eliminator.gates.empty ();
+  const bool resolve_gates = eliminator.definition_unit;
   if (substitute) {
     LOG ("substituting pivot %d by resolving with %zd gate clauses", pivot,
          eliminator.gates.size ());
@@ -574,7 +576,7 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
         break;
       if (d->garbage)
         continue;
-      if (substitute && c->gate == d->gate)
+      if (!resolve_gates && substitute && c->gate == d->gate)
         continue;
       if (!resolve_clauses (eliminator, c, pivot, d, false))
         continue;
@@ -604,6 +606,7 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
 
   LOG ("marking irredundant clauses with %d as garbage", pivot);
 
+  
   const int64_t substitute = eliminator.gates.size ();
   if (substitute)
     LOG ("pushing %" PRId64 " gate clauses on extension stack", substitute);
@@ -862,6 +865,7 @@ int Internal::elim_round (bool &completed) {
   //
   const int64_t garbage_limit = (2 * stats.irrlits / 3) + (1 << 20);
 
+
   // Main loops tries to eliminate variables according to the schedule. The
   // schedule is updated dynamically and variables are potentially
   // rescheduled to be tried again if they occur in a removed clause.
@@ -883,6 +887,7 @@ int Internal::elim_round (bool &completed) {
     mark_redundant_clauses_with_eliminated_variables_as_garbage ();
     garbage_collection ();
   }
+
 
   // If the schedule is empty all variables have been tried (even
   // rescheduled ones).  Otherwise asynchronous termination happened or we
@@ -978,6 +983,18 @@ void Internal::increase_elimination_bound () {
   report ('^');
 }
 
+void Internal::init_citten () {
+  if (!opts.elimdef) return;
+  assert (!citten);
+  citten = kitten_init ();
+}
+void Internal::reset_citten () {
+  if (citten) {
+    kitten_release (citten);
+    citten = 0;
+  }
+}
+
 /*------------------------------------------------------------------------*/
 
 void Internal::elim (bool update_limits) {
@@ -1007,6 +1024,8 @@ void Internal::elim (bool update_limits) {
     subsume (update_limits);
 
   reset_watches (); // saves lots of memory
+  
+  init_citten ();
 
   // Alternate one round of bounded variable elimination ('elim_round') and
   // subsumption ('subsume_round'), blocked ('block') and covered clause
@@ -1081,6 +1100,7 @@ void Internal::elim (bool update_limits) {
            stats.elimcompleted + 1, lim.elimbound);
   }
 
+  reset_citten ();
   init_watches ();
   connect_watches ();
 

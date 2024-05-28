@@ -161,6 +161,21 @@ void Stats::print (Internal *internal) {
          stats.elimres, relative (stats.elimres, stats.all.eliminated));
     PRT ("  elimrestried:  %15" PRId64 "   %10.2f %%  per resolution",
          stats.elimrestried, percent (stats.elimrestried, stats.elimres));
+    PRT ("  equi checked:  %15" PRId64 "   %10.2f    per phase",
+         stats.equivalences_checked,
+         relative (stats.equivalences_checked, stats.elimphases));
+    PRT ("  equi extracted:%15" PRId64 "   %10.2f %%  per checked",
+         stats.equivalences_extracted,
+         percent (stats.equivalences_extracted, stats.equivalences_checked));
+    PRT ("  def checked:   %15" PRId64 "   %10.2f    per phase",
+         stats.definitions_checked,
+         relative (stats.definitions_checked, stats.elimphases));
+    PRT ("  def extracted: %15" PRId64 "   %10.2f %%  per checked",
+         stats.definitions_extracted,
+         percent (stats.definitions_extracted, stats.definitions_checked));
+    PRT ("  def units:     %15" PRId64 "   %10.2f %%  per checked",
+         stats.definition_units,
+         percent (stats.definition_units, stats.definitions_checked));
   }
   if (all || stats.ext_prop.ext_cb) {
     PRT ("ext.prop. calls: %15" PRId64 "   %10.2f %%  of queries",

@@ -52,6 +52,7 @@ struct Internal;
   PROFILE (cover, 2) \
   PROFILE (decide, 3) \
   PROFILE (decompose, 3) \
+  PROFILE (definition, 2) \
   PROFILE (elim, 2) \
   PROFILE (extend, 3) \
   PROFILE (instantiate, 2) \
@@ -70,6 +71,7 @@ struct Internal;
   PROFILE (search, 1) \
   PROFILE (solve, 0) \
   PROFILE (stable, 2) \
+  PROFILE (sweep, 2) \
   PROFILE (preprocess, 2) \
   PROFILE (simplify, 1) \
   PROFILE (subsume, 2) \
@@ -215,8 +217,8 @@ struct Profiles {
         if (stable && internal->profiles.stable.level <= L) \
             internal->start_profiling (internal->profiles.stable, N); \
         if (!stable && internal->profiles.unstable.level <= L) \
-            internal->start_profiling (internal->profiles.unstable, N);) \
-        internal->profiles.walk.started = (N); \
+            internal->start_profiling (internal->profiles.unstable, N); \
+    internal->profiles.walk.started = (N);) \
   } while (0)
 
 /*------------------------------------------------------------------------*/

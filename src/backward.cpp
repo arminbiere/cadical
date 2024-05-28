@@ -82,6 +82,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
         continue;
       int negated = 0;
       unsigned found = 0;
+      satisfied = false;
       for (const auto &lit : *d) {
         signed char tmp = val (lit);
         if (tmp > 0) {
@@ -140,7 +141,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
               continue;
             if (unit) {
               unit = INT_MIN;
-              break;
+              continue;  // needed to guarantee d is not satsified
             } else
               unit = lit;
           }
@@ -180,7 +181,8 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
             clear_analyzed_literals ();
             lrat_chain.push_back (d->id);
             lrat_chain.push_back (c->id);
-          }
+          } else if (lrat)
+            clear_analyzed_literals ();
           if (satisfied) {
             assert (lrat_chain.empty ());
             mark_garbage (d);

@@ -205,6 +205,7 @@ void Internal::search_assign_external (int lit) {
   notify_assignments ();
 }
 
+
 /*------------------------------------------------------------------------*/
 
 // The 'propagate' function is usually the hot-spot of a CDCL SAT solver.

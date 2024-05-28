@@ -101,6 +101,10 @@ extern "C" {
 #include "vivify.hpp"
 #include "watch.hpp"
 
+// c headers
+extern "C" {
+#include "kitten.h"
+}
 /*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
@@ -140,10 +144,11 @@ struct Internal {
     SEARCH = (1 << 8),
     SIMPLIFY = (1 << 9),
     SUBSUME = (1 << 10),
-    TERNARY = (1 << 11),
-    TRANSRED = (1 << 12),
-    VIVIFY = (1 << 13),
-    WALK = (1 << 14),
+    SWEEP = (1 << 11),
+    TERNARY = (1 << 12),
+    TRANSRED = (1 << 13),
+    VIVIFY = (1 << 14),
+    WALK = (1 << 15),
   };
 
   bool in_mode (Mode m) const { return (mode & m) != 0; }
@@ -244,6 +249,8 @@ struct Internal {
   vector<int> minimized;     // removable or poison in 'minimize'
   vector<int> shrinkable;    // removable or poison in 'shrink'
   Reap reap;                 // radix heap for shrink
+
+  kitten *citten;
 
   size_t num_assigned; // check for satisfied
 
@@ -378,6 +385,19 @@ struct Internal {
     if (u & 1)
       res = -res;
     return res;
+  }
+
+  int citten2lit (unsigned ulit) {
+    int res = (ulit / 2) + 1;
+    assert (res <= max_var);
+    if (ulit & 1)
+      res = -res;
+    return res;
+  }
+
+  unsigned lit2citten (int lit) {
+    int idx = vidx (lit) - 1;
+    return (lit < 0) + 2u * (unsigned) idx;
   }
 
   // Helper functions to access variable and literal data.
@@ -995,6 +1015,16 @@ struct Internal {
   Clause *find_binary_clause (int, int);
   void find_gate_clauses (Eliminator &, int pivot);
   void unmark_gate_clauses (Eliminator &);
+
+  // mine definitions for kitten in 'definition.cpp'
+  //
+  void find_definition (Eliminator &, int);
+  void init_citten ();
+  void reset_citten ();
+
+  // mine equivalences
+  void find_citten_eq (Eliminator &, int);
+  bool find_next_eq (Eliminator &, int, int);
 
   // Bounded variable elimination in 'elim.cpp'.
   //

@@ -15,12 +15,21 @@ struct elim_more {
 
 typedef heap<elim_more> ElimSchedule;
 
+struct proof_clause {
+  uint64_t id;
+  vector<int> literals;
+  // for lrat
+  unsigned cid;  // kitten id
+  bool learned;
+  vector<uint64_t> chain;
+};
+
 struct Eliminator {
 
   Internal *internal;
   ElimSchedule schedule;
 
-  Eliminator (Internal *i) : internal (i), schedule (elim_more (i)) {}
+  Eliminator (Internal *i) : internal (i), schedule (elim_more (i)), definition_unit (0) {}
   ~Eliminator ();
 
   queue<Clause *> backward;
@@ -29,6 +38,8 @@ struct Eliminator {
   void enqueue (Clause *);
 
   vector<Clause *> gates;
+  unsigned definition_unit;
+  vector<proof_clause> proof_clauses;
   vector<int> marked;
 };
 

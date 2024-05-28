@@ -65,6 +65,8 @@ int Internal::second_literal_in_binary_clause_lrat (Clause *c, int first) {
     if (lit == first)
       continue;
     const signed char tmp = val (lit);
+    if (tmp < 0) continue;
+    if (tmp > 0) return 0;
     if (!tmp) {
       if (second) {
         second = INT_MIN;
@@ -582,8 +584,12 @@ bool Internal::get_clause (Clause *c, vector<int> &l) {
     return false;
   l.clear ();
   for (const auto &lit : *c) {
-    if (val (lit))
+    if (val (lit) < 0)
       continue;
+    if (val (lit) > 0) {
+      l.clear ();
+      return false;
+    }
     l.push_back (lit);
   }
   return true;
@@ -599,8 +605,10 @@ bool Internal::is_clause (Clause *c, const vector<int> &lits) {
     return false;
   int found = 0;
   for (const auto &lit : *c) {
-    if (val (lit))
+    if (val (lit) < 0)
       continue;
+    if (val (lit) > 0)
+      return false;
     const auto it = find (lits.begin (), lits.end (), lit);
     if (it == lits.end ())
       return false;
@@ -740,10 +748,12 @@ void Internal::find_gate_clauses (Eliminator &eliminator, int pivot) {
   assert (eliminator.gates.empty ());
 
   find_equivalence (eliminator, pivot);
+  //find_citten_eq (eliminator, pivot);
   find_and_gate (eliminator, pivot);
   find_and_gate (eliminator, -pivot);
   find_if_then_else (eliminator, pivot);
   find_xor_gate (eliminator, pivot);
+  find_definition (eliminator, pivot);
 }
 
 void Internal::unmark_gate_clauses (Eliminator &eliminator) {
@@ -753,6 +763,7 @@ void Internal::unmark_gate_clauses (Eliminator &eliminator) {
     c->gate = false;
   }
   eliminator.gates.clear ();
+  eliminator.definition_unit = 0;
 }
 
 /*------------------------------------------------------------------------*/

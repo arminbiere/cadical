@@ -110,7 +110,7 @@ where '<option>' is one of the following
 
 The environment variable CXX can be used to set a different C++
 compiler than the default 'g++'.  Similarly you can add additional
-compilation options by setting CXXFLAGS.  For example
+compilation options by setting CXXFLAGS and CFLAGS.  For example
 
   CXX=clang++ CXXFLAGS=-fPIC ./configure
 
@@ -175,6 +175,10 @@ do
 
     CXXFLAGS=*)
       CXXFLAGS="`expr \"$1\" : 'CXXFLAGS=\(.*\)'`"
+      ;;
+
+    CFLAGS=*)
+      CFLAGS="`expr \"$1\" : 'CFLAGS=\(.*\)'`"
       ;;
 
     *) die "invalid option '$1' (try '-h')";;
@@ -302,11 +306,19 @@ fi
 [ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
+
+[ $check = no ] && CFLAGS="$CFLAGS -DNDEBUG"
+[ $logging = yes ] && CFLAGS="$CFLAGS -DLOGGING"
+[ $quiet = yes ] && CFLAGS="$CFLAGS -DQUIET"
+[ $profile = yes ] && CFLAGS="$CFLAGS -pg"
+[ $coverage = yes ] && CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
 if [ $pedantic = yes ]
 then
   CXXFLAGS="$CXXFLAGS --pedantic -Werror -std=c++11"
+  CFLAGS="$CFLAGS --pedantic -Werror"
   case x"$CXX" in
     x*g++*|x*clang++*) CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
+    CFLAGS="${CFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
     ;;
   esac
 fi
@@ -314,7 +326,12 @@ fi
 [ $tracing = no ] && CXXFLAGS="$CXXFLAGS -DNTRACING"
 [ $contrib = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRIB"
 
+[ $contracts = no ] && CFLAGS="$CFLAGS -DNCONTRACTS"
+[ $tracing = no ] && CFLAGS="$CFLAGS -DNTRACING"
+[ $contrib = no ] && CFLAGS="$CFLAGS -DNCONTRIB"
+
 CXXFLAGS="$CXXFLAGS$options"
+CFLAGS="$CFLAGS$options"
 
 #--------------------------------------------------------------------------#
 
@@ -497,6 +514,7 @@ sed \
 # This 'makefile' is generated from '../makefile.in'." \
 -e "s,@CXX@,$CXX," \
 -e "s#@CXXFLAGS@#$CXXFLAGS#" \
+-e "s#@CFLAGS@#$CFLAGS#" \
 -e "s#@LIBS@#$libs#" \
 -e "s#@CONTRIB@#$contrib#" \
 -e "s#@ROOT@#$root#" \

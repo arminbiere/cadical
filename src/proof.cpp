@@ -413,6 +413,7 @@ void Proof::finalize_external_unit (uint64_t id, int lit) {
   finalize_clause ();
 }
 
+
 /*------------------------------------------------------------------------*/
 
 // During garbage collection clauses are shrunken by removing falsified
