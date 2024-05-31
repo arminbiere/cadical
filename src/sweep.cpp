@@ -12,7 +12,7 @@ struct Sweeper {
   unsigned save;
   vector<int> vars;
   vector<Clause *> clauses;
-  vector<unsigned> clause;
+  vector<int> clause;
   vector<unsigned> backbone;
   vector<unsigned> partition;
   vector<unsigned> core[2];
@@ -215,47 +215,46 @@ void Internal::sweep_clause (Sweeper &sweeper, unsigned depth) {
   for (const auto & lit : sweeper.clause ())
     add_literal_to_environment (sweeper, depth, lit);
   // TODO unsigned to signed conversion
-  kitten_clause (solver->kitten, SIZE_STACK (sweeper->clause),
+  kitten_clause (citten, SIZE_STACK (sweeper->clause),
                  BEGIN_STACK (sweeper->clause));
   sweeper.clause.clear ();
   sweeper.encoded++;
 }
 
-void sweep_binary Internal::(Sweeper &sweeper, unsigned depth, unsigned lit,
-                          unsigned other) {
+void Internal::sweep_binary (Sweeper &sweeper, unsigned depth, int lit,
+                          int other) {
   if (sweep_repr (sweeper, lit) != lit)
     return;
   if (sweep_repr (sweeper, other) != other)
     return;
-  kissat *solver = sweeper->solver;
-  LOGBINARY (lit, other, "sweeping[%u]", depth);
-  value *values = solver->values;
-  assert (!values[lit]);
-  const value other_value = values[other];
+  // LOGBINARY (lit, other, "sweeping[%u]", depth);
+  assert (!val (lit));
+  const value other_value = val (other);
   if (other_value > 0) {
-    LOGBINARY (lit, other, "skipping satisfied");
+    // LOGBINARY (lit, other, "skipping satisfied");
     return;
   }
-  const unsigned *depths = sweeper->depths;
-  const unsigned other_idx = IDX (other);
+  const unsigned *depths = sweeper.depths;
+  const unsigned other_idx = abs (other);
   const unsigned other_depth = depths[other_idx];
-  const unsigned lit_idx = IDX (lit);
+  const unsigned lit_idx = abs (lit);
   const unsigned lit_depth = depths[lit_idx];
   if (other_depth && other_depth < lit_depth) {
-    LOGBINARY (lit, other, "skipping depth %u copied", other_depth);
+    // LOGBINARY (lit, other, "skipping depth %u copied", other_depth);
     return;
   }
   assert (!other_value);
-  assert (EMPTY_STACK (sweeper->clause));
-  PUSH_STACK (sweeper->clause, lit);
-  PUSH_STACK (sweeper->clause, other);
+  assert (sweeper.clause.empty ());
+  sweeper.clause.push_back (lit);
+  sweeper.clause.push_back (other);
   sweep_clause (sweeper, depth);
 }
 
+
+// TODO not reference but clause *
 void Internal::sweep_reference (Sweeper &sweeper, unsigned depth,
                              reference ref) {
-  assert (EMPTY_STACK (sweeper->clause));
-  kissat *solver = sweeper->solver;
+  assert (sweeper.clause.empty ());
   clause *c = kissat_dereference_clause (solver, ref);
   if (c->swept)
     return;
