@@ -10,7 +10,7 @@ struct Sweeper {
   int first, last;
   unsigned encoded;
   unsigned save;
-  vector<unsigned> vars;
+  vector<int> vars;
   vector<Clause *> clauses;
   vector<unsigned> clause;
   vector<unsigned> backbone;
@@ -40,11 +40,11 @@ int Internal::sweep_solve () {
   return res;
 }
 
-void Internal::sweep_set_kitten_ticks_limit () {
+void Internal::sweep_set_kitten_ticks_limit (Sweeper &sweeper) {
   uint64_t remaining = 0;
   const uint64_t current = kitten_current_ticks (citten);
-  if (current < sweeper->limit.ticks)
-    remaining = sweeper->limit.ticks - current;
+  if (current < sweeper.limit.ticks)
+    remaining = sweeper.limit.ticks - current;
   LOG ("'kitten_ticks' remaining %" PRIu64, remaining);
   kitten_set_ticks_limit (citten, remaining);
 }
@@ -700,67 +700,66 @@ bool Internal::scheduled_variable (Sweeper &sweeper, int idx) {
   return sweeper.prev[idx] != 0 || sweeper.first == idx;
 }
 
-void Internal::schedule_inner (Sweeper &sweeper, unsigned idx) {
-  kissat *const solver = sweeper->solver;
-  assert (VALID_INTERNAL_INDEX (idx));
-  if (!ACTIVE (idx))
+void Internal::schedule_inner (Sweeper &sweeper, int idx) {
+  assert (idx);
+  if (!active (idx))
     return;
-  const unsigned next = sweeper->next[idx];
-  if (next != INVALID_IDX) {
-    LOG ("rescheduling inner %s as last", LOGVAR (idx));
-    const unsigned prev = sweeper->prev[idx];
-    assert (sweeper->prev[next] == idx);
-    sweeper->prev[next] = prev;
-    if (prev == INVALID_IDX) {
-      assert (sweeper->first == idx);
-      sweeper->first = next;
+  const int next = sweeper.next[idx];
+  if (next != 0) {
+    LOG ("rescheduling inner %d as last", idx);
+    const unsigned prev = sweeper.prev[idx];
+    assert (sweeper.prev[next] == idx);
+    sweeper.prev[next] = prev;
+    if (prev == 0) {
+      assert (sweeper.first == idx);
+      sweeper.first = next;
     } else {
-      assert (sweeper->next[prev] == idx);
-      sweeper->next[prev] = next;
+      assert (sweeper.next[prev] == idx);
+      sweeper.next[prev] = next;
     }
+    const unsigned last = sweeper.last;
+    if (last == 0) {
+      assert (sweeper.first == 0);
+      sweeper.first = idx;
+    } else {
+      assert (sweeper.next[last] == 0);
+      sweeper.next[last] = idx;
+    }
+    sweeper.prev[idx] = last;
+    sweeper.next[idx] = 0;
+    sweeper.last = idx;
+  } else if (sweeper.last != idx) {
+    LOG ("scheduling inner %d as last", idx);
     const unsigned last = sweeper->last;
-    if (last == INVALID_IDX) {
-      assert (sweeper->first == INVALID_IDX);
-      sweeper->first = idx;
+    if (last == 0) {
+      assert (sweeper.first == 0);
+      sweeper.first = idx;
     } else {
-      assert (sweeper->next[last] == INVALID_IDX);
-      sweeper->next[last] = idx;
+      assert (sweeper.next[last] == 0);
+      sweeper.next[last] = idx;
     }
-    sweeper->prev[idx] = last;
-    sweeper->next[idx] = INVALID_IDX;
-    sweeper->last = idx;
-  } else if (sweeper->last != idx) {
-    LOG ("scheduling inner %s as last", LOGVAR (idx));
-    const unsigned last = sweeper->last;
-    if (last == INVALID_IDX) {
-      assert (sweeper->first == INVALID_IDX);
-      sweeper->first = idx;
-    } else {
-      assert (sweeper->next[last] == INVALID_IDX);
-      sweeper->next[last] = idx;
-    }
-    assert (sweeper->next[idx] == INVALID_IDX);
-    sweeper->prev[idx] = last;
-    sweeper->last = idx;
+    assert (sweeper->next[idx] == 0);
+    sweeper.prev[idx] = last;
+    sweeper.last = idx;
   } else
-    LOG ("keeping inner %s scheduled as last", LOGVAR (idx));
+    LOG ("keeping inner %d scheduled as last", idx);
 }
 
-void Internal::schedule_outer (Sweeper &sweeper, unsigned idx) {
+void Internal::schedule_outer (Sweeper &sweeper, int idx) {
   assert (!scheduled_variable (sweeper, idx));
-  assert (ACTIVE (idx));
-  const unsigned first = sweeper->first;
-  if (first == INVALID_IDX) {
-    assert (sweeper->last == INVALID_IDX);
-    sweeper->last = idx;
+  assert (active (idx));
+  const int first = sweeper.first;
+  if (first == 0) {
+    assert (sweeper.last == 0);
+    sweeper.last = idx;
   } else {
-    assert (sweeper->prev[first] == INVALID_IDX);
-    sweeper->prev[first] = idx;
+    assert (sweeper.prev[first] == 0);
+    sweeper.prev[first] = idx;
   }
-  assert (sweeper->prev[idx] == INVALID_IDX);
-  sweeper->next[idx] = first;
-  sweeper->first = idx;
-  LOG ("scheduling outer %s as first", LOGVAR (idx));
+  assert (sweeper.prev[idx] == 0);
+  sweeper.next[idx] = first;
+  sweeper.first = idx;
+  LOG ("scheduling outer %d as first", idx);
 }
 
 unsigned Internal::next_scheduled (Sweeper &sweeper) {
@@ -789,8 +788,8 @@ unsigned Internal::next_scheduled (Sweeper &sweeper) {
 }
 
 #define all_scheduled(IDX) \
-  unsigned IDX = sweeper->first, NEXT_##IDX; \
-  IDX != INVALID_IDX && (NEXT_##IDX = sweeper->next[IDX], true); \
+  int IDX = sweeper.first, NEXT_##IDX; \
+  IDX != 0 && (NEXT_##IDX = sweeper.next[IDX], true); \
   IDX = NEXT_##IDX
 
 void Internal::substitute_connected_clauses (Sweeper &sweeper, unsigned lit,
@@ -1436,10 +1435,18 @@ DONE:
 
 struct sweep_candidate {
   unsigned rank;
-  unsigned idx;
+  int idx;
 };
 
-#define RANK_SWEEP_CANDIDATE(CAND) (CAND).rank
+struct rank_sweep_candidate {
+  bool operator() (sweep_candidate a, sweep_candidate b) const {
+    assert (a.rank && b.rank);
+    assert (a.idx > 0 && b.idx > 0);
+    if (a.rank < b.rank) return a;
+    if (b.rank < a.rank) return b;
+    return a.idx < b.idx;
+  }
+};
 
 bool Internal::scheduable_variable (Sweeper &sweeper, int idx,
                                     size_t *occ_ptr) {
@@ -1483,7 +1490,7 @@ unsigned Internal::schedule_all_other_not_scheduled_yet (Sweeper &sweeper) {
   }
   const size_t size = fresh.size ();
   assert (size <= UINT_MAX);
-  RADIX_STACK (sweep_candidate, unsigned, fresh, RANK_SWEEP_CANDIDATE);
+  sort (fresh.begin (), fresh.end (), rank_sweep_candidate ());
   for (auto &cand : fresh)
     schedule_outer (sweeper, cand.idx);
   return size;
@@ -1510,32 +1517,28 @@ unsigned Internal::reschedule_previously_remaining (Sweeper &sweeper) {
 }
 
 unsigned Internal::incomplete_variables (Sweeper &sweeper) {
-  kissat *solver = sweeper->solver;
-  flags *flags = solver->flags;
   unsigned res = 0;
-  for (all_variables (idx)) {
-    struct flags *f = flags + idx;
-    if (!f->active)
+  for (const auto &idx : vars) {
+    Flags &f = flags (idx);
+    if (!f.active)
       continue;
-    if (f->sweep)
+    if (f.sweep)
       res++;
   }
   return res;
 }
 
 void Internal::mark_incomplete (Sweeper &sweeper) {
-  kissat *solver = sweeper->solver;
-  flags *flags = solver->flags;
   unsigned marked = 0;
   for (all_scheduled (idx))
-    if (!flags[idx].sweep) {
-      flags[idx].sweep = true;
+    if (!flags (idx).sweep) {
+      flags (idx).sweep = true;
       marked++;
     }
-  solver->sweep_incomplete = true;
+  sweep_incomplete = true;
 #ifndef QUIET
-  kissat_extremely_verbose (
-      solver, "marked %u scheduled sweeping variables as incomplete",
+  vverbose (2,
+      "marked %u scheduled sweeping variables as incomplete",
       marked);
 #else
   (void) marked;
@@ -1547,20 +1550,18 @@ unsigned Internal::schedule_sweeping (Sweeper &sweeper) {
   const unsigned fresh = schedule_all_other_not_scheduled_yet (sweeper);
   const unsigned scheduled = fresh + rescheduled;
   const unsigned incomplete = incomplete_variables (sweeper);
-  kissat *solver = sweeper->solver;
 #ifndef QUIET
-  kissat_phase (solver, "sweep", GET (sweep),
+  PHASE ("sweep", stats.sweeps,
                 "scheduled %u variables %.0f%% "
                 "(%u rescheduled %.0f%%, %u incomplete %.0f%%)",
-                scheduled,
-                kissat_percent (scheduled, sweeper->solver->active),
-                rescheduled, kissat_percent (rescheduled, scheduled),
-                incomplete, kissat_percent (incomplete, scheduled));
+                scheduled, percent (scheduled, active ()),
+                rescheduled, percent (rescheduled, scheduled),
+                incomplete, percent (incomplete, scheduled));
 #endif
   if (incomplete)
-    assert (solver->sweep_incomplete);
+    assert (sweep_incomplete);
   else {
-    if (solver->sweep_incomplete)
+    if (sweep_incomplete)
       stats.sweep_completed++;
     mark_incomplete (sweeper);
   }
@@ -1569,38 +1570,34 @@ unsigned Internal::schedule_sweeping (Sweeper &sweeper) {
 
 void Internal::unschedule_sweeping (Sweeper &sweeper, unsigned swept,
                                  unsigned scheduled) {
-  kissat *solver = sweeper->solver;
 #ifdef QUIET
   (void) scheduled, (void) swept;
 #endif
-  assert (EMPTY_STACK (solver->sweep_schedule));
-  assert (solver->sweep_incomplete);
-  flags *flags = solver->flags;
+  assert (sweep_schedule.empty ());
+  assert (sweep_incomplete);
   for (all_scheduled (idx))
-    if (flags[idx].active) {
-      PUSH_STACK (solver->sweep_schedule, idx);
-      LOG ("untried scheduled %s", LOGVAR (idx));
+    if (active (idx)) {
+      sweep_schedule.push_back (idx);
+      LOG ("untried scheduled %d", idx);
     }
 #ifndef QUIET
-  const unsigned retained = SIZE_STACK (solver->sweep_schedule);
-  kissat_extremely_verbose (
-      solver, "retained %u variables %.0f%% to be swept next time",
-      retained, kissat_percent (retained, solver->active));
+  const unsigned retained = sweep_schedule.size ();
+  vverbose (
+      3, "retained %u variables %.0f%% to be swept next time",
+      retained, percent (retained, active ()));
 #endif
   const unsigned incomplete = incomplete_variables (sweeper);
   if (incomplete)
-    kissat_extremely_verbose (
-        solver, "need to sweep %u more variables %.0f%% for completion",
-        incomplete, kissat_percent (incomplete, solver->active));
+    vverbose (3, "need to sweep %u more variables %.0f%% for completion",
+            incomplete, percent (incomplete, active ()));
   else {
-    kissat_extremely_verbose (solver,
-                              "no more variables needed to complete sweep");
-    solver->sweep_incomplete = false;
+    vverbose (3, "no more variables needed to complete sweep");
+    sweep_incomplete = false;
     stats.sweep_completed++;
   }
-  kissat_phase (solver, "sweep", GET (sweep),
+  PHASE ("sweep", stats.sweeps,
                 "swept %u variables (%u remain %.0f%%)", swept, incomplete,
-                kissat_percent (incomplete, scheduled));
+                percent (incomplete, scheduled));
 }
 
 bool Internal::sweep () {
@@ -1622,11 +1619,11 @@ bool Internal::sweep () {
   const unsigned scheduled = schedule_sweeping (&sweeper);
   uint64_t swept = 0, limit = 10;
   for (;;) {
-    if (solver->inconsistent)
+    if (unsat)
       break;
-    if (TERMINATED (sweep_terminated_8))
+    if (terminated_asynchronously ())
       break;
-    if (solver->statistics.kitten_ticks > sweeper.limit.ticks)
+    if (stats.kitten_ticks > sweeper.limit.ticks)
       break;
     unsigned idx = next_scheduled (&sweeper);
     if (idx == INVALID_IDX)
