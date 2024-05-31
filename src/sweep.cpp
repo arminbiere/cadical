@@ -6,8 +6,8 @@ struct Sweeper {
   Internal *internal;
   vector<unsigned> depths;
   vector<unsigned> reprs;
-  vector<unsigned> next, prev;
-  unsigned first, last;
+  vector<int> next, prev;
+  int first, last;
   unsigned encoded;
   unsigned save;
   vector<unsigned> vars;
@@ -696,12 +696,8 @@ void Internal::add_binary (kissat *solver, unsigned lit, unsigned other) {
   kissat_new_binary_clause (solver, lit, other);
 }
 
-bool Internal::scheduled_variable (Sweeper &sweeper, unsigned idx) {
-#ifndef NDEBUG
-  kissat *const solver = sweeper->solver;
-  assert (VALID_INTERNAL_INDEX (idx));
-#endif
-  return sweeper->prev[idx] != INVALID_IDX || sweeper->first == idx;
+bool Internal::scheduled_variable (Sweeper &sweeper, int idx) {
+  return sweeper.prev[idx] != 0 || sweeper.first == idx;
 }
 
 void Internal::schedule_inner (Sweeper &sweeper, unsigned idx) {
@@ -751,10 +747,6 @@ void Internal::schedule_inner (Sweeper &sweeper, unsigned idx) {
 }
 
 void Internal::schedule_outer (Sweeper &sweeper, unsigned idx) {
-#if !defined(NDEBUG) || defined(LOGGING)
-  kissat *const solver = sweeper->solver;
-#endif
-  assert (VALID_INTERNAL_INDEX (idx));
   assert (!scheduled_variable (sweeper, idx));
   assert (ACTIVE (idx));
   const unsigned first = sweeper->first;
@@ -1442,8 +1434,6 @@ DONE:
   return "unsuccessfully and reached limit";
 }
 
-typedef struct sweep_candidate sweep_candidate;
-
 struct sweep_candidate {
   unsigned rank;
   unsigned idx;
@@ -1451,18 +1441,17 @@ struct sweep_candidate {
 
 #define RANK_SWEEP_CANDIDATE(CAND) (CAND).rank
 
-bool Internal::scheduable_variable (Sweeper &sweeper, unsigned idx,
-                                 size_t *occ_ptr) {
-  kissat *solver = sweeper->solver;
-  const unsigned lit = LIT (idx);
-  const size_t pos = SIZE_WATCHES (WATCHES (lit));
+bool Internal::scheduable_variable (Sweeper &sweeper, int idx,
+                                    size_t *occ_ptr) {
+  const int lit = idx;
+  const size_t pos = watches (lit).size ();
   if (!pos)
     return false;
-  const unsigned max_occurrences = sweeper->limit.clauses;
+  const unsigned max_occurrences = sweeper.limit.clauses;
   if (pos > max_occurrences)
     return false;
-  const unsigned not_lit = NOT (lit);
-  const size_t neg = SIZE_WATCHES (WATCHES (not_lit));
+  const int not_lit = -lit;
+  const size_t neg = watches (not_lit).size ();
   if (!neg)
     return false;
   if (neg > max_occurrences)
@@ -1473,55 +1462,50 @@ bool Internal::scheduable_variable (Sweeper &sweeper, unsigned idx,
 
 unsigned Internal::schedule_all_other_not_scheduled_yet (Sweeper &sweeper) {
   kissat *solver = sweeper->solver;
-  sweep_candidates fresh;
-  INIT_STACK (fresh);
-  flags *const flags = solver->flags;
-  const bool incomplete = solver->sweep_incomplete;
-  for (all_variables (idx)) {
-    struct flags *const f = flags + idx;
-    if (!f->active)
+  vector<sweep_candidate> fresh;
+  for (const auto & idx : vars) {
+    Flags &f = flags (idx);
+    if (!f.active)
       continue;
-    if (incomplete && !f->sweep)
+    if (sweep_incomplete && !f.sweep)
       continue;
     if (scheduled_variable (sweeper, idx))
       continue;
     size_t occ;
     if (!scheduable_variable (sweeper, idx, &occ)) {
-      FLAGS (idx)->sweep = false;
+      f.sweep = false;
       continue;
     }
     sweep_candidate cand;
     cand.rank = occ;
     cand.idx = idx;
-    PUSH_STACK (fresh, cand);
+    fresh.push_back (cand);
   }
-  const size_t size = SIZE_STACK (fresh);
+  const size_t size = fresh.size ();
   assert (size <= UINT_MAX);
   RADIX_STACK (sweep_candidate, unsigned, fresh, RANK_SWEEP_CANDIDATE);
-  for (all_stack (sweep_candidate, cand, fresh))
+  for (auto &cand : fresh)
     schedule_outer (sweeper, cand.idx);
-  RELEASE_STACK (fresh);
   return size;
 }
 
 unsigned Internal::reschedule_previously_remaining (Sweeper &sweeper) {
   unsigned rescheduled = 0;
-  unsigneds *remaining = &solver->sweep_schedule;
-  for (all_stack (unsigned, idx, *remaining)) {
-    struct flags *f = flags + idx;
-    if (!f->active)
+  for (const auto & idx : sweep_schedule)) {
+    Flags &f = flags (idx);
+    if (!f.active ())
       continue;
     if (scheduled_variable (sweeper, idx))
       continue;
     size_t occ;
     if (!scheduable_variable (sweeper, idx, &occ)) {
-      f->sweep = false;
+      f.sweep = false;
       continue;
     }
     schedule_inner (sweeper, idx);
     rescheduled++;
   }
-  RELEASE_STACK (*remaining);
+  sweep_schedule.clear ();
   return rescheduled;
 }
 
@@ -1624,10 +1608,10 @@ bool Internal::sweep () {
     return false;
   if (unsat)
     return false;
-  if (TERMINATED (sweep_terminated_7))
+  if (terminated_asynchronously ())
     return false;
-  if (DELAYING (sweep))
-    return false;
+//  if (DELAYING (sweep))  TODO sweeping should not be called every probe but
+//    return false;             only sometimes based on a counter
   assert (!level);
   assert (!solver->unflushed);  // ?
   START (sweep);
@@ -1687,10 +1671,10 @@ bool Internal::sweep () {
 #else
   (void) inactive;
 #endif
-  if (kissat_average (eliminated, swept) < 0.001)
-    BUMP_DELAY (sweep);
-  else
-    REDUCE_DELAY (sweep);
+//  if (kissat_average (eliminated, swept) < 0.001)
+//    BUMP_DELAY (sweep);              // increase sweeping counter (see above)
+//  else
+//    REDUCE_DELAY (sweep);            // decrease sweeping counter
   STOP (sweep);
   return eliminated;
 }

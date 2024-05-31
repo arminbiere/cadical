@@ -250,6 +250,9 @@ struct Internal {
   vector<int> shrinkable;    // removable or poison in 'shrink'
   Reap reap;                 // radix heap for shrink
 
+  vector<int> sweep_schedule;  // remember sweep varibles to reschedule
+  bool sweep_incomplete;       // sweep
+
   kitten *citten;
 
   size_t num_assigned; // check for satisfied

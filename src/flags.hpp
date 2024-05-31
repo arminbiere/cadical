@@ -23,6 +23,7 @@ struct Flags { // Variable flags.
   bool elim : 1;    // removed since last 'elim' round (*)
   bool subsume : 1; // added since last 'subsume' round (*)
   bool ternary : 1; // added in ternary clause since last 'ternary' (*)
+  bool sweep : 1;
 
   unsigned char decompose : 2; // generate correct LRAT chains in decompose
 
