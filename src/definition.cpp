@@ -294,6 +294,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
   ABORT:
     LOG ("sub-solver failed to show that definition exists");
   }
+  stats.definition_ticks += kitten_current_ticks (citten);
   return;
 }
 

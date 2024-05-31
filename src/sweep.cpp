@@ -118,8 +118,16 @@ void Internal::init_sweeper (Sweeper &sweeper) {
     sweeper.limit.ticks = UINT64_MAX;
     VERBOSE (3, "unlimited sweeper ticks limit");
   } else {
-    SET_EFFORT_LIMIT (ticks_limit, sweep, kitten_ticks);  // TODO ?
+    int64_t limit = stats.propagations.search;
+    limit -= last.sweep.propagations;
+    limit *= opts.sweepeffort * 1e-3;
+    // if (limit < opts.sweepmineff)  TODO maybe these options
+    //   limit = opts.sweepmineff;        
+    // if (limit > opts.sweepmaxeff)
+    //   limit = opts.sweepmaxeff;
+    int64_t ticks_limit = limit * 100;   // propagations are not equal ticks
     sweeper.limit.ticks = ticks_limit;
+    last.sweep.propagations = stats.propagations.search;
   }
   sweep_set_kitten_ticks_limit (sweeper);
 }
@@ -136,18 +144,6 @@ unsigned Internal::release_sweeper (Sweeper &sweeper) {
   }
   sweeper.reprs += max_var;
   delete[] sweeper.reprs;
-
-  // free memory early
-  // TODO: does clear even free memory? not strictly necessary anyways
-  sweeper.depths.clear ();
-  sweeper.prev.clear ();
-  sweeper.next.clear ();
-  sweeper.vars.clear ();
-  sweeper.refs.clear ();
-  sweeper.clause.clear ();
-  sweeper.backbone.clear ();
-  sweeper.core[0].clear ();
-  sweeper.core[1].clear ();
   
   kitten_release (citten);
   citten = 0;
@@ -634,9 +630,9 @@ void Internal::flip_backbone_literals (struct Sweeper &sweeper) {
     SET_END_OF_STACK (sweeper->backbone, q);
     LOG ("flipped %u backbone candidates in round %u", flipped, round);
 
-    if (TERMINATED (sweep_terminated_1))
+    if (terminated_asynchronously ())
       break;
-    if (solver->statistics.kitten_ticks > sweeper->limit.ticks)
+    if (kitten_current_ticks (citten) > sweeper.limit.ticks)
       break;
   } while (flipped && round < max_rounds);
   LOG ("flipped %u backbone candidates in total in %u rounds",
@@ -1092,9 +1088,9 @@ void Internal::flip_partition_literals (struct Sweeper &sweeper) {
     SET_END_OF_STACK (sweeper->partition, dst);
     LOG ("flipped %u equivalence candidates in round %u", flipped, round);
 
-    if (TERMINATED (sweep_terminated_2))
+    if (terminated_asynchronously ())
       break;
-    if (solver->statistics.kitten_ticks > sweeper->limit.ticks)
+    if (kitten_current_ticks (citten) > sweeper->limit.ticks)
       break;
   } while (flipped && round < max_rounds);
   LOG ("flipped %u equivalence candidates in total in %u rounds",
@@ -1333,7 +1329,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, unsigned idx) {
 #endif
     START (sweepbackbone);
     while (!EMPTY_STACK (sweeper->backbone)) {
-      if (solver->inconsistent || TERMINATED (sweep_terminated_3) ||
+      if (solver->inconsistent || terminated_asynchronously () ||
           kitten_ticks_limit_hit (sweeper, "backbone refinement")) {
         limit_reached = true;
       STOP_SWEEP_BACKBONE:
@@ -1341,7 +1337,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, unsigned idx) {
         goto DONE;
       }
       flip_backbone_literals (sweeper);
-      if (TERMINATED (sweep_terminated_4) ||
+      if (terminated_asynchronously () ||
           kitten_ticks_limit_hit (sweeper, "backbone refinement")) {
         limit_reached = true;
         goto STOP_SWEEP_BACKBONE;
@@ -1371,7 +1367,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, unsigned idx) {
 #endif
     START (sweepequivalences);
     while (!EMPTY_STACK (sweeper->partition)) {
-      if (solver->inconsistent || TERMINATED (sweep_terminated_5) ||
+      if (solver->inconsistent || terminated_asynchronously () ||
           kitten_ticks_limit_hit (sweeper, "partition refinement")) {
         limit_reached = true;
       STOP_SWEEP_EQUIVALENCES:
@@ -1379,7 +1375,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, unsigned idx) {
         goto DONE;
       }
       flip_partition_literals (sweeper);
-      if (TERMINATED (sweep_terminated_6) ||
+      if (terminated_asynchronously () ||
           kitten_ticks_limit_hit (sweeper, "backbone refinement")) {
         limit_reached = true;
         goto STOP_SWEEP_EQUIVALENCES;

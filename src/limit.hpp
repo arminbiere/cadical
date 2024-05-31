@@ -46,7 +46,7 @@ struct Limit {
 struct Last {
   struct {
     int64_t propagations;
-  } transred, vivify;
+  } transred, vivify, sweep;
   struct {
     int64_t fixed, subsumephases, marked;
   } elim;
