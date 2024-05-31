@@ -97,10 +97,8 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   if (vars_limit > max_vars_limit)
     vars_limit = max_vars_limit;
   sweeper.limit.vars = vars_limit;
-#ifndef QUIET
-  verbose (solver, "sweeper variable limit %u",
+  VERBOSE (solver, "sweeper variable limit %u",
                             sweeper->limit.vars);
-#endif
 
   uint64_t depth_limit = solver->statistics.sweep_completed;
   depth_limit += opts.sweepdepth;
@@ -108,7 +106,7 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   if (depth_limit > max_depth)
     depth_limit = max_depth;
   sweeper->limit.depth = depth_limit;
-  kissat_extremely_verbose (solver, "sweeper depth limit %u",
+  VERBOSE (3, "sweeper depth limit %u",
                             sweeper->limit.depth);
 
   uint64_t clause_limit = opts.sweepclauses;
@@ -117,12 +115,12 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   if (clause_limit > max_clause_limit)
     clause_limit = max_clause_limit;
   sweeper->limit.clauses = clause_limit;
-  kissat_extremely_verbose (solver, "sweeper clause limit %u",
+  VERBOSE (3, "sweeper clause limit %u",
                             sweeper->limit.clauses);
 
   if (opts.sweepcomplete) {
     sweeper->limit.ticks = UINT64_MAX;
-    kissat_extremely_verbose (solver, "unlimited sweeper ticks limit");
+    VERBOSE (3, "unlimited sweeper ticks limit");
   } else {
     SET_EFFORT_LIMIT (ticks_limit, sweep, kitten_ticks);
     sweeper->limit.ticks = ticks_limit;
@@ -1324,7 +1322,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, unsigned idx) {
   ADD (sweep_depth, depth);
   ADD (sweep_clauses, sweeper->encoded);
   ADD (sweep_environment, SIZE_STACK (sweeper->vars));
-  kissat_extremely_verbose (solver,
+  VERBOSE (3,
                             "sweeping variable %d environment of "
                             "%zu variables %u clauses depth %u",
                             kissat_export_literal (solver, LIT (idx)),
@@ -1365,12 +1363,12 @@ const char *Internal::sweep_variable (Sweeper &sweeper, unsigned idx) {
 #ifndef QUIET
     units = solver->statistics.sweep_units - units;
     solved = solver->statistics.sweep_solved - solved;
-    kissat_extremely_verbose (
-        solver,
+#endif
+    VERBOSE (
+        3,
         "complete swept variable %d backbone with %" PRIu64
         " units in %" PRIu64 " solver calls",
         kissat_export_literal (solver, LIT (idx)), units, solved);
-#endif
     assert (EMPTY_STACK (sweeper->backbone));
 #ifndef QUIET
     uint64_t equivalences = solver->statistics.sweep_equivalences;
@@ -1408,8 +1406,8 @@ const char *Internal::sweep_variable (Sweeper &sweeper, unsigned idx) {
     equivalences = solver->statistics.sweep_equivalences - equivalences;
     solved = solver->statistics.sweep_solved - solved;
     if (equivalences)
-      kissat_extremely_verbose (
-          solver,
+      VERBOSE (
+          3,
           "complete swept variable %d partition with %" PRIu64
           " equivalences in %" PRIu64 " solver calls",
           kissat_export_literal (solver, LIT (idx)), equivalences, solved);
@@ -1537,7 +1535,7 @@ void Internal::mark_incomplete (Sweeper &sweeper) {
     }
   sweep_incomplete = true;
 #ifndef QUIET
-  vverbose (2,
+  VERBOSE (2,
       "marked %u scheduled sweeping variables as incomplete",
       marked);
 #else
@@ -1582,16 +1580,16 @@ void Internal::unschedule_sweeping (Sweeper &sweeper, unsigned swept,
     }
 #ifndef QUIET
   const unsigned retained = sweep_schedule.size ();
-  vverbose (
+#endif
+  VERBOSE (
       3, "retained %u variables %.0f%% to be swept next time",
       retained, percent (retained, active ()));
-#endif
   const unsigned incomplete = incomplete_variables (sweeper);
   if (incomplete)
-    vverbose (3, "need to sweep %u more variables %.0f%% for completion",
+    VERBOSE (3, "need to sweep %u more variables %.0f%% for completion",
             incomplete, percent (incomplete, active ()));
   else {
-    vverbose (3, "no more variables needed to complete sweep");
+    VERBOSE (3, "no more variables needed to complete sweep");
     sweep_incomplete = false;
     stats.sweep_completed++;
   }
@@ -1625,27 +1623,27 @@ bool Internal::sweep () {
       break;
     if (stats.kitten_ticks > sweeper.limit.ticks)
       break;
-    unsigned idx = next_scheduled (&sweeper);
-    if (idx == INVALID_IDX)
+    int idx = next_scheduled (&sweeper);
+    if (idx == 0)
       break;
-    FLAGS (idx)->sweep = false;
+    flags (idx).sweep = false;
 #ifndef QUIET
     const char *res =
 #endif
         sweep_variable (&sweeper, idx);
-    kissat_extremely_verbose (
-        solver, "swept[%" PRIu64 "] external variable %d %s", swept,
-        kissat_export_literal (solver, LIT (idx)), res);
+    VERBOSE (
+        2, "swept[%" PRIu64 "] external variable %d %s", swept,
+        externalize (idx), res);
     if (++swept == limit) {
-      kissat_very_verbose (solver,
+      VERBOSE (2,
                            "found %" PRIu64 " equivalences and %" PRIu64
                            " units after sweeping %" PRIu64 " variables ",
-                           statistics->sweep_equivalences - equivalences,
-                           solver->statistics.sweep_units - units, swept);
+                           stats.sweep_equivalences - equivalences,
+                           stats.sweep_units - units, swept);
       limit *= 10;
     }
   }
-  kissat_very_verbose (solver, "swept %" PRIu64 " variables", swept);
+  VERBOSE (2, "swept %" PRIu64 " variables", swept);
   equivalences = statistics->sweep_equivalences - equivalences,
   units = solver->statistics.sweep_units - units;
   kissat_phase (solver, "sweep", GET (sweep),

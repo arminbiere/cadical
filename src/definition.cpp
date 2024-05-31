@@ -265,11 +265,9 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
 
     if (unit) {
       stats.definition_units++;
-#ifndef QUIET
-      verbose (2, "one sided core "
+      VERBOSE (2, "one sided core "
                   "definition extraction yields "
                   "failed literal");
-#endif
       if (proof) {
         if (lrat) {
           lrat_extractor extractor;
