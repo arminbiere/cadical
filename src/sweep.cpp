@@ -171,57 +171,54 @@ void Internal::clear_sweeper (Sweeper &sweeper) {
   sweep_set_kitten_ticks_limit (sweeper);
 }
 
-unsigned Internal::sweep_repr (Sweeper &sweeper, unsigned lit) {
-  unsigned res;
+unsigned Internal::sweep_repr (Sweeper &sweeper, int lit) {
+  int res;
   {
-    unsigned prev = lit;
-    while ((res = sweeper->reprs[prev]) != prev)
+    int prev = lit;
+    while ((res = sweeper.reprs[prev]) != prev)
       prev = res;
   }
   if (res == lit)
     return res;
-#if defined(LOGGING) || !defined(NDEBUG)
-  kissat *solver = sweeper->solver;
-#endif
-  LOG ("sweeping repr[%s] = %s", LOGLIT (lit), LOGLIT (res));
+  LOG ("sweeping repr[%d] = %d", lit, res);
   {
-    const unsigned not_res = NOT (res);
-    unsigned next, prev = lit;
+    const int not_res = -res;
+    int next, prev = lit;
     ;
-    while ((next = sweeper->reprs[prev]) != res) {
-      const unsigned not_prev = NOT (prev);
-      sweeper->reprs[not_prev] = not_res;
-      sweeper->reprs[prev] = res;
+    while ((next = sweeper.reprs[prev]) != res) {
+      const int not_prev = -prev;
+      sweeper.reprs[not_prev] = not_res;
+      sweeper.reprs[prev] = res;
       prev = next;
     }
-    assert (sweeper->reprs[NOT (prev)] == not_res);
+    assert (sweeper.reprs[-prev] == not_res);
   }
   return res;
 }
 
 void Internal::add_literal_to_environment (Sweeper &sweeper, unsigned depth,
-                                        unsigned lit) {
-  const unsigned repr = sweep_repr (sweeper, lit);
+                                        int lit) {
+  const int repr = sweep_repr (sweeper, lit);
   if (repr != lit)
     return;
-  const unsigned idx = IDX (lit);
-  if (sweeper->depths[idx])
+  const int idx = abs (lit);
+  if (sweeper.depths[idx])
     return;
   assert (depth < UINT_MAX);
-  sweeper->depths[idx] = depth + 1;
-  PUSH_STACK (sweeper->vars, idx);
-  LOG ("sweeping[%u] adding literal %s", depth, LOGLIT (lit));
+  sweeper.depths[idx] = depth + 1;
+  sweeper.vars.push_back (idx);
+  LOG ("sweeping[%u] adding literal %d", depth, lit);
 }
 
 void Internal::sweep_clause (Sweeper &sweeper, unsigned depth) {
-  kissat *solver = sweeper->solver;
-  assert (SIZE_STACK (sweeper->clause) > 1);
-  for (all_stack (unsigned, lit, sweeper->clause))
+  assert (sweeper.clause.size () > 1);
+  for (const auto & lit : sweeper.clause ())
     add_literal_to_environment (sweeper, depth, lit);
+  // TODO unsigned to signed conversion
   kitten_clause (solver->kitten, SIZE_STACK (sweeper->clause),
                  BEGIN_STACK (sweeper->clause));
-  CLEAR_STACK (sweeper->clause);
-  sweeper->encoded++;
+  sweeper.clause.clear ();
+  sweeper.encoded++;
 }
 
 void sweep_binary Internal::(Sweeper &sweeper, unsigned depth, unsigned lit,
