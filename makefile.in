@@ -34,7 +34,7 @@ COMPILE=$(CXX) $(CXXFLAGS) -I$(DIR) -I$(ROOT)/src
 
 #--------------------------------------------------------------------------#
 
-all: libcadical.a cadical mobical
+all: libcadical.so libcadical.a cadical mobical
 
 #--------------------------------------------------------------------------#
 
@@ -61,6 +61,9 @@ mobical: src/mobical.o libcadical.a makefile $(LIBS)
 
 libcadical.a: $(OBJ_SOLVER) $(OBJ_CONTRIB) makefile
 	ar rc $@ $(OBJ_SOLVER) $(OBJ_CONTRIB)
+
+libcadical.so: $(OBJ_SOLVER) $(OBJ_CONTRIB) $(LIBS) makefile
+	$(COMPILE) -shared -o $@ $(OBJ_SOLVER) $(OBJ_CONTRIB) $(LIBS)
 
 #--------------------------------------------------------------------------#
 
