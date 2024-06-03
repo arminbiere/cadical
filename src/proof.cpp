@@ -29,6 +29,7 @@ void Internal::setup_lrat_builder () {
 void Internal::force_lrat () {
   if (lrat || lratbuilder)
     return;
+  assert (proof);
   lrat = true;
 }
 

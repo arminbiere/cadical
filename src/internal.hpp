@@ -1058,12 +1058,10 @@ struct Internal {
   void init_sweeper (Sweeper &sweeper);
   unsigned release_sweeper (Sweeper &sweeper);
   void clear_sweeper (Sweeper &sweeper);
-  unsigned sweep_repr (Sweeper &sweeper, unsigned lit);
+  unsigned sweep_repr (Sweeper &sweeper, int lit);
   void add_literal_to_environment (Sweeper &sweeper, unsigned depth, int);
-  void sweep_clause (Sweeper &sweeper, unsigned depth);
-  void sweep_binary (Sweeper &sweeper, unsigned depth, unsigned lit,
-                            unsigned other);
-  void sweep_reference (Sweeper &sweeper, unsigned depth, int lit);
+  void sweep_clause (Sweeper &sweeper, unsigned depth, Clause *);
+  void sweep_add_clause (Sweeper &sweeper, unsigned depth);
   void add_core (Sweeper &sweeper, unsigned core_idx);
   void save_core (Sweeper &sweeper, unsigned core);
   void clear_core (Sweeper &sweeper, unsigned core_idx);
@@ -1074,28 +1072,31 @@ struct Internal {
   void sweep_refine_backbone (Sweeper &sweeper);
   void sweep_refine (Sweeper &sweeper);
   void flip_backbone_literals (struct Sweeper &sweeper);
-  bool sweep_backbone_candidate (Sweeper &sweeper, unsigned lit);
+  bool sweep_backbone_candidate (Sweeper &sweeper, int lit);
   void add_sweep_binary (int lit, int other);
   bool scheduled_variable (Sweeper &sweeper, int idx);
   void schedule_inner (Sweeper &sweeper, int idx);
   void schedule_outer (Sweeper &sweeper, int idx);
   int next_scheduled (Sweeper &sweeper);
-  void substitute_connected_clauses (Sweeper &sweeper, unsigned lit, int other);
-  void sweep_remove (Sweeper &sweeper, unsigned lit);
+  void substitute_connected_clauses (Sweeper &sweeper, int lit, int other);
+  void sweep_remove (Sweeper &sweeper, int lit);
   void flip_partition_literals (struct Sweeper &sweeper);
-  const char *sweep_variable (Sweeper &sweeper, unsigned idx);
+  const char *sweep_variable (Sweeper &sweeper, int idx);
   bool scheduable_variable (Sweeper &sweeper, int idx,
                                       size_t *occ_ptr);
   unsigned schedule_all_other_not_scheduled_yet (Sweeper &sweeper);
-  bool sweep_equivalence_candidates (Sweeper &sweeper, unsigned lit,
-                                            unsigned other);
+  bool sweep_equivalence_candidates (Sweeper &sweeper, int lit,
+                                            int other);
   unsigned reschedule_previously_remaining (Sweeper &sweeper);
   unsigned incomplete_variables (Sweeper &sweeper);
   void mark_incomplete (Sweeper &sweeper);
   unsigned schedule_sweeping (Sweeper &sweeper);
   void unschedule_sweeping (Sweeper &sweeper, unsigned swept,
                                    unsigned scheduled);
-  bool sweep () {
+  bool sweep ();
+  void sweep_dense_propagate ();
+  void sweep_sparse_mode ();
+  void sweep_dense_mode_and_watch_irredundant ();
   
   // instantiate
   //

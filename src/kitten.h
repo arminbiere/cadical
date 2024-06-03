@@ -27,8 +27,10 @@ void kitten_flip_phases (kitten *);
 void kitten_randomize_phases (kitten *);
 
 void kitten_assume (kitten *, unsigned lit);
+void kitten_assume_signed (kitten *, int lit);
 
 void kitten_clause (kitten *, size_t size, unsigned *);
+void citten_clause (kitten *, size_t size, int *);
 void kitten_unit (kitten *, unsigned);
 void kitten_binary (kitten *, unsigned, unsigned);
 
@@ -53,8 +55,11 @@ int kitten_solve (kitten *);
 int kitten_status (kitten *);
 
 signed char kitten_value (kitten *, unsigned);
+signed char kitten_signed_value (kitten *, int);  // converts second argument
+signed char kitten_fixed (kitten *, unsigned);
 bool kitten_failed (kitten *, unsigned);
 bool kitten_flip_literal (kitten *, unsigned);
+bool kitten_flip_signed_literal (kitten *, int);
 
 unsigned kitten_compute_clausal_core (kitten *, uint64_t *learned);
 void kitten_shrink_to_clausal_core (kitten *);

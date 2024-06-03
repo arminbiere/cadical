@@ -209,7 +209,7 @@ bool Internal::find_next_eq (Eliminator &eliminator, int pivot, int best) {
   if (status == 10 && false) {
     signed char citten_vals[max_var+1] {};
     for (const auto & lit : vars) {
-      citten_vals[lit] = kitten_value (citten, lit2citten (lit));
+      citten_vals[lit] = kitten_signed_value (citten, lit);  // kitten converts
     }
     for (const auto & ulit : vars) {
       const auto lit = -ulit * citten_vals[ulit];

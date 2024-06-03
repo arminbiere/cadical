@@ -1599,6 +1599,11 @@ void kitten_assume (kitten *kitten, unsigned elit) {
   PUSH_STACK (kitten->assumptions, ilit);
 }
 
+void kitten_assume (kitten *kitten, int elit) {
+  unsigned kelit = int2u (elit);
+  kitten_assume (citten, kelit);
+}
+
 void kitten_clause_with_id_and_exception (kitten *kitten, unsigned id,
                                           size_t size,
                                           const unsigned *elits,
@@ -1699,6 +1704,10 @@ void citten_clause_with_id_and_equivalence (kitten *kitten, unsigned id,
 void kitten_clause (kitten *kitten, size_t size, unsigned *elits) {
   kitten_clause_with_id_and_exception (kitten, INVALID, size, elits,
                                        INVALID);
+}
+
+void citten_clause (kitten *kitten, size_t size, int *elits) {
+  citten_clause_with_id_and_exception (kitten, INVALID, size, elits, 0);
 }
 
 void kitten_unit (kitten *kitten, unsigned lit) {
@@ -2009,6 +2018,19 @@ void kitten_shrink_to_clausal_core (kitten *kitten) {
   UPDATE_STATUS (0);
 }
 
+signed char kitten_signed_value (kitten *kitten, int selit) {
+  REQUIRE_STATUS (10);
+  const unsigned elit = int2u (selit);
+  const unsigned eidx = elit / 2;
+  if (eidx >= kitten->evars)
+    return 0;
+  unsigned iidx = kitten->import[eidx];
+  if (!iidx)
+    return 0;
+  const unsigned ilit = 2 * (iidx - 1) + (elit & 1);
+  return kitten->values[ilit];
+}
+
 signed char kitten_value (kitten *kitten, unsigned elit) {
   REQUIRE_STATUS (10);
   const unsigned eidx = elit / 2;
@@ -2021,6 +2043,29 @@ signed char kitten_value (kitten *kitten, unsigned elit) {
   return kitten->values[ilit];
 }
 
+signed char kitten_fixed (kitten *kitten, unsigned elit) {
+  const unsigned eidx = elit / 2;
+  if (eidx >= kitten->evars)
+    return 0;
+  unsigned iidx = kitten->import[eidx];
+  if (!iidx)
+    return 0;
+  iidx--;
+  const unsigned ilit = 2 * iidx + (elit & 1);
+  signed char res = kitten->values[ilit];
+  if (!res)
+    return 0;
+  kar *v = kitten->vars + iidx;
+  if (v->level)
+    return 0;
+  return res;
+}
+
+signed char kitten_fixed_signed (kitten *kitten, int elit) {
+  unsigned kelit = int2u (elit);
+  return kitten_fixed (kitten, kelit);
+}
+
 bool kitten_flip_literal (kitten *kitten, unsigned elit) {
   REQUIRE_STATUS (10);
   const unsigned eidx = elit / 2;
@@ -2031,6 +2076,11 @@ bool kitten_flip_literal (kitten *kitten, unsigned elit) {
     return false;
   const unsigned ilit = 2 * (iidx - 1) + (elit & 1);
   return flip_literal (kitten, ilit);
+}
+
+bool kitten_flip_signed_literal (kitten *kitten, int elit) {
+  unsigned kelit = int2u (elit);
+  return kitten_flip_literal (kitten, kelit);
 }
 
 bool kitten_failed (kitten *kitten, unsigned elit) {
