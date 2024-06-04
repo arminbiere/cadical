@@ -151,7 +151,7 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   sweeper.encoded = 0;
   enlarge_zero (sweeper.depths, max_var + 1);
   sweeper.reprs = new int[2 * max_var + 1];
-  sweeper.reprs -= max_var;
+  sweeper.reprs += max_var;
   enlarge_zero (sweeper.prev, max_var + 1);
   enlarge_zero (sweeper.next, max_var + 1);
   for (const auto & lit : lits)
@@ -223,7 +223,7 @@ unsigned Internal::release_sweeper (Sweeper &sweeper) {
     if (sweeper.reprs[lit] != lit)
       merged++;
   }
-  sweeper.reprs += max_var;
+  sweeper.reprs -= max_var;
   delete[] sweeper.reprs;
   
   erase_vector (sweeper.depths);
@@ -349,7 +349,7 @@ static void save_core_clause (void *state, bool learned, size_t size,
     const int lit = internal->citten2lit (ulit);
     const signed char tmp = internal->val (lit);
     if (tmp > 0) {
-      LOG (size, lits, "extracted %d satisfied lemma", LOG (lit));
+      // LOG (size, lits, "extracted %d satisfied lemma", LOG (lit));
       core.resize (saved);
       return;
     }
@@ -1216,7 +1216,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
   if (sweeper.reprs[start] != start)
     return "non-representative variable";
   assert (sweeper.vars.empty ());
-  assert (sweeper.refs.empty ());
+  assert (sweeper.depths.empty ());
   assert (sweeper.backbone.empty ());
   assert (sweeper.partition.empty ());
   assert (!sweeper.encoded);
@@ -1331,7 +1331,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
         "complete swept variable %d backbone with %" PRIu64
         " units in %" PRIu64 " solver calls",
         externalize (idx), units, solved);
-    assert (EMPTY_STACK (sweeper.backbone));
+    assert (sweeper.backbone.empty ());
 #ifndef QUIET
     uint64_t equivalences = stats.sweep_equivalences;
     solved = stats.sweep_solved;
@@ -1410,14 +1410,14 @@ struct rank_sweep_candidate {
 bool Internal::scheduable_variable (Sweeper &sweeper, int idx,
                                     size_t *occ_ptr) {
   const int lit = idx;
-  const size_t pos = watches (lit).size ();
+  const size_t pos = occs (lit).size ();
   if (!pos)
     return false;
   const unsigned max_occurrences = sweeper.limit.clauses;
   if (pos > max_occurrences)
     return false;
   const int not_lit = -lit;
-  const size_t neg = watches (not_lit).size ();
+  const size_t neg = occs (not_lit).size ();
   if (!neg)
     return false;
   if (neg > max_occurrences)
