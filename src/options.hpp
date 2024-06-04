@@ -71,11 +71,11 @@ OPTION( elimaxeff,       2e9,  0,2e9,1,0,1, "maximum elimination efficiency") \
 OPTION( elimbackward,      1,  0,  1,0,0,1, "eager backward subsumption") \
 OPTION( elimboundmax,     16, -1,2e6,1,0,1, "maximum elimination bound") \
 OPTION( elimboundmin,      0, -1,2e6,0,0,1, "minimum elimination bound") \
-OPTION( elimciteq,         1,  0,  1,0,1,1, "mine equivalences with kitten") \
-OPTION( elimciteqround,    1,  1, 10,0,1,1, "number of pairs tried") \
+OPTION( elimciteq,         1,  0,  1,0,0,1, "mine equivalences with kitten") \
+OPTION( elimciteqround,    1,  1, 10,0,0,1, "number of pairs tried") \
 OPTION( elimciteqticks,  1e6,  0,2e9,0,0,1, "kitten ticks limit") \
 OPTION( elimclslim,      1e2,  2,2e9,2,0,1, "resolvent size limit") \
-OPTION( elimdef,           1,  0,  1,0,1,1, "mine definitions with kitten") \
+OPTION( elimdef,           1,  0,  1,0,0,1, "mine definitions with kitten") \
 OPTION( elimdefcores,      2,  1,100,0,0,1, "number of unsat cores") \
 OPTION( elimdefticks,    1e6,  0,2e9,0,0,1, "kitten ticks limit") \
 OPTION( elimequivs,        1,  0,  1,0,0,1, "find equivalence gates") \
@@ -176,13 +176,13 @@ OPTION( subsumemineff,   1e6,  0,2e9,1,0,1, "minimum subsuming efficiency") \
 OPTION( subsumeocclim,   1e2,  0,2e9,1,0,1, "watch list length limit") \
 OPTION( subsumereleff,   1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( subsumestr,        1,  0,  1,0,0,1, "subsume strenghten") \
-OPTION( sweep,             1,  0,  1,0,0,1, "sweep") \
+OPTION( sweep,             1,  0,  1,0,1,1, "sweep") \
 OPTION( sweepclauses,   1024,  0,2e9,0,0,1, "sweep") \
 OPTION( sweepcomplete,     0,  0,  1,0,0,1, "sweep") \
 OPTION( sweepdepth,        2,  0,2e9,0,0,1, "sweep") \
 OPTION( sweepeffort,     100,  0,1e4,0,0,1, "sweep") \
 OPTION( sweepfliprounds,   1,  0,2e9,0,0,1, "sweep") \
-OPTION( sweepmaxclauses, 3e5, 2,2e9,0,0,1, "sweep") \
+OPTION( sweepmaxclauses, 3e5,  2,2e9,0,0,1, "sweep") \
 OPTION( sweepmaxdepth,     3,  1,2e9,0,0,1, "sweep") \
 OPTION( sweepmaxvars,   8192,  2,2e9,0,0,1, "sweep") \
 OPTION( sweeprand,         0,  0,  1,0,0,1, "sweep") \

@@ -296,6 +296,7 @@ void Internal::add_literal_to_environment (Sweeper &sweeper, unsigned depth,
     return;
   assert (depth < UINT_MAX);
   sweeper.depths[idx] = depth + 1;
+  assert (idx);
   sweeper.vars.push_back (idx);
   LOG ("sweeping[%u] adding literal %d", depth, lit);
 }
@@ -1216,7 +1217,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
   if (sweeper.reprs[start] != start)
     return "non-representative variable";
   assert (sweeper.vars.empty ());
-  assert (sweeper.depths.empty ());
+  assert (sweeper.clauses.empty ());
   assert (sweeper.backbone.empty ());
   assert (sweeper.partition.empty ());
   assert (!sweeper.encoded);
@@ -1258,8 +1259,9 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
     const unsigned choices = next - expand;
     if (opts.sweeprand && choices > 1) {
       const unsigned swaps =
-          sweeper.random.pick_int (0, choices);
+          sweeper.random.pick_int (0, choices - 1);
       if (swaps) {
+        assert (expand + swaps < sweeper.vars.size ());
         swap (sweeper.vars[expand], sweeper.vars[expand + swaps]);
       }
     }

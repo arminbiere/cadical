@@ -298,9 +298,9 @@ void Options::disable_preprocessing () {
       break; \
     if (!(N)) \
       break; \
+    LOG ("plain mode disables '%s'", #N); \
     assert ((L) == 0); \
     assert ((H) == 1); \
-    LOG ("plain mode disables '%s'", #N); \
     count++; \
     N = 0; \
   } while (0);
