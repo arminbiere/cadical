@@ -764,57 +764,43 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
 
 // at this point the binary (lit or other) should already be present
 // in the proof via add_core.
+// We just copy it as an irredundant clause and call weaken minus
+// and push it on the extension stack
 //
-void Internal::add_sweep_binary (int lit, int other) {
+uint64_t Internal::add_sweep_binary (uint64_t id, int lit, int other) {
   if (unsat) return;  // should not really happen but possibly can
   
-  // kissat_new_binary_clause (solver, lit, other);
-  // TODO potentially only add for proof -> similar to decompose...
-  /*
-    LOG ("marking equivalence of %d and %d", idx, other);
-    assert (clause.empty ());
-    assert (lrat_chain.empty ());
-    clause.push_back (other);
-    clause.push_back (-idx);
-    if (lrat) {
-      build_lrat_for_clause (dfs_chains);
-      assert (!lrat_chain.empty ());
-    }
+  assert (!val (lit) && !val (other));
+  if (lrat)
+    lrat_chain.push_back (id);
+  clause.push_back (lit);
+  clause.push_back (other);
+  const uint64_t new_id = ++clause_id;
+  if (proof) {
+    proof->add_derived_clause (new_id, false, clause, lrat_chain);
+    proof->weaken_minus (new_id, clause);
+  }
+  external->push_binary_clause_on_extension_stack (new_id, lit, other);
 
-    const uint64_t id1 = ++clause_id;
-    if (proof) {
-      proof->add_derived_clause (id1, false, clause, lrat_chain);
-      proof->weaken_minus (id1, clause);
-    }
-    external->push_binary_clause_on_extension_stack (id1, -idx, other);
-
-    decompose_ids[vlit (-idx)] = id1;
-
-    lrat_chain.clear ();
-    clause.clear ();
-
-    assert (clause.empty ());
-    assert (lrat_chain.empty ());
-    clause.push_back (idx);
-    clause.push_back (-other);
-    if (lrat) {
-      build_lrat_for_clause (dfs_chains);
-      assert (!lrat_chain.empty ());
-    }
-    const uint64_t id2 = ++clause_id;
-    if (proof) {
-      proof->add_derived_clause (id2, false, clause, lrat_chain);
-      proof->weaken_minus (id2, clause);
-    }
-    external->push_binary_clause_on_extension_stack (id2, idx, -other);
-    decompose_ids[vlit (idx)] = id2;
-
-    clause.clear ();
-    lrat_chain.clear ();
-*/
-  return;
+  lrat_chain.clear ();
+  clause.clear ();
+  return new_id;
 }
 
+void Internal::delete_sweep_binary (uint64_t id, int lit, int other) {
+  if (proof) {
+    clause.push_back (lit);
+    clause.push_back (other);
+    proof->delete_clause (id, false, clause);
+    clause.clear ();
+  }  
+}
+
+// mark all literals in sweeper.reprs which have been substituted
+void Internal::mark_substituted_literals (Sweeper &sweeper) {
+  
+}
+  
 bool Internal::scheduled_variable (Sweeper &sweeper, int idx) {
   return sweeper.prev[idx] != 0 || sweeper.first == idx;
 }
@@ -909,8 +895,9 @@ int Internal::next_scheduled (Sweeper &sweeper) {
   IDX = NEXT_##IDX
 
   
-void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
-                                          int repr) {
+// id for lrat proofs
+void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr,
+                                                   uint64_t id) {
   if (unsat)
     return;
   if (val (lit))
@@ -1213,28 +1200,31 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   LOG ("sweep equivalence %d = %d", lit, other);
   stats.sweep_equivalences++;
 
+  // if kitten behaves as expected, id should be at sweeper.core[0].back ()
   add_core (sweeper, 0);
-  add_sweep_binary (lit, not_other);
+  uint64_t id1 = add_sweep_binary (lit, not_other);
   clear_core (sweeper, 0);
 
   add_core (sweeper, 1);
-  add_sweep_binary (not_lit, other);
+  uint64_t id2 = add_sweep_binary (not_lit, other);
   clear_core (sweeper, 1);
 
   int repr;
   if (lit < other) {
     repr = sweeper.reprs[other] = lit;
     sweeper.reprs[not_other] = not_lit;
-    substitute_connected_clauses (sweeper, other, lit);
-    substitute_connected_clauses (sweeper, not_other, not_lit);
+    substitute_connected_clauses (sweeper, other, lit, id1);
+    substitute_connected_clauses (sweeper, not_other, not_lit, id2);
     sweep_remove (sweeper, other);
   } else {
     repr = sweeper.reprs[lit] = other;
     sweeper.reprs[not_lit] = not_other;
-    substitute_connected_clauses (sweeper, lit, other);
-    substitute_connected_clauses (sweeper, not_lit, not_other);
+    substitute_connected_clauses (sweeper, lit, other, id2);
+    substitute_connected_clauses (sweeper, not_lit, not_other, id1);
     sweep_remove (sweeper, lit);
   }
+  delete_sweep_binary (id1, lit, not_other);
+  delete_sweep_binary (id2, not_lit, other);
 
   const int repr_idx = abs (repr);
   schedule_inner (sweeper, repr_idx);

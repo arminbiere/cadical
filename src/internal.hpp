@@ -1079,7 +1079,7 @@ struct Internal {
   void schedule_inner (Sweeper &sweeper, int idx);
   void schedule_outer (Sweeper &sweeper, int idx);
   int next_scheduled (Sweeper &sweeper);
-  void substitute_connected_clauses (Sweeper &sweeper, int lit, int other);
+  void substitute_connected_clauses (Sweeper &sweeper, int lit, int other, uint64_t id);
   void sweep_remove (Sweeper &sweeper, int lit);
   void flip_partition_literals (struct Sweeper &sweeper);
   const char *sweep_variable (Sweeper &sweeper, int idx);
