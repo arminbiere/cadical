@@ -11,7 +11,7 @@ struct sweep_proof_clause {
   // for lrat
   unsigned cid;  // kitten id
   bool learned;
-  vector<uint64_t> chain;
+  vector<unsigned> chain;
 };
 
 struct Sweeper {
@@ -31,7 +31,7 @@ struct Sweeper {
   vector<int> propagate;
   vector<int> backbone;
   vector<int> partition;
-  vector<int> core[2];  // TODO maybe proof clause instead of int
+  vector<sweep_proof_clause> core[2];
   struct {
     uint64_t ticks;
     unsigned clauses, depth, vars;

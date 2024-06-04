@@ -14,6 +14,8 @@ Sweeper::~Sweeper () {
   return;
 }
 
+#define INVALID UINT64_MAX
+
 int Internal::sweep_solve () {
   kitten_randomize_phases (citten);
   stats.sweep_solved++;
@@ -336,42 +338,55 @@ void Internal::sweep_clause (Sweeper &sweeper, unsigned depth, Clause *c) {
 extern "C" {
 static void save_core_clause (void *state, bool learned, size_t size,
                               const unsigned *lits) {
+  if (learned) return;  // I suspect this is like in definition although it is
+                        // different from the source in kissat
   Sweeper *sweeper = (Sweeper *) state;
   Internal *internal = sweeper->internal;
   if (internal->unsat)
     return;
-  // TODO proof clause or int
-  vector<int> &core = sweeper->core[sweeper->save];
-  size_t saved = core.size ();
+  vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];  
+  sweep_proof_clause pc;
+  pc.id = INVALID;  // delay giving ids
   const unsigned *end = lits + size;
-  unsigned non_false = 0;
   for (const unsigned *p = lits; p != end; p++) {
-    const unsigned ulit = *p;
-    const int lit = internal->citten2lit (ulit);
-    const signed char tmp = internal->val (lit);
-    if (tmp > 0) {
-      // LOG (size, lits, "extracted %d satisfied lemma", LOG (lit));
-      core.resize (saved);
-      return;
+    pc.literals.push_back (internal->citten2lit (*p)); // conversion
+  }
+  core.push_back (pc);
+}
+
+static void save_core_clause_with_lrat (void *state, unsigned cid,
+                                        unsigned id, bool learned,
+                                        size_t size, const unsigned *lits,
+                                        size_t chain_size, const unsigned *chain) {
+  Sweeper *sweeper = (Sweeper *) state;
+  Internal *internal = sweeper->internal;
+  if (internal->unsat)
+    return;
+  vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];  
+  vector<Clause *> &clauses = sweeper->clauses;
+  sweep_proof_clause pc;
+  if (!learned) {
+    assert (size);
+    assert (!chain_size);
+    pc.cid = cid;
+    pc.learned = false;
+    assert (id < clauses.size ());
+    pc.id = clauses[id]->id;
+  } else {
+    assert (chain_size);
+    pc.id = INVALID;  // delay
+    pc.learned = true;
+    const unsigned *end = lits + size;
+    for (const unsigned *p = lits; p != end; p++) {
+      pc.literals.push_back (internal->citten2lit (*p)); // conversion
     }
-    core.push_back (lit);
-    if (tmp < 0)
-      continue;
-    if (!learned && ++non_false > 1) {
-      // LOGLITS (size, lits, "ignoring extracted original clause");
-      core.resize (saved);
-      return;
+    for (const unsigned *p = chain + chain_size; p != chain; p--) {
+      pc.chain.push_back (*(p-1));
     }
   }
-  /*
-#ifdef LOGGING
-  unsigned *saved_lits = BEGIN_STACK (*core) + saved;
-  size_t saved_size = SIZE_STACK (*core) - saved;
-  LOGLITS (saved_size, saved_lits, "saved core[%u]", sweeper.save);
-#endif
-*/
-  core.push_back (0);
+  core.push_back (pc);
 }
+
 } // end extern C
 
 void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
@@ -379,80 +394,97 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
     return;
   LOG ("check and add extracted core[%u] lemmas to proof", core_idx);
   assert (core_idx == 0 || core_idx == 1);
-  vector<int> &core = sweeper.core[core_idx];
+  vector<sweeper_proof_clause> &core = sweeper.core[core_idx];
 
   auto q = core.begin (), p = q;
   const auto end_core = core.end ();
 
+  assert (!lrat || proof);
+  
   while (p != end_core) {
-    auto c = p;
-    while (*p != 0)
-      p++;
-/*
-#ifdef LOGGING
-    size_t old_size = p - c;
-    LOGLITS (old_size, c, "simplifying extracted core[%u] lemma", core_idx);
-#endif
-*/
+    sweep_proof_clause &pc = *q++ = *p++;
+    LOG (pc.literals, "simplifying extracted core[%u] lemma", core_idx);
     bool satisfied = false;
     int unit = 0;
-
-    auto d = q;
-
-    for (auto l = c; !satisfied && l != p; l++) {
-      const int lit = *l;
+    
+    vector<int> pc_tmp;
+    vector<uint64_t> lrat_tmp;
+    for (const auto &lit : pc.literals) {
       const signed char value = val (lit);
       if (value > 0) {
         satisfied = true;
         break;
       }
-      if (!value)
-        unit = *q++ = lit;
+      if (!value) {
+        if (lrat) {
+          // TODO add units
+        }
+        continue;
+      }
+      pc_tmp.push_back (lit);
     }
-
-    size_t new_size = q - d;
-    p++;
+    
+    const unsigned new_size = pc_tmp.size ();
 
     if (satisfied) {
-      q = d;
+      q--;
       LOG ("not adding satisfied clause");
       continue;
+    } else if (!pc.learned && new_size > 1) {
+      q--;
+      LOG ("not adding already present clause");
+      continue;
+    }
+
+    if (lrat) {
+      if (new_size > 1) lrat_tmp.clear ();
+      else lrat_chain.swap (lrat_tmp);
+      if (pc.learned) {
+        assert (pc.id = INVALID);
+        for (auto & cid : pc.chain) {
+          uint64_t id = 0;
+          for (const auto & cpc : core) {
+            if (cpc.cid == cid) {
+              id = cpc.id;
+              break;
+            }
+          }
+          assert (id);
+          lrat_chain.push_back (id);
+        }
+      } else {
+        assert (pc.chain.empty ());
+        assert (new_size < 2);
+        assert (pc.id != INVALID && pc.id <= clause_id);
+        lrat_chain.push_back (pc.id);
+      }
     }
 
     if (!new_size) {
       LOG ("sweeping produced empty clause");
-      /*
-      CHECK_AND_ADD_EMPTY ();
-      ADD_EMPTY_TO_PROOF ();
-      */
       learn_empty_clause ();
       core.clear ();
       return;
     }
 
     if (new_size == 1) {
-      q = d;
+      q--;
       assert (unit != 0);
       LOG ("sweeping produced unit %d", unit);
-      /*
-      CHECK_AND_ADD_UNIT (unit);
-      ADD_UNIT_TO_PROOF (unit);
-      kissat_assign_unit (solver, unit, "sweeping backbone reason");
-      */
       assign_unit (unit);
       sweeper.propagate.push_back (unit);
       stats.sweep_units++;
       continue;
     }
 
-    *q++ = 0;
-
     assert (new_size > 1);
-    /*
-    LOGLITS (new_size, d, "adding extracted core[%u] lemma", core_idx);
-    CHECK_AND_ADD_LITS (new_size, d);
-    ADD_LITS_TO_PROOF (new_size, d);
-    */
+    assert (pc.learned);
+    
+    if (proof) {
+      pc.id = ++clause_id;
+      proof->add_derived_clause (pc.id, true, pc.literals, lrat_chain);
+      lrat_chain.clear ();
+    }
   }
   core.resize (q - core.begin ());
 }
@@ -462,8 +494,11 @@ void Internal::save_core (Sweeper &sweeper, unsigned core) {
   assert (core == 0 || core == 1);
   assert (sweeper.core[core].empty ());
   sweeper.save = core;
-  kitten_compute_clausal_core (citten, 0);
-  kitten_traverse_core_clauses (citten, &sweeper, save_core_clause);
+    kitten_compute_clausal_core (citten, 0);
+  if (lrat)
+    kitten_trace_core (citten, &sweeper, save_core_clause_with_lrat);
+  else
+    kitten_traverse_core_clauses (citten, &sweeper, save_core_clause);
 }
 
 void Internal::clear_core (Sweeper &sweeper, unsigned core_idx) {
@@ -471,22 +506,14 @@ void Internal::clear_core (Sweeper &sweeper, unsigned core_idx) {
     return;
   assert (core_idx == 0 || core_idx == 1);
   LOG ("clearing core[%u] lemmas", core_idx);
-  vector<int> &core = sweeper.core[core_idx];
-    /*  TODO core has to store ids (see proof_clauses in definition.cpp/elim.hpp)
+  vector<sweep_proof_clause> &core = sweeper.core[core_idx];
   if (proof) {
     LOG ("deleting sub-solver core clauses");
-    const unsigned *const end = END_STACK (*core);
-    const unsigned *c = BEGIN_STACK (*core);
-    for (const unsigned *p = c; c != end; c = ++p) {
-      while (*p != INVALID_LIT)
-        p++;
-      const size_t size = p - c;
-      assert (size > 1);
-      REMOVE_CHECKER_LITS (size, c);
-      DELETE_LITS_FROM_PROOF (size, c);
+    for (auto & pc : core) {
+      assert (pc.learned)
+      proof->delete_clause (pc.id, true, pc.literals);
     }
   }
-      */
   core.clear ();
 }
 
@@ -724,6 +751,7 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
   if (res == 20) {
     LOG ("sweep unit %d", lit);
     save_add_clear_core (sweeper);
+    assert (val (lit));
     stats.sweep_unsat_backbone++;
     return true;
   }
@@ -734,7 +762,12 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
   return false;
 }
 
+// at this point the binary (lit or other) should already be present
+// in the proof via add_core.
+//
 void Internal::add_sweep_binary (int lit, int other) {
+  if (unsat) return;  // should not really happen but possibly can
+  
   // kissat_new_binary_clause (solver, lit, other);
   // TODO potentially only add for proof -> similar to decompose...
   /*
