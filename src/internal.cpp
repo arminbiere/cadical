@@ -102,22 +102,6 @@ void Internal::enlarge_vals (size_t new_vsize) {
   vals = new_vals;
 }
 
-/*------------------------------------------------------------------------*/
-
-template <class T>
-static void enlarge_init (vector<T> &v, size_t N, const T &i) {
-  if (v.size () < N)
-    v.resize (N, i);
-}
-
-template <class T> static void enlarge_only (vector<T> &v, size_t N) {
-  if (v.size () < N)
-    v.resize (N, T ());
-}
-
-template <class T> static void enlarge_zero (vector<T> &v, size_t N) {
-  enlarge_init (v, N, (const T &) 0);
-}
 
 /*------------------------------------------------------------------------*/
 

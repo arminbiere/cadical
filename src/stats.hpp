@@ -258,8 +258,14 @@ struct Stats {
   int64_t sweep_equivalences;
   int64_t sweep_variables;
   int64_t sweep_completed;
+  int64_t sweep_solved;
+  int64_t sweep_sat;
+  int64_t sweep_unsat;
+  int64_t sweep_depth;
+  int64_t sweep_environment;
+  int64_t sweep_clauses;
   int64_t sweep;
-  
+
   int64_t preprocessings;
 
   int64_t ilbtriggers;

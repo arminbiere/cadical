@@ -645,7 +645,7 @@ void kitten_no_ticks_limit (kitten *kitten) {
   kitten->limits.ticks = UINT64_MAX;
 }
 
-void kitten_current_ticks (kitten *kitten) {
+uint64_t kitten_current_ticks (kitten *kitten) {
   REQUIRE_INITIALIZED ();
   const uint64_t current = KITTEN_TICKS;
   return current;
@@ -1590,6 +1590,16 @@ static bool flip_literal (kitten *kitten, unsigned lit) {
 
 /*------------------------------------------------------------------------*/
 
+// this cadical specific clause addition avoids copying clauses multiple
+// times just to convert literals to unsigned representation.
+//
+static unsigned int2u (int lit) {
+  assert (lit != 0);
+  int idx = abs (lit) - 1;
+  return (lit < 0) + 2u * (unsigned) idx;
+}
+
+
 void kitten_assume (kitten *kitten, unsigned elit) {
   REQUIRE_INITIALIZED ();
   if (kitten->status)
@@ -1599,9 +1609,9 @@ void kitten_assume (kitten *kitten, unsigned elit) {
   PUSH_STACK (kitten->assumptions, ilit);
 }
 
-void kitten_assume (kitten *kitten, int elit) {
+void kitten_assume_signed (kitten *kitten, int elit) {
   unsigned kelit = int2u (elit);
-  kitten_assume (citten, kelit);
+  kitten_assume (kitten, kelit);
 }
 
 void kitten_clause_with_id_and_exception (kitten *kitten, unsigned id,
@@ -1632,14 +1642,6 @@ void kitten_clause_with_id_and_exception (kitten *kitten, unsigned id,
   CLEAR_STACK (kitten->klause);
 }
 
-// this cadical specific clause addition avoids copying clauses multiple
-// times just to convert literals to unsigned representation.
-//
-static unsigned int2u (int lit) {
-  assert (lit != 0);
-  int idx = abs (lit) - 1;
-  return (lit < 0) + 2u * (unsigned) idx;
-}
 
 void citten_clause_with_id_and_exception (kitten *kitten, unsigned id,
                                           size_t size, const int *elits,

@@ -92,6 +92,7 @@ extern "C" {
 #include "resources.hpp"
 #include "score.hpp"
 #include "stats.hpp"
+#include "sweep.hpp"
 #include "terminal.hpp"
 #include "tracer.hpp"
 #include "util.hpp"
@@ -1058,7 +1059,7 @@ struct Internal {
   void init_sweeper (Sweeper &sweeper);
   unsigned release_sweeper (Sweeper &sweeper);
   void clear_sweeper (Sweeper &sweeper);
-  unsigned sweep_repr (Sweeper &sweeper, int lit);
+  int sweep_repr (Sweeper &sweeper, int lit);
   void add_literal_to_environment (Sweeper &sweeper, unsigned depth, int);
   void sweep_clause (Sweeper &sweeper, unsigned depth, Clause *);
   void sweep_add_clause (Sweeper &sweeper, unsigned depth);
@@ -1094,7 +1095,7 @@ struct Internal {
   void unschedule_sweeping (Sweeper &sweeper, unsigned swept,
                                    unsigned scheduled);
   bool sweep ();
-  void sweep_dense_propagate ();
+  void sweep_dense_propagate (Sweeper &sweeper);
   void sweep_sparse_mode ();
   void sweep_dense_mode_and_watch_irredundant ();
   

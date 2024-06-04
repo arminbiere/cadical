@@ -101,6 +101,22 @@ template <class T> void shrink_vector (std::vector<T> &v) {
   assert (v.capacity () == v.size ()); // not guaranteed though
 }
 
+template <class T>
+static void enlarge_init (vector<T> &v, size_t N, const T &i) {
+  if (v.size () < N)
+    v.resize (N, i);
+}
+
+template <class T> static void enlarge_only (vector<T> &v, size_t N) {
+  if (v.size () < N)
+    v.resize (N, T ());
+}
+
+template <class T> static void enlarge_zero (vector<T> &v, size_t N) {
+  enlarge_init (v, N, (const T &) 0);
+}
+
+
 /*------------------------------------------------------------------------*/
 
 template <class T> inline void clear_n (T *base, size_t n) {

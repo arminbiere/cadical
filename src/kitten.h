@@ -57,6 +57,7 @@ int kitten_status (kitten *);
 signed char kitten_value (kitten *, unsigned);
 signed char kitten_signed_value (kitten *, int);  // converts second argument
 signed char kitten_fixed (kitten *, unsigned);
+signed char kitten_fixed_signed (kitten *, int);  // converts
 bool kitten_failed (kitten *, unsigned);
 bool kitten_flip_literal (kitten *, unsigned);
 bool kitten_flip_signed_literal (kitten *, int);
