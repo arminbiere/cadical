@@ -162,6 +162,10 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   assert (!citten);
   citten = kitten_init ();
   kitten_track_antecedents (citten);
+#ifdef LOGGING
+  if (opts.log)
+    kitten_set_logging (citten);
+#endif
 
   sweep_dense_mode_and_watch_irredundant (); // full occurence list
 
@@ -307,7 +311,8 @@ void Internal::sweep_add_clause (Sweeper &sweeper, unsigned depth) {
   assert (sweeper.clause.size () > 1);
   for (const auto & lit : sweeper.clause)
     add_literal_to_environment (sweeper, depth, lit);
-  citten_clause (citten, sweeper.clause.size (), sweeper.clause.data ());
+  citten_clause_with_id (citten, sweeper.clauses.size (),
+         sweeper.clause.size (), sweeper.clause.data ());
   sweeper.clause.clear ();
   sweeper.encoded++;
 }
@@ -329,9 +334,9 @@ void Internal::sweep_clause (Sweeper &sweeper, unsigned depth, Clause *c) {
       continue;
     sweeper.clause.push_back (lit);
   }
-  sweeper.clauses.push_back (c);
   c->swept = true;
   sweep_add_clause (sweeper, depth);
+  sweeper.clauses.push_back (c);
 }
 
 
@@ -347,6 +352,7 @@ static void save_core_clause (void *state, bool learned, size_t size,
   vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];  
   sweep_proof_clause pc;
   pc.id = INVALID;  // delay giving ids
+  pc.learned = learned;
   const unsigned *end = lits + size;
   for (const unsigned *p = lits; p != end; p++) {
     pc.literals.push_back (internal->citten2lit (*p)); // conversion
@@ -372,6 +378,9 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
     pc.learned = false;
     assert (id < clauses.size ());
     pc.id = clauses[id]->id;
+    for (const auto & lit : *clauses[id]) {
+      pc.literals.push_back (lit);
+    }
   } else {
     assert (chain_size);
     pc.id = INVALID;  // delay
@@ -394,7 +403,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
     return;
   LOG ("check and add extracted core[%u] lemmas to proof", core_idx);
   assert (core_idx == 0 || core_idx == 1);
-  vector<sweeper_proof_clause> &core = sweeper.core[core_idx];
+  vector<sweep_proof_clause> &core = sweeper.core[core_idx];
 
   auto q = core.begin (), p = q;
   const auto end_core = core.end ();
@@ -415,9 +424,11 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
         satisfied = true;
         break;
       }
-      if (!value) {
+      if (value < 0) {
         if (lrat) {
-          // TODO add units
+          const unsigned uidx = vlit (-lit);
+          uint64_t id = unit_clauses[uidx];
+          lrat_tmp.push_back (id);
         }
         continue;
       }
@@ -440,7 +451,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
       if (new_size > 1) lrat_tmp.clear ();
       else lrat_chain.swap (lrat_tmp);
       if (pc.learned) {
-        assert (pc.id = INVALID);
+        assert (pc.id == INVALID);
         for (auto & cid : pc.chain) {
           uint64_t id = 0;
           for (const auto & cpc : core) {
@@ -510,7 +521,7 @@ void Internal::clear_core (Sweeper &sweeper, unsigned core_idx) {
   if (proof) {
     LOG ("deleting sub-solver core clauses");
     for (auto & pc : core) {
-      assert (pc.learned)
+      assert (pc.learned);
       proof->delete_clause (pc.id, true, pc.literals);
     }
   }
@@ -768,13 +779,17 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
 // and push it on the extension stack
 //
 uint64_t Internal::add_sweep_binary (uint64_t id, int lit, int other) {
-  if (unsat) return;  // should not really happen but possibly can
+  if (unsat) return INVALID;  // should not really happen but possibly can
   
   assert (!val (lit) && !val (other));
   if (lrat)
     lrat_chain.push_back (id);
   clause.push_back (lit);
   clause.push_back (other);
+  // for now do not substitute directly but only learn the binary...
+  // Clause *res = new_resolved_irredundant_clause ();
+  
+  
   const uint64_t new_id = ++clause_id;
   if (proof) {
     proof->add_derived_clause (new_id, false, clause, lrat_chain);
@@ -784,11 +799,12 @@ uint64_t Internal::add_sweep_binary (uint64_t id, int lit, int other) {
 
   lrat_chain.clear ();
   clause.clear ();
+
   return new_id;
 }
 
 void Internal::delete_sweep_binary (uint64_t id, int lit, int other) {
-  if (proof) {
+  if (proof && !unsat) {
     clause.push_back (lit);
     clause.push_back (other);
     proof->delete_clause (id, false, clause);
@@ -797,9 +813,9 @@ void Internal::delete_sweep_binary (uint64_t id, int lit, int other) {
 }
 
 // mark all literals in sweeper.reprs which have been substituted
-void Internal::mark_substituted_literals (Sweeper &sweeper) {
-  
-}
+// void Internal::mark_substituted_literals (Sweeper &sweeper) {
+//   
+// }
   
 bool Internal::scheduled_variable (Sweeper &sweeper, int idx) {
   return sweeper.prev[idx] != 0 || sweeper.first == idx;
@@ -889,6 +905,17 @@ int Internal::next_scheduled (Sweeper &sweeper) {
   return res;
 }
 
+void Internal::sweep_substitute_lrat (Clause *c, uint64_t id) {
+  if (!lrat) return;
+  for (const auto & lit : *c) {
+    const unsigned uidx = vlit (-lit);
+    uint64_t id = unit_clauses[uidx];
+    lrat_chain.push_back (id);
+  }
+  lrat_chain.push_back (id);
+  lrat_chain.push_back (c->id);
+}
+
 #define all_scheduled(IDX) \
   int IDX = sweeper.first, NEXT_##IDX; \
   IDX != 0 && (NEXT_##IDX = sweeper.next[IDX], true); \
@@ -965,6 +992,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr
       }
       assert (found);
       const unsigned new_size = clause.size ();
+      sweep_substitute_lrat (c, id);
       if (new_size == 0) {
         LOG (c, "substituted empty clause");
         assert (!unsat);
@@ -990,6 +1018,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr
         proof->delete_clause (c);
         c->id = clause_id;
       }
+      lrat_chain.clear ();
       size_t l;
       int *literals = c->literals;
       for (l = 0; l < clause.size (); l++)
@@ -1202,11 +1231,15 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
 
   // if kitten behaves as expected, id should be at sweeper.core[0].back ()
   add_core (sweeper, 0);
-  uint64_t id1 = add_sweep_binary (lit, not_other);
+  const uint64_t id1_kitten = sweeper.core[0].back ().id;
+  assert (id1_kitten != INVALID);
+  uint64_t id1 = add_sweep_binary (id1_kitten, lit, not_other);
   clear_core (sweeper, 0);
 
   add_core (sweeper, 1);
-  uint64_t id2 = add_sweep_binary (not_lit, other);
+  const uint64_t id2_kitten = sweeper.core[1].back ().id;
+  assert (id2_kitten != INVALID);
+  uint64_t id2 = add_sweep_binary (id2_kitten, not_lit, other);
   clear_core (sweeper, 1);
 
   int repr;
@@ -1499,7 +1532,7 @@ unsigned Internal::reschedule_previously_remaining (Sweeper &sweeper) {
   return rescheduled;
 }
 
-unsigned Internal::incomplete_variables (Sweeper &sweeper) {
+unsigned Internal::incomplete_variables () {
   unsigned res = 0;
   for (const auto &idx : vars) {
     Flags &f = flags (idx);
@@ -1532,7 +1565,7 @@ unsigned Internal::schedule_sweeping (Sweeper &sweeper) {
   const unsigned rescheduled = reschedule_previously_remaining (sweeper);
   const unsigned fresh = schedule_all_other_not_scheduled_yet (sweeper);
   const unsigned scheduled = fresh + rescheduled;
-  const unsigned incomplete = incomplete_variables (sweeper);
+  const unsigned incomplete = incomplete_variables ();
 #ifndef QUIET
   PHASE ("sweep", stats.sweep,
                 "scheduled %u variables %.0f%% "
@@ -1568,7 +1601,7 @@ void Internal::unschedule_sweeping (Sweeper &sweeper, unsigned swept,
 #endif
   VERBOSE (3, "retained %u variables %.0f%% to be swept next time",
       retained, percent (retained, active ()));
-  const unsigned incomplete = incomplete_variables (sweeper);
+  const unsigned incomplete = incomplete_variables ();
   if (incomplete)
     VERBOSE (3, "need to sweep %u more variables %.0f%% for completion",
             incomplete, percent (incomplete, active ()));

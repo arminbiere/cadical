@@ -1708,8 +1708,8 @@ void kitten_clause (kitten *kitten, size_t size, unsigned *elits) {
                                        INVALID);
 }
 
-void citten_clause (kitten *kitten, size_t size, int *elits) {
-  citten_clause_with_id_and_exception (kitten, INVALID, size, elits, 0);
+void citten_clause_with_id (kitten *kitten, unsigned id, size_t size, int *elits) {
+  citten_clause_with_id_and_exception (kitten, id, size, elits, INVALID);
 }
 
 void kitten_unit (kitten *kitten, unsigned lit) {

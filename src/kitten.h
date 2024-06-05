@@ -30,7 +30,7 @@ void kitten_assume (kitten *, unsigned lit);
 void kitten_assume_signed (kitten *, int lit);
 
 void kitten_clause (kitten *, size_t size, unsigned *);
-void citten_clause (kitten *, size_t size, int *);
+void citten_clause_with_id (kitten *, unsigned id, size_t size, int *);
 void kitten_unit (kitten *, unsigned);
 void kitten_binary (kitten *, unsigned, unsigned);
 
