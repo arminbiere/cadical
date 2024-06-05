@@ -343,8 +343,6 @@ void Internal::sweep_clause (Sweeper &sweeper, unsigned depth, Clause *c) {
 extern "C" {
 static void save_core_clause (void *state, bool learned, size_t size,
                               const unsigned *lits) {
-  if (learned) return;  // I suspect this is like in definition although it is
-                        // different from the source in kissat
   Sweeper *sweeper = (Sweeper *) state;
   Internal *internal = sweeper->internal;
   if (internal->unsat)
@@ -352,11 +350,15 @@ static void save_core_clause (void *state, bool learned, size_t size,
   vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];  
   sweep_proof_clause pc;
   pc.id = INVALID;  // delay giving ids
+  pc.cid = 0;
   pc.learned = learned;
   const unsigned *end = lits + size;
   for (const unsigned *p = lits; p != end; p++) {
     pc.literals.push_back (internal->citten2lit (*p)); // conversion
   }
+#ifdef LOGGING
+  LOG (pc.literals, "traced %s", pc.learned == true ? "learned" : "original");
+#endif
   core.push_back (pc);
 }
 
@@ -371,11 +373,11 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
   vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];  
   vector<Clause *> &clauses = sweeper->clauses;
   sweep_proof_clause pc;
+  pc.cid = cid;
+  pc.learned = learned;
   if (!learned) {
     assert (size);
     assert (!chain_size);
-    pc.cid = cid;
-    pc.learned = false;
     assert (id < clauses.size ());
     pc.id = clauses[id]->id;
     for (const auto & lit : *clauses[id]) {
@@ -384,7 +386,6 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
   } else {
     assert (chain_size);
     pc.id = INVALID;  // delay
-    pc.learned = true;
     const unsigned *end = lits + size;
     for (const unsigned *p = lits; p != end; p++) {
       pc.literals.push_back (internal->citten2lit (*p)); // conversion
@@ -393,6 +394,12 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
       pc.chain.push_back (*(p-1));
     }
   }
+#ifdef LOGGING
+  if (learned)
+    LOG (pc.literals, "traced %s", pc.learned == true ? "learned" : "original");
+  else
+    LOG (clauses[id], "traced");
+#endif
   core.push_back (pc);
 }
 
@@ -414,8 +421,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
     sweep_proof_clause &pc = *q++ = *p++;
     LOG (pc.literals, "simplifying extracted core[%u] lemma", core_idx);
     bool satisfied = false;
-    int unit = 0;
-    
+
     vector<int> pc_tmp;
     vector<uint64_t> lrat_tmp;
     for (const auto &lit : pc.literals) {
@@ -442,7 +448,6 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
       LOG ("not adding satisfied clause");
       continue;
     } else if (!pc.learned && new_size > 1) {
-      q--;
       LOG ("not adding already present clause");
       continue;
     }
@@ -480,7 +485,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
 
     if (new_size == 1) {
       q--;
-      assert (unit != 0);
+      int unit = pc_tmp[0];
       LOG ("sweeping produced unit %d", unit);
       assign_unit (unit);
       sweeper.propagate.push_back (unit);
@@ -521,8 +526,8 @@ void Internal::clear_core (Sweeper &sweeper, unsigned core_idx) {
   if (proof) {
     LOG ("deleting sub-solver core clauses");
     for (auto & pc : core) {
-      assert (pc.learned);
-      proof->delete_clause (pc.id, true, pc.literals);
+      if (pc.learned)
+        proof->delete_clause (pc.id, true, pc.literals);
     }
   }
   core.clear ();
@@ -778,17 +783,33 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
 // We just copy it as an irredundant clause and call weaken minus
 // and push it on the extension stack
 //
-uint64_t Internal::add_sweep_binary (uint64_t id, int lit, int other) {
+uint64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) {
   if (unsat) return INVALID;  // should not really happen but possibly can
-  
+
+  if (val (lit) || val (other)) return INVALID;
   assert (!val (lit) && !val (other));
-  if (lrat)
-    lrat_chain.push_back (id);
+  if (pc.literals.size () == 2) {
+    if (proof && pc.learned) {
+      assert (pc.id != INVALID);
+      proof->strengthen (pc.id);
+    }
+    if (proof)
+      proof->weaken_minus (pc.id, pc.literals);
+    external->push_binary_clause_on_extension_stack (pc.id, lit, other);
+    return pc.id;
+  }
+  if (lrat) {
+    for (const auto & plit : pc.literals) {
+      if (val (plit)) {
+        const unsigned uidx = vlit (-plit);
+        uint64_t id = unit_clauses[uidx];
+        lrat_chain.push_back (id);
+      }
+    }
+    lrat_chain.push_back (pc.id);
+  }
   clause.push_back (lit);
   clause.push_back (other);
-  // for now do not substitute directly but only learn the binary...
-  // Clause *res = new_resolved_irredundant_clause ();
-  
   
   const uint64_t new_id = ++clause_id;
   if (proof) {
@@ -1231,16 +1252,15 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
 
   // if kitten behaves as expected, id should be at sweeper.core[0].back ()
   add_core (sweeper, 0);
-  const uint64_t id1_kitten = sweeper.core[0].back ().id;
-  assert (id1_kitten != INVALID);
-  uint64_t id1 = add_sweep_binary (id1_kitten, lit, not_other);
-  clear_core (sweeper, 0);
-
   add_core (sweeper, 1);
-  const uint64_t id2_kitten = sweeper.core[1].back ().id;
-  assert (id2_kitten != INVALID);
-  uint64_t id2 = add_sweep_binary (id2_kitten, not_lit, other);
-  clear_core (sweeper, 1);
+  uint64_t id1 = INVALID;
+  uint64_t id2 = INVALID;
+  if (!val (lit) && !val (other)) {
+    assert (sweeper.core[0].size ());
+    id1 = add_sweep_binary (sweeper.core[0].back (), lit, not_other);
+    assert (sweeper.core[1].size ());
+    id2 = add_sweep_binary (sweeper.core[1].back (), not_lit, other);
+  }
 
   int repr;
   if (lit < other) {
@@ -1256,8 +1276,18 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
     substitute_connected_clauses (sweeper, not_lit, not_other, id1);
     sweep_remove (sweeper, lit);
   }
-  delete_sweep_binary (id1, lit, not_other);
-  delete_sweep_binary (id2, not_lit, other);
+  if (!val (lit) && !val (other)) {
+    if (id1 == sweeper.core[0].back ().id)
+      id1 = INVALID;
+    if (id2 == sweeper.core[1].back ().id)
+      id2 = INVALID;
+  }
+  clear_core (sweeper, 0);
+  clear_core (sweeper, 1);
+  if (id1 != INVALID)
+    delete_sweep_binary (id1, lit, not_other);
+  if (id2 != INVALID)
+    delete_sweep_binary (id2, not_lit, other);
 
   const int repr_idx = abs (repr);
   schedule_inner (sweeper, repr_idx);

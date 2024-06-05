@@ -111,6 +111,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   c->redundant = red;
   c->transred = false;
   c->subsume = false;
+  c->swept = false;
   c->vivified = false;
   c->vivify = false;
   c->used = 0;
