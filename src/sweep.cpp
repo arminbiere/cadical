@@ -342,7 +342,7 @@ void Internal::sweep_clause (Sweeper &sweeper, unsigned depth, Clause *c) {
 
 
 extern "C" {
-static void save_core_clause (void *state, bool learned, size_t size,
+static void save_core_clause (void *state, unsigned id, bool learned, size_t size,
                               const unsigned *lits) {
   Sweeper *sweeper = (Sweeper *) state;
   Internal *internal = sweeper->internal;
@@ -350,8 +350,13 @@ static void save_core_clause (void *state, bool learned, size_t size,
     return;
   vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];  
   sweep_proof_clause pc;
-  pc.sweep_id = INVALID;  // not necessary
-  pc.cad_id = INVALID64;  // delay giving ids
+  if (learned) {
+    pc.sweep_id = INVALID;  // necessary
+    pc.cad_id = INVALID64;  // delay giving ids
+  } else {
+    pc.sweep_id = id;  // necessary
+    pc.cad_id = sweeper->clauses[id]->id;  // delay giving ids
+  }
   pc.kit_id = 0;
   pc.learned = learned;
   const unsigned *end = lits + size;
@@ -376,18 +381,19 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
   vector<Clause *> &clauses = sweeper->clauses;
   sweep_proof_clause pc;
   pc.kit_id = cid;
-  pc.sweep_id = id;
   pc.learned = learned;
   if (!learned) {
     assert (size);
     assert (!chain_size);
     assert (id < clauses.size ());
+    pc.sweep_id = id;
     pc.cad_id = clauses[id]->id;
     for (const auto & lit : *clauses[id]) {
       pc.literals.push_back (lit);
     }
   } else {
     assert (chain_size);
+    pc.sweep_id = INVALID;
     pc.cad_id = INVALID64;  // delay giving ids
     const unsigned *end = lits + size;
     for (const unsigned *p = lits; p != end; p++) {
@@ -464,12 +470,25 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
           uint64_t id = 0;
           for (const auto & cpc : core) {
             if (cpc.kit_id == cid) {
-              Clause *c = sweeper.clauses[cpc.sweep_id];
-              assert (cpc.cad_id == c->id);
-              if (c->garbage)
-                id = INVALID64;
-              else
+              if (cpc.learned)
                 id = cpc.cad_id;
+              else {
+                Clause *c = sweeper.clauses[cpc.sweep_id];
+                // assert (cpc.cad_id == c->id);  not true due to substitution
+                if (c->garbage)
+                  id = INVALID64;
+                else {
+                  id = cpc.cad_id;
+                  // TODO this leads to duplicate ids of units!!!!
+                  for (const auto & lit : cpc.literals) {
+                    if (val (lit) < 0) {
+                      const unsigned uidx = vlit (-lit);
+                      uint64_t uid = unit_clauses[uidx];
+                      lrat_chain.push_back (uid);
+                    }
+                  }
+                }
+              }
               break;
             }
           }
@@ -523,7 +542,7 @@ void Internal::save_core (Sweeper &sweeper, unsigned core) {
   if (lrat)
     kitten_trace_core (citten, &sweeper, save_core_clause_with_lrat);
   else
-    kitten_traverse_core_clauses (citten, &sweeper, save_core_clause);
+    kitten_traverse_core_clauses_with_id (citten, &sweeper, save_core_clause);
 }
 
 void Internal::clear_core (Sweeper &sweeper, unsigned core_idx) {
@@ -796,6 +815,8 @@ uint64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) 
   if (unsat) return INVALID64;  // should not really happen but possibly can
 
   if (val (lit) || val (other)) return INVALID64;
+
+  /*
   assert (!val (lit) && !val (other));
   if (pc.literals.size () == 2) {
     if (proof && pc.learned) {
@@ -831,6 +852,23 @@ uint64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) 
   clause.clear ();
 
   return new_id;
+  */
+  if (lrat) {
+    for (const auto & plit : pc.literals) {
+      if (val (plit)) {
+        const unsigned uidx = vlit (-plit);
+        uint64_t id = unit_clauses[uidx];
+        lrat_chain.push_back (id);
+      }
+    }
+    lrat_chain.push_back (pc.cad_id);
+  }
+  clause.push_back (lit);
+  clause.push_back (other);
+  Clause *res = new_resolved_irredundant_clause ();
+  clause.clear ();
+  lrat_chain.clear ();
+  return res->id;
 }
 
 void Internal::delete_sweep_binary (uint64_t id, int lit, int other) {
@@ -1279,14 +1317,14 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   if (lit < other) {
     repr = sweeper.reprs[other] = lit;
     sweeper.reprs[not_other] = not_lit;
-    substitute_connected_clauses (sweeper, other, lit, id1);
-    substitute_connected_clauses (sweeper, not_other, not_lit, id2);
+    // substitute_connected_clauses (sweeper, other, lit, id1);
+    // substitute_connected_clauses (sweeper, not_other, not_lit, id2);
     sweep_remove (sweeper, other);
   } else {
     repr = sweeper.reprs[lit] = other;
     sweeper.reprs[not_lit] = not_other;
-    substitute_connected_clauses (sweeper, lit, other, id2);
-    substitute_connected_clauses (sweeper, not_lit, not_other, id1);
+    // substitute_connected_clauses (sweeper, lit, other, id2);
+    // substitute_connected_clauses (sweeper, not_lit, not_other, id1);
     sweep_remove (sweeper, lit);
   }
   if (!val (lit) && !val (other)) {
@@ -1297,10 +1335,12 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   }
   clear_core (sweeper, 0);
   clear_core (sweeper, 1);
+  /*
   if (id1 != INVALID64)
     delete_sweep_binary (id1, lit, not_other);
   if (id2 != INVALID64)
     delete_sweep_binary (id2, not_lit, other);
+    */
 
   const int repr_idx = abs (repr);
   schedule_inner (sweeper, repr_idx);

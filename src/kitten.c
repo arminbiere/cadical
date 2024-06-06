@@ -1899,6 +1899,42 @@ void kitten_traverse_core_clauses (kitten *kitten, void *state,
   assert (kitten->status == 21);
 }
 
+void kitten_traverse_core_clauses_with_id (kitten *kitten, void *state,
+                                   void (*traverse) (void *state, unsigned,
+                                                     bool learned, size_t,
+                                                     const unsigned *)) {
+  REQUIRE_STATUS (21);
+
+  LOG ("traversing clausal core");
+
+  unsigned traversed = 0;
+
+  for (all_stack (unsigned, c_ref, kitten->core)) {
+    klause *c = dereference_klause (kitten, c_ref);
+    assert (is_core_klause (c));
+    const bool learned = is_learned_klause (c);
+    unsigneds *eclause = &kitten->eclause;
+    assert (EMPTY_STACK (*eclause));
+    for (all_literals_in_klause (ilit, c)) {
+      const unsigned elit = export_literal (kitten, ilit);
+      PUSH_STACK (*eclause, elit);
+    }
+    const size_t size = SIZE_STACK (*eclause);
+    const unsigned *elits = eclause->begin;
+    ROG (reference_klause (kitten, c), "traversing");
+    unsigned ctag = learned ? 0 : c->aux;
+    traverse (state, ctag, learned, size, elits);
+    CLEAR_STACK (*eclause);
+    traversed++;
+  }
+
+  LOG ("traversed %u core clauses", traversed);
+  (void) traversed;
+
+  assert (kitten->status == 21);
+}
+
+
 void kitten_trace_core (kitten *kitten, void *state,
                         void (*trace) (void *, unsigned, unsigned, bool,
                                        size_t, const unsigned *, size_t,

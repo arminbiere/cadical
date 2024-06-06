@@ -72,6 +72,10 @@ void kitten_traverse_core_clauses (kitten *, void *state,
                                    void (*traverse) (void *state,
                                                      bool learned, size_t,
                                                      const unsigned *));
+void kitten_traverse_core_clauses_with_id (kitten *, void *state,
+                                   void (*traverse) (void *state, unsigned,
+                                                     bool learned, size_t,
+                                                     const unsigned *));
 void kitten_trace_core (kitten *, void *state,
                         void (*trace) (void *, unsigned, unsigned, bool,
                                        size_t, const unsigned *, size_t,
