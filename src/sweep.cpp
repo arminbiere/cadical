@@ -170,6 +170,13 @@ void Internal::init_sweeper (Sweeper &sweeper) {
 
   sweep_dense_mode_and_watch_irredundant (); // full occurence list
 
+  if (lrat) {
+    sweeper.prev_units.push_back (0);
+    for (const auto & idx : vars) {
+      sweeper.prev_units.push_back (val (idx) != 0);
+    }
+  }
+
   unsigned completed = stats.sweep_completed;
   const unsigned max_completed = 32;
   if (completed > max_completed)
@@ -240,6 +247,7 @@ unsigned Internal::release_sweeper (Sweeper &sweeper) {
   erase_vector (sweeper.clause);
   erase_vector (sweeper.backbone);
   erase_vector (sweeper.partition);
+  erase_vector (sweeper.prev_units);
   for (unsigned i = 0; i < 2; i++)
     erase_vector (sweeper.core[i]);
   
@@ -432,7 +440,6 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
     bool satisfied = false;
 
     vector<int> pc_tmp;
-    vector<uint64_t> lrat_tmp;
     for (const auto &lit : pc.literals) {
       const signed char value = val (lit);
       if (value > 0) {
@@ -440,11 +447,6 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
         break;
       }
       if (value < 0) {
-        if (lrat) {
-          const unsigned uidx = vlit (-lit);
-          uint64_t id = unit_clauses[uidx];
-          lrat_tmp.push_back (id);
-        }
         continue;
       }
       pc_tmp.push_back (lit);
@@ -462,8 +464,17 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
     }
 
     if (lrat) {
-      if (new_size > 1) lrat_tmp.clear ();
-      else lrat_chain.swap (lrat_tmp);
+      if (new_size < 2) {
+        for (const auto &lit : pc.literals) {
+          if (val (lit) >= 0) continue;
+          const int idx = abs (lit);
+          const unsigned uidx = vlit (-lit);
+          uint64_t id = unit_clauses[uidx];
+          lrat_chain.push_back (id);
+          analyzed.push_back (lit);
+          flags (lit).seen = true;
+        }
+      }
       if (pc.learned) {
         assert (pc.cad_id == INVALID64);
         for (auto & cid : pc.chain) {
@@ -474,18 +485,21 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
                 id = cpc.cad_id;
               else {
                 Clause *c = sweeper.clauses[cpc.sweep_id];
-                // assert (cpc.cad_id == c->id);  not true due to substitution
-                if (c->garbage)
-                  id = INVALID64;
-                else {
-                  id = cpc.cad_id;
-                  // TODO this leads to duplicate ids of units!!!!
-                  for (const auto & lit : cpc.literals) {
-                    if (val (lit) < 0) {
-                      const unsigned uidx = vlit (-lit);
-                      uint64_t uid = unit_clauses[uidx];
-                      lrat_chain.push_back (uid);
-                    }
+                assert (cpc.cad_id == c->id);  // not true due to substitution
+                assert (!c->garbage);
+                //  id = INVALID64;
+                id = cpc.cad_id;
+                // TODO this leads to duplicate ids of units!!!!
+                for (const auto & lit : cpc.literals) {
+                  if (val (lit) >= 0) continue;
+                  if (flags (lit).seen) continue;
+                  const int idx = abs (lit);
+                  if (sweeper.prev_units[idx]) {
+                    const unsigned uidx = vlit (-lit);
+                    uint64_t uid = unit_clauses[uidx];
+                    lrat_chain.push_back (uid);
+                    analyzed.push_back (lit);
+                    flags (lit).seen = true;
                   }
                 }
               }
@@ -502,6 +516,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
         assert (pc.cad_id != INVALID64 && pc.cad_id <= clause_id);
         lrat_chain.push_back (pc.cad_id);
       }
+      clear_analyzed_literals ();
     }
 
     if (!new_size) {
