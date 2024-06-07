@@ -421,10 +421,12 @@ void LratChecker::add_derived_clause (uint64_t id, bool,
   assert (id);
   if (!check (proof_chain) || !check_resolution (proof_chain)) {
     LOG (proof_chain, "chain");
+#ifdef LOGGING
     for (const auto & pid : proof_chain) {
       LratCheckerClause **p = find (pid), *d = *p;
       LOG (d->literals, d->size, "clause[%" PRId64 "]", pid);
     }
+#endif
     fatal_message_start ();
     fputs ("failed to check derived clause:\n", stderr);
     for (const auto &lit : imported_clause)

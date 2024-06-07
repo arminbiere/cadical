@@ -1057,7 +1057,7 @@ struct Internal {
   void sweep_set_kitten_ticks_limit (Sweeper &sweeper);
   bool kitten_ticks_limit_hit (Sweeper &sweeper, const char *when);
   void init_sweeper (Sweeper &sweeper);
-  unsigned release_sweeper (Sweeper &sweeper);
+  void release_sweeper (Sweeper &sweeper);
   void clear_sweeper (Sweeper &sweeper);
   int sweep_repr (Sweeper &sweeper, int lit);
   void add_literal_to_environment (Sweeper &sweeper, unsigned depth, int);

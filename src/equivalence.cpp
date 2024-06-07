@@ -100,7 +100,7 @@ static void traverse_core_lemma_with_lrat (void *state, unsigned cid,
   Internal *internal = extractor->internal;
   Proof *proof = internal->proof;
   const int pivot = extractor->pivot;
-  const int best = extractor->other;
+  // const int best = extractor->other;
   vector<Clause*> clauses0 = extractor->clauses[0];
   vector<Clause*> clauses1 = extractor->clauses[1];
   vector<proof_clause> &proof_clauses = eliminator->proof_clauses;

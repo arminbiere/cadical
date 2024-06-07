@@ -367,6 +367,9 @@ static void log_literals (kitten *kitten, unsigned *lits, unsigned size,
 #define ROG(...) \
   do { \
   } while (0)
+#define LOGLITS(...) \
+  do { \
+  } while (0)
 
 #endif
 

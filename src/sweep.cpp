@@ -227,16 +227,8 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   sweep_set_kitten_ticks_limit (sweeper);
 }
 
-unsigned Internal::release_sweeper (Sweeper &sweeper) {
+void Internal::release_sweeper (Sweeper &sweeper) {
 
-  unsigned merged = 0;
-  for (const auto & idx : vars) {
-    if (!active (idx))
-      continue;
-    const int lit = idx;
-    if (sweeper.reprs[lit] != lit)
-      merged++;
-  }
   sweeper.reprs -= max_var;
   delete[] sweeper.reprs;
   
@@ -254,7 +246,7 @@ unsigned Internal::release_sweeper (Sweeper &sweeper) {
   kitten_release (citten);
   citten = 0;
   sweep_sparse_mode ();
-  return merged;
+  return;
 }
 
 void Internal::clear_sweeper (Sweeper &sweeper) {
@@ -462,9 +454,8 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
             if (cpc.learned)
               id = cpc.cad_id;
             else {
-              Clause *c = sweeper.clauses[cpc.sweep_id];
-              assert (cpc.cad_id == c->id);
-              assert (!c->garbage);
+              assert (cpc.cad_id == sweeper.clauses[cpc.sweep_id]->id);
+              assert (!sweeper.clauses[cpc.sweep_id]->garbage);
               id = cpc.cad_id;
               // avoid duplicate ids of units with seen flags
               for (const auto & lit : cpc.literals) {
@@ -1751,7 +1742,7 @@ bool Internal::sweep () {
                 "found %" PRIu64 " equivalences and %" PRIu64 " units",
                 equivalences, units);
   unschedule_sweeping (sweeper, swept, scheduled);
-  unsigned inactive = release_sweeper (sweeper);
+  release_sweeper (sweeper);
 
   if (!unsat) {
     propagated = 0;
@@ -1761,14 +1752,11 @@ bool Internal::sweep () {
   }
 
   uint64_t eliminated = equivalences + units;
-#ifndef QUIET
   // assert (active () >= inactive);
   // solver->active -= inactive;   // don't know if this is allowed !!
   report ('=', !eliminated);
   // solver->active += inactive;
-#else
-  (void) inactive;
-#endif
+  // (void) inactive;
 //  if (kissat_average (eliminated, swept) < 0.001)
 //    BUMP_DELAY (sweep);              // increase sweeping counter (see above)
 //  else
