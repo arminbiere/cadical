@@ -353,7 +353,7 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
       checking = true;
       break;
     }
-    LOG ("LRAT CHECKER found unit clause %" PRIu64 ", assign %d", id, unit);
+   // LOG ("LRAT CHECKER found unit clause %" PRIu64 ", assign %d", id, unit);
     checked_lit (unit) = true;
   }
   for (auto &lc : used_clauses) {
@@ -420,6 +420,11 @@ void LratChecker::add_derived_clause (uint64_t id, bool,
   }
   assert (id);
   if (!check (proof_chain) || !check_resolution (proof_chain)) {
+    LOG (proof_chain, "chain");
+    for (const auto & pid : proof_chain) {
+      LratCheckerClause **p = find (pid), *d = *p;
+      LOG (d->literals, d->size, "clause[%" PRId64 "]", pid);
+    }
     fatal_message_start ();
     fputs ("failed to check derived clause:\n", stderr);
     for (const auto &lit : imported_clause)

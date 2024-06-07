@@ -316,6 +316,31 @@ static void log_reference (kitten *kitten, unsigned ref, const char *fmt,
   fflush (stdout);
 }
 
+
+static void log_literals (kitten *, unsigned *, unsigned, const char *, ...)
+    __attribute__ ((format (printf, 4, 5)));
+
+static void log_literals (kitten *kitten, unsigned *lits, unsigned size,
+              const char *fmt, ...) {
+  assert (logging);
+  printf ("c KITTEN %u ", kitten->level);
+  va_list ap;
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  value *values = kitten->values;
+  kar *vars = kitten->vars;
+  for (unsigned i = 0; i < size; i++) {
+    const unsigned lit = lits[i];
+    printf (" %u", lit);
+    const value value = values[lit];
+    if (value)
+      printf ("@%u=%d", vars[lit / 2].level, (int) value);
+  }
+  fputc ('\n', stdout);
+  fflush (stdout);
+}
+
 #define LOG(...) \
   do { \
     if (logging) \
@@ -326,6 +351,12 @@ static void log_reference (kitten *kitten, unsigned ref, const char *fmt,
   do { \
     if (logging) \
       log_reference (kitten, __VA_ARGS__); \
+  } while (0)
+
+#define LOGLITS(...) \
+  do { \
+    if (logging) \
+      log_literals (kitten, __VA_ARGS__); \
   } while (0)
 
 #else
@@ -1183,6 +1214,7 @@ static void analyze (kitten *kitten, unsigned conflict) {
   assign (kitten, not_uip, learned_ref);
 }
 
+
 static void failing (kitten *kitten) {
   assert (kitten->inconsistent == INVALID);
   assert (!EMPTY_STACK (kitten->assumptions));
@@ -1245,6 +1277,77 @@ static void failing (kitten *kitten) {
   PUSH_STACK (kitten->analyzed, failed_idx);
   PUSH_STACK (kitten->klause, not_failed);
 
+  unsigneds work;
+  INIT_STACK (work);
+  
+  LOGLITS (BEGIN_STACK (kitten->trail), SIZE_STACK (kitten->trail), "trail");
+
+  assert (SIZE_STACK (kitten->trail));
+  unsigned const *p = END_STACK (kitten->trail);
+  unsigned open = 1;
+  for (;;) {
+    if (!open)
+      break;
+    open--;
+    unsigned idx, uip;
+    do {
+      assert (BEGIN_STACK (kitten->trail) < p);
+      uip = *--p;
+    } while (!marks[idx = uip / 2]);
+
+    const kar *var = vars + idx;
+    const unsigned reason = var->reason;
+    if (reason == INVALID) {
+      unsigned lit = 2 * idx;
+      if (values[lit] < 0)
+        lit ^= 1;
+      LOG ("failed assumption %u", lit);
+      assert (!kitten->failed[lit]);
+      kitten->failed[lit] = true;
+      const unsigned not_lit = lit ^ 1;
+      PUSH_STACK (kitten->klause, not_lit);
+    } else {
+      ROG (reason, "analyzing");
+      PUSH_STACK (kitten->resolved, reason);
+      klause *c = dereference_klause (kitten, reason);
+      for (all_literals_in_klause (other, c)) {
+        const unsigned other_idx = other / 2;
+        if (marks[other_idx])
+          continue;
+        assert (other_idx != idx);
+        marks[other_idx] = true;
+        assert (values[other]);
+        if (vars[other_idx].level)
+          open++;
+        else
+          PUSH_STACK (work, other_idx);
+        PUSH_STACK (kitten->analyzed, other_idx);
+        
+        LOG ("analyzing final literal %u", other ^ 1);
+      }
+    }
+  }
+  for (size_t next = 0; next < SIZE_STACK (work); next++) {
+    const unsigned idx = PEEK_STACK (work, next);
+    const kar *var = vars + idx;
+    const unsigned reason = var->reason;
+    if (reason == INVALID) {
+      unsigned lit = 2 * idx;
+      if (values[lit] < 0)
+        lit ^= 1;
+      LOG ("failed assumption %u", lit);
+      assert (!kitten->failed[lit]);
+      kitten->failed[lit] = true;
+      const unsigned not_lit = lit ^ 1;
+      PUSH_STACK (kitten->klause, not_lit);
+    } else {
+      ROG (reason, "analyzing unit");
+      PUSH_STACK (kitten->resolved, reason);
+    }
+  }
+
+  // this is bfs not dfs so it does not work for lrat :/
+  /*
   for (size_t next = 0; next < SIZE_STACK (kitten->analyzed); next++) {
     const unsigned idx = PEEK_STACK (kitten->analyzed, next);
     assert (marks[idx]);
@@ -1275,10 +1378,13 @@ static void failing (kitten *kitten) {
       }
     }
   }
+  */
 
   for (all_stack (unsigned, idx, kitten->analyzed))
     assert (marks[idx]), marks[idx] = 0;
   CLEAR_STACK (kitten->analyzed);
+
+  RELEASE_STACK (work);
 
   const size_t resolved = SIZE_STACK (kitten->resolved);
   assert (resolved);

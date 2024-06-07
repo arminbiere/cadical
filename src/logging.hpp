@@ -53,6 +53,9 @@ struct Logger {
   static void log (Internal *, const vector<uint64_t> &, const char *fmt,
                    ...) CADICAL_ATTRIBUTE_FORMAT (3, 4);
 
+  static void log (Internal *, const int*, const unsigned, const char *fmt,
+                   ...) CADICAL_ATTRIBUTE_FORMAT (4, 5);
+
   static void log_empty_line (Internal *);
 };
 

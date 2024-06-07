@@ -123,7 +123,7 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
     if (unsat)
       break;
     
-    // TODO might not be necessary
+    // TODO maybe not necessary
     const Occs &ps = occs (lit);
     for (const auto &c : ps) {
       if (c->garbage)
@@ -261,6 +261,10 @@ void Internal::clear_sweeper (Sweeper &sweeper) {
   LOG ("clearing sweeping environment");
   kitten_clear (citten);
   kitten_track_antecedents (citten);
+#ifdef LOGGING
+  if (opts.log)
+    kitten_set_logging (citten);
+#endif
   for (auto & idx : sweeper.vars) {
     assert (sweeper.depths[idx]);
     sweeper.depths[idx] = 0;
@@ -337,10 +341,14 @@ void Internal::sweep_clause (Sweeper &sweeper, unsigned depth, Clause *c) {
     const signed char tmp = val (lit);
     if (tmp > 0) {
       mark_garbage (c);
+      sweeper.clause.clear ();
       return;
     }
-    if (tmp < 0)
+    if (tmp < 0) {
+      if (lrat)
+        sweeper.prev_units[abs (lit)] = true;
       continue;
+    }
     sweeper.clause.push_back (lit);
   }
   c->swept = true;
@@ -429,92 +437,53 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
   assert (core_idx == 0 || core_idx == 1);
   vector<sweep_proof_clause> &core = sweeper.core[core_idx];
 
-  auto q = core.begin (), p = q;
-  const auto end_core = core.end ();
-
   assert (!lrat || proof);
   
-  while (p != end_core) {
-    sweep_proof_clause &pc = *q++ = *p++;
-    LOG (pc.literals, "simplifying extracted core[%u] lemma", core_idx);
-    bool satisfied = false;
+  for (auto & pc : core) {
 
-    vector<int> pc_tmp;
-    for (const auto &lit : pc.literals) {
-      const signed char value = val (lit);
-      if (value > 0) {
-        satisfied = true;
-        break;
-      }
-      if (value < 0) {
-        continue;
-      }
-      pc_tmp.push_back (lit);
+    if (!pc.learned) {
+      LOG (pc.literals, "not adding already present core[%u] kitten[%u] clause", core_idx, pc.kit_id);
+      continue;
     }
+
+    LOG (pc.literals, "adding extracted core[%u] kitten[%u] lemma", core_idx, pc.kit_id);
+
+    const unsigned new_size = pc.literals.size ();
+
     
-    const unsigned new_size = pc_tmp.size ();
-
-    if (satisfied) {
-      q--;
-      LOG ("not adding satisfied clause");
-      continue;
-    } else if (!pc.learned && new_size > 1) {
-      LOG ("not adding already present clause");
-      continue;
-    }
-
     if (lrat) {
-      if (new_size < 2) {
-        for (const auto &lit : pc.literals) {
-          if (val (lit) >= 0) continue;
-          const int idx = abs (lit);
-          const unsigned uidx = vlit (-lit);
-          uint64_t id = unit_clauses[uidx];
-          lrat_chain.push_back (id);
-          analyzed.push_back (lit);
-          flags (lit).seen = true;
-        }
-      }
-      if (pc.learned) {
-        assert (pc.cad_id == INVALID64);
-        for (auto & cid : pc.chain) {
-          uint64_t id = 0;
-          for (const auto & cpc : core) {
-            if (cpc.kit_id == cid) {
-              if (cpc.learned)
-                id = cpc.cad_id;
-              else {
-                Clause *c = sweeper.clauses[cpc.sweep_id];
-                assert (cpc.cad_id == c->id);  // not true due to substitution
-                assert (!c->garbage);
-                //  id = INVALID64;
-                id = cpc.cad_id;
-                // TODO this leads to duplicate ids of units!!!!
-                for (const auto & lit : cpc.literals) {
-                  if (val (lit) >= 0) continue;
-                  if (flags (lit).seen) continue;
-                  const int idx = abs (lit);
-                  if (sweeper.prev_units[idx]) {
-                    const unsigned uidx = vlit (-lit);
-                    uint64_t uid = unit_clauses[uidx];
-                    lrat_chain.push_back (uid);
-                    analyzed.push_back (lit);
-                    flags (lit).seen = true;
-                  }
+      assert (pc.cad_id == INVALID64);
+      for (auto & cid : pc.chain) {
+        uint64_t id = 0;
+        for (const auto & cpc : core) {
+          if (cpc.kit_id == cid) {
+            if (cpc.learned)
+              id = cpc.cad_id;
+            else {
+              Clause *c = sweeper.clauses[cpc.sweep_id];
+              assert (cpc.cad_id == c->id);
+              assert (!c->garbage);
+              id = cpc.cad_id;
+              // avoid duplicate ids of units with seen flags
+              for (const auto & lit : cpc.literals) {
+                if (val (lit) >= 0) continue;
+                if (flags (lit).seen) continue;
+                const int idx = abs (lit);
+                if (sweeper.prev_units[idx]) {
+                  const unsigned uidx = vlit (-lit);
+                  uint64_t uid = unit_clauses[uidx];
+                  lrat_chain.push_back (uid);
+                  analyzed.push_back (lit);
+                  flags (lit).seen = true;
                 }
               }
-              break;
             }
+            break;
           }
-          assert (id);
-          if (id != INVALID64)
-            lrat_chain.push_back (id);
         }
-      } else {
-        assert (pc.chain.empty ());
-        assert (new_size < 2);
-        assert (pc.cad_id != INVALID64 && pc.cad_id <= clause_id);
-        lrat_chain.push_back (pc.cad_id);
+        assert (id);
+        if (id != INVALID64)
+          lrat_chain.push_back (id);
       }
       clear_analyzed_literals ();
     }
@@ -527,25 +496,37 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
     }
 
     if (new_size == 1) {
-      q--;
-      int unit = pc_tmp[0];
-      LOG ("sweeping produced unit %d", unit);
-      assign_unit (unit);
-      sweeper.propagate.push_back (unit);
+      int unit = pc.literals[0];
+      if (val (unit) > 0) {
+        LOG ("already assigned sweeping unit %d", unit);
+        lrat_chain.clear ();
+      } else if (val (unit) < 0) {
+        LOG ("falsified sweeping unit %d leads to empty clause", unit);
+        if (lrat)
+          lrat_chain.push_back (unit_clauses[vlit (-unit)]);
+        learn_empty_clause ();
+        core.clear ();
+        return;
+      } else {
+        LOG ("sweeping produced unit %d", unit);
+        assign_unit (unit);
+        sweeper.propagate.push_back (unit);
+      }
+      if (proof)
+        pc.cad_id = unit_clauses[vlit (unit)];
       stats.sweep_units++;
       continue;
     }
 
     assert (new_size > 1);
     assert (pc.learned);
-    
+
     if (proof) {
       pc.cad_id = ++clause_id;
       proof->add_derived_clause (pc.cad_id, true, pc.literals, lrat_chain);
       lrat_chain.clear ();
     }
   }
-  core.resize (q - core.begin ());
 }
 
 void Internal::save_core (Sweeper &sweeper, unsigned core) {
@@ -569,7 +550,7 @@ void Internal::clear_core (Sweeper &sweeper, unsigned core_idx) {
   if (proof) {
     LOG ("deleting sub-solver core clauses");
     for (auto & pc : core) {
-      if (pc.learned)
+      if (pc.learned && pc.literals.size () > 1)
         proof->delete_clause (pc.cad_id, true, pc.literals);
     }
   }
@@ -609,8 +590,8 @@ void Internal::init_backbone_and_partition (Sweeper &sweeper) {
   }
   sweeper.partition.push_back (0);
 
-  // LOGBACKBONE ("initialized backbone candidates");
-  // LOGPARTITION ("initialized equivalence candidates");
+  LOG (sweeper.backbone, "initialized backbone candidates");
+  LOG (sweeper.partition, "initialized equivalence candidates");
 }
 
 void Internal::sweep_empty_clause (Sweeper &sweeper) {
@@ -1446,7 +1427,13 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
                             externalize (idx),
                             sweeper.vars.size (), sweeper.encoded,
                             depth);
-  int res = sweep_solve ();
+  
+  int res;
+  if (sweeper.vars.size () == 1) {
+    LOG ("not sweeping literal %d with environment size 1", idx);
+    goto DONE;
+  }
+  res = sweep_solve ();
   LOG ("sub-solver returns '%d'", res);
   if (res == 10) {
     init_backbone_and_partition (sweeper);

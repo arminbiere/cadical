@@ -150,6 +150,25 @@ void Logger::log (Internal *internal, const vector<uint64_t> &c,
   fflush (stdout);
 }
 
+// for LRAT proof clauses
+
+void Logger::log (Internal *internal, const int *literals, const unsigned size,
+                  const char *fmt, ...) {
+  print_log_prefix (internal);
+  tout.magenta ();
+  va_list ap;
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  for (unsigned i = 0; i < size; i++) {
+    const int lit = literals[i];
+    printf (" %d", lit);
+  }
+  fputc ('\n', stdout);
+  tout.normal ();
+  fflush (stdout);
+}
+
 } // namespace CaDiCaL
 
 #endif
