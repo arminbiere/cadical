@@ -43,7 +43,11 @@ void Internal::sweep_dense_mode_and_watch_irredundant () {
 
   // mark satisfied irredundant clauses as garbage
   for (const auto &c : clauses) {
-    if (c->garbage || c->redundant)
+    if (c->garbage)
+      continue;
+    if (c->redundant && c->size > 2)
+      continue;
+    if (c->hyper)
       continue;
     bool satisfied = false;
     for (const auto &lit : *c) {
@@ -63,10 +67,12 @@ void Internal::sweep_dense_mode_and_watch_irredundant () {
   // Connect irredundant clauses.
   //
   for (const auto &c : clauses)
-    if (!c->garbage && !c->redundant)
-      for (const auto &lit : *c)
-        if (active (lit))
-          occs (lit).push_back (c);
+    if (!c->garbage)
+      if (!c->hyper)
+        if (!c->redundant || c->size == 2)
+          for (const auto &lit : *c)
+            if (active (lit))
+              occs (lit).push_back (c);
 }
 
 // go back to two watch scheme
@@ -217,8 +223,8 @@ void Internal::init_sweeper (Sweeper &sweeper) {
     int64_t limit = stats.propagations.search;
     limit -= last.sweep.propagations;
     limit *= opts.sweepeffort * 1e-3;
-    // if (limit < opts.sweepmineff)  TODO maybe these options
-    //   limit = opts.sweepmineff;        
+    if (limit < opts.sweepmineff) // TODO maybe these options
+      limit = opts.sweepmineff;        
     // if (limit > opts.sweepmaxeff)
     //   limit = opts.sweepmaxeff;
     int64_t ticks_limit = limit * 5;   // propagations are not equal ticks
