@@ -33,6 +33,7 @@ struct Sweeper {
   vector<int> partition;
   vector<bool> prev_units;
   vector<sweep_proof_clause> core[2];
+  uint64_t current_ticks;
   struct {
     uint64_t ticks;
     unsigned clauses, depth, vars;

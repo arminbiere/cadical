@@ -424,29 +424,33 @@ void Stats::print (Internal *internal) {
   if (all || stats.sweep_equivalences) {
     PRT ("sweep eq:        %15" PRId64 "   %10.2f %%  of swept variables",
          stats.sweep_equivalences, percent (stats.sweep_equivalences, stats.sweep_variables));
+    PRT ("  sweepings:     %15" PRId64 "   %10.2f    vars per sweeping",
+      stats.sweep, relative (stats.sweep_variables, stats.sweep));
     PRT ("  swept vars:    %15" PRId64 "   %10.2f %%  of all variables",
          stats.sweep_variables, percent (stats.sweep_variables, stats.vars));
-    PRT ("sweep_units:    %15" PRId64, stats.sweep_units);
-    PRT ("sweep_flip_backbone:    %15" PRId64, stats.sweep_flip_backbone);
-    PRT ("sweep_fixed_backbone:    %15" PRId64, stats.sweep_fixed_backbone);
-    PRT ("sweep_flipped_backbone:    %15" PRId64, stats.sweep_flipped_backbone);
-    PRT ("sweep_solved_backbone:    %15" PRId64, stats.sweep_solved_backbone);
-    PRT ("sweep_sat_backbone:    %15" PRId64, stats.sweep_sat_backbone);
-    PRT ("sweep_unsat_backbone:    %15" PRId64, stats.sweep_unsat_backbone);
-    PRT ("sweep_unknown_backbone:    %15" PRId64, stats.sweep_unknown_backbone);
-    PRT ("sweep_flip_equivalences:    %15" PRId64, stats.sweep_flip_equivalences);
-    PRT ("sweep_flipped_equivalences:    %15" PRId64, stats.sweep_flipped_equivalences);
-    PRT ("sweep_sat_equivalences:    %15" PRId64, stats.sweep_sat_equivalences);
-    PRT ("sweep_unsat_equivalences:    %15" PRId64, stats.sweep_unsat_equivalences);
-    PRT ("sweep_unknown_equivalences:    %15" PRId64, stats.sweep_unknown_equivalences);
-    PRT ("sweep_solved_equivalences:    %15" PRId64, stats.sweep_solved_equivalences);
-    PRT ("sweep_completed:    %15" PRId64, stats.sweep_completed);
-    PRT ("sweep_solved:    %15" PRId64, stats.sweep_solved);
-    PRT ("sweep_sat:    %15" PRId64, stats.sweep_sat);
-    PRT ("sweep_unsat:    %15" PRId64, stats.sweep_unsat);
-    PRT ("sweep_depth:    %15" PRId64, stats.sweep_depth);
-    PRT ("sweep_environment:    %15" PRId64, stats.sweep_environment);
-    PRT ("sweep_clauses:    %15" PRId64, stats.sweep_clauses);
+    PRT ("  sweep units:   %15" PRId64, stats.sweep_units);
+    PRT ("  backbones:     %15s", "");
+    PRT ("    fixed:       %15" PRId64, stats.sweep_fixed_backbone);
+    PRT ("    flip:        %15" PRId64, stats.sweep_flip_backbone);
+    PRT ("    flipped:     %15" PRId64, stats.sweep_flipped_backbone);
+    PRT ("    solved:      %15" PRId64, stats.sweep_solved_backbone);
+    PRT ("    sat:         %15" PRId64, stats.sweep_sat_backbone);
+    PRT ("    unsat:       %15" PRId64, stats.sweep_unsat_backbone);
+    PRT ("    unknown:     %15" PRId64, stats.sweep_unknown_backbone);
+    PRT ("  equivalences:  %15s", "");
+    PRT ("    fixed:       %15" PRId64, stats.sweep_flip_equivalences);
+    PRT ("    flip:        %15" PRId64, stats.sweep_flipped_equivalences);
+    PRT ("    flipped:     %15" PRId64, stats.sweep_solved_equivalences);
+    PRT ("    solved:      %15" PRId64, stats.sweep_sat_equivalences);
+    PRT ("    sat:         %15" PRId64, stats.sweep_unsat_equivalences);
+    PRT ("    unsat:       %15" PRId64, stats.sweep_unknown_equivalences);
+    PRT ("  solved:        %15" PRId64, stats.sweep_solved);
+    PRT ("  sat:           %15" PRId64, stats.sweep_sat);
+    PRT ("  unsat:         %15" PRId64, stats.sweep_unsat);
+    PRT ("  depth:         %15" PRId64, stats.sweep_depth);
+    PRT ("  environment:   %15" PRId64, stats.sweep_environment);
+    PRT ("  clauses:       %15" PRId64, stats.sweep_clauses);
+    PRT ("  completed:     %15" PRId64, stats.sweep_completed);
 
   }
   if (all || stats.subsumed) {

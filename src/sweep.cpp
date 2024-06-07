@@ -30,7 +30,7 @@ int Internal::sweep_solve () {
 
 void Internal::sweep_set_kitten_ticks_limit (Sweeper &sweeper) {
   uint64_t remaining = 0;
-  const uint64_t current = kitten_current_ticks (citten);
+  const uint64_t current = sweeper.current_ticks;
   if (current < sweeper.limit.ticks)
     remaining = sweeper.limit.ticks - current;
   LOG ("'kitten_ticks' remaining %" PRIu64, remaining);
@@ -136,7 +136,7 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
 }
 
 bool Internal::kitten_ticks_limit_hit (Sweeper &sweeper, const char *when) {
-  const uint64_t current = kitten_current_ticks (citten);
+  const uint64_t current = kitten_current_ticks (citten) + sweeper.current_ticks;
   if (current >= sweeper.limit.ticks) {
     LOG ("'kitten_ticks' limit of %" PRIu64 " ticks hit after %" PRIu64
          " ticks during %s",
@@ -160,6 +160,7 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   for (const auto & lit : lits)
     sweeper.reprs[lit] = lit;
   sweeper.first = sweeper.last = 0;
+  sweeper.current_ticks = 0;
   assert (!citten);
   citten = kitten_init ();
   kitten_track_antecedents (citten);
@@ -220,7 +221,7 @@ void Internal::init_sweeper (Sweeper &sweeper) {
     //   limit = opts.sweepmineff;        
     // if (limit > opts.sweepmaxeff)
     //   limit = opts.sweepmaxeff;
-    int64_t ticks_limit = limit * 100;   // propagations are not equal ticks
+    int64_t ticks_limit = limit * 10;   // propagations are not equal ticks
     sweeper.limit.ticks = ticks_limit;
     last.sweep.propagations = stats.propagations.search;
   }
@@ -251,6 +252,7 @@ void Internal::release_sweeper (Sweeper &sweeper) {
 
 void Internal::clear_sweeper (Sweeper &sweeper) {
   LOG ("clearing sweeping environment");
+  sweeper.current_ticks += kitten_current_ticks (citten);
   kitten_clear (citten);
   kitten_track_antecedents (citten);
 #ifdef LOGGING
@@ -742,7 +744,7 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
 
     if (terminated_asynchronously ())
       break;
-    if (kitten_current_ticks (citten) > sweeper.limit.ticks)
+    if (kitten_current_ticks (citten) + sweeper.current_ticks > sweeper.limit.ticks)
       break;
   } while (flipped && round < max_rounds);
   LOG ("flipped %u backbone candidates in total in %u rounds",
@@ -1180,7 +1182,7 @@ void Internal::flip_partition_literals (Sweeper &sweeper) {
 
     if (terminated_asynchronously ())
       break;
-    if (kitten_current_ticks (citten) > sweeper.limit.ticks)
+    if (kitten_current_ticks (citten) + sweeper.current_ticks > sweeper.limit.ticks)
       break;
   } while (flipped && round < max_rounds);
   LOG ("flipped %u equivalence candidates in total in %u rounds",
@@ -1692,7 +1694,7 @@ void Internal::unschedule_sweeping (Sweeper &sweeper, unsigned swept,
 }
 
 bool Internal::sweep () {
-  if (opts.sweep)
+  if (!opts.sweep)
     return false;
   if (unsat)
     return false;
@@ -1702,7 +1704,7 @@ bool Internal::sweep () {
 //    return false;             only sometimes based on a counter
   assert (!level);
   // assert (!solver->unflushed);  // ? maybe flushed falsified literals from clauses??
-  START (sweep);
+  START_SIMPLIFIER (sweep, SWEEP);
   stats.sweep++;
   uint64_t equivalences = stats.sweep_equivalences;
   uint64_t units = stats.sweep_units;
@@ -1714,7 +1716,7 @@ bool Internal::sweep () {
       break;
     if (terminated_asynchronously ())
       break;
-    if (kitten_current_ticks (citten) > sweeper.limit.ticks)
+    if (kitten_current_ticks (citten) + sweeper.current_ticks > sweeper.limit.ticks)
       break;
     int idx = next_scheduled (sweeper);
     if (idx == 0)
@@ -1761,7 +1763,7 @@ bool Internal::sweep () {
 //    BUMP_DELAY (sweep);              // increase sweeping counter (see above)
 //  else
 //    REDUCE_DELAY (sweep);            // decrease sweeping counter
-  STOP (sweep);
+  STOP_SIMPLIFIER (sweep, SWEEP);
   return eliminated;
 }
 

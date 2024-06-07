@@ -180,7 +180,7 @@ OPTION( sweep,             1,  0,  1,0,1,1, "sweep") \
 OPTION( sweepclauses,   1024,  0,2e9,0,0,1, "sweep") \
 OPTION( sweepcomplete,     0,  0,  1,0,0,1, "sweep") \
 OPTION( sweepdepth,        2,  0,2e9,0,0,1, "sweep") \
-OPTION( sweepeffort,     100,  0,1e4,0,0,1, "sweep") \
+OPTION( sweepeffort,     100,  0,1e5,0,0,1, "sweep") \
 OPTION( sweepfliprounds,   1,  0,2e9,0,0,1, "sweep") \
 OPTION( sweepmaxclauses, 3e5,  2,2e9,0,0,1, "sweep") \
 OPTION( sweepmaxdepth,     3,  1,2e9,0,0,1, "sweep") \
