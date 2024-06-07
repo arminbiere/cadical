@@ -221,7 +221,7 @@ void Internal::init_sweeper (Sweeper &sweeper) {
     //   limit = opts.sweepmineff;        
     // if (limit > opts.sweepmaxeff)
     //   limit = opts.sweepmaxeff;
-    int64_t ticks_limit = limit * 10;   // propagations are not equal ticks
+    int64_t ticks_limit = limit * 5;   // propagations are not equal ticks
     sweeper.limit.ticks = ticks_limit;
     last.sweep.propagations = stats.propagations.search;
   }
