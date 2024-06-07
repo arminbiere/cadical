@@ -69,17 +69,21 @@ struct Closure {
   void extract_and_gates (Closure&);
   void extract_gates (Closure&);
   std::unordered_set<Gate*, Hash> table;
-  void extract_and_gates_with_base_clause (Clause *c) const;
+  void extract_and_gates_with_base_clause (Clause *c);
 
   Gate* find_and_lits (unsigned, unsigned);
   bool merge_literals (Closure &closure, int lit, int other);
   void init_and_gate_extraction ();
   Gate* find_first_and_gate (int lhs);
+  Gate *find_remaining_and_gate (int lhs);
   void extract_and_gates ();
   
   Gate* new_and_gate(int);
 
   bool learn_congruence_unit(int unit);
+
+  // we define our own wrapper as cadical has otherwise a non-compatible marking system
+  signed char& marked (int lit);
   // negbincount (lit) -> noccs (-lit)
 };
 

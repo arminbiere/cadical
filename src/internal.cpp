@@ -541,6 +541,8 @@ bool Internal::preprocess_round (int round) {
   if (opts.condition)
     condition (false);
   after.vars = active ();
+  if (opts.congruence)
+    extract_gates();
   after.clauses = stats.current.irredundant;
   assert (preprocessing);
   preprocessing = false;

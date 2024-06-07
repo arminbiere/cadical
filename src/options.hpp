@@ -54,6 +54,7 @@ OPTION( conditionmaxeff, 1e7,  0,2e9,1,0,1, "maximum condition efficiency") \
 OPTION( conditionmaxrat, 100,  1,2e9,1,0,1, "maximum clause variable ratio") \
 OPTION( conditionmineff, 1e6,  0,2e9,1,0,1, "minimum condition efficiency") \
 OPTION( conditionreleff, 100,  1,1e5,0,0,1, "relative efficiency per mille") \
+OPTION( congruence,        1,  0,  1,0,0,1, "congruence closure") \
 OPTION( cover,             0,  0,  1,0,1,1, "covered clause elimination") \
 OPTION( covermaxclslim,  1e5,  1,2e9,2,0,1, "maximum clause size") \
 OPTION( covermaxeff,     1e8,  0,2e9,1,0,1, "maximum cover efficiency") \
