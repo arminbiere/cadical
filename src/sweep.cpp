@@ -438,8 +438,10 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
   vector<sweep_proof_clause> &core = sweeper.core[core_idx];
 
   assert (!lrat || proof);
-  
+
+  unsigned unsat_size = 0;
   for (auto & pc : core) {
+    unsat_size++;
 
     if (!pc.learned) {
       LOG (pc.literals, "not adding already present core[%u] kitten[%u] clause", core_idx, pc.kit_id);
@@ -491,7 +493,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
     if (!new_size) {
       LOG ("sweeping produced empty clause");
       learn_empty_clause ();
-      core.clear ();
+      core.resize (unsat_size);
       return;
     }
 
@@ -505,7 +507,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
         if (lrat)
           lrat_chain.push_back (unit_clauses[vlit (-unit)]);
         learn_empty_clause ();
-        core.clear ();
+        core.resize (unsat_size);
         return;
       } else {
         LOG ("sweeping produced unit %d", unit);
@@ -542,8 +544,6 @@ void Internal::save_core (Sweeper &sweeper, unsigned core) {
 }
 
 void Internal::clear_core (Sweeper &sweeper, unsigned core_idx) {
-  if (unsat)
-    return;
   assert (core_idx == 0 || core_idx == 1);
   LOG ("clearing core[%u] lemmas", core_idx);
   vector<sweep_proof_clause> &core = sweeper.core[core_idx];
