@@ -422,35 +422,52 @@ void Stats::print (Internal *internal) {
          relative (stats.decompositions, stats.probingphases));
   }
   if (all || stats.sweep_equivalences) {
-    PRT ("sweep eq:        %15" PRId64 "   %10.2f %%  of swept variables",
+    PRT ("sweep equiv:     %15" PRId64 "   %10.2f %%  of swept variables",
          stats.sweep_equivalences, percent (stats.sweep_equivalences, stats.sweep_variables));
     PRT ("  sweepings:     %15" PRId64 "   %10.2f    vars per sweeping",
       stats.sweep, relative (stats.sweep_variables, stats.sweep));
     PRT ("  swept vars:    %15" PRId64 "   %10.2f %%  of all variables",
          stats.sweep_variables, percent (stats.sweep_variables, stats.vars));
-    PRT ("  sweep units:   %15" PRId64, stats.sweep_units);
-    PRT ("  backbones:     %15s", "");
-    PRT ("    fixed:       %15" PRId64, stats.sweep_fixed_backbone);
-    PRT ("    flip:        %15" PRId64, stats.sweep_flip_backbone);
-    PRT ("    flipped:     %15" PRId64, stats.sweep_flipped_backbone);
-    PRT ("    solved:      %15" PRId64, stats.sweep_solved_backbone);
-    PRT ("    sat:         %15" PRId64, stats.sweep_sat_backbone);
-    PRT ("    unsat:       %15" PRId64, stats.sweep_unsat_backbone);
-    PRT ("    unknown:     %15" PRId64, stats.sweep_unknown_backbone);
-    PRT ("  equivalences:  %15s", "");
-    PRT ("    fixed:       %15" PRId64, stats.sweep_flip_equivalences);
-    PRT ("    flip:        %15" PRId64, stats.sweep_flipped_equivalences);
-    PRT ("    flipped:     %15" PRId64, stats.sweep_solved_equivalences);
-    PRT ("    solved:      %15" PRId64, stats.sweep_sat_equivalences);
-    PRT ("    sat:         %15" PRId64, stats.sweep_unsat_equivalences);
-    PRT ("    unsat:       %15" PRId64, stats.sweep_unknown_equivalences);
-    PRT ("  solved:        %15" PRId64, stats.sweep_solved);
-    PRT ("  sat:           %15" PRId64, stats.sweep_sat);
-    PRT ("  unsat:         %15" PRId64, stats.sweep_unsat);
-    PRT ("  depth:         %15" PRId64, stats.sweep_depth);
-    PRT ("  environment:   %15" PRId64, stats.sweep_environment);
-    PRT ("  clauses:       %15" PRId64, stats.sweep_clauses);
-    PRT ("  completed:     %15" PRId64, stats.sweep_completed);
+    PRT ("  sweep units:   %15" PRId64 "   %10.2f %%  of all variables",
+         stats.sweep_units, percent (stats.sweep_units, stats.vars));
+    PRT ("  solved:        %15" PRId64 "   %10.2f    per swept variable",
+         stats.sweep_solved, relative (stats.sweep_solved, stats.sweep_variables));
+    PRT ("  sat:           %15" PRId64 "   %10.2f %%  solved",
+         stats.sweep_sat, percent (stats.sweep_sat, stats.sweep_solved));
+    PRT ("  unsat:         %15" PRId64 "   %10.2f %%  solved",
+         stats.sweep_unsat, percent (stats.sweep_unsat, stats.sweep_solved));
+    PRT ("  backbone solved:%14" PRId64 "   %10.2f %%  solved",
+         stats.sweep_solved_backbone, percent (stats.sweep_solved_backbone, stats.sweep_solved));
+    PRT ("    sat:         %15" PRId64 "   %10.2f %%  backbone solved",
+         stats.sweep_sat_backbone, percent (stats.sweep_sat_backbone, stats.sweep_solved_backbone));
+    PRT ("    unsat:       %15" PRId64 "   %10.2f %%  backbone solved",
+         stats.sweep_unsat_backbone, percent (stats.sweep_unsat_backbone, stats.sweep_solved_backbone));
+    PRT ("    unknown:     %15" PRId64 "   %10.2f %%  backbone solved",
+         stats.sweep_unknown_backbone, percent (stats.sweep_unknown_backbone, stats.sweep_solved_backbone));
+    PRT ("    fixed:       %15" PRId64 "   %10.2f   per swept variable",
+         stats.sweep_fixed_backbone, relative (stats.sweep_fixed_backbone, stats.sweep_variables));
+    PRT ("    flip:        %15" PRId64 "   %10.2f   per swept variable",
+         stats.sweep_flip_backbone, relative (stats.sweep_flip_backbone, stats.sweep_variables));
+    PRT ("    flipped:     %15" PRId64 "   %10.2f %%  of backbone flip",
+         stats.sweep_flipped_backbone, percent (stats.sweep_flipped_backbone, stats.sweep_flip_backbone));
+    PRT ("  equiv solved:  %15" PRId64 "   %10.2f %%  solved",
+         stats.sweep_solved_equivalences, percent (stats.sweep_solved_equivalences, stats.sweep_solved));
+    PRT ("    sat:         %15" PRId64 "   %10.2f %%  equiv solved",
+         stats.sweep_unsat_equivalences, percent (stats.sweep_unsat_equivalences, stats.sweep_solved_equivalences));
+    PRT ("    unsat:       %15" PRId64 "   %10.2f %%  equiv solved",
+         stats.sweep_unknown_equivalences, percent (stats.sweep_unknown_equivalences, stats.sweep_solved_equivalences));
+    PRT ("    flip:        %15" PRId64 "   %10.2f    per swept variable",
+         stats.sweep_flip_equivalences, relative (stats.sweep_flip_equivalences, stats.sweep_variables));
+    PRT ("    flipped:     %15" PRId64 "   %10.2f %%  of equiv flip",
+         stats.sweep_flipped_equivalences, percent (stats.sweep_flipped_equivalences, stats.sweep_flip_equivalences));
+    PRT ("  depth:         %15" PRId64 "   %10.2f    per swept variable",
+         stats.sweep_depth, relative (stats.sweep_depth, stats.sweep_variables));
+    PRT ("  environment:   %15" PRId64 "   %10.2f    per swept variable",
+         stats.sweep_environment, relative (stats.sweep_environment, stats.sweep_variables));
+    PRT ("  clauses:       %15" PRId64 "   %10.2f    per swept variable",
+         stats.sweep_clauses, relative (stats.sweep_clauses, stats.sweep_variables));
+    PRT ("  completed:     %15" PRId64 "   %10.2f    sweeps to complete",
+         stats.sweep_completed, relative (stats.sweep, stats.sweep_completed));
 
   }
   if (all || stats.subsumed) {
