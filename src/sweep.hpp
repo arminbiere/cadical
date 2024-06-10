@@ -32,6 +32,7 @@ struct Sweeper {
   vector<int> backbone;
   vector<int> partition;
   vector<bool> prev_units;
+  vector<Clause *> binaries;
   vector<sweep_proof_clause> core[2];
   uint64_t current_ticks;
   struct {

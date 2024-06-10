@@ -1074,7 +1074,7 @@ struct Internal {
   void sweep_refine (Sweeper &sweeper);
   void flip_backbone_literals (struct Sweeper &sweeper);
   bool sweep_backbone_candidate (Sweeper &sweeper, int lit);
-  uint64_t add_sweep_binary (sweep_proof_clause, int lit, int other);
+  Clause *add_sweep_binary (sweep_proof_clause, int lit, int other);
   bool scheduled_variable (Sweeper &sweeper, int idx);
   void schedule_inner (Sweeper &sweeper, int idx);
   void schedule_outer (Sweeper &sweeper, int idx);
@@ -1098,8 +1098,8 @@ struct Internal {
   void sweep_dense_propagate (Sweeper &sweeper);
   void sweep_sparse_mode ();
   void sweep_dense_mode_and_watch_irredundant ();
-  void delete_sweep_binary (uint64_t id, int lit, int other);
   void sweep_substitute_lrat (Clause *c, uint64_t id);
+  void sweep_substitute_new_equivalences (Sweeper &sweeper);
 
   // instantiate
   //

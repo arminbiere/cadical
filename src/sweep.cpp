@@ -227,7 +227,7 @@ void Internal::init_sweeper (Sweeper &sweeper) {
       limit = opts.sweepmineff;        
     // if (limit > opts.sweepmaxeff)
     //   limit = opts.sweepmaxeff;
-    int64_t ticks_limit = limit * 5;   // propagations are not equal ticks
+    int64_t ticks_limit = limit * 10;   // propagations are not equal ticks
     sweeper.limit.ticks = ticks_limit;
     last.sweep.propagations = stats.propagations.search;
   }
@@ -511,11 +511,11 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
       } else {
         LOG ("sweeping produced unit %d", unit);
         assign_unit (unit);
+        stats.sweep_units++;
         sweeper.propagate.push_back (unit);
       }
       if (proof)
         pc.cad_id = unit_clauses[vlit (unit)];
-      stats.sweep_units++;
       continue;
     }
 
@@ -806,48 +806,12 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
 // We just copy it as an irredundant clause and call weaken minus
 // and push it on the extension stack
 //
-uint64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) {
-  if (unsat) return INVALID64;  // should not really happen but possibly can
+Clause *Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) {
+  if (unsat) return 0;  // should not really happen but possibly can
 
-  if (val (lit) || val (other)) return INVALID64;
+  assert (!val (lit) && !val (other)); 
+  if (val (lit) || val (other)) return 0;
 
-  /*
-  assert (!val (lit) && !val (other));
-  if (pc.literals.size () == 2) {
-    if (proof && pc.learned) {
-      assert (pc.cad_id != INVALID64);
-      proof->strengthen (pc.cad_id);
-    }
-    if (proof)
-      proof->weaken_minus (pc.cad_id, pc.literals);
-    external->push_binary_clause_on_extension_stack (pc.cad_id, lit, other);
-    return pc.cad_id;
-  }
-  if (lrat) {
-    for (const auto & plit : pc.literals) {
-      if (val (plit)) {
-        const unsigned uidx = vlit (-plit);
-        uint64_t id = unit_clauses[uidx];
-        lrat_chain.push_back (id);
-      }
-    }
-    lrat_chain.push_back (pc.cad_id);
-  }
-  clause.push_back (lit);
-  clause.push_back (other);
-  
-  const uint64_t new_id = ++clause_id;
-  if (proof) {
-    proof->add_derived_clause (new_id, false, clause, lrat_chain);
-    proof->weaken_minus (new_id, clause);
-  }
-  external->push_binary_clause_on_extension_stack (new_id, lit, other);
-
-  lrat_chain.clear ();
-  clause.clear ();
-
-  return new_id;
-  */
   if (lrat) {
     for (const auto & plit : pc.literals) {
       if (val (plit)) {
@@ -863,17 +827,9 @@ uint64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) 
   Clause *res = new_resolved_irredundant_clause ();
   clause.clear ();
   lrat_chain.clear ();
-  return res->id;
+  return res;
 }
 
-void Internal::delete_sweep_binary (uint64_t id, int lit, int other) {
-  if (proof && !unsat) {
-    clause.push_back (lit);
-    clause.push_back (other);
-    proof->delete_clause (id, false, clause);
-    clause.clear ();
-  }  
-}
 
 // mark all literals in sweeper.reprs which have been substituted
 // void Internal::mark_substituted_literals (Sweeper &sweeper) {
@@ -1108,6 +1064,22 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr
   }
 }
 
+void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
+  if (unsat) return;
+  
+  for (auto c : sweeper.binaries) {
+    assert (c->size == 2);
+    const auto lit = c->literals[0];
+    const auto other = c->literals[1];
+    if (abs (lit) < abs (other)) {
+      substitute_connected_clauses (sweeper, -other, lit, c->id);
+    } else {
+      substitute_connected_clauses (sweeper, -lit, other, c->id);
+    }
+  }
+  sweeper.binaries.clear ();
+}
+
 void Internal::sweep_remove (Sweeper &sweeper, int lit) {
   assert (sweeper.reprs[lit] != lit);
   vector<int> &partition = sweeper.partition;
@@ -1299,43 +1271,29 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   // if kitten behaves as expected, id should be at sweeper.core[0].back ()
   add_core (sweeper, 0);
   add_core (sweeper, 1);
-  uint64_t id1 = INVALID64;
-  uint64_t id2 = INVALID64;
   if (!val (lit) && !val (other)) {
     assert (sweeper.core[0].size ());
-    id1 = add_sweep_binary (sweeper.core[0].back (), lit, not_other);
     assert (sweeper.core[1].size ());
-    id2 = add_sweep_binary (sweeper.core[1].back (), not_lit, other);
+    Clause *bin1 = add_sweep_binary (sweeper.core[0].back (), lit, not_other);
+    Clause *bin2 = add_sweep_binary (sweeper.core[1].back (), not_lit, other);
+    if (bin1 && bin2) {
+      sweeper.binaries.push_back (bin1);
+      sweeper.binaries.push_back (bin2);
+    }
   }
 
   int repr;
-  if (lit < other) {
+  if (abs (lit) < abs (other)) {
     repr = sweeper.reprs[other] = lit;
     sweeper.reprs[not_other] = not_lit;
-    // substitute_connected_clauses (sweeper, other, lit, id1);
-    // substitute_connected_clauses (sweeper, not_other, not_lit, id2);
     sweep_remove (sweeper, other);
   } else {
     repr = sweeper.reprs[lit] = other;
     sweeper.reprs[not_lit] = not_other;
-    // substitute_connected_clauses (sweeper, lit, other, id2);
-    // substitute_connected_clauses (sweeper, not_lit, not_other, id1);
     sweep_remove (sweeper, lit);
-  }
-  if (!val (lit) && !val (other)) {
-    if (id1 == sweeper.core[0].back ().cad_id)
-      id1 = INVALID64;
-    if (id2 == sweeper.core[1].back ().cad_id)
-      id2 = INVALID64;
   }
   clear_core (sweeper, 0);
   clear_core (sweeper, 1);
-  /*
-  if (id1 != INVALID64)
-    delete_sweep_binary (id1, lit, not_other);
-  if (id2 != INVALID64)
-    delete_sweep_binary (id2, not_lit, other);
-    */
 
   const int repr_idx = abs (repr);
   schedule_inner (sweeper, repr_idx);
@@ -1521,6 +1479,8 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
 DONE:
   clear_sweeper (sweeper);
 
+  if (!unsat)
+    sweep_substitute_new_equivalences (sweeper);
   if (!unsat)
     sweep_dense_propagate (sweeper);
 
