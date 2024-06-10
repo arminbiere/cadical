@@ -422,7 +422,7 @@ void Stats::print (Internal *internal) {
          relative (stats.decompositions, stats.probingphases));
   }
   if (all || stats.sweep_equivalences) {
-    PRT ("sweep equiv:     %15" PRId64 "   %10.2f %%  of swept variables",
+    PRT ("sweep equivs:    %15" PRId64 "   %10.2f %%  of swept variables",
          stats.sweep_equivalences, percent (stats.sweep_equivalences, stats.sweep_variables));
     PRT ("  sweepings:     %15" PRId64 "   %10.2f    vars per sweeping",
       stats.sweep, relative (stats.sweep_variables, stats.sweep));
