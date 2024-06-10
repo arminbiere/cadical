@@ -29,6 +29,7 @@ struct Gate {
   bool indexed : 1;
   bool marked : 1;
   unsigned arity : LD_MAX_ARITY;
+  std::vector<uint64_t> ids;
   std::vector<int>rhs;
 
   bool operator == (Gate const& lhs)
@@ -50,6 +51,12 @@ struct Hash {
   }
 };
 
+struct GateEqualTo {
+  bool operator()(const Gate *const lhs, const Gate *const rhs) const 
+  {
+    return lhs->rhs == rhs->rhs;
+  }
+};
 struct Closure {
     
   Closure (Internal *i) : internal (i) {}
@@ -57,22 +64,24 @@ struct Closure {
   std::vector<Clause *> binaries;
 
   std::vector<bool> scheduled;
+  std::vector<signed char> marks;
 
   
   std::vector<int> representative; // union-find
   int find_representative(int lit) const;
+  void add_binary_clause (int a, int b);
 
   std::vector<int> lits; // result of definitions
   std::vector<int> rhs; // stack for storing RHS
   
-  void init_closure(Closure&);
+  void init_closure();
   void extract_and_gates (Closure&);
   void extract_gates (Closure&);
-  std::unordered_set<Gate*, Hash> table;
+  std::unordered_set<Gate*, Hash, GateEqualTo> table;
   void extract_and_gates_with_base_clause (Clause *c);
 
   Gate* find_and_lits (unsigned, unsigned);
-  bool merge_literals (Closure &closure, int lit, int other);
+  bool merge_literals (int lit, int other);
   void init_and_gate_extraction ();
   Gate* find_first_and_gate (int lhs);
   Gate *find_remaining_and_gate (int lhs);

@@ -4,9 +4,13 @@
 namespace CaDiCaL {
 
 signed char &Closure::marked (int lit){
-  return internal->marks[internal->vidx (lit)];
+  return marks[internal->vlit (lit)];
 }
-void init_closure (Closure &closure) {}
+void Closure::init_closure () {
+  representative.resize(internal->max_var+1);
+  for (int i = 0; i < representative.size(); ++i)
+    representative[i] = i;
+}
 
 Gate *Closure::find_and_lits (unsigned arity, unsigned) {
   unsigned hash = hash_lits (this->rhs);
@@ -22,8 +26,8 @@ Gate *Closure::find_and_lits (unsigned arity, unsigned) {
   }
 
   else {
-    table.insert (g);
-    return g;
+    LOG (this->rhs, "gate not found in table");
+    return nullptr;
   }
 }
 
@@ -49,7 +53,7 @@ void Closure::init_and_gate_extraction () {
 
 
 Gate *Closure::new_and_gate (int lhs) {
-  assert (rhs.empty()); // or clear like in kissat?
+  rhs.clear(); // or clear like in kissat?
   auto &lits = this->lits;
 
   for (auto lit : lits) {
@@ -61,28 +65,55 @@ Gate *Closure::new_and_gate (int lhs) {
   const unsigned arity = rhs.size();
   assert (arity + 1 == lits.size());
   Gate *g = find_and_lits (arity, 0);
+  if (g) {
+    if (merge_literals(g->lhs, lhs)) {
+      LOG ("found merged literals");
+    }
+  } else {
+    g = new Gate;
+    LOG ("setting %d as lhs", lhs);
+    g->lhs = lhs;
+    g->tag = Gate_Type::And_Gate;
+    g->arity = arity;
+    g->rhs = {rhs};
+    g->garbage = false;
+    g->indexed = true;
+    LOG (g->rhs, "inserting in table (%d)", table.size());
+    for (const auto it : table) {
+      LOG (it->rhs, "found in table");
+    }
+    table.insert(g);
+    
+
+  }
   return g;
 }
 
 Gate* Closure::find_first_and_gate (int lhs) {
+  assert (internal->analyzed.empty());
   const int not_lhs = -lhs;
   LOG ("trying to find AND gate with first LHS %d", (lhs));
-  LOG ("negated LHS %d occurs in %z binary clauses", (not_lhs), internal->occs (not_lhs));
+  LOG ("negated LHS %d occurs in %zd binary clauses", (not_lhs), internal->occs (not_lhs).size());
   unsigned matched = 0;
 
   const size_t arity = lits.size() - 1;
 
   for (auto c : internal->occs (not_lhs)) {
+    LOG (c, "checking clause for candidates");
     assert (c->size == 2);
     assert (c->literals[0] == -lhs || c->literals[1] == -lhs);
     const int other = c->literals[0] ^ c->literals[1] ^ not_lhs;
-    if (marked (other)) {
+    signed char &mark = marked (other);
+    if (mark) {
+      LOG ("marking %d mu2", other);
       ++matched;
-      assert (!internal->getbit (other, 2));
-      internal->setbit (other, 2);
+      assert (~ (mark & 2));
+      mark |= 2;
       internal->analyzed.push_back(other);
     }
   }
+  
+  LOG ("found %zd initial LHS candidates", internal->analyzed.size());
   if (matched < arity)
     return nullptr;
 
@@ -91,12 +122,43 @@ Gate* Closure::find_first_and_gate (int lhs) {
 
 int Closure::find_representative(int lit) const {
   int res = lit;
-  int nxt;
+  int nxt = lit;
   do {
+    assert (nxt < representative.size());
     res = nxt;
-    nxt = this->representative[nxt];
+    nxt = representative[nxt];
   } while (nxt != res);
   return res;
+}
+
+
+void Closure::add_binary_clause (int a, int b) {
+  if (internal->unsat)
+    return;
+  if (a == -b)
+    return;
+  const signed char a_value = internal->val (a);
+  const signed char b_value = internal->val (b);
+  if (b > 0)
+    return;
+  int unit = 0;
+  if (a == b)
+    unit = a;
+  else if (a_value < 0 && !b_value) {
+    unit = b;
+  } else if (!a_value && b_value < 0)
+    unit = a;
+  if (unit != 0) {
+    learn_congruence_unit(unit);
+    return;
+  }
+  assert (!a_value), assert (!b_value);
+  assert (internal->clause.empty());
+  internal->clause.push_back(a);
+  internal->clause.push_back(b);
+  internal->new_hyper_ternary_resolved_clause(false);
+  internal->clause.clear();
+  
 }
 
 bool Closure::learn_congruence_unit(int lit) {
@@ -114,7 +176,8 @@ bool Closure::learn_congruence_unit(int lit) {
   return !conflict;
 }
 
-bool Closure::merge_literals (Closure &closure, int lit, int other) {
+bool Closure::merge_literals (int lit, int other) {
+  LOG ("merging literals %d and %d", lit, other);
   int repr_lit = find_representative(lit);
   int repr_other = find_representative(other);
 
@@ -168,6 +231,10 @@ bool Closure::merge_literals (Closure &closure, int lit, int other) {
   }
 
   LOG ("merging %d and %d", lit, other);
+  add_binary_clause (-lit, other);
+  add_binary_clause (lit, -other);
+  // TODO propagate gates
+  
   // need i2u or something
   representative[lit] = smaller;
   return false;
@@ -177,22 +244,20 @@ Gate *Closure::find_remaining_and_gate (int lhs) {
   const unsigned not_lhs = -lhs;
 
   if (marked (not_lhs) < 2) {
-    LOG ("skipping no-candidate LHS %d", lhs);
+    LOG ("skipping no-candidate LHS %d (%d)", lhs, marked (not_lhs));
     return nullptr;
   }
 
   LOG ("trying to find AND gate with remaining LHS %d",  (lhs));
-  LOG ("negated LHS %s occurs times in %zd binary clauses", (not_lhs),
+  LOG ("negated LHS %d occurs times in %zd binary clauses", (not_lhs),
        internal->noccs(-lhs));
 
   const unsigned arity = lits.size() - 1;
   unsigned matched = 0;
   assert (1 < arity);
 
-  // TODO: use watch lists to have only binary clauses
   for (Clause *c : internal->occs (not_lhs) ) {
-    if (c->size != 2)
-      continue;
+    assert (c->size == 2);
     assert (c->literals[0] == not_lhs || c->literals[1] == not_lhs);
     const int other = c->literals[0] ^ c->literals[1] ^ not_lhs;
     signed char &mark = marked(other);
@@ -201,6 +266,7 @@ Gate *Closure::find_remaining_and_gate (int lhs) {
     ++matched;
     if (!(mark & 2))
       continue;
+    LOG ("marking %d mu3", other);
     assert (!(mark & 4));
     mark |= 4;
   }
@@ -209,7 +275,7 @@ Gate *Closure::find_remaining_and_gate (int lhs) {
     auto q = std::begin(internal->analyzed);
     for (auto lit : internal->analyzed) {
       signed char&mark = marked (lit);
-      assert (mark == 3);
+      assert (marked (not_lhs) == 3);
       if (lit == not_lhs) {
 	mark = 1;
         continue;
@@ -217,7 +283,7 @@ Gate *Closure::find_remaining_and_gate (int lhs) {
 
       assert ((mark & 3) == 3);
       if (mark & 4) {
-	internal->unsetbit(not_lhs, 2);
+	mark = 4;
 	*q = lit;
 	++q;
 	LOG ("keeping LHS candidate %d", -lit);
@@ -298,7 +364,8 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
   for (int i = 0; i < clause_size; ++i) {
     const int lit = lits[i];
     const unsigned count = internal->noccs (-lit);
-//    internal->mark67 (lit);
+    LOG ("marking %d mu1", -lit);
+    marked (-lit) = 1;
 //    internal->analyzed.push_back (lit);
     if (count < arity) {
       if (reduced < i) {
@@ -313,7 +380,8 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
   LOG (c, "trying as base arity %u AND gate", arity);
   sort (begin (lits), end (lits),
         [this] (int litA, int litB) {
-          return internal->noccs (-litA) < internal->noccs (-litB);
+          return (internal->noccs (-litA) < internal->noccs (-litB) ||
+		  (internal->noccs (-litA) == internal->noccs (-litB) && litA < litB));
         });
 
   bool first = true;
@@ -333,10 +401,10 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
       assert (internal->analyzed.empty ());
       if (find_first_and_gate (lhs) != nullptr) {
         ++extracted;
-      } else if (internal->analyzed.empty ()) {
+      }
+    } else if (internal->analyzed.empty ()) {
         LOG ("early abort AND gate search");
         break;
-      }
     } else if (find_remaining_and_gate (lhs)) {
       extracted++;
     }
@@ -356,7 +424,6 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
     assert (!internal->marked (-var));
   }
   internal->analyzed.clear();
-  COVER (extracted);
   if (extracted)
     LOG (c, "extracted %u with arity %u AND base", extracted, arity);
 }
@@ -370,10 +437,13 @@ void Closure::extract_and_gates () {
     assert (!internal->marked (var));
     assert (!internal->marked (-var));
   }
+  marks.resize (internal->max_var * 2 + 1);
   init_and_gate_extraction ();
 
   for (auto c : internal->clauses) {
     if (c->garbage)
+      continue;
+    if (c->size == 2)
       continue;
     if (c->hyper)
       continue;
@@ -398,6 +468,7 @@ void Internal::extract_gates () {
   init_occs();
   init_noccs();
 
+  closure.init_closure();
   closure.extract_and_gates ();
 
   reset_occs();
