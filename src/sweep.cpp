@@ -750,7 +750,7 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
 
     if (terminated_asynchronously ())
       break;
-    if (kitten_current_ticks (citten) + sweeper.current_ticks > sweeper.limit.ticks)
+    if (kitten_ticks_limit_hit (sweeper, "backbone flipping"))
       break;
   } while (flipped && round < max_rounds);
   LOG ("flipped %u backbone candidates in total in %u rounds",
@@ -1160,7 +1160,7 @@ void Internal::flip_partition_literals (Sweeper &sweeper) {
 
     if (terminated_asynchronously ())
       break;
-    if (kitten_current_ticks (citten) + sweeper.current_ticks > sweeper.limit.ticks)
+    if (kitten_ticks_limit_hit (sweeper, "partition flipping"))
       break;
   } while (flipped && round < max_rounds);
   LOG ("flipped %u equivalence candidates in total in %u rounds",
@@ -1682,7 +1682,7 @@ bool Internal::sweep () {
       break;
     if (terminated_asynchronously ())
       break;
-    if (kitten_current_ticks (citten) + sweeper.current_ticks > sweeper.limit.ticks)
+    if (kitten_ticks_limit_hit (sweeper, "sweeping loop"))
       break;
     int idx = next_scheduled (sweeper);
     if (idx == 0)
