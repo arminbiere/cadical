@@ -158,9 +158,9 @@ bool Closure::merge_literals (int lit, int other) {
   add_binary_clause (-lit, other);
   add_binary_clause (lit, -other);
   // TODO propagate gates
-  
-  // need i2u or something
+
   representative(lit) = smaller;
+  ++internal->stats.congruence.congruent;
   return false;
 }
 
@@ -271,6 +271,8 @@ Gate *Closure::new_and_gate (int lhs) {
     g->ids.push_back(marked_mu2(-lhs));
     g->ids.push_back(marked_mu4(-lhs));
     table.insert(g);
+    ++internal->stats.congruence.gates;
+    ++internal->stats.congruence.ands;
     
 
   }
@@ -622,10 +624,12 @@ void Internal::extract_gates () {
     return;
   }
 
+  const int64_t old = stats.congruence.congruent;
   const bool dedup = opts.deduplicate;
   opts.deduplicate = true;
   mark_duplicated_binary_clauses_as_garbage ();
   opts.deduplicate = dedup;
+  ++stats.congruence.rounds;
   reset_watches (); // saves lots of memory
   Closure closure (this);
   init_occs();
@@ -641,8 +645,11 @@ void Internal::extract_gates () {
   reset_noccs();
   init_watches ();
   connect_watches ();
+  
   if (!unsat && !propagate())
     unsat = true;
+
+  report('=', !opts.reportall && !(stats.congruence.congruent - old));
 }
   
 }

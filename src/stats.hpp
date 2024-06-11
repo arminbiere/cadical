@@ -256,6 +256,15 @@ struct Stats {
     int64_t subsumed;     // number of clauses subsumed by OTFS
   } otfs;
 
+  struct {
+    int64_t gates;
+    int64_t ands;
+    int64_t ites;
+    int64_t xors;
+    int64_t units;
+    int64_t congruent;
+    int64_t rounds;
+  } congruence;
   int64_t unused;   // number of unused variables
   int64_t active;   // number of active variables
   int64_t inactive; // number of inactive variables

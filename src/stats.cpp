@@ -542,6 +542,19 @@ void Stats::print (Internal *internal) {
     PRT ("  flipped:       %15" PRId64 "   %10.2f    per weakened",
          stats.extended, relative (stats.extended, stats.weakened));
   }
+  
+  if (all || stats.congruence.gates) {
+    PRT ("congruence:        %15" PRId64 "   %10.2f    interval",
+         stats.congruence.rounds, relative (stats.conflicts, stats.congruence.rounds));
+    PRT ("   and-gates:      %15" PRId64 "   %10.2f    per found gates",
+         stats.congruence.ands, relative (stats.congruence.ands, stats.congruence.gates));
+    PRT ("   ite-gates:      %15" PRId64 "   %10.2f    per found gates",
+         stats.congruence.ites, relative (stats.congruence.ites, stats.congruence.gates));
+    PRT ("   xor-gates:      %15" PRId64 "   %10.2f    per found gates",
+         stats.congruence.xors, relative (stats.congruence.xors, stats.congruence.gates));
+    PRT ("   congruent:      %15" PRId64 "   %10.2f    per round",
+         stats.congruence.congruent, relative (stats.congruence.rounds, stats.congruence.congruent));
+  }
 
   LINE ();
   MSG ("%sseconds are measured in %s time for solving%s",
