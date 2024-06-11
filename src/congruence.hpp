@@ -54,7 +54,7 @@ struct Hash {
 struct GateEqualTo {
   bool operator()(const Gate *const lhs, const Gate *const rhs) const 
   {
-    return lhs->rhs == rhs->rhs;
+    return lhs->rhs == rhs->rhs && lhs->tag == rhs->tag;
   }
 };
 struct Closure {
@@ -65,34 +65,61 @@ struct Closure {
 
   std::vector<bool> scheduled;
   std::vector<signed char> marks;
-
-  
-  std::vector<int> representative; // union-find
-  int find_representative(int lit) const;
-  void add_binary_clause (int a, int b);
+  std::vector<uint64_t> mu1_ids;
+  std::vector<uint64_t> mu2_ids;
+  std::vector<uint64_t> mu4_ids;
 
   std::vector<int> lits; // result of definitions
   std::vector<int> rhs; // stack for storing RHS
+
+
+  void unmark_all ();
+  std::vector<int> representant; // union-find
+  int & representative (int lit);
+  int representative (int lit) const;
+  int find_representative(int lit) const;
+  void add_binary_clause (int a, int b);
+  bool merge_literals (int lit, int other);
+
+  std::vector<uint64_t> lrat_chain;
+  void push_lrat_id (const Clause *const c);
+  void push_lrat_unit (int lit);
   
   void init_closure();
   void extract_and_gates (Closure&);
-  void extract_gates (Closure&);
+  void extract_gates ();
   std::unordered_set<Gate*, Hash, GateEqualTo> table;
   void extract_and_gates_with_base_clause (Clause *c);
 
   Gate* find_and_lits (unsigned, unsigned);
-  bool merge_literals (int lit, int other);
   void init_and_gate_extraction ();
   Gate* find_first_and_gate (int lhs);
   Gate *find_remaining_and_gate (int lhs);
   void extract_and_gates ();
+
+
+  
+  void extract_congruence ();
   
   Gate* new_and_gate(int);
 
   bool learn_congruence_unit(int unit);
 
+  void find_units();
+
+
+  
+
+  
   // we define our own wrapper as cadical has otherwise a non-compatible marking system
   signed char& marked (int lit);
+  void mu1 (int lit, Clause *c);
+  void mu2 (int lit, Clause *c);
+  void mu4 (int lit, Clause *c);
+  uint64_t marked_mu1(int lit);
+  uint64_t marked_mu2(int lit);
+  uint64_t marked_mu4(int lit);
+  
   // negbincount (lit) -> noccs (-lit)
 };
 
