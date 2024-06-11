@@ -128,7 +128,7 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
     }
     if (unsat)
       break;
-    
+
     // TODO maybe not necessary
     const Occs &ps = occs (lit);
     for (const auto &c : ps) {
@@ -224,7 +224,7 @@ void Internal::init_sweeper (Sweeper &sweeper) {
     limit -= last.sweep.propagations;
     limit *= opts.sweepeffort * 1e-3;
     if (limit < opts.sweepmineff) // TODO maybe these options
-      limit = opts.sweepmineff;        
+      limit = opts.sweepmineff;
     // if (limit > opts.sweepmaxeff)
     //   limit = opts.sweepmaxeff;
     int64_t ticks_limit = limit;   // propagations are not equal ticks
@@ -238,7 +238,7 @@ void Internal::release_sweeper (Sweeper &sweeper) {
 
   sweeper.reprs -= max_var;
   delete[] sweeper.reprs;
-  
+
   erase_vector (sweeper.depths);
   erase_vector (sweeper.prev);
   erase_vector (sweeper.next);
@@ -249,7 +249,7 @@ void Internal::release_sweeper (Sweeper &sweeper) {
   erase_vector (sweeper.prev_units);
   for (unsigned i = 0; i < 2; i++)
     erase_vector (sweeper.core[i]);
-  
+
   kitten_release (citten);
   citten = 0;
   sweep_sparse_mode ();
@@ -364,7 +364,7 @@ static void save_core_clause (void *state, unsigned id, bool learned, size_t siz
   Internal *internal = sweeper->internal;
   if (internal->unsat)
     return;
-  vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];  
+  vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];
   sweep_proof_clause pc;
   if (learned) {
     pc.sweep_id = INVALID;  // necessary
@@ -393,7 +393,7 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
   Internal *internal = sweeper->internal;
   if (internal->unsat)
     return;
-  vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];  
+  vector<sweep_proof_clause> &core = sweeper->core[sweeper->save];
   vector<Clause *> &clauses = sweeper->clauses;
   sweep_proof_clause pc;
   pc.kit_id = cid;
@@ -452,7 +452,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
 
     const unsigned new_size = pc.literals.size ();
 
-    
+
     if (lrat) {
       assert (pc.cad_id == INVALID64);
       for (auto & cid : pc.chain) {
@@ -572,7 +572,7 @@ void Internal::save_add_clear_core (Sweeper &sweeper) {
               BEGIN_STACK (sweeper.partition), MESSAGE)
 */
 
-              
+
 void Internal::init_backbone_and_partition (Sweeper &sweeper) {
   LOG ("initializing backbone and equivalent literals candidates");
   for (const auto & idx : sweeper.vars) {
@@ -809,7 +809,7 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
 Clause *Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) {
   if (unsat) return 0;  // should not really happen but possibly can
 
-  assert (!val (lit) && !val (other)); 
+  assert (!val (lit) && !val (other));
   if (val (lit) || val (other)) return 0;
 
   if (lrat) {
@@ -833,9 +833,9 @@ Clause *Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) {
 
 // mark all literals in sweeper.reprs which have been substituted
 // void Internal::mark_substituted_literals (Sweeper &sweeper) {
-//   
+//
 // }
-  
+
 bool Internal::scheduled_variable (Sweeper &sweeper, int idx) {
   return sweeper.prev[idx] != 0 || sweeper.first == idx;
 }
@@ -944,7 +944,7 @@ void Internal::sweep_substitute_lrat (Clause *c, uint64_t id) {
   IDX != 0 && (NEXT_##IDX = sweeper.next[IDX], true); \
   IDX = NEXT_##IDX
 
-  
+
 // id for lrat proofs
 void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr,
                                                    uint64_t id) {
@@ -1066,7 +1066,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr
 
 void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
   if (unsat) return;
-  
+
   for (auto c : sweeper.binaries) {
     assert (c->size == 2);
     const auto lit = c->literals[0];
@@ -1384,7 +1384,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
                             externalize (idx),
                             sweeper.vars.size (), sweeper.encoded,
                             depth);
-  
+
   int res;
   if (sweeper.vars.size () == 1) {
     LOG ("not sweeping literal %d with environment size 1", idx);
