@@ -117,6 +117,7 @@ void Internal::reactivate (int lit) {
   LOG ("reactivate previously %s %d", msg, abs (lit));
 #endif
   f.status = Flags::ACTIVE;
+  f.sweep = false;
   assert (active (lit));
   stats.reactivated++;
   assert (stats.inactive > 0);

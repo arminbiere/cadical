@@ -1590,11 +1590,12 @@ unsigned Internal::incomplete_variables () {
 
 void Internal::mark_incomplete (Sweeper &sweeper) {
   unsigned marked = 0;
-  for (all_scheduled (idx))
+  for (all_scheduled (idx)) {
     if (!flags (idx).sweep) {
       flags (idx).sweep = true;
       marked++;
     }
+  }
   sweep_incomplete = true;
 #ifndef QUIET
   VERBOSE (2,
