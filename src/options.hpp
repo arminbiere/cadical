@@ -180,12 +180,12 @@ OPTION( sweep,             1,  0,  1,0,1,1, "enable SAT sweeping") \
 OPTION( sweepclauses,   1024,  0,2e9,1,0,1, "environment clauses") \
 OPTION( sweepcomplete,     0,  0,  1,0,0,1, "run SAT sweeping to completion") \
 OPTION( sweepdepth,        2,  0,2e9,1,0,1, "environment depth") \
-OPTION( sweepeffort,     100,  0,1e5,0,0,1, "effort per mille") \
+OPTION( sweepeffort,     1e3,  0,1e6,0,0,1, "effort in ticks per mille") \
 OPTION( sweepfliprounds,   1,  0,2e9,1,0,1, "flipping rounds") \
 OPTION( sweepmaxclauses, 3e5,  2,2e9,1,0,1, "maximum environment clauses") \
 OPTION( sweepmaxdepth,     3,  1,2e9,1,0,1, "maximum environment depth") \
 OPTION( sweepmaxvars,   8192,  2,2e9,1,0,1, "maximum environment variables") \
-OPTION( sweepmineff,     2e4,  0,2e9,1,0,1, "minimum efficiency") \
+OPTION( sweepmineff,     2e5,  0,2e9,1,0,1, "minimum tick efficiency") \
 OPTION( sweeprand,         0,  0,  1,0,0,1, "randomize sweeping environment") \
 OPTION( sweepvars,       256,  0,2e9,1,0,1, "environment variables") \
 OPTION( target,            1,  0,  2,0,0,1, "target phases (1=stable only)") \

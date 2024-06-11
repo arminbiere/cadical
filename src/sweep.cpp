@@ -227,7 +227,7 @@ void Internal::init_sweeper (Sweeper &sweeper) {
       limit = opts.sweepmineff;        
     // if (limit > opts.sweepmaxeff)
     //   limit = opts.sweepmaxeff;
-    int64_t ticks_limit = limit * 5;   // propagations are not equal ticks
+    int64_t ticks_limit = limit;   // propagations are not equal ticks
     sweeper.limit.ticks = ticks_limit;
     last.sweep.propagations = stats.propagations.search;
   }
@@ -1266,7 +1266,6 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   save_core (sweeper, 1);
 
   LOG ("sweep equivalence %d = %d", lit, other);
-  stats.sweep_equivalences++;
 
   // if kitten behaves as expected, id should be at sweeper.core[0].back ()
   add_core (sweeper, 0);
@@ -1274,6 +1273,7 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   if (!val (lit) && !val (other)) {
     assert (sweeper.core[0].size ());
     assert (sweeper.core[1].size ());
+    stats.sweep_equivalences++;
     Clause *bin1 = add_sweep_binary (sweeper.core[0].back (), lit, not_other);
     Clause *bin2 = add_sweep_binary (sweeper.core[1].back (), not_lit, other);
     if (bin1 && bin2) {
