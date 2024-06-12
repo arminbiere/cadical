@@ -393,8 +393,6 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
   if (!size) {
     clause.clear ();
     LOG ("empty resolvent");
-    // TODO: lrat?? c or d (or both) should be sufficient.
-    // -> also need all unit ids (for negated lits in c and d)
     learn_empty_clause (); // already clears lrat_chain.
     return false;
   }
@@ -403,8 +401,6 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
     int unit = clause[0];
     LOG ("unit resolvent %d", unit);
     clause.clear ();
-    // TODO: lrat, prob c + d
-    // -> also need all unit ids (for negated lits in c and d)
     assign_unit (unit); // already clears lrat_chain.
     if (propagate_eagerly)
       elim_propagate (eliminator, unit);
@@ -439,7 +435,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
   if (s > size) {
     assert (s == size + 1);
     clause.clear ();
-    // TODO: LRAT is c + d (+ eventual units) -> not 100% sure.
+    // LRAT is c + d (+ eventual units)
     elim_on_the_fly_self_subsumption (eliminator, c, pivot);
     return false;
   }
@@ -449,13 +445,10 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
   if (t > size) {
     assert (t == size + 1);
     clause.clear ();
-    // TODO: LRAT is c + d (+ eventual units) -> same.
+    // LRAT is c + d (+ eventual units) -> same.
     elim_on_the_fly_self_subsumption (eliminator, d, -pivot);
     return false;
   }
-
-  // TODO: either clear lrat_chain or check what we do from here on out.
-  // if propagate_eagerly is true we want to clear lrat_chain, else leave it
   if (propagate_eagerly)
     lrat_chain.clear ();
   return true;
