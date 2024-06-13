@@ -7,23 +7,14 @@ namespace CaDiCaL {
 // functions below are passed to kitten
 //
 struct definition_extractor {
-  unsigned lit;
-  Eliminator *eliminator;
-  vector<Clause*> clauses[2];
-};
-
-struct lemma_extractor {
-  Eliminator *eliminator;
-  Internal *internal;
-  int unit;
-};
-
-struct lrat_extractor {
   Eliminator *eliminator;
   Internal *internal;
   vector<Clause*> clauses[2];
+  int lit;
+  vector<vector<int>> implicants;
   int unit;
 };
+
 
 extern "C" {
 
@@ -32,19 +23,26 @@ extern "C" {
 static void traverse_definition_core (void *state, unsigned id) {
   definition_extractor *extractor = (definition_extractor *) state;
   Clause *clause;
-  vector<Clause*> clauses0 = extractor->clauses[0];
-  vector<Clause*> clauses1 = extractor->clauses[1];
+  const vector<Clause*> &clauses0 = extractor->clauses[0];
+  const vector<Clause*> &clauses1 = extractor->clauses[1];
   Eliminator *eliminator = extractor->eliminator;
   const size_t size_clauses0 = clauses0.size ();
+  const size_t size_clauses1 = clauses1.size ();
   assert (size_clauses0 <= UINT_MAX);
   unsigned sign;
+  if (id >= size_clauses0 + size_clauses1) {
+    unsigned tmp = id - size_clauses0 - size_clauses1;
+    assert (tmp < extractor->implicants.size ());
+    eliminator->definition_unit |= 3;
+    eliminator->prime_gates.push_back (extractor->implicants[tmp]);
+    return;
+  }
   if (id < size_clauses0) {
     clause = clauses0[id];
     sign = 1;
   } else {
     unsigned tmp = id - size_clauses0;
 #ifndef NDEBUG
-    const size_t size_clauses1 = clauses1.size ();
     assert (size_clauses1 <= UINT_MAX);
     assert (tmp < size_clauses1);
 #endif
@@ -63,7 +61,7 @@ static void traverse_one_sided_core_lemma (void *state, bool learned,
                                            const unsigned *lits) {
   if (!learned)
     return;
-  lemma_extractor *extractor = (lemma_extractor *) state;
+  definition_extractor *extractor = (definition_extractor *) state;
   Eliminator *eliminator = extractor->eliminator;
   Internal *internal = extractor->internal;
   Proof *proof = internal->proof;
@@ -88,23 +86,19 @@ static void traverse_one_sided_core_lemma (void *state, bool learned,
   }
 }
 
-static int citten_terminate (void *data) {
-  return ((Terminator *) data)->terminate ();
-}
-
 // extract lrat proofs for relevant clauses
 //
 static void traverse_one_sided_core_lemma_with_lrat (void *state, unsigned cid,
                                                       unsigned id, bool learned,
                                            size_t size, const unsigned *lits,
                                            size_t chain_size, const unsigned *chain) {
-  lrat_extractor *extractor = (lrat_extractor *) state;
+  definition_extractor *extractor = (definition_extractor *) state;
   Eliminator *eliminator = extractor->eliminator;
   Internal *internal = extractor->internal;
   Proof *proof = internal->proof;
   const int unit = extractor->unit;
-  vector<Clause*> clauses0 = extractor->clauses[0];
-  vector<Clause*> clauses1 = extractor->clauses[1];
+  const vector<Clause*> &clauses0 = extractor->clauses[0];
+  const vector<Clause*> &clauses1 = extractor->clauses[1];
   vector<proof_clause> &proof_clauses = eliminator->proof_clauses;
   if (!learned) {  // remember clauses for mapping to kitten internal
     assert (size);
@@ -175,6 +169,46 @@ static void traverse_one_sided_core_lemma_with_lrat (void *state, unsigned cid,
   }
 }
 
+static bool ignore_negative (void *state, unsigned id) {
+  definition_extractor *extractor = (definition_extractor *) state;
+  const vector<Clause*> &clauses0 = extractor->clauses[0];
+  const size_t size_clauses0 = clauses0.size ();
+  assert (size_clauses0 <= UINT_MAX);
+  const vector<Clause*> &clauses1 = extractor->clauses[1];
+  const size_t size_clauses1 = clauses1.size ();
+  if (id >= size_clauses0 + size_clauses1) {
+    unsigned tmp = id - size_clauses0 - size_clauses1;
+    assert (tmp < extractor->implicants.size ());
+    return extractor->implicants[tmp][0] == extractor->lit;
+  }
+  if (id < size_clauses0)
+    return true;
+#ifndef NDEBUG
+  unsigned tmp = id - size_clauses0;
+  assert (size_clauses1 <= UINT_MAX);
+  assert (tmp < size_clauses1);
+#endif
+  return false;
+}
+
+static void add_implicant (void *state, int side, size_t size,
+                                const unsigned *lits) {
+  definition_extractor *extractor = (definition_extractor *) state;
+  // really ignore all implicants TODO: maybe logging or blocked clause proof
+  // for units
+  const unsigned id = extractor->clauses[0].size () + extractor->clauses[1].size ()
+                                                 + extractor->implicants.size ();
+  vector<int> implicant;
+  const int pivot = extractor->lit;
+  implicant.push_back (side ? -pivot : pivot);
+  const auto end = lits + size;
+  for (auto q = lits; q != end; q++) {
+    implicant.push_back (extractor->internal->citten2lit (*q));
+  }
+  extractor->implicants.push_back (implicant);
+  kitten_clause_with_id_and_exception (extractor->internal->citten, id, size, lits, INVALID); 
+}
+
 } // end extern C
 
 
@@ -196,26 +230,21 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
   assert (!val (lit));
   assert (!level);
   assert (citten);
-  kitten_clear (citten);
   const int not_lit = -lit;
   definition_extractor extractor;
-  extractor.lit = lit2citten (lit); // here the conversion happens.
+  extractor.lit = lit;
   extractor.clauses[0] = occs (lit);
   extractor.clauses[1] = occs (not_lit);
   extractor.eliminator = &eliminator;
-#ifdef LOGGING
-  if (opts.log)
-    kitten_set_logging (citten);
-#endif
-  kitten_track_antecedents (citten);
-  if (external->terminator)
-    kitten_set_terminator (citten, external->terminator, citten_terminate);
+  extractor.internal = internal;
+  citten_clear_track_log_terminate ();
   unsigned exported = 0;
   for (unsigned sign = 0; sign < 2; sign++) {
     const unsigned except = sign ? lit2citten (not_lit) : lit2citten (lit);
     for (auto c : extractor.clauses[sign]) {
       // to avoid copying the literals of c in their unsigned
       // representation we instead implement the translation in kitten
+      LOG (c, "adding to kitten");
       if (!c->garbage) 
         citten_clause_with_id_and_exception (citten, exported, c->size,
                                              c->literals, except);
@@ -225,6 +254,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
   stats.definitions_checked++;
   const size_t limit = opts.elimdefticks;
   kitten_set_ticks_limit (citten, limit);
+BEGIN:
   int status = kitten_solve (citten);
   if (status == 20) {
     LOG ("sub-solver result UNSAT shows definition exists");
@@ -270,19 +300,11 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
                   "failed literal");
       if (proof) {
         if (lrat) {
-          lrat_extractor extractor;
           extractor.unit = unit;
-          extractor.eliminator = &eliminator;
-          extractor.internal = internal;
-          extractor.clauses[0] = occs (lit);
-          extractor.clauses[1] = occs (not_lit);
           kitten_trace_core (citten, &extractor,
                               traverse_one_sided_core_lemma_with_lrat);
         } else {
-          lemma_extractor extractor;
           extractor.unit = unit;
-          extractor.eliminator = &eliminator;
-          extractor.internal = internal;
           kitten_traverse_core_clauses (citten, &extractor,
                                         traverse_one_sided_core_lemma);
         }
@@ -290,6 +312,12 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
         assign_unit (unit);
       elim_propagate (eliminator, unit);
     }
+  } else if (status == 10 && opts.elimdefprime) {
+    stats.definition_prime++;
+    int side = kitten_compute_prime_implicant (citten, &extractor, ignore_negative);
+    if (side == -1) goto ABORT;
+    kitten_add_prime_implicant (citten, &extractor, side, add_implicant);
+    goto BEGIN;
   } else {
   ABORT:
     LOG ("sub-solver failed to show that definition exists");

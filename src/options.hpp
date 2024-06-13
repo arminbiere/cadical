@@ -77,6 +77,7 @@ OPTION( elimciteqticks,  1e6,  0,2e9,0,0,1, "kitten ticks limit") \
 OPTION( elimclslim,      1e2,  2,2e9,2,0,1, "resolvent size limit") \
 OPTION( elimdef,           1,  0,  1,0,0,1, "mine definitions with kitten") \
 OPTION( elimdefcores,      2,  1,100,0,0,1, "number of unsat cores") \
+OPTION( elimdefprime,      1,  0,  1,0,0,1, "add blocking clauses to find definitions") \
 OPTION( elimdefticks,    1e6,  0,2e9,1,0,1, "kitten ticks limit") \
 OPTION( elimequivs,        1,  0,  1,0,0,1, "find equivalence gates") \
 OPTION( elimineff,       1e7,  0,2e9,1,0,1, "minimum elimination efficiency") \

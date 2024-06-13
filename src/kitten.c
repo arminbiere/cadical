@@ -184,6 +184,7 @@ struct kitten {
   unsigneds resolved;
   unsigneds trail;
   unsigneds units;
+  unsigneds prime[2];
 
   kimits limits;
   int (*terminator) (void *);
@@ -549,6 +550,8 @@ static const char *status_to_string (int status) {
   switch (status) {
   case 10:
     return "formula satisfied";
+  case 11:
+    return "formula satisfied and prime implicant computed";
   case 20:
     return "formula inconsistent";
   case 21:
@@ -906,6 +909,8 @@ void kitten_clear (kitten *kitten) {
   CLEAR_STACK (kitten->trail);
   CLEAR_STACK (kitten->units);
   CLEAR_STACK (kitten->clause);
+  CLEAR_STACK (kitten->prime[0]);
+  CLEAR_STACK (kitten->prime[1]);
 
   for (all_kits (kit))
     CLEAR_STACK (KATCHES (kit));
@@ -941,6 +946,8 @@ void kitten_release (kitten *kitten) {
   RELEASE_STACK (kitten->trail);
   RELEASE_STACK (kitten->units);
   RELEASE_STACK (kitten->clause);
+  RELEASE_STACK (kitten->prime[0]);
+  RELEASE_STACK (kitten->prime[1]);
 
   for (size_t lit = 0; lit < kitten->size; lit++)
     RELEASE_STACK (kitten->watches[lit]);
@@ -1139,6 +1146,7 @@ void completely_backtrack_to_root_level (kitten *kitten) {
   LOG ("completely backtracking to level 0");
   value *values = kitten->values;
   unsigneds *trail = &kitten->trail;
+  unsigneds *units = &kitten->units;
 #ifndef NDEBUG
   kar *vars = kitten->vars;
 #endif
@@ -1147,6 +1155,15 @@ void completely_backtrack_to_root_level (kitten *kitten) {
     unassign (kitten, values, lit);
   }
   CLEAR_STACK (*trail);
+  for (all_stack (unsigned, ref, *units)) {
+    klause *c = dereference_klause (kitten, ref);
+    assert (c->size == 1);
+    const unsigned unit = c->lits[0];
+    const value value = values[unit];
+    if (value <= 0)
+      continue;
+    unassign (kitten, values, unit);
+  }
   kitten->propagated = 0;
   kitten->level = 0;
   check_queue (kitten);
@@ -1620,8 +1637,8 @@ static void reset_assumptions (kitten *kitten) {
 }
 
 static void reset_incremental (kitten *kitten) {
-  if (kitten->level)
-    completely_backtrack_to_root_level (kitten);
+  //if (kitten->level)
+  completely_backtrack_to_root_level (kitten);
   if (!EMPTY_STACK (kitten->assumptions))
     reset_assumptions (kitten);
   else
@@ -1834,7 +1851,7 @@ int kitten_solve (kitten *kitten) {
   REQUIRE_INITIALIZED ();
   if (kitten->status)
     reset_incremental (kitten);
-  else if (kitten->level)
+  else // if (kitten->level)
     completely_backtrack_to_root_level (kitten);
 
   LOG ("starting solving under %zu assumptions",
@@ -1961,7 +1978,8 @@ void kitten_traverse_core_ids (kitten *kitten, void *state,
   unsigned traversed = 0;
 
   for (all_original_klauses (c)) {
-    assert (!is_learned_klause (c));
+    // only happens for 'true' incremental calls, i.e. if add happens after solve
+    if (is_learned_klause (c)) continue;
     if (!is_core_klause (c))
       continue;
     ROG (reference_klause (kitten, c), "traversing");
@@ -2127,7 +2145,7 @@ void kitten_shrink_to_clausal_core (kitten *kitten) {
 #endif
   for (klause *c = begin, *next; c != end; c = next) {
     next = next_klause (kitten, c);
-    assert (!is_learned_klause (c));
+    // assert (!is_learned_klause (c)); not necessarily true
     if (is_learned_klause (c))
       continue;
     if (!is_core_klause (c))
@@ -2135,21 +2153,21 @@ void kitten_shrink_to_clausal_core (kitten *kitten) {
     unset_core_klause (c);
     const unsigned dst = (unsigned *) q - (unsigned *) begin;
     const unsigned size = c->size;
-    if (!size) {
-      if (!kitten->inconsistent)
-        kitten->inconsistent = dst;
-    } else if (size == 1)
-      PUSH_STACK (kitten->units, dst);
-    else {
-      watch_klause (kitten, c->lits[0], dst);
-      watch_klause (kitten, c->lits[1], dst);
-    }
     if (c == q)
       q = next;
     else {
       const size_t bytes = (char *) next - (char *) c;
       memmove (q, c, bytes);
       q = (klause *) ((char *) q + bytes);
+    }
+    if (!size) {
+      if (kitten->inconsistent != INVALID)
+        kitten->inconsistent = dst;
+    } else if (size == 1)
+      PUSH_STACK (kitten->units, dst);
+    else {
+      watch_klause (kitten, c->lits[0], dst);
+      watch_klause (kitten, c->lits[1], dst);
     }
 #ifdef LOGGING
     original++;
@@ -2240,4 +2258,156 @@ bool kitten_failed (kitten *kitten, unsigned elit) {
     return false;
   const unsigned ilit = 2 * (iidx - 1) + (elit & 1);
   return kitten->failed[ilit];
+}
+
+// checks both watches for clauses with only one literal positively assigned.
+// if such a clause is found, return false.
+// Otherwise fix watch invariant and return true
+static bool kitten_prime_propagate (kitten *kitten, const unsigned idx,
+      void *state, const bool ignoring, bool (*ignore) (void *, unsigned)) {
+  unsigned lit = 2 * idx;
+  unsigned conflict = INVALID;
+  value *values = kitten->values;
+  for (int i = 0; i < 2; i++) {
+    if (conflict != INVALID) break;
+    lit = lit ^ i;
+    const unsigned not_lit = lit ^ 1;
+    katches *watches = kitten->watches + not_lit;
+    unsigned *q = BEGIN_STACK (*watches);
+    const unsigned *const end_watches = END_STACK (*watches);
+    unsigned const *p = q;
+    uint64_t ticks = (((char *) end_watches - (char *) q) >> 7) + 1;
+    while (p != end_watches) {
+      const unsigned ref = *q++ = *p++;
+      klause *c = dereference_klause (kitten, ref);
+      if (is_learned_klause (c) || ignore (state, c->aux) == ignoring)
+        continue;
+      assert (c->size > 1);
+      unsigned *lits = c->lits;
+      const unsigned other = lits[0] ^ lits[1] ^ not_lit;
+      const value other_value = values[other];
+      ticks++;
+      if (other_value > 0)
+        continue;
+      value replacement_value = -1;
+      unsigned replacement = INVALID;
+      const unsigned *const end_lits = lits + c->size;
+      unsigned *r;
+      for (r = lits + 2; r != end_lits; r++) {
+        replacement = *r;
+        replacement_value = values[replacement];
+        if (replacement_value > 0)
+          break;
+      }
+      if (replacement_value > 0) {
+        assert (replacement != INVALID);
+        ROG (ref, "unwatching %u in", not_lit);
+        lits[0] = other;
+        lits[1] = replacement;
+        *r = not_lit;
+        watch_klause (kitten, replacement, ref);
+        q--;
+      } else {
+        ROG (ref, "idx %u forced prime by", idx);
+        conflict = ref;
+        break;
+      }
+    }
+    while (p != end_watches)
+      *q++ = *p++;
+    SET_END_OF_STACK (*watches, q);
+    ADD (kitten_ticks, ticks);
+  }
+  return conflict == INVALID;
+}
+
+void kitten_add_prime_implicant (kitten *kitten, void *state, int side,
+                              void (*add_implicant) (void *, int,
+                                  size_t, const unsigned *)) {
+  REQUIRE_STATUS (11);
+  // might be possible in some edge cases
+  unsigneds *prime = &kitten->prime[side];
+  unsigneds *prime2 = &kitten->prime[!side];
+  assert (!EMPTY_STACK (*prime));
+  CLEAR_STACK (*prime2);
+  
+  for (all_stack (unsigned, lit, *prime)) {
+    const unsigned not_lit = lit ^ 1;
+    const unsigned elit = export_literal (kitten, not_lit);
+    PUSH_STACK (*prime2, elit);
+  }
+  
+  // adds a clause which will reset kitten status and backtrack
+  add_implicant (state, side, SIZE_STACK (*prime2), BEGIN_STACK (*prime2));
+  CLEAR_STACK (*prime);
+  CLEAR_STACK (*prime2);
+}
+
+// this might not work if you call flip before.
+// computes two prime implicants, only considering clauses based on ignore
+// return -1 if no prime implicant has been computed, otherwise returns index
+// of shorter implicant.
+int kitten_compute_prime_implicant (kitten *kitten, void *state,
+                                    bool (*ignore) (void *, unsigned)) {
+  REQUIRE_STATUS (10);
+
+  value *values = kitten->values;
+  kar *vars = kitten->vars;
+  unsigneds unassigned;
+  INIT_STACK (unassigned);
+  bool limit_hit = 0;
+  assert (EMPTY_STACK (kitten->prime[0]) && EMPTY_STACK (kitten->prime[1]));
+  for (int i = 0; i < 2; i++) {
+    const bool ignoring = i;
+    for (all_stack (unsigned, lit, kitten->trail)) {
+      if (KITTEN_TICKS >= kitten->limits.ticks) {
+        LOG ("ticks limit %" PRIu64 " hit after %" PRIu64 " ticks",
+             kitten->limits.ticks, KITTEN_TICKS);
+        limit_hit = 1;
+        break;
+      }
+      assert (values[lit] > 0);
+      const unsigned idx = lit / 2;
+      const unsigned ref = vars[idx].reason;
+      assert (vars[idx].level);
+      klause *c = 0;
+      if (ref != INVALID) c = dereference_klause (kitten, ref);
+      if (ref == INVALID || is_learned_klause (c) || ignore (state, c->aux) == ignoring) {
+        LOG ("non-prime candidate var %d", idx);
+        if (kitten_prime_propagate (kitten, idx, state, ignoring, ignore)) {
+          values[lit] = 0;
+          values[lit ^ 1] = 0;
+          PUSH_STACK (unassigned, lit);
+        } else
+          assert (values[lit] > 0);
+      }
+    }
+    unsigneds *prime = &kitten->prime[i];
+    // push on prime implicant stack.
+    for (all_kits (lit)) {
+      if (values[lit] > 0)
+        PUSH_STACK (*prime, lit);
+    }
+    // reassign all literals on 
+    for (all_stack (unsigned, lit, unassigned)) {
+      assert (!values[lit]);
+      values[lit] = 1;
+      values[lit ^ 1] = -1;
+    }
+    CLEAR_STACK (unassigned);
+  }
+  RELEASE_STACK (unassigned);
+
+  if (limit_hit) {
+    CLEAR_STACK (kitten->prime[0]);
+    CLEAR_STACK (kitten->prime[1]);
+    return -1;
+  }
+  // the only case when one of the prime implicants is allowed to be empty is
+  // if ignore returns always true or always false. 
+  assert (!EMPTY_STACK (kitten->prime[0]) || !EMPTY_STACK (kitten->prime[1]));
+  UPDATE_STATUS (11);
+
+  int res = SIZE_STACK (kitten->prime[0]) > SIZE_STACK (kitten->prime[1]);
+  return res;
 }

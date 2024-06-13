@@ -85,9 +85,6 @@ static void traverse_core_lemma (void *state, bool learned,
   }
 }
 
-static int citten_terminate (void *data) {
-  return ((Terminator *) data)->terminate ();
-}
 
 // extract lrat proofs for relevant clauses
 //
@@ -176,20 +173,13 @@ static void traverse_core_lemma_with_lrat (void *state, unsigned cid,
 } // end extern C
 
 bool Internal::find_next_eq (Eliminator &eliminator, int pivot, int best) {
-  kitten_clear (citten);
   equivalence_extractor extractor;
   extractor.pivot = lit2citten (pivot); // here the conversion happens.
   extractor.other = lit2citten (best); // here the conversion happens.
   extractor.clauses[0] = occs (-pivot);
   extractor.clauses[1] = occs (-best);
   extractor.eliminator = &eliminator;
-#ifdef LOGGING
-  if (opts.log)
-    kitten_set_logging (citten);
-#endif
-  kitten_track_antecedents (citten);
-  if (external->terminator)
-    kitten_set_terminator (citten, external->terminator, citten_terminate);
+  citten_clear_track_log_terminate ();
   unsigned exported = 0;
   for (unsigned sign = 0; sign < 2; sign++) {
     for (auto c : extractor.clauses[sign]) {

@@ -176,6 +176,9 @@ void Stats::print (Internal *internal) {
     PRT ("  def units:     %15" PRId64 "   %10.2f %%  per checked",
          stats.definition_units,
          percent (stats.definition_units, stats.definitions_checked));
+    PRT ("  def prime:     %15" PRId64 "   %10.2f %%  per checked",
+         stats.definition_prime,
+         percent (stats.definition_prime, stats.definitions_checked));
   }
   if (all || stats.ext_prop.ext_cb) {
     PRT ("ext.prop. calls: %15" PRId64 "   %10.2f %%  of queries",

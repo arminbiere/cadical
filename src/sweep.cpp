@@ -169,11 +169,7 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   sweeper.current_ticks = 0;
   assert (!citten);
   citten = kitten_init ();
-  kitten_track_antecedents (citten);
-#ifdef LOGGING
-  if (opts.log)
-    kitten_set_logging (citten);
-#endif
+  citten_clear_track_log_terminate ();
 
   sweep_dense_mode_and_watch_irredundant (); // full occurence list
 
@@ -259,12 +255,8 @@ void Internal::release_sweeper (Sweeper &sweeper) {
 void Internal::clear_sweeper (Sweeper &sweeper) {
   LOG ("clearing sweeping environment");
   sweeper.current_ticks += kitten_current_ticks (citten);
-  kitten_clear (citten);
-  kitten_track_antecedents (citten);
-#ifdef LOGGING
-  if (opts.log)
-    kitten_set_logging (citten);
-#endif
+
+  citten_clear_track_log_terminate ();
   for (auto & idx : sweeper.vars) {
     assert (sweeper.depths[idx]);
     sweeper.depths[idx] = 0;
@@ -428,7 +420,25 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
   core.push_back (pc);
 }
 
+
+static int citten_terminate (void *data) {
+  return ((Terminator *) data)->terminate ();
+}
+
 } // end extern C
+
+
+void Internal::citten_clear_track_log_terminate () {
+  assert (citten);
+  kitten_clear (citten);
+  kitten_track_antecedents (citten);
+  if (external->terminator)
+    kitten_set_terminator (citten, external->terminator, citten_terminate);
+#ifdef LOGGING
+  if (opts.log)
+    kitten_set_logging (citten);
+#endif
+}
 
 void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
   if (unsat)

@@ -1025,6 +1025,7 @@ struct Internal {
   void find_definition (Eliminator &, int);
   void init_citten ();
   void reset_citten ();
+  void citten_clear_track_log_terminate ();
 
   // mine equivalences
   void find_citten_eq (Eliminator &, int);

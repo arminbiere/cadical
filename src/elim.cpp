@@ -647,6 +647,7 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
 
   if (substitute)
     assert (pushed <= substitute);
+  // TODO also add eliminator.prime_gates to the extension stack.... IDs?
 
   // Unfortunately, we can not use the trick by Niklas Soerensson anymore,
   // which avoids saving all clauses on the extension stack.  This would
