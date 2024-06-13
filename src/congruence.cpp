@@ -1,5 +1,6 @@
 #include "congruence.hpp"
 #include "internal.hpp"
+#include <iterator>
 
 namespace CaDiCaL {
 
@@ -165,6 +166,12 @@ bool Closure::merge_literals (int lit, int other) {
 }
 
 /*------------------------------------------------------------------------*/
+GOccs &Closure::goccs (int lit) { return gtab[internal->vlit (lit)]; }
+
+void Closure::connect_goccs (Gate *g, int lit) {
+  goccs (lit).push_back (g);
+}
+/*------------------------------------------------------------------------*/
 // Initialization
 
 void Closure::init_closure () {
@@ -201,17 +208,118 @@ void Closure::init_and_gate_extraction () {
 
 
 /*------------------------------------------------------------------------*/
+// Simplification
+bool Closure::skip_and_gate(Gate *g) {
+  assert (g->tag == Gate_Type::And_Gate);
+  if (g->garbage)
+    return true;
+  const int lhs = g->lhs;
+  if (internal->val(lhs) > 0) {
+    LOG ("marking gate as garbage");
+    g->garbage = true;
+    return true;
+  }
+
+  assert (g->arity > 1);
+  return false;
+}
+
+void Closure::shrink_and_gate(Gate *g, int falsifies, int clashing) {
+  if (falsifies) {
+    g->rhs[0] = falsifies;
+    g->rhs.resize(1);
+  } else if (clashing) {
+    g->rhs[0] = clashing;
+    g->rhs[1] = -clashing;
+    g->rhs.resize(2);
+  }
+}
+
+
+void Closure::update_and_gate(Gate *g, int falsifies, int clashing) {
+  bool garbage = true;
+  if (falsifies || clashing) {
+    learn_congruence_unit (-g->lhs);
+  } else if (g->arity == 1) {
+    const signed char v = internal->val (g->lhs);
+    if (v > 0)
+      learn_congruence_unit (g->rhs[0]);
+    else if (v < 0)
+      learn_congruence_unit (-g->rhs[0]);
+    else if (merge_literals(g->lhs, g->rhs[0])) {
+      // unary stats
+    }
+    else {
+      Gate *h = find_and_lits(g->arity, g->rhs);
+      if (h) {
+	if (merge_literals(g->lhs, h->lhs))
+	  ++internal->stats.congruence.ands;
+	else {
+	  // TODO remove gate
+	  
+	}
+	
+      }
+    }
+    
+  }
+}
+void Closure::simplify_and_gate (Gate *g) {
+  if (skip_and_gate (g))
+    return;
+
+  LOG (g->rhs, "simplifying gate %d =", g->lhs);
+  int falsifies = 0;
+  auto it = std::begin(g->rhs);
+  for (auto lit : g->rhs) {
+    const signed char v = internal->val (lit);
+    if (v > 0)
+      continue;
+    if (v < 0) {
+      falsifies = lit;
+      continue;
+    }
+    *it++ = lit;
+  }
+
+  if (std::end(g->rhs) != it){
+    g->shrunken = true;
+    g->rhs.resize(std::end(g->rhs) - it);
+    LOG (g->rhs, "shrunken gate %d =", g->lhs);
+  }
+  shrink_and_gate(g, falsifies);
+  update_and_gate(g, falsifies);
+}
+bool Closure::simplify_gate (Gate *g) {
+  switch (g->tag) {
+  case Gate_Type::And_Gate:
+    simplify_and_gate (g);
+  default:
+    assert (false);
+  }
+
+  return !internal->unsat;
+  
+}
+
+bool Closure::simplify_gates (int lit) {
+  for (auto g : goccs (lit)) {
+    if (!simplify_gate (g))
+      return false;
+  }
+  return true;  
+}
+/*------------------------------------------------------------------------*/
 // AND gates
 
 
 
 // search for the gate in the hash-table. Very simple as we ues the one from the STL
-Gate *Closure::find_and_lits (unsigned arity, unsigned) {
-  unsigned hash = hash_lits (this->rhs);
+Gate *Closure::find_and_lits (int arity, const std::vector<int> &rhs) {
   Gate *g = new Gate;
   g->tag = Gate_Type::And_Gate;
   g->arity = arity;
-  g->rhs = {this->rhs};
+  g->rhs = {rhs};
   auto h = table.find(g);
 
   if (h != table.end()) {
@@ -227,7 +335,7 @@ Gate *Closure::find_and_lits (unsigned arity, unsigned) {
 }
 
 Gate *Closure::new_and_gate (int lhs) {
-  rhs.clear(); // or clear like in kissat?
+  rhs.clear();
   auto &lits = this->lits;
 
   for (auto lit : lits) {
@@ -238,7 +346,7 @@ Gate *Closure::new_and_gate (int lhs) {
   }
   const unsigned arity = rhs.size();
   assert (arity + 1 == lits.size());
-  Gate *g = find_and_lits (arity, 0);
+  Gate *g = find_and_lits (arity, this->rhs);
   if (g) {
     if (merge_literals(g->lhs, lhs)) {
       LOG ("found merged literals");
@@ -273,6 +381,9 @@ Gate *Closure::new_and_gate (int lhs) {
     table.insert(g);
     ++internal->stats.congruence.gates;
     ++internal->stats.congruence.ands;
+    for (auto lit : g->rhs) {
+      connect_goccs(g, lit);
+    }
     
 
   }
@@ -419,7 +530,7 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
   LOG(c, "extracting and gates with clause");
   int size = 0;
   const unsigned arity_limit =
-      min (internal->opts.congruenceandarity, MAX_ARITY); // TODO much larger in kissat
+      min (internal->opts.congruenceandarity, MAX_ARITY);
   const unsigned size_limit = arity_limit + 1;
   int64_t max_negbincount = 0;
   lits.clear ();
@@ -566,6 +677,103 @@ void Closure::extract_and_gates () {
 }
 
 /*------------------------------------------------------------------------*/
+// XOR gates
+// TODO moreg with find_and_lits
+Gate* Closure::find_xor_lits (int arity, const std::vector<int> &rhs) {
+  Gate *g = new Gate;
+  g->tag = Gate_Type::XOr_Gate;
+  g->arity = arity;
+  g->rhs = {rhs};
+  auto h = table.find(g);
+
+  if (h != table.end()) {
+    LOG ((*h)->rhs, "already existing XOR gate %d = ", (*h)->lhs);
+    delete g;
+    return *h;
+  }
+
+  else {
+    LOG (this->rhs, "gate not found in table");
+    return nullptr;
+  }
+}
+
+void inc_lits (std::vector<int>& lits){
+  bool carry = 1;
+  for (int i = 0; i < lits.size() && carry; ++i) {
+    int lit = lits[i];
+    carry = (lit > 0);
+    lits[i] = -lit;
+  }
+}
+void Closure::add_xor_matching_proof_chain(Gate *g, int lhs1, int lhs2) {
+  if (lhs1 == lhs2)
+    return;
+  if (!internal->proof)
+    return;
+  const size_t reduced_arity = g->arity - 1;
+  unsimplified = g->rhs;
+
+  do {
+    const size_t size = unsimplified.size();
+    assert (size < 32);
+    for (size_t i = 0; i != 1u << size; ++i) {
+      unsimplified.push_back(-lhs1);
+      unsimplified.push_back(lhs2);
+      // TODO simplify_and_add_to_proof_chain
+      unsimplified.resize(unsimplified.size() - 2);
+      unsimplified.push_back(lhs1);
+      unsimplified.push_back(-lhs2);
+      // TODO simplify_and_add_to_proof_chain
+      unsimplified.resize(unsimplified.size() - 2);
+      inc_lits(unsimplified);
+    }
+    assert (!unsimplified.empty());
+    unsimplified.pop_back();
+  } while (!unsimplified.empty());
+}
+
+Gate *Closure::new_xor_gate (int lhs) {
+  rhs.clear();
+  auto &lits = this->lits;
+
+  for (auto lit : lits) {
+    if (lhs != lit && -lhs != lit) {
+      assert (lit > 0);
+      rhs.push_back(-lit);
+    }
+  }
+  const unsigned arity = rhs.size();
+  assert (arity + 1 == lits.size());
+  Gate *g = find_xor_lits (arity, this->rhs);
+  if (g) {
+    // check_xor_gate_implied (closure, g);
+    if (merge_literals(g->lhs, lhs)) {
+      LOG ("found merged literals");
+    }
+  } else {
+    g = new Gate;
+    LOG (rhs, "found new gate %d = xor", lhs);
+    g->lhs = lhs;
+    g->tag = Gate_Type::XOr_Gate;
+    g->arity = arity;
+    g->rhs = {rhs};
+    g->garbage = false;
+    g->indexed = true;
+    table.insert(g);
+    ++internal->stats.congruence.gates;
+    ++internal->stats.congruence.xors;
+    // check_xor_gate_implied (closure, g);
+    for (auto lit : g->rhs) {
+      connect_goccs(g, lit);
+    }
+    
+
+  }
+  return g;
+}
+
+/*------------------------------------------------------------------------*/
 void Closure::find_units () {
   size_t units = 0;
   for (auto v : internal->vars) {
@@ -651,5 +859,5 @@ void Internal::extract_gates () {
 
   report('=', !opts.reportall && !(stats.congruence.congruent - old));
 }
-  
+
 }
