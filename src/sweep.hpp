@@ -14,6 +14,11 @@ struct sweep_proof_clause {
   vector<unsigned> chain;  // lrat
 };
 
+struct sweep_blocked_clause {
+  int blit;
+  vector<int> literals;
+};
+
 struct Sweeper {
   Sweeper (Internal *internal);
   ~Sweeper ();
@@ -27,6 +32,8 @@ struct Sweeper {
   unsigned save;
   vector<int> vars;
   vector<Clause *> clauses;
+  vector<sweep_blocked_clause> blocked_clauses;
+  vector<int> blockable;
   vector<int> clause;
   vector<int> propagate;
   vector<int> backbone;

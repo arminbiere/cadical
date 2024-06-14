@@ -266,6 +266,12 @@ void Internal::clear_sweeper (Sweeper &sweeper) {
     assert (c->swept);
     c->swept = false;
   }
+  for (const auto &lit : sweeper.blockable) {
+    assert (flags (lit).blockable);
+    flags (lit).blockable = false;
+  }
+  sweeper.blockable.clear ();
+  sweeper.blocked_clauses.clear ();
   sweeper.clauses.clear ();
   sweeper.backbone.clear ();
   sweeper.partition.clear ();
@@ -1382,6 +1388,11 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
       }
       if (limit_reached)
         break;
+      else if (opts.sweepblock) {
+        assert (!flags (lit).blockable);
+        flags (lit).blockable = true;
+        sweeper.blockable.push_back (lit);
+      }
     }
     expand++;
   }

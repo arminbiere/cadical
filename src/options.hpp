@@ -175,6 +175,7 @@ OPTION( subsumeocclim,   1e2,  0,2e9,1,0,1, "watch list length limit") \
 OPTION( subsumereleff,   1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( subsumestr,        1,  0,  1,0,0,1, "subsume strenghten") \
 OPTION( sweep,             1,  0,  1,0,1,1, "enable SAT sweeping") \
+OPTION( sweepblock,        1,  0,  1,0,0,1, "add blocking clauses in sweeping") \
 OPTION( sweepclauses,   1024,  0,2e9,1,0,1, "environment clauses") \
 OPTION( sweepcomplete,     0,  0,  1,0,0,1, "run SAT sweeping to completion") \
 OPTION( sweepdepth,        2,  0,2e9,1,0,1, "environment depth") \
