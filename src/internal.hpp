@@ -1027,10 +1027,6 @@ struct Internal {
   void reset_citten ();
   void citten_clear_track_log_terminate ();
 
-  // mine equivalences
-  void find_citten_eq (Eliminator &, int);
-  bool find_next_eq (Eliminator &, int, int);
-
   // Bounded variable elimination in 'elim.cpp'.
   //
   bool eliminating ();

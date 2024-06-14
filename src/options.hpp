@@ -71,9 +71,6 @@ OPTION( elimaxeff,       2e9,  0,2e9,1,0,1, "maximum elimination efficiency") \
 OPTION( elimbackward,      1,  0,  1,0,0,1, "eager backward subsumption") \
 OPTION( elimboundmax,     16, -1,2e6,1,0,1, "maximum elimination bound") \
 OPTION( elimboundmin,      0, -1,2e6,0,0,1, "minimum elimination bound") \
-OPTION( elimciteq,         0,  0,  1,0,0,1, "mine equivalences with kitten") \
-OPTION( elimciteqround,    1,  1, 10,0,0,1, "number of pairs tried") \
-OPTION( elimciteqticks,  1e6,  0,2e9,0,0,1, "kitten ticks limit") \
 OPTION( elimclslim,      1e2,  2,2e9,2,0,1, "resolvent size limit") \
 OPTION( elimdef,           1,  0,  1,0,0,1, "mine definitions with kitten") \
 OPTION( elimdefcores,      2,  1,100,0,0,1, "number of unsat cores") \

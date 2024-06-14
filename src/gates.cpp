@@ -748,7 +748,6 @@ void Internal::find_gate_clauses (Eliminator &eliminator, int pivot) {
   assert (eliminator.gates.empty ());
 
   find_equivalence (eliminator, pivot);
-  //find_citten_eq (eliminator, pivot);
   find_and_gate (eliminator, pivot);
   find_and_gate (eliminator, -pivot);
   find_if_then_else (eliminator, pivot);
