@@ -764,6 +764,7 @@ void Internal::unmark_gate_clauses (Eliminator &eliminator) {
   }
   eliminator.gates.clear ();
   eliminator.definition_unit = 0;
+  eliminator.prime_gates.clear ();
 }
 
 /*------------------------------------------------------------------------*/

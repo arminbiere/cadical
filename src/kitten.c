@@ -1574,13 +1574,12 @@ static int propagate_units (kitten *kitten) {
       return 20;
     }
     assign (kitten, unit, ref);
-    const unsigned conflict = propagate (kitten);
-    if (conflict == INVALID)
-      continue;
-    inconsistent (kitten, conflict);
-    return 20;
   }
-  return 0;
+  const unsigned conflict = propagate (kitten);
+  if (conflict == INVALID)
+    return 0;
+  inconsistent (kitten, conflict);
+  return 20;
 }
 
 /*------------------------------------------------------------------------*/
@@ -2153,21 +2152,22 @@ void kitten_shrink_to_clausal_core (kitten *kitten) {
     unset_core_klause (c);
     const unsigned dst = (unsigned *) q - (unsigned *) begin;
     const unsigned size = c->size;
+    if (!size) {
+      if (kitten->inconsistent != INVALID)
+        kitten->inconsistent = dst;
+    } else if (size == 1) {
+      PUSH_STACK (kitten->units, dst);
+      ROG (dst, "keeping");
+    } else {
+      watch_klause (kitten, c->lits[0], dst);
+      watch_klause (kitten, c->lits[1], dst);
+    }
     if (c == q)
       q = next;
     else {
       const size_t bytes = (char *) next - (char *) c;
       memmove (q, c, bytes);
       q = (klause *) ((char *) q + bytes);
-    }
-    if (!size) {
-      if (kitten->inconsistent != INVALID)
-        kitten->inconsistent = dst;
-    } else if (size == 1)
-      PUSH_STACK (kitten->units, dst);
-    else {
-      watch_klause (kitten, c->lits[0], dst);
-      watch_klause (kitten, c->lits[1], dst);
     }
 #ifdef LOGGING
     original++;

@@ -649,6 +649,10 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
     assert (pushed <= substitute);
   // TODO also add eliminator.prime_gates to the extension stack.... IDs?
 
+  for (const auto &prime : eliminator.prime_gates) {
+    assert (prime.size ());
+    external->push_blocked_clause_on_extension_stack (INT64_MAX, prime[0], prime);
+  }
   // Unfortunately, we can not use the trick by Niklas Soerensson anymore,
   // which avoids saving all clauses on the extension stack.  This would
   // break our new incremental 'restore' logic.
