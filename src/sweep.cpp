@@ -1388,11 +1388,11 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
       }
       if (limit_reached)
         break;
-      else if (opts.sweepblock) {
-        assert (!flags (lit).blockable);
-        flags (lit).blockable = true;
-        sweeper.blockable.push_back (lit);
-      }
+    }
+    if (opts.sweepblock && !limit_reached) {
+      assert (!flags (lit).blockable);
+      flags (lit).blockable = true;
+      sweeper.blockable.push_back (lit);
     }
     expand++;
   }
