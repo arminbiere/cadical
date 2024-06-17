@@ -155,18 +155,24 @@ void Stats::print (Internal *internal) {
          stats.elimites, percent (stats.elimites, stats.elimgates));
     PRT ("  elimxors:      %15" PRId64 "   %10.2f %%  xor gates",
          stats.elimxors, percent (stats.elimxors, stats.elimgates));
+    PRT ("  elimdefs:      %15" PRId64 "   %10.2f %%  definitions",
+         stats.definitions_extracted, percent (stats.definitions_extracted, stats.elimgates));
     PRT ("  elimsubst:     %15" PRId64 "   %10.2f %%  substituted",
          stats.elimsubst, percent (stats.elimsubst, stats.all.eliminated));
+    PRT ("  elimsubstequi: %15" PRId64 "   %10.2f %%  equivalence gates",
+         stats.eliminated_equi, percent (stats.eliminated_equi, stats.elimsubst));
+    PRT ("  elimsubstands: %15" PRId64 "   %10.2f %%  and gates",
+         stats.eliminated_and, percent (stats.eliminated_and, stats.elimsubst));
+    PRT ("  elimsubstites: %15" PRId64 "   %10.2f %%  if-then-else gates",
+         stats.eliminated_ite, percent (stats.eliminated_ite, stats.elimsubst));
+    PRT ("  elimsubstxors: %15" PRId64 "   %10.2f %%  xor gates",
+         stats.eliminated_xor, percent (stats.eliminated_xor, stats.elimsubst));
+    PRT ("  elimsubstdefs: %15" PRId64 "   %10.2f %%  definitions",
+         stats.eliminated_def, percent (stats.eliminated_def, stats.elimsubst));
     PRT ("  elimres:       %15" PRId64 "   %10.2f    per eliminated",
          stats.elimres, relative (stats.elimres, stats.all.eliminated));
     PRT ("  elimrestried:  %15" PRId64 "   %10.2f %%  per resolution",
          stats.elimrestried, percent (stats.elimrestried, stats.elimres));
-    PRT ("  equi checked:  %15" PRId64 "   %10.2f    per phase",
-         stats.equivalences_checked,
-         relative (stats.equivalences_checked, stats.elimphases));
-    PRT ("  equi extracted:%15" PRId64 "   %10.2f %%  per checked",
-         stats.equivalences_extracted,
-         percent (stats.equivalences_extracted, stats.equivalences_checked));
     PRT ("  def checked:   %15" PRId64 "   %10.2f    per phase",
          stats.definitions_checked,
          relative (stats.definitions_checked, stats.elimphases));
@@ -463,6 +469,10 @@ void Stats::print (Internal *internal) {
          stats.sweep_flip_equivalences, relative (stats.sweep_flip_equivalences, stats.sweep_variables));
     PRT ("    flipped:     %15" PRId64 "   %10.2f %%  of equiv flip",
          stats.sweep_flipped_equivalences, percent (stats.sweep_flipped_equivalences, stats.sweep_flip_equivalences));
+    PRT ("  blocking added:%15" PRId64 "   %10.2f    per swept variable",
+         stats.sweep_blocking_clause_added, relative (stats.sweep_blocking_clause_added, stats.sweep_variables));
+    PRT ("  blocking proof:%15" PRId64 "   %10.2f %%  added",
+         stats.sweep_blocking_clause_extracted, percent (stats.sweep_blocking_clause_extracted, stats.sweep_blocking_clause_added));
     PRT ("  depth:         %15" PRId64 "   %10.2f    per swept variable",
          stats.sweep_depth, relative (stats.sweep_depth, stats.sweep_variables));
     PRT ("  environment:   %15" PRId64 "   %10.2f    per swept variable",

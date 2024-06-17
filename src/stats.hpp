@@ -175,8 +175,13 @@ struct Stats {
   int64_t elimxors;      // number of XOR gates found during elimination
   int64_t elimbwsub;     // number of eager backward subsumed clauses
   int64_t elimbwstr;     // number of eager backward strengthened clauses
-  int64_t equivalences_checked;
-  int64_t equivalences_extracted;
+
+  int64_t eliminated_equi;  // number of successful equivalence eliminations
+  int64_t eliminated_and;   // number of successful AND gate eliminations
+  int64_t eliminated_ite;   // number of successful ITE gate eliminations
+  int64_t eliminated_xor;   // number of successful XOR gate eliminations
+  int64_t eliminated_def;   // number of successful definition eliminations
+
   int64_t definitions_checked;
   int64_t definitions_extracted;
   int64_t definition_units;
@@ -266,6 +271,8 @@ struct Stats {
   int64_t sweep_environment;
   int64_t sweep_clauses;
   int64_t sweep;
+  int64_t sweep_blocking_clause_added;
+  int64_t sweep_blocking_clause_extracted;
 
   int64_t preprocessings;
 

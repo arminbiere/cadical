@@ -548,6 +548,25 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
          eliminator.gates.size ());
     stats.elimsubst++;
   }
+  switch (eliminator.gatetype) {
+    case EQUI:
+      stats.eliminated_equi++;
+      break;
+    case AND:
+      stats.eliminated_and++;
+      break;
+    case ITE:
+      stats.eliminated_ite++;
+      break;
+    case XOR:
+      stats.eliminated_xor++;
+      break;
+    case DEF:
+      stats.eliminated_def++;
+      break;
+    default:
+      assert (eliminator.gatetype == NO);
+  }
 
   LOG ("adding all resolvents on %d", pivot);
 

@@ -176,7 +176,7 @@ size_t Internal::flush_occs (int lit) {
     if (c->collect ())
       continue;
     *j++ = c->moved ? c->copy : c;
-    assert (!c->redundant);
+    // assert (!c->redundant); // -> not true in sweeping
     res++;
   }
   os.resize (j - os.begin ());

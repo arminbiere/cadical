@@ -244,18 +244,21 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
     for (auto c : extractor.clauses[sign]) {
       // to avoid copying the literals of c in their unsigned
       // representation we instead implement the translation in kitten
-      LOG (c, "adding to kitten");
-      if (!c->garbage) 
+      if (!c->garbage) {
+        LOG (c, "adding to kitten");
         citten_clause_with_id_and_exception (citten, exported, c->size,
                                              c->literals, except);
-      exported++;
+        exported++;
+      }
     }
   }
   stats.definitions_checked++;
   const size_t limit = opts.elimdefticks;
   kitten_set_ticks_limit (citten, limit);
+  int primeround = 1;
 BEGIN:
   int status = kitten_solve (citten);
+  if (!exported) goto ABORT;
   if (status == 20) {
     LOG ("sub-solver result UNSAT shows definition exists");
     uint64_t learned;
@@ -284,6 +287,7 @@ BEGIN:
 #endif
     }
     stats.definitions_extracted++;
+    eliminator.gatetype = DEF;
     eliminator.definition_unit = 0;
     kitten_traverse_core_ids (citten, &extractor, traverse_definition_core);
     assert (eliminator.definition_unit);
@@ -313,9 +317,11 @@ BEGIN:
       elim_propagate (eliminator, unit);
     }
   } else if (status == 10 && opts.elimdefprime) {
-    stats.definition_prime++;
+    if (primeround > opts.elimdefprimeround) goto ABORT;
+    primeround++;
     int side = kitten_compute_prime_implicant (citten, &extractor, ignore_negative);
     if (side == -1) goto ABORT;
+    stats.definition_prime++;
     kitten_add_prime_implicant (citten, &extractor, side, add_implicant);
     goto BEGIN;
   } else {

@@ -308,6 +308,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
     assert (!d->gate);
     d->gate = true;
     eliminator.gates.push_back (d);
+    eliminator.gatetype = EQUI;
 
     break;
   }
@@ -402,6 +403,7 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
 #endif
     stats.elimands++;
     stats.elimgates++;
+    eliminator.gatetype = AND;
 
     (void) arity;
     assert (!c->gate);
@@ -570,6 +572,7 @@ void Internal::find_if_then_else (Eliminator &eliminator, int pivot) {
       eliminator.gates.push_back (d2);
       stats.elimgates++;
       stats.elimites++;
+      eliminator.gatetype = ITE;
       return;
     }
   }
@@ -724,7 +727,7 @@ void Internal::find_xor_gate (Eliminator &eliminator, int pivot) {
       *j++ = e;
     }
     eliminator.gates.resize (j - eliminator.gates.begin ());
-
+    eliminator.gatetype = XOR;
     break;
   }
 }

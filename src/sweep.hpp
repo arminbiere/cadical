@@ -10,12 +10,14 @@ struct sweep_proof_clause {
   uint64_t cad_id;   // cadical id
   unsigned kit_id;  // kitten id
   bool learned;
+  bool blocked;
   vector<int> literals;
   vector<unsigned> chain;  // lrat
 };
 
 struct sweep_blocked_clause {
   int blit;
+  uint64_t id;
   vector<int> literals;
 };
 
@@ -27,7 +29,7 @@ struct Sweeper {
   vector<unsigned> depths;
   int* reprs;
   vector<int> next, prev;
-  int first, last;
+  int first, last, blit;
   unsigned encoded;
   unsigned save;
   vector<int> vars;

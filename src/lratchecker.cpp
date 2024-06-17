@@ -43,7 +43,7 @@ LratCheckerClause *LratChecker::new_clause () {
   res->tautological = false;
   int *literals = res->literals, *p = literals;
   for (auto &b : checked_lits)
-    b = false;
+    assert (!b); // = false;
   for (const auto &lit : imported_clause) {
     *p++ = lit;
     checked_lit (-lit) = true;
@@ -243,7 +243,8 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
   }
   LOG (imported_clause, "LRAT CHECKER checking clause with resolution");
   for (auto &b : checked_lits)
-    b = false; // clearing checking bits
+    assert (!b); // = false; // clearing checking bits
+  if (!proof_chain.size ()) return false; // but we can assert it here :)
   LratCheckerClause *c = *find (proof_chain.back ());
   assert (c);
   for (int *i = c->literals; i < c->literals + c->size; i++) {
@@ -268,6 +269,8 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
       LOG ("LRAT CHECKER resolution failed, resolved literal %d in learned "
            "clause",
            lit);
+      for (auto &b : checked_lits)
+        b = false; // clearing checking bits
       return false;
     }
     if (!checked_lit (lit)) {
@@ -276,19 +279,21 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
     }
     checked_lit (-lit) = true;
   }
+  bool failed = false;
   for (int64_t lit = 1; lit < size_vars; lit++) {
     bool ok = checked_lit (lit) && checked_lit (-lit);
     ok = ok || (!checked_lit (lit) && !checked_lit (-lit));
-    if (!ok) {
+    checked_lit (lit) = checked_lit (-lit) = false;
+    if (!ok && !failed) {
       LOG ("LRAT CHECKER resolution failed, learned clause does not match "
            "on "
            "variable %" PRId64,
            lit);
-      return false;
+      failed = true;
     }
   }
 
-  return true;
+  return !failed;
 }
 
 /*------------------------------------------------------------------------*/
@@ -299,16 +304,22 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
   // assert (proof_chain.size ());             // this might be attempting
   // to
   for (auto &b : checked_lits)
-    b = false;                              // assert here but fails for
+    assert (!b); // = false;
+  bool taut = false;
   for (const auto &lit : imported_clause) { // tautological clauses
     checked_lit (-lit) = true;
     if (checked_lit (lit)) {
       LOG (imported_clause, "LRAT CHECKER clause tautological");
       assert (!proof_chain.size ()); // would be unnecessary hence a bug
-      return true;
+      taut = true;
     }
   }
-  assert (proof_chain.size ()); // but we can assert it here :)
+  if (taut || !proof_chain.size ()) {
+    for (const auto &lit : imported_clause) { // tautological clauses
+      checked_lit (-lit) = false;
+    }
+    return taut;
+  }
 
   vector<LratCheckerClause *> used_clauses;
   bool checking = false;
@@ -359,11 +370,40 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
   for (auto &lc : used_clauses) {
     lc->used = false;
   }
+  for (auto &b : checked_lits)
+    b = false;
   if (!checking) {
     LOG ("LRAT CHECKER failed, no conflict found");
     return false; // check failed because no empty clause was found
   }
   return true;
+}
+
+bool LratChecker::check_blocked () {
+  for (const auto &lit : imported_clause) {
+    checked_lit (-lit) = true;
+  }
+  for (size_t i = 0; i < size_clauses; i++) {
+    for (LratCheckerClause *c = clauses[i], *next; c; c = next) {
+      next = c->next;
+      unsigned count = 0;
+      int first;
+      for (int *i = c->literals; i < c->literals + c->size; i++) {
+        const int lit = *i;
+        if (checked_lit (lit)) {
+          count++;
+          first = lit;
+        }
+      }
+      if (count == 1) checked_lit (first) = false;
+    }
+  }
+  bool blocked = false;
+  for (const auto &lit : imported_clause) {
+    if (checked_lit (-lit)) blocked = true;
+    checked_lit (-lit) = false;
+  }
+  return blocked;
 }
 
 /*------------------------------------------------------------------------*/
@@ -419,7 +459,8 @@ void LratChecker::add_derived_clause (uint64_t id, bool,
     }
   }
   assert (id);
-  if (!check (proof_chain) || !check_resolution (proof_chain)) {
+  if ((!check (proof_chain) || !check_resolution (proof_chain))
+      && (!proof_chain.empty () || !check_blocked ())) {
     LOG (proof_chain, "chain");
 #ifdef LOGGING
     for (const auto & pid : proof_chain) {

@@ -95,6 +95,7 @@ class LratChecker : public StatTracer {
   bool check (vector<uint64_t>); // check if new clause is implied by rup
   bool check_resolution (
       vector<uint64_t>); // check if new clause is implied by resolution
+  bool check_blocked ();
 
   struct {
 

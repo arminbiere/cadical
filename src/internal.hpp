@@ -1097,6 +1097,7 @@ struct Internal {
   void sweep_dense_mode_and_watch_irredundant ();
   void sweep_substitute_lrat (Clause *c, uint64_t id);
   void sweep_substitute_new_equivalences (Sweeper &sweeper);
+  void delete_all_redundant_with (int);
 
   // instantiate
   //

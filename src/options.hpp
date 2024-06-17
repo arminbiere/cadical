@@ -75,6 +75,7 @@ OPTION( elimclslim,      1e2,  2,2e9,2,0,1, "resolvent size limit") \
 OPTION( elimdef,           1,  0,  1,0,0,1, "mine definitions with kitten") \
 OPTION( elimdefcores,      2,  1,100,0,0,1, "number of unsat cores") \
 OPTION( elimdefprime,      1,  0,  1,0,0,1, "add blocking clauses to find definitions") \
+OPTION( elimdefprimeround, 1,  1, 16,0,0,1, "max number of blocking clauses per definition") \
 OPTION( elimdefticks,    1e6,  0,2e9,1,0,1, "kitten ticks limit") \
 OPTION( elimequivs,        1,  0,  1,0,0,1, "find equivalence gates") \
 OPTION( elimineff,       1e7,  0,2e9,1,0,1, "minimum elimination efficiency") \
@@ -176,6 +177,10 @@ OPTION( subsumereleff,   1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( subsumestr,        1,  0,  1,0,0,1, "subsume strenghten") \
 OPTION( sweep,             1,  0,  1,0,1,1, "enable SAT sweeping") \
 OPTION( sweepblock,        1,  0,  1,0,0,1, "add blocking clauses in sweeping") \
+OPTION( sweepblockbackcand,1,  0,  1,0,0,1, "blocking clauses for backbone candidates") \
+OPTION( sweepblockequicand,1,  0,  1,0,0,1, "blocking clauses for equivalence candidates") \
+OPTION( sweepblockflipback,1,  0,  1,0,0,1, "blocking clauses in backbone flipping") \
+OPTION( sweepblockflippart,1,  0,  1,0,0,1, "blocking clauses in partition flipping") \
 OPTION( sweepclauses,   1024,  0,2e9,1,0,1, "environment clauses") \
 OPTION( sweepcomplete,     0,  0,  1,0,0,1, "run SAT sweeping to completion") \
 OPTION( sweepdepth,        2,  0,2e9,1,0,1, "environment depth") \
