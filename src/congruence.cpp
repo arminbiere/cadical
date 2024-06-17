@@ -82,6 +82,12 @@ int Closure::find_representative(int lit) const {
   return res;
 }
 
+void Closure::mark_garbage (Gate *g) {
+  assert (!g->garbage);
+  g->garbage = true;
+  garbage.push_back(g);
+}
+
 bool Closure::learn_congruence_unit(int lit) {
   LOG ("adding unit %d with current value %d", lit, internal->val(lit));
   const signed char val_lit = internal->val(lit);
@@ -158,9 +164,10 @@ bool Closure::merge_literals (int lit, int other) {
   LOG ("merging %d and %d", lit, other);
   add_binary_clause (-lit, other);
   add_binary_clause (lit, -other);
-  // TODO propagate gates
+  schedule_literal(lit);
 
-  representative(lit) = smaller;
+  representative(larger) = smaller;
+  representative(-larger) = -smaller;
   ++internal->stats.congruence.congruent;
   return false;
 }
@@ -179,10 +186,13 @@ void Closure::init_closure () {
   mu1_ids.resize(2*internal->max_var+3);
   mu2_ids.resize(2*internal->max_var+3);
   mu4_ids.resize(2*internal->max_var+3);
+  scheduled.resize(internal->max_var+1);
+  gtab.resize(2*internal->max_var+3);
   for (auto v : internal->vars) {
     representative(v) = v;
     representative(-v) = -v;
   }
+  units = internal->propagated;
 }
 
 
@@ -215,8 +225,7 @@ bool Closure::skip_and_gate(Gate *g) {
     return true;
   const int lhs = g->lhs;
   if (internal->val(lhs) > 0) {
-    LOG ("marking gate as garbage");
-    g->garbage = true;
+    mark_garbage(g);
     return true;
   }
 
@@ -247,22 +256,26 @@ void Closure::update_and_gate(Gate *g, int falsifies, int clashing) {
     else if (v < 0)
       learn_congruence_unit (-g->rhs[0]);
     else if (merge_literals(g->lhs, g->rhs[0])) {
-      // unary stats
-    }
-    else {
-      Gate *h = find_and_lits(g->arity, g->rhs);
+      ++internal->stats.congruence.unaries;
+      ++internal->stats.congruence.unary_and;
+    } else {
+      Gate *h = find_and_lits (g->arity, g->rhs);
       if (h) {
-	if (merge_literals(g->lhs, h->lhs))
-	  ++internal->stats.congruence.ands;
-	else {
-	  // TODO remove gate
-	  
-	}
-	
+        assert (garbage);
+        if (merge_literals (g->lhs, h->lhs))
+          ++internal->stats.congruence.ands;
+      } else {
+        if (g->indexed)
+          table.erase (g);
+
+        table.insert (g);
+        g->indexed = true;
+        garbage = false;
       }
     }
-    
   }
+  if (garbage && !internal->unsat)
+    mark_garbage(g);
 }
 void Closure::simplify_and_gate (Gate *g) {
   if (skip_and_gate (g))
@@ -289,13 +302,19 @@ void Closure::simplify_and_gate (Gate *g) {
   }
   shrink_and_gate(g, falsifies);
   update_and_gate(g, falsifies);
+  ++internal->stats.congruence.simplified_ands;
+  ++internal->stats.congruence.simplified;
 }
+
+
 bool Closure::simplify_gate (Gate *g) {
   switch (g->tag) {
   case Gate_Type::And_Gate:
     simplify_and_gate (g);
+    break;
   default:
     assert (false);
+    break;
   }
 
   return !internal->unsat;
@@ -804,10 +823,191 @@ void Closure::find_units () {
     }
     assert (internal->analyzed.empty());
   }
-  LOG ("found %zd", units);
+  LOG ("found %zd units", units);
+}
+
+void Closure::find_equivalences () {
+  assert (!internal->unsat);
+
+  for (auto v : internal->vars) {
+  RESTART:
+    if (!internal->flags (v).active ())
+      continue;
+    int lit = v;
+    for (auto c : internal->occs (lit)) {
+      assert (c->size == 2);
+      const int other = lit ^ c->literals[0] ^ c->literals[1];
+      if (std::abs(lit) > std::abs(other))
+	continue;
+      if (marked (other))
+	continue;
+      internal->analyzed.push_back(other);
+      marked (other) = true;
+    }
+
+    if (internal->analyzed.empty())
+      continue;
+    
+    for (auto c : internal->occs (-lit)) {
+      assert (c->size == 2);
+      assert (c->literals[0] == -lit || c->literals[1] == -lit);
+      const int other = (-lit) ^ c->literals[0] ^ c->literals[1];
+      if (std::abs(-lit) > std::abs(other))
+	continue;
+      if (lit == other)
+	continue;
+      if (marked (-other)) {
+	int lit_repr = find_representative(lit);
+	int other_repr = find_representative(other);
+	LOG ("%d and %d are the representative", lit_repr, other_repr);
+	if (lit_repr != other_repr) {
+	  if (merge_literals(lit_repr, other_repr)) {
+	    COVER (true);
+	    ++internal->stats.congruence.congruent;
+	  }
+	  unmark_all();
+	  if (internal->unsat)
+	    return;
+	  else
+	    goto RESTART;
+	}
+      }
+    }
+    unmark_all();
+  }
+  assert (internal->analyzed.empty());
+  LOG ("found %zd equivalences", schedule.size());
+}
+
+/*------------------------------------------------------------------------*/
+
+bool gate_contains(Gate *g, int lit) {
+  return std::find (begin(g->rhs), end (g->rhs), lit) != end (g->rhs);
+}
+
+void Closure::rewrite_and_gate (Gate *g, int dst, int src) {
+  if (skip_and_gate(g))
+    return;
+  if (!gate_contains (g, src))
+    return;
+  assert (src);
+  assert (dst);
+  assert (internal->val (src) == internal->val (dst));
+  LOG (g->rhs, "rewriting %d into %d in %d = bigand", src, dst, g->lhs);
+  int clashing = 0, falsifies = 0;
+  unsigned dst_count = 0, not_dst_count = 0;
+  auto q = begin(g->rhs);
+  for (auto &lit: g->rhs) {
+    if (lit == src)
+      lit = dst;
+    if (lit == -g->lhs) {
+      LOG ("found negated LHS literal %d", lit);
+      clashing = lit;
+      break;
+    }
+    const signed char val = internal->val (lit);
+    if (val > 0)
+      continue;
+    if (val < 0) {
+      LOG ("found falsifying literal %s", (lit));
+      falsifies = lit;
+      break;
+    }
+    if (lit == dst) {
+      if (not_dst_count) {
+        LOG ("clashing literals %d and %d", (-dst), (dst));
+        clashing = -dst;
+        break;
+      }
+      if (dst_count++)
+        continue;
+    }
+    if (lit == -dst) {
+      if (dst_count) {
+        assert (!not_dst_count);
+        LOG ("clashing literals %d and %d", (dst),  (-dst));
+        clashing = dst;
+        break;
+      }
+      assert (!not_dst_count);
+      ++not_dst_count;
+    }
+    *q++ = lit;
+  }
+
+  assert (dst_count <= 2);
+  assert (not_dst_count <= 1);
+  shrink_and_gate(g, falsifies, clashing);
+  LOG (g->rhs, "rewriten g as %d = bigand", g->lhs);
+  update_and_gate(g, falsifies, clashing);
+}
+
+bool Closure::rewrite_gate (Gate *g, int dst, int src) {
+  switch (g->tag) {
+  case Gate_Type::And_Gate:
+    rewrite_and_gate (g, dst, src);
+    break;
+  default:
+    assert (false);
+    break;
+  }
+  return !internal->unsat;
+}
+bool Closure::rewrite_gates(int dst, int src) {
+  for (auto g : goccs (src)) {
+    if (!rewrite_gate (g, dst, src))
+      return false;
+    else if (!g->garbage && std::find (begin (g->rhs), end (g->rhs), dst) != end (g->rhs))
+      goccs (dst).push_back(g);
+  }
+  goccs (src).clear();
+  return true;
+}
+/*------------------------------------------------------------------------*/
+// propagation of clauses and simplification
+void Closure::schedule_literal(int lit) {
+  const int idx = std::abs (lit);
+  if (scheduled[idx])
+    return;
+  scheduled[idx] = true;
+  schedule.push_back(lit);
+  LOG ("scheduled literal %d", lit);
+}
+
+bool Closure::propagate_unit(int lit) {
+  LOG("propagation of congruence unit %d", lit);
+  return simplify_gates(lit) && simplify_gates(-lit);
 }
 
 
+bool Closure::propagate_units () {
+  while (units != internal->trail.size())  {
+    if (!propagate_unit(internal->trail[units++]))
+      return false;
+  }
+  return true;
+}
+
+bool Closure::propagate_equivalence (int lit) {
+  if (internal->val(lit))
+    return true;
+  const int repr = find_representative(lit);
+  return rewrite_gates (repr, lit) && rewrite_gates (-repr, -lit);
+}
+
+size_t Closure::propagate_units_and_equivalences () {
+  size_t propagated = 0;
+  while (propagate_units() && !schedule.empty()) {
+    ++propagated;
+    int lit = schedule.back();
+    LOG ("propagating equivalence of %d", lit);
+    schedule.pop_back();
+    scheduled[lit] = false;
+    if (!propagate_equivalence(lit))
+      break;
+  }
+  return propagated;
+}
 /*------------------------------------------------------------------------*/
 void Closure::extract_gates() {
   extract_and_gates();
@@ -842,12 +1042,26 @@ void Internal::extract_gates () {
   Closure closure (this);
   init_occs();
   init_noccs();
+  bool reset = false;
 
   closure.init_closure();
   closure.extract_gates ();
   if (!internal->unsat) {
     closure.find_units();
+    if (!internal->unsat) {
+      closure.find_equivalences();
+      
+      if (!internal->unsat) {
+	closure.propagate_units_and_equivalences();
+	if (!internal->unsat && propagated)
+	  ; // TODO forward_subsume_matching_clauses
+	reset = true;
+      }
+    }
   }
+
+  if (!reset)
+    ; // reset_closure
 
   reset_occs();
   reset_noccs();

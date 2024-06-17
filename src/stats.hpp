@@ -264,6 +264,10 @@ struct Stats {
     int64_t units;
     int64_t congruent;
     int64_t rounds;
+    int64_t unary_and;
+    int64_t unaries;
+    int64_t simplified;
+    int64_t simplified_ands;
   } congruence;
   int64_t unused;   // number of unused variables
   int64_t active;   // number of active variables

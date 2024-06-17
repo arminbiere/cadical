@@ -94,6 +94,8 @@ struct Closure {
   vector<GOccs> gtab;
   GOccs &goccs (int lit);
   void connect_goccs (Gate *g, int lit);
+  vector<Gate*> garbage;
+  void mark_garbage(Gate*);
 
   // simplification
   bool skip_and_gate (Gate *g);
@@ -102,6 +104,16 @@ struct Closure {
   bool simplify_gate (Gate *g);
   void simplify_and_gate (Gate *g);
   bool simplify_gates (int lit);
+
+  bool rewrite_gates(int dst, int src);
+  bool rewrite_gate(Gate *g, int dst, int src);
+  void rewrite_and_gate(Gate *g, int dst, int src);
+  
+  size_t units;         // next trail position to propagate
+  bool propagate_unit(int lit);
+  bool propagate_units();
+  size_t propagate_units_and_equivalences();
+  bool propagate_equivalence(int lit);
   
   // gates
   void init_closure();
@@ -130,7 +142,12 @@ struct Closure {
   bool learn_congruence_unit(int unit);
 
   void find_units();
+  void find_equivalences();
 
+
+  // schedule
+  std::vector<int> schedule;
+  void schedule_literal(int lit);
 
   
 
