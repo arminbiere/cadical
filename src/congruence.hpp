@@ -61,7 +61,7 @@ struct GateEqualTo {
   }
 };
 struct Closure {
-    
+
   Closure (Internal *i) : internal (i) {}
   Internal *internal;
   std::vector<Clause *> binaries;
@@ -75,6 +75,8 @@ struct Closure {
   std::vector<int> lits; // result of definitions
   std::vector<int> rhs; // stack for storing RHS
   std::vector<int> unsimplified; // stack for storing unsimplified version (XOR, ITEs) for DRAT proof
+  std::vector<int> chain;
+
 
   void unmark_all ();
   std::vector<int> representant; // union-find
@@ -149,6 +151,9 @@ struct Closure {
   std::vector<int> schedule;
   void schedule_literal(int lit);
 
+  // proof
+  void simplify_and_add_to_proof_chain (std::vector<int> &unsimplified,
+                                            std::vector<int> &chain);
   
 
   

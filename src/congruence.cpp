@@ -1,6 +1,7 @@
 #include "congruence.hpp"
 #include "internal.hpp"
 #include <iterator>
+#include <vector>
 
 namespace CaDiCaL {
 
@@ -725,6 +726,45 @@ void inc_lits (std::vector<int>& lits){
     lits[i] = -lit;
   }
 }
+
+void Closure::simplify_and_add_to_proof_chain (
+					       std::vector<int> &unsimplified, std::vector<int> &chain) {
+  std::vector<int> &clause = internal->clause;
+  assert (clause.empty ());
+  for (auto lit : unsimplified) {
+    assert (!(marked(lit) & 4));
+  }
+
+  bool trivial = false;
+  for (auto lit: unsimplified) {
+    signed char &lit_mark = marked(lit);
+    if (lit_mark & 4)
+      continue;
+    signed char &not_lit_mark = marked(-lit);
+    if (not_lit_mark & 4) {
+      trivial = true;
+      break;
+    }
+    lit_mark |= 4;
+    clause.push_back(lit);
+  }
+  for (auto lit : clause) {
+    signed char &mark = marked(lit);
+    assert (mark & 4);
+    mark &= ~4u;
+  }
+
+  if (!trivial) {
+    internal->external->check_learned_clause ();
+    if (internal->proof) {
+      std::vector<uint64_t> lrat_chain;
+      internal->proof->add_derived_clause (++internal->clause_id, true, internal->clause, lrat_chain);
+      chain = std::move(clause);
+    }
+  }
+  clause.clear();
+}
+
 void Closure::add_xor_matching_proof_chain(Gate *g, int lhs1, int lhs2) {
   if (lhs1 == lhs2)
     return;
@@ -732,24 +772,26 @@ void Closure::add_xor_matching_proof_chain(Gate *g, int lhs1, int lhs2) {
     return;
   const size_t reduced_arity = g->arity - 1;
   unsimplified = g->rhs;
-
+  
+  LOG ("starting XOR matching proof");
   do {
     const size_t size = unsimplified.size();
     assert (size < 32);
     for (size_t i = 0; i != 1u << size; ++i) {
       unsimplified.push_back(-lhs1);
       unsimplified.push_back(lhs2);
-      // TODO simplify_and_add_to_proof_chain
+      simplify_and_add_to_proof_chain (unsimplified, chain);
       unsimplified.resize(unsimplified.size() - 2);
       unsimplified.push_back(lhs1);
       unsimplified.push_back(-lhs2);
-      // TODO simplify_and_add_to_proof_chain
+      simplify_and_add_to_proof_chain (unsimplified, chain);
       unsimplified.resize(unsimplified.size() - 2);
       inc_lits(unsimplified);
     }
     assert (!unsimplified.empty());
     unsimplified.pop_back();
   } while (!unsimplified.empty());
+  LOG ("finished XOR matching proof");
 }
 
 Gate *Closure::new_xor_gate (int lhs) {
