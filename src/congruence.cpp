@@ -601,7 +601,7 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
   internal->analyzed.clear();
   int reduced = 0;
   const size_t clause_size = lits.size ();
-  for (int i = 0; i < clause_size; ++i) {
+  for (size_t i = 0; i < clause_size; ++i) {
     const int lit = lits[i];
     const unsigned count = internal->noccs (-lit);
     LOG ("marking %d mu1", -lit);
@@ -704,9 +704,6 @@ unsigned parity_lits (std::vector<int> lits) {
   unsigned res = 0;
   for (auto lit : lits)
     res ^= (lit < 0);
-#ifdef NDEBUG
-  (void) solver;
-#endif
   return res;
 }
 
@@ -781,8 +778,10 @@ void Closure::simplify_and_add_to_proof_chain (
 					       std::vector<int> &unsimplified, std::vector<int> &chain) {
   std::vector<int> &clause = internal->clause;
   assert (clause.empty ());
+#ifndef NDEBUG
   for (auto lit : unsimplified) {
-    assert (!(marked(lit) & 4));
+    assert (!(marked (lit) & 4));
+#endif
   }
 
   bool trivial = false;
@@ -989,7 +988,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src) {
   int clashing = 0, falsifies = 0;
   unsigned dst_count = 0, not_dst_count = 0;
   auto q = begin(g->rhs);
-  for (auto &lit: g->rhs) {
+  for (int &lit: g->rhs) {
     if (lit == src)
       lit = dst;
     if (lit == -g->lhs) {
@@ -1160,10 +1159,10 @@ void Internal::extract_gates () {
   init_watches ();
   connect_watches ();
   
-  if (!unsat && !propagate())
+  if (!unsat && !internal->propagate())
     unsat = true;
 
-  report('=', !opts.reportall && !(stats.congruence.congruent - old));
+  internal->report('=', !opts.reportall && !(stats.congruence.congruent - old));
 }
 
 }
