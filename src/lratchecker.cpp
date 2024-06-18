@@ -42,8 +42,10 @@ LratCheckerClause *LratChecker::new_clause () {
   res->used = false;
   res->tautological = false;
   int *literals = res->literals, *p = literals;
+#ifndef NDEBUG
   for (auto &b : checked_lits)
     assert (!b); // = false;
+#endif
   for (const auto &lit : imported_clause) {
     *p++ = lit;
     checked_lit (-lit) = true;
@@ -242,8 +244,10 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
     return true;
   }
   LOG (imported_clause, "LRAT CHECKER checking clause with resolution");
+#ifndef NDEBUG
   for (auto &b : checked_lits)
-    assert (!b); // = false; // clearing checking bits
+    assert (!b); // = false;
+#endif
   if (!proof_chain.size ()) return false; // but we can assert it here :)
   LratCheckerClause *c = *find (proof_chain.back ());
   assert (c);
@@ -301,10 +305,10 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
 bool LratChecker::check (vector<uint64_t> proof_chain) {
   LOG (imported_clause, "LRAT CHECKER checking clause");
   stats.checks++;
-  // assert (proof_chain.size ());             // this might be attempting
-  // to
+#ifndef NDEBUG
   for (auto &b : checked_lits)
     assert (!b); // = false;
+#endif
   bool taut = false;
   for (const auto &lit : imported_clause) { // tautological clauses
     checked_lit (-lit) = true;
@@ -383,21 +387,27 @@ bool LratChecker::check_blocked () {
   for (const auto &lit : imported_clause) {
     checked_lit (-lit) = true;
   }
+  vector<int> not_blocked;
   for (size_t i = 0; i < size_clauses; i++) {
     for (LratCheckerClause *c = clauses[i], *next; c; c = next) {
       next = c->next;
+      if (c->garbage) continue;
       unsigned count = 0;
       int first;
       for (int *i = c->literals; i < c->literals + c->size; i++) {
         const int lit = *i;
         if (checked_lit (lit)) {
           count++;
+          LOG (c->literals, c->size, "clause");
           first = lit;
         }
       }
-      if (count == 1) checked_lit (first) = false;
+      if (count == 1) not_blocked.push_back (first);
     }
   }
+  for (const auto &lit : not_blocked) {
+    checked_lit (lit) = false;
+  }  
   bool blocked = false;
   for (const auto &lit : imported_clause) {
     if (checked_lit (-lit)) blocked = true;

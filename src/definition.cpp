@@ -200,7 +200,7 @@ static void add_implicant (void *state, int side, size_t size,
                                                  + extractor->implicants.size ();
   vector<int> implicant;
   const int pivot = extractor->lit;
-  implicant.push_back (side ? -pivot : pivot);
+  implicant.push_back (side ? pivot : -pivot);
   const auto end = lits + size;
   for (auto q = lits; q != end; q++) {
     implicant.push_back (extractor->internal->citten2lit (*q));
@@ -327,6 +327,7 @@ BEGIN:
   } else {
   ABORT:
     LOG ("sub-solver failed to show that definition exists");
+    eliminator.prime_gates.clear ();
   }
   stats.definition_ticks += kitten_current_ticks (citten);
   return;

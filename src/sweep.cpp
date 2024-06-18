@@ -271,6 +271,11 @@ void Internal::clear_sweeper (Sweeper &sweeper) {
     flags (lit).blockable = false;
   }
   sweeper.blockable.clear ();
+  if (proof) {
+    for (auto &bc : sweeper.blocked_clauses) {
+      proof->delete_clause (bc.id, true, bc.literals);
+    }
+  }
   sweeper.blocked_clauses.clear ();
   sweeper.clauses.clear ();
   sweeper.backbone.clear ();
@@ -455,15 +460,15 @@ static void add_sweep_implicant (void *data, int side, size_t size,
   Internal *internal = sweeper->internal;
   const unsigned id = sweeper->clauses.size () + sweeper->blocked_clauses.size ();
   sweep_blocked_clause implicant;
-  int pivot = sweeper->blit;
-  pivot = side ? -pivot : pivot;
-  implicant.blit = pivot;
-  implicant.literals.push_back (pivot);
+  //int pivot = *lits;
+  // pivot = side ? -pivot : pivot;
+  implicant.blit = internal->citten2lit (*lits);
+  // implicant.literals.push_back (pivot);
   const auto end = lits + size;
   for (auto q = lits; q != end; q++) {
     implicant.literals.push_back (internal->citten2lit (*q));
   }
-  sweeper->blocked_clauses.push_back (implicant);
+  LOG (implicant.literals, "blocked on %d clause", implicant.blit);
   citten_clause_with_id (internal->citten, id, implicant.literals.size (), implicant.literals.data ());
   if (internal->proof) {
     implicant.id = ++internal->clause_id;
@@ -477,6 +482,8 @@ static void add_sweep_implicant (void *data, int side, size_t size,
     implicant.id = internal->unit_clauses[internal->vlit (implicant.blit)];
     internal->lrat_chain.clear ();
   }
+  sweeper->blocked_clauses.push_back (implicant);
+  (void) side;
 }
 
 } // end extern C
@@ -832,11 +839,8 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
     while (p != end) {
       const int lit = *p++;
       stats.sweep_flip_backbone++;
-      if (limit_hit || refine) {
-        *q++ = lit;
-      } else if (kitten_ticks_limit_hit (sweeper, "backbone flipping")) {
-        *q++ = lit;
-        limit_hit = true;
+      if (limit_hit || refine || terminated_asynchronously ()) {
+        break;
       } else if (opts.sweepblock && opts.sweepblockflipback && flags (lit).blockable) {
         assert (kitten_status (citten) == 10);
         int res = kitten_flip_and_implicant_for_signed_literal (citten, lit);
@@ -861,7 +865,7 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
             assert (kitten_status (citten) == 10);
             refine = true;
           }
-          *q++ = lit;
+          break;
         }
       } else if (kitten_flip_signed_literal (citten, lit)) {
         LOG ("flipping backbone candidate %d succeeded", lit);
@@ -875,14 +879,15 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
         *q++ = lit;
       }
     }
+    while (p != end) *q++ = *p++;
     sweeper.backbone.resize (q - sweeper.backbone.begin ());
     LOG ("flipped %u backbone candidates in round %u", flipped, round);
 
     if (terminated_asynchronously ())
       break;
-    if (refine) sweep_refine (sweeper);
     if (kitten_ticks_limit_hit (sweeper, "backbone flipping"))
       break;
+    if (refine) sweep_refine (sweeper);
   } while (flipped && round < max_rounds);
   LOG ("flipped %u backbone candidates in total in %u rounds",
        total_flipped, round);
@@ -1434,7 +1439,7 @@ BEGIN:
       goto BEGIN;
     }
   } else if (res == 10) {
-    stats.sweep_flip_equivalences ++;
+    stats.sweep_flip_equivalences++;
     if (kitten_flip_signed_literal (citten, other)) {
       stats.sweep_flipped_equivalences++;
       LOG ("flipping %d succeeded", other);

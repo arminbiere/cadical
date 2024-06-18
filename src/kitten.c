@@ -2458,11 +2458,10 @@ static bool prime_propagate_blit (kitten *kitten, const unsigned idx,
       for (r = lits + 2; r != end_lits; r++) {
         replacement = *r;
         replacement_value = values[replacement];
+        use = use || replacement == blit;
         if (replacement_value > 0)
           break;
-        use = use || replacement == blit;
       }
-      if (!use) continue;
       if (replacement_value > 0) {
         assert (replacement != INVALID);
         ROG (ref, "unwatching %u in", not_lit);
@@ -2471,6 +2470,8 @@ static bool prime_propagate_blit (kitten *kitten, const unsigned idx,
         *r = not_lit;
         watch_klause (kitten, replacement, ref);
         q--;
+      } else if (!use) {
+        continue;
       } else {
         ROG (ref, "idx %u forced prime by", idx);
         conflict = ref;
@@ -2491,16 +2492,17 @@ static int compute_prime_implicant_for (kitten *kitten, unsigned blit) {
   unsigneds unassigned;
   INIT_STACK (unassigned);
   bool limit_hit = 0;
-  blit ^= 1;  // start with negative
   assert (EMPTY_STACK (kitten->prime[0]) && EMPTY_STACK (kitten->prime[1]));
   for (int i = 0; i < 2; i++) {
+    const unsigned block = blit ^ i;
     const bool ignoring = i;
-    if (prime_propagate_blit (kitten, blit / 2, blit)) {
+    if (prime_propagate_blit (kitten, block / 2, block)) {
       value tmp = values[blit];
       assert (tmp);
       values[blit] = 0;
       values[blit ^ 1] = 0;
       PUSH_STACK (unassigned, tmp > 0 ? blit : blit ^ 1);
+      PUSH_STACK (kitten->prime[i], block); // will be negated!
     } else assert (false);
     for (all_stack (unsigned, lit, kitten->trail)) {
       if (KITTEN_TICKS >= kitten->limits.ticks) {
@@ -2515,7 +2517,7 @@ static int compute_prime_implicant_for (kitten *kitten, unsigned blit) {
       const unsigned ref = vars[idx].reason;
       assert (vars[idx].level);
       LOG ("non-prime candidate var %d", idx);
-      if (prime_propagate_blit (kitten, idx, blit)) {
+      if (prime_propagate_blit (kitten, idx, block)) {
         value tmp = values[lit];
         assert (tmp);
         values[lit] = 0;
@@ -2535,7 +2537,6 @@ static int compute_prime_implicant_for (kitten *kitten, unsigned blit) {
       values[lit] = 1;
       values[lit ^ 1] = -1;
     }
-    blit ^= 1;
     CLEAR_STACK (unassigned);
   }
   RELEASE_STACK (unassigned);
@@ -2548,8 +2549,8 @@ static int compute_prime_implicant_for (kitten *kitten, unsigned blit) {
   // the only case when one of the prime implicants is allowed to be empty is
   // if ignore returns always true or always false. 
   assert (!EMPTY_STACK (kitten->prime[0]) || !EMPTY_STACK (kitten->prime[1]));
-  LOGLITS (BEGIN_STACK (kitten->prime[0]), SIZE_STACK (kitten->prime[0]), "first implicant %u", blit ^ 1);
-  LOGLITS (BEGIN_STACK (kitten->prime[1]), SIZE_STACK (kitten->prime[1]), "second implicant %u", blit);
+  LOGLITS (BEGIN_STACK (kitten->prime[0]), SIZE_STACK (kitten->prime[0]), "first implicant %u", blit);
+  LOGLITS (BEGIN_STACK (kitten->prime[1]), SIZE_STACK (kitten->prime[1]), "second implicant %u", blit ^ 1);
   UPDATE_STATUS (11);
 
   int res = SIZE_STACK (kitten->prime[0]) > SIZE_STACK (kitten->prime[1]);
