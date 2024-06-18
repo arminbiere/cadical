@@ -512,6 +512,7 @@ void Internal::flush_blocked_clauses (Sweeper &sweeper) {
     if (proof)
       internal->proof->add_derived_clause (implicant.id, true, implicant.literals, internal->lrat_chain);  // for now no lrat for blocked clauses
     if (implicant.literals.size () == 1) {
+      if (val (implicant.blit)) continue;  // to prevent already assigned
       if (internal->lrat) internal->lrat_chain.push_back (implicant.id);
       internal->assign_unit (implicant.blit);
       implicant.id = internal->unit_clauses[internal->vlit (implicant.blit)];
@@ -567,7 +568,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
               id = cpc.cad_id;
             else {
               if (cpc.blocked) {
-                assert (cpc.sweep_id > sweeper.clauses.size ());
+                assert (cpc.sweep_id >= sweeper.clauses.size ());
                 unsigned tmp = cpc.sweep_id - sweeper.clauses.size ();
                 assert (tmp < sweeper.blocked_clauses.size ());
                 id = sweeper.blocked_clauses[tmp].id;

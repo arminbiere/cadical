@@ -391,7 +391,7 @@ void Internal::clear_analyzed_literals () {
     assert (!f.removable);
   }
   analyzed.clear ();
-#if 0
+#if 0 // TO EXPENSIVE EVEN FOR DEBUGGING MODE
   if (unit_analyzed.size ())
     return;
   for (auto idx : vars) {

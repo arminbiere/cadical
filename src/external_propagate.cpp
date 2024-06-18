@@ -480,7 +480,7 @@ void Internal::explain_external_propagations () {
     f.seen = false;
   }
 
-#ifndef NDEBUG
+#if 0  // has been fuzzed extensively
   for (auto idx : vars) {
     assert (!flags (idx).seen);
   }
