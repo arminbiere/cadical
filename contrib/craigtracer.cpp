@@ -394,11 +394,12 @@ void CraigTracer::add_original_clause (uint64_t id, bool redundant,
   int original_id = craig_clause_current_id++;
   assert (craig_clause_labels.find (original_id) !=
           craig_clause_labels.end ());
+#ifndef NDEBUG
   for (auto &l : c) {
     assert (craig_var_labels.find (std::abs (l)) !=
             craig_var_labels.end ());
   }
-
+#endif
   auto clause_label = craig_clause_labels.find (original_id)->second;
   auto *interpolant = create_interpolant_for_clause (c, clause_label);
 
@@ -412,10 +413,10 @@ void CraigTracer::add_derived_clause (
     const std::vector<uint64_t> &proof_chain) {
   assert (proof_chain.size () >= 1);
   (void) redundant;
-
+#ifndef NDEBUG
   for (auto &clause : proof_chain)
     assert (craig_interpolants[clause - 1] != nullptr);
-
+#endif
   // Mark literals of conflicting clause.
   for (auto &l : craig_clauses[proof_chain.back () - 1])
     mark_literal (l);
@@ -437,8 +438,11 @@ void CraigTracer::add_derived_clause (
     }
   }
   unmark_all ();
-
+#ifndef NDEBUG
   assert (craig_clauses.size () == id - 1);
+#else
+  (void) id;
+#endif
   craig_clauses.push_back (c);
   craig_interpolants.push_back (interpolant);
 }
