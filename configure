@@ -31,6 +31,7 @@ options=""
 quiet=no
 m32=no
 contrib=yes
+ipasir=yes
 
 #--------------------------------------------------------------------------#
 
@@ -98,6 +99,7 @@ where '<option>' is one of the following
 --no-contracts     compile without API contract checking code
 --no-tracing       compile without API call tracing code
 --no-contrib       compile without contributed code
+--no-ipasir        compile without ipasir interface
 
 --competition      configure for the competition
                    ('--quiet', '--no-contracts', '--no-tracing')
@@ -155,6 +157,7 @@ do
     --no-contracts | --no-contract) contracts=no;;
     --no-tracing | --no-trace) tracing=no;;
     --no-contrib) contrib=no;;
+    --no-ipasir) ipasir=no;;
 
     --coverage) coverage=yes;;
     --profile) profile=yes;;
@@ -313,6 +316,7 @@ fi
 [ $contracts = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRACTS"
 [ $tracing = no ] && CXXFLAGS="$CXXFLAGS -DNTRACING"
 [ $contrib = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRIB"
+[ $ipasir = no ] && CXXFLAGS="$CXXFLAGS -DNIPASIR"
 
 CXXFLAGS="$CXXFLAGS$options"
 
@@ -499,6 +503,7 @@ sed \
 -e "s#@CXXFLAGS@#$CXXFLAGS#" \
 -e "s#@LIBS@#$libs#" \
 -e "s#@CONTRIB@#$contrib#" \
+-e "s#@IPASIR@#$ipasir#" \
 -e "s#@ROOT@#$root#" \
 ../makefile.in > makefile
 
