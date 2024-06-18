@@ -165,7 +165,7 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   enlarge_zero (sweeper.next, max_var + 1);
   for (const auto & lit : lits)
     sweeper.reprs[lit] = lit;
-  sweeper.first = sweeper.last = sweeper.blit = 0;
+  sweeper.first = sweeper.last = 0;
   sweeper.current_ticks = 0;
   assert (!citten);
   citten = kitten_init ();
@@ -271,11 +271,6 @@ void Internal::clear_sweeper (Sweeper &sweeper) {
     flags (lit).blockable = false;
   }
   sweeper.blockable.clear ();
-  if (proof) {
-    for (auto &bc : sweeper.blocked_clauses) {
-      proof->delete_clause (bc.id, true, bc.literals);
-    }
-  }
   sweeper.blocked_clauses.clear ();
   sweeper.clauses.clear ();
   sweeper.backbone.clear ();
@@ -470,19 +465,7 @@ static void add_sweep_implicant (void *data, int side, size_t size,
   }
   LOG (implicant.literals, "blocked on %d clause", implicant.blit);
   citten_clause_with_id (internal->citten, id, implicant.literals.size (), implicant.literals.data ());
-  if (internal->proof) {
-    implicant.id = ++internal->clause_id;
-    internal->delete_all_redundant_with (-implicant.blit);
-    internal->proof->add_derived_clause (implicant.id, true, implicant.literals, internal->lrat_chain);  // for now no lrat for blocked clauses
-  }
-  if (implicant.literals.size () == 1) {
-    if (internal->lrat) internal->lrat_chain.push_back (implicant.id);
-    internal->assign_unit (implicant.blit);
-    internal->delete_all_redundant_with (-implicant.blit);
-    implicant.id = internal->unit_clauses[internal->vlit (implicant.blit)];
-    internal->lrat_chain.clear ();
-  }
-  sweeper->blocked_clauses.push_back (implicant);
+
   (void) side;
 }
 
@@ -520,6 +503,28 @@ void Internal::delete_all_redundant_with (int blit) {
   delete_garbage_clauses ();
 }
 
+void Internal::flush_blocked_clauses (Sweeper &sweeper) {
+  for (auto &implicant : sweeper.blocked_clauses) {
+    implicant.id = ++internal->clause_id;
+    internal->delete_all_redundant_with (-implicant.blit);
+    if (proof)
+      internal->proof->add_derived_clause (implicant.id, true, implicant.literals, internal->lrat_chain);  // for now no lrat for blocked clauses
+    if (implicant.literals.size () == 1) {
+      if (internal->lrat) internal->lrat_chain.push_back (implicant.id);
+      internal->assign_unit (implicant.blit);
+      implicant.id = internal->unit_clauses[internal->vlit (implicant.blit)];
+      internal->lrat_chain.clear ();
+    }
+  }
+}
+
+void Internal::unflush_blocked_clauses (Sweeper &sweeper) {
+  if (!proof) return;
+  for (auto &bc : sweeper.blocked_clauses) {
+    proof->delete_clause (bc.id, true, bc.literals);
+  }
+}
+
 void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
   if (unsat)
     return;
@@ -528,7 +533,8 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
   vector<sweep_proof_clause> &core = sweeper.core[core_idx];
 
   assert (!lrat || proof);
-
+  flush_blocked_clauses (sweeper);
+  
   unsigned unsat_size = 0;
   for (auto & pc : core) {
     unsat_size++;
@@ -554,7 +560,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
 
     const unsigned new_size = pc.literals.size ();
 
-    if (lrat && !pc.blocked) {
+    if (lrat) {
       assert (pc.cad_id == INVALID64);
       for (auto & cid : pc.chain) {
         uint64_t id = 0;
@@ -565,7 +571,12 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
             else {
               assert (cpc.cad_id == sweeper.clauses[cpc.sweep_id]->id);
               assert (!sweeper.clauses[cpc.sweep_id]->garbage);
-              id = cpc.cad_id;
+              if (cpc.blocked) {
+                unsigned tmp = cpc.sweep_id - sweeper.clauses.size ();
+                assert (tmp >= 0 && tmp < sweeper.blocked.clauses.size ());
+                id = sweeper.blocked_clauses[tmp].id;
+              } else
+                id = cpc.cad_id;
               // avoid duplicate ids of units with seen flags
               for (const auto & lit : cpc.literals) {
                 if (val (lit) >= 0) continue;
@@ -629,6 +640,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
       lrat_chain.clear ();
     }
   }
+  unflush_blocked_clauses (sweeper);
 }
 
 void Internal::save_core (Sweeper &sweeper, unsigned core) {
@@ -854,10 +866,8 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
         } else {
           flipped++;
           stats.sweep_flipped_backbone++;
-          sweeper.blit = res ? -lit : lit;
           kitten_add_prime_implicant (citten, &sweeper, res, add_sweep_implicant);
           stats.sweep_blocking_clause_added++;
-          sweeper.blit = 0;
           res = sweep_solve ();
           if (!res) limit_hit = true;
           else {
@@ -916,10 +926,8 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
     } else {
       LOG ("add blocking clause for %d", lit);
       stats.sweep_flipped_backbone++;
-      sweeper.blit = res ? -lit : lit;
       kitten_add_prime_implicant (citten, &sweeper, res, add_sweep_implicant);
       stats.sweep_blocking_clause_added++;
-      sweeper.blit = 0;
       res = sweep_solve ();
       if (res == 10) {
         sweep_refine (sweeper);
@@ -1316,10 +1324,8 @@ void Internal::flip_partition_literals (Sweeper &sweeper) {
             total_flipped++;
 #endif
             flipped++;
-            sweeper.blit = res ? -lit : lit;
             kitten_add_prime_implicant (citten, &sweeper, res, add_sweep_implicant);
             stats.sweep_blocking_clause_added++;
-            sweeper.blit = 0;
             res = sweep_solve ();
             if (!res) limit_hit = true;
             else {
@@ -1386,10 +1392,8 @@ BEGIN:
       LOG ("blocking clause for %d failed due to ticks", lit);
     } else {
       LOG ("add blocking clause for %d", lit);
-      sweeper.blit = res ? -lit : lit;
       kitten_add_prime_implicant (citten, &sweeper, res, add_sweep_implicant);
       stats.sweep_blocking_clause_added++;
-      sweeper.blit = 0;
       res = sweep_solve ();
       if (res == 10) {
         sweep_refine (sweeper);
@@ -1428,10 +1432,8 @@ BEGIN:
       LOG ("blocking clause for %d failed due to ticks", other);
     } else {
       LOG ("add blocking clause for %d", other);
-      sweeper.blit = res ? -other : other;
       kitten_add_prime_implicant (citten, &sweeper, res, add_sweep_implicant);
       stats.sweep_blocking_clause_added++;
-      sweeper.blit = 0;
       res = sweep_solve ();
       if (res == 10) {
         sweep_refine (sweeper);
