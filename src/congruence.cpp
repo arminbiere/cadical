@@ -698,6 +698,65 @@ void Closure::extract_and_gates () {
 
 /*------------------------------------------------------------------------*/
 // XOR gates
+
+
+unsigned parity_lits (std::vector<int> lits) {
+  unsigned res = 0;
+  for (auto lit : lits)
+    res ^= (lit < 0);
+#ifdef NDEBUG
+  (void) solver;
+#endif
+  return res;
+}
+
+void inc_lits (std::vector<int>& lits){
+  bool carry = 1;
+  for (int i = 0; i < lits.size() && carry; ++i) {
+    int lit = lits[i];
+    carry = (lit > 0);
+    lits[i] = -lit;
+  }
+}
+
+void Closure::check_ternary (int a, int b, int c) {
+  if (!internal->opts.check)
+    return;
+  auto &clause = internal->clause;
+  assert (clause.empty ());
+  clause.push_back(a);
+  clause.push_back(b);
+  clause.push_back(c);
+  internal->external->check_learned_clause ();
+  clause.clear();
+}
+
+void Closure::check_xor_gate_implied(Gate const *const g) {
+  assert (g->tag == Gate_Type::XOr_Gate);
+  if (!internal->opts.check)
+    return;
+  const int lhs = g->lhs;
+  LOG (g->rhs, "checking gate %d = bigxor", g->lhs);
+  auto &clause = internal->clause;
+  assert (clause.empty());
+  for (auto other : g->rhs) {
+    assert (other > 0);
+    clause.push_back(other);
+  }
+  const unsigned arity = g->arity;
+  const unsigned end = 1u << arity;
+  const unsigned parity = (lhs > 0);
+
+  for (unsigned i = 0; i != end; ++i) {
+    while (i && parity_lits (clause) != parity)
+      inc_lits (clause);
+    internal->external->check_learned_clause ();
+    inc_lits (clause);
+  }
+  clause.clear();
+  }
+  
+// 
 // TODO moreg with find_and_lits
 Gate* Closure::find_xor_lits (int arity, const std::vector<int> &rhs) {
   Gate *g = new Gate;
@@ -715,15 +774,6 @@ Gate* Closure::find_xor_lits (int arity, const std::vector<int> &rhs) {
   else {
     LOG (this->rhs, "gate not found in table");
     return nullptr;
-  }
-}
-
-void inc_lits (std::vector<int>& lits){
-  bool carry = 1;
-  for (int i = 0; i < lits.size() && carry; ++i) {
-    int lit = lits[i];
-    carry = (lit > 0);
-    lits[i] = -lit;
   }
 }
 
@@ -808,7 +858,7 @@ Gate *Closure::new_xor_gate (int lhs) {
   assert (arity + 1 == lits.size());
   Gate *g = find_xor_lits (arity, this->rhs);
   if (g) {
-    // check_xor_gate_implied (closure, g);
+    check_xor_gate_implied (g);
     if (merge_literals(g->lhs, lhs)) {
       LOG ("found merged literals");
     }
@@ -824,7 +874,7 @@ Gate *Closure::new_xor_gate (int lhs) {
     table.insert(g);
     ++internal->stats.congruence.gates;
     ++internal->stats.congruence.xors;
-    // check_xor_gate_implied (closure, g);
+    check_xor_gate_implied (g);
     for (auto lit : g->rhs) {
       connect_goccs(g, lit);
     }

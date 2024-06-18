@@ -140,6 +140,9 @@ struct Closure {
   
   Gate* new_and_gate(int);
   Gate* new_xor_gate(int);
+  //check
+  void check_xor_gate_implied (Gate const *const);
+  void check_ternary (int a, int b, int c) {
 
   bool learn_congruence_unit(int unit);
 
