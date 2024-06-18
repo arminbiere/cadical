@@ -373,7 +373,7 @@ static void save_core_clause (void *state, unsigned id, bool learned, size_t siz
     if (id < sweeper->clauses.size ())
       pc.cad_id = sweeper->clauses[id]->id;
     else {  // blocking clause
-      pc.cad_id = sweeper->blocked_clauses[id-sweeper->clauses.size ()].id;
+      pc.cad_id = 0;
       pc.blocked = true;
     }
   }
@@ -414,7 +414,7 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
         pc.literals.push_back (lit);
       }
     } else {  // blocking clause
-      pc.cad_id = sweeper->blocked_clauses[id-sweeper->clauses.size ()].id;
+      pc.cad_id = 0;
       pc.blocked = true;
       const unsigned *end = lits + size;
       for (const unsigned *p = lits; p != end; p++) {
@@ -464,6 +464,7 @@ static void add_sweep_implicant (void *data, int side, size_t size,
     implicant.literals.push_back (internal->citten2lit (*q));
   }
   LOG (implicant.literals, "blocked on %d clause", implicant.blit);
+  sweeper->blocked_clauses.push_back (implicant);
   citten_clause_with_id (internal->citten, id, implicant.literals.size (), implicant.literals.data ());
 
   (void) side;
@@ -505,6 +506,7 @@ void Internal::delete_all_redundant_with (int blit) {
 
 void Internal::flush_blocked_clauses (Sweeper &sweeper) {
   for (auto &implicant : sweeper.blocked_clauses) {
+    stats.sweep_blocking_clause_flushed++;
     implicant.id = ++internal->clause_id;
     internal->delete_all_redundant_with (-implicant.blit);
     if (proof)
@@ -533,28 +535,23 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
   vector<sweep_proof_clause> &core = sweeper.core[core_idx];
 
   assert (!lrat || proof);
-  flush_blocked_clauses (sweeper);
   
   unsigned unsat_size = 0;
   for (auto & pc : core) {
     unsat_size++;
 
-    if (pc.blocked) stats.sweep_blocking_clause_extracted++;
-    if (!pc.learned) {  // skip blocked again.
+    if (pc.blocked) {
+      stats.sweep_blocking_clause_extracted++;
+      assert (pc.sweep_id >= sweeper.clauses.size ());
+      unsigned tmp = pc.sweep_id - sweeper.clauses.size ();
+      assert (tmp < sweeper.blocked_clauses.size ());
+      pc.cad_id = sweeper.blocked_clauses[tmp].id;
+      assert (pc.cad_id);
+    }
+    if (!pc.learned) {  // also skip blocked.
       LOG (pc.literals, "not adding already present core[%u] kitten[%u] clause", core_idx, pc.kit_id);
       continue;
     }
-    
-    // TODO: pc.blocked !! (lrat is all clause_ids which can be resolved with blit. pivot??)
-    // checker will break because its rat.
-    // blocking clause also only allowed if it is blocked over redundant clauses as well
-    // you can always 'fake' it by temporarily deleting learned clauses that
-    // disallow adding the blocked clause and re-adding them later
-    // this works if you are careful (i.e. sound & complete) with
-    // redundant / irredundant tracking (does not work with lrat easily though)
-    // will just assume for now that it is ok to do anyways.
-    // -> this is advantage of checked deletions :/
-    // if (pc.blocked) delete_all_redundant_with (-sweeper.blocked_clauses[pc.sweep_id - sweeper.clauses.size ()].blit);
 
     LOG (pc.literals, "adding extracted core[%u] kitten[%u] lemma", core_idx, pc.kit_id);
 
@@ -569,14 +566,17 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
             if (cpc.learned)
               id = cpc.cad_id;
             else {
-              assert (cpc.cad_id == sweeper.clauses[cpc.sweep_id]->id);
-              assert (!sweeper.clauses[cpc.sweep_id]->garbage);
               if (cpc.blocked) {
+                assert (cpc.sweep_id > sweeper.clauses.size ());
                 unsigned tmp = cpc.sweep_id - sweeper.clauses.size ();
-                assert (tmp >= 0 && tmp < sweeper.blocked.clauses.size ());
+                assert (tmp < sweeper.blocked_clauses.size ());
                 id = sweeper.blocked_clauses[tmp].id;
-              } else
+                assert (id);
+              } else {
                 id = cpc.cad_id;
+                assert (cpc.cad_id == sweeper.clauses[cpc.sweep_id]->id);
+                assert (!sweeper.clauses[cpc.sweep_id]->garbage);
+              }
               // avoid duplicate ids of units with seen flags
               for (const auto & lit : cpc.literals) {
                 if (val (lit) >= 0) continue;
@@ -640,7 +640,6 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
       lrat_chain.clear ();
     }
   }
-  unflush_blocked_clauses (sweeper);
 }
 
 void Internal::save_core (Sweeper &sweeper, unsigned core) {
@@ -673,8 +672,10 @@ void Internal::clear_core (Sweeper &sweeper, unsigned core_idx) {
 
 void Internal::save_add_clear_core (Sweeper &sweeper) {
   save_core (sweeper, 0);
+  flush_blocked_clauses (sweeper);
   add_core (sweeper, 0);
   clear_core (sweeper, 0);
+  unflush_blocked_clauses (sweeper);
 }
 
 /* TODO: logging
@@ -1512,6 +1513,7 @@ BEGIN:
   LOG ("sweep equivalence %d = %d", lit, other);
 
   // if kitten behaves as expected, id should be at sweeper.core[0].back ()
+  flush_blocked_clauses (sweeper);
   add_core (sweeper, 0);
   add_core (sweeper, 1);
   if (!val (lit) && !val (other)) {
@@ -1538,6 +1540,7 @@ BEGIN:
   }
   clear_core (sweeper, 0);
   clear_core (sweeper, 1);
+  unflush_blocked_clauses (sweeper);
 
   const int repr_idx = abs (repr);
   schedule_inner (sweeper, repr_idx);

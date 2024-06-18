@@ -471,6 +471,8 @@ void Stats::print (Internal *internal) {
          stats.sweep_flipped_equivalences, percent (stats.sweep_flipped_equivalences, stats.sweep_flip_equivalences));
     PRT ("  blocking added:%15" PRId64 "   %10.2f    per swept variable",
          stats.sweep_blocking_clause_added, relative (stats.sweep_blocking_clause_added, stats.sweep_variables));
+    PRT ("  blocking flush:%15" PRId64 "   %10.2f    added",
+         stats.sweep_blocking_clause_flushed, relative (stats.sweep_blocking_clause_flushed, stats.sweep_blocking_clause_added));
     PRT ("  blocking proof:%15" PRId64 "   %10.2f %%  added",
          stats.sweep_blocking_clause_extracted, percent (stats.sweep_blocking_clause_extracted, stats.sweep_blocking_clause_added));
     PRT ("  depth:         %15" PRId64 "   %10.2f    per swept variable",

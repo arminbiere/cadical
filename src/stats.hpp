@@ -273,6 +273,7 @@ struct Stats {
   int64_t sweep;
   int64_t sweep_blocking_clause_added;
   int64_t sweep_blocking_clause_extracted;
+  int64_t sweep_blocking_clause_flushed;
 
   int64_t preprocessings;
 
