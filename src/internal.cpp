@@ -683,7 +683,6 @@ int Internal::local_search () {
 
 // if preprocess_only is false and opts.ilb is true we do not preprocess
 // such that we do not have to backtrack to level 0.
-// TODO: check restore_clauses works on higher level
 //
 int Internal::solve (bool preprocess_only) {
   assert (clause.empty ());

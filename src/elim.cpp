@@ -418,7 +418,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
     assert (s == size + 1);
     assert (t == size + 1);
     clause.clear ();
-    // TODO: LRAT is c + d (+ eventual units)
+    // LRAT is c + d (+ eventual units)
     elim_on_the_fly_self_subsumption (eliminator, c, pivot);
     LOG (d, "double pivot %d on-the-fly self-subsuming resolution", -pivot);
     stats.elimotfsub++;
@@ -666,8 +666,9 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
 
   if (substitute)
     assert (pushed <= substitute);
-  // TODO also add eliminator.prime_gates to the extension stack.... IDs?
 
+  // also add eliminator.prime_gates to the extension stack... for now
+  // with INT64_MAX as IDs
   for (const auto &prime : eliminator.prime_gates) {
     assert (prime.size ());
     external->push_blocked_clause_on_extension_stack (INT64_MAX, prime[0], prime);

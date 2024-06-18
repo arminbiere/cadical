@@ -129,7 +129,7 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
     if (unsat)
       break;
 
-    // TODO maybe not necessary
+    // not necessary but should help
     const Occs &ps = occs (lit);
     for (const auto &c : ps) {
       if (c->garbage)
@@ -219,9 +219,9 @@ void Internal::init_sweeper (Sweeper &sweeper) {
     int64_t limit = stats.propagations.search;
     limit -= last.sweep.propagations;
     limit *= opts.sweepeffort * 1e-3;
-    if (limit < opts.sweepmineff) // TODO maybe these options
+    if (limit < opts.sweepmineff)
       limit = opts.sweepmineff;
-    // if (limit > opts.sweepmaxeff)
+    // if (limit > opts.sweepmaxeff) // TODO maybe this options
     //   limit = opts.sweepmaxeff;
     int64_t ticks_limit = limit;   // propagations are not equal ticks
     sweeper.limit.ticks = ticks_limit;
@@ -1221,7 +1221,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr
       } else if (likely_to_be_kept_clause (c))
         mark_added (c);
       LOG (c, "substituted");
-      if (!repr_already_watched)     // TODO maybe delay this
+      if (!repr_already_watched)
         occs (repr).push_back (c);
       clause.clear ();
       q--;

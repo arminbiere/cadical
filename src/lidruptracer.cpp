@@ -329,7 +329,7 @@ void LidrupTracer::lidrup_conclude_and_delete (
   if (size > 1) {
     if (binary) {
       file->put ('U');
-      put_binary_id (size); // TODO: put_binary_id ok for size?
+      put_binary_id (size);
     } else {
       file->put ("U ");
       file->put (size), file->put ("\n");

@@ -232,13 +232,13 @@ void LratChecker::insert () {
 
 /*------------------------------------------------------------------------*/
 
-// TODO "strict" resolution check instead of rup check
+// "strict" resolution check instead of rup check
 bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
-  if (proof_chain.empty ()) { // ignore these case TODO chain.size == 1?
+  if (proof_chain.empty ()) {
     LOG ("LRAT CHECKER resolution check skipped clause is tautological");
     return true;
   }
-  if (strict_lrat) { // ignore this case
+  if (strict_lrat) {
     LOG ("LRAT CHECKER resolution check skipped because "
          "opts.externallrat=true");
     return true;

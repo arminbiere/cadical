@@ -28,11 +28,13 @@ inline signed char LratBuilder::val (int lit) {
   return vals[lit];
 }
 
+#ifndef NDEBUG
 signed char &LratBuilder::mark (int lit) {
   const unsigned u = l2u (lit);
   assert (u < marks.size ());
   return marks[u];
 }
+#endif
 
 signed char &LratBuilder::checked_lit (int lit) {
   const unsigned u = l2u (lit);
@@ -274,16 +276,18 @@ void LratBuilder::enlarge_vars (int64_t idx) {
   reasons.resize (new_size_vars);
   unit_reasons.resize (new_size_vars);
   justified.resize (new_size_vars);
-  todo_justify.resize (new_size_vars);
+  to_justify.resize (new_size_vars);
   for (int64_t i = size_vars; i < new_size_vars; i++) {
     reasons[i] = 0;
     unit_reasons[i] = 0;
     justified[i] = 0;
-    todo_justify[i] = 0;
+    to_justify[i] = 0;
   }
 
   watchers.resize (2 * new_size_vars);
+#ifndef NDEBUG
   marks.resize (2 * new_size_vars);
+#endif
   checked_lits.resize (2 * new_size_vars);
 
   assert (idx < new_size_vars);
@@ -540,18 +544,18 @@ void LratBuilder::construct_chain () {
   LOG ("LRAT BUILDER checking lits on trail in reverse order");
   for (auto p = trail.end () - 1; unjustified && p >= trail.begin (); p--) {
     int lit = *p;
-    if (!todo_justify[l2a (lit)]) {
+    if (!to_justify[l2a (lit)]) {
       LOG ("LRAT BUILDER lit %d not needed", lit);
       continue;
     }
     if (justified[l2a (lit)]) {
       LOG ("LRAT BUILDER lit %d already justified", lit);
-      unjustified--; // one of the todo_justify lits justified
+      unjustified--; // one of the to_justify lits justified
       continue;
     }
     justified[l2a (lit)] = true;
     LOG ("LRAT BUILDER justify lit %d", lit);
-    unjustified--; // one of the todo_justify lits justified
+    unjustified--; // one of the to_justify lits justified
     LratBuilderClause *reason_clause = unit_reasons[l2a (lit)];
     if (!reason_clause)
       reason_clause = reasons[l2a (lit)];
@@ -561,7 +565,7 @@ void LratBuilder::construct_chain () {
     const int *rp = reason_clause->literals;
     for (unsigned i = 0; i < reason_clause->size; i++) {
       int reason_lit = *(rp + i);
-      if (todo_justify[l2a (reason_lit)]) {
+      if (to_justify[l2a (reason_lit)]) {
         LOG ("LRAT BUILDER lit %d already marked", reason_lit);
         continue;
       }
@@ -570,8 +574,8 @@ void LratBuilder::construct_chain () {
         continue;
       }
       LOG ("LRAT BUILDER need to justify lit %d", reason_lit);
-      unjustified++; // new todo_justify means unjustified increase
-      todo_justify[l2a (reason_lit)] = true;
+      unjustified++; // new to_justify means unjustified increase
+      to_justify[l2a (reason_lit)] = true;
     }
   }
   assert (!unjustified);
@@ -589,7 +593,7 @@ void LratBuilder::proof_tautological_clause () {
 void LratBuilder::proof_satisfied_literal (int lit) {
   LOG ("LRAT BUILDER satisfied clause is proven by %d", lit);
   unjustified = 1; // is always > 0 if we have work to do
-  todo_justify[l2a (lit)] = true;
+  to_justify[l2a (lit)] = true;
   construct_chain ();
 }
 
@@ -608,7 +612,7 @@ void LratBuilder::proof_inconsistent_clause () {
       inconsistent_clause->literals + inconsistent_clause->size;
   for (int *i = inconsistent_clause->literals; i < end; i++) {
     int lit = *i;
-    todo_justify[l2a (lit)] = true;
+    to_justify[l2a (lit)] = true;
   }
   reverse_chain.push_back (inconsistent_clause->id);
   construct_chain ();
@@ -627,7 +631,7 @@ void LratBuilder::proof_clause () {
   const int *end = conflict->literals + conflict->size;
   for (int *i = conflict->literals; i < end; i++) {
     int lit = *i;
-    todo_justify[l2a (lit)] = true;
+    to_justify[l2a (lit)] = true;
   }
   reverse_chain.push_back (conflict->id);
   construct_chain ();
@@ -646,8 +650,8 @@ bool LratBuilder::build_chain_if_possible () {
   reverse_chain.clear ();
   for (size_t i = 0; i < justified.size (); i++)
     justified[i] = false;
-  for (size_t i = 0; i < todo_justify.size (); i++)
-    todo_justify[i] = false;
+  for (size_t i = 0; i < to_justify.size (); i++)
+    to_justify[i] = false;
 
   if (inconsistent) {
     assert (inconsistent_clause);
@@ -824,14 +828,17 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> &c) {
   tautological ();
   LratBuilderClause **p = find (id), *d = *p;
   if (d) {
-    // TODO: marks should only be defined and used in debugging mode
+#ifndef NDEBUG
     for (const auto &lit : simplified)
       mark (lit) = true;
+#endif
     int unit = 0;
     const int *dp = d->literals;
     for (unsigned i = 0; i < d->size; i++) {
       int lit = *(dp + i);
+#ifndef NDEBUG
       assert (mark (lit));
+#endif
       LratBuilderClause *reason = reasons[l2a (lit)];
       if (!val (lit))
         LOG ("LRAT BUILDER skipping lit %d not assigned", lit);
@@ -844,9 +851,10 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> &c) {
         unit = lit;
       }
     }
+#ifndef NDEBUG
     for (const auto &lit : simplified)
       mark (lit) = false;
-
+#endif
     // Remove from hash table, mark as garbage, connect to garbage list.
     num_garbage++;
     assert (num_clauses);

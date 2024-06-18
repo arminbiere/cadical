@@ -55,9 +55,11 @@ class LratBuilder {
   //
   static unsigned l2u (int lit);
   vector<LratBuilderWatcher> watchers; // watchers of literals
+#ifndef NDEBUG
   vector<signed char> marks;           // mark bits of literals
 
   signed char &mark (int lit);
+#endif
   signed char &checked_lit (int lit);
   LratBuilderWatcher &watcher (int lit);
 
@@ -66,7 +68,7 @@ class LratBuilder {
   vector<LratBuilderClause *> reasons;      // reason for each assignment
   vector<LratBuilderClause *> unit_reasons; // units get preferred
   vector<bool> justified;
-  vector<bool> todo_justify;
+  vector<bool> to_justify;
   vector<signed char> checked_lits; // this is implemented same as marks
   LratBuilderClause *conflict;
 
@@ -143,7 +145,7 @@ class LratBuilder {
   bool build_chain_if_possible ();
   // if the clause is a true tautology it needs no proof.
   void proof_tautological_clause ();
-  // the following three initialize chain and justify_todo differently and
+  // the following three initialize chain and to_justify differently and
   // then call construct_chain.
   void proof_clause ();
   // for satisfied clauses we only need to prove the satisfied lit

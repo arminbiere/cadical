@@ -57,7 +57,6 @@ int Internal::second_literal_in_binary_clause (Eliminator &eliminator,
 // need a copy from above that does not care about garbage
 
 int Internal::second_literal_in_binary_clause_lrat (Clause *c, int first) {
-  // TODO: this seems to work
   if (c->garbage)
     return 0;
   int second = 0;

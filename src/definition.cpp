@@ -194,8 +194,6 @@ static bool ignore_negative (void *state, unsigned id) {
 static void add_implicant (void *state, int side, size_t size,
                                 const unsigned *lits) {
   definition_extractor *extractor = (definition_extractor *) state;
-  // really ignore all implicants TODO: maybe logging or blocked clause proof
-  // for units
   const unsigned id = extractor->clauses[0].size () + extractor->clauses[1].size ()
                                                  + extractor->implicants.size ();
   vector<int> implicant;

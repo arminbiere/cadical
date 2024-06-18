@@ -278,15 +278,15 @@ bool Internal::decompose_round () {
                 } while (other != parent);
 
                 assert (!conflicting || first > 0);
-                vector<int> todo;
+                vector<int> to_justify;
                 if (conflicting) {
                   LOG ("conflicting scc simulating up at %d", parent);
-                  todo.push_back (-parent);
+                  to_justify.push_back (-parent);
                 } else
-                  todo.push_back (first);
-                while (!todo.empty ()) {
-                  const int next = todo.back ();
-                  todo.pop_back ();
+                  to_justify.push_back (first);
+                while (!to_justify.empty ()) {
+                  const int next = to_justify.back ();
+                  to_justify.pop_back ();
                   Watches &next_ws = watches (-next);
                   for (const auto &w : next_ws) {
                     if (!w.binary ())
@@ -300,7 +300,7 @@ bool Internal::decompose_round () {
                     if (child_dfs.parent)
                       continue;
                     child_dfs.parent = w.clause;
-                    todo.push_back (child);
+                    to_justify.push_back (child);
                   }
                 }
 
