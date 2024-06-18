@@ -455,10 +455,8 @@ static void add_sweep_implicant (void *data, int side, size_t size,
   Internal *internal = sweeper->internal;
   const unsigned id = sweeper->clauses.size () + sweeper->blocked_clauses.size ();
   sweep_blocked_clause implicant;
-  //int pivot = *lits;
-  // pivot = side ? -pivot : pivot;
+  implicant.id = 0;
   implicant.blit = internal->citten2lit (*lits);
-  // implicant.literals.push_back (pivot);
   const auto end = lits + size;
   for (auto q = lits; q != end; q++) {
     implicant.literals.push_back (internal->citten2lit (*q));
@@ -515,7 +513,6 @@ void Internal::flush_blocked_clauses (Sweeper &sweeper) {
       if (val (implicant.blit)) continue;  // to prevent already assigned
       if (internal->lrat) internal->lrat_chain.push_back (implicant.id);
       internal->assign_unit (implicant.blit);
-      implicant.id = internal->unit_clauses[internal->vlit (implicant.blit)];
       internal->lrat_chain.clear ();
     }
   }
@@ -1923,7 +1920,6 @@ bool Internal::sweep () {
 //  if (DELAYING (sweep))  TODO sweeping should not be called every probe but
 //    return false;             only sometimes based on a counter
   assert (!level);
-  // assert (!solver->unflushed);  // ? maybe flushed falsified literals from clauses??
   START_SIMPLIFIER (sweep, SWEEP);
   stats.sweep++;
   uint64_t equivalences = stats.sweep_equivalences;
@@ -1974,7 +1970,10 @@ bool Internal::sweep () {
   }
 
   uint64_t eliminated = equivalences + units;
-  // assert (active () >= inactive);
+  // assert (active () >= inactive);  // TODO this should be stats.active
+  //                                     but also need to increment
+  //                                     stats.now.substituted to make
+  //                                     active () not trigger an assertion
   // solver->active -= inactive;   // don't know if this is allowed !!
   report ('=', !eliminated);
   // solver->active += inactive;
