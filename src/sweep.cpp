@@ -501,7 +501,7 @@ void Internal::citten_clear_track_log_terminate () {
 
 void Internal::delete_all_redundant_with (int blit) {
   for (const auto &c : clauses) {
-    if (!can_sweep_clause (c)) continue;
+    if (can_sweep_clause (c)) continue;
     assert (!c->swept);
     for (const auto &lit : *c) {
       if (lit == blit) {
