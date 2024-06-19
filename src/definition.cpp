@@ -51,6 +51,10 @@ static void traverse_definition_core (void *state, unsigned id) {
   }
   clause->gate = true;
   eliminator->gates.push_back (clause);
+#ifdef LOGGING
+  Internal *internal = extractor->internal;
+  LOG (clause, "extracted gate");
+#endif
   eliminator->definition_unit |= sign;
 }
 
@@ -246,8 +250,8 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
         LOG (c, "adding to kitten");
         citten_clause_with_id_and_exception (citten, exported, c->size,
                                              c->literals, except);
-        exported++;
       }
+      exported++;
     }
   }
   stats.definitions_checked++;

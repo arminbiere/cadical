@@ -1102,6 +1102,7 @@ struct Internal {
   void unflush_blocked_clauses (Sweeper &sweeper);
   void sweep_update_noccs (Clause *c);
   void delete_sweep_binary (const sweep_binary &sb);
+  bool can_sweep_clause (Clause *c);
 
   // instantiate
   //

@@ -44,6 +44,12 @@ void Internal::sweep_update_noccs (Clause *c) {
   }
 }
 
+bool Internal::can_sweep_clause (Clause *c) {
+  if (c->garbage) return false;
+  if (!c->redundant) return true;
+  return c->size == 2 && !c->hyper;  
+}
+
 // essentially do full occurence list as in elim.cpp
 void Internal::sweep_dense_mode_and_watch_irredundant () {
   reset_watches ();
@@ -52,12 +58,7 @@ void Internal::sweep_dense_mode_and_watch_irredundant () {
 
   // mark satisfied irredundant clauses as garbage
   for (const auto &c : clauses) {
-    if (c->garbage)
-      continue;
-    if (c->redundant && c->size > 2)
-      continue;
-    if (c->hyper)
-      continue;
+    if (!can_sweep_clause (c)) continue;
     bool satisfied = false;
     for (const auto &lit : *c) {
       const signed char tmp = val (lit);
@@ -104,10 +105,7 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
     assert (val (lit) > 0);
     const Occs &ns = occs (-lit);
     for (const auto &c : ns) {
-      if (c->garbage)
-        continue;
-      if (c->redundant)  // TODO try if it is better to propagate all
-        continue;
+      if (!can_sweep_clause (c)) continue;
       int unit = 0, satisfied = 0;
       for (const auto &other : *c) {
         const signed char tmp = val (other);
@@ -349,8 +347,7 @@ void Internal::sweep_add_clause (Sweeper &sweeper, unsigned depth) {
 void Internal::sweep_clause (Sweeper &sweeper, unsigned depth, Clause *c) {
   if (c->swept)
     return;
-  if (c->garbage)
-    return;
+  assert (can_sweep_clause (c));
   LOG (c, "sweeping[%u]", depth);
   assert (sweeper.clause.empty ());
   for (const auto & lit : *c) {
@@ -504,12 +501,7 @@ void Internal::citten_clear_track_log_terminate () {
 
 void Internal::delete_all_redundant_with (int blit) {
   for (const auto &c : clauses) {
-    if (c->garbage)
-      continue;
-    if (!c->redundant)
-      continue;
-    if (c->size == 2 && !c->hyper)
-      continue;
+    if (!can_sweep_clause (c)) continue;
     assert (!c->swept);
     for (const auto &lit : *c) {
       if (lit == blit) {
@@ -1667,7 +1659,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
       const int lit = sign ? -idx : idx;
       Occs &ns = occs (lit);
       for (auto c : ns) {
-        if (c->redundant && (c->size > 2 || c->hyper)) continue;
+        if (!can_sweep_clause (c)) continue;
         sweep_clause (sweeper, depth, c);
         if (sweeper.vars.size () >= sweeper.limit.vars) {
           LOG ("environment variable limit reached");
