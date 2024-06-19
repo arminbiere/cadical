@@ -1071,7 +1071,7 @@ struct Internal {
   void sweep_refine (Sweeper &sweeper);
   void flip_backbone_literals (struct Sweeper &sweeper);
   bool sweep_backbone_candidate (Sweeper &sweeper, int lit);
-  Clause *add_sweep_binary (sweep_proof_clause, int lit, int other);
+  uint64_t add_sweep_binary (sweep_proof_clause, int lit, int other);
   bool scheduled_variable (Sweeper &sweeper, int idx);
   void schedule_inner (Sweeper &sweeper, int idx);
   void schedule_outer (Sweeper &sweeper, int idx);
@@ -1100,6 +1100,8 @@ struct Internal {
   void delete_all_redundant_with (int);
   void flush_blocked_clauses (Sweeper &sweeper);
   void unflush_blocked_clauses (Sweeper &sweeper);
+  void sweep_update_noccs (Clause *c);
+  void delete_sweep_binary (const sweep_binary &sb);
 
   // instantiate
   //

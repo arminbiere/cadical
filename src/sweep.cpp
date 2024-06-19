@@ -37,9 +37,18 @@ void Internal::sweep_set_kitten_ticks_limit (Sweeper &sweeper) {
   kitten_set_ticks_limit (citten, remaining);
 }
 
+void Internal::sweep_update_noccs (Clause *c) {
+  if (c->redundant) return;
+  for (const auto &lit : *c) {
+    noccs (lit)--;
+  }
+}
+
 // essentially do full occurence list as in elim.cpp
 void Internal::sweep_dense_mode_and_watch_irredundant () {
   reset_watches ();
+
+  init_noccs ();
 
   // mark satisfied irredundant clauses as garbage
   for (const auto &c : clauses) {
@@ -60,6 +69,10 @@ void Internal::sweep_dense_mode_and_watch_irredundant () {
     }
     if (satisfied)
       mark_garbage (c); // forces more precise counts
+    else {
+      for (const auto &lit : *c)
+        noccs (lit)++;  
+    }
   }
 
   init_occs ();
@@ -68,16 +81,15 @@ void Internal::sweep_dense_mode_and_watch_irredundant () {
   //
   for (const auto &c : clauses)
     if (!c->garbage)
-      if (!c->hyper)
-        if (!c->redundant || c->size == 2)
-          for (const auto &lit : *c)
-            if (active (lit))
-              occs (lit).push_back (c);
+      for (const auto &lit : *c)
+        if (active (lit))
+          occs (lit).push_back (c);
 }
 
 // go back to two watch scheme
 void Internal::sweep_sparse_mode () {
   reset_occs ();
+  reset_noccs ();
   init_watches ();
   connect_watches ();
 }
@@ -93,6 +105,8 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
     const Occs &ns = occs (-lit);
     for (const auto &c : ns) {
       if (c->garbage)
+        continue;
+      if (c->redundant)  // TODO try if it is better to propagate all
         continue;
       int unit = 0, satisfied = 0;
       for (const auto &other : *c) {
@@ -112,6 +126,7 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
         LOG (c, "sweeping propagation of %d finds %d satisfied", lit,
              satisfied);
         mark_garbage (c);
+        sweep_update_noccs (c);
       } else if (!unit) {
         LOG ("empty clause during sweeping propagation of %d", lit);
         // need to set conflict = c for lrat
@@ -134,8 +149,11 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
     for (const auto &c : ps) {
       if (c->garbage)
         continue;
+      // if (c->redundant)  // TODO I assume it does not hurt to mark everything here
+        // continue;
       LOG (c, "sweeping propagation of %d produces satisfied", lit);
       mark_garbage (c);
+      sweep_update_noccs (c);
     }
   }
   work.clear ();
@@ -339,6 +357,7 @@ void Internal::sweep_clause (Sweeper &sweeper, unsigned depth, Clause *c) {
     const signed char tmp = val (lit);
     if (tmp > 0) {
       mark_garbage (c);
+      sweep_update_noccs (c);
       sweeper.clause.clear ();
       return;
     }
@@ -971,7 +990,7 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
 // We just copy it as an irredundant clause and call weaken minus
 // and push it on the extension stack
 //
-Clause *Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) {
+uint64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) {
   if (unsat) return 0;  // should not really happen but possibly can
 
   assert (!val (lit) && !val (other));
@@ -989,12 +1008,25 @@ Clause *Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) {
   }
   clause.push_back (lit);
   clause.push_back (other);
-  Clause *res = new_resolved_irredundant_clause ();
+  const uint64_t id = ++clause_id;
+  if (proof) {
+    proof->add_derived_clause (id, false, clause, lrat_chain);
+    proof->weaken_minus (id, clause);
+  }
+  external->push_binary_clause_on_extension_stack (id, lit, other);
   clause.clear ();
   lrat_chain.clear ();
-  return res;
+  return id;
 }
 
+void Internal::delete_sweep_binary (const sweep_binary &sb) {
+  if (unsat) return;
+  if (!proof) return;
+  vector<int> bin;
+  bin.push_back (sb.lit);
+  bin.push_back (sb.other);
+  proof->delete_clause (sb.id, false, bin);
+}
 
 // mark all literals in sweeper.reprs which have been substituted
 // void Internal::mark_substituted_literals (Sweeper &sweeper) {
@@ -1176,6 +1208,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr
       if (satisfied) {
         clause.clear ();
         mark_garbage (c);
+        sweep_update_noccs (c);
         continue;
       }
       assert (found);
@@ -1194,6 +1227,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr
         assign_unit (unit);
         sweeper.propagate.push_back (unit);
         mark_garbage (c);
+        sweep_update_noccs (c);
         stats.sweep_units++;
         break;
       }
@@ -1218,8 +1252,10 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr
       } else if (likely_to_be_kept_clause (c))
         mark_added (c);
       LOG (c, "substituted");
-      if (!repr_already_watched)
+      if (!repr_already_watched) {
         occs (repr).push_back (c);
+        noccs (repr)++;
+      }
       clause.clear ();
       q--;
     }
@@ -1232,14 +1268,22 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr
 void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
   if (unsat) return;
 
-  for (auto c : sweeper.binaries) {
-    assert (c->size == 2);
-    const auto lit = c->literals[0];
-    const auto other = c->literals[1];
+  unsigned count = 0;
+  for (const auto &sb : sweeper.binaries) {
+    count++;
+    const auto lit = sb.lit;
+    const auto other = sb.other;
     if (abs (lit) < abs (other)) {
-      substitute_connected_clauses (sweeper, -other, lit, c->id);
+      substitute_connected_clauses (sweeper, -other, lit, sb.id);
     } else {
-      substitute_connected_clauses (sweeper, -lit, other, c->id);
+      substitute_connected_clauses (sweeper, -lit, other, sb.id);
+    }
+    delete_sweep_binary (sb);
+    if (count == 2) {
+      const auto idx = abs (lit) < abs (other) ? abs (other) : abs (lit);
+      if (!flags (idx).fixed ())
+        mark_substituted (idx);
+      count = 0;
     }
   }
   sweeper.binaries.clear ();
@@ -1518,9 +1562,24 @@ BEGIN:
     assert (sweeper.core[0].size ());
     assert (sweeper.core[1].size ());
     stats.sweep_equivalences++;
-    Clause *bin1 = add_sweep_binary (sweeper.core[0].back (), lit, not_other);
-    Clause *bin2 = add_sweep_binary (sweeper.core[1].back (), not_lit, other);
-    if (bin1 && bin2) {
+    sweep_binary bin1;
+    sweep_binary bin2;
+    if (abs (lit) > abs (other)) {
+      bin1.lit = lit;
+      bin1.other = not_other;
+      bin2.lit = not_lit;
+      bin2.other = other;
+      bin1.id = add_sweep_binary (sweeper.core[0].back (), lit, not_other);
+      bin2.id = add_sweep_binary (sweeper.core[1].back (), not_lit, other);
+    } else {
+      bin1.lit = not_other;
+      bin1.other = lit;
+      bin2.lit = other;
+      bin2.other = not_lit;
+      bin1.id = add_sweep_binary (sweeper.core[0].back (), not_other, lit);
+      bin2.id = add_sweep_binary (sweeper.core[1].back (), other, not_lit);
+    }
+    if (bin1.id && bin2.id) {
       sweeper.binaries.push_back (bin1);
       sweeper.binaries.push_back (bin2);
     }
@@ -1608,6 +1667,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
       const int lit = sign ? -idx : idx;
       Occs &ns = occs (lit);
       for (auto c : ns) {
+        if (c->redundant && (c->size > 2 || c->hyper)) continue;
         sweep_clause (sweeper, depth, c);
         if (sweeper.vars.size () >= sweeper.limit.vars) {
           LOG ("environment variable limit reached");
@@ -1762,14 +1822,14 @@ struct rank_sweep_candidate {
 bool Internal::scheduable_variable (Sweeper &sweeper, int idx,
                                     size_t *occ_ptr) {
   const int lit = idx;
-  const size_t pos = occs (lit).size ();
+  const size_t pos = noccs (lit);
   if (!pos)
     return false;
   const unsigned max_occurrences = sweeper.limit.clauses;
   if (pos > max_occurrences)
     return false;
   const int not_lit = -lit;
-  const size_t neg = occs (not_lit).size ();
+  const size_t neg = noccs (not_lit);
   if (!neg)
     return false;
   if (neg > max_occurrences)

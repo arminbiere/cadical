@@ -21,6 +21,12 @@ struct sweep_blocked_clause {
   vector<int> literals;
 };
 
+struct sweep_binary {
+  int lit;
+  int other;
+  uint64_t id;
+};
+
 struct Sweeper {
   Sweeper (Internal *internal);
   ~Sweeper ();
@@ -41,7 +47,7 @@ struct Sweeper {
   vector<int> backbone;
   vector<int> partition;
   vector<bool> prev_units;
-  vector<Clause *> binaries;
+  vector<sweep_binary> binaries;
   vector<sweep_proof_clause> core[2];
   uint64_t current_ticks;
   struct {
