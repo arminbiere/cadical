@@ -502,6 +502,7 @@ void Internal::citten_clear_track_log_terminate () {
 void Internal::delete_all_redundant_with (int blit) {
   for (const auto &c : clauses) {
     if (can_sweep_clause (c)) continue;
+    if (c->garbage) continue;
     assert (!c->swept);
     for (const auto &lit : *c) {
       if (lit == blit) {
@@ -1272,9 +1273,11 @@ void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
     }
     delete_sweep_binary (sb);
     if (count == 2) {
-      const auto idx = abs (lit) < abs (other) ? abs (other) : abs (lit);
-      if (!flags (idx).fixed ())
-        mark_substituted (idx);
+      if (!val (lit) && !val (other)) {
+        const auto idx = abs (lit) < abs (other) ? abs (other) : abs (lit);
+        if (!flags (idx).fixed ())
+          mark_substituted (idx);
+      }
       count = 0;
     }
   }
@@ -1997,7 +2000,7 @@ bool Internal::sweep () {
     VERBOSE (2, "swept[%" PRIu64 "] external variable %d %s", swept,
         externalize (idx), res);
     if (++swept == limit) {
-      VERBOSE (2,
+      VERBOSE (1,
                            "found %" PRIu64 " equivalences and %" PRIu64
                            " units after sweeping %" PRIu64 " variables ",
                            stats.sweep_equivalences - equivalences,
