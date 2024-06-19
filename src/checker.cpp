@@ -466,6 +466,11 @@ bool Checker::check_blocked () {
       int first;
       for (int *i = c->literals; i < c->literals + c->size; i++) {
         const int lit = *i;
+        if (val (lit) > 0) {
+          LOG (c->literals, c->size, "satisfied clause");
+          count = 2;
+          break;
+        }
         if (mark (lit)) {
           count++;
           LOG (c->literals, c->size, "clause");
