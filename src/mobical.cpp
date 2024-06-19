@@ -2926,7 +2926,7 @@ bool Trace::shrink_literals (int expected) {
 }
 
 static bool is_basic (Call *c) {
-  switch (c->type) {
+  switch ((uint64_t)c->type) {
   case Call::ASSUME:
   case Call::SOLVE:
   case Call::SIMPLIFY:
@@ -3180,7 +3180,7 @@ bool Trace::reduce_values (int expected) {
 }
 
 static bool has_lit_arg_type (Call *c) {
-  switch (c->type) {
+  switch ((uint64_t)c->type) {
   case Call::ADD:
   case Call::CONSTRAIN:
   case Call::ASSUME:
@@ -3798,7 +3798,7 @@ void Reader::parse () {
 
       uint64_t new_state = state;
 
-      switch (c->type) {
+      switch ((uint64_t)c->type) {
 
       case Call::INIT:
         if (state)
