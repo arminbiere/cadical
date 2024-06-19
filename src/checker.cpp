@@ -454,6 +454,38 @@ bool Checker::check () {
   return res;
 }
 
+bool Checker::check_blocked () {
+  for (const auto &lit : unsimplified) {
+    mark (-lit) = true;
+  }
+  vector<int> not_blocked;
+  for (size_t i = 0; i < size_clauses; i++) {
+    for (CheckerClause *c = clauses[i], *next; c; c = next) {
+      next = c->next;
+      unsigned count = 0;
+      int first;
+      for (int *i = c->literals; i < c->literals + c->size; i++) {
+        const int lit = *i;
+        if (mark (lit)) {
+          count++;
+          LOG (c->literals, c->size, "clause");
+          first = lit;
+        }
+      }
+      if (count == 1) not_blocked.push_back (first);
+    }
+  }
+  for (const auto &lit : not_blocked) {
+    mark (lit) = false;
+  }  
+  bool blocked = false;
+  for (const auto &lit : unsimplified) {
+    if (mark (-lit)) blocked = true;
+    mark (-lit) = false;
+  }
+  return blocked;
+}
+
 /*------------------------------------------------------------------------*/
 
 void Checker::add_clause (const char *type) {
@@ -524,7 +556,7 @@ void Checker::add_derived_clause (uint64_t id, bool, const vector<int> &c,
   last_id = id;
   if (tautological ())
     LOG ("CHECKER ignoring satisfied derived clause");
-  else if (!check ()) {
+  else if (!check () && !check_blocked ()) {
     fatal_message_start ();
     fputs ("failed to check derived clause:\n", stderr);
     for (const auto &lit : unsimplified)

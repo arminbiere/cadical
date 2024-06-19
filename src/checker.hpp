@@ -122,6 +122,7 @@ class Checker : public StatTracer {
   bool propagate ();         // propagate and check for conflicts
   void backtrack (unsigned); // prepare for next clause
   bool check ();             // check simplified clause is implied
+  bool check_blocked ();     // check if clause is blocked
 
   struct {
 

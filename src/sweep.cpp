@@ -508,7 +508,7 @@ void Internal::flush_blocked_clauses (Sweeper &sweeper) {
     implicant.id = ++internal->clause_id;
     internal->delete_all_redundant_with (-implicant.blit);
     if (proof)
-      internal->proof->add_derived_clause (implicant.id, true, implicant.literals, internal->lrat_chain);  // for now no lrat for blocked clauses
+      internal->proof->add_derived_clause (implicant.id, true, implicant.literals, internal->lrat_chain);  // TODO for now no lrat for blocked clauses
     if (implicant.literals.size () == 1) {
       if (val (implicant.blit)) continue;  // to prevent already assigned
       if (internal->lrat) internal->lrat_chain.push_back (implicant.id);
