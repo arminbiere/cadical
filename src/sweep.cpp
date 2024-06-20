@@ -287,6 +287,7 @@ void Internal::clear_sweeper (Sweeper &sweeper) {
     flags (lit).blockable = false;
   }
   sweeper.blockable.clear ();
+  unflush_blocked_clauses (sweeper);
   sweeper.blocked_clauses.clear ();
   sweeper.clauses.clear ();
   sweeper.backbone.clear ();
@@ -516,6 +517,7 @@ void Internal::delete_all_redundant_with (int blit) {
 
 void Internal::flush_blocked_clauses (Sweeper &sweeper) {
   for (auto &implicant : sweeper.blocked_clauses) {
+    if (implicant.id) continue;
     stats.sweep_blocking_clause_flushed++;
     implicant.id = ++internal->clause_id;
     internal->delete_all_redundant_with (-implicant.blit);
@@ -533,7 +535,8 @@ void Internal::flush_blocked_clauses (Sweeper &sweeper) {
 void Internal::unflush_blocked_clauses (Sweeper &sweeper) {
   if (!proof) return;
   for (auto &bc : sweeper.blocked_clauses) {
-    proof->delete_clause (bc.id, true, bc.literals);
+    if (bc.id)
+      proof->delete_clause (bc.id, true, bc.literals);
   }
 }
 
@@ -685,7 +688,7 @@ void Internal::save_add_clear_core (Sweeper &sweeper) {
   flush_blocked_clauses (sweeper);
   add_core (sweeper, 0);
   clear_core (sweeper, 0);
-  unflush_blocked_clauses (sweeper);
+  // unflush_blocked_clauses (sweeper); -> delay
 }
 
 /* TODO: logging
@@ -1271,6 +1274,27 @@ void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
     } else {
       substitute_connected_clauses (sweeper, -lit, other, sb.id);
     }
+    if (val (lit) < 0) {
+      if (!val (other)) {
+        assert (unit_clauses[vlit (-lit)]);
+        lrat_chain.push_back (unit_clauses[vlit (-lit)]);
+        lrat_chain.push_back (sb.id);
+        assign_unit (other);
+      } else if (val (other) < 0) {
+        lrat_chain.push_back (unit_clauses[vlit (-lit)]);
+        lrat_chain.push_back (unit_clauses[vlit (-other)]);
+        lrat_chain.push_back (sb.id);
+        learn_empty_clause ();
+        return;
+      }
+    } else if (val (other) < 0) {
+      if (!val (lit)) {
+        assert (unit_clauses[vlit (-other)]);
+        lrat_chain.push_back (unit_clauses[vlit (-other)]);
+        lrat_chain.push_back (sb.id);
+        assign_unit (lit);
+      } else assert (val (lit) > 0);
+    }
     delete_sweep_binary (sb);
     if (count == 2) {
       if (!val (lit) && !val (other)) {
@@ -1592,7 +1616,7 @@ BEGIN:
   }
   clear_core (sweeper, 0);
   clear_core (sweeper, 1);
-  unflush_blocked_clauses (sweeper);
+  // unflush_blocked_clauses (sweeper); -> delay
 
   const int repr_idx = abs (repr);
   schedule_inner (sweeper, repr_idx);
