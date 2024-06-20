@@ -463,7 +463,7 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
 
 
 static int citten_terminate (void *data) {
-  return ((Terminator *) data)->terminate ();
+  return ((Internal *) data)->terminated_asynchronously ();
 }
 
 static void add_sweep_implicant (void *data, int side, size_t size,
@@ -493,7 +493,7 @@ void Internal::citten_clear_track_log_terminate () {
   kitten_clear (citten);
   kitten_track_antecedents (citten);
   if (external->terminator)
-    kitten_set_terminator (citten, external->terminator, citten_terminate);
+    kitten_set_terminator (citten, internal, citten_terminate);
 #ifdef LOGGING
   if (opts.log)
     kitten_set_logging (citten);
@@ -907,6 +907,7 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
     sweeper.backbone.resize (q - sweeper.backbone.begin ());
     LOG ("flipped %u backbone candidates in round %u", flipped, round);
 
+    if (limit_hit) break;
     if (terminated_asynchronously ())
       break;
     if (kitten_ticks_limit_hit (sweeper, "backbone flipping"))
@@ -945,9 +946,13 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
       res = sweep_solve ();
       if (res == 10) {
         sweep_refine (sweeper);
+      } else {
+        assert (!res);
+        LOG ("sweeping backbone candidate timeout or external termination");
+        return false;
       }
     }
-  } 
+  }
   if (res == 10 && kitten_flip_signed_literal (citten, lit)) {
     stats.sweep_flipped_backbone++;
     LOG ("flipping %d succeeded", lit);
@@ -1459,6 +1464,10 @@ BEGIN:
       res = sweep_solve ();
       if (res == 10) {
         sweep_refine (sweeper);
+      } else {
+        assert (!res);
+        LOG ("equivalence candidate timeout or limit hit");
+        return false;
       }
       goto BEGIN;
     }
@@ -1499,6 +1508,10 @@ BEGIN:
       res = sweep_solve ();
       if (res == 10) {
         sweep_refine (sweeper);
+      } else {
+        assert (!res);
+        LOG ("equivalence candidate timeout or limit hit");
+        return false;
       }
       goto BEGIN;
     }

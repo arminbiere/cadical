@@ -1082,6 +1082,9 @@ static inline unsigned propagate (kitten *kitten) {
   unsigned conflict = INVALID;
   while (conflict == INVALID &&
          kitten->propagated < SIZE_STACK (kitten->trail)) {
+    if (kitten->terminator && kitten->terminator (kitten->terminator_data)) {
+      break;
+    }
     const unsigned lit = PEEK_STACK (kitten->trail, kitten->propagated);
     conflict = propagate_literal (kitten, lit);
     kitten->propagated++;
@@ -1861,6 +1864,11 @@ int kitten_solve (kitten *kitten) {
   int res = propagate_units (kitten);
   while (!res) {
     const unsigned conflict = propagate (kitten);
+    if (kitten->terminator && kitten->terminator (kitten->terminator_data)) {
+      LOG ("terminator requested termination");
+      res = -1;
+      break;
+    }
     if (conflict != INVALID) {
       if (kitten->level)
         analyze (kitten, conflict);
