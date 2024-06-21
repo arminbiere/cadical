@@ -1007,6 +1007,18 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
       stats.sweep_flipped_backbone++;
       kitten_add_prime_implicant (citten, &sweeper, res, add_sweep_implicant);
       stats.sweep_blocking_clause_added++;
+      res = sweep_solve ();
+      if (!res) {
+        return false;
+      } else {
+        assert (res == 10);
+        signed char value = kitten_signed_value (citten, lit);
+        if (!value) {
+          LOG ("dropping sub-solver unassigned %d", lit);
+          return false;
+        } else if (value < 0)
+          lit = -lit;
+      }
     }
   }
   stats.sweep_flip_backbone++;
@@ -1453,8 +1465,10 @@ void Internal::flip_partition_literals (Sweeper &sweeper) {
             kitten_add_prime_implicant (citten, &sweeper, res, add_sweep_implicant);
             stats.sweep_blocking_clause_added++;
             res = sweep_solve ();
-            if (!res) limit_hit = true;
-            else {
+            if (!res) {
+              limit_hit = true;
+              *q++ = lit;
+            } else {
               assert (res == 10);
               signed char value = kitten_signed_value (citten, lit);
               if (!value)
@@ -1503,8 +1517,6 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
                                           int other) {
   LOG ("trying equivalence candidates %d = %d", lit,
        other);
-  const int not_other = -other;
-  const int not_lit = -lit;
   const auto begin = sweeper.partition.begin ();
   auto const end = sweeper.partition.end ();
   assert (begin + 3 <= end);
@@ -1532,6 +1544,12 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
       refine = true;
       if (!res)
         return false;
+      else {
+        if (kitten_signed_value (citten, lit) < 0) {
+          end[-3] = -lit;
+          other = -lit;
+        }
+      }
     }
   } else if (res == 10) {
     stats.sweep_flip_equivalences++;
@@ -1571,6 +1589,12 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
       res = sweep_solve ();
       if (!res)
         return false;
+      else {
+        if (kitten_signed_value (citten, other) < 0) {
+          end[-2] = -other;
+          other = -other;
+        }
+      }
     }
   } else if (res == 10) {
     stats.sweep_flip_equivalences++;
@@ -1594,6 +1618,8 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   }
   if (refine)
     sweep_refine (sweeper);
+  const int not_other = -other;
+  const int not_lit = -lit;
   LOG ("flipping %d and %d both failed", lit, other);
   kitten_assume_signed (citten, not_lit);
   kitten_assume_signed (citten, other);
