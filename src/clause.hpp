@@ -47,6 +47,7 @@ struct Clause {
   bool transred : 1;     // already checked for transitive reduction
   bool subsume : 1;      // not checked in last subsumption round
   bool swept : 1;        // clause used to sweep equivalences
+  bool flushed : 1;
   unsigned used : 2; // resolved in conflict analysis since last 'reduce'
   bool vivified : 1; // clause already vivified
   bool vivify : 1;   // clause scheduled to be vivified

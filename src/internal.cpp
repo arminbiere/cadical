@@ -859,7 +859,7 @@ void Internal::finalize (int res) {
   // See the discussion in 'propagate' on why garbage binary clauses stick
   // around.
   for (const auto &c : clauses)
-    if (!c->garbage || c->size == 2)
+    if (!c->garbage || (c->size == 2 && !c->flushed))
       proof->finalize_clause (c);
 
   // finalize conflict and proof

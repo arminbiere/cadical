@@ -1547,7 +1547,7 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
       else {
         if (kitten_signed_value (citten, lit) < 0) {
           end[-3] = -lit;
-          other = -lit;
+          lit = -lit;
         }
       }
     }

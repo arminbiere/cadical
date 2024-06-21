@@ -112,6 +112,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   c->transred = false;
   c->subsume = false;
   c->swept = false;
+  c->flushed = false;
   c->vivified = false;
   c->vivify = false;
   c->used = 0;
@@ -253,7 +254,7 @@ void Internal::delete_clause (Clause *c) {
     // from the proof perspective is that the deletion of these binary
     // clauses occurs later in the proof file.
     //
-    if (proof && c->size == 2) {
+    if (proof && c->size == 2 && !c->flushed) {
       proof->delete_clause (c);
     }
   }
@@ -283,7 +284,8 @@ void Internal::mark_garbage (Clause *c) {
   // Delay tracing deletion of binary clauses.  See the discussion above in
   // 'delete_clause' and also in 'propagate'.
   //
-  if (proof && c->size != 2) {
+  if (proof && (c->size != 2 || !watching ())) {
+    c->flushed = true;
     proof->delete_clause (c);
   }
 
