@@ -727,8 +727,22 @@ void Internal::init_backbone_and_partition (Sweeper &sweeper) {
   LOG ("initializing backbone and equivalent literals candidates");
   sweeper.backbone.clear ();
   sweeper.partition.clear ();
+  for (const auto & idx : sweeper.blockable) {
+    if (!active (idx))
+      continue;
+    assert (idx > 0);
+    const int lit = idx;
+    const int not_lit = -lit;
+    const signed char tmp = kitten_signed_value (citten, lit);
+    const int candidate = (tmp < 0) ? not_lit : lit;
+    LOG ("sweeping candidate %d", candidate);
+    sweeper.backbone.push_back (candidate);
+    sweeper.partition.push_back (candidate);
+  }
   for (const auto & idx : sweeper.vars) {
     if (!active (idx))
+      continue;
+    if (flags (idx).blockable)
       continue;
     assert (idx > 0);
     const int lit = idx;
@@ -881,22 +895,21 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
   do {
     round++;
     flipped = 0;
+    bool refine = false;
     auto begin = sweeper.backbone.begin (), q = begin, p = q;
     const auto end = sweeper.backbone.end ();
     bool limit_hit = false;
-    bool refine = false;
     while (p != end) {
       const int lit = *p++;
       stats.sweep_flip_backbone++;
       if (limit_hit || terminated_asynchronously ()) {
         break;
       } else if (opts.sweepblock && opts.sweepblockflipback && flags (lit).blockable) {
-BEGIN:
         assert (kitten_status (citten) == 10);
         int res = sweep_flip_and_implicant (lit);
         if (res == -2) {
-          LOG ("flipping backbone candidate %d failed", lit);
           *q++ = lit;
+          LOG ("flipping backbone candidate %d failed", lit);
         } else if (res == -1) {
           LOG ("blocking clause for %d failed due to ticks", lit);
           *q++ = lit;
@@ -909,17 +922,22 @@ BEGIN:
           res = sweep_solve ();
           if (!res) {
             limit_hit = true;
+            *q++ = lit;
             break;
           } else {
             assert (res == 10);
             assert (kitten_status (citten) == 10);
+            signed char value = kitten_signed_value (citten, lit);
+            if (!value)
+              LOG ("dropping sub-solver unassigned %d", lit);
+            else if (value > 0)
+              *q++ = lit;
+            else
+              *q++ = -lit;
             refine = true;
-            if (opts.sweepblockiterate) {
-              goto BEGIN;
-            }
           }
         }
-      } else if (!refine && sweep_flip (lit)) {
+      } else if (sweep_flip (lit)) {
         LOG ("flipping backbone candidate %d succeeded", lit);
 #ifdef LOGGING
         total_flipped++;
@@ -940,8 +958,7 @@ BEGIN:
       break;
     if (kitten_ticks_limit_hit (sweeper, "backbone flipping"))
       break;
-    if (refine)
-      init_backbone_and_partition (sweeper);
+    if (refine) sweep_refine (sweeper);
   } while (flipped && round < max_rounds);
   LOG ("flipped %u backbone candidates in total in %u rounds",
        total_flipped, round);
@@ -976,7 +993,6 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
     return false;
   }
 
-BEGIN:
   int res = kitten_status (citten);
   if (res != 10) {
     LOG ("not flipping due to status %d != 10", res);
@@ -991,10 +1007,6 @@ BEGIN:
       stats.sweep_flipped_backbone++;
       kitten_add_prime_implicant (citten, &sweeper, res, add_sweep_implicant);
       stats.sweep_blocking_clause_added++;
-      if (opts.sweepblockiterate) {
-        sweep_solve ();
-        goto BEGIN;
-      }
     }
   }
   stats.sweep_flip_backbone++;
@@ -1424,14 +1436,14 @@ void Internal::flip_partition_literals (Sweeper &sweeper) {
           limit_hit = true;
           continue;
         } else if (opts.sweepblock && opts.sweepblockflippart && flags (lit).blockable) {
-          *q++ = lit;
-BEGIN:
           int res = sweep_flip_and_implicant (lit);
           if (res == -2) {
             LOG ("flipping equivalence candidate %d failed", lit);
+            *q++ = lit;
           } else if (res == -1) {
             LOG ("blocking clause for %d failed due to ticks", lit);
             limit_hit = true;
+            *q++ = lit;
           } else {
             LOG ("add blocking clause for %d", lit);
 #ifdef LOGGING
@@ -1444,10 +1456,14 @@ BEGIN:
             if (!res) limit_hit = true;
             else {
               assert (res == 10);
+              signed char value = kitten_signed_value (citten, lit);
+              if (!value)
+                LOG ("dropping sub-solver unassigned %d", lit);
+              else if (value > 0)
+                *q++ = lit;
+              else
+                *q++ = -lit;
               refine = true;
-              if (opts.sweepblockiterate) {
-                goto BEGIN;
-              }
             }
           }
         } else if (sweep_flip (lit)) {
@@ -1477,9 +1493,7 @@ BEGIN:
       break;
     if (kitten_ticks_limit_hit (sweeper, "partition flipping"))
       break;
-    if (refine) {
-      sweep_refine (sweeper);
-    }
+    if (refine) sweep_refine (sweeper);
   } while (flipped && round < max_rounds);
   LOG ("flipped %u equivalence candidates in total in %u rounds",
        total_flipped, round);
@@ -1499,7 +1513,6 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   const int third = (end - begin == 3) ? 0 : end[-4];
   bool refine = false;
   int res = kitten_status (citten);
-BEGIN:
   if (res == 10 && opts.sweepblock && opts.sweepblockequicand &&
                            flags (lit).blockable) {
     res = sweep_flip_and_implicant (lit);
@@ -1519,9 +1532,6 @@ BEGIN:
       refine = true;
       if (!res)
         return false;
-      if (opts.sweepblockiterate) {
-        goto BEGIN;
-      }
     }
   } else if (res == 10) {
     stats.sweep_flip_equivalences++;
@@ -1561,9 +1571,6 @@ BEGIN:
       res = sweep_solve ();
       if (!res)
         return false;
-      if (opts.sweepblockiterate) {
-        goto BEGIN;
-      }
     }
   } else if (res == 10) {
     stats.sweep_flip_equivalences++;
@@ -1585,6 +1592,8 @@ BEGIN:
       return false;
     }
   }
+  if (refine)
+    sweep_refine (sweeper);
   LOG ("flipping %d and %d both failed", lit, other);
   kitten_assume_signed (citten, not_lit);
   kitten_assume_signed (citten, other);
