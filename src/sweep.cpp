@@ -98,11 +98,20 @@ void Internal::sweep_dense_mode_and_watch_irredundant () {
 
   // Connect irredundant clauses.
   //
-  for (const auto &c : clauses)
-    if (!c->garbage)
+  for (const auto &c : clauses) {
+    if (!c->garbage) {
       for (const auto &lit : *c)
         if (active (lit))
           occs (lit).push_back (c);
+    } else if (c->size == 2) {
+      if (!c->flushed) {
+        if (proof) {
+          c->flushed = true;
+          proof->delete_clause (c);
+        }
+      }
+    }
+  }
 }
 
 // go back to two watch scheme
