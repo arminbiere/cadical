@@ -74,6 +74,9 @@ struct Internal;
   PROFILE (sweep, 2) \
   PROFILE (sweepbackbone, 3) \
   PROFILE (sweepequivalences, 3) \
+  PROFILE (sweepflip, 4) \
+  PROFILE (sweepimplicant, 4) \
+  PROFILE (sweepsolve, 4) \
   PROFILE (preprocess, 2) \
   PROFILE (simplify, 1) \
   PROFILE (subsume, 2) \

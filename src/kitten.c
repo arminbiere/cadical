@@ -2499,7 +2499,7 @@ static int compute_prime_implicant_for (kitten *kitten, unsigned blit) {
   kar *vars = kitten->vars;
   unsigneds unassigned;
   INIT_STACK (unassigned);
-  bool limit_hit = 0;
+  bool limit_hit = false;
   assert (EMPTY_STACK (kitten->prime[0]) && EMPTY_STACK (kitten->prime[1]));
   for (int i = 0; i < 2; i++) {
     const unsigned block = blit ^ i;
@@ -2516,7 +2516,7 @@ static int compute_prime_implicant_for (kitten *kitten, unsigned blit) {
       if (KITTEN_TICKS >= kitten->limits.ticks) {
         LOG ("ticks limit %" PRIu64 " hit after %" PRIu64 " ticks",
              kitten->limits.ticks, KITTEN_TICKS);
-        limit_hit = 1;
+        limit_hit = true;
         break;
       }
       if (!values[lit]) continue;

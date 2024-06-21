@@ -41,6 +41,7 @@ struct Sweeper {
   vector<int> vars;
   vector<Clause *> clauses;
   vector<sweep_blocked_clause> blocked_clauses;
+  bool flush_blocked_clauses;
   vector<int> blockable;
   vector<int> clause;
   vector<int> propagate;

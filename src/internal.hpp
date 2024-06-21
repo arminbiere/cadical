@@ -1103,6 +1103,9 @@ struct Internal {
   void sweep_update_noccs (Clause *c);
   void delete_sweep_binary (const sweep_binary &sb);
   bool can_sweep_clause (Clause *c);
+  bool sweep_flip (int);
+  int sweep_flip_and_implicant (int);
+  bool sweep_extract_fixed (Sweeper &sweeper, int lit);
 
   // instantiate
   //

@@ -462,8 +462,10 @@ void Stats::print (Internal *internal) {
     PRT ("  equiv solved:  %15" PRId64 "   %10.2f %%  solved",
          stats.sweep_solved_equivalences, percent (stats.sweep_solved_equivalences, stats.sweep_solved));
     PRT ("    sat:         %15" PRId64 "   %10.2f %%  equiv solved",
-         stats.sweep_unsat_equivalences, percent (stats.sweep_unsat_equivalences, stats.sweep_solved_equivalences));
+         stats.sweep_sat_equivalences, percent (stats.sweep_sat_equivalences, stats.sweep_solved_equivalences));
     PRT ("    unsat:       %15" PRId64 "   %10.2f %%  equiv solved",
+         stats.sweep_unsat_equivalences, percent (stats.sweep_unsat_equivalences, stats.sweep_solved_equivalences));
+    PRT ("    unknown:     %15" PRId64 "   %10.2f %%  equiv solved",
          stats.sweep_unknown_equivalences, percent (stats.sweep_unknown_equivalences, stats.sweep_solved_equivalences));
     PRT ("    flip:        %15" PRId64 "   %10.2f    per swept variable",
          stats.sweep_flip_equivalences, relative (stats.sweep_flip_equivalences, stats.sweep_variables));
@@ -471,8 +473,8 @@ void Stats::print (Internal *internal) {
          stats.sweep_flipped_equivalences, percent (stats.sweep_flipped_equivalences, stats.sweep_flip_equivalences));
     PRT ("  blocking added:%15" PRId64 "   %10.2f    per swept variable",
          stats.sweep_blocking_clause_added, relative (stats.sweep_blocking_clause_added, stats.sweep_variables));
-    PRT ("  blocking flush:%15" PRId64 "   %10.2f    added",
-         stats.sweep_blocking_clause_flushed, relative (stats.sweep_blocking_clause_flushed, stats.sweep_blocking_clause_added));
+    PRT ("  blocking flush:%15" PRId64 "   %10.2f %%  added",
+         stats.sweep_blocking_clause_flushed, percent (stats.sweep_blocking_clause_flushed, stats.sweep_blocking_clause_added));
     PRT ("  blocking proof:%15" PRId64 "   %10.2f %%  added",
          stats.sweep_blocking_clause_extracted, percent (stats.sweep_blocking_clause_extracted, stats.sweep_blocking_clause_added));
     PRT ("  depth:         %15" PRId64 "   %10.2f    per swept variable",

@@ -181,8 +181,10 @@ OPTION( sweepblockbackcand,1,  0,  1,0,0,1, "blocking clauses for backbone candi
 OPTION( sweepblockequicand,1,  0,  1,0,0,1, "blocking clauses for equivalence candidates") \
 OPTION( sweepblockflipback,1,  0,  1,0,0,1, "blocking clauses in backbone flipping") \
 OPTION( sweepblockflippart,1,  0,  1,0,0,1, "blocking clauses in partition flipping") \
+OPTION( sweepblockiterate, 1,  0,  1,0,0,1, "iterate adding blocking clauses") \
 OPTION( sweepclauses,   1024,  0,2e9,1,0,1, "environment clauses") \
 OPTION( sweepcomplete,     0,  0,  1,0,0,1, "run SAT sweeping to completion") \
+OPTION( sweepcountbinary,  1,  0,  1,0,0,1, "count binaries to environment") \
 OPTION( sweepdepth,        2,  0,2e9,1,0,1, "environment depth") \
 OPTION( sweepeffort,     1e3,  0,1e5,0,0,1, "effort in ticks per mille") \
 OPTION( sweepfliprounds,   1,  0,2e9,1,0,1, "flipping rounds") \
