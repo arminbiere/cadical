@@ -80,6 +80,7 @@ bool Internal::eliminating () {
   if (last.elim.marked < stats.mark.elim)
     return true;
 
+  VERBOSE (3, "elim not scheduled due to fixpoint");
   return false;
 }
 
@@ -780,6 +781,7 @@ int Internal::elim_round (bool &completed) {
   START_SIMPLIFIER (elim, ELIM);
   stats.elimrounds++;
 
+  int64_t marked_before = last.elim.marked;
   last.elim.marked = stats.mark.elim;
   assert (!level);
 
@@ -840,6 +842,7 @@ int Internal::elim_round (bool &completed) {
 
   Eliminator eliminator (this);
   ElimSchedule &schedule = eliminator.schedule;
+  assert (schedule.empty ());
 
   // Now find elimination candidates which occurred in clauses removed since
   // the last time we ran bounded variable elimination, which in turned
@@ -852,7 +855,7 @@ int Internal::elim_round (bool &completed) {
       continue;
     if (!flags (idx).elim)
       continue;
-    flags (idx).elim = false;
+    // flags (idx).elim = false;
     LOG ("scheduling %d for elimination initially", idx);
     schedule.push_back (idx);
   }
@@ -924,6 +927,9 @@ int Internal::elim_round (bool &completed) {
   // ran into the resolution limit (or derived unsatisfiability).
   //
   completed = !schedule.size ();
+  
+  if (!completed)
+    last.elim.marked = marked_before;
 
   PHASE ("elim-round", stats.elimrounds,
          "tried to eliminate %" PRId64 " variables %.0f%% (%zd remain)",
@@ -1072,31 +1078,34 @@ void Internal::elim (bool update_limits) {
   bool phase_complete = false;
 
   int round = 1;
+#ifndef QUIET
+  int eliminated = 0;
+#endif
 
+  bool round_complete = false;;
   while (!unsat && !phase_complete && !terminated_asynchronously ()) {
 
-    bool round_complete;
-
-#ifndef QUIET
-    int eliminated =
-#endif
-        elim_round (round_complete);
-
-    if (!round_complete) {
-      PHASE ("elim-phase", stats.elimphases, "last round %d incomplete %s",
-             round, eliminated ? "but successful" : "and unsuccessful");
-      assert (!phase_complete);
-      break;
-    }
-
-    if (round++ >= opts.elimrounds) {
+    if (round++ > opts.elimrounds) {
       PHASE ("elim-phase", stats.elimphases, "round limit %d hit (%s)",
-             round - 1,
+             round - 2,
              eliminated ? "though last round successful"
                         : "last round unsuccessful anyhow");
       assert (!phase_complete);
       break;
     }
+
+#ifndef QUIET
+    eliminated =
+#endif
+        elim_round (round_complete);
+
+    if (!round_complete) {
+      PHASE ("elim-phase", stats.elimphases, "last round %d incomplete %s",
+             round - 1, eliminated ? "but successful" : "and unsuccessful");
+      assert (!phase_complete);
+      break;
+    }
+
 
     // Prioritize 'subsumption' over blocked and covered clause elimination.
 
@@ -1153,7 +1162,7 @@ void Internal::elim (bool update_limits) {
     increase_elimination_bound ();
 
 #ifndef QUIET
-  int eliminated = stats.all.eliminated - old_eliminated;
+  eliminated = stats.all.eliminated - old_eliminated;
   PHASE ("elim-phase", stats.elimphases, "eliminated %d variables %.2f%%",
          eliminated, percent (eliminated, old_active_variables));
 #endif

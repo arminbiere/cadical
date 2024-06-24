@@ -335,27 +335,39 @@ BEGIN:
   return;
 }
 
-void Internal::delete_all_redundant_def (int blit) {
+bool Internal::delete_all_redundant_def (int blit, unsigned max) {
   const Occs &ps = roccs (blit);
+  unsigned count = 0;
+  for (const auto &c : ps) {
+    if (c->garbage) continue;
+    if (c->blocking) count++;
+  }
+  if (count > max) return false;
   for (const auto &c : ps) {
     if (c->garbage) continue;
     mark_garbage (c);
   }
+  return true;
 }
 
 void Internal::add_definition_blocking_clauses (Eliminator &eliminator) {
   if (!eliminator.prime_gates.size ()) return;
   if (!opts.elimdefprimeadd) return;
-  int pivot = eliminator.prime_gates[0][0];
-  delete_all_redundant_def (-pivot);
+  int pivot = abs (eliminator.prime_gates[0][0]);
+  unsigned cpos = 0, cneg = 0;
   for (auto &bc : eliminator.prime_gates) {
-    if (bc[0] != pivot) {
-      assert (bc[0] == -pivot);
-      delete_all_redundant_def (pivot);
-      break;
-    }
+    if (bc[0] == pivot) cpos++;
+    else cneg++;
   }
+  bool addpos = false;
+  bool addneg = false;
+  if (cpos > 0)
+    addpos = delete_all_redundant_def (-pivot, INT_MAX);
+  if (cneg > 0)
+    addneg = delete_all_redundant_def (pivot, INT_MAX);
   for (auto &bc : eliminator.prime_gates) {
+    if (!addpos && bc[0] == pivot) continue;
+    if (!addneg && bc[0] == -pivot) continue;
     assert (clause.empty ());
     clause.swap (bc);
     Clause *res = new_definitions_blocking_clause ();
