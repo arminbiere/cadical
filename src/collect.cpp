@@ -196,7 +196,7 @@ size_t Internal::flush_roccs (int lit) {
     if (c->collect ())
       continue;
     *j++ = c->moved ? c->copy : c;
-    // assert (!c->redundant); // -> not true in sweeping
+    assert (c->redundant);
     res++;
   }
   os.resize (j - os.begin ());

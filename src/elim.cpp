@@ -877,7 +877,7 @@ int Internal::elim_round (bool &completed) {
 
   // Connect redundant clauses.
   //
-  if (opts.elimdefprimeadd)
+  if (opts.elimdefprimeadd && opts.elimdefprime)
     for (const auto &c : clauses)
       if (!c->garbage && c->redundant)
         for (const auto &lit : *c)

@@ -76,7 +76,7 @@ OPTION( elimdef,           1,  0,  1,0,0,1, "mine definitions with kitten") \
 OPTION( elimdefcores,      2,  1,100,0,0,1, "number of unsat cores") \
 OPTION( elimdefprime,      0,  0,  1,0,0,1, "add blocking clauses to find definitions") \
 OPTION( elimdefprimeadd,   1,  0,  1,0,0,1, "add blocking clauses") \
-OPTION( elimdefprimeround, 1,  1, 16,0,0,1, "max number of blocking clauses per definition") \
+OPTION( elimdefprimeround, 1,  1,1e3,0,0,1, "max number of blocking clauses per definition") \
 OPTION( elimdefticks,    1e6,  0,2e9,1,0,1, "kitten ticks limit") \
 OPTION( elimequivs,        1,  0,  1,0,0,1, "find equivalence gates") \
 OPTION( elimineff,       1e7,  0,2e9,1,0,1, "minimum elimination efficiency") \
