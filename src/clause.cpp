@@ -537,6 +537,16 @@ Clause *Internal::new_hyper_ternary_resolved_clause (bool red) {
   return res;
 }
 
+Clause *Internal::new_definitions_blocking_clause () {
+  external->check_learned_clause ();
+  Clause *res = new_clause (true, 1);
+  if (proof) {
+    proof->add_derived_clause (res, lrat_chain);
+  }
+  assert (!watching ());
+  return res;
+}
+
 // Add a new clause with same glue and redundancy as 'orig' but literals are
 // assumed to be in 'clause' in 'decompose' and 'vivify'.
 //

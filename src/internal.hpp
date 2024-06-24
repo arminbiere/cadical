@@ -1029,6 +1029,7 @@ struct Internal {
   //
   void find_definition (Eliminator &, int);
   void add_definition_blocking_clauses (Eliminator &);
+  Clause *new_definitions_blocking_clause ();
   void delete_all_redundant_def (int);
   void init_citten ();
   void reset_citten ();

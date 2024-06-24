@@ -358,7 +358,7 @@ void Internal::add_definition_blocking_clauses (Eliminator &eliminator) {
   for (auto &bc : eliminator.prime_gates) {
     assert (clause.empty ());
     clause.swap (bc);
-    Clause *res = new_hyper_ternary_resolved_clause (true);
+    Clause *res = new_definitions_blocking_clause ();
     stats.definition_prime_added++;
     for (const auto &lit : *res)
       roccs (lit).push_back (res);
