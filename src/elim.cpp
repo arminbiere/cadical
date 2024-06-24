@@ -730,8 +730,10 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator,
         mark_eliminated_clauses_as_garbage (eliminator, pivot);
       if (active (pivot))
         mark_eliminated (pivot);
-    } else
+    } else {
+      add_definition_blocking_clauses (eliminator);
       LOG ("too many resolvents on %d so not eliminated", pivot);
+    }
   }
 
   unmark_gate_clauses (eliminator);
@@ -834,6 +836,7 @@ int Internal::elim_round (bool &completed) {
   }
 
   init_occs ();
+  init_roccs ();
 
   Eliminator eliminator (this);
   ElimSchedule &schedule = eliminator.schedule;
@@ -871,6 +874,15 @@ int Internal::elim_round (bool &completed) {
       for (const auto &lit : *c)
         if (active (lit))
           occs (lit).push_back (c);
+
+  // Connect redundant clauses.
+  //
+  if (opts.elimdefprimeadd)
+    for (const auto &c : clauses)
+      if (!c->garbage && c->redundant)
+        for (const auto &lit : *c)
+          if (active (lit))
+            roccs (lit).push_back (c);
 
 #ifndef QUIET
   const int64_t old_resolutions = stats.elimres;
@@ -928,6 +940,7 @@ int Internal::elim_round (bool &completed) {
 
   reset_occs ();
   reset_noccs ();
+  reset_roccs ();
 
   // Mark all redundant clauses with eliminated variables as garbage.
   //

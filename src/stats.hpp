@@ -187,6 +187,8 @@ struct Stats {
   int64_t definition_units;
   int64_t definition_ticks;
   int64_t definition_prime;
+  int64_t definition_prime_added;
+  
   int64_t ternary;        // number of ternary resolution phases
   int64_t ternres;        // number of ternary resolutions
   int64_t htrs;           // number of hyper ternary resolvents

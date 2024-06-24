@@ -335,4 +335,32 @@ BEGIN:
   return;
 }
 
+void Internal::delete_all_redundant_def (int blit) {
+  const Occs &ps = roccs (blit);
+  for (const auto &c : ps) {
+    if (c->garbage) continue;
+    mark_garbage (c);
+  }
+}
+
+void Internal::add_definition_blocking_clauses (Eliminator &eliminator) {
+  if (!eliminator.prime_gates.size ()) return;
+  if (!opts.elimdefprimeadd) return;
+  int pivot = eliminator.prime_gates[0][0];
+  delete_all_redundant_def (-pivot);
+  for (auto &bc : eliminator.prime_gates) {
+    if (pivot && bc[0] != pivot) {
+      assert (bc[0] == -pivot);
+      delete_all_redundant_def (pivot);
+      pivot = 0;
+    }
+    assert (clause.empty ());
+    clause.swap (bc);
+    Clause *res = new_resolved_irredundant_clause ();
+    stats.definition_prime_added++;
+    elim_update_added_clause (eliminator, res);
+    clause.swap (bc);
+  }
+}
+
 } // namespace CaDiCaL

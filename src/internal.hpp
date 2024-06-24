@@ -216,6 +216,7 @@ struct Internal {
   vector<int64_t> btab;         // enqueue time stamps for queue
   vector<int64_t> gtab;         // time stamp table to recompute glue
   vector<Occs> otab;            // table of occurrences for all literals
+  vector<Occs> rtab;            // table of redundant occurrences
   vector<int> ptab;             // table for caching probing attempts
   vector<int64_t> ntab;         // number of one-sided occurrences table
   vector<Bins> big;             // binary implication graph
@@ -420,6 +421,7 @@ struct Internal {
 
   Bins &bins (int lit) { return big[vlit (lit)]; }
   Occs &occs (int lit) { return otab[vlit (lit)]; }
+  Occs &roccs (int lit) { return rtab[vlit (lit)]; }
   int64_t &noccs (int lit) { return ntab[vlit (lit)]; }
   Watches &watches (int lit) { return wtab[vlit (lit)]; }
 
@@ -790,9 +792,11 @@ struct Internal {
   // Set-up occurrence list counters and containers.
   //
   void init_occs ();
+  void init_roccs ();
   void init_bins ();
   void init_noccs ();
   void reset_occs ();
+  void reset_roccs ();
   void reset_bins ();
   void reset_noccs ();
 
@@ -1023,6 +1027,8 @@ struct Internal {
   // mine definitions for kitten in 'definition.cpp'
   //
   void find_definition (Eliminator &, int);
+  void add_definition_blocking_clauses (Eliminator &);
+  void delete_all_redundant_def (int);
   void init_citten ();
   void reset_citten ();
   void citten_clear_track_log_terminate ();

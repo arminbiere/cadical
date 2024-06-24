@@ -449,6 +449,8 @@ void Internal::compact () {
     mapper.map2_vector (wtab);
   if (!otab.empty ())
     mapper.map2_vector (otab);
+  if (!rtab.empty ())
+    mapper.map2_vector (rtab);
   if (!big.empty ())
     mapper.map2_vector (big);
 
