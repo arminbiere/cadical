@@ -777,6 +777,7 @@ struct Internal {
   void copy_clause (Clause *);
   void flush_watches (int lit, Watches &);
   size_t flush_occs (int lit);
+  size_t flush_roccs (int lit);
   void flush_all_occs_and_watches ();
   void update_reason_references ();
   void copy_non_garbage_clauses ();

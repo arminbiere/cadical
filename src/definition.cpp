@@ -359,8 +359,9 @@ void Internal::add_definition_blocking_clauses (Eliminator &eliminator) {
     Clause *res = new_resolved_irredundant_clause ();
     stats.definition_prime_added++;
     elim_update_added_clause (eliminator, res);
-    clause.swap (bc);
+    clause.clear ();
   }
+  eliminator.prime_gates.clear ();
 }
 
 } // namespace CaDiCaL
