@@ -57,6 +57,9 @@ OPTION( conditionreleff, 100,  1,1e5,0,0,1, "relative efficiency per mille") \
 OPTION( congruence,        1,  0,  1,0,0,1, "congruence closure") \
 OPTION( congruenceand,     1,  0,  1,0,0,1, "extract AND gates") \
 OPTION( congruenceandarity,1e5,2,5e6,0,0,1, "AND gate arity limit") \
+OPTION( congruencexor,     1,  0,  1,0,0,1, "extract XOR gates") \
+OPTION( congruencexorarity,1e5,2,5e6,0,0,1, "XOR gate arity limit") \
+OPTION( congruencexorcounts,1, 1,5e6,0,0,1, "XOR gate round") \
 OPTION( cover,             0,  0,  1,0,1,1, "covered clause elimination") \
 OPTION( covermaxclslim,  1e5,  1,2e9,2,0,1, "maximum clause size") \
 OPTION( covermaxeff,     1e8,  0,2e9,1,0,1, "maximum cover efficiency") \

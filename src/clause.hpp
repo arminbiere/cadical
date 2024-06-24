@@ -1,6 +1,10 @@
 #ifndef _clause_hpp_INCLUDED
 #define _clause_hpp_INCLUDED
 
+
+#include <climits>
+#include <cstdlib>
+
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
@@ -171,6 +175,7 @@ struct clause_smaller_size {
 
 struct clause_lit_less_than {
   bool operator() (int a, int b) const {
+    using namespace std;
     int s = abs (a), t = abs (b);
     return s < t || (s == t && a < b);
   }

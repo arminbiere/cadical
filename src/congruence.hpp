@@ -30,8 +30,8 @@ struct Gate {
   bool marked : 1;
   bool shrunken : 1;
   unsigned arity : LD_MAX_ARITY;
-  std::vector<uint64_t> ids;
-  std::vector<int>rhs;
+  vector<uint64_t> ids;
+  vector<int>rhs;
 
   bool operator == (Gate const& lhs)
   {
@@ -42,14 +42,14 @@ struct Gate {
 
 typedef vector<Gate *> GOccs;
 
-static std::size_t hash_lits (std::vector<int> lits) {
-  std::size_t hash = 0;
+static size_t hash_lits (vector<int> lits) {
+  size_t hash = 0;
   for (auto lit : lits)
     hash ^= lit;
   return hash;
 }
 struct Hash {
-  std::size_t operator() (const Gate *const g) const {
+  size_t operator() (const Gate *const g) const {
     return hash_lits (g->rhs);
   }
 };
@@ -64,22 +64,25 @@ struct Closure {
 
   Closure (Internal *i) : internal (i) {}
   Internal *internal;
-  std::vector<Clause *> binaries;
+  vector<Clause *> binaries;
 
-  std::vector<bool> scheduled;
-  std::vector<signed char> marks;
-  std::vector<uint64_t> mu1_ids;
-  std::vector<uint64_t> mu2_ids;
-  std::vector<uint64_t> mu4_ids;
+  vector<bool> scheduled;
+  vector<signed char> marks;
+  vector<uint64_t> mu1_ids;
+  vector<uint64_t> mu2_ids;
+  vector<uint64_t> mu4_ids;
 
-  std::vector<int> lits; // result of definitions
-  std::vector<int> rhs; // stack for storing RHS
-  std::vector<int> unsimplified; // stack for storing unsimplified version (XOR, ITEs) for DRAT proof
-  std::vector<int> chain;
-
+  vector<int> lits; // result of definitions
+  vector<int> rhs; // stack for storing RHS
+  vector<int> unsimplified; // stack for storing unsimplified version (XOR, ITEs) for DRAT proof
+  vector<int> chain;
+  vector<uint64_t> glargecounts; // count for large clauses to complement internal->noccs
+  vector<uint64_t> gnew_largecounts; // count for large clauses to complement internal->noccs
+  uint64_t& new_largecounts(int lit);
+  uint64_t& largecounts(int lit);
 
   void unmark_all ();
-  std::vector<int> representant; // union-find
+  vector<int> representant; // union-find
   int & representative (int lit);
   int representative (int lit) const;
   int find_representative(int lit) const;
@@ -87,7 +90,7 @@ struct Closure {
   bool merge_literals (int lit, int other);
 
   // proof production
-  std::vector<uint64_t> lrat_chain;
+  vector<uint64_t> lrat_chain;
   void push_lrat_id (const Clause *const c);
   void push_lrat_unit (int lit);
 
@@ -98,6 +101,9 @@ struct Closure {
   void connect_goccs (Gate *g, int lit);
   vector<Gate*> garbage;
   void mark_garbage(Gate*);
+
+  // second counter for size, complements noccs
+  uint64_t &largecount (int lit);
 
   // simplification
   bool skip_and_gate (Gate *g);
@@ -121,13 +127,17 @@ struct Closure {
   void init_closure();
   void extract_and_gates (Closure&);
   void extract_gates ();
-  std::unordered_set<Gate*, Hash, GateEqualTo> table;
+  unordered_set<Gate*, Hash, GateEqualTo> table;
   void extract_and_gates_with_base_clause (Clause *c);
 
-  Gate* find_and_lits (int, const std::vector<int> &rhs);
+  Gate* find_and_lits (int, const vector<int> &rhs);
 
+  void init_xor_gate_extraction (std::vector<Clause *> &candidates);
   void add_xor_matching_proof_chain(Gate *g, int lhs1, int lhs2);
-  Gate* find_xor_lits (int, const std::vector<int> &rhs);
+  Gate* find_xor_lits (int, const vector<int> &rhs);
+  void extract_xor_gates ();
+  void extract_xor_gates_with_base_clause (Clause *c);
+  Clause *find_large_xor_side_clause (std::vector<int> &lits);
   
   void init_and_gate_extraction ();
   Gate* find_first_and_gate (int lhs);
@@ -142,7 +152,7 @@ struct Closure {
   Gate* new_xor_gate(int);
   //check
   void check_xor_gate_implied (Gate const *const);
-  void check_ternary (int a, int b, int c) {
+  void check_ternary (int a, int b, int c);
 
   bool learn_congruence_unit(int unit);
 
@@ -151,12 +161,12 @@ struct Closure {
 
 
   // schedule
-  std::vector<int> schedule;
+  vector<int> schedule;
   void schedule_literal(int lit);
 
   // proof
-  void simplify_and_add_to_proof_chain (std::vector<int> &unsimplified,
-                                            std::vector<int> &chain);
+  void simplify_and_add_to_proof_chain (vector<int> &unsimplified,
+                                            vector<int> &chain);
   
 
   
@@ -170,6 +180,7 @@ struct Closure {
   uint64_t marked_mu4(int lit);
   
   // negbincount (lit) -> noccs (-lit)
+
 };
 
 } // namespace CaDiCaL
