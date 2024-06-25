@@ -103,7 +103,9 @@ bool Closure::learn_congruence_unit(int lit) {
   }
 
   LOG ("assigning");
+  assert (lit != -1);
   internal->assign_unit (lit);
+  
   //assert (internal->watching());
   bool conflict = false; //internal->propagate ();
 
@@ -703,7 +705,8 @@ void Closure::extract_and_gates () {
     extract_and_gates_with_base_clause(c);
   }
 
-  //internal->reset_noccs();
+  internal->reset_occs();
+  internal->init_occs();
   for (auto v : internal->vars)
     internal->noccs(v) = internal->noccs(-v) = 0;
 }
@@ -866,12 +869,11 @@ void Closure::add_xor_matching_proof_chain(Gate *g, int lhs1, int lhs2) {
 
 Gate *Closure::new_xor_gate (int lhs) {
   rhs.clear();
-  auto &lits = this->lits;
 
   for (auto lit : lits) {
     if (lhs != lit && -lhs != lit) {
       assert (lit > 0);
-      rhs.push_back(-lit);
+      rhs.push_back(lit);
     }
   }
   const unsigned arity = rhs.size();
@@ -901,7 +903,6 @@ Gate *Closure::new_xor_gate (int lhs) {
     
 
   }
-  COVER (true);
   return g;
 }
 
@@ -992,6 +993,11 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
     LOG ("after round %d, %d (%d %%) remain", round, candidates.size(), candidates.size() / (1+original_size )* 100);
   }
 
+  for (auto c : candidates) {
+    for (auto lit : *c)
+      internal->occs (lit).push_back(c);
+  }
+
   // for (auto lit : internal->lits) {
   //   internal->noccs(lit) = largecount(lit);
   // }
@@ -1024,16 +1030,18 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
   assert (least_occurring_literal);
   LOG ("searching XOR side clause watched by %d#%u",
        least_occurring_literal, count_least_occurring);
-
+  LOG ("searching for size %d", size_lits);
   // TODO this is the wrong thing to iterate on!
   for (auto c : internal->occs (least_occurring_literal)) {
     LOG (c, "checking");
-    assert (c->size == 2);
+    if (c->size == 2) // TODO kissat has break
+      continue;
     if (c->garbage)
       continue;
-    if (c->size < size_lits)
+    if (c->size<size_lits)
       continue;
     size_t found = 0;
+    LOG ("detailed look");
     for (auto other : *c) {
       const signed char value = internal->val (other);
       if (value < 0)
@@ -1047,7 +1055,7 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
       if (marks[other])
         found++;
       else {
-	LOG ("not marked %d", other);
+        LOG ("not marked %d", other);
         found = 0;
         break;
       }
@@ -1055,6 +1063,8 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
     if (found == size_lits && !c->garbage) {
       res = c;
       break;
+    } else {
+      LOG ("too few literals");
     }
   }
   for (auto lit : lits)
@@ -1094,11 +1104,11 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
     } else {
       assert (smallest);
       assert (largest);
-      if (abs(lit) < abs(smallest)) {
+      if (internal->vlit(lit) < internal->vlit(smallest)) {
 	LOG ("new smallest %d", lit);
 	smallest = lit;
       }
-      if (abs(lit) > abs (largest)) {
+      if (internal->vlit(lit) > internal->vlit (largest)) {
 	if (largest < 0) {
 	  LOG (c, "not largest %d (largest: %d) occurs negated in XOR base", lit, largest);
 	  return;
@@ -1106,7 +1116,7 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
 	largest = lit;
       }
     }
-    if (lit < 0 && abs(lit) < abs(largest)) {
+    if (lit < 0 && internal->vlit(lit) < internal->vlit(largest)) {
       LOG (c, "negated literal %d not largest in XOR base", lit);
       return;
     }
@@ -1158,7 +1168,7 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
   
   while (parity_lits (lits) != negated)
     inc_lits (lits);
-  LOG ("found all needed %u matching clauses:", found);
+  LOG (lits, "found all needed %u matching clauses:", found);
   assert (found == 1u << arity);
   if (negated) {
     auto p = begin(lits);
@@ -1168,6 +1178,7 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
     LOG ("flipping RHS literal %d", (lit));
     *p = - lit;
   }
+  LOG (lits, "normalized negations");
   unsigned extracted = 0;
   for (auto lhs: lits) {
     if (!negated)
@@ -1206,6 +1217,8 @@ void Closure::find_units () {
     for (int sgn = -1; sgn < 1; sgn += 2) {
       int lit = v * sgn;
       for (auto c : internal->occs (lit)) {
+	if (c->size != 2)
+	  continue;
         const int other = lit ^ c->literals[0] ^ c->literals[1];
         if (marked (-other)) {
           LOG (c, "binary clause %d %d and %d %d give unit", lit, other,
@@ -1239,6 +1252,8 @@ void Closure::find_equivalences () {
       continue;
     int lit = v;
     for (auto c : internal->occs (lit)) {
+      if (c->size != 2)
+	continue;
       assert (c->size == 2);
       const int other = lit ^ c->literals[0] ^ c->literals[1];
       if (abs(lit) > abs(other))
