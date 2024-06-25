@@ -775,7 +775,7 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
     inc_lits (clause);
   }
   clause.clear();
-  }
+}
   
 // 
 // TODO moreg with find_and_lits
@@ -881,6 +881,7 @@ Gate *Closure::new_xor_gate (int lhs) {
   Gate *g = find_xor_lits (arity, this->rhs);
   if (g) {
     check_xor_gate_implied (g);
+    add_xor_matching_proof_chain(g, g->lhs, lhs);
     if (merge_literals(g->lhs, lhs)) {
       LOG ("found merged literals");
     }
