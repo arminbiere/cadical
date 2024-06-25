@@ -335,49 +335,109 @@ BEGIN:
   return;
 }
 
-bool Internal::delete_all_redundant_def (int blit, unsigned max) {
+void Internal::delete_all_redundant_def (int blit) {
   const Occs &ps = roccs (blit);
-  unsigned count = 0;
-  for (const auto &c : ps) {
-    if (c->garbage) continue;
-    if (c->blocking) count++;
-  }
-  if (count > max) return false;
   for (const auto &c : ps) {
     if (c->garbage) continue;
     mark_garbage (c);
   }
-  return true;
 }
 
-void Internal::add_definition_blocking_clauses (Eliminator &eliminator) {
-  if (!eliminator.prime_gates.size ()) return;
-  if (!opts.elimdefprimeadd) return;
+bool Internal::add_definition_blocking_clauses (Eliminator &eliminator, bool redundant) {
+  if (!eliminator.prime_gates.size ()) return false;
+  if (!opts.elimdefprimeadd && redundant) return false;
+  if (!opts.elimdefblock && !redundant) return false;
   int pivot = abs (eliminator.prime_gates[0][0]);
   unsigned cpos = 0, cneg = 0;
   for (auto &bc : eliminator.prime_gates) {
     if (bc[0] == pivot) cpos++;
     else cneg++;
   }
-  bool addpos = false;
-  bool addneg = false;
   if (cpos > 0)
-    addpos = delete_all_redundant_def (-pivot, INT_MAX);
+    delete_all_redundant_def (-pivot);
   if (cneg > 0)
-    addneg = delete_all_redundant_def (pivot, INT_MAX);
+    delete_all_redundant_def (pivot);
   for (auto &bc : eliminator.prime_gates) {
-    if (!addpos && bc[0] == pivot) continue;
-    if (!addneg && bc[0] == -pivot) continue;
     assert (clause.empty ());
     clause.swap (bc);
-    Clause *res = new_definitions_blocking_clause ();
+    Clause *res = new_definitions_blocking_clause (redundant);
     stats.definition_prime_added++;
-    for (const auto &lit : *res)
-      roccs (lit).push_back (res);
-    // elim_update_added_clause (eliminator, res);
+    if (redundant)
+      for (const auto &lit : *res)
+        roccs (lit).push_back (res);
+    else {
+      for (const auto &lit : *res) {
+        occs (lit).push_back (res);
+        mark_elim (lit);
+      }
+    }
     clause.clear ();
   }
   eliminator.prime_gates.clear ();
+  return true;
+}
+
+bool Internal::definition_blocked_addition () {
+  if (!opts.elimdefblock) return false;
+  init_occs ();
+  init_noccs ();
+  init_roccs ();
+
+  for (const auto &c : clauses) {
+    if (c->garbage || c->redundant)
+      continue;
+    for (const auto &lit : *c) {
+      if (!active (lit))
+        continue;
+      noccs (lit)++;
+    }
+  }
+
+  // Connect irredundant clauses.
+  //
+  for (const auto &c : clauses)
+    if (!c->garbage && !c->redundant)
+      for (const auto &lit : *c)
+        if (active (lit))
+          occs (lit).push_back (c);
+
+  // Connect redundant clauses.
+  //
+  if (opts.elimdefprimeadd && opts.elimdefprime)
+    for (const auto &c : clauses)
+      if (!c->garbage && c->redundant)
+        for (const auto &lit : *c)
+          if (active (lit))
+            roccs (lit).push_back (c);
+  
+  
+  Eliminator eliminator (this);
+  ElimSchedule &schedule = eliminator.schedule;
+  bool added = false;
+  for (auto idx : vars) {
+    if (!active (idx))
+      continue;
+    if (frozen (idx))
+      continue;
+    schedule.push_back (idx);
+  }
+  while (!unsat && !terminated_asynchronously () && !schedule.empty ()) {
+    int idx = schedule.front ();
+    schedule.pop_front ();
+    find_definition (eliminator, idx);
+    if (add_definition_blocking_clauses (eliminator, false)) added = true;
+    unmark_gate_clauses (eliminator);
+  }
+
+  reset_occs ();
+  reset_roccs ();
+  reset_noccs ();
+
+  if (added)
+    PHASE ("elim-phase", stats.elimphases, "added some definition blocking clauses");
+  else
+    PHASE ("elim-phase", stats.elimphases, "added no definition blocking clauses");
+  return added;
 }
 
 } // namespace CaDiCaL

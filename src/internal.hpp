@@ -1028,9 +1028,10 @@ struct Internal {
   // mine definitions for kitten in 'definition.cpp'
   //
   void find_definition (Eliminator &, int);
-  void add_definition_blocking_clauses (Eliminator &);
-  Clause *new_definitions_blocking_clause ();
-  bool delete_all_redundant_def (int, unsigned);
+  bool add_definition_blocking_clauses (Eliminator &, bool);
+  Clause *new_definitions_blocking_clause (bool);
+  void delete_all_redundant_def (int);
+  bool definition_blocked_addition ();
   void init_citten ();
   void reset_citten ();
   void citten_clear_track_log_terminate ();

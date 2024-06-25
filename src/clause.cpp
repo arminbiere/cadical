@@ -538,9 +538,9 @@ Clause *Internal::new_hyper_ternary_resolved_clause (bool red) {
   return res;
 }
 
-Clause *Internal::new_definitions_blocking_clause () {
+Clause *Internal::new_definitions_blocking_clause (bool redundant) {
   external->check_learned_clause ();
-  Clause *res = new_clause (true, 1);
+  Clause *res = new_clause (redundant, 1);
   res->blocking = true;
   if (proof) {
     proof->add_derived_clause (res, lrat_chain);

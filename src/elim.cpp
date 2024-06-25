@@ -37,7 +37,7 @@ inline double Internal::compute_elim_score (unsigned lit) {
 
 /*------------------------------------------------------------------------*/
 
-inline bool elim_more::operator() (unsigned a, unsigned b) {
+bool elim_more::operator() (unsigned a, unsigned b) {
   const auto s = internal->compute_elim_score (a);
   const auto t = internal->compute_elim_score (b);
   if (s > t)
@@ -80,7 +80,7 @@ bool Internal::eliminating () {
   if (last.elim.marked < stats.mark.elim)
     return true;
 
-  VERBOSE (3, "elim not scheduled due to fixpoint");
+  // VERBOSE (3, "elim not scheduled due to fixpoint");
   return false;
 }
 
@@ -732,7 +732,7 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator,
       if (active (pivot))
         mark_eliminated (pivot);
     } else {
-      add_definition_blocking_clauses (eliminator);
+      add_definition_blocking_clauses (eliminator, true);
       LOG ("too many resolvents on %d so not eliminated", pivot);
     }
   }
@@ -1127,6 +1127,10 @@ void Internal::elim (bool update_limits) {
     phase_complete = true;
   }
 
+  if (phase_complete)
+    if (definition_blocked_addition ())
+      phase_complete = false;
+
   if (phase_complete) {
     stats.elimcompleted++;
     PHASE ("elim-phase", stats.elimphases,
@@ -1140,6 +1144,7 @@ void Internal::elim (bool update_limits) {
            stats.elimcompleted + 1, lim.elimbound);
   }
 
+  
   reset_citten ();
   init_watches ();
   connect_watches ();

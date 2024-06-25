@@ -73,6 +73,7 @@ OPTION( elimboundmax,     16, -1,2e6,1,0,1, "maximum elimination bound") \
 OPTION( elimboundmin,      0, -1,2e6,0,0,1, "minimum elimination bound") \
 OPTION( elimclslim,      1e2,  2,2e9,2,0,1, "resolvent size limit") \
 OPTION( elimdef,           1,  0,  1,0,0,1, "mine definitions with kitten") \
+OPTION( elimdefblock,      1,  0,  1,0,0,1, "use definitions to add blocking clauses") \
 OPTION( elimdefcores,      2,  1,100,0,0,1, "number of unsat cores") \
 OPTION( elimdefprime,      0,  0,  1,0,0,1, "add blocking clauses to find definitions") \
 OPTION( elimdefprimeadd,   1,  0,  1,0,0,1, "add blocking clauses") \
