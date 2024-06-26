@@ -495,10 +495,8 @@ bool Internal::consider_to_vivify_clause (Clause *c, bool irredundant, int lower
   assert (!irredundant);
   if (!c->redundant)
     return false;
-  if (irredundant && c->redundant)
-    return false;
   assert (c->redundant);
-  if (c->glue >= upper_glue_limit)
+  if (c->glue > upper_glue_limit)
     return false;
   if (c->glue < lower_glue_limit)
     return false;
@@ -1291,14 +1289,14 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   switch (vivifier.tier) {
   case Vivify_Mode::TIER1:
     lower_glue_limit = 0;
-    upper_glue_limit = tier1 + 1;
+    upper_glue_limit = tier1;
     break;
   case Vivify_Mode::TIER2:
-    lower_glue_limit = tier1;
-    upper_glue_limit = tier2 + 1;
+    lower_glue_limit = tier1 < tier2 ? tier1 + 1 : 0;
+    upper_glue_limit = tier2;
     break;
   case Vivify_Mode::TIER3:
-    lower_glue_limit = tier2;
+    lower_glue_limit = tier2 + 1;
     upper_glue_limit = INT32_MAX;
     break;
   default:
@@ -1307,8 +1305,9 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     break;
   }
 
+  
   for (const auto &c : clauses) {
-
+  
     if (c->size == 2)
       continue; // see also (NO-BINARY) above
 
@@ -1330,6 +1329,8 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     for (const auto lit : *c) {
       noccs (lit) += score;
     }
+    
+    vivifier.schedule.push_back (c);
   }
 
   // In the first round of filling the schedule check whether there are
@@ -1337,13 +1338,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   // yet. The second round is only entered if no such clause was found in
   // the first round.  Then the second round selects all clauses.
   //
-  for (const auto &c : clauses) {
-
-    if (c->size == 2)
-      continue; // see also (NO-BINARY) above
-
-    if (!consider_to_vivify_clause (c, vivifier.tier == Vivify_Mode::IRREDUNDANT, lower_glue_limit, upper_glue_limit))
-      continue;
+  for (const auto &c : vivifier.schedule) {
 
     // Literals in scheduled clauses are sorted with their highest score
     // literals first (as explained above in the example at '@2').  This
@@ -1351,7 +1346,6 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     //
     sort (c->begin (), c->end (), vivify_more_noccs (this));
 
-    vivifier.schedule.push_back (c);
   }
   shrink_vector (vivifier.schedule);
 
