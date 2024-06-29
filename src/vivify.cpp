@@ -1143,11 +1143,13 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   if (subsuming) {
     assert (c != subsuming);
     LOG (c, "deleting subsumed clause");
+    if (subsuming->redundant && c->glue < subsuming->glue) {
+      promote_clause (c, c->glue);
+    }
     vivify_subsume_clause (subsuming, c);
     backtrack (level - 1);
     res = false;
     stats.vivifysubs++;
-    // TODO: reompute glue
     // TODO statistics
   }
   else if (vivify_shrinkable (sorted, conflict, subsume)) {
@@ -1160,6 +1162,11 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     conflict = nullptr; // TODO dup from below
     vivify_strengthen (c);
     res = true;
+  } else if (subsume && c->redundant) {
+    LOG (c, "vivification implied");
+    mark_garbage(c);
+    //    stats.vivfyimplied;
+    res = true;
   } else if ((conflict || subsume) && !c->redundant && !redundant) {
     LOG ("demote clause from irredundant to redundant");
     res = false;
@@ -1168,9 +1175,18 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     promote_clause(c, new_glue);
     if (conflict)
       backtrack (level - 1);
-  } else {
+  } else if (subsume) {
+    LOG (c, "no vivification instantiation with implied literal %d",
+             (subsume));
+    assert (!c->redundant);
+    assert (redundant);
+    res = false;
+  }else {
+    assert (level > 2);
+    assert ((size_t)level == sorted.size());
     LOG (c, "vivification failed on");
     lrat_chain.clear();
+    assert (!subsume);
     if (!subsume && opts.vivifyinst) {
       res = vivify_instantiate(sorted, c);
     } else {
