@@ -202,6 +202,7 @@ struct Stats {
   int64_t vivifystred2 = 0;   // strengthened redundant clause (2)
   int64_t vivifystred3 = 0;   // strengthened redundant clause (3)
   int64_t vivifyunits = 0;    // units during vivification
+  int64_t vivifyimplied = 0;     // implied during vivification
   int64_t vivifyinst = 0;     // instantiation during vivification
   int64_t vivifydemote = 0;   //demoting during vivification
   int64_t transreds;

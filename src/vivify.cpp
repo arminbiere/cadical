@@ -1151,7 +1151,10 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     backtrack (level - 1);
     res = false;
     stats.vivifysubs++;
-    // TODO statistics
+    if (c->redundant)
+      ++stats.vivifystred1;
+    else
+      ++stats.vivifystrirr;
   }
   else if (vivify_shrinkable (sorted, conflict, subsume)) {
     vivify_increment_stats (vivifier);
@@ -1166,7 +1169,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   } else if (subsume && c->redundant) {
     LOG (c, "vivification implied");
     mark_garbage(c);
-    //    stats.vivfyimplied;
+    ++stats.vivifyimplied;
     res = true;
   } else if ((conflict || subsume) && !c->redundant && !redundant) {
     LOG ("demote clause from irredundant to redundant");
@@ -1182,6 +1185,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     assert (!c->redundant);
     assert (redundant);
     res = false;
+    ++stats.vivifyimplied;
   }else {
     assert (level > 2);
     assert ((size_t)level == sorted.size());
