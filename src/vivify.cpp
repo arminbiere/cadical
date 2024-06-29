@@ -104,6 +104,7 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming, Clause *subsumed
   if (proof)
     proof->strengthen (subsuming->id);
   mark_garbage (subsumed);
+  mark_added (subsuming);
   stats.current.irredundant++;
   stats.added.irredundant++;
   stats.irrlits += subsuming->size;
@@ -1172,7 +1173,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     res = false;
     demote_clause (c);
     const int new_glue = recompute_glue(c);
-    promote_clause(c, new_glue);
+    promote_clause (c, new_glue);
     if (conflict)
       backtrack (level - 1);
   } else if (subsume) {
