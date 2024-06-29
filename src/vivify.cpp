@@ -593,6 +593,7 @@ void Internal::vivify_strengthen (Clause *c) {
   clause.clear ();
   mark_garbage (c);
   lrat_chain.clear ();
+  ++stats.vivifystrs;
 }
 
 
@@ -1175,7 +1176,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     LOG ("demote clause from irredundant to redundant");
     res = false;
     demote_clause (c);
-    const int new_glue = recompute_glue(c);
+    const int new_glue = recompute_glue (c);
     promote_clause (c, new_glue);
     if (conflict)
       backtrack (level - 1);
@@ -1193,7 +1194,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     lrat_chain.clear();
     assert (!subsume);
     if (!subsume && opts.vivifyinst) {
-      res = vivify_instantiate(sorted, c);
+      res = vivify_instantiate (sorted, c);
     } else {
       LOG ("cannot apply instantiation");
       if (conflict) {
