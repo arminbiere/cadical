@@ -139,6 +139,7 @@ void Internal::enlarge (int new_max_var) {
 void Internal::init_vars (int new_max_var) {
   if (new_max_var <= max_var)
     return;
+  // TODO this breaks ilb????
   if (level && !external_prop)
     backtrack ();
   LOG ("initializing %d internal variables from %d to %d",
@@ -268,6 +269,8 @@ int Internal::cdcl_loop_with_inprocessing () {
       compact (); // collect variables
     else if (conditioning ())
       condition (); // globally blocked clauses
+    else if (stats.factor < 10)
+      factor ();
     else
       res = decide (); // next decision
   }

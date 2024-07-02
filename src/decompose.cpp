@@ -89,13 +89,13 @@ void Internal::build_lrat_for_clause (
   assert (lrat);
   LOG ("building chain for not subsumed clause");
   assert (lrat_chain.empty ());
-  assert (decomposed.empty ());
+  assert (sign_marked.empty ());
   for (const auto lit : clause) { // build chain for each replaced literal
     auto other = lit;
     if (val (other) > 0) {
-      if (marked_decompose (other))
+      if (marked_signed (other))
         continue;
-      mark_decomposed (other);
+      mark_signed (other);
       const unsigned uidx = vlit (other);
       uint64_t id = unit_clauses[uidx];
       assert (id);
@@ -104,9 +104,9 @@ void Internal::build_lrat_for_clause (
     }
     assert (mini_chain.empty ());
     for (auto p : dfs_chains[vlit (other)]) {
-      if (marked_decompose (other))
+      if (marked_signed (other))
         continue;
-      mark_decomposed (other);
+      mark_signed (other);
       int implied = p->literals[0];
       implied = implied == other ? -p->literals[1] : -implied;
       LOG ("ADDED %d -> %d (%" PRIu64 ")", implied, other, p->id);
@@ -114,9 +114,9 @@ void Internal::build_lrat_for_clause (
       mini_chain.push_back (p->id);
       if (val (implied) <= 0)
         continue;
-      if (marked_decompose (implied))
+      if (marked_signed (implied))
         break;
-      mark_decomposed (implied);
+      mark_signed (implied);
       const unsigned uidx = vlit (implied);
       uint64_t id = unit_clauses[uidx];
       assert (id);
@@ -132,17 +132,17 @@ void Internal::build_lrat_for_clause (
     mini_chain.clear ();
   }
   // clear_analyzed_literals ();
-  clear_decomposed_literals ();
+  clear_sign_marked_literals ();
   LOG (lrat_chain, "lrat_chain:");
 }
 
-void Internal::clear_decomposed_literals () {
-  LOG ("clearing %zd decomposed literals", decomposed.size ());
-  for (const auto &lit : decomposed) {
-    assert (marked_decompose (lit));
-    unmark_decompose (lit);
+void Internal::clear_sign_marked_literals () {
+  LOG ("clearing %zd marked literals", sign_marked.size ());
+  for (const auto &lit : sign_marked) {
+    assert (marked_signed (lit));
+    unmark_signed (lit);
   }
-  decomposed.clear ();
+  sign_marked.clear ();
 }
 
 // This performs one round of Tarjan's algorithm, e.g., equivalent literal

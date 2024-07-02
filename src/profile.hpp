@@ -54,6 +54,7 @@ struct Internal;
   PROFILE (decompose, 3) \
   PROFILE (definition, 2) \
   PROFILE (elim, 2) \
+  PROFILE (factor, 2) \
   PROFILE (extend, 3) \
   PROFILE (instantiate, 2) \
   PROFILE (lucky, 2) \

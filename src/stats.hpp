@@ -189,6 +189,14 @@ struct Stats {
   int64_t definition_prime;
   int64_t definition_prime_added;
   
+  int64_t eres;
+  int64_t eresint;
+
+  int64_t factor;
+  int64_t factor_vars;
+  int64_t factor_added;
+  int64_t factor_deleted;
+  
   int64_t ternary;        // number of ternary resolution phases
   int64_t ternres;        // number of ternary resolutions
   int64_t htrs;           // number of hyper ternary resolvents

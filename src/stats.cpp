@@ -490,6 +490,19 @@ void Stats::print (Internal *internal) {
          stats.sweep_completed, relative (stats.sweep, stats.sweep_completed));
 
   }
+  if (all || stats.eres)
+    PRT ("extended res:    %15" PRId64 "   %10.2f %%  of decisions",
+         stats.eres, percent (stats.eres, stats.decisions));
+  if (all || stats.factor) {
+    PRT ("factored vars:   %15" PRId64 "   %10.2f %%  of variables",
+         stats.factor_vars, percent (stats.factor_vars, internal->max_var));
+    PRT ("  factored:      %15" PRId64 "   %10.2f    conflict interval",
+         stats.factor, relative (stats.conflicts, stats.factor));
+    PRT ("  factor added:  %15" PRId64 "   %10.2f    per new var",
+         stats.factor_added, relative (stats.factor_added, factor_vars));
+    PRT ("  factor deleted:%15" PRId64 "   %10.2f    per new var",
+         stats.factor_deleted, relative (stats.factor, factor_vars));
+  }
   if (all || stats.subsumed) {
     PRT ("subsumed:        %15" PRId64 "   %10.2f %%  of all clauses",
          stats.subsumed, percent (stats.subsumed, stats.added.total));

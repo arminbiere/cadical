@@ -549,6 +549,30 @@ Clause *Internal::new_definitions_blocking_clause (bool redundant) {
   return res;
 }
 
+
+Clause *Internal::new_eres_clause () {
+  external->check_learned_clause ();
+  Clause *res = new_clause (false, 0);
+  if (proof) {
+    proof->add_derived_clause (res, lrat_chain);
+  }
+  assert (watching ());
+  watch_clause (res);
+  return res;
+}
+
+
+Clause *Internal::new_factor_clause () {
+  external->check_learned_clause ();
+  stats.factor_added++;
+  Clause *res = new_clause (false, 0);
+  if (proof) {
+    proof->add_derived_clause (res, lrat_chain);
+  }
+  assert (!watching ());
+  return res;
+}
+
 // Add a new clause with same glue and redundancy as 'orig' but literals are
 // assumed to be in 'clause' in 'decompose' and 'vivify'.
 //

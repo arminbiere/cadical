@@ -233,11 +233,50 @@ int Internal::decide () {
       decision = decide_phase (idx, target);
     }
     search_assume_decision (decision);
+    if (opts.eres && stats.eres < opts.eresmax) {
+      stats.eresint++;
+      if (stats.eresint > opts.eresint) {
+        stats.eres++;
+        stats.eresint = 0;
+        int first = decision;
+        int idx = next_decision_variable ();
+        const bool target = (opts.target > 1 || (stable && opts.target));
+        decision = decide_phase (idx, target);
+        int second = decision;
+        backtrack (level - 1);
+        int new_var = add_eres_clauses (first, second);
+        search_assume_decision (new_var);
+      }
+    }
   }
   if (res)
     marked_failed = false;
   STOP (decide);
   return res;
+}
+
+
+// add a <-> first && second
+// return a s.t. first and second propagate
+int Internal::add_eres_clauses (int first, int second) {
+  int a = external->internalize (external->max_var + 1);
+  int b = first;
+  int c = second;
+  
+  clause.push_back (-a);
+  clause.push_back (b);
+  new_eres_clause ();
+  clause.clear ();
+  clause.push_back (-a);
+  clause.push_back (c);
+  new_eres_clause ();
+  clause.clear ();
+  clause.push_back (a);
+  clause.push_back (-b);
+  clause.push_back (-c);
+  new_eres_clause ();
+  clause.clear ();
+  return a;
 }
 
 } // namespace CaDiCaL

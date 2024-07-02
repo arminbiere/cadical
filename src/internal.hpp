@@ -61,6 +61,7 @@ extern "C" {
 #include "elim.hpp"
 #include "ema.hpp"
 #include "external.hpp"
+#include "factor.hpp"
 #include "file.hpp"
 #include "flags.hpp"
 #include "format.hpp"
@@ -140,16 +141,17 @@ struct Internal {
     DECOMP = (1 << 3),
     DEDUP = (1 << 4),
     ELIM = (1 << 5),
-    LUCKY = (1 << 6),
-    PROBE = (1 << 7),
-    SEARCH = (1 << 8),
-    SIMPLIFY = (1 << 9),
-    SUBSUME = (1 << 10),
-    SWEEP = (1 << 11),
-    TERNARY = (1 << 12),
-    TRANSRED = (1 << 13),
-    VIVIFY = (1 << 14),
-    WALK = (1 << 15),
+    FACTOR = (1 << 6),
+    LUCKY = (1 << 7),
+    PROBE = (1 << 8),
+    SEARCH = (1 << 9),
+    SIMPLIFY = (1 << 10),
+    SUBSUME = (1 << 11),
+    SWEEP = (1 << 12),
+    TERNARY = (1 << 13),
+    TRANSRED = (1 << 14),
+    VIVIFY = (1 << 15),
+    WALK = (1 << 16),
   };
 
   bool in_mode (Mode m) const { return (mode & m) != 0; }
@@ -247,7 +249,7 @@ struct Internal {
   vector<int> levels;        // decision levels in learned clause
   vector<int> analyzed;      // analyzed literals in 'analyze'
   vector<int> unit_analyzed; // to avoid duplicate units in lrat_chain
-  vector<int> decomposed;    // literals skipped in 'decompose'
+  vector<int> sign_marked;    // literals skipped in 'decompose'
   vector<int> minimized;     // removable or poison in 'minimize'
   vector<int> shrinkable;    // removable or poison in 'shrink'
   Reap reap;                 // radix heap for shrink
@@ -968,25 +970,24 @@ struct Internal {
 
   // During decompose ignore literals where we already built LRAT chains
   //
-  void mark_decomposed (int lit) {
+  void mark_signed (int lit) {
     Flags &f = flags (lit);
     const unsigned bit = bign (lit);
-    assert ((f.decompose & bit) == 0);
-    LOG ("marking LRAT chain of %d to be skipped", lit);
-    decomposed.push_back (lit);
-    f.decompose |= bit;
+    assert ((f.marked_signed & bit) == 0);
+    sign_marked.push_back (lit);
+    f.marked_signed |= bit;
   }
-  void unmark_decompose (int lit) {
+  void unmark_signed (int lit) {
     Flags &f = flags (lit);
     const unsigned bit = bign (lit);
-    f.decompose &= ~bit;
+    f.marked_signed &= ~bit;
   }
-  bool marked_decompose (int lit) {
+  bool marked_signed (int lit) {
     const Flags &f = flags (lit);
     const unsigned bit = bign (lit);
-    return (f.decompose & bit) != 0;
+    return (f.marked_signed & bit) != 0;
   }
-  void clear_decomposed_literals ();
+  void clear_sign_marked_literals ();
 
   // Blocked Clause elimination in 'block.cpp'.
   //
@@ -1116,6 +1117,20 @@ struct Internal {
   int sweep_flip_and_implicant (int);
   bool sweep_extract_fixed (Sweeper &sweeper, int lit);
 
+  // extended resolution
+  int add_eres_clauses (int, int);
+  Clause *new_eres_clause ();
+
+  // factor
+  bool factor ();
+  void factor_mode ();
+  void reset_factor_mode ();
+  void delete_all_factored (Factorizor &);
+  void try_and_factor (Factorizor &factor, int first, int second);
+  void mark_outer (int outer);
+  void updated_scores_for_new_variables (int64_t);
+  Clause *new_factor_clause ();
+  
   // instantiate
   //
   void inst_assign (int lit);

@@ -269,8 +269,8 @@ void Options::optimize (int val) {
   do { \
     if (!(O)) \
       break; \
-    const int64_t factor = ((O) == 1 ? factor2 : factor10); \
-    int64_t new_val = factor * (int64_t) (V); \
+    const int64_t factor1 = ((O) == 1 ? factor2 : factor10); \
+    int64_t new_val = factor1 * (int64_t) (V); \
     if (new_val > (H)) \
       new_val = (H); \
     if (new_val == (int) (V)) \

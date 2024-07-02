@@ -99,7 +99,11 @@ OPTION( emalevel,        1e5,  1,2e9,0,0,1, "window back-track level") \
 OPTION( emasize,         1e5,  1,2e9,0,0,1, "window learned clause size") \
 OPTION( ematrailfast,    1e2,  1,2e9,0,0,1, "window fast trail") \
 OPTION( ematrailslow,    1e5,  1,2e9,0,0,1, "window slow trail") \
+OPTION( eres,              1,  0,  1,0,0,1, "extended resolution") \
+OPTION( eresint,         2e3,  0,2e9,0,0,1, "extended resolution") \
+OPTION( eresmax,         100,  1,2e9,0,0,1, "extended resolution") \
 OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
+OPTION( factor,            1,  0,  1,0,1,1, "systematic variable addition") \
 OPTION( flush,             0,  0,  1,0,0,1, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \
 OPTION( flushint,        1e5,  1,2e9,0,0,1, "initial limit") \
