@@ -1123,12 +1123,14 @@ struct Internal {
 
   // factor
   bool factor ();
-  void factor_mode ();
+  bool factoring ();
+  void factor_mode (Factorizor &);
   void reset_factor_mode ();
   void delete_all_factored (Factorizor &);
   void try_and_factor (Factorizor &factor, int first, int second);
-  void mark_outer (int outer);
+  void mark_outer (Factorizor &, int outer);
   void updated_scores_for_new_variables (int64_t);
+  void find_and_delete_outer (Factorizor &factor, int outer);
   Clause *new_factor_clause ();
   
   // instantiate

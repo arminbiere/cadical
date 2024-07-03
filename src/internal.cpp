@@ -269,8 +269,8 @@ int Internal::cdcl_loop_with_inprocessing () {
       compact (); // collect variables
     else if (conditioning ())
       condition (); // globally blocked clauses
-    else if (stats.factor < 10)
-      factor ();
+    else if (factoring () && factor ())
+      continue;
     else
       res = decide (); // next decision
   }

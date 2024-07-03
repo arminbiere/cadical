@@ -139,7 +139,7 @@ void Internal::build_lrat_for_clause (
 void Internal::clear_sign_marked_literals () {
   LOG ("clearing %zd marked literals", sign_marked.size ());
   for (const auto &lit : sign_marked) {
-    assert (marked_signed (lit));
+    // assert (marked_signed (lit));  violated on purpose in factor
     unmark_signed (lit);
   }
   sign_marked.clear ();
