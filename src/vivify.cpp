@@ -791,6 +791,19 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
     }
     if (subsumes) {
       assert (candidate != reason);
+#ifndef NDEBUG
+      int nonfalse_reason = 0;
+      for (auto lit : *reason)
+	if (!fixed (lit))
+	  ++nonfalse_reason;
+      
+      int nonfalse_candidate = 0;
+      for (auto lit : *candidate)
+	if (!fixed (lit))
+	  ++nonfalse_candidate;
+
+      assert (nonfalse_reason <= nonfalse_candidate);
+#endif
       LOG (candidate, "vivify subsumed 0");
       LOG (reason, "vivify subsuming 0");
       *subsuming = reason;
@@ -870,12 +883,15 @@ inline void Internal::vivify_increment_stats (const Vivifier &vivifier) {
   }
 }
 /*------------------------------------------------------------------------*/
-
+// instantiate last literal (see the description of the hack track 2023), fix the watches and
+//  backtrack two level back
 bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c) {
   LOG ("now trying instantiation");
   conflict = nullptr;
   const int lit = sorted.back ();
   LOG ("vivify instantiation");
+  assert (!var (lit).reason);
+  assert (var (lit).level);
   backtrack (level - 1);
   assert (val (lit) == 0);
   stats.vivifydecs++;
@@ -893,11 +909,11 @@ bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c) {
       clear_analyzed_literals ();
     }
     int remove = lit;
-    conflict = 0;
-    backtrack (level - 1);
+    conflict = nullptr;
     unwatch_clause (c);
+    backtrack_without_updating_phases (level-2);
     strengthen_clause (c, remove);
-    vivify_sort_watched(c);
+    vivify_sort_watched (c);
     watch_clause (c);
     assert (!conflict);
     return true;
@@ -919,8 +935,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   c->vivify = false;  // mark as checked / tried
   c->vivified = true; // and globally remember
 
-  if (c->garbage)
-    return false;
+  assert (!c->garbage);
 
   // First check whether the candidate clause is already satisfied and at
   // the same time copy its non fixed literals to 'sorted'.  The literals
@@ -928,31 +943,26 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   // watches during propagation, even though we sorted them initially
   // while pushing the clause onto the schedule and sorting the schedule.
   //
-  int satisfied = 0;
   auto &sorted = vivifier.sorted;
   sorted.clear ();
 
   for (const auto &lit : *c) {
     const int tmp = fixed (lit);
     if (tmp > 0) {
-      satisfied = lit;
-      break;
+      LOG (c, "satisfied by propagated unit %d", lit);
+      mark_garbage (c);
+      return false;
     } else if (!tmp)
       sorted.push_back (lit);
   }
 
-  if (satisfied) {
-    LOG (c, "satisfied by propagated unit %d", satisfied);
-    mark_garbage (c);
-    return false;
-  }
-
+  assert (sorted.size() > 1);
   if (sorted.size() == 2) {
     LOG ("skipping actual binary");
     return false;
   }
 
-  sort (sorted.begin (), sorted.end (), vivify_more_noccs (this));
+  sort (sorted.begin (), sorted.end (), vivify_more_noccs_kissat (this));
 
   // The actual vivification checking is performed here, by assuming the
   // negation of each of the remaining literals of the clause in turn and
@@ -1001,7 +1011,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     if (forced) {
       LOG ("clause is reason forcing %d", forced);
       assert (var (forced).level);
-      backtrack (var (forced).level - 1);
+      backtrack_without_updating_phases (var (forced).level - 1);
     }
 
     // As long the (remaining) literals of the sorted clause match
@@ -1012,8 +1022,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
       int l = 1; // This is the decision level we want to reuse.
 
       for (const auto &lit : sorted) {
-        if (fixed (lit))
-          continue;
+        assert (!fixed (lit));
         const int decision = control[l].decision;
         if (-lit == decision) {
           LOG ("reusing decision %d at decision level %d", decision, l);
@@ -1023,7 +1032,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
         } else {
           LOG ("literal %d does not match decision %d at decision level %d",
                lit, decision, l);
-          backtrack (l - 1);
+          backtrack_without_updating_phases (l - 1);
           break;
         }
       }
@@ -1077,11 +1086,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     if (tmp) { // literal already assigned
 
       const Var &v = var (lit);
-
-      if (!v.level) {
-        LOG ("skipping fixed %d", lit);
-        continue;
-      }
+      assert (v.level);
       if (!v.reason) {
         LOG ("skipping decision %d", lit);
         continue;
