@@ -315,6 +315,20 @@ struct vivify_more_noccs {
   }
 };
 
+
+struct vivify_more_noccs_kissat {
+
+  Internal *internal;
+
+  vivify_more_noccs_kissat (Internal *i) : internal (i) {}
+
+  bool operator() (int a, int b) {
+    unsigned t = internal->noccs (a);
+    unsigned s = internal->noccs (b);
+    return ((t - s) | ((b - a) & ~(s - t))) >> 31;
+  }
+};
+
 // Sort candidate clauses by the number of occurrences (actually by their
 // score) of their literals, with clauses to be vivified first last.   We
 // assume that clauses are sorted w.r.t. more occurring (higher score)
