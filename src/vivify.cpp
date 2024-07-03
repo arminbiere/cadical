@@ -1132,8 +1132,9 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
 
   Clause *subsuming = nullptr;
   bool redundant = false;
+  const int level_after_assumptions = level;
+  assert (level_after_assumptions);
   vivify_deduce (c, conflict, subsume, &subsuming, redundant);
-  // should be already unmarked, but maybe put here
 
   bool res;
 
@@ -1154,7 +1155,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
       promote_clause (c, c->glue);
     }
     vivify_subsume_clause (subsuming, c);
-    backtrack (level - 1);
     res = false;
     stats.vivifysubs++;
     if (c->redundant)
@@ -1183,8 +1183,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     demote_clause (c);
     const int new_glue = recompute_glue (c);
     promote_clause (c, new_glue);
-    if (conflict)
-      backtrack (level - 1);
   } else if (subsume) {
     LOG (c, "no vivification instantiation with implied literal %d",
              (subsume));
@@ -1200,16 +1198,21 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     assert (!subsume);
     if (!subsume && opts.vivifyinst) {
       res = vivify_instantiate (sorted, c);
+      assert (!conflict);
     } else {
       LOG ("cannot apply instantiation");
       if (conflict) {
 	conflict = 0;
-	backtrack (level - 1);
       }
       res = false;
     }
   }
 
+  if (conflict && level == level_after_assumptions) {
+    LOG ("forcing backtracking at least one level after conflict");
+    backtrack_without_updating_phases (level - 1);
+  }
+    
   clause.clear();
   clear_analyzed_literals (); // TODO why needed?
   lrat_chain.clear();
