@@ -642,6 +642,7 @@ struct Internal {
   void unassign (int lit);
   void update_target_and_best ();
   void backtrack (int target_level = 0);
+  void backtrack_without_updating_phases (int target_level = 0);
 
   // Minimized learned clauses in 'minimize.cpp'.
   //
