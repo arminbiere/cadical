@@ -722,10 +722,13 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes, Clause **subsuming
     if (lrat && reason)
       lrat_chain.push_back (reason->id);
   }
+#ifndef NDEBUG
+  (void)candidate;
+#endif
 }
 
 
-bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
+void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
                               int implied, Clause **subsuming, bool &redundant) {
   assert (lrat_chain.empty());
   bool subsumes;
@@ -747,7 +750,7 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
     assert (reason);
     assert (!reason->garbage);
     mark2 (candidate);
-    subsumes = (candidate != reason && reason->size <= candidate->size); // TODO why is the second part required
+    subsumes = (candidate != reason);
     redundant = reason->redundant;
     LOG (reason, "resolving with");
     if (lrat)
@@ -794,7 +797,7 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
       unmark (candidate);
       if (lrat)
 	lrat_chain.clear ();
-      return subsumes;
+      return;
     }
 
   }
@@ -807,11 +810,8 @@ bool Internal::vivify_deduce (Clause *candidate, Clause *conflict,
     LOG (*subsuming, "vivify subsuming");
     if (lrat)
       lrat_chain.clear ();
-    return subsumes;
   }
 
-
-  return subsumes;
 }
 /*------------------------------------------------------------------------*/
 
