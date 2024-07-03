@@ -892,6 +892,7 @@ inline void Internal::vivify_increment_stats (const Vivifier &vivifier) {
     ++stats.vivifystred3;
     break;
   default:
+    assert (vivifier.tier == Vivify_Mode::IRREDUNDANT);
     ++stats.vivifystrirr;
     break;
   }
@@ -1178,7 +1179,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   }
   else if (vivify_shrinkable (sorted, conflict, subsume)) {
     vivify_increment_stats (vivifier);
-    //vivify_learn
     LOG ("vivify succeeded, learning new clause");
     clear_analyzed_literals ();
     LOG (lrat_chain, "lrat");
@@ -1193,10 +1193,16 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     res = true;
   } else if ((conflict || subsume) && !c->redundant && !redundant) {
     LOG ("demote clause from irredundant to redundant");
-    res = false;
-    demote_clause (c);
-    const int new_glue = recompute_glue (c);
-    promote_clause (c, new_glue);
+    if (opts.vivifydemote){
+      demote_clause (c);
+      const int new_glue = recompute_glue (c);
+      promote_clause (c, new_glue);
+      res = false;
+    } else {
+      mark_garbage(c);
+      ++stats.vivifyimplied;
+      res = true;
+    }
   } else if (subsume) {
     LOG (c, "no vivification instantiation with implied literal %d",
              (subsume));
@@ -1443,6 +1449,8 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     if (vivify_clause (vivifier, c)) {
       if (!c->garbage && c->size > 2) {
 	++retry;
+	++stats.vivifystrirr;
+
 	vivifier.schedule.push_back(c);
       } else retry = 0;
     } else retry = 0;
@@ -1578,18 +1586,16 @@ void Internal::vivify () {
 
   START_SIMPLIFIER (vivify, VIVIFY);
   stats.vivifications++;
-  bool continue_vivi;
   int64_t total = (stats.propagations.search - last.vivify.propagations) * opts.vivifyeff;
   if (total < opts.vivifymineff)
     total = opts.vivifymineff;
   if (total > opts.vivifymaxeff)
     total = opts.vivifymaxeff;
-  const int64_t end = stats.propagations.vivify + total;
 
-  double tier1effort = 1e-3 * (double) opts.vivifytier1eff;
-  double tier2effort = 1e-3 * (double) opts.vivifytier2eff;
-  double tier3effort = 1e-3 * (double) opts.vivifytier3eff;
-  double irreffort = delaying_vivify_irredundant.bumpreasons.delay() ? 0 : 1e-3 * (double) opts.vivifyirredeff;
+  double tier1effort = !opts.vivifytier1 ? 0 : 1e-3 * (double) opts.vivifytier1eff;
+  double tier2effort = !opts.vivifytier2 ? 0 : 1e-3 * (double) opts.vivifytier2eff;
+  double tier3effort = !opts.vivifytier3 ? 0 : 1e-3 * (double) opts.vivifytier3eff;
+  double irreffort = delaying_vivify_irredundant.bumpreasons.delay() || !opts.vivifyirred ? 0 : 1e-3 * (double) opts.vivifyirredeff;
   double sumeffort = tier1effort + tier2effort + tier3effort + irreffort;
   if (!stats.current.redundant)
     tier1effort = tier2effort = tier3effort = 0;
@@ -1618,8 +1624,7 @@ void Internal::vivify () {
     vivify_round (vivifier, limit);
   }
 
-  continue_vivi = (end >= stats.propagations.vivify);
-  if (!unsat && continue_vivi && tier2effort && opts.vivifytier2) {
+  if (!unsat && tier2effort) {
     vivifier.erase();
     const int64_t limit = (total * tier2effort) / sumeffort;
     assert (limit >= 0);
@@ -1627,8 +1632,7 @@ void Internal::vivify () {
     vivify_round (vivifier, limit);
   }
 
-  continue_vivi = (end >= stats.propagations.vivify);
-  if (!unsat && continue_vivi && tier3effort && opts.vivifytier3) {
+  if (!unsat && tier3effort) {
     vivifier.erase();
     const int64_t limit = (total * tier3effort) / sumeffort;
     assert (limit >= 0);
@@ -1636,8 +1640,7 @@ void Internal::vivify () {
     vivify_round (vivifier, limit);
   }
 
-  continue_vivi = (end >= stats.propagations.vivify);
-  if (!unsat && continue_vivi && irreffort && opts.vivifyirred) {
+  if (!unsat && irreffort) {
     vivifier.erase();
     const int64_t limit = (total * irreffort) / sumeffort;
     assert (limit >= 0);
@@ -1645,11 +1648,13 @@ void Internal::vivify () {
     const int old = stats.vivifystrirr;
     const int old_tried = stats.vivifychecks;
     vivify_round (vivifier, limit);
-    if ((stats.vivifychecks - old_tried) &&
-	(float) (stats.vivifystrirr - old) / (float) (stats.vivifychecks - old_tried) < 0.01)
+    if (stats.vivifychecks - old_tried == 0 ||
+	(float) (stats.vivifystrirr - old) / (float) (stats.vivifychecks - old_tried) < 0.01) {
       delaying_vivify_irredundant.bumpreasons.bump_delay();
-    else
+    }
+    else{
       delaying_vivify_irredundant.bumpreasons.reduce_delay();
+    }
   }
 
   STOP_SIMPLIFIER (vivify, VIVIFY);
