@@ -50,7 +50,7 @@ inline LratBuilderWatcher &LratBuilder::watcher (int lit) {
 LratBuilderClause *LratBuilder::new_clause () {
   const size_t size = simplified.size ();
   assert (size <= UINT_MAX);
-  const int off = size ? -1 : 0;
+  const int off = size ? 1 : 0;
   const size_t bytes =
       sizeof (LratBuilderClause) + (size - off) * sizeof (int);
   LratBuilderClause *res = (LratBuilderClause *) new char[bytes];
