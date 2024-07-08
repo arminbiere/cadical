@@ -21,7 +21,7 @@ void Internal::factor_mode (Factorizor &factor) {
 
   // mark satisfied irredundant clauses as garbage
   for (const auto &c : clauses) {
-    if (c->redundant || c->garbage) continue;
+    if (c->garbage) continue;
     bool satisfied = false;
     unsigned count = 0;
     for (const auto &lit : *c) {
@@ -74,6 +74,7 @@ void Internal::try_and_factor (Factorizor &factor, int first, int second) {
   vector<int> &common = factor.common;
   vector<Occs> &occurs = factor.occurs;
   for (auto c : occurs[vlit (second)]) {
+    if (current.size () == 2 && opts.factor == 2) break;
     if (!(stats.factor & 1) && c->garbage) continue;
     if (c->garbage) continue;
     int other = 0;

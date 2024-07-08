@@ -103,7 +103,7 @@ OPTION( eres,              1,  0,  1,0,0,1, "extended resolution") \
 OPTION( eresint,         2e3,  0,2e9,0,0,1, "extended resolution") \
 OPTION( eresmax,         100,  1,2e9,0,0,1, "extended resolution") \
 OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
-OPTION( factor,            1,  0,  1,0,1,1, "systematic variable addition") \
+OPTION( factor,            1,  0,  2,0,0,1, "systematic variable addition") \
 OPTION( factorrounds,      1,  0,2e9,0,0,1, "factor rounds") \
 OPTION( flush,             0,  0,  1,0,0,1, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \

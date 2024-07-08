@@ -425,7 +425,7 @@ bool Internal::definition_blocked_addition () {
     int idx = schedule.front ();
     schedule.pop_front ();
     find_definition (eliminator, idx);
-    if (add_definition_blocking_clauses (eliminator, false)) added = true;
+    if (add_definition_blocking_clauses (eliminator, true)) added = true;
     unmark_gate_clauses (eliminator);
   }
 
