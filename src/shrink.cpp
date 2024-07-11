@@ -279,7 +279,7 @@ Internal::shrink_block (std::vector<int>::reverse_iterator &rbegin_lits,
     LOG ("shrinking up to %u", max_trail);
 #endif
 
-  const bool resolve_large_clauses = (opts.shrink > 2);
+  const bool resolve_large_clauses = (opts.shrink > 1);
   bool failed = (opts.shrink == 0);
   unsigned block_shrunken = 0;
   std::vector<int>::size_type minimized_start = minimized.size ();

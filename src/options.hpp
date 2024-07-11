@@ -148,7 +148,7 @@ OPTION( reverse,           0,  0,  1,0,0,1, "reverse variable ordering") \
 OPTION( score,             1,  0,  1,0,0,1, "use EVSIDS scores") \
 OPTION( scorefactor,     950,500,1e3,0,0,1, "score factor per mille") \
 OPTION( seed,              0,  0,2e9,0,0,1, "random seed") \
-OPTION( shrink,            3,  0,  3,0,0,1, "shrink conflict clause") \
+OPTION( shrink,            3,  0,  3,0,0,1, "shrink conflict clause (1=only with binary, 2=minimize when pulling, 3=full)") \
 OPTION( shrinkreap,        1,  0,  1,0,0,1, "use a reap for shrinking") \
 OPTION( shuffle,           0,  0,  1,0,0,1, "shuffle variables") \
 OPTION( shufflequeue,      1,  0,  1,0,0,1, "shuffle variable queue") \
