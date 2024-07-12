@@ -86,6 +86,7 @@ int Closure::find_representative(int lit) const {
 }
 
 void Closure::mark_garbage (Gate *g) {
+  LOG(g->rhs, "marking as garbage %d", g->lhs);
   assert (!g->garbage);
   g->garbage = true;
   garbage.push_back(g);
@@ -371,6 +372,9 @@ bool Closure::simplify_gate (Gate *g) {
   switch (g->tag) {
   case Gate_Type::And_Gate:
     simplify_and_gate (g);
+    break;
+  case Gate_Type::XOr_Gate:
+    simplify_xor_gate (g);
     break;
   default:
     assert (false);
@@ -827,6 +831,7 @@ void Closure::add_xor_shrinking_proof_chain(Gate const *const g, int pivot) {
     clause.push_back(pivot);
     check_and_add_to_proof_chain (clause);
   }
+  clause.clear();
 }
 
 void Closure::check_xor_gate_implied(Gate const *const g) {
@@ -1498,7 +1503,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
       continue;
     if (lit == dst)
       dst_count++;
-    g->rhs[j++] = g->rhs[i];
+    g->rhs[j++] = lit;
   }
   if (negate) {
     LOG ("flipping LHS");
@@ -1515,9 +1520,10 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     assert (j == g->rhs.size() - 2);
     g->rhs.resize(j);
     g->shrunken = true;
-    LOG (g->rhs, "shrunken %d = XOR", g->lhs);
+    g->arity = j;
+    LOG (g->rhs, "shrunken %d [arity: %d] = XOR", g->lhs, g->arity);
   } else if (j != size){
-    LOG (g->rhs, "shrinking gate to %d = bigxor", g->lhs);
+    LOG (g->rhs, "shrinking gate to %d [arity: %d] = bigxor", g->lhs, g->arity);
     g->shrunken = true;
     g->rhs.resize(j);
     g->arity = j;
@@ -1525,6 +1531,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   
   if (dst_count > 1)
     add_xor_shrinking_proof_chain (g, src);
+  assert (internal->clause.empty());  
   update_xor_gate(g);
 
   if (!g->garbage && !internal->unsat && original_dst_negated &&
