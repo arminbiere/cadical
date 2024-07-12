@@ -194,6 +194,7 @@ uint64_t &Closure::largecount (int lit) {
 
 void Closure::init_closure () {
   representant.resize(2*internal->max_var+3);
+  marks.resize(2*internal->max_var+3);
   mu1_ids.resize(2*internal->max_var+3);
   mu2_ids.resize(2*internal->max_var+3);
   mu4_ids.resize(2*internal->max_var+3);
@@ -244,6 +245,14 @@ bool Closure::skip_and_gate(Gate *g) {
   return false;
 }
 
+bool Closure::skip_xor_gate(Gate *g) {
+  assert (g->tag == Gate_Type::XOr_Gate);
+  if (g->garbage)
+    return true;
+  assert (g->arity > 1);
+  return false;
+}
+
 void Closure::shrink_and_gate(Gate *g, int falsifies, int clashing) {
   if (falsifies) {
     g->rhs[0] = falsifies;
@@ -288,6 +297,42 @@ void Closure::update_and_gate(Gate *g, int falsifies, int clashing) {
   if (garbage && !internal->unsat)
     mark_garbage(g);
 }
+
+
+void Closure::update_xor_gate(Gate *g) {
+  assert (g->tag == Gate_Type::XOr_Gate);
+  bool garbage = true;
+  if (g->arity == 0)
+    learn_congruence_unit (-g->rhs[0]);
+  else if (g->arity == 1) {
+    const signed char v = internal->val (g->lhs);
+    if (v > 0)
+      learn_congruence_unit (g->rhs[0]);
+    else if (v < 0)
+      learn_congruence_unit (-g->rhs[0]);
+    else if (merge_literals(g->lhs, g->rhs[0])) {
+      ++internal->stats.congruence.unaries;
+      ++internal->stats.congruence.unary_and;
+    } else {
+      Gate *h = find_and_lits (g->arity, g->rhs);
+      if (h) {
+        assert (garbage);
+        if (merge_literals (g->lhs, h->lhs))
+          ++internal->stats.congruence.ands;
+      } else {
+        if (g->indexed)
+          table.erase (g);
+
+        table.insert (g);
+        g->indexed = true;
+        garbage = false;
+      }
+    }
+  }
+  if (garbage && !internal->unsat)
+    mark_garbage(g);
+}
+
 void Closure::simplify_and_gate (Gate *g) {
   if (skip_and_gate (g))
     return;
@@ -752,6 +797,30 @@ void Closure::check_ternary (int a, int b, int c) {
   clause.clear();
 }
 
+void Closure::add_xor_shrinking_proof_chain(Gate const *const g, int pivot) {
+  if (!internal->proof)
+    return;
+  LOG ("starting XOR shrinking proof chain");
+  auto &clause = internal->clause;
+  assert (clause.empty());
+
+  for (auto lit : g->rhs)
+    clause.push_back (lit);
+
+  const int lhs = g->lhs;
+  clause.push_back(-lhs);
+  const unsigned parity = (lhs > 0);
+  assert (parity == parity_lits(clause));
+  const size_t size = clause.size();
+  const unsigned end = 1u << size;
+  for (unsigned i = 0; i != end; ++i) {
+    while (i && parity != parity_lits(clause))
+      inc_lits(clause);
+    clause.push_back(pivot);
+    check_and_add_to_proof_chain (clause);
+  }
+}
+
 void Closure::check_xor_gate_implied(Gate const *const g) {
   assert (g->tag == Gate_Type::XOr_Gate);
   if (!internal->opts.check)
@@ -798,6 +867,14 @@ Gate* Closure::find_xor_lits (int arity, const vector<int> &rhs) {
   }
 }
 
+void Closure::check_and_add_to_proof_chain (vector<int> &clause) {
+  internal->external->check_learned_clause ();
+  if (internal->proof) {
+    vector<uint64_t> lrat_chain;
+    internal->proof->add_derived_clause (++internal->clause_id, true,
+                                         internal->clause, lrat_chain);
+  }
+}
 void Closure::simplify_and_add_to_proof_chain (
 					       vector<int> &unsimplified, vector<int> &chain) {
   vector<int> &clause = internal->clause;
@@ -828,14 +905,10 @@ void Closure::simplify_and_add_to_proof_chain (
   }
 
   if (!trivial) {
-    internal->external->check_learned_clause ();
-    if (internal->proof) {
-      vector<uint64_t> lrat_chain;
-      internal->proof->add_derived_clause (++internal->clause_id, true, internal->clause, lrat_chain);
-      chain = move(clause);
-    }
+    check_and_add_to_proof_chain (clause);
+    chain = move (clause);
   }
-  clause.clear();
+  clause.clear ();
 }
 
 void Closure::add_xor_matching_proof_chain(Gate *g, int lhs1, int lhs2) {
@@ -1019,7 +1092,7 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
   LOG (lits, "trying to find arity %u XOR side clause", arity);
   for (auto lit: lits) {
     assert (!internal->val(lit));
-    marks[lit] = 1;
+    marked (lit) = 1;
     unsigned count = largecount (lit);
     assert (count_limit <= count);
     if (count >= count_least_occurring)
@@ -1031,7 +1104,7 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
   assert (least_occurring_literal);
   LOG ("searching XOR side clause watched by %d#%u",
        least_occurring_literal, count_least_occurring);
-  LOG ("searching for size %d", size_lits);
+  LOG ("searching for size %ld", size_lits);
   // TODO this is the wrong thing to iterate on!
   for (auto c : internal->occs (least_occurring_literal)) {
     LOG (c, "checking");
@@ -1053,7 +1126,7 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
         assert (c->garbage);
         break;
       }
-      if (marks[other])
+      if (marked(other))
         found++;
       else {
         LOG ("not marked %d", other);
@@ -1069,7 +1142,7 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
     }
   }
   for (auto lit : lits)
-    marks[lit] = 0;
+    marked(lit) = 0;
   if (res)
     LOG (res, "found matching XOR side");
   else
@@ -1138,13 +1211,13 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
   const unsigned arity = size - 1;
   const unsigned needed_clauses = 1u << (arity - 1);
   for (auto lit : lits) {
-    for (int sign = 0; sign != 2; sign += 2, lit = -lit) {
+    for (int sign = 0; sign != 2; ++sign, lit = -lit) {
       unsigned count = largecount(lit);
       if (count >= needed_clauses)
 	continue;
-
       LOG (c, "literal %d in XOR base clause only occurs %u times in large clause thus skipping",
 	   lit, count);
+      return;
     }
   }
 
@@ -1222,7 +1295,7 @@ void Closure::find_units () {
 	  continue;
         const int other = lit ^ c->literals[0] ^ c->literals[1];
         if (marked (-other)) {
-          LOG (c, "binary clause %d %d and %d %d give unit", lit, other,
+          LOG (c, "binary clause %d %d and %d %d give unit %d", lit, other,
                lit, -other, lit);
 	  ++units;
           bool failed = !learn_congruence_unit (lit);
@@ -1329,7 +1402,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src) {
     if (val > 0)
       continue;
     if (val < 0) {
-      LOG ("found falsifying literal %s", (lit));
+      LOG ("found falsifying literal %d", (lit));
       falsifies = lit;
       break;
     }
@@ -1367,6 +1440,9 @@ bool Closure::rewrite_gate (Gate *g, int dst, int src) {
   case Gate_Type::And_Gate:
     rewrite_and_gate (g, dst, src);
     break;
+  case Gate_Type::XOr_Gate:
+    rewrite_xor_gate (g, dst, src);
+    break;
   default:
     assert (false);
     break;
@@ -1383,6 +1459,108 @@ bool Closure::rewrite_gates(int dst, int src) {
   goccs (src).clear();
   return true;
 }
+
+bool Closure::rewriting_lhs (Gate *g, int dst) {
+  if (dst != g->lhs && dst != -g->lhs)
+    return false;
+  mark_garbage (g);
+  return true;
+}
+
+void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
+  if (skip_xor_gate (g))
+    return;
+  if (rewriting_lhs (g, dst))
+    return;
+  if (!gate_contains (g, src))
+    return;
+  LOG (g->rhs, "simplifying %d = bigxor", g->lhs);
+  size_t j = 0, dst_count = 0;
+  unsigned original_dst_negated = (dst < 0);
+  dst = abs (dst);
+  unsigned negate = original_dst_negated;
+  const size_t size = g->rhs.size ();
+  for (size_t i = 0; i < size; ++i) {
+    int lit = g->rhs[i];
+    assert (lit > 0);
+    if (lit == src)
+      lit = dst;
+    const signed char v = internal->val (lit);
+    if (v > 0)
+      negate ^= 1;
+    if (lit == dst)
+      dst_count++;
+    if (!v)
+      g->rhs[j] = g->rhs[i];
+  }
+  if (negate) {
+    LOG ("flipping LHS");
+    g->lhs = -g->lhs;
+  }
+  assert (dst_count <= 2);
+  if (dst_count == 2) {
+    int j = 0;
+    for (auto i = 0; i < g->rhs.size(); ++i) {
+      int lit = g->rhs[i];
+      if (lit != dst)
+	g->rhs[i] = g->rhs[j++];
+    }
+    assert (j == g->rhs.size() - 2);
+    g->rhs.resize(j);
+    g->shrunken = true;
+    LOG (g->rhs, "shrunken %d = XOR", g->lhs);
+  } else if (j != size){
+    LOG (g->rhs, "shrinking gate to %d = bigxor", g->lhs);
+    g->shrunken = true;
+    g->rhs.resize(j);
+    g->arity = j;
+  }
+  
+  if (dst_count > 1)
+    add_xor_shrinking_proof_chain (g, src);
+  update_xor_gate(g);
+
+  if (!g->garbage && !internal->unsat && original_dst_negated &&
+      dst_count == 1) {
+    connect_goccs(g, dst);
+  }
+
+  check_xor_gate_implied(g);
+  // TODO stats
+  
+}
+
+void Closure::simplify_xor_gate (Gate *g) {
+  if (skip_xor_gate (g))
+    return;
+  unsigned negate = 0;
+  const size_t size  = g->rhs.size();
+  size_t j = 0;
+  for (size_t i = 0; i < size; ++i) {
+    int lit = g->rhs[i];
+    assert (lit > 0);
+    const signed char v = internal->val (lit);
+    if (v > 0)
+      negate ^= 1;
+    if (!v)
+      g->rhs[j++] = lit;
+  }
+  if (negate) {
+    LOG ("flipping LHS literal %d", (g->lhs));
+    g->lhs = - (g->lhs);
+  }
+  if (j != size) {
+    LOG ("shrunken gate");
+    g->shrunken = true;
+    g->rhs.resize(j);
+  }
+  update_xor_gate (g);
+  LOG (g->rhs, "simplified %d = XOR", g->lhs);
+  check_xor_gate_implied (g);
+  internal->stats.congruence.simplified++;
+  internal->stats.congruence.simplified_xors++;
+}
+
 /*------------------------------------------------------------------------*/
 // propagation of clauses and simplification
 void Closure::schedule_literal(int lit) {
@@ -1422,12 +1600,191 @@ size_t Closure::propagate_units_and_equivalences () {
     int lit = schedule.back();
     LOG ("propagating equivalence of %d", lit);
     schedule.pop_back();
-    scheduled[lit] = false;
+    scheduled[abs(lit)] = false;
     if (!propagate_equivalence(lit))
       break;
   }
   return propagated;
 }
+
+void Closure::reset_closure() {
+  scheduled.clear();
+  for (auto gate : garbage)
+    free(gate);
+  garbage.clear();
+}
+
+void Closure::forward_subsume_matching_clauses() {
+  reset_closure();
+
+  std::vector<signed char> matchable;
+  matchable.resize (internal->max_var + 1);
+  size_t count_matchable = 0;
+
+  for (auto idx : internal->vars) {
+    if (!internal->flags(idx).active())
+      continue;
+    internal->occs(idx).clear();
+    internal->occs(-idx).clear();
+    const int lit = idx;
+    const int repr = find_representative(lit);
+    if (lit == repr)
+      continue;
+    const int repr_idx = abs(repr);
+    if (!matchable[idx]) {
+      LOG ("matchable %d", idx);
+      matchable[idx] = true;
+      count_matchable++;
+    }
+
+    if(!matchable[repr_idx]) {
+      LOG ("matchable %d", repr_idx);
+      matchable[repr_idx] = true;
+      count_matchable++;
+    }
+  }
+
+
+  LOG ("found %.0f%%", count_matchable / (internal->max_var ? internal->max_var : 1));
+  std::vector<Clause *> candidates;
+  auto &analyzed = internal->analyzed;
+
+  for (auto *c : internal->clauses) {
+    if (c->garbage)
+      continue;
+    if (c->redundant)
+      continue;
+    if (c->size == 2)
+      continue;
+    assert (analyzed.empty());
+    bool contains_matchable = false;
+    for (auto lit : *c) {
+      const signed char v = internal->val(lit);
+      if (v < 0)
+	continue;
+      if (v > 0) {
+	LOG (c, "mark satisfied");
+	COVER (true);
+	internal->mark_garbage(c);
+	break;
+      }
+      if (!contains_matchable) {
+	const int idx = abs (lit);
+	if (matchable[idx])
+	  contains_matchable = true;
+      }
+
+      const int repr = find_representative (lit);
+      assert (!internal->val (repr));
+      if (marked (repr))
+        continue;
+      const int not_repr = -repr;
+      if (marked (not_repr)) {
+        LOG (c, "matches both %d and %d", (lit), (not_repr));
+        internal->mark_garbage (c);
+        break;
+      }
+      marked (repr) = 1;
+      analyzed.push_back (repr);
+    }
+
+    for (auto lit : analyzed)
+      marked (lit) = 0;
+    analyzed.clear ();
+    if (c->garbage)
+      continue;
+    if (!contains_matchable) {
+      LOG ("no matching variable");
+      continue;
+    }
+    candidates.push_back (c);
+  }
+
+  auto sort_order  = [&] (Clause *c, Clause *d) {
+    return c->size < d->size || (c->size == d->size && c->id < d->id);
+  };
+  sort (begin (candidates), end (candidates), sort_order);
+  size_t tried = 0, subsumed = 0;
+
+  for (auto c : candidates) {
+    assert (c->size != 2);
+    // TODO if terminated
+    ++tried;
+    if (find_subsuming_clause (c)) {
+      ++subsumed;
+    }
+  }
+  LOG ("[congruence] subsumed %.0f%%",
+       (double) subsumed / (double) (tried ? tried : 1));
+}
+
+bool Closure::find_subsuming_clause (Clause *subsumed) {
+  assert (!subsumed->garbage);
+  Clause *subsuming = nullptr;  
+  for (auto lit : *subsumed) {
+    assert (internal->val (lit) <= 0);
+    const int repr_lit = find_representative (lit);
+    const signed char repr_val = internal->val (repr_lit);
+    assert (repr_val <= 0);
+    if (repr_val < 0)
+      continue;
+    if (marked (repr_lit))
+      continue;
+    assert (!marked (-repr_lit));
+    marked (repr_lit) = 1;
+  }
+  int least_occuring_lit = 0;
+  size_t count_least_occurring = INT_MAX;
+  LOG (subsumed, "trying to forward subsume");
+  for (auto lit : *subsumed) {
+    const int repr_lit = find_representative(lit);    
+    const size_t count = internal->occs (lit).size ();
+    assert (count <= UINT_MAX);
+    if (count < count_least_occurring) {
+      count_least_occurring = count;
+      least_occuring_lit = repr_lit;
+    }
+    for (auto d : internal->occs (lit)) {
+      assert (d->size != 2); // TODO might need an if here
+      assert (!d->garbage);
+      assert (subsumed != d);
+      if (!subsumed->redundant && d->redundant)
+        continue;
+      for (auto other : *d) {
+        const signed char v = internal->val (other);
+        if (v < 0)
+          continue;
+        assert (!v);
+        const int repr_other = find_representative (other);
+        if (!marked (repr_other))
+          goto CONTINUE_WITH_NEXT_CLAUSE;
+      }
+      subsuming = d;
+      goto FOUND_SUBSUMING;
+
+    CONTINUE_WITH_NEXT_CLAUSE:;
+    }
+  }
+  assert (least_occuring_lit);
+FOUND_SUBSUMING:
+  for (auto lit : *subsumed) {
+    const int repr_lit = find_representative (lit);
+    const signed char v = internal->val (lit);
+    if (!v)
+      marked (repr_lit) = 0;
+  }
+  if (subsuming) {
+    LOG (subsumed, "subsumed");
+    LOG (subsuming, "subsuming");
+    internal->subsume_clause (subsuming, subsumed);
+    ++internal->stats.congruence.subsumed;
+    return true;
+  } else {
+    internal->occs (least_occuring_lit).push_back (subsumed);
+    return false;
+  }
+}
+
 /*------------------------------------------------------------------------*/
 void Closure::extract_gates() {
   extract_and_gates();
@@ -1438,6 +1795,7 @@ void Closure::extract_gates() {
     return;
   //extract_ite_gates
 }
+
 /*------------------------------------------------------------------------*/
 // top lever function to exctract gate
 void Internal::extract_gates () {
@@ -1472,16 +1830,16 @@ void Internal::extract_gates () {
       closure.find_equivalences();
       
       if (!internal->unsat) {
-	closure.propagate_units_and_equivalences();
-	if (!internal->unsat && propagated)
-	  ; // TODO forward_subsume_matching_clauses
+        const int propagated = closure.propagate_units_and_equivalences ();
+        if (!internal->unsat && propagated)
+	  closure.forward_subsume_matching_clauses();
 	reset = true;
       }
     }
   }
 
   if (!reset)
-    ; // reset_closure
+    closure.reset_closure();
 
   reset_occs();
   reset_noccs();

@@ -107,14 +107,19 @@ struct Closure {
 
   // simplification
   bool skip_and_gate (Gate *g);
+  bool skip_xor_gate (Gate *g);
   void update_and_gate (Gate *g, int falsified = 0, int clashing = 0);
+  void update_xor_gate (Gate *g);
   void shrink_and_gate (Gate *g, int falsified = 0, int clashing = 0);
   bool simplify_gate (Gate *g);
   void simplify_and_gate (Gate *g);
+  void simplify_xor_gate (Gate *g);
   bool simplify_gates (int lit);
 
+  bool rewriting_lhs (Gate *g, int dst);
   bool rewrite_gates(int dst, int src);
   bool rewrite_gate(Gate *g, int dst, int src);
+  void rewrite_xor_gate(Gate *g, int dst, int src);
   void rewrite_and_gate(Gate *g, int dst, int src);
   
   size_t units;         // next trail position to propagate
@@ -125,6 +130,7 @@ struct Closure {
   
   // gates
   void init_closure();
+  void reset_closure();
   void extract_and_gates (Closure&);
   void extract_gates ();
   unordered_set<Gate*, Hash, GateEqualTo> table;
@@ -133,7 +139,9 @@ struct Closure {
   Gate* find_and_lits (int, const vector<int> &rhs);
 
   void init_xor_gate_extraction (std::vector<Clause *> &candidates);
+  void check_and_add_to_proof_chain (vector<int> &clause);
   void add_xor_matching_proof_chain(Gate *g, int lhs1, int lhs2);
+  void add_xor_shrinking_proof_chain(Gate const *const g, int src);
   Gate* find_xor_lits (int, const vector<int> &rhs);
   void extract_xor_gates ();
   void extract_xor_gates_with_base_clause (Clause *c);
@@ -143,6 +151,8 @@ struct Closure {
   Gate* find_first_and_gate (int lhs);
   Gate *find_remaining_and_gate (int lhs);
   void extract_and_gates ();
+
+  void forward_subsume_matching_clauses();
 
 
   
@@ -158,6 +168,7 @@ struct Closure {
 
   void find_units();
   void find_equivalences();
+  bool find_subsuming_clause (Clause *c);
 
 
   // schedule
