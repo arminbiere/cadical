@@ -1636,10 +1636,10 @@ void Closure::forward_subsume_matching_clauses() {
   size_t count_matchable = 0;
 
   for (auto idx : internal->vars) {
-    if (!internal->flags(idx).active())
-      continue;
     internal->occs(idx).clear();
     internal->occs(-idx).clear();
+    if (!internal->flags(idx).active())
+      continue;
     const int lit = idx;
     const int repr = find_representative(lit);
     if (lit == repr)
