@@ -830,6 +830,14 @@ void Closure::add_xor_shrinking_proof_chain(Gate const *const g, int pivot) {
       inc_lits(clause);
     clause.push_back(pivot);
     check_and_add_to_proof_chain (clause);
+    clause.pop_back();
+    clause.push_back(-pivot);
+    check_and_add_to_proof_chain (clause);
+    clause.pop_back();
+    check_and_add_to_proof_chain (clause);
+    // TODO missing deletion
+    
+    inc_lits(clause);
   }
   clause.clear();
 }
@@ -884,7 +892,8 @@ void Closure::check_and_add_to_proof_chain (vector<int> &clause) {
   internal->external->check_learned_clause ();
   if (internal->proof) {
     vector<uint64_t> lrat_chain;
-    internal->proof->add_derived_clause (++internal->clause_id, true,
+    const uint64_t id = ++internal->clause_id;
+    internal->proof->add_derived_clause (id, true,
                                          internal->clause, lrat_chain);
   }
 }
@@ -1513,9 +1522,9 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   if (dst_count == 2) {
     j = 0;
     for (auto i = 0; i < g->rhs.size(); ++i) {
-      int lit = g->rhs[i];
+      const int lit = g->rhs[i];
       if (lit != dst)
-	g->rhs[i] = g->rhs[j++];
+	g->rhs[j++] = g->rhs[i];
     }
     assert (j == g->rhs.size() - 2);
     g->rhs.resize(j);
