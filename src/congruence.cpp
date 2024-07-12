@@ -106,10 +106,14 @@ bool Closure::learn_congruence_unit(int lit) {
   assert (lit != -1);
   internal->assign_unit (lit);
   
-  //assert (internal->watching());
-  bool conflict = false; //internal->propagate ();
+  LOG ("propagating %d %d", internal->propagated, internal->trail.size());
+  bool no_conflict = internal->propagate ();
 
-  return !conflict;
+  if (no_conflict)
+    return true;
+  internal->learn_empty_clause();
+
+  return false;
 }
 
 bool Closure::merge_literals (int lit, int other) {
@@ -303,7 +307,7 @@ void Closure::update_xor_gate(Gate *g) {
   assert (g->tag == Gate_Type::XOr_Gate);
   bool garbage = true;
   if (g->arity == 0)
-    learn_congruence_unit (-g->rhs[0]);
+    learn_congruence_unit (-g->lhs);
   else if (g->arity == 1) {
     const signed char v = internal->val (g->lhs);
     if (v > 0)
@@ -497,15 +501,16 @@ Gate* Closure::find_first_and_gate (int lhs) {
   return new_and_gate(lhs); 
 }
 
-
 void Closure::add_binary_clause (int a, int b) {
+  LOG ("learning clause for equivalence %d %d", a, b);
   if (internal->unsat)
     return;
   if (a == -b)
     return;
   const signed char a_value = internal->val (a);
   const signed char b_value = internal->val (b);
-  if (b > 0)
+  LOG ("learning clause for equivalence %d %d", a_value, b_value);
+  if (b_value > 0)
     return;
   int unit = 0;
   if (a == b)
@@ -515,14 +520,17 @@ void Closure::add_binary_clause (int a, int b) {
   } else if (!a_value && b_value < 0)
     unit = a;
   if (unit != 0) {
+    LOG ("clause reduced to unit %d", unit);
     learn_congruence_unit(unit);
     return;
   }
+  LOG ("learning clause for equivalence");
   assert (!a_value), assert (!b_value);
   assert (internal->clause.empty());
   internal->clause.push_back(a);
   internal->clause.push_back(b);
-  internal->new_hyper_ternary_resolved_clause(false);
+  Clause *res = internal->new_hyper_ternary_resolved_clause_and_watch (false);
+  LOG (res, "learning clause");
   internal->clause.clear();
   
 }
@@ -981,7 +989,6 @@ Gate *Closure::new_xor_gate (int lhs) {
 }
 
 void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
-  assert (!internal->watching());
   const unsigned arity_limit = internal->opts.congruencexorarity;
   const unsigned size_limit = arity_limit + 1;
   glargecounts.resize (2 * internal->vsize, 0);
@@ -1079,7 +1086,6 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
 }
 
 Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
-  assert (!internal->watching());
   unsigned least_occurring_literal = 0;
   unsigned count_least_occurring = UINT_MAX;
   const size_t size_lits = lits.size();
@@ -1474,7 +1480,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     return;
   if (!gate_contains (g, src))
     return;
-  LOG (g->rhs, "simplifying %d = bigxor", g->lhs);
+  LOG (g->rhs, "simplifying (%d -> %d) %d = bigxor", src, dst, g->lhs);
   size_t j = 0, dst_count = 0;
   unsigned original_dst_negated = (dst < 0);
   dst = abs (dst);
@@ -1488,10 +1494,11 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     const signed char v = internal->val (lit);
     if (v > 0)
       negate ^= 1;
+    if (v)
+      continue;
     if (lit == dst)
       dst_count++;
-    if (!v)
-      g->rhs[j] = g->rhs[i];
+    g->rhs[j++] = g->rhs[i];
   }
   if (negate) {
     LOG ("flipping LHS");
@@ -1499,7 +1506,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   }
   assert (dst_count <= 2);
   if (dst_count == 2) {
-    int j = 0;
+    j = 0;
     for (auto i = 0; i < g->rhs.size(); ++i) {
       int lit = g->rhs[i];
       if (lit != dst)
@@ -1664,7 +1671,6 @@ void Closure::forward_subsume_matching_clauses() {
 	continue;
       if (v > 0) {
 	LOG (c, "mark satisfied");
-	COVER (true);
 	internal->mark_garbage(c);
 	break;
       }
@@ -1817,6 +1823,8 @@ void Internal::extract_gates () {
   opts.deduplicate = dedup;
   ++stats.congruence.rounds;
   reset_watches (); // saves lots of memory
+  init_watches ();
+  connect_binary_watches ();
   Closure closure (this);
   init_occs();
   init_noccs();
@@ -1843,6 +1851,7 @@ void Internal::extract_gates () {
 
   reset_occs();
   reset_noccs();
+  reset_watches (); // TODO we could be more efficient here
   init_watches ();
   connect_watches ();
   
