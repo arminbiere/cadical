@@ -318,20 +318,20 @@ void Closure::update_xor_gate(Gate *g) {
     else if (merge_literals(g->lhs, g->rhs[0])) {
       ++internal->stats.congruence.unaries;
       ++internal->stats.congruence.unary_and;
+    }
+  } else {
+    Gate *h = find_and_lits (g->arity, g->rhs);
+    if (h) {
+      assert (garbage);
+      if (merge_literals (g->lhs, h->lhs))
+        ++internal->stats.congruence.ands;
     } else {
-      Gate *h = find_and_lits (g->arity, g->rhs);
-      if (h) {
-        assert (garbage);
-        if (merge_literals (g->lhs, h->lhs))
-          ++internal->stats.congruence.ands;
-      } else {
-        if (g->indexed)
-          table.erase (g);
+      if (g->indexed)
+        table.erase (g);
 
-        table.insert (g);
-        g->indexed = true;
-        garbage = false;
-      }
+      table.insert (g);
+      g->indexed = true;
+      garbage = false;
     }
   }
   if (garbage && !internal->unsat)
@@ -1488,6 +1488,7 @@ bool Closure::rewriting_lhs (Gate *g, int dst) {
 }
 
 void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
+  LOG (g->rhs, "rewriting %d = XOR", g->lhs);
   if (skip_xor_gate (g))
     return;
   if (rewriting_lhs (g, dst))
