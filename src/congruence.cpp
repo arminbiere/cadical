@@ -174,10 +174,10 @@ bool Closure::merge_literals (int lit, int other) {
   LOG ("merging %d and %d", lit, other);
   add_binary_clause (-lit, other);
   add_binary_clause (lit, -other);
-  schedule_literal(lit);
 
   representative(larger) = smaller;
   representative(-larger) = -smaller;
+  schedule_literal(larger);
   ++internal->stats.congruence.congruent;
   return false;
 }
@@ -1593,6 +1593,7 @@ void Closure::schedule_literal(int lit) {
     return;
   scheduled[idx] = true;
   schedule.push_back(lit);
+  assert (lit != find_representative(lit));
   LOG ("scheduled literal %d", lit);
 }
 
