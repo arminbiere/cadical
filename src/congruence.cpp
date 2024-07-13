@@ -1473,7 +1473,7 @@ bool Closure::rewrite_gates(int dst, int src) {
   for (auto g : goccs (src)) {
     if (!rewrite_gate (g, dst, src))
       return false;
-    else if (!g->garbage && find (begin (g->rhs), end (g->rhs), dst) != end (g->rhs))
+    else if (!g->garbage && gate_contains (g, dst))
       goccs (dst).push_back(g);
   }
   goccs (src).clear();
@@ -1555,6 +1555,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
 }
 
 void Closure::simplify_xor_gate (Gate *g) {
+  LOG (g->rhs, "simplifying %d = XOR", g->lhs);
   if (skip_xor_gate (g))
     return;
   unsigned negate = 0;
@@ -1635,7 +1636,7 @@ size_t Closure::propagate_units_and_equivalences () {
 void Closure::reset_closure() {
   scheduled.clear();
   for (auto gate : garbage)
-    free(gate);
+    delete gate;
   garbage.clear();
 }
 
