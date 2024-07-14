@@ -270,7 +270,7 @@ void Closure::shrink_and_gate(Gate *g, int falsifies, int clashing) {
 }
 
 
-void Closure::update_and_gate(Gate *g, int falsifies, int clashing) {
+void Closure::update_and_gate(Gate *g, GatesTable::iterator it, int falsifies, int clashing) {
   bool garbage = true;
   if (falsifies || clashing) {
     learn_congruence_unit (-g->lhs);
@@ -290,8 +290,11 @@ void Closure::update_and_gate(Gate *g, int falsifies, int clashing) {
         if (merge_literals (g->lhs, h->lhs))
           ++internal->stats.congruence.ands;
       } else {
-        if (g->indexed)
-          table.erase (g);
+        if (g->indexed) {
+          LOG (g->rhs, "removing gate from table %d = %s", g->lhs,
+               string_of_gate (g->tag).c_str ());
+          (void)table.erase (it);
+        }
 
         table.insert (g);
         g->indexed = true;
@@ -304,8 +307,9 @@ void Closure::update_and_gate(Gate *g, int falsifies, int clashing) {
 }
 
 
-void Closure::update_xor_gate(Gate *g) {
+  void Closure::update_xor_gate(Gate *g, GatesTable::iterator git) {
   assert (g->tag == Gate_Type::XOr_Gate);
+  LOG (g->rhs, "updating gate %d = %s", g->lhs, string_of_gate(g->tag).c_str());
   bool garbage = true;
   if (g->arity == 0)
     learn_congruence_unit (-g->lhs);
@@ -326,11 +330,14 @@ void Closure::update_xor_gate(Gate *g) {
       if (merge_literals (g->lhs, h->lhs))
         ++internal->stats.congruence.ands;
     } else {
-      if (g->indexed)
-        table.erase (g);
+      if (g->indexed) {
+	LOG (g->rhs, "removing gate from table %d = %s", g->lhs, string_of_gate(g->tag).c_str());
+        table.erase (git);
+      }
 
       table.insert (g);
       g->indexed = true;
+      assert (table.find(g) != end (table));
       garbage = false;
     }
   }
@@ -341,7 +348,7 @@ void Closure::update_xor_gate(Gate *g) {
 void Closure::simplify_and_gate (Gate *g) {
   if (skip_and_gate (g))
     return;
-
+  GatesTable::iterator git = (g->indexed ? table.find(g) : end(table));
   LOG (g->rhs, "simplifying gate %d =", g->lhs);
   int falsifies = 0;
   auto it = begin(g->rhs);
@@ -362,7 +369,7 @@ void Closure::simplify_and_gate (Gate *g) {
     LOG (g->rhs, "shrunken gate %d =", g->lhs);
   }
   shrink_and_gate(g, falsifies);
-  update_and_gate(g, falsifies);
+  update_and_gate(g, git, falsifies);
   ++internal->stats.congruence.simplified_ands;
   ++internal->stats.congruence.simplified;
 }
@@ -413,6 +420,7 @@ Gate *Closure::find_and_lits (int arity, const vector<int> &rhs) {
 
   else {
     LOG (this->rhs, "gate not found in table");
+    delete g;
     return nullptr;
   }
 }
@@ -443,21 +451,6 @@ Gate *Closure::new_and_gate (int lhs) {
     g->rhs = {rhs};
     g->garbage = false;
     g->indexed = true;
-/*
-    LOG (g->rhs, "inserting in table (%d)", table.size());
-    for (auto lit : g->rhs) {
-      LOG ("mu1 %d %d", lit, marked_mu1(lit));
-      LOG ("mu2 %d %d", lit, marked_mu2(lit));
-      LOG ("mu4 %d %d", lit, marked_mu4(lit));
-      LOG ("mu1 %d %d", -lit, marked_mu1(-lit));
-      LOG ("mu2 %d %d", -lit, marked_mu2(-lit));
-      LOG ("mu4 %d %d", -lit, marked_mu4(-lit));
-    }
-    LOG ("mu1 %d %d", lhs, marked_mu1(lhs));
-    LOG ("mu1 %d %d", -lhs, marked_mu1(-lhs));
-    LOG ("mu2 %d %d", -lhs, marked_mu2(-lhs));
-    LOG ("mu4 %d %d", -lhs, marked_mu4(-lhs));
-*/
     g->ids.push_back(marked_mu1(-lhs));
     g->ids.push_back(marked_mu2(-lhs));
     g->ids.push_back(marked_mu4(-lhs));
@@ -884,6 +877,7 @@ Gate* Closure::find_xor_lits (int arity, const vector<int> &rhs) {
 
   else {
     LOG (this->rhs, "gate not found in table");
+    delete g;
     return nullptr;
   }
 }
@@ -1406,6 +1400,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src) {
   assert (src);
   assert (dst);
   assert (internal->val (src) == internal->val (dst));
+  GatesTable::iterator git = (g->indexed ? table.find(g) : end(table));
   LOG (g->rhs, "rewriting %d into %d in %d = bigand", src, dst, g->lhs);
   int clashing = 0, falsifies = 0;
   unsigned dst_count = 0, not_dst_count = 0;
@@ -1452,7 +1447,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src) {
   assert (not_dst_count <= 1);
   shrink_and_gate(g, falsifies, clashing);
   LOG (g->rhs, "rewriten g as %d = bigand", g->lhs);
-  update_and_gate(g, falsifies, clashing);
+  update_and_gate(g, git, falsifies, clashing);
 }
 
 bool Closure::rewrite_gate (Gate *g, int dst, int src) {
@@ -1496,6 +1491,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   if (!gate_contains (g, src))
     return;
   LOG (g->rhs, "simplifying (%d -> %d) %d = bigxor", src, dst, g->lhs);
+  GatesTable::iterator git = (g->indexed ? table.find(g) : end(table));
   size_t j = 0, dst_count = 0;
   unsigned original_dst_negated = (dst < 0);
   dst = abs (dst);
@@ -1542,7 +1538,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   if (dst_count > 1)
     add_xor_shrinking_proof_chain (g, src);
   assert (internal->clause.empty());  
-  update_xor_gate(g);
+  update_xor_gate(g, git);
 
   if (!g->garbage && !internal->unsat && original_dst_negated &&
       dst_count == 1) {
@@ -1555,10 +1551,11 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
 }
 
 void Closure::simplify_xor_gate (Gate *g) {
-  LOG (g->rhs, "simplifying %d = XOR", g->lhs);
+  LOG (g->rhs, "simplifying %d = %s", g->lhs, string_of_gate(g->tag).c_str());
   if (skip_xor_gate (g))
     return;
   unsigned negate = 0;
+  GatesTable::iterator git = (g->indexed ? table.find(g) : end(table));
   const size_t size  = g->rhs.size();
   size_t j = 0;
   for (size_t i = 0; i < size; ++i) {
@@ -1579,7 +1576,7 @@ void Closure::simplify_xor_gate (Gate *g) {
     g->shrunken = true;
     g->rhs.resize(j);
   }
-  update_xor_gate (g);
+  update_xor_gate (g, git);
   LOG (g->rhs, "simplified %d = XOR", g->lhs);
   check_xor_gate_implied (g);
   internal->stats.congruence.simplified++;
@@ -1633,8 +1630,34 @@ size_t Closure::propagate_units_and_equivalences () {
   return propagated;
 }
 
+
+std::string string_of_gate (Gate_Type t) {
+  switch(t) {
+  case Gate_Type::And_Gate:
+    return "And";
+  case Gate_Type::XOr_Gate:
+    return "XOr";
+  case Gate_Type::ITE_Gate:
+    return "ITE";
+  default:
+    return "buggy";
+  }
+}
+
 void Closure::reset_closure() {
   scheduled.clear();
+  for (Gate* g : table) {
+    assert (g->indexed);
+    LOG(g->rhs, "deleting gate %d = %s", g->lhs, string_of_gate (g->tag).c_str());
+    if (!g->garbage)
+      delete g;
+  }
+  table.clear();
+
+  for (auto &occ : gtab) {
+    occ.clear();
+  }
+
   for (auto gate : garbage)
     delete gate;
   garbage.clear();
@@ -1865,8 +1888,8 @@ void Internal::extract_gates () {
     }
   }
 
-  if (!reset)
-    closure.reset_closure();
+  //if (!reset)
+  closure.reset_closure();
 
   reset_occs();
   reset_noccs();

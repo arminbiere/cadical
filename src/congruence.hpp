@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "util.hpp"
@@ -21,7 +22,10 @@ namespace CaDiCaL {
 
 struct Internal;
 
-enum class Gate_Type {And_Gate, XOr_Gate, ITE_Gate};
+enum class Gate_Type { And_Gate, XOr_Gate, ITE_Gate };
+
+std::string string_of_gate (Gate_Type t);
+
 struct Gate {
   unsigned lhs;
   Gate_Type tag;
@@ -35,7 +39,7 @@ struct Gate {
 
   bool operator == (Gate const& lhs)
   {
-    return tag == lhs.tag && rhs == lhs.rhs; 
+    return tag == lhs.tag && rhs == lhs.rhs && this->lhs == lhs.lhs; 
   }
 
 };
@@ -63,6 +67,8 @@ struct GateEqualTo {
 struct Closure {
 
   Closure (Internal *i) : internal (i) {}
+
+  typedef unordered_set<Gate *, Hash, GateEqualTo> GatesTable;
   Internal *internal;
   vector<Clause *> binaries;
 
@@ -108,8 +114,8 @@ struct Closure {
   // simplification
   bool skip_and_gate (Gate *g);
   bool skip_xor_gate (Gate *g);
-  void update_and_gate (Gate *g, int falsified = 0, int clashing = 0);
-  void update_xor_gate (Gate *g);
+  void update_and_gate (Gate *g, GatesTable::iterator, int falsified = 0, int clashing = 0);
+  void update_xor_gate (Gate *g, GatesTable::iterator);
   void shrink_and_gate (Gate *g, int falsified = 0, int clashing = 0);
   bool simplify_gate (Gate *g);
   void simplify_and_gate (Gate *g);
@@ -133,7 +139,7 @@ struct Closure {
   void reset_closure();
   void extract_and_gates (Closure&);
   void extract_gates ();
-  unordered_set<Gate*, Hash, GateEqualTo> table;
+  GatesTable table;
   void extract_and_gates_with_base_clause (Clause *c);
 
   Gate* find_and_lits (int, const vector<int> &rhs);
