@@ -54,10 +54,10 @@ contrib/%.o: $(ROOT)/contrib/%.cpp $(ROOT)/contrib/%.hpp $(ROOT)/src/*.hpp makef
 # tester 'mobical') and the library are the main build targets.
 
 cadical: src/cadical.o libcadical.a makefile
-	$(COMPILE) -o $@ $< -L. -lcadical $(LIBS)
+	$(COMPILE) -static -o $@ $< -L. -lcadical $(LIBS)
 
 mobical: src/mobical.o libcadical.a makefile $(LIBS)
-	$(COMPILE) -o $@ $< -L. -lcadical
+	$(COMPILE) -static -o $@ $< -L. -lcadical
 
 libcadical.a: $(OBJ_SOLVER) $(OBJ_CONTRIB) makefile
 	ar rc $@ $(OBJ_SOLVER) $(OBJ_CONTRIB)
