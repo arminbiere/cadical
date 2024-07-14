@@ -27,6 +27,9 @@ enum class Gate_Type { And_Gate, XOr_Gate, ITE_Gate };
 std::string string_of_gate (Gate_Type t);
 
 struct Gate {
+#ifdef LOGGING
+  unsigned id;
+#endif  
   unsigned lhs;
   Gate_Type tag;
   bool garbage : 1;
@@ -84,6 +87,10 @@ struct Closure {
   vector<int> chain;
   vector<uint64_t> glargecounts; // count for large clauses to complement internal->noccs
   vector<uint64_t> gnew_largecounts; // count for large clauses to complement internal->noccs
+#ifdef LOGGING
+  unsigned fresh_id;
+#endif  
+
   uint64_t& new_largecounts(int lit);
   uint64_t& largecounts(int lit);
 
