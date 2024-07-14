@@ -104,7 +104,6 @@ bool Closure::learn_congruence_unit(int lit) {
   }
 
   LOG ("assigning");
-  assert (lit != -1);
   internal->assign_unit (lit);
   
   LOG ("propagating %d %d", internal->propagated, internal->trail.size());
