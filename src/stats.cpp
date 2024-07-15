@@ -432,6 +432,9 @@ void Stats::print (Internal *internal) {
     PRT ("  decompositions:%15" PRId64 "   %10.2f    per phase",
          stats.decompositions,
          relative (stats.decompositions, stats.probingphases));
+    PRT ("  flushed:       %15" PRId64 "   %10.2f    per decomposition",
+         stats.flushedbinary,
+         relative (stats.flushedbinary, stats.decompositions));
   }
   if (all || stats.sweep_equivalences) {
     PRT ("sweep equivs:    %15" PRId64 "   %10.2f %%  of swept variables",

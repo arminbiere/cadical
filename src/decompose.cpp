@@ -148,6 +148,7 @@ void Internal::clear_sign_marked_literals () {
 
 void Internal::flush_and_learn_binaries () {
   if (unsat || terminated_asynchronously ()) return;
+  if (!opts.decomposeflush) return;
   assert (!level);
   size_t clauses_size = clauses.size ();
   for (size_t i = 0; i < clauses_size; i++) {
@@ -171,6 +172,7 @@ void Internal::flush_and_learn_binaries () {
     }
     assert (first && second);
     LOG (c, "found %d %d from flushing", first, second);
+    stats.flushedbinary++;
     clause.push_back (first);
     clause.push_back (second);
     if (lrat) {

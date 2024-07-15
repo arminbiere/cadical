@@ -61,6 +61,7 @@ OPTION( coverminclslim,    2,  2,2e9,0,0,1, "minimum clause size") \
 OPTION( covermineff,     1e6,  0,2e9,1,0,1, "minimum cover efficiency") \
 OPTION( coverreleff,       4,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( decompose,         1,  0,  1,0,1,1, "decompose BIG in SCCs and ELS") \
+OPTION( decomposeflush,    1,  0,  1,0,0,1, "flush binaries before decompose") \
 OPTION( decomposerounds,   2,  1, 16,1,0,1, "number of decompose rounds") \
 OPTION( deduplicate,       1,  0,  1,0,1,1, "remove duplicated binaries") \
 OPTION( eagersubsume,      1,  0,  1,0,0,1, "subsume recently learned") \
@@ -128,7 +129,7 @@ OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \
 OPTION( otfs,              1,  0,  1,0,0,1, "on-the-fly self subsumption") \
 OPTION( phase,             1,  0,  1,0,0,1, "initial phase") \
 OPTION( probe,             1,  0,  1,0,1,1, "failed literal probing" ) \
-OPTION( probehbr,          1,  0,  1,0,0,1, "learn hyper binary clauses") \
+OPTION( probehbr,          0,  0,  1,0,0,1, "learn hyper binary clauses") \
 OPTION( probeint,        5e3,  1,2e9,0,0,1, "probing interval" ) \
 OPTION( probemaxeff,     1e8,  0,2e9,1,0,1, "maximum probing efficiency") \
 OPTION( probemineff,     1e6,  0,2e9,1,0,1, "minimum probing efficiency") \

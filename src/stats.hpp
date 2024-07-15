@@ -203,6 +203,7 @@ struct Stats {
   int64_t htrs2;          // number of binary hyper ternary resolvents
   int64_t htrs3;          // number of ternary hyper ternary resolvents
   int64_t decompositions; // number of SCC + ELS
+  int64_t flushedbinary;  // number of learned binaries through flushing
   int64_t vivifications;  // number of vivifications
   int64_t vivifychecks;   // checked clauses during vivification
   int64_t vivifydecs;     // vivification decisions
