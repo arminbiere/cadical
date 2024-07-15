@@ -1202,6 +1202,7 @@ struct Internal {
   void decompose_analyze_binary_chain (DFS *dfs, int);
   bool decompose_round ();
   void decompose ();
+  void flush_and_learn_binaries ();
 
   void reset_limits (); // Reset after 'solve' call.
 
