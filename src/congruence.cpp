@@ -809,6 +809,11 @@ void Closure::check_ternary (int a, int b, int c) {
   clause.push_back(b);
   clause.push_back(c);
   internal->external->check_learned_clause ();
+  if (internal->proof) {
+    internal->proof->add_derived_clause (internal->clause_id, false, clause, {});
+    internal->proof->delete_clause (internal->clause_id, false, clause);
+  }
+
   clause.clear();
 }
 
@@ -859,13 +864,14 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
   if (!internal->opts.check)
     return;
   const int lhs = g->lhs;
-  LOG (g->rhs, "checking gate[%d] %d = bigxor", g->id, g->lhs);
+  LOGGATE (g, "checking implied");
   auto &clause = internal->clause;
   assert (clause.empty());
   for (auto other : g->rhs) {
     assert (other > 0);
     clause.push_back(other);
   }
+  clause.push_back(-lhs);
   const unsigned arity = g->arity;
   const unsigned end = 1u << arity;
   const unsigned parity = (lhs > 0);
@@ -874,6 +880,11 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
     while (i && parity_lits (clause) != parity)
       inc_lits (clause);
     internal->external->check_learned_clause ();
+    if (internal->proof) {
+      internal->proof->add_derived_clause (internal->clause_id, false,
+                                           clause, {});
+      internal->proof->delete_clause (internal->clause_id, false, clause);
+    }
     inc_lits (clause);
   }
   clause.clear();
@@ -1529,10 +1540,11 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     return;
   if (!gate_contains (g, src))
     return;
-  LOGGATE (g, "rewriting");
+  LOGGATE (g, "rewriting (%d -> %d)", src, dst);
+  check_xor_gate_implied (g);
   GatesTable::iterator git = (g->indexed ? table.find(g) : end(table));
   size_t j = 0, dst_count = 0;
-  unsigned original_dst_negated = (dst < 0);
+  bool original_dst_negated = (dst < 0);
   dst = abs (dst);
   unsigned negate = original_dst_negated;
   const size_t size = g->rhs.size ();
@@ -1542,31 +1554,35 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     if (lit == src)
       lit = dst;
     const signed char v = internal->val (lit);
-    if (v > 0)
-      negate ^= 1;
+    if (v > 0) {
+      negate ^= true;
+      if (negate)
+	LOG ("negate = %d due to %d with value %d", negate, lit, v);
+    }
     if (v)
       continue;
     if (lit == dst)
       dst_count++;
+    LOG ("keeping value %d", lit);
     g->rhs[j++] = lit;
   }
   if (negate) {
-    LOG ("flipping LHS");
+    LOG ("flipping LHS %d", g->lhs);
     g->lhs = -g->lhs;
   }
   assert (dst_count <= 2);
   if (dst_count == 2) {
     LOG ("destination found twice, removing");
-    j = 0;
-    for (auto i = 0; i < g->rhs.size(); ++i) {
+    size_t k = 0;
+    for (auto i = 0; i < j; ++i) {
       const int lit = g->rhs[i];
       if (lit != dst)
-	g->rhs[j++] = g->rhs[i];
+	g->rhs[k++] = g->rhs[i];
     }
-    assert (j == g->rhs.size() - 2);
-    g->rhs.resize(j);
+    assert (k == j - 2);
+    g->rhs.resize(k);
     g->shrunken = true;
-    g->arity = j;
+    g->arity = k;
   } else if (j != size){
     g->shrunken = true;
     g->rhs.resize(j);
