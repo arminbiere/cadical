@@ -152,7 +152,7 @@ struct Closure {
   Gate* find_and_lits (int, const vector<int> &rhs);
 
   void init_xor_gate_extraction (std::vector<Clause *> &candidates);
-  void check_and_add_to_proof_chain (vector<int> &clause);
+  uint64_t check_and_add_to_proof_chain (vector<int> &clause);
   void add_xor_matching_proof_chain(Gate *g, int lhs1, int lhs2);
   void add_xor_shrinking_proof_chain(Gate const *const g, int src);
   Gate* find_xor_lits (int, const vector<int> &rhs);
@@ -188,9 +188,9 @@ struct Closure {
   vector<int> schedule;
   void schedule_literal(int lit);
 
-  // proof
-  void simplify_and_add_to_proof_chain (vector<int> &unsimplified,
-                                            vector<int> &chain);
+  // proof. If delete_id is non-zero, then delete the clause instead of learning it
+  uint64_t simplify_and_add_to_proof_chain (vector<int> &unsimplified,
+                                            vector<int> &chain, uint64_t delete_id = 0);
   
 
   
