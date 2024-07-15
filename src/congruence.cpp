@@ -334,7 +334,7 @@ void Closure::update_xor_gate(Gate *g, GatesTable::iterator git) {
       ++internal->stats.congruence.unary_and;
     }
   } else {
-    Gate *h = find_and_lits (g->arity, g->rhs);
+    Gate *h = find_xor_lits (g->arity, g->rhs);
     if (h) {
       assert (garbage);
       if (merge_literals (g->lhs, h->lhs))
@@ -422,7 +422,7 @@ Gate *Closure::find_and_lits (int arity, const vector<int> &rhs) {
   auto h = table.find(g);
 
   if (h != table.end()) {
-    LOG ((*h)->rhs, "already existing AND gate %d = ", (*h)->lhs);
+    LOGGATE ((*h), "already existing");
     delete g;
     return *h;
   }
@@ -900,7 +900,7 @@ Gate* Closure::find_xor_lits (int arity, const vector<int> &rhs) {
   auto h = table.find(g);
 
   if (h != table.end()) {
-    LOG ((*h)->rhs, "already existing XOR gate %d = ", (*h)->lhs);
+    LOGGATE ((*h), "already existing");
     delete g;
     return *h;
   }
