@@ -126,6 +126,7 @@ bool Closure::learn_congruence_unit(int lit) {
 }
 
 bool Closure::merge_literals (int lit, int other) {
+  assert (!internal->unsat);
   LOG ("merging literals %d and %d", lit, other);
   int repr_lit = find_representative(lit);
   int repr_other = find_representative(other);
@@ -174,7 +175,7 @@ bool Closure::merge_literals (int lit, int other) {
   if (repr_lit == -repr_other) {
     LOG ("merging clashing %d and %d", lit, other);
     internal->assign_unit (smaller);
-    internal->unsat = true;
+    internal->learn_empty_clause();
     return false;
   }
 
@@ -455,7 +456,6 @@ Gate *Closure::new_and_gate (int lhs) {
     }
   } else {
     g = new Gate;
-    LOG (rhs, "found new gate %d[%d] = bigand", fresh_id, lhs);
     g->lhs = lhs;
     g->tag = Gate_Type::And_Gate;
     g->arity = arity;
@@ -1612,6 +1612,7 @@ void Closure::simplify_xor_gate (Gate *g) {
   LOGGATE (g, "simplifying");
   if (skip_xor_gate (g))
     return;
+  check_xor_gate_implied (g);
   unsigned negate = 0;
   GatesTable::iterator git = (g->indexed ? table.find(g) : end(table));
   const size_t size  = g->rhs.size();
@@ -1622,8 +1623,10 @@ void Closure::simplify_xor_gate (Gate *g) {
     const signed char v = internal->val (lit);
     if (v > 0)
       negate ^= 1;
-    if (!v)
+    if (!v) {
+      LOG ("keeping %d", lit);
       g->rhs[j++] = lit;
+    }
   }
   if (negate) {
     LOG ("flipping LHS literal %d", (g->lhs));
@@ -1636,6 +1639,7 @@ void Closure::simplify_xor_gate (Gate *g) {
     g->arity = j;
   }
   assert (g->arity == g->rhs.size());
+  check_xor_gate_implied (g);
   update_xor_gate (g, git);
   LOGGATE (g, "simplified");
   check_xor_gate_implied (g);
@@ -1894,6 +1898,117 @@ FOUND_SUBSUMING:
 }
 
 /*------------------------------------------------------------------------*/
+void Closure::init_ite_gate_extraction (std::vector<Clause *> &candidates) {
+  std::vector<Clause *> ternary;
+  glargecounts.resize (2 * internal->vsize, 0);
+  for (auto c : internal->clauses) {
+    if (c->garbage)
+      continue;
+    if (c->redundant)
+      continue;
+    unsigned size = 0;
+
+    for (auto lit : *c) {
+      const signed char v = internal->val (lit);
+      if (v < 0)
+	continue;
+      if (v > 0) {
+	LOG (c, "deleting as satisfied");
+	internal->mark_garbage(c);
+      }
+      if (size == 3)
+        goto CONTINUE_COUNTING_NEXT_CLAUSE;
+      size++;
+    }
+    if (size < 3)
+      continue;
+    assert (size == 3);
+    ternary.push_back(c);
+    LOG (c, "counting original ITE gate base");
+    for (auto lit : *c) {
+      if (!internal->val (lit))
+	++largecount(lit);
+    }
+  CONTINUE_COUNTING_NEXT_CLAUSE:;
+  }
+
+  for (auto c : ternary) {
+    assert (!c->garbage);
+    assert (!c->redundant);
+    unsigned positive = 0, negative = 0, twice = 0;
+    for (auto lit : *c) {
+      if (internal->val (lit))
+	continue;
+      const int count_not_lit = largecount (-lit);
+      if (!count_not_lit)
+        goto CONTINUE_WITH_NEXT_TERNARY_CLAUSE;
+      const unsigned count_lit = largecount(lit);
+      assert (count_lit);
+      if (count_lit > 1 && count_not_lit > 1)
+	++twice;
+      if (lit < 0)
+	++negative;
+      else
+	++positive;
+    }
+    if (twice < 2)
+      goto CONTINUE_WITH_NEXT_TERNARY_CLAUSE;
+    for (auto lit : *c)
+      internal->occs (lit).push_back(c);
+    if (positive && negative)
+      candidates.push_back(c);
+  CONTINUE_WITH_NEXT_TERNARY_CLAUSE:;
+  }
+
+  ternary.clear();
+}
+
+void Closure::reset_ite_gate_extraction () {
+  condbin[0].clear();
+  condbin[1].clear();
+  condeq[0].clear();
+  condeq[1].clear();
+  glargecounts.clear();
+}
+void Closure::extract_ite_gates_of_literal (int lit, Watches& lit_ws, Watches& not_lit_ws) {
+
+  condbin[0].clear();
+  condbin[1].clear();
+  condeq[0].clear();
+  condeq[1].clear();
+}
+void Closure::extract_ite_gates_of_variable (int idx) {
+  const int lit = idx;
+  const int not_lit = -idx;
+
+  auto lit_watches = internal->watches(lit);
+  auto not_lit_watches = internal->watches(not_lit);
+  const size_t size_lit_watches = lit_watches.size();
+  const size_t size_not_lit_watches = not_lit_watches.size();
+  if (size_lit_watches <= size_not_lit_watches) {
+    if (size_lit_watches > 1)
+      extract_ite_gates_of_literal (lit, lit_watches, not_lit_watches);
+  } else {
+    if (size_lit_watches > 1)
+      extract_ite_gates_of_literal (not_lit, not_lit_watches, lit_watches);
+  }
+}
+void Closure::extract_ite_gates() {
+  std::vector<Clause*> candidates;
+  init_ite_gate_extraction(candidates);
+
+  for (auto idx : internal->vars) {
+    if (internal->flags(idx).active()) {
+      extract_ite_gates_of_variable(idx);
+      if (internal->unsat)
+	break;
+    }
+  }
+  // Kissat has an alternative version MERGE_CONDITIONAL_EQUIVALENCES
+  reset_ite_gate_extraction();
+  candidates.clear();
+}
+/*------------------------------------------------------------------------*/
 void Closure::extract_gates() {
   extract_and_gates();
   if (internal->unsat)
@@ -1901,7 +2016,8 @@ void Closure::extract_gates() {
   extract_xor_gates();
   if (internal->unsat)
     return;
-  //extract_ite_gates
+  return;
+  extract_ite_gates();
 }
 
 /*------------------------------------------------------------------------*/

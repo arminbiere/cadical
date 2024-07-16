@@ -14,6 +14,7 @@
 #include "util.hpp"
 #include "inttypes.hpp"
 #include "clause.hpp"
+#include "watch.hpp"
 
 namespace CaDiCaL {
   
@@ -87,6 +88,9 @@ struct Closure {
   vector<int> chain;
   vector<uint64_t> glargecounts; // count for large clauses to complement internal->noccs
   vector<uint64_t> gnew_largecounts; // count for large clauses to complement internal->noccs
+  GatesTable table;
+  std::array<std::vector<std::pair<int, int>>, 2> condbin;
+  std::array<std::vector<std::pair<int, int>>, 2> condeq;
 #ifdef LOGGING
   unsigned fresh_id;
 #endif  
@@ -146,8 +150,11 @@ struct Closure {
   void reset_closure();
   void extract_and_gates (Closure&);
   void extract_gates ();
-  GatesTable table;
   void extract_and_gates_with_base_clause (Clause *c);
+  void init_and_gate_extraction ();
+  Gate* find_first_and_gate (int lhs);
+  Gate *find_remaining_and_gate (int lhs);
+  void extract_and_gates ();
 
   Gate* find_and_lits (int, const vector<int> &rhs);
 
@@ -159,11 +166,13 @@ struct Closure {
   void extract_xor_gates ();
   void extract_xor_gates_with_base_clause (Clause *c);
   Clause *find_large_xor_side_clause (std::vector<int> &lits);
+
+  void extract_ite_gates_of_literal (int, Watches&, Watches&);
+  void extract_ite_gates_of_variable (int idx);
+  void init_ite_gate_extraction (std::vector<Clause *> &candidates);
+  void reset_ite_gate_extraction ();
+  void extract_ite_gates ();
   
-  void init_and_gate_extraction ();
-  Gate* find_first_and_gate (int lhs);
-  Gate *find_remaining_and_gate (int lhs);
-  void extract_and_gates ();
 
   void forward_subsume_matching_clauses();
 
