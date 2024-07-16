@@ -1425,7 +1425,6 @@ void Closure::find_equivalences () {
 	LOG ("%d and %d are the representative", lit_repr, other_repr);
 	if (lit_repr != other_repr) {
 	  if (merge_literals(lit_repr, other_repr)) {
-	    COVER (true);
 	    ++internal->stats.congruence.congruent;
 	  }
 	  unmark_all();
