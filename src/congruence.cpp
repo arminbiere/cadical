@@ -143,9 +143,8 @@ bool Closure::merge_literals (int lit, int other) {
       LOG ("not merging lits %d and %d assigned to same value", lit, other);
       return false;
     }
-    if (val_lit == val_other) {
+    if (val_lit == -val_other) {
       LOG ("merging lits %d and %d assigned to inconsistent value", lit, other);
-      internal->unsat = true;
       internal->learn_empty_clause();
       return false;
     }
