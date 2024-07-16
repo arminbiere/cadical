@@ -520,6 +520,8 @@ void Closure::add_binary_clause (int a, int b) {
   if (a == -b)
     return;
   const signed char a_value = internal->val (a);
+  if (a_value > 0)
+    return;
   const signed char b_value = internal->val (b);
   if (b_value > 0)
     return;
