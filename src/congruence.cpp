@@ -339,8 +339,9 @@ void Closure::update_xor_gate(Gate *g, GatesTable::iterator git) {
     Gate *h = find_xor_lits (g->arity, g->rhs);
     if (h) {
       assert (garbage);
+      add_xor_matching_proof_chain (g, g->lhs, h->lhs);
       if (merge_literals (g->lhs, h->lhs))
-        ++internal->stats.congruence.ands;
+        ++internal->stats.congruence.xors;
     } else {
       if (g->indexed) {
         table.erase (git);
