@@ -936,8 +936,8 @@ uint64_t Closure::simplify_and_add_to_proof_chain (
 #ifndef NDEBUG
   for (auto lit : unsimplified) {
     assert (!(marked (lit) & 4));
-#endif
   }
+#endif
 
   bool trivial = false;
   for (auto lit: unsimplified) {
@@ -2060,7 +2060,7 @@ void Closure::extract_gates() {
 void Internal::extract_gates () {
   if (unsat)
     return;
-  if (!internal->opts.congruence)
+  if (!opts.congruence)
     return;
   if (level)
     backtrack ();
@@ -2085,14 +2085,14 @@ void Internal::extract_gates () {
 
   closure.init_closure();
   closure.extract_gates ();
-  if (!internal->unsat) {
+  if (!unsat) {
     closure.find_units();
     if (!internal->unsat) {
       closure.find_equivalences();
       
-      if (!internal->unsat) {
+      if (!unsat) {
         const int propagated = closure.propagate_units_and_equivalences ();
-        if (!internal->unsat && propagated)
+        if (!unsat && propagated)
 	  closure.forward_subsume_matching_clauses();
       }
     }
@@ -2108,17 +2108,17 @@ void Internal::extract_gates () {
   
   const int64_t new_merged = stats.congruence.congruent;
 
-  internal->phase ("congruence-phase", stats.congruence.rounds,
+  phase ("congruence-phase", stats.congruence.rounds,
 	 "merged %ld literals", new_merged - old_merged);
   if (!unsat && !internal->propagate())
     unsat = true;
 
 
-  internal->report('=', !opts.reportall && !(stats.congruence.congruent - old));
+  report('=', !opts.reportall && !(stats.congruence.congruent - old));
 
   if (opts.decompose && new_merged != old_merged) {
     decompose ();
-    internal->report('d', !opts.reportall && !(stats.congruence.congruent - old));
+    this->report('d', !opts.reportall && !(stats.congruence.congruent - old));
   }
 }
 
