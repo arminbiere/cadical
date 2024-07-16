@@ -6,8 +6,10 @@
 namespace CaDiCaL {
 
 #ifdef LOGGING
-#define LOGGATE(g,str,...) \
-  LOG (g->rhs, str " gate[%d] (arity: %d) %d = %s", ##__VA_ARGS__, g->id, g->arity, g->lhs, string_of_gate (g->tag).c_str ())
+#define LOGGATE(g, str, ...) \
+  LOG (g->rhs, str "%s gate[%d] (arity: %d) %d = %s", ##__VA_ARGS__, \
+  g->garbage ? " garbage" : "", \
+  g->id, g->arity, g->lhs, string_of_gate (g->tag).c_str ())
 #else
 #define LOGGATE(...) \
   while (false) {}
@@ -375,7 +377,7 @@ void Closure::simplify_and_gate (Gate *g) {
   if (end(g->rhs) != it){
     g->shrunken = true;
     g->rhs.resize(end(g->rhs) - it);
-    LOG (g->rhs, "shrunken gate[%d] %d =", g->id, g->lhs);
+    LOGGATE (g, "shrunken");
   }
   shrink_and_gate(g, falsifies);
   update_and_gate(g, git, falsifies);
@@ -469,6 +471,7 @@ Gate *Closure::new_and_gate (int lhs) {
 #ifdef LOGGING
     g->id = fresh_id++;
 #endif  
+    LOGGATE (g, "creating new");
     for (auto lit : g->rhs) {
       connect_goccs(g, lit);
     }
@@ -1025,7 +1028,6 @@ Gate *Closure::new_xor_gate (int lhs) {
     }
   } else {
     g = new Gate;
-    LOG (rhs, "found new gate[%d] (arity: %d) %d = xor", fresh_id, arity, lhs);
     g->lhs = lhs;
     g->tag = Gate_Type::XOr_Gate;
     g->arity = arity;
@@ -1038,6 +1040,7 @@ Gate *Closure::new_xor_gate (int lhs) {
 #ifdef LOGGING
     g->id = fresh_id++;
 #endif
+    LOGGATE (g, "creating new");
     check_xor_gate_implied (g);
     for (auto lit : g->rhs) {
       connect_goccs(g, lit);
