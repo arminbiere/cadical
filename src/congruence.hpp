@@ -24,6 +24,8 @@ namespace CaDiCaL {
 struct Internal;
 
 enum class Gate_Type { And_Gate, XOr_Gate, ITE_Gate };
+typedef std::pair<int,int> litpair;
+typedef std::vector<litpair> litpairs;
 
 std::string string_of_gate (Gate_Type t);
 
@@ -157,17 +159,27 @@ struct Closure {
   void extract_and_gates ();
 
   Gate* find_and_lits (int, const vector<int> &rhs);
+  Gate* find_gate_lits (int, const vector<int> &rhs, Gate_Type typ);
+  Gate* find_xor_lits (int, const vector<int> &rhs);
 
   void init_xor_gate_extraction (std::vector<Clause *> &candidates);
   uint64_t check_and_add_to_proof_chain (vector<int> &clause);
   void add_xor_matching_proof_chain(Gate *g, int lhs1, int lhs2);
   void add_xor_shrinking_proof_chain(Gate const *const g, int src);
-  Gate* find_xor_lits (int, const vector<int> &rhs);
   void extract_xor_gates ();
   void extract_xor_gates_with_base_clause (Clause *c);
   Clause *find_large_xor_side_clause (std::vector<int> &lits);
 
-  void extract_ite_gates_of_literal (int, Watches&, Watches&);
+  void merge_condeq (int cond, litpairs condeq, litpairs not_condeq);
+  void
+  find_conditional_equivalences (int lit,
+                                 std::vector<litpair> &condbin,
+                                 std::vector<litpair> &condeq);
+  void
+  copy_conditional_equivalences (int lit, std::vector<std::pair<int, int>> &condbin);
+  void check_ite_implied (int lhs, int cond, int then_lit, int else_lit);
+  void check_ite_gate_implied (Gate *g);
+  void extract_ite_gates_of_literal (int);
   void extract_ite_gates_of_variable (int idx);
   void init_ite_gate_extraction (std::vector<Clause *> &candidates);
   void reset_ite_gate_extraction ();
@@ -181,6 +193,7 @@ struct Closure {
   void extract_congruence ();
   
   Gate* new_and_gate(int);
+  Gate* new_ite_gate(int);
   Gate* new_xor_gate(int);
   //check
   void check_xor_gate_implied (Gate const *const);

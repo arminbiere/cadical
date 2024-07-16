@@ -415,11 +415,14 @@ bool Closure::simplify_gates (int lit) {
 // AND gates
 
 
+Gate *Closure::find_and_lits (int arity, const vector<int> &rhs) {
+  return find_gate_lits(arity, rhs, Gate_Type::And_Gate);
+}
 
 // search for the gate in the hash-table. Very simple as we ues the one from the STL
-Gate *Closure::find_and_lits (int arity, const vector<int> &rhs) {
+Gate *Closure::find_gate_lits (int arity, const vector<int> &rhs, Gate_Type typ) {
   Gate *g = new Gate;
-  g->tag = Gate_Type::And_Gate;
+  g->tag = typ;
   g->arity = arity;
   g->rhs = {rhs};
   auto h = table.find(g);
@@ -898,23 +901,7 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
 // 
 // TODO moreg with find_and_lits
 Gate* Closure::find_xor_lits (int arity, const vector<int> &rhs) {
-  Gate *g = new Gate;
-  g->tag = Gate_Type::XOr_Gate;
-  g->arity = arity;
-  g->rhs = {rhs};
-  auto h = table.find(g);
-
-  if (h != table.end()) {
-    LOGGATE ((*h), "already existing");
-    delete g;
-    return *h;
-  }
-
-  else {
-    LOG (this->rhs, "gate not found in table");
-    delete g;
-    return nullptr;
-  }
+  return find_gate_lits(arity, rhs, Gate_Type::XOr_Gate);
 }
 
 uint64_t Closure::check_and_add_to_proof_chain (vector<int> &clause) {
@@ -1933,6 +1920,33 @@ FOUND_SUBSUMING:
 }
 
 /*------------------------------------------------------------------------*/
+void check_ite_lits_normalized (std::vector<int> lits) {
+  assert (lits[0] > 0);
+  assert (lits[1] > 0);
+  assert (lits[0] != lits[1]);
+  assert (lits[0] != lits[2]);
+  assert (lits[1] != lits[2]);
+  assert (lits[0] != -lits[1]);
+  assert (lits[0] != -lits[2]);
+  assert (lits[1] != -lits[2]);
+}
+
+void Closure::check_ite_implied (int lhs, int cond, int then_lit, int else_lit) {
+  if (!internal->opts.check)
+    return;
+  check_ternary(cond, -else_lit, lhs);
+  check_ternary(cond, else_lit, -lhs);
+  check_ternary(-cond, -then_lit, lhs);
+  check_ternary(-cond, then_lit, -lhs);
+}
+
+void Closure::check_ite_gate_implied (Gate *g) {
+  assert (g->tag == Gate_Type::ITE_Gate);
+  if (!internal->opts.check)
+    return;
+  check_ite_implied(g->lhs, g->rhs[0], g->rhs[1], g->rhs[2]);
+}
+
 void Closure::init_ite_gate_extraction (std::vector<Clause *> &candidates) {
   std::vector<Clause *> ternary;
   glargecounts.resize (2 * internal->vsize, 0);
@@ -2005,13 +2019,94 @@ void Closure::reset_ite_gate_extraction () {
   condeq[1].clear();
   glargecounts.clear();
 }
-void Closure::extract_ite_gates_of_literal (int lit, Watches& lit_ws, Watches& not_lit_ws) {
 
-  condbin[0].clear();
-  condbin[1].clear();
-  condeq[0].clear();
-  condeq[1].clear();
+void Closure::copy_conditional_equivalences (int lit, std::vector<std::pair<int, int>> &condbin) {
+  assert (condbin.empty());
+  for (auto c : internal->occs (lit)) {
+    assert(c->size != 2);
+    int first = 0, second = 0;
+    for (auto other : *c) {
+      if (internal->val(lit))
+	continue;
+      if (other == lit)
+	continue;
+      if (!first)
+	first = 0;
+      else {
+	assert (!second);
+	second = other;
+      }
+    }
+    assert (first), assert (second);
+    std::pair<int, int> p;
+    if (first < second)
+      p.first = first, p.second = second;
+    else {
+      assert (second < first);
+      p.first = second, p.second = first;
+    }
+    LOG ("literal %d condition binary clause %s %s", lit, first, second);
+    condbin.push_back(p);
+  }
 }
+
+bool less_litpair (litpair p, litpair q) {
+  const int a = p.first;
+  const int b = q.first;
+  if (a < b)
+    return true;
+  if (b > a)
+    return false;
+  const int c = p.second;
+  const int d = q.second;
+  return (c < d);
+}
+
+void Closure::find_conditional_equivalences (
+    int lit,
+    std::vector<std::pair<int, int>> &condbin,
+    std::vector<std::pair<int, int>> &condeq) {
+  assert (condbin.empty());
+  assert (condeq.empty());
+  assert (internal->occs (lit).size () > 1);
+  
+}
+
+
+void Closure::merge_condeq (int cond, litpairs condeq, litpairs not_condeq) {
+  auto q = begin (not_condeq);
+  const auto end_not_condeq = end (not_condeq);
+  for (auto p : condeq) {
+    const int lhs = p.first;
+    const int then_lit = p.second;
+    assert (lhs > 0);
+    while (q != end_not_condeq && q->first < lhs)
+      ++q;
+    while (q != end_not_condeq && q->first == lhs){
+      litpair not_cond_pair = *q++;
+      const int else_lit = not_cond_pair.second;
+      // new_ite_gate (lhs, cond, then_lit, else_lit);
+      if (internal->unsat)
+	return;
+    }
+    
+  }
+}
+
+void Closure::extract_ite_gates_of_literal (int lit) {
+  find_conditional_equivalences(lit, condbin[0], condeq[0]);
+  if (!condeq[0].empty()) {
+    find_conditional_equivalences(-lit, condbin[1], condeq[1]);
+    if (!condeq[1].empty()) {
+      if (lit < 0)
+        ; //merge_condeq
+      else
+	; // merge_condeq
+    }
+  }
+  
+}
+
 void Closure::extract_ite_gates_of_variable (int idx) {
   const int lit = idx;
   const int not_lit = -idx;
@@ -2022,10 +2117,10 @@ void Closure::extract_ite_gates_of_variable (int idx) {
   const size_t size_not_lit_watches = not_lit_watches.size();
   if (size_lit_watches <= size_not_lit_watches) {
     if (size_lit_watches > 1)
-      extract_ite_gates_of_literal (lit, lit_watches, not_lit_watches);
+      extract_ite_gates_of_literal (lit);
   } else {
     if (size_lit_watches > 1)
-      extract_ite_gates_of_literal (not_lit, not_lit_watches, lit_watches);
+      extract_ite_gates_of_literal (not_lit);
   }
 }
 void Closure::extract_ite_gates() {
