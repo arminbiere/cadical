@@ -534,8 +534,6 @@ bool Internal::preprocess_round (int round) {
          " clauses",
          round, before.vars, before.clauses);
   int old_elimbound = lim.elimbound;
-  if (opts.congruence)
-    extract_gates();
 
   if (opts.probe)
     probe (false);
@@ -543,9 +541,10 @@ bool Internal::preprocess_round (int round) {
     elim (false);
   if (opts.condition)
     condition (false);
-  after.vars = active ();
+  
   if (opts.congruence)
     extract_gates();
+  after.vars = active ();
   after.clauses = stats.current.irredundant;
   assert (preprocessing);
   preprocessing = false;

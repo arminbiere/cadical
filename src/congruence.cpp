@@ -1832,6 +1832,40 @@ void Closure::forward_subsume_matching_clauses() {
        (double) subsumed / (double) (tried ? tried : 1));
 }
 
+
+/*------------------------------------------------------------------------*/
+// Candidate clause 'subsumed' is subsumed by 'subsuming'.
+
+void Closure::subsume_clause (Clause *subsuming, Clause *subsumed) {
+  assert (!subsuming->redundant);
+  assert (!subsumed->redundant);
+  auto &stats = internal->stats;
+  stats.subsumed++;
+  assert (subsuming->size <= subsumed->size);
+  LOG (subsumed, "subsumed");
+  if (subsumed->redundant)
+    stats.subred++;
+  else
+    stats.subirr++;
+  if (subsumed->redundant || !subsuming->redundant) {
+    internal->mark_garbage (subsumed);
+    return;
+  }
+  LOG ("turning redundant subsuming clause into irredundant clause");
+  subsuming->redundant = false;
+  if (internal->proof)
+    internal->proof->strengthen (subsuming->id);
+  internal->mark_garbage (subsumed);
+  stats.current.irredundant++;
+  stats.added.irredundant++;
+  stats.irrlits += subsuming->size;
+  assert (stats.current.redundant > 0);
+  stats.current.redundant--;
+  assert (stats.added.redundant > 0);
+  stats.added.redundant--;
+  // ... and keep 'stats.added.total'.
+}
+
 bool Closure::find_subsuming_clause (Clause *subsumed) {
   assert (!subsumed->garbage);
   Clause *subsuming = nullptr;  
@@ -1890,7 +1924,7 @@ FOUND_SUBSUMING:
   if (subsuming) {
     LOG (subsumed, "subsumed");
     LOG (subsuming, "subsuming");
-    internal->subsume_clause (subsuming, subsumed);
+    subsume_clause (subsuming, subsumed);
     ++internal->stats.congruence.subsumed;
     return true;
   } else {
@@ -2038,6 +2072,7 @@ void Internal::extract_gates () {
 
   const int64_t old = stats.congruence.congruent;
   const bool dedup = opts.deduplicate;
+  const int old_merged = stats.congruence.congruent;
   opts.deduplicate = true;
   mark_duplicated_binary_clauses_as_garbage ();
   opts.deduplicate = dedup;
@@ -2072,10 +2107,20 @@ void Internal::extract_gates () {
   init_watches ();
   connect_watches ();
   
+  const int64_t new_merged = stats.congruence.congruent;
+
+  internal->phase ("congruence-phase", stats.congruence.rounds,
+	 "merged %ld literals", new_merged - old_merged);
   if (!unsat && !internal->propagate())
     unsat = true;
 
+
   internal->report('=', !opts.reportall && !(stats.congruence.congruent - old));
+
+  if (opts.decompose && new_merged != old_merged) {
+    decompose ();
+    internal->report('d', !opts.reportall && !(stats.congruence.congruent - old));
+  }
 }
 
 }

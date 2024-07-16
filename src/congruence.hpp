@@ -190,6 +190,7 @@ struct Closure {
 
   void find_units();
   void find_equivalences();
+  void subsume_clause (Clause *subsuming, Clause *subsumed);
   bool find_subsuming_clause (Clause *c);
 
 
