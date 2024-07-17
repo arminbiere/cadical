@@ -992,16 +992,19 @@ void Closure::add_xor_matching_proof_chain(Gate *g, int lhs1, int lhs2) {
       unsimplified.push_back(-lhs2);
       const uint64_t id2 = simplify_and_add_to_proof_chain (unsimplified, chain);
       unsimplified.resize(unsimplified.size() - 2);
-      if (internal->proof) {
-        unsimplified.push_back (-lhs1);
-        unsimplified.push_back (lhs2);
-        simplify_and_add_to_proof_chain (unsimplified, chain, id1);
-        unsimplified.resize (unsimplified.size () - 2);
-        unsimplified.push_back (lhs1);
-        unsimplified.push_back (-lhs2);
-        simplify_and_add_to_proof_chain (unsimplified, chain, id2);
-	unsimplified.resize(unsimplified.size() - 2);
-      }
+      // TODO we need to delete the original clauses, not the intermediate ones
+      // generated here
+      // but we need to remember the ids
+      // if (false && internal->proof) {
+      //   unsimplified.push_back (-lhs1);
+      //   unsimplified.push_back (lhs2);
+      //   simplify_and_add_to_proof_chain (unsimplified, chain, id1);
+      //   unsimplified.resize (unsimplified.size () - 2);
+      //   unsimplified.push_back (lhs1);
+      //   unsimplified.push_back (-lhs2);
+      //   simplify_and_add_to_proof_chain (unsimplified, chain, id2);
+      // 	unsimplified.resize(unsimplified.size() - 2);
+      // }
       inc_lits(unsimplified);
     }
     assert (!unsimplified.empty());
