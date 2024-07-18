@@ -172,18 +172,18 @@ struct Closure {
   void extract_xor_gates_with_base_clause (Clause *c);
   Clause *find_large_xor_side_clause (std::vector<int> &lits);
 
-  void merge_condeq (int cond, litpairs condeq, litpairs not_condeq);
+  void merge_condeq (int cond, litpairs &condeq, litpairs &not_condeq);
   void
   find_conditional_equivalences (int lit,
-                                 std::vector<litpair> &condbin,
-                                 std::vector<litpair> &condeq);
+                                 litpairs &condbin,
+                                 litpairs &condeq);
   void
-  copy_conditional_equivalences (int lit, std::vector<std::pair<int, int>> &condbin);
+  copy_conditional_equivalences (int lit, litpairs &condbin);
   void check_ite_implied (int lhs, int cond, int then_lit, int else_lit);
   void check_ite_gate_implied (Gate *g);
   void extract_ite_gates_of_literal (int);
   void extract_ite_gates_of_variable (int idx);
-  void extract_condeq_pairs (int lit, litpairs condbin, litpairs condeq);
+  void extract_condeq_pairs (int lit, litpairs &condbin, litpairs &condeq);
   void init_ite_gate_extraction (std::vector<Clause *> &candidates);
   bool find_litpair_second_literal (int lit, litpairs::const_iterator begin,
                                     litpairs::const_iterator end);

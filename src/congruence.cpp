@@ -1942,9 +1942,9 @@ void Closure::add_ite_matching_proof_chain (Gate *g, int lhs1, int lhs2) {
   if (!internal->proof)
     return;
   LOG ("starting ITE matching proof chain");
+  assert (unsimplified.empty ());
   unsimplified = g->rhs;
 
-  assert (unsimplified.empty ());
   assert (chain.empty ());
   const auto &rhs = g->rhs;
   const int cond = rhs[0];
@@ -1997,6 +1997,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
   rhs.push_back (then_lit);
   rhs.push_back (else_lit);
   const unsigned arity = 3;
+  LOG ("ITE gate %d = %d ? %d : %d", lhs, cond, then_lit, else_lit);
 
   Gate *g = find_ite_lits (arity, this->rhs);
   if (g) {
@@ -2154,10 +2155,11 @@ void Closure::copy_conditional_equivalences (int lit, std::vector<std::pair<int,
     }
     assert (first), assert (second);
     std::pair<int, int> p;
-    if (first < second)
+    
+    if (internal->vlit (first) < internal->vlit (second))
       p.first = first, p.second = second;
     else {
-      assert (second < first);
+      assert (internal->vlit (second) < internal->vlit (first));
       p.first = second, p.second = first;
     }
     LOG ("literal %d condition binary clause %d %d", lit, first, second);
@@ -2200,6 +2202,9 @@ struct litpair_smaller {
 
 bool Closure::find_litpair_second_literal (int lit, litpairs::const_iterator begin,
                                   litpairs::const_iterator end) {
+  LOG ("searching for %d in", lit);
+  for (auto it = begin; it != end; ++it)
+    LOG ("%d [%d]", it->first, it->second);
   auto found = std::binary_search(begin, end, std::pair<int,int>{lit, lit}, [](const litpair& a, const litpair &b) {
     return a.second < b.second;
   });
@@ -2250,10 +2255,10 @@ void Closure::search_condeq (int lit, int pos_lit,
       std::pair<int, int> equivalence = {first, second};
       condeq.push_back(equivalence);
       if (second < 0) {
-	std::pair<int, int> inverse_equivalence = {-first, -second};
+	std::pair<int, int> inverse_equivalence = {-second, -first};
 	condeq.push_back(inverse_equivalence);
       } else {
-	std::pair<int, int> inverse_equivalence = {first, second};
+	std::pair<int, int> inverse_equivalence = {second, first};
 	condeq.push_back(inverse_equivalence);
       }
     }
@@ -2263,15 +2268,20 @@ void Closure::search_condeq (int lit, int pos_lit,
 #endif
 }
 
-void Closure::extract_condeq_pairs (int lit, litpairs condbin, litpairs condeq) {
+void Closure::extract_condeq_pairs (int lit, litpairs &condbin, litpairs &condeq) {
   const litpairs::const_iterator begin = condbin.cbegin();
   const litpairs::const_iterator end = condbin.cend();
   litpairs::const_iterator pos_begin = begin;
   int next_lit = 0;
+  
+  for (const auto &pair : condbin)
+    LOG ("unsorted conditional %d equivalence %d = %d",  lit, pair.first,  pair.second);
+  LOG ("searching for first positive literal for lit %d", lit);
   for (;;) {
     if (pos_begin == end)
       return;
     next_lit = pos_begin->first;
+    LOG ("checking %d", next_lit);
     if (next_lit > 0)
       break;
     pos_begin++;
@@ -2283,6 +2293,7 @@ void Closure::extract_condeq_pairs (int lit, litpairs condbin, litpairs condeq) 
     assert (next_lit > 0);
     const int pos_lit = next_lit;
     litpairs::const_iterator pos_end = pos_begin + 1;
+    LOG ("searching for first other literal after finding lit %d", next_lit);
     for (;;) {
       if (pos_end == end)
         return;
@@ -2297,6 +2308,7 @@ void Closure::extract_condeq_pairs (int lit, litpairs condbin, litpairs condeq) 
     if (next_lit != neg_lit) {
       if (next_lit < 0) {
         pos_begin = pos_end + 1;
+	LOG ("next_lit %d < 0", next_lit);
         for (;;) {
           if (pos_begin == end)
             return;
@@ -2382,7 +2394,8 @@ void Closure::find_conditional_equivalences (
 }
 
 
-void Closure::merge_condeq (int cond, litpairs condeq, litpairs not_condeq) {
+void Closure::merge_condeq (int cond, litpairs & condeq, litpairs & not_condeq) {
+  LOG ("merging cond for literal %d", cond);
   auto q = begin (not_condeq);
   const auto end_not_condeq = end (not_condeq);
   for (auto p : condeq) {
@@ -2403,6 +2416,7 @@ void Closure::merge_condeq (int cond, litpairs condeq, litpairs not_condeq) {
 }
 
 void Closure::extract_ite_gates_of_literal (int lit) {
+  LOG ("search for ITE for literal %d ", lit);
   find_conditional_equivalences(lit, condbin[0], condeq[0]);
   if (!condeq[0].empty()) {
     find_conditional_equivalences(-lit, condbin[1], condeq[1]);
