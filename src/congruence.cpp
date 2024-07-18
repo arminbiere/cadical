@@ -2190,6 +2190,168 @@ struct litpair_smaller {
   }
 };
 
+
+bool Closure::find_litpair_second_literal (int lit, litpairs::const_iterator begin,
+                                  litpairs::const_iterator end) {
+  auto found = std::binary_search(begin, end, std::pair<int,int>{lit, lit}, [](const litpair& a, const litpair &b) {
+    return a.second < b.second;
+  });
+  return found;
+/*
+  litpairs::const_iterator l = begin, r = end;
+  while (l != r) {
+    litpairs::const_iterator m = l + (r - l) / 2;
+    assert (begin <= m), assert (m < end);
+    int other = m->second;
+    if (other < lit)
+      l = m + 1;
+    else if (other > lit)
+      r = m;
+    else
+      return true;
+  }
+  return false;
+*/
+}
+
+void Closure::search_condeq (int lit, int pos_lit,
+                             litpairs::const_iterator pos_begin,
+                             litpairs::const_iterator pos_end, int neg_lit,
+                             litpairs::const_iterator neg_begin,
+                             litpairs::const_iterator neg_end,
+                             litpairs &condeq) {
+  assert (neg_lit == - pos_lit);
+  assert (pos_begin < pos_end);
+  assert (neg_begin < neg_end);
+  assert (pos_begin->first == pos_lit);
+  assert (neg_begin->first == neg_lit);
+  assert (pos_end <= neg_begin || neg_end <= pos_begin);
+  for (litpairs::const_iterator p = pos_begin; p != pos_end; p++) {
+    const int other = p->second;
+    const int not_other = -other;
+    if (find_litpair_second_literal (not_other, neg_begin, neg_end)) {
+      int first, second;
+      if (pos_lit < 0)
+        first = neg_lit, second = other;
+      else
+        first = pos_lit, second = not_other;
+      LOG ("found conditional %s equivalence %s = %s", LOGLIT (lit),
+           LOGLIT (first), LOGLIT (second));
+      assert (first > 0);
+      assert (first < second);
+      check_ternary (lit, first, -second);
+      check_ternary (lit, -first, second);
+      std::pair<int, int> equivalence = {first, second};
+      condeq.push_back(equivalence);
+      if (second < 0) {
+	std::pair<int, int> inverse_equivalence = {-first, -second};
+	condeq.push_back(inverse_equivalence);
+      } else {
+	std::pair<int, int> inverse_equivalence = {first, second};
+	condeq.push_back(inverse_equivalence);
+      }
+    }
+  }
+#ifndef LOGGING
+  (void) lit;
+#endif
+}
+
+void Closure::extract_condeq_pairs (int lit, litpairs condbin, litpairs condeq) {
+  const litpairs::const_iterator begin = condbin.cbegin();
+  const litpairs::const_iterator end = condbin.cend();
+  litpairs::const_iterator pos_begin = begin;
+  int next_lit = 0;
+  for (;;) {
+    if (pos_begin == end)
+      return;
+    next_lit = pos_begin->first;
+    if (next_lit > 0)
+      break;
+    pos_begin++;
+  }
+
+  for (;;) {
+    assert (pos_begin != end);
+    assert (next_lit == pos_begin->first);
+    assert (next_lit > 0);
+    const int pos_lit = next_lit;
+    litpairs::const_iterator pos_end = pos_begin + 1;
+    for (;;) {
+      if (pos_end == end)
+        return;
+      next_lit = pos_end->first;
+      if (next_lit != pos_lit)
+        break;
+      pos_end++;
+    }
+    assert (pos_end != end);
+    assert (next_lit == pos_end->first);
+    const int neg_lit = -pos_lit;
+    if (next_lit != neg_lit) {
+      if (next_lit < 0) {
+        pos_begin = pos_end + 1;
+        for (;;) {
+          if (pos_begin == end)
+            return;
+          next_lit = pos_begin->first;
+          if (next_lit > 0)
+            break;
+          pos_begin++;
+        }
+      } else
+        pos_begin = pos_end;
+      continue;
+    }
+    const litpairs::const_iterator neg_begin = pos_end;
+    litpairs::const_iterator neg_end = neg_begin + 1;
+    while (neg_end != end) {
+      next_lit = neg_end->first;
+      if (next_lit != neg_lit)
+        break;
+      neg_end++;
+    }
+#ifdef LOGGING
+    for (const litpair *p = pos_begin; p != pos_end; p++)
+      LOG ("conditional %d binary clause %d %d with positive %d",
+            (lit),  (p->first),  (p->second),
+            (pos_lit));
+    for (const litpair *p = neg_begin; p != neg_end; p++)
+      LOG ("conditional %d binary clause %d %d with negative %d",
+            (lit),  (p->first),  (p->second),
+            (neg_lit));
+#endif
+    const size_t pos_size = pos_end - pos_begin;
+    const size_t neg_size = neg_end - neg_begin;
+    if (pos_size <= neg_size) {
+      LOG ("searching negation of %zu conditional binary clauses "
+           "with positive %s in %zu conditional binary clauses with %s",
+           pos_size, LOGLIT (pos_lit), neg_size, LOGLIT (neg_lit));
+      search_condeq (lit, pos_lit, pos_begin, pos_end, neg_lit, neg_begin, neg_end, condeq);
+    } else {
+      LOG ("searching negation of %zu conditional binary clauses "
+           "with negative %s in %zu conditional binary clauses with %s",
+           neg_size, LOGLIT (neg_lit), pos_size, LOGLIT (pos_lit));
+      search_condeq (lit, neg_lit, neg_begin, neg_end, pos_lit, pos_begin, pos_end, condeq);
+    }
+    if (neg_end == end)
+      return;
+    assert (next_lit == neg_end->first);
+    if (next_lit < 0) {
+      pos_begin = neg_end + 1;
+      for (;;) {
+        if (pos_begin == end)
+          return;
+        next_lit = pos_begin->first;
+        if (next_lit > 0)
+          break;
+        pos_begin++;
+      }
+    } else
+      pos_begin = neg_end;
+  }
+}
+
 void Closure::find_conditional_equivalences (
     int lit,
     std::vector<std::pair<int, int>> &condbin,
@@ -2201,7 +2363,7 @@ void Closure::find_conditional_equivalences (
   MSORT (internal->opts.radixsortlim, begin (condbin), end (condbin),
          litpair_rank (this->internal), litpair_smaller (this->internal));
  
-//  extract_condeq_pairs (lit, condbin, condeq);
+  extract_condeq_pairs (lit, condbin, condeq);
   MSORT (internal->opts.radixsortlim, begin (condbin), end (condbin),
          litpair_rank (this->internal), litpair_smaller (this->internal));
 
@@ -2240,12 +2402,16 @@ void Closure::extract_ite_gates_of_literal (int lit) {
     find_conditional_equivalences(-lit, condbin[1], condeq[1]);
     if (!condeq[1].empty()) {
       if (lit < 0)
-        ; //merge_condeq
+        merge_condeq(-lit, condeq[0], condeq[1]);
       else
-	; // merge_condeq
+	merge_condeq(lit, condeq[1], condeq[0]);
     }
   }
-  
+
+  condbin[0].clear();
+  condbin[1].clear();
+  condeq[0].clear();
+  condeq[1].clear();
 }
 
 void Closure::extract_ite_gates_of_variable (int idx) {
@@ -2264,7 +2430,10 @@ void Closure::extract_ite_gates_of_variable (int idx) {
       extract_ite_gates_of_literal (not_lit);
   }
 }
+
 void Closure::extract_ite_gates() {
+  if (!internal->opts.congruenceite)
+    return;
   std::vector<Clause*> candidates;
   init_ite_gate_extraction(candidates);
 
@@ -2287,7 +2456,6 @@ void Closure::extract_gates() {
   extract_xor_gates();
   if (internal->unsat)
     return;
-  return;
   extract_ite_gates();
 }
 

@@ -183,7 +183,16 @@ struct Closure {
   void check_ite_gate_implied (Gate *g);
   void extract_ite_gates_of_literal (int);
   void extract_ite_gates_of_variable (int idx);
+  void extract_condeq_pairs (int lit, litpairs condbin, litpairs condeq);
   void init_ite_gate_extraction (std::vector<Clause *> &candidates);
+  bool find_litpair_second_literal (int lit, litpairs::const_iterator begin,
+                                    litpairs::const_iterator end);
+  void search_condeq (int lit, int pos_lit,
+                             litpairs::const_iterator pos_begin,
+                             litpairs::const_iterator pos_end, int neg_lit,
+                             litpairs::const_iterator neg_begin,
+                             litpairs::const_iterator neg_end,
+                             litpairs &condeq);
   void reset_ite_gate_extraction ();
   void extract_ite_gates ();
   
