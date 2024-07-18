@@ -2052,12 +2052,17 @@ void Closure::check_ite_gate_implied (Gate *g) {
   assert (g->tag == Gate_Type::ITE_Gate);
   if (!internal->opts.check)
     return;
-  check_ite_implied(g->lhs, g->rhs[0], g->rhs[1], g->rhs[2]);
+  check_ite_implied (g->lhs, g->rhs[0], g->rhs[1], g->rhs[2]);
 }
 
 void Closure::init_ite_gate_extraction (std::vector<Clause *> &candidates) {
   std::vector<Clause *> ternary;
   glargecounts.resize (2 * internal->vsize, 0);
+  for (auto lit : internal->lits) {
+    // TODO where is kissat doing that?
+    internal->occs (lit).clear ();
+    internal->occs (-lit).clear ();
+  }
   for (auto c : internal->clauses) {
     if (c->garbage)
       continue;
@@ -2065,13 +2070,15 @@ void Closure::init_ite_gate_extraction (std::vector<Clause *> &candidates) {
       continue;
     unsigned size = 0;
 
+    assert (!c->garbage);
     for (auto lit : *c) {
       const signed char v = internal->val (lit);
       if (v < 0)
 	continue;
       if (v > 0) {
-	LOG (c, "deleting as satisfied");
+	LOG (c, "deleting as satisfied due to %d", lit);
 	internal->mark_garbage(c);
+        goto CONTINUE_COUNTING_NEXT_CLAUSE;
       }
       if (size == 3)
         goto CONTINUE_COUNTING_NEXT_CLAUSE;
@@ -2134,12 +2141,12 @@ void Closure::copy_conditional_equivalences (int lit, std::vector<std::pair<int,
     assert(c->size != 2);
     int first = 0, second = 0;
     for (auto other : *c) {
-      if (internal->val(lit))
+      if (internal->val(other))
 	continue;
       if (other == lit)
 	continue;
       if (!first)
-	first = 0;
+	first = other;
       else {
 	assert (!second);
 	second = other;
@@ -2235,8 +2242,7 @@ void Closure::search_condeq (int lit, int pos_lit,
         first = neg_lit, second = other;
       else
         first = pos_lit, second = not_other;
-      LOG ("found conditional %s equivalence %s = %s", LOGLIT (lit),
-           LOGLIT (first), LOGLIT (second));
+      LOG ("found conditional %d equivalence %d = %d", lit, first,  second);
       assert (first > 0);
       assert (first < second);
       check_ternary (lit, first, -second);
@@ -2312,11 +2318,11 @@ void Closure::extract_condeq_pairs (int lit, litpairs condbin, litpairs condeq) 
       neg_end++;
     }
 #ifdef LOGGING
-    for (const litpair *p = pos_begin; p != pos_end; p++)
+    for (litpairs::const_iterator p = pos_begin; p != pos_end; p++)
       LOG ("conditional %d binary clause %d %d with positive %d",
             (lit),  (p->first),  (p->second),
             (pos_lit));
-    for (const litpair *p = neg_begin; p != neg_end; p++)
+    for (litpairs::const_iterator p = neg_begin; p != neg_end; p++)
       LOG ("conditional %d binary clause %d %d with negative %d",
             (lit),  (p->first),  (p->second),
             (neg_lit));
@@ -2325,13 +2331,13 @@ void Closure::extract_condeq_pairs (int lit, litpairs condbin, litpairs condeq) 
     const size_t neg_size = neg_end - neg_begin;
     if (pos_size <= neg_size) {
       LOG ("searching negation of %zu conditional binary clauses "
-           "with positive %s in %zu conditional binary clauses with %s",
-           pos_size, LOGLIT (pos_lit), neg_size, LOGLIT (neg_lit));
+           "with positive %d in %zu conditional binary clauses with %d",
+           pos_size, (pos_lit), neg_size, (neg_lit));
       search_condeq (lit, pos_lit, pos_begin, pos_end, neg_lit, neg_begin, neg_end, condeq);
     } else {
       LOG ("searching negation of %zu conditional binary clauses "
-           "with negative %s in %zu conditional binary clauses with %s",
-           neg_size, LOGLIT (neg_lit), pos_size, LOGLIT (pos_lit));
+           "with negative %d in %zu conditional binary clauses with %d",
+           neg_size, (neg_lit), pos_size, (pos_lit));
       search_condeq (lit, neg_lit, neg_begin, neg_end, pos_lit, pos_begin, pos_end, condeq);
     }
     if (neg_end == end)
@@ -2418,15 +2424,15 @@ void Closure::extract_ite_gates_of_variable (int idx) {
   const int lit = idx;
   const int not_lit = -idx;
 
-  auto lit_watches = internal->watches(lit);
-  auto not_lit_watches = internal->watches(not_lit);
+  auto lit_watches = internal->occs (lit);
+  auto not_lit_watches = internal->occs (not_lit);
   const size_t size_lit_watches = lit_watches.size();
   const size_t size_not_lit_watches = not_lit_watches.size();
   if (size_lit_watches <= size_not_lit_watches) {
     if (size_lit_watches > 1)
       extract_ite_gates_of_literal (lit);
   } else {
-    if (size_lit_watches > 1)
+    if (size_not_lit_watches > 1)
       extract_ite_gates_of_literal (not_lit);
   }
 }
