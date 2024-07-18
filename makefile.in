@@ -34,7 +34,7 @@ COMPILE=$(CXX) $(CXXFLAGS) -I$(DIR) -I$(ROOT)/src
 
 #--------------------------------------------------------------------------#
 
-all: libcadical.so libcadical.a cadical mobical
+all: libcadical.so libcadical.a
 
 #--------------------------------------------------------------------------#
 
@@ -52,12 +52,6 @@ contrib/%.o: $(ROOT)/contrib/%.cpp $(ROOT)/contrib/%.hpp $(ROOT)/src/*.hpp makef
 
 # Application binaries (the stand alone solver 'cadical' and the model based
 # tester 'mobical') and the library are the main build targets.
-
-cadical: src/cadical.o libcadical.a makefile
-	$(COMPILE) -static -o $@ $< -L. -lcadical $(LIBS)
-
-mobical: src/mobical.o libcadical.a makefile $(LIBS)
-	$(COMPILE) -static -o $@ $< -L. -lcadical
 
 libcadical.a: $(OBJ_SOLVER) $(OBJ_CONTRIB) makefile
 	ar rc $@ $(OBJ_SOLVER) $(OBJ_CONTRIB)
