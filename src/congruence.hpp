@@ -132,6 +132,7 @@ struct Closure {
   void shrink_and_gate (Gate *g, int falsified = 0, int clashing = 0);
   bool simplify_gate (Gate *g);
   void simplify_and_gate (Gate *g);
+  void simplify_ite_gate (Gate *g);
   void simplify_xor_gate (Gate *g);
   bool simplify_gates (int lit);
 
@@ -140,6 +141,7 @@ struct Closure {
   bool rewrite_gate(Gate *g, int dst, int src);
   void rewrite_xor_gate(Gate *g, int dst, int src);
   void rewrite_and_gate(Gate *g, int dst, int src);
+  void rewrite_ite_gate(Gate *g, int dst, int src);
   
   size_t units;         // next trail position to propagate
   bool propagate_unit(int lit);
@@ -162,7 +164,7 @@ struct Closure {
   Gate* find_gate_lits (int, const vector<int> &rhs, Gate_Type typ);
   Gate* find_xor_lits (int, const vector<int> &rhs);
   // not const to normalize negations
-  Gate* find_ite_lits (int, vector<int> &rhs);
+  Gate* find_ite_lits (int, vector<int> &rhs, bool&);
 
   void init_xor_gate_extraction (std::vector<Clause *> &candidates);
   uint64_t check_and_add_to_proof_chain (vector<int> &clause);

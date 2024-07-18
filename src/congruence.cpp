@@ -395,6 +395,9 @@ bool Closure::simplify_gate (Gate *g) {
   case Gate_Type::XOr_Gate:
     simplify_xor_gate (g);
     break;
+  case Gate_Type::ITE_Gate:
+    simplify_xor_gate (g);
+    break;
   default:
     assert (false);
     break;
@@ -904,18 +907,18 @@ Gate* Closure::find_xor_lits (int arity, const vector<int> &rhs) {
 bool normalize_ite_lits (std::vector<int>& rhs) {
   assert (rhs.size() == 3);
   if (rhs[0] < 0) {
-    rhs[0] = - rhs[0];
+    rhs[0] = -rhs[0];
     std::swap(rhs[1], rhs[2]);
   }
   if (rhs[1] > 0)
     return false;
-  rhs[1] = - (rhs[1]);
-  rhs[2] = - (rhs[2]);
+  rhs[1] = -rhs[1];
+  rhs[2] = -rhs[2];
   return true;
 }
 
-Gate* Closure::find_ite_lits (int arity, vector<int> &rhs) {
-  normalize_ite_lits(rhs);
+Gate* Closure::find_ite_lits (int arity, vector<int> &rhs, bool& negate_lhs) {
+  negate_lhs = normalize_ite_lits(rhs);
   return find_gate_lits(arity, rhs, Gate_Type::ITE_Gate);
 }
 uint64_t Closure::check_and_add_to_proof_chain (vector<int> &clause) {
@@ -1515,6 +1518,9 @@ bool Closure::rewrite_gate (Gate *g, int dst, int src) {
   case Gate_Type::XOr_Gate:
     rewrite_xor_gate (g, dst, src);
     break;
+  case Gate_Type::ITE_Gate:
+    rewrite_ite_gate (g, dst, src);
+    break;
   default:
     assert (false);
     break;
@@ -1935,7 +1941,13 @@ FOUND_SUBSUMING:
 }
 
 /*------------------------------------------------------------------------*/
+void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
+  assert (false);  
+}
 
+void Closure::simplify_ite_gate(Gate *g) {
+  assert (false);  
+}
 void Closure::add_ite_matching_proof_chain (Gate *g, int lhs1, int lhs2) {
   if (lhs1 == lhs2)
     return;
@@ -1999,13 +2011,19 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
   const unsigned arity = 3;
   LOG ("ITE gate %d = %d ? %d : %d", lhs, cond, then_lit, else_lit);
 
-  Gate *g = find_ite_lits (arity, this->rhs);
+  bool negate_lhs = false;
+  Gate *g = find_ite_lits (arity, this->rhs, negate_lhs);
+    if (negate_lhs)
+      lhs = -lhs;
   if (g) {
     check_ite_gate_implied (g);
     add_ite_matching_proof_chain (g, g->lhs, lhs);
     if (merge_literals (g->lhs, lhs)) {
+      ++internal->stats.congruence.ites;
       LOG ("found merged literals");
     }
+    if (!internal->unsat)
+      ; // delete_proof_chain
   } else {
     g = new Gate;
     g->lhs = lhs;
@@ -2249,7 +2267,7 @@ void Closure::search_condeq (int lit, int pos_lit,
         first = pos_lit, second = not_other;
       LOG ("found conditional %d equivalence %d = %d", lit, first,  second);
       assert (first > 0);
-      assert (first < second);
+      assert (internal->vlit (first) < internal->vlit (second));
       check_ternary (lit, first, -second);
       check_ternary (lit, -first, second);
       std::pair<int, int> equivalence = {first, second};
