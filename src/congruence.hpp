@@ -120,6 +120,9 @@ struct Closure {
   void connect_goccs (Gate *g, int lit);
   vector<Gate*> garbage;
   void mark_garbage(Gate*);
+  // remove the gate from the table
+  bool remove_gate (Gate*);
+  void index_gate (Gate*);
 
   // second counter for size, complements noccs
   uint64_t &largecount (int lit);
@@ -183,6 +186,8 @@ struct Closure {
   copy_conditional_equivalences (int lit, litpairs &condbin);
   void check_ite_implied (int lhs, int cond, int then_lit, int else_lit);
   void check_ite_gate_implied (Gate *g);
+  void check_and_gate_implied (Gate *g);
+  void delete_proof_chain ();
   void extract_ite_gates_of_literal (int);
   void extract_ite_gates_of_variable (int idx);
   void extract_condeq_pairs (int lit, litpairs &condbin, litpairs &condeq);
@@ -206,12 +211,15 @@ struct Closure {
   void extract_congruence ();
   
   void add_ite_matching_proof_chain(Gate *g, int lhs1, int lhs2);
+  void add_ite_turned_and_binary_clauses (Gate *g);
   Gate* new_and_gate(int);
   Gate* new_ite_gate (int lhs, int cond, int then_lit, int else_lit);
   Gate* new_xor_gate(int);
   //check
   void check_xor_gate_implied (Gate const *const);
   void check_ternary (int a, int b, int c);
+  void check_binary_implied (int a, int b);
+  void check_implied ();
 
   bool learn_congruence_unit(int unit);
 

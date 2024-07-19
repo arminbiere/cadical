@@ -101,6 +101,26 @@ void Closure::mark_garbage (Gate *g) {
   garbage.push_back(g);
 }
 
+bool Closure::remove_gate (Gate *g) {
+  if (!g->indexed)
+    return false;
+  assert (!internal->unsat);
+  assert (table.find(g) != end (table));
+  table.erase(table.find(g));
+  g->indexed = false;
+  LOGGATE (g, "removing from hash table");
+  return true;
+}
+
+void Closure::index_gate (Gate *g) {
+  assert (!g->indexed);
+  assert (!internal->unsat);
+  assert (g->arity > 1);
+  LOGGATE (g, "adding to hash table");
+  table.insert(g);
+  g->indexed = true;
+}
+
 bool Closure::learn_congruence_unit(int lit) {
   LOG ("adding unit %d with current value %d", lit, internal->val(lit));
   const signed char val_lit = internal->val(lit);
@@ -245,6 +265,91 @@ void Closure::init_and_gate_extraction () {
   }
 }
 
+
+/*------------------------------------------------------------------------*/
+void Closure::check_and_gate_implied (Gate *g) {
+  assert (g->tag == Gate_Type::And_Gate);
+  if (!internal->opts.check)
+    return;
+  LOGGATE (g, "checking implied");
+  const int lhs = g->lhs;
+  const int not_lhs = -lhs;
+  for (auto other : g->rhs)
+    check_binary_implied (not_lhs, other);
+  internal->clause = g->rhs;
+  check_implied ();
+  internal->clause.clear();
+}
+
+
+void Closure::delete_proof_chain () {
+  if (!internal->proof) {
+    assert (chain.empty());
+    return;
+  }
+  if (chain.empty())
+    return;
+  LOG ("starting deletion of proof chain");
+  auto &clause = internal->clause;
+  assert (clause.empty());
+  auto start = cbegin (chain);
+  const auto end = cend (chain);
+  int id1, id2;
+  uint64_t id;
+  
+  for (auto lit : chain) {
+    if (lit) { // parsing the id first
+      if (!id1) {
+	id1 = lit;
+	id = (uint64_t)id1;
+	continue;
+      }
+      if (!id2){
+	id2 = lit;
+	id = ((uint64_t)id1 << 32) + id2;
+	continue;
+      }
+      clause.push_back(lit);
+    } else {
+      internal->proof->delete_clause (id, false, clause);
+      clause.clear();
+      id = 0, id1 = 0, id2 = 0;
+    }
+  }
+  /* this is the version from kissat:
+     std::vector<int>::const_iterator p = start;
+  while (p != end) {
+    const int lit = *p;
+    if (lit) { // parsing the id
+      if (!id1) {
+	id1 = lit;
+	id = ((uint64_t)id1 << 32);
+	continue;
+      }
+      if (!id2){
+	id2 = lit;
+	id = ((uint64_t)id1 << 32) + id2;
+	continue;
+      }
+    }
+    if (!lit) {
+      while (start != p) {
+        const int other = *start++;
+	clause.push_back(other);
+      }
+      // TODO we need the id
+      //internal->proof->delete_clause (internal->clause_id, false, clause);
+      clause.clear();
+      start++;
+      id = 0, id1 = 0, id2 = 0;
+    }
+    p++;
+  }*/
+  assert (clause.empty());
+  assert (start == end);
+  chain.clear();
+  LOG ("finished deletion of proof chain");
+}
 
 /*------------------------------------------------------------------------*/
 // Simplification
@@ -828,6 +933,23 @@ void Closure::check_ternary (int a, int b, int c) {
   clause.clear();
 }
 
+void Closure::check_binary_implied (int a, int b) {
+  if (!internal->opts.check)
+    return;
+  auto &clause = internal->clause;
+  assert (clause.empty ());
+  clause.push_back(a);
+  clause.push_back(b);
+  check_implied ();
+  clause.clear();
+}
+
+void Closure::check_implied () {
+  if (!internal->opts.check)
+    return;
+  internal->external->check_learned_clause ();
+}
+
 void Closure::add_xor_shrinking_proof_chain(Gate const *const g, int pivot) {
   if (!internal->proof)
     return;
@@ -973,6 +1095,22 @@ uint64_t Closure::simplify_and_add_to_proof_chain (
   }
   clause.clear ();
   return id;
+}
+/*------------------------------------------------------------------------*/
+void Closure::add_ite_turned_and_binary_clauses (Gate *g) {
+  if (!internal->proof)
+    return;
+  LOG ("starting ITE turned AND supporting binary clauses");
+  assert (unsimplified.empty());
+  assert (chain.empty());
+  int not_lhs = g->lhs;
+  unsimplified.push_back(not_lhs);
+  unsimplified.push_back(g->rhs[0]);
+  simplify_and_add_to_proof_chain(unsimplified, chain);
+  unsimplified.pop_back();
+  unsimplified.push_back(g->rhs[1]);
+  simplify_and_add_to_proof_chain(unsimplified, chain);
+  unsimplified.clear();
 }
 
 void Closure::add_xor_matching_proof_chain(Gate *g, int lhs1, int lhs2) {
@@ -1841,7 +1979,8 @@ void Closure::forward_subsume_matching_clauses() {
 
 
 /*------------------------------------------------------------------------*/
-// Candidate clause 'subsumed' is subsumed by 'subsuming'.
+// Candidate clause 'subsumed' is subsumed by 'subsuming'.  We need to copy the function because
+// 'congruence' is too early to include the version from subsume
 
 void Closure::subsume_clause (Clause *subsuming, Clause *subsumed) {
   assert (!subsuming->redundant);
@@ -1941,8 +2080,240 @@ FOUND_SUBSUMING:
 }
 
 /*------------------------------------------------------------------------*/
+static bool skip_ite_gate (Gate *g) {
+  assert (g->tag == Gate_Type::ITE_Gate);
+  if (g->garbage)
+    return true;
+  return false;
+}
+
 void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
-  assert (false);  
+  if (skip_ite_gate(g))
+    return;
+  if (!gate_contains(g, src))
+    return;
+  LOGGATE (g, "rewriting %d by %d in", src, dst);
+  assert (g->arity == 3 && g->rhs.size() == 3);
+  auto &rhs = g->rhs;
+  const int lhs = g->lhs;
+  const int cond = g->rhs[0];
+  const int then_lit = g->rhs[1];
+  const int else_lit = g->rhs[2];
+  const int not_lhs = - (lhs);
+  const int not_dst = - (dst);
+  const int not_cond = - (cond);
+  const int not_then_lit = - (then_lit);
+  const int not_else_lit = - (else_lit);
+  Gate_Type new_tag = Gate_Type::And_Gate;
+
+  bool garbage = false;
+  bool shrink = true;
+  // this code is taken one-to-one from kissat
+  if (src == cond) {
+    if (dst == then_lit) {
+      // then_lit ? then_lit : else_lit
+      // then_lit & then_lit | !then_lit & else_lit
+      // then_lit | !then_lit & else_lit
+      // then_lit | else_lit
+      // !(!then_lit & !else_lit)
+      g->lhs = not_lhs;
+      rhs[0] = not_then_lit;
+      rhs[1] = not_else_lit;
+    } else if (not_dst == then_lit) {
+      // !then_lit ? then_lit : else_lit
+      // !then_lit & then_lit | then_lit & else_lit
+      // then_lit & else_lit
+      rhs[0] = else_lit;
+      assert (rhs[1] == then_lit);
+    } else if (dst == else_lit) {
+      // else_list ? then_lit : else_lit
+      // else_list & then_lit | !else_list & else_lit
+      // else_list & then_lit
+      rhs[0] = else_lit;
+      assert (rhs[1] == then_lit);
+    } else if (not_dst == else_lit) {
+      // !else_list ? then_lit : else_lit
+      // !else_list & then_lit | else_lit & else_lit
+      // !else_list & then_lit | else_lit
+      // then_lit | else_lit
+      // !(!then_lit & !else_lit)
+      g->lhs = not_lhs;
+      rhs[0] = not_then_lit;
+      rhs[1] = not_else_lit;
+    } else {
+      shrink = false;
+      rhs[0] = dst;
+    }
+  } else if (src == then_lit) {
+    if (dst == cond) {
+      // cond ? cond : else_lit
+      // cond & cond | !cond & else_lit
+      // cond | !cond & else_lit
+      // cond | else_lit
+      // !(!cond & !else_lit)
+      g->lhs = not_lhs;
+      rhs[0] = not_cond;
+      rhs[1] = not_else_lit;
+    } else if (not_dst == cond) {
+      // cond ? !cond : else_lit
+      // cond & !cond | !cond & else_lit
+      // !cond & else_lit
+      rhs[0] = not_cond;
+      rhs[1] = else_lit;
+    } else if (dst == else_lit) {
+      // cond ? else_lit : else_lit
+      // else_lit
+      if (merge_literals (lhs, else_lit)) {
+	++internal->stats.congruence.unaries;
+	++internal->stats.congruence.unary_ites;
+      }
+      garbage = true;
+    } else if (not_dst == else_lit) {
+      // cond ? !else_lit : else_lit
+      // cond & !else_lit | !cond & else_lit
+      // cond ^ else_lit
+      new_tag = Gate_Type::XOr_Gate;
+      assert (rhs[0] == cond);
+      rhs[1] = else_lit;
+    } else {
+      shrink = false;
+      rhs[1] = dst;
+    }
+  } else {
+    assert (src == else_lit);
+    if (dst == cond) {
+      // cond ? then_lit : cond
+      // cond & then_lit | !cond & cond
+      // cond & then_lit
+      assert (rhs[0] == cond);
+      assert (rhs[1] == then_lit);
+    } else if (not_dst == cond) {
+      // cond ? then_lit : !cond
+      // cond & then_lit | !cond & !cond
+      // cond & then_lit | !cond
+      // then_lit | !cond
+      // !(!then_lit & cond)
+      g->lhs = not_lhs;
+      assert (rhs[0] == cond);
+      rhs[1] = not_then_lit;
+    } else if (dst == then_lit) {
+      // cond ? then_lit : then_lit
+      // then_lit
+      if (merge_literals (lhs, then_lit)) {
+	++internal->stats.congruence.unaries;
+	++internal->stats.congruence.unary_ites;
+      }
+      garbage = true;
+    } else if (not_dst == then_lit) {
+      // cond ? then_lit : !then_lit
+      // cond & then_lit | !cond & !then_lit
+      // !(cond ^ then_lit)
+      new_tag = Gate_Type::XOr_Gate;
+      g->lhs = not_lhs;
+      assert (rhs[0] == cond);
+      assert (rhs[1] == then_lit);
+    } else {
+      shrink = false;
+      rhs[2] = dst;
+    }
+  }
+  
+
+  if (!garbage) {
+    if (shrink) {
+      if (rhs[0] > rhs[1])
+	std::swap(rhs[0], rhs[1]);
+      if (new_tag == Gate_Type::XOr_Gate) {
+        bool negate_lhs = false;
+        if (rhs[0] < 0) {
+          rhs[0] = -rhs[0];
+          negate_lhs = !negate_lhs;
+        }
+        if (rhs[1] < 0) {
+          rhs[1] = -rhs[1];
+          negate_lhs = !negate_lhs;
+        }
+        if (negate_lhs)
+          g->lhs = -g->lhs;
+      }
+      assert (!g->shrunken);
+      g->shrunken = true;
+      rhs[2] = 0;
+      g->arity = 2;
+      g->tag = new_tag;
+      assert (rhs[0] < rhs[1]);
+      assert (rhs[0] != -rhs[1]);
+      LOGGATE (g, "rewritten");
+      Gate *h;
+      if (new_tag == Gate_Type::And_Gate) {
+        check_and_gate_implied (g);
+        h = find_and_lits (g->lhs, g->rhs);
+      } else {
+        assert (new_tag == Gate_Type::XOr_Gate);
+        check_xor_gate_implied (g);
+        h = find_xor_lits (g->lhs, g->rhs);
+      }
+      if (h) {
+        garbage = true;
+        if (new_tag == Gate_Type::XOr_Gate)
+          add_xor_matching_proof_chain (g, g->lhs, h->lhs);
+        else
+          add_ite_turned_and_binary_clauses (g);
+        if (merge_literals (g->lhs, h->lhs))
+	  ++internal->stats.congruence.ands;
+        if (!internal->unsat)
+          delete_proof_chain ();
+      } else {
+        garbage = false;
+        remove_gate (g);
+        index_gate (g);
+        assert (g->arity == 2);
+        for (auto lit : g->rhs)
+          if (lit != dst)
+            if (lit != cond && lit != then_lit && lit != else_lit)
+              connect_goccs (g, lit);
+        if (g->tag == Gate_Type::And_Gate)
+          for (auto lit : g->rhs)
+            add_binary_clause (-g->lhs, lit);
+      }
+    } else {
+      LOGGATE (g, "rewritten");
+      assert (rhs[0] != rhs[1]);
+      assert (rhs[0] != rhs[2]);
+      assert (rhs[1] != rhs[2]);
+      assert (rhs[0] != - (rhs[1]));
+      assert (rhs[0] != - (rhs[2]));
+      assert (rhs[1] != - (rhs[2]));
+      check_ite_gate_implied (g);
+      bool negate_lhs;
+      Gate *h = find_ite_lits (g->lhs, g->rhs, negate_lhs);
+      assert (lhs == g->lhs);
+      assert (not_lhs == - (g->lhs));
+      if (h) {
+        garbage = true;
+        int normalized_lhs = negate_lhs ? not_lhs : lhs;
+        add_ite_matching_proof_chain (h, h->lhs, normalized_lhs);
+        if (merge_literals (h->lhs, normalized_lhs))
+	  ++internal->stats.congruence.ites;
+        if (!internal->unsat)
+          delete_proof_chain ();
+      } else {
+        garbage = false;
+        remove_gate (g);
+        if (negate_lhs)
+          g->lhs = not_lhs;
+        LOGGATE (g, "normalized");
+        index_gate (g);
+        assert (g->arity == 3);
+        for (auto lit : g->rhs)
+          if (lit != dst)
+            if (lit != cond && lit != then_lit && lit != else_lit)
+              connect_goccs (g, lit);
+      }
+    }
+  }
+  if (garbage && !internal->unsat)
+    mark_garbage (g);
 }
 
 void Closure::simplify_ite_gate(Gate *g) {
@@ -2023,7 +2394,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
       LOG ("found merged literals");
     }
     if (!internal->unsat)
-      ; // delete_proof_chain
+      delete_proof_chain ();
   } else {
     g = new Gate;
     g->lhs = lhs;

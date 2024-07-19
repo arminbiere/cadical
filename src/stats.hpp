@@ -271,6 +271,7 @@ struct Stats {
     int64_t simplified_xors;
     int64_t subsumed;
     int64_t trivial_ite;
+    int64_t unary_ites;
   } congruence;
   int64_t unused;   // number of unused variables
   int64_t active;   // number of active variables
