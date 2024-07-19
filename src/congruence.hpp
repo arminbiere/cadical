@@ -122,6 +122,7 @@ struct Closure {
   void mark_garbage(Gate*);
   // remove the gate from the table
   bool remove_gate (Gate*);
+  bool remove_gate (GatesTable::iterator git);
   void index_gate (Gate*);
 
   // second counter for size, complements noccs
@@ -232,7 +233,7 @@ struct Closure {
   // schedule
   vector<int> schedule;
   void schedule_literal(int lit);
-
+  void add_clause_to_chain(std::vector<int>, uint64_t);
   // proof. If delete_id is non-zero, then delete the clause instead of learning it
   uint64_t simplify_and_add_to_proof_chain (vector<int> &unsimplified,
                                             vector<int> &chain, uint64_t delete_id = 0);

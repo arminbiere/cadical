@@ -269,6 +269,7 @@ struct Stats {
     int64_t simplified;
     int64_t simplified_ands;
     int64_t simplified_xors;
+    int64_t simplified_ites;
     int64_t subsumed;
     int64_t trivial_ite;
     int64_t unary_ites;
