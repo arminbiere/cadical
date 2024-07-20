@@ -2478,18 +2478,17 @@ void Closure::add_ite_matching_proof_chain (Gate *g, int lhs1, int lhs2) {
     simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.pop_back ();
   const uint64_t id = check_and_add_to_proof_chain (unsimplified);
-  add_clause_to_chain (unsimplified, id);  
-  const uint64_t id3 =
-    simplify_and_add_to_proof_chain (unsimplified, chain);
-  if (internal->proof) {
-    unsimplified.push_back (lhs1);
-    unsimplified.push_back (-lhs2);
-    unsimplified.push_back (cond);
-    simplify_and_add_to_proof_chain (unsimplified, chain, id1);
-    unsimplified.pop_back ();
-    unsimplified.push_back (-cond);
-    simplify_and_add_to_proof_chain (unsimplified, chain, id2);
-  }
+  add_clause_to_chain (unsimplified, id);
+  unsimplified.clear();
+  unsimplified.push_back (lhs1);
+  unsimplified.push_back (-lhs2);
+  unsimplified.push_back (cond);
+  const uint64_t id3 = simplify_and_add_to_proof_chain (unsimplified, chain);
+  unsimplified.pop_back ();
+  unsimplified.push_back (-cond);
+  const uint64_t id4 = simplify_and_add_to_proof_chain (unsimplified, chain);
+  unsimplified.pop_back ();
+  const uint64_t id5 = simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.clear ();
   LOG ("finished ITE matching proof chain");
 }
