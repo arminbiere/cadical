@@ -549,6 +549,10 @@ Gate *Closure::find_gate_lits (int arity, const vector<int> &rhs, Gate_Type typ)
   g->tag = typ;
   g->arity = arity;
   g->rhs = {rhs};
+  g->lhs = 0;
+#ifdef LOGGING
+  g->id = 0;
+#endif  
   auto h = table.find(g);
 
   if (h != table.end()) {

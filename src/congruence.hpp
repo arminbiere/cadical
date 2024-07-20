@@ -45,7 +45,7 @@ struct Gate {
 
   bool operator == (Gate const& lhs)
   {
-    return tag == lhs.tag && rhs == lhs.rhs && this->lhs == lhs.lhs; 
+    return tag == lhs.tag && rhs == lhs.rhs; 
   }
 
 };
