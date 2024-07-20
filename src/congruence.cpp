@@ -533,7 +533,8 @@ bool Closure::simplify_gate (Gate *g) {
 }
 
 bool Closure::simplify_gates (int lit) {
-  for (auto g : goccs (lit)) {
+  const auto occs = goccs (lit);
+  for (auto g : occs) {
     if (!simplify_gate (g))
       return false;
   }
@@ -668,7 +669,7 @@ void Closure::add_binary_clause (int a, int b) {
     unit = b;
   } else if (!a_value && b_value < 0)
     unit = a;
-  if (unit != 0) {
+  if (unit) {
     LOG ("clause reduced to unit %d", unit);
     learn_congruence_unit(unit);
     return;
@@ -1706,8 +1707,10 @@ bool Closure::rewrite_gate (Gate *g, int dst, int src) {
   }
   return !internal->unsat;
 }
+
 bool Closure::rewrite_gates(int dst, int src) {
-  for (auto g : goccs (src)) {
+  const auto &occs = goccs(src);
+  for (auto g : occs) {
     if (!rewrite_gate (g, dst, src))
       return false;
     else if (!g->garbage && gate_contains (g, dst))
@@ -2311,8 +2314,6 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
           delete_proof_chain ();
       } else {
         garbage = false;
-	if (g->indexed)
-	  LOGGATE((*git), "am i doing forbidden stuff");
 	if (g->indexed)
           remove_gate (git);
         index_gate (g);
