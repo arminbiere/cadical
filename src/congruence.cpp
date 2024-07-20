@@ -298,39 +298,43 @@ void Closure::delete_proof_chain () {
   }
   if (chain.empty())
     return;
-#if 1
+#if 0
   chain.clear();  
   return; // temporary workaround
 #endif
   LOG ("starting deletion of proof chain");
   auto &clause = internal->clause;
   assert (clause.empty());
-  auto start = cbegin (chain);
-  const auto end = cend (chain);
-  int id1, id2;
-  uint64_t id;
-  
+  uint32_t id1 = UINT32_MAX, id2 = UINT32_MAX;
+  uint64_t id = 0;
+
+  LOG (chain, "chain:");
   for (auto lit : chain) {
+    LOG ("reading %d from chain", lit);
+    if (id1 == UINT32_MAX) {
+      id1 = lit;
+      id = (uint64_t) id1;
+      continue;
+    }
+    if (id2 == UINT32_MAX) {
+      id2 = lit;
+      id = ((uint64_t) id1 << 32) + id2;
+      continue;
+    }
     if (lit) { // parsing the id first
-      if (!id1) {
-	id1 = lit;
-	id = (uint64_t)id1;
-	continue;
-      }
-      if (!id2){
-	id2 = lit;
-	id = ((uint64_t)id1 << 32) + id2;
-	continue;
-      }
+      LOG ("found %d as literal in chain", lit);
       clause.push_back(lit);
     } else {
+      assert (id);
       internal->proof->delete_clause (id, false, clause);
       clause.clear();
-      id = 0, id1 = 0, id2 = 0;
+      id = 0, id1 = UINT32_MAX, id2 = UINT32_MAX;
     }
   }
   /* this is the version from kissat:
      std::vector<int>::const_iterator p = start;
+  auto start = cbegin (chain);
+  const auto end = cend (chain);
   while (p != end) {
     const int lit = *p;
     if (lit) { // parsing the id
@@ -357,9 +361,9 @@ void Closure::delete_proof_chain () {
       id = 0, id1 = 0, id2 = 0;
     }
     p++;
-  }*/
+  }
+  assert (start == end);*/
   assert (clause.empty());
-  assert (start == end);
   chain.clear();
   LOG ("finished deletion of proof chain");
 }
@@ -561,8 +565,8 @@ Gate *Closure::find_gate_lits (int arity, const vector<int> &rhs, Gate_Type typ)
     return *h;
   }
 
-  else {
-    LOG (this->rhs, "gate not found in table");
+  else { 
+    LOG(g->rhs, "gate not found in table");
     delete g;
     return nullptr;
   }
@@ -1079,10 +1083,11 @@ void Closure::add_clause_to_chain (std::vector<int> unsimplified, uint64_t id) {
   const uint32_t id2_higher = (id >> 32);
   const uint32_t id2_lower = (uint32_t) (id & (uint64_t) (uint32_t) (-1));
   assert (id == ((uint64_t) id2_higher << 32) + (uint64_t) id2_lower);
-  if (id2_higher)
-    chain.push_back (id2_higher);
+  chain.push_back (id2_higher);
   chain.push_back (id2_lower);
+  LOG (unsimplified, "pushing to chain"); 
   chain.insert (end (chain), begin (unsimplified), end (unsimplified));
+  chain.push_back(0);
 }
 
 uint64_t Closure::simplify_and_add_to_proof_chain (
@@ -2128,6 +2133,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
   if (!gate_contains(g, src))
     return;
   LOGGATE (g, "rewriting %d by %d in", src, dst);
+  assert (!g->shrunken);
   assert (g->arity == 3 && g->rhs.size() == 3);
   auto &rhs = g->rhs;
   const int lhs = g->lhs;
