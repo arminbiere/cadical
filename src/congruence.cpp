@@ -2255,8 +2255,6 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
 
   if (!garbage) {
     if (shrink) {
-      if (rhs[0] > rhs[1])
-	std::swap(rhs[0], rhs[1]);
       if (new_tag == Gate_Type::XOr_Gate) {
         bool negate_lhs = false;
         if (rhs[0] < 0) {
@@ -2270,6 +2268,9 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
         if (negate_lhs)
           g->lhs = -g->lhs;
       }
+      if (rhs[0] > rhs[1]) // unlike kissat, we need to do it after negating 
+	std::swap(rhs[0], rhs[1]);
+      assert (rhs[0] < rhs[1]);
       assert (!g->shrunken);
       g->shrunken = true;
       rhs[2] = 0;
