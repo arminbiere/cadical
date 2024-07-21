@@ -2469,7 +2469,6 @@ void Closure::add_ite_matching_proof_chain (Gate *g, int lhs1, int lhs2) {
     return;
   LOG ("starting ITE matching proof chain");
   assert (unsimplified.empty ());
-  unsimplified = g->rhs;
 
   assert (chain.empty ());
   const auto &rhs = g->rhs;
@@ -2487,8 +2486,8 @@ void Closure::add_ite_matching_proof_chain (Gate *g, int lhs1, int lhs2) {
   const uint64_t id = check_and_add_to_proof_chain (unsimplified);
   add_clause_to_chain (unsimplified, id);
   unsimplified.clear();
-  unsimplified.push_back (lhs1);
-  unsimplified.push_back (-lhs2);
+  unsimplified.push_back (-lhs1);
+  unsimplified.push_back (lhs2);
   unsimplified.push_back (cond);
   const uint64_t id3 = simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.pop_back ();
