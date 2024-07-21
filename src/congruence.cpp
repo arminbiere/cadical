@@ -2653,6 +2653,7 @@ void Closure::init_ite_gate_extraction (std::vector<Clause *> &candidates) {
       goto CONTINUE_WITH_NEXT_TERNARY_CLAUSE;
     for (auto lit : *c)
       internal->occs (lit).push_back(c);
+    internal->watch_clause(c);
     if (positive && negative)
       candidates.push_back(c);
   CONTINUE_WITH_NEXT_TERNARY_CLAUSE:;
