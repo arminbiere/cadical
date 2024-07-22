@@ -564,12 +564,17 @@ Gate *Closure::find_gate_lits (int arity, const vector<int> &rhs, Gate_Type typ,
   for (auto it = its.first; it != its.second; ++it) {
     if (*it == except)
       continue;
+    if ((*it)->tag != g->tag)
+      continue;
+    if ((*it)->rhs != g->rhs)
+      continue;
     h = *it;
     break;
   }
 
   if (h) {
     LOGGATE (h, "already existing");
+    LOGGATE (g, "searching");
     delete g;
     return h;
   }
@@ -2321,7 +2326,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
       } else {
         assert (new_tag == Gate_Type::XOr_Gate);
         check_xor_gate_implied (g);
-        h = find_xor_lits (g->lhs, g->rhs);
+        h = find_xor_gate (g);
       }
       if (h) {
         garbage = true;
