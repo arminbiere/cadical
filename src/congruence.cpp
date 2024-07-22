@@ -2367,10 +2367,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
       assert (not_lhs == - (g->lhs));
       if (h) {
         garbage = true;
-	LOG ("checking h");
 	check_ite_gate_implied(h);
-	LOG ("checking G");
-	check_ite_gate_implied(g);
         int normalized_lhs = negate_lhs ? not_lhs : lhs;
         add_ite_matching_proof_chain (h, h->lhs, normalized_lhs);
         if (merge_literals (h->lhs, normalized_lhs))
