@@ -45,7 +45,7 @@ struct Gate {
 
   bool operator == (Gate const& lhs)
   {
-    return tag == lhs.tag && rhs == lhs.rhs; 
+    return tag == lhs.tag && rhs == lhs.rhs  && this->lhs == lhs.lhs; 
   }
 
 };
@@ -165,10 +165,12 @@ struct Closure {
   void extract_and_gates ();
 
   Gate* find_and_lits (int, const vector<int> &rhs);
-  Gate* find_gate_lits (int, const vector<int> &rhs, Gate_Type typ);
+  Gate* find_gate_lits (int, const vector<int> &rhs, Gate_Type typ, Gate *except = nullptr);
   Gate* find_xor_lits (int, const vector<int> &rhs);
   // not const to normalize negations
   Gate* find_ite_lits (int, vector<int> &rhs, bool&);
+  Gate* find_ite_gate (Gate *, bool&);
+  Gate* find_xor_gate (Gate *);
 
   void init_xor_gate_extraction (std::vector<Clause *> &candidates);
   uint64_t check_and_add_to_proof_chain (vector<int> &clause);

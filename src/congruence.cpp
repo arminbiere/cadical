@@ -459,7 +459,7 @@ void Closure::update_xor_gate(Gate *g, GatesTable::iterator git) {
       ++internal->stats.congruence.unary_and;
     }
   } else {
-    Gate *h = find_xor_lits (g->arity, g->rhs);
+    Gate *h = find_xor_gate (g);
     if (h) {
       assert (garbage);
       add_xor_matching_proof_chain (g, g->lhs, h->lhs);
@@ -548,8 +548,9 @@ Gate *Closure::find_and_lits (int arity, const vector<int> &rhs) {
   return find_gate_lits(arity, rhs, Gate_Type::And_Gate);
 }
 
-// search for the gate in the hash-table. Very simple as we ues the one from the STL
-Gate *Closure::find_gate_lits (int arity, const vector<int> &rhs, Gate_Type typ) {
+// search for the gate in the hash-table.  We cannot use find, as we might be changing a gate, so
+// there might be 2 gates with the same LHS (the one we are changing ang the other)
+Gate *Closure::find_gate_lits (int arity, const vector<int> &rhs, Gate_Type typ, Gate *except) {
   Gate *g = new Gate;
   g->tag = typ;
   g->arity = arity;
@@ -558,12 +559,19 @@ Gate *Closure::find_gate_lits (int arity, const vector<int> &rhs, Gate_Type typ)
 #ifdef LOGGING
   g->id = 0;
 #endif  
-  auto h = table.find(g);
+  const auto its = table.equal_range(g);
+  Gate *h = nullptr;
+  for (auto it = its.first; it != its.second; ++it) {
+    if (*it == except)
+      continue;
+    h = *it;
+    break;
+  }
 
-  if (h != table.end()) {
-    LOGGATE ((*h), "already existing");
+  if (h) {
+    LOGGATE (h, "already existing");
     delete g;
-    return *h;
+    return h;
   }
 
   else { 
@@ -1051,6 +1059,11 @@ Gate* Closure::find_xor_lits (int arity, const vector<int> &rhs) {
   return find_gate_lits(arity, rhs, Gate_Type::XOr_Gate);
 }
 
+Gate* Closure::find_xor_gate (Gate *g) {
+  assert (g->tag == Gate_Type::XOr_Gate);
+  return find_gate_lits(g->arity, g->rhs, Gate_Type::XOr_Gate);
+}
+
 
 bool normalize_ite_lits (std::vector<int>& rhs) {
   assert (rhs.size() == 3);
@@ -1069,6 +1082,12 @@ Gate* Closure::find_ite_lits (int arity, vector<int> &rhs, bool& negate_lhs) {
   negate_lhs = normalize_ite_lits(rhs);
   return find_gate_lits(arity, rhs, Gate_Type::ITE_Gate);
 }
+
+Gate* Closure::find_ite_gate (Gate *g, bool& negate_lhs) {
+  negate_lhs = normalize_ite_lits(g->rhs);
+  return find_gate_lits(3, g->rhs, Gate_Type::ITE_Gate, g);
+}
+
 uint64_t Closure::check_and_add_to_proof_chain (vector<int> &clause) {
   internal->external->check_learned_clause ();
   const uint64_t id = ++internal->clause_id;
@@ -1128,8 +1147,10 @@ uint64_t Closure::simplify_and_add_to_proof_chain (
         internal->proof->delete_clause (delete_id, true, clause);
     } else {
       id = check_and_add_to_proof_chain (clause);
-      add_clause_to_chain (unsimplified, id);
+      add_clause_to_chain (clause, id);
     }
+  } else {
+    LOG ("skipping trivial proof");
   }
   clause.clear ();
   return id;
@@ -2336,11 +2357,15 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
       assert (rhs[1] != - (rhs[2]));
       check_ite_gate_implied (g);
       bool negate_lhs;
-      Gate *h = find_ite_lits (g->lhs, g->rhs, negate_lhs);
+      Gate *h = find_ite_gate (g, negate_lhs);
       assert (lhs == g->lhs);
       assert (not_lhs == - (g->lhs));
       if (h) {
         garbage = true;
+	LOG ("checking h");
+	check_ite_gate_implied(h);
+	LOG ("checking G");
+	check_ite_gate_implied(g);
         int normalized_lhs = negate_lhs ? not_lhs : lhs;
         add_ite_matching_proof_chain (h, h->lhs, normalized_lhs);
         if (merge_literals (h->lhs, normalized_lhs))
