@@ -25,6 +25,10 @@ int main (void) {
   assert (res == -1);
   res = ccadical_val (solver, 2);
   assert (res == 2);
+  res = ccadical_val (solver, -1);
+  assert (res == -1);
+  res = ccadical_val (solver, -2);
+  assert (res == 2);
   ccadical_release (solver);
   return 0;
 }

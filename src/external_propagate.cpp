@@ -661,18 +661,15 @@ bool Internal::external_check_solution () {
     // Here the variables must be filtered by external->is_observed,
     // because fixed variables are internally not necessarily observed
     // anymore.
-    for (unsigned i = 1; i <= (unsigned) external->max_var; i++) {
-      if (!external->is_observed[i])
+    for (int idx = 1; idx <= external->max_var; idx++) {
+      if (!external->is_observed[idx])
         continue;
-      const int tmp = external->ival (i);
-      if (tmp > 0)
-        etrail.push_back (i);
-      else
-        etrail.push_back (-i);
+      const int lit = external->ival (idx);
+      etrail.push_back (lit);
 #ifndef NDEBUG
 #ifdef LOGGING
-      bool p = external->vals[i];
-      LOG ("evals[%d]: %d ival(%d): %d", i, p, i, tmp);
+      bool p = external->vals[idx];
+      LOG ("evals[%d]: %d ival(%d): %d", idx, p, idx, lit);
 #endif
 #endif
     }
