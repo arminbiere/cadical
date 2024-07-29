@@ -44,7 +44,8 @@ href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFrol
 <a href="https://kfazekas.github.io">Katalin Fazekas</a>,
 <a href="https://cca.informatik.uni-freiburg.de/fleury">Mathias Fleury</a>,
 <a href="https://fmv.jku.at/froleyks">Nils Froleyks</a> and
-<a href="https://cca.informatik.uni-freiburg.de/pollittf">Florian Pollitt.
+<a href="https://cca.informatik.uni-freiburg.de/pollittf">Florian
+Pollitt</a>.
 <br>
 In
 <i>
