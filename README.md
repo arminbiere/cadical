@@ -46,11 +46,10 @@ href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFrol
 <a href="https://fmv.jku.at/froleyks">Nils Froleyks</a> and
 <a href="https://cca.informatik.uni-freiburg.de/pollittf">Florian Pollitt</a>
 <br>
-In
 <i>
 Proc.&nbsp;Computer Aidded Verification - 26th Intl.&nbsp;Conf.&nbsp;(CAV'24)</i>
 <br>
-Lecture Notes in Computer Science
+Lecture Notes in Computer Science (LNCS)
 <br>
 vol.&nbsp;14681,
 pages 133-152,
