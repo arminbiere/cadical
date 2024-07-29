@@ -293,16 +293,13 @@ struct External {
   //
   inline int ival (int elit) const {
     assert (elit != INT_MIN);
-    int eidx = abs (elit), res;
-    if (eidx > max_var)
-      res = -eidx;
-    else if ((size_t) eidx >= vals.size ())
-      res = -eidx;
-    else
-      res = vals[eidx] ? eidx : -eidx;
+    int eidx = abs (elit);
+    bool val = false;
+    if (eidx <= max_var && (size_t) eidx < vals.size ())
+      val = vals[eidx];
     if (elit < 0)
-      res = -res;
-    return res;
+      val = !val;
+    return val ? elit : -elit;
   }
 
   bool flip (int elit);
@@ -410,10 +407,12 @@ struct External {
     int eidx = abs (elit);
     if (eidx > max_var)
       return 0;
-    int res = solution[eidx];
+    signed char value = solution[eidx];
+    if (!value)
+      return 0;
     if (elit < 0)
-      res = -res;
-    return res;
+      value = -value;
+    return value > 0 ? elit : -elit;
   }
 };
 

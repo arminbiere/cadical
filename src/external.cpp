@@ -600,7 +600,15 @@ void External::check_assignment (int (External::*a) (int) const) {
   for (auto idx : vars) {
     if (!(this->*a) (idx))
       FATAL ("unassigned variable: %d", idx);
-    if ((this->*a) (idx) != -(this->*a) (-idx))
+    int value_idx = (this->*a) (idx);
+    int value_neg_idx = (this->*a) (-idx);
+    if (value_idx == idx)
+      assert (value_neg_idx == idx);
+    else {
+      assert (value_idx == -idx);
+      assert (value_neg_idx == -idx);
+    }
+    if (value_idx != value_neg_idx)
       FATAL ("inconsistently assigned literals %d and %d", idx, -idx);
   }
 
@@ -628,7 +636,7 @@ void External::check_assignment (int (External::*a) (int) const) {
 #ifndef QUIET
       count++;
 #endif
-    } else if (!satisfied && (this->*a) (lit) > 0)
+    } else if (!satisfied && (this->*a) (lit) == lit)
       satisfied = true;
   }
   VERBOSE (1, "satisfying assignment checked on %" PRId64 " clauses",
@@ -641,7 +649,7 @@ void External::check_assumptions_satisfied () {
   for (const auto &lit : assumptions) {
     // Not 'signed char' !!!!
     const int tmp = ival (lit);
-    if (tmp < 0)
+    if (tmp != lit)
       FATAL ("assumption %d falsified", lit);
     if (!tmp)
       FATAL ("assumption %d unassigned", lit);
@@ -652,7 +660,7 @@ void External::check_assumptions_satisfied () {
 
 void External::check_constraint_satisfied () {
   for (const auto lit : constraint) {
-    if (ival (lit) > 0) {
+    if (ival (lit) == lit) {
       VERBOSE (1, "checked that constraint is satisfied");
       return;
     }
