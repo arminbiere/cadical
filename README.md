@@ -60,7 +60,7 @@ Springer 2024.
 | <a href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24.bib">bibtex</a>
 | <a href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24-Springer.pdf">official</a>
 | <a href="https://zenodo.org/records/10943125">artifact</a>
-| <a href="https://github.com/arminbiere/cadical">cadical</a>
+| <a href="https://github.com/arminbiere/cadical">github</a>
 | <a href="https://doi.org/10.1007/978-3-031-37703-7">doi</a>
 ]
 </p>
