@@ -39,22 +39,22 @@ paper which appeared at CAV'24:
 href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24.pdf">CaDiCaL
 2.0</a>
 <br>
-<a href="https://cca.informatik.uni-freiburg.de/biere">Armin Biere</a>.
-<a href="https://cca.informatik.uni-freiburg.de/fallert">Tobias Faller</a>.
+<a href="https://cca.informatik.uni-freiburg.de/biere">Armin Biere</a>,
+<a href="https://cca.informatik.uni-freiburg.de/fallert">Tobias Faller</a>,
 <a href="https://kfazekas.github.io">Katalin Fazekas</a>,
 <a href="https://cca.informatik.uni-freiburg.de/fleury">Mathias Fleury</a>,
 <a href="https://fmv.jku.at/froleyks">Nils Froleyks</a> and
-<a href="https://cca.informatik.uni-freiburg.de/pollittf">Florian Pollitt</a>.
+<a href="https://cca.informatik.uni-freiburg.de/pollittf">Florian Pollitt</a>
 <br>
 In
 <i>
-Proc.&nbsp;Computer Aidded Verification - 26th Intl.&nbsp;Conf.&nbsp;(CAV'24)</i>,
+Proc.&nbsp;Computer Aidded Verification - 26th Intl.&nbsp;Conf.&nbsp;(CAV'24)</i>
 <br>
-Lecture Notes in Computer Science,
+Lecture Notes in Computer Science
 <br>
 vol.&nbsp;14681,
 pages 133-152,
-Springer 2024.
+Springer 2024
 <br>
 [ <a href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24.pdf">paper</a>
 | <a href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24.bib">bibtex</a>
