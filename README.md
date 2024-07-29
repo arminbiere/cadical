@@ -35,6 +35,8 @@ If you want to cite CaDiCaL please use our CaDiCaL 2.0 tool paper from
 CAV'24:
 
 <p>
+<a href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24.pdf">CaDiCaL 2.0</a>.
+<br>
 <a href="https://cca.informatik.uni-freiburg.de/biere/index.html#publications">Armin Biere</a>.
 <a href="https://cca.informatik.uni-freiburg.de/fallert/index.html#publications">Tobias Faller Biere</a>.
 Katalin Fazekas,
@@ -42,13 +44,11 @@ Katalin Fazekas,
 Nils Froleyks and
 Florian Pollitt.
 <br>
-<a href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24.pdf">CaDiCaL 2.0</a>.
-<br>
 In
 <i>
 Proc.&nbsp;Computer Aidded Verification - 26th Intl.&nbsp;Conf.&nbsp;(CAV'24)</i>,
 <br>
-{{LNCS}},
+Lecture Notes in Computer Science,
 <br>
 vol.&nbsp;14681,
 pages 133-152,
