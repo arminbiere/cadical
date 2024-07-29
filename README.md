@@ -35,7 +35,9 @@ If you want to cite CaDiCaL please use our CaDiCaL 2.0 tool paper from
 CAV'24:
 
 <p>
-<a href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24.pdf">CaDiCaL 2.0</a>.
+"<a
+href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24.pdf">CaDiCaL
+2.0</a>" by
 <br>
 <a href="https://cca.informatik.uni-freiburg.de/biere/index.html#publications">Armin Biere</a>.
 <a href="https://cca.informatik.uni-freiburg.de/fallert/index.html#publications">Tobias Faller Biere</a>.
