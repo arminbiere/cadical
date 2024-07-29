@@ -31,20 +31,20 @@ if you want to contribute.
 The solver has the following usage `cadical [ dimacs [ proof ] ]`.
 See `cadical -h` for more options.
 
-If you want to cite CaDiCaL please use our CaDiCaL 2.0 tool paper from
-CAV'24:
+If you want to cite CaDiCaL please use a citation of our CaDiCaL 2.0 tool
+paper which appeared at CAV'24:
 
 <p>
 <a
 href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24.pdf">CaDiCaL
 2.0</a>
 <br>
-<a href="https://cca.informatik.uni-freiburg.de/biere/index.html#publications">Armin Biere</a>.
-<a href="https://cca.informatik.uni-freiburg.de/fallert/index.html#publications">Tobias Faller Biere</a>.
-Katalin Fazekas,
-<a href="https://cca.informatik.uni-freiburg.de/fleury/index.html">Mathias Fleury</a>,
-Nils Froleyks and
-Florian Pollitt.
+<a href="https://cca.informatik.uni-freiburg.de/biere">Armin Biere</a>.
+<a href="https://cca.informatik.uni-freiburg.de/fallert">Tobias Faller Biere</a>.
+<a href="https://kfazekas.github.io">Katalin Fazekas</a>,
+<a href="https://cca.informatik.uni-freiburg.de/fleury">Mathias Fleury</a>,
+<a href="https://fmv.jku.at/froleyks">Nils Froleyks</a> and
+<a href="https://cca.informatik.uni-freiburg.de/pollittf">Florian Pollitt.
 <br>
 In
 <i>
