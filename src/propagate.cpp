@@ -422,7 +422,7 @@ bool Internal::propagate () {
                 lits[pos] = lit;
                 lits[0] = other;
                 lits[1] = s;
-                watch_literal (s, other, w.clause);
+                watch_literal (s, lit, w.clause);
 
                 j--; // Drop this watch from the watch list of 'lit'.
               }

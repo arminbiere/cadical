@@ -342,7 +342,7 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 #endif
     Watches &ws = watches (-lit);
 
-    LOG ("trying to brake %zd watched clauses", ws.size ());
+    LOG ("trying to break %zd watched clauses", ws.size ());
 
     for (const auto &w : ws) {
       Clause *d = w.clause;
