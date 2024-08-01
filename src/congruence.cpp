@@ -939,7 +939,7 @@ uint64_t &Closure::largecounts(int lit) {
   return glargecounts[internal->vlit(lit)];
 }
 
-unsigned parity_lits (vector<int> lits) {
+bool parity_lits (const vector<int> &lits) {
   unsigned res = 0;
   for (auto lit : lits)
     res ^= (lit < 0);
@@ -1001,7 +1001,7 @@ void Closure::add_xor_shrinking_proof_chain(Gate const *const g, int pivot) {
 
   const int lhs = g->lhs;
   clause.push_back(-lhs);
-  const unsigned parity = (lhs > 0);
+  const bool parity = (lhs > 0);
   assert (parity == parity_lits(clause));
   const size_t size = clause.size();
   const unsigned end = 1u << size;
@@ -1044,7 +1044,7 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
   clause.push_back(-lhs);
   const unsigned arity = g->arity;
   const unsigned end = 1u << arity;
-  const unsigned parity = (lhs > 0);
+  const bool parity = (lhs > 0);
 
   for (unsigned i = 0; i != end; ++i) {
     while (i && parity_lits (clause) != parity)
