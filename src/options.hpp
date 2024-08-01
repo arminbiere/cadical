@@ -59,7 +59,7 @@ OPTION( congruenceand,     1,  0,  1,0,0,1, "extract AND gates") \
 OPTION( congruenceandarity,1e5,2,5e6,0,0,1, "AND gate arity limit") \
 OPTION( congruenceite,     1,  0,  1,0,0,1, "extract ITE gates") \
 OPTION( congruencexor,     1,  0,  1,0,0,1, "extract XOR gates") \
-OPTION( congruencexorarity,1e5,2,5e6,0,0,1, "XOR gate arity limit") \
+OPTION( congruencexorarity,4,  2, 31,0,0,1, "XOR gate arity limit") \
 OPTION( congruencexorcounts,1, 1,5e6,0,0,1, "XOR gate round") \
 OPTION( cover,             0,  0,  1,0,1,1, "covered clause elimination") \
 OPTION( covermaxclslim,  1e5,  1,2e9,2,0,1, "maximum clause size") \

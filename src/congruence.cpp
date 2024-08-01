@@ -1267,6 +1267,7 @@ Gate *Closure::new_xor_gate (int lhs) {
 
 void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
   const unsigned arity_limit = internal->opts.congruencexorarity;
+  assert (arity_limit < 31); // we use unsigned int. uint64_t would allow 64 limit
   const unsigned size_limit = arity_limit + 1;
   glargecounts.resize (2 * internal->vsize, 0);
 
