@@ -640,6 +640,7 @@ Gate* Closure::find_first_and_gate (int lhs) {
 
   const size_t arity = lits.size() - 1;
 
+  // TODO probably more efficient in the watch lists, as we need to keep them anyway
   for (auto c : internal->occs (not_lhs)) {
     LOG (c, "checking clause for candidates");
     assert (c->size == 2);
@@ -829,7 +830,6 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
   for (size_t i = 0; i < clause_size; ++i) {
     const int lit = lits[i];
     const unsigned count = internal->noccs (-lit);
-    LOG ("marking %d mu1", -lit);
     marked (-lit) = 1;
     mu1(-lit, c);
     if (count < arity) {
@@ -843,8 +843,9 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
   const size_t reduced_size = clause_size - reduced;
   assert (reduced_size);
   LOG (c, "trying as base arity %lu AND gate", arity);
-  sort (begin (lits), end (lits),
-        [this] (int litA, int litB) {
+  assert (begin (lits) + reduced_size <= end (lits));
+  sort (begin (lits), begin (lits) + reduced_size,
+        [&] (int litA, int litB) {
           return (internal->noccs (-litA) < internal->noccs (-litB) ||
 		  (internal->noccs (-litA) == internal->noccs (-litB) && litA < litB));
         });
@@ -885,10 +886,6 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
     assert (!marked (-lit));
   }
   internal->analyzed.clear();
-  for (auto var: internal->vars) {
-    assert (!marked (var));
-    assert (!marked (-var));
-  }
   lrat_chain.clear();
   if (extracted)
     LOG (c, "extracted %u with arity %lu AND base", extracted, arity);
@@ -897,12 +894,6 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
 void Closure::extract_and_gates () {
   if (!internal->opts.congruenceand)
     return;
-  for (auto var: internal->vars) {
-    assert (!internal->marked67 (var));
-    assert (!internal->marked67 (-var));
-    assert (!internal->marked (var));
-    assert (!internal->marked (-var));
-  }
   marks.resize (internal->max_var * 2 + 3);
   init_and_gate_extraction ();
 
@@ -2835,9 +2826,12 @@ void Closure::extract_condeq_pairs (int lit, litpairs &condbin, litpairs &condeq
   const litpairs::const_iterator end = condbin.cend();
   litpairs::const_iterator pos_begin = begin;
   int next_lit = 0;
-  
+
+#ifdef LOGGING  
   for (const auto &pair : condbin)
-    LOG ("unsorted conditional %d equivalence %d = %d",  lit, pair.first,  pair.second);
+    LOG ("unsorted conditional %d equivalence %d = %d", lit, pair.first,
+         pair.second);
+#endif  
   LOG ("searching for first positive literal for lit %d", lit);
   for (;;) {
     if (pos_begin == end)
@@ -3065,6 +3059,8 @@ void Internal::extract_gates () {
   reset_watches (); // saves lots of memory
   init_watches ();
   connect_binary_watches ();
+
+  START_SIMPLIFIER (congruence, CONGRUENCE);
   Closure closure (this);
   init_occs();
   init_noccs ();
@@ -3105,12 +3101,16 @@ void Internal::extract_gates () {
     unsat = true;
 
 
+  STOP_SIMPLIFIER (congruence, CONGRUENCE);
   report('=', !opts.reportall && !(stats.congruence.congruent - old));
 
+#if 0
+  // check when decompose is not scheduled after anyways
   if (opts.decompose && new_merged != old_merged) {
     decompose ();
     this->report('d', !opts.reportall && !(stats.congruence.congruent - old));
   }
+#endif
 }
 
 }
