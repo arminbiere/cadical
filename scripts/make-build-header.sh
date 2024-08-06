@@ -81,7 +81,7 @@ fi
 #--------------------------------------------------------------------------#
 # Use time of executing this script at build time.
 #
-LC_TIME="en_US" # Avoid umlaut in 'DATE'.
+LC_TIME="C" # Avoid umlaut in 'DATE'.
 export LC_TIME
 # The time and date we compiled the CaDiCaL library.
 DATE="`date 2>/dev/null|sed -e 's,  *, ,g'`"
