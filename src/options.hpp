@@ -31,7 +31,8 @@ OPTION( blockmaxclslim,  1e5,  1,2e9,2,0,1, "maximum clause size") \
 OPTION( blockminclslim,    2,  2,2e9,0,0,1, "minimum clause size") \
 OPTION( blockocclim,     1e2,  1,2e9,2,0,1, "occurrence limit") \
 OPTION( bump,              1,  0,  1,0,0,1, "bump variables") \
-OPTION( bumpgates,         1,  0,  1,0,0,1, "bump gate variables") \
+OPTION( bumpgatefocused,   1,  0,  1,0,0,1, "bump gate variables") \
+OPTION( bumpgatestable,    1,  0,  1,0,0,1, "bump gate variables") \
 OPTION( bumpreason,        1,  0,  1,0,0,1, "bump reason literals too") \
 OPTION( bumpreasondepth,   1,  1,  3,0,0,1, "bump reason depth") \
 OPTION( check,             0,  0,  1,0,0,0, "enable internal checking") \
