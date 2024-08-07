@@ -129,6 +129,26 @@ void Internal::bump_variable (int lit) {
     bump_queue (lit);
 }
 
+void Internal::bump_all_gates () {
+  if (!opts.bumpgates) return;
+  assert (!stable);
+  for (auto &idx : vars) {
+    if (!active (idx)) continue;
+    if (!flags (idx).gatevar) continue;
+    bump_variable (idx);
+  }
+}
+
+void Internal::bump_all_non_gates () {
+  if (!opts.bumpgates) return;
+  assert (stable);
+  for (auto &idx : vars) {
+    if (!active (idx)) continue;
+    if (flags (idx).gatevar) continue;
+    bump_variable (idx);
+  }
+}
+
 // After every conflict the variable score increment is increased by a
 // factor (if we are currently using scores).
 
