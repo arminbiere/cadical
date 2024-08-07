@@ -132,10 +132,31 @@ void Internal::bump_variable (int lit) {
 void Internal::bump_all_gates () {
   if (!opts.bumpgates) return;
   assert (!stable);
-  for (auto &idx : vars) {
-    if (!active (idx)) continue;
-    if (!flags (idx).gatevar) continue;
-    bump_variable (idx);
+  if (use_scores ()) {
+    for (auto &idx : vars) {
+      if (!active (idx)) continue;
+      if (!flags (idx).gatevar) continue;
+      bump_variable (idx);
+    }
+  } else {
+    int first = queue.first;
+    while (!flags (first).gatevar) {
+      first = links[first].prev;
+      if (!first) return;
+    }
+    assert (first);
+    assert (flags (first).gatevar);
+    int current = first;
+    int next = links[current].prev;
+    while (next && next != first) {
+      assert (current);
+      if (flags (current).gatevar)
+        bump_variable (current);
+      current = next;
+      next = links[next].prev;
+    }
+    if (flags (current).gatevar)
+      bump_variable (current);
   }
 }
 

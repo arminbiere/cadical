@@ -754,8 +754,8 @@ void Internal::find_gate_clauses (Eliminator &eliminator, int pivot) {
   find_and_gate (eliminator, -pivot);
   find_if_then_else (eliminator, pivot);
   find_xor_gate (eliminator, pivot);
-  find_definition (eliminator, pivot);
   if (eliminator.gates.size ()) flags (pivot).gatevar = true;
+  find_definition (eliminator, pivot);
 }
 
 void Internal::unmark_gate_clauses (Eliminator &eliminator) {
