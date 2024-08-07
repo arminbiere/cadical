@@ -1897,6 +1897,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
         assert (end[-1] == 0);
         int lit = end[-3];
         int other = end[-2];
+        // TODO: lit or other frozen!!!!!
         if (sweep_equivalence_candidates (sweeper, lit, other))
           success = true;
       } else

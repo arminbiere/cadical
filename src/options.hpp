@@ -77,7 +77,7 @@ OPTION( elimclslim,      1e2,  2,2e9,2,0,1, "resolvent size limit") \
 OPTION( elimdef,           1,  0,  1,0,0,1, "mine definitions with kitten") \
 OPTION( elimdefblock,      1,  0,  1,0,0,1, "use definitions to add blocking clauses") \
 OPTION( elimdefcores,      2,  1,100,0,0,1, "number of unsat cores") \
-OPTION( elimdefprime,      0,  0,  1,0,0,1, "add blocking clauses to find definitions") \
+OPTION( elimdefprime,      0,  0,  0,0,0,1, "add blocking clauses to find definitions") \
 OPTION( elimdefprimeadd,   1,  0,  1,0,0,1, "add blocking clauses") \
 OPTION( elimdefprimeround, 1,  1,1e3,0,0,1, "max number of blocking clauses per definition") \
 OPTION( elimdefticks,    1e6,  0,2e9,1,0,1, "kitten ticks limit") \
@@ -101,11 +101,11 @@ OPTION( emalevel,        1e5,  1,2e9,0,0,1, "window back-track level") \
 OPTION( emasize,         1e5,  1,2e9,0,0,1, "window learned clause size") \
 OPTION( ematrailfast,    1e2,  1,2e9,0,0,1, "window fast trail") \
 OPTION( ematrailslow,    1e5,  1,2e9,0,0,1, "window slow trail") \
-OPTION( eres,              0,  0,  1,0,0,1, "extended resolution") \
+OPTION( eres,              0,  0,  0,0,0,1, "extended resolution") \
 OPTION( eresint,         2e3,  0,2e9,0,0,1, "extended resolution") \
 OPTION( eresmax,         100,  1,2e9,0,0,1, "extended resolution") \
 OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
-OPTION( factor,            0,  0,  2,0,0,1, "systematic variable addition") \
+OPTION( factor,            0,  0,  0,0,0,1, "systematic variable addition") \
 OPTION( factorrounds,      1,  0,2e9,0,0,1, "factor rounds") \
 OPTION( flush,             0,  0,  1,0,0,1, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \
@@ -185,7 +185,7 @@ OPTION( subsumeocclim,   1e2,  0,2e9,1,0,1, "watch list length limit") \
 OPTION( subsumereleff,   1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( subsumestr,        1,  0,  1,0,0,1, "subsume strenghten") \
 OPTION( sweep,             1,  0,  1,0,1,1, "enable SAT sweeping") \
-OPTION( sweepblock,        0,  0,  1,0,0,1, "add blocking clauses in sweeping") \
+OPTION( sweepblock,        0,  0,  0,0,0,1, "add blocking clauses in sweeping") \
 OPTION( sweepblockbackcand,1,  0,  1,0,0,1, "blocking clauses for backbone candidates") \
 OPTION( sweepblockequicand,1,  0,  1,0,0,1, "blocking clauses for equivalence candidates") \
 OPTION( sweepblockflipback,1,  0,  1,0,0,1, "blocking clauses in backbone flipping") \
