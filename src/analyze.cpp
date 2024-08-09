@@ -123,6 +123,10 @@ void Internal::bump_variable_score (int lit) {
 // Important variables recently used in conflict analysis are 'bumped',
 
 void Internal::bump_variable (int lit) {
+  if (opts.bumpgatealways) {
+    if (stable && flags (lit).gatevar) return;
+    else if (!stable && !flags (lit).gatevar) return;
+  }
   if (use_scores ())
     bump_variable_score (lit);
   else
