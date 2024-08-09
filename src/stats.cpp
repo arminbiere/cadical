@@ -188,6 +188,9 @@ void Stats::print (Internal *internal) {
     PRT ("  def prime add: %15" PRId64 "   %10.2f %%  per prime",
          stats.definition_prime_added,
          percent (stats.definition_prime_added, stats.definition_prime));
+    PRT ("  gatevars found:%15" PRId64 "   %10.2f %%  elimtried",
+         stats.gatevars,
+         percent (stats.gatevars, stats.elimtried));
   }
   if (all || stats.ext_prop.ext_cb) {
     PRT ("ext.prop. calls: %15" PRId64 "   %10.2f %%  of queries",

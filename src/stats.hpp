@@ -175,6 +175,7 @@ struct Stats {
   int64_t elimxors;      // number of XOR gates found during elimination
   int64_t elimbwsub;     // number of eager backward subsumed clauses
   int64_t elimbwstr;     // number of eager backward strengthened clauses
+  int64_t gatevars;
 
   int64_t eliminated_equi;  // number of successful equivalence eliminations
   int64_t eliminated_and;   // number of successful AND gate eliminations

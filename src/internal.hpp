@@ -654,6 +654,7 @@ struct Internal {
   void learn_empty_clause ();
   void learn_unit_clause (int lit);
 
+  void init_gate_vars ();
   void bump_all_non_gates ();
   void bump_all_gates ();
   void bump_variable (int lit);
