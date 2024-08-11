@@ -640,12 +640,12 @@ Gate* Closure::find_first_and_gate (int lhs) {
 
   const size_t arity = lits.size() - 1;
 
-  // TODO probably more efficient in the watch lists, as we need to keep them anyway
-  for (auto c : internal->occs (not_lhs)) {
-    LOG (c, "checking clause for candidates");
-    assert (c->size == 2);
-    assert (c->literals[0] == -lhs || c->literals[1] == -lhs);
-    const int other = c->literals[0] ^ c->literals[1] ^ not_lhs;
+  for (auto w : internal->watches(not_lhs)) {
+    LOG (w.clause, "checking clause for candidates");
+    assert (w.size == 2);
+    assert (w.clause->size == 2);
+    assert (w.clause->literals[0] == -lhs || w.clause->literals[1] == -lhs);
+    const int other = w.blit;
     signed char &mark = marked (other);
     if (mark) {
       LOG ("marking %d mu2", other);
@@ -653,7 +653,7 @@ Gate* Closure::find_first_and_gate (int lhs) {
       assert (~ (mark & 2));
       mark |= 2;
       internal->analyzed.push_back(other);
-      mu2(other, c);
+      mu2(other, w.clause);
     }
   }
   
@@ -714,23 +714,28 @@ Gate *Closure::find_remaining_and_gate (int lhs) {
   unsigned matched = 0;
   assert (1 < arity);
 
-  for (Clause *c : internal->occs (not_lhs) ) {
+
+  for (auto w : internal->watches(not_lhs)) {
+    assert (w.size == 2);
+#ifdef DEBUG
     LOG (c, "checking");
-    
+    Clause *c = w.clause;
     assert (c->size == 2);
     assert (c->literals[0] == not_lhs || c->literals[1] == not_lhs);
-    const int other = c->literals[0] ^ c->literals[1] ^ not_lhs;
+#endif
+    const int other = w.blit;
     signed char &mark = marked(other);
     if (!mark)
       continue;
     ++matched;
-    mu4_ids[internal->vlit (-lhs)] = c->id;
+    if (internal->lrat)
+      mu4_ids[internal->vlit (-lhs)] = w.clause->id;
     if (!(mark & 2))
       continue;
     LOG ("marking %d mu4", other);
     assert (!(mark & 4));
     mark |= 4;
-    mu4 (other, c);
+    mu4 (other, w.clause);
   }
 
   {
@@ -1379,7 +1384,6 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
   LOG ("searching XOR side clause watched by %d#%u",
        least_occurring_literal, count_least_occurring);
   LOG ("searching for size %ld", size_lits);
-  // TODO this is the wrong thing to iterate on!
   for (auto c : internal->occs (least_occurring_literal)) {
     LOG (c, "checking");
     if (c->size == 2) // TODO kissat has break
