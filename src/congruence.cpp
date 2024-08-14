@@ -125,6 +125,7 @@ void Closure::index_gate (Gate *g) {
   assert (!g->indexed);
   assert (!internal->unsat);
   assert (g->arity > 1);
+  assert (g->hash == hash_lits(g->rhs));
   LOGGATE (g, "adding to hash table");
   table.insert(g);
   g->indexed = true;
@@ -428,6 +429,7 @@ void Closure::update_and_gate(Gate *g, GatesTable::iterator it, int falsifies, i
 	  LOGGATE(g, "removing from table");
           (void)table.erase (it);
         }
+	g->hash = hash_lits(g->rhs);
         LOG (g->rhs, "inserting gate[%d] from table %d = %s", g->id, g->lhs,
              string_of_gate (g->tag).c_str ());
         table.insert (g);
@@ -471,6 +473,7 @@ void Closure::update_xor_gate(Gate *g, GatesTable::iterator git) {
       if (g->indexed) {
 	remove_gate (git);
       }
+      g->hash = hash_lits(g->rhs);
       LOGGATE(g, "reinserting in table");
       table.insert (g);
       g->indexed = true;
@@ -503,6 +506,7 @@ void Closure::simplify_and_gate (Gate *g) {
   if (end(g->rhs) != it){
     g->shrunken = true;
     g->rhs.resize(end(g->rhs) - it);
+    g->hash = hash_lits (g->rhs);
     LOGGATE (g, "shrunken");
   }
   shrink_and_gate(g, falsifies);
@@ -533,7 +537,7 @@ bool Closure::simplify_gate (Gate *g) {
 }
 
 bool Closure::simplify_gates (int lit) {
-  const auto occs = goccs (lit);
+  const auto &occs = goccs (lit);
   for (auto g : occs) {
     if (!simplify_gate (g))
       return false;
@@ -555,6 +559,7 @@ Gate *Closure::find_gate_lits (int arity, const vector<int> &rhs, Gate_Type typ,
   g->tag = typ;
   g->arity = arity;
   g->rhs = {rhs};
+  g->hash = hash_lits (g->rhs);
   g->lhs = 0;
 #ifdef LOGGING
   g->id = 0;
@@ -612,6 +617,7 @@ Gate *Closure::new_and_gate (int lhs) {
     g->garbage = false;
     g->indexed = true;
     g->shrunken = false;
+    g->hash = hash_lits (g->rhs);
     g->ids.push_back(marked_mu1(-lhs));
     g->ids.push_back(marked_mu2(-lhs));
     g->ids.push_back(marked_mu4(-lhs));
@@ -1245,6 +1251,7 @@ Gate *Closure::new_xor_gate (int lhs) {
     g->garbage = false;
     g->indexed = true;
     g->shrunken = false;
+    g->hash = hash_lits (g->rhs);
     table.insert(g);
     ++internal->stats.congruence.gates;
     ++internal->stats.congruence.xors;
@@ -1264,7 +1271,7 @@ Gate *Closure::new_xor_gate (int lhs) {
 
 void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
   const unsigned arity_limit = internal->opts.congruencexorarity;
-  assert (arity_limit < 31); // we use unsigned int. uint64_t would allow 64 limit
+  assert (arity_limit < 32); // we use unsigned int. uint64_t would allow 64 limit
   const unsigned size_limit = arity_limit + 1;
   glargecounts.resize (2 * internal->vsize, 0);
 
@@ -1571,7 +1578,7 @@ void Closure::find_units () {
       int lit = v * sgn;
       for (auto w : internal->watches (lit)) {
 	if (!w.binary ())
-	  continue;
+	  break; // todo check that binaries first
         const int other = w.blit;
         if (marked (-other)) {
           LOG (w.clause, "binary clause %d %d and %d %d give unit %d", lit, other,
@@ -1622,7 +1629,7 @@ void Closure::find_equivalences () {
     
     for (auto w : internal->watches (-lit)) {
       if (!w.binary())
-	break; // TODO check if this as in kissat or continue
+	continue; // TODO check if this as in kissat or continue
       const int other = w.blit;
       if (abs(-lit) > abs(other))
 	continue;
@@ -1633,7 +1640,7 @@ void Closure::find_equivalences () {
 	int other_repr = find_representative(other);
 	LOG ("%d and %d are the representative", lit_repr, other_repr);
 	if (lit_repr != other_repr) {
-	  if (merge_literals(lit_repr, other_repr)) {
+	  if (merge_literals(lit, other)) {
 	    ++internal->stats.congruence.congruent;
 	  }
 	  unmark_all();
@@ -1801,10 +1808,12 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     g->rhs.resize(k);
     g->shrunken = true;
     g->arity = k;
+    g->hash = hash_lits (g->rhs);
   } else if (j != size){
     g->shrunken = true;
     g->rhs.resize(j);
     g->arity = j;
+    g->hash = hash_lits (g->rhs);
   }
   
   if (dst_count > 1)
@@ -1851,6 +1860,7 @@ void Closure::simplify_xor_gate (Gate *g) {
     g->shrunken = true;
     g->rhs.resize(j);
     g->arity = j;
+    g->hash = hash_lits (g->rhs);
   }
   assert (g->arity == g->rhs.size());
   check_xor_gate_implied (g);
@@ -1944,11 +1954,18 @@ void Closure::reset_closure() {
 void Closure::reset_extraction () {
   full_watching = true;
   internal->reset_occs();
-  internal->reset_noccs();  
+  internal->reset_noccs ();
+  if (!internal->unsat && !internal->propagate()) {
+    internal->learn_empty_clause();
+  }
+  internal->reset_watches (); // TODO we could be more efficient here
+  internal->init_watches ();
+  internal->connect_watches ();
 }
 
 void Closure::forward_subsume_matching_clauses() {
   reset_closure();
+  internal->init_occs();
 
   std::vector<signed char> matchable;
   matchable.resize (internal->max_var + 1);
@@ -2027,6 +2044,7 @@ void Closure::forward_subsume_matching_clauses() {
       LOG ("no matching variable");
       continue;
     }
+    LOG (c, "candidate");
     candidates.push_back (c);
   }
 
@@ -2046,6 +2064,7 @@ void Closure::forward_subsume_matching_clauses() {
   }
   LOG ("[congruence] subsumed %.0f%%",
        (double) subsumed / (double) (tried ? tried : 1));
+  internal->reset_occs();
 }
 
 
@@ -2085,7 +2104,7 @@ void Closure::subsume_clause (Clause *subsuming, Clause *subsumed) {
 
 bool Closure::find_subsuming_clause (Clause *subsumed) {
   assert (!subsumed->garbage);
-  Clause *subsuming = nullptr;  
+  Clause *subsuming = nullptr;
   for (auto lit : *subsumed) {
     assert (internal->val (lit) <= 0);
     const int repr_lit = find_representative (lit);
@@ -2103,16 +2122,13 @@ bool Closure::find_subsuming_clause (Clause *subsumed) {
   LOG (subsumed, "trying to forward subsume");
   for (auto lit : *subsumed) {
     const int repr_lit = find_representative(lit);    
-    const size_t count = internal->watches (lit).size ();
+    const size_t count = internal->occs (lit).size ();
     assert (count <= UINT_MAX);
     if (count < count_least_occurring) {
       count_least_occurring = count;
       least_occuring_lit = repr_lit;
     }
-    for (auto w : internal->watches (lit)) {
-      if (!w.binary())
-	continue; // TODO check
-      Clause *d = w.clause;
+    for (auto d : internal->occs (lit)) {
       assert (!d->garbage);
       assert (subsumed != d);
       if (!subsumed->redundant && d->redundant)
@@ -2151,7 +2167,7 @@ bool Closure::find_subsuming_clause (Clause *subsumed) {
     ++internal->stats.congruence.subsumed;
     return true;
   } else {
-    internal->watch_literal(least_occuring_lit, other, subsumed);
+    internal->occs (least_occuring_lit).push_back(subsumed);
     return false;
   }
 }
@@ -2326,6 +2342,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
       g->rhs.resize(2);
       assert (rhs[0] < rhs[1]);
       assert (rhs[0] != -rhs[1]);
+      g->hash = hash_lits (g->rhs);
       LOGGATE (g, "rewritten");
       Gate *h;
       if (new_tag == Gate_Type::And_Gate) {
@@ -2390,6 +2407,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
         if (negate_lhs)
           g->lhs = not_lhs;
         LOGGATE (g, "normalized");
+	g->hash = hash_lits(g->rhs);
         index_gate (g);
         assert (g->arity == 3);
         for (auto lit : g->rhs)
@@ -2473,6 +2491,7 @@ void Closure::simplify_ite_gate (Gate *g) {
       g->tag = Gate_Type::And_Gate;
       g->arity = 2;
       rhs.resize(2);
+      g->hash = hash_lits (g->rhs);
       check_and_gate_implied(g);
       Gate *h = find_and_lits(2, rhs);
       if (h) {
@@ -2484,6 +2503,7 @@ void Closure::simplify_ite_gate (Gate *g) {
 	remove_gate(git);
 	index_gate(g);
 	garbage = false;
+	g->hash = hash_lits(g->rhs);
 	for (auto lit : rhs)
 	  if (lit != cond && lit != then_lit && lit != else_lit) {
 	    connect_goccs(g, lit);
@@ -2582,6 +2602,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
     g->garbage = false;
     g->indexed = true;
     g->shrunken = false;
+    g->hash = hash_lits (g->rhs);
     table.insert (g);
     ++internal->stats.congruence.gates;
     ++internal->stats.congruence.xors;
@@ -2597,7 +2618,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
   return g;
 }
 
-void check_ite_lits_normalized (std::vector<int> lits) {
+void check_ite_lits_normalized (std::vector<int> &lits) {
   assert (lits[0] > 0);
   assert (lits[1] > 0);
   assert (lits[0] != lits[1]);
@@ -2688,7 +2709,7 @@ void Closure::init_ite_gate_extraction (std::vector<Clause *> &candidates) {
       goto CONTINUE_WITH_NEXT_TERNARY_CLAUSE;
     for (auto lit : *c)
       internal->occs (lit).push_back(c);
-    internal->watch_clause(c);
+//    internal->watch_clause(c);
     if (positive && negative)
       candidates.push_back(c);
   CONTINUE_WITH_NEXT_TERNARY_CLAUSE:;
@@ -3044,17 +3065,17 @@ void Closure::extract_ite_gates() {
 /*------------------------------------------------------------------------*/
 void Closure::extract_gates() {
   extract_and_gates();
-  if (internal->unsat)
+  if (internal->unsat || internal->terminated_asynchronously ())
     return;
   extract_xor_gates();
-  if (internal->unsat)
+  if (internal->unsat || internal->terminated_asynchronously ())
     return;
   extract_ite_gates();
 }
 
 /*------------------------------------------------------------------------*/
 // top lever function to exctract gate
-void Internal::extract_gates () {
+void Internal::extract_gates (bool decompose) {
   if (unsat)
     return;
   if (!opts.congruence)
@@ -3119,13 +3140,10 @@ void Internal::extract_gates () {
   STOP_SIMPLIFIER (congruence, CONGRUENCE);
   report('=', !opts.reportall && !(stats.congruence.congruent - old));
 
-#if 0
-  // check when decompose is not scheduled after anyways
-  if (opts.decompose && new_merged != old_merged) {
-    decompose ();
+  if (decompose && opts.decompose && new_merged != old_merged) {
+    internal->decompose ();
     this->report('d', !opts.reportall && !(stats.congruence.congruent - old));
   }
-#endif
 }
 
 }

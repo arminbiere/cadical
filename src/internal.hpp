@@ -1320,7 +1320,7 @@ struct Internal {
   bool frozen (int lit) { return frozentab[vidx (lit)] > 0; }
 
   // Congruence closure
-  void extract_gates ();
+  void extract_gates (bool decompose = false);
 
   // Parsing functions in 'parse.cpp'.
   //

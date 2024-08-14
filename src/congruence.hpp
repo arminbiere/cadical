@@ -40,6 +40,7 @@ struct Gate {
   bool marked : 1;
   bool shrunken : 1;
   unsigned arity : LD_MAX_ARITY;
+  size_t hash;
   vector<uint64_t> ids;
   vector<int>rhs;
 
@@ -52,15 +53,19 @@ struct Gate {
 
 typedef vector<Gate *> GOccs;
 
-static size_t hash_lits (vector<int> lits) {
+static size_t hash_lits (const vector<int> &lits) {
   size_t hash = 0;
-  for (auto lit : lits)
-    hash ^= lit;
+  for (auto lit : lits){
+    hash += lit;
+    hash = (hash << 4) | (hash >> 60);
+  }
+  hash ^= hash >> 32;
   return hash;
 }
 struct Hash {
   size_t operator() (const Gate *const g) const {
-    return hash_lits (g->rhs);
+    assert (hash_lits (g->rhs) == g->hash);
+    return g->hash;
   }
 };
 

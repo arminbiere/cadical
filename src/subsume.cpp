@@ -664,7 +664,7 @@ void Internal::subsume (bool update_limits) {
     vivify ();
   if (opts.transred)
     transred ();
-  extract_gates();
+  extract_gates(true);
 
 UPDATE_LIMITS:
 
