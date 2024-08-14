@@ -3165,10 +3165,34 @@ void Internal::extract_gates (bool decompose) {
   if (!unsat && !internal->propagate())
     unsat = true;
 
-
   STOP_SIMPLIFIER (congruence, CONGRUENCE);
-  report('=', !opts.reportall && !(stats.congruence.congruent - old));
-
+  report ('=', !opts.reportall && !(stats.congruence.congruent - old));
+#ifndef NDEBUG
+  size_t watched = 0;
+  for (auto v : vars) {
+    for (auto sgn = -1; sgn <= 1; sgn += 2) {
+      const int lit = v * sgn;
+      for (auto w : watches (lit)) {
+        if (w.binary ())
+          assert (!w.clause->garbage);
+        if (w.clause->garbage)
+          continue;
+        ++watched;
+        LOG (w.clause, "watched");
+      }
+    }
+  }
+  LOG ("and now the clauses:");
+  size_t nb_clauses = 0;
+  for (auto c : clauses) {
+    if (c->garbage)
+      continue;
+    LOG (c, "watched");
+    ++nb_clauses;
+    
+  }
+  assert (watched == nb_clauses * 2);
+#endif
   if (decompose && opts.decompose && new_merged != old_merged) {
     internal->decompose ();
     this->report('d', !opts.reportall && !(stats.congruence.congruent - old));
