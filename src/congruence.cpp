@@ -1945,6 +1945,7 @@ void Closure::reset_closure() {
   for (auto &occ : gtab) {
     occ.clear();
   }
+  gtab.clear();
 
   for (auto gate : garbage)
     delete gate;
@@ -1953,7 +1954,7 @@ void Closure::reset_closure() {
 
 void Closure::reset_extraction () {
   full_watching = true;
-  internal->reset_occs();
+  internal->clear_occs ();
   internal->reset_noccs ();
   if (!internal->unsat && !internal->propagate()) {
     internal->learn_empty_clause();
@@ -1995,8 +1996,6 @@ void Closure::reset_extraction () {
 
 void Closure::forward_subsume_matching_clauses() {
   reset_closure();
-  internal->init_occs ();
-
   std::vector<signed char> matchable;
   matchable.resize (internal->max_var + 1);
   size_t count_matchable = 0;
@@ -2094,7 +2093,7 @@ void Closure::forward_subsume_matching_clauses() {
   }
   LOG ("[congruence] subsumed %.0f%%",
        (double) subsumed / (double) (tried ? tried : 1));
-  internal->reset_occs();
+  internal->reset_occs ();
 }
 
 
@@ -3129,7 +3128,7 @@ void Internal::extract_gates (bool decompose) {
 
   START_SIMPLIFIER (congruence, CONGRUENCE);
   Closure closure (this);
-  init_occs();
+  init_occs ();
   init_noccs ();
 
   closure.init_closure ();
@@ -3157,6 +3156,7 @@ void Internal::extract_gates (bool decompose) {
 //  internal->clear_watches (); // TODO we could be more efficient here
   assert (closure.new_unwatched_binary_clauses.empty ());
 //  internal->connect_watches ();
+  internal->reset_occs ();
 
   const int64_t new_merged = stats.congruence.congruent;
 

@@ -18,6 +18,13 @@ void Internal::reset_occs () {
   LOG ("reset occurrence lists");
 }
 
+void Internal::clear_occs () {
+  assert (occurring ());
+  for (auto &occ : otab)
+    occ.clear();
+  LOG ("clear occurrence lists");
+}
+
 /*------------------------------------------------------------------------*/
 
 // One-sided occurrence counter (each literal has its own counter).
