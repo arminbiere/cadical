@@ -1037,7 +1037,7 @@ struct Internal {
   bool ternary_find_binary_clause (int, int);
   bool ternary_find_ternary_clause (int, int, int);
   Clause *new_hyper_ternary_resolved_clause (bool red);
-  Clause *new_hyper_ternary_resolved_clause_and_watch (bool red);
+  Clause *new_hyper_ternary_resolved_clause_and_watch (bool red, bool);
   bool hyper_ternary_resolve (Clause *, int, Clause *);
   void ternary_lit (int pivot, int64_t &steps, int64_t &htrs);
   void ternary_idx (int idx, int64_t &steps, int64_t &htrs);

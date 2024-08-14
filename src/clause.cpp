@@ -535,15 +535,17 @@ Clause *Internal::new_hyper_ternary_resolved_clause (bool red) {
 }
 // Add hyper ternary resolved clause during 'congruence' and watch it
 //
-Clause *Internal::new_hyper_ternary_resolved_clause_and_watch (bool red) {
+  Clause *Internal::new_hyper_ternary_resolved_clause_and_watch (bool red, bool full_watching) {
   external->check_learned_clause ();
   size_t size = clause.size ();
   Clause *res = new_clause (red, size);
   if (proof) {
     proof->add_derived_clause (res, lrat_chain);
   }
-  assert (watching ());
-  watch_clause(res);
+  if (full_watching) {
+    assert (watching ());
+    watch_clause(res);
+  }
   return res;
 }
 // Add a new clause with same glue and redundancy as 'orig' but literals are

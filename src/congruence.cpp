@@ -642,7 +642,7 @@ Gate* Closure::find_first_and_gate (int lhs) {
 
   for (auto w : internal->watches(not_lhs)) {
     LOG (w.clause, "checking clause for candidates");
-    assert (w.size == 2);
+    assert (w.binary());
     assert (w.clause->size == 2);
     assert (w.clause->literals[0] == -lhs || w.clause->literals[1] == -lhs);
     const int other = w.blit;
@@ -692,7 +692,7 @@ void Closure::add_binary_clause (int a, int b) {
   assert (internal->clause.empty());
   internal->clause.push_back(a);
   internal->clause.push_back(b);
-  Clause *res = internal->new_hyper_ternary_resolved_clause_and_watch (false);
+  Clause *res = internal->new_hyper_ternary_resolved_clause_and_watch (false, full_watching);
   LOG (res, "learning clause");
   internal->clause.clear();
   
@@ -716,10 +716,10 @@ Gate *Closure::find_remaining_and_gate (int lhs) {
 
 
   for (auto w : internal->watches(not_lhs)) {
-    assert (w.size == 2);
-#ifdef DEBUG
-    LOG (c, "checking");
+    assert (w.binary ());
+#ifdef LOGGING
     Clause *c = w.clause;
+    LOG (c, "checking");
     assert (c->size == 2);
     assert (c->literals[0] == not_lhs || c->literals[1] == not_lhs);
 #endif
@@ -897,6 +897,7 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
 }
 
 void Closure::extract_and_gates () {
+  assert(!full_watching);
   if (!internal->opts.congruenceand)
     return;
   marks.resize (internal->max_var * 2 + 3);
@@ -1544,6 +1545,7 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
     LOG ("no arity %u XOR gate extracted", arity);
 }
 void Closure::extract_xor_gates () {
+  assert(!full_watching);
   if (!internal->opts.congruencexor)
     return;
   LOG ("starting extracting XOR");
@@ -1567,12 +1569,12 @@ void Closure::find_units () {
       continue;
     for (int sgn = -1; sgn < 1; sgn += 2) {
       int lit = v * sgn;
-      for (auto c : internal->occs (lit)) {
-	if (c->size != 2)
+      for (auto w : internal->watches (lit)) {
+	if (!w.binary ())
 	  continue;
-        const int other = lit ^ c->literals[0] ^ c->literals[1];
+        const int other = w.blit;
         if (marked (-other)) {
-          LOG (c, "binary clause %d %d and %d %d give unit %d", lit, other,
+          LOG (w.clause, "binary clause %d %d and %d %d give unit %d", lit, other,
                lit, -other, lit);
 	  ++units;
           bool failed = !learn_congruence_unit (lit);
@@ -1602,11 +1604,11 @@ void Closure::find_equivalences () {
     if (!internal->flags (v).active ())
       continue;
     int lit = v;
-    for (auto c : internal->occs (lit)) {
-      if (c->size != 2)
+    for (auto w : internal->watches (lit)) {
+      if (!w.binary ())
 	continue;
-      assert (c->size == 2);
-      const int other = lit ^ c->literals[0] ^ c->literals[1];
+      assert (w.size == 2);
+      const int other = w.blit;
       if (abs(lit) > abs(other))
 	continue;
       if (marked (other))
@@ -1618,10 +1620,10 @@ void Closure::find_equivalences () {
     if (internal->analyzed.empty())
       continue;
     
-    for (auto c : internal->occs (-lit)) {
-      assert (c->size == 2);
-      assert (c->literals[0] == -lit || c->literals[1] == -lit);
-      const int other = (-lit) ^ c->literals[0] ^ c->literals[1];
+    for (auto w : internal->watches (-lit)) {
+      if (!w.binary())
+	break; // TODO check if this as in kissat or continue
+      const int other = w.blit;
       if (abs(-lit) > abs(other))
 	continue;
       if (lit == other)
@@ -1939,6 +1941,12 @@ void Closure::reset_closure() {
   garbage.clear();
 }
 
+void Closure::reset_extraction () {
+  full_watching = true;
+  internal->reset_occs();
+  internal->reset_noccs();  
+}
+
 void Closure::forward_subsume_matching_clauses() {
   reset_closure();
 
@@ -1947,8 +1955,6 @@ void Closure::forward_subsume_matching_clauses() {
   size_t count_matchable = 0;
 
   for (auto idx : internal->vars) {
-    internal->occs(idx).clear();
-    internal->occs(-idx).clear();
     if (!internal->flags(idx).active())
       continue;
     const int lit = idx;
@@ -2097,14 +2103,16 @@ bool Closure::find_subsuming_clause (Clause *subsumed) {
   LOG (subsumed, "trying to forward subsume");
   for (auto lit : *subsumed) {
     const int repr_lit = find_representative(lit);    
-    const size_t count = internal->occs (lit).size ();
+    const size_t count = internal->watches (lit).size ();
     assert (count <= UINT_MAX);
     if (count < count_least_occurring) {
       count_least_occurring = count;
       least_occuring_lit = repr_lit;
     }
-    for (auto d : internal->occs (lit)) {
-      assert (d->size != 2); // TODO might need an if here
+    for (auto w : internal->watches (lit)) {
+      if (!w.binary())
+	continue; // TODO check
+      Clause *d = w.clause;
       assert (!d->garbage);
       assert (subsumed != d);
       if (!subsumed->redundant && d->redundant)
@@ -2125,13 +2133,17 @@ bool Closure::find_subsuming_clause (Clause *subsumed) {
     }
   }
   assert (least_occuring_lit);
-FOUND_SUBSUMING:
+ FOUND_SUBSUMING:
+  int other = 0;
   for (auto lit : *subsumed) {
     const int repr_lit = find_representative (lit);
     const signed char v = internal->val (lit);
     if (!v)
       marked (repr_lit) = 0;
+    if (!other && lit != least_occuring_lit)
+      other = lit;
   }
+  assert (other); // we do not really need other except for the watching scheme
   if (subsuming) {
     LOG (subsumed, "subsumed");
     LOG (subsuming, "subsuming");
@@ -2139,7 +2151,7 @@ FOUND_SUBSUMING:
     ++internal->stats.congruence.subsumed;
     return true;
   } else {
-    internal->occs (least_occuring_lit).push_back (subsumed);
+    internal->watch_literal(least_occuring_lit, other, subsumed);
     return false;
   }
 }
@@ -3012,6 +3024,7 @@ void Closure::extract_ite_gates_of_variable (int idx) {
 }
 
 void Closure::extract_ite_gates() {
+  assert(!full_watching);
   if (!internal->opts.congruenceite)
     return;
   std::vector<Clause*> candidates;
@@ -3073,6 +3086,7 @@ void Internal::extract_gates () {
   assert (unsat || closure.chain.empty ());
   closure.extract_gates ();
   assert (unsat || closure.chain.empty ());
+  closure.reset_extraction ();
   if (!unsat) {
     closure.find_units ();
     assert (unsat || closure.chain.empty ());
@@ -3090,13 +3104,10 @@ void Internal::extract_gates () {
   }
 
   closure.reset_closure();
+  internal->reset_watches (); // TODO we could be more efficient here
+  internal->init_watches ();
+  internal->connect_watches ();
 
-  reset_occs();
-  reset_noccs();
-  reset_watches (); // TODO we could be more efficient here
-  init_watches ();
-  connect_watches ();
-  
   const int64_t new_merged = stats.congruence.congruent;
 
   phase ("congruence-phase", stats.congruence.rounds,

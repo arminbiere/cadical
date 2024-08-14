@@ -77,6 +77,7 @@ struct Closure {
   typedef unordered_set<Gate *, Hash, GateEqualTo> GatesTable;
   Internal *internal;
   vector<Clause *> binaries;
+  bool full_watching = false;
 
   vector<bool> scheduled;
   vector<signed char> marks;
@@ -156,6 +157,7 @@ struct Closure {
   // gates
   void init_closure();
   void reset_closure();
+  void reset_extraction();
   void extract_and_gates (Closure&);
   void extract_gates ();
   void extract_and_gates_with_base_clause (Clause *c);
