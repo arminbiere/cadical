@@ -1613,7 +1613,7 @@ void Closure::find_equivalences () {
     int lit = v;
     for (auto w : internal->watches (lit)) {
       if (!w.binary ())
-	continue;
+	break;
       assert (w.size == 2);
       const int other = w.blit;
       if (abs(lit) > abs(other))
@@ -1629,7 +1629,7 @@ void Closure::find_equivalences () {
     
     for (auto w : internal->watches (-lit)) {
       if (!w.binary())
-	continue; // TODO check if this as in kissat or continue
+	break; // TODO check if this as in kissat or continue
       const int other = w.blit;
       if (abs(-lit) > abs(other))
 	continue;
