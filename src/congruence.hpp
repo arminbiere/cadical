@@ -99,6 +99,8 @@ struct Closure {
   GatesTable table;
   std::array<std::vector<std::pair<int, int>>, 2> condbin;
   std::array<std::vector<std::pair<int, int>>, 2> condeq;
+
+  std::vector<Clause*> new_unwatched_binary_clauses;
 #ifdef LOGGING
   unsigned fresh_id;
 #endif  

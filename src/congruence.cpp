@@ -1958,14 +1958,44 @@ void Closure::reset_extraction () {
   if (!internal->unsat && !internal->propagate()) {
     internal->learn_empty_clause();
   }
-  internal->reset_watches (); // TODO we could be more efficient here
-  internal->init_watches ();
-  internal->connect_watches ();
+
+#if 1
+  // remove delete watched clauses from the watch list
+  for (auto v : internal->vars) {
+    for (auto sgn = -1; sgn <= 1; sgn += 2) {
+      const int lit = v * sgn;
+      auto &watchers = internal->watches (lit);
+      const size_t size = watchers.size ();
+      size_t j = 0;
+      for (size_t i = 0; i != size; ++i) {
+	const auto w = watchers[i];
+	watchers[j] = watchers[i];
+	if (!w.clause->garbage)
+	  ++j;
+      }
+      watchers.resize(j);
+    }
+  }
+  // watch the remaining non-watched clauses
+  for (auto c : new_unwatched_binary_clauses)
+    internal->watch_clause (c);
+  new_unwatched_binary_clauses.clear();
+  for (auto c : internal->clauses) {
+    if (c->garbage)
+      continue;
+    if (c->size != 2)
+      internal->watch_clause (c);
+  }
+#else // simpler implementation
+  internal->clear_watches();
+  internal->connect_watches();
+
+#endif
 }
 
 void Closure::forward_subsume_matching_clauses() {
   reset_closure();
-  internal->init_occs();
+  internal->init_occs ();
 
   std::vector<signed char> matchable;
   matchable.resize (internal->max_var + 1);
@@ -3094,8 +3124,7 @@ void Internal::extract_gates (bool decompose) {
   mark_duplicated_binary_clauses_as_garbage ();
   opts.deduplicate = dedup;
   ++stats.congruence.rounds;
-  reset_watches (); // saves lots of memory
-  init_watches ();
+  clear_watches();
   connect_binary_watches ();
 
   START_SIMPLIFIER (congruence, CONGRUENCE);
@@ -3125,9 +3154,9 @@ void Internal::extract_gates (bool decompose) {
   }
 
   closure.reset_closure();
-  internal->reset_watches (); // TODO we could be more efficient here
-  internal->init_watches ();
-  internal->connect_watches ();
+//  internal->clear_watches (); // TODO we could be more efficient here
+  assert (closure.new_unwatched_binary_clauses.empty ());
+//  internal->connect_watches ();
 
   const int64_t new_merged = stats.congruence.congruent;
 
