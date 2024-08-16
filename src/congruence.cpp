@@ -125,7 +125,7 @@ void Closure::index_gate (Gate *g) {
   assert (!g->indexed);
   assert (!internal->unsat);
   assert (g->arity > 1);
-  assert (g->hash == hash_lits(g->rhs));
+  assert (g->hash == hash_lits(nonces, g->rhs));
   LOGGATE (g, "adding to hash table");
   table.insert(g);
   g->indexed = true;
@@ -249,6 +249,10 @@ void Closure::init_closure () {
     representative(-v) = -v;
   }
   units = internal->propagated;
+  Random rand(internal->stats.congruence.rounds);
+  for (auto &n : nonces) {
+    n = 1 | rand.next();
+  }
 #ifdef LOGGING
   fresh_id = internal->clause_id;
 #endif  
@@ -258,6 +262,8 @@ void Closure::init_closure () {
 
 void Closure::init_and_gate_extraction () {
   LOG ("[gate-extraction]");
+  internal->init_noccs ();
+  internal->init_occs ();
   for (Clause *c : internal->clauses) {
     if (c->garbage)
       continue;
@@ -272,6 +278,7 @@ void Closure::init_and_gate_extraction () {
     internal->noccs (other)++;
     internal->occs (lit).push_back (c);
     internal->occs (other).push_back (c);
+    internal->watch_clause (c);
   }
 }
 
@@ -299,7 +306,7 @@ void Closure::delete_proof_chain () {
   }
   if (chain.empty())
     return;
-#if 0
+#if 1
   chain.clear();  
   return; // temporary workaround
 #endif
@@ -429,7 +436,7 @@ void Closure::update_and_gate(Gate *g, GatesTable::iterator it, int falsifies, i
 	  LOGGATE(g, "removing from table");
           (void)table.erase (it);
         }
-	g->hash = hash_lits(g->rhs);
+	g->hash = hash_lits(nonces, g->rhs);
         LOG (g->rhs, "inserting gate[%d] from table %d = %s", g->id, g->lhs,
              string_of_gate (g->tag).c_str ());
         table.insert (g);
@@ -473,7 +480,7 @@ void Closure::update_xor_gate(Gate *g, GatesTable::iterator git) {
       if (g->indexed) {
 	remove_gate (git);
       }
-      g->hash = hash_lits(g->rhs);
+      g->hash = hash_lits(nonces, g->rhs);
       LOGGATE(g, "reinserting in table");
       table.insert (g);
       g->indexed = true;
@@ -506,7 +513,7 @@ void Closure::simplify_and_gate (Gate *g) {
   if (end(g->rhs) != it){
     g->shrunken = true;
     g->rhs.resize(end(g->rhs) - it);
-    g->hash = hash_lits (g->rhs);
+    g->hash = hash_lits (nonces, g->rhs);
     LOGGATE (g, "shrunken");
   }
   shrink_and_gate(g, falsifies);
@@ -559,7 +566,7 @@ Gate *Closure::find_gate_lits (int arity, const vector<int> &rhs, Gate_Type typ,
   g->tag = typ;
   g->arity = arity;
   g->rhs = {rhs};
-  g->hash = hash_lits (g->rhs);
+  g->hash = hash_lits (nonces, g->rhs);
   g->lhs = 0;
 #ifdef LOGGING
   g->id = 0;
@@ -617,7 +624,7 @@ Gate *Closure::new_and_gate (int lhs) {
     g->garbage = false;
     g->indexed = true;
     g->shrunken = false;
-    g->hash = hash_lits (g->rhs);
+    g->hash = hash_lits (nonces, g->rhs);
     g->ids.push_back(marked_mu1(-lhs));
     g->ids.push_back(marked_mu2(-lhs));
     g->ids.push_back(marked_mu4(-lhs));
@@ -699,6 +706,8 @@ void Closure::add_binary_clause (int a, int b) {
   internal->clause.push_back(a);
   internal->clause.push_back(b);
   Clause *res = internal->new_hyper_ternary_resolved_clause_and_watch (false, full_watching);
+  if (!full_watching)
+    new_unwatched_binary_clauses.push_back(res);
   LOG (res, "learning clause");
   internal->clause.clear();
   
@@ -902,6 +911,10 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
     LOG (c, "extracted %u with arity %lu AND base", extracted, arity);
 }
 
+void Closure::reset_and_gate_extraction () {  
+  internal->reset_noccs ();
+  internal->clear_watches ();
+}
 void Closure::extract_and_gates () {
   assert(!full_watching);
   if (!internal->opts.congruenceand)
@@ -923,10 +936,7 @@ void Closure::extract_and_gates () {
     extract_and_gates_with_base_clause(c);
   }
 
-  internal->reset_occs();
-  internal->init_occs();
-  for (auto v : internal->vars)
-    internal->noccs(v) = internal->noccs(-v) = 0;
+  reset_and_gate_extraction ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -1251,7 +1261,7 @@ Gate *Closure::new_xor_gate (int lhs) {
     g->garbage = false;
     g->indexed = true;
     g->shrunken = false;
-    g->hash = hash_lits (g->rhs);
+    g->hash = hash_lits (nonces, g->rhs);
     table.insert(g);
     ++internal->stats.congruence.gates;
     ++internal->stats.congruence.xors;
@@ -1808,12 +1818,12 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     g->rhs.resize(k);
     g->shrunken = true;
     g->arity = k;
-    g->hash = hash_lits (g->rhs);
+    g->hash = hash_lits (nonces, g->rhs);
   } else if (j != size){
     g->shrunken = true;
     g->rhs.resize(j);
     g->arity = j;
-    g->hash = hash_lits (g->rhs);
+    g->hash = hash_lits (nonces, g->rhs);
   }
   
   if (dst_count > 1)
@@ -1860,7 +1870,7 @@ void Closure::simplify_xor_gate (Gate *g) {
     g->shrunken = true;
     g->rhs.resize(j);
     g->arity = j;
-    g->hash = hash_lits (g->rhs);
+    g->hash = hash_lits (nonces, g->rhs);
   }
   assert (g->arity == g->rhs.size());
   check_xor_gate_implied (g);
@@ -1954,13 +1964,11 @@ void Closure::reset_closure() {
 
 void Closure::reset_extraction () {
   full_watching = true;
-  internal->clear_occs ();
-  internal->reset_noccs ();
   if (!internal->unsat && !internal->propagate()) {
     internal->learn_empty_clause();
   }
 
-#if 1
+#if 0
   // remove delete watched clauses from the watch list
   for (auto v : internal->vars) {
     for (auto sgn = -1; sgn <= 1; sgn += 2) {
@@ -1988,6 +1996,7 @@ void Closure::reset_extraction () {
       internal->watch_clause (c);
   }
 #else // simpler implementation
+  new_unwatched_binary_clauses.clear();
   internal->clear_watches();
   internal->connect_watches();
 
@@ -1995,7 +2004,7 @@ void Closure::reset_extraction () {
 }
 
 void Closure::forward_subsume_matching_clauses() {
-  reset_closure();
+  reset_closure ();
   std::vector<signed char> matchable;
   matchable.resize (internal->max_var + 1);
   size_t count_matchable = 0;
@@ -2082,7 +2091,7 @@ void Closure::forward_subsume_matching_clauses() {
   };
   sort (begin (candidates), end (candidates), sort_order);
   size_t tried = 0, subsumed = 0;
-
+  internal->init_occs ();
   for (auto c : candidates) {
     assert (c->size != 2);
     // TODO if terminated
@@ -2091,9 +2100,9 @@ void Closure::forward_subsume_matching_clauses() {
       ++subsumed;
     }
   }
+  internal->reset_occs ();
   LOG ("[congruence] subsumed %.0f%%",
        (double) subsumed / (double) (tried ? tried : 1));
-  internal->reset_occs ();
 }
 
 
@@ -2149,6 +2158,7 @@ bool Closure::find_subsuming_clause (Clause *subsumed) {
   int least_occuring_lit = 0;
   size_t count_least_occurring = INT_MAX;
   LOG (subsumed, "trying to forward subsume");
+
   for (auto lit : *subsumed) {
     const int repr_lit = find_representative(lit);    
     const size_t count = internal->occs (lit).size ();
@@ -2371,7 +2381,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
       g->rhs.resize(2);
       assert (rhs[0] < rhs[1]);
       assert (rhs[0] != -rhs[1]);
-      g->hash = hash_lits (g->rhs);
+      g->hash = hash_lits (nonces, g->rhs);
       LOGGATE (g, "rewritten");
       Gate *h;
       if (new_tag == Gate_Type::And_Gate) {
@@ -2436,7 +2446,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
         if (negate_lhs)
           g->lhs = not_lhs;
         LOGGATE (g, "normalized");
-	g->hash = hash_lits(g->rhs);
+	g->hash = hash_lits (nonces, g->rhs);
         index_gate (g);
         assert (g->arity == 3);
         for (auto lit : g->rhs)
@@ -2520,7 +2530,7 @@ void Closure::simplify_ite_gate (Gate *g) {
       g->tag = Gate_Type::And_Gate;
       g->arity = 2;
       rhs.resize(2);
-      g->hash = hash_lits (g->rhs);
+      g->hash = hash_lits (nonces, g->rhs);
       check_and_gate_implied(g);
       Gate *h = find_and_lits(2, rhs);
       if (h) {
@@ -2532,7 +2542,7 @@ void Closure::simplify_ite_gate (Gate *g) {
 	remove_gate(git);
 	index_gate(g);
 	garbage = false;
-	g->hash = hash_lits(g->rhs);
+	g->hash = hash_lits (nonces, g->rhs);
 	for (auto lit : rhs)
 	  if (lit != cond && lit != then_lit && lit != else_lit) {
 	    connect_goccs(g, lit);
@@ -2631,7 +2641,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
     g->garbage = false;
     g->indexed = true;
     g->shrunken = false;
-    g->hash = hash_lits (g->rhs);
+    g->hash = hash_lits (nonces, g->rhs);
     table.insert (g);
     ++internal->stats.congruence.gates;
     ++internal->stats.congruence.xors;
@@ -2677,6 +2687,7 @@ void Closure::check_ite_gate_implied (Gate *g) {
 void Closure::init_ite_gate_extraction (std::vector<Clause *> &candidates) {
   std::vector<Clause *> ternary;
   glargecounts.resize (2 * internal->vsize, 0);
+  internal->init_occs ();
   for (auto lit : internal->lits) {
     // TODO where is kissat doing that?
     internal->occs (lit).clear ();
@@ -3124,12 +3135,10 @@ void Internal::extract_gates (bool decompose) {
   opts.deduplicate = dedup;
   ++stats.congruence.rounds;
   clear_watches();
-  connect_binary_watches ();
+//  connect_binary_watches ();
 
   START_SIMPLIFIER (congruence, CONGRUENCE);
   Closure closure (this);
-  init_occs ();
-  init_noccs ();
 
   closure.init_closure ();
   assert (unsat || closure.chain.empty ());
@@ -3153,10 +3162,10 @@ void Internal::extract_gates (bool decompose) {
   }
 
   closure.reset_closure();
-//  internal->clear_watches (); // TODO we could be more efficient here
   assert (closure.new_unwatched_binary_clauses.empty ());
-//  internal->connect_watches ();
-  internal->reset_occs ();
+  internal->clear_watches ();
+  internal->connect_watches ();
+  assert (!internal->occurring ());
 
   const int64_t new_merged = stats.congruence.congruent;
 
@@ -3193,6 +3202,8 @@ void Internal::extract_gates (bool decompose) {
   }
   assert (watched == nb_clauses * 2);
 #endif
+  assert (!internal->occurring ());
+
   if (decompose && opts.decompose && new_merged != old_merged) {
     internal->decompose ();
     this->report('d', !opts.reportall && !(stats.congruence.congruent - old));

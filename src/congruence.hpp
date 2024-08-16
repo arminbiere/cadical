@@ -53,21 +53,22 @@ struct Gate {
 
 typedef vector<Gate *> GOccs;
 
-static size_t hash_lits (const vector<int> &lits) {
+static size_t hash_lits (std::array<int, 16> &nonces, const vector<int> &lits) {
   size_t hash = 0;
+  const auto end_nonces = end (nonces);
+  const auto begin_nonces = begin (nonces);
+  auto n = begin_nonces;
   for (auto lit : lits){
     hash += lit;
+    hash *= *n++;
     hash = (hash << 4) | (hash >> 60);
+    if (n == end_nonces)
+      n = begin_nonces;
   }
-  hash ^= hash >> 32;
+//  hash ^= hash >> 32;
   return hash;
 }
-struct Hash {
-  size_t operator() (const Gate *const g) const {
-    assert (hash_lits (g->rhs) == g->hash);
-    return g->hash;
-  }
-};
+
 
 struct GateEqualTo {
   bool operator()(const Gate *const lhs, const Gate *const rhs) const 
@@ -77,12 +78,23 @@ struct GateEqualTo {
 };
 struct Closure {
 
-  Closure (Internal *i) : internal (i) {}
+  Closure (Internal *i) : internal (i), table (128, Hash (nonces)) {
+    
+  }
 
-  typedef unordered_set<Gate *, Hash, GateEqualTo> GatesTable;
   Internal *internal;
   vector<Clause *> binaries;
   bool full_watching = false;
+  std::array<int, 16> nonces;
+  struct Hash {
+    Hash (std::array<int, 16> &ncs) : nonces (ncs)  {};
+    std::array<int, 16> &nonces;
+    size_t operator() (const Gate *const g) const {
+      assert (hash_lits (nonces, g->rhs) == g->hash);
+      return g->hash;
+    }
+  };
+  typedef unordered_set<Gate *, Hash, GateEqualTo> GatesTable;
 
   vector<bool> scheduled;
   vector<signed char> marks;
@@ -165,6 +177,7 @@ struct Closure {
   void init_closure();
   void reset_closure();
   void reset_extraction();
+  void reset_and_gate_extraction ();
   void extract_and_gates (Closure&);
   void extract_gates ();
   void extract_and_gates_with_base_clause (Clause *c);
