@@ -572,7 +572,7 @@ void Internal::transmute_clause (Transmuter &transmuter, Clause *c, int64_t limi
       assert (c->glue - 1 < 64);
       stats.transmutedglue[c->glue - 1]++;
     }
-    stats.transmutedsize[current.size ()]++;
+    stats.transmutedsize[current.size ()-1]++;
   }
   for (const auto & bin : golden_binaries) {
     assert (clause.empty ());
