@@ -772,6 +772,7 @@ struct Internal {
   void init_occs ();
   void init_bins ();
   void init_noccs ();
+  void clear_noccs ();
   void clear_occs ();
   void reset_occs ();
   void reset_bins ();

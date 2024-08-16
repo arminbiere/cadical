@@ -1,5 +1,6 @@
 #include "congruence.hpp"
 #include "internal.hpp"
+#include <algorithm>
 #include <iterator>
 #include <vector>
 
@@ -7,9 +8,11 @@ namespace CaDiCaL {
 
 #ifdef LOGGING
 #define LOGGATE(g, str, ...) \
+  do { \
   LOG (g->rhs, str "%s gate[%d] (arity: %d) %d = %s", ##__VA_ARGS__, \
   g->garbage ? " garbage" : "", \
-  g->id, g->arity, g->lhs, string_of_gate (g->tag).c_str ())
+  g->id, g->arity, g->lhs, string_of_gate (g->tag).c_str ()); \
+  } while (false)
 #else
 #define LOGGATE(...) \
   while (false) {}
@@ -157,7 +160,7 @@ bool Closure::learn_congruence_unit(int lit) {
 
 bool Closure::merge_literals (int lit, int other) {
   assert (!internal->unsat);
-  LOG ("merging literals %d and %d", lit, other);
+  LOG ("merging literals %d and %d\n", lit, other);
   int repr_lit = find_representative(lit);
   int repr_other = find_representative(other);
 
@@ -165,7 +168,8 @@ bool Closure::merge_literals (int lit, int other) {
     LOG ("already merged %d and %d", lit, other);
     return false;
   }
-
+  LOG ("merging external literals %d and %d\n", internal->externalize (lit), internal->externalize (other));
+  printf ("merging kissat literals %d and %d\n", internal->vlit(internal->externalize (lit)), internal->vlit(internal->externalize (other)));
   const int val_lit = internal->val(lit);
   const int val_other = internal->val(other);
 
@@ -255,15 +259,14 @@ void Closure::init_closure () {
   }
 #ifdef LOGGING
   fresh_id = internal->clause_id;
-#endif  
-
+#endif
+  internal->init_noccs ();
+  internal->init_occs ();
 }
 
 
 void Closure::init_and_gate_extraction () {
   LOG ("[gate-extraction]");
-  internal->init_noccs ();
-  internal->init_occs ();
   for (Clause *c : internal->clauses) {
     if (c->garbage)
       continue;
@@ -276,8 +279,9 @@ void Closure::init_and_gate_extraction () {
     const int other = c->literals[1];
     internal->noccs (lit)++;
     internal->noccs (other)++;
-    internal->occs (lit).push_back (c);
-    internal->occs (other).push_back (c);
+//    internal->occs (lit).push_back (c);
+//    internal->occs (other).push_back (c);
+
     internal->watch_clause (c);
   }
 }
@@ -566,6 +570,7 @@ Gate *Closure::find_gate_lits (int arity, const vector<int> &rhs, Gate_Type typ,
   g->tag = typ;
   g->arity = arity;
   g->rhs = {rhs};
+  std:sort (begin (g->rhs), end (g->rhs));
   g->hash = hash_lits (nonces, g->rhs);
   g->lhs = 0;
 #ifdef LOGGING
@@ -621,6 +626,7 @@ Gate *Closure::new_and_gate (int lhs) {
     g->tag = Gate_Type::And_Gate;
     g->arity = arity;
     g->rhs = {rhs};
+    std:sort (begin (g->rhs), end (g->rhs));
     g->garbage = false;
     g->indexed = true;
     g->shrunken = false;
@@ -867,7 +873,8 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
   sort (begin (lits), begin (lits) + reduced_size,
         [&] (int litA, int litB) {
           return (internal->noccs (-litA) < internal->noccs (-litB) ||
-		  (internal->noccs (-litA) == internal->noccs (-litB) && litA < litB));
+		  (internal->noccs (-litA) == internal->noccs (-litB) &&
+		   internal->vlit (litA) < internal->vlit (litB)));
         });
 
   bool first = true;
@@ -912,9 +919,13 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
 }
 
 void Closure::reset_and_gate_extraction () {  
-  internal->reset_noccs ();
+  internal->clear_noccs ();
   internal->clear_watches ();
+
+  for (auto nt : internal->ntab)
+    assert (nt == 0);
 }
+
 void Closure::extract_and_gates () {
   assert(!full_watching);
   if (!internal->opts.congruenceand)
@@ -1083,6 +1094,13 @@ Gate* Closure::find_xor_gate (Gate *g) {
 }
 
 
+void Closure::reset_xor_gate_extraction () {  
+  internal->clear_occs ();
+
+  for (auto nt : internal->ntab)
+    assert (nt == 0);
+}
+  
 bool normalize_ite_lits (std::vector<int>& rhs) {
   assert (rhs.size() == 3);
   if (rhs[0] < 0) {
@@ -1258,6 +1276,7 @@ Gate *Closure::new_xor_gate (int lhs) {
     g->tag = Gate_Type::XOr_Gate;
     g->arity = arity;
     g->rhs = {rhs};
+    sort (begin (g->rhs), end (g->rhs));
     g->garbage = false;
     g->indexed = true;
     g->shrunken = false;
@@ -1575,7 +1594,7 @@ void Closure::extract_xor_gates () {
       continue;
     extract_xor_gates_with_base_clause (c);
   }
-  // reset_xor_gate_extraction();
+  reset_xor_gate_extraction();
 }
 /*------------------------------------------------------------------------*/
 void Closure::find_units () {
@@ -1673,7 +1692,7 @@ bool gate_contains(Gate *g, int lit) {
   return find (begin(g->rhs), end (g->rhs), lit) != end (g->rhs);
 }
 
-void Closure::rewrite_and_gate (Gate *g, int dst, int src) {
+  void Closure::rewrite_and_gate (Gate *g, int dst, int src) {
   if (skip_and_gate(g))
     return;
   if (!gate_contains (g, src))
@@ -1728,7 +1747,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src) {
   assert (not_dst_count <= 1);
   shrink_and_gate(g, falsifies, clashing);
   LOGGATE (g, "rewriten as");
-  update_and_gate(g, git, falsifies, clashing);
+  update_and_gate (g, git, falsifies, clashing);
 }
 
 bool Closure::rewrite_gate (Gate *g, int dst, int src) {
@@ -1758,6 +1777,11 @@ bool Closure::rewrite_gates(int dst, int src) {
       goccs (dst).push_back(g);
   }
   goccs (src).clear();
+
+  for (const auto & occs : gtab) {
+    for (auto g : occs)
+      assert (g), assert (g->garbage || !gate_contains (g, src));
+  }
   return true;
 }
 
@@ -1916,6 +1940,7 @@ bool Closure::propagate_equivalence (int lit) {
 
 size_t Closure::propagate_units_and_equivalences () {
   size_t propagated = 0;
+  printf ("logging %zd", schedule.size());
   while (propagate_units() && !schedule.empty()) {
     ++propagated;
     int lit = schedule.back();
@@ -1959,7 +1984,7 @@ void Closure::reset_closure() {
 
   for (auto gate : garbage)
     delete gate;
-  garbage.clear();
+  garbage.clear ();
 }
 
 void Closure::reset_extraction () {
@@ -1999,7 +2024,6 @@ void Closure::reset_extraction () {
   new_unwatched_binary_clauses.clear();
   internal->clear_watches();
   internal->connect_watches();
-
 #endif
 }
 
@@ -2100,7 +2124,6 @@ void Closure::forward_subsume_matching_clauses() {
       ++subsumed;
     }
   }
-  internal->reset_occs ();
   LOG ("[congruence] subsumed %.0f%%",
        (double) subsumed / (double) (tried ? tried : 1));
 }
@@ -2638,6 +2661,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
     g->tag = Gate_Type::ITE_Gate;
     g->arity = arity;
     g->rhs = {rhs};
+    sort (begin (g->rhs), end (g->rhs));
     g->garbage = false;
     g->indexed = true;
     g->shrunken = false;
@@ -2687,12 +2711,6 @@ void Closure::check_ite_gate_implied (Gate *g) {
 void Closure::init_ite_gate_extraction (std::vector<Clause *> &candidates) {
   std::vector<Clause *> ternary;
   glargecounts.resize (2 * internal->vsize, 0);
-  internal->init_occs ();
-  for (auto lit : internal->lits) {
-    // TODO where is kissat doing that?
-    internal->occs (lit).clear ();
-    internal->occs (-lit).clear ();
-  }
   for (auto c : internal->clauses) {
     if (c->garbage)
       continue;
@@ -2747,9 +2765,9 @@ void Closure::init_ite_gate_extraction (std::vector<Clause *> &candidates) {
     }
     if (twice < 2)
       goto CONTINUE_WITH_NEXT_TERNARY_CLAUSE;
+    assert (c->size != 2);
     for (auto lit : *c)
       internal->occs (lit).push_back(c);
-//    internal->watch_clause(c);
     if (positive && negative)
       candidates.push_back(c);
   CONTINUE_WITH_NEXT_TERNARY_CLAUSE:;
@@ -2764,6 +2782,7 @@ void Closure::reset_ite_gate_extraction () {
   condeq[0].clear();
   condeq[1].clear();
   glargecounts.clear();
+  internal->clear_occs ();
 }
 
 void Closure::copy_conditional_equivalences (int lit, std::vector<std::pair<int, int>> &condbin) {
@@ -3089,6 +3108,10 @@ void Closure::extract_ite_gates() {
   if (!internal->opts.congruenceite)
     return;
   std::vector<Clause*> candidates;
+
+//  internal->clear_occs();
+  for (const auto & nt : internal->otab)
+    assert (nt.size() == 0);
   init_ite_gate_extraction(candidates);
 
   for (auto idx : internal->vars) {
@@ -3140,6 +3163,7 @@ void Internal::extract_gates (bool decompose) {
   START_SIMPLIFIER (congruence, CONGRUENCE);
   Closure closure (this);
 
+  opts.log = false;
   closure.init_closure ();
   assert (unsat || closure.chain.empty ());
   closure.extract_gates ();
@@ -3160,11 +3184,14 @@ void Internal::extract_gates (bool decompose) {
       }
     }
   }
+  opts.log = false;
 
   closure.reset_closure();
   assert (closure.new_unwatched_binary_clauses.empty ());
   internal->clear_watches ();
   internal->connect_watches ();
+  internal->reset_occs ();
+  internal->reset_noccs ();
   assert (!internal->occurring ());
 
   const int64_t new_merged = stats.congruence.congruent;
@@ -3175,7 +3202,7 @@ void Internal::extract_gates (bool decompose) {
     unsat = true;
 
   STOP_SIMPLIFIER (congruence, CONGRUENCE);
-  report ('=', !opts.reportall && !(stats.congruence.congruent - old));
+  report ('c', !opts.reportall && !(stats.congruence.congruent - old));
 #ifndef NDEBUG
   size_t watched = 0;
   for (auto v : vars) {
@@ -3204,9 +3231,14 @@ void Internal::extract_gates (bool decompose) {
 #endif
   assert (!internal->occurring ());
 
-  if (decompose && opts.decompose && new_merged != old_merged) {
+  if ((true || decompose) && opts.decompose && new_merged != old_merged) {
     internal->decompose ();
     this->report('d', !opts.reportall && !(stats.congruence.congruent - old));
+    internal->decompose ();
+    this->report('d', !opts.reportall && !(stats.congruence.congruent - old));
+    internal->decompose ();
+    this->report('d', !opts.reportall && !(stats.congruence.congruent - old));
+//    internal->dump();
   }
 }
 

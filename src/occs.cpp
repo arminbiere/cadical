@@ -36,6 +36,13 @@ void Internal::init_noccs () {
   LOG ("initialized two-sided occurrence counters");
 }
 
+void Internal::clear_noccs () {
+  assert (!ntab.empty ());
+  for (auto &nt : ntab)
+    nt = 0;
+  LOG ("clear two-sided occurrence counters");
+}
+
 void Internal::reset_noccs () {
   assert (!max_var || !ntab.empty ());
   erase_vector (ntab);
