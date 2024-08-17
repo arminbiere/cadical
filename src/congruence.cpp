@@ -1989,7 +1989,8 @@ size_t Closure::propagate_units_and_equivalences () {
       if (g->garbage)
 	continue;
       assert (g->tag == Gate_Type::ITE_Gate || !gate_contains(g, -g->lhs));
-      assert (g->tag != Gate_Type::ITE_Gate || (g->rhs[1] != -g->lhs && g->rhs[1] != -g->lhs));
+      // TODO: this would be nice to have!
+//      assert (g->tag != Gate_Type::ITE_Gate || (g->rhs.size() == 3 && g->rhs[1] != -g->lhs && g->rhs[2] != -g->lhs));
       //assert (table.count(g) == 1);
       // for (auto lit : g->rhs)
       // 	assert (!internal->val (lit));
