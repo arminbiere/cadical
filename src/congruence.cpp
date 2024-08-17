@@ -9,9 +9,9 @@ namespace CaDiCaL {
 #ifdef LOGGING
 #define LOGGATE(g, str, ...) \
   do { \
-  LOG (g->rhs, str "%s gate[%d,%zd] (arity: %d) %d = %s", ##__VA_ARGS__, \
+  LOG (g->rhs, str "%s gate[%d] (arity: %d) %d = %s", ##__VA_ARGS__, \
   g->garbage ? " garbage" : "", \
-  g->id, g->hash, g->arity, g->lhs, string_of_gate (g->tag).c_str ()); \
+  g->id, g->arity, g->lhs, string_of_gate (g->tag).c_str ()); \
   } while (false)
 #else
 #define LOGGATE(...) \
@@ -442,6 +442,7 @@ void Closure::update_and_gate(Gate *g, GatesTable::iterator it, int falsifies, i
       ++internal->stats.congruence.unary_and;
     }
   } else {
+    assert (g->arity == g->rhs.size());
     Gate *h = find_and_lits (g->arity, g->rhs);
     if (h) {
       assert (garbage);
@@ -1987,7 +1988,8 @@ size_t Closure::propagate_units_and_equivalences () {
     for (auto g : occs) {
       if (g->garbage)
 	continue;
-      assert (!gate_contains(g, -g->lhs));
+      assert (g->tag == Gate_Type::ITE_Gate || !gate_contains(g, -g->lhs));
+      assert (g->tag != Gate_Type::ITE_Gate || (g->rhs[1] != -g->lhs && g->rhs[1] != -g->lhs));
       //assert (table.count(g) == 1);
       // for (auto lit : g->rhs)
       // 	assert (!internal->val (lit));
