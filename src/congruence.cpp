@@ -232,6 +232,9 @@ bool Closure::merge_literals (int lit, int other) {
 GOccs &Closure::goccs (int lit) { return gtab[internal->vlit (lit)]; }
 
 void Closure::connect_goccs (Gate *g, int lit) {
+  LOGGATE (g, "connect %d to", lit);
+  // incorrect for ITE
+  //assert (std::find(begin (goccs (lit)), end (goccs (lit)), g) == std::end (goccs (lit)));
   goccs (lit).push_back (g);
 }
 
@@ -529,7 +532,7 @@ void Closure::simplify_and_gate (Gate *g) {
     *it++ = lit;
   }
 
-  assert (it < end (g->rhs));
+  assert (it <= end (g->rhs)); // can be equal when ITE are converted to ands leading to 
   assert (it >= begin (g->rhs));
 //  internal->opts.log = true;
   LOGGATE (g, "shrunken %zd -> %zd", g->rhs.size(), it - std::begin (g->rhs));
