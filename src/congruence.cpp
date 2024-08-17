@@ -9,9 +9,9 @@ namespace CaDiCaL {
 #ifdef LOGGING
 #define LOGGATE(g, str, ...) \
   do { \
-  LOG (g->rhs, str "%s gate[%d] (arity: %d) %d = %s", ##__VA_ARGS__, \
+  LOG (g->rhs, str "%s gate[%d,%zd] (arity: %d) %d = %s", ##__VA_ARGS__, \
   g->garbage ? " garbage" : "", \
-  g->id, g->arity, g->lhs, string_of_gate (g->tag).c_str ()); \
+  g->id, g->hash, g->arity, g->lhs, string_of_gate (g->tag).c_str ()); \
   } while (false)
 #else
 #define LOGGATE(...) \
@@ -135,7 +135,7 @@ void Closure::index_gate (Gate *g) {
 }
 
 bool Closure::learn_congruence_unit(int lit) {
-  LOG ("adding unit %d with current value %d", lit, internal->val(lit));
+  LOG ("adding unit %d with current value %d\n", lit, internal->val(lit));
   const signed char val_lit = internal->val(lit);
   if (val_lit > 0)
     return true;
@@ -148,8 +148,11 @@ bool Closure::learn_congruence_unit(int lit) {
   LOG ("assigning");
   internal->assign_unit (lit);
   
-  LOG ("propagating %zd %zd", internal->propagated, internal->trail.size());
+  LOG ("propagating %zd %zd\n", internal->propagated, internal->trail.size());
+  assert (internal->watching());
+  assert (full_watching);
   bool no_conflict = internal->propagate ();
+  LOG ("propagating %zd %zd\n", internal->propagated, internal->trail.size());
 
   if (no_conflict)
     return true;
@@ -168,8 +171,8 @@ bool Closure::merge_literals (int lit, int other) {
     LOG ("already merged %d and %d", lit, other);
     return false;
   }
-  LOG ("merging external literals %d and %d\n", internal->externalize (lit), internal->externalize (other));
-  printf ("merging kissat literals %d and %d\n", internal->vlit(internal->externalize (lit)), internal->vlit(internal->externalize (other)));
+//  LOG ("merging external literals %d and %d\n", internal->externalize (lit), internal->externalize (other));
+//  LOG ("merging kissat literals %d and %d\n", internal->vlit(internal->externalize (lit)), internal->vlit(internal->externalize (other)));
   const int val_lit = internal->val(lit);
   const int val_other = internal->val(other);
 
@@ -408,47 +411,57 @@ void Closure::shrink_and_gate(Gate *g, int falsifies, int clashing) {
   if (falsifies) {
     g->rhs[0] = falsifies;
     g->rhs.resize(1);
+    g->hash = hash_lits (nonces, g->rhs);
+    g->arity = 1;
   } else if (clashing) {
     g->rhs[0] = clashing;
     g->rhs[1] = -clashing;
     g->rhs.resize(2);
+    g->hash = hash_lits (nonces, g->rhs);
+    g->arity = 2;
   }
+  g->arity = g->rhs.size();
+  g->shrunken = true;
 }
 
 
 void Closure::update_and_gate(Gate *g, GatesTable::iterator it, int falsifies, int clashing) {
+  LOGGATE (g, "update and gate of arity %d", g->arity);
   bool garbage = true;
   if (falsifies || clashing) {
     learn_congruence_unit (-g->lhs);
   } else if (g->arity == 1) {
     const signed char v = internal->val (g->lhs);
+    LOG ("val lhs = %d", v);
     if (v > 0)
       learn_congruence_unit (g->rhs[0]);
     else if (v < 0)
       learn_congruence_unit (-g->rhs[0]);
-    else if (merge_literals(g->lhs, g->rhs[0])) {
+    else if (merge_literals (g->lhs, g->rhs[0])) {
       ++internal->stats.congruence.unaries;
       ++internal->stats.congruence.unary_and;
+    }
+  } else {
+    Gate *h = find_and_lits (g->arity, g->rhs);
+    if (h) {
+      assert (garbage);
+      if (merge_literals (g->lhs, h->lhs))
+        ++internal->stats.congruence.ands;
     } else {
-      Gate *h = find_and_lits (g->arity, g->rhs);
-      if (h) {
-        assert (garbage);
-        if (merge_literals (g->lhs, h->lhs))
-          ++internal->stats.congruence.ands;
-      } else {
-        if (g->indexed) {
-	  LOGGATE(g, "removing from table");
-          (void)table.erase (it);
-        }
-	g->hash = hash_lits(nonces, g->rhs);
-        LOG (g->rhs, "inserting gate[%d] from table %d = %s", g->id, g->lhs,
-             string_of_gate (g->tag).c_str ());
-        table.insert (g);
-        g->indexed = true;
-        garbage = false;
+      if (g->indexed) {
+        LOGGATE (g, "removing from table");
+        (void) table.erase (it);
       }
+      g->hash = hash_lits (nonces, g->rhs);
+      LOG (g->rhs, "inserting gate[%d] from table %d = %s", g->id, g->lhs,
+           string_of_gate (g->tag).c_str ());
+      assert (table.count (g) == 0);
+      table.insert (g);
+      g->indexed = true;
+      garbage = false;
     }
   }
+
   if (garbage && !internal->unsat)
     mark_garbage(g);
 }
@@ -500,9 +513,10 @@ void Closure::simplify_and_gate (Gate *g) {
   if (skip_and_gate (g))
     return;
   GatesTable::iterator git = (g->indexed ? table.find(g) : end(table));
-  LOG (g->rhs, "simplifying gate[%d] %d =", g->id, g->lhs);
+  assert (!g->indexed || git != end (table));
+  LOGGATE (g, "simplifying ");
   int falsifies = 0;
-  auto it = begin(g->rhs);
+  std::vector<int>::iterator it = begin(g->rhs);
   for (auto lit : g->rhs) {
     const signed char v = internal->val (lit);
     if (v > 0)
@@ -514,14 +528,20 @@ void Closure::simplify_and_gate (Gate *g) {
     *it++ = lit;
   }
 
-  if (end(g->rhs) != it){
-    g->shrunken = true;
-    g->rhs.resize(end(g->rhs) - it);
-    g->hash = hash_lits (nonces, g->rhs);
-    LOGGATE (g, "shrunken");
-  }
-  shrink_and_gate(g, falsifies);
-  update_and_gate(g, git, falsifies);
+  assert (it < end (g->rhs));
+  assert (it >= begin (g->rhs));
+//  internal->opts.log = true;
+  LOGGATE (g, "shrunken %zd -> %zd", g->rhs.size(), it - std::begin (g->rhs));
+  
+  g->shrunken = true;
+  g->rhs.resize (it - std::begin (g->rhs));
+  g->hash = hash_lits (nonces, g->rhs);
+  g->arity = it - std::begin (g->rhs);
+  
+  LOGGATE (g, "shrunken");
+//  internal->opts.log = false;
+  shrink_and_gate (g, falsifies);
+  update_and_gate (g, git, falsifies);
   ++internal->stats.congruence.simplified_ands;
   ++internal->stats.congruence.simplified;
 }
@@ -560,7 +580,7 @@ bool Closure::simplify_gates (int lit) {
 
 
 Gate *Closure::find_and_lits (int arity, const vector<int> &rhs) {
-  return find_gate_lits(arity, rhs, Gate_Type::And_Gate);
+  return find_gate_lits (arity, rhs, Gate_Type::And_Gate);
 }
 
 // search for the gate in the hash-table.  We cannot use find, as we might be changing a gate, so
@@ -570,17 +590,18 @@ Gate *Closure::find_gate_lits (int arity, const vector<int> &rhs, Gate_Type typ,
   g->tag = typ;
   g->arity = arity;
   g->rhs = {rhs};
-  std:sort (begin (g->rhs), end (g->rhs));
   g->hash = hash_lits (nonces, g->rhs);
   g->lhs = 0;
 #ifdef LOGGING
   g->id = 0;
 #endif  
-  const auto its = table.equal_range(g);
+  const auto &its = table.equal_range(g);
   Gate *h = nullptr;
   for (auto it = its.first; it != its.second; ++it) {
+    LOGGATE ((*it), "checking gate in the table");
     if (*it == except)
       continue;
+    assert ((*it)->lhs != g->lhs);
     if ((*it)->tag != g->tag)
       continue;
     if ((*it)->rhs != g->rhs)
@@ -615,6 +636,7 @@ Gate *Closure::new_and_gate (int lhs) {
   }
   const unsigned arity = rhs.size();
   assert (arity + 1 == lits.size());
+    std::sort (begin (rhs), end (rhs));
   Gate *g = find_and_lits (arity, this->rhs);
   if (g) {
     if (merge_literals(g->lhs, lhs)) {
@@ -626,7 +648,6 @@ Gate *Closure::new_and_gate (int lhs) {
     g->tag = Gate_Type::And_Gate;
     g->arity = arity;
     g->rhs = {rhs};
-    std:sort (begin (g->rhs), end (g->rhs));
     g->garbage = false;
     g->indexed = true;
     g->shrunken = false;
@@ -1260,6 +1281,7 @@ Gate *Closure::new_xor_gate (int lhs) {
   }
   const unsigned arity = rhs.size();
   assert (arity + 1 == lits.size());
+  std:sort (begin (rhs), end (rhs));
   Gate *g = find_xor_lits (arity, this->rhs);
   if (g) {
     check_xor_gate_implied (g);
@@ -1276,7 +1298,6 @@ Gate *Closure::new_xor_gate (int lhs) {
     g->tag = Gate_Type::XOr_Gate;
     g->arity = arity;
     g->rhs = {rhs};
-    sort (begin (g->rhs), end (g->rhs));
     g->garbage = false;
     g->indexed = true;
     g->shrunken = false;
@@ -1607,7 +1628,7 @@ void Closure::find_units () {
       int lit = v * sgn;
       for (auto w : internal->watches (lit)) {
 	if (!w.binary ())
-	  break; // todo check that binaries first
+	  continue; // todo check that binaries first
         const int other = w.blit;
         if (marked (-other)) {
           LOG (w.clause, "binary clause %d %d and %d %d give unit %d", lit, other,
@@ -1629,7 +1650,7 @@ void Closure::find_units () {
     }
     assert (internal->analyzed.empty());
   }
-  LOG ("found %zd units", units);
+  MSG ("found %zd units", units);
 }
 
 void Closure::find_equivalences () {
@@ -1642,7 +1663,7 @@ void Closure::find_equivalences () {
     int lit = v;
     for (auto w : internal->watches (lit)) {
       if (!w.binary ())
-	break;
+	continue;
       assert (w.size == 2);
       const int other = w.blit;
       if (abs(lit) > abs(other))
@@ -1658,7 +1679,7 @@ void Closure::find_equivalences () {
     
     for (auto w : internal->watches (-lit)) {
       if (!w.binary())
-	break; // TODO check if this as in kissat or continue
+	continue; // TODO check if this as in kissat or continue
       const int other = w.blit;
       if (abs(-lit) > abs(other))
 	continue;
@@ -1683,7 +1704,7 @@ void Closure::find_equivalences () {
     unmark_all();
   }
   assert (internal->analyzed.empty());
-  LOG ("found %zd equivalences", schedule.size());
+  MSG ("found %zd equivalences", schedule.size());
 }
 
 /*------------------------------------------------------------------------*/
@@ -1692,7 +1713,7 @@ bool gate_contains(Gate *g, int lit) {
   return find (begin(g->rhs), end (g->rhs), lit) != end (g->rhs);
 }
 
-  void Closure::rewrite_and_gate (Gate *g, int dst, int src) {
+void Closure::rewrite_and_gate (Gate *g, int dst, int src) {
   if (skip_and_gate(g))
     return;
   if (!gate_contains (g, src))
@@ -1743,11 +1764,14 @@ bool gate_contains(Gate *g, int lit) {
     *q++ = lit;
   }
 
+
+  g->rhs.resize(q - begin(g->rhs));
   assert (dst_count <= 2);
   assert (not_dst_count <= 1);
-  shrink_and_gate(g, falsifies, clashing);
-  LOGGATE (g, "rewriten as");
+  shrink_and_gate (g, falsifies, clashing);
+  LOGGATE (g, "rewritten as");
   update_and_gate (g, git, falsifies, clashing);
+  ++internal->stats.congruence.rewritten_ands;
 }
 
 bool Closure::rewrite_gate (Gate *g, int dst, int src) {
@@ -1779,8 +1803,10 @@ bool Closure::rewrite_gates(int dst, int src) {
   goccs (src).clear();
 
   for (const auto & occs : gtab) {
-    for (auto g : occs)
-      assert (g), assert (g->garbage || !gate_contains (g, src));
+    for (auto g : occs) {
+      assert (g);
+      assert (g->garbage || !gate_contains (g, src));
+    }
   }
   return true;
 }
@@ -1924,7 +1950,7 @@ bool Closure::propagate_unit(int lit) {
 
 
 bool Closure::propagate_units () {
-  while (units != internal->trail.size())  {
+  while (units != internal->trail.size())  { // units are added during propagation, so reloading
     if (!propagate_unit(internal->trail[units++]))
       return false;
   }
@@ -1940,7 +1966,7 @@ bool Closure::propagate_equivalence (int lit) {
 
 size_t Closure::propagate_units_and_equivalences () {
   size_t propagated = 0;
-  printf ("logging %zd", schedule.size());
+  LOG ("propagating at least %zd units", schedule.size());
   while (propagate_units() && !schedule.empty()) {
     ++propagated;
     int lit = schedule.back();
@@ -1949,6 +1975,23 @@ size_t Closure::propagate_units_and_equivalences () {
     scheduled[abs(lit)] = false;
     if (!propagate_equivalence(lit))
       break;
+  }
+
+  assert (internal->unsat || schedule.empty());
+
+  MSG ("propagated %zu congruence units", units);
+  MSG ("propagated %zu congruence equivalences",
+                       propagated);
+
+  for (const auto & occs : gtab) {
+    for (auto g : occs) {
+      if (g->garbage)
+	continue;
+      assert (!gate_contains(g, -g->lhs));
+      //assert (table.count(g) == 1);
+      // for (auto lit : g->rhs)
+      // 	assert (!internal->val (lit));
+    }
   }
   return propagated;
 }
@@ -2661,7 +2704,8 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
     g->tag = Gate_Type::ITE_Gate;
     g->arity = arity;
     g->rhs = {rhs};
-    sort (begin (g->rhs), end (g->rhs));
+    // do not sort clauses here obviously!
+    // sort (begin (g->rhs), end (g->rhs));
     g->garbage = false;
     g->indexed = true;
     g->shrunken = false;
@@ -3163,12 +3207,15 @@ void Internal::extract_gates (bool decompose) {
   START_SIMPLIFIER (congruence, CONGRUENCE);
   Closure closure (this);
 
-  opts.log = false;
+//  opts.log = false;
   closure.init_closure ();
   assert (unsat || closure.chain.empty ());
   closure.extract_gates ();
   assert (unsat || closure.chain.empty ());
+  internal->clear_watches ();
+  internal->connect_watches ();
   closure.reset_extraction ();
+
   if (!unsat) {
     closure.find_units ();
     assert (unsat || closure.chain.empty ());
@@ -3184,12 +3231,12 @@ void Internal::extract_gates (bool decompose) {
       }
     }
   }
-  opts.log = false;
+//  opts.log = false;
 
   closure.reset_closure();
-  assert (closure.new_unwatched_binary_clauses.empty ());
   internal->clear_watches ();
   internal->connect_watches ();
+  assert (closure.new_unwatched_binary_clauses.empty ());
   internal->reset_occs ();
   internal->reset_noccs ();
   assert (!internal->occurring ());

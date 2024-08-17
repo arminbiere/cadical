@@ -266,6 +266,7 @@ struct Stats {
     int64_t rounds;
     int64_t unary_and;
     int64_t unaries;
+    int64_t rewritten_ands;
     int64_t simplified;
     int64_t simplified_ands;
     int64_t simplified_xors;

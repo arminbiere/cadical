@@ -536,7 +536,7 @@ bool Internal::preprocess_round (int round) {
   int old_elimbound = lim.elimbound;
 
   if (opts.congruence)
-    extract_gates(), extract_gates(); // probing calls decompose already
+    extract_gates(); // probing calls decompose already
  
   if (opts.probe)
     probe (false);

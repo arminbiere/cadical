@@ -554,8 +554,10 @@ void Stats::print (Internal *internal) {
          stats.congruence.xors, relative (stats.congruence.xors, stats.congruence.gates));
     PRT ("   congruent:      %15" PRId64 "   %10.2f    per round",
          stats.congruence.congruent, relative (stats.congruence.rounds, stats.congruence.congruent));
-        PRT ("   unaries:      %15" PRId64 "   %10.2f    per round",
+    PRT ("   unaries:      %15" PRId64 "   %10.2f    per round",
          stats.congruence.unaries, relative (stats.congruence.rounds, stats.congruence.unaries));
+    PRT ("   rewritten-ands:      %15" PRId64 "   %10.2f    per round",
+         stats.congruence.rewritten_ands, relative (stats.congruence.rounds, stats.congruence.rewritten_ands));
   }
 
   LINE ();
