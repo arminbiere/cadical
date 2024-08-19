@@ -1987,16 +1987,30 @@ size_t Closure::propagate_units_and_equivalences () {
   MSG ("propagated %zu congruence equivalences",
                        propagated);
 
-  for (const auto & occs : gtab) {
-    for (auto g : occs) {
+  if (!internal->unsat) {
+    for (const auto &occs : gtab) {
+      for (auto g : occs) {
+        if (g->garbage)
+          continue;
+        assert (g->tag == Gate_Type::ITE_Gate ||
+                g->tag == Gate_Type::XOr_Gate ||
+                !gate_contains (g, -g->lhs));
+        // TODO: this would be nice to have!
+        //      assert (g->tag != Gate_Type::ITE_Gate || (g->rhs.size() == 3
+        //      && g->rhs[1] != -g->lhs && g->rhs[2] != -g->lhs));
+        // assert (table.count(g) == 1);
+        for (auto lit : g->rhs) {
+          assert (!internal->val (lit));
+          assert (representative (lit) == lit);
+        }
+      }
+    }
+    for (Gate* g : table) {
       if (g->garbage)
 	continue;
-      assert (g->tag == Gate_Type::ITE_Gate || g->tag == Gate_Type::XOr_Gate || !gate_contains(g, -g->lhs));
-      // TODO: this would be nice to have!
-//      assert (g->tag != Gate_Type::ITE_Gate || (g->rhs.size() == 3 && g->rhs[1] != -g->lhs && g->rhs[2] != -g->lhs));
-      //assert (table.count(g) == 1);
-      // for (auto lit : g->rhs)
-      // 	assert (!internal->val (lit));
+      if (g->tag == Gate_Type::And_Gate) {
+	//assert (find_and_lits(g->arity, g->rhs));
+      }
     }
   }
   return propagated;
@@ -3213,9 +3227,9 @@ void Internal::extract_gates (bool decompose) {
   START_SIMPLIFIER (congruence, CONGRUENCE);
   Closure closure (this);
 
-//  opts.log = false;
   closure.init_closure ();
   assert (unsat || closure.chain.empty ());
+//  opts.log = true;
   closure.extract_gates ();
   assert (unsat || closure.chain.empty ());
   internal->clear_watches ();
