@@ -3339,11 +3339,15 @@ void Internal::extract_gates (bool decompose) {
   }
 
   const int64_t old = stats.congruence.congruent;
-  const bool dedup = opts.deduplicate;
   const int old_merged = stats.congruence.congruent;
-  opts.deduplicate = true;
-  mark_duplicated_binary_clauses_as_garbage ();
-  opts.deduplicate = dedup;
+
+  // congruencebinary is already doing it (and more actually)
+  if (!internal->opts.congruencebinaries) {
+    const bool dedup = opts.deduplicate;
+    opts.deduplicate = true;
+    mark_duplicated_binary_clauses_as_garbage ();
+    opts.deduplicate = dedup;
+  }
   ++stats.congruence.rounds;
   clear_watches();
 //  connect_binary_watches ();
