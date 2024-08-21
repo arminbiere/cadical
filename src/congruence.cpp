@@ -133,7 +133,7 @@ void Closure::extract_binaries () {
       if (binaries[i].lit1 == binaries[j].lit1 &&
           binaries[i].lit2 == binaries[j].lit2) {
         // subsuming later clause
-        internal->subsume_clause (
+        subsume_clause (
             binaries[i].clause,
             binaries[j].clause); // the local one is specialized
         ++duplicated;
