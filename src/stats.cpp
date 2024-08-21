@@ -546,6 +546,8 @@ void Stats::print (Internal *internal) {
   if (all || stats.congruence.gates) {
     PRT ("congruence:        %15" PRId64 "   %10.2f    interval",
          stats.congruence.rounds, relative (stats.conflicts, stats.congruence.rounds));
+    PRT ("   units:          %15" PRId64 "   %10.2f    per congruent",
+         stats.congruence.units, relative (stats.congruence.units, stats.congruence.congruent));
     PRT ("   and-gates:      %15" PRId64 "   %10.2f    per found gates",
          stats.congruence.ands, relative (stats.congruence.ands, stats.congruence.gates));
     PRT ("   ite-gates:      %15" PRId64 "   %10.2f    per found gates",

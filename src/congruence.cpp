@@ -270,6 +270,7 @@ void Closure::index_gate (Gate *g) {
 
 bool Closure::learn_congruence_unit(int lit) {
   LOG ("adding unit %d with current value %d\n", lit, internal->val(lit));
+  ++internal->stats.congruence.units;
   const signed char val_lit = internal->val(lit);
   if (val_lit > 0)
     return true;
@@ -359,7 +360,7 @@ bool Closure::merge_literals (int lit, int other) {
   representative(-larger) = -smaller;
   schedule_literal(larger);
   ++internal->stats.congruence.congruent;
-  return false;
+  return true;
 }
 
 /*------------------------------------------------------------------------*/
@@ -572,6 +573,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int falsifies, 
       ++internal->stats.congruence.unary_and;
     }
   } else {
+    std::sort (begin (g->rhs), end (g->rhs));
     Gate *h = find_and_lits (g->rhs);
     if (h) {
       assert (garbage);
@@ -709,6 +711,7 @@ bool Closure::simplify_gates (int lit) {
 
 
 Gate *Closure::find_and_lits (const vector<int> &rhs) {
+  assert (is_sorted(begin (rhs), end (rhs)));
   return find_gate_lits (rhs, Gate_Type::And_Gate);
 }
 
@@ -720,6 +723,7 @@ Gate *Closure::find_gate_lits (const vector<int> &rhs, Gate_Type typ, Gate *exce
   g->rhs = {rhs};
   g->hash = hash_lits (nonces, g->rhs);
   g->lhs = 0;
+  g->garbage = false;
 #ifdef LOGGING
   g->id = 0;
 #endif  
@@ -739,8 +743,8 @@ Gate *Closure::find_gate_lits (const vector<int> &rhs, Gate_Type typ, Gate *exce
   }
 
   if (h) {
-    LOGGATE (h, "already existing");
     LOGGATE (g, "searching");
+    LOGGATE (h, "already existing");
     delete g;
     return h;
   }
@@ -762,14 +766,16 @@ Gate *Closure::new_and_gate (int lhs) {
       rhs.push_back(-lit);
     }
   }
-  const unsigned arity = rhs.size();
+  const size_t arity = rhs.size();
   assert (arity + 1 == lits.size());
-    std::sort (begin (rhs), end (rhs));
+  std::sort (begin (rhs), end (rhs));
   Gate *g = find_and_lits (this->rhs);
   if (g) {
-    if (merge_literals(g->lhs, lhs)) {
+    if (merge_literals (g->lhs, lhs)) {
       LOG ("found merged literals");
+      ++internal->stats.congruence.ands;
     }
+    return nullptr;
   } else {
     g = new Gate;
     g->lhs = lhs;
@@ -784,13 +790,12 @@ Gate *Closure::new_and_gate (int lhs) {
     g->ids.push_back(marked_mu4(-lhs));
     table.insert(g);
     ++internal->stats.congruence.gates;
-    ++internal->stats.congruence.ands;
 #ifdef LOGGING
     g->id = fresh_id++;
 #endif  
     LOGGATE (g, "creating new");
     for (auto lit : g->rhs) {
-      connect_goccs(g, lit);
+      connect_goccs (g, lit);
     }
     
 
@@ -881,8 +886,8 @@ Gate *Closure::find_remaining_and_gate (int lhs) {
   LOG ("negated LHS %d occurs times in %zd binary clauses", (not_lhs),
        internal->noccs(-lhs));
 
-  const unsigned arity = lits.size() - 1;
-  unsigned matched = 0;
+  const size_t arity = lits.size() - 1;
+  size_t matched = 0;
   assert (1 < arity);
 
 
@@ -1233,8 +1238,9 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
   }
   clause.clear();
 }
-  
+ 
 Gate* Closure::find_xor_lits (const vector<int> &rhs) {
+  assert (is_sorted(begin (rhs), end (rhs)));
   return find_gate_lits(rhs, Gate_Type::XOr_Gate);
 }
 
@@ -1415,7 +1421,7 @@ Gate *Closure::new_xor_gate (int lhs) {
   if (g) {
     check_xor_gate_implied (g);
     add_xor_matching_proof_chain(g, g->lhs, lhs);
-    if (merge_literals(g->lhs, lhs)) {
+    if (merge_literals (g->lhs, lhs)) {
       LOG ("found merged literals");
     }
     if (!internal->unsat)
@@ -1439,7 +1445,7 @@ Gate *Closure::new_xor_gate (int lhs) {
     LOGGATE (g, "creating new");
     check_xor_gate_implied (g);
     for (auto lit : g->rhs) {
-      connect_goccs(g, lit);
+      connect_goccs (g, lit);
     }
     
 
@@ -1820,7 +1826,7 @@ void Closure::find_equivalences () {
 	int other_repr = find_representative(other);
 	LOG ("%d and %d are the representative", lit_repr, other_repr);
 	if (lit_repr != other_repr) {
-	  if (merge_literals(lit, other)) {
+	  if (merge_literals (lit, other)) {
 	    ++internal->stats.congruence.congruent;
 	  }
 	  unmark_all();
@@ -2068,7 +2074,7 @@ void Closure::schedule_literal(int lit) {
   if (scheduled[idx])
     return;
   scheduled[idx] = true;
-  schedule.push_back(lit);
+  schedule.push (lit);
   assert (lit != find_representative(lit));
   LOG ("scheduled literal %d", lit);
 }
@@ -2099,11 +2105,10 @@ size_t Closure::propagate_units_and_equivalences () {
   LOG ("propagating at least %zd units", schedule.size());
   while (propagate_units() && !schedule.empty()) {
     ++propagated;
-    int lit = schedule.back();
-    LOG ("propagating equivalence of %d", lit);
-    schedule.pop_back();
-    scheduled[abs(lit)] = false;
-    if (!propagate_equivalence(lit))
+    int lit = schedule.front ();
+    schedule.pop ();
+    scheduled[abs (lit)] = false;
+    if (!propagate_equivalence (lit))
       break;
   }
 
@@ -2323,8 +2328,8 @@ void Closure::forward_subsume_matching_clauses() {
 // 'congruence' is too early to include the version from subsume
 
 void Closure::subsume_clause (Clause *subsuming, Clause *subsumed) {
-  assert (!subsuming->redundant);
-  assert (!subsumed->redundant);
+//  assert (!subsuming->redundant);
+ // assert (!subsumed->redundant);
   auto &stats = internal->stats;
   stats.subsumed++;
   assert (subsuming->size <= subsumed->size);

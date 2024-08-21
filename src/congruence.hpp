@@ -5,6 +5,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <queue>
 #include <unordered_map>
 #include <unordered_set>
 #include <memory>
@@ -40,7 +41,7 @@ struct Gate {
   bool indexed : 1;
   bool marked : 1;
   bool shrunken : 1;
-  size_t hash;
+  size_t hash; // TODO remove this field (the C++ implementation is caching it anyway)
   vector<uint64_t> ids;
   vector<int>rhs;
 
@@ -93,7 +94,7 @@ struct Closure {
     
   }
 
-  Internal *internal;
+  Internal *const internal;
   vector<CompactBinary> binaries;
   std::vector<std::pair<size_t,size_t>> offsetsize;
   bool full_watching = false;
@@ -271,7 +272,7 @@ struct Closure {
   bool find_binary (int, int) const;
   
   // schedule
-  vector<int> schedule;
+  queue<int> schedule;
   void schedule_literal(int lit);
   void add_clause_to_chain(std::vector<int>, uint64_t);
   // proof. If delete_id is non-zero, then delete the clause instead of learning it
