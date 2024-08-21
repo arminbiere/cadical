@@ -323,14 +323,14 @@ bool Closure::merge_literals (int lit, int other) {
 
     assert (!val_other);
     LOG ("merging assigned %d and unassigned %d", lit, other);
-    const unsigned unit = (val_lit < 0) ? -other : other;
+    const int unit = (val_lit < 0) ? -other : other;
     learn_congruence_unit(unit);
     return false;
   }
 
   if (!val_lit && val_other) {
     LOG ("merging assigned %d and unassigned %d", lit, other);
-    const unsigned unit = (val_other < 0) ? -lit : lit;
+    const int unit = (val_other < 0) ? -lit : lit;
     learn_congruence_unit(unit);
     return false;
   }
@@ -627,7 +627,7 @@ void Closure::update_xor_gate(Gate *g, GatesTable::iterator git) {
       if (g->indexed) {
 	remove_gate (git);
       }
-      g->hash = hash_lits(nonces, g->rhs);
+      g->hash = hash_lits (nonces, g->rhs);
       LOGGATE(g, "reinserting in table");
       table.insert (g);
       g->indexed = true;
@@ -698,7 +698,7 @@ bool Closure::simplify_gate (Gate *g) {
 
 bool Closure::simplify_gates (int lit) {
   const auto &occs = goccs (lit);
-  for (auto g : occs) {
+  for (Gate *g : occs) {
     if (!simplify_gate (g))
       return false;
   }
@@ -1926,8 +1926,8 @@ bool Closure::rewrite_gate (Gate *g, int dst, int src) {
   return !internal->unsat;
 }
 
-bool Closure::rewrite_gates(int dst, int src) {
-  const auto &occs = goccs(src);
+bool Closure::rewrite_gates (int dst, int src) {
+  const auto &occs = goccs (src);
   for (auto g : occs) {
     if (!rewrite_gate (g, dst, src))
       return false;
@@ -2755,7 +2755,7 @@ void Closure::simplify_ite_gate (Gate *g) {
 	g->hash = hash_lits (nonces, g->rhs);
 	for (auto lit : rhs)
 	  if (lit != cond && lit != then_lit && lit != else_lit) {
-	    connect_goccs(g, lit);
+	    connect_goccs (g, lit);
 	  }
       }
     }
