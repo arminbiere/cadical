@@ -2,6 +2,7 @@
 #include "internal.hpp"
 #include <algorithm>
 #include <iterator>
+#include <utility>
 #include <vector>
 
 namespace CaDiCaL {
@@ -17,8 +18,128 @@ namespace CaDiCaL {
 #define LOGGATE(...) \
   while (false) {}
 #endif
+
 /*------------------------------------------------------------------------*/
-  // marking structure for congruence closure, by reference
+
+bool CompactBinaryOrder(const CompactBinary &a, const CompactBinary &b) {
+        return (a.lit1 < b.lit1) || (a.lit1 == b.lit1 && a.lit2 < b.lit2);
+};
+
+bool Closure::find_binary (int lit, int other) const {
+  const auto [offset, size] = offsetsize[internal->vlit (lit)];
+  const auto begin = std::begin (binaries) + offset;
+  const auto end = std::begin (binaries) + size;
+  assert (end <= std::end(binaries));
+  const CompactBinary target = {.clause = nullptr, .id = 0, .lit1 = lit, .lit2 = other};
+  bool found = std::binary_search (begin, end, target, CompactBinaryOrder);
+  if (found) {
+    LOG ("found binary %d %d", lit, other);
+  }
+  return found;
+}
+
+void Closure::extract_binaries () {
+  if (!internal->opts.congruencebinaries)
+    return;
+
+  offsetsize.resize(internal->max_var*2+3, make_pair(0,0));
+
+  // in kissat this is done during watch clearing. TODO: consider doing this too.
+  for (Clause *c : internal->clauses) {
+    if (c->garbage)
+      continue;
+    if (c->redundant && c->size != 2)
+      continue;
+    if (c->size > 2)
+      continue;
+    assert (c->size == 2);
+    const int lit = c->literals[0];
+    const int other = c->literals[1];
+    const bool already_sorted = internal->vlit (lit) < internal->vlit (other);
+    binaries.push_back({.clause = c, .id = c->id, .lit1 = already_sorted ? lit : other, .lit2 = already_sorted ? other : lit});
+  }
+
+  sort (begin (binaries), end (binaries), CompactBinaryOrder);
+
+  {
+    const size_t size = binaries.size();
+    size_t i = 0;
+    while (i < size) {
+      CompactBinary bin = binaries[i];
+      const int lit = bin.lit1;
+      size_t j = i;
+      while (j < size && binaries[j].lit1 == lit) {
+	++j;
+      }
+      assert (j >= i);
+      assert (j <= size);
+      offsetsize[internal->vlit(lit)] = make_pair(i, j);
+      i = j;
+    }
+  }
+
+  const size_t old_size = binaries.size();
+  size_t extracted = 0, already_present = 0, duplicated = 0;
+
+  const size_t size = internal->clauses.size();
+  for (auto i = 0; i < size; ++i) {
+    Clause *d = internal->clauses[i]; // binary clauses are appended, so reallocation possible
+    if (d->garbage)
+      continue;
+    if (d->redundant)
+      continue;
+    if (d->size != 3)
+      continue;
+    const int a = d->literals[0];
+    const int b = d->literals[1];
+    const int c = d->literals[2];
+    if (internal->val (a))
+      continue;
+    if (internal->val (b))
+      continue;
+    if (internal->val (c))
+      continue;
+    int l = 0, k = 0;
+    if (find_binary(-a, b) || find_binary(-a, c)) {
+      l = b, k = c;
+    }
+    else if (find_binary(-b, a) || find_binary(-b, c)) {
+      l = a, k = c;
+    }
+    else if (find_binary(-c, a) || find_binary(-c, b)) {
+      l = a, k = b;
+    }
+    else
+      continue;
+    LOG (d, "strengthening");
+    if (!find_binary(l, k)) {
+      add_binary_clause(l, k);
+      ++extracted;
+    } else {
+      ++already_present;
+    }
+  }
+
+  offsetsize.clear();
+
+  // kissat has code to remove duplicates, which we have already removed before starting congruence
+  
+  sort (begin (binaries), end (binaries), CompactBinaryOrder);
+  const size_t new_size = binaries.size();
+  for (size_t i = 0; i+1 < new_size; ++i) {
+    if (binaries[i].lit1 == binaries[i+1].lit1 &&
+	binaries[i].lit2 == binaries[i+1].lit2) {
+      internal->mark_garbage(binaries[i+1].clause);
+      ++duplicated;
+    }
+  }
+  
+  MSG ("extracted %zu binaries (plus %zu already present)",
+       extracted, already_present);
+}
+
+/*------------------------------------------------------------------------*/
+// marking structure for congruence closure, by reference
 signed char &Closure::marked (int lit){
   assert (internal->vlit (lit) < marks.size());
   return marks[internal->vlit (lit)];
@@ -172,7 +293,7 @@ bool Closure::merge_literals (int lit, int other) {
     return false;
   }
 //  LOG ("merging external literals %d and %d\n", internal->externalize (lit), internal->externalize (other));
-//  LOG ("merging kissat literals %d and %d\n", internal->vlit(internal->externalize (lit)), internal->vlit(internal->externalize (other)));
+  LOG ("merging kissat literals %d and %d\n", internal->vlit(internal->externalize (lit)) - 2, internal->vlit(internal->externalize (other)) - 2);
   const int val_lit = internal->val(lit);
   const int val_other = internal->val(other);
 
@@ -285,9 +406,6 @@ void Closure::init_and_gate_extraction () {
     const int other = c->literals[1];
     internal->noccs (lit)++;
     internal->noccs (other)++;
-//    internal->occs (lit).push_back (c);
-//    internal->occs (other).push_back (c);
-
     internal->watch_clause (c);
   }
 }
@@ -737,6 +855,8 @@ void Closure::add_binary_clause (int a, int b) {
   internal->clause.push_back(a);
   internal->clause.push_back(b);
   Clause *res = internal->new_hyper_ternary_resolved_clause_and_watch (false, full_watching);
+  const bool already_sorted = internal->vlit (a) < internal->vlit (b);
+  binaries.push_back({.clause = res, .id = res->id, .lit1 = already_sorted ? a : b, .lit2 = already_sorted ? b : a});
   if (!full_watching)
     new_unwatched_binary_clauses.push_back(res);
   LOG (res, "learning clause");
@@ -1285,7 +1405,7 @@ Gate *Closure::new_xor_gate (int lhs) {
   }
   const unsigned arity = rhs.size();
   assert (arity + 1 == lits.size());
-  std:sort (begin (rhs), end (rhs));
+  std::sort (begin (rhs), end (rhs));
   Gate *g = find_xor_lits (arity, this->rhs);
   if (g) {
     check_xor_gate_implied (g);
@@ -1712,7 +1832,7 @@ void Closure::find_equivalences () {
 }
 
 /*------------------------------------------------------------------------*/
-
+// Initialization
 bool gate_contains(Gate *g, int lit) {
   return find (begin(g->rhs), end (g->rhs), lit) != end (g->rhs);
 }
@@ -3201,7 +3321,7 @@ void Closure::extract_gates() {
 }
 
 /*------------------------------------------------------------------------*/
-// top lever function to exctract gate
+// top level function to extract gate
 void Internal::extract_gates (bool decompose) {
   if (unsat)
     return;
@@ -3229,6 +3349,7 @@ void Internal::extract_gates (bool decompose) {
 
   closure.init_closure ();
   assert (unsat || closure.chain.empty ());
+  closure.extract_binaries ();
 //  opts.log = true;
   closure.extract_gates ();
   assert (unsat || closure.chain.empty ());

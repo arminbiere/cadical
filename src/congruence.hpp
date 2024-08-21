@@ -76,6 +76,13 @@ struct GateEqualTo {
     return lhs->rhs == rhs->rhs && lhs->tag == rhs->tag;
   }
 };
+
+struct CompactBinary {
+  Clause *clause;
+  uint64_t id;
+  int lit1, lit2;
+};
+
 struct Closure {
 
   Closure (Internal *i) : internal (i), table (128, Hash (nonces)) {
@@ -83,7 +90,8 @@ struct Closure {
   }
 
   Internal *internal;
-  vector<Clause *> binaries;
+  vector<CompactBinary> binaries;
+  std::vector<std::pair<size_t,size_t>> offsetsize;
   bool full_watching = false;
   std::array<int, 16> nonces;
   struct Hash {
@@ -255,7 +263,9 @@ struct Closure {
   void subsume_clause (Clause *subsuming, Clause *subsumed);
   bool find_subsuming_clause (Clause *c);
 
-
+  void extract_binaries ();
+  bool find_binary (int, int) const;
+  
   // schedule
   vector<int> schedule;
   void schedule_literal(int lit);
