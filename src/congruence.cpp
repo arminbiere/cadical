@@ -126,12 +126,25 @@ void Closure::extract_binaries () {
   
   sort (begin (binaries), end (binaries), CompactBinaryOrder);
   const size_t new_size = binaries.size();
-  for (size_t i = 0; i+1 < new_size; ++i) {
-    if (binaries[i].lit1 == binaries[i+1].lit1 &&
-	binaries[i].lit2 == binaries[i+1].lit2) {
-      internal->subsume_clause (binaries[i].clause, binaries[i+1].clause); // the local one is specialized
-      ++duplicated;
+  {
+    size_t i = 0;
+    for (size_t j = 1; j < new_size; ++j) {
+      assert (i < j);
+      if (binaries[i].lit1 == binaries[j].lit1 &&
+          binaries[i].lit2 == binaries[j].lit2) {
+        // subsuming later clause
+        internal->subsume_clause (
+            binaries[i].clause,
+            binaries[j].clause); // the local one is specialized
+        ++duplicated;
+        LOG ("stats clauses: %d %d", internal->stats.current.irredundant,
+             internal->stats.current.redundant);
+      } else {
+	binaries[++i] = binaries[j];
+      }
     }
+    assert (i <= new_size);
+    binaries.resize (i);
   }
   binaries.clear();
   MSG ("extracted %zu binaries (plus %zu already present and %zu duplicates)",
