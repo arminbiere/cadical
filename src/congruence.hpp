@@ -17,11 +17,12 @@
 #include "watch.hpp"
 
 namespace CaDiCaL {
-  
-#define LD_MAX_ARITY 26
-#define MAX_ARITY ((1 << LD_MAX_ARITY) - 1)
+
 
 struct Internal;
+
+#define LD_MAX_ARITY 26
+#define MAX_ARITY ((1 << LD_MAX_ARITY) - 1)
 
 enum class Gate_Type { And_Gate, XOr_Gate, ITE_Gate };
 typedef std::pair<int,int> litpair;
@@ -39,14 +40,17 @@ struct Gate {
   bool indexed : 1;
   bool marked : 1;
   bool shrunken : 1;
-  unsigned arity : LD_MAX_ARITY;
   size_t hash;
   vector<uint64_t> ids;
   vector<int>rhs;
 
+  size_t arity () const {
+    return rhs.size();
+  }
+
   bool operator == (Gate const& lhs)
   {
-    return tag == lhs.tag && arity == lhs.arity && hash == lhs.hash && rhs == lhs.rhs; 
+    return tag == lhs.tag && hash == lhs.hash && rhs == lhs.rhs; 
   }
 
 };
@@ -194,12 +198,12 @@ struct Closure {
   Gate *find_remaining_and_gate (int lhs);
   void extract_and_gates ();
 
-  Gate* find_and_lits (int, const vector<int> &rhs);
+  Gate* find_and_lits (const vector<int> &rhs);
   // rhs is sorted, so passing by copy
-  Gate* find_gate_lits (int, const vector<int> &rhs, Gate_Type typ, Gate *except = nullptr);
-  Gate* find_xor_lits (int, const vector<int> &rhs);
+  Gate* find_gate_lits (const vector<int> &rhs, Gate_Type typ, Gate *except = nullptr);
+  Gate* find_xor_lits (const vector<int> &rhs);
   // not const to normalize negations
-  Gate* find_ite_lits (int, vector<int> &rhs, bool&);
+  Gate* find_ite_lits (vector<int> &rhs, bool&);
   Gate* find_ite_gate (Gate *, bool&);
   Gate* find_xor_gate (Gate *);
 

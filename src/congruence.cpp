@@ -10,9 +10,9 @@ namespace CaDiCaL {
 #ifdef LOGGING
 #define LOGGATE(g, str, ...) \
   do { \
-  LOG (g->rhs, str "%s gate[%d] (arity: %d) %d = %s", ##__VA_ARGS__, \
+  LOG (g->rhs, str "%s gate[%d] (arity: %ld) %d = %s", ##__VA_ARGS__, \
   g->garbage ? " garbage" : "", \
-  g->id, g->arity, g->lhs, string_of_gate (g->tag).c_str ()); \
+  g->id, g->arity(), g->lhs, string_of_gate (g->tag).c_str ()); \
   } while (false)
 #else
 #define LOGGATE(...) \
@@ -261,7 +261,7 @@ bool Closure::remove_gate (Gate *g) {
 void Closure::index_gate (Gate *g) {
   assert (!g->indexed);
   assert (!internal->unsat);
-  assert (g->arity > 1);
+  assert (g->arity() > 1);
   assert (g->hash == hash_lits(nonces, g->rhs));
   LOGGATE (g, "adding to hash table");
   table.insert(g);
@@ -306,7 +306,7 @@ bool Closure::merge_literals (int lit, int other) {
     return false;
   }
 //  LOG ("merging external literals %d and %d\n", internal->externalize (lit), internal->externalize (other));
-  LOG ("merging kissat literals %d and %d\n", internal->vlit(internal->externalize (lit)) - 2, internal->vlit(internal->externalize (other)) - 2);
+//  LOG ("merging kissat literals %d and %d\n", internal->vlit(internal->externalize (lit)) - 2, internal->vlit(internal->externalize (other)) - 2);
   const int val_lit = internal->val(lit);
   const int val_other = internal->val(other);
 
@@ -529,7 +529,7 @@ bool Closure::skip_and_gate(Gate *g) {
     return true;
   }
 
-  assert (g->arity > 1);
+  assert (g->arity () > 1);
   return false;
 }
 
@@ -537,7 +537,7 @@ bool Closure::skip_xor_gate(Gate *g) {
   assert (g->tag == Gate_Type::XOr_Gate);
   if (g->garbage)
     return true;
-  assert (g->arity > 1);
+  assert (g->arity () > 1);
   return false;
 }
 
@@ -546,27 +546,23 @@ void Closure::shrink_and_gate(Gate *g, int falsifies, int clashing) {
     g->rhs[0] = falsifies;
     g->rhs.resize(1);
     g->hash = hash_lits (nonces, g->rhs);
-    g->arity = 1;
   } else if (clashing) {
     g->rhs[0] = clashing;
     g->rhs[1] = -clashing;
     g->rhs.resize(2);
     g->hash = hash_lits (nonces, g->rhs);
-    g->arity = 2;
   }
-  g->arity = g->rhs.size();
   g->shrunken = true;
 }
 
 
-void Closure::update_and_gate(Gate *g, GatesTable::iterator it, int falsifies, int clashing) {
-  LOGGATE (g, "update and gate of arity %d", g->arity);
+void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int falsifies, int clashing) {
+  LOGGATE (g, "update and gate of arity %ld", g->arity ());
   bool garbage = true;
   if (falsifies || clashing) {
     learn_congruence_unit (-g->lhs);
-  } else if (g->arity == 1) {
+  } else if (g->arity () == 1) {
     const signed char v = internal->val (g->lhs);
-    LOG ("val lhs = %d", v);
     if (v > 0)
       learn_congruence_unit (g->rhs[0]);
     else if (v < 0)
@@ -576,8 +572,7 @@ void Closure::update_and_gate(Gate *g, GatesTable::iterator it, int falsifies, i
       ++internal->stats.congruence.unary_and;
     }
   } else {
-    assert (g->arity == g->rhs.size());
-    Gate *h = find_and_lits (g->arity, g->rhs);
+    Gate *h = find_and_lits (g->rhs);
     if (h) {
       assert (garbage);
       if (merge_literals (g->lhs, h->lhs))
@@ -598,7 +593,7 @@ void Closure::update_and_gate(Gate *g, GatesTable::iterator it, int falsifies, i
   }
 
   if (garbage && !internal->unsat)
-    mark_garbage(g);
+    mark_garbage (g);
 }
 
 
@@ -607,9 +602,9 @@ void Closure::update_xor_gate(Gate *g, GatesTable::iterator git) {
   assert (!internal->unsat && chain.empty ());
   LOGGATE(g, "updating");
   bool garbage = true;
-  if (g->arity == 0)
+  if (g->arity () == 0)
     learn_congruence_unit (-g->lhs);
-  else if (g->arity == 1) {
+  else if (g->arity () == 1) {
     const signed char v = internal->val (g->lhs);
     if (v > 0)
       learn_congruence_unit (g->rhs[0]);
@@ -666,12 +661,11 @@ void Closure::simplify_and_gate (Gate *g) {
   assert (it <= end (g->rhs)); // can be equal when ITE are converted to ands leading to 
   assert (it >= begin (g->rhs));
 //  internal->opts.log = true;
-  LOGGATE (g, "shrunken %zd -> %zd", g->rhs.size(), it - std::begin (g->rhs));
+  LOGGATE (g, "shrunken");
   
   g->shrunken = true;
   g->rhs.resize (it - std::begin (g->rhs));
   g->hash = hash_lits (nonces, g->rhs);
-  g->arity = it - std::begin (g->rhs);
   
   LOGGATE (g, "shrunken");
 //  internal->opts.log = false;
@@ -714,16 +708,15 @@ bool Closure::simplify_gates (int lit) {
 // AND gates
 
 
-Gate *Closure::find_and_lits (int arity, const vector<int> &rhs) {
-  return find_gate_lits (arity, rhs, Gate_Type::And_Gate);
+Gate *Closure::find_and_lits (const vector<int> &rhs) {
+  return find_gate_lits (rhs, Gate_Type::And_Gate);
 }
 
 // search for the gate in the hash-table.  We cannot use find, as we might be changing a gate, so
 // there might be 2 gates with the same LHS (the one we are changing ang the other)
-Gate *Closure::find_gate_lits (int arity, const vector<int> &rhs, Gate_Type typ, Gate *except) {
+Gate *Closure::find_gate_lits (const vector<int> &rhs, Gate_Type typ, Gate *except) {
   Gate *g = new Gate;
   g->tag = typ;
-  g->arity = arity;
   g->rhs = {rhs};
   g->hash = hash_lits (nonces, g->rhs);
   g->lhs = 0;
@@ -772,7 +765,7 @@ Gate *Closure::new_and_gate (int lhs) {
   const unsigned arity = rhs.size();
   assert (arity + 1 == lits.size());
     std::sort (begin (rhs), end (rhs));
-  Gate *g = find_and_lits (arity, this->rhs);
+  Gate *g = find_and_lits (this->rhs);
   if (g) {
     if (merge_literals(g->lhs, lhs)) {
       LOG ("found merged literals");
@@ -781,7 +774,6 @@ Gate *Closure::new_and_gate (int lhs) {
     g = new Gate;
     g->lhs = lhs;
     g->tag = Gate_Type::And_Gate;
-    g->arity = arity;
     g->rhs = {rhs};
     g->garbage = false;
     g->indexed = true;
@@ -1224,7 +1216,7 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
     clause.push_back(other);
   }
   clause.push_back(-lhs);
-  const unsigned arity = g->arity;
+  const unsigned arity = g->arity ();
   const unsigned end = 1u << arity;
   const bool parity = (lhs > 0);
 
@@ -1242,13 +1234,13 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
   clause.clear();
 }
   
-Gate* Closure::find_xor_lits (int arity, const vector<int> &rhs) {
-  return find_gate_lits(arity, rhs, Gate_Type::XOr_Gate);
+Gate* Closure::find_xor_lits (const vector<int> &rhs) {
+  return find_gate_lits(rhs, Gate_Type::XOr_Gate);
 }
 
 Gate* Closure::find_xor_gate (Gate *g) {
   assert (g->tag == Gate_Type::XOr_Gate);
-  return find_gate_lits(g->arity, g->rhs, Gate_Type::XOr_Gate);
+  return find_gate_lits(g->rhs, Gate_Type::XOr_Gate);
 }
 
 
@@ -1272,14 +1264,14 @@ bool normalize_ite_lits (std::vector<int>& rhs) {
   return true;
 }
 
-Gate* Closure::find_ite_lits (int arity, vector<int> &rhs, bool& negate_lhs) {
+Gate* Closure::find_ite_lits (vector<int> &rhs, bool& negate_lhs) {
   negate_lhs = normalize_ite_lits(rhs);
-  return find_gate_lits(arity, rhs, Gate_Type::ITE_Gate);
+  return find_gate_lits(rhs, Gate_Type::ITE_Gate);
 }
 
 Gate* Closure::find_ite_gate (Gate *g, bool& negate_lhs) {
   negate_lhs = normalize_ite_lits(g->rhs);
-  return find_gate_lits(3, g->rhs, Gate_Type::ITE_Gate, g);
+  return find_gate_lits(g->rhs, Gate_Type::ITE_Gate, g);
 }
 
 uint64_t Closure::check_and_add_to_proof_chain (vector<int> &clause) {
@@ -1419,7 +1411,7 @@ Gate *Closure::new_xor_gate (int lhs) {
   const unsigned arity = rhs.size();
   assert (arity + 1 == lits.size());
   std::sort (begin (rhs), end (rhs));
-  Gate *g = find_xor_lits (arity, this->rhs);
+  Gate *g = find_xor_lits (this->rhs);
   if (g) {
     check_xor_gate_implied (g);
     add_xor_matching_proof_chain(g, g->lhs, lhs);
@@ -1433,7 +1425,6 @@ Gate *Closure::new_xor_gate (int lhs) {
     g = new Gate;
     g->lhs = lhs;
     g->tag = Gate_Type::XOr_Gate;
-    g->arity = arity;
     g->rhs = {rhs};
     g->garbage = false;
     g->indexed = true;
@@ -1888,7 +1879,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src) {
         break;
       }
       if (dst_count++)
-        continue;
+	continue;
     }
     if (lit == -dst) {
       if (dst_count) {
@@ -1904,11 +1895,15 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src) {
   }
 
 
-  g->rhs.resize(q - begin(g->rhs));
+  if (q != end(g->rhs)) {
+    g->rhs.resize(q - begin(g->rhs));
+    g->shrunken = true;
+  }
   assert (dst_count <= 2);
   assert (not_dst_count <= 1);
   shrink_and_gate (g, falsifies, clashing);
   LOGGATE (g, "rewritten as");
+  check_and_gate_implied(g);
   update_and_gate (g, git, falsifies, clashing);
   ++internal->stats.congruence.rewritten_ands;
 }
@@ -2006,18 +2001,15 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     assert (k == j - 2);
     g->rhs.resize(k);
     g->shrunken = true;
-    g->arity = k;
     g->hash = hash_lits (nonces, g->rhs);
   } else if (j != size){
     g->shrunken = true;
     g->rhs.resize(j);
-    g->arity = j;
     g->hash = hash_lits (nonces, g->rhs);
   }
   
   if (dst_count > 1)
     add_xor_shrinking_proof_chain (g, src);
-  assert (g->arity == g->rhs.size());
   assert (internal->clause.empty()); 
   update_xor_gate(g, git);
 
@@ -2058,10 +2050,9 @@ void Closure::simplify_xor_gate (Gate *g) {
     LOG ("shrunken gate");
     g->shrunken = true;
     g->rhs.resize(j);
-    g->arity = j;
     g->hash = hash_lits (nonces, g->rhs);
   }
-  assert (g->arity == g->rhs.size());
+
   check_xor_gate_implied (g);
   update_xor_gate (g, git);
   LOGGATE (g, "simplified");
@@ -2447,7 +2438,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
     return;
   LOGGATE (g, "rewriting %d by %d in", src, dst);
   assert (!g->shrunken);
-  assert (g->arity == 3 && g->rhs.size() == 3);
+  assert (g->rhs.size() == 3);
   auto &rhs = g->rhs;
   const int lhs = g->lhs;
   const int cond = g->rhs[0];
@@ -2597,7 +2588,6 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
       assert (!g->shrunken);
       g->shrunken = true;
       rhs[2] = 0;
-      g->arity = 2;
       g->tag = new_tag;
       g->rhs.resize(2);
       assert (rhs[0] < rhs[1]);
@@ -2607,7 +2597,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
       Gate *h;
       if (new_tag == Gate_Type::And_Gate) {
         check_and_gate_implied (g);
-        h = find_and_lits (g->lhs, g->rhs);
+        h = find_and_lits (g->rhs);
       } else {
         assert (new_tag == Gate_Type::XOr_Gate);
         check_xor_gate_implied (g);
@@ -2628,7 +2618,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
 	if (g->indexed)
           remove_gate (git);
         index_gate (g);
-        assert (g->arity == 2);
+        assert (g->arity () == 2);
         for (auto lit : g->rhs)
           if (lit != dst)
             if (lit != cond && lit != then_lit && lit != else_lit)
@@ -2669,7 +2659,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
         LOGGATE (g, "normalized");
 	g->hash = hash_lits (nonces, g->rhs);
         index_gate (g);
-        assert (g->arity == 3);
+        assert (g->arity () == 3);
         for (auto lit : g->rhs)
           if (lit != dst)
             if (lit != cond && lit != then_lit && lit != else_lit)
@@ -2687,7 +2677,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
 void Closure::simplify_ite_gate (Gate *g) {
   if (skip_ite_gate (g))
     return;
-  assert (g->arity == 3);
+  assert (g->arity () == 3);
   bool garbage = true;
   int lhs = g->lhs;
   auto &rhs = g->rhs;
@@ -2749,11 +2739,10 @@ void Closure::simplify_ite_gate (Gate *g) {
 	std::swap (rhs[0], rhs[1]);
       g->shrunken = true;
       g->tag = Gate_Type::And_Gate;
-      g->arity = 2;
       rhs.resize(2);
       g->hash = hash_lits (nonces, g->rhs);
       check_and_gate_implied(g);
-      Gate *h = find_and_lits(2, rhs);
+      Gate *h = find_and_lits(rhs);
       if (h) {
 	assert (garbage);
 	if (merge_literals(g->lhs, h->lhs)) {
@@ -2837,11 +2826,10 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
   rhs.push_back (cond);
   rhs.push_back (then_lit);
   rhs.push_back (else_lit);
-  const unsigned arity = 3;
   LOG ("ITE gate %d = %d ? %d : %d", lhs, cond, then_lit, else_lit);
 
   bool negate_lhs = false;
-  Gate *g = find_ite_lits (arity, this->rhs, negate_lhs);
+  Gate *g = find_ite_lits (this->rhs, negate_lhs);
   if (negate_lhs)
     lhs = -lhs;
   if (g) {
@@ -2857,7 +2845,6 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
     g = new Gate;
     g->lhs = lhs;
     g->tag = Gate_Type::ITE_Gate;
-    g->arity = arity;
     g->rhs = {rhs};
     // do not sort clauses here obviously!
     // sort (begin (g->rhs), end (g->rhs));
