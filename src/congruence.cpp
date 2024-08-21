@@ -924,7 +924,7 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
         LOG ("early abort AND gate search");
         break;
     } else if (find_remaining_and_gate (lhs)) {
-      extracted++;
+      ++extracted;
     }
   }
   
@@ -1670,7 +1670,7 @@ void Closure::find_equivalences () {
 	continue;
       assert (w.size == 2);
       const int other = w.blit;
-      if (abs(lit) > abs(other))
+      if (internal->vlit (lit) > internal->vlit (other))
 	continue;
       if (marked (other))
 	continue;
@@ -1685,7 +1685,7 @@ void Closure::find_equivalences () {
       if (!w.binary())
 	continue; // TODO check if this as in kissat or continue
       const int other = w.blit;
-      if (abs(-lit) > abs(other))
+      if (internal->vlit (-lit) > internal->vlit (other))
 	continue;
       if (lit == other)
 	continue;
@@ -3298,14 +3298,8 @@ void Internal::extract_gates (bool decompose) {
 #endif
   assert (!internal->occurring ());
 
-  if ((true || decompose) && opts.decompose && new_merged != old_merged) {
+  if (decompose && opts.decompose && new_merged != old_merged) {
     internal->decompose ();
-    this->report('d', !opts.reportall && !(stats.congruence.congruent - old));
-    internal->decompose ();
-    this->report('d', !opts.reportall && !(stats.congruence.congruent - old));
-    internal->decompose ();
-    this->report('d', !opts.reportall && !(stats.congruence.congruent - old));
-//    internal->dump();
   }
 }
 
