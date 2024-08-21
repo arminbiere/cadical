@@ -2682,6 +2682,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
 void Closure::simplify_ite_gate (Gate *g) {
   if (skip_ite_gate (g))
     return;
+  LOGGATE (g, "simplifying");
   assert (g->arity () == 3);
   bool garbage = true;
   int lhs = g->lhs;
@@ -2740,12 +2741,13 @@ void Closure::simplify_ite_gate (Gate *g) {
 	rhs[0] = cond;
 	rhs[1] = then_lit;
       }
-      if (internal->vlit (rhs[0]) > internal->vlit (rhs[1]))
+      if (rhs[0] > rhs[1])
 	std::swap (rhs[0], rhs[1]);
       g->shrunken = true;
       g->tag = Gate_Type::And_Gate;
       rhs.resize(2);
-      g->hash = hash_lits (nonces, g->rhs);
+      assert (is_sorted (begin (rhs), end (rhs)));
+      g->hash = hash_lits (nonces, rhs);
       check_and_gate_implied(g);
       Gate *h = find_and_lits(rhs);
       if (h) {
@@ -2754,14 +2756,16 @@ void Closure::simplify_ite_gate (Gate *g) {
 	  ++internal->stats.congruence.ands;
 	}
       } else {
-	remove_gate(git);
-	index_gate(g);
+	remove_gate (git);
+	index_gate (g);
 	garbage = false;
 	g->hash = hash_lits (nonces, g->rhs);
 	for (auto lit : rhs)
 	  if (lit != cond && lit != then_lit && lit != else_lit) {
 	    connect_goccs (g, lit);
 	  }
+	if (rhs[0] == -lhs || rhs[1] == -lhs)
+	  simplify_and_gate(g); // TODO Kissat does not do that, but it has also no checks to verify that it cannot happen...
       }
     }
   } 
