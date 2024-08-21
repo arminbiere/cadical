@@ -129,13 +129,13 @@ void Closure::extract_binaries () {
   for (size_t i = 0; i+1 < new_size; ++i) {
     if (binaries[i].lit1 == binaries[i+1].lit1 &&
 	binaries[i].lit2 == binaries[i+1].lit2) {
-      internal->mark_garbage(binaries[i+1].clause);
+      internal->subsume_clause (binaries[i].clause, binaries[i+1].clause); // the local one is specialized
       ++duplicated;
     }
   }
-  
-  MSG ("extracted %zu binaries (plus %zu already present)",
-       extracted, already_present);
+  binaries.clear();
+  MSG ("extracted %zu binaries (plus %zu already present and %zu duplicates)",
+       extracted, already_present, duplicated);
 }
 
 /*------------------------------------------------------------------------*/
@@ -1454,6 +1454,8 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
     if (c->redundant)
       continue;
     if (c->garbage)
+      continue;
+    if (c->size < 3)
       continue;
     unsigned size = 0;
     for (auto lit : *c) {
@@ -2899,6 +2901,8 @@ void Closure::init_ite_gate_extraction (std::vector<Clause *> &candidates) {
     if (c->garbage)
       continue;
     if (c->redundant)
+      continue;
+    if (c->size < 3)
       continue;
     unsigned size = 0;
 
