@@ -1627,11 +1627,6 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
     for (auto lit : *c)
       internal->occs (lit).push_back(c);
   }
-
-  // for (auto lit : internal->lits) {
-  //   internal->noccs(lit) = largecount(lit);
-  // }
-  // glargecounts.clear();
 }
 
 Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
@@ -1662,8 +1657,7 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
   LOG ("searching for size %ld", size_lits);
   for (auto c : internal->occs (least_occurring_literal)) {
     LOG (c, "checking");
-    if (c->size == 2) // TODO kissat has break
-      continue;
+    assert (c->size != 2); // TODO kissat has break
     if (c->garbage)
       continue;
     if ((size_t)c->size<size_lits)
@@ -1900,7 +1894,7 @@ void Closure::find_equivalences () {
     
     for (auto w : internal->watches (-lit)) {
       if (!w.binary())
-	continue; // TODO check if this as in kissat or continue
+	break; // binary clauses are first
       const int other = w.blit;
       if (internal->vlit (-lit) > internal->vlit (other))
 	continue;
@@ -2676,15 +2670,14 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
         if (negate_lhs)
           g->lhs = -g->lhs;
       }
-      if (rhs[0] > rhs[1]) // unlike kissat, we need to do it after negating 
+      if (internal->vlit (rhs[0]) > internal->vlit (rhs[1])) // unlike kissat, we need to do it after negating 
 	std::swap(rhs[0], rhs[1]);
-      assert (rhs[0] < rhs[1]);
+      assert (internal->vlit (rhs[0]) < internal->vlit (rhs[1]));
       assert (!g->shrunken);
       g->shrunken = true;
       rhs[2] = 0;
       g->tag = new_tag;
       g->rhs.resize(2);
-      assert (rhs[0] < rhs[1]);
       assert (rhs[0] != -rhs[1]);
       g->hash = hash_lits (nonces, g->rhs);
       LOGGATE (g, "rewritten");
@@ -2830,12 +2823,12 @@ void Closure::simplify_ite_gate (Gate *g) {
 	rhs[0] = cond;
 	rhs[1] = then_lit;
       }
-      if (rhs[0] > rhs[1])
+      if (internal->vlit (rhs[0]) > internal->vlit (rhs[1]))
 	std::swap (rhs[0], rhs[1]);
       g->shrunken = true;
       g->tag = Gate_Type::And_Gate;
       rhs.resize(2);
-      assert (is_sorted (begin (rhs), end (rhs)));
+      assert (is_sorted (begin (rhs), end (rhs), sort_literals_smaller (internal)));
       g->hash = hash_lits (nonces, rhs);
       check_and_gate_implied(g);
       Gate *h = find_and_lits(rhs);
