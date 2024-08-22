@@ -58,22 +58,6 @@ struct Gate {
 
 typedef vector<Gate *> GOccs;
 
-static size_t hash_lits (std::array<int, 16> &nonces, const vector<int> &lits) {
-  size_t hash = 0;
-  const auto end_nonces = end (nonces);
-  const auto begin_nonces = begin (nonces);
-  auto n = begin_nonces;
-  for (auto lit : lits){
-    hash += lit;
-    hash *= *n++;
-    hash = (hash << 4) | (hash >> 60);
-    if (n == end_nonces)
-      n = begin_nonces;
-  }
-//  hash ^= hash >> 32;
-  return hash;
-}
-
 
 struct GateEqualTo {
   bool operator()(const Gate *const lhs, const Gate *const rhs) const 
@@ -88,6 +72,12 @@ struct CompactBinary {
   int lit1, lit2;
 };
 
+struct Hash {
+  Hash (std::array<int, 16> &ncs) : nonces (ncs){};
+  std::array<int, 16> &nonces;
+  size_t operator() (const Gate *const g) const;
+};
+
 struct Closure {
 
   Closure (Internal *i) : internal (i), table (128, Hash (nonces)) {
@@ -99,14 +89,6 @@ struct Closure {
   std::vector<std::pair<size_t,size_t>> offsetsize;
   bool full_watching = false;
   std::array<int, 16> nonces;
-  struct Hash {
-    Hash (std::array<int, 16> &ncs) : nonces (ncs)  {};
-    std::array<int, 16> &nonces;
-    size_t operator() (const Gate *const g) const {
-      assert (hash_lits (nonces, g->rhs) == g->hash);
-      return g->hash;
-    }
-  };
   typedef unordered_set<Gate *, Hash, GateEqualTo> GatesTable;
 
   vector<bool> scheduled;
@@ -173,6 +155,7 @@ struct Closure {
   void simplify_xor_gate (Gate *g);
   bool simplify_gates (int lit);
 
+  //rewriting
   bool rewriting_lhs (Gate *g, int dst);
   bool rewrite_gates(int dst, int src);
   bool rewrite_gate(Gate *g, int dst, int src);
@@ -228,6 +211,8 @@ struct Closure {
   void check_ite_gate_implied (Gate *g);
   void check_and_gate_implied (Gate *g);
   void delete_proof_chain ();
+
+  // ite gate extraction
   void extract_ite_gates_of_literal (int);
   void extract_ite_gates_of_variable (int idx);
   void extract_condeq_pairs (int lit, litpairs &condbin, litpairs &condeq);
@@ -268,9 +253,13 @@ struct Closure {
   void subsume_clause (Clause *subsuming, Clause *subsumed);
   bool find_subsuming_clause (Clause *c);
 
+  // binary extraction and ternary strengthening
   void extract_binaries ();
   bool find_binary (int, int) const;
-  
+
+  //
+  void sort_literals (vector<int> &rhs);
+
   // schedule
   queue<int> schedule;
   void schedule_literal(int lit);
