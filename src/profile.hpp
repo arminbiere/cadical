@@ -48,6 +48,8 @@ struct Internal;
   PROFILE (compact, 3) \
   PROFILE (condition, 2) \
   PROFILE (congruence, 2) \
+  PROFILE (congruencemerge, 4) \
+  PROFILE (congruencematching, 4) \
   PROFILE (connect, 3) \
   PROFILE (copy, 4) \
   PROFILE (cover, 2) \
@@ -55,6 +57,11 @@ struct Internal;
   PROFILE (decompose, 3) \
   PROFILE (elim, 2) \
   PROFILE (extend, 3) \
+  PROFILE (extract, 3) \
+  PROFILE (extractands, 4) \
+  PROFILE (extractbinaries, 4) \
+  PROFILE (extractites, 4) \
+  PROFILE (extractxors, 4) \
   PROFILE (instantiate, 2) \
   PROFILE (lucky, 2) \
   PROFILE (lookahead, 2) \

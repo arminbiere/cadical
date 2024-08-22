@@ -3338,13 +3338,17 @@ void Closure::extract_ite_gates() {
 /*------------------------------------------------------------------------*/
 void Closure::extract_gates() {
   START (extract);
-  extract_and_gates();
-  if (internal->unsat || internal->terminated_asynchronously ())
+  extract_and_gates ();
+  if (internal->unsat || internal->terminated_asynchronously ()) {
+    STOP (extract);
     return;
-  extract_xor_gates();
-  if (internal->unsat || internal->terminated_asynchronously ())
+  }
+  extract_xor_gates ();
+  if (internal->unsat || internal->terminated_asynchronously ()) {
+    STOP (extract);
     return;
-  extract_ite_gates();
+  }
+  extract_ite_gates ();
   STOP (extract);
 }
 
