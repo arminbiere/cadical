@@ -21,17 +21,50 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-bool CompactBinaryOrder(const CompactBinary &a, const CompactBinary &b) {
-        return (a.lit1 < b.lit1) || (a.lit1 == b.lit1 && a.lit2 < b.lit2);
+static size_t hash_lits (std::array<int, 16> &nonces, const vector<int> &lits) {
+  size_t hash = 0;
+  const auto end_nonces = end (nonces);
+  const auto begin_nonces = begin (nonces);
+  auto n = begin_nonces;
+  for (auto lit : lits){
+    hash += lit;
+    hash *= *n++;
+    hash = (hash << 4) | (hash >> 60);
+    if (n == end_nonces)
+      n = begin_nonces;
+  }
+  hash ^= hash >> 32;
+  return hash;
+}
+
+size_t Hash::operator() (const Gate *const g) const {
+  assert (hash_lits (nonces, g->rhs) == g->hash);
+  return g->hash;
+}
+/*------------------------------------------------------------------------*/
+struct compact_binary_rank {
+  typedef uint64_t Type;
+  uint64_t operator() (const CompactBinary &a) {
+    return ((uint64_t) a.lit1 << 32) + a.lit2;
+  };
+};
+
+struct compact_binary_order {
+  bool operator () (const CompactBinary &a,
+                             const CompactBinary &b) {
+    return compact_binary_rank () (a) < compact_binary_rank () (b);
+  };
 };
 
 bool Closure::find_binary (int lit, int other) const {
-  const auto [offset, size] = offsetsize[internal->vlit (lit)];
+  const auto offsize = offsetsize[internal->vlit (lit)]; // in C++17: [offset, size] = 
+  const auto offset = offsize.first;
+  const auto size = offsize.second;
   const auto begin = std::begin (binaries) + offset;
   const auto end = std::begin (binaries) + size;
   assert (end <= std::end(binaries));
   const CompactBinary target = {.clause = nullptr, .id = 0, .lit1 = lit, .lit2 = other};
-  bool found = std::binary_search (begin, end, target, CompactBinaryOrder);
+  bool found = std::binary_search (begin, end, target, compact_binary_order());
   if (found) {
     LOG ("found binary %d %d", lit, other);
   }
@@ -59,7 +92,8 @@ void Closure::extract_binaries () {
     binaries.push_back({.clause = c, .id = c->id, .lit1 = already_sorted ? lit : other, .lit2 = already_sorted ? other : lit});
   }
 
-  sort (begin (binaries), end (binaries), CompactBinaryOrder);
+  MSORT (internal->opts.radixsortlim, begin (binaries), end (binaries),
+         compact_binary_rank (), compact_binary_order ());
 
   {
     const size_t size = binaries.size();
@@ -124,7 +158,8 @@ void Closure::extract_binaries () {
 
   // kissat has code to remove duplicates, which we have already removed before starting congruence
   
-  sort (begin (binaries), end (binaries), CompactBinaryOrder);
+  MSORT (internal->opts.radixsortlim, begin (binaries), end (binaries),
+         compact_binary_rank (), compact_binary_order ());
   const size_t new_size = binaries.size();
   {
     size_t i = 0;
@@ -212,6 +247,34 @@ uint64_t Closure::marked_mu4(int lit) {
   return mu4_ids[internal->vlit (lit)];
 }
 
+
+struct sort_literals_rank {
+  CaDiCaL::Internal *internal;
+  sort_literals_rank (Internal *i) : internal (i) {}
+
+  typedef uint64_t Type;
+
+  // Set assumptions first, then sorted by position on the trail
+  // unset literals are sorted by literal value.
+
+  Type operator() (const int &a) const {
+    return internal->vlit (a);
+  }
+};
+
+struct sort_literals_smaller {
+  CaDiCaL::Internal *internal;
+  sort_literals_smaller (Internal *i) : internal (i) {}
+  bool operator() (const int &a, const int &b) const {
+    return sort_literals_rank(internal) (a) <
+           sort_literals_rank(internal) (b);
+  }
+};
+
+void Closure::sort_literals (vector<int> &rhs) {
+  MSORT (internal->opts.radixsortlim, begin (rhs), end (rhs),
+         sort_literals_rank (internal), sort_literals_smaller (internal));
+}
 
 /*------------------------------------------------------------------------*/
 int & Closure::representative (int lit) {
@@ -574,7 +637,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int falsifies, 
       ++internal->stats.congruence.unary_and;
     }
   } else {
-    std::sort (begin (g->rhs), end (g->rhs));
+    sort_literals (g->rhs);
     Gate *h = find_and_lits (g->rhs);
     if (h) {
       assert (garbage);
@@ -712,7 +775,7 @@ bool Closure::simplify_gates (int lit) {
 
 
 Gate *Closure::find_and_lits (const vector<int> &rhs) {
-  assert (is_sorted(begin (rhs), end (rhs)));
+  assert (is_sorted(begin (rhs), end (rhs), sort_literals_smaller (internal)));
   return find_gate_lits (rhs, Gate_Type::And_Gate);
 }
 
@@ -769,7 +832,7 @@ Gate *Closure::new_and_gate (int lhs) {
   }
   const size_t arity = rhs.size();
   assert (arity + 1 == lits.size());
-  std::sort (begin (rhs), end (rhs));
+  sort_literals (this->rhs);
   Gate *g = find_and_lits (this->rhs);
   if (g) {
     if (merge_literals (g->lhs, lhs)) {
@@ -952,6 +1015,27 @@ Gate *Closure::find_remaining_and_gate (int lhs) {
 
 }
 
+struct congruence_occurrences_rank {
+  Internal *internal;
+  congruence_occurrences_rank (Internal *s) : internal (s) {}
+  typedef uint64_t Type;
+  Type operator() (int a) {
+    uint64_t res = internal->noccs (-a);
+    res <<= 32;
+    res |= a;
+    return res;
+  }
+};
+
+struct congruence_occurrences_larger {
+  Internal *internal;
+  congruence_occurrences_larger (Internal *s) : internal (s) {}
+  bool operator() (const int &a, const int &b) const {
+    return congruence_occurrences_rank (internal) (a) <
+           congruence_occurrences_rank (internal) (b);
+  }
+};
+
 void Closure::extract_and_gates_with_base_clause (Clause *c) {
   assert (!c->garbage);
   assert (lrat_chain.empty());
@@ -1026,13 +1110,8 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
   assert (reduced_size);
   LOG (c, "trying as base arity %lu AND gate", arity);
   assert (begin (lits) + reduced_size <= end (lits));
-  sort (begin (lits), begin (lits) + reduced_size,
-        [&] (int litA, int litB) {
-          return (internal->noccs (-litA) < internal->noccs (-litB) ||
-		  (internal->noccs (-litA) == internal->noccs (-litB) &&
-		   internal->vlit (litA) < internal->vlit (litB)));
-        });
-
+  MSORT (internal->opts.radixsortlim, begin (lits), begin (lits) + reduced_size,
+	 congruence_occurrences_rank (internal), congruence_occurrences_larger (internal));
   bool first = true;
   unsigned extracted = 0;
 
@@ -1243,7 +1322,7 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
 }
  
 Gate* Closure::find_xor_lits (const vector<int> &rhs) {
-  assert (is_sorted(begin (rhs), end (rhs)));
+  assert (is_sorted(begin (rhs), end (rhs), sort_literals_smaller (internal)));
   return find_gate_lits(rhs, Gate_Type::XOr_Gate);
 }
 
@@ -1419,7 +1498,7 @@ Gate *Closure::new_xor_gate (int lhs) {
   }
   const unsigned arity = rhs.size();
   assert (arity + 1 == lits.size());
-  std::sort (begin (rhs), end (rhs));
+  sort_literals (rhs);
   Gate *g = find_xor_lits (this->rhs);
   if (g) {
     check_xor_gate_implied (g);
