@@ -2764,7 +2764,8 @@ void Closure::simplify_ite_gate (Gate *g) {
 	  if (lit != cond && lit != then_lit && lit != else_lit) {
 	    connect_goccs (g, lit);
 	  }
-	if (rhs[0] == -lhs || rhs[1] == -lhs)
+
+	if (rhs[0] == -g->lhs || rhs[1] == -g->lhs)
 	  simplify_and_gate(g); // TODO Kissat does not do that, but it has also no checks to verify that it cannot happen...
       }
     }
