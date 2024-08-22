@@ -112,11 +112,10 @@ void Closure::extract_binaries () {
     }
   }
 
-  const size_t old_size = binaries.size();
   size_t extracted = 0, already_present = 0, duplicated = 0;
 
   const size_t size = internal->clauses.size();
-  for (auto i = 0; i < size; ++i) {
+  for (size_t i = 0; i < size; ++i) {
     Clause *d = internal->clauses[i]; // binary clauses are appended, so reallocation possible
     if (d->garbage)
       continue;
@@ -830,8 +829,8 @@ Gate *Closure::new_and_gate (int lhs) {
       rhs.push_back(-lit);
     }
   }
-  const size_t arity = rhs.size();
-  assert (arity + 1 == lits.size());
+
+  assert (rhs.size () + 1 == lits.size ());
   sort_literals (this->rhs);
   Gate *g = find_and_lits (this->rhs);
   if (g) {
@@ -1156,9 +1155,6 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
 void Closure::reset_and_gate_extraction () {  
   internal->clear_noccs ();
   internal->clear_watches ();
-
-  for (auto nt : internal->ntab)
-    assert (nt == 0);
 }
 
 void Closure::extract_and_gates () {
@@ -1334,9 +1330,6 @@ Gate* Closure::find_xor_gate (Gate *g) {
 
 void Closure::reset_xor_gate_extraction () {  
   internal->clear_occs ();
-
-  for (auto nt : internal->ntab)
-    assert (nt == 0);
 }
   
 bool normalize_ite_lits (std::vector<int>& rhs) {
@@ -1496,8 +1489,7 @@ Gate *Closure::new_xor_gate (int lhs) {
       rhs.push_back(lit);
     }
   }
-  const unsigned arity = rhs.size();
-  assert (arity + 1 == lits.size());
+  assert (rhs.size() + 1 == lits.size());
   sort_literals (rhs);
   Gate *g = find_xor_lits (this->rhs);
   if (g) {
@@ -2021,12 +2013,14 @@ bool Closure::rewrite_gates (int dst, int src) {
   }
   goccs (src).clear();
 
+#ifndef NDEBUG
   for (const auto & occs : gtab) {
     for (auto g : occs) {
       assert (g);
       assert (g->garbage || !gate_contains (g, src));
     }
   }
+#endif
   return true;
 }
 
@@ -2198,6 +2192,7 @@ size_t Closure::propagate_units_and_equivalences () {
   MSG ("propagated %zu congruence equivalences",
                        propagated);
 
+#ifndef NDEBUG
   if (!internal->unsat) {
     for (const auto &occs : gtab) {
       for (auto g : occs) {
@@ -2224,6 +2219,7 @@ size_t Closure::propagate_units_and_equivalences () {
       }
     }
   }
+#endif
   STOP (congruencemerge);
   return propagated;
 }
@@ -2460,7 +2456,7 @@ bool Closure::find_subsuming_clause (Clause *subsumed) {
   LOG (subsumed, "trying to forward subsume");
 
   for (auto lit : *subsumed) {
-    const int repr_lit = find_representative(lit);    
+    const int repr_lit = find_representative(lit);
     const size_t count = internal->occs (lit).size ();
     assert (count <= UINT_MAX);
     if (count < count_least_occurring) {
@@ -2488,17 +2484,14 @@ bool Closure::find_subsuming_clause (Clause *subsumed) {
     }
   }
   assert (least_occuring_lit);
+
  FOUND_SUBSUMING:
-  int other = 0;
   for (auto lit : *subsumed) {
     const int repr_lit = find_representative (lit);
     const signed char v = internal->val (lit);
     if (!v)
       marked (repr_lit) = 0;
-    if (!other && lit != least_occuring_lit)
-      other = lit;
   }
-  assert (other); // we do not really need other except for the watching scheme
   if (subsuming) {
     LOG (subsumed, "subsumed");
     LOG (subsuming, "subsuming");
@@ -3390,9 +3383,6 @@ void Closure::extract_ite_gates() {
   START (extractites);
   std::vector<Clause*> candidates;
 
-//  internal->clear_occs();
-  for (const auto & nt : internal->otab)
-    assert (nt.size() == 0);
   init_ite_gate_extraction(candidates);
 
   for (auto idx : internal->vars) {
