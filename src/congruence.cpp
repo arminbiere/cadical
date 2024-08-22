@@ -41,7 +41,7 @@ bool Closure::find_binary (int lit, int other) const {
 void Closure::extract_binaries () {
   if (!internal->opts.congruencebinaries)
     return;
-
+  START (extractbinaries);
   offsetsize.resize(internal->max_var*2+3, make_pair(0,0));
 
   // in kissat this is done during watch clearing. TODO: consider doing this too.
@@ -147,6 +147,7 @@ void Closure::extract_binaries () {
     binaries.resize (i);
   }
   binaries.clear();
+  STOP (extractbinaries);
   MSG ("extracted %zu binaries (plus %zu already present and %zu duplicates)",
        extracted, already_present, duplicated);
 }
@@ -1085,6 +1086,7 @@ void Closure::extract_and_gates () {
   assert(!full_watching);
   if (!internal->opts.congruenceand)
     return;
+  START (extractands);
   marks.resize (internal->max_var * 2 + 3);
   init_and_gate_extraction ();
 
@@ -1103,6 +1105,7 @@ void Closure::extract_and_gates () {
   }
 
   reset_and_gate_extraction ();
+  STOP (extractands);
 }
 
 /*------------------------------------------------------------------------*/
@@ -1741,6 +1744,7 @@ void Closure::extract_xor_gates () {
   assert(!full_watching);
   if (!internal->opts.congruencexor)
     return;
+  START (extractxors);
   LOG ("starting extracting XOR");
   std::vector<Clause *> candidates = {};
   init_xor_gate_extraction(candidates);
@@ -1752,7 +1756,9 @@ void Closure::extract_xor_gates () {
     extract_xor_gates_with_base_clause (c);
   }
   reset_xor_gate_extraction();
+  STOP (extractxors);
 }
+
 /*------------------------------------------------------------------------*/
 void Closure::find_units () {
   size_t units = 0;
@@ -2101,6 +2107,7 @@ bool Closure::propagate_equivalence (int lit) {
 }
 
 size_t Closure::propagate_units_and_equivalences () {
+  START (congruencemerge);
   size_t propagated = 0;
   LOG ("propagating at least %zd units", schedule.size());
   while (propagate_units() && !schedule.empty()) {
@@ -2144,6 +2151,7 @@ size_t Closure::propagate_units_and_equivalences () {
       }
     }
   }
+  STOP (congruencemerge);
   return propagated;
 }
 
@@ -2222,6 +2230,7 @@ void Closure::reset_extraction () {
 }
 
 void Closure::forward_subsume_matching_clauses() {
+  START (congruencematching);
   reset_closure ();
   std::vector<signed char> matchable;
   matchable.resize (internal->max_var + 1);
@@ -2320,6 +2329,7 @@ void Closure::forward_subsume_matching_clauses() {
   }
   LOG ("[congruence] subsumed %.0f%%",
        (double) subsumed / (double) (tried ? tried : 1));
+  STOP (congruencematching);
 }
 
 
@@ -3305,6 +3315,7 @@ void Closure::extract_ite_gates() {
   assert(!full_watching);
   if (!internal->opts.congruenceite)
     return;
+  START (extractites);
   std::vector<Clause*> candidates;
 
 //  internal->clear_occs();
@@ -3321,10 +3332,12 @@ void Closure::extract_ite_gates() {
   }
   // Kissat has an alternative version MERGE_CONDITIONAL_EQUIVALENCES
   reset_ite_gate_extraction();
-  candidates.clear();
+  STOP (extractites);
 }
+
 /*------------------------------------------------------------------------*/
 void Closure::extract_gates() {
+  START (extract);
   extract_and_gates();
   if (internal->unsat || internal->terminated_asynchronously ())
     return;
@@ -3332,6 +3345,7 @@ void Closure::extract_gates() {
   if (internal->unsat || internal->terminated_asynchronously ())
     return;
   extract_ite_gates();
+  STOP (extract);
 }
 
 /*------------------------------------------------------------------------*/
