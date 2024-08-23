@@ -3436,6 +3436,11 @@ void Internal::extract_gates (bool decompose) {
     return;
   }
 
+  // to remove false literals from clauses
+  // It makes the technique stronger as long clauses
+  // can become binary / ternary
+  garbage_collection ();
+
   const int64_t old = stats.congruence.congruent;
   const int old_merged = stats.congruence.congruent;
 
