@@ -3435,6 +3435,12 @@ void Internal::extract_gates (bool decompose) {
     learn_empty_clause ();
     return;
   }
+  if (congruence_delay.bumpreasons.limit) {
+    LOG ("delaying congruence %" PRId64 " more times",
+         congruence_delay.bumpreasons.limit);
+    congruence_delay.bumpreasons.limit--;
+    return;
+  }
 
   // to remove false literals from clauses
   // It makes the technique stronger as long clauses
@@ -3529,6 +3535,15 @@ void Internal::extract_gates (bool decompose) {
   assert (watched == nb_clauses * 2);
 #endif
   assert (!internal->occurring ());
+
+  if (new_merged == old_merged) {
+    congruence_delay.bumpreasons.interval++;
+  } else {
+    congruence_delay.bumpreasons.interval /= 2;
+  }
+
+  MSG ("delay congruence internal %" PRId64, congruence_delay.bumpreasons.interval);
+  congruence_delay.bumpreasons.limit = congruence_delay.bumpreasons.interval;
 
   if (decompose && opts.decompose && new_merged != old_merged) {
     internal->decompose ();

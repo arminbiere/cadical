@@ -255,6 +255,7 @@ struct Internal {
   vector<Clause *> clauses; // ordered collection of all clauses
   Averages averages;        // glue, size, jump moving averages
   Delay delay[2];	    // Delay certain functions
+  Delay congruence_delay;   // Delay congruence if not successful recently
   Limit lim;                // limits for various phases
   Last last;                // statistics at last occurrence
   Inc inc;                  // increments on limits
