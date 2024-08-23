@@ -2081,12 +2081,15 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     g->shrunken = true;
     assert (is_sorted(begin (g->rhs), end (g->rhs), sort_literals_smaller (internal)));
     g->hash = hash_lits (nonces, g->rhs);
-  } else if (j != size){
+  } else if (dst_count == 1) {
+    assert (j != size);
     g->shrunken = true;
     g->rhs.resize(j);
     sort_literals (g->rhs);
     g->hash = hash_lits (nonces, g->rhs); // all but one (the dst) is sorted correctly actually
   } else {
+    assert (j == size);
+    assert (dst_count == 0);
     sort_literals (g->rhs);
   }
   
