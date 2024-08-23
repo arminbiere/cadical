@@ -713,6 +713,7 @@ struct Internal {
   // Lucky feasible case checking.
   //
   int unlucky (int res);
+  bool lucky_propagate_discrepency (int);
   int trivially_false_satisfiable ();
   int trivially_true_satisfiable ();
   int forward_false_satisfiable ();

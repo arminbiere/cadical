@@ -544,23 +544,23 @@ void Stats::print (Internal *internal) {
   }
   
   if (all || stats.congruence.gates) {
-    PRT ("congruence:        %15" PRId64 "   %10.2f    interval",
+    PRT ("congruence:      %15" PRId64 "   %10.2f    interval",
          stats.congruence.rounds, relative (stats.conflicts, stats.congruence.rounds));
-    PRT ("   units:          %15" PRId64 "   %10.2f    per congruent",
+    PRT ("   units:        %15" PRId64 "   %10.2f    per congruent",
          stats.congruence.units, relative (stats.congruence.units, stats.congruence.congruent));
-    PRT ("   and-gates:      %15" PRId64 "   %10.2f    per found gates",
+    PRT ("   cong-and:     %15" PRId64 "   %10.2f    per found gates",
          stats.congruence.ands, relative (stats.congruence.ands, stats.congruence.gates));
-    PRT ("   ite-gates:      %15" PRId64 "   %10.2f    per found gates",
+    PRT ("   cong-ite:     %15" PRId64 "   %10.2f    per found gates",
          stats.congruence.ites, relative (stats.congruence.ites, stats.congruence.gates));
-    PRT ("   xor-gates:      %15" PRId64 "   %10.2f    per found gates",
+    PRT ("   cong-xor:     %15" PRId64 "   %10.2f    per found gates",
          stats.congruence.xors, relative (stats.congruence.xors, stats.congruence.gates));
-    PRT ("   congruent:      %15" PRId64 "   %10.2f    per round",
+    PRT ("   congruent:    %15" PRId64 "   %10.2f    per round",
          stats.congruence.congruent, relative (stats.congruence.rounds, stats.congruence.congruent));
-    PRT ("   unaries:        %15" PRId64 "   %10.2f    per round",
+    PRT ("   unaries:      %15" PRId64 "   %10.2f    per round",
          stats.congruence.unaries, relative (stats.congruence.rounds, stats.congruence.unaries));
-    PRT ("   rewritten-ands: %15" PRId64 "   %10.2f    per round",
+    PRT ("   rewri.-ands:  %15" PRId64 "   %10.2f    per round",
          stats.congruence.rewritten_ands, relative (stats.congruence.rounds, stats.congruence.rewritten_ands));
-    PRT ("   subsumed:       %15" PRId64 "   %10.2f    per round",
+    PRT ("   subsumed:     %15" PRId64 "   %10.2f    per round",
          stats.congruence.subsumed, relative (stats.congruence.rounds, stats.congruence.subsumed));
   }
 

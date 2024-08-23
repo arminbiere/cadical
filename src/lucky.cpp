@@ -137,7 +137,6 @@ inline bool Internal::lucky_propagate_discrepency (int dec) {
   } else {
     analyze ();
     assert (!level);
-    printf ("c new unit");
     no_conflict = propagate ();
     if (!no_conflict) {
       analyze ();
