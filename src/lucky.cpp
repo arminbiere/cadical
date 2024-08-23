@@ -122,9 +122,34 @@ int Internal::trivially_true_satisfiable () {
 }
 
 /*------------------------------------------------------------------------*/
+inline bool Internal::lucky_propagate_discrepency (int dec) {
+  search_assume_decision (dec);
+  bool no_conflict = propagate ();
+  if (no_conflict)
+    return false;
+  if (level > 1) {
+    backtrack (level - 1);
+    search_assume_decision (-dec);
+    no_conflict = propagate ();
+    if (no_conflict)
+      return false;
+    return true;
+  } else {
+    analyze ();
+    assert (!level);
+    printf ("c new unit");
+    no_conflict = propagate ();
+    if (!no_conflict) {
+      analyze ();
+      LOG ("lucky inconsistency backward assigning to true");
+      return true;
+    }
+  }
+  return false;
+}
 
 int Internal::forward_false_satisfiable () {
-  LOG ("checking increasing variable index false assignment");
+  MSG ("checking increasing variable index false assignment");
   assert (!unsat);
   assert (!level);
   assert (assumptions.empty ());
@@ -133,8 +158,7 @@ int Internal::forward_false_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
-    search_assume_decision (-idx);
-    if (!propagate ())
+    if (lucky_propagate_discrepency (-idx))
       return unlucky (0);
   }
   VERBOSE (1, "forward assuming variables false satisfies formula");
@@ -153,8 +177,7 @@ int Internal::forward_true_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
-    search_assume_decision (idx);
-    if (!propagate ())
+    if (lucky_propagate_discrepency (idx))
       return unlucky (0);
   }
   VERBOSE (1, "forward assuming variables true satisfies formula");
@@ -175,8 +198,7 @@ int Internal::backward_false_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
-    search_assume_decision (-idx);
-    if (!propagate ())
+    if (lucky_propagate_discrepency (-idx))
       return unlucky (0);
   }
   VERBOSE (1, "backward assuming variables false satisfies formula");
@@ -195,8 +217,7 @@ int Internal::backward_true_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
-    search_assume_decision (idx);
-    if (!propagate ())
+    if (lucky_propagate_discrepency (idx))
       return unlucky (0);
   }
   VERBOSE (1, "backward assuming variables true satisfies formula");
@@ -353,6 +374,7 @@ int Internal::lucky_phases () {
   assert (!searching_lucky_phases);
   searching_lucky_phases = true;
   stats.lucky.tried++;
+  const int64_t active_before = stats.active;
   int res = trivially_false_satisfiable ();
   if (!res)
     res = trivially_true_satisfiable ();
@@ -374,6 +396,11 @@ int Internal::lucky_phases () {
     stats.lucky.succeeded++;
   report ('l', !res);
   assert (searching_lucky_phases);
+
+  const int64_t units = active_before - stats.active;
+
+  if (!res && units)
+    MSG ("lucky %zd units", units);
   searching_lucky_phases = false;
   STOP (lucky);
   STOP (search);

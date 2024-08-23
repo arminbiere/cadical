@@ -545,7 +545,7 @@ bool Internal::preprocess_round (int round) {
   if (opts.condition)
     condition (false);
   
- after.vars = active ();
+  after.vars = active ();
   after.clauses = stats.current.irredundant;
   assert (preprocessing);
   preprocessing = false;
