@@ -662,7 +662,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int falsifies, 
 }
 
 
-void Closure::update_xor_gate(Gate *g, GatesTable::iterator git) {
+void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
   assert (g->tag == Gate_Type::XOr_Gate);
   assert (!internal->unsat && chain.empty ());
   LOGGATE(g, "updating");
@@ -1319,12 +1319,13 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
  
 Gate* Closure::find_xor_lits (const vector<int> &rhs) {
   assert (is_sorted(begin (rhs), end (rhs), sort_literals_smaller (internal)));
-  return find_gate_lits(rhs, Gate_Type::XOr_Gate);
+  return find_gate_lits (rhs, Gate_Type::XOr_Gate);
 }
 
 Gate* Closure::find_xor_gate (Gate *g) {
   assert (g->tag == Gate_Type::XOr_Gate);
-  return find_gate_lits(g->rhs, Gate_Type::XOr_Gate);
+  assert (is_sorted(begin (g->rhs), end (g->rhs), sort_literals_smaller (internal)));
+  return find_gate_lits (g->rhs, Gate_Type::XOr_Gate);
 }
 
 
@@ -2054,8 +2055,6 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     const signed char v = internal->val (lit);
     if (v > 0) {
       negate ^= true;
-      if (negate)
-	LOG ("negate = %d due to %d with value %d", negate, lit, v);
     }
     if (v)
       continue;
@@ -2080,24 +2079,28 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     assert (k == j - 2);
     g->rhs.resize(k);
     g->shrunken = true;
+    assert (is_sorted(begin (g->rhs), end (g->rhs), sort_literals_smaller (internal)));
     g->hash = hash_lits (nonces, g->rhs);
   } else if (j != size){
     g->shrunken = true;
     g->rhs.resize(j);
-    g->hash = hash_lits (nonces, g->rhs);
+    sort_literals (g->rhs);
+    g->hash = hash_lits (nonces, g->rhs); // all but one (the dst) is sorted correctly actually
+  } else {
+    sort_literals (g->rhs);
   }
   
   if (dst_count > 1)
     add_xor_shrinking_proof_chain (g, src);
-  assert (internal->clause.empty()); 
+  assert (internal->clause.empty());
   update_xor_gate(g, git);
 
   if (!g->garbage && !internal->unsat && original_dst_negated &&
       dst_count == 1) {
-    connect_goccs(g, dst);
+    connect_goccs (g, dst);
   }
 
-  check_xor_gate_implied(g);
+  check_xor_gate_implied (g);
   // TODO stats
   
 }
@@ -2129,7 +2132,10 @@ void Closure::simplify_xor_gate (Gate *g) {
     LOG ("shrunken gate");
     g->shrunken = true;
     g->rhs.resize(j);
+    assert (is_sorted(begin (g->rhs), end (g->rhs), sort_literals_smaller (internal)));
     g->hash = hash_lits (nonces, g->rhs);
+  } else {
+    assert (g->hash == hash_lits (nonces, g->rhs));
   }
 
   check_xor_gate_implied (g);
@@ -2670,14 +2676,14 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
       g->shrunken = true;
       rhs[2] = 0;
       g->tag = new_tag;
-      g->rhs.resize(2);
+      rhs.resize(2);
       assert (rhs[0] != -rhs[1]);
       g->hash = hash_lits (nonces, g->rhs);
       LOGGATE (g, "rewritten");
       Gate *h;
       if (new_tag == Gate_Type::And_Gate) {
         check_and_gate_implied (g);
-        h = find_and_lits (g->rhs);
+        h = find_and_lits (rhs);
       } else {
         assert (new_tag == Gate_Type::XOr_Gate);
         check_xor_gate_implied (g);
@@ -2952,7 +2958,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
   return g;
 }
 
-void check_ite_lits_normalized (std::vector<int> &lits) {
+void check_ite_lits_normalized (const std::vector<int> &lits) {
   assert (lits[0] > 0);
   assert (lits[1] > 0);
   assert (lits[0] != lits[1]);
@@ -2961,6 +2967,9 @@ void check_ite_lits_normalized (std::vector<int> &lits) {
   assert (lits[0] != -lits[1]);
   assert (lits[0] != -lits[2]);
   assert (lits[1] != -lits[2]);
+#ifdef NDEBUG
+  (void) lits;
+#endif
 }
 
 void Closure::check_ite_implied (int lhs, int cond, int then_lit, int else_lit) {
