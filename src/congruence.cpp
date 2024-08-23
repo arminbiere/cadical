@@ -1497,7 +1497,7 @@ Gate *Closure::new_xor_gate (int lhs) {
     check_xor_gate_implied (g);
     add_xor_matching_proof_chain(g, g->lhs, lhs);
     if (merge_literals (g->lhs, lhs)) {
-      LOG ("found merged literals");
+      ++internal->stats.congruence.xors;
     }
     if (!internal->unsat)
       delete_proof_chain();
@@ -1513,7 +1513,6 @@ Gate *Closure::new_xor_gate (int lhs) {
     g->hash = hash_lits (nonces, g->rhs);
     table.insert(g);
     ++internal->stats.congruence.gates;
-    ++internal->stats.congruence.xors;
 #ifdef LOGGING
     g->id = fresh_id++;
 #endif
@@ -1871,7 +1870,7 @@ void Closure::find_equivalences () {
     int lit = v;
     for (auto w : internal->watches (lit)) {
       if (!w.binary ())
-	continue;
+	break;
       assert (w.size == 2);
       const int other = w.blit;
       if (internal->vlit (lit) > internal->vlit (other))
@@ -1891,8 +1890,8 @@ void Closure::find_equivalences () {
       const int other = w.blit;
       if (internal->vlit (-lit) > internal->vlit (other))
 	continue;
-      if (lit == other)
-	continue;
+      assert (-lit != other);
+      LOG ("binary clause %d %d", -lit, other);
       if (marked (-other)) {
 	int lit_repr = find_representative(lit);
 	int other_repr = find_representative(other);
@@ -2835,7 +2834,7 @@ void Closure::simplify_ite_gate (Gate *g) {
       if (h) {
 	assert (garbage);
 	if (merge_literals(g->lhs, h->lhs)) {
-	  ++internal->stats.congruence.ands;
+	  ++internal->stats.congruence.ites;
 	}
       } else {
 	remove_gate (git);
@@ -2946,7 +2945,6 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
     g->hash = hash_lits (nonces, g->rhs);
     table.insert (g);
     ++internal->stats.congruence.gates;
-    ++internal->stats.congruence.xors;
 #ifdef LOGGING
     g->id = fresh_id++;
 #endif
