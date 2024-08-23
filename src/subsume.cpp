@@ -664,7 +664,8 @@ void Internal::subsume (bool update_limits) {
     vivify ();
   if (opts.transred)
     transred ();
-  extract_gates(true);
+  if (opts.congruence && !preprocessing) // more efficient to run it only once
+    extract_gates (true);
 
 UPDATE_LIMITS:
 
