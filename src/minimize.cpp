@@ -32,6 +32,8 @@ bool Internal::minimize_literal (int lit, int depth) {
     return false;
   bool res = true;
   assert (v.reason);
+  if (opts.minimizeticks)
+    stats.ticks.search[stable]++;
   const const_literal_iterator end = v.reason->end ();
   const_literal_iterator i;
   for (i = v.reason->begin (); res && i != end; i++) {

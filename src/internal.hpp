@@ -183,6 +183,7 @@ struct Internal {
   uint64_t original_id;       // ids for original clauses to produce LRAT
   uint64_t reserved_ids;      // number of reserved ids for original clauses
   uint64_t conflict_id;       // store conflict id for finalize (frat)
+  int64_t saved_decisions;    // to compute decision rate average
   bool concluded;             // keeps track of conclude
   vector<uint64_t> conclusion;   // store ids of conclusion clauses
   vector<uint64_t> unit_clauses; // keep track of unit_clauses (LRAT/FRAT)
@@ -253,6 +254,7 @@ struct Internal {
   vector<Level> control;    // 'level + 1 == control.size ()'
   vector<Clause *> clauses; // ordered collection of all clauses
   Averages averages;        // glue, size, jump moving averages
+  Delay delay[2];	    // Delay certain functions
   Limit lim;                // limits for various phases
   Last last;                // statistics at last occurrence
   Inc inc;                  // increments on limits
@@ -562,6 +564,7 @@ struct Internal {
   //
   Clause *new_clause (bool red, int glue = 0);
   void promote_clause (Clause *, int new_glue);
+  void promote_clause_glue_only (Clause *, int new_glue);
   size_t shrink_clause (Clause *, int new_size);
   void minimize_sort_clause ();
   void shrink_and_minimize_clause ();
@@ -607,7 +610,27 @@ struct Internal {
   void search_assign_external (int lit);
   void search_assume_decision (int decision);
   void assign_unit (int lit);
+  int64_t cache_lines (size_t bytes) { return (bytes + 127) / 128; }
+  int64_t cache_lines (size_t n, size_t bytes) {
+    return cache_lines (n * bytes);
+  }
   bool propagate ();
+
+#ifdef PROFILE_MODE
+  bool propagate_wrapper ();
+  bool propagate_unstable ();
+  bool propagate_stable ();
+  void analyze_wrapper ();
+  void analyze_unstable ();
+  void analyze_stable ();
+  int decide_wrapper ();
+  int decide_stable ();
+  int decide_unstable ();
+#else
+#define propagate_wrapper propagate
+#define analyze_wrapper analyze
+#define decide_wrapper decide
+#endif
 
   void propergate (); // Repropagate without blocking literals.
 
@@ -637,7 +660,8 @@ struct Internal {
   void clear_analyzed_levels ();
   void clear_minimized_literals ();
   bool bump_also_reason_literal (int lit);
-  void bump_also_reason_literals (int lit, int limit);
+  void bump_also_reason_literals (int lit, int depth_limit,
+                                  size_t size_limit);
   void bump_also_all_reason_literals ();
   void analyze_literal (int lit, int &open, int &resolvent_size,
                         int &antecedent_size);
@@ -651,6 +675,7 @@ struct Internal {
   void otfs_subsume_clause (Clause *subsuming, Clause *subsumed);
   int otfs_find_backtrack_level (int &forced);
   Clause *on_the_fly_strengthen (Clause *conflict, int lit);
+  void update_decision_rate_average ();
   void analyze ();
   void iterate (); // report learned unit clause
 

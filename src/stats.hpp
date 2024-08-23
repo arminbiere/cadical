@@ -27,6 +27,10 @@ struct Stats {
   } propagations;
 
   struct {
+    int64_t search[2];
+  } ticks;
+
+  struct {
     int64_t ext_cb;     // number of times any external callback was called
     int64_t eprop_call; // number of times external_propagate was called
     int64_t eprop_prop; // number of times external propagate propagated
@@ -133,6 +137,7 @@ struct Stats {
   int64_t promoted1;      // promoted clauses to tier one
   int64_t promoted2;      // promoted clauses to tier two
   int64_t bumped;         // seen and bumped variables in 'analyze'
+  int64_t bumpedreasons;  // reason side bumpings 'analyze'
   int64_t recomputed;     // recomputed glues 'recompute_glue'
   int64_t searched;       // searched decisions in 'decide'
   int64_t reductions;     // 'reduce' counter

@@ -33,6 +33,8 @@ OPTION( blockocclim,     1e2,  1,2e9,2,0,1, "occurrence limit") \
 OPTION( bump,              1,  0,  1,0,0,1, "bump variables") \
 OPTION( bumpreason,        1,  0,  1,0,0,1, "bump reason literals too") \
 OPTION( bumpreasondepth,   1,  1,  3,0,0,1, "bump reason depth") \
+OPTION( bumpreasonlimit,  10,  1,2e9,0,0,1, "bump reason limit") \
+OPTION( bumpreasonrate,  100,  1,2e9,0,0,1, "bump reason decision rate") \
 OPTION( check,             0,  0,  1,0,0,0, "enable internal checking") \
 OPTION( checkassumptions,  1,  0,  1,0,0,0, "check assumptions satisfied") \
 OPTION( checkconstraint,   1,  0,  1,0,0,0, "check constraint satisfied") \
@@ -93,6 +95,7 @@ OPTION( elimsubst,         1,  0,  1,0,0,1, "elimination by substitution") \
 OPTION( elimsum,           1,  0,1e4,0,0,1, "elimination score sum weight") \
 OPTION( elimxorlim,        5,  2, 27,1,0,1, "maximum XOR size") \
 OPTION( elimxors,          1,  0,  1,0,0,1, "find XOR gates") \
+OPTION( emadecisions,    1e5,  1,2e9,0,0,1, "window decision rate") \
 OPTION( emagluefast,      33,  1,2e9,0,0,1, "window fast glue") \
 OPTION( emaglueslow,     1e5,  1,2e9,0,0,1, "window slow glue") \
 OPTION( emajump,         1e5,  1,2e9,0,0,1, "window back-jump level") \
@@ -121,6 +124,7 @@ OPTION( lrat,              0,  0,  1,0,0,1, "use LRAT proof format") \
 OPTION( lucky,             1,  0,  1,0,0,1, "search for lucky phases") \
 OPTION( minimize,          1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \
+OPTION( minimizeticks,     1,  0,  1,0,0,1, "increment ticks in minimization") \
 OPTION( otfs,              1,  0,  1,0,0,1, "on-the-fly self subsumption") \
 OPTION( phase,             1,  0,  1,0,0,1, "initial phase") \
 OPTION( probe,             1,  0,  1,0,1,1, "failed literal probing" ) \
@@ -163,9 +167,7 @@ OPTION( shufflequeue,      1,  0,  1,0,0,1, "shuffle variable queue") \
 OPTION( shufflerandom,     0,  0,  1,0,0,1, "not reverse but random") \
 OPTION( shufflescores,     1,  0,  1,0,0,1, "shuffle variable scores") \
 OPTION( stabilize,         1,  0,  1,0,0,1, "enable stabilizing phases") \
-OPTION( stabilizefactor, 200,101,2e9,0,0,1, "phase increase in percent") \
-OPTION( stabilizeint,    1e3,  1,2e9,0,0,1, "stabilizing interval") \
-OPTION( stabilizemaxint, 2e9,  1,2e9,0,0,1, "maximum stabilizing phase") \
+OPTION( stabilizeinit,   1e3,  1,2e9,0,0,1, "stabilizing interval") \
 OPTION( stabilizeonly,     0,  0,  1,0,0,1, "only stabilizing phases") \
 OPTION( stats,             0,  0,  1,0,0,1, "print all statistics at the end of the run") \
 OPTION( subsume,           1,  0,  1,0,1,1, "enable clause subsumption") \
