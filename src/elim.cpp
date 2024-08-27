@@ -471,7 +471,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
 // than negative occurrences.
 
 bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
-                                            int pivot) {
+                                            int pivot, bool fastel) {
   const bool substitute = !eliminator.gates.empty ();
   if (substitute)
     LOG ("trying to substitute %d", pivot);
@@ -487,7 +487,7 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
   const int64_t neg = ns.size ();
   if (!pos || !neg)
     return lim.elimbound >= 0;
-  const int64_t bound = pos + neg + lim.elimbound;
+  const int64_t bound = fastel ? opts.fastelimbound : pos + neg + lim.elimbound;
 
   LOG ("checking number resolvents on %d bounded by "
        "%" PRId64 " = %" PRId64 " + %" PRId64 " + %" PRId64,
@@ -662,7 +662,7 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
 // Try to eliminate 'pivot' by bounded variable elimination.
 
 void Internal::try_to_eliminate_variable (Eliminator &eliminator,
-                                          int pivot) {
+                                          int pivot, bool fastel) {
 
   if (!active (pivot))
     return;
@@ -702,7 +702,7 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator,
     find_gate_clauses (eliminator, pivot);
 
   if (!unsat && !val (pivot)) {
-    if (elim_resolvents_are_bounded (eliminator, pivot)) {
+    if (elim_resolvents_are_bounded (eliminator, pivot, fastel)) {
       LOG ("number of resolvents on %d are bounded", pivot);
       elim_add_resolvents (eliminator, pivot);
       if (!unsat)
@@ -761,6 +761,7 @@ int Internal::elim_round (bool &completed) {
   assert (!level);
 
   int64_t resolution_limit;
+  bool fastel = opts.fastelim && preprocessing;
 
   if (opts.elimlimited) {
     int64_t delta = stats.propagations.search;
@@ -828,7 +829,8 @@ int Internal::elim_round (bool &completed) {
       continue;
     if (!flags (idx).elim)
       continue;
-    flags (idx).elim = false;
+    if (!fastel) // during fastel, do not update to retry lits later
+      flags (idx).elim = false;
     LOG ("scheduling %d for elimination initially", idx);
     schedule.push_back (idx);
   }
@@ -873,8 +875,9 @@ int Internal::elim_round (bool &completed) {
          stats.elimres <= resolution_limit && !schedule.empty ()) {
     int idx = schedule.front ();
     schedule.pop_front ();
-    flags (idx).elim = false;
-    try_to_eliminate_variable (eliminator, idx);
+    if (!fastel) // during fastelim, a try does not count
+      flags (idx).elim = false;
+    try_to_eliminate_variable (eliminator, idx, fastel);
 #ifndef QUIET
     tried++;
 #endif
@@ -912,6 +915,8 @@ int Internal::elim_round (bool &completed) {
     mark_redundant_clauses_with_eliminated_variables_as_garbage ();
 
   int eliminated = stats.all.eliminated - old_eliminated;
+  if (fastel)
+    stats.all.fasteliminated += eliminated;
 #ifndef QUIET
   int64_t resolutions = stats.elimres - old_resolutions;
   PHASE ("elim-round", stats.elimrounds,
@@ -921,7 +926,7 @@ int Internal::elim_round (bool &completed) {
 
   last.elim.subsumephases = stats.subsumephases;
   const int units = stats.all.fixed - old_fixed;
-  report ('e', !opts.reportall && !(eliminated + units));
+  report (fastel ? 'f' : 'e', !opts.reportall && !(eliminated + units));
   STOP_SIMPLIFIER (elim, ELIM);
 
   if (!unsat && !terminated_asynchronously () &&

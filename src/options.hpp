@@ -104,6 +104,8 @@ OPTION( emasize,         1e5,  1,2e9,0,0,1, "window learned clause size") \
 OPTION( ematrailfast,    1e2,  1,2e9,0,0,1, "window fast trail") \
 OPTION( ematrailslow,    1e5,  1,2e9,0,0,1, "window slow trail") \
 OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
+OPTION( fastelim,          1,  0,  1,0,1,1, "fast BVE during preprocessing") \
+OPTION( fastelimbound,     7,  0,2e9,0,1,1, "fast BVE bound during preprocessing") \
 OPTION( flush,             0,  0,  1,0,0,1, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \
 OPTION( flushint,        1e5,  1,2e9,0,0,1, "initial limit") \

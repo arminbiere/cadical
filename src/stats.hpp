@@ -252,6 +252,7 @@ struct Stats {
   struct {
     int64_t fixed;       // number of top level assigned variables
     int64_t eliminated;  // number of eliminated variables
+    int64_t fasteliminated;  // number of fast eliminated variables only
     int64_t substituted; // number of substituted variables
     int64_t pure;        // number of pure literals
   } all, now;

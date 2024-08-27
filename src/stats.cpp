@@ -142,6 +142,8 @@ void Stats::print (Internal *internal) {
   if (all || stats.all.eliminated) {
     PRT ("eliminated:      %15" PRId64 "   %10.2f %%  of all variables",
          stats.all.eliminated, percent (stats.all.eliminated, stats.vars));
+    PRT ("  fastelim:      %15" PRId64 "   %10.2f %%  of eliminated",
+         stats.all.fasteliminated, percent (stats.all.fasteliminated, stats.all.eliminated));
     PRT ("  elimphases:    %15" PRId64 "   %10.2f    interval",
          stats.elimphases, relative (stats.conflicts, stats.elimphases));
     PRT ("  elimrounds:    %15" PRId64 "   %10.2f    per phase",
