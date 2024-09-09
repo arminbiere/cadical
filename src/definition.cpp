@@ -30,13 +30,7 @@ static void traverse_definition_core (void *state, unsigned id) {
   const size_t size_clauses1 = clauses1.size ();
   assert (size_clauses0 <= UINT_MAX);
   unsigned sign;
-  if (id >= size_clauses0 + size_clauses1) {
-    unsigned tmp = id - size_clauses0 - size_clauses1;
-    assert (tmp < extractor->implicants.size ());
-    eliminator->definition_unit |= 3;
-    eliminator->prime_gates.push_back (extractor->implicants[tmp]);
-    return;
-  }
+  assert (id < size_clauses0 + size_clauses1);
   if (id < size_clauses0) {
     clause = clauses0[id];
     sign = 1;
@@ -257,7 +251,6 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
   stats.definitions_checked++;
   const size_t limit = opts.elimdefticks;
   kitten_set_ticks_limit (citten, limit);
-  int primeround = 1;
 BEGIN:
   int status = kitten_solve (citten);
   if (!exported) goto ABORT;
@@ -318,18 +311,9 @@ BEGIN:
         assign_unit (unit);
       elim_propagate (eliminator, unit);
     }
-  } else if (status == 10 && opts.elimdefprime) {
-    if (primeround > opts.elimdefprimeround) goto ABORT;
-    primeround++;
-    int side = kitten_compute_prime_implicant (citten, &extractor, ignore_negative);
-    if (side == -1) goto ABORT;
-    stats.definition_prime++;
-    kitten_add_prime_implicant (citten, &extractor, side, add_implicant);
-    goto BEGIN;
   } else {
   ABORT:
     LOG ("sub-solver failed to show that definition exists");
-    eliminator.prime_gates.clear ();
   }
   stats.definition_ticks += kitten_current_ticks (citten);
   return;
@@ -341,103 +325,6 @@ void Internal::delete_all_redundant_def (int blit) {
     if (c->garbage) continue;
     mark_garbage (c);
   }
-}
-
-bool Internal::add_definition_blocking_clauses (Eliminator &eliminator, bool redundant) {
-  if (!eliminator.prime_gates.size ()) return false;
-  if (!opts.elimdefprimeadd && redundant) return false;
-  if (!opts.elimdefblock && !redundant) return false;
-  int pivot = abs (eliminator.prime_gates[0][0]);
-  unsigned cpos = 0, cneg = 0;
-  for (auto &bc : eliminator.prime_gates) {
-    if (bc[0] == pivot) cpos++;
-    else cneg++;
-  }
-  if (cpos > 0)
-    delete_all_redundant_def (-pivot);
-  if (cneg > 0)
-    delete_all_redundant_def (pivot);
-  for (auto &bc : eliminator.prime_gates) {
-    assert (clause.empty ());
-    clause.swap (bc);
-    Clause *res = new_definitions_blocking_clause (redundant);
-    stats.definition_prime_added++;
-    if (redundant)
-      for (const auto &lit : *res)
-        roccs (lit).push_back (res);
-    else {
-      for (const auto &lit : *res) {
-        occs (lit).push_back (res);
-        mark_elim (lit);
-      }
-    }
-    clause.clear ();
-  }
-  eliminator.prime_gates.clear ();
-  return true;
-}
-
-bool Internal::definition_blocked_addition () {
-  if (!opts.elimdefblock) return false;
-  init_occs ();
-  init_noccs ();
-  init_roccs ();
-
-  for (const auto &c : clauses) {
-    if (c->garbage || c->redundant)
-      continue;
-    for (const auto &lit : *c) {
-      if (!active (lit))
-        continue;
-      noccs (lit)++;
-    }
-  }
-
-  // Connect irredundant clauses.
-  //
-  for (const auto &c : clauses)
-    if (!c->garbage && !c->redundant)
-      for (const auto &lit : *c)
-        if (active (lit))
-          occs (lit).push_back (c);
-
-  // Connect redundant clauses.
-  //
-  if (opts.elimdefprimeadd && opts.elimdefprime)
-    for (const auto &c : clauses)
-      if (!c->garbage && c->redundant)
-        for (const auto &lit : *c)
-          if (active (lit))
-            roccs (lit).push_back (c);
-  
-  
-  Eliminator eliminator (this);
-  ElimSchedule &schedule = eliminator.schedule;
-  bool added = false;
-  for (auto idx : vars) {
-    if (!active (idx))
-      continue;
-    if (frozen (idx))
-      continue;
-    schedule.push_back (idx);
-  }
-  while (!unsat && !terminated_asynchronously () && !schedule.empty ()) {
-    int idx = schedule.front ();
-    schedule.pop_front ();
-    find_definition (eliminator, idx);
-    if (add_definition_blocking_clauses (eliminator, true)) added = true;
-    unmark_gate_clauses (eliminator);
-  }
-
-  reset_occs ();
-  reset_roccs ();
-  reset_noccs ();
-
-  if (added)
-    PHASE ("elim-phase", stats.elimphases, "added some definition blocking clauses");
-  else
-    PHASE ("elim-phase", stats.elimphases, "added no definition blocking clauses");
-  return added;
 }
 
 } // namespace CaDiCaL

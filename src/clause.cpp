@@ -112,7 +112,6 @@ Clause *Internal::new_clause (bool red, int glue) {
   c->transred = false;
   c->subsume = false;
   c->swept = false;
-  c->blocking = false;
   c->flushed = false;
   c->vivified = false;
   c->vivify = false;
@@ -537,18 +536,6 @@ Clause *Internal::new_hyper_ternary_resolved_clause (bool red) {
   assert (!watching ());
   return res;
 }
-
-Clause *Internal::new_definitions_blocking_clause (bool redundant) {
-  external->check_learned_clause ();
-  Clause *res = new_clause (redundant, 1);
-  res->blocking = true;
-  if (proof) {
-    proof->add_derived_clause (res, lrat_chain);
-  }
-  assert (!watching ());
-  return res;
-}
-
 
 Clause *Internal::new_eres_clause () {
   external->check_learned_clause ();

@@ -469,8 +469,8 @@ void LratChecker::add_derived_clause (uint64_t id, bool,
     }
   }
   assert (id);
-  if ((!check (proof_chain) || !check_resolution (proof_chain))
-      && (!proof_chain.empty () || !check_blocked ())) {
+  if ((!check (proof_chain) || !check_resolution (proof_chain))) {
+      // && (!proof_chain.empty ()|| !check_blocked ())) { // needed for ER proof support
     LOG (proof_chain, "chain");
 #ifdef LOGGING
     for (const auto & pid : proof_chain) {

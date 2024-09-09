@@ -78,11 +78,7 @@ OPTION( elimboundmax,     16, -1,2e6,1,0,1, "maximum elimination bound") \
 OPTION( elimboundmin,      0, -1,2e6,0,0,1, "minimum elimination bound") \
 OPTION( elimclslim,      1e2,  2,2e9,2,0,1, "resolvent size limit") \
 OPTION( elimdef,           1,  0,  1,0,0,1, "mine definitions with kitten") \
-OPTION( elimdefblock,      1,  0,  1,0,0,1, "use definitions to add blocking clauses") \
 OPTION( elimdefcores,      2,  1,100,0,0,1, "number of unsat cores") \
-OPTION( elimdefprime,      0,  0,  0,0,0,1, "add blocking clauses to find definitions") \
-OPTION( elimdefprimeadd,   1,  0,  1,0,0,1, "add blocking clauses") \
-OPTION( elimdefprimeround, 1,  1,1e3,0,0,1, "max number of blocking clauses per definition") \
 OPTION( elimdefticks,    1e6,  0,2e9,1,0,1, "kitten ticks limit") \
 OPTION( elimequivs,        1,  0,  1,0,0,1, "find equivalence gates") \
 OPTION( elimineff,       1e7,  0,2e9,1,0,1, "minimum elimination efficiency") \
@@ -188,11 +184,6 @@ OPTION( subsumeocclim,   1e2,  0,2e9,1,0,1, "watch list length limit") \
 OPTION( subsumereleff,   1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( subsumestr,        1,  0,  1,0,0,1, "subsume strenghten") \
 OPTION( sweep,             1,  0,  1,0,1,1, "enable SAT sweeping") \
-OPTION( sweepblock,        0,  0,  0,0,0,1, "add blocking clauses in sweeping") \
-OPTION( sweepblockbackcand,1,  0,  1,0,0,1, "blocking clauses for backbone candidates") \
-OPTION( sweepblockequicand,1,  0,  1,0,0,1, "blocking clauses for equivalence candidates") \
-OPTION( sweepblockflipback,1,  0,  1,0,0,1, "blocking clauses in backbone flipping") \
-OPTION( sweepblockflippart,1,  0,  1,0,0,1, "blocking clauses in partition flipping") \
 OPTION( sweepclauses,   1024,  0,2e9,1,0,1, "environment clauses") \
 OPTION( sweepcomplete,     0,  0,  1,0,0,1, "run SAT sweeping to completion") \
 OPTION( sweepcountbinary,  1,  0,  1,0,0,1, "count binaries to environment") \

@@ -187,8 +187,6 @@ struct Stats {
   int64_t definitions_extracted;
   int64_t definition_units;
   int64_t definition_ticks;
-  int64_t definition_prime;
-  int64_t definition_prime_added;
   
   int64_t eres;
   int64_t eresint;
@@ -283,9 +281,6 @@ struct Stats {
   int64_t sweep_environment;
   int64_t sweep_clauses;
   int64_t sweep;
-  int64_t sweep_blocking_clause_added;
-  int64_t sweep_blocking_clause_extracted;
-  int64_t sweep_blocking_clause_flushed;
 
   int64_t preprocessings;
 

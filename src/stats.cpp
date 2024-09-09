@@ -182,12 +182,6 @@ void Stats::print (Internal *internal) {
     PRT ("  def units:     %15" PRId64 "   %10.2f %%  per checked",
          stats.definition_units,
          percent (stats.definition_units, stats.definitions_checked));
-    PRT ("  def prime:     %15" PRId64 "   %10.2f %%  per checked",
-         stats.definition_prime,
-         percent (stats.definition_prime, stats.definitions_checked));
-    PRT ("  def prime add: %15" PRId64 "   %10.2f %%  per prime",
-         stats.definition_prime_added,
-         percent (stats.definition_prime_added, stats.definition_prime));
     PRT ("  gatevars found:%15" PRId64 "   %10.2f %%  elimtried",
          stats.gatevars,
          percent (stats.gatevars, stats.elimtried));
@@ -480,12 +474,6 @@ void Stats::print (Internal *internal) {
          stats.sweep_flip_equivalences, relative (stats.sweep_flip_equivalences, stats.sweep_variables));
     PRT ("    flipped:     %15" PRId64 "   %10.2f %%  of equiv flip",
          stats.sweep_flipped_equivalences, percent (stats.sweep_flipped_equivalences, stats.sweep_flip_equivalences));
-    PRT ("  blocking added:%15" PRId64 "   %10.2f    per swept variable",
-         stats.sweep_blocking_clause_added, relative (stats.sweep_blocking_clause_added, stats.sweep_variables));
-    PRT ("  blocking flush:%15" PRId64 "   %10.2f %%  added",
-         stats.sweep_blocking_clause_flushed, percent (stats.sweep_blocking_clause_flushed, stats.sweep_blocking_clause_added));
-    PRT ("  blocking proof:%15" PRId64 "   %10.2f %%  added",
-         stats.sweep_blocking_clause_extracted, percent (stats.sweep_blocking_clause_extracted, stats.sweep_blocking_clause_added));
     PRT ("  depth:         %15" PRId64 "   %10.2f    per swept variable",
          stats.sweep_depth, relative (stats.sweep_depth, stats.sweep_variables));
     PRT ("  environment:   %15" PRId64 "   %10.2f    per swept variable",

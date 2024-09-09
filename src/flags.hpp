@@ -53,7 +53,7 @@ struct Flags { // Variable flags.
   // Initialized explicitly in 'Internal::init' through this function.
   //
   Flags () {
-    seen = keep = poison = removable = shrinkable = added = sweep = blockable = gatevar = false;
+    seen = keep = poison = removable = shrinkable = added = sweep = gatevar = false;
     subsume = elim = ternary = true;
     block = 3u;
     skip = assumed = failed = marked_signed = 0;

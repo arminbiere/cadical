@@ -47,7 +47,6 @@ struct Eliminator {
   void enqueue (Clause *);
 
   vector<Clause *> gates;
-  vector<vector<int>> prime_gates;
   unsigned definition_unit;
   vector<proof_clause> proof_clauses;
   vector<int> marked;

@@ -1032,10 +1032,7 @@ struct Internal {
   // mine definitions for kitten in 'definition.cpp'
   //
   void find_definition (Eliminator &, int);
-  bool add_definition_blocking_clauses (Eliminator &, bool);
-  Clause *new_definitions_blocking_clause (bool);
   void delete_all_redundant_def (int);
-  bool definition_blocked_addition ();
   void init_citten ();
   void reset_citten ();
   void citten_clear_track_log_terminate ();
@@ -1111,8 +1108,6 @@ struct Internal {
   void sweep_substitute_lrat (Clause *c, uint64_t id);
   void sweep_substitute_new_equivalences (Sweeper &sweeper);
   void delete_all_redundant_with (int);
-  void flush_blocked_clauses (Sweeper &sweeper);
-  void unflush_blocked_clauses (Sweeper &sweeper);
   void sweep_update_noccs (Clause *c);
   void delete_sweep_binary (const sweep_binary &sb);
   bool can_sweep_clause (Clause *c);

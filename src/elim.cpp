@@ -668,12 +668,6 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
   if (substitute)
     assert (pushed <= substitute);
 
-  // also add eliminator.prime_gates to the extension stack... for now
-  // with INT64_MAX as IDs
-  for (const auto &prime : eliminator.prime_gates) {
-    assert (prime.size ());
-    external->push_blocked_clause_on_extension_stack (INT64_MAX, prime[0], prime);
-  }
   // Unfortunately, we can not use the trick by Niklas Soerensson anymore,
   // which avoids saving all clauses on the extension stack.  This would
   // break our new incremental 'restore' logic.
@@ -732,7 +726,6 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator,
       if (active (pivot))
         mark_eliminated (pivot);
     } else {
-      add_definition_blocking_clauses (eliminator, true);
       LOG ("too many resolvents on %d so not eliminated", pivot);
     }
   }
@@ -877,15 +870,6 @@ int Internal::elim_round (bool &completed) {
       for (const auto &lit : *c)
         if (active (lit))
           occs (lit).push_back (c);
-
-  // Connect redundant clauses.
-  //
-  if (opts.elimdefprimeadd && opts.elimdefprime)
-    for (const auto &c : clauses)
-      if (!c->garbage && c->redundant)
-        for (const auto &lit : *c)
-          if (active (lit))
-            roccs (lit).push_back (c);
 
 #ifndef QUIET
   const int64_t old_resolutions = stats.elimres;
@@ -1126,10 +1110,6 @@ void Internal::elim (bool update_limits) {
     assert (round_complete);
     phase_complete = true;
   }
-
-  if (phase_complete)
-    if (definition_blocked_addition ())
-      phase_complete = false;
 
   if (phase_complete) {
     stats.elimcompleted++;
