@@ -201,8 +201,6 @@ void VeripbTracer::veripb_add_derived_clause (
   }
   file->put ("\n");
   file->put ("e ");
-  file->put (id);
-  file->put (" : ");
   for (const auto &external_lit : clause) {
     file->put ("1 ");
     if (external_lit < 0)
@@ -211,7 +209,9 @@ void VeripbTracer::veripb_add_derived_clause (
     file->put (abs (external_lit));
     file->put (' ');
   }
-  file->put (">= 1 ;\n");
+  file->put (">= 1 ; ");
+  file->put (id);
+  file->put (" ;\n");
   if (!redundant && checked_deletions) {
     file->put ("core id ");
     file->put (id);

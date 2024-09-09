@@ -134,7 +134,7 @@ void Internal::bump_variable (int lit) {
 }
 
 void Internal::bump_all_gates () {
-  if (!opts.bumpgatefocused) return;
+  if (!opts.bumpgatefocused || !opts.bump) return;
   assert (!stable);
   if (use_scores ()) {
     for (auto &idx : vars) {
@@ -165,7 +165,7 @@ void Internal::bump_all_gates () {
 }
 
 void Internal::bump_all_non_gates () {
-  if (!opts.bumpgatestable) return;
+  if (!opts.bumpgatestable || !opts.bump) return;
   assert (stable);
   for (auto &idx : vars) {
     if (!active (idx)) continue;

@@ -204,7 +204,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
   if (!opts.elimequivs)
     return;
 
-  assert (opts.elimsubst);
+  assert (opts.elimsubst || opts.bumpgateinit);
 
   if (unsat)
     return;
@@ -327,7 +327,7 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
   if (!opts.elimands)
     return;
 
-  assert (opts.elimsubst);
+  assert (opts.elimsubst || opts.bumpgateinit);
 
   if (unsat)
     return;
@@ -509,7 +509,7 @@ void Internal::find_if_then_else (Eliminator &eliminator, int pivot) {
   if (!opts.elimites)
     return;
 
-  assert (opts.elimsubst);
+  assert (opts.elimsubst || opts.bumpgateinit);
 
   if (unsat)
     return;
@@ -640,7 +640,7 @@ void Internal::find_xor_gate (Eliminator &eliminator, int pivot) {
   if (!opts.elimxors)
     return;
 
-  assert (opts.elimsubst);
+  assert (opts.elimsubst || opts.bumpgateinit);
 
   if (unsat)
     return;
@@ -772,7 +772,7 @@ void Internal::unmark_gate_clauses (Eliminator &eliminator) {
 }
 
 void Internal::init_gate_vars ()  {
-  if (!opts.bumpgateinit) return;
+  if (!opts.bumpgateinit || !opts.bump) return;
   if (unsat) return;
 
   Eliminator eliminator (this);
