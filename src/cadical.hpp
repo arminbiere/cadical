@@ -1141,8 +1141,7 @@ class ExternalPropagator {
 public:
   bool is_lazy = false; // lazy propagator only checks complete assignments
   bool are_reasons_forgettable = false; // Reason external clauses can be deleted
-  bool is_tainting = true; // The external clauses must trigger restore (unless frozen)
-
+  
   virtual ~ExternalPropagator () {}
 
   // Notify the propagator about assignments to observed variables.
@@ -1205,63 +1204,24 @@ public:
   //
   // The external propagator indicates that there is a clause to add.
   // The parameter of the function allows the user to indicate that how 
-  // 'forgettable' is the external clause. Further, there is a member-parameter
-  // called 'is_tainting' that indicates if the external clauses are irredundant
-  // (almost always they are, see below the rare exceptions).
-  // There are overall four possible scenarios defined by these two Boolean flags:
-  // - Non-Forgettable & Tainting Clause [default value].
-  //    - Policy to Forget: The clause will not be deleted, unless it is
-  //      directly implied by some of the other irredundant clauses (e.g. root
-  //      satisfied).
-  //    - Tainting: The clause will be considered as irredundant and thus the
-  //      literals of it will be tainted and might trigger restore steps
-  //      (except frozen literals).
-  //    - Example: It is always safe and correct to use this clause type.
-  // - Forgettable & Tainting Clause.
-  //    - Policy to Forget: The clause will be considered for deletion during
-  //      clause database reduction rounds.
-  //    - Tainting: The clause will be considered as irredundant and thus the
-  //      literals of it will be tainted and might trigger restore steps (except
-  //      frozen literals).
-  //    - Example usage: Theory lemmas in SMT solvers. Anything that is
-  //      irredundant from the SAT perspective (hence must be considered for
-  //      tainting), but allowed to be deleted because the external propagator
-  //      (e.g. theory solver) can always re-derive it.
-  // - Forgettable & Not-Tainting Clause.
-  //    - Policy to Forget: The clause will be considered for deletion during
-  //      clause database reduction rounds.
-  //    - Tainting: The clause is assumed to be derivable in propositional
-  //      logic from the current set of irredundant and redundant clauses (i.e.
-  //      (\phi \land \rho) \implies C, as in the side condition of Learn- in
-  //      incremental inprocessing), therefore the literals of it are not
-  //      tainted and do not trigger restore steps.
-  //    - Example usage: Use it ONLY to share learned clauses between parallel
-  //      SAT solvers. It is NOT correct to use this clause type unless the
-  //      clause is indeed directly derivable by the SAT solver alone.
-  // - Non-Forgettable & Non-Tainting Clause:
-  //    - Policy to Forget: The clause will not be deleted, unless it is
-  //      directly implied by some of the other irredundant clauses (e.g. root
-  //      satisfied).
-  //    - Redundancy: The clause is assumed to be derivable in propositional 
-  //      logic from the current set of irredundant and redundant clauses (i.e.
-  //      (\phi \land \rho) \implies C, as in the side condition of Learn- in
-  //      incremental inprocessing), therefore the literals of it are not
-  //      tainted and do not trigger restore steps.
-  //    - Example usage: Same as previous case, the only difference is that the
-  //      clauses will be kept around (can be useful in cases where their
-  //      derivation was expensive).
+  // 'forgettable' is the external clause. Forgettable clauses are allowed
+  // to be removed by the SAT solver during clause database reduction.
+  // However, it is up to the solver to decide when actually the clause is
+  // deleted. In case the clause is not 'forgettable' (the parameter is false),
+  // the solver considers the clause to be irredundant.
   //
+  // In case the solver produces incremental proofs, these external clauses 
+  // are added to the proof during solving at real-time, i.e., the proof 
+  // checker can ignore them until that point (so added as input clause, but
+  // input after the query line).
   //
-  // Reason clauses of external propagation steps are assumed to be forgettable,
-  // and tainting by default. Use parameter 'reason_forgettable' to change it.
+  // Reason clauses of external propagation steps are assumed to be
+  // forgettable, parameter 'reason_forgettable' can be used to change it.
   //
-  // DISCLAIMER: Any tainting clause is correct to be added ONLY if it is
-  // guaranteed that the SAT solver uses only RUP-based clause addition 
-  // techniques (so no BVA) and the literals are either tainted or frozen.
-  // See our Incremental Inprocessing SAT'19 paper for more details on it.
-  //
-  // The naming of the clause types will might change later (to coordinate
-  // with IPASIR-2).
+  // Currently, every external clause is expected to be over observed
+  // (therefore frozen) variables, hence no tainting or restore steps
+  // are performed upon their addition. This will be changed in later
+  // versions probably.
   //
   virtual bool cb_has_external_clause (bool& is_forgettable) = 0;
 
