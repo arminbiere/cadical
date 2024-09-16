@@ -1207,6 +1207,7 @@ public:
   // 'forgettable' is the external clause. Forgettable clauses are allowed
   // to be removed by the SAT solver during clause database reduction.
   // However, it is up to the solver to decide when actually the clause is
+  // deleted. For example, unit clauses, even forgettable ones, will not be
   // deleted. In case the clause is not 'forgettable' (the parameter is false),
   // the solver considers the clause to be irredundant.
   //
