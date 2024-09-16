@@ -695,7 +695,7 @@ void External::check_assignment (int (External::*a) (int) const) {
         continue;
       }
       
-      if ((this->*a) (lit) > 0) {
+      if ((this->*a) (lit) == lit) {
         satisfied = true;
         break;
       }
