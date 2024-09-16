@@ -426,9 +426,10 @@ void Internal::add_external_clause (int propagated_elit,
   int elit = 0;
 
   if (propagated_elit) {
-    // Propagation reason clauses are assumed to be forgettable irredundant.
-    // In case they would be unforgettably important, the propagator would
-    // have added them as an explicit external clause with type 0.
+    // Propagation reason clauses are by default assumed to be forgettable 
+    // irredundant. In case they would be unforgettably important, the 
+    // propagator can add them as an explicit unforgettable external clause or
+    // set 'are_reasons_forgettable' to false.
     ext_clause_forgettable = external->propagator->are_reasons_forgettable;
 #ifndef NDEBUG
     LOG ("add external reason of propagated lit: %d", propagated_elit);
@@ -585,7 +586,7 @@ void Internal::explain_external_propagations () {
 // Learns the reason clause of the propagation of ilit from the
 // external propagator via 'add_external_clause'.
 // In case of falsified propagation steps, if the propagated literal is
-// already fixed to the opposite value externalize will not necessarily give
+// already fixed to the opposite value, externalize will not necessarily give
 // back the original elit (but an equivalent one). To avoid that, in
 // falsified propagation cases the propagated elit is added as a second
 // argument.
@@ -609,6 +610,21 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 
   LOG ("ilit: %d, elit: %d", ilit, elit);
   add_external_clause (elit, no_backtrack);
+
+#ifndef NDEBUG
+  if (!falsified_elit && newest_clause) {
+  // Check if external propagation is correct wrt to the topological order 
+  // defined by the trail. In case it is a falsified external propagation
+  // step, the order does not matter, the reason simply supposed to be a 
+  // falsified clause.
+    const int propagated_ilit = ilit;
+    for (auto const reason_ilit : *newest_clause) {
+      assert (var(reason_ilit).trail <= var(propagated_ilit).trail);
+    }
+   
+  }
+#endif
+
   return newest_clause;
 }
 
