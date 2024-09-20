@@ -123,55 +123,10 @@ void Internal::bump_variable_score (int lit) {
 // Important variables recently used in conflict analysis are 'bumped',
 
 void Internal::bump_variable (int lit) {
-  if (opts.bumpgatealways) {
-    if (stable && flags (lit).gatevar) return;
-    else if (!stable && !flags (lit).gatevar) return;
-  }
   if (use_scores ())
     bump_variable_score (lit);
   else
     bump_queue (lit);
-}
-
-void Internal::bump_all_gates () {
-  if (!opts.bumpgatefocused || !opts.bump) return;
-  assert (!stable);
-  if (use_scores ()) {
-    for (auto &idx : vars) {
-      if (!active (idx)) continue;
-      if (!flags (idx).gatevar) continue;
-      bump_variable (idx);
-    }
-  } else {
-    int first = queue.first;
-    while (!flags (first).gatevar) {
-      first = links[first].prev;
-      if (!first) return;
-    }
-    assert (first);
-    assert (flags (first).gatevar);
-    int current = first;
-    int next = links[current].prev;
-    while (next && next != first) {
-      assert (current);
-      if (flags (current).gatevar)
-        bump_variable (current);
-      current = next;
-      next = links[next].prev;
-    }
-    if (flags (current).gatevar)
-      bump_variable (current);
-  }
-}
-
-void Internal::bump_all_non_gates () {
-  if (!opts.bumpgatestable || !opts.bump) return;
-  assert (stable);
-  for (auto &idx : vars) {
-    if (!active (idx)) continue;
-    if (flags (idx).gatevar) continue;
-    bump_variable (idx);
-  }
 }
 
 // After every conflict the variable score increment is increased by a

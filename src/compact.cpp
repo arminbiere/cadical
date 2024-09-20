@@ -331,7 +331,7 @@ void Internal::compact () {
 
   if (!sweep_schedule.empty ())
     mapper.map_flush_and_shrink_lits (sweep_schedule);
-  
+
   /*======================================================================*/
   // In the third part we map stuff and also reallocate memory.
   /*======================================================================*/

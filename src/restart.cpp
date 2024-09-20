@@ -40,8 +40,6 @@ bool Internal::stabilizing () {
     if (lim.stabilize <= stats.conflicts)
       lim.stabilize = stats.conflicts + 1;
     swap_averages ();
-    if (stable) bump_all_non_gates ();
-    else bump_all_gates ();
     PHASE ("stabilizing", stats.stabphases,
            "new stabilization limit %" PRId64
            " at conflicts interval %" PRId64 "",

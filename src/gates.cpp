@@ -204,7 +204,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
   if (!opts.elimequivs)
     return;
 
-  assert (opts.elimsubst || opts.bumpgateinit);
+  assert (opts.elimsubst);
 
   if (unsat)
     return;
@@ -327,7 +327,7 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
   if (!opts.elimands)
     return;
 
-  assert (opts.elimsubst || opts.bumpgateinit);
+  assert (opts.elimsubst);
 
   if (unsat)
     return;
@@ -509,7 +509,7 @@ void Internal::find_if_then_else (Eliminator &eliminator, int pivot) {
   if (!opts.elimites)
     return;
 
-  assert (opts.elimsubst || opts.bumpgateinit);
+  assert (opts.elimsubst);
 
   if (unsat)
     return;
@@ -640,7 +640,7 @@ void Internal::find_xor_gate (Eliminator &eliminator, int pivot) {
   if (!opts.elimxors)
     return;
 
-  assert (opts.elimsubst || opts.bumpgateinit);
+  assert (opts.elimsubst);
 
   if (unsat)
     return;
@@ -769,67 +769,6 @@ void Internal::unmark_gate_clauses (Eliminator &eliminator) {
   }
   eliminator.gates.clear ();
   eliminator.definition_unit = 0;
-}
-
-void Internal::init_gate_vars ()  {
-  if (!opts.bumpgateinit || !opts.bump) return;
-  if (unsat) return;
-
-  Eliminator eliminator (this);
-
-  init_occs ();
-  init_noccs ();
-  // score
-  for (const auto &c : clauses) {
-    if (c->garbage || c->redundant)
-      continue;
-    bool satisfied = false, falsified = false;
-    for (const auto &lit : *c) {
-      const signed char tmp = val (lit);
-      if (tmp > 0)
-        satisfied = true;
-      else if (tmp < 0)
-        falsified = true;
-      else
-        assert (active (lit));
-    }
-    if (satisfied)
-      mark_garbage (c); // forces more precise counts
-    else {
-      for (const auto &lit : *c) {
-        if (!active (lit))
-          continue;
-        if (falsified)
-          mark_elim (lit); // simulate unit propagation
-        noccs (lit)++;
-      }
-    }
-  }
-  // Connect irredundant clauses.
-  //
-  for (const auto &c : clauses)
-    if (!c->garbage && !c->redundant)
-      for (const auto &lit : *c)
-        if (active (lit))
-          occs (lit).push_back (c);
-
-  for (auto &idx : vars) {
-    if (val (idx)) continue;
-    int pivot = idx;
-    find_equivalence (eliminator, pivot);
-    find_and_gate (eliminator, pivot);
-    find_and_gate (eliminator, -pivot);
-    find_if_then_else (eliminator, pivot);
-    find_xor_gate (eliminator, pivot);
-    if (eliminator.gates.size ()) {
-      if (!flags (pivot).gatevar) stats.gatevars++;
-      flags (pivot).gatevar = true;
-    }
-    unmark_gate_clauses (eliminator);
-  }
-  
-  reset_occs ();
-  reset_noccs ();
 }
 
 /*------------------------------------------------------------------------*/

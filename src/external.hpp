@@ -164,8 +164,6 @@ struct External {
 
   void push_clause_on_extension_stack (Clause *);
   void push_clause_on_extension_stack (Clause *, int witness);
-  void push_blocked_clause_on_extension_stack (uint64_t id, int witness,
-                                              const vector<int> &bc);
   void push_binary_clause_on_extension_stack (uint64_t id, int witness,
                                               int other);
 

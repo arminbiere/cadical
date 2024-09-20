@@ -482,7 +482,7 @@ bool Checker::check_blocked () {
   }
   for (const auto &lit : not_blocked) {
     mark (lit) = false;
-  }  
+  }
   bool blocked = false;
   for (const auto &lit : unsimplified) {
     if (mark (-lit)) blocked = true;

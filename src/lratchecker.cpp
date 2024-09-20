@@ -407,7 +407,7 @@ bool LratChecker::check_blocked () {
   }
   for (const auto &lit : not_blocked) {
     checked_lit (lit) = false;
-  }  
+  }
   bool blocked = false;
   for (const auto &lit : imported_clause) {
     if (checked_lit (-lit)) blocked = true;

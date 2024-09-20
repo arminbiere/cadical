@@ -483,7 +483,7 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
   if (!pos || !neg)
     return lim.elimbound >= 0;
   const int64_t bound = pos + neg + lim.elimbound;
-  
+
   LOG ("checking number resolvents on %d bounded by "
        "%" PRId64 " = %" PRId64 " + %" PRId64 " + %" PRId64,
        pivot, bound, pos, neg, lim.elimbound);
@@ -619,7 +619,7 @@ void Internal::mark_eliminated_clauses_as_garbage (Eliminator &eliminator,
 
   LOG ("marking irredundant clauses with %d as garbage", pivot);
 
-  
+
   const int64_t substitute = eliminator.gates.size ();
   if (substitute)
     LOG ("pushing %" PRId64 " gate clauses on extension stack", substitute);
@@ -911,7 +911,7 @@ int Internal::elim_round (bool &completed) {
   // ran into the resolution limit (or derived unsatisfiability).
   //
   completed = !schedule.size ();
-  
+
   if (!completed)
     last.elim.marked = marked_before;
 
@@ -1009,6 +1009,7 @@ void Internal::init_citten () {
   assert (!citten);
   citten = kitten_init ();
 }
+
 void Internal::reset_citten () {
   if (citten) {
     kitten_release (citten);
@@ -1045,7 +1046,7 @@ void Internal::elim (bool update_limits) {
     subsume (update_limits);
 
   reset_watches (); // saves lots of memory
-  
+
   init_citten ();
 
   // Alternate one round of bounded variable elimination ('elim_round') and
