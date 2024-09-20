@@ -1340,7 +1340,6 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   assert (end[-3] == lit);
   assert (end[-2] == other);
   const int third = (end - begin == 3) ? 0 : end[-4];
-  bool refine = false;
   int res = kitten_status (citten);
   if (res == 10) {
     stats.sweep_flip_equivalences++;
@@ -1360,9 +1359,6 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
       // LOGPARTITION ("refined equivalence candidates");
       return false;
     }
-  }
-  res = kitten_status (citten);
-  if (res == 10) {
     stats.sweep_flip_equivalences++;
     if (sweep_flip (other)) {
       stats.sweep_flipped_equivalences++;
@@ -1376,14 +1372,35 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
         end[-2] = 0;
         sweeper.partition.resize (sweeper.partition.size () - 1);
       }
-      if (refine)
-        sweep_refine (sweeper);
       // LOGPARTITION ("refined equivalence candidates");
       return false;
     }
   }
-  if (refine)
-    sweep_refine (sweeper);
+  if (abs (lit) > abs (other) && frozen (lit)) {
+    if (third == 0) {
+      LOG ("squashing equivalence class of %d", lit);
+      sweeper.partition.resize (sweeper.partition.size () - 3);
+    } else {
+      LOG ("removing %d from equivalence class of %d", lit,
+           other);
+      end[-3] = other;
+      end[-2] = 0;
+      sweeper.partition.resize (sweeper.partition.size () - 1);
+    }
+    return false;
+  } else if (abs (other) > abs (lit) && frozen (other)) {
+    if (third == 0) {
+      LOG ("squashing equivalence class of %d", lit);
+      sweeper.partition.resize (sweeper.partition.size () - 3);
+    } else {
+      LOG ("removing %d from equivalence class of %d", lit,
+           other);
+      end[-2] = 0;
+      sweeper.partition.resize (sweeper.partition.size () - 1);
+    }
+    return false;
+  }
+
   const int not_other = -other;
   const int not_lit = -lit;
   LOG ("flipping %d and %d both failed", lit, other);
@@ -1430,6 +1447,8 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
     sweeper.core[0].clear ();
     return false;
   }
+
+  assert (res == 20);
 
   stats.sweep_unsat_equivalences++;
   LOG ("second sweeping implication %d <- %d succeeded too", other,

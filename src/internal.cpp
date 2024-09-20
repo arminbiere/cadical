@@ -227,7 +227,6 @@ int Internal::cdcl_loop_with_inprocessing () {
     report ('{');
   }
 
-  init_gate_vars ();
   while (!res) {
     if (unsat)
       res = 20;
