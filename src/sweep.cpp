@@ -435,6 +435,8 @@ static void save_core_clause_with_lrat (void *state, unsigned cid,
   sweep_proof_clause pc;
   pc.kit_id = cid;
   pc.learned = learned;
+  pc.sweep_id = INVALID;
+  pc.cad_id = INVALID64;
   if (!learned) {
     assert (size);
     assert (!chain_size);

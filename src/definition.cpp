@@ -43,6 +43,7 @@ static void traverse_definition_core (void *state, unsigned id) {
     clause = clauses1[tmp];
     sign = 2;
   }
+  (void) size_clauses1;
   clause->gate = true;
   eliminator->gates.push_back (clause);
 #ifdef LOGGING
@@ -167,44 +168,6 @@ static void traverse_one_sided_core_lemma_with_lrat (void *state, unsigned cid,
   }
 }
 
-static bool ignore_negative (void *state, unsigned id) {
-  definition_extractor *extractor = (definition_extractor *) state;
-  const vector<Clause*> &clauses0 = extractor->clauses[0];
-  const size_t size_clauses0 = clauses0.size ();
-  assert (size_clauses0 <= UINT_MAX);
-  const vector<Clause*> &clauses1 = extractor->clauses[1];
-  const size_t size_clauses1 = clauses1.size ();
-  if (id >= size_clauses0 + size_clauses1) {
-    unsigned tmp = id - size_clauses0 - size_clauses1;
-    assert (tmp < extractor->implicants.size ());
-    return extractor->implicants[tmp][0] == extractor->lit;
-  }
-  if (id < size_clauses0)
-    return true;
-#ifndef NDEBUG
-  unsigned tmp = id - size_clauses0;
-  assert (size_clauses1 <= UINT_MAX);
-  assert (tmp < size_clauses1);
-#endif
-  return false;
-}
-
-static void add_implicant (void *state, int side, size_t size,
-                                const unsigned *lits) {
-  definition_extractor *extractor = (definition_extractor *) state;
-  const unsigned id = extractor->clauses[0].size () + extractor->clauses[1].size ()
-                                                 + extractor->implicants.size ();
-  vector<int> implicant;
-  const int pivot = extractor->lit;
-  implicant.push_back (side ? pivot : -pivot);
-  const auto end = lits + size;
-  for (auto q = lits; q != end; q++) {
-    implicant.push_back (extractor->internal->citten2lit (*q));
-  }
-  extractor->implicants.push_back (implicant);
-  kitten_clause_with_id_and_exception (extractor->internal->citten, id, size, lits, INVALID); 
-}
-
 } // end extern C
 
 
@@ -251,7 +214,6 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
   stats.definitions_checked++;
   const size_t limit = opts.elimdefticks;
   kitten_set_ticks_limit (citten, limit);
-BEGIN:
   int status = kitten_solve (citten);
   if (!exported) goto ABORT;
   if (status == 20) {
