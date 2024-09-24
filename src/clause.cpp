@@ -537,18 +537,6 @@ Clause *Internal::new_hyper_ternary_resolved_clause (bool red) {
   return res;
 }
 
-Clause *Internal::new_eres_clause () {
-  external->check_learned_clause ();
-  Clause *res = new_clause (false, 0);
-  if (proof) {
-    proof->add_derived_clause (res, lrat_chain);
-  }
-  assert (watching ());
-  watch_clause (res);
-  return res;
-}
-
-
 Clause *Internal::new_factor_clause () {
   external->check_learned_clause ();
   stats.factor_added++;

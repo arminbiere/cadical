@@ -188,9 +188,6 @@ struct Stats {
   int64_t definition_units;
   int64_t definition_ticks;
   
-  int64_t eres;
-  int64_t eresint;
-
   int64_t factor;
   int64_t factor_vars;
   int64_t factor_added;

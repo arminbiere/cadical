@@ -484,9 +484,6 @@ void Stats::print (Internal *internal) {
          stats.sweep_completed, relative (stats.sweep, stats.sweep_completed));
 
   }
-  if (all || stats.eres)
-    PRT ("extended res:    %15" PRId64 "   %10.2f %%  of decisions",
-         stats.eres, percent (stats.eres, stats.decisions));
   if (all || stats.factor) {
     PRT ("factored vars:   %15" PRId64 "   %10.2f %%  of variables",
          stats.factor_vars, percent (stats.factor_vars, internal->max_var));

@@ -1112,10 +1112,6 @@ struct Internal {
   int sweep_flip_and_implicant (int);
   bool sweep_extract_fixed (Sweeper &sweeper, int lit);
 
-  // extended resolution
-  int add_eres_clauses (int, int);
-  Clause *new_eres_clause ();
-
   // factor
   bool factor ();
   bool factoring ();

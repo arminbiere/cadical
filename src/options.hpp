@@ -96,9 +96,6 @@ OPTION( emalevel,        1e5,  1,2e9,0,0,1, "window back-track level") \
 OPTION( emasize,         1e5,  1,2e9,0,0,1, "window learned clause size") \
 OPTION( ematrailfast,    1e2,  1,2e9,0,0,1, "window fast trail") \
 OPTION( ematrailslow,    1e5,  1,2e9,0,0,1, "window slow trail") \
-OPTION( eres,              0,  0,  0,0,0,1, "extended resolution") \
-OPTION( eresint,         2e3,  0,2e9,0,0,1, "extended resolution") \
-OPTION( eresmax,         100,  1,2e9,0,0,1, "extended resolution") \
 OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
 OPTION( factor,            0,  0,  0,0,0,1, "systematic variable addition") \
 OPTION( factorrounds,      1,  0,2e9,0,0,1, "factor rounds") \
