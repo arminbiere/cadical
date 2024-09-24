@@ -62,6 +62,9 @@ struct Last {
   struct {
     int64_t fixed;
   } collect;
+  struct {
+    int64_t marked, ticks;
+  } factor;
   Last ();
 };
 

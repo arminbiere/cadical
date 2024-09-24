@@ -97,8 +97,11 @@ OPTION( emasize,         1e5,  1,2e9,0,0,1, "window learned clause size") \
 OPTION( ematrailfast,    1e2,  1,2e9,0,0,1, "window fast trail") \
 OPTION( ematrailslow,    1e5,  1,2e9,0,0,1, "window slow trail") \
 OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
-OPTION( factor,            0,  0,  0,0,0,1, "systematic variable addition") \
-OPTION( factorrounds,      1,  0,2e9,0,0,1, "factor rounds") \
+OPTION( factor,            0,  0,  0,0,0,1, "bounded variable addition") \
+OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds") \
+OPTION( factoreffort,     50,  0,1e6,0,0,1, "effort per mille") \
+OPTION( factoriniticks,  700,  1,1e6,0,0,1, "initial effort per mille") \
+OPTION( factorsize,        5,  2,2e9,0,0,1, "clause size limit") \
 OPTION( flush,             0,  0,  1,0,0,1, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \
 OPTION( flushint,        1e5,  1,2e9,0,0,1, "initial limit") \
