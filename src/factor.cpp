@@ -84,7 +84,7 @@ void Internal::try_and_factor (Factorizor &factor, int first, int second) {
       other = lit; 
       break;
     }
-    if (marked_signed (other)) {
+    if (other && marked_signed (other)) {
       current.push_back (c);
       common.push_back (other);
     }

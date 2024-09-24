@@ -45,6 +45,7 @@ void External::init (int new_max_var) {
     ext_units.push_back (0);
     ext_units.push_back (0);
     ext_flags.push_back (0);
+    ervars.push_back (0);
     assert (internal->i2e.empty ());
     internal->i2e.push_back (0);
   } else {
@@ -60,6 +61,7 @@ void External::init (int new_max_var) {
     ext_units.push_back (0);
     ext_units.push_back (0);
     ext_flags.push_back (0);
+    ervars.push_back (0);
     internal->i2e.push_back (eidx);
     assert (internal->i2e[iidx] == (int) eidx);
     assert (e2i[eidx] == (int) iidx);
@@ -103,7 +105,7 @@ void External::reset_limits () { internal->reset_limits (); }
 
 /*------------------------------------------------------------------------*/
 
-// TODO: when extension is true, elit should be a fresh variable and
+// when extension is true, elit should be a fresh variable and
 // we can set a flag that it is an extension variable.
 // This is then used in the API contracts, that extension variables are
 // never part of the input
@@ -112,8 +114,14 @@ int External::internalize (int elit, bool extension) {
   if (elit) {
     assert (elit != INT_MIN);
     const int eidx = abs (elit);
+    if (extension && eidx <= max_var)
+      FATAL ("can not add a definition for an already used variable %d", eidx);
     if (eidx > max_var)
       init (eidx);
+    if (extension) {
+      assert (ervars.size () > (size_t) eidx);
+      ervars[eidx] = true;
+    }
     ilit = e2i[eidx];
     if (elit < 0)
       ilit = -ilit;

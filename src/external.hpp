@@ -81,6 +81,8 @@ struct External {
   vector<bool> witness; // Literal witness on extension stack.
   vector<bool> tainted; // Literal tainted in adding literals.
 
+  vector<bool> ervars; // Variables added through Extended Resolution.
+
   vector<unsigned> frozentab; // Reference counts for frozen variables.
 
   // Regularly checked terminator if non-zero.  The terminator is set from
@@ -144,6 +146,13 @@ struct External {
     assert (elit != INT_MIN);
     assert (abs (elit) <= max_var);
     return elit;
+  }
+
+  inline bool is_valid_input (int elit) {
+    assert (elit);
+    assert (elit != INT_MIN);
+    int eidx = abs (elit);
+    return eidx > max_var || !ervars[eidx];
   }
 
   /*----------------------------------------------------------------------*/
