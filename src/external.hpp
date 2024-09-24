@@ -245,7 +245,7 @@ struct External {
   void enlarge (int new_max_var); // Enlarge allocated 'vsize'.
   void init (int new_max_var);    // Initialize up-to 'new_max_var'.
 
-  int internalize (int); // Translate external to internal literal.
+  int internalize (int, bool extension = false); // Translate external to internal literal.
 
   /*----------------------------------------------------------------------*/
 

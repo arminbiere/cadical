@@ -103,7 +103,11 @@ void External::reset_limits () { internal->reset_limits (); }
 
 /*------------------------------------------------------------------------*/
 
-int External::internalize (int elit) {
+// TODO: when extension is true, elit should be a fresh variable and
+// we can set a flag that it is an extension variable.
+// This is then used in the API contracts, that extension variables are
+// never part of the input
+int External::internalize (int elit, bool extension) {
   int ilit;
   if (elit) {
     assert (elit != INT_MIN);

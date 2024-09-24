@@ -505,6 +505,9 @@ public:
   // literal is used as an argument except for the functions 'val', 'fixed',
   // 'failed' and 'frozen'.  However, the library internally keeps a maximum
   // variable index, which can be queried.
+  // With factor (BVA) the solver might also add new variables. In that case
+  // the user is required to use this to check which variables are currently
+  // free before adding new variables of their own.
   //
   //   require (VALID | SOLVING)
   //   ensure (VALID | SOLVING)
