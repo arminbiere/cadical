@@ -182,9 +182,6 @@ void Stats::print (Internal *internal) {
     PRT ("  def units:     %15" PRId64 "   %10.2f %%  per checked",
          stats.definition_units,
          percent (stats.definition_units, stats.definitions_checked));
-    PRT ("  gatevars found:%15" PRId64 "   %10.2f %%  elimtried",
-         stats.gatevars,
-         percent (stats.gatevars, stats.elimtried));
   }
   if (all || stats.ext_prop.ext_cb) {
     PRT ("ext.prop. calls: %15" PRId64 "   %10.2f %%  of queries",

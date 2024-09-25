@@ -6,48 +6,8 @@ namespace CaDiCaL {
 #define QUOTIENT 2
 #define NOUNTED 4
 
-struct quotient {
-  size_t id;
-  struct quotient *prev, *next;
-  unsigned factor;
-  statches clauses;
-  sizes matches;
-  size_t matched;
-};
-
-typedef struct quotient quotient;
-
-struct scores {
-  double *score;
-  unsigneds scored;
-};
-
-typedef struct scores scores;
-
-struct factoring {
-  kissat *solver;
-  size_t size, allocated;
-  unsigned initial;
-  unsigned *count;
-  scores *scores;
-  unsigned bound;
-  unsigneds fresh;
-  unsigneds counted;
-  unsigneds nounted;
-  references qlauses;
-  uint64_t limit;
-  struct {
-    quotient *first, *last;
-  } quotients;
-  heap schedule;
-};
-
-typedef struct factoring factoring;
-
-static void init_factoring (kissat *solver, factoring *factoring,
-                            uint64_t limit) {
+void Internal::init_factoring (Factoring *factoring, uint64_t limit) {
   memset (factoring, 0, sizeof *factoring);
-  factoring->solver = solver;
   factoring->initial = factoring->allocated = factoring->size = LITS;
   factoring->limit = limit;
   factoring->bound = solver->bounds.eliminate.additional_clauses;
@@ -58,7 +18,7 @@ static void init_factoring (kissat *solver, factoring *factoring,
 #endif
 }
 
-static void release_quotients (factoring *factoring) {
+static void release_quotients (Factoring *factoring) {
   kissat *const solver = factoring->solver;
   mark *marks = solver->marks;
   for (quotient *q = factoring->quotients.first, *next; q; q = next) {
@@ -73,7 +33,7 @@ static void release_quotients (factoring *factoring) {
   factoring->quotients.first = factoring->quotients.last = 0;
 }
 
-static void release_factoring (factoring *factoring) {
+static void release_factoring (Factoring *factoring) {
   kissat *const solver = factoring->solver;
   assert (EMPTY_STACK (solver->analyzed));
   assert (EMPTY_STACK (factoring->counted));
@@ -94,7 +54,7 @@ static void release_factoring (factoring *factoring) {
 #endif
 }
 
-static void update_candidate (factoring *factoring, unsigned lit) {
+static void update_candidate (Factoring *factoring, unsigned lit) {
   heap *cands = &factoring->schedule;
   kissat *const solver = factoring->solver;
   const size_t size = SIZE_WATCHES (solver->watches[lit]);
@@ -107,7 +67,7 @@ static void update_candidate (factoring *factoring, unsigned lit) {
     kissat_pop_heap (solver, cands, lit);
 }
 
-static void schedule_factorization (factoring *factoring) {
+static void schedule_factorization (Factoring *factoring) {
   kissat *const solver = factoring->solver;
   flags *flags = solver->flags;
   for (all_variables (idx)) {
@@ -130,7 +90,7 @@ static void schedule_factorization (factoring *factoring) {
 #endif
 }
 
-static quotient *new_quotient (factoring *factoring, unsigned factor) {
+static quotient *new_quotient (Factoring *factoring, unsigned factor) {
   kissat *const solver = factoring->solver;
   mark *marks = solver->marks;
   assert (!marks[factor]);
@@ -154,7 +114,7 @@ static quotient *new_quotient (factoring *factoring, unsigned factor) {
   return res;
 }
 
-static size_t first_factor (factoring *factoring, unsigned factor) {
+static size_t first_factor (Factoring *factoring, unsigned factor) {
   kissat *const solver = factoring->solver;
   watches *all_watches = solver->watches;
   watches *factor_watches = all_watches + factor;
@@ -199,7 +159,7 @@ static void clear_qlauses (kissat *solver, references *qlauses) {
   CLEAR_STACK (*qlauses);
 }
 
-static double tied_next_factor_score (factoring *factoring, unsigned lit) {
+static double tied_next_factor_score (Factoring *factoring, unsigned lit) {
   kissat *const solver = factoring->solver;
   watches *watches = solver->watches + lit;
   double res = SIZE_WATCHES (*watches);
@@ -207,7 +167,7 @@ static double tied_next_factor_score (factoring *factoring, unsigned lit) {
   return res;
 }
 
-static unsigned next_factor (factoring *factoring,
+static unsigned next_factor (Factoring *factoring,
                              unsigned *next_count_ptr) {
   quotient *last_quotient = factoring->quotients.last;
   assert (last_quotient);
@@ -382,7 +342,7 @@ static unsigned next_factor (factoring *factoring,
   return next;
 }
 
-static void factorize_next (factoring *factoring, unsigned next,
+static void factorize_next (Factoring *factoring, unsigned next,
                             unsigned expected_next_count) {
   quotient *last_quotient = factoring->quotients.last;
   quotient *next_quotient = new_quotient (factoring, next);
@@ -489,7 +449,7 @@ static void factorize_next (factoring *factoring, unsigned next,
   (void) expected_next_count;
 }
 
-static quotient *best_quotient (factoring *factoring,
+static quotient *best_quotient (Factoring *factoring,
                                 size_t *best_reduction_ptr) {
   size_t factors = 1, best_reduction = 0;
   quotient *best = 0;
@@ -527,7 +487,7 @@ static quotient *best_quotient (factoring *factoring,
   return best;
 }
 
-static void resize_factoring (factoring *factoring, unsigned lit) {
+static void resize_factoring (Factoring *factoring, unsigned lit) {
   kissat *const solver = factoring->solver;
   assert (lit > NOT (lit));
   const size_t old_size = factoring->size;
@@ -581,7 +541,7 @@ static void flush_unmatched_clauses (kissat *solver, quotient *q) {
   (void) solver;
 }
 
-static void add_factored_divider (factoring *factoring, quotient *q,
+static void add_factored_divider (Factoring *factoring, quotient *q,
                                   unsigned fresh) {
   const unsigned factor = q->factor;
   kissat *const solver = factoring->solver;
@@ -591,7 +551,7 @@ static void add_factored_divider (factoring *factoring, quotient *q,
   ADD (literals_factored, 2);
 }
 
-static void add_factored_quotient (factoring *factoring, quotient *q,
+static void add_factored_quotient (Factoring *factoring, quotient *q,
                                    unsigned not_fresh) {
   kissat *const solver = factoring->solver;
   LOG ("adding factored quotient[%zu] clauses", q->id);
@@ -648,7 +608,7 @@ static void eagerly_remove_binary (kissat *solver, watches *watches,
   eagerly_remove_watch (solver, watches, needle);
 }
 
-static void delete_unfactored (factoring *factoring, quotient *q) {
+static void delete_unfactored (Factoring *factoring, quotient *q) {
   kissat *const solver = factoring->solver;
   LOG ("deleting unfactored quotient[%zu] clauses", q->id);
   const unsigned factor = q->factor;
@@ -673,7 +633,7 @@ static void delete_unfactored (factoring *factoring, quotient *q) {
   }
 }
 
-static void update_factored (factoring *factoring, quotient *q) {
+static void update_factored (Factoring *factoring, quotient *q) {
   kissat *const solver = factoring->solver;
   const unsigned factor = q->factor;
   update_candidate (factoring, factor);
@@ -693,7 +653,7 @@ static void update_factored (factoring *factoring, quotient *q) {
   }
 }
 
-static bool apply_factoring (factoring *factoring, quotient *q) {
+static bool apply_factoring (Factoring *factoring, quotient *q) {
   kissat *const solver = factoring->solver;
   const unsigned fresh = kissat_fresh_literal (solver);
   if (fresh == INVALID_LIT)
@@ -716,7 +676,7 @@ static bool apply_factoring (factoring *factoring, quotient *q) {
 }
 
 static void
-adjust_scores_and_phases_of_fresh_varaibles (factoring *factoring) {
+adjust_scores_and_phases_of_fresh_varaibles (Factoring *factoring) {
   const unsigned *begin = BEGIN_STACK (factoring->fresh);
   const unsigned *end = END_STACK (factoring->fresh);
   kissat *const solver = factoring->solver;

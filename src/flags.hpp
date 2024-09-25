@@ -23,7 +23,6 @@ struct Flags { // Variable flags.
   bool ternary : 1; // added in ternary clause since last 'ternary' (*)
   bool sweep : 1;
   bool blockable : 1;
-  bool gatevar : 1;
 
   unsigned char marked_signed : 2; // generate correct LRAT chains in decompose
 
@@ -53,7 +52,7 @@ struct Flags { // Variable flags.
   // Initialized explicitly in 'Internal::init' through this function.
   //
   Flags () {
-    seen = keep = poison = removable = shrinkable = added = sweep = gatevar = false;
+    seen = keep = poison = removable = shrinkable = added = sweep = false;
     subsume = elim = ternary = true;
     block = 3u;
     skip = assumed = failed = marked_signed = 0;
