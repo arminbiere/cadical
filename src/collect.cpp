@@ -184,25 +184,6 @@ size_t Internal::flush_occs (int lit) {
   return res;
 }
 
-size_t Internal::flush_roccs (int lit) {
-  Occs &os = roccs (lit);
-  const const_occs_iterator end = os.end ();
-  occs_iterator j = os.begin ();
-  const_occs_iterator i;
-  size_t res = 0;
-  Clause *c;
-  for (i = j; i != end; i++) {
-    c = *i;
-    if (c->collect ())
-      continue;
-    *j++ = c->moved ? c->copy : c;
-    assert (c->redundant);
-    res++;
-  }
-  os.resize (j - os.begin ());
-  shrink_occs (os);
-  return res;
-}
 
 // Update watch lists before deleting garbage clauses in the context of
 // 'reduce' where we watch and no occurrence lists.  We have to protect
@@ -243,7 +224,7 @@ inline void Internal::flush_watches (int lit, Watches &saved) {
 void Internal::flush_all_occs_and_watches () {
   if (occurring ())
     for (auto idx : vars)
-      flush_occs (idx), flush_occs (-idx), flush_roccs (idx), flush_roccs (-idx);
+      flush_occs (idx), flush_occs (-idx);
 
   if (watching ()) {
     Watches tmp;

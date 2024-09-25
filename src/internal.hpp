@@ -423,7 +423,6 @@ struct Internal {
 
   Bins &bins (int lit) { return big[vlit (lit)]; }
   Occs &occs (int lit) { return otab[vlit (lit)]; }
-  Occs &roccs (int lit) { return rtab[vlit (lit)]; }
   int64_t &noccs (int lit) { return ntab[vlit (lit)]; }
   Watches &watches (int lit) { return wtab[vlit (lit)]; }
 
@@ -779,7 +778,6 @@ struct Internal {
   void copy_clause (Clause *);
   void flush_watches (int lit, Watches &);
   size_t flush_occs (int lit);
-  size_t flush_roccs (int lit);
   void flush_all_occs_and_watches ();
   void update_reason_references ();
   void copy_non_garbage_clauses ();
@@ -795,11 +793,9 @@ struct Internal {
   // Set-up occurrence list counters and containers.
   //
   void init_occs ();
-  void init_roccs ();
   void init_bins ();
   void init_noccs ();
   void reset_occs ();
-  void reset_roccs ();
   void reset_bins ();
   void reset_noccs ();
 
@@ -1029,7 +1025,6 @@ struct Internal {
   // mine definitions for kitten in 'definition.cpp'
   //
   void find_definition (Eliminator &, int);
-  void delete_all_redundant_def (int);
   void init_citten ();
   void reset_citten ();
   void citten_clear_track_log_terminate ();
@@ -1104,7 +1099,6 @@ struct Internal {
   void sweep_dense_mode_and_watch_irredundant ();
   void sweep_substitute_lrat (Clause *c, uint64_t id);
   void sweep_substitute_new_equivalences (Sweeper &sweeper);
-  void delete_all_redundant_with (int);
   void sweep_update_noccs (Clause *c);
   void delete_sweep_binary (const sweep_binary &sb);
   bool can_sweep_clause (Clause *c);

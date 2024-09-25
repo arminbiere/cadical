@@ -18,17 +18,6 @@ void Internal::reset_occs () {
   LOG ("reset occurrence lists");
 }
 
-void Internal::init_roccs () {
-  if (rtab.size () < 2 * vsize)
-    rtab.resize (2 * vsize, Occs ());
-  LOG ("initialized redundant occurrence lists");
-}
-
-void Internal::reset_roccs () {
-  // assert (occurring ());
-  erase_vector (rtab);
-  LOG ("reset redundant occurrence lists");
-}
 
 /*------------------------------------------------------------------------*/
 

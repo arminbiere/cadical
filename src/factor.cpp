@@ -913,13 +913,15 @@ void Internal::factor_mode (Factorizor &factor) {
   reset_watches ();
 
   assert (!watching ());
-  // init_noccs ();
-  // init_occs ();
-  factor.occurs.resize (2 * vsize, Occs ());
+  init_noccs ();
+  init_occs ();
+
+  const unsigned size_limit = opts.factorsize;
 
   // mark satisfied irredundant clauses as garbage
   for (const auto &c : clauses) {
     if (c->garbage) continue;
+    if (c->redundant && !c->binary) continue;
     bool satisfied = false;
     unsigned count = 0;
     for (const auto &lit : *c) {
@@ -944,145 +946,10 @@ void Internal::factor_mode (Factorizor &factor) {
 
 // go back to two watch scheme
 void Internal::reset_factor_mode () {
-  // reset_occs ();
-  // reset_noccs ();
+  reset_occs ();
+  reset_noccs ();
   init_watches ();
   connect_watches ();
-}
-
-void Internal::updated_scores_for_new_variables (int64_t added) {
-  for (int lit = max_var; added > 0; lit--, added--) {
-    bump_variable (lit);
-    bump_variable (-lit);
-  }
-}
-
-void Internal::delete_all_factored (Factorizor &factor) {
-  for (auto c : factor.delete_later) {
-    assert (c->garbage);
-    c->garbage = false;
-    mark_garbage (c);
-  }
-  stats.factor_deleted += factor.delete_later.size ();
-  factor.delete_later.clear ();
-}
-
-void Internal::try_and_factor (Factorizor &factor, int first, int second) {
-  vector<Clause *> current;
-  vector<int> &common = factor.common;
-  vector<Occs> &occurs = factor.occurs;
-  for (auto c : occurs[vlit (second)]) {
-    if (current.size () == 2 && opts.factor == 2) break;
-    if (!(stats.factor & 1) && c->garbage) continue;
-    if (c->garbage) continue;
-    int other = 0;
-    for (auto lit : *c) {
-      if (val (lit) < 0) continue;
-      if (lit == second) continue;
-      other = lit; 
-      break;
-    }
-    if (other && marked_signed (other)) {
-      current.push_back (c);
-      common.push_back (other);
-    }
-  }
-  // actually do factorization
-  if (current.size () >= 2) {
-    for (auto c : current) {
-      if (!c->garbage) {
-        factor.delete_later.push_back (c);
-        c->garbage = true;
-      }
-    }
-    find_and_delete_outer (factor, first);
-    stats.factor_vars++;
-    Clause *res;
-    int a = external->internalize (external->max_var + 1);
-    mark_signed (a);
-    factor.occurs.resize (2 *vsize, Occs ());
-    if (watching ())
-      reset_watches ();
-    int b = first;
-    int c = second;
-    clause.push_back (a);
-    clause.push_back (b);
-    res = new_factor_clause ();
-    factor.occurs[vlit (a)].push_back (res);
-    factor.occurs[vlit (b)].push_back (res);
-    clause.clear ();
-    clause.push_back (a);
-    clause.push_back (c);
-    res = new_factor_clause ();
-    factor.occurs[vlit (a)].push_back (res);
-    factor.occurs[vlit (c)].push_back (res);
-    clause.clear ();
-    auto id = ++clause_id;
-    if (proof) {
-      clause.push_back (-a);
-      clause.push_back (-b);
-      clause.push_back (-c);
-      proof->add_derived_clause (id, false, clause, lrat_chain);
-      clause.clear ();
-    }
-    for (auto &lit : common) {
-      clause.push_back (-a);
-      assert (lit != first && lit != second);
-      clause.push_back (lit);
-      res = new_factor_clause ();
-      factor.occurs[vlit (-a)].push_back (res);
-      factor.occurs[vlit (lit)].push_back (res);
-      clause.clear ();
-    }
-    if (proof) {
-      clause.push_back (-a);
-      clause.push_back (-b);
-      clause.push_back (-c);
-      proof->delete_clause (id, false, clause);
-      clause.clear ();
-    }
-  }
-  common.clear ();
-}
-
-void Internal::mark_outer (Factorizor &factor, int outer) {
-  vector<Occs> &occurs = factor.occurs;
-  if (occurs.size () < 2) return;
-  for (auto c : occurs[vlit (outer)]) {
-    if (!(stats.factor & 1) && c->garbage) continue;
-    if (c->garbage) continue;
-    int other = 0;
-    for (auto lit : *c) {
-      if (val (lit) < 0) continue;
-      if (lit == outer) continue;
-      other = lit; 
-      break;
-    }
-    assert (other);
-    if (!marked_signed (other))
-      mark_signed (other);
-  }
-}
-
-void Internal::find_and_delete_outer (Factorizor &factor, int outer) {
-  vector<Occs> &occurs = factor.occurs;
-  for (auto c : occurs[vlit (outer)]) {
-    if (!(stats.factor & 1) && c->garbage) continue;
-    if (c->garbage) continue;
-    int other = 0;
-    for (auto lit : *c) {
-      if (val (lit) < 0) continue;
-      if (lit == outer) continue;
-      other = lit; 
-      break;
-    }
-    assert (other);
-    if (std::find (factor.common.begin (), factor.common.end (), other) != factor.common.end ()) {
-      c->garbage = true;
-      factor.delete_later.push_back (c);
-      unmark_signed (other);
-    }
-  }
 }
 
 bool Internal::run_factorization (int64_t limit) {
@@ -1095,42 +962,6 @@ bool Internal::run_factorization (int64_t limit) {
   report ('f', !factored);
   return false;
 }
-
-#ifndef QUIET
-  struct {
-    int64_t variables, binary, clauses, ticks;
-  } before, after, delta;
-  before.variables = s->variables_extension + s->variables_original;
-  before.binary = BINARY_CLAUSES;
-  before.clauses = IRREDUNDANT_CLAUSES;
-  before.ticks = s->factor_ticks;
-#endif
-  kissat_enter_dense_mode (solver, 0);
-  connect_clauses_to_factor (solver);
-  bool completed = run_factorization (solver, limit);
-  kissat_resume_sparse_mode (solver, false, 0);
-#ifndef QUIET
-  after.variables = s->variables_extension + s->variables_original;
-  after.binary = BINARY_CLAUSES;
-  after.clauses = IRREDUNDANT_CLAUSES;
-  after.ticks = s->factor_ticks;
-  delta.variables = after.variables - before.variables;
-  delta.binary = before.binary - after.binary;
-  delta.clauses = before.clauses - after.clauses;
-  delta.ticks = after.ticks - before.ticks;
-  kissat_very_verbose (solver, "used %f million factorization ticks",
-                       delta.ticks * 1e-6);
-  kissat_phase (solver, "factorization", GET (factorizations),
-                "introduced %" PRId64 " extension variables %.0f%%",
-                delta.variables,
-                kissat_percent (delta.variables, before.variables));
-  kissat_phase (solver, "factorization", GET (factorizations),
-                "removed %" PRId64 " binary clauses %.0f%%", delta.binary,
-                kissat_percent (delta.binary, before.binary));
-  kissat_phase (solver, "factorization", GET (factorizations),
-                "removed %" PRId64 " large clauses %.0f%%", delta.clauses,
-                kissat_percent (delta.clauses, before.clauses));
-#endif
 
 void Internal::factor () {
   if (unsat)

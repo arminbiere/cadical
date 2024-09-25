@@ -831,7 +831,6 @@ int Internal::elim_round (bool &completed) {
   }
 
   init_occs ();
-  init_roccs ();
 
   Eliminator eliminator (this);
   ElimSchedule &schedule = eliminator.schedule;
@@ -930,7 +929,6 @@ int Internal::elim_round (bool &completed) {
 
   reset_occs ();
   reset_noccs ();
-  reset_roccs ();
 
   // Mark all redundant clauses with eliminated variables as garbage.
   //

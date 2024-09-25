@@ -490,17 +490,6 @@ void Internal::citten_clear_track_log_terminate () {
 #endif
 }
 
-void Internal::delete_all_redundant_with (int blit) {
-  const Occs &ps = occs (blit);
-  for (const auto &c : ps) {
-    if (can_sweep_clause (c)) continue;
-    if (c->garbage) continue;
-    assert (!c->swept);
-    mark_garbage (c);
-  }
-  // way to expensive, instead we also sweep hyper binary clauses
-  // delete_garbage_clauses ();
-}
 
 void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
   if (unsat)

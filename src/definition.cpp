@@ -281,12 +281,5 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
   return;
 }
 
-void Internal::delete_all_redundant_def (int blit) {
-  const Occs &ps = roccs (blit);
-  for (const auto &c : ps) {
-    if (c->garbage) continue;
-    mark_garbage (c);
-  }
-}
 
 } // namespace CaDiCaL
