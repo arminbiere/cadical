@@ -919,10 +919,9 @@ void Internal::factor () {
   before.variables = stats.variables_extension + stats.variables_original;
   before.ticks = stats.factor_ticks;
 
-  kissat_enter_dense_mode (solver, 0);
-  connect_clauses_to_factor (solver);
+  factor_mode ();
   bool completed = run_factorization (limit);
-  kissat_resume_sparse_mode (solver, false, 0);
+  reset_factor_mode ();
   updated_scores_for_new_variables (factored);
   
   after.variables = s->variables_extension + s->variables_original;

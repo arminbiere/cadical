@@ -622,17 +622,6 @@ void Internal::save_add_clear_core (Sweeper &sweeper) {
   clear_core (sweeper, 0);
 }
 
-/* TODO: logging
-#define LOGBACKBONE(MESSAGE) \
-  LOGLITSET (SIZE_STACK (sweeper.backbone), \
-             BEGIN_STACK (sweeper.backbone), MESSAGE)
-
-#define LOGPARTITION(MESSAGE) \
-  LOGLITPART (SIZE_STACK (sweeper.partition), \
-              BEGIN_STACK (sweeper.partition), MESSAGE)
-*/
-
-
 void Internal::init_backbone_and_partition (Sweeper &sweeper) {
   LOG ("initializing backbone and equivalent literals candidates");
   sweeper.backbone.clear ();
@@ -744,7 +733,6 @@ void Internal::sweep_refine_partition (Sweeper &sweeper) {
   }
   old_partition.swap (new_partition);
   LOG ("refined %u classes into %u", old_classes, new_classes);
-  // LOGPARTITION ("refined equivalence candidates");
 }
 
 void Internal::sweep_refine_backbone (Sweeper &sweeper) {
@@ -762,7 +750,6 @@ void Internal::sweep_refine_backbone (Sweeper &sweeper) {
       *q++ = lit;
   }
   sweeper.backbone.resize (q - sweeper.backbone.begin ());
-  // LOGBACKBONE ("refined backbone candidates");
 }
 
 void Internal::sweep_refine (Sweeper &sweeper) {
@@ -894,13 +881,14 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
   return false;
 }
 
-// at this point the binary (lit or other) should already be present
-// in the proof via add_core.
-// We just copy it as an irredundant clause and call weaken minus
-// and push it on the extension stack
+// at this point the binary (lit or other) is already present
+// in the proof via 'add_core'.
+// We just copy it as an irredundant clause, call weaken minus
+// and push it on the extension stack.
 //
 uint64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) {
-  if (unsat) return 0;  // should not really happen but possibly can
+  assert (!unsat);
+  if (unsat) return 0;  // sanity check, should be fuzzed
 
   assert (!val (lit) && !val (other));
   if (val (lit) || val (other)) return 0;
@@ -936,11 +924,6 @@ void Internal::delete_sweep_binary (const sweep_binary &sb) {
   bin.push_back (sb.other);
   proof->delete_clause (sb.id, false, bin);
 }
-
-// mark all literals in sweeper.reprs which have been substituted
-// void Internal::mark_substituted_literals (Sweeper &sweeper) {
-//
-// }
 
 bool Internal::scheduled_variable (Sweeper &sweeper, int idx) {
   return sweeper.prev[idx] != 0 || sweeper.first == idx;
@@ -1051,7 +1034,8 @@ void Internal::sweep_substitute_lrat (Clause *c, uint64_t id) {
   IDX = NEXT_##IDX
 
 
-// id for lrat proofs
+// Substitute equivalences in clauses (see 'sweep_substitute_new_equivalences'
+// for explanation)
 void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr,
                                                    uint64_t id) {
   if (unsat)
@@ -1174,6 +1158,10 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr
   }
 }
 
+
+// In contrast to kissat we substitute the equivalences explicitely after every
+// successful round of sweeping. This is necessary in order to extract valid
+// LRAT proofs for subsequent rounds of sweeping.
 void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
   if (unsat) return;
 
@@ -1345,7 +1333,6 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
         end[-2] = 0;
         sweeper.partition.resize (sweeper.partition.size () - 1);
       }
-      // LOGPARTITION ("refined equivalence candidates");
       return false;
     }
     stats.sweep_flip_equivalences++;
@@ -1361,10 +1348,14 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
         end[-2] = 0;
         sweeper.partition.resize (sweeper.partition.size () - 1);
       }
-      // LOGPARTITION ("refined equivalence candidates");
       return false;
     }
   }
+  // frozen variables are not allowed to be eliminated.
+  // It might still be beneficial to learn the binaries, if they
+  // really are equivalent, but we avoid the issue by not trying
+  // for equivalence at all if the non-representative is frozen.
+  // i.e., the higher absolute value
   if (abs (lit) > abs (other) && frozen (lit)) {
     if (third == 0) {
       LOG ("squashing equivalence class of %d", lit);
@@ -1447,7 +1438,10 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
 
   LOG ("sweep equivalence %d = %d", lit, other);
 
-  // if kitten behaves as expected, id should be at sweeper.core[0].back ()
+  // If kitten behaves as expected, the two binaries of the equivalence
+  // should be stored at sweeper.core[i].back () for i in {0, 1}.
+  // We pick the smaller absolute valued literal as representative and
+  // store the equivalence .
   add_core (sweeper, 0);
   add_core (sweeper, 1);
   if (!val (lit) && !val (other)) {
@@ -1917,18 +1911,12 @@ bool Internal::sweep () {
   }
 
   uint64_t eliminated = equivalences + units;
-  // assert (active () >= inactive);  // TODO this should be stats.active
-  //                                     but also need to increment
-  //                                     stats.now.substituted to make
-  //                                     active () not trigger an assertion
-  // solver->active -= inactive;   // don't know if this is allowed !!
   report ('=', !eliminated);
-  // solver->active += inactive;
-  // (void) inactive;
-//  if (kissat_average (eliminated, swept) < 0.001)
-//    BUMP_DELAY (sweep);              // increase sweeping counter (see above)
-//  else
-//    REDUCE_DELAY (sweep);            // decrease sweeping counter
+
+  //  if (kissat_average (eliminated, swept) < 0.001)
+  //    BUMP_DELAY (sweep);              // increase sweeping counter (see above)
+  //  else
+  //    REDUCE_DELAY (sweep);            // decrease sweeping counter
   STOP_SIMPLIFIER (sweep, SWEEP);
   return eliminated;
 }

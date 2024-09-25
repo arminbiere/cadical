@@ -7,17 +7,6 @@ namespace CaDiCaL {
 
 struct Internal;
 
-struct Factorizor {
-  Factorizor () {}
-  ~Factorizor () {}
-
-  vector<Clause *> delete_later;
-  vector<vector<Clause *>> occurs;
-  vector<int> common;
-  // TODO schedule
-};
-
-
 struct Quotient {
   size_t id;
   struct quotient *prev, *next;
