@@ -9,33 +9,33 @@ struct Internal;
 
 struct Quotient {
   size_t id;
-  struct quotient *prev, *next;
+  Quotient *prev, *next;
   unsigned factor;
-  statches clauses;
-  sizes matches;
+  // statches clauses;  // TODO statches?
+  vector<size_t> matches;  // TODO sizes type correct?
   size_t matched;
 };
 
 struct Scores {
   double *score;
-  unsigneds scored;
+  vector<unsigned> scored;
 };
 
 struct Factoring {
   size_t size, allocated;
   unsigned initial;
   unsigned *count;
-  scores *scores;
+  Scores *scores;
   unsigned bound;
-  unsigneds fresh;
-  unsigneds counted;
-  unsigneds nounted;
-  references qlauses;
+  vector<unsigned> fresh;
+  vector<unsigned> counted;
+  vector<unsigned> nounted;
+  vector<Clause *> qlauses;
   uint64_t limit;
   struct {
-    quotient *first, *last;
+    Quotient *first, *last;
   } quotients;
-  heap schedule;  // TODO check block.hpp for reference
+  // heap schedule;  // TODO check block.hpp for reference
 };
 
 } // namespace CaDiCaL

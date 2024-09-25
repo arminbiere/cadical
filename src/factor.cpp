@@ -2,6 +2,91 @@
 
 namespace CaDiCaL {
 
+  
+// do full occurence list as in elim.cpp but filter out useless clauses
+void Internal::factor_mode () {
+  reset_watches ();
+
+  assert (!watching ());
+  init_occs ();
+
+  const int size_limit = opts.factorsize;
+
+  vector<unsigned> bincount, largecount;
+  const unsigned max_lit = 2 * (max_var + 1);
+  enlarge_zero (bincount, max_lit);
+  if (size_limit > 2)
+    enlarge_zero (largecount, max_lit);
+
+  vector<Clause *> candidates;
+
+  // mark satisfied irredundant clauses as garbage
+  for (const auto &c : clauses) {
+    if (c->garbage) continue;
+    if (c->redundant) continue; // TODO: these? && !c->binary) continue;
+    if (c->size > size_limit) continue;
+    if (c->size == 2) {
+      const int lit = c->literals[0];
+      const int other = c->literals[1];
+      bincount[vlit (lit)]++;
+      bincount[vlit (other)]++;
+      occs (vlit (lit)).push_back (c);
+      occs (vlit (other)).push_back (c);
+      continue;
+    }
+    candidates.push_back (c);
+    for (const auto &lit : *c) {
+      largecount[vlit (lit)]++;
+    }
+  }
+  if (size_limit == 2) return;
+
+  const unsigned rounds = opts.factorcandrounds;
+  for (unsigned round = 1; round <= rounds; round++) {
+    vector<unsigned> newlargecount;
+    enlarge_zero (newlargecount, max_lit);
+    const auto begin = candidates.begin ();
+    auto p = candidates.begin ();
+    auto q = p;
+    const auto end = candidates.end ();
+    while (p != end) {
+      Clause *c = *q++ = *p++;
+      for (const auto &lit : *c) {
+        const auto idx = vlit (lit);
+        if (bincount[idx] + largecount[idx] < 2) {
+          q--;
+          goto CONTINUE_WITH_NEXT_CLAUSE;
+        }
+      }
+      for (const auto &lit : *c) {
+        const auto idx = vlit (lit);
+        newlargecount[idx]++;
+      }
+    CONTINUE_WITH_NEXT_CLAUSE:
+      continue;
+    }
+    candidates.resize (q - begin);
+    largecount.swap (newlargecount);
+  }
+
+  for (const auto &c : candidates) {
+    for (const auto &lit : *c) {
+      const auto idx = vlit (lit);
+      occs (idx).push_back (c);
+    }
+  }
+
+}
+
+// go back to two watch scheme
+void Internal::reset_factor_mode () {
+  reset_occs ();
+  init_watches ();
+  connect_watches ();
+}
+
+/* kissat code commented below
+ 
 #define FACTOR 1
 #define QUOTIENT 2
 #define NOUNTED 4
@@ -790,106 +875,26 @@ static bool run_factorization (kissat *solver, uint64_t limit) {
   return completed;
 }
 
-// essentially do full occurence list as in elim.cpp
-void Internal::factor_mode () {
-  reset_watches ();
-
-  assert (!watching ());
-  init_occs ();
-
-  const unsigned size_limit = opts.factorsize;
-
-  vector<unsigned> bincount, largecount;
-  const unsigned max_lit = 2 * (max_var + 1);
-  enlarge_zero (bincount, max_lit);
-  if (size_limit > 2)
-    enlarge_zero (largecount, max_lit);
-
-  vector<Clause *> candidates;
-
-  // mark satisfied irredundant clauses as garbage
-  for (const auto &c : clauses) {
-    if (c->garbage) continue;
-    if (c->redundant) continue; // TODO: these? && !c->binary) continue;
-    if (c->size > size_limit) continue;
-    if (c->size == 2) {
-      const int lit = c->literals[0];
-      const int other = c->literals[1];
-      bincount[vlit (lit)]++;
-      bincount[vlit (other)]++;
-      occs[vlit (lit)].push_back (c);
-      occs[vlit (other)].push_back (c);
-      continue;
-    }
-    candidates.push_back (c);
-    for (const auto &lit : *c) {
-      largecount[vlit (lit)]++;
-    }
-  }
-  if (size_limit == 2) return;
-
-  const unsigned rounds = opts.factorcandrounds;
-  for (unsigned round = 1; round <= rounds; round++) {
-    vector<unsigned> newlargecount;
-    enlarge_zero (newlargecount, max_lit);
-    const auto begin = candidates.begin ();
-    auto p = candidates.begin ();
-    auto q = p;
-    const auto end = candidates.end ();
-    for (auto c = *q; c = *q++ = *p++; p != end) {
-      for (const auto &lit : c) {
-        const auto idx = vlit (lit);
-        if (bincount[idx] + largecount[idx] < 2) {
-          q--;
-          goto CONTINUE_WITH_NEXT_CLAUSE;
-        }
-      }
-      for (const auto &lit : c) {
-        const auto idx = vlit (lit);
-        newlargecount[idx]++;
-      }
-    CONTINUE_WITH_NEXT_CLAUSE:
-    }
-    candidates.resize (q - begin);
-    largecount.swap (newlargecount);
-  }
-
-  for (const auto &c : candidates) {
-    for (const auto &lit : *c) {
-      const auto idx = vlit (lit);
-      occs[idx].push_back (c);
-    }
-  }
-
-}
-
-// go back to two watch scheme
-void Internal::reset_factor_mode () {
-  reset_occs ();
-  init_watches ();
-  connect_watches ();
-}
+above is kissat code
+*/
 
 bool Internal::run_factorization (int64_t limit) {
-  Factorizor factor = Factorizor ();
-  factor_mode (factor);
-  
-  reset_factor_mode ();
-
-  delete_all_factored (factor);
-  report ('f', !factored);
+  Factoring factoring; // = Factoring ();  TODO constructor?
+  // init_factoring (solver, &factoring, limit); TODO: this or constructor
+  // report ('f', !factored);
+  // release_factoring (&factoring); TODO: this or destructor
   return false;
 }
 
 void Internal::factor () {
   if (unsat)
-    return false;
+    return;
   if (terminated_asynchronously ())
-    return false;
+    return;
   if (!opts.factor)
-    return false;
+    return;
   if (last.factor.marked >= stats.factor_literals) {
-    VERBOSE (3, "factorization skipped as no literals have been
+    VERBOSE (3, "factorization skipped as no literals have been"
         "marked to be added (%" PRIu64 " < %" PRIu64 ")",
         last.factor.marked, stats.factor_literals);
     return;
@@ -900,7 +905,7 @@ void Internal::factor () {
 
   uint64_t limit = opts.factoriniticks;
   if (stats.factor > 1) {
-    int64_t tmp = stats.propagations - last.factor.ticks;
+    int64_t tmp = stats.propagations.search - last.factor.ticks;
     tmp *= opts.factoreffort;
     limit = tmp;
   } else {
@@ -911,19 +916,20 @@ void Internal::factor () {
     limit += stats.factor_ticks;
   }
 
-  // TODO
-
+  // TODO commented code for messages
+  /*
   struct {
     int64_t variables, clauses, ticks;
   } before, after, delta;
   before.variables = stats.variables_extension + stats.variables_original;
   before.ticks = stats.factor_ticks;
-
+  */
   factor_mode ();
   bool completed = run_factorization (limit);
   reset_factor_mode ();
-  updated_scores_for_new_variables (factored);
-  
+  // updated_scores_for_new_variables (factored); // TODO factored as new vars
+
+  /*
   after.variables = s->variables_extension + s->variables_original;
   after.binary = BINARY_CLAUSES;
   after.clauses = IRREDUNDANT_CLAUSES;
@@ -947,6 +953,7 @@ void Internal::factor () {
 
   VERBOSE (2, "factored %" PRIu64 " new variables", factored);
   VERBOSE (2, "factorization added %" PRIu64 " and deleted %" PRIu64 " clauses", added, deleted);
+  */
   if (completed)
     last.factor.marked = stats.factor_literals;
   STOP_SIMPLIFIER (factor, FACTOR);
