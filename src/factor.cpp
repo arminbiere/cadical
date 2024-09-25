@@ -790,155 +790,74 @@ static bool run_factorization (kissat *solver, uint64_t limit) {
   return completed;
 }
 
-static void connect_clauses_to_factor (kissat *solver) {
-  const unsigned size_limit = GET_OPTION (factorsize);
-  if (size_limit < 3) {
-    kissat_extremely_verbose (solver, "only factorizing binary clauses");
-    return;
-  }
-  kissat_very_verbose (solver, "factorizing clauses of maximum size %u",
-                       size_limit);
-  clause *last_irredundant = kissat_last_irredundant_clause (solver);
-  ward *const arena = BEGIN_STACK (solver->arena);
-  watches *all_watches = solver->watches;
-  unsigned *bincount, *largecount;
-  CALLOC (bincount, LITS);
-  for (all_literals (lit)) {
-    if (!ACTIVE (IDX (lit)))
-      continue;
-    for (all_binary_large_watches (watch, WATCHES (lit))) {
-      assert (watch.type.binary);
-      const unsigned other = watch.type.lit;
-      if (lit > other)
-        continue;
-      bincount[lit]++;
-      bincount[other]++;
-    }
-  }
-  CALLOC (largecount, LITS);
-  size_t initial_candidates = 0;
-  for (all_clauses (c)) {
-    if (c->garbage)
-      continue;
-    if (last_irredundant && last_irredundant < c)
-      break;
-    if (c->redundant)
-      continue;
-    if (c->size > size_limit)
-      continue;
-    for (all_literals_in_clause (lit, c))
-      largecount[lit]++;
-    initial_candidates++;
-  }
-  kissat_very_verbose (solver,
-                       "initially found %zu large clause candidates",
-                       initial_candidates);
-  size_t candidates = initial_candidates;
-  const unsigned rounds = GET_OPTION (factorcandrounds);
-  for (unsigned round = 1; round <= rounds; round++) {
-    size_t new_candidates = 0;
-    unsigned *newlargecount;
-    CALLOC (newlargecount, LITS);
-    for (all_clauses (c)) {
-      if (c->garbage)
-        continue;
-      if (last_irredundant && last_irredundant < c)
-        break;
-      if (c->redundant)
-        continue;
-      if (c->size > size_limit)
-        continue;
-      for (all_literals_in_clause (lit, c))
-        if (bincount[lit] + largecount[lit] < 2)
-          goto CONTINUE_WITH_NEXT_CLAUSE1;
-      for (all_literals_in_clause (lit, c))
-        newlargecount[lit]++;
-      new_candidates++;
-    CONTINUE_WITH_NEXT_CLAUSE1:;
-    }
-    DEALLOC (largecount, LITS);
-    largecount = newlargecount;
-    if (candidates == new_candidates) {
-      kissat_very_verbose (solver,
-                           "no large factorization candidate clauses "
-                           "reduction in round %u",
-                           round);
-      break;
-    }
-    candidates = new_candidates;
-    kissat_very_verbose (
-        solver,
-        "reduced to %zu large factorization candidate clauses %.0f%% in "
-        "round %u",
-        candidates, kissat_percent (candidates, initial_candidates), round);
-  }
-#ifndef QUIET
-  size_t connected = 0;
-#endif
-  for (all_clauses (c)) {
-    if (c->garbage)
-      continue;
-    if (last_irredundant && last_irredundant < c)
-      break;
-    if (c->redundant)
-      continue;
-    if (c->size > size_limit)
-      continue;
-    for (all_literals_in_clause (lit, c))
-      if (bincount[lit] + largecount[lit] < 2)
-        goto CONTINUE_WITH_NEXT_CLAUSE2;
-    const reference ref = (ward *) c - arena;
-    kissat_inlined_connect_clause (solver, all_watches, c, ref);
-#ifndef QUIET
-    connected++;
-#endif
-  CONTINUE_WITH_NEXT_CLAUSE2:;
-  }
-  DEALLOC (largecount, LITS);
-  DEALLOC (bincount, LITS);
-  kissat_very_verbose (
-      solver, "connected %zu large factorization candidate clauses %.0f%%",
-      connected, kissat_percent (candidates, initial_candidates));
-}
-
-  
-bool Internal::factoring () {
-  if (!opts.factor) return false;
-  if (stats.factor >= opts.factorrounds) return false;
-  return stats.conflicts > stats.factor * 3000;
-}
-
 // essentially do full occurence list as in elim.cpp
-void Internal::factor_mode (Factorizor &factor) {
+void Internal::factor_mode () {
   reset_watches ();
 
   assert (!watching ());
-  init_noccs ();
   init_occs ();
 
   const unsigned size_limit = opts.factorsize;
 
+  vector<unsigned> bincount, largecount;
+  const unsigned max_lit = 2 * (max_var + 1);
+  enlarge_zero (bincount, max_lit);
+  if (size_limit > 2)
+    enlarge_zero (largecount, max_lit);
+
+  vector<Clause *> candidates;
+
   // mark satisfied irredundant clauses as garbage
   for (const auto &c : clauses) {
     if (c->garbage) continue;
-    if (c->redundant && !c->binary) continue;
-    bool satisfied = false;
-    unsigned count = 0;
-    for (const auto &lit : *c) {
-      const signed char tmp = val (lit);
-      if (!tmp) count++;
-      else if (tmp > 0) {
-        satisfied = true;
-        break;
-      }
+    if (c->redundant) continue; // TODO: these? && !c->binary) continue;
+    if (c->size > size_limit) continue;
+    if (c->size == 2) {
+      const int lit = c->literals[0];
+      const int other = c->literals[1];
+      bincount[vlit (lit)]++;
+      bincount[vlit (other)]++;
+      occs[vlit (lit)].push_back (c);
+      occs[vlit (other)].push_back (c);
+      continue;
     }
-    assert (satisfied || count > 1);
-    if (satisfied)
-      mark_garbage (c); // forces more precise counts
-    else if (count == 2) {
-      for (const auto &lit : *c) {
-        factor.occurs[vlit (lit)].push_back (c);
+    candidates.push_back (c);
+    for (const auto &lit : *c) {
+      largecount[vlit (lit)]++;
+    }
+  }
+  if (size_limit == 2) return;
+
+  const unsigned rounds = opts.factorcandrounds;
+  for (unsigned round = 1; round <= rounds; round++) {
+    vector<unsigned> newlargecount;
+    enlarge_zero (newlargecount, max_lit);
+    const auto begin = candidates.begin ();
+    auto p = candidates.begin ();
+    auto q = p;
+    const auto end = candidates.end ();
+    for (auto c = *q; c = *q++ = *p++; p != end) {
+      for (const auto &lit : c) {
+        const auto idx = vlit (lit);
+        if (bincount[idx] + largecount[idx] < 2) {
+          q--;
+          goto CONTINUE_WITH_NEXT_CLAUSE;
+        }
       }
+      for (const auto &lit : c) {
+        const auto idx = vlit (lit);
+        newlargecount[idx]++;
+      }
+    CONTINUE_WITH_NEXT_CLAUSE:
+    }
+    candidates.resize (q - begin);
+    largecount.swap (newlargecount);
+  }
+
+  for (const auto &c : candidates) {
+    for (const auto &lit : *c) {
+      const auto idx = vlit (lit);
+      occs[idx].push_back (c);
     }
   }
 
@@ -947,7 +866,6 @@ void Internal::factor_mode (Factorizor &factor) {
 // go back to two watch scheme
 void Internal::reset_factor_mode () {
   reset_occs ();
-  reset_noccs ();
   init_watches ();
   connect_watches ();
 }
