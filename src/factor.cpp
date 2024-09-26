@@ -2,7 +2,16 @@
 
 namespace CaDiCaL {
 
-  
+inline bool factor_occs_size::operator() (unsigned a, unsigned b) {
+  size_t s = internal->occs (internal->u2i (a)).size ();
+  size_t t = internal->occs (internal->u2i (b)).size ();
+  if (s > t)
+    return true;
+  if (s < t)
+    return false;
+  return a > b;
+}
+
 // do full occurence list as in elim.cpp but filter out useless clauses
 void Internal::factor_mode () {
   reset_watches ();
@@ -773,17 +782,14 @@ above is kissat code
 
 
 void Internal::update_factor_candidate (Factoring &factoring, int lit) {
-  /*
-  heap *cands = &factoring->schedule;
+  FactorSchedule &schedule = factoring.schedule;
   const size_t size = occs (lit).size ();
-  if (size > 1) {
-    kissat_adjust_heap (solver, cands, lit);
-    kissat_update_heap (solver, cands, lit, size);
-    if (!kissat_heap_contains (cands, lit))
-      kissat_push_heap (solver, cands, lit);
-  } else if (kissat_heap_contains (cands, lit))
-    kissat_pop_heap (solver, cands, lit);
-    */
+  const unsigned idx = vlit (lit);
+  if (schedule.contains (idx))
+    schedule.update (idx);
+  else if (size > 1) {
+    schedule.push_back (idx);
+  }
 }
 
 
@@ -800,8 +806,7 @@ void Internal::schedule_factorization (Factoring &factoring) {
     }
   }
 #ifndef QUIET
-  // heap *cands = &factoring->schedule;
-  size_t size_cands = 0; //kissat_size_heap (cands);
+  size_t size_cands = factoring.schedule.size ();
   VERBOSE (2, "scheduled %zu factorization candidate literals %.0f %%",
       size_cands, percent (size_cands, max_var));
 #endif
@@ -817,54 +822,60 @@ bool Internal::run_factorization (int64_t limit) {
   int64_t *ticks = &stats.factor_ticks;
   VERBOSE (3, "factorization limit of %" PRIu64 " ticks", limit - *ticks);
 
-  // TODO: content
-  /*
-  while (!done && !kissat_empty_heap (&factoring.schedule)) {
-    const unsigned first =
-        kissat_pop_max_heap (solver, &factoring.schedule);
-    const unsigned first_idx = IDX (first);
-    if (!ACTIVE (first_idx))
+  while (!done && !factoring.schedule.empty ()) {
+    const unsigned ufirst = factoring.schedule.pop_front ();
+    const int first = u2i (ufirst);
+    const int first_idx = vidx (first);
+    if (!active (first_idx))
       continue;
-    if (*ticks > limit) {
-      kissat_very_verbose (solver, "factorization ticks limit hit");
+    if (!occs (first).size ()) {
+      factoring.schedule.clear ();
       break;
     }
-    if (TERMINATED (factor_terminated_1))
+    if (*ticks > limit) {
+      VERBOSE (2, "factorization ticks limit hit");
       break;
-    struct flags *f = solver->flags + first_idx;
-    const unsigned bit = 1u << NEGATED (first);
+    }
+    if (terminated_asynchronously ())
+      break;
+    Flags &f = flags (first_idx);
+    const unsigned bit = 1u << (first < 0);
     if (!(f->factor & bit))
       continue;
     f->factor &= ~bit;
-    const size_t first_count = first_factor (&factoring, first);
+    const size_t first_count = first_factor (factoring, first);
     if (first_count > 1) {
       for (;;) {
         unsigned next_count;
-        const unsigned next = next_factor (&factoring, &next_count);
-        if (next == INVALID_LIT)
+        const int next = next_factor (factoring, &next_count);
+        if (next == 0)
           break;
         assert (next_count > 1);
         if (next_count < 2)
           break;
-        factorize_next (&factoring, next, next_count);
+        factorize_next (factoring, next, next_count);
       }
       size_t reduction;
-      quotient *q = best_quotient (&factoring, &reduction);
+      quotient *q = best_quotient (factoring, &reduction);
       if (q && reduction > factoring.bound) {
-        if (apply_factoring (&factoring, q)) {
-#ifndef QUIET
+        if (apply_factoring (factoring, q)) {
           factored++;
-#endif
         } else
           done = true;
       }
     }
-    release_quotients (&factoring);
-  }*/
+    release_quotients (factoring);
+  }
   
-  bool completed = false; // kissat_empty_heap (&factoring.schedule);
+  // since we cannot remove elements from the heap we check wether the
+  // first element in the heap has occurences
+  bool completed = factoring.schedule.empty ();
+  if (!completed) {
+    const unsigned idx = factoring.schedule.front ();
+    completed = occs (u2i (idx)).empty ();
+  }
   updated_scores_for_new_variables (factoring); // TODO factored as new vars
-  // report ('f', !factored);
+  report ('f', !factored);
   // delete factoring; // TODO: if factoring is not pointer it should automatically
                     // call destructor upon leaving this function??
   return completed;

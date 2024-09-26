@@ -7,6 +7,13 @@ namespace CaDiCaL {
 
 struct Internal;
 
+
+struct factor_occs_size {
+  Internal *internal;
+  factor_occs_size (Internal *i) : internal (i) {}
+  bool operator() (unsigned a, unsigned b);
+};
+
 struct Quotient {
   size_t id;
   Quotient *prev, *next;
@@ -21,11 +28,17 @@ struct Scores {
   vector<unsigned> scored;
 };
 
+typedef heap<factor_occs_size> FactorSchedule;
+
 struct Factoring {
   Factoring (Internal *, int64_t);
   ~Factoring ();
+
+  // These are initialized by the constructor
   Internal *internal;
   int64_t limit;
+  FactorSchedule schedule;
+
   size_t size, allocated;
   unsigned initial;
   Scores *scores;
@@ -38,7 +51,6 @@ struct Factoring {
   struct {
     Quotient *first, *last;
   } quotients;
-  //heap schedule;  // TODO check block.hpp for reference
 };
 
 } // namespace CaDiCaL
