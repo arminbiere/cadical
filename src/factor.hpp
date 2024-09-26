@@ -23,7 +23,7 @@ struct Quotient {
   size_t matched;
 };
 
-struct Scores {
+struct FactorScores {
   double *score;
   vector<unsigned> scored;
 };
@@ -41,7 +41,7 @@ struct Factoring {
 
   size_t size, allocated;
   unsigned initial;
-  Scores *scores;
+  FactorScores *scores;
   unsigned bound;
   vector<unsigned> count;
   vector<int> fresh;

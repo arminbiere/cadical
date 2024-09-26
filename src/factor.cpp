@@ -95,7 +95,7 @@ void Internal::reset_factor_mode () {
 }
 
 Factoring::Factoring (Internal *i, int64_t l)
-    : internal (i), limit (l) {
+    : internal (i), limit (l), schedule (i) {
   const unsigned max_var = internal->max_var;
   const unsigned max_lit = 2 * (max_var + 1);
   initial = allocated = size = max_var;
@@ -111,62 +111,8 @@ Factoring::~Factoring () {
   assert (qlauses.empty ());
   // TODO: scores??
   // release_quotients (factoring);
-  // kissat_release_heap (solver, &factoring->schedule);
+  schedule.erase ();  // actually not necessary
 }
-
-
-void Internal::updated_scores_for_new_variables (Factoring &factoring) {
-  const auto &fresh = factoring.fresh;
-  {
-    for (const auto &idx : fresh) {
-      LOG ("unbumping fresh idx %d", idx);
-      const double score = 0;
-      // TODO: equivalent for cadical
-      // kissat_update_heap (solver, &solver->scores, idx, score);
-    }
-  }
-    /*
-  {
-    // TODO this is the linked list for decisions
-    const unsigned *p = end;
-    links *links = solver->links;
-    queue *queue = &solver->queue;
-    while (p != begin) {
-      const unsigned lit = *--p;
-      const unsigned idx = IDX (lit);
-      kissat_dequeue_links (idx, links, queue);
-    }
-    queue->stamp = 0;
-    unsigned rest = queue->first;
-    p = end;
-    while (p != begin) {
-      const unsigned lit = *--p;
-      const unsigned idx = IDX (lit);
-      struct links *l = links + idx;
-      if (DISCONNECTED (queue->first)) {
-        assert (DISCONNECTED (queue->last));
-        queue->last = idx;
-      } else {
-        struct links *first = links + queue->first;
-        assert (DISCONNECTED (first->prev));
-        first->prev = idx;
-      }
-      l->next = queue->first;
-      queue->first = idx;
-      assert (DISCONNECTED (l->prev));
-      l->stamp = ++queue->stamp;
-    }
-    while (!DISCONNECTED (rest)) {
-      struct links *l = links + rest;
-      l->stamp = ++queue->stamp;
-      rest = l->next;
-    }
-    solver->queue.search.idx = queue->last;
-    solver->queue.search.stamp = queue->stamp;
-  }
-  */
-}
-
 
 /* kissat code commented below
  
@@ -874,10 +820,12 @@ bool Internal::run_factorization (int64_t limit) {
     const unsigned idx = factoring.schedule.front ();
     completed = occs (u2i (idx)).empty ();
   }
-  updated_scores_for_new_variables (factoring); // TODO factored as new vars
+  // kissat initializes scores for new variables at this point, however
+  // this is actually done already during resize of internal
   report ('f', !factored);
-  // delete factoring; // TODO: if factoring is not pointer it should automatically
-                    // call destructor upon leaving this function??
+  // TODO: if factoring is not pointer it should automatically
+  // call destructor upon leaving this function??
+  // delete factoring;
   return completed;
 }
 

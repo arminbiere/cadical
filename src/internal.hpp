@@ -1111,7 +1111,6 @@ struct Internal {
   bool run_factorization (int64_t limit);
   void factor_mode ();
   void reset_factor_mode ();
-  void updated_scores_for_new_variables (Factoring &);
   void schedule_factorization (Factoring &);
   void update_factor_candidate (Factoring &, int);
   Clause *new_factor_clause ();
