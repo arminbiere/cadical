@@ -749,61 +749,6 @@ static bool apply_factoring (Factoring *factoring, quotient *q) {
   return true;
 }
 
-static void
-adjust_scores_and_phases_of_fresh_varaibles (Factoring *factoring) {
-  const unsigned *begin = BEGIN_STACK (factoring->fresh);
-  const unsigned *end = END_STACK (factoring->fresh);
-  kissat *const solver = factoring->solver;
-  {
-    const unsigned *p = begin;
-    while (p != end) {
-      const unsigned lit = *p++;
-      const unsigned idx = IDX (lit);
-      LOG ("unbumping fresh[%zu] %s", (size_t) (p - begin - 1),
-           LOGVAR (idx));
-      const double score = 0;
-      kissat_update_heap (solver, &solver->scores, idx, score);
-    }
-  }
-  {
-    const unsigned *p = end;
-    links *links = solver->links;
-    queue *queue = &solver->queue;
-    while (p != begin) {
-      const unsigned lit = *--p;
-      const unsigned idx = IDX (lit);
-      kissat_dequeue_links (idx, links, queue);
-    }
-    queue->stamp = 0;
-    unsigned rest = queue->first;
-    p = end;
-    while (p != begin) {
-      const unsigned lit = *--p;
-      const unsigned idx = IDX (lit);
-      struct links *l = links + idx;
-      if (DISCONNECTED (queue->first)) {
-        assert (DISCONNECTED (queue->last));
-        queue->last = idx;
-      } else {
-        struct links *first = links + queue->first;
-        assert (DISCONNECTED (first->prev));
-        first->prev = idx;
-      }
-      l->next = queue->first;
-      queue->first = idx;
-      assert (DISCONNECTED (l->prev));
-      l->stamp = ++queue->stamp;
-    }
-    while (!DISCONNECTED (rest)) {
-      struct links *l = links + rest;
-      l->stamp = ++queue->stamp;
-      rest = l->next;
-    }
-    solver->queue.search.idx = queue->last;
-    solver->queue.search.stamp = queue->stamp;
-  }
-}
-
 static bool run_factorization (kissat *solver, uint64_t limit) {
   factoring factoring;
   init_factoring (solver, &factoring, limit);
@@ -867,11 +812,68 @@ static bool run_factorization (kissat *solver, uint64_t limit) {
 above is kissat code
 */
 
+void Internal::updated_scores_for_new_variables (Factoring &factoring) {
+  
+  const unsigned *begin = BEGIN_STACK (factoring->fresh);
+  const unsigned *end = END_STACK (factoring->fresh);
+  kissat *const solver = factoring->solver;
+  {
+    for (const auto &idx : fresh) {
+      LOG ("unbumping fresh idx %d", idx);
+      const double score = 0;
+      // TODO: equivalent for cadical
+      // kissat_update_heap (solver, &solver->scores, idx, score);
+    }
+  }
+    /*
+  {
+    // TODO this is the linked list for decisions
+    const unsigned *p = end;
+    links *links = solver->links;
+    queue *queue = &solver->queue;
+    while (p != begin) {
+      const unsigned lit = *--p;
+      const unsigned idx = IDX (lit);
+      kissat_dequeue_links (idx, links, queue);
+    }
+    queue->stamp = 0;
+    unsigned rest = queue->first;
+    p = end;
+    while (p != begin) {
+      const unsigned lit = *--p;
+      const unsigned idx = IDX (lit);
+      struct links *l = links + idx;
+      if (DISCONNECTED (queue->first)) {
+        assert (DISCONNECTED (queue->last));
+        queue->last = idx;
+      } else {
+        struct links *first = links + queue->first;
+        assert (DISCONNECTED (first->prev));
+        first->prev = idx;
+      }
+      l->next = queue->first;
+      queue->first = idx;
+      assert (DISCONNECTED (l->prev));
+      l->stamp = ++queue->stamp;
+    }
+    while (!DISCONNECTED (rest)) {
+      struct links *l = links + rest;
+      l->stamp = ++queue->stamp;
+      rest = l->next;
+    }
+    solver->queue.search.idx = queue->last;
+    solver->queue.search.stamp = queue->stamp;
+  }
+  */
+}
+
+
 bool Internal::run_factorization (uint64_t limit) {
-  Factoring *factoring = new Factoring (this, limit); // TODO new or not new
+  Factoring factoring = Factoring (this, limit); // TODO new or not new
 
   // TODO: content
   
+  updated_scores_for_new_variables (factoring); // TODO factored as new vars
   // report ('f', !factored);
   delete factoring; // TODO: if factoring is not pointer it should automatically
                     // call destructor upon leaving this function??
@@ -919,7 +921,6 @@ void Internal::factor () {
   factor_mode ();
   bool completed = run_factorization (limit);
   reset_factor_mode ();
-  // updated_scores_for_new_variables (factored); // TODO factored as new vars
 
   /*
   after.variables = s->variables_extension + s->variables_original;

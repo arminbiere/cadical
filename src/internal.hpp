@@ -1111,11 +1111,7 @@ struct Internal {
   bool run_factorization (uint64_t limit);
   void factor_mode ();
   void reset_factor_mode ();
-  // void delete_all_factored (Factoring &);
-  // void try_and_factor (Factoring &factor, int first, int second);
-  // void mark_outer (Factoring &, int outer);
-  // void updated_scores_for_new_variables (int64_t);
-  // void find_and_delete_outer (Factoring &factor, int outer);
+  void updated_scores_for_new_variables (Factoring &);
   Clause *new_factor_clause ();
   
   // instantiate

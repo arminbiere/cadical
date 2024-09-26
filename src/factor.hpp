@@ -31,7 +31,7 @@ struct Factoring {
   Scores *scores;
   unsigned bound;
   vector<unsigned> count;
-  vector<unsigned> fresh;
+  vector<int> fresh;
   vector<unsigned> counted;
   vector<unsigned> nounted;
   vector<Clause *> qlauses;
