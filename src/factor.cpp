@@ -85,7 +85,7 @@ void Internal::reset_factor_mode () {
   connect_watches ();
 }
 
-Factoring::Factoring (Internal *i, uint64_t l)
+Factoring::Factoring (Internal *i, int64_t l)
     : internal (i), limit (l) {
   const unsigned max_var = internal->max_var;
   const unsigned max_lit = 2 * (max_var + 1);
@@ -104,6 +104,60 @@ Factoring::~Factoring () {
   // release_quotients (factoring);
   // kissat_release_heap (solver, &factoring->schedule);
 }
+
+
+void Internal::updated_scores_for_new_variables (Factoring &factoring) {
+  const auto &fresh = factoring.fresh;
+  {
+    for (const auto &idx : fresh) {
+      LOG ("unbumping fresh idx %d", idx);
+      const double score = 0;
+      // TODO: equivalent for cadical
+      // kissat_update_heap (solver, &solver->scores, idx, score);
+    }
+  }
+    /*
+  {
+    // TODO this is the linked list for decisions
+    const unsigned *p = end;
+    links *links = solver->links;
+    queue *queue = &solver->queue;
+    while (p != begin) {
+      const unsigned lit = *--p;
+      const unsigned idx = IDX (lit);
+      kissat_dequeue_links (idx, links, queue);
+    }
+    queue->stamp = 0;
+    unsigned rest = queue->first;
+    p = end;
+    while (p != begin) {
+      const unsigned lit = *--p;
+      const unsigned idx = IDX (lit);
+      struct links *l = links + idx;
+      if (DISCONNECTED (queue->first)) {
+        assert (DISCONNECTED (queue->last));
+        queue->last = idx;
+      } else {
+        struct links *first = links + queue->first;
+        assert (DISCONNECTED (first->prev));
+        first->prev = idx;
+      }
+      l->next = queue->first;
+      queue->first = idx;
+      assert (DISCONNECTED (l->prev));
+      l->stamp = ++queue->stamp;
+    }
+    while (!DISCONNECTED (rest)) {
+      struct links *l = links + rest;
+      l->stamp = ++queue->stamp;
+      rest = l->next;
+    }
+    solver->queue.search.idx = queue->last;
+    solver->queue.search.stamp = queue->stamp;
+  }
+  */
+}
+
 
 /* kissat code commented below
  
@@ -128,41 +182,6 @@ static void release_quotients (Factoring *factoring) {
 }
 
 
-static void update_candidate (Factoring *factoring, unsigned lit) {
-  heap *cands = &factoring->schedule;
-  kissat *const solver = factoring->solver;
-  const size_t size = SIZE_WATCHES (solver->watches[lit]);
-  if (size > 1) {
-    kissat_adjust_heap (solver, cands, lit);
-    kissat_update_heap (solver, cands, lit, size);
-    if (!kissat_heap_contains (cands, lit))
-      kissat_push_heap (solver, cands, lit);
-  } else if (kissat_heap_contains (cands, lit))
-    kissat_pop_heap (solver, cands, lit);
-}
-
-static void schedule_factorization (Factoring *factoring) {
-  kissat *const solver = factoring->solver;
-  flags *flags = solver->flags;
-  for (all_variables (idx)) {
-    if (ACTIVE (idx)) {
-      struct flags *f = flags + idx;
-      const unsigned lit = LIT (idx);
-      const unsigned not_lit = NOT (lit);
-      if (f->factor & 1)
-        update_candidate (factoring, lit);
-      if (f->factor & 2)
-        update_candidate (factoring, not_lit);
-    }
-  }
-#ifndef QUIET
-  heap *cands = &factoring->schedule;
-  size_t size_cands = kissat_size_heap (cands);
-  kissat_very_verbose (
-      solver, "scheduled %zu factorization candidate literals %.0f %%",
-      size_cands, kissat_percent (size_cands, LITS));
-#endif
-}
 
 static quotient *new_quotient (Factoring *factoring, unsigned factor) {
   kissat *const solver = factoring->solver;
@@ -195,7 +214,7 @@ static size_t first_factor (Factoring *factoring, unsigned factor) {
   assert (!factoring->quotients.first);
   quotient *quotient = new_quotient (factoring, factor);
   statches *clauses = &quotient->clauses;
-  uint64_t ticks = 0;
+  int64_t ticks = 0;
   for (all_binary_large_watches (watch, *factor_watches)) {
     PUSH_STACK (*clauses, watch);
 #ifndef NDEBUG
@@ -256,7 +275,7 @@ static unsigned next_factor (Factoring *factoring,
   ward *const arena = BEGIN_STACK (solver->arena);
   mark *marks = solver->marks;
   const unsigned initial = factoring->initial;
-  uint64_t ticks =
+  int64_t ticks =
       1 + kissat_cache_lines (SIZE_STACK (*last_clauses), sizeof (watch));
   for (all_stack (watch, quotient_watch, *last_clauses)) {
     if (quotient_watch.type.binary) {
@@ -433,7 +452,7 @@ static void factorize_next (Factoring *factoring, unsigned next,
   references *qlauses = &factoring->qlauses;
   assert (EMPTY_STACK (*qlauses));
 
-  uint64_t ticks =
+  int64_t ticks =
       1 + kissat_cache_lines (SIZE_STACK (*last_clauses), sizeof (watch));
 
   size_t i = 0;
@@ -710,19 +729,19 @@ static void delete_unfactored (Factoring *factoring, quotient *q) {
 static void update_factored (Factoring *factoring, quotient *q) {
   kissat *const solver = factoring->solver;
   const unsigned factor = q->factor;
-  update_candidate (factoring, factor);
-  update_candidate (factoring, NOT (factor));
+  update_factor_candidate (factoring, factor);
+  update_factor_candidate (factoring, NOT (factor));
   for (all_stack (watch, watch, q->clauses)) {
     if (watch.type.binary) {
       const unsigned other = watch.binary.lit;
-      update_candidate (factoring, other);
+      update_factor_candidate (factoring, other);
     } else {
       const reference ref = watch.large.ref;
       clause *c = kissat_dereference_clause (solver, ref);
       LOGCLS (c, "deleting unfactored");
       for (all_literals_in_clause (lit, c))
         if (lit != factor)
-          update_candidate (factoring, lit);
+          update_factor_candidate (factoring, lit);
     }
   }
 }
@@ -749,17 +768,57 @@ static bool apply_factoring (Factoring *factoring, quotient *q) {
   return true;
 }
 
-static bool run_factorization (kissat *solver, uint64_t limit) {
-  factoring factoring;
-  init_factoring (solver, &factoring, limit);
-  schedule_factorization (&factoring);
+above is kissat code
+*/
+
+
+void Internal::update_factor_candidate (Factoring &factoring, int lit) {
+  /*
+  heap *cands = &factoring->schedule;
+  const size_t size = occs (lit).size ();
+  if (size > 1) {
+    kissat_adjust_heap (solver, cands, lit);
+    kissat_update_heap (solver, cands, lit, size);
+    if (!kissat_heap_contains (cands, lit))
+      kissat_push_heap (solver, cands, lit);
+  } else if (kissat_heap_contains (cands, lit))
+    kissat_pop_heap (solver, cands, lit);
+    */
+}
+
+
+void Internal::schedule_factorization (Factoring &factoring) {
+  for (const auto &idx : vars) {
+    if (active (idx)) {
+      Flags &f = flags (idx);
+      const int lit = idx;
+      const int not_lit = -lit;
+      if (f.factor & 1)
+        update_factor_candidate (factoring, lit);
+      if (f.factor & 2)
+        update_factor_candidate (factoring, not_lit);
+    }
+  }
+#ifndef QUIET
+  // heap *cands = &factoring->schedule;
+  size_t size_cands = 0; //kissat_size_heap (cands);
+  VERBOSE (2, "scheduled %zu factorization candidate literals %.0f %%",
+      size_cands, percent (size_cands, max_var));
+#endif
+}
+
+bool Internal::run_factorization (int64_t limit) {
+  Factoring factoring = Factoring (this, limit); // TODO new or not new
+  schedule_factorization (factoring);
   bool done = false;
 #ifndef QUIET
   unsigned factored = 0;
 #endif
-  uint64_t *ticks = &solver->statistics.factor_ticks;
-  kissat_extremely_verbose (
-      solver, "factorization limit of %" PRIu64 " ticks", limit - *ticks);
+  int64_t *ticks = &stats.factor_ticks;
+  VERBOSE (3, "factorization limit of %" PRIu64 " ticks", limit - *ticks);
+
+  // TODO: content
+  /*
   while (!done && !kissat_empty_heap (&factoring.schedule)) {
     const unsigned first =
         kissat_pop_max_heap (solver, &factoring.schedule);
@@ -801,83 +860,14 @@ static bool run_factorization (kissat *solver, uint64_t limit) {
       }
     }
     release_quotients (&factoring);
-  }
-  bool completed = kissat_empty_heap (&factoring.schedule);
-  adjust_scores_and_phases_of_fresh_varaibles (&factoring);
-  release_factoring (&factoring);
-  REPORT (!factored, 'f');
-  return completed;
-}
-
-above is kissat code
-*/
-
-void Internal::updated_scores_for_new_variables (Factoring &factoring) {
+  }*/
   
-  const unsigned *begin = BEGIN_STACK (factoring->fresh);
-  const unsigned *end = END_STACK (factoring->fresh);
-  kissat *const solver = factoring->solver;
-  {
-    for (const auto &idx : fresh) {
-      LOG ("unbumping fresh idx %d", idx);
-      const double score = 0;
-      // TODO: equivalent for cadical
-      // kissat_update_heap (solver, &solver->scores, idx, score);
-    }
-  }
-    /*
-  {
-    // TODO this is the linked list for decisions
-    const unsigned *p = end;
-    links *links = solver->links;
-    queue *queue = &solver->queue;
-    while (p != begin) {
-      const unsigned lit = *--p;
-      const unsigned idx = IDX (lit);
-      kissat_dequeue_links (idx, links, queue);
-    }
-    queue->stamp = 0;
-    unsigned rest = queue->first;
-    p = end;
-    while (p != begin) {
-      const unsigned lit = *--p;
-      const unsigned idx = IDX (lit);
-      struct links *l = links + idx;
-      if (DISCONNECTED (queue->first)) {
-        assert (DISCONNECTED (queue->last));
-        queue->last = idx;
-      } else {
-        struct links *first = links + queue->first;
-        assert (DISCONNECTED (first->prev));
-        first->prev = idx;
-      }
-      l->next = queue->first;
-      queue->first = idx;
-      assert (DISCONNECTED (l->prev));
-      l->stamp = ++queue->stamp;
-    }
-    while (!DISCONNECTED (rest)) {
-      struct links *l = links + rest;
-      l->stamp = ++queue->stamp;
-      rest = l->next;
-    }
-    solver->queue.search.idx = queue->last;
-    solver->queue.search.stamp = queue->stamp;
-  }
-  */
-}
-
-
-bool Internal::run_factorization (uint64_t limit) {
-  Factoring factoring = Factoring (this, limit); // TODO new or not new
-
-  // TODO: content
-  
+  bool completed = false; // kissat_empty_heap (&factoring.schedule);
   updated_scores_for_new_variables (factoring); // TODO factored as new vars
   // report ('f', !factored);
-  delete factoring; // TODO: if factoring is not pointer it should automatically
+  // delete factoring; // TODO: if factoring is not pointer it should automatically
                     // call destructor upon leaving this function??
-  return false;
+  return completed;
 }
 
 void Internal::factor () {
@@ -897,7 +887,7 @@ void Internal::factor () {
   START_SIMPLIFIER (factor, FACTOR);
   stats.factor++;
 
-  uint64_t limit = opts.factoriniticks;
+  int64_t limit = opts.factoriniticks;
   if (stats.factor > 1) {
     int64_t tmp = stats.propagations.search - last.factor.ticks;
     tmp *= opts.factoreffort;

@@ -22,10 +22,10 @@ struct Scores {
 };
 
 struct Factoring {
-  Factoring (Internal *, uint64_t);
+  Factoring (Internal *, int64_t);
   ~Factoring ();
   Internal *internal;
-  uint64_t limit;
+  int64_t limit;
   size_t size, allocated;
   unsigned initial;
   Scores *scores;
@@ -38,7 +38,7 @@ struct Factoring {
   struct {
     Quotient *first, *last;
   } quotients;
-  // heap schedule;  // TODO check block.hpp for reference
+  //heap schedule;  // TODO check block.hpp for reference
 };
 
 } // namespace CaDiCaL

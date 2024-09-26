@@ -25,6 +25,7 @@ struct Flags { // Variable flags.
   bool blockable : 1;
 
   unsigned char marked_signed : 2; // generate correct LRAT chains in decompose
+  unsigned char factor : 2;
 
   // These literal flags are used by blocked clause elimination ('block').
   //
@@ -55,7 +56,7 @@ struct Flags { // Variable flags.
     seen = keep = poison = removable = shrinkable = added = sweep = false;
     subsume = elim = ternary = true;
     block = 3u;
-    skip = assumed = failed = marked_signed = 0;
+    skip = assumed = failed = marked_signed = factor = 0;
     status = UNUSED;
   }
 
