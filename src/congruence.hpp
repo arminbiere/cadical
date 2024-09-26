@@ -6,6 +6,7 @@
 #include <cassert>
 #include <cstddef>
 #include <queue>
+#include <sys/types.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <memory>
@@ -20,6 +21,19 @@
 namespace CaDiCaL {
 
 
+// This implements the algorithm algorithm from SAT 2024.
+//
+// The idea is to:
+//   1. detect gates and merge gates with same inputs
+//   2. eagerly replace the equivalent literals and merge gates with same
+//   inputs
+//   3. forward subsume
+//
+// In step 2 there is a subtility: we only replace with the equivalence chain as far as we
+// propagated so far. This is the eager part. For LRAT we produce the equivalence up to the point we
+// have propagated, no the full chain. This is important for merging literals.  To merge literals we
+// use union-find but we only compress paths when rewriting the literal, not before.
+
 struct Internal;
 
 #define LD_MAX_ARITY 26
@@ -30,6 +44,13 @@ typedef std::pair<int,int> litpair;
 typedef std::vector<litpair> litpairs;
 
 std::string string_of_gate (Gate_Type t);
+
+struct LitClausePair {
+  int current_lit;  // current literal from the gate
+  Clause *clause;
+};
+
+LitClausePair make_LitClausePair (int lit, Clause* cl);
 
 struct Gate {
 #ifdef LOGGING
@@ -42,7 +63,9 @@ struct Gate {
   bool marked : 1;
   bool shrunken : 1;
   size_t hash; // TODO remove this field (the C++ implementation is caching it anyway)
-  vector<uint64_t> ids;
+  vector<uint64_t> units;
+  vector<LitClausePair> pos_lhs_ids;
+  vector<LitClausePair> neg_lhs_ids;
   vector<int>rhs;
 
   size_t arity () const {
@@ -93,9 +116,7 @@ struct Closure {
 
   vector<bool> scheduled;
   vector<signed char> marks;
-  vector<uint64_t> mu1_ids;
-  vector<uint64_t> mu2_ids;
-  vector<uint64_t> mu4_ids;
+  vector<LitClausePair> mu1_ids, mu2_ids, mu4_ids; // remember the ids and the literal
 
   vector<int> lits; // result of definitions
   vector<int> rhs; // stack for storing RHS
@@ -117,15 +138,26 @@ struct Closure {
 
   void unmark_all ();
   vector<int> representant; // union-find
+  vector<int> eager_representant; // union-find
+  vector<uint64_t> eager_representant_id; // lrat version of union-find
   int & representative (int lit);
   int representative (int lit) const;
-  int find_representative(int lit) const;
-  void add_binary_clause (int a, int b);
-  bool merge_literals (int lit, int other);
+  int & eager_representative (int lit);
+  int eager_representative (int lit) const;
+  int find_representative (int lit);
+  int find_representative_and_update_eager (int lit);
+  int find_eager_representative_and_compress (int);
+  uint64_t & eager_representative_id (int lit);
+  uint64_t eager_representative_id (int lit) const;
+  uint64_t find_representative_lrat (int lit);
+  void produce_representative_lrat (int lit);
+  Clause* add_binary_clause (int a, int b);
+  bool merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const std::vector<uint64_t>& = {}, const std::vector<uint64_t> & = {});
+  bool merge_literals (int lit, int other, bool learn_clauses = true);
 
   // proof production
-  vector<uint64_t> lrat_chain;
-  void push_lrat_id (const Clause *const c);
+  vector<LitClausePair> lrat_chain;
+  void push_lrat_id (const Clause *const c, int lit);
   void push_lrat_unit (int lit);
 
 
@@ -146,7 +178,7 @@ struct Closure {
   // simplification
   bool skip_and_gate (Gate *g);
   bool skip_xor_gate (Gate *g);
-  void update_and_gate (Gate *g, GatesTable::iterator, int falsified = 0, int clashing = 0);
+  void update_and_gate (Gate *g, GatesTable::iterator, int falsified = 0, int clashing = 0, const std::vector<uint64_t>& = {}, const std::vector<uint64_t> & = {});
   void update_xor_gate (Gate *g, GatesTable::iterator);
   void shrink_and_gate (Gate *g, int falsified = 0, int clashing = 0);
   bool simplify_gate (Gate *g);
@@ -157,10 +189,10 @@ struct Closure {
 
   //rewriting
   bool rewriting_lhs (Gate *g, int dst);
-  bool rewrite_gates(int dst, int src);
-  bool rewrite_gate(Gate *g, int dst, int src);
+  bool rewrite_gates(int dst, int src, uint64_t id1, uint64_t id2);
+  bool rewrite_gate(Gate *g, int dst, int src, uint64_t id1, uint64_t id2);
   void rewrite_xor_gate(Gate *g, int dst, int src);
-  void rewrite_and_gate(Gate *g, int dst, int src);
+  void rewrite_and_gate(Gate *g, int dst, int src, uint64_t id1, uint64_t id2);
   void rewrite_ite_gate(Gate *g, int dst, int src);
   
   size_t units;         // next trail position to propagate
@@ -178,8 +210,8 @@ struct Closure {
   void extract_gates ();
   void extract_and_gates_with_base_clause (Clause *c);
   void init_and_gate_extraction ();
-  Gate* find_first_and_gate (int lhs);
-  Gate *find_remaining_and_gate (int lhs);
+  Gate* find_first_and_gate (Clause *base_clause, int lhs);
+  Gate *find_remaining_and_gate (Clause *base_clause, int lhs);
   void extract_and_gates ();
 
   Gate* find_and_lits (const vector<int> &rhs);
@@ -237,7 +269,7 @@ struct Closure {
   
   void add_ite_matching_proof_chain(Gate *g, int lhs1, int lhs2);
   void add_ite_turned_and_binary_clauses (Gate *g);
-  Gate* new_and_gate(int);
+  Gate* new_and_gate(Clause *, int);
   Gate* new_ite_gate (int lhs, int cond, int then_lit, int else_lit);
   Gate* new_xor_gate(int);
   //check
@@ -246,7 +278,9 @@ struct Closure {
   void check_binary_implied (int a, int b);
   void check_implied ();
 
-  bool learn_congruence_unit(int unit);
+  bool learn_congruence_unit(int unit); // TODO remove and replace by _lrat version
+  void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int unit); 
+  void learn_congruence_unit_unit_lrat_chain (Gate *g, int unit); 
 
   void find_units();
   void find_equivalences();
@@ -272,12 +306,12 @@ struct Closure {
   
   // we define our own wrapper as cadical has otherwise a non-compatible marking system
   signed char& marked (int lit);
-  void mu1 (int lit, Clause *c);
-  void mu2 (int lit, Clause *c);
-  void mu4 (int lit, Clause *c);
-  uint64_t marked_mu1(int lit);
-  uint64_t marked_mu2(int lit);
-  uint64_t marked_mu4(int lit);
+  void set_mu1_reason (int lit, Clause *c);
+  void set_mu2_reason (int lit, Clause *c);
+  void set_mu4_reason (int lit, Clause *c);
+  LitClausePair marked_mu1(int lit);
+  LitClausePair marked_mu2(int lit);
+  LitClausePair marked_mu4(int lit);
   
   // negbincount (lit) -> noccs (-lit)
 

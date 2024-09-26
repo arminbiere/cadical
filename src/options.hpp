@@ -40,7 +40,7 @@ OPTION( checkassumptions,  1,  0,  1,0,0,0, "check assumptions satisfied") \
 OPTION( checkconstraint,   1,  0,  1,0,0,0, "check constraint satisfied") \
 OPTION( checkfailed,       1,  0,  1,0,0,0, "check failed literals form core") \
 OPTION( checkfrozen,       0,  0,  1,0,0,0, "check all frozen semantics") \
-OPTION( checkproof,        1,  0,  1,0,0,0, "1=drat, 2=lrat, 3=both") \
+OPTION( checkproof,        3,  0,  3,0,0,0, "1=drat, 2=lrat, 3=both") \
 OPTION( checkwitness,      1,  0,  1,0,0,0, "check witness internally") \
 OPTION( chrono,            1,  0,  2,0,0,1, "chronological backtracking") \
 OPTION( chronoalways,      0,  0,  1,0,0,1, "force always chronological") \
@@ -60,8 +60,8 @@ OPTION( congruence,        1,  0,  1,0,0,1, "congruence closure") \
 OPTION( congruenceand,     1,  0,  1,0,0,1, "extract AND gates") \
 OPTION( congruenceandarity,1e6,2,5e7,0,0,1, "AND gate arity limit") \
 OPTION( congruencebinaries,1,  0,  1,0,0,1, "extract binary and strengthen ternary clauses") \
-OPTION( congruenceite,     1,  0,  1,0,0,1, "extract ITE gates") \
-OPTION( congruencexor,     1,  0,  1,0,0,1, "extract XOR gates") \
+OPTION( congruenceite,     0,  0,  0,0,0,1, "extract ITE gates") \
+OPTION( congruencexor,     0,  0,  0,0,0,1, "extract XOR gates") \
 OPTION( congruencexorarity,4,  2, 31,0,0,1, "XOR gate arity limit") \
 OPTION( congruencexorcounts,1, 1,5e6,0,0,1, "XOR gate round") \
 OPTION( cover,             0,  0,  1,0,1,1, "covered clause elimination") \
@@ -105,7 +105,7 @@ OPTION( ematrailfast,    1e2,  1,2e9,0,0,1, "window fast trail") \
 OPTION( ematrailslow,    1e5,  1,2e9,0,0,1, "window slow trail") \
 OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
 OPTION( fastelim,          1,  0,  1,0,1,1, "fast BVE during preprocessing") \
-OPTION( fastelimbound,     7,  0,2e9,0,1,1, "fast BVE bound during preprocessing") \
+OPTION( fastelimbound,     7, -1,2e9,1,0,1, "fast BVE bound during preprocessing") \
 OPTION( flush,             0,  0,  1,0,0,1, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \
 OPTION( flushint,        1e5,  1,2e9,0,0,1, "initial limit") \

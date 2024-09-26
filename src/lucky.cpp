@@ -157,8 +157,11 @@ int Internal::forward_false_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
-    if (lucky_propagate_discrepency (-idx))
-      return unlucky (0);
+    if (lucky_propagate_discrepency (-idx)) {
+      if (unsat)
+	return 20;
+      else return unlucky (0);
+    }
   }
   VERBOSE (1, "forward assuming variables false satisfies formula");
   assert (satisfied ());
@@ -176,8 +179,11 @@ int Internal::forward_true_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
-    if (lucky_propagate_discrepency (idx))
-      return unlucky (0);
+    if (lucky_propagate_discrepency (idx)) {
+      if (unsat)
+	return 20;
+      else return unlucky (0);
+    }
   }
   VERBOSE (1, "forward assuming variables true satisfies formula");
   assert (satisfied ());
@@ -197,8 +203,11 @@ int Internal::backward_false_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
-    if (lucky_propagate_discrepency (-idx))
-      return unlucky (0);
+    if (lucky_propagate_discrepency (-idx)) {
+      if (unsat)
+	return 20;
+      else return unlucky (0);
+    }
   }
   VERBOSE (1, "backward assuming variables false satisfies formula");
   assert (satisfied ());
@@ -216,8 +225,11 @@ int Internal::backward_true_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
-    if (lucky_propagate_discrepency (idx))
-      return unlucky (0);
+    if (lucky_propagate_discrepency (idx)) {
+      if (unsat)
+	return 20;
+      else return unlucky (0);
+    }
   }
   VERBOSE (1, "backward assuming variables true satisfies formula");
   assert (satisfied ());
