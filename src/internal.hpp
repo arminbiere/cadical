@@ -523,6 +523,49 @@ struct Internal {
     assert (marked2 (lit));
   }
 
+  int getfact (int lit) const {
+    int res = marks[vidx (lit)];
+    if (lit < 0) {
+      res >>= 3;
+    } else {
+      res &= 7;
+    }
+    assert (!res || res == 1 || res == 2 || res == 4);
+    return res;
+  }
+
+  void markfact (int lit, int fact) {
+    assert (fact == 1 || fact == 2 || fact == 4);
+    assert (!getfact (lit));
+#ifndef NDEBUG
+    int before = getfact (-lit);
+#endif
+    int res = marks[vidx (lit)];
+    if (res < 0) {
+      res += fact << 3;
+    } else {
+      res += fact;
+    }
+    marks[vidx (lit)] = res;
+    assert (getfact (lit) == fact);
+#ifndef NDEBUG
+    assert (getfact (-lit) == before);
+#endif
+  }
+
+  void unmarkfact (int lit) {
+    int res = marks[vidx (lit)];
+    if (lit < 0) {
+      res &= 7;
+    } else {
+      res >>= 3;
+      res <<= 3;
+    }
+    marks[vidx (lit)] = res;
+    assert (!getfact (res));
+  }
+
+
   // Marking and unmarking of all literals in a clause.
   //
   void mark_clause (); // mark 'this->clause'

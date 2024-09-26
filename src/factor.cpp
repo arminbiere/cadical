@@ -2,6 +2,10 @@
 
 namespace CaDiCaL {
 
+#define FACTOR 1
+#define QUOTIENT 2
+#define NOUNTED 4
+
 inline bool factor_occs_size::operator() (unsigned a, unsigned b) {
   size_t s = internal->occs (internal->u2i (a)).size ();
   size_t t = internal->occs (internal->u2i (b)).size ();
@@ -108,17 +112,68 @@ Factoring::Factoring (Internal *i, int64_t l)
 Factoring::~Factoring () {
   assert (counted.empty ());
   assert (nounted.empty ());
-  assert (qlauses.empty ());
+  assert (flauses.empty ());
   // TODO: scores??
   // release_quotients (factoring);
   schedule.erase ();  // actually not necessary
 }
 
+double Internal::tied_next_factor_score (int lit) {
+  double res = occs (lit).size ();
+  LOG ("watches score %g of %d", res, lit);
+  return res;
+}
+
+// the marks in cadical have 6 bits for marking but work on idx
+// to mark everything (FACTOR, QUOTIENT, NOUNTED) we shift the bits
+// depending on the sign of factor (+ bitmask)
+// i.e. if factor is positive, we apply a bitmask to only get
+// the first three bits (& 7u)
+// otherwise we leftshift by 3 (>> 3) to get the bits 4,5,6
+// use markfact, unmarkfact, getfact for this purpose.
+//
+Quotient *Internal::new_quotient (Factoring &factoring, int factor) {
+  // TODO marks... reuse marks with getbit and so on...
+  assert (!getfact (factor));
+  markfact (factor, FACTOR);
+  Quotient *res = new Quotient ();
+  // memset (res, 0, sizeof *res);
+  // res->factor = factor;
+  // quotient *last = factoring->quotients.last;
+  // if (last) {
+  //   assert (factoring->quotients.first);
+  //   assert (!last->next);
+  //   last->next = res;
+  //   res->id = last->id + 1;
+  // } else {
+  //   assert (!factoring->quotients.first);
+  //   factoring->quotients.first = res;
+  // }
+  // factoring->quotients.last = res;
+  // res->prev = last;
+  // LOG ("new quotient[%zu] with factor %s", res->id, LOGLIT (factor));
+  return res;
+}
+
+
+size_t Internal::first_factor (Factoring &factoring, int factor) {
+  assert (!factoring.quotients.first);
+  Quotient *quotient = new_quotient (factoring, factor);
+  vector<Clause *> &qlauses = quotient->qlauses;
+  int64_t ticks = 0;
+  for (const auto &c : occs (factor)) {
+    qlauses.push_back (c);
+    ticks++;
+  }
+  size_t res = qlauses.size ();
+  LOG ("quotient[0] factor %d size %zu", factor, res);
+  assert (res > 1);
+  stats.factor_ticks += ticks;
+  return res;
+}
+
 /* kissat code commented below
  
-#define FACTOR 1
-#define QUOTIENT 2
-#define NOUNTED 4
 
 
 static void release_quotients (Factoring *factoring) {
@@ -138,55 +193,6 @@ static void release_quotients (Factoring *factoring) {
 
 
 
-static quotient *new_quotient (Factoring *factoring, unsigned factor) {
-  kissat *const solver = factoring->solver;
-  mark *marks = solver->marks;
-  assert (!marks[factor]);
-  marks[factor] = FACTOR;
-  quotient *res = kissat_malloc (solver, sizeof *res);
-  memset (res, 0, sizeof *res);
-  res->factor = factor;
-  quotient *last = factoring->quotients.last;
-  if (last) {
-    assert (factoring->quotients.first);
-    assert (!last->next);
-    last->next = res;
-    res->id = last->id + 1;
-  } else {
-    assert (!factoring->quotients.first);
-    factoring->quotients.first = res;
-  }
-  factoring->quotients.last = res;
-  res->prev = last;
-  LOG ("new quotient[%zu] with factor %s", res->id, LOGLIT (factor));
-  return res;
-}
-
-static size_t first_factor (Factoring *factoring, unsigned factor) {
-  kissat *const solver = factoring->solver;
-  watches *all_watches = solver->watches;
-  watches *factor_watches = all_watches + factor;
-  assert (!factoring->quotients.first);
-  quotient *quotient = new_quotient (factoring, factor);
-  statches *clauses = &quotient->clauses;
-  int64_t ticks = 0;
-  for (all_binary_large_watches (watch, *factor_watches)) {
-    PUSH_STACK (*clauses, watch);
-#ifndef NDEBUG
-    if (watch.type.binary)
-      continue;
-    const reference ref = watch.large.ref;
-    clause *const c = kissat_dereference_clause (solver, ref);
-    assert (!c->quotient);
-#endif
-    ticks++;
-  }
-  size_t res = SIZE_STACK (*clauses);
-  LOG ("quotient[0] factor %s size %zu", LOGLIT (factor), res);
-  assert (res > 1);
-  ADD (factor_ticks, ticks);
-  return res;
-}
 
 static void clear_nounted (kissat *solver, unsigneds *nounted) {
   mark *marks = solver->marks;
@@ -197,23 +203,16 @@ static void clear_nounted (kissat *solver, unsigneds *nounted) {
   CLEAR_STACK (*nounted);
 }
 
-static void clear_qlauses (kissat *solver, references *qlauses) {
+static void clear_flauses (kissat *solver, references *flauses) {
   ward *const arena = BEGIN_STACK (solver->arena);
-  for (all_stack (reference, ref, *qlauses)) {
+  for (all_stack (reference, ref, *flauses)) {
     clause *const c = (clause *) (arena + ref);
     assert (c->quotient);
     c->quotient = false;
   }
-  CLEAR_STACK (*qlauses);
+  CLEAR_STACK (*flauses);
 }
 
-static double tied_next_factor_score (Factoring *factoring, unsigned lit) {
-  kissat *const solver = factoring->solver;
-  watches *watches = solver->watches + lit;
-  double res = SIZE_WATCHES (*watches);
-  LOG ("watches score %g of %s", res, LOGLIT (lit));
-  return res;
-}
 
 static unsigned next_factor (Factoring *factoring,
                              unsigned *next_count_ptr) {
@@ -224,9 +223,9 @@ static unsigned next_factor (Factoring *factoring,
   watches *all_watches = solver->watches;
   unsigned *count = factoring->count;
   unsigneds *counted = &factoring->counted;
-  references *qlauses = &factoring->qlauses;
+  references *flauses = &factoring->flauses;
   assert (EMPTY_STACK (*counted));
-  assert (EMPTY_STACK (*qlauses));
+  assert (EMPTY_STACK (*flauses));
   ward *const arena = BEGIN_STACK (solver->arena);
   mark *marks = solver->marks;
   const unsigned initial = factoring->initial;
@@ -319,7 +318,7 @@ static unsigned next_factor (Factoring *factoring,
           marks[next] |= NOUNTED;
           PUSH_STACK (*nounted, next);
           d->quotient = true;
-          PUSH_STACK (*qlauses, d_ref);
+          PUSH_STACK (*flauses, d_ref);
           if (!count[next])
             PUSH_STACK (*counted, next);
           count[next]++;
@@ -335,7 +334,7 @@ static unsigned next_factor (Factoring *factoring,
     if (solver->statistics.factor_ticks > factoring->limit)
       break;
   }
-  clear_qlauses (solver, qlauses);
+  clear_flauses (solver, flauses);
   unsigned next_count = 0, next = INVALID_LIT;
   if (solver->statistics.factor_ticks <= factoring->limit) {
     unsigned ties = 0;
@@ -404,8 +403,8 @@ static void factorize_next (Factoring *factoring, unsigned next,
   statches *last_clauses = &last_quotient->clauses;
   statches *next_clauses = &next_quotient->clauses;
   sizes *matches = &next_quotient->matches;
-  references *qlauses = &factoring->qlauses;
-  assert (EMPTY_STACK (*qlauses));
+  references *flauses = &factoring->flauses;
+  assert (EMPTY_STACK (*flauses));
 
   int64_t ticks =
       1 + kissat_cache_lines (SIZE_STACK (*last_clauses), sizeof (watch));
@@ -478,7 +477,7 @@ static void factorize_next (Factoring *factoring, unsigned next,
           LOGCLS (d, "keeping");
           PUSH_STACK (*next_clauses, min_watch);
           PUSH_STACK (*matches, i);
-          PUSH_STACK (*qlauses, d_ref);
+          PUSH_STACK (*flauses, d_ref);
           d->quotient = true;
           break;
         CONTINUE_WITH_NEXT_MIN_WATCH:;
@@ -490,7 +489,7 @@ static void factorize_next (Factoring *factoring, unsigned next,
     i++;
   }
 
-  clear_qlauses (solver, qlauses);
+  clear_flauses (solver, flauses);
   ADD (factor_ticks, ticks);
 
   assert (expected_next_count <= SIZE_STACK (*next_clauses));

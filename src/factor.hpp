@@ -17,9 +17,9 @@ struct factor_occs_size {
 struct Quotient {
   size_t id;
   Quotient *prev, *next;
-  unsigned factor;
-  // statches clauses;  // TODO statches?
-  vector<size_t> matches;  // TODO sizes type correct?
+  int factor;
+  vector<Clause *> qlauses;
+  vector<size_t> matches;
   size_t matched;
 };
 
@@ -47,7 +47,7 @@ struct Factoring {
   vector<int> fresh;
   vector<unsigned> counted;
   vector<unsigned> nounted;
-  vector<Clause *> qlauses;
+  vector<Clause *> flauses;
   struct {
     Quotient *first, *last;
   } quotients;
