@@ -22,16 +22,19 @@ struct Scores {
 };
 
 struct Factoring {
+  Factoring (Internal *, uint64_t);
+  ~Factoring ();
+  Internal *internal;
+  uint64_t limit;
   size_t size, allocated;
   unsigned initial;
-  unsigned *count;
   Scores *scores;
   unsigned bound;
+  vector<unsigned> count;
   vector<unsigned> fresh;
   vector<unsigned> counted;
   vector<unsigned> nounted;
   vector<Clause *> qlauses;
-  uint64_t limit;
   struct {
     Quotient *first, *last;
   } quotients;

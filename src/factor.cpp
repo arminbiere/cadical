@@ -85,23 +85,32 @@ void Internal::reset_factor_mode () {
   connect_watches ();
 }
 
+Factoring::Factoring (Internal *i, uint64_t l)
+    : internal (i), limit (l) {
+  const unsigned max_var = internal->max_var;
+  const unsigned max_lit = 2 * (max_var + 1);
+  initial = allocated = size = max_var;
+  bound = internal->lim.elimbound;
+  enlarge_zero (count, max_lit);
+  scores = 0;
+  quotients.first = quotients.last = 0;
+}
+
+Factoring::~Factoring () {
+  assert (counted.empty ());
+  assert (nounted.empty ());
+  assert (qlauses.empty ());
+  // TODO: scores??
+  // release_quotients (factoring);
+  // kissat_release_heap (solver, &factoring->schedule);
+}
+
 /* kissat code commented below
  
 #define FACTOR 1
 #define QUOTIENT 2
 #define NOUNTED 4
 
-void Internal::init_factoring (Factoring *factoring, uint64_t limit) {
-  memset (factoring, 0, sizeof *factoring);
-  factoring->initial = factoring->allocated = factoring->size = LITS;
-  factoring->limit = limit;
-  factoring->bound = solver->bounds.eliminate.additional_clauses;
-  CALLOC (factoring->count, factoring->allocated);
-#ifndef NDEBUG
-  for (all_literals (lit))
-    assert (!solver->marks[lit]);
-#endif
-}
 
 static void release_quotients (Factoring *factoring) {
   kissat *const solver = factoring->solver;
@@ -118,26 +127,6 @@ static void release_quotients (Factoring *factoring) {
   factoring->quotients.first = factoring->quotients.last = 0;
 }
 
-static void release_factoring (Factoring *factoring) {
-  kissat *const solver = factoring->solver;
-  assert (EMPTY_STACK (solver->analyzed));
-  assert (EMPTY_STACK (factoring->counted));
-  assert (EMPTY_STACK (factoring->nounted));
-  assert (EMPTY_STACK (factoring->qlauses));
-  DEALLOC (factoring->count, factoring->allocated);
-  RELEASE_STACK (factoring->counted);
-  RELEASE_STACK (factoring->nounted);
-  RELEASE_STACK (factoring->fresh);
-  RELEASE_STACK (factoring->qlauses);
-  release_quotients (factoring);
-  kissat_release_heap (solver, &factoring->schedule);
-  assert (!(factoring->allocated & 1));
-  const size_t allocated_score = factoring->allocated / 2;
-#ifndef NDEBUG
-  for (all_literals (lit))
-    assert (!solver->marks[lit]);
-#endif
-}
 
 static void update_candidate (Factoring *factoring, unsigned lit) {
   heap *cands = &factoring->schedule;
@@ -878,11 +867,14 @@ static bool run_factorization (kissat *solver, uint64_t limit) {
 above is kissat code
 */
 
-bool Internal::run_factorization (int64_t limit) {
-  Factoring factoring; // = Factoring ();  TODO constructor?
-  // init_factoring (solver, &factoring, limit); TODO: this or constructor
+bool Internal::run_factorization (uint64_t limit) {
+  Factoring *factoring = new Factoring (this, limit); // TODO new or not new
+
+  // TODO: content
+  
   // report ('f', !factored);
-  // release_factoring (&factoring); TODO: this or destructor
+  delete factoring; // TODO: if factoring is not pointer it should automatically
+                    // call destructor upon leaving this function??
   return false;
 }
 

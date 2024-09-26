@@ -1108,7 +1108,7 @@ struct Internal {
 
   // factor
   void factor ();
-  bool run_factorization (int64_t limit);
+  bool run_factorization (uint64_t limit);
   void factor_mode ();
   void reset_factor_mode ();
   // void delete_all_factored (Factoring &);
