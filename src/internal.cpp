@@ -121,7 +121,6 @@ template <class T> static void enlarge_zero (vector<T> &v, size_t N) {
 /*------------------------------------------------------------------------*/
 
 void Internal::enlarge (int new_max_var) {
-  assert (!level || external_prop);
   size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var)
     new_vsize *= 2;
@@ -151,10 +150,10 @@ void Internal::enlarge (int new_max_var) {
   vsize = new_vsize;
 }
 
-void Internal::init_vars (int new_max_var) {
+void Internal::reserve_vars (int new_max_var) {
   if (new_max_var <= max_var)
     return;
-  if (level && !external_prop)
+  if (level && !external_prop && !opts.ilb)
     backtrack ();
   LOG ("initializing %d internal variables from %d to %d",
        new_max_var - max_var, max_var + 1, new_max_var);
@@ -170,14 +169,43 @@ void Internal::init_vars (int new_max_var) {
     assert (ptab[i] == -1);
 #endif
   assert (!btab[0]);
+  
   int old_max_var = max_var;
   max_var = new_max_var;
-  init_queue (old_max_var, new_max_var);
-  init_scores (old_max_var, new_max_var);
   int initialized = new_max_var - old_max_var;
   stats.vars += initialized;
   stats.unused += initialized;
   stats.inactive += initialized;
+  assert (initialized);
+  LOG ("finished reserving %d variables", initialized);
+}
+
+void Internal::init_vars (int new_max_var) {
+  int old_max_var = max_var;
+  for (auto v : vars) {
+    if (flags (v).unused ()) {
+      LOG ("not enqueueed %d", v);
+      assert (!scores.contains(v));
+    }
+  }
+  reserve_vars (new_max_var);
+  if (new_max_var <= max_var){
+    
+    if (flags (new_max_var).unused()) {
+      mark_active (new_max_var);
+    }
+    return;
+  }
+  if (level && !external_prop && !opts.ilb)
+    backtrack ();
+  int initialized = new_max_var - old_max_var;
+  max_var = new_max_var;
+  --stats.unused;
+  --stats.inactive;
+  ++stats.active;
+  
+  // init_queue (old_max_var, new_max_var);
+  // init_scores (old_max_var, new_max_var);
   LOG ("finished initializing %d internal variables", initialized);
 }
 

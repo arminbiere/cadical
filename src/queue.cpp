@@ -64,21 +64,28 @@ void Internal::shuffle_queue () {
   LOG ("shuffling queue");
   vector<int> shuffle;
   if (opts.shufflerandom) {
-    for (int idx = max_var; idx; idx--)
-      shuffle.push_back (idx);
+    for (int idx = max_var; idx; idx--) {
+      if (!flags (idx).unused ())
+	shuffle.push_back (idx);
+    }
     Random random (opts.seed); // global seed
     random += stats.shuffled;  // different every time
-    for (int i = 0; i <= max_var - 2; i++) {
-      const int j = random.pick_int (i, max_var - 1);
+    const int size = shuffle.size ();
+    for (int i = 0; i <= size - 2; i++) {
+      const int j = random.pick_int (i, size-1);
       swap (shuffle[i], shuffle[j]);
     }
   } else {
-    for (int idx = queue.last; idx; idx = links[idx].prev)
+    for (int idx = queue.last; idx; idx = links[idx].prev){
+      assert (!flags (idx).unused ());
       shuffle.push_back (idx);
+    }
   }
   queue.first = queue.last = 0;
-  for (const int idx : shuffle)
+  for (const int idx : shuffle) {
+    assert (!flags (idx).unused ());
     queue.enqueue (links, idx);
+  }
   int64_t bumped = queue.bumped;
   for (int idx = queue.last; idx; idx = links[idx].prev)
     btab[idx] = bumped--;

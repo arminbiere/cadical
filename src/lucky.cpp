@@ -63,6 +63,8 @@ int Internal::trivially_false_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
+    if (flags (idx).unused ())
+      continue;
     search_assume_decision (-idx);
     if (propagate ())
       continue;
@@ -110,6 +112,8 @@ int Internal::trivially_true_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
+    if (flags (idx).unused())
+      continue;
     search_assume_decision (idx);
     if (propagate ())
       continue;
@@ -133,6 +137,8 @@ int Internal::forward_false_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
+    if (flags (idx).unused())
+      continue;
     search_assume_decision (-idx);
     if (!propagate ())
       return unlucky (0);
@@ -152,6 +158,8 @@ int Internal::forward_true_satisfiable () {
     if (terminated_asynchronously (10))
       return unlucky (-1);
     if (val (idx))
+      continue;
+    if (flags (idx).unused())
       continue;
     search_assume_decision (idx);
     if (!propagate ())
@@ -175,6 +183,8 @@ int Internal::backward_false_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
+    if (flags (idx).unused ())
+      continue;
     search_assume_decision (-idx);
     if (!propagate ())
       return unlucky (0);
@@ -194,6 +204,8 @@ int Internal::backward_true_satisfiable () {
     if (terminated_asynchronously (10))
       return unlucky (-1);
     if (val (idx))
+      continue;
+    if (flags (idx).unused ())
       continue;
     search_assume_decision (idx);
     if (!propagate ())
@@ -259,6 +271,8 @@ int Internal::positive_horn_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
+    if (flags (idx).unused())
+      continue;
     search_assume_decision (-idx);
     if (propagate ())
       continue;
@@ -319,6 +333,8 @@ int Internal::negative_horn_satisfiable () {
     if (terminated_asynchronously (10))
       return unlucky (-1);
     if (val (idx))
+      continue;
+    if (flags (idx).unused ())
       continue;
     search_assume_decision (idx);
     if (propagate ())

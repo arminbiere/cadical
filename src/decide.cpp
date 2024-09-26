@@ -96,15 +96,21 @@ void Internal::new_trail_level (int lit) {
 /*------------------------------------------------------------------------*/
 
 bool Internal::satisfied () {
+  assert (num_assigned <= (size_t) max_var);
+  assert (stats.active <= (size_t) max_var);
+  const size_t number_lits = max_var - stats.unused;
+
   if ((size_t) level < assumptions.size () + (!!constraint.size ()))
     return false;
-  if (num_assigned < (size_t) max_var)
+  if (num_assigned < number_lits)
     return false;
-  assert (num_assigned == (size_t) max_var);
+  assert (num_assigned == number_lits);
   if (propagated < trail.size ())
     return false;
   size_t assigned = num_assigned;
-  return (assigned == (size_t) max_var);
+  // this only holds at the very end when all eliminated and subsituted have been decided, so checking here
+  assert (number_lits == (size_t) stats.active + stats.now.fixed + stats.now.eliminated + stats.now.substituted + stats.now.pure);
+  return (assigned == number_lits);
 }
 
 bool Internal::better_decision (int lit, int other) {

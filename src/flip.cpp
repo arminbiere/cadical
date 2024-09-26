@@ -8,7 +8,8 @@ bool Internal::flip (int lit) {
 
   if (!active (lit) && !flags (lit).unused ())
     return false;
-
+  if (flags (lit).unused ())
+    return true;
   // Need to reestablish proper watching invariants as if there are no
   // blocking literals as flipping in principle does not work with them.
 
@@ -156,7 +157,9 @@ bool Internal::flippable (int lit) {
 
   if (!active (lit) && !flags (lit).unused ())
     return false;
-
+  if (flags (lit).unused ())
+    return true;
+  
   // Need to reestablish proper watching invariants as if there are no
   // blocking literals as flipping in principle does not work with them.
 

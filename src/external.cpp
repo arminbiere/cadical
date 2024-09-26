@@ -35,7 +35,7 @@ void External::init (int new_max_var) {
   int new_vars = new_max_var - max_var;
   int old_internal_max_var = internal->max_var;
   int new_internal_max_var = old_internal_max_var + new_vars;
-  internal->init_vars (new_internal_max_var);
+  internal->reserve_vars (new_internal_max_var);
   if ((size_t) new_max_var >= vsize)
     enlarge (new_max_var);
   LOG ("initialized %d external variables", new_vars);

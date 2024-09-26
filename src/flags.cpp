@@ -76,6 +76,8 @@ void Internal::mark_active (int lit) {
   assert (stats.unused);
   stats.unused--;
   stats.active++;
+  init_enqueue (abs (lit));
+  scores.push_back (abs (lit));
   assert (active (lit));
 }
 

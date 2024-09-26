@@ -187,6 +187,7 @@ void Internal::assign_unit (int lit) {
 void Internal::search_assume_decision (int lit) {
   require_mode (SEARCH);
   assert (propagated == trail.size ());
+  assert (!flags (lit).unused ());
   new_trail_level (lit);
   notify_decision ();
   LOG ("search decide %d", lit);

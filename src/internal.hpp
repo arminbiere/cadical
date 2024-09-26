@@ -301,6 +301,9 @@ struct Internal {
   //
   void init_vars (int new_max_var);
 
+  // Similar to reserve_vars, but it does not add the variable to the problem.
+  void reserve_vars (int new_max_var);
+
   void init_enqueue (int idx);
   void init_queue (int old_max_var, int new_max_var);
 
