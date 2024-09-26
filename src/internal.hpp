@@ -523,6 +523,8 @@ struct Internal {
     assert (marked2 (lit));
   }
 
+  // marks bits 1,2,3 and 4,5,6 depending on fact and sign of lit
+  //
   int getfact (int lit) const {
     int res = marks[vidx (lit)];
     if (lit < 0) {

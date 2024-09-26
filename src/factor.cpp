@@ -133,25 +133,24 @@ double Internal::tied_next_factor_score (int lit) {
 // use markfact, unmarkfact, getfact for this purpose.
 //
 Quotient *Internal::new_quotient (Factoring &factoring, int factor) {
-  // TODO marks... reuse marks with getbit and so on...
   assert (!getfact (factor));
   markfact (factor, FACTOR);
-  Quotient *res = new Quotient ();
-  // memset (res, 0, sizeof *res);
-  // res->factor = factor;
-  // quotient *last = factoring->quotients.last;
-  // if (last) {
-  //   assert (factoring->quotients.first);
-  //   assert (!last->next);
-  //   last->next = res;
-  //   res->id = last->id + 1;
-  // } else {
-  //   assert (!factoring->quotients.first);
-  //   factoring->quotients.first = res;
-  // }
-  // factoring->quotients.last = res;
-  // res->prev = last;
-  // LOG ("new quotient[%zu] with factor %s", res->id, LOGLIT (factor));
+  Quotient *res = new Quotient (factor);
+  res->next = 0;
+  res->matched = 0;
+  quotient *last = factoring.quotients.last;
+  if (last) {
+    assert (factoring.quotients.first);
+    assert (!last->next);
+    last->next = res;
+    res->id = last->id + 1;
+  } else {
+    assert (!factoring.quotients.first);
+    factoring.quotients.first = res;
+  }
+  factoring.quotients.last = res;
+  res->prev = last;
+  LOG ("new quotient[%zu] with factor %d", res->id, factor);
   return res;
 }
 
@@ -173,8 +172,6 @@ size_t Internal::first_factor (Factoring &factoring, int factor) {
 }
 
 /* kissat code commented below
- 
-
 
 static void release_quotients (Factoring *factoring) {
   kissat *const solver = factoring->solver;
