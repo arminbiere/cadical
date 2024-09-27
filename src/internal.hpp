@@ -558,7 +558,7 @@ struct Internal {
 
   void unmarkfact (int lit, int fact) {
     assert (fact == 1 || fact == 2 || fact == 4);
-    assert (getfact (res, fact));
+    assert (getfact (lit, fact));
     int res = marks[vidx (lit)];
     if (lit < 0) {
       res &= ~(fact << 3);
@@ -1159,7 +1159,7 @@ struct Internal {
   void tied_next_factor_score (int);
   void new_quotient (Factoring &, int);
   void release_quotients (Factoring &);
-  void first_factor (Factoring &, int);
+  size_t first_factor (Factoring &, int);
   void clear_nounted (vector<int> &);
   void clear_flauses (vector<Clause *> &);
   Quotient *best_quotient (Factoring &, size_t *);

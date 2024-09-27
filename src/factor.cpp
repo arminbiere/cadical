@@ -448,7 +448,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
         unmarkfact (other, QUOTIENT);
     i++;
   }
-  clear_flauses (solver, flauses);
+  clear_flauses (flauses);
   stats.factor_ticks += ticks;
 
   assert (expected_next_count <= next_clauses.size ());
@@ -473,6 +473,7 @@ void Internal::resize_factoring (Factoring &factoring, int lit) {
   factoring.size = new_var_size;
 }
 
+// TODO: this is not done yet
 void Internal::flush_unmatched_clauses (Quotient *q) {
   Quotient *prev = q->prev;
   vector<size_t> &q_matches = q->matches, &prev_matches = prev->matches;
@@ -497,7 +498,6 @@ void Internal::flush_unmatched_clauses (Quotient *q) {
   if (!prev_is_first)
     RESIZE_STACK (*prev_matches, n);
   RESIZE_STACK (*prev_clauses, n);
-  (void) solver;
 }
 
 
@@ -521,7 +521,7 @@ void Internal::add_factored_quotient (Factoring &factoring, Quotient *q,
 #ifndef NDEBUG
     bool found = false;
 #endif
-    for (const auto &other : c) {
+    for (const auto &other : *c) {
       if (other == factor) {
 #ifndef NDEBUG
         found = true;
@@ -584,7 +584,7 @@ bool Internal::apply_factoring (Factoring &factoring, Quotient *q) {
   stats.factored++;
   factoring.fresh.push_back (fresh);
   for (Quotient *p = q; p->prev; p = p->prev)
-    flush_unmatched_clauses (solver, p);
+    flush_unmatched_clauses (p);
   for (Quotient *p = q; p; p = p->prev)
     add_factored_divider (factoring, p, fresh);
   const int not_fresh = -fresh;
@@ -659,9 +659,9 @@ bool Internal::run_factorization (int64_t limit) {
       break;
     Flags &f = flags (first_idx);
     const unsigned bit = 1u << (first < 0);
-    if (!(f->factor & bit))
+    if (!(f.factor & bit))
       continue;
-    f->factor &= ~bit;
+    f.factor &= ~bit;
     const size_t first_count = first_factor (factoring, first);
     if (first_count > 1) {
       for (;;) {
