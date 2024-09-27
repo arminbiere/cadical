@@ -1164,6 +1164,7 @@ struct Internal {
   void clear_flauses (vector<Clause *> &);
   Quotient *best_quotient (Factoring &, size_t *);
   int next_factor (Factoring &, unsigned *);
+  void factorize_next (Factoring &, int, unsigned);
   void update_factor_candidate (Factoring &, int);
   void schedule_factorization (Factoring &);
   bool run_factorization (int64_t limit);

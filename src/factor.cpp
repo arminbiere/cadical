@@ -247,7 +247,7 @@ int Internal::next_factor (Factoring &factoring,
   assert (flauses.empty ());
   const int initial = factoring.initial;
   int64_t ticks = 1; // TODO: + kissat_cache_lines (SIZE_STACK (*last_clauses), sizeof (watch));
-  for (auto c : last_clauses)) {
+  for (auto c : last_clauses) {
     assert (!c->quotient);
     int min_lit = 0;
     unsigned factors = 0;
@@ -372,116 +372,90 @@ int Internal::next_factor (Factoring &factoring,
   return next;
 }
 
-/* kissat code commented below
 
 
-
-static void factorize_next (Factoring &factoring, unsigned next,
-                            unsigned expected_next_count) {
+void Internal::factorize_next (Factoring &factoring, int next,
+                              unsigned expected_next_count) {
   Quotient *last_quotient = factoring.quotients.last;
   Quotient *next_quotient = new_quotient (factoring, next);
 
-  kissat *const solver = factoring.solver;
-  watches *all_watches = solver->watches;
-  ward *const arena = BEGIN_STACK (solver->arena);
-  mark *marks = solver->marks;
-
   assert (last_quotient);
-  statches *last_clauses = &last_quotient->clauses;
-  statches *next_clauses = &next_quotient->clauses;
-  sizes *matches = &next_quotient->matches;
-  references *flauses = &factoring.flauses;
-  assert (EMPTY_STACK (*flauses));
+  vector<Clause *> &last_clauses = last_quotient->qlauses;
+  vector<Clause *> &next_clauses = next_quotient->qlauses;
+  vector<size_t> &matches = next_quotient->matches;
+  vector<Clause *> &flauses = factoring.flauses;
+  assert (flauses.empty ());
 
-  int64_t ticks =
-      1 + kissat_cache_lines (SIZE_STACK (*last_clauses), sizeof (watch));
+  int64_t ticks = 1;
+  //    1 + kissat_cache_lines (SIZE_STACK (*last_clauses), sizeof (watch));
 
   size_t i = 0;
 
-  for (all_stack (watch, last_watch, *last_clauses)) {
-    if (last_watch.type.binary) {
-      const unsigned q = last_watch.binary.lit;
-      watches *q_watches = all_watches + q;
-      ticks += 1 + kissat_cache_lines (SIZE_WATCHES (*q_watches),
-                                       sizeof (watch));
-      for (all_binary_large_watches (q_watch, *q_watches))
-        if (q_watch.type.binary && q_watch.binary.lit == next) {
-          LOGBINARY (last_quotient->factor, q, "matched");
-          LOGBINARY (next, q, "keeping");
-          PUSH_STACK (*next_clauses, last_watch);
-          PUSH_STACK (*matches, i);
+  for (auto c : last_clauses) {
+    assert (!c->quotient);
+    int min_lit = 0;
+    unsigned factors = 0;
+    size_t min_size = 0;
+    ticks++;
+    for (const auto &other : *c) {
+      if (getfact (other, FACTORS)) {
+        if (factors++)
           break;
-        }
-    } else {
-      const reference c_ref = last_watch.large.ref;
-      clause *const c = (clause *) (arena + c_ref);
-      assert (!c->quotient);
-      unsigned min_lit = INVALID_LIT, factors = 0;
-      size_t min_size = 0;
-      ticks++;
-      for (all_literals_in_clause (other, c)) {
-        if (marks[other] & FACTORS) {
-          if (factors++)
-            break;
-        } else {
-          assert (!(marks[other] & QUOTIENT));
-          marks[other] |= QUOTIENT;
-          watches *other_watches = all_watches + other;
-          const size_t other_size = SIZE_WATCHES (*other_watches);
-          if (min_lit != INVALID_LIT && min_size <= other_size)
-            continue;
+      } else {
+        assert (!getfact (other, QUOTIENT));
+        markfact (other, QUOTIENT);
+        const size_t other_size = occs (other).size ();
+        if (!min_lit || other_size < min_size) {
           min_lit = other;
           min_size = other_size;
         }
       }
-      assert (factors);
-      if (factors == 1) {
-        assert (min_lit != INVALID_LIT);
-        watches *min_watches = all_watches + min_lit;
-        unsigned c_size = c->size;
-        ticks += 1 + kissat_cache_lines (SIZE_STACK (*min_watches),
-                                         sizeof (watch));
-        for (all_binary_large_watches (min_watch, *min_watches)) {
-          if (min_watch.type.binary)
-            continue;
-          const reference d_ref = min_watch.large.ref;
-          if (c_ref == d_ref)
-            continue;
-          clause *const d = (clause *) (arena + d_ref);
-          ticks++;
-          if (d->quotient)
-            continue;
-          if (d->size != c_size)
-            continue;
-          for (all_literals_in_clause (other, d)) {
-            const mark mark = marks[other];
-            if (mark & QUOTIENT)
-              continue;
-            if (other != next)
-              goto CONTINUE_WITH_NEXT_MIN_WATCH;
-          }
-          LOGCLS (c, "matched");
-          LOGCLS (d, "keeping");
-          PUSH_STACK (*next_clauses, min_watch);
-          PUSH_STACK (*matches, i);
-          PUSH_STACK (*flauses, d_ref);
-          d->quotient = true;
-          break;
-        CONTINUE_WITH_NEXT_MIN_WATCH:;
-        }
-      }
-      for (all_literals_in_clause (other, c))
-        marks[other] &= ~QUOTIENT;
     }
+    assert (factors);
+    if (factors == 1) {
+      assert (min_lit);
+      const unsigned c_size = c->size;
+      ticks += 1; //  + kissat_cache_lines (SIZE_STACK (*min_watches),
+                 //                      sizeof (watch));
+      for (auto d : occs (min_lit)) {
+        if (c == d)
+          continue;
+        ticks++;
+        if (d->quotient)
+          continue;
+        if (d->size != c_size)
+          continue;
+        for (const auto &other : d) {
+          if (getfact (other, QUOTIENT))
+            continue;
+          if (other != next)
+            goto CONTINUE_WITH_NEXT_MIN_WATCH;
+        }
+        LOG (c, "matched");
+        LOG (d, "keeping");
+        
+        next_clauses.push_back (d);
+        matches.push_back (i);
+        flauses.push_back (d);
+        d->quotient = true;
+        break;
+
+      CONTINUE_WITH_NEXT_MIN_WATCH:;
+      }
+    }
+    for (const auto &other : *c)
+      if (getfact (other, QUOTIENT))
+        unmarkfact (other, QUOTIENT);
     i++;
   }
-
   clear_flauses (solver, flauses);
-  ADD (factor_ticks, ticks);
+  stats.factor_ticks += ticks;
 
-  assert (expected_next_count <= SIZE_STACK (*next_clauses));
+  assert (expected_next_count <= next_clauses.size ());
   (void) expected_next_count;
 }
+
+/* kissat code commented below
 
 
 static void resize_factoring (Factoring &factoring, unsigned lit) {
