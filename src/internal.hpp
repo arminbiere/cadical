@@ -1156,8 +1156,8 @@ struct Internal {
   // factor
   void factor_mode ();
   void reset_factor_mode ();
-  void tied_next_factor_score (int);
-  void new_quotient (Factoring &, int);
+  double tied_next_factor_score (int);
+  Quotient *new_quotient (Factoring &, int);
   void release_quotients (Factoring &);
   size_t first_factor (Factoring &, int);
   void clear_nounted (vector<int> &);

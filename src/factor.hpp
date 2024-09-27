@@ -48,7 +48,7 @@ struct Factoring {
   vector<unsigned> count;
   vector<int> fresh;
   vector<int> counted;
-  vector<unsigned> nounted;
+  vector<int> nounted;
   vector<Clause *> flauses;
   struct {
     Quotient *first, *last;

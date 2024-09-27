@@ -114,7 +114,7 @@ Factoring::~Factoring () {
   assert (nounted.empty ());
   assert (flauses.empty ());
   // TODO: scores??
-  internal->release_quotients (factoring);
+  internal->release_quotients (*this);
   schedule.erase ();  // actually not necessary
 }
 
@@ -193,8 +193,8 @@ void Internal::clear_nounted (vector<int> &nounted) {
 
 void Internal::clear_flauses (vector<Clause *> &flauses) {
   for (auto c : flauses) {
-    assert (c->quotient);
-    c->quotient = false;
+    assert (c->swept);
+    c->swept = false;
   }
   flauses.clear ();
 }
@@ -240,15 +240,15 @@ int Internal::next_factor (Factoring &factoring,
   Quotient *last_quotient = factoring.quotients.last;
   assert (last_quotient);
   vector<Clause *> &last_clauses = last_quotient->qlauses;
-  unsigned &count = factoring.count;
-  vector<unsigned> &counted = factoring.counted;
-  vector<Clause *> &flauses = &factoring.flauses;
+  vector<unsigned> &count = factoring.count;
+  vector<int> &counted = factoring.counted;
+  vector<Clause *> &flauses = factoring.flauses;
   assert (counted.empty ());
   assert (flauses.empty ());
   const int initial = factoring.initial;
   int64_t ticks = 1; // TODO: + kissat_cache_lines (SIZE_STACK (*last_clauses), sizeof (watch));
   for (auto c : last_clauses) {
-    assert (!c->quotient);
+    assert (!c->swept);
     int min_lit = 0;
     unsigned factors = 0;
     size_t min_size = 0;
@@ -270,22 +270,22 @@ int Internal::next_factor (Factoring &factoring,
     assert (factors);
     if (factors == 1) {
       assert (min_lit);
-      const unsigned c_size = c->size;
-      vector<unsigned> &nounted = factoring.nounted;
+      const int c_size = c->size;
+      vector<int> &nounted = factoring.nounted;
       assert (nounted.empty ());
       ticks += 1; // + kissat_cache_lines (SIZE_WATCHES (*min_watches), sizeof (watch));
       for (auto d : occs (min_lit)) {
         if (c == d) continue;
         ticks++;
-        if (d->quotient) continue;
+        if (d->swept) continue;
         if (d->size != c_size) continue;
         int next = 0;
         for (const auto &other : *d) {
-          if (getmark (other, QUOTIENT))
+          if (getfact (other, QUOTIENT))
             continue;
-          if (getmark (other, FACTORS))
+          if (getfact (other, FACTORS))
             goto CONTINUE_WITH_NEXT_MIN_WATCH;
-          if (getmark (other, NOUNTED))
+          if (getfact (other, NOUNTED))
             goto CONTINUE_WITH_NEXT_MIN_WATCH;
           if (next)
             goto CONTINUE_WITH_NEXT_MIN_WATCH;
@@ -300,7 +300,7 @@ int Internal::next_factor (Factoring &factoring,
         assert (!getfact (next, NOUNTED));
         markfact (next, NOUNTED);
         nounted.push_back (next);
-        d->quotient = true;
+        d->swept = true;
         flauses.push_back (d);
         if (!count[vlit (next)])
           counted.push_back (next);
@@ -347,7 +347,7 @@ int Internal::next_factor (Factoring &factoring,
         const unsigned lit_count = count[lit];
         if (lit_count != next_count)
           continue;
-        double lit_score = tied_next_factor_score (factoring, lit);
+        double lit_score = tied_next_factor_score (lit);
         assert (lit_score >= 0);
         LOG ("score %g of next factor candidate %d", lit_score, lit);
         if (lit_score <= next_score)
@@ -392,7 +392,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
   size_t i = 0;
 
   for (auto c : last_clauses) {
-    assert (!c->quotient);
+    assert (!c->swept);
     int min_lit = 0;
     unsigned factors = 0;
     size_t min_size = 0;
@@ -414,18 +414,18 @@ void Internal::factorize_next (Factoring &factoring, int next,
     assert (factors);
     if (factors == 1) {
       assert (min_lit);
-      const unsigned c_size = c->size;
+      const int c_size = c->size;
       ticks += 1; //  + kissat_cache_lines (SIZE_STACK (*min_watches),
                  //                      sizeof (watch));
       for (auto d : occs (min_lit)) {
         if (c == d)
           continue;
         ticks++;
-        if (d->quotient)
+        if (d->swept)
           continue;
         if (d->size != c_size)
           continue;
-        for (const auto &other : d) {
+        for (const auto &other : *d) {
           if (getfact (other, QUOTIENT))
             continue;
           if (other != next)
@@ -437,7 +437,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
         next_clauses.push_back (d);
         matches.push_back (i);
         flauses.push_back (d);
-        d->quotient = true;
+        d->swept = true;
         break;
 
       CONTINUE_WITH_NEXT_MIN_WATCH:;
@@ -458,7 +458,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
 void Internal::resize_factoring (Factoring &factoring, int lit) {
   assert (lit > 0);
   const size_t old_size = factoring.size;
-  assert (lit > old_size);
+  assert ((size_t) lit > old_size);
   const size_t old_allocated = factoring.allocated;
   size_t new_var_size = lit + 1;
   size_t new_lit_size = 2 * new_var_size;
@@ -467,7 +467,7 @@ void Internal::resize_factoring (Factoring &factoring, int lit) {
   // TODO: maybe exponential resize ?
   // or remove allocated...
   if (new_size > old_allocated) {
-    factoring.count.enlarge_zero (new_lit_size);
+    enlarge_zero (factoring.count, new_lit_size);
     factoring.allocated = new_var_size;
   }
   factoring.size = new_var_size;
@@ -541,7 +541,9 @@ void Internal::add_factored_quotient (Factoring &factoring, Quotient *q,
 void Internal::eagerly_remove_from_occurences (Clause *c) {
   for (const auto &lit : *c) {
     auto &occ = occs (lit);
-    auto p = q = begin = occ.begin ();
+    auto p = occ.begin ();
+    auto q = occ.begin ();
+    auto begin = occ.begin ();
     auto end = occ.end ();
     while (p != end) {
       *q++ = *p++;
