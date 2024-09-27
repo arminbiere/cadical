@@ -1,3 +1,13 @@
+Version 2.1.0
+-------------
+
+- The semantic of reserve is now closer to 'reserve' from
+  std::vector: it prepares the solver to receive that many literals
+  without declaring them. They are only really declared when they appear
+  in a clause. You can still (for now) ask for value, flip,...
+  even if the literal does not appear in any clause.
+
+
 Version 2.0.0
 -------------
 

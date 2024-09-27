@@ -189,11 +189,10 @@ void Internal::init_vars (int new_max_var) {
     }
   }
   reserve_vars (new_max_var);
-  if (new_max_var <= max_var){
-    
-    if (flags (new_max_var).unused()) {
-      mark_active (new_max_var);
-    }
+  if (flags (new_max_var).unused ()) {
+    mark_active (new_max_var);
+  }
+  if (new_max_var <= max_var) {
     return;
   }
   if (level && !external_prop && !opts.ilb)
