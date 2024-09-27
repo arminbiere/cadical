@@ -540,11 +540,16 @@ Clause *Internal::new_hyper_ternary_resolved_clause (bool red) {
 Clause *Internal::new_factor_clause () {
   external->check_learned_clause ();
   stats.factor_added++;
+  stats.literals_factored += clause.size ();
   Clause *res = new_clause (false, 0);
   if (proof) {
     proof->add_derived_clause (res, lrat_chain);
   }
   assert (!watching ());
+  assert (occurring ());
+  for (const auto &lit : *res) {
+    occs (lit).push_back (res);
+  }
   return res;
 }
 

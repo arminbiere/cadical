@@ -1165,6 +1165,14 @@ struct Internal {
   Quotient *best_quotient (Factoring &, size_t *);
   int next_factor (Factoring &, unsigned *);
   void factorize_next (Factoring &, int, unsigned);
+  void resize_factoring (Factoring &factoring, int lit);
+  void flush_unmatched_clauses (Quotient *);
+  void add_factored_divider (Factoring &, Quotient *, int);
+  void add_factored_quotient (Factoring &, Quotient *, int not_fresh);
+  void eagerly_remove_from_occurences (Clause *c);
+  void delete_unfactored (Factoring &factoring, Quotient *q);
+  void update_factored (Factoring &factoring, Quotient *q);
+  bool apply_factoring (Factoring &factoring, Quotient *q);
   void update_factor_candidate (Factoring &, int);
   void schedule_factorization (Factoring &);
   bool run_factorization (int64_t limit);

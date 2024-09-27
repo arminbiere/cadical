@@ -455,42 +455,30 @@ void Internal::factorize_next (Factoring &factoring, int next,
   (void) expected_next_count;
 }
 
-/* kissat code commented below
-
-
-static void resize_factoring (Factoring &factoring, unsigned lit) {
-  kissat *const solver = factoring.solver;
-  assert (lit > NOT (lit));
+void Internal::resize_factoring (Factoring &factoring, int lit) {
+  assert (lit > 0);
   const size_t old_size = factoring.size;
   assert (lit > old_size);
   const size_t old_allocated = factoring.allocated;
-  size_t new_size = lit + 1;
+  size_t new_var_size = lit + 1;
+  size_t new_lit_size = 2 * new_var_size;
+  
+  // since we have vectors instead of arrays as in kissat this is easy
+  // TODO: maybe exponential resize ?
+  // or remove allocated...
   if (new_size > old_allocated) {
-    size_t new_allocated = 2 * old_allocated;
-    while (new_size > new_allocated)
-      new_allocated *= 2;
-    unsigned *count = factoring.count;
-    count = kissat_nrealloc (solver, count, old_allocated, new_allocated,
-                             sizeof *count);
-    const size_t delta_allocated = new_allocated - old_allocated;
-    const size_t delta_bytes = delta_allocated * sizeof *count;
-    memset (count + old_size, 0, delta_bytes);
-    factoring.count = count;
-    assert (!(old_allocated & 1));
-    assert (!(new_allocated & 1));
-    const size_t old_allocated_score = old_allocated / 2;
-    const size_t new_allocated_score = new_allocated / 2;
-    factoring.allocated = new_allocated;
+    factoring.count.enlarge_zero (new_lit_size);
+    factoring.allocated = new_var_size;
   }
-  factoring.size = new_size;
+  factoring.size = new_var_size;
 }
 
-static void flush_unmatched_clauses (kissat *solver, Quotient *q) {
+void Internal::flush_unmatched_clauses (Quotient *q) {
   Quotient *prev = q->prev;
-  sizes *q_matches = &q->matches, *prev_matches = &prev->matches;
-  statches *q_clauses = &q->clauses, *prev_clauses = &prev->clauses;
-  const size_t n = SIZE_STACK (*q_clauses);
-  assert (n == SIZE_STACK (*q_matches));
+  vector<size_t> &q_matches = q->matches, &prev_matches = prev->matches;
+  vector<Clause *> &q_clauses = q->qlauses, &prev_clauses = prev->qlauses;
+  const size_t n = q_clauses.size ();
+  assert (n == q_matches.size ());
   bool prev_is_first = !prev->id;
   size_t i = 0;
   while (i != n) {
@@ -512,142 +500,104 @@ static void flush_unmatched_clauses (kissat *solver, Quotient *q) {
   (void) solver;
 }
 
-static void add_factored_divider (Factoring &factoring, Quotient *q,
-                                  unsigned fresh) {
-  const unsigned factor = q->factor;
-  kissat *const solver = factoring.solver;
-  LOGBINARY (fresh, factor, "factored %s divider", LOGLIT (factor));
-  kissat_new_binary_clause (solver, fresh, factor);
-  INC (clauses_factored);
-  ADD (literals_factored, 2);
+
+// TODO: LRAT, occs of new clauses ??
+void Internal::add_factored_divider (Factoring &factoring, Quotient *q,
+                                  int fresh) {
+  const int factor = q->factor;
+  LOG ("factored %d divider %d", factor, fresh);
+  clause.push_back (factor);
+  clause.push_back (fresh);
+  new_factor_clause ();
+  clause.clear ();
 }
 
-static void add_factored_quotient (Factoring &factoring, Quotient *q,
-                                   unsigned not_fresh) {
-  kissat *const solver = factoring.solver;
+// TODO: LRAT, occs of new clauses ??
+void Internal::add_factored_quotient (Factoring &factoring, Quotient *q,
+                                   int not_fresh) {
   LOG ("adding factored quotient[%zu] clauses", q->id);
-  for (all_stack (watch, watch, q->clauses)) {
-    if (watch.type.binary) {
-      const unsigned other = watch.binary.lit;
-      LOGBINARY (not_fresh, other, "factored quotient");
-      kissat_new_binary_clause (solver, not_fresh, other);
-      ADD (literals_factored, 2);
-    } else {
-      const reference c_ref = watch.large.ref;
-      clause *const c = kissat_dereference_clause (solver, c_ref);
-      unsigneds *clause = &solver->clause;
-      assert (EMPTY_STACK (*clause));
-      const unsigned factor = q->factor;
+  const int factor = q->factor;
+  for (auto c : q->qlauses) {
 #ifndef NDEBUG
-      bool found = false;
+    bool found = false;
 #endif
-      PUSH_STACK (*clause, not_fresh);
-      for (all_literals_in_clause (other, c)) {
-        if (other == factor) {
+    for (const auto &other : c) {
+      if (other == factor) {
 #ifndef NDEBUG
-          found = true;
+        found = true;
 #endif
-          continue;
-        }
-        PUSH_STACK (*clause, other);
+        continue;
       }
-      assert (found);
-      ADD (literals_factored, c->size);
-      kissat_new_irredundant_clause (solver);
-      CLEAR_STACK (*clause);
+      clause.push_back (other);
     }
-    INC (clauses_factored);
+    assert (found);
+    clause.push_back (not_fresh);
+    new_factor_clause ();
+    clause.clear ();
   }
 }
 
-static void eagerly_remove_watch (kissat *solver, watches *watches,
-                                  watch needle) {
-  watch *p = BEGIN_WATCHES (*watches);
-  watch *end = END_WATCHES (*watches);
-  assert (p != end);
-  watch *last = end - 1;
-  while (p->raw != needle.raw)
-    p++, assert (p != end);
-  if (p != last)
-    memmove (p, p + 1, (last - p) * sizeof *p);
-  SET_END_OF_WATCHES (*watches, last);
+
+void Internal::eagerly_remove_from_occurences (Clause *c) {
+  for (const auto &lit : *c) {
+    auto &occ = occs (lit);
+    auto p = q = begin = occ.begin ();
+    auto end = occ.end ();
+    while (p != end) {
+      *q++ = *p++;
+      if (*q == c) q--;
+    }
+    assert (q++ == p);
+    occ.resize (begin - q);
+  }
 }
 
-static void eagerly_remove_binary (kissat *solver, watches *watches,
-                                   unsigned lit) {
-  const watch needle = kissat_binary_watch (lit);
-  eagerly_remove_watch (solver, watches, needle);
-}
-
-static void delete_unfactored (Factoring &factoring, Quotient *q) {
-  kissat *const solver = factoring.solver;
+void Internal::delete_unfactored (Factoring &factoring, Quotient *q) {
   LOG ("deleting unfactored quotient[%zu] clauses", q->id);
-  const unsigned factor = q->factor;
-  for (all_stack (watch, watch, q->clauses)) {
-    if (watch.type.binary) {
-      const unsigned other = watch.binary.lit;
-      LOGBINARY (factor, other, "deleting unfactored");
-      eagerly_remove_binary (solver, &WATCHES (other), factor);
-      eagerly_remove_binary (solver, &WATCHES (factor), other);
-      kissat_delete_binary (solver, factor, other);
-      ADD (literals_unfactored, 2);
-    } else {
-      const reference ref = watch.large.ref;
-      clause *c = kissat_dereference_clause (solver, ref);
-      LOGCLS (c, "deleting unfactored");
-      for (all_literals_in_clause (lit, c))
-        eagerly_remove_watch (solver, &WATCHES (lit), watch);
-      kissat_mark_clause_as_garbage (solver, c);
-      ADD (literals_unfactored, c->size);
-    }
-    INC (clauses_unfactored);
+  const int factor = q->factor;
+  for (auto c : q->qlauses) {
+    eagerly_remove_from_occurences (c);
+    mark_garbage (c);
+    stats.literals_unfactored += c->size;
+    stats.clauses_unfactored++;
   }
 }
 
-static void update_factored (Factoring &factoring, Quotient *q) {
-  kissat *const solver = factoring.solver;
-  const unsigned factor = q->factor;
+
+void Internal::update_factored (Factoring &factoring, Quotient *q) {
+  const int factor = q->factor;
   update_factor_candidate (factoring, factor);
-  update_factor_candidate (factoring, NOT (factor));
-  for (all_stack (watch, watch, q->clauses)) {
-    if (watch.type.binary) {
-      const unsigned other = watch.binary.lit;
-      update_factor_candidate (factoring, other);
-    } else {
-      const reference ref = watch.large.ref;
-      clause *c = kissat_dereference_clause (solver, ref);
-      LOGCLS (c, "deleting unfactored");
-      for (all_literals_in_clause (lit, c))
-        if (lit != factor)
-          update_factor_candidate (factoring, lit);
-    }
+  update_factor_candidate (factoring, -factor);
+  for (auto c : q->qlauses) {
+    LOG (c, "deleting unfactored");
+    for (const auto &lit : *c)
+      if (lit != factor)
+        update_factor_candidate (factoring, lit);
   }
 }
 
-static bool apply_factoring (Factoring &factoring, Quotient *q) {
-  kissat *const solver = factoring.solver;
-  const unsigned fresh = kissat_fresh_literal (solver);
-  if (fresh == INVALID_LIT)
+// TODO: schedule factored variable?
+bool Internal::apply_factoring (Factoring &factoring, Quotient *q) {
+  const int fresh = get_new_extension_variable ();
+  if (!fresh)
     return false;
-  INC (factored);
-  PUSH_STACK (factoring.fresh, fresh);
+  stats.factored++;
+  factoring.fresh.push_back (fresh);
   for (Quotient *p = q; p->prev; p = p->prev)
     flush_unmatched_clauses (solver, p);
   for (Quotient *p = q; p; p = p->prev)
     add_factored_divider (factoring, p, fresh);
-  const unsigned not_fresh = NOT (fresh);
+  const int not_fresh = -fresh;
   add_factored_quotient (factoring, q, not_fresh);
   for (Quotient *p = q; p; p = p->prev)
     delete_unfactored (factoring, p);
   for (Quotient *p = q; p; p = p->prev)
     update_factored (factoring, p);
-  assert (fresh < not_fresh);
-  resize_factoring (factoring, not_fresh);
+  assert (fresh > 0);
+  resize_factoring (factoring, fresh);
   return true;
 }
 
-above is kissat code
-*/
 
 
 void Internal::update_factor_candidate (Factoring &factoring, int lit) {
