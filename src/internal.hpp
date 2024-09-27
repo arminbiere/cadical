@@ -1152,12 +1152,17 @@ struct Internal {
   bool sweep_extract_fixed (Sweeper &sweeper, int lit);
 
   // factor
-  void factor ();
-  bool run_factorization (int64_t limit);
   void factor_mode ();
   void reset_factor_mode ();
-  void schedule_factorization (Factoring &);
+  void tied_next_factor_score (int);
+  void new_quotient (Factoring &, int);
+  void release_quotients (Factoring &);
+  void first_factor (Factoring &, int);
   void update_factor_candidate (Factoring &, int);
+  void schedule_factorization (Factoring &);
+  bool run_factorization (int64_t limit);
+  void factor ();
+  int get_new_extension_variable ();
   Clause *new_factor_clause ();
 
   // instantiate

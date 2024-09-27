@@ -188,11 +188,12 @@ struct Stats {
   int64_t definition_ticks;
   
   int64_t factor;
-  int64_t factor_vars;
   int64_t factor_added;
   int64_t factor_deleted;
   int64_t factor_ticks;
   int64_t factor_literals;
+  int64_t variables_extension;
+  int64_t variables_original;
   
   int64_t ternary;        // number of ternary resolution phases
   int64_t ternres;        // number of ternary resolutions

@@ -16,7 +16,7 @@ struct factor_occs_size {
 
 struct Quotient {
   Quotient (int f) : factor (f) {}
-  ~Quotient ();
+  ~Quotient () {}
   int factor;
   size_t id;
   Quotient *prev, *next;

@@ -2,7 +2,7 @@
 
 namespace CaDiCaL {
 
-#define FACTOR 1
+#define FACTORS 1
 #define QUOTIENT 2
 #define NOUNTED 4
 
@@ -125,20 +125,21 @@ double Internal::tied_next_factor_score (int lit) {
 }
 
 // the marks in cadical have 6 bits for marking but work on idx
-// to mark everything (FACTOR, QUOTIENT, NOUNTED) we shift the bits
+// to mark everything (FACTORS, QUOTIENT, NOUNTED) we shift the bits
 // depending on the sign of factor (+ bitmask)
 // i.e. if factor is positive, we apply a bitmask to only get
 // the first three bits (& 7u)
 // otherwise we leftshift by 3 (>> 3) to get the bits 4,5,6
 // use markfact, unmarkfact, getfact for this purpose.
+// TODO: check wether we need to mark for multiple things independently...
 //
 Quotient *Internal::new_quotient (Factoring &factoring, int factor) {
   assert (!getfact (factor));
-  markfact (factor, FACTOR);
+  markfact (factor, FACTORS);
   Quotient *res = new Quotient (factor);
   res->next = 0;
   res->matched = 0;
-  quotient *last = factoring.quotients.last;
+  Quotient *last = factoring.quotients.last;
   if (last) {
     assert (factoring.quotients.first);
     assert (!last->next);
@@ -154,6 +155,17 @@ Quotient *Internal::new_quotient (Factoring &factoring, int factor) {
   return res;
 }
 
+
+void Internal::release_quotients (Factoring &factoring) {
+  for (Quotient *q = factoring.quotients.first, *next; q; q = next) {
+    next = q->next;
+    int factor = q->factor;
+    assert (getfact (factor) == FACTORS);
+    unmarkfact (factor);
+    delete q;
+  }
+  factoring.quotients.first = factoring.quotients.last = 0;
+}
 
 size_t Internal::first_factor (Factoring &factoring, int factor) {
   assert (!factoring.quotients.first);
@@ -171,61 +183,39 @@ size_t Internal::first_factor (Factoring &factoring, int factor) {
   return res;
 }
 
-/* kissat code commented below
-
-static void release_quotients (Factoring *factoring) {
-  kissat *const solver = factoring->solver;
-  mark *marks = solver->marks;
-  for (quotient *q = factoring->quotients.first, *next; q; q = next) {
-    next = q->next;
-    unsigned factor = q->factor;
-    assert (marks[factor] == FACTOR);
-    marks[factor] = 0;
-    RELEASE_STACK (q->clauses);
-    RELEASE_STACK (q->matches);
-    kissat_free (solver, q, sizeof *q);
+void Internal::clear_nounted (vector<int> &nounted) {
+  for (const auto &lit : nounted) {
+    assert (getfact (lit));
+    unmarkfact (lit);
   }
-  factoring->quotients.first = factoring->quotients.last = 0;
+  nounted.clear ();
 }
 
-
-
-
-static void clear_nounted (kissat *solver, unsigneds *nounted) {
-  mark *marks = solver->marks;
-  for (all_stack (unsigned, lit, *nounted)) {
-    assert (marks[lit] & NOUNTED);
-    marks[lit] &= ~NOUNTED;
-  }
-  CLEAR_STACK (*nounted);
-}
-
-static void clear_flauses (kissat *solver, references *flauses) {
-  ward *const arena = BEGIN_STACK (solver->arena);
-  for (all_stack (reference, ref, *flauses)) {
-    clause *const c = (clause *) (arena + ref);
+void Internal::clear_flauses (vector<Clause *> &flauses) {
+  for (auto c : flauses) {
     assert (c->quotient);
     c->quotient = false;
   }
-  CLEAR_STACK (*flauses);
+  flauses.clear ();
 }
 
+/* kissat code commented below
 
-static unsigned next_factor (Factoring *factoring,
+static unsigned next_factor (Factoring &factoring,
                              unsigned *next_count_ptr) {
-  quotient *last_quotient = factoring->quotients.last;
+  Quotient *last_quotient = factoring.quotients.last;
   assert (last_quotient);
   statches *last_clauses = &last_quotient->clauses;
-  kissat *const solver = factoring->solver;
+  kissat *const solver = factoring.solver;
   watches *all_watches = solver->watches;
-  unsigned *count = factoring->count;
-  unsigneds *counted = &factoring->counted;
-  references *flauses = &factoring->flauses;
+  unsigned *count = factoring.count;
+  unsigneds *counted = &factoring.counted;
+  references *flauses = &factoring.flauses;
   assert (EMPTY_STACK (*counted));
   assert (EMPTY_STACK (*flauses));
   ward *const arena = BEGIN_STACK (solver->arena);
   mark *marks = solver->marks;
-  const unsigned initial = factoring->initial;
+  const unsigned initial = factoring.initial;
   int64_t ticks =
       1 + kissat_cache_lines (SIZE_STACK (*last_clauses), sizeof (watch));
   for (all_stack (watch, quotient_watch, *last_clauses)) {
@@ -240,7 +230,7 @@ static unsigned next_factor (Factoring *factoring,
         const unsigned next = next_watch.binary.lit;
         if (next > initial)
           continue;
-        if (marks[next] & FACTOR)
+        if (marks[next] & FACTORS)
           continue;
         const unsigned next_idx = IDX (next);
         if (!ACTIVE (next_idx))
@@ -257,7 +247,7 @@ static unsigned next_factor (Factoring *factoring,
       size_t min_size = 0;
       ticks++;
       for (all_literals_in_clause (other, c)) {
-        if (marks[other] & FACTOR) {
+        if (marks[other] & FACTORS) {
           if (factors++)
             break;
         } else {
@@ -276,7 +266,7 @@ static unsigned next_factor (Factoring *factoring,
         assert (min_lit != INVALID_LIT);
         watches *min_watches = all_watches + min_lit;
         unsigned c_size = c->size;
-        unsigneds *nounted = &factoring->nounted;
+        unsigneds *nounted = &factoring.nounted;
         assert (EMPTY_STACK (*nounted));
         ticks += 1 + kissat_cache_lines (SIZE_WATCHES (*min_watches),
                                          sizeof (watch));
@@ -297,7 +287,7 @@ static unsigned next_factor (Factoring *factoring,
             const mark mark = marks[other];
             if (mark & QUOTIENT)
               continue;
-            if (mark & FACTOR)
+            if (mark & FACTORS)
               goto CONTINUE_WITH_NEXT_MIN_WATCH;
             if (mark & NOUNTED)
               goto CONTINUE_WITH_NEXT_MIN_WATCH;
@@ -311,7 +301,7 @@ static unsigned next_factor (Factoring *factoring,
           const unsigned next_idx = IDX (next);
           if (!ACTIVE (next_idx))
             continue;
-          assert (!(marks[next] & (FACTOR | NOUNTED)));
+          assert (!(marks[next] & (FACTORS | NOUNTED)));
           marks[next] |= NOUNTED;
           PUSH_STACK (*nounted, next);
           d->quotient = true;
@@ -328,12 +318,12 @@ static unsigned next_factor (Factoring *factoring,
     }
     ADD (factor_ticks, ticks);
     ticks = 0;
-    if (solver->statistics.factor_ticks > factoring->limit)
+    if (solver->statistics.factor_ticks > factoring.limit)
       break;
   }
   clear_flauses (solver, flauses);
   unsigned next_count = 0, next = INVALID_LIT;
-  if (solver->statistics.factor_ticks <= factoring->limit) {
+  if (solver->statistics.factor_ticks <= factoring.limit) {
     unsigned ties = 0;
     for (all_stack (unsigned, lit, *counted)) {
       const unsigned lit_count = count[lit];
@@ -386,12 +376,12 @@ static unsigned next_factor (Factoring *factoring,
   return next;
 }
 
-static void factorize_next (Factoring *factoring, unsigned next,
+static void factorize_next (Factoring &factoring, unsigned next,
                             unsigned expected_next_count) {
-  quotient *last_quotient = factoring->quotients.last;
-  quotient *next_quotient = new_quotient (factoring, next);
+  Quotient *last_quotient = factoring.quotients.last;
+  Quotient *next_quotient = new_quotient (factoring, next);
 
-  kissat *const solver = factoring->solver;
+  kissat *const solver = factoring.solver;
   watches *all_watches = solver->watches;
   ward *const arena = BEGIN_STACK (solver->arena);
   mark *marks = solver->marks;
@@ -400,7 +390,7 @@ static void factorize_next (Factoring *factoring, unsigned next,
   statches *last_clauses = &last_quotient->clauses;
   statches *next_clauses = &next_quotient->clauses;
   sizes *matches = &next_quotient->matches;
-  references *flauses = &factoring->flauses;
+  references *flauses = &factoring.flauses;
   assert (EMPTY_STACK (*flauses));
 
   int64_t ticks =
@@ -430,7 +420,7 @@ static void factorize_next (Factoring *factoring, unsigned next,
       size_t min_size = 0;
       ticks++;
       for (all_literals_in_clause (other, c)) {
-        if (marks[other] & FACTOR) {
+        if (marks[other] & FACTORS) {
           if (factors++)
             break;
         } else {
@@ -493,12 +483,12 @@ static void factorize_next (Factoring *factoring, unsigned next,
   (void) expected_next_count;
 }
 
-static quotient *best_quotient (Factoring *factoring,
+static Quotient *best_quotient (Factoring &factoring,
                                 size_t *best_reduction_ptr) {
   size_t factors = 1, best_reduction = 0;
-  quotient *best = 0;
-  kissat *const solver = factoring->solver;
-  for (quotient *q = factoring->quotients.first; q; q = q->next) {
+  Quotient *best = 0;
+  kissat *const solver = factoring.solver;
+  for (Quotient *q = factoring.quotients.first; q; q = q->next) {
     size_t quotients = SIZE_STACK (q->clauses);
     size_t before_factorization = quotients * factors;
     size_t after_factorization = quotients + factors;
@@ -531,35 +521,35 @@ static quotient *best_quotient (Factoring *factoring,
   return best;
 }
 
-static void resize_factoring (Factoring *factoring, unsigned lit) {
-  kissat *const solver = factoring->solver;
+static void resize_factoring (Factoring &factoring, unsigned lit) {
+  kissat *const solver = factoring.solver;
   assert (lit > NOT (lit));
-  const size_t old_size = factoring->size;
+  const size_t old_size = factoring.size;
   assert (lit > old_size);
-  const size_t old_allocated = factoring->allocated;
+  const size_t old_allocated = factoring.allocated;
   size_t new_size = lit + 1;
   if (new_size > old_allocated) {
     size_t new_allocated = 2 * old_allocated;
     while (new_size > new_allocated)
       new_allocated *= 2;
-    unsigned *count = factoring->count;
+    unsigned *count = factoring.count;
     count = kissat_nrealloc (solver, count, old_allocated, new_allocated,
                              sizeof *count);
     const size_t delta_allocated = new_allocated - old_allocated;
     const size_t delta_bytes = delta_allocated * sizeof *count;
     memset (count + old_size, 0, delta_bytes);
-    factoring->count = count;
+    factoring.count = count;
     assert (!(old_allocated & 1));
     assert (!(new_allocated & 1));
     const size_t old_allocated_score = old_allocated / 2;
     const size_t new_allocated_score = new_allocated / 2;
-    factoring->allocated = new_allocated;
+    factoring.allocated = new_allocated;
   }
-  factoring->size = new_size;
+  factoring.size = new_size;
 }
 
-static void flush_unmatched_clauses (kissat *solver, quotient *q) {
-  quotient *prev = q->prev;
+static void flush_unmatched_clauses (kissat *solver, Quotient *q) {
+  Quotient *prev = q->prev;
   sizes *q_matches = &q->matches, *prev_matches = &prev->matches;
   statches *q_clauses = &q->clauses, *prev_clauses = &prev->clauses;
   const size_t n = SIZE_STACK (*q_clauses);
@@ -585,19 +575,19 @@ static void flush_unmatched_clauses (kissat *solver, quotient *q) {
   (void) solver;
 }
 
-static void add_factored_divider (Factoring *factoring, quotient *q,
+static void add_factored_divider (Factoring &factoring, Quotient *q,
                                   unsigned fresh) {
   const unsigned factor = q->factor;
-  kissat *const solver = factoring->solver;
+  kissat *const solver = factoring.solver;
   LOGBINARY (fresh, factor, "factored %s divider", LOGLIT (factor));
   kissat_new_binary_clause (solver, fresh, factor);
   INC (clauses_factored);
   ADD (literals_factored, 2);
 }
 
-static void add_factored_quotient (Factoring *factoring, quotient *q,
+static void add_factored_quotient (Factoring &factoring, Quotient *q,
                                    unsigned not_fresh) {
-  kissat *const solver = factoring->solver;
+  kissat *const solver = factoring.solver;
   LOG ("adding factored quotient[%zu] clauses", q->id);
   for (all_stack (watch, watch, q->clauses)) {
     if (watch.type.binary) {
@@ -652,8 +642,8 @@ static void eagerly_remove_binary (kissat *solver, watches *watches,
   eagerly_remove_watch (solver, watches, needle);
 }
 
-static void delete_unfactored (Factoring *factoring, quotient *q) {
-  kissat *const solver = factoring->solver;
+static void delete_unfactored (Factoring &factoring, Quotient *q) {
+  kissat *const solver = factoring.solver;
   LOG ("deleting unfactored quotient[%zu] clauses", q->id);
   const unsigned factor = q->factor;
   for (all_stack (watch, watch, q->clauses)) {
@@ -677,8 +667,8 @@ static void delete_unfactored (Factoring *factoring, quotient *q) {
   }
 }
 
-static void update_factored (Factoring *factoring, quotient *q) {
-  kissat *const solver = factoring->solver;
+static void update_factored (Factoring &factoring, Quotient *q) {
+  kissat *const solver = factoring.solver;
   const unsigned factor = q->factor;
   update_factor_candidate (factoring, factor);
   update_factor_candidate (factoring, NOT (factor));
@@ -697,22 +687,22 @@ static void update_factored (Factoring *factoring, quotient *q) {
   }
 }
 
-static bool apply_factoring (Factoring *factoring, quotient *q) {
-  kissat *const solver = factoring->solver;
+static bool apply_factoring (Factoring &factoring, Quotient *q) {
+  kissat *const solver = factoring.solver;
   const unsigned fresh = kissat_fresh_literal (solver);
   if (fresh == INVALID_LIT)
     return false;
   INC (factored);
-  PUSH_STACK (factoring->fresh, fresh);
-  for (quotient *p = q; p->prev; p = p->prev)
+  PUSH_STACK (factoring.fresh, fresh);
+  for (Quotient *p = q; p->prev; p = p->prev)
     flush_unmatched_clauses (solver, p);
-  for (quotient *p = q; p; p = p->prev)
+  for (Quotient *p = q; p; p = p->prev)
     add_factored_divider (factoring, p, fresh);
   const unsigned not_fresh = NOT (fresh);
   add_factored_quotient (factoring, q, not_fresh);
-  for (quotient *p = q; p; p = p->prev)
+  for (Quotient *p = q; p; p = p->prev)
     delete_unfactored (factoring, p);
-  for (quotient *p = q; p; p = p->prev)
+  for (Quotient *p = q; p; p = p->prev)
     update_factored (factoring, p);
   assert (fresh < not_fresh);
   resize_factoring (factoring, not_fresh);
@@ -798,7 +788,7 @@ bool Internal::run_factorization (int64_t limit) {
         factorize_next (factoring, next, next_count);
       }
       size_t reduction;
-      quotient *q = best_quotient (factoring, &reduction);
+      Quotient *q = best_quotient (factoring, &reduction);
       if (q && reduction > factoring.bound) {
         if (apply_factoring (factoring, q)) {
           factored++;
@@ -823,6 +813,13 @@ bool Internal::run_factorization (int64_t limit) {
   // call destructor upon leaving this function??
   // delete factoring;
   return completed;
+}
+
+int Internal::get_new_extension_variable () {
+  const int current_max_external = external->max_var;
+  const int new_external = current_max_external + 1;
+  const int new_internal = external->internalize (new_external, true);
+  return new_internal;
 }
 
 void Internal::factor () {
