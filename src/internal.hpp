@@ -525,46 +525,48 @@ struct Internal {
 
   // marks bits 1,2,3 and 4,5,6 depending on fact and sign of lit
   //
-  int getfact (int lit) const {
+  bool getfact (int lit, int fact) const {
+    assert (fact == 1 || fact == 2 || fact == 4);
     int res = marks[vidx (lit)];
     if (lit < 0) {
       res >>= 3;
     } else {
       res &= 7;
     }
-    assert (!res || res == 1 || res == 2 || res == 4);
-    return res;
+    // assert (!res || res == 1 || res == 2 || res == 4);
+    return res & fact;
   }
 
   void markfact (int lit, int fact) {
     assert (fact == 1 || fact == 2 || fact == 4);
-    assert (!getfact (lit));
+    assert (!getfact (lit, fact));
 #ifndef NDEBUG
-    int before = getfact (-lit);
+    int before = getfact (-lit, fact);
 #endif
     int res = marks[vidx (lit)];
-    if (res < 0) {
-      res += fact << 3;
+    if (lit < 0) {
+      res |= fact << 3;
     } else {
-      res += fact;
+      res |= fact;
     }
     marks[vidx (lit)] = res;
-    assert (getfact (lit) == fact);
+    assert (getfact (lit, fact));
 #ifndef NDEBUG
-    assert (getfact (-lit) == before);
+    assert (getfact (-lit, fact) == before);
 #endif
   }
 
-  void unmarkfact (int lit) {
+  void unmarkfact (int lit, int fact) {
+    assert (fact == 1 || fact == 2 || fact == 4);
+    assert (getfact (res, fact));
     int res = marks[vidx (lit)];
     if (lit < 0) {
-      res &= 7;
+      res &= ~(fact << 3);
     } else {
-      res >>= 3;
-      res <<= 3;
+      res &= ~fact;
     }
     marks[vidx (lit)] = res;
-    assert (!getfact (res));
+    assert (!getfact (res, fact));
   }
 
 
@@ -1158,6 +1160,10 @@ struct Internal {
   void new_quotient (Factoring &, int);
   void release_quotients (Factoring &);
   void first_factor (Factoring &, int);
+  void clear_nounted (vector<int> &);
+  void clear_flauses (vector<Clause *> &);
+  Quotient *best_quotient (Factoring &, size_t *);
+  int next_factor (Factoring &, unsigned *);
   void update_factor_candidate (Factoring &, int);
   void schedule_factorization (Factoring &);
   bool run_factorization (int64_t limit);

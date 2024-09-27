@@ -42,12 +42,12 @@ struct Factoring {
   FactorSchedule schedule;
 
   size_t size, allocated;
-  unsigned initial;
+  int initial;
   FactorScores *scores;
   unsigned bound;
   vector<unsigned> count;
   vector<int> fresh;
-  vector<unsigned> counted;
+  vector<int> counted;
   vector<unsigned> nounted;
   vector<Clause *> flauses;
   struct {

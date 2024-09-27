@@ -114,7 +114,7 @@ Factoring::~Factoring () {
   assert (nounted.empty ());
   assert (flauses.empty ());
   // TODO: scores??
-  // release_quotients (factoring);
+  internal->release_quotients (factoring);
   schedule.erase ();  // actually not necessary
 }
 
@@ -134,7 +134,7 @@ double Internal::tied_next_factor_score (int lit) {
 // TODO: check wether we need to mark for multiple things independently...
 //
 Quotient *Internal::new_quotient (Factoring &factoring, int factor) {
-  assert (!getfact (factor));
+  assert (!getfact (factor, FACTORS));
   markfact (factor, FACTORS);
   Quotient *res = new Quotient (factor);
   res->next = 0;
@@ -160,8 +160,8 @@ void Internal::release_quotients (Factoring &factoring) {
   for (Quotient *q = factoring.quotients.first, *next; q; q = next) {
     next = q->next;
     int factor = q->factor;
-    assert (getfact (factor) == FACTORS);
-    unmarkfact (factor);
+    assert (getfact (factor, FACTORS));
+    unmarkfact (factor, FACTORS);
     delete q;
   }
   factoring.quotients.first = factoring.quotients.last = 0;
@@ -185,8 +185,8 @@ size_t Internal::first_factor (Factoring &factoring, int factor) {
 
 void Internal::clear_nounted (vector<int> &nounted) {
   for (const auto &lit : nounted) {
-    assert (getfact (lit));
-    unmarkfact (lit);
+    assert (getfact (lit, NOUNTED));
+    unmarkfact (lit, NOUNTED);
   }
   nounted.clear ();
 }
@@ -199,134 +199,131 @@ void Internal::clear_flauses (vector<Clause *> &flauses) {
   flauses.clear ();
 }
 
-/* kissat code commented below
+Quotient *Internal::best_quotient (Factoring &factoring,
+                                size_t *best_reduction_ptr) {
+  size_t factors = 1, best_reduction = 0;
+  Quotient *best = 0;
+  for (Quotient *q = factoring.quotients.first; q; q = q->next) {
+    size_t quotients = q->qlauses.size ();
+    size_t before_factorization = quotients * factors;
+    size_t after_factorization = quotients + factors;
+    if (before_factorization == after_factorization)
+      LOG ("quotient[%zu] factors %zu clauses into %zu thus no change",
+           factors - 1, before_factorization, after_factorization);
+    else if (before_factorization < after_factorization)
+      LOG ("quotient[%zu] factors %zu clauses into %zu thus %zu more",
+           factors - 1, before_factorization, after_factorization,
+           after_factorization - before_factorization);
+    else {
+      size_t delta = before_factorization - after_factorization;
+      LOG ("quotient[%zu] factors %zu clauses into %zu thus %zu less",
+           factors - 1, before_factorization, after_factorization, delta);
+      if (!best || best_reduction < delta) {
+        best_reduction = delta;
+        best = q;
+      }
+    }
+    factors++;
+  }
+  if (!best) {
+    LOG ("no decreasing quotient found");
+    return 0;
+  }
+  LOG ("best decreasing quotient[%zu] with reduction %zu", best->id,
+       best_reduction);
+  *best_reduction_ptr = best_reduction;
+  return best;
+}
 
-static unsigned next_factor (Factoring &factoring,
-                             unsigned *next_count_ptr) {
+int Internal::next_factor (Factoring &factoring,
+                           unsigned *next_count_ptr) {
   Quotient *last_quotient = factoring.quotients.last;
   assert (last_quotient);
-  statches *last_clauses = &last_quotient->clauses;
-  kissat *const solver = factoring.solver;
-  watches *all_watches = solver->watches;
-  unsigned *count = factoring.count;
-  unsigneds *counted = &factoring.counted;
-  references *flauses = &factoring.flauses;
-  assert (EMPTY_STACK (*counted));
-  assert (EMPTY_STACK (*flauses));
-  ward *const arena = BEGIN_STACK (solver->arena);
-  mark *marks = solver->marks;
-  const unsigned initial = factoring.initial;
-  int64_t ticks =
-      1 + kissat_cache_lines (SIZE_STACK (*last_clauses), sizeof (watch));
-  for (all_stack (watch, quotient_watch, *last_clauses)) {
-    if (quotient_watch.type.binary) {
-      const unsigned q = quotient_watch.binary.lit;
-      watches *q_watches = all_watches + q;
-      ticks += 1 + kissat_cache_lines (SIZE_WATCHES (*q_watches),
-                                       sizeof (watch));
-      for (all_binary_large_watches (next_watch, *q_watches)) {
-        if (!next_watch.type.binary)
-          continue;
-        const unsigned next = next_watch.binary.lit;
-        if (next > initial)
-          continue;
-        if (marks[next] & FACTORS)
-          continue;
-        const unsigned next_idx = IDX (next);
-        if (!ACTIVE (next_idx))
-          continue;
-        if (!count[next])
-          PUSH_STACK (*counted, next);
-        count[next]++;
-      }
-    } else {
-      const reference c_ref = quotient_watch.large.ref;
-      clause *const c = (clause *) (arena + c_ref);
-      assert (!c->quotient);
-      unsigned min_lit = INVALID_LIT, factors = 0;
-      size_t min_size = 0;
-      ticks++;
-      for (all_literals_in_clause (other, c)) {
-        if (marks[other] & FACTORS) {
-          if (factors++)
-            break;
-        } else {
-          assert (!(marks[other] & QUOTIENT));
-          marks[other] |= QUOTIENT;
-          watches *other_watches = all_watches + other;
-          const size_t other_size = SIZE_WATCHES (*other_watches);
-          if (min_lit != INVALID_LIT && min_size <= other_size)
-            continue;
+  vector<Clause *> &last_clauses = last_quotient->qlauses;
+  unsigned &count = factoring.count;
+  vector<unsigned> &counted = factoring.counted;
+  vector<Clause *> &flauses = &factoring.flauses;
+  assert (counted.empty ());
+  assert (flauses.empty ());
+  const int initial = factoring.initial;
+  int64_t ticks = 1; // TODO: + kissat_cache_lines (SIZE_STACK (*last_clauses), sizeof (watch));
+  for (auto c : last_clauses)) {
+    assert (!c->quotient);
+    int min_lit = 0;
+    unsigned factors = 0;
+    size_t min_size = 0;
+    ticks++;
+    for (const auto &other : *c) {
+      if (getfact (other, FACTORS)) {
+        if (factors++)
+          break;
+      } else {
+        assert (!getfact (other, QUOTIENT));
+        markfact (other, QUOTIENT);
+        const size_t other_size = occs (other).size ();
+        if (!min_lit || other_size < min_size) {
           min_lit = other;
           min_size = other_size;
         }
       }
-      assert (factors);
-      if (factors == 1) {
-        assert (min_lit != INVALID_LIT);
-        watches *min_watches = all_watches + min_lit;
-        unsigned c_size = c->size;
-        unsigneds *nounted = &factoring.nounted;
-        assert (EMPTY_STACK (*nounted));
-        ticks += 1 + kissat_cache_lines (SIZE_WATCHES (*min_watches),
-                                         sizeof (watch));
-        for (all_binary_large_watches (min_watch, *min_watches)) {
-          if (min_watch.type.binary)
-            continue;
-          const reference d_ref = min_watch.large.ref;
-          if (c_ref == d_ref)
-            continue;
-          clause *const d = (clause *) (arena + d_ref);
-          ticks++;
-          if (d->quotient)
-            continue;
-          if (d->size != c_size)
-            continue;
-          unsigned next = INVALID_LIT;
-          for (all_literals_in_clause (other, d)) {
-            const mark mark = marks[other];
-            if (mark & QUOTIENT)
-              continue;
-            if (mark & FACTORS)
-              goto CONTINUE_WITH_NEXT_MIN_WATCH;
-            if (mark & NOUNTED)
-              goto CONTINUE_WITH_NEXT_MIN_WATCH;
-            if (next != INVALID_LIT)
-              goto CONTINUE_WITH_NEXT_MIN_WATCH;
-            next = other;
-          }
-          assert (next != INVALID_LIT);
-          if (next > initial)
-            continue;
-          const unsigned next_idx = IDX (next);
-          if (!ACTIVE (next_idx))
-            continue;
-          assert (!(marks[next] & (FACTORS | NOUNTED)));
-          marks[next] |= NOUNTED;
-          PUSH_STACK (*nounted, next);
-          d->quotient = true;
-          PUSH_STACK (*flauses, d_ref);
-          if (!count[next])
-            PUSH_STACK (*counted, next);
-          count[next]++;
-        CONTINUE_WITH_NEXT_MIN_WATCH:;
-        }
-        clear_nounted (solver, nounted);
-      }
-      for (all_literals_in_clause (other, c))
-        marks[other] &= ~QUOTIENT;
     }
-    ADD (factor_ticks, ticks);
+    assert (factors);
+    if (factors == 1) {
+      assert (min_lit);
+      const unsigned c_size = c->size;
+      vector<unsigned> &nounted = factoring.nounted;
+      assert (nounted.empty ());
+      ticks += 1; // + kissat_cache_lines (SIZE_WATCHES (*min_watches), sizeof (watch));
+      for (auto d : occs (min_lit)) {
+        if (c == d) continue;
+        ticks++;
+        if (d->quotient) continue;
+        if (d->size != c_size) continue;
+        int next = 0;
+        for (const auto &other : *d) {
+          if (getmark (other, QUOTIENT))
+            continue;
+          if (getmark (other, FACTORS))
+            goto CONTINUE_WITH_NEXT_MIN_WATCH;
+          if (getmark (other, NOUNTED))
+            goto CONTINUE_WITH_NEXT_MIN_WATCH;
+          if (next)
+            goto CONTINUE_WITH_NEXT_MIN_WATCH;
+          next = other;
+        }
+        assert (next);
+        if (abs (next) > abs (initial))
+          continue;
+        if (!active (next))
+          continue;
+        assert (!getfact (next, FACTORS));
+        assert (!getfact (next, NOUNTED));
+        markfact (next, NOUNTED);
+        nounted.push_back (next);
+        d->quotient = true;
+        flauses.push_back (d);
+        if (!count[vlit (next)])
+          counted.push_back (next);
+        count[vlit (next)]++;
+      CONTINUE_WITH_NEXT_MIN_WATCH:;
+      }
+      clear_nounted (nounted);
+    }
+    for (const auto &other : *c)
+      if (getfact (other, QUOTIENT))
+        unmarkfact (other, QUOTIENT);
+    stats.factor_ticks += ticks;
     ticks = 0;
-    if (solver->statistics.factor_ticks > factoring.limit)
+    if (stats.factor_ticks > factoring.limit)
       break;
   }
-  clear_flauses (solver, flauses);
-  unsigned next_count = 0, next = INVALID_LIT;
-  if (solver->statistics.factor_ticks <= factoring.limit) {
+  clear_flauses (flauses);
+  unsigned next_count = 0;
+  int next = 0;
+  if (stats.factor_ticks <= factoring.limit) {
     unsigned ties = 0;
-    for (all_stack (unsigned, lit, *counted)) {
-      const unsigned lit_count = count[lit];
+    for (const auto &lit : counted) {
+      const unsigned lit_count = count[vlit (lit)];
       if (lit_count < next_count)
         continue;
       if (lit_count == next_count) {
@@ -341,40 +338,43 @@ static unsigned next_factor (Factoring &factoring,
     }
     if (next_count < 2) {
       LOG ("next factor count %u smaller than 2", next_count);
-      next = INVALID_LIT;
+      next = 0;
     } else if (ties > 1) {
       LOG ("found %u tied next factor candidate literals with count %u",
            ties, next_count);
       double next_score = -1;
-      for (all_stack (unsigned, lit, *counted)) {
+      for (const auto &lit : counted) {
         const unsigned lit_count = count[lit];
         if (lit_count != next_count)
           continue;
         double lit_score = tied_next_factor_score (factoring, lit);
         assert (lit_score >= 0);
-        LOG ("score %g of next factor candidate %s", lit_score,
-             LOGLIT (lit));
+        LOG ("score %g of next factor candidate %d", lit_score, lit);
         if (lit_score <= next_score)
           continue;
         next_score = lit_score;
         next = lit;
       }
       assert (next_score >= 0);
-      assert (next != INVALID_LIT);
-      LOG ("best score %g of next factor %s", next_score, LOGLIT (next));
+      assert (next);
+      LOG ("best score %g of next factor %d", next_score, next);
     } else {
       assert (ties == 1);
-      LOG ("single next factor %s with count %u", LOGLIT (next),
+      LOG ("single next factor %d with count %u", next,
            next_count);
     }
   }
-  for (all_stack (unsigned, lit, *counted))
-    count[lit] = 0;
-  CLEAR_STACK (*counted);
-  assert (next == INVALID_LIT || next_count > 1);
+  for (const auto &lit : counted)
+    count[vlit (lit)] = 0;
+  counted.clear ();
+  assert (!next || next_count > 1);
   *next_count_ptr = next_count;
   return next;
 }
+
+/* kissat code commented below
+
+
 
 static void factorize_next (Factoring &factoring, unsigned next,
                             unsigned expected_next_count) {
@@ -483,43 +483,6 @@ static void factorize_next (Factoring &factoring, unsigned next,
   (void) expected_next_count;
 }
 
-static Quotient *best_quotient (Factoring &factoring,
-                                size_t *best_reduction_ptr) {
-  size_t factors = 1, best_reduction = 0;
-  Quotient *best = 0;
-  kissat *const solver = factoring.solver;
-  for (Quotient *q = factoring.quotients.first; q; q = q->next) {
-    size_t quotients = SIZE_STACK (q->clauses);
-    size_t before_factorization = quotients * factors;
-    size_t after_factorization = quotients + factors;
-    if (before_factorization == after_factorization)
-      LOG ("quotient[%zu] factors %zu clauses into %zu thus no change",
-           factors - 1, before_factorization, after_factorization);
-    else if (before_factorization < after_factorization)
-      LOG ("quotient[%zu] factors %zu clauses into %zu thus %zu more",
-           factors - 1, before_factorization, after_factorization,
-           after_factorization - before_factorization);
-    else {
-      size_t delta = before_factorization - after_factorization;
-      LOG ("quotient[%zu] factors %zu clauses into %zu thus %zu less",
-           factors - 1, before_factorization, after_factorization, delta);
-      if (!best || best_reduction < delta) {
-        best_reduction = delta;
-        best = q;
-      }
-    }
-    factors++;
-  }
-  if (!best) {
-    LOG ("no decreasing quotient found");
-    return 0;
-  }
-  LOG ("best decreasing quotient[%zu] with reduction %zu", best->id,
-       best_reduction);
-  *best_reduction_ptr = best_reduction;
-  (void) solver;
-  return best;
-}
 
 static void resize_factoring (Factoring &factoring, unsigned lit) {
   kissat *const solver = factoring.solver;
