@@ -555,32 +555,64 @@ struct sort_assumptions_smaller {
 // to the first place where the assumptions and the current trail differ.
 
 void Internal::sort_and_reuse_assumptions () {
-  assert (opts.ilbassumptions);
+  assert (opts.ilb);
+  if (!opts.ilbassumptions && !assumptions.empty()) {
+    backtrack ();
+    return;
+  }
   if (assumptions.empty ())
     return;
-  MSORT (opts.radixsortlim, assumptions.begin (), assumptions.end (),
+  switch (opts.ilbassumptions) {
+  case 1: //no reorder
+    LOG (assumptions, "kept assumptions order");
+    break;
+  case 2: // randomize order
+  {
+    Random random (opts.seed); // global seed
+    random += stats.shuffled;  // different every time
+    const int size = assumptions.size ();
+    for (int i = 0; i <= size - 2; i++) {
+      const int j = random.pick_int (i, size - 1);
+      assert (j < size && i < size);
+      swap (assumptions[i], assumptions[j]);
+    }
+    LOG (assumptions, "randomized assumptions");
+    break;
+  }
+  case 3: // sort like ILB
+    MSORT (opts.radixsortlim, assumptions.begin (), assumptions.end (),
          sort_assumptions_positive_rank (this),
          sort_assumptions_smaller (this));
-
-  unsigned max_level = 0;
-  // assumptions are sorted by level, with unset at the end
-  for (auto lit : assumptions) {
-    if (val (lit))
-      max_level = var (lit).level;
-    else
-      break;
+    LOG (assumptions, "sorted assumptions");
+    break;
+  default:
+    assert (false);
   }
 
-  const unsigned size = min (level + 1u, max_level + 1);
+  int max_level = 0;
+  bool must_backtrack = false;
+  for (auto lit : assumptions) {
+    if (val (lit) > 0)
+      max_level = max (var (lit).level, max_level);
+    else // there is one assumption that is wrong, backtrack is required
+      must_backtrack = true;
+  }
+
+  LOG ("max_level %d of the assumptions", max_level);
+  const unsigned size = min (level + 1u, (unsigned)max_level + 1);
   assert ((size_t) level == control.size () - 1);
-  LOG (assumptions, "sorted assumptions");
+  assert (max_level <= level);
   int target = 0;
+  LOG ("checking up to %d of the assumptions", size);
   for (unsigned i = 1, j = 0; i < size;) {
+    assert (i < control.size());
+    assert (j < assumptions.size ());
     const Level &l = control[i];
     const int lit = l.decision;
     const int alit = assumptions[j];
     const int lev = i;
     target = lev;
+    LOG ("ilb checking %d vs assumption %d", l.decision, alit);
     if (val (alit) &&
         var (alit).level < lev) { // we can ignore propagated assumptions
       LOG ("ILB skipping propagation %d", alit);
@@ -589,23 +621,35 @@ void Internal::sort_and_reuse_assumptions () {
     }
     if (!lit) { // skip fake decisions
       target = lev - 1;
+      must_backtrack = true;
       break;
     }
     ++i, ++j;
     assert (var (lit).level == lev);
     if (l.decision == alit) {
+      LOG ("same literal as decision on level %d", lev);
       continue;
     }
     target = lev - 1;
     LOG ("first different literal %d on the trail and %d from the "
          "assumptions",
          lit, alit);
+    must_backtrack = true;
     break;
   }
-  if (target < level)
+
+  if (must_backtrack)
     backtrack (target);
+  else if (opts.ilb == 1) {
+    if (max_level < level)
+      backtrack (max_level);
+    else
+      LOG ("no need to backtrack");
+  }
+  else {
+    LOG ("keeping full trail");
+  }
   LOG ("assumptions allow for reuse of trail up to level %d", level);
-  //  COVER (target > 1);
   if ((size_t) level > assumptions.size ())
     stats.assumptionsreused += assumptions.size ();
   else

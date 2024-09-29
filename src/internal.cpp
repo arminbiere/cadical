@@ -706,8 +706,7 @@ int Internal::solve (bool preprocess_only) {
   if (proof)
     proof->solve_query ();
   if (opts.ilb) {
-    if (opts.ilbassumptions)
-      sort_and_reuse_assumptions ();
+    sort_and_reuse_assumptions ();
     stats.ilbtriggers++;
     stats.ilbsuccess += (level > 0);
     stats.levelsreused += level;
