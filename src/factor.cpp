@@ -342,9 +342,8 @@ int Internal::next_factor (Factoring &factoring,
       LOG ("found %u tied next factor candidate literals with count %u",
            ties, next_count);
       double next_score = -1;
-      // TODO: here is a bug
       for (const auto &lit : counted) {
-        const unsigned lit_count = count[lit];
+        const unsigned lit_count = count[vlit (lit)];
         if (lit_count != next_count)
           continue;
         double lit_score = tied_next_factor_score (lit);

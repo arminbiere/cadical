@@ -191,7 +191,6 @@ struct Stats {
   int64_t factor;
   int64_t factored;
   int64_t factor_added;
-  int64_t factor_deleted;
   int64_t factor_ticks;
   int64_t variables_extension;
   int64_t variables_original;
