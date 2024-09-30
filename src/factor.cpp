@@ -33,10 +33,10 @@ void Internal::factor_mode () {
 
   vector<Clause *> candidates;
 
-  // mark satisfied irredundant clauses as garbage
+  // push binary clauses on the occurrence stack.
   for (const auto &c : clauses) {
     if (c->garbage) continue;
-    if (c->redundant) continue; // TODO: these? && !c->binary) continue;
+    if (c->redundant && c->size > 2) continue;
     if (c->size > size_limit) continue;
     if (c->size == 2) {
       const int lit = c->literals[0];
@@ -54,6 +54,7 @@ void Internal::factor_mode () {
   }
   if (size_limit == 2) return;
 
+  // iterate counts of larger clauses rounds often
   const unsigned rounds = opts.factorcandrounds;
   for (unsigned round = 1; round <= rounds; round++) {
     vector<unsigned> newlargecount;
@@ -82,6 +83,7 @@ void Internal::factor_mode () {
     largecount.swap (newlargecount);
   }
 
+  // finally push remaining clause on the occurrence stack
   for (const auto &c : candidates) {
     for (const auto &lit : *c) {
       const auto idx = vlit (lit);
@@ -105,7 +107,6 @@ Factoring::Factoring (Internal *i, int64_t l)
   initial = allocated = size = max_var;
   bound = internal->lim.elimbound;
   enlarge_zero (count, max_lit);
-  scores = 0;
   quotients.first = quotients.last = 0;
 }
 
@@ -113,7 +114,6 @@ Factoring::~Factoring () {
   assert (counted.empty ());
   assert (nounted.empty ());
   assert (flauses.empty ());
-  // TODO: scores??
   internal->release_quotients (*this);
   schedule.erase ();  // actually not necessary
 }
@@ -131,7 +131,6 @@ double Internal::tied_next_factor_score (int lit) {
 // the first three bits (& 7u)
 // otherwise we leftshift by 3 (>> 3) to get the bits 4,5,6
 // use markfact, unmarkfact, getfact for this purpose.
-// TODO: check wether we need to mark for multiple things independently...
 //
 Quotient *Internal::new_quotient (Factoring &factoring, int factor) {
   assert (!getfact (factor, FACTORS));
@@ -473,7 +472,6 @@ void Internal::resize_factoring (Factoring &factoring, int lit) {
   factoring.size = new_var_size;
 }
 
-// TODO: this is not done yet
 void Internal::flush_unmatched_clauses (Quotient *q) {
   Quotient *prev = q->prev;
   vector<size_t> &q_matches = q->matches, &prev_matches = prev->matches;
@@ -600,8 +598,6 @@ bool Internal::apply_factoring (Factoring &factoring, Quotient *q) {
   return true;
 }
 
-
-
 void Internal::update_factor_candidate (Factoring &factoring, int lit) {
   FactorSchedule &schedule = factoring.schedule;
   const size_t size = occs (lit).size ();
@@ -612,7 +608,6 @@ void Internal::update_factor_candidate (Factoring &factoring, int lit) {
     schedule.push_back (idx);
   }
 }
-
 
 void Internal::schedule_factorization (Factoring &factoring) {
   for (const auto &idx : vars) {
@@ -718,13 +713,13 @@ void Internal::factor () {
     return;
   if (!opts.factor)
     return;
-  // TODO: update last.factor.marked to retrigger factor
-  // if (last.factor.marked >= stats.factor_literals) {
-  //   VERBOSE (3, "factorization skipped as no literals have been"
-  //       "marked to be added (%" PRIu64 " < %" PRIu64 ")",
-  //       last.factor.marked, stats.factor_literals);
-  //   return;
-  // }
+  // update last.factor.marked and flags.factor to trigger factor
+  if (last.factor.marked >= stats.mark.factor) {
+    VERBOSE (3, "factorization skipped as no literals have been"
+        "marked to be added (%" PRIu64 " < %" PRIu64 ")",
+        last.factor.marked, stats.mark.factor);
+    return;
+  }
   assert (!level);
   START_SIMPLIFIER (factor, FACTOR);
   stats.factor++;
@@ -780,7 +775,7 @@ void Internal::factor () {
   VERBOSE (2, "factorization added %" PRIu64 " and deleted %" PRIu64 " clauses", added, deleted);
   */
   if (completed)
-    last.factor.marked = stats.factor_literals;
+    last.factor.marked = stats.mark.factor;
   STOP_SIMPLIFIER (factor, FACTOR);
 }
 

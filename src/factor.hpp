@@ -25,11 +25,6 @@ struct Quotient {
   size_t matched;
 };
 
-struct FactorScores {
-  double *score;
-  vector<unsigned> scored;
-};
-
 typedef heap<factor_occs_size> FactorSchedule;
 
 struct Factoring {
@@ -43,7 +38,6 @@ struct Factoring {
 
   size_t size, allocated;
   int initial;
-  FactorScores *scores;
   unsigned bound;
   vector<unsigned> count;
   vector<int> fresh;

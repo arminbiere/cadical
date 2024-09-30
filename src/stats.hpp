@@ -61,6 +61,7 @@ struct Stats {
     int64_t elim;    // elim marked variables
     int64_t subsume; // subsume marked variables
     int64_t ternary; // ternary marked variables
+    int64_t factor;
   } mark;
 
   struct {
@@ -192,7 +193,6 @@ struct Stats {
   int64_t factor_added;
   int64_t factor_deleted;
   int64_t factor_ticks;
-  int64_t factor_literals;
   int64_t variables_extension;
   int64_t variables_original;
   int64_t literals_factored;

@@ -946,6 +946,15 @@ struct Internal {
     stats.mark.ternary++;
     f.ternary = true;
   }
+  void mark_factor (int lit) {
+    Flags &f = flags (lit);
+    const unsigned bit = bign (lit);
+    if (f.factor & bit)
+      return;
+    LOG ("marking %d as factor literal candidate", lit);
+    stats.mark.elim++;
+    f.elim = true;
+  }
   void mark_added (int lit, int size, bool redundant);
   void mark_added (Clause *);
 
