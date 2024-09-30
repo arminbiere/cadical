@@ -122,6 +122,7 @@ int External::internalize (int elit, bool extension) {
         internal->stats.variables_extension++;
       else
         internal->stats.variables_original++;
+      // TODO: stats are incremented here and in init !
       init (eidx);
     }
     if (extension) {

@@ -84,12 +84,9 @@ void Internal::factor_mode () {
   }
 
   // finally push remaining clause on the occurrence stack
-  for (const auto &c : candidates) {
-    for (const auto &lit : *c) {
-      const auto idx = vlit (lit);
-      occs (idx).push_back (c);
-    }
-  }
+  for (const auto &c : candidates)
+    for (const auto &lit : *c)
+      occs (lit).push_back (c);
 
 }
 
@@ -707,6 +704,7 @@ int Internal::get_new_extension_variable () {
   if (watching ()) reset_watches ();
   // it does not enlarge otab, however, so we do this manually
   init_occs ();
+  assert (vlit (new_internal));
   return new_internal;
 }
 
