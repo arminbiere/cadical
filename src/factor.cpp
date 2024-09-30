@@ -175,7 +175,8 @@ size_t Internal::first_factor (Factoring &factoring, int factor) {
   }
   size_t res = qlauses.size ();
   LOG ("quotient[0] factor %d size %zu", factor, res);
-  assert (res > 1);
+  // This invariant can of course be broken by previous factorings
+  // assert (res > 1);
   stats.factor_ticks += ticks;
   return res;
 }
@@ -715,7 +716,7 @@ void Internal::factor () {
     return;
   if (!opts.factor)
     return;
-  assert (stats.mark.factor);
+  assert (stats.mark.factor || clauses.empty ());
   // update last.factor.marked and flags.factor to trigger factor
   if (last.factor.marked >= stats.mark.factor) {
     VERBOSE (3, "factorization skipped as no literals have been"
