@@ -66,6 +66,7 @@ void External::init (int new_max_var) {
     assert (internal->i2e[iidx] == (int) eidx);
     assert (e2i[eidx] == (int) iidx);
   }
+  internal->stats.variables_original += new_vars;
   if (new_max_var >= (int64_t) is_observed.size ())
     is_observed.resize (1 + (size_t) new_max_var, false);
   if (internal->opts.checkfrozen)

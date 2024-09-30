@@ -43,8 +43,8 @@ void Internal::factor_mode () {
       const int other = c->literals[1];
       bincount[vlit (lit)]++;
       bincount[vlit (other)]++;
-      occs (vlit (lit)).push_back (c);
-      occs (vlit (other)).push_back (c);
+      occs (lit).push_back (c);
+      occs (other).push_back (c);
       continue;
     }
     candidates.push_back (c);
@@ -719,12 +719,12 @@ void Internal::factor () {
   if (!opts.factor)
     return;
   // TODO: update last.factor.marked to retrigger factor
-  if (last.factor.marked >= stats.factor_literals) {
-    VERBOSE (3, "factorization skipped as no literals have been"
-        "marked to be added (%" PRIu64 " < %" PRIu64 ")",
-        last.factor.marked, stats.factor_literals);
-    return;
-  }
+  // if (last.factor.marked >= stats.factor_literals) {
+  //   VERBOSE (3, "factorization skipped as no literals have been"
+  //       "marked to be added (%" PRIu64 " < %" PRIu64 ")",
+  //       last.factor.marked, stats.factor_literals);
+  //   return;
+  // }
   assert (!level);
   START_SIMPLIFIER (factor, FACTOR);
   stats.factor++;

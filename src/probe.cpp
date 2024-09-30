@@ -897,6 +897,8 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   if (sweep ())
     decompose ();
 
+  factor ();
+
   last.probe.propagations = stats.propagations.search;
 
   if (!update_limits)
