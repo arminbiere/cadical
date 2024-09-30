@@ -147,6 +147,7 @@ Quotient *Internal::new_quotient (Factoring &factoring, int factor) {
   } else {
     assert (!factoring.quotients.first);
     factoring.quotients.first = res;
+    res->id = 0;
   }
   factoring.quotients.last = res;
   res->prev = last;
@@ -472,6 +473,7 @@ void Internal::resize_factoring (Factoring &factoring, int lit) {
   factoring.size = new_var_size;
 }
 
+// TODO: bug in here with preprocesing
 void Internal::flush_unmatched_clauses (Quotient *q) {
   Quotient *prev = q->prev;
   vector<size_t> &q_matches = q->matches, &prev_matches = prev->matches;
