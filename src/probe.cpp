@@ -875,6 +875,7 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   stats.probingphases++;
 
   const int before = active ();
+  const int before_extended = stats.variables_extension;
 
   // We trigger equivalent literal substitution (ELS) before ...
   //
@@ -905,7 +906,10 @@ void CaDiCaL::Internal::probe (bool update_limits) {
     return;
 
   const int after = active ();
-  const int removed = before - after;
+  const int after_extended = stats.variables_extension;
+  const int diff_extended = after_extended - before_extended;
+  assert (diff_extended >= 0);
+  const int removed = before - after + diff_extended;
   assert (removed >= 0);
 
   if (removed) {

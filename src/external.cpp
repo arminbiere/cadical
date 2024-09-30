@@ -117,8 +117,13 @@ int External::internalize (int elit, bool extension) {
     const int eidx = abs (elit);
     if (extension && eidx <= max_var)
       FATAL ("can not add a definition for an already used variable %d", eidx);
-    if (eidx > max_var)
+    if (eidx > max_var) {
+      if (extension)
+        internal->stats.variables_extension++;
+      else
+        internal->stats.variables_original++;
       init (eidx);
+    }
     if (extension) {
       assert (ervars.size () > (size_t) eidx);
       ervars[eidx] = true;
@@ -127,10 +132,6 @@ int External::internalize (int elit, bool extension) {
     if (elit < 0)
       ilit = -ilit;
     if (!ilit) {
-      if (extension)
-        internal->stats.variables_extension++;
-      else
-        internal->stats.variables_original++;
       assert (internal->max_var < INT_MAX);
       ilit = internal->max_var + 1u;
       internal->init_vars (ilit);

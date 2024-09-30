@@ -566,7 +566,7 @@ struct Internal {
       res &= ~fact;
     }
     marks[vidx (lit)] = res;
-    assert (!getfact (res, fact));
+    assert (!getfact (lit, fact));
   }
 
 
@@ -952,8 +952,8 @@ struct Internal {
     if (f.factor & bit)
       return;
     LOG ("marking %d as factor literal candidate", lit);
-    stats.mark.elim++;
-    f.elim = true;
+    stats.mark.factor++;
+    f.factor |= bit;
   }
   void mark_added (int lit, int size, bool redundant);
   void mark_added (Clause *);

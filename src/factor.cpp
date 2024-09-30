@@ -342,6 +342,7 @@ int Internal::next_factor (Factoring &factoring,
       LOG ("found %u tied next factor candidate literals with count %u",
            ties, next_count);
       double next_score = -1;
+      // TODO: here is a bug
       for (const auto &lit : counted) {
         const unsigned lit_count = count[lit];
         if (lit_count != next_count)
@@ -457,7 +458,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
 void Internal::resize_factoring (Factoring &factoring, int lit) {
   assert (lit > 0);
   const size_t old_size = factoring.size;
-  assert ((size_t) lit > old_size);
+  assert ((size_t) lit >= old_size);
   const size_t old_allocated = factoring.allocated;
   size_t new_var_size = lit + 1;
   size_t new_lit_size = 2 * new_var_size;
@@ -544,11 +545,11 @@ void Internal::eagerly_remove_from_occurences (Clause *c) {
     auto begin = occ.begin ();
     auto end = occ.end ();
     while (p != end) {
-      *q++ = *p++;
-      if (*q == c) q--;
+      *q = *p++;
+      if (*q != c) q++;
     }
-    assert (q++ == p);
-    occ.resize (begin - q);
+    assert (q+1 == p);
+    occ.resize (q - begin);
   }
 }
 
@@ -693,9 +694,6 @@ bool Internal::run_factorization (int64_t limit) {
   // kissat initializes scores for new variables at this point, however
   // this is actually done already during resize of internal
   report ('f', !factored);
-  // TODO: if factoring is not pointer it should automatically
-  // call destructor upon leaving this function??
-  // delete factoring;
   return completed;
 }
 
@@ -703,6 +701,11 @@ int Internal::get_new_extension_variable () {
   const int current_max_external = external->max_var;
   const int new_external = current_max_external + 1;
   const int new_internal = external->internalize (new_external, true);
+  // one sideeffect of internalize is enlarging the internal datastructures
+  // which can initialize the watches (wtab)
+  if (watching ()) reset_watches ();
+  // it does not enlarge otab, however, so we do this manually
+  init_occs ();
   return new_internal;
 }
 
@@ -713,6 +716,7 @@ void Internal::factor () {
     return;
   if (!opts.factor)
     return;
+  assert (stats.mark.factor);
   // update last.factor.marked and flags.factor to trigger factor
   if (last.factor.marked >= stats.mark.factor) {
     VERBOSE (3, "factorization skipped as no literals have been"
