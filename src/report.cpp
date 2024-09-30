@@ -114,7 +114,7 @@ Report::Report (const char *h, int precision, int min, double value)
 
 #define MB (current_resident_set_size () / (double) (1l << 20))
 
-#define REMAINING (percent (active (), external->max_var))
+#define REMAINING (percent (active (), stats.variables_original))
 
 #define TRAIL (percent (averages.current.trail.slow, max_var))
 

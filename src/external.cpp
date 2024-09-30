@@ -126,6 +126,10 @@ int External::internalize (int elit, bool extension) {
     if (elit < 0)
       ilit = -ilit;
     if (!ilit) {
+      if (extension)
+        internal->stats.variables_extension++;
+      else
+        internal->stats.variables_original++;
       assert (internal->max_var < INT_MAX);
       ilit = internal->max_var + 1u;
       internal->init_vars (ilit);

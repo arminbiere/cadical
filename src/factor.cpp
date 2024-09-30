@@ -466,7 +466,7 @@ void Internal::resize_factoring (Factoring &factoring, int lit) {
   // since we have vectors instead of arrays as in kissat this is easy
   // TODO: maybe exponential resize ?
   // or remove allocated...
-  if (new_size > old_allocated) {
+  if (new_var_size > old_allocated) {
     enlarge_zero (factoring.count, new_lit_size);
     factoring.allocated = new_var_size;
   }
@@ -482,22 +482,22 @@ void Internal::flush_unmatched_clauses (Quotient *q) {
   assert (n == q_matches.size ());
   bool prev_is_first = !prev->id;
   size_t i = 0;
-  while (i != n) {
-    size_t j = PEEK_STACK (*q_matches, i);
+  while (i < q_matches.size ()) {
+    size_t j = q_matches[i];
     assert (i <= j);
     if (!prev_is_first) {
-      size_t matches = PEEK_STACK (*prev_matches, j);
-      POKE_STACK (*prev_matches, i, matches);
+      size_t matches = prev_matches[j];
+      prev_matches[i] = matches;
     }
-    watch watch = PEEK_STACK (*prev_clauses, j);
-    POKE_STACK (*prev_clauses, i, watch);
+    Clause *c = prev_clauses[j];
+    prev_clauses[i] = c;
     i++;
   }
   LOG ("flushing %zu clauses of quotient[%zu]",
-       SIZE_STACK (*prev_clauses) - n, prev->id);
+       prev_clauses.size () - n, prev->id);
   if (!prev_is_first)
-    RESIZE_STACK (*prev_matches, n);
-  RESIZE_STACK (*prev_clauses, n);
+    prev_matches.resize (n);
+  prev_clauses.resize (n);
 }
 
 
@@ -718,6 +718,7 @@ void Internal::factor () {
     return;
   if (!opts.factor)
     return;
+  // TODO: update last.factor.marked to retrigger factor
   if (last.factor.marked >= stats.factor_literals) {
     VERBOSE (3, "factorization skipped as no literals have been"
         "marked to be added (%" PRIu64 " < %" PRIu64 ")",

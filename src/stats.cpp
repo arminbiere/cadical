@@ -481,15 +481,23 @@ void Stats::print (Internal *internal) {
          stats.sweep_completed, relative (stats.sweep, stats.sweep_completed));
 
   }
-  if (all || stats.factor) {
-    PRT ("factored vars:   %15" PRId64 "   %10.2f %%  of variables",
-         stats.factor_vars, percent (stats.factor_vars, internal->max_var));
-    PRT ("  factored:      %15" PRId64 "   %10.2f    conflict interval",
+  if (all || stats.factored) {
+    PRT ("factored:         %15" PRId64 "   %10.2f %%  of variables",
+         stats.factored, percent (stats.factored, internal->max_var));
+    PRT ("  factor:         %15" PRId64 "   %10.2f    conflict interval",
          stats.factor, relative (stats.conflicts, stats.factor));
-    PRT ("  factor added:  %15" PRId64 "   %10.2f    per new var",
-         stats.factor_added, relative (stats.factor_added, factor_vars));
-    PRT ("  factor deleted:%15" PRId64 "   %10.2f    per new var",
-         stats.factor_deleted, relative (stats.factor, factor_vars));
+    PRT ("  factor ticks:   %15" PRId64 "   %10.2f    per search propagation",
+         stats.factor_ticks, relative (stats.factor_ticks, stats.propagations.search));
+    PRT ("  cls added:      %15" PRId64 "   %10.2f    per factored",
+         stats.factor_added, relative (stats.factor_added, factored));
+    PRT ("  cls deleted:    %15" PRId64 "   %10.2f    per factored",
+         stats.factor_deleted, relative (stats.factor_deleted, factored));
+    PRT ("  lits factored:  %15" PRId64 "   %10.2f    per factored",
+         stats.literals_factored, relative (stats.literals_factored, factored));
+    PRT ("  cls unfactored: %15" PRId64 "   %10.2f    per factored",
+         stats.clauses_unfactored, relative (stats.clauses_unfactored, factored));
+    PRT ("  lits unfactored:%15" PRId64 "   %10.2f    per factored",
+         stats.literals_unfactored, relative (stats.literals_unfactored, factored));
   }
   if (all || stats.subsumed) {
     PRT ("subsumed:        %15" PRId64 "   %10.2f %%  of all clauses",
