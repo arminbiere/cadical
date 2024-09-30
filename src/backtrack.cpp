@@ -158,6 +158,7 @@ void Internal::backtrack (int new_level) {
       tainted_literal = 0;
     }
   }
+  assumptions2.backtrack (level);
   assert (num_assigned == trail.size ());
 }
 

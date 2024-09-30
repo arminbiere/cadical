@@ -614,7 +614,7 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
 void Internal::produce_failed_assumptions () {
   LOG ("producing failed assumptions");
   assert (!level);
-  assert (!assumptions.empty ());
+  assert (!assumptions2.empty ());
   while (!unsat) {
     assert (!satisfied ());
     notify_assignments ();
@@ -687,7 +687,7 @@ int Internal::local_search () {
     res = try_to_satisfy_formula_by_saved_phases ();
   } else if (res == 20) {
     LOG ("local search determined assumptions to be inconsistent");
-    assert (!assumptions.empty ());
+    assert (!assumptions2.empty ());
     produce_failed_assumptions ();
   }
 
@@ -907,7 +907,7 @@ void Internal::dump (Clause *c) {
 }
 
 void Internal::dump () {
-  int64_t m = assumptions.size ();
+  int64_t m = assumptions2.size ();
   for (auto idx : vars)
     if (fixed (idx))
       m++;
@@ -923,7 +923,7 @@ void Internal::dump () {
   for (const auto &c : clauses)
     if (!c->garbage)
       dump (c);
-  for (const auto &lit : assumptions)
+  for (const auto &lit : assumptions2)
     printf ("%d 0\n", lit);
   fflush (stdout);
 }

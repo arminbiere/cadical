@@ -290,7 +290,7 @@ int Internal::lookahead_probing () {
 
   MSG ("lookahead-probe-round %" PRId64
        " without propagations limit and %zu assumptions",
-       stats.probingrounds, assumptions.size ());
+       stats.probingrounds, assumptions2.size ());
 
   termination_forced = false;
 
@@ -433,11 +433,11 @@ CubesWithStatus Internal::generate_cubes (int depth, int min_depth) {
   }
 
   reset_limits ();
-  MSG ("generate cubes with %zu assumptions\n", assumptions.size ());
+  MSG ("generate cubes with %zu assumptions\n", assumptions2.size ());
 
   assert (ntab.empty ());
-  std::vector<int> current_assumptions{assumptions};
-  std::vector<std::vector<int>> cubes{{assumptions}};
+  std::vector<int> current_assumptions{assumptions2.assumptions};
+  std::vector<std::vector<int>> cubes{{assumptions2.assumptions}};
   auto loccs{lookahead_populate_locc ()};
   LOG ("loccs populated\n");
   assert (ntab.empty ());

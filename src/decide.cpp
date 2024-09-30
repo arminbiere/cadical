@@ -96,7 +96,9 @@ void Internal::new_trail_level (int lit) {
 /*------------------------------------------------------------------------*/
 
 bool Internal::satisfied () {
-  if ((size_t) level < assumptions.size () + (!!constraint.size ()))
+  if (!assumptions2.satisfied())
+    return false;
+  if ((size_t) level < assumptions2.level () + (!!constraint.size ()))
     return false;
   if (num_assigned < (size_t) max_var)
     return false;
@@ -123,23 +125,43 @@ int Internal::decide () {
   assert (!satisfied ());
   START (decide);
   int res = 0;
-  if ((size_t) level < assumptions.size ()) {
-    const int lit = assumptions[level];
-    assert (assumed (lit));
+  int lit = 0;
+  while (!assumptions2.satisfied ()) {
+    lit = assumptions2.next ();
     const signed char tmp = val (lit);
     if (tmp < 0) {
       LOG ("assumption %d falsified", lit);
       res = 20;
     } else if (tmp > 0) {
       LOG ("assumption %d already satisfied", lit);
-      new_trail_level (0);
-      LOG ("added pseudo decision level");
-      notify_decision ();
+      lit = 0;
     } else {
       LOG ("deciding assumption %d", lit);
+      assumptions2.decide();
       search_assume_decision (lit);
+      break;
     }
-  } else if ((size_t) level == assumptions.size () && constraint.size ()) {
+  }
+
+  //  if (!lit && (size_t) level < assumptions.size ()) {
+  //     const int lit = assumptions[level];
+  //     assert (assumed (lit));
+  //     const signed char tmp = val (lit);
+  //     if (tmp < 0) {
+  //       LOG ("assumption %d falsified", lit);
+  //       res = 20;
+  //     } else if (tmp > 0) {
+  //       LOG ("assumption %d already satisfied", lit);
+  //       new_trail_level (0);
+  //       LOG ("added pseudo decision level");
+  //       notify_decision ();
+  //     } else {
+  //       LOG ("deciding assumption %d", lit);
+  //       search_assume_decision (lit);
+  //     }
+  // } else
+  if (!lit && assumptions2.satisfied () && level == assumptions2.level () &&
+      constraint.size ()) {
 
     int satisfied_lit = 0;  // The literal satisfying the constrain.
     int unassigned_lit = 0; // Highest score unassigned literal.
@@ -224,7 +246,9 @@ int Internal::decide () {
     assert (!sum); // Checksum of literal should not change!
 #endif
 
-  } else {
+  } else if (!lit) {
+    assert (!lit);
+    LOG ("now real decision");
     stats.decisions++;
     int decision = ask_decision ();
     if (!decision) {

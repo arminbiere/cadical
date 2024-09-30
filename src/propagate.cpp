@@ -225,7 +225,7 @@ void Internal::search_assign_external (int lit) {
 // more bytes for each clause.
 
 bool Internal::propagate () {
-
+  LOG ("propagating");
   if (level)
     require_mode (SEARCH);
   assert (!unsat);

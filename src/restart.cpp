@@ -63,7 +63,9 @@ bool Internal::stabilizing () {
 bool Internal::restarting () {
   if (!opts.restart)
     return false;
-  if ((size_t) level < assumptions.size () + 2)
+  if (!assumptions2.satisfied ())
+    return false;
+  if ((size_t) level < assumptions2.level () + 2)
     return false;
   if (stabilizing ())
     return reluctant;
@@ -83,10 +85,10 @@ bool Internal::restarting () {
 
 int Internal::reuse_trail () {
   const int trivial_decisions =
-      assumptions.size ()
+      assumptions2.level ()
       // Plus 1 if the constraint is satisfied via implications of
       // assumptions and a pseudo-decision level was introduced.
-      + !control[assumptions.size () + 1].decision;
+      + !control[assumptions2.level () + 1].decision;
   if (!opts.restartreusetrail)
     return trivial_decisions;
   int next_decision = next_decision_variable ();

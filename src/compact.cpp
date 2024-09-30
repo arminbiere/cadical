@@ -187,7 +187,7 @@ void Internal::compact () {
   else
     LOG ("no variable fixed");
 
-  if (!assumptions.empty ()) {
+  if (!assumptions2.empty ()) {
     assert (!external->assumptions.empty ());
     LOG ("temporarily reset internal assumptions");
     reset_assumptions ();

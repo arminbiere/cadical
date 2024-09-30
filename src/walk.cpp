@@ -464,11 +464,11 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
   level = 1; // Assumed variables assigned at level 1.
 
-  if (assumptions.empty ()) {
+  if (assumptions2.empty ()) {
     LOG ("no assumptions so assigning all variables to decision phase");
   } else {
     LOG ("assigning assumptions to their forced phase first");
-    for (const auto lit : assumptions) {
+    for (const auto lit : assumptions2) {
       signed char tmp = val (lit);
       if (tmp > 0)
         continue;

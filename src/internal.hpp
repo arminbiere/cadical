@@ -47,6 +47,7 @@ extern "C" {
 // header files here is that '.cpp' files then only need to include this.
 
 #include "arena.hpp"
+#include "assumptions.hpp"
 #include "averages.hpp"
 #include "bins.hpp"
 #include "block.hpp"
@@ -232,7 +233,6 @@ struct Internal {
   size_t no_conflict_until;  // largest trail prefix without conflict
   vector<int> trail;         // currently assigned literals
   vector<int> clause;        // simplified in parsing & learning
-  vector<int> assumptions;   // assumed literals
   vector<int> constraint;    // literals of the constraint
   bool unsat_constraint;     // constraint used for unsatisfiability?
   bool marked_failed;        // are the failed assumptions marked?
@@ -1095,6 +1095,10 @@ struct Internal {
   bool flip (int lit);
   bool flippable (int lit);
 
+  // Assumption handling.
+  //
+  Assumptions assumptions2;
+  
   // Assumption handling.
   //
   void assume_analyze_literal (int lit);

@@ -30,7 +30,7 @@ int Internal::unlucky (int res) {
 int Internal::trivially_false_satisfiable () {
   LOG ("checking that all clauses contain a negative literal");
   assert (!level);
-  assert (assumptions.empty ());
+  assert (assumptions2.empty ());
   for (const auto &c : clauses) {
     if (terminated_asynchronously (100))
       return unlucky (-1);
@@ -77,7 +77,7 @@ int Internal::trivially_false_satisfiable () {
 int Internal::trivially_true_satisfiable () {
   LOG ("checking that all clauses contain a positive literal");
   assert (!level);
-  assert (assumptions.empty ());
+  assert (assumptions2.empty ());
   for (const auto &c : clauses) {
     if (terminated_asynchronously (100))
       return unlucky (-1);
@@ -127,7 +127,7 @@ int Internal::forward_false_satisfiable () {
   LOG ("checking increasing variable index false assignment");
   assert (!unsat);
   assert (!level);
-  assert (assumptions.empty ());
+  assert (assumptions2.empty ());
   for (auto idx : vars) {
     if (terminated_asynchronously (100))
       return unlucky (-1);
@@ -147,7 +147,7 @@ int Internal::forward_true_satisfiable () {
   LOG ("checking increasing variable index true assignment");
   assert (!unsat);
   assert (!level);
-  assert (assumptions.empty ());
+  assert (assumptions2.empty ());
   for (auto idx : vars) {
     if (terminated_asynchronously (10))
       return unlucky (-1);
@@ -169,7 +169,7 @@ int Internal::backward_false_satisfiable () {
   LOG ("checking decreasing variable index false assignment");
   assert (!unsat);
   assert (!level);
-  assert (assumptions.empty ());
+  assert (assumptions2.empty ());
   for (int idx = max_var; idx > 0; idx--) {
     if (terminated_asynchronously (10))
       return unlucky (-1);
@@ -189,7 +189,7 @@ int Internal::backward_true_satisfiable () {
   LOG ("checking decreasing variable index true assignment");
   assert (!unsat);
   assert (!level);
-  assert (assumptions.empty ());
+  assert (assumptions2.empty ());
   for (int idx = max_var; idx > 0; idx--) {
     if (terminated_asynchronously (10))
       return unlucky (-1);
@@ -216,7 +216,7 @@ int Internal::backward_true_satisfiable () {
 int Internal::positive_horn_satisfiable () {
   LOG ("checking that all clauses are positive horn satisfiable");
   assert (!level);
-  assert (assumptions.empty ());
+  assert (assumptions2.empty ());
   for (const auto &c : clauses) {
     if (terminated_asynchronously (10))
       return unlucky (-1);
@@ -275,7 +275,7 @@ int Internal::positive_horn_satisfiable () {
 int Internal::negative_horn_satisfiable () {
   LOG ("checking that all clauses are negative horn satisfiable");
   assert (!level);
-  assert (assumptions.empty ());
+  assert (assumptions2.empty ());
   for (const auto &c : clauses) {
     if (terminated_asynchronously (10))
       return unlucky (-1);
@@ -345,7 +345,7 @@ int Internal::lucky_phases () {
   // assumptions, but this is not completely implemented nor tested yet.
   // Nothing done for constraint either.
   // External propagator assumes a CDCL loop, so lucky is not tried here.
-  if (!assumptions.empty () || !constraint.empty () || external_prop)
+  if (!assumptions2.empty () || !constraint.empty () || external_prop)
     return 0;
 
   START (search);
