@@ -121,17 +121,25 @@ void Internal::renotify_full_trail () {
     notified = 0;  // TODO: save the last notified root-level position somewhere and use it here
     notify_backtrack (0);
   }
-
   std::vector<int> assigned;
+
+  int prev_max_level = 0;
+  int current_level = 0;
+  
   while (notified < end_of_trail) {
     int ilit = trail[notified++];
+    // In theory, 0 ilit can happen due to pseudo-decision levels
+    if (!ilit) current_level = prev_max_level + 1;
+    else current_level = var (ilit).level;
 
-    if (is_decision (ilit)) {
+    if (is_decision (ilit) || current_level > prev_max_level) {
       if (assigned.size()) external->propagator->notify_assignment (assigned);
       external->propagator->notify_new_decision_level ();
       assigned.clear ();
     }
-
+    // Current level can be smaller than prev_max_level due to chrono
+    if (current_level > prev_max_level) prev_max_level = current_level;
+    
     if (!observed (ilit))
       continue;
 
@@ -145,6 +153,11 @@ void Internal::renotify_full_trail () {
     assigned.push_back(elit);
   }
   if (assigned.size()) external->propagator->notify_assignment (assigned);
+  assigned.clear();
+
+  // In case there are some left over empty levels on the top of the trail, the
+  // external propagtor must be notified about them so the levels are synced
+  while (level > current_level++) external->propagator->notify_new_decision_level ();
   
   return;
 
