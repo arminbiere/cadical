@@ -432,7 +432,6 @@ public:
       }
     }
 
-    size_t t_idx = 0;
     for (const auto& level : observed_trail) {
       for (const auto elit : level) {
         if (is_observed_now(elit)) {
@@ -446,9 +445,7 @@ public:
           otrail.insert (elit);
           otrail_inserted ++;
         }
-
       }
-      t_idx++;
     }
 #ifdef LOGGING    
     if (etrail.size() != otrail.size()) {
@@ -474,6 +471,7 @@ public:
                                       << observed_trail.size () - 1
                                       << ", current fixed count: "
                                       << observed_fixed.size()
+                                      << ")"
                                       << std::endl);
 
     assert (std::find (observed_fixed.begin (), observed_fixed.end (),
@@ -743,6 +741,9 @@ public:
       size_t id = add_new_lemma (true);
       external_lemmas[id]->propagation_reason = true;
       reason_map[propagated_lit] = id;
+      MLOG("new clause added to reason map for " << propagated_lit 
+        << " with id " << id
+        << std::endl);
       clause.clear();
     }
 
@@ -800,20 +801,6 @@ public:
     }
   }
 
-  //
-  // Old signature, remove once get merged.
-  //
-  // void notify_assignment (int lit, bool is_fixed) {
-  //   MLOG ("notify assignment: "
-  //         << lit << " (current level: " << observed_trail.size () - 1
-  //         << ", is_fixed: " << is_fixed << ")" << std::endl);
-  //   if (is_fixed) {
-  //     observed_trail.front ().push_back (lit);
-  //   } else {
-  //     observed_trail.back ().push_back (lit);
-  //   }
-  // }
-
   void notify_new_decision_level () {
     MLOG ("notify new decision level " << observed_trail.size () -1 << " -> "
                                        << observed_trail.size ()
@@ -828,50 +815,32 @@ public:
     assert (observed_trail.size () == 1 ||
             observed_trail.size () >= new_level + 1);
     while (observed_trail.size () > new_level + 1) {
-      // Remove reason clause of backtracked assignments (keep it as lemma)
-      for (auto lit : observed_trail.back ()) {
-        if (reason_map.find (lit) != reason_map.end ()) {
-          size_t reason_id = reason_map[lit];
-          assert (reason_id < external_lemmas.size ());
-          external_lemmas[reason_id]->propagation_reason = false;
-          external_lemmas[reason_id]->forgettable = true;
-          reason_map.erase (lit);
+      // We can not remove reason clauses of backtracked assignments because
+      // ILB might re-introduces them on the trail. But upon restarts it should
+      // be always safe to clean up the reason database.
+      if (!new_level) {
+        for (auto lit : observed_trail.back ()) {
+          if (reason_map.find (lit) != reason_map.end ()) {
+            size_t reason_id = reason_map[lit];
+            assert (reason_id < external_lemmas.size ());
+            external_lemmas[reason_id]->propagation_reason = false;
+            external_lemmas[reason_id]->forgettable = true;
+            reason_map.erase (lit);
+          }
         }
       }
+#ifndef NDEBUG
+      MLOG("unassign during backtrack from level : " 
+        << observed_trail.size() - 1 );
+      for (auto lit: observed_trail.back()) MLOGC(lit << " ");
+      MLOGC(std::endl);
+#endif
       observed_trail.pop_back ();
     }
   }
 
   /* ----------------- ExternalPropagator functions end ------------------*/
 
-  /* -------------------------- Helper functions ---------------------- */
-  // std::set<int> current_observed_satisfied_set (size_t &lit_sum,
-  //                                               int &lowest_lit,
-  //                                               int &highest_lit) {
-
-  //   lit_sum = 0;
-  //   lowest_lit = 0;
-  //   highest_lit = 0;
-  //   std::set<int> satisfied_literals;
-
-  //   for (auto level_lits : observed_trail) {
-  //     for (auto lit : level_lits) {
-  //       if (!s->observed (lit))
-  //         continue;
-
-  //       satisfied_literals.insert (lit);
-  //       lit_sum += abs (lit);
-
-  //       if (!lowest_lit)
-  //         lowest_lit = lit;
-  //       highest_lit = lit;
-  //     }
-  //   }
-
-  //   return satisfied_literals;
-  // }
-
-  /* ------------------------ Helper functions end -------------------- */
 };
 
 // This is the class for the Mobical application.
@@ -2537,6 +2506,11 @@ void Trace::generate (uint64_t i, uint64_t s) {
 
     int clauses = range * ratio;
 
+    // TODO: Test empty clause database by uncommenting here
+    // Note that it can lead to unvalid mobical states in the reduced
+    // trace, so always check the original bug-trace too.
+    //if (random.generate_double () < 0.01) clauses = 0;
+    
     minvars = random.pick_int (1, maxvars + 1);
     maxvars = minvars + range;
 
