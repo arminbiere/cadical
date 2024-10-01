@@ -1084,8 +1084,12 @@ struct Call {
 
   virtual int sign () { return arg > 0 ? 1 : -1; }
   virtual void extend_map (Solver *&s, vector<int> &map) {
+    if (map.empty ()) map.push_back (0); // 0 is always mapped to 0
     if (!arg) return;
-    if (abs (arg) < map.size ()) return;
+    // these do not increase the variable counter in cadical
+    if (type == VAL || type == FIXED || type == FAILED || type == FROZEN)
+      return;
+    if (abs (arg) < map.size ()) return; // arg is already mapped
     const int diff = abs (arg) - map.size () + 1;
     const int max_var = s->vars ();
     for (int i = 1; i <= diff; i++)
@@ -1130,7 +1134,7 @@ static bool after_type (Call::Type t) {
 
 struct InitCall : public Call {
   InitCall () : Call (INIT) {}
-  void execute (Solver *&s, vector<int> &map) { s = new Solver (); assert (map.empty ()); }
+  void execute (Solver *&s, vector<int> &map) { s = new Solver (); assert (map.size () == 1); }
   void print (ostream &o) { o << "init" << endl; }
   Call *copy () { return new InitCall (); }
   const char *keyword () { return "init"; }
