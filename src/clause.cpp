@@ -319,7 +319,7 @@ void Internal::mark_garbage (Clause *c) {
 // Almost the same function as 'search_assign' except that we do not pretend
 // to learn a new unit clause (which was confusing in log files).
 
-void Internal::assign_original_unit (uint64_t id, int lit) {
+void Internal::assign_original_unit (int64_t id, int lit) {
   assert (!level || opts.chrono);
   assert (!unsat);
   const int idx = vidx (lit);
@@ -354,7 +354,7 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
 // sometimes the pointer to the new clause is needed, therefore it is
 // made sure that newest_clause points to the new clause upon return.
 //
-void Internal::add_new_original_clause (uint64_t id) {
+void Internal::add_new_original_clause (int64_t id) {
 
   if (!from_propagator && level && !opts.ilb) {
     backtrack ();
@@ -392,7 +392,7 @@ void Internal::add_new_original_clause (uint64_t id) {
             int elit = externalize (lit);
             unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
             if (!external->ext_units[eidx]) {
-              uint64_t uid = (unit_clauses[vlit (-lit)]);
+              int64_t uid = (unit_clauses[vlit (-lit)]);
               assert (uid);
               lrat_chain.push_back (uid);
             }
@@ -421,7 +421,7 @@ void Internal::add_new_original_clause (uint64_t id) {
       proof->delete_external_original_clause (id, false, external->eclause);
     }
   } else {
-    uint64_t new_id = id;
+    int64_t new_id = id;
     const size_t size = clause.size ();
     if (original.size () > size) {
       new_id = ++clause_id;

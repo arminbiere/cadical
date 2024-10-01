@@ -73,7 +73,7 @@ void Internal::init_probehbr_lrat () {
     // commented because not needed... should be empty already
     /*
     for (size_t j = 0; j < size; j++) {
-      vector<uint64_t> empty;
+      vector<int64_t> empty;
       probehbr_chains[i][j] = empty;
     }
     */
@@ -134,7 +134,7 @@ void Internal::probe_dominator_lrat (int dom, Clause *reason) {
       continue;
     }
     const unsigned uidx = vlit (other);
-    uint64_t id = unit_clauses[uidx];
+    int64_t id = unit_clauses[uidx];
     assert (id);
     lrat_chain.push_back (id);
   }
@@ -365,7 +365,7 @@ inline void Internal::probe_lrat_for_units (int lit) {
     if (!val (reason_lit))
       continue;
     const unsigned uidx = vlit (val (reason_lit) * reason_lit);
-    uint64_t id = unit_clauses[uidx];
+    int64_t id = unit_clauses[uidx];
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (probe_reason->id);

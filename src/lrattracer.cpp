@@ -53,13 +53,14 @@ inline void LratTracer::put_binary_lit (int lit) {
   file->put (ch);
 }
 
+// TODO
 inline void LratTracer::put_binary_id (int64_t id) {
   assert (binary);
   assert (file);
 #ifndef NDEBUG
   // Unfortunately 'std::numeric_limits<int64_t>::min ()' does not seem to
   // be available for pedantic compilation.
-  assert ((uint64_t) id != ((~(uint64_t) 0) >> 1));
+  assert ((int64_t) id != ((~(int64_t) 0) >> 1));
 #endif
   uint64_t u = (id < 0) ? -id : id;
   assert (u < (((uint64_t) 1) << 63));
@@ -76,8 +77,8 @@ inline void LratTracer::put_binary_id (int64_t id) {
 
 /*------------------------------------------------------------------------*/
 
-void LratTracer::lrat_add_clause (uint64_t id, const vector<int> &clause,
-                                  const vector<uint64_t> &chain) {
+void LratTracer::lrat_add_clause (int64_t id, const vector<int> &clause,
+                                  const vector<int64_t> &chain) {
   if (delete_ids.size ()) {
     if (!binary)
       file->put (latest_id), file->put (" ");
@@ -123,15 +124,15 @@ void LratTracer::lrat_add_clause (uint64_t id, const vector<int> &clause,
     file->put ("0\n"); // this is just 2c here
 }
 
-void LratTracer::lrat_delete_clause (uint64_t id) {
+void LratTracer::lrat_delete_clause (int64_t id) {
   delete_ids.push_back (id); // pushing off deletion for later
 }
 
 /*------------------------------------------------------------------------*/
 
-void LratTracer::add_derived_clause (uint64_t id, bool,
+void LratTracer::add_derived_clause (int64_t id, bool,
                                      const vector<int> &clause,
-                                     const vector<uint64_t> &chain) {
+                                     const vector<int64_t> &chain) {
   if (file->closed ())
     return;
   LOG ("LRAT TRACER tracing addition of derived clause");
@@ -141,7 +142,7 @@ void LratTracer::add_derived_clause (uint64_t id, bool,
 #endif
 }
 
-void LratTracer::delete_clause (uint64_t id, bool, const vector<int> &) {
+void LratTracer::delete_clause (int64_t id, bool, const vector<int> &) {
   if (file->closed ())
     return;
   LOG ("LRAT TRACER tracing deletion of clause");
@@ -151,7 +152,7 @@ void LratTracer::delete_clause (uint64_t id, bool, const vector<int> &) {
 #endif
 }
 
-void LratTracer::begin_proof (uint64_t id) {
+void LratTracer::begin_proof (int64_t id) {
   if (file->closed ())
     return;
   LOG ("LRAT TRACER tracing begin of proof");

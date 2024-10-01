@@ -49,8 +49,8 @@ namespace CaDiCaL {
 
 void External::restore_clause (const vector<int>::const_iterator &begin,
                                const vector<int>::const_iterator &end,
-                               const uint64_t id) {
-  LOG (begin, end, "restoring external clause[%" PRIu64 "]", id);
+                               const int64_t id) {
+  LOG (begin, end, "restoring external clause[%" PRId64 "]", id);
   assert (eclause.empty ());
   assert (id);
   for (auto p = begin; p != end; p++) {
@@ -59,7 +59,7 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
       const auto &elit = *p;
       unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
       assert ((size_t) eidx < ext_units.size ());
-      const uint64_t id = ext_units[eidx];
+      const int64_t id = ext_units[eidx];
       bool added = ext_flags[abs (elit)];
       if (id && !added) {
         ext_flags[abs (elit)] = true;
@@ -142,8 +142,8 @@ void External::restore_clauses () {
     }
 
     // now copy the id of the clause
-    const uint64_t id = ((uint64_t) (*p) << 32) + (uint64_t) * (p + 1);
-    LOG ("id is %" PRIu64, id);
+    const int64_t id = ((int64_t) (*p) << 32) + (int64_t) * (p + 1);
+    LOG ("id is %" PRId64, id);
     *q++ = *p++;
     *q++ = *p++;
     assert (id);

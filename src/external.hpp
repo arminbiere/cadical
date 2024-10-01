@@ -63,7 +63,7 @@ struct External {
   vector<int> assumptions; // External assumptions.
   vector<int> constraint;  // External constraint. Terminated by zero.
 
-  vector<uint64_t>
+  vector<int64_t>
       ext_units; // External units. Needed to compute LRAT for eclause
   vector<bool> ext_flags; // to avoid duplicate units
   vector<int> eclause;    // External version of original input clause.
@@ -173,7 +173,7 @@ struct External {
 
   void push_clause_on_extension_stack (Clause *);
   void push_clause_on_extension_stack (Clause *, int witness);
-  void push_binary_clause_on_extension_stack (uint64_t id, int witness,
+  void push_binary_clause_on_extension_stack (int64_t id, int witness,
                                               int other);
 
   // The main 'extend' function which extends an internal assignment to an
@@ -215,14 +215,14 @@ struct External {
   /*----------------------------------------------------------------------*/
 
   void push_external_clause_and_witness_on_extension_stack (
-      const vector<int> &clause, const vector<int> &witness, uint64_t id);
+      const vector<int> &clause, const vector<int> &witness, int64_t id);
 
-  void push_id_on_extension_stack (uint64_t id);
+  void push_id_on_extension_stack (int64_t id);
 
   // Restore a clause, which was pushed on the extension stack.
   void restore_clause (const vector<int>::const_iterator &begin,
                        const vector<int>::const_iterator &end,
-                       const uint64_t id);
+                       const int64_t id);
 
   void restore_clauses ();
 

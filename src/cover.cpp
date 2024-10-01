@@ -377,7 +377,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       // Only copy extension stack if successful.
       int prev = INT_MIN;
       bool already_pushed = false;
-      uint64_t last_id = 0;
+      int64_t last_id = 0;
       LOG (c, "covered tautological");
       assert (clause.empty ());
       LOG (coveror.extend, "extension = ");

@@ -135,7 +135,7 @@ void Logger::log (Internal *internal,
 
 // for LRAT proof chains
 
-void Logger::log (Internal *internal, const vector<uint64_t> &c,
+void Logger::log (Internal *internal, const vector<int64_t> &c,
                   const char *fmt, ...) {
   print_log_prefix (internal);
   tout.magenta ();
@@ -144,7 +144,7 @@ void Logger::log (Internal *internal, const vector<uint64_t> &c,
   vprintf (fmt, ap);
   va_end (ap);
   for (const auto &id : c)
-    printf (" %" PRIu64, id);
+    printf (" %" PRId64, id);
   fputc ('\n', stdout);
   tout.normal ();
   fflush (stdout);

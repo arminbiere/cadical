@@ -185,19 +185,19 @@ struct Internal {
   Reluctant reluctant;        // restart counter in stable mode
   size_t vsize;               // actually allocated variable data size
   int max_var;                // internal maximum variable index
-  uint64_t clause_id;         // last used id for clauses
-  uint64_t original_id;       // ids for original clauses to produce LRAT
-  uint64_t reserved_ids;      // number of reserved ids for original clauses
-  uint64_t conflict_id;       // store conflict id for finalize (frat)
+  int64_t clause_id;         // last used id for clauses
+  int64_t original_id;       // ids for original clauses to produce LRAT
+  int64_t reserved_ids;      // number of reserved ids for original clauses
+  int64_t conflict_id;       // store conflict id for finalize (frat)
   bool concluded;             // keeps track of conclude
-  vector<uint64_t> conclusion;   // store ids of conclusion clauses
-  vector<uint64_t> unit_clauses; // keep track of unit_clauses (LRAT/FRAT)
-  vector<uint64_t> lrat_chain;   // create LRAT in solver: option lratdirect
-  vector<uint64_t> mini_chain;   // used to create LRAT in minimize
-  vector<uint64_t> minimize_chain; // used to create LRAT in minimize
-  vector<uint64_t> unit_chain;     // used to avoid duplicate units
+  vector<int64_t> conclusion;   // store ids of conclusion clauses
+  vector<int64_t> unit_clauses; // keep track of unit_clauses (LRAT/FRAT)
+  vector<int64_t> lrat_chain;   // create LRAT in solver: option lratdirect
+  vector<int64_t> mini_chain;   // used to create LRAT in minimize
+  vector<int64_t> minimize_chain; // used to create LRAT in minimize
+  vector<int64_t> unit_chain;     // used to avoid duplicate units
   vector<Clause *> inst_chain;     // for LRAT in instantiate
-  vector<vector<vector<uint64_t>>>
+  vector<vector<vector<int64_t>>>
       probehbr_chains;          // only used if opts.probehbr=false
   bool lrat;                    // generate LRAT internally
   int level;                    // decision level ('control.size () - 1')
@@ -323,7 +323,7 @@ struct Internal {
   void add_original_lit (int lit);
 
   // only able to restore irredundant clause
-  void finish_added_clause_with_id (uint64_t lit, bool restore = false);
+  void finish_added_clause_with_id (int64_t id, bool restore = false);
 
   // Reserve ids for original clauses to produce lrat
   void reserve_ids (int number);
@@ -662,8 +662,8 @@ struct Internal {
   void deallocate_clause (Clause *);
   void delete_clause (Clause *);
   void mark_garbage (Clause *);
-  void assign_original_unit (uint64_t, int);
-  void add_new_original_clause (uint64_t);
+  void assign_original_unit (int64_t, int);
+  void add_new_original_clause (int64_t);
   Clause *new_learned_redundant_clause (int glue);
   Clause *new_hyper_binary_resolved_clause (bool red, int glue);
   Clause *new_clause_as (const Clause *orig);
@@ -1129,12 +1129,12 @@ struct Internal {
   void sweep_refine (Sweeper &sweeper);
   void flip_backbone_literals (struct Sweeper &sweeper);
   bool sweep_backbone_candidate (Sweeper &sweeper, int lit);
-  uint64_t add_sweep_binary (sweep_proof_clause, int lit, int other);
+  int64_t add_sweep_binary (sweep_proof_clause, int lit, int other);
   bool scheduled_variable (Sweeper &sweeper, int idx);
   void schedule_inner (Sweeper &sweeper, int idx);
   void schedule_outer (Sweeper &sweeper, int idx);
   int next_scheduled (Sweeper &sweeper);
-  void substitute_connected_clauses (Sweeper &sweeper, int lit, int other, uint64_t id);
+  void substitute_connected_clauses (Sweeper &sweeper, int lit, int other, int64_t id);
   void sweep_remove (Sweeper &sweeper, int lit);
   void flip_partition_literals (struct Sweeper &sweeper);
   const char *sweep_variable (Sweeper &sweeper, int idx);
@@ -1153,7 +1153,7 @@ struct Internal {
   void sweep_dense_propagate (Sweeper &sweeper);
   void sweep_sparse_mode ();
   void sweep_dense_mode_and_watch_irredundant ();
-  void sweep_substitute_lrat (Clause *c, uint64_t id);
+  void sweep_substitute_lrat (Clause *c, int64_t id);
   void sweep_substitute_new_equivalences (Sweeper &sweeper);
   void sweep_update_noccs (Clause *c);
   void delete_sweep_binary (const sweep_binary &sb);

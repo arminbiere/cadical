@@ -14,7 +14,7 @@ Sweeper::~Sweeper () {
   return;
 }
 
-#define INVALID64 UINT64_MAX
+#define INVALID64 INT64_MAX
 #define INVALID UINT_MAX
 
 int Internal::sweep_solve () {
@@ -516,7 +516,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
     if (lrat) {
       assert (pc.cad_id == INVALID64);
       for (auto & cid : pc.chain) {
-        uint64_t id = 0;
+        int64_t id = 0;
         for (const auto & cpc : core) {
           if (cpc.kit_id == cid) {
             if (cpc.learned)
@@ -532,7 +532,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
                 const int idx = abs (lit);
                 if (sweeper.prev_units[idx]) {
                   const unsigned uidx = vlit (-lit);
-                  uint64_t uid = unit_clauses[uidx];
+                  int64_t uid = unit_clauses[uidx];
                   lrat_chain.push_back (uid);
                   analyzed.push_back (lit);
                   flags (lit).seen = true;
@@ -886,7 +886,7 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
 // We just copy it as an irredundant clause, call weaken minus
 // and push it on the extension stack.
 //
-uint64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) {
+int64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) {
   assert (!unsat);
   if (unsat) return 0;  // sanity check, should be fuzzed
 
@@ -897,7 +897,7 @@ uint64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) 
     for (const auto & plit : pc.literals) {
       if (val (plit)) {
         const unsigned uidx = vlit (-plit);
-        uint64_t id = unit_clauses[uidx];
+        int64_t id = unit_clauses[uidx];
         lrat_chain.push_back (id);
       }
     }
@@ -905,7 +905,7 @@ uint64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) 
   }
   clause.push_back (lit);
   clause.push_back (other);
-  const uint64_t id = ++clause_id;
+  const int64_t id = ++clause_id;
   if (proof) {
     proof->add_derived_clause (id, false, clause, lrat_chain);
     proof->weaken_minus (id, clause);
@@ -1013,13 +1013,13 @@ int Internal::next_scheduled (Sweeper &sweeper) {
   return res;
 }
 
-void Internal::sweep_substitute_lrat (Clause *c, uint64_t id) {
+void Internal::sweep_substitute_lrat (Clause *c, int64_t id) {
   if (!lrat) return;
   for (const auto & lit : *c) {
     assert (val (lit) <= 0);
     if (val (lit) < 0) {
       const unsigned uidx = vlit (-lit);
-      uint64_t id = unit_clauses[uidx];
+      int64_t id = unit_clauses[uidx];
       assert (id);
       lrat_chain.push_back (id);
     }
@@ -1037,7 +1037,7 @@ void Internal::sweep_substitute_lrat (Clause *c, uint64_t id) {
 // Substitute equivalences in clauses (see 'sweep_substitute_new_equivalences'
 // for explanation)
 void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr,
-                                                   uint64_t id) {
+                                                   int64_t id) {
   if (unsat)
     return;
   if (val (lit))

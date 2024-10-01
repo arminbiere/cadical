@@ -11,7 +11,7 @@ void Internal::decompose_analyze_binary_chain (DFS *dfs, int from) {
   /*
   if (val (from) > 0) {
     const unsigned uidx = vlit (from);
-    uint64_t id = unit_clauses[uidx];
+    int64_t id = unit_clauses[uidx];
     assert (id);
     mini_chain.push_back (id);
     return;
@@ -97,7 +97,7 @@ void Internal::build_lrat_for_clause (
         continue;
       mark_signed (other);
       const unsigned uidx = vlit (other);
-      uint64_t id = unit_clauses[uidx];
+      int64_t id = unit_clauses[uidx];
       assert (id);
       lrat_chain.push_back (id);
       continue;
@@ -109,7 +109,7 @@ void Internal::build_lrat_for_clause (
       mark_signed (other);
       int implied = p->literals[0];
       implied = implied == other ? -p->literals[1] : -implied;
-      LOG ("ADDED %d -> %d (%" PRIu64 ")", implied, other, p->id);
+      LOG ("ADDED %d -> %d (%" PRId64 ")", implied, other, p->id);
       other = implied;
       mini_chain.push_back (p->id);
       if (val (implied) <= 0)
@@ -118,7 +118,7 @@ void Internal::build_lrat_for_clause (
         break;
       mark_signed (implied);
       const unsigned uidx = vlit (implied);
-      uint64_t id = unit_clauses[uidx];
+      int64_t id = unit_clauses[uidx];
       assert (id);
       mini_chain.push_back (id);
       break;
@@ -181,7 +181,7 @@ void Internal::flush_and_learn_binaries () {
           continue;
         assert (val (reason_lit) < 0);
         const unsigned uidx = vlit (val (reason_lit) * reason_lit);
-        uint64_t id = unit_clauses[uidx];
+        int64_t id = unit_clauses[uidx];
         lrat_chain.push_back (id);
       }
       lrat_chain.push_back (c->id);
@@ -515,7 +515,7 @@ bool Internal::decompose_round () {
   // also just simply use the 'e2i' map as a union find data structure.
   // This would avoid the need to restore these clauses.
 
-  vector<uint64_t> decompose_ids;
+  vector<int64_t> decompose_ids;
   const size_t size = 2 * (1 + (size_t) max_var);
   decompose_ids.resize (size);
 
@@ -540,7 +540,7 @@ bool Internal::decompose_round () {
       assert (!lrat_chain.empty ());
     }
 
-    const uint64_t id1 = ++clause_id;
+    const int64_t id1 = ++clause_id;
     if (proof) {
       proof->add_derived_clause (id1, false, clause, lrat_chain);
       proof->weaken_minus (id1, clause);
@@ -560,7 +560,7 @@ bool Internal::decompose_round () {
       build_lrat_for_clause (dfs_chains);
       assert (!lrat_chain.empty ());
     }
-    const uint64_t id2 = ++clause_id;
+    const int64_t id2 = ++clause_id;
     if (proof) {
       proof->add_derived_clause (id2, false, clause, lrat_chain);
       proof->weaken_minus (id2, clause);
@@ -624,7 +624,7 @@ bool Internal::decompose_round () {
         f.seen = true;
         analyzed.push_back (lit);
         const unsigned uidx = vlit (-lit);
-        uint64_t id = unit_clauses[uidx];
+        int64_t id = unit_clauses[uidx];
         assert (id);
         lrat_chain.push_back (id);
         continue;
@@ -639,13 +639,13 @@ bool Internal::decompose_round () {
             f.seen = true;
             analyzed.push_back (other);
             const unsigned uidx = vlit (-other);
-            uint64_t id = unit_clauses[uidx];
+            int64_t id = unit_clauses[uidx];
             assert (id);
             lrat_chain.push_back (id);
           }
           if (other == lit)
             continue;
-          uint64_t id = decompose_ids[vlit (-lit)];
+          int64_t id = decompose_ids[vlit (-lit)];
           assert (id);
           lrat_chain.push_back (id);
           continue;
@@ -663,7 +663,7 @@ bool Internal::decompose_round () {
             continue;
           if (!lrat)
             continue;
-          uint64_t id = decompose_ids[vlit (-lit)];
+          int64_t id = decompose_ids[vlit (-lit)];
           assert (id);
           lrat_chain.push_back (id);
         }
@@ -746,7 +746,7 @@ bool Internal::decompose_round () {
     for (auto idx : vars) {
       if (!active (idx))
         continue;
-      const uint64_t id1 = decompose_ids[vlit (-idx)];
+      const int64_t id1 = decompose_ids[vlit (-idx)];
       if (!id1)
         continue;
       int other = reprs[vlit (idx)];
@@ -761,7 +761,7 @@ bool Internal::decompose_round () {
 
       clause.push_back (idx);
       clause.push_back (-other);
-      const uint64_t id2 = decompose_ids[vlit (idx)];
+      const int64_t id2 = decompose_ids[vlit (idx)];
       proof->delete_clause (id2, false, clause);
       clause.clear ();
     }

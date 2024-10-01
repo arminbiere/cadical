@@ -172,7 +172,7 @@ void Internal::add_original_lit (int lit) {
   if (lit) {
     original.push_back (lit);
   } else {
-    const uint64_t id =
+    const int64_t id =
         original_id < reserved_ids ? ++original_id : ++clause_id;
     if (proof) {
       // Use the external form of the clause for printing in proof
@@ -185,7 +185,7 @@ void Internal::add_original_lit (int lit) {
   }
 }
 
-void Internal::finish_added_clause_with_id (uint64_t id, bool restore) {
+void Internal::finish_added_clause_with_id (int64_t id, bool restore) {
   if (proof) {
     // Use the external form of the clause for printing in proof
     // Externalize(internalized literal) != external literal
@@ -833,7 +833,7 @@ void Internal::finalize (int res) {
     assert (evar > 0);
     const auto eidx = 2 * evar;
     int sign = 1;
-    uint64_t id = external->ext_units[eidx];
+    int64_t id = external->ext_units[eidx];
     if (!id) {
       sign = -1;
       id = external->ext_units[eidx + 1];
@@ -847,14 +847,14 @@ void Internal::finalize (int res) {
     const auto elit = externalize (lit);
     if (elit) {
       const unsigned eidx = (elit < 0) + 2u * (unsigned) abs (elit);
-      const uint64_t id = external->ext_units[eidx];
+      const int64_t id = external->ext_units[eidx];
       if (id) {
         assert (unit_clauses[vlit (lit)] == id);
         continue;
       }
     }
     const auto uidx = vlit (lit);
-    const uint64_t id = unit_clauses[uidx];
+    const int64_t id = unit_clauses[uidx];
     if (!id)
       continue;
     proof->finalize_unit (id, lit);

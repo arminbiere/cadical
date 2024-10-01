@@ -309,7 +309,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
       analyzed.push_back (lit);
       f.seen = true;
       const unsigned uidx = vlit (-lit);
-      uint64_t id = unit_clauses[uidx];
+      int64_t id = unit_clauses[uidx];
       assert (id);
       lrat_chain.push_back (id);
       continue;
@@ -350,7 +350,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
       analyzed.push_back (lit);
       f.seen = true;
       const unsigned uidx = vlit (-lit);
-      uint64_t id = unit_clauses[uidx];
+      int64_t id = unit_clauses[uidx];
       assert (id);
       lrat_chain.push_back (id);
       continue;

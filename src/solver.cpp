@@ -1502,7 +1502,7 @@ struct WitnessWriter : public WitnessIterator {
     }
     return file->put ('0');
   }
-  bool witness (const vector<int> &c, const vector<int> &w, uint64_t) {
+  bool witness (const vector<int> &c, const vector<int> &w, int64_t) {
     if (!write (c))
       return false;
     if (!file->put (' '))
@@ -1565,7 +1565,7 @@ struct WitnessCopier : public WitnessIterator {
 
 public:
   WitnessCopier (External *d) : dst (d) {}
-  bool witness (const vector<int> &c, const vector<int> &w, uint64_t id) {
+  bool witness (const vector<int> &c, const vector<int> &w, int64_t id) {
     dst->push_external_clause_and_witness_on_extension_stack (c, w, id);
     return true;
   }

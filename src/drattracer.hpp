@@ -26,19 +26,19 @@ public:
   ~DratTracer ();
 
   void connect_internal (Internal *i) override;
-  void begin_proof (uint64_t) override {} // skip
+  void begin_proof (int64_t) override {} // skip
 
-  void add_original_clause (uint64_t, bool, const vector<int> &,
+  void add_original_clause (int64_t, bool, const vector<int> &,
                             bool = false) override {} // skip
 
-  void add_derived_clause (uint64_t, bool, const vector<int> &,
-                           const vector<uint64_t> &) override;
+  void add_derived_clause (int64_t, bool, const vector<int> &,
+                           const vector<int64_t> &) override;
 
-  void delete_clause (uint64_t, bool, const vector<int> &) override;
+  void delete_clause (int64_t, bool, const vector<int> &) override;
 
-  void finalize_clause (uint64_t, const vector<int> &) override {} // skip
+  void finalize_clause (int64_t, const vector<int> &) override {} // skip
 
-  void report_status (int, uint64_t) override {} // skip
+  void report_status (int, int64_t) override {} // skip
 
 #ifndef QUIET
   void print_statistics ();

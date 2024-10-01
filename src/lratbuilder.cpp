@@ -353,14 +353,14 @@ uint64_t LratBuilder::reduce_hash (uint64_t hash, uint64_t size) {
   return res;
 }
 
-uint64_t LratBuilder::compute_hash (const uint64_t id) {
+uint64_t LratBuilder::compute_hash (const int64_t id) {
   assert (id > 0);
   unsigned j = id % num_nonces;             // dont know if this is a good
-  uint64_t tmp = nonces[j] * (uint64_t) id; // hash funktion or if it is
+  uint64_t tmp = nonces[j] * (int64_t) id; // hash funktion or if it is
   return last_hash = tmp; // even better than just using id
 }
 
-LratBuilderClause **LratBuilder::find (const uint64_t id) {
+LratBuilderClause **LratBuilder::find (const int64_t id) {
   stats.searches++;
   LratBuilderClause **res, *c;
   const uint64_t hash = compute_hash (id);
@@ -727,14 +727,14 @@ void LratBuilder::add_clause (const char *type) {
   }
   if (!size) {
     LOG ("LRAT BUILDER added and checked empty %s clause", type);
-    LOG ("LRAT BUILDER clause with id %" PRIu64 " is now falsified", c->id);
+    LOG ("LRAT BUILDER clause with id %" PRId64 " is now falsified", c->id);
     inconsistent = true;
     inconsistent_clause = c;
   } else if (sat) {
     LOG ("LRAT BUILDER added and checked satisfied %s clause", type);
   } else if (!unit) {
     LOG ("LRAT BUILDER added and checked falsified %s clause with id "
-         "%" PRIu64,
+         "%" PRId64,
          type, c->id);
     inconsistent = true;
     inconsistent_clause = c;
@@ -748,7 +748,7 @@ void LratBuilder::add_clause (const char *type) {
       LOG ("LRAT BUILDER inconsistent after adding %s clause and "
            "propagating",
            type);
-      LOG ("LRAT BUILDER clause with id %" PRIu64 " is now falsified",
+      LOG ("LRAT BUILDER clause with id %" PRId64 " is now falsified",
            conflict->id);
       inconsistent = true;
       inconsistent_clause = conflict;
@@ -759,10 +759,10 @@ void LratBuilder::add_clause (const char *type) {
 
 /*------------------------------------------------------------------------*/
 
-void LratBuilder::add_original_clause (uint64_t id, const vector<int> &c) {
+void LratBuilder::add_original_clause (int64_t id, const vector<int> &c) {
   START (checking);
   LOG (c, "LRAT BUILDER addition of original clause");
-  LOG ("LRAT BUILDER clause id %" PRIu64, id);
+  LOG ("LRAT BUILDER clause id %" PRId64, id);
   stats.added++;
   stats.original++;
   import_clause (c);
@@ -775,11 +775,11 @@ void LratBuilder::add_original_clause (uint64_t id, const vector<int> &c) {
   STOP (checking);
 }
 
-const vector<uint64_t> &
-LratBuilder::add_clause_get_proof (uint64_t id, const vector<int> &c) {
+const vector<int64_t> &
+LratBuilder::add_clause_get_proof (int64_t id, const vector<int> &c) {
   START (checking);
   LOG (c, "LRAT BUILDER addition of derived clause");
-  LOG ("LRAT BUILDER clause id %" PRIu64, id);
+  LOG ("LRAT BUILDER clause id %" PRId64, id);
   stats.added++;
   stats.derived++;
   import_clause (c);
@@ -803,7 +803,7 @@ LratBuilder::add_clause_get_proof (uint64_t id, const vector<int> &c) {
   return chain;
 }
 
-void LratBuilder::add_derived_clause (uint64_t id, const vector<int> &c) {
+void LratBuilder::add_derived_clause (int64_t id, const vector<int> &c) {
   START (checking);
   LOG (c, "LRAT BUILDER addition of derived clause");
   LOG ("LRAT BUILDER proceeding without proof chain building");
@@ -818,10 +818,10 @@ void LratBuilder::add_derived_clause (uint64_t id, const vector<int> &c) {
   STOP (checking);
 }
 
-void LratBuilder::delete_clause (uint64_t id, const vector<int> &c) {
+void LratBuilder::delete_clause (int64_t id, const vector<int> &c) {
   START (checking);
   LOG (c, "LRAT BUILDER checking deletion of clause");
-  LOG ("LRAT BUILDER clause id %" PRIu64, id);
+  LOG ("LRAT BUILDER clause id %" PRId64, id);
   stats.deleted++;
   import_clause (c);
   last_id = id;
@@ -843,7 +843,7 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> &c) {
       if (!val (lit))
         LOG ("LRAT BUILDER skipping lit %d not assigned", lit);
       else
-        LOG ("LRAT BUILDER lit %d reason id %" PRIu64, lit, reason->id);
+        LOG ("LRAT BUILDER lit %d reason id %" PRId64, lit, reason->id);
       if (reason == d) {
         LOG ("LRAT BUILDER reason matches, unassigning lit %d", lit);
         assert (val (lit));
@@ -904,7 +904,7 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> &c) {
         inconsistent = false;
         inconsistent_clause = 0;
         LOG ("LRAT BUILDER no longer inconsistent after deletion of clause "
-             "%" PRIu64,
+             "%" PRId64,
              d->id);
       }
     }

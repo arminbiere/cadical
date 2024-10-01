@@ -350,7 +350,7 @@ void Internal::add_external_clause (int propagated_elit,
 
   // we need to be build a new LRAT chain if we are already in the middle of
   // the analysis (like during failed assumptions)
-  std::vector<uint64_t> lrat_chain_ext;
+  std::vector<int64_t> lrat_chain_ext;
   assert (lrat_chain_ext.empty ());
 
   assert (!force_no_backtrack);
@@ -529,7 +529,7 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 //
 Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
   Clause *res;
-  std::vector<uint64_t> chain_tmp{std::move (lrat_chain)};
+  std::vector<int64_t> chain_tmp{std::move (lrat_chain)};
   lrat_chain.clear ();
   if (clause.empty ()) {
     res = learn_external_reason_clause (ilit, 0, true);

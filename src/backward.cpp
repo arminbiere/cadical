@@ -174,7 +174,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
                 continue;
               }
               const unsigned uidx = vlit (-lit);
-              uint64_t id = unit_clauses[uidx];
+              int64_t id = unit_clauses[uidx];
               assert (id);
               lrat_chain.push_back (id);
             }

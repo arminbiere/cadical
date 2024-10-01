@@ -1231,7 +1231,7 @@ public:
   virtual ~WitnessIterator () {}
   virtual bool witness (const std::vector<int> &clause,
                         const std::vector<int> &witness,
-                        uint64_t id = 0) = 0;
+                        int64_t id = 0) = 0;
 };
 
 /*------------------------------------------------------------------------*/

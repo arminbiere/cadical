@@ -24,7 +24,7 @@ typedef const int *const_literal_iterator;
 
 struct Clause {
   union {
-    uint64_t id;  // Used to create LRAT-style proofs
+    int64_t id;  // Used to create LRAT-style proofs
     Clause *copy; // Only valid if 'moved', then that's where to.
     //
     // The 'copy' field is only valid for 'moved' clauses in the moving

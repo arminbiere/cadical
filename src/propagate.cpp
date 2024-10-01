@@ -73,7 +73,7 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
     if (!val (reason_lit))
       continue;
     const unsigned uidx = vlit (val (reason_lit) * reason_lit);
-    uint64_t id = unit_clauses[uidx];
+    int64_t id = unit_clauses[uidx];
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (reason->id);
@@ -92,7 +92,7 @@ void Internal::build_chain_for_empty () {
   for (auto &lit : *conflict) {
     assert (val (lit) < 0);
     const unsigned uidx = vlit (-lit);
-    uint64_t id = unit_clauses[uidx];
+    int64_t id = unit_clauses[uidx];
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (conflict->id);

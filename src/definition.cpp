@@ -131,7 +131,7 @@ static void traverse_one_sided_core_lemma_with_lrat (void *state, unsigned cid,
       for (const unsigned *p = lits; p != end; p++)
         pc.literals.push_back (internal->citten2lit (*p)); // conversion
       for (const unsigned *p = chain + chain_size; p != chain; p--) {
-        uint64_t id = 0;
+        int64_t id = 0;
         for (const auto & cpc : proof_clauses) {
           if (cpc.cid == *(p-1)) {
             id = cpc.id;
@@ -147,7 +147,7 @@ static void traverse_one_sided_core_lemma_with_lrat (void *state, unsigned cid,
     } else {  // learn unit finish proof
       assert (internal->lrat_chain.empty ());
       for (const unsigned *p = chain + chain_size; p != chain; p--) {
-        uint64_t id = 0;
+        int64_t id = 0;
         for (const auto & cpc : proof_clauses) {
           if (cpc.cid == *(p-1)) {
             id = cpc.id;

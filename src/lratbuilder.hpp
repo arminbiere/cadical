@@ -17,7 +17,7 @@ namespace CaDiCaL {
 struct LratBuilderClause {
   LratBuilderClause *next; // collision chain link for hash table
   uint64_t hash;           // previously computed full 64-bit hash
-  uint64_t id;             // id of clause
+  int64_t id;             // id of clause
   bool garbage;            // for garbage clauses
   unsigned size;
   int literals[1]; // 'literals' of length 'size'
@@ -72,9 +72,9 @@ class LratBuilder {
   vector<signed char> checked_lits; // this is implemented same as marks
   LratBuilderClause *conflict;
 
-  vector<uint64_t> chain; // LRAT style proof chain
+  vector<int64_t> chain; // LRAT style proof chain
   vector<uint64_t> reverse_chain;
-  vector<uint64_t> inconsistent_chain; // store proof to reuse
+  vector<int64_t> inconsistent_chain; // store proof to reuse
   unsigned unjustified;                // number of lits to justify
 
   bool new_clause_taut;
@@ -106,8 +106,8 @@ class LratBuilder {
 
   uint64_t nonces[num_nonces];      // random numbers for hashing
   uint64_t last_hash;               // last computed hash value of clause
-  uint64_t last_id;                 // id of the last added clause
-  uint64_t compute_hash (uint64_t); // compute and save hash value of clause
+  int64_t last_id;                 // id of the last added clause
+  uint64_t compute_hash (int64_t); // compute and save hash value of clause
 
   // Reduce hash value to the actual size.
   //
@@ -116,7 +116,7 @@ class LratBuilder {
   void enlarge_clauses ();      // enlarge hash table for clauses
   LratBuilderClause *insert (); // insert clause in hash table
   LratBuilderClause **
-  find (const uint64_t); // find clause position in hash table
+  find (const int64_t); // find clause position in hash table
 
   void add_clause (const char *type);
   void clean (); // cleans up after adding/deleting clauses
@@ -182,10 +182,10 @@ public:
   LratBuilder (Internal *);
   ~LratBuilder ();
 
-  void add_original_clause (uint64_t, const vector<int> &);
-  void add_derived_clause (uint64_t, const vector<int> &);
-  void delete_clause (uint64_t, const vector<int> &);
-  const vector<uint64_t> &add_clause_get_proof (uint64_t,
+  void add_original_clause (int64_t, const vector<int> &);
+  void add_derived_clause (int64_t, const vector<int> &);
+  void delete_clause (int64_t, const vector<int> &);
+  const vector<int64_t> &add_clause_get_proof (int64_t,
                                                 const vector<int> &);
 
   void print_stats ();

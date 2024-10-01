@@ -183,7 +183,7 @@ void External::add (int elit) {
       // actually find unit of -elit (flips elit < 0)
       unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
       assert ((size_t) eidx < ext_units.size ());
-      const uint64_t id = ext_units[eidx];
+      const int64_t id = ext_units[eidx];
       bool added = ext_flags[abs (elit)];
       if (id && !added) {
         ext_flags[abs (elit)] = true;
@@ -799,7 +799,7 @@ bool External::traverse_all_non_frozen_units_as_witnesses (
     int unit = tmp < 0 ? -idx : idx;
     const int ilit = e2i[idx] * (tmp < 0 ? -1 : 1);
     // heurstically add + max_var to the id to avoid reusing ids
-    const uint64_t id = internal->opts.lrat
+    const int64_t id = internal->opts.lrat
                             ? internal->unit_clauses[internal->vlit (ilit)]
                             : 1;
     assert (id);

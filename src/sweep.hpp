@@ -7,7 +7,7 @@ struct Internal;
 
 struct sweep_proof_clause {
   unsigned sweep_id;  // index for sweeper.clauses
-  uint64_t cad_id;   // cadical id
+  int64_t cad_id;   // cadical id
   unsigned kit_id;  // kitten id
   bool learned;
   vector<int> literals;
@@ -16,14 +16,14 @@ struct sweep_proof_clause {
 
 struct sweep_blocked_clause {
   int blit;
-  uint64_t id;
+  int64_t id;
   vector<int> literals;
 };
 
 struct sweep_binary {
   int lit;
   int other;
-  uint64_t id;
+  int64_t id;
 };
 
 struct Sweeper {

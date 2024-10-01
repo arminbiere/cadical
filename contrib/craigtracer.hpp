@@ -137,24 +137,24 @@ public:
 
   // ====== END CRAIG INTERFACE ============================================
 
-  void add_original_clause (uint64_t id, bool redundant,
+  void add_original_clause (int64_t id, bool redundant,
                             const std::vector<int> &c,
                             bool restore) override;
   void
-  add_derived_clause (uint64_t id, bool redundant,
+  add_derived_clause (int64_t id, bool redundant,
                       const std::vector<int> &c,
-                      const std::vector<uint64_t> &proof_chain) override;
+                      const std::vector<int64_t> &proof_chain) override;
   void
-  add_assumption_clause (uint64_t id, const std::vector<int> &c,
-                         const std::vector<uint64_t> &proof_chain) override;
-  void delete_clause (uint64_t id, bool redundant,
+  add_assumption_clause (int64_t id, const std::vector<int> &c,
+                         const std::vector<int64_t> &proof_chain) override;
+  void delete_clause (int64_t id, bool redundant,
                       const std::vector<int> &c) override;
 
   void add_assumption (int lit) override;
   void add_constraint (const std::vector<int> &c) override;
   void reset_assumptions () override;
   void conclude_unsat (CaDiCaL::ConclusionType conclusion,
-                       const std::vector<uint64_t> &proof_chain) override;
+                       const std::vector<int64_t> &proof_chain) override;
 
 private:
   CraigData *create_interpolant_for_assumption (int literal);
@@ -171,19 +171,19 @@ private:
 
   std::set<int> assumptions;
   std::vector<int> constraint;
-  std::vector<uint64_t> assumption_clauses;
+  std::vector<int64_t> assumption_clauses;
 
   std::vector<int> marked_history;
   std::map<int, uint8_t> marked_lits;
 
   int craig_clause_current_id;
-  std::map<int, uint64_t> craig_clause_ids;
+  std::map<int, int64_t> craig_clause_ids;
   std::map<int, CraigVarType> craig_var_labels;
   std::map<int, CraigClauseType> craig_clause_labels;
   CraigClauseType craig_constraint_label;
 
-  std::map<uint64_t, std::vector<int>> craig_clauses;
-  std::map<uint64_t, CraigData *> craig_interpolants;
+  std::map<int64_t, std::vector<int>> craig_clauses;
+  std::map<int64_t, CraigData *> craig_interpolants;
 
   CraigConstruction craig_construction;
   size_t craig_id;

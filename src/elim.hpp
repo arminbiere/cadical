@@ -16,12 +16,12 @@ struct elim_more {
 typedef heap<elim_more> ElimSchedule;
 
 struct proof_clause {
-  uint64_t id;
+  int64_t id;
   vector<int> literals;
   // for lrat
   unsigned cid;  // kitten id
   bool learned;
-  vector<uint64_t> chain;
+  vector<int64_t> chain;
 };
 
 enum GateType {

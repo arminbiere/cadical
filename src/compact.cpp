@@ -214,12 +214,12 @@ void Internal::compact () {
     }
     assert (eidx > 0);
     assert (external->ext_units.size () >= (size_t) 2 * eidx + 1);
-    uint64_t id1 = external->ext_units[2 * eidx];
-    uint64_t id2 = external->ext_units[2 * eidx + 1];
+    int64_t id1 = external->ext_units[2 * eidx];
+    int64_t id2 = external->ext_units[2 * eidx + 1];
     assert (!id1 || !id2);
     if (!id1 && !id2) {
-      uint64_t new_id1 = unit_clauses[2 * src];
-      uint64_t new_id2 = unit_clauses[2 * src + 1];
+      int64_t new_id1 = unit_clauses[2 * src];
+      int64_t new_id2 = unit_clauses[2 * src + 1];
       external->ext_units[2 * eidx] = new_id1;
       external->ext_units[2 * eidx + 1] = new_id2;
     }
@@ -252,7 +252,7 @@ void Internal::compact () {
       unit_clauses[2 * src + 1] = 0;
       continue;
     }
-    uint64_t id = unit_clauses[2 * src];
+    int64_t id = unit_clauses[2 * src];
     int lit = src;
     if (!id) {
       id = unit_clauses[2 * src + 1];

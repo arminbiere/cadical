@@ -95,7 +95,7 @@ class Checker : public StatTracer {
 
   uint64_t nonces[num_nonces]; // random numbers for hashing
   uint64_t last_hash;          // last computed hash value of clause
-  uint64_t last_id;
+  int64_t last_id;
   uint64_t compute_hash (); // compute and save hash value of clause
 
   // Reduce hash value to the actual size.
@@ -152,17 +152,17 @@ public:
 
   void connect_internal (Internal *i) override;
 
-  void add_original_clause (uint64_t, bool, const vector<int> &,
+  void add_original_clause (int64_t, bool, const vector<int> &,
                             bool = false) override;
-  void add_derived_clause (uint64_t, bool, const vector<int> &,
-                           const vector<uint64_t> &) override;
-  void delete_clause (uint64_t, bool, const vector<int> &) override;
+  void add_derived_clause (int64_t, bool, const vector<int> &,
+                           const vector<int64_t> &) override;
+  void delete_clause (int64_t, bool, const vector<int> &) override;
 
-  void finalize_clause (uint64_t, const vector<int> &) override {} // skip
-  void report_status (int, uint64_t) override {}                   // skip
-  void begin_proof (uint64_t) override {}                          // skip
-  void add_assumption_clause (uint64_t, const vector<int> &,
-                              const vector<uint64_t> &) override;
+  void finalize_clause (int64_t, const vector<int> &) override {} // skip
+  void report_status (int, int64_t) override {}                   // skip
+  void begin_proof (int64_t) override {}                          // skip
+  void add_assumption_clause (int64_t, const vector<int> &,
+                              const vector<int64_t> &) override;
   void print_stats () override;
   void dump (); // for debugging purposes only
 };

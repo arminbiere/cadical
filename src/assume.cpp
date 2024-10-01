@@ -43,7 +43,7 @@ void Internal::assume_analyze_literal (int lit) {
   assert (v.reason != external_reason);
   if (!v.level) {
     const unsigned uidx = vlit (-lit);
-    uint64_t id = unit_clauses[uidx];
+    int64_t id = unit_clauses[uidx];
     assert (id);
     lrat_chain.push_back (id);
     return;
@@ -184,12 +184,12 @@ void Internal::failing () {
         if (lrat) {
           unsigned eidx = (efailed > 0) + 2u * (unsigned) abs (efailed);
           assert ((size_t) eidx < external->ext_units.size ());
-          const uint64_t id = external->ext_units[eidx];
+          const int64_t id = external->ext_units[eidx];
           if (id) {
             lrat_chain.push_back (id);
           } else {
             const unsigned uidx = vlit (-failed_unit);
-            uint64_t id = unit_clauses[uidx];
+            int64_t id = unit_clauses[uidx];
             assert (id);
             lrat_chain.push_back (id);
           }
@@ -252,7 +252,7 @@ void Internal::failing () {
 
   {
     // used for unsat_constraint lrat
-    vector<vector<uint64_t>> constraint_chains;
+    vector<vector<int64_t>> constraint_chains;
     vector<vector<int>> constraint_clauses;
     vector<int> sum_constraints;
     vector<int> econstraints;
@@ -323,7 +323,7 @@ void Internal::failing () {
         assume_analyze_reason (lit, v.reason);
       else {
         const unsigned uidx = vlit (lit);
-        uint64_t id = unit_clauses[uidx];
+        int64_t id = unit_clauses[uidx];
         assert (id);
         lrat_chain.push_back (id);
       }
@@ -343,7 +343,7 @@ void Internal::failing () {
         // lrat_chain is empty because clause is tautological
         assert (lit != INT_MIN);
         assume_analyze_literal (lit);
-        vector<uint64_t> empty;
+        vector<int64_t> empty;
         vector<int> empty2;
         constraint_chains.push_back (empty);
         constraint_clauses.push_back (empty2);
@@ -425,7 +425,7 @@ void Internal::failing () {
           if (lrat) {
             unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
             assert ((size_t) eidx < external->ext_units.size ());
-            const uint64_t id = external->ext_units[eidx];
+            const int64_t id = external->ext_units[eidx];
             if (id) {
               lrat_chain.push_back (id);
             } else {
@@ -433,7 +433,7 @@ void Internal::failing () {
               if (elit < 0)
                 lit = -lit;
               const unsigned uidx = vlit (-lit);
-              uint64_t id = unit_clauses[uidx];
+              int64_t id = unit_clauses[uidx];
               assert (id);
               lrat_chain.push_back (id);
             }
