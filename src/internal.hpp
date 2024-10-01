@@ -1153,6 +1153,7 @@ struct Internal {
   // Part on picking the next decision in 'decide.cpp'.
   //
   bool satisfied ();
+  bool all_properly_assigned (); // check if fully propagated, all assigned, assuming constraints/assumption done
   int next_decision_variable_on_queue ();
   int next_decision_variable_with_best_score ();
   int next_decision_variable ();

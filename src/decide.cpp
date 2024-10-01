@@ -95,8 +95,7 @@ void Internal::new_trail_level (int lit) {
 
 /*------------------------------------------------------------------------*/
 
-bool Internal::satisfied () {
-  assert (assumptions2.satisfied ());
+bool Internal::all_properly_assigned () {
   assert (assumptions2.satisfied ());
   assert (!constraining());
   for (auto lit : assumptions2) {
@@ -113,6 +112,13 @@ bool Internal::satisfied () {
   return (assigned == (size_t) max_var);
 }
 
+bool Internal::satisfied () {
+  if (!assumptions2.satisfied ())
+    return false;
+  if (constraining ())
+    return false;
+  return all_properly_assigned ();
+}
 bool Internal::better_decision (int lit, int other) {
   int lit_idx = abs (lit);
   int other_idx = abs (other);

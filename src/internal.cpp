@@ -259,7 +259,7 @@ int Internal::cdcl_loop_with_inprocessing () {
       res = decide_assumption ();
     else if (constraining ())
       res = decide_constrain ();
-    else if (satisfied ()) { // found model
+    else if (all_properly_assigned ()) { // found model
       if (!external_check_solution () || unsat) {
         if (unsat)
           continue;
@@ -604,7 +604,7 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
       res = decide_assumption ();
     } else if (constraining ()) {
       res = decide_constrain ();
-    } else if (satisfied ()) {
+    } else if (all_properly_assigned ()) {
       LOG ("formula indeed satisfied by saved phases");
       res = 10;
     } else if (decide ()) {
