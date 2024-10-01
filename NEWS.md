@@ -19,7 +19,7 @@ Version 2.1.0
   `force_backtrack`)
   
   - Removed unnecessary notifications of backtrack during
-  inprocessing (solves issue # by Jip Dekker.)
+  inprocessing (supposed to solve issue #92).
 
   - Call again `cb_propagate` if during final model checking a new
   clause is added.
