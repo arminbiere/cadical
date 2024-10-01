@@ -18,21 +18,34 @@ void Assumptions::add (int a) {
 
 void Assumptions::clear () {
   assumptions.clear ();
-  control.resize (1);
-  assert (control[0] == 0);
+  // control.resize (1);
+  // assert (control[0] == 0);
   assumed = 0;
+}
+
+
+void Assumptions::reset_ilb (unsigned level) {
+  if (level >= control.size ())
+    return;
+  assumed = control[level];
+  // this does not hold here as we might have changed the assumptions
+  // assert (assumed <= assumptions.size ());
+  //
+  control.resize (level + 1);
 }
 
 void Assumptions::decide () {
   assert (assumed <= assumptions.size ());
+  assert (assumed > 0);
   control.push_back(assumed-1);
 }
 
 void Assumptions::backtrack (unsigned level) {
   if (level >= control.size ())
     return;
-  assumed = control[level];
-  assert (assumed <= assumptions.size ());
+  if (assumed)
+    assumed = control[level];
+//assert (assumed <= assumptions.size ());
   control.resize (level + 1);
 }
 
@@ -51,6 +64,10 @@ size_t Assumptions::size () {
 }
 
 
+void Assumptions::pop () {
+  assert (assumed > 0);
+  --assumed;
+};
 
 
 }

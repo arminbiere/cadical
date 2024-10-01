@@ -96,8 +96,26 @@ void Internal::new_trail_level (int lit) {
 /*------------------------------------------------------------------------*/
 
 bool Internal::satisfied () {
+  while (!assumptions2.satisfied ()) {
+    int lit = assumptions2.next ();
+    LOG ("testing %d", lit);
+    const signed char tmp = val (lit);
+    if (tmp < 0) {
+      LOG ("satisfied / assumption %d falsified", lit);
+      assumptions2.pop ();
+      return false;
+    } else if (tmp > 0) {
+      LOG ("assumption %d already satisfied", lit);
+    } else {
+      assumptions2.pop ();
+      return false;
+    }
+  }
   if (!assumptions2.satisfied())
     return false;
+  for (auto lit : assumptions2) {
+    assert (val (lit) > 0);
+  }
   if ((size_t) level < assumptions2.level () + (!!constraint.size ()))
     return false;
   if (num_assigned < (size_t) max_var)
@@ -132,6 +150,7 @@ int Internal::decide () {
     if (tmp < 0) {
       LOG ("assumption %d falsified", lit);
       res = 20;
+      break;
     } else if (tmp > 0) {
       LOG ("assumption %d already satisfied", lit);
       lit = 0;
@@ -143,23 +162,6 @@ int Internal::decide () {
     }
   }
 
-  //  if (!lit && (size_t) level < assumptions.size ()) {
-  //     const int lit = assumptions[level];
-  //     assert (assumed (lit));
-  //     const signed char tmp = val (lit);
-  //     if (tmp < 0) {
-  //       LOG ("assumption %d falsified", lit);
-  //       res = 20;
-  //     } else if (tmp > 0) {
-  //       LOG ("assumption %d already satisfied", lit);
-  //       new_trail_level (0);
-  //       LOG ("added pseudo decision level");
-  //       notify_decision ();
-  //     } else {
-  //       LOG ("deciding assumption %d", lit);
-  //       search_assume_decision (lit);
-  //     }
-  // } else
   if (!lit && assumptions2.satisfied () && level == assumptions2.level () &&
       constraint.size ()) {
 

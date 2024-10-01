@@ -7,6 +7,9 @@ namespace CaDiCaL {
 // adds an assumption literal onto the assumption stack.
 
 void Internal::assume (int lit) {
+  LOG ("reset assumed");
+  assumptions2.assumed = 0;
+  LOG ("reset assumed %d", assumptions2.assumed);
   if (level && !opts.ilbassumptions)
     backtrack ();
   else if (val (lit) < 0)
@@ -599,40 +602,35 @@ void Internal::sort_and_reuse_assumptions () {
   }
 
   LOG ("max_level %d of the assumptions", max_level);
-  const unsigned size = min (level + 1u, (unsigned)max_level + 1);
+  const unsigned size = level + 1u;
   assert ((size_t) level == control.size () - 1);
   assert (max_level <= level);
   int target = 0;
   LOG ("checking up to %d of the assumptions", size);
-  for (unsigned i = 1, j = 0; i < size;) {
+  assumptions2.backtrack (0);
+  for (unsigned i = 1; i < size && !assumptions2.satisfied (); ) {
     assert (i < control.size());
-    assert (j < assumptions2.size ());
     const Level &l = control[i];
     const int lit = l.decision;
-    const int alit = assumptions2[j];
+    const int alit = assumptions2.next ();
     const int lev = i;
     target = lev;
     LOG ("ilb checking %d vs assumption %d", l.decision, alit);
     if (val (alit) &&
         var (alit).level < lev) { // we can ignore propagated assumptions
       LOG ("ILB skipping propagation %d", alit);
-      ++j;
       continue;
     }
-    if (!lit) { // skip fake decisions
-//      target = lev - 1;
-//      must_backtrack = true;
-LOG ("skipping hole");
-      ++i;
-      continue;
-    }
-    ++i, ++j;
+    assert (lit);
     assert (var (lit).level == lev);
+    ++i;
     if (l.decision == alit) {
       LOG ("same literal as decision on level %d", lev);
+      assumptions2.decide();
       continue;
     }
     target = lev - 1;
+    assumptions2.pop ();
     LOG ("first different literal %d on the trail and %d from the "
          "assumptions",
          lit, alit);
@@ -640,11 +638,15 @@ LOG ("skipping hole");
     break;
   }
 
-  if (must_backtrack)
+  if (must_backtrack){
+    assumptions2.reset_ilb (target);
     backtrack (target);
+  }
   else if (opts.ilb == 1) {
-    if (max_level < level)
+    if (max_level < level) {
+      assumptions2.reset_ilb (target);
       backtrack (max_level);
+    }
     else
       LOG ("no need to backtrack");
   }
