@@ -675,8 +675,12 @@ void External::check_assignment (int (External::*a) (int) const) {
   }
 
   bool presence_flag;
-  // Check those forgettable external clauses that are still present
+  // Check those forgettable external clauses that are still present, but only
+  // if the external propagator is still connected (otherwise solution 
+  // reconstruction is allowed to touch the previously observed variables so
+  // there is no guarantee that the final model will satisfy these clauses.)
   for (const auto& forgettables : forgettable_original) {
+    if (!propagator) break;
     presence_flag = true;
     satisfied = false;
 #ifndef QUIET
