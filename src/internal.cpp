@@ -255,7 +255,11 @@ int Internal::cdcl_loop_with_inprocessing () {
         continue;
       else
         analyze ();
-    } else if (satisfied ()) { // found model
+    } else if (assuming ())
+      res = decide_assumption ();
+    else if (constraining ())
+      res = decide_constrain ();
+    else if (satisfied ()) { // found model
       if (!external_check_solution () || unsat) {
         if (unsat)
           continue;
@@ -589,19 +593,23 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
   force_saved_phase = true;
   int res = 0;
   while (!res) {
-    if (satisfied ()) {
-      LOG ("formula indeed satisfied by saved phases");
-      res = 10;
-    } else if (decide ()) {
-      LOG ("inconsistent assumptions with redundant clauses and phases");
-      res = 20;
-    } else if (!propagate ()) {
+    if (!propagate ()) {
       LOG ("saved phases do not satisfy redundant clauses");
       assert (level > 0);
       backtrack ();
       conflict = 0; // ignore conflict
       assert (!res);
       break;
+    } else if (assuming ()) {
+      res = decide_assumption ();
+    } else if (constraining ()) {
+      res = decide_constrain ();
+    } else if (satisfied ()) {
+      LOG ("formula indeed satisfied by saved phases");
+      res = 10;
+    } else if (decide ()) {
+      LOG ("inconsistent assumptions with redundant clauses and phases");
+      res = 20;
     }
   }
   assert (force_saved_phase);
@@ -616,10 +624,16 @@ void Internal::produce_failed_assumptions () {
   assert (!level);
   assert (!assumptions2.empty ());
   while (!unsat) {
-    assert (!satisfied ());
+    assert (!assumptions2.satisfied() || constraining());
     notify_assignments ();
-    if (decide ())
-      break;
+    if (assuming ()) {
+      if (decide_assumption())
+	break;
+    }
+    else if (constraining ()) {
+      if (decide_constrain())
+	break;
+    }
     while (!unsat && !propagate ())
       analyze ();
   }

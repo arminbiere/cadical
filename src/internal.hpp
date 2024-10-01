@@ -1098,6 +1098,8 @@ struct Internal {
   // Assumption handling.
   //
   Assumptions assumptions2;
+  bool assuming (); // do we need to decide an assumption?
+  int decide_assumption ();
   
   // Assumption handling.
   //
@@ -1121,6 +1123,8 @@ struct Internal {
   void constrain (int); // Add literal to constraint.
   bool
   failed_constraint ();     // Was constraint used to proof unsatisfiablity?
+  bool constraining ();
+  int decide_constrain ();
   void reset_constraint (); // Reset after 'solve' call.
 
   // Forcing decision variables to a certain phase.

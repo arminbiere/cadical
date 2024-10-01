@@ -659,4 +659,8 @@ void Internal::sort_and_reuse_assumptions () {
   else
     stats.assumptionsreused += level;
 }
+
+
+bool Internal::assuming () { return !assumptions2.satisfied (); }
+
 } // namespace CaDiCaL

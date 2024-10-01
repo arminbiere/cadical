@@ -96,27 +96,13 @@ void Internal::new_trail_level (int lit) {
 /*------------------------------------------------------------------------*/
 
 bool Internal::satisfied () {
-  while (!assumptions2.satisfied ()) {
-    int lit = assumptions2.next ();
-    LOG ("testing %d", lit);
-    const signed char tmp = val (lit);
-    if (tmp < 0) {
-      LOG ("satisfied / assumption %d falsified", lit);
-      assumptions2.pop ();
-      return false;
-    } else if (tmp > 0) {
-      LOG ("assumption %d already satisfied", lit);
-    } else {
-      assumptions2.pop ();
-      return false;
-    }
-  }
-  if (!assumptions2.satisfied())
-    return false;
+  assert (assumptions2.satisfied ());
+  assert (assumptions2.satisfied ());
+  assert (!constraining());
   for (auto lit : assumptions2) {
     assert (val (lit) > 0);
   }
-  if ((size_t) level < assumptions2.level () + (!!constraint.size ()))
+  if (constraining ()) // should be removed in the CDCL loop... the optimizer can do that
     return false;
   if (num_assigned < (size_t) max_var)
     return false;
@@ -144,126 +130,46 @@ int Internal::decide () {
   START (decide);
   int res = 0;
   int lit = 0;
-  while (!assumptions2.satisfied ()) {
-    lit = assumptions2.next ();
-    const signed char tmp = val (lit);
-    if (tmp < 0) {
-      LOG ("assumption %d falsified", lit);
-      res = 20;
-      break;
-    } else if (tmp > 0) {
-      LOG ("assumption %d already satisfied", lit);
-      lit = 0;
-    } else {
-      LOG ("deciding assumption %d", lit);
-      assumptions2.decide();
-      search_assume_decision (lit);
-      break;
-    }
+  assert (assumptions2.satisfied ());
+  assert (!constraining ());
+
+  if (false && constraining())
+    res = decide_constrain();
+  else {
+  assert (!lit);
+  LOG ("now real decision");
+  stats.decisions++;
+  int decision = ask_decision ();
+  if (!decision) {
+    int idx = next_decision_variable ();
+    const bool target = (opts.target > 1 || (stable && opts.target));
+    decision = decide_phase (idx, target);
   }
-
-  if (!lit && assumptions2.satisfied () && level == assumptions2.level () &&
-      constraint.size ()) {
-
-    int satisfied_lit = 0;  // The literal satisfying the constrain.
-    int unassigned_lit = 0; // Highest score unassigned literal.
-    int previous_lit = 0;   // Move satisfied literals to the front.
-
-    const size_t size_constraint = constraint.size ();
-
-#ifndef NDEBUG
-    unsigned sum = 0;
-    for (auto lit : constraint)
-      sum += lit;
-#endif
-    for (size_t i = 0; i != size_constraint; i++) {
-
-      // Get literal and move 'constraint[i] = constraint[i-1]'.
-
-      int lit = constraint[i];
-      constraint[i] = previous_lit;
-      previous_lit = lit;
-
-      const signed char tmp = val (lit);
-      if (tmp < 0) {
-        LOG ("constraint literal %d falsified", lit);
-        continue;
-      }
-
-      if (tmp > 0) {
-        LOG ("constraint literal %d satisfied", lit);
-        satisfied_lit = lit;
-        break;
-      }
-
-      assert (!tmp);
-      LOG ("constraint literal %d unassigned", lit);
-
-      if (!unassigned_lit || better_decision (lit, unassigned_lit))
-        unassigned_lit = lit;
-    }
-
-    if (satisfied_lit) {
-
-      constraint[0] = satisfied_lit; // Move satisfied to the front.
-
-      LOG ("literal %d satisfies constraint and "
-           "is implied by assumptions",
-           satisfied_lit);
-
-      new_trail_level (0);
-      LOG ("added pseudo decision level for constraint");
-      notify_decision ();
-
-    } else {
-
-      // Just move all the literals back.  If we found an unsatisfied
-      // literal then it will be satisfied (most likely) at the next
-      // decision and moved then to the first position.
-
-      if (size_constraint) {
-
-        for (size_t i = 0; i + 1 != size_constraint; i++)
-          constraint[i] = constraint[i + 1];
-
-        constraint[size_constraint - 1] = previous_lit;
-      }
-
-      if (unassigned_lit) {
-
-        LOG ("deciding %d to satisfy constraint", unassigned_lit);
-        search_assume_decision (unassigned_lit);
-
-      } else {
-
-        LOG ("failing constraint");
-        unsat_constraint = true;
-        res = 20;
-      }
-    }
-
-#ifndef NDEBUG
-    for (auto lit : constraint)
-      sum -= lit;
-    assert (!sum); // Checksum of literal should not change!
-#endif
-
-  } else if (!lit) {
-    assert (!lit);
-    LOG ("now real decision");
-    stats.decisions++;
-    int decision = ask_decision ();
-    if (!decision) {
-      int idx = next_decision_variable ();
-      const bool target = (opts.target > 1 || (stable && opts.target));
-      decision = decide_phase (idx, target);
-    }
-    search_assume_decision (decision);
+  search_assume_decision (decision);
   }
   if (res)
     marked_failed = false;
   STOP (decide);
   return res;
+}
+
+int Internal::decide_assumption() {
+  int res = 0;
+  int lit = assumptions2.next ();
+  const signed char tmp = val (lit);
+  if (tmp < 0) {
+    LOG ("assumption %d falsified", lit);
+    res = 20;
+    marked_failed = false;
+  } else if (tmp > 0) {
+    LOG ("assumption %d already satisfied", lit);
+    lit = 0;
+  } else {
+    LOG ("deciding assumption %d", lit);
+    assumptions2.decide ();
+    search_assume_decision (lit);
+  }
+  return res;  
 }
 
 } // namespace CaDiCaL

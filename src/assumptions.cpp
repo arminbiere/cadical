@@ -18,8 +18,6 @@ void Assumptions::add (int a) {
 
 void Assumptions::clear () {
   assumptions.clear ();
-  // control.resize (1);
-  // assert (control[0] == 0);
   assumed = 0;
 }
 
