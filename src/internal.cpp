@@ -122,7 +122,8 @@ template <class T> static void enlarge_zero (vector<T> &v, size_t N) {
 /*------------------------------------------------------------------------*/
 
 void Internal::enlarge (int new_max_var) {
-  assert (!level || external_prop);
+  // New variables can be created that can invoke enlarge anytime (via calls
+  // during ipasir-up call-backs), thus assuming (!level) is not correct 
   size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var)
     new_vsize *= 2;
@@ -155,8 +156,8 @@ void Internal::enlarge (int new_max_var) {
 void Internal::init_vars (int new_max_var) {
   if (new_max_var <= max_var)
     return;
-  if (level && !external_prop)
-    backtrack ();
+  // New variables can be created that can invoke enlarge anytime (via calls
+  // during ipasir-up call-backs), thus assuming (!level) is not correct 
   LOG ("initializing %d internal variables from %d to %d",
        new_max_var - max_var, max_var + 1, new_max_var);
   if ((size_t) new_max_var >= vsize)
