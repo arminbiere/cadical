@@ -3,6 +3,7 @@
 namespace CaDiCaL {
 
 void Internal::constrain (int lit) {
+  constraint_satisfied_at_level = -1;
   if (lit)
     constraint.push_back (lit);
   else {
@@ -59,10 +60,10 @@ void Internal::reset_constraint () {
   constraint.clear ();
   unsat_constraint = false;
   marked_failed = true;
+  constraint_satisfied_at_level = -1;
 }
 
 bool Internal::constraining () {
-  assert (level == assumptions2.level ());
   return constraint.size () && constraint_satisfied_at_level == -1;
 }
 

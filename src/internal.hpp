@@ -234,7 +234,7 @@ struct Internal {
   vector<int> trail;         // currently assigned literals
   vector<int> clause;        // simplified in parsing & learning
   vector<int> constraint;    // literals of the constraint
-  int constraint_satisfied_at_level;   // level at which the constraint is satisfied
+  int constraint_satisfied_at_level = -1;   // level at which the constraint is satisfied
   bool unsat_constraint;     // constraint used for unsatisfiability?
   bool marked_failed;        // are the failed assumptions marked?
   vector<int> original;      // original added literals
