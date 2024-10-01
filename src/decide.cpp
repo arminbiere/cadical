@@ -119,6 +119,7 @@ bool Internal::satisfied () {
     return false;
   return all_properly_assigned ();
 }
+
 bool Internal::better_decision (int lit, int other) {
   int lit_idx = abs (lit);
   int other_idx = abs (other);

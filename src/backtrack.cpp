@@ -159,6 +159,8 @@ void Internal::backtrack (int new_level) {
     }
   }
   assumptions2.backtrack (level);
+  if (level < constraint_satisfied_at_level)
+    constraint_satisfied_at_level = -1;
   assert (num_assigned == trail.size ());
 }
 

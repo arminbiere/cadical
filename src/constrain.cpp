@@ -62,7 +62,8 @@ void Internal::reset_constraint () {
 }
 
 bool Internal::constraining () {
-  return level == assumptions2.level () && constraint.size ();
+  assert (level == assumptions2.level ());
+  return constraint.size () && constraint_satisfied_at_level == -1;
 }
 
 int Internal::decide_constrain () {
@@ -112,10 +113,12 @@ int Internal::decide_constrain () {
     LOG ("literal %d satisfies constraint and "
          "is implied by assumptions",
          satisfied_lit);
-
-    new_trail_level (0);
-    LOG ("added pseudo decision level for constraint");
-    notify_decision ();
+    constraint_satisfied_at_level = level;
+    /*
+        new_trail_level (0);
+        LOG ("added pseudo decision level for constraint");
+        notify_decision ();
+     */
   } else {
 
     // Just move all the literals back.  If we found an unsatisfied

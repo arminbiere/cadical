@@ -471,7 +471,7 @@ bool Internal::failed (int lit) {
 void Internal::conclude_unsat () {
   if (!proof || concluded)
     return;
-  concluded = true;
+  concluded = true;    LOG ("marked_failed %d, conflict_id %d", marked_failed, conflict_id);
   if (!marked_failed) {
     assert (conclusion.empty ());
     if (!conflict_id)
@@ -621,7 +621,12 @@ void Internal::sort_and_reuse_assumptions () {
       LOG ("ILB skipping propagation %d", alit);
       continue;
     }
-    assert (lit);
+    if (!lit) {
+      LOG ("found empty level");
+      target = lev - 1;
+      assumptions2.pop ();
+      break;
+    }
     assert (var (lit).level == lev);
     ++i;
     if (l.decision == alit) {
