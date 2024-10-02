@@ -366,7 +366,7 @@ bool CraigTracer::has_craig_interpolant () {
 }
 
 // C++11 version of insert_or_assign because it is only C++20
-template<typename A> void insert_or_assign (std::unordered_map<int, A> craig_var_labels, int id, A variable_type) {
+template<typename A> void insert_or_assign (std::unordered_map<int, A> &craig_var_labels, int id, A variable_type) {
   auto it = craig_var_labels.find (id);
   if (it != end (craig_var_labels))
     it->second = variable_type;
