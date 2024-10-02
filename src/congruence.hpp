@@ -5,6 +5,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <queue>
 #include <sys/types.h>
 #include <unordered_map>
@@ -154,6 +155,7 @@ struct Closure {
   Clause* add_binary_clause (int a, int b);
   bool merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const std::vector<uint64_t>& = {}, const std::vector<uint64_t> & = {});
   bool merge_literals (int lit, int other, bool learn_clauses = true);
+  bool merge_literals_equivalence (int lit, int other, uint64_t, uint64_t);
 
   // proof production
   vector<LitClausePair> lrat_chain;

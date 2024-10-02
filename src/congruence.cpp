@@ -1,4 +1,4 @@
-include "congruence.hpp"
+#include "congruence.hpp"
 #include "internal.hpp"
 #include <algorithm>
 #include <cstdint>
@@ -323,12 +323,15 @@ int Closure::find_representative_and_update_eager (int lit) {
 
   return res;
 }
- void Closure::push_lrat_unit (int lit) {
-   const unsigned uidx = internal->vlit (lit);
-   uint64_t id = internal->unit_clauses[uidx];
-   assert (id);
-   internal->lrat_chain.push_back (id);
- }
+
+void Closure::push_lrat_unit (int lit) {
+  if (!internal->lrat)
+    return;
+  const unsigned uidx = internal->vlit (lit);
+  uint64_t id = internal->unit_clauses[uidx];
+  assert (id);
+  internal->lrat_chain.push_back (id);
+}
   
 int Closure::find_eager_representative_and_compress (int lit) {
   int res = lit;
@@ -342,23 +345,28 @@ int Closure::find_eager_representative_and_compress (int lit) {
 
 
   // we have to do path compression to support LRAT proofs
-  if (path_length > 1) {
-    eager_representative (lit) = res;
+  if (path_length > 2) {
+    LOG ("learning new equivalence between %d and %d (current path length: %d)", lit, res, path_length);
     if (internal->lrat) {
       produce_representative_lrat (lit);
     }
-    Clause *equiv = add_binary_clause (lit, res);
+    eager_representative (lit) = res;
+    Clause *equiv = add_binary_clause (-lit, res);
     equiv->hyper = true;
 
     if (internal->lrat && equiv) {
       eager_representative_id (lit) = equiv->id;
     }
+    if (internal->lrat)
+      internal->lrat_chain.clear ();
+  } else if (path_length == 2) {
+    assert (!internal->lrat || eager_representative_id (lit));
   }
   return res;
 }
 
 void Closure::produce_representative_lrat (int lit) {
-  assert (!internal->lrat);
+  assert (internal->lrat);
   LOG ("checking for LRAT chain for %d with representative %d", lit, find_representative (lit));
   assert (internal->lrat);  
   int res = lit;
@@ -375,9 +383,9 @@ void Closure::produce_representative_lrat (int lit) {
 }
 
 uint64_t Closure::find_representative_lrat (int lit) {
-  assert (!internal->lrat);
+  if (!internal->lrat)
+    return 0;
   LOG ("checking for LRAT chain for %d with representative %d", lit, find_representative (lit));
-  assert (internal->lrat);
   int res = lit;
   int nxt = representative (res);
   assert (nxt == representative (res));
@@ -437,14 +445,27 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (Gate *g, int lit) {
   case Gate_Type::And_Gate:
     for (auto id : g->units)
       internal->lrat_chain.push_back (id);
-    assert (!g->pos_lhs_ids.empty());
+    assert (!g->pos_lhs_ids.empty ());
+    assert (internal->analyzed.empty ());
     for (auto litId : g->pos_lhs_ids) {
-      if (true || litId.current_lit == lit) {
-	LOG ("found lrat in gate %d -> %zd (looking for %d)", litId.current_lit, litId.clause->id, lit);
-        internal->lrat_chain.push_back (litId.clause->id);
-        continue;
+      LOG (litId.clause, "found lrat in gate %d from %zd (looking for %d)",
+           litId.current_lit, litId.clause->id, lit);
+      internal->lrat_chain.push_back (litId.clause->id);
+      for (auto other : *litId.clause) {
+        if (other != find_eager_representative_and_compress (other) &&
+            !marked (other)) {
+          marked (other) = 1;
+          LOG ("representative of %d now marked with %d", other,
+               marked (other));
+          internal->analyzed.push_back (other);
+          internal->lrat_chain.push_back (find_representative_lrat (other));
+        }
       }
     }
+    for (auto lit : internal->analyzed) {
+      marked (lit) = 0;
+    }
+    internal->analyzed.clear ();
     break;
   default:
     assert (false);
@@ -469,8 +490,6 @@ bool Closure::learn_congruence_unit(int lit) {
     internal->learn_empty_clause();
     return false;
   }
-  if (internal->lrat)
-    std::reverse (begin (internal->lrat_chain), end (internal->lrat_chain));
 
   LOG (internal->lrat_chain, "assigning due to LRAT chain");
   internal->assign_unit (lit);
@@ -508,8 +527,8 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
   }
 //  LOG ("merging external literals %d and %d\n", internal->externalize (lit), internal->externalize (other));
 //  LOG ("merging kissat literals %d and %d\n", internal->vlit(internal->externalize (lit)) - 2, internal->vlit(internal->externalize (other)) - 2);
-  const int val_lit = internal->val(lit);
-  const int val_other = internal->val(other);
+  const int val_lit = internal->val (lit);
+  const int val_other = internal->val (other);
 
   if (val_lit) {
     if (val_lit == val_other) {
@@ -555,7 +574,7 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
     return false;
   }
 
-  LOG ("merging %d and %d", lit, other);
+  LOG ("merging %d and %d, aka %d and %d", lit, other, repr_lit, repr_other);
   if (internal->lrat) {
     // assert (h->neg_lhs_ids.size () == 1); // otherwise we need intermediate clauses
     // assert (h->pos_lhs_ids.size () == h->arity()); // otherwise we need intermediate clauses
@@ -564,13 +583,13 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
     // for (auto id : g->pos_lhs_ids)
     //   internal->lrat_chain.push_back (id.second);
     // LOG (internal->lrat_chain, "lrat chain");
-    internal->lrat_chain =  extra_reasons_lit;
+    internal->lrat_chain = extra_reasons_lit;
   }
   Clause *eq1 = add_binary_clause (-lit, other);
 
   if (internal->lrat) {
     assert (g->neg_lhs_ids.size () == 1); // otherwise we need intermediate clauses
-    internal->lrat_chain =  extra_reasons_ulit;
+    internal->lrat_chain = extra_reasons_ulit;
     // for (auto id : extra_reasons_ulit)
     //   internal->lrat_chain.push_back (id);
     // internal->lrat_chain.push_back (g->neg_lhs_ids[0].second);
@@ -593,9 +612,114 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
   return true;
 }
 
+  
+bool Closure::merge_literals_equivalence (int lit, int other, uint64_t id1, uint64_t id2) {
+  assert (!internal->unsat);
+  LOG ("merging literals %d and %d lrat", lit, other);
+  int repr_lit = find_representative(lit);
+  int repr_other = find_representative(other);
+
+  if (repr_lit == repr_other) {
+    LOG ("already merged %d and %d", lit, other);
+    return false;
+  }
+  const int val_lit = internal->val(lit);
+  const int val_other = internal->val(other);
+
+  if (val_lit) {
+    if (val_lit == val_other) {
+      LOG ("not merging lits %d and %d assigned to same value", lit, other);
+      return false;
+    }
+    if (val_lit == -val_other) {
+      if (internal->lrat)
+	internal->lrat_chain.push_back(internal->unit_clauses[internal->vidx(lit)]),
+	internal->lrat_chain.push_back(internal->unit_clauses[internal->vidx(other)]);
+      LOG ("merging lits %d and %d assigned to inconsistent value", lit, other);
+      internal->learn_empty_clause();
+      return false;
+    }
+
+    assert (!val_other);
+    LOG ("merging assigned %d and unassigned %d", lit, other);
+    const int unit = (val_lit < 0) ? -other : other;
+    if (internal->lrat)
+      internal->lrat_chain.push_back(internal->unit_clauses[internal->vidx(lit)]);
+    learn_congruence_unit(unit);
+    return false;
+  }
+
+  if (!val_lit && val_other) {
+    LOG ("merging assigned %d and unassigned %d", lit, other);
+    const int unit = (val_other < 0) ? -lit : lit;
+    if (internal->lrat)
+      internal->lrat_chain.push_back(internal->unit_clauses[internal->vidx(other)]);
+    learn_congruence_unit(unit);
+    return false;
+  }
+
+  int smaller = repr_lit;
+  int larger = repr_other;
+
+  if (abs(smaller) > abs(larger))
+    swap (smaller, larger);
+
+  assert (find_representative (smaller) == smaller);
+  assert (find_representative (larger) == larger);
+
+  if (repr_lit == -repr_other) {
+    LOG ("merging clashing %d and %d", lit, other);
+    internal->assign_unit (smaller);
+    internal->learn_empty_clause();
+    return false;
+  }
+
+  LOG ("merging %d and %d", lit, other);
+  bool learn_clause = (lit != repr_lit) || (other != repr_other);
+  if (learn_clause) {
+    if (internal->lrat) {
+      if (lit != repr_lit)
+	internal->lrat_chain.push_back(find_representative_lrat (-lit));
+      if (other != repr_other)
+	internal->lrat_chain.push_back(find_representative_lrat (other));
+      internal->lrat_chain.push_back(id2);
+    }
+    Clause *eq1 = add_binary_clause (-repr_lit, repr_other);
+    
+    if (internal->lrat) {
+      internal->lrat_chain.clear ();
+      if (lit != repr_lit)
+	internal->lrat_chain.push_back(find_representative_lrat (lit));
+      if (other != repr_other)
+	internal->lrat_chain.push_back(find_representative_lrat (-other));
+      internal->lrat_chain.push_back(id1);
+    }
+    Clause *eq2 = add_binary_clause (repr_lit, -repr_other);
+    if (internal->lrat) {
+      internal->lrat_chain.clear ();
+      if (smaller == repr_lit) {
+	eager_representative_id (-larger) = eq1->id;
+	eager_representative_id (larger) = eq2->id;
+      } else {
+	eager_representative_id (-larger) = eq2->id;
+	eager_representative_id (larger) = eq1->id;
+      }
+    }
+    
+  } else if (internal->lrat) {
+    eager_representative_id (larger) = id1;
+    eager_representative_id (-larger) = id2;
+  }
+  representative (larger) = smaller;
+  representative (-larger) = -smaller;
+  schedule_literal (larger);
+  ++internal->stats.congruence.congruent;
+  return true;
+}
+
 bool Closure::merge_literals (int lit, int other, bool learn_clauses) {
   assert (!internal->unsat);
-  LOG ("merging literals %d and %d", lit, other);
+  LOG ("merging literals %d and %d no lrat", lit, other);
   int repr_lit = find_representative(lit);
   int repr_other = find_representative(other);
 
@@ -662,9 +786,9 @@ bool Closure::merge_literals (int lit, int other, bool learn_clauses) {
     add_binary_clause (lit, -other);
   }
 
-  representative(larger) = smaller;
-  representative(-larger) = -smaller;
-  schedule_literal(larger);
+  representative (larger) = smaller;
+  representative (-larger) = -smaller;
+  schedule_literal (larger);
   ++internal->stats.congruence.congruent;
   return true;
 }
@@ -1401,17 +1525,21 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
   for (int lit : *c) {
     signed char v = internal->val (lit);
     if (v < 0) {
-      push_lrat_unit (lit);
+      push_lrat_unit (-lit);
       continue;
     }
     if (v > 0) {
       assert (!internal->level);
       LOG (c, "found satisfied clause");
       internal->mark_garbage (c);
+      if (internal->lrat)
+	internal->lrat_chain.clear ();
       return;
     }
     if (++size > size_limit) {
       LOG (c, "clause is actually too large, thus skipping");
+      if (internal->lrat)
+	internal->lrat_chain.clear ();
       return;
     }
     const size_t count = internal->noccs (-lit);
@@ -1419,6 +1547,8 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
       LOG (c,
            "%d negated does not occur in any binary clause, thus skipping",
 	   lit);
+      if (internal->lrat)
+	internal->lrat_chain.clear ();
       return;
     }
 
@@ -1429,6 +1559,9 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
 
   if (size < 3) {
     LOG (c, "is actually too small, thus skipping");
+    if (internal->lrat)
+      internal->lrat_chain.clear ();
+    assert (internal->lrat_chain.empty ());
     return;
   }
 
@@ -1438,6 +1571,8 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
          "all literals have less than %lu negated occurrences"
          "thus skipping",
          arity);
+    if (internal->lrat)
+      internal->lrat_chain.clear ();
     return;
   }
 
@@ -1522,6 +1657,7 @@ void Closure::extract_and_gates () {
 
   const size_t size = internal->clauses.size();
   for (size_t i = 0; i < size && !internal->terminated_asynchronously (); ++i) { // we can learn new binary clauses, but no for loop
+    assert (internal->lrat_chain.empty ());
     Clause *c = internal->clauses[i];
     if (c->garbage)
       continue;
@@ -1531,7 +1667,8 @@ void Closure::extract_and_gates () {
       continue;
     if (c->redundant)
       continue;
-    extract_and_gates_with_base_clause(c);
+    extract_and_gates_with_base_clause (c);
+    assert (internal->lrat_chain.empty ());
   }
 
   reset_and_gate_extraction ();
@@ -2197,8 +2334,10 @@ void Closure::find_units () {
           LOG (w.clause, "binary clause %d %d and %d %d give unit %d", lit, other,
                lit, -other, lit);
 	  ++units;
-	  internal->lrat_chain.push_back (w.clause->id);
-	  internal->lrat_chain.push_back (marked_mu1(-other).clause->id);
+	  if (internal->lrat) {
+	    internal->lrat_chain.push_back (w.clause->id);
+	    internal->lrat_chain.push_back (marked_mu1(-other).clause->id);
+	  }
           bool failed = !learn_congruence_unit (lit);
           unmark_all ();
           if (failed)
@@ -2256,15 +2395,20 @@ void Closure::find_equivalences () {
       if (marked (-other)) {
 	int lit_repr = find_representative (lit);
 	int other_repr = find_representative (other);
-	LOG ("found equivalence %d %d with %d and %d are the representative", lit, other, lit_repr, other_repr);
+	LOG ("found equivalence %d %d with %d and %d as the representative", lit, -other, lit_repr, other_repr);
 	if (lit_repr != other_repr) {
-	  if (internal->lrat) {
-	    eager_representative_id (other) = marked_mu1 (-other).clause->id;
-	    eager_representative_id (-other) = w.clause->id;
-	    assert (eager_representative_id (other) != -1);
-	    LOG ("lrat: %d (%zd) %d (%zd)", other, eager_representative_id (other), -other, eager_representative_id (-other));
-	  }
-	  if (merge_literals (lit, other, false)) {
+	  // if (internal->lrat) {
+	  //   // This cannot work
+	  //   // if you have 2 = 1 and 3=4
+	  //   // you cannot add 2=3. You really to connect the representatives directly
+	  //   // therefore you actually need to learn the clauses 2->3->4 and -2->1 and vice-versa
+	    
+	  //   eager_representative_id (other) = marked_mu1 (-other).clause->id;
+	  //   eager_representative_id (-other) = w.clause->id;
+	  //   assert (eager_representative_id (other) != -1);
+	  //   LOG ("lrat: %d (%zd) %d (%zd)", other, eager_representative_id (other), -other, eager_representative_id (-other));
+	  // }
+	  if (merge_literals_equivalence (lit, other, internal->lrat ? marked_mu1 (-other).clause->id : 0, w.clause->id)) {
 	    ++internal->stats.congruence.congruent;
 	  }
 	  unmark_all();
@@ -2343,13 +2487,19 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1, uint64_
   LOG (internal->lrat_chain, "lrat chain after rewriting");
 
   if (internal->lrat) {
-    const auto is_set_or_src = [this, src, clashing] (LitClausePair lit) {return (lit.current_lit == src && clashing) || (bool)internal->vlit (lit.current_lit);};
-    g->pos_lhs_ids.erase (std::remove_if (begin (g->pos_lhs_ids), end (g->pos_lhs_ids), is_set_or_src));
-    for (auto &sid: g->pos_lhs_ids) {
-      if (sid.current_lit == src) {
-	sid.current_lit = dst;
-      }
+    size_t i = 0, size =  g->pos_lhs_ids.size ();
+    for (size_t j = 0; j < size; ++j) {
+      LOG ("looking at %d [%d %d]", g->pos_lhs_ids[j].current_lit, i, j);
+      g->pos_lhs_ids [i] = g->pos_lhs_ids[j];
+      if (internal->val (g->pos_lhs_ids[i].current_lit))
+	continue;
+      if (g->pos_lhs_ids[i].current_lit == src)
+	g->pos_lhs_ids[i].current_lit = dst;
+      LOG ("keeping %d [%d %d]", g->pos_lhs_ids[i].current_lit, i, j);
+      ++i;
     }
+    LOG ("resizing to %d", i);
+    g->pos_lhs_ids.resize (i);
   }
 
   if (q != end(g->rhs)) {
@@ -2365,8 +2515,8 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1, uint64_
     internal->lrat_chain.clear ();
     assert (g->neg_lhs_ids.size () ==
             1); // otherwise we need intermediate clauses
-    assert (g->pos_lhs_ids.size () ==
-            g->arity ()); // otherwise we need intermediate clauses
+    assert (g->pos_lhs_ids.size () >=
+            g->arity () + g->units.size ()); // otherwise we need intermediate clauses
     for (auto id : g->pos_lhs_ids)
       reasons_lrat_src.push_back (id.clause->id);
     LOG (reasons_lrat_src, "lrat chain for positive side");
@@ -2374,6 +2524,11 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1, uint64_
     reasons_lrat_src.push_back (find_representative_lrat (-src));
     internal->lrat_chain.clear ();
     reasons_lrat_usrc.push_back (g->neg_lhs_ids[0].clause->id);
+    for (auto lit : *g->neg_lhs_ids[0].clause) {
+      if (lit != find_eager_representative_and_compress (lit)) {
+	reasons_lrat_usrc.push_back(find_representative_lrat (lit));
+      }
+    }
     LOG (reasons_lrat_usrc, "lrat chain for negative side");
   }
 
@@ -2578,10 +2733,12 @@ bool Closure::propagate_units () {
 bool Closure::propagate_equivalence (int lit) {
   if (internal->val(lit))
     return true;
-  (void)find_representative_and_update_eager (lit);
+  const int res = find_representative_and_update_eager (lit);
   const int repr = find_eager_representative_and_compress (lit);
+  (void) find_eager_representative_and_compress (-lit);
   const uint64_t id1 = find_representative_lrat (lit);
   const uint64_t id2 = find_representative_lrat (-lit);
+  assert (internal->lrat_chain.empty ());
   return rewrite_gates (repr, lit, id1, id2) && rewrite_gates (-repr, -lit, id2, id1);
 }
 
@@ -2589,6 +2746,7 @@ size_t Closure::propagate_units_and_equivalences () {
   START (congruencemerge);
   size_t propagated = 0;
   LOG ("propagating at least %zd units", schedule.size());
+  assert (internal->lrat_chain.empty ());
   while (propagate_units() && !schedule.empty()) {
     assert (internal->lrat_chain.empty ());
     ++propagated;
@@ -3817,11 +3975,13 @@ void Closure::extract_ite_gates() {
 void Closure::extract_gates() {
   START (extract);
   extract_and_gates ();
+  assert (internal->unsat || internal->lrat_chain.empty ());
   if (internal->unsat || internal->terminated_asynchronously ()) {
     STOP (extract);
     return;
   }
   extract_xor_gates ();
+  assert (internal->unsat || internal->lrat_chain.empty ());
   if (internal->unsat || internal->terminated_asynchronously ()) {
     STOP (extract);
     return;
@@ -3874,10 +4034,13 @@ void Internal::extract_gates (bool decompose) {
 
   closure.init_closure ();
   assert (unsat || closure.chain.empty ());
+  assert (unsat || internal->lrat_chain.empty ());
   closure.extract_binaries ();
-//  opts.log = true;
+  assert (unsat || closure.chain.empty ());
+  assert (unsat || internal->lrat_chain.empty ());
   closure.extract_gates ();
   assert (unsat || closure.chain.empty ());
+  assert (unsat || internal->lrat_chain.empty ());
   internal->clear_watches ();
   internal->connect_watches ();
   closure.reset_extraction ();
@@ -3885,9 +4048,11 @@ void Internal::extract_gates (bool decompose) {
   if (!unsat) {
     closure.find_units ();
     assert (unsat || closure.chain.empty ());
+    assert (unsat || internal->lrat_chain.empty ());
     if (!internal->unsat) {
       closure.find_equivalences ();
       assert (unsat || closure.chain.empty ());
+      assert (unsat || internal->lrat_chain.empty ());
 
       if (!unsat) {
         const int propagated = closure.propagate_units_and_equivalences ();
@@ -3897,7 +4062,6 @@ void Internal::extract_gates (bool decompose) {
       }
     }
   }
-//  opts.log = false;
 
   closure.reset_closure();
   internal->clear_watches ();
