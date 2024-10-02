@@ -248,7 +248,7 @@ bool LratChecker::check_resolution (vector<int64_t> proof_chain) {
   for (auto &b : checked_lits)
     assert (!b); // = false;
 #endif
-  if (!proof_chain.size ()) return false; // but we can assert it here :)
+  if (!proof_chain.size () || proof_chain.back () < 0) return false;
   LratCheckerClause *c = *find (proof_chain.back ());
   assert (c);
   for (int *i = c->literals; i < c->literals + c->size; i++) {
@@ -318,7 +318,11 @@ bool LratChecker::check (vector<int64_t> proof_chain) {
       taut = true;
     }
   }
-  if (taut || !proof_chain.size ()) {
+  // we assume that we can have RUP and ER clauses. One side of the ER
+  // clauses are pure, i.e. without any chain, the long clause is blocked,
+  // so the chain consists only of negative ids. Therefore these checks are
+  // enough to distiguish between RUP and ER
+  if (taut || !proof_chain.size () || proof_chain.back () < 0) {
     for (const auto &lit : imported_clause) { // tautological clauses
       checked_lit (-lit) = false;
     }
@@ -383,37 +387,58 @@ bool LratChecker::check (vector<int64_t> proof_chain) {
   return true;
 }
 
-bool LratChecker::check_blocked () {
+bool LratChecker::check_blocked (vector<int64_t> proof_chain) {
   for (const auto &lit : imported_clause) {
     checked_lit (-lit) = true;
   }
-  vector<int> not_blocked;
   for (size_t i = 0; i < size_clauses; i++) {
     for (LratCheckerClause *c = clauses[i], *next; c; c = next) {
       next = c->next;
       if (c->garbage) continue;
-      unsigned count = 0;
-      int first;
-      for (int *i = c->literals; i < c->literals + c->size; i++) {
-        const int lit = *i;
-        if (checked_lit (lit)) {
-          count++;
-          LOG (c->literals, c->size, "clause");
-          first = lit;
+      // if c is part of the proof chain its id occurs negatively there.
+      if (std::find (proof_chain.begin (), proof_chain.end (), -c->id)
+        != proof_chain.end ()) {
+        // clause needs to be blocked
+        unsigned count = 0;
+        vector<int> candidates;
+        for (unsigned i = 0; i < c->size; i++) {
+          const int lit = c->literals[i];
+          if (checked_lit (lit)) {
+            candidates.push_back (lit);
+            count++;
+          }
+        }
+        if (count < 2) {
+          // check failed
+          for (const auto &lit : imported_clause) {
+            checked_lit (-lit) = false;
+          }
+          return false;
+        } else {
+          // all literals outside of candidates are not valid RAT candidates
+          for (const auto &lit : imported_clause) {
+            if (checked_lit (-lit) &&
+              std::find (candidates.begin (), candidates.end (), -lit)
+              != candidates.end ()) {
+            checked_lit (-lit) = false;
+            }
+          }
+        }
+      } else {
+        // any literal contained in the clause is not a valid RAT candidate
+        for (unsigned i = 0; i < c->size; i++) {
+          checked_lit (c->literals[i]) = false;
         }
       }
-      if (count == 1) not_blocked.push_back (first);
     }
   }
-  for (const auto &lit : not_blocked) {
-    checked_lit (lit) = false;
-  }
-  bool blocked = false;
+  bool success = false;
   for (const auto &lit : imported_clause) {
-    if (checked_lit (-lit)) blocked = true;
+    if (checked_lit (-lit))
+      success = true;
     checked_lit (-lit) = false;
   }
-  return blocked;
+  return success;
 }
 
 /*------------------------------------------------------------------------*/
@@ -469,12 +494,18 @@ void LratChecker::add_derived_clause (int64_t id, bool,
     }
   }
   assert (id);
-  if ((!check (proof_chain) || !check_resolution (proof_chain))) {
-      // && (!proof_chain.empty ()|| !check_blocked ())) { // needed for ER proof support
+  bool failed = true;
+  if (check (proof_chain) && check_resolution (proof_chain)) {
+    failed = false;
+  } else if (check_blocked (proof_chain)) {
+    failed = false;
+  }
+  if (failed) {
     LOG (proof_chain, "chain");
 #ifdef LOGGING
     for (const auto & pid : proof_chain) {
-      LratCheckerClause **p = find (pid), *d = *p;
+      const int64_t aid = abs (pid);
+      LratCheckerClause **p = find (aid), *d = *p;
       LOG (d->literals, d->size, "clause[%" PRId64 "]", pid);
     }
 #endif

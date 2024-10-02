@@ -92,10 +92,9 @@ class LratChecker : public StatTracer {
   LratCheckerClause *new_clause ();
   void delete_clause (LratCheckerClause *);
 
-  bool check (vector<int64_t>); // check if new clause is implied by rup
-  bool check_resolution (
-      vector<int64_t>); // check if new clause is implied by resolution
-  bool check_blocked ();
+  bool check (vector<int64_t>); // check RUP
+  bool check_resolution (vector<int64_t>); // check resolution
+  bool check_blocked (vector<int64_t>); // check ER
 
   struct {
 
