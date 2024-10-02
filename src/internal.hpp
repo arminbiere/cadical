@@ -1112,7 +1112,7 @@ struct Internal {
 
   // Assumption handling.
   //
-  Assumptions assumptions2;
+  Assumptions assumptions;
   bool assuming (); // do we need to decide an assumption?
   int decide_assumption ();
   

@@ -7,7 +7,7 @@ namespace CaDiCaL {
 // adds an assumption literal onto the assumption stack.
 
 void Internal::assume (int lit) {
-  assumptions2.undo_all ();
+  assumptions.undo_all ();
   if (level && !opts.ilbassumptions)
     backtrack ();
   else if (val (lit) < 0)
@@ -20,7 +20,7 @@ void Internal::assume (int lit) {
   }
   LOG ("assume %d", lit);
   f.assumed |= bit;
-  assumptions2.add (lit);
+  assumptions.add (lit);
   freeze (lit);
 }
 
@@ -373,7 +373,7 @@ void Internal::failing () {
     // TODO: We can not do clause minimization here, right?
 
     VERBOSE (1, "found %zd failed assumptions %.0f%%", clause.size (),
-             percent (clause.size (), assumptions2.size ()));
+             percent (clause.size (), assumptions.size ()));
 
     // We do not actually need to learn this clause, since the conflict is
     // forced already by some other clauses.  There is also no bumping
@@ -504,15 +504,15 @@ void Internal::reset_concluded () {
 // 'UNSATISFIABLE' actually) we reset all assumptions.
 
 void Internal::reset_assumptions () {
-  for (const auto &lit : assumptions2) {
+  for (const auto &lit : assumptions) {
     Flags &f = flags (lit);
     const unsigned char bit = bign (lit);
     f.assumed &= ~bit;
     f.failed &= ~bit;
     melt (lit);
   }
-  LOG ("cleared %zd assumptions", assumptions2.size ());
-  assumptions2.clear ();
+  LOG ("cleared %zd assumptions", assumptions.size ());
+  assumptions.clear ();
   marked_failed = true;
 }
 
@@ -557,34 +557,34 @@ struct sort_assumptions_smaller {
 
 void Internal::sort_and_reuse_assumptions () {
   assert (opts.ilb);
-  if (!opts.ilbassumptions && !assumptions2.empty ()) {
+  if (!opts.ilbassumptions && !assumptions.empty ()) {
     backtrack ();
     return;
   }
-  if (assumptions2.empty ())
+  if (assumptions.empty ())
     return;
   switch (opts.ilbassumptions) {
   case 1: //no reorder
-    LOG (assumptions2.assumptions, "kept assumptions order");
+    LOG (assumptions.assumptions, "kept assumptions order");
     break;
   case 2: // randomize order
   {
     Random random (opts.seed); // global seed
     random += stats.shuffled;  // different every time
-    const int size = assumptions2.size ();
+    const int size = assumptions.size ();
     for (int i = 0; i <= size - 2; i++) {
       const int j = random.pick_int (i, size - 1);
       assert (j < size && i < size);
-      swap (assumptions2[i], assumptions2[j]);
+      swap (assumptions[i], assumptions[j]);
     }
-    LOG (assumptions2.assumptions, "randomized assumptions");
+    LOG (assumptions.assumptions, "randomized assumptions");
     break;
   }
   case 3: // sort like ILB
-    MSORT (opts.radixsortlim, assumptions2.begin (), assumptions2.end (),
+    MSORT (opts.radixsortlim, assumptions.begin (), assumptions.end (),
          sort_assumptions_positive_rank (this),
          sort_assumptions_smaller (this));
-    LOG (assumptions2.assumptions, "sorted assumptions");
+    LOG (assumptions.assumptions, "sorted assumptions");
     break;
   default:
     assert (false);
@@ -597,12 +597,12 @@ void Internal::sort_and_reuse_assumptions () {
   assert ((size_t) level == control.size () - 1);
   int target = 0;
   LOG ("checking up to %d of the assumptions", size);
-  assumptions2.backtrack (0);
-  for (unsigned i = 1; i < size && !assumptions2.satisfied (); ) {
+  assumptions.backtrack (0);
+  for (unsigned i = 1; i < size && !assumptions.satisfied (); ) {
     assert (i < control.size());
     const Level &l = control[i];
     const int lit = l.decision;
-    const int alit = assumptions2.next ();
+    const int alit = assumptions.next ();
     const int lev = i;
     target = lev;
     LOG ("ilb checking %d vs assumption %d", l.decision, alit);
@@ -616,11 +616,11 @@ void Internal::sort_and_reuse_assumptions () {
     ++i;
     if (l.decision == alit) {
       LOG ("same literal as decision on level %d", lev);
-      assumptions2.decide();
+      assumptions.decide();
       continue;
     }
     target = lev - 1;
-    assumptions2.pop ();
+    assumptions.pop ();
     LOG ("first different literal %d on the trail and %d from the "
          "assumptions",
          lit, alit);
@@ -629,12 +629,12 @@ void Internal::sort_and_reuse_assumptions () {
   }
 
   if (must_backtrack) {
-    assumptions2.reset_ilb (target);
+    assumptions.reset_ilb (target);
     backtrack (target);
   }
   else if (opts.ilb == 1) {
     if (max_level < level) {
-      assumptions2.reset_ilb (target);
+      assumptions.reset_ilb (target);
       backtrack (max_level);
     }
     else
@@ -644,13 +644,13 @@ void Internal::sort_and_reuse_assumptions () {
     LOG ("keeping full trail");
   }
   LOG ("assumptions allow for reuse of trail up to level %d", level);
-  if ((size_t) level > assumptions2.size ())
-    stats.assumptionsreused += assumptions2.size ();
+  if ((size_t) level > assumptions.size ())
+    stats.assumptionsreused += assumptions.size ();
   else
     stats.assumptionsreused += level;
 }
 
 
-bool Internal::assuming () { return !assumptions2.satisfied (); }
+bool Internal::assuming () { return !assumptions.satisfied (); }
 
 } // namespace CaDiCaL

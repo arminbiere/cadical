@@ -603,10 +603,10 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
   } else if (jump >= level - 1) {
     res = jump;
     LOG ("jump level identical to chronological backtrack level %d", res);
-  } else if ((size_t) jump <= assumptions2.level ()) {
+  } else if ((size_t) jump <= assumptions.level ()) {
     res = jump;
     LOG ("using jump level %d since it is lower than assumption level %zd",
-         res, assumptions2.level ());
+         res, assumptions.level ());
   } else if (level - jump > opts.chronolevelim) {
     stats.chrono++;
     res = level - 1;
