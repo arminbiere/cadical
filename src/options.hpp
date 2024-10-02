@@ -99,8 +99,8 @@ OPTION( flushint,        1e5,  1,2e9,0,0,1, "initial limit") \
 OPTION( forcephase,        0,  0,  1,0,0,1, "always use initial phase") \
 OPTION( frat,              0,  0,  2,0,0,1, "1=frat(lrat), 2=frat(drat)") \
 OPTION( idrup,             0,  0,  1,0,0,1, "incremental proof format") \
-OPTION( ilb,               2,  0,  2,0,0,1, "ILB (incremental lazy backtrack) [0=none,1=assumptions only, 2=full]") \
-OPTION( ilbassumptions,    3,  0,  3,0,0,1, "trail reuse for assumptions [0=nothing,1=no reorder,2=random,3=sorted like ILB]") \
+OPTION( ilb,               0,  0,  2,0,0,1, "ILB (incremental lazy backtrack) [0=none,1=assumptions only, 2=full]") \
+OPTION( ilbassumptions,    0,  0,  3,0,0,1, "trail reuse for assumptions [0=nothing,1=no reorder,2=random,3=sorted like ILB]") \
 OPTION( inprocessing,      1,  0,  1,0,0,1, "enable inprocessing") \
 OPTION( instantiate,       0,  0,  1,0,1,1, "variable instantiation") \
 OPTION( instantiateclslim, 3,  2,2e9,0,0,1, "minimum clause size") \

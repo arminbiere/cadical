@@ -873,7 +873,10 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   }
 
   stats.probingphases++;
-
+  if (external_prop) {
+    assert(!level);
+    private_steps = true;
+  }
   const int before = active ();
 
   // We trigger equivalent literal substitution (ELS) before ...
@@ -895,6 +898,11 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   decompose (); // ... and (ELS) afterwards.
 
   last.probe.propagations = stats.propagations.search;
+
+  if (external_prop) {
+    assert(!level);
+    private_steps = false;
+  }
 
   if (!update_limits)
     return;

@@ -205,6 +205,7 @@ struct External;
 // Forward declaration of call-back classes. See bottom of this file.
 
 class Learner;
+class FixedAssignmentListener;
 class Terminator;
 class ClauseIterator;
 class WitnessIterator;
@@ -360,6 +361,14 @@ public:
 
   // ====== END IPASIR =====================================================
 
+// Add call-back which allows to observe when a variable is fixed.
+  //
+  //   require (VALID)
+  //   ensure (VALID)
+  //
+  void connect_fixed_listener (FixedAssignmentListener *fixed_listener);
+  void disconnect_fixed_listener ();
+
   // ====== BEGIN IPASIR-UP ================================================
 
   // Add call-back which allows to learn, propagate and backtrack based on
@@ -414,6 +423,17 @@ public:
   //   ensure (VALID_OR_SOLVING)
   //
   bool is_decision (int lit);
+
+  // Force solve to backtrack to certain decision level. Can be called only
+  // during 'cb_decide' of a connected External Propagator.
+  // Invoking in any other time will not have an effect. 
+  // If the call had an effect, the External Propagator will be notified about
+  // the backtrack via 'notify_backtrack'.
+  //
+  //   require (SOLVING)
+  //   ensure (SOLVING)
+  //
+  void force_backtrack (size_t new_level);
 
   // ====== END IPASIR-UP ==================================================
 
@@ -1099,6 +1119,17 @@ public:
   virtual void learn (int lit) = 0;
 };
 
+// Connected listener gets notified whenever the truth value of a variable is
+// fixed (for example during inprocessing or due to some derived unit clauses).
+
+class FixedAssignmentListener {
+public:
+  virtual ~FixedAssignmentListener () {}
+
+  virtual void notify_fixed_assignment (int) = 0;
+};
+
+
 /*------------------------------------------------------------------------*/
 
 // Allows to connect an external propagator to propagate values to variables
@@ -1108,9 +1139,9 @@ public:
 class ExternalPropagator {
 
 public:
-  // This flag is currently checked only when the propagator is connected.
   bool is_lazy = false; // lazy propagator only checks complete assignments
-
+  bool are_reasons_forgettable = false; // Reason external clauses can be deleted
+  
   virtual ~ExternalPropagator () {}
 
   // Notify the propagator about assignments to observed variables.
@@ -1118,7 +1149,8 @@ public:
   // the call of propagator callbacks and when a driving clause is leading
   // to an assignment.
   //
-  virtual void notify_assignment (int lit, bool is_fixed) = 0;
+  //virtual void notify_assignment (int lit, bool is_fixed) = 0;
+  virtual void notify_assignment (const std::vector<int>& lits) = 0;
   virtual void notify_new_decision_level () = 0;
   virtual void notify_backtrack (size_t new_level) = 0;
 
@@ -1145,6 +1177,9 @@ public:
   // added literal-by-literal closed with a 0. Further, the clause must
   // contain the propagated literal.
   //
+  // The clause will be learned as an Irredundant Non-Forgettable Clause (see
+  // below at 'cb_has_external_clause' more details about it).
+  //
   virtual int cb_add_reason_clause_lit (int propagated_lit) {
     (void) propagated_lit;
     return 0;
@@ -1168,8 +1203,28 @@ public:
   // clause.
   //
   // The external propagator indicates that there is a clause to add.
+  // The parameter of the function allows the user to indicate that how 
+  // 'forgettable' is the external clause. Forgettable clauses are allowed
+  // to be removed by the SAT solver during clause database reduction.
+  // However, it is up to the solver to decide when actually the clause is
+  // deleted. For example, unit clauses, even forgettable ones, will not be
+  // deleted. In case the clause is not 'forgettable' (the parameter is false),
+  // the solver considers the clause to be irredundant.
   //
-  virtual bool cb_has_external_clause () = 0;
+  // In case the solver produces incremental proofs, these external clauses 
+  // are added to the proof during solving at real-time, i.e., the proof 
+  // checker can ignore them until that point (so added as input clause, but
+  // input after the query line).
+  //
+  // Reason clauses of external propagation steps are assumed to be
+  // forgettable, parameter 'reason_forgettable' can be used to change it.
+  //
+  // Currently, every external clause is expected to be over observed
+  // (therefore frozen) variables, hence no tainting or restore steps
+  // are performed upon their addition. This will be changed in later
+  // versions probably.
+  //
+  virtual bool cb_has_external_clause (bool& is_forgettable) = 0;
 
   // The actual function called to add the external clause.
   //

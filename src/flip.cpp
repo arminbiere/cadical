@@ -9,6 +9,10 @@ bool Internal::flip (int lit) {
   if (!active (lit) && !flags (lit).unused ())
     return false;
 
+
+  // TODO: Unused case is not handled yet.
+  // if (flags (lit).unused ()) return false;
+
   // Need to reestablish proper watching invariants as if there are no
   // blocking literals as flipping in principle does not work with them.
 
@@ -156,6 +160,9 @@ bool Internal::flippable (int lit) {
 
   if (!active (lit) && !flags (lit).unused ())
     return false;
+
+  // TODO: Unused case is not handled yet
+  // if (flags (lit).unused ()) return false;
 
   // Need to reestablish proper watching invariants as if there are no
   // blocking literals as flipping in principle does not work with them.

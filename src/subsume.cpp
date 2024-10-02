@@ -656,6 +656,11 @@ void Internal::subsume (bool update_limits) {
     return;
   }
 
+  if (external_prop) {
+    assert(!level);
+    private_steps = true;
+  }
+
   if (opts.subsume) {
     reset_watches ();
     subsume_round ();
@@ -673,6 +678,11 @@ void Internal::subsume (bool update_limits) {
     vivify ();
   if (opts.transred)
     transred ();
+
+  if (external_prop) {
+    assert(!level);
+    private_steps = false;
+  }
 
 UPDATE_LIMITS:
 

@@ -517,6 +517,7 @@ void Internal::propergate () {
       const int other = lits[0] ^ lits[1] ^ lit;
       const signed char u = val (other);
 
+      // TODO: check if u == 0 can happen
       if (u > 0)
         continue;
       assert (u < 0);
