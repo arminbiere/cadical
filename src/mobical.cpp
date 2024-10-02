@@ -470,7 +470,7 @@ public:
   /*-----------------functions for mobical ends ------------------------*/
 
   /*------------------ FixedAssignmentListener functions ---------------------*/
-  void notify_fixed_assignment (int lit) {
+  void notify_fixed_assignment (int lit) override {
     MLOG ("notify_fixed_assignment: " << lit << " (current level: "
                                       << observed_trail.size () - 1
                                       << ", current fixed count: "
@@ -503,7 +503,7 @@ public:
 
   /* -------------------- ExternalPropagator functions -----------------*/
 
-  bool cb_check_found_model (const std::vector<int> &model) {
+  bool cb_check_found_model (const std::vector<int> &model) override {
     MLOG ("cb_check_found_model (" << model.size () << ") returns: ");
 
     // Model reconstruction can change the assignments of certain variables,
@@ -560,7 +560,7 @@ public:
     return cb_has_external_clause (forgettable);
   }
 
-  bool cb_has_external_clause (bool& forgettable) {
+  bool cb_has_external_clause (bool& forgettable) override {
     MLOG ("cb_has_external_clause returns: ");
 
     assert (compare_trails ());
@@ -624,7 +624,7 @@ public:
     return false;
   }
 
-  int cb_add_external_clause_lit () {
+  int cb_add_external_clause_lit () override {
     int lit = external_lemmas[add_lemma_idx]->next_lit ();
 
     MLOG ("cb_add_external_clause_lit "
@@ -637,7 +637,7 @@ public:
     return lit;
   }
 
-  int cb_decide () {
+  int cb_decide () override {
     MLOG ("cb_decide starts." << std::endl);
 
     assert (compare_trails ());
@@ -694,7 +694,7 @@ public:
     return 0;
   }
 
-  int cb_propagate () {
+  int cb_propagate () override {
     MLOGC ("cb_propagate starts" << std::endl);
     assert (compare_trails ());
     // if (observed_trail.size () < 2) {
@@ -795,7 +795,7 @@ public:
     return satisfied_literals;
   }
 
-  int cb_add_reason_clause_lit (int plit) {
+  int cb_add_reason_clause_lit (int plit) override {
 
     // At that point there is no need to assume that the trails are in
     // synchron.
@@ -822,14 +822,14 @@ public:
     }
   }
 
-  void notify_new_decision_level () {
+  void notify_new_decision_level () override {
     MLOG ("notify new decision level " << observed_trail.size () -1 << " -> "
                                        << observed_trail.size ()
                                        << std::endl);
     observed_trail.push_back (std::vector<int> ());
   }
 
-  void notify_backtrack (size_t new_level) {
+  void notify_backtrack (size_t new_level) override {
     MLOG ("notify backtrack: " << observed_trail.size () - 1 << " -> "
                                << new_level << std::endl);
     assert (observed_trail.size () > 1 || !new_level);                
