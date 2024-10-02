@@ -58,7 +58,7 @@ class LidrupTracer : public FileTracer {
 
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
-  void put_binary_id (int64_t id);
+  void put_binary_id (int64_t id, bool = true);
 
   void lidrup_add_derived_clause (int64_t id, const vector<int> &clause,
                                   const vector<int64_t> &chain);

@@ -19,7 +19,7 @@ class FratTracer : public FileTracer {
 
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
-  void put_binary_id (int64_t id);
+  void put_binary_id (int64_t id, bool = false);
 
   // support FRAT
   void frat_add_original_clause (int64_t, const vector<int> &);

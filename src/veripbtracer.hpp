@@ -54,7 +54,7 @@ class VeripbTracer : public FileTracer {
 
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
-  void put_binary_id (int64_t id);
+  void put_binary_id (int64_t id, bool = false);
 
   // support veriPB
   void veripb_add_derived_clause (int64_t, bool redundant,

@@ -48,11 +48,13 @@ inline void FratTracer::put_binary_lit (int lit) {
   file->put (ch);
 }
 
-// TODO
-inline void FratTracer::put_binary_id (int64_t id) {
+inline void FratTracer::put_binary_id (int64_t id, bool can_be_negative) {
   assert (binary);
   assert (file);
-  uint64_t x = id;
+  uint64_t x = abs (id);
+  if (can_be_negative) {
+    x = 2 * x + (id < 0);
+  }
   unsigned char ch;
   while (x & ~0x7f) {
     ch = (x & 0x7f) | 0x80;
@@ -129,7 +131,7 @@ void FratTracer::frat_add_derived_clause (int64_t id,
     file->put ("0  l ");
   for (const auto &c : chain)
     if (binary)
-      put_binary_id (2 * c); // LRAT can have negative ids
+      put_binary_id (c, true); // LRAT can have negative ids
     else
       file->put (c), file->put (' '); // in proof chain, so they get
   if (binary)

@@ -54,7 +54,7 @@ class IdrupTracer : public FileTracer {
 
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
-  void put_binary_id (int64_t id);
+  void put_binary_id (int64_t id, bool = false);
 
   void idrup_add_derived_clause (const vector<int> &clause);
   void idrup_delete_clause (int64_t id, const vector<int> &clause);

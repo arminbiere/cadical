@@ -179,10 +179,13 @@ inline void IdrupTracer::put_binary_lit (int lit) {
 }
 
 // TODO
-inline void IdrupTracer::put_binary_id (int64_t id) {
+inline void IdrupTracer::put_binary_id (int64_t id, bool can_be_negative) {
   assert (binary);
   assert (file);
-  int64_t x = id;
+  uint64_t x = abs (id);
+  if (can_be_negative) {
+    x = 2 * x + (id < 0);
+  }
   unsigned char ch;
   while (x & ~0x7f) {
     ch = (x & 0x7f) | 0x80;
