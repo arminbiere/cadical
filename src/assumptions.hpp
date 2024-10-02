@@ -22,12 +22,12 @@ public:
   void reset_ilb (unsigned level); // backtrack in the case of ILB to reset invariants
   void decide (); // set the last next () to be set
   size_t size (); // size of the assumptions
-  auto begin () {return std::begin (assumptions);};
-  auto end () {return std::end (assumptions);};
+  std::vector<int>::iterator begin () {return std::begin (assumptions);};
+  std::vector<int>::iterator end () {return std::end (assumptions);};
   bool empty () {return assumptions.empty ();};
   int & operator[] (int i) {return assumptions [i];};
   void pop (); // pop the last literal back to the stream
-  
+  void undo_all (); // undo the decided assumptions for ILB
   std::vector<int> assumptions;
   std::vector<int> control = {0};
   size_t assumed = 0;

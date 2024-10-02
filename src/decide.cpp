@@ -89,6 +89,7 @@ int Internal::likely_phase (int idx) { return decide_phase (idx, false); }
 // adds new level to control and trail
 //
 void Internal::new_trail_level (int lit) {
+  assert (lit);
   level++;
   control.push_back (Level (lit, trail.size ()));
 }

@@ -7,9 +7,7 @@ namespace CaDiCaL {
 // adds an assumption literal onto the assumption stack.
 
 void Internal::assume (int lit) {
-  LOG ("reset assumed");
-  assumptions2.assumed = 0;
-  LOG ("reset assumed %d", assumptions2.assumed);
+  assumptions2.undo_all ();
   if (level && !opts.ilbassumptions)
     backtrack ();
   else if (val (lit) < 0)
@@ -471,7 +469,7 @@ bool Internal::failed (int lit) {
 void Internal::conclude_unsat () {
   if (!proof || concluded)
     return;
-  concluded = true;    LOG ("marked_failed %d, conflict_id %d", marked_failed, conflict_id);
+  concluded = true;
   if (!marked_failed) {
     assert (conclusion.empty ());
     if (!conflict_id)
@@ -594,17 +592,9 @@ void Internal::sort_and_reuse_assumptions () {
 
   int max_level = 0;
   bool must_backtrack = false;
-  for (auto lit : assumptions2) {
-    if (val (lit) > 0)
-      max_level = max (var (lit).level, max_level);
-    else // there is one assumption that is wrong, backtrack is required
-      must_backtrack = true;
-  }
 
-  LOG ("max_level %d of the assumptions", max_level);
   const unsigned size = level + 1u;
   assert ((size_t) level == control.size () - 1);
-  assert (max_level <= level);
   int target = 0;
   LOG ("checking up to %d of the assumptions", size);
   assumptions2.backtrack (0);
@@ -621,12 +611,7 @@ void Internal::sort_and_reuse_assumptions () {
       LOG ("ILB skipping propagation %d", alit);
       continue;
     }
-    if (!lit) {
-      LOG ("found empty level");
-      target = lev - 1;
-      assumptions2.pop ();
-      break;
-    }
+    assert (lit);
     assert (var (lit).level == lev);
     ++i;
     if (l.decision == alit) {
@@ -643,7 +628,7 @@ void Internal::sort_and_reuse_assumptions () {
     break;
   }
 
-  if (must_backtrack){
+  if (must_backtrack) {
     assumptions2.reset_ilb (target);
     backtrack (target);
   }

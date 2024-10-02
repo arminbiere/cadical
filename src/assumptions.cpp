@@ -67,5 +67,8 @@ void Assumptions::pop () {
   --assumed;
 };
 
+void Assumptions::undo_all () {
+  assumed = 0;
+}
 
 }
