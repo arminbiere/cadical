@@ -247,6 +247,8 @@ private:
 
   // The reasons of present external propagations
   std::map<int, int> reason_map;
+  // The external propagations that are currently unassigned
+  std::set<int> unassigned_reasons;
 
   // Next lemma to add
   size_t add_lemma_idx = 0;
@@ -328,6 +330,8 @@ public:
   ~MockPropagator () {
     for (auto l : external_lemmas)
       delete[] l->literals, delete l;
+    reason_map.clear();
+    unassigned_reasons.clear();
   }
 
   /*-----------------functions for mobical -----------------------------*/
@@ -638,6 +642,22 @@ public:
 
     assert (compare_trails ());
 
+    if (!unassigned_reasons.empty()) {
+      MLOG ("clean up backtracked external propagation reasons: ");
+      size_t del_count = 0;
+      for (const auto& lit : unassigned_reasons) {
+        size_t reason_id = reason_map[lit];
+        assert (reason_id < external_lemmas.size ());
+        external_lemmas[reason_id]->propagation_reason = false;
+        external_lemmas[reason_id]->forgettable = true;
+        reason_map.erase (lit);
+        MLOGC (lit << " ");
+        del_count++;
+      }
+      MLOGC ("(" << del_count << " clauses)" <<std::endl);
+      unassigned_reasons.clear();
+    }
+
     if (observed_variables.empty () || observed_variables.size () <= 4) {
       MLOG ("cb_decide returns 0" << std::endl);
       return 0;
@@ -798,6 +818,7 @@ public:
     MLOG ("notified " << lits.size() << " new assignments." << std::endl);
     for (const auto& lit: lits) {
       observed_trail.back ().push_back (lit);
+      unassigned_reasons.erase (lit);
     }
   }
 
@@ -816,22 +837,17 @@ public:
             observed_trail.size () >= new_level + 1);
     while (observed_trail.size () > new_level + 1) {
       // We can not remove reason clauses of backtracked assignments because
-      // ILB might re-introduces them on the trail. But upon restarts it should
-      // be always safe to clean up the reason database.
-      if (!new_level) {
-        for (auto lit : observed_trail.back ()) {
-          if (reason_map.find (lit) != reason_map.end ()) {
-            size_t reason_id = reason_map[lit];
-            assert (reason_id < external_lemmas.size ());
-            external_lemmas[reason_id]->propagation_reason = false;
-            external_lemmas[reason_id]->forgettable = true;
-            reason_map.erase (lit);
-          }
+      // ILB might re-introduces them to the trail. Here we only save the
+      // potential candidates to delete, and upon next cb_decide we delete
+      // those ones that did not get re-assigned.
+      for (auto lit : observed_trail.back ()) {
+        if (reason_map.find (lit) != reason_map.end ()) {
+          unassigned_reasons.insert (lit);
         }
       }
 #ifndef NDEBUG
-      MLOG("unassign during backtrack from level : " 
-        << observed_trail.size() - 1 );
+      MLOG("unassign during backtrack from level " 
+        << observed_trail.size() - 1 << ": ");
       for (auto lit: observed_trail.back()) MLOGC(lit << " ");
       MLOGC(std::endl);
 #endif
