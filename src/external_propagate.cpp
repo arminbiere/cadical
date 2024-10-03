@@ -125,16 +125,20 @@ void Internal::renotify_full_trail () {
 
   int prev_max_level = 0;
   int current_level = 0;
-  
+  int propagator_level = 0;
+
   while (notified < end_of_trail) {
     int ilit = trail[notified++];
     // In theory, 0 ilit can happen due to pseudo-decision levels    
     if (!ilit) current_level = prev_max_level + 1;
     else current_level = var (ilit).level;
 
-    if (is_decision (ilit) || current_level > prev_max_level) {
+    if (current_level > propagator_level) {
       if (assigned.size()) external->propagator->notify_assignment (assigned);
-      while (current_level > prev_max_level++) external->propagator->notify_new_decision_level ();
+      while (current_level > propagator_level) {
+        external->propagator->notify_new_decision_level ();
+        propagator_level++;
+      }
       assigned.clear ();
     }
     // Current level can be smaller than prev_max_level due to chrono
@@ -157,7 +161,10 @@ void Internal::renotify_full_trail () {
 
   // In case there are some left over empty levels on the top of the trail, the
   // external propagtor must be notified about them so the levels are synced
-  while (level > current_level++) external->propagator->notify_new_decision_level ();
+  while (level > propagator_level) {
+    external->propagator->notify_new_decision_level ();
+    propagator_level++;
+  }
   
   return;
 
