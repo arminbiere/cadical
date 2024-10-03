@@ -330,8 +330,16 @@ public:
   ~MockPropagator () {
     for (auto l : external_lemmas)
       delete[] l->literals, delete l;
+
+    s = 0;
     reason_map.clear();
     unassigned_reasons.clear();
+
+    observed_variables.clear();
+    new_observed_variables.clear();
+    observed_trail.clear();
+
+    observed_fixed.clear();
   }
 
   /*-----------------functions for mobical -----------------------------*/
@@ -496,6 +504,7 @@ public:
     s->internal->get_all_fixed_literals (fixed_lits);
     MLOGC ("found: " << fixed_lits.size() << " fixed literals" << std::endl);
     add_prev_fixed(fixed_lits);
+    fixed_lits.clear();
 #endif    
   }
 
@@ -848,7 +857,10 @@ public:
 #ifndef NDEBUG
       MLOG("unassign during backtrack from level " 
         << observed_trail.size() - 1 << ": ");
-      for (auto lit: observed_trail.back()) MLOGC(lit << " ");
+      for (auto lit: observed_trail.back()) {
+        (void)lit;
+        MLOGC(lit << " ");
+      }
       MLOGC(std::endl);
 #endif
       observed_trail.pop_back ();
