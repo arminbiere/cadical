@@ -1067,15 +1067,9 @@ void Internal::vivify_build_lrat (
       Var &v = var (other);
       Flags &f = flags (other);
       if (f.seen)
-        continue; // we would lik // assert (val (other) < 0);e to assert
-                  // this:
-      // analyzed.push_back (other); // assert (val (other) < 0);
-      // f.seen = true;              // but we cannot because we have
-      if (!v.level) { // already backtracked (sometimes)
-        const unsigned uidx =
-            vlit (-other);                // nevertheless we can use var (l)
-        int64_t id = unit_clauses[uidx]; // as if l was still assigned
-        assert (id);                      // because var is updated lazily
+        continue;
+      if (!v.level) {
+        const int64_t id = unit_id (-other);
         lrat_chain.push_back (id);
         f.seen = true;
         analyzed.push_back (other);
@@ -1104,8 +1098,8 @@ inline void Internal::vivify_chain_for_units (int lit, Clause *reason) {
     if (lit == reason_lit)
       continue;
     assert (val (reason_lit));
-    const unsigned uidx = vlit (val (reason_lit) * reason_lit);
-    int64_t id = unit_clauses[uidx];
+    const int signed_reason_lit = val (reason_lit) * reason_lit;
+    int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (reason->id);

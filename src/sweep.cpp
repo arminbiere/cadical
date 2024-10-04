@@ -531,8 +531,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
                 if (flags (lit).seen) continue;
                 const int idx = abs (lit);
                 if (sweeper.prev_units[idx]) {
-                  const unsigned uidx = vlit (-lit);
-                  int64_t uid = unit_clauses[uidx];
+                  int64_t uid = unit_id (-lit);
                   lrat_chain.push_back (uid);
                   analyzed.push_back (lit);
                   flags (lit).seen = true;
@@ -563,8 +562,10 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
         lrat_chain.clear ();
       } else if (val (unit) < 0) {
         LOG ("falsified sweeping unit %d leads to empty clause", unit);
-        if (lrat)
-          lrat_chain.push_back (unit_clauses[vlit (-unit)]);
+        if (lrat) {
+          int64_t id = unit_id (-unit);
+          lrat_chain.push_back (id);
+        }
         learn_empty_clause ();
         core.resize (unsat_size);
         return;
@@ -575,7 +576,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
         sweeper.propagate.push_back (unit);
       }
       if (proof)
-        pc.cad_id = unit_clauses[vlit (unit)];
+        pc.cad_id = unit_id (unit);
       continue;
     }
 
@@ -896,8 +897,7 @@ int64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit, int other) {
   if (lrat) {
     for (const auto & plit : pc.literals) {
       if (val (plit)) {
-        const unsigned uidx = vlit (-plit);
-        int64_t id = unit_clauses[uidx];
+        int64_t id = unit_id (-plit);
         lrat_chain.push_back (id);
       }
     }
@@ -1018,9 +1018,7 @@ void Internal::sweep_substitute_lrat (Clause *c, int64_t id) {
   for (const auto & lit : *c) {
     assert (val (lit) <= 0);
     if (val (lit) < 0) {
-      const unsigned uidx = vlit (-lit);
-      int64_t id = unit_clauses[uidx];
-      assert (id);
+      int64_t id = unit_id (-lit);
       lrat_chain.push_back (id);
     }
   }
@@ -1176,23 +1174,30 @@ void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
       substitute_connected_clauses (sweeper, -lit, other, sb.id);
     }
     if (val (lit) < 0) {
+      if (lrat) {
+        const int64_t lid = unit_id (-lit);
+        lrat_chain.push_back (lid);
+      }
       if (!val (other)) {
-        assert (unit_clauses[vlit (-lit)]);
-        lrat_chain.push_back (unit_clauses[vlit (-lit)]);
-        lrat_chain.push_back (sb.id);
+        if (lrat)
+          lrat_chain.push_back (sb.id);
         assign_unit (other);
       } else if (val (other) < 0) {
-        lrat_chain.push_back (unit_clauses[vlit (-lit)]);
-        lrat_chain.push_back (unit_clauses[vlit (-other)]);
-        lrat_chain.push_back (sb.id);
+        if (lrat) {
+          const int64_t oid = unit_id (-other);
+          lrat_chain.push_back (oid);
+          lrat_chain.push_back (sb.id);
+        }
         learn_empty_clause ();
         return;
       }
     } else if (val (other) < 0) {
       if (!val (lit)) {
-        assert (unit_clauses[vlit (-other)]);
-        lrat_chain.push_back (unit_clauses[vlit (-other)]);
-        lrat_chain.push_back (sb.id);
+        if (lrat) {
+          const int64_t oid = unit_id (-other);
+          lrat_chain.push_back (oid);
+          lrat_chain.push_back (sb.id);
+        }
         assign_unit (lit);
       } else assert (val (lit) > 0);
     }

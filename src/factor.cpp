@@ -136,6 +136,7 @@ Quotient *Internal::new_quotient (Factoring &factoring, int factor) {
   res->next = 0;
   res->matched = 0;
   Quotient *last = factoring.quotients.last;
+  res->bid = 0;
   if (last) {
     assert (factoring.quotients.first);
     assert (!last->next);
@@ -498,43 +499,140 @@ void Internal::flush_unmatched_clauses (Quotient *q) {
   prev_clauses.resize (n);
 }
 
+void Internal::add_self_subsuming_factor (Quotient *q, Quotient *p) {
+  const int factor = q->factor;
+  const int not_factor = p->factor;
+  assert (-factor == not_factor);
+  for (auto c : q->qlauses) {
+    for (const auto &lit : *c) {
+      if (lit == factor) continue;
+      clause.push_back (lit);
+    }
+    if (lrat) {
+      lrat_chain.push_back (c->id);
+      for (auto d : p->qlauses) {
+        bool match = true;
+        for (const auto &lit : *d) {
+          if (lit == not_factor) continue;
+          if (std::find (clause.begin (), clause.end (), lit) == clause.end ()) {
+            match = false;
+            break;
+          }
+        }
+        if (match) {
+          lrat_chain.push_back (d->id);
+          break;
+        }
+      }
+      assert (lrat_chain.size () == 2);
+    }
+    if (clause.size () > 1) {
+      new_factor_clause ();
+    } else {
+      const int unit = clause[0];
+      const signed char tmp = val (unit);
+      if (!tmp)
+        assign_unit (unit);
+      else if (tmp < 0) {
+        if (lrat) {
+          int64_t id = unit_id (-unit);
+          lrat_chain.push_back (id);
+          std::reverse (lrat_chain.begin (), lrat_chain.end ());
+        }
+        learn_empty_clause ();
+      }
+    }
+    clause.clear ();
+    lrat_chain.clear ();
+  }
+}
 
-// TODO: LRAT, occs of new clauses ??
-void Internal::add_factored_divider (Factoring &factoring, Quotient *q,
-                                  int fresh) {
+bool Internal::self_subsuming_factor (Quotient *q) {
+  Quotient *x = 0, *y = 0;
+  bool found = false;
+  for (Quotient *p = q; p; p = p->prev) {
+    const int factor = p->factor;
+    Flags &f = flags (factor);
+    if (f.seen) {
+      assert (std::find (analyzed.begin (), analyzed.end (), -factor)
+        != analyzed.end ());
+      found = true;
+      x = p;
+      for (Quotient *r = q; r; r = r->prev) {
+        if (r->factor != -factor)
+          continue;
+        y = r;
+        break;
+      }
+      break;
+    }
+    analyzed.push_back (factor);
+    f.seen = true;
+  }
+  assert (!found || (x && y));
+  clear_analyzed_literals ();
+  if (found) {
+    add_self_subsuming_factor (x, y);
+    return true;
+  }
+  return false;
+}
+
+void Internal::add_factored_divider (Quotient *q, int fresh) {
   const int factor = q->factor;
   LOG ("factored %d divider %d", factor, fresh);
   clause.push_back (factor);
   clause.push_back (fresh);
   new_factor_clause ();
   clause.clear ();
+  if (lrat)
+    mini_chain.push_back (-clause_id);
 }
 
-// TODO: LRAT, occs of new clauses ??
-void Internal::add_factored_quotient (Factoring &factoring, Quotient *q,
-                                   int not_fresh) {
+void Internal::blocked_clause (Quotient *q, int not_fresh) {
+  if (!proof) return;
+  int64_t new_id = ++clause_id;
+  q->bid = new_id;
+  assert (clause.empty ());
+  for (Quotient *p = q; p; p = p->prev)
+    clause.push_back (-p->factor);
+  clause.push_back (not_fresh);
+  assert (!lrat || mini_chain.size ());
+  proof->add_derived_clause (new_id, true, clause, mini_chain);
+  mini_chain.clear ();
+}
+
+void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
   LOG ("adding factored quotient[%zu] clauses", q->id);
   const int factor = q->factor;
-  for (auto c : q->qlauses) {
-#ifndef NDEBUG
-    bool found = false;
-#endif
+  assert (lrat_chain.empty ());
+  auto qlauses = q->qlauses;
+  for (unsigned idx = 0; idx < qlauses.size (); idx++) {
+    const auto c = qlauses[idx];
     for (const auto &other : *c) {
       if (other == factor) {
-#ifndef NDEBUG
-        found = true;
-#endif
         continue;
       }
       clause.push_back (other);
     }
-    assert (found);
+    if (lrat) {
+      assert (proof);
+      assert (q->bid);
+      lrat_chain.push_back (q->bid);
+      for (Quotient *p = q; p; p = p->prev) {
+        lrat_chain.push_back (p->qlauses[idx]->id);
+        if (p->prev)
+          idx = p->matches[idx];
+      }
+    }
     clause.push_back (not_fresh);
     new_factor_clause ();
     clause.clear ();
+    lrat_chain.clear ();
   }
+  if (proof)
+    proof->delete_clause (q->bid, true, clause);
 }
-
 
 void Internal::eagerly_remove_from_occurences (Clause *c) {
   for (const auto &lit : *c) {
@@ -552,9 +650,8 @@ void Internal::eagerly_remove_from_occurences (Clause *c) {
   }
 }
 
-void Internal::delete_unfactored (Factoring &factoring, Quotient *q) {
+void Internal::delete_unfactored (Quotient *q) {
   LOG ("deleting unfactored quotient[%zu] clauses", q->id);
-  const int factor = q->factor;
   for (auto c : q->qlauses) {
     eagerly_remove_from_occurences (c);
     mark_garbage (c);
@@ -578,19 +675,27 @@ void Internal::update_factored (Factoring &factoring, Quotient *q) {
 
 // TODO: schedule factored variable?
 bool Internal::apply_factoring (Factoring &factoring, Quotient *q) {
+  for (Quotient *p = q; p->prev; p = p->prev)
+    flush_unmatched_clauses (p);
+  if (self_subsuming_factor (q)) {
+    for (Quotient *p = q; p; p = p->prev)
+      delete_unfactored (p);
+    for (Quotient *p = q; p; p = p->prev)
+      update_factored (factoring, p);
+    return true;
+  }
   const int fresh = get_new_extension_variable ();
   if (!fresh)
     return false;
   stats.factored++;
   factoring.fresh.push_back (fresh);
-  for (Quotient *p = q; p->prev; p = p->prev)
-    flush_unmatched_clauses (p);
   for (Quotient *p = q; p; p = p->prev)
-    add_factored_divider (factoring, p, fresh);
+    add_factored_divider (p, fresh);
   const int not_fresh = -fresh;
-  add_factored_quotient (factoring, q, not_fresh);
+  blocked_clause (q, not_fresh);
+  add_factored_quotient (q, not_fresh);
   for (Quotient *p = q; p; p = p->prev)
-    delete_unfactored (factoring, p);
+    delete_unfactored (p);
   for (Quotient *p = q; p; p = p->prev)
     update_factored (factoring, p);
   assert (fresh > 0);
@@ -638,7 +743,7 @@ bool Internal::run_factorization (int64_t limit) {
   int64_t *ticks = &stats.factor_ticks;
   VERBOSE (3, "factorization limit of %" PRIu64 " ticks", limit - *ticks);
 
-  while (!done && !factoring.schedule.empty ()) {
+  while (!unsat && !done && !factoring.schedule.empty ()) {
     const unsigned ufirst = factoring.schedule.pop_front ();
     const int first = u2i (ufirst);
     const int first_idx = vidx (first);

@@ -173,9 +173,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
                 f.seen = true;
                 continue;
               }
-              const unsigned uidx = vlit (-lit);
-              int64_t id = unit_clauses[uidx];
-              assert (id);
+              int64_t id = unit_id (-lit);
               lrat_chain.push_back (id);
             }
             clear_analyzed_literals ();

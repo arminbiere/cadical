@@ -314,6 +314,8 @@ bool LratChecker::check (vector<int64_t> proof_chain) {
     checked_lit (-lit) = true;
     if (checked_lit (lit)) {
       LOG (imported_clause, "LRAT CHECKER clause tautological");
+      // currently, we do not notice in factor when we produce
+      // tautological clauses
       assert (!proof_chain.size ()); // would be unnecessary hence a bug
       taut = true;
     }
@@ -501,7 +503,7 @@ void LratChecker::add_derived_clause (int64_t id, bool,
     failed = false;
   }
   if (failed) {
-    LOG (proof_chain, "chain");
+    LOG (proof_chain, "LRAT CHECKER check failed with chain");
 #ifdef LOGGING
     for (const auto & pid : proof_chain) {
       const int64_t aid = abs (pid);

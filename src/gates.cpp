@@ -141,9 +141,7 @@ void Internal::mark_binary_literals (Eliminator &eliminator, int first) {
             continue;
           analyzed.push_back (lit);
           f.seen = true;
-          const unsigned uidx = vlit (-lit);
-          int64_t id = unit_clauses[uidx];
-          assert (id);
+          int64_t id = unit_id (-lit);
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);
         }
@@ -156,9 +154,7 @@ void Internal::mark_binary_literals (Eliminator &eliminator, int first) {
             continue;
           analyzed.push_back (lit);
           f.seen = true;
-          const unsigned uidx = vlit (-lit);
-          int64_t id = unit_clauses[uidx];
-          assert (id);
+          int64_t id = unit_id (-lit);
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);
         }
@@ -243,9 +239,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
             continue;
           analyzed.push_back (lit);
           f.seen = true;
-          const unsigned uidx = vlit (-lit);
-          int64_t id = unit_clauses[uidx];
-          assert (id);
+          int64_t id = unit_id (-lit);
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);
         }
@@ -258,9 +252,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
             continue;
           analyzed.push_back (lit);
           f.seen = true;
-          const unsigned uidx = vlit (-lit);
-          int64_t id = unit_clauses[uidx];
-          assert (id);
+          int64_t id = unit_id (-lit);
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);
         }

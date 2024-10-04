@@ -383,7 +383,7 @@ struct Internal {
   // arrays by literals.  The idea is to keep the elements in such an array
   // for both the positive and negated version of a literal close together.
   //
-  unsigned vlit (int lit) { return (lit < 0) + 2u * (unsigned) vidx (lit); }
+  unsigned vlit (int lit) const { return (lit < 0) + 2u * (unsigned) vidx (lit); }
 
   int u2i (unsigned u) {
     assert (u > 1);
@@ -407,6 +407,14 @@ struct Internal {
     return (lit < 0) + 2u * (unsigned) idx;
   }
 
+  int64_t unit_id (int lit) const {
+    assert (val (lit) > 0);
+    const unsigned uidx = vlit (lit);
+    int64_t id = unit_clauses[uidx];
+    assert (id);
+    return id;
+  }
+  
   // Helper functions to access variable and literal data.
   //
   Var &var (int lit) { return vtab[vidx (lit)]; }
@@ -1176,10 +1184,13 @@ struct Internal {
   void factorize_next (Factoring &, int, unsigned);
   void resize_factoring (Factoring &factoring, int lit);
   void flush_unmatched_clauses (Quotient *);
-  void add_factored_divider (Factoring &, Quotient *, int);
-  void add_factored_quotient (Factoring &, Quotient *, int not_fresh);
+  void add_self_subsuming_factor (Quotient *, Quotient *);
+  bool self_subsuming_factor (Quotient *);
+  void add_factored_divider (Quotient *, int);
+  void blocked_clause (Quotient *q, int);
+  void add_factored_quotient (Quotient *, int not_fresh);
   void eagerly_remove_from_occurences (Clause *c);
-  void delete_unfactored (Factoring &factoring, Quotient *q);
+  void delete_unfactored (Quotient *q);
   void update_factored (Factoring &factoring, Quotient *q);
   bool apply_factoring (Factoring &factoring, Quotient *q);
   void update_factor_candidate (Factoring &, int);

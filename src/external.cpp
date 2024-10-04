@@ -799,9 +799,7 @@ bool External::traverse_all_non_frozen_units_as_witnesses (
     int unit = tmp < 0 ? -idx : idx;
     const int ilit = e2i[idx] * (tmp < 0 ? -1 : 1);
     // heurstically add + max_var to the id to avoid reusing ids
-    const int64_t id = internal->opts.lrat
-                            ? internal->unit_clauses[internal->vlit (ilit)]
-                            : 1;
+    const int64_t id = internal->lrat ? internal->unit_id (ilit) : 1;
     assert (id);
     clause_and_witness.push_back (unit);
     if (!it.witness (clause_and_witness, clause_and_witness, id + max_var))

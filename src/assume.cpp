@@ -42,9 +42,7 @@ void Internal::assume_analyze_literal (int lit) {
   }
   assert (v.reason != external_reason);
   if (!v.level) {
-    const unsigned uidx = vlit (-lit);
-    int64_t id = unit_clauses[uidx];
-    assert (id);
+    int64_t id = unit_id (-lit);
     lrat_chain.push_back (id);
     return;
   }
@@ -188,9 +186,7 @@ void Internal::failing () {
           if (id) {
             lrat_chain.push_back (id);
           } else {
-            const unsigned uidx = vlit (-failed_unit);
-            int64_t id = unit_clauses[uidx];
-            assert (id);
+            int64_t id = unit_id (-failed_unit);
             lrat_chain.push_back (id);
           }
         }
@@ -322,9 +318,7 @@ void Internal::failing () {
       if (v.reason)
         assume_analyze_reason (lit, v.reason);
       else {
-        const unsigned uidx = vlit (lit);
-        int64_t id = unit_clauses[uidx];
-        assert (id);
+        int64_t id = unit_id (lit);
         lrat_chain.push_back (id);
       }
       for (auto &lit : clause) {
@@ -432,9 +426,7 @@ void Internal::failing () {
               int lit = external->e2i[abs (elit)];
               if (elit < 0)
                 lit = -lit;
-              const unsigned uidx = vlit (-lit);
-              int64_t id = unit_clauses[uidx];
-              assert (id);
+              int64_t id = unit_id (-lit);
               lrat_chain.push_back (id);
             }
           }

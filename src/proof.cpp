@@ -427,9 +427,7 @@ void Proof::flush_clause (Clause *c) {
   for (int i = 0; i < c->size; i++) {
     int internal_lit = c->literals[i];
     if (internal->fixed (internal_lit) < 0) {
-      const unsigned uidx = internal->vlit (-internal_lit);
-      int64_t id = internal->unit_clauses[uidx];
-      assert (id);
+      int64_t id = internal->unit_id (-internal_lit);
       proof_chain.push_back (id);
       continue;
     }

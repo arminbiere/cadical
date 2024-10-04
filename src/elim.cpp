@@ -308,9 +308,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
         continue;
       analyzed.push_back (lit);
       f.seen = true;
-      const unsigned uidx = vlit (-lit);
-      int64_t id = unit_clauses[uidx];
-      assert (id);
+      int64_t id = unit_id (-lit);
       lrat_chain.push_back (id);
       continue;
     } else
@@ -349,9 +347,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
         continue;
       analyzed.push_back (lit);
       f.seen = true;
-      const unsigned uidx = vlit (-lit);
-      int64_t id = unit_clauses[uidx];
-      assert (id);
+      int64_t id = unit_id (-lit);
       lrat_chain.push_back (id);
       continue;
     } else if ((tmp = marked (lit)) < 0) {

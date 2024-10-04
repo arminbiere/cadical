@@ -19,6 +19,7 @@ struct Quotient {
   ~Quotient () {}
   int factor;
   size_t id;
+  int64_t bid; // for LRAT
   Quotient *prev, *next;
   vector<Clause *> qlauses;
   vector<size_t> matches;

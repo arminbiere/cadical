@@ -561,7 +561,7 @@ void Checker::add_derived_clause (int64_t id, bool, const vector<int> &c,
   last_id = id;
   if (tautological ())
     LOG ("CHECKER ignoring satisfied derived clause");
-  else if (!check ()) { // && !check_blocked ()) { // needed for ER proof support
+  else if (!check () && !check_blocked ()) { // needed for ER proof support
     fatal_message_start ();
     fputs ("failed to check derived clause:\n", stderr);
     for (const auto &lit : unsimplified)

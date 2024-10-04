@@ -262,9 +262,7 @@ inline void Internal::analyze_literal (int lit, int &open,
     f.seen = true;
     unit_analyzed.push_back (lit);
     assert (val (lit) < 0);
-    const unsigned uidx = vlit (-lit);
-    int64_t id = unit_clauses[uidx];
-    assert (id);
+    int64_t id = unit_id (-lit);
     unit_chain.push_back (id);
     return;
   }

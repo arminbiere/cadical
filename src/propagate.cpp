@@ -72,8 +72,8 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
     assert (val (reason_lit));
     if (!val (reason_lit))
       continue;
-    const unsigned uidx = vlit (val (reason_lit) * reason_lit);
-    int64_t id = unit_clauses[uidx];
+    const int signed_reason_lit = val (reason_lit) * reason_lit;
+    int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (reason->id);
@@ -91,8 +91,7 @@ void Internal::build_chain_for_empty () {
   LOG (conflict, "lrat for global empty clause with conflict");
   for (auto &lit : *conflict) {
     assert (val (lit) < 0);
-    const unsigned uidx = vlit (-lit);
-    int64_t id = unit_clauses[uidx];
+    int64_t id = unit_id (-lit);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (conflict->id);

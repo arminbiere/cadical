@@ -90,7 +90,8 @@ void Internal::get_probehbr_lrat (int lit, int uip) {
   assert (lrat_chain.empty ());
   assert (val (uip) < 0);
   lrat_chain = probehbr_chains[vlit (lit)][vlit (uip)];
-  lrat_chain.push_back (unit_clauses[vlit (-uip)]);
+  int64_t id = unit_id (-uip);
+  lrat_chain.push_back (id);
 }
 
 // sets the corresponding probehbr_chain to what is currently stored in
@@ -133,9 +134,7 @@ void Internal::probe_dominator_lrat (int dom, Clause *reason) {
       probe_dominator_lrat (dom, u.reason);
       continue;
     }
-    const unsigned uidx = vlit (other);
-    int64_t id = unit_clauses[uidx];
-    assert (id);
+    int64_t id = unit_id (other);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (reason->id);
@@ -364,8 +363,8 @@ inline void Internal::probe_lrat_for_units (int lit) {
     assert (val (reason_lit));
     if (!val (reason_lit))
       continue;
-    const unsigned uidx = vlit (val (reason_lit) * reason_lit);
-    int64_t id = unit_clauses[uidx];
+    const int signed_reason_lit = val (reason_lit) * reason_lit;
+    int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (probe_reason->id);

@@ -8,15 +8,6 @@ void Internal::decompose_analyze_binary_chain (DFS *dfs, int from) {
   LOG ("binary chain starting at %d", from);
   DFS &from_dfs = dfs[vlit (from)];
   Clause *reason = from_dfs.parent;
-  /*
-  if (val (from) > 0) {
-    const unsigned uidx = vlit (from);
-    int64_t id = unit_clauses[uidx];
-    assert (id);
-    mini_chain.push_back (id);
-    return;
-  }
-  */
   if (!reason)
     return;
   assert (reason->size == 2);
@@ -69,16 +60,6 @@ void Internal::decompose_conflicting_scc_lrat (DFS *dfs, vector<int> &scc) {
     for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++) {
       lrat_chain.push_back (*p);
     }
-    /*
-    if (back)
-      for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++) {
-        lrat_chain.push_back (*p);
-      }
-    else
-      for (auto p : mini_chain) {
-        lrat_chain.push_back (p);
-      }
-      */
     mini_chain.clear ();
   }
   clear_analyzed_literals ();
@@ -96,9 +77,7 @@ void Internal::build_lrat_for_clause (
       if (marked_signed (other))
         continue;
       mark_signed (other);
-      const unsigned uidx = vlit (other);
-      int64_t id = unit_clauses[uidx];
-      assert (id);
+      int64_t id = unit_id (other);
       lrat_chain.push_back (id);
       continue;
     }
@@ -117,9 +96,7 @@ void Internal::build_lrat_for_clause (
       if (marked_signed (implied))
         break;
       mark_signed (implied);
-      const unsigned uidx = vlit (implied);
-      int64_t id = unit_clauses[uidx];
-      assert (id);
+      int64_t id = unit_id (implied);
       mini_chain.push_back (id);
       break;
     }
@@ -180,8 +157,8 @@ void Internal::flush_and_learn_binaries () {
         if (!val (reason_lit))
           continue;
         assert (val (reason_lit) < 0);
-        const unsigned uidx = vlit (val (reason_lit) * reason_lit);
-        int64_t id = unit_clauses[uidx];
+        const int signed_reason_lit = val (reason_lit) * reason_lit;
+        int64_t id = unit_id (signed_reason_lit);
         lrat_chain.push_back (id);
       }
       lrat_chain.push_back (c->id);
@@ -623,9 +600,7 @@ bool Internal::decompose_round () {
           continue;
         f.seen = true;
         analyzed.push_back (lit);
-        const unsigned uidx = vlit (-lit);
-        int64_t id = unit_clauses[uidx];
-        assert (id);
+        int64_t id = unit_id (-lit);
         lrat_chain.push_back (id);
         continue;
       } else {
@@ -638,9 +613,7 @@ bool Internal::decompose_round () {
           if (!f.seen) {
             f.seen = true;
             analyzed.push_back (other);
-            const unsigned uidx = vlit (-other);
-            int64_t id = unit_clauses[uidx];
-            assert (id);
+            int64_t id = unit_id (-other);
             lrat_chain.push_back (id);
           }
           if (other == lit)

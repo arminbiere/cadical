@@ -392,8 +392,7 @@ void Internal::add_new_original_clause (int64_t id) {
             int elit = externalize (lit);
             unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
             if (!external->ext_units[eidx]) {
-              int64_t uid = (unit_clauses[vlit (-lit)]);
-              assert (uid);
+              int64_t uid = unit_id (-lit);
               lrat_chain.push_back (uid);
             }
           }
