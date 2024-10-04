@@ -652,16 +652,20 @@ public:
     assert (compare_trails ());
 
     if (!unassigned_reasons.empty()) {
+#ifdef LOGGING
       MLOG ("clean up backtracked external propagation reasons: ");
       size_t del_count = 0;
+#endif
       for (const auto& lit : unassigned_reasons) {
         size_t reason_id = reason_map[lit];
         assert (reason_id < external_lemmas.size ());
         external_lemmas[reason_id]->propagation_reason = false;
         external_lemmas[reason_id]->forgettable = true;
         reason_map.erase (lit);
+#ifdef LOGGING
         MLOGC (lit << " ");
         del_count++;
+#endif
       }
       MLOGC ("(" << del_count << " clauses)" <<std::endl);
       unassigned_reasons.clear();
