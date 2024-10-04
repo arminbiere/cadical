@@ -24,7 +24,7 @@
 
 #ifdef NBUILD
 #ifndef VERSION
-#define VERSION "2.0.1-dev.1"
+#define VERSION "2.1.0-rc.1"
 #endif // VERSION
 #endif // NBUILD
 
