@@ -281,7 +281,7 @@ struct Closure {
   void check_implied ();
 
   bool learn_congruence_unit(int unit); // TODO remove and replace by _lrat version
-  void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int unit); 
+  void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int clashing, int unit); 
   void learn_congruence_unit_unit_lrat_chain (Gate *g, int unit); 
 
   void find_units();
