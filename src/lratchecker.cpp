@@ -200,7 +200,7 @@ uint64_t LratChecker::reduce_hash (uint64_t hash, uint64_t size) {
 uint64_t LratChecker::compute_hash (const uint64_t id) {
   assert (id > 0);
   unsigned j = id % num_nonces;             // dont know if this is a good
-  uint64_t tmp = nonces[j] * (uint64_t) id; // hash funktion or if it is
+  uint64_t tmp = nonces[j] * (uint64_t) id; // hash function or if it is
   return last_hash = tmp; // even better than just using id
 }
 
@@ -349,7 +349,7 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
       break;
     }
     if (!unit) {
-      LOG ("LRAT CHECKER check succeded, clause falsified %" PRIu64, id);
+      LOG ("LRAT CHECKER check succeeded, clause falsified %" PRIu64, id);
       checking = true;
       break;
     }

@@ -362,7 +362,7 @@ std::vector<int>::reverse_iterator Internal::minimize_and_shrink_block (
   unsigned open = 0;
   unsigned max_trail;
 
-  // find begining of block;
+  // find beginning of block;
   std::vector<int>::reverse_iterator rend_block;
   {
     assert (rbegin_block <= clause.rend ());

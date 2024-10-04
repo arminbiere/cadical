@@ -492,7 +492,7 @@ void Internal::propergate () {
   while (propergated != trail.size ()) {
 
     const int lit = -trail[propergated++];
-    LOG ("propergating %d", -lit);
+    LOG ("propagating %d", -lit);
     Watches &ws = watches (lit);
 
     const const_watch_iterator eow = ws.end ();

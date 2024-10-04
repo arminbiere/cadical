@@ -110,7 +110,7 @@ Version 1.7.3
   on the trail.  Also works for assumptions (`--ilbassumptions`).
 
 - Reimplication (`--reimply`) fixes assignment levels of literals by
-  "elevating" them (assigning a lower decision level and propating them
+  "elevating" them (assigning a lower decision level and propagating them
   out-of-order on this lower decision level).  Out-of-order assignments
   are introduced by chronological backtracking, adding external clauses
   during solving (e.g., by a user propagation) or simply by ILB.
@@ -121,7 +121,7 @@ Version 1.7.3
   API (via `connect_proof_tracer`). This feature allows to use custom
   proof tracers to process clausal proofs on-the-fly while solving.  Both
   proofs steps with proof antecedents (needed for instance for
-  interpolation) as well as without (working direclty on DRAT level) are
+  interpolation) as well as without (working directly on DRAT level) are
   supported.
  
 - Reworked options for proof tracing to be less confusing.  Support for

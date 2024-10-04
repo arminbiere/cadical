@@ -506,7 +506,7 @@ public:
 
     if (added_lemma_count > lemma_per_cb) {
       added_lemma_count = 0;
-      MLOGC ("false (lemma per CB treshold reached)." << std::endl);
+      MLOGC ("false (lemma per CB threshold reached)." << std::endl);
       return false;
     }
 
@@ -870,7 +870,7 @@ protected:
   /*----------------------------------------------------------------------*/
 
   MockPropagator
-      *mock_pointer; // to be able to clean up withouth disconnect
+      *mock_pointer; // to be able to clean up without disconnect
 
 public:
   Mobical ();
@@ -3380,7 +3380,7 @@ static bool is_valid_char (int ch) {
     return true;
 
   // For now proof file paths can only have these additional characters.
-  // We should probably have an escape mechamism (quotes) for paths.
+  // We should probably have an escape mechanism (quotes) for paths.
 
   if (ch == '_' || ch == '/' || ch == '.' || ('A' <= ch && ch <= 'Z'))
     return true;

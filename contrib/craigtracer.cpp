@@ -778,7 +778,7 @@ CraigTracer::create_craig_interpolant (CraigInterpolant interpolant,
     break;
 
   default:
-    assert (false); // Seleted craig interpolation type not supported!
+    assert (false); // Selected craig interpolation type not supported!
     __builtin_unreachable ();
   }
 
@@ -954,7 +954,7 @@ CraigTracer::create_craig_interpolant (CraigInterpolant interpolant,
     cnf = std::move (*std::get<0> (*maximum));
     return std::get<1> (*maximum);
   } else {
-    assert (false); // Seleted craig interpolation type not supported!
+    assert (false); // Selected craig interpolation type not supported!
     __builtin_unreachable ();
   }
 }

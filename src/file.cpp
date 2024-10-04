@@ -288,7 +288,7 @@ FILE *File::write_pipe (Internal *internal, const char *command,
     ::close (pipe_fds[1]);
     ::close (0);
     ::close (1);
-    if (command[0] == '7') // Surpress '7z' verbose output on 'stderr'.
+    if (command[0] == '7') // Suppress '7z' verbose output on 'stderr'.
       ::close (2);
     int in = dup (pipe_fds[0]);
     assert (in == 0), (void) in;

@@ -1078,7 +1078,7 @@ void Internal::analyze () {
   // up to this point lrat_chain contains the proof for current clause in
   // reversed order. in minimize and shrink the clause is changed and
   // therefore lrat_chain has to be extended. Unfortunately we cannot create
-  // the chain directly during minimazation (or shrinking) but afterwards we
+  // the chain directly during minimization (or shrinking) but afterwards we
   // can calculate it pretty easily and even better the same algorithm works
   // for both shrinking and minimization.
 

@@ -258,7 +258,7 @@ struct Internal {
   Proof *proof;             // abstraction layer between solver and tracers
   LratBuilder *lratbuilder; // special proof tracer
   vector<Tracer *>
-      tracers; // proof tracing objects (ie interpolant calulator)
+      tracers; // proof tracing objects (ie interpolant calculator)
   vector<FileTracer *>
       file_tracers; // file proof tracers (ie DRAT, LRAT...)
   vector<StatTracer *> stat_tracers; // checkers
@@ -426,7 +426,7 @@ struct Internal {
   }
 
   // Use only bits 6 and 7 to store the sign or zero.  The remaining
-  // bits can be use as additional flags.
+  // bits can be used as additional flags.
   //
   signed char marked67 (int lit) const {
     signed char res = marks[vidx (lit)] >> 6;
@@ -1116,7 +1116,7 @@ struct Internal {
   //
   void constrain (int); // Add literal to constraint.
   bool
-  failed_constraint ();     // Was constraint used to proof unsatisfiablity?
+  failed_constraint ();     // Was constraint used to proof unsatisfiability?
   void reset_constraint (); // Reset after 'solve' call.
 
   // Forcing decision variables to a certain phase.
@@ -1190,7 +1190,7 @@ struct Internal {
   // local search and searching for lucky phases, which in full solving
   // mode except for the last are usually optional and then followed by
   // the main CDCL search loop with inprocessing.  If only preprocessing
-  // is requested from 'External::simplifiy' only preprocessing is called
+  // is requested from 'External::simplify' only preprocessing is called
   // though. This is all orchestrated by the 'solve' function.
   //
   int already_solved ();

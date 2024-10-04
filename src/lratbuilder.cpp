@@ -352,7 +352,7 @@ uint64_t LratBuilder::reduce_hash (uint64_t hash, uint64_t size) {
 uint64_t LratBuilder::compute_hash (const uint64_t id) {
   assert (id > 0);
   unsigned j = id % num_nonces;             // dont know if this is a good
-  uint64_t tmp = nonces[j] * (uint64_t) id; // hash funktion or if it is
+  uint64_t tmp = nonces[j] * (uint64_t) id; // hash function or if it is
   return last_hash = tmp; // even better than just using id
 }
 

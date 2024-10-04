@@ -297,7 +297,7 @@ public:
 #undef OPTION
 
   // It would be more elegant to use an anonymous 'struct' of the actual
-  // option values overlayed with an 'int values[number_of_options]' array
+  // option values overlaid with an 'int values[number_of_options]' array
   // but that is not proper ISO C++ and produces a warning.  Instead we use
   // the following construction which relies on '__start_of_options__' and
   // that the following options are really allocated directly after it.

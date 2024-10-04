@@ -1067,7 +1067,7 @@ void Internal::vivify_build_lrat (
       Var &v = var (other);
       Flags &f = flags (other);
       if (f.seen)
-        continue; // we would lik // assert (val (other) < 0);e to assert
+        continue; // we would like // assert (val (other) < 0);e to assert
                   // this:
       // analyzed.push_back (other); // assert (val (other) < 0);
       // f.seen = true;              // but we cannot because we have

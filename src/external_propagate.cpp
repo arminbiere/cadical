@@ -169,7 +169,7 @@ bool Internal::external_propagate () {
           break;
         notify_assignments ();
       } else if (tmp < 0) {
-        LOG ("External propgation of %d is falsified under current trail",
+        LOG ("External propagation of %d is falsified under current trail",
              ilit);
         stats.ext_prop.eprop_conf++;
         int level_before = level;
@@ -308,13 +308,13 @@ void Internal::move_literal_to_watch (bool other_watch) {
 
 /*----------------------------------------------------------------------------*/
 //
-// Reads out from the external propagator the lemma/proapgation reason
+// Reads out from the external propagator the lemma/propagation reason
 // clause literal by literal. In case propagated_elit is 0, it is about an
 // external clause via 'cb_add_external_clause_lit'. Otherwise, it is about
 // learning the reason of 'propagated_elit' via 'cb_add_reason_clause_lit'.
 // The learned clause is simplified by the current root-level assignment
 // (i.e. root-level falsified literals are removed, root satisfied clauses
-// are skipped). Duplicate literals are removed, tauotologies are detected
+// are skipped). Duplicate literals are removed, tautologies are detected
 // and skipped. It always adds the original (un-simplified) external clause
 // to the proof as an input clause and
 // the simplified version of it (except exceptions below) as a derived
@@ -413,7 +413,7 @@ void Internal::explain_reason (int ilit, Clause *reason, int &open) {
 // clause learning must check every clause on every level that is backward
 // reachable from the conflicting clause to guarantee that the assignment
 // levels of the variables are accurate. So this explanation round is
-// separated from the conflict analysis, thereby guranteeing that the flags
+// separated from the conflict analysis, thereby guaranteeing that the flags
 // and datastructures can be properly used later.
 //
 // This function must be called before the conflict analysis, in order to
@@ -538,7 +538,7 @@ Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
     clause.clear ();
     res = learn_external_reason_clause (ilit, 0, true);
     // The learn_external_reason clause can leave a literal in clause when
-    // there there is a falsified elit arg. Here it is not allowed to
+    // there is a falsified elit arg. Here it is not allowed to
     // happen.
     assert (clause.empty ());
 
