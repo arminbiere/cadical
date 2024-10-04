@@ -18,7 +18,7 @@ IPASIR=@IPASIR@
 #    It is usually not necessary to change anything below this line!       #
 ############################################################################
 
-SRC_APP=src/cadical.cpp src/mobical.cpp
+SRC_APP=cadical.cpp mobical.cpp
 
 SRC_IPASIR=src/ipasir.cpp
 SRC_SOLVER=$(subst ../src/,,$(sort $(wildcard ../src/*.cpp)))
