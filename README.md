@@ -31,7 +31,7 @@ if you want to contribute.
 The solver has the following usage `cadical [ dimacs [ proof ] ]`.
 See `cadical -h` for more options.
 
-If you want to cite CaDiCaL please use a citation of our CaDiCaL 2.0 tool
+If you want to cite CaDiCaL please use as reference our CaDiCaL 2.0 tool
 paper which appeared at CAV'24:
 
 <p>
