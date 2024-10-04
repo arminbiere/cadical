@@ -5,29 +5,28 @@ Version 2.1.0
   changes affect the syntax of the API, and thus updating to this
   version of CaDiCaL requires to modify the consuming code to 
   accommodate to the new syntax:
-  - Notification of assignments is batched into arrays and no more fixed flags
-  are passed during notification (`breaking change`)
+
+  - Notification of assignments is batched into arrays and no more fixed
+    flags are passed during notification (`breaking change`)
   
   - Allow clauses learned from the propagator to be deleted (see
-  `is_forgettable` parameter and `are_reasons_forgettable` Boolean
-  flag) (`breaking change`)
+    `is_forgettable` parameter and `are_reasons_forgettable` Boolean flag)
+    (`breaking change`)
   
   - Added support to generate incremental proofs (LIDRUP) while 
-  using IPASIR-UP
+    using IPASIR-UP
 
   - Users can force to backtrack during `cb_decide` (see function
-  `force_backtrack`)
+    `force_backtrack`)
   
   - Removed unnecessary notifications of backtrack during
-  inprocessing (supposed to solve issue #92).
+    inprocessing (supposed to solve issue #92).
 
   - Call again `cb_propagate` if during final model checking a new
-  clause is added.
+    clause is added.
 
-- Added a new interface `FixedAssignmentListener`: Egerly calls a
+- Added a new interface `FixedAssignmentListener`: Eagerly calls a
   callback whenever a variable is fixed during search.
-
-
 
 Version 2.0.0
 -------------
