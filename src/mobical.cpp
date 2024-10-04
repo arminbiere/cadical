@@ -407,13 +407,9 @@ public:
 
   bool compare_trails () { 
 #ifndef NDEBUG 
-    size_t etrail_inserted = 0;
-
     std::set<int> etrail = {};  // Trail of the solver
     std::set<int> efixed = {};  // Fixed assignments in the solver
 
-    size_t otrail_inserted = 0;
-    
     std::set<int> otrail = {}; // Observed trail
     std::set<int> ofixed = {}; // Observed fixed assignments
 
@@ -428,7 +424,6 @@ public:
       for ( const auto& elit: eq_class ) {  
         if (is_observed_now(elit)) {
           etrail.insert (elit);
-          etrail_inserted ++;
         }
       }
       idx++; // trail[0] is processed already
@@ -440,7 +435,6 @@ public:
       int elit = s->internal->externalize(ilit);
       if (is_observed_now(elit)) {
         etrail.insert (elit);
-        etrail_inserted ++;
       }
     }
 
@@ -455,7 +449,6 @@ public:
                     elit) != observed_fixed.end ());
            
           otrail.insert (elit);
-          otrail_inserted ++;
         }
       }
     }
