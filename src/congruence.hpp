@@ -25,10 +25,14 @@ namespace CaDiCaL {
 // This implements the algorithm algorithm from SAT 2024.
 //
 // The idea is to:
+//   0. handle binary clauses
 //   1. detect gates and merge gates with same inputs
 //   2. eagerly replace the equivalent literals and merge gates with same
 //   inputs
 //   3. forward subsume
+//
+// In step 0 the normalization is fully lazy but we do not care about a normal form. Therefore we
+// actually eagerly merge literals.
 //
 // In step 2 there is a subtility: we only replace with the equivalence chain as far as we
 // propagated so far. This is the eager part. For LRAT we produce the equivalence up to the point we
@@ -148,6 +152,7 @@ struct Closure {
   int find_representative (int lit);
   int find_representative_and_update_eager (int lit);
   int find_eager_representative_and_compress (int);
+  void find_eager_representative_and_compress_both (int); // generates clauses for -lit and lit
   uint64_t & eager_representative_id (int lit);
   uint64_t eager_representative_id (int lit) const;
   uint64_t find_representative_lrat (int lit);
@@ -283,6 +288,7 @@ struct Closure {
   bool learn_congruence_unit(int unit); // TODO remove and replace by _lrat version
   void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int clashing, int unit); 
   void learn_congruence_unit_unit_lrat_chain (Gate *g, int unit); 
+  void learn_congruence_unit_when_lhs_set (Gate *g, int lit);
 
   void find_units();
   void find_equivalences();
