@@ -167,6 +167,8 @@ struct Closure {
   void push_lrat_id (const Clause *const c, int lit);
   void push_lrat_unit (int lit);
 
+  void push_id_and_rewriting_lrat (Clause *c, int except, std::vector<uint64_t> &chain);
+  void unmark_marked_lrat ();
 
   // occs
   vector<GOccs> gtab;
