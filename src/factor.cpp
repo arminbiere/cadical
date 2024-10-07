@@ -56,7 +56,12 @@ void Internal::factor_mode () {
 
   // iterate counts of larger clauses rounds often
   const unsigned rounds = opts.factorcandrounds;
+  unsigned candidates_before = 0;
   for (unsigned round = 1; round <= rounds; round++) {
+    LOG ("factor round %d", round);
+    if (candidates.size () == candidates_before)
+      break;
+    candidates_before = candidates.size ();
     vector<unsigned> newlargecount;
     enlarge_zero (newlargecount, max_lit);
     const auto begin = candidates.begin ();
@@ -456,8 +461,8 @@ void Internal::factorize_next (Factoring &factoring, int next,
 
 void Internal::resize_factoring (Factoring &factoring, int lit) {
   assert (lit > 0);
-  const size_t old_size = factoring.size;
-  assert ((size_t) lit >= old_size);
+  // const size_t old_size = factoring.size;
+  assert ((size_t) lit >= factoring.size);
   const size_t old_allocated = factoring.allocated;
   size_t new_var_size = lit + 1;
   size_t new_lit_size = 2 * new_var_size;
@@ -542,6 +547,9 @@ void Internal::add_self_subsuming_factor (Quotient *q, Quotient *p) {
           std::reverse (lrat_chain.begin (), lrat_chain.end ());
         }
         learn_empty_clause ();
+        clause.clear ();
+        lrat_chain.clear ();
+        break;
       }
     }
     clause.clear ();
@@ -756,6 +764,7 @@ bool Internal::run_factorization (int64_t limit) {
 
   while (!unsat && !done && !factoring.schedule.empty ()) {
     const unsigned ufirst = factoring.schedule.pop_front ();
+    LOG ("next factor candidate %d", ufirst);
     const int first = u2i (ufirst);
     const int first_idx = vidx (first);
     if (!active (first_idx))

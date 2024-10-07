@@ -1065,6 +1065,9 @@ struct Call {
     DURING = LEMMA, // | CONTINUE,
     AFTER = VAL | FLIP | FAILED | CONCLUDE | ALWAYS | FLUSHPROOFTRACE |
             CLOSEPROOFTRACE,
+    LITTYPE = PHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE | FAILED | FIXED |
+             FREEZE | FROZEN | MELT | CONSTRAIN | OBSERVE | LEMMA,
+    EXTENDMAP = PHASE | ADD | ASSUME | FREEZE | CONSTRAIN | LEMMA,
   };
 
   Type type; // Explicit typing.
@@ -1082,19 +1085,27 @@ struct Call {
       free (name);
   }
 
+  virtual bool lit_type () {
+    return (((int) type & (int) Call::LITTYPE)) != 0;
+  }
+  virtual bool extendmap_type () {
+    return (((int) type & (int) Call::EXTENDMAP)) != 0;
+  }
+
   virtual void extend_map (Solver *&s, vector<int> &map) {
     if (map.empty ()) map.push_back (0); // 0 is always mapped to 0
     if (!arg) return;
-    // these do not increase the variable counter in cadical
-    if (type == VAL || type == FIXED || type == FAILED || type == FROZEN)
-      return;
-    if (abs (arg) < map.size ()) return; // arg is already mapped
-    const int diff = abs (arg) - map.size () + 1;
+    const unsigned abs_arg = abs (arg);
+    if (abs_arg < map.size ()) return; // arg is already mapped
+    const int diff = abs_arg - map.size () + 1;
     const int max_var = s->vars ();
+    map.reserve (max_var + diff);
     for (int i = 1; i <= diff; i++)
       map.push_back (max_var + i);
   }
   virtual int map_arg (Solver *&s, vector<int> &map) {
+    if (!lit_type ()) return arg;
+    if (extendmap_type ()) extend_map (s, map);
     const int abs_arg = abs (arg);
     const int sign = arg > 0 ? 1 : -1;
     const int map_size = map.size ();
@@ -1132,6 +1143,7 @@ static bool after_type (Call::Type t) {
   return (((int) t & (int) Call::AFTER)) != 0;
 }
 
+
 /*------------------------------------------------------------------------*/
 
 // The model of valid API sequences is rather implicit.  First it is encoded
@@ -1143,7 +1155,7 @@ static bool after_type (Call::Type t) {
 
 struct InitCall : public Call {
   InitCall () : Call (INIT) {}
-  void execute (Solver *&s, vector<int> &map) { s = new Solver (); assert (map.size () == 1); }
+  void execute (Solver *&s, vector<int> &map) { s = new Solver (); assert (map.empty ()); (void) (map); }
   void print (ostream &o) { o << "init" << endl; }
   Call *copy () { return new InitCall (); }
   const char *keyword () { return "init"; }
@@ -1356,7 +1368,7 @@ struct SolveCall : public Call {
 
 struct SimplifyCall : public Call {
   SimplifyCall (int rounds, int r = 0) : Call (SIMPLIFY, rounds, r) {}
-  void execute (Solver *&s, vector<int> &map) { res = s->simplify (map_arg (s, map)); }
+  void execute (Solver *&s, vector<int> &map) { res = s->simplify (arg); (void) map; }
   void print (ostream &o) { o << "simplify " << arg << " " << res << endl; }
   Call *copy () { return new SimplifyCall (arg, res); }
   const char *keyword () { return "simplify"; }
@@ -1539,7 +1551,7 @@ class Trace {
 
   Solver *solver;
   vector<Call *> calls;
-  // TODO: map from mobical vars to solver vars (skipping extension variables)
+  // map from mobical vars to solver vars (skipping extension variables)
   // the map is strictly increasing and gets updated whenever a call with an
   // argument gets executed.
   vector<int> map;
@@ -1605,7 +1617,6 @@ public:
         for (size_t j = i + 1; j < calls.size (); j++) {
           Call *next_c = calls[j];
           if (next_c->type == Call::LEMMA) {
-            next_c->extend_map (solver, map);
             next_c->execute (solver, map);
           }
           // else if (next_c->type == Call::CONTINUE)
@@ -1620,14 +1631,12 @@ public:
           first = false;
         else
           mobical.shared->incremental++;
-        c->extend_map (solver, map);
         c->execute (solver, map);
         if (c->res == 10)
           mobical.shared->sat++;
         if (c->res == 20)
           mobical.shared->unsat++;
       } else {
-        c->extend_map (solver, map);
         c->execute (solver, map);
       }
     }
@@ -3213,24 +3222,7 @@ bool Trace::reduce_values (int expected) {
 }
 
 static bool has_lit_arg_type (Call *c) {
-  switch (c->type) {
-  case Call::ADD:
-  case Call::CONSTRAIN:
-  case Call::ASSUME:
-  case Call::FREEZE:
-  case Call::MELT:
-  case Call::FROZEN:
-  case Call::FLIP:
-  case Call::FLIPPABLE:
-  case Call::FIXED:
-  case Call::FAILED:
-  case Call::RESERVE:
-  case Call::LEMMA:
-  case Call::OBSERVE:
-    return true;
-  default:
-    return false;
-  }
+  return c->lit_type ();
 }
 
 // Try to map variables to a contiguous initial range.

@@ -1164,6 +1164,8 @@ void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
   if (unsat) return;
 
   unsigned count = 0;
+  assert (lrat_chain.empty ());
+
   for (const auto &sb : sweeper.binaries) {
     count++;
     const auto lit = sb.lit;
@@ -1173,6 +1175,7 @@ void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
     } else {
       substitute_connected_clauses (sweeper, -lit, other, sb.id);
     }
+    assert (lrat_chain.empty ());
     if (val (lit) < 0) {
       if (lrat) {
         const int64_t lid = unit_id (-lit);
@@ -1201,6 +1204,7 @@ void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
         assign_unit (lit);
       } else assert (val (lit) > 0);
     }
+    lrat_chain.clear ();
     delete_sweep_binary (sb);
     if (count == 2) {
       if (!val (lit) && !val (other)) {
@@ -1210,6 +1214,7 @@ void Internal::sweep_substitute_new_equivalences (Sweeper &sweeper) {
       }
       count = 0;
     }
+    assert (lrat_chain.empty ());
   }
   sweeper.binaries.clear ();
 }
