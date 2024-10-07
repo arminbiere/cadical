@@ -483,6 +483,7 @@ void Internal::flush_unmatched_clauses (Quotient *q) {
   size_t i = 0;
   while (i < q_matches.size ()) {
     size_t j = q_matches[i];
+    q_matches[i] = i;
     assert (i <= j);
     if (!prev_is_first) {
       size_t matches = prev_matches[j];
@@ -503,13 +504,13 @@ void Internal::add_self_subsuming_factor (Quotient *q, Quotient *p) {
   const int factor = q->factor;
   const int not_factor = p->factor;
   assert (-factor == not_factor);
+  LOG ("adding self subsuming factor because blocked clause is a tautology");
   for (auto c : q->qlauses) {
     for (const auto &lit : *c) {
       if (lit == factor) continue;
       clause.push_back (lit);
     }
     if (lrat) {
-      lrat_chain.push_back (c->id);
       for (auto d : p->qlauses) {
         bool match = true;
         for (const auto &lit : *d) {
@@ -524,6 +525,7 @@ void Internal::add_self_subsuming_factor (Quotient *q, Quotient *p) {
           break;
         }
       }
+      lrat_chain.push_back (c->id);
       assert (lrat_chain.size () == 2);
     }
     if (clause.size () > 1) {
@@ -600,6 +602,7 @@ void Internal::blocked_clause (Quotient *q, int not_fresh) {
   assert (!lrat || mini_chain.size ());
   proof->add_derived_clause (new_id, true, clause, mini_chain);
   mini_chain.clear ();
+  clause.clear ();
 }
 
 void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
@@ -609,6 +612,7 @@ void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
   auto qlauses = q->qlauses;
   for (unsigned idx = 0; idx < qlauses.size (); idx++) {
     const auto c = qlauses[idx];
+    assert (clause.empty ());
     for (const auto &other : *c) {
       if (other == factor) {
         continue;
@@ -618,20 +622,27 @@ void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
     if (lrat) {
       assert (proof);
       assert (q->bid);
-      lrat_chain.push_back (q->bid);
+      unsigned idxtoo = idx;
       for (Quotient *p = q; p; p = p->prev) {
-        lrat_chain.push_back (p->qlauses[idx]->id);
+        lrat_chain.push_back (p->qlauses[idxtoo]->id);
         if (p->prev)
-          idx = p->matches[idx];
+          idxtoo = p->matches[idx];
       }
+      lrat_chain.push_back (q->bid);
     }
     clause.push_back (not_fresh);
     new_factor_clause ();
     clause.clear ();
     lrat_chain.clear ();
   }
-  if (proof)
+  if (proof) {
+    for (Quotient *p = q; p; p = p->prev) {
+      clause.push_back (-p->factor);
+    }
+    clause.push_back (not_fresh);
     proof->delete_clause (q->bid, true, clause);
+    clause.clear ();
+  }
 }
 
 void Internal::eagerly_remove_from_occurences (Clause *c) {

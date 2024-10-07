@@ -10,7 +10,6 @@ struct Clause;
 struct Internal;
 class Tracer;
 class FileTracer;
-class LratBuilder;
 
 /*------------------------------------------------------------------------*/
 
@@ -28,7 +27,6 @@ class Proof {
   // the 'tracers'
   vector<Tracer *> tracers;          // tracers (ie checker)
   vector<FileTracer *> file_tracers; // file tracers (ie LRAT tracer)
-  LratBuilder *lratbuilder;          // special tracer
 
   void add_literal (int internal_lit); // add to 'clause'
   void add_literals (Clause *);        // add to 'clause'
@@ -50,7 +48,6 @@ public:
   Proof (Internal *);
   ~Proof ();
 
-  void connect (LratBuilder *lb) { lratbuilder = lb; }
   void connect (Tracer *t) { tracers.push_back (t); }
   void disconnect (Tracer *t);
   // Add original clauses to the proof (for online proof checking).

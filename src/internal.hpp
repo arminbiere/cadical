@@ -74,7 +74,6 @@ extern "C" {
 #include "lidruptracer.hpp"
 #include "limit.hpp"
 #include "logging.hpp"
-#include "lratbuilder.hpp"
 #include "lratchecker.hpp"
 #include "lrattracer.hpp"
 #include "message.hpp"
@@ -270,7 +269,6 @@ struct Internal {
   Inc inc;                  // increments on limits
 
   Proof *proof;             // abstraction layer between solver and tracers
-  LratBuilder *lratbuilder; // special proof tracer
   vector<Tracer *>
       tracers; // proof tracing objects (ie interpolant calulator)
   vector<FileTracer *>
@@ -1506,7 +1504,6 @@ struct Internal {
   // Enable and disable proof logging and checking.
   //
   void new_proof_on_demand ();
-  void setup_lrat_builder ();            // if opts.externallrat=true
   void force_lrat ();                    // sets lrat=true
   void close_trace (bool stats = false); // Stop proof tracing.
   void flush_trace (bool stats = false); // Flush proof trace file.

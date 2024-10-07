@@ -22,7 +22,7 @@ Internal::Internal ()
       target_assigned (0), no_conflict_until (0), unsat_constraint (false),
       marked_failed (true), sweep_incomplete (false),
       citten (0), num_assigned (0), proof (0),
-      lratbuilder (0), opts (this),
+      opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
@@ -53,8 +53,6 @@ Internal::~Internal () {
     delete_clause (c);
   if (proof)
     delete proof;
-  if (lratbuilder)
-    delete lratbuilder;
   for (auto &tracer : tracers)
     delete tracer;
   for (auto &filetracer : file_tracers)

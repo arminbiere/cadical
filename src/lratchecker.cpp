@@ -114,7 +114,7 @@ void LratChecker::collect_garbage_clauses () {
 /*------------------------------------------------------------------------*/
 
 LratChecker::LratChecker (Internal *i)
-    : internal (i), size_vars (0), strict_lrat (false), concluded (false),
+    : internal (i), size_vars (0), concluded (false),
       num_clauses (0), num_finalized (0), num_garbage (0), size_clauses (0),
       clauses (0), garbage (0), last_hash (0), last_id (0), current_id (0) {
 
@@ -129,15 +129,12 @@ LratChecker::LratChecker (Internal *i)
     nonces[n] = nonce;
   }
 
-  strict_lrat = internal ? internal->lrat : 0;
-
   memset (&stats, 0, sizeof (stats)); // Initialize statistics.
 }
 
 void LratChecker::connect_internal (Internal *i) {
   internal = i;
   LOG ("connected to internal");
-  strict_lrat = internal->lrat;
 }
 
 LratChecker::~LratChecker () {
@@ -236,11 +233,6 @@ void LratChecker::insert () {
 bool LratChecker::check_resolution (vector<int64_t> proof_chain) {
   if (proof_chain.empty ()) {
     LOG ("LRAT CHECKER resolution check skipped clause is tautological");
-    return true;
-  }
-  if (strict_lrat) {
-    LOG ("LRAT CHECKER resolution check skipped because "
-         "opts.externallrat=true");
     return true;
   }
   LOG (imported_clause, "LRAT CHECKER checking clause with resolution");
@@ -392,6 +384,7 @@ bool LratChecker::check (vector<int64_t> proof_chain) {
 bool LratChecker::check_blocked (vector<int64_t> proof_chain) {
   for (const auto &lit : imported_clause) {
     checked_lit (-lit) = true;
+    mark (-lit) = true;
   }
   for (size_t i = 0; i < size_clauses; i++) {
     for (LratCheckerClause *c = clauses[i], *next; c; c = next) {
@@ -406,39 +399,45 @@ bool LratChecker::check_blocked (vector<int64_t> proof_chain) {
         for (unsigned i = 0; i < c->size; i++) {
           const int lit = c->literals[i];
           if (checked_lit (lit)) {
-            candidates.push_back (lit);
             count++;
+          }
+          if (mark (lit)) {
+            candidates.push_back (lit);            
           }
         }
         if (count < 2) {
           // check failed
           for (const auto &lit : imported_clause) {
             checked_lit (-lit) = false;
+            mark (-lit) = false;
           }
           return false;
         } else {
           // all literals outside of candidates are not valid RAT candidates
-          for (const auto &lit : imported_clause) {
-            if (checked_lit (-lit) &&
-              std::find (candidates.begin (), candidates.end (), -lit)
-              != candidates.end ()) {
-            checked_lit (-lit) = false;
+          for (auto & lit : imported_clause) {
+            if (mark (-lit) &&
+                std::find (candidates.begin (), candidates.end (), -lit)
+                           == candidates.end ()) {
+              mark (-lit) = false;
             }
           }
         }
       } else {
         // any literal contained in the clause is not a valid RAT candidate
         for (unsigned i = 0; i < c->size; i++) {
-          checked_lit (c->literals[i]) = false;
+          const int lit = c->literals[i];
+          if (checked_lit (lit)) {
+            mark (lit) = false;
+          }
         }
       }
     }
   }
   bool success = false;
   for (const auto &lit : imported_clause) {
-    if (checked_lit (-lit))
+    if (mark (-lit))
       success = true;
-    checked_lit (-lit) = false;
+    checked_lit (-lit) = mark (-lit) = false;
   }
   return success;
 }
@@ -713,10 +712,6 @@ void LratChecker::weaken_minus (int64_t id, const vector<int> &c) {
 
 void LratChecker::restore_clause (int64_t id, const vector<int> &c) {
   LOG (c, "LRAT CHECKER check of restoration of clause[%" PRId64 "]", id);
-  if (!strict_lrat &&
-      clauses_to_reconstruct.find (id) == end (clauses_to_reconstruct)) {
-    return;
-  }
   if (clauses_to_reconstruct.find (id) == end (clauses_to_reconstruct)) {
     fatal_message_start ();
     fputs ("restoring clauses not deleted previously:\n", stderr);

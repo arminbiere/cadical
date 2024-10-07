@@ -9,8 +9,7 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 // This checker implements an LRUP checker.
-// It requires LRAT-style proof chains for each learned clause that we can
-// currently only build with lratbuilder.
+// It requires LRAT-style proof chains for each learned clause
 //
 // Most of the infrastructure is taken from checker, but without the
 // propagation
@@ -37,7 +36,6 @@ class LratChecker : public StatTracer {
   // Capacity of variable values.
   //
   int64_t size_vars;
-  bool strict_lrat;
 
   // The 'watchers' and 'marks' data structures are not that time critical
   // and thus we access them by first mapping a literal to 'unsigned'.

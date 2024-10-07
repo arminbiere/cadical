@@ -10,24 +10,13 @@ using namespace std;
 
 void Internal::new_proof_on_demand () {
   if (!proof) {
-    proof = new Proof (this);
     LOG ("connecting proof to internal solver");
-    setup_lrat_builder ();
-  }
-}
-
-void Internal::setup_lrat_builder () {
-  if (lratbuilder)
-    return;
-  if (opts.externallrat) {
-    lratbuilder = new LratBuilder (this);
-    LOG ("PROOF connecting LRAT proof chain builder");
-    proof->connect (lratbuilder);
+    proof = new Proof (this);
   }
 }
 
 void Internal::force_lrat () {
-  if (lrat || lratbuilder)
+  if (lrat)
     return;
   assert (proof);
   lrat = true;
@@ -177,7 +166,7 @@ void Internal::flush_trace (bool print) {
 
 /*------------------------------------------------------------------------*/
 
-Proof::Proof (Internal *s) : internal (s), lratbuilder (0) {
+Proof::Proof (Internal *s) : internal (s) {
   LOG ("PROOF new");
 }
 
@@ -497,8 +486,6 @@ void Proof::add_original_clause (bool restore) {
   LOG (clause, "PROOF adding original external clause");
   assert (clause_id);
 
-  if (lratbuilder)
-    lratbuilder->add_original_clause (clause_id, clause);
   for (auto &tracer : tracers) {
     tracer->add_original_clause (clause_id, false, clause, restore);
   }
@@ -510,9 +497,6 @@ void Proof::add_derived_clause () {
   LOG (clause, "PROOF adding derived external clause (redundant: %d)",
        redundant);
   assert (clause_id);
-  if (lratbuilder) {
-    proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
-  }
   for (auto &tracer : tracers) {
     tracer->add_derived_clause (clause_id, redundant, clause, proof_chain);
   }
@@ -523,8 +507,6 @@ void Proof::add_derived_clause () {
 
 void Proof::delete_clause () {
   LOG (clause, "PROOF deleting external clause");
-  if (lratbuilder)
-    lratbuilder->delete_clause (clause_id, clause);
   for (auto &tracer : tracers) {
     tracer->delete_clause (clause_id, redundant, clause);
   }
@@ -559,10 +541,6 @@ void Proof::finalize_clause () {
 
 void Proof::add_assumption_clause () {
   LOG (clause, "PROOF adding assumption clause");
-  if (lratbuilder) {
-    proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
-    lratbuilder->delete_clause (clause_id, clause);
-  }
   for (auto &tracer : tracers) {
     tracer->add_assumption_clause (clause_id, clause, proof_chain);
   }
