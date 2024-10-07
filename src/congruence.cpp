@@ -372,8 +372,8 @@ void Closure::find_eager_representative_and_compress_both (int lit) {
 }
 void Closure::produce_representative_lrat (int lit) {
   assert (internal->lrat);
-  LOG ("checking for LRAT chain for %d with representative %d", lit, eager_representative_id (lit));
-  assert (internal->lrat);  
+  LOG ("production of LRAT chain for %d with representative %" PRIu64, lit, eager_representative_id (lit));
+  assert (internal->lrat);
   int res = lit;
   int nxt = lit;
   assert (nxt != eager_representative (nxt));
@@ -390,10 +390,10 @@ void Closure::produce_representative_lrat (int lit) {
 uint64_t Closure::find_representative_lrat (int lit) {
   if (!internal->lrat)
     return 0;
-  LOG ("checking for LRAT chain for %d with representative %d", lit, find_representative (lit));
   int res = lit;
   int nxt = representative (res);
   assert (nxt == representative (res));
+  LOG ("checking for existing LRAT chain for %d with representative %" PRIu64, lit, eager_representative_id (res));
   return eager_representative_id (res);
 }
 
@@ -443,19 +443,24 @@ void Closure::index_gate (Gate *g) {
   g->indexed = true;
 }
 
-void Closure::push_id_and_rewriting_lrat (Clause *c, int except, std::vector<uint64_t> &chain) {
-  LOG (c, "computing normalized LRAT chain for clause");
+void Closure::push_id_and_rewriting_lrat (Clause *c, int except, std::vector<uint64_t> &chain, bool insert_id_after) {
+  LOG (c, "computing normalized LRAT chain for clause, skipping %d", except);
+  if (!insert_id_after)
+    chain.push_back (c->id);
   for (auto other : *c) {
-    if (other != except && other != find_eager_representative_and_compress (other) &&
+    if (other != except && other != -except && other != find_eager_representative_and_compress (other) &&
 	!marked (other)) {
       marked (other) = 1;
-      LOG ("representative of %d now marked with %d", other,
-	   marked (other));
+      LOG ("reason for representative of %d %d is %" PRIu64, other, eager_representative (other),
+	   find_representative_lrat (other));
       internal->analyzed.push_back (other);
       chain.push_back (find_representative_lrat (other));
+    } else {
+      LOG ("skipping %d", other);
     }
   }
-  chain.push_back (c->id);
+  if (insert_id_after)
+    chain.push_back (c->id);
 }
 
 void Closure::unmark_marked_lrat () {
@@ -468,8 +473,10 @@ void Closure::unmark_marked_lrat () {
 void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int lit) {
   if (!internal->lrat)
     return;
+  LOG ("calculating LRAT chain learn_congruence_unit_when_lhs_set");
   assert (!g->pos_lhs_ids.empty ());
   assert (internal->analyzed.empty ());
+  assert (internal->val (g->lhs));
   switch (g->tag) {
   case Gate_Type::And_Gate:
      push_lrat_unit (-g->lhs);
@@ -504,26 +511,16 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (Gate *g, int clashing,
 	  push_id_and_rewriting_lrat (litId.clause, -g->lhs, internal->lrat_chain);
 	}
       }
+      LOG (internal->lrat_chain, "produced lrat chain");
     } else {
       for (auto litId : g->pos_lhs_ids) {
         LOG (litId.clause,
              "found lrat in gate %d from %zd (looking for %d)",
              litId.current_lit, litId.clause->id, lit);
-        internal->lrat_chain.push_back (litId.clause->id);
-        for (auto other : *litId.clause) {
-	  if (internal->val (other) < 0) {
-	    push_lrat_unit(-other);
-	  } else if (other != -g->lhs && other != find_eager_representative_and_compress (other) &&
-              !marked (other)) {
-            marked (other) = 1;
-            LOG ("representative of %d now marked with %d", other,
-                 marked (other));
-            internal->analyzed.push_back (other);
-            internal->lrat_chain.push_back (
-                find_representative_lrat (other));
-          }
-        }
+	if (litId.current_lit == g->rhs[0] || litId.current_lit == -g->rhs[0])
+	  push_id_and_rewriting_lrat (litId.clause, -g->lhs, internal->lrat_chain, false);
       }
+      LOG (internal->lrat_chain, "produced lrat chain");
     }
     unmark_marked_lrat ();
     break;
