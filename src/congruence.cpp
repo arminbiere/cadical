@@ -448,7 +448,15 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, int except, std::vector<uin
   if (!insert_id_after)
     chain.push_back (c->id);
   for (auto other : *c) {
-    if (other != except && other != -except && other != find_eager_representative_and_compress (other) &&
+    assert (internal->val (other) <= 0 || other == except);
+    if (internal->val (other) < 0) {
+      LOG ("found unit %d", -other);
+      const unsigned uidx = internal->vlit (-other);
+      uint64_t id = internal->unit_clauses[uidx];
+      assert (id);
+      chain.push_back (id);
+    }
+    else if (other != except && other != -except && other != find_eager_representative_and_compress (other) &&
 	!marked (other)) {
       marked (other) = 1;
       LOG ("reason for representative of %d %d is %" PRIu64, other, eager_representative (other),
@@ -456,7 +464,7 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, int except, std::vector<uin
       internal->analyzed.push_back (other);
       chain.push_back (find_representative_lrat (other));
     } else {
-      LOG ("skipping %d", other);
+      LOG ("no rewriting needed for %d", other);
     }
   }
   if (insert_id_after)
@@ -476,11 +484,9 @@ void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int lit) {
   LOG ("calculating LRAT chain learn_congruence_unit_when_lhs_set");
   assert (!g->pos_lhs_ids.empty ());
   assert (internal->analyzed.empty ());
-  assert (internal->val (g->lhs));
+  assert (internal->val (g->lhs) < 0);
   switch (g->tag) {
   case Gate_Type::And_Gate:
-     push_lrat_unit (-g->lhs);
-     marked (g->lhs) = 1;
     for (auto litId : g->neg_lhs_ids) {
       LOG (litId.clause,
 	   "found lrat in gate %d from %zd (looking for %d)",
@@ -567,6 +573,8 @@ bool Closure::learn_congruence_unit(int lit) {
 
 
 // for merging the literals there are many cases
+// TODO: LRAT does not work if the LHS is not in normal form and if the representative
+// is also in the gate.
 bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const std::vector<uint64_t> & extra_reasons_lit, const std::vector<uint64_t> &extra_reasons_ulit) {
   assert (!internal->unsat);
   assert (g->lhs == lit);
@@ -1142,7 +1150,14 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int falsifies, 
     Gate *h = find_and_lits (g->rhs);
     if (h) {
       assert (garbage);
-      if (merge_literals_lrat (g, h, g->lhs, h->lhs))
+      auto extra_reasons_lit2 = extra_reasons_lit;
+      auto extra_reasons_ulit2 = extra_reasons_ulit;
+      if (internal->lrat) {
+	push_id_and_rewriting_lrat (h->neg_lhs_ids[0].clause, 0, extra_reasons_lit2, false);
+	//TODO find better solution
+	std::reverse(begin (extra_reasons_lit2), end (extra_reasons_lit2));
+      }
+      if (merge_literals_lrat (g, h, g->lhs, h->lhs, extra_reasons_lit2, extra_reasons_ulit2))
         ++internal->stats.congruence.ands;
     } else {
       if (g->indexed) {
@@ -1279,30 +1294,35 @@ void Closure::simplify_and_gate (Gate *g) {
 
     for (auto id : g->pos_lhs_ids)
       if (id.current_lit == g->rhs[0]) {
-	for (auto other : *id.clause) { // add only the required units
-	  assert (internal->val (other) <= 0);
-	  if (internal->val (other)) {
-	    LOG ("found unit %d", other);
-            const unsigned uidx = internal->vlit (other);
-            uint64_t id = internal->unit_clauses[uidx];
-            assert (id);
-            reasons_lrat_src.push_back (id);
-          }
-	}
-        reasons_lrat_src.push_back (id.clause->id);
+	push_id_and_rewriting_lrat (id.clause, 0, reasons_lrat_src);
+	// for (auto other : *id.clause) { // add only the required units
+	//   assert (internal->val (other) <= 0);
+	//   if (internal->val (other)) {
+	//     LOG ("found unit %d", other);
+        //     const unsigned uidx = internal->vlit (other);
+        //     uint64_t id = internal->unit_clauses[uidx];
+        //     assert (id);
+        //     reasons_lrat_src.push_back (id);
+        //   }
+	// }
+        // reasons_lrat_src.push_back (id.clause->id);
       }
+    unmark_marked_lrat();
     LOG (reasons_lrat_src, "lrat chain for positive side");
 
     internal->lrat_chain.clear ();
-    for (auto id : g->units) // the negation contains all units
-      reasons_lrat_usrc.push_back (id);
-    reasons_lrat_usrc.push_back (g->neg_lhs_ids[0].clause->id);
-    for (auto other : *g->neg_lhs_ids[0].clause) {
-      if (other != find_eager_representative_and_compress (other)) {
-	reasons_lrat_usrc.push_back(find_representative_lrat (other));
-      }
-    }
+    // for (auto id : g->units) // the negation contains all units
+    //   reasons_lrat_usrc.push_back (id);
+    // reasons_lrat_usrc.push_back (g->neg_lhs_ids[0].clause->id);
+
+    // for (auto other : *g->neg_lhs_ids[0].clause) {
+    //   if (other != find_eager_representative_and_compress (other)) {
+    // 	reasons_lrat_usrc.push_back(find_representative_lrat (other));
+    //   }
+    // }
+    push_id_and_rewriting_lrat(g->neg_lhs_ids[0].clause, 0, reasons_lrat_usrc);
     LOG (reasons_lrat_usrc, "lrat chain for negative side");
+    unmark_marked_lrat();
 
   }
   update_and_gate (g, git, falsifies, 0, reasons_lrat_src, reasons_lrat_usrc);
@@ -2660,7 +2680,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1, uint64_
       g->pos_lhs_ids [i] = g->pos_lhs_ids[j];
       if (internal->val (g->pos_lhs_ids[i].current_lit))
 	continue;
-      if (g->pos_lhs_ids[i].current_lit == dst){
+      if (g->pos_lhs_ids[i].current_lit == dst) {
 	if (!found)
 	  found = true;
 	else
@@ -2691,17 +2711,17 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1, uint64_
   if (internal->lrat) {
     //reasons_lrat_src.push_back (find_representative_lrat (src));
     internal->lrat_chain.clear ();
-    assert (g->neg_lhs_ids.size () ==
-            1); // otherwise we need intermediate clauses
+    assert (g->neg_lhs_ids.size () == 1); // otherwise we need intermediate clauses
     for (auto id : g->pos_lhs_ids) {
-      push_id_and_rewriting_lrat (id.clause, 0, reasons_lrat_src);
+      push_id_and_rewriting_lrat (id.clause, 0, reasons_lrat_src, true);
     }
     unmark_marked_lrat ();
+
     LOG (reasons_lrat_src, "rewrite and gate: lrat chain for positive side");
 
     //reasons_lrat_src.push_back (find_representative_lrat (-src));
     internal->lrat_chain.clear ();
-    push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, 0, reasons_lrat_usrc);
+    push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, 0, reasons_lrat_usrc, false);
     unmark_marked_lrat ();
     LOG (reasons_lrat_usrc, "rewrite and gate: lrat chain for negative side");
   }
