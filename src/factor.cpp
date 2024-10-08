@@ -878,6 +878,10 @@ void Internal::factor () {
   bool completed = run_factorization (limit);
   reset_factor_mode ();
 
+  if (!unsat && !propagate ()) {
+    assert (unsat);
+    learn_empty_clause ();
+  }
   /*
   after.variables = s->variables_extension + s->variables_original;
   after.binary = BINARY_CLAUSES;
