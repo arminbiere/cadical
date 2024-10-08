@@ -477,7 +477,6 @@ void Internal::resize_factoring (Factoring &factoring, int lit) {
   factoring.size = new_var_size;
 }
 
-// TODO: bug in here with preprocesing
 void Internal::flush_unmatched_clauses (Quotient *q) {
   Quotient *prev = q->prev;
   vector<size_t> &q_matches = q->matches, &prev_matches = prev->matches;
@@ -878,8 +877,8 @@ void Internal::factor () {
   bool completed = run_factorization (limit);
   reset_factor_mode ();
 
+  propagated = 0;
   if (!unsat && !propagate ()) {
-    assert (unsat);
     learn_empty_clause ();
   }
   /*

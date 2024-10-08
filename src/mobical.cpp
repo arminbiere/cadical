@@ -469,14 +469,13 @@ public:
         if (!lit)
           continue; // eoc
 
-        const int mlit = map_arg (lit);
-        auto search = std::find (model.begin (), model.end (), mlit);
+        auto search = std::find (model.begin (), model.end (), lit);
         if (search != model.end ()) {
           satisfied = true;
           break;
         } else {
           // if not satisfied, it must be falsified.
-          search = std::find (model.begin (), model.end (), -mlit);
+          search = std::find (model.begin (), model.end (), -lit);
           assert (search != model.end ());
         }
       }
