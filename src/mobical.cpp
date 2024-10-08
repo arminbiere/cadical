@@ -201,11 +201,16 @@ struct Shared {
   int64_t timeout;
 };
 
+struct ExtendMap {
+  vector<int> map;
+};
+
 /*------------------------------------------------------------------------*/
 
 class MockPropagator : public ExternalPropagator {
 private:
   Solver *s = 0;
+  ExtendMap *extendmap = 0;
 
   // MockPropagator parameters
   size_t lemma_per_cb = 2;
@@ -217,6 +222,7 @@ private:
     size_t size;
     size_t next;
 
+    bool mapped;
     bool forgettable;
     bool tainting;
     bool propagation_reason;
@@ -294,6 +300,31 @@ private:
     return lemma->id;
   }
 
+  void extend_map (int arg) {
+    vector<int> &map = extendmap->map;
+    if (map.empty ()) map.push_back (0); // 0 is always mapped to 0
+    if (!arg) return;
+    const unsigned abs_arg = abs (arg);
+    if (abs_arg < map.size ()) return; // arg is already mapped
+    const int diff = abs_arg - map.size () + 1;
+    const int max_var = s->vars ();
+    map.reserve (max_var + diff);
+    for (int i = 1; i <= diff; i++)
+      map.push_back (max_var + i);
+  }
+
+  int map_arg (int arg) {
+    vector<int> &map = extendmap->map;
+    const int abs_arg = abs (arg);
+    const int sign = arg > 0 ? 1 : -1;
+    const int map_size = map.size ();
+    if (abs_arg < map_size)
+      return map[abs_arg] * sign;
+    const int max_var = s->vars ();
+    const int diff = abs_arg - map_size + 1;
+    return sign * (max_var + diff);
+  }
+
   // Helper to print very verbose log during debugging
 
 #ifdef LOGGING
@@ -320,9 +351,10 @@ public:
   // It is public, so it can be shared easily between different propagators
   std::vector<int> observed_fixed;
 
-  MockPropagator (Solver *solver, bool with_logging = false) {
+  MockPropagator (Solver *solver, ExtendMap *map, bool with_logging = false) {
     observed_trail.push_back (std::vector<int> ());
     s = solver;
+    extendmap = map;
     logging = logging || with_logging;
   }
 
@@ -360,9 +392,11 @@ public:
     }
 
     if (!new_ovars) {
-      if (!s->is_witness (abs (lit))) {
-        s->add_observed_var (abs (lit));
-        observed_variables.insert (abs (lit));
+      const int abs_lit = abs (lit);
+      if (!s->is_witness (map_arg (abs_lit))) {  // does not extend map
+        extend_map (abs_lit);    // now we have to extend map
+        s->add_observed_var (map_arg (abs_lit));  // might be different
+        observed_variables.insert (map_arg (abs_lit));
       }
     } else {
       new_observed_variables.push_back (abs (lit));
@@ -373,14 +407,15 @@ public:
     for (std::vector<int>::iterator it = new_observed_variables.begin ();
          it != new_observed_variables.end (); ++it) {
       int lit = *it;
-      if (s->is_witness (lit))
+      if (s->is_witness (map_arg (lit)))
         continue;
       new_observed_variables.erase (it);
-      observed_variables.insert (lit);
 
-      s->add_observed_var (lit);
+      extend_map (lit);
+      s->add_observed_var (map_arg (lit));
+      observed_variables.insert (map_arg (lit));
 
-      return lit;
+      return map_arg (lit);
     }
     return 0;
   }
@@ -433,13 +468,14 @@ public:
         if (!lit)
           continue; // eoc
 
-        auto search = std::find (model.begin (), model.end (), lit);
+        const int mlit = map_arg (lit);
+        auto search = std::find (model.begin (), model.end (), mlit);
         if (search != model.end ()) {
           satisfied = true;
           break;
         } else {
           // if not satisfied, it must be falsified.
-          search = std::find (model.begin (), model.end (), -lit);
+          search = std::find (model.begin (), model.end (), -mlit);
           assert (search != model.end ());
         }
       }
@@ -1067,7 +1103,7 @@ struct Call {
             CLOSEPROOFTRACE,
     LITTYPE = PHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE | FAILED | FIXED |
              FREEZE | FROZEN | MELT | CONSTRAIN | OBSERVE | LEMMA,
-    EXTENDMAP = PHASE | ADD | ASSUME | FREEZE | CONSTRAIN | LEMMA,
+    EXTENDMAP = PHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
   };
 
   Type type; // Explicit typing.
@@ -1092,7 +1128,8 @@ struct Call {
     return (((int) type & (int) Call::EXTENDMAP)) != 0;
   }
 
-  virtual void extend_map (Solver *&s, vector<int> &map) {
+  virtual void extend_map (Solver *&s, ExtendMap &extendmap) {
+    vector<int> &map = extendmap.map;
     if (map.empty ()) map.push_back (0); // 0 is always mapped to 0
     if (!arg) return;
     const unsigned abs_arg = abs (arg);
@@ -1103,9 +1140,10 @@ struct Call {
     for (int i = 1; i <= diff; i++)
       map.push_back (max_var + i);
   }
-  virtual int map_arg (Solver *&s, vector<int> &map) {
+  virtual int map_arg (Solver *&s, ExtendMap &extendmap) {
+    vector<int> &map = extendmap.map;
     if (!lit_type ()) return arg;
-    if (extendmap_type ()) extend_map (s, map);
+    if (extendmap_type ()) extend_map (s, extendmap);
     const int abs_arg = abs (arg);
     const int sign = arg > 0 ? 1 : -1;
     const int map_size = map.size ();
@@ -1115,7 +1153,7 @@ struct Call {
     const int diff = abs_arg - map_size + 1;
     return sign * (max_var + diff);
   }
-  virtual void execute (Solver *&, vector<int> &map) = 0;
+  virtual void execute (Solver *&, ExtendMap &extendmap) = 0;
   virtual void print (ostream &o) = 0;
   virtual const char *keyword () = 0;
   virtual Call *copy () = 0;
@@ -1155,7 +1193,7 @@ static bool after_type (Call::Type t) {
 
 struct InitCall : public Call {
   InitCall () : Call (INIT) {}
-  void execute (Solver *&s, vector<int> &map) { s = new Solver (); assert (map.empty ()); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s = new Solver (); assert (extendmap.map.empty ()); (void) (extendmap); }
   void print (ostream &o) { o << "init" << endl; }
   Call *copy () { return new InitCall (); }
   const char *keyword () { return "init"; }
@@ -1163,7 +1201,7 @@ struct InitCall : public Call {
 
 struct VarsCall : public Call {
   VarsCall () : Call (VARS) {}
-  void execute (Solver *&s, vector<int> &map) { res = s->vars (); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { res = s->vars (); (void) (extendmap); }
   void print (ostream &o) { o << "vars" << endl; }
   Call *copy () { return new VarsCall (); }
   const char *keyword () { return "vars"; }
@@ -1171,7 +1209,7 @@ struct VarsCall : public Call {
 
 struct ActiveCall : public Call {
   ActiveCall () : Call (ACTIVE) {}
-  void execute (Solver *&s, vector<int> &map) { res = s->active (); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { res = s->active (); (void) (extendmap); }
   void print (ostream &o) { o << "active" << endl; }
   Call *copy () { return new ActiveCall (); }
   const char *keyword () { return "active"; }
@@ -1179,7 +1217,7 @@ struct ActiveCall : public Call {
 
 struct RedundantCall : public Call {
   RedundantCall () : Call (REDUNDANT) {}
-  void execute (Solver *&s, vector<int> &map) { res = s->redundant (); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { res = s->redundant (); (void) (extendmap); }
   void print (ostream &o) { o << "redundant" << endl; }
   Call *copy () { return new RedundantCall (); }
   const char *keyword () { return "redundant"; }
@@ -1187,7 +1225,7 @@ struct RedundantCall : public Call {
 
 struct IrredundantCall : public Call {
   IrredundantCall () : Call (IRREDUNDANT) {}
-  void execute (Solver *&s, vector<int> &map) { res = s->irredundant (); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { res = s->irredundant (); (void) (extendmap); }
   void print (ostream &o) { o << "irredundant" << endl; }
   Call *copy () { return new IrredundantCall (); }
   const char *keyword () { return "irredundant"; }
@@ -1195,7 +1233,7 @@ struct IrredundantCall : public Call {
 
 struct ReserveCall : public Call {
   ReserveCall (int max_var) : Call (RESERVE, max_var) {}
-  void execute (Solver *&s, vector<int> &map) { s->reserve (map_arg (s, map)); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->reserve (map_arg (s, extendmap)); }
   void print (ostream &o) { o << "reserve " << arg << endl; }
   Call *copy () { return new ReserveCall (arg); }
   const char *keyword () { return "reserve"; }
@@ -1203,7 +1241,7 @@ struct ReserveCall : public Call {
 
 struct PhaseCall : public Call {
   PhaseCall (int max_var) : Call (PHASE, max_var) {}
-  void execute (Solver *&s, vector<int> &map) { s->phase (map_arg (s, map)); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->phase (map_arg (s, extendmap)); }
   void print (ostream &o) { o << "phase " << arg << endl; }
   Call *copy () { return new PhaseCall (arg); }
   const char *keyword () { return "phase"; }
@@ -1211,7 +1249,7 @@ struct PhaseCall : public Call {
 
 struct SetCall : public Call {
   SetCall (const char *o, int v) : Call (SET, 0, 0, o, v) {}
-  void execute (Solver *&s, vector<int> &map) { s->set (name, val); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->set (name, val); (void) (extendmap); }
   void print (ostream &o) { o << "set " << name << ' ' << val << endl; }
   Call *copy () { return new SetCall (name, val); }
   const char *keyword () { return "set"; }
@@ -1219,7 +1257,7 @@ struct SetCall : public Call {
 
 struct ConfigureCall : public Call {
   ConfigureCall (const char *o) : Call (CONFIGURE, 0, 0, o) {}
-  void execute (Solver *&s, vector<int> &map) { s->configure (name); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->configure (name); (void) (extendmap); }
   void print (ostream &o) { o << "configure " << name << endl; }
   Call *copy () { return new ConfigureCall (name); }
   const char *keyword () { return "configure"; }
@@ -1227,7 +1265,7 @@ struct ConfigureCall : public Call {
 
 struct LimitCall : public Call {
   LimitCall (const char *o, int v) : Call (LIMIT, 0, 0, o, v) {}
-  void execute (Solver *&s, vector<int> &map) { s->limit (name, val); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->limit (name, val); (void) (extendmap); }
   void print (ostream &o) { o << "limit " << name << ' ' << val << endl; }
   Call *copy () { return new LimitCall (name, val); }
   const char *keyword () { return "limit"; }
@@ -1235,7 +1273,7 @@ struct LimitCall : public Call {
 
 struct OptimizeCall : public Call {
   OptimizeCall (int v) : Call (OPTIMIZE, 0, 0, 0, v) {}
-  void execute (Solver *&s, vector<int> &map) { s->optimize (val); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->optimize (val); (void) (extendmap); }
   void print (ostream &o) { o << "optimize " << val << endl; }
   Call *copy () { return new OptimizeCall (val); }
   const char *keyword () { return "optimize"; }
@@ -1243,8 +1281,8 @@ struct OptimizeCall : public Call {
 
 struct ResetCall : public Call {
   ResetCall () : Call (RESET) {}
-  void execute (Solver *&s, vector<int> &map) {
-    map.clear (); 
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    extendmap.map.clear ();
     delete s;
     s = 0;
   }
@@ -1255,7 +1293,7 @@ struct ResetCall : public Call {
 
 struct AddCall : public Call {
   AddCall (int l) : Call (ADD, l) {}
-  void execute (Solver *&s, vector<int> &map) { s->add (map_arg (s, map)); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->add (map_arg (s, extendmap)); }
   void print (ostream &o) { o << "add " << arg << endl; }
   Call *copy () { return new AddCall (arg); }
   const char *keyword () { return "add"; }
@@ -1263,7 +1301,7 @@ struct AddCall : public Call {
 
 struct ConstrainCall : public Call {
   ConstrainCall (int l) : Call (CONSTRAIN, l) {}
-  void execute (Solver *&s, vector<int> &map) { s->constrain (map_arg (s, map)); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->constrain (map_arg (s, extendmap)); }
   void print (ostream &o) { o << "constrain " << arg << endl; }
   Call *copy () { return new ConstrainCall (arg); }
   const char *keyword () { return "constrain"; }
@@ -1271,18 +1309,17 @@ struct ConstrainCall : public Call {
 
 struct ConnectCall : public Call {
   ConnectCall () : Call (CONNECT) {}
-  void execute (Solver *&s, vector<int> &map) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     // clean up if there was already one mock propagator
     MockPropagator *prev_pointer = 0;
     if (mobical.mock_pointer)
       prev_pointer = mobical.mock_pointer;
 
-    mobical.mock_pointer = new MockPropagator (s);
+    mobical.mock_pointer = new MockPropagator (s, &extendmap);
     s->connect_external_propagator (mobical.mock_pointer);
 
     if (prev_pointer)
       delete prev_pointer;
-    (void) (map); 
   }
   void print (ostream &o) { o << "connect mock-propagator" << endl; }
   Call *copy () { return new ConnectCall (); }
@@ -1291,12 +1328,13 @@ struct ConnectCall : public Call {
 
 struct ObserveCall : public Call {
   ObserveCall (int l) : Call (OBSERVE, l) {}
-  void execute (Solver *&s, vector<int> &map) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     if (mp) {
-      mp->add_observed_lit (map_arg (s, map));
+      mp->add_observed_lit (arg);
     }
+    (void) (extendmap);
   }
   void print (ostream &o) { o << "observe " << arg << endl; }
   Call *copy () { return new ObserveCall (arg); }
@@ -1305,12 +1343,12 @@ struct ObserveCall : public Call {
 
 struct LemmaCall : public Call {
   LemmaCall (int l) : Call (LEMMA, l) {}
-  void execute (Solver *&s, vector<int> &map) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
 
-    if (mp && (!arg || s->observed (map_arg (s, map)))) { // || mobical.donot.enforce
-      mp->push_lemma_lit (map_arg (s, map));
+    if (mp && (!arg || s->observed (map_arg (s, extendmap)))) { // || mobical.donot.enforce
+      mp->push_lemma_lit (map_arg (s, extendmap));
     }
   }
   void print (ostream &o) { o << "lemma " << arg << endl; }
@@ -1320,7 +1358,7 @@ struct LemmaCall : public Call {
 
 // struct ContinueCall : public Call {
 //   ContinueCall () : Call (CONTINUE) {}
-//   void execute (Solver *&s, vector<int> &map) {
+//   void execute (Solver *&s, ExtendMap &extendmap) {
 //     MockPropagator *mp =
 //         static_cast<MockPropagator *> (s->get_propagator ());
 
@@ -1334,7 +1372,7 @@ struct LemmaCall : public Call {
 
 struct DisconnectCall : public Call {
   DisconnectCall () : Call (DISCONNECT) {}
-  void execute (Solver *&s, vector<int> &map) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     mp->remove_new_observed_var ();
@@ -1343,7 +1381,7 @@ struct DisconnectCall : public Call {
       delete mp;
       mobical.mock_pointer = 0;
     }
-    (void) (map);
+    (void) (extendmap);
   }
   void print (ostream &o) { o << "disconnect mock-propagator" << endl; }
   Call *copy () { return new DisconnectCall (); }
@@ -1352,7 +1390,7 @@ struct DisconnectCall : public Call {
 
 struct AssumeCall : public Call {
   AssumeCall (int l) : Call (ASSUME, l) {}
-  void execute (Solver *&s, vector<int> &map) { s->assume (map_arg (s, map)); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->assume (map_arg (s, extendmap)); }
   void print (ostream &o) { o << "assume " << arg << endl; }
   Call *copy () { return new AssumeCall (arg); }
   const char *keyword () { return "assume"; }
@@ -1360,7 +1398,7 @@ struct AssumeCall : public Call {
 
 struct SolveCall : public Call {
   SolveCall (int r = 0) : Call (SOLVE, 0, r) {}
-  void execute (Solver *&s, vector<int> &map) { res = s->solve (); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { res = s->solve (); (void) (extendmap); }
   void print (ostream &o) { o << "solve " << res << endl; }
   Call *copy () { return new SolveCall (res); }
   const char *keyword () { return "solve"; }
@@ -1368,7 +1406,7 @@ struct SolveCall : public Call {
 
 struct SimplifyCall : public Call {
   SimplifyCall (int rounds, int r = 0) : Call (SIMPLIFY, rounds, r) {}
-  void execute (Solver *&s, vector<int> &map) { res = s->simplify (arg); (void) map; }
+  void execute (Solver *&s, ExtendMap &extendmap) { res = s->simplify (arg); (void) (extendmap); }
   void print (ostream &o) { o << "simplify " << arg << " " << res << endl; }
   Call *copy () { return new SimplifyCall (arg, res); }
   const char *keyword () { return "simplify"; }
@@ -1376,7 +1414,7 @@ struct SimplifyCall : public Call {
 
 struct LookaheadCall : public Call {
   LookaheadCall (int r = 0) : Call (LOOKAHEAD, 0, r) {}
-  void execute (Solver *&s, vector<int> &map) { res = s->lookahead (); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { res = s->lookahead (); (void) (extendmap); }
   void print (ostream &o) { o << "lookahead " << res << endl; }
   Call *copy () { return new LookaheadCall (res); }
   const char *keyword () { return "lookahead"; }
@@ -1384,7 +1422,7 @@ struct LookaheadCall : public Call {
 
 struct CubingCall : public Call {
   CubingCall (int r = 1) : Call (CUBING, 0, r) {}
-  void execute (Solver *&s, vector<int> &map) { (void) s->generate_cubes (map_arg (s, map)); }
+  void execute (Solver *&s, ExtendMap &extendmap) { (void) s->generate_cubes (arg); (void) (extendmap); }
   void print (ostream &o) { o << "cubing " << res << endl; }
   Call *copy () { return new CubingCall (res); }
   const char *keyword () { return "cubing"; }
@@ -1392,11 +1430,11 @@ struct CubingCall : public Call {
 
 struct ValCall : public Call {
   ValCall (int l, int r = 0) : Call (VAL, l, r) {}
-  void execute (Solver *&s, vector<int> &map) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     if (mobical.donot.enforce)
-      res = s->val (map_arg (s, map));
+      res = s->val (map_arg (s, extendmap));
     else if (s->state () == SATISFIED)
-      res = s->val (map_arg (s, map));
+      res = s->val (map_arg (s, extendmap));
     else
       res = 0;
   }
@@ -1407,11 +1445,11 @@ struct ValCall : public Call {
 
 struct FlipCall : public Call {
   FlipCall (int l, int r = 0) : Call (FLIP, l, r) {}
-  void execute (Solver *&s, vector<int> &map) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     if (mobical.donot.enforce)
-      res = s->flip (map_arg (s, map));
+      res = s->flip (map_arg (s, extendmap));
     else if (s->state () == SATISFIED)
-      res = s->flip (map_arg (s, map));
+      res = s->flip (map_arg (s, extendmap));
     else
       res = 0;
   }
@@ -1422,11 +1460,11 @@ struct FlipCall : public Call {
 
 struct FlippableCall : public Call {
   FlippableCall (int l, int r = 0) : Call (FLIPPABLE, l, r) {}
-  void execute (Solver *&s, vector<int> &map) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     if (mobical.donot.enforce)
-      res = s->flippable (map_arg (s, map));
+      res = s->flippable (map_arg (s, extendmap));
     else if (s->state () == SATISFIED)
-      res = s->flippable (map_arg (s, map));
+      res = s->flippable (map_arg (s, extendmap));
     else
       res = 0;
   }
@@ -1439,7 +1477,7 @@ struct FlippableCall : public Call {
 
 struct FixedCall : public Call {
   FixedCall (int l, int r = 0) : Call (FIXED, l, r) {}
-  void execute (Solver *&s, vector<int> &map) { res = s->fixed (map_arg (s, map)); }
+  void execute (Solver *&s, ExtendMap &extendmap) { res = s->fixed (map_arg (s, extendmap)); }
   void print (ostream &o) { o << "fixed " << arg << ' ' << res << endl; }
   Call *copy () { return new FixedCall (arg, res); }
   const char *keyword () { return "fixed"; }
@@ -1447,11 +1485,11 @@ struct FixedCall : public Call {
 
 struct FailedCall : public Call {
   FailedCall (int l, int r = 0) : Call (FAILED, l, r) {}
-  void execute (Solver *&s, vector<int> &map) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     if (mobical.donot.enforce)
-      res = s->failed (map_arg (s, map));
+      res = s->failed (map_arg (s, extendmap));
     else if (s->state () == UNSATISFIED)
-      res = s->failed (map_arg (s, map));
+      res = s->failed (map_arg (s, extendmap));
     else
       res = 0;
   }
@@ -1462,12 +1500,12 @@ struct FailedCall : public Call {
 
 struct ConcludeCall : public Call {
   ConcludeCall () : Call (CONCLUDE) {}
-  void execute (Solver *&s, vector<int> &map) {
+  void execute (Solver *&s, ExtendMap &extendmap) {
     if (mobical.donot.enforce)
       s->conclude ();
     else if (s->state () == UNSATISFIED || s->state () == SATISFIED)
       s->conclude ();
-    (void) (map);
+    (void) (extendmap);
   }
   void print (ostream &o) { o << "conclude" << endl; }
   Call *copy () { return new ConcludeCall (); }
@@ -1476,7 +1514,7 @@ struct ConcludeCall : public Call {
 
 struct FreezeCall : public Call {
   FreezeCall (int l) : Call (FREEZE, l) {}
-  void execute (Solver *&s, vector<int> &map) { s->freeze (map_arg (s, map)); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->freeze (map_arg (s, extendmap)); }
   void print (ostream &o) { o << "freeze " << arg << endl; }
   Call *copy () { return new FreezeCall (arg); }
   const char *keyword () { return "freeze"; }
@@ -1484,9 +1522,9 @@ struct FreezeCall : public Call {
 
 struct MeltCall : public Call {
   MeltCall (int l) : Call (MELT, l) {}
-  void execute (Solver *&s, vector<int> &map) {
-    if (mobical.donot.enforce || s->frozen (map_arg (s, map)))
-      s->melt (map_arg (s, map));
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    if (mobical.donot.enforce || s->frozen (map_arg (s, extendmap)))
+      s->melt (map_arg (s, extendmap));
   }
   void print (ostream &o) { o << "melt " << arg << endl; }
   Call *copy () { return new MeltCall (arg); }
@@ -1495,7 +1533,7 @@ struct MeltCall : public Call {
 
 struct FrozenCall : public Call {
   FrozenCall (int l, int r = 0) : Call (FROZEN, l, r) {}
-  void execute (Solver *&s, vector<int> &map) { res = s->frozen (map_arg (s, map)); }
+  void execute (Solver *&s, ExtendMap &extendmap) { res = s->frozen (map_arg (s, extendmap)); }
   void print (ostream &o) { o << "frozen " << arg << ' ' << res << endl; }
   Call *copy () { return new FrozenCall (arg, res); }
   const char *keyword () { return "frozen"; }
@@ -1503,7 +1541,7 @@ struct FrozenCall : public Call {
 
 struct DumpCall : public Call {
   DumpCall () : Call (DUMP) {}
-  void execute (Solver *&s, vector<int> &map) { s->dump_cnf (); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->dump_cnf (); (void) (extendmap); }
   void print (ostream &o) { o << "dump" << endl; }
   Call *copy () { return new DumpCall (); }
   const char *keyword () { return "dump"; }
@@ -1511,7 +1549,7 @@ struct DumpCall : public Call {
 
 struct StatsCall : public Call {
   StatsCall () : Call (STATS) {}
-  void execute (Solver *&s, vector<int> &map) { s->statistics (); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->statistics (); (void) (extendmap); }
   void print (ostream &o) { o << "stats" << endl; }
   Call *copy () { return new StatsCall (); }
   const char *keyword () { return "stats"; }
@@ -1520,7 +1558,7 @@ struct StatsCall : public Call {
 struct TraceProofCall : public Call {
   std::string path;
   TraceProofCall (const string &p) : Call (TRACEPROOF), path (p) {}
-  void execute (Solver *&s, vector<int> &map) { s->trace_proof (path.c_str ()); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->trace_proof (path.c_str ()); (void) (extendmap); }
   void print (ostream &o) { o << "trace_proof" << ' ' << path << endl; }
   Call *copy () { return new TraceProofCall (path); }
   const char *keyword () { return "trace_proof"; }
@@ -1528,7 +1566,7 @@ struct TraceProofCall : public Call {
 
 struct FlushProofTraceCall : public Call {
   FlushProofTraceCall () : Call (FLUSHPROOFTRACE) {}
-  void execute (Solver *&s, vector<int> &map) { s->flush_proof_trace (); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->flush_proof_trace (); (void) (extendmap); }
   void print (ostream &o) { o << "flush_proof_trace" << endl; }
   Call *copy () { return new FlushProofTraceCall (); }
   const char *keyword () { return "flush_proof_trace"; }
@@ -1536,7 +1574,7 @@ struct FlushProofTraceCall : public Call {
 
 struct CloseProofTraceCall : public Call {
   CloseProofTraceCall () : Call (CLOSEPROOFTRACE) {}
-  void execute (Solver *&s, vector<int> &map) { s->close_proof_trace (); (void) (map); }
+  void execute (Solver *&s, ExtendMap &extendmap) { s->close_proof_trace (); (void) (extendmap); }
   void print (ostream &o) { o << "close_proof_trace" << endl; }
   Call *copy () { return new CloseProofTraceCall (); }
   const char *keyword () { return "close_proof_trace"; }
@@ -1554,7 +1592,7 @@ class Trace {
   // map from mobical vars to solver vars (skipping extension variables)
   // the map is strictly increasing and gets updated whenever a call with an
   // argument gets executed.
-  vector<int> map;
+  ExtendMap extendmap;
 
   friend class Reader;
 
@@ -1617,7 +1655,7 @@ public:
         for (size_t j = i + 1; j < calls.size (); j++) {
           Call *next_c = calls[j];
           if (next_c->type == Call::LEMMA) {
-            next_c->execute (solver, map);
+            next_c->execute (solver, extendmap);
           }
           // else if (next_c->type == Call::CONTINUE)
           //   next_c->execute (solver);
@@ -1631,13 +1669,13 @@ public:
           first = false;
         else
           mobical.shared->incremental++;
-        c->execute (solver, map);
+        c->execute (solver, extendmap);
         if (c->res == 10)
           mobical.shared->sat++;
         if (c->res == 20)
           mobical.shared->unsat++;
       } else {
-        c->execute (solver, map);
+        c->execute (solver, extendmap);
       }
     }
   }
