@@ -5,6 +5,7 @@
 /* Copyright (C) 2022-2024 Katalin Fazekas, Technical University of Vienna*/
 /* Copyright (C) 2021-2024 Armin Biere, University of Freiburg            */
 /* Copyright (C) 2021-2023 Mathias Fleury, University of Freiburg         */
+/* Copyright (C) 2023-2024 Florian Pollitt, University of Freiburg         */
 /*------------------------------------------------------------------------*/
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
@@ -4232,8 +4233,8 @@ int Mobical::main (int argc, char **argv) {
   terminal.normal ();
   prefix ();
   terminal.magenta (1);
-  fputs ("Copyright (c) 2018-2023 A. Biere, M. Fleury, N. Froleyks, K. "
-         "Fazekas\n",
+  fputs ("Copyright (c) 2018-2024 A. Biere, M. Fleury, N. Froleyks, K. "
+         "Fazekas, F. Pollitt\n",
          stderr);
   terminal.normal ();
   empty_line ();

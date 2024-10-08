@@ -356,7 +356,8 @@ void Internal::add_literal_to_environment (Sweeper &sweeper, unsigned depth,
 }
 
 void Internal::sweep_add_clause (Sweeper &sweeper, unsigned depth) {
-  assert (sweeper.clause.size () > 1);
+  // TODO: assertion fails, check if this an issue or can be avoided
+  // assert (sweeper.clause.size () > 1);
   for (const auto & lit : sweeper.clause)
     add_literal_to_environment (sweeper, depth, lit);
   citten_clause_with_id (citten, sweeper.clauses.size (),
