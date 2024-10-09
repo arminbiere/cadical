@@ -95,10 +95,12 @@ void Internal::enlarge_vals (size_t new_vsize) {
   ignore_clang_analyze_memory_leak_warning = new_vals;
   new_vals += new_vsize;
 
-  if (vals)
+  if (vals) {
     memcpy (new_vals - max_var, vals - max_var, 2u * max_var + 1u);
-  vals -= vsize;
-  delete[] vals;
+    vals -= vsize;
+    delete[] vals;
+  } else
+    assert (!vsize);
   vals = new_vals;
 }
 
