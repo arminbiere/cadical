@@ -158,9 +158,26 @@ struct Closure {
   uint64_t find_representative_lrat (int lit);
   void produce_representative_lrat (int lit);
   Clause* add_binary_clause (int a, int b);
+
+  // Merge functions. We actually need different several versions for LRAT in order to simplify the
+  // proof production.
+  //
+  // When merging binary clauses, we can simply produce the LRAT chain by (1) using the two binary
+  // clauses and (2) the reason clause from the literals to the representatives.
+  //
+  // The same approach does not work for merging gates because the representative might be also a
+  // representative of another literal (because of eager rewriting), requiring to resolve more than
+  // once on the same literal. An example of this are the two gates 4=-2&7 and 6=-2&1, the rewriting
+  // 7=1 and the equivalence 4=1. The simple road of merging 6 and 4 (requires resolving away 1) +
+  // adding the rewrite 4 to 1 (requires adding 1) does not work.
+  //
+  // Therefore, we actually go for the more regular road and produce two
+  // equivalence: the merge from the LHS, followed by the actual equivalence (by combining it with
+  // the rewrite).  In DRAT this is less important because the checker finds a chain and is less
+  // restricted than our LRAT chain.
+  bool merge_literals_equivalence (int lit, int other, uint64_t, uint64_t);
   bool merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const std::vector<uint64_t>& = {}, const std::vector<uint64_t> & = {});
   bool merge_literals (int lit, int other, bool learn_clauses = true);
-  bool merge_literals_equivalence (int lit, int other, uint64_t, uint64_t);
 
   // proof production
   vector<LitClausePair> lrat_chain;
