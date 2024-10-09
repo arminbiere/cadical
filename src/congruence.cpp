@@ -727,8 +727,8 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
   if (internal->lrat) {
     if (repr_larger == repr_lit) {
       assert (repr_larger == repr_lit);
-      eager_representative_id (repr_larger) = eq1->id;
-      eager_representative_id (-repr_larger) = eq2->id;
+      eager_representative_id (repr_larger) = eq2->id;
+      eager_representative_id (-repr_larger) = eq1->id;
       LOG (eq1, " (larger==lit)%d->%d due to ", repr_larger, repr_smaller);
     } else {
       assert (repr_larger == repr_other);
