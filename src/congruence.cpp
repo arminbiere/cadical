@@ -398,6 +398,7 @@ uint64_t Closure::find_representative_lrat (int lit) {
   int nxt = representative (res);
   assert (nxt == representative (res));
   LOG ("checking for existing LRAT chain for %d with representative %" PRIu64, lit, eager_representative_id (res));
+  assert (eager_representative_id (res));
   return eager_representative_id (res);
 }
 
@@ -793,23 +794,31 @@ bool Closure::merge_literals_equivalence (int lit, int other, uint64_t id1, uint
     return false;
   }
 
-  int smaller = repr_lit;
-  int larger = repr_other;
+  int smaller_repr = repr_lit;
+  int larger_repr = repr_other;
+  int smaller = lit;
+  int larger = other;
 
-  if (abs(smaller) > abs(larger))
+  if (abs(smaller_repr) > abs(larger_repr)) {
+    swap (smaller_repr, larger_repr);
     swap (smaller, larger);
+  }
 
-  assert (find_representative (smaller) == smaller);
-  assert (find_representative (larger) == larger);
+  assert (find_representative (smaller_repr) == smaller_repr);
+  assert (find_representative (larger_repr) == larger_repr);
 
   if (repr_lit == -repr_other) {
     LOG ("merging clashing %d and %d [smaller: %d]", lit, other, smaller);
     if (internal->lrat) {
-      const uint64_t repr_id1 = find_representative_lrat (lit);
-      const uint64_t repr_larger_id1 = find_representative_lrat (-other);
-      internal->lrat_chain.push_back (repr_id1);
+      if (lit != repr_lit) {
+	const uint64_t repr_id1 = find_representative_lrat (lit);
+	internal->lrat_chain.push_back (repr_id1);
+      }
       internal->lrat_chain.push_back (id1);
-      internal->lrat_chain.push_back (repr_larger_id1);
+      if (other != repr_other) {
+	const uint64_t repr_larger_id1 = find_representative_lrat (-other);
+	internal->lrat_chain.push_back (repr_larger_id1);
+      }
       LOG (internal->lrat_chain, "lrat chain");
     }
     internal->assign_unit (repr_lit);
@@ -818,12 +827,16 @@ bool Closure::merge_literals_equivalence (int lit, int other, uint64_t id1, uint
       const unsigned uidx = internal->vlit (repr_lit);
       uint64_t id = internal->unit_clauses[uidx];
       assert (id);
-      const uint64_t repr_id2 = find_representative_lrat (-lit);
-      const uint64_t repr_larger_id2 = find_representative_lrat (other);
       internal->lrat_chain.push_back (id);
-      internal->lrat_chain.push_back (repr_id2);
+      if (lit != repr_lit) {
+	const uint64_t repr_id2 = find_representative_lrat (-lit);
+	internal->lrat_chain.push_back (repr_id2);
+      }
       internal->lrat_chain.push_back (id2);
-      internal->lrat_chain.push_back (repr_larger_id2);
+      if (other != repr_other) {
+	const uint64_t repr_larger_id2 = find_representative_lrat (other);
+	internal->lrat_chain.push_back (repr_larger_id2);
+      }
       LOG (internal->lrat_chain, "lrat chain");
     }
     internal->learn_empty_clause();
@@ -857,32 +870,32 @@ bool Closure::merge_literals_equivalence (int lit, int other, uint64_t id1, uint
     Clause *eq2 = add_binary_clause (-repr_lit, repr_other);
     if (internal->lrat) {
       internal->lrat_chain.clear ();
-      if (smaller == repr_lit) {
-	assert (larger == repr_other);
-	eager_representative_id (-larger) = eq2->id;
-	eager_representative_id (larger) = eq1->id;
+      if (smaller_repr == repr_lit) {
+	assert (larger_repr == repr_other);
+	eager_representative_id (-larger_repr) = eq2->id;
+	eager_representative_id (larger_repr) = eq1->id;
       } else {
-	assert (larger == repr_lit);
-	eager_representative_id (-larger) = eq1->id;
-	eager_representative_id (larger) = eq2->id;
+	assert (larger_repr == repr_lit);
+	eager_representative_id (-larger_repr) = eq1->id;
+	eager_representative_id (larger_repr) = eq2->id;
       }
     }
     
   } else if (internal->lrat) {
     LOG ("not learning clause");
-    if (smaller == repr_lit) {
+    if (smaller_repr == repr_lit) {
       LOG ("setting ids of %d: %d; %d: %d (case 1)", larger, id1, -larger, id2);
-      eager_representative_id (-larger) = id2;
-      eager_representative_id (larger) = id1;
+      eager_representative_id (-larger_repr) = id2;
+      eager_representative_id (larger_repr) = id1;
     } else {
       LOG ("setting ids of %d: %d; %d: %d (case 2)", larger, id2, -larger, id1);
-      eager_representative_id (-larger) = id1;
-      eager_representative_id (larger) = id2;
+      eager_representative_id (-larger_repr) = id1;
+      eager_representative_id (larger_repr) = id2;
     }
   }
-  representative (larger) = smaller;
-  representative (-larger) = -smaller;
-  schedule_literal (larger);
+  representative (larger_repr) = smaller_repr;
+  representative (-larger_repr) = -smaller_repr;
+  schedule_literal (larger_repr);
   ++internal->stats.congruence.congruent;
   return true;
 }
