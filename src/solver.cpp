@@ -697,7 +697,6 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
     Solver checker;
     // checking restored clauses does not work (because the clauses are not added)
     checker.set("checkproof", 1);
-    checker.set("lratexternal", 0);
     checker.set("lrat", 0);
     checker.prefix ("checker ");
     copy (checker);
