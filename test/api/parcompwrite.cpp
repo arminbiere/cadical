@@ -231,8 +231,18 @@ void tester::join () {
   assert (p == this);
 }
 
+#include <csignal>
+
+static void catch_alarm (int sig) {
+  assert(sig == SIGALRM);
+  const char * msg = "unexpected alarm (file I/O hanging?)\n";
+  ::write (2, msg, strlen (msg));
+  exit (1);
+}
+
 int main () {
   const char *suffixes[] = {"", ".gz"};
+  (void) signal (SIGALRM, catch_alarm);
   for (auto s : suffixes) {
     suffix = s;
     for (unsigned c = 0; c != 2; c++) {
