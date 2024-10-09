@@ -35,12 +35,12 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void lock () {
   if (pthread_mutex_lock (&mutex))
-    perror ("pthread_mutex_lock failed");
+    perror ("error: pthread_mutex_lock failed");
 }
 
 static void unlock () {
   if (pthread_mutex_unlock (&mutex))
-    perror ("pthread_mutex_unlock failed");
+    perror ("error: pthread_mutex_unlock failed");
 }
 
 class tester {
@@ -77,29 +77,29 @@ public:
   void writing () override {
     file = fopen (path (), "w");
     if (!file)
-      perror ("fopen to write failed"), exit (1);
+      perror ("error: fopen to write failed"), exit (1);
   }
   void reading () override {
     file = fopen (path (), "r");
     if (!file)
-      perror ("fopen to read failed"), exit (1);
+      perror ("error: fopen to read failed"), exit (1);
   }
   void write () override {
     assert (file);
     if (fprintf (file, "%u\n", i) <= 0)
-      fprintf (stderr, "fprintf failed\n");
+      fprintf (stderr, "error: fprintf failed\n");
   }
   bool read (unsigned &j) override {
     assert (file);
     if (fscanf (file, "%u", &j) <= 0) {
-      fprintf (stderr, "fscanf failed\n");
+      fprintf (stderr, "error: fscanf failed\n");
       return false;
     }
     return true;
   }
   void close () override {
     if (fclose (file))
-      perror ("fclose written failed");
+      perror ("error: fclose written failed");
   }
 };
 
@@ -120,24 +120,25 @@ public:
   void writing () override {
     file = File::write (internal, path ());
     if (!file)
-      fprintf (stderr, "'File::write' failed\n"), exit (1);
+      fprintf (stderr, "error: 'File::write' failed\n"), exit (1);
   }
   void reading () override {
     file = File::read (internal, path ());
     if (!file)
-      perror ("File::read failed"), exit (1);
+      fprintf (stderr, "error: File::read failed\n"), exit (1);
   }
   void write () override {
     assert (file);
     if (!file->put ((uint64_t) i) || !file->endl ())
-      fprintf (stderr, "File::put failed\n");
+      fprintf (stderr, "error: File::put failed\n");
   }
   bool read (unsigned &j) override {
     assert (file);
     int ch = file->get ();
     if (!isdigit (ch)) {
     INVALID_NUMBER:
-      fprintf (stderr, "invalid number in 'cadical_file_tester::read'\n");
+      fprintf (stderr,
+               "error: invalid number in 'cadical_file_tester::read'\n");
       return false;
     }
     unsigned tmp = ch - '0';
@@ -151,11 +152,12 @@ public:
       tmp += digit;
     }
     if (ch != '\n') {
-      fprintf (stderr, "expected new-line after number");
+      fprintf (stderr, "error: expected new-line after number");
       return false;
     }
     if (file->get () != EOF) {
-      fprintf (stderr, "expected end-of-file after line with number");
+      fprintf (stderr,
+               "error: expected end-of-file after line with number");
       return false;
     }
     j = tmp;
@@ -196,7 +198,8 @@ void tester::run () {
     message ("checked");
   else {
     lock ();
-    fprintf (stderr, "writing and reading back '%u' from '%s' failed\n", i,
+    fprintf (stderr,
+             "error: writing and reading back '%u' from '%s' failed\n", i,
              path ());
     fflush (stderr);
     unlock ();
@@ -210,7 +213,7 @@ void tester::run () {
 void tester::unlink () {
   message ("deleting");
   if (::unlink (path ()))
-    perror ("unlink failed");
+    perror ("error: unlink failed");
 }
 
 void *start (void *p) {
@@ -221,21 +224,21 @@ void *start (void *p) {
 
 void tester::create () {
   if (pthread_create (&thread, 0, start, this))
-    perror ("'pthread_created' failed");
+    perror ("error: 'pthread_created' failed");
 }
 
 void tester::join () {
   void *p;
   if (pthread_join (thread, &p))
-    perror ("'pthread_join' failed");
+    perror ("error: 'pthread_join' failed");
   assert (p == this);
 }
 
 #include <csignal>
 
 static void catch_alarm (int sig) {
-  assert(sig == SIGALRM);
-  const char * msg = "unexpected alarm (file I/O hanging?)\n";
+  assert (sig == SIGALRM);
+  const char *msg = "error: unexpected alarm (file I/O hanging?)\n";
   ::write (2, msg, strlen (msg));
   exit (1);
 }
