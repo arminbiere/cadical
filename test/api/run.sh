@@ -100,6 +100,10 @@ run () {
 
 #--------------------------------------------------------------------------#
 
+# TODO move down
+
+run parcompwrite
+
 run newdelete
 run unit
 run morenmore
