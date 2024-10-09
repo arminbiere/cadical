@@ -210,7 +210,7 @@ private:
   // MockPropagator parameters
   size_t lemma_per_cb = 2;
   bool logging = false;
-  
+
   struct ExternalLemma {
     size_t id;
     size_t add_count;

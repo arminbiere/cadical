@@ -229,8 +229,8 @@ int Internal::decide () {
     int decision = ask_decision ();
     if ((size_t) level < assumptions.size () ||
       ((size_t) level == assumptions.size () && constraint.size ())) {
-        // forced backtrack below pseudo decision
-        // levels, one of the two branches above will handle it.
+        // Forced backtrack below pseudo decision levels.
+        // So one of the two branches above will handle it.
         STOP (decide);
         res = decide (); // STARTS and STOPS profiling
         START (decide);

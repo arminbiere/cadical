@@ -667,7 +667,7 @@ Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
     clause.clear ();
     res = learn_external_reason_clause (ilit, 0, true);
     // The learn_external_reason clause can leave a literal in clause when
-    // there there is a falsified elit arg. Here it is not allowed to
+    // there is a falsified elit arg. Here it is not allowed to
     // happen.
     assert (clause.empty ());
 

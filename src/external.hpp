@@ -273,7 +273,7 @@ struct External {
 
   void reset_assumptions ();
 
-  // similarily to 'failed', 'conclude' needs to know about failing
+  // Similarly to 'failed', 'conclude' needs to know about failing
   // assumptions and therefore needs to be reset when leaving the
   // 'UNSATISFIED' state.
   //
