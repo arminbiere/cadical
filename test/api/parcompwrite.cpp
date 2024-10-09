@@ -242,14 +242,15 @@ static void catch_alarm (int sig) {
 
 int main () {
   const char *suffixes[] = {"", ".gz"};
-  (void) signal (SIGALRM, catch_alarm);
+  (void) ::signal (SIGALRM, catch_alarm);
+  ::alarm (1);
   for (auto s : suffixes) {
     suffix = s;
     for (unsigned c = 0; c != 2; c++) {
       if (!c && *suffix)
         continue;
       vector<tester *> testers;
-      for (size_t i = 0; i != 2; i++) {
+      for (size_t i = 0; i != 100; i++) {
         tester *t;
         if (c)
           t = new cadical_file_tester (i);
