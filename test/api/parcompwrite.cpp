@@ -1,6 +1,10 @@
 #include "../../src/cadical.hpp"
+#include "../../src/file.hpp"
+#include "../../src/internal.hpp"
 
 #include <cassert>
+#include <cctype>
+#include <climits>
 #include <cstdint>
 #include <iostream>
 #include <string>
@@ -11,18 +15,20 @@ extern "C" {
 };
 
 using namespace std;
+using namespace CaDiCaL;
 
 static string prefix (const char *tester) {
   string res = "/tmp/parcompwrite-";
   res += tester;
   res += "-";
   res += to_string (getpid ());
-  res += "-";
   return res;
 }
 
+static const char *suffix = ".gz";
+
 static string path (const char *tester, unsigned i) {
-  return prefix (tester) + "-" + to_string (i) + ".gz";
+  return prefix (tester) + "-" + to_string (i) + suffix;
 }
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -97,6 +103,70 @@ public:
   }
 };
 
+class cadical_file_tester : public tester {
+  File *file = 0;
+  Internal *internal;
+
+public:
+  cadical_file_tester (unsigned j) : tester (j) {
+    internal = new Internal ();
+#ifndef QUIET
+    internal->opts.verbose = 0;
+    internal->opts.quiet = 1;
+#endif
+  }
+  ~cadical_file_tester () { delete internal; }
+  const char *name () override { return "cadical-file"; }
+  void writing () override {
+    file = File::write (internal, path ());
+    if (!file)
+      fprintf (stderr, "'File::write' failed\n"), exit (1);
+  }
+  void reading () override {
+    file = File::read (internal, path ());
+    if (!file)
+      perror ("File::read failed"), exit (1);
+  }
+  void write () override {
+    assert (file);
+    if (!file->put ((uint64_t) i) || !file->endl ())
+      fprintf (stderr, "File::put failed\n");
+  }
+  bool read (unsigned &j) override {
+    assert (file);
+    int ch = file->get ();
+    if (!isdigit (ch)) {
+    INVALID_NUMBER:
+      fprintf (stderr, "invalid number in 'cadical_file_tester::read'\n");
+      return false;
+    }
+    unsigned tmp = ch - '0';
+    while (isdigit (ch = file->get ())) {
+      if (UINT_MAX / 10 < tmp)
+        goto INVALID_NUMBER;
+      tmp *= 10;
+      unsigned digit = ch - '0';
+      if (UINT_MAX - digit < tmp)
+        goto INVALID_NUMBER;
+      tmp += digit;
+    }
+    if (ch != '\n') {
+      fprintf (stderr, "expected new-line after number");
+      return false;
+    }
+    if (file->get () != EOF) {
+      fprintf (stderr, "expected end-of-file after line with number");
+      return false;
+    }
+    j = tmp;
+    return true;
+  }
+  void close () override {
+    assert (file);
+    file->close ();
+  }
+};
+
 const char *tester::path () {
   if (!spath_cached) {
     spath = ::path (name (), i);
@@ -143,8 +213,8 @@ void tester::unlink () {
     perror ("unlink failed");
 }
 
-void *start (void * p) {
-  tester *t = (tester*) p;
+void *start (void *p) {
+  tester *t = (tester *) p;
   t->run ();
   return t;
 }
@@ -155,21 +225,35 @@ void tester::create () {
 }
 
 void tester::join () {
-  void* p;
+  void *p;
   if (pthread_join (thread, &p))
     perror ("'pthread_join' failed");
   assert (p == this);
 }
 
 int main () {
-  vector<tester*> testers;
-  for (size_t i = 0; i != 100; i++)
-    testers.push_back (new stdio_tester (i));
-  for (auto t : testers)
-    t->create ();
-  for (auto t : testers)
-    t->join ();
-  for (auto t : testers)
-    delete t;
+  const char *suffixes[] = {"", ".gz"};
+  for (auto s : suffixes) {
+    suffix = s;
+    for (unsigned c = 0; c != 2; c++) {
+      if (!c && *suffix)
+        continue;
+      vector<tester *> testers;
+      for (size_t i = 0; i != 2; i++) {
+        tester *t;
+        if (c)
+          t = new cadical_file_tester (i);
+        else
+          t = new stdio_tester (i);
+        testers.push_back (t);
+      }
+      for (auto t : testers)
+        t->create ();
+      for (auto t : testers)
+        t->join ();
+      for (auto t : testers)
+        delete t;
+    }
+  }
   return 0;
 }
