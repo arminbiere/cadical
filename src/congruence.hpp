@@ -148,6 +148,7 @@ struct Closure {
 
   void unmark_all ();
   vector<int> representant; // union-find
+  vector<int> eager_representant; // union-find
   vector<uint64_t> eager_representant_id; // lrat version of union-find
   int & representative (int lit);
   int representative (int lit) const;
@@ -188,7 +189,10 @@ struct Closure {
   void push_lrat_id (const Clause *const c, int lit);
   void push_lrat_unit (int lit);
 
-  void push_id_and_rewriting_lrat (Clause *c, int except, std::vector<uint64_t> &chain, bool = true);
+  void push_id_and_rewriting_lrat (Clause *c, int except, uint64_t id1, uint64_t id2,
+				   std::vector<uint64_t> &chain, bool = true,
+				   int except_other = 0, uint64_t id_other1 = 0, uint64_t id_other2 = 0,
+				   int execept_lhs = 0);
   void unmark_marked_lrat ();
 
   // occs
@@ -208,7 +212,7 @@ struct Closure {
   // simplification
   bool skip_and_gate (Gate *g);
   bool skip_xor_gate (Gate *g);
-  void update_and_gate (Gate *g, GatesTable::iterator, int falsified = 0, int clashing = 0, const std::vector<uint64_t>& = {}, const std::vector<uint64_t> & = {});
+  void update_and_gate (Gate *g, GatesTable::iterator, int src, int dst, uint64_t id1, uint64_t id2, int falsified = 0, int clashing = 0, const std::vector<uint64_t>& = {}, const std::vector<uint64_t> & = {});
   void update_xor_gate (Gate *g, GatesTable::iterator);
   void shrink_and_gate (Gate *g, int falsified = 0, int clashing = 0);
   bool simplify_gate (Gate *g);
@@ -309,9 +313,9 @@ struct Closure {
   void check_implied ();
 
   bool learn_congruence_unit(int unit); // TODO remove and replace by _lrat version
-  void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int clashing, int unit); 
+  void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src, int dst, uint64_t id1, uint64_t id2, int clashing, int unit);
   void learn_congruence_unit_unit_lrat_chain (Gate *g, int unit); 
-  void learn_congruence_unit_when_lhs_set (Gate *g, int lit);
+  void learn_congruence_unit_when_lhs_set (Gate *g, int src, uint64_t id1, uint64_t id2, int lit);
 
   void find_units();
   void find_equivalences();
