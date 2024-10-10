@@ -134,6 +134,11 @@ struct Closure {
   std::array<std::vector<std::pair<int, int>>, 2> condeq;
 
   std::vector<Clause*> new_unwatched_binary_clauses;
+
+  // LRAT proofs
+  vector<signed char> proof_marks;
+  vector<signed char> proof_analyzed;
+
 #ifdef LOGGING
   unsigned fresh_id;
 #endif  
@@ -143,7 +148,6 @@ struct Closure {
 
   void unmark_all ();
   vector<int> representant; // union-find
-  vector<int> eager_representant; // union-find
   vector<uint64_t> eager_representant_id; // lrat version of union-find
   int & representative (int lit);
   int representative (int lit) const;
@@ -339,6 +343,8 @@ struct Closure {
   LitClausePair marked_mu1(int lit);
   LitClausePair marked_mu2(int lit);
   LitClausePair marked_mu4(int lit);
+
+  signed char& proof_marked (int lit);
   
   // negbincount (lit) -> noccs (-lit)
 
