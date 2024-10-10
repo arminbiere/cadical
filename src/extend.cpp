@@ -271,6 +271,7 @@ void External::conclude_sat () {
     extend ();
   vector<int> model;
   for (int i = 1; i <= max_var; i++) {
+    if (ervars[i]) continue;
     int lit = i;
     const int value = ival (lit);
     assert (value);
