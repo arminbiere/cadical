@@ -185,4 +185,12 @@ void ccadical_close_proof (CCaDiCaL *ptr) {
 void ccadical_conclude (CCaDiCaL *ptr) {
   ((Wrapper *) ptr)->solver->conclude ();
 }
+
+int ccadical_vars (CCaDiCaL *ptr) {
+  return ((Wrapper *) ptr)->solver->vars ();
+}
+
+int ccadical_reserve_difference (CCaDiCaL *ptr, int number_of_vars) {
+  return ((Wrapper *) ptr)->solver->reserve_difference (number_of_vars);
+}
 }
