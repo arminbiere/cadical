@@ -636,6 +636,19 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
     return false;
   }
 
+  // For LRAT we need to distinguish more cases for a more regular reconstruction.
+  //
+  // 1. if lit = -other, then we learn lit and -lit to derive false
+  //
+  // 2. otherwise, we learn the new clauses lit = -other (which are two real clauses).
+  //
+  //    2a. if repr_lit = -repr_other, we learn the units repr_lit and -repr_lit to derive false
+  //
+  //    2b. otherwise, we learn the equivalences repr_lit = -repr_other (which are two real clauses)
+  //
+  // Without LRAT this is easier, as we directly learn the conclusion (either false or the
+  // equivalence). The steps can also not be merged because repr_lit can appear in the gate and
+  // hence in the resolution chain.
   int smaller_repr = repr_lit;
   int larger_repr = repr_other;
   int smaller = lit;
