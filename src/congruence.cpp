@@ -1693,11 +1693,13 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
         reasons_lrat_src.push_back (id.clause->id);
       push_id_and_rewriting_lrat(h->neg_lhs_ids[0].clause, h->lhs, 0, 0, reasons_lrat_src);
       LOG (reasons_lrat_src, "lrat chain for positive side");
+      unmark_marked_lrat ();
 
       internal->lrat_chain.clear ();
       for (auto id : h->pos_lhs_ids)
         reasons_lrat_usrc.push_back (id.clause->id);
       push_id_and_rewriting_lrat(g->neg_lhs_ids[0].clause, h->lhs, 0, 0, reasons_lrat_usrc);
+      unmark_marked_lrat ();
       LOG (reasons_lrat_usrc, "lrat chain for negative side");
     }
     if (merge_literals_lrat (g, h, lhs, h->lhs, reasons_lrat_src, reasons_lrat_usrc)) {
