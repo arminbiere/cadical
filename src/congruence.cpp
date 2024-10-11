@@ -666,160 +666,195 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
 
   assert (find_representative (smaller_repr) == smaller_repr);
   assert (find_representative (larger_repr) == larger_repr);
-  if (internal->lrat) {
-    if (lit == -other) {
-      LOG ("merging clashing %d and %d", lit, other);
-
+  if (lit == -other) {
+    LOG ("merging clashing %d and %d", lit, other);
+    if (internal->lrat)
       internal->lrat_chain = *smaller_chain;
-      internal->assign_unit (smaller);
+
+    internal->assign_unit (smaller);
+    if (internal->lrat)
       internal->lrat_chain.clear ();
 
-      push_lrat_unit (smaller);
+    push_lrat_unit (smaller);
+    if (internal->lrat) {
       for (auto id : *larger_chain)
-      internal->lrat_chain.push_back (id);
+        internal->lrat_chain.push_back (id);
       LOG (internal->lrat_chain, "lrat chain");
-      internal->learn_empty_clause ();
-      return false;
     }
+    internal->learn_empty_clause ();
+    return false;
+  }
 
-    LOG ("merging %d and %d first and then the equivalences of %d and %d "
-         "with LRAT",
-         lit, other, repr_lit, repr_other);
+  LOG ("merging %d and %d first and then the equivalences of %d and %d "
+       "with LRAT",
+       lit, other, repr_lit, repr_other);
+  if (internal->lrat)
     internal->lrat_chain = *smaller_chain;
-    Clause *eq1_tmp = add_binary_clause (-larger, smaller);
-    assert (eq1_tmp);
+  Clause *eq1_tmp = add_binary_clause (-larger, smaller);
+  assert (eq1_tmp);
 
+  if (internal->lrat) {
     unmark_marked_lrat ();
 
     internal->lrat_chain = *larger_chain;
     LOG (internal->lrat_chain, "lrat chain");
+  }
 
-    Clause *eq2_tmp = add_binary_clause (larger, -smaller); // the order in the clause is important for the repr_lit == -repr_other to get the right chain
-    assert (eq2_tmp);
+  Clause *eq2_tmp = add_binary_clause (
+      larger, -smaller); // the order in the clause is important for the
+                         // repr_lit == -repr_other to get the right chain
+  assert (eq2_tmp);
+  if (internal->lrat)
     internal->lrat_chain.clear ();
 
-    if (repr_lit == -repr_other) {
-      // now derive empty clause
-      push_id_and_rewriting_lrat (eq1_tmp,
-				  lit == repr_lit ? 0 : lit,
-				  lit == repr_lit ? 0 : find_representative_lrat(lit),
-				  lit == repr_lit ? 0 : find_representative_lrat(-lit), internal->lrat_chain,
-				  true,
-				  other == repr_other ? 0 : other,
-				  other == repr_other ? 0 : find_representative_lrat (other),
-				  other == repr_other ? 0 : find_representative_lrat (-other));
+  if (repr_lit == -repr_other) {
+    // now derive empty clause
+    if (internal->lrat) {
+      push_id_and_rewriting_lrat (
+          eq1_tmp, lit == repr_lit ? 0 : lit,
+          lit == repr_lit ? 0 : find_representative_lrat (lit),
+          lit == repr_lit ? 0 : find_representative_lrat (-lit),
+          internal->lrat_chain, true, other == repr_other ? 0 : other,
+          other == repr_other ? 0 : find_representative_lrat (other),
+          other == repr_other ? 0 : find_representative_lrat (-other));
       unmark_marked_lrat ();
-      internal->assign_unit (-larger_repr);
+    }
+    internal->assign_unit (-larger_repr);
+    if (internal->lrat) {
       internal->lrat_chain.clear ();
 
       if (larger != larger_repr)
-	push_lrat_unit (-larger_repr);
-      push_id_and_rewriting_lrat (eq2_tmp,
-				  lit == repr_lit ? 0 : lit,
-				  lit == repr_lit ? 0 : find_representative_lrat(lit),
-				  lit == repr_lit ? 0 : find_representative_lrat(-lit),
-				  internal->lrat_chain,
-				  true,
-				  other == repr_other ? 0 : other,
-				  other == repr_other ? 0 : find_representative_lrat (other),
-				  other == repr_other ? 0 : find_representative_lrat (-other));
+        push_lrat_unit (-larger_repr);
+      push_id_and_rewriting_lrat (
+          eq2_tmp, lit == repr_lit ? 0 : lit,
+          lit == repr_lit ? 0 : find_representative_lrat (lit),
+          lit == repr_lit ? 0 : find_representative_lrat (-lit),
+          internal->lrat_chain, true, other == repr_other ? 0 : other,
+          other == repr_other ? 0 : find_representative_lrat (other),
+          other == repr_other ? 0 : find_representative_lrat (-other));
       unmark_marked_lrat ();
       LOG (internal->lrat_chain, "lrat chain");
-      internal->learn_empty_clause ();
+    }
+    internal->learn_empty_clause ();
+    if (internal->lrat)
       internal->lrat_chain.clear ();
+    return false;
+  }
+
+  if (val_lit) {
+    if (val_lit == val_other) {
+      LOG ("not merging lits %d and %d assigned to same value", lit, other);
+      if (internal->lrat)
+        internal->lrat_chain.clear ();
+      return false;
+    }
+    if (val_lit == -val_other) {
+      LOG ("merging lits %d and %d assigned to inconsistent value", lit,
+           other);
+      assert (internal->lrat_chain.empty ());
+      if (internal->lrat) {
+        Clause *c = val_lit ? eq2_tmp : eq1_tmp;
+        int pos = val_lit ? other : lit;
+        int neg = val_lit ? -lit : -other;
+        push_lrat_unit (pos);
+        push_lrat_unit (neg);
+        push_id_and_rewriting_lrat (c, 0, 0, 0, internal->lrat_chain, true,
+                                    0, 0, 0, -pos, -neg);
+      }
+      internal->learn_empty_clause ();
+      if (internal->lrat)
+        internal->lrat_chain.clear ();
       return false;
     }
 
-    if (val_lit) {
-      if (val_lit == val_other) {
-        LOG ("not merging lits %d and %d assigned to same value", lit,
-             other);
-        if (internal->lrat)
-          internal->lrat_chain.clear ();
-        return false;
-      }
-      if (val_lit == -val_other) {
-        LOG ("merging lits %d and %d assigned to inconsistent value", lit,
-             other);
-	assert (internal->lrat_chain.empty ());
-	Clause *c = val_lit ? eq2_tmp : eq1_tmp;
-	int pos = val_lit ? other : lit;
-	int neg = val_lit ? -lit : -other;
-	push_lrat_unit (pos);
-	push_lrat_unit (neg);
-        push_id_and_rewriting_lrat (c, 0, 0, 0, internal->lrat_chain, true, 0, 0, 0, -pos, -neg);
-        internal->learn_empty_clause ();
-        return false;
-      }
-
-      assert (!val_other);
-      LOG ("merging assigned %d and unassigned %d", lit, other);
-      assert (internal->lrat_chain.empty ());
-      const int unit = (val_lit < 0) ? -other : other;
+    assert (!val_other);
+    LOG ("merging assigned %d and unassigned %d", lit, other);
+    assert (internal->lrat_chain.empty ());
+    const int unit = (val_lit < 0) ? -other : other;
+    if (internal->lrat) {
       signed char val_smaller = internal->val (smaller);
       Clause *c = lit == smaller ? eq1_tmp : eq2_tmp;
       int neg = val_lit ? lit : -lit;
-      push_id_and_rewriting_lrat (c, 0, 0, 0, internal->lrat_chain, true, 0, 0, 0, -neg, unit);
-      learn_congruence_unit (unit);
-      internal->lrat_chain.clear ();
-      return false;
+      push_id_and_rewriting_lrat (c, 0, 0, 0, internal->lrat_chain, true, 0,
+                                  0, 0, -neg, unit);
     }
-
-    if (!val_lit && val_other) {
-      LOG ("merging assigned %d and unassigned %d", lit, other);
-      assert (internal->lrat_chain.empty ());
-      const int unit = (val_other < 0) ? -lit : lit;
-      learn_congruence_unit (unit);
+    learn_congruence_unit (unit);
+    if (internal->lrat)
       internal->lrat_chain.clear ();
-      return false;
-    }
+    return false;
+  }
 
-    Clause *eq1_repr, *eq2_repr;
-    if (smaller_repr != smaller || larger != larger_repr) {
+  if (!val_lit && val_other) {
+    LOG ("merging assigned %d and unassigned %d", lit, other);
+    assert (internal->lrat_chain.empty ());
+    const int unit = (val_other < 0) ? -lit : lit;
+    if (internal->lrat) {
+      Clause *c = val_lit ? eq2_tmp : eq1_tmp;
+      push_id_and_rewriting_lrat (c, 0, 0, 0, internal->lrat_chain, true);
+    }
+    learn_congruence_unit (unit);
+    if (internal->lrat)
+      internal->lrat_chain.clear ();
+    return false;
+  }
+
+  Clause *eq1_repr, *eq2_repr;
+  if (smaller_repr != smaller || larger != larger_repr) {
+    if (internal->lrat) {
       internal->lrat_chain.clear ();
       unmark_marked_lrat ();
       assert (!proof_marked (-lit));
-      push_id_and_rewriting_lrat (eq1_tmp, smaller_repr != smaller ? smaller : 0,
-				  smaller_repr != smaller ? find_representative_lrat(smaller) : 0,
-				  smaller_repr != smaller ? find_representative_lrat(-smaller) : 0,
-				  internal->lrat_chain,
-				  true,
-				  larger_repr != larger ? larger : 0,
-				  larger_repr != larger ? find_representative_lrat(larger) : 0,
-				  larger_repr != larger ? find_representative_lrat(-larger) : 0);
-      eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
-    } else {
-      eq1_repr = eq1_tmp;
+      push_id_and_rewriting_lrat (
+          eq1_tmp, smaller_repr != smaller ? smaller : 0,
+          smaller_repr != smaller ? find_representative_lrat (smaller) : 0,
+          smaller_repr != smaller ? find_representative_lrat (-smaller) : 0,
+          internal->lrat_chain, true, larger_repr != larger ? larger : 0,
+          larger_repr != larger ? find_representative_lrat (larger) : 0,
+          larger_repr != larger ? find_representative_lrat (-larger) : 0);
     }
+    eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
+  } else {
+    eq1_repr = eq1_tmp;
+  }
+
+  if (internal->lrat) {
     unmark_marked_lrat ();
     internal->lrat_chain.clear ();
+  }
 
-    if (smaller_repr != smaller || larger != larger_repr) {
+  if (smaller_repr != smaller || larger != larger_repr) {
+
+    if (internal->lrat) {
       internal->lrat_chain.clear ();
       assert (proof_analyzed.empty ());
       assert (!proof_marked (-lit));
       // eq2 = larger, -smaller
-      push_id_and_rewriting_lrat (eq2_tmp, smaller_repr != smaller ? smaller : 0,
-				  smaller_repr != smaller ? find_representative_lrat(smaller) : 0,
-				  smaller_repr != smaller ? find_representative_lrat(-smaller) : 0,
-				  internal->lrat_chain,
-				  true,
-				  larger_repr != larger ? larger : 0,
-				  larger_repr != larger ? find_representative_lrat(larger) : 0,
-				  larger_repr != larger ? find_representative_lrat(-larger) : 0);
-      eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
-      unmark_marked_lrat ();
-    } else {
-      eq2_repr = eq2_tmp;
+      push_id_and_rewriting_lrat (
+          eq2_tmp, smaller_repr != smaller ? smaller : 0,
+          smaller_repr != smaller ? find_representative_lrat (smaller) : 0,
+          smaller_repr != smaller ? find_representative_lrat (-smaller) : 0,
+          internal->lrat_chain, true, larger_repr != larger ? larger : 0,
+          larger_repr != larger ? find_representative_lrat (larger) : 0,
+          larger_repr != larger ? find_representative_lrat (-larger) : 0);
     }
-    internal->lrat_chain.clear ();
 
-    eager_representative_id (larger_repr) = eq1_repr->id;
-    assert (std::find (begin (*eq1_repr), end (*eq1_repr), -larger_repr) != end (*eq1_repr));
-    eager_representative_id (-larger_repr) = eq2_repr->id;
-    assert (std::find (begin (*eq2_repr), end (*eq2_repr), larger_repr) != end (*eq2_repr));
+    eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
+
+    if (internal->lrat)
+      unmark_marked_lrat ();
+  } else {
+    eq2_repr = eq2_tmp;
   }
+  internal->lrat_chain.clear ();
 
+  if (internal->lrat) {
+    eager_representative_id (larger_repr) = eq1_repr->id;
+    assert (std::find (begin (*eq1_repr), end (*eq1_repr), -larger_repr) !=
+            end (*eq1_repr));
+    eager_representative_id (-larger_repr) = eq2_repr->id;
+    assert (std::find (begin (*eq2_repr), end (*eq2_repr), larger_repr) !=
+            end (*eq2_repr));
+  }
   representative (larger_repr) = smaller_repr;
   representative (-larger_repr) = -smaller_repr;
   schedule_literal (larger_repr);
@@ -827,7 +862,6 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
   assert (internal->lrat_chain.empty ());
   return true;
 }
-
 
 // This function is rather tricky for LRAT. If you have 2 = 1 and 3=4 you cannot add 2=3. You really
 // to connect the representatives directly therefore you actually need to learn the clauses 2->3->4
