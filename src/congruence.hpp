@@ -164,6 +164,8 @@ struct Closure {
   void produce_representative_lrat (int lit);
   Clause* add_binary_clause (int a, int b);
 
+  void promote_clause (Clause *);
+
   // Merge functions. We actually need different several versions for LRAT in order to simplify the
   // proof production.
   //
@@ -180,7 +182,7 @@ struct Closure {
   // equivalence: the merge from the LHS, followed by the actual equivalence (by combining it with
   // the rewrite).  In DRAT this is less important because the checker finds a chain and is less
   // restricted than our LRAT chain.
-  bool merge_literals_equivalence (int lit, int other, uint64_t, uint64_t);
+  bool merge_literals_equivalence (int lit, int other, Clause *c1, Clause *c2);
   bool merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const std::vector<uint64_t>& = {}, const std::vector<uint64_t> & = {});
   bool merge_literals (int lit, int other, bool learn_clauses = true);
 

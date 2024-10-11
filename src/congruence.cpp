@@ -863,11 +863,32 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
   return true;
 }
 
+inline void Closure::promote_clause (Clause *c) {
+  if (!c)
+    return;
+  if (!c->redundant)
+    return;
+  LOG (c, "turning redundant subsuming clause into irredundant clause");
+  c->redundant = false;
+  if (internal->proof)
+    internal->proof->strengthen (c->id);
+  internal->stats.current.irredundant++;
+  internal->stats.added.irredundant++;
+  internal->stats.irrlits += c->size;
+  assert (internal->stats.current.redundant > 0);
+  internal->stats.current.redundant--;
+  assert (internal->stats.added.redundant > 0);
+  internal->stats.added.redundant--;
+  // ... and keep 'stats.added.total'.
+}
+
 // This function is rather tricky for LRAT. If you have 2 = 1 and 3=4 you cannot add 2=3. You really
 // to connect the representatives directly therefore you actually need to learn the clauses 2->3->4
 // and -2->1 and vice-versa
-bool Closure::merge_literals_equivalence (int lit, int other, uint64_t id1, uint64_t id2) {
+bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1, Clause *c2) {
   assert (!internal->unsat);
+  uint64_t id1 = c1 ? c1->id : 0;
+  uint64_t id2 = c2 ? c2->id : 0;
   LOG ("merging literals %d and %d lrat", lit, other);
   int repr_lit = find_representative_and_update_eager (lit);
   int repr_other = find_representative_and_update_eager (other);
@@ -963,6 +984,7 @@ bool Closure::merge_literals_equivalence (int lit, int other, uint64_t id1, uint
   }
 
   LOG ("merging %d and %d", lit, other);
+  promote_clause (c1), promote_clause(c2);
   bool learn_clause = (lit != repr_lit) || (other != repr_other);
   if (learn_clause) {
     if (internal->lrat) {
@@ -2793,7 +2815,7 @@ void Closure::find_equivalences () {
 	  //   assert (eager_representative_id (other) != -1);
 	  //   LOG ("lrat: %d (%zd) %d (%zd)", other, eager_representative_id (other), -other, eager_representative_id (-other));
 	  // }
-	  if (merge_literals_equivalence (lit, other, internal->lrat ? marked_mu1 (-other).clause->id : 0, w.clause->id)) {
+	  if (merge_literals_equivalence (lit, other, internal->lrat ? marked_mu1 (-other).clause : nullptr, w.clause)) {
 	    ++internal->stats.congruence.congruent;
 	  }
 	  unmark_all();
