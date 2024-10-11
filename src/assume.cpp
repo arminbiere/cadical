@@ -23,9 +23,8 @@ void Internal::assume (int lit) {
   freeze (lit);
 }
 
-// for LRAT we actually need to implement recursive dfs
-// I don't know how to do this non-recursively...
-// for non-lrat use bfs
+// for LRAT we actually need to implement recursive DFS
+// for non-lrat use BFS. TODO: maybe derecursify to avoid stack overflow
 //
 void Internal::assume_analyze_literal (int lit) {
   assert (lit);

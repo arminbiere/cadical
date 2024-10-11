@@ -389,7 +389,7 @@ void Internal::clear_analyzed_literals () {
     assert (!f.removable);
   }
   analyzed.clear ();
-#if 0 // TO EXPENSIVE EVEN FOR DEBUGGING MODE
+#if 0 // TOO EXPENSIVE EVEN FOR DEBUGGING MODE
   if (unit_analyzed.size ())
     return;
   for (auto idx : vars) {
@@ -755,7 +755,7 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
       const auto id = *i;
       mini_chain.push_back (id);
     }
-    lrat_chain.clear (); // see if this is correct...
+    lrat_chain.clear ();
     clear_unit_analyzed_literals ();
     unit_chain.clear ();
   }
@@ -938,7 +938,6 @@ void Internal::analyze () {
     learn_empty_clause ();
     if (external->learner)
       external->export_learned_empty_clause ();
-    // lrat_chain.clear (); done in learn_empty_clause
     STOP (analyze);
     return;
   }

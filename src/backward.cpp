@@ -120,9 +120,10 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
           assert (minimize_chain.empty ());
           assert (analyzed.empty ());
           assert (lrat_chain.empty ());
-          for (const auto &lit : *d) {         // find out if we get
-            const signed char tmp = val (lit); // a new unit or just
-            if (tmp < 0) {                     // strengthen c
+          // figure out wether we strengthen c or get a new unit
+          for (const auto &lit : *d) {
+            const signed char tmp = val (lit);
+            if (tmp < 0) {
               if (!lrat)
                 continue;
               Flags &f = flags (lit);
