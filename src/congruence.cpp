@@ -704,13 +704,16 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
 				  lit == repr_lit ? 0 : lit,
 				  lit == repr_lit ? 0 : find_representative_lrat(lit),
 				  lit == repr_lit ? 0 : find_representative_lrat(-lit), internal->lrat_chain,
+				  true,
 				  other == repr_other ? 0 : other,
 				  other == repr_other ? 0 : find_representative_lrat (other),
 				  other == repr_other ? 0 : find_representative_lrat (-other));
       unmark_marked_lrat ();
-      internal->assign_unit (-larger);
+      internal->assign_unit (-larger_repr);
       internal->lrat_chain.clear ();
 
+      if (larger != larger_repr)
+	push_lrat_unit (-larger_repr);
       push_id_and_rewriting_lrat (eq2_tmp,
 				  lit == repr_lit ? 0 : lit,
 				  lit == repr_lit ? 0 : find_representative_lrat(lit),
