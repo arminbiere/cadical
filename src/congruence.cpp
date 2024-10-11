@@ -691,7 +691,7 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
   if (internal->lrat)
     internal->lrat_chain = *smaller_chain;
   Clause *eq1_tmp = add_binary_clause (-larger, smaller);
-  assert (eq1_tmp);
+  assert (!internal->lrat || eq1_tmp);
 
   if (internal->lrat) {
     unmark_marked_lrat ();
@@ -703,7 +703,7 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
   Clause *eq2_tmp = add_binary_clause (
       larger, -smaller); // the order in the clause is important for the
                          // repr_lit == -repr_other to get the right chain
-  assert (eq2_tmp);
+  assert (!internal->lrat || eq2_tmp);
   if (internal->lrat)
     internal->lrat_chain.clear ();
 
