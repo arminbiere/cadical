@@ -731,7 +731,8 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
           lit == repr_lit ? 0 : find_representative_lrat (-lit),
           internal->lrat_chain, true, other == repr_other ? 0 : other,
           other == repr_other ? 0 : find_representative_lrat (other),
-          other == repr_other ? 0 : find_representative_lrat (-other));
+          other == repr_other ? 0 : find_representative_lrat (-other),
+          larger != larger_repr ? larger_repr : 0);
       unmark_marked_lrat ();
       LOG (internal->lrat_chain, "lrat chain");
     }
@@ -1027,7 +1028,7 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1, Clause
     }
     
   } else if (internal->lrat) {
-    LOG ("not learning clause");
+    LOG ("not learning new clause");
     if (smaller_repr == repr_lit) {
       LOG ("setting ids of %d: %" PRIu64 "; %d: %" PRIu64 " (case 1)", larger, id1, -larger, id2);
       eager_representative_id (-larger_repr) = id2;
@@ -1301,7 +1302,7 @@ bool Closure::skip_and_gate(Gate *g) {
     return true;
   const int lhs = g->lhs;
   if (internal->val(lhs) > 0) {
-    mark_garbage(g);
+    mark_garbage (g);
     return true;
   }
 
@@ -1809,7 +1810,7 @@ Clause* Closure::add_binary_clause (int a, int b) {
   const bool already_sorted = internal->vlit (a) < internal->vlit (b);
   binaries.push_back({.clause = res, .id = res->id, .lit1 = already_sorted ? a : b, .lit2 = already_sorted ? b : a});
   if (!full_watching)
-    new_unwatched_binary_clauses.push_back(res);
+    new_unwatched_binary_clauses.push_back (res);
   LOG (res, "learning clause");
   internal->clause.clear();
   if (internal->lrat)
