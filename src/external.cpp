@@ -28,7 +28,7 @@ void External::enlarge (int new_max_var) {
   vsize = new_vsize;
 }
 
-void External::init (int new_max_var) {
+void External::init (int new_max_var, bool extension) {
   assert (!extended);
   if (new_max_var <= max_var)
     return;
@@ -66,7 +66,10 @@ void External::init (int new_max_var) {
     assert (internal->i2e[iidx] == (int) eidx);
     assert (e2i[eidx] == (int) iidx);
   }
-  internal->stats.variables_original += new_vars;
+  if (extension)
+    internal->stats.variables_extension += new_vars;
+  else
+    internal->stats.variables_original += new_vars;
   if (new_max_var >= (int64_t) is_observed.size ())
     is_observed.resize (1 + (size_t) new_max_var, false);
   if (internal->opts.checkfrozen)
@@ -118,12 +121,7 @@ int External::internalize (int elit, bool extension) {
     if (extension && eidx <= max_var)
       FATAL ("can not add a definition for an already used variable %d", eidx);
     if (eidx > max_var) {
-      if (extension)
-        internal->stats.variables_extension++;
-      else
-        internal->stats.variables_original++;
-      // TODO: stats are incremented here and in init !
-      init (eidx);
+      init (eidx, extension);
     }
     if (extension) {
       assert (ervars.size () > (size_t) eidx);
