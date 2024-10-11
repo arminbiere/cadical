@@ -1282,12 +1282,12 @@ void Closure::update_and_gate_unit_build_lrat_chain (Gate *g, int src, uint64_t 
 						  int dst,
 						std::vector<uint64_t> & extra_reasons_lit,
 						std::vector<uint64_t> &extra_reasons_ulit) {
-  
-  push_id_and_rewriting_lrat(g->neg_lhs_ids[0].clause, 0, 0, 0, extra_reasons_ulit, true, dst, 0, 0, g->lhs);
+  LOG ("generate chain for gate boiling down to unit");
+  push_id_and_rewriting_lrat(g->neg_lhs_ids[0].clause, 0, 0, 0, extra_reasons_ulit, true, 0, 0, 0, g->lhs, -dst);
   internal->lrat_chain.clear ();
   unmark_marked_lrat ();
   for (auto id : g->pos_lhs_ids)
-    push_id_and_rewriting_lrat (id.clause, src, id1, id2, extra_reasons_lit, true, dst, 0, 0, -g->lhs);
+    push_id_and_rewriting_lrat (id.clause, src, id1, id2, extra_reasons_lit, true, 0, 0, 0, -g->lhs, dst);
   unmark_marked_lrat ();
   LOG (extra_reasons_lit, "lrat chain for positive side");
 }
@@ -1349,7 +1349,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src, int ds
       std::vector<uint64_t> extra_reasons_lit;
       std::vector<uint64_t> extra_reasons_ulit;
       if (internal->lrat)
-        update_and_gate_unit_build_lrat_chain (g, src, id1, id2, dst,
+        update_and_gate_unit_build_lrat_chain (g, src, id1, id2, g->rhs[0],
                                           extra_reasons_lit,
                                           extra_reasons_ulit);
       if (merge_literals_lrat (g, g, g->lhs, g->rhs[0], extra_reasons_lit,
@@ -1496,44 +1496,6 @@ void Closure::simplify_and_gate (Gate *g) {
   shrink_and_gate (g, falsifies);
   std::vector<uint64_t> reasons_lrat_src, reasons_lrat_usrc;
 
-  if (false && internal->lrat && !(falsifies)) {
-    internal->lrat_chain.clear ();
-    assert (g->neg_lhs_ids.size () ==
-            1); // otherwise we need intermediate clauses
-
-    for (auto id : g->pos_lhs_ids)
-      if (id.current_lit == g->rhs[0]) {
-	push_id_and_rewriting_lrat (id.clause, 0, 0, 0, reasons_lrat_src);
-	// for (auto other : *id.clause) { // add only the required units
-	//   assert (internal->val (other) <= 0);
-	//   if (internal->val (other)) {
-	//     LOG ("found unit %d", other);
-        //     const unsigned uidx = internal->vlit (other);
-        //     uint64_t id = internal->unit_clauses[uidx];
-        //     assert (id);
-        //     reasons_lrat_src.push_back (id);
-        //   }
-	// }
-        // reasons_lrat_src.push_back (id.clause->id);
-      }
-    unmark_marked_lrat();
-    LOG (reasons_lrat_src, "lrat chain for positive side");
-
-    internal->lrat_chain.clear ();
-    // for (auto id : g->units) // the negation contains all units
-    //   reasons_lrat_usrc.push_back (id);
-    // reasons_lrat_usrc.push_back (g->neg_lhs_ids[0].clause->id);
-
-    // for (auto other : *g->neg_lhs_ids[0].clause) {
-    //   if (other != find_eager_representative_and_compress (other)) {
-    // 	reasons_lrat_usrc.push_back(find_representative_lrat (other));
-    //   }
-    // }
-    push_id_and_rewriting_lrat(g->neg_lhs_ids[0].clause, 0, 0, 0, reasons_lrat_usrc);
-    LOG (reasons_lrat_usrc, "lrat chain for negative side");
-    unmark_marked_lrat();
-
-  }
   update_and_gate (g, git, 0, 0, 0, 0, falsifies, 0);
   ++internal->stats.congruence.simplified_ands;
   ++internal->stats.congruence.simplified;
