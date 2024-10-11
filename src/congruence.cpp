@@ -1681,7 +1681,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
       assert (g->pos_lhs_ids.size () ==
               rhs.size ()); // g->arity() not defined yet
       for (auto lit : *g->neg_lhs_ids[0].clause) { // find the units
-        if (internal->val (lit)) {
+        if (internal->val (lit) > 0) {
           const unsigned uidx = internal->vlit (lit);
           uint64_t id = internal->unit_clauses[uidx];
           assert (id);
