@@ -316,13 +316,13 @@ int Closure::find_representative_and_update_eager (int lit) {
   do {
     res = nxt;
     nxt = representative (nxt);
-    if (eager_representative (res) == res)
+    if (internal->lrat && eager_representative (res) == res)
       eager_representative (res) = nxt;
     else {
-      if (eager_representative (res) != nxt)
+      if (internal->lrat && eager_representative (res) != nxt)
 	LOG ("not overwriting existing link to %d, or would have been %d", eager_representative (res), nxt);
     }
-    if (eager_representative (-res) == -res)
+    if (internal->lrat && eager_representative (-res) == -res)
       eager_representative (-res) = -nxt;
   } while (nxt != res);
 
@@ -341,6 +341,8 @@ void Closure::push_lrat_unit (int lit) {
 }
   
 int Closure::find_eager_representative_and_compress (int lit) {
+  if (!internal->lrat)
+    return find_representative (lit);
   int res = lit;
   int nxt = lit;
   int path_length = 0;
@@ -369,7 +371,6 @@ int Closure::find_eager_representative_and_compress (int lit) {
   } else if (path_length == 2) {
     assert (!internal->lrat || eager_representative_id (lit));
   }
-  LOG ("eager representative of %d is %d with reason %" PRIu64, lit, res, eager_representative_id (lit));
   return res;
 }
 
@@ -381,6 +382,7 @@ void Closure::produce_representative_lrat (int lit) {
   assert (internal->lrat);
   LOG ("production of LRAT chain for %d with representative %" PRIu64, lit, eager_representative_id (lit));
   assert (internal->lrat);
+  assert (internal->lrat_chain.empty ());
   int res = lit;
   int nxt = lit;
   assert (nxt != eager_representative (nxt));
@@ -452,8 +454,10 @@ void Closure::index_gate (Gate *g) {
 }
 
 void Closure::push_id_and_rewriting_lrat (Clause *c, int except, uint64_t id1, uint64_t id2, std::vector<uint64_t> &chain, bool insert_id_after,
-					  int except_other, uint64_t id_other1, uint64_t id_other2, int except_lhs) {
-  LOG (c, "computing normalized LRAT chain for clause, rewriting except for %d and %d and skipping %d", except, except_other, except_lhs);
+					  int except_other, uint64_t id_other1, uint64_t id_other2, int except_lhs, int except_lhs2) {
+  LOG (c, "computing normalized LRAT chain for clause, rewriting except for %d (%" PRIu64 ", %" PRIu64
+	  ") and %d (%" PRIu64 ", %" PRIu64 ") and skipping %d", except, id1, id2,
+       except_other, id_other1, id_other2, except_lhs);
   if (!insert_id_after)
     chain.push_back (c->id);
   for (auto other : *c) {
@@ -467,15 +471,27 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, int except, uint64_t id1, u
       chain.push_back (id);
     } else if (other == except_lhs) {
       // do nothing;
-    } else if (other == except && id1) {
+    } else if (other == except_lhs2) {
+      // do nothing;
+    } else if (proof_marked (other))
+      continue;
+    else if (other == except && id1) {
       chain.push_back (id1);
+      proof_marked (other) = 1;
+      proof_analyzed.push_back (other);
     } else if (other == -except && id2) {
       chain.push_back (id2);
+      proof_marked (other) = 1;
+      proof_analyzed.push_back (other);
     } else if (other == except_other && id_other1) {
       chain.push_back (id_other1);
+      proof_marked (other) = 1;
+      proof_analyzed.push_back (other);
     } else if (other == -except_other && id_other2) {
       chain.push_back (id_other2);
-    } else if (other != find_eager_representative_and_compress (other) && !proof_marked (other)) {
+      proof_marked (other) = 1;
+      proof_analyzed.push_back (other);
+    } else if (other != find_eager_representative_and_compress (other)) {
       proof_marked (other) = 1;
       LOG ("reason for representative of %d %d is %" PRIu64, other, eager_representative (other),
           find_representative_lrat (other));
@@ -531,6 +547,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src, int 
     return;
   assert (!g->pos_lhs_ids.empty ());
   assert (internal->analyzed.empty ());
+  std::vector <uint64_t> proof_chain;
   switch (g->tag) {
   case Gate_Type::And_Gate:
     LOG ("clashing %d", clashing);
@@ -540,24 +557,25 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src, int 
 	     "found lrat in gate %d from %zd (looking for %d)",
 	     litId.current_lit, litId.clause->id, lit);
 	if (litId.current_lit == clashing) {
-	  push_id_and_rewriting_lrat (litId.clause, src, id1, id2, internal->lrat_chain, true, 0, 0, 0, -g->lhs);
+	  push_id_and_rewriting_lrat (litId.clause, src, id1, id2, proof_chain, true, 0, 0, 0, -g->lhs);
 	}
       }
-      LOG (internal->lrat_chain, "produced lrat chain");
+      LOG (proof_chain, "produced lrat chain");
     } else {
       for (auto litId : g->pos_lhs_ids) {
         LOG (litId.clause,
              "found lrat in gate %d from %zd (looking for %d)",
              litId.current_lit, litId.clause->id, lit);
-	push_id_and_rewriting_lrat (litId.clause, src, id1, id2, internal->lrat_chain, false, 0, 0, 0, -g->lhs);
+	push_id_and_rewriting_lrat (litId.clause, src, id1, id2, proof_chain, false, 0, 0, 0, -g->lhs);
       }
-      LOG (internal->lrat_chain, "produced lrat chain");
+      LOG (proof_chain, "produced lrat chain");
     }
     unmark_marked_lrat ();
     break;
   default:
     assert (false);
   }
+  internal->lrat_chain = std::move (proof_chain);
 }
 
 void Closure::learn_congruence_unit_unit_lrat_chain (Gate *g, int lit) {
@@ -686,7 +704,8 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
       internal->lrat_chain.clear ();
 
       push_lrat_unit (smaller);
-      internal->lrat_chain = *larger_chain;
+      for (auto id : *larger_chain)
+      internal->lrat_chain.push_back (id);
       LOG (internal->lrat_chain, "lrat chain");
       internal->learn_empty_clause ();
       return false;
@@ -1186,8 +1205,10 @@ void Closure::init_closure () {
   for (auto v : internal->vars) {
     representative (v) = v;
     representative (-v) = -v;
-    eager_representative (v) = v;
-    eager_representative (-v) = -v;
+    if (internal->lrat) {
+      eager_representative (v) = v;
+      eager_representative (-v) = -v;
+    }
   }
   units = internal->propagated;
   Random rand(internal->stats.congruence.rounds);
@@ -1353,9 +1374,49 @@ void Closure::shrink_and_gate (Gate *g, int falsifies, int clashing) {
 }
 
 
+void Closure::update_and_gate_unit_build_lrat_chain (Gate *g, int src, uint64_t id1, uint64_t id2,
+						  int dst,
+						std::vector<uint64_t> & extra_reasons_lit,
+						std::vector<uint64_t> &extra_reasons_ulit) {
+  
+  push_id_and_rewriting_lrat(g->neg_lhs_ids[0].clause, 0, 0, 0, extra_reasons_ulit, true, dst, 0, 0, g->lhs);
+  internal->lrat_chain.clear ();
+  unmark_marked_lrat ();
+  for (auto id : g->pos_lhs_ids)
+    push_id_and_rewriting_lrat (id.clause, src, id1, id2, extra_reasons_lit, true, dst, 0, 0, -g->lhs);
+  unmark_marked_lrat ();
+  LOG (extra_reasons_lit, "lrat chain for positive side");
+}
+
+void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint64_t id1, uint64_t id2,
+						  int dst,
+						std::vector<uint64_t> & extra_reasons_lit,
+						std::vector<uint64_t> &extra_reasons_ulit) {
+  // We need to exclude the LHS each time
+  for (auto clid : h->pos_lhs_ids) {
+    push_id_and_rewriting_lrat (clid.clause, src, id1, id2,
+                                extra_reasons_ulit, !true, dst, 0, 0, -h->lhs);
+  }
+  push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, src, id1, id2,
+                              extra_reasons_ulit, !true, dst, 0, 0, g->lhs);
+  internal->lrat_chain.clear ();
+  unmark_marked_lrat ();
+  LOG (extra_reasons_ulit, "lrat chain for negative side");
+
+  for (auto id : g->pos_lhs_ids)
+    push_id_and_rewriting_lrat (id.clause, src, id1, id2, extra_reasons_lit,
+                                false, dst, 0, 0, -g->lhs);
+  push_id_and_rewriting_lrat (h->neg_lhs_ids[0].clause, src, id1, id2,
+                              extra_reasons_lit, false, dst, 0, 0, h->lhs);
+
+  unmark_marked_lrat ();
+  internal->lrat_chain.clear ();
+  LOG (extra_reasons_lit, "lrat chain for positive side");
+
+}
+
 void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src, int dst,
-			       uint64_t id1, uint64_t id2,  int falsifies, int clashing,
-			       const std::vector<uint64_t> & extra_reasons_lit, const std::vector<uint64_t> &extra_reasons_ulit) {
+			       uint64_t id1, uint64_t id2,  int falsifies, int clashing) {
   LOGGATE (g, "update and gate of arity %ld", g->arity ());
   bool garbage = true;
   if (falsifies || clashing) {
@@ -1380,19 +1441,29 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src, int ds
       learn_congruence_unit (-g->rhs[0]);
       if (internal->lrat)
 	internal->lrat_chain.clear ();
-    }
-    else if (merge_literals_lrat (g, g, g->lhs, g->rhs[0], extra_reasons_lit, extra_reasons_ulit)) {
-      ++internal->stats.congruence.unaries;
-      ++internal->stats.congruence.unary_and;
+    } else {
+      std::vector<uint64_t> extra_reasons_lit;
+      std::vector<uint64_t> extra_reasons_ulit;
+      if (internal->lrat)
+        update_and_gate_unit_build_lrat_chain (g, src, id1, id2, dst,
+                                          extra_reasons_lit,
+                                          extra_reasons_ulit);
+      if (merge_literals_lrat (g, g, g->lhs, g->rhs[0], extra_reasons_lit,
+                               extra_reasons_ulit)) {
+        ++internal->stats.congruence.unaries;
+        ++internal->stats.congruence.unary_and;
+      }
     }
   } else {
     sort_literals (g->rhs);
     Gate *h = find_and_lits (g->rhs);
     if (h) {
       assert (garbage);
-      auto extra_reasons_lit2 = extra_reasons_lit;
-      auto extra_reasons_ulit2 = extra_reasons_ulit;
-      if (internal->lrat) {
+      std::vector<uint64_t> extra_reasons_lit2;
+      std::vector<uint64_t> extra_reasons_ulit2;
+      if (internal->lrat)
+	update_and_gate_build_lrat_chain (g, h, src, id1, id2, dst, extra_reasons_lit2, extra_reasons_ulit2);
+      if (false && internal->lrat) {
 	push_id_and_rewriting_lrat (h->neg_lhs_ids[0].clause, src, id1, id2, extra_reasons_lit2, true);
 	//TODO find better solution
 
@@ -1530,7 +1601,7 @@ void Closure::simplify_and_gate (Gate *g) {
   shrink_and_gate (g, falsifies);
   std::vector<uint64_t> reasons_lrat_src, reasons_lrat_usrc;
 
-  if (internal->lrat && !(falsifies)) {
+  if (false && internal->lrat && !(falsifies)) {
     internal->lrat_chain.clear ();
     assert (g->neg_lhs_ids.size () ==
             1); // otherwise we need intermediate clauses
@@ -1568,7 +1639,7 @@ void Closure::simplify_and_gate (Gate *g) {
     unmark_marked_lrat();
 
   }
-  update_and_gate (g, git, 0, 0, 0, 0, falsifies, 0, reasons_lrat_src, reasons_lrat_usrc);
+  update_and_gate (g, git, 0, 0, 0, 0, falsifies, 0);
   ++internal->stats.congruence.simplified_ands;
   ++internal->stats.congruence.simplified;
 }
@@ -2915,11 +2986,15 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1, uint64_
     size_t i = 0, size =  g->pos_lhs_ids.size ();
     bool found = false;
     int orig_falsifies = falsifies == dst ? src : falsifies;
-    LOG ("keeping chain for %d", orig_falsifies);
+    int orig_clashing = clashing == -dst ? src : clashing;
+    LOG ("keeping chain for %d and %d", orig_falsifies, orig_clashing);
     for (size_t j = 0; j < size; ++j) {
       LOG ("looking at %d [%zd %zd] with val %d", g->pos_lhs_ids[j].current_lit, i, j,
 	   internal->val (g->pos_lhs_ids[i].current_lit));
       g->pos_lhs_ids [i] = g->pos_lhs_ids[j];
+      if (clashing && g->pos_lhs_ids[i].current_lit != orig_clashing && g->pos_lhs_ids[i].current_lit != -orig_clashing
+	  && g->pos_lhs_ids[i].current_lit != clashing && g->pos_lhs_ids[i].current_lit != -clashing)
+	continue;
       if (internal->val (g->pos_lhs_ids[i].current_lit) && g->pos_lhs_ids[i].current_lit != orig_falsifies)
 	continue;
       if (g->pos_lhs_ids[i].current_lit == dst) {
@@ -2950,7 +3025,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1, uint64_
   assert (not_dst_count <= 1);
 
   std::vector<uint64_t> reasons_lrat_src, reasons_lrat_usrc;
-  if (internal->lrat && !falsifies) {
+  if (false && internal->lrat && !falsifies) {
     //reasons_lrat_src.push_back (find_representative_lrat (src));
     internal->lrat_chain.clear ();
     assert (g->neg_lhs_ids.size () == 1); // otherwise we need intermediate clauses
@@ -2971,7 +3046,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1, uint64_
   shrink_and_gate (g, falsifies, clashing);
   LOGGATE (g, "rewritten as");
   //  check_and_gate_implied (g);
-  update_and_gate (g, git, src, dst, id1, id2, falsifies, clashing, reasons_lrat_src, reasons_lrat_usrc);
+  update_and_gate (g, git, src, dst, id1, id2, falsifies, clashing);
   ++internal->stats.congruence.rewritten_ands;
 }
 

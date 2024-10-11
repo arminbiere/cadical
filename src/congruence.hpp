@@ -192,9 +192,13 @@ struct Closure {
   void push_id_and_rewriting_lrat (Clause *c, int except, uint64_t id1, uint64_t id2,
 				   std::vector<uint64_t> &chain, bool = true,
 				   int except_other = 0, uint64_t id_other1 = 0, uint64_t id_other2 = 0,
-				   int execept_lhs = 0);
+				   int execept_lhs = 0, int except_lhs2 = 0);
   void unmark_marked_lrat ();
-
+  void update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint64_t id1, uint64_t id2, int dst,
+					 std::vector<uint64_t> & extra_reasons_lit, std::vector<uint64_t> &extra_reasons_ulit);
+  void update_and_gate_unit_build_lrat_chain (Gate *g, int src, uint64_t id1, uint64_t id2, int dst,
+      std::vector<uint64_t> &extra_reasons_lit,
+      std::vector<uint64_t> &extra_reasons_ulit);
   // occs
   vector<GOccs> gtab;
   GOccs &goccs (int lit);
@@ -212,7 +216,7 @@ struct Closure {
   // simplification
   bool skip_and_gate (Gate *g);
   bool skip_xor_gate (Gate *g);
-  void update_and_gate (Gate *g, GatesTable::iterator, int src, int dst, uint64_t id1, uint64_t id2, int falsified = 0, int clashing = 0, const std::vector<uint64_t>& = {}, const std::vector<uint64_t> & = {});
+  void update_and_gate (Gate *g, GatesTable::iterator, int src, int dst, uint64_t id1, uint64_t id2, int falsified = 0, int clashing = 0);
   void update_xor_gate (Gate *g, GatesTable::iterator);
   void shrink_and_gate (Gate *g, int falsified = 0, int clashing = 0);
   bool simplify_gate (Gate *g);
