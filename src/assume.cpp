@@ -363,7 +363,9 @@ void Internal::failing () {
     }
     clear_analyzed_literals ();
 
-    // TODO: We can not do clause minimization here, right?
+    // Doing clause minimization here does not do anything because
+    // the clause already contains only one literal of each level
+    // and minimization can never reduce the number of levels
 
     VERBOSE (1, "found %zd failed assumptions %.0f%%", clause.size (),
              percent (clause.size (), assumptions.size ()));

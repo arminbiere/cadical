@@ -76,7 +76,6 @@ LidrupClause *LidrupTracer::new_clause () {
   res->next = 0;
   res->hash = last_hash;
   res->id = last_id;
-  // res->chain = std::vector<int64_t> ();
   for (const auto &id : imported_chain) {
     res->chain.push_back (id);
   }
@@ -178,7 +177,6 @@ inline void LidrupTracer::put_binary_lit (int lit) {
   file->put (ch);
 }
 
-// TODO
 inline void LidrupTracer::put_binary_id (int64_t id, bool can_be_negative) {
   assert (binary);
   assert (file);
@@ -233,7 +231,6 @@ void LidrupTracer::lidrup_add_derived_clause (
     put_binary_zero ();
   else
     file->put ("0\n");
-  // flush_if_piping ();
 }
 
 void LidrupTracer::lidrup_add_original_clause (int64_t id,
@@ -256,7 +253,6 @@ void LidrupTracer::lidrup_add_original_clause (int64_t id,
     put_binary_zero ();
   else
     file->put ("0\n");
-  // flush_if_piping ();
 }
 
 void LidrupTracer::lidrup_batch_weaken_restore_and_delete () {

@@ -198,9 +198,9 @@ uint64_t LratChecker::reduce_hash (uint64_t hash, uint64_t size) {
 
 uint64_t LratChecker::compute_hash (const int64_t id) {
   assert (id > 0);
-  unsigned j = id % num_nonces;             // dont know if this is a good
-  uint64_t tmp = nonces[j] * (uint64_t) id; // hash funktion or if it is
-  return last_hash = tmp; // even better than just using id
+  unsigned j = id % num_nonces;
+  uint64_t tmp = nonces[j] * (uint64_t) id;
+  return last_hash = tmp;
 }
 
 LratCheckerClause **LratChecker::find (const int64_t id) {
@@ -235,7 +235,7 @@ bool LratChecker::check_resolution (vector<int64_t> proof_chain) {
     LOG ("LRAT CHECKER resolution check skipped clause is tautological");
     return true;
   }
-  LOG (imported_clause, "LRAT CHECKER checking clause with resolution");
+  // LOG (imported_clause, "LRAT CHECKER checking clause with resolution");
 #ifndef NDEBUG
   for (auto &b : checked_lits)
     assert (!b); // = false;
@@ -306,8 +306,6 @@ bool LratChecker::check (vector<int64_t> proof_chain) {
     checked_lit (-lit) = true;
     if (checked_lit (lit)) {
       LOG (imported_clause, "LRAT CHECKER clause tautological");
-      // currently, we do not notice in factor when we produce
-      // tautological clauses
       assert (!proof_chain.size ()); // would be unnecessary hence a bug
       taut = true;
     }
@@ -343,7 +341,7 @@ bool LratChecker::check (vector<int64_t> proof_chain) {
       LOG ("LRAT CHECKER LRAT failed. Id %" PRId64
            " was used multiple times",
            id);
-      break; // mostly fuzzed and debugged :)
+      break;
     } else
       c->used = true;
     int unit = 0;

@@ -71,7 +71,8 @@ void Internal::build_lrat_for_clause (
   LOG ("building chain for not subsumed clause");
   assert (lrat_chain.empty ());
   assert (sign_marked.empty ());
-  for (const auto lit : clause) { // build chain for each replaced literal
+  // build chain for each replaced literal
+  for (const auto lit : clause) {
     auto other = lit;
     if (val (other) > 0) {
       if (marked_signed (other))
@@ -108,7 +109,6 @@ void Internal::build_lrat_for_clause (
         lrat_chain.push_back (*p);
     mini_chain.clear ();
   }
-  // clear_analyzed_literals ();
   clear_sign_marked_literals ();
   LOG (lrat_chain, "lrat_chain:");
 }
@@ -203,7 +203,7 @@ void Internal::flush_and_learn_binaries () {
 // This performs one round of Tarjan's algorithm, e.g., equivalent literal
 // detection and substitution, on the whole formula.  We might want to
 // repeat it since its application might produce new binary clauses or
-// units.  Such units might even result in an empty clause.
+// units. Such units might even result in an empty clause.
 
 bool Internal::decompose_round () {
 
@@ -422,10 +422,10 @@ bool Internal::decompose_round () {
                 Flags &f = flags (repr);
                 f.seen = true;
                 analyzed.push_back (repr);
+                // no need to reverse dfs_chain because this is handled by
+                // build_lrat_for_clause.
                 dfs_chains[vlit (other)] =
                     decompose_analyze_binary_clauses (dfs, other);
-                // reverse (dfs_chains[vlit (other)].begin (),
-                // dfs_chains[vlit (other)].end ());
                 clear_analyzed_literals ();
               } while (other != parent);
 
@@ -487,10 +487,7 @@ bool Internal::decompose_round () {
   // Finally, mark substituted literals as such and push the equivalences of
   // the substituted literals to their representative on the extension
   // stack to fix an assignment during 'extend'.
-  //
-  // TODO instead of adding the clauses to the extension stack one could
-  // also just simply use the 'e2i' map as a union find data structure.
-  // This would avoid the need to restore these clauses.
+  // It is also necessary to do so for proper IDRUP/LIDRUP/Resolution proofs
 
   vector<int64_t> decompose_ids;
   const size_t size = 2 * (1 + (size_t) max_var);
@@ -699,8 +696,11 @@ bool Internal::decompose_round () {
         (void) shrink_clause (c, l);
       } else if (likely_to_be_kept_clause (c))
         mark_added (c);
-      // we have assert (c->size > 2)
+      // we have shrunken c->size to l so even though there is an assertion
+      // for c->size > 2 at the beginning of this else block, the new size
+      // can be 2 now.
       if (c->size == 2) { // cheaper to update only new binary clauses
+        assert (new_binary_clause);
         update_watch_size (watches (c->literals[0]), c->literals[1], c);
         update_watch_size (watches (c->literals[1]), c->literals[0], c);
       }

@@ -138,7 +138,7 @@ void Internal::init_vars (int new_max_var) {
   if (new_max_var <= max_var)
     return;
   // TODO this breaks ilb????
-  if (level && !external_prop)
+  if (level && !external_prop && !opts.ilb)
     backtrack ();
   LOG ("initializing %d internal variables from %d to %d",
        new_max_var - max_var, max_var + 1, new_max_var);
@@ -339,7 +339,7 @@ void Internal::init_preprocessing_limits () {
 
   if (!incremental) {
 
-    last.ternary.marked = -1; // TODO explain why this is necessary.
+    last.ternary.marked = -1; // TODO this should not be necessary...
 
     lim.compact = stats.conflicts + opts.compactint;
     LOG ("initial compact limit %" PRId64 " increment %" PRId64 "",

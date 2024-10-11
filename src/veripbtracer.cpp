@@ -167,7 +167,6 @@ inline void VeripbTracer::put_binary_lit (int lit) {
   file->put (ch);
 }
 
-// TODO
 inline void VeripbTracer::put_binary_id (int64_t id, bool can_be_negative) {
   assert (binary);
   assert (file);
