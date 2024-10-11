@@ -469,7 +469,13 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, int except, uint64_t id1, u
       // do nothing;
     } else if (proof_marked (other))
       continue;
-    else if (other == except && id1) {
+    else if (internal->val (other) < 0) {
+      LOG ("found unit %d", -other);
+      const unsigned uidx = internal->vlit (-other);
+      uint64_t id = internal->unit_clauses[uidx];
+      assert (id);
+      chain.push_back (id);
+    } else if (other == except && id1) {
       chain.push_back (id1);
       proof_marked (other) = 1;
       proof_analyzed.push_back (other);
@@ -492,13 +498,7 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, int except, uint64_t id1, u
       proof_analyzed.push_back (other);
       chain.push_back (find_representative_lrat (other));
     }
-    else if (internal->val (other) < 0) {
-      LOG ("found unit %d", -other);
-      const unsigned uidx = internal->vlit (-other);
-      uint64_t id = internal->unit_clauses[uidx];
-      assert (id);
-      chain.push_back (id);
-    } else {
+    else {
       LOG ("no rewriting needed for %d", other);
     }
   }
@@ -1277,13 +1277,12 @@ void Closure::shrink_and_gate (Gate *g, int falsifies, int clashing) {
   g->shrunken = true;
 }
 
-
 void Closure::update_and_gate_unit_build_lrat_chain (Gate *g, int src, uint64_t id1, uint64_t id2,
 						  int dst,
 						std::vector<uint64_t> & extra_reasons_lit,
 						std::vector<uint64_t> &extra_reasons_ulit) {
   LOG ("generate chain for gate boiling down to unit");
-  push_id_and_rewriting_lrat(g->neg_lhs_ids[0].clause, 0, 0, 0, extra_reasons_ulit, true, 0, 0, 0, g->lhs, -dst);
+  push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, 0, 0, 0, extra_reasons_ulit, true, 0, 0, 0, g->lhs, -dst);
   internal->lrat_chain.clear ();
   unmark_marked_lrat ();
   for (auto id : g->pos_lhs_ids)
