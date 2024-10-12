@@ -59,7 +59,7 @@ LitClausePair make_LitClausePair (int lit, Clause* cl);
 
 struct Gate {
 #ifdef LOGGING
-  unsigned id;
+  uint64_t id;
 #endif  
   int lhs;
   Gate_Type tag;
@@ -108,9 +108,7 @@ struct Hash {
 
 struct Closure {
 
-  Closure (Internal *i) : internal (i), table (128, Hash (nonces)) {
-    
-  }
+  Closure (Internal *i);
 
   Internal *const internal;
   vector<CompactBinary> binaries;
@@ -140,7 +138,7 @@ struct Closure {
   vector<signed char> proof_analyzed;
 
 #ifdef LOGGING
-  unsigned fresh_id;
+  uint64_t fresh_id;
 #endif  
 
   uint64_t& new_largecounts(int lit);
@@ -149,6 +147,7 @@ struct Closure {
   void unmark_all ();
   vector<int> representant; // union-find
   vector<int> eager_representant; // union-find
+  vector<uint64_t> representant_id; // lrat version of union-find
   vector<uint64_t> eager_representant_id; // lrat version of union-find
   int & representative (int lit);
   int representative (int lit) const;
@@ -160,7 +159,10 @@ struct Closure {
   void find_eager_representative_and_compress_both (int); // generates clauses for -lit and lit
   uint64_t & eager_representative_id (int lit);
   uint64_t eager_representative_id (int lit) const;
+  uint64_t &representative_id (int lit);
+  uint64_t representative_id (int lit) const;
   uint64_t find_representative_lrat (int lit);
+  void produce_eager_representative_lrat (int lit);
   void produce_representative_lrat (int lit);
   Clause* add_binary_clause (int a, int b);
 
