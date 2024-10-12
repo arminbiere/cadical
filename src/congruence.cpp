@@ -318,6 +318,10 @@ int Closure::find_representative (int lit) {
 }
 
 int Closure::find_representative_and_update_eager (int lit) {
+  return find_representative_and_compress (lit, true);
+}
+
+int Closure::find_representative_and_compress (int lit, bool update_eager) {
   LOG ("finding representative of %d", lit);
   int res = lit;
   int nxt = lit;
@@ -345,21 +349,26 @@ int Closure::find_representative_and_update_eager (int lit) {
     if (internal->lrat) {
       produce_representative_lrat (lit);
     }
-    eager_representative (lit) = res;
+    if (update_eager)
+      eager_representative (lit) = res;
     Clause *equiv = add_binary_clause (-lit, res);
     equiv->hyper = true;
 
     if (internal->lrat && equiv) {
-      eager_representative_id (lit) = representative_id (lit) = equiv->id;
+      representative_id (lit) = equiv->id;
+      if (update_eager)
+	eager_representative_id (lit) = equiv->id;
     }
     if (internal->lrat)
       internal->lrat_chain.clear ();
   } else if (path_length == 2) {
     LOG ("duplicating information %d -> %d to eager with clause %" PRIu64,
          lit, res, representative_id (lit));
-    eager_representative_id (lit) = representative_id (lit);
-    eager_representative (lit) = res;
-    assert (!internal->lrat || eager_representative_id (lit));
+    if (update_eager) {
+      eager_representative (lit) = res;
+      eager_representative_id (lit) = representative_id (lit);
+      assert (!internal->lrat || eager_representative_id (lit));
+    }
   }
 
   if (lit != res) {
@@ -701,10 +710,10 @@ bool Closure::merge_literals_lrat (
   assert (g == h || h->lhs == other);
   LOG ("merging literals %d and %d", lit, other);
   // TODO: this should not update_eager but still calculate the LRAT chain below!
-  const int repr_lit = find_representative_and_update_eager (lit);
-  const int repr_other = find_representative_and_update_eager (other);
-  find_eager_representative_and_compress_both (lit);
-  find_eager_representative_and_compress_both (other);
+  const int repr_lit = find_representative_and_compress (lit, false);
+  const int repr_other = find_representative_and_compress (other, false);
+  find_representative_and_compress (-lit, false);
+  find_representative_and_compress (-other, false);
   LOG ("merging literals %d [=%d] and %d [=%d]", lit, repr_lit, other,
        repr_other);
   LOG (internal->lrat_chain, "lrat chain beginning of merge");
@@ -798,11 +807,11 @@ bool Closure::merge_literals_lrat (
     if (internal->lrat) {
       push_id_and_rewriting_lrat (
           eq1_tmp, lit == repr_lit ? 0 : lit,
-          lit == repr_lit ? 0 : find_representative_lrat (lit),
-          lit == repr_lit ? 0 : find_representative_lrat (-lit),
+          lit == repr_lit ? 0 : representative_id (lit),
+          lit == repr_lit ? 0 : representative_id (-lit),
           internal->lrat_chain, true, other == repr_other ? 0 : other,
-          other == repr_other ? 0 : find_representative_lrat (other),
-          other == repr_other ? 0 : find_representative_lrat (-other));
+          other == repr_other ? 0 : representative_id (other),
+          other == repr_other ? 0 : representative_id (-other));
       unmark_marked_lrat ();
     }
     internal->assign_unit (-larger_repr);
@@ -813,11 +822,11 @@ bool Closure::merge_literals_lrat (
         push_lrat_unit (-larger_repr);
       push_id_and_rewriting_lrat (
           eq2_tmp, lit == repr_lit ? 0 : lit,
-          lit == repr_lit ? 0 : find_representative_lrat (lit),
-          lit == repr_lit ? 0 : find_representative_lrat (-lit),
+          lit == repr_lit ? 0 : representative_id (lit),
+          lit == repr_lit ? 0 : representative_id (-lit),
           internal->lrat_chain, true, other == repr_other ? 0 : other,
-          other == repr_other ? 0 : find_representative_lrat (other),
-          other == repr_other ? 0 : find_representative_lrat (-other),
+          other == repr_other ? 0 : representative_id (other),
+          other == repr_other ? 0 : representative_id (-other),
           larger != larger_repr ? larger_repr : 0);
       unmark_marked_lrat ();
       LOG (internal->lrat_chain, "lrat chain");
@@ -893,11 +902,11 @@ bool Closure::merge_literals_lrat (
       assert (!proof_marked (-lit));
       push_id_and_rewriting_lrat (
           eq1_tmp, smaller_repr != smaller ? smaller : 0,
-          smaller_repr != smaller ? find_representative_lrat (smaller) : 0,
-          smaller_repr != smaller ? find_representative_lrat (-smaller) : 0,
+          smaller_repr != smaller ? representative_id (smaller) : 0,
+          smaller_repr != smaller ? representative_id (-smaller) : 0,
           internal->lrat_chain, true, larger_repr != larger ? larger : 0,
-          larger_repr != larger ? find_representative_lrat (larger) : 0,
-          larger_repr != larger ? find_representative_lrat (-larger) : 0);
+          larger_repr != larger ? representative_id (larger) : 0,
+          larger_repr != larger ? representative_id (-larger) : 0);
     }
     eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
   } else {
@@ -918,11 +927,11 @@ bool Closure::merge_literals_lrat (
       // eq2 = larger, -smaller
       push_id_and_rewriting_lrat (
           eq2_tmp, smaller_repr != smaller ? smaller : 0,
-          smaller_repr != smaller ? find_representative_lrat (smaller) : 0,
-          smaller_repr != smaller ? find_representative_lrat (-smaller) : 0,
+          smaller_repr != smaller ? representative_id (smaller) : 0,
+          smaller_repr != smaller ? representative_id (-smaller) : 0,
           internal->lrat_chain, true, larger_repr != larger ? larger : 0,
-          larger_repr != larger ? find_representative_lrat (larger) : 0,
-          larger_repr != larger ? find_representative_lrat (-larger) : 0);
+          larger_repr != larger ? representative_id (larger) : 0,
+          larger_repr != larger ? representative_id (-larger) : 0);
     }
 
     eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
