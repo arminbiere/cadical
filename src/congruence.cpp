@@ -1356,10 +1356,10 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
   // We need to exclude the LHS each time
   for (auto clid : h->pos_lhs_ids) {
     push_id_and_rewriting_lrat (clid.clause, src, id1, id2,
-                                extra_reasons_ulit, !true, dst, 0, 0, -h->lhs);
+                                extra_reasons_ulit, false, dst, 0, 0, -h->lhs);
   }
   push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, src, id1, id2,
-                              extra_reasons_ulit, !true, dst, 0, 0, g->lhs);
+                              extra_reasons_ulit, true, dst, 0, 0, g->lhs);
   internal->lrat_chain.clear ();
   unmark_marked_lrat ();
   LOG (extra_reasons_ulit, "lrat chain for negative side");
@@ -1368,7 +1368,7 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
     push_id_and_rewriting_lrat (id.clause, src, id1, id2, extra_reasons_lit,
                                 false, dst, 0, 0, -g->lhs);
   push_id_and_rewriting_lrat (h->neg_lhs_ids[0].clause, src, id1, id2,
-                              extra_reasons_lit, false, dst, 0, 0, h->lhs);
+                              extra_reasons_lit, !false, dst, 0, 0, h->lhs);
 
   unmark_marked_lrat ();
   internal->lrat_chain.clear ();
