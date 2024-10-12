@@ -584,14 +584,15 @@ void Closure::learn_congruence_unit_unit_lrat_chain (Gate *g, int lit) {
 
 
 bool Closure::learn_congruence_unit (int lit) {
-  assert (!internal->unsat);
   assert (!internal->lrat || !internal->lrat_chain.empty());
   LOG ("adding unit %d with current value %d", lit, internal->val(lit));
   ++internal->stats.congruence.units;
   const signed char val_lit = internal->val(lit);
   if (val_lit > 0)
     return true;
-  if (val_lit < 0) {
+  // TODO this is done in Kissat, but we try to make the lrat/drat code as close as possible. So We
+  // do not learn the empty clause here.
+  if (false && val_lit < 0) {
     LOG ("fount unsat");
     internal->learn_empty_clause();
     return false;
@@ -3182,6 +3183,7 @@ size_t Closure::propagate_units_and_equivalences () {
   LOG ("propagating at least %zd units", schedule.size());
   assert (internal->lrat_chain.empty ());
   while (propagate_units() && !schedule.empty()) {
+    assert (!internal->unsat);
     assert (internal->lrat_chain.empty ());
     ++propagated;
     int lit = schedule.front ();
