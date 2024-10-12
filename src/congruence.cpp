@@ -617,7 +617,10 @@ bool Closure::learn_congruence_unit (int lit) {
 // for merging the literals there are many cases
 // TODO: LRAT does not work if the LHS is not in normal form and if the representative
 // is also in the gate.
-bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const std::vector<uint64_t> & extra_reasons_lit, const std::vector<uint64_t> &extra_reasons_ulit) {
+bool Closure::merge_literals_lrat (
+    Gate *g, Gate *h, int lit, int other,
+    const std::vector<uint64_t> &extra_reasons_lit,
+    const std::vector<uint64_t> &extra_reasons_ulit) {
   assert (!internal->unsat);
   assert (g->lhs == lit);
   assert (g == h || h->lhs == other);
@@ -626,7 +629,8 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
   const int repr_other = find_representative_and_update_eager (other);
   find_eager_representative_and_compress_both (lit);
   find_eager_representative_and_compress_both (other);
-  LOG ("merging literals %d [=%d] and %d [=%d]", lit, repr_lit, other, repr_other);
+  LOG ("merging literals %d [=%d] and %d [=%d]", lit, repr_lit, other,
+       repr_other);
   LOG (internal->lrat_chain, "lrat chain beginning of merge");
 
   if (repr_lit == repr_other) {
@@ -639,27 +643,32 @@ bool Closure::merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const s
   const int val_lit = internal->val (lit);
   const int val_other = internal->val (other);
 
-  // For LRAT we need to distinguish more cases for a more regular reconstruction.
+  // For LRAT we need to distinguish more cases for a more regular
+  // reconstruction.
   //
   // 1. if lit = -other, then we learn lit and -lit to derive false
   //
-  // 2. otherwise, we learn the new clauses lit = -other (which are two real clauses).
+  // 2. otherwise, we learn the new clauses lit = -other (which are two real
+  // clauses).
   //
-  //    2a. if repr_lit = -repr_other, we learn the units repr_lit and -repr_lit to derive false
+  //    2a. if repr_lit = -repr_other, we learn the units repr_lit and
+  //    -repr_lit to derive false
   //
-  //    2b. otherwise, we learn the equivalences repr_lit = -repr_other (which are two real clauses)
+  //    2b. otherwise, we learn the equivalences repr_lit = -repr_other
+  //    (which are two real clauses)
   //
-  // Without LRAT this is easier, as we directly learn the conclusion (either false or the
-  // equivalence). The steps can also not be merged because repr_lit can appear in the gate and
-  // hence in the resolution chain.
+  // Without LRAT this is easier, as we directly learn the conclusion
+  // (either false or the equivalence). The steps can also not be merged
+  // because repr_lit can appear in the gate and hence in the resolution
+  // chain.
   int smaller_repr = repr_lit;
   int larger_repr = repr_other;
   int smaller = lit;
   int larger = other;
-  const std::vector<uint64_t> * smaller_chain = &extra_reasons_ulit;
-  const std::vector<uint64_t> * larger_chain = &extra_reasons_lit;
+  const std::vector<uint64_t> *smaller_chain = &extra_reasons_ulit;
+  const std::vector<uint64_t> *larger_chain = &extra_reasons_lit;
 
-  if (abs(smaller_repr) > abs(larger_repr)) {
+  if (abs (smaller_repr) > abs (larger_repr)) {
     swap (smaller_repr, larger_repr);
     swap (smaller, larger);
     swap (smaller_chain, larger_chain);
