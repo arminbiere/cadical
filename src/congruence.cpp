@@ -297,12 +297,12 @@ int Closure::representative (int lit) const {
 }
 
 int & Closure::eager_representative (int lit) {
-  assert (internal->vlit (lit) < representant.size());
+  assert (internal->vlit (lit) < eager_representant.size());
   return eager_representant[internal->vlit (lit)];
 }
 
 int Closure::eager_representative (int lit) const {
-  assert (internal->vlit (lit) < representant.size());
+  assert (internal->vlit (lit) < eager_representant.size());
   return eager_representant[internal->vlit (lit)];
 }
 
@@ -363,10 +363,11 @@ int Closure::find_representative_and_compress (int lit, bool update_eager) {
       internal->lrat_chain.clear ();
   } else if (path_length == 2) {
     LOG ("duplicating information %d -> %d to eager with clause %" PRIu64,
-         lit, res, representative_id (lit));
+         lit, res);
     if (update_eager) {
       eager_representative (lit) = res;
-      eager_representative_id (lit) = representative_id (lit);
+      if (internal->lrat)
+	eager_representative_id (lit) = representative_id (lit);
       assert (!internal->lrat || eager_representative_id (lit));
     }
   }
@@ -481,20 +482,20 @@ uint64_t Closure::find_representative_lrat (int lit) {
 }
 
 uint64_t & Closure::eager_representative_id (int lit) {
-  assert (internal->vlit (lit) < representant.size());
+  assert (internal->vlit (lit) < eager_representant_id.size());
   return eager_representant_id[internal->vlit (lit)];
 }
 uint64_t Closure::eager_representative_id (int lit) const {
-  assert (internal->vlit (lit) < representant.size());
+  assert (internal->vlit (lit) < eager_representant_id.size());
   return eager_representant_id[internal->vlit (lit)];
 }
 
 uint64_t & Closure::representative_id (int lit) {
-  assert (internal->vlit (lit) < representant.size());
+  assert (internal->vlit (lit) < representant_id.size());
   return representant_id[internal->vlit (lit)];
 }
 uint64_t Closure::representative_id (int lit) const {
-  assert (internal->vlit (lit) < representant.size());
+  assert (internal->vlit (lit) < representant_id.size());
   return representant_id[internal->vlit (lit)];
 }
 
@@ -1247,8 +1248,8 @@ uint64_t &Closure::largecount (int lit) {
 
 void Closure::init_closure () {
   representant.resize(2*internal->max_var+3);
+  eager_representant.resize(2*internal->max_var+3);
   if (internal->lrat) {
-    eager_representant.resize(2*internal->max_var+3);
     eager_representant_id.resize(2*internal->max_var+3);
     representant_id.resize(2*internal->max_var+3);
     proof_marks.resize(2*internal->max_var+3);
