@@ -2977,6 +2977,12 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1, uint64_
     return;
   if (!gate_contains (g, src))
     return;
+  if (internal->val (src)) {
+    // In essence the code below does the same thing as simplify_and_gate but the necessary LRAT
+    // chain are different.
+    simplify_and_gate (g);
+    return;
+  }
   assert (src);
   assert (dst);
   assert (internal->val (src) == internal->val (dst));
