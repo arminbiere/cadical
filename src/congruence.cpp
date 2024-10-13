@@ -388,7 +388,18 @@ void Closure::push_lrat_unit (int lit) {
   assert (id);
   internal->lrat_chain.push_back (id);
 }
-  
+
+int Closure::find_eager_representative (int lit) {
+  int res = lit;
+  int nxt = lit;
+  do {
+    res = nxt;
+    nxt = eager_representative (nxt);
+  } while (nxt != res);
+
+  return res;
+}
+
 int Closure::find_eager_representative_and_compress (int lit) {
   if (!internal->lrat)
     return find_representative (lit);
@@ -541,6 +552,19 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, int except, uint64_t id1, u
   LOG (c, "computing normalized LRAT chain for clause, rewriting except for %d (%" PRIu64 ", %" PRIu64
 	  ") and %d (%" PRIu64 ", %" PRIu64 ") and skipping %d and %d", except, id1, id2,
        except_other, id_other1, id_other2, except_lhs, except_lhs2);
+  if (internal->lrat && c->size == 2) {
+    const int lit = c->literals[0];
+    const int other = c->literals[1];
+    const int larger = abs (lit) > abs (other) ? lit : other;
+    const int smaller = abs (lit) > abs (other) ? other : lit;
+    if (smaller == find_eager_representative_and_compress (-larger) && eager_representative_id(-larger) == c->id) {
+      LOG ("clause is already reason for rewriting, blocking it");
+      proof_marked (-larger) = 1;
+      proof_analyzed.push_back(larger);
+    } else {
+      LOG ("%d -> %d is not %" PRIu64 " but -> %d", larger, smaller, c->id, find_eager_representative (larger));
+    }
+  }
   if (!insert_id_after)
     chain.push_back (c->id);
   for (auto other : *c) {

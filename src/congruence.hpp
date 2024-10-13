@@ -156,6 +156,7 @@ struct Closure {
   int find_representative (int lit);
   int find_representative_and_update_eager (int lit);
   int find_representative_and_compress (int, bool update_eager = true);
+  int find_eager_representative (int);
   int find_eager_representative_and_compress (int);
   void find_eager_representative_and_compress_both (int); // generates clauses for -lit and lit
   uint64_t & eager_representative_id (int lit);
