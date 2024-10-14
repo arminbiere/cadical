@@ -894,7 +894,18 @@ bool Closure::merge_literals_lrat (
     const int unit = (val_lit < 0) ? -other : other;
     if (internal->lrat) {
       signed char val_smaller = internal->val (smaller);
-      Clause *c = lit == smaller ? eq1_tmp : eq2_tmp;
+      Clause *c;
+      if (lit == smaller){
+	if (val_lit < 0)
+	  c = eq1_tmp;
+	else
+	  c = eq2_tmp;
+      } else {
+	if (val_lit < 0)
+	  c = eq2_tmp;
+	else
+	  c = eq1_tmp;
+      }
       int neg = val_lit ? lit : -lit;
       push_id_and_rewriting_lrat (c, 0, 0, 0, internal->lrat_chain, true, 0,
                                   0, 0, -neg, unit);
@@ -910,7 +921,19 @@ bool Closure::merge_literals_lrat (
     assert (internal->lrat_chain.empty ());
     const int unit = (val_other < 0) ? -lit : lit;
     if (internal->lrat) {
-      Clause *c = val_lit ? eq2_tmp : eq1_tmp;
+      Clause *c;
+      if (lit == smaller){
+	if (val_lit < 0)
+	  c = eq1_tmp;
+	else
+	  c = eq2_tmp;
+      } else {
+	if (val_lit < 0)
+	  c = eq2_tmp;
+	else
+	  c = eq1_tmp;
+      }
+      int neg = val_lit ? lit : -lit;
       push_id_and_rewriting_lrat (c, 0, 0, 0, internal->lrat_chain, true);
     }
     learn_congruence_unit (unit);
