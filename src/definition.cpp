@@ -237,7 +237,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
 #endif
       reduced = kitten_compute_clausal_core (citten, &learned);
       LOG ("%d sub-solver core of size %u original clauses out of %u", i,
-           reduced, exported); // TODO happy ordinal
+           reduced, exported);
       assert (reduced <= previous);
 #if not defined(LOGGING) && defined(NDEBUG)
       (void) reduced;

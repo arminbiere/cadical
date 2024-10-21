@@ -37,7 +37,6 @@ struct Factoring {
   int64_t limit;
   FactorSchedule schedule;
 
-  size_t size, allocated;
   int initial;
   unsigned bound;
   vector<unsigned> count;

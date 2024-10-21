@@ -106,7 +106,7 @@ Factoring::Factoring (Internal *i, int64_t l)
     : internal (i), limit (l), schedule (i) {
   const unsigned max_var = internal->max_var;
   const unsigned max_lit = 2 * (max_var + 1);
-  initial = allocated = size = max_var;
+  initial = max_var;
   bound = internal->lim.elimbound;
   enlarge_zero (count, max_lit);
   quotients.first = quotients.last = 0;
@@ -459,22 +459,13 @@ void Internal::factorize_next (Factoring &factoring, int next,
   (void) expected_next_count;
 }
 
+// We only need to enlarge factoring.count as everything else is
+// initialized in internal
 void Internal::resize_factoring (Factoring &factoring, int lit) {
   assert (lit > 0);
-  // const size_t old_size = factoring.size;
-  assert ((size_t) lit >= factoring.size);
-  const size_t old_allocated = factoring.allocated;
   size_t new_var_size = lit + 1;
   size_t new_lit_size = 2 * new_var_size;
-  
-  // since we have vectors instead of arrays as in kissat this is easy
-  // TODO: maybe exponential resize ?
-  // or remove allocated...
-  if (new_var_size > old_allocated) {
-    enlarge_zero (factoring.count, new_lit_size);
-    factoring.allocated = new_var_size;
-  }
-  factoring.size = new_var_size;
+  enlarge_zero (factoring.count, new_lit_size);
 }
 
 void Internal::flush_unmatched_clauses (Quotient *q) {
@@ -504,6 +495,10 @@ void Internal::flush_unmatched_clauses (Quotient *q) {
   prev_clauses.resize (n);
 }
 
+// special case when we have two quotients with negated factors.
+// in this case, factoring does not make sense, and instead we
+// can resolve the clauses of the two quotients.
+// this subsumes all clauses in all quotients.
 void Internal::add_self_subsuming_factor (Quotient *q, Quotient *p) {
   const int factor = q->factor;
   const int not_factor = p->factor;
@@ -587,6 +582,8 @@ bool Internal::self_subsuming_factor (Quotient *q) {
   return false;
 }
 
+// this is a pure binary clauses containing fresh and one other literal
+// it is added for all applicable quotients.
 void Internal::add_factored_divider (Quotient *q, int fresh) {
   const int factor = q->factor;
   LOG ("factored %d divider %d", factor, fresh);
@@ -598,6 +595,9 @@ void Internal::add_factored_divider (Quotient *q, int fresh) {
     mini_chain.push_back (-clause_id);
 }
 
+// this clause is blocked on fresh, i.e., it contains all literals from
+// the binaries above, but negated. This is only added to the proof, to
+// make checking easier.
 void Internal::blocked_clause (Quotient *q, int not_fresh) {
   if (!proof) return;
   int64_t new_id = ++clause_id;
@@ -612,6 +612,9 @@ void Internal::blocked_clause (Quotient *q, int not_fresh) {
   clause.clear ();
 }
 
+// this is the other side of the factored clauses. To derive these,
+// one can resolved the blocked clause on all matching clauses of
+// one type
 void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
   LOG ("adding factored quotient[%zu] clauses", q->id);
   const int factor = q->factor;
@@ -652,6 +655,7 @@ void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
   }
 }
 
+// remove deleted clauses once factored.
 void Internal::eagerly_remove_from_occurences (Clause *c) {
   for (const auto &lit : *c) {
     auto &occ = occs (lit);
@@ -668,6 +672,7 @@ void Internal::eagerly_remove_from_occurences (Clause *c) {
   }
 }
 
+// delete the factored clauses
 void Internal::delete_unfactored (Quotient *q) {
   LOG ("deleting unfactored quotient[%zu] clauses", q->id);
   for (auto c : q->qlauses) {
@@ -678,7 +683,7 @@ void Internal::delete_unfactored (Quotient *q) {
   }
 }
 
-
+// update the priority queue for scheduling
 void Internal::update_factored (Factoring &factoring, Quotient *q) {
   const int factor = q->factor;
   update_factor_candidate (factoring, factor);
@@ -691,7 +696,6 @@ void Internal::update_factored (Factoring &factoring, Quotient *q) {
   }
 }
 
-// TODO: schedule factored variable?
 bool Internal::apply_factoring (Factoring &factoring, Quotient *q) {
   for (Quotient *p = q; p->prev; p = p->prev)
     flush_unmatched_clauses (p);
@@ -752,7 +756,7 @@ void Internal::schedule_factorization (Factoring &factoring) {
 }
 
 bool Internal::run_factorization (int64_t limit) {
-  Factoring factoring = Factoring (this, limit); // TODO new or not new
+  Factoring factoring = Factoring (this, limit);
   schedule_factorization (factoring);
   bool done = false;
 #ifndef QUIET
@@ -799,7 +803,9 @@ bool Internal::run_factorization (int64_t limit) {
       Quotient *q = best_quotient (factoring, &reduction);
       if (q && reduction > factoring.bound) {
         if (apply_factoring (factoring, q)) {
+#ifndef QUIET
           factored++;
+#endif
         } else
           done = true;
       }
@@ -816,7 +822,9 @@ bool Internal::run_factorization (int64_t limit) {
   }
   // kissat initializes scores for new variables at this point, however
   // this is actually done already during resize of internal
+#ifndef QUIET
   report ('f', !factored);
+#endif
   return completed;
 }
 
@@ -865,14 +873,15 @@ void Internal::factor () {
     limit += stats.factor_ticks;
   }
 
-  // TODO commented code for messages
-  /*
+#ifndef QUIET
   struct {
     int64_t variables, clauses, ticks;
   } before, after, delta;
   before.variables = stats.variables_extension + stats.variables_original;
   before.ticks = stats.factor_ticks;
-  */
+  before.clauses = stats.current.irredundant;
+#endif
+
   factor_mode ();
   bool completed = run_factorization (limit);
   reset_factor_mode ();
@@ -881,31 +890,23 @@ void Internal::factor () {
   if (!unsat && !propagate ()) {
     learn_empty_clause ();
   }
-  /*
-  after.variables = s->variables_extension + s->variables_original;
-  after.binary = BINARY_CLAUSES;
-  after.clauses = IRREDUNDANT_CLAUSES;
-  after.ticks = s->factor_ticks;
+
+#ifndef QUIET
+  after.variables = stats.variables_extension + stats.variables_original;
+  after.clauses = stats.current.irredundant;
+  after.ticks = stats.factor_ticks;
   delta.variables = after.variables - before.variables;
-  delta.binary = before.binary - after.binary;
   delta.clauses = before.clauses - after.clauses;
   delta.ticks = after.ticks - before.ticks;
-  kissat_very_verbose (solver, "used %f million factorization ticks",
-                       delta.ticks * 1e-6);
-  kissat_phase (solver, "factorization", GET (factorizations),
-                "introduced %" PRId64 " extension variables %.0f%%",
-                delta.variables,
-                kissat_percent (delta.variables, before.variables));
-  kissat_phase (solver, "factorization", GET (factorizations),
-                "removed %" PRId64 " binary clauses %.0f%%", delta.binary,
-                kissat_percent (delta.binary, before.binary));
-  kissat_phase (solver, "factorization", GET (factorizations),
-                "removed %" PRId64 " large clauses %.0f%%", delta.clauses,
-                kissat_percent (delta.clauses, before.clauses));
+  VERBOSE (2, "used %f million factorization ticks", delta.ticks * 1e-6);
+  phase ("factorization", stats.factor,
+         "introduced %" PRId64 " extension variables %.0f%%",
+          delta.variables, percent (delta.variables, before.variables));
+  phase ("factorization", stats.factor,
+          "removed %" PRId64 " irredundant clauses %.0f%%", delta.clauses,
+           percent (delta.clauses, before.clauses));
+#endif
 
-  VERBOSE (2, "factored %" PRIu64 " new variables", factored);
-  VERBOSE (2, "factorization added %" PRIu64 " and deleted %" PRIu64 " clauses", added, deleted);
-  */
   if (completed)
     last.factor.marked = stats.mark.factor;
   STOP_SIMPLIFIER (factor, FACTOR);
