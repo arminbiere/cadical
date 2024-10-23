@@ -558,7 +558,7 @@ void Internal::vivify_strengthen (Clause *c) {
 
   if (clause.size () == 1) {
 
-    backtrack ();
+    backtrack_without_updating_phases ();
     const int unit = clause[0];
     LOG (c, "vivification shrunken to unit %d", unit);
     assert (!val (unit));
@@ -1492,7 +1492,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   }
 
   if (level)
-    backtrack ();
+    backtrack_without_updating_phases ();
 
   if (!unsat) {
 
@@ -1618,6 +1618,7 @@ void Internal::vivify () {
     backtrack ();
   assert (opts.vivify);
   assert (!level);
+  private_steps = true;
 
   START_SIMPLIFIER (vivify, VIVIFY);
   stats.vivifications++;
@@ -1698,6 +1699,7 @@ void Internal::vivify () {
 
   int64_t delta = scale (opts.vivifyint * (stats.vivifications + 1));
   lim.vivify = stats.conflicts + delta;
+  private_steps = false;
 
   if (opts.transred)
     transred ();
