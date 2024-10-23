@@ -344,9 +344,9 @@ bool Internal::decompose_round () {
 
               if (unsat)
                 break;
-
+#ifndef QUIET
               LOG ("SCC of representative %d of size %d", repr, size);
-
+#endif
               do {
                 assert (!scc.empty ());
                 other = scc.back ();
@@ -637,7 +637,7 @@ bool Internal::decompose_round () {
         c->id = clause_id;
       }
       size_t l;
-      int * literals = c->literals;
+      int *literals = c->literals;
       for (l = 2; l < clause.size (); l++)
         literals[l] = clause[l];
       int flushed = c->size - (int) l;

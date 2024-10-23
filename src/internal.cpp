@@ -11,13 +11,14 @@ Internal::Internal ()
       protected_reasons (false), force_saved_phase (false),
       searching_lucky_phases (false), stable (false), reported (false),
       external_prop (false), did_external_prop (false),
-      external_prop_is_lazy (true), rephased (0), vsize (0), max_var (0),
+      external_prop_is_lazy (true), forced_backt_allowed (false),
+      private_steps (false), rephased (0), vsize (0), max_var (0),
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
-      saved_decisions (0), concluded (false), lrat (false), level (0),
+      concluded (false), lrat (false), level (0),
       vals (0), score_inc (1.0), scores (this), conflict (0), ignore (0),
-      dummy_binary (0), external_reason (&external_reason_clause),
+      external_reason (&external_reason_clause),
       newest_clause (0), force_no_backtrack (false),
-      from_propagator (false), tainted_literal (0), notified (0),
+      from_propagator (false), ext_clause_forgettable (false), tainted_literal (0), notified (0),
       probe_reason (0), propagated (0), propagated2 (0), propergated (0),
       best_assigned (0), target_assigned (0), no_conflict_until (0),
       unsat_constraint (false), marked_failed (true), num_assigned (0),
@@ -29,6 +30,17 @@ Internal::Internal ()
       termination_forced (false), vars (this->max_var),
       lits (this->max_var) {
   control.push_back (Level (0, 0));
+
+  // The 'dummy_binary' is used in 'try_to_subsume_clause' to fake a real
+  // clause, which then can be used to subsume or strengthen the given
+  // clause in one routine for both binary and non binary clauses.  This
+  // fake binary clause is always kept non-redundant (and not-moved etc.)
+  // due to the following 'memset'.  Only literals will be changed.
+
+  // In a previous version we used local automatic allocated 'Clause' on the
+  // stack, which became incompatible with several compilers (see the
+  // discussion on flexible array member in 'Clause.cpp').
+
   size_t bytes = Clause::bytes (2);
   dummy_binary = (Clause *) new char[bytes];
   memset (dummy_binary, 0, bytes);
@@ -83,10 +95,12 @@ void Internal::enlarge_vals (size_t new_vsize) {
   ignore_clang_analyze_memory_leak_warning = new_vals;
   new_vals += new_vsize;
 
-  if (vals)
+  if (vals) {
     memcpy (new_vals - max_var, vals - max_var, 2u * max_var + 1u);
-  vals -= vsize;
-  delete[] vals;
+    vals -= vsize;
+    delete[] vals;
+  } else
+    assert (!vsize);
   vals = new_vals;
 }
 
@@ -110,7 +124,8 @@ template <class T> static void enlarge_zero (vector<T> &v, size_t N) {
 /*------------------------------------------------------------------------*/
 
 void Internal::enlarge (int new_max_var) {
-  assert (!level || external_prop);
+  // New variables can be created that can invoke enlarge anytime (via calls
+  // during ipasir-up call-backs), thus assuming (!level) is not correct 
   size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var)
     new_vsize *= 2;
@@ -143,8 +158,8 @@ void Internal::enlarge (int new_max_var) {
 void Internal::init_vars (int new_max_var) {
   if (new_max_var <= max_var)
     return;
-  if (level && !external_prop)
-    backtrack ();
+  // New variables can be created that can invoke enlarge anytime (via calls
+  // during ipasir-up call-backs), thus assuming (!level) is not correct 
   LOG ("initializing %d internal variables from %d to %d",
        new_max_var - max_var, max_var + 1, new_max_var);
   if ((size_t) new_max_var >= vsize)
@@ -183,6 +198,22 @@ void Internal::add_original_lit (int lit) {
       assert (!original.size () || !external->eclause.empty ());
       proof->add_external_original_clause (id, false, external->eclause);
     }
+    if (internal->opts.check &&
+      (internal->opts.checkwitness || internal->opts.checkfailed)) {
+      bool forgettable = from_propagator && ext_clause_forgettable;
+      if (forgettable) {
+        assert (!original.size () || !external->eclause.empty ());
+
+        // First integer is the presence-flag (even if the clause is empty)
+        external->forgettable_original[id] = {1};
+       
+        for (auto const& elit : external->eclause)
+          external->forgettable_original[id].push_back(elit);
+        
+        LOG (external->eclause, "clause added to external forgettable map:");
+      }
+    }
+    
     add_new_original_clause (id);
     original.clear ();
   }
@@ -610,6 +641,11 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
   assert (!force_saved_phase);
   assert (propagated == trail.size ());
   force_saved_phase = true;
+  if (external_prop) {
+    assert (!level);
+    LOG ("external notifications are turned off during preprocessing.");
+    private_steps = true;
+  }
   int res = 0;
   while (!res) {
     if (satisfied ()) {
@@ -629,6 +665,14 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
   }
   assert (force_saved_phase);
   force_saved_phase = false;
+  if (external_prop) {
+    private_steps = false;
+    LOG("external notifications are turned back on.");
+    if (!level) notify_assignments (); // In case fixed assignments were found.
+    else {
+      renotify_trail_after_local_search ();
+    }
+  }
   return res;
 }
 
@@ -738,6 +782,8 @@ int Internal::solve (bool preprocess_only) {
       assert (control.size () > 1);
       stats.literalsreused += num_assigned - control[1].trail;
     }
+    if (external->propagator) 
+      renotify_trail_after_ilb ();
   }
   if (preprocess_only)
     LOG ("internal solving in preprocessing only mode");
@@ -842,6 +888,15 @@ int Internal::lookahead () {
   START (lookahead);
   assert (!lookingahead);
   lookingahead = true;
+  if (external_prop) {
+    if (level) {
+      // Combining lookahead with external propagator is limited
+      // Note that lookahead_probing (); would also force backtrack anyway
+      backtrack ();
+    }
+    LOG ("external notifications are turned off during preprocessing.");
+    private_steps = true;
+  }
   int tmp = already_solved ();
   if (!tmp)
     tmp = restore_clauses ();
@@ -855,6 +910,11 @@ int Internal::lookahead () {
   assert (lookingahead);
   lookingahead = false;
   STOP (lookahead);
+  if (external_prop) {
+    private_steps = false;
+    LOG("external notifications are turned back on.");
+    notify_assignments (); // In case fixed assignments were found.
+  }
   return res;
 }
 

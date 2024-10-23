@@ -50,7 +50,7 @@ inline LratBuilderWatcher &LratBuilder::watcher (int lit) {
 LratBuilderClause *LratBuilder::new_clause () {
   const size_t size = simplified.size ();
   assert (size <= UINT_MAX);
-  const int off = size ? -1 : 0;
+  const int off = size ? 1 : 0;
   const size_t bytes =
       sizeof (LratBuilderClause) + (size - off) * sizeof (int);
   LratBuilderClause *res = (LratBuilderClause *) new char[bytes];
@@ -351,9 +351,9 @@ uint64_t LratBuilder::reduce_hash (uint64_t hash, uint64_t size) {
 
 uint64_t LratBuilder::compute_hash (const uint64_t id) {
   assert (id > 0);
-  unsigned j = id % num_nonces;             // dont know if this is a good
-  uint64_t tmp = nonces[j] * (uint64_t) id; // hash funktion or if it is
-  return last_hash = tmp; // even better than just using id
+  unsigned j = id % num_nonces;             // Don't know if this is a good
+  uint64_t tmp = nonces[j] * (uint64_t) id; // hash function or even better
+  return last_hash = tmp;                   // than just using id.
 }
 
 LratBuilderClause **LratBuilder::find (const uint64_t id) {

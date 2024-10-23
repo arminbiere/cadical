@@ -83,7 +83,7 @@ inline bool parity (unsigned a) {
 // allocated size of watched and occurrence lists small particularly during
 // bounded variable elimination where many clauses are added and removed.
 
-template <class T> void erase_vector (vector<T> &v) {
+template <class T> void erase_vector (std::vector<T> &v) {
   if (v.capacity ()) {
     std::vector<T> ().swap (v);
   }
@@ -94,9 +94,9 @@ template <class T> void erase_vector (vector<T> &v) {
 // capacity of a vector to its size thus kind of releasing all the internal
 // excess memory not needed at the moment any more.
 
-template <class T> void shrink_vector (vector<T> &v) {
+template <class T> void shrink_vector (std::vector<T> &v) {
   if (v.capacity () > v.size ()) {
-    vector<T> (v).swap (v);
+    std::vector<T> (v).swap (v);
   }
   assert (v.capacity () == v.size ()); // not guaranteed though
 }

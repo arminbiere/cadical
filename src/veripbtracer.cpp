@@ -101,9 +101,9 @@ uint64_t VeripbTracer::reduce_hash (uint64_t hash, uint64_t size) {
 
 uint64_t VeripbTracer::compute_hash (const uint64_t id) {
   assert (id > 0);
-  unsigned j = id % num_nonces;             // dont know if this is a good
-  uint64_t tmp = nonces[j] * (uint64_t) id; // hash funktion or if it is
-  return last_hash = tmp; // even better than just using id
+  unsigned j = id % num_nonces;             // Dont know if this is a good
+  uint64_t tmp = nonces[j] * (uint64_t) id; // hash funktion or even better
+  return last_hash = tmp;                   // than just using id.
 }
 
 bool VeripbTracer::find_and_delete (const uint64_t id) {

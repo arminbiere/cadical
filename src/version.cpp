@@ -24,7 +24,7 @@
 
 #ifdef NBUILD
 #ifndef VERSION
-#define VERSION "2.0.0-explore.j"
+#define VERSION "2.2.0-rc1"
 #endif // VERSION
 #endif // NBUILD
 
@@ -33,7 +33,7 @@
 // The copyright of the code is here.
 
 static const char *COPYRIGHT =
-    "Copyright (c) 2016-2023 A. Biere, M. Fleury, N. Froleyks, K. Fazekas, "
+    "Copyright (c) 2016-2024 A. Biere, M. Fleury, N. Froleyks, K. Fazekas, "
     "F. Pollitt";
 
 /*------------------------------------------------------------------------*/

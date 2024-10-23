@@ -224,7 +224,8 @@ struct Profiles {
         if (stable && internal->profiles.stable.level <= L) \
             internal->start_profiling (internal->profiles.stable, N); \
         if (!stable && internal->profiles.unstable.level <= L) \
-            internal->start_profiling (internal->profiles.unstable, N);) \
+            internal->start_profiling (internal->profiles.unstable, N); \
+        internal->profiles.walk.started = (N);) \
   } while (0)
 
 /*------------------------------------------------------------------------*/

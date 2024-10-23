@@ -379,6 +379,9 @@ struct vivify_clause_later {
 
   bool operator() (Clause *a, Clause *b) const {
 
+    if (a == b)
+      return false;
+
     // First focus on clauses scheduled in the last vivify round but not
     // checked yet since then.
     //
@@ -900,7 +903,7 @@ inline void Internal::vivify_increment_stats (const Vivifier &vivifier) {
 /*------------------------------------------------------------------------*/
 // instantiate last literal (see the description of the hack track 2023), fix the watches and
 //  backtrack two level back
-bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c) {
+bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c, std::vector<std::tuple<int, Clause *, bool>> &lrat_stack) {
   LOG ("now trying instantiation");
   conflict = nullptr;
   const int lit = sorted.back ();
@@ -919,8 +922,8 @@ bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c) {
     if (lrat) {
       clear_analyzed_literals ();
       assert (lrat_chain.empty ());
-      vivify_build_lrat (0, c);
-      vivify_build_lrat (0, conflict);
+      vivify_build_lrat (0, c, lrat_stack);
+      vivify_build_lrat (0, conflict, lrat_stack);
       clear_analyzed_literals ();
     }
     int remove = lit;
@@ -951,6 +954,8 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   c->vivified = true; // and globally remember
 
   assert (!c->garbage);
+
+  auto &lrat_stack = vivifier.lrat_stack;
 
   // First check whether the candidate clause is already satisfied and at
   // the same time copy its non fixed literals to 'sorted'.  The literals
@@ -1217,7 +1222,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     lrat_chain.clear();
     assert (!subsume);
     if (!subsume && opts.vivifyinst) {
-      res = vivify_instantiate (sorted, c);
+      res = vivify_instantiate (sorted, c, lrat_stack);
       assert (!conflict);
     } else {
       LOG ("cannot apply instantiation");
@@ -1252,34 +1257,64 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
 // the function with (0, c). originally we justified each literal in c on
 // its own but this is not actually necessary.
 //
-void Internal::vivify_build_lrat (int lit, Clause *reason) {
-  LOG (reason, "VIVIFY LRAT justifying %d with reason", lit);
 
-  for (const auto &other : *reason) {
-    LOG ("VIVIFY LRAT checking %d", other);
-    if (other == lit)
+// Non-recursive version, as some bugs have been found.  DFS over the
+// reasons with preordering (aka we explore the entire reason before
+// exploring deeper)
+void Internal::vivify_build_lrat (
+    int lit, Clause *reason,
+    std::vector<std::tuple<int, Clause *, bool>> &stack) {
+  assert (stack.empty ());
+  stack.push_back ({lit, reason, false});
+  while (!stack.empty ()) {
+    int lit;
+    Clause *reason;
+    bool finished;
+    std::tie (lit, reason, finished) = stack.back ();
+    LOG ("VIVIFY LRAT justifying %d", lit);
+    stack.pop_back ();
+    if (lit && flags (lit).seen) {
+      LOG ("skipping already justified");
       continue;
-    Var &v = var (other);
-    Flags &f = flags (other);
-    if (f.seen){
-      LOG ("skipping already seen %d", other);
-      continue;                 // we would like to assert this:
     }
-    analyzed.push_back (other); // assert (val (other) < 0);
-    f.seen = true;              // but we cannot because we have
-    if (!v.level) {             // already backtracked (sometimes)
-      const unsigned uidx =
-          vlit (-other);                // nevertheless we can use var (l)
-      uint64_t id = unit_clauses[uidx]; // as if l was still assigned
-      assert (id);                      // because var is updated lazily
-      lrat_chain.push_back (id);
+    if (finished) {
+      lrat_chain.push_back (reason->id);
+      if (lit && reason) {
+        Flags &f = flags (lit);
+        f.seen = true;
+        analyzed.push_back (lit); // assert (val (other) < 0);
+        assert (flags (lit).seen);
+      }
       continue;
-    }
-    if (v.reason) { // recursive justification
-      vivify_build_lrat (other, v.reason);
+    } else
+      stack.push_back ({lit, reason, true});
+    for (const auto &other : *reason) {
+      if (other == lit)
+        continue;
+      Var &v = var (other);
+      Flags &f = flags (other);
+      if (f.seen)
+        continue;
+      // we would like
+      // assert (val (other) < 0);
+      // does not hold because we already backtracked (sometimes)
+      if (!v.level) {
+        const unsigned uidx =
+            vlit (-other);                // nevertheless we can use var (l)
+        uint64_t id = unit_clauses[uidx]; // as if l was still assigned
+        assert (id);                      // because var is updated lazily
+        lrat_chain.push_back (id);
+        f.seen = true;
+        analyzed.push_back (other);
+        continue;
+      }
+      if (v.reason) { // recursive justification
+        LOG ("VIVIFY LRAT pushing %d", other);
+        stack.push_back ({other, v.reason, false});
+      }
     }
   }
-  lrat_chain.push_back (reason->id);
+  stack.clear ();
 }
 
 // calculate lrat_chain

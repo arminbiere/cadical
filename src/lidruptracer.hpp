@@ -7,12 +7,10 @@ namespace CaDiCaL {
 
 struct LidrupClause {
   LidrupClause *next; // collision chain link for hash table
-  uint64_t hash;     // previously computed full 64-bit hash
-  uint64_t id;       // id of clause
-  unsigned size;
-  unsigned chain_size;
-  int literals[1];
-  uint64_t chain[1];
+  uint64_t hash;      // previously computed full 64-bit hash
+  uint64_t id;        // id of clause
+  std::vector<uint64_t> chain;
+  std::vector<int> literals;
 };
 
 class LidrupTracer : public FileTracer {
@@ -24,14 +22,15 @@ class LidrupTracer : public FileTracer {
 
   // hash table for conclusion
   //
-  uint64_t num_clauses;  // number of clauses in hash table
-  uint64_t size_clauses; // size of clause hash table
+  uint64_t num_clauses;   // number of clauses in hash table
+  uint64_t size_clauses;  // size of clause hash table
   LidrupClause **clauses; // hash table of clauses
   vector<int> imported_clause;
   vector<int> assumptions;
   vector<uint64_t> imported_chain;
   vector<uint64_t> batch_weaken;
   vector<uint64_t> batch_delete;
+  vector<uint64_t> batch_restore;
 
   static const unsigned num_nonces = 4;
 
@@ -61,15 +60,17 @@ class LidrupTracer : public FileTracer {
   void put_binary_lit (int external_lit);
   void put_binary_id (uint64_t id);
 
-  void lidrup_add_derived_clause (uint64_t id, const vector<int> &clause, const vector<uint64_t> &chain);
+  void lidrup_add_derived_clause (uint64_t id, const vector<int> &clause,
+                                  const vector<uint64_t> &chain);
   void lidrup_delete_clause (uint64_t id); //, const vector<int> &clause);
-  void lidrup_add_restored_clause (uint64_t id); //, const vector<int> &clause);
+  void
+  lidrup_add_restored_clause (uint64_t id); //, const vector<int> &clause);
   void lidrup_add_original_clause (uint64_t id, const vector<int> &clause);
   void lidrup_conclude_and_delete (const vector<uint64_t> &conclusion);
   void lidrup_report_status (int status);
   void lidrup_conclude_sat (const vector<int> &model);
   void lidrup_solve_query ();
-  void lidrup_batch_weaken_and_delete ();
+  void lidrup_batch_weaken_restore_and_delete ();
 
 public:
   LidrupTracer (Internal *, File *file, bool);

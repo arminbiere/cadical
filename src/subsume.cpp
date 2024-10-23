@@ -8,7 +8,7 @@ namespace CaDiCaL {
 // frequently during search.  It works both on original (irredundant)
 // clauses and on 'sticky' learned clauses which are likely to be kept.
 // This is abstracted away in the 'likely_to_be_kept_clause' function, which
-// implicitly relies on 'opts.reducetier1lgue' (glucose level of clauses
+// implicitly relies on 'opts.reducetier1glue' (glucose level of clauses
 // which are not reduced) as well as dynamically determined size and glucose
 // level ('lim.keptglue' and 'lim.keptsize') of clauses kept in 'reduce'.
 //
@@ -216,7 +216,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
 
     // Only clauses which have a variable which has recently been added are
     // checked for being subsumed.  The idea is that all these newly added
-    // clauses are candidates for subsubming the clause.  Then we also only
+    // clauses are candidates for subsuming the clause.  Then we also only
     // need to check occurrences of these variables.  The occurrence lists
     // of other literal do not have to be checked.
     //
@@ -230,14 +230,15 @@ inline int Internal::try_to_subsume_clause (Clause *c,
       // array, which is way faster than storing clause pointers and
       // dereferencing them.  Since this binary clause array is also not
       // shrunken, we also can bail out earlier if subsumption or
-      // strengthening is determined.  In both cases the (self-)subsuming
-      // clause is stored in 'd', which makes it nonzero and forces
-      // aborting both the outer and inner loop.  If the binary clause can
-      // strengthen the candidate clause 'c' (through self-subsuming
-      // resolution), then 'filled' is set to the literal which can be
-      // removed in 'c', otherwise to 'INT_MIN' which is a non-valid
-      // literal.
-      //
+      // strengthening is determined.
+
+      // In both cases the (self-)subsuming clause is stored in 'd', which
+      // makes it nonzero and forces aborting both the outer and inner loop.
+      // If the binary clause can strengthen the candidate clause 'c'
+      // (through self-subsuming resolution), then 'filled' is set to the
+      // literal which can be removed in 'c', otherwise to 'INT_MIN' which
+      // is a non-valid literal.
+
       for (const auto &bin : bins (sign * lit)) {
         const auto &other = bin.lit;
         const int tmp = marked (other);
@@ -256,8 +257,16 @@ inline int Internal::try_to_subsume_clause (Clause *c,
           dummy_binary->literals[1] = other;
           flipped = (sign < 0) ? -lit : INT_MIN;
         }
+
+        // This dummy binary clauses is initialized in 'Internal::Internal'
+        // and only changes it literals in the lines above.   By using such
+        // a faked binary clause we can simply reuse 'subsume_clause' as
+        // well as the code around 'strengthen_clause' uniform for both real
+        // clauses and this special case for binary clauses
+
         dummy_binary->id = bin.id;
         d = dummy_binary;
+
         break;
       }
 
@@ -647,6 +656,11 @@ void Internal::subsume (bool update_limits) {
     return;
   }
 
+  if (external_prop) {
+    assert(!level);
+    private_steps = true;
+  }
+
   if (opts.subsume) {
     reset_watches ();
     subsume_round ();
@@ -664,6 +678,11 @@ void Internal::subsume (bool update_limits) {
   //   vivify ();
   if (opts.transred)
     transred ();
+
+  if (external_prop) {
+    assert(!level);
+    private_steps = false;
+  }
 
 UPDATE_LIMITS:
 

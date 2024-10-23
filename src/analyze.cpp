@@ -393,7 +393,6 @@ inline void Internal::bump_also_all_reason_literals () {
   } else {
     LOG ("bumping reasons up to depth %d", opts.bumpreasondepth);
     delay[stable].bumpreasons.interval /= 2;
-    stats.bumpedreasons++;
   }
   LOG ("delay internal %" PRId64, delay[stable].bumpreasons.interval);
   delay[stable].bumpreasons.limit = delay[stable].bumpreasons.interval;
@@ -1126,7 +1125,7 @@ void Internal::analyze () {
   // up to this point lrat_chain contains the proof for current clause in
   // reversed order. in minimize and shrink the clause is changed and
   // therefore lrat_chain has to be extended. Unfortunately we cannot create
-  // the chain directly during minimazation (or shrinking) but afterwards we
+  // the chain directly during minimization (or shrinking) but afterwards we
   // can calculate it pretty easily and even better the same algorithm works
   // for both shrinking and minimization.
 

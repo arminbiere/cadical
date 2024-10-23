@@ -78,9 +78,6 @@ void Stats::print (Internal *internal) {
   if (all || stats.chrono)
     PRT ("chronological:   %15" PRId64 "   %10.2f %%  of conflicts",
          stats.chrono, percent (stats.chrono, stats.conflicts));
-  if (all || (stats.elevated && stats.chrono))
-    PRT ("  elevated:      %15" PRId64 "   %10.2f    per chronological",
-         stats.elevated, relative (stats.elevated, stats.chrono));
   if (all)
     PRT ("compacts:        %15" PRId64 "   %10.2f    interval",
          stats.compacts, relative (stats.conflicts, stats.compacts));
@@ -250,9 +247,6 @@ void Stats::print (Internal *internal) {
          percent (stats.learned.clauses, stats.conflicts));
     PRT ("@ bumped:        %15" PRId64 "   %10.2f    per learned",
          stats.bumped, relative (stats.bumped, stats.learned.clauses));
-    PRT ("@ bumpedreasons: %15" PRId64 "   %10.2f %%  learned",
-         stats.bumpedreasons,
-         percent (stats.bumpedreasons, stats.learned.clauses));
     PRT ("  recomputed:    %15" PRId64 "   %10.2f %%  per learned",
          stats.recomputed,
          percent (stats.recomputed, stats.learned.clauses));
@@ -354,10 +348,6 @@ void Stats::print (Internal *internal) {
   if (all || stats.reduced) {
     PRT ("reduced:         %15" PRId64 "   %10.2f %%  per conflict",
          stats.reduced, percent (stats.reduced, stats.conflicts));
-    PRT ("  tier1:         %15" PRId64 "   %10.2f %%  per reduction",
-         stats.reduced_tier1, percent (stats.reduced_tier1, stats.reduced));
-    PRT ("  tier2:         %15" PRId64 "   %10.2f %%  per reduction",
-         stats.reduced_tier2, percent (stats.reduced_tier2, stats.reduced));
     PRT ("  reductions:    %15" PRId64 "   %10.2f    interval",
          stats.reductions, relative (stats.conflicts, stats.reductions));
     PRT ("  collections:   %15" PRId64 "   %10.2f    interval",

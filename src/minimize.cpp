@@ -166,7 +166,7 @@ void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
       if (f.seen)
         continue;
       f.seen = true;
-      analyzed.push_back (idx);
+      unit_analyzed.push_back (idx);
       const int lit = val (idx) > 0 ? idx : -idx;
       const unsigned uidx = vlit (lit); // I didn't clean added flag
       uint64_t id = unit_clauses[uidx];

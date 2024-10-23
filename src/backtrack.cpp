@@ -106,7 +106,7 @@ void Internal::backtrack_without_updating_phases (int new_level) {
   int reassigned = 0;
 
   notify_backtrack (new_level);
-  if (external_prop && !external_prop_is_lazy && notified > assigned) {
+  if (external_prop && !external_prop_is_lazy && !private_steps && notified > assigned) {
     LOG ("external propagator is notified about some unassignments (trail: "
          "%zd, notified: %zd).",
          trail.size (), notified);
