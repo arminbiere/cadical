@@ -1086,6 +1086,7 @@ void Internal::elim (bool update_limits) {
            stats.elimcompleted + 1, lim.elimbound);
   }
 
+  delete_garbage_clauses ();
   init_watches ();
   connect_watches ();
 
