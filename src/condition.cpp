@@ -869,16 +869,8 @@ long Internal::condition_round (long delta) {
   }
 
   reset_occs ();
-// eager deletion of binary clauses
-  for (auto c : candidates) {
-    if (c->size == 2 && c->garbage && !c->redundant) {
-      LOG (c, "deleting hard clause");
-      unwatch_clause (c);
-      clauses.erase (remove (begin (clauses), end (clauses), c),
-                     end (clauses));
-      delete_clause (c);
-    }
-  }
+  delete_garbage_clauses ();
+
   // Reassign previously assigned variables again.
   //
   LOG ("reassigning previously assigned variables");
