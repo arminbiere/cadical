@@ -200,16 +200,7 @@ void Internal::strengthen_clause (Clause *c, int lit) {
       LOG (c, "bumping");
       unsigned used = c->used;
       c->used = 1;
-      if (c->keep)
-        return;
-      if (c->hyper)
-        return;
-      if (!c->redundant)
-        return;
-      int new_glue = recompute_glue (c);
-      if (new_glue < c->glue)
-        promote_clause (c, new_glue);
-      else if (used && c->glue <= opts.reducetier2glue)
+      if (used && c->glue <= opts.reducetier2glue)
         c->used = 2;
       break;
     }
