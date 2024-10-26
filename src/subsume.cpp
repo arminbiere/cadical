@@ -196,8 +196,23 @@ void Internal::strengthen_clause (Clause *c, int lit) {
     break;
   case 1:
     // the untiution that you should bump clauses
-    bump_clause(c);
-    break;
+    {
+      LOG (c, "bumping");
+      unsigned used = c->used;
+      c->used = 1;
+      if (c->keep)
+        return;
+      if (c->hyper)
+        return;
+      if (!c->redundant)
+        return;
+      int new_glue = recompute_glue (c);
+      if (new_glue < c->glue)
+        promote_clause (c, new_glue);
+      else if (used && c->glue <= opts.reducetier2glue)
+        c->used = 2;
+      break;
+    }
   case 2:
     // do nothing
     break;
