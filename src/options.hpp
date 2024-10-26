@@ -170,6 +170,7 @@ OPTION( subsumemineff,   1e6,  0,2e9,1,0,1, "minimum subsuming efficiency") \
 OPTION( subsumeocclim,   1e2,  0,2e9,1,0,1, "watch list length limit") \
 OPTION( subsumereleff,   1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( subsumestr,        1,  0,  1,0,0,1, "strengthen during subsume") \
+OPTION( subsumeusedpromote,0,  0,  5,0,0,1, "strengthen used promotion policy (0=<1.9.4,1=1.9.4(buggy),2=1.9.5,3=all 0,4=demote tier 2 to 0,5=demote tier2, used2 to 0)") \
 OPTION( target,            1,  0,  2,0,0,1, "target phases (1=stable only)") \
 OPTION( terminateint,     10,  0,1e4,0,0,1, "termination check interval") \
 OPTION( ternary,           1,  0,  1,0,1,1, "hyper ternary resolution") \

@@ -189,6 +189,37 @@ void Internal::strengthen_clause (Clause *c, int lit) {
   assert (new_end + 1 == c->end ()), (void) new_end;
   (void) shrink_clause (c, c->size - 1);
   LOG (c, "strengthened");
+  switch (opts.subsumeusedpromote) {
+  case 0: // this is the old behavior, which look like it was done at the time where used was only a
+	  // boolean
+    c->used = 1;
+    break;
+  case 1:
+    // the untiution that you should bump clauses
+    bump_clause(c);
+    break;
+  case 2:
+    // do nothing
+    break;
+  case 3: // set everything to 0
+    c->used = 0;
+    break;
+  case 4: // demote tier 2 clauses
+    if (c->glue <= opts.reducetier2glue)
+      c->used = 0;
+    else
+      c->used = 1;
+    break;
+  case 5: // demote tier 2 clauses that are useful
+    if (c->glue <= opts.reducetier2glue && c->used == 2)
+      c->used = 0;
+    else
+      c->used = 1;
+    break;
+  default:
+    __builtin_unreachable ();
+    break;
+  }
   external->check_shrunken_clause (c);
 }
 
