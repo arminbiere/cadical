@@ -194,6 +194,7 @@ struct Internal {
   vector<vector<vector<uint64_t>>>
       probehbr_chains;          // only used if opts.probehbr=false
   bool lrat;                    // generate LRAT internally
+  bool frat;                    // finalize non-deleted clauses in proof
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
   signed char *vals;            // assignment [-max_var,max_var]
@@ -1344,10 +1345,10 @@ struct Internal {
   void trace (File *);                   // Start write proof file.
   void check ();                         // Enable online proof checking.
 
-  void connect_proof_tracer (Tracer *tracer, bool antecedents);
-  void connect_proof_tracer (InternalTracer *tracer, bool antecedents);
-  void connect_proof_tracer (StatTracer *tracer, bool antecedents);
-  void connect_proof_tracer (FileTracer *tracer, bool antecedents);
+  void connect_proof_tracer (Tracer *tracer, bool antecedents, bool finalize_clauses = false);
+  void connect_proof_tracer (InternalTracer *tracer, bool antecedents, bool finalize_clauses = false);
+  void connect_proof_tracer (StatTracer *tracer, bool antecedents, bool finalize_clauses = false);
+  void connect_proof_tracer (FileTracer *tracer, bool antecedents, bool finalize_clauses = false);
   bool disconnect_proof_tracer (Tracer *tracer);
   bool disconnect_proof_tracer (StatTracer *tracer);
   bool disconnect_proof_tracer (FileTracer *tracer);

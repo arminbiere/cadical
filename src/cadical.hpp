@@ -798,10 +798,10 @@ public:
   //   require (CONFIGURING)
   //   ensure (CONFIGURING)
   //
-  void connect_proof_tracer (Tracer *tracer, bool antecedents);
-  void connect_proof_tracer (InternalTracer *tracer, bool antecedents);
-  void connect_proof_tracer (StatTracer *tracer, bool antecedents);
-  void connect_proof_tracer (FileTracer *tracer, bool antecedents);
+  void connect_proof_tracer (Tracer *tracer, bool antecedents, bool finalize_clauses = false);
+  void connect_proof_tracer (InternalTracer *tracer, bool antecedents, bool finalize_clauses = false);
+  void connect_proof_tracer (StatTracer *tracer, bool antecedents, bool finalize_clauses = false);
+  void connect_proof_tracer (FileTracer *tracer, bool antecedents, bool finalize_clauses = false);
 
   // Triggers the conclusion of incremental proofs.
   // if the solver is SATISFIED it will trigger extend ()

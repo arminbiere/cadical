@@ -1114,44 +1114,44 @@ void Solver::close_proof_trace (bool print_statistics_unless_quiet) {
 
 /*------------------------------------------------------------------------*/
 
-void Solver::connect_proof_tracer (Tracer *tracer, bool antecedents) {
+void Solver::connect_proof_tracer (Tracer *tracer, bool antecedents, bool finalize_clauses) {
   LOG_API_CALL_BEGIN ("connect proof tracer");
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only start proof tracing to right after initialization");
   REQUIRE (tracer, "can not connect zero tracer");
-  internal->connect_proof_tracer (tracer, antecedents);
+  internal->connect_proof_tracer (tracer, antecedents, finalize_clauses);
   LOG_API_CALL_END ("connect proof tracer");
 }
 
 void Solver::connect_proof_tracer (InternalTracer *tracer,
-                                   bool antecedents) {
+                                   bool antecedents, bool finalize_clauses) {
   LOG_API_CALL_BEGIN ("connect proof tracer");
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only start proof tracing to right after initialization");
   REQUIRE (tracer, "can not connect zero tracer");
-  internal->connect_proof_tracer (tracer, antecedents);
+  internal->connect_proof_tracer (tracer, antecedents, finalize_clauses);
   LOG_API_CALL_END ("connect proof tracer");
 }
 
-void Solver::connect_proof_tracer (StatTracer *tracer, bool antecedents) {
+void Solver::connect_proof_tracer (StatTracer *tracer, bool antecedents, bool finalize_clauses) {
   LOG_API_CALL_BEGIN ("connect proof tracer with stats");
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only start proof tracing to right after initialization");
   REQUIRE (tracer, "can not connect zero tracer");
-  internal->connect_proof_tracer (tracer, antecedents);
+  internal->connect_proof_tracer (tracer, antecedents, finalize_clauses);
   LOG_API_CALL_END ("connect proof tracer with stats");
 }
 
-void Solver::connect_proof_tracer (FileTracer *tracer, bool antecedents) {
+void Solver::connect_proof_tracer (FileTracer *tracer, bool antecedents, bool finalize_clauses) {
   LOG_API_CALL_BEGIN ("connect proof tracer with file");
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
            "can only start proof tracing right after initialization");
   REQUIRE (tracer, "can not connect zero tracer");
-  internal->connect_proof_tracer (tracer, antecedents);
+  internal->connect_proof_tracer (tracer, antecedents, finalize_clauses);
   LOG_API_CALL_END ("connect proof tracer with file");
 }
 

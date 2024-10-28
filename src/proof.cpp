@@ -32,37 +32,45 @@ void Internal::force_lrat () {
   lrat = true;
 }
 
-void Internal::connect_proof_tracer (Tracer *tracer, bool antecedents) {
+void Internal::connect_proof_tracer (Tracer *tracer, bool antecedents, bool finalize_clauses) {
   new_proof_on_demand ();
   if (antecedents)
     force_lrat ();
+  if (finalize_clauses)
+    frat = true;
   proof->connect (tracer);
   tracers.push_back (tracer);
 }
 
 void Internal::connect_proof_tracer (InternalTracer *tracer,
-                                     bool antecedents) {
+                                     bool antecedents, bool finalize_clauses) {
   new_proof_on_demand ();
   if (antecedents)
     force_lrat ();
+  if (finalize_clauses)
+    frat = true;
   tracer->connect_internal (this);
   proof->connect (tracer);
   tracers.push_back (tracer);
 }
 
-void Internal::connect_proof_tracer (StatTracer *tracer, bool antecedents) {
+void Internal::connect_proof_tracer (StatTracer *tracer, bool antecedents, bool finalize_clauses) {
   new_proof_on_demand ();
   if (antecedents)
     force_lrat ();
+  if (finalize_clauses)
+    frat = true;
   tracer->connect_internal (this);
   proof->connect (tracer);
   stat_tracers.push_back (tracer);
 }
 
-void Internal::connect_proof_tracer (FileTracer *tracer, bool antecedents) {
+void Internal::connect_proof_tracer (FileTracer *tracer, bool antecedents, bool finalize_clauses) {
   new_proof_on_demand ();
   if (antecedents)
     force_lrat ();
+  if (finalize_clauses)
+    frat = true;
   tracer->connect_internal (this);
   proof->connect (tracer);
   file_tracers.push_back (tracer);
@@ -121,7 +129,7 @@ void Internal::trace (File *file) {
     bool antecedents = opts.frat == 1;
     FileTracer *ft =
         new FratTracer (this, file, opts.binary, opts.frat == 1);
-    connect_proof_tracer (ft, antecedents);
+    connect_proof_tracer (ft, antecedents, true);
   } else if (opts.lrat) {
     LOG ("PROOF connecting LRAT tracer");
     FileTracer *ft = new LratTracer (this, file, opts.binary);
@@ -149,6 +157,7 @@ void Internal::check () {
     StatTracer *lratchecker = new LratChecker (this);
     LOG ("PROOF connecting LRAT proof checker");
     force_lrat ();
+    frat = true;
     proof->connect (lratchecker);
     stat_tracers.push_back (lratchecker);
   }
