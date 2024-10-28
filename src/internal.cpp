@@ -142,6 +142,7 @@ void Internal::enlarge (int new_max_var) {
   enlarge_init (ptab, 2 * new_vsize, -1);
   enlarge_only (ftab, new_vsize);
   enlarge_vals (new_vsize);
+  vsize = new_vsize;
   enlarge_zero (frozentab, new_vsize);
   enlarge_zero (relevanttab, new_vsize);
   const signed char val = opts.phase ? 1 : -1;
@@ -152,7 +153,6 @@ void Internal::enlarge (int new_max_var) {
   enlarge_zero (phases.prev, new_vsize);
   enlarge_zero (phases.min, new_vsize);
   enlarge_zero (marks, new_vsize);
-  vsize = new_vsize;
 }
 
 void Internal::init_vars (int new_max_var) {
