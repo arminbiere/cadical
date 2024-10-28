@@ -344,8 +344,10 @@ Solver::Solver () {
   adding_constraint = false;
   _state = INITIALIZING;
   internal = new Internal ();
+  DeferDeletePtr<Internal> delete_internal (internal);
   TRACE ("init");
   external = new External (internal);
+  DeferDeletePtr<External> delete_external (external);
   STATE (CONFIGURING);
 #ifndef NTRACING
   if (tracing_api_calls_through_environment_variable_method)
@@ -370,6 +372,9 @@ Solver::Solver () {
   } else {
     tracing_nb_lidrup_env_var_method = false;
   }
+
+  delete_internal.release ();
+  delete_external.release ();
 }
 
 Solver::~Solver () {

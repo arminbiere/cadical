@@ -147,7 +147,7 @@ class Checker : public StatTracer {
 
 public:
   Checker (Internal *);
-  ~Checker ();
+  virtual ~Checker ();
 
   void connect_internal (Internal *i) override;
 

@@ -94,6 +94,7 @@ Clause *Internal::new_clause (bool red, int glue) {
 
   size_t bytes = Clause::bytes (size);
   Clause *c = (Clause *) new char[bytes];
+  DeferDeleteArray<char> clause_delete ((char *) c);
 
   c->id = ++clause_id;
 
@@ -140,6 +141,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   }
 
   clauses.push_back (c);
+  clause_delete.release ();
   LOG (c, "new pointer %p", (void *) c);
 
   if (likely_to_be_kept_clause (c))

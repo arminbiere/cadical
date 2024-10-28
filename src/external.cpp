@@ -747,6 +747,7 @@ void External::check_constraint_satisfied () {
 
 void External::check_failing () {
   Solver *checker = new Solver ();
+  DeferDeletePtr<Solver> delete_checker (checker);
   checker->prefix ("checker ");
 #ifdef LOGGING
   if (internal->opts.log)
@@ -789,7 +790,7 @@ void External::check_failing () {
   int res = checker->solve ();
   if (res != 20)
     FATAL ("failed assumptions do not form a core");
-  delete checker;
+  delete_checker.free ();
   VERBOSE (1, "checked that %zd failing assumptions form a core",
            assumptions.size ());
 }

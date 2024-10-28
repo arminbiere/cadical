@@ -54,6 +54,7 @@ LratBuilderClause *LratBuilder::new_clause () {
   const size_t bytes =
       sizeof (LratBuilderClause) + (size - off) * sizeof (int);
   LratBuilderClause *res = (LratBuilderClause *) new char[bytes];
+  DeferDeleteArray<char> delete_res ((char *) res);
   res->garbage = false;
   res->next = 0;
   res->hash = last_hash;
@@ -65,10 +66,12 @@ LratBuilderClause *LratBuilder::new_clause () {
     *p++ = lit;
 
   if (size == 0) {
+    delete_res.release ();
     return res;
   }
   if (size == 1) {
     unit_clauses.push_back (res);
+    delete_res.release ();
     return res;
   }
 
@@ -96,6 +99,7 @@ LratBuilderClause *LratBuilder::new_clause () {
   } else {
     LOG ("LRAT BUILDER clause not added to watchers");
   }
+  delete_res.release ();
   return res;
 }
 
