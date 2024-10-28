@@ -40,6 +40,7 @@ CheckerClause *Checker::new_clause () {
   assert (size > 1), assert (size <= UINT_MAX);
   const size_t bytes = sizeof (CheckerClause) + (size - 2) * sizeof (int);
   CheckerClause *res = (CheckerClause *) new char[bytes];
+  DeferDeleteArray<char> delete_res ((char *) res);
   res->next = 0;
   res->hash = last_hash;
   res->size = size;
@@ -67,6 +68,7 @@ CheckerClause *Checker::new_clause () {
   watcher (literals[0]).push_back (CheckerWatch (literals[1], res));
   watcher (literals[1]).push_back (CheckerWatch (literals[0], res));
 
+  delete_res.release ();
   return res;
 }
 

@@ -155,17 +155,21 @@ void Internal::check () {
   new_proof_on_demand ();
   if (opts.checkproof > 1) {
     StatTracer *lratchecker = new LratChecker (this);
+    DeferDeletePtr<LratChecker> delete_lratchecker ((LratChecker *) lratchecker);
     LOG ("PROOF connecting LRAT proof checker");
     force_lrat ();
     frat = true;
     proof->connect (lratchecker);
     stat_tracers.push_back (lratchecker);
+    delete_lratchecker.release ();
   }
   if (opts.checkproof == 1 || opts.checkproof == 3) {
     StatTracer *checker = new Checker (this);
+    DeferDeletePtr<Checker> delete_checker ((Checker *) checker);
     LOG ("PROOF connecting proof checker");
     proof->connect (checker);
     stat_tracers.push_back (checker);
+    delete_checker.release ();
   }
 }
 
