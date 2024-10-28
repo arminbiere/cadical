@@ -270,6 +270,7 @@ void LratBuilder::enlarge_vars (int64_t idx) {
   vals -= size_vars;
   delete[] vals;
   vals = new_vals;
+  size_vars = new_size_vars;
 
   reasons.resize (new_size_vars);
   unit_reasons.resize (new_size_vars);
@@ -287,7 +288,6 @@ void LratBuilder::enlarge_vars (int64_t idx) {
   checked_lits.resize (2 * new_size_vars);
 
   assert (idx < new_size_vars);
-  size_vars = new_size_vars;
 }
 
 inline void LratBuilder::import_literal (int lit) {
