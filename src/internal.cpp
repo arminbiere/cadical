@@ -871,50 +871,50 @@ int Internal::lookahead () {
 /*------------------------------------------------------------------------*/
 
 void Internal::finalize (int res) {
-  if (!frat)
-    return;
-  assert (proof);
+  if (!proof) return;
   LOG ("finalizing");
   // finalize external units
-  for (const auto &evar : external->vars) {
-    assert (evar > 0);
-    const auto eidx = 2 * evar;
-    int sign = 1;
-    int64_t id = external->ext_units[eidx];
-    if (!id) {
-      sign = -1;
-      id = external->ext_units[eidx + 1];
-    }
-    if (id) {
-      proof->finalize_external_unit (id, evar * sign);
-    }
-  }
-  // finalize internal units
-  for (const auto &lit : lits) {
-    const auto elit = externalize (lit);
-    if (elit) {
-      const unsigned eidx = (elit < 0) + 2u * (unsigned) abs (elit);
-      const int64_t id = external->ext_units[eidx];
+  if (frat) {
+    for (const auto &evar : external->vars) {
+      assert (evar > 0);
+      const auto eidx = 2 * evar;
+      int sign = 1;
+      int64_t id = external->ext_units[eidx];
+      if (!id) {
+        sign = -1;
+        id = external->ext_units[eidx + 1];
+      }
       if (id) {
-        assert (unit_clauses[vlit (lit)] == id);
-        continue;
+        proof->finalize_external_unit (id, evar * sign);
       }
     }
-    const auto uidx = vlit (lit);
-    const int64_t id = unit_clauses[uidx];
-    if (!id)
-      continue;
-    proof->finalize_unit (id, lit);
-  }
-  // See the discussion in 'propagate' on why garbage binary clauses stick
-  // around.
-  for (const auto &c : clauses)
-    if (!c->garbage || (c->size == 2 && !c->flushed))
-      proof->finalize_clause (c);
-
-  // finalize conflict and proof
-  if (conflict_id) {
-    proof->finalize_clause (conflict_id, {});
+    // finalize internal units
+    for (const auto &lit : lits) {
+      const auto elit = externalize (lit);
+      if (elit) {
+        const unsigned eidx = (elit < 0) + 2u * (unsigned) abs (elit);
+        const int64_t id = external->ext_units[eidx];
+        if (id) {
+          assert (unit_clauses[vlit (lit)] == id);
+          continue;
+        }
+      }
+      const auto uidx = vlit (lit);
+      const int64_t id = unit_clauses[uidx];
+      if (!id)
+        continue;
+      proof->finalize_unit (id, lit);
+    }
+    // See the discussion in 'propagate' on why garbage binary clauses stick
+    // around.
+    for (const auto &c : clauses)
+      if (!c->garbage || c->size == 2)
+        proof->finalize_clause (c);
+  
+    // finalize conflict and proof
+    if (conflict_id) {
+      proof->finalize_clause (conflict_id, {});
+    }
   }
   proof->report_status (res, conflict_id);
   if (res == 10)
