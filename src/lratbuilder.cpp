@@ -695,6 +695,10 @@ void LratBuilder::add_clause (const char *type) {
   (void) type;
 #endif
 
+  // If there are enough garbage clauses collect them.
+  if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
+    collect_garbage_clauses ();
+
   LratBuilderClause *c = insert ();
   if (inconsistent) {
     LOG ("LRAT BUILDER state already inconsistent so nothing more to do");
@@ -900,10 +904,6 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> &c) {
              d->id);
       }
     }
-
-    // If there are enough garbage clauses collect them.
-    if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
-      collect_garbage_clauses ();
   } else {
     fatal_message_start ();
     fputs ("deleted clause not in proof:\n", stderr);
