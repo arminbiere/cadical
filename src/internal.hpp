@@ -180,6 +180,8 @@ struct Internal {
   bool external_prop;         // true if an external propagator is connected
   bool did_external_prop;     // true if ext. propagation happened
   bool external_prop_is_lazy; // true if the external propagator is lazy
+  bool forced_backt_allowed;  // external propagator can force backtracking
+  bool private_steps;         // no notification of ext. prop during these steps
   char rephased;              // last type of resetting phases
   Reluctant reluctant;        // restart counter in stable mode
   size_t vsize;               // actually allocated variable data size
@@ -199,6 +201,7 @@ struct Internal {
   vector<vector<vector<int64_t>>>
       probehbr_chains;          // only used if opts.probehbr=false
   bool lrat;                    // generate LRAT internally
+  bool frat;                    // finalize non-deleted clauses in proof
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
   signed char *vals;            // assignment [-max_var,max_var]
@@ -229,6 +232,7 @@ struct Internal {
   Clause *newest_clause;        // used in external_propagate
   bool force_no_backtrack;      // for new clauses with external propagator
   bool from_propagator;         // differentiate new clauses...
+  bool ext_clause_forgettable;  // Is new clause from propagator forgettable
   int tainted_literal;          // used for ILB
   size_t notified;           // next trail position to notify external prop
   Clause *probe_reason;      // set during probing
@@ -270,7 +274,7 @@ struct Internal {
 
   Proof *proof;             // abstraction layer between solver and tracers
   vector<Tracer *>
-      tracers; // proof tracing objects (ie interpolant calulator)
+      tracers; // proof tracing objects (ie interpolant calculator)
   vector<FileTracer *>
       file_tracers; // file proof tracers (ie DRAT, LRAT...)
   vector<StatTracer *> stat_tracers; // checkers
@@ -459,7 +463,7 @@ struct Internal {
   }
 
   // Use only bits 6 and 7 to store the sign or zero.  The remaining
-  // bits can be use as additional flags.
+  // bits can be used as additional flags.
   //
   signed char marked67 (int lit) const {
     signed char res = marks[vidx (lit)] >> 6;
@@ -743,19 +747,30 @@ struct Internal {
   Clause *wrapped_learn_external_reason_clause (int lit);
   void explain_external_propagations ();
   void explain_reason (int lit, Clause *, int &open);
-  void move_literal_to_watch (bool other_watch);
+  void move_literals_to_watch ();
   void handle_external_clause (Clause *);
   void notify_assignments ();
   void notify_decision ();
   void notify_backtrack (size_t new_level);
+  void force_backtrack (size_t new_level);
   int ask_decision ();
+  bool ask_external_clause ();
   void add_observed_var (int ilit);
   void remove_observed_var (int ilit);
   bool observed (int ilit) const;
   bool is_decision (int ilit);
   void check_watched_literal_invariants ();
   void set_tainted_literal ();
+  void renotify_trail_after_ilb ();
+  void renotify_trail_after_local_search ();
+  void renotify_full_trail ();
   void connect_propagator ();
+  void mark_garbage_external_forgettable (int64_t id);
+  bool is_external_forgettable (int64_t id);
+#ifndef NDEBUG  
+  bool get_merged_literals (std::vector<int>&);
+  void get_all_fixed_literals (std::vector<int>&);
+#endif
 
   // Use last learned clause to subsume some more.
   //
@@ -1371,7 +1386,7 @@ struct Internal {
   // local search and searching for lucky phases, which in full solving
   // mode except for the last are usually optional and then followed by
   // the main CDCL search loop with inprocessing.  If only preprocessing
-  // is requested from 'External::simplifiy' only preprocessing is called
+  // is requested from 'External::simplify' only preprocessing is called
   // though. This is all orchestrated by the 'solve' function.
   //
   int already_solved ();
@@ -1510,10 +1525,10 @@ struct Internal {
   void trace (File *);                   // Start write proof file.
   void check ();                         // Enable online proof checking.
 
-  void connect_proof_tracer (Tracer *tracer, bool antecedents);
-  void connect_proof_tracer (InternalTracer *tracer, bool antecedents);
-  void connect_proof_tracer (StatTracer *tracer, bool antecedents);
-  void connect_proof_tracer (FileTracer *tracer, bool antecedents);
+  void connect_proof_tracer (Tracer *tracer, bool antecedents, bool finalize_clauses = false);
+  void connect_proof_tracer (InternalTracer *tracer, bool antecedents, bool finalize_clauses = false);
+  void connect_proof_tracer (StatTracer *tracer, bool antecedents, bool finalize_clauses = false);
+  void connect_proof_tracer (FileTracer *tracer, bool antecedents, bool finalize_clauses = false);
   bool disconnect_proof_tracer (Tracer *tracer);
   bool disconnect_proof_tracer (StatTracer *tracer);
   bool disconnect_proof_tracer (FileTracer *tracer);

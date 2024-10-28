@@ -4,7 +4,7 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// Failed literal probing uses it's own propagation and assignment
+// Failed literal probing uses its own propagation and assignment
 // functions.  It further provides on-the-fly generation of hyper binary
 // resolvents but only probes on roots of the binary implication graph.  The
 // search for failed literals is limited, but untried roots are kept until
@@ -872,7 +872,10 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   }
 
   stats.probingphases++;
-
+  if (external_prop) {
+    assert(!level);
+    private_steps = true;
+  }
   const int before = active ();
   const int before_extended = stats.variables_extension;
 
@@ -900,6 +903,11 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   factor ();
 
   last.probe.propagations = stats.propagations.search;
+
+  if (external_prop) {
+    assert(!level);
+    private_steps = false;
+  }
 
   if (!update_limits)
     return;

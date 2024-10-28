@@ -3,13 +3,10 @@
 namespace CaDiCaL {
 
 void Internal::mark_fixed (int lit) {
-  if (external_prop && !external_prop_is_lazy && observed (lit)) {
+  if (external->fixed_listener) {
     int elit = externalize (lit);
-    assert (elit && external->observed (elit));
-
-    external->propagator->notify_assignment (elit, true);
-    // Does not increase the notified counter because
-    // it is a separated way of notification.
+    assert (elit);
+    external->fixed_listener->notify_fixed_assignment (elit);
   }
   Flags &f = flags (lit);
   assert (f.status == Flags::ACTIVE);
@@ -22,6 +19,14 @@ void Internal::mark_fixed (int lit) {
   stats.active--;
   assert (!active (lit));
   assert (f.fixed ());
+
+  if (external_prop && private_steps) {
+    // If pre/inprocessing found a fixed assignment, we want the propagator
+    // to know about it.
+    // But at that point it is not guaranteed to be already on the trail, so
+    // notification will happen only later.
+    assert (!level);
+  }
 }
 
 void Internal::mark_eliminated (int lit) {

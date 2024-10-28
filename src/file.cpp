@@ -184,7 +184,7 @@ FILE *File::read_file (Internal *internal, const char *path) {
 
 FILE *File::write_file (Internal *internal, const char *path) {
   MSG ("opening file to write '%s'", path);
-  return open_file (internal, path, "w");
+  return open_file (internal, path, "wb");
 }
 
 /*------------------------------------------------------------------------*/
@@ -283,7 +283,7 @@ FILE *File::write_pipe (Internal *internal, const char *command,
     ::close (out);
   } else if (child_pid) {
     ::close (pipe_fds[0]);
-    res = ::fdopen (pipe_fds[1], "w");
+    res = ::fdopen (pipe_fds[1], "wb");
   } else {
     ::close (pipe_fds[1]);
     ::close (0);

@@ -31,6 +31,7 @@ options=""
 quiet=no
 m32=no
 contrib=yes
+ipasir=yes
 
 #--------------------------------------------------------------------------#
 
@@ -98,11 +99,13 @@ where '<option>' is one of the following
 --no-contracts     compile without API contract checking code
 --no-tracing       compile without API call tracing code
 --no-contrib       compile without contributed code
+--no-ipasir        compile without ipasir interface
 
 --competition      configure for the competition
                    ('--quiet', '--no-contracts', '--no-tracing')
 
 -f...              pass '-f<option>[=<val>]' options to the makefile
+-W...              pass '-W<warning>' options to the makefile
 -m32               pass '-m32' to the compiler (compile for 32 bit)
 -ggdb3             pass '-ggdb3' to makefile (like '-s')
 -O|-O[123]         pass '-O' or '-O[123]' to the makefile
@@ -155,6 +158,7 @@ do
     --no-contracts | --no-contract) contracts=no;;
     --no-tracing | --no-trace) tracing=no;;
     --no-contrib) contrib=no;;
+    --no-ipasir) ipasir=no;;
 
     --coverage) coverage=yes;;
     --profile) profile=yes;;
@@ -165,7 +169,7 @@ do
     --no-unlocked) unlocked=no;;
 
     -m32) options="$options $1";m32=yes;;
-    -f*|-ggdb3|-O|-O1|-O2|-O3) options="$options $1";;
+    -f*|-W*|-ggdb3|-O|-O1|-O2|-O3) options="$options $1";;
     -s|--symbols) options="$options -ggdb3";;
     -static*) options="$options $1";;
 
@@ -325,6 +329,7 @@ fi
 [ $contracts = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRACTS"
 [ $tracing = no ] && CXXFLAGS="$CXXFLAGS -DNTRACING"
 [ $contrib = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRIB"
+[ $ipasir = no ] && CXXFLAGS="$CXXFLAGS -DNIPASIR"
 
 [ $contracts = no ] && CFLAGS="$CFLAGS -DNCONTRACTS"
 [ $tracing = no ] && CFLAGS="$CFLAGS -DNTRACING"
@@ -517,6 +522,7 @@ sed \
 -e "s#@CFLAGS@#$CFLAGS#" \
 -e "s#@LIBS@#$libs#" \
 -e "s#@CONTRIB@#$contrib#" \
+-e "s#@IPASIR@#$ipasir#" \
 -e "s#@ROOT@#$root#" \
 ../makefile.in > makefile
 

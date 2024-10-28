@@ -389,7 +389,7 @@ void Internal::clear_analyzed_literals () {
     assert (!f.removable);
   }
   analyzed.clear ();
-#if 0 // TOO EXPENSIVE EVEN FOR DEBUGGING MODE
+#if 0 // to expensive, even for debugging mode
   if (unit_analyzed.size ())
     return;
   for (auto idx : vars) {
@@ -1075,7 +1075,7 @@ void Internal::analyze () {
   // up to this point lrat_chain contains the proof for current clause in
   // reversed order. in minimize and shrink the clause is changed and
   // therefore lrat_chain has to be extended. Unfortunately we cannot create
-  // the chain directly during minimazation (or shrinking) but afterwards we
+  // the chain directly during minimization (or shrinking) but afterwards we
   // can calculate it pretty easily and even better the same algorithm works
   // for both shrinking and minimization.
 

@@ -525,7 +525,7 @@ static size_t fill_buffer () {
 
 // These three functions were not inlined with gcc-11 but should be despite
 // having declared them as 'inline' and thus we use this 'always_inline'
-// attribute which seems to succeed to force inlining.  Havin them inlined
+// attribute which seems to succeed to force inlining.  Having them inlined
 // really gives a performance boost.
 
 static inline int read_buffer (void) __attribute__ ((always_inline));

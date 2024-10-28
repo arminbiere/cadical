@@ -216,7 +216,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
 
     // Only clauses which have a variable which has recently been added are
     // checked for being subsumed.  The idea is that all these newly added
-    // clauses are candidates for subsubming the clause.  Then we also only
+    // clauses are candidates for subsuming the clause.  Then we also only
     // need to check occurrences of these variables.  The occurrence lists
     // of other literal do not have to be checked.
     //
@@ -656,6 +656,11 @@ void Internal::subsume (bool update_limits) {
     return;
   }
 
+  if (external_prop) {
+    assert(!level);
+    private_steps = true;
+  }
+
   if (opts.subsume) {
     reset_watches ();
     subsume_round ();
@@ -673,6 +678,11 @@ void Internal::subsume (bool update_limits) {
     vivify ();
   if (opts.transred)
     transred ();
+
+  if (external_prop) {
+    assert(!level);
+    private_steps = false;
+  }
 
 UPDATE_LIMITS:
 

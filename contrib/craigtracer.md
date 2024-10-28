@@ -12,7 +12,7 @@ and a Tseitin transformation converts them into a Conjunctive Normal Form (CNF).
 Attach / detach the `CraigTracer` to the CaDiCaL solver via the
 `connect_proof_tracer` and `disconnect_proof_tracer` methods.
 The tracer requires antecedents. Therefore it has to be attached with `true`
-as second argument. The partial Craig interpolant construcion has to be
+as second argument. The partial Craig interpolant construction has to be
 configured before any clauses are added to the solver.
 
 ```cpp
@@ -172,6 +172,42 @@ if (solver.solve () == CaDiCaL::Status::UNSATISFIABLE) {
   tracer.create_craig_interpolant (
     CaDiCraig::CraigInterpolant::INTERSECTION, cnf_interst, ...);
 }
+
+solver.disconnect_proof_tracer (&tracer);
+```
+
+## Incremental solving with interpolation
+
+The Craig tracer supports handling assumptions and constraints.
+Assumptions are treated like equivalent temporary unit clauses with a
+clause label according to the variable label (`label_variable`).
+Global variables are handled like a B_CLAUSE.
+
+- Assuming a `A_LOCAL` variable is equivalent to a temporary `A_CLAUSE` clause.
+- Assuming a `B_LOCAL` variable is equivalent to a temporary `B_CLAUSE` clause.
+- Assuming a `GLOBAL` variable is equivalent to a temporary `B_CLAUSE` clause.
+
+The constraint is treated as a temporary clause.
+It has to be explicitly labeled by calling `label_constraint`.
+
+```cpp
+CaDiCaL::Solver solver;
+CaDiCraig::CraigTracer tracer;
+solver.connect_proof_tracer (&tracer, true);
+tracer.set_craig_construction (...);
+
+tracer.label_variable (1, CaDiCraig::CraigVarType::A_LOCAL);
+tracer.label_variable (2, CaDiCraig::CraigVarType::GLOBAL);
+solver.assume (-1);
+solver.assume (2);
+
+tracer.label_constraint (CaDiCraig::CraigClauseType::A_CLAUSE);
+solver.constrain (1);
+solver.constrain (-2);
+solver.constrain (0);
+
+assert (solver.solve () == CaDiCaL::Status::UNSATISFIABLE);
+tracer.create_craig_interpolant (...);
 
 solver.disconnect_proof_tracer (&tracer);
 ```

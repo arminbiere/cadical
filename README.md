@@ -31,25 +31,35 @@ if you want to contribute.
 The solver has the following usage `cadical [ dimacs [ proof ] ]`.
 See `cadical -h` for more options.
 
-If you want to cite CaDiCaL please use the solver description in the
-latest SAT competition proceedings:
+If you want to cite CaDiCaL please use as reference our CaDiCaL 2.0 tool
+paper which appeared at CAV'24:
 
-<pre>
-  @inproceedings{BiereFazekasFleuryHeisinger-SAT-Competition-2020-solvers,
-    author    = {Armin Biere and Katalin Fazekas and Mathias Fleury and Maximillian Heisinger},
-    title     = {{CaDiCaL}, {Kissat}, {Paracooba}, {Plingeling} and {Treengeling}
-		 Entering the {SAT Competition 2020}},
-    pages     = {51--53},
-    editor    = {Tomas Balyo and Nils Froleyks and Marijn Heule and 
-		 Markus Iser and Matti J{\"a}rvisalo and Martin Suda},
-    booktitle = {Proc.~of {SAT Competition} 2020 -- Solver and Benchmark Descriptions},
-    volume    = {B-2020-1},
-    series    = {Department of Computer Science Report Series B},
-    publisher = {University of Helsinki},
-    year      = 2020,
-  }
-</pre>
-
-You might also find more information on CaDiCaL at <http://fmv.jku.at/cadical>.
-
-Armin Biere
+<p>
+<a
+href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24.pdf">CaDiCaL
+2.0</a>
+<br>
+<a href="https://cca.informatik.uni-freiburg.de/biere">Armin Biere</a>,
+<a href="https://cca.informatik.uni-freiburg.de/fallert">Tobias Faller</a>,
+<a href="https://kfazekas.github.io">Katalin Fazekas</a>,
+<a href="https://cca.informatik.uni-freiburg.de/fleury">Mathias Fleury</a>,
+<a href="https://fmv.jku.at/froleyks">Nils Froleyks</a> and
+<a href="https://cca.informatik.uni-freiburg.de/pollittf">Florian Pollitt</a>
+<br>
+<i>
+Proc.&nbsp;Computer Aidded Verification - 26th Intl.&nbsp;Conf.&nbsp;(CAV'24)</i>
+<br>
+Lecture Notes in Computer Science (LNCS)
+<br>
+vol.&nbsp;14681,
+pages 133-152,
+Springer 2024
+<br>
+[ <a href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24.pdf">paper</a>
+| <a href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24.bib">bibtex</a>
+| <a href="https://cca.informatik.uni-freiburg.de/papers/BiereFallerFazekasFleuryFroleyksPollitt-CAV24-Springer.pdf">official</a>
+| <a href="https://zenodo.org/records/10943125">artifact</a>
+| <a href="https://github.com/arminbiere/cadical">github</a>
+| <a href="https://doi.org/10.1007/978-3-031-37703-7">doi</a>
+]
+</p>
