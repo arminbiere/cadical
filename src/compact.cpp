@@ -411,6 +411,7 @@ void Internal::compact () {
     vals -= vsize;
     delete[] vals;
     vals = new_vals;
+    vsize = mapper.new_vsize;
   }
 
   // 'constrain' uses 'val', so this code has to be after remapping that
@@ -516,7 +517,6 @@ void Internal::compact () {
   /*----------------------------------------------------------------------*/
 
   max_var = mapper.new_max_var;
-  vsize = mapper.new_vsize;
 
   stats.unused = 0;
   stats.inactive = stats.now.fixed = mapper.first_fixed ? 1 : 0;
