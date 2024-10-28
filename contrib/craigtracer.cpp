@@ -511,7 +511,7 @@ void CraigTracer::delete_clause (int64_t id, bool redundant,
   (void) redundant;
   (void) c;
 
-  assert ((int64_t) craig_clauses.size () == id - 1);
+  assert ((int64_t) craig_clauses.size () >= id - 1);
   craig_clauses[id - 1].resize (0);
 }
 

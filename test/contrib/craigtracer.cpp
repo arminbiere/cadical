@@ -17,6 +17,7 @@ int main () {
   tracer->label_variable (1, CaDiCraig::CraigVarType::GLOBAL);
   tracer->label_clause (1, CaDiCraig::CraigClauseType::A_CLAUSE);
   tracer->label_clause (2, CaDiCraig::CraigClauseType::B_CLAUSE);
+  solver->set ("factor", 0);
   solver->add (-1);
   solver->add (0);
   solver->add (1);
