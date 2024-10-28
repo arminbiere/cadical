@@ -461,6 +461,11 @@ void Checker::add_clause (const char *type) {
   (void) type;
 #endif
 
+  // If there are enough garbage clauses collect them first.
+  if (num_garbage >
+      0.5 * max ((size_t) size_clauses, (size_t) size_vars))
+    collect_garbage_clauses ();
+
   int unit = 0;
   for (const auto &lit : simplified) {
     const signed char tmp = val (lit);
@@ -560,10 +565,6 @@ void Checker::delete_clause (uint64_t id, bool, const vector<int> &c) {
       d->next = garbage;
       garbage = d;
       d->size = 0;
-      // If there are enough garbage clauses collect them.
-      if (num_garbage >
-          0.5 * max ((size_t) size_clauses, (size_t) size_vars))
-        collect_garbage_clauses ();
     } else {
       fatal_message_start ();
       fputs ("deleted clause not in proof:\n", stderr);
