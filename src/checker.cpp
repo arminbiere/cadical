@@ -551,6 +551,8 @@ void Checker::delete_clause (uint64_t id, bool, const vector<int> &c) {
   START (checking);
   LOG (c, "CHECKER checking deletion of clause");
   stats.deleted++;
+  simplified.clear();  // Can be non-empty if clause allocation fails.
+  unsimplified.clear();  // Can be non-empty if clause allocation fails.
   import_clause (c);
   last_id = id;
   if (!tautological ()) {
