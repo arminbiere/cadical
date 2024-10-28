@@ -230,12 +230,12 @@ void Checker::enlarge_vars (int64_t idx) {
   vals -= size_vars;
   delete[] vals;
   vals = new_vals;
+  size_vars = new_size_vars;
 
   watchers.resize (2 * new_size_vars);
   marks.resize (2 * new_size_vars);
 
   assert (idx < new_size_vars);
-  size_vars = new_size_vars;
 }
 
 inline void Checker::import_literal (int lit) {
