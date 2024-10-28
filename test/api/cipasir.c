@@ -46,6 +46,7 @@ struct learner {
 
 static void learn (void *ptr, int *clause) {
   learner *learner = ptr;
+  // TODO do not export extension vars..
   for (const int *p = clause; *p; p++)
     ipasir_add (learner->solver, *p);
   ipasir_add (learner->solver, 0);
