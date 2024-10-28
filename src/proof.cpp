@@ -338,7 +338,7 @@ void Proof::add_assumption_clause (uint64_t id, int lit,
 
 void Proof::delete_clause (Clause *c) {
   LOG (c, "PROOF deleting from proof");
-  assert (clause.empty ());
+  clause.clear(); // Can be non-empty if an allocation fails during adding.
   add_literals (c);
   clause_id = c->id;
   redundant = c->redundant;
