@@ -42,7 +42,7 @@ int main () {
   solver->connect_proof_tracer (ft1, 1);
   solver->set ("veripb", 4);
   solver->trace_proof ("/tmp/veripb.proof");
-  solver->connect_proof_tracer (ft2, 0);
+  solver->connect_proof_tracer (ft2, 0, 1);
   solver->connect_proof_tracer (st1, 1);
   solver->connect_proof_tracer (st2, 0);
 
