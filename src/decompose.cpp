@@ -123,83 +123,6 @@ void Internal::clear_sign_marked_literals () {
 }
 
 
-void Internal::flush_and_learn_binaries () {
-  if (unsat || terminated_asynchronously ()) return;
-  if (!opts.decomposeflush) return;
-  assert (!level);
-  size_t clauses_size = clauses.size ();
-  for (size_t i = 0; i < clauses_size; i++) {
-    Clause *c = clauses[i];
-    if (c->garbage || c->size == 2) continue;
-    int first = 0;
-    int second = 0;
-    for (const auto &lit : *c) {
-      const auto tmp = val (lit);
-      if (tmp > 0) {
-        mark_garbage (c);
-        goto NEXT_CLAUSE;
-      } else if (tmp < 0)
-        continue;
-      else if (!first)
-        first = lit;
-      else if (!second)
-        second = lit;
-      else
-        goto NEXT_CLAUSE;
-    }
-    assert (first && second);
-    LOG (c, "found %d %d from flushing", first, second);
-    stats.flushedbinary++;
-    clause.push_back (first);
-    clause.push_back (second);
-    if (lrat) {
-      for (auto &reason_lit : *c) {
-        if (!val (reason_lit))
-          continue;
-        assert (val (reason_lit) < 0);
-        const int signed_reason_lit = val (reason_lit) * reason_lit;
-        int64_t id = unit_id (signed_reason_lit);
-        lrat_chain.push_back (id);
-      }
-      lrat_chain.push_back (c->id);
-    }
-    if (first != c->literals[0] || second != c->literals[1]) {
-      LOG ("need new clause since at least one watched literal changed");
-      size_t d_clause_idx = clauses.size ();
-      Clause *d = new_clause_as (c);
-      assert (clauses[d_clause_idx] == d);
-      clauses[d_clause_idx] = c;
-      clauses[i] = d;
-      mark_garbage (c);
-    } else {
-      LOG ("simply shrinking clause since watches did not change");
-      assert (c->size > 2);
-      if (!c->redundant)
-        mark_removed (c);
-      if (proof) {
-        proof->add_derived_clause (++clause_id, c->redundant, clause,
-                                   lrat_chain);
-        proof->delete_clause (c);
-        c->id = clause_id;
-      }
-      size_t l = 2;
-#ifdef LOGGING
-      int flushed = c->size - (int) l;
-      LOG ("flushed %d literals", flushed);
-#endif
-      (void) shrink_clause (c, l);
-      assert (c->size == 2);
-      update_watch_size (watches (c->literals[0]), c->literals[1], c);
-      update_watch_size (watches (c->literals[1]), c->literals[0], c);
-      LOG (c, "substituted");
-    }
-    clause.clear ();
-    lrat_chain.clear ();
-  NEXT_CLAUSE:
-    continue;
-  }
-}
-
 // This performs one round of Tarjan's algorithm, e.g., equivalent literal
 // detection and substitution, on the whole formula.  We might want to
 // repeat it since its application might produce new binary clauses or
@@ -792,7 +715,6 @@ bool Internal::decompose_round () {
 }
 
 void Internal::decompose () {
-  flush_and_learn_binaries ();
   for (int round = 1; round <= opts.decomposerounds; round++)
     if (!decompose_round ())
       break;
