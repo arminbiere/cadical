@@ -38,6 +38,7 @@ class Proof {
   void add_derived_clause ();
   void add_assumption_clause ();
   void delete_clause ();
+  void demote_clause ();
   void weaken_minus ();
   void strengthen ();
   void finalize_clause ();

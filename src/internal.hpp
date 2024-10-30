@@ -167,6 +167,8 @@ struct Internal {
   /*----------------------------------------------------------------------*/
 
   int mode;                    // current internal state
+  int tier1[2] = {2,2};
+  int tier2[2] = {6,6};
   bool unsat;                  // empty clause found or learned
   bool iterating;              // report learned unit ('i' line)
   bool localsearching;         // true during local search
@@ -190,6 +192,7 @@ struct Internal {
   int64_t original_id;       // ids for original clauses to produce LRAT
   int64_t reserved_ids;      // number of reserved ids for original clauses
   int64_t conflict_id;       // store conflict id for finalize (frat)
+  int64_t saved_decisions;    // to compute decision rate average
   bool concluded;             // keeps track of conclude
   vector<int64_t> conclusion;   // store ids of conclusion clauses
   vector<int64_t> unit_clauses; // keep track of unit_clauses (LRAT/FRAT)
@@ -268,9 +271,12 @@ struct Internal {
   vector<Level> control;    // 'level + 1 == control.size ()'
   vector<Clause *> clauses; // ordered collection of all clauses
   Averages averages;        // glue, size, jump moving averages
+  Delay delay[2];	    // Delay certain functions
   Limit lim;                // limits for various phases
   Last last;                // statistics at last occurrence
   Inc inc;                  // increments on limits
+
+  Delay delaying_vivify_irredundant;
 
   Proof *proof;             // abstraction layer between solver and tracers
   vector<Tracer *>
@@ -292,6 +298,7 @@ struct Internal {
   Internal *internal; // proxy to 'this' in macros
   External *external; // proxy to 'external' buddy in 'Solver'
 
+  const unsigned max_used = 255;  // must fix into the header of the clause!
   /*----------------------------------------------------------------------*/
 
   // Asynchronous termination flag written by 'terminate' and read by
@@ -644,6 +651,7 @@ struct Internal {
   //
   Clause *new_clause (bool red, int glue = 0);
   void promote_clause (Clause *, int new_glue);
+  void promote_clause_glue_only (Clause *, int new_glue);
   size_t shrink_clause (Clause *, int new_size);
   void minimize_sort_clause ();
   void shrink_and_minimize_clause ();
@@ -689,7 +697,27 @@ struct Internal {
   void search_assign_external (int lit);
   void search_assume_decision (int decision);
   void assign_unit (int lit);
+  int64_t cache_lines (size_t bytes) { return (bytes + 127) / 128; }
+  int64_t cache_lines (size_t n, size_t bytes) {
+    return cache_lines (n * bytes);
+  }
   bool propagate ();
+
+#ifdef PROFILE_MODE
+  bool propagate_wrapper ();
+  bool propagate_unstable ();
+  bool propagate_stable ();
+  void analyze_wrapper ();
+  void analyze_unstable ();
+  void analyze_stable ();
+  int decide_wrapper ();
+  int decide_stable ();
+  int decide_unstable ();
+#else
+#define propagate_wrapper propagate
+#define analyze_wrapper analyze
+#define decide_wrapper decide
+#endif
 
   void propergate (); // Repropagate without blocking literals.
 
@@ -698,6 +726,7 @@ struct Internal {
   void unassign (int lit);
   void update_target_and_best ();
   void backtrack (int target_level = 0);
+  void backtrack_without_updating_phases (int target_level = 0);
 
   // Minimized learned clauses in 'minimize.cpp'.
   //
@@ -719,7 +748,8 @@ struct Internal {
   void clear_analyzed_levels ();
   void clear_minimized_literals ();
   bool bump_also_reason_literal (int lit);
-  void bump_also_reason_literals (int lit, int limit);
+  void bump_also_reason_literals (int lit, int depth_limit,
+                                  size_t size_limit);
   void bump_also_all_reason_literals ();
   void analyze_literal (int lit, int &open, int &resolvent_size,
                         int &antecedent_size);
@@ -733,6 +763,7 @@ struct Internal {
   void otfs_subsume_clause (Clause *subsuming, Clause *subsumed);
   int otfs_find_backtrack_level (int &forced);
   Clause *on_the_fly_strengthen (Clause *conflict, int lit);
+  void update_decision_rate_average ();
   void analyze ();
   void iterate (); // report learned unit clause
 
@@ -772,6 +803,7 @@ struct Internal {
   void get_all_fixed_literals (std::vector<int>&);
 #endif
 
+  void recompute_tier ();
   // Use last learned clause to subsume some more.
   //
   void eagerly_subsume_recently_learned_clauses (Clause *);
@@ -899,20 +931,28 @@ struct Internal {
 
   // Strengthening through vivification in 'vivify.cpp'.
   //
+  bool vivifying ();
+  void demote_clause (Clause *);
   void flush_vivification_schedule (Vivifier &);
-  bool consider_to_vivify_clause (Clause *candidate, bool redundant_mode);
+  void vivify_increment_stats (const Vivifier &vivifier);
+  void vivify_subsume_clause (Clause *subsuming, Clause *subsumed);
+  void compute_tier_limits (Vivifier &);
+  bool consider_to_vivify_clause (Clause *candidate, bool, int, int);
+  void vivify_sort_watched (Clause *c);
+  bool vivify_instantiate (const std::vector<int>&, Clause *, std::vector<std::tuple<int, Clause *, bool>> &lrat_stack);
   void vivify_analyze_redundant (Vivifier &, Clause *start, bool &);
   void vivify_build_lrat (int, Clause *,
                           std::vector<std::tuple<int, Clause *, bool>> &);
   void vivify_chain_for_units (int lit, Clause *reason);
-  bool vivify_all_decisions (Clause *candidate, int subsume);
-  void vivify_post_process_analysis (Clause *candidate, int subsume);
   void vivify_strengthen (Clause *candidate);
   void vivify_assign (int lit, Clause *);
   void vivify_assume (int lit);
   bool vivify_propagate ();
-  void vivify_clause (Vivifier &, Clause *candidate);
-  void vivify_round (bool redundant_mode, int64_t delta);
+  void vivify_deduce (Clause *candidate, Clause *conflct, int implied, Clause **, bool&);
+  bool vivify_clause (Vivifier &, Clause *candidate);
+  void vivify_analyze (Clause *start, bool &, Clause **, const Clause *const, int implied, bool&);
+  bool vivify_shrinkable (const std::vector<int>&sorted,  Clause *c, int &implied);
+  void vivify_round (Vivifier&, int64_t delta);
   void vivify ();
 
   // Compacting (shrinking internal variable tables) in 'compact.cpp'
@@ -933,7 +973,7 @@ struct Internal {
   bool likely_to_be_kept_clause (Clause *c) {
     if (!c->redundant)
       return true;
-    if (c->keep)
+    if (c->glue <= tier1[false])
       return true;
     if (c->glue > lim.keptglue)
       return false;

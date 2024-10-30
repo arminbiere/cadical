@@ -40,7 +40,6 @@ struct Clause {
   bool gate : 1;     // Clause part of a gate (function definition).
   bool hyper : 1;    // redundant hyper binary or ternary resolved
   bool instantiated : 1; // tried to instantiate
-  bool keep : 1;         // always keep this clause (if redundant)
   bool moved : 1;        // moved during garbage collector ('copy' valid)
   bool reason : 1;       // reason / antecedent clause can not be collected
   bool redundant : 1;    // aka 'learned' so not 'irredundant' (original)
@@ -48,7 +47,7 @@ struct Clause {
   bool subsume : 1;      // not checked in last subsumption round
   bool swept : 1;        // clause used to sweep equivalences
   bool flushed : 1;      // garbage in proof deleted binaries
-  unsigned used : 2; // resolved in conflict analysis since last 'reduce'
+  unsigned used : 8; // resolved in conflict analysis since last 'reduce'
   bool vivified : 1; // clause already vivified
   bool vivify : 1;   // clause scheduled to be vivified
 

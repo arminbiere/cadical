@@ -672,10 +672,10 @@ void Internal::subsume (bool update_limits) {
     }
   }
 
-  // Schedule 'vivification' in 'subsume' as well as 'transitive reduction'.
-  //
-  if (opts.vivify)
-    vivify ();
+  // // Schedule 'vivification' in 'subsume' as well as 'transitive reduction'.
+  // //
+  // if (opts.vivify)
+  //   vivify ();
   if (opts.transred)
     transred ();
 

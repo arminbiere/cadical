@@ -66,8 +66,20 @@ void Logger::log (Internal *internal, const Clause *c, const char *fmt,
         for (const auto &lit : s)
           printf (" %d", lit);
       } else {
-        for (const auto &lit : *c)
+        for (const auto &lit : *c) {
+	  const char val = (-internal->max_var <= lit && internal->max_var >= lit ) ? internal->val (lit) : 0;
           printf (" %d", lit);
+	  if (val) {
+            printf ("@%d", internal->var (lit).level);
+	    if (!internal->var (lit).reason) {
+	      printf("+");
+	    }
+	  }
+          if (val > 0)
+            printf ("=+1");
+          if (val < 0)
+            printf ("=-1");
+	}
       }
     }
   } else if (internal->level)

@@ -33,6 +33,8 @@ OPTION( blockocclim,     1e2,  1,2e9,2,0,1, "occurrence limit") \
 OPTION( bump,              1,  0,  1,0,0,1, "bump variables") \
 OPTION( bumpreason,        1,  0,  1,0,0,1, "bump reason literals too") \
 OPTION( bumpreasondepth,   1,  1,  3,0,0,1, "bump reason depth") \
+OPTION( bumpreasonlimit,  10,  1,2e9,0,0,1, "bump reason limit") \
+OPTION( bumpreasonrate,  100,  1,2e9,0,0,1, "bump reason decision rate") \
 OPTION( check,             0,  0,  1,0,0,0, "enable internal checking") \
 OPTION( checkassumptions,  1,  0,  1,0,0,0, "check assumptions satisfied") \
 OPTION( checkconstraint,   1,  0,  1,0,0,0, "check constraint satisfied") \
@@ -89,6 +91,7 @@ OPTION( elimsubst,         1,  0,  1,0,0,1, "elimination by substitution") \
 OPTION( elimsum,           1,  0,1e4,0,0,1, "elimination score sum weight") \
 OPTION( elimxorlim,        5,  2, 27,1,0,1, "maximum XOR size") \
 OPTION( elimxors,          1,  0,  1,0,0,1, "find XOR gates") \
+OPTION( emadecisions,    1e5,  1,2e9,0,0,1, "window decision rate") \
 OPTION( emagluefast,      33,  1,2e9,0,0,1, "window fast glue") \
 OPTION( emaglueslow,     1e5,  1,2e9,0,0,1, "window slow glue") \
 OPTION( emajump,         1e5,  1,2e9,0,0,1, "window back-jump level") \
@@ -121,6 +124,7 @@ OPTION( lrat,              0,  0,  1,0,0,1, "use LRAT proof format") \
 OPTION( lucky,             1,  0,  1,0,0,1, "search for lucky phases") \
 OPTION( minimize,          1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \
+OPTION( minimizeticks,     1,  0,  1,0,0,1, "increment ticks in minimization") \
 OPTION( otfs,              1,  0,  1,0,0,1, "on-the-fly self subsumption") \
 OPTION( phase,             1,  0,  1,0,0,1, "initial phase") \
 OPTION( probe,             1,  0,  1,0,1,1, "failed literal probing" ) \
@@ -134,6 +138,7 @@ OPTION( profile,           2,  0,  4,0,0,0, "profiling level") \
 QUTOPT( quiet,             0,  0,  1,0,0,0, "disable all messages") \
 OPTION( radixsortlim,     32,  0,2e9,0,0,1, "radix sort limit") \
 OPTION( realtime,          0,  0,  1,0,0,0, "real instead of process time") \
+OPTION( recomputetier,     1,  0,  1,0,0,1, "recompute tiers") \
 OPTION( reduce,            1,  0,  1,0,0,1, "reduce useless clauses") \
 OPTION( reduceint,       300, 10,1e6,0,0,1, "reduce interval") \
 OPTION( reducetarget,     75, 10,1e2,0,0,1, "reduce fraction in percent") \
@@ -163,9 +168,7 @@ OPTION( shufflequeue,      1,  0,  1,0,0,1, "shuffle variable queue") \
 OPTION( shufflerandom,     0,  0,  1,0,0,1, "not reverse but random") \
 OPTION( shufflescores,     1,  0,  1,0,0,1, "shuffle variable scores") \
 OPTION( stabilize,         1,  0,  1,0,0,1, "enable stabilizing phases") \
-OPTION( stabilizefactor, 200,101,2e9,0,0,1, "phase increase in percent") \
-OPTION( stabilizeint,    1e3,  1,2e9,0,0,1, "stabilizing interval") \
-OPTION( stabilizemaxint, 2e9,  1,2e9,0,0,1, "maximum stabilizing phase") \
+OPTION( stabilizeinit,   1e3,  1,2e9,0,0,1, "stabilizing interval") \
 OPTION( stabilizeonly,     0,  0,  1,0,0,1, "only stabilizing phases") \
 OPTION( stats,             0,  0,  1,0,0,1, "print all statistics at the end of the run") \
 OPTION( subsume,           1,  0,  1,0,1,1, "enable clause subsumption") \
@@ -200,6 +203,8 @@ OPTION( ternarymineff,   1e6,  1,2e9,1,0,1, "minimum ternary efficiency") \
 OPTION( ternaryocclim,   1e2,  1,2e9,2,0,1, "ternary occurrence limit") \
 OPTION( ternaryreleff,    10,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( ternaryrounds,     2,  1, 16,1,0,1, "maximum ternary rounds") \
+OPTION( tier1limit,       50,  0,100,0,0,1, "limit of tier1 usage in percentage") \
+OPTION( tier2limit,       90,  0,100,0,0,1, "limit of tier2 usage in percentage") \
 OPTION( transred,          1,  0,  1,0,1,1, "transitive reduction of BIG") \
 OPTION( transredmaxeff,  1e8,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transredmineff,  1e6,  0,2e9,1,0,1, "minimum efficiency") \
@@ -207,12 +212,22 @@ OPTION( transredreleff,  1e2,  1,1e5,1,0,1, "relative efficiency per mille") \
 QUTOPT( verbose,           0,  0,  3,0,0,0, "more verbose messages") \
 OPTION( veripb,            0,  0,  4,0,0,1, "odd=checkdeletions, > 2=drat") \
 OPTION( vivify,            1,  0,  1,0,1,1, "vivification") \
+OPTION( vivifycalctier,    0,  0,  1,0,0,1, "recalculate tier limits") \
+OPTION( vivifydemote,      0,  0,  1,0,1,1, "demote irredundant or delete directly") \
+OPTION( vivifyeff,        75,  0,1e5,1,0,1, "overall efficiency per mille") \
 OPTION( vivifyinst,        1,  0,  1,0,0,1, "instantiate last literal when vivify") \
+OPTION( vivifyint,       1e4,  1,2e9,0,0,1, "vivify interval") \
+OPTION( vivifyirred,       1,  0,  1,0,1,1, "vivification irred") \
+OPTION( vivifyirredeff,    3,  1,100,1,0,1, "irredundant efficiency per mille") \
 OPTION( vivifymaxeff,    2e7,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( vivifymineff,    2e4,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( vivifyonce,        0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \
-OPTION( vivifyredeff,     75,  0,1e3,1,0,1, "redundant efficiency per mille") \
-OPTION( vivifyreleff,     20,  1,1e5,1,0,1, "relative efficiency per mille") \
+OPTION( vivifytier1,       1,  0,  1,0,1,1, "vivification tier1") \
+OPTION( vivifytier1eff,    3,  0,100,1,0,1, "relative tier1 effort") \
+OPTION( vivifytier2,       1,  0,  1,0,1,1, "vivification tier2") \
+OPTION( vivifytier2eff,    3,  1,100,1,0,1, "relative tier2 effort") \
+OPTION( vivifytier3,       1,  0,  1,0,1,1, "vivification tier3") \
+OPTION( vivifytier3eff,    1,  1,100,1,0,1, "relative tier3 effort") \
 OPTION( walk,              1,  0,  1,0,0,1, "enable random walks") \
 OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( walkmineff,      1e5,  0,1e7,1,0,1, "minimum efficiency") \

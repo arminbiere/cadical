@@ -7,10 +7,12 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 Stats::Stats () {
-  memset (this, 0, sizeof *this);
   time.real = absolute_real_time ();
   time.process = absolute_process_time ();
   walk.minimum = LONG_MAX;
+  used.resize(2);
+  used[0].resize(127);
+  used[1].resize(127);
 }
 
 /*------------------------------------------------------------------------*/
@@ -264,7 +266,7 @@ void Stats::print (Internal *internal) {
     PRT ("learned:         %15" PRId64 "   %10.2f %%  per conflict",
          stats.learned.clauses,
          percent (stats.learned.clauses, stats.conflicts));
-    PRT ("  bumped:        %15" PRId64 "   %10.2f    per learned",
+    PRT ("@ bumped:        %15" PRId64 "   %10.2f    per learned",
          stats.bumped, relative (stats.bumped, stats.learned.clauses));
     PRT ("  recomputed:    %15" PRId64 "   %10.2f %%  per learned",
          stats.recomputed,
@@ -353,6 +355,13 @@ void Stats::print (Internal *internal) {
   PRT ("  walkprops:     %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.walk,
        percent (stats.propagations.walk, propagations));
+  int64_t ticks = stats.ticks.search[0] + stats.ticks.search[1];
+  PRT ("searchticks:     %15" PRId64 "   %10.2f    propagation",
+       ticks, relative (ticks, stats.propagations.search));
+  PRT ("@ stableticks:   %15" PRId64 "   %10.2f %%  ticks",
+       stats.ticks.search[1], percent (stats.ticks.search[1], ticks));
+  PRT ("@ unstableticks: %15" PRId64 "   %10.2f %%  ticks",
+       stats.ticks.search[0], percent (stats.ticks.search[0], ticks));
   if (all || stats.reactivated) {
     PRT ("reactivated:     %15" PRId64 "   %10.2f %%  of all variables",
          stats.reactivated, percent (stats.reactivated, stats.vars));
@@ -540,6 +549,11 @@ void Stats::print (Internal *internal) {
     PRT ("  elimbwstr:     %15" PRId64 "   %10.2f %%  of strengthened",
          stats.elimbwstr, percent (stats.elimbwstr, stats.strengthened));
   }
+  if (all) {
+    PRT ("tier recomputed: %15" PRId64 "   %10.2f    interval",
+         stats.tierecomputed,
+         relative (stats.conflicts, stats.tierecomputed));
+  }
   if (all || stats.htrs) {
     PRT ("ternary:         %15" PRId64 "   %10.2f %%  of resolved",
          stats.htrs, percent (stats.htrs, stats.ternres));
@@ -590,12 +604,15 @@ void Stats::print (Internal *internal) {
     PRT ("  vivifystred1:  %15" PRId64 "   %10.2f %%  per vivifystrs",
          stats.vivifystred1,
          percent (stats.vivifystred1, stats.vivifystrs));
-    PRT ("  vivifystred2:  %15" PRId64 "   %10.2f %%  per vivifystrs",
+    PRT ("  vivifystred2:  %15" PRId64 "   %10.2f %%  per viviyfstrs",
          stats.vivifystred2,
          percent (stats.vivifystred2, stats.vivifystrs));
     PRT ("  vivifystred3:  %15" PRId64 "   %10.2f %%  per vivifystrs",
          stats.vivifystred3,
          percent (stats.vivifystred3, stats.vivifystrs));
+    PRT ("  vivifydemote:  %15" PRId64 "   %10.2f %%  per vivifystrs",
+         stats.vivifydemote,
+         percent (stats.vivifydemote, stats.vivifystrs));
     PRT ("  vivifydecs:    %15" PRId64 "   %10.2f    per checks",
          stats.vivifydecs, relative (stats.vivifydecs, stats.vivifychecks));
     PRT ("  vivifyreused:  %15" PRId64 "   %10.2f %%  per decision",

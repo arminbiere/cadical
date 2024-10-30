@@ -74,13 +74,21 @@ void Internal::update_target_and_best () {
 /*------------------------------------------------------------------------*/
 
 void Internal::backtrack (int new_level) {
+  assert (new_level <= level);
+  if (new_level == level)
+    return;
+
+  update_target_and_best ();
+  backtrack_without_updating_phases(new_level);
+}
+
+void Internal::backtrack_without_updating_phases (int new_level) {
 
   assert (new_level <= level);
   if (new_level == level)
     return;
 
   stats.backtracks++;
-  update_target_and_best ();
 
   assert (num_assigned == trail.size ());
 

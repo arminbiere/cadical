@@ -32,6 +32,8 @@ bool Internal::flushing () {
 /*------------------------------------------------------------------------*/
 
 void Internal::mark_clauses_to_be_flushed () {
+  const int tier1limit = tier1[false];
+  const int tier2limit = max (tier1limit, tier2[false]);
   for (const auto &c : clauses) {
     if (!c->redundant)
       continue; // keep irredundant
@@ -42,8 +44,10 @@ void Internal::mark_clauses_to_be_flushed () {
     const unsigned used = c->used;
     if (used)
       c->used--;
-    if (used)
-      continue;       // but keep recently used clauses
+    if (c->glue < tier1limit && used)
+      continue;
+    if (c->glue < tier2limit && used >= max_used - 1)
+      continue;
     mark_garbage (c); // flush unused clauses
     if (c->hyper)
       stats.flush.hyper++;
@@ -90,6 +94,8 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   // they otherwise have the same glue and size).
 
   vector<Clause *> stack;
+  const int tier1limit = tier1[false];
+  const int tier2limit = max (tier1limit, tier2[false]);
 
   stack.reserve (stats.current.redundant);
 
@@ -103,17 +109,18 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     const unsigned used = c->used;
     if (used)
       c->used--;
+    if (c->glue <= tier1limit && used)
+      continue;
+    if (c->glue <= tier2limit && used >= max_used - 1)
+      continue;
     if (c->hyper) {          // Hyper binary and ternary resolvents
       assert (c->size <= 3); // are only kept for one reduce round
       if (!used)
-        mark_garbage (c); // (even if 'c->keep' is true) unless
+        mark_garbage (c); // unless
       continue;           //  used recently.
     }
-    if (used)
+    if (used >= max_used)
       continue; // Do keep recently used clauses.
-    if (c->keep)
-      continue; // Forced to keep (see above).
-
     stack.push_back (c);
   }
 

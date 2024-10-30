@@ -523,6 +523,16 @@ void Proof::delete_clause () {
   clause_id = 0;
 }
 
+void Proof::demote_clause () {
+  LOG (clause, "PROOF demoting external clause");
+  assert (!redundant);
+  for (auto &tracer : tracers) {
+    tracer->demote_clause (clause_id, clause);
+  }
+  clause.clear ();
+  clause_id = 0;
+}
+
 void Proof::weaken_minus () {
   LOG (clause, "PROOF marking as clause to restore");
   for (auto &tracer : tracers) {

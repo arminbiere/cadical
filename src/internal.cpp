@@ -12,6 +12,7 @@ Internal::Internal ()
       searching_lucky_phases (false), stable (false), reported (false),
       external_prop (false), did_external_prop (false),
       external_prop_is_lazy (true), forced_backt_allowed (false), 
+
       private_steps (false), rephased (0), vsize (0), max_var (0), 
       clause_id (0), original_id (0), reserved_ids (0), 
       conflict_id (0), concluded (false), lrat (false), frat (false), level (0), vals (0),
@@ -228,6 +229,35 @@ void Internal::reserve_ids (int number) {
 
 /*------------------------------------------------------------------------*/
 
+#ifdef PROFILE_MODE
+
+// Separating these makes it easier to profile stable and unstable search.
+
+bool Internal::propagate_wrapper () {
+  if (stable)
+    return propagate_stable ();
+  else
+    return propagate_unstable ();
+}
+
+void Internal::analyze_wrapper () {
+  if (stable)
+    analyze_stable ();
+  else
+    analyze_unstable ();
+}
+
+int Internal::decide_wrapper () {
+  if (stable)
+    return decide_stable ();
+  else
+    return decide_unstable ();
+}
+
+#endif
+
+/*------------------------------------------------------------------------*/
+
 // This is the main CDCL loop with interleaved inprocessing.
 
 int Internal::cdcl_loop_with_inprocessing () {
@@ -249,8 +279,8 @@ int Internal::cdcl_loop_with_inprocessing () {
       res = 20;
     else if (unsat_constraint)
       res = 20;
-    else if (!propagate ())
-      analyze (); // propagate and analyze
+    else if (!propagate_wrapper ())
+      analyze_wrapper (); // propagate and analyze
     else if (iterating)
       iterate ();                               // report learned unit
     else if (!external_propagate () || unsat) { // external propagation
@@ -278,8 +308,10 @@ int Internal::cdcl_loop_with_inprocessing () {
       reduce (); // collect useless clauses
     else if (probing ())
       probe (); // failed literal probing
-    else if (subsuming ())
-      subsume (); // subsumption algorithm
+    else if (vivifying ())
+      vivify (); // subsumption algorithm
+    // else if (subsuming ())
+    //   subsume (); // subsumption algorithm
     else if (eliminating ())
       elim (); // variable elimination
     else if (compacting ())
@@ -312,6 +344,7 @@ int Internal::cdcl_loop_with_inprocessing () {
 void Internal::init_report_limits () {
   reported = false;
   lim.report = 0;
+  lim.recompute_tier = 5000;
 }
 
 void Internal::init_preprocessing_limits () {
@@ -473,10 +506,12 @@ void Internal::init_search_limits () {
   } else
     LOG ("keeping non-stable phase");
 
-  inc.stabilize = opts.stabilizeint;
-  lim.stabilize = stats.conflicts + inc.stabilize;
-  LOG ("new stabilize limit %" PRId64 " after %" PRId64 " conflicts",
-       lim.stabilize, inc.stabilize);
+  if (!incremental) {
+    inc.stabilize = 0;
+    lim.stabilize = stats.conflicts + opts.stabilizeinit;
+    LOG ("initial stabilize limit %" PRId64 " after %d conflicts",
+         lim.stabilize, (int) opts.stabilizeinit);
+  }
 
   if (opts.stabilize && opts.reluctant) {
     LOG ("new restart reluctant doubling sequence period %d",
