@@ -250,7 +250,7 @@ int Internal::next_factor (Factoring &factoring,
   assert (counted.empty ());
   assert (flauses.empty ());
   const int initial = factoring.initial;
-  int64_t ticks = 1; // TODO: + kissat_cache_lines (SIZE_STACK (*last_clauses), sizeof (watch));
+  int64_t ticks = 1 + cache_lines (last_clauses.size (), sizeof (Clause *));
   for (auto c : last_clauses) {
     assert (!c->swept);
     int min_lit = 0;
@@ -277,7 +277,7 @@ int Internal::next_factor (Factoring &factoring,
       const int c_size = c->size;
       vector<int> &nounted = factoring.nounted;
       assert (nounted.empty ());
-      ticks += 1; // + kissat_cache_lines (SIZE_WATCHES (*min_watches), sizeof (watch));
+      ticks += 1 + cache_lines (occs (min_lit).size (), sizeof (Clause *));
       for (auto d : occs (min_lit)) {
         if (c == d) continue;
         ticks++;
@@ -390,8 +390,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
   vector<Clause *> &flauses = factoring.flauses;
   assert (flauses.empty ());
 
-  int64_t ticks = 1;
-  //    1 + kissat_cache_lines (SIZE_STACK (*last_clauses), sizeof (watch));
+  int64_t ticks = 1 + cache_lines (last_clauses.size (), sizeof (Clause *));
 
   size_t i = 0;
 
@@ -419,8 +418,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
     if (factors == 1) {
       assert (min_lit);
       const int c_size = c->size;
-      ticks += 1; //  + kissat_cache_lines (SIZE_STACK (*min_watches),
-                 //                      sizeof (watch));
+      ticks += 1 + cache_lines (occs (min_lit).size (), sizeof (Clause *));
       for (auto d : occs (min_lit)) {
         if (c == d)
           continue;
@@ -862,7 +860,9 @@ void Internal::factor () {
 
   int64_t limit = opts.factoriniticks;
   if (stats.factor > 1) {
-    int64_t tmp = stats.propagations.search - last.factor.ticks;
+    int64_t tmp = stats.ticks.search[0] + stats.ticks.search[1];
+    tmp -= last.factor.ticks;
+    last.factor.ticks = stats.ticks.search[0] + stats.ticks.search[1];
     tmp *= opts.factoreffort;
     limit = tmp;
   } else {

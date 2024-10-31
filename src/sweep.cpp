@@ -259,8 +259,8 @@ void Internal::init_sweeper (Sweeper &sweeper) {
     sweeper.limit.ticks = UINT64_MAX;
     VERBOSE (3, "unlimited sweeper ticks limit");
   } else {
-    int64_t limit = stats.propagations.search;
-    limit -= last.sweep.propagations;
+    int64_t limit = stats.ticks.search[0] + stats.ticks.search[1];
+    limit -= last.sweep.propagations;  // TODO rename to ticks
     limit *= opts.sweepeffort * 1e-3;
     if (limit < opts.sweepmineff)
       limit = opts.sweepmineff;
@@ -268,7 +268,7 @@ void Internal::init_sweeper (Sweeper &sweeper) {
     //   limit = opts.sweepmaxeff;
     int64_t ticks_limit = limit;   // propagations are not equal ticks
     sweeper.limit.ticks = ticks_limit;
-    last.sweep.propagations = stats.propagations.search;
+    last.sweep.propagations = stats.ticks.search[0] + stats.ticks.search[1];
   }
   sweep_set_kitten_ticks_limit (sweeper);
 }
