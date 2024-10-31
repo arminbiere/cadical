@@ -38,6 +38,7 @@ static const char *USAGE =
 "  --do-not-ignore-resource-limits  consider out-of-time or memory as "
 "error\n"
 "\n"
+"  --tiny            generate tiny formulas only\n"
 "  --small           generate small formulas only\n"
 "  --medium          generate medium sized formulas only\n"
 "  --big             generate big formulas only\n"
@@ -200,7 +201,7 @@ class Trace;
 
 // Options to generate traces.
 
-enum Size { NOSIZE = 0, SMALL = 10, MEDIUM = 30, BIG = 50 };
+enum Size { NOSIZE = 0, TINY = 5, SMALL = 10, MEDIUM = 30, BIG = 50 };
 
 struct Force {
   Size size = NOSIZE;
@@ -2722,7 +2723,9 @@ void Trace::generate (uint64_t i, uint64_t s) {
     double ratio;
     int uniform;
 
-    if (size == SMALL)
+    if (size == TINY)
+      range = random.pick_int (1, TINY);
+    else if (size == SMALL)
       range = random.pick_int (1, SMALL);
     else if (size == MEDIUM)
       range = random.pick_int (SMALL + 1, MEDIUM);
@@ -2730,6 +2733,8 @@ void Trace::generate (uint64_t i, uint64_t s) {
       range = random.pick_int (MEDIUM + 1, BIG);
 
     if (random.generate_bool ())
+      uniform = 0;
+    else if (size == TINY)
       uniform = 0;
     else if (size == SMALL)
       uniform = random.pick_int (3, 7);
@@ -4607,6 +4612,8 @@ int Mobical::main (int argc, char **argv) {
              !strcmp (argv[i], "--do-not-reduce-values") ||
              !strcmp (argv[i], "--do-not-reduce-option-values"))
       donot.reduce = true;
+    else if (!strcmp (argv[i], "--tiny"))
+      force.size = TINY;
     else if (!strcmp (argv[i], "--small"))
       force.size = SMALL;
     else if (!strcmp (argv[i], "--medium"))
