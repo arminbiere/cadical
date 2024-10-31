@@ -31,15 +31,15 @@ static string path (const char *tester, unsigned i) {
   return prefix (tester) + "-" + to_string (i) + suffix;
 }
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t serialize_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void lock () {
-  if (pthread_mutex_lock (&mutex))
+  if (pthread_mutex_lock (&serialize_mutex))
     perror ("error: pthread_mutex_lock failed");
 }
 
 static void unlock () {
-  if (pthread_mutex_unlock (&mutex))
+  if (pthread_mutex_unlock (&serialize_mutex))
     perror ("error: pthread_mutex_unlock failed");
 }
 
@@ -240,6 +240,7 @@ static void catch_alarm (int sig) {
   assert (sig == SIGALRM);
   const char *msg = "error: unexpected alarm (file I/O hanging?)\n";
   ::write (2, msg, strlen (msg));
+  (void) sig;
   exit (1);
 }
 

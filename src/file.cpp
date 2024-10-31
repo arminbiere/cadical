@@ -22,6 +22,15 @@ extern "C" {
 
 #endif
 
+#if defined(__APPLE__) || defined(__MACH__)
+
+extern "C" {
+#include <libproc.h>
+#include <sys/proc_info.h>
+}
+
+#endif
+
 /*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
@@ -300,7 +309,27 @@ FILE *File::write_pipe (Internal *internal, const char *command,
     // These fds are cloned into the child process.
     // As this inhibits pipes to be closed by the parent process
     // we have to close all of the erroneously cloned fds here.
+#if defined(__linux__) || defined(__unix__)
     ::closefrom (3);
+#elif defined(__APPLE__) || defined(__MACH__)
+    {
+      int fds, pid = getpid ();
+      if ((fds = proc_pidinfo (pid, PROC_PIDLISTFDS, 0, nullptr, 0)) < 0) {
+        MSG ("could not get length of list of opened fds");
+        _exit (1);
+      }
+      auto fdinfos = new struct proc_fdinfo[fds];
+      if (proc_pidinfo (pid, PROC_PIDLISTFDS, 0, fdinfos, fds) < 0) {
+        delete[] fdinfos;
+        MSG ("could not get list of opened fds");
+        _exit (1);
+      }
+      for (int i = 0; i < fds; i++)
+        if (fdinfos[i].proc_fd >= 3)
+          ::close (fdinfos[i].proc_fd);
+      delete[] fdinfos;
+    }
+#endif
     execv (absolute_command_path, argv);
     _exit (1);
   }
