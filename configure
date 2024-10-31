@@ -23,6 +23,7 @@ competition=no
 coverage=no
 flexible=yes
 profile=no
+memory_fuzzing=no
 contracts=yes
 tracing=yes
 unlocked=yes
@@ -95,6 +96,8 @@ where '<option>' is one of the following
 
 --coverage         compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile          compile with '-pg' to profile with 'gprof'
+--memory-fuzzing   compile with '-rdynamic -fno-omit-frame-pointer' and
+                   '-DMOBICAL_MEMORY' to fuzz for bad memory allocation handling
 
 --no-contracts     compile without API contract checking code
 --no-tracing       compile without API call tracing code
@@ -162,6 +165,7 @@ do
 
     --coverage) coverage=yes;;
     --profile) profile=yes;;
+    --memory-fuzzing) memory_fuzzing=yes;;
 
     --competition) competition=yes;;
 
@@ -306,6 +310,7 @@ fi
 [ $quiet = yes ] && CXXFLAGS="$CXXFLAGS -DQUIET"
 [ $profile = yes ] && CXXFLAGS="$CXXFLAGS -pg"
 [ $coverage = yes ] && CXXFLAGS="$CXXFLAGS -ftest-coverage -fprofile-arcs"
+[ $memory_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic -fno-omit-frame-pointer -DMOBICAL_MEMORY"
 if [ $pedantic = yes ]
 then
   CXXFLAGS="$CXXFLAGS --pedantic -Werror -std=c++11"
