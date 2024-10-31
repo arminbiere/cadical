@@ -22,6 +22,14 @@ extern "C" {
 
 #endif
 
+#if defined(__APPLE__) || defined(__MACH__)
+
+extern "C" {
+#include <sys/proc_info.h>
+}
+
+#endif
+
 /*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
