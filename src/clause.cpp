@@ -94,6 +94,7 @@ Clause *Internal::new_clause (bool red, int glue) {
 
   size_t bytes = Clause::bytes (size);
   Clause *c = (Clause *) new char[bytes];
+  DeferDeleteArray<char> clause_delete ((char *) c);
 
   c->id = ++clause_id;
 
@@ -140,6 +141,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   }
 
   clauses.push_back (c);
+  clause_delete.release ();
   LOG (c, "new pointer %p", (void *) c);
 
   if (likely_to_be_kept_clause (c))
@@ -579,10 +581,10 @@ Clause *Internal::new_clause_as (const Clause *orig) {
 //
 Clause *Internal::new_resolved_irredundant_clause () {
   external->check_learned_clause ();
-  Clause *res = new_clause (false);
   if (proof) {
-    proof->add_derived_clause (res, lrat_chain);
+    proof->add_derived_clause (clause_id + 1, false, clause, lrat_chain);
   }
+  Clause *res = new_clause (false);
   assert (!watching ());
   return res;
 }

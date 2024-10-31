@@ -155,17 +155,21 @@ void Internal::check () {
   new_proof_on_demand ();
   if (opts.checkproof > 1) {
     StatTracer *lratchecker = new LratChecker (this);
+    DeferDeletePtr<LratChecker> delete_lratchecker ((LratChecker *) lratchecker);
     LOG ("PROOF connecting LRAT proof checker");
     force_lrat ();
     frat = true;
     proof->connect (lratchecker);
     stat_tracers.push_back (lratchecker);
+    delete_lratchecker.release ();
   }
   if (opts.checkproof == 1 || opts.checkproof == 3) {
     StatTracer *checker = new Checker (this);
+    DeferDeletePtr<Checker> delete_checker ((Checker *) checker);
     LOG ("PROOF connecting proof checker");
     proof->connect (checker);
     stat_tracers.push_back (checker);
+    delete_checker.release ();
   }
 }
 
@@ -338,7 +342,7 @@ void Proof::add_assumption_clause (uint64_t id, int lit,
 
 void Proof::delete_clause (Clause *c) {
   LOG (c, "PROOF deleting from proof");
-  assert (clause.empty ());
+  clause.clear(); // Can be non-empty if an allocation fails during adding.
   add_literals (c);
   clause_id = c->id;
   redundant = c->redundant;

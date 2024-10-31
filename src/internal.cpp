@@ -48,6 +48,11 @@ Internal::Internal ()
 }
 
 Internal::~Internal () {
+  // If a memory exception ocurred a profile might still be active.
+#define PROFILE(NAME, LEVEL) \
+  if (PROFILE_ACTIVE(NAME)) STOP(NAME);
+  PROFILES
+#undef PROFILE
   delete[](char *) dummy_binary;
   for (const auto &c : clauses)
     delete_clause (c);
@@ -142,6 +147,7 @@ void Internal::enlarge (int new_max_var) {
   enlarge_init (ptab, 2 * new_vsize, -1);
   enlarge_only (ftab, new_vsize);
   enlarge_vals (new_vsize);
+  vsize = new_vsize;
   enlarge_zero (frozentab, new_vsize);
   enlarge_zero (relevanttab, new_vsize);
   const signed char val = opts.phase ? 1 : -1;
@@ -152,7 +158,6 @@ void Internal::enlarge (int new_max_var) {
   enlarge_zero (phases.prev, new_vsize);
   enlarge_zero (phases.min, new_vsize);
   enlarge_zero (marks, new_vsize);
-  vsize = new_vsize;
 }
 
 void Internal::init_vars (int new_max_var) {
