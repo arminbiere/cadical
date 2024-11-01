@@ -32,10 +32,13 @@ static const char *USAGE =
 "  -<n>              specify the number of solving phases explicitly\n"
 "  --time <seconds>  set time limit per trace (none=0, default=%d)\n"
 "  --space <MB>      set space limit (none=0, default=%d)\n"
+"  --bad-alloc       generate failing memory allocations, monitor for crashes\n"
+"  --leak-alloc      generate failing memory allocations, monitor for leaks\n"
 "\n"
 "  --do-not-ignore-resource-limits  consider out-of-time or memory as "
 "error\n"
 "\n"
+"  --tiny            generate tiny formulas only\n"
 "  --small           generate small formulas only\n"
 "  --medium          generate medium sized formulas only\n"
 "  --big             generate big formulas only\n"
@@ -127,12 +130,14 @@ static const char *USAGE =
 
 #include <cstdarg>
 #include <cstring>
+#include <cstddef>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <regex>
 
 // MockPropagator
 #include <deque>
@@ -142,8 +147,43 @@ static const char *USAGE =
 /*------------------------------------------------------------------------*/
 
 extern "C" {
+#ifdef MOBICAL_MEMORY
+#include <cxxabi.h>
+#include <dlfcn.h>
+#include <execinfo.h>
+#endif
 #include <unistd.h>
 }
+
+#ifdef MOBICAL_MEMORY
+typedef void* (*malloc_t)(size_t);
+typedef void* (*realloc_t)(void*, size_t);
+typedef void (*free_t)(void*);
+static malloc_t libc_malloc = nullptr;
+static realloc_t libc_realloc = nullptr;
+static free_t libc_free = nullptr;
+static malloc_t hook_malloc = nullptr;
+static realloc_t hook_realloc = nullptr;
+static free_t hook_free = nullptr;
+
+void* malloc (size_t size) {
+  return hook_malloc ? (*hook_malloc)(size) : (*libc_malloc)(size);
+}
+void* realloc (void* ptr, size_t size) {
+  return hook_realloc ? (*hook_realloc)(ptr, size) : (*libc_realloc)(ptr, size);
+}
+void free (void* ptr) {
+  (hook_free) ? (*hook_free)(ptr) : (*libc_free)(ptr);
+}
+
+void initialize_allocators () {
+  libc_malloc = reinterpret_cast<malloc_t> (dlsym (RTLD_NEXT, "malloc"));
+  libc_realloc = reinterpret_cast<realloc_t> (dlsym (RTLD_NEXT, "realloc"));
+  libc_free = reinterpret_cast<free_t> (dlsym (RTLD_NEXT, "free"));
+}
+__attribute__ ((section (".preinit_array")))
+void (*init_allocators_ptr)(void) = initialize_allocators;
+#endif
 
 /*------------------------------------------------------------------------*/
 namespace CaDiCaL { // All except 'main' below.
@@ -161,7 +201,7 @@ class Trace;
 
 // Options to generate traces.
 
-enum Size { NOSIZE = 0, SMALL = 10, MEDIUM = 30, BIG = 50 };
+enum Size { NOSIZE = 0, TINY = 5, SMALL = 10, MEDIUM = 30, BIG = 50 };
 
 struct Force {
   Size size = NOSIZE;
@@ -199,6 +239,28 @@ struct Shared {
   int64_t sat;
   int64_t memout;
   int64_t timeout;
+  int64_t oom;
+
+#ifdef MOBICAL_MEMORY
+#define MOBICAL_MEMORY_STACK_COUNT 64
+#define MOBICAL_MEMORY_LEAK_COUNT (1024 * 64)
+  struct {
+    size_t debug_filter_index;
+    size_t alloc_call_index;
+    void*  alloc_stack_array [MOBICAL_MEMORY_STACK_COUNT];
+    size_t alloc_stack_size;
+    size_t signal_call_index;
+    void*  signal_stack_array [MOBICAL_MEMORY_STACK_COUNT];
+    size_t signal_stack_size;
+  } bad_alloc;
+  struct {
+    size_t call_index [MOBICAL_MEMORY_LEAK_COUNT];
+    size_t alloc_size [MOBICAL_MEMORY_LEAK_COUNT];
+    void*  alloc_ptr  [MOBICAL_MEMORY_LEAK_COUNT];
+    void*  stack_array [MOBICAL_MEMORY_LEAK_COUNT][MOBICAL_MEMORY_STACK_COUNT];
+    size_t stack_size [MOBICAL_MEMORY_LEAK_COUNT];
+  } leak_alloc;
+#endif
 };
 
 /*------------------------------------------------------------------------*/
@@ -276,7 +338,9 @@ private:
 
     size_t size = clause.size ();
     ExternalLemma *lemma = new ExternalLemma;
+    DeferDeletePtr<ExternalLemma> delete_lemma (lemma);
     lemma->literals = new int[size];
+    DeferDeleteArray<int> delete_literals (lemma->literals);
 
     lemma->id = external_lemmas.size ();
     lemma->add_count = 0;
@@ -291,6 +355,8 @@ private:
       *q++ = lit;
 
     external_lemmas.push_back (lemma);
+    delete_literals.release ();
+    delete_lemma.release ();
 
     return lemma->id;
   }
@@ -920,6 +986,10 @@ class Mobical : public Handler {
 
   int64_t time_limit = DEFAULT_TIME_LIMIT;   // in seconds, none if zero
   int64_t space_limit = DEFAULT_SPACE_LIMIT; // in MB, none if zero
+#ifdef MOBICAL_MEMORY
+  bool bad_alloc = false;
+  bool leak_alloc = false;
+#endif
 
   Terminal &terminal = terr;
 
@@ -1166,19 +1236,27 @@ struct Call {
     FLUSHPROOFTRACE = shift ( 35 ),
     CLOSEPROOFTRACE = shift ( 36 ),
 
+#ifdef MOBICAL_MEMORY
+    MAXALLOC        = shift ( 37 ),
+    LEAKALLOC       = shift ( 38 ),
+#endif
+
     // clang-format on
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED |
-             PHASE,
-
+             PHASE
+#ifdef MOBICAL_MEMORY
+            | MAXALLOC | LEAKALLOC
+#endif
+            ,
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
-    BEFORE =
-        ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
+    BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT |
+             OBSERVE,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING,
     DURING = LEMMA, // | CONTINUE,
-    AFTER = VAL | FLIP | FAILED | CONCLUDE | ALWAYS | FLUSHPROOFTRACE |
-            CLOSEPROOFTRACE,
+    AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS |
+            FLUSHPROOFTRACE | CLOSEPROOFTRACE,
   };
 
   Type type; // Explicit typing.
@@ -1240,6 +1318,23 @@ struct InitCall : public Call {
   Call *copy () { return new InitCall (); }
   const char *keyword () { return "init"; }
 };
+
+#ifdef MOBICAL_MEMORY
+struct MaxAllocCall : public Call {
+  MaxAllocCall (int val) : Call (MAXALLOC, 0, 0, 0, val) {}
+  void execute (Solver *&s) { (void) s; }
+  void print (ostream &o) { o << "max_alloc " << val << endl; }
+  Call *copy () { return new MaxAllocCall (val); }
+  const char *keyword () { return "max_alloc"; }
+};
+struct LeakAllocCall : public Call {
+  LeakAllocCall () : Call (LEAKALLOC) {}
+  void execute (Solver *&s) { (void) s; }
+  void print (ostream &o) { o << "leak_alloc" << endl; }
+  Call *copy () { return new LeakAllocCall (); }
+  const char *keyword () { return "leak_alloc"; }
+};
+#endif
 
 struct VarsCall : public Call {
   VarsCall () : Call (VARS) {}
@@ -1638,12 +1733,23 @@ public:
   static int64_t failed;
   static int64_t ok;
 
+#ifdef MOBICAL_MEMORY
+  static int64_t memory_call_index;
+  static int64_t memory_bad_alloc;
+  static int64_t memory_bad_size;
+  static int64_t memory_bad_failed;
+  static int64_t memory_leak_alloc;
+  static int64_t memory_leak_next_free;
+#endif
+
 #define SIGNALS \
   SIGNAL (SIGINT) \
   SIGNAL (SIGSEGV) \
   SIGNAL (SIGABRT) \
   SIGNAL (SIGTERM) \
-  SIGNAL (SIGBUS)
+  SIGNAL (SIGBUS) \
+  SIGNAL (SIGUSR1) \
+  SIGNAL (SIGUSR2)
 
 #define SIGNAL(SIG) static void (*old_##SIG##_handler) (int);
   SIGNALS
@@ -1651,6 +1757,15 @@ public:
   static void child_signal_handler (int);
   static void init_child_signal_handlers ();
   static void reset_child_signal_handlers ();
+
+#ifdef MOBICAL_MEMORY
+  static void  hooks_install (void);
+  static void  hooks_uninstall (void);
+  static void *hook_malloc (size_t);
+  static void *hook_realloc (void *, size_t);
+  static void  hook_free (void *);
+  static void  print_trace (void **, size_t, ostream&, size_t);
+#endif
 
   Trace (int64_t i = 0, uint64_t s = 0) : id (i), seed (s), solver (0) {}
 
@@ -1670,48 +1785,153 @@ public:
   void push_back (Call *c) { calls.push_back (c); }
 
   void print (ostream &o) {
-    for (size_t i = 0; i < calls.size (); i++)
-      calls[i]->print (o << i << ' ');
+    for (size_t i = 0; i < calls.size (); i++) {
+#ifdef MOBICAL_MEMORY
+      if (mobical.shared->bad_alloc.alloc_call_index == i + 1)
+        o << "# V---------------------------------------------------------------------- bad alloc: allocation" << endl;
+      if (mobical.shared->bad_alloc.signal_call_index == i + 1)
+        o << "# V---------------------------------------------------------------------- bad alloc: crashed" << endl;
+      if (mobical.shared->bad_alloc.debug_filter_index == i + 1)
+        o << "# V---------------------------------------------------------------------- debug: call was filtered" << endl;
+      for (size_t index { 0u }; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+        if (mobical.shared->leak_alloc.call_index[index] == i + 1) {
+          o << "# V---------------------------------------------------------------------- leak alloc: allocation" << endl;
+          break;
+        }
+      }
+#endif
+      o << i << ' ';
+      calls[i]->print (o);
+    }
+
+#ifdef MOBICAL_MEMORY
+    if (mobical.shared->bad_alloc.alloc_call_index > 0) {
+      o << "# ---------------------------------------------------" << endl;
+      o << "# Memory was tried to be allocated here:" << endl;
+      assert (mobical.shared->bad_alloc.alloc_stack_size <= MOBICAL_MEMORY_STACK_COUNT);
+      print_trace (mobical.shared->bad_alloc.alloc_stack_array,
+        mobical.shared->bad_alloc.alloc_stack_size, o, 0);
+      o << "#" << endl;
+    }
+    if (mobical.shared->bad_alloc.signal_call_index > 0) {
+      o << "# ---------------------------------------------------" << endl;
+      o << "# A crash happened here:" << endl;
+      assert (mobical.shared->bad_alloc.signal_stack_size <= MOBICAL_MEMORY_STACK_COUNT);
+      print_trace (mobical.shared->bad_alloc.signal_stack_array,
+        mobical.shared->bad_alloc.signal_stack_size, o, 0);
+      o << "#" << endl;
+    }
+    for (size_t index { 0u }; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+      if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
+        o << "# ---------------------------------------------------" << endl;
+        o << "# Leak of " << mobical.shared->leak_alloc.alloc_size[index]
+          << " bytes at (0x" << hex << setw (64/4) << setfill ('0')
+          << mobical.shared->leak_alloc.alloc_ptr[index] << dec << ")" << endl;
+        o << "# Memory was allocated here:" << endl;
+        assert (mobical.shared->leak_alloc.stack_size[index] <= MOBICAL_MEMORY_STACK_COUNT);
+        print_trace (mobical.shared->leak_alloc.stack_array[index],
+          mobical.shared->leak_alloc.stack_size[index], o, 0);
+        o << "#" << endl;
+      }
+    }
+#endif
   }
 
   void execute () {
+#ifdef MOBICAL_MEMORY
+    memory_bad_alloc = 0;
+    memory_bad_size = 0;
+    memory_bad_failed = 0;
+    memory_leak_alloc = 0;
+    memory_leak_next_free = 0;
+    std::memset (&mobical.shared->bad_alloc, 0, sizeof(mobical.shared->bad_alloc));
+    std::memset (&mobical.shared->leak_alloc, 0, sizeof(mobical.shared->leak_alloc));
+    hooks_install ();
+#endif
+
     executed++;
     bool first = true;
+    bool deallocated = false;
     for (size_t i = 0; i < calls.size (); i++) {
       Call *c = calls[i];
-      // They are (ideally) are executed already
-      if (c->type == Call::LEMMA)
-        continue;
-      // if (c->type == Call::CONTINUE)
-      //   continue;
 
-      if (c->type == Call::SOLVE) {
-        // Look ahead and collect LemmaCalls to be executed
-        // before solve is executed
-        for (size_t j = i + 1; j < calls.size (); j++) {
-          Call *next_c = calls[j];
-          if (next_c->type == Call::LEMMA)
-            next_c->execute (solver);
-          // else if (next_c->type == Call::CONTINUE)
-          //   next_c->execute (solver);
+#ifdef MOBICAL_MEMORY
+      memory_call_index = i + 1;
+      if (memory_bad_failed && c->type != Call::RESET) {
+        continue; // Ignore call, only RESET (deallocation) allowed.
+      }
+#else
+      (void) deallocated;
+#endif
+
+      try {
+        // They are (ideally) are executed already
+        if (c->type == Call::LEMMA)
+          continue;
+        // if (c->type == Call::CONTINUE)
+        //   continue;
+#ifdef MOBICAL_MEMORY
+        if (c->type == Call::MAXALLOC) {
+          memory_bad_alloc = c->val;
+          memory_bad_size = 0;
+          continue;
+        } else if (c->type == Call::LEAKALLOC) {
+          memory_leak_alloc = 1;
+          memory_leak_next_free = 0;
+          continue;
+        } else if (c->type == Call::RESET) {
+          deallocated = true;
+        }
+#endif
+
+        if (c->type == Call::SOLVE) {
+          // Look ahead and collect LemmaCalls to be executed
+          // before solve is executed
+          for (size_t j = i + 1; j < calls.size (); j++) {
+            Call *next_c = calls[j];
+            if (next_c->type == Call::LEMMA)
+              next_c->execute (solver);
+            // else if (next_c->type == Call::CONTINUE)
+            //   next_c->execute (solver);
+            else
+              break;
+          }
+        }
+        if (mobical.shared && process_type (c->type)) {
+          mobical.shared->solved++;
+          if (first)
+            first = false;
           else
-            break;
+            mobical.shared->incremental++;
+          c->execute (solver);
+          if (c->res == 10)
+            mobical.shared->sat++;
+          if (c->res == 20)
+            mobical.shared->unsat++;
+        } else
+          c->execute (solver);
+      } catch (const std::bad_alloc& e) {
+        // Ignore out-of-memory errors and assume solver state is consistent.
+        mobical.shared->oom++;
+      }
+    }
+#ifdef MOBICAL_MEMORY
+    if (deallocated && mobical.mock_pointer) {
+      delete mobical.mock_pointer;
+      mobical.mock_pointer = nullptr;
+    }
+    hooks_uninstall ();
+    // Note: Do not force-deallocate here as otherwise the shrink procedure will
+    // remove the RESET call.
+    if (deallocated) {
+      for (size_t index { 0u }; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+        if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
+          reset_child_signal_handlers ();
+          raise (SIGUSR2);
         }
       }
-      if (mobical.shared && process_type (c->type)) {
-        mobical.shared->solved++;
-        if (first)
-          first = false;
-        else
-          mobical.shared->incremental++;
-        c->execute (solver);
-        if (c->res == 10)
-          mobical.shared->sat++;
-        if (c->res == 20)
-          mobical.shared->unsat++;
-      } else
-        c->execute (solver);
     }
+#endif
   }
 
   int vars () {
@@ -2453,10 +2673,18 @@ void Trace::generate (uint64_t i, uint64_t s) {
 
   id = i;
   seed = s;
+  Random random (seed);
+
+#ifdef MOBICAL_MEMORY
+  if (mobical.bad_alloc && (random.pick_int (0, 2) == 0)) {
+    push_back (new MaxAllocCall (random.pick_log (1e2, 1e6)));
+  }
+  if (mobical.leak_alloc && (random.pick_int (0, 2) == 0)) {
+    push_back (new LeakAllocCall ());
+  }
+#endif
 
   push_back (new InitCall ());
-
-  Random random (seed);
 
   Size size;
 
@@ -2495,7 +2723,9 @@ void Trace::generate (uint64_t i, uint64_t s) {
     double ratio;
     int uniform;
 
-    if (size == SMALL)
+    if (size == TINY)
+      range = random.pick_int (1, TINY);
+    else if (size == SMALL)
       range = random.pick_int (1, SMALL);
     else if (size == MEDIUM)
       range = random.pick_int (SMALL + 1, MEDIUM);
@@ -2503,6 +2733,8 @@ void Trace::generate (uint64_t i, uint64_t s) {
       range = random.pick_int (MEDIUM + 1, BIG);
 
     if (random.generate_bool ())
+      uniform = 0;
+    else if (size == TINY)
       uniform = 0;
     else if (size == SMALL)
       uniform = random.pick_int (3, 7);
@@ -2616,6 +2848,9 @@ void Mobical::print_statistics () {
          << terr.normal_code () << ", " << shared->incremental
          << " incremental "
          << rounded_percent (shared->incremental, shared->solved) << "%"
+         << terr.normal_code () << ", " << terr.yellow_code ()
+         << shared->oom << " oom "
+         << rounded_percent (shared->oom, shared->solved) << "%"
          << endl
          << flush;
     if (shared->memout || shared->timeout) {
@@ -2652,10 +2887,19 @@ extern "C" {
 
 #endif
 
-int64_t Trace::generated;
-int64_t Trace::executed;
-int64_t Trace::failed;
-int64_t Trace::ok;
+int64_t Trace::generated = 0;
+int64_t Trace::executed = 0;
+int64_t Trace::failed = 0;
+int64_t Trace::ok = 0;
+
+#ifdef MOBICAL_MEMORY
+int64_t Trace::memory_call_index = -1;
+int64_t Trace::memory_bad_alloc = 0;
+int64_t Trace::memory_bad_size = 0;
+int64_t Trace::memory_bad_failed = 0;
+int64_t Trace::memory_leak_alloc = 0;
+int64_t Trace::memory_leak_next_free = 0;
+#endif
 
 #define SIGNAL(SIG) void (*Trace::old_##SIG##_handler) (int);
 SIGNALS
@@ -2668,6 +2912,22 @@ void Trace::reset_child_signal_handlers () {
 }
 
 void Trace::child_signal_handler (int sig) {
+#ifdef MOBICAL_MEMORY
+  hooks_uninstall ();
+  if (memory_bad_failed) {
+    mobical.shared->bad_alloc.signal_call_index = memory_call_index;
+    mobical.shared->bad_alloc.signal_stack_size = backtrace (
+      mobical.shared->bad_alloc.signal_stack_array,
+      MOBICAL_MEMORY_STACK_COUNT);
+    // The signal probably has been raised as a result
+    // of the forced failed memory allocation.
+    // Raise a custom signal code for the parent to
+    // create a unique result code (2 instead of 1).
+    reset_child_signal_handlers ();
+    raise (SIGUSR1);
+  }
+#endif
+
   struct rusage u;
   if (!getrusage (RUSAGE_SELF, &u)) {
     if ((int64_t) u.ru_maxrss >> 10 >= mobical.space_limit) {
@@ -2697,6 +2957,166 @@ void Trace::init_child_signal_handlers () {
 #undef SIGNAL
 }
 
+#ifdef MOBICAL_MEMORY
+void Trace::hooks_install (void) {
+  *static_cast<volatile malloc_t*> (&::hook_malloc) = &hook_malloc;
+  *static_cast<volatile realloc_t*> (&::hook_realloc) = &hook_realloc;
+  *static_cast<volatile free_t*> (&::hook_free) = &hook_free;
+}
+
+void Trace::hooks_uninstall (void) {
+  *static_cast<volatile malloc_t*> (&::hook_malloc) = nullptr;
+  *static_cast<volatile realloc_t*> (&::hook_realloc) = nullptr;
+  *static_cast<volatile free_t*> (&::hook_free) = nullptr;
+}
+
+void* Trace::hook_malloc (size_t size) {
+  // Failing allocator
+  if (memory_bad_alloc > 0) {
+    memory_bad_size += size + 1; // + 1 to catch allocations of size 0
+    if (memory_bad_size > memory_bad_alloc && !memory_bad_failed) {
+      memory_bad_failed = 1;
+      hooks_uninstall ();
+      mobical.shared->bad_alloc.alloc_call_index = memory_call_index;
+      mobical.shared->bad_alloc.alloc_stack_size = backtrace (
+        mobical.shared->bad_alloc.alloc_stack_array,
+        MOBICAL_MEMORY_STACK_COUNT);
+      hooks_install ();
+      return nullptr;
+    }
+  }
+  // Default allocator
+  void* ptr = (*libc_malloc)(size);
+  // Leak detection
+  if (memory_leak_alloc > 0) {
+    for (size_t offset { 0u }; offset < MOBICAL_MEMORY_LEAK_COUNT; offset++) {
+      size_t index { memory_leak_next_free + offset };
+      if (index >= MOBICAL_MEMORY_LEAK_COUNT)
+        index -= MOBICAL_MEMORY_LEAK_COUNT;
+      if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
+        continue;
+      }
+      // Found free slot
+      hooks_uninstall ();
+      mobical.shared->leak_alloc.alloc_size[index] = size;
+      mobical.shared->leak_alloc.alloc_ptr[index] = ptr;
+      mobical.shared->leak_alloc.call_index[index] = memory_call_index;
+      mobical.shared->leak_alloc.stack_size[index] = backtrace (
+        mobical.shared->leak_alloc.stack_array[index],
+        MOBICAL_MEMORY_STACK_COUNT);
+      memory_leak_next_free = index + 1;
+      hooks_install ();
+      return ptr;
+    }
+  }
+  return ptr;
+}
+
+void* Trace::hook_realloc (void *ptr, size_t size) {
+  // Failing allocator
+  if (memory_bad_alloc > 0) {
+    memory_bad_size += size + 1; // + 1 to catch allocations of size 0
+    if (memory_bad_size > memory_bad_alloc && !memory_bad_failed) {
+      hooks_uninstall ();
+      memory_bad_failed = 1;
+      mobical.shared->bad_alloc.alloc_call_index = memory_call_index;
+      mobical.shared->bad_alloc.alloc_stack_size = backtrace (
+        mobical.shared->bad_alloc.alloc_stack_array,
+        MOBICAL_MEMORY_STACK_COUNT);
+      hooks_install ();
+      return nullptr;
+    }
+  }
+  // Default allocator
+  void* new_ptr = (*libc_realloc)(ptr, size);
+  // Leak detection
+  if (memory_leak_alloc > 0) {
+    for (size_t index { 0u }; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+      if (mobical.shared->leak_alloc.alloc_ptr[index] != ptr) {
+        continue;
+      }
+      // Found previous slot
+      hooks_uninstall ();
+      mobical.shared->leak_alloc.alloc_size[index] = size;
+      mobical.shared->leak_alloc.alloc_ptr[index] = new_ptr;
+      mobical.shared->leak_alloc.call_index[index] = memory_call_index;
+      mobical.shared->leak_alloc.stack_size[index] = backtrace (
+        mobical.shared->leak_alloc.stack_array[index],
+        MOBICAL_MEMORY_STACK_COUNT);
+      hooks_install ();
+      return new_ptr;
+    }
+    for (size_t offset { 0u }; offset < MOBICAL_MEMORY_LEAK_COUNT; offset++) {
+      size_t index { memory_leak_next_free + offset };
+      if (index >= MOBICAL_MEMORY_LEAK_COUNT)
+        index -= MOBICAL_MEMORY_LEAK_COUNT;
+      if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
+        continue;
+      }
+      // Found free slot
+      hooks_uninstall ();
+      mobical.shared->leak_alloc.alloc_size[index] = size;
+      mobical.shared->leak_alloc.alloc_ptr[index] = new_ptr;
+      mobical.shared->leak_alloc.call_index[index] = memory_call_index;
+      mobical.shared->leak_alloc.stack_size[index] = backtrace (
+        mobical.shared->leak_alloc.stack_array[index],
+        MOBICAL_MEMORY_STACK_COUNT);
+      memory_leak_next_free = index + 1;
+      hooks_install ();
+      return new_ptr;
+    }
+
+    hooks_uninstall ();
+    printf ("No free slot!");
+    hooks_install ();
+  }
+  return new_ptr;
+}
+
+void Trace::hook_free (void* ptr) {
+  (*libc_free)(ptr);
+  // Leak detection
+  if (memory_leak_alloc > 0) {
+    for (size_t index { 0u }; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+      if (mobical.shared->leak_alloc.alloc_ptr[index] == ptr) {
+        mobical.shared->leak_alloc.alloc_size[index] = 0;
+        mobical.shared->leak_alloc.alloc_ptr[index] = nullptr;
+        mobical.shared->leak_alloc.call_index[index] = 0;
+        mobical.shared->leak_alloc.stack_size[index] = 0;
+        //memory_leak_next_free = index;
+        break;
+      }
+    }
+  }
+}
+
+void Trace::print_trace (void** stack_array, size_t stack_size, ostream& os, size_t start_index) {
+  char ** stack_text = backtrace_symbols (stack_array, stack_size);
+  for (size_t stack_index = start_index; stack_index < stack_size; stack_index++) {
+    string stack_entry = stack_text[stack_index];
+    if (size_t position = stack_entry.rfind ("/"); position != string::npos) {
+      stack_entry = stack_entry.substr (position + 1);
+    }
+    smatch match; // Try to unmangle C++ method names
+    regex regex_function_name("^(.*?)\\(([a-zA-Z0-9_]+)((?:\\+0x[0-9a-fA-F]+)?)\\)(.*?)");
+    if (regex_match (stack_entry, match, regex_function_name)) {
+      string mangledName = match[2];
+      int status = -1;
+      char *demangledName = abi::__cxa_demangle (mangledName.c_str(), NULL, NULL, &status);
+      if (status == 0) { // Print C++ method name
+        os << "# " << match[1] << "(" << demangledName << match[3] << ")" << match[4] << endl;
+        free (static_cast<void*>(demangledName));
+      } else { // Print C method name
+        os << "# " << match[1] << "(" << mangledName << match[3] << ")" << match[4] << endl;
+      }
+    } else { // Print unparsable stack entry
+      os << "# " << stack_entry << endl;
+    }
+  }
+  free (static_cast<void *>(stack_text));
+}
+#endif
+
 int Trace::fork_and_execute () {
 
   cerr << flush;
@@ -2716,6 +3136,10 @@ int Trace::fork_and_execute () {
       res = 0;
     else if (mobical.donot.ignore_resource_limits)
       res = 1;
+    else if (WTERMSIG (status) == SIGUSR1)
+      res = 2; // Bad allocation caused signal.
+    else if (WTERMSIG (status) == SIGUSR2)
+      res = 3; // Leaked allocation caused signal.
     else
       res = (WTERMSIG (status) != SIGXCPU);
 
@@ -3098,11 +3522,20 @@ void Trace::add_options (int expected) {
   const int max_var = vars ();
   notify ('a');
   assert (size ());
-  assert (calls[0]->type == Call::INIT);
   Trace extended;
-  extended.push_back (calls[0]->copy ());
-  size_t i = 1;
+  size_t i = 0;
   Call *c;
+  for (; i < size (); i++) {
+    c = calls[i];
+#ifdef MOBICAL_MEMORY
+    if (!(c->type == Call::INIT || c->type == Call::MAXALLOC)) {
+#else
+    if (!(c->type == Call::INIT)) {
+#endif
+      continue;
+    }
+    extended.push_back (c->copy ());
+  }
   while (i < size () && (c = calls[i])->type == Call::SET)
     extended.push_back (c->copy ()), i++;
   for (Options::const_iterator it = Options::begin ();
@@ -3206,7 +3639,6 @@ bool Trace::reduce_values (int expected) {
   notify ('r');
 
   assert (size ());
-  assert (calls[0]->type == Call::INIT);
 
   bool changed = false, res = false;
   do {
@@ -3236,6 +3668,10 @@ bool Trace::reduce_values (int expected) {
           continue;
       } else if (c->type == Call::OPTIMIZE) {
         lo = 0, hi = 9;
+#ifdef MOBICAL_MEMORY
+      } else if (c->type == Call::MAXALLOC) {
+        lo = 0, hi = c->val;
+#endif
       } else
         continue;
 
@@ -3422,7 +3858,7 @@ void Trace::shrink (int expected) {
   mobical.shrinking = true;
   mobical.notified.clear ();
   assert (!mobical.donot.shrink.atall);
-  if (!size () || calls[0]->type != Call::INIT)
+  if (!size ())
     return;
   add_options (expected);
   Shrinking l = NONE;
@@ -3448,6 +3884,9 @@ void Trace::shrink (int expected) {
   } while (s);
   map_variables (expected);
   shrink_options (expected);
+  // Execute one last time to get accurate results when memory fuzzing
+  // is enabled.
+  fork_and_execute ();
   cerr << flush;
   mobical.shrinking = false;
 }
@@ -3518,6 +3957,14 @@ void Reader::parse () {
   Call *before_trigger = 0;
   char line[80];
   while ((ch = next ()) != EOF) {
+    // Ignore comments (used for additional human readable information).
+    if (ch == '#') {
+      while (ch != '\n') {
+        if ((ch = next ()) == EOF)
+          error ("unexpected end-of-file");
+      }
+      continue;
+    }
     size_t n = 0;
     while (ch != '\n') {
       if (n + 2 >= sizeof line)
@@ -3891,15 +4338,32 @@ void Reader::parse () {
       if (first)
         error ("additional argument '%s' to 'close_proof_trace'", first);
       c = new CloseProofTraceCall ();
+#ifdef MOBICAL_MEMORY
+    } else if (!strcmp (keyword, "max_alloc")) {
+      if (!mobical.bad_alloc)
+        error ("option --bad-alloc has to be anabled for max_alloc calls");
+      if (!first)
+        error ("first argument to 'max_alloc' missing");
+      if (!parse_int_str (first, val))
+        error ("invalid first argument '%s' to 'max_alloc'", first);
+      c = new MaxAllocCall (val);
+    } else if (!strcmp (keyword, "leak_alloc")) {
+      if (!mobical.leak_alloc)
+        error ("option --leak-alloc has to be anabled for leak_alloc calls");
+      c = new LeakAllocCall ();
+#endif
     } else
       error ("invalid keyword '%s'", keyword);
 
     // This checks the legal structure of traces described above.
     //
     if (enforce) {
-
-      if (!state && c->type != Call::INIT)
-        error ("first call has to be an 'init' call");
+#ifdef MOBICAL_MEMORY
+      if (!state && !(c->type & (Call::INIT | Call::MAXALLOC)))
+#else
+      if (!state && !(c->type == Call::INIT))
+#endif
+        error ("first call has to be an 'init' or 'maxalloc' call");
 
       if (state == Call::RESET)
         error ("'%s' after 'reset'", c->keyword ());
@@ -4148,6 +4612,8 @@ int Mobical::main (int argc, char **argv) {
              !strcmp (argv[i], "--do-not-reduce-values") ||
              !strcmp (argv[i], "--do-not-reduce-option-values"))
       donot.reduce = true;
+    else if (!strcmp (argv[i], "--tiny"))
+      force.size = TINY;
     else if (!strcmp (argv[i], "--small"))
       force.size = SMALL;
     else if (!strcmp (argv[i], "--medium"))
@@ -4186,6 +4652,17 @@ int Mobical::main (int argc, char **argv) {
       if (!is_unsigned_str (argv[i]) ||
           (space_limit = atol (argv[i])) < 0 || space_limit > 1e9)
         die ("invalid argument '%s' to '--space' (try '-h')", argv[i]);
+#ifdef MOBICAL_MEMORY
+    } else if (!strcmp (argv[i], "--bad-alloc")) {
+      bad_alloc = true;
+    } else if (!strcmp (argv[i], "--leak-alloc")) {
+      leak_alloc = true;
+#else
+    } else if (!strcmp (argv[i], "--bad-alloc")) {
+      die ("--bad-alloc requires memory fuzzing to be enabled at compile time");
+    } else if (!strcmp (argv[i], "--leak-alloc")) {
+      die ("--leak-alloc requires memory fuzzing to be enabled at compile time");
+#endif
     } else if (!strcmp (argv[i], "--do-not-ignore-resource-limits")) {
       donot.ignore_resource_limits = true;
     } else if (argv[i][0] == '-' && is_unsigned_str (argv[i] + 1)) {
@@ -4597,5 +5074,11 @@ int Mobical::main (int argc, char **argv) {
 /*------------------------------------------------------------------------*/
 
 int main (int argc, char **argv) {
+#ifdef MOBICAL_MEMORY
+  // Disable buffers as they are otherwise detected as memory leak
+  setvbuf(stdout, NULL, _IONBF, 0);
+  setvbuf(stderr, NULL, _IONBF, 0);
+  setvbuf(stdin, NULL, _IONBF, 0);
+#endif
   return CaDiCaL::mobical.main (argc, argv);
 }
