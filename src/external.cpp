@@ -549,6 +549,26 @@ int External::solve (bool preprocess_only) {
   return res;
 }
 
+int External::near_solve () {
+  int res = internal->near_solve ();
+  if (res == 20) {
+    check_solve_result (res);
+  } else {
+    // if (internal->opts.check) {
+      // if (!extended)
+      //   extend ();
+      // if (internal->opts.checkassumptions && !assumptions.empty ())
+      //   check_assumptions_satisfied ();
+      // if (internal->opts.checkconstraint && !constraint.empty ())
+      //   check_constraint_satisfied ();
+
+    // }
+    res = 0;
+  }
+  reset_limits ();
+  return res;
+}
+
 void External::terminate () { internal->terminate (); }
 
 int External::lookahead () {
@@ -726,10 +746,12 @@ void External::check_assumptions_satisfied () {
   for (const auto &lit : assumptions) {
     // Not 'signed char' !!!!
     const int tmp = ival (lit);
-    if (tmp != lit)
-      FATAL ("assumption %d falsified", lit);
+    LOG("assumption: %d ival: %d",lit,tmp);
     if (!tmp)
       FATAL ("assumption %d unassigned", lit);
+    if (tmp != lit)
+      FATAL ("assumption %d falsified", lit);
+
   }
   VERBOSE (1, "checked that %zd assumptions are satisfied",
            assumptions.size ());

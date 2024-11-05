@@ -300,6 +300,8 @@ struct External {
   void assume (int elit);
   int solve (bool preprocess_only);
 
+  int near_solve ();
+
   // We call it 'ival' as abbreviation for 'val' with 'int' return type to
   // avoid bugs due to using 'signed char tmp = val (lit)', which might turn
   // a negative value into a positive one (happened in 'extend').

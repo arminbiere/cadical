@@ -1219,6 +1219,8 @@ struct Internal {
   int solve (bool preprocess_only = false);
   void finalize (int);
 
+  int near_solve ();
+
   //
   int lookahead ();
   CubesWithStatus generate_cubes (int, int);

@@ -287,6 +287,8 @@ public:
   //
   int solve ();
 
+  int near_solve ();
+
   // Get value (-lit=false, lit=true) of valid non-zero literal.
   //
   //   require (SATISFIED)

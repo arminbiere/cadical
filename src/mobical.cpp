@@ -1076,7 +1076,7 @@ void Mobical::warning (const char *fmt, ...) {
 //   (
 //     (ADD|ASSUME|ALWAYS)*
 //     [
-//       (SOLVE|SIMPLIFY|LOOKAHEAD)
+//       (SOLVE|SIMPLIFY|LOOKAHEAD|NEARSOLVE)
 //       (LEMMA|CONTINUE)*
 //       (VAL|FLIP|FAILED|ALWAYS|CONCLUDE|FLUSHPROOFTRACE|CLOSEPROOFTRACE)*
 //     ]
@@ -1166,6 +1166,8 @@ struct Call {
     FLUSHPROOFTRACE = shift ( 35 ),
     CLOSEPROOFTRACE = shift ( 36 ),
 
+    NEARSOLVE     = shift ( 37 ),
+
     // clang-format on
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
@@ -1175,7 +1177,7 @@ struct Call {
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
     BEFORE =
         ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
-    PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING,
+    PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | NEARSOLVE,
     DURING = LEMMA, // | CONTINUE,
     AFTER = VAL | FLIP | FAILED | CONCLUDE | ALWAYS | FLUSHPROOFTRACE |
             CLOSEPROOFTRACE,
@@ -1444,6 +1446,14 @@ struct SolveCall : public Call {
   const char *keyword () { return "solve"; }
 };
 
+struct NearSolveCall : public Call {
+  NearSolveCall (int r = 0) : Call (NEARSOLVE, 0, r) {}
+  void execute (Solver *&s) { res = s->near_solve (); }
+  void print  (ostream &o) { o << "nearsolve " << res << endl; }
+  Call *copy () { return new NearSolveCall (res); }
+  const char *keyword () { return "nearsolve"; }
+};
+
 struct SimplifyCall : public Call {
   SimplifyCall (int rounds, int r = 0) : Call (SIMPLIFY, rounds, r) {}
   void execute (Solver *&s) { res = s->simplify (arg); }
@@ -1685,7 +1695,7 @@ public:
       // if (c->type == Call::CONTINUE)
       //   continue;
 
-      if (c->type == Call::SOLVE) {
+      if (c->type == Call::SOLVE || c->type == Call::NEARSOLVE) {
         // Look ahead and collect LemmaCalls to be executed
         // before solve is executed
         for (size_t j = i + 1; j < calls.size (); j++) {
@@ -2438,9 +2448,11 @@ void Trace::generate_process (Random &random) {
   } else if (fraction > 0.99) {
     const int depth = random.pick_int (0, 10);
     push_back (new CubingCall (depth));
-  } else if (fraction > 0.9)
+  } else if (fraction > 0.9) {
     push_back (new LookaheadCall ());
-  else {
+  } else if (fraction > 0.83) {
+    push_back (new NearSolveCall ());
+  } else {
     const int rounds = random.pick_int (0, 10);
     push_back (new SimplifyCall (rounds));
   }
@@ -3050,6 +3062,7 @@ static bool is_basic (Call *c) {
   switch ((uint64_t)c->type) {
   case Call::ASSUME:
   case Call::SOLVE:
+  case Call::NEARSOLVE:
   case Call::SIMPLIFY:
   case Call::LOOKAHEAD:
   case Call::CUBING:
@@ -3722,6 +3735,17 @@ void Reader::parse () {
       else
         c = new SolveCall ();
       solved++;
+    } else if (!strcmp (keyword, "nearsolve")) {
+      if (first && !parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'nearsolve'", first);
+      if (first && lit != 0 && lit != 10 && lit != 20)
+        error ("invalid result argument '%d' to 'nearsolve'", lit);
+      assert (!second);
+      if (first)
+        c = new NearSolveCall (lit);
+      else
+        c = new NearSolveCall ();
+      solved++;
     } else if (!strcmp (keyword, "simplify")) {
       if (!first)
         error ("argument to 'simplify' missing");
@@ -3964,12 +3988,13 @@ void Reader::parse () {
         assert (state == Call::SOLVE || state == Call::SIMPLIFY ||
                 state == Call::LOOKAHEAD || state == Call::CUBING ||
                 state == Call::OBSERVE || state == Call::LEMMA ||
-                // state == Call::CONTINUE ||
+                state == Call::NEARSOLVE ||
                 state == Call::AFTER);
         new_state = Call::AFTER;
         break;
 
       case Call::SOLVE:
+      case Call::NEARSOLVE:
       case Call::SIMPLIFY:
       case Call::LOOKAHEAD:
       case Call::CUBING:

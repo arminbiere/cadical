@@ -786,6 +786,53 @@ int Internal::solve (bool preprocess_only) {
   return res;
 }
 
+int Internal::near_solve () {
+  assert (clause.empty ());
+  START (solve);
+  if (proof)
+    proof->solve_query ();
+  if (opts.ilb) {
+    if (opts.ilbassumptions)
+      sort_and_reuse_assumptions ();
+    stats.ilbtriggers++;
+    stats.ilbsuccess += (level > 0);
+    stats.levelsreused += level;
+    if (level) {
+      assert (control.size () > 1);
+      stats.literalsreused += num_assigned - control[1].trail;
+    }
+    if (external->propagator) 
+      renotify_trail_after_ilb ();
+  }
+  
+  LOG ("internal solving in full mode without clause restoration");
+  
+  init_preprocessing_limits ();
+  init_search_limits ();
+  init_report_limits ();
+  int res = 0;
+  
+  
+  // if (!res || (res == 10 && external_prop)) {
+  //   if (res == 10 && external_prop && level)
+  //     backtrack ();
+    res = cdcl_loop_with_inprocessing ();
+  // }
+  int reported_res = 0;
+  if (res == 20) {
+    reported_res = 20;
+  }
+
+  finalize (reported_res);
+  // if (res == 20) finalize (res);
+  // else if (proof) proof->report_status (0,0);
+  reset_solving ();
+  report_solving (reported_res);
+  
+  STOP (solve);
+  return res;
+}
+
 int Internal::already_solved () {
   int res = 0;
   if (unsat || unsat_constraint) {

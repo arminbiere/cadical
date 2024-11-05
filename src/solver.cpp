@@ -740,6 +740,27 @@ int Solver::solve () {
   return res;
 }
 
+
+int Solver::near_solve () {
+  TRACE ("near-solve");
+  REQUIRE_READY_STATE ();
+  const int res = external->near_solve ();
+  if (res == 20)
+    STATE (UNSATISFIED);
+  else
+    STATE (STEADY);
+  
+  if (!res) {
+    external->reset_assumptions ();
+    external->reset_constraint ();
+    external->reset_concluded ();
+  }
+  
+  LOG_API_CALL_RETURNS ("near-solve", res);
+  if (tracing_nb_lidrup_env_var_method) flush_proof_trace(true); 
+  return res;
+}
+
 int Solver::simplify (int rounds) {
   TRACE ("simplify", rounds);
   REQUIRE_READY_STATE ();

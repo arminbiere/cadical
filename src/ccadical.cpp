@@ -107,6 +107,10 @@ int ccadical_solve (CCaDiCaL *wrapper) {
   return ((Wrapper *) wrapper)->solver->solve ();
 }
 
+int ccadical_near_solve (CCaDiCaL *wrapper) {
+  return ((Wrapper *) wrapper)->solver->near_solve ();
+}
+
 int ccadical_simplify (CCaDiCaL *wrapper) {
   return ((Wrapper *) wrapper)->solver->simplify ();
 }
