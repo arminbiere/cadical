@@ -1868,8 +1868,10 @@ bool Internal::sweep () {
     return false;
   if (terminated_asynchronously ())
     return false;
-//  if (DELAYING (sweep))  TODO sweeping should not be called every probe but
-//    return false;             only sometimes based on a counter
+  if (stats.sweepdelay.count < stats.sweepdelay.delay) {
+    stats.sweepdelay.count++;
+    return false;
+  }
   assert (!level);
   START_SIMPLIFIER (sweep, SWEEP);
   stats.sweep++;
@@ -1923,10 +1925,12 @@ bool Internal::sweep () {
   uint64_t eliminated = equivalences + units;
   report ('=', !eliminated);
 
-  //  if (kissat_average (eliminated, swept) < 0.001)
-  //    BUMP_DELAY (sweep);              // increase sweeping counter (see above)
-  //  else
-  //    REDUCE_DELAY (sweep);            // decrease sweeping counter
+  if (relative (eliminated, swept) < 0.001) {
+    stats.sweepdelay.delay++;        // increase sweeping counter (see above)
+  } else if (stats.sweepdelay.delay) {
+    stats.sweepdelay.delay--;        // increase sweeping counter (see above)
+  }
+  stats.sweepdelay.count = 0;
   STOP_SIMPLIFIER (sweep, SWEEP);
   return eliminated;
 }
