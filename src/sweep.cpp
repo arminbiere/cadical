@@ -1868,8 +1868,7 @@ bool Internal::sweep () {
     return false;
   if (terminated_asynchronously ())
     return false;
-  if (stats.sweepdelay.count < stats.sweepdelay.delay) {
-    stats.sweepdelay.count++;
+  if (delaying_sweep.bumpreasons.delay ()) {  // TODO need to fix Delay
     return false;
   }
   assert (!level);
@@ -1926,11 +1925,10 @@ bool Internal::sweep () {
   report ('=', !eliminated);
 
   if (relative (eliminated, swept) < 0.001) {
-    stats.sweepdelay.delay++;        // increase sweeping counter (see above)
-  } else if (stats.sweepdelay.delay) {
-    stats.sweepdelay.delay--;        // increase sweeping counter (see above)
+    delaying_sweep.bumpreasons.bump_delay ();
+  } else {
+    delaying_sweep.bumpreasons.reduce_delay ();
   }
-  stats.sweepdelay.count = 0;
   STOP_SIMPLIFIER (sweep, SWEEP);
   return eliminated;
 }

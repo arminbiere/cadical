@@ -277,6 +277,7 @@ struct Internal {
   Inc inc;                  // increments on limits
 
   Delay delaying_vivify_irredundant;
+  Delay delaying_sweep;
 
   Proof *proof;             // abstraction layer between solver and tracers
   vector<Tracer *>

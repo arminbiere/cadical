@@ -265,10 +265,6 @@ struct Stats {
   int64_t sweep_environment = 0;
   int64_t sweep_clauses = 0;
   int64_t sweep = 0;
-  struct {
-    int64_t delay = 0;
-    int64_t count = 0;
-  } sweepdelay;
 
   int64_t units = 0;         // learned unit clauses
   int64_t binaries = 0;      // learned binary clauses
