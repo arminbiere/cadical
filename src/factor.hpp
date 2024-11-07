@@ -38,7 +38,7 @@ struct Factoring {
   FactorSchedule schedule;
 
   int initial;
-  unsigned bound;
+  int bound;
   vector<unsigned> count;
   vector<int> fresh;
   vector<int> counted;

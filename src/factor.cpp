@@ -799,7 +799,7 @@ bool Internal::run_factorization (int64_t limit) {
       }
       size_t reduction;
       Quotient *q = best_quotient (factoring, &reduction);
-      if (q && reduction > factoring.bound) {
+      if (q && (int) reduction > factoring.bound) {
         if (apply_factoring (factoring, q)) {
 #ifndef QUIET
           factored++;

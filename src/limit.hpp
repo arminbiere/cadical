@@ -75,7 +75,10 @@ struct Delay {
 struct Last {
   struct {
     int64_t propagations;
-  } transred, vivify, sweep;
+  } transred, vivify;
+  struct {
+    int64_t ticks;
+  } sweep;
   struct {
     int64_t fixed, subsumephases, marked;
   } elim;

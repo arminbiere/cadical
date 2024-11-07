@@ -132,7 +132,7 @@ OPTION( probeint,        5e3,  1,2e9,0,0,1, "probing interval" ) \
 OPTION( probemaxeff,     1e8,  0,2e9,1,0,1, "maximum probing efficiency") \
 OPTION( probemineff,     1e6,  0,2e9,1,0,1, "minimum probing efficiency") \
 OPTION( probereleff,      20,  1,1e5,1,0,1, "relative efficiency per mille") \
-OPTION( proberounds,       1,  1, 16,1,0,1, "probing rounds" ) \
+OPTION( proberounds,       2,  1, 16,1,0,1, "probing rounds" ) \
 OPTION( profile,           2,  0,  4,0,0,0, "profiling level") \
 QUTOPT( quiet,             0,  0,  1,0,0,0, "disable all messages") \
 OPTION( radixsortlim,     32,  0,2e9,0,0,1, "radix sort limit") \
@@ -190,7 +190,6 @@ OPTION( sweepfliprounds,   1,  0,2e9,1,0,1, "flipping rounds") \
 OPTION( sweepmaxclauses, 3e5,  2,2e9,1,0,1, "maximum environment clauses") \
 OPTION( sweepmaxdepth,     3,  1,2e9,1,0,1, "maximum environment depth") \
 OPTION( sweepmaxvars,   8192,  2,2e9,1,0,1, "maximum environment variables") \
-OPTION( sweepmineff,     2e5,  0,2e9,1,0,1, "minimum tick efficiency") \
 OPTION( sweeprand,         0,  0,  1,0,0,1, "randomize sweeping environment") \
 OPTION( sweepvars,       256,  0,2e9,1,0,1, "environment variables") \
 OPTION( target,            1,  0,  2,0,0,1, "target phases (1=stable only)") \

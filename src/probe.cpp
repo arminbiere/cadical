@@ -879,28 +879,19 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   const int before = active ();
   const int before_extended = stats.variables_extension;
 
-  // We trigger equivalent literal substitution (ELS) before ...
-  //
-  decompose ();
-
-  if (ternary ()) // If we derived a binary clause
-    decompose (); // then start another round of ELS.
-
-  // Remove duplicated binary clauses and perform in essence hyper unary
-  // resolution, i.e., derive the unit '2' from '1 2' and '-1 2'.
-  //
-  mark_duplicated_binary_clauses_as_garbage ();
-
-  for (int round = 1; round <= opts.proberounds; round++)
-    if (!probe_round ())
-      break;
-
-  decompose (); // ... and (ELS) afterwards.
-
-  if (sweep ())
+  for (int round = 1; round <= opts.proberounds; round++) {
+    mark_duplicated_binary_clauses_as_garbage ();
     decompose ();
-
-  factor ();
+    if (ternary ())
+      decompose (); // If we derived a binary clause
+    if (probe_round ())
+      decompose ();
+    vivify ();
+    if (sweep ())
+      decompose (); // ... and (ELS) afterwards.
+    factor ();
+    if (unsat) break;
+  }
 
   last.probe.propagations = stats.propagations.search;
 
