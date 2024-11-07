@@ -1432,6 +1432,7 @@ struct Internal {
   int already_solved ();
   int restore_clauses ();
   bool preprocess_round (int round);
+  void preprocess_quickly ();
   int preprocess ();
   int local_search_round (int round);
   int local_search ();

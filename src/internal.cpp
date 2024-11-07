@@ -610,7 +610,50 @@ bool Internal::preprocess_round (int round) {
   return false;
 }
 
+// for now counts as one of the preprocessing rounds TODO: change this?
+void Internal::preprocess_quickly () {
+  if (unsat)
+    return;
+  if (!max_var)
+    return;
+  if (!opts.preprocesslight)
+    return;
+  START (preprocess);
+  struct {
+    int64_t vars, clauses;
+  } before, after;
+  before.vars = active ();
+  before.clauses = stats.current.irredundant;
+  // stats.preprocessings++;
+  assert (!preprocessing);
+  preprocessing = true;
+  PHASE ("preprocessing", stats.preprocessings,
+         "starting with %" PRId64 " variables and %" PRId64
+         " clauses",
+         before.vars, before.clauses);
+  if (opts.factor)
+    factor ();
+  // TODO fastelim and congruence
+  // if (opts.probe)
+  //  probe (false);
+  // if (opts.elim)
+  //  elim (false);
+  // if (opts.condition)
+    // condition (false);
+  after.vars = active ();
+  after.clauses = stats.current.irredundant;
+  assert (preprocessing);
+  preprocessing = false;
+  PHASE ("preprocessing", stats.preprocessings,
+         "finished with %" PRId64 " variables and %" PRId64
+         " clauses",
+         after.vars, after.clauses);
+  STOP (preprocess);
+  report ('P');
+}
+
 int Internal::preprocess () {
+  preprocess_quickly ();
   for (int i = 0; i < lim.preprocessing; i++)
     if (!preprocess_round (i))
       break;
