@@ -886,7 +886,6 @@ void CaDiCaL::Internal::probe (bool update_limits) {
       decompose (); // If we derived a binary clause
     if (probe_round ())
       decompose ();
-    vivify ();
     if (sweep ())
       decompose (); // ... and (ELS) afterwards.
     factor ();
