@@ -691,6 +691,24 @@ void Solver::reset_constraint () {
 
 /*------------------------------------------------------------------------*/
 
+int Solver::propagate (std::vector<int>& implicants) {
+  TRACE ("propagate_assumptions");
+  REQUIRE_VALID_STATE ();
+  transition_to_steady_state ();
+  const int res = external->propagate_assumptions (implicants);
+  if (tracing_nb_lidrup_env_var_method) flush_proof_trace(true); 
+  LOG_API_CALL_RETURNS ("propagate_assumptions", res);
+  if (res == 10)
+    STATE (SATISFIED);
+  else if (res == 20)
+    STATE (UNSATISFIED);
+  else
+    STATE (STEADY);
+  return res;
+}
+
+/*------------------------------------------------------------------------*/
+
 int Solver::call_external_solve_and_check_results (bool preprocess_only) {
   transition_to_steady_state ();
   assert (state () & READY);

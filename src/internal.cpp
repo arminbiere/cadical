@@ -330,6 +330,48 @@ int Internal::cdcl_loop_with_inprocessing () {
   return res;
 }
 
+
+
+int Internal::propagate_assumptions (std::vector<int>& implicants) {
+  init_search_limits ();
+  init_report_limits();
+  int res = already_solved (); // root-level propagation is done here
+  
+  size_t current_level = level;
+  if (!res) {
+    implicants.clear();
+    while (!res && (current_level < assumptions.size () || (current_level == assumptions.size () && constraint.size ()))) {
+      if (unsat)
+        res = 20;
+      else if (unsat_constraint)
+        res = 20;
+      else if (!propagate ()) {
+        // let analyze run to get failed assumptions
+        analyze ();
+      } else if (satisfied ()) { // found model
+        res = 10;
+      } else if (search_limits_hit ())
+        break;                               // decision or conflict limit
+      else if (terminated_asynchronously ()) // externally terminated
+        break;
+      else
+        res = decide ();
+    current_level = level;
+    }
+  }
+  
+  if (res != 20) {
+    for (size_t i = 0; i < trail.size(); i++)
+      implicants.push_back(trail[i]);
+  }
+
+  finalize (res);
+  reset_solving ();
+  report_solving (res);
+  
+  return res;
+}
+
 /*------------------------------------------------------------------------*/
 
 // Most of the limits are only initialized in the first 'solve' call and

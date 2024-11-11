@@ -474,6 +474,35 @@ void External::force_backtrack (size_t new_level) {
 
 /*------------------------------------------------------------------------*/
 
+
+int External::propagate_assumptions (std::vector<int>& implicants) {
+  std::vector<int> ilit_implicants;
+  int res = internal->propagate_assumptions (ilit_implicants);
+  
+  if (res == 10) extend(); // Call solution reconstruction
+  check_solve_result (res);
+  
+  // Those implied literals must be filtered out that are witnesses
+  // on the reconstruction stack -> no inplace externalize is possible.
+  // (Internal does not see these marks, so no earlier filter is
+  // possible.)
+  
+  implicants.clear();
+  for (const auto& ilit: ilit_implicants) {
+    assert (ilit);
+    const int elit = internal->externalize (ilit);
+    if (!marked(tainted, elit)) {
+      implicants.push_back(elit);
+    }
+  }
+  
+  reset_limits ();
+  return res;
+}
+
+
+/*------------------------------------------------------------------------*/
+
 // Internal checker if 'solve' claims the formula to be satisfiable.
 
 void External::check_satisfiable () {

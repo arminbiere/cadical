@@ -343,6 +343,9 @@ struct External {
 
   /*----------------------------------------------------------------------*/
 
+  int propagate_assumptions (std::vector<int>& implicants);
+
+  /*----------------------------------------------------------------------*/
   int lookahead ();
   CaDiCaL::CubesWithStatus generate_cubes (int, int);
 
