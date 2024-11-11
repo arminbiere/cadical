@@ -213,7 +213,7 @@ OPTION( veripb,            0,  0,  4,0,0,1, "odd=checkdeletions, > 2=drat") \
 OPTION( vivify,            1,  0,  1,0,1,1, "vivification") \
 OPTION( vivifycalctier,    0,  0,  1,0,0,1, "recalculate tier limits") \
 OPTION( vivifydemote,      0,  0,  1,0,1,1, "demote irredundant or delete directly") \
-OPTION( vivifyeff,       100,  0,1e5,1,0,1, "overall efficiency per mille") \
+OPTION( vivifyeff,        30,  0,1e5,1,0,1, "overall efficiency per mille") \
 OPTION( vivifyinst,        1,  0,  1,0,0,1, "instantiate last literal when vivify") \
 OPTION( vivifyint,       1e4,  1,2e9,0,0,1, "vivify interval") \
 OPTION( vivifyirred,       1,  0,  1,0,1,1, "vivification irred") \
