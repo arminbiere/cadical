@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include <math.h>
 
 namespace CaDiCaL {
 
@@ -888,6 +889,7 @@ void CaDiCaL::Internal::probe (bool update_limits) {
       decompose ();
     if (sweep ())
       decompose (); // ... and (ELS) afterwards.
+    vivify ();
     factor ();
     if (unsat) break;
   }
@@ -918,7 +920,7 @@ void CaDiCaL::Internal::probe (bool update_limits) {
     PHASE ("probe-phase", stats.probingphases,
            "could not remove any active variable");
 
-  const int64_t delta = opts.probeint * (stats.probingphases + 1);
+  const int64_t delta = opts.probeint * log10 (stats.probingphases + 9);
   lim.probe = stats.conflicts + delta;
 
   PHASE ("probe-phase", stats.probingphases,

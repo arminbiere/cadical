@@ -1621,6 +1621,7 @@ void Internal::vivify () {
     total = opts.vivifymineff;
   if (total > opts.vivifymaxeff)
     total = opts.vivifymaxeff;
+    
 
   double tier1effort = !opts.vivifytier1 ? 0 : 1e-3 * (double) opts.vivifytier1eff;
   double tier2effort = !opts.vivifytier2 ? 0 : 1e-3 * (double) opts.vivifytier2eff;
