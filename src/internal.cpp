@@ -585,8 +585,6 @@ bool Internal::preprocess_round (int round) {
          " clauses",
          round, before.vars, before.clauses);
   int old_elimbound = lim.elimbound;
-  if (opts.factor)
-    factor ();
   if (opts.probe)
     probe (false);
   if (opts.elim)
@@ -638,8 +636,8 @@ void Internal::preprocess_quickly () {
   // TODO fastelim and congruence
   // if (opts.probe)
   //  probe (false);
-  // if (opts.elim)
-  //  elim (false);
+  if (opts.elim)
+    elim (false);
   // if (opts.condition)
     // condition (false);
   after.vars = active ();
