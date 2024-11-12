@@ -126,12 +126,15 @@ void Internal::sweep_sparse_mode () {
 void Internal::sweep_dense_propagate (Sweeper &sweeper) {
   vector<int> &work = sweeper.propagate;
   size_t i = 0;
+  uint64_t &ticks = sweeper.current_ticks;
   while (i < work.size ()) {
     int lit = work[i++];
     LOG ("sweeping propagation of %d", lit);
     assert (val (lit) > 0);
+    ticks += 1 + cache_lines (occs (-lit).size (), sizeof (Clause *));
     const Occs &ns = occs (-lit);
     for (const auto &c : ns) {
+      ticks++;
       if (!can_sweep_clause (c)) continue;
       int unit = 0, satisfied = 0;
       for (const auto &other : *c) {
@@ -164,14 +167,17 @@ void Internal::sweep_dense_propagate (Sweeper &sweeper) {
         build_chain_for_units (unit, c, 0);
         assign_unit (unit);
         work.push_back (unit);
+        ticks++;
       }
     }
     if (unsat)
       break;
 
     // not necessary but should help
+    ticks += 1 + cache_lines (occs (lit).size (), sizeof (Clause *));
     const Occs &ps = occs (lit);
     for (const auto &c : ps) {
+      ticks++;
       if (c->garbage)
         continue;
       // if (c->redundant)  // TODO I assume it does not hurt to mark everything here
@@ -286,6 +292,7 @@ void Internal::release_sweeper (Sweeper &sweeper) {
 
   kitten_release (citten);
   citten = 0;
+  stats.sweep_ticks += sweeper.current_ticks;
   sweep_sparse_mode ();
   return;
 }
@@ -1046,8 +1053,10 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr
   assert (active (lit));
   assert (active (repr));
 
+  uint64_t &ticks = sweeper.current_ticks;
 
   {
+    ticks += 1 + cache_lines (occs (lit).size (), sizeof (Clause *));
     Occs &ns = occs (lit);
     auto const begin = ns.begin ();
     const auto end = ns.end ();
@@ -1055,6 +1064,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr
     auto p = q;
     while (p != end) {
       Clause *c = *q++ = *p++;
+      ticks++;
       if (c->garbage)
         continue;
       assert (clause.empty ());
@@ -1107,6 +1117,7 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit, int repr
         learn_empty_clause ();
         break;
       }
+      ticks++;
       if (new_size == 1) {
         LOG (c, "reduces to unit");
         const int unit = clause[0];
@@ -1523,6 +1534,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
   bool success = false;
   unsigned depth = 1;
 
+  uint64_t &ticks = sweeper.current_ticks;
   while (!limit_reached) {
     if (sweeper.encoded >= sweeper.limit.clauses) {
       LOG ("environment clause limit reached");
@@ -1556,8 +1568,10 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
     LOG ("traversing and adding clauses of %d", idx);
     for (unsigned sign = 0; sign < 2; sign++) {
       const int lit = sign ? -idx : idx;
+      ticks += 1 + cache_lines (occs (lit).size (), sizeof (Clause *));
       Occs &ns = occs (lit);
       for (auto c : ns) {
+        ticks++;
         if (!can_sweep_clause (c)) continue;
         sweep_clause (sweeper, depth, c);
         if (sweeper.vars.size () >= sweeper.limit.vars) {
@@ -1892,7 +1906,7 @@ bool Internal::sweep () {
     VERBOSE (2, "swept[%" PRIu64 "] external variable %d %s", swept,
         externalize (idx), res);
     if (++swept == limit) {
-      VERBOSE (1,
+      VERBOSE (2,
                            "found %" PRIu64 " equivalences and %" PRIu64
                            " units after sweeping %" PRIu64 " variables ",
                            stats.sweep_equivalences - equivalences,

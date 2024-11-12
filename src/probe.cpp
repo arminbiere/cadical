@@ -889,7 +889,8 @@ void CaDiCaL::Internal::probe (bool update_limits) {
       decompose ();
     if (sweep ())
       decompose (); // ... and (ELS) afterwards.
-    vivify ();
+    if (round < 2)
+      vivify ();
     factor ();
     if (unsat) break;
   }

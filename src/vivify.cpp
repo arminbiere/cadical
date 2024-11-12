@@ -181,7 +181,7 @@ void Internal::vivify_assume (int lit) {
 // 'probe_propagate' with 'probe_propagate2' in 'probe.cpp'.  Please refer
 // to that code for more explanation on how propagation is implemented.
 
-bool Internal::vivify_propagate () {
+bool Internal::vivify_propagate (uint64_t &ticks) {
   require_mode (VIVIFY);
   assert (!unsat);
   START (propagate);
@@ -191,6 +191,7 @@ bool Internal::vivify_propagate () {
       const int lit = -trail[propagated2++];
       LOG ("vivify propagating %d over binary clauses", -lit);
       Watches &ws = watches (lit);
+      ticks += 1 + cache_lines (ws.size (), sizeof ws);
       for (const auto &w : ws) {
         if (!w.binary ())
           continue;
@@ -200,6 +201,7 @@ bool Internal::vivify_propagate () {
         if (b < 0)
           conflict = w.clause; // but continue
         else {
+          ticks++;
           build_chain_for_units (w.blit, w.clause, 0);
           vivify_assign (w.blit, w.clause);
           lrat_chain.clear ();
@@ -209,6 +211,7 @@ bool Internal::vivify_propagate () {
       const int lit = -trail[propagated++];
       LOG ("vivify propagating %d over large clauses", -lit);
       Watches &ws = watches (lit);
+      ticks += 1 + cache_lines (ws.size (), sizeof ws);
       const const_watch_iterator eow = ws.end ();
       const_watch_iterator i = ws.begin ();
       watch_iterator j = ws.begin ();
@@ -218,6 +221,7 @@ bool Internal::vivify_propagate () {
           continue;
         if (val (w.blit) > 0)
           continue;
+        ticks++;
         if (w.clause->garbage) {
           j--;
           continue;
@@ -251,6 +255,7 @@ bool Internal::vivify_propagate () {
             lits[0] = other;
             lits[1] = r;
             *k = lit;
+            ticks++;
             watch_literal (r, lit, w.clause);
             j--;
           } else if (!u) {
@@ -258,6 +263,7 @@ bool Internal::vivify_propagate () {
 	      LOG ("ignoring propagation due to clause to vivify");
 	      continue;
 	    }
+	          ticks++;
             assert (v < 0);
             vivify_chain_for_units (other, w.clause);
             vivify_assign (other, w.clause);
@@ -903,7 +909,7 @@ inline void Internal::vivify_increment_stats (const Vivifier &vivifier) {
 /*------------------------------------------------------------------------*/
 // instantiate last literal (see the description of the hack track 2023), fix the watches and
 //  backtrack two level back
-bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c, std::vector<std::tuple<int, Clause *, bool>> &lrat_stack) {
+bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c, std::vector<std::tuple<int, Clause *, bool>> &lrat_stack, uint64_t &ticks) {
   LOG ("now trying instantiation");
   conflict = nullptr;
   const int lit = sorted.back ();
@@ -914,7 +920,7 @@ bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c, st
   assert (val (lit) == 0);
   stats.vivifydecs++;
   vivify_assume (lit);
-  bool ok = vivify_propagate ();
+  bool ok = vivify_propagate (ticks);
   if (!ok) {
     LOG (c, "instantiate success with literal %d in", lit);
     stats.vivifyinst++;
@@ -956,6 +962,8 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   assert (!c->garbage);
 
   auto &lrat_stack = vivifier.lrat_stack;
+  auto &ticks = vivifier.ticks;
+  ticks++;
 
   // First check whether the candidate clause is already satisfied and at
   // the same time copy its non fixed literals to 'sorted'.  The literals
@@ -1131,7 +1139,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     vivify_assume (-lit);
     LOG ("negated decision %d score %" PRId64 "", lit, noccs (lit));
 
-    if (!vivify_propagate ()){
+    if (!vivify_propagate (ticks)){
       break; // hot-spot
     }
   }
@@ -1222,7 +1230,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     lrat_chain.clear();
     assert (!subsume);
     if (!subsume && opts.vivifyinst) {
-      res = vivify_instantiate (sorted, c, lrat_stack);
+      res = vivify_instantiate (sorted, c, lrat_stack, ticks);
       assert (!conflict);
     } else {
       LOG ("cannot apply instantiation");
@@ -1340,7 +1348,7 @@ inline void Internal::vivify_chain_for_units (int lit, Clause *reason) {
 // tautologies (clauses subsumed through unit propagation), which in
 // redundant mode is incorrect (due to propagating over redundant clauses).
 
-void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
+void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
 
   if (unsat)
     return;
@@ -1348,8 +1356,8 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     return;
 
   PHASE ("vivify", stats.vivifications,
-         "starting %c vivification round propagation limit %" PRId64 "",
-         vivifier.tag, propagation_limit);
+         "starting %c vivification round ticks limit %" PRId64 "",
+         vivifier.tag, ticks_limit);
 
   // Disconnect all watches since we sort literals within clauses.
   //
@@ -1384,9 +1392,10 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     break;
   }
 
-  
+  int64_t ticks = 1 + cache_lines (clauses.size (), sizeof (Clause *));
+
   for (const auto &c : clauses) {
-  
+    ticks++;
     if (c->size == 2)
       continue; // see also (NO-BINARY) above
 
@@ -1418,6 +1427,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   // the first round.  Then the second round selects all clauses.
   //
   for (const auto &c : vivifier.schedule) {
+    ticks++;
 
     // Literals in scheduled clauses are sorted with their highest score
     // literals first (as explained above in the example at '@2').  This
@@ -1457,8 +1467,9 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
 
   // Limit the number of propagations during vivification as in 'probe'.
   //
-  const int64_t limit = stats.propagations.vivify + propagation_limit;
+  const uint64_t limit = ticks_limit;
 
+  ticks += 2 * cache_lines (clauses.size (), sizeof (Clause *));
   connect_watches (); // watch all relevant clauses
 
   // the clauses might still contain set literals, so propagation since the
@@ -1470,9 +1481,10 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     learn_empty_clause ();
   }
 
+  vivifier.ticks = ticks;
   int retry = 0;
   while (!unsat && !terminated_asynchronously () &&
-         !vivifier.schedule.empty () && stats.propagations.vivify < limit) {
+         !vivifier.schedule.empty () && vivifier.ticks < limit) {
     Clause *c = vivifier.schedule.back (); // Next candidate.
     vivifier.schedule.pop_back ();
     if (vivify_clause (vivifier, c)) {
@@ -1540,8 +1552,9 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   units = stats.vivifyunits - units;
 
   PHASE ("vivify", stats.vivifications,
-         "checked %" PRId64 " clauses %.02f%% of %" PRId64 " scheduled",
-         checked, percent (checked, scheduled), scheduled);
+         "checked %" PRId64 " clauses %.02f%% of %" PRId64 " scheduled using %"
+         PRIu64 " ticks",
+         checked, percent (checked, scheduled), scheduled, vivifier.ticks);
   if (units)
     PHASE ("vivify", stats.vivifications,
            "found %" PRId64 " units %.02f%% of %" PRId64 " checked", units,
@@ -1558,8 +1571,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
 
   stats.subsumed += subsumed;
   stats.strengthened += strengthened;
-
-//  last.vivify.propagations = stats.propagations.search;
+  stats.vivifyticks += vivifier.ticks;
 
   bool unsuccessful = !(subsumed + strengthened + units);
   report (vivifier.tag, unsuccessful);
@@ -1616,7 +1628,7 @@ void Internal::vivify () {
 
   START_SIMPLIFIER (vivify, VIVIFY);
   stats.vivifications++;
-  int64_t total = (stats.propagations.search - last.vivify.propagations) * opts.vivifyeff;
+  int64_t total = (stats.ticks.search[0] + stats.ticks.search[1] - last.vivify.ticks) * opts.vivifyeff * 1e-3;
   if (total < opts.vivifymineff)
     total = opts.vivifymineff;
   if (total > opts.vivifymaxeff)
@@ -1634,7 +1646,7 @@ void Internal::vivify () {
     sumeffort = irreffort = 1;
 
   PHASE ("vivify", stats.vivifications,
-         "vivification limit of %" PRId64 " propagations", total);
+         "vivification limit of %" PRId64 " ticks", total);
   Vivifier vivifier (Vivify_Mode::TIER1);
   compute_tier_limits (vivifier);
 
@@ -1690,7 +1702,7 @@ void Internal::vivify () {
 
   STOP_SIMPLIFIER (vivify, VIVIFY);
 
-  last.vivify.propagations = stats.propagations.search;
+  last.vivify.ticks = stats.ticks.search[0] + stats.ticks.search[1];
 
   int64_t delta = scale (opts.vivifyint * (stats.vivifications + 1));
   lim.vivify = stats.conflicts + delta;

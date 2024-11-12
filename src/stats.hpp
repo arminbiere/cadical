@@ -224,6 +224,7 @@ struct Stats {
   int64_t vivifyimplied = 0;     // implied during vivification
   int64_t vivifyinst = 0;     // instantiation during vivification
   int64_t vivifydemote = 0;   //demoting during vivification
+  int64_t vivifyticks = 0;   // ticks during vivification
   int64_t transreds = 0;
   int64_t transitive = 0;
   struct {
@@ -265,6 +266,7 @@ struct Stats {
   int64_t sweep_environment = 0;
   int64_t sweep_clauses = 0;
   int64_t sweep = 0;
+  int64_t sweep_ticks = 0;
 
   int64_t units = 0;         // learned unit clauses
   int64_t binaries = 0;      // learned binary clauses

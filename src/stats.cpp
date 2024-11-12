@@ -441,6 +441,8 @@ void Stats::print (Internal *internal) {
          stats.sweep_equivalences, percent (stats.sweep_equivalences, stats.sweep_variables));
     PRT ("  sweepings:     %15" PRId64 "   %10.2f    vars per sweeping",
       stats.sweep, relative (stats.sweep_variables, stats.sweep));
+    PRT ("  sweep ticks:   %15" PRId64 "   %10.2f %%  searchticks",
+      stats.sweep_ticks, percent (stats.sweep_ticks, ticks));
     PRT ("  swept vars:    %15" PRId64 "   %10.2f %%  of all variables",
          stats.sweep_variables, percent (stats.sweep_variables, stats.vars));
     PRT ("  sweep units:   %15" PRId64 "   %10.2f %%  of all variables",
@@ -581,6 +583,9 @@ void Stats::print (Internal *internal) {
     PRT ("  vivifications: %15" PRId64 "   %10.2f    interval",
          stats.vivifications,
          relative (stats.conflicts, stats.vivifications));
+    PRT ("  vivify ticks:  %15" PRId64 "   %10.2f %%  searchticks",
+         stats.vivifyticks,
+         percent (stats.vivifyticks, ticks));
     PRT ("  vivifychecks:  %15" PRId64 "   %10.2f %%  per conflict",
          stats.vivifychecks, percent (stats.vivifychecks, stats.conflicts));
     PRT ("  vivifysched:   %15" PRId64 "   %10.2f %%  checks per scheduled",
