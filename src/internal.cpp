@@ -403,7 +403,9 @@ void Internal::init_preprocessing_limits () {
   if (incremental)
     mode = "keeping";
   else {
-    lim.probe = stats.conflicts + opts.probeint;
+    double delta = log10 (stats.added.irredundant);
+    delta = delta * delta;
+    lim.probe = stats.conflicts + opts.probeint * delta;
     mode = "initial";
   }
   (void) mode;

@@ -1,5 +1,4 @@
 #include "internal.hpp"
-#include <math.h>
 
 namespace CaDiCaL {
 
