@@ -921,7 +921,7 @@ void CaDiCaL::Internal::probe (bool update_limits) {
     PHASE ("probe-phase", stats.probingphases,
            "could not remove any active variable");
 
-  const int64_t delta = opts.probeint * log10 (stats.probingphases + 9);
+  const int64_t delta = 25 * opts.probeint * log10 (stats.probingphases + 9);
   lim.probe = stats.conflicts + delta;
 
   PHASE ("probe-phase", stats.probingphases,

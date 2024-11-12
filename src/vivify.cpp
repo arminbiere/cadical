@@ -1467,7 +1467,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
 
   // Limit the number of propagations during vivification as in 'probe'.
   //
-  const uint64_t limit = ticks_limit;
+  const uint64_t limit = ticks_limit - stats.vivifyticks;
 
   ticks += 2 * cache_lines (clauses.size (), sizeof (Clause *));
   connect_watches (); // watch all relevant clauses
@@ -1657,19 +1657,20 @@ void Internal::vivify () {
          "thus using tier2 budget for tier1");
   }
 
+  int64_t limit = stats.vivifyticks;
   if (opts.vivifytier1) {
     // Refill the schedule every time.  Unchecked clauses are 'saved' by
     // setting their 'vivify' bit, such that they can be tried next time.
     //
     set_vivifier_mode(vivifier, Vivify_Mode::TIER1);
-    const int64_t limit = (total * tier1effort) / sumeffort;
+    limit += (total * tier1effort) / sumeffort;
     assert (limit >= 0);
     vivify_round (vivifier, limit);
   }
 
   if (!unsat && tier2effort) {
     vivifier.erase();
-    const int64_t limit = (total * tier2effort) / sumeffort;
+    limit += (total * tier2effort) / sumeffort;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::TIER2);
     vivify_round (vivifier, limit);
@@ -1677,7 +1678,7 @@ void Internal::vivify () {
 
   if (!unsat && tier3effort) {
     vivifier.erase();
-    const int64_t limit = (total * tier3effort) / sumeffort;
+    limit += (total * tier3effort) / sumeffort;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::TIER3);
     vivify_round (vivifier, limit);
@@ -1685,7 +1686,7 @@ void Internal::vivify () {
 
   if (!unsat && irreffort) {
     vivifier.erase();
-    const int64_t limit = (total * irreffort) / sumeffort;
+    limit += (total * irreffort) / sumeffort;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::IRREDUNDANT);
     const int old = stats.vivifystrirr;
