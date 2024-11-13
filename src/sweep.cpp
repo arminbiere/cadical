@@ -1878,6 +1878,7 @@ bool Internal::sweep () {
   if (terminated_asynchronously ())
     return false;
   if (delaying_sweep.bumpreasons.delay ()) {  // TODO need to fix Delay
+    last.sweep.ticks = stats.ticks.search[0] + stats.ticks.search[1];
     return false;
   }
   assert (!level);
