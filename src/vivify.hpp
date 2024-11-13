@@ -14,7 +14,7 @@ struct Vivifier {
   char tag;
   int tier1;
   int tier2;
-  uint64_t ticks;
+  int64_t ticks;
   std::vector<std::tuple<int, Clause *, bool>> lrat_stack;
   Vivifier (Vivify_Mode mode_tier) : tier (mode_tier) {}
 

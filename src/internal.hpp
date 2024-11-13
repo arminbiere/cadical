@@ -940,7 +940,7 @@ struct Internal {
   void compute_tier_limits (Vivifier &);
   bool consider_to_vivify_clause (Clause *candidate, bool, int, int);
   void vivify_sort_watched (Clause *c);
-  bool vivify_instantiate (const std::vector<int>&, Clause *, std::vector<std::tuple<int, Clause *, bool>> &lrat_stack, uint64_t &ticks);
+  bool vivify_instantiate (const std::vector<int>&, Clause *, std::vector<std::tuple<int, Clause *, bool>> &lrat_stack, int64_t &ticks);
   void vivify_analyze_redundant (Vivifier &, Clause *start, bool &);
   void vivify_build_lrat (int, Clause *,
                           std::vector<std::tuple<int, Clause *, bool>> &);
@@ -948,7 +948,7 @@ struct Internal {
   void vivify_strengthen (Clause *candidate);
   void vivify_assign (int lit, Clause *);
   void vivify_assume (int lit);
-  bool vivify_propagate (uint64_t&);
+  bool vivify_propagate (int64_t&);
   void vivify_deduce (Clause *candidate, Clause *conflct, int implied, Clause **, bool&);
   bool vivify_clause (Vivifier &, Clause *candidate);
   void vivify_analyze (Clause *start, bool &, Clause **, const Clause *const, int implied, bool&);

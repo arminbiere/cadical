@@ -181,7 +181,7 @@ void Internal::vivify_assume (int lit) {
 // 'probe_propagate' with 'probe_propagate2' in 'probe.cpp'.  Please refer
 // to that code for more explanation on how propagation is implemented.
 
-bool Internal::vivify_propagate (uint64_t &ticks) {
+bool Internal::vivify_propagate (int64_t &ticks) {
   require_mode (VIVIFY);
   assert (!unsat);
   START (propagate);
@@ -909,7 +909,7 @@ inline void Internal::vivify_increment_stats (const Vivifier &vivifier) {
 /*------------------------------------------------------------------------*/
 // instantiate last literal (see the description of the hack track 2023), fix the watches and
 //  backtrack two level back
-bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c, std::vector<std::tuple<int, Clause *, bool>> &lrat_stack, uint64_t &ticks) {
+bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c, std::vector<std::tuple<int, Clause *, bool>> &lrat_stack, int64_t &ticks) {
   LOG ("now trying instantiation");
   conflict = nullptr;
   const int lit = sorted.back ();
@@ -1467,7 +1467,8 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
 
   // Limit the number of propagations during vivification as in 'probe'.
   //
-  const uint64_t limit = ticks_limit - stats.vivifyticks;
+  const int64_t limit = ticks_limit - stats.vivifyticks;
+  assert (limit > 0);
 
   ticks += 2 * cache_lines (clauses.size (), sizeof (Clause *));
   connect_watches (); // watch all relevant clauses
@@ -1663,6 +1664,7 @@ void Internal::vivify () {
     // setting their 'vivify' bit, such that they can be tried next time.
     //
     set_vivifier_mode(vivifier, Vivify_Mode::TIER1);
+    if (limit < stats.vivifyticks) limit = stats.vivifyticks;
     limit += (total * tier1effort) / sumeffort;
     assert (limit >= 0);
     vivify_round (vivifier, limit);
@@ -1670,6 +1672,7 @@ void Internal::vivify () {
 
   if (!unsat && tier2effort) {
     vivifier.erase();
+    if (limit < stats.vivifyticks) limit = stats.vivifyticks;
     limit += (total * tier2effort) / sumeffort;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::TIER2);
@@ -1678,6 +1681,7 @@ void Internal::vivify () {
 
   if (!unsat && tier3effort) {
     vivifier.erase();
+    if (limit < stats.vivifyticks) limit = stats.vivifyticks;
     limit += (total * tier3effort) / sumeffort;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::TIER3);
@@ -1686,6 +1690,7 @@ void Internal::vivify () {
 
   if (!unsat && irreffort) {
     vivifier.erase();
+    if (limit < stats.vivifyticks) limit = stats.vivifyticks;
     limit += (total * irreffort) / sumeffort;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::IRREDUNDANT);
