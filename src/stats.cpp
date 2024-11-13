@@ -494,8 +494,8 @@ void Stats::print (Internal *internal) {
          stats.factored, percent (stats.factored, internal->max_var));
     PRT ("  factor:        %15" PRId64 "   %10.2f    conflict interval",
          stats.factor, relative (stats.conflicts, stats.factor));
-    PRT ("  factor ticks:  %15" PRId64 "   %10.2f    per search propagation",
-         stats.factor_ticks, relative (stats.factor_ticks, stats.propagations.search));
+    PRT ("  factor ticks:  %15" PRId64 "   %10.2f %%  search ticks",
+         stats.factor_ticks, percent (stats.factor_ticks, ticks));
     PRT ("  cls factored:  %15" PRId64 "   %10.2f    per factored",
          stats.factor_added, relative (stats.factor_added, factored));
     PRT ("  lits factored: %15" PRId64 "   %10.2f    per factored",

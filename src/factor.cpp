@@ -858,20 +858,15 @@ void Internal::factor () {
   START_SIMPLIFIER (factor, FACTOR);
   stats.factor++;
 
-  int64_t limit = opts.factoriniticks;
-  if (stats.factor > 0) {
-    int64_t tmp = stats.ticks.search[0] + stats.ticks.search[1];
-    tmp -= last.factor.ticks;
-    last.factor.ticks = stats.ticks.search[0] + stats.ticks.search[1];
-    tmp *= opts.factoreffort;
-    limit = tmp;
-  } else {
-    VERBOSE (3, "initially limiting to %" PRIu64
-               " million factorization ticks",
-               limit);
-    limit *= 1e3;
-    limit += stats.factor_ticks;
-  }
+  int64_t tmp = stats.ticks.search[0] + stats.ticks.search[1];
+  tmp -= last.factor.ticks;
+  last.factor.ticks = stats.ticks.search[0] + stats.ticks.search[1];
+  tmp *= opts.factoreffort / 1e3;
+  int64_t limit = tmp;
+  VERBOSE (3, "limiting to %" PRIu64
+             " million factorization ticks",
+             limit);
+  limit += stats.factor_ticks;
 
 #ifndef QUIET
   struct {
