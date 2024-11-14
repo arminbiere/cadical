@@ -868,9 +868,10 @@ void Internal::factor () {
   tmp -= last.factor.ticks;
   last.factor.ticks = stats.ticks.search[0] + stats.ticks.search[1];
   tmp *= opts.factoreffort / 1e3;
+  if (stats.factor == 1) tmp += opts.factoriniticks * 1e3;
   int64_t limit = tmp;
   VERBOSE (3, "limiting to %" PRIu64
-             " million factorization ticks",
+             " factorization ticks",
              limit);
   limit += stats.factor_ticks;
 
