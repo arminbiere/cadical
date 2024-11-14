@@ -1,5 +1,6 @@
 #include "../../src/cadical.hpp"
 
+#include <cstdlib>
 #include <string>
 
 using namespace std;
