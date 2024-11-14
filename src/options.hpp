@@ -76,7 +76,7 @@ OPTION( elimboundmin,      0, -1,2e6,0,0,1, "minimum elimination bound") \
 OPTION( elimclslim,      1e2,  2,2e9,2,0,1, "resolvent size limit") \
 OPTION( elimdef,           1,  0,  1,0,0,1, "mine definitions with kitten") \
 OPTION( elimdefcores,      2,  1,100,0,0,1, "number of unsat cores") \
-OPTION( elimdefticks,    1e6,  0,2e9,1,0,1, "kitten ticks limit") \
+OPTION( elimdefticks,    2e5,  0,2e9,1,0,1, "kitten ticks limit") \
 OPTION( elimequivs,        1,  0,  1,0,0,1, "find equivalence gates") \
 OPTION( elimineff,       1e7,  0,2e9,1,0,1, "minimum elimination efficiency") \
 OPTION( elimint,         2e3,  1,2e9,0,0,1, "elimination interval") \
@@ -133,7 +133,7 @@ OPTION( probeint,        100,  1,2e9,0,0,1, "probing interval" ) \
 OPTION( probemaxeff,     1e8,  0,2e9,1,0,1, "maximum probing efficiency") \
 OPTION( probemineff,     1e6,  0,2e9,1,0,1, "minimum probing efficiency") \
 OPTION( probereleff,      20,  1,1e5,1,0,1, "relative efficiency per mille") \
-OPTION( proberounds,       2,  1, 16,1,0,1, "probing rounds" ) \
+OPTION( proberounds,       1,  1, 16,1,0,1, "probing rounds" ) \
 OPTION( profile,           2,  0,  4,0,0,0, "profiling level") \
 QUTOPT( quiet,             0,  0,  1,0,0,0, "disable all messages") \
 OPTION( radixsortlim,     32,  0,2e9,0,0,1, "radix sort limit") \

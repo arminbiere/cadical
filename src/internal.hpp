@@ -1225,7 +1225,7 @@ struct Internal {
   bool sweep_extract_fixed (Sweeper &sweeper, int lit);
 
   // factor
-  void factor_mode ();
+  int64_t factor_mode (int64_t);
   void reset_factor_mode ();
   double tied_next_factor_score (int);
   Quotient *new_quotient (Factoring &, int);

@@ -17,7 +17,7 @@ inline bool factor_occs_size::operator() (unsigned a, unsigned b) {
 }
 
 // do full occurence list as in elim.cpp but filter out useless clauses
-void Internal::factor_mode () {
+int64_t Internal::factor_mode (int64_t limit) {
   reset_watches ();
 
   assert (!watching ());
@@ -32,6 +32,7 @@ void Internal::factor_mode () {
     enlarge_zero (largecount, max_lit);
 
   vector<Clause *> candidates;
+  int64_t ticks = 2 * cache_lines (clauses.size (), sizeof (Clause *));
 
   // push binary clauses on the occurrence stack.
   for (const auto &c : clauses) {
@@ -52,7 +53,8 @@ void Internal::factor_mode () {
       largecount[vlit (lit)]++;
     }
   }
-  if (size_limit == 2) return;
+  if (ticks > limit >> 1) return limit >> 1;
+  if (size_limit == 2) return limit - ticks;
 
   // iterate counts of larger clauses rounds often
   const unsigned rounds = opts.factorcandrounds;
@@ -61,6 +63,8 @@ void Internal::factor_mode () {
     LOG ("factor round %d", round);
     if (candidates.size () == candidates_before)
       break;
+    if (ticks > limit >> 1) break;
+    ticks += 2 * cache_lines (candidates.size (), sizeof (Clause *));
     candidates_before = candidates.size ();
     vector<unsigned> newlargecount;
     enlarge_zero (newlargecount, max_lit);
@@ -93,6 +97,8 @@ void Internal::factor_mode () {
     for (const auto &lit : *c)
       occs (lit).push_back (c);
 
+  if (ticks > limit >> 1) return limit >> 1;
+  return limit - ticks;
 }
 
 // go back to two watch scheme
@@ -877,7 +883,7 @@ void Internal::factor () {
   before.clauses = stats.current.irredundant;
 #endif
 
-  factor_mode ();
+  limit = factor_mode (limit);
   bool completed = run_factorization (limit);
   reset_factor_mode ();
 
