@@ -458,14 +458,17 @@ void Internal::add_external_clause (int propagated_elit,
   } else
     elit = external->propagator->cb_add_external_clause_lit ();
 
-  // Read out the external lemma into original and simplify it into clause
-  assert (clause.empty ());
-  assert (original.empty ());
 
   // we need to be build a new LRAT chain if we are already in the middle of
   // the analysis (like during failed assumptions)
-  std::vector<uint64_t> lrat_chain_ext;
-  assert (lrat_chain_ext.empty ());
+  LOG (lrat_chain, "lrat chain before");
+  std::vector<uint64_t> lrat_chain_ext = std::move (lrat_chain);
+  lrat_chain.clear();
+  clause.clear ();
+
+  // Read out the external lemma into original and simplify it into clause
+  assert (clause.empty ());
+  assert (original.empty ());
 
   assert (!force_no_backtrack);
   assert (!from_propagator);
@@ -485,6 +488,8 @@ void Internal::add_external_clause (int propagated_elit,
   assert (clause.empty ());
   force_no_backtrack = false;
   from_propagator = false;
+  lrat_chain = std::move (lrat_chain_ext);
+  LOG (lrat_chain, "lrat chain after");
 }
 
 /*----------------------------------------------------------------------------*/
