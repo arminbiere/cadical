@@ -1619,21 +1619,29 @@ void Internal::vivify () {
     return;
   if (terminated_asynchronously ())
     return;
+  if (!opts.vivify)
+    return;
   if (!stats.current.irredundant)
     return;
   if (level)
     backtrack ();
   assert (opts.vivify);
   assert (!level);
-  private_steps = true;
-
-  START_SIMPLIFIER (vivify, VIVIFY);
-  stats.vivifications++;
   int64_t total = (stats.ticks.search[0] + stats.ticks.search[1] - last.vivify.ticks) * opts.vivifyeff * 1e-3;
   if (total < opts.vivifymineff)
     total = opts.vivifymineff;
   if (total > opts.vivifymaxeff)
     total = opts.vivifymaxeff;
+  const int64_t min_limit = 10 * cache_lines (clauses.size (), sizeof (Clause *));
+  if (total < min_limit) {
+    VERBOSE (2, "limit of %" PRId64 " ticks not enough (min %" PRId64 " budget will be preserved for next vivification round", total, min_limit);
+    return;
+  }
+
+  private_steps = true;
+
+  START_SIMPLIFIER (vivify, VIVIFY);
+  stats.vivifications++;
     
 
   double tier1effort = !opts.vivifytier1 ? 0 : 1e-3 * (double) opts.vivifytier1eff;
@@ -1659,6 +1667,7 @@ void Internal::vivify () {
   }
 
   int64_t limit = stats.vivifyticks;
+
   if (opts.vivifytier1) {
     // Refill the schedule every time.  Unchecked clauses are 'saved' by
     // setting their 'vivify' bit, such that they can be tried next time.
