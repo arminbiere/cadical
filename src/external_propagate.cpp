@@ -498,6 +498,8 @@ void Internal::add_external_clause (int propagated_elit,
 // backward reachable externally propagated literal starting from 'ilit'.
 //
 void Internal::explain_reason (int ilit, Clause *reason, int &open) {
+  if (!opts.exteagerreasons)
+    return;
 #ifndef NDEBUG
   LOG (reason, "explain_reason of %d (open: %d)", ilit, open);
 #endif
@@ -620,6 +622,8 @@ Clause *Internal::learn_external_reason_clause (int ilit,
                                                 int falsified_elit,
                                                 bool no_backtrack) {
   assert (external->propagator);
+  // we cannot modify clause during analysis
+  auto clause_tmp = std::move (clause);
 
   assert (clause.empty ());
   assert (original.empty ());
@@ -650,6 +654,7 @@ Clause *Internal::learn_external_reason_clause (int ilit,
   }
 #endif
 
+  clause = std::move (clause_tmp);
   return newest_clause;
 }
 
