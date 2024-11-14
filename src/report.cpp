@@ -220,7 +220,6 @@ void Internal::report (char type, int verbose) {
     tout.magenta (true);
     break;
   case 's':
-  case 't':
   case 'b':
   case 'c':
     tout.green (false);
@@ -237,6 +236,9 @@ void Internal::report (char type, int verbose) {
   case 'x':
   case 'f':
     tout.blue (false);
+    break;
+  case 't':
+    tout.cyan (false);
     break;
   case 'd':
     tout.blue (true);
