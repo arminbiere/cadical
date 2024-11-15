@@ -393,7 +393,7 @@ struct vivify_clause_later {
     //
     if (!a->vivify && b->vivify)
       return true;
-    if (a->vivify && !b->vivify)
+    if (a->vivify && !b->vivify)                                     
       return false;
 
     // Among redundant clauses (in redundant mode) prefer small glue.
@@ -745,9 +745,7 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes, Clause **subsuming
     if (lrat && reason)
       lrat_chain.push_back (reason->id);
   }
-#ifndef NDEBUG
   (void)candidate;
-#endif
 }
 
 
@@ -885,6 +883,7 @@ bool Internal::vivify_shrinkable (const std::vector<int>&sorted,  Clause *confli
       }
     }
   }
+  (void) implied;
   return false;
 }
 /*------------------------------------------------------------------------*/

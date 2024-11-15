@@ -59,7 +59,7 @@ struct Delay {
     }
 
     void bump_delay () {
-      interval += interval < std::numeric_limits<unsigned>::max ();
+      interval += interval < INT64_MAX;
       limit = interval;
     }
 
