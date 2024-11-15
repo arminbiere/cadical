@@ -886,11 +886,11 @@ void CaDiCaL::Internal::probe (bool update_limits) {
       decompose (); // If we derived a binary clause
     if (probe_round ())
       decompose ();
-    if (sweep ())
+    if (sweep ())   // full occurrence list
       decompose (); // ... and (ELS) afterwards.
     if (round < 2)
-      vivify ();
-    factor ();
+      vivify ();    // resets watches
+    factor ();      // resets watches, partial occurrence list
     if (unsat) break;
   }
 

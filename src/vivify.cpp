@@ -1443,6 +1443,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
   //
   flush_vivification_schedule (vivifier);
 
+  ticks += 1 + vivifier.schedule.size ();
   // Sort candidates, with first to be tried candidate clause last, i.e.,
   // many occurrences and high score literals) as in the example explained
   // above (search for '@3').
@@ -1470,7 +1471,9 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
   const int64_t limit = ticks_limit - stats.vivifyticks;
   assert (limit > 0);
 
-  ticks += 2 * cache_lines (clauses.size (), sizeof (Clause *));
+  ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
+  ticks += clauses.size ();
+
   connect_watches (); // watch all relevant clauses
 
   // the clauses might still contain set literals, so propagation since the
@@ -1528,8 +1531,9 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
     vivifier.erase (); // Reclaim  memory early.
   }
 
-  clear_watches ();
-  connect_watches ();
+  // should not be necessary...
+  // clear_watches ();
+  // connect_watches ();
 
   if (!unsat) {
 
@@ -1632,7 +1636,7 @@ void Internal::vivify () {
     total = opts.vivifymineff;
   if (total > opts.vivifymaxeff)
     total = opts.vivifymaxeff;
-  const int64_t min_limit = 10 * cache_lines (clauses.size (), sizeof (Clause *));
+  const int64_t min_limit = 10 * clauses.size ();
   if (total < min_limit) {
     VERBOSE (2, "limit of %" PRId64 " ticks not enough (min %" PRId64 " budget will be preserved for next vivification round", total, min_limit);
     return;

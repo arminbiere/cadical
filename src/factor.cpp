@@ -32,10 +32,11 @@ int64_t Internal::factor_mode (int64_t limit) {
     enlarge_zero (largecount, max_lit);
 
   vector<Clause *> candidates;
-  int64_t ticks = 2 * cache_lines (clauses.size (), sizeof (Clause *));
+  int64_t ticks = 1 + cache_lines (clauses.size (), sizeof (Clause *));
 
   // push binary clauses on the occurrence stack.
   for (const auto &c : clauses) {
+    ticks++;
     if (c->garbage) continue;
     if (c->redundant && c->size > 2) continue;
     if (c->size > size_limit) continue;
@@ -64,7 +65,7 @@ int64_t Internal::factor_mode (int64_t limit) {
     if (candidates.size () == candidates_before)
       break;
     if (ticks > limit >> 1) break;
-    ticks += 2 * cache_lines (candidates.size (), sizeof (Clause *));
+    ticks += 1 + cache_lines (candidates.size (), sizeof (Clause *));
     candidates_before = candidates.size ();
     vector<unsigned> newlargecount;
     enlarge_zero (newlargecount, max_lit);
@@ -74,6 +75,7 @@ int64_t Internal::factor_mode (int64_t limit) {
     const auto end = candidates.end ();
     while (p != end) {
       Clause *c = *q++ = *p++;
+      ticks++;
       for (const auto &lit : *c) {
         const auto idx = vlit (lit);
         if (bincount[idx] + largecount[idx] < 2) {
@@ -861,19 +863,24 @@ void Internal::factor () {
     return;
   }
   assert (!level);
-  START_SIMPLIFIER (factor, FACTOR);
-  stats.factor++;
 
   int64_t tmp = stats.ticks.search[0] + stats.ticks.search[1];
   tmp -= last.factor.ticks;
-  last.factor.ticks = stats.ticks.search[0] + stats.ticks.search[1];
   tmp *= opts.factoreffort / 1e3;
-  if (stats.factor == 1) tmp += opts.factoriniticks * 1e3;
+  if (!stats.factor) tmp += opts.factoriniticks * 1e3;
   int64_t limit = tmp;
   VERBOSE (3, "limiting to %" PRIu64
              " factorization ticks",
              limit);
-  limit += stats.factor_ticks;
+  const int64_t min_ticks = 3 * clauses.size ();
+  if (tmp < min_ticks) {
+    VERBOSE (2, "limit of %" PRId64 " ticks not enough (min %" PRId64 " budget will be preserved for next factorization", tmp, min_ticks);
+    return;
+  }
+
+  last.factor.ticks = stats.ticks.search[0] + stats.ticks.search[1];
+  START_SIMPLIFIER (factor, FACTOR);
+  stats.factor++;
 
 #ifndef QUIET
   struct {
@@ -885,6 +892,7 @@ void Internal::factor () {
 #endif
 
   limit = factor_mode (limit);
+  limit += stats.factor_ticks;
   bool completed = run_factorization (limit);
   reset_factor_mode ();
 
