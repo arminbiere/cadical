@@ -116,6 +116,7 @@ run cfreeze
 run traverse
 run cipasir
 run incproof
+run propagate_assumptions
 
 if [ "`grep DNTRACING $makefile`" = "" ]
 then
