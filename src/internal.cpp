@@ -823,7 +823,7 @@ int Internal::solve (bool preprocess_only) {
     backtrack ();
   if (!res)
     res = restore_clauses ();
-  if (!res) {
+  if (!res || (res == 10 && external_prop)) {
     init_preprocessing_limits ();
     if (!preprocess_only)
       init_search_limits ();

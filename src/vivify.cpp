@@ -1469,7 +1469,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
   // Limit the number of propagations during vivification as in 'probe'.
   //
   const int64_t limit = ticks_limit - stats.vivifyticks;
-  assert (limit > 0);
+  assert (limit >= 0);
 
   ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
   ticks += clauses.size ();
@@ -1636,7 +1636,7 @@ void Internal::vivify () {
     total = opts.vivifymineff;
   if (total > opts.vivifymaxeff)
     total = opts.vivifymaxeff;
-  const int64_t min_limit = 10 * clauses.size ();
+  const int64_t min_limit = 30 * clauses.size ();
   if (total < min_limit) {
     VERBOSE (2, "limit of %" PRId64 " ticks not enough (min %" PRId64 " budget will be preserved for next vivification round", total, min_limit);
     return;

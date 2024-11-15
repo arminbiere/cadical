@@ -268,6 +268,8 @@ void Internal::report (char type, int verbose) {
     tout.bold ();
     tout.underline ();
     break;
+  default:
+    break;
   }
   fputc (type, stdout);
   if (stable || type == ']')

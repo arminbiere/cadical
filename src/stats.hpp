@@ -28,7 +28,7 @@ struct Stats {
   } propagations;
 
   struct {
-    int64_t search[2];
+    int64_t search[2] = { 0 };
   } ticks;
 
   struct {
@@ -76,7 +76,7 @@ struct Stats {
   } current, added; // Clauses.
 
   struct {
-    double process, real;
+    double process = 0, real = 0;
   } time;
 
   struct {
