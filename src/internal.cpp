@@ -333,8 +333,23 @@ int Internal::cdcl_loop_with_inprocessing () {
 
 
 int Internal::propagate_assumptions (std::vector<int>& implicants) {
+  // TODO: extend proof format for propagate queries
+  // if (proof)
+  //   proof->solve_query ();
+  if (opts.ilb) {
+    if (opts.ilbassumptions)
+      sort_and_reuse_assumptions ();
+    stats.ilbtriggers++;
+    stats.ilbsuccess += (level > 0);
+    stats.levelsreused += level;
+    if (level) {
+      assert (control.size () > 1);
+      stats.literalsreused += num_assigned - control[1].trail;
+    }
+  }
   init_search_limits ();
   init_report_limits();
+
   int res = already_solved (); // root-level propagation is done here
   
   size_t current_level = level;
@@ -359,7 +374,8 @@ int Internal::propagate_assumptions (std::vector<int>& implicants) {
     current_level = level;
     }
   }
-  
+  if (!res && satisfied ()) res = 10;
+
   if (res != 20) {
     for (size_t i = 0; i < trail.size(); i++)
       implicants.push_back(trail[i]);

@@ -1209,41 +1209,42 @@ struct Call {
     SIMPLIFY        = shift ( 12 ),
     LOOKAHEAD       = shift ( 13 ),
     CUBING          = shift ( 14 ),
+    PROPAGATE       = shift ( 15 ),
 
-    VAL             = shift ( 15 ),
-    FLIP            = shift ( 16 ),
-    FLIPPABLE       = shift ( 17 ),
-    FAILED          = shift ( 18 ),
-    FIXED           = shift ( 19 ),
+    VAL             = shift ( 16 ),
+    FLIP            = shift ( 17 ),
+    FLIPPABLE       = shift ( 18 ),
+    FAILED          = shift ( 19 ),
+    FIXED           = shift ( 20 ),
 
-    FREEZE          = shift ( 20 ),
-    FROZEN          = shift ( 21 ),
-    MELT            = shift ( 22 ),
+    FREEZE          = shift ( 21 ),
+    FROZEN          = shift ( 22 ),
+    MELT            = shift ( 23 ),
 
-    LIMIT           = shift ( 23 ),
-    OPTIMIZE        = shift ( 24 ),
+    LIMIT           = shift ( 24 ),
+    OPTIMIZE        = shift ( 25 ),
 
-    DUMP            = shift ( 25 ),
-    STATS           = shift ( 26 ),
+    DUMP            = shift ( 26 ),
+    STATS           = shift ( 27 ),
 
-    RESET           = shift ( 27 ),
+    RESET           = shift ( 28 ),
 
-    CONSTRAIN       = shift ( 28 ),
+    CONSTRAIN       = shift ( 29 ),
 
-    CONNECT         = shift ( 29 ),
-    OBSERVE         = shift ( 30 ),
-    LEMMA           = shift ( 31 ),
+    CONNECT         = shift ( 30 ),
+    OBSERVE         = shift ( 31 ),
+    LEMMA           = shift ( 32 ),
 
-    CONCLUDE        = shift ( 32 ),
-    DISCONNECT      = shift ( 33 ),
+    CONCLUDE        = shift ( 33 ),
+    DISCONNECT      = shift ( 34 ),
 
-    TRACEPROOF      = shift ( 34 ),
-    FLUSHPROOFTRACE = shift ( 35 ),
-    CLOSEPROOFTRACE = shift ( 36 ),
+    TRACEPROOF      = shift ( 35 ),
+    FLUSHPROOFTRACE = shift ( 36 ),
+    CLOSEPROOFTRACE = shift ( 37 ),
 
 #ifdef MOBICAL_MEMORY
-    MAXALLOC        = shift ( 37 ),
-    LEAKALLOC       = shift ( 38 ),
+    MAXALLOC        = shift ( 38 ),
+    LEAKALLOC       = shift ( 39 ),
 #endif
 
     // clang-format on
@@ -1567,6 +1568,17 @@ struct CubingCall : public Call {
   void print (ostream &o) { o << "cubing " << res << endl; }
   Call *copy () { return new CubingCall (res); }
   const char *keyword () { return "cubing"; }
+};
+
+struct PropagateCall : public Call {
+  PropagateCall (int r = 0) : Call (PROPAGATE, 0, r) {}
+  void execute (Solver *&s) { 
+    std::vector<int> implicants; 
+    (void) s->propagate (implicants);
+  }
+  void print (ostream &o) { o << "propagate " << res << endl; }
+  Call *copy () { return new PropagateCall (res); }
+  const char *keyword () { return "propagate"; }
 };
 
 struct ValCall : public Call {
@@ -1916,8 +1928,6 @@ public:
             Call *next_c = calls[j];
             if (next_c->type == Call::LEMMA)
               next_c->execute (solver);
-            // else if (next_c->type == Call::CONTINUE)
-            //   next_c->execute (solver);
             else
               break;
           }
@@ -2715,9 +2725,11 @@ void Trace::generate_process (Random &random) {
   } else if (fraction > 0.99) {
     const int depth = random.pick_int (0, 10);
     push_back (new CubingCall (depth));
-  } else if (fraction > 0.9)
+  } else if (fraction > 0.9) {
     push_back (new LookaheadCall ());
-  else {
+  } else if (fraction > 0.85) {
+    push_back (new PropagateCall ());
+  } else {
     const int rounds = random.pick_int (0, 10);
     push_back (new SimplifyCall (rounds));
   }
@@ -3540,6 +3552,7 @@ static bool is_basic (Call *c) {
   case Call::SIMPLIFY:
   case Call::LOOKAHEAD:
   case Call::CUBING:
+  case Call::PROPAGATE:
   case Call::VARS:
   case Call::ACTIVE:
   case Call::REDUNDANT:
@@ -4209,8 +4222,6 @@ void Reader::parse () {
       // if (!lemma_adding && !lit) error ("empty lemma is learned.");
       lemma_adding = lit;
       c = new LemmaCall (lit);
-      // } else if (!strcmp (keyword, "continue")) {
-      //   c = new ContinueCall ();
     } else if (!strcmp (keyword, "assume")) {
       if (!first)
         error ("argument to 'assume' missing");
@@ -4263,6 +4274,16 @@ void Reader::parse () {
       assert (!second);
       c = new CubingCall (lit);
       solved++;
+    } else if (!strcmp (keyword, "propagate")) {
+      if (first && !parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'solve'", first);
+      if (first && lit != 0 && lit != 10 && lit != 20)
+        error ("invalid result argument '%d' to 'solve'", lit);
+      assert (!second);
+      if (first)
+        c = new PropagateCall (lit);
+      else
+        c = new PropagateCall ();
     } else if (!strcmp (keyword, "val")) {
       if (!first)
         error ("first argument to 'val' missing");
@@ -4491,9 +4512,8 @@ void Reader::parse () {
         }
         assert (state == Call::SOLVE || state == Call::SIMPLIFY ||
                 state == Call::LOOKAHEAD || state == Call::CUBING ||
-                state == Call::OBSERVE || state == Call::LEMMA ||
-                // state == Call::CONTINUE ||
-                state == Call::AFTER);
+                state == Call::PROPAGATE || state == Call::OBSERVE ||
+                state == Call::LEMMA || state == Call::AFTER);
         new_state = Call::AFTER;
         break;
 
@@ -4501,6 +4521,7 @@ void Reader::parse () {
       case Call::SIMPLIFY:
       case Call::LOOKAHEAD:
       case Call::CUBING:
+      case Call::PROPAGATE:
       case Call::RESET:
       case Call::CONNECT:
       case Call::LEMMA:
