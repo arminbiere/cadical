@@ -271,9 +271,6 @@ void Internal::delete_garbage_clauses () {
 
   flush_all_occs_and_watches ();
 
-  for (auto c : clauses) {
-    LOG (c, "found clause before GC");
-  }
   LOG ("deleting garbage clauses");
 #ifndef QUIET
   int64_t collected_bytes = 0, collected_clauses = 0;
@@ -294,9 +291,6 @@ void Internal::delete_garbage_clauses () {
   clauses.resize (j - clauses.begin ());
   shrink_vector (clauses);
 
-  for (auto c : clauses) {
-    LOG (c, "found clause after GC");
-  }
   PHASE ("collect", stats.collections,
          "collected %" PRId64 " bytes of %" PRId64 " garbage clauses",
          collected_bytes, collected_clauses);
