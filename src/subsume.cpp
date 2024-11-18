@@ -188,6 +188,15 @@ void Internal::strengthen_clause (Clause *c, int lit) {
   auto new_end = remove (c->begin (), c->end (), lit);
   assert (new_end + 1 == c->end ()), (void) new_end;
   (void) shrink_clause (c, c->size - 1);
+  // In an earlier version (probably from the time where the used flag was a single bit)
+  // the code was
+  //
+  // c->used = 1
+  //
+  // This code was subsequently removed leading to a performance regression that can be solved by
+  // the simpler (there is a more meaningfull way, but it is not yet part of the master branch of
+  // CaDiCaL):
+  c->used = 0;
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
 }
