@@ -1015,6 +1015,7 @@ int Internal::ask_decision () {
 // propagator.
 //
 bool Internal::is_external_forgettable (int64_t id) {
+  assert (opts.check);
   return (external->forgettable_original.find(id) != external->forgettable_original.end());
 }
 
@@ -1025,6 +1026,7 @@ bool Internal::is_external_forgettable (int64_t id) {
 // it.
 //
 void Internal::mark_garbage_external_forgettable (int64_t id) {
+  assert (opts.check);
   assert (is_external_forgettable(id));
   
   LOG(external->forgettable_original[id],"forgettable external lemma is deleted:");
