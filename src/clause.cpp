@@ -191,7 +191,7 @@ void Internal::promote_clause (Clause *c, int new_glue) {
 // (aligned) removed bytes, resulting from shrinking the clause.
 //
 size_t Internal::shrink_clause (Clause *c, int new_size) {
-  if (is_external_forgettable (c->id))
+  if (opts.check && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
   assert (new_size >= 2);
   int old_size = c->size;
@@ -292,7 +292,7 @@ void Internal::mark_garbage (Clause *c) {
   // Because of the internal model checking, external forgettable clauses must
   // be marked as removed already upon mark_garbage, can not wait until actual
   // deletion.
-  if (is_external_forgettable (c->id))
+  if (opts.check && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
   
   assert (stats.current.total > 0);
@@ -427,7 +427,7 @@ void Internal::add_new_original_clause (uint64_t id) {
       // In case it was a skipped external forgettable, we need to mark it
       // immediately as removed
 
-      if (is_external_forgettable (id))
+      if (opts.check && is_external_forgettable (id))
         mark_garbage_external_forgettable (id);
 
     }
@@ -451,7 +451,7 @@ void Internal::add_new_original_clause (uint64_t id) {
       if (from_propagator) {
         // The original form of the added clause is immediately forgotten
         // TODO: shall we save and check the simplified form? (one with new_id)
-        if (is_external_forgettable (id))
+        if (opts.check && is_external_forgettable (id))
           mark_garbage_external_forgettable (id);
       }
 
