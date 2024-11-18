@@ -354,6 +354,7 @@ int Internal::propagate_assumptions (std::vector<int>& implicants) {
   
   size_t current_level = level;
   if (!res) {
+    restore_clauses (); // restore clauses tainted by the assumptions -> needed to recognize UNSAT
     implicants.clear();
     while (!res && (current_level < assumptions.size () || (current_level == assumptions.size () && constraint.size ()))) {
       if (unsat)
