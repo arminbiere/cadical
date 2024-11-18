@@ -572,6 +572,19 @@ void Internal::explain_external_propagations () {
       break;
   }
   assert (!open);
+
+  if (!opts.exteagerrecalc) {
+    for (auto lit : seen_lits) {
+      Flags &f = flags (lit);
+      f.seen = false;
+    }
+#ifndef NDEBUG
+    for (auto idx : vars) {
+      assert (!flags (idx).seen);
+    }
+#endif
+  }
+
   // Traverse now in the opposite direction (from lower to higher levels)
   // and calculate the actual assignment level for the seen assignments.
   for (auto it = seen_lits.rbegin (); it != seen_lits.rend (); ++it) {
