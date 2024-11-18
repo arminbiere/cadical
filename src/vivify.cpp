@@ -1631,10 +1631,10 @@ void Internal::vivify () {
   assert (opts.vivify);
   assert (!level);
   int64_t total = (stats.ticks.search[0] + stats.ticks.search[1] - last.vivify.ticks) * opts.vivifyeff * 1e-3;
-  if (total < opts.vivifymineff)
-    total = opts.vivifymineff;
-  if (total > opts.vivifymaxeff)
-    total = opts.vivifymaxeff;
+  // if (total < opts.vivifymineff)
+  //   total = opts.vivifymineff;
+  // if (total > opts.vivifymaxeff)
+  //   total = opts.vivifymaxeff;
   const int64_t min_limit = 30 * clauses.size ();
   if (total < min_limit) {
     VERBOSE (2, "limit of %" PRId64 " ticks not enough (min %" PRId64 " budget will be preserved for next vivification round", total, min_limit);

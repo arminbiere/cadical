@@ -215,7 +215,8 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   for (const auto & lit : lits)
     sweeper.reprs[lit] = lit;
   sweeper.first = sweeper.last = 0;
-  sweeper.current_ticks = 0;
+  sweeper.current_ticks = 2 * clauses.size ();  // initialize with the cost of building full occ list.
+  sweeper.current_ticks += 2 + 2 * cache_lines (clauses.size (), sizeof (Clause *));
   assert (!citten);
   citten = kitten_init ();
   citten_clear_track_log_terminate ();
@@ -1881,6 +1882,15 @@ bool Internal::sweep () {
     last.sweep.ticks = stats.ticks.search[0] + stats.ticks.search[1];
     return false;
   }
+  int64_t tickslimit = stats.ticks.search[0] + stats.ticks.search[1];
+  tickslimit -= last.sweep.ticks;
+  tickslimit *= opts.sweepeffort * 1e-3;
+  const int64_t min_limit = 5 * clauses.size ();
+  if (tickslimit < min_limit) {
+    delaying_sweep.bumpreasons.bypass_delay ();
+    return false;
+  }
+  delaying_sweep.bumpreasons.unbypass_delay ();
   assert (!level);
   START_SIMPLIFIER (sweep, SWEEP);
   stats.sweep++;

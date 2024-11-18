@@ -48,8 +48,10 @@ struct Limit {
 struct Delay {
   struct {
     int64_t interval = 0, limit = 0;
+    bool bypass = 0;
 
     bool delay () {
+      if (bypass) return true;
       if (limit) {
         --limit;
         return true;
@@ -68,6 +70,13 @@ struct Delay {
         return;
       interval /= 2;
       limit = interval;
+    }
+
+    void bypass_delay () {
+      bypass = 1;
+    }
+    void unbypass_delay () {
+      bypass = 0;
     }
   } bumpreasons;
 };
