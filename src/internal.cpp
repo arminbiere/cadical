@@ -15,7 +15,7 @@ Internal::Internal ()
 
       private_steps (false), rephased (0), vsize (0), max_var (0), 
       clause_id (0), original_id (0), reserved_ids (0), 
-      conflict_id (0), concluded (false), lrat (false), frat (false), level (0), vals (0),
+      conflict_id (0), saved_decisions (0), concluded (false), lrat (false), frat (false), level (0), vals (0),
       score_inc (1.0), scores (this), conflict (0), ignore (0),
       external_reason (&external_reason_clause), newest_clause (0),
       force_no_backtrack (false), from_propagator (false), ext_clause_forgettable (false),
