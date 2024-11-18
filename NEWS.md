@@ -10,6 +10,10 @@ Version 2.1.1
      the solver provides many propagations in a lazy fashion. Requires
      exteagerreasons to be on to have any effect.
 
+- Fix performance regression for incremental SAT solving due to too
+  eager garbage collection before any incremental call in favor of
+  only doing it during variable elimination
+
 Version 2.1.0
 -------------
 
