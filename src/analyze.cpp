@@ -291,7 +291,6 @@ inline void Internal::analyze_literal (int lit, int &open,
       uint64_t id = unit_clauses[uidx];
       assert (id);
       unit_chain.push_back (id);
-      LOG ("pushed %d", id);
       return;
     }
   }
