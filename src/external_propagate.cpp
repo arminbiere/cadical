@@ -458,14 +458,17 @@ void Internal::add_external_clause (int propagated_elit,
   } else
     elit = external->propagator->cb_add_external_clause_lit ();
 
-  // Read out the external lemma into original and simplify it into clause
-  assert (clause.empty ());
-  assert (original.empty ());
 
   // we need to be build a new LRAT chain if we are already in the middle of
   // the analysis (like during failed assumptions)
-  std::vector<uint64_t> lrat_chain_ext;
-  assert (lrat_chain_ext.empty ());
+  LOG (lrat_chain, "lrat chain before");
+  std::vector<uint64_t> lrat_chain_ext = std::move (lrat_chain);
+  lrat_chain.clear();
+  clause.clear ();
+
+  // Read out the external lemma into original and simplify it into clause
+  assert (clause.empty ());
+  assert (original.empty ());
 
   assert (!force_no_backtrack);
   assert (!from_propagator);
@@ -485,6 +488,8 @@ void Internal::add_external_clause (int propagated_elit,
   assert (clause.empty ());
   force_no_backtrack = false;
   from_propagator = false;
+  lrat_chain = std::move (lrat_chain_ext);
+  LOG (lrat_chain, "lrat chain after");
 }
 
 /*----------------------------------------------------------------------------*/
@@ -493,6 +498,8 @@ void Internal::add_external_clause (int propagated_elit,
 // backward reachable externally propagated literal starting from 'ilit'.
 //
 void Internal::explain_reason (int ilit, Clause *reason, int &open) {
+  if (!opts.exteagerreasons)
+    return;
 #ifndef NDEBUG
   LOG (reason, "explain_reason of %d (open: %d)", ilit, open);
 #endif
@@ -565,6 +572,19 @@ void Internal::explain_external_propagations () {
       break;
   }
   assert (!open);
+
+  if (!opts.exteagerrecalc) {
+    for (auto lit : seen_lits) {
+      Flags &f = flags (lit);
+      f.seen = false;
+    }
+#ifndef NDEBUG
+    for (auto idx : vars) {
+      assert (!flags (idx).seen);
+    }
+#endif
+  }
+
   // Traverse now in the opposite direction (from lower to higher levels)
   // and calculate the actual assignment level for the seen assignments.
   for (auto it = seen_lits.rbegin (); it != seen_lits.rend (); ++it) {
@@ -615,6 +635,8 @@ Clause *Internal::learn_external_reason_clause (int ilit,
                                                 int falsified_elit,
                                                 bool no_backtrack) {
   assert (external->propagator);
+  // we cannot modify clause during analysis
+  auto clause_tmp = std::move (clause);
 
   assert (clause.empty ());
   assert (original.empty ());
@@ -645,6 +667,7 @@ Clause *Internal::learn_external_reason_clause (int ilit,
   }
 #endif
 
+  clause = std::move (clause_tmp);
   return newest_clause;
 }
 

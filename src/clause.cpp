@@ -191,7 +191,8 @@ void Internal::promote_clause (Clause *c, int new_glue) {
 // (aligned) removed bytes, resulting from shrinking the clause.
 //
 size_t Internal::shrink_clause (Clause *c, int new_size) {
-
+  if (is_external_forgettable (c->id))
+    mark_garbage_external_forgettable (c->id);
   assert (new_size >= 2);
   int old_size = c->size;
   assert (new_size < old_size);
