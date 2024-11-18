@@ -14,6 +14,8 @@ Version 2.1.1
   eager garbage collection before any incremental call in favor of
   only doing it during variable elimination
 
+- Fix performance regression for the SAT anniversary track.
+
 Version 2.1.0
 -------------
 
