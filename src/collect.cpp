@@ -271,6 +271,9 @@ void Internal::delete_garbage_clauses () {
 
   flush_all_occs_and_watches ();
 
+  for (auto c : clauses) {
+    LOG (c, "found clause before GC");
+  }
   LOG ("deleting garbage clauses");
 #ifndef QUIET
   int64_t collected_bytes = 0, collected_clauses = 0;
@@ -291,6 +294,9 @@ void Internal::delete_garbage_clauses () {
   clauses.resize (j - clauses.begin ());
   shrink_vector (clauses);
 
+  for (auto c : clauses) {
+    LOG (c, "found clause after GC");
+  }
   PHASE ("collect", stats.collections,
          "collected %" PRId64 " bytes of %" PRId64 " garbage clauses",
          collected_bytes, collected_clauses);
@@ -483,30 +489,26 @@ void Internal::remove_garbage_binaries () {
       const_watch_iterator i;
       for (i = j; i != end; i++) {
         Watch w = *i;
+	*j++ = w;
         Clause *c = w.clause;
-        if (c->reason && c->collect ()) {
+	COVER (!w.binary() && c->size == 2);
+	if (!w.binary())
+	  continue;
+        if (c->reason && c->garbage) {
+	  COVER (true);
           assert (c->size == 2);
           backtrack_level =
               min (backtrack_level, var (c->literals[0]).level);
           LOG ("need to backtrack to before level %d", backtrack_level);
+	  --j;
+	  continue;
         }
-        if (c->collect ())
-          continue;
-        assert (!c->moved);
-        w.size = c->size;
-        const int new_blit_pos = (c->literals[0] == lit);
-        LOG (c, "clause in flush_watch starting from %d", lit);
-        assert (c->literals[!new_blit_pos] == lit); /*FW1*/
-        w.blit = c->literals[new_blit_pos];
-        if (w.binary ())
-          *j++ = w;
-        else
-          saved.push_back (w);
+	if (!c->collect ())
+	  continue;
+	LOG (c, "removing from watch list");
+	--j;
       }
       ws.resize (j - ws.begin ());
-      for (const auto &w : saved)
-        ws.push_back (w);
-      saved.clear ();
       shrink_vector (ws);
     }
   }

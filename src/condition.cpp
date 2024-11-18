@@ -869,6 +869,7 @@ long Internal::condition_round (long delta) {
   }
 
   reset_occs ();
+  delete_garbage_clauses ();
 
   // Reassign previously assigned variables again.
   //
