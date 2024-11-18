@@ -860,6 +860,47 @@ bool Internal::probe_round () {
 
 /*------------------------------------------------------------------------*/
 
+// TODO: change name from probe to something more generic
+
+// This schedules a number of inprocessing techniques.
+// These range from very cheap and beneficial (decompose) to
+// more expensive and sometimes less beneficial. We want to limit
+// expensive techniques to some fraction of total time or search time.
+// this is done using 'ticks'. TODO: ternary, probe still use propagations.
+// Generally, there are options for each of the techniques to set the
+// efficiency, i.e., the fraction of ticks they are allowed as budget.
+// Whenever e.g. vivify is called, the budget is calculated from the
+// search ticks that have passed since the last vivify round and this
+// efficiency.
+// We want to be able to run inprocessing frequently, without it dominating
+// runtimes. This entire inprocessing scheme is scheduled after a certain
+// amount of conflicts were found, the gap between two inprocessing rounds
+// increasing by a constant number each time. In effect, the number of
+// inprocessing rounds is allways the square root of the number of conflicts
+// with some constant factor.
+// This factor can also be with the option 'probeint'
+// Some of the techniques are not run always, for different reasons.
+// 'factor' or BVA depends on certain structures of the irredundant clauses
+// and as such will only be run when new irredundant clauses are derived or
+// it was not able to finish with the entire search space.
+// 'sweeping' is especially usefull on certain classes of formulas, and uses
+// a increasing or decreasing delay that depends on how usefull it was.
+// In cases where it is less usefull, we obviously want to reset the budged,
+// even if the routine was delayed.
+// Additionally 'vivify', 'sweep' and 'factor' can also have a big initial
+// overhead in setting up the datastructures. This has to be accounted for
+// with the 'ticks', however, since inprocessing is done frequently, this
+// overhead is too expensive to pay. So instead, we accumulate the budget
+// of 'ticks' and delay the technique until it passes a certain threshhold,
+// which depends on the the cost of initialization. Note that in the case of
+// sweeping, we have two different delays, one which resets the budged, and
+// one which passes it to the next round. In this case the former takes
+// precendent, until we would run sweeping once, at which point the focus
+// switches to the latter delay until the budget is big enough, such that
+// sweeping can be run. Then we switch back to the other delay.
+
+// TODO make a threshhold option.
+
 void CaDiCaL::Internal::probe (bool update_limits) {
 
   if (unsat)
