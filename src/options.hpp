@@ -130,9 +130,9 @@ OPTION( preprocesslight,   0,  0,  1,0,1,1, "lightweight preprocessing" ) \
 OPTION( probe,             1,  0,  1,0,1,1, "failed literal probing" ) \
 OPTION( probehbr,          1,  0,  1,0,0,1, "learn hyper binary clauses") \
 OPTION( probeint,        100,  1,2e9,0,0,1, "probing interval" ) \
-OPTION( probemaxeff,     1e8,  0,2e9,1,0,1, "maximum probing efficiency") \
-OPTION( probemineff,     1e6,  0,2e9,1,0,1, "minimum probing efficiency") \
-OPTION( probereleff,      20,  1,1e5,1,0,1, "relative efficiency per mille") \
+OPTION( probemaxeff,     1e7,  0,2e9,1,0,1, "maximum probing efficiency") \
+OPTION( probemineff,     1e5,  0,2e9,1,0,1, "minimum probing efficiency") \
+OPTION( probereleff,       8,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( proberounds,       1,  1, 16,1,0,1, "probing rounds" ) \
 OPTION( profile,           2,  0,  4,0,0,0, "profiling level") \
 QUTOPT( quiet,             0,  0,  1,0,0,0, "disable all messages") \
@@ -200,7 +200,7 @@ OPTION( ternarymaxadd,   1e3,  0,1e4,1,0,1, "max clauses added in percent") \
 OPTION( ternarymaxeff,   1e8,  0,2e9,1,0,1, "ternary maximum efficiency") \
 OPTION( ternarymineff,   1e6,  1,2e9,1,0,1, "minimum ternary efficiency") \
 OPTION( ternaryocclim,   1e2,  1,2e9,2,0,1, "ternary occurrence limit") \
-OPTION( ternaryreleff,    10,  1,1e5,1,0,1, "relative efficiency per mille") \
+OPTION( ternaryreleff,     4,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( ternaryrounds,     2,  1, 16,1,0,1, "maximum ternary rounds") \
 OPTION( tier1limit,       50,  0,100,0,0,1, "limit of tier1 usage in percentage") \
 OPTION( tier2limit,       90,  0,100,0,0,1, "limit of tier2 usage in percentage") \
