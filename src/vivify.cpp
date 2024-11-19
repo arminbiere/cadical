@@ -1414,7 +1414,8 @@ void Internal::vivify_initialize (Vivifier &vivifier) {
     // Flush clauses subsumed by another clause with the same prefix, which
     // also includes flushing syntactically identical clauses.
     //
-    flush_vivification_schedule (sched);
+    if (opts.vivifyflush)
+      flush_vivification_schedule (sched);
 
   }
   connect_watches (); // watch all relevant clauses
