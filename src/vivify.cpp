@@ -1416,11 +1416,6 @@ void Internal::vivify_initialize (Vivifier &vivifier) {
     //
     flush_vivification_schedule (sched);
 
-    // Sort candidates, with first to be tried candidate clause last, i.e.,
-    // many occurrences and high score literals) as in the example explained
-    // above (search for '@3').
-    //
-    stable_sort (begin (sched), end (sched), vivify_clause_later (this));
   }
   connect_watches (); // watch all relevant clauses
 }
@@ -1464,6 +1459,13 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   assert (watching ());
 
   auto &schedule = current_schedule(vivifier);
+
+  // Sort candidates, with first to be tried candidate clause last, i.e.,
+  // many occurrences and high score literals) as in the example explained
+  // above (search for '@3').
+  //
+  if (vivifier.tier != Vivify_Mode::IRREDUNDANT || irredundant () / 10 < redundant ())
+    stable_sort (begin (schedule), end (schedule), vivify_clause_later (this));
 
   // Remember old values of counters to summarize after each round with
   // verbose messages what happened in that round.
@@ -1593,11 +1595,11 @@ void set_vivifier_mode (Vivifier &vivifier, Vivify_Mode tier) {
       vivifier.tag = 'v';
       break;
     case Vivify_Mode::TIER3:
-      vivifier.tag = 'x';
+      vivifier.tag = 'w';
       break;
     default:
       assert (tier == Vivify_Mode::IRREDUNDANT);
-      vivifier.tag = 'w';
+      vivifier.tag = 'x';
       break;
     }
 }
