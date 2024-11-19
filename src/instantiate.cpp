@@ -279,7 +279,7 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
         continue;
       }
       const unsigned uidx = vlit (-other);
-      uint64_t id = unit_clauses[uidx];
+      uint64_t id = unit_clauses(uidx);
       assert (id);
       lrat_chain.push_back (id);
     }

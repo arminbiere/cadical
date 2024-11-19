@@ -136,7 +136,8 @@ void Internal::enlarge (int new_max_var) {
     new_vsize *= 2;
   LOG ("enlarge internal size from %zd to new size %zd", vsize, new_vsize);
   // Ordered in the size of allocated memory (larger block first).
-  enlarge_zero (unit_clauses, 2 * new_vsize);
+  if (lrat || frat)
+    enlarge_zero (unit_clauses_idx, 2 * new_vsize);
   enlarge_only (wtab, 2 * new_vsize);
   enlarge_only (vtab, new_vsize);
   enlarge_zero (parents, new_vsize);
@@ -916,12 +917,12 @@ void Internal::finalize (int res) {
         const unsigned eidx = (elit < 0) + 2u * (unsigned) abs (elit);
         const uint64_t id = external->ext_units[eidx];
         if (id) {
-          assert (unit_clauses[vlit (lit)] == id);
+          assert (unit_clauses (vlit (lit)) == id);
           continue;
         }
       }
       const auto uidx = vlit (lit);
-      const uint64_t id = unit_clauses[uidx];
+      const uint64_t id = unit_clauses (uidx);
       if (!id)
         continue;
       proof->finalize_unit (id, lit);

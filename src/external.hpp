@@ -5,6 +5,7 @@
 
 #include "range.hpp"
 #include <unordered_map>
+#include <vector>
 
 /*------------------------------------------------------------------------*/
 

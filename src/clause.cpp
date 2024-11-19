@@ -338,7 +338,8 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   trail.push_back (lit);
   num_assigned++;
   const unsigned uidx = vlit (lit);
-  unit_clauses[uidx] = id;
+  if (lrat || frat)
+    unit_clauses(uidx) = id;
   LOG ("original unit assign %d", lit);
   assert (num_assigned == trail.size () || level);
   mark_fixed (lit);
@@ -398,7 +399,7 @@ void Internal::add_new_original_clause (uint64_t id) {
             int elit = externalize (lit);
             unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
             if (!external->ext_units[eidx]) {
-              uint64_t uid = (unit_clauses[vlit (-lit)]);
+              uint64_t uid = (unit_clauses(vlit (-lit)));
               assert (uid);
               lrat_chain.push_back (uid);
             }
@@ -481,7 +482,8 @@ void Internal::add_new_original_clause (uint64_t id) {
         v.level = 0;
         v.reason = 0;
         const unsigned uidx = vlit (clause[0]);
-        unit_clauses[uidx] = new_id;
+	if (lrat || frat)
+          unit_clauses(uidx) = new_id;
         mark_fixed (clause[0]);
       } else {
         const int lit = clause[0];
