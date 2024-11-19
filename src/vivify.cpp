@@ -730,7 +730,7 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes, Clause **subsuming
     if (lrat && reason)
       lrat_chain.push_back (reason->id);
   }
-#ifndef NDEBUG
+#ifdef NDEBUG
   (void)candidate;
 #endif
 }
