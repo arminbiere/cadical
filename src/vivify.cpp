@@ -1347,45 +1347,39 @@ void Internal::vivify_initialize (Vivifier &vivifier) {
   clear_watches ();
 
   size_t prioritized = 0;
-  for (unsigned prioritize = 0; prioritize < 2; ++prioritize) {
-    for (const auto &c : clauses) {
+  for (const auto &c : clauses) {
 
-      if (c->size == 2)
-        continue; // see also (NO-BINARY) above
-      if (!consider_to_vivify_clause (c))
-        continue;
+    if (c->size == 2)
+      continue; // see also (NO-BINARY) above
+    if (!consider_to_vivify_clause (c))
+      continue;
 
-      if (prioritize) {
-        // This computes an approximation of the Jeroslow Wang heuristic
-        // score
-        //
-        //       nocc (L) =     sum       2^(12-|C|)
-        //                   L in C in F
-        //
-        // but we cap the size at 12, that is all clauses of size 12 and
-        // larger contribute '1' to the score, which allows us to use 'long'
-        // numbers. See the example above (search for '@1').
-        //
-        const int shift = 12 - c->size;
-        const int64_t score = shift < 1 ? 1 : (1l << shift); // @4
+    // This computes an approximation of the Jeroslow Wang heuristic
+    // score
+    //
+    //       nocc (L) =     sum       2^(12-|C|)
+    //                   L in C in F
+    //
+    // but we cap the size at 12, that is all clauses of size 12 and
+    // larger contribute '1' to the score, which allows us to use 'long'
+    // numbers. See the example above (search for '@1').
+    //
+    const int shift = 12 - c->size;
+    const int64_t score = shift < 1 ? 1 : (1l << shift); // @4
 
-        for (const auto lit : *c) {
-          noccs (lit) += score;
-        }
-      }
-      if (c->vivify != prioritize)
-        continue;
-      if (prioritize)
-        prioritized++;
-      if (!c->redundant)
-        vivifier.schedule_irred.push_back (c);
-      else if (c->glue <= tier1)
-        vivifier.schedule_tier1.push_back (c);
-      else if (c->glue <= tier2)
-        vivifier.schedule_tier2.push_back (c);
-      else
-        vivifier.schedule_tier3.push_back (c);
+    for (const auto lit : *c) {
+      noccs (lit) += score;
     }
+    if (c->vivify)
+      prioritized++;
+    if (!c->redundant)
+      vivifier.schedule_irred.push_back (c);
+    else if (c->glue <= tier1)
+      vivifier.schedule_tier1.push_back (c);
+    else if (c->glue <= tier2)
+      vivifier.schedule_tier2.push_back (c);
+    else
+      vivifier.schedule_tier3.push_back (c);
   }
 
   if (prioritized) {
