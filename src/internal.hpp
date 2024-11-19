@@ -1308,6 +1308,12 @@ struct Internal {
   //
   void freeze (int lit) {
     int idx = vidx (lit);
+    if ((size_t)idx >= frozentab.size ()) {
+      size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) max_var;
+      while (new_vsize <= (size_t) max_var)
+        new_vsize *= 2;
+      frozentab.resize (new_vsize);
+    }
     unsigned &ref = frozentab[idx];
     if (ref < UINT_MAX) {
       ref++;
@@ -1332,7 +1338,7 @@ struct Internal {
     } else
       LOG ("variable %d remains frozen forever", idx);
   }
-  bool frozen (int lit) { return frozentab[vidx (lit)] > 0; }
+  bool frozen (int lit) { return (size_t)vidx (lit) < frozentab.size () && frozentab[vidx (lit)] > 0; }
 
   // Parsing functions in 'parse.cpp'.
   //
