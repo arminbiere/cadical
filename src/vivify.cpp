@@ -447,9 +447,7 @@ struct vivify_flush_smaller {
   }
 };
 
-void Internal::flush_vivification_schedule (Vivifier &vivifier) {
-
-  auto &schedule = vivifier.schedule;
+void Internal::flush_vivification_schedule (std::vector<Clause*> &schedule) {
 
   stable_sort (schedule.begin (), schedule.end (), vivify_flush_smaller ());
 
@@ -501,25 +499,18 @@ void Internal::flush_vivification_schedule (Vivifier &vivifier) {
 // we schedule a clause to be vivified.  For redundant clauses we only try
 // to vivify them if they are likely to survive the next 'reduce' operation.
 
-bool Internal::consider_to_vivify_clause (Clause *c, bool irredundant, int lower_glue_limit, int upper_glue_limit) {
+bool Internal::consider_to_vivify_clause (Clause *c) {
   if (c->garbage)
     return false;
   if (opts.vivifyonce >= 1 && c->redundant && c->vivified)
     return false;
   if (opts.vivifyonce >= 2 && !c->redundant && c->vivified)
     return false;
-  if (irredundant)
-    return !c->redundant;
-  assert (!irredundant);
   if (!c->redundant)
-    return false;
+    return true;
   assert (c->redundant);
-  if (c->glue > upper_glue_limit)
-    return false;
-  if (c->glue < lower_glue_limit)
-    return false;
-  if (!likely_to_be_kept_clause (c))
-    return false;
+
+  // likely_to_be_kept_clause is too aggressive at removing tier-3 clauses
   return true;
 }
 
@@ -1340,6 +1331,127 @@ inline void Internal::vivify_chain_for_units (int lit, Clause *reason) {
 
 /*------------------------------------------------------------------------*/
 
+void Internal::vivify_initialize (Vivifier &vivifier) {
+
+  const int tier1 = vivifier.tier1;
+  const int tier2 = vivifier.tier2;
+  // Count the number of occurrences of literals in all clauses,
+  // particularly binary clauses, which are usually responsible
+  // for most of the propagations.
+  //
+  init_noccs ();
+
+  // Disconnect all watches since we sort literals within clauses.
+  //
+  assert (watching ());
+  clear_watches ();
+
+  size_t prioritized = 0;
+  for (unsigned prioritize = 0; prioritize < 2; ++prioritize) {
+    for (const auto &c : clauses) {
+
+      if (c->size == 2)
+        continue; // see also (NO-BINARY) above
+      if (!consider_to_vivify_clause (c))
+        continue;
+
+      if (prioritize) {
+        // This computes an approximation of the Jeroslow Wang heuristic
+        // score
+        //
+        //       nocc (L) =     sum       2^(12-|C|)
+        //                   L in C in F
+        //
+        // but we cap the size at 12, that is all clauses of size 12 and
+        // larger contribute '1' to the score, which allows us to use 'long'
+        // numbers. See the example above (search for '@1').
+        //
+        const int shift = 12 - c->size;
+        const int64_t score = shift < 1 ? 1 : (1l << shift); // @4
+
+        for (const auto lit : *c) {
+          noccs (lit) += score;
+        }
+      }
+      if (c->vivify != prioritize)
+        continue;
+      if (prioritize)
+        prioritized++;
+      if (!c->redundant)
+        vivifier.schedule_irred.push_back (c);
+      else if (c->glue <= tier1)
+        vivifier.schedule_tier1.push_back (c);
+      else if (c->glue <= tier2)
+        vivifier.schedule_tier2.push_back (c);
+      else
+        vivifier.schedule_tier3.push_back (c);
+    }
+  }
+
+  if (prioritized) {
+    PHASE ("vivify", stats.vivifications,
+           "leftovers of %" PRId64 " clause", prioritized);
+  } else {
+    PHASE ("vivify", stats.vivifications,
+           "prioritizing all clause");
+    for (auto &sched : vivifier.schedules) {
+      for (auto c : sched)
+        c->vivify = true;
+    }
+  }
+  printf ("vivify found %zd %zd %zd %zd clauses", vivifier.schedule_irred.size(), vivifier.schedule_tier1.size (),
+       vivifier.schedule_tier2.size (), vivifier.schedule_tier3.size());
+  shrink_vector (vivifier.schedule_tier1);
+  shrink_vector (vivifier.schedule_tier2);
+  shrink_vector (vivifier.schedule_tier3);
+  shrink_vector (vivifier.schedule_irred);
+
+  // In the first round of filling the schedule check whether there are
+  // still clauses left, which were scheduled but have not been vivified
+  // yet. The second round is only entered if no such clause was found in
+  // the first round.  Then the second round selects all clauses.
+  //
+  for (auto &sched : vivifier.schedules) {
+    for (const auto &c : sched) {
+      // Literals in scheduled clauses are sorted with their highest score
+      // literals first (as explained above in the example at '@2').  This
+      // is also needed in the prefix subsumption checking below.
+      //
+      sort (c->begin (), c->end (), vivify_more_noccs (this));
+    }
+    // Flush clauses subsumed by another clause with the same prefix, which
+    // also includes flushing syntactically identical clauses.
+    //
+    flush_vivification_schedule (sched);
+
+    // Sort candidates, with first to be tried candidate clause last, i.e.,
+    // many occurrences and high score literals) as in the example explained
+    // above (search for '@3').
+    //
+    stable_sort (begin (sched), end (sched), vivify_clause_later (this));
+  }
+  connect_watches (); // watch all relevant clauses
+}
+
+inline std::vector<Clause*>& current_schedule (Vivifier& vivifier) {
+  switch (vivifier.tier) {
+  case Vivify_Mode::TIER1:
+    return vivifier.schedule_tier1;
+    break;
+  case Vivify_Mode::TIER2:
+    return vivifier.schedule_tier2;
+    break;
+  case Vivify_Mode::TIER3:
+    return vivifier.schedule_tier3;
+    break;
+  default:
+    return vivifier.schedule_irred;
+    break;
+  }
+  __builtin_unreachable();
+}
+
+/*------------------------------------------------------------------------*/
 // There are two modes of vivification, one using all clauses and one
 // focusing on irredundant clauses only.  The latter variant working on
 // irredundant clauses only can also remove irredundant asymmetric
@@ -1357,94 +1469,9 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
          "starting %c vivification round propagation limit %" PRId64 "",
          vivifier.tag, propagation_limit);
 
-  // Disconnect all watches since we sort literals within clauses.
-  //
-  if (watching ())
-    clear_watches ();
+  assert (watching ());
 
-  // Count the number of occurrences of literals in all clauses,
-  // particularly binary clauses, which are usually responsible
-  // for most of the propagations.
-  //
-  init_noccs ();
-
-  unsigned lower_glue_limit, upper_glue_limit;
-  const unsigned tier1 = vivifier.tier1;
-  const unsigned tier2 = vivifier.tier2;
-  switch (vivifier.tier) {
-  case Vivify_Mode::TIER1:
-    lower_glue_limit = 0;
-    upper_glue_limit = tier1;
-    break;
-  case Vivify_Mode::TIER2:
-    lower_glue_limit = tier1 < tier2 ? tier1 + 1 : 0;
-    upper_glue_limit = tier2;
-    break;
-  case Vivify_Mode::TIER3:
-    lower_glue_limit = tier2 + 1;
-    upper_glue_limit = INT32_MAX;
-    break;
-  default:
-    lower_glue_limit = 0;
-    upper_glue_limit = INT32_MAX;
-    break;
-  }
-
-  
-  for (const auto &c : clauses) {
-  
-    if (c->size == 2)
-      continue; // see also (NO-BINARY) above
-
-    if (!consider_to_vivify_clause (c, vivifier.tier == Vivify_Mode::IRREDUNDANT, lower_glue_limit, upper_glue_limit))
-      continue;
-
-    // This computes an approximation of the Jeroslow Wang heuristic score
-    //
-    //       nocc (L) =     sum       2^(12-|C|)
-    //                   L in C in F
-    //
-    // but we cap the size at 12, that is all clauses of size 12 and larger
-    // contribute '1' to the score, which allows us to use 'long' numbers.
-    // See the example above (search for '@1').
-    //
-    const int shift = 12 - c->size;
-    const int64_t score = shift < 1 ? 1 : (1l << shift); // @4
-
-    for (const auto lit : *c) {
-      noccs (lit) += score;
-    }
-    
-    vivifier.schedule.push_back (c);
-  }
-
-  // In the first round of filling the schedule check whether there are
-  // still clauses left, which were scheduled but have not been vivified
-  // yet. The second round is only entered if no such clause was found in
-  // the first round.  Then the second round selects all clauses.
-  //
-  for (const auto &c : vivifier.schedule) {
-
-    // Literals in scheduled clauses are sorted with their highest score
-    // literals first (as explained above in the example at '@2').  This
-    // is also needed in the prefix subsumption checking below.
-    //
-    sort (c->begin (), c->end (), vivify_more_noccs (this));
-
-  }
-  shrink_vector (vivifier.schedule);
-
-  // Flush clauses subsumed by another clause with the same prefix, which
-  // also includes flushing syntactically identical clauses.
-  //
-  flush_vivification_schedule (vivifier);
-
-  // Sort candidates, with first to be tried candidate clause last, i.e.,
-  // many occurrences and high score literals) as in the example explained
-  // above (search for '@3').
-  //
-  stable_sort (vivifier.schedule.begin (), vivifier.schedule.end (),
-               vivify_clause_later (this));
+  auto &schedule = current_schedule(vivifier);
 
   // Remember old values of counters to summarize after each round with
   // verbose messages what happened in that round.
@@ -1454,7 +1481,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   int64_t strengthened = stats.vivifystrs;
   int64_t units = stats.vivifyunits;
 
-  int64_t scheduled = vivifier.schedule.size ();
+  int64_t scheduled = schedule.size ();
   stats.vivifysched += scheduled;
 
   PHASE ("vivify", stats.vivifications,
@@ -1464,8 +1491,6 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   // Limit the number of propagations during vivification as in 'probe'.
   //
   const int64_t limit = stats.propagations.vivify + propagation_limit;
-
-  connect_watches (); // watch all relevant clauses
 
   // the clauses might still contain set literals, so propagation since the
   // beginning
@@ -1478,15 +1503,15 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
 
   int retry = 0;
   while (!unsat && !terminated_asynchronously () &&
-         !vivifier.schedule.empty () && stats.propagations.vivify < limit) {
-    Clause *c = vivifier.schedule.back (); // Next candidate.
-    vivifier.schedule.pop_back ();
+         !schedule.empty () && stats.propagations.vivify < limit) {
+    Clause *c = schedule.back (); // Next candidate.
+    schedule.pop_back ();
     if (vivify_clause (vivifier, c)) {
       if (!c->garbage && c->size > 2) {
 	++retry;
 	++stats.vivifystrirr;
 
-	vivifier.schedule.push_back(c);
+	schedule.push_back(c);
       } else retry = 0;
     } else retry = 0;
   }
@@ -1495,11 +1520,8 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     backtrack_without_updating_phases ();
 
   if (!unsat) {
-
-    reset_noccs ();
-
     int64_t still_need_to_be_vivified = 0;
-    for (const auto &c : vivifier.schedule)
+    for (const auto &c : schedule)
       if (c->vivify)
         still_need_to_be_vivified++;
 
@@ -1514,15 +1536,12 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     else {
       PHASE ("vivify", stats.vivifications,
              "no previously not yet vivified clause left");
-      for (const auto &c : vivifier.schedule)
+      for (const auto &c : schedule)
         c->vivify = true;
     }
 
-    vivifier.erase (); // Reclaim  memory early.
+    erase_vector (schedule); // Reclaim  memory early.
   }
-
-  clear_watches ();
-  connect_watches ();
 
   if (!unsat) {
 
@@ -1649,7 +1668,10 @@ void Internal::vivify () {
     LOG ("vivification tier1 matches tier2 "
          "thus using tier2 budget for tier1");
   }
+  vivify_initialize (vivifier);
 
+  printf ("vivify found %zd %zd %zd %zd clauses\n", vivifier.schedule_irred.size(), vivifier.schedule_tier1.size (),
+       vivifier.schedule_tier2.size (), vivifier.schedule_tier3.size());
   if (opts.vivifytier1) {
     // Refill the schedule every time.  Unchecked clauses are 'saved' by
     // setting their 'vivify' bit, such that they can be tried next time.
@@ -1660,16 +1682,18 @@ void Internal::vivify () {
     vivify_round (vivifier, limit);
   }
 
+  printf ("vivify found %zd %zd %zd %zd clauses\n", vivifier.schedule_irred.size(), vivifier.schedule_tier1.size (),
+       vivifier.schedule_tier2.size (), vivifier.schedule_tier3.size());
   if (!unsat && tier2effort) {
-    vivifier.erase();
     const int64_t limit = (total * tier2effort) / sumeffort;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::TIER2);
     vivify_round (vivifier, limit);
   }
 
+  printf ("vivify found %zd %zd %zd %zd clauses\n", vivifier.schedule_irred.size(), vivifier.schedule_tier1.size (),
+       vivifier.schedule_tier2.size (), vivifier.schedule_tier3.size());
   if (!unsat && tier3effort) {
-    vivifier.erase();
     const int64_t limit = (total * tier3effort) / sumeffort;
     assert (limit >= 0);
     set_vivifier_mode(vivifier, Vivify_Mode::TIER3);
@@ -1677,10 +1701,9 @@ void Internal::vivify () {
   }
 
   if (!unsat && irreffort) {
-    vivifier.erase();
     const int64_t limit = (total * irreffort) / sumeffort;
     assert (limit >= 0);
-    set_vivifier_mode(vivifier, Vivify_Mode::IRREDUNDANT);
+    set_vivifier_mode (vivifier, Vivify_Mode::IRREDUNDANT);
     const int old = stats.vivifystrirr;
     const int old_tried = stats.vivifychecks;
     vivify_round (vivifier, limit);
@@ -1693,6 +1716,7 @@ void Internal::vivify () {
     }
   }
 
+  reset_noccs ();
   STOP_SIMPLIFIER (vivify, VIVIFY);
 
   last.vivify.propagations = stats.propagations.search;

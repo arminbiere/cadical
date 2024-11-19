@@ -852,11 +852,12 @@ struct Internal {
   //
   bool vivifying ();
   void demote_clause (Clause *);
-  void flush_vivification_schedule (Vivifier &);
+  void flush_vivification_schedule (std::vector<Clause*>&);
   void vivify_increment_stats (const Vivifier &vivifier);
   void vivify_subsume_clause (Clause *subsuming, Clause *subsumed);
   void compute_tier_limits (Vivifier &);
-  bool consider_to_vivify_clause (Clause *candidate, bool, int, int);
+  void vivify_initialize (Vivifier &vivifier);
+  bool consider_to_vivify_clause (Clause *candidate);
   void vivify_sort_watched (Clause *c);
   bool vivify_instantiate (const std::vector<int>&, Clause *, std::vector<std::tuple<int, Clause *, bool>> &lrat_stack);
   void vivify_analyze_redundant (Vivifier &, Clause *start, bool &);
@@ -892,7 +893,7 @@ struct Internal {
   bool likely_to_be_kept_clause (Clause *c) {
     if (!c->redundant)
       return true;
-    if (c->glue <= tier1[false])
+    if (c->glue <= tier2[false])
       return true;
     if (c->glue > lim.keptglue)
       return false;
