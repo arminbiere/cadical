@@ -1399,8 +1399,6 @@ void Internal::vivify_initialize (Vivifier &vivifier) {
         c->vivify = true;
     }
   }
-  printf ("vivify found %zd %zd %zd %zd clauses", vivifier.schedule_irred.size(), vivifier.schedule_tier1.size (),
-       vivifier.schedule_tier2.size (), vivifier.schedule_tier3.size());
   shrink_vector (vivifier.schedule_tier1);
   shrink_vector (vivifier.schedule_tier2);
   shrink_vector (vivifier.schedule_tier3);
@@ -1670,8 +1668,6 @@ void Internal::vivify () {
   }
   vivify_initialize (vivifier);
 
-  printf ("vivify found %zd %zd %zd %zd clauses\n", vivifier.schedule_irred.size(), vivifier.schedule_tier1.size (),
-       vivifier.schedule_tier2.size (), vivifier.schedule_tier3.size());
   if (opts.vivifytier1) {
     // Refill the schedule every time.  Unchecked clauses are 'saved' by
     // setting their 'vivify' bit, such that they can be tried next time.
@@ -1682,8 +1678,6 @@ void Internal::vivify () {
     vivify_round (vivifier, limit);
   }
 
-  printf ("vivify found %zd %zd %zd %zd clauses\n", vivifier.schedule_irred.size(), vivifier.schedule_tier1.size (),
-       vivifier.schedule_tier2.size (), vivifier.schedule_tier3.size());
   if (!unsat && tier2effort) {
     const int64_t limit = (total * tier2effort) / sumeffort;
     assert (limit >= 0);
@@ -1691,8 +1685,6 @@ void Internal::vivify () {
     vivify_round (vivifier, limit);
   }
 
-  printf ("vivify found %zd %zd %zd %zd clauses\n", vivifier.schedule_irred.size(), vivifier.schedule_tier1.size (),
-       vivifier.schedule_tier2.size (), vivifier.schedule_tier3.size());
   if (!unsat && tier3effort) {
     const int64_t limit = (total * tier3effort) / sumeffort;
     assert (limit >= 0);
