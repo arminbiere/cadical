@@ -1077,7 +1077,7 @@ void Internal::vivify_build_lrat (
       if (!v.level) { // already backtracked (sometimes)
         const unsigned uidx =
             vlit (-other);                // nevertheless we can use var (l)
-        uint64_t id = unit_clauses[uidx]; // as if l was still assigned
+        uint64_t id = unit_clauses(uidx); // as if l was still assigned
         assert (id);                      // because var is updated lazily
         lrat_chain.push_back (id);
         f.seen = true;
@@ -1108,7 +1108,7 @@ inline void Internal::vivify_chain_for_units (int lit, Clause *reason) {
       continue;
     assert (val (reason_lit));
     const unsigned uidx = vlit (val (reason_lit) * reason_lit);
-    uint64_t id = unit_clauses[uidx];
+    uint64_t id = unit_clauses(uidx);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (reason->id);

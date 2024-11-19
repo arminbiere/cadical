@@ -33,8 +33,10 @@ void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   external->check_learned_unit_clause (lit);
   int64_t id = ++clause_id;
-  const unsigned uidx = vlit (lit);
-  unit_clauses[uidx] = id;
+  if (lrat || frat) {
+    const unsigned uidx = vlit (lit);
+    unit_clauses(uidx) = id;
+  }
   if (proof) {
     proof->add_derived_unit_clause (id, lit, lrat_chain);
   }
@@ -263,7 +265,7 @@ inline void Internal::analyze_literal (int lit, int &open,
     unit_analyzed.push_back (lit);
     assert (val (lit) < 0);
     const unsigned uidx = vlit (-lit);
-    uint64_t id = unit_clauses[uidx];
+    uint64_t id = unit_clauses(uidx);
     assert (id);
     unit_chain.push_back (id);
     return;
@@ -288,7 +290,7 @@ inline void Internal::analyze_literal (int lit, int &open,
       unit_analyzed.push_back (lit);
       assert (val (lit) < 0);
       const unsigned uidx = vlit (-lit);
-      uint64_t id = unit_clauses[uidx];
+      uint64_t id = unit_clauses(uidx);
       assert (id);
       unit_chain.push_back (id);
       return;

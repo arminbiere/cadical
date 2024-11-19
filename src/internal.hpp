@@ -185,7 +185,7 @@ struct Internal {
   uint64_t conflict_id;       // store conflict id for finalize (frat)
   bool concluded;             // keeps track of conclude
   vector<uint64_t> conclusion;   // store ids of conclusion clauses
-  vector<uint64_t> unit_clauses; // keep track of unit_clauses (LRAT/FRAT)
+  vector<uint64_t> unit_clauses_idx; // keep track of unit_clauses (LRAT/FRAT)
   vector<uint64_t> lrat_chain;   // create LRAT in solver: option lratdirect
   vector<uint64_t> mini_chain;   // used to create LRAT in minimize
   vector<uint64_t> minimize_chain; // used to create LRAT in minimize
@@ -382,6 +382,11 @@ struct Internal {
     if (u & 1)
       res = -res;
     return res;
+  }
+
+  inline uint64_t &unit_clauses (int lit) {
+    assert (lrat || frat);
+    return unit_clauses_idx[lit];
   }
 
   // Helper functions to access variable and literal data.
@@ -1340,6 +1345,7 @@ struct Internal {
   void new_proof_on_demand ();
   void setup_lrat_builder ();            // if opts.externallrat=true
   void force_lrat ();                    // sets lrat=true
+  void resize_unit_clauses_idx ();       // resizes unit_clauses_idx
   void close_trace (bool stats = false); // Stop proof tracing.
   void flush_trace (bool stats = false); // Flush proof trace file.
   void trace (File *);                   // Start write proof file.

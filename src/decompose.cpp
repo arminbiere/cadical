@@ -8,15 +8,6 @@ void Internal::decompose_analyze_binary_chain (DFS *dfs, int from) {
   LOG ("binary chain starting at %d", from);
   DFS &from_dfs = dfs[vlit (from)];
   Clause *reason = from_dfs.parent;
-  /*
-  if (val (from) > 0) {
-    const unsigned uidx = vlit (from);
-    uint64_t id = unit_clauses[uidx];
-    assert (id);
-    mini_chain.push_back (id);
-    return;
-  }
-  */
   if (!reason)
     return;
   assert (reason->size == 2);
@@ -97,7 +88,7 @@ void Internal::build_lrat_for_clause (
         continue;
       mark_decomposed (other);
       const unsigned uidx = vlit (other);
-      uint64_t id = unit_clauses[uidx];
+      uint64_t id = unit_clauses(uidx);
       assert (id);
       lrat_chain.push_back (id);
       continue;
@@ -118,7 +109,7 @@ void Internal::build_lrat_for_clause (
         break;
       mark_decomposed (implied);
       const unsigned uidx = vlit (implied);
-      uint64_t id = unit_clauses[uidx];
+      uint64_t id = unit_clauses(uidx);
       assert (id);
       mini_chain.push_back (id);
       break;
@@ -548,7 +539,7 @@ bool Internal::decompose_round () {
         f.seen = true;
         analyzed.push_back (lit);
         const unsigned uidx = vlit (-lit);
-        uint64_t id = unit_clauses[uidx];
+        uint64_t id = unit_clauses(uidx);
         assert (id);
         lrat_chain.push_back (id);
         continue;
@@ -563,7 +554,7 @@ bool Internal::decompose_round () {
             f.seen = true;
             analyzed.push_back (other);
             const unsigned uidx = vlit (-other);
-            uint64_t id = unit_clauses[uidx];
+            uint64_t id = unit_clauses(uidx);
             assert (id);
             lrat_chain.push_back (id);
           }
