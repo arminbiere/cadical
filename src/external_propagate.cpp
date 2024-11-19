@@ -44,6 +44,7 @@ void Internal::remove_observed_var (int ilit) {
   assert (fixed (ilit) || !level);
 
   const int idx = vidx (ilit);
+  assert ((size_t)idx < relevanttab.size ());
   unsigned &ref = relevanttab[idx];
   assert (fixed (ilit) || ref > 0);
   if (fixed (ilit))
@@ -63,6 +64,7 @@ void Internal::remove_observed_var (int ilit) {
 // Supposed to be used only by mobical.
 //
 bool Internal::observed (int ilit) const {
+  assert ((size_t)vidx (ilit) < relevanttab.size ());
   return relevanttab[vidx (ilit)] > 0;
 }
 

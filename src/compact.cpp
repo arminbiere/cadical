@@ -358,27 +358,33 @@ void Internal::compact () {
     if (src == dst)
       continue;
     assert (dst < src);
+    if ((size_t)src >= frozentab.size ())
+      break;
+    if ((size_t)dst >= frozentab.size ())
+      break;
     frozentab[dst] += frozentab[src];
     frozentab[src] = 0;
   }
-  frozentab.resize (mapper.new_vsize);
+  frozentab.resize (min(frozentab.size (), mapper.new_vsize));
   shrink_vector (frozentab);
 
   // Special code for 'relevanttab'.
   //
-  for (auto src : vars) {
-    const int dst = abs (mapper.map_lit (src));
-    if (!dst)
-      continue;
-    if (src == dst)
-      continue;
-    assert (dst < src);
+  if (external) {
+    for (auto src : vars) {
+      const int dst = abs (mapper.map_lit (src));
+      if (!dst)
+        continue;
+      if (src == dst)
+        continue;
+      assert (dst < src);
 
-    relevanttab[dst] += relevanttab[src];
-    relevanttab[src] = 0;
+      relevanttab[dst] += relevanttab[src];
+      relevanttab[src] = 0;
+    }
+    relevanttab.resize (mapper.new_vsize);
+    shrink_vector (relevanttab);
   }
-  relevanttab.resize (mapper.new_vsize);
-  shrink_vector (relevanttab);
 
   /*----------------------------------------------------------------------*/
 
