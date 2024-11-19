@@ -16,6 +16,9 @@ Version 2.1.1
 
 - Fix performance regression for the SAT anniversary track.
 
+- Slight memory usage reduction expected thanks to not allocating some
+  internal array only used for proof and external propagator.
+
 Version 2.1.0
 -------------
 
