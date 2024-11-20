@@ -794,7 +794,7 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
       f.seen = true;
     }
     if (reason != candidate && reason->redundant) {
-      const int new_glue = recompute_glue(reason);
+      const int new_glue = recompute_glue (reason);
       promote_clause (reason, new_glue);
     }
     if (subsumes) {
@@ -1497,19 +1497,11 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     learn_empty_clause ();
   }
 
-  int retry = 0;
   while (!unsat && !terminated_asynchronously () &&
          !schedule.empty () && stats.propagations.vivify < limit) {
     Clause *c = schedule.back (); // Next candidate.
     schedule.pop_back ();
-    if (vivify_clause (vivifier, c)) {
-      if (!c->garbage && c->size > 2) {
-	++retry;
-	++stats.vivifystrirr;
-
-	schedule.push_back(c);
-      } else retry = 0;
-    } else retry = 0;
+    vivify_clause (vivifier, c);
   }
 
   if (level)
@@ -1701,7 +1693,7 @@ void Internal::vivify () {
 	(float) (stats.vivifystrirr - old) / (float) (stats.vivifychecks - old_tried) < 0.01) {
       delaying_vivify_irredundant.bumpreasons.bump_delay();
     }
-    else{
+    else {
       delaying_vivify_irredundant.bumpreasons.reduce_delay();
     }
   }
