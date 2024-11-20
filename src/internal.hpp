@@ -160,8 +160,8 @@ struct Internal {
   /*----------------------------------------------------------------------*/
 
   int mode;                    // current internal state
-  int tier1[2] = {2,2};
-  int tier2[2] = {6,6};
+  int tier1[2] = {2,2};        // tier1 limit for 0=focused, 1=stable; aka tier1[stable]
+  int tier2[2] = {6,6};        // tier2 limit for 0=focused, 1=stable; aka tier1[stable]
   bool unsat;                  // empty clause found or learned
   bool iterating;              // report learned unit ('i' line)
   bool localsearching;         // true during local search
