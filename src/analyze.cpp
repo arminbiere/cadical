@@ -235,6 +235,9 @@ inline void Internal::bump_clause (Clause *c) {
   ++stats.bump_used[stable];
 }
 
+void Internal::bump_clause2 (Clause *c) {
+  bump_clause (c);
+}
 /*------------------------------------------------------------------------*/
 
 // During conflict analysis literals not seen yet either become part of the

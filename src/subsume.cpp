@@ -188,7 +188,7 @@ void Internal::strengthen_clause (Clause *c, int lit) {
   auto new_end = remove (c->begin (), c->end (), lit);
   assert (new_end + 1 == c->end ()), (void) new_end;
   (void) shrink_clause (c, c->size - 1);
-  bump_clause (c);
+  bump_clause2 (c);
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
 }

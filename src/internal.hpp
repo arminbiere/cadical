@@ -744,6 +744,7 @@ struct Internal {
   void bump_variables ();
   int recompute_glue (Clause *);
   void bump_clause (Clause *);
+  void bump_clause2 (Clause *);
   void clear_unit_analyzed_literals ();
   void clear_analyzed_literals ();
   void clear_analyzed_levels ();
