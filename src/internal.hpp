@@ -871,7 +871,7 @@ struct Internal {
   void vivify_deduce (Clause *candidate, Clause *conflct, int implied, Clause **, bool&);
   bool vivify_clause (Vivifier &, Clause *candidate);
   void vivify_analyze (Clause *start, bool &, Clause **, const Clause *const, int implied, bool&);
-  bool vivify_shrinkable (const std::vector<int>&sorted,  Clause *c, int &implied);
+  bool vivify_shrinkable (const std::vector<int>&sorted,  Clause *c);
   void vivify_round (Vivifier&, int64_t delta);
   void vivify ();
 

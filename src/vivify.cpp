@@ -836,7 +836,7 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
 }
 /*------------------------------------------------------------------------*/
 
-bool Internal::vivify_shrinkable (const std::vector<int>&sorted,  Clause *conflict, int &implied) {
+bool Internal::vivify_shrinkable (const std::vector<int>&sorted,  Clause *conflict) {
 
   unsigned count_implied = 0;
   for (auto lit: sorted) {
@@ -849,7 +849,6 @@ bool Internal::vivify_shrinkable (const std::vector<int>&sorted,  Clause *confli
       LOG ("vivification implied satisfied %d", lit);
       if (conflict)
         return true;
-      assert (implied);
       if (count_implied++) {
         LOG ("at least one implied literal with conflict thus shrinking");
         return true;
@@ -1173,7 +1172,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     else
       ++stats.vivifystrirr;
   }
-  else if (vivify_shrinkable (sorted, conflict, subsume)) {
+  else if (vivify_shrinkable (sorted, conflict)) {
     vivify_increment_stats (vivifier);
     LOG ("vivify succeeded, learning new clause");
     clear_analyzed_literals ();
