@@ -1455,7 +1455,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
 
   assert (watching ());
 
-  auto &schedule = current_schedule(vivifier);
+  auto &schedule = current_schedule (vivifier);
 
   // Sort candidates, with first to be tried candidate clause last, i.e.,
   // many occurrences and high score literals) as in the example explained
@@ -1463,6 +1463,11 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   //
   if (vivifier.tier != Vivify_Mode::IRREDUNDANT || irredundant () / 10 < redundant ())
     stable_sort (begin (schedule), end (schedule), vivify_clause_later (this));
+  else {
+    // skip sorting but still put clauses with the vivify tag at the end to be done first
+    // Kissat does this implicitely by going twice over all clauses
+    std::partition(begin(schedule), end(schedule), [](Clause *c) {return !c->vivify;});
+  }
 
   // Remember old values of counters to summarize after each round with
   // verbose messages what happened in that round.
