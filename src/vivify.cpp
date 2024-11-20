@@ -900,6 +900,7 @@ bool Internal::vivify_instantiate (const std::vector<int>& sorted, Clause *c, st
   LOG ("vivify instantiation");
   assert (!var (lit).reason);
   assert (var (lit).level);
+  assert (val (lit));
   backtrack (level - 1);
   assert (val (lit) == 0);
   stats.vivifydecs++;
@@ -1151,7 +1152,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   // reverse lrat_chain. We could probably work with reversed iterators
   // (views) to be more efficient but we would have to distinguish in proof
   //
-  if (lrat){
+  if (lrat) {
     for (auto id : unit_chain)
       lrat_chain.push_back(id);
     unit_chain.clear ();
