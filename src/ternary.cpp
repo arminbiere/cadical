@@ -374,6 +374,14 @@ bool Internal::ternary () {
   //
   int64_t steps_limit = stats.propagations.search;
   steps_limit *= 1e-3 * opts.ternaryreleff;
+
+  int64_t saved_steps = steps_limit;
+  steps_limit -= stats.ternaryticks;
+  // TODO: actually last.ternary.ticks
+  // and schedule ternary based on ticks.
+  // also maybe count watching time and add a threshhold.
+  // i.e., in ternary round also count ticks.
+
   if (steps_limit < opts.ternarymineff)
     steps_limit = opts.ternarymineff;
   if (steps_limit > opts.ternarymaxeff)
@@ -436,6 +444,7 @@ bool Internal::ternary () {
 
   if (completed)
     last.ternary.marked = stats.mark.ternary;
+  stats.ternaryticks = saved_steps;
 
   STOP_SIMPLIFIER (ternary, TERNARY);
 

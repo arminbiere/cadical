@@ -204,6 +204,7 @@ struct Stats {
   int64_t elimbwsub = 0;      // number of eager backward subsumed clauses
   int64_t elimbwstr = 0;      // number of eager backward strengthened clauses
   int64_t ternary = 0;        // number of ternary resolution phases
+  int64_t ternaryticks = 0;
   int64_t ternres = 0;        // number of ternary resolutions
   int64_t htrs = 0;           // number of hyper ternary resolvents
   int64_t htrs2 = 0;          // number of binary hyper ternary resolvents
