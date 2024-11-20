@@ -1206,7 +1206,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     assert (redundant);
     res = false;
     ++stats.vivifyimplied;
-  }else {
+  } else {
     assert (level > 2);
     assert ((size_t)level == sorted.size());
     LOG (c, "vivification failed on");
@@ -1217,9 +1217,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
       assert (!conflict);
     } else {
       LOG ("cannot apply instantiation");
-      if (conflict) {
-	conflict = 0;
-      }
       res = false;
     }
   }
@@ -1228,7 +1225,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     LOG ("forcing backtracking at least one level after conflict");
     backtrack_without_updating_phases (level - 1);
   }
-    
+
   clause.clear();
   clear_analyzed_literals (); // TODO why needed?
   lrat_chain.clear();
