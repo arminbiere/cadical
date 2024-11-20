@@ -495,9 +495,9 @@ void Internal::flush_vivification_schedule (std::vector<Clause*> &schedule) {
 
 /*------------------------------------------------------------------------*/
 
-// Depending on whether we try to vivify redundant or irredundant clauses,
-// we schedule a clause to be vivified.  For redundant clauses we only try
-// to vivify them if they are likely to survive the next 'reduce' operation.
+// Depending on whether we try to vivify redundant or irredundant clauses, we schedule a clause to
+// be vivified.  For redundant clauses we initially only try to vivify them if they are likely to
+// survive the next 'reduce' operation, but this left the last schedule empty most of the time.
 
 bool Internal::consider_to_vivify_clause (Clause *c) {
   if (c->garbage)
@@ -1657,12 +1657,12 @@ void Internal::vivify () {
     LOG ("vivification tier1 matches tier2 "
          "thus using tier2 budget for tier1");
   }
+  // Refill the schedule every time.  Unchecked clauses are 'saved' by
+  // setting their 'vivify' bit, such that they can be tried next time.
+  //
   vivify_initialize (vivifier);
 
   if (opts.vivifytier1) {
-    // Refill the schedule every time.  Unchecked clauses are 'saved' by
-    // setting their 'vivify' bit, such that they can be tried next time.
-    //
     set_vivifier_mode(vivifier, Vivify_Mode::TIER1);
     const int64_t limit = (total * tier1effort) / sumeffort;
     assert (limit >= 0);
