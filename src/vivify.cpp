@@ -1467,7 +1467,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   else {
     // skip sorting but still put clauses with the vivify tag at the end to be done first
     // Kissat does this implicitely by going twice over all clauses
-    std::partition(begin(schedule), end(schedule), [](Clause *c) {return !c->vivify;});
+    std::stable_partition(begin(schedule), end(schedule), [](Clause *c) {return !c->vivify;});
   }
 
   // Remember old values of counters to summarize after each round with
