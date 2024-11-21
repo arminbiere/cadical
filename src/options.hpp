@@ -202,6 +202,7 @@ OPTION( vivifyirredeff,    3,  1,100,1,0,1, "irredundant efficiency per mille") 
 OPTION( vivifymaxeff,    2e7,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( vivifymineff,    2e4,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( vivifyonce,        0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \
+OPTION( vivifyretry,       0,  0,  5,0,1,1, "re-vivify clause if vivify was successful") \
 OPTION( vivifytier1,       1,  0,  1,0,1,1, "vivification tier1") \
 OPTION( vivifytier1eff,    3,  0,100,1,0,1, "relative tier1 effort") \
 OPTION( vivifytier2,       1,  0,  1,0,1,1, "vivification tier2") \

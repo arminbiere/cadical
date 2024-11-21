@@ -1498,11 +1498,15 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     learn_empty_clause ();
   }
 
+  int retry = 0;
   while (!unsat && !terminated_asynchronously () &&
          !schedule.empty () && stats.propagations.vivify < limit) {
     Clause *c = schedule.back (); // Next candidate.
     schedule.pop_back ();
-    vivify_clause (vivifier, c);
+    if (vivify_clause (vivifier, c) && !c->garbage && c->size > 2 && retry < opts.vivifyretry) {
+      ++retry;
+      schedule.push_back(c);
+    } else retry = 0;
   }
 
   if (level)
