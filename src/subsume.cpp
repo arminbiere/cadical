@@ -188,7 +188,7 @@ void Internal::strengthen_clause (Clause *c, int lit) {
   auto new_end = remove (c->begin (), c->end (), lit);
   assert (new_end + 1 == c->end ()), (void) new_end;
   (void) shrink_clause (c, c->size - 1);
-  bump_clause2 (c);
+  // bump_clause2 (c);
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
 }
@@ -312,6 +312,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
       lrat_chain.push_back (c->id);
       lrat_chain.push_back (d->id);
     }
+    if (d->used > c->used) c->used = d->used;
     strengthen_clause (c, -flipped);
     lrat_chain.clear ();
     assert (likely_to_be_kept_clause (c));

@@ -1492,10 +1492,12 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
     vivifier.schedule.pop_back ();
     if (vivify_clause (vivifier, c)) {
       if (!c->garbage && c->size > 2) {
+    //if (retry < opts.vivifyretry) { TODO merge Mathias.
 	++retry;
 	++stats.vivifystrirr;
 
 	vivifier.schedule.push_back(c);
+	  //}
       } else retry = 0;
     } else retry = 0;
   }
