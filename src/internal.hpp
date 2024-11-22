@@ -167,8 +167,8 @@ struct Internal {
   /*----------------------------------------------------------------------*/
 
   int mode;                    // current internal state
-  int tier1[2] = {2,2};
-  int tier2[2] = {6,6};
+  int tier1[2] = {2,2};        // tier1 limit for 0=focused, 1=stable; aka tier1[stable]
+  int tier2[2] = {6,6};        // tier2 limit for 0=focused, 1=stable; aka tier1[stable]
   bool unsat;                  // empty clause found or learned
   bool iterating;              // report learned unit ('i' line)
   bool localsearching;         // true during local search
@@ -935,11 +935,12 @@ struct Internal {
   //
   bool vivifying ();
   void demote_clause (Clause *);
-  void flush_vivification_schedule (Vivifier &);
+  void flush_vivification_schedule (std::vector<Clause*>&);
   void vivify_increment_stats (const Vivifier &vivifier);
   void vivify_subsume_clause (Clause *subsuming, Clause *subsumed);
   void compute_tier_limits (Vivifier &);
-  bool consider_to_vivify_clause (Clause *candidate, bool, int, int);
+  void vivify_initialize (Vivifier &vivifier, int64_t &ticks);
+  bool consider_to_vivify_clause (Clause *candidate);
   void vivify_sort_watched (Clause *c);
   bool vivify_instantiate (const std::vector<int>&, Clause *, std::vector<std::tuple<int, Clause *, bool>> &lrat_stack, int64_t &ticks);
   void vivify_analyze_redundant (Vivifier &, Clause *start, bool &);
@@ -953,7 +954,7 @@ struct Internal {
   void vivify_deduce (Clause *candidate, Clause *conflct, int implied, Clause **, bool&);
   bool vivify_clause (Vivifier &, Clause *candidate);
   void vivify_analyze (Clause *start, bool &, Clause **, const Clause *const, int implied, bool&);
-  bool vivify_shrinkable (const std::vector<int>&sorted,  Clause *c, int &implied);
+  bool vivify_shrinkable (const std::vector<int>&sorted,  Clause *c);
   void vivify_round (Vivifier&, int64_t delta);
   void vivify ();
 
@@ -975,7 +976,7 @@ struct Internal {
   bool likely_to_be_kept_clause (Clause *c) {
     if (!c->redundant)
       return true;
-    if (c->glue <= tier1[false])
+    if (c->glue <= tier2[false])
       return true;
     if (c->glue > lim.keptglue)
       return false;

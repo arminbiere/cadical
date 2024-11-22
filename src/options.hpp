@@ -214,6 +214,7 @@ OPTION( vivify,            1,  0,  1,0,1,1, "vivification") \
 OPTION( vivifycalctier,    0,  0,  1,0,0,1, "recalculate tier limits") \
 OPTION( vivifydemote,      0,  0,  1,0,1,1, "demote irredundant or delete directly") \
 OPTION( vivifyeff,        50,  0,1e5,1,0,1, "overall efficiency per mille") \
+OPTION( vivifyflush,      1,  0,  1,1,0,1,  "flush subsumed before vivification rounds") \
 OPTION( vivifyinst,        1,  0,  1,0,0,1, "instantiate last literal when vivify") \
 OPTION( vivifyint,       1e4,  1,2e9,0,0,1, "vivify interval") \
 OPTION( vivifyirred,       1,  0,  1,0,1,1, "vivification irred") \
@@ -221,6 +222,7 @@ OPTION( vivifyirredeff,    3,  1,100,1,0,1, "irredundant efficiency per mille") 
 OPTION( vivifymaxeff,    2e7,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( vivifymineff,      0,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( vivifyonce,        0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \
+OPTION( vivifyretry,       0,  0,  5,0,1,1, "re-vivify clause if vivify was successful") \
 OPTION( vivifytier1,       1,  0,  1,0,1,1, "vivification tier1") \
 OPTION( vivifytier1eff,    3,  0,100,1,0,1, "relative tier1 effort") \
 OPTION( vivifytier2,       1,  0,  1,0,1,1, "vivification tier2") \

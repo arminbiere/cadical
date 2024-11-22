@@ -1,6 +1,9 @@
 #ifndef _limit_hpp_INCLUDED
 #define _limit_hpp_INCLUDED
 
+#include <limits>
+#include <cstdint>
+
 namespace CaDiCaL {
 
 struct Limit {
