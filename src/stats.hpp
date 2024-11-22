@@ -216,6 +216,8 @@ struct Stats {
   int64_t vivifyreused = 0;   // reused vivification decisions
   int64_t vivifysched = 0;    // scheduled clauses for vivification
   int64_t vivifysubs = 0;     // subsumed clauses during vivification
+  int64_t vivifysubred = 0;   // subsumed clauses during vivification
+  int64_t vivifysubirr = 0;   // subsumed clauses during vivification
   int64_t vivifystrs = 0;     // strengthened clauses during vivification
   int64_t vivifystrirr = 0;   // strengthened irredundant clause
   int64_t vivifystred1 = 0;   // strengthened redundant clause (1)

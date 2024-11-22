@@ -101,6 +101,7 @@ struct Last {
     int64_t conflicts;
   } reduce, rephase;
   struct {
+    int64_t ticks;
     int64_t marked;
   } ternary;
   struct {

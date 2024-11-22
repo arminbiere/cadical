@@ -151,7 +151,9 @@ bool Internal::hyper_ternary_resolve (Clause *c, int pivot, Clause *d) {
 
 void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
   LOG ("starting hyper ternary resolutions on pivot %d", pivot);
+  steps -= 1 + cache_lines (occs (pivot).size (), sizeof (Clause *));
   for (const auto &c : occs (pivot)) {
+    if (steps < 0) break;
     if (htrs < 0)
       break;
     if (c->garbage)
@@ -170,8 +172,11 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
       }
     if (assigned)
       continue;
+    steps -= 1 + cache_lines (occs (-pivot).size (), sizeof (Clause *));
     for (const auto &d : occs (-pivot)) {
       if (htrs < 0)
+        break;
+      if (--steps < 0)
         break;
       if (d->garbage)
         continue;
@@ -231,6 +236,7 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
 void Internal::ternary_idx (int idx, int64_t &steps, int64_t &htrs) {
   assert (0 < idx);
   assert (idx <= max_var);
+  steps -= 3;
   if (!active (idx))
     return;
   if (!flags (idx).ternary)
@@ -268,7 +274,9 @@ bool Internal::ternary_round (int64_t &steps_limit, int64_t &htrs_limit) {
 
   init_occs ();
 
+  steps_limit -= 1 + cache_lines (clauses.size (), sizeof (Clause *));
   for (const auto &c : clauses) {
+    steps_limit --;
     if (c->garbage)
       continue;
     if (c->size > 3)
@@ -359,6 +367,17 @@ bool Internal::ternary () {
   if (last.ternary.marked == stats.mark.ternary)
     return false;
 
+  int64_t total = (stats.ticks.search[0] + stats.ticks.search[1] - last.ternary.ticks) * opts.ternaryreleff * 1e-3;
+  if (total < opts.ternarymineff)
+    total = opts.ternarymineff;
+  const int64_t min_limit = 6 * clauses.size ();
+  if (total < min_limit) {
+    VERBOSE (2, "limit of %" PRId64 " ticks not enough (min %" PRId64 " budget will be preserved for next ternary round", total, min_limit);
+    return false;
+  }
+  if (total > opts.ternarymaxeff)
+    total = opts.ternarymaxeff;
+  
   START_SIMPLIFIER (ternary, TERNARY);
   stats.ternary++;
 
@@ -371,21 +390,12 @@ bool Internal::ternary () {
   // The number of steps (see comment to 'ternary_lit' above) is global to
   // all rounds of producing ternary resolvents on all marked variables in
   // this call to the 'ternary' procedure.
-  //
-  int64_t steps_limit = stats.propagations.search;
-  steps_limit *= 1e-3 * opts.ternaryreleff;
-
-  int64_t saved_steps = steps_limit;
-  steps_limit -= stats.ternaryticks;
   // TODO: actually last.ternary.ticks
   // and schedule ternary based on ticks.
   // also maybe count watching time and add a threshhold.
   // i.e., in ternary round also count ticks.
-
-  if (steps_limit < opts.ternarymineff)
-    steps_limit = opts.ternarymineff;
-  if (steps_limit > opts.ternarymaxeff)
-    steps_limit = opts.ternarymaxeff;
+  int64_t steps_limit = total;
+  stats.ternaryticks += steps_limit;
 
   // The number of clauses derived through ternary resolution can grow
   // substantially, particularly for random formulas.  Thus we limit the
@@ -433,6 +443,8 @@ bool Internal::ternary () {
       break;
   }
 
+  stats.ternaryticks -= steps_limit;
+
   assert (!occurring ());
   assert (!unsat);
   init_watches ();
@@ -444,7 +456,7 @@ bool Internal::ternary () {
 
   if (completed)
     last.ternary.marked = stats.mark.ternary;
-  stats.ternaryticks = saved_steps;
+  last.ternary.ticks = stats.ticks.search[0] + stats.ticks.search[1] ;
 
   STOP_SIMPLIFIER (ternary, TERNARY);
 

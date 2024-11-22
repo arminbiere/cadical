@@ -558,6 +558,8 @@ void Stats::print (Internal *internal) {
          stats.htrs, percent (stats.htrs, stats.ternres));
     PRT ("  phases:        %15" PRId64 "   %10.2f    interval",
          stats.ternary, relative (stats.conflicts, stats.ternary));
+    PRT ("  ternary ticks: %15" PRId64 "   %10.2f %%  searchticks",
+         stats.ternaryticks, relative (stats.ternaryticks, ticks));
     PRT ("  htr3:          %15" PRId64
          "   %10.2f %%  ternary hyper ternres",
          stats.htrs3, percent (stats.htrs3, stats.htrs));
@@ -598,6 +600,10 @@ void Stats::print (Internal *internal) {
          stats.vivifyinst, percent (stats.vivifyinst, stats.vivifychecks));
     PRT ("  vivifysubs:    %15" PRId64 "   %10.2f %%  per subsumed",
          stats.vivifysubs, percent (stats.vivifysubs, stats.subsumed));
+    PRT ("  vivifysubred:  %15" PRId64 "   %10.2f %%  per subs",
+         stats.vivifysubred, percent (stats.vivifysubred, stats.vivifysubs));
+    PRT ("  vivifysubirr:  %15" PRId64 "   %10.2f %%  per subs",
+         stats.vivifysubirr, percent (stats.vivifysubirr, stats.vivifysubs));
     PRT ("  vivifystrs:    %15" PRId64 "   %10.2f %%  per strengthened",
          stats.vivifystrs, percent (stats.vivifystrs, stats.strengthened));
     PRT ("  vivifystrirr:  %15" PRId64 "   %10.2f %%  per vivifystrs",

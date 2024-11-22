@@ -197,10 +197,10 @@ OPTION( target,            1,  0,  2,0,0,1, "target phases (1=stable only)") \
 OPTION( terminateint,     10,  0,1e4,0,0,1, "termination check interval") \
 OPTION( ternary,           1,  0,  1,0,1,1, "hyper ternary resolution") \
 OPTION( ternarymaxadd,   1e3,  0,1e4,1,0,1, "max clauses added in percent") \
-OPTION( ternarymaxeff,   1e8,  0,2e9,1,0,1, "ternary maximum efficiency") \
-OPTION( ternarymineff,   1e6,  1,2e9,1,0,1, "minimum ternary efficiency") \
+OPTION( ternarymaxeff,   2e7,  0,2e9,1,0,1, "ternary maximum efficiency") \
+OPTION( ternarymineff,   1e4,  1,2e9,1,0,1, "minimum ternary efficiency") \
 OPTION( ternaryocclim,   1e2,  1,2e9,2,0,1, "ternary occurrence limit") \
-OPTION( ternaryreleff,     4,  1,1e5,1,0,1, "relative efficiency per mille") \
+OPTION( ternaryreleff,    10,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( ternaryrounds,     2,  1, 16,1,0,1, "maximum ternary rounds") \
 OPTION( tier1limit,       50,  0,100,0,0,1, "limit of tier1 usage in percentage") \
 OPTION( tier2limit,       90,  0,100,0,0,1, "limit of tier2 usage in percentage") \
@@ -214,7 +214,7 @@ OPTION( vivify,            1,  0,  1,0,1,1, "vivification") \
 OPTION( vivifycalctier,    0,  0,  1,0,0,1, "recalculate tier limits") \
 OPTION( vivifydemote,      0,  0,  1,0,1,1, "demote irredundant or delete directly") \
 OPTION( vivifyeff,        50,  0,1e5,1,0,1, "overall efficiency per mille") \
-OPTION( vivifyflush,      1,  0,  1,1,0,1,  "flush subsumed before vivification rounds") \
+OPTION( vivifyflush,       1,  0,  1,1,0,1,  "flush subsumed before vivification rounds") \
 OPTION( vivifyinst,        1,  0,  1,0,0,1, "instantiate last literal when vivify") \
 OPTION( vivifyint,       1e4,  1,2e9,0,0,1, "vivify interval") \
 OPTION( vivifyirred,       1,  0,  1,0,1,1, "vivification irred") \

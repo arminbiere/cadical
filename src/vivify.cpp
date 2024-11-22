@@ -1175,9 +1175,9 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     res = false;
     stats.vivifysubs++;
     if (c->redundant)
-      ++stats.vivifystred1;
+      ++stats.vivifysubred;
     else
-      ++stats.vivifystrirr;
+      ++stats.vivifysubirr;
   }
   else if (vivify_shrinkable (sorted, conflict)) {
     vivify_increment_stats (vivifier);
@@ -1500,9 +1500,6 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
   const int64_t limit = ticks_limit - stats.vivifyticks;
   assert (limit >= 0);
 
-  ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
-  ticks += clauses.size ();
-
   // the clauses might still contain set literals, so propagation since the
   // beginning
   propagated2 = propagated = 0;
@@ -1515,7 +1512,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
   vivifier.ticks = ticks;
   int retry = 0;
   while (!unsat && !terminated_asynchronously () &&
-         !schedule.empty () && stats.propagations.vivify < limit) {
+         !schedule.empty () && vivifier.ticks < limit) {
     Clause *c = schedule.back (); // Next candidate.
     schedule.pop_back ();
     if (vivify_clause (vivifier, c) && !c->garbage && c->size > 2 && retry < opts.vivifyretry) {
@@ -1650,7 +1647,7 @@ void Internal::vivify () {
   int64_t total = (stats.ticks.search[0] + stats.ticks.search[1] - last.vivify.ticks) * opts.vivifyeff * 1e-3;
   if (total < opts.vivifymineff)
     total = opts.vivifymineff;
-  const int64_t min_limit = 30 * clauses.size ();
+  const int64_t min_limit = 6 * clauses.size ();
   if (total < min_limit) {
     VERBOSE (2, "limit of %" PRId64 " ticks not enough (min %" PRId64 " budget will be preserved for next vivification round", total, min_limit);
     return;
