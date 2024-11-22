@@ -1416,6 +1416,7 @@ void Internal::vivify_initialize (Vivifier &vivifier) {
 
   }
   connect_watches (); // watch all relevant clauses
+	vivify_propagate ();
 }
 
 inline std::vector<Clause*>& current_schedule (Vivifier& vivifier) {
