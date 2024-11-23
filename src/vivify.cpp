@@ -192,7 +192,7 @@ bool Internal::vivify_propagate (int64_t &ticks) {
       const int lit = -trail[propagated2++];
       LOG ("vivify propagating %d over binary clauses", -lit);
       Watches &ws = watches (lit);
-      ticks += 1 + cache_lines (ws.size (), sizeof ws);
+      ticks += 1 + cache_lines (ws.size (), sizeof (const_watch_iterator *));
       for (const auto &w : ws) {
         if (!w.binary ())
           continue;
@@ -212,9 +212,9 @@ bool Internal::vivify_propagate (int64_t &ticks) {
       const int lit = -trail[propagated++];
       LOG ("vivify propagating %d over large clauses", -lit);
       Watches &ws = watches (lit);
-      ticks += 1 + cache_lines (ws.size (), sizeof ws);
       const const_watch_iterator eow = ws.end ();
       const_watch_iterator i = ws.begin ();
+      ticks += 1 + cache_lines (ws.size (), sizeof (*i));
       watch_iterator j = ws.begin ();
       while (i != eow) {
         const Watch w = *j++ = *i++;

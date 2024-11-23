@@ -29,6 +29,7 @@ struct Stats {
 
   struct {
     int64_t search[2] = { 0 };
+    int64_t probe;
   } ticks;
 
   struct {

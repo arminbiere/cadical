@@ -54,6 +54,7 @@ void Stats::print (Internal *internal) {
   propagations += stats.propagations.walk;
 
   int64_t vivified = stats.vivifysubs + stats.vivifystrs;
+  int64_t ticks = stats.ticks.search[0] + stats.ticks.search[1];
 
   size_t extendbytes = internal->external->extension.size ();
   extendbytes *= sizeof (int);
@@ -234,6 +235,8 @@ void Stats::print (Internal *internal) {
          relative (stats.probingrounds, stats.probingphases));
     PRT ("  probed:        %15" PRId64 "   %10.2f    per failed",
          stats.probed, relative (stats.probed, stats.failed));
+    PRT ("  probe ticks:   %15" PRId64 "   %10.2f %%  searchticks",
+      stats.ticks.probe, percent (stats.ticks.probe, ticks));
     PRT ("  hbrs:          %15" PRId64 "   %10.2f    per probed",
          stats.hbrs, relative (stats.hbrs, stats.probed));
     PRT ("  hbrsizes:      %15" PRId64 "   %10.2f    per hbr",
@@ -355,7 +358,6 @@ void Stats::print (Internal *internal) {
   PRT ("  walkprops:     %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.walk,
        percent (stats.propagations.walk, propagations));
-  int64_t ticks = stats.ticks.search[0] + stats.ticks.search[1];
   PRT ("searchticks:     %15" PRId64 "   %10.2f    propagation",
        ticks, relative (ticks, stats.propagations.search));
   PRT ("@ stableticks:   %15" PRId64 "   %10.2f %%  ticks",

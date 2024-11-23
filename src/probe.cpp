@@ -382,16 +382,19 @@ inline void Internal::probe_lrat_for_units (int lit) {
 
 inline void Internal::probe_propagate2 () {
   require_mode (PROBE);
+  int64_t &ticks = stats.ticks.probe;
   while (propagated2 != trail.size ()) {
     const int lit = -trail[propagated2++];
     LOG ("probe propagating %d over binary clauses", -lit);
     Watches &ws = watches (lit);
+    ticks += 1 + cache_lines (ws.size (), sizeof (const_watch_iterator *));
     for (const auto &w : ws) {
       if (!w.binary ())
         continue;
       const signed char b = val (w.blit);
       if (b > 0)
         continue;
+      ticks++;
       if (b < 0)
         conflict = w.clause; // but continue
       else {
@@ -411,6 +414,7 @@ bool Internal::probe_propagate () {
   assert (!unsat);
   START (propagate);
   int64_t before = propagated2 = propagated;
+  int64_t &ticks = stats.ticks.probe;
   while (!conflict) {
     if (propagated2 != trail.size ())
       probe_propagate2 ();
@@ -418,6 +422,7 @@ bool Internal::probe_propagate () {
       const int lit = -trail[propagated++];
       LOG ("probe propagating %d over large clauses", -lit);
       Watches &ws = watches (lit);
+      ticks += 1 + cache_lines (ws.size (), sizeof (sizeof (const_watch_iterator *)));
       size_t i = 0, j = 0;
       while (i != ws.size ()) {
         const Watch w = ws[j++] = ws[i++];
@@ -426,6 +431,7 @@ bool Internal::probe_propagate () {
         const signed char b = val (w.blit);
         if (b > 0)
           continue;
+        ticks++;
         if (w.clause->garbage)
           continue;
         const literal_iterator lits = w.clause->begin ();
@@ -454,6 +460,7 @@ bool Internal::probe_propagate () {
           if (v > 0)
             ws[j - 1].blit = r;
           else if (!v) {
+        ticks++;
             LOG (w.clause, "unwatch %d in", r);
             *k = lit;
             lits[0] = other;
@@ -461,6 +468,7 @@ bool Internal::probe_propagate () {
             watch_literal (r, lit, w.clause);
             j--;
           } else if (!u) {
+        ticks++;
             if (level == 1) {
               lits[0] = other, lits[1] = lit;
               assert (lrat_chain.empty ());
@@ -468,6 +476,7 @@ bool Internal::probe_propagate () {
               int dom = hyper_binary_resolve (w.clause);
               probe_assign (other, dom);
             } else {
+        ticks++;
               assert (lrat_chain.empty ());
               assert (!probe_reason);
               probe_reason = w.clause;
@@ -624,13 +633,18 @@ void Internal::generate_probes () {
 
   assert (probes.empty ());
 
+  int64_t &ticks = stats.ticks.probe;
+
+
   // First determine all the literals which occur in binary clauses. It is
   // way faster to go over the clauses once, instead of walking the watch
   // lists for each literal.
   //
   init_noccs ();
+  ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
   for (const auto &c : clauses) {
     int a, b;
+    ticks ++;
     if (!is_binary_clause (c, a, b))
       continue;
     noccs (a)++;
@@ -647,6 +661,8 @@ void Internal::generate_probes () {
     // This argument requires that equivalent literal substitution through
     // 'decompose' is performed, because otherwise there might be 'cyclic
     // roots' which are not tried, i.e., -1 2 0, 1 -2 0, 1 2 3 0, 1 2 -3 0.
+
+    ticks += 2;
 
     const bool have_pos_bin_occs = noccs (idx) > 0;
     const bool have_neg_bin_occs = noccs (-idx) > 0;
@@ -682,10 +698,13 @@ void Internal::generate_probes () {
 void Internal::flush_probes () {
 
   assert (!probes.empty ());
+  int64_t &ticks = stats.ticks.probe;
 
   init_noccs ();
+  ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
   for (const auto &c : clauses) {
     int a, b;
+    ticks++;
     if (!is_binary_clause (c, a, b))
       continue;
     noccs (a)++;
@@ -698,6 +717,7 @@ void Internal::flush_probes () {
     int lit = *i;
     if (!active (lit))
       continue;
+    ticks += 2;
     const bool have_pos_bin_occs = noccs (lit) > 0;
     const bool have_neg_bin_occs = noccs (-lit) > 0;
     if (have_pos_bin_occs == have_neg_bin_occs)
@@ -779,8 +799,9 @@ bool Internal::probe_round () {
   // (say %5) of probing propagations in each probing with a lower bound of
   // 'opts.probmineff'.
   //
-  int64_t delta = stats.propagations.search;
-  delta -= last.probe.propagations;
+
+  int64_t delta = stats.ticks.search[0] + stats.ticks.search[1];
+  delta -= last.probe.ticks;
   delta *= 1e-3 * opts.probereleff;
   if (delta < opts.probemineff)
     delta = opts.probemineff;
@@ -792,7 +813,7 @@ bool Internal::probe_round () {
   PHASE ("probe-round", stats.probingrounds,
          "probing limit of %" PRId64 " propagations ", delta);
 
-  int64_t limit = stats.propagations.probe + delta;
+  int64_t limit = stats.ticks.probe + delta;
 
   int old_failed = stats.failed;
 #ifndef QUIET
@@ -816,7 +837,7 @@ bool Internal::probe_round () {
   int probe;
   init_probehbr_lrat ();
   while (!unsat && !terminated_asynchronously () &&
-         stats.propagations.probe < limit && (probe = next_probe ())) {
+         stats.ticks.probe < limit && (probe = next_probe ())) {
     stats.probed++;
     LOG ("probing %d", probe);
     probe_assign_decision (probe);
@@ -936,7 +957,7 @@ void CaDiCaL::Internal::probe (bool update_limits) {
     if (unsat) break;
   }
 
-  last.probe.propagations = stats.propagations.search;
+  last.probe.ticks = stats.ticks.search[0] + stats.ticks.search[1];
 
   if (external_prop) {
     assert(!level);

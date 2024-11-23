@@ -95,7 +95,7 @@ struct Last {
     int64_t fixed, subsumephases, marked;
   } elim;
   struct {
-    int64_t propagations, reductions;
+    int64_t ticks, reductions;
   } probe;
   struct {
     int64_t conflicts;
