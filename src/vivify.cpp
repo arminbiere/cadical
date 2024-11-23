@@ -1403,6 +1403,7 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
   // the first round.  Then the second round selects all clauses.
   //
   for (auto &sched : vivifier.schedules) {
+    ticks += 1 + cache_lines (sched.size (), sizeof (Clause *));
     for (const auto &c : sched) {
       // Literals in scheduled clauses are sorted with their highest score
       // literals first (as explained above in the example at '@2').  This
@@ -1648,7 +1649,7 @@ void Internal::vivify () {
   int64_t total = (stats.ticks.search[0] + stats.ticks.search[1] - last.vivify.ticks) * opts.vivifyeff * 1e-3;
   if (total < opts.vivifymineff)
     total = opts.vivifymineff;
-  const int64_t min_limit = 6 * clauses.size ();
+  const int64_t min_limit = 20 * clauses.size ();
   if (total < min_limit) {
     VERBOSE (2, "limit of %" PRId64 " ticks not enough (min %" PRId64 " budget will be preserved for next vivification round", total, min_limit);
     return;
@@ -1685,12 +1686,13 @@ void Internal::vivify () {
     LOG ("vivification tier1 matches tier2 "
          "thus using tier2 budget for tier1");
   }
-  int64_t limit = stats.vivifyticks;
   int64_t init_ticks = 0;
   // Refill the schedule every time.  Unchecked clauses are 'saved' by
   // setting their 'vivify' bit, such that they can be tried next time.
   //
   vivify_initialize (vivifier, init_ticks);
+  stats.vivifyticks += init_ticks;
+  int64_t limit = stats.vivifyticks;
   const double shared_effort = (double)init_ticks / 4.0;
   if (opts.vivifytier1) {
     set_vivifier_mode (vivifier, Vivify_Mode::TIER1);
