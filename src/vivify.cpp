@@ -1,6 +1,7 @@
 #include "internal.hpp"
 #include "vivify.hpp"
 #include <algorithm>
+#include <limits>
 #include <utility>
 
 namespace CaDiCaL {
@@ -1661,10 +1662,12 @@ void Internal::vivify () {
   stats.vivifications++;
     
 
-  double tier1effort = !opts.vivifytier1 ? 0 : 1e-3 * (double) opts.vivifytier1eff;
-  double tier2effort = !opts.vivifytier2 ? 0 : 1e-3 * (double) opts.vivifytier2eff;
-  double tier3effort = !opts.vivifytier3 ? 0 : 1e-3 * (double) opts.vivifytier3eff;
-  double irreffort = delaying_vivify_irredundant.bumpreasons.delay() || !opts.vivifyirred ? 0 : 1e-3 * (double) opts.vivifyirredeff;
+  // the effort is normalized by dividing by sumeffort below, hence no need to multiply by 1e-3
+  // (also making the precision better)
+  double tier1effort = !opts.vivifytier1 ? 0 : (double) opts.vivifytier1eff;
+  double tier2effort = !opts.vivifytier2 ? 0 : (double) opts.vivifytier2eff;
+  double tier3effort = !opts.vivifytier3 ? 0 : (double) opts.vivifytier3eff;
+  double irreffort = delaying_vivify_irredundant.bumpreasons.delay() || !opts.vivifyirred ? 0 : (double) opts.vivifyirredeff;
   double sumeffort = tier1effort + tier2effort + tier3effort + irreffort;
   if (!stats.current.redundant)
     tier1effort = tier2effort = tier3effort = 0;
@@ -1692,8 +1695,10 @@ void Internal::vivify () {
   if (opts.vivifytier1) {
     set_vivifier_mode (vivifier, Vivify_Mode::TIER1);
     if (limit < stats.vivifyticks) limit = stats.vivifyticks;
-    limit += (total * tier1effort) / sumeffort;
-    if ((total * tier1effort) / sumeffort > shared_effort) {
+    const double effort = (total * tier1effort) / sumeffort;
+    assert (std::numeric_limits<int64_t>::max() - (int64_t)effort >= limit);
+    limit += effort;
+    if (limit > shared_effort && limit - shared_effort > stats.vivifyticks) {
       limit -= shared_effort;
       assert (limit >= 0);
       vivify_round (vivifier, limit);
@@ -1706,8 +1711,10 @@ void Internal::vivify () {
   if (!unsat && tier2effort) {
     erase_vector (vivifier.schedule_tier1); // save memory (well, not really as we already reached the peak memory)
     if (limit < stats.vivifyticks) limit = stats.vivifyticks;
-    limit += (total * tier2effort) / sumeffort;
-    if ((total * tier2effort) / sumeffort > shared_effort) {
+    const double effort = (total * tier2effort) / sumeffort;
+    assert (std::numeric_limits<int64_t>::max() - (int64_t)effort >= limit);
+    limit += effort;
+    if (limit > shared_effort && limit - shared_effort > stats.vivifyticks) {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::TIER2);
@@ -1720,8 +1727,10 @@ void Internal::vivify () {
   if (!unsat && tier3effort) {
     erase_vector (vivifier.schedule_tier2);
     if (limit < stats.vivifyticks) limit = stats.vivifyticks;
-    limit += (total * tier3effort) / sumeffort;
-    if ((total * tier3effort) / sumeffort > shared_effort) {
+    const double effort = (total * tier3effort) / sumeffort;
+    assert (std::numeric_limits<int64_t>::max() - (int64_t)effort >= limit);
+    limit += effort;
+    if (limit > shared_effort && limit - shared_effort > stats.vivifyticks) {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::TIER3);
@@ -1734,8 +1743,10 @@ void Internal::vivify () {
   if (!unsat && irreffort) {
     erase_vector (vivifier.schedule_tier3);
     if (limit < stats.vivifyticks) limit = stats.vivifyticks;
-    limit += (total * irreffort) / sumeffort;
-    if ((total * irreffort) / sumeffort > shared_effort) {
+    const double effort = (total * irreffort) / sumeffort;
+    assert (std::numeric_limits<int64_t>::max() - (int64_t)effort >= limit);
+    limit += effort;
+    if (limit > shared_effort && limit - shared_effort > stats.vivifyticks) {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::IRREDUNDANT);
