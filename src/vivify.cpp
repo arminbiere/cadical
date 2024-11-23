@@ -1698,7 +1698,7 @@ void Internal::vivify () {
     const double effort = (total * tier1effort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max() - (int64_t)effort >= limit);
     limit += effort;
-    if (limit > shared_effort && limit - shared_effort > stats.vivifyticks) {
+    if (limit - shared_effort > stats.vivifyticks) {
       limit -= shared_effort;
       assert (limit >= 0);
       vivify_round (vivifier, limit);
@@ -1714,7 +1714,7 @@ void Internal::vivify () {
     const double effort = (total * tier2effort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max() - (int64_t)effort >= limit);
     limit += effort;
-    if (limit > shared_effort && limit - shared_effort > stats.vivifyticks) {
+    if (limit - shared_effort > stats.vivifyticks) {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::TIER2);
@@ -1730,7 +1730,7 @@ void Internal::vivify () {
     const double effort = (total * tier3effort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max() - (int64_t)effort >= limit);
     limit += effort;
-    if (limit > shared_effort && limit - shared_effort > stats.vivifyticks) {
+    if (limit - shared_effort > stats.vivifyticks) {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::TIER3);
@@ -1746,7 +1746,7 @@ void Internal::vivify () {
     const double effort = (total * irreffort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max() - (int64_t)effort >= limit);
     limit += effort;
-    if (limit > shared_effort && limit - shared_effort > stats.vivifyticks) {
+    if (limit - shared_effort > stats.vivifyticks) {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::IRREDUNDANT);
