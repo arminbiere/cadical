@@ -41,33 +41,7 @@ namespace CaDiCaL {
 // with more occurrences first.  Then we sort clauses lexicographically with
 // respect to that literal order.
 
-bool Internal::vivifying () {
-
-  if (!opts.vivify)
-    return false;
-  if (!preprocessing && !opts.inprocessing)
-    return false;
-  if (preprocessing)
-    assert (lim.preprocessing);
-
-  if (!stats.current.irredundant)
-    return false;
-  
-  // Only perform global subsumption checking immediately after a clause
-  // reduction happened where the overall allocated memory is small and we
-  // got a limit on the number of kept clause in terms of size and glue.
-  //
-  if (opts.reduce && stats.conflicts != last.reduce.conflicts)
-    return false;
-
-  if (stats.conflicts < lim.vivify)
-    return false;
-  LOG ("actually vivifying");
-  return true;
-}
-
 /*------------------------------------------------------------------------*/
-
 
 // Candidate clause 'subsumed' is subsumed by 'subsuming'.
 
@@ -1501,7 +1475,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
 
   // Limit the number of propagations during vivification as in 'probe'.
   //
-  const int64_t limit = ticks_limit - stats.vivifyticks;
+  const int64_t limit = ticks_limit - stats.ticks.vivify;
   assert (limit >= 0);
 
   // the clauses might still contain set literals, so propagation since the
@@ -1593,7 +1567,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
 
   stats.subsumed += subsumed;
   stats.strengthened += strengthened;
-  stats.vivifyticks += vivifier.ticks;
+  stats.ticks.vivify += vivifier.ticks;
 
   bool unsuccessful = !(subsumed + strengthened + units);
   report (vivifier.tag, unsuccessful);
@@ -1634,30 +1608,22 @@ void Internal::compute_tier_limits (Vivifier & vivifier) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::vivify () {
+bool Internal::vivify () {
 
   if (unsat)
-    return;
+    return false;
   if (terminated_asynchronously ())
-    return;
+    return false;
   if (!opts.vivify)
-    return;
+    return false;
   if (!stats.current.irredundant)
-    return;
+    return false;
   if (level)
     backtrack ();
   assert (opts.vivify);
   assert (!level);
-  int64_t total = (stats.ticks.search[0] + stats.ticks.search[1] - last.vivify.ticks) * opts.vivifyeff * 1e-3;
-  if (total < opts.vivifymineff)
-    total = opts.vivifymineff;
-  const int64_t min_limit = 20 * clauses.size ();
-  if (total < min_limit) {
-    VERBOSE (2, "limit of %" PRId64 " ticks not enough (min %" PRId64 " budget will be preserved for next vivification round", total, min_limit);
-    return;
-  }
-  if (total > opts.vivifymaxeff)
-    total = opts.vivifymaxeff;
+
+  SET_EFFORT_LIMIT (totallimit, vivify, true);
 
   private_steps = true;
 
@@ -1676,6 +1642,7 @@ void Internal::vivify () {
     tier1effort = tier2effort = tier3effort = 0;
   if (!sumeffort)
     sumeffort = irreffort = 1;
+  int64_t total = totallimit - stats.ticks.vivify;
 
   PHASE ("vivify", stats.vivifications,
          "vivification limit of %" PRId64 " ticks", total);
@@ -1689,20 +1656,22 @@ void Internal::vivify () {
          "thus using tier2 budget for tier1");
   }
   int64_t init_ticks = 0;
+
   // Refill the schedule every time.  Unchecked clauses are 'saved' by
   // setting their 'vivify' bit, such that they can be tried next time.
   //
+  // TODO: count against ticks.vivify directly instead of this unholy shifting.
   vivify_initialize (vivifier, init_ticks);
-  stats.vivifyticks += init_ticks;
-  int64_t limit = stats.vivifyticks;
+  stats.ticks.vivify += init_ticks;
+  int64_t limit = stats.ticks.vivify;
   const double shared_effort = (double)init_ticks / 4.0;
   if (opts.vivifytier1) {
     set_vivifier_mode (vivifier, Vivify_Mode::TIER1);
-    if (limit < stats.vivifyticks) limit = stats.vivifyticks;
+    if (limit < stats.ticks.vivify) limit = stats.ticks.vivify;
     const double effort = (total * tier1effort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max() - (int64_t)effort >= limit);
     limit += effort;
-    if (limit - shared_effort > stats.vivifyticks) {
+    if (limit - shared_effort > stats.ticks.vivify) {
       limit -= shared_effort;
       assert (limit >= 0);
       vivify_round (vivifier, limit);
@@ -1714,11 +1683,11 @@ void Internal::vivify () {
 
   if (!unsat && tier2effort) {
     erase_vector (vivifier.schedule_tier1); // save memory (well, not really as we already reached the peak memory)
-    if (limit < stats.vivifyticks) limit = stats.vivifyticks;
+    if (limit < stats.ticks.vivify) limit = stats.ticks.vivify;
     const double effort = (total * tier2effort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max() - (int64_t)effort >= limit);
     limit += effort;
-    if (limit - shared_effort > stats.vivifyticks) {
+    if (limit - shared_effort > stats.ticks.vivify) {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::TIER2);
@@ -1730,11 +1699,11 @@ void Internal::vivify () {
 
   if (!unsat && tier3effort) {
     erase_vector (vivifier.schedule_tier2);
-    if (limit < stats.vivifyticks) limit = stats.vivifyticks;
+    if (limit < stats.ticks.vivify) limit = stats.ticks.vivify;
     const double effort = (total * tier3effort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max() - (int64_t)effort >= limit);
     limit += effort;
-    if (limit - shared_effort > stats.vivifyticks) {
+    if (limit - shared_effort > stats.ticks.vivify) {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::TIER3);
@@ -1746,11 +1715,11 @@ void Internal::vivify () {
 
   if (!unsat && irreffort) {
     erase_vector (vivifier.schedule_tier3);
-    if (limit < stats.vivifyticks) limit = stats.vivifyticks;
+    if (limit < stats.ticks.vivify) limit = stats.ticks.vivify;
     const double effort = (total * irreffort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max() - (int64_t)effort >= limit);
     limit += effort;
-    if (limit - shared_effort > stats.vivifyticks) {
+    if (limit - shared_effort > stats.ticks.vivify) {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::IRREDUNDANT);
@@ -1775,19 +1744,9 @@ void Internal::vivify () {
   reset_noccs ();
   STOP_SIMPLIFIER (vivify, VIVIFY);
 
-  last.vivify.ticks = stats.ticks.search[0] + stats.ticks.search[1];
-
-  int64_t delta = scale (opts.vivifyint * (stats.vivifications + 1));
-  lim.vivify = stats.conflicts + delta;
   private_steps = false;
 
-  if (opts.transred)
-    transred ();
-
-  PHASE ("vivify-phase", stats.vivifications,
-         "new vivify limit %" PRId64 " after %" PRId64 " conflicts",
-         lim.vivify, delta);
-
+  return true;
 }
 
 } // namespace CaDiCaL

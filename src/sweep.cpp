@@ -262,17 +262,6 @@ void Internal::init_sweeper (Sweeper &sweeper) {
   VERBOSE (3, "sweeper clause limit %u",
                             sweeper.limit.clauses);
 
-  if (opts.sweepcomplete) {
-    sweeper.limit.ticks = UINT64_MAX;
-    VERBOSE (3, "unlimited sweeper ticks limit");
-  } else {
-    int64_t limit = stats.ticks.search[0] + stats.ticks.search[1];
-    limit -= last.sweep.ticks;
-    limit *= opts.sweepeffort * 1e-3;
-    sweeper.limit.ticks = limit;
-    last.sweep.ticks = stats.ticks.search[0] + stats.ticks.search[1];
-  }
-  sweep_set_kitten_ticks_limit (sweeper);
 }
 
 void Internal::release_sweeper (Sweeper &sweeper) {
@@ -293,7 +282,7 @@ void Internal::release_sweeper (Sweeper &sweeper) {
 
   kitten_release (citten);
   citten = 0;
-  stats.sweep_ticks += sweeper.current_ticks;
+  stats.ticks.sweep += sweeper.current_ticks;
   sweep_sparse_mode ();
   return;
 }
@@ -1882,21 +1871,21 @@ bool Internal::sweep () {
     last.sweep.ticks = stats.ticks.search[0] + stats.ticks.search[1];
     return false;
   }
-  int64_t tickslimit = stats.ticks.search[0] + stats.ticks.search[1];
-  tickslimit -= last.sweep.ticks;
-  tickslimit *= opts.sweepeffort * 1e-3;
-  const int64_t min_limit = 5 * clauses.size ();
-  if (tickslimit < min_limit) {
-    delaying_sweep.bumpreasons.bypass_delay ();
-    return false;
-  }
+  delaying_sweep.bumpreasons.bypass_delay ();
+  SET_EFFORT_LIMIT (tickslimit, sweep, !opts.sweepcomplete);
   delaying_sweep.bumpreasons.unbypass_delay ();
+
   assert (!level);
   START_SIMPLIFIER (sweep, SWEEP);
   stats.sweep++;
   uint64_t equivalences = stats.sweep_equivalences;
   uint64_t units = stats.sweep_units;
   Sweeper sweeper = Sweeper (this);
+  if (opts.sweepcomplete)
+    sweeper.limit.ticks = INT64_MAX;
+  else
+    sweeper.limit.ticks = tickslimit - stats.ticks.sweep;
+  sweep_set_kitten_ticks_limit (sweeper);
   const unsigned scheduled = schedule_sweeping (sweeper);
   uint64_t swept = 0, limit = 10;
   for (;;) {

@@ -683,7 +683,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 void Internal::walk () {
   START_INNER_WALK ();
   int64_t limit = stats.propagations.search;
-  limit *= 1e-3 * opts.walkreleff;
+  limit *= 1e-3 * opts.walkeffort;
   if (limit < opts.walkmineff)
     limit = opts.walkmineff;
   if (limit > opts.walkmaxeff)

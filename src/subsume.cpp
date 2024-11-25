@@ -57,28 +57,6 @@ namespace CaDiCaL {
 // literals which do not occur in the subsumed candidate fast with high
 // probability (less occurring literals have a higher chance).
 
-bool Internal::subsuming () {
-
-  if (!opts.subsume && !opts.vivify)
-    return false;
-  if (!preprocessing && !opts.inprocessing)
-    return false;
-  if (preprocessing)
-    assert (lim.preprocessing);
-
-  // Only perform global subsumption checking immediately after a clause
-  // reduction happened where the overall allocated memory is small and we
-  // got a limit on the number of kept clause in terms of size and glue.
-  //
-  if (opts.reduce && stats.conflicts != last.reduce.conflicts)
-    return false;
-
-  if (stats.conflicts < lim.subsume)
-    return false;
-
-  return true;
-}
-
 // This is the actual subsumption and strengthening check.  We assume that
 // all the literals of the candidate clause to be subsumed or strengthened
 // are marked, so we only have to check that all the literals of the
@@ -388,7 +366,7 @@ bool Internal::subsume_round () {
   int64_t check_limit;
   if (opts.subsumelimited) {
     int64_t delta = stats.propagations.search;
-    delta *= 1e-3 * opts.subsumereleff;
+    delta *= 1e-3 * opts.subsumeeffort;
     if (delta < opts.subsumemineff)
       delta = opts.subsumemineff;
     if (delta > opts.subsumemaxeff)
@@ -642,12 +620,10 @@ bool Internal::subsume_round () {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::subsume (bool update_limits) {
-
-  stats.subsumephases++;
+void Internal::subsume () {
 
   if (!stats.current.redundant && !stats.current.irredundant)
-    goto UPDATE_LIMITS;
+    return;
 
   if (unsat)
     return;
@@ -657,6 +633,8 @@ void Internal::subsume (bool update_limits) {
     learn_empty_clause ();
     return;
   }
+
+  stats.subsumephases++;
 
   if (external_prop) {
     assert(!level);
@@ -674,29 +652,12 @@ void Internal::subsume (bool update_limits) {
     }
   }
 
-  // // Schedule 'vivification' in 'subsume' as well as 'transitive reduction'.
-  // //
-  // if (opts.vivify)
-  //   vivify ();
-  if (opts.transred)
-    transred ();
+  transred ();
 
   if (external_prop) {
     assert(!level);
     private_steps = false;
   }
-
-UPDATE_LIMITS:
-
-  if (!update_limits)
-    return;
-
-  int64_t delta = scale (opts.subsumeint * (stats.subsumephases + 1));
-  lim.subsume = stats.conflicts + delta;
-
-  PHASE ("subsume-phase", stats.subsumephases,
-         "new subsume limit %" PRId64 " after %" PRId64 " conflicts",
-         lim.subsume, delta);
 }
 
 } // namespace CaDiCaL

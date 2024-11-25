@@ -17,7 +17,7 @@ inline bool factor_occs_size::operator() (unsigned a, unsigned b) {
 }
 
 // do full occurence list as in elim.cpp but filter out useless clauses
-int64_t Internal::factor_mode (int64_t limit) {
+void Internal::factor_mode () {
   reset_watches ();
 
   assert (!watching ());
@@ -32,7 +32,8 @@ int64_t Internal::factor_mode (int64_t limit) {
     enlarge_zero (largecount, max_lit);
 
   vector<Clause *> candidates;
-  int64_t ticks = 1 + cache_lines (clauses.size (), sizeof (Clause *));
+  int64_t &ticks = stats.ticks.factor;
+  ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
 
   // push binary clauses on the occurrence stack.
   for (const auto &c : clauses) {
@@ -54,8 +55,7 @@ int64_t Internal::factor_mode (int64_t limit) {
       largecount[vlit (lit)]++;
     }
   }
-  if (ticks > limit >> 1) return limit >> 1;
-  if (size_limit == 2) return limit - ticks;
+  if (size_limit == 2) return;
 
   // iterate counts of larger clauses rounds often
   const unsigned rounds = opts.factorcandrounds;
@@ -64,7 +64,6 @@ int64_t Internal::factor_mode (int64_t limit) {
     LOG ("factor round %d", round);
     if (candidates.size () == candidates_before)
       break;
-    if (ticks > limit >> 1) break;
     ticks += 1 + cache_lines (candidates.size (), sizeof (Clause *));
     candidates_before = candidates.size ();
     vector<unsigned> newlargecount;
@@ -98,9 +97,6 @@ int64_t Internal::factor_mode (int64_t limit) {
   for (const auto &c : candidates)
     for (const auto &lit : *c)
       occs (lit).push_back (c);
-
-  if (ticks > limit >> 1) return limit >> 1;
-  return limit - ticks;
 }
 
 // go back to two watch scheme
@@ -191,7 +187,7 @@ size_t Internal::first_factor (Factoring &factoring, int factor) {
   LOG ("quotient[0] factor %d size %zu", factor, res);
   // This invariant can of course be broken by previous factorings
   // assert (res > 1);
-  stats.factor_ticks += ticks;
+  stats.ticks.factor += ticks;
   return res;
 }
 
@@ -324,15 +320,15 @@ int Internal::next_factor (Factoring &factoring,
     for (const auto &other : *c)
       if (getfact (other, QUOTIENT))
         unmarkfact (other, QUOTIENT);
-    stats.factor_ticks += ticks;
+    stats.ticks.factor += ticks;
     ticks = 0;
-    if (stats.factor_ticks > factoring.limit)
+    if (stats.ticks.factor > factoring.limit)
       break;
   }
   clear_flauses (flauses);
   unsigned next_count = 0;
   int next = 0;
-  if (stats.factor_ticks <= factoring.limit) {
+  if (stats.ticks.factor <= factoring.limit) {
     unsigned ties = 0;
     for (const auto &lit : counted) {
       const unsigned lit_count = count[vlit (lit)];
@@ -459,7 +455,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
     i++;
   }
   clear_flauses (flauses);
-  stats.factor_ticks += ticks;
+  stats.ticks.factor += ticks;
 
   assert (expected_next_count <= next_clauses.size ());
   (void) expected_next_count;
@@ -768,7 +764,7 @@ bool Internal::run_factorization (int64_t limit) {
 #ifndef QUIET
   unsigned factored = 0;
 #endif
-  int64_t *ticks = &stats.factor_ticks;
+  int64_t *ticks = &stats.ticks.factor;
   VERBOSE (3, "factorization limit of %" PRIu64 " ticks", limit - *ticks);
 
   while (!unsat && !done && !factoring.schedule.empty ()) {
@@ -847,38 +843,27 @@ int Internal::get_new_extension_variable () {
   return new_internal;
 }
 
-void Internal::factor () {
+bool Internal::factor () {
   if (unsat)
-    return;
+    return false;
   if (terminated_asynchronously ())
-    return;
+    return false;
   if (!opts.factor)
-    return;
+    return false;
   assert (stats.mark.factor || clauses.empty ());
   // update last.factor.marked and flags.factor to trigger factor
   if (last.factor.marked >= stats.mark.factor) {
     VERBOSE (3, "factorization skipped as no literals have been"
         "marked to be added (%" PRIu64 " < %" PRIu64 ")",
         last.factor.marked, stats.mark.factor);
-    return;
+    return false;
   }
   assert (!level);
 
-  int64_t tmp = stats.ticks.search[0] + stats.ticks.search[1];
-  tmp -= last.factor.ticks;
-  tmp *= opts.factoreffort / 1e3;
-  if (!stats.factor) tmp += opts.factoriniticks * 1e3;
-  int64_t limit = tmp;
-  VERBOSE (3, "limiting to %" PRIu64
-             " factorization ticks",
-             limit);
-  const int64_t min_ticks = 3 * clauses.size ();
-  if (tmp < min_ticks) {
-    VERBOSE (2, "limit of %" PRId64 " ticks not enough (min %" PRId64 " budget will be preserved for next factorization", tmp, min_ticks);
-    return;
-  }
+  SET_EFFORT_LIMIT (limit, factor, stats.factor);
+  if (!stats.factor)
+    limit += opts.factoriniticks * 1e3;
 
-  last.factor.ticks = stats.ticks.search[0] + stats.ticks.search[1];
   START_SIMPLIFIER (factor, FACTOR);
   stats.factor++;
 
@@ -887,12 +872,11 @@ void Internal::factor () {
     int64_t variables, clauses, ticks;
   } before, after, delta;
   before.variables = stats.variables_extension + stats.variables_original;
-  before.ticks = stats.factor_ticks;
+  before.ticks = stats.ticks.factor;
   before.clauses = stats.current.irredundant;
 #endif
 
-  limit = factor_mode (limit);
-  limit += stats.factor_ticks;
+  factor_mode ();
   bool completed = run_factorization (limit);
   reset_factor_mode ();
 
@@ -904,7 +888,7 @@ void Internal::factor () {
 #ifndef QUIET
   after.variables = stats.variables_extension + stats.variables_original;
   after.clauses = stats.current.irredundant;
-  after.ticks = stats.factor_ticks;
+  after.ticks = stats.ticks.factor;
   delta.variables = after.variables - before.variables;
   delta.clauses = before.clauses - after.clauses;
   delta.ticks = after.ticks - before.ticks;
@@ -920,6 +904,7 @@ void Internal::factor () {
   if (completed)
     last.factor.marked = stats.mark.factor;
   STOP_SIMPLIFIER (factor, FACTOR);
+  return true;
 }
 
 }

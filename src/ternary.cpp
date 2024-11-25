@@ -367,16 +367,7 @@ bool Internal::ternary () {
   if (last.ternary.marked == stats.mark.ternary)
     return false;
 
-  int64_t total = (stats.ticks.search[0] + stats.ticks.search[1] - last.ternary.ticks) * opts.ternaryreleff * 1e-3;
-  if (total < opts.ternarymineff)
-    total = opts.ternarymineff;
-  const int64_t min_limit = 6 * clauses.size ();
-  if (total < min_limit) {
-    VERBOSE (2, "limit of %" PRId64 " ticks not enough (min %" PRId64 " budget will be preserved for next ternary round", total, min_limit);
-    return false;
-  }
-  if (total > opts.ternarymaxeff)
-    total = opts.ternarymaxeff;
+  SET_EFFORT_LIMIT (limit, ternary, true);
   
   START_SIMPLIFIER (ternary, TERNARY);
   stats.ternary++;
@@ -387,16 +378,6 @@ bool Internal::ternary () {
   if (watching ())
     reset_watches ();
 
-  // The number of steps (see comment to 'ternary_lit' above) is global to
-  // all rounds of producing ternary resolvents on all marked variables in
-  // this call to the 'ternary' procedure.
-  // TODO: actually last.ternary.ticks
-  // and schedule ternary based on ticks.
-  // also maybe count watching time and add a threshhold.
-  // i.e., in ternary round also count ticks.
-  int64_t steps_limit = total;
-  stats.ternaryticks += steps_limit;
-
   // The number of clauses derived through ternary resolution can grow
   // substantially, particularly for random formulas.  Thus we limit the
   // number of added clauses too (actually the number of 'htrs').
@@ -404,6 +385,11 @@ bool Internal::ternary () {
   int64_t htrs_limit = stats.current.redundant + stats.current.irredundant;
   htrs_limit *= opts.ternarymaxadd;
   htrs_limit /= 100;
+
+  // approximation of ternary ticks.
+  // TODO: count with ternary.ticks directly.
+  int64_t steps_limit = stats.ticks.ternary - limit;
+  stats.ticks.ternary = limit;
 
   // With 'stats.ternary' we actually count the number of calls to
   // 'ternary_round' and not the number of calls to 'ternary'. But before
@@ -443,8 +429,6 @@ bool Internal::ternary () {
       break;
   }
 
-  stats.ternaryticks -= steps_limit;
-
   assert (!occurring ());
   assert (!unsat);
   init_watches ();
@@ -456,7 +440,6 @@ bool Internal::ternary () {
 
   if (completed)
     last.ternary.marked = stats.mark.ternary;
-  last.ternary.ticks = stats.ticks.search[0] + stats.ticks.search[1] ;
 
   STOP_SIMPLIFIER (ternary, TERNARY);
 

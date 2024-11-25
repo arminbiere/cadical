@@ -306,13 +306,9 @@ int Internal::cdcl_loop_with_inprocessing () {
       rephase (); // reset variable phases
     else if (reducing ())
       reduce (); // collect useless clauses
-    else if (probing ())
-      probe (); // failed literal probing
-    //else if (vivifying ())
-      //vivify (); // subsumption algorithm
-    // else if (subsuming ())
-    //   subsume (); // subsumption algorithm
-    else if (eliminating ())
+    else if (inprobing ())
+      inprobe (); // schedule of inprocessing
+    else if (ineliminating ())
       elim (); // variable elimination
     else if (compacting ())
       compact (); // collect variables
@@ -362,18 +358,6 @@ void Internal::init_preprocessing_limits () {
   if (incremental)
     mode = "keeping";
   else {
-    lim.subsume = stats.conflicts + scale (opts.subsumeint);
-    mode = "initial";
-  }
-  (void) mode;
-  LOG ("%s subsume limit %" PRId64 " after %" PRId64 " conflicts", mode,
-       lim.subsume, lim.subsume - stats.conflicts);
-
-  /*----------------------------------------------------------------------*/
-
-  if (incremental)
-    mode = "keeping";
-  else {
     last.elim.marked = -1;
     lim.elim = stats.conflicts + scale (opts.elimint);
     mode = "initial";
@@ -405,12 +389,12 @@ void Internal::init_preprocessing_limits () {
   else {
     double delta = log10 (stats.added.irredundant);
     delta = delta * delta;
-    lim.probe = stats.conflicts + opts.probeint * delta;
+    lim.inprobe = stats.conflicts + opts.inprobeint * delta;
     mode = "initial";
   }
   (void) mode;
   LOG ("%s probe limit %" PRId64 " after %" PRId64 " conflicts", mode,
-       lim.probe, lim.probe - stats.conflicts);
+       lim.inprobe, lim.inprobe - stats.conflicts);
 
   /*----------------------------------------------------------------------*/
 
@@ -585,8 +569,8 @@ bool Internal::preprocess_round (int round) {
          " clauses",
          round, before.vars, before.clauses);
   int old_elimbound = lim.elimbound;
-  if (opts.probe)
-    probe (false);
+  if (opts.inprobing)
+    inprobe (false);
   if (opts.elim)
     elim (false);
   if (opts.condition)

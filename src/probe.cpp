@@ -13,16 +13,16 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-bool Internal::probing () {
-  if (!opts.probe)
+bool Internal::inprobing () {
+  if (!opts.inprobing)
     return false;
   if (!preprocessing && !opts.inprocessing)
     return false;
   if (preprocessing)
     assert (lim.preprocessing);
-  if (stats.probingphases && last.probe.reductions == stats.reductions)
+  if (stats.inprobingphases && last.inprobe.reductions == stats.reductions)
     return false;
-  return lim.probe <= stats.conflicts;
+  return lim.inprobe <= stats.conflicts;
 }
 
 /*------------------------------------------------------------------------*/
@@ -784,36 +784,28 @@ int Internal::next_probe () {
   }
 }
 
-bool Internal::probe_round () {
+bool Internal::probe () {
 
+  if (!opts.probe)
+    return false;
   if (unsat)
     return false;
   if (terminated_asynchronously ())
     return false;
 
+  SET_EFFORT_LIMIT (limit, probe, true);
+  
   START_SIMPLIFIER (probe, PROBE);
   stats.probingrounds++;
 
   // Probing is limited in terms of non-probing propagations
-  // 'stats.propagations'. We allow a certain percentage 'opts.probereleff'
+  // 'stats.propagations'. We allow a certain percentage 'opts.probeeffort'
   // (say %5) of probing propagations in each probing with a lower bound of
   // 'opts.probmineff'.
   //
 
-  int64_t delta = stats.ticks.search[0] + stats.ticks.search[1];
-  delta -= last.probe.ticks;
-  delta *= 1e-3 * opts.probereleff;
-  if (delta < opts.probemineff)
-    delta = opts.probemineff;
-  if (delta > opts.probemaxeff)
-    delta = opts.probemaxeff;
-  // if (delta < (int64_t) 2l * active ())
-  //  delta = 2l * active ();
-
   PHASE ("probe-round", stats.probingrounds,
-         "probing limit of %" PRId64 " propagations ", delta);
-
-  int64_t limit = stats.ticks.probe + delta;
+         "probing limit of %" PRId64 " propagations ", limit);
 
   int old_failed = stats.failed;
 #ifndef QUIET
@@ -882,13 +874,11 @@ bool Internal::probe_round () {
 
 /*------------------------------------------------------------------------*/
 
-// TODO: change name from probe to something more generic
-
 // This schedules a number of inprocessing techniques.
 // These range from very cheap and beneficial (decompose) to
 // more expensive and sometimes less beneficial. We want to limit
 // expensive techniques to some fraction of total time or search time.
-// this is done using 'ticks'. TODO: ternary, probe still use propagations.
+// this is done using 'ticks'.
 // Generally, there are options for each of the techniques to set the
 // efficiency, i.e., the fraction of ticks they are allowed as budget.
 // Whenever e.g. vivify is called, the budget is calculated from the
@@ -900,7 +890,7 @@ bool Internal::probe_round () {
 // increasing by a constant number each time. In effect, the number of
 // inprocessing rounds is allways the square root of the number of conflicts
 // with some constant factor.
-// This factor can also be with the option 'probeint'
+// This factor can also be with the option 'inprobeint'
 // Some of the techniques are not run always, for different reasons.
 // 'factor' or BVA depends on certain structures of the irredundant clauses
 // and as such will only be run when new irredundant clauses are derived or
@@ -921,9 +911,7 @@ bool Internal::probe_round () {
 // switches to the latter delay until the budget is big enough, such that
 // sweeping can be run. Then we switch back to the other delay.
 
-// TODO make a threshhold option.
-
-void CaDiCaL::Internal::probe (bool update_limits) {
+void CaDiCaL::Internal::inprobe (bool update_limits) {
 
   if (unsat)
     return;
@@ -934,7 +922,7 @@ void CaDiCaL::Internal::probe (bool update_limits) {
     return;
   }
 
-  stats.probingphases++;
+  stats.inprobingphases++;
   if (external_prop) {
     assert(!level);
     private_steps = true;
@@ -942,22 +930,21 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   const int before = active ();
   const int before_extended = stats.variables_extension;
 
-  for (int round = 1; round <= opts.proberounds; round++) {
+  // schedule of inprobing techniques.
+  // 
+  {
     mark_duplicated_binary_clauses_as_garbage ();
     decompose ();
     if (ternary ())
       decompose (); // If we derived a binary clause
-    if (probe_round ())
+    if (probe ())
       decompose ();
     if (sweep ())   // full occurrence list
       decompose (); // ... and (ELS) afterwards.
-    if (round < 2)
-      vivify ();    // resets watches
+    (void) vivify ();      // resets watches
+    transred ();    // builds big.
     factor ();      // resets watches, partial occurrence list
-    if (unsat) break;
   }
-
-  last.probe.ticks = stats.ticks.search[0] + stats.ticks.search[1];
 
   if (external_prop) {
     assert(!level);
@@ -975,22 +962,22 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   assert (removed >= 0);
 
   if (removed) {
-    stats.probesuccess++;
-    PHASE ("probe-phase", stats.probingphases,
+    stats.inprobesuccess++;
+    PHASE ("probe-phase", stats.inprobingphases,
            "successfully removed %d active variables %.0f%%", removed,
            percent (removed, before));
   } else
-    PHASE ("probe-phase", stats.probingphases,
+    PHASE ("probe-phase", stats.inprobingphases,
            "could not remove any active variable");
 
-  const int64_t delta = 25 * opts.probeint * log10 (stats.probingphases + 9);
-  lim.probe = stats.conflicts + delta;
+  const int64_t delta = 25 * opts.inprobeint * log10 (stats.inprobingphases + 9);
+  lim.inprobe = stats.conflicts + delta;
 
-  PHASE ("probe-phase", stats.probingphases,
+  PHASE ("probe-phase", stats.inprobingphases,
          "new limit at %" PRId64 " conflicts after %" PRId64 " conflicts",
-         lim.probe, delta);
+         lim.inprobe, delta);
 
-  last.probe.reductions = stats.reductions;
+  last.inprobe.reductions = stats.reductions;
 }
 
 } // namespace CaDiCaL

@@ -911,14 +911,13 @@ struct Internal {
 
   // Regular forward subsumption checking in 'subsume.cpp'.
   //
-  bool subsuming ();
   void strengthen_clause (Clause *, int);
   void subsume_clause (Clause *subsuming, Clause *subsumed);
   int subsume_check (Clause *subsuming, Clause *subsumed);
   int try_to_subsume_clause (Clause *, vector<Clause *> &shrunken);
   void reset_subsume_bits ();
   bool subsume_round ();
-  void subsume (bool update_limits = true);
+  void subsume ();
 
   // Covered clause elimination of large clauses.
   //
@@ -933,7 +932,6 @@ struct Internal {
 
   // Strengthening through vivification in 'vivify.cpp'.
   //
-  bool vivifying ();
   void demote_clause (Clause *);
   void flush_vivification_schedule (std::vector<Clause*>&, int64_t &);
   void vivify_increment_stats (const Vivifier &vivifier);
@@ -956,7 +954,7 @@ struct Internal {
   void vivify_analyze (Clause *start, bool &, Clause **, const Clause *const, int implied, bool&);
   bool vivify_shrinkable (const std::vector<int>&sorted,  Clause *c);
   void vivify_round (Vivifier&, int64_t delta);
-  void vivify ();
+  bool vivify ();
 
   // Compacting (shrinking internal variable tables) in 'compact.cpp'
   //
@@ -1151,7 +1149,7 @@ struct Internal {
 
   // Bounded variable elimination in 'elim.cpp'.
   //
-  bool eliminating ();
+  bool ineliminating ();
   double compute_elim_score (unsigned lit);
   void mark_redundant_clauses_with_eliminated_variables_as_garbage ();
   void unmark_binary_literals (Eliminator &);
@@ -1227,7 +1225,7 @@ struct Internal {
   bool sweep_extract_fixed (Sweeper &sweeper, int lit);
 
   // factor
-  int64_t factor_mode (int64_t);
+  void factor_mode ();
   void reset_factor_mode ();
   double tied_next_factor_score (int);
   Quotient *new_quotient (Factoring &, int);
@@ -1252,7 +1250,7 @@ struct Internal {
   void update_factor_candidate (Factoring &, int);
   void schedule_factorization (Factoring &);
   bool run_factorization (int64_t limit);
-  void factor ();
+  bool factor ();
   int get_new_extension_variable ();
   Clause *new_factor_clause ();
 
@@ -1279,7 +1277,7 @@ struct Internal {
 
   // Probing in 'probe.cpp'.
   //
-  bool probing ();
+  bool inprobing ();
   void failed_literal (int lit);
   void probe_lrat_for_units (int lit);
   void probe_assign_unit (int lit);
@@ -1302,8 +1300,8 @@ struct Internal {
   void generate_probes ();
   void flush_probes ();
   int next_probe ();
-  bool probe_round ();
-  void probe (bool update_limits = true);
+  bool probe ();
+  void inprobe (bool update_limits = true);
 
   // ProbSAT/WalkSAT implementation called initially or from 'rephase'.
   //

@@ -21,9 +21,9 @@ static NameVal plain_config[1];   // '[0]' gave a warning.
 // Here we have the pre-defined default configurations.
 
 static NameVal sat_config[] = {
-    {"elimreleff", 10},
+    {"elimeffort", 10},
     {"stabilizeonly", 1},
-    {"subsumereleff", 60},
+    {"subsumeeffort", 60},
 };
 
 static NameVal unsat_config[] = {

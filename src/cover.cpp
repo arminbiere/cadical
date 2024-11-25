@@ -485,7 +485,7 @@ int64_t Internal::cover_round () {
   connect_watches (true); // irredundant watches only is enough
 
   int64_t delta = stats.propagations.search;
-  delta *= 1e-3 * opts.coverreleff;
+  delta *= 1e-3 * opts.covereffort;
   if (delta < opts.covermineff)
     delta = opts.covermineff;
   if (delta > opts.covermaxeff)

@@ -56,9 +56,9 @@ bool elim_more::operator() (unsigned a, unsigned b) {
 // or as consequence of other preprocessors, these subsumption rounds during
 // search can remove (irredundant) clauses (and literals), which in turn
 // might make new bounded variable elimination possible.  This is tested
-// in the 'bool eliminating ()' guard.
+// in the 'bool ineliminating ()' guard.
 
-bool Internal::eliminating () {
+bool Internal::ineliminating () {
 
   if (!opts.elim)
     return false;
@@ -778,11 +778,11 @@ int Internal::elim_round (bool &completed) {
 
   if (opts.elimlimited) {
     int64_t delta = stats.propagations.search;
-    delta *= 1e-3 * opts.elimreleff;
-    if (delta < opts.elimineff)
-      delta = opts.elimineff;
-    if (delta > opts.elimaxeff)
-      delta = opts.elimaxeff;
+    delta *= 1e-3 * opts.elimeffort;
+    if (delta < opts.elimmineff)
+      delta = opts.elimmineff;
+    if (delta > opts.elimmaxeff)
+      delta = opts.elimmaxeff;
     delta = max (delta, (int64_t) 2l * active ());
 
     PHASE ("elim-round", stats.elimrounds,
@@ -1042,7 +1042,7 @@ void Internal::elim (bool update_limits) {
   // elimination including vivification etc.
   //
   if (last.elim.subsumephases == stats.subsumephases)
-    subsume (update_limits);
+    subsume ();
 
   reset_watches (); // saves lots of memory
 

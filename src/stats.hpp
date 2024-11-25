@@ -29,7 +29,11 @@ struct Stats {
 
   struct {
     int64_t search[2] = { 0 };
+    int64_t factor;
     int64_t probe;
+    int64_t sweep;
+    int64_t ternary;
+    int64_t vivify;
   } ticks;
 
   struct {
@@ -171,7 +175,6 @@ struct Stats {
   int64_t factor = 0;
   int64_t factored = 0;
   int64_t factor_added = 0;
-  int64_t factor_ticks = 0;
   int64_t variables_extension = 0;
   int64_t variables_original = 0;
   int64_t literals_factored = 0;
@@ -205,7 +208,6 @@ struct Stats {
   int64_t elimbwsub = 0;      // number of eager backward subsumed clauses
   int64_t elimbwstr = 0;      // number of eager backward strengthened clauses
   int64_t ternary = 0;        // number of ternary resolution phases
-  int64_t ternaryticks = 0;
   int64_t ternres = 0;        // number of ternary resolutions
   int64_t htrs = 0;           // number of hyper ternary resolvents
   int64_t htrs2 = 0;          // number of binary hyper ternary resolvents
@@ -228,7 +230,6 @@ struct Stats {
   int64_t vivifyimplied = 0;     // implied during vivification
   int64_t vivifyinst = 0;     // instantiation during vivification
   int64_t vivifydemote = 0;   //demoting during vivification
-  int64_t vivifyticks = 0;   // ticks during vivification
   int64_t transreds = 0;
   int64_t transitive = 0;
   struct {
@@ -270,13 +271,12 @@ struct Stats {
   int64_t sweep_environment = 0;
   int64_t sweep_clauses = 0;
   int64_t sweep = 0;
-  int64_t sweep_ticks = 0;
 
   int64_t units = 0;         // learned unit clauses
   int64_t binaries = 0;      // learned binary clauses
-  int64_t probingphases = 0; // number of scheduled probing phases
+  int64_t inprobingphases = 0; // number of scheduled probing phases
   int64_t probingrounds = 0; // number of probing rounds
-  int64_t probesuccess = 0;  // number successful probing phases
+  int64_t inprobesuccess = 0;  // number successful probing phases
   int64_t probed = 0;        // number of probed literals
   int64_t failed = 0;        // number of failed literals
   int64_t hyperunary = 0;    // hyper unary resolved unit clauses

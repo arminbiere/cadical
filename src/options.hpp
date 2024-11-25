@@ -50,26 +50,25 @@ OPTION( compact,           1,  0,  1,0,1,1, "compact internal variables") \
 OPTION( compactint,      2e3,  1,2e9,0,0,1, "compacting interval") \
 OPTION( compactlim,      1e2,  0,1e3,0,0,1, "inactive limit per mille") \
 OPTION( compactmin,      1e2,  1,2e9,0,0,1, "minimum inactive limit") \
-OPTION( condition,         0,  0,  1,0,0,1, "globally blocked clause elim") \
+OPTION( condition,         0,  0,  1,0,1,1, "globally blocked clause elim") \
+OPTION( conditioneffort, 100,  1,1e5,0,0,1, "relative efficiency per mille") \
 OPTION( conditionint,    1e4,  1,2e9,0,0,1, "initial conflict interval") \
 OPTION( conditionmaxeff, 1e7,  0,2e9,1,0,1, "maximum condition efficiency") \
 OPTION( conditionmaxrat, 100,  1,2e9,1,0,1, "maximum clause variable ratio") \
 OPTION( conditionmineff,   0,  0,2e9,1,0,1, "minimum condition efficiency") \
-OPTION( conditionreleff, 100,  1,1e5,0,0,1, "relative efficiency per mille") \
 OPTION( cover,             0,  0,  1,0,1,1, "covered clause elimination") \
+OPTION( covereffort,       4,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( covermaxclslim,  1e5,  1,2e9,2,0,1, "maximum clause size") \
 OPTION( covermaxeff,     1e8,  0,2e9,1,0,1, "maximum cover efficiency") \
 OPTION( coverminclslim,    2,  2,2e9,0,0,1, "minimum clause size") \
 OPTION( covermineff,       0,  0,2e9,1,0,1, "minimum cover efficiency") \
-OPTION( coverreleff,       4,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( decompose,         1,  0,  1,0,1,1, "decompose BIG in SCCs and ELS") \
 OPTION( decomposerounds,   2,  1, 16,1,0,1, "number of decompose rounds") \
 OPTION( deduplicate,       1,  0,  1,0,1,1, "remove duplicated binaries") \
-OPTION( eagersubsume,      1,  0,  1,0,0,1, "subsume recently learned") \
+OPTION( eagersubsume,      1,  0,  1,0,1,1, "subsume recently learned") \
 OPTION( eagersubsumelim,  20,  1,1e3,0,0,1, "limit on subsumed candidates") \
 OPTION( elim,              1,  0,  1,0,1,1, "bounded variable elimination") \
 OPTION( elimands,          1,  0,  1,0,0,1, "find AND gates") \
-OPTION( elimaxeff,       2e9,  0,2e9,1,0,1, "maximum elimination efficiency") \
 OPTION( elimbackward,      1,  0,  1,0,0,1, "eager backward subsumption") \
 OPTION( elimboundmax,     16, -1,2e6,1,0,1, "maximum elimination bound") \
 OPTION( elimboundmin,      0, -1,2e6,0,0,1, "minimum elimination bound") \
@@ -77,14 +76,15 @@ OPTION( elimclslim,      1e2,  2,2e9,2,0,1, "resolvent size limit") \
 OPTION( elimdef,           0,  0,  1,0,0,1, "mine definitions with kitten") \
 OPTION( elimdefcores,      1,  1,100,0,0,1, "number of unsat cores") \
 OPTION( elimdefticks,    2e5,  0,2e9,1,0,1, "kitten ticks limit") \
+OPTION( elimeffort,      1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( elimequivs,        1,  0,  1,0,0,1, "find equivalence gates") \
-OPTION( elimineff,       1e6,  0,2e9,1,0,1, "minimum elimination efficiency") \
 OPTION( elimint,         2e3,  1,2e9,0,0,1, "elimination interval") \
 OPTION( elimites,          1,  0,  1,0,0,1, "find if-then-else gates") \
 OPTION( elimlimited,       1,  0,  1,0,0,1, "limit resolutions") \
+OPTION( elimmaxeff,       2e9,  0,2e9,1,0,1, "maximum elimination efficiency") \
+OPTION( elimmineff,      1e6,  0,2e9,1,0,1, "minimum elimination efficiency") \
 OPTION( elimocclim,      1e2,  0,2e9,2,0,1, "occurrence limit") \
 OPTION( elimprod,          1,  0,1e4,0,0,1, "elim score product weight") \
-OPTION( elimreleff,      1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( elimrounds,        2,  1,512,1,0,1, "usual number of rounds") \
 OPTION( elimsubst,         1,  0,  1,0,0,1, "elimination by substitution") \
 OPTION( elimsum,           1,  0,1e4,0,0,1, "elimination score sum weight") \
@@ -98,12 +98,13 @@ OPTION( emalevel,        1e5,  1,2e9,0,0,1, "window back-track level") \
 OPTION( emasize,         1e5,  1,2e9,0,0,1, "window learned clause size") \
 OPTION( ematrailfast,    1e2,  1,2e9,0,0,1, "window fast trail") \
 OPTION( ematrailslow,    1e5,  1,2e9,0,0,1, "window slow trail") \
-OPTION( factor,            1,  0,  1,0,0,1, "bounded variable addition") \
+OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds") \
-OPTION( factoreffort,     50,  0,1e6,0,0,1, "effort per mille") \
+OPTION( factoreffort,     50,  0,1e6,0,0,1, "relative effort per mille") \
 OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort per thousand") \
 OPTION( factorsize,        5,  2,2e9,0,0,1, "clause size limit") \
-OPTION( flush,             0,  0,  1,0,0,1, "flush redundant clauses") \
+OPTION( factorthresh,      7,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
+OPTION( flush,             0,  0,  1,0,1,1, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \
 OPTION( flushint,        1e5,  1,2e9,0,0,1, "initial limit") \
 OPTION( forcephase,        0,  0,  1,0,0,1, "always use initial phase") \
@@ -111,7 +112,9 @@ OPTION( frat,              0,  0,  2,0,0,1, "1=frat(lrat), 2=frat(drat)") \
 OPTION( idrup,             0,  0,  1,0,0,1, "incremental proof format") \
 OPTION( ilb,               0,  0,  1,0,0,1, "ILB (incremental lazy backtrack)") \
 OPTION( ilbassumptions,    0,  0,  1,0,0,1, "trail reuse for assumptions (ILB-like)") \
-OPTION( inprocessing,      1,  0,  1,0,0,1, "enable inprocessing") \
+OPTION( inprobeint,      100,  1,2e9,0,0,1, "inprobing interval" ) \
+OPTION( inprobing,         1,  0,  1,0,1,1, "enable probe inprocessing") \
+OPTION( inprocessing,      1,  0,  1,0,1,1, "enable general inprocessing") \
 OPTION( instantiate,       0,  0,  1,0,1,1, "variable instantiation") \
 OPTION( instantiateclslim, 3,  2,2e9,0,0,1, "minimum clause size") \
 OPTION( instantiateocclim, 1,  1,2e9,2,0,1, "maximum occurrence limit") \
@@ -128,12 +131,9 @@ OPTION( otfs,              1,  0,  1,0,0,1, "on-the-fly self subsumption") \
 OPTION( phase,             1,  0,  1,0,0,1, "initial phase") \
 OPTION( preprocesslight,   0,  0,  1,0,1,1, "lightweight preprocessing" ) \
 OPTION( probe,             1,  0,  1,0,1,1, "failed literal probing" ) \
+OPTION( probeeffort,       8,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( probehbr,          1,  0,  1,0,0,1, "learn hyper binary clauses") \
-OPTION( probeint,        100,  1,2e9,0,0,1, "probing interval" ) \
-OPTION( probemaxeff,     1e7,  0,2e9,1,0,1, "maximum probing efficiency") \
-OPTION( probemineff,       0,  0,2e9,1,0,1, "minimum probing efficiency") \
-OPTION( probereleff,      20,  1,1e5,1,0,1, "relative efficiency per mille") \
-OPTION( proberounds,       1,  1, 16,1,0,1, "probing rounds" ) \
+OPTION( probethresh,       0,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( profile,           2,  0,  4,0,0,0, "profiling level") \
 QUTOPT( quiet,             0,  0,  1,0,0,0, "disable all messages") \
 OPTION( radixsortlim,     32,  0,2e9,0,0,1, "radix sort limit") \
@@ -174,67 +174,64 @@ OPTION( stats,             0,  0,  1,0,0,1, "print all statistics at the end of 
 OPTION( subsume,           1,  0,  1,0,1,1, "enable clause subsumption") \
 OPTION( subsumebinlim,   1e4,  0,2e9,1,0,1, "watch list length limit") \
 OPTION( subsumeclslim,   1e2,  0,2e9,2,0,1, "clause length limit") \
-OPTION( subsumeint,      1e4,  1,2e9,0,0,1, "subsume interval") \
+OPTION( subsumeeffort,   1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( subsumelimited,    1,  0,  1,0,0,1, "limit subsumption checks") \
 OPTION( subsumemaxeff,   1e8,  0,2e9,1,0,1, "maximum subsuming efficiency") \
 OPTION( subsumemineff,     0,  0,2e9,1,0,1, "minimum subsuming efficiency") \
 OPTION( subsumeocclim,   1e2,  0,2e9,1,0,1, "watch list length limit") \
-OPTION( subsumereleff,   1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( subsumestr,        1,  0,  1,0,0,1, "subsume strenghten") \
 OPTION( sweep,             1,  0,  1,0,1,1, "enable SAT sweeping") \
 OPTION( sweepclauses,   1024,  0,2e9,1,0,1, "environment clauses") \
 OPTION( sweepcomplete,     0,  0,  1,0,0,1, "run SAT sweeping to completion") \
 OPTION( sweepcountbinary,  1,  0,  1,0,0,1, "count binaries to environment") \
 OPTION( sweepdepth,        2,  0,2e9,1,0,1, "environment depth") \
-OPTION( sweepeffort,     1e2,  0,1e4,0,0,1, "effort in ticks per mille") \
+OPTION( sweepeffort,     1e2,  0,1e4,0,0,1, "relative effort in ticks per mille") \
 OPTION( sweepfliprounds,   1,  0,2e9,1,0,1, "flipping rounds") \
 OPTION( sweepmaxclauses, 3e5,  2,2e9,1,0,1, "maximum environment clauses") \
 OPTION( sweepmaxdepth,     3,  1,2e9,1,0,1, "maximum environment depth") \
 OPTION( sweepmaxvars,   8192,  2,2e9,1,0,1, "maximum environment variables") \
 OPTION( sweeprand,         0,  0,  1,0,0,1, "randomize sweeping environment") \
+OPTION( sweepthresh,       5,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( sweepvars,       256,  0,2e9,1,0,1, "environment variables") \
 OPTION( target,            1,  0,  2,0,0,1, "target phases (1=stable only)") \
 OPTION( terminateint,     10,  0,1e4,0,0,1, "termination check interval") \
 OPTION( ternary,           1,  0,  1,0,1,1, "hyper ternary resolution") \
+OPTION( ternaryeffort,     8,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( ternarymaxadd,   1e3,  0,1e4,1,0,1, "max clauses added in percent") \
-OPTION( ternarymaxeff,   2e7,  0,2e9,1,0,1, "ternary maximum efficiency") \
-OPTION( ternarymineff,     0,  0,2e9,1,0,1, "minimum ternary efficiency") \
 OPTION( ternaryocclim,   1e2,  1,2e9,2,0,1, "ternary occurrence limit") \
-OPTION( ternaryreleff,    20,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( ternaryrounds,     2,  1, 16,1,0,1, "maximum ternary rounds") \
+OPTION( ternarythresh,     6,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( tier1limit,       50,  0,100,0,0,1, "limit of tier1 usage in percentage") \
 OPTION( tier2limit,       90,  0,100,0,0,1, "limit of tier2 usage in percentage") \
 OPTION( transred,          1,  0,  1,0,1,1, "transitive reduction of BIG") \
+OPTION( transredeffort,  1e2,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( transredmaxeff,  1e8,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transredmineff,    0,  0,2e9,1,0,1, "minimum efficiency") \
-OPTION( transredreleff,  1e2,  1,1e5,1,0,1, "relative efficiency per mille") \
 QUTOPT( verbose,           0,  0,  3,0,0,0, "more verbose messages") \
 OPTION( veripb,            0,  0,  4,0,0,1, "odd=checkdeletions, > 2=drat") \
 OPTION( vivify,            1,  0,  1,0,1,1, "vivification") \
 OPTION( vivifycalctier,    0,  0,  1,0,0,1, "recalculate tier limits") \
 OPTION( vivifydemote,      0,  0,  1,0,1,1, "demote irredundant or delete directly") \
-OPTION( vivifyeff,        50,  0,1e5,1,0,1, "overall efficiency per mille") \
+OPTION( vivifyeffort,     50,  0,1e5,1,0,1, "overall efficiency per mille") \
 OPTION( vivifyflush,       1,  0,  1,1,0,1,  "flush subsumed before vivification rounds") \
 OPTION( vivifyinst,        1,  0,  1,0,0,1, "instantiate last literal when vivify") \
-OPTION( vivifyint,       1e4,  1,2e9,0,0,1, "vivify interval") \
 OPTION( vivifyirred,       1,  0,  1,0,1,1, "vivification irred") \
 OPTION( vivifyirredeff,    3,  1,100,1,0,1, "irredundant efficiency per mille") \
-OPTION( vivifymaxeff,    2e7,  0,2e9,1,0,1, "maximum efficiency") \
-OPTION( vivifymineff,      0,  0,2e9,1,0,1, "minimum efficiency") \
 OPTION( vivifyonce,        0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \
 OPTION( vivifyretry,       0,  0,  5,0,1,1, "re-vivify clause if vivify was successful") \
+OPTION( vivifythresh,     29,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( vivifytier1,       1,  0,  1,0,1,1, "vivification tier1") \
-OPTION( vivifytier1eff,    3,  0,100,1,0,1, "relative tier1 effort") \
+OPTION( vivifytier1eff,    4,  0,100,1,0,1, "relative tier1 effort") \
 OPTION( vivifytier2,       1,  0,  1,0,1,1, "vivification tier2") \
-OPTION( vivifytier2eff,    3,  1,100,1,0,1, "relative tier2 effort") \
+OPTION( vivifytier2eff,    2,  1,100,1,0,1, "relative tier2 effort") \
 OPTION( vivifytier3,       1,  0,  1,0,1,1, "vivification tier3") \
 OPTION( vivifytier3eff,    1,  1,100,1,0,1, "relative tier3 effort") \
 OPTION( walk,              1,  0,  1,0,0,1, "enable random walks") \
+OPTION( walkeffort,       20,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( walkmineff,        0,  0,1e7,1,0,1, "minimum efficiency") \
 OPTION( walknonstable,     1,  0,  1,0,0,1, "walk in non-stabilizing phase") \
 OPTION( walkredundant,     0,  0,  1,0,0,1, "walk redundant clauses too") \
-OPTION( walkreleff,       20,  1,1e5,1,0,1, "relative efficiency per mille") \
 
 // Note, keep an empty line right before this line because of the last '\'!
 // Also keep those single spaces after 'OPTION(' for proper sorting.
