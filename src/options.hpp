@@ -81,8 +81,8 @@ OPTION( elimequivs,        1,  0,  1,0,0,1, "find equivalence gates") \
 OPTION( elimint,         2e3,  1,2e9,0,0,1, "elimination interval") \
 OPTION( elimites,          1,  0,  1,0,0,1, "find if-then-else gates") \
 OPTION( elimlimited,       1,  0,  1,0,0,1, "limit resolutions") \
-OPTION( elimmaxeff,       2e9,  0,2e9,1,0,1, "maximum elimination efficiency") \
-OPTION( elimmineff,      1e6,  0,2e9,1,0,1, "minimum elimination efficiency") \
+OPTION( elimmaxeff,      2e9,  0,2e9,1,0,1, "maximum elimination efficiency") \
+OPTION( elimmineff,      1e7,  0,2e9,1,0,1, "minimum elimination efficiency") \
 OPTION( elimocclim,      1e2,  0,2e9,2,0,1, "occurrence limit") \
 OPTION( elimprod,          1,  0,1e4,0,0,1, "elim score product weight") \
 OPTION( elimrounds,        2,  1,512,1,0,1, "usual number of rounds") \
