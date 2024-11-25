@@ -68,13 +68,11 @@ static const char *USAGE =
 "To read from '<stdin>' use '-' as '<input>' and also '-' instead of\n"
 "'<output>' to write to '<stdout>'.\n"
 "\n"
-#ifdef LOGGING
 "As the library is compiled with logging support ('-DLOGGING')\n"
 "one can force to add the 'set log 1' call to the trace with\n"
 "\n"
 "  --log | -l        force low-level logging for detailed debugging\n"
 "\n"
-#endif
 "Implicitly add 'dump' and 'stats' calls to traces:\n"
 "\n"
 "  --dump  | -d      force dumping the CNF before every 'solve'\n"
@@ -972,9 +970,7 @@ class Mobical : public Handler {
   DoNot donot;
   Force force;
   bool verbose = false;
-#ifdef LOGGING
   bool add_set_log_to_true = false;
-#endif
   bool add_dump_before_solve = false;
   bool add_stats_after_solve = false;
   bool add_plain_after_options = false;
@@ -2287,6 +2283,9 @@ void Trace::generate_options (Random &random, Size size) {
 #ifdef LOGGING
   if (mobical.add_set_log_to_true)
     push_back (new SetCall ("log", 1));
+#else
+  if (mobical.add_set_log_to_true)
+    mobical.warning("ignoring log option");
 #endif
 }
 
@@ -4037,7 +4036,7 @@ void Reader::parse () {
       if (enforce && !Solver::is_valid_option ((first))) {
 #ifndef LOGGING
         if (!strcmp (first, "log"))
-          mobical.warning ("non-existing option name 'log' "
+          mobical.warning ("ignoring non-existing option name 'log' "
                            "(compiled without '-DLOGGING')");
         else
 #endif
@@ -4621,12 +4620,7 @@ int Mobical::main (int argc, char **argv) {
     else if (!strcmp (argv[i], "--big"))
       force.size = BIG;
     else if (!strcmp (argv[i], "-l") || !strcmp (argv[i], "--log")) {
-#ifdef LOGGING
       add_set_log_to_true = true;
-#else
-      die ("can not force logging with '%s' (compiled without '-DLOGGING')",
-           argv[i]);
-#endif
     } else if (!strcmp (argv[i], "-d") || !strcmp (argv[i], "--dump")) {
       add_dump_before_solve = true;
     } else if (!strcmp (argv[i], "-s") || !strcmp (argv[i], "--stats")) {
