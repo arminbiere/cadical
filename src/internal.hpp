@@ -935,7 +935,7 @@ struct Internal {
   //
   bool vivifying ();
   void demote_clause (Clause *);
-  void flush_vivification_schedule (std::vector<Clause*>&);
+  void flush_vivification_schedule (std::vector<Clause*>&, int64_t &);
   void vivify_increment_stats (const Vivifier &vivifier);
   void vivify_subsume_clause (Clause *subsuming, Clause *subsumed);
   void compute_tier_limits (Vivifier &);

@@ -807,8 +807,8 @@ bool Internal::probe_round () {
     delta = opts.probemineff;
   if (delta > opts.probemaxeff)
     delta = opts.probemaxeff;
-  if (delta < (int64_t) 2l * active ())
-    delta = 2l * active ();
+  // if (delta < (int64_t) 2l * active ())
+  //  delta = 2l * active ();
 
   PHASE ("probe-round", stats.probingrounds,
          "probing limit of %" PRId64 " propagations ", delta);

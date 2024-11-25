@@ -454,8 +454,9 @@ struct vivify_flush_smaller {
   }
 };
 
-void Internal::flush_vivification_schedule (std::vector<Clause*> &schedule) {
+void Internal::flush_vivification_schedule (std::vector<Clause*> &schedule, int64_t &ticks) {
 
+  ticks += 1 + 3 * cache_lines (schedule.size (), sizeof (Clause *));
   stable_sort (schedule.begin (), schedule.end (), vivify_flush_smaller ());
 
   const auto end = schedule.end ();
@@ -464,6 +465,7 @@ void Internal::flush_vivification_schedule (std::vector<Clause*> &schedule) {
   Clause *prev = 0;
   int64_t subsumed = 0;
   for (; i != end; i++) {
+    ticks ++;
     Clause *c = *j++ = *i;
     if (!prev || c->size < prev->size) {
       prev = c;
@@ -1415,7 +1417,7 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
     // also includes flushing syntactically identical clauses.
     //
     if (opts.vivifyflush)
-      flush_vivification_schedule (sched);
+      flush_vivification_schedule (sched, ticks);
 
   }
   ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
