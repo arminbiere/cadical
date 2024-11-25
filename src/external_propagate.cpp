@@ -1144,7 +1144,7 @@ void Internal::get_all_fixed_literals (std::vector<int>& fixed_lits) {
   int ilit;
   for(int eidx = 1; eidx < e2i_size; eidx++) {
     ilit = external->e2i[eidx];
-    if (ilit) {
+    if (ilit && !external->ervars[eidx]) {
       Flags &f = flags (ilit);
       if (f.status == Flags::FIXED) {
         fixed_lits.push_back(vals[abs(ilit)]*eidx);

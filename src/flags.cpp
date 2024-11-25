@@ -6,7 +6,9 @@ void Internal::mark_fixed (int lit) {
   if (external->fixed_listener) {
     int elit = externalize (lit);
     assert (elit);
-    external->fixed_listener->notify_fixed_assignment (elit);
+    const int eidx = abs (elit);
+    if (!external->ervars[eidx])
+      external->fixed_listener->notify_fixed_assignment (elit);
   }
   Flags &f = flags (lit);
   assert (f.status == Flags::ACTIVE);
