@@ -198,7 +198,7 @@ OPTION( terminateint,     10,  0,1e4,0,0,1, "termination check interval") \
 OPTION( ternary,           1,  0,  1,0,1,1, "hyper ternary resolution") \
 OPTION( ternarymaxadd,   1e3,  0,1e4,1,0,1, "max clauses added in percent") \
 OPTION( ternarymaxeff,   2e7,  0,2e9,1,0,1, "ternary maximum efficiency") \
-OPTION( ternarymineff,     0,  1,2e9,1,0,1, "minimum ternary efficiency") \
+OPTION( ternarymineff,     0,  0,2e9,1,0,1, "minimum ternary efficiency") \
 OPTION( ternaryocclim,   1e2,  1,2e9,2,0,1, "ternary occurrence limit") \
 OPTION( ternaryreleff,    20,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( ternaryrounds,     2,  1, 16,1,0,1, "maximum ternary rounds") \
