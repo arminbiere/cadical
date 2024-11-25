@@ -1,3 +1,4 @@
+
 /*------------------------------------------------------------------------*/
 /* Copyright (C) 2018-2021 Armin Biere, Johannes Kepler University Linz   */
 /* Copyright (C) 2020-2021 Mathias Fleury, Johannes Kepler University Linz*/
@@ -2234,6 +2235,11 @@ void Trace::generate_options (Random &random, Size size) {
     if (o.lo == o.hi)
       continue;
 
+    // We ignore logging here and set it below to make mobical deterministic
+    if (!strcmp (o.name, "log"))
+      continue;
+    if (!strcmp (o.name, "logsort"))
+      continue;
     // We keep choosing the value for 'simplify' and 'walk' out of the loop
     // (see the arguments described above).
     //
@@ -2241,10 +2247,6 @@ void Trace::generate_options (Random &random, Size size) {
       continue;
     if (!strcmp (o.name, "walk"))
       continue;
-    /*
-    if (!strcmp (o.name, "lrat"))
-      continue;
-    */
 
     // Probability to change an option is 'fraction'.
     //
@@ -2280,6 +2282,28 @@ void Trace::generate_options (Random &random, Size size) {
     push_back (new SetCall (o.name, val));
   }
 
+  // Now setting the option for logging. Even if we do not generate the log call, we need the side
+  // effect of generate_bool ()
+  auto log_option = std::find_if (Options::begin (), Options::end (), [] (const Option o) {return strcmp(o.name, "log");});
+  const bool should_log = random.generate_bool ();
+  auto logsort_option = std::find_if (Options::begin (), Options::end (), [] (const Option o) {return strcmp(o.name, "logsort");});
+  const bool should_logsort = random.generate_bool ();
+
+#ifdef LOGGING
+  // sanity check
+  assert (log_option != Options::end ());
+  assert (logsort_option != Options::end ());
+#endif
+  if (log_option != Options::end () && should_log) { // only if the option was found
+#ifdef LOGGING
+    push_back (new SetCall (log_option->name, should_log));
+#endif
+  }
+  if (logsort_option != Options::end () && should_logsort) {
+#ifdef LOGGING
+    push_back (new SetCall (logsort_option->name, should_logsort));
+#endif
+  }
 #ifdef LOGGING
   if (mobical.add_set_log_to_true)
     push_back (new SetCall ("log", 1));

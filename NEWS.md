@@ -19,6 +19,9 @@ Version 2.1.1
 - Slight memory usage reduction expected thanks to not allocating some
   internal array only used for proof and external propagator.
 
+- Mobical should now be deterministic whether compiled with or without
+  logging.
+
 Version 2.1.0
 -------------
 
