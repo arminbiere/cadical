@@ -886,11 +886,14 @@ void Internal::notify_assignments () {
 
     int elit = externalize (ilit); // TODO: double-check tainting
     assert (elit);
+    if (external->ervars[abs (elit)])
+      continue;
     // Fixed variables might get mapped (during compact) to another
     // non-observed but fixed variable.
     // This happens on root level, so notification about their assignment is
     // already done.
-    assert (external->observed (elit) || fixed(ilit));
+    assert (external->observed (elit) ||
+      (fixed(ilit) && !external->ervars[abs (elit)]));
     assigned.push_back(elit);
   }
 
