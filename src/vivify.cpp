@@ -66,10 +66,13 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming, Clause *subsumed
   assert (real_size_subsuming <= real_size_subsumed);
 #endif
   LOG (subsumed, "subsumed");
-  if (subsumed->redundant)
+  if (subsumed->redundant) {
     stats.subred++;
-  else
+    ++stats.vivifysubred;
+  } else {
     stats.subirr++;
+    ++stats.vivifysubirr;
+  }
   if (subsumed->redundant || !subsuming->redundant) {
     mark_garbage (subsumed);
     return;
@@ -1151,10 +1154,6 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     vivify_subsume_clause (subsuming, c);
     res = false;
     // stats.vivifysubs++;  // already done in vivify_subsume_clause
-    if (c->redundant)
-      ++stats.vivifysubred;
-    else
-      ++stats.vivifysubirr;
   }
   else if (vivify_shrinkable (sorted, conflict)) {
     vivify_increment_stats (vivifier);
