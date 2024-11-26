@@ -32,7 +32,8 @@ void Internal::force_lrat () {
   lrat = true;
 }
 
-void Internal::connect_proof_tracer (Tracer *tracer, bool antecedents, bool finalize_clauses) {
+void Internal::connect_proof_tracer (Tracer *tracer, bool antecedents,
+                                     bool finalize_clauses) {
   new_proof_on_demand ();
   if (antecedents)
     force_lrat ();
@@ -43,7 +44,8 @@ void Internal::connect_proof_tracer (Tracer *tracer, bool antecedents, bool fina
 }
 
 void Internal::connect_proof_tracer (InternalTracer *tracer,
-                                     bool antecedents, bool finalize_clauses) {
+                                     bool antecedents,
+                                     bool finalize_clauses) {
   new_proof_on_demand ();
   if (antecedents)
     force_lrat ();
@@ -54,7 +56,8 @@ void Internal::connect_proof_tracer (InternalTracer *tracer,
   tracers.push_back (tracer);
 }
 
-void Internal::connect_proof_tracer (StatTracer *tracer, bool antecedents, bool finalize_clauses) {
+void Internal::connect_proof_tracer (StatTracer *tracer, bool antecedents,
+                                     bool finalize_clauses) {
   new_proof_on_demand ();
   if (antecedents)
     force_lrat ();
@@ -65,7 +68,8 @@ void Internal::connect_proof_tracer (StatTracer *tracer, bool antecedents, bool 
   stat_tracers.push_back (tracer);
 }
 
-void Internal::connect_proof_tracer (FileTracer *tracer, bool antecedents, bool finalize_clauses) {
+void Internal::connect_proof_tracer (FileTracer *tracer, bool antecedents,
+                                     bool finalize_clauses) {
   new_proof_on_demand ();
   if (antecedents)
     force_lrat ();
@@ -155,7 +159,8 @@ void Internal::check () {
   new_proof_on_demand ();
   if (opts.checkproof > 1) {
     StatTracer *lratchecker = new LratChecker (this);
-    DeferDeletePtr<LratChecker> delete_lratchecker ((LratChecker *) lratchecker);
+    DeferDeletePtr<LratChecker> delete_lratchecker (
+        (LratChecker *) lratchecker);
     LOG ("PROOF connecting LRAT proof checker");
     force_lrat ();
     frat = true;
@@ -342,7 +347,7 @@ void Proof::add_assumption_clause (uint64_t id, int lit,
 
 void Proof::delete_clause (Clause *c) {
   LOG (c, "PROOF deleting from proof");
-  clause.clear(); // Can be non-empty if an allocation fails during adding.
+  clause.clear (); // Can be non-empty if an allocation fails during adding.
   add_literals (c);
   clause_id = c->id;
   redundant = c->redundant;
@@ -641,6 +646,13 @@ void Proof::conclude_sat (const vector<int> &model) {
   LOG (clause, "PROOF conclude sat");
   for (auto &tracer : tracers) {
     tracer->conclude_sat (model);
+  }
+}
+
+void Proof::conclude_unknown (const vector<int> &trail) {
+  LOG (clause, "PROOF conclude unknown");
+  for (auto &tracer : tracers) {
+    tracer->conclude_unknown (trail);
   }
 }
 

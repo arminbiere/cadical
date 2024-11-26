@@ -418,6 +418,25 @@ void LidrupTracer::lidrup_conclude_sat (const vector<int> &model) {
   flush_if_piping ();
 }
 
+void LidrupTracer::lidrup_conclude_unknown (const vector<int> &trail) {
+  lidrup_batch_weaken_restore_and_delete ();
+  if (binary)
+    file->put ('e');
+  else
+    file->put ("e ");
+  for (auto &lit : trail) {
+    if (binary)
+      put_binary_lit (lit);
+    else
+      file->put (lit), file->put (' ');
+  }
+  if (binary)
+    put_binary_zero ();
+  else
+    file->put ("0\n");
+  flush_if_piping ();
+}
+
 void LidrupTracer::lidrup_solve_query () {
   lidrup_batch_weaken_restore_and_delete ();
   if (binary)
@@ -549,6 +568,13 @@ void LidrupTracer::conclude_sat (const vector<int> &model) {
     return;
   LOG (model, "LIDRUP TRACER tracing conclusion of model");
   lidrup_conclude_sat (model);
+}
+
+void LidrupTracer::conclude_unknown (const vector<int> &entrailed) {
+  if (file->closed ())
+    return;
+  LOG (entrailed, "LIDRUP TRACER tracing conclusion of UNK");
+  lidrup_conclude_unknown (entrailed);
 }
 
 void LidrupTracer::solve_query () {

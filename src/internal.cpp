@@ -11,18 +11,18 @@ Internal::Internal ()
       protected_reasons (false), force_saved_phase (false),
       searching_lucky_phases (false), stable (false), reported (false),
       external_prop (false), did_external_prop (false),
-      external_prop_is_lazy (true), forced_backt_allowed (false), 
-      private_steps (false), rephased (0), vsize (0), max_var (0), 
-      clause_id (0), original_id (0), reserved_ids (0), 
-      conflict_id (0), concluded (false), lrat (false), frat (false), level (0), vals (0),
+      external_prop_is_lazy (true), forced_backt_allowed (false),
+      private_steps (false), rephased (0), vsize (0), max_var (0),
+      clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
+      concluded (false), lrat (false), frat (false), level (0), vals (0),
       score_inc (1.0), scores (this), conflict (0), ignore (0),
       external_reason (&external_reason_clause), newest_clause (0),
-      force_no_backtrack (false), from_propagator (false), ext_clause_forgettable (false),
-      tainted_literal (0), notified (0), probe_reason (0), propagated (0),
-      propagated2 (0), propergated (0), best_assigned (0),
-      target_assigned (0), no_conflict_until (0), unsat_constraint (false),
-      marked_failed (true), num_assigned (0), proof (0), lratbuilder (0),
-      opts (this),
+      force_no_backtrack (false), from_propagator (false),
+      ext_clause_forgettable (false), tainted_literal (0), notified (0),
+      probe_reason (0), propagated (0), propagated2 (0), propergated (0),
+      best_assigned (0), target_assigned (0), no_conflict_until (0),
+      unsat_constraint (false), marked_failed (true), num_assigned (0),
+      proof (0), lratbuilder (0), opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
@@ -50,7 +50,8 @@ Internal::Internal ()
 Internal::~Internal () {
   // If a memory exception ocurred a profile might still be active.
 #define PROFILE(NAME, LEVEL) \
-  if (PROFILE_ACTIVE(NAME)) STOP(NAME);
+  if (PROFILE_ACTIVE (NAME)) \
+    STOP (NAME);
   PROFILES
 #undef PROFILE
   delete[](char *) dummy_binary;
@@ -130,7 +131,7 @@ template <class T> static void enlarge_zero (vector<T> &v, size_t N) {
 
 void Internal::enlarge (int new_max_var) {
   // New variables can be created that can invoke enlarge anytime (via calls
-  // during ipasir-up call-backs), thus assuming (!level) is not correct 
+  // during ipasir-up call-backs), thus assuming (!level) is not correct
   size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var)
     new_vsize *= 2;
@@ -164,7 +165,7 @@ void Internal::init_vars (int new_max_var) {
   if (new_max_var <= max_var)
     return;
   // New variables can be created that can invoke enlarge anytime (via calls
-  // during ipasir-up call-backs), thus assuming (!level) is not correct 
+  // during ipasir-up call-backs), thus assuming (!level) is not correct
   LOG ("initializing %d internal variables from %d to %d",
        new_max_var - max_var, max_var + 1, new_max_var);
   if ((size_t) new_max_var >= vsize)
@@ -204,21 +205,22 @@ void Internal::add_original_lit (int lit) {
       proof->add_external_original_clause (id, false, external->eclause);
     }
     if (internal->opts.check &&
-      (internal->opts.checkwitness || internal->opts.checkfailed)) {
+        (internal->opts.checkwitness || internal->opts.checkfailed)) {
       bool forgettable = from_propagator && ext_clause_forgettable;
       if (forgettable) {
         assert (!original.size () || !external->eclause.empty ());
 
         // First integer is the presence-flag (even if the clause is empty)
         external->forgettable_original[id] = {1};
-       
-        for (auto const& elit : external->eclause)
-          external->forgettable_original[id].push_back(elit);
-        
-        LOG (external->eclause, "clause added to external forgettable map:");
+
+        for (auto const &elit : external->eclause)
+          external->forgettable_original[id].push_back (elit);
+
+        LOG (external->eclause,
+             "clause added to external forgettable map:");
       }
     }
-    
+
     add_new_original_clause (id);
     original.clear ();
   }
@@ -325,12 +327,9 @@ int Internal::cdcl_loop_with_inprocessing () {
   return res;
 }
 
-
-
-int Internal::propagate_assumptions (std::vector<int>& implicants) {
-  // TODO: extend proof format for propagate queries
-  // if (proof)
-  //   proof->solve_query ();
+int Internal::propagate_assumptions () {
+  if (proof)
+    proof->solve_query ();
   if (opts.ilb) {
     if (opts.ilbassumptions)
       sort_and_reuse_assumptions ();
@@ -343,15 +342,18 @@ int Internal::propagate_assumptions (std::vector<int>& implicants) {
     }
   }
   init_search_limits ();
-  init_report_limits();
+  init_report_limits ();
 
   int res = already_solved (); // root-level propagation is done here
-  
+
   size_t current_level = level;
   if (!res) {
-    restore_clauses (); // restore clauses tainted by the assumptions -> needed to recognize UNSAT
-    implicants.clear();
-    while (!res && (current_level < assumptions.size () || (current_level == assumptions.size () && constraint.size ()))) {
+    restore_clauses (); // restore clauses tainted by the assumptions ->
+                        // needed to recognize UNSAT
+
+    while (!res &&
+           (current_level < assumptions.size () ||
+            (current_level == assumptions.size () && constraint.size ()))) {
       if (unsat)
         res = 20;
       else if (unsat_constraint)
@@ -367,21 +369,23 @@ int Internal::propagate_assumptions (std::vector<int>& implicants) {
         break;
       else
         res = decide ();
-    current_level = level;
+      current_level = level;
     }
   }
-  if (!res && satisfied ()) res = 10;
-
-  if (res != 20) {
-    for (size_t i = 0; i < trail.size(); i++)
-      implicants.push_back(trail[i]);
-  }
+  if (!res && satisfied ())
+    res = 10;
 
   finalize (res);
   reset_solving ();
   report_solving (res);
-  
+
   return res;
+}
+
+void Internal::get_entrailed_literals (std::vector<int> &entrailed) {
+
+  for (size_t i = 0; i < trail.size (); i++)
+    entrailed.push_back (trail[i]);
 }
 
 /*------------------------------------------------------------------------*/
@@ -697,8 +701,9 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
   force_saved_phase = false;
   if (external_prop) {
     private_steps = false;
-    LOG("external notifications are turned back on.");
-    if (!level) notify_assignments (); // In case fixed assignments were found.
+    LOG ("external notifications are turned back on.");
+    if (!level)
+      notify_assignments (); // In case fixed assignments were found.
     else {
       renotify_trail_after_local_search ();
     }
@@ -812,7 +817,7 @@ int Internal::solve (bool preprocess_only) {
       assert (control.size () > 1);
       stats.literalsreused += num_assigned - control[1].trail;
     }
-    if (external->propagator) 
+    if (external->propagator)
       renotify_trail_after_ilb ();
   }
   if (preprocess_only)
@@ -942,7 +947,7 @@ int Internal::lookahead () {
   STOP (lookahead);
   if (external_prop) {
     private_steps = false;
-    LOG("external notifications are turned back on.");
+    LOG ("external notifications are turned back on.");
     notify_assignments (); // In case fixed assignments were found.
   }
   return res;
@@ -951,7 +956,8 @@ int Internal::lookahead () {
 /*------------------------------------------------------------------------*/
 
 void Internal::finalize (int res) {
-  if (!proof) return;
+  if (!proof)
+    return;
   LOG ("finalizing");
   // finalize external units
   if (frat) {
@@ -990,7 +996,7 @@ void Internal::finalize (int res) {
     for (const auto &c : clauses)
       if (!c->garbage || c->size == 2)
         proof->finalize_clause (c);
-  
+
     // finalize conflict and proof
     if (conflict_id) {
       proof->finalize_clause (conflict_id, {});
@@ -1001,6 +1007,8 @@ void Internal::finalize (int res) {
     external->conclude_sat ();
   else if (res == 20)
     conclude_unsat ();
+  else if (!res)
+    external->conclude_unknown ();
 }
 
 /*------------------------------------------------------------------------*/

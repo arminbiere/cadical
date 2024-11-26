@@ -95,6 +95,12 @@ void require_solver_pointer_to_be_non_zero (const void *ptr,
              "invalid literal '%d'", (int) (LIT)); \
   } while (0)
 
+#define REQUIRE_STEADY_STATE() \
+  do { \
+    REQUIRE_INITIALIZED (); \
+    REQUIRE (this->state () & STEADY, "solver is not in steady state"); \
+  } while (0)
+
 /*------------------------------------------------------------------------*/
 #else // NCONTRACTS
 /*------------------------------------------------------------------------*/
@@ -115,6 +121,9 @@ void require_solver_pointer_to_be_non_zero (const void *ptr,
   do { \
   } while (0)
 #define REQUIRE_VALID_LIT(...) \
+  do { \
+  } while (0)
+#define REQUIRE_STEADY_STATE() \
   do { \
   } while (0)
 

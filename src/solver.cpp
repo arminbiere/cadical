@@ -56,7 +56,8 @@ void Solver::transition_to_steady_state () {
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
-  }
+  } else if (state () == STEADY)
+    external->reset_concluded ();
   if (state () != STEADY)
     STATE (STEADY);
 }
@@ -313,9 +314,7 @@ static bool tracing_api_calls_through_environment_variable_method;
 #endif
 /*------------------------------------------------------------------------*/
 
-
 static bool tracing_nb_lidrup_env_var_method = false;
-
 
 Solver::Solver () {
 
@@ -693,12 +692,13 @@ void Solver::reset_constraint () {
 
 /*------------------------------------------------------------------------*/
 
-int Solver::propagate (std::vector<int>& implicants) {
+int Solver::propagate () {
   TRACE ("propagate_assumptions");
   REQUIRE_VALID_STATE ();
   transition_to_steady_state ();
-  const int res = external->propagate_assumptions (implicants);
-  if (tracing_nb_lidrup_env_var_method) flush_proof_trace(true); 
+  const int res = external->propagate_assumptions ();
+  if (tracing_nb_lidrup_env_var_method)
+    flush_proof_trace (true);
   LOG_API_CALL_RETURNS ("propagate_assumptions", res);
   if (res == 10)
     STATE (SATISFIED);
@@ -707,6 +707,16 @@ int Solver::propagate (std::vector<int>& implicants) {
   else
     STATE (STEADY);
   return res;
+}
+
+void Solver::get_entrailed_literals (std::vector<int> &entrailed) {
+  TRACE ("get_entrailed_literals");
+  REQUIRE_STEADY_STATE ();
+  external->conclude_unknown ();
+  external->get_entrailed_literals (entrailed);
+  if (tracing_nb_lidrup_env_var_method)
+    flush_proof_trace (true);
+  LOG_API_CALL_RETURNS ("get_entrailed_literals", (int) entrailed.size ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -759,7 +769,8 @@ int Solver::solve () {
   REQUIRE_READY_STATE ();
   const int res = call_external_solve_and_check_results (false);
   LOG_API_CALL_RETURNS ("solve", res);
-  if (tracing_nb_lidrup_env_var_method) flush_proof_trace(true); 
+  if (tracing_nb_lidrup_env_var_method)
+    flush_proof_trace (true);
   return res;
 }
 
@@ -932,23 +943,26 @@ void Solver::disconnect_learner () {
 
 /*===== IPASIR END =======================================================*/
 
-void Solver::connect_fixed_listener (FixedAssignmentListener *fixed_listener) {
+void Solver::connect_fixed_listener (
+    FixedAssignmentListener *fixed_listener) {
   LOG_API_CALL_BEGIN ("connect_fixed_listener");
   REQUIRE_VALID_STATE ();
   REQUIRE (fixed_listener, "can not connect zero fixed listener");
 
 #ifdef LOGGING
   if (external->fixed_listener)
-    LOG ("connecting new listener of fixed assignments (disconnecting previous one)");
+    LOG ("connecting new listener of fixed assignments (disconnecting "
+         "previous one)");
   else
     LOG ("connecting new listener of fixed assigments (no previous one)");
-#endif  
+#endif
   if (external->fixed_listener)
     disconnect_fixed_listener ();
   external->fixed_listener = fixed_listener;
-  // Listeners are treated as real-time listeners, thus previously found fixed
-  // assignments are not sent out (would be rather expensive to recover it
-  // retrospect, see external_propagate.cpp/get_fixed_literals () function).
+  // Listeners are treated as real-time listeners, thus previously found
+  // fixed assignments are not sent out (would be rather expensive to
+  // recover it retrospect, see external_propagate.cpp/get_fixed_literals ()
+  // function).
   LOG_API_CALL_END ("connect_fixed_listener");
 }
 
@@ -959,7 +973,8 @@ void Solver::disconnect_fixed_listener () {
   if (external->fixed_listener)
     LOG ("disconnecting previous listener of fixed assignments");
   else
-    LOG ("ignoring to disconnect listener of fixed assignments (no previous one)");
+    LOG ("ignoring to disconnect listener of fixed assignments (no "
+         "previous one)");
 #endif
   external->fixed_listener = 0;
   LOG_API_CALL_END ("disconnect_fixed_listener");
@@ -1137,7 +1152,8 @@ void Solver::close_proof_trace (bool print_statistics_unless_quiet) {
 
 /*------------------------------------------------------------------------*/
 
-void Solver::connect_proof_tracer (Tracer *tracer, bool antecedents, bool finalize_clauses) {
+void Solver::connect_proof_tracer (Tracer *tracer, bool antecedents,
+                                   bool finalize_clauses) {
   LOG_API_CALL_BEGIN ("connect proof tracer");
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
@@ -1147,8 +1163,8 @@ void Solver::connect_proof_tracer (Tracer *tracer, bool antecedents, bool finali
   LOG_API_CALL_END ("connect proof tracer");
 }
 
-void Solver::connect_proof_tracer (InternalTracer *tracer,
-                                   bool antecedents, bool finalize_clauses) {
+void Solver::connect_proof_tracer (InternalTracer *tracer, bool antecedents,
+                                   bool finalize_clauses) {
   LOG_API_CALL_BEGIN ("connect proof tracer");
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
@@ -1158,7 +1174,8 @@ void Solver::connect_proof_tracer (InternalTracer *tracer,
   LOG_API_CALL_END ("connect proof tracer");
 }
 
-void Solver::connect_proof_tracer (StatTracer *tracer, bool antecedents, bool finalize_clauses) {
+void Solver::connect_proof_tracer (StatTracer *tracer, bool antecedents,
+                                   bool finalize_clauses) {
   LOG_API_CALL_BEGIN ("connect proof tracer with stats");
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
@@ -1168,7 +1185,8 @@ void Solver::connect_proof_tracer (StatTracer *tracer, bool antecedents, bool fi
   LOG_API_CALL_END ("connect proof tracer with stats");
 }
 
-void Solver::connect_proof_tracer (FileTracer *tracer, bool antecedents, bool finalize_clauses) {
+void Solver::connect_proof_tracer (FileTracer *tracer, bool antecedents,
+                                   bool finalize_clauses) {
   LOG_API_CALL_BEGIN ("connect proof tracer with file");
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
@@ -1210,13 +1228,17 @@ bool Solver::disconnect_proof_tracer (FileTracer *tracer) {
 void Solver::conclude () {
   TRACE ("conclude");
   REQUIRE_VALID_STATE ();
-  REQUIRE (state () == UNSATISFIED || state () == SATISFIED,
-           "can only conclude in satisfied or unsatisfied state");
+  REQUIRE (state () == UNSATISFIED || state () == SATISFIED ||
+               state () == STEADY,
+           "can only conclude in satisfied, unsatisfied or STEADY state");
   if (state () == UNSATISFIED)
     internal->conclude_unsat ();
   else if (state () == SATISFIED)
     external->conclude_sat ();
-  assert (state () == UNSATISFIED || state () == SATISFIED);
+  else if (state () == STEADY)
+    external->conclude_unknown ();
+  assert (state () == UNSATISFIED || state () == SATISFIED ||
+          state () == STEADY);
   LOG_API_CALL_END ("conclude");
 }
 

@@ -129,6 +129,11 @@ public:
   // will give the complete model as a vector.
   //
   virtual void conclude_sat (const std::vector<int> &) {}
+
+  // Notify the observer that conclude unknown was requested.
+  // will give the current trail as a vector.
+  //
+  virtual void conclude_unknown (const std::vector<int> &) {}
 };
 
 /*--------------------------------------------------------------------------*/

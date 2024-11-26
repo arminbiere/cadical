@@ -69,6 +69,7 @@ class LidrupTracer : public FileTracer {
   void lidrup_conclude_and_delete (const vector<uint64_t> &conclusion);
   void lidrup_report_status (int status);
   void lidrup_conclude_sat (const vector<int> &model);
+  void lidrup_conclude_unknown (const vector<int> &trail);
   void lidrup_solve_query ();
   void lidrup_batch_weaken_restore_and_delete ();
 
@@ -88,6 +89,7 @@ public:
   void report_status (int, uint64_t) override;
   void conclude_sat (const vector<int> &) override;
   void conclude_unsat (ConclusionType, const vector<uint64_t> &) override;
+  void conclude_unknown (const vector<int> &) override;
 
   void solve_query () override;
   void add_assumption (int) override;

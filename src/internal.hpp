@@ -174,16 +174,16 @@ struct Internal {
   bool did_external_prop;     // true if ext. propagation happened
   bool external_prop_is_lazy; // true if the external propagator is lazy
   bool forced_backt_allowed;  // external propagator can force backtracking
-  bool private_steps;         // no notification of ext. prop during these steps
-  char rephased;              // last type of resetting phases
-  Reluctant reluctant;        // restart counter in stable mode
-  size_t vsize;               // actually allocated variable data size
-  int max_var;                // internal maximum variable index
-  uint64_t clause_id;         // last used id for clauses
-  uint64_t original_id;       // ids for original clauses to produce LRAT
-  uint64_t reserved_ids;      // number of reserved ids for original clauses
-  uint64_t conflict_id;       // store conflict id for finalize (frat)
-  bool concluded;             // keeps track of conclude
+  bool private_steps;    // no notification of ext. prop during these steps
+  char rephased;         // last type of resetting phases
+  Reluctant reluctant;   // restart counter in stable mode
+  size_t vsize;          // actually allocated variable data size
+  int max_var;           // internal maximum variable index
+  uint64_t clause_id;    // last used id for clauses
+  uint64_t original_id;  // ids for original clauses to produce LRAT
+  uint64_t reserved_ids; // number of reserved ids for original clauses
+  uint64_t conflict_id;  // store conflict id for finalize (frat)
+  bool concluded;        // keeps track of conclude
   vector<uint64_t> conclusion;   // store ids of conclusion clauses
   vector<uint64_t> unit_clauses; // keep track of unit_clauses (LRAT/FRAT)
   vector<uint64_t> lrat_chain;   // create LRAT in solver: option lratdirect
@@ -687,9 +687,9 @@ struct Internal {
   void connect_propagator ();
   void mark_garbage_external_forgettable (int64_t id);
   bool is_external_forgettable (int64_t id);
-#ifndef NDEBUG  
-  bool get_merged_literals (std::vector<int>&);
-  void get_all_fixed_literals (std::vector<int>&);
+#ifndef NDEBUG
+  bool get_merged_literals (std::vector<int> &);
+  void get_all_fixed_literals (std::vector<int> &);
 #endif
 
   // Use last learned clause to subsume some more.
@@ -1134,10 +1134,10 @@ struct Internal {
   failed_constraint ();     // Was constraint used to proof unsatisfiablity?
   void reset_constraint (); // Reset after 'solve' call.
 
-
   // Propagate the current set of assumptions and return the
   // non-witness assigned literals
-  int propagate_assumptions (std::vector<int>& implicants);
+  int propagate_assumptions ();
+  void get_entrailed_literals (std::vector<int> &entrailed);
 
   // Forcing decision variables to a certain phase.
   //
@@ -1350,10 +1350,14 @@ struct Internal {
   void trace (File *);                   // Start write proof file.
   void check ();                         // Enable online proof checking.
 
-  void connect_proof_tracer (Tracer *tracer, bool antecedents, bool finalize_clauses = false);
-  void connect_proof_tracer (InternalTracer *tracer, bool antecedents, bool finalize_clauses = false);
-  void connect_proof_tracer (StatTracer *tracer, bool antecedents, bool finalize_clauses = false);
-  void connect_proof_tracer (FileTracer *tracer, bool antecedents, bool finalize_clauses = false);
+  void connect_proof_tracer (Tracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
+  void connect_proof_tracer (InternalTracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
+  void connect_proof_tracer (StatTracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
+  void connect_proof_tracer (FileTracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
   bool disconnect_proof_tracer (Tracer *tracer);
   bool disconnect_proof_tracer (StatTracer *tracer);
   bool disconnect_proof_tracer (FileTracer *tracer);
