@@ -417,6 +417,8 @@ bool Internal::decompose_round () {
   decompose_ids.resize (size);
 
   for (auto idx : vars) {
+    if (!substituted)
+      break;
     if (unsat)
       break;
     if (!active (idx))
@@ -640,6 +642,10 @@ bool Internal::decompose_round () {
 
   if (proof) {
     for (auto idx : vars) {
+      if (!substituted)
+        break;
+      if (unsat)
+        break;
       if (!active (idx))
         continue;
       const int64_t id1 = decompose_ids[vlit (-idx)];
@@ -686,6 +692,8 @@ bool Internal::decompose_round () {
   }
 
   for (auto idx : vars) {
+    if (!substituted)
+      break;
     if (unsat)
       break;
     if (!active (idx))
@@ -703,7 +711,8 @@ bool Internal::decompose_round () {
   delete[] dfs;
   erase_vector (dfs_chains);
 
-  flush_all_occs_and_watches (); // particularly the 'blit's
+  if (substituted)
+    flush_all_occs_and_watches (); // particularly the 'blit's
 
   bool success =
       unsat || (substituted > 0 && (new_unit || new_binary_clause));
