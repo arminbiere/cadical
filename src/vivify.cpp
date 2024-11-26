@@ -1373,6 +1373,15 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
   shrink_vector (vivifier.schedule_tier3);
   shrink_vector (vivifier.schedule_irred);
 
+  for (auto &schedule : vivifier.schedules) {
+    const size_t max = opts.vivifyschedmax;
+    if (schedule.size () > max) {
+      if (prioritized) {
+        std::partition(begin(schedule), end(schedule), [](Clause *c) {return c->vivify;});
+      }
+      schedule.resize (max);
+    }
+  }
   // In the first round of filling the schedule check whether there are
   // still clauses left, which were scheduled but have not been vivified
   // yet. The second round is only entered if no such clause was found in
