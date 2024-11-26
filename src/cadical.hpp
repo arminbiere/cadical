@@ -462,21 +462,20 @@ public:
   //
   bool constraint_failed ();
 
-
-  // Collects a subset of those literals that are implied by unit propagation by
-  // assuming the currently defined (potentially empty) set of assumptions (see 
-  // IPASIR assume(lit)) function.
-  // In case unit propgation over the defined set of assumptions (or over the
-  // clause  database on its own) leads to conflict, the function returns 20 and
-  // the content of 'implicants' is undefined.
-  // In case unit propagation happens to satisfy all the clauses (not probable,
-  // but not impossible), the function returns 10 and 'implicants' is a solution
-  // of the current formula under the current assumptions (after solution 
-  // reconstruction).
+  // Collects a subset of those literals that are implied by unit
+  // propagation by assuming the currently defined (potentially empty) set
+  // of assumptions (see IPASIR assume(lit)) function. In case unit
+  // propgation over the defined set of assumptions (or over the clause
+  // database on its own) leads to conflict, the function returns 20 and the
+  // content of 'implicants' is undefined. In case unit propagation happens
+  // to satisfy all the clauses (not probable, but not impossible), the
+  // function returns 10 and 'implicants' is a solution of the current
+  // formula under the current assumptions (after solution reconstruction).
   // In any other case, the function returns 0 (indicating 'UNKNOWN') and
   // 'implicants' lists the non-conflicting current value of the trail.
 
-  int propagate (std::vector<int>& implicants);
+  int propagate ();
+  void get_entrailed_literals (std::vector<int> &implicants);
 
   //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be
@@ -833,9 +832,11 @@ public:
   // With a failing constraint these can be multiple clauses.
   // Then it will trigger a conclude_unsat event with the id(s)
   // of the newly learnt clauses or the id of the global conflict.
+  // In case the solver is in UNKNOWN, it will collect the currently
+  // entrailed literals and add them to the proof.
   //
-  //   require (SATISFIED || UNSATISFIED)
-  //   ensure (SATISFIED || UNSATISFIED)
+  //   require (SATISFIED || UNSATISFIED || UNKNOWN)
+  //   ensure (SATISFIED || UNSATISFIED || UNKNOWN)
   //
   void conclude ();
 

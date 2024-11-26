@@ -1140,10 +1140,10 @@ struct Internal {
   failed_constraint ();     // Was constraint used to proof unsatisfiablity?
   void reset_constraint (); // Reset after 'solve' call.
 
-
   // Propagate the current set of assumptions and return the
   // non-witness assigned literals
-  int propagate_assumptions (std::vector<int>& implicants);
+  int propagate_assumptions ();
+  void get_entrailed_literals (std::vector<int> &entrailed);
 
   // Forcing decision variables to a certain phase.
   //

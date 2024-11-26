@@ -330,12 +330,9 @@ int Internal::cdcl_loop_with_inprocessing () {
   return res;
 }
 
-
-
-int Internal::propagate_assumptions (std::vector<int>& implicants) {
-  // TODO: extend proof format for propagate queries
-  // if (proof)
-  //   proof->solve_query ();
+int Internal::propagate_assumptions () {
+  if (proof)
+    proof->solve_query ();
   if (opts.ilb) {
     if (opts.ilbassumptions)
       sort_and_reuse_assumptions ();
@@ -348,15 +345,18 @@ int Internal::propagate_assumptions (std::vector<int>& implicants) {
     }
   }
   init_search_limits ();
-  init_report_limits();
+  init_report_limits ();
 
   int res = already_solved (); // root-level propagation is done here
-  
+
   size_t current_level = level;
   if (!res) {
-    restore_clauses (); // restore clauses tainted by the assumptions -> needed to recognize UNSAT
-    implicants.clear();
-    while (!res && (current_level < assumptions.size () || (current_level == assumptions.size () && constraint.size ()))) {
+    restore_clauses (); // restore clauses tainted by the assumptions ->
+                        // needed to recognize UNSAT
+
+    while (!res &&
+           (current_level < assumptions.size () ||
+            (current_level == assumptions.size () && constraint.size ()))) {
       if (unsat)
         res = 20;
       else if (unsat_constraint)
@@ -372,21 +372,23 @@ int Internal::propagate_assumptions (std::vector<int>& implicants) {
         break;
       else
         res = decide ();
-    current_level = level;
+      current_level = level;
     }
   }
-  if (!res && satisfied ()) res = 10;
-
-  if (res != 20) {
-    for (size_t i = 0; i < trail.size(); i++)
-      implicants.push_back(trail[i]);
-  }
+  if (!res && satisfied ())
+    res = 10;
 
   finalize (res);
   reset_solving ();
   report_solving (res);
-  
+
   return res;
+}
+
+void Internal::get_entrailed_literals (std::vector<int> &entrailed) {
+
+  for (size_t i = 0; i < trail.size (); i++)
+    entrailed.push_back (trail[i]);
 }
 
 /*------------------------------------------------------------------------*/
@@ -1008,6 +1010,8 @@ void Internal::finalize (int res) {
     external->conclude_sat ();
   else if (res == 20)
     conclude_unsat ();
+  else if (!res)
+    external->conclude_unknown ();
 }
 
 /*------------------------------------------------------------------------*/

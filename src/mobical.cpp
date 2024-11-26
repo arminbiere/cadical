@@ -1259,7 +1259,7 @@ struct Call {
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
     BEFORE =
         ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
-    PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING,
+    PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
     DURING = LEMMA, // | CONTINUE,
     AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS |
             FLUSHPROOFTRACE | CLOSEPROOFTRACE,
@@ -1572,9 +1572,12 @@ struct CubingCall : public Call {
 
 struct PropagateCall : public Call {
   PropagateCall (int r = 0) : Call (PROPAGATE, 0, r) {}
-  void execute (Solver *&s) { 
-    std::vector<int> implicants; 
-    (void) s->propagate (implicants);
+  void execute (Solver *&s) {
+    int res = s->propagate ();
+    if (!res) {
+      std::vector<int> implicants;
+      s->get_entrailed_literals (implicants);
+    }
   }
   void print (ostream &o) { o << "propagate " << res << endl; }
   Call *copy () { return new PropagateCall (res); }
