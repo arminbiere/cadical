@@ -1150,7 +1150,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     }
     vivify_subsume_clause (subsuming, c);
     res = false;
-    stats.vivifysubs++;
+    // stats.vivifysubs++;  // already done in vivify_subsume_clause
     if (c->redundant)
       ++stats.vivifysubred;
     else
