@@ -644,8 +644,6 @@ bool Internal::decompose_round () {
     for (auto idx : vars) {
       if (!substituted)
         break;
-      if (unsat)
-        break;
       if (!active (idx))
         continue;
       const int64_t id1 = decompose_ids[vlit (-idx)];
