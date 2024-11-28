@@ -1327,6 +1327,18 @@ inline void Internal::vivify_chain_for_units (int lit, Clause *reason) {
 }
 
 /*------------------------------------------------------------------------*/
+inline void Internal::vivify_prioritize_leftovers (size_t prioritized, std::vector<Clause*> &schedule) {
+  if (prioritized) {
+    PHASE ("vivify", stats.vivifications,
+           "leftovers of %" PRId64 " clause", prioritized);
+  } else {
+    PHASE ("vivify", stats.vivifications, "prioritizing all clause");
+    for (auto c : schedule)
+      c->vivify = true;
+  }
+  // let's try to save a bit of memory
+  shrink_vector (schedule);
+}
 
 void Internal::vivify_initialize (Vivifier &vivifier) {
 
@@ -1343,7 +1355,7 @@ void Internal::vivify_initialize (Vivifier &vivifier) {
   assert (watching ());
   clear_watches ();
 
-  size_t prioritized = 0;
+  size_t prioritized_irred = 0, prioritized_tier1 = 0, prioritized_tier2 = 0, prioritized_tier3 = 0;
   for (const auto &c : clauses) {
 
     if (c->size == 2)
@@ -1367,33 +1379,21 @@ void Internal::vivify_initialize (Vivifier &vivifier) {
     for (const auto lit : *c) {
       noccs (lit) += score;
     }
-    if (c->vivify)
-      prioritized++;
     if (!c->redundant)
-      vivifier.schedule_irred.push_back (c);
+      vivifier.schedule_irred.push_back (c), prioritized_irred += (c->vivify);
     else if (c->glue <= tier1)
-      vivifier.schedule_tier1.push_back (c);
+      vivifier.schedule_tier1.push_back (c), prioritized_tier1 += (c->vivify);
     else if (c->glue <= tier2)
-      vivifier.schedule_tier2.push_back (c);
+      vivifier.schedule_tier2.push_back (c), prioritized_tier2 += (c->vivify);
     else
-      vivifier.schedule_tier3.push_back (c);
+      vivifier.schedule_tier3.push_back (c), prioritized_tier3 += (c->vivify);
   }
 
-  if (prioritized) {
-    PHASE ("vivify", stats.vivifications,
-           "leftovers of %" PRId64 " clause", prioritized);
-  } else {
-    PHASE ("vivify", stats.vivifications,
-           "prioritizing all clause");
-    for (auto &sched : vivifier.schedules) {
-      for (auto c : sched)
-        c->vivify = true;
-    }
-  }
-  shrink_vector (vivifier.schedule_tier1);
-  shrink_vector (vivifier.schedule_tier2);
-  shrink_vector (vivifier.schedule_tier3);
-  shrink_vector (vivifier.schedule_irred);
+  vivify_prioritize_leftovers(prioritized_irred, vivifier.schedule_irred);
+  vivify_prioritize_leftovers(prioritized_tier1, vivifier.schedule_tier1);
+  vivify_prioritize_leftovers(prioritized_tier2, vivifier.schedule_tier2);
+  vivify_prioritize_leftovers(prioritized_tier2, vivifier.schedule_tier3);
+
 
   // In the first round of filling the schedule check whether there are
   // still clauses left, which were scheduled but have not been vivified
