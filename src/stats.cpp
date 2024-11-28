@@ -242,10 +242,10 @@ void Stats::print (Internal *internal) {
          stats.probefailed, percent (stats.probefailed, stats.failed));
     PRT ("  transredunits: %15" PRId64 "   %10.2f %%  per failed",
          stats.transredunits, percent (stats.transredunits, stats.failed));
-    PRT ("  inprobingphases: %15" PRId64 "   %10.2f    interval",
+    PRT ("  inprobephases: %15" PRId64 "   %10.2f    interval",
          stats.inprobingphases,
          relative (stats.conflicts, stats.inprobingphases));
-    PRT ("  inprobesuccess:  %15" PRId64 "   %10.2f %%  phases",
+    PRT ("  inprobesuccess:%15" PRId64 "   %10.2f %%  phases",
          stats.inprobesuccess,
          percent (stats.inprobesuccess, stats.inprobingphases));
     PRT ("  probingrounds: %15" PRId64 "   %10.2f    per phase",
