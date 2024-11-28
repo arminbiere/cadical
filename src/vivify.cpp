@@ -1375,10 +1375,10 @@ void Internal::vivify_initialize (Vivifier &vivifier) {
     //
     const int shift = 12 - c->size;
     const int64_t score = shift < 1 ? 1 : (1l << shift); // @4
-
     for (const auto lit : *c) {
       noccs (lit) += score;
     }
+    LOG (c, "putting clause in candidates");
     if (!c->redundant)
       vivifier.schedule_irred.push_back (c), prioritized_irred += (c->vivify);
     else if (c->glue <= tier1)
@@ -1389,10 +1389,10 @@ void Internal::vivify_initialize (Vivifier &vivifier) {
       vivifier.schedule_tier3.push_back (c), prioritized_tier3 += (c->vivify);
   }
 
-  vivify_prioritize_leftovers(prioritized_irred, vivifier.schedule_irred);
-  vivify_prioritize_leftovers(prioritized_tier1, vivifier.schedule_tier1);
-  vivify_prioritize_leftovers(prioritized_tier2, vivifier.schedule_tier2);
-  vivify_prioritize_leftovers(prioritized_tier2, vivifier.schedule_tier3);
+  vivify_prioritize_leftovers (prioritized_irred, vivifier.schedule_irred);
+  vivify_prioritize_leftovers (prioritized_tier1, vivifier.schedule_tier1);
+  vivify_prioritize_leftovers (prioritized_tier2, vivifier.schedule_tier2);
+  vivify_prioritize_leftovers (prioritized_tier3, vivifier.schedule_tier3);
 
 
   // In the first round of filling the schedule check whether there are
@@ -1514,10 +1514,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     backtrack_without_updating_phases ();
 
   if (!unsat) {
-    int64_t still_need_to_be_vivified = 0;
-    for (const auto &c : schedule)
-      if (c->vivify)
-        still_need_to_be_vivified++;
+    int64_t still_need_to_be_vivified = schedule.size ();
 
     // Preference clauses scheduled but not vivified yet next time.
     //
@@ -1530,8 +1527,6 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     else {
       PHASE ("vivify", stats.vivifications,
              "no previously not yet vivified clause left");
-      for (const auto &c : schedule)
-        c->vivify = true;
     }
 
     erase_vector (schedule); // Reclaim  memory early.

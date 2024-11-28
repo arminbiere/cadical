@@ -11,7 +11,7 @@ enum class Vivify_Mode { TIER1, TIER2, TIER3, IRREDUNDANT };
 
 struct Vivifier {
   std::array<vector<Clause *>,4> schedules;
-  vector<Clause *> &schedule_tier1, &schedule_tier2, &schedule_tier3, &schedule_irred, stack;
+  vector<Clause *> &schedule_tier1, &schedule_tier2, &schedule_tier3, &schedule_irred;
   vector<int> sorted;
   Vivify_Mode tier;
   char tag;
@@ -28,7 +28,6 @@ struct Vivifier {
     erase_vector (schedule_tier3);
     erase_vector (schedule_irred);
     erase_vector (sorted);
-    erase_vector (stack);
   }
 
 };
