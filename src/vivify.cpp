@@ -1636,10 +1636,10 @@ void Internal::vivify () {
   if (total > opts.vivifymaxeff)
     total = opts.vivifymaxeff;
 
-  double tier1effort = !opts.vivifytier1 ? 0 : 1e-3 * (double) opts.vivifytier1eff;
-  double tier2effort = !opts.vivifytier2 ? 0 : 1e-3 * (double) opts.vivifytier2eff;
-  double tier3effort = !opts.vivifytier3 ? 0 : 1e-3 * (double) opts.vivifytier3eff;
-  double irreffort = delaying_vivify_irredundant.bumpreasons.delay() || !opts.vivifyirred ? 0 : 1e-3 * (double) opts.vivifyirredeff;
+  double tier1effort = !opts.vivifytier1 ? 0 : (double) opts.vivifytier1eff;
+  double tier2effort = !opts.vivifytier2 ? 0 : (double) opts.vivifytier2eff;
+  double tier3effort = !opts.vivifytier3 ? 0 : (double) opts.vivifytier3eff;
+  double irreffort = delaying_vivify_irredundant.bumpreasons.delay() || !opts.vivifyirred ? 0 : (double) opts.vivifyirredeff;
   double sumeffort = tier1effort + tier2effort + tier3effort + irreffort;
   if (!stats.current.redundant)
     tier1effort = tier2effort = tier3effort = 0;
