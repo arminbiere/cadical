@@ -1516,11 +1516,20 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
   if (!unsat) {
     int64_t still_need_to_be_vivified = schedule.size ();
 #if 0
-    // the question is: do we favor leftovers or de we want to get the leftovers through before
-    // going over a new set of leftovers?
-    // CaDiCaL had the forst version before. If commented out we go to the second version.
+    // in the current round we have new_clauses_to_vivify @ leftovers from previous round There are
+    // now two possibilities: (i) we consider all clauses as leftovers, or (ii) only the leftovers
+    // from previous round are considered leftovers.
+    //
+    // CaDiCaL had the first version before. If
+    // commented out we go to the second version.
     for (auto c : schedule)
       c->vivify = true;
+#else
+    // if we have gone through all the leftovers, the current clauses are leftovers for the next
+    // round
+    if (!schedule.empty() && !schedule.front()->vivify && schedule.back()->vivify)
+      for (auto c : schedule)
+	c->vivify = true;
 #endif
     // Preference clauses scheduled but not vivified yet next time.
     //
