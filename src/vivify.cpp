@@ -1184,24 +1184,23 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     res = true;
   } else if (subsume && c->redundant) {
     LOG (c, "vivification implied");
-    mark_garbage(c);
+    mark_garbage (c);
     ++stats.vivifyimplied;
     res = true;
   } else if ((conflict || subsume) && !c->redundant && !redundant) {
     LOG ("demote clause from irredundant to redundant");
-    if (opts.vivifydemote){
+    if (opts.vivifydemote) {
       demote_clause (c);
       const int new_glue = recompute_glue (c);
       promote_clause (c, new_glue);
       res = false;
     } else {
-      mark_garbage(c);
+      mark_garbage (c);
       ++stats.vivifyimplied;
       res = true;
     }
   } else if (subsume) {
-    LOG (c, "no vivification instantiation with implied literal %d",
-             (subsume));
+    LOG (c, "no vivification instantiation with implied literal %d", subsume);
     assert (!c->redundant);
     assert (redundant);
     res = false;
@@ -1524,12 +1523,14 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t propagation_limit) {
     // commented out we go to the second version.
     for (auto c : schedule)
       c->vivify = true;
-#else
+#elif 1
     // if we have gone through all the leftovers, the current clauses are leftovers for the next
     // round
     if (!schedule.empty() && !schedule.front()->vivify && schedule.back()->vivify)
       for (auto c : schedule)
-	c->vivify = true;
+        c->vivify = true;
+#else
+   // do nothing like in kissat and use the candidates for next time.
 #endif
     // Preference clauses scheduled but not vivified yet next time.
     //
