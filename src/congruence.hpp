@@ -331,7 +331,9 @@ struct Closure {
   void find_equivalences();
   void subsume_clause (Clause *subsuming, Clause *subsumed);
   bool find_subsuming_clause (Clause *c);
-
+  Clause* produce_rewritten_clause_lrat (Clause *c, int except = 0, uint64_t id1 = 0, uint64_t id2 = 0,
+				   int except_other = 0, uint64_t id_other1 = 0, uint64_t id_other2 = 0,
+				   int execept_lhs = 0, int except_lhs2 = 0);
   // binary extraction and ternary strengthening
   void extract_binaries ();
   bool find_binary (int, int) const;

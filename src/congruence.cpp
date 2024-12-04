@@ -174,7 +174,6 @@ void Closure::extract_binaries () {
   offsetsize.clear();
 
   // kissat has code to remove duplicates, which we have already removed before starting congruence
-  
   MSORT (internal->opts.radixsortlim, begin (binaries), end (binaries),
          compact_binary_rank (), compact_binary_order ());
   const size_t new_size = binaries.size();
@@ -362,8 +361,7 @@ int Closure::find_representative_and_compress (int lit, bool update_eager) {
     if (internal->lrat)
       internal->lrat_chain.clear ();
   } else if (path_length == 2) {
-    LOG ("duplicating information %d -> %d to eager with clause %" PRIu64,
-         lit, res);
+    LOG ("duplicating information %d -> %d to eager", lit, res);
     if (update_eager) {
       eager_representative (lit) = res;
       if (internal->lrat)
@@ -547,6 +545,78 @@ void Closure::index_gate (Gate *g) {
   g->indexed = true;
 }
 
+// TODO we here duplicate the arguments of push_id_and_rewriting_lrat but we probably do not need
+// that.
+Clause* Closure::produce_rewritten_clause_lrat (Clause *c, int except, uint64_t id1, uint64_t id2,
+				   int except_other, uint64_t id_other1, uint64_t id_other2,
+				   int except_lhs, int except_lhs2) {
+  LOG (c, "rewriting clause for LRAT proof");
+  assert (internal->clause.empty ());
+  assert (internal->lrat_chain.empty());
+  bool changed = false;
+  bool tautology = false;
+  for (auto lit : *c) {
+    if (lit == except_lhs) {
+      continue;
+    }
+    if (lit == except_lhs2)
+      continue;
+    if (lit == except && id1)
+      continue;
+    if (lit == -except && id2) {
+      continue;
+    }
+    if (lit == except_other && id_other1)
+      continue;
+    if (lit == -except_other && id_other2) {
+      continue;
+    }
+    if (internal->val (lit) < 0) {
+      LOG ("found unit %d", -lit);
+      const unsigned uidx = internal->vlit (-lit);
+      uint64_t id = internal->unit_clauses[uidx];
+      assert (id);
+      chain.push_back (id);
+      continue;
+    }
+    const int other = find_eager_representative_and_compress (lit);
+    const bool marked = internal->marked (lit);
+    internal->marked (other);
+    if (lit != other && marked) {
+      tautology = true;
+    }
+    else if (lit != other) {
+      assert (!marked);
+      internal->clause.push_back (other);
+      internal->mark (other);
+      changed = true;
+      internal->lrat_chain.push_back (find_representative_lrat(lit));
+    }
+    else {
+      internal->clause.push_back (lit);
+
+    }
+  }
+
+  for (auto lit : *c) {
+    internal->unmark (lit);
+  }
+
+  Clause *d;
+  if (tautology) {
+    assert (false);
+  }
+  else if (changed) {
+    d = internal->new_clause (false);
+    LOG (d, "rewriting clause to");
+  } else {
+    internal->lrat_chain.clear ();
+    d = c;
+  }
+
+  return d;
+}
+
 void Closure::push_id_and_rewriting_lrat (Clause *c, int except, uint64_t id1, uint64_t id2, std::vector<uint64_t> &chain, bool insert_id_after,
 					  int except_other, uint64_t id_other1, uint64_t id_other2, int except_lhs, int except_lhs2) {
   LOG (c, "computing normalized LRAT chain for clause, rewriting except for %d (%" PRIu64 ", %" PRIu64
@@ -638,10 +708,11 @@ void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src, uint64_t id1
   assert (internal->val (g->lhs) < 0);
   switch (g->tag) {
   case Gate_Type::And_Gate:
-    for (auto litId : g->neg_lhs_ids) {
+    for (auto &litId : g->neg_lhs_ids) {
       LOG (litId.clause,
 	   "found lrat in gate %d from %zd (looking for %d)",
 	   litId.current_lit, litId.clause->id, lit);
+      litId.clause = produce_rewritten_clause_lrat (litId.clause);
       push_id_and_rewriting_lrat (litId.clause, src, id1, id2, internal->lrat_chain);
     }
     break;
@@ -675,6 +746,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src, int 
         LOG (litId.clause,
              "found lrat in gate %d from %zd (looking for %d)",
              litId.current_lit, litId.clause->id, lit);
+	litId.clause = produce_rewritten_clause_lrat (litId.clause);
 	push_id_and_rewriting_lrat (litId.clause, src, id1, id2, proof_chain, false, 0, 0, 0, -dst, -g->lhs);
       }
       LOG (proof_chain, "produced lrat chain");
@@ -1493,11 +1565,15 @@ void Closure::update_and_gate_unit_build_lrat_chain (Gate *g, int src, uint64_t 
 						std::vector<uint64_t> & extra_reasons_lit,
 						std::vector<uint64_t> &extra_reasons_ulit) {
   LOG ("generate chain for gate boiling down to unit");
+  assert (g->neg_lhs_ids.size() == 1);
+  g->neg_lhs_ids[0].clause = produce_rewritten_clause_lrat (g->neg_lhs_ids[0].clause, int except, uint64_t id1, uint64_t id2,);
   push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, 0, 0, 0, extra_reasons_ulit, true, 0, 0, 0, g->lhs, -dst);
   internal->lrat_chain.clear ();
   unmark_marked_lrat ();
-  for (auto id : g->pos_lhs_ids)
+  for (auto id : g->pos_lhs_ids) {
+    id.clause = produce_rewritten_clause_lrat (id.clause);
     push_id_and_rewriting_lrat (id.clause, src, id1, id2, extra_reasons_lit, true, 0, 0, 0, -g->lhs, dst);
+  }
   unmark_marked_lrat ();
   LOG (extra_reasons_lit, "lrat chain for positive side");
 }
