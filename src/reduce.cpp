@@ -126,7 +126,25 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
 
   stable_sort (stack.begin (), stack.end (), reduce_less_useful ());
 
-  size_t target = 1e-2 * opts.reducetarget * stack.size ();
+  size_t target = 0;
+  if (!opts.reduceopt) {
+    target = 1e-2 * opts.reducetarget * stack.size ();
+    stats.reduced_prct++;
+  } else if (opts.reduceopt == 1) {
+    target = stats.conflicts - last.reduce.conflicts;
+    target -= 1e-2 * opts.reducetarget * (sqrt (stats.conflicts) - sqrt (last.reduce.conflicts));
+    stats.reduced_sqrt++;
+  } else {
+    target = 1e-2 * opts.reducetarget * stack.size ();
+    size_t target2 = stats.conflicts - last.reduce.conflicts;
+    target2 -= 1e-2 * opts.reducetarget * (sqrt (stats.conflicts) - sqrt (last.reduce.conflicts));
+    if (target2 > target)
+      stats.reduced_sqrt++;
+    else
+      stats.reduced_prct++;
+    target = max (target, target2);
+  }
+
 
   // This is defensive code, which I usually consider a bug, but here I am
   // just not sure that using floating points in the line above is precise

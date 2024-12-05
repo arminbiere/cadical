@@ -383,6 +383,10 @@ void Stats::print (Internal *internal) {
          stats.reduced, percent (stats.reduced, stats.conflicts));
     PRT ("  reductions:    %15" PRId64 "   %10.2f    interval",
          stats.reductions, relative (stats.conflicts, stats.reductions));
+    PRT ("  sqrt scheme:   %15" PRId64 "   %10.2f %%  reductions",
+         stats.reduced_sqrt, relative (stats.reduced_sqrt, stats.reductions));
+    PRT ("  prct scheme:   %15" PRId64 "   %10.2f %%  reductions",
+         stats.reduced_prct, relative (stats.reduced_prct, stats.reductions));
     PRT ("  collections:   %15" PRId64 "   %10.2f    interval",
          stats.collections, relative (stats.conflicts, stats.collections));
   }
