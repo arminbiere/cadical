@@ -224,6 +224,7 @@ void Internal::reduce () {
       delta *= (sqrt ((double) stats.conflicts) - sqrt ((double) last.reduce.conflicts));
     else if (opts.reduceopt == 2)
       delta *= sqrt ((double) stats.reductions + 1);
+    if (delta < 0) delta = 1;
     // if (irredundant () > 1e5) {
     //   delta *= log (irredundant () / 1e4) / log (10);
     //   if (delta < 1)
