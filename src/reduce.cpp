@@ -125,26 +125,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   }
 
   stable_sort (stack.begin (), stack.end (), reduce_less_useful ());
-
-  size_t target = 0;
-  if (!opts.reduceopt) {
-    target = 1e-2 * opts.reducetarget * stack.size ();
-    stats.reduced_prct++;
-  } else if (opts.reduceopt == 1) {
-    target = stats.conflicts - last.reduce.conflicts;
-    target -= 1e-2 * opts.reducetarget * (sqrt (stats.conflicts) - sqrt (last.reduce.conflicts));
-    stats.reduced_sqrt++;
-  } else {
-    target = 1e-2 * opts.reducetarget * stack.size ();
-    size_t target2 = stats.conflicts - last.reduce.conflicts;
-    target2 -= 1e-2 * opts.reducetarget * (sqrt (stats.conflicts) - sqrt (last.reduce.conflicts));
-    if (target2 > target)
-      stats.reduced_sqrt++;
-    else
-      stats.reduced_prct++;
-    target = max (target, target2);
-  }
-
+  target = 1e-2 * opts.reducetarget * stack.size ();
 
   // This is defensive code, which I usually consider a bug, but here I am
   // just not sure that using floating points in the line above is precise
@@ -236,12 +217,18 @@ void Internal::reduce () {
   garbage_collection ();
 
   {
-    int64_t delta = opts.reduceint * (stats.reductions + 1);
-    if (irredundant () > 1e5) {
-      delta *= log (irredundant () / 1e4) / log (10);
-      if (delta < 1)
-        delta = 1;
-    }
+    int64_t delta = opts.reduceint;
+    if (opts.reduceopt == 0)
+      delta *= stats.reductions + 1;
+    else if (opts.reduceopt == 1)
+      delta *= (sqrt (stats.conflicts) - sqrt (last.reduce.conflicts));
+    else if (opts.reduceopt == 2)
+      delta *= sqrt (stats.reductions + 1);
+    // if (irredundant () > 1e5) {
+    //   delta *= log (irredundant () / 1e4) / log (10);
+    //   if (delta < 1)
+    //     delta = 1;
+    // }
     lim.reduce = stats.conflicts + delta;
     PHASE ("reduce", stats.reductions,
            "new reduce limit %" PRId64 " after %" PRId64 " conflicts",
