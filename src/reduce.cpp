@@ -125,7 +125,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   }
 
   stable_sort (stack.begin (), stack.end (), reduce_less_useful ());
-  target = 1e-2 * opts.reducetarget * stack.size ();
+  size_t target = 1e-2 * opts.reducetarget * stack.size ();
 
   // This is defensive code, which I usually consider a bug, but here I am
   // just not sure that using floating points in the line above is precise
@@ -221,9 +221,9 @@ void Internal::reduce () {
     if (opts.reduceopt == 0)
       delta *= stats.reductions + 1;
     else if (opts.reduceopt == 1)
-      delta *= (sqrt (stats.conflicts) - sqrt (last.reduce.conflicts));
+      delta *= (sqrt ((double) stats.conflicts) - sqrt ((double) last.reduce.conflicts));
     else if (opts.reduceopt == 2)
-      delta *= sqrt (stats.reductions + 1);
+      delta *= sqrt ((double) stats.reductions + 1);
     // if (irredundant () > 1e5) {
     //   delta *= log (irredundant () / 1e4) / log (10);
     //   if (delta < 1)
