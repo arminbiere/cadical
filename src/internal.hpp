@@ -857,7 +857,7 @@ struct Internal {
   void vivify_subsume_clause (Clause *subsuming, Clause *subsumed);
   void compute_tier_limits (Vivifier &);
   void vivify_initialize (Vivifier &vivifier);
-  inline void vivify_prioritize_leftovers (size_t prioritized, std::vector<Clause*> &schedule);
+  inline void vivify_prioritize_leftovers (char, size_t prioritized, std::vector<Clause*> &schedule);
   bool consider_to_vivify_clause (Clause *candidate);
   void vivify_sort_watched (Clause *c);
   bool vivify_instantiate (const std::vector<int>&, Clause *, std::vector<std::tuple<int, Clause *, bool>> &lrat_stack);
