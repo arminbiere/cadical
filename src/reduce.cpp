@@ -221,10 +221,10 @@ void Internal::reduce () {
     double factor = stats.reductions + 1;
     int64_t sub = 0;
     if (opts.reduceopt == 0);
-    else if (opts.reduceopt == 1)
+    else if (opts.reduceopt == 1) {
       factor = sqrt ((double) stats.conflicts);
       sub = sqrt ((double) last.reduce.conflicts);
-    else if (opts.reduceopt == 2)
+    } else if (opts.reduceopt == 2)
       factor = sqrt ((double) stats.reductions + 1);
     if (factor < 1) factor = 1;
     delta = delta * factor - sub;
