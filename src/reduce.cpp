@@ -218,13 +218,17 @@ void Internal::reduce () {
 
   {
     int64_t delta = opts.reduceint;
-    if (opts.reduceopt == 0)
-      delta *= stats.reductions + 1;
+    double factor = stats.reductions + 1;
+    int64_t sub = 0;
+    if (opts.reduceopt == 0);
     else if (opts.reduceopt == 1)
-      delta *= (sqrt ((double) stats.conflicts) - sqrt ((double) last.reduce.conflicts));
+      factor = sqrt ((double) stats.conflicts);
+      sub = sqrt ((double) last.reduce.conflicts);
     else if (opts.reduceopt == 2)
-      delta *= sqrt ((double) stats.reductions + 1);
-    if (delta < 0) delta = 1;
+      factor = sqrt ((double) stats.reductions + 1);
+    if (factor < 1) factor = 1;
+    delta = delta * factor - sub;
+    if (delta < 1) delta = 1;
     // if (irredundant () > 1e5) {
     //   delta *= log (irredundant () / 1e4) / log (10);
     //   if (delta < 1)
