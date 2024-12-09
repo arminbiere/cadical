@@ -157,6 +157,25 @@ struct Internal {
   }
   void require_mode (Mode m) const { assert (mode & m), (void) m; }
 
+  // tier1_limit depending on the mode and the different options (only focused, only stable,
+  // alternating)
+  int tier1_limit (bool stable) const {
+    if (opts.stabilizeonly)
+      return tier1[true];
+    if (!opts.stabilize)
+      return tier1[false];
+    return tier1[stable];
+  }
+
+  // tier2_limit depending on the mode and the different options (only focused, only stable,
+  // alternating)
+  int tier2_limit (bool stable) const {
+    if (opts.stabilizeonly)
+      return tier2[true];
+    if (!opts.stabilize)
+      return tier2[false];
+    return tier2[stable];
+  }
   /*----------------------------------------------------------------------*/
 
   int mode;                    // current internal state

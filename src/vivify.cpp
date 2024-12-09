@@ -1752,8 +1752,8 @@ void Internal::compute_tier_limits (Vivifier & vivifier) {
     vivifier.tier2_limit = 6;
     return;
   }
-  vivifier.tier1_limit = tier1[false];
-  vivifier.tier2_limit = tier2[false];
+  vivifier.tier1_limit = tier1_limit (false);
+  vivifier.tier2_limit = tier2_limit (false);
 }
 
 
