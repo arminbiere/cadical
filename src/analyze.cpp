@@ -508,6 +508,10 @@ Clause *Internal::new_driving_clause (const int glue, int &jump) {
     jump = var (clause[1]).level;
     res = new_learned_redundant_clause (glue);
     res->used = 1 + (glue <= opts.reducetier2glue);
+#if 0
+    // in kissat:
+    res->used = max_used;
+#endif
   }
 
   LOG ("jump level %d", jump);

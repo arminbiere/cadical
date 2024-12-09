@@ -85,6 +85,34 @@ struct reduce_less_useful {
 // which redundant clauses are considered not useful and thus will be
 // collected in a subsequent garbage collection phase.
 
+struct Reducer {
+  Clause *clause;
+  uint64_t score;
+  Reducer (): clause (nullptr), score (0) {}
+  Reducer (Clause *d) {
+    clause = d;
+    const uint32_t negative_glue = ~clause->glue;
+    const uint32_t negative_size = ~clause->size;
+    score = negative_size | (((uint64_t)negative_glue) << 32);
+  }
+};
+
+
+struct reduce_score_rank {
+  reduce_score_rank () {}
+  typedef uint64_t Type;
+  Type operator() (const Reducer &a) const { return a.score; }
+};
+
+struct reduce_score_smaller {
+  reduce_score_smaller () {}
+  bool operator() (const Reducer &a, const Reducer &b) const {
+    const auto s = reduce_score_rank () (a);
+    const auto t = reduce_score_rank () (b);
+    return s < t;
+  }
+};
+
 void Internal::mark_useless_redundant_clauses_as_garbage () {
 
   // We use a separate stack for sorting candidates for removal.  This uses
@@ -93,7 +121,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   // into the candidate selection (more recently learned clauses are kept if
   // they otherwise have the same glue and size).
 
-  vector<Clause *> stack;
+  vector<Reducer> stack;
   const int tier1limit = tier1[false];
   const int tier2limit = max (tier1limit, tier2[false]);
 
@@ -119,12 +147,15 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
         mark_garbage (c); // unless
       continue;           //  used recently.
     }
-    if (used >= max_used)
-      continue; // Do keep recently used clauses.
-    stack.push_back (c);
+#if 0
+    if (used >= max_used / 4) // keeping very active clauses
+      continue;
+#endif
+    stack.push_back (Reducer (c));
   }
 
-  stable_sort (stack.begin (), stack.end (), reduce_less_useful ());
+  MSORT (opts.radixsortlim, stack.begin (), stack.end (),
+         reduce_score_rank (), reduce_score_smaller ());
 
   size_t target = 1e-2 * opts.reducetarget * stack.size ();
 
@@ -141,7 +172,8 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   auto i = stack.begin ();
   const auto t = i + target;
   while (i != t) {
-    Clause *c = *i++;
+    Clause *c = i->clause;
+    ++i;
     LOG (c, "marking useless to be collected");
     mark_garbage (c);
     stats.reduced++;
@@ -151,7 +183,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
 
   const auto end = stack.end ();
   for (i = t; i != end; i++) {
-    Clause *c = *i;
+    Clause *c = (*i).clause;
     LOG (c, "keeping");
     if (c->size > lim.keptsize)
       lim.keptsize = c->size;
