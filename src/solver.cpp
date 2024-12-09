@@ -56,8 +56,7 @@ void Solver::transition_to_steady_state () {
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
-  } else if (state () == STEADY)
-    external->reset_concluded ();
+  }
   if (state () != STEADY)
     STATE (STEADY);
 }
