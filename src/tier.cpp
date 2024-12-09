@@ -5,6 +5,7 @@ namespace CaDiCaL {
 void Internal::recompute_tier () {
   if (!opts.recomputetier)
     return;
+  assert (!stable || (opts.stabilizeonly && opts.stabilize));
 
   ++stats.tierecomputed;
   const int64_t delta = stats.tierecomputed >= 16 ? 1u << 16 : (1u << stats.tierecomputed);
@@ -28,7 +29,8 @@ void Internal::recompute_tier () {
     uint64_t accumulated_tier1_limit = stats.bump_used[stable] * opts.tier1limit / 100;
     uint64_t accumulated_tier2_limit = stats.bump_used[stable] * opts.tier2limit / 100;
     uint64_t accumulated_used = 0;
-    for (size_t glue = 0; glue < stats.used[stable].size (); ++glue) {
+    assert (stats.used[stable].size () && !stats.used[stable][0]);
+    for (size_t glue = 1; glue < stats.used[stable].size (); ++glue) {
       const uint64_t u = stats.used[stable][glue];
       accumulated_used += u;
       if (accumulated_used <= accumulated_tier1_limit) {
