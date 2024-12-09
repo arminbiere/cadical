@@ -349,14 +349,10 @@ int Internal::propagate_assumptions () {
 
   int res = already_solved (); // root-level propagation is done here
 
-  size_t current_level = level;
+  int constraint_offset = constraint.size () > 0 ? 1 : 0;
   if (!res) {
-    restore_clauses (); // restore clauses tainted by the assumptions ->
-                        // needed to recognize UNSAT
-
-    while (!res &&
-           (current_level < assumptions.size () ||
-            (current_level == assumptions.size () && constraint.size ()))) {
+    restore_clauses ();
+    while (!res) {
       if (unsat)
         res = 20;
       else if (unsat_constraint)
@@ -370,11 +366,18 @@ int Internal::propagate_assumptions () {
         break;                               // decision or conflict limit
       else if (terminated_asynchronously ()) // externally terminated
         break;
-      else
+      else {
+        if (level >= assumptions.size () + constraint_offset)
+            break;
         res = decide ();
-      current_level = level;
+      }
+        
     }
   }
+
+  if (unsat || unsat_constraint)
+    res = 20;
+    
   if (!res && satisfied ())
     res = 10;
 
