@@ -349,7 +349,9 @@ int Internal::propagate_assumptions () {
 
   int res = already_solved (); // root-level propagation is done here
 
-  int constraint_offset = constraint.size () > 0 ? 1 : 0;
+  int last_assumption_level = assumptions.size();
+  if (constraint.size()) last_assumption_level++;
+  
   if (!res) {
     restore_clauses ();
     while (!res) {
@@ -367,7 +369,7 @@ int Internal::propagate_assumptions () {
       else if (terminated_asynchronously ()) // externally terminated
         break;
       else {
-        if (level >= assumptions.size () + constraint_offset)
+        if (level >= last_assumption_level)
             break;
         res = decide ();
       }
