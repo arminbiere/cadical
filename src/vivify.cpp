@@ -1351,6 +1351,13 @@ inline void Internal::vivify_prioritize_leftovers ([[maybe_unused]]char tag, siz
     for (auto c : schedule)
       c->vivify = true;
   }
+  const size_t max = opts.vivifyschedmax;
+  if (schedule.size () > max) {
+    if (prioritized) {
+      std::partition(begin(schedule), end(schedule), [](Clause *c) {return c->vivify;});
+    }
+    schedule.resize (max);
+  }
   // let's try to save a bit of memory
   shrink_vector (schedule);
 }

@@ -219,21 +219,20 @@ void Internal::reduce () {
   {
     int64_t delta = opts.reduceint;
     double factor = stats.reductions + 1;
-    int64_t sub = 0;
-    if (opts.reduceopt == 0);
+    if (opts.reduceopt == 0)  // adjust delta such this is the same as reduceopt=1
+      delta = delta * delta / 2;
     else if (opts.reduceopt == 1) {
+      // this is the same as reduceopt=0 if reduceint = sqrt (reduceint) = 17
       factor = sqrt ((double) stats.conflicts);
-      sub = sqrt ((double) last.reduce.conflicts);
     } else if (opts.reduceopt == 2)
-      factor = sqrt ((double) stats.reductions + 1);
+      // log scaling instead
+      factor = log ((double) stats.conflicts);
     if (factor < 1) factor = 1;
-    delta = delta * factor - sub;
+    delta = delta * factor;
+    if (irredundant () > 1e5) {
+      delta *= log (irredundant () / 1e4) / log (10);
+    }
     if (delta < 1) delta = 1;
-    // if (irredundant () > 1e5) {
-    //   delta *= log (irredundant () / 1e4) / log (10);
-    //   if (delta < 1)
-    //     delta = 1;
-    // }
     lim.reduce = stats.conflicts + delta;
     PHASE ("reduce", stats.reductions,
            "new reduce limit %" PRId64 " after %" PRId64 " conflicts",

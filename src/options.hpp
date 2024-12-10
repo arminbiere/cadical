@@ -140,8 +140,8 @@ OPTION( radixsortlim,     32,  0,2e9,0,0,1, "radix sort limit") \
 OPTION( realtime,          0,  0,  1,0,0,0, "real instead of process time") \
 OPTION( recomputetier,     1,  0,  1,0,0,1, "recompute tiers") \
 OPTION( reduce,            1,  0,  1,0,0,1, "reduce useless clauses") \
-OPTION( reduceint,       300, 10,1e6,0,0,1, "reduce interval") \
-OPTION( reduceopt,         0,  0,  2,0,0,1, "0=prct,1=sqrt,2=max") \
+OPTION( reduceint,        25,  1,1e6,0,0,1, "reduce interval") \
+OPTION( reduceopt,         1,  0,  2,0,0,1, "0=prct,1=sqrt,2=max") \
 OPTION( reducetarget,     75, 10,1e2,0,0,1, "reduce fraction in percent") \
 OPTION( reducetier1glue,   2,  1,2e9,0,0,1, "glue of kept learned clauses") \
 OPTION( reducetier2glue,   6,  1,2e9,0,0,1, "glue of tier two clauses") \
@@ -220,7 +220,7 @@ OPTION( vivifyirred,       1,  0,  1,0,1,1, "vivification irred") \
 OPTION( vivifyirredeff,    3,  1,100,1,0,1, "irredundant efficiency per mille") \
 OPTION( vivifyonce,        0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \
 OPTION( vivifyretry,       0,  0,  5,0,1,1, "re-vivify clause if vivify was successful") \
-OPTION( vivifyschedmax,  1e3, 10,2e9,0,0,1, "maximum schedule size") \
+OPTION( vivifyschedmax,  5e3, 10,2e9,0,0,1, "maximum schedule size") \
 OPTION( vivifythresh,     20,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( vivifytier1,       1,  0,  1,0,1,1, "vivification tier1") \
 OPTION( vivifytier1eff,    4,  0,100,1,0,1, "relative tier1 effort") \
