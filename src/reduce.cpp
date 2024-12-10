@@ -119,8 +119,6 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
         mark_garbage (c); // unless
       continue;           //  used recently.
     }
-    if (used >= max_used)
-      continue; // Do keep recently used clauses.
     stack.push_back (c);
   }
 
@@ -194,6 +192,21 @@ bool Internal::propagate_out_of_order_units () {
 }
 
 /*------------------------------------------------------------------------*/
+
+// reduction is scheduled with reduceint, reducetarget and reduceopt.
+// with reduceopt=1 the number of learnt clauses scale with
+// sqrt of conflicts times reduceint
+// the scaling is the same as with reduceopt=0 (the classical default)
+// however, the constants are different. To avoid this (and get roughly the
+// same behaviour with reduceopt=0 and reduceopt=1) we need to scale the
+// interval, namely (reduceint^2/2)
+// Lastly, reduceopt=2 just replaces sqrt conflicts with log conflicts.
+// The learnt clauses should not be bigger than
+// 1/reducetarget * reduceint * function (conflicts)
+// for function being log if reduceint=2 an sqrt otherwise.
+// This is however only the theoretical target and second chance for
+// tier2 clauses and very long lifespan of tier1 clauses (through used flag)
+// make this behave differently.
 
 void Internal::reduce () {
   START (reduce);
