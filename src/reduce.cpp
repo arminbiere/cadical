@@ -147,10 +147,8 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
         mark_garbage (c); // unless
       continue;           //  used recently.
     }
-#if 0
-    if (used >= max_used / 4) // keeping very active clauses
+    if (used >= max_used) // keeping recently used clauses
       continue;
-#endif
     stack.push_back (Reducer (c));
   }
 
