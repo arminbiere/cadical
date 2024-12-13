@@ -436,7 +436,7 @@ void Internal::init_search_limits () {
     mode = "keeping";
   else {
     last.reduce.conflicts = -1;
-    lim.reduce = stats.conflicts + opts.reduceint;
+    lim.reduce = stats.conflicts + opts.reduceinit;
     mode = "initial";
   }
   (void) mode;

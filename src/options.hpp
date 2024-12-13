@@ -140,6 +140,7 @@ OPTION( radixsortlim,     32,  0,2e9,0,0,1, "radix sort limit") \
 OPTION( realtime,          0,  0,  1,0,0,0, "real instead of process time") \
 OPTION( recomputetier,     1,  0,  1,0,0,1, "recompute tiers") \
 OPTION( reduce,            1,  0,  1,0,0,1, "reduce useless clauses") \
+OPTION( reduceinit,      300,  1,1e6,0,0,1, "initial interval") \
 OPTION( reduceint,        25,  1,1e6,0,0,1, "reduce interval") \
 OPTION( reduceopt,         1,  0,  2,0,0,1, "0=prct,1=sqrt,2=max") \
 OPTION( reducetarget,     75, 10,1e2,0,0,1, "reduce fraction in percent") \
