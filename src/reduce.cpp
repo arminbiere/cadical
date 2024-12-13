@@ -207,6 +207,8 @@ bool Internal::propagate_out_of_order_units () {
 // This is however only the theoretical target and second chance for
 // tier2 clauses and very long lifespan of tier1 clauses (through used flag)
 // make this behave differently.
+// reduceinit shifts the curve to the right, increasing the number of clauses
+// in the solver. This impact will decrease over time.
 
 void Internal::reduce () {
   START (reduce);
