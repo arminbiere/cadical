@@ -49,11 +49,13 @@ Internal::Internal ()
 
 Internal::~Internal () {
   // If a memory exception ocurred a profile might still be active.
+#ifndef QUIET
 #define PROFILE(NAME, LEVEL) \
   if (PROFILE_ACTIVE (NAME)) \
     STOP (NAME);
   PROFILES
 #undef PROFILE
+#endif
   delete[] (char *) dummy_binary;
   for (const auto &c : clauses)
     delete_clause (c);
