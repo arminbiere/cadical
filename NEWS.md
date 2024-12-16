@@ -2,13 +2,13 @@ Version 2.1.1
 -------------
 - New IPASIR-UP options, with the same default as in 1.1:
 
-   + exteagerreasons where the solver eagerly asks for reasons before
+   + `exteagerreasons` where the solver eagerly asks for reasons before
      analysing conflicts instead of being lazy (default: eager)
 
-   + exteagerrecalc where the solver recalculates the levels on the
+   + `exteagerrecalc` where the solver recalculates the levels on the
      trail before conflict analysis (default: on). Mostly useful if
      the solver provides many propagations in a lazy fashion. Requires
-     exteagerreasons to be on to have any effect.
+     `exteagerreasons` to be on to have any effect.
 
 - Fix performance regression for incremental SAT solving due to too
   eager garbage collection before any incremental call in favor of
