@@ -14,13 +14,8 @@ Internal::Internal ()
       external_prop_is_lazy (true), forced_backt_allowed (false),
       private_steps (false), rephased (0), vsize (0), max_var (0),
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
-<<<<<<< HEAD
       concluded (false), lrat (false), frat (false), level (0), vals (0),
       score_inc (1.0), scores (this), conflict (0), ignore (0),
-=======
-      concluded (false), lrat (false), level (0), vals (0), score_inc (1.0),
-      scores (this), conflict (0), ignore (0),
->>>>>>> fde65537 (formatted)
       external_reason (&external_reason_clause), newest_clause (0),
       force_no_backtrack (false), from_propagator (false),
       ext_clause_forgettable (false), tainted_literal (0), notified (0),
@@ -53,15 +48,12 @@ Internal::Internal ()
 }
 
 Internal::~Internal () {
-<<<<<<< HEAD
   // If a memory exception ocurred a profile might still be active.
 #define PROFILE(NAME, LEVEL) \
   if (PROFILE_ACTIVE (NAME)) \
     STOP (NAME);
   PROFILES
 #undef PROFILE
-=======
->>>>>>> fde65537 (formatted)
   delete[] (char *) dummy_binary;
   for (const auto &c : clauses)
     delete_clause (c);
