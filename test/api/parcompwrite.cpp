@@ -239,7 +239,8 @@ void tester::join () {
 static void catch_alarm (int sig) {
   assert (sig == SIGALRM);
   const char *msg = "error: unexpected alarm (file I/O hanging?)\n";
-  ::write (2, msg, strlen (msg));
+  if (::write (2, msg, strlen (msg)))
+    exit (2);
   (void) sig;
   exit (1);
 }
