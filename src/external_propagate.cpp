@@ -1029,7 +1029,10 @@ int Internal::ask_decision () {
 // propagator.
 //
 bool Internal::is_external_forgettable (int64_t id) {
+<<<<<<< HEAD
   assert (opts.check);
+=======
+>>>>>>> fde65537 (formatted)
   return (external->forgettable_original.find (id) !=
           external->forgettable_original.end ());
 }
@@ -1041,7 +1044,10 @@ bool Internal::is_external_forgettable (int64_t id) {
 // ignore it.
 //
 void Internal::mark_garbage_external_forgettable (int64_t id) {
+<<<<<<< HEAD
   assert (opts.check);
+=======
+>>>>>>> fde65537 (formatted)
   assert (is_external_forgettable (id));
 
   LOG (external->forgettable_original[id],

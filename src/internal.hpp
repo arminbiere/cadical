@@ -184,11 +184,18 @@ struct Internal {
   uint64_t reserved_ids; // number of reserved ids for original clauses
   uint64_t conflict_id;  // store conflict id for finalize (frat)
   bool concluded;        // keeps track of conclude
+<<<<<<< HEAD
   vector<uint64_t> conclusion; // store ids of conclusion clauses
   vector<uint64_t>
       unit_clauses_idx;        // keep track of unit_clauses (LRAT/FRAT)
   vector<uint64_t> lrat_chain; // create LRAT in solver: option lratdirect
   vector<uint64_t> mini_chain; // used to create LRAT in minimize
+=======
+  vector<uint64_t> conclusion;   // store ids of conclusion clauses
+  vector<uint64_t> unit_clauses; // keep track of unit_clauses (LRAT/FRAT)
+  vector<uint64_t> lrat_chain;   // create LRAT in solver: option lratdirect
+  vector<uint64_t> mini_chain;   // used to create LRAT in minimize
+>>>>>>> fde65537 (formatted)
   vector<uint64_t> minimize_chain; // used to create LRAT in minimize
   vector<uint64_t> unit_chain;     // used to avoid duplicate units
   vector<Clause *> inst_chain;     // for LRAT in instantiate
