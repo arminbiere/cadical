@@ -48,8 +48,9 @@ void Internal::init_queue (int old_max_var, int new_max_var) {
   LOG ("initializing VMTF queue from %d to %d", old_max_var + 1,
        new_max_var);
   assert (old_max_var < new_max_var);
-  // New variables can be created that can invoke enlarge anytime (eg via calls
-  // during ipasir-up call-backs), thus assuming (!level) is not correct 
+  // New variables can be created that can invoke enlarge anytime (eg via
+  // calls during ipasir-up call-backs), thus assuming (!level) is not
+  // correct
   for (int idx = old_max_var; idx < new_max_var; idx++)
     init_enqueue (idx + 1);
 }

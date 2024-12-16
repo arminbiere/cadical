@@ -81,7 +81,7 @@ void Checker::delete_clause (CheckerClause *c) {
     assert (num_garbage);
     num_garbage--;
   }
-  delete[](char *) c;
+  delete[] (char *) c;
 }
 
 void Checker::enlarge_clauses () {
@@ -464,8 +464,7 @@ void Checker::add_clause (const char *type) {
 #endif
 
   // If there are enough garbage clauses collect them first.
-  if (num_garbage >
-      0.5 * max ((size_t) size_clauses, (size_t) size_vars))
+  if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
     collect_garbage_clauses ();
 
   int unit = 0;
@@ -553,8 +552,8 @@ void Checker::delete_clause (uint64_t id, bool, const vector<int> &c) {
   START (checking);
   LOG (c, "CHECKER checking deletion of clause");
   stats.deleted++;
-  simplified.clear();  // Can be non-empty if clause allocation fails.
-  unsimplified.clear();  // Can be non-empty if clause allocation fails.
+  simplified.clear ();   // Can be non-empty if clause allocation fails.
+  unsimplified.clear (); // Can be non-empty if clause allocation fails.
   import_clause (c);
   last_id = id;
   if (!tautological ()) {

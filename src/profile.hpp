@@ -134,8 +134,8 @@ struct Profiles {
   } while (0)
 
 #define PROFILE_ACTIVE(P) \
-  ((internal->profiles.P.level <= internal->opts.profile) \
-    && (internal->profiles.P.active))
+  ((internal->profiles.P.level <= internal->opts.profile) && \
+   (internal->profiles.P.active))
 
 /*------------------------------------------------------------------------*/
 

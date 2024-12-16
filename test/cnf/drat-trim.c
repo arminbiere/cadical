@@ -1643,7 +1643,7 @@ int parse (struct solver *S) {
     if (tmp > 0 && tmp != EOF)
       break;
     tmp = fscanf (S->inputFile, "%*s\n");
-  }                               // In case a comment line was found
+  } // In case a comment line was found
   while (tmp != 2 && tmp != EOF); // Skip it and read next line
   int nZeros = S->nClauses;
 

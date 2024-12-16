@@ -225,15 +225,15 @@ int Internal::decide () {
 #endif
 
   } else {
-    
+
     int decision = ask_decision ();
     if ((size_t) level < assumptions.size () ||
-      ((size_t) level == assumptions.size () && constraint.size ())) {
-        // Forced backtrack below pseudo decision levels.
-        // So one of the two branches above will handle it.
-        STOP (decide);
-        res = decide (); // STARTS and STOPS profiling
-        START (decide);
+        ((size_t) level == assumptions.size () && constraint.size ())) {
+      // Forced backtrack below pseudo decision levels.
+      // So one of the two branches above will handle it.
+      STOP (decide);
+      res = decide (); // STARTS and STOPS profiling
+      START (decide);
     } else {
       stats.decisions++;
       if (!decision) {

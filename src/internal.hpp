@@ -174,20 +174,21 @@ struct Internal {
   bool did_external_prop;     // true if ext. propagation happened
   bool external_prop_is_lazy; // true if the external propagator is lazy
   bool forced_backt_allowed;  // external propagator can force backtracking
-  bool private_steps;         // no notification of ext. prop during these steps
-  char rephased;              // last type of resetting phases
-  Reluctant reluctant;        // restart counter in stable mode
-  size_t vsize;               // actually allocated variable data size
-  int max_var;                // internal maximum variable index
-  uint64_t clause_id;         // last used id for clauses
-  uint64_t original_id;       // ids for original clauses to produce LRAT
-  uint64_t reserved_ids;      // number of reserved ids for original clauses
-  uint64_t conflict_id;       // store conflict id for finalize (frat)
-  bool concluded;             // keeps track of conclude
-  vector<uint64_t> conclusion;   // store ids of conclusion clauses
-  vector<uint64_t> unit_clauses_idx; // keep track of unit_clauses (LRAT/FRAT)
-  vector<uint64_t> lrat_chain;   // create LRAT in solver: option lratdirect
-  vector<uint64_t> mini_chain;   // used to create LRAT in minimize
+  bool private_steps;    // no notification of ext. prop during these steps
+  char rephased;         // last type of resetting phases
+  Reluctant reluctant;   // restart counter in stable mode
+  size_t vsize;          // actually allocated variable data size
+  int max_var;           // internal maximum variable index
+  uint64_t clause_id;    // last used id for clauses
+  uint64_t original_id;  // ids for original clauses to produce LRAT
+  uint64_t reserved_ids; // number of reserved ids for original clauses
+  uint64_t conflict_id;  // store conflict id for finalize (frat)
+  bool concluded;        // keeps track of conclude
+  vector<uint64_t> conclusion; // store ids of conclusion clauses
+  vector<uint64_t>
+      unit_clauses_idx;        // keep track of unit_clauses (LRAT/FRAT)
+  vector<uint64_t> lrat_chain; // create LRAT in solver: option lratdirect
+  vector<uint64_t> mini_chain; // used to create LRAT in minimize
   vector<uint64_t> minimize_chain; // used to create LRAT in minimize
   vector<uint64_t> unit_chain;     // used to avoid duplicate units
   vector<Clause *> inst_chain;     // for LRAT in instantiate
@@ -692,9 +693,9 @@ struct Internal {
   void connect_propagator ();
   void mark_garbage_external_forgettable (int64_t id);
   bool is_external_forgettable (int64_t id);
-#ifndef NDEBUG  
-  bool get_merged_literals (std::vector<int>&);
-  void get_all_fixed_literals (std::vector<int>&);
+#ifndef NDEBUG
+  bool get_merged_literals (std::vector<int> &);
+  void get_all_fixed_literals (std::vector<int> &);
 #endif
 
   // Use last learned clause to subsume some more.
@@ -1308,7 +1309,7 @@ struct Internal {
   //
   void freeze (int lit) {
     int idx = vidx (lit);
-    if ((size_t)idx >= frozentab.size ()) {
+    if ((size_t) idx >= frozentab.size ()) {
       size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) max_var;
       while (new_vsize <= (size_t) max_var)
         new_vsize *= 2;
@@ -1338,7 +1339,10 @@ struct Internal {
     } else
       LOG ("variable %d remains frozen forever", idx);
   }
-  bool frozen (int lit) { return (size_t)vidx (lit) < frozentab.size () && frozentab[vidx (lit)] > 0; }
+  bool frozen (int lit) {
+    return (size_t) vidx (lit) < frozentab.size () &&
+           frozentab[vidx (lit)] > 0;
+  }
 
   // Parsing functions in 'parse.cpp'.
   //
@@ -1357,10 +1361,14 @@ struct Internal {
   void trace (File *);                   // Start write proof file.
   void check ();                         // Enable online proof checking.
 
-  void connect_proof_tracer (Tracer *tracer, bool antecedents, bool finalize_clauses = false);
-  void connect_proof_tracer (InternalTracer *tracer, bool antecedents, bool finalize_clauses = false);
-  void connect_proof_tracer (StatTracer *tracer, bool antecedents, bool finalize_clauses = false);
-  void connect_proof_tracer (FileTracer *tracer, bool antecedents, bool finalize_clauses = false);
+  void connect_proof_tracer (Tracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
+  void connect_proof_tracer (InternalTracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
+  void connect_proof_tracer (StatTracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
+  void connect_proof_tracer (FileTracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
   bool disconnect_proof_tracer (Tracer *tracer);
   bool disconnect_proof_tracer (StatTracer *tracer);
   bool disconnect_proof_tracer (FileTracer *tracer);

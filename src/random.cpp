@@ -81,9 +81,9 @@ static uint64_t hash_machine_identifier () {
 #ifndef __WIN32
 
 extern "C" {
-#include <netinet/in.h>
 #include <ifaddrs.h>
 #include <netdb.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>

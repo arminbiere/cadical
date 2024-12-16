@@ -35,7 +35,7 @@ void Internal::learn_unit_clause (int lit) {
   int64_t id = ++clause_id;
   if (lrat || frat) {
     const unsigned uidx = vlit (lit);
-    unit_clauses(uidx) = id;
+    unit_clauses (uidx) = id;
   }
   if (proof) {
     proof->add_derived_unit_clause (id, lit, lrat_chain);
@@ -265,7 +265,7 @@ inline void Internal::analyze_literal (int lit, int &open,
     unit_analyzed.push_back (lit);
     assert (val (lit) < 0);
     const unsigned uidx = vlit (-lit);
-    uint64_t id = unit_clauses(uidx);
+    uint64_t id = unit_clauses (uidx);
     assert (id);
     unit_chain.push_back (id);
     return;
@@ -290,7 +290,7 @@ inline void Internal::analyze_literal (int lit, int &open,
       unit_analyzed.push_back (lit);
       assert (val (lit) < 0);
       const unsigned uidx = vlit (-lit);
-      uint64_t id = unit_clauses(uidx);
+      uint64_t id = unit_clauses (uidx);
       assert (id);
       unit_chain.push_back (id);
       return;
@@ -1030,17 +1030,17 @@ void Internal::analyze () {
 
       assert (conflict_size);
       if (!reason) {
-	uip = -other;
-	assert (open == 1);
-	LOG ("clause is actually unit %d, stopping", -uip);
-	reverse (begin (mini_chain), end (mini_chain));
+        uip = -other;
+        assert (open == 1);
+        LOG ("clause is actually unit %d, stopping", -uip);
+        reverse (begin (mini_chain), end (mini_chain));
         for (auto id : mini_chain)
-          lrat_chain.push_back(id);
-	mini_chain.clear ();
-	clear_analyzed_levels ();
-	assert (!opts.exteagerreasons);
-	clause.clear ();
-	break;
+          lrat_chain.push_back (id);
+        mini_chain.clear ();
+        clear_analyzed_levels ();
+        assert (!opts.exteagerreasons);
+        clause.clear ();
+        break;
       }
       assert (conflict_size >= 2);
 

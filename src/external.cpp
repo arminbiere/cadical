@@ -4,9 +4,9 @@
 namespace CaDiCaL {
 
 External::External (Internal *i)
-    : internal (i), max_var (0), vsize (0), extended (false), concluded (false),
-      terminator (0), learner (0), fixed_listener (0), propagator (0), solution (0),
-      vars (max_var) {
+    : internal (i), max_var (0), vsize (0), extended (false),
+      concluded (false), terminator (0), learner (0), fixed_listener (0),
+      propagator (0), solution (0), vars (max_var) {
   assert (internal);
   assert (!internal->external);
   internal->external = this;
@@ -154,17 +154,19 @@ void External::add (int elit) {
 
   if (internal->opts.check &&
       (internal->opts.checkwitness || internal->opts.checkfailed)) {
-    
-    forgettable = internal->from_propagator && internal->ext_clause_forgettable;
-    
-    // Forgettable clauses (coming from the external propagator) are not saved
-    // into the external 'original' stack. They are stored separately in
-    // external 'forgettable_original', from where they are deleted when the
-    // corresponding clause is deleted (actually deleted, not just marked as
-    // garbage).
-    if (!forgettable) original.push_back (elit);
+
+    forgettable =
+        internal->from_propagator && internal->ext_clause_forgettable;
+
+    // Forgettable clauses (coming from the external propagator) are not
+    // saved into the external 'original' stack. They are stored separately
+    // in external 'forgettable_original', from where they are deleted when
+    // the corresponding clause is deleted (actually deleted, not just
+    // marked as garbage).
+    if (!forgettable)
+      original.push_back (elit);
   }
-  
+
   const int ilit = internalize (elit);
   assert (!elit == !ilit);
 
@@ -310,10 +312,10 @@ void External::unphase (int elit) {
 /*------------------------------------------------------------------------*/
 
 // External propagation related functions
-// 
+//
 // Note that when an already assigned variable is added as observed, the
 // solver will backtrack to undo this assignment.
-// 
+//
 void External::add_observed_var (int elit) {
   if (!propagator) {
     LOG ("No connected propagator that could observe the variable, "
@@ -352,9 +354,9 @@ void External::add_observed_var (int elit) {
   is_observed[eidx] = true;
 
   int ilit = internalize (elit);
-  // internal add-observed-var backtracks to a lower decision level to unassign
-  // the variable in case it was already assigned previously (but not on the
-  // current level)
+  // internal add-observed-var backtracks to a lower decision level to
+  // unassign the variable in case it was already assigned previously (but
+  // not on the current level)
   internal->add_observed_var (ilit);
 
   if (propagator->is_lazy)
@@ -362,10 +364,10 @@ void External::add_observed_var (int elit) {
 
   // In case this variable was already assigned (e.g. via unit clause) and
   // got compacted to map to another (not observed) variable, it can not be
-  // unnasigned so it must be notified explicitly now. (-> Can lead to repeated
-  // fixed assignment notifications, in case it was unobserved and observed
-  // again. But a repeated notification is less error-prone than never
-  // notifying an assignment.)
+  // unnasigned so it must be notified explicitly now. (-> Can lead to
+  // repeated fixed assignment notifications, in case it was unobserved and
+  // observed again. But a repeated notification is less error-prone than
+  // never notifying an assignment.)
   const int tmp = fixed (elit);
   if (!tmp)
     return;
@@ -376,7 +378,7 @@ void External::add_observed_var (int elit) {
 
   // internal add-observed-var had to backtrack to root-level already
   assert (!internal->level);
-    
+
   std::vector<int> assigned = {unit};
   propagator->notify_assignment (assigned);
 }
@@ -466,7 +468,7 @@ void External::force_backtrack (size_t new_level) {
     LOG ("No connected propagator that could force backtracking");
     return;
   }
-  LOG ("force backtrack to level %zd",new_level);
+  LOG ("force backtrack to level %zd", new_level);
   internal->force_backtrack (new_level);
 }
 
@@ -675,12 +677,13 @@ void External::check_assignment (int (External::*a) (int) const) {
   }
 
   bool presence_flag;
-  // Check those forgettable external clauses that are still present, but only
-  // if the external propagator is still connected (otherwise solution 
+  // Check those forgettable external clauses that are still present, but
+  // only if the external propagator is still connected (otherwise solution
   // reconstruction is allowed to touch the previously observed variables so
   // there is no guarantee that the final model will satisfy these clauses.)
-  for (const auto& forgettables : forgettable_original) {
-    if (!propagator) break;
+  for (const auto &forgettables : forgettable_original) {
+    if (!propagator)
+      break;
     presence_flag = true;
     satisfied = false;
 #ifndef QUIET
@@ -698,7 +701,7 @@ void External::check_assignment (int (External::*a) (int) const) {
         presence_flag = false;
         continue;
       }
-      
+
       if ((this->*a) (lit) == lit) {
         satisfied = true;
         break;
@@ -706,12 +709,12 @@ void External::check_assignment (int (External::*a) (int) const) {
     }
 
     if (!satisfied) {
-        fatal_message_start ();
-        fputs ("unsatisfied external forgettable clause:\n", stderr);
-        for (size_t j = 1; j < forgettables.second.size(); j++)
-          fprintf (stderr, "%d ", forgettables.second[j]);
-        fputc ('0', stderr);
-        fatal_message_end ();
+      fatal_message_start ();
+      fputs ("unsatisfied external forgettable clause:\n", stderr);
+      for (size_t j = 1; j < forgettables.second.size (); j++)
+        fprintf (stderr, "%d ", forgettables.second[j]);
+      fputc ('0', stderr);
+      fatal_message_end ();
     }
   }
 #ifndef QUIET
@@ -774,7 +777,7 @@ void External::check_failing () {
     checker->add (lit);
 
   // Add every forgettable external clauses
-  for (const auto& forgettables : forgettable_original) {
+  for (const auto &forgettables : forgettable_original) {
     bool presence_flag = true;
     for (const auto lit : forgettables.second) {
       if (presence_flag) {
@@ -881,7 +884,7 @@ bool External::traverse_all_non_frozen_units_as_witnesses (
     const int ilit = e2i[idx] * (tmp < 0 ? -1 : 1);
     // heurstically add + max_var to the id to avoid reusing ids
     const uint64_t id = internal->opts.lrat
-                            ? internal->unit_clauses(internal->vlit (ilit))
+                            ? internal->unit_clauses (internal->vlit (ilit))
                             : 1;
     assert (id);
     clause_and_witness.push_back (unit);
