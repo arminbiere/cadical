@@ -289,12 +289,12 @@ void Internal::mark_garbage (Clause *c) {
     proof->delete_clause (c);
   }
 
-  // Because of the internal model checking, external forgettable clauses must
-  // be marked as removed already upon mark_garbage, can not wait until actual
-  // deletion.
+  // Because of the internal model checking, external forgettable clauses
+  // must be marked as removed already upon mark_garbage, can not wait until
+  // actual deletion.
   if (opts.check && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
-  
+
   assert (stats.current.total > 0);
   stats.current.total--;
 
@@ -339,7 +339,7 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   num_assigned++;
   const unsigned uidx = vlit (lit);
   if (lrat || frat)
-    unit_clauses(uidx) = id;
+    unit_clauses (uidx) = id;
   LOG ("original unit assign %d", lit);
   assert (num_assigned == trail.size () || level);
   mark_fixed (lit);
@@ -399,7 +399,7 @@ void Internal::add_new_original_clause (uint64_t id) {
             int elit = externalize (lit);
             unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
             if (!external->ext_units[eidx]) {
-              uint64_t uid = (unit_clauses(vlit (-lit)));
+              uint64_t uid = (unit_clauses (vlit (-lit)));
               assert (uid);
               lrat_chain.push_back (uid);
             }
@@ -430,7 +430,6 @@ void Internal::add_new_original_clause (uint64_t id) {
 
       if (opts.check && is_external_forgettable (id))
         mark_garbage_external_forgettable (id);
-
     }
     if (proof) {
       proof->delete_external_original_clause (id, false, external->eclause);
@@ -451,11 +450,11 @@ void Internal::add_new_original_clause (uint64_t id) {
 
       if (from_propagator) {
         // The original form of the added clause is immediately forgotten
-        // TODO: shall we save and check the simplified form? (one with new_id)
+        // TODO: shall we save and check the simplified form? (one with
+        // new_id)
         if (opts.check && is_external_forgettable (id))
           mark_garbage_external_forgettable (id);
       }
-
     }
     external->eclause.clear ();
     lrat_chain.clear ();
@@ -482,8 +481,8 @@ void Internal::add_new_original_clause (uint64_t id) {
         v.level = 0;
         v.reason = 0;
         const unsigned uidx = vlit (clause[0]);
-	if (lrat || frat)
-          unit_clauses(uidx) = new_id;
+        if (lrat || frat)
+          unit_clauses (uidx) = new_id;
         mark_fixed (clause[0]);
       } else {
         const int lit = clause[0];

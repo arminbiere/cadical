@@ -483,24 +483,24 @@ void Internal::remove_garbage_binaries () {
       const_watch_iterator i;
       for (i = j; i != end; i++) {
         Watch w = *i;
-	*j++ = w;
+        *j++ = w;
         Clause *c = w.clause;
-	COVER (!w.binary() && c->size == 2);
-	if (!w.binary())
-	  continue;
+        COVER (!w.binary () && c->size == 2);
+        if (!w.binary ())
+          continue;
         if (c->reason && c->garbage) {
-	  COVER (true);
+          COVER (true);
           assert (c->size == 2);
           backtrack_level =
               min (backtrack_level, var (c->literals[0]).level);
           LOG ("need to backtrack to before level %d", backtrack_level);
-	  --j;
-	  continue;
+          --j;
+          continue;
         }
-	if (!c->collect ())
-	  continue;
-	LOG (c, "removing from watch list");
-	--j;
+        if (!c->collect ())
+          continue;
+        LOG (c, "removing from watch list");
+        --j;
       }
       ws.resize (j - ws.begin ());
       shrink_vector (ws);

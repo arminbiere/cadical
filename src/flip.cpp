@@ -9,7 +9,6 @@ bool Internal::flip (int lit) {
   if (!active (lit) && !flags (lit).unused ())
     return false;
 
-
   // TODO: Unused case is not handled yet.
   // if (flags (lit).unused ()) return false;
 

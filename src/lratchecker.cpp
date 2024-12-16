@@ -68,7 +68,7 @@ void LratChecker::delete_clause (LratCheckerClause *c) {
     assert (num_garbage);
     num_garbage--;
   }
-  delete[](char *) c;
+  delete[] (char *) c;
 }
 
 void LratChecker::enlarge_clauses () {

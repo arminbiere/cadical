@@ -112,7 +112,7 @@ void LratBuilder::delete_clause (LratBuilderClause *c) {
     assert (num_garbage);
     num_garbage--;
   }
-  delete[](char *) c;
+  delete[] (char *) c;
 }
 
 void LratBuilder::enlarge_clauses () {
@@ -332,7 +332,7 @@ void LratBuilder::tautological () {
     if (lit == -prev) {
       new_clause_taut = true;
       return;
-    }                  // tautological clause
+    } // tautological clause
     *j++ = prev = lit; // which means we don't care
   }
   simplified.resize (j - simplified.begin ());

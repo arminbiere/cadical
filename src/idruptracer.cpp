@@ -93,7 +93,7 @@ IdrupClause *IdrupTracer::new_clause () {
 void IdrupTracer::delete_clause (IdrupClause *c) {
   assert (c);
   num_clauses--;
-  delete[](char *) c;
+  delete[] (char *) c;
 }
 
 uint64_t IdrupTracer::reduce_hash (uint64_t hash, uint64_t size) {

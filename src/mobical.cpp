@@ -4701,7 +4701,8 @@ int Mobical::main (int argc, char **argv) {
     } else if (argv[i][0] == '-' && argv[i][1] == 'L') {
       if (limit >= 0)
         die ("multiple '-L' options (try '-h')");
-      if (!is_unsigned_str (argv[i] + 2) || (limit = atol (argv[i] + 2)) < 0)
+      if (!is_unsigned_str (argv[i] + 2) ||
+          (limit = atol (argv[i] + 2)) < 0)
         die ("invalid argument in '%s' (try '-h')", argv[i]);
     } else if (!strcmp (argv[i], "--time")) {
       if (++i == argc)

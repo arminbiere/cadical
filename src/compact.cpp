@@ -358,14 +358,14 @@ void Internal::compact () {
     if (src == dst)
       continue;
     assert (dst < src);
-    if ((size_t)src >= frozentab.size ())
+    if ((size_t) src >= frozentab.size ())
       break;
-    if ((size_t)dst >= frozentab.size ())
+    if ((size_t) dst >= frozentab.size ())
       break;
     frozentab[dst] += frozentab[src];
     frozentab[src] = 0;
   }
-  frozentab.resize (min(frozentab.size (), mapper.new_vsize));
+  frozentab.resize (min (frozentab.size (), mapper.new_vsize));
   shrink_vector (frozentab);
 
   // Special code for 'relevanttab'.
