@@ -1,5 +1,9 @@
 Version 2.1.1
 -------------
+
+- Reentrant multi-threaded writing of compressed files fixed
+  with 'closeform' (using 'pipe|fork|exec|closefrom').
+
 - New IPASIR-UP options, with the same default as in 1.1:
 
    + `exteagerreasons` where the solver eagerly asks for reasons before
