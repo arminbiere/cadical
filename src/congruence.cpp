@@ -222,8 +222,6 @@ LitClausePair make_LitClausePair (int lit, Clause* cl) {
 
 void Closure::set_mu1_reason(int lit, Clause *c) {
   assert (marked(lit) & 1);
-  if (!internal->lrat)
-    return;
   LOG (c, "mu1 %d -> %zd", lit, c->id);
   mu1_ids[internal->vlit (lit)] = make_LitClausePair (lit, c);
 }
@@ -549,7 +547,9 @@ void Closure::index_gate (Gate *g) {
 // that.
 Clause* Closure::produce_rewritten_clause_lrat (Clause *c, int except, uint64_t id1, uint64_t id2,
 				   int except_other, uint64_t id_other1, uint64_t id_other2,
-				   int except_lhs, int except_lhs2) {
+						int except_lhs, int except_lhs2) {
+  auto tmp_lrat (std::move(internal->lrat_chain));
+  internal->lrat_chain.clear();
   LOG (c, "rewriting clause for LRAT proof");
   assert (internal->clause.empty ());
   assert (internal->lrat_chain.empty());
@@ -576,52 +576,109 @@ Clause* Closure::produce_rewritten_clause_lrat (Clause *c, int except, uint64_t 
       const unsigned uidx = internal->vlit (-lit);
       uint64_t id = internal->unit_clauses[uidx];
       assert (id);
-      chain.push_back (id);
+      internal->lrat_chain.push_back (id);
+      changed = true;
       continue;
     }
-    const int other = find_eager_representative_and_compress (lit);
-    const bool marked = internal->marked (lit);
-    internal->marked (other);
-    if (lit != other && marked) {
+    if (internal->val (lit) > 0) {
+      LOG ("found positive unit, so clause is subsumed by unit");
       tautology = true;
+      break;
+    }
+    const int other = find_eager_representative_and_compress (lit);
+    const bool marked = internal->marked2 (other);
+    const bool neg_marked = internal->marked2 (-other);
+    if (!marked)
+      internal->mark2 (other);
+    if (neg_marked) {
+      tautology = true;
+      LOG ("tautology due to %d -> %d", lit, other);
+    }
+    else if (lit == other && marked) {
+      changed = true;
+      LOG ("%d -> %d already in", lit, other);
     }
     else if (lit != other) {
-      assert (!marked);
-      internal->clause.push_back (other);
-      internal->mark (other);
+      if (!marked)
+	internal->clause.push_back (other);
       changed = true;
-      internal->lrat_chain.push_back (find_representative_lrat(lit));
+      internal->lrat_chain.push_back (representative_id (lit));
     }
-    else {
+    else if (!marked)
       internal->clause.push_back (lit);
-
-    }
   }
 
   for (auto lit : *c) {
     internal->unmark (lit);
   }
 
+  for (auto lit : internal->clause) {
+    internal->unmark (lit);
+  }
+
+  internal->lrat_chain.push_back(c->id);
   Clause *d;
   if (tautology) {
-    assert (false);
+    LOG ("generated clause is a tautology");
+    d = nullptr;
+    internal->lrat_chain.clear ();
   }
   else if (changed) {
-    d = internal->new_clause (false);
-    LOG (d, "rewriting clause to");
+    LOG (internal->lrat_chain, "LRAT Chain");
+    d = new_clause ();
+    LOG (d, "rewritten clause to");
   } else {
+    LOG (c, "clause is unchanged, so giving up");
     internal->lrat_chain.clear ();
     d = c;
   }
-
+  for (auto var : internal->vars) {
+    assert (!internal->marked (var));
+    assert (!internal->marked (-var));
+  }
+  internal->clause.clear ();
+  internal->lrat_chain = std::move (tmp_lrat);
   return d;
 }
 
-void Closure::push_id_and_rewriting_lrat (Clause *c, int except, uint64_t id1, uint64_t id2, std::vector<uint64_t> &chain, bool insert_id_after,
-					  int except_other, uint64_t id_other1, uint64_t id_other2, int except_lhs, int except_lhs2) {
+Clause* Closure::new_clause () {
+  LOG (internal->clause, "learn new clause");
+  internal->external->check_learned_clause ();
+  Clause *c = internal->new_clause (false);
+
+  if (internal->proof) {
+    internal->proof->add_derived_clause (c, internal->lrat_chain);
+  }
+  return c;
+}
+
+void Closure::produce_lrat_for_rewrite (std::vector<uint64_t> &chain, Rewrite rewrite, int lit) {
+  if (resolvent_marked (rewrite.dst)) {
+    LOG ("producing reason for rewriting %d marked with %d", lit, resolvent_marked (rewrite.dst));
+    chain.push_back (lit == rewrite.src ? rewrite.id1 : rewrite.id2);
+    proof_marked (lit) = proof_marked (-lit) = 1;
+    proof_analyzed.push_back (lit);
+  } else {
+    // no reason to push the justification for the rewrite, just marking as
+    // done
+    LOG ("not producing reason for rewriting %d", lit);
+    proof_marked (lit) = proof_marked (-lit) = 1;
+    proof_analyzed.push_back (lit);
+  }
+}
+
+void Closure::push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
+                                          std::vector<uint64_t> &chain,
+                                          bool insert_id_after,
+                                          Rewrite rewrite2, int except_lhs,
+                                          int except_lhs2) {
   LOG (c, "computing normalized LRAT chain for clause, rewriting except for %d (%" PRIu64 ", %" PRIu64
-	  ") and %d (%" PRIu64 ", %" PRIu64 ") and skipping %d and %d", except, id1, id2,
-       except_other, id_other1, id_other2, except_lhs, except_lhs2);
+	  ") and %d (%" PRIu64 ", %" PRIu64 ") and skipping %d and %d", rewrite1.src, rewrite1.id1, rewrite1.id2,
+       rewrite2.src, rewrite2.id1, rewrite2.id2, except_lhs, except_lhs2);
+  assert (c);
+  chain.push_back (c->id);
+  LOG (chain, "chain");
+  return;
   if (internal->lrat && c->size == 2) {
     const int lit = c->literals[0];
     const int other = c->literals[1];
@@ -652,29 +709,32 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, int except, uint64_t id1, u
       uint64_t id = internal->unit_clauses[uidx];
       assert (id);
       chain.push_back (id);
-    } else if (other == except && id1) {
-      chain.push_back (id1);
-      proof_marked (other) = proof_marked (-other) = 1;
+    } else if (other == rewrite1.src && rewrite1.id1) {
+      produce_lrat_for_rewrite (chain, rewrite1, other);
+    } else if (other == -rewrite1.src && rewrite1.id2) {
+      produce_lrat_for_rewrite (chain, rewrite1, other);
       proof_analyzed.push_back (other);
-    } else if (other == -except && id2) {
-      chain.push_back (id2);
-      proof_marked (other) = proof_marked (-other) = 1;
-      proof_analyzed.push_back (other);
-    } else if (other == except_other && id_other1) {
-      chain.push_back (id_other1);
-      proof_marked (other) = proof_marked (-other) = 1;
-      proof_analyzed.push_back (other);
-    } else if (other == -except_other && id_other2) {
-      chain.push_back (id_other2);
-      proof_marked (other) = proof_marked (-other) = 1;
-      proof_analyzed.push_back (other);
+    } else if (other == rewrite2.src && rewrite2.id1) {
+      produce_lrat_for_rewrite (chain, rewrite2, other);
+    } else if (other == -rewrite2.src && rewrite2.id2) {
+      produce_lrat_for_rewrite (chain, rewrite2, other);
     } else if (other != find_eager_representative_and_compress (other)) {
-      proof_marked (other) = 1;
-      assert (other != eager_representative (other));
-      LOG ("reason for representative of %d %d is %" PRIu64, other, eager_representative (other),
-          find_representative_lrat (other));
-      proof_analyzed.push_back (other);
-      chain.push_back (find_representative_lrat (other));
+      const int rewritten_other = eager_representative (other);
+      assert (resolvent_marked (rewritten_other) <= 3);
+      if (!resolvent_marked (rewritten_other)) {
+        // no reason to push the justification for the rewrite, just marking as done
+	LOG ("skipping rewriting %d -> %d", other, rewritten_other);
+        proof_marked (other) = proof_marked (-other) = 1;
+        proof_analyzed.push_back (other);
+      } else {
+        proof_marked (rewritten_other) = 1;
+        assert (other != rewritten_other);
+        LOG ("reason for representative of %d %d is %" PRIu64 " seen %d", other,
+             rewritten_other,
+             find_representative_lrat (other), resolvent_marked (rewritten_other));
+        proof_analyzed.push_back (other);
+        chain.push_back (find_representative_lrat (other));
+      }
     }
     else {
       LOG ("no rewriting needed for %d", other);
@@ -684,10 +744,27 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, int except, uint64_t id1, u
     chain.push_back (c->id);
 }
 
+void Closure::push_id_and_rewriting_lrat (
+    const std::vector<LitClausePair> &reasons, Rewrite rewrite1,
+    std::vector<uint64_t> &chain, bool forward, Rewrite rewrite2,
+    int execept_lhs, int except_lhs2) {
+  for (auto litId : reasons) {
+    LOG (litId.clause, "found lrat in gate %d from %zd", litId.current_lit,
+         litId.clause->id);
+    push_id_and_rewriting_lrat (litId.clause, rewrite1, chain, forward,
+                                rewrite2, execept_lhs, except_lhs2);
+  }
+  LOG (chain, "chain from %zd reasons", reasons.size());
+}
 
 signed char &Closure::proof_marked (int lit){
-  assert (internal->vlit (lit) < marks.size());
+  assert (internal->vlit (lit) < proof_marks.size());
   return proof_marks[internal->vlit (lit)];
+}
+
+signed char &Closure::resolvent_marked (int lit){
+  assert ((size_t)internal->vidx (lit) < resolvent_marks.size());
+  return resolvent_marks[internal->vidx (lit)];
 }
 
 void Closure::unmark_marked_lrat () {
@@ -698,8 +775,77 @@ void Closure::unmark_marked_lrat () {
   }
   proof_analyzed.clear ();
 }
+void Closure::unmark_lrat_resolvents () {
+  for (auto lit : resolvent_analyzed) {
+    // TODO readd
+    // assert (proof_marked (lit));
+    resolvent_marked (lit) = 0;
+  }
+  resolvent_analyzed.clear ();
+  for (auto v : internal->vars)
+    assert (!resolvent_marked(v));
+}
 
-void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src, uint64_t id1, uint64_t id2, int lit) {
+
+void Closure::mark_lrat_resolvents (int lit, int src, int dst, int except, int except2) {
+  assert (internal->lrat);
+  return;
+  LOG ("marking %d except if %d->%d and %d %d", lit, src, dst, except, except2);
+  int repr = 0;
+  if (lit == except)
+    repr = lit;
+  else if (lit == -except)
+    repr = lit;
+  else if (lit == except2)
+    repr = lit;
+  else if (lit == -except2)
+    repr = lit;
+  else if (lit == src && dst) // use lit instead of dst
+    repr = lit;
+  else if (lit == -src && dst)
+    repr = lit;
+  else
+    repr = lit; // find_eager_representative (lit);
+  signed char &o = resolvent_marked (repr);
+  if (!o)
+    resolvent_analyzed.push_back (repr);
+  LOG ("marking was %d %d", repr, o);
+  if (repr < 0)
+    o |= 1;
+  else
+    o |= 2;
+  assert (o <= 3);
+  if (o == 3) {
+    LOG ("marking %d for both directions", repr);
+  } else
+    LOG ("marking %d to %d", repr, o);
+}
+
+void Closure::mark_lrat_resolvents (Clause *c, int src, int dst, int except, int except2) {
+  assert (internal->lrat);
+  LOG (c, "marking the resolvents with the rewrite from %d -> %d and %d %d of", src, dst, except, except2);
+  for (auto lit : *c)
+    mark_lrat_resolvents (lit, src, dst, except, except2);
+}
+
+void Closure::mark_lrat_resolvents (std::vector<LitClausePair> &chain, int src, int dst, int except, int except2) {
+  LOG ("rewriting chain");
+  assert (internal->lrat);
+  assert (internal->lrat_chain.empty());
+  for (auto &c : chain) {
+    LOG (c.clause, "sent clause");
+    c.clause = produce_rewritten_clause_lrat (c.clause, 0, 0, 0);
+    LOG (c.clause, "returned clause");
+//    mark_lrat_resolvents (c.clause, src, dst, except, except2);
+  }
+
+  LOG ("chain has size %zd", chain.size ());
+  chain.erase(std::remove_if (begin (chain), end (chain), [this](LitClausePair c){LOG (c.clause, "clause"); return c.clause == nullptr;}),
+	      end (chain));
+  LOG ("chain has size %zd", chain.size ());
+}
+
+void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src, uint64_t id1, uint64_t id2, int dst) {
   if (!internal->lrat)
     return;
   LOG ("calculating LRAT chain learn_congruence_unit_when_lhs_set");
@@ -708,13 +854,10 @@ void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src, uint64_t id1
   assert (internal->val (g->lhs) < 0);
   switch (g->tag) {
   case Gate_Type::And_Gate:
-    for (auto &litId : g->neg_lhs_ids) {
-      LOG (litId.clause,
-	   "found lrat in gate %d from %zd (looking for %d)",
-	   litId.current_lit, litId.clause->id, lit);
-      litId.clause = produce_rewritten_clause_lrat (litId.clause);
-      push_id_and_rewriting_lrat (litId.clause, src, id1, id2, internal->lrat_chain);
-    }
+
+    mark_lrat_resolvents (g->neg_lhs_ids, src, dst);
+    push_id_and_rewriting_lrat (g->neg_lhs_ids, Rewrite (src, dst, id1, id2), internal->lrat_chain);
+    unmark_lrat_resolvents ();
     break;
   default:
     assert (false);
@@ -728,30 +871,29 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src, int 
   assert (!g->pos_lhs_ids.empty ());
   assert (internal->analyzed.empty ());
   std::vector <uint64_t> proof_chain;
+//  mark_lrat_resolvents (g->lhs, src, dst);
   switch (g->tag) {
   case Gate_Type::And_Gate:
     LOG ("clashing %d", clashing);
+    // there is not need to check if we need to rewrite or not: we do not as the literals are all set.
+    // Therefore, we do not call mark_lrat_resolvents
     if (clashing == -g->lhs) { // -2 = 1&3 and 3=2
       for (auto litId : g->pos_lhs_ids) {
 	LOG (litId.clause,
 	     "found lrat in gate %d from %zd (looking for %d)",
 	     litId.current_lit, litId.clause->id, lit);
 	if (litId.current_lit == clashing) {
-	  push_id_and_rewriting_lrat (litId.clause, src, id1, id2, proof_chain, true, 0, 0, 0, -dst, -g->lhs);
+	  push_id_and_rewriting_lrat (litId.clause, Rewrite (src, dst, id1, id2), proof_chain, true, Rewrite (), -dst, -g->lhs);
 	}
       }
       LOG (proof_chain, "produced lrat chain");
     } else {
-      for (auto litId : g->pos_lhs_ids) {
-        LOG (litId.clause,
-             "found lrat in gate %d from %zd (looking for %d)",
-             litId.current_lit, litId.clause->id, lit);
-	litId.clause = produce_rewritten_clause_lrat (litId.clause);
-	push_id_and_rewriting_lrat (litId.clause, src, id1, id2, proof_chain, false, 0, 0, 0, -dst, -g->lhs);
-      }
+      mark_lrat_resolvents (g->pos_lhs_ids, src, dst, -dst, -g->lhs);
+      push_id_and_rewriting_lrat (g->pos_lhs_ids, Rewrite (src, dst, id1, id2), proof_chain, false, Rewrite (), -dst, -g->lhs);
       LOG (proof_chain, "produced lrat chain");
     }
     unmark_marked_lrat ();
+    unmark_lrat_resolvents();
     break;
   default:
     assert (false);
@@ -806,7 +948,8 @@ bool Closure::merge_literals_lrat (
   assert (g->lhs == lit);
   assert (g == h || h->lhs == other);
   LOG ("merging literals %d and %d", lit, other);
-  // TODO: this should not update_eager but still calculate the LRAT chain below!
+  // TODO: this should not update_eager but still calculate the LRAT chain
+  // below!
   const int repr_lit = find_representative_and_compress (lit, false);
   const int repr_other = find_representative_and_compress (other, false);
   find_representative_and_compress (-lit, false);
@@ -901,14 +1044,18 @@ bool Closure::merge_literals_lrat (
 
   if (repr_lit == -repr_other) {
     // now derive empty clause
+    Rewrite rew1, rew2;
     if (internal->lrat) {
-      push_id_and_rewriting_lrat (
-          eq1_tmp, lit == repr_lit ? 0 : lit,
-          lit == repr_lit ? 0 : representative_id (lit),
-          lit == repr_lit ? 0 : representative_id (-lit),
-          internal->lrat_chain, true, other == repr_other ? 0 : other,
-          other == repr_other ? 0 : representative_id (other),
-          other == repr_other ? 0 : representative_id (-other));
+      // no need to calculate push_id_and_rewriting_lrat here because all
+      // the job is done by the arguments already
+      rew1 = Rewrite (lit == repr_lit ? 0 : lit, repr_lit,
+                      lit == repr_lit ? 0 : representative_id (lit),
+                      lit == repr_lit ? 0 : representative_id (-lit));
+      rew2 = Rewrite (other == repr_other ? 0 : other, repr_other,
+                      other == repr_other ? 0 : representative_id (other),
+                      other == repr_other ? 0 : representative_id (-other));
+      push_id_and_rewriting_lrat (eq1_tmp, rew1, internal->lrat_chain, true,
+                                  rew2);
       unmark_marked_lrat ();
     }
     internal->assign_unit (-larger_repr);
@@ -917,14 +1064,11 @@ bool Closure::merge_literals_lrat (
 
       if (larger != larger_repr)
         push_lrat_unit (-larger_repr);
-      push_id_and_rewriting_lrat (
-          eq2_tmp, lit == repr_lit ? 0 : lit,
-          lit == repr_lit ? 0 : representative_id (lit),
-          lit == repr_lit ? 0 : representative_id (-lit),
-          internal->lrat_chain, true, other == repr_other ? 0 : other,
-          other == repr_other ? 0 : representative_id (other),
-          other == repr_other ? 0 : representative_id (-other),
-          larger != larger_repr ? larger_repr : 0);
+      // no need to calculate push_id_and_rewriting_lrat here because all
+      // the job is done by the arguments already
+      push_id_and_rewriting_lrat (eq2_tmp, rew1, internal->lrat_chain, true,
+                                  rew2,
+                                  larger != larger_repr ? larger_repr : 0);
       unmark_marked_lrat ();
       LOG (internal->lrat_chain, "lrat chain");
     }
@@ -951,8 +1095,8 @@ bool Closure::merge_literals_lrat (
         int neg = val_lit ? -lit : -other;
         push_lrat_unit (pos);
         push_lrat_unit (neg);
-        push_id_and_rewriting_lrat (c, 0, 0, 0, internal->lrat_chain, true,
-                                    0, 0, 0, -pos, -neg);
+        push_id_and_rewriting_lrat (c, Rewrite (), internal->lrat_chain,
+                                    true, Rewrite (), -pos, -neg);
       }
       internal->learn_empty_clause ();
       if (internal->lrat)
@@ -965,22 +1109,23 @@ bool Closure::merge_literals_lrat (
     assert (internal->lrat_chain.empty ());
     const int unit = (val_lit < 0) ? -other : other;
     if (internal->lrat) {
-      signed char val_smaller = internal->val (smaller);
       Clause *c;
-      if (lit == smaller){
-	if (val_lit < 0)
-	  c = eq1_tmp;
-	else
-	  c = eq2_tmp;
+      if (lit == smaller) {
+        if (val_lit < 0)
+          c = eq1_tmp;
+        else
+          c = eq2_tmp;
       } else {
-	if (val_lit < 0)
-	  c = eq2_tmp;
-	else
-	  c = eq1_tmp;
+        if (val_lit < 0)
+          c = eq2_tmp;
+        else
+          c = eq1_tmp;
       }
       int neg = val_lit ? lit : -lit;
-      push_id_and_rewriting_lrat (c, 0, 0, 0, internal->lrat_chain, true, 0,
-                                  0, 0, -neg, unit);
+      // no need to calculate push_id_and_rewriting_lrat here because all
+      // the job is done by the arguments already
+      push_id_and_rewriting_lrat (c, Rewrite (), internal->lrat_chain, true,
+                                  Rewrite (), -neg, unit);
     }
     learn_congruence_unit (unit);
     if (internal->lrat)
@@ -994,19 +1139,19 @@ bool Closure::merge_literals_lrat (
     const int unit = (val_other < 0) ? -lit : lit;
     if (internal->lrat) {
       Clause *c;
-      if (lit == smaller){
-	if (val_lit < 0)
-	  c = eq1_tmp;
-	else
-	  c = eq2_tmp;
+      if (lit == smaller) {
+        if (val_lit < 0)
+          c = eq1_tmp;
+        else
+          c = eq2_tmp;
       } else {
-	if (val_lit < 0)
-	  c = eq2_tmp;
-	else
-	  c = eq1_tmp;
+        if (val_lit < 0)
+          c = eq2_tmp;
+        else
+          c = eq1_tmp;
       }
-      int neg = val_lit ? lit : -lit;
-      push_id_and_rewriting_lrat (c, 0, 0, 0, internal->lrat_chain, true);
+      push_id_and_rewriting_lrat (c, Rewrite (), internal->lrat_chain,
+                                  true);
     }
     learn_congruence_unit (unit);
     if (internal->lrat)
@@ -1020,13 +1165,22 @@ bool Closure::merge_literals_lrat (
       internal->lrat_chain.clear ();
       unmark_marked_lrat ();
       assert (!proof_marked (-lit));
-      push_id_and_rewriting_lrat (
-          eq1_tmp, smaller_repr != smaller ? smaller : 0,
+/*      mark_lrat_resolvents (larger_repr);
+      mark_lrat_resolvents (-smaller_repr);
+      mark_lrat_resolvents(eq1_tmp);*/
+      Rewrite rew1 = Rewrite (
+          smaller_repr != smaller ? smaller : 0,
+          smaller_repr != smaller ? smaller_repr : 0,
           smaller_repr != smaller ? representative_id (smaller) : 0,
-          smaller_repr != smaller ? representative_id (-smaller) : 0,
-          internal->lrat_chain, true, larger_repr != larger ? larger : 0,
-          larger_repr != larger ? representative_id (larger) : 0,
-          larger_repr != larger ? representative_id (-larger) : 0);
+          smaller_repr != smaller ? representative_id (-smaller) : 0);
+      Rewrite rew2 =
+          Rewrite (larger_repr != larger ? larger : 0,
+                   larger_repr != larger ? larger_repr : 0,
+                   larger_repr != larger ? representative_id (larger) : 0,
+                   larger_repr != larger ? representative_id (-larger) : 0);
+      push_id_and_rewriting_lrat (eq1_tmp, rew1, internal->lrat_chain, true,
+                                  rew2);
+      unmark_lrat_resolvents();
     }
     eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
   } else {
@@ -1045,19 +1199,25 @@ bool Closure::merge_literals_lrat (
       assert (proof_analyzed.empty ());
       assert (!proof_marked (-lit));
       // eq2 = larger, -smaller
-      push_id_and_rewriting_lrat (
-          eq2_tmp, smaller_repr != smaller ? smaller : 0,
+      mark_lrat_resolvents (-larger_repr);
+      mark_lrat_resolvents (smaller_repr);
+      Rewrite rew1 = Rewrite (
+          smaller_repr != smaller ? smaller : 0,
+          smaller_repr != smaller ? smaller_repr : 0,
           smaller_repr != smaller ? representative_id (smaller) : 0,
-          smaller_repr != smaller ? representative_id (-smaller) : 0,
-          internal->lrat_chain, true, larger_repr != larger ? larger : 0,
-          larger_repr != larger ? representative_id (larger) : 0,
-          larger_repr != larger ? representative_id (-larger) : 0);
+          smaller_repr != smaller ? representative_id (-smaller) : 0);
+      Rewrite rew2 =
+          Rewrite (larger_repr != larger ? larger : 0,
+                   larger_repr != larger ? larger_repr : 0,
+                   larger_repr != larger ? representative_id (larger) : 0,
+                   larger_repr != larger ? representative_id (-larger) : 0);
+      push_id_and_rewriting_lrat (eq2_tmp, rew1, internal->lrat_chain, true,
+                                  rew2);
+      unmark_lrat_resolvents();
     }
 
     eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
 
-    if (internal->lrat)
-      unmark_marked_lrat ();
   } else {
     eq2_repr = eq2_tmp;
   }
@@ -1102,7 +1262,8 @@ inline void Closure::promote_clause (Clause *c) {
 // This function is rather tricky for LRAT. If you have 2 = 1 and 3=4 you cannot add 2=3. You really
 // to connect the representatives directly therefore you actually need to learn the clauses 2->3->4
 // and -2->1 and vice-versa
-bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1, Clause *c2) {
+bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
+                                          Clause *c2) {
   assert (!internal->unsat);
   uint64_t id1 = c1 ? c1->id : 0;
   uint64_t id2 = c2 ? c2->id : 0;
@@ -1116,8 +1277,8 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1, Clause
     LOG ("already merged %d and %d", lit, other);
     return false;
   }
-  const int val_lit = internal->val(lit);
-  const int val_other = internal->val(other);
+  const int val_lit = internal->val (lit);
+  const int val_other = internal->val (other);
 
   if (val_lit) {
     if (val_lit == val_other) {
@@ -1126,10 +1287,13 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1, Clause
     }
     if (val_lit == -val_other) {
       if (internal->lrat)
-	internal->lrat_chain.push_back(internal->unit_clauses[internal->vidx(lit)]),
-	internal->lrat_chain.push_back(internal->unit_clauses[internal->vidx(other)]);
-      LOG ("merging lits %d and %d assigned to inconsistent value", lit, other);
-      internal->learn_empty_clause();
+        internal->lrat_chain.push_back (
+            internal->unit_clauses[internal->vidx (lit)]),
+            internal->lrat_chain.push_back (
+                internal->unit_clauses[internal->vidx (other)]);
+      LOG ("merging lits %d and %d assigned to inconsistent value", lit,
+           other);
+      internal->learn_empty_clause ();
       return false;
     }
 
@@ -1137,8 +1301,9 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1, Clause
     LOG ("merging assigned %d and unassigned %d", lit, other);
     const int unit = (val_lit < 0) ? -other : other;
     if (internal->lrat)
-      internal->lrat_chain.push_back(internal->unit_clauses[internal->vidx(lit)]);
-    learn_congruence_unit(unit);
+      internal->lrat_chain.push_back (
+          internal->unit_clauses[internal->vidx (lit)]);
+    learn_congruence_unit (unit);
     return false;
   }
 
@@ -1146,8 +1311,9 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1, Clause
     LOG ("merging assigned %d and unassigned %d", lit, other);
     const int unit = (val_other < 0) ? -lit : lit;
     if (internal->lrat)
-      internal->lrat_chain.push_back(internal->unit_clauses[internal->vidx(other)]);
-    learn_congruence_unit(unit);
+      internal->lrat_chain.push_back (
+          internal->unit_clauses[internal->vidx (other)]);
+    learn_congruence_unit (unit);
     return false;
   }
 
@@ -1156,7 +1322,7 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1, Clause
   int smaller = lit;
   int larger = other;
 
-  if (abs(smaller_repr) > abs(larger_repr)) {
+  if (abs (smaller_repr) > abs (larger_repr)) {
     swap (smaller_repr, larger_repr);
     swap (smaller, larger);
   }
@@ -1173,14 +1339,18 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1, Clause
       // 	internal->lrat_chain.push_back (repr_id1);
       // }
       //      internal->lrat_chain.push_back (id1);
-      push_id_and_rewriting_lrat (c1, lit, lit == repr_lit ? 0 : find_representative_lrat (lit),
-                                  lit == repr_lit ? 0 : find_representative_lrat (-lit),
-                                  internal->lrat_chain, true, other,
-                                  other == repr_other ? 0 : find_representative_lrat (other),
-                                  other == repr_other ? 0 : find_representative_lrat (-other));
+
+      Rewrite rew1 =
+          Rewrite (lit, lit == repr_lit ? 0 : repr_lit,
+                   lit == repr_lit ? 0 : find_representative_lrat (lit),
+                   lit == repr_lit ? 0 : find_representative_lrat (-lit));
+      Rewrite rew2 = Rewrite (
+          other, other == repr_other ? 0 : repr_other,
+          other == repr_other ? 0 : find_representative_lrat (other),
+          other == repr_other ? 0 : find_representative_lrat (-other));
+      push_id_and_rewriting_lrat (c1, rew1, internal->lrat_chain, true,
+                                  rew2);
       if (false && other != repr_other) {
-        //	push_id_and_rewriting_lrat(c1, lit, 0, 0,
-        // internal->lrat_chain, true, other, 0, 0);
         const uint64_t repr_larger_id1 = find_representative_lrat (-other);
         internal->lrat_chain.push_back (repr_larger_id1);
       }
@@ -1194,71 +1364,77 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1, Clause
       assert (id);
       internal->lrat_chain.push_back (id);
       if (lit != repr_lit) {
-	const uint64_t repr_id2 = find_representative_lrat (-lit);
-	internal->lrat_chain.push_back (repr_id2);
+        const uint64_t repr_id2 = find_representative_lrat (-lit);
+        internal->lrat_chain.push_back (repr_id2);
       }
       internal->lrat_chain.push_back (id2);
       if (other != repr_other) {
-	const uint64_t repr_larger_id2 = find_representative_lrat (other);
-	internal->lrat_chain.push_back (repr_larger_id2);
+        const uint64_t repr_larger_id2 = find_representative_lrat (other);
+        internal->lrat_chain.push_back (repr_larger_id2);
       }
       LOG (internal->lrat_chain, "lrat chain");
     }
-    internal->learn_empty_clause();
+    internal->learn_empty_clause ();
     return false;
   }
 
   LOG ("merging %d and %d", lit, other);
-  promote_clause (c1), promote_clause(c2);
+  promote_clause (c1), promote_clause (c2);
   bool learn_clause = (lit != repr_lit) || (other != repr_other);
   if (learn_clause) {
     if (internal->lrat) {
       if (lit != repr_lit) {
-	LOG ("adding chain for lit %d -> %d", lit, repr_lit);
-	internal->lrat_chain.push_back(find_representative_lrat (lit));
+        LOG ("adding chain for lit %d -> %d", lit, repr_lit);
+        internal->lrat_chain.push_back (find_representative_lrat (lit));
       }
       if (other != repr_other) {
-	LOG ("adding chain for lit %d -> %d", -other, -repr_other);
-	internal->lrat_chain.push_back(find_representative_lrat (-other));
+        LOG ("adding chain for lit %d -> %d", -other, -repr_other);
+        internal->lrat_chain.push_back (find_representative_lrat (-other));
       }
-      internal->lrat_chain.push_back(id1);
+      internal->lrat_chain.push_back (id1);
     }
     Clause *eq1 = add_binary_clause (repr_lit, -repr_other);
-    
+
     if (internal->lrat) {
       internal->lrat_chain.clear ();
       if (lit != repr_lit)
-	internal->lrat_chain.push_back(find_representative_lrat (-lit));
+        internal->lrat_chain.push_back (find_representative_lrat (-lit));
       if (other != repr_other)
-	internal->lrat_chain.push_back(find_representative_lrat (other));
-      internal->lrat_chain.push_back(id2);
+        internal->lrat_chain.push_back (find_representative_lrat (other));
+      internal->lrat_chain.push_back (id2);
     }
     Clause *eq2 = add_binary_clause (-repr_lit, repr_other);
     if (internal->lrat) {
       internal->lrat_chain.clear ();
       if (smaller_repr == repr_lit) {
-	assert (larger_repr == repr_other);
-	representative_id (-larger_repr) = eq2->id;
-	assert (std::find (eq2->begin(), eq2->end (), larger_repr) != eq2->end ());
-	representative_id (larger_repr) = eq1->id;
-	assert (std::find (eq1->begin(), eq1->end (), -larger_repr) != eq1->end ());
+        assert (larger_repr == repr_other);
+        representative_id (-larger_repr) = eq2->id;
+        assert (std::find (eq2->begin (), eq2->end (), larger_repr) !=
+                eq2->end ());
+        representative_id (larger_repr) = eq1->id;
+        assert (std::find (eq1->begin (), eq1->end (), -larger_repr) !=
+                eq1->end ());
       } else {
-	assert (larger_repr == repr_lit);
-	representative_id (-larger_repr) = eq1->id;
-	assert (std::find (eq1->begin(), eq1->end (), larger_repr) != eq1->end ());
-	representative_id (larger_repr) = eq2->id;
-	assert (std::find (eq2->begin(), eq2->end (), -larger_repr) != eq2->end ());
+        assert (larger_repr == repr_lit);
+        representative_id (-larger_repr) = eq1->id;
+        assert (std::find (eq1->begin (), eq1->end (), larger_repr) !=
+                eq1->end ());
+        representative_id (larger_repr) = eq2->id;
+        assert (std::find (eq2->begin (), eq2->end (), -larger_repr) !=
+                eq2->end ());
       }
     }
-    
+
   } else if (internal->lrat) {
     LOG ("not learning new clause");
     if (smaller_repr == repr_lit) {
-      LOG ("setting ids of %d: %" PRIu64 "; %d: %" PRIu64 " (case 1)", larger, id1, -larger, id2);
+      LOG ("setting ids of %d: %" PRIu64 "; %d: %" PRIu64 " (case 1)",
+           larger, id1, -larger, id2);
       representative_id (-larger_repr) = id2;
       representative_id (larger_repr) = id1;
     } else {
-      LOG ("setting ids of %d: %" PRIu64 "; %d: %" PRIu64 " (case 2)", larger, id2, -larger, id1);
+      LOG ("setting ids of %d: %" PRIu64 "; %d: %" PRIu64 " (case 2)",
+           larger, id2, -larger, id1);
       representative_id (-larger_repr) = id1;
       representative_id (larger_repr) = id2;
     }
@@ -1372,11 +1548,14 @@ void Closure::init_closure () {
     eager_representant_id.resize(2*internal->max_var+3);
     representant_id.resize(2*internal->max_var+3);
     proof_marks.resize(2*internal->max_var+3);
+    resolvent_marks.resize(internal->max_var+1);
   }
   marks.resize(2*internal->max_var+3);
   mu1_ids.resize(2*internal->max_var+3);
-  mu2_ids.resize(2*internal->max_var+3);
-  mu4_ids.resize (2 * internal->max_var + 3);
+  if (internal->lrat) {
+    mu2_ids.resize(2*internal->max_var+3);
+    mu4_ids.resize (2 * internal->max_var + 3);
+  }
 #ifndef NDEBUG
   for (auto &it : mu1_ids)
     it.current_lit = 0, it.clause = nullptr;
@@ -1565,16 +1744,27 @@ void Closure::update_and_gate_unit_build_lrat_chain (Gate *g, int src, uint64_t 
 						std::vector<uint64_t> & extra_reasons_lit,
 						std::vector<uint64_t> &extra_reasons_ulit) {
   LOG ("generate chain for gate boiling down to unit");
-  assert (g->neg_lhs_ids.size() == 1);
-  g->neg_lhs_ids[0].clause = produce_rewritten_clause_lrat (g->neg_lhs_ids[0].clause, int except, uint64_t id1, uint64_t id2,);
-  push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, 0, 0, 0, extra_reasons_ulit, true, 0, 0, 0, g->lhs, -dst);
+  assert (g->neg_lhs_ids.size () == 1);
+  assert (!g->pos_lhs_ids.empty());
+  Clause *rewritten_clause = produce_rewritten_clause_lrat (g->neg_lhs_ids[0].clause);
+  if (rewritten_clause)
+    g->neg_lhs_ids[0].clause = rewritten_clause;
+  else
+    g->neg_lhs_ids.clear ();
+//  mark_lrat_resolvents (g->neg_lhs_ids[0].clause, src, dst);
+  mark_lrat_resolvents (g->pos_lhs_ids, src, dst);
+
+  if (rewritten_clause)
+    push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, Rewrite (), extra_reasons_ulit, true, Rewrite (), g->lhs, -dst);
+  LOG (extra_reasons_ulit, "lrat chain for negative side");
+
   internal->lrat_chain.clear ();
   unmark_marked_lrat ();
-  for (auto id : g->pos_lhs_ids) {
-    id.clause = produce_rewritten_clause_lrat (id.clause);
-    push_id_and_rewriting_lrat (id.clause, src, id1, id2, extra_reasons_lit, true, 0, 0, 0, -g->lhs, dst);
-  }
+
+  assert (!g->pos_lhs_ids.empty());
+  push_id_and_rewriting_lrat (g->pos_lhs_ids, Rewrite (src, dst, id1, id2), extra_reasons_lit, true, Rewrite (), -g->lhs, dst);
   unmark_marked_lrat ();
+  unmark_lrat_resolvents ();
   LOG (extra_reasons_lit, "lrat chain for positive side");
 }
 
@@ -1582,27 +1772,33 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
 						  int dst,
 						std::vector<uint64_t> & extra_reasons_lit,
 						std::vector<uint64_t> &extra_reasons_ulit) {
+  mark_lrat_resolvents (g->lhs, src, dst, -g->lhs, h->lhs);
+  mark_lrat_resolvents (-h->lhs, src, dst, -g->lhs, h->lhs);
+  mark_lrat_resolvents (h->pos_lhs_ids, src, dst, -g->lhs, h->lhs);
+  mark_lrat_resolvents (g->neg_lhs_ids[0].clause, src, dst, -g->lhs, h->lhs);
   // We need to exclude the LHS each time
-  for (auto clid : h->pos_lhs_ids) {
-    push_id_and_rewriting_lrat (clid.clause, src, id1, id2,
-                                extra_reasons_ulit, false, dst, 0, 0, -h->lhs);
-  }
-  push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, src, id1, id2,
-                              extra_reasons_ulit, true, dst, 0, 0, g->lhs);
+  push_id_and_rewriting_lrat (h->pos_lhs_ids, Rewrite (src, dst, id1, id2),
+                              extra_reasons_ulit, false, Rewrite (), -h->lhs, g->lhs);
+  push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, Rewrite (src, dst, id1, id2),
+                              extra_reasons_ulit, true, Rewrite (), g->lhs, -h->lhs);
   internal->lrat_chain.clear ();
   unmark_marked_lrat ();
+  unmark_lrat_resolvents ();
   LOG (extra_reasons_ulit, "lrat chain for negative side");
 
-  for (auto id : g->pos_lhs_ids)
-    push_id_and_rewriting_lrat (id.clause, src, id1, id2, extra_reasons_lit,
-                                false, dst, 0, 0, -g->lhs);
-  push_id_and_rewriting_lrat (h->neg_lhs_ids[0].clause, src, id1, id2,
-                              extra_reasons_lit, !false, dst, 0, 0, h->lhs);
+  mark_lrat_resolvents (h->lhs, src, dst, -h->lhs);
+  mark_lrat_resolvents (-g->lhs, src, dst, g->lhs);
+  mark_lrat_resolvents (g->pos_lhs_ids, src, dst);
+  mark_lrat_resolvents (h->neg_lhs_ids[0].clause, src, dst);
+  push_id_and_rewriting_lrat (g->pos_lhs_ids, Rewrite (src, dst, id1, id2), extra_reasons_lit,
+                              false, Rewrite (), dst, -g->lhs);
+  push_id_and_rewriting_lrat (h->neg_lhs_ids[0].clause, Rewrite (src, dst, id1, id2),
+                              extra_reasons_lit, !false, Rewrite (), dst, h->lhs);
 
   unmark_marked_lrat ();
+  unmark_lrat_resolvents ();
   internal->lrat_chain.clear ();
   LOG (extra_reasons_lit, "lrat chain for positive side");
-
 }
 
 void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src, int dst,
@@ -1627,7 +1823,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src, int ds
     }
     else if (v < 0) {
       if (internal->lrat)
-	learn_congruence_unit_when_lhs_set (g, src, id1, id2, g->rhs[0]);
+	learn_congruence_unit_when_lhs_set (g, src, id1, id2, dst);
       learn_congruence_unit (-g->rhs[0]);
       if (internal->lrat)
 	internal->lrat_chain.clear ();
@@ -1918,17 +2114,23 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
         }
       }
       internal->lrat_chain.clear ();
+      mark_lrat_resolvents (g->pos_lhs_ids);
+      mark_lrat_resolvents (h->neg_lhs_ids[0].clause);
       for (auto id : g->pos_lhs_ids)
         reasons_lrat_src.push_back (id.clause->id);
-      push_id_and_rewriting_lrat(h->neg_lhs_ids[0].clause, 0, 0, 0, reasons_lrat_src, true, 0, 0, 0, h->lhs, g->lhs);
+      push_id_and_rewriting_lrat (h->neg_lhs_ids[0].clause, Rewrite (), reasons_lrat_src, true, Rewrite (), h->lhs, g->lhs);
       LOG (reasons_lrat_src, "lrat chain for positive side");
       unmark_marked_lrat ();
+      unmark_lrat_resolvents ();
 
       internal->lrat_chain.clear ();
+      mark_lrat_resolvents (h->pos_lhs_ids);
+      mark_lrat_resolvents (g->neg_lhs_ids[0].clause);
       for (auto id : h->pos_lhs_ids)
         reasons_lrat_usrc.push_back (id.clause->id);
-      push_id_and_rewriting_lrat(g->neg_lhs_ids[0].clause, 0, 0, 0, reasons_lrat_usrc, true, 0, 0, 0, h->lhs, g->lhs);
+      push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, Rewrite (), reasons_lrat_usrc, true, Rewrite (), h->lhs, g->lhs);
       unmark_marked_lrat ();
+      unmark_lrat_resolvents ();
       LOG (reasons_lrat_usrc, "lrat chain for negative side");
     }
     if (merge_literals_lrat (g, h, lhs, h->lhs, reasons_lrat_src, reasons_lrat_usrc)) {
@@ -1993,7 +2195,6 @@ Gate* Closure::find_first_and_gate (Clause *base_clause, int lhs) {
     return nullptr;
   }
 
-  uint64_t base_id = 0;
   Gate *g = new_and_gate (base_clause, lhs);
 
   if (internal->lrat) {
@@ -2080,17 +2281,14 @@ Gate *Closure::find_remaining_and_gate (Clause *base_clause, int lhs) {
       continue;
     ++matched;
     if (!(mark & 2)) {
-      if (internal->lrat) {
-	lrat_chain.push_back (make_LitClausePair (other, w.clause));
-	LOG ("pushing %d -> %zd", other, w.clause->id);
-      }
+      lrat_chain.push_back (make_LitClausePair (other, w.clause));
+      LOG ("pushing %d -> %zd", other, w.clause->id);
       continue;
     }
     LOG ("marking %d mu4", other);
     assert (!(mark & 4));
     mark |= 4;
-    if (internal->lrat)
-      lrat_chain.push_back (make_LitClausePair (other, w.clause));
+    lrat_chain.push_back (make_LitClausePair (other, w.clause));
     if (internal->lrat)
       set_mu4_reason (other, w.clause);
   }
@@ -2122,6 +2320,7 @@ Gate *Closure::find_remaining_and_gate (Clause *base_clause, int lhs) {
     internal->analyzed.resize(q - begin(internal->analyzed));
     LOG ("after filtering %zu LHS candidate remain", internal->analyzed.size());
   }
+
   
   if (matched < arity) {
     if (internal->lrat)
@@ -2129,6 +2328,10 @@ Gate *Closure::find_remaining_and_gate (Clause *base_clause, int lhs) {
     return nullptr;
   }
 
+  for (auto c : lrat_chain)
+    promote_clause (c.clause);
+  if (!internal->lrat)
+    lrat_chain.clear();
   return new_and_gate (base_clause, lhs);
 
 }
@@ -3016,8 +3219,7 @@ void Closure::find_equivalences () {
 	continue;
       internal->analyzed.push_back(other);
       marked (other) = true;
-      if (internal->lrat)
-	set_mu1_reason (other, w.clause);
+      set_mu1_reason (other, w.clause);
     }
 
     if (internal->analyzed.empty())
@@ -3047,6 +3249,10 @@ void Closure::find_equivalences () {
 	  //   assert (eager_representative_id (other) != -1);
 	  //   LOG ("lrat: %d (%zd) %d (%zd)", other, eager_representative_id (other), -other, eager_representative_id (-other));
 	  // }
+	  promote_clause (marked_mu1 (-other).clause);
+	  promote_clause (w.clause);
+	  LOG (w.clause, "merging");
+	  LOG (marked_mu1 (-other).clause, "with");
 	  if (merge_literals_equivalence (lit, other, internal->lrat ? marked_mu1 (-other).clause : nullptr, w.clause)) {
 	    ++internal->stats.congruence.congruent;
 	  }
@@ -3089,6 +3295,8 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1, uint64_
   LOGGATE (g, "rewriting %d into %d in", src, dst);
   int clashing = 0, falsifies = 0;
   unsigned dst_count = 0, not_dst_count = 0;
+  if (g->lhs == dst)
+    g->tautological_clauses = true;
   auto q = begin(g->rhs);
   for (int &lit: g->rhs) {
     if (lit == src)
@@ -3143,7 +3351,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1, uint64_
     int keep_clashing = clashing;
     LOG ("keeping chain for %d aka %d and %d aka %d", falsifies, orig_falsifies, clashing, orig_clashing);
     for (size_t j = 0; j < size; ++j) {
-      LOG ("looking at %d [%zd %zd] with val %d", g->pos_lhs_ids[j].current_lit, i, j,
+      LOG (g->pos_lhs_ids[j].clause, "looking at %d [%zd %zd] with val %d", g->pos_lhs_ids[j].current_lit, i, j,
 	   internal->val (g->pos_lhs_ids[i].current_lit));
       g->pos_lhs_ids [i] = g->pos_lhs_ids[j];
       if (keep_clashing
@@ -3181,27 +3389,12 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1, uint64_
   assert (dst_count <= 2);
   assert (not_dst_count <= 1);
 
+  if (!g->tautological_clauses)
+    assert (std::find (begin (g->rhs), end (g->rhs), g->lhs) == end (g->rhs));
   std::vector<uint64_t> reasons_lrat_src, reasons_lrat_usrc;
-  if (false && internal->lrat && !falsifies) {
-    //reasons_lrat_src.push_back (find_representative_lrat (src));
-    internal->lrat_chain.clear ();
-    assert (g->neg_lhs_ids.size () == 1); // otherwise we need intermediate clauses
-    for (auto id : g->pos_lhs_ids) {
-      push_id_and_rewriting_lrat (id.clause, src, id1, id2, reasons_lrat_src, false, dst, 0, 0);
-    }
-    unmark_marked_lrat ();
-
-    LOG (reasons_lrat_src, "rewrite and gate: lrat chain for positive side");
-
-    //reasons_lrat_src.push_back (find_representative_lrat (-src));
-    internal->lrat_chain.clear ();
-    push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, src, id1, id2, reasons_lrat_usrc, false, dst, 0, 0);
-    unmark_marked_lrat ();
-    LOG (reasons_lrat_usrc, "rewrite and gate: lrat chain for negative side");
-  }
-
   shrink_and_gate (g, falsifies, clashing);
   LOGGATE (g, "rewritten as");
+  assert (!g->pos_lhs_ids.empty());
   //  check_and_gate_implied (g);
   update_and_gate (g, git, src, dst, id1, id2, falsifies, clashing);
   ++internal->stats.congruence.rewritten_ands;

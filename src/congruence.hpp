@@ -8,9 +8,7 @@
 #include <cstdint>
 #include <queue>
 #include <sys/types.h>
-#include <unordered_map>
 #include <unordered_set>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -71,6 +69,7 @@ struct Gate {
   vector<uint64_t> units;
   vector<LitClausePair> pos_lhs_ids;
   vector<LitClausePair> neg_lhs_ids;
+  bool tautological_clauses;
   vector<int>rhs;
 
   size_t arity () const {
@@ -106,6 +105,16 @@ struct Hash {
   size_t operator() (const Gate *const g) const;
 };
 
+struct Rewrite {
+  int src, dst;
+  uint64_t id1;
+  uint64_t id2;
+
+  Rewrite (int _src, int _dst, uint64_t _id1, uint64_t _id2) : src (_src), dst (_dst),
+							       id1 (_id1), id2 (_id2) {};
+  Rewrite () : src (0), dst (0), id1 (0), id2 (0) {};
+};
+
 struct Closure {
 
   Closure (Internal *i);
@@ -119,7 +128,9 @@ struct Closure {
 
   vector<bool> scheduled;
   vector<signed char> marks;
-  vector<LitClausePair> mu1_ids, mu2_ids, mu4_ids; // remember the ids and the literal
+  vector<LitClausePair> mu1_ids, mu2_ids, mu4_ids; // remember the ids and the literal. 2 and 4 are
+						   // only used for lrat proofs, but we need 1 to
+						   // promote binary clauses to irredundant
 
   vector<int> lits; // result of definitions
   vector<int> rhs; // stack for storing RHS
@@ -132,10 +143,11 @@ struct Closure {
   std::array<std::vector<std::pair<int, int>>, 2> condeq;
 
   std::vector<Clause*> new_unwatched_binary_clauses;
-
   // LRAT proofs
   vector<signed char> proof_marks;
-  vector<signed char> proof_analyzed;
+  vector<int> proof_analyzed;
+  vector<signed char> resolvent_marks;
+  vector<int> resolvent_analyzed;
 
 #ifdef LOGGING
   uint64_t fresh_id;
@@ -195,11 +207,24 @@ struct Closure {
   void push_lrat_id (const Clause *const c, int lit);
   void push_lrat_unit (int lit);
 
-  void push_id_and_rewriting_lrat (Clause *c, int except, uint64_t id1, uint64_t id2,
+  // pushes the clause with the reasons to rewrite clause
+  // unless:
+  //   - the rewriting is not necessary (resolvent_marked == 1)
+  //   - it is overwritten by one of the argumentsx
+  void push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
 				   std::vector<uint64_t> &chain, bool = true,
-				   int except_other = 0, uint64_t id_other1 = 0, uint64_t id_other2 = 0,
+				   Rewrite rewrite2 = Rewrite (),
 				   int execept_lhs = 0, int except_lhs2 = 0);
+  void push_id_and_rewriting_lrat (const std::vector<LitClausePair> &c, Rewrite rewrite1,
+				   std::vector<uint64_t> &chain, bool = true,
+				   Rewrite rewrite2 = Rewrite (),
+				   int execept_lhs = 0, int except_lhs2 = 0);
+  void produce_lrat_for_rewrite (std::vector<uint64_t> &chain, Rewrite rewrite, int);
   void unmark_marked_lrat ();
+  void unmark_lrat_resolvents ();
+  void mark_lrat_resolvents (int lit, int src = 0, int dst = 0, int except = 0, int except2 = 0);
+  void mark_lrat_resolvents (Clause *, int src = 0, int dst = 0, int except = 0, int except2 = 0);
+  void mark_lrat_resolvents (std::vector<LitClausePair> &c, int src = 0, int dst = 0, int except = 0, int except2 = 0);
   void update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint64_t id1, uint64_t id2, int dst,
 					 std::vector<uint64_t> & extra_reasons_lit, std::vector<uint64_t> &extra_reasons_ulit);
   void update_and_gate_unit_build_lrat_chain (Gate *g, int src, uint64_t id1, uint64_t id2, int dst,
@@ -325,7 +350,7 @@ struct Closure {
   bool learn_congruence_unit(int unit); // TODO remove and replace by _lrat version
   void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src, int dst, uint64_t id1, uint64_t id2, int clashing, int unit);
   void learn_congruence_unit_unit_lrat_chain (Gate *g, int unit); 
-  void learn_congruence_unit_when_lhs_set (Gate *g, int src, uint64_t id1, uint64_t id2, int lit);
+  void learn_congruence_unit_when_lhs_set (Gate *g, int src, uint64_t id1, uint64_t id2, int dst);
 
   void find_units();
   void find_equivalences();
@@ -338,6 +363,7 @@ struct Closure {
   void extract_binaries ();
   bool find_binary (int, int) const;
 
+  Clause *new_clause ();
   //
   void sort_literals (vector<int> &rhs);
 
@@ -361,6 +387,7 @@ struct Closure {
   LitClausePair marked_mu4(int lit);
 
   signed char& proof_marked (int lit);
+  signed char& resolvent_marked (int lit);
   
   // negbincount (lit) -> noccs (-lit)
 
