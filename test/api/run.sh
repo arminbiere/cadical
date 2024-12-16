@@ -102,8 +102,6 @@ run () {
 
 # TODO move down
 
-run parcompwrite
-
 run newdelete
 run unit
 run morenmore
@@ -117,6 +115,8 @@ run cfreeze
 run traverse
 run cipasir
 run incproof
+run parcompwrite
+
 
 if [ "`grep DNTRACING $makefile`" = "" ]
 then
