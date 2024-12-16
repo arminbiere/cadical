@@ -19,8 +19,10 @@ Version 2.1.1
 - Slight memory usage reduction expected thanks to not allocating some
   internal array only used for proof and external propagator.
 
-- Mobical should now be deterministic whether compiled with or without
-  logging.
+- Mobical deterministic compiled with or without logging.
+
+- Fixed memory corruption and leaks when allocation of arena fails
+  and further added support in fuzzer to trigger such bad allocations.
 
 Version 2.1.0
 -------------
