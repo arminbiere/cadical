@@ -550,7 +550,7 @@ Clause* Closure::produce_rewritten_clause_lrat (Clause *c, int except, uint64_t 
 						int except_lhs, int except_lhs2) {
   auto tmp_lrat (std::move(internal->lrat_chain));
   internal->lrat_chain.clear();
-  LOG (c, "rewriting clause for LRAT proof");
+  LOG (c, "rewriting clause for LRAT proof, except for %d and %d", except_lhs, except_lhs2);
   assert (internal->clause.empty ());
   assert (internal->lrat_chain.empty());
   bool changed = false;
@@ -561,9 +561,9 @@ Clause* Closure::produce_rewritten_clause_lrat (Clause *c, int except, uint64_t 
     }
     if (lit == except_lhs2)
       continue;
-    if (lit == except && id1)
+    if (lit == except)
       continue;
-    if (lit == -except && id2) {
+    if (lit == -except) {
       continue;
     }
     if (lit == except_other && id_other1)
@@ -572,15 +572,18 @@ Clause* Closure::produce_rewritten_clause_lrat (Clause *c, int except, uint64_t 
       continue;
     }
     if (internal->val (lit) < 0) {
-      LOG ("found unit %d", -lit);
+      LOG ("found unit %d, but ignoring it", -lit);
+#if 0
       const unsigned uidx = internal->vlit (-lit);
       uint64_t id = internal->unit_clauses[uidx];
       assert (id);
       internal->lrat_chain.push_back (id);
       changed = true;
+#endif
       continue;
     }
     if (internal->val (lit) > 0) {
+      assert (false);
       LOG ("found positive unit, so clause is subsumed by unit");
       tautology = true;
       break;
@@ -834,7 +837,7 @@ void Closure::mark_lrat_resolvents (std::vector<LitClausePair> &chain, int src, 
   assert (internal->lrat_chain.empty());
   for (auto &c : chain) {
     LOG (c.clause, "sent clause");
-    c.clause = produce_rewritten_clause_lrat (c.clause, 0, 0, 0);
+    c.clause = produce_rewritten_clause_lrat (c.clause, src, 0, 0, dst, 0, 0, except, except2);
     LOG (c.clause, "returned clause");
 //    mark_lrat_resolvents (c.clause, src, dst, except, except2);
   }
@@ -3394,7 +3397,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1, uint64_
   std::vector<uint64_t> reasons_lrat_src, reasons_lrat_usrc;
   shrink_and_gate (g, falsifies, clashing);
   LOGGATE (g, "rewritten as");
-  assert (!g->pos_lhs_ids.empty());
+  assert (!internal->lrat || !g->pos_lhs_ids.empty());
   //  check_and_gate_implied (g);
   update_and_gate (g, git, src, dst, id1, id2, falsifies, clashing);
   ++internal->stats.congruence.rewritten_ands;

@@ -346,6 +346,18 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     }
     if (unit == INT_MIN) {
       LOG ("LRAT CHECKER check failed, found non unit clause %" PRIu64, id);
+      for (int *i = c->literals; i < c->literals + c->size; i++) {
+        int lit = *i;
+        if (checked_lit (-lit)) {
+	  LOG ("already resolved unit %d", lit);
+          continue;
+	}
+        if (unit && unit != lit) {
+	  LOG ("new non-assigned %d", lit);
+	  continue;
+        }
+	LOG ("found unit %d", lit);
+      }
       break;
     }
     if (!unit) {
