@@ -449,7 +449,7 @@ void File::close (bool print) {
     fclose (file);
     waitpid (child_pid, 0, 0);
 #if defined(__APPLE__) || defined(__MACH__)
-  compressed_file_writing_mutex.unlock ();
+    compressed_file_writing_mutex.unlock ();
 #endif
   }
 #endif
