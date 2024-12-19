@@ -19,6 +19,7 @@ debug=no
 libs=""
 logging=no
 check=no
+closefrom=yes
 competition=no
 coverage=no
 flexible=yes
@@ -133,6 +134,7 @@ will have the same effect as
 The following configuration options might be usefull during porting the
 code to a new platform and are usually not necessary to change.
 
+--no-closefrom     use our own 'closefrom' replacement
 --no-flexible      do not use flexible array members
 --no-unlocked      force compilation without unlocked IO
 EOF
@@ -169,6 +171,7 @@ do
 
     --competition) competition=yes;;
 
+    --no-closefrom) closefrom=no;;
     --no-flexible) flexible=no;;
     --no-unlocked) unlocked=no;;
 
@@ -494,6 +497,44 @@ else
 fi
 
 [ $unlocked = no ] && CXXFLAGS="$CXXFLAGS -DNUNLOCKED"
+
+#--------------------------------------------------------------------------#
+
+# We need 'closefrom' to avoid a race in reentrant multi-threaded writing of
+# compressed files.  This is due to copying filedescriptors during fork,
+# which is needed to support safe writing of compressed files through a pipe
+# and the help of an external compression utility (such as 'gzip').
+
+if [ $closefrom = yes ]
+then
+  feature=./configure-have-closefrom
+cat <<EOF > $feature.cpp
+extern "C" {
+#include <unistd.h>
+};
+int main () {
+  closefrom (0);
+  return 0;
+}
+EOF
+  if $CXX $CXXFLAGS -o $feature.exe $feature.cpp 2>>configure.log
+  then
+    if $feature.exe
+    then
+      msg "'closefrom' seems to be working"
+    else
+      msg "'closefrom' does not seem to be working"
+      closefrom=no
+    fi
+  else
+    msg "can not use 'closefrom' (failed to compile '$feature.cpp')"
+    closefrom=no
+  fi
+else
+  msg "not using 'closefrom' (since '--no-closefrom' specified)"
+fi
+
+[ $closefrom = no ] && CXXFLAGS="$CXXFLAGS -DNCLOSEFROM"
 
 #--------------------------------------------------------------------------#
 

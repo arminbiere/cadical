@@ -310,7 +310,13 @@ FILE *File::write_pipe (Internal *internal, const char *command,
     // As this inhibits pipes to be closed by the parent process
     // we have to close all of the erroneously cloned fds here.
 #if defined(__linux__) || defined(__unix__)
-    ::closefrom (3);
+#ifndef NCLOSEFROM
+    ::closefrom (3); 
+#else
+    // Simplistic replacement on Unix without 'closefrom'.
+    for (int fd = 3; fd != FD_SETSIZE; fd++)
+      ::close (fd);
+#endif
 #elif defined(__APPLE__) || defined(__MACH__)
     {
       int fds, pid = getpid ();
