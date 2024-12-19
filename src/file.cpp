@@ -294,30 +294,32 @@ FILE *File::write_pipe (Internal *internal, const char *command,
     ::close (pipe_fds[0]);
     res = ::fdopen (pipe_fds[1], "wb");
   } else {
+
     // Connect stdin and stdout in child
+
     ::dup2 (pipe_fds[0], 0);
     ::dup2 (out, 1);
+
     // Make sure to close all non-required fds to not cause hangs.
     // This is handled now by closefrom and remains for documentation
     // purposes:
+    //
     //   ::close (pipe_fds[0]);
     //   ::close (pipe_fds[1]);
     //   ::close (out);
-    if (command[0] == '7') // Surpress '7z' verbose output on 'stderr'.
+
+    // Surpress '7z' verbose output on 'stderr'.
+
+    if (command[0] == '7') {
       ::close (2);
-    // Before the fork another thread could have created more fds.
-    // These fds are cloned into the child process.
-    // As this inhibits pipes to be closed by the parent process
-    // we have to close all of the erroneously cloned fds here.
-#if defined(__linux__) || defined(__unix__)
-#ifndef NCLOSEFROM
-    ::closefrom (3); 
-#else
-    // Simplistic replacement on Unix without 'closefrom'.
-    for (int fd = 3; fd != FD_SETSIZE; fd++)
-      ::close (fd);
-#endif
-#elif defined(__APPLE__) || defined(__MACH__)
+    }
+
+    // Before the fork another thread could have created more fds.  These
+    // fds are cloned into the child process.  As this inhibits pipes to
+    // be closed by the parent process we have to close all of the
+    // erroneously cloned fds here.
+
+#if defined(__APPLE__) || defined(__MACH__)
     {
       int fds, pid = getpid ();
       if ((fds = proc_pidinfo (pid, PROC_PIDLISTFDS, 0, nullptr, 0)) < 0) {
@@ -335,6 +337,14 @@ FILE *File::write_pipe (Internal *internal, const char *command,
           ::close (fdinfos[i].proc_fd);
       delete[] fdinfos;
     }
+#elif defined(__linux__) || defined(__unix__)
+#ifndef NCLOSEFROM
+    ::closefrom (3);
+#else
+    // Simplistic replacement on Unix without 'closefrom'.
+    for (int fd = 3; fd != FD_SETSIZE; fd++)
+      ::close (fd);
+#endif
 #endif
     execv (absolute_command_path, argv);
     _exit (1);
