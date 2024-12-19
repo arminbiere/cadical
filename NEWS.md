@@ -2,7 +2,7 @@ Version 2.1.1
 -------------
 
 - Reentrant multi-threaded writing of compressed files fixed
-  with 'closeform' (using 'pipe|fork|exec|closefrom').
+  with 'closeform' (using 'pipe|fork|exec|closefrom') on Linux.
 
 - New IPASIR-UP options, with the same default as in 1.1:
 

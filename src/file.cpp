@@ -29,6 +29,8 @@ extern "C" {
 #include <sys/proc_info.h>
 }
 
+#include <mutex>
+
 #endif
 
 /*------------------------------------------------------------------------*/
@@ -266,6 +268,10 @@ FILE *File::read_pipe (Internal *internal, const char *fmt, const int *sig,
 
 #ifndef _WIN32
 
+#if defined(__APPLE__) || defined(__MACH__)
+static std::mutex compressed_file_writing_mutex;
+#endif
+
 FILE *File::write_pipe (Internal *internal, const char *command,
                         const char *path, int &child_pid) {
   assert (command[0] && command[0] != ' ');
@@ -281,6 +287,9 @@ FILE *File::write_pipe (Internal *internal, const char *command,
   char *absolute_command_path = find_program (argv[0]);
   int pipe_fds[2], out;
   FILE *res = 0;
+#if defined(__APPLE__) || defined(__MACH__)
+  compressed_file_writing_mutex.lock ();
+#endif
   if (!absolute_command_path)
     MSG ("could not find '%s' in 'PATH' environment variable", argv[0]);
   else if (::pipe (pipe_fds) < 0)
@@ -319,32 +328,12 @@ FILE *File::write_pipe (Internal *internal, const char *command,
     // be closed by the parent process we have to close all of the
     // erroneously cloned fds here.
 
-#if defined(__APPLE__) || defined(__MACH__)
-    {
-      int fds, pid = getpid ();
-      if ((fds = proc_pidinfo (pid, PROC_PIDLISTFDS, 0, nullptr, 0)) < 0) {
-        MSG ("could not get length of list of opened fds");
-        _exit (1);
-      }
-      auto fdinfos = new struct proc_fdinfo[fds];
-      if (proc_pidinfo (pid, PROC_PIDLISTFDS, 0, fdinfos, fds) < 0) {
-        delete[] fdinfos;
-        MSG ("could not get list of opened fds");
-        _exit (1);
-      }
-      for (int i = 0; i < fds; i++)
-        if (fdinfos[i].proc_fd >= 3)
-          ::close (fdinfos[i].proc_fd);
-      delete[] fdinfos;
-    }
-#elif defined(__linux__) || defined(__unix__)
 #ifndef NCLOSEFROM
     ::closefrom (3);
 #else
     // Simplistic replacement on Unix without 'closefrom'.
     for (int fd = 3; fd != FD_SETSIZE; fd++)
       ::close (fd);
-#endif
 #endif
     execv (absolute_command_path, argv);
     _exit (1);
@@ -354,6 +343,10 @@ FILE *File::write_pipe (Internal *internal, const char *command,
   delete_str_vector (args);
 #ifdef QUIET
   (void) internal;
+#endif
+#if defined(__APPLE__) || defined(__MACH__)
+  if (!res)
+    compressed_file_writing_mutex.unlock ();
 #endif
   return res;
 }
@@ -455,6 +448,9 @@ void File::close (bool print) {
       MSG ("closing output pipe to write '%s'", name ());
     fclose (file);
     waitpid (child_pid, 0, 0);
+#if defined(__APPLE__) || defined(__MACH__)
+  compressed_file_writing_mutex.unlock ();
+#endif
   }
 #endif
   file = 0; // mark as closed
