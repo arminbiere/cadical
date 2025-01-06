@@ -115,7 +115,7 @@ class LratChecker : public StatTracer {
 
 public:
   LratChecker (Internal *);
-  ~LratChecker ();
+  virtual ~LratChecker ();
 
   void connect_internal (Internal *i) override;
   void begin_proof (int64_t) override;

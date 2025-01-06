@@ -637,7 +637,7 @@ void Internal::subsume () {
   stats.subsumephases++;
 
   if (external_prop) {
-    assert(!level);
+    assert (!level);
     private_steps = true;
   }
 
@@ -655,7 +655,7 @@ void Internal::subsume () {
   transred ();
 
   if (external_prop) {
-    assert(!level);
+    assert (!level);
     private_steps = false;
   }
 }

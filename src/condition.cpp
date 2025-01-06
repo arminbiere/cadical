@@ -689,7 +689,7 @@ long Internal::condition_round (long delta) {
               watched_autarky_literal = 0; // Breaks out of 4 loops!!!!!
             }
           } // End of loop of turning autarky literals into conditionals.
-        }   // End of loop of all watched clauses of an unassigned literal.
+        } // End of loop of all watched clauses of an unassigned literal.
         //
         // We might abort the occurrence traversal early but already
         // removed some watches, thus have to just copy the rest.
@@ -702,7 +702,7 @@ long Internal::condition_round (long delta) {
           os.resize (i - os.begin ());
         }
       } // End of loop which goes over all unprocessed unassigned literals.
-    }   // End of loop which goes over all unprocessed conditional literals.
+    } // End of loop which goes over all unprocessed conditional literals.
 
     // We are still processing the candidate 'c' and now have reached a
     // final fix-point assignment partitioned into a conditional and an
@@ -869,6 +869,7 @@ long Internal::condition_round (long delta) {
   }
 
   reset_occs ();
+  delete_garbage_clauses ();
 
   // Reassign previously assigned variables again.
   //

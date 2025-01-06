@@ -79,6 +79,7 @@ run () {
     src=$tests/$1.cpp
     language=""
     COMPILE="$CXX $CXXFLAGS"
+    [ x"$1" = xparcompwrite ] && COMPILE="$COMPILE -pthread"
   else
     die "can not find '$tests.c' nor '$tests.cpp'"
   fi
@@ -99,6 +100,8 @@ run () {
 }
 
 #--------------------------------------------------------------------------#
+
+run parcompwrite
 
 run newdelete
 run unit

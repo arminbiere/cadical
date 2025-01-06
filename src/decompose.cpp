@@ -145,7 +145,9 @@ bool Internal::decompose_round () {
 
   const size_t size_dfs = 2 * (1 + (size_t) max_var);
   DFS *dfs = new DFS[size_dfs];
+  DeferDeleteArray<DFS> dfs_delete (dfs);
   int *reprs = new int[size_dfs];
+  DeferDeleteArray<int> reprs_delete (reprs);
   clear_n (reprs, size_dfs);
   vector<vector<Clause *>> dfs_chains;
   dfs_chains.resize (size_dfs);
@@ -705,8 +707,8 @@ bool Internal::decompose_round () {
       mark_substituted (idx);
   }
 
-  delete[] reprs;
-  delete[] dfs;
+  reprs_delete.free ();
+  dfs_delete.free ();
   erase_vector (dfs_chains);
 
   if (substituted)

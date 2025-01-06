@@ -86,6 +86,7 @@ Clause *Internal::new_clause (bool red, int glue) {
 
   size_t bytes = Clause::bytes (size);
   Clause *c = (Clause *) new char[bytes];
+  DeferDeleteArray<char> clause_delete ((char *) c);
 
   c->id = ++clause_id;
 
@@ -133,6 +134,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   }
 
   clauses.push_back (c);
+  clause_delete.release ();
   LOG (c, "new pointer %p", (void *) c);
 
   if (likely_to_be_kept_clause (c))
@@ -209,7 +211,8 @@ void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
 // (aligned) removed bytes, resulting from shrinking the clause.
 //
 size_t Internal::shrink_clause (Clause *c, int new_size) {
-
+  if (opts.check && is_external_forgettable (c->id))
+    mark_garbage_external_forgettable (c->id);
   assert (new_size >= 2);
   int old_size = c->size;
   assert (new_size < old_size);
@@ -307,12 +310,12 @@ void Internal::mark_garbage (Clause *c) {
     proof->delete_clause (c);
   }
 
-  // Because of the internal model checking, external forgettable clauses must
-  // be marked as removed already upon mark_garbage, can not wait until actual
-  // deletion.
-  if (is_external_forgettable (c->id))
+  // Because of the internal model checking, external forgettable clauses
+  // must be marked as removed already upon mark_garbage, can not wait until
+  // actual deletion.
+  if (opts.check && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
-  
+
   assert (stats.current.total > 0);
   stats.current.total--;
 
@@ -356,7 +359,8 @@ void Internal::assign_original_unit (int64_t id, int lit) {
   trail.push_back (lit);
   num_assigned++;
   const unsigned uidx = vlit (lit);
-  unit_clauses[uidx] = id;
+  if (lrat || frat)
+    unit_clauses (uidx) = id;
   LOG ("original unit assign %d", lit);
   assert (num_assigned == trail.size () || level);
   mark_fixed (lit);
@@ -444,9 +448,8 @@ void Internal::add_new_original_clause (int64_t id) {
       // In case it was a skipped external forgettable, we need to mark it
       // immediately as removed
 
-      if (is_external_forgettable (id))
+      if (opts.check && is_external_forgettable (id))
         mark_garbage_external_forgettable (id);
-
     }
     if (proof) {
       proof->delete_external_original_clause (id, false, external->eclause);
@@ -467,11 +470,11 @@ void Internal::add_new_original_clause (int64_t id) {
 
       if (from_propagator) {
         // The original form of the added clause is immediately forgotten
-        // TODO: shall we save and check the simplified form? (one with new_id)
-        if (is_external_forgettable (id))
+        // TODO: shall we save and check the simplified form? (one with
+        // new_id)
+        if (opts.check && is_external_forgettable (id))
           mark_garbage_external_forgettable (id);
       }
-
     }
     external->eclause.clear ();
     lrat_chain.clear ();
@@ -498,7 +501,8 @@ void Internal::add_new_original_clause (int64_t id) {
         v.level = 0;
         v.reason = 0;
         const unsigned uidx = vlit (clause[0]);
-        unit_clauses[uidx] = new_id;
+        if (lrat || frat)
+          unit_clauses (uidx) = new_id;
         mark_fixed (clause[0]);
       } else {
         const int lit = clause[0];
@@ -614,10 +618,10 @@ Clause *Internal::new_clause_as (const Clause *orig) {
 //
 Clause *Internal::new_resolved_irredundant_clause () {
   external->check_learned_clause ();
-  Clause *res = new_clause (false);
   if (proof) {
-    proof->add_derived_clause (res, lrat_chain);
+    proof->add_derived_clause (clause_id + 1, false, clause, lrat_chain);
   }
+  Clause *res = new_clause (false);
   assert (!watching ());
   return res;
 }

@@ -24,7 +24,7 @@ Internal::Internal ()
       target_assigned (0), no_conflict_until (0), unsat_constraint (false),
       marked_failed (true), sweep_incomplete (false),
       citten (0), num_assigned (0), proof (0),
-      opts (this),
+      lratbuilder (0), opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
@@ -50,7 +50,15 @@ Internal::Internal ()
 }
 
 Internal::~Internal () {
-  delete[](char *) dummy_binary;
+  // If a memory exception ocurred a profile might still be active.
+#ifndef QUIET
+#define PROFILE(NAME, LEVEL) \
+  if (PROFILE_ACTIVE (NAME)) \
+    STOP (NAME);
+  PROFILES
+#undef PROFILE
+#endif
+  delete[] (char *) dummy_binary;
   for (const auto &c : clauses)
     delete_clause (c);
   if (proof)
@@ -109,13 +117,14 @@ void Internal::enlarge_vals (size_t new_vsize) {
 
 void Internal::enlarge (int new_max_var) {
   // New variables can be created that can invoke enlarge anytime (via calls
-  // during ipasir-up call-backs), thus assuming (!level) is not correct 
+  // during ipasir-up call-backs), thus assuming (!level) is not correct
   size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) new_max_var;
   while (new_vsize <= (size_t) new_max_var)
     new_vsize *= 2;
   LOG ("enlarge internal size from %zd to new size %zd", vsize, new_vsize);
   // Ordered in the size of allocated memory (larger block first).
-  enlarge_zero (unit_clauses, 2 * new_vsize);
+  if (lrat || frat)
+    enlarge_zero (unit_clauses_idx, 2 * new_vsize);
   enlarge_only (wtab, 2 * new_vsize);
   enlarge_only (vtab, new_vsize);
   enlarge_zero (parents, new_vsize);
@@ -126,8 +135,9 @@ void Internal::enlarge (int new_max_var) {
   enlarge_init (ptab, 2 * new_vsize, -1);
   enlarge_only (ftab, new_vsize);
   enlarge_vals (new_vsize);
-  enlarge_zero (frozentab, new_vsize);
-  enlarge_zero (relevanttab, new_vsize);
+  vsize = new_vsize;
+  if (external)
+    enlarge_zero (relevanttab, new_vsize);
   const signed char val = opts.phase ? 1 : -1;
   enlarge_init (phases.saved, new_vsize, val);
   enlarge_zero (phases.forced, new_vsize);
@@ -136,14 +146,13 @@ void Internal::enlarge (int new_max_var) {
   enlarge_zero (phases.prev, new_vsize);
   enlarge_zero (phases.min, new_vsize);
   enlarge_zero (marks, new_vsize);
-  vsize = new_vsize;
 }
 
 void Internal::init_vars (int new_max_var) {
   if (new_max_var <= max_var)
     return;
   // New variables can be created that can invoke enlarge anytime (via calls
-  // during ipasir-up call-backs), thus assuming (!level) is not correct 
+  // during ipasir-up call-backs), thus assuming (!level) is not correct
   LOG ("initializing %d internal variables from %d to %d",
        new_max_var - max_var, max_var + 1, new_max_var);
   if ((size_t) new_max_var >= vsize)
@@ -183,21 +192,22 @@ void Internal::add_original_lit (int lit) {
       proof->add_external_original_clause (id, false, external->eclause);
     }
     if (internal->opts.check &&
-      (internal->opts.checkwitness || internal->opts.checkfailed)) {
+        (internal->opts.checkwitness || internal->opts.checkfailed)) {
       bool forgettable = from_propagator && ext_clause_forgettable;
-      if (forgettable) {
+      if (forgettable && opts.check) {
         assert (!original.size () || !external->eclause.empty ());
 
         // First integer is the presence-flag (even if the clause is empty)
         external->forgettable_original[id] = {1};
-       
-        for (auto const& elit : external->eclause)
-          external->forgettable_original[id].push_back(elit);
-        
-        LOG (external->eclause, "clause added to external forgettable map:");
+
+        for (auto const &elit : external->eclause)
+          external->forgettable_original[id].push_back (elit);
+
+        LOG (external->eclause,
+             "clause added to external forgettable map:");
       }
     }
-    
+
     add_new_original_clause (id);
     original.clear ();
   }
@@ -680,8 +690,9 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
   force_saved_phase = false;
   if (external_prop) {
     private_steps = false;
-    LOG("external notifications are turned back on.");
-    if (!level) notify_assignments (); // In case fixed assignments were found.
+    LOG ("external notifications are turned back on.");
+    if (!level)
+      notify_assignments (); // In case fixed assignments were found.
     else {
       renotify_trail_after_local_search ();
     }
@@ -794,7 +805,7 @@ int Internal::solve (bool preprocess_only) {
       assert (control.size () > 1);
       stats.literalsreused += num_assigned - control[1].trail;
     }
-    if (external->propagator) 
+    if (external->propagator)
       renotify_trail_after_ilb ();
   }
   if (preprocess_only)
@@ -883,7 +894,7 @@ int Internal::restore_clauses () {
     report ('*');
   } else {
     report ('+');
-    remove_garbage_binaries ();
+    // remove_garbage_binaries ();
     external->restore_clauses ();
     internal->report ('r');
     if (!unsat && !level && !propagate ()) {
@@ -924,7 +935,7 @@ int Internal::lookahead () {
   STOP (lookahead);
   if (external_prop) {
     private_steps = false;
-    LOG("external notifications are turned back on.");
+    LOG ("external notifications are turned back on.");
     notify_assignments (); // In case fixed assignments were found.
   }
   return res;
@@ -933,7 +944,8 @@ int Internal::lookahead () {
 /*------------------------------------------------------------------------*/
 
 void Internal::finalize (int res) {
-  if (!proof) return;
+  if (!proof)
+    return;
   LOG ("finalizing");
   // finalize external units
   if (frat) {
@@ -957,7 +969,7 @@ void Internal::finalize (int res) {
         const unsigned eidx = (elit < 0) + 2u * (unsigned) abs (elit);
         const int64_t id = external->ext_units[eidx];
         if (id) {
-          assert (unit_clauses[vlit (lit)] == id);
+          assert (unit_clauses (vlit (lit)) == id);
           continue;
         }
       }
@@ -972,7 +984,7 @@ void Internal::finalize (int res) {
     for (const auto &c : clauses)
       if (!c->garbage || (c->size == 2 && !c->flushed))
         proof->finalize_clause (c);
-  
+
     // finalize conflict and proof
     if (conflict_id) {
       proof->finalize_clause (conflict_id, {});

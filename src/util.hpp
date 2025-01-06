@@ -116,6 +116,29 @@ template <class T> static void enlarge_zero (vector<T> &v, size_t N) {
   enlarge_init (v, N, (const T &) 0);
 }
 
+// Clean-up class for bad_alloc error safety.
+
+template <typename T> struct DeferDeleteArray {
+  T *data;
+  DeferDeleteArray (T *t) : data (t) {}
+  ~DeferDeleteArray () { delete[] data; }
+  void release () { data = nullptr; }
+  void free () {
+    delete[] data;
+    data = nullptr;
+  }
+};
+
+template <typename T> struct DeferDeletePtr {
+  T *data;
+  DeferDeletePtr (T *t) : data (t) {}
+  ~DeferDeletePtr () { delete data; }
+  void release () { data = nullptr; }
+  void free () {
+    delete data;
+    data = nullptr;
+  }
+};
 
 /*------------------------------------------------------------------------*/
 

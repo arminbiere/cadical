@@ -1,3 +1,4 @@
+
 /*------------------------------------------------------------------------*/
 /* Copyright (C) 2018-2021 Armin Biere, Johannes Kepler University Linz   */
 /* Copyright (C) 2020-2021 Mathias Fleury, Johannes Kepler University Linz*/
@@ -6,6 +7,7 @@
 /* Copyright (C) 2021-2024 Armin Biere, University of Freiburg            */
 /* Copyright (C) 2021-2023 Mathias Fleury, University of Freiburg         */
 /* Copyright (C) 2023-2024 Florian Pollitt, University of Freiburg         */
+/* Copyright (C) 2024-2024 Tobias Faller, University of Freiburg   */
 /*------------------------------------------------------------------------*/
 
 // Model Based Tester for the CaDiCaL SAT Solver Library.
@@ -25,18 +27,19 @@ static const char *USAGE =
 "\n"
 "  -v                increase verbosity\n"
 "  --colors          force colors for both '<stdout>' and '<stderr>'\n"
-"  --no-colors       disable colors if '<stderr>' is connected to "
-"terminal\n"
+"  --no-colors       disable colors if '<stderr>' is connected to terminal\n"
 "  --no-terminal     assume '<stderr>' is not connected to terminal\n"
 "  --no-seeds        do not print seeds in random mode\n"
 "\n"
 "  -<n>              specify the number of solving phases explicitly\n"
 "  --time <seconds>  set time limit per trace (none=0, default=%d)\n"
 "  --space <MB>      set space limit (none=0, default=%d)\n"
+"  --bad-alloc       generate failing memory allocations, monitor for crashes\n"
+"  --leak-alloc      generate failing memory allocations, monitor for leaks\n"
 "\n"
-"  --do-not-ignore-resource-limits  consider out-of-time or memory as "
-"error\n"
+"  --do-not-ignore-resource-limits  consider out-of-time or memory as error\n"
 "\n"
+"  --tiny            generate tiny formulas only\n"
 "  --small           generate small formulas only\n"
 "  --medium          generate medium sized formulas only\n"
 "  --big             generate big formulas only\n"
@@ -47,6 +50,10 @@ static const char *USAGE =
 "  <seed>  <output>  generate trace, shrink and write it to file\n"
 "  <input> <output>  read trace, shrink and write it to output file\n"
 "  <input>           read and replay the specified input trace\n"
+"\n"
+"In order to let the test exectue '<r>' runs (starting from '<seed>') use:\n"
+"\n"
+"  -L[ ]<r>          execute '<r>' runs\n"
 "\n"
 "The output trace is not shrunken if it is not failing.  However, before\n"
 "it is written it is executed, unless '--do-not-execute' is specified:\n"
@@ -66,13 +73,11 @@ static const char *USAGE =
 "To read from '<stdin>' use '-' as '<input>' and also '-' instead of\n"
 "'<output>' to write to '<stdout>'.\n"
 "\n"
-#ifdef LOGGING
 "As the library is compiled with logging support ('-DLOGGING')\n"
 "one can force to add the 'set log 1' call to the trace with\n"
 "\n"
 "  --log | -l        force low-level logging for detailed debugging\n"
 "\n"
-#endif
 "Implicitly add 'dump' and 'stats' calls to traces:\n"
 "\n"
 "  --dump  | -d      force dumping the CNF before every 'solve'\n"
@@ -127,10 +132,12 @@ static const char *USAGE =
 /*------------------------------------------------------------------------*/
 
 #include <cstdarg>
+#include <cstddef>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -143,8 +150,44 @@ static const char *USAGE =
 /*------------------------------------------------------------------------*/
 
 extern "C" {
+#ifdef MOBICAL_MEMORY
+#include <cxxabi.h>
+#include <dlfcn.h>
+#include <execinfo.h>
+#endif
 #include <unistd.h>
 }
+
+#ifdef MOBICAL_MEMORY
+typedef void *(*malloc_t) (size_t);
+typedef void *(*realloc_t) (void *, size_t);
+typedef void (*free_t) (void *);
+static malloc_t libc_malloc = nullptr;
+static realloc_t libc_realloc = nullptr;
+static free_t libc_free = nullptr;
+static malloc_t hook_malloc = nullptr;
+static realloc_t hook_realloc = nullptr;
+static free_t hook_free = nullptr;
+
+void *malloc (size_t size) {
+  return hook_malloc ? (*hook_malloc) (size) : (*libc_malloc) (size);
+}
+void *realloc (void *ptr, size_t size) {
+  return hook_realloc ? (*hook_realloc) (ptr, size)
+                      : (*libc_realloc) (ptr, size);
+}
+void free (void *ptr) {
+  (hook_free) ? (*hook_free) (ptr) : (*libc_free) (ptr);
+}
+
+void initialize_allocators () {
+  libc_malloc = reinterpret_cast<malloc_t> (dlsym (RTLD_NEXT, "malloc"));
+  libc_realloc = reinterpret_cast<realloc_t> (dlsym (RTLD_NEXT, "realloc"));
+  libc_free = reinterpret_cast<free_t> (dlsym (RTLD_NEXT, "free"));
+}
+__attribute__ ((section (".preinit_array"))) void (*init_allocators_ptr) (
+    void) = initialize_allocators;
+#endif
 
 /*------------------------------------------------------------------------*/
 namespace CaDiCaL { // All except 'main' below.
@@ -162,7 +205,7 @@ class Trace;
 
 // Options to generate traces.
 
-enum Size { NOSIZE = 0, SMALL = 10, MEDIUM = 30, BIG = 50 };
+enum Size { NOSIZE = 0, TINY = 5, SMALL = 10, MEDIUM = 30, BIG = 50 };
 
 struct Force {
   Size size = NOSIZE;
@@ -200,6 +243,29 @@ struct Shared {
   int64_t sat;
   int64_t memout;
   int64_t timeout;
+  int64_t oom;
+
+#ifdef MOBICAL_MEMORY
+#define MOBICAL_MEMORY_STACK_COUNT 64
+#define MOBICAL_MEMORY_LEAK_COUNT (1024 * 64)
+  struct {
+    size_t debug_filter_index;
+    size_t alloc_call_index;
+    void *alloc_stack_array[MOBICAL_MEMORY_STACK_COUNT];
+    size_t alloc_stack_size;
+    size_t signal_call_index;
+    void *signal_stack_array[MOBICAL_MEMORY_STACK_COUNT];
+    size_t signal_stack_size;
+  } bad_alloc;
+  struct {
+    size_t call_index[MOBICAL_MEMORY_LEAK_COUNT];
+    size_t alloc_size[MOBICAL_MEMORY_LEAK_COUNT];
+    void *alloc_ptr[MOBICAL_MEMORY_LEAK_COUNT];
+    void
+        *stack_array[MOBICAL_MEMORY_LEAK_COUNT][MOBICAL_MEMORY_STACK_COUNT];
+    size_t stack_size[MOBICAL_MEMORY_LEAK_COUNT];
+  } leak_alloc;
+#endif
 };
 
 struct ExtendMap {
@@ -208,7 +274,8 @@ struct ExtendMap {
 
 /*------------------------------------------------------------------------*/
 
-class MockPropagator : public ExternalPropagator, public FixedAssignmentListener {
+class MockPropagator : public ExternalPropagator,
+                       public FixedAssignmentListener {
 private:
   Solver *s = 0;
   ExtendMap *extendmap = 0;
@@ -283,7 +350,9 @@ private:
 
     size_t size = clause.size ();
     ExternalLemma *lemma = new ExternalLemma;
+    DeferDeletePtr<ExternalLemma> delete_lemma (lemma);
     lemma->literals = new int[size];
+    DeferDeleteArray<int> delete_literals (lemma->literals);
 
     lemma->id = external_lemmas.size ();
     lemma->add_count = 0;
@@ -298,6 +367,8 @@ private:
       *q++ = lit;
 
     external_lemmas.push_back (lemma);
+    delete_literals.release ();
+    delete_lemma.release ();
 
     return lemma->id;
   }
@@ -365,14 +436,14 @@ public:
       delete[] l->literals, delete l;
 
     s = 0;
-    reason_map.clear();
-    unassigned_reasons.clear();
+    reason_map.clear ();
+    unassigned_reasons.clear ();
 
-    observed_variables.clear();
-    new_observed_variables.clear();
-    observed_trail.clear();
+    observed_variables.clear ();
+    new_observed_variables.clear ();
+    observed_trail.clear ();
 
-    observed_fixed.clear();
+    observed_fixed.clear ();
   }
 
   /*-----------------functions for mobical -----------------------------*/
@@ -442,15 +513,14 @@ public:
             observed_variables.end ());
   }
 
-  bool compare_trails () { 
-#ifndef NDEBUG 
-    std::set<int> etrail = {};  // Trail of the solver
-    std::set<int> efixed = {};  // Fixed assignments in the solver
+  bool compare_trails () {
+#ifndef NDEBUG
+    std::set<int> etrail = {}; // Trail of the solver
+    std::set<int> efixed = {}; // Fixed assignments in the solver
 
     std::set<int> otrail = {}; // Observed trail
     std::set<int> ofixed = {}; // Observed fixed assignments
 
-    
     size_t idx = 0;
 
     // 1. Collect merged/eliminated variables in case there are:
@@ -458,63 +528,63 @@ public:
     // can be an expensive call, avoid if possible
     bool is_merger = s->internal->get_merged_literals (eq_class);
     if (is_merger) {
-      for ( const auto& elit: eq_class ) {  
-        if (is_observed_now(elit)) {
+      for (const auto &elit : eq_class) {
+        if (is_observed_now (elit)) {
           etrail.insert (elit);
         }
       }
       idx++; // trail[0] is processed already
     }
-  
+
     // 2. Collect all other variables from trail
-    for (; idx < s->internal->trail.size(); idx++) {
+    for (; idx < s->internal->trail.size (); idx++) {
       int ilit = s->internal->trail[idx];
-      int elit = s->internal->externalize(ilit);
-      if (is_observed_now(elit)) {
+      int elit = s->internal->externalize (ilit);
+      if (is_observed_now (elit)) {
         etrail.insert (elit);
       }
     }
 
-    for (const auto& level : observed_trail) {
+    for (const auto &level : observed_trail) {
       for (const auto elit : level) {
-        if (is_observed_now(elit)) {
+        if (is_observed_now (elit)) {
           // There can be duplicate assignments due to fixed variables
           // so assert (otrail_inserted == otrail.size()) will not work.
-          assert (otrail.count(elit) == 0 || 
-                  std::find (
-                    observed_fixed.begin (), observed_fixed.end (),
-                    elit) != observed_fixed.end ());
-           
+          assert (otrail.count (elit) == 0 ||
+                  std::find (observed_fixed.begin (), observed_fixed.end (),
+                             elit) != observed_fixed.end ());
+
           otrail.insert (elit);
         }
       }
     }
-#ifdef LOGGING    
-    if (etrail.size() != otrail.size()) {
+#ifdef LOGGING
+    if (etrail.size () != otrail.size ()) {
       MLOG ("etrail: ");
-      for (auto const& lit: etrail) MLOGC (lit << " ");
+      for (auto const &lit : etrail)
+        MLOGC (lit << " ");
       MLOGC (std::endl << "otrail: ";);
-      for (auto const& lit: otrail) MLOGC (lit << " ");
+      for (auto const &lit : otrail)
+        MLOGC (lit << " ");
       MLOGC (std::endl);
     }
 #endif
-    assert (etrail.size() == otrail.size() );
-  
+    assert (etrail.size () == otrail.size ());
+
     assert (etrail == otrail);
 
 #endif
-    return true; 
+    return true;
   }
   /*-----------------functions for mobical ends ------------------------*/
 
-  /*------------------ FixedAssignmentListener functions ---------------------*/
+  /*------------------ FixedAssignmentListener functions
+   * ---------------------*/
   void notify_fixed_assignment (int lit) override {
-    MLOG ("notify_fixed_assignment: " << lit << " (current level: "
-                                      << observed_trail.size () - 1
-                                      << ", current fixed count: "
-                                      << observed_fixed.size()
-                                      << ")"
-                                      << std::endl);
+    MLOG ("notify_fixed_assignment: "
+          << lit << " (current level: " << observed_trail.size () - 1
+          << ", current fixed count: " << observed_fixed.size () << ")"
+          << std::endl);
 
     assert (std::find (observed_fixed.begin (), observed_fixed.end (),
                        lit) == observed_fixed.end ());
@@ -527,18 +597,21 @@ public:
   }
 
   void collect_prev_fixed () {
-#ifndef NDEBUG  
-    MLOG ("collecting previously fixed assignments for the new FixedAssignmentListener: ");
-    
+#ifndef NDEBUG
+    MLOG ("collecting previously fixed assignments for the new "
+          "FixedAssignmentListener: ");
+
     std::vector<int> fixed_lits = {};
     s->internal->get_all_fixed_literals (fixed_lits);
-    MLOGC ("found: " << fixed_lits.size() << " fixed literals" << std::endl);
-    add_prev_fixed(fixed_lits);
-    fixed_lits.clear();
-#endif    
+    MLOGC ("found: " << fixed_lits.size () << " fixed literals"
+                     << std::endl);
+    add_prev_fixed (fixed_lits);
+    fixed_lits.clear ();
+#endif
   }
 
-  /* ---------------- FixedAssignmentListener functions end ------------------*/
+  /* ---------------- FixedAssignmentListener functions end
+   * ------------------*/
 
   /* -------------------- ExternalPropagator functions -----------------*/
 
@@ -599,7 +672,7 @@ public:
     return cb_has_external_clause (forgettable);
   }
 
-  bool cb_has_external_clause (bool& forgettable) override {
+  bool cb_has_external_clause (bool &forgettable) override {
     MLOG ("cb_has_external_clause returns: ");
 
     assert (compare_trails ());
@@ -618,10 +691,10 @@ public:
       add_lemma_idx = must_add_idx;
 
       forgettable = external_lemmas[must_add_idx]->forgettable;
-        
+
       MLOGC ("true (forced clause addition, "
-             << "forgettable: " << forgettable
-             << " id: " << add_lemma_idx << ")." << std::endl);
+             << "forgettable: " << forgettable << " id: " << add_lemma_idx
+             << ")." << std::endl);
 
       added_lemma_count++;
       return true;
@@ -646,9 +719,9 @@ public:
         forgettable = external_lemmas[add_lemma_idx]->forgettable;
 
         MLOGC ("true (new lemma was found, "
-            << "forgettable: " << forgettable
-            << " id: " << add_lemma_idx << ")." <<  std::endl);
-        
+               << "forgettable: " << forgettable << " id: " << add_lemma_idx
+               << ")." << std::endl);
+
         added_lemma_count++;
         return true;
       }
@@ -681,12 +754,12 @@ public:
 
     assert (compare_trails ());
 
-    if (!unassigned_reasons.empty()) {
+    if (!unassigned_reasons.empty ()) {
 #ifdef LOGGING
       MLOG ("clean up backtracked external propagation reasons: ");
       size_t del_count = 0;
 #endif
-      for (const auto& lit : unassigned_reasons) {
+      for (const auto &lit : unassigned_reasons) {
         size_t reason_id = reason_map[lit];
         assert (reason_id < external_lemmas.size ());
         external_lemmas[reason_id]->propagation_reason = false;
@@ -697,8 +770,8 @@ public:
         del_count++;
 #endif
       }
-      MLOGC ("(" << del_count << " clauses)" <<std::endl);
-      unassigned_reasons.clear();
+      MLOGC ("(" << del_count << " clauses)" << std::endl);
+      unassigned_reasons.clear ();
     }
 
     if (observed_variables.empty () || observed_variables.size () <= 4) {
@@ -714,7 +787,6 @@ public:
         return -1 * new_var;
       }
     }
-
 
     decision_loc++;
 
@@ -804,24 +876,25 @@ public:
       size_t id = add_new_lemma (true);
       external_lemmas[id]->propagation_reason = true;
       reason_map[propagated_lit] = id;
-      MLOG("new clause added to reason map for " << propagated_lit 
-        << " with id " << id
-        << std::endl);
-      clause.clear();
+      MLOG ("new clause added to reason map for "
+            << propagated_lit << " with id " << id << std::endl);
+      clause.clear ();
     }
 
-    MLOG( "cb_propagate returns " << propagated_lit << std::endl );
+    MLOG ("cb_propagate returns " << propagated_lit << std::endl);
 
     return propagated_lit;
   }
 
-  std::set<int> current_observed_satisfied_set (size_t& lit_sum, int& lowest_lit, int& highest_lit) {
-    
+  std::set<int> current_observed_satisfied_set (size_t &lit_sum,
+                                                int &lowest_lit,
+                                                int &highest_lit) {
+
     lit_sum = 0;
     lowest_lit = 0;
     highest_lit = 0;
     std::set<int> satisfied_literals;
-    
+
     for (auto level_lits : observed_trail) {
       for (auto lit : level_lits) {
         if (!s->observed (lit))
@@ -830,7 +903,8 @@ public:
         satisfied_literals.insert (lit);
         lit_sum += abs (lit);
 
-        if (!lowest_lit) lowest_lit = lit;
+        if (!lowest_lit)
+          lowest_lit = lit;
         highest_lit = lit;
       }
     }
@@ -857,17 +931,17 @@ public:
     return lit;
   }
 
-  void notify_assignment (const std::vector<int>& lits) override { 
-    MLOG ("notified " << lits.size() << " new assignments." << std::endl);
-    for (const auto& lit: lits) {
+  void notify_assignment (const std::vector<int> &lits) override {
+    MLOG ("notified " << lits.size () << " new assignments." << std::endl);
+    for (const auto &lit : lits) {
       observed_trail.back ().push_back (lit);
       unassigned_reasons.erase (lit);
     }
   }
 
   void notify_new_decision_level () override {
-    MLOG ("notify new decision level " << observed_trail.size () -1 << " -> "
-                                       << observed_trail.size ()
+    MLOG ("notify new decision level " << observed_trail.size () - 1
+                                       << " -> " << observed_trail.size ()
                                        << std::endl);
     observed_trail.push_back (std::vector<int> ());
   }
@@ -875,7 +949,7 @@ public:
   void notify_backtrack (size_t new_level) override {
     MLOG ("notify backtrack: " << observed_trail.size () - 1 << " -> "
                                << new_level << std::endl);
-    assert (observed_trail.size () > 1 || !new_level);                
+    assert (observed_trail.size () > 1 || !new_level);
     assert (observed_trail.size () == 1 ||
             observed_trail.size () >= new_level + 1);
     while (observed_trail.size () > new_level + 1) {
@@ -889,20 +963,19 @@ public:
         }
       }
 #ifndef NDEBUG
-      MLOG("unassign during backtrack from level " 
-        << observed_trail.size() - 1 << ": ");
-      for (auto lit: observed_trail.back()) {
-        (void)lit;
-        MLOGC(lit << " ");
+      MLOG ("unassign during backtrack from level "
+            << observed_trail.size () - 1 << ": ");
+      for (auto lit : observed_trail.back ()) {
+        (void) lit;
+        MLOGC (lit << " ");
       }
-      MLOGC(std::endl);
+      MLOGC (std::endl);
 #endif
       observed_trail.pop_back ();
     }
   }
 
   /* ----------------- ExternalPropagator functions end ------------------*/
-
 };
 
 // This is the class for the Mobical application.
@@ -943,9 +1016,7 @@ class Mobical : public Handler {
   DoNot donot;
   Force force;
   bool verbose = false;
-#ifdef LOGGING
   bool add_set_log_to_true = false;
-#endif
   bool add_dump_before_solve = false;
   bool add_stats_after_solve = false;
   bool add_plain_after_options = false;
@@ -957,6 +1028,10 @@ class Mobical : public Handler {
 
   int64_t time_limit = DEFAULT_TIME_LIMIT;   // in seconds, none if zero
   int64_t space_limit = DEFAULT_SPACE_LIMIT; // in MB, none if zero
+#ifdef MOBICAL_MEMORY
+  bool bad_alloc = false;
+  bool leak_alloc = false;
+#endif
 
   Terminal &terminal = terr;
 
@@ -1203,22 +1278,30 @@ struct Call {
     FLUSHPROOFTRACE = shift ( 35 ),
     CLOSEPROOFTRACE = shift ( 36 ),
 
+#ifdef MOBICAL_MEMORY
+    MAXALLOC        = shift ( 37 ),
+    LEAKALLOC       = shift ( 38 ),
+#endif
+
     // clang-format on
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESERVE | FIXED |
-             PHASE,
-
+             PHASE
+#ifdef MOBICAL_MEMORY
+             | MAXALLOC | LEAKALLOC
+#endif
+    ,
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
     BEFORE =
         ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING,
     DURING = LEMMA, // | CONTINUE,
-    AFTER = VAL | FLIP | FAILED | CONCLUDE | ALWAYS | FLUSHPROOFTRACE |
-            CLOSEPROOFTRACE,
     LITTYPE = PHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE | FAILED | FIXED |
              FREEZE | FROZEN | MELT | CONSTRAIN | OBSERVE | LEMMA,
     EXTENDMAP = PHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
+    AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS | FLUSHPROOFTRACE |
+            CLOSEPROOFTRACE,
   };
 
   Type type; // Explicit typing.
@@ -1313,6 +1396,23 @@ struct InitCall : public Call {
   Call *copy () { return new InitCall (); }
   const char *keyword () { return "init"; }
 };
+
+#ifdef MOBICAL_MEMORY
+struct MaxAllocCall : public Call {
+  MaxAllocCall (int val) : Call (MAXALLOC, 0, 0, 0, val) {}
+  void execute (Solver *&s) { (void) s; }
+  void print (ostream &o) { o << "max_alloc " << val << endl; }
+  Call *copy () { return new MaxAllocCall (val); }
+  const char *keyword () { return "max_alloc"; }
+};
+struct LeakAllocCall : public Call {
+  LeakAllocCall () : Call (LEAKALLOC) {}
+  void execute (Solver *&s) { (void) s; }
+  void print (ostream &o) { o << "leak_alloc" << endl; }
+  Call *copy () { return new LeakAllocCall (); }
+  const char *keyword () { return "leak_alloc"; }
+};
+#endif
 
 struct VarsCall : public Call {
   VarsCall () : Call (VARS) {}
@@ -1435,7 +1535,7 @@ struct ConnectCall : public Call {
     mobical.mock_pointer = new MockPropagator (s, &extendmap);
 #endif
     s->connect_external_propagator (mobical.mock_pointer);
-    s->connect_fixed_listener(mobical.mock_pointer);
+    s->connect_fixed_listener (mobical.mock_pointer);
 
     if (prev_pointer) {
       mobical.mock_pointer->add_prev_fixed (prev_pointer->observed_fixed);
@@ -1443,9 +1543,9 @@ struct ConnectCall : public Call {
     } else {
       // FixedAssignmentListener does not replay previous fixed assignment,
       // collect them here explicitly -- EXPENSIVE
-      // In practice FixedAssignmentListener is there from the beginning if 
+      // In practice FixedAssignmentListener is there from the beginning if
       // needed, in mobical we do not want to wire in this.
-      
+
       mobical.mock_pointer->collect_prev_fixed ();
     }
   }
@@ -1720,12 +1820,23 @@ public:
   static int64_t failed;
   static int64_t ok;
 
+#ifdef MOBICAL_MEMORY
+  static int64_t memory_call_index;
+  static int64_t memory_bad_alloc;
+  static int64_t memory_bad_size;
+  static int64_t memory_bad_failed;
+  static int64_t memory_leak_alloc;
+  static int64_t memory_leak_next_free;
+#endif
+
 #define SIGNALS \
   SIGNAL (SIGINT) \
   SIGNAL (SIGSEGV) \
   SIGNAL (SIGABRT) \
   SIGNAL (SIGTERM) \
-  SIGNAL (SIGBUS)
+  SIGNAL (SIGBUS) \
+  SIGNAL (SIGUSR1) \
+  SIGNAL (SIGUSR2)
 
 #define SIGNAL(SIG) static void (*old_##SIG##_handler) (int);
   SIGNALS
@@ -1733,6 +1844,15 @@ public:
   static void child_signal_handler (int);
   static void init_child_signal_handlers ();
   static void reset_child_signal_handlers ();
+
+#ifdef MOBICAL_MEMORY
+  static void hooks_install (void);
+  static void hooks_uninstall (void);
+  static void *hook_malloc (size_t);
+  static void *hook_realloc (void *, size_t);
+  static void hook_free (void *);
+  static void print_trace (void **, size_t, ostream &, size_t);
+#endif
 
   Trace (int64_t i = 0, uint64_t s = 0) : id (i), seed (s), solver (0) {}
 
@@ -1752,33 +1872,169 @@ public:
   void push_back (Call *c) { calls.push_back (c); }
 
   void print (ostream &o) {
-    for (size_t i = 0; i < calls.size (); i++)
-      calls[i]->print (o << i << ' ');
+    for (size_t i = 0; i < calls.size (); i++) {
+#ifdef MOBICAL_MEMORY
+      if (mobical.shared->bad_alloc.alloc_call_index == i + 1)
+        o << "# "
+             "V------------------------------------------------------------"
+             "---------- bad alloc: allocation"
+          << endl;
+      if (mobical.shared->bad_alloc.signal_call_index == i + 1)
+        o << "# "
+             "V------------------------------------------------------------"
+             "---------- bad alloc: crashed"
+          << endl;
+      if (mobical.shared->bad_alloc.debug_filter_index == i + 1)
+        o << "# "
+             "V------------------------------------------------------------"
+             "---------- debug: call was filtered"
+          << endl;
+      for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+        if (mobical.shared->leak_alloc.call_index[index] == i + 1) {
+          o << "# "
+               "V----------------------------------------------------------"
+               "------------ leak alloc: allocation"
+            << endl;
+          break;
+        }
+      }
+#endif
+      o << i << ' ';
+      calls[i]->print (o);
+    }
+
+#ifdef MOBICAL_MEMORY
+    if (mobical.shared->bad_alloc.alloc_call_index > 0) {
+      o << "# ---------------------------------------------------" << endl;
+      o << "# Memory was tried to be allocated here:" << endl;
+      assert (mobical.shared->bad_alloc.alloc_stack_size <=
+              MOBICAL_MEMORY_STACK_COUNT);
+      print_trace (mobical.shared->bad_alloc.alloc_stack_array,
+                   mobical.shared->bad_alloc.alloc_stack_size, o, 0);
+      o << "#" << endl;
+    }
+    if (mobical.shared->bad_alloc.signal_call_index > 0) {
+      o << "# ---------------------------------------------------" << endl;
+      o << "# A crash happened here:" << endl;
+      assert (mobical.shared->bad_alloc.signal_stack_size <=
+              MOBICAL_MEMORY_STACK_COUNT);
+      print_trace (mobical.shared->bad_alloc.signal_stack_array,
+                   mobical.shared->bad_alloc.signal_stack_size, o, 0);
+      o << "#" << endl;
+    }
+    for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+      if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
+        o << "# ---------------------------------------------------"
+          << endl;
+        o << "# Leak of " << mobical.shared->leak_alloc.alloc_size[index]
+          << " bytes at (0x" << hex << setw (64 / 4) << setfill ('0')
+          << mobical.shared->leak_alloc.alloc_ptr[index] << dec << ")"
+          << endl;
+        o << "# Memory was allocated here:" << endl;
+        assert (mobical.shared->leak_alloc.stack_size[index] <=
+                MOBICAL_MEMORY_STACK_COUNT);
+        print_trace (mobical.shared->leak_alloc.stack_array[index],
+                     mobical.shared->leak_alloc.stack_size[index], o, 0);
+        o << "#" << endl;
+      }
+    }
+#endif
   }
 
   void execute () {
+#ifdef MOBICAL_MEMORY
+    memory_bad_alloc = 0;
+    memory_bad_size = 0;
+    memory_bad_failed = 0;
+    memory_leak_alloc = 0;
+    memory_leak_next_free = 0;
+    std::memset (&mobical.shared->bad_alloc, 0,
+                 sizeof (mobical.shared->bad_alloc));
+    std::memset (&mobical.shared->leak_alloc, 0,
+                 sizeof (mobical.shared->leak_alloc));
+    hooks_install ();
+#endif
+
     executed++;
     bool first = true;
+    bool deallocated = false;
     for (size_t i = 0; i < calls.size (); i++) {
       Call *c = calls[i];
-      // They are (ideally) are executed already
-      if (c->type == Call::LEMMA)
-        continue;
-      // if (c->type == Call::CONTINUE)
-      //   continue;
 
-      if (c->type == Call::SOLVE) {
-        // Look ahead and collect LemmaCalls to be executed
-        // before solve is executed
-        for (size_t j = i + 1; j < calls.size (); j++) {
-          Call *next_c = calls[j];
-          if (next_c->type == Call::LEMMA) {
-            next_c->execute (solver, extendmap);
+#ifdef MOBICAL_MEMORY
+      memory_call_index = i + 1;
+      if (memory_bad_failed && c->type != Call::RESET) {
+        continue; // Ignore call, only RESET (deallocation) allowed.
+      }
+#else
+      (void) deallocated;
+#endif
+
+      try {
+        // They are (ideally) are executed already
+        if (c->type == Call::LEMMA)
+          continue;
+          // if (c->type == Call::CONTINUE)
+          //   continue;
+#ifdef MOBICAL_MEMORY
+        if (c->type == Call::MAXALLOC) {
+          memory_bad_alloc = c->val;
+          memory_bad_size = 0;
+          continue;
+        } else if (c->type == Call::LEAKALLOC) {
+          memory_leak_alloc = 1;
+          memory_leak_next_free = 0;
+          continue;
+        } else if (c->type == Call::RESET) {
+          deallocated = true;
+        }
+#endif
+
+        if (c->type == Call::SOLVE) {
+          // Look ahead and collect LemmaCalls to be executed
+          // before solve is executed
+          for (size_t j = i + 1; j < calls.size (); j++) {
+            Call *next_c = calls[j];
+            if (next_c->type == Call::LEMMA)
+              next_c->execute (solver);
+            // else if (next_c->type == Call::CONTINUE)
+            //   next_c->execute (solver);
+            else
+              break;
           }
-          // else if (next_c->type == Call::CONTINUE)
-          //   next_c->execute (solver);
+        }
+        if (mobical.shared && process_type (c->type)) {
+          mobical.shared->solved++;
+          if (first)
+            first = false;
           else
-            break;
+            mobical.shared->incremental++;
+          c->execute (solver);
+          if (c->res == 10)
+            mobical.shared->sat++;
+          if (c->res == 20)
+            mobical.shared->unsat++;
+        } else
+          c->execute (solver);
+      } catch (const std::bad_alloc &e) {
+        // Ignore out-of-memory errors and assume solver state is
+        // consistent.
+        mobical.shared->oom++;
+      }
+    }
+#ifdef MOBICAL_MEMORY
+    if (deallocated && mobical.mock_pointer) {
+      delete mobical.mock_pointer;
+      mobical.mock_pointer = nullptr;
+    }
+    hooks_uninstall ();
+    // Note: Do not force-deallocate here as otherwise the shrink procedure
+    // will remove the RESET call.
+    if (deallocated) {
+      for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+        if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
+          reset_child_signal_handlers ();
+          raise (SIGUSR2);
         }
       }
       if (mobical.shared && process_type (c->type)) {
@@ -1796,6 +2052,7 @@ public:
         c->execute (solver, extendmap);
       }
     }
+#endif
   }
 
   int vars () {
@@ -2102,6 +2359,11 @@ void Trace::generate_options (Random &random, Size size) {
     if (o.lo == o.hi)
       continue;
 
+    // We ignore logging here and set it below to make mobical deterministic
+    if (!strcmp (o.name, "log"))
+      continue;
+    if (!strcmp (o.name, "logsort"))
+      continue;
     // We keep choosing the value for 'simplify' and 'walk' out of the loop
     // (see the arguments described above).
     //
@@ -2109,10 +2371,6 @@ void Trace::generate_options (Random &random, Size size) {
       continue;
     if (!strcmp (o.name, "walk"))
       continue;
-    /*
-    if (!strcmp (o.name, "lrat"))
-      continue;
-    */
 
     // Probability to change an option is 'fraction'.
     //
@@ -2148,9 +2406,39 @@ void Trace::generate_options (Random &random, Size size) {
     push_back (new SetCall (o.name, val));
   }
 
+  // Now setting the option for logging. Even if we do not generate the log
+  // call, we need the side effect of generate_bool ()
+  auto log_option =
+      std::find_if (Options::begin (), Options::end (),
+                    [] (const Option o) { return strcmp (o.name, "log"); });
+  const bool should_log = random.generate_bool ();
+  auto logsort_option = std::find_if (
+      Options::begin (), Options::end (),
+      [] (const Option o) { return strcmp (o.name, "logsort"); });
+  const bool should_logsort = random.generate_bool ();
+
+#ifdef LOGGING
+  // sanity check
+  assert (log_option != Options::end ());
+  assert (logsort_option != Options::end ());
+#endif
+  if (log_option != Options::end () &&
+      should_log) { // only if the option was found
+#ifdef LOGGING
+    push_back (new SetCall (log_option->name, should_log));
+#endif
+  }
+  if (logsort_option != Options::end () && should_logsort) {
+#ifdef LOGGING
+    push_back (new SetCall (logsort_option->name, should_logsort));
+#endif
+  }
 #ifdef LOGGING
   if (mobical.add_set_log_to_true)
     push_back (new SetCall ("log", 1));
+#else
+  if (mobical.add_set_log_to_true)
+    mobical.warning ("ignoring log option");
 #endif
 }
 
@@ -2537,10 +2825,18 @@ void Trace::generate (uint64_t i, uint64_t s) {
 
   id = i;
   seed = s;
+  Random random (seed);
+
+#ifdef MOBICAL_MEMORY
+  if (mobical.bad_alloc && (random.pick_int (0, 2) == 0)) {
+    push_back (new MaxAllocCall (random.pick_log (1e2, 1e6)));
+  }
+  if (mobical.leak_alloc && (random.pick_int (0, 2) == 0)) {
+    push_back (new LeakAllocCall ());
+  }
+#endif
 
   push_back (new InitCall ());
-
-  Random random (seed);
 
   Size size;
 
@@ -2579,7 +2875,9 @@ void Trace::generate (uint64_t i, uint64_t s) {
     double ratio;
     int uniform;
 
-    if (size == SMALL)
+    if (size == TINY)
+      range = random.pick_int (1, TINY);
+    else if (size == SMALL)
       range = random.pick_int (1, SMALL);
     else if (size == MEDIUM)
       range = random.pick_int (SMALL + 1, MEDIUM);
@@ -2587,6 +2885,8 @@ void Trace::generate (uint64_t i, uint64_t s) {
       range = random.pick_int (MEDIUM + 1, BIG);
 
     if (random.generate_bool ())
+      uniform = 0;
+    else if (size == TINY)
       uniform = 0;
     else if (size == SMALL)
       uniform = random.pick_int (3, 7);
@@ -2618,8 +2918,8 @@ void Trace::generate (uint64_t i, uint64_t s) {
     // TODO: Test empty clause database by uncommenting here
     // Note that it can lead to unvalid mobical states in the reduced
     // trace, so always check the original bug-trace too.
-    //if (random.generate_double () < 0.01) clauses = 0;
-    
+    // if (random.generate_double () < 0.01) clauses = 0;
+
     minvars = random.pick_int (1, maxvars + 1);
     maxvars = minvars + range;
 
@@ -2700,12 +3000,14 @@ void Mobical::print_statistics () {
          << terr.normal_code () << ", " << shared->incremental
          << " incremental "
          << rounded_percent (shared->incremental, shared->solved) << "%"
-         << endl
+         << terr.normal_code () << ", " << terr.yellow_code ()
+         << shared->oom << " oom "
+         << rounded_percent (shared->oom, shared->solved) << "%" << endl
          << flush;
     if (shared->memout || shared->timeout) {
       prefix ();
-      cerr << "out-of-time " << shared->timeout << ", "
-           << "out-of-memory " << shared->memout << endl
+      cerr << "out-of-time " << shared->timeout << ", " << "out-of-memory "
+           << shared->memout << endl
            << flush;
     }
   }
@@ -2736,10 +3038,19 @@ extern "C" {
 
 #endif
 
-int64_t Trace::generated;
-int64_t Trace::executed;
-int64_t Trace::failed;
-int64_t Trace::ok;
+int64_t Trace::generated = 0;
+int64_t Trace::executed = 0;
+int64_t Trace::failed = 0;
+int64_t Trace::ok = 0;
+
+#ifdef MOBICAL_MEMORY
+int64_t Trace::memory_call_index = -1;
+int64_t Trace::memory_bad_alloc = 0;
+int64_t Trace::memory_bad_size = 0;
+int64_t Trace::memory_bad_failed = 0;
+int64_t Trace::memory_leak_alloc = 0;
+int64_t Trace::memory_leak_next_free = 0;
+#endif
 
 #define SIGNAL(SIG) void (*Trace::old_##SIG##_handler) (int);
 SIGNALS
@@ -2752,6 +3063,22 @@ void Trace::reset_child_signal_handlers () {
 }
 
 void Trace::child_signal_handler (int sig) {
+#ifdef MOBICAL_MEMORY
+  hooks_uninstall ();
+  if (memory_bad_failed) {
+    mobical.shared->bad_alloc.signal_call_index = memory_call_index;
+    mobical.shared->bad_alloc.signal_stack_size =
+        backtrace (mobical.shared->bad_alloc.signal_stack_array,
+                   MOBICAL_MEMORY_STACK_COUNT);
+    // The signal probably has been raised as a result
+    // of the forced failed memory allocation.
+    // Raise a custom signal code for the parent to
+    // create a unique result code (2 instead of 1).
+    reset_child_signal_handlers ();
+    raise (SIGUSR1);
+  }
+#endif
+
   struct rusage u;
   if (!getrusage (RUSAGE_SELF, &u)) {
     if ((int64_t) u.ru_maxrss >> 10 >= mobical.space_limit) {
@@ -2781,6 +3108,173 @@ void Trace::init_child_signal_handlers () {
 #undef SIGNAL
 }
 
+#ifdef MOBICAL_MEMORY
+void Trace::hooks_install (void) {
+  *static_cast<volatile malloc_t *> (&::hook_malloc) = &hook_malloc;
+  *static_cast<volatile realloc_t *> (&::hook_realloc) = &hook_realloc;
+  *static_cast<volatile free_t *> (&::hook_free) = &hook_free;
+}
+
+void Trace::hooks_uninstall (void) {
+  *static_cast<volatile malloc_t *> (&::hook_malloc) = nullptr;
+  *static_cast<volatile realloc_t *> (&::hook_realloc) = nullptr;
+  *static_cast<volatile free_t *> (&::hook_free) = nullptr;
+}
+
+void *Trace::hook_malloc (size_t size) {
+  // Failing allocator
+  if (memory_bad_alloc > 0) {
+    memory_bad_size += size + 1; // + 1 to catch allocations of size 0
+    if (memory_bad_size > memory_bad_alloc && !memory_bad_failed) {
+      memory_bad_failed = 1;
+      hooks_uninstall ();
+      mobical.shared->bad_alloc.alloc_call_index = memory_call_index;
+      mobical.shared->bad_alloc.alloc_stack_size =
+          backtrace (mobical.shared->bad_alloc.alloc_stack_array,
+                     MOBICAL_MEMORY_STACK_COUNT);
+      hooks_install ();
+      return nullptr;
+    }
+  }
+  // Default allocator
+  void *ptr = (*libc_malloc) (size);
+  // Leak detection
+  if (memory_leak_alloc > 0) {
+    for (size_t offset{0u}; offset < MOBICAL_MEMORY_LEAK_COUNT; offset++) {
+      size_t index{memory_leak_next_free + offset};
+      if (index >= MOBICAL_MEMORY_LEAK_COUNT)
+        index -= MOBICAL_MEMORY_LEAK_COUNT;
+      if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
+        continue;
+      }
+      // Found free slot
+      hooks_uninstall ();
+      mobical.shared->leak_alloc.alloc_size[index] = size;
+      mobical.shared->leak_alloc.alloc_ptr[index] = ptr;
+      mobical.shared->leak_alloc.call_index[index] = memory_call_index;
+      mobical.shared->leak_alloc.stack_size[index] =
+          backtrace (mobical.shared->leak_alloc.stack_array[index],
+                     MOBICAL_MEMORY_STACK_COUNT);
+      memory_leak_next_free = index + 1;
+      hooks_install ();
+      return ptr;
+    }
+  }
+  return ptr;
+}
+
+void *Trace::hook_realloc (void *ptr, size_t size) {
+  // Failing allocator
+  if (memory_bad_alloc > 0) {
+    memory_bad_size += size + 1; // + 1 to catch allocations of size 0
+    if (memory_bad_size > memory_bad_alloc && !memory_bad_failed) {
+      hooks_uninstall ();
+      memory_bad_failed = 1;
+      mobical.shared->bad_alloc.alloc_call_index = memory_call_index;
+      mobical.shared->bad_alloc.alloc_stack_size =
+          backtrace (mobical.shared->bad_alloc.alloc_stack_array,
+                     MOBICAL_MEMORY_STACK_COUNT);
+      hooks_install ();
+      return nullptr;
+    }
+  }
+  // Default allocator
+  void *new_ptr = (*libc_realloc) (ptr, size);
+  // Leak detection
+  if (memory_leak_alloc > 0) {
+    for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+      if (mobical.shared->leak_alloc.alloc_ptr[index] != ptr) {
+        continue;
+      }
+      // Found previous slot
+      hooks_uninstall ();
+      mobical.shared->leak_alloc.alloc_size[index] = size;
+      mobical.shared->leak_alloc.alloc_ptr[index] = new_ptr;
+      mobical.shared->leak_alloc.call_index[index] = memory_call_index;
+      mobical.shared->leak_alloc.stack_size[index] =
+          backtrace (mobical.shared->leak_alloc.stack_array[index],
+                     MOBICAL_MEMORY_STACK_COUNT);
+      hooks_install ();
+      return new_ptr;
+    }
+    for (size_t offset{0u}; offset < MOBICAL_MEMORY_LEAK_COUNT; offset++) {
+      size_t index{memory_leak_next_free + offset};
+      if (index >= MOBICAL_MEMORY_LEAK_COUNT)
+        index -= MOBICAL_MEMORY_LEAK_COUNT;
+      if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
+        continue;
+      }
+      // Found free slot
+      hooks_uninstall ();
+      mobical.shared->leak_alloc.alloc_size[index] = size;
+      mobical.shared->leak_alloc.alloc_ptr[index] = new_ptr;
+      mobical.shared->leak_alloc.call_index[index] = memory_call_index;
+      mobical.shared->leak_alloc.stack_size[index] =
+          backtrace (mobical.shared->leak_alloc.stack_array[index],
+                     MOBICAL_MEMORY_STACK_COUNT);
+      memory_leak_next_free = index + 1;
+      hooks_install ();
+      return new_ptr;
+    }
+
+    hooks_uninstall ();
+    printf ("No free slot!");
+    hooks_install ();
+  }
+  return new_ptr;
+}
+
+void Trace::hook_free (void *ptr) {
+  (*libc_free) (ptr);
+  // Leak detection
+  if (memory_leak_alloc > 0) {
+    for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+      if (mobical.shared->leak_alloc.alloc_ptr[index] == ptr) {
+        mobical.shared->leak_alloc.alloc_size[index] = 0;
+        mobical.shared->leak_alloc.alloc_ptr[index] = nullptr;
+        mobical.shared->leak_alloc.call_index[index] = 0;
+        mobical.shared->leak_alloc.stack_size[index] = 0;
+        // memory_leak_next_free = index;
+        break;
+      }
+    }
+  }
+}
+
+void Trace::print_trace (void **stack_array, size_t stack_size, ostream &os,
+                         size_t start_index) {
+  char **stack_text = backtrace_symbols (stack_array, stack_size);
+  for (size_t stack_index = start_index; stack_index < stack_size;
+       stack_index++) {
+    string stack_entry = stack_text[stack_index];
+    if (size_t position = stack_entry.rfind ("/");
+        position != string::npos) {
+      stack_entry = stack_entry.substr (position + 1);
+    }
+    smatch match; // Try to unmangle C++ method names
+    regex regex_function_name (
+        "^(.*?)\\(([a-zA-Z0-9_]+)((?:\\+0x[0-9a-fA-F]+)?)\\)(.*?)");
+    if (regex_match (stack_entry, match, regex_function_name)) {
+      string mangledName = match[2];
+      int status = -1;
+      char *demangledName =
+          abi::__cxa_demangle (mangledName.c_str (), NULL, NULL, &status);
+      if (status == 0) { // Print C++ method name
+        os << "# " << match[1] << "(" << demangledName << match[3] << ")"
+           << match[4] << endl;
+        free (static_cast<void *> (demangledName));
+      } else { // Print C method name
+        os << "# " << match[1] << "(" << mangledName << match[3] << ")"
+           << match[4] << endl;
+      }
+    } else { // Print unparsable stack entry
+      os << "# " << stack_entry << endl;
+    }
+  }
+  free (static_cast<void *> (stack_text));
+}
+#endif
+
 int Trace::fork_and_execute () {
 
   cerr << flush;
@@ -2800,6 +3294,10 @@ int Trace::fork_and_execute () {
       res = 0;
     else if (mobical.donot.ignore_resource_limits)
       res = 1;
+    else if (WTERMSIG (status) == SIGUSR1)
+      res = 2; // Bad allocation caused signal.
+    else if (WTERMSIG (status) == SIGUSR2)
+      res = 3; // Leaked allocation caused signal.
     else
       res = (WTERMSIG (status) != SIGXCPU);
 
@@ -3131,7 +3629,7 @@ bool Trace::shrink_literals (int expected) {
 }
 
 static bool is_basic (Call *c) {
-  switch ((uint64_t)c->type) {
+  switch ((uint64_t) c->type) {
   case Call::ASSUME:
   case Call::SOLVE:
   case Call::SIMPLIFY:
@@ -3182,11 +3680,20 @@ void Trace::add_options (int expected) {
   const int max_var = vars ();
   notify ('a');
   assert (size ());
-  assert (calls[0]->type == Call::INIT);
   Trace extended;
-  extended.push_back (calls[0]->copy ());
-  size_t i = 1;
+  size_t i = 0;
   Call *c;
+  for (; i < size (); i++) {
+    c = calls[i];
+#ifdef MOBICAL_MEMORY
+    if (!(c->type == Call::INIT || c->type == Call::MAXALLOC)) {
+#else
+    if (!(c->type == Call::INIT)) {
+#endif
+      continue;
+    }
+    extended.push_back (c->copy ());
+  }
   while (i < size () && (c = calls[i])->type == Call::SET)
     extended.push_back (c->copy ()), i++;
   for (Options::const_iterator it = Options::begin ();
@@ -3290,7 +3797,6 @@ bool Trace::reduce_values (int expected) {
   notify ('r');
 
   assert (size ());
-  assert (calls[0]->type == Call::INIT);
 
   bool changed = false, res = false;
   do {
@@ -3320,6 +3826,10 @@ bool Trace::reduce_values (int expected) {
           continue;
       } else if (c->type == Call::OPTIMIZE) {
         lo = 0, hi = 9;
+#ifdef MOBICAL_MEMORY
+      } else if (c->type == Call::MAXALLOC) {
+        lo = 0, hi = c->val;
+#endif
       } else
         continue;
 
@@ -3385,7 +3895,6 @@ bool Trace::reduce_values (int expected) {
 }
 
 static bool has_lit_arg_type (Call *c) {
-  // return c->lit_type ();
   switch ((uint64_t)c->type) {
   case Call::ADD:
   case Call::CONSTRAIN:
@@ -3507,7 +4016,7 @@ void Trace::shrink (int expected) {
   mobical.shrinking = true;
   mobical.notified.clear ();
   assert (!mobical.donot.shrink.atall);
-  if (!size () || calls[0]->type != Call::INIT)
+  if (!size ())
     return;
   add_options (expected);
   Shrinking l = NONE;
@@ -3533,6 +4042,9 @@ void Trace::shrink (int expected) {
   } while (s);
   map_variables (expected);
   shrink_options (expected);
+  // Execute one last time to get accurate results when memory fuzzing
+  // is enabled.
+  fork_and_execute ();
   cerr << flush;
   mobical.shrinking = false;
 }
@@ -3603,6 +4115,14 @@ void Reader::parse () {
   Call *before_trigger = 0;
   char line[80];
   while ((ch = next ()) != EOF) {
+    // Ignore comments (used for additional human readable information).
+    if (ch == '#') {
+      while (ch != '\n') {
+        if ((ch = next ()) == EOF)
+          error ("unexpected end-of-file");
+      }
+      continue;
+    }
     size_t n = 0;
     while (ch != '\n') {
       if (n + 2 >= sizeof line)
@@ -3675,7 +4195,7 @@ void Reader::parse () {
       if (enforce && !Solver::is_valid_option ((first))) {
 #ifndef LOGGING
         if (!strcmp (first, "log"))
-          mobical.warning ("non-existing option name 'log' "
+          mobical.warning ("ignoring non-existing option name 'log' "
                            "(compiled without '-DLOGGING')");
         else
 #endif
@@ -3976,15 +4496,33 @@ void Reader::parse () {
       if (first)
         error ("additional argument '%s' to 'close_proof_trace'", first);
       c = new CloseProofTraceCall ();
+#ifdef MOBICAL_MEMORY
+    } else if (!strcmp (keyword, "max_alloc")) {
+      if (!mobical.bad_alloc)
+        error ("option --bad-alloc has to be anabled for max_alloc calls");
+      if (!first)
+        error ("first argument to 'max_alloc' missing");
+      if (!parse_int_str (first, val))
+        error ("invalid first argument '%s' to 'max_alloc'", first);
+      c = new MaxAllocCall (val);
+    } else if (!strcmp (keyword, "leak_alloc")) {
+      if (!mobical.leak_alloc)
+        error (
+            "option --leak-alloc has to be anabled for leak_alloc calls");
+      c = new LeakAllocCall ();
+#endif
     } else
       error ("invalid keyword '%s'", keyword);
 
     // This checks the legal structure of traces described above.
     //
     if (enforce) {
-
-      if (!state && c->type != Call::INIT)
-        error ("first call has to be an 'init' call");
+#ifdef MOBICAL_MEMORY
+      if (!state && !(c->type & (Call::INIT | Call::MAXALLOC)))
+#else
+      if (!state && !(c->type == Call::INIT))
+#endif
+        error ("first call has to be an 'init' or 'maxalloc' call");
 
       if (state == Call::RESET)
         error ("'%s' after 'reset'", c->keyword ());
@@ -4004,7 +4542,7 @@ void Reader::parse () {
 
       uint64_t new_state = state;
 
-      switch ((uint64_t)c->type) {
+      switch ((uint64_t) c->type) {
 
       case Call::INIT:
         if (state)
@@ -4233,6 +4771,8 @@ int Mobical::main (int argc, char **argv) {
              !strcmp (argv[i], "--do-not-reduce-values") ||
              !strcmp (argv[i], "--do-not-reduce-option-values"))
       donot.reduce = true;
+    else if (!strcmp (argv[i], "--tiny"))
+      force.size = TINY;
     else if (!strcmp (argv[i], "--small"))
       force.size = SMALL;
     else if (!strcmp (argv[i], "--medium"))
@@ -4240,12 +4780,7 @@ int Mobical::main (int argc, char **argv) {
     else if (!strcmp (argv[i], "--big"))
       force.size = BIG;
     else if (!strcmp (argv[i], "-l") || !strcmp (argv[i], "--log")) {
-#ifdef LOGGING
       add_set_log_to_true = true;
-#else
-      die ("can not force logging with '%s' (compiled without '-DLOGGING')",
-           argv[i]);
-#endif
     } else if (!strcmp (argv[i], "-d") || !strcmp (argv[i], "--dump")) {
       add_dump_before_solve = true;
     } else if (!strcmp (argv[i], "-s") || !strcmp (argv[i], "--stats")) {
@@ -4259,6 +4794,12 @@ int Mobical::main (int argc, char **argv) {
         die ("argument to '-L' missing (try '-h')");
       if (!is_unsigned_str (argv[i]) || (limit = atol (argv[i])) < 0)
         die ("invalid argument '%s' to '-L' (try '-h')", argv[i]);
+    } else if (argv[i][0] == '-' && argv[i][1] == 'L') {
+      if (limit >= 0)
+        die ("multiple '-L' options (try '-h')");
+      if (!is_unsigned_str (argv[i] + 2) ||
+          (limit = atol (argv[i] + 2)) < 0)
+        die ("invalid argument in '%s' (try '-h')", argv[i]);
     } else if (!strcmp (argv[i], "--time")) {
       if (++i == argc)
         die ("argument to '--time' missing (try '-h')");
@@ -4271,6 +4812,19 @@ int Mobical::main (int argc, char **argv) {
       if (!is_unsigned_str (argv[i]) ||
           (space_limit = atol (argv[i])) < 0 || space_limit > 1e9)
         die ("invalid argument '%s' to '--space' (try '-h')", argv[i]);
+#ifdef MOBICAL_MEMORY
+    } else if (!strcmp (argv[i], "--bad-alloc")) {
+      bad_alloc = true;
+    } else if (!strcmp (argv[i], "--leak-alloc")) {
+      leak_alloc = true;
+#else
+    } else if (!strcmp (argv[i], "--bad-alloc")) {
+      die ("--bad-alloc requires memory fuzzing to be enabled at compile "
+           "time");
+    } else if (!strcmp (argv[i], "--leak-alloc")) {
+      die ("--leak-alloc requires memory fuzzing to be enabled at compile "
+           "time");
+#endif
     } else if (!strcmp (argv[i], "--do-not-ignore-resource-limits")) {
       donot.ignore_resource_limits = true;
     } else if (argv[i][0] == '-' && is_unsigned_str (argv[i] + 1)) {
@@ -4375,9 +4929,15 @@ int Mobical::main (int argc, char **argv) {
   terminal.normal ();
   prefix ();
   terminal.magenta (1);
-  fputs ("Copyright (c) 2018-2024 A. Biere, M. Fleury, N. Froleyks, K. "
-         "Fazekas, F. Pollitt\n",
-         stderr);
+  printf ("%s\n", copyright ());
+  terminal.normal ();
+  prefix ();
+  terminal.magenta (1);
+  printf ("%s\n", authors ());
+  terminal.normal ();
+  prefix ();
+  terminal.magenta (1);
+  printf ("%s\n", affiliations ());
   terminal.normal ();
   empty_line ();
   Solver::build (stderr, prefix_string ());
@@ -4682,5 +5242,11 @@ int Mobical::main (int argc, char **argv) {
 /*------------------------------------------------------------------------*/
 
 int main (int argc, char **argv) {
+#ifdef MOBICAL_MEMORY
+  // Disable buffers as they are otherwise detected as memory leak
+  setvbuf (stdout, NULL, _IONBF, 0);
+  setvbuf (stderr, NULL, _IONBF, 0);
+  setvbuf (stdin, NULL, _IONBF, 0);
+#endif
   return CaDiCaL::mobical.main (argc, argv);
 }

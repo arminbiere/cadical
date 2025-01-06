@@ -76,7 +76,8 @@ public:
   //
   bool contains (void *p) const {
     char *c = (char *) p;
-    return from.start <= c && c < from.top;
+    return (from.start <= c && c < from.top) ||
+           (to.start <= c && c < to.top);
   }
 
   // Allocate that amount of memory in 'to' space.  This assumes the 'to'

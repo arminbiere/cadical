@@ -195,7 +195,7 @@ struct Internal {
   int64_t saved_decisions;    // to compute decision rate average
   bool concluded;             // keeps track of conclude
   vector<int64_t> conclusion;   // store ids of conclusion clauses
-  vector<int64_t> unit_clauses; // keep track of unit_clauses (LRAT/FRAT)
+  vector<int64_t> unit_clauses_idx; // keep track of unit_clauses (LRAT/FRAT)
   vector<int64_t> lrat_chain;   // create LRAT in solver: option lratdirect
   vector<int64_t> mini_chain;   // used to create LRAT in minimize
   vector<int64_t> minimize_chain; // used to create LRAT in minimize
@@ -420,11 +420,17 @@ struct Internal {
   int64_t unit_id (int lit) const {
     assert (val (lit) > 0);
     const unsigned uidx = vlit (lit);
-    int64_t id = unit_clauses[uidx];
+    int64_t id = unit_clauses_idx[uidx];
     assert (id);
     return id;
   }
   
+
+  inline uint64_t &unit_clauses (int lit) {
+    assert (lrat || frat);
+    return unit_clauses_idx[lit];
+  }
+
   // Helper functions to access variable and literal data.
   //
   Var &var (int lit) { return vtab[vidx (lit)]; }
@@ -800,9 +806,9 @@ struct Internal {
   void connect_propagator ();
   void mark_garbage_external_forgettable (int64_t id);
   bool is_external_forgettable (int64_t id);
-#ifndef NDEBUG  
-  bool get_merged_literals (std::vector<int>&);
-  void get_all_fixed_literals (std::vector<int>&);
+#ifndef NDEBUG
+  bool get_merged_literals (std::vector<int> &);
+  void get_all_fixed_literals (std::vector<int> &);
 #endif
 
   void recompute_tier ();
@@ -1155,7 +1161,7 @@ struct Internal {
   void mark_redundant_clauses_with_eliminated_variables_as_garbage ();
   void unmark_binary_literals (Eliminator &);
   bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *, bool);
-  void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot);
+  void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot, bool &);
   bool elim_resolvents_are_bounded (Eliminator &, int pivot);
   void elim_update_removed_lit (Eliminator &, int lit);
   void elim_update_removed_clause (Eliminator &, Clause *, int except = 0);
@@ -1165,9 +1171,9 @@ struct Internal {
   void elim_backward_clauses (Eliminator &);
   void elim_propagate (Eliminator &, int unit);
   void elim_on_the_fly_self_subsumption (Eliminator &, Clause *, int);
-  void try_to_eliminate_variable (Eliminator &, int pivot);
+  void try_to_eliminate_variable (Eliminator &, int pivot, bool &);
   void increase_elimination_bound ();
-  int elim_round (bool &completed);
+  int elim_round (bool &completed, bool &);
   void elim (bool update_limits = true);
 
   // sweeping in 'sweep.cpp'
@@ -1526,6 +1532,12 @@ struct Internal {
   //
   void freeze (int lit) {
     int idx = vidx (lit);
+    if ((size_t) idx >= frozentab.size ()) {
+      size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) max_var;
+      while (new_vsize <= (size_t) max_var)
+        new_vsize *= 2;
+      frozentab.resize (new_vsize);
+    }
     unsigned &ref = frozentab[idx];
     if (ref < UINT_MAX) {
       ref++;
@@ -1550,7 +1562,10 @@ struct Internal {
     } else
       LOG ("variable %d remains frozen forever", idx);
   }
-  bool frozen (int lit) { return frozentab[vidx (lit)] > 0; }
+  bool frozen (int lit) {
+    return (size_t) vidx (lit) < frozentab.size () &&
+           frozentab[vidx (lit)] > 0;
+  }
 
   // Parsing functions in 'parse.cpp'.
   //
@@ -1562,15 +1577,20 @@ struct Internal {
   //
   void new_proof_on_demand ();
   void force_lrat ();                    // sets lrat=true
+  void resize_unit_clauses_idx ();       // resizes unit_clauses_idx
   void close_trace (bool stats = false); // Stop proof tracing.
   void flush_trace (bool stats = false); // Flush proof trace file.
   void trace (File *);                   // Start write proof file.
   void check ();                         // Enable online proof checking.
 
-  void connect_proof_tracer (Tracer *tracer, bool antecedents, bool finalize_clauses = false);
-  void connect_proof_tracer (InternalTracer *tracer, bool antecedents, bool finalize_clauses = false);
-  void connect_proof_tracer (StatTracer *tracer, bool antecedents, bool finalize_clauses = false);
-  void connect_proof_tracer (FileTracer *tracer, bool antecedents, bool finalize_clauses = false);
+  void connect_proof_tracer (Tracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
+  void connect_proof_tracer (InternalTracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
+  void connect_proof_tracer (StatTracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
+  void connect_proof_tracer (FileTracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
   bool disconnect_proof_tracer (Tracer *tracer);
   bool disconnect_proof_tracer (StatTracer *tracer);
   bool disconnect_proof_tracer (FileTracer *tracer);

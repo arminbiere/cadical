@@ -924,7 +924,7 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
 
   stats.inprobingphases++;
   if (external_prop) {
-    assert(!level);
+    assert (!level);
     private_steps = true;
   }
   const int before = active ();
@@ -947,7 +947,7 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
   }
 
   if (external_prop) {
-    assert(!level);
+    assert (!level);
     private_steps = false;
   }
 

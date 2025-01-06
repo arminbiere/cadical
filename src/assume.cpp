@@ -42,6 +42,7 @@ void Internal::assume_analyze_literal (int lit) {
   assert (v.reason != external_reason);
   if (!v.level) {
     int64_t id = unit_id (-lit);
+    assert (id);
     lrat_chain.push_back (id);
     return;
   }

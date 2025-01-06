@@ -34,6 +34,15 @@ bool Internal::minimize_literal (int lit, int depth) {
   assert (v.reason);
   if (opts.minimizeticks)
     stats.ticks.search[stable]++;
+  if (v.reason == external_reason) {
+    assert (!opts.exteagerreasons);
+    v.reason = learn_external_reason_clause (lit, 0, true);
+    if (!v.reason) {
+      assert (!v.level);
+      return true;
+    }
+  }
+  assert (v.reason != external_reason);
   const const_literal_iterator end = v.reason->end ();
   const_literal_iterator i;
   for (i = v.reason->begin (); res && i != end; i++) {

@@ -150,6 +150,10 @@ struct Profiles {
                                       internal->time ());) \
   } while (0)
 
+#define PROFILE_ACTIVE(P) \
+  ((internal->profiles.P.level <= internal->opts.profile) && \
+   (internal->profiles.P.active))
+
 /*------------------------------------------------------------------------*/
 
 #define START_SIMPLIFIER(S, M) \

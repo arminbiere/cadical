@@ -1,3 +1,33 @@
+Version 2.1.1
+-------------
+
+- Reentrant multi-threaded writing of compressed files fixed
+  with 'closefrom' (using 'pipe|fork|exec|closefrom') on Linux.
+
+- New IPASIR-UP options, with the same default as in 1.1:
+
+   + `exteagerreasons` where the solver eagerly asks for reasons before
+     analysing conflicts instead of being lazy (default: eager)
+
+   + `exteagerrecalc` where the solver recalculates the levels on the
+     trail before conflict analysis (default: on). Mostly useful if
+     the solver provides many propagations in a lazy fashion. Requires
+     `exteagerreasons` to be on to have any effect.
+
+- Fix performance regression for incremental SAT solving due to too
+  eager garbage collection before any incremental call in favor of
+  only doing it during variable elimination
+
+- Fix performance regression for the SAT anniversary track.
+
+- Slight memory usage reduction expected thanks to not allocating some
+  internal array only used for proof and external propagator.
+
+- Mobical deterministic compiled with or without logging.
+
+- Fixed memory corruption and leaks when allocation of arena fails
+  and further added support in fuzzer to trigger such bad allocations.
+
 Version 2.1.0
 -------------
 
