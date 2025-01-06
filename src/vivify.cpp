@@ -87,7 +87,7 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming, Clause *subsumed
     if (subsuming->redundant)
       stats.current.redundant++;
     else
-      stats.current.irredundant++, stats.irrlits += subsuming->size, stats.irrlits += subsuming->size;
+      stats.current.irredundant++, stats.irrlits += subsuming->size;
   }
   if (subsumed->redundant || !subsuming->redundant) {
     mark_garbage (subsumed);
