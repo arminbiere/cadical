@@ -50,6 +50,10 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming, Clause *subsumed
   stats.subsumed++;
   stats.vivifysubs++;
 #ifndef NDEBUG
+  assert (subsuming);
+  assert (subsumed);
+  assert (subsuming != subsumed);
+  assert (!subsumed->garbage);
   // size after removeing units;
   int real_size_subsuming = 0, real_size_subsumed = 0;
   for (auto lit : *subsuming) {
@@ -73,6 +77,16 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming, Clause *subsumed
   } else {
     stats.subirr++;
     ++stats.vivifysubirr;
+  }
+  if (subsuming->garbage) {
+    assert (subsuming->size == 2);
+    LOG (subsuming, "subsuming clause was already deleted, so undeleting");
+    subsuming->garbage = false;
+    subsuming->glue = 1;
+    if (subsuming->redundant)
+      stats.current.redundant += 1;
+    else
+      stats.current.irredundant += 1;
   }
   if (subsumed->redundant || !subsuming->redundant) {
     mark_garbage (subsumed);
