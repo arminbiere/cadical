@@ -80,13 +80,14 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming, Clause *subsumed
   }
   if (subsuming->garbage) {
     assert (subsuming->size == 2);
-    LOG (subsuming, "subsuming clause was already deleted, so undeleting");
+    LOG (subsuming, "binary subsuming clause was already deleted, so undeleting");
     subsuming->garbage = false;
     subsuming->glue = 1;
+    ++stats.current.total;
     if (subsuming->redundant)
-      stats.current.redundant += 1;
+      stats.current.redundant++;
     else
-      stats.current.irredundant += 1;
+      stats.current.irredundant++, stats.irrlits += subsuming->size, stats.irrlits += subsuming->size;
   }
   if (subsumed->redundant || !subsuming->redundant) {
     mark_garbage (subsumed);
