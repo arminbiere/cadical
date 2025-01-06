@@ -287,7 +287,7 @@ inline void Internal::analyze_literal (int lit, int &open,
       unit_analyzed.push_back (lit);
       assert (val (lit) < 0);
       const unsigned uidx = vlit (-lit);
-      uint64_t id = unit_clauses (uidx);
+      int64_t id = unit_clauses (uidx);
       assert (id);
       unit_chain.push_back (id);
       return;

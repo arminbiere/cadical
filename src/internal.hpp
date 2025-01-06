@@ -418,6 +418,7 @@ struct Internal {
   }
 
   int64_t unit_id (int lit) const {
+    assert (lrat || frat);
     assert (val (lit) > 0);
     const unsigned uidx = vlit (lit);
     int64_t id = unit_clauses_idx[uidx];
@@ -426,9 +427,11 @@ struct Internal {
   }
   
 
-  inline uint64_t &unit_clauses (int lit) {
+  inline int64_t &unit_clauses (int uidx) {
     assert (lrat || frat);
-    return unit_clauses_idx[lit];
+    assert (uidx > 0);
+    assert ((size_t)uidx < unit_clauses_idx.size());
+    return unit_clauses_idx [uidx];
   }
 
   // Helper functions to access variable and literal data.
@@ -1091,19 +1094,19 @@ struct Internal {
 
   // During decompose ignore literals where we already built LRAT chains
   //
-  void mark_signed (int lit) {
+  void mark_decomposed (int lit) {
     Flags &f = flags (lit);
     const unsigned bit = bign (lit);
     assert ((f.marked_signed & bit) == 0);
     sign_marked.push_back (lit);
     f.marked_signed |= bit;
   }
-  void unmark_signed (int lit) {
+  void unmark_decomposed (int lit) {
     Flags &f = flags (lit);
     const unsigned bit = bign (lit);
     f.marked_signed &= ~bit;
   }
-  bool marked_signed (int lit) {
+  bool marked_decomposed (int lit) {
     const Flags &f = flags (lit);
     const unsigned bit = bign (lit);
     return (f.marked_signed & bit) != 0;

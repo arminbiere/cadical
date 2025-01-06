@@ -255,7 +255,7 @@ void Internal::compact () {
         unit_clauses (2 * src + 1) = 0;
         continue;
       }
-      uint64_t id = unit_clauses (2 * src);
+      int64_t id = unit_clauses (2 * src);
       int lit = src;
       if (!id) {
         id = unit_clauses (2 * src + 1);

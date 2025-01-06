@@ -675,9 +675,7 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes, Clause **subsuming
           if (f.seen || !lrat || reason == start)
             continue;
 	  LOG ("unit reason for %d", other);
-          const unsigned uidx = vlit (-other);
-          uint64_t id = unit_clauses[uidx];
-          assert (id); // because var is updated lazily
+          int64_t id = unit_id (-other);
           LOG ("adding unit reason %zd for %d", id, other);
           unit_chain.push_back (id);
           f.seen = true;
@@ -770,10 +768,9 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
 	  continue;
 	LOG ("adding unit %d", lit);
         if (!f.seen) {
-          const unsigned uidx =
-              vlit (-lit); // nevertheless we can use var (l)
-          uint64_t id = unit_clauses[uidx]; // as if l was still assigned
-          assert (id);                      // because var is updated lazily
+	  // nevertheless we can use var (l) as if l was still assigned
+          // because var is updated lazily
+          int64_t id = unit_id (-lit); 
           LOG ("adding unit reason %zd for %d", id, lit);
           unit_chain.push_back (id);
         }

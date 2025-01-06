@@ -568,7 +568,7 @@ void Internal::add_core (Sweeper &sweeper, unsigned core_idx) {
         stats.sweep_units++;
         sweeper.propagate.push_back (unit);
       }
-      if (proof)
+      if (proof && lrat)
         pc.cad_id = unit_id (unit);
       continue;
     }

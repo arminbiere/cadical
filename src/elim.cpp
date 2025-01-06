@@ -1070,11 +1070,8 @@ void Internal::elim (bool update_limits) {
   int eliminated = 0;
 #endif
 
-  bool round_complete = false;;
+  bool round_complete = false;
   while (!unsat && !phase_complete && !terminated_asynchronously ()) {
-
-    bool round_complete;
-
 #ifndef QUIET
     int eliminated =
 #endif
@@ -1089,25 +1086,12 @@ void Internal::elim (bool update_limits) {
 
     if (round++ >= opts.elimrounds) {
       PHASE ("elim-phase", stats.elimphases, "round limit %d hit (%s)",
-             round - 2,
+             round - 1,
              eliminated ? "though last round successful"
                         : "last round unsuccessful anyhow");
       assert (!phase_complete);
       break;
     }
-
-#ifndef QUIET
-    eliminated =
-#endif
-        elim_round (round_complete);
-
-    if (!round_complete) {
-      PHASE ("elim-phase", stats.elimphases, "last round %d incomplete %s",
-             round - 1, eliminated ? "but successful" : "and unsuccessful");
-      assert (!phase_complete);
-      break;
-    }
-
 
     // Prioritize 'subsumption' over blocked and covered clause elimination.
 
@@ -1144,7 +1128,6 @@ void Internal::elim (bool update_limits) {
 
   
   reset_citten ();
-
   if (deleted_binary_clause)
     delete_garbage_clauses ();
   init_watches ();

@@ -1996,7 +1996,7 @@ public:
           for (size_t j = i + 1; j < calls.size (); j++) {
             Call *next_c = calls[j];
             if (next_c->type == Call::LEMMA)
-              next_c->execute (solver);
+              next_c->execute (solver, extendmap);
             // else if (next_c->type == Call::CONTINUE)
             //   next_c->execute (solver);
             else
@@ -2009,13 +2009,13 @@ public:
             first = false;
           else
             mobical.shared->incremental++;
-          c->execute (solver);
+          c->execute (solver, extendmap);
           if (c->res == 10)
             mobical.shared->sat++;
           if (c->res == 20)
             mobical.shared->unsat++;
         } else
-          c->execute (solver);
+          c->execute (solver, extendmap);
       } catch (const std::bad_alloc &e) {
         // Ignore out-of-memory errors and assume solver state is
         // consistent.

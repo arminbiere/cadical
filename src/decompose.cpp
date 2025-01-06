@@ -75,18 +75,18 @@ void Internal::build_lrat_for_clause (
   for (const auto lit : clause) {
     auto other = lit;
     if (val (other) > 0) {
-      if (marked_signed (other))
+      if (marked_decomposed (other))
         continue;
-      mark_signed (other);
+      mark_decomposed (other);
       int64_t id = unit_id (other);
       lrat_chain.push_back (id);
       continue;
     }
     assert (mini_chain.empty ());
     for (auto p : dfs_chains[vlit (other)]) {
-      if (marked_signed (other))
+      if (marked_decomposed (other))
         continue;
-      mark_signed (other);
+      mark_decomposed (other);
       int implied = p->literals[0];
       implied = implied == other ? -p->literals[1] : -implied;
       LOG ("ADDED %d -> %d (%" PRId64 ")", implied, other, p->id);
@@ -94,9 +94,9 @@ void Internal::build_lrat_for_clause (
       mini_chain.push_back (p->id);
       if (val (implied) <= 0)
         continue;
-      if (marked_signed (implied))
+      if (marked_decomposed (implied))
         break;
-      mark_signed (implied);
+      mark_decomposed (implied);
       int64_t id = unit_id (implied);
       mini_chain.push_back (id);
       break;
@@ -117,7 +117,7 @@ void Internal::clear_sign_marked_literals () {
   LOG ("clearing %zd marked literals", sign_marked.size ());
   for (const auto &lit : sign_marked) {
     // assert (marked_signed (lit));  violated on purpose in factor
-    unmark_signed (lit);
+    unmark_decomposed (lit);
   }
   sign_marked.clear ();
 }
