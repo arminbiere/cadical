@@ -1,5 +1,7 @@
-Version 2.1.1
+Version 2.1.2
 -------------
+
+- Fixed version number.
 
 - Reentrant multi-threaded writing of compressed files fixed
   with 'closeform' (using 'pipe|fork|exec|closefrom') on Linux.
