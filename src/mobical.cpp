@@ -4581,6 +4581,10 @@ extern "C" {
 #include <sys/mman.h>
 }
 
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS MAP_ANON
+#endif
+
 Mobical::Mobical () {
   const int prot = PROT_READ | PROT_WRITE;
   const int flags = MAP_ANONYMOUS | MAP_SHARED;
