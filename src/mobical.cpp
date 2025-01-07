@@ -1,4 +1,3 @@
-
 /*------------------------------------------------------------------------*/
 /* Copyright (C) 2018-2021 Armin Biere, Johannes Kepler University Linz   */
 /* Copyright (C) 2020-2021 Mathias Fleury, Johannes Kepler University Linz*/
@@ -4580,6 +4579,12 @@ void Mobical::header () {
 extern "C" {
 #include <sys/mman.h>
 }
+
+// https://github.com/libressl/portable/issues/24\#issuecomment-50435773
+// The usage of MAP_ANONYMOUS vs MAP_ANON depends on the actual system
+#if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
+#define MAP_ANONYMOUS MAP_ANON
+#endif
 
 Mobical::Mobical () {
   const int prot = PROT_READ | PROT_WRITE;
