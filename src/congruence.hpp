@@ -365,6 +365,9 @@ struct Closure {
   void find_equivalences();
   void subsume_clause (Clause *subsuming, Clause *subsumed);
   bool find_subsuming_clause (Clause *c);
+  void produce_rewritten_clause_lrat_and_clean (vector<LitClausePair>&, Rewrite rew1,
+					 Rewrite rew2,
+				   int execept_lhs = 0, int except_lhs2 = 0);
   Clause* produce_rewritten_clause_lrat (Clause *c, Rewrite rew1,
 					 Rewrite rew2,
 				   int execept_lhs = 0, int except_lhs2 = 0);

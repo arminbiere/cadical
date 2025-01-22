@@ -549,6 +549,14 @@ void Closure::index_gate (Gate *g) {
 
 
 
+  void Closure::produce_rewritten_clause_lrat_and_clean (std::vector<LitClausePair> &litIds, Rewrite rew1,
+						Rewrite rew2, int except_lhs, int except_lhs2) {
+  for (auto &litId : litIds){
+    litId.clause = produce_rewritten_clause_lrat (litId.clause, rew1, rew2, except_lhs, except_lhs2);}
+  litIds.erase (std::remove_if (begin (litIds), end (litIds), [](const LitClausePair& p) { return !p.clause; }),
+		end (litIds));
+}
+
 Clause* Closure::produce_rewritten_clause_lrat (Clause *c, Rewrite rew1,
 						Rewrite rew2, int except_lhs, int except_lhs2) {
 
@@ -973,16 +981,8 @@ void Closure::mark_lrat_resolvents (std::vector<LitClausePair> &chain, int src, 
   LOG ("rewriting chain");
   assert (internal->lrat);
   assert (internal->lrat_chain.empty());
-  for (auto &c : chain) {
-    LOG (c.clause, "sent clause");
-    c.clause = produce_rewritten_clause_lrat (c.clause, src, 0, 0, dst, 0, 0, except, except2);
-    LOG (c.clause, "returned clause");
-//    mark_lrat_resolvents (c.clause, src, dst, except, except2);
-  }
+  produce_rewritten_clause_lrat_and_clean (chain, Rewrite (src, 0, 0, 0), Rewrite (dst, 0, 0, 0), except, except2);
 
-  LOG ("chain has size %zd", chain.size ());
-  chain.erase(std::remove_if (begin (chain), end (chain), [this](LitClausePair c){LOG (c.clause, "clause"); return c.clause == nullptr;}),
-	      end (chain));
   LOG ("chain has size %zd", chain.size ());
 }
 
@@ -1976,19 +1976,10 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
   // mark_lrat_resolvents (g->neg_lhs_ids[0].clause, src, dst, -g->lhs, h->lhs);
 
   // first rewrite
-  for (auto & litId : h->pos_lhs_ids)
-    litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (),
-						  Rewrite (), -h->lhs, g->lhs);
-  for (auto & litId : h->neg_lhs_ids)
-    litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (),
-						  Rewrite (), -h->lhs, g->lhs);
-
-  for (auto & litId : g->pos_lhs_ids)
-    litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (),
-						  Rewrite (), -h->lhs, g->lhs);
-  for (auto & litId : g->neg_lhs_ids)
-    litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (),
-						  Rewrite (), -h->lhs, g->lhs);
+  produce_rewritten_clause_lrat_and_clean (h->pos_lhs_ids, Rewrite (), Rewrite (), -h->lhs, g->lhs);
+  produce_rewritten_clause_lrat_and_clean (h->neg_lhs_ids, Rewrite (), Rewrite (), -h->lhs, g->lhs);
+  produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, Rewrite (), Rewrite (), -h->lhs, g->lhs);
+  produce_rewritten_clause_lrat_and_clean (g->neg_lhs_ids, Rewrite (), Rewrite (), -h->lhs, g->lhs);
 
   // We need to exclude the LHS each time
   push_id_and_rewriting_lrat (h->pos_lhs_ids, Rewrite (src, dst, id1, id2),
@@ -2006,7 +1997,7 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
   // mark_lrat_resolvents (h->neg_lhs_ids[0].clause, src, dst);
   push_id_and_rewriting_lrat (g->pos_lhs_ids, Rewrite (src, dst, id1, id2), extra_reasons_lit,
                               false, Rewrite (), dst, -g->lhs);
-  push_id_and_rewriting_lrat (h->neg_lhs_ids[0].clause, Rewrite (src, dst, id1, id2),
+  push_id_and_rewriting_lrat (h->neg_lhs_ids, Rewrite (src, dst, id1, id2),
                               extra_reasons_lit, !false, Rewrite (), dst, h->lhs);
 
   unmark_marked_lrat ();
