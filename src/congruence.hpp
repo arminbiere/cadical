@@ -211,6 +211,10 @@ struct Closure {
   // unless:
   //   - the rewriting is not necessary (resolvent_marked == 1)
   //   - it is overwritten by one of the argumentsx
+  void push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
+				   std::vector<uint64_t> &chain, bool = true,
+				   Rewrite rewrite2 = Rewrite (),
+				   int execept_lhs = 0, int except_lhs2 = 0);
   void push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
 				   std::vector<uint64_t> &chain, bool = true,
 				   Rewrite rewrite2 = Rewrite (),
@@ -348,7 +352,7 @@ struct Closure {
   void check_implied ();
 
   bool learn_congruence_unit(int unit); // TODO remove and replace by _lrat version
-  void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src, int dst, uint64_t id1, uint64_t id2, int clashing, int unit);
+  void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src, int dst, uint64_t id1, uint64_t id2, int clashing, int falsified, int unit);
   void learn_congruence_unit_unit_lrat_chain (Gate *g, int unit); 
   void learn_congruence_unit_when_lhs_set (Gate *g, int src, uint64_t id1, uint64_t id2, int dst);
 
