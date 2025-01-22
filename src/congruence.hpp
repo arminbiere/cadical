@@ -210,7 +210,7 @@ struct Closure {
   // pushes the clause with the reasons to rewrite clause
   // unless:
   //   - the rewriting is not necessary (resolvent_marked == 1)
-  //   - it is overwritten by one of the argumentsx
+  //   - it is overwritten by one of the arguments
   void push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
 				   std::vector<uint64_t> &chain, bool = true,
 				   Rewrite rewrite2 = Rewrite (),
@@ -219,6 +219,11 @@ struct Closure {
 				   std::vector<uint64_t> &chain, bool = true,
 				   Rewrite rewrite2 = Rewrite (),
 				   int execept_lhs = 0, int except_lhs2 = 0);
+  void push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
+				   std::vector<uint64_t> &chain, bool = true,
+				   Rewrite rewrite2 = Rewrite (),
+					int execept_lhs = 0, int except_lhs2 = 0);
+  // TODO: does nothing except pushing on the stack, remove!
   void push_id_and_rewriting_lrat (const std::vector<LitClausePair> &c, Rewrite rewrite1,
 				   std::vector<uint64_t> &chain, bool = true,
 				   Rewrite rewrite2 = Rewrite (),
@@ -360,6 +365,9 @@ struct Closure {
   void find_equivalences();
   void subsume_clause (Clause *subsuming, Clause *subsumed);
   bool find_subsuming_clause (Clause *c);
+  Clause* produce_rewritten_clause_lrat (Clause *c, Rewrite rew1,
+					 Rewrite rew2,
+				   int execept_lhs = 0, int except_lhs2 = 0);
   Clause* produce_rewritten_clause_lrat (Clause *c, int except = 0, uint64_t id1 = 0, uint64_t id2 = 0,
 				   int except_other = 0, uint64_t id_other1 = 0, uint64_t id_other2 = 0,
 				   int execept_lhs = 0, int except_lhs2 = 0);

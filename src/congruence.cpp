@@ -547,6 +547,14 @@ void Closure::index_gate (Gate *g) {
   g->indexed = true;
 }
 
+
+
+Clause* Closure::produce_rewritten_clause_lrat (Clause *c, Rewrite rew1,
+						Rewrite rew2, int except_lhs, int except_lhs2) {
+
+  return produce_rewritten_clause_lrat (c, rew1.src, rew1.id1, rew1.id2, rew2.src, rew2.id1, rew2.id2, except_lhs, except_lhs2);
+}
+
 // TODO we here duplicate the arguments of push_id_and_rewriting_lrat but we probably do not need
 // that.
 Clause* Closure::produce_rewritten_clause_lrat (Clause *c, int except, uint64_t id1, uint64_t id2,
@@ -554,25 +562,35 @@ Clause* Closure::produce_rewritten_clause_lrat (Clause *c, int except, uint64_t 
 						int except_lhs, int except_lhs2) {
   auto tmp_lrat (std::move(internal->lrat_chain));
   internal->lrat_chain.clear();
-  LOG (c, "rewriting clause for LRAT proof, except for %d and %d", except_lhs, except_lhs2);
+  LOG (c, "rewriting clause for LRAT proof, except for rewriting %d and %d and the exception %d and %d", except, except_other, except_lhs, except_lhs2);
   assert (internal->clause.empty ());
   assert (internal->lrat_chain.empty());
   bool changed = false;
   bool tautology = false;
   for (auto lit : *c) {
-    if (lit == except_lhs) {
+    LOG ("checking if %d is required", lit);
+    if (lit == except_lhs)  {
+      internal->clause.push_back (lit);
       continue;
     }
-    if (lit == except_lhs2)
+    if (lit == except_lhs2) {
+      internal->clause.push_back (lit);
       continue;
-    if (lit == except)
+    }
+    if (lit == except) {
+      internal->clause.push_back (lit);
       continue;
+    }
     if (lit == -except) {
+      internal->clause.push_back (lit);
       continue;
     }
-    if (lit == except_other && id_other1)
+    if (lit == except_other && id_other1){
+      internal->clause.push_back (lit);
       continue;
+    }
     if (lit == -except_other && id_other2) {
+      internal->clause.push_back (lit);
       continue;
     }
     if (internal->val (lit) < 0) {
@@ -659,17 +677,17 @@ Clause* Closure::new_clause () {
 }
 
 void Closure::produce_lrat_for_rewrite (std::vector<uint64_t> &chain, Rewrite rewrite, int lit) {
-  if (resolvent_marked (rewrite.dst)) {
+  if (resolvent_marked (rewrite.dst) || true) {
     LOG ("adding reason %zd for rewriting %d marked with %d", lit == rewrite.src ? rewrite.id1 : rewrite.id2, lit, resolvent_marked (rewrite.dst));
     chain.push_back (lit == rewrite.src ? rewrite.id1 : rewrite.id2);
     proof_marked (lit) = proof_marked (-lit) = 1;
-    proof_analyzed.push_back (lit);
+//    proof_analyzed.push_back (lit);
   } else {
     // no reason to push the justification for the rewrite, just marking as
     // done
     LOG ("not producing reason for rewriting %d", lit);
     proof_marked (lit) = proof_marked (-lit) = 1;
-    proof_analyzed.push_back (lit);
+//    proof_analyzed.push_back (lit);
   }
 }
 
@@ -707,7 +725,7 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
       produce_lrat_for_rewrite (chain, rewrite1, other);
     } else if (other == -rewrite1.src && rewrite1.id2) {
       produce_lrat_for_rewrite (chain, rewrite1, other);
-      proof_analyzed.push_back (other);
+//      proof_analyzed.push_back (other);
     } else if (other == rewrite2.src && rewrite2.id1) {
       produce_lrat_for_rewrite (chain, rewrite2, other);
     } else if (other == -rewrite2.src && rewrite2.id2) {
@@ -715,19 +733,19 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
     } else if (other != find_eager_representative_and_compress (other)) {
       const int rewritten_other = eager_representative (other);
       assert (resolvent_marked (rewritten_other) <= 3);
-      if (!resolvent_marked (rewritten_other)) {
+      if (!resolvent_marked (rewritten_other) && false) {
         // no reason to push the justification for the rewrite, just marking
         // as done
         LOG ("skipping rewriting %d -> %d", other, rewritten_other);
         proof_marked (other) = proof_marked (-other) = 1;
-        proof_analyzed.push_back (other);
+//        proof_analyzed.push_back (other);
       } else {
         proof_marked (rewritten_other) = 1;
         assert (other != rewritten_other);
         LOG ("reason for representative of %d %d is %" PRIu64 " seen %d",
              other, rewritten_other, find_representative_lrat (other),
              resolvent_marked (rewritten_other));
-        proof_analyzed.push_back (other);
+//        proof_analyzed.push_back (other);
         chain.push_back (find_representative_lrat (other));
       }
     } else {
@@ -738,6 +756,58 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
     chain.push_back (c->id);
 }
 
+  // Note: it is important that the Rewrite takes over the normal rewriting, because we can force
+  // rewriting that way that have not been done eagerly yet.
+void Closure::push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
+                                          std::vector<uint64_t> &chain,
+                                          bool insert_id_after,
+                                          Rewrite rewrite2, int except_lhs,
+                                          int except_lhs2) {
+  LOG (c, "computing normalized LRAT chain for clause, rewriting except for %d (%" PRIu64 ", %" PRIu64
+	  ") and %d (%" PRIu64 ", %" PRIu64 ") and skipping %d and %d", rewrite1.src, rewrite1.id1, rewrite1.id2,
+       rewrite2.src, rewrite2.id1, rewrite2.id2, except_lhs, except_lhs2);
+  assert (c);
+  LOG (chain, "chain");
+  if (!insert_id_after)
+    chain.push_back (c->id);
+  for (auto other : *c) {
+    // unclear how to achieve this in the simplify context where other == g->lhs might be set
+    // assert (internal->val (other) <= 0 || other == except);
+    if (other == except_lhs) {
+      // do nothing;
+    } else if (other == except_lhs2) {
+      // do nothing;
+    } else if (proof_marked (other) && false){
+      continue;
+    }
+    else if (internal->val (other) < 0) {
+      LOG ("found unit %d", -other);
+      const unsigned uidx = internal->vlit (-other);
+      uint64_t id = internal->unit_clauses[uidx];
+      assert (id);
+      chain.push_back (id);
+    } else if (other == rewrite1.src && rewrite1.id1) {
+      produce_lrat_for_rewrite (chain, rewrite1, other);
+    } else if (other == -rewrite1.src && rewrite1.id2) {
+      produce_lrat_for_rewrite (chain, rewrite1, other);
+//      proof_analyzed.push_back (other);
+    } else if (other == rewrite2.src && rewrite2.id1) {
+      produce_lrat_for_rewrite (chain, rewrite2, other);
+    } else if (other == -rewrite2.src && rewrite2.id2) {
+      produce_lrat_for_rewrite (chain, rewrite2, other);
+    } 
+    else {
+      assert (other == find_eager_representative (other));
+      LOG ("no rewriting needed for %d", other);
+    }
+  }
+  if (insert_id_after)
+    chain.push_back (c->id);
+}
+
+  
+  // Note: it is important that the Rewrite takes over the normal rewriting, because we can force
+  // rewriting that way that have not been done eagerly yet.
 void Closure::push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
                                           std::vector<uint64_t> &chain,
                                           bool insert_id_after,
@@ -758,7 +828,7 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
     if (smaller == find_eager_representative_and_compress (-larger) && eager_representative_id(-larger) == c->id) {
       LOG ("clause is already reason for rewriting, blocking it");
       proof_marked (-larger) = 1;
-      proof_analyzed.push_back(larger);
+//      proof_analyzed.push_back(larger);
     } else {
       LOG ("%d -> %d is not %" PRIu64 " but -> %d", larger, smaller, c->id, find_eager_representative (larger));
     }
@@ -772,8 +842,9 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
       // do nothing;
     } else if (other == except_lhs2) {
       // do nothing;
-    } else if (proof_marked (other))
+    } else if (proof_marked (other) && false){
       continue;
+    }
     else if (internal->val (other) < 0) {
       LOG ("found unit %d", -other);
       const unsigned uidx = internal->vlit (-other);
@@ -784,7 +855,7 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
       produce_lrat_for_rewrite (chain, rewrite1, other);
     } else if (other == -rewrite1.src && rewrite1.id2) {
       produce_lrat_for_rewrite (chain, rewrite1, other);
-      proof_analyzed.push_back (other);
+//      proof_analyzed.push_back (other);
     } else if (other == rewrite2.src && rewrite2.id1) {
       produce_lrat_for_rewrite (chain, rewrite2, other);
     } else if (other == -rewrite2.src && rewrite2.id2) {
@@ -792,18 +863,18 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
     } else if (other != find_eager_representative_and_compress (other)) {
       const int rewritten_other = eager_representative (other);
       assert (resolvent_marked (rewritten_other) <= 3);
-      if (!resolvent_marked (rewritten_other)) {
+      if (!resolvent_marked (rewritten_other) && false) {
         // no reason to push the justification for the rewrite, just marking as done
 	LOG ("skipping rewriting %d -> %d", other, rewritten_other);
         proof_marked (other) = proof_marked (-other) = 1;
-        proof_analyzed.push_back (other);
+//        proof_analyzed.push_back (other);
       } else {
         proof_marked (rewritten_other) = 1;
         assert (other != rewritten_other);
         LOG ("reason for representative of %d %d is %" PRIu64 " seen %d", other,
              rewritten_other,
              find_representative_lrat (other), resolvent_marked (rewritten_other));
-        proof_analyzed.push_back (other);
+//        proof_analyzed.push_back (other);
         chain.push_back (find_representative_lrat (other));
       }
     }
@@ -1251,7 +1322,7 @@ bool Closure::merge_literals_lrat (
       int neg = val_lit ? lit : -lit;
       // no need to calculate push_id_and_rewriting_lrat here because all
       // the job is done by the arguments already
-      push_id_and_rewriting_lrat (c, Rewrite (), internal->lrat_chain, true,
+      push_id_and_rewriting_lrat_unit (c, Rewrite (), internal->lrat_chain, true,
                                   Rewrite (), -neg, unit);
     }
     learn_congruence_unit (unit);
@@ -1277,7 +1348,7 @@ bool Closure::merge_literals_lrat (
         else
           c = eq1_tmp;
       }
-      push_id_and_rewriting_lrat (c, Rewrite (), internal->lrat_chain,
+      push_id_and_rewriting_lrat_unit (c, Rewrite (), internal->lrat_chain,
                                   true);
     }
     learn_congruence_unit (unit);
@@ -1292,9 +1363,6 @@ bool Closure::merge_literals_lrat (
       internal->lrat_chain.clear ();
       unmark_marked_lrat ();
       assert (!proof_marked (-lit));
-/*      mark_lrat_resolvents (larger_repr);
-      mark_lrat_resolvents (-smaller_repr);
-      mark_lrat_resolvents(eq1_tmp);*/
       Rewrite rew1 = Rewrite (
           smaller_repr != smaller ? smaller : 0,
           smaller_repr != smaller ? smaller_repr : 0,
@@ -1305,7 +1373,7 @@ bool Closure::merge_literals_lrat (
                    larger_repr != larger ? larger_repr : 0,
                    larger_repr != larger ? representative_id (larger) : 0,
                    larger_repr != larger ? representative_id (-larger) : 0);
-      push_id_and_rewriting_lrat (eq1_tmp, rew1, internal->lrat_chain, true,
+      push_id_and_rewriting_lrat_full (eq1_tmp, rew1, internal->lrat_chain, true,
                                   rew2);
       unmark_lrat_resolvents();
     }
@@ -1338,7 +1406,7 @@ bool Closure::merge_literals_lrat (
                    larger_repr != larger ? larger_repr : 0,
                    larger_repr != larger ? representative_id (larger) : 0,
                    larger_repr != larger ? representative_id (-larger) : 0);
-      push_id_and_rewriting_lrat (eq2_tmp, rew1, internal->lrat_chain, true,
+      push_id_and_rewriting_lrat_full (eq2_tmp, rew1, internal->lrat_chain, true,
                                   rew2);
       unmark_lrat_resolvents();
     }
@@ -1906,6 +1974,22 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
   // mark_lrat_resolvents (-h->lhs, src, dst, -g->lhs, h->lhs);
   // mark_lrat_resolvents (h->pos_lhs_ids, src, dst, -g->lhs, h->lhs);
   // mark_lrat_resolvents (g->neg_lhs_ids[0].clause, src, dst, -g->lhs, h->lhs);
+
+  // first rewrite
+  for (auto & litId : h->pos_lhs_ids)
+    litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (),
+						  Rewrite (), -h->lhs, g->lhs);
+  for (auto & litId : h->neg_lhs_ids)
+    litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (),
+						  Rewrite (), -h->lhs, g->lhs);
+
+  for (auto & litId : g->pos_lhs_ids)
+    litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (),
+						  Rewrite (), -h->lhs, g->lhs);
+  for (auto & litId : g->neg_lhs_ids)
+    litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (),
+						  Rewrite (), -h->lhs, g->lhs);
+
   // We need to exclude the LHS each time
   push_id_and_rewriting_lrat (h->pos_lhs_ids, Rewrite (src, dst, id1, id2),
                               extra_reasons_ulit, false, Rewrite (), -h->lhs, g->lhs);
@@ -3372,7 +3456,6 @@ void Closure::find_equivalences () {
 	  //   // if you have 2 = 1 and 3=4
 	  //   // you cannot add 2=3. You really to connect the representatives directly
 	  //   // therefore you actually need to learn the clauses 2->3->4 and -2->1 and vice-versa
-	    
 	  //   eager_representative_id (other) = marked_mu1 (-other).clause->id;
 	  //   eager_representative_id (-other) = w.clause->id;
 	  //   assert (eager_representative_id (other) != -1);
@@ -3386,6 +3469,7 @@ void Closure::find_equivalences () {
 	    ++internal->stats.congruence.congruent;
 	  }
 	  unmark_all();
+	  assert (proof_analyzed.empty());
 	  if (internal->unsat)
 	    return;
 	  else
