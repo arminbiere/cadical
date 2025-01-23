@@ -153,6 +153,7 @@ int Internal::forward_false_satisfiable () {
   assert (!level);
   assert (assumptions.empty ());
   for (auto idx : vars) {
+  START:
     if (terminated_asynchronously (100))
       return unlucky (-1);
     if (val (idx))
@@ -162,6 +163,7 @@ int Internal::forward_false_satisfiable () {
 	return 20;
       else return unlucky (0);
     }
+    else goto START;
   }
   VERBOSE (1, "forward assuming variables false satisfies formula");
   assert (satisfied ());
@@ -175,6 +177,7 @@ int Internal::forward_true_satisfiable () {
   assert (!level);
   assert (assumptions.empty ());
   for (auto idx : vars) {
+  START:
     if (terminated_asynchronously (10))
       return unlucky (-1);
     if (val (idx))
@@ -184,6 +187,7 @@ int Internal::forward_true_satisfiable () {
 	return 20;
       else return unlucky (0);
     }
+    else goto START;
   }
   VERBOSE (1, "forward assuming variables true satisfies formula");
   assert (satisfied ());
@@ -199,6 +203,7 @@ int Internal::backward_false_satisfiable () {
   assert (!level);
   assert (assumptions.empty ());
   for (int idx = max_var; idx > 0; idx--) {
+  START:
     if (terminated_asynchronously (10))
       return unlucky (-1);
     if (val (idx))
@@ -208,6 +213,7 @@ int Internal::backward_false_satisfiable () {
 	return 20;
       else return unlucky (0);
     }
+    else goto START;
   }
   VERBOSE (1, "backward assuming variables false satisfies formula");
   assert (satisfied ());
@@ -221,6 +227,7 @@ int Internal::backward_true_satisfiable () {
   assert (!level);
   assert (assumptions.empty ());
   for (int idx = max_var; idx > 0; idx--) {
+  START:
     if (terminated_asynchronously (10))
       return unlucky (-1);
     if (val (idx))
@@ -230,6 +237,7 @@ int Internal::backward_true_satisfiable () {
 	return 20;
       else return unlucky (0);
     }
+    else goto START;
   }
   VERBOSE (1, "backward assuming variables true satisfies formula");
   assert (satisfied ());
