@@ -552,7 +552,8 @@ void Closure::index_gate (Gate *g) {
   void Closure::produce_rewritten_clause_lrat_and_clean (std::vector<LitClausePair> &litIds, Rewrite rew1,
 						Rewrite rew2, int except_lhs, int except_lhs2) {
   for (auto &litId : litIds){
-    litId.clause = produce_rewritten_clause_lrat (litId.clause, rew1, rew2, except_lhs, except_lhs2);}
+    litId.clause = produce_rewritten_clause_lrat (litId.clause, rew1, rew2, except_lhs, except_lhs2);
+  }
   litIds.erase (std::remove_if (begin (litIds), end (litIds), [](const LitClausePair& p) { return !p.clause; }),
 		end (litIds));
 }
@@ -578,6 +579,14 @@ Clause* Closure::produce_rewritten_clause_lrat (Clause *c, int except, uint64_t 
   for (auto lit : *c) {
     LOG ("checking if %d is required", lit);
     if (lit == except_lhs)  {
+      internal->clause.push_back (lit);
+      continue;
+    }
+    if (lit == -except_lhs)  {
+      internal->clause.push_back (lit);
+      continue;
+    }
+    if (lit == -except_lhs2) {
       internal->clause.push_back (lit);
       continue;
     }
@@ -688,13 +697,11 @@ void Closure::produce_lrat_for_rewrite (std::vector<uint64_t> &chain, Rewrite re
   if (resolvent_marked (rewrite.dst) || true) {
     LOG ("adding reason %zd for rewriting %d marked with %d", lit == rewrite.src ? rewrite.id1 : rewrite.id2, lit, resolvent_marked (rewrite.dst));
     chain.push_back (lit == rewrite.src ? rewrite.id1 : rewrite.id2);
-    proof_marked (lit) = proof_marked (-lit) = 1;
 //    proof_analyzed.push_back (lit);
   } else {
     // no reason to push the justification for the rewrite, just marking as
     // done
     LOG ("not producing reason for rewriting %d", lit);
-    proof_marked (lit) = proof_marked (-lit) = 1;
 //    proof_analyzed.push_back (lit);
   }
 }
@@ -745,10 +752,8 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
         // no reason to push the justification for the rewrite, just marking
         // as done
         LOG ("skipping rewriting %d -> %d", other, rewritten_other);
-        proof_marked (other) = proof_marked (-other) = 1;
 //        proof_analyzed.push_back (other);
       } else {
-        proof_marked (rewritten_other) = 1;
         assert (other != rewritten_other);
         LOG ("reason for representative of %d %d is %" PRIu64 " seen %d",
              other, rewritten_other, find_representative_lrat (other),
@@ -775,7 +780,6 @@ void Closure::push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
 	  ") and %d (%" PRIu64 ", %" PRIu64 ") and skipping %d and %d", rewrite1.src, rewrite1.id1, rewrite1.id2,
        rewrite2.src, rewrite2.id1, rewrite2.id2, except_lhs, except_lhs2);
   assert (c);
-  LOG (chain, "chain");
   if (!insert_id_after)
     chain.push_back (c->id);
   for (auto other : *c) {
@@ -835,7 +839,7 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
     const int smaller = abs (lit) > abs (other) ? other : lit;
     if (smaller == find_eager_representative_and_compress (-larger) && eager_representative_id(-larger) == c->id) {
       LOG ("clause is already reason for rewriting, blocking it");
-      proof_marked (-larger) = 1;
+//      proof_marked (-larger) = 1;
 //      proof_analyzed.push_back(larger);
     } else {
       LOG ("%d -> %d is not %" PRIu64 " but -> %d", larger, smaller, c->id, find_eager_representative (larger));
@@ -874,10 +878,10 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
       if (!resolvent_marked (rewritten_other) && false) {
         // no reason to push the justification for the rewrite, just marking as done
 	LOG ("skipping rewriting %d -> %d", other, rewritten_other);
-        proof_marked (other) = proof_marked (-other) = 1;
+//        proof_marked (other) = proof_marked (-other) = 1;
 //        proof_analyzed.push_back (other);
       } else {
-        proof_marked (rewritten_other) = 1;
+//        proof_marked (rewritten_other) = 1;
         assert (other != rewritten_other);
         LOG ("reason for representative of %d %d is %" PRIu64 " seen %d", other,
              rewritten_other,
@@ -1392,7 +1396,6 @@ bool Closure::merge_literals_lrat (
     if (internal->lrat) {
       internal->lrat_chain.clear ();
       assert (proof_analyzed.empty ());
-      assert (!proof_marked (-lit));
       // eq2 = larger, -smaller
       // mark_lrat_resolvents (-larger_repr);
       // mark_lrat_resolvents (smaller_repr);
@@ -1976,16 +1979,16 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
   // mark_lrat_resolvents (g->neg_lhs_ids[0].clause, src, dst, -g->lhs, h->lhs);
 
   // first rewrite
-  produce_rewritten_clause_lrat_and_clean (h->pos_lhs_ids, Rewrite (), Rewrite (), -h->lhs, g->lhs);
-  produce_rewritten_clause_lrat_and_clean (h->neg_lhs_ids, Rewrite (), Rewrite (), -h->lhs, g->lhs);
-  produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, Rewrite (), Rewrite (), -h->lhs, g->lhs);
-  produce_rewritten_clause_lrat_and_clean (g->neg_lhs_ids, Rewrite (), Rewrite (), -h->lhs, g->lhs);
+  // TODO: do we really need dest as second exclusion?
+  produce_rewritten_clause_lrat_and_clean (h->pos_lhs_ids, Rewrite (), Rewrite (), -h->lhs);
+  produce_rewritten_clause_lrat_and_clean (h->neg_lhs_ids, Rewrite (), Rewrite (), -h->lhs);
+  produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, Rewrite (), Rewrite (), -g->lhs);
+  produce_rewritten_clause_lrat_and_clean (g->neg_lhs_ids, Rewrite (), Rewrite (), -g->lhs);
 
-  // We need to exclude the LHS each time
   push_id_and_rewriting_lrat (h->pos_lhs_ids, Rewrite (src, dst, id1, id2),
-                              extra_reasons_ulit, false, Rewrite (), -h->lhs, g->lhs);
+                              extra_reasons_ulit, false, Rewrite (), -h->lhs, dst);
   push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, Rewrite (src, dst, id1, id2),
-                              extra_reasons_ulit, true, Rewrite (), g->lhs, -h->lhs);
+                              extra_reasons_ulit, true, Rewrite (), g->lhs, dst);
   internal->lrat_chain.clear ();
   unmark_marked_lrat ();
   unmark_lrat_resolvents ();
@@ -1998,7 +2001,7 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
   push_id_and_rewriting_lrat (g->pos_lhs_ids, Rewrite (src, dst, id1, id2), extra_reasons_lit,
                               false, Rewrite (), dst, -g->lhs);
   push_id_and_rewriting_lrat (h->neg_lhs_ids, Rewrite (src, dst, id1, id2),
-                              extra_reasons_lit, !false, Rewrite (), dst, h->lhs);
+                              extra_reasons_lit, !false, Rewrite (), h->lhs, dst);
 
   unmark_marked_lrat ();
   unmark_lrat_resolvents ();
