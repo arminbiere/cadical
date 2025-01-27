@@ -2100,7 +2100,8 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src, int ds
   } else {
     assert (g->arity () > 1);
     sort_literals (g->rhs);
-    Gate *h = find_and_lits (g->rhs);
+    Gate *h = find_and_lits (g->rhs, g);
+    assert (g != h);
     if (h) {
       assert (garbage);
       std::vector<uint64_t> extra_reasons_lit2;
@@ -2272,9 +2273,9 @@ bool Closure::simplify_gates (int lit) {
 // AND gates
 
 
-Gate *Closure::find_and_lits (const vector<int> &rhs) {
+Gate *Closure::find_and_lits (const vector<int> &rhs, Gate *except) {
   assert (is_sorted(begin (rhs), end (rhs), sort_literals_smaller (internal)));
-  return find_gate_lits (rhs, Gate_Type::And_Gate);
+  return find_gate_lits (rhs, Gate_Type::And_Gate, except);
 }
 
 // search for the gate in the hash-table.  We cannot use find, as we might be changing a gate, so

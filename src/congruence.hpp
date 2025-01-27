@@ -292,7 +292,7 @@ struct Closure {
   Gate *find_remaining_and_gate (Clause *base_clause, int lhs);
   void extract_and_gates ();
 
-  Gate* find_and_lits (const vector<int> &rhs);
+  Gate* find_and_lits (const vector<int> &rhs, Gate *except = nullptr);
   // rhs is sorted, so passing by copy
   Gate* find_gate_lits (const vector<int> &rhs, Gate_Type typ, Gate *except = nullptr);
   Gate* find_xor_lits (const vector<int> &rhs);
