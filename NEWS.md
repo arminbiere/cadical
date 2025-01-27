@@ -10,6 +10,9 @@ are available now:
   + `get_entrailed_literals (std::vector<int> &)`: In case `propagate ()`
     returned `0` (UNKNOWN), this function returns (the subset of) those
     literals that were assigned based on the assumptions and propagation.
+    Those assigned literals that are tainted on the reconstruction stack
+    (due to some preprocessing) are not returned, thus it is safe to 
+    combine it with the formula simplifications.
 
 - LIDRUP proofs now include information about queries that returned with
   UNKNOWN result.
