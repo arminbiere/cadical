@@ -804,6 +804,10 @@ void Internal::handle_external_clause (Clause *res) {
 // - The empty clause was learned due to something new learned from
 // the external propagator.
 //
+// In case only new variables were introduced, but no new clauses were
+// added, the function will return without a conflict to the outer CDCL
+// loop, where the new (not yet satisfied) variables are recognized and
+// the search continues.
 bool Internal::external_check_solution () {
   if (!external_prop)
     return true;
@@ -851,9 +855,9 @@ bool Internal::external_check_solution () {
 
     stats.ext_prop.ext_cb++;
     stats.ext_prop.elearn_call++;
-    assert (has_external_clause);
-
-    LOG ("Found solution triggered new clauses from external propagator.");
+    
+    if (has_external_clause)
+      LOG ("Found solution triggered new clauses from external propagator.");
 
     while (has_external_clause) {
       int level_before = level;

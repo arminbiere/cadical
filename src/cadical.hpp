@@ -1177,8 +1177,9 @@ public:
   virtual void notify_backtrack (size_t new_level) = 0;
 
   // Check by the external propagator the found complete solution (after
-  // solution reconstruction). If it returns false, the propagator must
-  // provide an external clause during the next callback.
+  // solution reconstruction). If it returns false, the propagator should
+  // provide an external clause during the next callback or introduce new
+  // observed variables during this callback.
   //
   virtual bool cb_check_found_model (const std::vector<int> &model) = 0;
 
