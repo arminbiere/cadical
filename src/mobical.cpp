@@ -526,7 +526,8 @@ public:
       MLOG ("etrail: ");
       for (auto const &lit : etrail)
         MLOGC (lit << " ");
-      MLOGC (std::endl << "otrail: ";);
+      MLOGC (std::endl);
+      MLOG ("otrail: ");
       for (auto const &lit : otrail)
         MLOGC (lit << " ");
       MLOGC (std::endl);
@@ -895,12 +896,23 @@ public:
   }
 
   void notify_assignment (const std::vector<int> &lits) override {
-    MLOG ("notified " << lits.size () << " new assignments." << std::endl);
+    MLOG ("notified " << lits.size () << " new assignments on level "
+        << observed_trail.size () - 1 << "." << std::endl);
+#ifndef NDEBUG
+    MLOGC ("[ ");
+#endif
     for (const auto &lit : lits) {
       observed_trail.back ().push_back (lit);
       unassigned_reasons.erase (lit);
+#ifndef NDEBUG
+      MLOGC (lit << " ");
+#endif
     }
+#ifndef NDEBUG
+    MLOGC ("]" << std::endl);
+#endif
   }
+
 
   void notify_new_decision_level () override {
     MLOG ("notify new decision level " << observed_trail.size () - 1

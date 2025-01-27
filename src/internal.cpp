@@ -362,8 +362,19 @@ int Internal::propagate_assumptions () {
       else if (!propagate ()) {
         // let analyze run to get failed assumptions
         analyze ();
+      } else if (!external_propagate () || unsat) { // external propagation
+        if (unsat)
+          continue;
+        else
+          analyze ();
       } else if (satisfied ()) { // found model
-        res = 10;
+        if (!external_check_solution () || unsat) {
+          if (unsat)
+            continue;
+          else
+            analyze ();
+        } else if (satisfied ())
+          res = 10;
       } else if (search_limits_hit ())
         break;                               // decision or conflict limit
       else if (terminated_asynchronously ()) // externally terminated
