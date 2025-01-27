@@ -1985,18 +1985,20 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
     assert (tauto != other);
     assert (tauto == h || tauto == g);
 
+    auto &extra_reasons_tauto = (!g_tautology ? extra_reasons_lit : extra_reasons_ulit);
+    auto &extra_reasons_other = (!g_tautology ? extra_reasons_ulit : extra_reasons_lit);
     
     // one direction: the binary clause already exists
     for (auto &litId : other->pos_lhs_ids) {
       if (litId.current_lit == tauto->lhs) {
-	assert (extra_reasons_lit.empty());
+	assert (extra_reasons_tauto.empty());
 	LOG (litId.clause, "binary clause to push into the reason");
 	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), -h->lhs);
 	assert (litId.clause);
-	extra_reasons_lit.push_back(litId.clause->id);
+	extra_reasons_tauto.push_back(litId.clause->id);
       }
     }
-    assert (!extra_reasons_lit.empty());
+    assert (!extra_reasons_tauto.empty());
 
     // other direction, we have to resolve
     LOG ("now the other direction");
@@ -2004,16 +2006,16 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
       LOG (litId.clause, "binary clause from %d to push into the reason", litId.current_lit);
       if (litId.current_lit != tauto->lhs) {
 	LOG (litId.clause, "binary clause to push into the reason");
-	assert (extra_reasons_ulit.empty());
+	assert (extra_reasons_other.empty());
 	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), tauto->lhs);
 	assert (litId.clause);
-	extra_reasons_ulit.push_back(litId.clause->id);
+	extra_reasons_other.push_back(litId.clause->id);
       }
     }
-    assert (!extra_reasons_ulit.empty());
+    assert (!extra_reasons_other.empty());
     produce_rewritten_clause_lrat_and_clean (other->neg_lhs_ids, Rewrite (), Rewrite (), -tauto->lhs, other->lhs);
     push_id_and_rewriting_lrat (other->neg_lhs_ids, Rewrite (src, dst, id1, id2),
-				extra_reasons_ulit, false, Rewrite (), -tauto->lhs, other->lhs);
+				extra_reasons_other, false, Rewrite (), -tauto->lhs, other->lhs);
     return;
   }
   // default: resolve all clauses
