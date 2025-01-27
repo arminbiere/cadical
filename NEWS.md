@@ -1,8 +1,27 @@
-Version 2.1.1
+Version 2.1.3
 -------------
 
+- New interface to support propagation of assumptions. The following functions
+are available now:
+
+  + `propagate ()`: Applies unit propagation on the assumptions given to the
+    solver previously (supposed to be called instead of `solve ()`).
+
+  + `get_entrailed_literals (std::vector<int> &)`: In case `propagate ()`
+    returned `0` (UNKNOWN), this function returns (the subset of) those
+    literals that were assigned based on the assumptions and propagation.
+
+- LIDRUP proofs now include information about queries that returned with
+  UNKNOWN result.
+
+
+Version 2.1.2
+-------------
+
+- Fixed version number.
+
 - Reentrant multi-threaded writing of compressed files fixed
-  with 'closefrom' (using 'pipe|fork|exec|closefrom') on Linux.
+  with 'closeform' (using 'pipe|fork|exec|closefrom') on Linux.
 
 - New IPASIR-UP options, with the same default as in 1.1:
 
