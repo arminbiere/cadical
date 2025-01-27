@@ -1944,8 +1944,17 @@ void Closure::update_and_gate_unit_build_lrat_chain (Gate *g, int src, uint64_t 
 						std::vector<uint64_t> & extra_reasons_lit,
 						std::vector<uint64_t> &extra_reasons_ulit) {
   LOG ("generate chain for gate boiling down to unit");
+
   assert (g->neg_lhs_ids.size () == 1);
   assert (!g->pos_lhs_ids.empty());
+
+  const int repr_lit = find_representative (g->lhs);
+  const int repr_other = find_representative (g->rhs[0]);
+  if (repr_lit == repr_other) {
+    LOG ("skipping already merged");
+    return;
+  }
+
   //push_id_and_rewriting_lrat_unit (g->neg_lhs_ids[0].clause, Rewrite (), internal->lrat_chain);
   // Clause *rewritten_clause = produce_rewritten_clause_lrat (g->neg_lhs_ids[0].clause);
   // if (rewritten_clause)
@@ -2347,12 +2356,15 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
   if (h) {
     std::vector<uint64_t> reasons_lrat_src, reasons_lrat_usrc;
     if (internal->lrat) {
+      // we need to remove units from the long clause, but they cannot be any unit in the binary clauses
+
       assert (g->neg_lhs_ids.size () ==
               1); // otherwise we need intermediate clauses
       assert (h->neg_lhs_ids.size () ==
               1); // otherwise we need intermediate clauses
       assert (g->pos_lhs_ids.size () ==
-              rhs.size ()); // g->arity() not defined yet
+        rhs.size ()); // g->arity() not defined yet
+      LOG (g->neg_lhs_ids[0].clause, "units");
       for (auto lit : *g->neg_lhs_ids[0].clause) { // find the units
         if (internal->val (lit) > 0) {
           const unsigned uidx = internal->vlit (lit);
@@ -2362,11 +2374,14 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
         }
       }
       internal->lrat_chain.clear ();
-      // mark_lrat_resolvents (g->pos_lhs_ids);
-      // mark_lrat_resolvents (h->neg_lhs_ids[0].clause);
-      for (auto id : g->pos_lhs_ids)
-        reasons_lrat_src.push_back (id.clause->id);
-      push_id_and_rewriting_lrat (h->neg_lhs_ids[0].clause, Rewrite (), reasons_lrat_src, true, Rewrite (), h->lhs, g->lhs);
+      produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, Rewrite (), Rewrite (), h->lhs, g->lhs);
+      push_id_and_rewriting_lrat (g->pos_lhs_ids, Rewrite (), reasons_lrat_src, true, Rewrite (), h->lhs, g->lhs);
+
+      produce_rewritten_clause_lrat_and_clean (h->neg_lhs_ids, Rewrite (), Rewrite (), h->lhs, g->lhs);
+      push_id_and_rewriting_lrat (h->neg_lhs_ids, Rewrite (),
+                                  reasons_lrat_src, true, Rewrite (),
+                                  h->lhs, g->lhs);
+
       LOG (reasons_lrat_src, "lrat chain for positive side");
       unmark_marked_lrat ();
       unmark_lrat_resolvents ();
@@ -2374,8 +2389,10 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
       internal->lrat_chain.clear ();
       // mark_lrat_resolvents (h->pos_lhs_ids);
       // mark_lrat_resolvents (g->neg_lhs_ids[0].clause);
-      for (auto id : h->pos_lhs_ids)
-        reasons_lrat_usrc.push_back (id.clause->id);
+      push_id_and_rewriting_lrat (h->pos_lhs_ids, Rewrite (),
+                                  reasons_lrat_usrc, true, Rewrite (),
+                                  h->lhs, g->lhs);
+      produce_rewritten_clause_lrat_and_clean (g->neg_lhs_ids, Rewrite (), Rewrite (), h->lhs, g->lhs);
       push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, Rewrite (), reasons_lrat_usrc, true, Rewrite (), h->lhs, g->lhs);
       unmark_marked_lrat ();
       unmark_lrat_resolvents ();
