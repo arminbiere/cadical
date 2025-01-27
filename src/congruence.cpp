@@ -1946,6 +1946,10 @@ void Closure::update_and_gate_unit_build_lrat_chain (Gate *g, int src, uint64_t 
   LOG ("generate chain for gate boiling down to unit");
   assert (g->neg_lhs_ids.size () == 1);
   assert (!g->pos_lhs_ids.empty());
+  if (gate_contains (g, g->lhs)) {
+    assert (false); // TODO the proof required are different!
+    // basically then the binary clauses to learn are already included in the problem
+  }
   //push_id_and_rewriting_lrat_unit (g->neg_lhs_ids[0].clause, Rewrite (), internal->lrat_chain);
   // Clause *rewritten_clause = produce_rewritten_clause_lrat (g->neg_lhs_ids[0].clause);
   // if (rewritten_clause)
