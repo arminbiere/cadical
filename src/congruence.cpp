@@ -1946,10 +1946,6 @@ void Closure::update_and_gate_unit_build_lrat_chain (Gate *g, int src, uint64_t 
   LOG ("generate chain for gate boiling down to unit");
   assert (g->neg_lhs_ids.size () == 1);
   assert (!g->pos_lhs_ids.empty());
-  if (gate_contains (g, g->lhs)) {
-    assert (false); // TODO the proof required are different!
-    // basically then the binary clauses to learn are already included in the problem
-  }
   //push_id_and_rewriting_lrat_unit (g->neg_lhs_ids[0].clause, Rewrite (), internal->lrat_chain);
   // Clause *rewritten_clause = produce_rewritten_clause_lrat (g->neg_lhs_ids[0].clause);
   // if (rewritten_clause)
@@ -1977,11 +1973,50 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
 						  int dst,
 						std::vector<uint64_t> & extra_reasons_lit,
 						std::vector<uint64_t> &extra_reasons_ulit) {
-  // mark_lrat_resolvents (g->lhs, src, dst, -g->lhs, h->lhs);
-  // mark_lrat_resolvents (-h->lhs, src, dst, -g->lhs, h->lhs);
-  // mark_lrat_resolvents (h->pos_lhs_ids, src, dst, -g->lhs, h->lhs);
-  // mark_lrat_resolvents (g->neg_lhs_ids[0].clause, src, dst, -g->lhs, h->lhs);
+  const bool g_tautology = gate_contains(g, g->lhs);
+  const bool h_tautology = gate_contains(h, h->lhs);
+  if (g_tautology || h_tautology) {
+    // special case: actually we have an equivalence due to binary clauses and some of the clauses
+    // from the gate are actually tautologies
+    assert (g_tautology != h_tautology);
+    Gate *tauto = (g_tautology ? g : h);
+    Gate *other = (g_tautology ? h : g);
+    LOGGATE (tauto, "one gate is a tautology");
+    assert (tauto != other);
+    assert (tauto == h || tauto == g);
 
+    
+    // one direction: the binary clause already exists
+    for (auto &litId : other->pos_lhs_ids) {
+      if (litId.current_lit == tauto->lhs) {
+	assert (extra_reasons_lit.empty());
+	LOG (litId.clause, "binary clause to push into the reason");
+	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), -h->lhs);
+	assert (litId.clause);
+	extra_reasons_lit.push_back(litId.clause->id);
+      }
+    }
+    assert (!extra_reasons_lit.empty());
+
+    // other direction, we have to resolve
+    LOG ("now the other direction");
+    for (auto &litId : tauto->pos_lhs_ids) {
+      LOG (litId.clause, "binary clause from %d to push into the reason", litId.current_lit);
+      if (litId.current_lit != tauto->lhs) {
+	LOG (litId.clause, "binary clause to push into the reason");
+	assert (extra_reasons_ulit.empty());
+	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), tauto->lhs);
+	assert (litId.clause);
+	extra_reasons_ulit.push_back(litId.clause->id);
+      }
+    }
+    assert (!extra_reasons_ulit.empty());
+    produce_rewritten_clause_lrat_and_clean (other->neg_lhs_ids, Rewrite (), Rewrite (), -tauto->lhs, other->lhs);
+    push_id_and_rewriting_lrat (other->neg_lhs_ids, Rewrite (src, dst, id1, id2),
+				extra_reasons_ulit, false, Rewrite (), -tauto->lhs, other->lhs);
+    return;
+  }
+  // default: resolve all clauses
   // first rewrite
   // TODO: do we really need dest as second exclusion?
   produce_rewritten_clause_lrat_and_clean (h->pos_lhs_ids, Rewrite (), Rewrite (), -h->lhs);
