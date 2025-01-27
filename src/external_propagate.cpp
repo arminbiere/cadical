@@ -325,7 +325,10 @@ bool Internal::external_propagate () {
       bool trail_changed =
             (num_assigned != assigned || level != level_before ||
              propagated < trail.size ());
-      if (trail_changed) propagate (); //unsat or conflict will be caught later
+      if (trail_changed) {
+        propagate (); //unsat or conflict will be caught later
+        if (!unsat || !conflict) notify_assignments ();
+      }
         
 
 #ifndef NDEBUG
