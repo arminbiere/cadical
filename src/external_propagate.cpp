@@ -39,8 +39,9 @@ void Internal::add_observed_var (int ilit) {
 // graph involving this variable.
 //
 void Internal::remove_observed_var (int ilit) {
-  if (!fixed (ilit) && level)
+  if (!fixed (ilit) && level) {
     backtrack ();
+  }
 
   assert (fixed (ilit) || !level);
 
@@ -312,9 +313,21 @@ bool Internal::external_propagate () {
          level, trail.size (), notified);
 #endif
     if (!unsat && !conflict) {
+      int level_before = level;
+      size_t assigned = num_assigned;
       bool has_external_clause = ask_external_clause ();
+      // New observed variable might have triggered a backtrack during this 
+      // ask_external_clause call, so we need to propagate before continuing
       stats.ext_prop.ext_cb++;
       stats.ext_prop.elearn_call++;
+
+
+      bool trail_changed =
+            (num_assigned != assigned || level != level_before ||
+             propagated < trail.size ());
+      if (trail_changed) propagate (); //unsat or conflict will be caught later
+        
+
 #ifndef NDEBUG
       if (has_external_clause)
         LOG ("New external clauses are to be added.");
@@ -323,11 +336,11 @@ bool Internal::external_propagate () {
 #endif
 
       while (has_external_clause) {
-        int level_before = level;
-        size_t assigned = num_assigned;
+        level_before = level;
+        assigned = num_assigned;
 
         add_external_clause (0);
-        bool trail_changed =
+        trail_changed =
             (num_assigned != assigned || level != level_before ||
              propagated < trail.size ());
         cb_repropagate_needed = true;

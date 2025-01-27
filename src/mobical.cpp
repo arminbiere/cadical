@@ -897,9 +897,11 @@ public:
 
   void notify_assignment (const std::vector<int> &lits) override {
     MLOG ("notified " << lits.size () << " new assignments on level "
-        << observed_trail.size () - 1 << "." << std::endl);
+        << observed_trail.size () - 1);
 #ifndef NDEBUG
-    MLOGC ("[ ");
+    MLOGC (": [ ");
+# else
+  MLOGC (std::endl);
 #endif
     for (const auto &lit : lits) {
       observed_trail.back ().push_back (lit);
