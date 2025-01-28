@@ -318,10 +318,6 @@ int Closure::find_representative (int lit) {
   return res;
 }
 
-int Closure::find_representative_and_update_eager (int lit) {
-  return find_representative_and_compress (lit, true);
-}
-
 int Closure::find_representative_and_compress (int lit, bool update_eager) {
   LOG ("finding representative of %d", lit);
   int res = lit;
@@ -332,16 +328,6 @@ int Closure::find_representative_and_compress (int lit, bool update_eager) {
     nxt = representative (nxt);
     ++path_length;
     LOG ("updating %d -> %d", res, nxt);
-    // if (internal->lrat && eager_representative (res) == res) {
-    //   LOG ("updating %d -> %d", res, nxt);
-    //   eager_representative (res) = nxt;
-    // }
-    // else {
-    //   if (internal->lrat && eager_representative (res) != nxt)
-    // 	LOG ("not overwriting existing link to %d, or would have been %d", eager_representative (res), nxt);
-    // }
-    // if (internal->lrat && eager_representative (-res) == -res)
-    //   eager_representative (-res) = -nxt;
   } while (nxt != res);
 
   if (path_length > 2) {
@@ -363,8 +349,8 @@ int Closure::find_representative_and_compress (int lit, bool update_eager) {
     if (internal->lrat)
       internal->lrat_chain.clear ();
   } else if (path_length == 2) {
-    LOG ("duplicating information %d -> %d to eager", lit, res);
     if (update_eager) {
+      LOG ("updating information %d -> %d in eager", lit, res);
       eager_representative (lit) = res;
       if (internal->lrat)
 	eager_representative_id (lit) = representative_id (lit);
@@ -430,18 +416,22 @@ int Closure::find_eager_representative_and_compress (int lit) {
     if (internal->lrat)
       internal->lrat_chain.clear ();
   } else if (path_length == 2) {
-    LOG ("duplicating information %d -> %d to eager with clause %" PRIu64, lit, res, representative_id (lit));
-    eager_representative (lit) = res;
-    eager_representative_id (lit) = representative_id (lit);
+    LOG ("duplicated information %d -> %d to eager with clause %" PRIu64, lit, res, eager_representative_id (lit));
+    assert (eager_representative (lit) == res);
     assert (!internal->lrat || eager_representative_id (lit));
   }
   return res;
 }
 
+void Closure::find_representative_and_compress_both (int lit) {
+  find_representative_and_compress (lit, false);
+  find_representative_and_compress (-lit, false);
+}
+
 void Closure::find_eager_representative_and_compress_both (int lit) {
-  find_representative_and_update_eager (lit);
+  find_representative_and_compress (lit);
   find_eager_representative_and_compress (lit);
-  find_representative_and_update_eager (-lit);
+  find_representative_and_compress (-lit);
   find_eager_representative_and_compress (-lit);
 }
 
@@ -482,6 +472,17 @@ void Closure::produce_eager_representative_lrat (int lit) {
 }
 
 uint64_t Closure::find_representative_lrat (int lit) {
+  if (!internal->lrat)
+    return 0;
+  int res = lit;
+  int nxt = representative (res);
+  assert (nxt == representative (res));
+  LOG ("checking for existing LRAT chain for %d with clause %" PRIu64, lit, eager_representative_id (res));
+  assert (representative_id (res));
+  return representative_id (res);
+}
+
+uint64_t Closure::find_eager_representative_lrat (int lit) {
   if (!internal->lrat)
     return 0;
   int res = lit;
@@ -643,7 +644,7 @@ Clause* Closure::produce_rewritten_clause_lrat (Clause *c, int except, uint64_t 
       if (!marked)
 	internal->clause.push_back (other);
       changed = true;
-      internal->lrat_chain.push_back (representative_id (lit));
+      internal->lrat_chain.push_back (eager_representative_id (lit));
     }
     else if (!marked)
       internal->clause.push_back (lit);
@@ -756,10 +757,10 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
       } else {
         assert (other != rewritten_other);
         LOG ("reason for representative of %d %d is %" PRIu64 " seen %d",
-             other, rewritten_other, find_representative_lrat (other),
+             other, rewritten_other, find_eager_representative_lrat (other),
              resolvent_marked (rewritten_other));
 //        proof_analyzed.push_back (other);
-        chain.push_back (find_representative_lrat (other));
+        chain.push_back (find_eager_representative_lrat (other));
       }
     } else {
       LOG ("no rewriting needed for %d", other);
@@ -885,9 +886,9 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
         assert (other != rewritten_other);
         LOG ("reason for representative of %d %d is %" PRIu64 " seen %d", other,
              rewritten_other,
-             find_representative_lrat (other), resolvent_marked (rewritten_other));
+             find_eager_representative_lrat (other), resolvent_marked (rewritten_other));
 //        proof_analyzed.push_back (other);
-        chain.push_back (find_representative_lrat (other));
+        chain.push_back (find_eager_representative_lrat (other));
       }
     }
     else {
@@ -1353,7 +1354,7 @@ bool Closure::merge_literals_lrat (
           c = eq1_tmp;
       }
       push_id_and_rewriting_lrat_unit (c, Rewrite (), internal->lrat_chain,
-                                  true);
+                                       true, Rewrite (), lit, unit);
     }
     learn_congruence_unit (unit);
     if (internal->lrat)
@@ -1466,10 +1467,10 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
   uint64_t id1 = c1 ? c1->id : 0;
   uint64_t id2 = c2 ? c2->id : 0;
   LOG ("merging literals %d and %d lrat", lit, other);
-  int repr_lit = find_representative_and_update_eager (lit);
-  int repr_other = find_representative_and_update_eager (other);
-  find_eager_representative_and_compress_both (lit);
-  find_eager_representative_and_compress_both (other);
+  int repr_lit = find_representative (lit);
+  int repr_other = find_representative (other);
+  find_representative_and_compress_both (lit);
+  find_representative_and_compress_both (other);
 
   if (repr_lit == repr_other) {
     LOG ("already merged %d and %d", lit, other);
@@ -1982,6 +1983,9 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
 						  int dst,
 						std::vector<uint64_t> & extra_reasons_lit,
 						std::vector<uint64_t> &extra_reasons_ulit) {
+  // If the gates are identical, do not even attempt to build the LRAT chain
+  if (find_representative(g->lhs) == find_representative(h->lhs))
+    return;
   const bool g_tautology = gate_contains(g, g->lhs);
   const bool h_tautology = gate_contains(h, h->lhs);
   if (g_tautology || h_tautology) {
@@ -2002,7 +2006,7 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
       if (litId.current_lit == tauto->lhs) {
 	assert (extra_reasons_tauto.empty());
 	LOG (litId.clause, "binary clause to push into the reason");
-	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), -h->lhs);
+	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), tauto->lhs, other->lhs);
 	assert (litId.clause);
 	extra_reasons_tauto.push_back(litId.clause->id);
       }
@@ -2016,7 +2020,7 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
       if (litId.current_lit != tauto->lhs) {
 	LOG (litId.clause, "binary clause to push into the reason");
 	assert (extra_reasons_other.empty());
-	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), tauto->lhs);
+	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), tauto->lhs, other->lhs);
 	assert (litId.clause);
 	extra_reasons_other.push_back(litId.clause->id);
       }
@@ -3858,12 +3862,10 @@ bool Closure::propagate_equivalence (int lit) {
   if (internal->val(lit))
     return true;
   LOG ("propagating literal %d", lit);
-  (void) find_representative_and_update_eager (lit);
+  find_eager_representative_and_compress_both (lit);
   const int repr = find_eager_representative_and_compress (lit);
-  (void) find_representative_and_update_eager (-lit);
-  (void) find_eager_representative_and_compress (-lit);
-  const uint64_t id1 = find_representative_lrat (lit);
-  const uint64_t id2 = find_representative_lrat (-lit);
+  const uint64_t id1 = find_eager_representative_lrat (lit);
+  const uint64_t id2 = find_eager_representative_lrat (-lit);
   assert (internal->lrat_chain.empty ());
   return rewrite_gates (repr, lit, id1, id2) && rewrite_gates (-repr, -lit, id2, id1);
 }

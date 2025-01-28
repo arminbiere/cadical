@@ -166,8 +166,8 @@ struct Closure {
   int & eager_representative (int lit);
   int eager_representative (int lit) const;
   int find_representative (int lit);
-  int find_representative_and_update_eager (int lit);
   int find_representative_and_compress (int, bool update_eager = true);
+  void find_representative_and_compress_both (int); // generates clauses for -lit and lit
   int find_eager_representative (int);
   int find_eager_representative_and_compress (int);
   void find_eager_representative_and_compress_both (int); // generates clauses for -lit and lit
@@ -176,6 +176,7 @@ struct Closure {
   uint64_t &representative_id (int lit);
   uint64_t representative_id (int lit) const;
   uint64_t find_representative_lrat (int lit);
+  uint64_t find_eager_representative_lrat (int lit);
   void produce_eager_representative_lrat (int lit);
   void produce_representative_lrat (int lit);
   Clause* add_binary_clause (int a, int b);
