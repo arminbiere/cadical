@@ -579,6 +579,9 @@ Clause* Closure::produce_rewritten_clause_lrat (Clause *c, int except, uint64_t 
   bool tautology = false;
   for (auto lit : *c) {
     LOG ("checking if %d is required", lit);
+    if (internal->marked2 (lit)) {
+      continue;
+    }
     if (lit == except_lhs)  {
       internal->clause.push_back (lit);
       continue;
