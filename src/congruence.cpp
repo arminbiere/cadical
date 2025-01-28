@@ -762,13 +762,13 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
         LOG ("reason for representative of %d %d is %" PRIu64 " seen %d",
              other, rewritten_other, find_eager_representative_lrat (other),
              resolvent_marked (rewritten_other));
-//        proof_analyzed.push_back (other);
-        chain.push_back (find_eager_representative_lrat (other));
+	chain.push_back (find_eager_representative_lrat (other));
       }
     } else {
       LOG ("no rewriting needed for %d", other);
     }
   }
+
   if (insert_id_after)
     chain.push_back (c->id);
 }
@@ -835,71 +835,6 @@ void Closure::push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
   assert (c);
   chain.push_back (c->id);
   LOG (chain, "chain");
-  return;
-  if (internal->lrat && c->size == 2) {
-    const int lit = c->literals[0];
-    const int other = c->literals[1];
-    const int larger = abs (lit) > abs (other) ? lit : other;
-    const int smaller = abs (lit) > abs (other) ? other : lit;
-    if (smaller == find_eager_representative_and_compress (-larger) && eager_representative_id(-larger) == c->id) {
-      LOG ("clause is already reason for rewriting, blocking it");
-//      proof_marked (-larger) = 1;
-//      proof_analyzed.push_back(larger);
-    } else {
-      LOG ("%d -> %d is not %" PRIu64 " but -> %d", larger, smaller, c->id, find_eager_representative (larger));
-    }
-  }
-  if (!insert_id_after)
-    chain.push_back (c->id);
-  for (auto other : *c) {
-    // unclear how to achieve this in the simplify context where other == g->lhs might be set
-    // assert (internal->val (other) <= 0 || other == except);
-    if (other == except_lhs) {
-      // do nothing;
-    } else if (other == except_lhs2) {
-      // do nothing;
-    } else if (proof_marked (other) && false){
-      continue;
-    }
-    else if (internal->val (other) < 0) {
-      LOG ("found unit %d", -other);
-      const unsigned uidx = internal->vlit (-other);
-      uint64_t id = internal->unit_clauses[uidx];
-      assert (id);
-      chain.push_back (id);
-    } else if (other == rewrite1.src && rewrite1.id1) {
-      produce_lrat_for_rewrite (chain, rewrite1, other);
-    } else if (other == -rewrite1.src && rewrite1.id2) {
-      produce_lrat_for_rewrite (chain, rewrite1, other);
-//      proof_analyzed.push_back (other);
-    } else if (other == rewrite2.src && rewrite2.id1) {
-      produce_lrat_for_rewrite (chain, rewrite2, other);
-    } else if (other == -rewrite2.src && rewrite2.id2) {
-      produce_lrat_for_rewrite (chain, rewrite2, other);
-    } else if (other != find_eager_representative_and_compress (other)) {
-      const int rewritten_other = eager_representative (other);
-      assert (resolvent_marked (rewritten_other) <= 3);
-      if (!resolvent_marked (rewritten_other) && false) {
-        // no reason to push the justification for the rewrite, just marking as done
-	LOG ("skipping rewriting %d -> %d", other, rewritten_other);
-//        proof_marked (other) = proof_marked (-other) = 1;
-//        proof_analyzed.push_back (other);
-      } else {
-//        proof_marked (rewritten_other) = 1;
-        assert (other != rewritten_other);
-        LOG ("reason for representative of %d %d is %" PRIu64 " seen %d", other,
-             rewritten_other,
-             find_eager_representative_lrat (other), resolvent_marked (rewritten_other));
-//        proof_analyzed.push_back (other);
-        chain.push_back (find_eager_representative_lrat (other));
-      }
-    }
-    else {
-      LOG ("no rewriting needed for %d", other);
-    }
-  }
-  if (insert_id_after)
-    chain.push_back (c->id);
 }
 
 void Closure::push_id_and_rewriting_lrat (
