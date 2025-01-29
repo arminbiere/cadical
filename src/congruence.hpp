@@ -43,8 +43,40 @@ struct Internal;
 #define MAX_ARITY ((1 << LD_MAX_ARITY) - 1)
 
 enum class Gate_Type { And_Gate, XOr_Gate, ITE_Gate };
-typedef std::pair<int,int> litpair;
-typedef std::vector<litpair> litpairs;
+
+struct lit_implication {
+  int first;
+  int second;
+  uint64_t id;
+  lit_implication (int f, int s, uint64_t _id)
+  : first (f), second (s), id (_id) {}
+  lit_implication (int f, int s)
+  : first (f), second (s), id (0) {}
+  lit_implication (): first (0), second (0), id (0) {};
+  void swap () {
+    std::swap (first, second);
+  }
+};
+
+
+struct lit_equivalence {
+  int first;
+  int second;
+  uint64_t first_id;
+  uint64_t second_id;
+  lit_equivalence (int f, uint64_t f_id, int s, uint64_t s_id)
+  : first (f), second (s), first_id (f_id), second_id (s_id) {}
+  lit_equivalence (int f, int s)
+  : first (f), second (s), first_id (0), second_id (0) {}
+  lit_equivalence (): first (0), second (0), first_id (0), second_id (0) {};
+  void swap () {
+    std::swap (first, second);
+    std::swap (first_id, second_id);
+  }
+};
+
+typedef std::vector<lit_implication> lit_implications;
+typedef std::vector<lit_equivalence> lit_equivalences;
 
 std::string string_of_gate (Gate_Type t);
 
@@ -139,8 +171,8 @@ struct Closure {
   vector<uint64_t> glargecounts; // count for large clauses to complement internal->noccs
   vector<uint64_t> gnew_largecounts; // count for large clauses to complement internal->noccs
   GatesTable table;
-  std::array<std::vector<std::pair<int, int>>, 2> condbin;
-  std::array<std::vector<std::pair<int, int>>, 2> condeq;
+  std::array<lit_implications, 2> condbin;
+  std::array<lit_equivalences, 2> condeq;
 
   std::vector<Clause*> new_unwatched_binary_clauses;
   // LRAT proofs
@@ -311,13 +343,13 @@ struct Closure {
   void extract_xor_gates_with_base_clause (Clause *c);
   Clause *find_large_xor_side_clause (std::vector<int> &lits);
 
-  void merge_condeq (int cond, litpairs &condeq, litpairs &not_condeq);
+  void merge_condeq (int cond, lit_equivalences &condeq, lit_equivalences &not_condeq);
   void
   find_conditional_equivalences (int lit,
-                                 litpairs &condbin,
-                                 litpairs &condeq);
+                                 lit_implications &condbin,
+                                 lit_equivalences &condeq);
   void
-  copy_conditional_equivalences (int lit, litpairs &condbin);
+  copy_conditional_equivalences (int lit, lit_implications &condbin);
   void check_ite_implied (int lhs, int cond, int then_lit, int else_lit);
   void check_ite_gate_implied (Gate *g);
   void check_and_gate_implied (Gate *g);
@@ -326,16 +358,16 @@ struct Closure {
   // ite gate extraction
   void extract_ite_gates_of_literal (int);
   void extract_ite_gates_of_variable (int idx);
-  void extract_condeq_pairs (int lit, litpairs &condbin, litpairs &condeq);
+  void extract_condeq_pairs (int lit, lit_implications &condbin, lit_equivalences &condeq);
   void init_ite_gate_extraction (std::vector<Clause *> &candidates);
-  bool find_litpair_second_literal (int lit, litpairs::const_iterator begin,
-                                    litpairs::const_iterator end);
+  lit_implications::const_iterator find_lit_implication_second_literal (int lit, lit_implications::const_iterator begin,
+                                    lit_implications::const_iterator end);
   void search_condeq (int lit, int pos_lit,
-                             litpairs::const_iterator pos_begin,
-                             litpairs::const_iterator pos_end, int neg_lit,
-                             litpairs::const_iterator neg_begin,
-                             litpairs::const_iterator neg_end,
-                             litpairs &condeq);
+                             lit_implications::const_iterator pos_begin,
+                             lit_implications::const_iterator pos_end, int neg_lit,
+                             lit_implications::const_iterator neg_begin,
+                             lit_implications::const_iterator neg_end,
+                             lit_equivalences &condeq);
   void reset_ite_gate_extraction ();
   void extract_ite_gates ();
   
