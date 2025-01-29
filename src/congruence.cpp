@@ -1976,10 +1976,9 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
     // other direction, we have to resolve
     LOG ("now the other direction");
     for (auto &litId : tauto->pos_lhs_ids) {
-      LOG (litId.clause, "binary clause from %d to push into the reason", litId.current_lit);
+      LOG (litId.clause, "binary clause from %d to push into the reason [avoiding %d]", litId.current_lit, tauto->lhs);
       if (litId.current_lit != tauto->lhs) {
 	LOG (litId.clause, "binary clause to push into the reason");
-	assert (extra_reasons_other.empty());
 	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), tauto->lhs);
 	assert (litId.clause);
 	extra_reasons_other.push_back(litId.clause->id);
