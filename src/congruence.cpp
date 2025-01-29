@@ -2339,13 +2339,13 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
         }
       }
       internal->lrat_chain.clear ();
-      produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, Rewrite (), Rewrite (), h->lhs, g->lhs);
-      push_id_and_rewriting_lrat (g->pos_lhs_ids, Rewrite (), reasons_lrat_src, true, Rewrite (), h->lhs, g->lhs);
+      produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, Rewrite (), Rewrite (), g->lhs);
+      push_id_and_rewriting_lrat (g->pos_lhs_ids, Rewrite (), reasons_lrat_src, true, Rewrite (), g->lhs);
 
-      produce_rewritten_clause_lrat_and_clean (h->neg_lhs_ids, Rewrite (), Rewrite (), h->lhs, g->lhs);
+      produce_rewritten_clause_lrat_and_clean (h->neg_lhs_ids, Rewrite (), Rewrite (), h->lhs);
       push_id_and_rewriting_lrat (h->neg_lhs_ids, Rewrite (),
                                   reasons_lrat_src, true, Rewrite (),
-                                  h->lhs, g->lhs);
+                                  h->lhs);
 
       LOG (reasons_lrat_src, "lrat chain for positive side");
       unmark_marked_lrat ();
@@ -2356,9 +2356,9 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
       // mark_lrat_resolvents (g->neg_lhs_ids[0].clause);
       push_id_and_rewriting_lrat (h->pos_lhs_ids, Rewrite (),
                                   reasons_lrat_usrc, true, Rewrite (),
-                                  h->lhs, g->lhs);
-      produce_rewritten_clause_lrat_and_clean (g->neg_lhs_ids, Rewrite (), Rewrite (), h->lhs, g->lhs);
-      push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, Rewrite (), reasons_lrat_usrc, true, Rewrite (), h->lhs, g->lhs);
+                                  h->lhs);
+      produce_rewritten_clause_lrat_and_clean (g->neg_lhs_ids, Rewrite (), Rewrite (), g->lhs);
+      push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, Rewrite (), reasons_lrat_usrc, true, Rewrite (), g->lhs);
       unmark_marked_lrat ();
       unmark_lrat_resolvents ();
       LOG (reasons_lrat_usrc, "lrat chain for negative side");
