@@ -1913,11 +1913,40 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
 						  int dst,
 						std::vector<uint64_t> & extra_reasons_lit,
 						std::vector<uint64_t> &extra_reasons_ulit) {
+  assert (g != h);
   // If the gates are identical, do not even attempt to build the LRAT chain
   if (find_representative(g->lhs) == find_representative(h->lhs))
     return;
   const bool g_tautology = gate_contains(g, g->lhs);
   const bool h_tautology = gate_contains(h, h->lhs);
+  if (g_tautology && h_tautology) {
+    // special case: actually we have an equivalence due to binary clauses and all gate clauses
+    // (except one binary) are actually tautologies
+    for (auto &litId : g->pos_lhs_ids) {
+      if (litId.current_lit == h->lhs) {
+	assert (extra_reasons_lit.empty());
+	LOG (litId.clause, "binary clause to push into the reason");
+	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), g->lhs, h->lhs);
+	assert (litId.clause);
+	extra_reasons_lit.push_back(litId.clause->id);
+      }
+    }
+    assert (!extra_reasons_lit.empty ());
+    assert (extra_reasons_lit.size () == 1);
+
+    for (auto &litId : h->pos_lhs_ids) {
+      if (litId.current_lit == g->lhs) {
+	assert (extra_reasons_ulit.empty());
+	LOG (litId.clause, "binary clause to push into the reason");
+	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), g->lhs, h->lhs);
+	assert (litId.clause);
+	extra_reasons_ulit.push_back(litId.clause->id);
+      }
+    }
+    assert (!extra_reasons_ulit.empty ());
+    assert (extra_reasons_ulit.size () == 1);
+    return;
+  }
   if (g_tautology || h_tautology) {
     // special case: actually we have an equivalence due to binary clauses and some of the clauses
     // from the gate are actually tautologies
