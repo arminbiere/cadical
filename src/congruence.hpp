@@ -1,3 +1,4 @@
+
 #ifndef _congruenc_hpp_INCLUDED
 #define _congruenc_hpp_INCLUDED
 
@@ -47,12 +48,12 @@ enum class Gate_Type { And_Gate, XOr_Gate, ITE_Gate };
 struct lit_implication {
   int first;
   int second;
-  uint64_t id;
-  lit_implication (int f, int s, uint64_t _id)
-  : first (f), second (s), id (_id) {}
+  Clause* clause;
+  lit_implication (int f, int s, Clause* _id)
+  : first (f), second (s), clause (_id) {}
   lit_implication (int f, int s)
-  : first (f), second (s), id (0) {}
-  lit_implication (): first (0), second (0), id (0) {};
+  : first (f), second (s), clause (0) {}
+  lit_implication (): first (0), second (0), clause (nullptr) {};
   void swap () {
     std::swap (first, second);
   }
@@ -62,16 +63,16 @@ struct lit_implication {
 struct lit_equivalence {
   int first;
   int second;
-  uint64_t first_id;
-  uint64_t second_id;
-  lit_equivalence (int f, uint64_t f_id, int s, uint64_t s_id)
-  : first (f), second (s), first_id (f_id), second_id (s_id) {}
+  Clause* first_clause;
+  Clause* second_clause;
+  lit_equivalence (int f, Clause* f_id, int s, Clause* s_id)
+  : first (f), second (s), first_clause (f_id), second_clause (s_id) {}
   lit_equivalence (int f, int s)
-  : first (f), second (s), first_id (0), second_id (0) {}
-  lit_equivalence (): first (0), second (0), first_id (0), second_id (0) {};
+  : first (f), second (s), first_clause (nullptr), second_clause (nullptr) {}
+  lit_equivalence (): first (0), second (0), first_clause (nullptr), second_clause (nullptr) {};
   void swap () {
     std::swap (first, second);
-    std::swap (first_id, second_id);
+    std::swap (first_clause, second_clause);
   }
 };
 
@@ -378,10 +379,10 @@ struct Closure {
   
   void extract_congruence ();
   
-  void add_ite_matching_proof_chain(Gate *g, int lhs1, int lhs2);
+  void add_ite_matching_proof_chain(Gate *g, Gate *h, int lhs1, int lhs2, std::vector<uint64_t>&reasons1, std::vector<uint64_t>&reasons2);
   void add_ite_turned_and_binary_clauses (Gate *g);
   Gate* new_and_gate(Clause *, int);
-  Gate* new_ite_gate (int lhs, int cond, int then_lit, int else_lit);
+  Gate* new_ite_gate (int lhs, int cond, int then_lit, int else_lit, std::vector<LitClausePair> &&clauses);
   Gate* new_xor_gate(int);
   //check
   void check_xor_gate_implied (Gate const *const);
