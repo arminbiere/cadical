@@ -393,7 +393,6 @@ int Closure::find_eager_representative_and_compress (int lit) {
   int nxt = lit;
   int path_length = 0;
   do {
-    LOG ("%d -> %d", res, eager_representative (nxt));
     res = nxt;
     nxt = eager_representative (nxt);
     ++path_length;
@@ -582,35 +581,28 @@ Clause* Closure::produce_rewritten_clause_lrat (Clause *c, int except, uint64_t 
     if (internal->marked2 (lit)) {
       continue;
     }
-    if (lit == except_lhs)  {
+    if (lit == except_lhs || lit == -except_lhs)  {
+      internal->mark2 (lit);
       internal->clause.push_back (lit);
       continue;
     }
-    if (lit == -except_lhs)  {
+    if (lit == except_lhs2 || lit == -except_lhs2) {
+      internal->mark2 (lit);
       internal->clause.push_back (lit);
       continue;
     }
-    if (lit == -except_lhs2) {
-      internal->clause.push_back (lit);
-      continue;
-    }
-    if (lit == except_lhs2) {
-      internal->clause.push_back (lit);
-      continue;
-    }
-    if (lit == except) {
-      internal->clause.push_back (lit);
-      continue;
-    }
-    if (lit == -except) {
+    if (lit == except || lit == -except) {
+      internal->mark2 (lit);
       internal->clause.push_back (lit);
       continue;
     }
     if (lit == except_other && id_other1){
+      internal->mark2 (lit);
       internal->clause.push_back (lit);
       continue;
     }
     if (lit == -except_other && id_other2) {
+      internal->mark2 (lit);
       internal->clause.push_back (lit);
       continue;
     }
