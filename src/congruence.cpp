@@ -1920,6 +1920,7 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
   const bool g_tautology = gate_contains(g, g->lhs);
   const bool h_tautology = gate_contains(h, h->lhs);
   if (g_tautology && h_tautology) {
+    LOG ("both gates are a tautology");
     // special case: actually we have an equivalence due to binary clauses and all gate clauses
     // (except one binary) are actually tautologies
     for (auto &litId : g->pos_lhs_ids) {
@@ -1965,7 +1966,7 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
       if (litId.current_lit == tauto->lhs) {
 	assert (extra_reasons_tauto.empty());
 	LOG (litId.clause, "binary clause to push into the reason");
-	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), tauto->lhs, other->lhs);
+	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), other->lhs);
 	assert (litId.clause);
 	extra_reasons_tauto.push_back(litId.clause->id);
       }
@@ -1979,15 +1980,15 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
       if (litId.current_lit != tauto->lhs) {
 	LOG (litId.clause, "binary clause to push into the reason");
 	assert (extra_reasons_other.empty());
-	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), tauto->lhs, other->lhs);
+	litId.clause = produce_rewritten_clause_lrat (litId.clause, Rewrite (), Rewrite (), tauto->lhs);
 	assert (litId.clause);
 	extra_reasons_other.push_back(litId.clause->id);
       }
     }
     assert (!extra_reasons_other.empty());
-    produce_rewritten_clause_lrat_and_clean (other->neg_lhs_ids, Rewrite (), Rewrite (), -tauto->lhs, other->lhs);
+    produce_rewritten_clause_lrat_and_clean (other->neg_lhs_ids, Rewrite (), Rewrite (), other->lhs);
     push_id_and_rewriting_lrat (other->neg_lhs_ids, Rewrite (src, dst, id1, id2),
-				extra_reasons_other, false, Rewrite (), -tauto->lhs, other->lhs);
+				extra_reasons_other, false, Rewrite (), other->lhs);
     return;
   }
   // default: resolve all clauses
