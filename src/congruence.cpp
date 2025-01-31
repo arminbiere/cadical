@@ -2778,6 +2778,8 @@ void inc_lits (vector<int>& lits){
 void Closure::check_ternary (int a, int b, int c) {
   if (!internal->opts.check)
     return;
+  if (internal->lrat)
+    return;
   auto &clause = internal->clause;
   assert (clause.empty ());
   clause.push_back(a);
@@ -2796,6 +2798,8 @@ void Closure::check_ternary (int a, int b, int c) {
 void Closure::check_binary_implied (int a, int b) {
   if (!internal->opts.check)
     return;
+  if (internal->lrat)
+    return;
   auto &clause = internal->clause;
   assert (clause.empty ());
   clause.push_back(a);
@@ -2806,6 +2810,8 @@ void Closure::check_binary_implied (int a, int b) {
 
 void Closure::check_implied () {
   if (!internal->opts.check)
+    return;
+  if (internal->lrat)
     return;
   internal->external->check_learned_clause ();
 }
@@ -4690,6 +4696,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
       connect_goccs (g, lit);
     }
   }
+  check_ite_lrat_reasons (g);
   return g;
 }
 
@@ -4714,6 +4721,37 @@ void Closure::check_ite_implied (int lhs, int cond, int then_lit, int else_lit) 
   check_ternary(cond, else_lit, -lhs);
   check_ternary(-cond, -then_lit, lhs);
   check_ternary(-cond, then_lit, -lhs);
+
+}
+
+void Closure::check_contained_module_rewriting (Clause *c, int lit) {
+  const int normalize_lit = find_eager_representative (lit);
+  bool found = false;
+  for (auto other : *c) {
+    const int normalize_other = find_eager_representative (other);
+    if (normalize_other == normalize_lit) {
+      found = true;
+      break;
+    }
+  }
+  assert (found);
+}
+
+void Closure::check_ite_lrat_reasons (Gate *g) {
+  assert (g->tag == Gate_Type::ITE_Gate);
+  if (!internal->lrat)
+    return;
+  assert (g->rhs.size() == 3);
+  assert (g->pos_lhs_ids.size () == 4);
+  assert (g->neg_lhs_ids.empty());
+  check_contained_module_rewriting (g->pos_lhs_ids[0].clause, g->rhs[1]);
+  assert (g->pos_lhs_ids[0].current_lit == g->rhs[1]);
+  check_contained_module_rewriting (g->pos_lhs_ids[1].clause, -g->rhs[1]);
+  assert (g->pos_lhs_ids[1].current_lit == -g->rhs[1]);
+  check_contained_module_rewriting (g->pos_lhs_ids[2].clause, g->rhs[2]);
+  assert (g->pos_lhs_ids[2].current_lit == g->rhs[2]);
+  check_contained_module_rewriting (g->pos_lhs_ids[3].clause, -g->rhs[3]);
+  assert (g->pos_lhs_ids[3].current_lit == -g->rhs[2]);
 }
 
 void Closure::check_ite_gate_implied (Gate *g) {
@@ -4878,7 +4916,15 @@ lit_implications::const_iterator Closure::find_lit_implication_second_literal (i
   lit_implications::const_iterator found = std::lower_bound (begin, end, lit_implication{lit, lit}, [](const lit_implication& a, const lit_implication &b) {
     return a.second < b.second;
   });
-  return found;
+  auto found2 = std::binary_search (begin, end, lit_implication{lit, lit}, [](const lit_implication& a, const lit_implication &b) {
+    return a.second < b.second;
+  });
+
+  if (found < end && found->second == lit){
+    assert (found2 == (found < end));
+    return found;
+  }
+  return end;
 /*
   litpairs::const_iterator l = begin, r = end;
   while (l != r) {
@@ -4914,23 +4960,21 @@ void Closure::search_condeq (int lit, int pos_lit,
     Clause* first_id = p->clause;
     const lit_implications::const_iterator other_clause = find_lit_implication_second_literal (not_other, neg_begin, neg_end);
     if (other_clause != neg_end) {
-      int first, second;
       lit_equivalence equivalence (neg_lit, first_id, other, other_clause->clause);
-      if (pos_lit < 0)
-        first = neg_lit, second = other;
-      else
-        first = pos_lit, second = not_other;
-      LOG ("found conditional %d equivalence %d = %d", lit, first,  second);
-      assert (first > 0);
-      assert (internal->vlit (first) < internal->vlit (second));
-      check_ternary (lit, first, -second);
-      check_ternary (lit, -first, second);
+      if (pos_lit > 0) {
+	equivalence.negate_both ();
+      }
+      LOG ("found conditional %d equivalence %d = %d", lit, equivalence.first,  equivalence.second);
+      assert (equivalence.first > 0);
+      assert (internal->vlit (equivalence.first) < internal->vlit (equivalence.second));
+      check_ternary (lit, neg_lit, -other);
+      check_ternary (lit, -neg_lit, other);
       condeq.push_back(equivalence);
-      if (second < 0) {
-	lit_equivalence inverse_equivalence (-second, -first);
+      if (equivalence.second < 0) {
+	lit_equivalence inverse_equivalence = equivalence.swap ().negate_both ();
 	condeq.push_back(inverse_equivalence);
       } else {
-	lit_equivalence inverse_equivalence (second, first);
+	lit_equivalence inverse_equivalence = equivalence.swap();
 	condeq.push_back(inverse_equivalence);
       }
     }

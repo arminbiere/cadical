@@ -1,4 +1,3 @@
-
 #ifndef _congruenc_hpp_INCLUDED
 #define _congruenc_hpp_INCLUDED
 
@@ -70,9 +69,15 @@ struct lit_equivalence {
   lit_equivalence (int f, int s)
   : first (f), second (s), first_clause (nullptr), second_clause (nullptr) {}
   lit_equivalence (): first (0), second (0), first_clause (nullptr), second_clause (nullptr) {};
-  void swap () {
+  lit_equivalence swap () {
     std::swap (first, second);
     std::swap (first_clause, second_clause);
+    return *this;
+  }
+  lit_equivalence negate_both () {
+    first = -first;
+    second = -second;
+    return *this;
   }
 };
 
@@ -354,6 +359,8 @@ struct Closure {
   void check_ite_implied (int lhs, int cond, int then_lit, int else_lit);
   void check_ite_gate_implied (Gate *g);
   void check_and_gate_implied (Gate *g);
+  void check_ite_lrat_reasons (Gate *g);
+  void check_contained_module_rewriting (Clause *c, int lit);
   void delete_proof_chain ();
 
   // ite gate extraction
