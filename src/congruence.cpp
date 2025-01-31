@@ -2778,6 +2778,8 @@ void inc_lits (vector<int>& lits){
 void Closure::check_ternary (int a, int b, int c) {
   if (!internal->opts.check)
     return;
+  if (internal->lrat)
+    return;
   auto &clause = internal->clause;
   assert (clause.empty ());
   clause.push_back(a);
@@ -2796,6 +2798,8 @@ void Closure::check_ternary (int a, int b, int c) {
 void Closure::check_binary_implied (int a, int b) {
   if (!internal->opts.check)
     return;
+  if (internal->lrat)
+    return;
   auto &clause = internal->clause;
   assert (clause.empty ());
   clause.push_back(a);
@@ -2806,6 +2810,8 @@ void Closure::check_binary_implied (int a, int b) {
 
 void Closure::check_implied () {
   if (!internal->opts.check)
+    return;
+  if (internal->lrat)
     return;
   internal->external->check_learned_clause ();
 }
@@ -4384,7 +4390,8 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
         garbage = true;
 	check_ite_gate_implied(h);
         int normalized_lhs = negate_lhs ? not_lhs : lhs;
-        add_ite_matching_proof_chain (h, h->lhs, normalized_lhs);
+	std::vector<uint64_t> extra_reasons_lit, extra_reasons_ulit;
+        add_ite_matching_proof_chain (g, h, h->lhs, normalized_lhs, extra_reasons_lit, extra_reasons_ulit);
         if (merge_literals (h->lhs, normalized_lhs))
 	  ++internal->stats.congruence.ites;
         if (!internal->unsat)
@@ -4483,7 +4490,7 @@ void Closure::simplify_ite_gate (Gate *g) {
       rhs.resize(2);
       assert (is_sorted (begin (rhs), end (rhs), sort_literals_smaller (internal)));
       g->hash = hash_lits (nonces, rhs);
-      check_and_gate_implied(g);
+      check_and_gate_implied (g);
       Gate *h = find_and_lits(rhs);
       if (h) {
 	assert (garbage);
@@ -4511,46 +4518,118 @@ void Closure::simplify_ite_gate (Gate *g) {
   ++internal->stats.congruence.simplified_ites;
 }
 
-void Closure::add_ite_matching_proof_chain (Gate *g, int lhs1, int lhs2) {
+void Closure::add_ite_matching_proof_chain (Gate *g, Gate *h, int lhs1, int lhs2, std::vector<uint64_t>&reasons1, std::vector<uint64_t>&reasons2) {
   if (lhs1 == lhs2)
     return;
   if (!internal->proof)
     return;
   LOG ("starting ITE matching proof chain");
   assert (unsimplified.empty ());
-
   assert (chain.empty ());
   const auto &rhs = g->rhs;
   const int cond = rhs[0];
+  const int then_lit = g->rhs[1];
+  const int else_lit = g->rhs[2];
+  uint64_t g_then_id = 0, g_neg_then_id = 0, g_else_id = 0, g_neg_else_id = 0;
+  uint64_t h_then_id = 0, h_neg_then_id = 0, h_else_id = 0, h_neg_else_id = 0;
+  if (internal->lrat) {
+    for (auto &litId : g->pos_lhs_ids) {
+      litId.clause = produce_rewritten_clause_lrat (litId.clause);
+      assert (litId.clause);
+      if (litId.current_lit == then_lit) {
+        assert (!g_then_id);
+        g_then_id = litId.clause->id;
+      }
+      if (litId.current_lit == -then_lit) {
+        assert (!g_neg_then_id);
+        g_neg_then_id = litId.clause->id;
+      }
+      if (litId.current_lit == else_lit) {
+        assert (!g_else_id);
+        g_else_id = litId.clause->id;
+      }
+      if (litId.current_lit == -else_lit) {
+        assert (!g_neg_else_id);
+        g_neg_else_id = litId.clause->id;
+      }
+    }
+    for (auto &litId : h->pos_lhs_ids) {
+      litId.clause = produce_rewritten_clause_lrat (litId.clause);
+      assert (litId.clause);
+      if (litId.current_lit == then_lit) {
+        assert (!h_then_id);
+        h_then_id = litId.clause->id;
+      }
+      if (litId.current_lit == -then_lit) {
+        assert (!h_neg_then_id);
+        h_neg_then_id = litId.clause->id;
+      }
+      if (litId.current_lit == else_lit) {
+        assert (!h_else_id);
+        h_else_id = litId.clause->id;
+      }
+      if (litId.current_lit == -else_lit) {
+        assert (!h_neg_else_id);
+        h_neg_else_id = litId.clause->id;
+      }
+    }
+    assert (g_then_id && g_else_id && g_neg_then_id && g_neg_else_id);
+    assert (h_then_id && h_else_id && h_neg_then_id && h_neg_else_id);
+  }
   unsimplified.push_back (lhs1);
   unsimplified.push_back (-lhs2);
   unsimplified.push_back (cond);
+  if (internal->lrat)
+    internal->lrat_chain.push_back(g_then_id), internal->lrat_chain.push_back(h_neg_then_id);
   const uint64_t id1 =
       simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.pop_back ();
   unsimplified.push_back (-cond);
+  if (internal->lrat)
+    internal->lrat_chain.push_back(h_then_id), internal->lrat_chain.push_back(g_neg_then_id);
   const uint64_t id2 =
     simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.pop_back ();
+
+  
+  if (internal->lrat)
+    reasons1.push_back (id1), reasons1.push_back (id2);
+#if 0 // in kissat and useful for debugging, but not more
+  if (internal->lrat)
+    internal->lrat_chain.push_back(id1), internal->lrat_chain.push_back(id2);
   const uint64_t id = check_and_add_to_proof_chain (unsimplified);
   add_clause_to_chain (unsimplified, id);
+#endif
   unsimplified.clear();
   unsimplified.push_back (-lhs1);
   unsimplified.push_back (lhs2);
   unsimplified.push_back (cond);
+
+  if (internal->lrat)
+    internal->lrat_chain.push_back(h_else_id), internal->lrat_chain.push_back(g_neg_else_id);
   const uint64_t id3 = simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.pop_back ();
   unsimplified.push_back (-cond);
+  if (internal->lrat)
+    internal->lrat_chain.push_back(h_else_id), internal->lrat_chain.push_back(g_neg_else_id);
   const uint64_t id4 = simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.pop_back ();
+
+#if 0 // in kissat and useful for debugging, but not more
+  if (internal->lrat)
+    internal->lrat_chain.push_back(id3), internal->lrat_chain.push_back(id4);
   const uint64_t id5 = simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.clear ();
+#endif
+  if (internal->lrat)
+    reasons2.push_back(id3), reasons2.push_back(id4);
+
   LOG ("finished ITE matching proof chain");
 }
 
 
 Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
-                             int else_lit) {
+                             int else_lit, std::vector<LitClausePair> &&clauses) {
 
   if (else_lit == -then_lit) {
     if (then_lit < 0)
@@ -4574,20 +4653,29 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
   LOG ("ITE gate %d = %d ? %d : %d", lhs, cond, then_lit, else_lit);
 
   bool negate_lhs = false;
-  Gate *g = find_ite_lits (this->rhs, negate_lhs);
+  Gate *h = find_ite_lits (this->rhs, negate_lhs);
   if (negate_lhs)
     lhs = -lhs;
-  if (g) {
-    check_ite_gate_implied (g);
-    add_ite_matching_proof_chain (g, g->lhs, lhs);
-    if (merge_literals (g->lhs, lhs)) {
+
+  Gate *g = new Gate;
+  g->lhs = lhs;
+  g->tag = Gate_Type::ITE_Gate;
+  g->rhs = {rhs};
+  g->pos_lhs_ids = clauses;
+
+  if (h) {
+    check_ite_gate_implied (h);
+    std::vector<uint64_t> extra_reasons_lit, extra_reasons_ulit;
+    add_ite_matching_proof_chain (h, g, h->lhs, lhs, extra_reasons_lit, extra_reasons_ulit);
+    if (merge_literals_lrat (h, g, h->lhs, lhs, extra_reasons_lit, extra_reasons_ulit)) {
       ++internal->stats.congruence.ites;
       LOG ("found merged literals");
     }
     if (!internal->unsat)
       delete_proof_chain ();
+    delete g;
+    return h;
   } else {
-    g = new Gate;
     g->lhs = lhs;
     g->tag = Gate_Type::ITE_Gate;
     g->rhs = {rhs};
@@ -4608,6 +4696,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit,
       connect_goccs (g, lit);
     }
   }
+  check_ite_lrat_reasons (g);
   return g;
 }
 
@@ -4632,6 +4721,37 @@ void Closure::check_ite_implied (int lhs, int cond, int then_lit, int else_lit) 
   check_ternary(cond, else_lit, -lhs);
   check_ternary(-cond, -then_lit, lhs);
   check_ternary(-cond, then_lit, -lhs);
+
+}
+
+void Closure::check_contained_module_rewriting (Clause *c, int lit) {
+  const int normalize_lit = find_eager_representative (lit);
+  bool found = false;
+  for (auto other : *c) {
+    const int normalize_other = find_eager_representative (other);
+    if (normalize_other == normalize_lit) {
+      found = true;
+      break;
+    }
+  }
+  assert (found);
+}
+
+void Closure::check_ite_lrat_reasons (Gate *g) {
+  assert (g->tag == Gate_Type::ITE_Gate);
+  if (!internal->lrat)
+    return;
+  assert (g->rhs.size() == 3);
+  assert (g->pos_lhs_ids.size () == 4);
+  assert (g->neg_lhs_ids.empty());
+  check_contained_module_rewriting (g->pos_lhs_ids[0].clause, g->rhs[1]);
+  assert (g->pos_lhs_ids[0].current_lit == g->rhs[1]);
+  check_contained_module_rewriting (g->pos_lhs_ids[1].clause, -g->rhs[1]);
+  assert (g->pos_lhs_ids[1].current_lit == -g->rhs[1]);
+  check_contained_module_rewriting (g->pos_lhs_ids[2].clause, g->rhs[2]);
+  assert (g->pos_lhs_ids[2].current_lit == g->rhs[2]);
+  check_contained_module_rewriting (g->pos_lhs_ids[3].clause, -g->rhs[3]);
+  assert (g->pos_lhs_ids[3].current_lit == -g->rhs[2]);
 }
 
 void Closure::check_ite_gate_implied (Gate *g) {
@@ -4720,7 +4840,7 @@ void Closure::reset_ite_gate_extraction () {
   internal->clear_occs ();
 }
 
-void Closure::copy_conditional_equivalences (int lit, std::vector<std::pair<int, int>> &condbin) {
+void Closure::copy_conditional_equivalences (int lit, lit_implications &condbin) {
   assert (condbin.empty());
   for (auto c : internal->occs (lit)) {
     assert(c->size != 2);
@@ -4738,20 +4858,24 @@ void Closure::copy_conditional_equivalences (int lit, std::vector<std::pair<int,
       }
     }
     assert (first), assert (second);
-    std::pair<int, int> p;
+    lit_implication p (first, second, c);
     
-    if (internal->vlit (first) < internal->vlit (second))
-      p.first = first, p.second = second;
+    if (internal->vlit (first) < internal->vlit (second)){
+      assert (p.first == first);
+      assert (p.second == second);
+    }
     else {
       assert (internal->vlit (second) < internal->vlit (first));
-      p.first = second, p.second = first;
+      p.swap ();
+      assert (p.first == second);
+      assert (p.second == first);
     }
     LOG ("literal %d condition binary clause %d %d", lit, first, second);
     condbin.push_back(p);
   }
 }
 
-bool less_litpair (litpair p, litpair q) {
+bool less_litpair (lit_equivalence p, lit_equivalence q) {
   const int a = p.first;
   const int b = q.first;
   if (a < b)
@@ -4766,7 +4890,7 @@ struct litpair_rank {
   CaDiCaL::Internal *internal;
   litpair_rank  (Internal *i) : internal (i) {}
   typedef uint64_t Type;
-  Type operator() (const litpair &a) const {
+  Type operator() (const lit_implication &a) const {
     uint64_t lita = internal->vlit(a.first);
     uint64_t litb = internal->vlit(a.second);
     return (lita<<32) + litb;
@@ -4776,7 +4900,7 @@ struct litpair_rank {
 struct litpair_smaller {
   CaDiCaL::Internal *internal;
   litpair_smaller (Internal *i) : internal (i) {}
-  bool operator() (const litpair &a, const litpair &b) const {
+  bool operator() (const lit_implication &a, const lit_implication &b) const {
     const auto s = litpair_rank (internal) (a);
     const auto t = litpair_rank (internal) (b);
     return s < t;
@@ -4784,15 +4908,23 @@ struct litpair_smaller {
 };
 
 
-bool Closure::find_litpair_second_literal (int lit, litpairs::const_iterator begin,
-                                  litpairs::const_iterator end) {
+lit_implications::const_iterator Closure::find_lit_implication_second_literal (int lit, lit_implications::const_iterator begin,
+                                  lit_implications::const_iterator end) {
   LOG ("searching for %d in", lit);
   for (auto it = begin; it != end; ++it)
     LOG ("%d [%d]", it->first, it->second);
-  auto found = std::binary_search(begin, end, std::pair<int,int>{lit, lit}, [](const litpair& a, const litpair &b) {
+  lit_implications::const_iterator found = std::lower_bound (begin, end, lit_implication{lit, lit}, [](const lit_implication& a, const lit_implication &b) {
     return a.second < b.second;
   });
-  return found;
+  auto found2 = std::binary_search (begin, end, lit_implication{lit, lit}, [](const lit_implication& a, const lit_implication &b) {
+    return a.second < b.second;
+  });
+
+  if (found < end && found->second == lit){
+    assert (found2 == (found < end));
+    return found;
+  }
+  return end;
 /*
   litpairs::const_iterator l = begin, r = end;
   while (l != r) {
@@ -4811,38 +4943,38 @@ bool Closure::find_litpair_second_literal (int lit, litpairs::const_iterator beg
 }
 
 void Closure::search_condeq (int lit, int pos_lit,
-                             litpairs::const_iterator pos_begin,
-                             litpairs::const_iterator pos_end, int neg_lit,
-                             litpairs::const_iterator neg_begin,
-                             litpairs::const_iterator neg_end,
-                             litpairs &condeq) {
+                             lit_implications::const_iterator pos_begin,
+                             lit_implications::const_iterator pos_end, int neg_lit,
+                             lit_implications::const_iterator neg_begin,
+                             lit_implications::const_iterator neg_end,
+                             lit_equivalences &condeq) {
   assert (neg_lit == - pos_lit);
   assert (pos_begin < pos_end);
   assert (neg_begin < neg_end);
   assert (pos_begin->first == pos_lit);
   assert (neg_begin->first == neg_lit);
   assert (pos_end <= neg_begin || neg_end <= pos_begin);
-  for (litpairs::const_iterator p = pos_begin; p != pos_end; p++) {
+  for (lit_implications::const_iterator p = pos_begin; p != pos_end; p++) {
     const int other = p->second;
     const int not_other = -other;
-    if (find_litpair_second_literal (not_other, neg_begin, neg_end)) {
-      int first, second;
-      if (pos_lit < 0)
-        first = neg_lit, second = other;
-      else
-        first = pos_lit, second = not_other;
-      LOG ("found conditional %d equivalence %d = %d", lit, first,  second);
-      assert (first > 0);
-      assert (internal->vlit (first) < internal->vlit (second));
-      check_ternary (lit, first, -second);
-      check_ternary (lit, -first, second);
-      std::pair<int, int> equivalence = {first, second};
+    Clause* first_id = p->clause;
+    const lit_implications::const_iterator other_clause = find_lit_implication_second_literal (not_other, neg_begin, neg_end);
+    if (other_clause != neg_end) {
+      lit_equivalence equivalence (neg_lit, first_id, other, other_clause->clause);
+      if (pos_lit > 0) {
+	equivalence.negate_both ();
+      }
+      LOG ("found conditional %d equivalence %d = %d", lit, equivalence.first,  equivalence.second);
+      assert (equivalence.first > 0);
+      assert (internal->vlit (equivalence.first) < internal->vlit (equivalence.second));
+      check_ternary (lit, neg_lit, -other);
+      check_ternary (lit, -neg_lit, other);
       condeq.push_back(equivalence);
-      if (second < 0) {
-	std::pair<int, int> inverse_equivalence = {-second, -first};
+      if (equivalence.second < 0) {
+	lit_equivalence inverse_equivalence = equivalence.swap ().negate_both ();
 	condeq.push_back(inverse_equivalence);
       } else {
-	std::pair<int, int> inverse_equivalence = {second, first};
+	lit_equivalence inverse_equivalence = equivalence.swap();
 	condeq.push_back(inverse_equivalence);
       }
     }
@@ -4852,10 +4984,10 @@ void Closure::search_condeq (int lit, int pos_lit,
 #endif
 }
 
-void Closure::extract_condeq_pairs (int lit, litpairs &condbin, litpairs &condeq) {
-  const litpairs::const_iterator begin = condbin.cbegin();
-  const litpairs::const_iterator end = condbin.cend();
-  litpairs::const_iterator pos_begin = begin;
+void Closure::extract_condeq_pairs (int lit, lit_implications &condbin, lit_equivalences &condeq) {
+  const lit_implications::const_iterator begin = condbin.cbegin();
+  const lit_implications::const_iterator end = condbin.cend();
+  lit_implications::const_iterator pos_begin = begin;
   int next_lit = 0;
 
 #ifdef LOGGING  
@@ -4879,7 +5011,7 @@ void Closure::extract_condeq_pairs (int lit, litpairs &condbin, litpairs &condeq
     assert (next_lit == pos_begin->first);
     assert (next_lit > 0);
     const int pos_lit = next_lit;
-    litpairs::const_iterator pos_end = pos_begin + 1;
+    lit_implications::const_iterator pos_end = pos_begin + 1;
     LOG ("searching for first other literal after finding lit %d", next_lit);
     for (;;) {
       if (pos_end == end)
@@ -4908,8 +5040,8 @@ void Closure::extract_condeq_pairs (int lit, litpairs &condbin, litpairs &condeq
         pos_begin = pos_end;
       continue;
     }
-    const litpairs::const_iterator neg_begin = pos_end;
-    litpairs::const_iterator neg_end = neg_begin + 1;
+    const lit_implications::const_iterator neg_begin = pos_end;
+    lit_implications::const_iterator neg_end = neg_begin + 1;
     while (neg_end != end) {
       next_lit = neg_end->first;
       if (next_lit != neg_lit)
@@ -4917,11 +5049,11 @@ void Closure::extract_condeq_pairs (int lit, litpairs &condbin, litpairs &condeq
       neg_end++;
     }
 #ifdef LOGGING
-    for (litpairs::const_iterator p = pos_begin; p != pos_end; p++)
+    for (lit_implications::const_iterator p = pos_begin; p != pos_end; p++)
       LOG ("conditional %d binary clause %d %d with positive %d",
             (lit),  (p->first),  (p->second),
             (pos_lit));
-    for (litpairs::const_iterator p = neg_begin; p != neg_end; p++)
+    for (lit_implications::const_iterator p = neg_begin; p != neg_end; p++)
       LOG ("conditional %d binary clause %d %d with negative %d",
             (lit),  (p->first),  (p->second),
             (neg_lit));
@@ -4959,8 +5091,8 @@ void Closure::extract_condeq_pairs (int lit, litpairs &condbin, litpairs &condeq
 
 void Closure::find_conditional_equivalences (
     int lit,
-    std::vector<std::pair<int, int>> &condbin,
-    std::vector<std::pair<int, int>> &condeq) {
+    lit_implications &condbin,
+    lit_equivalences &condeq) {
   assert (condbin.empty());
   assert (condeq.empty());
   assert (internal->occs (lit).size () > 1);
@@ -4981,7 +5113,7 @@ void Closure::find_conditional_equivalences (
 }
 
 
-void Closure::merge_condeq (int cond, litpairs & condeq, litpairs & not_condeq) {
+void Closure::merge_condeq (int cond, lit_equivalences & condeq, lit_equivalences & not_condeq) {
   LOG ("merging cond for literal %d", cond);
   auto q = begin (not_condeq);
   const auto end_not_condeq = end (not_condeq);
@@ -4992,9 +5124,16 @@ void Closure::merge_condeq (int cond, litpairs & condeq, litpairs & not_condeq) 
     while (q != end_not_condeq && q->first < lhs)
       ++q;
     while (q != end_not_condeq && q->first == lhs){
-      litpair not_cond_pair = *q++;
+      lit_equivalence not_cond_pair = *q++;
       const int else_lit = not_cond_pair.second;
-      new_ite_gate (lhs, cond, then_lit, else_lit);
+      std::vector<LitClausePair> clauses;
+      if (internal->lrat){
+	clauses.push_back(make_LitClausePair(then_lit, p.first_clause));
+	clauses.push_back(make_LitClausePair(-then_lit, p.second_clause));
+	clauses.push_back(make_LitClausePair(else_lit, q->first_clause));
+	clauses.push_back(make_LitClausePair(-else_lit, q->second_clause));
+      }
+      new_ite_gate (lhs, cond, then_lit, else_lit, std::move (clauses));
       if (internal->unsat)
 	return;
     }
