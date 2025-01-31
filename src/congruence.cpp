@@ -2778,7 +2778,7 @@ void inc_lits (vector<int>& lits){
 void Closure::check_ternary (int a, int b, int c) {
   if (!internal->opts.check)
     return;
-  if (internal->lrat)
+  if (internal->lrat || internal->lratbuilder)
     return;
   auto &clause = internal->clause;
   assert (clause.empty ());
@@ -2798,7 +2798,7 @@ void Closure::check_ternary (int a, int b, int c) {
 void Closure::check_binary_implied (int a, int b) {
   if (!internal->opts.check)
     return;
-  if (internal->lrat)
+  if (internal->lrat || internal->lratbuilder)
     return;
   auto &clause = internal->clause;
   assert (clause.empty ());
@@ -4725,10 +4725,11 @@ void Closure::check_ite_implied (int lhs, int cond, int then_lit, int else_lit) 
 }
 
 void Closure::check_contained_module_rewriting (Clause *c, int lit) {
-  const int normalize_lit = find_eager_representative (lit);
+  const int normalize_lit = find_representative (lit);
   bool found = false;
+  LOG (c, "looking for (normalized) %d in ", lit);
   for (auto other : *c) {
-    const int normalize_other = find_eager_representative (other);
+    const int normalize_other = find_representative (other);
     if (normalize_other == normalize_lit) {
       found = true;
       break;
@@ -4750,7 +4751,7 @@ void Closure::check_ite_lrat_reasons (Gate *g) {
   assert (g->pos_lhs_ids[1].current_lit == -g->rhs[1]);
   check_contained_module_rewriting (g->pos_lhs_ids[2].clause, g->rhs[2]);
   assert (g->pos_lhs_ids[2].current_lit == g->rhs[2]);
-  check_contained_module_rewriting (g->pos_lhs_ids[3].clause, -g->rhs[3]);
+  check_contained_module_rewriting (g->pos_lhs_ids[3].clause, -g->rhs[2]);
   assert (g->pos_lhs_ids[3].current_lit == -g->rhs[2]);
 }
 
@@ -5128,8 +5129,12 @@ void Closure::merge_condeq (int cond, lit_equivalences & condeq, lit_equivalence
       const int else_lit = not_cond_pair.second;
       std::vector<LitClausePair> clauses;
       if (internal->lrat){
-	clauses.push_back(make_LitClausePair(then_lit, p.first_clause));
-	clauses.push_back(make_LitClausePair(-then_lit, p.second_clause));
+	LOG (p.first_clause, "pairing %d", -then_lit);
+	LOG (p.second_clause, "pairing %d", then_lit);
+	LOG (q->first_clause, "pairing %d", else_lit);
+	LOG (q->second_clause, "pairing %d", -else_lit);
+	clauses.push_back(make_LitClausePair(then_lit, p.second_clause));
+	clauses.push_back(make_LitClausePair(-then_lit, p.first_clause));
 	clauses.push_back(make_LitClausePair(else_lit, q->first_clause));
 	clauses.push_back(make_LitClausePair(-else_lit, q->second_clause));
       }
