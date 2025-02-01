@@ -207,6 +207,9 @@ struct Closure {
   int find_representative_and_compress (int, bool update_eager = true);
   void find_representative_and_compress_both (int); // generates clauses for -lit and lit
   int find_eager_representative (int);
+
+  // compreses the path from lit to the representative with a new clause if needed.
+  // Save internal->lrat_chain to avoid any issue.
   int find_eager_representative_and_compress (int);
   void find_eager_representative_and_compress_both (int); // generates clauses for -lit and lit
   uint64_t & eager_representative_id (int lit);

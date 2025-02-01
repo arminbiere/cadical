@@ -402,7 +402,10 @@ int Closure::find_eager_representative_and_compress (int lit) {
   // we have to do path compression to support LRAT proofs
   if (path_length > 2) {
     LOG ("learning new rewriting from %d to %d (current path length: %d)", lit, res, path_length);
+    std::vector<uint64_t> chain;
     if (internal->lrat) {
+      chain = std::move (internal->lrat_chain);
+      internal->lrat_chain.clear ();
       produce_eager_representative_lrat (lit);
     }
     eager_representative (lit) = res;
@@ -412,8 +415,9 @@ int Closure::find_eager_representative_and_compress (int lit) {
     if (internal->lrat && equiv) {
       eager_representative_id (lit) = equiv->id;
     }
-    if (internal->lrat)
-      internal->lrat_chain.clear ();
+    if (internal->lrat) {
+      internal->lrat_chain = std::move (chain);
+    }
   } else if (path_length == 2) {
     LOG ("duplicated information %d -> %d to eager with clause %" PRIu64, lit, res, eager_representative_id (lit));
     assert (eager_representative (lit) == res);
