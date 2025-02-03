@@ -3201,8 +3201,13 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
   assert (g->tag == Gate_Type::XOr_Gate);
   if (!internal->opts.check)
     return;
-  if (internal->lrat)
+  if (internal->lrat) {
+    assert (std::is_sorted (begin (g->pos_lhs_ids), end (g->pos_lhs_ids), [](LitClausePair &x, LitClausePair &y) {return x.current_lit < y.current_lit;}));
+    for (auto litId : g->pos_lhs_ids) {
+      assert (litId.current_lit == number_from_xor_reason(litId.clause));
+    }
     return;
+  }
   const int lhs = g->lhs;
   LOGGATE (g, "checking implied");
   auto &clause = internal->clause;
@@ -3443,6 +3448,16 @@ Gate *Closure::new_xor_gate (int lhs) {
   }
   return g;
 }
+uint32_t Closure::number_from_xor_reason (const Clause *const rhs) {
+  size_t n = 0;
+  assert (is_sorted(begin (*rhs), end (*rhs), sort_literals_smaller (internal)));
+  assert (rhs->size <= 32);
+  for (auto lit : *rhs) {
+    n *= 2;
+    n += (lit > 0);
+  }
+  return n;
+}
 
 uint32_t Closure::number_from_xor_reason (const std::vector<int> &rhs) {
   size_t n = 0;
@@ -3468,12 +3483,11 @@ void Closure::gate_sort_lrat_reasons (std::vector<LitClausePair> &xs) {
   for (auto &litId : xs) {
     gate_sort_lrat_reasons(litId);
   }
+  std::sort (begin (xs), end (xs), [](LitClausePair &x, LitClausePair &y) {return x.current_lit < y.current_lit;});
 
 #if DEBUG
   std::for_each (begin (xs), end (xs), [&xs] (const LitClausePair &x) {assert (x.clause->size == xs[1].clause->size);});
 #endif
-  // how do I fix it?
-
 }
 
 void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {

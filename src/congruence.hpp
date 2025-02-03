@@ -468,6 +468,7 @@ struct Closure {
   
   // XOR
   uint32_t number_from_xor_reason (const std::vector<int> &rhs);
+  uint32_t number_from_xor_reason (const Clause *const rhs);
   void gate_sort_lrat_reasons (std::vector<LitClausePair>&);
   void gate_sort_lrat_reasons (LitClausePair &);
 
