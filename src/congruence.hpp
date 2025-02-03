@@ -1,7 +1,7 @@
 #ifndef _congruenc_hpp_INCLUDED
 #define _congruenc_hpp_INCLUDED
 
-
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cstddef>
@@ -29,14 +29,20 @@ namespace CaDiCaL {
 //   inputs
 //   3. forward subsume
 //
-// In step 0 the normalization is fully lazy but we do not care about a normal form. Therefore we
-// actually eagerly merge literals.
+// In step 0 the normalization is fully lazy but we do not care about a
+// normal form. Therefore we actually eagerly merge literals.
 //
-// In step 2 there is a subtility: we only replace with the equivalence chain as far as we
-// propagated so far. This is the eager part. For LRAT we produce the equivalence up to the point we
-// have propagated, no the full chain. This is important for merging literals.  To merge literals we
-// use union-find but we only compress paths when rewriting the literal, not before.
-
+// In step 2 there is a subtility: we only replace with the equivalence
+// chain as far as we propagated so far. This is the eager part. For LRAT we
+// produce the equivalence up to the point we have propagated, no the full
+// chain. This is important for merging literals.  To merge literals we use
+// union-find but we only compress paths when rewriting the literal, not
+// before.
+//
+// An important point: We cannot use internal->lrat_chain and internal->clause because in most
+// places we can interrupt the transformation to learn a new clause representing an
+// equivalence. However, we can only have 2 layers so we use this->lrat_chain and
+  // internal->lrat_chain when we really produce the proof.
 struct Internal;
 
 #define LD_MAX_ARITY 26
@@ -64,6 +70,14 @@ struct lit_equivalence {
   int second;
   Clause* first_clause;
   Clause* second_clause;
+  void check_invariant () {
+    assert (second_clause);
+    assert (first_clause);
+    assert (std::find (begin (*first_clause), end (*first_clause), first) != end (*first_clause));
+    assert (std::find (begin (*second_clause), end (*second_clause), second) != end (*second_clause));
+    assert (std::find (begin (*first_clause), end (*first_clause), -second) != end (*first_clause));
+    assert (std::find (begin (*second_clause), end (*second_clause), -first) != end (*second_clause));
+  }
   lit_equivalence (int f, Clause* f_id, int s, Clause* s_id)
   : first (f), second (s), first_clause (f_id), second_clause (s_id) {}
   lit_equivalence (int f, int s)
@@ -77,6 +91,7 @@ struct lit_equivalence {
   lit_equivalence negate_both () {
     first = -first;
     second = -second;
+    std::swap (first_clause, second_clause);
     return *this;
   }
 };
@@ -173,7 +188,8 @@ struct Closure {
   vector<int> lits; // result of definitions
   vector<int> rhs; // stack for storing RHS
   vector<int> unsimplified; // stack for storing unsimplified version (XOR, ITEs) for DRAT proof
-  vector<int> chain;
+  vector<int> chain; // store clauses to be able to delete them properly
+  vector<int> clause; // storing partial clauses
   vector<uint64_t> glargecounts; // count for large clauses to complement internal->noccs
   vector<uint64_t> gnew_largecounts; // count for large clauses to complement internal->noccs
   GatesTable table;
@@ -186,6 +202,7 @@ struct Closure {
   vector<int> proof_analyzed;
   vector<signed char> resolvent_marks;
   vector<int> resolvent_analyzed;
+  mutable vector<uint64_t> lrat_chain; // storing LRAT chain
 
 #ifdef LOGGING
   uint64_t fresh_id;
@@ -242,10 +259,11 @@ struct Closure {
   // restricted than our LRAT chain.
   bool merge_literals_equivalence (int lit, int other, Clause *c1, Clause *c2);
   bool merge_literals_lrat (Gate *g, Gate *h, int lit, int other, const std::vector<uint64_t>& = {}, const std::vector<uint64_t> & = {});
+  bool merge_literals_lrat (int lit, int other, const std::vector<uint64_t>& = {}, const std::vector<uint64_t> & = {});
   bool merge_literals (int lit, int other, bool learn_clauses = true);
 
   // proof production
-  vector<LitClausePair> lrat_chain;
+  vector<LitClausePair> lrat_chain_and_gate;
   void push_lrat_id (const Clause *const c, int lit);
   void push_lrat_unit (int lit);
 
