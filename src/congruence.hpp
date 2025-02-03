@@ -466,7 +466,10 @@ struct Closure {
   signed char& proof_marked (int lit);
   signed char& resolvent_marked (int lit);
   
-  // negbincount (lit) -> noccs (-lit)
+  // XOR
+  uint32_t number_from_xor_reason (const std::vector<int> &rhs);
+  void gate_sort_lrat_reasons (std::vector<LitClausePair>&);
+  void gate_sort_lrat_reasons (LitClausePair &);
 
 };
 
