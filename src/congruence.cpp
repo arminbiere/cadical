@@ -3202,7 +3202,7 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
   if (!internal->opts.check)
     return;
   if (internal->lrat) {
-    assert (std::is_sorted (begin (g->pos_lhs_ids), end (g->pos_lhs_ids), [](LitClausePair &x, LitClausePair &y) {return x.current_lit < y.current_lit;}));
+    assert (std::is_sorted (begin (g->pos_lhs_ids), end (g->pos_lhs_ids), [](const LitClausePair &x, const LitClausePair &y) {return x.current_lit < y.current_lit;}));
     for (auto litId : g->pos_lhs_ids) {
       assert (litId.current_lit == number_from_xor_reason(litId.clause));
     }
@@ -4738,6 +4738,11 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
 	if (new_tag == Gate_Type::XOr_Gate) {
 	  produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, Rewrite (), Rewrite ());
 	  gate_sort_lrat_reasons (g->pos_lhs_ids);
+#ifndef NDEBUG
+            std::for_each (
+                begin (g->pos_lhs_ids), end (g->pos_lhs_ids),
+                [] (LitClausePair l) { assert (l.clause->size == 2); });
+#endif
 	}
 	else if (new_tag == Gate_Type::And_Gate) {
 	  // we have to get rid of one clause, two become binaries, and becomes ternary
@@ -4750,7 +4755,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
           if (ternary_clause != end (g->pos_lhs_ids)) {
             g->neg_lhs_ids.push_back (*ternary_clause);
             g->pos_lhs_ids.erase (ternary_clause);
-#if DEBUG
+#ifndef NDEBUG
             std::for_each (
                 begin (g->pos_lhs_ids), end (g->pos_lhs_ids),
                 [] (LitClausePair l) { assert (l.clause->size == 2); });
@@ -4793,7 +4798,7 @@ void Closure::rewrite_ite_gate(Gate *g, int dst, int src) {
           if (lit != dst)
             if (lit != cond && lit != then_lit && lit != else_lit)
               connect_goccs (g, lit);
-        if (g->tag == Gate_Type::And_Gate)
+        if (g->tag == Gate_Type::And_Gate && !internal->lrat)
           for (auto lit : g->rhs)
             add_binary_clause (-g->lhs, lit);
       }
@@ -4947,6 +4952,8 @@ void Closure::add_ite_matching_proof_chain (Gate *g, Gate *h, int lhs1, int lhs2
   if (lhs1 == lhs2)
     return;
   if (!internal->proof)
+    return;
+  if (!internal->opts.check)
     return;
   LOG ("starting ITE matching proof chain");
   assert (unsimplified.empty ());
@@ -5163,7 +5170,7 @@ void check_ite_lits_normalized (const std::vector<int> &lits) {
   assert (lits[0] != -lits[1]);
   assert (lits[0] != -lits[2]);
   assert (lits[1] != -lits[2]);
-#ifdef NDEBUG
+#ifndef NDEBUG
   (void) lits;
 #endif
 }
