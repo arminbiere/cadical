@@ -491,9 +491,13 @@ struct Closure {
   Clause* produce_rewritten_clause_lrat (Clause *c, Rewrite rew1,
 					 Rewrite rew2,
 				   int execept_lhs = 0, int except_lhs2 = 0);
-  Clause* produce_rewritten_clause_lrat (Clause *c, int except = 0, uint64_t id1 = 0, uint64_t id2 = 0,
-				   int except_other = 0, uint64_t id_other1 = 0, uint64_t id_other2 = 0,
-				   int execept_lhs = 0, int except_lhs2 = 0);
+  Clause *produce_rewritten_clause_lrat (
+      Clause *c, int except = 0, uint64_t id1 = 0, uint64_t id2 = 0,
+      int except_other = 0, uint64_t id_other1 = 0, uint64_t id_other2 = 0,
+					 int execept_lhs = 0, int except_lhs2 = 0);
+  // variant where we update the indices after removing the tautologies
+void produce_rewritten_clause_lrat_and_clean (std::vector<LitClausePair> &litIds, Rewrite rew1,
+					      Rewrite rew2, int except_lhs, int except_lhs2, size_t &old_position1, size_t &old_position2);
   // binary extraction and ternary strengthening
   void extract_binaries ();
   bool find_binary (int, int) const;
@@ -530,6 +534,11 @@ struct Closure {
   void gate_sort_lrat_reasons (std::vector<LitClausePair>&);
   void gate_sort_lrat_reasons (LitClausePair &);
 
+  void rewrite_ite_gate_lrat_and (Gate *g, int dst, int src, size_t c, size_t d);
+  void produce_ite_merge_then_else_reasons (
+      Gate *g, int dst, int src, std::vector<uint64_t> &reasons_implication,
+      std::vector<uint64_t> &reasons_back);
+  void rewrite_ite_gate_update_lrat_reasons (Gate *g, int src, int dst);
 };
 
 } // namespace CaDiCaL
