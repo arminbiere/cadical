@@ -24,7 +24,7 @@ namespace CaDiCaL {
 //
 // The idea is to:
 //   0. handle binary clauses
-//   1. detect gates and merge gates with same inputs
+//   1. detect gates and merge gates with same inputs ('lazy')
 //   2. eagerly replace the equivalent literals and merge gates with same
 //   inputs
 //   3. forward subsume
@@ -37,12 +37,31 @@ namespace CaDiCaL {
 // produce the equivalence up to the point we have propagated, no the full
 // chain. This is important for merging literals.  To merge literals we use
 // union-find but we only compress paths when rewriting the literal, not
-// before.
+// before. The compression was not considered important in Kissat, but we do
+// it aggressively as a mirror of the equivalences we have generated.
+//
+// We have two structures for merging:
+//   - the lazy ones contains alls merges, with functions like
+//   find_representative
+//
+//   - the eager version that gets the merges one by one, with functions
+//   like find_eager_representatives
+//
+//  The two structures are nicely separated and we only working on one of
+//  them except for:
+//
+//    1. When propagating one equivalence, we first important the
+//    equivalence from the lazy to the eager version, producing the full
+//    chain.
+//
+//    2. When merging the literals, we merge the literals given by the lazy structure, then we merge
+//    their representative in the eager version, updating only the lazy structure. We do not update
+//    the eager version.
 //
 // An important point: We cannot use internal->lrat_chain and internal->clause because in most
 // places we can interrupt the transformation to learn a new clause representing an
 // equivalence. However, we can only have 2 layers so we use this->lrat_chain and
-  // internal->lrat_chain when we really produce the proof.
+// internal->lrat_chain when we really produce the proof.
 struct Internal;
 
 #define LD_MAX_ARITY 26
@@ -50,6 +69,8 @@ struct Internal;
 
 enum class Gate_Type { And_Gate, XOr_Gate, ITE_Gate };
 
+
+// Wrapper when we are looking for implication in if-then-else gates
 struct lit_implication {
   int first;
   int second;
@@ -64,7 +85,7 @@ struct lit_implication {
   }
 };
 
-
+// Wrapper when we are looking for equivalence for if-then-else-gate. They are produced by merging implication
 struct lit_equivalence {
   int first;
   int second;
@@ -108,6 +129,27 @@ struct LitClausePair {
 
 LitClausePair make_LitClausePair (int lit, Clause* cl);
 
+// The core structure of this algorithm: the gate. It is composed of a
+// left-hand side and an array of right-hand side.
+//
+// There are a few tags to help remembering the status of the gate (like
+// deleted)
+//
+// To keep track of the proof we use two extra arrays:
+//  - `neg_lhs_ids' contains the long clause for AND gates. Otherwise, it is
+//  empty.
+//  - `pos_lhs_ids' contains all the remaining gates.
+//
+// We keep the reasons with an index. This index depends on the gates:
+
+//   - AND-Gates and ITE-Gates: the index is the literal from the RHS
+//
+//   - XOR-Gates: if you order the clauses by the order of the literals,
+//   each literal is either positive (bit '1') or negative (bit '0'). This
+//   gives a number that we can use.
+//
+// TODO Florian: I do not think that you have to changed anything, look at the 'Look at this first'
+// in the CPP file.
 struct Gate {
 #ifdef LOGGING
   uint64_t id;
@@ -122,7 +164,7 @@ struct Gate {
   vector<uint64_t> units;
   vector<LitClausePair> pos_lhs_ids;
   vector<LitClausePair> neg_lhs_ids;
-  bool tautological_clauses;
+  bool tautological_clauses; // TODO delete
   vector<int>rhs;
 
   size_t arity () const {
@@ -218,27 +260,49 @@ struct Closure {
   vector<uint64_t> eager_representant_id; // lrat version of union-find
   int & representative (int lit);
   int representative (int lit) const;
+  uint64_t &representative_id (int lit);
+  uint64_t representative_id (int lit) const;
   int & eager_representative (int lit);
   int eager_representative (int lit) const;
+  uint64_t & eager_representative_id (int lit);
+  uint64_t eager_representative_id (int lit) const;
+
+  // representative in the union-find structure in the lazy equivalences
   int find_representative (int lit);
+  // find the representative and produce the binary clause representing the normalization from the
+  // literal to the result.
   int find_representative_and_compress (int, bool update_eager = true);
-  void find_representative_and_compress_both (int); // generates clauses for -lit and lit
+  // find the lazy representative for the `lit' and `-lit'
+  void find_representative_and_compress_both (int); 
+  // find the eager representative
   int find_eager_representative (int);
 
   // compreses the path from lit to the representative with a new clause if needed.
   // Save internal->lrat_chain to avoid any issue.
   int find_eager_representative_and_compress (int);
-  void find_eager_representative_and_compress_both (int); // generates clauses for -lit and lit
-  uint64_t & eager_representative_id (int lit);
-  uint64_t eager_representative_id (int lit) const;
-  uint64_t &representative_id (int lit);
-  uint64_t representative_id (int lit) const;
+  // Import the path from the literal and its negation to the representative in the lazy graph to
+  // the eager part, producing the binary clauses.
+  void import_lazy_and_find_eager_representative_and_compress_both (
+      int); // generates clauses for -lit and lit
+
+  // returns the ID of the LRAT clause for the normalization from the literal lit to its argument,
+  // assuming that the representative was already compressed.
   uint64_t find_representative_lrat (int lit);
+  // returns the ID of the LRAT clause for the eager normalization from the literal lit to its
+  // argument assuming that the representative was already compressed.
   uint64_t find_eager_representative_lrat (int lit);
+
+  // Writes the LRAT chain required for the eager normalization to `lrat_chain`.
   void produce_eager_representative_lrat (int lit);
+  // Writes the LRAT chain required for the lazy normalization to `lrat_chain`.
   void produce_representative_lrat (int lit);
+
+
+  // learns a binary clause
   Clause* add_binary_clause (int a, int b);
 
+  // promotes a clause from redundant to irredundant. We do this for all clauses involved in gates
+  // to make sure that we produce correct result.
   void promote_clause (Clause *);
 
   // Merge functions. We actually need different several versions for LRAT in order to simplify the
@@ -275,19 +339,13 @@ struct Closure {
 				   std::vector<uint64_t> &chain, bool = true,
 				   Rewrite rewrite2 = Rewrite (),
 				   int execept_lhs = 0, int except_lhs2 = 0);
-  void push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
-				   std::vector<uint64_t> &chain, bool = true,
-				   Rewrite rewrite2 = Rewrite (),
-				   int execept_lhs = 0, int except_lhs2 = 0);
+  void push_id_on_chain (Clause *c);
   void push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
 				   std::vector<uint64_t> &chain, bool = true,
 				   Rewrite rewrite2 = Rewrite (),
 					int execept_lhs = 0, int except_lhs2 = 0);
   // TODO: does nothing except pushing on the stack, remove!
-  void push_id_and_rewriting_lrat (const std::vector<LitClausePair> &c, Rewrite rewrite1,
-				   std::vector<uint64_t> &chain, bool = true,
-				   Rewrite rewrite2 = Rewrite (),
-				   int execept_lhs = 0, int except_lhs2 = 0);
+  void push_id_on_chain (const std::vector<LitClausePair> &c);
   void produce_lrat_for_rewrite (std::vector<uint64_t> &chain, Rewrite rewrite, int);
   void unmark_marked_lrat ();
   void unmark_lrat_resolvents ();

@@ -432,7 +432,7 @@ void Closure::find_representative_and_compress_both (int lit) {
   find_representative_and_compress (-lit, false);
 }
 
-void Closure::find_eager_representative_and_compress_both (int lit) {
+void Closure::import_lazy_and_find_eager_representative_and_compress_both (int lit) {
   find_representative_and_compress (lit);
   find_eager_representative_and_compress (lit);
   find_representative_and_compress (-lit);
@@ -831,28 +831,17 @@ void Closure::push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
   
   // Note: it is important that the Rewrite takes over the normal rewriting, because we can force
   // rewriting that way that have not been done eagerly yet.
-void Closure::push_id_and_rewriting_lrat (Clause *c, Rewrite rewrite1,
-                                          std::vector<uint64_t> &chain,
-                                          bool insert_id_after,
-                                          Rewrite rewrite2, int except_lhs,
-                                          int except_lhs2) {
-  LOG (c, "computing normalized LRAT chain for clause, rewriting except for %d (%" PRIu64 ", %" PRIu64
-	  ") and %d (%" PRIu64 ", %" PRIu64 ") and skipping %d and %d", rewrite1.src, rewrite1.id1, rewrite1.id2,
-       rewrite2.src, rewrite2.id1, rewrite2.id2, except_lhs, except_lhs2);
+void Closure::push_id_on_chain (Clause *c) {
   assert (c);
   chain.push_back (c->id);
   LOG (chain, "chain");
 }
 
-void Closure::push_id_and_rewriting_lrat (
-    const std::vector<LitClausePair> &reasons, Rewrite rewrite1,
-    std::vector<uint64_t> &chain, bool forward, Rewrite rewrite2,
-    int execept_lhs, int except_lhs2) {
+void Closure::push_id_on_chain (const std::vector<LitClausePair> &reasons) {
   for (auto litId : reasons) {
     LOG (litId.clause, "found lrat in gate %d from %zd", litId.current_lit,
          litId.clause->id);
-    push_id_and_rewriting_lrat (litId.clause, rewrite1, chain, forward,
-                                rewrite2, execept_lhs, except_lhs2);
+    push_id_on_chain (litId.clause);
   }
   LOG (chain, "chain from %zd reasons", reasons.size());
 }
@@ -1216,8 +1205,6 @@ bool Closure::merge_literals_lrat (
 
       if (larger != larger_repr)
         push_lrat_unit (-larger_repr);
-      // no need to calculate push_id_and_rewriting_lrat here because all
-      // the job is done by the arguments already
       mark_lrat_resolvents (eq2_tmp, 0, 0);
       push_id_and_rewriting_lrat_unit (eq2_tmp, rew1, lrat_chain, true,
                                   rew2,
@@ -1249,8 +1236,7 @@ bool Closure::merge_literals_lrat (
         int neg = val_lit ? -lit : -other;
         push_lrat_unit (pos);
         push_lrat_unit (neg);
-        push_id_and_rewriting_lrat (c, Rewrite (), lrat_chain,
-                                    true, Rewrite (), -pos, -neg);
+        push_id_on_chain (c);
       }
       internal->learn_empty_clause ();
       if (internal->lrat)
@@ -1276,8 +1262,6 @@ bool Closure::merge_literals_lrat (
           c = eq1_tmp;
       }
       int neg = val_lit ? lit : -lit;
-      // no need to calculate push_id_and_rewriting_lrat here because all
-      // the job is done by the arguments already
       push_id_and_rewriting_lrat_unit (c, Rewrite (), lrat_chain, true,
                                   Rewrite (), -neg, unit);
     }
@@ -1552,8 +1536,7 @@ bool Closure::merge_literals_lrat (
         int neg = val_lit ? -lit : -other;
         push_lrat_unit (pos);
         push_lrat_unit (neg);
-        push_id_and_rewriting_lrat (c, Rewrite (), lrat_chain,
-                                    true, Rewrite (), -pos, -neg);
+        push_id_on_chain (c);
       }
       internal->learn_empty_clause ();
       if (internal->lrat)
@@ -2313,8 +2296,7 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
     }
     assert (!extra_reasons_other.empty());
     produce_rewritten_clause_lrat_and_clean (other->neg_lhs_ids, Rewrite (), Rewrite (), other->lhs);
-    push_id_and_rewriting_lrat (other->neg_lhs_ids, Rewrite (src, dst, id1, id2),
-				extra_reasons_other, false, Rewrite (), other->lhs);
+    push_id_on_chain (other->neg_lhs_ids);
     return;
   }
   // default: resolve all clauses
@@ -2329,10 +2311,8 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
   produce_rewritten_clause_lrat_and_clean (g->neg_lhs_ids, Rewrite (), Rewrite (), -g->lhs);
   assert (internal->clause.empty ());
 
-  push_id_and_rewriting_lrat (h->pos_lhs_ids, Rewrite (src, dst, id1, id2),
-                              extra_reasons_ulit, false, Rewrite (), -h->lhs, dst);
-  push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, Rewrite (src, dst, id1, id2),
-                              extra_reasons_ulit, true, Rewrite (), g->lhs, dst);
+  push_id_on_chain (h->pos_lhs_ids);
+  push_id_on_chain (g->neg_lhs_ids[0].clause);
   lrat_chain.clear ();
   unmark_marked_lrat ();
   unmark_lrat_resolvents ();
@@ -2342,10 +2322,8 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
   // mark_lrat_resolvents (-g->lhs, src, dst, g->lhs);
   // mark_lrat_resolvents (g->pos_lhs_ids, src, dst);
   // mark_lrat_resolvents (h->neg_lhs_ids[0].clause, src, dst);
-  push_id_and_rewriting_lrat (g->pos_lhs_ids, Rewrite (src, dst, id1, id2), extra_reasons_lit,
-                              false, Rewrite (), dst, -g->lhs);
-  push_id_and_rewriting_lrat (h->neg_lhs_ids, Rewrite (src, dst, id1, id2),
-                              extra_reasons_lit, !false, Rewrite (), h->lhs, dst);
+  push_id_on_chain (g->pos_lhs_ids);
+  push_id_on_chain (h->neg_lhs_ids);
 
   unmark_marked_lrat ();
   unmark_lrat_resolvents ();
@@ -2446,8 +2424,11 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
     Gate *h = find_xor_gate (g);
     if (h) {
       assert (garbage);
+      std::vector<uint64_t> reasons_implication, reasons_back;
+      // TODO Florian: add_xor_matching_proof_chain needs to learn the extra clauses
+      // and populate the LRAT chain
       add_xor_matching_proof_chain (g, g->lhs, h->lhs);
-      if (merge_literals (g->lhs, h->lhs))
+      if (merge_literals_lrat (g->lhs, h->lhs, reasons_implication, reasons_back))
         ++internal->stats.congruence.xors;
       if (!internal->unsat)
         delete_proof_chain ();
@@ -2670,12 +2651,10 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
       }
       lrat_chain.clear ();
       produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, Rewrite (), Rewrite (), g->lhs);
-      push_id_and_rewriting_lrat (g->pos_lhs_ids, Rewrite (), reasons_lrat_src, true, Rewrite (), g->lhs);
+      push_id_on_chain (g->pos_lhs_ids);
 
       produce_rewritten_clause_lrat_and_clean (h->neg_lhs_ids, Rewrite (), Rewrite (), h->lhs);
-      push_id_and_rewriting_lrat (h->neg_lhs_ids, Rewrite (),
-                                  reasons_lrat_src, true, Rewrite (),
-                                  h->lhs);
+      push_id_on_chain (h->neg_lhs_ids);
 
       LOG (reasons_lrat_src, "lrat chain for positive side");
       unmark_marked_lrat ();
@@ -2684,11 +2663,9 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
       lrat_chain.clear ();
       // mark_lrat_resolvents (h->pos_lhs_ids);
       // mark_lrat_resolvents (g->neg_lhs_ids[0].clause);
-      push_id_and_rewriting_lrat (h->pos_lhs_ids, Rewrite (),
-                                  reasons_lrat_usrc, true, Rewrite (),
-                                  h->lhs);
+      push_id_on_chain (h->pos_lhs_ids);
       produce_rewritten_clause_lrat_and_clean (g->neg_lhs_ids, Rewrite (), Rewrite (), g->lhs);
-      push_id_and_rewriting_lrat (g->neg_lhs_ids[0].clause, Rewrite (), reasons_lrat_usrc, true, Rewrite (), g->lhs);
+      push_id_on_chain (g->neg_lhs_ids[0].clause);
       unmark_marked_lrat ();
       unmark_lrat_resolvents ();
       LOG (reasons_lrat_usrc, "lrat chain for negative side");
@@ -3403,6 +3380,8 @@ void Closure::add_xor_matching_proof_chain(Gate *g, int lhs1, int lhs2) {
   LOG ("finished XOR matching proof");
 }
 
+// TODO Florian: this function needs to either put the clauses from lrat_chain_and_gate into
+// g->pos_neg_ids or clear it or do something with it if you merge gates.
 Gate *Closure::new_xor_gate (int lhs) {
   rhs.clear();
 
@@ -3418,6 +3397,7 @@ Gate *Closure::new_xor_gate (int lhs) {
   if (g) {
     check_xor_gate_implied (g);
     add_xor_matching_proof_chain (g, g->lhs, lhs);
+    // TODO Florian
     if (merge_literals (g->lhs, lhs)) {
       ++internal->stats.congruence.xors;
     }
@@ -3470,6 +3450,8 @@ uint32_t Closure::number_from_xor_reason (const std::vector<int> &rhs) {
   return n;
 }
 
+// TODO Florian: this is how I planned to sort it and produce the number
+// Look at this first
 void Closure::gate_sort_lrat_reasons (LitClausePair &litId) {
   assert (clause.empty());
   std::copy (begin (*litId.clause), end (*litId.clause), begin (clause));
@@ -3477,6 +3459,8 @@ void Closure::gate_sort_lrat_reasons (LitClausePair &litId) {
   litId.current_lit = number_from_xor_reason (clause);
 }
 
+// TODO Florian: this is how I planned to sort it and produce the number
+// Look at this first
 void Closure::gate_sort_lrat_reasons (std::vector<LitClausePair> &xs) {
   assert (clause.empty());
   assert (!xs.empty ());
@@ -3485,7 +3469,7 @@ void Closure::gate_sort_lrat_reasons (std::vector<LitClausePair> &xs) {
   }
   std::sort (begin (xs), end (xs), [](LitClausePair &x, LitClausePair &y) {return x.current_lit < y.current_lit;});
 
-#if DEBUG
+#ifndef NDEBUG
   std::for_each (begin (xs), end (xs), [&xs] (const LitClausePair &x) {assert (x.clause->size == xs[1].clause->size);});
 #endif
 }
@@ -3732,6 +3716,8 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
     while (i && parity_lits(lits) != negated)
       inc_lits (lits);
     if (i) {
+      // TODO Florian: the clause must be stored
+      // you can use `lrat_chain_and_gate` for this
       Clause *d = find_large_xor_side_clause (lits);
       if (!d)
 	return;
@@ -3759,6 +3745,7 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
   for (auto lhs: lits) {
     if (!negated)
       lhs = -lhs;
+    // TODO Florian if negated, you need to update the index of the gates
     Gate *g = new_xor_gate (lhs);
     if (g)
       extracted++;
@@ -4073,6 +4060,7 @@ bool Closure::rewriting_lhs (Gate *g, int dst) {
   return true;
 }
 
+// TODO Florian update to produce proofs
 void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   if (skip_xor_gate (g))
     return;
@@ -4147,6 +4135,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   
 }
 
+// TODO Florian update to produce proofs
 void Closure::simplify_xor_gate (Gate *g) {
   LOGGATE (g, "simplifying");
   if (skip_xor_gate (g))
@@ -4220,7 +4209,7 @@ bool Closure::propagate_equivalence (int lit) {
   if (internal->val(lit))
     return true;
   LOG ("propagating literal %d", lit);
-  find_eager_representative_and_compress_both (lit);
+  import_lazy_and_find_eager_representative_and_compress_both (lit);
   const int repr = find_eager_representative_and_compress (lit);
   const uint64_t id1 = find_eager_representative_lrat (lit);
   const uint64_t id2 = find_eager_representative_lrat (-lit);
