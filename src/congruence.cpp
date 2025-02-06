@@ -734,12 +734,10 @@ void Closure::produce_lrat_for_rewrite (std::vector<uint64_t> &chain, Rewrite re
   if (resolvent_marked (rewrite.dst) || true) {
     LOG ("adding reason %zd for rewriting %d marked with %d", lit == rewrite.src ? rewrite.id1 : rewrite.id2, lit, resolvent_marked (rewrite.dst));
     chain.push_back (lit == rewrite.src ? rewrite.id1 : rewrite.id2);
-//    proof_analyzed.push_back (lit);
   } else {
     // no reason to push the justification for the rewrite, just marking as
     // done
     LOG ("not producing reason for rewriting %d", lit);
-//    proof_analyzed.push_back (lit);
   }
 }
 
@@ -777,7 +775,6 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
       produce_lrat_for_rewrite (chain, rewrite1, other);
     } else if (other == -rewrite1.src && rewrite1.id2) {
       produce_lrat_for_rewrite (chain, rewrite1, other);
-//      proof_analyzed.push_back (other);
     } else if (other == rewrite2.src && rewrite2.id1) {
       produce_lrat_for_rewrite (chain, rewrite2, other);
     } else if (other == -rewrite2.src && rewrite2.id2) {
@@ -789,7 +786,6 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
         // no reason to push the justification for the rewrite, just marking
         // as done
         LOG ("skipping rewriting %d -> %d", other, rewritten_other);
-//        proof_analyzed.push_back (other);
       } else {
         assert (other != rewritten_other);
         LOG ("reason for representative of %d %d is %" PRIu64 " seen %d",
@@ -839,7 +835,6 @@ void Closure::push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
       produce_lrat_for_rewrite (chain, rewrite1, other);
     } else if (other == -rewrite1.src && rewrite1.id2) {
       produce_lrat_for_rewrite (chain, rewrite1, other);
-//      proof_analyzed.push_back (other);
     } else if (other == rewrite2.src && rewrite2.id1) {
       produce_lrat_for_rewrite (chain, rewrite2, other);
     } else if (other == -rewrite2.src && rewrite2.id2) {
@@ -882,75 +877,6 @@ signed char &Closure::resolvent_marked (int lit){
   return resolvent_marks[internal->vidx (lit)];
 }
 
-void Closure::unmark_marked_lrat () {
-  for (auto lit : proof_analyzed) {
-    // TODO readd
-    // assert (proof_marked (lit));
-    proof_marked (lit) = proof_marked (-lit) = 0;
-  }
-  proof_analyzed.clear ();
-}
-void Closure::unmark_lrat_resolvents () {
-  for (auto lit : resolvent_analyzed) {
-    // TODO readd
-    // assert (proof_marked (lit));
-    resolvent_marked (lit) = 0;
-  }
-  resolvent_analyzed.clear ();
-  for (auto v : internal->vars)
-    assert (!resolvent_marked(v));
-}
-
-
-void Closure::mark_lrat_resolvents (int lit, int src, int dst, int except, int except2) {
-  assert (internal->lrat);
-  LOG ("marking %d except if %d->%d and %d %d", lit, src, dst, except, except2);
-  int repr = 0;
-  if (lit == except)
-    repr = lit;
-  else if (lit == -except)
-    repr = lit;
-  else if (lit == except2)
-    repr = lit;
-  else if (lit == -except2)
-    repr = lit;
-  else if (lit == src && dst) // use lit instead of dst
-    repr = lit;
-  else if (lit == -src && dst)
-    repr = lit;
-  else
-    repr = lit; // find_eager_representative (lit);
-  signed char &o = resolvent_marked (repr);
-  if (!o)
-    resolvent_analyzed.push_back (repr);
-  LOG ("marking was %d %d", repr, o);
-  if (repr < 0)
-    o |= 1;
-  else
-    o |= 2;
-  assert (o <= 3);
-  if (o == 3) {
-    LOG ("marking %d for both directions", repr);
-  } else
-    LOG ("marking %d to %d", repr, o);
-}
-
-void Closure::mark_lrat_resolvents (Clause *c, int src, int dst, int except, int except2) {
-  assert (internal->lrat);
-  LOG (c, "marking the resolvents with the rewrite from %d -> %d and %d %d of", src, dst, except, except2);
-  for (auto lit : *c)
-    mark_lrat_resolvents (lit, src, dst, except, except2);
-}
-
-void Closure::mark_lrat_resolvents (std::vector<LitClausePair> &chain, int src, int dst, int except, int except2) {
-  LOG ("rewriting chain");
-  assert (internal->lrat);
-  assert (lrat_chain.empty());
-  produce_rewritten_clause_lrat_and_clean (chain, Rewrite (src, 0, 0, 0), Rewrite (dst, 0, 0, 0), except, except2);
-
-  LOG ("chain has size %zd", chain.size ());
-}
-
 void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src, uint64_t id1, uint64_t id2, int dst) {
   if (!internal->lrat)
     return;
@@ -961,18 +887,14 @@ void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src, uint64_t id1
   switch (g->tag) {
   case Gate_Type::And_Gate:
     LOG (lrat_chain, "lrat");
-    for (auto litId : g->neg_lhs_ids)
-      mark_lrat_resolvents (litId.clause, src, dst, g->lhs);
     LOG (lrat_chain, "lrat");
     for (auto litId : g->neg_lhs_ids)
       push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (src, dst, id1, id2), lrat_chain, true);
     LOG (lrat_chain, "lrat");
-    unmark_lrat_resolvents ();
     break;
   default:
     assert (false);
   }
-  unmark_marked_lrat ();
 }
 
 // Something very important here: as we are producing a unit, we cannot simplify or rewrite the
@@ -984,7 +906,6 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src, int 
   assert (internal->analyzed.empty ());
   assert (lrat_chain.empty ());
   std::vector <uint64_t> proof_chain;
-//  mark_lrat_resolvents (g->lhs, src, dst);
   switch (g->tag) {
   case Gate_Type::And_Gate:
     if (clashing) {
@@ -998,7 +919,6 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src, int 
                "found lrat in gate %d from %zd (looking for %d)",
                litId.current_lit, litId.clause->id, falsified);
           if (litId.current_lit == clashing) {
-            mark_lrat_resolvents (litId.clause);
             push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
                                              proof_chain, true, Rewrite (),
                                              -dst, -g->lhs);
@@ -1012,8 +932,6 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src, int 
 	// 9: -2v1
 	// 6: 3v1
 	// The chain cannot start by 9
-        for (const auto &litId : g->pos_lhs_ids)
-	  mark_lrat_resolvents (litId.clause, src, dst, -g->lhs);
         for (const auto &litId : g->pos_lhs_ids) {
           push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (src, dst, id1, id2),
                                            proof_chain, false, Rewrite (), -g->lhs);
@@ -1029,21 +947,11 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src, int 
              "found lrat in gate %d from %zd (looking for %d)",
              litId.current_lit, litId.clause->id, falsified);
         if (litId.current_lit == falsified || (litId.current_lit == src && dst == falsified)) {
-          mark_lrat_resolvents (litId.clause);
           push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
                                            proof_chain, true, Rewrite (),
                                            -dst, -g->lhs);
         }
       }
-      //      mark_lrat_resolvents (g->pos_lhs_ids, src, dst, -dst,
-      //      -g->lhs); push_id_and_rewriting_lrat (g->pos_lhs_ids,
-      //      Rewrite (src, dst, id1, id2), proof_chain, false, Rewrite
-      //      (), -dst, -g->lhs);
-      //        mark_lrat_resolvents (g->neg_lhs_ids, src, dst, -dst,
-      //        -g->lhs);
-      // push_id_and_rewriting_lrat (
-      //     g->neg_lhs_ids, Rewrite (src, dst, id1, id2), proof_chain,
-      //     false, Rewrite (), -dst, -g->lhs);
     } else {
       assert (unit);
       // Example is 1 = 2&3 where 2 and 3 are false
@@ -1052,8 +960,6 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src, int 
                                          proof_chain);
       }
       LOG (proof_chain, "produced lrat chain");
-      unmark_marked_lrat ();
-      unmark_lrat_resolvents ();
       break;
     default:
       assert (false);
@@ -1194,8 +1100,6 @@ bool Closure::merge_literals_lrat (
   assert (!internal->lrat || eq1_tmp);
 
   if (internal->lrat) {
-    unmark_marked_lrat ();
-
     lrat_chain = *larger_chain;
     LOG (lrat_chain, "lrat chain");
   }
@@ -1219,10 +1123,8 @@ bool Closure::merge_literals_lrat (
       rew2 = Rewrite (other == repr_other ? 0 : other, repr_other,
                       other == repr_other ? 0 : representative_id (other),
                       other == repr_other ? 0 : representative_id (-other));
-      mark_lrat_resolvents (eq1_tmp, 0, 0);
       push_id_and_rewriting_lrat_unit (eq1_tmp, rew1, lrat_chain, true,
                                   rew2);
-      unmark_marked_lrat ();
       swap (lrat_chain, internal->lrat_chain);
     }
     internal->assign_unit (-larger_repr);
@@ -1231,11 +1133,9 @@ bool Closure::merge_literals_lrat (
 
       if (larger != larger_repr)
         push_lrat_unit (-larger_repr);
-      mark_lrat_resolvents (eq2_tmp, 0, 0);
       push_id_and_rewriting_lrat_unit (eq2_tmp, rew1, lrat_chain, true,
                                   rew2,
                                   larger != larger_repr ? larger_repr : 0);
-      unmark_marked_lrat ();
       LOG (lrat_chain, "lrat chain");
       swap (lrat_chain, internal->lrat_chain);
     }
@@ -1327,8 +1227,6 @@ bool Closure::merge_literals_lrat (
   if (smaller_repr != smaller || larger != larger_repr) {
     if (internal->lrat) {
       lrat_chain.clear ();
-      unmark_marked_lrat ();
-      assert (!proof_marked (-lit));
       Rewrite rew1 = Rewrite (
           smaller_repr != smaller ? smaller : 0,
           smaller_repr != smaller ? smaller_repr : 0,
@@ -1341,7 +1239,6 @@ bool Closure::merge_literals_lrat (
                    larger_repr != larger ? representative_id (-larger) : 0);
       push_id_and_rewriting_lrat_full (eq1_tmp, rew1, lrat_chain, true,
                                   rew2);
-      unmark_lrat_resolvents();
     }
     eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
   } else {
@@ -1349,7 +1246,6 @@ bool Closure::merge_literals_lrat (
   }
 
   if (internal->lrat) {
-    unmark_marked_lrat ();
     lrat_chain.clear ();
   }
 
@@ -1357,10 +1253,7 @@ bool Closure::merge_literals_lrat (
 
     if (internal->lrat) {
       lrat_chain.clear ();
-      assert (proof_analyzed.empty ());
       // eq2 = larger, -smaller
-      // mark_lrat_resolvents (-larger_repr);
-      // mark_lrat_resolvents (smaller_repr);
       Rewrite rew1 = Rewrite (
           smaller_repr != smaller ? smaller : 0,
           smaller_repr != smaller ? smaller_repr : 0,
@@ -1373,7 +1266,6 @@ bool Closure::merge_literals_lrat (
                    larger_repr != larger ? representative_id (-larger) : 0);
       push_id_and_rewriting_lrat_full (eq2_tmp, rew1, lrat_chain, true,
                                   rew2);
-      unmark_lrat_resolvents();
     }
 
     eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
@@ -1492,7 +1384,6 @@ bool Closure::merge_literals_lrat (
   assert (!internal->lrat || eq1_tmp);
 
   if (internal->lrat) {
-    unmark_marked_lrat ();
 
     lrat_chain = *larger_chain;
     LOG (lrat_chain, "lrat chain");
@@ -1517,10 +1408,8 @@ bool Closure::merge_literals_lrat (
       rew2 = Rewrite (other == repr_other ? 0 : other, repr_other,
                       other == repr_other ? 0 : representative_id (other),
                       other == repr_other ? 0 : representative_id (-other));
-      mark_lrat_resolvents (eq1_tmp, 0, 0);
       push_id_and_rewriting_lrat_unit (eq1_tmp, rew1, lrat_chain, true,
                                   rew2);
-      unmark_marked_lrat ();
       swap (lrat_chain, internal->lrat_chain);
     }
     internal->assign_unit (-larger_repr);
@@ -1531,11 +1420,9 @@ bool Closure::merge_literals_lrat (
         push_lrat_unit (-larger_repr);
       // no need to calculate push_id_and_rewriting_lrat here because all
       // the job is done by the arguments already
-      mark_lrat_resolvents (eq2_tmp, 0, 0);
       push_id_and_rewriting_lrat_unit (eq2_tmp, rew1, lrat_chain, true,
                                   rew2,
                                   larger != larger_repr ? larger_repr : 0);
-      unmark_marked_lrat ();
       LOG (lrat_chain, "lrat chain");
       swap (lrat_chain, internal->lrat_chain);
     }
@@ -1629,7 +1516,6 @@ bool Closure::merge_literals_lrat (
   if (smaller_repr != smaller || larger != larger_repr) {
     if (internal->lrat) {
       lrat_chain.clear ();
-      unmark_marked_lrat ();
       assert (!proof_marked (-lit));
       Rewrite rew1 = Rewrite (
           smaller_repr != smaller ? smaller : 0,
@@ -1643,7 +1529,6 @@ bool Closure::merge_literals_lrat (
                    larger_repr != larger ? representative_id (-larger) : 0);
       push_id_and_rewriting_lrat_full (eq1_tmp, rew1, lrat_chain, true,
                                   rew2);
-      unmark_lrat_resolvents();
     }
     eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
   } else {
@@ -1651,7 +1536,6 @@ bool Closure::merge_literals_lrat (
   }
 
   if (internal->lrat) {
-    unmark_marked_lrat ();
     lrat_chain.clear ();
   }
 
@@ -1659,10 +1543,7 @@ bool Closure::merge_literals_lrat (
 
     if (internal->lrat) {
       lrat_chain.clear ();
-      assert (proof_analyzed.empty ());
       // eq2 = larger, -smaller
-      // mark_lrat_resolvents (-larger_repr);
-      // mark_lrat_resolvents (smaller_repr);
       Rewrite rew1 = Rewrite (
           smaller_repr != smaller ? smaller : 0,
           smaller_repr != smaller ? smaller_repr : 0,
@@ -1675,7 +1556,6 @@ bool Closure::merge_literals_lrat (
                    larger_repr != larger ? representative_id (-larger) : 0);
       push_id_and_rewriting_lrat_full (eq2_tmp, rew1, lrat_chain, true,
                                   rew2);
-      unmark_lrat_resolvents();
     }
 
     eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
@@ -1810,8 +1690,6 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
           other, other == repr_other ? 0 : repr_other,
           other == repr_other ? 0 : find_representative_lrat (other),
 			      other == repr_other ? 0 : find_representative_lrat (-other));
-      mark_lrat_resolvents (c1);
-      mark_lrat_resolvents (repr_lit);
       push_id_and_rewriting_lrat_unit (c1, rew1, lrat_chain, true,
                                   rew2);
       if (false && other != repr_other) {
@@ -2228,20 +2106,15 @@ void Closure::update_and_gate_unit_build_lrat_chain (Gate *g, int src, uint64_t 
   //   g->neg_lhs_ids[0].clause = rewritten_clause;
   // else
   //   g->neg_lhs_ids.clear ();
-//  mark_lrat_resolvents (g->neg_lhs_ids[0].clause, src, dst);
-  // mark_lrat_resolvents (g->pos_lhs_ids, src, dst);
 
   push_id_and_rewriting_lrat_unit (g->neg_lhs_ids[0].clause, Rewrite (), extra_reasons_ulit, true, Rewrite (), g->lhs, -dst);
   LOG (extra_reasons_ulit, "lrat chain for negative side");
 
   lrat_chain.clear ();
-  unmark_marked_lrat ();
 
   assert (!g->pos_lhs_ids.empty());
   for (auto litId : g->pos_lhs_ids)
     push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (src, dst, id1, id2), extra_reasons_lit, true, Rewrite (), -g->lhs, dst);
-  unmark_marked_lrat ();
-  unmark_lrat_resolvents ();
   LOG (extra_reasons_lit, "lrat chain for positive side");
 }
 
@@ -2340,19 +2213,11 @@ void Closure::update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint6
   push_id_on_chain (h->pos_lhs_ids);
   push_id_on_chain (g->neg_lhs_ids[0].clause);
   lrat_chain.clear ();
-  unmark_marked_lrat ();
-  unmark_lrat_resolvents ();
   LOG (extra_reasons_ulit, "lrat chain for negative side");
 
-  // mark_lrat_resolvents (h->lhs, src, dst, -h->lhs);
-  // mark_lrat_resolvents (-g->lhs, src, dst, g->lhs);
-  // mark_lrat_resolvents (g->pos_lhs_ids, src, dst);
-  // mark_lrat_resolvents (h->neg_lhs_ids[0].clause, src, dst);
   push_id_on_chain (g->pos_lhs_ids);
   push_id_on_chain (h->neg_lhs_ids);
 
-  unmark_marked_lrat ();
-  unmark_lrat_resolvents ();
   lrat_chain.clear ();
   LOG (extra_reasons_lit, "lrat chain for positive side");
 }
@@ -2683,17 +2548,11 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
       push_id_on_chain (h->neg_lhs_ids);
 
       LOG (reasons_lrat_src, "lrat chain for positive side");
-      unmark_marked_lrat ();
-      unmark_lrat_resolvents ();
 
       lrat_chain.clear ();
-      // mark_lrat_resolvents (h->pos_lhs_ids);
-      // mark_lrat_resolvents (g->neg_lhs_ids[0].clause);
       push_id_on_chain (h->pos_lhs_ids);
       produce_rewritten_clause_lrat_and_clean (g->neg_lhs_ids, Rewrite (), Rewrite (), g->lhs);
       push_id_on_chain (g->neg_lhs_ids[0].clause);
-      unmark_marked_lrat ();
-      unmark_lrat_resolvents ();
       LOG (reasons_lrat_usrc, "lrat chain for negative side");
     }
     if (merge_literals_lrat (g, h, lhs, h->lhs, reasons_lrat_src, reasons_lrat_usrc)) {
@@ -3897,7 +3756,6 @@ void Closure::find_equivalences () {
 	    ++internal->stats.congruence.congruent;
 	  }
 	  unmark_all();
-	  assert (proof_analyzed.empty());
 	  if (internal->unsat)
 	    return;
 	  else
@@ -3908,7 +3766,6 @@ void Closure::find_equivalences () {
     unmark_all();
   }
   assert (internal->analyzed.empty());
-  assert (proof_analyzed.empty());
   MSG ("found %zd equivalences", schedule.size());
 }
 

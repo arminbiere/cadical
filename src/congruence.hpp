@@ -148,8 +148,10 @@ LitClausePair make_LitClausePair (int lit, Clause* cl);
 //   each literal is either positive (bit '1') or negative (bit '0'). This
 //   gives a number that we can use.
 //
-// TODO Florian: I do not think that you have to changed anything, look at the 'Look at this first'
-// in the CPP file.
+// TODO Florian: I do not think that you have to changed anything, look at
+// the 'Look at this first' in the CPP file.
+//
+// Important for the proofs: the LHS is not updated.
 struct Gate {
 #ifdef LOGGING
   uint64_t id;
@@ -241,7 +243,6 @@ struct Closure {
   std::vector<Clause*> new_unwatched_binary_clauses;
   // LRAT proofs
   vector<signed char> proof_marks;
-  vector<int> proof_analyzed;
   vector<signed char> resolvent_marks;
   vector<int> resolvent_analyzed;
   mutable vector<uint64_t> lrat_chain; // storing LRAT chain
@@ -347,11 +348,6 @@ struct Closure {
   // TODO: does nothing except pushing on the stack, remove!
   void push_id_on_chain (const std::vector<LitClausePair> &c);
   void produce_lrat_for_rewrite (std::vector<uint64_t> &chain, Rewrite rewrite, int);
-  void unmark_marked_lrat ();
-  void unmark_lrat_resolvents ();
-  void mark_lrat_resolvents (int lit, int src = 0, int dst = 0, int except = 0, int except2 = 0);
-  void mark_lrat_resolvents (Clause *, int src = 0, int dst = 0, int except = 0, int except2 = 0);
-  void mark_lrat_resolvents (std::vector<LitClausePair> &c, int src = 0, int dst = 0, int except = 0, int except2 = 0);
   void update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint64_t id1, uint64_t id2, int dst,
 					 std::vector<uint64_t> & extra_reasons_lit, std::vector<uint64_t> &extra_reasons_ulit);
   void update_and_gate_unit_build_lrat_chain (Gate *g, int src, uint64_t id1, uint64_t id2, int dst,
