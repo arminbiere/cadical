@@ -3031,7 +3031,7 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
   if (internal->lrat) {
     assert (std::is_sorted (begin (g->pos_lhs_ids), end (g->pos_lhs_ids), [](const LitClausePair &x, const LitClausePair &y) {return x.current_lit < y.current_lit;}));
     for (auto litId : g->pos_lhs_ids) {
-      assert (litId.current_lit == number_from_xor_reason(litId.clause));
+      assert ((uint32_t)litId.current_lit == number_from_xor_reason(litId.clause));
     }
     return;
   }
