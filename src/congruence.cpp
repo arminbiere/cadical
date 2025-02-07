@@ -3363,19 +3363,24 @@ Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
   return g;
 }
 uint32_t Closure::number_from_xor_reason (const Clause *const rhs) {
-  size_t n = 0;
-  assert (is_sorted (begin (*rhs), end (*rhs),
+  assert (clause.empty ());
+  uint32_t n = 0;
+  std::copy (begin (*rhs), end (*rhs), back_inserter (clause));
+  sort_literals_by_var(clause);
+  assert (is_sorted (begin (clause), end (clause),
                      sort_literals_by_var_smaller (internal)));
   assert (rhs->size <= 32);
-  for (auto lit : *rhs) {
+  for (auto lit : clause) {
     n *= 2;
     n += (lit > 0);
   }
+  LOG (clause, "[%zd] %d -> ", rhs->id, n);
+  clause.clear ();
   return n;
 }
 
 uint32_t Closure::number_from_xor_reason (const std::vector<int> &rhs) {
-  size_t n = 0;
+  uint32_t n = 0;
   assert (is_sorted (begin (rhs), end (rhs),
                      sort_literals_by_var_smaller (internal)));
   assert (rhs.size () <= 32);
@@ -3390,7 +3395,7 @@ uint32_t Closure::number_from_xor_reason (const std::vector<int> &rhs) {
 // Look at this first
 void Closure::gate_sort_lrat_reasons (LitClausePair &litId) {
   assert (clause.empty ());
-  std::copy (begin (*litId.clause), end (*litId.clause), begin (clause));
+  std::copy (begin (*litId.clause), end (*litId.clause), back_inserter (clause));
   sort_literals_by_var (clause);
   litId.current_lit = number_from_xor_reason (clause);
   clause.clear ();
@@ -3405,7 +3410,7 @@ void Closure::gate_sort_lrat_reasons (std::vector<LitClausePair> &xs) {
     gate_sort_lrat_reasons (litId);
   }
   std::sort (begin (xs), end (xs), [] (LitClausePair &x, LitClausePair &y) {
-    return x.current_lit < y.current_lit;
+    return (uint32_t)x.current_lit < (uint32_t)y.current_lit;
   });
 
 #ifndef NDEBUG
@@ -4716,6 +4721,9 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       new_tag = Gate_Type::XOr_Gate;
       assert (rhs[0] == cond);
       rhs[1] = else_lit;
+      produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, Rewrite (),
+                                               Rewrite ());
+      gate_sort_lrat_reasons (g->pos_lhs_ids);
     } else {
       shrink = false;
       rhs[1] = dst;
@@ -4804,7 +4812,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
 #ifndef NDEBUG
           std::for_each (
               begin (g->pos_lhs_ids), end (g->pos_lhs_ids),
-              [] (LitClausePair l) { assert (l.clause->size == 2); });
+              [] (LitClausePair l) { assert (l.clause->size == 3); });
 #endif
         } else if (new_tag == Gate_Type::And_Gate) {
           // we have to get rid of one clause, two become binaries, and
