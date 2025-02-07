@@ -220,14 +220,10 @@ void Closure::unmark_all () {
   internal->analyzed.clear();
 }
 
-LitClausePair make_LitClausePair (int lit, Clause* cl) {
-  return {.current_lit = lit, .clause = cl};  
-}
-
 void Closure::set_mu1_reason(int lit, Clause *c) {
   assert (marked(lit) & 1);
   LOG (c, "mu1 %d -> %zd", lit, c->id);
-  mu1_ids[internal->vlit (lit)] = make_LitClausePair (lit, c);
+  mu1_ids[internal->vlit (lit)] = LitClausePair (lit, c);
 }
 
 void Closure::set_mu2_reason(int lit, Clause *c) {
@@ -235,7 +231,7 @@ void Closure::set_mu2_reason(int lit, Clause *c) {
   if (!internal->lrat)
     return;
   LOG (c, "mu2 %d -> %zd", lit, c->id);
-  mu2_ids[internal->vlit (lit)] = make_LitClausePair (lit, c);
+  mu2_ids[internal->vlit (lit)] = LitClausePair (lit, c);
 }
 
 void Closure::set_mu4_reason(int lit, Clause *c) {
@@ -243,7 +239,7 @@ void Closure::set_mu4_reason(int lit, Clause *c) {
   if (!internal->lrat)
     return;
   LOG (c, "mu4 %d -> %zd", lit, c->id);
-  mu4_ids[internal->vlit (lit)] = make_LitClausePair (lit, c);
+  mu4_ids[internal->vlit (lit)] = LitClausePair (lit, c);
 }
 
 LitClausePair Closure::marked_mu1(int lit) {
@@ -2473,7 +2469,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
   Gate *g = new Gate;
   g->lhs = lhs;
   if (internal->lrat) {
-    g->neg_lhs_ids.push_back (make_LitClausePair (lhs, base_clause));
+    g->neg_lhs_ids.push_back (LitClausePair (lhs, base_clause));
     for (auto i : lrat_chain_and_gate)
       g->pos_lhs_ids.push_back (i);
 #ifdef LOGGING
@@ -2575,7 +2571,7 @@ Gate* Closure::find_first_and_gate (Clause *base_clause, int lhs) {
       internal->analyzed.push_back(other);
       set_mu2_reason (other, w.clause);
       if (internal->lrat)
-        lrat_chain_and_gate.push_back (make_LitClausePair (other, w.clause));
+        lrat_chain_and_gate.push_back (LitClausePair (other, w.clause));
     }
   }
   
@@ -2678,14 +2674,14 @@ Gate *Closure::find_remaining_and_gate (Clause *base_clause, int lhs) {
       continue;
     ++matched;
     if (!(mark & 2)) {
-      lrat_chain_and_gate.push_back (make_LitClausePair (other, w.clause));
+      lrat_chain_and_gate.push_back (LitClausePair (other, w.clause));
       LOG ("pushing %d -> %zd", other, w.clause->id);
       continue;
     }
     LOG ("marking %d mu4", other);
     assert (!(mark & 4));
     mark |= 4;
-    lrat_chain_and_gate.push_back (make_LitClausePair (other, w.clause));
+    lrat_chain_and_gate.push_back (LitClausePair (other, w.clause));
     if (internal->lrat)
       set_mu4_reason (other, w.clause);
   }
@@ -5548,10 +5544,10 @@ void Closure::merge_condeq (int cond, lit_equivalences & condeq, lit_equivalence
 	LOG (p.first_clause, "pairing %d", -then_lit);
 	LOG (not_cond_pair.second_clause, "pairing %d", else_lit);
 	LOG (not_cond_pair.first_clause, "pairing %d", -else_lit);
-	clauses.push_back(make_LitClausePair(then_lit, p.second_clause));
-	clauses.push_back(make_LitClausePair(-then_lit, p.first_clause));
-	clauses.push_back(make_LitClausePair(else_lit, not_cond_pair.second_clause));
-	clauses.push_back(make_LitClausePair(-else_lit, not_cond_pair.first_clause));
+	clauses.push_back(LitClausePair(then_lit, p.second_clause));
+	clauses.push_back(LitClausePair(-then_lit, p.first_clause));
+	clauses.push_back(LitClausePair(else_lit, not_cond_pair.second_clause));
+	clauses.push_back(LitClausePair(-else_lit, not_cond_pair.first_clause));
 	if (internal->lrat)
           not_cond_pair.check_invariant ();
 

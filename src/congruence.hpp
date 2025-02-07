@@ -125,9 +125,9 @@ std::string string_of_gate (Gate_Type t);
 struct LitClausePair {
   int current_lit;  // current literal from the gate
   Clause *clause;
+  LitClausePair (int lit, Clause* cl) : current_lit (lit), clause (cl) {}
+  LitClausePair (): current_lit (0), clause (nullptr) {}
 };
-
-LitClausePair make_LitClausePair (int lit, Clause* cl);
 
 // The core structure of this algorithm: the gate. It is composed of a
 // left-hand side and an array of right-hand side.
