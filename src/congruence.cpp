@@ -255,32 +255,29 @@ LitClausePair Closure::marked_mu4(int lit) {
 }
 
 
-struct sort_literals_rank {
+struct sort_literals_by_var_rank {
   CaDiCaL::Internal *internal;
-  sort_literals_rank (Internal *i) : internal (i) {}
+  sort_literals_by_var_rank (Internal *i) : internal (i) {}
 
   typedef uint64_t Type;
-
-  // Set assumptions first, then sorted by position on the trail
-  // unset literals are sorted by literal value.
 
   Type operator() (const int &a) const {
     return internal->vlit (a);
   }
 };
 
-struct sort_literals_smaller {
+struct sort_literals_by_var_smaller {
   CaDiCaL::Internal *internal;
-  sort_literals_smaller (Internal *i) : internal (i) {}
+  sort_literals_by_var_smaller (Internal *i) : internal (i) {}
   bool operator() (const int &a, const int &b) const {
-    return sort_literals_rank(internal) (a) <
-           sort_literals_rank(internal) (b);
+    return sort_literals_by_var_rank(internal) (a) <
+           sort_literals_by_var_rank(internal) (b);
   }
 };
 
-void Closure::sort_literals (vector<int> &rhs) {
+void Closure::sort_literals_by_var (vector<int> &rhs) {
   MSORT (internal->opts.radixsortlim, begin (rhs), end (rhs),
-         sort_literals_rank (internal), sort_literals_smaller (internal));
+         sort_literals_by_var_rank (internal), sort_literals_by_var_smaller (internal));
 }
 
 /*------------------------------------------------------------------------*/
@@ -2227,7 +2224,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src, int ds
     }
   } else {
     assert (g->arity () > 1);
-    sort_literals (g->rhs);
+    sort_literals_by_var (g->rhs);
     Gate *h = find_and_lits (g->rhs, g);
     assert (g != h);
     if (h) {
@@ -2405,7 +2402,7 @@ bool Closure::simplify_gates (int lit) {
 
 
 Gate *Closure::find_and_lits (const vector<int> &rhs, Gate *except) {
-  assert (is_sorted(begin (rhs), end (rhs), sort_literals_smaller (internal)));
+  assert (is_sorted(begin (rhs), end (rhs), sort_literals_by_var_smaller (internal)));
   return find_gate_lits (rhs, Gate_Type::And_Gate, except);
 }
 
@@ -2462,7 +2459,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
   }
 
   assert (rhs.size () + 1 == lits.size ());
-  sort_literals (this->rhs);
+  sort_literals_by_var (this->rhs);
 
 
   Gate *h = find_and_lits (this->rhs);
@@ -3063,13 +3060,13 @@ void Closure::check_xor_gate_implied(Gate const *const g) {
 }
  
 Gate* Closure::find_xor_lits (const vector<int> &rhs) {
-  assert (is_sorted(begin (rhs), end (rhs), sort_literals_smaller (internal)));
+  assert (is_sorted(begin (rhs), end (rhs), sort_literals_by_var_smaller (internal)));
   return find_gate_lits (rhs, Gate_Type::XOr_Gate);
 }
 
 Gate* Closure::find_xor_gate (Gate *g) {
   assert (g->tag == Gate_Type::XOr_Gate);
-  assert (is_sorted(begin (g->rhs), end (g->rhs), sort_literals_smaller (internal)));
+  assert (is_sorted(begin (g->rhs), end (g->rhs), sort_literals_by_var_smaller (internal)));
   return find_gate_lits (g->rhs, Gate_Type::XOr_Gate);
 }
 
@@ -3242,7 +3239,7 @@ Gate *Closure::new_xor_gate (int lhs) {
     }
   }
   assert (rhs.size() + 1 == lits.size());
-  sort_literals (rhs);
+  sort_literals_by_var (rhs);
   Gate *g = find_xor_lits (this->rhs);
   if (g) {
     check_xor_gate_implied (g);
@@ -3280,7 +3277,7 @@ Gate *Closure::new_xor_gate (int lhs) {
 }
 uint32_t Closure::number_from_xor_reason (const Clause *const rhs) {
   size_t n = 0;
-  assert (is_sorted(begin (*rhs), end (*rhs), sort_literals_smaller (internal)));
+  assert (is_sorted(begin (*rhs), end (*rhs), sort_literals_by_var_smaller (internal)));
   assert (rhs->size <= 32);
   for (auto lit : *rhs) {
     n *= 2;
@@ -3291,7 +3288,7 @@ uint32_t Closure::number_from_xor_reason (const Clause *const rhs) {
 
 uint32_t Closure::number_from_xor_reason (const std::vector<int> &rhs) {
   size_t n = 0;
-  assert (is_sorted(begin (rhs), end (rhs), sort_literals_smaller (internal)));
+  assert (is_sorted(begin (rhs), end (rhs), sort_literals_by_var_smaller (internal)));
   assert (rhs.size() <= 32);
   for (auto lit : rhs) {
     n *= 2;
@@ -3305,7 +3302,7 @@ uint32_t Closure::number_from_xor_reason (const std::vector<int> &rhs) {
 void Closure::gate_sort_lrat_reasons (LitClausePair &litId) {
   assert (clause.empty());
   std::copy (begin (*litId.clause), end (*litId.clause), begin (clause));
-  sort_literals (clause);
+  sort_literals_by_var (clause);
   litId.current_lit = number_from_xor_reason (clause);
 }
 
@@ -3956,16 +3953,16 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     assert (k == j - 2);
     g->rhs.resize(k);
     g->shrunken = true;
-    assert (is_sorted(begin (g->rhs), end (g->rhs), sort_literals_smaller (internal)));
+    assert (is_sorted(begin (g->rhs), end (g->rhs), sort_literals_by_var_smaller (internal)));
     g->hash = hash_lits (nonces, g->rhs);
   } else if (j != size) {
     g->shrunken = true;
     g->rhs.resize(j);
-    sort_literals (g->rhs);
+    sort_literals_by_var (g->rhs);
     g->hash = hash_lits (nonces, g->rhs); // all but one (the dst) is sorted correctly actually
   } else {
     assert (j == size);
-    sort_literals (g->rhs);
+    sort_literals_by_var (g->rhs);
   }
   
   if (dst_count > 1)
@@ -4011,7 +4008,7 @@ void Closure::simplify_xor_gate (Gate *g) {
     LOG ("shrunken gate");
     g->shrunken = true;
     g->rhs.resize(j);
-    assert (is_sorted(begin (g->rhs), end (g->rhs), sort_literals_smaller (internal)));
+    assert (is_sorted(begin (g->rhs), end (g->rhs), sort_literals_by_var_smaller (internal)));
     g->hash = hash_lits (nonces, g->rhs);
   } else {
     assert (g->hash == hash_lits (nonces, g->rhs));
@@ -4845,7 +4842,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         g->tag = Gate_Type::And_Gate;
         rhs.resize (2);
         assert (is_sorted (begin (rhs), end (rhs),
-                           sort_literals_smaller (internal)));
+                           sort_literals_by_var_smaller (internal)));
         g->hash = hash_lits (nonces, rhs);
         check_and_gate_implied (g);
         Gate *h = find_and_lits (rhs);

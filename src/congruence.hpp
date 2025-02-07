@@ -512,7 +512,7 @@ void produce_rewritten_clause_lrat_and_clean (std::vector<LitClausePair> &litIds
 
   Clause *new_clause ();
   //
-  void sort_literals (vector<int> &rhs);
+  void sort_literals_by_var (vector<int> &rhs);
 
   // schedule
   queue<int> schedule;
