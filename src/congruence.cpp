@@ -402,9 +402,9 @@ int Closure::find_eager_representative_and_compress (int lit) {
   if (path_length > 2) {
     LOG ("learning new rewriting from %d to %d (current path length: %d)",
          lit, res, path_length);
-    std::vector<uint64_t> chain;
+    std::vector<uint64_t> tmp_lrat_chain;
     if (internal->lrat) {
-      chain = std::move (lrat_chain);
+      tmp_lrat_chain = std::move (lrat_chain);
       lrat_chain.clear ();
       produce_eager_representative_lrat (lit);
     }
@@ -416,7 +416,7 @@ int Closure::find_eager_representative_and_compress (int lit) {
       eager_representative_id (lit) = equiv->id;
     }
     if (internal->lrat) {
-      lrat_chain = std::move (chain);
+      lrat_chain = std::move (tmp_lrat_chain);
     }
   } else if (path_length == 2) {
     LOG ("duplicated information %d -> %d to eager with clause %" PRIu64,
@@ -857,19 +857,20 @@ void Closure::push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
 // Note: it is important that the Rewrite takes over the normal rewriting,
 // because we can force rewriting that way that have not been done eagerly
 // yet.
-void Closure::push_id_on_chain (Clause *c) {
+void Closure::push_id_on_chain (std::vector<uint64_t> &chain, Clause *c) {
   assert (c);
   chain.push_back (c->id);
-  LOG (chain, "chain");
+  LOG (lrat_chain, "chain");
 }
 
-void Closure::push_id_on_chain (const std::vector<LitClausePair> &reasons) {
+void Closure::push_id_on_chain (std::vector<uint64_t> &chain,
+				const std::vector<LitClausePair> &reasons) {
   for (auto litId : reasons) {
     LOG (litId.clause, "found lrat in gate %d from %zd", litId.current_lit,
          litId.clause->id);
-    push_id_on_chain (litId.clause);
+    push_id_on_chain (chain, litId.clause);
   }
-  LOG (chain, "chain from %zd reasons", reasons.size ());
+  LOG (lrat_chain, "chain from %zd reasons", reasons.size ());
 }
 
 void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src,
@@ -1027,7 +1028,6 @@ bool Closure::merge_literals_lrat (
   find_representative_and_compress (-other, false);
   LOG ("merging literals %d [=%d] and %d [=%d]", lit, repr_lit, other,
        repr_other);
-  LOG (lrat_chain, "lrat chain beginning of merge");
 
   if (repr_lit == repr_other) {
     LOG ("already merged %d and %d", lit, other);
@@ -1164,7 +1164,7 @@ bool Closure::merge_literals_lrat (
         int neg = val_lit ? -lit : -other;
         push_lrat_unit (pos);
         push_lrat_unit (neg);
-        push_id_on_chain (c);
+        push_id_on_chain (lrat_chain, c);
       }
       internal->learn_empty_clause ();
       if (internal->lrat)
@@ -1450,7 +1450,7 @@ bool Closure::merge_literals_lrat (
         int neg = val_lit ? -lit : -other;
         push_lrat_unit (pos);
         push_lrat_unit (neg);
-        push_id_on_chain (c);
+        push_id_on_chain (lrat_chain, c);
       }
       internal->learn_empty_clause ();
       if (internal->lrat)
@@ -2206,7 +2206,9 @@ void Closure::update_and_gate_build_lrat_chain (
     assert (!extra_reasons_other.empty ());
     produce_rewritten_clause_lrat_and_clean (other->neg_lhs_ids, Rewrite (),
                                              Rewrite (), other->lhs);
-    push_id_on_chain (other->neg_lhs_ids);
+    push_id_on_chain (extra_reasons_other, other->neg_lhs_ids);
+    assert (!extra_reasons_tauto.empty ());
+    assert (!extra_reasons_other.empty ());
     return;
   }
   // default: resolve all clauses
@@ -2225,16 +2227,18 @@ void Closure::update_and_gate_build_lrat_chain (
                                            Rewrite (), -g->lhs);
   assert (internal->clause.empty ());
 
-  push_id_on_chain (h->pos_lhs_ids);
-  push_id_on_chain (g->neg_lhs_ids[0].clause);
+  push_id_on_chain (extra_reasons_ulit, h->pos_lhs_ids);
+  push_id_on_chain (extra_reasons_ulit, g->neg_lhs_ids[0].clause);
   lrat_chain.clear ();
   LOG (extra_reasons_ulit, "lrat chain for negative side");
 
-  push_id_on_chain (g->pos_lhs_ids);
-  push_id_on_chain (h->neg_lhs_ids);
+  push_id_on_chain (extra_reasons_lit, g->pos_lhs_ids);
+  push_id_on_chain (extra_reasons_lit, h->neg_lhs_ids);
 
   lrat_chain.clear ();
   LOG (extra_reasons_lit, "lrat chain for positive side");
+  assert (!extra_reasons_lit.empty ());
+  assert (!extra_reasons_ulit.empty ());
 }
 
 void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
@@ -2569,19 +2573,19 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
       lrat_chain.clear ();
       produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, Rewrite (),
                                                Rewrite (), g->lhs);
-      push_id_on_chain (g->pos_lhs_ids);
+      push_id_on_chain (reasons_lrat_src, g->pos_lhs_ids);
 
       produce_rewritten_clause_lrat_and_clean (h->neg_lhs_ids, Rewrite (),
                                                Rewrite (), h->lhs);
-      push_id_on_chain (h->neg_lhs_ids);
+      push_id_on_chain (reasons_lrat_src, h->neg_lhs_ids);
 
       LOG (reasons_lrat_src, "lrat chain for positive side");
 
       lrat_chain.clear ();
-      push_id_on_chain (h->pos_lhs_ids);
+      push_id_on_chain (reasons_lrat_usrc, h->pos_lhs_ids);
       produce_rewritten_clause_lrat_and_clean (g->neg_lhs_ids, Rewrite (),
                                                Rewrite (), g->lhs);
-      push_id_on_chain (g->neg_lhs_ids[0].clause);
+      push_id_on_chain (reasons_lrat_usrc, g->neg_lhs_ids[0].clause);
       LOG (reasons_lrat_usrc, "lrat chain for negative side");
     }
     if (merge_literals_lrat (g, h, lhs, h->lhs, reasons_lrat_src,
@@ -5104,7 +5108,7 @@ void Closure::add_ite_matching_proof_chain (
 
 Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
                              std::vector<LitClausePair> &&clauses) {
-
+  assert (chain.empty());
   if (else_lit == -then_lit) {
     if (then_lit < 0)
       LOG ("skipping ternary XOR %d := %d ^ %d", lhs, cond, -then_lit);
@@ -5756,12 +5760,15 @@ void Closure::extract_gates () {
   START (extract);
   extract_and_gates ();
   assert (internal->unsat || lrat_chain.empty ());
+  assert (internal->unsat || chain.empty ());
   if (internal->unsat || internal->terminated_asynchronously ()) {
     STOP (extract);
     return;
   }
   extract_xor_gates ();
   assert (internal->unsat || lrat_chain.empty ());
+  assert (internal->unsat || chain.empty ());
+
   if (internal->unsat || internal->terminated_asynchronously ()) {
     STOP (extract);
     return;

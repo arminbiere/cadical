@@ -346,9 +346,9 @@ struct Closure {
 				   Rewrite rewrite2 = Rewrite (),
 					int execept_lhs = 0, int except_lhs2 = 0);
   // TODO: does nothing except pushing on the stack, remove!
-  void push_id_on_chain (Clause *c);
+  void push_id_on_chain (std::vector<uint64_t> &chain, Clause *c);
   // TODO: does nothing except pushing on the stack, remove!
-  void push_id_on_chain (const std::vector<LitClausePair> &c);
+  void push_id_on_chain (std::vector<uint64_t> &chain, const std::vector<LitClausePair> &c);
   // TODO: does nothing except pushing on the stack, remove!
   void push_id_on_chain (std::vector<uint64_t> &chain, Rewrite rewrite, int);
   void update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint64_t id1, uint64_t id2, int dst,
