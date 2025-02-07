@@ -4555,8 +4555,8 @@ void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
   assert (g->pos_lhs_ids.size () == 4);
   assert (idx1 < g->pos_lhs_ids.size ());
   assert (idx2 < g->pos_lhs_ids.size ());
-  int lit = g->pos_lhs_ids[0].current_lit,
-      other = g->pos_lhs_ids[2].current_lit;
+  int lit = g->pos_lhs_ids[2].current_lit,
+      other = g->lhs;
 
   produce_rewritten_clause_lrat_and_clean (
       g->pos_lhs_ids, Rewrite (), Rewrite (), g->lhs, 0, idx1, idx2);
@@ -4573,16 +4573,18 @@ void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
   assert (idx1 < g->pos_lhs_ids.size ());
   assert (idx2 < g->pos_lhs_ids.size ());
   Clause *c = g->pos_lhs_ids[idx1].clause;
+  assert (c->size == 2);
   Clause *d = g->pos_lhs_ids[idx2].clause;
   assert (c != d);
   assert (c);
   assert (d);
   g->pos_lhs_ids.erase (
       std::remove_if (begin (g->pos_lhs_ids), end (g->pos_lhs_ids),
-                      [c, d] (const LitClausePair &p) {
-                        return p.clause == c || p.clause == d;
+                      [d] (const LitClausePair &p) {
+                        return p.clause == d;
                       }),
-      end (g->pos_lhs_ids));
+			end (g->pos_lhs_ids));
+  assert (g->pos_lhs_ids.size () == 2);
   assert (lit);
   assert (other);
   assert (lit != dst);
@@ -4590,8 +4592,7 @@ void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
   assert (lit != other);
   lrat_chain.push_back (c->id);
   lrat_chain.push_back (d->id);
-  Clause *e = add_binary_clause (lit, other);
-  g->pos_lhs_ids[idx1] = {lit, e};
+  Clause *e = add_binary_clause (lit, -other);
 
   auto long_clause =
       std::find_if (begin (g->pos_lhs_ids), end (g->pos_lhs_ids),
@@ -4600,6 +4601,8 @@ void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
   LOG (long_clause->clause, "new long clause");
   g->neg_lhs_ids.push_back (*long_clause);
   g->pos_lhs_ids.erase (long_clause);
+  assert (g->pos_lhs_ids.size () == 1);
+  g->pos_lhs_ids.push_back ({lit, e});
 }
 
 void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
