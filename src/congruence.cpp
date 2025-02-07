@@ -864,7 +864,7 @@ void Closure::push_id_on_chain (std::vector<uint64_t> &chain, Clause *c) {
 }
 
 void Closure::push_id_on_chain (std::vector<uint64_t> &chain,
-				const std::vector<LitClausePair> &reasons) {
+                                const std::vector<LitClausePair> &reasons) {
   for (auto litId : reasons) {
     LOG (litId.clause, "found lrat in gate %d from %zd", litId.current_lit,
          litId.clause->id);
@@ -2341,7 +2341,7 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
       std::vector<uint64_t> reasons_implication, reasons_back;
       // TODO Florian: add_xor_matching_proof_chain needs to learn the extra
       // clauses and populate the LRAT chain
-      add_xor_matching_proof_chain (g, g->lhs, h->lhs);
+      add_xor_matching_proof_chain (g, g->lhs, h->neg_lhs_ids, h->lhs);
       if (merge_literals_lrat (g->lhs, h->lhs, reasons_implication,
                                reasons_back))
         ++internal->stats.congruence.xors;
@@ -3269,7 +3269,8 @@ void Closure::add_ite_turned_and_binary_clauses (Gate *g) {
   unsimplified.clear ();
 }
 
-void Closure::add_xor_matching_proof_chain (Gate *g, int lhs1, int lhs2) {
+void Closure::add_xor_matching_proof_chain (
+    Gate *g, int lhs1, const vector<LitClausePair> &clauses2, int lhs2) {
   if (lhs1 == lhs2)
     return;
   if (!internal->proof)
@@ -3314,7 +3315,8 @@ void Closure::add_xor_matching_proof_chain (Gate *g, int lhs1, int lhs2) {
 // TODO Florian: this function needs to either put the clauses from
 // lrat_chain_and_gate into g->pos_neg_ids or clear it or do something with
 // it if you merge gates.
-Gate *Closure::new_xor_gate (int lhs) {
+Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
+                             int lhs) {
   rhs.clear ();
 
   for (auto lit : lits) {
@@ -3328,7 +3330,7 @@ Gate *Closure::new_xor_gate (int lhs) {
   Gate *g = find_xor_lits (this->rhs);
   if (g) {
     check_xor_gate_implied (g);
-    add_xor_matching_proof_chain (g, g->lhs, lhs);
+    add_xor_matching_proof_chain (g, g->lhs, glauses, lhs);
     // TODO Florian
     if (merge_literals (g->lhs, lhs)) {
       ++internal->stats.congruence.xors;
@@ -3345,6 +3347,8 @@ Gate *Closure::new_xor_gate (int lhs) {
     g->indexed = true;
     g->shrunken = false;
     g->hash = hash_lits (nonces, g->rhs);
+    for (auto pair : glauses)
+      g->neg_lhs_ids.push_back (pair);
     table.insert (g);
     ++internal->stats.congruence.gates;
 #ifdef LOGGING
@@ -3655,6 +3659,8 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
   const unsigned end = 1u << arity;
   assert (negated == parity_lits (lits));
   unsigned found = 0;
+  vector<LitClausePair> glauses;
+  glauses.push_back (LitClausePair (0, c));
   for (unsigned i = 0; i != end; ++i) {
     while (i && parity_lits (lits) != negated)
       inc_lits (lits);
@@ -3665,6 +3671,7 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
       if (!d)
         return;
       assert (!d->redundant);
+      glauses.push_back (LitClausePair (i, d));
     } else
       assert (!c->redundant);
     inc_lits (lits);
@@ -3689,7 +3696,7 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
     if (!negated)
       lhs = -lhs;
     // TODO Florian if negated, you need to update the index of the gates
-    Gate *g = new_xor_gate (lhs);
+    Gate *g = new_xor_gate (glauses, lhs);
     if (g)
       extracted++;
     if (internal->unsat)
@@ -4829,7 +4836,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       if (h) {
         garbage = true;
         if (new_tag == Gate_Type::XOr_Gate)
-          add_xor_matching_proof_chain (g, g->lhs, h->lhs);
+          add_xor_matching_proof_chain (g, g->lhs, h->neg_lhs_ids, h->lhs);
         else
           add_ite_turned_and_binary_clauses (g);
         if (merge_literals (g->lhs, h->lhs))
@@ -5111,7 +5118,7 @@ void Closure::add_ite_matching_proof_chain (
 
 Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
                              std::vector<LitClausePair> &&clauses) {
-  assert (chain.empty());
+  assert (chain.empty ());
   if (else_lit == -then_lit) {
     if (then_lit < 0)
       LOG ("skipping ternary XOR %d := %d ^ %d", lhs, cond, -then_lit);

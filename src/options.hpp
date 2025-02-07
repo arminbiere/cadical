@@ -60,8 +60,8 @@ OPTION( congruence,        1,  0,  1,0,0,1, "congruence closure") \
 OPTION( congruenceand,     1,  0,  1,0,0,1, "extract AND gates") \
 OPTION( congruenceandarity,1e6,2,5e7,0,0,1, "AND gate arity limit") \
 OPTION( congruencebinaries,1,  0,  1,0,0,1, "extract binary and strengthen ternary clauses") \
-OPTION( congruenceite,     1,  0,  1,0,0,1, "extract ITE gates") \
-OPTION( congruencexor,     0,  0,  0,0,0,1, "extract XOR gates") \
+OPTION( congruenceite,     0,  0,  0,0,0,1, "extract ITE gates") \
+OPTION( congruencexor,     1,  0,  1,0,0,1, "extract XOR gates") \
 OPTION( congruencexorarity,4,  2, 31,0,0,1, "XOR gate arity limit") \
 OPTION( congruencexorcounts,1, 1,5e6,0,0,1, "XOR gate round") \
 OPTION( cover,             0,  0,  1,0,1,1, "covered clause elimination") \
@@ -103,7 +103,7 @@ OPTION( emalevel,        1e5,  1,2e9,0,0,1, "window back-track level") \
 OPTION( emasize,         1e5,  1,2e9,0,0,1, "window learned clause size") \
 OPTION( ematrailfast,    1e2,  1,2e9,0,0,1, "window fast trail") \
 OPTION( ematrailslow,    1e5,  1,2e9,0,0,1, "window slow trail") \
-OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
+OPTION( externallrat,      0,  0,  0,0,0,1, "external lrat") \
 OPTION( fastelim,          1,  0,  1,0,1,1, "fast BVE during preprocessing") \
 OPTION( fastelimbound,     7, -1,2e9,1,0,1, "fast BVE bound during preprocessing") \
 OPTION( flush,             0,  0,  1,0,0,1, "flush redundant clauses") \
