@@ -166,7 +166,7 @@ struct Gate {
   bool marked : 1;
   bool shrunken : 1;
   size_t hash; // TODO remove this field (the C++ implementation is caching it anyway)
-  vector<uint64_t> units;
+  vector<uint64_t> units; // TODO: remove, should not be useful anymore
   vector<LitClausePair> pos_lhs_ids;
   vector<LitClausePair> neg_lhs_ids;
   bool tautological_clauses; // TODO delete
