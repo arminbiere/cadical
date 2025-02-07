@@ -137,7 +137,7 @@ LitClausePair make_LitClausePair (int lit, Clause* cl);
 //
 // To keep track of the proof we use two extra arrays:
 //  - `neg_lhs_ids' contains the long clause for AND gates. Otherwise, it is
-//  empty.
+//  empty. TODO: change to std::option as it contains at most one element
 //  - `pos_lhs_ids' contains all the remaining gates.
 //
 // We keep the reasons with an index. This index depends on the gates:
@@ -152,6 +152,9 @@ LitClausePair make_LitClausePair (int lit, Clause* cl);
 // the 'Look at this first' in the CPP file.
 //
 // Important for the proofs: the LHS is not updated.
+//
+// TODO: we currently use a vector for the rhs, but we could also use FMA and inline the structure
+// to avoid any indirection.
 struct Gate {
 #ifdef LOGGING
   uint64_t id;
@@ -242,8 +245,6 @@ struct Closure {
 
   std::vector<Clause*> new_unwatched_binary_clauses;
   // LRAT proofs
-  vector<signed char> proof_marks;
-  vector<signed char> resolvent_marks;
   vector<int> resolvent_analyzed;
   mutable vector<uint64_t> lrat_chain; // storing LRAT chain
 
@@ -340,14 +341,16 @@ struct Closure {
 				   std::vector<uint64_t> &chain, bool = true,
 				   Rewrite rewrite2 = Rewrite (),
 				   int execept_lhs = 0, int except_lhs2 = 0);
-  void push_id_on_chain (Clause *c);
   void push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
 				   std::vector<uint64_t> &chain, bool = true,
 				   Rewrite rewrite2 = Rewrite (),
 					int execept_lhs = 0, int except_lhs2 = 0);
   // TODO: does nothing except pushing on the stack, remove!
+  void push_id_on_chain (Clause *c);
+  // TODO: does nothing except pushing on the stack, remove!
   void push_id_on_chain (const std::vector<LitClausePair> &c);
-  void produce_lrat_for_rewrite (std::vector<uint64_t> &chain, Rewrite rewrite, int);
+  // TODO: does nothing except pushing on the stack, remove!
+  void push_id_on_chain (std::vector<uint64_t> &chain, Rewrite rewrite, int);
   void update_and_gate_build_lrat_chain (Gate *g, Gate *h, int src, uint64_t id1, uint64_t id2, int dst,
 					 std::vector<uint64_t> & extra_reasons_lit, std::vector<uint64_t> &extra_reasons_ulit);
   void update_and_gate_unit_build_lrat_chain (Gate *g, int src, uint64_t id1, uint64_t id2, int dst,
@@ -483,15 +486,24 @@ struct Closure {
   bool find_subsuming_clause (Clause *c);
   void produce_rewritten_clause_lrat_and_clean (vector<LitClausePair>&, Rewrite rew1,
 					 Rewrite rew2,
-				   int execept_lhs = 0, int except_lhs2 = 0);
+					 int execept_lhs = 0, int except_lhs2 = 0);
+  // rewrite the clause using eager rewriting and rew1 and rew2, except for
+  // 2 literals Usage:
+  //   - the except are used to ignore LHS of gates that have not and should
+  //   not be rewritten.
+  //   - TODO: except_lhs2 should never be used actually
+  //   - the Rewrite are for additional rewrite to allow for lazy rewrites to be taken into account
+  //   without being added to the eager rewriting (yet)
   Clause* produce_rewritten_clause_lrat (Clause *c, Rewrite rew1,
 					 Rewrite rew2,
-				   int execept_lhs = 0, int except_lhs2 = 0);
+					 int execept_lhs = 0, int except_lhs2 = 0);
+  // TODO: do not use, too error prone due to the arguments default to '0', use the version above instead
   Clause *produce_rewritten_clause_lrat (
       Clause *c, int except = 0, uint64_t id1 = 0, uint64_t id2 = 0,
       int except_other = 0, uint64_t id_other1 = 0, uint64_t id_other2 = 0,
 					 int execept_lhs = 0, int except_lhs2 = 0);
-  // variant where we update the indices after removing the tautologies
+  // variant where we update the indices after removing the tautologies and remove the tautological
+  // clauses
 void produce_rewritten_clause_lrat_and_clean (std::vector<LitClausePair> &litIds, Rewrite rew1,
 					      Rewrite rew2, int except_lhs, int except_lhs2, size_t &old_position1, size_t &old_position2);
   // binary extraction and ternary strengthening
@@ -521,9 +533,6 @@ void produce_rewritten_clause_lrat_and_clean (std::vector<LitClausePair> &litIds
   LitClausePair marked_mu2(int lit);
   LitClausePair marked_mu4(int lit);
 
-  signed char& proof_marked (int lit);
-  signed char& resolvent_marked (int lit);
-  
   // XOR
   uint32_t number_from_xor_reason (const std::vector<int> &rhs);
   uint32_t number_from_xor_reason (const Clause *const rhs);
