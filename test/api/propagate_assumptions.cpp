@@ -129,7 +129,7 @@ int main () {
   // ------------------------------------------------------------------
   // Encode Problem and check without assumptions.
 
-  enum { TIE = 1, SHIRT = 2, HAT = 3, SHOES = 4, SLIPPERS = 5};
+  enum { TIE = 1, SHIRT = 2, HAT = 3, SHOES = 4, SLIPPERS = 5 };
 
   solver->set ("binary", 0);
   solver->set ("lidrup", 1);
@@ -169,9 +169,6 @@ int main () {
   check_test_case ({}, {-SHIRT, -TIE}, 20);
   check_test_case ({HAT}, {SHIRT, -TIE, HAT}, 10);
 
-
-
-
   // Check when root-level propagation satisfies
   solver->add (-TIE), solver->add (0);
   solver->add (SHIRT), solver->add (0);
@@ -190,20 +187,17 @@ int main () {
   // Check when last level propagation is needed for conflict detection
   solver = new CaDiCaL::Solver ();
 
-  solver->add (SHOES), solver->add(SLIPPERS), solver->add(0);
-  solver->add (-SHOES), solver->add(-SLIPPERS), solver->add(0);
+  solver->add (SHOES), solver->add (SLIPPERS), solver->add (0);
+  solver->add (-SHOES), solver->add (-SLIPPERS), solver->add (0);
 
-  solver->add (-HAT), solver->add (SLIPPERS), solver->add(0);
-  solver->add (-TIE), solver->add (SHIRT), solver->add(0);
-  solver->add (-6), solver->add (7), solver->add(0);
-  solver->add (-6), solver->add (-8), solver->add(0);
-  solver->add (-7), solver->add (-SHIRT), solver->add (-TIE), solver->add (8), solver->add(0);
-  
-  check_test_case ({}, {HAT,TIE,6}, 20);
+  solver->add (-HAT), solver->add (SLIPPERS), solver->add (0);
+  solver->add (-TIE), solver->add (SHIRT), solver->add (0);
+  solver->add (-6), solver->add (7), solver->add (0);
+  solver->add (-6), solver->add (-8), solver->add (0);
+  solver->add (-7), solver->add (-SHIRT), solver->add (-TIE),
+      solver->add (8), solver->add (0);
 
-
-
-  
+  check_test_case ({}, {HAT, TIE, 6}, 20);
 
   return 0;
 }

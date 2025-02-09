@@ -897,11 +897,11 @@ public:
 
   void notify_assignment (const std::vector<int> &lits) override {
     MLOG ("notified " << lits.size () << " new assignments on level "
-        << observed_trail.size () - 1);
+                      << observed_trail.size () - 1);
 #ifndef NDEBUG
     MLOGC (": [ ");
-# else
-  MLOGC (std::endl);
+#else
+    MLOGC (std::endl);
 #endif
     for (const auto &lit : lits) {
       observed_trail.back ().push_back (lit);
@@ -914,7 +914,6 @@ public:
     MLOGC ("]" << std::endl);
 #endif
   }
-
 
   void notify_new_decision_level () override {
     MLOG ("notify new decision level " << observed_trail.size () - 1
@@ -1922,8 +1921,8 @@ public:
         // They are (ideally) are executed already
         if (c->type == Call::LEMMA)
           continue;
-          // if (c->type == Call::CONTINUE)
-          //   continue;
+        // if (c->type == Call::CONTINUE)
+        //   continue;
 #ifdef MOBICAL_MEMORY
         if (c->type == Call::MAXALLOC) {
           memory_bad_alloc = c->val;

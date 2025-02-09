@@ -316,20 +316,19 @@ bool Internal::external_propagate () {
       int level_before = level;
       size_t assigned = num_assigned;
       bool has_external_clause = ask_external_clause ();
-      // New observed variable might have triggered a backtrack during this 
+      // New observed variable might have triggered a backtrack during this
       // ask_external_clause call, so we need to propagate before continuing
       stats.ext_prop.ext_cb++;
       stats.ext_prop.elearn_call++;
 
-
       bool trail_changed =
-            (num_assigned != assigned || level != level_before ||
-             propagated < trail.size ());
+          (num_assigned != assigned || level != level_before ||
+           propagated < trail.size ());
       if (trail_changed) {
-        propagate (); //unsat or conflict will be caught later
-        if (!unsat || !conflict) notify_assignments ();
+        propagate (); // unsat or conflict will be caught later
+        if (!unsat || !conflict)
+          notify_assignments ();
       }
-        
 
 #ifndef NDEBUG
       if (has_external_clause)
@@ -871,9 +870,10 @@ bool Internal::external_check_solution () {
 
     stats.ext_prop.ext_cb++;
     stats.ext_prop.elearn_call++;
-    
+
     if (has_external_clause)
-      LOG ("Found solution triggered new clauses from external propagator.");
+      LOG (
+          "Found solution triggered new clauses from external propagator.");
 
     while (has_external_clause) {
       int level_before = level;
