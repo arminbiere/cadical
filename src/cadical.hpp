@@ -197,6 +197,7 @@ enum State {
 // Opaque classes needed in the API and declared in the same namespace.
 
 class File;
+class Testing;
 struct Internal;
 struct External;
 
@@ -987,6 +988,8 @@ private:
   //
   Internal *internal; // Hidden internal solver.
   External *external; // Hidden API to internal solver mapping.
+
+  friend class Testing; // Access to 'internal' for testing only!
 
 #ifndef NTRACING
   // The API calls to the solver can be traced by setting the environment

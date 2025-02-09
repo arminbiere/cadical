@@ -1,19 +1,23 @@
 #include "../../src/cadical.hpp"
+
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
+
 #include <cassert>
 #include <cstdlib>
 #include <string>
 
 using namespace CaDiCaL;
 using namespace std;
+
 #include "../../src/checker.hpp"
 #include "../../src/file.hpp"
 #include "../../src/frattracer.hpp"
 #include "../../src/lratchecker.hpp"
 #include "../../src/lrattracer.hpp"
 #include "../../src/tracer.hpp"
+#include "../../src/testing.hpp"
 
 #define LOG(...) \
   do { \
@@ -24,16 +28,17 @@ using namespace std;
 int main () {
 
   Solver *solver = new Solver;
+  Internal * internal = Testing (solver).internal ();
 
-  File *f1 = File::write (0, "/tmp/lrat.proof");
-  File *f2 = File::write (0, "/tmp/frat.proof");
+  File *f1 = File::write (internal, "/tmp/lrat.proof");
+  File *f2 = File::write (internal, "/tmp/frat.proof");
 
-  InternalTracer *t1 = new LratChecker (0);
-  InternalTracer *t2 = new Checker (0);
-  FileTracer *ft1 = new LratTracer (0, f1, 0);
-  FileTracer *ft2 = new FratTracer (0, f2, 0, 0);
-  StatTracer *st1 = new LratChecker (0);
-  StatTracer *st2 = new Checker (0);
+  InternalTracer *t1 = new LratChecker (internal);
+  InternalTracer *t2 = new Checker (internal);
+  FileTracer *ft1 = new LratTracer (internal, f1, 0);
+  FileTracer *ft2 = new FratTracer (internal, f2, 0, 0);
+  StatTracer *st1 = new LratChecker (internal);
+  StatTracer *st2 = new Checker (internal);
 
   // ------------------------------------------------------------------
 
