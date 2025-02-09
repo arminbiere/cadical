@@ -42,9 +42,9 @@ int main () {
   const char *prefix = "/tmp/cadical-api-test-example-tracer";
   size_t pid = (size_t) getpid ();
 
-  sprintf (lrat_proof_path, "%s-%zu-lrat.proof", prefix, pid);
-  sprintf (frat_proof_path, "%s-%zu-frat.proof", prefix, pid);
-  sprintf (veripb_proof_path, "%s-%zu-veripb.proof", prefix, pid);
+  snprintf (lrat_proof_path, 128, "%s-%zu-lrat.proof", prefix, pid);
+  snprintf (frat_proof_path, 128, "%s-%zu-frat.proof", prefix, pid);
+  snprintf (veripb_proof_path, 128, "%s-%zu-veripb.proof", prefix, pid);
 
   File *f1 = File::write (internal, lrat_proof_path);
   File *f2 = File::write (internal, frat_proof_path);
