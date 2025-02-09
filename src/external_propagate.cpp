@@ -216,7 +216,7 @@ void Internal::force_backtrack (size_t new_level) {
        new_level, level);
 #endif
   backtrack (new_level);
-};
+}
 
 /*----------------------------------------------------------------------------*/
 //
