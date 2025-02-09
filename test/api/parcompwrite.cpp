@@ -12,7 +12,7 @@
 extern "C" {
 #include <pthread.h>
 #include <unistd.h>
-};
+}
 
 using namespace std;
 using namespace CaDiCaL;

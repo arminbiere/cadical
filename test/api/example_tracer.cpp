@@ -11,7 +11,7 @@
 extern "C" {
 #include <sys/types.h>
 #include <unistd.h>
-};
+}
 
 using namespace CaDiCaL;
 using namespace std;
