@@ -35,6 +35,7 @@ void check_test_case (const std::vector<int> &constrain,
   std::cout << res << " ";
 
   assert (res == expected_result);
+  (void) expected_result;
 
   // Check if returned set is subset of the expected result
 
