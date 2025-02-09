@@ -39,7 +39,7 @@ int main () {
   char frat_proof_path[128];
   char veripb_proof_path[128];
 
-  const char *prefix = "/tmp/cadical-example-tracer";
+  const char *prefix = "/tmp/cadical-api-test-example-tracer";
   size_t pid = (size_t) getpid ();
 
   sprintf (lrat_proof_path, "%s-%zu-lrat.proof", prefix, pid);

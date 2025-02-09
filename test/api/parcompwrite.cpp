@@ -18,7 +18,7 @@ using namespace std;
 using namespace CaDiCaL;
 
 static string prefix (const char *tester) {
-  string res = "/tmp/parcompwrite-";
+  string res = "/tmp/cadical-api-test-parcompwrite-";
   res += tester;
   res += "-";
   res += to_string (getpid ());
