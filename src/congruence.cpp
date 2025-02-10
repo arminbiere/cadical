@@ -4872,11 +4872,13 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         } else if (new_tag == Gate_Type::And_Gate) {
           // we have to get rid of one clause, two become binaries, and
           // becomes ternary
-          produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids,
-                                                   Rewrite (), Rewrite ());
           for (auto id : g->pos_lhs_ids) {
             LOG (id.clause, "clause after rewriting:");
+	    assert (id.clause->size == 2);
           }
+	  assert (g->pos_lhs_ids.size() == 2);
+	  assert (g->neg_lhs_ids.size() == 1);
+	  assert (g->arity() == 2);
 #ifndef NDEBUG
           std::for_each (
               begin (g->pos_lhs_ids), end (g->pos_lhs_ids),
@@ -5001,8 +5003,6 @@ void Closure::merge_and_gate_lrat_produce_lrat (
           1); // otherwise we need intermediate clauses
   assert (h->neg_lhs_ids.size () ==
           1); // otherwise we need intermediate clauses
-  assert (g->pos_lhs_ids.size () ==
-          rhs.size ()); // g->arity() not defined yet
   LOG (g->neg_lhs_ids[0].clause, "units");
   for (auto lit : *g->neg_lhs_ids[0].clause) { // find the units
     if (internal->val (lit) > 0) {
@@ -5031,12 +5031,42 @@ void Closure::merge_and_gate_lrat_produce_lrat (
   LOG (reasons_lrat_usrc, "lrat chain for negative side");
 }
 
-void Closure::simplify_ite_gate_to_and_lrat (Gate *g) {
-  LOGGATE (g, "convert to AND gate");
-  assert (g->tag == Gate_Type::ITE_Gate);
-  assert (internal->lrat);
+// odd copy of rewrite_ite_gate_lrat_and
+void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1, size_t idx2) {
+  assert (internal->lrat_chain.empty ());
+  if (!internal->lrat)
+    return;
+  assert (g->rhs.size () == 3);
+  assert (g->pos_lhs_ids.size () == 4);
+  assert (idx1 < g->pos_lhs_ids.size ());
+  assert (idx2 < g->pos_lhs_ids.size ());
+  int lit = g->pos_lhs_ids[idx2].current_lit, other = g->lhs;
+
   produce_rewritten_clause_lrat_and_clean (
-      g->pos_lhs_ids, Rewrite (), Rewrite (), g->lhs);
+      g->pos_lhs_ids, Rewrite (), Rewrite (), g->lhs, 0, idx1, idx2);
+
+  assert (idx1 < g->pos_lhs_ids.size ());
+  assert (idx2 < g->pos_lhs_ids.size ());
+  Clause *c = g->pos_lhs_ids[idx1].clause;
+  assert (c->size == 2);
+  Clause *d = g->pos_lhs_ids[idx2].clause;
+  assert (c != d);
+  assert (c);
+  assert (d);
+  g->pos_lhs_ids.erase (std::remove_if (begin (g->pos_lhs_ids),
+                                        end (g->pos_lhs_ids),
+                                        [d] (const LitClausePair &p) {
+                                          return p.clause == d;
+                                        }),
+                        end (g->pos_lhs_ids));
+  assert (g->pos_lhs_ids.size () == 2);
+  assert (lit);
+  assert (other);
+  assert (lit != other);
+  lrat_chain.push_back (c->id);
+  lrat_chain.push_back (d->id);
+  Clause *e = add_binary_clause (lit, -other);
+
   auto long_clause =
       std::find_if (begin (g->pos_lhs_ids), end (g->pos_lhs_ids),
                     [] (LitClausePair l) { return l.clause->size == 3; });
@@ -5044,12 +5074,8 @@ void Closure::simplify_ite_gate_to_and_lrat (Gate *g) {
   LOG (long_clause->clause, "new long clause");
   g->neg_lhs_ids.push_back (*long_clause);
   g->pos_lhs_ids.erase (long_clause);
-  assert (g->pos_lhs_ids.size () == 2);
-#ifndef NDEBUG
-  for (auto litId: g->pos_lhs_ids) {
-    assert (litId.clause->size == 2);
-  }
-#endif
+  assert (g->pos_lhs_ids.size () == 1);
+  g->pos_lhs_ids.push_back ({lit, e});
 }
 
 void Closure::simplify_ite_gate (Gate *g) {
@@ -5105,21 +5131,21 @@ void Closure::simplify_ite_gate (Gate *g) {
         g->lhs = -lhs;
         rhs[0] = -cond;
         rhs[1] = -else_lit;
-        simplify_ite_gate_to_and_lrat (g);
+        simplify_ite_gate_to_and_lrat (g, 0, 3);
       } else if (v_then < 0) {
         rhs[0] = -cond;
         rhs[1] = else_lit;
-        simplify_ite_gate_to_and_lrat (g);
+        simplify_ite_gate_to_and_lrat (g, 1, 2);
       } else if (v_else > 0) {
         g->lhs = -lhs;
         rhs[0] = -then_lit;
         rhs[1] = cond;
-        simplify_ite_gate_to_and_lrat (g);
+        simplify_ite_gate_to_and_lrat (g, 0, 3);
       } else {
         assert (v_else < 0);
         rhs[0] = cond;
         rhs[1] = then_lit;
-        simplify_ite_gate_to_and_lrat (g);
+        simplify_ite_gate_to_and_lrat (g, 1, 2);
       }
       if (internal->vlit (rhs[0]) > internal->vlit (rhs[1]))
         std::swap (rhs[0], rhs[1]);

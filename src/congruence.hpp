@@ -593,7 +593,7 @@ struct Closure {
   void rewrite_ite_gate_update_lrat_reasons (Gate *g, int src, int dst);
   void simplify_ite_gate_produce_unit_lrat (Gate *g, size_t idx1, size_t idx2);
   void merge_and_gate_lrat_produce_lrat (Gate *g, Gate *h, std::vector<uint64_t> &reasons_lrat, std::vector<uint64_t> &reasons_lrat_back);
-  void simplify_ite_gate_to_and_lrat (Gate *g);
+  void simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1, size_t idx2);
 };
 
 } // namespace CaDiCaL
