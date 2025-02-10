@@ -2357,6 +2357,7 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
   assert (!internal->unsat && chain.empty ());
   LOGGATE (g, "updating");
   bool garbage = true;
+  // TODO Florian LRAT for learn_congruence_unit
   if (g->arity () == 0)
     learn_congruence_unit (-g->lhs);
   else if (g->arity () == 1) {
@@ -2374,7 +2375,7 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
     if (h) {
       assert (garbage);
       std::vector<uint64_t> reasons_implication, reasons_back;
-      // TODO Florian: add_xor_matching_proof_chain needs to learn the extra
+      // add_xor_matching_proof_chain needs to learn the extra
       // clauses and populate the LRAT chain
       add_xor_matching_proof_chain (g, g->lhs, h->pos_lhs_ids, h->lhs);
       if (merge_literals_lrat (g->lhs, h->lhs, reasons_implication,
@@ -3383,7 +3384,7 @@ void Closure::add_xor_matching_proof_chain (
   LOG ("finished XOR matching proof");
 }
 
-// TODO Florian: this function needs to either put the clauses from
+// this function needs to either put the clauses from
 // lrat_chain_and_gate into g->pos_neg_ids or clear it or do something with
 // it if you merge gates.
 Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
@@ -3402,7 +3403,6 @@ Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
   if (g) {
     check_xor_gate_implied (g);
     add_xor_matching_proof_chain (g, g->lhs, glauses, lhs);
-    // TODO Florian
     if (merge_literals (g->lhs, lhs)) {
       ++internal->stats.congruence.xors;
     }
@@ -3464,7 +3464,7 @@ uint32_t Closure::number_from_xor_reason (const std::vector<int> &rhs,
   return n;
 }
 
-// TODO Florian: this is how I planned to sort it and produce the number
+// this is how I planned to sort it and produce the number
 // Look at this first
 void Closure::gate_sort_lrat_reasons (LitClausePair &litId, int lhs) {
   assert (clause.empty ());
@@ -3475,7 +3475,7 @@ void Closure::gate_sort_lrat_reasons (LitClausePair &litId, int lhs) {
   clause.clear ();
 }
 
-// TODO Florian: this is how I planned to sort it and produce the number
+// this is how I planned to sort it and produce the number
 // Look at this first
 void Closure::gate_sort_lrat_reasons (std::vector<LitClausePair> &xs,
                                       int lhs) {
@@ -3745,7 +3745,7 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
     while (i && parity_lits (lits) != negated)
       inc_lits (lits);
     if (i) {
-      // TODO Florian: the clause must be stored
+      // the clause must be stored
       // you can use `lrat_chain_and_gate` for this
       Clause *d = find_large_xor_side_clause (lits);
       if (!d)
@@ -3775,7 +3775,6 @@ void Closure::extract_xor_gates_with_base_clause (Clause *c) {
   for (auto lhs : lits) {
     if (!negated)
       lhs = -lhs;
-    // TODO Florian if negated, you need to update the index of the gates
     Gate *g = new_xor_gate (glauses, lhs);
     if (g)
       extracted++;
@@ -4103,7 +4102,7 @@ bool Closure::rewriting_lhs (Gate *g, int dst) {
   return true;
 }
 
-// TODO Florian update to produce proofs
+// update to produce proofs
 void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   if (skip_xor_gate (g))
     return;
@@ -4166,6 +4165,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     sort_literals_by_var (g->rhs);
   }
 
+  // TODO Florian LRAT for add_xor_shrinking_proof_chain
   if (dst_count > 1)
     add_xor_shrinking_proof_chain (g, src);
   assert (internal->clause.empty ());
@@ -4180,7 +4180,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   // TODO stats
 }
 
-// TODO Florian update to produce proofs
+// update to produce proofs
 void Closure::simplify_xor_gate (Gate *g) {
   LOGGATE (g, "simplifying");
   if (skip_xor_gate (g))
