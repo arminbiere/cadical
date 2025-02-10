@@ -272,6 +272,7 @@ struct Closure {
   uint64_t &eager_representative_id (int lit);
   uint64_t eager_representative_id (int lit) const;
 
+  int find_lrat_representative_with_marks (int lit);
   // representative in the union-find structure in the lazy equivalences
   int find_representative (int lit);
   // find the representative and produce the binary clause representing the
@@ -405,6 +406,7 @@ struct Closure {
   bool simplify_gate (Gate *g);
   void simplify_and_gate (Gate *g);
   void simplify_ite_gate (Gate *g);
+  Clause *simplify_xor_clause (int lhs, Clause *);
   void simplify_xor_gate (Gate *g);
   bool simplify_gates (int lit);
 
@@ -535,6 +537,7 @@ struct Closure {
   Clause *produce_rewritten_clause_lrat (Clause *c, Rewrite rew1,
                                          Rewrite rew2, int execept_lhs = 0,
                                          int except_lhs2 = 0);
+  Clause *produce_rewritten_clause_lrat_simple (Clause *c, int lhs);
   // TODO: do not use, too error prone due to the arguments default to '0',
   // use the version above instead
   Clause *produce_rewritten_clause_lrat (
@@ -554,6 +557,7 @@ struct Closure {
   Clause *new_clause ();
   //
   void sort_literals_by_var (vector<int> &rhs);
+  void sort_literals_by_var_except (vector<int> &rhs, int);
 
   // schedule
   queue<int> schedule;
@@ -576,10 +580,10 @@ struct Closure {
   LitClausePair marked_mu4 (int lit);
 
   // XOR
-  uint32_t number_from_xor_reason (const std::vector<int> &rhs);
-  uint32_t number_from_xor_reason (const Clause *const rhs);
-  void gate_sort_lrat_reasons (std::vector<LitClausePair> &);
-  void gate_sort_lrat_reasons (LitClausePair &);
+  uint32_t number_from_xor_reason (const std::vector<int> &rhs, int);
+  uint32_t number_from_xor_reason (const Clause *const rhs, int);
+  void gate_sort_lrat_reasons (std::vector<LitClausePair> &, int);
+  void gate_sort_lrat_reasons (LitClausePair &, int);
 
   void rewrite_ite_gate_lrat_and (Gate *g, int dst, int src, size_t c,
                                   size_t d);
