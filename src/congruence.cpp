@@ -3100,7 +3100,7 @@ void Closure::check_implied () {
 void Closure::add_xor_shrinking_proof_chain (Gate const *const g,
                                              int pivot) {
   assert (internal->clause.empty ());
-  if (!internal->proof)
+  if (!internal->proof || internal->lrat)
     return;
   LOGGATE (g, "starting XOR shrinking proof chain");
   auto &clause = internal->clause;
