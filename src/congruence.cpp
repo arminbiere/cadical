@@ -4567,8 +4567,9 @@ void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
   assert (g->pos_lhs_ids.size () == 4);
   assert (idx1 < g->pos_lhs_ids.size ());
   assert (idx2 < g->pos_lhs_ids.size ());
-  int lit = g->pos_lhs_ids[2].current_lit,
-      other = g->lhs;
+  int lit = g->pos_lhs_ids[idx2].current_lit,
+    other = g->lhs;
+
 
   produce_rewritten_clause_lrat_and_clean (
       g->pos_lhs_ids, Rewrite (), Rewrite (), g->lhs, 0, idx1, idx2);
@@ -4656,21 +4657,20 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       rhs[1] = not_else_lit;
       rewrite_ite_gate_lrat_and (g, src, dst, 1, 3);
     } else if (not_dst == then_lit) {
-      rewrite_ite_gate_lrat_and (g, src, dst, 0, 2);
       // !then_lit ? then_lit : else_lit
       // !then_lit & then_lit | then_lit & else_lit
       // then_lit & else_lit
       rhs[0] = else_lit;
       assert (rhs[1] == then_lit);
-    } else if (dst == else_lit) {
       rewrite_ite_gate_lrat_and (g, src, dst, 0, 2);
+    } else if (dst == else_lit) {
       // else_list ? then_lit : else_lit
       // else_list & then_lit | !else_list & else_lit
       // else_list & then_lit
       rhs[0] = else_lit;
       assert (rhs[1] == then_lit);
+      rewrite_ite_gate_lrat_and (g, src, dst, 0, 2);
     } else if (not_dst == else_lit) {
-      rewrite_ite_gate_lrat_and (g, src, dst, 1, 3);
       // !else_list ? then_lit : else_lit
       // !else_list & then_lit | else_lit & else_lit
       // !else_list & then_lit | else_lit
@@ -4679,6 +4679,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       g->lhs = not_lhs;
       rhs[0] = not_then_lit;
       rhs[1] = not_else_lit;
+      rewrite_ite_gate_lrat_and (g, src, dst, 1, 3);
     } else {
       shrink = false;
       rhs[0] = dst;
@@ -4686,7 +4687,6 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
     }
   } else if (src == then_lit) {
     if (dst == cond) {
-      rewrite_ite_gate_lrat_and (g, src, dst, 1, 3);
       // cond ? cond : else_lit
       // cond & cond | !cond & else_lit
       // cond | !cond & else_lit
@@ -4702,6 +4702,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       // !cond & else_lit
       rhs[0] = not_cond;
       rhs[1] = else_lit;
+      rewrite_ite_gate_lrat_and (g, src, dst, 1, 3);
     } else if (dst == else_lit) {
       // cond ? else_lit : else_lit
       // else_lit
@@ -4732,14 +4733,13 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
   } else {
     assert (src == else_lit);
     if (dst == cond) {
-      rewrite_ite_gate_lrat_and (g, src, dst, 0, 2);
       // cond ? then_lit : cond
       // cond & then_lit | !cond & cond
       // cond & then_lit
       assert (rhs[0] == cond);
       assert (rhs[1] == then_lit);
+      rewrite_ite_gate_lrat_and (g, src, dst, 2, 0);
     } else if (not_dst == cond) {
-      rewrite_ite_gate_lrat_and (g, src, dst, 1, 3);
       // cond ? then_lit : !cond
       // cond & then_lit | !cond & !cond
       // cond & then_lit | !cond
@@ -4748,6 +4748,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       g->lhs = not_lhs;
       assert (rhs[0] == cond);
       rhs[1] = not_then_lit;
+      rewrite_ite_gate_lrat_and (g, src, dst, 1, 3);
     } else if (dst == then_lit) {
       // cond ? then_lit : then_lit
       // then_lit
