@@ -2576,6 +2576,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
   Gate *h = find_and_lits (this->rhs);
   Gate *g = new Gate;
   g->lhs = lhs;
+  g->tag = Gate_Type::And_Gate;
   if (internal->lrat) {
     g->neg_lhs_ids.push_back (LitClausePair (lhs, base_clause));
     for (auto i : lrat_chain_and_gate)
@@ -2608,7 +2609,6 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
     }
     return nullptr;
   } else {
-    g->tag = Gate_Type::And_Gate;
     g->rhs = {rhs};
     assert (!internal->lrat ||
             g->pos_lhs_ids.size () ==
