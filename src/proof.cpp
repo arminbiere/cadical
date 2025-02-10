@@ -663,4 +663,11 @@ void Proof::conclude_sat (const vector<int> &model) {
   }
 }
 
+void Proof::conclude_unknown (const vector<int> &trail) {
+  LOG (clause, "PROOF conclude unknown");
+  for (auto &tracer : tracers) {
+    tracer->conclude_unknown (trail);
+  }
+}
+
 } // namespace CaDiCaL

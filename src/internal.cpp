@@ -330,6 +330,83 @@ int Internal::cdcl_loop_with_inprocessing () {
   return res;
 }
 
+int Internal::propagate_assumptions () {
+  if (proof)
+    proof->solve_query ();
+  if (opts.ilb) {
+    if (opts.ilbassumptions)
+      sort_and_reuse_assumptions ();
+    stats.ilbtriggers++;
+    stats.ilbsuccess += (level > 0);
+    stats.levelsreused += level;
+    if (level) {
+      assert (control.size () > 1);
+      stats.literalsreused += num_assigned - control[1].trail;
+    }
+  }
+  init_search_limits ();
+  init_report_limits ();
+
+  int res = already_solved (); // root-level propagation is done here
+
+  int last_assumption_level = assumptions.size ();
+  if (constraint.size ())
+    last_assumption_level++;
+
+  if (!res) {
+    restore_clauses ();
+    while (!res) {
+      if (unsat)
+        res = 20;
+      else if (unsat_constraint)
+        res = 20;
+      else if (!propagate ()) {
+        // let analyze run to get failed assumptions
+        analyze ();
+      } else if (!external_propagate () || unsat) { // external propagation
+        if (unsat)
+          continue;
+        else
+          analyze ();
+      } else if (satisfied ()) { // found model
+        if (!external_check_solution () || unsat) {
+          if (unsat)
+            continue;
+          else
+            analyze ();
+        } else if (satisfied ())
+          res = 10;
+      } else if (search_limits_hit ())
+        break;                               // decision or conflict limit
+      else if (terminated_asynchronously ()) // externally terminated
+        break;
+      else {
+        if (level >= last_assumption_level)
+          break;
+        res = decide ();
+      }
+    }
+  }
+
+  if (unsat || unsat_constraint)
+    res = 20;
+
+  if (!res && satisfied ())
+    res = 10;
+
+  finalize (res);
+  reset_solving ();
+  report_solving (res);
+
+  return res;
+}
+
+void Internal::get_entrailed_literals (std::vector<int> &entrailed) {
+
+  for (size_t i = 0; i < trail.size (); i++)
+    entrailed.push_back (trail[i]);
+}
+
 /*------------------------------------------------------------------------*/
 
 // Most of the limits are only initialized in the first 'solve' call and
@@ -949,6 +1026,8 @@ void Internal::finalize (int res) {
     external->conclude_sat ();
   else if (res == 20)
     conclude_unsat ();
+  else if (!res)
+    external->conclude_unknown ();
 }
 
 /*------------------------------------------------------------------------*/

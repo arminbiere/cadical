@@ -197,6 +197,7 @@ enum State {
 // Opaque classes needed in the API and declared in the same namespace.
 
 class File;
+class Testing;
 struct Internal;
 struct External;
 
@@ -461,6 +462,21 @@ public:
   //   ensure (UNSATISFIED)
   //
   bool constraint_failed ();
+
+  // Collects a subset of those literals that are implied by unit
+  // propagation by assuming the currently defined (potentially empty) set
+  // of assumptions (see IPASIR assume(lit)) function. In case unit
+  // propgation over the defined set of assumptions (or over the clause
+  // database on its own) leads to conflict, the function returns 20 and the
+  // content of 'implicants' is undefined. In case unit propagation happens
+  // to satisfy all the clauses (not probable, but not impossible), the
+  // function returns 10 and 'implicants' is a solution of the current
+  // formula under the current assumptions (after solution reconstruction).
+  // In any other case, the function returns 0 (indicating 'UNKNOWN') and
+  // 'implicants' lists the non-conflicting current value of the trail.
+
+  int propagate ();
+  void get_entrailed_literals (std::vector<int> &implicants);
 
   //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be
@@ -817,9 +833,11 @@ public:
   // With a failing constraint these can be multiple clauses.
   // Then it will trigger a conclude_unsat event with the id(s)
   // of the newly learnt clauses or the id of the global conflict.
+  // In case the solver is in UNKNOWN, it will collect the currently
+  // entrailed literals and add them to the proof.
   //
-  //   require (SATISFIED || UNSATISFIED)
-  //   ensure (SATISFIED || UNSATISFIED)
+  //   require (SATISFIED || UNSATISFIED || UNKNOWN)
+  //   ensure (SATISFIED || UNSATISFIED || UNKNOWN)
   //
   void conclude ();
 
@@ -970,6 +988,8 @@ private:
   //
   Internal *internal; // Hidden internal solver.
   External *external; // Hidden API to internal solver mapping.
+
+  friend class Testing; // Access to 'internal' for testing only!
 
 #ifndef NTRACING
   // The API calls to the solver can be traced by setting the environment
@@ -1160,8 +1180,9 @@ public:
   virtual void notify_backtrack (size_t new_level) = 0;
 
   // Check by the external propagator the found complete solution (after
-  // solution reconstruction). If it returns false, the propagator must
-  // provide an external clause during the next callback.
+  // solution reconstruction). If it returns false, the propagator should
+  // provide an external clause during the next callback or introduce new
+  // observed variables during this callback.
   //
   virtual bool cb_check_found_model (const std::vector<int> &model) = 0;
 

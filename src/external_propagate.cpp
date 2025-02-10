@@ -39,8 +39,9 @@ void Internal::add_observed_var (int ilit) {
 // graph involving this variable.
 //
 void Internal::remove_observed_var (int ilit) {
-  if (!fixed (ilit) && level)
+  if (!fixed (ilit) && level) {
     backtrack ();
+  }
 
   assert (fixed (ilit) || !level);
 
@@ -215,7 +216,7 @@ void Internal::force_backtrack (size_t new_level) {
        new_level, level);
 #endif
   backtrack (new_level);
-};
+}
 
 /*----------------------------------------------------------------------------*/
 //
@@ -312,9 +313,23 @@ bool Internal::external_propagate () {
          level, trail.size (), notified);
 #endif
     if (!unsat && !conflict) {
+      int level_before = level;
+      size_t assigned = num_assigned;
       bool has_external_clause = ask_external_clause ();
+      // New observed variable might have triggered a backtrack during this
+      // ask_external_clause call, so we need to propagate before continuing
       stats.ext_prop.ext_cb++;
       stats.ext_prop.elearn_call++;
+
+      bool trail_changed =
+          (num_assigned != assigned || level != level_before ||
+           propagated < trail.size ());
+      if (trail_changed) {
+        propagate (); // unsat or conflict will be caught later
+        if (!unsat || !conflict)
+          notify_assignments ();
+      }
+
 #ifndef NDEBUG
       if (has_external_clause)
         LOG ("New external clauses are to be added.");
@@ -323,11 +338,11 @@ bool Internal::external_propagate () {
 #endif
 
       while (has_external_clause) {
-        int level_before = level;
-        size_t assigned = num_assigned;
+        level_before = level;
+        assigned = num_assigned;
 
         add_external_clause (0);
-        bool trail_changed =
+        trail_changed =
             (num_assigned != assigned || level != level_before ||
              propagated < trail.size ());
         cb_repropagate_needed = true;
@@ -804,6 +819,10 @@ void Internal::handle_external_clause (Clause *res) {
 // - The empty clause was learned due to something new learned from
 // the external propagator.
 //
+// In case only new variables were introduced, but no new clauses were
+// added, the function will return without a conflict to the outer CDCL
+// loop, where the new (not yet satisfied) variables are recognized and
+// the search continues.
 bool Internal::external_check_solution () {
   if (!external_prop)
     return true;
@@ -851,9 +870,10 @@ bool Internal::external_check_solution () {
 
     stats.ext_prop.ext_cb++;
     stats.ext_prop.elearn_call++;
-    assert (has_external_clause);
 
-    LOG ("Found solution triggered new clauses from external propagator.");
+    if (has_external_clause)
+      LOG (
+          "Found solution triggered new clauses from external propagator.");
 
     while (has_external_clause) {
       int level_before = level;

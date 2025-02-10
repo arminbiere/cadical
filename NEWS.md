@@ -1,3 +1,23 @@
+Version 2.1.3
+-------------
+
+- New interface to support propagation of assumptions. The following functions
+are available now:
+
+  + `propagate ()`: Applies unit propagation on the assumptions given to the
+    solver previously (supposed to be called instead of `solve ()`).
+
+  + `get_entrailed_literals (std::vector<int> &)`: In case `propagate ()`
+    returned `0` (UNKNOWN), this function returns (the subset of) those
+    literals that were assigned based on the assumptions and propagation.
+    Those assigned literals that are tainted on the reconstruction stack
+    (due to some preprocessing) are not returned, thus it is safe to 
+    combine it with the formula simplifications.
+
+- LIDRUP proofs now include information about queries that returned with
+  UNKNOWN result.
+
+
 Version 2.1.2
 -------------
 

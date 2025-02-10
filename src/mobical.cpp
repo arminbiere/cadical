@@ -1,4 +1,3 @@
-
 /*------------------------------------------------------------------------*/
 /* Copyright (C) 2018-2021 Armin Biere, Johannes Kepler University Linz   */
 /* Copyright (C) 2020-2021 Mathias Fleury, Johannes Kepler University Linz*/
@@ -527,7 +526,8 @@ public:
       MLOG ("etrail: ");
       for (auto const &lit : etrail)
         MLOGC (lit << " ");
-      MLOGC (std::endl << "otrail: ";);
+      MLOGC (std::endl);
+      MLOG ("otrail: ");
       for (auto const &lit : otrail)
         MLOGC (lit << " ");
       MLOGC (std::endl);
@@ -896,11 +896,23 @@ public:
   }
 
   void notify_assignment (const std::vector<int> &lits) override {
-    MLOG ("notified " << lits.size () << " new assignments." << std::endl);
+    MLOG ("notified " << lits.size () << " new assignments on level "
+                      << observed_trail.size () - 1);
+#ifndef NDEBUG
+    MLOGC (": [ ");
+#else
+    MLOGC (std::endl);
+#endif
     for (const auto &lit : lits) {
       observed_trail.back ().push_back (lit);
       unassigned_reasons.erase (lit);
+#ifndef NDEBUG
+      MLOGC (lit << " ");
+#endif
     }
+#ifndef NDEBUG
+    MLOGC ("]" << std::endl);
+#endif
   }
 
   void notify_new_decision_level () override {
@@ -1210,41 +1222,42 @@ struct Call {
     SIMPLIFY        = shift ( 12 ),
     LOOKAHEAD       = shift ( 13 ),
     CUBING          = shift ( 14 ),
+    PROPAGATE       = shift ( 15 ),
 
-    VAL             = shift ( 15 ),
-    FLIP            = shift ( 16 ),
-    FLIPPABLE       = shift ( 17 ),
-    FAILED          = shift ( 18 ),
-    FIXED           = shift ( 19 ),
+    VAL             = shift ( 16 ),
+    FLIP            = shift ( 17 ),
+    FLIPPABLE       = shift ( 18 ),
+    FAILED          = shift ( 19 ),
+    FIXED           = shift ( 20 ),
 
-    FREEZE          = shift ( 20 ),
-    FROZEN          = shift ( 21 ),
-    MELT            = shift ( 22 ),
+    FREEZE          = shift ( 21 ),
+    FROZEN          = shift ( 22 ),
+    MELT            = shift ( 23 ),
 
-    LIMIT           = shift ( 23 ),
-    OPTIMIZE        = shift ( 24 ),
+    LIMIT           = shift ( 24 ),
+    OPTIMIZE        = shift ( 25 ),
 
-    DUMP            = shift ( 25 ),
-    STATS           = shift ( 26 ),
+    DUMP            = shift ( 26 ),
+    STATS           = shift ( 27 ),
 
-    RESET           = shift ( 27 ),
+    RESET           = shift ( 28 ),
 
-    CONSTRAIN       = shift ( 28 ),
+    CONSTRAIN       = shift ( 29 ),
 
-    CONNECT         = shift ( 29 ),
-    OBSERVE         = shift ( 30 ),
-    LEMMA           = shift ( 31 ),
+    CONNECT         = shift ( 30 ),
+    OBSERVE         = shift ( 31 ),
+    LEMMA           = shift ( 32 ),
 
-    CONCLUDE        = shift ( 32 ),
-    DISCONNECT      = shift ( 33 ),
+    CONCLUDE        = shift ( 33 ),
+    DISCONNECT      = shift ( 34 ),
 
-    TRACEPROOF      = shift ( 34 ),
-    FLUSHPROOFTRACE = shift ( 35 ),
-    CLOSEPROOFTRACE = shift ( 36 ),
+    TRACEPROOF      = shift ( 35 ),
+    FLUSHPROOFTRACE = shift ( 36 ),
+    CLOSEPROOFTRACE = shift ( 37 ),
 
 #ifdef MOBICAL_MEMORY
-    MAXALLOC        = shift ( 37 ),
-    LEAKALLOC       = shift ( 38 ),
+    MAXALLOC        = shift ( 38 ),
+    LEAKALLOC       = shift ( 39 ),
 #endif
 
     // clang-format on
@@ -1259,7 +1272,7 @@ struct Call {
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
     BEFORE =
         ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
-    PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING,
+    PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
     DURING = LEMMA, // | CONTINUE,
     AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS |
             FLUSHPROOFTRACE | CLOSEPROOFTRACE,
@@ -1568,6 +1581,20 @@ struct CubingCall : public Call {
   void print (ostream &o) { o << "cubing " << res << endl; }
   Call *copy () { return new CubingCall (res); }
   const char *keyword () { return "cubing"; }
+};
+
+struct PropagateCall : public Call {
+  PropagateCall (int r = 0) : Call (PROPAGATE, 0, r) {}
+  void execute (Solver *&s) {
+    int res = s->propagate ();
+    if (!res) {
+      std::vector<int> implicants;
+      s->get_entrailed_literals (implicants);
+    }
+  }
+  void print (ostream &o) { o << "propagate " << res << endl; }
+  Call *copy () { return new PropagateCall (res); }
+  const char *keyword () { return "propagate"; }
 };
 
 struct ValCall : public Call {
@@ -1894,8 +1921,8 @@ public:
         // They are (ideally) are executed already
         if (c->type == Call::LEMMA)
           continue;
-          // if (c->type == Call::CONTINUE)
-          //   continue;
+        // if (c->type == Call::CONTINUE)
+        //   continue;
 #ifdef MOBICAL_MEMORY
         if (c->type == Call::MAXALLOC) {
           memory_bad_alloc = c->val;
@@ -1917,8 +1944,6 @@ public:
             Call *next_c = calls[j];
             if (next_c->type == Call::LEMMA)
               next_c->execute (solver);
-            // else if (next_c->type == Call::CONTINUE)
-            //   next_c->execute (solver);
             else
               break;
           }
@@ -2716,9 +2741,11 @@ void Trace::generate_process (Random &random) {
   } else if (fraction > 0.99) {
     const int depth = random.pick_int (0, 10);
     push_back (new CubingCall (depth));
-  } else if (fraction > 0.9)
+  } else if (fraction > 0.9) {
     push_back (new LookaheadCall ());
-  else {
+  } else if (fraction > 0.85) {
+    push_back (new PropagateCall ());
+  } else {
     const int rounds = random.pick_int (0, 10);
     push_back (new SimplifyCall (rounds));
   }
@@ -3541,6 +3568,7 @@ static bool is_basic (Call *c) {
   case Call::SIMPLIFY:
   case Call::LOOKAHEAD:
   case Call::CUBING:
+  case Call::PROPAGATE:
   case Call::VARS:
   case Call::ACTIVE:
   case Call::REDUNDANT:
@@ -4210,8 +4238,6 @@ void Reader::parse () {
       // if (!lemma_adding && !lit) error ("empty lemma is learned.");
       lemma_adding = lit;
       c = new LemmaCall (lit);
-      // } else if (!strcmp (keyword, "continue")) {
-      //   c = new ContinueCall ();
     } else if (!strcmp (keyword, "assume")) {
       if (!first)
         error ("argument to 'assume' missing");
@@ -4264,6 +4290,16 @@ void Reader::parse () {
       assert (!second);
       c = new CubingCall (lit);
       solved++;
+    } else if (!strcmp (keyword, "propagate")) {
+      if (first && !parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'solve'", first);
+      if (first && lit != 0 && lit != 10 && lit != 20)
+        error ("invalid result argument '%d' to 'solve'", lit);
+      assert (!second);
+      if (first)
+        c = new PropagateCall (lit);
+      else
+        c = new PropagateCall ();
     } else if (!strcmp (keyword, "val")) {
       if (!first)
         error ("first argument to 'val' missing");
@@ -4492,9 +4528,8 @@ void Reader::parse () {
         }
         assert (state == Call::SOLVE || state == Call::SIMPLIFY ||
                 state == Call::LOOKAHEAD || state == Call::CUBING ||
-                state == Call::OBSERVE || state == Call::LEMMA ||
-                // state == Call::CONTINUE ||
-                state == Call::AFTER);
+                state == Call::PROPAGATE || state == Call::OBSERVE ||
+                state == Call::LEMMA || state == Call::AFTER);
         new_state = Call::AFTER;
         break;
 
@@ -4502,6 +4537,7 @@ void Reader::parse () {
       case Call::SIMPLIFY:
       case Call::LOOKAHEAD:
       case Call::CUBING:
+      case Call::PROPAGATE:
       case Call::RESET:
       case Call::CONNECT:
       case Call::LEMMA:
@@ -4580,6 +4616,12 @@ void Mobical::header () {
 extern "C" {
 #include <sys/mman.h>
 }
+
+// https://github.com/libressl/portable/issues/24\#issuecomment-50435773
+// The usage of MAP_ANONYMOUS vs MAP_ANON depends on the actual system
+#if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
+#define MAP_ANONYMOUS MAP_ANON
+#endif
 
 Mobical::Mobical () {
   const int prot = PROT_READ | PROT_WRITE;

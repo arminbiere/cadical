@@ -343,6 +343,11 @@ struct External {
 
   /*----------------------------------------------------------------------*/
 
+  int propagate_assumptions ();
+  void get_entrailed_literals (std::vector<int> &entrailed);
+  void conclude_unknown ();
+
+  /*----------------------------------------------------------------------*/
   int lookahead ();
   CaDiCaL::CubesWithStatus generate_cubes (int, int);
 
