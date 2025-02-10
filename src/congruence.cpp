@@ -2370,7 +2370,8 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
       learn_congruence_unit (g->rhs[0]);
     else if (v < 0)
       learn_congruence_unit (-g->rhs[0]);
-    else if (merge_literals (g->lhs, g->rhs[0])) {
+    else if (merge_literals (g->lhs,
+                             g->rhs[0])) { // TODO Florian merge with LRAT
       ++internal->stats.congruence.unaries;
       ++internal->stats.congruence.unary_and;
     }
@@ -4174,6 +4175,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   }
 
   // TODO Florian LRAT for add_xor_shrinking_proof_chain
+  // this should be unnecessary...
   if (dst_count > 1)
     add_xor_shrinking_proof_chain (g, src);
   assert (internal->clause.empty ());
