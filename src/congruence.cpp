@@ -743,6 +743,10 @@ Clause *Closure::produce_rewritten_clause_lrat (
     LOG ("generated clause is a tautology");
     d = nullptr;
     lrat_chain.clear ();
+  } else if (changed && clause.size () == 1) {
+    LOG (lrat_chain, "LRAT chain");
+    d = nullptr;
+    assert (false);
   } else if (changed) {
     LOG (lrat_chain, "LRAT Chain");
     d = new_clause ();
@@ -2358,9 +2362,9 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
   LOGGATE (g, "updating");
   bool garbage = true;
   // TODO Florian LRAT for learn_congruence_unit
-  if (g->arity () == 0)
+  if (g->arity () == 0) {
     learn_congruence_unit (-g->lhs);
-  else if (g->arity () == 1) {
+  } else if (g->arity () == 1) {
     const signed char v = internal->val (g->lhs);
     if (v > 0)
       learn_congruence_unit (g->rhs[0]);
@@ -3315,12 +3319,16 @@ void Closure::add_xor_matching_proof_chain (
   vector<LitClausePair> first;
   vector<LitClausePair> second;
   if (internal->lrat) {
-    for (auto pair : g->pos_lhs_ids)
-      first.push_back (LitClausePair (
-          0, produce_rewritten_clause_lrat_simple (pair.clause, lhs1)));
-    for (auto pair : clauses2)
-      second.push_back (LitClausePair (
-          0, produce_rewritten_clause_lrat_simple (pair.clause, lhs2)));
+    for (auto pair : g->pos_lhs_ids) {
+      Clause *c = produce_rewritten_clause_lrat_simple (pair.clause, lhs1);
+      if (c)
+        first.push_back (LitClausePair (0, c));
+    }
+    for (auto pair : clauses2) {
+      Clause *c = produce_rewritten_clause_lrat_simple (pair.clause, lhs2);
+      if (c)
+        second.push_back (LitClausePair (0, c));
+    }
     gate_sort_lrat_reasons (first, lhs1);
     gate_sort_lrat_reasons (second, lhs2);
     g->pos_lhs_ids = first;
