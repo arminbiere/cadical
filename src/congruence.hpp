@@ -79,7 +79,7 @@ struct lit_implication {
   lit_implication (int f, int s, Clause *_id)
       : first (f), second (s), clause (_id) {}
   lit_implication (int f, int s) : first (f), second (s), clause (0) {}
-  lit_implication () : first (0), second (0), clause (nullptr) {};
+  lit_implication () : first (0), second (0), clause (nullptr) {}
   void swap () { std::swap (first, second); }
 };
 
@@ -109,7 +109,7 @@ struct lit_equivalence {
         second_clause (nullptr) {}
   lit_equivalence ()
       : first (0), second (0), first_clause (nullptr),
-        second_clause (nullptr) {};
+        second_clause (nullptr) {}
   lit_equivalence swap () {
     std::swap (first, second);
     std::swap (first_clause, second_clause);
@@ -198,10 +198,13 @@ struct CompactBinary {
   Clause *clause;
   LRAT_ID id;
   int lit1, lit2;
+  CompactBinary (Clause *c, LRAT_ID i, int l1, int l2)
+  : clause (c), id (i), lit1 (l1), lit2 (l2) {}
+  CompactBinary () : clause (nullptr), id (0), lit1 (0), lit2 (0) {}
 };
 
 struct Hash {
-  Hash (std::array<int, 16> &ncs) : nonces (ncs) {};
+  Hash (std::array<int, 16> &ncs) : nonces (ncs) {}
   std::array<int, 16> &nonces;
   size_t operator() (const Gate *const g) const;
 };
@@ -212,8 +215,8 @@ struct Rewrite {
   LRAT_ID id2;
 
   Rewrite (int _src, int _dst, LRAT_ID _id1, LRAT_ID _id2)
-      : src (_src), dst (_dst), id1 (_id1), id2 (_id2) {};
-  Rewrite () : src (0), dst (0), id1 (0), id2 (0) {};
+      : src (_src), dst (_dst), id1 (_id1), id2 (_id2) {}
+  Rewrite () : src (0), dst (0), id1 (0), id2 (0) {}
 };
 
 struct Closure {
@@ -376,7 +379,7 @@ struct Closure {
   void push_id_on_chain (std::vector<LRAT_ID> &chain, Rewrite rewrite,
                          int);
   void update_and_gate_build_lrat_chain (
-      Gate *g, Gate *h, int src, LRAT_ID id1, LRAT_ID id2, int dst,
+      Gate *g, Gate *h,
       std::vector<LRAT_ID> &extra_reasons_lit,
       std::vector<LRAT_ID> &extra_reasons_ulit);
   void update_and_gate_unit_build_lrat_chain (
@@ -518,7 +521,6 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
                                                    LRAT_ID id2,
                                                    int clashing,
                                                    int falsified, int unit);
-  void learn_congruence_unit_unit_lrat_chain (Gate *g, int unit);
   void learn_congruence_unit_when_lhs_set (Gate *g, int src, LRAT_ID id1,
                                            LRAT_ID id2, int dst);
 
@@ -527,9 +529,7 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   void subsume_clause (Clause *subsuming, Clause *subsumed);
   bool find_subsuming_clause (Clause *c);
   void produce_rewritten_clause_lrat_and_clean (vector<LitClausePair> &,
-                                                Rewrite rew1, Rewrite rew2,
-                                                int execept_lhs = 0,
-                                                int except_lhs2 = 0);
+                                                int execept_lhs = 0);
   // rewrite the clause using eager rewriting and rew1 and rew2, except for
   // 2 literals Usage:
   //   - the except are used to ignore LHS of gates that have not and should
@@ -538,22 +538,12 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   //   - the Rewrite are for additional rewrite to allow for lazy rewrites
   //   to be taken into account without being added to the eager rewriting
   //   (yet)
-  Clause *produce_rewritten_clause_lrat (Clause *c, Rewrite rew1,
-                                         Rewrite rew2, int execept_lhs = 0,
-                                         int except_lhs2 = 0);
-  Clause *produce_rewritten_clause_lrat_simple (Clause *c, int lhs);
+  Clause *produce_rewritten_clause_lrat (Clause *c, int execept_lhs = 0);
   void compute_rewritten_clause_lrat_simple (Clause *c, int except) ;
-  // TODO: do not use, too error prone due to the arguments default to '0',
-  // use the version above instead
-  Clause *produce_rewritten_clause_lrat (
-      Clause *c, int except = 0, LRAT_ID id1 = 0, LRAT_ID id2 = 0,
-      int except_other = 0, LRAT_ID id_other1 = 0, LRAT_ID id_other2 = 0,
-      int execept_lhs = 0, int except_lhs2 = 0);
   // variant where we update the indices after removing the tautologies and
   // remove the tautological clauses
   void produce_rewritten_clause_lrat_and_clean (
-      std::vector<LitClausePair> &litIds, Rewrite rew1, Rewrite rew2,
-      int except_lhs, int except_lhs2, size_t &old_position1,
+      std::vector<LitClausePair> &litIds, int except_lhs, size_t &old_position1,
       size_t &old_position2);
   // binary extraction and ternary strengthening
   void extract_binaries ();
@@ -571,7 +561,6 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   // proof. If delete_id is non-zero, then delete the clause instead of
   // learning it
   LRAT_ID simplify_and_add_to_proof_chain (vector<int> &unsimplified,
-                                            vector<int> &chain,
                                             LRAT_ID delete_id = 0);
 
   // we define our own wrapper as cadical has otherwise a non-compatible
