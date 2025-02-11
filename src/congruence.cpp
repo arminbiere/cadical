@@ -2090,8 +2090,8 @@ bool Closure::skip_xor_gate (Gate *g) {
 
 void Closure::shrink_and_gate (Gate *g, int falsifies, int clashing) {
   if (falsifies) {
-    g->rhs[0] = falsifies;
     g->rhs.resize (1);
+    g->rhs[0] = falsifies;
     g->hash = hash_lits (nonces, g->rhs);
   } else if (clashing) {
     LOG (g, "gate before clashing on %d", clashing);
