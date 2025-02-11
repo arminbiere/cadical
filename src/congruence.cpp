@@ -2404,9 +2404,7 @@ void Closure::simplify_and_gate (Gate *g) {
   int falsifies = 0;
   std::vector<int>::iterator it = begin (g->rhs);
   std::vector<LRAT_ID> &units = g->units;
-
-  // if (internal->lrat)
-  //   lrat_chain.push_back(g->neg_lhs_ids[0].second);
+  bool ulhs_in_rhs = false;
   for (auto lit : g->rhs) {
     const signed char v = internal->val (lit);
     if (v > 0) {
@@ -2424,6 +2422,8 @@ void Closure::simplify_and_gate (Gate *g) {
       }
       continue;
     }
+    if (lit == -g->lhs)
+      ulhs_in_rhs = true;
     *it++ = lit;
   }
 
@@ -2458,6 +2458,19 @@ void Closure::simplify_and_gate (Gate *g) {
   update_and_gate (g, git, 0, 0, 0, 0, falsifies, 0);
   ++internal->stats.congruence.simplified_ands;
   ++internal->stats.congruence.simplified;
+
+  if (ulhs_in_rhs) { // missing in Kissat, TODO: port back
+    assert (gate_contains (g, -g->lhs));
+    if (internal->lrat) {
+      for (auto litId : g->pos_lhs_ids){
+	if (litId.current_lit == g->lhs){
+	  compute_rewritten_clause_lrat_simple (litId.clause, 0);
+	  break;
+	}
+      }
+    }
+    learn_congruence_unit(-g->lhs);
+  }
 }
 
 bool Closure::simplify_gate (Gate *g) {
