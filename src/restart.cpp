@@ -45,6 +45,8 @@ bool Internal::stabilizing () {
          stats.conflicts, stats.ticks.search[stable]);
   if (!inc.stabilize)
     inc.stabilize = delta_ticks;
+  if (!inc.stabilize) // rare occurence in incremental calls requiring no ticks
+    inc.stabilize = 1;
 
   stable = !stable; // Switch!!!!!
 
