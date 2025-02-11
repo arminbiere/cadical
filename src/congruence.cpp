@@ -626,6 +626,103 @@ void Closure::produce_rewritten_clause_lrat_and_clean (
   }
   litIds.resize (j);
 }
+void     Closure::compute_rewritten_clause_lrat_simple (Clause *c, int except) {
+  assert (internal->clause.empty ());
+  assert (internal->lrat_chain.empty ());
+  assert (clause.empty ());
+  assert (lrat_chain.empty ());
+  bool changed = false;
+  bool tautology = false;
+  for (auto lit : *c) {
+    LOG ("checking if %d is required", lit);
+    if (internal->marked2 (lit)) {
+      continue;
+    }
+    if (internal->marked2 (-lit)) {
+      tautology = true;
+      break;
+    }
+    if (lit == except || lit == -except) {
+      internal->mark2 (lit);
+      clause.push_back (lit);
+      continue;
+    }
+    if (internal->val (lit) < 0) {
+#if 1
+      LOG ("found unit %d, removing it", -lit);
+      const unsigned uidx = internal->vlit (-lit);
+      uint64_t id = internal->unit_clauses[uidx];
+      assert (id);
+      lrat_chain.push_back (id);
+      changed = true;
+      continue;
+#else
+      LOG ("found unit %d, but ignoring it", -lit);
+#endif
+    }
+    if (internal->val (lit) > 0) {
+      LOG ("found positive unit, so clause is subsumed by unit");
+      tautology = true;
+    }
+    const int other = find_eager_representative_and_compress (lit);
+    const bool marked = internal->marked2 (other);
+    const bool neg_marked = internal->marked2 (-other);
+    if (!marked)
+      internal->mark2 (other);
+    if (neg_marked) {
+      tautology = true;
+      LOG ("tautology due to %d -> %d", lit, other);
+    } else if (lit == other && marked) {
+      changed = true;
+      LOG ("%d -> %d already in", lit, other);
+    } else if (lit != other) {
+      if (!marked)
+        clause.push_back (other);
+      changed = true;
+      lrat_chain.push_back (eager_representative_id (lit));
+    } else if (!marked)
+      clause.push_back (lit);
+  }
+
+  for (auto lit : *c) {
+    internal->unmark (lit);
+  }
+
+  for (auto lit : clause) {
+    internal->unmark (lit);
+  }
+
+  lrat_chain.push_back (c->id);
+  if (tautology) {
+    LOG ("generated clause is a tautology");
+    lrat_chain.clear ();
+  } else if (changed && clause.size () == 1) {
+    LOG (lrat_chain, "LRAT chain");
+  } else{ 
+    LOG (c, "oops this should not happen");
+    assert (false);
+  }
+}
+
+Clause *Closure::new_clause () {
+  assert (internal->clause.empty ());
+  assert (!clause.empty ());
+  LOG (clause, "learn new clause");
+  if (internal->lrat) {
+    assert (!clause.empty ());
+    assert (internal->clause.empty ());
+    swap (internal->clause, clause);
+  }
+  internal->external->check_learned_clause ();
+  Clause *c = internal->new_clause (false);
+  internal->clause.clear ();
+
+  if (internal->proof) {
+    internal->proof->add_derived_clause (c, lrat_chain);
+  }
+  return c;
+
+}
 
 Clause *Closure::produce_rewritten_clause_lrat (Clause *c, Rewrite rew1,
                                                 Rewrite rew2,
@@ -765,25 +862,6 @@ Clause *Closure::produce_rewritten_clause_lrat (
   lrat_chain = std::move (tmp_lrat);
   assert (internal->clause.empty ());
   return d;
-}
-
-Clause *Closure::new_clause () {
-  assert (internal->clause.empty ());
-  assert (!clause.empty ());
-  LOG (clause, "learn new clause");
-  if (internal->lrat) {
-    assert (!clause.empty ());
-    assert (internal->clause.empty ());
-    swap (internal->clause, clause);
-  }
-  internal->external->check_learned_clause ();
-  Clause *c = internal->new_clause (false);
-  internal->clause.clear ();
-
-  if (internal->proof) {
-    internal->proof->add_derived_clause (c, lrat_chain);
-  }
-  return c;
 }
 
 void Closure::push_id_on_chain (std::vector<uint64_t> &chain,
@@ -2369,15 +2447,40 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
   bool garbage = true;
   // TODO Florian LRAT for learn_congruence_unit
   if (g->arity () == 0) {
+    if (internal->lrat) {
+    simplify_unit_xor_lrat_clauses (g->pos_lhs_ids, g->lhs);
+      assert (clause.size () == 1 && clause.back () == -g->lhs);
+      assert (lrat_chain.size ());
+      clause.clear ();
+    }
     learn_congruence_unit (-g->lhs);
   } else if (g->arity () == 1) {
+      std::vector<uint64_t> reasons_implication, reasons_back;
+    if (internal->lrat) {
+      vector<LitClausePair> first;
+    simplify_and_sort_xor_lrat_clauses (g->pos_lhs_ids, first, g->lhs);
+g->pos_lhs_ids = first;
+      assert (g->pos_lhs_ids.size () == 2);
+      reasons_implication.push_back (g->pos_lhs_ids[0].clause->id);
+      reasons_back.push_back (g->pos_lhs_ids[1].clause->id);
+    }
     const signed char v = internal->val (g->lhs);
-    if (v > 0)
+    if (v > 0) {
+     if (internal->lrat)  {
+     push_lrat_unit(g->lhs);
+        lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
+      }
       learn_congruence_unit (g->rhs[0]);
-    else if (v < 0)
+    }
+    else if (v < 0) {
+     if (internal->lrat)  {
+     push_lrat_unit(-g->lhs);
+        lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
+      }
       learn_congruence_unit (-g->rhs[0]);
-    else if (merge_literals (g->lhs,
-                             g->rhs[0])) { // TODO Florian merge with LRAT
+    }
+    else if (merge_literals_lrat (g->lhs,
+                             g->rhs[0], reasons_implication, reasons_back)) { // TODO Florian merge with LRAT
       ++internal->stats.congruence.unaries;
       ++internal->stats.congruence.unary_and;
     }
@@ -2388,7 +2491,7 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
       std::vector<uint64_t> reasons_implication, reasons_back;
       // add_xor_matching_proof_chain needs to learn the extra
       // clauses and populate the LRAT chain
-      add_xor_matching_proof_chain (g, g->lhs, h->pos_lhs_ids, h->lhs);
+      add_xor_matching_proof_chain (g, g->lhs, h->pos_lhs_ids, h->lhs, reasons_implication, reasons_back);
       if (merge_literals_lrat (g->lhs, h->lhs, reasons_implication,
                                reasons_back))
         ++internal->stats.congruence.xors;
@@ -3282,8 +3385,25 @@ void Closure::add_ite_turned_and_binary_clauses (Gate *g) {
   simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.clear ();
 }
+void Closure::simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &source, int lhs) {
+ assert (internal->lrat) ;
+    for (auto pair : source) {
+      compute_rewritten_clause_lrat_simple (pair.clause, lhs);
+    if (lrat_chain.size ()) break;
+    }
+  assert (clause.size () == 1);
+}
+void Closure::simplify_and_sort_xor_lrat_clauses (const vector<LitClausePair> &source, vector<LitClausePair> &target, int lhs) {
+ assert (internal->lrat) ;
+    for (auto pair : source) {
+      Clause *c = produce_rewritten_clause_lrat_simple (pair.clause, lhs);
+      if (c)
+        target.push_back (LitClausePair (0, c));
+    }
+    gate_sort_lrat_reasons (target, lhs);
+}
 void Closure::add_xor_matching_proof_chain (
-    Gate *g, int lhs1, const vector<LitClausePair> &clauses2, int lhs2) {
+    Gate *g, int lhs1, const vector<LitClausePair> &clauses2, int lhs2, vector<uint64_t> &to_lrat, vector<uint64_t> &back_lrat) {
   if (lhs1 == lhs2)
     return;
   if (!internal->proof)
@@ -3292,18 +3412,8 @@ void Closure::add_xor_matching_proof_chain (
   vector<LitClausePair> first;
   vector<LitClausePair> second;
   if (internal->lrat) {
-    for (auto pair : g->pos_lhs_ids) {
-      Clause *c = produce_rewritten_clause_lrat_simple (pair.clause, lhs1);
-      if (c)
-        first.push_back (LitClausePair (0, c));
-    }
-    for (auto pair : clauses2) {
-      Clause *c = produce_rewritten_clause_lrat_simple (pair.clause, lhs2);
-      if (c)
-        second.push_back (LitClausePair (0, c));
-    }
-    gate_sort_lrat_reasons (first, lhs1);
-    gate_sort_lrat_reasons (second, lhs2);
+    simplify_and_sort_xor_lrat_clauses (g->pos_lhs_ids, first, lhs1);
+    simplify_and_sort_xor_lrat_clauses (clauses2, second, lhs2);
     g->pos_lhs_ids = first;
   }
   LOG ("starting XOR matching proof");
@@ -3362,6 +3472,10 @@ void Closure::add_xor_matching_proof_chain (
       second_ids.swap (second_tmp);
     }
   } while (!unsimplified.empty ());
+  to_lrat.swap (first_ids);
+  back_lrat.swap (second_ids);
+  assert (!internal->lrat || to_lrat.size () == 1);
+  assert (!internal->lrat || back_lrat.size () == 1);
   LOG ("finished XOR matching proof");
 }
 
@@ -3383,8 +3497,9 @@ Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
   Gate *g = find_xor_lits (this->rhs);
   if (g) {
     check_xor_gate_implied (g);
-    add_xor_matching_proof_chain (g, g->lhs, glauses, lhs);
-    if (merge_literals (g->lhs, lhs)) {
+      std::vector<uint64_t> reasons_implication, reasons_back;
+    add_xor_matching_proof_chain (g, g->lhs, glauses, lhs, reasons_implication, reasons_back);
+    if (merge_literals_lrat (g->lhs, lhs, reasons_implication, reasons_back)) {
       ++internal->stats.congruence.xors;
     }
     if (!internal->unsat)
@@ -4147,7 +4262,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
     sort_literals_by_var (g->rhs);
   }
 
-  // TODO Florian LRAT for add_xor_shrinking_proof_chain
+  // LRAT for add_xor_shrinking_proof_chain
   // this should be unnecessary...
   if (dst_count > 1)
     add_xor_shrinking_proof_chain (g, src);
@@ -4900,12 +5015,18 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       }
       if (h) {
         garbage = true;
-        if (new_tag == Gate_Type::XOr_Gate)
-          add_xor_matching_proof_chain (g, g->lhs, h->pos_lhs_ids, h->lhs);
-        else
+        if (new_tag == Gate_Type::XOr_Gate) {
+      std::vector<uint64_t> reasons_implication, reasons_back;
+          add_xor_matching_proof_chain (g, g->lhs, h->pos_lhs_ids, h->lhs, reasons_implication, reasons_back);
+        if (merge_literals_lrat (g->lhs, h->lhs, reasons_implication, reasons_back))
+          ++internal->stats.congruence.xors;
+        }
+        else {
           add_ite_turned_and_binary_clauses (g);
         if (merge_literals (g->lhs, h->lhs))
           ++internal->stats.congruence.ands;
+
+        }
         if (!internal->unsat)
           delete_proof_chain ();
       } else {

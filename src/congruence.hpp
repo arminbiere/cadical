@@ -409,6 +409,8 @@ struct Closure {
   Clause *simplify_xor_clause (int lhs, Clause *);
   void simplify_xor_gate (Gate *g);
   bool simplify_gates (int lit);
+void simplify_and_sort_xor_lrat_clauses (const vector<LitClausePair> &, vector<LitClausePair>&,int );
+void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
 
   // rewriting
   bool rewriting_lhs (Gate *g, int dst);
@@ -453,7 +455,7 @@ struct Closure {
   uint64_t check_and_add_to_proof_chain (vector<int> &clause);
   void add_xor_matching_proof_chain (Gate *g, int lhs1,
                                      const vector<LitClausePair> &,
-                                     int lhs2);
+                                     int lhs2, vector<uint64_t> &, vector<uint64_t> &);
   void add_xor_shrinking_proof_chain (Gate const *const g, int src);
   void extract_xor_gates ();
   void extract_xor_gates_with_base_clause (Clause *c);
@@ -538,6 +540,7 @@ struct Closure {
                                          Rewrite rew2, int execept_lhs = 0,
                                          int except_lhs2 = 0);
   Clause *produce_rewritten_clause_lrat_simple (Clause *c, int lhs);
+  void compute_rewritten_clause_lrat_simple (Clause *c, int except) ;
   // TODO: do not use, too error prone due to the arguments default to '0',
   // use the version above instead
   Clause *produce_rewritten_clause_lrat (
