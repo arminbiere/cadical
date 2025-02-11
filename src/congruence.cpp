@@ -4659,12 +4659,15 @@ static bool skip_ite_gate (Gate *g) {
 void Closure::produce_ite_merge_then_else_reasons (
     Gate *g, int dst, int src, std::vector<LRAT_ID> &reasons_implication,
     std::vector<LRAT_ID> &reasons_back) {
+  assert (!g->garbage);
   if (!internal->lrat)
     return;
   assert (g->rhs.size () == 3);
   assert (src == g->rhs[1] || src == g->rhs[2]);
   assert (dst == g->rhs[1] || dst == g->rhs[2]);
   (void) src, (void) dst;
+  produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs);
+  assert (g->pos_lhs_ids.size () == 4);
   reasons_implication.push_back (g->pos_lhs_ids[0].clause->id);
   reasons_implication.push_back (g->pos_lhs_ids[2].clause->id);
   reasons_back.push_back (g->pos_lhs_ids[1].clause->id);
@@ -4686,6 +4689,7 @@ void Closure::rewrite_ite_gate_update_lrat_reasons (Gate *g, int src,
 void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
                                          size_t idx1, size_t idx2) {
   assert (internal->lrat_chain.empty ());
+  assert (!g->garbage);
   if (!internal->lrat)
     return;
   assert (g->rhs.size () == 3);
