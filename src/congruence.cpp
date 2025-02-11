@@ -401,7 +401,7 @@ void Closure::push_lrat_unit (int lit) {
     return;
   assert (internal->val (lit) > 0);
   const unsigned uidx = internal->vlit (lit);
-  uint64_t id = internal->unit_clauses[uidx];
+  LRAT_ID id = internal->unit_clauses[uidx];
   assert (id);
   lrat_chain.push_back (id);
 }
@@ -434,7 +434,7 @@ int Closure::find_eager_representative_and_compress (int lit) {
   if (path_length > 2) {
     LOG ("learning new rewriting from %d to %d (current path length: %d)",
          lit, res, path_length);
-    std::vector<uint64_t> tmp_lrat_chain;
+    std::vector<LRAT_ID> tmp_lrat_chain;
     if (internal->lrat) {
       tmp_lrat_chain = std::move (lrat_chain);
       lrat_chain.clear ();
@@ -511,7 +511,7 @@ void Closure::produce_eager_representative_lrat (int lit) {
   } while (nxt != res);
 }
 
-uint64_t Closure::find_representative_lrat (int lit) {
+LRAT_ID Closure::find_representative_lrat (int lit) {
   if (!internal->lrat)
     return 0;
   int res = lit;
@@ -523,7 +523,7 @@ uint64_t Closure::find_representative_lrat (int lit) {
   return representative_id (res);
 }
 
-uint64_t Closure::find_eager_representative_lrat (int lit) {
+LRAT_ID Closure::find_eager_representative_lrat (int lit) {
   if (!internal->lrat)
     return 0;
   int res = lit;
@@ -535,20 +535,20 @@ uint64_t Closure::find_eager_representative_lrat (int lit) {
   return eager_representative_id (res);
 }
 
-uint64_t &Closure::eager_representative_id (int lit) {
+LRAT_ID &Closure::eager_representative_id (int lit) {
   assert (internal->vlit (lit) < eager_representant_id.size ());
   return eager_representant_id[internal->vlit (lit)];
 }
-uint64_t Closure::eager_representative_id (int lit) const {
+LRAT_ID Closure::eager_representative_id (int lit) const {
   assert (internal->vlit (lit) < eager_representant_id.size ());
   return eager_representant_id[internal->vlit (lit)];
 }
 
-uint64_t &Closure::representative_id (int lit) {
+LRAT_ID &Closure::representative_id (int lit) {
   assert (internal->vlit (lit) < representant_id.size ());
   return representant_id[internal->vlit (lit)];
 }
-uint64_t Closure::representative_id (int lit) const {
+LRAT_ID Closure::representative_id (int lit) const {
   assert (internal->vlit (lit) < representant_id.size ());
   return representant_id[internal->vlit (lit)];
 }
@@ -652,7 +652,7 @@ void     Closure::compute_rewritten_clause_lrat_simple (Clause *c, int except) {
 #if 1
       LOG ("found unit %d, removing it", -lit);
       const unsigned uidx = internal->vlit (-lit);
-      uint64_t id = internal->unit_clauses[uidx];
+      LRAT_ID id = internal->unit_clauses[uidx];
       assert (id);
       lrat_chain.push_back (id);
       changed = true;
@@ -741,8 +741,8 @@ Clause *Closure::produce_rewritten_clause_lrat_simple (Clause *c, int lhs) {
 // TODO we here duplicate the arguments of push_id_and_rewriting_lrat but we
 // probably do not need that.
 Clause *Closure::produce_rewritten_clause_lrat (
-    Clause *c, int except, uint64_t id1, uint64_t id2, int except_other,
-    uint64_t id_other1, uint64_t id_other2, int except_lhs,
+    Clause *c, int except, LRAT_ID id1, LRAT_ID id2, int except_other,
+    LRAT_ID id_other1, LRAT_ID id_other2, int except_lhs,
     int except_lhs2) {
   assert (internal->clause.empty ());
   assert (internal->lrat_chain.empty ());
@@ -794,7 +794,7 @@ Clause *Closure::produce_rewritten_clause_lrat (
 #if 1
       LOG ("found unit %d, removing it", -lit);
       const unsigned uidx = internal->vlit (-lit);
-      uint64_t id = internal->unit_clauses[uidx];
+      LRAT_ID id = internal->unit_clauses[uidx];
       assert (id);
       lrat_chain.push_back (id);
       changed = true;
@@ -865,7 +865,7 @@ Clause *Closure::produce_rewritten_clause_lrat (
   return d;
 }
 
-void Closure::push_id_on_chain (std::vector<uint64_t> &chain,
+void Closure::push_id_on_chain (std::vector<LRAT_ID> &chain,
                                 Rewrite rewrite, int lit) {
   LOG ("adding reason %zd for rewriting %d marked",
        lit == rewrite.src ? rewrite.id1 : rewrite.id2, lit);
@@ -873,7 +873,7 @@ void Closure::push_id_on_chain (std::vector<uint64_t> &chain,
 }
 
 void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
-                                               std::vector<uint64_t> &chain,
+                                               std::vector<LRAT_ID> &chain,
                                                bool insert_id_after,
                                                Rewrite rewrite2,
                                                int except_lhs,
@@ -898,7 +898,7 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
     } else if (internal->val (other) < 0) {
       LOG ("found unit %d", -other);
       const unsigned uidx = internal->vlit (-other);
-      uint64_t id = internal->unit_clauses[uidx];
+      LRAT_ID id = internal->unit_clauses[uidx];
       assert (id);
       chain.push_back (id);
     } else if (other == rewrite1.src && rewrite1.id1) {
@@ -928,7 +928,7 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
 // because we can force rewriting that way that have not been done eagerly
 // yet.
 void Closure::push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
-                                               std::vector<uint64_t> &chain,
+                                               std::vector<LRAT_ID> &chain,
                                                bool insert_id_after,
                                                Rewrite rewrite2,
                                                int except_lhs,
@@ -953,7 +953,7 @@ void Closure::push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
     } else if (internal->val (other) < 0) {
       LOG ("found unit %d", -other);
       const unsigned uidx = internal->vlit (-other);
-      uint64_t id = internal->unit_clauses[uidx];
+      LRAT_ID id = internal->unit_clauses[uidx];
       assert (id);
       chain.push_back (id);
     } else if (other == rewrite1.src && rewrite1.id1) {
@@ -976,13 +976,13 @@ void Closure::push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
 // Note: it is important that the Rewrite takes over the normal rewriting,
 // because we can force rewriting that way that have not been done eagerly
 // yet.
-void Closure::push_id_on_chain (std::vector<uint64_t> &chain, Clause *c) {
+void Closure::push_id_on_chain (std::vector<LRAT_ID> &chain, Clause *c) {
   assert (c);
   chain.push_back (c->id);
   LOG (lrat_chain, "chain");
 }
 
-void Closure::push_id_on_chain (std::vector<uint64_t> &chain,
+void Closure::push_id_on_chain (std::vector<LRAT_ID> &chain,
                                 const std::vector<LitClausePair> &reasons) {
   for (auto litId : reasons) {
     LOG (litId.clause, "found lrat in gate %d from %zd", litId.current_lit,
@@ -993,8 +993,8 @@ void Closure::push_id_on_chain (std::vector<uint64_t> &chain,
 }
 
 void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src,
-                                                  uint64_t id1,
-                                                  uint64_t id2, int dst) {
+                                                  LRAT_ID id1,
+                                                  LRAT_ID id2, int dst) {
   if (!internal->lrat)
     return;
   LOG ("calculating LRAT chain learn_congruence_unit_when_lhs_set");
@@ -1018,14 +1018,14 @@ void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src,
 // Something very important here: as we are producing a unit, we cannot
 // simplify or rewrite the clauses as this will produce units.
 void Closure::learn_congruence_unit_falsifies_lrat_chain (
-    Gate *g, int src, int dst, uint64_t id1, uint64_t id2, int clashing,
+    Gate *g, int src, int dst, LRAT_ID id1, LRAT_ID id2, int clashing,
     int falsified, int unit) {
   if (!internal->lrat)
     return;
   assert (!g->pos_lhs_ids.empty ());
   assert (internal->analyzed.empty ());
   assert (lrat_chain.empty ());
-  std::vector<uint64_t> proof_chain;
+  std::vector<LRAT_ID> proof_chain;
   switch (g->tag) {
   case Gate_Type::And_Gate:
     if (clashing) {
@@ -1137,8 +1137,8 @@ bool Closure::learn_congruence_unit (int lit) {
 // representative is also in the gate.
 bool Closure::merge_literals_lrat (
     Gate *g, Gate *h, int lit, int other,
-    const std::vector<uint64_t> &extra_reasons_lit,
-    const std::vector<uint64_t> &extra_reasons_ulit) {
+    const std::vector<LRAT_ID> &extra_reasons_lit,
+    const std::vector<LRAT_ID> &extra_reasons_ulit) {
   assert (!internal->unsat);
   assert (g->lhs == lit);
   assert (g == h || h->lhs == other);
@@ -1184,8 +1184,8 @@ bool Closure::merge_literals_lrat (
   int larger_repr = repr_other;
   int smaller = lit;
   int larger = other;
-  const std::vector<uint64_t> *smaller_chain = &extra_reasons_ulit;
-  const std::vector<uint64_t> *larger_chain = &extra_reasons_lit;
+  const std::vector<LRAT_ID> *smaller_chain = &extra_reasons_ulit;
+  const std::vector<LRAT_ID> *larger_chain = &extra_reasons_lit;
 
   if (abs (smaller_repr) > abs (larger_repr)) {
     swap (smaller_repr, larger_repr);
@@ -1421,8 +1421,8 @@ bool Closure::merge_literals_lrat (
 // TODO: this is exactly the same as the other function without the gates.
 // Kill the arguments!
 bool Closure::merge_literals_lrat (
-    int lit, int other, const std::vector<uint64_t> &extra_reasons_lit,
-    const std::vector<uint64_t> &extra_reasons_ulit) {
+    int lit, int other, const std::vector<LRAT_ID> &extra_reasons_lit,
+    const std::vector<LRAT_ID> &extra_reasons_ulit) {
   assert (!internal->unsat);
   LOG ("merging literals %d and %d", lit, other);
   // TODO: this should not update_eager but still calculate the LRAT chain
@@ -1467,8 +1467,8 @@ bool Closure::merge_literals_lrat (
   int larger_repr = repr_other;
   int smaller = lit;
   int larger = other;
-  const std::vector<uint64_t> *smaller_chain = &extra_reasons_ulit;
-  const std::vector<uint64_t> *larger_chain = &extra_reasons_lit;
+  const std::vector<LRAT_ID> *smaller_chain = &extra_reasons_ulit;
+  const std::vector<LRAT_ID> *larger_chain = &extra_reasons_lit;
 
   if (abs (smaller_repr) > abs (larger_repr)) {
     swap (smaller_repr, larger_repr);
@@ -1731,8 +1731,8 @@ inline void Closure::promote_clause (Clause *c) {
 bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
                                           Clause *c2) {
   assert (!internal->unsat);
-  uint64_t id1 = c1 ? c1->id : 0;
-  uint64_t id2 = c2 ? c2->id : 0;
+  LRAT_ID id1 = c1 ? c1->id : 0;
+  LRAT_ID id2 = c2 ? c2->id : 0;
   LOG ("merging literals %d and %d lrat", lit, other);
   int repr_lit = find_representative (lit);
   int repr_other = find_representative (other);
@@ -1813,7 +1813,7 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
           other == repr_other ? 0 : find_representative_lrat (-other));
       push_id_and_rewriting_lrat_unit (c1, rew1, lrat_chain, true, rew2);
       if (false && other != repr_other) {
-        const uint64_t repr_larger_id1 = find_representative_lrat (-other);
+        const LRAT_ID repr_larger_id1 = find_representative_lrat (-other);
         lrat_chain.push_back (repr_larger_id1);
       }
       LOG (lrat_chain, "lrat chain");
@@ -1823,16 +1823,16 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
     if (internal->lrat) {
       lrat_chain.clear ();
       const unsigned uidx = internal->vlit (repr_lit);
-      uint64_t id = internal->unit_clauses[uidx];
+      LRAT_ID id = internal->unit_clauses[uidx];
       assert (id);
       lrat_chain.push_back (id);
       if (lit != repr_lit) {
-        const uint64_t repr_id2 = find_representative_lrat (-lit);
+        const LRAT_ID repr_id2 = find_representative_lrat (-lit);
         lrat_chain.push_back (repr_id2);
       }
       lrat_chain.push_back (id2);
       if (other != repr_other) {
-        const uint64_t repr_larger_id2 = find_representative_lrat (other);
+        const LRAT_ID repr_larger_id2 = find_representative_lrat (other);
         lrat_chain.push_back (repr_larger_id2);
       }
       LOG (lrat_chain, "lrat chain");
@@ -2102,19 +2102,19 @@ void Closure::delete_proof_chain () {
   auto &clause = internal->clause;
   assert (clause.empty ());
   uint32_t id1 = UINT32_MAX, id2 = UINT32_MAX;
-  uint64_t id = 0;
+  LRAT_ID id = 0;
 
   LOG (chain, "chain:");
   for (auto lit : chain) {
     LOG ("reading %d from chain", lit);
     if (id1 == UINT32_MAX) {
       id1 = lit;
-      id = (uint64_t) id1;
+      id = (LRAT_ID) id1;
       continue;
     }
     if (id2 == UINT32_MAX) {
       id2 = lit;
-      id = ((uint64_t) id1 << 32) + id2;
+      id = ((LRAT_ID) id1 << 32) + id2;
       continue;
     }
     if (lit) { // parsing the id first
@@ -2127,38 +2127,6 @@ void Closure::delete_proof_chain () {
       id = 0, id1 = UINT32_MAX, id2 = UINT32_MAX;
     }
   }
-  /* this is the version from kissat:
-     std::vector<int>::const_iterator p = start;
-  auto start = cbegin (chain);
-  const auto end = cend (chain);
-  while (p != end) {
-    const int lit = *p;
-    if (lit) { // parsing the id
-      if (!id1) {
-        id1 = lit;
-        id = ((uint64_t)id1 << 32);
-        continue;
-      }
-      if (!id2){
-        id2 = lit;
-        id = ((uint64_t)id1 << 32) + id2;
-        continue;
-      }
-    }
-    if (!lit) {
-      while (start != p) {
-        const int other = *start++;
-        clause.push_back(other);
-      }
-      // TODO we need the id
-      //internal->proof->delete_clause (internal->clause_id, false, clause);
-      clause.clear();
-      start++;
-      id = 0, id1 = 0, id2 = 0;
-    }
-    p++;
-  }
-  assert (start == end);*/
   assert (clause.empty ());
   chain.clear ();
   LOG ("finished deletion of proof chain");
@@ -2205,9 +2173,9 @@ void Closure::shrink_and_gate (Gate *g, int falsifies, int clashing) {
 }
 
 void Closure::update_and_gate_unit_build_lrat_chain (
-    Gate *g, int src, uint64_t id1, uint64_t id2, int dst,
-    std::vector<uint64_t> &extra_reasons_lit,
-    std::vector<uint64_t> &extra_reasons_ulit) {
+    Gate *g, int src, LRAT_ID id1, LRAT_ID id2, int dst,
+    std::vector<LRAT_ID> &extra_reasons_lit,
+    std::vector<LRAT_ID> &extra_reasons_ulit) {
   LOG ("generate chain for gate boiling down to unit");
 
   assert (g->neg_lhs_ids.size () == 1);
@@ -2244,9 +2212,9 @@ void Closure::update_and_gate_unit_build_lrat_chain (
 }
 
 void Closure::update_and_gate_build_lrat_chain (
-    Gate *g, Gate *h, int src, uint64_t id1, uint64_t id2, int dst,
-    std::vector<uint64_t> &extra_reasons_lit,
-    std::vector<uint64_t> &extra_reasons_ulit) {
+    Gate *g, Gate *h, int src, LRAT_ID id1, LRAT_ID id2, int dst,
+    std::vector<LRAT_ID> &extra_reasons_lit,
+    std::vector<LRAT_ID> &extra_reasons_ulit) {
   assert (g != h);
   // If the gates are identical, do not even attempt to build the LRAT chain
   if (find_representative (g->lhs) == find_representative (h->lhs))
@@ -2365,7 +2333,7 @@ void Closure::update_and_gate_build_lrat_chain (
 }
 
 void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
-                               int dst, uint64_t id1, uint64_t id2,
+                               int dst, LRAT_ID id1, LRAT_ID id2,
                                int falsifies, int clashing) {
   LOGGATE (g, "update and gate of arity %ld", g->arity ());
   assert (lrat_chain.empty ());
@@ -2393,8 +2361,8 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
       if (internal->lrat)
         lrat_chain.clear ();
     } else {
-      std::vector<uint64_t> extra_reasons_lit;
-      std::vector<uint64_t> extra_reasons_ulit;
+      std::vector<LRAT_ID> extra_reasons_lit;
+      std::vector<LRAT_ID> extra_reasons_ulit;
       if (internal->lrat)
         update_and_gate_unit_build_lrat_chain (g, src, id1, id2, g->rhs[0],
                                                extra_reasons_lit,
@@ -2412,8 +2380,8 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
     assert (g != h);
     if (h) {
       assert (garbage);
-      std::vector<uint64_t> extra_reasons_lit2;
-      std::vector<uint64_t> extra_reasons_ulit2;
+      std::vector<LRAT_ID> extra_reasons_lit2;
+      std::vector<LRAT_ID> extra_reasons_ulit2;
       if (internal->lrat)
         update_and_gate_build_lrat_chain (g, h, src, id1, id2, dst,
                                           extra_reasons_lit2,
@@ -2456,8 +2424,8 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
     }
     learn_congruence_unit (-g->lhs);
   } else if (g->arity () == 1) {
-      std::vector<uint64_t> reasons_implication, reasons_back;
-    if (internal->lrat) {
+      std::vector<LRAT_ID> reasons_implication, reasons_back;
+      if (internal->lrat) {
       vector<LitClausePair> first;
     simplify_and_sort_xor_lrat_clauses (g->pos_lhs_ids, first, g->lhs);
 g->pos_lhs_ids = first;
@@ -2489,7 +2457,7 @@ g->pos_lhs_ids = first;
     Gate *h = find_xor_gate (g);
     if (h) {
       assert (garbage);
-      std::vector<uint64_t> reasons_implication, reasons_back;
+      std::vector<LRAT_ID> reasons_implication, reasons_back;
       // add_xor_matching_proof_chain needs to learn the extra
       // clauses and populate the LRAT chain
       add_xor_matching_proof_chain (g, g->lhs, h->pos_lhs_ids, h->lhs, reasons_implication, reasons_back);
@@ -2522,7 +2490,7 @@ void Closure::simplify_and_gate (Gate *g) {
   LOGGATE (g, "simplifying");
   int falsifies = 0;
   std::vector<int>::iterator it = begin (g->rhs);
-  std::vector<uint64_t> &units = g->units;
+  std::vector<LRAT_ID> &units = g->units;
 
   // if (internal->lrat)
   //   lrat_chain.push_back(g->neg_lhs_ids[0].second);
@@ -2531,7 +2499,7 @@ void Closure::simplify_and_gate (Gate *g) {
     if (v > 0) {
       if (internal->lrat) {
         const unsigned uidx = internal->vlit (lit);
-        uint64_t id = internal->unit_clauses[uidx];
+        LRAT_ID id = internal->unit_clauses[uidx];
         assert (id);
         units.push_back (id);
       }
@@ -2541,7 +2509,7 @@ void Closure::simplify_and_gate (Gate *g) {
       falsifies = lit;
       if (internal->lrat) {
         const unsigned uidx = internal->vlit (-lit);
-        uint64_t id = internal->unit_clauses[uidx];
+        LRAT_ID id = internal->unit_clauses[uidx];
         assert (id);
         units.push_back (id);
       }
@@ -2576,7 +2544,7 @@ void Closure::simplify_and_gate (Gate *g) {
 
   LOGGATE (g, "shrunken");
   shrink_and_gate (g, falsifies);
-  std::vector<uint64_t> reasons_lrat_src, reasons_lrat_usrc;
+  std::vector<LRAT_ID> reasons_lrat_src, reasons_lrat_usrc;
 
   update_and_gate (g, git, 0, 0, 0, 0, falsifies, 0);
   ++internal->stats.congruence.simplified_ands;
@@ -2686,7 +2654,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
     for (auto i : lrat_chain_and_gate)
       g->pos_lhs_ids.push_back (i);
 #ifdef LOGGING
-    std::vector<uint64_t> result;
+    std::vector<LRAT_ID> result;
     transform (cbegin (g->pos_lhs_ids), cend (g->pos_lhs_ids),
                back_inserter (result),
                [] (const LitClausePair &x) { return x.clause->id; });
@@ -2703,7 +2671,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
     lrat_chain_and_gate.clear ();
 
   if (h) {
-    std::vector<uint64_t> reasons_lrat_src, reasons_lrat_usrc;
+    std::vector<LRAT_ID> reasons_lrat_src, reasons_lrat_usrc;
     if (internal->lrat)
       merge_and_gate_lrat_produce_lrat (g, h, reasons_lrat_src, reasons_lrat_usrc);
     if (merge_literals_lrat (g, h, lhs, h->lhs, reasons_lrat_src,
@@ -3144,7 +3112,7 @@ void Closure::check_ternary (int a, int b, int c) {
   clause.push_back (c);
   internal->external->check_learned_clause ();
   if (internal->proof) {
-    const uint64_t id = internal->clause_id++;
+    const LRAT_ID id = internal->clause_id++;
     internal->proof->add_derived_clause (id, false, clause, {});
     internal->proof->delete_clause (id, false, clause);
   }
@@ -3197,12 +3165,12 @@ void Closure::add_xor_shrinking_proof_chain (Gate const *const g,
       inc_lits (clause);
     clause.push_back (pivot);
     LOG (clause, "proof checking ");
-    const uint64_t id1 = check_and_add_to_proof_chain (clause);
+    const LRAT_ID id1 = check_and_add_to_proof_chain (clause);
     clause.pop_back ();
     clause.push_back (-pivot);
-    const uint64_t id2 = check_and_add_to_proof_chain (clause);
+    const LRAT_ID id2 = check_and_add_to_proof_chain (clause);
     clause.pop_back ();
-    const uint64_t id3 = check_and_add_to_proof_chain (clause);
+    const LRAT_ID id3 = check_and_add_to_proof_chain (clause);
     if (internal->proof) {
       clause.push_back (pivot);
       internal->proof->delete_clause (id1, false, clause);
@@ -3299,9 +3267,9 @@ Gate *Closure::find_ite_gate (Gate *g, bool &negate_lhs) {
   return find_gate_lits (g->rhs, Gate_Type::ITE_Gate, g);
 }
 
-uint64_t Closure::check_and_add_to_proof_chain (vector<int> &clause) {
+LRAT_ID Closure::check_and_add_to_proof_chain (vector<int> &clause) {
   internal->external->check_learned_clause ();
-  const uint64_t id = ++internal->clause_id;
+  const LRAT_ID id = ++internal->clause_id;
   if (internal->proof) {
     if (internal->lrat) {
       assert (internal->lrat_chain.empty ());
@@ -3313,10 +3281,10 @@ uint64_t Closure::check_and_add_to_proof_chain (vector<int> &clause) {
 }
 
 void Closure::add_clause_to_chain (std::vector<int> unsimplified,
-                                   uint64_t id) {
+                                   LRAT_ID id) {
   const uint32_t id2_higher = (id >> 32);
-  const uint32_t id2_lower = (uint32_t) (id & (uint64_t) (uint32_t) (-1));
-  assert (id == ((uint64_t) id2_higher << 32) + (uint64_t) id2_lower);
+  const uint32_t id2_lower = (uint32_t) (id & (LRAT_ID) (uint32_t) (-1));
+  assert (id == ((LRAT_ID) id2_higher << 32) + (LRAT_ID) id2_lower);
   chain.push_back (id2_higher);
   chain.push_back (id2_lower);
   LOG (unsimplified, "pushing to chain");
@@ -3324,8 +3292,8 @@ void Closure::add_clause_to_chain (std::vector<int> unsimplified,
   chain.push_back (0);
 }
 
-uint64_t Closure::simplify_and_add_to_proof_chain (
-    vector<int> &unsimplified, vector<int> &chain, uint64_t delete_id) {
+LRAT_ID Closure::simplify_and_add_to_proof_chain (
+    vector<int> &unsimplified, vector<int> &chain, LRAT_ID delete_id) {
   vector<int> &clause = internal->clause;
   assert (clause.empty ());
 #ifndef NDEBUG
@@ -3353,7 +3321,7 @@ uint64_t Closure::simplify_and_add_to_proof_chain (
     mark &= ~4u;
   }
 
-  uint64_t id = 0;
+  LRAT_ID id = 0;
   if (!trivial) {
     if (delete_id) {
       if (internal->proof)
@@ -3404,7 +3372,7 @@ void Closure::simplify_and_sort_xor_lrat_clauses (const vector<LitClausePair> &s
     gate_sort_lrat_reasons (target, lhs);
 }
 void Closure::add_xor_matching_proof_chain (
-    Gate *g, int lhs1, const vector<LitClausePair> &clauses2, int lhs2, vector<uint64_t> &to_lrat, vector<uint64_t> &back_lrat) {
+    Gate *g, int lhs1, const vector<LitClausePair> &clauses2, int lhs2, vector<LRAT_ID> &to_lrat, vector<LRAT_ID> &back_lrat) {
   if (lhs1 == lhs2)
     return;
   if (!internal->proof)
@@ -3419,8 +3387,8 @@ void Closure::add_xor_matching_proof_chain (
   }
   LOG ("starting XOR matching proof");
   // for lrat
-  vector<uint64_t> first_ids;
-  vector<uint64_t> second_ids;
+  vector<LRAT_ID> first_ids;
+  vector<LRAT_ID> second_ids;
   if (internal->lrat) {
     for (auto pair : first) {
       first_ids.push_back (pair.clause->id);
@@ -3430,8 +3398,8 @@ void Closure::add_xor_matching_proof_chain (
     }
   }
   do {
-    vector<uint64_t> first_tmp;
-    vector<uint64_t> second_tmp;
+    vector<LRAT_ID> first_tmp;
+    vector<LRAT_ID> second_tmp;
     assert (!unsimplified.empty ());
     unsimplified.pop_back ();
     const size_t size = unsimplified.size ();
@@ -3446,7 +3414,7 @@ void Closure::add_xor_matching_proof_chain (
       }
       unsimplified.push_back (-lhs1);
       unsimplified.push_back (lhs2);
-      const uint64_t id1 =
+      const LRAT_ID id1 =
           simplify_and_add_to_proof_chain (unsimplified, chain);
       unsimplified.resize (unsimplified.size () - 2);
       if (internal->lrat) {
@@ -3459,7 +3427,7 @@ void Closure::add_xor_matching_proof_chain (
       }
       unsimplified.push_back (lhs1);
       unsimplified.push_back (-lhs2);
-      const uint64_t id2 =
+      const LRAT_ID id2 =
           simplify_and_add_to_proof_chain (unsimplified, chain);
       if (internal->lrat) {
         lrat_chain.clear ();
@@ -3498,7 +3466,7 @@ Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
   Gate *g = find_xor_lits (this->rhs);
   if (g) {
     check_xor_gate_implied (g);
-      std::vector<uint64_t> reasons_implication, reasons_back;
+      std::vector<LRAT_ID> reasons_implication, reasons_back;
     add_xor_matching_proof_chain (g, g->lhs, glauses, lhs, reasons_implication, reasons_back);
     if (merge_literals_lrat (g->lhs, lhs, reasons_implication, reasons_back)) {
       ++internal->stats.congruence.xors;
@@ -3594,8 +3562,7 @@ void Closure::gate_sort_lrat_reasons (std::vector<LitClausePair> &xs,
 
 void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
   const unsigned arity_limit = internal->opts.congruencexorarity;
-  assert (arity_limit <
-          32); // we use unsigned int. uint64_t would allow 64 limit
+  assert (arity_limit < 32); // we use unsigned int.
   const unsigned size_limit = arity_limit + 1;
   glargecounts.resize (2 * internal->vsize, 0);
 
@@ -4020,8 +3987,8 @@ void Closure::find_equivalences () {
 /*------------------------------------------------------------------------*/
 // Initialization
 
-void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1,
-                                uint64_t id2) {
+void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
+                                LRAT_ID id2) {
   if (skip_and_gate (g))
     return;
   if (!gate_contains (g, src))
@@ -4141,7 +4108,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1,
   if (!g->tautological_clauses)
     assert (std::find (begin (g->rhs), end (g->rhs), g->lhs) ==
             end (g->rhs));
-  std::vector<uint64_t> reasons_lrat_src, reasons_lrat_usrc;
+  std::vector<LRAT_ID> reasons_lrat_src, reasons_lrat_usrc;
   shrink_and_gate (g, falsifies, clashing);
   LOGGATE (g, "rewritten as");
   assert (!internal->lrat || !g->pos_lhs_ids.empty ());
@@ -4150,8 +4117,8 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1,
   ++internal->stats.congruence.rewritten_ands;
 }
 
-bool Closure::rewrite_gate (Gate *g, int dst, int src, uint64_t id1,
-                            uint64_t id2) {
+bool Closure::rewrite_gate (Gate *g, int dst, int src, LRAT_ID id1,
+                            LRAT_ID id2) {
   switch (g->tag) {
   case Gate_Type::And_Gate:
     rewrite_and_gate (g, dst, src, id1, id2);
@@ -4170,7 +4137,7 @@ bool Closure::rewrite_gate (Gate *g, int dst, int src, uint64_t id1,
   return !internal->unsat;
 }
 
-bool Closure::rewrite_gates (int dst, int src, uint64_t id1, uint64_t id2) {
+bool Closure::rewrite_gates (int dst, int src, LRAT_ID id1, LRAT_ID id2) {
   const auto &occs = goccs (src);
   for (auto g : occs) {
     assert (lrat_chain.empty ());
@@ -4357,8 +4324,8 @@ bool Closure::propagate_equivalence (int lit) {
   LOG ("propagating literal %d", lit);
   import_lazy_and_find_eager_representative_and_compress_both (lit);
   const int repr = find_eager_representative_and_compress (lit);
-  const uint64_t id1 = find_eager_representative_lrat (lit);
-  const uint64_t id2 = find_eager_representative_lrat (-lit);
+  const LRAT_ID id1 = find_eager_representative_lrat (lit);
+  const LRAT_ID id2 = find_eager_representative_lrat (-lit);
   assert (lrat_chain.empty ());
   return rewrite_gates (repr, lit, id1, id2) &&
          rewrite_gates (-repr, -lit, id2, id1);
@@ -4707,8 +4674,8 @@ static bool skip_ite_gate (Gate *g) {
 }
 
 void Closure::produce_ite_merge_then_else_reasons (
-    Gate *g, int dst, int src, std::vector<uint64_t> &reasons_implication,
-    std::vector<uint64_t> &reasons_back) {
+    Gate *g, int dst, int src, std::vector<LRAT_ID> &reasons_implication,
+    std::vector<LRAT_ID> &reasons_back) {
   if (!internal->lrat)
     return;
   assert (g->rhs.size () == 4);
@@ -4878,7 +4845,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
     } else if (dst == else_lit) {
       // cond ? else_lit : else_lit
       // else_lit
-      std::vector<uint64_t> reasons_implication, reasons_back;
+      std::vector<LRAT_ID> reasons_implication, reasons_back;
       produce_ite_merge_then_else_reasons (g, src, dst, reasons_implication,
                                            reasons_back);
       if (merge_literals_lrat (lhs, else_lit, reasons_implication,
@@ -4923,7 +4890,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
     } else if (dst == then_lit) {
       // cond ? then_lit : then_lit
       // then_lit
-      std::vector<uint64_t> reasons_implication, reasons_back;
+      std::vector<LRAT_ID> reasons_implication, reasons_back;
       produce_ite_merge_then_else_reasons (g, src, dst, reasons_implication,
                                            reasons_back);
       if (merge_literals_lrat (lhs, then_lit, reasons_implication,
@@ -5017,7 +4984,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       if (h) {
         garbage = true;
         if (new_tag == Gate_Type::XOr_Gate) {
-      std::vector<uint64_t> reasons_implication, reasons_back;
+      std::vector<LRAT_ID> reasons_implication, reasons_back;
           add_xor_matching_proof_chain (g, g->lhs, h->pos_lhs_ids, h->lhs, reasons_implication, reasons_back);
         if (merge_literals_lrat (g->lhs, h->lhs, reasons_implication, reasons_back))
           ++internal->stats.congruence.xors;
@@ -5061,7 +5028,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         garbage = true;
         check_ite_gate_implied (h);
         int normalized_lhs = negate_lhs ? not_lhs : lhs;
-        std::vector<uint64_t> extra_reasons_lit, extra_reasons_ulit;
+        std::vector<LRAT_ID> extra_reasons_lit, extra_reasons_ulit;
         add_ite_matching_proof_chain (g, h, h->lhs, normalized_lhs,
                                       extra_reasons_lit,
                                       extra_reasons_ulit);
@@ -5115,8 +5082,8 @@ void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit, size_t idx1
 }
 
 void Closure::merge_and_gate_lrat_produce_lrat (
-    Gate *g, Gate *h, std::vector<uint64_t> &reasons_lrat_src,
-    std::vector<uint64_t> &reasons_lrat_usrc) {
+    Gate *g, Gate *h, std::vector<LRAT_ID> &reasons_lrat_src,
+    std::vector<LRAT_ID> &reasons_lrat_usrc) {
   assert (internal->lrat);
   assert (g->tag == Gate_Type::And_Gate);
   assert (h->tag == Gate_Type::And_Gate);
@@ -5138,7 +5105,7 @@ void Closure::merge_and_gate_lrat_produce_lrat (
   for (auto lit : *g->neg_lhs_ids[0].clause) { // find the units
     if (internal->val (lit) > 0) {
       const unsigned uidx = internal->vlit (lit);
-      uint64_t id = internal->unit_clauses[uidx];
+      LRAT_ID id = internal->unit_clauses[uidx];
       assert (id);
       g->units.push_back (id);
     }
@@ -5216,7 +5183,7 @@ void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1, size_t idx2) 
   g->pos_lhs_ids.push_back ({lit, e});
 }
 
-void Closure::merge_ite_gate_produce_lrat (std::vector<LitClausePair> & clauses, std::vector<uint64_t> &reasons_implication, std::vector<uint64_t> &reasons_back) {
+void Closure::merge_ite_gate_produce_lrat (std::vector<LitClausePair> & clauses, std::vector<LRAT_ID> &reasons_implication, std::vector<LRAT_ID> &reasons_back) {
   produce_rewritten_clause_lrat_and_clean (
       clauses, Rewrite (),
       Rewrite ()); // get rid of the units that could be in the clause
@@ -5316,7 +5283,7 @@ void Closure::simplify_ite_gate (Gate *g) {
       Gate *h = find_and_lits (rhs);
       if (h) {
         assert (garbage);
-        std::vector<uint64_t> reasons_lrat, reasons_lrat_back;
+        std::vector<LRAT_ID> reasons_lrat, reasons_lrat_back;
         if (internal->lrat)
           merge_and_gate_lrat_produce_lrat (g, h, reasons_lrat,
                                        reasons_lrat_back);
@@ -5348,8 +5315,8 @@ void Closure::simplify_ite_gate (Gate *g) {
 }
 
 void Closure::add_ite_matching_proof_chain (
-    Gate *g, Gate *h, int lhs1, int lhs2, std::vector<uint64_t> &reasons1,
-    std::vector<uint64_t> &reasons2) {
+    Gate *g, Gate *h, int lhs1, int lhs2, std::vector<LRAT_ID> &reasons1,
+    std::vector<LRAT_ID> &reasons2) {
   check_ite_lrat_reasons (g);
   if (lhs1 == lhs2)
     return;
@@ -5362,9 +5329,9 @@ void Closure::add_ite_matching_proof_chain (
   assert (chain.empty ());
   const auto &rhs = g->rhs;
   const int cond = rhs[0];
-  uint64_t g_then_id = 0, g_neg_then_id = 0, g_else_id = 0,
+  LRAT_ID g_then_id = 0, g_neg_then_id = 0, g_else_id = 0,
            g_neg_else_id = 0;
-  uint64_t h_then_id = 0, h_neg_then_id = 0, h_else_id = 0,
+  LRAT_ID h_then_id = 0, h_neg_then_id = 0, h_else_id = 0,
            h_neg_else_id = 0;
 
   if (internal->lrat) {
@@ -5409,13 +5376,13 @@ void Closure::add_ite_matching_proof_chain (
   unsimplified.push_back (cond);
   if (internal->lrat)
     lrat_chain.push_back (g_then_id), lrat_chain.push_back (h_neg_then_id);
-  const uint64_t id1 =
+  const LRAT_ID id1 =
       simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.pop_back ();
   unsimplified.push_back (-cond);
   if (internal->lrat)
     lrat_chain.push_back (h_then_id), lrat_chain.push_back (g_neg_then_id);
-  const uint64_t id2 =
+  const LRAT_ID id2 =
       simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.pop_back ();
 
@@ -5424,7 +5391,7 @@ void Closure::add_ite_matching_proof_chain (
 #if 0 // in kissat and useful for debugging, but not more
   if (internal->lrat)
     lrat_chain.push_back(id1), lrat_chain.push_back(id2);
-  const uint64_t id = check_and_add_to_proof_chain (unsimplified);
+  const LRAT_ID id = check_and_add_to_proof_chain (unsimplified);
   add_clause_to_chain (unsimplified, id);
 #endif
   unsimplified.clear ();
@@ -5434,20 +5401,20 @@ void Closure::add_ite_matching_proof_chain (
 
   if (internal->lrat)
     lrat_chain.push_back (h_else_id), lrat_chain.push_back (g_neg_else_id);
-  const uint64_t id3 =
+  const LRAT_ID id3 =
       simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.pop_back ();
   unsimplified.push_back (-cond);
   if (internal->lrat)
     lrat_chain.push_back (h_else_id), lrat_chain.push_back (g_neg_else_id);
-  const uint64_t id4 =
+  const LRAT_ID id4 =
       simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.pop_back ();
 
 #if 0 // in kissat and useful for debugging, but not more
   if (internal->lrat)
     lrat_chain.push_back(id3), lrat_chain.push_back(id4);
-  const uint64_t id5 = simplify_and_add_to_proof_chain (unsimplified, chain);
+  const LRAT_ID id5 = simplify_and_add_to_proof_chain (unsimplified, chain);
   unsimplified.clear ();
 #endif
   if (internal->lrat)
@@ -5469,7 +5436,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
   if (else_lit == then_lit) {
     LOG ("found trivial ITE gate %d := %d ? %d : %d", (lhs), (cond),
          (then_lit), (else_lit));
-    std::vector<uint64_t> reasons_implication, reasons_back;
+    std::vector<LRAT_ID> reasons_implication, reasons_back;
     if (internal->lrat) {
       merge_ite_gate_produce_lrat (clauses, reasons_implication,
                                    reasons_back);
@@ -5500,7 +5467,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
 
   if (h) {
     check_ite_gate_implied (h);
-    std::vector<uint64_t> extra_reasons_lit, extra_reasons_ulit;
+    std::vector<LRAT_ID> extra_reasons_lit, extra_reasons_ulit;
     add_ite_matching_proof_chain (h, g, h->lhs, lhs, extra_reasons_lit,
                                   extra_reasons_ulit);
     if (merge_literals_lrat (h, g, h->lhs, lhs, extra_reasons_lit,

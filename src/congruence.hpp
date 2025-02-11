@@ -19,6 +19,8 @@
 
 namespace CaDiCaL {
 
+typedef uint64_t LRAT_ID;
+
 // This implements the algorithm algorithm from SAT 2024.
 //
 // The idea is to:
@@ -171,7 +173,7 @@ struct Gate {
   bool shrunken : 1;
   size_t hash; // TODO remove this field (the C++ implementation is caching
                // it anyway)
-  vector<uint64_t> units; // TODO: remove, should not be useful anymore
+  vector<LRAT_ID> units; // TODO: remove, should not be useful anymore
   vector<LitClausePair> pos_lhs_ids;
   vector<LitClausePair> neg_lhs_ids;
   bool tautological_clauses; // TODO delete
@@ -194,7 +196,7 @@ struct GateEqualTo {
 
 struct CompactBinary {
   Clause *clause;
-  uint64_t id;
+  LRAT_ID id;
   int lit1, lit2;
 };
 
@@ -206,10 +208,10 @@ struct Hash {
 
 struct Rewrite {
   int src, dst;
-  uint64_t id1;
-  uint64_t id2;
+  LRAT_ID id1;
+  LRAT_ID id2;
 
-  Rewrite (int _src, int _dst, uint64_t _id1, uint64_t _id2)
+  Rewrite (int _src, int _dst, LRAT_ID _id1, LRAT_ID _id2)
       : src (_src), dst (_dst), id1 (_id1), id2 (_id2) {};
   Rewrite () : src (0), dst (0), id1 (0), id2 (0) {};
 };
@@ -249,7 +251,7 @@ struct Closure {
   std::vector<Clause *> new_unwatched_binary_clauses;
   // LRAT proofs
   vector<int> resolvent_analyzed;
-  mutable vector<uint64_t> lrat_chain; // storing LRAT chain
+  mutable vector<LRAT_ID> lrat_chain; // storing LRAT chain
 
 #ifdef LOGGING
   uint64_t fresh_id;
@@ -261,16 +263,16 @@ struct Closure {
   void unmark_all ();
   vector<int> representant;               // union-find
   vector<int> eager_representant;         // union-find
-  vector<uint64_t> representant_id;       // lrat version of union-find
-  vector<uint64_t> eager_representant_id; // lrat version of union-find
+  vector<LRAT_ID> representant_id;       // lrat version of union-find
+  vector<LRAT_ID> eager_representant_id; // lrat version of union-find
   int &representative (int lit);
   int representative (int lit) const;
-  uint64_t &representative_id (int lit);
-  uint64_t representative_id (int lit) const;
+  LRAT_ID &representative_id (int lit);
+  LRAT_ID representative_id (int lit) const;
   int &eager_representative (int lit);
   int eager_representative (int lit) const;
-  uint64_t &eager_representative_id (int lit);
-  uint64_t eager_representative_id (int lit) const;
+  LRAT_ID &eager_representative_id (int lit);
+  LRAT_ID eager_representative_id (int lit) const;
 
   int find_lrat_representative_with_marks (int lit);
   // representative in the union-find structure in the lazy equivalences
@@ -294,11 +296,11 @@ struct Closure {
   // returns the ID of the LRAT clause for the normalization from the
   // literal lit to its argument, assuming that the representative was
   // already compressed.
-  uint64_t find_representative_lrat (int lit);
+  LRAT_ID find_representative_lrat (int lit);
   // returns the ID of the LRAT clause for the eager normalization from the
   // literal lit to its argument assuming that the representative was
   // already compressed.
-  uint64_t find_eager_representative_lrat (int lit);
+  LRAT_ID find_eager_representative_lrat (int lit);
 
   // Writes the LRAT chain required for the eager normalization to
   // `lrat_chain`.
@@ -337,11 +339,11 @@ struct Closure {
   bool merge_literals_equivalence (int lit, int other, Clause *c1,
                                    Clause *c2);
   bool merge_literals_lrat (Gate *g, Gate *h, int lit, int other,
-                            const std::vector<uint64_t> & = {},
-                            const std::vector<uint64_t> & = {});
+                            const std::vector<LRAT_ID> & = {},
+                            const std::vector<LRAT_ID> & = {});
   bool merge_literals_lrat (int lit, int other,
-                            const std::vector<uint64_t> & = {},
-                            const std::vector<uint64_t> & = {});
+                            const std::vector<LRAT_ID> & = {},
+                            const std::vector<LRAT_ID> & = {});
   bool merge_literals (int lit, int other, bool learn_clauses = true);
 
   // proof production
@@ -354,33 +356,33 @@ struct Closure {
   //   - the rewriting is not necessary (resolvent_marked == 1)
   //   - it is overwritten by one of the arguments
   void push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
-                                        std::vector<uint64_t> &chain,
+                                        std::vector<LRAT_ID> &chain,
                                         bool = true,
                                         Rewrite rewrite2 = Rewrite (),
                                         int execept_lhs = 0,
                                         int except_lhs2 = 0);
   void push_id_and_rewriting_lrat_full (Clause *c, Rewrite rewrite1,
-                                        std::vector<uint64_t> &chain,
+                                        std::vector<LRAT_ID> &chain,
                                         bool = true,
                                         Rewrite rewrite2 = Rewrite (),
                                         int execept_lhs = 0,
                                         int except_lhs2 = 0);
   // TODO: does nothing except pushing on the stack, remove!
-  void push_id_on_chain (std::vector<uint64_t> &chain, Clause *c);
+  void push_id_on_chain (std::vector<LRAT_ID> &chain, Clause *c);
   // TODO: does nothing except pushing on the stack, remove!
-  void push_id_on_chain (std::vector<uint64_t> &chain,
+  void push_id_on_chain (std::vector<LRAT_ID> &chain,
                          const std::vector<LitClausePair> &c);
   // TODO: does nothing except pushing on the stack, remove!
-  void push_id_on_chain (std::vector<uint64_t> &chain, Rewrite rewrite,
+  void push_id_on_chain (std::vector<LRAT_ID> &chain, Rewrite rewrite,
                          int);
   void update_and_gate_build_lrat_chain (
-      Gate *g, Gate *h, int src, uint64_t id1, uint64_t id2, int dst,
-      std::vector<uint64_t> &extra_reasons_lit,
-      std::vector<uint64_t> &extra_reasons_ulit);
+      Gate *g, Gate *h, int src, LRAT_ID id1, LRAT_ID id2, int dst,
+      std::vector<LRAT_ID> &extra_reasons_lit,
+      std::vector<LRAT_ID> &extra_reasons_ulit);
   void update_and_gate_unit_build_lrat_chain (
-      Gate *g, int src, uint64_t id1, uint64_t id2, int dst,
-      std::vector<uint64_t> &extra_reasons_lit,
-      std::vector<uint64_t> &extra_reasons_ulit);
+      Gate *g, int src, LRAT_ID id1, LRAT_ID id2, int dst,
+      std::vector<LRAT_ID> &extra_reasons_lit,
+      std::vector<LRAT_ID> &extra_reasons_ulit);
   // occs
   vector<GOccs> gtab;
   GOccs &goccs (int lit);
@@ -399,7 +401,7 @@ struct Closure {
   bool skip_and_gate (Gate *g);
   bool skip_xor_gate (Gate *g);
   void update_and_gate (Gate *g, GatesTable::iterator, int src, int dst,
-                        uint64_t id1, uint64_t id2, int falsified = 0,
+                        LRAT_ID id1, LRAT_ID id2, int falsified = 0,
                         int clashing = 0);
   void update_xor_gate (Gate *g, GatesTable::iterator);
   void shrink_and_gate (Gate *g, int falsified = 0, int clashing = 0);
@@ -414,11 +416,11 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
 
   // rewriting
   bool rewriting_lhs (Gate *g, int dst);
-  bool rewrite_gates (int dst, int src, uint64_t id1, uint64_t id2);
-  bool rewrite_gate (Gate *g, int dst, int src, uint64_t id1, uint64_t id2);
+  bool rewrite_gates (int dst, int src, LRAT_ID id1, LRAT_ID id2);
+  bool rewrite_gate (Gate *g, int dst, int src, LRAT_ID id1, LRAT_ID id2);
   void rewrite_xor_gate (Gate *g, int dst, int src);
-  void rewrite_and_gate (Gate *g, int dst, int src, uint64_t id1,
-                         uint64_t id2);
+  void rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
+                         LRAT_ID id2);
   void rewrite_ite_gate (Gate *g, int dst, int src);
 
   size_t units; // next trail position to propagate
@@ -452,10 +454,10 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
 
   void reset_xor_gate_extraction ();
   void init_xor_gate_extraction (std::vector<Clause *> &candidates);
-  uint64_t check_and_add_to_proof_chain (vector<int> &clause);
+  LRAT_ID check_and_add_to_proof_chain (vector<int> &clause);
   void add_xor_matching_proof_chain (Gate *g, int lhs1,
                                      const vector<LitClausePair> &,
-                                     int lhs2, vector<uint64_t> &, vector<uint64_t> &);
+                                     int lhs2, vector<LRAT_ID> &, vector<LRAT_ID> &);
   void add_xor_shrinking_proof_chain (Gate const *const g, int src);
   void extract_xor_gates ();
   void extract_xor_gates_with_base_clause (Clause *c);
@@ -496,8 +498,8 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   void extract_congruence ();
 
   void add_ite_matching_proof_chain (Gate *g, Gate *h, int lhs1, int lhs2,
-                                     std::vector<uint64_t> &reasons1,
-                                     std::vector<uint64_t> &reasons2);
+                                     std::vector<LRAT_ID> &reasons1,
+                                     std::vector<LRAT_ID> &reasons2);
   void add_ite_turned_and_binary_clauses (Gate *g);
   Gate *new_and_gate (Clause *, int);
   Gate *new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
@@ -512,13 +514,13 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   bool learn_congruence_unit (
       int unit); // TODO remove and replace by _lrat version
   void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src,
-                                                   int dst, uint64_t id1,
-                                                   uint64_t id2,
+                                                   int dst, LRAT_ID id1,
+                                                   LRAT_ID id2,
                                                    int clashing,
                                                    int falsified, int unit);
   void learn_congruence_unit_unit_lrat_chain (Gate *g, int unit);
-  void learn_congruence_unit_when_lhs_set (Gate *g, int src, uint64_t id1,
-                                           uint64_t id2, int dst);
+  void learn_congruence_unit_when_lhs_set (Gate *g, int src, LRAT_ID id1,
+                                           LRAT_ID id2, int dst);
 
   void find_units ();
   void find_equivalences ();
@@ -544,8 +546,8 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   // TODO: do not use, too error prone due to the arguments default to '0',
   // use the version above instead
   Clause *produce_rewritten_clause_lrat (
-      Clause *c, int except = 0, uint64_t id1 = 0, uint64_t id2 = 0,
-      int except_other = 0, uint64_t id_other1 = 0, uint64_t id_other2 = 0,
+      Clause *c, int except = 0, LRAT_ID id1 = 0, LRAT_ID id2 = 0,
+      int except_other = 0, LRAT_ID id_other1 = 0, LRAT_ID id_other2 = 0,
       int execept_lhs = 0, int except_lhs2 = 0);
   // variant where we update the indices after removing the tautologies and
   // remove the tautological clauses
@@ -565,12 +567,12 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   // schedule
   queue<int> schedule;
   void schedule_literal (int lit);
-  void add_clause_to_chain (std::vector<int>, uint64_t);
+  void add_clause_to_chain (std::vector<int>, LRAT_ID);
   // proof. If delete_id is non-zero, then delete the clause instead of
   // learning it
-  uint64_t simplify_and_add_to_proof_chain (vector<int> &unsimplified,
+  LRAT_ID simplify_and_add_to_proof_chain (vector<int> &unsimplified,
                                             vector<int> &chain,
-                                            uint64_t delete_id = 0);
+                                            LRAT_ID delete_id = 0);
 
   // we define our own wrapper as cadical has otherwise a non-compatible
   // marking system
@@ -591,13 +593,13 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   void rewrite_ite_gate_lrat_and (Gate *g, int dst, int src, size_t c,
                                   size_t d);
   void produce_ite_merge_then_else_reasons (
-      Gate *g, int dst, int src, std::vector<uint64_t> &reasons_implication,
-      std::vector<uint64_t> &reasons_back);
+      Gate *g, int dst, int src, std::vector<LRAT_ID> &reasons_implication,
+      std::vector<LRAT_ID> &reasons_back);
   void rewrite_ite_gate_update_lrat_reasons (Gate *g, int src, int dst);
   void simplify_ite_gate_produce_unit_lrat (Gate *g, int lit, size_t idx1, size_t idx2);
-  void merge_and_gate_lrat_produce_lrat (Gate *g, Gate *h, std::vector<uint64_t> &reasons_lrat, std::vector<uint64_t> &reasons_lrat_back);
+  void merge_and_gate_lrat_produce_lrat (Gate *g, Gate *h, std::vector<LRAT_ID> &reasons_lrat, std::vector<LRAT_ID> &reasons_lrat_back);
   void simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1, size_t idx2); // first index is a binary clause after unit propagation and the second has length 3
-  void merge_ite_gate_produce_lrat (std::vector<LitClausePair> & clauses, std::vector<uint64_t> &reasons_implication, std::vector<uint64_t> &reasons_back);
+  void merge_ite_gate_produce_lrat (std::vector<LitClausePair> & clauses, std::vector<LRAT_ID> &reasons_implication, std::vector<LRAT_ID> &reasons_back);
 };
 
 } // namespace CaDiCaL
