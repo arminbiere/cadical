@@ -601,6 +601,10 @@ struct Closure {
   merge_ite_gate_produce_lrat (std::vector<LitClausePair> &clauses,
                                std::vector<LRAT_ID> &reasons_implication,
                                std::vector<LRAT_ID> &reasons_back);
+
+  void simplify_ite_gate_condition_set (Gate *g, std::vector<LRAT_ID> &reasons_lrat,
+					std::vector<LRAT_ID> &reasons_back_lrat,
+					size_t idx1, size_t idx2);
 };
 
 } // namespace CaDiCaL

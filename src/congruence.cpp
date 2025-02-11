@@ -4661,9 +4661,9 @@ void Closure::produce_ite_merge_then_else_reasons (
     std::vector<LRAT_ID> &reasons_back) {
   if (!internal->lrat)
     return;
-  assert (g->rhs.size () == 4);
-  assert (src == g->rhs[2] || src == g->rhs[3]);
-  assert (dst == g->rhs[2] || dst == g->rhs[3]);
+  assert (g->rhs.size () == 3);
+  assert (src == g->rhs[1] || src == g->rhs[2]);
+  assert (dst == g->rhs[1] || dst == g->rhs[2]);
   (void) src, (void) dst;
   reasons_implication.push_back (g->pos_lhs_ids[0].clause->id);
   reasons_implication.push_back (g->pos_lhs_ids[2].clause->id);
@@ -5153,6 +5153,20 @@ void Closure::merge_ite_gate_produce_lrat (
   reasons_back.push_back (neg_else_imp.clause->id);
 }
 
+void Closure::simplify_ite_gate_condition_set (Gate *g, std::vector<LRAT_ID> &reasons_lrat,
+					       std::vector<LRAT_ID> &reasons_back_lrat,
+					       size_t idx1, size_t idx2) {
+  assert (internal->lrat);
+  Clause *c = g->pos_lhs_ids[idx1].clause;
+  Clause *d = g->pos_lhs_ids[idx2].clause;
+  c = produce_rewritten_clause_lrat (c);
+  assert (c);
+  d = produce_rewritten_clause_lrat (d);
+  assert (d);
+  reasons_lrat.push_back(c->id);
+  reasons_back_lrat.push_back(d->id);
+}
+
 void Closure::simplify_ite_gate (Gate *g) {
   if (skip_ite_gate (g))
     return;
@@ -5165,13 +5179,18 @@ void Closure::simplify_ite_gate (Gate *g) {
   const int then_lit = rhs[1];
   const int else_lit = rhs[2];
   const signed char v_cond = internal->val (cond);
+  std::vector<LRAT_ID> reasons_lrat, reasons_back_lrat;
   if (v_cond > 0) {
-    if (merge_literals (lhs, then_lit)) {
+    if (internal->lrat)
+      simplify_ite_gate_condition_set(g, reasons_lrat, reasons_back_lrat, 0, 1);
+    if (merge_literals_lrat (lhs, then_lit, reasons_lrat, reasons_back_lrat)) {
       ++internal->stats.congruence.unary_ites;
       ++internal->stats.congruence.unaries;
     }
   } else if (v_cond < 0) {
-    if (merge_literals (lhs, else_lit)) {
+    if (internal->lrat)
+      simplify_ite_gate_condition_set(g, reasons_lrat, reasons_back_lrat, 2, 3);
+    if (merge_literals_lrat (lhs, else_lit, reasons_lrat, reasons_back_lrat)) {
       ++internal->stats.congruence.unary_ites;
       ++internal->stats.congruence.unaries;
     }
