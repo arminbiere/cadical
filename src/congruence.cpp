@@ -4156,8 +4156,8 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   // LRAT for add_xor_shrinking_proof_chain
   // this should be unnecessary...
   // TODO check if really unnecessary
-  // if (dst_count > 1)
-  //  add_xor_shrinking_proof_chain (g, src);
+  if (dst_count > 1)
+    add_xor_shrinking_proof_chain (g, src);
   assert (internal->clause.empty ());
   update_xor_gate (g, git);
 
