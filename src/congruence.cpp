@@ -2339,8 +2339,8 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
   // TODO Florian LRAT for learn_congruence_unit
   assert (g->arity () == 0 || internal->clause.empty ());
   if (g->arity () == 0) {
-    assert (internal->clause.size () == 1 &&
-            internal->clause.back () == -g->lhs);
+    assert (!internal->proof || (internal->clause.size () == 1 &&
+                                 internal->clause.back () == -g->lhs));
     assert (!internal->lrat || lrat_chain.size ());
     internal->clause.clear ();
     learn_congruence_unit (-g->lhs);
@@ -3084,21 +3084,21 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
   const bool parity = (lhs > 0);
   assert (parity == parity_lits (clause));
   const size_t size = clause.size ();
-  const unsigned end = 1u << size;
-  assert (!internal->lrat || first.size () > 2 * end);
+  const unsigned end = 1u << (size - 1);
+  assert (!internal->lrat || first.size () == 2 * end);
   for (unsigned i = 0; i != end; ++i) {
     while (i && parity != parity_lits (clause))
       inc_lits (clause);
     clause.push_back (pivot);
     LOG (clause, "proof checking ");
     if (internal->lrat) {
-      lrat_chain.push_back (first[2 * i].clause->id);
+      lrat_chain.push_back (first[2 * i + 1].clause->id);
     }
     const LRAT_ID id1 = check_and_add_to_proof_chain (clause);
     clause.pop_back ();
     clause.push_back (-pivot);
     if (internal->lrat) {
-      lrat_chain.push_back (first[2 * i + 1].clause->id);
+      lrat_chain.push_back (first[2 * i].clause->id);
     }
     const LRAT_ID id2 = check_and_add_to_proof_chain (clause);
     clause.pop_back ();
@@ -3220,7 +3220,7 @@ LRAT_ID Closure::check_and_add_to_proof_chain (vector<int> &clause) {
   if (internal->proof) {
     if (internal->lrat) {
       assert (internal->lrat_chain.empty ());
-      assert (lrat_chain.size () > 1);
+      assert (lrat_chain.size () >= 1);
     }
     internal->proof->add_derived_clause (id, true, clause, lrat_chain);
   }
@@ -4188,7 +4188,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   // this should be unnecessary...
   // TODO check if really unnecessary
   if (dst_count > 1)
-    add_xor_shrinking_proof_chain (g, src);
+    add_xor_shrinking_proof_chain (g, dst);
   assert (internal->clause.size () <= 1);
   update_xor_gate (g, git);
 
