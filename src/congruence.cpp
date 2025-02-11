@@ -5125,6 +5125,7 @@ void Closure::simplify_ite_gate (Gate *g) {
     const signed char v_else = internal->val (else_lit);
     const signed char v_then = internal->val (then_lit);
     LOG ("then %d: %d; else %d: %d", then_lit, v_then, else_lit, v_else);
+    std::vector <LRAT_ID> extra_reasons, extra_reasons_back;
     assert (v_then || v_else);
     if (v_then > 0 && v_else > 0) {
       simplify_ite_gate_produce_unit_lrat (g, lhs, 1, 3);
@@ -5133,17 +5134,15 @@ void Closure::simplify_ite_gate (Gate *g) {
       simplify_ite_gate_produce_unit_lrat (g, -lhs, 0, 2);
       learn_congruence_unit (-lhs);
     } else if (v_then > 0 && v_else < 0) {
-      // TODO should be merge_ite_gate_produce_lrat
       if (internal->lrat)
-        simplify_ite_gate_produce_unit_lrat (g, 0, 1, 2);
-      if (merge_literals (lhs, cond)) {
+        merge_ite_gate_produce_lrat (g->pos_lhs_ids, extra_reasons, extra_reasons_back);
+      if (merge_literals_lrat (lhs, cond)) {
         ++internal->stats.congruence.unary_ites;
         ++internal->stats.congruence.unaries;
       }
     } else if (v_then < 0 && v_else > 0) {
-      // TODO should be merge_ite_gate_produce_lrat
       if (internal->lrat)
-        simplify_ite_gate_produce_unit_lrat (g, 0, 0, 3);
+        merge_ite_gate_produce_lrat (g->pos_lhs_ids, extra_reasons, extra_reasons_back);
       if (merge_literals (lhs, -cond)) {
         ++internal->stats.congruence.unary_ites;
         ++internal->stats.congruence.unaries;
