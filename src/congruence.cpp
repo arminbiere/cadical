@@ -1747,10 +1747,6 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
           other == repr_other ? 0 : find_representative_lrat (other),
           other == repr_other ? 0 : find_representative_lrat (-other));
       push_id_and_rewriting_lrat_unit (c1, rew1, lrat_chain, true, rew2);
-      if (false && other != repr_other) {
-        const LRAT_ID repr_larger_id1 = find_representative_lrat (-other);
-        lrat_chain.push_back (repr_larger_id1);
-      }
       LOG (lrat_chain, "lrat chain");
       swap (internal->lrat_chain, lrat_chain);
     }
