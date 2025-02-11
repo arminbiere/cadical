@@ -137,6 +137,7 @@ void Closure::extract_binaries () {
       continue;
     const int a = d->literals[0];
     const int b = d->literals[1];
+    // TODO this does not compile with pedantic (configure -l -p)
     const int c = d->literals[2];
     if (internal->val (a))
       continue;
@@ -3476,7 +3477,7 @@ uint32_t Closure::number_from_xor_reason (const std::vector<int> &rhs,
   assert (is_sorted (
       begin (rhs), end (rhs),
       sort_literals_by_var_smaller_except (internal, lhs, except)));
-  (void) lhs;
+  (void) lhs, (void) except;
   assert (rhs.size () <= 32);
   for (auto lit : rhs) {
     n *= 2;
