@@ -1044,8 +1044,8 @@ bool Closure::learn_congruence_unit (int lit) {
   }
   // TODO this is done in Kissat, but we try to make the lrat/drat code as
   // close as possible. So We do not learn the empty clause here.
-  if (false && val_lit < 0) {
-    LOG ("fount unsat");
+  if (val_lit < 0) {
+    swap (internal->lrat_chain, lrat_chain);
     internal->learn_empty_clause ();
     return false;
   }
