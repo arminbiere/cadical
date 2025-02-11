@@ -355,7 +355,8 @@ int Closure::find_representative_and_compress (int lit, bool update_eager) {
     if (update_eager)
       eager_representative (lit) = res;
     Clause *equiv = add_binary_clause (-lit, res);
-    equiv->hyper = true;
+    if (equiv)
+      equiv->hyper = true;
 
     if (internal->lrat && equiv) {
       representative_id (lit) = equiv->id;
