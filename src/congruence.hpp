@@ -597,8 +597,8 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   void simplify_ite_gate_produce_unit_lrat (Gate *g, int lit, size_t idx1, size_t idx2);
   void merge_and_gate_lrat_produce_lrat (Gate *g, Gate *h, std::vector<uint64_t> &reasons_lrat, std::vector<uint64_t> &reasons_lrat_back);
   void simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1, size_t idx2); // first index is a binary clause after unit propagation and the second has length 3
+  void merge_ite_gate_produce_lrat (std::vector<LitClausePair> & clauses, std::vector<uint64_t> &reasons_implication, std::vector<uint64_t> &reasons_back);
 };
-  void merge_ite_gate_produce_lrat (std::vector<LitClausePair> & clauses, std::vector<uint64_t> &reasons_implication, std::vector<uint64_t> &reasons_back)
 
 } // namespace CaDiCaL
 

@@ -5121,9 +5121,9 @@ void Closure::merge_and_gate_lrat_produce_lrat (
   assert (g->tag == Gate_Type::And_Gate);
   assert (h->tag == Gate_Type::And_Gate);
   assert (g->neg_lhs_ids.size () <= 1);
-      update_and_gate_build_lrat_chain (g, h, 0, 0, 0, 0, reasons_lrat_src,
-					reasons_lrat_usrc);
-      return;
+  update_and_gate_build_lrat_chain (g, h, 0, 0, 0, 0, reasons_lrat_src,
+                                    reasons_lrat_usrc);
+  return;
   // we need to remove units from the long clause, but they cannot be
   // any unit in the binary clauses
   assert (internal->lrat);
@@ -5265,13 +5265,17 @@ void Closure::simplify_ite_gate (Gate *g) {
       simplify_ite_gate_produce_unit_lrat (g, -lhs, 0, 2);
       learn_congruence_unit (-lhs);
     } else if (v_then > 0 && v_else < 0) {
-      simplify_ite_gate_produce_unit_lrat (g, 1, 2);
+      // TODO should be merge_ite_gate_produce_lrat
+      if (internal->lrat)
+	  simplify_ite_gate_produce_unit_lrat (g, 0, 1, 2);
       if (merge_literals (lhs, cond)) {
         ++internal->stats.congruence.unary_ites;
         ++internal->stats.congruence.unaries;
       }
     } else if (v_then < 0 && v_else > 0) {
-      simplify_ite_gate_produce_unit_lrat (g, 0, 3);
+      // TODO should be merge_ite_gate_produce_lrat
+      if (internal->lrat)
+        simplify_ite_gate_produce_unit_lrat (g, 0, 0, 3);
       if (merge_literals (lhs, -cond)) {
         ++internal->stats.congruence.unary_ites;
         ++internal->stats.congruence.unaries;
