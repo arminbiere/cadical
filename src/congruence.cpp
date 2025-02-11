@@ -2340,10 +2340,16 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
   // TODO Florian LRAT for learn_congruence_unit
   assert (g->arity () == 0 || internal->clause.empty ());
   if (g->arity () == 0) {
-    assert (!internal->proof || (internal->clause.size () == 1 &&
-                                 internal->clause.back () == -g->lhs));
-    assert (!internal->lrat || lrat_chain.size ());
-    internal->clause.clear ();
+    if (internal->clause.size ()) {
+      assert (!internal->proof || (internal->clause.size () == 1 &&
+                                   internal->clause.back () == -g->lhs));
+      assert (!internal->lrat || lrat_chain.size ());
+      internal->clause.clear ();
+
+    } else if (internal->lrat) {
+      simplify_unit_xor_lrat_clauses (g->pos_lhs_ids, g->lhs);
+      assert (clause.size () && clause.back () == -g->lhs);
+    }
     learn_congruence_unit (-g->lhs);
   } else if (g->arity () == 1) {
     std::vector<LRAT_ID> reasons_implication, reasons_back;
@@ -2471,14 +2477,14 @@ void Closure::simplify_and_gate (Gate *g) {
   if (ulhs_in_rhs) { // missing in Kissat, TODO: port back
     assert (gate_contains (g, -g->lhs));
     if (internal->lrat) {
-      for (auto litId : g->pos_lhs_ids){
-	if (litId.current_lit == g->lhs){
-	  compute_rewritten_clause_lrat_simple (litId.clause, 0);
-	  break;
-	}
+      for (auto litId : g->pos_lhs_ids) {
+        if (litId.current_lit == g->lhs) {
+          compute_rewritten_clause_lrat_simple (litId.clause, 0);
+          break;
+        }
       }
     }
-    learn_congruence_unit(-g->lhs);
+    learn_congruence_unit (-g->lhs);
   }
 }
 
@@ -5173,7 +5179,7 @@ void Closure::simplify_ite_gate (Gate *g) {
     const signed char v_else = internal->val (else_lit);
     const signed char v_then = internal->val (then_lit);
     LOG ("then %d: %d; else %d: %d", then_lit, v_then, else_lit, v_else);
-    std::vector <LRAT_ID> extra_reasons, extra_reasons_back;
+    std::vector<LRAT_ID> extra_reasons, extra_reasons_back;
     assert (v_then || v_else);
     if (v_then > 0 && v_else > 0) {
       simplify_ite_gate_produce_unit_lrat (g, lhs, 1, 3);
@@ -5183,14 +5189,16 @@ void Closure::simplify_ite_gate (Gate *g) {
       learn_congruence_unit (-lhs);
     } else if (v_then > 0 && v_else < 0) {
       if (internal->lrat)
-        merge_ite_gate_produce_lrat (g->pos_lhs_ids, extra_reasons, extra_reasons_back);
+        merge_ite_gate_produce_lrat (g->pos_lhs_ids, extra_reasons,
+                                     extra_reasons_back);
       if (merge_literals_lrat (lhs, cond)) {
         ++internal->stats.congruence.unary_ites;
         ++internal->stats.congruence.unaries;
       }
     } else if (v_then < 0 && v_else > 0) {
       if (internal->lrat)
-        merge_ite_gate_produce_lrat (g->pos_lhs_ids, extra_reasons, extra_reasons_back);
+        merge_ite_gate_produce_lrat (g->pos_lhs_ids, extra_reasons,
+                                     extra_reasons_back);
       if (merge_literals (lhs, -cond)) {
         ++internal->stats.congruence.unary_ites;
         ++internal->stats.congruence.unaries;
