@@ -54,6 +54,7 @@ extern "C" {
 #include "checker.hpp"
 #include "clause.hpp"
 #include "config.hpp"
+#include "congruence.hpp"
 #include "contract.hpp"
 #include "cover.hpp"
 #include "decompose.hpp"
@@ -136,21 +137,22 @@ struct Internal {
   enum Mode {
     BLOCK = (1 << 0),
     CONDITION = (1 << 1),
-    COVER = (1 << 2),
-    DECOMP = (1 << 3),
-    DEDUP = (1 << 4),
-    ELIM = (1 << 5),
-    FACTOR = (1 << 6),
-    LUCKY = (1 << 7),
-    PROBE = (1 << 8),
-    SEARCH = (1 << 9),
-    SIMPLIFY = (1 << 10),
-    SUBSUME = (1 << 11),
-    SWEEP = (1 << 12),
-    TERNARY = (1 << 13),
-    TRANSRED = (1 << 14),
-    VIVIFY = (1 << 15),
-    WALK = (1 << 16),
+    CONGRUENCE = (1 << 2),
+    COVER = (1 << 3),
+    DECOMP = (1 << 4),
+    DEDUP = (1 << 5),
+    ELIM = (1 << 6),
+    FACTOR = (1 << 7),
+    LUCKY = (1 << 8),
+    PROBE = (1 << 9),
+    SEARCH = (1 << 10),
+    SIMPLIFY = (1 << 11),
+    SUBSUME = (1 << 12),
+    SWEEP = (1 << 13),
+    TERNARY = (1 << 14),
+    TRANSRED = (1 << 15),
+    VIVIFY = (1 << 16),
+    WALK = (1 << 17),
   };
 
   bool in_mode (Mode m) const { return (mode & m) != 0; }
@@ -272,6 +274,7 @@ struct Internal {
   vector<Clause *> clauses; // ordered collection of all clauses
   Averages averages;        // glue, size, jump moving averages
   Delay delay[2];	    // Delay certain functions
+  Delay congruence_delay;   // Delay congruence if not successful recently
   Limit lim;                // limits for various phases
   Last last;                // statistics at last occurrence
   Inc inc;                  // increments on limits
@@ -847,6 +850,7 @@ struct Internal {
   // Lucky feasible case checking.
   //
   int unlucky (int res);
+  bool lucky_propagate_discrepency (int);
   int trivially_false_satisfiable ();
   int trivially_true_satisfiable ();
   int forward_false_satisfiable ();
@@ -906,6 +910,8 @@ struct Internal {
   void init_occs ();
   void init_bins ();
   void init_noccs ();
+  void clear_noccs ();
+  void clear_occs ();
   void reset_occs ();
   void reset_bins ();
   void reset_noccs ();
@@ -914,6 +920,7 @@ struct Internal {
   //
   void init_watches ();
   void connect_watches (bool irredundant_only = false);
+  void connect_binary_watches ();
   void sort_watches ();
   void clear_watches ();
   void reset_watches ();
@@ -1165,7 +1172,7 @@ struct Internal {
   void unmark_binary_literals (Eliminator &);
   bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *, bool);
   void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot, bool &);
-  bool elim_resolvents_are_bounded (Eliminator &, int pivot);
+  bool elim_resolvents_are_bounded (Eliminator &, int pivot, bool fastel);
   void elim_update_removed_lit (Eliminator &, int lit);
   void elim_update_removed_clause (Eliminator &, Clause *, int except = 0);
   void elim_update_added_clause (Eliminator &, Clause *);
@@ -1174,10 +1181,10 @@ struct Internal {
   void elim_backward_clauses (Eliminator &);
   void elim_propagate (Eliminator &, int unit);
   void elim_on_the_fly_self_subsumption (Eliminator &, Clause *, int);
-  void try_to_eliminate_variable (Eliminator &, int pivot, bool &);
+  void try_to_eliminate_variable (Eliminator &, int pivot, bool &, bool fastel);
   void increase_elimination_bound ();
-  int elim_round (bool &completed, bool &);
-  void elim (bool update_limits = true);
+  int elim_round (bool &completed, bool &, bool);
+  void elim (bool update_limits = true, bool = false);
 
   // sweeping in 'sweep.cpp'
   int sweep_solve ();
@@ -1279,6 +1286,7 @@ struct Internal {
   bool ternary_find_binary_clause (int, int);
   bool ternary_find_ternary_clause (int, int, int);
   Clause *new_hyper_ternary_resolved_clause (bool red);
+  Clause *new_hyper_ternary_resolved_clause_and_watch (bool red, bool);
   bool hyper_ternary_resolve (Clause *, int, Clause *);
   void ternary_lit (int pivot, int64_t &steps, int64_t &htrs);
   void ternary_idx (int idx, int64_t &steps, int64_t &htrs);
@@ -1574,6 +1582,9 @@ struct Internal {
     return (size_t) vidx (lit) < frozentab.size () &&
            frozentab[vidx (lit)] > 0;
   }
+
+  // Congruence closure
+  bool extract_gates ();
 
   // Parsing functions in 'parse.cpp'.
   //

@@ -212,7 +212,7 @@ class ClauseIterator;
 class WitnessIterator;
 class ExternalPropagator;
 class Tracer;
-class InternalTracer;
+struct InternalTracer;
 class FileTracer;
 class StatTracer;
 

@@ -30,7 +30,7 @@ void Internal::learn_empty_clause () {
 
 void Internal::learn_unit_clause (int lit) {
   assert (!unsat);
-  LOG ("learned unit clause %d", lit);
+  LOG ("learned unit clause %d, stored at position %d", lit, vlit (lit));
   external->check_learned_unit_clause (lit);
   int64_t id = ++clause_id;
   if (lrat || frat) {

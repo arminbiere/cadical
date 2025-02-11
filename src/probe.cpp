@@ -939,6 +939,9 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
       decompose (); // If we derived a binary clause
     if (probe ())
       decompose ();
+
+    if (extract_gates ())
+      decompose ();
     if (sweep ())   // full occurrence list
       decompose (); // ... and (ELS) afterwards.
     (void) vivify ();      // resets watches

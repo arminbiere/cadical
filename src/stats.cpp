@@ -146,6 +146,8 @@ void Stats::print (Internal *internal) {
   if (all || stats.all.eliminated) {
     PRT ("eliminated:      %15" PRId64 "   %10.2f %%  of all variables",
          stats.all.eliminated, percent (stats.all.eliminated, stats.vars));
+    PRT ("  fastelim:      %15" PRId64 "   %10.2f %%  of eliminated",
+         stats.all.fasteliminated, percent (stats.all.fasteliminated, stats.all.eliminated));
     PRT ("  elimphases:    %15" PRId64 "   %10.2f    interval",
          stats.elimphases, relative (stats.conflicts, stats.elimphases));
     PRT ("  elimrounds:    %15" PRId64 "   %10.2f    per phase",
@@ -666,6 +668,27 @@ void Stats::print (Internal *internal) {
          stats.extensions, relative (stats.conflicts, stats.extensions));
     PRT ("  flipped:       %15" PRId64 "   %10.2f    per weakened",
          stats.extended, relative (stats.extended, stats.weakened));
+  }
+  
+  if (all || stats.congruence.gates) {
+    PRT ("congruence:      %15" PRId64 "   %10.2f    interval",
+         stats.congruence.rounds, relative (stats.conflicts, stats.congruence.rounds));
+    PRT ("   units:        %15" PRId64 "   %10.2f    per congruent",
+         stats.congruence.units, relative (stats.congruence.units, stats.congruence.congruent));
+    PRT ("   cong-and:     %15" PRId64 "   %10.2f    per found gates",
+         stats.congruence.ands, relative (stats.congruence.ands, stats.congruence.gates));
+    PRT ("   cong-ite:     %15" PRId64 "   %10.2f    per found gates",
+         stats.congruence.ites, relative (stats.congruence.ites, stats.congruence.gates));
+    PRT ("   cong-xor:     %15" PRId64 "   %10.2f    per found gates",
+         stats.congruence.xors, relative (stats.congruence.xors, stats.congruence.gates));
+    PRT ("   congruent:    %15" PRId64 "   %10.2f    per round",
+         stats.congruence.congruent, relative (stats.congruence.rounds, stats.congruence.congruent));
+    PRT ("   unaries:      %15" PRId64 "   %10.2f    per round",
+         stats.congruence.unaries, relative (stats.congruence.rounds, stats.congruence.unaries));
+    PRT ("   rewri.-ands:  %15" PRId64 "   %10.2f    per round",
+         stats.congruence.rewritten_ands, relative (stats.congruence.rounds, stats.congruence.rewritten_ands));
+    PRT ("   subsumed:     %15" PRId64 "   %10.2f    per round",
+         stats.congruence.subsumed, relative (stats.congruence.rounds, stats.congruence.subsumed));
   }
 
   LINE ();

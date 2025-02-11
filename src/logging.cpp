@@ -91,6 +91,26 @@ void Logger::log (Internal *internal, const Clause *c, const char *fmt,
   fflush (stdout);
 }
 
+void Logger::log (Internal *internal, const Gate *g, const char *fmt, ...) {
+  print_log_prefix (internal);
+  tout.magenta ();
+  va_list ap;
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  if (g) {
+    printf ("%s gate[%" PRIu64 "] (arity: %ld) %d = %s",
+            g->garbage ? " garbage" : "", g->id, g->arity (), g->lhs,
+            string_of_gate (g->tag).c_str ());
+    for (const auto &lit : g->rhs)
+      printf (" %d", lit);
+  } else
+    printf (" null gate");
+  fputc ('\n', stdout);
+  tout.normal ();
+  fflush (stdout);
+}
+
 // Same as above, but for the global clause 'c' (which is not a reason).
 
 void Logger::log (Internal *internal, const vector<int> &c, const char *fmt,

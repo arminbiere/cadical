@@ -253,6 +253,7 @@ bool Internal::propagate () {
 
       const Watch w = *j++ = *i++;
       const signed char b = val (w.blit);
+      LOG (w.clause, "checking");
 
       if (b > 0)
         continue; // blocking literal satisfied

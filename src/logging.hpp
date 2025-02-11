@@ -5,6 +5,7 @@
 #ifdef LOGGING
 /*------------------------------------------------------------------------*/
 
+#include <cstdint>
 #include <vector>
 
 namespace CaDiCaL {
@@ -17,6 +18,7 @@ namespace CaDiCaL {
 using namespace std;
 
 struct Clause;
+struct Gate;
 struct Internal;
 
 struct Logger {
@@ -57,6 +59,9 @@ struct Logger {
                    ...) CADICAL_ATTRIBUTE_FORMAT (4, 5);
 
   static void log_empty_line (Internal *);
+
+  static void log (Internal *, const Gate *, const char *fmt, ...)
+      CADICAL_ATTRIBUTE_FORMAT (3, 4);
 };
 
 } // namespace CaDiCaL

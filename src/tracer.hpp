@@ -146,7 +146,7 @@ public:
 
 // Following tracers for internal use.
 
-class InternalTracer : public Tracer {
+struct InternalTracer : public Tracer {
 public:
   InternalTracer () {}
   virtual ~InternalTracer () {}

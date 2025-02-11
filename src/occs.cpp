@@ -18,6 +18,12 @@ void Internal::reset_occs () {
   LOG ("reset occurrence lists");
 }
 
+void Internal::clear_occs () {
+  assert (occurring ());
+  for (auto &occ : otab)
+    occ.clear();
+  LOG ("clear occurrence lists");
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -28,6 +34,13 @@ void Internal::init_noccs () {
   if (ntab.size () < 2 * vsize)
     ntab.resize (2 * vsize, 0);
   LOG ("initialized two-sided occurrence counters");
+}
+
+void Internal::clear_noccs () {
+  assert (!ntab.empty ());
+  for (auto &nt : ntab)
+    nt = 0;
+  LOG ("clear two-sided occurrence counters");
 }
 
 void Internal::reset_noccs () {

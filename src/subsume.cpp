@@ -655,7 +655,6 @@ void Internal::subsume () {
   }
 
   transred ();
-
   if (external_prop) {
     assert (!level);
     private_steps = false;

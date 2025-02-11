@@ -2,6 +2,7 @@
 #define _stats_hpp_INCLUDED
 
 #include <cstdlib>
+#include <cstdint>
 #include <vector>
 
 namespace CaDiCaL {
@@ -311,6 +312,7 @@ struct Stats {
   struct {
     int64_t fixed = 0;       // number of top level assigned variables
     int64_t eliminated = 0;  // number of eliminated variables
+    int64_t fasteliminated = 0;  // number of fast eliminated variables only
     int64_t substituted = 0; // number of substituted variables
     int64_t pure = 0;        // number of pure literals
   } all, now;
@@ -325,6 +327,26 @@ struct Stats {
   int64_t inactive = 0; // number of inactive variables
   std::vector<uint64_t> bump_used = {0,0};
   std::vector<std::vector<uint64_t>> used; // used clauses in focused mode
+
+  struct {
+    int64_t gates = 0;
+    int64_t ands = 0;
+    int64_t ites = 0;
+    int64_t xors = 0;
+    int64_t units = 0;
+    int64_t congruent = 0;
+    int64_t rounds = 0;
+    int64_t unary_and = 0;
+    int64_t unaries = 0;
+    int64_t rewritten_ands = 0;
+    int64_t simplified = 0;
+    int64_t simplified_ands = 0;
+    int64_t simplified_xors = 0;
+    int64_t simplified_ites = 0;
+    int64_t subsumed = 0;
+    int64_t trivial_ite = 0;
+    int64_t unary_ites = 0;
+  } congruence;
 
   Stats ();
 
