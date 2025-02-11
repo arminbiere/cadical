@@ -176,7 +176,6 @@ struct Gate {
   vector<LRAT_ID> units; // TODO: remove, should not be useful anymore
   vector<LitClausePair> pos_lhs_ids;
   vector<LitClausePair> neg_lhs_ids;
-  bool tautological_clauses; // TODO delete
   vector<int> rhs;
 
   size_t arity () const { return rhs.size (); }

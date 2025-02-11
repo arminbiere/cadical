@@ -3929,8 +3929,6 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
   LOG (g, "rewriting %d into %d in", src, dst);
   int clashing = 0, falsifies = 0;
   unsigned dst_count = 0, not_dst_count = 0;
-  if (g->lhs == dst)
-    g->tautological_clauses = true;
   auto q = begin (g->rhs);
   for (int &lit : g->rhs) {
     if (lit == src)
@@ -4028,9 +4026,6 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
   assert (dst_count <= 2);
   assert (not_dst_count <= 1);
 
-  if (!g->tautological_clauses)
-    assert (std::find (begin (g->rhs), end (g->rhs), g->lhs) ==
-            end (g->rhs));
   std::vector<LRAT_ID> reasons_lrat_src, reasons_lrat_usrc;
   shrink_and_gate (g, falsifies, clashing);
   LOG (g, "rewritten as");
