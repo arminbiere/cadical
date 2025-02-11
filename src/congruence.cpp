@@ -4823,7 +4823,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       g->lhs = not_lhs;
       rhs[0] = not_cond;
       rhs[1] = not_else_lit;
-      rewrite_ite_gate_lrat_and (g, src, dst, 0, 2);
+      rewrite_ite_gate_lrat_and (g, src, dst, 0, 3);
     } else if (not_dst == cond) {
       // cond ? !cond : else_lit
       // cond & !cond | !cond & else_lit
