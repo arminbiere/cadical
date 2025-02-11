@@ -609,6 +609,7 @@ void Closure::produce_rewritten_clause_lrat_and_clean (
     int except_lhs, int except_lhs2, size_t &old_position1,
     size_t &old_position2) {
   assert (internal->lrat_chain.empty ());
+  assert (old_position1 != old_position2);
   size_t j = 0;
   for (size_t i = 0; i < litIds.size (); ++i) {
     assert (j <= i);
@@ -803,7 +804,7 @@ Clause *Closure::produce_rewritten_clause_lrat (
 #endif
     }
     if (internal->val (lit) > 0) {
-      LOG ("found positive unit, so clause is subsumed by unit");
+      LOG ("found positive unit %d, so clause is subsumed by unit", lit);
       tautology = true;
     }
     const int other = find_eager_representative_and_compress (lit);
@@ -5093,7 +5094,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
     assert (chain.empty ());
 }
 
-void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, size_t idx1,
+void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit, size_t idx1,
                                                    size_t idx2) {
   if (!internal->lrat)
     return;
@@ -5102,6 +5103,7 @@ void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, size_t idx1,
   assert (idx1 < g->pos_lhs_ids.size ());
   assert (idx2 < g->pos_lhs_ids.size ());
   assert (g->pos_lhs_ids.size () == 4);
+  assert (idx1 != idx2);
   Clause *c = g->pos_lhs_ids[idx1].clause;
   Clause *d = g->pos_lhs_ids[idx2].clause;
   c = produce_rewritten_clause_lrat (c, Rewrite (), Rewrite ());
@@ -5115,15 +5117,23 @@ void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, size_t idx1,
 void Closure::merge_and_gate_lrat_produce_lrat (
     Gate *g, Gate *h, std::vector<uint64_t> &reasons_lrat_src,
     std::vector<uint64_t> &reasons_lrat_usrc) {
+  assert (internal->lrat);
+  assert (g->tag == Gate_Type::And_Gate);
+  assert (h->tag == Gate_Type::And_Gate);
+  assert (g->neg_lhs_ids.size () <= 1);
+      update_and_gate_build_lrat_chain (g, h, 0, 0, 0, 0, reasons_lrat_src,
+					reasons_lrat_usrc);
+      return;
   // we need to remove units from the long clause, but they cannot be
   // any unit in the binary clauses
   assert (internal->lrat);
   assert (g->tag == Gate_Type::And_Gate);
   assert (h->tag == Gate_Type::And_Gate);
-  assert (g->neg_lhs_ids.size () ==
-          1); // otherwise we need intermediate clauses
-  assert (h->neg_lhs_ids.size () ==
-          1); // otherwise we need intermediate clauses
+  assert (g->neg_lhs_ids.size () <= 1);
+  if (g->neg_lhs_ids.empty ()) {
+    // degenerated AND gate
+    
+  }
   LOG (g->neg_lhs_ids[0].clause, "units");
   for (auto lit : *g->neg_lhs_ids[0].clause) { // find the units
     if (internal->val (lit) > 0) {
@@ -5162,15 +5172,22 @@ void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1, size_t idx2) 
   assert (idx1 < g->pos_lhs_ids.size ());
   assert (idx2 < g->pos_lhs_ids.size ());
   int lit = g->pos_lhs_ids[idx2].current_lit, other = g->lhs;
+  size_t new_idx1 = idx1;
+  size_t new_idx2 = idx2;
 
   produce_rewritten_clause_lrat_and_clean (
-      g->pos_lhs_ids, Rewrite (), Rewrite (), g->lhs, 0, idx1, idx2);
+      g->pos_lhs_ids, Rewrite (), Rewrite (), g->lhs, 0, new_idx1, new_idx2);
 
-  assert (idx1 < g->pos_lhs_ids.size ());
-  assert (idx2 < g->pos_lhs_ids.size ());
-  Clause *c = g->pos_lhs_ids[idx1].clause;
+  if (g->pos_lhs_ids.size () == 1) {
+    // we have a degenerated end gate
+    return;
+  }
+  assert (new_idx1 < g->pos_lhs_ids.size ());
+  assert (new_idx2 < g->pos_lhs_ids.size ());
+  Clause *c = g->pos_lhs_ids[new_idx1].clause;
   assert (c->size == 2);
-  Clause *d = g->pos_lhs_ids[idx2].clause;
+  assert (new_idx1 != new_idx2);
+  Clause *d = g->pos_lhs_ids[new_idx2].clause;
   assert (c != d);
   assert (c);
   assert (d);
@@ -5197,6 +5214,21 @@ void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1, size_t idx2) 
   g->pos_lhs_ids.erase (long_clause);
   assert (g->pos_lhs_ids.size () == 1);
   g->pos_lhs_ids.push_back ({lit, e});
+}
+
+void Closure::merge_ite_gate_produce_lrat (std::vector<LitClausePair> & clauses, std::vector<uint64_t> &reasons_implication, std::vector<uint64_t> &reasons_back) {
+  produce_rewritten_clause_lrat_and_clean (
+      clauses, Rewrite (),
+      Rewrite ()); // get rid of the units that could be in the clause
+  assert (clauses.size () == 4);
+  auto then_imp = clauses[0];
+  auto neg_then_imp = clauses[1];
+  auto else_imp = clauses[2];
+  auto neg_else_imp = clauses[3];
+  reasons_implication.push_back (then_imp.clause->id);
+  reasons_implication.push_back (else_imp.clause->id);
+  reasons_back.push_back (neg_then_imp.clause->id);
+  reasons_back.push_back (neg_else_imp.clause->id);
 }
 
 void Closure::simplify_ite_gate (Gate *g) {
@@ -5227,10 +5259,10 @@ void Closure::simplify_ite_gate (Gate *g) {
     LOG ("then %d: %d; else %d: %d", then_lit, v_then, else_lit, v_else);
     assert (v_then || v_else);
     if (v_then > 0 && v_else > 0) {
-      simplify_ite_gate_produce_unit_lrat (g, 1, 3);
+      simplify_ite_gate_produce_unit_lrat (g, lhs, 1, 3);
       learn_congruence_unit (lhs);
     } else if (v_then < 0 && v_else < 0) {
-      simplify_ite_gate_produce_unit_lrat (g, 0, 2);
+      simplify_ite_gate_produce_unit_lrat (g, -lhs, 0, 2);
       learn_congruence_unit (-lhs);
     } else if (v_then > 0 && v_else < 0) {
       simplify_ite_gate_produce_unit_lrat (g, 1, 2);
@@ -5252,21 +5284,21 @@ void Closure::simplify_ite_gate (Gate *g) {
         g->lhs = -lhs;
         rhs[0] = -cond;
         rhs[1] = -else_lit;
-        simplify_ite_gate_to_and_lrat (g, 0, 3);
+        simplify_ite_gate_to_and_lrat (g, 1, 3);
       } else if (v_then < 0) {
         rhs[0] = -cond;
         rhs[1] = else_lit;
-        simplify_ite_gate_to_and_lrat (g, 1, 2);
+        simplify_ite_gate_to_and_lrat (g, 0, 2);
       } else if (v_else > 0) {
         g->lhs = -lhs;
         rhs[0] = -then_lit;
         rhs[1] = cond;
-        simplify_ite_gate_to_and_lrat (g, 0, 3);
+        simplify_ite_gate_to_and_lrat (g, 3, 1);
       } else {
         assert (v_else < 0);
         rhs[0] = cond;
         rhs[1] = then_lit;
-        simplify_ite_gate_to_and_lrat (g, 1, 2);
+        simplify_ite_gate_to_and_lrat (g, 2, 0);
       }
       if (internal->vlit (rhs[0]) > internal->vlit (rhs[1]))
         std::swap (rhs[0], rhs[1]);
@@ -5435,18 +5467,8 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
          (then_lit), (else_lit));
     std::vector<uint64_t> reasons_implication, reasons_back;
     if (internal->lrat) {
-      produce_rewritten_clause_lrat_and_clean (
-          clauses, Rewrite (),
-          Rewrite ()); // get rid of the units that could be in the clause
-      assert (clauses.size () == 4);
-      auto then_imp = clauses[0];
-      auto neg_then_imp = clauses[1];
-      auto else_imp = clauses[2];
-      auto neg_else_imp = clauses[3];
-      reasons_implication.push_back (then_imp.clause->id);
-      reasons_implication.push_back (else_imp.clause->id);
-      reasons_back.push_back (neg_then_imp.clause->id);
-      reasons_back.push_back (neg_else_imp.clause->id);
+      merge_ite_gate_produce_lrat (clauses, reasons_implication,
+                                   reasons_back);
     }
     if (merge_literals_lrat (lhs, then_lit, reasons_implication,
                              reasons_back))
