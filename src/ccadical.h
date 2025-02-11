@@ -51,6 +51,8 @@ void ccadical_freeze (CCaDiCaL *, int lit);
 int ccadical_frozen (CCaDiCaL *, int lit);
 void ccadical_melt (CCaDiCaL *, int lit);
 int ccadical_simplify (CCaDiCaL *);
+int ccadical_vars (CCaDiCaL *);
+int ccadical_reserve_difference (CCaDiCaL *, int number_of_vars);
 
 /*------------------------------------------------------------------------*/
 

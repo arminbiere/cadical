@@ -342,7 +342,7 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 #endif
     Watches &ws = watches (-lit);
 
-    LOG ("trying to brake %zd watched clauses", ws.size ());
+    LOG ("trying to break %zd watched clauses", ws.size ());
 
     for (const auto &w : ws) {
       Clause *d = w.clause;
@@ -683,7 +683,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 void Internal::walk () {
   START_INNER_WALK ();
   int64_t limit = stats.propagations.search;
-  limit *= 1e-3 * opts.walkreleff;
+  limit *= 1e-3 * opts.walkeffort;
   if (limit < opts.walkmineff)
     limit = opts.walkmineff;
   if (limit > opts.walkmaxeff)

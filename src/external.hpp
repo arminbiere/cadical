@@ -65,7 +65,7 @@ struct External {
   vector<int> assumptions; // External assumptions.
   vector<int> constraint;  // External constraint. Terminated by zero.
 
-  vector<uint64_t>
+  vector<int64_t>
       ext_units; // External units. Needed to compute LRAT for eclause
   vector<bool> ext_flags; // to avoid duplicate units
   vector<int> eclause;    // External version of original input clause.
@@ -82,6 +82,8 @@ struct External {
 
   vector<bool> witness; // Literal witness on extension stack.
   vector<bool> tainted; // Literal tainted in adding literals.
+
+  vector<bool> ervars; // Variables added through Extended Resolution.
 
   vector<unsigned> frozentab; // Reference counts for frozen variables.
 
@@ -160,6 +162,13 @@ struct External {
     return elit;
   }
 
+  inline bool is_valid_input (int elit) {
+    assert (elit);
+    assert (elit != INT_MIN);
+    int eidx = abs (elit);
+    return eidx > max_var || !ervars[eidx];
+  }
+
   /*----------------------------------------------------------------------*/
 
   // The following five functions push individual literals or clauses on the
@@ -178,7 +187,7 @@ struct External {
 
   void push_clause_on_extension_stack (Clause *);
   void push_clause_on_extension_stack (Clause *, int witness);
-  void push_binary_clause_on_extension_stack (uint64_t id, int witness,
+  void push_binary_clause_on_extension_stack (int64_t id, int witness,
                                               int other);
 
   // The main 'extend' function which extends an internal assignment to an
@@ -220,14 +229,14 @@ struct External {
   /*----------------------------------------------------------------------*/
 
   void push_external_clause_and_witness_on_extension_stack (
-      const vector<int> &clause, const vector<int> &witness, uint64_t id);
+      const vector<int> &clause, const vector<int> &witness, int64_t id);
 
-  void push_id_on_extension_stack (uint64_t id);
+  void push_id_on_extension_stack (int64_t id);
 
   // Restore a clause, which was pushed on the extension stack.
   void restore_clause (const vector<int>::const_iterator &begin,
                        const vector<int>::const_iterator &end,
-                       const uint64_t id);
+                       const int64_t id);
 
   void restore_clauses ();
 
@@ -257,9 +266,9 @@ struct External {
   ~External ();
 
   void enlarge (int new_max_var); // Enlarge allocated 'vsize'.
-  void init (int new_max_var);    // Initialize up-to 'new_max_var'.
+  void init (int new_max_var, bool extension = false);    // Initialize up-to 'new_max_var'.
 
-  int internalize (int); // Translate external to internal literal.
+  int internalize (int, bool extension = false); // Translate external to internal literal.
 
   /*----------------------------------------------------------------------*/
 

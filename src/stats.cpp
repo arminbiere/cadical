@@ -7,10 +7,12 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 Stats::Stats () {
-  memset (this, 0, sizeof *this);
   time.real = absolute_real_time ();
   time.process = absolute_process_time ();
   walk.minimum = LONG_MAX;
+  used.resize(2);
+  used[0].resize(127);
+  used[1].resize(127);
 }
 
 /*------------------------------------------------------------------------*/
@@ -52,6 +54,11 @@ void Stats::print (Internal *internal) {
   propagations += stats.propagations.walk;
 
   int64_t vivified = stats.vivifysubs + stats.vivifystrs;
+  int64_t searchticks = stats.ticks.search[0] + stats.ticks.search[1];
+  int64_t inprobeticks = stats.ticks.vivify + stats.ticks.probe + \
+                           stats.ticks.factor + stats.ticks.ternary + \
+                           stats.ticks.sweep;
+  int64_t totalticks = searchticks + inprobeticks;
 
   size_t extendbytes = internal->external->extension.size ();
   extendbytes *= sizeof (int);
@@ -155,12 +162,33 @@ void Stats::print (Internal *internal) {
          stats.elimites, percent (stats.elimites, stats.elimgates));
     PRT ("  elimxors:      %15" PRId64 "   %10.2f %%  xor gates",
          stats.elimxors, percent (stats.elimxors, stats.elimgates));
+    PRT ("  elimdefs:      %15" PRId64 "   %10.2f %%  definitions",
+         stats.definitions_extracted, percent (stats.definitions_extracted, stats.elimgates));
     PRT ("  elimsubst:     %15" PRId64 "   %10.2f %%  substituted",
          stats.elimsubst, percent (stats.elimsubst, stats.all.eliminated));
+    PRT ("  elimsubstequi: %15" PRId64 "   %10.2f %%  equivalence gates",
+         stats.eliminated_equi, percent (stats.eliminated_equi, stats.elimsubst));
+    PRT ("  elimsubstands: %15" PRId64 "   %10.2f %%  and gates",
+         stats.eliminated_and, percent (stats.eliminated_and, stats.elimsubst));
+    PRT ("  elimsubstites: %15" PRId64 "   %10.2f %%  if-then-else gates",
+         stats.eliminated_ite, percent (stats.eliminated_ite, stats.elimsubst));
+    PRT ("  elimsubstxors: %15" PRId64 "   %10.2f %%  xor gates",
+         stats.eliminated_xor, percent (stats.eliminated_xor, stats.elimsubst));
+    PRT ("  elimsubstdefs: %15" PRId64 "   %10.2f %%  definitions",
+         stats.eliminated_def, percent (stats.eliminated_def, stats.elimsubst));
     PRT ("  elimres:       %15" PRId64 "   %10.2f    per eliminated",
          stats.elimres, relative (stats.elimres, stats.all.eliminated));
     PRT ("  elimrestried:  %15" PRId64 "   %10.2f %%  per resolution",
          stats.elimrestried, percent (stats.elimrestried, stats.elimres));
+    PRT ("  def checked:   %15" PRId64 "   %10.2f    per phase",
+         stats.definitions_checked,
+         relative (stats.definitions_checked, stats.elimphases));
+    PRT ("  def extracted: %15" PRId64 "   %10.2f %%  per checked",
+         stats.definitions_extracted,
+         percent (stats.definitions_extracted, stats.definitions_checked));
+    PRT ("  def units:     %15" PRId64 "   %10.2f %%  per checked",
+         stats.definition_units,
+         percent (stats.definition_units, stats.definitions_checked));
   }
   if (all || stats.ext_prop.ext_cb) {
     PRT ("ext.prop. calls: %15" PRId64 "   %10.2f %%  of queries",
@@ -191,6 +219,20 @@ void Stats::print (Internal *internal) {
          stats.ext_prop.echeck_call,
          percent (stats.ext_prop.echeck_call, stats.ext_prop.ext_cb));
   }
+  if (all || stats.factored) {
+    PRT ("factored:        %15" PRId64 "   %10.2f %%  of variables",
+         stats.factored, percent (stats.factored, internal->max_var));
+    PRT ("  factor:        %15" PRId64 "   %10.2f    conflict interval",
+         stats.factor, relative (stats.conflicts, stats.factor));
+    PRT ("  cls factored:  %15" PRId64 "   %10.2f    per factored",
+         stats.factor_added, relative (stats.factor_added, factored));
+    PRT ("  lits factored: %15" PRId64 "   %10.2f    per factored",
+         stats.literals_factored, relative (stats.literals_factored, factored));
+    PRT ("  cls unfactored:%15" PRId64 "   %10.2f    per factored",
+         stats.clauses_unfactored, relative (stats.clauses_unfactored, factored));
+    PRT ("  lits unfactored:%14" PRId64 "   %10.2f    per factored",
+         stats.literals_unfactored, relative (stats.literals_unfactored, factored));
+  }
   if (all || stats.all.fixed) {
     PRT ("fixed:           %15" PRId64 "   %10.2f %%  of all variables",
          stats.all.fixed, percent (stats.all.fixed, stats.vars));
@@ -200,15 +242,15 @@ void Stats::print (Internal *internal) {
          stats.probefailed, percent (stats.probefailed, stats.failed));
     PRT ("  transredunits: %15" PRId64 "   %10.2f %%  per failed",
          stats.transredunits, percent (stats.transredunits, stats.failed));
-    PRT ("  probingphases: %15" PRId64 "   %10.2f    interval",
-         stats.probingphases,
-         relative (stats.conflicts, stats.probingphases));
-    PRT ("  probesuccess:  %15" PRId64 "   %10.2f %%  phases",
-         stats.probesuccess,
-         percent (stats.probesuccess, stats.probingphases));
+    PRT ("  inprobephases: %15" PRId64 "   %10.2f    interval",
+         stats.inprobingphases,
+         relative (stats.conflicts, stats.inprobingphases));
+    PRT ("  inprobesuccess:%15" PRId64 "   %10.2f %%  phases",
+         stats.inprobesuccess,
+         percent (stats.inprobesuccess, stats.inprobingphases));
     PRT ("  probingrounds: %15" PRId64 "   %10.2f    per phase",
          stats.probingrounds,
-         relative (stats.probingrounds, stats.probingphases));
+         relative (stats.probingrounds, stats.inprobingphases));
     PRT ("  probed:        %15" PRId64 "   %10.2f    per failed",
          stats.probed, relative (stats.probed, stats.failed));
     PRT ("  hbrs:          %15" PRId64 "   %10.2f    per probed",
@@ -243,7 +285,7 @@ void Stats::print (Internal *internal) {
     PRT ("learned:         %15" PRId64 "   %10.2f %%  per conflict",
          stats.learned.clauses,
          percent (stats.learned.clauses, stats.conflicts));
-    PRT ("  bumped:        %15" PRId64 "   %10.2f    per learned",
+    PRT ("@ bumped:        %15" PRId64 "   %10.2f    per learned",
          stats.bumped, relative (stats.bumped, stats.learned.clauses));
     PRT ("  recomputed:    %15" PRId64 "   %10.2f %%  per learned",
          stats.recomputed,
@@ -341,6 +383,10 @@ void Stats::print (Internal *internal) {
          stats.reduced, percent (stats.reduced, stats.conflicts));
     PRT ("  reductions:    %15" PRId64 "   %10.2f    interval",
          stats.reductions, relative (stats.conflicts, stats.reductions));
+    PRT ("  sqrt scheme:   %15" PRId64 "   %10.2f %%  reductions",
+         stats.reduced_sqrt, relative (stats.reduced_sqrt, stats.reductions));
+    PRT ("  prct scheme:   %15" PRId64 "   %10.2f %%  reductions",
+         stats.reduced_prct, relative (stats.reduced_prct, stats.reductions));
     PRT ("  collections:   %15" PRId64 "   %10.2f    interval",
          stats.collections, relative (stats.conflicts, stats.collections));
   }
@@ -404,7 +450,57 @@ void Stats::print (Internal *internal) {
          percent (stats.all.substituted, stats.vars));
     PRT ("  decompositions:%15" PRId64 "   %10.2f    per phase",
          stats.decompositions,
-         relative (stats.decompositions, stats.probingphases));
+         relative (stats.decompositions, stats.inprobingphases));
+  }
+  if (all || stats.sweep_equivalences) {
+    PRT ("sweep equivs:    %15" PRId64 "   %10.2f %%  of swept variables",
+         stats.sweep_equivalences, percent (stats.sweep_equivalences, stats.sweep_variables));
+    PRT ("  sweepings:     %15" PRId64 "   %10.2f    vars per sweeping",
+      stats.sweep, relative (stats.sweep_variables, stats.sweep));
+    PRT ("  swept vars:    %15" PRId64 "   %10.2f %%  of all variables",
+         stats.sweep_variables, percent (stats.sweep_variables, stats.vars));
+    PRT ("  sweep units:   %15" PRId64 "   %10.2f %%  of all variables",
+         stats.sweep_units, percent (stats.sweep_units, stats.vars));
+    PRT ("  solved:        %15" PRId64 "   %10.2f    per swept variable",
+         stats.sweep_solved, relative (stats.sweep_solved, stats.sweep_variables));
+    PRT ("  sat:           %15" PRId64 "   %10.2f %%  solved",
+         stats.sweep_sat, percent (stats.sweep_sat, stats.sweep_solved));
+    PRT ("  unsat:         %15" PRId64 "   %10.2f %%  solved",
+         stats.sweep_unsat, percent (stats.sweep_unsat, stats.sweep_solved));
+    PRT ("  backbone solved:%14" PRId64 "   %10.2f %%  solved",
+         stats.sweep_solved_backbone, percent (stats.sweep_solved_backbone, stats.sweep_solved));
+    PRT ("    sat:         %15" PRId64 "   %10.2f %%  backbone solved",
+         stats.sweep_sat_backbone, percent (stats.sweep_sat_backbone, stats.sweep_solved_backbone));
+    PRT ("    unsat:       %15" PRId64 "   %10.2f %%  backbone solved",
+         stats.sweep_unsat_backbone, percent (stats.sweep_unsat_backbone, stats.sweep_solved_backbone));
+    PRT ("    unknown:     %15" PRId64 "   %10.2f %%  backbone solved",
+         stats.sweep_unknown_backbone, percent (stats.sweep_unknown_backbone, stats.sweep_solved_backbone));
+    PRT ("    fixed:       %15" PRId64 "   %10.2f   per swept variable",
+         stats.sweep_fixed_backbone, relative (stats.sweep_fixed_backbone, stats.sweep_variables));
+    PRT ("    flip:        %15" PRId64 "   %10.2f   per swept variable",
+         stats.sweep_flip_backbone, relative (stats.sweep_flip_backbone, stats.sweep_variables));
+    PRT ("    flipped:     %15" PRId64 "   %10.2f %%  of backbone flip",
+         stats.sweep_flipped_backbone, percent (stats.sweep_flipped_backbone, stats.sweep_flip_backbone));
+    PRT ("  equiv solved:  %15" PRId64 "   %10.2f %%  solved",
+         stats.sweep_solved_equivalences, percent (stats.sweep_solved_equivalences, stats.sweep_solved));
+    PRT ("    sat:         %15" PRId64 "   %10.2f %%  equiv solved",
+         stats.sweep_sat_equivalences, percent (stats.sweep_sat_equivalences, stats.sweep_solved_equivalences));
+    PRT ("    unsat:       %15" PRId64 "   %10.2f %%  equiv solved",
+         stats.sweep_unsat_equivalences, percent (stats.sweep_unsat_equivalences, stats.sweep_solved_equivalences));
+    PRT ("    unknown:     %15" PRId64 "   %10.2f %%  equiv solved",
+         stats.sweep_unknown_equivalences, percent (stats.sweep_unknown_equivalences, stats.sweep_solved_equivalences));
+    PRT ("    flip:        %15" PRId64 "   %10.2f    per swept variable",
+         stats.sweep_flip_equivalences, relative (stats.sweep_flip_equivalences, stats.sweep_variables));
+    PRT ("    flipped:     %15" PRId64 "   %10.2f %%  of equiv flip",
+         stats.sweep_flipped_equivalences, percent (stats.sweep_flipped_equivalences, stats.sweep_flip_equivalences));
+    PRT ("  depth:         %15" PRId64 "   %10.2f    per swept variable",
+         stats.sweep_depth, relative (stats.sweep_depth, stats.sweep_variables));
+    PRT ("  environment:   %15" PRId64 "   %10.2f    per swept variable",
+         stats.sweep_environment, relative (stats.sweep_environment, stats.sweep_variables));
+    PRT ("  clauses:       %15" PRId64 "   %10.2f    per swept variable",
+         stats.sweep_clauses, relative (stats.sweep_clauses, stats.sweep_variables));
+    PRT ("  completed:     %15" PRId64 "   %10.2f    sweeps to complete",
+         stats.sweep_completed, relative (stats.sweep, stats.sweep_completed));
   }
   if (all || stats.subsumed) {
     PRT ("subsumed:        %15" PRId64 "   %10.2f %%  of all clauses",
@@ -460,6 +556,31 @@ void Stats::print (Internal *internal) {
     PRT ("  htr2:          %15" PRId64 "   %10.2f %%  binary hyper ternres",
          stats.htrs2, percent (stats.htrs2, stats.htrs));
   }
+  PRT ("ticks:           %15" PRId64 "   %10.2f    propagation",
+       totalticks, relative (totalticks, stats.propagations.search));
+  PRT (" searchticks:    %15" PRId64 "   %10.2f %%  totalticks",
+       searchticks, percent (searchticks, totalticks));
+  PRT ("   stableticks:  %15" PRId64 "   %10.2f %%  searchticks",
+       stats.ticks.search[1], percent (stats.ticks.search[1], searchticks));
+  PRT ("   unstableticks:%15" PRId64 "   %10.2f %%  searchticks",
+       stats.ticks.search[0], percent (stats.ticks.search[0], searchticks));
+  PRT (" inprobeticks:   %15" PRId64 "   %10.2f %%  totalticks",
+       inprobeticks, percent (inprobeticks, totalticks));
+  PRT ("   factorticks:  %15" PRId64 "   %10.2f %%  searchticks",
+       stats.ticks.factor, percent (stats.ticks.factor, searchticks));
+  PRT ("   probeticks:   %15" PRId64 "   %10.2f %%  searchticks",
+    stats.ticks.probe, percent (stats.ticks.probe, searchticks));
+  PRT ("   sweepticks:   %15" PRId64 "   %10.2f %%  searchticks",
+    stats.ticks.sweep, percent (stats.ticks.sweep, searchticks));
+  PRT ("   ternaryticks: %15" PRId64 "   %10.2f %%  searchticks",
+       stats.ticks.ternary, percent (stats.ticks.ternary, searchticks));
+  PRT ("   vivifyticks:  %15" PRId64 "   %10.2f %%  searchticks",
+       stats.ticks.vivify, percent (stats.ticks.vivify, searchticks));
+  if (all) {
+    PRT ("tier recomputed: %15" PRId64 "   %10.2f    interval",
+         stats.tierecomputed,
+         relative (stats.conflicts, stats.tierecomputed));
+  }
   if (all || stats.ilbtriggers) {
     PRT ("trail reuses:    %15" PRId64 "   %10.2f %%  of incremental calls",
          stats.ilbsuccess, percent (stats.ilbsuccess, stats.ilbtriggers));
@@ -491,6 +612,10 @@ void Stats::print (Internal *internal) {
          stats.vivifyinst, percent (stats.vivifyinst, stats.vivifychecks));
     PRT ("  vivifysubs:    %15" PRId64 "   %10.2f %%  per subsumed",
          stats.vivifysubs, percent (stats.vivifysubs, stats.subsumed));
+    PRT ("  vivifysubred:  %15" PRId64 "   %10.2f %%  per subs",
+         stats.vivifysubred, percent (stats.vivifysubred, stats.vivifysubs));
+    PRT ("  vivifysubirr:  %15" PRId64 "   %10.2f %%  per subs",
+         stats.vivifysubirr, percent (stats.vivifysubirr, stats.vivifysubs));
     PRT ("  vivifystrs:    %15" PRId64 "   %10.2f %%  per strengthened",
          stats.vivifystrs, percent (stats.vivifystrs, stats.strengthened));
     PRT ("  vivifystrirr:  %15" PRId64 "   %10.2f %%  per vivifystrs",
@@ -499,12 +624,15 @@ void Stats::print (Internal *internal) {
     PRT ("  vivifystred1:  %15" PRId64 "   %10.2f %%  per vivifystrs",
          stats.vivifystred1,
          percent (stats.vivifystred1, stats.vivifystrs));
-    PRT ("  vivifystred2:  %15" PRId64 "   %10.2f %%  per vivifystrs",
+    PRT ("  vivifystred2:  %15" PRId64 "   %10.2f %%  per viviyfstrs",
          stats.vivifystred2,
          percent (stats.vivifystred2, stats.vivifystrs));
     PRT ("  vivifystred3:  %15" PRId64 "   %10.2f %%  per vivifystrs",
          stats.vivifystred3,
          percent (stats.vivifystred3, stats.vivifystrs));
+    PRT ("  vivifydemote:  %15" PRId64 "   %10.2f %%  per vivifystrs",
+         stats.vivifydemote,
+         percent (stats.vivifydemote, stats.vivifystrs));
     PRT ("  vivifydecs:    %15" PRId64 "   %10.2f    per checks",
          stats.vivifydecs, relative (stats.vivifydecs, stats.vivifychecks));
     PRT ("  vivifyreused:  %15" PRId64 "   %10.2f %%  per decision",

@@ -3,7 +3,6 @@
 2 set elimint 1
 3 set elimprod 0
 4 set elimsum 0
-5 set vivifymineff 0
 6 set elimboundmin -1
 7 set lucky 0
 8 add -2

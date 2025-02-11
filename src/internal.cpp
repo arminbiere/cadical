@@ -11,18 +11,20 @@ Internal::Internal ()
       protected_reasons (false), force_saved_phase (false),
       searching_lucky_phases (false), stable (false), reported (false),
       external_prop (false), did_external_prop (false),
-      external_prop_is_lazy (true), forced_backt_allowed (false),
-      private_steps (false), rephased (0), vsize (0), max_var (0),
-      clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
-      concluded (false), lrat (false), frat (false), level (0), vals (0),
+      external_prop_is_lazy (true), forced_backt_allowed (false), 
+
+      private_steps (false), rephased (0), vsize (0), max_var (0), 
+      clause_id (0), original_id (0), reserved_ids (0), 
+      conflict_id (0), saved_decisions (0), concluded (false), lrat (false), frat (false), level (0), vals (0),
       score_inc (1.0), scores (this), conflict (0), ignore (0),
       external_reason (&external_reason_clause), newest_clause (0),
-      force_no_backtrack (false), from_propagator (false),
-      ext_clause_forgettable (false), tainted_literal (0), notified (0),
-      probe_reason (0), propagated (0), propagated2 (0), propergated (0),
-      best_assigned (0), target_assigned (0), no_conflict_until (0),
-      unsat_constraint (false), marked_failed (true), num_assigned (0),
-      proof (0), lratbuilder (0), opts (this),
+      force_no_backtrack (false), from_propagator (false), ext_clause_forgettable (false),
+      tainted_literal (0), notified (0), probe_reason (0), propagated (0),
+      propagated2 (0), propergated (0), best_assigned (0),
+      target_assigned (0), no_conflict_until (0), unsat_constraint (false),
+      marked_failed (true), sweep_incomplete (false),
+      citten (0), num_assigned (0), proof (0),
+      opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
@@ -61,8 +63,6 @@ Internal::~Internal () {
     delete_clause (c);
   if (proof)
     delete proof;
-  if (lratbuilder)
-    delete lratbuilder;
   for (auto &tracer : tracers)
     delete tracer;
   for (auto &filetracer : file_tracers)
@@ -112,22 +112,6 @@ void Internal::enlarge_vals (size_t new_vsize) {
   vals = new_vals;
 }
 
-/*------------------------------------------------------------------------*/
-
-template <class T>
-static void enlarge_init (vector<T> &v, size_t N, const T &i) {
-  if (v.size () < N)
-    v.resize (N, i);
-}
-
-template <class T> static void enlarge_only (vector<T> &v, size_t N) {
-  if (v.size () < N)
-    v.resize (N, T ());
-}
-
-template <class T> static void enlarge_zero (vector<T> &v, size_t N) {
-  enlarge_init (v, N, (const T &) 0);
-}
 
 /*------------------------------------------------------------------------*/
 
@@ -199,7 +183,7 @@ void Internal::add_original_lit (int lit) {
   if (lit) {
     original.push_back (lit);
   } else {
-    const uint64_t id =
+    const int64_t id =
         original_id < reserved_ids ? ++original_id : ++clause_id;
     if (proof) {
       // Use the external form of the clause for printing in proof
@@ -229,7 +213,7 @@ void Internal::add_original_lit (int lit) {
   }
 }
 
-void Internal::finish_added_clause_with_id (uint64_t id, bool restore) {
+void Internal::finish_added_clause_with_id (int64_t id, bool restore) {
   if (proof) {
     // Use the external form of the clause for printing in proof
     // Externalize(internalized literal) != external literal
@@ -255,6 +239,35 @@ void Internal::reserve_ids (int number) {
 
 /*------------------------------------------------------------------------*/
 
+#ifdef PROFILE_MODE
+
+// Separating these makes it easier to profile stable and unstable search.
+
+bool Internal::propagate_wrapper () {
+  if (stable)
+    return propagate_stable ();
+  else
+    return propagate_unstable ();
+}
+
+void Internal::analyze_wrapper () {
+  if (stable)
+    analyze_stable ();
+  else
+    analyze_unstable ();
+}
+
+int Internal::decide_wrapper () {
+  if (stable)
+    return decide_stable ();
+  else
+    return decide_unstable ();
+}
+
+#endif
+
+/*------------------------------------------------------------------------*/
+
 // This is the main CDCL loop with interleaved inprocessing.
 
 int Internal::cdcl_loop_with_inprocessing () {
@@ -276,8 +289,8 @@ int Internal::cdcl_loop_with_inprocessing () {
       res = 20;
     else if (unsat_constraint)
       res = 20;
-    else if (!propagate ())
-      analyze (); // propagate and analyze
+    else if (!propagate_wrapper ())
+      analyze_wrapper (); // propagate and analyze
     else if (iterating)
       iterate ();                               // report learned unit
     else if (!external_propagate () || unsat) { // external propagation
@@ -303,11 +316,9 @@ int Internal::cdcl_loop_with_inprocessing () {
       rephase (); // reset variable phases
     else if (reducing ())
       reduce (); // collect useless clauses
-    else if (probing ())
-      probe (); // failed literal probing
-    else if (subsuming ())
-      subsume (); // subsumption algorithm
-    else if (eliminating ())
+    else if (inprobing ())
+      inprobe (); // schedule of inprocessing
+    else if (ineliminating ())
       elim (); // variable elimination
     else if (compacting ())
       compact (); // collect variables
@@ -416,6 +427,7 @@ void Internal::get_entrailed_literals (std::vector<int> &entrailed) {
 void Internal::init_report_limits () {
   reported = false;
   lim.report = 0;
+  lim.recompute_tier = 5000;
 }
 
 void Internal::init_preprocessing_limits () {
@@ -427,18 +439,6 @@ void Internal::init_preprocessing_limits () {
     LOG ("initializing preprocessing limits and increments");
 
   const char *mode = 0;
-
-  /*----------------------------------------------------------------------*/
-
-  if (incremental)
-    mode = "keeping";
-  else {
-    lim.subsume = stats.conflicts + scale (opts.subsumeint);
-    mode = "initial";
-  }
-  (void) mode;
-  LOG ("%s subsume limit %" PRId64 " after %" PRId64 " conflicts", mode,
-       lim.subsume, lim.subsume - stats.conflicts);
 
   /*----------------------------------------------------------------------*/
 
@@ -462,7 +462,7 @@ void Internal::init_preprocessing_limits () {
 
   if (!incremental) {
 
-    last.ternary.marked = -1; // TODO explain why this is necessary.
+    last.ternary.marked = -1; // TODO this should not be necessary...
 
     lim.compact = stats.conflicts + opts.compactint;
     LOG ("initial compact limit %" PRId64 " increment %" PRId64 "",
@@ -474,12 +474,14 @@ void Internal::init_preprocessing_limits () {
   if (incremental)
     mode = "keeping";
   else {
-    lim.probe = stats.conflicts + opts.probeint;
+    double delta = log10 (stats.added.irredundant);
+    delta = delta * delta;
+    lim.inprobe = stats.conflicts + opts.inprobeint * delta;
     mode = "initial";
   }
   (void) mode;
   LOG ("%s probe limit %" PRId64 " after %" PRId64 " conflicts", mode,
-       lim.probe, lim.probe - stats.conflicts);
+       lim.inprobe, lim.inprobe - stats.conflicts);
 
   /*----------------------------------------------------------------------*/
 
@@ -521,7 +523,7 @@ void Internal::init_search_limits () {
     mode = "keeping";
   else {
     last.reduce.conflicts = -1;
-    lim.reduce = stats.conflicts + opts.reduceint;
+    lim.reduce = stats.conflicts + opts.reduceinit;
     mode = "initial";
   }
   (void) mode;
@@ -577,10 +579,12 @@ void Internal::init_search_limits () {
   } else
     LOG ("keeping non-stable phase");
 
-  inc.stabilize = opts.stabilizeint;
-  lim.stabilize = stats.conflicts + inc.stabilize;
-  LOG ("new stabilize limit %" PRId64 " after %" PRId64 " conflicts",
-       lim.stabilize, inc.stabilize);
+  if (!incremental) {
+    inc.stabilize = 0;
+    lim.stabilize = stats.conflicts + opts.stabilizeinit;
+    LOG ("initial stabilize limit %" PRId64 " after %d conflicts",
+         lim.stabilize, (int) opts.stabilizeinit);
+  }
 
   if (opts.stabilize && opts.reluctant) {
     LOG ("new restart reluctant doubling sequence period %d",
@@ -652,8 +656,8 @@ bool Internal::preprocess_round (int round) {
          " clauses",
          round, before.vars, before.clauses);
   int old_elimbound = lim.elimbound;
-  if (opts.probe)
-    probe (false);
+  if (opts.inprobing)
+    inprobe (false);
   if (opts.elim)
     elim (false);
   if (opts.condition)
@@ -677,7 +681,50 @@ bool Internal::preprocess_round (int round) {
   return false;
 }
 
+// for now counts as one of the preprocessing rounds TODO: change this?
+void Internal::preprocess_quickly () {
+  if (unsat)
+    return;
+  if (!max_var)
+    return;
+  if (!opts.preprocesslight)
+    return;
+  START (preprocess);
+  struct {
+    int64_t vars, clauses;
+  } before, after;
+  before.vars = active ();
+  before.clauses = stats.current.irredundant;
+  // stats.preprocessings++;
+  assert (!preprocessing);
+  preprocessing = true;
+  PHASE ("preprocessing", stats.preprocessings,
+         "starting with %" PRId64 " variables and %" PRId64
+         " clauses",
+         before.vars, before.clauses);
+  if (opts.factor)
+    factor ();
+  // TODO fastelim and congruence
+  // if (opts.probe)
+  //  probe (false);
+  if (opts.elim)
+    elim (false);
+  // if (opts.condition)
+    // condition (false);
+  after.vars = active ();
+  after.clauses = stats.current.irredundant;
+  assert (preprocessing);
+  preprocessing = false;
+  PHASE ("preprocessing", stats.preprocessings,
+         "finished with %" PRId64 " variables and %" PRId64
+         " clauses",
+         after.vars, after.clauses);
+  STOP (preprocess);
+  report ('P');
+}
+
 int Internal::preprocess () {
+  preprocess_quickly ();
   for (int i = 0; i < lim.preprocessing; i++)
     if (!preprocess_round (i))
       break;
@@ -819,7 +866,6 @@ int Internal::local_search () {
 
 // if preprocess_only is false and opts.ilb is true we do not preprocess
 // such that we do not have to backtrack to level 0.
-// TODO: check restore_clauses works on higher level
 //
 int Internal::solve (bool preprocess_only) {
   assert (clause.empty ());
@@ -849,7 +895,7 @@ int Internal::solve (bool preprocess_only) {
     backtrack ();
   if (!res)
     res = restore_clauses ();
-  if (!res) {
+  if (!res || (res == 10 && external_prop)) {
     init_preprocessing_limits ();
     if (!preprocess_only)
       init_search_limits ();
@@ -984,7 +1030,7 @@ void Internal::finalize (int res) {
       assert (evar > 0);
       const auto eidx = 2 * evar;
       int sign = 1;
-      uint64_t id = external->ext_units[eidx];
+      int64_t id = external->ext_units[eidx];
       if (!id) {
         sign = -1;
         id = external->ext_units[eidx + 1];
@@ -998,14 +1044,13 @@ void Internal::finalize (int res) {
       const auto elit = externalize (lit);
       if (elit) {
         const unsigned eidx = (elit < 0) + 2u * (unsigned) abs (elit);
-        const uint64_t id = external->ext_units[eidx];
+        const int64_t id = external->ext_units[eidx];
         if (id) {
           assert (unit_clauses (vlit (lit)) == id);
           continue;
         }
       }
-      const auto uidx = vlit (lit);
-      const uint64_t id = unit_clauses (uidx);
+      const int64_t id = unit_clauses (vlit (lit));
       if (!id)
         continue;
       proof->finalize_unit (id, lit);
@@ -1013,7 +1058,7 @@ void Internal::finalize (int res) {
     // See the discussion in 'propagate' on why garbage binary clauses stick
     // around.
     for (const auto &c : clauses)
-      if (!c->garbage || c->size == 2)
+      if (!c->garbage || (c->size == 2 && !c->flushed))
         proof->finalize_clause (c);
 
     // finalize conflict and proof

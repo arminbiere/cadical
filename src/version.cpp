@@ -24,7 +24,11 @@
 
 #ifdef NBUILD
 #ifndef VERSION
+<<<<<<< HEAD
 #define VERSION "2.1.3"
+=======
+#define VERSION "2.2.0-rc1"
+>>>>>>> kitten
 #endif // VERSION
 #endif // NBUILD
 

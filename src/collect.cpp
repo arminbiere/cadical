@@ -176,13 +176,14 @@ size_t Internal::flush_occs (int lit) {
     if (c->collect ())
       continue;
     *j++ = c->moved ? c->copy : c;
-    assert (!c->redundant);
+    // assert (!c->redundant); // -> not true in sweeping
     res++;
   }
   os.resize (j - os.begin ());
   shrink_occs (os);
   return res;
 }
+
 
 // Update watch lists before deleting garbage clauses in the context of
 // 'reduce' where we watch and no occurrence lists.  We have to protect

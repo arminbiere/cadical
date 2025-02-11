@@ -48,10 +48,13 @@ inline void FratTracer::put_binary_lit (int lit) {
   file->put (ch);
 }
 
-inline void FratTracer::put_binary_id (uint64_t id) {
+inline void FratTracer::put_binary_id (int64_t id, bool can_be_negative) {
   assert (binary);
   assert (file);
-  uint64_t x = id;
+  uint64_t x = abs (id);
+  if (can_be_negative) {
+    x = 2 * x + (id < 0);
+  }
   unsigned char ch;
   while (x & ~0x7f) {
     ch = (x & 0x7f) | 0x80;
@@ -64,7 +67,7 @@ inline void FratTracer::put_binary_id (uint64_t id) {
 
 /*------------------------------------------------------------------------*/
 
-void FratTracer::frat_add_original_clause (uint64_t id,
+void FratTracer::frat_add_original_clause (int64_t id,
                                            const vector<int> &clause) {
   if (binary)
     file->put ('o');
@@ -85,7 +88,7 @@ void FratTracer::frat_add_original_clause (uint64_t id,
     file->put ("0\n");
 }
 
-void FratTracer::frat_add_derived_clause (uint64_t id,
+void FratTracer::frat_add_derived_clause (int64_t id,
                                           const vector<int> &clause) {
   if (binary)
     file->put ('a');
@@ -106,9 +109,9 @@ void FratTracer::frat_add_derived_clause (uint64_t id,
     file->put ("0\n");
 }
 
-void FratTracer::frat_add_derived_clause (uint64_t id,
+void FratTracer::frat_add_derived_clause (int64_t id,
                                           const vector<int> &clause,
-                                          const vector<uint64_t> &chain) {
+                                          const vector<int64_t> &chain) {
   if (binary)
     file->put ('a');
   else
@@ -128,7 +131,7 @@ void FratTracer::frat_add_derived_clause (uint64_t id,
     file->put ("0  l ");
   for (const auto &c : chain)
     if (binary)
-      put_binary_id (2 * c); // LRAT can have negative ids
+      put_binary_id (c, true); // LRAT can have negative ids
     else
       file->put (c), file->put (' '); // in proof chain, so they get
   if (binary)
@@ -137,7 +140,7 @@ void FratTracer::frat_add_derived_clause (uint64_t id,
     file->put ("0\n"); // this is just 2c here
 }
 
-void FratTracer::frat_delete_clause (uint64_t id,
+void FratTracer::frat_delete_clause (int64_t id,
                                      const vector<int> &clause) {
   if (binary)
     file->put ('d');
@@ -158,7 +161,7 @@ void FratTracer::frat_delete_clause (uint64_t id,
     file->put ("0\n");
 }
 
-void FratTracer::frat_finalize_clause (uint64_t id,
+void FratTracer::frat_finalize_clause (int64_t id,
                                        const vector<int> &clause) {
   if (binary)
     file->put ('f');
@@ -181,7 +184,7 @@ void FratTracer::frat_finalize_clause (uint64_t id,
 
 /*------------------------------------------------------------------------*/
 
-void FratTracer::add_original_clause (uint64_t id, bool,
+void FratTracer::add_original_clause (int64_t id, bool,
                                       const vector<int> &clause, bool) {
   if (file->closed ())
     return;
@@ -189,9 +192,9 @@ void FratTracer::add_original_clause (uint64_t id, bool,
   frat_add_original_clause (id, clause);
 }
 
-void FratTracer::add_derived_clause (uint64_t id, bool,
+void FratTracer::add_derived_clause (int64_t id, bool,
                                      const vector<int> &clause,
-                                     const vector<uint64_t> &chain) {
+                                     const vector<int64_t> &chain) {
   if (file->closed ())
     return;
   LOG ("FRAT TRACER tracing addition of derived clause");
@@ -204,7 +207,7 @@ void FratTracer::add_derived_clause (uint64_t id, bool,
 #endif
 }
 
-void FratTracer::delete_clause (uint64_t id, bool,
+void FratTracer::delete_clause (int64_t id, bool,
                                 const vector<int> &clause) {
   if (file->closed ())
     return;
@@ -215,7 +218,7 @@ void FratTracer::delete_clause (uint64_t id, bool,
 #endif
 }
 
-void FratTracer::finalize_clause (uint64_t id, const vector<int> &clause) {
+void FratTracer::finalize_clause (int64_t id, const vector<int> &clause) {
   if (file->closed ())
     return;
   LOG ("FRAT TRACER tracing finalization of clause");

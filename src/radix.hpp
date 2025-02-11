@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstring>
 #include <iterator>
+#include <vector>
 
 namespace CaDiCaL {
 
@@ -64,7 +65,7 @@ template <class I, class Rank> void rsort (I first, I last, Rank rank) {
 
   I a = first, b = last, c = a;
   bool initialized = false;
-  vector<T> v;
+  std::vector<T> v;
 
   R upper = 0, lower = ~upper;
   R shifted = mask;

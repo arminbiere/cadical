@@ -13,8 +13,6 @@ struct Flags { // Variable flags.
   bool removable : 1;  // can be removed in 'minimize'
   bool shrinkable : 1; // can be removed in 'shrink'
   bool added : 1; // has already been added to lrat_chain (in 'minimize')
-  bool ignorepos : 1; // decompose need to dif between pos/neg lit
-  bool ignoreneg : 1; // decompose
 
   // These three variable flags are used to schedule clauses in subsumption
   // ('subsume'), variables in bounded variable elimination ('elim') and in
@@ -23,8 +21,11 @@ struct Flags { // Variable flags.
   bool elim : 1;    // removed since last 'elim' round (*)
   bool subsume : 1; // added since last 'subsume' round (*)
   bool ternary : 1; // added in ternary clause since last 'ternary' (*)
+  bool sweep : 1;
+  bool blockable : 1;
 
-  unsigned char decompose : 2; // generate correct LRAT chains in decompose
+  unsigned char marked_signed : 2; // generate correct LRAT chains in decompose
+  unsigned char factor : 2;
 
   // These literal flags are used by blocked clause elimination ('block').
   //
@@ -52,10 +53,10 @@ struct Flags { // Variable flags.
   // Initialized explicitly in 'Internal::init' through this function.
   //
   Flags () {
-    seen = keep = poison = removable = shrinkable = added = false;
+    seen = keep = poison = removable = shrinkable = added = sweep = false;
     subsume = elim = ternary = true;
     block = 3u;
-    skip = assumed = failed = decompose = 0;
+    skip = assumed = failed = marked_signed = factor = 0;
     status = UNUSED;
   }
 

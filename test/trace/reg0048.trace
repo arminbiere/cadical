@@ -6,7 +6,6 @@ set elimocclim 0
 set restoreflush 1
 set subsumemineff 0
 set subsumestr 0
-set vivifymineff 0
 add 2
 add -3
 add -6

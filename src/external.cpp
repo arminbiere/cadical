@@ -28,7 +28,7 @@ void External::enlarge (int new_max_var) {
   vsize = new_vsize;
 }
 
-void External::init (int new_max_var) {
+void External::init (int new_max_var, bool extension) {
   assert (!extended);
   if (new_max_var <= max_var)
     return;
@@ -45,6 +45,7 @@ void External::init (int new_max_var) {
     ext_units.push_back (0);
     ext_units.push_back (0);
     ext_flags.push_back (0);
+    ervars.push_back (0);
     assert (internal->i2e.empty ());
     internal->i2e.push_back (0);
   } else {
@@ -60,10 +61,15 @@ void External::init (int new_max_var) {
     ext_units.push_back (0);
     ext_units.push_back (0);
     ext_flags.push_back (0);
+    ervars.push_back (0);
     internal->i2e.push_back (eidx);
     assert (internal->i2e[iidx] == (int) eidx);
     assert (e2i[eidx] == (int) iidx);
   }
+  if (extension)
+    internal->stats.variables_extension += new_vars;
+  else
+    internal->stats.variables_original += new_vars;
   if (new_max_var >= (int64_t) is_observed.size ())
     is_observed.resize (1 + (size_t) new_max_var, false);
   if (internal->opts.checkfrozen)
@@ -103,13 +109,24 @@ void External::reset_limits () { internal->reset_limits (); }
 
 /*------------------------------------------------------------------------*/
 
-int External::internalize (int elit) {
+// when extension is true, elit should be a fresh variable and
+// we can set a flag that it is an extension variable.
+// This is then used in the API contracts, that extension variables are
+// never part of the input
+int External::internalize (int elit, bool extension) {
   int ilit;
   if (elit) {
     assert (elit != INT_MIN);
     const int eidx = abs (elit);
-    if (eidx > max_var)
-      init (eidx);
+    if (extension && eidx <= max_var)
+      FATAL ("can not add a definition for an already used variable %d", eidx);
+    if (eidx > max_var) {
+      init (eidx, extension);
+    }
+    if (extension) {
+      assert (ervars.size () > (size_t) eidx);
+      ervars[eidx] = true;
+    }
     ilit = e2i[eidx];
     if (elit < 0)
       ilit = -ilit;
@@ -178,7 +195,7 @@ void External::add (int elit) {
       // actually find unit of -elit (flips elit < 0)
       unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
       assert ((size_t) eidx < ext_units.size ());
-      const uint64_t id = ext_units[eidx];
+      const int64_t id = ext_units[eidx];
       bool added = ext_flags[abs (elit)];
       if (id && !added) {
         ext_flags[abs (elit)] = true;
@@ -495,7 +512,9 @@ void External::get_entrailed_literals (std::vector<int> &trailed) {
   for (const auto &ilit : ilit_implicants) {
     assert (ilit);
     const int elit = internal->externalize (ilit);
-    if (!marked (tainted, elit)) {
+    const int eidx = abs (elit);
+    const bool is_extension_var = ervars[eidx];
+    if (!marked (tainted, elit) && !is_extension_var) {
       trailed.push_back (elit);
     }
   }
@@ -922,9 +941,7 @@ bool External::traverse_all_non_frozen_units_as_witnesses (
     int unit = tmp < 0 ? -idx : idx;
     const int ilit = e2i[idx] * (tmp < 0 ? -1 : 1);
     // heurstically add + max_var to the id to avoid reusing ids
-    const uint64_t id = internal->opts.lrat
-                            ? internal->unit_clauses (internal->vlit (ilit))
-                            : 1;
+    const int64_t id = internal->lrat ? internal->unit_id (ilit) : 1;
     assert (id);
     clause_and_witness.push_back (unit);
     if (!it.witness (clause_and_witness, clause_and_witness, id + max_var))

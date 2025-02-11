@@ -541,6 +541,12 @@ public:
   // literal is used as an argument except for the functions 'val', 'fixed',
   // 'failed' and 'frozen'.  However, the library internally keeps a maximum
   // variable index, which can be queried.
+  // With factor (BVA) the solver might also add new variables. In that case
+  // the user is required to use this to check which variables are currently
+  // free before adding new variables of their own.
+  // The alternative is to reserve variables in batches with
+  // 'reserve_difference'. Using 'reserve' in combination with any technique
+  // that could add variables (currently only factor) is not advised.
   //
   //   require (VALID | SOLVING)
   //   ensure (VALID | SOLVING)
@@ -556,6 +562,18 @@ public:
   //   ensure (STEADY )
   //
   void reserve (int min_max_var);
+
+  // Increase the maximum variable index by a number of new variables.
+  // initializes 'number_of_vars' new variables and protects them from
+  // being used by the solver as extension variables (BVA).
+  // It returns the new maximum variable index which is the highest
+  // variable name of the consecutive range of newly reserved variables.
+  // It has the same state transition and conditions as 'reserve' above.
+  //
+  //   require (READY)
+  //   ensure (STEADY )
+  //
+  int reserve_difference (int number_of_vars);
 
 #ifndef NTRACING
   //------------------------------------------------------------------------
@@ -1294,7 +1312,7 @@ public:
   virtual ~WitnessIterator () {}
   virtual bool witness (const std::vector<int> &clause,
                         const std::vector<int> &witness,
-                        uint64_t id = 0) = 0;
+                        int64_t id = 0) = 0;
 };
 
 /*------------------------------------------------------------------------*/

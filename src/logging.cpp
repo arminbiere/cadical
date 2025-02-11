@@ -66,8 +66,20 @@ void Logger::log (Internal *internal, const Clause *c, const char *fmt,
         for (const auto &lit : s)
           printf (" %d", lit);
       } else {
-        for (const auto &lit : *c)
+        for (const auto &lit : *c) {
+	  const char val = (-internal->max_var <= lit && internal->max_var >= lit ) ? internal->val (lit) : 0;
           printf (" %d", lit);
+	  if (val) {
+            printf ("@%d", internal->var (lit).level);
+	    if (!internal->var (lit).reason) {
+	      printf("+");
+	    }
+	  }
+          if (val > 0)
+            printf ("=+1");
+          if (val < 0)
+            printf ("=-1");
+	}
       }
     }
   } else if (internal->level)
@@ -135,7 +147,7 @@ void Logger::log (Internal *internal,
 
 // for LRAT proof chains
 
-void Logger::log (Internal *internal, const vector<uint64_t> &c,
+void Logger::log (Internal *internal, const vector<int64_t> &c,
                   const char *fmt, ...) {
   print_log_prefix (internal);
   tout.magenta ();
@@ -144,7 +156,26 @@ void Logger::log (Internal *internal, const vector<uint64_t> &c,
   vprintf (fmt, ap);
   va_end (ap);
   for (const auto &id : c)
-    printf (" %" PRIu64, id);
+    printf (" %" PRId64, id);
+  fputc ('\n', stdout);
+  tout.normal ();
+  fflush (stdout);
+}
+
+// for LRAT proof clauses
+
+void Logger::log (Internal *internal, const int *literals, const unsigned size,
+                  const char *fmt, ...) {
+  print_log_prefix (internal);
+  tout.magenta ();
+  va_list ap;
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  for (unsigned i = 0; i < size; i++) {
+    const int lit = literals[i];
+    printf (" %d", lit);
+  }
   fputc ('\n', stdout);
   tout.normal ();
   fflush (stdout);

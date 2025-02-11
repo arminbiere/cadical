@@ -1,3 +1,4 @@
+#include <stdint.h>
 static const char *version = "0.2.0";
 
 // clang-format off
@@ -26,6 +27,7 @@ static const char * usage =
 "  --no-trim       disable trimming (assume all clauses used)\n"
 "\n"
 "  --relax         ignore deletion of clauses which were never added\n"
+"  --rup           no RAT lemmas\n"
 "\n"
 "and '<file> ...' is a non-empty list of at most four DIMACS and LRAT files:\n"
 "\n"
@@ -137,6 +139,7 @@ struct statistics {
       size_t empty;
     } checked;
     size_t resolved;
+    size_t extended;
   } clauses;
   struct {
     size_t assigned;
@@ -177,6 +180,7 @@ static int verbosity;
 static bool checking;
 static bool trimming;
 static bool relax;
+static bool norat;
 
 static int empty_clause;
 static int last_clause_added_in_cnf;
@@ -185,6 +189,7 @@ static int first_clause_added_in_proof;
 static struct {
   struct char_map marks;
   struct char_map values;
+  struct size_t_map used;
   int original;
 } variables;
 
@@ -850,6 +855,95 @@ static void crr (int id, const char *fmt, ...) {
   exit (1);
 }
 
+static void mark_used_literals (int *literals) {
+  for (int *l = literals, lit; (lit = *l); l++) {
+    const unsigned idx = 2 * abs (lit) + (lit < 0);
+    size_t *count = &ACCESS (variables.used, idx);
+    // SIZE_MAX is at least 65535, which should be enough.
+    if (*count != SIZE_MAX)
+      (*count)++;
+  }
+}
+
+static void check_clause_extension (int id, int *literals,
+                                    int *antecedents) {
+  if (!*antecedents) {
+    bool pure = false;
+    for (int *l = literals, lit; (lit = *l); l++) {
+      const unsigned idx = 2 * abs (lit) + (lit > 0); // access -lit
+      const size_t count = ACCESS (variables.used, idx);
+      if (!count) {
+        pure = true;
+        break;
+      }
+    }
+    if (!pure)
+      crr (id, "empty antecedents but clause not pure");
+  } else {
+    int ext = 0;
+    for (int *l = literals, lit; (lit = *l); l++) {
+      signed char value = assigned_literal (lit);
+      const unsigned idx = 2 * abs (lit) + (lit < 0);
+      size_t count = ACCESS (variables.used, idx);
+      if (!count && ext)
+        crr (id, "multiple pure literals '%d' and '%d' in extension clause",
+             ext, lit);
+      if (!count)
+        ext = lit;
+      if (value < 0) {
+        if (strict)
+          crr (id, "duplicated literal '%d'", lit);
+        dbg ("skipping duplicated literal '%d' in clause '%d'", lit, id);
+        continue;
+      }
+      if (strict && value > 0)
+        crr (id, "tautology on '%d'", lit);
+      assert (!value);
+      assign_literal (-lit);
+    }
+    if (!ext)
+      crr (id, "no pure literal for extension check");
+    const unsigned eidx = 2 * abs (ext) + (ext > 0);
+    size_t numants = ACCESS (variables.used, eidx); // access -ext
+    for (int *a = antecedents, aid; (aid = *a); a++) {
+      if (numants)
+        numants--;
+      else
+        crr (id,
+             "more antecedents than occurrences of '%d' (or more than %zd)",
+             -ext, SIZE_MAX);
+      if (aid > 0)
+        crr (id, "positive id '%d' in extension check not supported", aid);
+      int *als = ACCESS (clauses.literals, -aid);
+      dbgs (als, "checking blocked antecedent %d clause", -aid);
+      bool hasnotext = false;
+      int blocked = 0;
+      for (int *l = als, lit; (lit = *l); l++) {
+        if (lit == -ext) {
+          if (hasnotext && strict)
+            crr (id, "multiple occurrence of '%d' in antecedent %d", -ext,
+                 -aid);
+          hasnotext = true;
+          continue;
+        }
+        signed char value = assigned_literal (lit);
+        if (value > 0 && !blocked) {
+          blocked = lit;
+        }
+      }
+      if (!hasnotext)
+        crr (id, "antecedent %d does not contain extension literal %d",
+             -aid, -ext);
+      if (!blocked)
+        crr (id, "antecedent %d not blocked", -aid);
+    }
+    if (numants)
+      crr (id, "occurrences of '%d' not equal antecendents (missing %zd)",
+           -ext, numants);
+    backtrack ();
+  }
+}
+
 static void check_clause_non_strictly_by_propagation (int id, int *literals,
                                                       int *antecedents) {
   assert (!strict);
@@ -873,9 +967,14 @@ static void check_clause_non_strictly_by_propagation (int id, int *literals,
     assign_literal (-lit);
   }
 
-  for (int *a = antecedents, aid; (aid = *a); a++) {
-    if (aid < 0)
+  int *a = antecedents, aid;
+  while ((aid = *a)) {
+    if (aid < 0 && norat)
       crr (id, "checking negative RAT antecedent '%d' not supported", aid);
+    else if (aid < 0) {
+      backtrack ();
+      return check_clause_extension (id, literals, antecedents);
+    }
     int *als = ACCESS (clauses.literals, aid);
     dbgs (als, "resolving antecedent %d clause", aid);
     statistics.clauses.resolved++;
@@ -897,6 +996,13 @@ static void check_clause_non_strictly_by_propagation (int id, int *literals,
             aid, id);
       goto CHECKED;
     }
+    a++;
+  }
+
+  // empty antecedents and non-tautological clause.
+  if (!(a - antecedents) && !norat) {
+    backtrack ();
+    return check_clause_extension (id, literals, antecedents);
   }
   crr (id, "propagating antecedents does not yield conflict");
 }
@@ -908,10 +1014,16 @@ static void check_clause_strictly_by_resolution (int id, int *literals,
 
   int *a = antecedents, aid;
   while ((aid = *a))
-    if (aid < 0)
+    if (aid < 0 && norat)
       crr (id, "checking negative RAT antecedent '%d' not supported", aid);
+    else if (aid < 0)
+      return check_clause_extension (id, literals, antecedents);
     else
       a++;
+
+  // empty antecedents.
+  if (!(a - antecedents) && !norat)
+    return check_clause_extension (id, literals, antecedents);
 
   size_t resolvent_size = 0;
   bool first = true;
@@ -990,6 +1102,8 @@ static void check_clause (int id, int *literals, int *antecedents) {
     check_clause_strictly_by_resolution (id, literals, antecedents);
   else
     check_clause_non_strictly_by_propagation (id, literals, antecedents);
+  if (!norat)
+    mark_used_literals (literals);
 }
 
 static inline bool is_original_clause (int id) {
@@ -1079,10 +1193,11 @@ static void parse_cnf () {
     prr ("expected digit after 'p cnf '");
   int header_variables = ch - '0';
   while (ISDIGIT (ch = read_ascii ())) {
-    if (INT_MAX / 10 < header_variables)
+    if (INT_MAX / 10 < header_variables) {
     NUMBER_OF_VARIABLES_EXCEEDS_INT_MAX:
       prr ("number of variables '%s' exceeds 'INT_MAX'",
            exceeds_int_max (header_variables, ch));
+    }
     header_variables *= 10;
     int digit = ch - '0';
     if (INT_MAX - digit < header_variables) {
@@ -1098,10 +1213,11 @@ static void parse_cnf () {
     prr ("expected digit after 'p cnf %d '", header_variables);
   int header_clauses = ch - '0';
   while (ISDIGIT (ch = read_ascii ())) {
-    if (INT_MAX / 10 < header_clauses)
+    if (INT_MAX / 10 < header_clauses) {
     NUMBER_OF_CLAUSES_EXCEEDS_INT_MAX:
       prr ("number of clauses '%s' exceeds 'INT_MAX'",
            exceeds_int_max (header_clauses, ch));
+    }
     header_clauses *= 10;
     int digit = ch - '0';
     if (INT_MAX - digit < header_clauses) {
@@ -1120,6 +1236,8 @@ static void parse_cnf () {
     ADJUST (variables.marks, header_variables);
   else
     ADJUST (variables.values, header_variables);
+  if (!norat) // actually allocates 2 * header_variables + 2
+    ADJUST (variables.used, 2 * header_variables + 1);
   ADJUST (clauses.literals, header_clauses);
   ADJUST (clauses.status, header_clauses);
   int lit = 0, parsed_clauses = 0;
@@ -1165,9 +1283,10 @@ static void parse_cnf () {
     while (ISDIGIT (ch = read_ascii ())) {
       if (!idx)
         prr ("unexpected digit '%c' after '0'", ch);
-      if (INT_MAX / 10 < idx)
+      if (INT_MAX / 10 < idx) {
       VARIABLE_EXCEEDS_INT_MAX:
         prr ("variable '%s' exceeds 'INT_MAX'", exceeds_int_max (idx, ch));
+      }
       idx *= 10;
       int digit = ch - '0';
       if (INT_MAX - digit < idx) {
@@ -1208,6 +1327,7 @@ static void parse_cnf () {
         statistics.clauses.checked.empty++;
         empty_clause = parsed_clauses;
       }
+      mark_used_literals (ACCESS (clauses.literals, parsed_clauses));
     }
     if (ch == 'c')
       goto SKIP_COMMENT_AFTER_HEADER;
@@ -2215,6 +2335,8 @@ static void release () {
     RELEASE (variables.marks);
   else
     RELEASE (variables.values);
+  if (!norat)
+    RELEASE (variables.used);
   RELEASE (trail);
   release_ints_map (&clauses.literals);
   release_ints_map (&clauses.antecedents);
@@ -2267,6 +2389,8 @@ static void options (int argc, char **argv) {
       notrim = arg;
     else if (!strcmp (arg, "--relax"))
       relax = true;
+    else if (!strcmp (arg, "--rup"))
+      norat = true;
     else if (!strcmp (arg, "-V") || !strcmp (arg, "--version"))
       fputs (version, stdout), fputc ('\n', stdout), exit (0);
     else if (arg[0] == '-' && arg[1])

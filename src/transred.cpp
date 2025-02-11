@@ -9,7 +9,8 @@ namespace CaDiCaL {
 // literals (in the binary implication graph).
 
 void Internal::transred () {
-
+  if (!opts.transred)
+    return;
   if (unsat)
     return;
   if (terminated_asynchronously ())
@@ -28,7 +29,7 @@ void Internal::transred () {
   //
   int64_t limit = stats.propagations.search;
   limit -= last.transred.propagations;
-  limit *= 1e-3 * opts.transredreleff;
+  limit *= 1e-3 * opts.transredeffort;
   if (limit < opts.transredmineff)
     limit = opts.transredmineff;
   if (limit > opts.transredmaxeff)

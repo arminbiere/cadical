@@ -137,24 +137,24 @@ public:
 
   // ====== END CRAIG INTERFACE ============================================
 
-  void add_original_clause (uint64_t id, bool redundant,
+  void add_original_clause (int64_t id, bool redundant,
                             const std::vector<int> &c,
                             bool restore) override;
   void
-  add_derived_clause (uint64_t id, bool redundant,
+  add_derived_clause (int64_t id, bool redundant,
                       const std::vector<int> &c,
-                      const std::vector<uint64_t> &proof_chain) override;
+                      const std::vector<int64_t> &proof_chain) override;
   void
-  add_assumption_clause (uint64_t id, const std::vector<int> &c,
-                         const std::vector<uint64_t> &proof_chain) override;
-  void delete_clause (uint64_t id, bool redundant,
+  add_assumption_clause (int64_t id, const std::vector<int> &c,
+                         const std::vector<int64_t> &proof_chain) override;
+  void delete_clause (int64_t id, bool redundant,
                       const std::vector<int> &c) override;
 
   void add_assumption (int lit) override;
   void add_constraint (const std::vector<int> &c) override;
   void reset_assumptions () override;
   void conclude_unsat (CaDiCaL::ConclusionType conclusion,
-                       const std::vector<uint64_t> &proof_chain) override;
+                       const std::vector<int64_t> &proof_chain) override;
 
 private:
   CraigData *create_interpolant_for_assumption (int literal);
@@ -171,7 +171,7 @@ private:
 
   std::set<int> assumptions;
   std::vector<int> constraint;
-  std::vector<uint64_t> assumption_clauses;
+  std::vector<int64_t> assumption_clauses;
 
   std::vector<int> marked_history;
   std::unordered_map<int, uint8_t> marked_lits;

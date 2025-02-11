@@ -1,6 +1,6 @@
 0 init
 1 set check 1
-2 set probeint 0
+2 set inprobeint 0
 3 add -2
 4 add -1
 5 add 0

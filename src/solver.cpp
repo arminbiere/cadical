@@ -438,6 +438,17 @@ void Solver::reserve (int min_max_var) {
   LOG_API_CALL_END ("reserve", min_max_var);
 }
 
+int Solver::reserve_difference (int number_of_vars) {
+  TRACE ("reserve_difference", number_of_vars);
+  REQUIRE_VALID_STATE ();
+  transition_to_steady_state ();
+  external->reset_extended ();
+  int new_max_var = external->max_var + number_of_vars;
+  external->init (new_max_var);
+  LOG_API_CALL_END ("reserve_difference", number_of_vars);
+  return new_max_var;
+}
+
 /*------------------------------------------------------------------------*/
 #ifndef NTRACING
 
@@ -743,7 +754,6 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
     Solver checker;
     // checking restored clauses does not work (because the clauses are not added)
     checker.set("checkproof", 1);
-    checker.set("lratexternal", 0);
     checker.set("lrat", 0);
     checker.prefix ("checker ");
     copy (checker);
@@ -1599,7 +1609,7 @@ struct WitnessWriter : public WitnessIterator {
     }
     return file->put ('0');
   }
-  bool witness (const vector<int> &c, const vector<int> &w, uint64_t) {
+  bool witness (const vector<int> &c, const vector<int> &w, int64_t) {
     if (!write (c))
       return false;
     if (!file->put (' '))
@@ -1662,7 +1672,7 @@ struct WitnessCopier : public WitnessIterator {
 
 public:
   WitnessCopier (External *d) : dst (d) {}
-  bool witness (const vector<int> &c, const vector<int> &w, uint64_t id) {
+  bool witness (const vector<int> &c, const vector<int> &w, int64_t id) {
     dst->push_external_clause_and_witness_on_extension_stack (c, w, id);
     return true;
   }

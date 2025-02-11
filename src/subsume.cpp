@@ -57,28 +57,6 @@ namespace CaDiCaL {
 // literals which do not occur in the subsumed candidate fast with high
 // probability (less occurring literals have a higher chance).
 
-bool Internal::subsuming () {
-
-  if (!opts.subsume && !opts.vivify)
-    return false;
-  if (!preprocessing && !opts.inprocessing)
-    return false;
-  if (preprocessing)
-    assert (lim.preprocessing);
-
-  // Only perform global subsumption checking immediately after a clause
-  // reduction happened where the overall allocated memory is small and we
-  // got a limit on the number of kept clause in terms of size and glue.
-  //
-  if (opts.reduce && stats.conflicts != last.reduce.conflicts)
-    return false;
-
-  if (stats.conflicts < lim.subsume)
-    return false;
-
-  return true;
-}
-
 // This is the actual subsumption and strengthening check.  We assume that
 // all the literals of the candidate clause to be subsumed or strengthened
 // are marked, so we only have to check that all the literals of the
@@ -176,6 +154,8 @@ inline void Internal::subsume_clause (Clause *subsuming, Clause *subsumed) {
 // Candidate clause 'c' is strengthened by removing 'lit'.
 
 void Internal::strengthen_clause (Clause *c, int lit) {
+  if (opts.check && is_external_forgettable (c->id))
+    mark_garbage_external_forgettable (c->id);
   stats.strengthened++;
   assert (c->size > 2);
   LOG (c, "removing %d in", lit);
@@ -188,15 +168,7 @@ void Internal::strengthen_clause (Clause *c, int lit) {
   auto new_end = remove (c->begin (), c->end (), lit);
   assert (new_end + 1 == c->end ()), (void) new_end;
   (void) shrink_clause (c, c->size - 1);
-  // In an earlier version (probably from the time where the used flag was a
-  // single bit) the code was
-  //
-  // c->used = 1
-  //
-  // This code was subsequently removed leading to a performance regression
-  // that can be solved by the simpler (there is a more meaningfull way, but
-  // it is not yet part of the master branch of CaDiCaL):
-  c->used = 0;
+  // bump_clause2 (c);
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
 }
@@ -320,6 +292,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
       lrat_chain.push_back (c->id);
       lrat_chain.push_back (d->id);
     }
+    if (d->used > c->used) c->used = d->used;
     strengthen_clause (c, -flipped);
     lrat_chain.clear ();
     assert (likely_to_be_kept_clause (c));
@@ -395,7 +368,7 @@ bool Internal::subsume_round () {
   int64_t check_limit;
   if (opts.subsumelimited) {
     int64_t delta = stats.propagations.search;
-    delta *= 1e-3 * opts.subsumereleff;
+    delta *= 1e-3 * opts.subsumeeffort;
     if (delta < opts.subsumemineff)
       delta = opts.subsumemineff;
     if (delta > opts.subsumemaxeff)
@@ -649,12 +622,10 @@ bool Internal::subsume_round () {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::subsume (bool update_limits) {
-
-  stats.subsumephases++;
+void Internal::subsume () {
 
   if (!stats.current.redundant && !stats.current.irredundant)
-    goto UPDATE_LIMITS;
+    return;
 
   if (unsat)
     return;
@@ -664,6 +635,8 @@ void Internal::subsume (bool update_limits) {
     learn_empty_clause ();
     return;
   }
+
+  stats.subsumephases++;
 
   if (external_prop) {
     assert (!level);
@@ -681,29 +654,12 @@ void Internal::subsume (bool update_limits) {
     }
   }
 
-  // Schedule 'vivification' in 'subsume' as well as 'transitive reduction'.
-  //
-  if (opts.vivify)
-    vivify ();
-  if (opts.transred)
-    transred ();
+  transred ();
 
   if (external_prop) {
     assert (!level);
     private_steps = false;
   }
-
-UPDATE_LIMITS:
-
-  if (!update_limits)
-    return;
-
-  int64_t delta = scale (opts.subsumeint * (stats.subsumephases + 1));
-  lim.subsume = stats.conflicts + delta;
-
-  PHASE ("subsume-phase", stats.subsumephases,
-         "new subsume limit %" PRId64 " after %" PRId64 " conflicts",
-         lim.subsume, delta);
 }
 
 } // namespace CaDiCaL

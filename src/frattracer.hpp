@@ -15,19 +15,19 @@ class FratTracer : public FileTracer {
   int64_t finalized, original;
 #endif
 
-  vector<uint64_t> delete_ids;
+  vector<int64_t> delete_ids;
 
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
-  void put_binary_id (uint64_t id);
+  void put_binary_id (int64_t id, bool = false);
 
   // support FRAT
-  void frat_add_original_clause (uint64_t, const vector<int> &);
-  void frat_add_derived_clause (uint64_t, const vector<int> &);
-  void frat_add_derived_clause (uint64_t, const vector<int> &,
-                                const vector<uint64_t> &);
-  void frat_delete_clause (uint64_t, const vector<int> &);
-  void frat_finalize_clause (uint64_t, const vector<int> &);
+  void frat_add_original_clause (int64_t, const vector<int> &);
+  void frat_add_derived_clause (int64_t, const vector<int> &);
+  void frat_add_derived_clause (int64_t, const vector<int> &,
+                                const vector<int64_t> &);
+  void frat_delete_clause (int64_t, const vector<int> &);
+  void frat_finalize_clause (int64_t, const vector<int> &);
 
 public:
   // own and delete 'file'
@@ -35,19 +35,19 @@ public:
   ~FratTracer ();
 
   void connect_internal (Internal *i) override;
-  void begin_proof (uint64_t) override {} // skip
+  void begin_proof (int64_t) override {} // skip
 
-  void add_original_clause (uint64_t, bool, const vector<int> &,
+  void add_original_clause (int64_t, bool, const vector<int> &,
                             bool = false) override;
 
-  void add_derived_clause (uint64_t, bool, const vector<int> &,
-                           const vector<uint64_t> &) override;
+  void add_derived_clause (int64_t, bool, const vector<int> &,
+                           const vector<int64_t> &) override;
 
-  void delete_clause (uint64_t, bool, const vector<int> &) override;
+  void delete_clause (int64_t, bool, const vector<int> &) override;
 
-  void finalize_clause (uint64_t, const vector<int> &) override;
+  void finalize_clause (int64_t, const vector<int> &) override;
 
-  void report_status (int, uint64_t) override {} // skip
+  void report_status (int, int64_t) override {} // skip
 
 #ifndef QUIET
   void print_statistics ();

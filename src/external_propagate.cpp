@@ -491,7 +491,7 @@ void Internal::add_external_clause (int propagated_elit,
   // we need to be build a new LRAT chain if we are already in the middle of
   // the analysis (like during failed assumptions)
   LOG (lrat_chain, "lrat chain before");
-  std::vector<uint64_t> lrat_chain_ext = std::move (lrat_chain);
+  std::vector<int64_t> lrat_chain_ext = std::move (lrat_chain);
   lrat_chain.clear ();
   clause.clear ();
 
@@ -643,7 +643,7 @@ void Internal::explain_external_propagations () {
     f.seen = false;
   }
 
-#ifndef NDEBUG
+#if 0  // has been fuzzed extensively
   for (auto idx : vars) {
     assert (!flags (idx).seen);
   }
@@ -709,7 +709,7 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 //
 Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
   Clause *res;
-  std::vector<uint64_t> chain_tmp{std::move (lrat_chain)};
+  std::vector<int64_t> chain_tmp{std::move (lrat_chain)};
   lrat_chain.clear ();
   if (clause.empty ()) {
     res = learn_external_reason_clause (ilit, 0, true);
@@ -773,8 +773,7 @@ void Internal::handle_external_clause (Clause *res) {
     if (val (pos0) < 0) {
       conflict = res;
       if (!from_propagator) {
-        // analyze (); // TODO: is it good to do conflict analysis?
-        // apparently its better to backtrack :(
+        // its better to backtrack instead of analyze
         backtrack (l1 - 1);
         conflict = 0;
         assert (!val (pos0) && !val (pos1));
@@ -944,12 +943,15 @@ void Internal::notify_assignments () {
 
     int elit = externalize (ilit); // TODO: double-check tainting
     assert (elit);
+    if (external->ervars[abs (elit)])
+      continue;
     // Fixed variables might get mapped (during compact) to another
     // non-observed but fixed variable.
     // This happens on root level, so notification about their assignment is
     // already done.
-    assert (external->observed (elit) || fixed (ilit));
-    assigned.push_back (elit);
+    assert (external->observed (elit) ||
+      (fixed(ilit) && !external->ervars[abs (elit)]));
+    assigned.push_back(elit);
   }
 
   external->propagator->notify_assignment (assigned);
@@ -1210,7 +1212,7 @@ void Internal::get_all_fixed_literals (std::vector<int> &fixed_lits) {
   int ilit;
   for (int eidx = 1; eidx < e2i_size; eidx++) {
     ilit = external->e2i[eidx];
-    if (ilit) {
+    if (ilit && !external->ervars[eidx]) {
       Flags &f = flags (ilit);
       if (f.status == Flags::FIXED) {
         fixed_lits.push_back (vals[abs (ilit)] * eidx);

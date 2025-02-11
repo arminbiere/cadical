@@ -7,9 +7,9 @@ void External::push_zero_on_extension_stack () {
   LOG ("pushing 0 on extension stack");
 }
 
-void External::push_id_on_extension_stack (uint64_t id) {
+void External::push_id_on_extension_stack (int64_t id) {
   const uint32_t higher_bits = static_cast<int> (id << 32);
-  const uint32_t lower_bits = (id & (((uint64_t) 1 << 32) - 1));
+  const uint32_t lower_bits = (id & (((int64_t) 1 << 32) - 1));
   extension.push_back (higher_bits);
   extension.push_back (lower_bits);
   LOG ("pushing id %" PRIu64 " = %d + %d", id, higher_bits, lower_bits);
@@ -60,7 +60,7 @@ void External::push_clause_on_extension_stack (Clause *c, int pivot) {
   push_clause_on_extension_stack (c);
 }
 
-void External::push_binary_clause_on_extension_stack (uint64_t id,
+void External::push_binary_clause_on_extension_stack (int64_t id,
                                                       int pivot,
                                                       int other) {
   internal->stats.weakened++;
@@ -77,7 +77,7 @@ void External::push_binary_clause_on_extension_stack (uint64_t id,
 /*------------------------------------------------------------------------*/
 
 void External::push_external_clause_and_witness_on_extension_stack (
-    const vector<int> &c, const vector<int> &w, uint64_t id) {
+    const vector<int> &c, const vector<int> &w, int64_t id) {
   assert (id);
   extension.push_back (0);
   for (const auto &elit : w) {
@@ -88,7 +88,7 @@ void External::push_external_clause_and_witness_on_extension_stack (
   }
   extension.push_back (0);
   const uint32_t higher_bits = static_cast<int> (id << 32);
-  const uint32_t lower_bits = (id & (((uint64_t) 1 << 32) - 1));
+  const uint32_t lower_bits = (id & (((int64_t) 1 << 32) - 1));
   extension.push_back (higher_bits);
   extension.push_back (lower_bits);
   extension.push_back (0);
@@ -157,7 +157,7 @@ void External::extend () {
       assert (i != begin);
     }
     assert (i != begin);
-    LOG ("id=%" PRIu64, ((uint64_t) *i << 32) + *(i - 1));
+    LOG ("id=%" PRId64, ((int64_t) *i << 32) + *(i - 1));
     assert (*i || *(i - 1));
     --i;
     assert (i != begin);
@@ -210,8 +210,8 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
       clause.push_back (lit);
     assert (!lit);
     --i;
-    const uint64_t id =
-        ((uint64_t) *(i - 1) << 32) + static_cast<uint64_t> (*i);
+    const int64_t id =
+        ((int64_t) * (i - 1) << 32) + static_cast<int64_t> (*i);
     assert (id);
     i -= 2;
     assert (!*i);
@@ -244,8 +244,8 @@ bool External::traverse_witnesses_forward (WitnessIterator &it) {
       assert (!lit);
       assert (i != end);
       assert (!*i);
-      const uint64_t id =
-          ((uint64_t) *i << 32) + static_cast<uint64_t> (*(i + 1));
+      const int64_t id =
+          ((int64_t) *i << 32) + static_cast<int64_t> (*(i + 1));
       assert (id > 0);
       i += 3;
       assert (*i);
@@ -271,6 +271,7 @@ void External::conclude_sat () {
     extend ();
   vector<int> model;
   for (int idx = 1; idx <= max_var; idx++) {
+    if (ervars[idx]) continue;
     const int lit = ival (idx);
     model.push_back (lit);
   }

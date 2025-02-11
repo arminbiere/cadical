@@ -18,6 +18,7 @@ void Internal::reset_occs () {
   LOG ("reset occurrence lists");
 }
 
+
 /*------------------------------------------------------------------------*/
 
 // One-sided occurrence counter (each literal has its own counter).

@@ -72,8 +72,8 @@ void Internal::build_chain_for_units (int lit, Clause *reason,
     assert (val (reason_lit));
     if (!val (reason_lit))
       continue;
-    const unsigned uidx = vlit (val (reason_lit) * reason_lit);
-    uint64_t id = unit_clauses (uidx);
+    const int signed_reason_lit = val (reason_lit) * reason_lit;
+    int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (reason->id);
@@ -91,8 +91,7 @@ void Internal::build_chain_for_empty () {
   LOG (conflict, "lrat for global empty clause with conflict");
   for (auto &lit : *conflict) {
     assert (val (lit) < 0);
-    const unsigned uidx = vlit (-lit);
-    uint64_t id = unit_clauses (uidx);
+    int64_t id = unit_id (-lit);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (conflict->id);
@@ -205,6 +204,7 @@ void Internal::search_assign_external (int lit) {
   notify_assignments ();
 }
 
+
 /*------------------------------------------------------------------------*/
 
 // The 'propagate' function is usually the hot-spot of a CDCL SAT solver.
@@ -229,13 +229,14 @@ bool Internal::propagate () {
   if (level)
     require_mode (SEARCH);
   assert (!unsat);
-
+  LOG ("starting propagate");
   START (propagate);
 
   // Updating statistics counter in the propagation loops is costly so we
   // delay until propagation ran to completion.
   //
   int64_t before = propagated;
+  int64_t ticks = 0;
 
   while (!conflict && propagated != trail.size ()) {
 
@@ -246,6 +247,7 @@ bool Internal::propagate () {
     const const_watch_iterator eow = ws.end ();
     watch_iterator j = ws.begin ();
     const_watch_iterator i = j;
+    ticks += 1 + cache_lines (ws.size (), sizeof *i);
 
     while (i != eow) {
 
@@ -290,6 +292,7 @@ bool Internal::propagate () {
           build_chain_for_units (w.blit, w.clause, 0);
           search_assign (w.blit, w.clause);
           // lrat_chain.clear (); done in search_assign
+	  ticks++;
         }
 
       } else {
@@ -302,6 +305,8 @@ bool Internal::propagate () {
         // and thus this first memory access below is the real hot-spot of
         // the solver.  Note, that this check is positive very rarely and
         // thus branch prediction should be almost perfect here.
+
+        ticks++;
 
         if (w.clause->garbage) {
           j--;
@@ -379,6 +384,8 @@ bool Internal::propagate () {
 
             j--; // Drop this watch from the watch list of 'lit'.
 
+	    ticks++;
+
           } else if (!u) {
 
             assert (v < 0);
@@ -389,6 +396,7 @@ bool Internal::propagate () {
             build_chain_for_units (other, w.clause, 0);
             search_assign (other, w.clause);
             // lrat_chain.clear (); done in search_assign
+	    ticks++;
 
             // Similar code is in the implementation of the SAT'18 paper on
             // chronological backtracking but in our experience, this code
@@ -421,7 +429,7 @@ bool Internal::propagate () {
                 lits[pos] = lit;
                 lits[0] = other;
                 lits[1] = s;
-                watch_literal (s, other, w.clause);
+                watch_literal (s, lit, w.clause);
 
                 j--; // Drop this watch from the watch list of 'lit'.
               }
@@ -460,6 +468,7 @@ bool Internal::propagate () {
     // Avoid updating stats eagerly in the hot-spot of the solver.
     //
     stats.propagations.search += propagated - before;
+    stats.ticks.search[stable] += ticks;
 
     if (!conflict)
       no_conflict_until = propagated;

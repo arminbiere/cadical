@@ -93,6 +93,8 @@ void require_solver_pointer_to_be_non_zero (const void *ptr,
   do { \
     REQUIRE ((int) (LIT) && ((int) (LIT)) != INT_MIN, \
              "invalid literal '%d'", (int) (LIT)); \
+    REQUIRE (external->is_valid_input ((int) (LIT)), \
+             "extension variable %d defined by the solver", (int) (LIT)); \
   } while (0)
 
 #define REQUIRE_STEADY_STATE() \

@@ -53,8 +53,10 @@ R  restart
 s  subsumed clause removal round
 3  ternary resolution round
 t  transition reduction of binary implication graph
-w  vivified redundant and irredundant clauses
-v  vivified irredundant clauses
+u  vivified tier1 clauses
+v  vivified tier2 clauses
+x  vivified tier3 clauses
+w  vivified irredundant clauses
 
 The order of the list follows the occurrences of 'report' in the source
 files, i.e., obtained from "grep 'report (' *.cpp".   Note that some of the
@@ -114,7 +116,7 @@ Report::Report (const char *h, int precision, int min, double value)
 
 #define MB (current_resident_set_size () / (double) (1l << 20))
 
-#define REMAINING (percent (active (), external->max_var))
+#define REMAINING (percent (active (), stats.variables_original))
 
 #define TRAIL (percent (averages.current.trail.slow, max_var))
 
@@ -129,6 +131,7 @@ Report::Report (const char *h, int precision, int min, double value)
   REPORT ("level", 0, 2, averages.current.level) \
   REPORT ("reductions", 0, 1, stats.reductions) \
   REPORT ("restarts", 0, 3, stats.restarts) \
+  REPORT ("rate", 0, 2, averages.current.decisions) \
   REPORT ("conflicts", 0, 4, stats.conflicts) \
   REPORT ("redundant", 0, 4, stats.current.redundant) \
   REPORT ("trail", -1, 2, TRAIL) \
@@ -217,9 +220,6 @@ void Internal::report (char type, int verbose) {
     tout.magenta (true);
     break;
   case 's':
-  case 'v':
-  case 'w':
-  case 't':
   case 'b':
   case 'c':
     tout.green (false);
@@ -230,13 +230,22 @@ void Internal::report (char type, int verbose) {
   case 'p':
   case '2':
   case '3':
+  case 'u':
+  case 'v':
+  case 'w':
+  case 'x':
+  case 'f':
+  case '=':
     tout.blue (false);
+    break;
+  case 't':
+    tout.cyan (false);
     break;
   case 'd':
     tout.blue (true);
     break;
   case 'z':
-  case 'f':
+  case '!':
     tout.cyan (true);
     break;
   case '-':
@@ -259,6 +268,8 @@ void Internal::report (char type, int verbose) {
   case 'P':
     tout.bold ();
     tout.underline ();
+    break;
+  default:
     break;
   }
   fputc (type, stdout);

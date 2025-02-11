@@ -278,9 +278,7 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
         f.seen = true;
         continue;
       }
-      const unsigned uidx = vlit (-other);
-      uint64_t id = unit_clauses (uidx);
-      assert (id);
+      int64_t id = unit_id (-other);
       lrat_chain.push_back (id);
     }
     clear_analyzed_literals ();
