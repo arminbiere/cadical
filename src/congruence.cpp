@@ -4870,7 +4870,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       g->lhs = not_lhs;
       assert (rhs[0] == cond);
       rhs[1] = not_then_lit;
-      rewrite_ite_gate_lrat_and (g, src, dst, 1, 3);
+      rewrite_ite_gate_lrat_and (g, src, dst, 3, 1);
     } else if (dst == then_lit) {
       // cond ? then_lit : then_lit
       // then_lit
