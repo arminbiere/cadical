@@ -198,7 +198,7 @@ struct CompactBinary {
   LRAT_ID id;
   int lit1, lit2;
   CompactBinary (Clause *c, LRAT_ID i, int l1, int l2)
-  : clause (c), id (i), lit1 (l1), lit2 (l2) {}
+      : clause (c), id (i), lit1 (l1), lit2 (l2) {}
   CompactBinary () : clause (nullptr), id (0), lit1 (0), lit2 (0) {}
 };
 
@@ -263,8 +263,8 @@ struct Closure {
   uint64_t &largecounts (int lit);
 
   void unmark_all ();
-  vector<int> representant;               // union-find
-  vector<int> eager_representant;         // union-find
+  vector<int> representant;              // union-find
+  vector<int> eager_representant;        // union-find
   vector<LRAT_ID> representant_id;       // lrat version of union-find
   vector<LRAT_ID> eager_representant_id; // lrat version of union-find
   int &representative (int lit);
@@ -375,11 +375,9 @@ struct Closure {
   void push_id_on_chain (std::vector<LRAT_ID> &chain,
                          const std::vector<LitClausePair> &c);
   // TODO: does nothing except pushing on the stack, remove!
-  void push_id_on_chain (std::vector<LRAT_ID> &chain, Rewrite rewrite,
-                         int);
+  void push_id_on_chain (std::vector<LRAT_ID> &chain, Rewrite rewrite, int);
   void update_and_gate_build_lrat_chain (
-      Gate *g, Gate *h,
-      std::vector<LRAT_ID> &extra_reasons_lit,
+      Gate *g, Gate *h, std::vector<LRAT_ID> &extra_reasons_lit,
       std::vector<LRAT_ID> &extra_reasons_ulit);
   void update_and_gate_unit_build_lrat_chain (
       Gate *g, int src, LRAT_ID id1, LRAT_ID id2, int dst,
@@ -413,8 +411,10 @@ struct Closure {
   Clause *simplify_xor_clause (int lhs, Clause *);
   void simplify_xor_gate (Gate *g);
   bool simplify_gates (int lit);
-void simplify_and_sort_xor_lrat_clauses (const vector<LitClausePair> &, vector<LitClausePair>&,int );
-void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
+  void simplify_and_sort_xor_lrat_clauses (const vector<LitClausePair> &,
+                                           vector<LitClausePair> &, int,
+                                           int except2 = 0);
+  void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int);
 
   // rewriting
   bool rewriting_lhs (Gate *g, int dst);
@@ -459,8 +459,9 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   LRAT_ID check_and_add_to_proof_chain (vector<int> &clause);
   void add_xor_matching_proof_chain (Gate *g, int lhs1,
                                      const vector<LitClausePair> &,
-                                     int lhs2, vector<LRAT_ID> &, vector<LRAT_ID> &);
-  void add_xor_shrinking_proof_chain (Gate const *const g, int src);
+                                     int lhs2, vector<LRAT_ID> &,
+                                     vector<LRAT_ID> &);
+  void add_xor_shrinking_proof_chain (Gate *g, int src);
   void extract_xor_gates ();
   void extract_xor_gates_with_base_clause (Clause *c);
   Clause *find_large_xor_side_clause (std::vector<int> &lits);
@@ -538,12 +539,12 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   //   to be taken into account without being added to the eager rewriting
   //   (yet)
   Clause *produce_rewritten_clause_lrat (Clause *c, int execept_lhs = 0);
-  void compute_rewritten_clause_lrat_simple (Clause *c, int except) ;
+  void compute_rewritten_clause_lrat_simple (Clause *c, int except);
   // variant where we update the indices after removing the tautologies and
   // remove the tautological clauses
   void produce_rewritten_clause_lrat_and_clean (
-      std::vector<LitClausePair> &litIds, int except_lhs, size_t &old_position1,
-      size_t &old_position2);
+      std::vector<LitClausePair> &litIds, int except_lhs,
+      size_t &old_position1, size_t &old_position2);
   // binary extraction and ternary strengthening
   void extract_binaries ();
   bool find_binary (int, int) const;
@@ -551,7 +552,7 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   Clause *new_clause ();
   //
   void sort_literals_by_var (vector<int> &rhs);
-  void sort_literals_by_var_except (vector<int> &rhs, int);
+  void sort_literals_by_var_except (vector<int> &rhs, int, int except2 = 0);
 
   // schedule
   queue<int> schedule;
@@ -560,7 +561,7 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   // proof. If delete_id is non-zero, then delete the clause instead of
   // learning it
   LRAT_ID simplify_and_add_to_proof_chain (vector<int> &unsimplified,
-                                            LRAT_ID delete_id = 0);
+                                           LRAT_ID delete_id = 0);
 
   // we define our own wrapper as cadical has otherwise a non-compatible
   // marking system
@@ -573,10 +574,13 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
   LitClausePair marked_mu4 (int lit);
 
   // XOR
-  uint32_t number_from_xor_reason (const std::vector<int> &rhs, int);
-  uint32_t number_from_xor_reason (const Clause *const rhs, int);
-  void gate_sort_lrat_reasons (std::vector<LitClausePair> &, int);
-  void gate_sort_lrat_reasons (LitClausePair &, int);
+  uint32_t number_from_xor_reason (const std::vector<int> &rhs, int,
+                                   int except2 = 0);
+  uint32_t number_from_xor_reason (const Clause *const rhs, int,
+                                   int except2 = 0);
+  void gate_sort_lrat_reasons (std::vector<LitClausePair> &, int,
+                               int except2 = 0);
+  void gate_sort_lrat_reasons (LitClausePair &, int, int except2 = 0);
 
   void rewrite_ite_gate_lrat_and (Gate *g, int dst, int src, size_t c,
                                   size_t d);
@@ -584,10 +588,19 @@ void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int );
       Gate *g, int dst, int src, std::vector<LRAT_ID> &reasons_implication,
       std::vector<LRAT_ID> &reasons_back);
   void rewrite_ite_gate_update_lrat_reasons (Gate *g, int src, int dst);
-  void simplify_ite_gate_produce_unit_lrat (Gate *g, int lit, size_t idx1, size_t idx2);
-  void merge_and_gate_lrat_produce_lrat (Gate *g, Gate *h, std::vector<LRAT_ID> &reasons_lrat, std::vector<LRAT_ID> &reasons_lrat_back);
-  void simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1, size_t idx2); // first index is a binary clause after unit propagation and the second has length 3
-  void merge_ite_gate_produce_lrat (std::vector<LitClausePair> & clauses, std::vector<LRAT_ID> &reasons_implication, std::vector<LRAT_ID> &reasons_back);
+  void simplify_ite_gate_produce_unit_lrat (Gate *g, int lit, size_t idx1,
+                                            size_t idx2);
+  void merge_and_gate_lrat_produce_lrat (
+      Gate *g, Gate *h, std::vector<LRAT_ID> &reasons_lrat,
+      std::vector<LRAT_ID> &reasons_lrat_back);
+  void simplify_ite_gate_to_and_lrat (
+      Gate *g, size_t idx1,
+      size_t idx2); // first index is a binary clause after unit propagation
+                    // and the second has length 3
+  void
+  merge_ite_gate_produce_lrat (std::vector<LitClausePair> &clauses,
+                               std::vector<LRAT_ID> &reasons_implication,
+                               std::vector<LRAT_ID> &reasons_back);
 };
 
 } // namespace CaDiCaL

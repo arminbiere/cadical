@@ -259,9 +259,16 @@ struct sort_literals_by_var_rank {
 struct sort_literals_by_var_smaller_except {
   CaDiCaL::Internal *internal;
   int lhs;
+  int except;
+  sort_literals_by_var_smaller_except (Internal *i, int my_lhs, int except2)
+      : internal (i), lhs (my_lhs), except (except2) {}
   sort_literals_by_var_smaller_except (Internal *i, int my_lhs)
-      : internal (i), lhs (my_lhs) {}
+      : internal (i), lhs (my_lhs), except (0) {}
   bool operator() (const int &a, const int &b) const {
+    if (abs (a) == abs (except) && abs (b) != abs (except))
+      return false;
+    if (abs (a) != abs (except) && abs (b) == abs (except))
+      return true;
     if (abs (a) == abs (lhs) && abs (b) != abs (lhs))
       return false;
     if (abs (a) != abs (lhs) && abs (b) == abs (lhs))
@@ -279,10 +286,11 @@ struct sort_literals_by_var_smaller {
   }
 };
 
-void Closure::sort_literals_by_var_except (vector<int> &rhs, int lhs) {
+void Closure::sort_literals_by_var_except (vector<int> &rhs, int lhs,
+                                           int except2) {
   MSORT (internal->opts.radixsortlim, begin (rhs), end (rhs),
          sort_literals_by_var_rank (internal),
-         sort_literals_by_var_smaller_except (internal, lhs));
+         sort_literals_by_var_smaller_except (internal, lhs, except2));
 }
 void Closure::sort_literals_by_var (vector<int> &rhs) {
   MSORT (internal->opts.radixsortlim, begin (rhs), end (rhs),
@@ -681,6 +689,7 @@ void Closure::compute_rewritten_clause_lrat_simple (Clause *c, int except) {
   if (tautology) {
     LOG ("generated clause is a tautology");
     lrat_chain.clear ();
+    clause.clear ();
   } else if (changed && clause.size () == 1) {
     LOG (lrat_chain, "LRAT chain");
   } else {
@@ -2328,13 +2337,12 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
   LOG (g, "updating");
   bool garbage = true;
   // TODO Florian LRAT for learn_congruence_unit
+  assert (g->arity () == 0 || internal->clause.empty ());
   if (g->arity () == 0) {
-    if (internal->lrat) {
-      simplify_unit_xor_lrat_clauses (g->pos_lhs_ids, g->lhs);
-      assert (clause.size () == 1 && clause.back () == -g->lhs);
-      assert (lrat_chain.size ());
-      clause.clear ();
-    }
+    assert (internal->clause.size () == 1 &&
+            internal->clause.back () == -g->lhs);
+    assert (!internal->lrat || lrat_chain.size ());
+    internal->clause.clear ();
     learn_congruence_unit (-g->lhs);
   } else if (g->arity () == 1) {
     std::vector<LRAT_ID> reasons_implication, reasons_back;
@@ -3050,12 +3058,21 @@ void Closure::check_implied () {
   internal->external->check_learned_clause ();
 }
 
-void Closure::add_xor_shrinking_proof_chain (Gate const *const g,
-                                             int pivot) {
+void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
   assert (internal->clause.empty ());
-  if (!internal->proof || internal->lrat)
+  if (!internal->proof)
     return;
   LOG (g, "starting XOR shrinking proof chain");
+  // TODO Florian simplify and sort xor clauses (like in
+  // add_xor_matching_proof_chain)
+  //
+  vector<LitClausePair> first;
+  vector<LitClausePair> newclauses;
+  if (internal->lrat) {
+    simplify_and_sort_xor_lrat_clauses (g->pos_lhs_ids, first, g->lhs,
+                                        pivot);
+  }
+
   auto &clause = internal->clause;
   assert (clause.empty ());
 
@@ -3068,18 +3085,33 @@ void Closure::add_xor_shrinking_proof_chain (Gate const *const g,
   assert (parity == parity_lits (clause));
   const size_t size = clause.size ();
   const unsigned end = 1u << size;
+  assert (!internal->lrat || first.size () > 2 * end);
   for (unsigned i = 0; i != end; ++i) {
     while (i && parity != parity_lits (clause))
       inc_lits (clause);
     clause.push_back (pivot);
     LOG (clause, "proof checking ");
+    if (internal->lrat) {
+      lrat_chain.push_back (first[2 * i].clause->id);
+    }
     const LRAT_ID id1 = check_and_add_to_proof_chain (clause);
     clause.pop_back ();
     clause.push_back (-pivot);
+    if (internal->lrat) {
+      lrat_chain.push_back (first[2 * i + 1].clause->id);
+    }
     const LRAT_ID id2 = check_and_add_to_proof_chain (clause);
     clause.pop_back ();
-    const LRAT_ID id3 = check_and_add_to_proof_chain (clause);
-    (void) id2, (void) id3;
+    if (internal->lrat) {
+      lrat_chain.push_back (first[2 * i].clause->id);
+      lrat_chain.push_back (first[2 * i + 1].clause->id);
+    }
+    if (clause.size () > 1) {
+      Clause *c = new_clause ();
+      if (internal->lrat) {
+        newclauses.push_back (LitClausePair (0, c));
+      }
+    }
     if (internal->proof) {
       clause.push_back (pivot);
       internal->proof->delete_clause (id1, false, clause);
@@ -3088,8 +3120,12 @@ void Closure::add_xor_shrinking_proof_chain (Gate const *const g,
       internal->proof->delete_clause (id2, false, clause);
       clause.pop_back ();
     }
+    if (clause.size () == 1)
+      return;
     inc_lits (clause);
   }
+  g->pos_lhs_ids.swap (newclauses);
+
   clause.clear ();
 }
 
@@ -3277,14 +3313,14 @@ void Closure::simplify_unit_xor_lrat_clauses (
 }
 void Closure::simplify_and_sort_xor_lrat_clauses (
     const vector<LitClausePair> &source, vector<LitClausePair> &target,
-    int lhs) {
+    int lhs, int except2) {
   assert (internal->lrat);
   for (auto pair : source) {
     Clause *c = produce_rewritten_clause_lrat (pair.clause, lhs);
     if (c)
       target.push_back (LitClausePair (0, c));
   }
-  gate_sort_lrat_reasons (target, lhs);
+  gate_sort_lrat_reasons (target, lhs, except2);
 }
 void Closure::add_xor_matching_proof_chain (
     Gate *g, int lhs1, const vector<LitClausePair> &clauses2, int lhs2,
@@ -3414,14 +3450,15 @@ Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
   }
   return g;
 }
-uint32_t Closure::number_from_xor_reason (const Clause *const rhs,
-                                          int lhs) {
+uint32_t Closure::number_from_xor_reason (const Clause *const rhs, int lhs,
+                                          int except2) {
   assert (clause.empty ());
   uint32_t n = 0;
   std::copy (begin (*rhs), end (*rhs), back_inserter (clause));
-  sort_literals_by_var_except (clause, lhs);
-  assert (is_sorted (begin (clause), end (clause),
-                     sort_literals_by_var_smaller_except (internal, lhs)));
+  sort_literals_by_var_except (clause, lhs, except2);
+  assert (is_sorted (
+      begin (clause), end (clause),
+      sort_literals_by_var_smaller_except (internal, lhs, except2)));
   (void) lhs;
   assert (rhs->size <= 32);
   for (auto lit : clause) {
@@ -3434,10 +3471,11 @@ uint32_t Closure::number_from_xor_reason (const Clause *const rhs,
 }
 
 uint32_t Closure::number_from_xor_reason (const std::vector<int> &rhs,
-                                          int lhs) {
+                                          int lhs, int except) {
   uint32_t n = 0;
-  assert (is_sorted (begin (rhs), end (rhs),
-                     sort_literals_by_var_smaller_except (internal, lhs)));
+  assert (is_sorted (
+      begin (rhs), end (rhs),
+      sort_literals_by_var_smaller_except (internal, lhs, except)));
   (void) lhs;
   assert (rhs.size () <= 32);
   for (auto lit : rhs) {
@@ -3449,23 +3487,24 @@ uint32_t Closure::number_from_xor_reason (const std::vector<int> &rhs,
 
 // this is how I planned to sort it and produce the number
 // Look at this first
-void Closure::gate_sort_lrat_reasons (LitClausePair &litId, int lhs) {
+void Closure::gate_sort_lrat_reasons (LitClausePair &litId, int lhs,
+                                      int except2) {
   assert (clause.empty ());
   std::copy (begin (*litId.clause), end (*litId.clause),
              back_inserter (clause));
-  sort_literals_by_var_except (clause, lhs);
-  litId.current_lit = number_from_xor_reason (clause, lhs);
+  sort_literals_by_var_except (clause, lhs, except2);
+  litId.current_lit = number_from_xor_reason (clause, lhs, except2);
   clause.clear ();
 }
 
 // this is how I planned to sort it and produce the number
 // Look at this first
 void Closure::gate_sort_lrat_reasons (std::vector<LitClausePair> &xs,
-                                      int lhs) {
+                                      int lhs, int except2) {
   assert (clause.empty ());
   assert (!xs.empty ());
   for (auto &litId : xs) {
-    gate_sort_lrat_reasons (litId, lhs);
+    gate_sort_lrat_reasons (litId, lhs, except2);
   }
   std::sort (begin (xs), end (xs), [] (LitClausePair &x, LitClausePair &y) {
     return (uint32_t) x.current_lit < (uint32_t) y.current_lit;
@@ -4150,7 +4189,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   // TODO check if really unnecessary
   if (dst_count > 1)
     add_xor_shrinking_proof_chain (g, src);
-  assert (internal->clause.empty ());
+  assert (internal->clause.size () <= 1);
   update_xor_gate (g, git);
 
   if (!g->garbage && !internal->unsat && original_dst_negated &&
