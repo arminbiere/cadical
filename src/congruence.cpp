@@ -274,7 +274,7 @@ struct sort_literals_by_var_smaller_except {
       return false;
     if (abs (a) != abs (lhs) && abs (b) == abs (lhs))
       return true;
-    return sort_literals_by_var_rank (internal) (a) <
+    return sort_literals_by_var_rank (internal) (a) >
            sort_literals_by_var_rank (internal) (b);
   }
 };
@@ -3077,9 +3077,6 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
   if (!internal->proof)
     return;
   LOG (g, "starting XOR shrinking proof chain");
-  // TODO Florian simplify and sort xor clauses (like in
-  // add_xor_matching_proof_chain)
-  //
   vector<LitClausePair> first;
   vector<LitClausePair> newclauses;
   if (internal->lrat) {
@@ -3100,19 +3097,21 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
   const size_t size = clause.size ();
   const unsigned end = 1u << (size - 1);
   assert (!internal->lrat || first.size () == 2 * end);
+  // TODO Florian adjust indices of first depending on order...
+  //
   for (unsigned i = 0; i != end; ++i) {
     while (i && parity != parity_lits (clause))
       inc_lits (clause);
     clause.push_back (pivot);
     LOG (clause, "proof checking ");
     if (internal->lrat) {
-      lrat_chain.push_back (first[2 * i + 1].clause->id);
+      lrat_chain.push_back (first[2 * i].clause->id);
     }
     const LRAT_ID id1 = check_and_add_to_proof_chain (clause);
     clause.pop_back ();
     clause.push_back (-pivot);
     if (internal->lrat) {
-      lrat_chain.push_back (first[2 * i].clause->id);
+      lrat_chain.push_back (first[2 * i + 1].clause->id);
     }
     const LRAT_ID id2 = check_and_add_to_proof_chain (clause);
     clause.pop_back ();
@@ -3335,6 +3334,11 @@ void Closure::simplify_and_sort_xor_lrat_clauses (
       target.push_back (LitClausePair (0, c));
   }
   gate_sort_lrat_reasons (target, lhs, except2);
+  /*
+  for (auto pair : target) {
+    LOG (pair.clause, "key %d", pair.current_lit);
+  }
+*/
 }
 void Closure::add_xor_matching_proof_chain (
     Gate *g, int lhs1, const vector<LitClausePair> &clauses2, int lhs2,
@@ -3355,13 +3359,13 @@ void Closure::add_xor_matching_proof_chain (
   // for lrat
   vector<LRAT_ID> first_ids;
   vector<LRAT_ID> second_ids;
-  if (internal->lrat) {
-    for (auto pair : first) {
-      first_ids.push_back (pair.clause->id);
-    }
-    for (auto pair : second) {
-      first_ids.push_back (pair.clause->id);
-    }
+  for (auto pair : first) {
+    first_ids.push_back (pair.clause->id);
+    LOG (pair.clause, "key %d", pair.current_lit);
+  }
+  for (auto pair : second) {
+    second_ids.push_back (pair.clause->id);
+    LOG (pair.clause, "key %d", pair.current_lit);
   }
   do {
     vector<LRAT_ID> first_tmp;
@@ -3371,12 +3375,16 @@ void Closure::add_xor_matching_proof_chain (
     const size_t size = unsimplified.size ();
     assert (size < 32);
     const size_t off = 1u << size;
+    bool parity = 1;
     for (size_t i = 0; i != off; ++i) {
+      parity = !parity;
+      size_t fof = parity * off;
+      size_t sof = (!parity) * off;
       if (internal->lrat) {
         assert (lrat_chain.empty ());
         assert (first.size () == 2 * off);
-        lrat_chain.push_back (first_ids[i]);
-        lrat_chain.push_back (second_ids[off + i]);
+        lrat_chain.push_back (first_ids[fof + i]);
+        lrat_chain.push_back (second_ids[sof + i]);
       }
       unsimplified.push_back (-lhs1);
       unsimplified.push_back (lhs2);
@@ -3387,8 +3395,8 @@ void Closure::add_xor_matching_proof_chain (
         lrat_chain.clear ();
         assert (lrat_chain.empty ());
         assert (first.size () == 2 * off);
-        lrat_chain.push_back (first_ids[off + i]);
-        lrat_chain.push_back (second_ids[i]);
+        lrat_chain.push_back (first_ids[sof + i]);
+        lrat_chain.push_back (second_ids[fof + i]);
       }
       unsimplified.push_back (lhs1);
       unsimplified.push_back (-lhs2);
@@ -3494,7 +3502,7 @@ uint32_t Closure::number_from_xor_reason (const std::vector<int> &rhs,
   assert (rhs.size () <= 32);
   for (auto lit : rhs) {
     n *= 2;
-    n += (lit > 0);
+    n += !(lit > 0);
   }
   return n;
 }
