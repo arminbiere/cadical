@@ -989,7 +989,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
           if (litId.current_lit == clashing) {
             push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
                                              proof_chain, true, Rewrite (),
-                                             -dst, -g->lhs);
+                                             -g->lhs);
           }
         }
       } else {
