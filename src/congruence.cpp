@@ -256,6 +256,26 @@ struct sort_literals_by_var_rank {
 
   Type operator() (const int &a) const { return internal->vlit (a); }
 };
+struct sort_literals_by_var_rank_except {
+  CaDiCaL::Internal *internal;
+  int lhs;
+  int except;
+  sort_literals_by_var_rank_except (Internal *i, int my_lhs, int except2)
+      : internal (i), lhs (my_lhs), except (except2) {}
+  sort_literals_by_var_rank_except (Internal *i, int my_lhs)
+      : internal (i), lhs (my_lhs), except (0) {}
+  typedef uint64_t Type;
+  Type operator() (const int &a) const {
+    Type res = 0;
+    if (abs (a) == abs (except))
+      res = 1 - (a > 0);
+    else if (abs (a) == abs (lhs))
+      res = 3 - (a > 0);
+    else
+      res = internal->vlit (a) + 2; // probably +2 enough
+    return ~res;
+  }
+};
 
 struct sort_literals_by_var_smaller_except {
   CaDiCaL::Internal *internal;
@@ -266,6 +286,8 @@ struct sort_literals_by_var_smaller_except {
   sort_literals_by_var_smaller_except (Internal *i, int my_lhs)
       : internal (i), lhs (my_lhs), except (0) {}
   bool operator() (const int &a, const int &b) const {
+    return sort_literals_by_var_rank_except (internal, lhs, except) (a) <
+           sort_literals_by_var_rank_except (internal, lhs, except) (b);
     if (abs (a) == abs (except) && abs (b) != abs (except))
       return false;
     if (abs (a) != abs (except) && abs (b) == abs (except))
@@ -290,7 +312,7 @@ struct sort_literals_by_var_smaller {
 void Closure::sort_literals_by_var_except (vector<int> &rhs, int lhs,
                                            int except2) {
   MSORT (internal->opts.radixsortlim, begin (rhs), end (rhs),
-         sort_literals_by_var_rank (internal),
+         sort_literals_by_var_rank_except (internal, lhs, except2),
          sort_literals_by_var_smaller_except (internal, lhs, except2));
 }
 void Closure::sort_literals_by_var (vector<int> &rhs) {
