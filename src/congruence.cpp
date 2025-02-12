@@ -4855,13 +4855,6 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       rhs[0] = not_then_lit;
       rhs[1] = not_else_lit;
       rewrite_ite_gate_lrat_and (g, src, dst, 3, 1);
-    } else if (not_dst == g->lhs) { // TODO not in kissat
-      check_ite_implied(g->lhs, cond, then_lit, else_lit);
-      if (merge_literals_lrat (g->lhs, else_lit)) {
-        ++internal->stats.congruence.unaries;
-        ++internal->stats.congruence.unary_ites;
-      }
-      garbage = true;
     } else {
       shrink = false;
       rhs[0] = dst;
