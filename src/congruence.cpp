@@ -614,6 +614,7 @@ void Closure::produce_rewritten_clause_lrat_and_clean (
   assert (internal->lrat_chain.empty ());
   for (auto &litId : litIds) {
     litId.clause = produce_rewritten_clause_lrat (litId.clause, except_lhs);
+    litId.current_lit = find_eager_representative (litId.current_lit);
   }
   litIds.erase (
       std::remove_if (begin (litIds), end (litIds),
@@ -631,7 +632,7 @@ void Closure::produce_rewritten_clause_lrat_and_clean (
     assert (j <= i);
     litIds[j].clause =
         produce_rewritten_clause_lrat (litIds[i].clause, except_lhs);
-    litIds[j].current_lit = litIds[j].current_lit;
+    litIds[j].current_lit = find_eager_representative (litIds[i].current_lit);
     if (i == old_position1) {
       old_position1 = j;
     }
@@ -4791,6 +4792,18 @@ void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
   g->pos_lhs_ids.erase (long_clause);
   assert (g->pos_lhs_ids.size () == 1);
   g->pos_lhs_ids.push_back ({lit, e});
+
+#ifndef NDEBUG
+  for (auto litId : g->pos_lhs_ids) {
+    bool found = false;
+    for (auto other : *litId.clause) {
+      found = (find_eager_representative (other) == litId.current_lit);
+      if (found)
+        break;
+    }
+    assert (found);
+  }
+#endif
 }
 
 void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
