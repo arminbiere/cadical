@@ -538,7 +538,7 @@ struct Closure {
   //   - the Rewrite are for additional rewrite to allow for lazy rewrites
   //   to be taken into account without being added to the eager rewriting
   //   (yet)
-  Clause *produce_rewritten_clause_lrat (Clause *c, int execept_lhs = 0);
+  Clause *produce_rewritten_clause_lrat (Clause *c, int execept_lhs = 0, bool remove_units = true);
   void compute_rewritten_clause_lrat_simple (Clause *c, int except);
   // variant where we update the indices after removing the tautologies and
   // remove the tautological clauses
@@ -601,6 +601,10 @@ struct Closure {
   merge_ite_gate_produce_lrat (std::vector<LitClausePair> &clauses,
                                std::vector<LRAT_ID> &reasons_implication,
                                std::vector<LRAT_ID> &reasons_back);
+  void
+  simplify_ite_gate_then_else_set (Gate *g,
+                               std::vector<LRAT_ID> &reasons_implication,
+                               std::vector<LRAT_ID> &reasons_back, size_t idx1, size_t idx2);
 
   void simplify_ite_gate_condition_set (Gate *g, std::vector<LRAT_ID> &reasons_lrat,
 					std::vector<LRAT_ID> &reasons_back_lrat,
