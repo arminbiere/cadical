@@ -3460,10 +3460,12 @@ void Closure::add_xor_matching_proof_chain (
       second_ids.swap (second_tmp);
     }
   } while (!unsimplified.empty ());
-  assert (first_ids.size () == 1);
-  assert (second_ids.size () == 1);
-  to_lrat.push_back (first_ids.back ().id);
-  back_lrat.push_back (second_ids.back ().id);
+  if (internal->lrat) {
+    assert (first_ids.size () == 1);
+    assert (second_ids.size () == 1);
+    to_lrat.push_back (first_ids.back ().id);
+    back_lrat.push_back (second_ids.back ().id);
+  }
   assert (!internal->lrat || to_lrat.size () == 1);
   assert (!internal->lrat || back_lrat.size () == 1);
   LOG ("finished XOR matching proof");
