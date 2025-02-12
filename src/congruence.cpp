@@ -3373,6 +3373,8 @@ void Closure::add_xor_matching_proof_chain (
     second_ids.push_back (pair.clause->id);
     LOG (pair.clause, "key %d", pair.current_lit);
   }
+  // TODO Florian: resort and ids after every round
+  // red-04623012030656819335.trace
   do {
     vector<LRAT_ID> first_tmp;
     vector<LRAT_ID> second_tmp;
@@ -3388,7 +3390,7 @@ void Closure::add_xor_matching_proof_chain (
       size_t sof = (!parity) * off;
       if (internal->lrat) {
         assert (lrat_chain.empty ());
-        assert (first.size () == 2 * off);
+        assert (first_ids.size () == 2 * off);
         lrat_chain.push_back (first_ids[fof + i]);
         lrat_chain.push_back (second_ids[sof + i]);
       }
@@ -3400,7 +3402,7 @@ void Closure::add_xor_matching_proof_chain (
         first_tmp.push_back (id1);
         lrat_chain.clear ();
         assert (lrat_chain.empty ());
-        assert (first.size () == 2 * off);
+        assert (first_ids.size () == 2 * off);
         lrat_chain.push_back (first_ids[sof + i]);
         lrat_chain.push_back (second_ids[fof + i]);
       }
