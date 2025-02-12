@@ -134,6 +134,12 @@ struct LitClausePair {
   LitClausePair (int lit, Clause *cl) : current_lit (lit), clause (cl) {}
   LitClausePair () : current_lit (0), clause (nullptr) {}
 };
+struct LitIdPair {
+  int lit; // current literal from the gate
+  LRAT_ID id;
+  LitIdPair (int l, LRAT_ID i) : lit (l), id (i) {}
+  LitIdPair () : lit (0), id (0) {}
+};
 
 // The core structure of this algorithm: the gate. It is composed of a
 // left-hand side and an array of right-hand side.
@@ -538,7 +544,8 @@ struct Closure {
   //   - the Rewrite are for additional rewrite to allow for lazy rewrites
   //   to be taken into account without being added to the eager rewriting
   //   (yet)
-  Clause *produce_rewritten_clause_lrat (Clause *c, int execept_lhs = 0, bool remove_units = true);
+  Clause *produce_rewritten_clause_lrat (Clause *c, int execept_lhs = 0,
+                                         bool remove_units = true);
   void compute_rewritten_clause_lrat_simple (Clause *c, int except);
   // variant where we update the indices after removing the tautologies and
   // remove the tautological clauses
@@ -601,14 +608,13 @@ struct Closure {
   merge_ite_gate_produce_lrat (std::vector<LitClausePair> &clauses,
                                std::vector<LRAT_ID> &reasons_implication,
                                std::vector<LRAT_ID> &reasons_back);
-  void
-  simplify_ite_gate_then_else_set (Gate *g,
-                               std::vector<LRAT_ID> &reasons_implication,
-                               std::vector<LRAT_ID> &reasons_back, size_t idx1, size_t idx2);
+  void simplify_ite_gate_then_else_set (
+      Gate *g, std::vector<LRAT_ID> &reasons_implication,
+      std::vector<LRAT_ID> &reasons_back, size_t idx1, size_t idx2);
 
-  void simplify_ite_gate_condition_set (Gate *g, std::vector<LRAT_ID> &reasons_lrat,
-					std::vector<LRAT_ID> &reasons_back_lrat,
-					size_t idx1, size_t idx2);
+  void simplify_ite_gate_condition_set (
+      Gate *g, std::vector<LRAT_ID> &reasons_lrat,
+      std::vector<LRAT_ID> &reasons_back_lrat, size_t idx1, size_t idx2);
 };
 
 } // namespace CaDiCaL

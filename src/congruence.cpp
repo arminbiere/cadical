@@ -3397,55 +3397,60 @@ void Closure::add_xor_matching_proof_chain (
   }
   LOG ("starting XOR matching proof");
   // for lrat
-  vector<LRAT_ID> first_ids;
-  vector<LRAT_ID> second_ids;
+  vector<LitIdPair> first_ids;
+  vector<LitIdPair> second_ids;
   for (auto pair : first) {
-    first_ids.push_back (pair.clause->id);
+    if ((pair.current_lit & 1) == (lhs1 < 0)) {
+      first_ids.push_back (LitIdPair (pair.current_lit, pair.clause->id));
+    } else {
+      second_ids.push_back (LitIdPair (pair.current_lit, pair.clause->id));
+    }
     LOG (pair.clause, "key %d", pair.current_lit);
   }
   for (auto pair : second) {
-    second_ids.push_back (pair.clause->id);
+    if ((pair.current_lit & 1) == (lhs2 > 0)) {
+      first_ids.push_back (LitIdPair (pair.current_lit, pair.clause->id));
+    } else {
+      second_ids.push_back (LitIdPair (pair.current_lit, pair.clause->id));
+    }
     LOG (pair.clause, "key %d", pair.current_lit);
   }
   // TODO Florian: resort and ids after every round
-  // red-04623012030656819335.trace
   do {
-    vector<LRAT_ID> first_tmp;
-    vector<LRAT_ID> second_tmp;
+    vector<LitIdPair> first_tmp;
+    vector<LitIdPair> second_tmp;
     assert (!unsimplified.empty ());
     unsimplified.pop_back ();
     const size_t size = unsimplified.size ();
     assert (size < 32);
     const size_t off = 1u << size;
-    bool parity = 1;
     for (size_t i = 0; i != off; ++i) {
-      parity = !parity;
-      size_t fof = parity * off;
-      size_t sof = (!parity) * off;
+      size_t fof = 1 * off;
+      size_t sof = 0 * off;
       if (internal->lrat) {
         assert (lrat_chain.empty ());
         assert (first_ids.size () == 2 * off);
-        lrat_chain.push_back (first_ids[fof + i]);
-        lrat_chain.push_back (second_ids[sof + i]);
+        lrat_chain.push_back (first_ids[fof + i].id);
+        lrat_chain.push_back (first_ids[sof + i].id);
       }
       unsimplified.push_back (-lhs1);
       unsimplified.push_back (lhs2);
       const LRAT_ID id1 = simplify_and_add_to_proof_chain (unsimplified);
       unsimplified.resize (unsimplified.size () - 2);
       if (internal->lrat) {
-        first_tmp.push_back (id1);
+        first_tmp.push_back (LitIdPair (0, id1));
         lrat_chain.clear ();
         assert (lrat_chain.empty ());
         assert (first_ids.size () == 2 * off);
-        lrat_chain.push_back (first_ids[sof + i]);
-        lrat_chain.push_back (second_ids[fof + i]);
+        lrat_chain.push_back (second_ids[sof + i].id);
+        lrat_chain.push_back (second_ids[fof + i].id);
       }
       unsimplified.push_back (lhs1);
       unsimplified.push_back (-lhs2);
       const LRAT_ID id2 = simplify_and_add_to_proof_chain (unsimplified);
       if (internal->lrat) {
         lrat_chain.clear ();
-        second_tmp.push_back (id2);
+        second_tmp.push_back (LitIdPair (0, id2));
       }
       unsimplified.resize (unsimplified.size () - 2);
       inc_lits (unsimplified);
@@ -3455,8 +3460,10 @@ void Closure::add_xor_matching_proof_chain (
       second_ids.swap (second_tmp);
     }
   } while (!unsimplified.empty ());
-  to_lrat.swap (first_ids);
-  back_lrat.swap (second_ids);
+  assert (first_ids.size () == 1);
+  assert (second_ids.size () == 1);
+  to_lrat.push_back (first_ids.back ().id);
+  back_lrat.push_back (second_ids.back ().id);
   assert (!internal->lrat || to_lrat.size () == 1);
   assert (!internal->lrat || back_lrat.size () == 1);
   LOG ("finished XOR matching proof");
@@ -5490,10 +5497,10 @@ void Closure::add_ite_matching_proof_chain (
   if (internal->lrat)
     lrat_chain.push_back(id3), lrat_chain.push_back(id4);
   const LRAT_ID id5 = simplify_and_add_to_proof_chain (unsimplified, chain);
-  unsimplified.clear ();
 #endif
   if (internal->lrat)
     reasons2.push_back (id3), reasons2.push_back (id4);
+  unsimplified.clear ();
 
   LOG ("finished ITE matching proof chain");
 }
