@@ -5470,10 +5470,10 @@ void Closure::add_ite_matching_proof_chain (
   if (internal->lrat)
     lrat_chain.push_back(id3), lrat_chain.push_back(id4);
   const LRAT_ID id5 = simplify_and_add_to_proof_chain (unsimplified, chain);
-  unsimplified.clear ();
 #endif
   if (internal->lrat)
     reasons2.push_back (id3), reasons2.push_back (id4);
+  unsimplified.clear ();
 
   LOG ("finished ITE matching proof chain");
 }
