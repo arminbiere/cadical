@@ -705,9 +705,10 @@ void Internal::preprocess_quickly () {
          before.vars, before.clauses);
   if (opts.factor)
     factor ();
-  // TODO fastelim and congruence
-  // if (opts.probe)
-  //  probe (false);
+
+  if (extract_gates ())
+    decompose ();
+
   if (opts.elim)
     elim (false, true);
   // if (opts.condition)
