@@ -5018,8 +5018,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
             assert (id.clause->size == 2);
           }
 #endif
-          assert (g->pos_lhs_ids.size () == 2);
-          assert (g->neg_lhs_ids.size () == 1);
+          assert (g->pos_lhs_ids.size () == 2 || gate_contains(g, g->lhs));
+          assert (g->neg_lhs_ids.size () == 1 || gate_contains(g, g->lhs));
           assert (g->arity () == 2);
 #ifndef NDEBUG
           std::for_each (
