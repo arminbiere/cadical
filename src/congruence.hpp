@@ -419,7 +419,7 @@ struct Closure {
   bool simplify_gates (int lit);
   void simplify_and_sort_xor_lrat_clauses (const vector<LitClausePair> &,
                                            vector<LitClausePair> &, int,
-                                           int except2 = 0);
+                                           int except2 = 0, bool flip = 0);
   void simplify_unit_xor_lrat_clauses (const vector<LitClausePair> &, int);
 
   // rewriting
@@ -582,12 +582,10 @@ struct Closure {
 
   // XOR
   uint32_t number_from_xor_reason (const std::vector<int> &rhs, int,
-                                   int except2 = 0);
-  uint32_t number_from_xor_reason (const Clause *const rhs, int,
-                                   int except2 = 0);
+                                   int except2 = 0, bool flip = 0);
   void gate_sort_lrat_reasons (std::vector<LitClausePair> &, int,
-                               int except2 = 0);
-  void gate_sort_lrat_reasons (LitClausePair &, int, int except2 = 0);
+                               int except2 = 0, bool flip = 0);
+  void gate_sort_lrat_reasons (LitClausePair &, int, int except2 = 0, bool flip = 0);
 
   void rewrite_ite_gate_lrat_and (Gate *g, int dst, int src, size_t c,
                                   size_t d);
