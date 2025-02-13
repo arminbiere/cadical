@@ -2077,10 +2077,6 @@ void Closure::delete_proof_chain () {
   }
   if (chain.empty ())
     return;
-#if 1
-  chain.clear ();
-  return; // temporary workaround
-#endif
   LOG ("starting deletion of proof chain");
   auto &clause = internal->clause;
   assert (clause.empty ());
@@ -3158,7 +3154,7 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
     while (i && parity != parity_lits (clause))
       inc_lits (clause);
     clause.push_back (pivot);
-    LOG (clause, "proof checking ");
+    LOG (clause, "xor shrinking clause");
     if (internal->lrat) {
       lrat_chain.push_back (first[2 * i].clause->id);
     }
@@ -3166,11 +3162,13 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
     clause.pop_back ();
     clause.push_back (-pivot);
     if (internal->lrat) {
+      lrat_chain.clear ();
       lrat_chain.push_back (first[2 * i + 1].clause->id);
     }
     const LRAT_ID id2 = check_and_add_to_proof_chain (clause);
     clause.pop_back ();
     if (internal->lrat) {
+      lrat_chain.clear ();
       lrat_chain.push_back (first[2 * i].clause->id);
       lrat_chain.push_back (first[2 * i + 1].clause->id);
     }
@@ -3178,6 +3176,7 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
       Clause *c = new_clause ();
       if (internal->lrat) {
         newclauses.push_back (LitClausePair (0, c));
+        lrat_chain.clear ();
       }
     }
     if (internal->proof) {
