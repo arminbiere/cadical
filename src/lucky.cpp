@@ -148,7 +148,7 @@ inline bool Internal::lucky_propagate_discrepency (int dec) {
 }
 
 int Internal::forward_false_satisfiable () {
-  MSG ("checking increasing variable index false assignment");
+  LOG ("checking increasing variable index false assignment");
   assert (!unsat);
   assert (!level);
   assert (assumptions.empty ());
@@ -160,10 +160,11 @@ int Internal::forward_false_satisfiable () {
       continue;
     if (lucky_propagate_discrepency (-idx)) {
       if (unsat)
-	return 20;
-      else return unlucky (0);
-    }
-    else goto START;
+        return 20;
+      else
+        return unlucky (0);
+    } else
+      goto START;
   }
   VERBOSE (1, "forward assuming variables false satisfies formula");
   assert (satisfied ());
@@ -184,10 +185,11 @@ int Internal::forward_true_satisfiable () {
       continue;
     if (lucky_propagate_discrepency (idx)) {
       if (unsat)
-	return 20;
-      else return unlucky (0);
-    }
-    else goto START;
+        return 20;
+      else
+        return unlucky (0);
+    } else
+      goto START;
   }
   VERBOSE (1, "forward assuming variables true satisfies formula");
   assert (satisfied ());
@@ -210,10 +212,11 @@ int Internal::backward_false_satisfiable () {
       continue;
     if (lucky_propagate_discrepency (-idx)) {
       if (unsat)
-	return 20;
-      else return unlucky (0);
-    }
-    else goto START;
+        return 20;
+      else
+        return unlucky (0);
+    } else
+      goto START;
   }
   VERBOSE (1, "backward assuming variables false satisfies formula");
   assert (satisfied ());
@@ -234,10 +237,11 @@ int Internal::backward_true_satisfiable () {
       continue;
     if (lucky_propagate_discrepency (idx)) {
       if (unsat)
-	return 20;
-      else return unlucky (0);
-    }
-    else goto START;
+        return 20;
+      else
+        return unlucky (0);
+    } else
+      goto START;
   }
   VERBOSE (1, "backward assuming variables true satisfies formula");
   assert (satisfied ());
@@ -419,7 +423,7 @@ int Internal::lucky_phases () {
   const int64_t units = active_before - stats.active;
 
   if (!res && units)
-    MSG ("lucky %zd units", units);
+    LOG ("lucky %zd units", units);
   searching_lucky_phases = false;
   STOP (lucky);
   STOP (search);
