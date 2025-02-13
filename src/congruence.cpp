@@ -1437,6 +1437,8 @@ bool Closure::merge_literals_lrat (
   // chain.
   int smaller_repr = repr_lit;
   int larger_repr = repr_other;
+  int val_smaller = val_lit;
+  int val_larger = val_other;
   int smaller = lit;
   int larger = other;
   const std::vector<LRAT_ID> *smaller_chain = &extra_reasons_ulit;
@@ -1446,6 +1448,7 @@ bool Closure::merge_literals_lrat (
     swap (smaller_repr, larger_repr);
     swap (smaller, larger);
     swap (smaller_chain, larger_chain);
+    swap (val_smaller, val_larger);
   }
 
   assert (find_representative (smaller_repr) == smaller_repr);
@@ -1454,21 +1457,27 @@ bool Closure::merge_literals_lrat (
     LOG ("merging clashing %d and %d", lit, other);
     if (internal->lrat)
       internal->lrat_chain = *smaller_chain;
+    if (!val_smaller) {
+      internal->assign_unit (smaller);
+      if (internal->lrat)
+        internal->lrat_chain.clear ();
 
-    internal->assign_unit (smaller);
-    if (internal->lrat)
-      internal->lrat_chain.clear ();
-
-    push_lrat_unit (smaller);
-    if (internal->lrat) {
-      assert (internal->lrat_chain.empty ());
-      swap (internal->lrat_chain, lrat_chain);
-      for (auto id : *larger_chain)
-        internal->lrat_chain.push_back (id);
-      LOG (internal->lrat_chain, "lrat chain");
+      push_lrat_unit (smaller);
+      if (internal->lrat) {
+        assert (internal->lrat_chain.empty ());
+        swap (internal->lrat_chain, lrat_chain);
+        for (auto id : *larger_chain)
+          internal->lrat_chain.push_back (id);
+        LOG (internal->lrat_chain, "lrat chain");
+      }
+      internal->learn_empty_clause ();
+      return false;
+    } else {
+      if (internal->lrat)
+	internal->lrat_chain.push_back(internal->unit_id (smaller));
+      internal->learn_empty_clause ();
+      return false;
     }
-    internal->learn_empty_clause ();
-    return false;
   }
 
   LOG ("merging %d and %d first and then the equivalences of %d and %d "
@@ -1508,19 +1517,27 @@ bool Closure::merge_literals_lrat (
                                        rew2);
       swap (lrat_chain, internal->lrat_chain);
     }
-    internal->assign_unit (-larger_repr);
-    if (internal->lrat) {
-      internal->lrat_chain.clear ();
+    assert (val_larger == internal->val (larger_repr));
+    if (!val_larger) {
+      // not assigned, first assign one
+      internal->assign_unit (-larger_repr);
+      if (internal->lrat) {
+        internal->lrat_chain.clear ();
 
-      if (larger != larger_repr)
-        push_lrat_unit (-larger_repr);
-      // no need to calculate push_id_and_rewriting_lrat here because all
-      // the job is done by the arguments already
-      push_id_and_rewriting_lrat_unit (
-          eq2_tmp, rew1, lrat_chain, true, rew2,
-          larger != larger_repr ? larger_repr : 0);
-      LOG (lrat_chain, "lrat chain");
-      swap (lrat_chain, internal->lrat_chain);
+        if (larger != larger_repr)
+          push_lrat_unit (-larger_repr);
+        // no need to calculate push_id_and_rewriting_lrat here because all
+        // the job is done by the arguments already
+        push_id_and_rewriting_lrat_unit (
+            eq2_tmp, rew1, lrat_chain, true, rew2,
+            larger != larger_repr ? larger_repr : 0);
+        LOG (lrat_chain, "lrat chain");
+        swap (lrat_chain, internal->lrat_chain);
+      }
+    } else {
+      // otherwise, no need to
+      if (internal->lrat)
+        lrat_chain.push_back (internal->unit_id (larger_repr));
     }
     internal->learn_empty_clause ();
     if (internal->lrat)
