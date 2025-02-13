@@ -632,7 +632,8 @@ void Closure::produce_rewritten_clause_lrat_and_clean (
     assert (j <= i);
     litIds[j].clause =
         produce_rewritten_clause_lrat (litIds[i].clause, except_lhs);
-    litIds[j].current_lit = find_eager_representative (litIds[i].current_lit);
+    litIds[j].current_lit =
+        find_eager_representative (litIds[i].current_lit);
     if (i == old_position1) {
       old_position1 = j;
     }
@@ -1474,7 +1475,7 @@ bool Closure::merge_literals_lrat (
       return false;
     } else {
       if (internal->lrat)
-	internal->lrat_chain.push_back(internal->unit_id (smaller));
+        internal->lrat_chain.push_back (internal->unit_id (smaller));
       internal->learn_empty_clause ();
       return false;
     }
@@ -2438,8 +2439,7 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
       if (merge_literals_lrat (g->lhs, h->lhs, reasons_implication,
                                reasons_back))
         ++internal->stats.congruence.xors;
-      if (!internal->unsat)
-        delete_proof_chain ();
+      delete_proof_chain ();
     } else {
       if (g->indexed) {
         remove_gate (git);
@@ -3404,18 +3404,24 @@ void Closure::add_xor_matching_proof_chain (
   vector<LitIdPair> first_ids;
   vector<LitIdPair> second_ids;
   for (auto pair : first) {
-    if ((pair.current_lit & 1) == (lhs1 > 0)) {
-      first_ids.push_back (LitIdPair (pair.current_lit, pair.clause->id));
+    bool first = pair.current_lit & 1;
+    int rest = pair.current_lit >> 1;
+    rest &= ~(1 << (g->rhs.size () - 1));
+    if (first == (lhs1 > 0)) {
+      first_ids.push_back (LitIdPair (rest, pair.clause->id));
     } else {
-      second_ids.push_back (LitIdPair (pair.current_lit, pair.clause->id));
+      second_ids.push_back (LitIdPair (rest, pair.clause->id));
     }
     LOG (pair.clause, "key %d", pair.current_lit);
   }
   for (auto pair : second) {
-    if ((pair.current_lit & 1) == (lhs2 < 0)) {
-      first_ids.push_back (LitIdPair (pair.current_lit, pair.clause->id));
+    bool first = pair.current_lit & 1;
+    int rest = pair.current_lit >> 1;
+    rest &= ~(1 << (g->rhs.size () - 1));
+    if (first == (lhs2 < 0)) {
+      first_ids.push_back (LitIdPair (rest, pair.clause->id));
     } else {
-      second_ids.push_back (LitIdPair (pair.current_lit, pair.clause->id));
+      second_ids.push_back (LitIdPair (rest, pair.clause->id));
     }
     LOG (pair.clause, "key %d", pair.current_lit);
   }
@@ -3429,37 +3435,40 @@ void Closure::add_xor_matching_proof_chain (
     assert (size < 32);
     const size_t off = 1u << size;
     for (size_t i = 0; i != off; ++i) {
-      size_t fof = 1 * off;
-      size_t sof = 0 * off;
       int32_t n = 0;
       if (internal->lrat) {
         n = number_from_xor_reason (unsimplified, lhs1);
         assert (lrat_chain.empty ());
-        assert (first_ids.size () == 2 * off);
-        lrat_chain.push_back (first_ids[fof + i].id);
-        lrat_chain.push_back (first_ids[sof + i].id);
+        for (auto pair : first_ids) {
+          if (pair.lit == n)
+            lrat_chain.push_back (pair.id);
+        }
+        assert (lrat_chain.size () == 2);
       }
       unsimplified.push_back (-lhs1);
       unsimplified.push_back (lhs2);
       const LRAT_ID id1 = simplify_and_add_to_proof_chain (unsimplified);
       unsimplified.resize (unsimplified.size () - 2);
       if (internal->lrat) {
-        first_tmp.push_back (LitIdPair (n, id1));
+        int32_t rest = n &= ~(1 << (unsimplified.size () - 1));
+        first_tmp.push_back (LitIdPair (rest, id1));
         n = number_from_xor_reason (unsimplified, lhs1);
         lrat_chain.clear ();
-        assert (lrat_chain.empty ());
-        assert (first_ids.size () == 2 * off);
-        lrat_chain.push_back (second_ids[sof + i].id);
-        lrat_chain.push_back (second_ids[fof + i].id);
+        for (auto pair : second_ids) {
+          if (pair.lit == n)
+            lrat_chain.push_back (pair.id);
+        }
+        assert (lrat_chain.size () == 2);
       }
       unsimplified.push_back (lhs1);
       unsimplified.push_back (-lhs2);
       const LRAT_ID id2 = simplify_and_add_to_proof_chain (unsimplified);
+      unsimplified.resize (unsimplified.size () - 2);
       if (internal->lrat) {
         lrat_chain.clear ();
-        second_tmp.push_back (LitIdPair (n, id2));
+        int32_t rest = n &= ~(1 << (unsimplified.size () - 1));
+        second_tmp.push_back (LitIdPair (rest, id2));
       }
-      unsimplified.resize (unsimplified.size () - 2);
       inc_lits (unsimplified);
     }
     if (internal->lrat) {
@@ -3503,8 +3512,7 @@ Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
                              reasons_back)) {
       ++internal->stats.congruence.xors;
     }
-    if (!internal->unsat)
-      delete_proof_chain ();
+    delete_proof_chain ();
     assert (internal->unsat || chain.empty ());
   } else {
     g = new Gate;
@@ -4899,7 +4907,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       rhs[1] = else_lit;
       produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids);
     } else if (not_dst == g->lhs) { // TODO not in kissat
-      check_ite_implied(g->lhs, cond, then_lit, else_lit);
+      check_ite_implied (g->lhs, cond, then_lit, else_lit);
       if (merge_literals_lrat (g->lhs, else_lit)) {
         ++internal->stats.congruence.unaries;
         ++internal->stats.congruence.unary_ites;
@@ -5045,8 +5053,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
           if (merge_literals (g->lhs, h->lhs))
             ++internal->stats.congruence.ands;
         }
-        if (!internal->unsat)
-          delete_proof_chain ();
+        delete_proof_chain ();
       } else {
         garbage = false;
         if (g->indexed)
@@ -5084,8 +5091,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
                                       extra_reasons_ulit);
         if (merge_literals (h->lhs, normalized_lhs))
           ++internal->stats.congruence.ites;
-        if (!internal->unsat)
-          delete_proof_chain ();
+        delete_proof_chain ();
         assert (internal->unsat || chain.empty ());
       } else {
         garbage = false;
@@ -5107,8 +5113,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
   if (garbage && !internal->unsat)
     mark_garbage (g);
 
-  if (!internal->unsat)
-    assert (chain.empty ());
+  assert (chain.empty ());
 }
 
 void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit,
@@ -5552,8 +5557,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
       ++internal->stats.congruence.ites;
       LOG ("found merged literals");
     }
-    if (!internal->unsat)
-      delete_proof_chain ();
+    delete_proof_chain ();
     delete g;
     return h;
   } else {
