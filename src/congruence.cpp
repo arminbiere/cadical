@@ -3134,41 +3134,34 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
   if (internal->lrat) {
     simplify_and_sort_xor_lrat_clauses (g->pos_lhs_ids, first, g->lhs,
                                         pivot);
+    gate_sort_lrat_reasons (first, pivot, g->lhs);
   }
 
   auto &clause = internal->clause;
 
+  const int lhs = g->lhs;
+  clause.push_back (-lhs);
   for (auto lit : g->rhs)
     clause.push_back (lit);
 
-  const int lhs = g->lhs;
-  clause.push_back (-lhs);
   const bool parity = (lhs > 0);
   assert (parity == parity_lits (clause));
   const size_t size = clause.size ();
   const unsigned end = 1u << (size - 1);
   assert (!internal->lrat || first.size () == 2 * end);
+#ifdef LOGGING
+  for (auto pair : first) {
+    LOG (pair.clause, "key %d", pair.current_lit);
+  }
+#endif
   // TODO Florian adjust indices of first depending on order...
   //
   for (unsigned i = 0; i != end; ++i) {
     while (i && parity != parity_lits (clause))
       inc_lits (clause);
-    clause.push_back (pivot);
     LOG (clause, "xor shrinking clause");
     if (internal->lrat) {
-      lrat_chain.push_back (first[2 * i].clause->id);
-    }
-    const LRAT_ID id1 = check_and_add_to_proof_chain (clause);
-    clause.pop_back ();
-    clause.push_back (-pivot);
-    if (internal->lrat) {
-      lrat_chain.clear ();
-      lrat_chain.push_back (first[2 * i + 1].clause->id);
-    }
-    const LRAT_ID id2 = check_and_add_to_proof_chain (clause);
-    clause.pop_back ();
-    if (internal->lrat) {
-      lrat_chain.clear ();
+      assert (lrat_chain.empty ());
       lrat_chain.push_back (first[2 * i].clause->id);
       lrat_chain.push_back (first[2 * i + 1].clause->id);
     }
@@ -3178,14 +3171,6 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
         newclauses.push_back (LitClausePair (0, c));
         lrat_chain.clear ();
       }
-    }
-    if (internal->proof) {
-      clause.push_back (pivot);
-      internal->proof->delete_clause (id1, false, clause);
-      clause.pop_back ();
-      clause.push_back (-pivot);
-      internal->proof->delete_clause (id2, false, clause);
-      clause.pop_back ();
     }
     if (clause.size () == 1)
       return;
@@ -3377,11 +3362,6 @@ void Closure::simplify_and_sort_xor_lrat_clauses (
     }
   }
   gate_sort_lrat_reasons (target, lhs, except2, flip);
-  /*
-  for (auto pair : target) {
-    LOG (pair.clause, "key %d", pair.current_lit);
-  }
-*/
 }
 void Closure::add_xor_matching_proof_chain (
     Gate *g, int lhs1, const vector<LitClausePair> &clauses2, int lhs2,
