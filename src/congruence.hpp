@@ -455,8 +455,7 @@ struct Closure {
   Gate *find_gate_lits (const vector<int> &rhs, Gate_Type typ,
                         Gate *except = nullptr);
   Gate *find_xor_lits (const vector<int> &rhs);
-  // not const to normalize negations
-  Gate *find_ite_lits (vector<int> &rhs, bool &);
+  // not const to normalize negations, also fixes the order of the LRAT
   Gate *find_ite_gate (Gate *, bool &);
   Gate *find_xor_gate (Gate *);
 
@@ -480,8 +479,8 @@ struct Closure {
   void check_ite_implied (int lhs, int cond, int then_lit, int else_lit);
   void check_ite_gate_implied (Gate *g);
   void check_and_gate_implied (Gate *g);
-  void check_ite_lrat_reasons (Gate *g);
-  void check_contained_module_rewriting (Clause *c, int lit);
+  void check_ite_lrat_reasons (Gate *g, bool = false);
+  void check_contained_module_rewriting (Clause *c, int lit, bool, int except);
   void delete_proof_chain ();
 
   // ite gate extraction
@@ -618,7 +617,8 @@ struct Closure {
 
   void simplify_ite_gate_condition_set (
       Gate *g, std::vector<LRAT_ID> &reasons_lrat,
-      std::vector<LRAT_ID> &reasons_back_lrat, size_t idx1, size_t idx2);
+					std::vector<LRAT_ID> &reasons_back_lrat, size_t idx1, size_t idx2);
+  bool normalize_ite_lits_gate (Gate *rhs);
 };
 
 } // namespace CaDiCaL
