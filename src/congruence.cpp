@@ -3437,7 +3437,7 @@ void Closure::add_xor_matching_proof_chain (
     for (size_t i = 0; i != off; ++i) {
       int32_t n = 0;
       if (internal->lrat) {
-        n = number_from_xor_reason (unsimplified, lhs1);
+        n = number_from_xor_reason_reversed (unsimplified);
         assert (lrat_chain.empty ());
         for (auto pair : first_ids) {
           if (pair.lit == n)
@@ -3452,7 +3452,7 @@ void Closure::add_xor_matching_proof_chain (
       if (internal->lrat) {
         int32_t rest = n &= ~(1 << (unsimplified.size () - 1));
         first_tmp.push_back (LitIdPair (rest, id1));
-        n = number_from_xor_reason (unsimplified, lhs1);
+        n = number_from_xor_reason_reversed (unsimplified);
         lrat_chain.clear ();
         for (auto pair : second_ids) {
           if (pair.lit == n)
@@ -3538,6 +3538,20 @@ Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
   }
   return g;
 }
+uint32_t
+Closure::number_from_xor_reason_reversed (const std::vector<int> &rhs) {
+  uint32_t n = 0;
+  assert (is_sorted (rbegin (rhs), rend (rhs),
+                     sort_literals_by_var_smaller_except (internal, 0, 0)));
+  assert (rhs.size () <= 32);
+  for (auto r = rhs.rbegin (); r != rhs.rend (); r++) {
+    int lit = *r;
+    n *= 2;
+    n += !(lit > 0);
+  }
+  return n;
+}
+
 uint32_t Closure::number_from_xor_reason (const std::vector<int> &rhs,
                                           int lhs, int except, bool flip) {
   uint32_t n = 0;

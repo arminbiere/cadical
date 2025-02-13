@@ -581,11 +581,13 @@ struct Closure {
   LitClausePair marked_mu4 (int lit);
 
   // XOR
+  uint32_t number_from_xor_reason_reversed (const std::vector<int> &rhs);
   uint32_t number_from_xor_reason (const std::vector<int> &rhs, int,
                                    int except2 = 0, bool flip = 0);
   void gate_sort_lrat_reasons (std::vector<LitClausePair> &, int,
                                int except2 = 0, bool flip = 0);
-  void gate_sort_lrat_reasons (LitClausePair &, int, int except2 = 0, bool flip = 0);
+  void gate_sort_lrat_reasons (LitClausePair &, int, int except2 = 0,
+                               bool flip = 0);
 
   void rewrite_ite_gate_lrat_and (Gate *g, int dst, int src, size_t c,
                                   size_t d);
