@@ -4802,6 +4802,30 @@ void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
 #endif
 }
 
+void Closure::produce_ite_merge_lhs_then_else_reasons (
+    Gate *g, std::vector<LRAT_ID> &reasons_implication,
+    std::vector<LRAT_ID> &reasons_back,
+    std::vector<LRAT_ID> &reasons_unit,
+						       bool then_merge) {
+  assert (internal->lrat);
+  assert (g->pos_lhs_ids.size () == 4);
+
+  const size_t idx1 = then_merge ? 0 : 2;
+  const size_t idx2 = idx1 + 1;
+  const size_t other_idx1 = then_merge ? 2 : 0;
+  const size_t other_idx2 = other_idx1 + 1;
+
+  produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs);
+  assert (g->pos_lhs_ids.size () == 4);
+  reasons_implication.push_back (g->pos_lhs_ids[idx1].clause->id);
+  reasons_implication.push_back (g->pos_lhs_ids[other_idx1].clause->id);
+  reasons_back.push_back (g->pos_lhs_ids[idx2].clause->id);
+  reasons_back.push_back (g->pos_lhs_ids[other_idx2].clause->id);
+
+  reasons_unit.push_back(g->pos_lhs_ids[idx1].clause->id);
+  reasons_unit.push_back(g->pos_lhs_ids[idx2].clause->id);
+}
+
 void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
   if (skip_ite_gate (g))
     return;
@@ -4909,9 +4933,16 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids);
     } else if (not_dst == g->lhs) { // TODO not in kissat
       check_ite_implied (g->lhs, cond, then_lit, else_lit);
-      if (merge_literals_lrat (g->lhs, else_lit)) {
+      std::vector<LRAT_ID> reasons_implication, reasons_back, reasons_unit;
+      produce_ite_merge_lhs_then_else_reasons (g, reasons_implication, reasons_back, reasons_unit, true);
+      if (merge_literals_lrat (g->lhs, else_lit, reasons_implication, reasons_back)) {
         ++internal->stats.congruence.unaries;
         ++internal->stats.congruence.unary_ites;
+      }
+      if (!internal->unsat) {
+	if (internal->lrat)
+	  lrat_chain = reasons_unit;
+	learn_congruence_unit (-cond);
       }
       garbage = true;
     } else {
@@ -4960,9 +4991,16 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       assert (rhs[1] == then_lit);
       produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids);
     } else if (not_dst == g->lhs) { // TODO not in kissat
-      if (merge_literals_lrat (g->lhs, then_lit)) {
+      std::vector<LRAT_ID> reasons_implication, reasons_back, reasons_unit;
+      produce_ite_merge_lhs_then_else_reasons (g, reasons_implication, reasons_back, reasons_unit, false);
+      if (merge_literals_lrat (g->lhs, then_lit, reasons_implication, reasons_back)) {
         ++internal->stats.congruence.unaries;
         ++internal->stats.congruence.unary_ites;
+      }
+      if (!internal->unsat) {
+	if (internal->lrat)
+	  lrat_chain = reasons_unit;
+	learn_congruence_unit (cond);
       }
       garbage = true;
     } else {
