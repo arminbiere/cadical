@@ -4877,7 +4877,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       // else_list & then_lit
       rhs[0] = else_lit;
       assert (rhs[1] == then_lit);
-      rewrite_ite_gate_lrat_and (g, src, dst, 0, 2);
+      rewrite_ite_gate_lrat_and (g, src, dst, 2, 0);
     } else if (not_dst == else_lit) {
       // !else_list ? then_lit : else_lit
       // !else_list & then_lit | else_lit & else_lit
