@@ -4982,8 +4982,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
   }
 
   if (!garbage) {
-    assert (g->lhs != -rhs[1]);
-    assert (g->lhs != -rhs[2]);
+    assert (new_tag != Gate_Type::ITE_Gate || g->lhs != -rhs[1]);
+    assert (new_tag != Gate_Type::ITE_Gate || g->lhs != -rhs[2]);
     if (shrink) {
       if (new_tag == Gate_Type::XOr_Gate) {
         bool negate_lhs = false;
