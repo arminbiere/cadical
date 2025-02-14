@@ -1475,7 +1475,7 @@ bool Closure::merge_literals_lrat (
       return false;
     } else {
       if (internal->lrat)
-        internal->lrat_chain.push_back (internal->unit_id (smaller));
+        internal->lrat_chain.push_back (internal->unit_id (val_smaller ? -smaller : smaller));
       internal->learn_empty_clause ();
       return false;
     }
