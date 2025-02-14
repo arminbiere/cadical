@@ -5583,32 +5583,32 @@ void Closure::add_ite_matching_proof_chain (
   unsimplified.clear ();
   unsimplified.push_back (-lhs1);
   unsimplified.push_back (lhs2);
-  unsimplified.push_back (cond);
+  unsimplified.push_back (-cond);
   assert (lrat_chain.empty ());
 
   LRAT_ID id3 = -1;
-  if (degenerated_g_else || degenerated_h_else) {
-    id3 = degenerated_g_else ? h_neg_else_id : g_else_id;
+  if (degenerated_g_then || degenerated_h_then) {
+    id3 = degenerated_g_then ? h_then_id : g_neg_then_id;
   } else {
     if (internal->lrat) {
-        // lrat_chain.push_back (g_else_id);
-        // lrat_chain.push_back (h_neg_else_id);
-      lrat_chain.push_back (g_else_id);
-      lrat_chain.push_back (h_neg_else_id);
+        // lrat_chain.push_back (g_then_id);
+        // lrat_chain.push_back (h_neg_then_id);
+      lrat_chain.push_back (g_neg_then_id);
+      lrat_chain.push_back (h_then_id);
     }
     id3 = simplify_and_add_to_proof_chain (unsimplified);
   }
   unsimplified.pop_back ();
-  unsimplified.push_back (-cond);
+  unsimplified.push_back (cond);
   assert (lrat_chain.empty ());
 
   LRAT_ID id4 = -1;
-  if (degenerated_g_then || degenerated_h_then) {
-    id4 = degenerated_g_then ? h_neg_then_id : g_then_id;
+  if (degenerated_g_else || degenerated_h_else) {
+    id4 = degenerated_g_else ? h_else_id : g_neg_else_id;
   } else {
     if (internal->lrat) {
-      lrat_chain.push_back (g_then_id);
-      lrat_chain.push_back (h_neg_then_id);
+      lrat_chain.push_back (g_neg_else_id);
+      lrat_chain.push_back (h_else_id);
     }
     id4 = simplify_and_add_to_proof_chain (unsimplified);
   }
