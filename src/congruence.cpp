@@ -4653,11 +4653,18 @@ static bool skip_ite_gate (Gate *g) {
 }
 
 void Closure::produce_ite_merge_then_else_reasons (
-    Gate *g, int dst, int src, std::vector<LRAT_ID> &reasons_implication,
+    Gate *g, int src, int dst, std::vector<LRAT_ID> &reasons_implication,
     std::vector<LRAT_ID> &reasons_back) {
   assert (!g->garbage);
   if (!internal->lrat)
     return;
+  if ((g->rhs[1] == src && g->lhs == dst && g->rhs[2] == g->lhs) ||
+      (g->rhs[2] == src && g->lhs == dst && g->rhs[1] == g->lhs) ||
+      (g->rhs[1] == -src && g->lhs == -dst && g->rhs[2] == g->lhs) ||
+      (g->rhs[2] == -src && g->lhs == -dst &&
+       g->rhs[1] == g->lhs)) // no merge is happening actually
+    return;
+  check_ite_lrat_reasons (g, false);
   assert (g->rhs.size () == 3);
   assert (src == g->rhs[1] || src == g->rhs[2]);
   assert (dst == g->rhs[1] || dst == g->rhs[2]);
@@ -4939,7 +4946,6 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       // then_lit
       std::vector<LRAT_ID> reasons_implication, reasons_back;
       produce_ite_merge_then_else_reasons (g, src, dst, reasons_implication, reasons_back);
-      std::swap ( reasons_implication, reasons_back);
       if (merge_literals_lrat (lhs, then_lit, reasons_implication,
                                reasons_back)) {
         ++internal->stats.congruence.unaries;
