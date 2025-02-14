@@ -705,10 +705,13 @@ void Internal::preprocess_quickly () {
   if (extract_gates ())
     decompose ();
 
+  if (sweep ())
+    decompose ();
+
   if (opts.factor)
     factor (true);
 
-  if (opts.elim)
+  if (opts.fastelim)
     elim (false, true);
   // if (opts.condition)
   // condition (false);
