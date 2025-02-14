@@ -5058,7 +5058,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         } else {
           add_ite_turned_and_binary_clauses (g);
           std::vector<LRAT_ID> reasons_implication, reasons_back;
-	  merge_and_gate_lrat_produce_lrat (g, h, reasons_implication, reasons_back);
+	  if (internal->lrat)
+	    merge_and_gate_lrat_produce_lrat (g, h, reasons_implication, reasons_back);
           if (merge_literals_lrat (g->lhs, h->lhs, reasons_implication, reasons_back))
             ++internal->stats.congruence.ands;
         }
