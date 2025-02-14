@@ -5500,9 +5500,7 @@ void Closure::add_ite_matching_proof_chain (
   const int cond = rhs[0];
   LRAT_ID g_then_id = 0, g_neg_then_id = 0, g_neg_else_id = 0;
   LRAT_ID h_then_id = 0, h_neg_then_id = 0, h_else_id = 0;
-#ifndef NDEBUG
   LRAT_ID g_else_id = 0, h_neg_else_id = 0;
-#endif
   const bool degenerated_g_then = (g->lhs == g->rhs[1]);
   const bool degenerated_g_else = (g->lhs == g->rhs[2]);
   const bool degenerated_h_then = (h->lhs == h->rhs[1]);
