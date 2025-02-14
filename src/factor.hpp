@@ -7,7 +7,6 @@ namespace CaDiCaL {
 
 struct Internal;
 
-
 struct factor_occs_size {
   Internal *internal;
   factor_occs_size (Internal *i) : internal (i) {}
@@ -29,7 +28,7 @@ struct Quotient {
 typedef heap<factor_occs_size> FactorSchedule;
 
 struct Factoring {
-  Factoring (Internal *, int64_t);
+  Factoring (Internal *, int64_t, bool);
   ~Factoring ();
 
   // These are initialized by the constructor

@@ -11,20 +11,20 @@ Internal::Internal ()
       protected_reasons (false), force_saved_phase (false),
       searching_lucky_phases (false), stable (false), reported (false),
       external_prop (false), did_external_prop (false),
-      external_prop_is_lazy (true), forced_backt_allowed (false), 
+      external_prop_is_lazy (true), forced_backt_allowed (false),
 
-      private_steps (false), rephased (0), vsize (0), max_var (0), 
-      clause_id (0), original_id (0), reserved_ids (0), 
-      conflict_id (0), saved_decisions (0), concluded (false), lrat (false), frat (false), level (0), vals (0),
-      score_inc (1.0), scores (this), conflict (0), ignore (0),
-      external_reason (&external_reason_clause), newest_clause (0),
-      force_no_backtrack (false), from_propagator (false), ext_clause_forgettable (false),
+      private_steps (false), rephased (0), vsize (0), max_var (0),
+      clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
+      saved_decisions (0), concluded (false), lrat (false), frat (false),
+      level (0), vals (0), score_inc (1.0), scores (this), conflict (0),
+      ignore (0), external_reason (&external_reason_clause),
+      newest_clause (0), force_no_backtrack (false),
+      from_propagator (false), ext_clause_forgettable (false),
       tainted_literal (0), notified (0), probe_reason (0), propagated (0),
       propagated2 (0), propergated (0), best_assigned (0),
       target_assigned (0), no_conflict_until (0), unsat_constraint (false),
-      marked_failed (true), sweep_incomplete (false),
-      citten (0), num_assigned (0), proof (0),
-      opts (this),
+      marked_failed (true), sweep_incomplete (false), citten (0),
+      num_assigned (0), proof (0), opts (this),
 #ifndef QUIET
       profiles (this), force_phase_messages (false),
 #endif
@@ -111,7 +111,6 @@ void Internal::enlarge_vals (size_t new_vsize) {
     assert (!vsize);
   vals = new_vals;
 }
-
 
 /*------------------------------------------------------------------------*/
 
@@ -662,7 +661,7 @@ bool Internal::preprocess_round (int round) {
     elim (false);
   if (opts.condition)
     condition (false);
-  
+
   after.vars = active ();
   after.clauses = stats.current.irredundant;
   assert (preprocessing);
@@ -700,27 +699,25 @@ void Internal::preprocess_quickly () {
   assert (!preprocessing);
   preprocessing = true;
   PHASE ("preprocessing", stats.preprocessings,
-         "starting with %" PRId64 " variables and %" PRId64
-         " clauses",
+         "starting with %" PRId64 " variables and %" PRId64 " clauses",
          before.vars, before.clauses);
 
   if (extract_gates ())
     decompose ();
 
   if (opts.factor)
-    factor ();
+    factor (true);
 
   if (opts.elim)
     elim (false, true);
   // if (opts.condition)
-    // condition (false);
+  // condition (false);
   after.vars = active ();
   after.clauses = stats.current.irredundant;
   assert (preprocessing);
   preprocessing = false;
   PHASE ("preprocessing", stats.preprocessings,
-         "finished with %" PRId64 " variables and %" PRId64
-         " clauses",
+         "finished with %" PRId64 " variables and %" PRId64 " clauses",
          after.vars, after.clauses);
   STOP (preprocess);
   report ('P');

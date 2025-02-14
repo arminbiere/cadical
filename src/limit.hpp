@@ -1,8 +1,8 @@
 #ifndef _limit_hpp_INCLUDED
 #define _limit_hpp_INCLUDED
 
-#include <limits>
 #include <cstdint>
+#include <limits>
 
 namespace CaDiCaL {
 
@@ -28,9 +28,9 @@ struct Limit {
   int64_t restart;   // conflict limit for next 'restart'
   int64_t stabilize; // conflict/ticks limit for next 'stabilize'
 
-  int keptsize; // maximum kept size in 'reduce'
-  int keptglue; // maximum kept glue in 'reduce'
-  int64_t recompute_tier; // conflict limit for next tier recomputation  
+  int keptsize;           // maximum kept size in 'reduce'
+  int keptglue;           // maximum kept glue in 'reduce'
+  int64_t recompute_tier; // conflict limit for next tier recomputation
 
   // How often rephased during (1) or out (0) of stabilization.
   //
@@ -54,7 +54,8 @@ struct Delay {
     bool bypass = 0;
 
     bool delay () {
-      if (bypass) return true;
+      if (bypass)
+        return true;
       if (limit) {
         --limit;
         return true;
@@ -75,12 +76,8 @@ struct Delay {
       limit = interval;
     }
 
-    void bypass_delay () {
-      bypass = 1;
-    }
-    void unbypass_delay () {
-      bypass = 0;
-    }
+    void bypass_delay () { bypass = 1; }
+    void unbypass_delay () { bypass = 0; }
   } bumpreasons;
 };
 
@@ -134,10 +131,21 @@ struct Inc {
     const int64_t TICKS = stats.ticks.search[0] + stats.ticks.search[1]; \
     const int64_t LAST = last.NAME.ticks; \
     int64_t REFERENCE = TICKS - LAST; \
+    if (!REFERENCE || !stats.conflicts) { \
+      VERBOSE (2, "last %" PRId64 " current %" PRId64 " delta %" PRId64, \
+               LAST, TICKS, REFERENCE); \
+      REFERENCE = opts.preprocessinit; \
+    } \
     const double EFFORT = (double) opts.NAME##effort * 1e-3; \
     const int64_t DELTA = EFFORT * REFERENCE; \
     const int64_t THRESH = opts.NAME##thresh * clauses.size (); \
-    if (THRESHHOLD && DELTA < THRESH) return false; \
+    if (THRESHHOLD && DELTA < THRESH) { \
+      VERBOSE (2, \
+               "delaying %s with ticklimit %" PRId64 \
+               " and threshhold %" PRId64, \
+               #NAME, DELTA, THRESH); \
+      return false; \
+    } \
     last.NAME.ticks = TICKS; \
     const int64_t NEW_LIMIT = OLD_LIMIT + DELTA; \
     LIMIT = NEW_LIMIT; \

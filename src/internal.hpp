@@ -168,11 +168,13 @@ struct Internal {
 
   /*----------------------------------------------------------------------*/
 
-  int mode;                    // current internal state
-  int tier1[2] = {2,2};        // tier1 limit for 0=focused, 1=stable; aka tier1[stable]
-  int tier2[2] = {6,6};        // tier2 limit for 0=focused, 1=stable; aka tier1[stable]
-  bool unsat;                  // empty clause found or learned
-  bool iterating;              // report learned unit ('i' line)
+  int mode; // current internal state
+  int tier1[2] = {
+      2, 2}; // tier1 limit for 0=focused, 1=stable; aka tier1[stable]
+  int tier2[2] = {
+      6, 6};      // tier2 limit for 0=focused, 1=stable; aka tier1[stable]
+  bool unsat;     // empty clause found or learned
+  bool iterating; // report learned unit ('i' line)
   bool localsearching;         // true during local search
   bool lookingahead;           // true during look ahead
   bool preprocessing;          // true during preprocessing
@@ -185,24 +187,25 @@ struct Internal {
   bool did_external_prop;     // true if ext. propagation happened
   bool external_prop_is_lazy; // true if the external propagator is lazy
   bool forced_backt_allowed;  // external propagator can force backtracking
-  bool private_steps;         // no notification of ext. prop during these steps
-  char rephased;              // last type of resetting phases
-  Reluctant reluctant;        // restart counter in stable mode
-  size_t vsize;               // actually allocated variable data size
-  int max_var;                // internal maximum variable index
-  int64_t clause_id;         // last used id for clauses
-  int64_t original_id;       // ids for original clauses to produce LRAT
-  int64_t reserved_ids;      // number of reserved ids for original clauses
-  int64_t conflict_id;       // store conflict id for finalize (frat)
+  bool private_steps;   // no notification of ext. prop during these steps
+  char rephased;        // last type of resetting phases
+  Reluctant reluctant;  // restart counter in stable mode
+  size_t vsize;         // actually allocated variable data size
+  int max_var;          // internal maximum variable index
+  int64_t clause_id;    // last used id for clauses
+  int64_t original_id;  // ids for original clauses to produce LRAT
+  int64_t reserved_ids; // number of reserved ids for original clauses
+  int64_t conflict_id;  // store conflict id for finalize (frat)
   int64_t saved_decisions;    // to compute decision rate average
   bool concluded;             // keeps track of conclude
-  vector<int64_t> conclusion;   // store ids of conclusion clauses
-  vector<int64_t> unit_clauses_idx; // keep track of unit_clauses (LRAT/FRAT)
-  vector<int64_t> lrat_chain;   // create LRAT in solver: option lratdirect
-  vector<int64_t> mini_chain;   // used to create LRAT in minimize
+  vector<int64_t> conclusion; // store ids of conclusion clauses
+  vector<int64_t>
+      unit_clauses_idx;       // keep track of unit_clauses (LRAT/FRAT)
+  vector<int64_t> lrat_chain; // create LRAT in solver: option lratdirect
+  vector<int64_t> mini_chain; // used to create LRAT in minimize
   vector<int64_t> minimize_chain; // used to create LRAT in minimize
   vector<int64_t> unit_chain;     // used to avoid duplicate units
-  vector<Clause *> inst_chain;     // for LRAT in instantiate
+  vector<Clause *> inst_chain;    // for LRAT in instantiate
   vector<vector<vector<int64_t>>>
       probehbr_chains;          // only used if opts.probehbr=false
   bool lrat;                    // generate LRAT internally
@@ -257,13 +260,13 @@ struct Internal {
   vector<int> levels;        // decision levels in learned clause
   vector<int> analyzed;      // analyzed literals in 'analyze'
   vector<int> unit_analyzed; // to avoid duplicate units in lrat_chain
-  vector<int> sign_marked;    // literals skipped in 'decompose'
+  vector<int> sign_marked;   // literals skipped in 'decompose'
   vector<int> minimized;     // removable or poison in 'minimize'
   vector<int> shrinkable;    // removable or poison in 'shrink'
   Reap reap;                 // radix heap for shrink
 
-  vector<int> sweep_schedule;  // remember sweep varibles to reschedule
-  bool sweep_incomplete;       // sweep
+  vector<int> sweep_schedule; // remember sweep varibles to reschedule
+  bool sweep_incomplete;      // sweep
 
   kitten *citten;
 
@@ -273,7 +276,7 @@ struct Internal {
   vector<Level> control;    // 'level + 1 == control.size ()'
   vector<Clause *> clauses; // ordered collection of all clauses
   Averages averages;        // glue, size, jump moving averages
-  Delay delay[2];	    // Delay certain functions
+  Delay delay[2];           // Delay certain functions
   Delay congruence_delay;   // Delay congruence if not successful recently
   Limit lim;                // limits for various phases
   Last last;                // statistics at last occurrence
@@ -282,7 +285,7 @@ struct Internal {
   Delay delaying_vivify_irredundant;
   Delay delaying_sweep;
 
-  Proof *proof;             // abstraction layer between solver and tracers
+  Proof *proof; // abstraction layer between solver and tracers
   vector<Tracer *>
       tracers; // proof tracing objects (ie interpolant calculator)
   vector<FileTracer *>
@@ -302,7 +305,7 @@ struct Internal {
   Internal *internal; // proxy to 'this' in macros
   External *external; // proxy to 'external' buddy in 'Solver'
 
-  const unsigned max_used = 255;  // must fix into the header of the clause!
+  const unsigned max_used = 255; // must fix into the header of the clause!
   /*----------------------------------------------------------------------*/
 
   // Asynchronous termination flag written by 'terminate' and read by
@@ -396,7 +399,9 @@ struct Internal {
   // arrays by literals.  The idea is to keep the elements in such an array
   // for both the positive and negated version of a literal close together.
   //
-  unsigned vlit (int lit) const { return (lit < 0) + 2u * (unsigned) vidx (lit); }
+  unsigned vlit (int lit) const {
+    return (lit < 0) + 2u * (unsigned) vidx (lit);
+  }
 
   int u2i (unsigned u) {
     assert (u > 1);
@@ -428,13 +433,12 @@ struct Internal {
     assert (id);
     return id;
   }
-  
 
   inline int64_t &unit_clauses (int uidx) {
     assert (lrat || frat);
     assert (uidx > 0);
-    assert ((size_t)uidx < unit_clauses_idx.size());
-    return unit_clauses_idx [uidx];
+    assert ((size_t) uidx < unit_clauses_idx.size ());
+    return unit_clauses_idx[uidx];
   }
 
   // Helper functions to access variable and literal data.
@@ -598,7 +602,6 @@ struct Internal {
     marks[vidx (lit)] = res;
     assert (!getfact (lit, fact));
   }
-
 
   // Marking and unmarking of all literals in a clause.
   //
@@ -949,15 +952,19 @@ struct Internal {
   // Strengthening through vivification in 'vivify.cpp'.
   //
   void demote_clause (Clause *);
-  void flush_vivification_schedule (std::vector<Clause*>&, int64_t &);
+  void flush_vivification_schedule (std::vector<Clause *> &, int64_t &);
   void vivify_increment_stats (const Vivifier &vivifier);
   void vivify_subsume_clause (Clause *subsuming, Clause *subsumed);
   void compute_tier_limits (Vivifier &);
   void vivify_initialize (Vivifier &vivifier, int64_t &ticks);
-  inline void vivify_prioritize_leftovers (char, size_t prioritized, std::vector<Clause*> &schedule);
+  inline void vivify_prioritize_leftovers (char, size_t prioritized,
+                                           std::vector<Clause *> &schedule);
   bool consider_to_vivify_clause (Clause *candidate);
   void vivify_sort_watched (Clause *c);
-  bool vivify_instantiate (const std::vector<int>&, Clause *, std::vector<std::tuple<int, Clause *, bool>> &lrat_stack, int64_t &ticks);
+  bool vivify_instantiate (
+      const std::vector<int> &, Clause *,
+      std::vector<std::tuple<int, Clause *, bool>> &lrat_stack,
+      int64_t &ticks);
   void vivify_analyze_redundant (Vivifier &, Clause *start, bool &);
   void vivify_build_lrat (int, Clause *,
                           std::vector<std::tuple<int, Clause *, bool>> &);
@@ -965,12 +972,14 @@ struct Internal {
   void vivify_strengthen (Clause *candidate);
   void vivify_assign (int lit, Clause *);
   void vivify_assume (int lit);
-  bool vivify_propagate (int64_t&);
-  void vivify_deduce (Clause *candidate, Clause *conflct, int implied, Clause **, bool&);
+  bool vivify_propagate (int64_t &);
+  void vivify_deduce (Clause *candidate, Clause *conflct, int implied,
+                      Clause **, bool &);
   bool vivify_clause (Vivifier &, Clause *candidate);
-  void vivify_analyze (Clause *start, bool &, Clause **, const Clause *const, int implied, bool&);
-  bool vivify_shrinkable (const std::vector<int>&sorted,  Clause *c);
-  void vivify_round (Vivifier&, int64_t delta);
+  void vivify_analyze (Clause *start, bool &, Clause **,
+                       const Clause *const, int implied, bool &);
+  bool vivify_shrinkable (const std::vector<int> &sorted, Clause *c);
+  void vivify_round (Vivifier &, int64_t delta);
   bool vivify ();
 
   // Compacting (shrinking internal variable tables) in 'compact.cpp'
@@ -1181,7 +1190,8 @@ struct Internal {
   void elim_backward_clauses (Eliminator &);
   void elim_propagate (Eliminator &, int unit);
   void elim_on_the_fly_self_subsumption (Eliminator &, Clause *, int);
-  void try_to_eliminate_variable (Eliminator &, int pivot, bool &, bool fastel);
+  void try_to_eliminate_variable (Eliminator &, int pivot, bool &,
+                                  bool fastel);
   void increase_elimination_bound ();
   int elim_round (bool &completed, bool &, bool);
   void elim (bool update_limits = true, bool = false);
@@ -1213,21 +1223,20 @@ struct Internal {
   void schedule_inner (Sweeper &sweeper, int idx);
   void schedule_outer (Sweeper &sweeper, int idx);
   int next_scheduled (Sweeper &sweeper);
-  void substitute_connected_clauses (Sweeper &sweeper, int lit, int other, int64_t id);
+  void substitute_connected_clauses (Sweeper &sweeper, int lit, int other,
+                                     int64_t id);
   void sweep_remove (Sweeper &sweeper, int lit);
   void flip_partition_literals (struct Sweeper &sweeper);
   const char *sweep_variable (Sweeper &sweeper, int idx);
-  bool scheduable_variable (Sweeper &sweeper, int idx,
-                                      size_t *occ_ptr);
+  bool scheduable_variable (Sweeper &sweeper, int idx, size_t *occ_ptr);
   unsigned schedule_all_other_not_scheduled_yet (Sweeper &sweeper);
-  bool sweep_equivalence_candidates (Sweeper &sweeper, int lit,
-                                            int other);
+  bool sweep_equivalence_candidates (Sweeper &sweeper, int lit, int other);
   unsigned reschedule_previously_remaining (Sweeper &sweeper);
   unsigned incomplete_variables ();
   void mark_incomplete (Sweeper &sweeper);
   unsigned schedule_sweeping (Sweeper &sweeper);
   void unschedule_sweeping (Sweeper &sweeper, unsigned swept,
-                                   unsigned scheduled);
+                            unsigned scheduled);
   bool sweep ();
   void sweep_dense_propagate (Sweeper &sweeper);
   void sweep_sparse_mode ();
@@ -1266,8 +1275,8 @@ struct Internal {
   bool apply_factoring (Factoring &factoring, Quotient *q);
   void update_factor_candidate (Factoring &, int);
   void schedule_factorization (Factoring &);
-  bool run_factorization (int64_t limit);
-  bool factor ();
+  bool run_factorization (int64_t limit, bool);
+  bool factor (bool);
   int get_new_extension_variable ();
   Clause *new_factor_clause ();
 

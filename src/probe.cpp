@@ -422,7 +422,8 @@ bool Internal::probe_propagate () {
       const int lit = -trail[propagated++];
       LOG ("probe propagating %d over large clauses", -lit);
       Watches &ws = watches (lit);
-      ticks += 1 + cache_lines (ws.size (), sizeof (sizeof (const_watch_iterator *)));
+      ticks += 1 + cache_lines (ws.size (),
+                                sizeof (sizeof (const_watch_iterator *)));
       size_t i = 0, j = 0;
       while (i != ws.size ()) {
         const Watch w = ws[j++] = ws[i++];
@@ -460,7 +461,7 @@ bool Internal::probe_propagate () {
           if (v > 0)
             ws[j - 1].blit = r;
           else if (!v) {
-        ticks++;
+            ticks++;
             LOG (w.clause, "unwatch %d in", r);
             *k = lit;
             lits[0] = other;
@@ -468,7 +469,7 @@ bool Internal::probe_propagate () {
             watch_literal (r, lit, w.clause);
             j--;
           } else if (!u) {
-        ticks++;
+            ticks++;
             if (level == 1) {
               lits[0] = other, lits[1] = lit;
               assert (lrat_chain.empty ());
@@ -476,7 +477,7 @@ bool Internal::probe_propagate () {
               int dom = hyper_binary_resolve (w.clause);
               probe_assign (other, dom);
             } else {
-        ticks++;
+              ticks++;
               assert (lrat_chain.empty ());
               assert (!probe_reason);
               probe_reason = w.clause;
@@ -635,7 +636,6 @@ void Internal::generate_probes () {
 
   int64_t &ticks = stats.ticks.probe;
 
-
   // First determine all the literals which occur in binary clauses. It is
   // way faster to go over the clauses once, instead of walking the watch
   // lists for each literal.
@@ -644,7 +644,7 @@ void Internal::generate_probes () {
   ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
   for (const auto &c : clauses) {
     int a, b;
-    ticks ++;
+    ticks++;
     if (!is_binary_clause (c, a, b))
       continue;
     noccs (a)++;
@@ -794,7 +794,7 @@ bool Internal::probe () {
     return false;
 
   SET_EFFORT_LIMIT (limit, probe, true);
-  
+
   START_SIMPLIFIER (probe, PROBE);
   stats.probingrounds++;
 
@@ -931,7 +931,7 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
   const int before_extended = stats.variables_extension;
 
   // schedule of inprobing techniques.
-  // 
+  //
   {
     mark_duplicated_binary_clauses_as_garbage ();
     decompose ();
@@ -942,11 +942,11 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
 
     if (extract_gates ())
       decompose ();
-    if (sweep ())   // full occurrence list
-      decompose (); // ... and (ELS) afterwards.
-    (void) vivify ();      // resets watches
-    transred ();    // builds big.
-    factor ();      // resets watches, partial occurrence list
+    if (sweep ())     // full occurrence list
+      decompose ();   // ... and (ELS) afterwards.
+    (void) vivify (); // resets watches
+    transred ();      // builds big.
+    factor (false);   // resets watches, partial occurrence list
   }
 
   if (external_prop) {
@@ -973,7 +973,8 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
     PHASE ("probe-phase", stats.inprobingphases,
            "could not remove any active variable");
 
-  const int64_t delta = 25 * opts.inprobeint * log10 (stats.inprobingphases + 9);
+  const int64_t delta =
+      25 * opts.inprobeint * log10 (stats.inprobingphases + 9);
   lim.inprobe = stats.conflicts + delta;
 
   PHASE ("probe-phase", stats.inprobingphases,

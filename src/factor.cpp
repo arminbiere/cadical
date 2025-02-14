@@ -38,9 +38,12 @@ void Internal::factor_mode () {
   // push binary clauses on the occurrence stack.
   for (const auto &c : clauses) {
     ticks++;
-    if (c->garbage) continue;
-    if (c->redundant && c->size > 2) continue;
-    if (c->size > size_limit) continue;
+    if (c->garbage)
+      continue;
+    if (c->redundant && c->size > 2)
+      continue;
+    if (c->size > size_limit)
+      continue;
     if (c->size == 2) {
       const int lit = c->literals[0];
       const int other = c->literals[1];
@@ -55,7 +58,8 @@ void Internal::factor_mode () {
       largecount[vlit (lit)]++;
     }
   }
-  if (size_limit == 2) return;
+  if (size_limit == 2)
+    return;
 
   // iterate counts of larger clauses rounds often
   const unsigned rounds = opts.factorcandrounds;
@@ -106,12 +110,13 @@ void Internal::reset_factor_mode () {
   connect_watches ();
 }
 
-Factoring::Factoring (Internal *i, int64_t l)
+Factoring::Factoring (Internal *i, int64_t l, bool preprocess)
     : internal (i), limit (l), schedule (i) {
   const unsigned max_var = internal->max_var;
   const unsigned max_lit = 2 * (max_var + 1);
   initial = max_var;
-  bound = internal->lim.elimbound;
+  bound =
+      preprocess ? internal->opts.fastelimbound : internal->lim.elimbound;
   enlarge_zero (count, max_lit);
   quotients.first = quotients.last = 0;
 }
@@ -121,7 +126,7 @@ Factoring::~Factoring () {
   assert (nounted.empty ());
   assert (flauses.empty ());
   internal->release_quotients (*this);
-  schedule.erase ();  // actually not necessary
+  schedule.erase (); // actually not necessary
 }
 
 double Internal::tied_next_factor_score (int lit) {
@@ -161,7 +166,6 @@ Quotient *Internal::new_quotient (Factoring &factoring, int factor) {
   LOG ("new quotient[%zu] with factor %d", res->id, factor);
   return res;
 }
-
 
 void Internal::release_quotients (Factoring &factoring) {
   for (Quotient *q = factoring.quotients.first, *next; q; q = next) {
@@ -208,7 +212,7 @@ void Internal::clear_flauses (vector<Clause *> &flauses) {
 }
 
 Quotient *Internal::best_quotient (Factoring &factoring,
-                                size_t *best_reduction_ptr) {
+                                   size_t *best_reduction_ptr) {
   size_t factors = 1, best_reduction = 0;
   Quotient *best = 0;
   for (Quotient *q = factoring.quotients.first; q; q = q->next) {
@@ -243,8 +247,7 @@ Quotient *Internal::best_quotient (Factoring &factoring,
   return best;
 }
 
-int Internal::next_factor (Factoring &factoring,
-                           unsigned *next_count_ptr) {
+int Internal::next_factor (Factoring &factoring, unsigned *next_count_ptr) {
   Quotient *last_quotient = factoring.quotients.last;
   assert (last_quotient);
   vector<Clause *> &last_clauses = last_quotient->qlauses;
@@ -283,10 +286,13 @@ int Internal::next_factor (Factoring &factoring,
       assert (nounted.empty ());
       ticks += 1 + cache_lines (occs (min_lit).size (), sizeof (Clause *));
       for (auto d : occs (min_lit)) {
-        if (c == d) continue;
+        if (c == d)
+          continue;
         ticks++;
-        if (d->swept) continue;
-        if (d->size != c_size) continue;
+        if (d->swept)
+          continue;
+        if (d->size != c_size)
+          continue;
         int next = 0;
         for (const auto &other : *d) {
           if (getfact (other, QUOTIENT))
@@ -368,8 +374,7 @@ int Internal::next_factor (Factoring &factoring,
       LOG ("best score %g of next factor %d", next_score, next);
     } else {
       assert (ties == 1);
-      LOG ("single next factor %d with count %u", next,
-           next_count);
+      LOG ("single next factor %d with count %u", next, next_count);
     }
   }
   for (const auto &lit : counted)
@@ -380,10 +385,8 @@ int Internal::next_factor (Factoring &factoring,
   return next;
 }
 
-
-
 void Internal::factorize_next (Factoring &factoring, int next,
-                              unsigned expected_next_count) {
+                               unsigned expected_next_count) {
   Quotient *last_quotient = factoring.quotients.last;
   Quotient *next_quotient = new_quotient (factoring, next);
 
@@ -439,7 +442,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
         }
         LOG (c, "matched");
         LOG (d, "keeping");
-        
+
         next_clauses.push_back (d);
         matches.push_back (i);
         flauses.push_back (d);
@@ -490,8 +493,8 @@ void Internal::flush_unmatched_clauses (Quotient *q) {
     prev_clauses[i] = c;
     i++;
   }
-  LOG ("flushing %zu clauses of quotient[%zu]",
-       prev_clauses.size () - n, prev->id);
+  LOG ("flushing %zu clauses of quotient[%zu]", prev_clauses.size () - n,
+       prev->id);
   if (!prev_is_first)
     prev_matches.resize (n);
   prev_clauses.resize (n);
@@ -505,18 +508,22 @@ void Internal::add_self_subsuming_factor (Quotient *q, Quotient *p) {
   const int factor = q->factor;
   const int not_factor = p->factor;
   assert (-factor == not_factor);
-  LOG ("adding self subsuming factor because blocked clause is a tautology");
+  LOG (
+      "adding self subsuming factor because blocked clause is a tautology");
   for (auto c : q->qlauses) {
     for (const auto &lit : *c) {
-      if (lit == factor) continue;
+      if (lit == factor)
+        continue;
       clause.push_back (lit);
     }
     if (lrat) {
       for (auto d : p->qlauses) {
         bool match = true;
         for (const auto &lit : *d) {
-          if (lit == not_factor) continue;
-          if (std::find (clause.begin (), clause.end (), lit) == clause.end ()) {
+          if (lit == not_factor)
+            continue;
+          if (std::find (clause.begin (), clause.end (), lit) ==
+              clause.end ()) {
             match = false;
             break;
           }
@@ -560,8 +567,8 @@ bool Internal::self_subsuming_factor (Quotient *q) {
     const int factor = p->factor;
     Flags &f = flags (factor);
     if (f.seen) {
-      assert (std::find (analyzed.begin (), analyzed.end (), -factor)
-        != analyzed.end ());
+      assert (std::find (analyzed.begin (), analyzed.end (), -factor) !=
+              analyzed.end ());
       found = true;
       x = p;
       for (Quotient *r = q; r; r = r->prev) {
@@ -601,7 +608,8 @@ void Internal::add_factored_divider (Quotient *q, int fresh) {
 // the binaries above, but negated. This is only added to the proof, to
 // make checking easier.
 void Internal::blocked_clause (Quotient *q, int not_fresh) {
-  if (!proof) return;
+  if (!proof)
+    return;
   int64_t new_id = ++clause_id;
   q->bid = new_id;
   assert (clause.empty ());
@@ -667,9 +675,10 @@ void Internal::eagerly_remove_from_occurences (Clause *c) {
     auto end = occ.end ();
     while (p != end) {
       *q = *p++;
-      if (*q != c) q++;
+      if (*q != c)
+        q++;
     }
-    assert (q+1 == p);
+    assert (q + 1 == p);
     occ.resize (q - begin);
   }
 }
@@ -753,12 +762,12 @@ void Internal::schedule_factorization (Factoring &factoring) {
 #ifndef QUIET
   size_t size_cands = factoring.schedule.size ();
   VERBOSE (2, "scheduled %zu factorization candidate literals %.0f %%",
-      size_cands, percent (size_cands, max_var));
+           size_cands, percent (size_cands, max_var));
 #endif
 }
 
-bool Internal::run_factorization (int64_t limit) {
-  Factoring factoring = Factoring (this, limit);
+bool Internal::run_factorization (int64_t limit, bool preprocess) {
+  Factoring factoring = Factoring (this, limit, preprocess);
   schedule_factorization (factoring);
   bool done = false;
 #ifndef QUIET
@@ -814,7 +823,7 @@ bool Internal::run_factorization (int64_t limit) {
     }
     release_quotients (factoring);
   }
-  
+
   // since we cannot remove elements from the heap we check wether the
   // first element in the heap has occurences
   bool completed = factoring.schedule.empty ();
@@ -836,14 +845,15 @@ int Internal::get_new_extension_variable () {
   const int new_internal = external->internalize (new_external, true);
   // one sideeffect of internalize is enlarging the internal datastructures
   // which can initialize the watches (wtab)
-  if (watching ()) reset_watches ();
+  if (watching ())
+    reset_watches ();
   // it does not enlarge otab, however, so we do this manually
   init_occs ();
   assert (vlit (new_internal));
   return new_internal;
 }
 
-bool Internal::factor () {
+bool Internal::factor (bool preprocess) {
   if (unsat)
     return false;
   if (terminated_asynchronously ())
@@ -853,9 +863,10 @@ bool Internal::factor () {
   assert (stats.mark.factor || clauses.empty ());
   // update last.factor.marked and flags.factor to trigger factor
   if (last.factor.marked >= stats.mark.factor) {
-    VERBOSE (3, "factorization skipped as no literals have been"
-        "marked to be added (%" PRIu64 " < %" PRIu64 ")",
-        last.factor.marked, stats.mark.factor);
+    VERBOSE (3,
+             "factorization skipped as no literals have been"
+             "marked to be added (%" PRIu64 " < %" PRIu64 ")",
+             last.factor.marked, stats.mark.factor);
     return false;
   }
   assert (!level);
@@ -877,7 +888,7 @@ bool Internal::factor () {
 #endif
 
   factor_mode ();
-  bool completed = run_factorization (limit);
+  bool completed = run_factorization (limit, preprocess);
   reset_factor_mode ();
 
   propagated = 0;
@@ -895,10 +906,10 @@ bool Internal::factor () {
   VERBOSE (2, "used %f million factorization ticks", delta.ticks * 1e-6);
   phase ("factorization", stats.factor,
          "introduced %" PRId64 " extension variables %.0f%%",
-          delta.variables, percent (delta.variables, before.variables));
+         delta.variables, percent (delta.variables, before.variables));
   phase ("factorization", stats.factor,
-          "removed %" PRId64 " irredundant clauses %.0f%%", delta.clauses,
-           percent (delta.clauses, before.clauses));
+         "removed %" PRId64 " irredundant clauses %.0f%%", delta.clauses,
+         percent (delta.clauses, before.clauses));
 #endif
 
   if (completed)
@@ -907,4 +918,4 @@ bool Internal::factor () {
   return true;
 }
 
-}
+} // namespace CaDiCaL

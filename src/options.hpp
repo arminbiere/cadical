@@ -142,6 +142,7 @@ OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \
 OPTION( minimizeticks,     1,  0,  1,0,0,1, "increment ticks in minimization") \
 OPTION( otfs,              1,  0,  1,0,0,1, "on-the-fly self subsumption") \
 OPTION( phase,             1,  0,  1,0,0,1, "initial phase") \
+OPTION( preprocessinit,  2e6,  0,2e9,0,1,1, "initial preprocessing base limit" ) \
 OPTION( preprocesslight,   1,  0,  1,0,1,1, "lightweight preprocessing" ) \
 OPTION( probe,             1,  0,  1,0,1,1, "failed literal probing" ) \
 OPTION( probeeffort,       8,  1,1e5,1,0,1, "relative efficiency per mille") \
