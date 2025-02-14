@@ -2424,6 +2424,13 @@ int64_t Trace::option_high_value (const char *name, int64_t def, int64_t lo,
 
 void Trace::generate_options (Random &random, Size size) {
 
+#ifdef LOGGING
+  if (mobical.add_set_log_to_true)
+    push_back (new SetCall ("log", 1));
+#else
+  if (mobical.add_set_log_to_true)
+    mobical.warning ("ignoring log option");
+#endif
   // In 10% of the cases do not change any options.
   //
   if (random.generate_double () < 0.1)
@@ -2540,13 +2547,6 @@ void Trace::generate_options (Random &random, Size size) {
     push_back (new SetCall (logsort_option->name, should_logsort));
 #endif
   }
-#ifdef LOGGING
-  if (mobical.add_set_log_to_true)
-    push_back (new SetCall ("log", 1));
-#else
-  if (mobical.add_set_log_to_true)
-    mobical.warning ("ignoring log option");
-#endif
 }
 
 /*------------------------------------------------------------------------*/

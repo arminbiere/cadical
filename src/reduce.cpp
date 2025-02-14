@@ -207,8 +207,8 @@ bool Internal::propagate_out_of_order_units () {
 // This is however only the theoretical target and second chance for
 // tier2 clauses and very long lifespan of tier1 clauses (through used flag)
 // make this behave differently.
-// reduceinit shifts the curve to the right, increasing the number of clauses
-// in the solver. This impact will decrease over time.
+// reduceinit shifts the curve to the right, increasing the number of
+// clauses in the solver. This impact will decrease over time.
 
 void Internal::reduce () {
   START (reduce);
@@ -234,20 +234,24 @@ void Internal::reduce () {
   {
     int64_t delta = opts.reduceint;
     double factor = stats.reductions + 1;
-    if (opts.reduceopt == 0)  // adjust delta such this is the same as reduceopt=1
+    if (opts.reduceopt ==
+        0) // adjust delta such this is the same as reduceopt=1
       delta = delta * delta / 2;
     else if (opts.reduceopt == 1) {
-      // this is the same as reduceopt=0 if reduceint = sqrt (reduceint) = 17
+      // this is the same as reduceopt=0 if reduceint = sqrt (reduceint) =
+      // 17
       factor = sqrt ((double) stats.conflicts);
     } else if (opts.reduceopt == 2)
       // log scaling instead
       factor = log ((double) stats.conflicts);
-    if (factor < 1) factor = 1;
+    if (factor < 1)
+      factor = 1;
     delta = delta * factor;
     if (irredundant () > 1e5) {
       delta *= log (irredundant () / 1e4) / log (10);
     }
-    if (delta < 1) delta = 1;
+    if (delta < 1)
+      delta = 1;
     lim.reduce = stats.conflicts + delta;
     PHASE ("reduce", stats.reductions,
            "new reduce limit %" PRId64 " after %" PRId64 " conflicts",
