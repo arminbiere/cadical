@@ -903,6 +903,10 @@ int Internal::solve (bool preprocess_only) {
     if (!preprocess_only)
       init_search_limits ();
   }
+  if (!preprocess_only) {
+    if (!res && !level)
+      res = local_search ();
+  }
   if (!res && !level)
     res = preprocess ();
   if (!preprocess_only) {
