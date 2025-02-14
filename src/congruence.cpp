@@ -1895,85 +1895,6 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
   return true;
 }
 
-bool Closure::merge_literals (int lit, int other, bool learn_clauses) {
-  assert (!internal->unsat);
-  LOG ("merging literals %d and %d no lrat", lit, other);
-  int repr_lit = find_representative (lit);
-  int repr_other = find_representative (other);
-
-  if (repr_lit == repr_other) {
-    LOG ("already merged %d and %d", lit, other);
-    return false;
-  }
-  //  LOG ("merging external literals %d and %d\n", internal->externalize
-  //  (lit), internal->externalize (other)); LOG ("merging kissat literals
-  //  %d and %d\n", internal->vlit(internal->externalize (lit)) - 2,
-  //  internal->vlit(internal->externalize (other)) - 2);
-  const int val_lit = internal->val (lit);
-  const int val_other = internal->val (other);
-
-  if (val_lit) {
-    if (val_lit == val_other) {
-      LOG ("not merging lits %d and %d assigned to same value", lit, other);
-      return false;
-    }
-    if (val_lit == -val_other) {
-      if (internal->lrat)
-        lrat_chain.push_back (internal->unit_id (lit)),
-            lrat_chain.push_back (internal->unit_id (other));
-      LOG ("merging lits %d and %d assigned to inconsistent value", lit,
-           other);
-      internal->learn_empty_clause ();
-      return false;
-    }
-
-    assert (!val_other);
-    LOG ("merging assigned %d and unassigned %d", lit, other);
-    const int unit = (val_lit < 0) ? -other : other;
-    if (internal->lrat)
-      lrat_chain.push_back (internal->unit_id (lit));
-    learn_congruence_unit (unit);
-    return false;
-  }
-
-  if (!val_lit && val_other) {
-    LOG ("merging assigned %d and unassigned %d", lit, other);
-    const int unit = (val_other < 0) ? -lit : lit;
-    if (internal->lrat)
-      lrat_chain.push_back (internal->unit_id (other));
-    learn_congruence_unit (unit);
-    return false;
-  }
-
-  int smaller = repr_lit;
-  int larger = repr_other;
-
-  if (abs (smaller) > abs (larger))
-    swap (smaller, larger);
-
-  assert (find_representative (smaller) == smaller);
-  assert (find_representative (larger) == larger);
-
-  if (repr_lit == -repr_other) {
-    LOG ("merging clashing %d and %d", lit, other);
-    internal->assign_unit (smaller);
-    internal->learn_empty_clause ();
-    return false;
-  }
-
-  LOG ("merging %d and %d", lit, other);
-  if (learn_clauses) {
-    add_binary_clause (-lit, other);
-    add_binary_clause (lit, -other);
-  }
-  LOG ("updating %d -> %d", larger, smaller);
-  representative (larger) = smaller;
-  representative (-larger) = -smaller;
-  schedule_literal (larger);
-  ++internal->stats.congruence.congruent;
-  return true;
-}
-
 /*------------------------------------------------------------------------*/
 GOccs &Closure::goccs (int lit) { return gtab[internal->vlit (lit)]; }
 
@@ -5417,7 +5338,7 @@ void Closure::simplify_ite_gate (Gate *g) {
       if (internal->lrat)
         simplify_ite_gate_then_else_set (g, extra_reasons,
                                          extra_reasons_back, 0, 2);
-      if (merge_literals (lhs, -cond)) {
+      if (merge_literals_lrat (lhs, -cond, extra_reasons, extra_reasons_back)) {
         ++internal->stats.congruence.unary_ites;
         ++internal->stats.congruence.unaries;
       }

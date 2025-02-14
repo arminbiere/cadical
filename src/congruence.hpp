@@ -352,7 +352,6 @@ struct Closure {
   bool merge_literals_lrat (int lit, int other,
                             const std::vector<LRAT_ID> & = {},
                             const std::vector<LRAT_ID> & = {});
-  bool merge_literals (int lit, int other, bool learn_clauses = true);
 
   // proof production
   vector<LitClausePair> lrat_chain_and_gate;
