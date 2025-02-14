@@ -102,7 +102,7 @@ void Logger::log (Internal *internal, const Gate *g, const char *fmt, ...) {
     printf ("%s gate[%" PRIu64 "] (arity: %ld) %d%s := %s",
             g->garbage ? " garbage" : "", g->id, g->arity (), g->lhs,
             (g->lhs && -internal->max_var <= g->lhs && internal->max_var >= g->lhs)
-            ? (internal->val (g->lhs) > 0 ? "=1" : "=-1")
+            ? (internal->val (g->lhs) > 0 ? "=1" :  (internal->val (g->lhs) < 0 ? "=-1" : ""))
             : "",
             string_of_gate (g->tag).c_str ());
     for (const auto &lit : g->rhs) {

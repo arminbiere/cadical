@@ -4688,13 +4688,6 @@ void Closure::rewrite_ite_gate_update_lrat_reasons (Gate *g, int src,
     if (litId.current_lit == -src)
       litId.current_lit = -dst;
   }
-  if ((dst > 0) != (src < 0)) {
-    if (dst == g->rhs[1]) {
-      swap (g->pos_lhs_ids[0].clause, g->pos_lhs_ids[1].clause);
-    } else if (dst == g->rhs[2]) {
-      swap (g->pos_lhs_ids[2].clause, g->pos_lhs_ids[3].clause);
-    }
-  }
   check_ite_lrat_reasons (g, false);
 }
 
@@ -4781,7 +4774,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
   const size_t other_idx1 = then_merge ? 2 : 0;
   const size_t other_idx2 = other_idx1 + 1;
 
-  if (g->lhs == -g->rhs[0]) { // special case: rewriting actually already gives the unit
+  if (g->lhs == -g->rhs[0] || g->lhs == g->rhs[2]) { // special case: rewriting actually already gives the unit
     // we only produce the unit.
     push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx1].clause, Rewrite (), reasons_unit, true, Rewrite (), g->lhs);
 
@@ -4831,7 +4824,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
   assert (!g->indexed || git != end (table));
   assert (*git == g);
   if (internal->val (cond) &&
-      (internal->val (then_lit) || internal->val (else_lit))) { // propagation has set all value anyway
+      (internal->val (then_lit) && internal->val (else_lit))) { // propagation has set all value anyway
     LOG (g, "all values are set");
     assert (internal->val (g->lhs));
     garbage = true;
@@ -4882,10 +4875,13 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       check_ite_implied (g->lhs, cond, then_lit, else_lit);
       std::vector<LRAT_ID> reasons_implication, reasons_back, reasons_unit;
       LOG ("%d = %d ?", g->lhs, -g->rhs[0]);
-      if (internal->lrat)
-        produce_ite_merge_lhs_then_else_reasons (
-            g, reasons_implication, reasons_back, reasons_unit, false);
-      if (g->lhs == -g->rhs[0]) { // it is too hard to produce LRAT chains in this case
+      if (g->lhs == -g->rhs[0] ||
+          g->lhs == g->rhs[2]) { // it is too hard to produce LRAT chains in
+                                 // this case
+        if (internal->lrat)
+          produce_ite_merge_lhs_then_else_reasons (
+              g, reasons_implication, reasons_back, reasons_unit, false);
+
         if (internal->lrat)
           lrat_chain = reasons_unit;
         learn_congruence_unit (-cond);
@@ -5344,7 +5340,7 @@ void Closure::simplify_ite_gate (Gate *g) {
   const signed char v_else = internal->val (else_lit);
   const signed char v_then = internal->val (then_lit);
   std::vector<LRAT_ID> reasons_lrat, reasons_back_lrat;
-  if (v_cond && (v_else || v_then)) { // propagation has set all value anyway
+  if (v_cond && v_else && v_then) { // propagation has set all value anyway
     LOG (g, "all values are set");
     assert (internal->val (g->lhs));
     garbage = true;
