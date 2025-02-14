@@ -5043,8 +5043,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
     }
   }
 
-  check_ite_lrat_reasons (g, false);
   if (!garbage) {
+    check_ite_lrat_reasons (g, false);
     assert (g->lhs != -rhs[1]);
     assert (g->lhs != -rhs[2]);
     if (shrink) {
