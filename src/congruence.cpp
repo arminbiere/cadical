@@ -4766,54 +4766,89 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
     Gate *g, std::vector<LRAT_ID> &reasons_implication,
     std::vector<LRAT_ID> &reasons_back, std::vector<LRAT_ID> &reasons_unit,
     bool then_merge) {
-  assert (internal->lrat);
-  assert (g->pos_lhs_ids.size () == 4);
 
   const size_t idx1 = then_merge ? 0 : 2;
   const size_t idx2 = idx1 + 1;
   const size_t other_idx1 = then_merge ? 2 : 0;
   const size_t other_idx2 = other_idx1 + 1;
-
-  if (g->lhs == -g->rhs[0]) { // special case: rewriting actually already gives the unit
-    // we only produce the unit.
-    push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx1].clause, Rewrite (), reasons_unit, true, Rewrite (), g->lhs);
-
-    reasons_implication = reasons_unit;
-
-    g->pos_lhs_ids[other_idx2].clause = produce_rewritten_clause_lrat(g->pos_lhs_ids[other_idx2].clause, g->rhs[0]);
-    assert (g->pos_lhs_ids[other_idx2].clause);
-    reasons_implication.push_back (g->pos_lhs_ids[other_idx2].clause->id);
-
+  if (!internal->proof)
     return;
-  }
+  if (internal->lrat) {
+    assert (internal->lrat);
+    assert (g->pos_lhs_ids.size () == 4);
 
-  if (g->lhs == g->rhs[2]) {
-    LOG (g->pos_lhs_ids[other_idx1].clause, "%d ->", g->pos_lhs_ids[other_idx1].current_lit);
-    g->pos_lhs_ids[other_idx1].clause = produce_rewritten_clause_lrat (g->pos_lhs_ids[other_idx1].clause, g->lhs);
-    LOG (g->pos_lhs_ids[other_idx2].clause, "%d ->", g->pos_lhs_ids[other_idx2].current_lit);
-    g->pos_lhs_ids[other_idx2].clause = produce_rewritten_clause_lrat (g->pos_lhs_ids[other_idx2].clause, g->lhs);
-    reasons_unit.push_back (g->pos_lhs_ids[other_idx1].clause->id);
-    reasons_unit.push_back (g->pos_lhs_ids[other_idx2].clause->id);
-    return;
-  }
-  if (g->lhs == g->rhs[1]) {
-    LOG (g->pos_lhs_ids[idx1].clause, "%d ->", g->pos_lhs_ids[idx1].current_lit);
-    g->pos_lhs_ids[idx1].clause = produce_rewritten_clause_lrat (g->pos_lhs_ids[idx1].clause, g->lhs);
-    LOG (g->pos_lhs_ids[idx2].clause, "%d ->", g->pos_lhs_ids[idx2].current_lit);
-    g->pos_lhs_ids[idx2].clause = produce_rewritten_clause_lrat (g->pos_lhs_ids[idx2].clause, g->lhs);
+    if (g->lhs == -g->rhs[0]) { // special case: rewriting actually already
+                                // gives the unit
+      // we only produce the unit.
+      push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx1].clause,
+                                       Rewrite (), reasons_unit, true,
+                                       Rewrite (), g->lhs);
+
+      reasons_implication = reasons_unit;
+
+      g->pos_lhs_ids[other_idx2].clause = produce_rewritten_clause_lrat (
+          g->pos_lhs_ids[other_idx2].clause, g->rhs[0]);
+      assert (g->pos_lhs_ids[other_idx2].clause);
+      reasons_implication.push_back (g->pos_lhs_ids[other_idx2].clause->id);
+
+      return;
+    }
+
+    if (g->lhs == g->rhs[2]) {
+      LOG (g->pos_lhs_ids[other_idx1].clause, "%d ->",
+           g->pos_lhs_ids[other_idx1].current_lit);
+      g->pos_lhs_ids[other_idx1].clause = produce_rewritten_clause_lrat (
+          g->pos_lhs_ids[other_idx1].clause, g->lhs);
+      LOG (g->pos_lhs_ids[other_idx2].clause, "%d ->",
+           g->pos_lhs_ids[other_idx2].current_lit);
+      g->pos_lhs_ids[other_idx2].clause = produce_rewritten_clause_lrat (
+          g->pos_lhs_ids[other_idx2].clause, g->lhs);
+      reasons_unit.push_back (g->pos_lhs_ids[other_idx1].clause->id);
+      reasons_unit.push_back (g->pos_lhs_ids[other_idx2].clause->id);
+      return;
+    }
+    if (g->lhs == g->rhs[1]) {
+      LOG (g->pos_lhs_ids[idx1].clause, "%d ->",
+           g->pos_lhs_ids[idx1].current_lit);
+      g->pos_lhs_ids[idx1].clause = produce_rewritten_clause_lrat (
+          g->pos_lhs_ids[idx1].clause, g->lhs);
+      LOG (g->pos_lhs_ids[idx2].clause, "%d ->",
+           g->pos_lhs_ids[idx2].current_lit);
+      g->pos_lhs_ids[idx2].clause = produce_rewritten_clause_lrat (
+          g->pos_lhs_ids[idx2].clause, g->lhs);
+      reasons_unit.push_back (g->pos_lhs_ids[idx1].clause->id);
+      reasons_unit.push_back (g->pos_lhs_ids[idx2].clause->id);
+      return;
+    }
+    produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs);
+    assert (g->pos_lhs_ids.size () == 4);
+    reasons_implication.push_back (g->pos_lhs_ids[idx1].clause->id);
+    reasons_implication.push_back (g->pos_lhs_ids[other_idx1].clause->id);
+    reasons_back.push_back (g->pos_lhs_ids[idx2].clause->id);
+    reasons_back.push_back (g->pos_lhs_ids[other_idx2].clause->id);
+
     reasons_unit.push_back (g->pos_lhs_ids[idx1].clause->id);
     reasons_unit.push_back (g->pos_lhs_ids[idx2].clause->id);
-    return;
+  } else {
+    LOG ("learn extra clauses XXXXXXXXXXXXXXXXXXXXXXXXX");
+    const int lhs = g->lhs;
+    const int cond = g->rhs[0];
+    if (then_merge) {
+      unsimplified.push_back (-cond);
+      unsimplified.push_back (lhs);
+      simplify_and_add_to_proof_chain (unsimplified);
+      unsimplified.push_back (-cond);
+      unsimplified.push_back (-lhs);
+      simplify_and_add_to_proof_chain (unsimplified);
+    } else {
+      unsimplified.push_back (cond);
+      unsimplified.push_back (-lhs);
+      simplify_and_add_to_proof_chain (unsimplified);
+      unsimplified.push_back (cond);
+      unsimplified.push_back (lhs);
+      simplify_and_add_to_proof_chain (unsimplified);
+    }
   }
-  produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs);
-  assert (g->pos_lhs_ids.size () == 4);
-  reasons_implication.push_back (g->pos_lhs_ids[idx1].clause->id);
-  reasons_implication.push_back (g->pos_lhs_ids[other_idx1].clause->id);
-  reasons_back.push_back (g->pos_lhs_ids[idx2].clause->id);
-  reasons_back.push_back (g->pos_lhs_ids[other_idx2].clause->id);
-
-  reasons_unit.push_back (g->pos_lhs_ids[idx1].clause->id);
-  reasons_unit.push_back (g->pos_lhs_ids[idx2].clause->id);
 }
 
 void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
@@ -4891,14 +4926,14 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
     }
   } else if (src == then_lit) {
     if (not_dst == g->lhs) { // TODO not in kissat
+      rhs[1] = dst;
       check_ite_implied (g->lhs, cond, then_lit, else_lit);
       std::vector<LRAT_ID> reasons_implication, reasons_back, reasons_unit;
       LOG ("%d = %d ?", g->lhs, -g->rhs[0]);
       if (g->lhs == -g->rhs[0]) { // it is too hard to produce LRAT chains
                                   // in this case
-        if (internal->lrat)
-          produce_ite_merge_lhs_then_else_reasons (
-              g, reasons_implication, reasons_back, reasons_unit, false);
+        produce_ite_merge_lhs_then_else_reasons (
+            g, reasons_implication, reasons_back, reasons_unit, false);
 
         if (internal->lrat)
           lrat_chain = reasons_unit;
@@ -4906,7 +4941,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         if (internal->lrat)
           lrat_chain = reasons_implication;
         learn_congruence_unit (-g->lhs);
-      } else if (g->lhs == g->rhs[2]) {
+	delete_proof_chain ();
+      } else if (false && g->lhs == -else_lit) {
         if (internal->lrat)
           produce_ite_merge_lhs_then_else_reasons (
               g, reasons_implication, reasons_back, reasons_unit, false);
@@ -4914,10 +4950,10 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         if (internal->lrat)
           lrat_chain = reasons_unit;
         learn_congruence_unit (-cond);
+	delete_proof_chain ();
       } else {
-        if (internal->lrat)
-          produce_ite_merge_lhs_then_else_reasons (
-              g, reasons_implication, reasons_back, reasons_unit, true);
+        produce_ite_merge_lhs_then_else_reasons (
+            g, reasons_implication, reasons_back, reasons_unit, true);
         if (merge_literals_lrat (g->lhs, else_lit, reasons_implication,
                                  reasons_back)) {
           ++internal->stats.congruence.unaries;
@@ -4928,6 +4964,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
             lrat_chain = reasons_unit;
           learn_congruence_unit (-cond);
         }
+	delete_proof_chain ();
       }
       garbage = true;
     } else if (dst == cond) {
@@ -4976,9 +5013,9 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
   } else {
     assert (src == else_lit);
     if (not_dst == g->lhs) { // TODO not in kissat
+      rhs[2] = dst;
       std::vector<LRAT_ID> reasons_implication, reasons_back, reasons_unit;
-      if (internal->lrat)
-	produce_ite_merge_lhs_then_else_reasons (g, reasons_implication, reasons_back, reasons_unit, false);
+      produce_ite_merge_lhs_then_else_reasons (g, reasons_implication, reasons_back, reasons_unit, false);
       if (g->lhs == -g->rhs[0]) { // Too hard to produce LRAT
         if (internal->lrat)
           lrat_chain = reasons_unit;
@@ -4986,14 +5023,14 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         if (internal->lrat)
           lrat_chain = reasons_implication;
         learn_congruence_unit (-g->lhs);
-      } else if (g->lhs == g->rhs[1]) {
-        if (internal->lrat)
-          produce_ite_merge_lhs_then_else_reasons (
+	delete_proof_chain ();
+      } else if (false && g->lhs == -then_lit) {
+        produce_ite_merge_lhs_then_else_reasons (
               g, reasons_implication, reasons_back, reasons_unit, false);
-
         if (internal->lrat)
           lrat_chain = reasons_unit;
         learn_congruence_unit (cond);
+	delete_proof_chain ();
       } else {
         if (merge_literals_lrat (g->lhs, then_lit, reasons_implication,
                                  reasons_back)) {
