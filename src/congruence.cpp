@@ -3271,6 +3271,17 @@ bool Closure::normalize_ite_lits_gate (Gate *g) {
   return true;
 }
 
+#ifndef NDEBUG
+bool is_tautological_ite_gate (Gate *g) {
+  assert (g->tag == Gate_Type::ITE_Gate);
+  assert (g->rhs.size () == 3);
+  const int cond_lit = g->rhs[0];
+  const int then_lit = g->rhs[1];
+  const int else_lit = g->rhs[2];
+  return cond_lit == then_lit || cond_lit == else_lit;
+}
+#endif
+
 Gate *Closure::find_ite_gate (Gate *g, bool &negate_lhs) {
   negate_lhs = normalize_ite_lits_gate (g);
   LOG (g, "post normalize");
@@ -5044,7 +5055,6 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
   }
 
   if (!garbage) {
-    check_ite_lrat_reasons (g, false);
     assert (g->lhs != -rhs[1]);
     assert (g->lhs != -rhs[2]);
     if (shrink) {
@@ -5070,7 +5080,6 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
 	  std::swap (g->pos_lhs_ids[1], g->pos_lhs_ids[2]);
 	}
       }
-      check_ite_lrat_reasons(g, false);
       assert (internal->vlit (rhs[0]) < internal->vlit (rhs[1]));
       assert (!g->shrunken);
       g->shrunken = true;
@@ -5098,7 +5107,6 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
             assert (id.clause->size == 2);
           }
 #endif
-	  check_ite_lrat_reasons(g);
           assert (g->pos_lhs_ids.size () == 2 || gate_contains(g, g->lhs));
           assert (g->neg_lhs_ids.size () == 1 || gate_contains(g, g->lhs));
           assert (g->arity () == 2);
@@ -5665,7 +5673,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
     lhs = -lhs;
   g->lhs = lhs;
   check_ite_gate_implied (g);
-  check_ite_lrat_reasons (g, true);
+  check_ite_lrat_reasons (g, false); // due to merges done before during AND gate detection!
 
 
   if (h) {
@@ -5770,16 +5778,33 @@ void Closure::check_ite_lrat_reasons (Gate *g, bool normalized) {
   if (!internal->lrat)
     return;
   assert (g->rhs.size () == 3);
-  assert (g->pos_lhs_ids.size () == 4);
+  assert (is_tautological_ite_gate (g) || g->pos_lhs_ids.size () == 4);
   assert (g->neg_lhs_ids.empty ());
-  check_contained_module_rewriting (g->pos_lhs_ids[0].clause, g->rhs[1], normalized, g->lhs);
-  assert (g->pos_lhs_ids[0].current_lit == g->rhs[1]);
-  check_contained_module_rewriting (g->pos_lhs_ids[1].clause, -g->rhs[1], normalized, g->lhs);
-  assert (g->pos_lhs_ids[1].current_lit == -g->rhs[1]);
-  check_contained_module_rewriting (g->pos_lhs_ids[2].clause, g->rhs[2], normalized, g->lhs);
-  assert (g->pos_lhs_ids[2].current_lit == g->rhs[2]);
-  check_contained_module_rewriting (g->pos_lhs_ids[3].clause, -g->rhs[2], normalized, g->lhs);
-  assert (g->pos_lhs_ids[3].current_lit == -g->rhs[2]);
+  if (g->pos_lhs_ids.size () == 4) {
+    check_contained_module_rewriting (g->pos_lhs_ids[0].clause, g->rhs[1],
+                                      normalized, g->lhs);
+    assert (g->pos_lhs_ids[0].current_lit == g->rhs[1]);
+    check_contained_module_rewriting (g->pos_lhs_ids[1].clause, -g->rhs[1],
+                                      normalized, g->lhs);
+    assert (g->pos_lhs_ids[1].current_lit == -g->rhs[1]);
+    check_contained_module_rewriting (g->pos_lhs_ids[2].clause, g->rhs[2],
+                                      normalized, g->lhs);
+    assert (g->pos_lhs_ids[2].current_lit == g->rhs[2]);
+    check_contained_module_rewriting (g->pos_lhs_ids[3].clause, -g->rhs[2],
+                                      normalized, g->lhs);
+    assert (g->pos_lhs_ids[3].current_lit == -g->rhs[2]);
+  } else {
+    assert (g->pos_lhs_ids[0].current_lit == g->rhs[1] || g->pos_lhs_ids[0].current_lit == g->rhs[2]);
+    const int non_tauto_lit =
+        (g->pos_lhs_ids[0].current_lit == g->rhs[1] ? g->rhs[1]
+                                                    : g->rhs[2]);
+    assert (g->pos_lhs_ids[0].current_lit == non_tauto_lit);
+    check_contained_module_rewriting (g->pos_lhs_ids[0].clause, non_tauto_lit,
+                                      normalized, g->lhs);
+    assert (g->pos_lhs_ids[1].current_lit == -non_tauto_lit);
+    check_contained_module_rewriting (g->pos_lhs_ids[1].clause, -non_tauto_lit,
+                                      normalized, g->lhs);
+  }
 }
 
 void Closure::check_ite_gate_implied (Gate *g) {
