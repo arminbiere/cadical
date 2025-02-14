@@ -4831,7 +4831,12 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
   assert (!g->indexed || git != end (table));
   assert (*git == g);
   // this code is taken one-to-one from kissat
-  if (src == cond) {
+  if (internal->val (cond) &&
+      (internal->val (then_lit) || internal->val (else_lit))) { // propagation has set all value anyway
+    LOG (g, "all values are set");
+    assert (internal->val (g->lhs));
+    garbage = true;
+  } else if (src == cond) {
     if (dst == then_lit) {
       // then_lit ? then_lit : else_lit
       // then_lit & then_lit | !then_lit & else_lit
@@ -5335,8 +5340,14 @@ void Closure::simplify_ite_gate (Gate *g) {
   const int then_lit = rhs[1];
   const int else_lit = rhs[2];
   const signed char v_cond = internal->val (cond);
+  const signed char v_else = internal->val (else_lit);
+  const signed char v_then = internal->val (then_lit);
   std::vector<LRAT_ID> reasons_lrat, reasons_back_lrat;
-  if (v_cond > 0) {
+  if (v_cond && (v_else || v_then)) { // propagation has set all value anyway
+    LOG (g, "all values are set");
+    assert (internal->val (g->lhs));
+    garbage = true;
+  } else if (v_cond > 0) {
     if (internal->lrat)
       simplify_ite_gate_condition_set (g, reasons_lrat, reasons_back_lrat,
                                        0, 1);
@@ -5355,8 +5366,6 @@ void Closure::simplify_ite_gate (Gate *g) {
       ++internal->stats.congruence.unaries;
     }
   } else {
-    const signed char v_else = internal->val (else_lit);
-    const signed char v_then = internal->val (then_lit);
     LOG ("then %d: %d; else %d: %d", then_lit, v_then, else_lit, v_else);
     std::vector<LRAT_ID> extra_reasons, extra_reasons_back;
     assert (v_then || v_else);
