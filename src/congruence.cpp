@@ -4830,13 +4830,14 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
   const auto git = g->indexed ? table.find (g) : end (table);
   assert (!g->indexed || git != end (table));
   assert (*git == g);
-  // this code is taken one-to-one from kissat
   if (internal->val (cond) &&
       (internal->val (then_lit) || internal->val (else_lit))) { // propagation has set all value anyway
     LOG (g, "all values are set");
     assert (internal->val (g->lhs));
     garbage = true;
-  } else if (src == cond) {
+  }
+  // this code is taken one-to-one from kissat
+  else if (src == cond) {
     if (dst == then_lit) {
       // then_lit ? then_lit : else_lit
       // then_lit & then_lit | !then_lit & else_lit
