@@ -769,7 +769,8 @@ void Internal::
 int Internal::elim_round (bool &completed, bool &deleted_binary_clause,
                           bool fastel) {
 
-  assert (opts.elim);
+  assert (opts.elim || fastel);
+  assert (!fastel || opts.fastelim);
   assert (!unsat);
 
   START_SIMPLIFIER (elim, ELIM);
