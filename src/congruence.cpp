@@ -5074,11 +5074,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       if (internal->vlit (rhs[0]) >
           internal->vlit (rhs[1])) {// unlike kissat, we need to do it after negating
         std::swap (rhs[0], rhs[1]);
-	if (internal->lrat) {
-	  assert (g->pos_lhs_ids.size () == 4);
-	  std::swap (g->pos_lhs_ids[0], g->pos_lhs_ids[1]);
-	  std::swap (g->pos_lhs_ids[1], g->pos_lhs_ids[2]);
-	}
+        assert (new_tag != Gate_Type::ITE_Gate);
       }
       assert (internal->vlit (rhs[0]) < internal->vlit (rhs[1]));
       assert (!g->shrunken);
