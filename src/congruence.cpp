@@ -1483,7 +1483,7 @@ bool Closure::merge_literals_lrat (
     }
   }
 
-  if (val_lit && val_lit == -val_smaller) {
+  if (val_lit && val_lit == -val_other) {
     if (internal->lrat)
       internal->lrat_chain.push_back (
           internal->unit_id (val_smaller ? -smaller : smaller));
