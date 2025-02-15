@@ -4941,7 +4941,6 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         if (internal->lrat)
           lrat_chain = reasons_implication;
         learn_congruence_unit (-g->lhs);
-	delete_proof_chain ();
       } else if (false && g->lhs == -else_lit) {
         if (internal->lrat)
           produce_ite_merge_lhs_then_else_reasons (
@@ -4950,7 +4949,6 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         if (internal->lrat)
           lrat_chain = reasons_unit;
         learn_congruence_unit (-cond);
-	delete_proof_chain ();
       } else {
         produce_ite_merge_lhs_then_else_reasons (
             g, reasons_implication, reasons_back, reasons_unit, true);
@@ -4964,8 +4962,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
             lrat_chain = reasons_unit;
           learn_congruence_unit (-cond);
         }
-	delete_proof_chain ();
       }
+      delete_proof_chain ();
       garbage = true;
     } else if (dst == cond) {
       // cond ? cond : else_lit
@@ -4995,6 +4993,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         ++internal->stats.congruence.unaries;
         ++internal->stats.congruence.unary_ites;
       }
+      delete_proof_chain ();
       garbage = true;
     } else if (not_dst == else_lit) {
       // cond ? !else_lit : else_lit
@@ -5043,6 +5042,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
           learn_congruence_unit (cond);
         }
       }
+      delete_proof_chain ();
       garbage = true;
     } else if (dst == cond) {
       // cond ? then_lit : cond
