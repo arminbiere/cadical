@@ -1071,6 +1071,8 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
 
 bool Closure::learn_congruence_unit (int lit) {
   assert (!internal->lrat || !lrat_chain.empty ());
+  if (internal->unsat)
+    return false;
   LOG ("adding unit %d with current value %d", lit, internal->val (lit));
   ++internal->stats.congruence.units;
   const signed char val_lit = internal->val (lit);
@@ -1479,6 +1481,14 @@ bool Closure::merge_literals_lrat (
       internal->learn_empty_clause ();
       return false;
     }
+  }
+
+  if (val_lit && val_lit == -val_smaller) {
+    if (internal->lrat)
+      internal->lrat_chain.push_back (
+          internal->unit_id (val_smaller ? -smaller : smaller));
+    internal->learn_empty_clause ();
+    return false;
   }
 
   LOG ("merging %d and %d first and then the equivalences of %d and %d "
@@ -4848,10 +4858,12 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
       unsimplified.push_back (lhs);
       simplify_and_add_to_proof_chain (unsimplified);
     }
+    unsimplified.clear ();
   }
 }
 
 void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
+  assert (unsimplified.empty ());
   if (skip_ite_gate (g))
     return;
   if (!gate_contains (g, src))
@@ -5022,14 +5034,12 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         if (internal->lrat)
           lrat_chain = reasons_implication;
         learn_congruence_unit (-g->lhs);
-	delete_proof_chain ();
       } else if (false && g->lhs == -then_lit) {
         produce_ite_merge_lhs_then_else_reasons (
               g, reasons_implication, reasons_back, reasons_unit, false);
         if (internal->lrat)
           lrat_chain = reasons_unit;
         learn_congruence_unit (cond);
-	delete_proof_chain ();
       } else {
         if (merge_literals_lrat (g->lhs, then_lit, reasons_implication,
                                  reasons_back)) {
