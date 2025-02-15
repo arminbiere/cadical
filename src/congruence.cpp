@@ -1399,19 +1399,19 @@ bool Closure::merge_literals_lrat (
     int lit, int other, const std::vector<LRAT_ID> &extra_reasons_lit,
     const std::vector<LRAT_ID> &extra_reasons_ulit) {
   assert (!internal->unsat);
-  LOG ("merging literals %d and %d", lit, other);
+  LOG ("merging literals %s and %s", LOGLIT (lit), LOGLIT (other));
   // TODO: this should not update_eager but still calculate the LRAT chain
   // below!
   const int repr_lit = find_representative_and_compress (lit, false);
   const int repr_other = find_representative_and_compress (other, false);
   find_representative_and_compress (-lit, false);
   find_representative_and_compress (-other, false);
-  LOG ("merging literals %d [=%d] and %d [=%d]", lit, repr_lit, other,
+  LOG ("merging literals %s [=%d] and %s [=%d]", LOGLIT (lit), repr_lit, LOGLIT (other),
        repr_other);
   LOG (lrat_chain, "lrat chain beginning of merge");
 
   if (repr_lit == repr_other) {
-    LOG ("already merged %d and %d", lit, other);
+    LOG ("already merged %s and %s", LOGLIT (lit), LOGLIT (other));
     if (internal->lrat)
       lrat_chain.clear ();
     return false;

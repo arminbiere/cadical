@@ -75,10 +75,7 @@ void Logger::log (Internal *internal, const Clause *c, const char *fmt,
 	      printf("+");
 	    }
 	  }
-          if (val > 0)
-            printf ("=+1");
-          if (val < 0)
-            printf ("=-1");
+	  printf ("%s", loglit (internal, lit).c_str ());
 	}
       }
     }
@@ -101,9 +98,7 @@ void Logger::log (Internal *internal, const Gate *g, const char *fmt, ...) {
   if (g) {
     printf ("%s gate[%" PRIu64 "] (arity: %ld) %d%s := %s",
             g->garbage ? " garbage" : "", g->id, g->arity (), g->lhs,
-            (g->lhs && -internal->max_var <= g->lhs && internal->max_var >= g->lhs)
-            ? (internal->val (g->lhs) > 0 ? "=1" :  (internal->val (g->lhs) < 0 ? "=-1" : ""))
-            : "",
+            loglit (internal, g->lhs).c_str (),
             string_of_gate (g->tag).c_str ());
     for (const auto &lit : g->rhs) {
       printf (" %d", lit);
@@ -117,10 +112,7 @@ void Logger::log (Internal *internal, const Gate *g, const char *fmt, ...) {
           printf ("+");
         }
       }
-      if (val > 0)
-        printf ("=+1");
-      if (val < 0)
-        printf ("=-1");
+      printf ("%s", loglit (internal, lit).c_str ());
     }
   } else
     printf (" null gate");
@@ -219,6 +211,23 @@ void Logger::log (Internal *internal, const int *literals, const unsigned size,
   fflush (stdout);
 }
 
+
+string Logger::loglit (Internal *internal, int lit) {
+  std::string v = std::to_string (lit);
+  if (lit && -internal->max_var <= lit && internal->max_var >= lit) {
+    const int va = internal->val (lit);
+    if (va) {
+      v = v + "@" + std::to_string (internal->var (lit).level);
+      if (!internal->var (lit).reason)
+        v = v + "+";
+    }
+    if (va > 0)
+      v+= "=1";
+    else if (va < 0)
+      v+= "=-1";
+  }
+  return v;
+}
 } // namespace CaDiCaL
 
 #endif
