@@ -62,6 +62,8 @@ struct Logger {
 
   static void log (Internal *, const Gate *, const char *fmt, ...)
       CADICAL_ATTRIBUTE_FORMAT (3, 4);
+
+  static string loglit (Internal *, int lit);
 };
 
 } // namespace CaDiCaL
@@ -78,6 +80,9 @@ struct Logger {
     Logger::log (internal, __VA_ARGS__); \
   } while (0)
 
+#define LOGLIT(lit) \
+  Logger::loglit (internal, lit).c_str()
+
 /*------------------------------------------------------------------------*/
 #else // end of 'then' part of 'ifdef LOGGING'
 /*------------------------------------------------------------------------*/
@@ -85,6 +90,8 @@ struct Logger {
 #define LOG(...) \
   do { \
   } while (0)
+
+#define LOGLIT(...) \
 
 /*------------------------------------------------------------------------*/
 #endif // end of 'else' part of 'ifdef LOGGING'
