@@ -867,9 +867,9 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
     // unclear how to achieve this in the simplify context where other ==
     // g->lhs might be set assert (internal->val (other) <= 0 || other ==
     // except);
-    if (other == except_lhs) {
+    if (other == except_lhs || other == -except_lhs) {
       // do nothing;
-    } else if (other == except_lhs2) {
+    } else if (other == except_lhs2 || other == -except_lhs2) {
       // do nothing;
     } else if (internal->val (other) < 0) {
       LOG ("found unit %d", -other);
