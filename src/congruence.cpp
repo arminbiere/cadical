@@ -4945,18 +4945,18 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       if (g->lhs == -g->rhs[0]) { // it is too hard to produce LRAT chains
                                   // in this case
         produce_ite_merge_lhs_then_else_reasons (
-            g, reasons_implication, reasons_back, reasons_unit, false);
+            g, reasons_implication, reasons_back, reasons_unit, true);
 
         if (internal->lrat)
           lrat_chain = reasons_unit;
         learn_congruence_unit (-cond);
         if (internal->lrat)
           lrat_chain = reasons_implication;
-        learn_congruence_unit (-g->lhs);
+	learn_congruence_unit (else_lit);
       } else if (false && g->lhs == -else_lit) {
         if (internal->lrat)
           produce_ite_merge_lhs_then_else_reasons (
-              g, reasons_implication, reasons_back, reasons_unit, false);
+              g, reasons_implication, reasons_back, reasons_unit, true);
 
         if (internal->lrat)
           lrat_chain = reasons_unit;
@@ -5033,7 +5033,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         learn_congruence_unit (cond);
         if (internal->lrat)
           lrat_chain = reasons_implication;
-        learn_congruence_unit (-g->lhs);
+        learn_congruence_unit (-then_lit);
       } else if (false && g->lhs == -then_lit) {
         produce_ite_merge_lhs_then_else_reasons (
               g, reasons_implication, reasons_back, reasons_unit, false);
