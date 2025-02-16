@@ -67,15 +67,7 @@ void Logger::log (Internal *internal, const Clause *c, const char *fmt,
           printf (" %d", lit);
       } else {
         for (const auto &lit : *c) {
-	  const char val = (-internal->max_var <= lit && internal->max_var >= lit ) ? internal->val (lit) : 0;
-          printf (" %d", lit);
-	  if (val) {
-            printf ("@%d", internal->var (lit).level);
-	    if (!internal->var (lit).reason) {
-	      printf("+");
-	    }
-	  }
-	  printf ("%s", loglit (internal, lit).c_str ());
+	  printf (" %s", loglit (internal, lit).c_str ());
 	}
       }
     }
@@ -101,7 +93,7 @@ void Logger::log (Internal *internal, const Gate *g, const char *fmt, ...) {
             loglit (internal, g->lhs).c_str (),
             string_of_gate (g->tag).c_str ());
     for (const auto &lit : g->rhs) {
-      printf (" %s", loglit (internal, lit).c_str());
+      printf (" %s ", loglit (internal, lit).c_str());
     }
   } else
     printf (" null gate");
