@@ -4822,29 +4822,30 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
 
       // return;
       if (cond_lit == g->lhs) {
-        LOG ("XXXXXXXXX");
+        LOG ("t=-lhs/c=lhs");
         // is a unit
-        push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx2].clause,
+        push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx1].clause,
                                          Rewrite (), reasons_unit);
-        push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx2].clause,
+        push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx1].clause,
                                          Rewrite (), reasons_implication);
         reasons_implication.push_back (
             g->pos_lhs_ids[other_idx2].clause->id);
         return;
       }
       if (cond_lit == -g->lhs) {
-        LOG ("YYYYY");
+        LOG ("t=-lhs/c=-lhs");
         push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx2].clause,
                                          Rewrite (), reasons_unit);
         push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx2].clause,
                                          Rewrite (), reasons_implication);
+	g->pos_lhs_ids[other_idx1].clause = produce_rewritten_clause_lrat(g->pos_lhs_ids[other_idx1].clause);
         reasons_implication.push_back (
             g->pos_lhs_ids[other_idx1].clause->id);
         return;
       }
 
       if (other_lit == g->lhs) {
-        LOG ("ZZZ");
+        LOG ("t=-lhs/e=lhs");
         // in the other direction we are merging a literal with itself
         g->pos_lhs_ids[idx1].clause =
             produce_rewritten_clause_lrat (g->pos_lhs_ids[idx1].clause);
@@ -5004,7 +5005,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         if (internal->lrat)
           lrat_chain = reasons_implication;
         learn_congruence_unit (else_lit);
-      } else if (false && g->lhs == -else_lit) {
+      } else if (cond == g->lhs || g->lhs == -else_lit) {
         if (internal->lrat)
           produce_ite_merge_lhs_then_else_reasons (
               g, reasons_implication, reasons_back, reasons_unit, true);
