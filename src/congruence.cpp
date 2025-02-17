@@ -1598,11 +1598,8 @@ bool Closure::merge_literals_lrat (
         else
           c = eq1_tmp;
       }
-      int neg = val_lit ? lit : -lit;
-      // no need to calculate push_id_and_rewriting_lrat here because all
-      // the job is done by the arguments already
       push_id_and_rewriting_lrat_unit (c, Rewrite (), lrat_chain, true,
-                                       Rewrite (), -neg, unit);
+                                       Rewrite (), unit);
     }
     learn_congruence_unit (unit);
     if (internal->lrat)
@@ -2088,6 +2085,11 @@ void Closure::update_and_gate_unit_build_lrat_chain (
     std::vector<LRAT_ID> &extra_reasons_ulit) {
   LOG ("generate chain for gate boiling down to unit");
 
+  if (g->neg_lhs_ids.size () != 1) {
+    assert (g->lhs == g->rhs[0]);
+    assert (g->pos_lhs_ids.size () == 1);
+    return;
+  }
   assert (g->neg_lhs_ids.size () == 1);
   assert (!g->pos_lhs_ids.empty ());
 
@@ -5312,7 +5314,7 @@ void Closure::merge_and_gate_lrat_produce_lrat (
 
 // odd copy of rewrite_ite_gate_lrat_and
 void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1,
-                                             size_t idx2) {
+                                             size_t idx2, int removed_lit) {
   assert (internal->lrat_chain.empty ());
   if (!internal->lrat)
     return;
@@ -5323,12 +5325,25 @@ void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1,
   int lit = g->pos_lhs_ids[idx2].current_lit, other = g->lhs;
   size_t new_idx1 = idx1;
   size_t new_idx2 = idx2;
-
+  for (auto litId : g->pos_lhs_ids) {
+    LOG (litId.clause, "%d ->", litId.current_lit);
+  }
   produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs, new_idx1,
                                            new_idx2);
 
   if (g->pos_lhs_ids.size () == 1) {
-    // we have a degenerated end gate
+    LOG (g, "degenerated AND gate");
+    for (auto &litId : g->pos_lhs_ids) {
+      LOG (litId.clause, "%d ->", litId.current_lit);
+      if (litId.current_lit == removed_lit)
+        litId.current_lit = -g->rhs[0];
+      if (litId.current_lit == -removed_lit)
+        litId.current_lit = g->rhs[0];
+      LOG (litId.clause, "%d ->", litId.current_lit);
+      // TODO we need a replacement index
+      assert (std::find (begin (g->rhs), end (g->rhs), litId.current_lit) !=
+              end (g->rhs));
+    }
     return;
   }
   assert (new_idx1 < g->pos_lhs_ids.size ());
@@ -5363,6 +5378,17 @@ void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1,
   g->pos_lhs_ids.erase (long_clause);
   assert (g->pos_lhs_ids.size () == 1);
   g->pos_lhs_ids.push_back ({lit, e});
+
+  for (auto &litId : g->pos_lhs_ids) {
+    LOG (litId.clause, "%d ->", litId.current_lit);
+    if (litId.current_lit == removed_lit)
+      litId.current_lit = -g->rhs[0];
+    if (litId.current_lit == -removed_lit)
+      litId.current_lit = g->rhs[0];
+    LOG (litId.clause, "%d ->", litId.current_lit);
+    // TODO we need a replacement index
+    assert (std::find (begin (g->rhs), end (g->rhs), litId.current_lit) != end (g->rhs));
+  }
 }
 
 void Closure::merge_ite_gate_produce_lrat (
@@ -5498,21 +5524,21 @@ void Closure::simplify_ite_gate (Gate *g) {
         g->lhs = -lhs;
         rhs[0] = -cond;
         rhs[1] = -else_lit;
-        simplify_ite_gate_to_and_lrat (g, 1, 3);
+        simplify_ite_gate_to_and_lrat (g, 1, 3, then_lit);
       } else if (v_then < 0) {
         rhs[0] = -cond;
         rhs[1] = else_lit;
-        simplify_ite_gate_to_and_lrat (g, 0, 2);
+        simplify_ite_gate_to_and_lrat (g, 0, 2, -then_lit);
       } else if (v_else > 0) {
         g->lhs = -lhs;
         rhs[0] = -then_lit;
         rhs[1] = cond;
-        simplify_ite_gate_to_and_lrat (g, 3, 1);
+        simplify_ite_gate_to_and_lrat (g, 3, 1, else_lit);
       } else {
         assert (v_else < 0);
         rhs[0] = cond;
         rhs[1] = then_lit;
-        simplify_ite_gate_to_and_lrat (g, 2, 0);
+        simplify_ite_gate_to_and_lrat (g, 2, 0, -else_lit);
       }
       if (internal->vlit (rhs[0]) > internal->vlit (rhs[1]))
         std::swap (rhs[0], rhs[1]);

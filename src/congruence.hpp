@@ -601,11 +601,10 @@ struct Closure {
                                             size_t idx2);
   void merge_and_gate_lrat_produce_lrat (
       Gate *g, Gate *h, std::vector<LRAT_ID> &reasons_lrat,
-      std::vector<LRAT_ID> &reasons_lrat_back);
-  void simplify_ite_gate_to_and_lrat (
-      Gate *g, size_t idx1,
-      size_t idx2); // first index is a binary clause after unit propagation
-                    // and the second has length 3
+					 std::vector<LRAT_ID> &reasons_lrat_back);
+  // first index is a binary clause after unit propagation and the second has length 3
+  void simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1, size_t idx2,
+                                      int removed); 
   void
   merge_ite_gate_produce_lrat (std::vector<LitClausePair> &clauses,
                                std::vector<LRAT_ID> &reasons_implication,
