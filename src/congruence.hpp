@@ -533,7 +533,7 @@ struct Closure {
   void subsume_clause (Clause *subsuming, Clause *subsumed);
   bool find_subsuming_clause (Clause *c);
   void produce_rewritten_clause_lrat_and_clean (vector<LitClausePair> &,
-                                                int execept_lhs = 0);
+                                                int execept_lhs = 0, bool =true);
   // rewrite the clause using eager rewriting and rew1 and rew2, except for
   // 2 literals Usage:
   //   - the except are used to ignore LHS of gates that have not and should
@@ -604,7 +604,7 @@ struct Closure {
 					 std::vector<LRAT_ID> &reasons_lrat_back);
   // first index is a binary clause after unit propagation and the second has length 3
   void simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1, size_t idx2,
-                                      int removed); 
+                                      int removed, int replaced); 
   void
   merge_ite_gate_produce_lrat (std::vector<LitClausePair> &clauses,
                                std::vector<LRAT_ID> &reasons_implication,

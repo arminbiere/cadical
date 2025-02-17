@@ -5433,10 +5433,12 @@ void Closure::simplify_ite_gate_then_else_set (
   assert (idx2 < g->pos_lhs_ids.size ());
   Clause *c = g->pos_lhs_ids[idx1].clause;
   Clause *d = g->pos_lhs_ids[idx2].clause;
-  push_id_and_rewriting_lrat_unit (c, Rewrite (), reasons_implication, true,
+  push_id_and_rewriting_lrat_unit (c, Rewrite (), reasons_back, true,
                                    Rewrite (), g->lhs);
-  push_id_and_rewriting_lrat_unit (d, Rewrite (), reasons_back, true,
+  push_id_and_rewriting_lrat_unit (d, Rewrite (), reasons_implication, true,
                                    Rewrite (), g->lhs);
+  LOG (reasons_back, "LRAT");
+  LOG (reasons_implication, "LRAT");
   // c = produce_rewritten_clause_lrat (c, g->lhs, false);
   // assert (c);
   // d = produce_rewritten_clause_lrat (d, g->lhs, false);
@@ -5523,16 +5525,16 @@ void Closure::simplify_ite_gate (Gate *g) {
       if (internal->lrat)
         simplify_ite_gate_then_else_set (g, extra_reasons,
                                          extra_reasons_back, 1, 2);
-      if (merge_literals_lrat (lhs, cond)) {
+      if (merge_literals_lrat (lhs, cond, extra_reasons, extra_reasons_back)) {
         ++internal->stats.congruence.unary_ites;
         ++internal->stats.congruence.unaries;
       }
     } else if (v_then < 0 && v_else > 0) {
       if (internal->lrat)
         simplify_ite_gate_then_else_set (g, extra_reasons,
-                                         extra_reasons_back, 0, 2);
-      if (merge_literals_lrat (lhs, -cond, extra_reasons,
-                               extra_reasons_back)) {
+                                         extra_reasons_back, 0, 3);
+      if (merge_literals_lrat (lhs, -cond, extra_reasons_back,
+                               extra_reasons)) {
         ++internal->stats.congruence.unary_ites;
         ++internal->stats.congruence.unaries;
       }
@@ -5687,7 +5689,7 @@ void Closure::add_ite_matching_proof_chain (
   }
   unsimplified.push_back (lhs1);
   unsimplified.push_back (-lhs2);
-  unsimplified.push_back (cond);
+  unsimplified.push_back (-cond);
   LRAT_ID id1 = -1;
   if (degenerated_g_then || degenerated_h_then) {
     id1 = degenerated_g_then ? h_then_id : g_neg_then_id;
@@ -5699,15 +5701,15 @@ void Closure::add_ite_matching_proof_chain (
     id1 = simplify_and_add_to_proof_chain (unsimplified);
   }
   unsimplified.pop_back ();
-  unsimplified.push_back (-cond);
+  unsimplified.push_back (cond);
 
   LRAT_ID id2 = -1;
-  if (degenerated_g_then || degenerated_h_then) {
-    id2 = degenerated_g_then ? h_then_id : g_neg_then_id;
+  if (degenerated_g_else || degenerated_h_else) {
+    id2 = degenerated_g_else ? h_neg_else_id : g_else_id;
   } else {
     if (internal->lrat) {
-      lrat_chain.push_back (h_then_id);
-      lrat_chain.push_back (g_neg_then_id);
+      lrat_chain.push_back (h_neg_else_id);
+      lrat_chain.push_back (g_else_id);
     }
     id2 = simplify_and_add_to_proof_chain (unsimplified);
   }
