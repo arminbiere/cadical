@@ -628,14 +628,14 @@ void Closure::produce_rewritten_clause_lrat_and_clean (
 
 void Closure::produce_rewritten_clause_lrat_and_clean (
     std::vector<LitClausePair> &litIds, int except_lhs,
-    size_t &old_position1, size_t &old_position2) {
+    size_t &old_position1, size_t &old_position2, bool remove_units) {
   assert (internal->lrat_chain.empty ());
   assert (old_position1 != old_position2);
   size_t j = 0;
   for (size_t i = 0; i < litIds.size (); ++i) {
     assert (j <= i);
     litIds[j].clause =
-        produce_rewritten_clause_lrat (litIds[i].clause, except_lhs);
+      produce_rewritten_clause_lrat (litIds[i].clause, except_lhs, remove_units);
     litIds[j].current_lit =
         find_eager_representative (litIds[i].current_lit);
     if (i == old_position1) {
@@ -4694,7 +4694,7 @@ void Closure::produce_ite_merge_then_else_reasons (
   assert (src == g->rhs[1] || src == g->rhs[2]);
   assert (dst == g->rhs[1] || dst == g->rhs[2]);
   (void) src, (void) dst;
-  produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs);
+  produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs, false);
   assert (g->pos_lhs_ids.size () == 4);
   reasons_implication.push_back (g->pos_lhs_ids[0].clause->id);
   reasons_implication.push_back (g->pos_lhs_ids[2].clause->id);
@@ -4730,7 +4730,7 @@ void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
   // TODO: remove argument
   (void) src;
   produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs, idx1,
-                                           idx2);
+                                           idx2, false);
 
   if (dst == g->lhs) {
     // in this case, we actually have a degenerated AND gate
@@ -5926,7 +5926,7 @@ void Closure::check_contained_module_rewriting (Clause *c, int lit,
                                                 bool normalized,
                                                 int except) {
   const int normalize_lit =
-      (lit == except ? except : find_representative (lit));
+      (lit == except ? except : find_eager_representative (lit));
   assert (!normalized || lit == -except || normalize_lit == lit);
 #ifndef NDEBUG
   bool found = false;
@@ -5934,7 +5934,7 @@ void Closure::check_contained_module_rewriting (Clause *c, int lit,
   LOG (c, "looking for (normalized) %d in ", lit);
   for (auto other : *c) {
     const int normalize_other =
-        (other == except ? except : find_representative (other));
+        (other == except ? except : find_eager_representative (other));
     assert (!normalized || other == -except || normalize_other == other);
     if (normalize_other == normalize_lit) {
 #ifndef NDEBUG

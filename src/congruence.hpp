@@ -551,7 +551,8 @@ struct Closure {
   // remove the tautological clauses
   void produce_rewritten_clause_lrat_and_clean (
       std::vector<LitClausePair> &litIds, int except_lhs,
-      size_t &old_position1, size_t &old_position2);
+      size_t &old_position1, size_t &old_position2,
+      bool remove_units = true);
   // binary extraction and ternary strengthening
   void extract_binaries ();
   bool find_binary (int, int) const;
