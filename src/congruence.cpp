@@ -5393,10 +5393,25 @@ void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1,
   assert (g->pos_lhs_ids.size () == 1);
   g->pos_lhs_ids.push_back ({lit, e});
 
+  const int first_lit = g->rhs[0];
+  const int second_lit = g->rhs[1];
   for (auto &litId : g->pos_lhs_ids) {
-    LOG (litId.clause, "%d ->", litId.current_lit);
+    LOG (litId.clause, "%s ->", LOGLIT(litId.current_lit));
     if (internal->val (litId.current_lit)) {
-      litId.current_lit = g->rhs[1];
+      assert (litId.clause->size == 2);
+      int replacement_lit = 0;
+      for (int i = 0; i < 2; ++i) {
+        if (litId.clause->literals[i] == first_lit) {
+          replacement_lit = first_lit;
+          break;
+        } else if (litId.clause->literals[i] == second_lit) {
+          replacement_lit = second_lit;
+          break;
+        }
+      }
+      assert (replacement_lit);
+
+      litId.current_lit = replacement_lit;
     }
     else if (litId.current_lit == removed_lit)
       litId.current_lit = -g->rhs[0];
