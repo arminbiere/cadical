@@ -613,7 +613,7 @@ void Closure::produce_rewritten_clause_lrat_and_clean (
     std::vector<LitClausePair> &litIds, int except_lhs) {
   assert (internal->lrat_chain.empty ());
   for (auto &litId : litIds) {
-    litId.clause = produce_rewritten_clause_lrat (litId.clause, except_lhs);
+    litId.clause = produce_rewritten_clause_lrat (litId.clause, except_lhs, remove_units);
     litId.current_lit = find_eager_representative (litId.current_lit);
   }
   litIds.erase (
@@ -1289,7 +1289,7 @@ bool Closure::merge_literals_lrat (
       }
       int neg = val_lit ? lit : -lit;
       push_id_and_rewriting_lrat_unit (c, Rewrite (), lrat_chain, true,
-                                       Rewrite (), -neg, unit);
+                                       Rewrite (), unit);
     }
     learn_congruence_unit (unit);
     if (internal->lrat)
@@ -4043,6 +4043,9 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
   LOG (lrat_chain, "lrat chain after rewriting");
 
   if (internal->lrat) { // updating reasons in the chain.
+    for (auto litId : g->pos_lhs_ids) {
+      LOG (litId.clause, "%d ->", litId.current_lit);
+    }
     // We remove all assigned literals except the falsified literal such
     // that we can produce an LRAT chain
     size_t i = 0, size = g->pos_lhs_ids.size ();
@@ -4052,7 +4055,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
     const int orig_clashing =
         clashing == -dst || clashing == dst ? src : clashing;
     int keep_clashing = clashing;
-    LOG ("keeping chain for %d aka %d and %d aka %d", falsifies,
+    LOG ("keeping chain for falsifies: %d aka %d and clashing: %d aka %d", falsifies,
          orig_falsifies, clashing, orig_clashing);
     for (size_t j = 0; j < size; ++j) {
       LOG (g->pos_lhs_ids[j].clause, "looking at %d [%zd %zd] with val %d",
@@ -4075,6 +4078,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
           continue; // we have already one defining clause
       }
 
+      LOG ("maybe keeping %d [%zd %zd], src: %d, found: %d", g->pos_lhs_ids[i].current_lit, i, j, src, found);
       if (g->pos_lhs_ids[i].current_lit == src) {
         if (!found)
           g->pos_lhs_ids[i].current_lit = dst, found = true;
@@ -5119,7 +5123,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       g->lhs = not_lhs;
       assert (rhs[0] == cond);
       assert (rhs[1] == then_lit);
-      produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids);
+      produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, not_lhs, false);
     } else {
       shrink = false;
       rhs[2] = dst;
@@ -5324,7 +5328,7 @@ void Closure::merge_and_gate_lrat_produce_lrat (
 
 // odd copy of rewrite_ite_gate_lrat_and
 void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1,
-                                             size_t idx2, int removed_lit) {
+                                             size_t idx2, int removed_lit, int replaced) {
   assert (internal->lrat_chain.empty ());
   if (!internal->lrat)
     return;
@@ -5391,14 +5395,18 @@ void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1,
 
   for (auto &litId : g->pos_lhs_ids) {
     LOG (litId.clause, "%d ->", litId.current_lit);
-    if (litId.current_lit == removed_lit)
+    if (internal->val (litId.current_lit)) {
+      litId.current_lit = g->rhs[1];
+    }
+    else if (litId.current_lit == removed_lit)
       litId.current_lit = -g->rhs[0];
-    if (litId.current_lit == -removed_lit)
+    else if (litId.current_lit == -removed_lit)
       litId.current_lit = g->rhs[0];
     LOG (litId.clause, "%d ->", litId.current_lit);
     // TODO we need a replacement index
     assert (std::find (begin (g->rhs), end (g->rhs), litId.current_lit) !=
             end (g->rhs));
+    assert (std::find (begin (*litId.clause), end (*litId.clause), litId.current_lit) != end (*litId.clause));
   }
 }
 
@@ -5536,21 +5544,21 @@ void Closure::simplify_ite_gate (Gate *g) {
         g->lhs = -lhs;
         rhs[0] = -cond;
         rhs[1] = -else_lit;
-        simplify_ite_gate_to_and_lrat (g, 1, 3, then_lit);
+        simplify_ite_gate_to_and_lrat (g, 1, 3, then_lit, -cond);
       } else if (v_then < 0) {
         rhs[0] = -cond;
         rhs[1] = else_lit;
-        simplify_ite_gate_to_and_lrat (g, 0, 2, -then_lit);
+        simplify_ite_gate_to_and_lrat (g, 0, 2, -then_lit, -cond);
       } else if (v_else > 0) {
         g->lhs = -lhs;
         rhs[0] = -then_lit;
         rhs[1] = cond;
-        simplify_ite_gate_to_and_lrat (g, 3, 1, else_lit);
+        simplify_ite_gate_to_and_lrat (g, 3, 1, else_lit, -then_lit);
       } else {
         assert (v_else < 0);
-        rhs[0] = cond;
-        rhs[1] = then_lit;
-        simplify_ite_gate_to_and_lrat (g, 2, 0, -else_lit);
+        rhs[0] = then_lit;
+        rhs[1] = cond;
+        simplify_ite_gate_to_and_lrat (g, 2, 0, -else_lit, -then_lit);
       }
       if (internal->vlit (rhs[0]) > internal->vlit (rhs[1]))
         std::swap (rhs[0], rhs[1]);
