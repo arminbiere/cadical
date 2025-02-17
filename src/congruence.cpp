@@ -1615,12 +1615,13 @@ bool Closure::merge_literals_lrat (
     if (internal->lrat) {
       Clause *c;
       if (lit == smaller) {
-        if (val_lit < 0)
+	assert (other == larger);
+        if (val_other > 0)
           c = eq1_tmp;
         else
           c = eq2_tmp;
       } else {
-        if (val_lit < 0)
+        if (val_other > 0)
           c = eq2_tmp;
         else
           c = eq1_tmp;
