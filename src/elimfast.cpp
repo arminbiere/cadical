@@ -85,6 +85,54 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
 
   return true;
 }
+/*------------------------------------------------------------------------*/
+
+
+/*------------------------------------------------------------------------*/
+// Add all resolvents on 'pivot' and connect them.
+
+inline void Internal::elimfast_add_resolvents (Eliminator &eliminator,
+                                           int pivot) {
+
+  assert (eliminator.gates.empty ());
+  assert (!eliminator.definition_unit);
+
+  LOG ("adding all resolvents on %d", pivot);
+
+  assert (!val (pivot));
+  assert (!flags (pivot).eliminated ());
+
+  const Occs &ps = occs (pivot);
+  const Occs &ns = occs (-pivot);
+#ifdef LOGGING
+  int64_t resolvents = 0;
+#endif
+  for (auto &c : ps) {
+    if (unsat)
+      break;
+    if (c->garbage)
+      continue;
+    for (auto &d : ns) {
+      if (unsat)
+        break;
+      if (d->garbage)
+        continue;
+      if (!resolve_clauses (eliminator, c, pivot, d, false))
+        continue;
+      assert (!lrat || !lrat_chain.empty ());
+      Clause *r = new_resolved_irredundant_clause ();
+      elim_update_added_clause (eliminator, r);
+      eliminator.enqueue (r);
+      lrat_chain.clear ();
+      clause.clear ();
+#ifdef LOGGING
+      resolvents++;
+#endif
+    }
+  }
+
+  LOG ("added %" PRId64 " resolvents to eliminate %d", resolvents, pivot);
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -129,7 +177,7 @@ void Internal::try_to_fasteliminate_variable (Eliminator &eliminator, int pivot,
   if (!unsat && !val (pivot)) {
     if (elimfast_resolvents_are_bounded (eliminator, pivot)) {
       LOG ("number of resolvents on %d are bounded", pivot);
-      elim_add_resolvents (eliminator, pivot);
+      elimfast_add_resolvents (eliminator, pivot);
       if (!unsat)
         mark_eliminated_clauses_as_garbage (eliminator, pivot,
                                             deleted_binary_clause);
