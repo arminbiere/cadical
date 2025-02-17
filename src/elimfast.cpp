@@ -38,8 +38,8 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
   const int64_t bound = opts.fastelimbound;
 
   LOG ("checking number resolvents on %d bounded by "
-       "%" PRId64 " = %" PRId64 " + %" PRId64 " + %" PRId64,
-       pivot, bound, pos, neg, lim.elimbound);
+       "%" PRId64 " = %" PRId64 " + %" PRId64 " + %d",
+       pivot, bound, pos, neg, opts.fastelimbound);
 
   // Try all resolutions between a positive occurrence (outer loop) of
   // 'pivot' and a negative occurrence of 'pivot' (inner loop) as long the
@@ -160,8 +160,6 @@ int Internal::elimfast_round (bool &completed, bool &deleted_binary_clause) {
   START_SIMPLIFIER (elim, ELIM);
   stats.elimfastrounds++;
 
-  int64_t marked_before = last.elim.marked;
-  last.elim.marked = stats.mark.elim;
   assert (!level);
 
   int64_t resolution_limit;
@@ -294,9 +292,6 @@ int Internal::elimfast_round (bool &completed, bool &deleted_binary_clause) {
   //
   completed = !schedule.size ();
 
-  if (!completed)
-    last.elim.marked = marked_before;
-
   PHASE ("fastelim-round", stats.elimfastrounds,
          "tried to eliminate %" PRId64 " variables %.0f%% (%zd remain)",
          tried, percent (tried, scheduled), schedule.size ());
@@ -320,7 +315,6 @@ int Internal::elimfast_round (bool &completed, bool &deleted_binary_clause) {
          eliminated, percent (eliminated, scheduled), resolutions);
 #endif
 
-  last.elim.subsumephases = stats.subsumephases;
   const int units = stats.all.fixed - old_fixed;
   report ('e', !opts.reportall && !(eliminated + units));
   STOP_SIMPLIFIER (elim, ELIM);
