@@ -788,7 +788,7 @@ Clause *Closure::produce_rewritten_clause_lrat (Clause *c, int except_lhs,
     }
     if (internal->val (lit) > 0) {
       LOG ("found positive unit %d, so clause is subsumed by unit", lit);
-      if (remove_units && lazy_propagated (lit))
+      if (remove_units || lazy_propagated (lit))
         tautology = true;
     }
     const int other = find_eager_representative_and_compress (lit);
