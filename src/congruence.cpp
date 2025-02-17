@@ -17,6 +17,10 @@ Closure::Closure (Internal *i)
 {
 }
 
+char &Closure::lazy_propagated (int lit) {
+  return lazy_propagated_idx[internal->vidx (lit)];
+}
+
 /*------------------------------------------------------------------------*/
 
 static size_t hash_lits (std::array<int, 16> &nonces,
@@ -773,7 +777,7 @@ Clause *Closure::produce_rewritten_clause_lrat (Clause *c, int except_lhs,
       continue;
     }
     if (internal->val (lit) < 0) {
-      if (remove_units) {
+      if (remove_units && lazy_propagated (lit)) {
         LOG ("found unit %d, removing it", -lit);
         LRAT_ID id = internal->unit_id (-lit);
         lrat_chain.push_back (id);
@@ -784,7 +788,7 @@ Clause *Closure::produce_rewritten_clause_lrat (Clause *c, int except_lhs,
     }
     if (internal->val (lit) > 0) {
       LOG ("found positive unit %d, so clause is subsumed by unit", lit);
-      if (remove_units)
+      if (remove_units && lazy_propagated (lit))
         tautology = true;
     }
     const int other = find_eager_representative_and_compress (lit);
@@ -1929,6 +1933,9 @@ void Closure::init_closure () {
   if (internal->lrat) {
     eager_representant_id.resize (2 * internal->max_var + 3);
     representant_id.resize (2 * internal->max_var + 3);
+    lazy_propagated_idx.resize (internal->max_var + 1, false);
+    for (auto lit : internal->trail)
+      lazy_propagated (lit) = true;
   }
   marks.resize (2 * internal->max_var + 3);
   mu1_ids.resize (2 * internal->max_var + 3);
@@ -4299,6 +4306,7 @@ void Closure::schedule_literal (int lit) {
 
 bool Closure::propagate_unit (int lit) {
   LOG ("propagation of congruence unit %d", lit);
+  if (internal->lrat) lazy_propagated (lit) = true;
   return simplify_gates (lit) && simplify_gates (-lit);
 }
 
@@ -4854,6 +4862,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
       if (other_lit == g->lhs) {
         assert (false);
       }
+
     }
 
     LOG ("normal path");
@@ -4921,9 +4930,13 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
   assert (!g->indexed || git != end (table));
   assert (*git == g);
   if (internal->val (cond) &&
-      (internal->val (then_lit) &&
-       internal->val (else_lit))) { // propagation has set all value anyway
+      internal->val (then_lit) &&
+       internal->val (else_lit)) { // propagation has set all value anyway
     LOG (g, "all values are set");
+    assert (internal->val (g->lhs));
+    garbage = true;
+  } else if (internal->val (g->lhs) && internal->val (cond)) {
+    LOG (g, "all values are set 2");
     assert (internal->val (g->lhs));
     garbage = true;
   }

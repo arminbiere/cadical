@@ -281,6 +281,8 @@ struct Closure {
   int eager_representative (int lit) const;
   LRAT_ID &eager_representative_id (int lit);
   LRAT_ID eager_representative_id (int lit) const;
+  std::vector <char> lazy_propagated_idx;
+  char &lazy_propagated (int lit);
 
   int find_lrat_representative_with_marks (int lit);
   // representative in the union-find structure in the lazy equivalences
