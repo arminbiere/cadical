@@ -711,7 +711,7 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
   Occs &ns = occs (-pivot);
   stable_sort (ns.begin (), ns.end (), clause_smaller_size ());
 
-  if (pos && !fastel)
+  if (pos)
     find_gate_clauses (eliminator, pivot);
 
   if (!unsat && !val (pivot)) {
