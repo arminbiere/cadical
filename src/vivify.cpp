@@ -1328,7 +1328,7 @@ vivify_ref create_ref (Internal *internal, Clause *c) {
   ref.size = c->size;
   for (int i = 0; i < COUNTREF_COUNTS; ++i)
     ref.count[i] = 0;
-  ref.vivify = 0;
+  ref.vivify = c->vivify;
   int lits[COUNTREF_COUNTS] = {0};
   for (int i = 0; i != std::min (COUNTREF_COUNTS, c->size); ++i) {
     int best = 0;
