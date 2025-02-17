@@ -115,7 +115,7 @@ OPTION( factoreffort,     50,  0,1e6,0,0,1, "relative effort per mille") \
 OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort per thousand") \
 OPTION( factorsize,        5,  2,2e9,0,0,1, "clause size limit") \
 OPTION( factorthresh,      7,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
-OPTION( fastelim,          1,  0,  1,0,1,1, "fast BVE during preprocessing") \
+OPTION( fastelim,          0,  0,  1,0,1,1, "fast BVE during preprocessing") \
 OPTION( fastelimbound,     7, -1,1e3,1,0,1, "fast BVE bound during preprocessing") \
 OPTION( fastelimrounds,    4,  1,512,1,0,1, "number of fastelim rounds") \
 OPTION( flush,             0,  0,  1,0,1,1, "flush redundant clauses") \
