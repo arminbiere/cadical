@@ -1074,17 +1074,17 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
 }
 
 bool Closure::learn_congruence_unit (int lit) {
-  assert (!internal->lrat || !lrat_chain.empty ());
   if (internal->unsat)
     return false;
-  LOG ("adding unit %d with current value %d", lit, internal->val (lit));
-  ++internal->stats.congruence.units;
   const signed char val_lit = internal->val (lit);
   if (val_lit > 0) {
     if (internal->lrat)
       lrat_chain.clear ();
     return true;
   }
+  LOG ("adding unit %d with current value %d", lit, internal->val (lit));
+  ++internal->stats.congruence.units;
+  assert (!internal->lrat || !lrat_chain.empty ());
   // TODO this is done in Kissat, but we try to make the lrat/drat code as
   // close as possible. So We do not learn the empty clause here.
   if (val_lit < 0) {
@@ -4951,7 +4951,10 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       g->lhs = not_lhs;
       rhs[0] = not_then_lit;
       rhs[1] = not_else_lit;
-      rewrite_ite_gate_lrat_and (g, src, dst, 1, 3);
+      if (then_lit == lhs || else_lit == lhs)
+	garbage = true;
+      else
+	rewrite_ite_gate_lrat_and (g, src, dst, 1, 3);
     } else if (not_dst == then_lit) {
       // !then_lit ? then_lit : else_lit
       // !then_lit & then_lit | then_lit & else_lit
@@ -4975,6 +4978,9 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       g->lhs = not_lhs;
       rhs[0] = not_then_lit;
       rhs[1] = not_else_lit;
+      if (then_lit == lhs || else_lit == lhs)
+	garbage = true;
+      else
       rewrite_ite_gate_lrat_and (g, src, dst, 3, 1);
     } else {
       shrink = false;
@@ -5031,7 +5037,10 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       g->lhs = not_lhs;
       rhs[0] = not_cond;
       rhs[1] = not_else_lit;
-      rewrite_ite_gate_lrat_and (g, src, dst, 0, 3);
+      if (else_lit == lhs || cond == lhs)
+	garbage = true;
+      else
+	rewrite_ite_gate_lrat_and (g, src, dst, 0, 3);
     } else if (not_dst == cond) {
       // cond ? !cond : else_lit
       // cond & !cond | !cond & else_lit
@@ -5116,7 +5125,10 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       g->lhs = not_lhs;
       assert (rhs[0] == cond);
       rhs[1] = not_then_lit;
-      rewrite_ite_gate_lrat_and (g, src, dst, 3, 1);
+      if (then_lit == lhs || cond == lhs)
+	garbage = true;
+      else
+	rewrite_ite_gate_lrat_and (g, src, dst, 3, 1);
     } else if (dst == then_lit) {
       // cond ? then_lit : then_lit
       // then_lit
