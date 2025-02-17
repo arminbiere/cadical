@@ -777,7 +777,7 @@ Clause *Closure::produce_rewritten_clause_lrat (Clause *c, int except_lhs,
       continue;
     }
     if (internal->val (lit) < 0) {
-      if (remove_units && lazy_propagated (lit)) {
+      if (remove_units || lazy_propagated (lit)) {
         LOG ("found unit %d, removing it", -lit);
         LRAT_ID id = internal->unit_id (-lit);
         lrat_chain.push_back (id);
@@ -4866,7 +4866,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
     }
 
     LOG ("normal path");
-    produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs);
+    produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs, false);
     assert (g->pos_lhs_ids.size () == 4);
 
     reasons_unit.push_back (g->pos_lhs_ids[idx1].clause->id);
@@ -5320,9 +5320,9 @@ void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit,
   assert (idx1 != idx2);
   Clause *c = g->pos_lhs_ids[idx1].clause;
   Clause *d = g->pos_lhs_ids[idx2].clause;
-  c = produce_rewritten_clause_lrat (c, 0, false);
+  c = produce_rewritten_clause_lrat (c, 0, true);
   assert (c);
-  d = produce_rewritten_clause_lrat (d, 0, false);
+  d = produce_rewritten_clause_lrat (d, 0, true);
   assert (d);
   lrat_chain.push_back (c->id);
   lrat_chain.push_back (d->id);
