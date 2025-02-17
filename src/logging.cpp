@@ -93,7 +93,7 @@ void Logger::log (Internal *internal, const Gate *g, const char *fmt, ...) {
             loglit (internal, g->lhs).c_str (),
             string_of_gate (g->tag).c_str ());
     for (const auto &lit : g->rhs) {
-      printf (" %s ", loglit (internal, lit).c_str());
+      printf (" %s", loglit (internal, lit).c_str());
     }
   } else
     printf (" null gate");
