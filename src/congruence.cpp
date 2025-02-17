@@ -5477,9 +5477,9 @@ void Closure::simplify_ite_gate_condition_set (
   LOG ("cond = %d", cond);
   for (auto litid : g->pos_lhs_ids)
     LOG (litid.clause, "clause in gate:");
-  push_id_and_rewriting_lrat_unit (c, Rewrite (), reasons_lrat, false,
+  push_id_and_rewriting_lrat_unit (c, Rewrite (), reasons_lrat, true,
                                    Rewrite (), -g->lhs);
-  push_id_and_rewriting_lrat_unit (d, Rewrite (), reasons_back_lrat, false,
+  push_id_and_rewriting_lrat_unit (d, Rewrite (), reasons_back_lrat, true,
                                    Rewrite (), g->lhs);
   // c = produce_rewritten_clause_lrat (c, g->lhs, false);
   // assert (c);
