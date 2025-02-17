@@ -610,7 +610,7 @@ void Closure::index_gate (Gate *g) {
 }
 
 void Closure::produce_rewritten_clause_lrat_and_clean (
-    std::vector<LitClausePair> &litIds, int except_lhs) {
+						       std::vector<LitClausePair> &litIds, int except_lhs, bool remove_units) {
   assert (internal->lrat_chain.empty ());
   for (auto &litId : litIds) {
     litId.clause = produce_rewritten_clause_lrat (litId.clause, except_lhs, remove_units);
