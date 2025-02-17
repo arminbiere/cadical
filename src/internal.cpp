@@ -712,7 +712,7 @@ void Internal::preprocess_quickly () {
     factor (true);
 
   if (opts.fastelim)
-    elim (false, true);
+    elimfast ();
   // if (opts.condition)
   // condition (false);
   after.vars = active ();

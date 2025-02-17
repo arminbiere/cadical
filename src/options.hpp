@@ -40,7 +40,7 @@ OPTION( checkassumptions,  1,  0,  1,0,0,0, "check assumptions satisfied") \
 OPTION( checkconstraint,   1,  0,  1,0,0,0, "check constraint satisfied") \
 OPTION( checkfailed,       1,  0,  1,0,0,0, "check failed literals form core") \
 OPTION( checkfrozen,       0,  0,  1,0,0,0, "check all frozen semantics") \
-OPTION( checkproof,        3,  0,  3,0,0,0, "1=drat, 2=lrat, 3=both") \
+OPTION( checkproof,        1,  0,  1,0,0,0, "1=drat, 2=lrat, 3=both") \
 OPTION( checkwitness,      1,  0,  1,0,0,0, "check witness internally") \
 OPTION( chrono,            1,  0,  2,0,0,1, "chronological backtracking") \
 OPTION( chronoalways,      0,  0,  1,0,0,1, "force always chronological") \
@@ -117,6 +117,7 @@ OPTION( factorsize,        5,  2,2e9,0,0,1, "clause size limit") \
 OPTION( factorthresh,      7,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( fastelim,          1,  0,  1,0,1,1, "fast BVE during preprocessing") \
 OPTION( fastelimbound,     7, -1,1e3,1,0,1, "fast BVE bound during preprocessing") \
+OPTION( fastelimrounds,    4,  1,512,1,0,1, "number of fastelim rounds") \
 OPTION( flush,             0,  0,  1,0,1,1, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \
 OPTION( flushint,        1e5,  1,2e9,0,0,1, "initial limit") \

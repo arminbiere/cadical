@@ -461,7 +461,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
 // than negative occurrences.
 
 bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
-                                            int pivot, bool fastel) {
+                                            int pivot) {
   const bool substitute = !eliminator.gates.empty ();
   const bool resolve_gates = eliminator.definition_unit;
   if (substitute)
@@ -478,8 +478,7 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
   const int64_t neg = ns.size ();
   if (!pos || !neg)
     return lim.elimbound >= 0;
-  const int64_t bound =
-      fastel ? opts.fastelimbound : pos + neg + lim.elimbound;
+  const int64_t bound = pos + neg + lim.elimbound;
 
   LOG ("checking number resolvents on %d bounded by "
        "%" PRId64 " = %" PRId64 " + %" PRId64 " + %" PRId64,
@@ -676,8 +675,7 @@ void Internal::mark_eliminated_clauses_as_garbage (
 
 // Try to eliminate 'pivot' by bounded variable elimination.
 void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
-                                          bool &deleted_binary_clause,
-                                          bool fastel) {
+                                          bool &deleted_binary_clause) {
 
   if (!active (pivot))
     return;
@@ -717,7 +715,7 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
     find_gate_clauses (eliminator, pivot);
 
   if (!unsat && !val (pivot)) {
-    if (elim_resolvents_are_bounded (eliminator, pivot, fastel)) {
+    if (elim_resolvents_are_bounded (eliminator, pivot)) {
       LOG ("number of resolvents on %d are bounded", pivot);
       elim_add_resolvents (eliminator, pivot);
       if (!unsat)
@@ -766,11 +764,9 @@ void Internal::
 // variables have been tried).  Otherwise it was asynchronously terminated
 // or the resolution limit was hit.
 
-int Internal::elim_round (bool &completed, bool &deleted_binary_clause,
-                          bool fastel) {
+int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
 
-  assert (opts.elim || fastel);
-  assert (!fastel || opts.fastelim);
+  assert (opts.elim);
   assert (!unsat);
 
   START_SIMPLIFIER (elim, ELIM);
@@ -894,8 +890,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause,
     int idx = schedule.front ();
     schedule.pop_front ();
     flags (idx).elim = false;
-    try_to_eliminate_variable (eliminator, idx, deleted_binary_clause,
-                               fastel);
+    try_to_eliminate_variable (eliminator, idx, deleted_binary_clause);
 #ifndef QUIET
     tried++;
 #endif
@@ -936,8 +931,6 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause,
     mark_redundant_clauses_with_eliminated_variables_as_garbage ();
 
   int eliminated = stats.all.eliminated - old_eliminated;
-  if (fastel)
-    stats.all.fasteliminated += eliminated;
 #ifndef QUIET
   int64_t resolutions = stats.elimres - old_resolutions;
   PHASE ("elim-round", stats.elimrounds,
@@ -947,7 +940,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause,
 
   last.elim.subsumephases = stats.subsumephases;
   const int units = stats.all.fixed - old_fixed;
-  report (fastel ? 'e' : 'e', !opts.reportall && !(eliminated + units));
+  report ('e', !opts.reportall && !(eliminated + units));
   STOP_SIMPLIFIER (elim, ELIM);
 
   if (!unsat && !terminated_asynchronously () &&
@@ -1020,7 +1013,7 @@ void Internal::reset_citten () {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::elim (bool update_limits, bool fastel) {
+void Internal::elim (bool update_limits) {
 
   if (unsat)
     return;
@@ -1078,7 +1071,7 @@ void Internal::elim (bool update_limits, bool fastel) {
 #ifndef QUIET
     int eliminated =
 #endif
-        elim_round (round_complete, deleted_binary_clause, fastel);
+        elim_round (round_complete, deleted_binary_clause);
 
     if (!round_complete) {
       PHASE ("elim-phase", stats.elimphases, "last round %d incomplete %s",
@@ -1116,13 +1109,6 @@ void Internal::elim (bool update_limits, bool fastel) {
     phase_complete = true;
   }
 
-  if (fastel) { // reset for normal expansive elimination
-    for (auto idx : vars) {
-      if (active (idx))
-        flags (idx).elim = true;
-    }
-  }
-
   if (phase_complete) {
     stats.elimcompleted++;
     PHASE ("elim-phase", stats.elimphases,
@@ -1156,7 +1142,7 @@ void Internal::elim (bool update_limits, bool fastel) {
   // If we ran variable elimination until completion we increase the
   // variable elimination bound and reschedule elimination of all variables.
   //
-  if (!fastel && phase_complete)
+  if (phase_complete)
     increase_elimination_bound ();
 
 #ifndef QUIET

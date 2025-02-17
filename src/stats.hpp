@@ -206,8 +206,10 @@ struct Stats {
       0; // number of eagerly subsumed recently learned clauses
   int64_t elimres = 0;       // number of resolved clauses in BVE
   int64_t elimrestried = 0;  // number of tried resolved clauses in BVE
+  int64_t elimfastrounds = 0;    // number of elimination rounds
   int64_t elimrounds = 0;    // number of elimination rounds
   int64_t elimphases = 0;    // number of scheduled elimination phases
+  int64_t elimfastphases = 0;    // number of scheduled elimination phases
   int64_t elimcompleted = 0; // number complete elimination procedures
   int64_t elimtried = 0;     // number of variable elimination attempts
   int64_t elimsubst = 0;     // number of eliminations through substitutions

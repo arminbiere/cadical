@@ -1181,7 +1181,7 @@ struct Internal {
   void unmark_binary_literals (Eliminator &);
   bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *, bool);
   void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot, bool &);
-  bool elim_resolvents_are_bounded (Eliminator &, int pivot, bool fastel);
+  bool elim_resolvents_are_bounded (Eliminator &, int pivot);
   void elim_update_removed_lit (Eliminator &, int lit);
   void elim_update_removed_clause (Eliminator &, Clause *, int except = 0);
   void elim_update_added_clause (Eliminator &, Clause *);
@@ -1190,11 +1190,16 @@ struct Internal {
   void elim_backward_clauses (Eliminator &);
   void elim_propagate (Eliminator &, int unit);
   void elim_on_the_fly_self_subsumption (Eliminator &, Clause *, int);
-  void try_to_eliminate_variable (Eliminator &, int pivot, bool &,
-                                  bool fastel);
+  void try_to_eliminate_variable (Eliminator &, int pivot, bool &);
   void increase_elimination_bound ();
-  int elim_round (bool &completed, bool &, bool);
-  void elim (bool update_limits = true, bool = false);
+  int elim_round (bool &completed, bool &);
+  void elim (bool update_limits = true);
+
+  bool elimfast_resolvents_are_bounded (Eliminator &, int pivot);
+  void try_to_fasteliminate_variable (Eliminator &, int pivot, bool &);
+  int elimfast_round (bool &completed, bool &);
+  void elimfast ();
+
 
   // sweeping in 'sweep.cpp'
   int sweep_solve ();
