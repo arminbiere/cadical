@@ -115,8 +115,9 @@ Factoring::Factoring (Internal *i, int64_t l, bool preprocess)
   const unsigned max_var = internal->max_var;
   const unsigned max_lit = 2 * (max_var + 1);
   initial = max_var;
-  bound =
-      preprocess ? internal->opts.fastelimbound : internal->lim.elimbound;
+  bound = preprocess && internal->opts.fastelim
+              ? internal->opts.fastelimbound
+              : internal->lim.elimbound;
   enlarge_zero (count, max_lit);
   quotients.first = quotients.last = 0;
 }
