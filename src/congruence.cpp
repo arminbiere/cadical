@@ -2095,7 +2095,7 @@ void Closure::update_and_gate_unit_build_lrat_chain (
   LOG ("generate chain for gate boiling down to unit");
 
   if (g->neg_lhs_ids.size () != 1) {
-    assert (g->lhs == g->rhs[0]);
+    assert (g->lhs == g->rhs[0] || (g->lhs == src && g->rhs[0] == dst));
     assert (g->pos_lhs_ids.size () == 1);
     return;
   }
@@ -5289,7 +5289,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         check_ite_lrat_reasons (h, false);
         int normalized_lhs = negate_lhs ? not_lhs : lhs;
         std::vector<LRAT_ID> extra_reasons_lit, extra_reasons_ulit;
-        add_ite_matching_proof_chain (g, h, h->lhs, normalized_lhs,
+        add_ite_matching_proof_chain (g, h, normalized_lhs, h->lhs,
                                       extra_reasons_lit,
                                       extra_reasons_ulit);
         if (merge_literals_lrat (h->lhs, normalized_lhs, extra_reasons_lit,
@@ -5653,6 +5653,8 @@ void Closure::add_ite_matching_proof_chain (
     std::vector<LRAT_ID> &reasons2) {
   check_ite_lrat_reasons (g);
   check_ite_lrat_reasons (h, false);
+  assert (g->lhs == lhs1);
+  assert (h->lhs == lhs2);
   if (lhs1 == lhs2)
     return;
   if (!internal->proof)
@@ -5671,11 +5673,26 @@ void Closure::add_ite_matching_proof_chain (
   const bool degenerated_g_else = (g->lhs == g->rhs[2]);
   const bool degenerated_h_then = (h->lhs == h->rhs[1]);
   const bool degenerated_h_else = (h->lhs == h->rhs[2]);
+  
+  const bool degenerated_g_cond = (g->lhs == g->rhs[0]);
+  const bool degenerated_h_cond = (h->lhs == h->rhs[0]);
+
+  const bool degenerated_g_not_cond = (g->lhs == -g->rhs[0]);
+  const bool degenerated_h_not_cond = (h->lhs == -h->rhs[0]);
 
   if (internal->lrat) {
     // the code can produce tautologies in the case that:
     // a = (c ? a : e)
     // b = (c ? a : e)
+    // (no clauses with (then) index a/-a)
+    // but also for
+    // a = (a ? t : e)
+    // b = (a ? t : e)
+    // (no clauses with (then) index -a and (else) index e)
+    // and same for
+    // a = (c ? t : a)
+    // b = (c ? t : a)
+    // (no clauses with (then) index a and (else) index -e)
     LOG (g, "get ids from");
     assert (g->pos_lhs_ids.size () == 4);
     auto &g_then_clause = g->pos_lhs_ids[0].clause;
@@ -5723,15 +5740,65 @@ void Closure::add_ite_matching_proof_chain (
         produce_rewritten_clause_lrat (h_neg_else_clause, h->lhs);
     if (h_neg_else_clause)
       h_neg_else_id = h_neg_else_clause->id;
-    assert (degenerated_g_then || (g_then_id && g_neg_then_id));
-    assert (degenerated_g_else || (g_else_id && g_neg_else_id));
-    assert (degenerated_h_then || (h_then_id && h_neg_then_id));
-    assert (degenerated_h_else || (h_else_id && h_neg_else_id));
-    assert (g_then_id || h_neg_then_id);
-    assert (g_neg_then_id || h_then_id);
   }
-  unsimplified.push_back (lhs1);
-  unsimplified.push_back (-lhs2);
+
+  if (degenerated_g_cond || degenerated_h_cond) {
+    LOG ("special case: cond = lhs");
+    assert (g_then_id && h_neg_then_id && g_neg_else_id && h_else_id);
+    unsimplified.push_back (-lhs1);
+    unsimplified.push_back (lhs2);
+    if (internal->lrat) {
+      lrat_chain.push_back (g_then_id);
+      lrat_chain.push_back (h_neg_then_id);
+    }
+    LRAT_ID id1 = simplify_and_add_to_proof_chain (unsimplified);
+
+
+    unsimplified.clear();
+    unsimplified.push_back (lhs1);
+    unsimplified.push_back (-lhs2);
+    if (internal->lrat) {
+      lrat_chain.push_back (g_neg_else_id);
+      lrat_chain.push_back (h_else_id);
+    }
+    LRAT_ID id2 = simplify_and_add_to_proof_chain (unsimplified);
+    reasons1.push_back (id1);
+    reasons2.push_back (id2);
+    unsimplified.clear ();
+    return;
+  }
+  if (degenerated_g_not_cond || degenerated_h_not_cond) {
+    LOG ("special case: cond = -lhs");
+    assert (g_neg_then_id && h_then_id && g_else_id && h_neg_else_id);
+    unsimplified.push_back (lhs1);
+    unsimplified.push_back (-lhs2);
+    if (internal->lrat) {
+      lrat_chain.push_back (g_else_id);
+      lrat_chain.push_back (h_neg_else_id);
+    }
+    LRAT_ID id1 = simplify_and_add_to_proof_chain (unsimplified);
+
+
+    unsimplified.clear();
+    unsimplified.push_back (-lhs1);
+    unsimplified.push_back (lhs2);
+    if (internal->lrat) {
+      lrat_chain.push_back (g_neg_then_id);
+      lrat_chain.push_back (h_then_id);
+    }
+    LRAT_ID id2 = simplify_and_add_to_proof_chain (unsimplified);
+    reasons1.push_back (id1);
+    reasons2.push_back (id2);
+    return;
+  }
+  assert (degenerated_g_then || (g_then_id && g_neg_then_id));
+  assert (degenerated_g_else || (g_else_id && g_neg_else_id));
+  assert (degenerated_h_then || (h_then_id && h_neg_then_id));
+  assert (degenerated_h_else || (h_else_id && h_neg_else_id));
+  assert (g_then_id || h_neg_then_id);
+  assert (g_neg_then_id || h_then_id);
+  unsimplified.push_back (-lhs1);
+  unsimplified.push_back (lhs2);
   unsimplified.push_back (-cond);
   LRAT_ID id1 = -1;
   if (degenerated_g_then || degenerated_h_then) {
@@ -5759,8 +5826,8 @@ void Closure::add_ite_matching_proof_chain (
   unsimplified.pop_back ();
 
   unsimplified.clear ();
-  unsimplified.push_back (-lhs1);
-  unsimplified.push_back (lhs2);
+  unsimplified.push_back (lhs1);
+  unsimplified.push_back (-lhs2);
   unsimplified.push_back (-cond);
   assert (lrat_chain.empty ());
 
