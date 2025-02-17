@@ -5069,7 +5069,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       new_tag = Gate_Type::XOr_Gate;
       assert (rhs[0] == cond);
       rhs[1] = else_lit;
-      produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids);
+      produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs);
     } else {
       shrink = false;
       rhs[1] = dst;
@@ -5323,7 +5323,8 @@ void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit,
   if (!internal->lrat)
     return;
   // TODO
-  (void) lit;
+  if (internal->val (lit) > 0)
+    return;
   assert (internal->lrat);
   assert (g);
   assert (idx1 < g->pos_lhs_ids.size ());
