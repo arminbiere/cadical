@@ -4840,7 +4840,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         // is a unit
         push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[0].clause,
                                          Rewrite (), lrat_chain);
-	unsimplified.push_back (rewritting_then ? -cond_lit : cond_lit);
+	unsimplified.push_back (-cond_lit);
 	LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
 	reasons_unit = {id_unit};
 	// don't bother finding out which one is used
@@ -4854,7 +4854,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         // is a unit
         push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[3].clause,
                                          Rewrite (), lrat_chain);
-	unsimplified.push_back (rewritting_then ? -cond_lit : cond_lit);
+	unsimplified.push_back (cond_lit);
 	LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
 	reasons_unit = {id_unit};
 	// don't bother finding out which one is used
@@ -4873,9 +4873,9 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         // c LOG 0 clause[2] -3 -4 -5
 	// the first two are rewriting, but they are not ordered properly
 	// and we need the '5' clause to come after
-        push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[3].clause,
+        push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[2].clause,
                                          Rewrite (), lrat_chain);
-	unsimplified.push_back (-cond_lit);
+	unsimplified.push_back (cond_lit);
 	LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
 	reasons_unit = {id_unit};
 	g->pos_lhs_ids[1].clause = produce_rewritten_clause_lrat(g->pos_lhs_ids[1].clause);
@@ -4887,15 +4887,16 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
       }
       if (rewritting_then && cond_lit == -g->lhs) {
         LOG ("t=-lhs/c=-lhs");
-        push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[2].clause,
+	assert (g->pos_lhs_ids.size () == 4);
+        push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[0].clause,
                                          Rewrite (), lrat_chain);
-	unsimplified.push_back (cond_lit);
+	unsimplified.push_back (-cond_lit);
 	LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
 	reasons_unit = {id_unit};
-	g->pos_lhs_ids[1].clause = produce_rewritten_clause_lrat(g->pos_lhs_ids[1].clause);
+	g->pos_lhs_ids[3].clause = produce_rewritten_clause_lrat(g->pos_lhs_ids[3].clause);
 
         reasons_implication.push_back (id_unit);
-        reasons_implication.push_back (g->pos_lhs_ids[1].clause->id);
+        reasons_implication.push_back (g->pos_lhs_ids[3].clause->id);
         return;
       }
 
