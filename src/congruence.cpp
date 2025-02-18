@@ -2359,13 +2359,13 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
     if (v > 0) {
       if (internal->lrat) {
         push_lrat_unit (g->lhs);
-        lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
+        lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
       }
       learn_congruence_unit (g->rhs[0]);
     } else if (v < 0) {
       if (internal->lrat) {
         push_lrat_unit (-g->lhs);
-        lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
+        lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
       }
       learn_congruence_unit (-g->rhs[0]);
     } else if (merge_literals_lrat (
