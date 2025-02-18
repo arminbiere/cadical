@@ -4854,7 +4854,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         // don't bother finding out which one is used
         reasons_implication.push_back (id_unit);
         g->pos_lhs_ids[3].clause =
-            produce_rewritten_clause_lrat (g->pos_lhs_ids[3].clause);
+            produce_rewritten_clause_lrat (g->pos_lhs_ids[3].clause, g->lhs, false);
         reasons_implication.push_back (g->pos_lhs_ids[3].clause->id);
         unsimplified.clear ();
         return;
@@ -4871,7 +4871,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         // don't bother finding out which one is used
         reasons_implication.push_back (id_unit);
         g->pos_lhs_ids[0].clause =
-            produce_rewritten_clause_lrat (g->pos_lhs_ids[0].clause);
+            produce_rewritten_clause_lrat (g->pos_lhs_ids[0].clause, g->lhs, false);
         reasons_implication.push_back (g->pos_lhs_ids[3].clause->id);
         unsimplified.clear ();
         return;
@@ -4893,7 +4893,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
         reasons_unit = {id_unit};
         g->pos_lhs_ids[1].clause =
-            produce_rewritten_clause_lrat (g->pos_lhs_ids[1].clause);
+            produce_rewritten_clause_lrat (g->pos_lhs_ids[1].clause, g->lhs, false);
 
         // don't bother finding out which one is used
         reasons_implication.push_back (id_unit);
@@ -4910,7 +4910,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
         reasons_unit = {id_unit};
         g->pos_lhs_ids[2].clause =
-            produce_rewritten_clause_lrat (g->pos_lhs_ids[2].clause);
+            produce_rewritten_clause_lrat (g->pos_lhs_ids[2].clause, g->lhs, false);
 
         reasons_implication.push_back (id_unit);
         reasons_implication.push_back (g->pos_lhs_ids[2].clause->id);
@@ -4921,9 +4921,9 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         LOG ("t=-lhs/e=lhs from rewriting then");
 	learn_units = true;
         g->pos_lhs_ids[idx1].clause =
-            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx1].clause);
+          produce_rewritten_clause_lrat (g->pos_lhs_ids[idx1].clause, g->lhs, false);
         g->pos_lhs_ids[idx2].clause =
-            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx2].clause);
+            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx2].clause, g->lhs, false);
         assert (g->pos_lhs_ids[idx1].clause);
         assert (g->pos_lhs_ids[idx2].clause);
         lrat_chain.push_back (g->pos_lhs_ids[idx1].clause->id);
@@ -4939,9 +4939,9 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         LOG ("t=-lhs/e=lhs from rewriting else");
 	learn_units = true;
         g->pos_lhs_ids[idx1].clause =
-            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx1].clause);
+            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx1].clause, g->lhs, false);
         g->pos_lhs_ids[idx2].clause =
-            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx2].clause);
+            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx2].clause, g->lhs, false);
         assert (g->pos_lhs_ids[idx1].clause);
         assert (g->pos_lhs_ids[idx2].clause);
         lrat_chain.push_back (g->pos_lhs_ids[idx1].clause->id);
@@ -4958,9 +4958,9 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
 	learn_units = true;
         // in the other direction we are merging a literal with itself
         g->pos_lhs_ids[idx1].clause =
-            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx1].clause);
+            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx1].clause, g->lhs, false);
         g->pos_lhs_ids[idx2].clause =
-            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx2].clause);
+            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx2].clause, g->lhs, false);
         assert (g->pos_lhs_ids[idx1].clause);
         assert (g->pos_lhs_ids[idx2].clause);
         reasons_unit.push_back (g->pos_lhs_ids[idx1].clause->id);
