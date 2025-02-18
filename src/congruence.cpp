@@ -6238,6 +6238,9 @@ void Closure::check_ite_implied (int lhs, int cond, int then_lit,
 void Closure::check_contained_module_rewriting (Clause *c, int lit,
                                                 bool normalized,
                                                 int except) {
+#ifndef NDEBUG
+  if (lit == except) // happens for degenerated cases
+    except = 0;
   const int normalize_lit =
       (lit == except ? except : find_eager_representative (lit));
   assert (!normalized || lit == -except || normalize_lit == lit);
@@ -6248,15 +6251,15 @@ void Closure::check_contained_module_rewriting (Clause *c, int lit,
   for (auto other : *c) {
     const int normalize_other =
         (other == except ? except : find_eager_representative (other));
+    LOG ("%d -> %d ", other, normalize_other);
     assert (!normalized || other == -except || normalize_other == other);
     if (normalize_other == normalize_lit) {
-#ifndef NDEBUG
       found = true;
-#endif
       break;
     }
   }
   assert (found);
+#endif
 }
 
 void Closure::check_ite_lrat_reasons (Gate *g, bool normalized) {
