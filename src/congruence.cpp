@@ -1184,17 +1184,17 @@ bool Closure::merge_literals_lrat (
   assert (find_representative (larger_repr) == larger_repr);
   if (lit == -other) {
     LOG ("merging clashing %d and %d", lit, other);
-    if (internal->lrat)
-      internal->lrat_chain = *smaller_chain;
-
-    internal->assign_unit (smaller);
-    if (internal->lrat)
-      internal->lrat_chain.clear ();
-
-    push_lrat_unit (smaller);
     if (internal->lrat) {
-      assert (internal->lrat_chain.empty ());
-      swap (internal->lrat_chain, lrat_chain);
+      //      if (!lazy_propagated (smaller))
+      
+      LRAT_ID id = internal->unit_id (-smaller);
+      internal->lrat_chain.push_back (id);
+
+      for (auto id : *smaller_chain)
+	internal->lrat_chain.push_back(id);
+    }
+
+    if (internal->lrat) {
       for (auto id : *larger_chain)
         internal->lrat_chain.push_back (id);
       LOG (internal->lrat_chain, "lrat chain");
