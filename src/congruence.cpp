@@ -4730,8 +4730,10 @@ void Closure::produce_ite_merge_then_else_reasons (
   }
   if (g->lhs == g->rhs[0]) {
     LOG ("degenerated case with lhs = cond");
-    reasons_back.push_back (g->pos_lhs_ids[2].clause->id);
-    reasons_implication.push_back (g->pos_lhs_ids[3].clause->id);
+    assert (g->pos_lhs_ids[0].clause);
+    assert (g->pos_lhs_ids[1].clause);
+    reasons_back.push_back (g->pos_lhs_ids[0].clause->id);
+    reasons_implication.push_back (g->pos_lhs_ids[1].clause->id);
     return;
   }
   assert (g->pos_lhs_ids.size () == 4);
