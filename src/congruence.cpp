@@ -2105,7 +2105,7 @@ void Closure::update_and_gate_unit_build_lrat_chain (
 
   if (g->neg_lhs_ids.size () != 1) {
     assert (g->lhs == g->rhs[0] || (g->lhs == src && g->rhs[0] == dst));
-    assert (g->pos_lhs_ids.size () == 1);
+    assert (g->pos_lhs_ids.size () <= 1); // either degenerated or empty A = A
     return;
   }
   assert (g->neg_lhs_ids.size () == 1);
@@ -4868,6 +4868,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         g->pos_lhs_ids[0].clause =
             produce_rewritten_clause_lrat (g->pos_lhs_ids[0].clause);
         reasons_implication.push_back (g->pos_lhs_ids[3].clause->id);
+        unsimplified.clear ();
         return;
       }
       if (!rewritting_then && cond_lit == -g->lhs) {
@@ -4891,6 +4892,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         // don't bother finding out which one is used
         reasons_implication.push_back (id_unit);
         reasons_implication.push_back (g->pos_lhs_ids[1].clause->id);
+        unsimplified.clear ();
         return;
       }
       if (rewritting_then && cond_lit == -g->lhs) {
@@ -4905,6 +4907,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
 
         reasons_implication.push_back (id_unit);
         reasons_implication.push_back (g->pos_lhs_ids[2].clause->id);
+        unsimplified.clear ();
         return;
       }
       if (rewritting_then && lit_to_merge == g->lhs) {
@@ -4920,6 +4923,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
 	unsimplified.push_back (-cond_lit);
         LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
 	reasons_unit = {id_unit};
+        unsimplified.clear ();
 
         return;
       }
@@ -4935,8 +4939,8 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         lrat_chain.push_back (g->pos_lhs_ids[idx2].clause->id);
 	unsimplified.push_back (cond_lit);
         LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
-	reasons_unit = {id_unit};
-
+        reasons_unit = {id_unit};
+        unsimplified.clear ();
         return;
       }
 
