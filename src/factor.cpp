@@ -861,8 +861,9 @@ bool Internal::factor (bool preprocess) {
     return false;
   if (!opts.factor)
     return false;
-  assert (stats.mark.factor || clauses.empty ());
-  // update last.factor.marked and flags.factor to trigger factor
+  // The following assertion fails if there are *only* user propagator
+  // clauses (which are redundant).
+  // assert (stats.mark.factor || clauses.empty ());
   if (last.factor.marked >= stats.mark.factor) {
     VERBOSE (3,
              "factorization skipped as no literals have been"
