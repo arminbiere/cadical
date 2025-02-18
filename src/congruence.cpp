@@ -5543,12 +5543,10 @@ void Closure::merge_and_gate_lrat_produce_lrat (
 }
 
 // odd copy of rewrite_ite_gate_lrat_and
-void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1,
+bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1,
                                              size_t idx2, int removed_lit,
                                              int replaced) {
   assert (internal->lrat_chain.empty ());
-  if (!internal->lrat)
-    return;
   assert (g->rhs.size () == 3);
   assert (g->pos_lhs_ids.size () == 4);
   assert (idx1 < g->pos_lhs_ids.size ());
@@ -5559,6 +5557,17 @@ void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1,
   for (auto litId : g->pos_lhs_ids) {
     LOG (litId.clause, "%d ->", litId.current_lit);
   }
+  if (g->lhs == -g->rhs[0] || g->lhs == -g->rhs[1]) {
+    if (internal->lrat) {
+      Clause *c = g->pos_lhs_ids[idx1].clause;
+      push_id_and_rewriting_lrat_unit (c, Rewrite (), lrat_chain);
+      assert (!lrat_chain.empty ());
+    }
+    learn_congruence_unit (-g->lhs);
+    return true;
+  }
+  if (!internal->lrat)
+    return false;
   produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs, new_idx1,
                                            new_idx2);
 
@@ -5575,7 +5584,7 @@ void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1,
       assert (std::find (begin (g->rhs), end (g->rhs), litId.current_lit) !=
               end (g->rhs));
     }
-    return;
+    return false;
   }
   assert (new_idx1 < g->pos_lhs_ids.size ());
   assert (new_idx2 < g->pos_lhs_ids.size ());
@@ -5640,6 +5649,7 @@ void Closure::simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1,
     assert (std::find (begin (*litId.clause), end (*litId.clause),
                        litId.current_lit) != end (*litId.clause));
   }
+  return false;
 }
 
 void Closure::merge_ite_gate_produce_lrat (
@@ -5779,21 +5789,21 @@ void Closure::simplify_ite_gate (Gate *g) {
         g->lhs = -lhs;
         rhs[0] = -cond;
         rhs[1] = -else_lit;
-        simplify_ite_gate_to_and_lrat (g, 1, 3, then_lit, -cond);
+        garbage = simplify_ite_gate_to_and (g, 1, 3, then_lit, -cond);
       } else if (v_then < 0) {
         rhs[0] = -cond;
         rhs[1] = else_lit;
-        simplify_ite_gate_to_and_lrat (g, 0, 2, -then_lit, -cond);
+        garbage = simplify_ite_gate_to_and (g, 0, 2, -then_lit, -cond);
       } else if (v_else > 0) {
         g->lhs = -lhs;
         rhs[0] = -then_lit;
         rhs[1] = cond;
-        simplify_ite_gate_to_and_lrat (g, 3, 1, else_lit, -then_lit);
+        garbage = simplify_ite_gate_to_and (g, 3, 1, else_lit, -then_lit);
       } else {
         assert (v_else < 0);
         rhs[0] = then_lit;
         rhs[1] = cond;
-        simplify_ite_gate_to_and_lrat (g, 2, 0, -else_lit, -then_lit);
+        garbage = simplify_ite_gate_to_and (g, 2, 0, -else_lit, -then_lit);
       }
       if (internal->vlit (rhs[0]) > internal->vlit (rhs[1]))
         std::swap (rhs[0], rhs[1]);
