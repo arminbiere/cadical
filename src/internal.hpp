@@ -1201,7 +1201,6 @@ struct Internal {
   int elimfast_round (bool &completed, bool &);
   void elimfast ();
 
-
   // sweeping in 'sweep.cpp'
   int sweep_solve ();
   void sweep_set_kitten_ticks_limit (Sweeper &sweeper);

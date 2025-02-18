@@ -204,7 +204,6 @@ void Internal::search_assign_external (int lit) {
   notify_assignments ();
 }
 
-
 /*------------------------------------------------------------------------*/
 
 // The 'propagate' function is usually the hot-spot of a CDCL SAT solver.
@@ -293,7 +292,7 @@ bool Internal::propagate () {
           build_chain_for_units (w.blit, w.clause, 0);
           search_assign (w.blit, w.clause);
           // lrat_chain.clear (); done in search_assign
-	  ticks++;
+          ticks++;
         }
 
       } else {
@@ -385,7 +384,7 @@ bool Internal::propagate () {
 
             j--; // Drop this watch from the watch list of 'lit'.
 
-	    ticks++;
+            ticks++;
 
           } else if (!u) {
 
@@ -397,7 +396,7 @@ bool Internal::propagate () {
             build_chain_for_units (other, w.clause, 0);
             search_assign (other, w.clause);
             // lrat_chain.clear (); done in search_assign
-	    ticks++;
+            ticks++;
 
             // Similar code is in the implementation of the SAT'18 paper on
             // chronological backtracking but in our experience, this code

@@ -232,14 +232,13 @@ inline void Internal::bump_clause (Clause *c) {
   if (new_glue < c->glue)
     promote_clause (c, new_glue);
 
-  const size_t glue = std::min ((size_t)c->glue, stats.used[stable].size() - 1);
+  const size_t glue =
+      std::min ((size_t) c->glue, stats.used[stable].size () - 1);
   ++stats.used[stable][glue];
   ++stats.bump_used[stable];
 }
 
-void Internal::bump_clause2 (Clause *c) {
-  bump_clause (c);
-}
+void Internal::bump_clause2 (Clause *c) { bump_clause (c); }
 /*------------------------------------------------------------------------*/
 
 // During conflict analysis literals not seen yet either become part of the
@@ -1264,7 +1263,7 @@ void Internal::analyze () {
     eagerly_subsume_recently_learned_clauses (driving_clause);
 
   if (lim.recompute_tier <= stats.conflicts)
-    recompute_tier();
+    recompute_tier ();
 }
 
 // We wait reporting a learned unit until propagation of that unit is

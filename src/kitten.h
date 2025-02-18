@@ -42,8 +42,8 @@ void citten_clause_with_id_and_exception (kitten *, unsigned id,
                                           size_t size, const int *,
                                           unsigned except);
 void citten_clause_with_id_and_equivalence (kitten *, unsigned id,
-                                          size_t size, const int *,
-                                          unsigned, unsigned);
+                                            size_t size, const int *,
+                                            unsigned, unsigned);
 void kitten_no_ticks_limit (kitten *);
 void kitten_set_ticks_limit (kitten *, uint64_t);
 uint64_t kitten_current_ticks (kitten *);
@@ -55,9 +55,9 @@ int kitten_solve (kitten *);
 int kitten_status (kitten *);
 
 signed char kitten_value (kitten *, unsigned);
-signed char kitten_signed_value (kitten *, int);  // converts second argument
+signed char kitten_signed_value (kitten *, int); // converts second argument
 signed char kitten_fixed (kitten *, unsigned);
-signed char kitten_fixed_signed (kitten *, int);  // converts
+signed char kitten_fixed_signed (kitten *, int); // converts
 bool kitten_failed (kitten *, unsigned);
 bool kitten_flip_literal (kitten *, unsigned);
 bool kitten_flip_signed_literal (kitten *, int);
@@ -72,10 +72,10 @@ void kitten_traverse_core_clauses (kitten *, void *state,
                                    void (*traverse) (void *state,
                                                      bool learned, size_t,
                                                      const unsigned *));
-void kitten_traverse_core_clauses_with_id (kitten *, void *state,
-                                   void (*traverse) (void *state, unsigned,
-                                                     bool learned, size_t,
-                                                     const unsigned *));
+void kitten_traverse_core_clauses_with_id (
+    kitten *, void *state,
+    void (*traverse) (void *state, unsigned, bool learned, size_t,
+                      const unsigned *));
 void kitten_trace_core (kitten *, void *state,
                         void (*trace) (void *, unsigned, unsigned, bool,
                                        size_t, const unsigned *, size_t,
@@ -85,8 +85,8 @@ int kitten_compute_prime_implicant (kitten *kitten, void *state,
                                     bool (*ignore) (void *, unsigned));
 
 void kitten_add_prime_implicant (kitten *kitten, void *state, int side,
-                              void (*add_implicant) (void *, int,
-                                  size_t, const unsigned *));
+                                 void (*add_implicant) (void *, int, size_t,
+                                                        const unsigned *));
 
 int kitten_flip_and_implicant_for_signed_literal (kitten *kitten, int elit);
 

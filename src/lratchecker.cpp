@@ -114,9 +114,9 @@ void LratChecker::collect_garbage_clauses () {
 /*------------------------------------------------------------------------*/
 
 LratChecker::LratChecker (Internal *i)
-    : internal (i), size_vars (0), concluded (false),
-      num_clauses (0), num_finalized (0), num_garbage (0), size_clauses (0),
-      clauses (0), garbage (0), last_hash (0), last_id (0), current_id (0) {
+    : internal (i), size_vars (0), concluded (false), num_clauses (0),
+      num_finalized (0), num_garbage (0), size_clauses (0), clauses (0),
+      garbage (0), last_hash (0), last_id (0), current_id (0) {
 
   // Initialize random number table for hash function.
   //
@@ -240,7 +240,8 @@ bool LratChecker::check_resolution (vector<int64_t> proof_chain) {
   for (auto &b : checked_lits)
     assert (!b); // = false;
 #endif
-  if (!proof_chain.size () || proof_chain.back () < 0) return false;
+  if (!proof_chain.size () || proof_chain.back () < 0)
+    return false;
   LratCheckerClause *c = *find (proof_chain.back ());
   assert (c);
   for (int *i = c->literals; i < c->literals + c->size; i++) {
@@ -364,7 +365,8 @@ bool LratChecker::check (vector<int64_t> proof_chain) {
       checking = true;
       break;
     }
-   // LOG ("LRAT CHECKER found unit clause %" PRIu64 ", assign %d", id, unit);
+    // LOG ("LRAT CHECKER found unit clause %" PRIu64 ", assign %d", id,
+    // unit);
     checked_lit (unit) = true;
   }
   for (auto &lc : used_clauses) {
@@ -387,10 +389,11 @@ bool LratChecker::check_blocked (vector<int64_t> proof_chain) {
   for (size_t i = 0; i < size_clauses; i++) {
     for (LratCheckerClause *c = clauses[i], *next; c; c = next) {
       next = c->next;
-      if (c->garbage) continue;
+      if (c->garbage)
+        continue;
       // if c is part of the proof chain its id occurs negatively there.
-      if (std::find (proof_chain.begin (), proof_chain.end (), -c->id)
-        != proof_chain.end ()) {
+      if (std::find (proof_chain.begin (), proof_chain.end (), -c->id) !=
+          proof_chain.end ()) {
         // clause needs to be blocked
         unsigned count = 0;
         vector<int> candidates;
@@ -400,7 +403,7 @@ bool LratChecker::check_blocked (vector<int64_t> proof_chain) {
             count++;
           }
           if (mark (lit)) {
-            candidates.push_back (lit);            
+            candidates.push_back (lit);
           }
         }
         if (count < 2) {
@@ -412,10 +415,10 @@ bool LratChecker::check_blocked (vector<int64_t> proof_chain) {
           return false;
         } else {
           // all literals outside of candidates are not valid RAT candidates
-          for (auto & lit : imported_clause) {
+          for (auto &lit : imported_clause) {
             if (mark (-lit) &&
-                std::find (candidates.begin (), candidates.end (), -lit)
-                           == candidates.end ()) {
+                std::find (candidates.begin (), candidates.end (), -lit) ==
+                    candidates.end ()) {
               mark (-lit) = false;
             }
           }
@@ -502,7 +505,7 @@ void LratChecker::add_derived_clause (int64_t id, bool,
   if (failed) {
     LOG (proof_chain, "LRAT CHECKER check failed with chain");
 #ifdef LOGGING
-    for (const auto & pid : proof_chain) {
+    for (const auto &pid : proof_chain) {
       const int64_t aid = abs (pid);
       LratCheckerClause **p = find (aid), *d = *p;
       LOG (d->literals, d->size, "clause[%" PRId64 "]", pid);

@@ -9,12 +9,11 @@ namespace CaDiCaL {
 struct definition_extractor {
   Eliminator *eliminator;
   Internal *internal;
-  vector<Clause*> clauses[2];
+  vector<Clause *> clauses[2];
   int lit;
   vector<vector<int>> implicants;
   int unit;
 };
-
 
 extern "C" {
 
@@ -23,8 +22,8 @@ extern "C" {
 static void traverse_definition_core (void *state, unsigned id) {
   definition_extractor *extractor = (definition_extractor *) state;
   Clause *clause;
-  const vector<Clause*> &clauses0 = extractor->clauses[0];
-  const vector<Clause*> &clauses1 = extractor->clauses[1];
+  const vector<Clause *> &clauses0 = extractor->clauses[0];
+  const vector<Clause *> &clauses1 = extractor->clauses[1];
   Eliminator *eliminator = extractor->eliminator;
   const size_t size_clauses0 = clauses0.size ();
   const size_t size_clauses1 = clauses1.size ();
@@ -78,7 +77,7 @@ static void traverse_one_sided_core_lemma (void *state, bool learned,
     proof->add_derived_clause (pc.id, true, pc.literals, pc.chain);
   } else {
     internal->assign_unit (unit);
-    for (const auto & pc : proof_clauses) {
+    for (const auto &pc : proof_clauses) {
       proof->delete_clause (pc.id, true, pc.literals);
     }
     proof_clauses.clear ();
@@ -87,19 +86,18 @@ static void traverse_one_sided_core_lemma (void *state, bool learned,
 
 // extract lrat proofs for relevant clauses
 //
-static void traverse_one_sided_core_lemma_with_lrat (void *state, unsigned cid,
-                                                      unsigned id, bool learned,
-                                           size_t size, const unsigned *lits,
-                                           size_t chain_size, const unsigned *chain) {
+static void traverse_one_sided_core_lemma_with_lrat (
+    void *state, unsigned cid, unsigned id, bool learned, size_t size,
+    const unsigned *lits, size_t chain_size, const unsigned *chain) {
   definition_extractor *extractor = (definition_extractor *) state;
   Eliminator *eliminator = extractor->eliminator;
   Internal *internal = extractor->internal;
   Proof *proof = internal->proof;
   const int unit = extractor->unit;
-  const vector<Clause*> &clauses0 = extractor->clauses[0];
-  const vector<Clause*> &clauses1 = extractor->clauses[1];
+  const vector<Clause *> &clauses0 = extractor->clauses[0];
+  const vector<Clause *> &clauses1 = extractor->clauses[1];
   vector<proof_clause> &proof_clauses = eliminator->proof_clauses;
-  if (!learned) {  // remember clauses for mapping to kitten internal
+  if (!learned) { // remember clauses for mapping to kitten internal
     assert (size);
     assert (!chain_size);
     proof_clause pc;
@@ -119,7 +117,7 @@ static void traverse_one_sided_core_lemma_with_lrat (void *state, unsigned cid,
       pc.id = clauses1[tmp]->id;
     }
     proof_clauses.push_back (pc);
-  } else {  // actually add to proof
+  } else { // actually add to proof
     assert (chain_size);
     if (size) {
       proof_clause pc;
@@ -132,8 +130,8 @@ static void traverse_one_sided_core_lemma_with_lrat (void *state, unsigned cid,
         pc.literals.push_back (internal->citten2lit (*p)); // conversion
       for (const unsigned *p = chain + chain_size; p != chain; p--) {
         int64_t id = 0;
-        for (const auto & cpc : proof_clauses) {
-          if (cpc.cid == *(p-1)) {
+        for (const auto &cpc : proof_clauses) {
+          if (cpc.cid == *(p - 1)) {
             id = cpc.id;
             break;
           }
@@ -144,12 +142,12 @@ static void traverse_one_sided_core_lemma_with_lrat (void *state, unsigned cid,
       proof_clauses.push_back (pc);
       assert (proof);
       proof->add_derived_clause (pc.id, true, pc.literals, pc.chain);
-    } else {  // learn unit finish proof
+    } else { // learn unit finish proof
       assert (internal->lrat_chain.empty ());
       for (const unsigned *p = chain + chain_size; p != chain; p--) {
         int64_t id = 0;
-        for (const auto & cpc : proof_clauses) {
-          if (cpc.cid == *(p-1)) {
+        for (const auto &cpc : proof_clauses) {
+          if (cpc.cid == *(p - 1)) {
             id = cpc.id;
             break;
           }
@@ -159,7 +157,7 @@ static void traverse_one_sided_core_lemma_with_lrat (void *state, unsigned cid,
       }
       internal->assign_unit (unit);
       assert (internal->lrat_chain.empty ());
-      for (const auto & pc : proof_clauses) {
+      for (const auto &pc : proof_clauses) {
         if (pc.learned)
           proof->delete_clause (pc.id, true, pc.literals);
       }
@@ -169,7 +167,6 @@ static void traverse_one_sided_core_lemma_with_lrat (void *state, unsigned cid,
 }
 
 } // end extern C
-
 
 // Code ported from kissat. Kitten (and kissat) use unsigned representation
 // for literals whereas CaDiCaL uses signed representation. Conversion is
@@ -185,7 +182,8 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
     return;
   if (val (lit))
     return;
-  if (!eliminator.gates.empty ()) return;
+  if (!eliminator.gates.empty ())
+    return;
   assert (!val (lit));
   assert (!level);
   assert (citten);
@@ -215,7 +213,8 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
   const size_t limit = opts.elimdefticks;
   kitten_set_ticks_limit (citten, limit);
   int status = kitten_solve (citten);
-  if (!exported) goto ABORT;
+  if (!exported)
+    goto ABORT;
   if (status == 20) {
     LOG ("sub-solver result UNSAT shows definition exists");
     uint64_t learned;
@@ -263,7 +262,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
         if (lrat) {
           extractor.unit = unit;
           kitten_trace_core (citten, &extractor,
-                              traverse_one_sided_core_lemma_with_lrat);
+                             traverse_one_sided_core_lemma_with_lrat);
         } else {
           extractor.unit = unit;
           kitten_traverse_core_clauses (citten, &extractor,
@@ -280,6 +279,5 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
   stats.definition_ticks += kitten_current_ticks (citten);
   return;
 }
-
 
 } // namespace CaDiCaL

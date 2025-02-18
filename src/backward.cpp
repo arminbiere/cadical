@@ -142,7 +142,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
               continue;
             if (unit) {
               unit = INT_MIN;
-              continue;  // needed to guarantee d is not satsified
+              continue; // needed to guarantee d is not satsified
             } else
               unit = lit;
           }

@@ -8,7 +8,7 @@ bool Internal::flip (int lit) {
 
   if (!active (lit) && !flags (lit).unused ())
     return false;
-  
+
   /*
   if (flags (lit).unused ()) {
     assert (lit <= max_var);

@@ -1314,7 +1314,7 @@ struct Call {
     BEFORE =
         ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
-    DURING = LEMMA, 
+    DURING = LEMMA,
     LITTYPE = PHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE | FAILED |
               FIXED | FREEZE | FROZEN | MELT | CONSTRAIN | OBSERVE | LEMMA,
     EXTENDMAP = PHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
@@ -2080,8 +2080,8 @@ public:
         // They are (ideally) are executed already
         if (c->type == Call::LEMMA)
           continue;
-        // if (c->type == Call::CONTINUE)
-        //   continue;
+          // if (c->type == Call::CONTINUE)
+          //   continue;
 #ifdef MOBICAL_MEMORY
         if (c->type == Call::MAXALLOC) {
           memory_bad_alloc = c->val;
@@ -4717,9 +4717,9 @@ void Reader::parse () {
 
     lineno++;
   }
-  if (adding) 
+  if (adding)
     error ("EOF after 'add %d' without 'add 0'", adding);
-  if (lemma_adding) 
+  if (lemma_adding)
     error ("EOF after 'lemma %d' without 'lemma 0'", lemma_adding);
   if (constraining)
     error ("EOF after 'constrain %d' without 'constrain 0'", constraining);
