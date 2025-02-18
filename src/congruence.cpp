@@ -4771,12 +4771,12 @@ bool Closure::rewrite_ite_gate_to_and (Gate *g, int src, int dst,
 	  LOG ("unit is at idx1 %d", idx1);
           push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx1].clause,
                                            Rewrite (), lrat_chain);}
-        learn_congruence_unit (g->rhs[0]);
+        learn_congruence_unit (idx1 < 2 ? -dst : dst);
       } else {
         if (internal->lrat)
           push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx1].clause,
                                            Rewrite (), lrat_chain);
-        push_lrat_unit (g->rhs[0]);
+        push_lrat_unit (idx1 < 2 ? dst : -dst);
         internal->learn_empty_clause ();
         return true;
       }
@@ -4784,14 +4784,17 @@ bool Closure::rewrite_ite_gate_to_and (Gate *g, int src, int dst,
     if (!internal->unsat) {
       const int lit = g->rhs[1];
       const char v = internal->val (lit);
+      assert (dst == g->rhs[0] || dst==g->rhs[1] || -dst == g->rhs[0] || -dst==g->rhs[1]);
+      const int other = (dst == g->rhs[0] || dst==g->rhs[1]) ? dst ^ g->rhs[0] ^ g->rhs[1] :
+			(-dst) ^ g->rhs[0] ^ g->rhs[1];
       if (v > 0) {
       } else if (!v) {
         if (internal->lrat) {
-          push_lrat_unit (g->rhs[0]);
+          push_lrat_unit (g->rhs[0] ^ g->rhs[1] ^ dst);
           push_id_and_rewriting_lrat_unit (
               g->pos_lhs_ids[idx2].clause, Rewrite (), lrat_chain);
         }
-        learn_congruence_unit (g->rhs[0]);
+        learn_congruence_unit (other);
       } else {
         if (internal->lrat) {
           push_lrat_unit (g->rhs[0]);
@@ -5340,7 +5343,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
           lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
           lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
         }
-        learn_congruence_unit (-then_lit);
+        learn_congruence_unit (then_lit);
         garbage = true;
       } else if (not_lhs == cond) {
         produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, not_lhs,
