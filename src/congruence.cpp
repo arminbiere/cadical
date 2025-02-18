@@ -6039,12 +6039,12 @@ void Closure::add_ite_matching_proof_chain (
     return;
   }
   LOG ("normal path");
-  assert (degenerated_g_then || (g_then_id && g_neg_then_id));
-  assert (degenerated_g_else || (g_else_id && g_neg_else_id));
-  assert (degenerated_h_then || (h_then_id && h_neg_then_id));
-  assert (degenerated_h_else || (h_else_id && h_neg_else_id));
-  assert (g_then_id || h_neg_then_id);
-  assert (g_neg_then_id || h_then_id);
+  assert (!internal->lrat || degenerated_g_then || (g_then_id && g_neg_then_id));
+  assert (!internal->lrat || degenerated_g_else || (g_else_id && g_neg_else_id));
+  assert (!internal->lrat || degenerated_h_then || (h_then_id && h_neg_then_id));
+  assert (!internal->lrat || degenerated_h_else || (h_else_id && h_neg_else_id));
+  assert (!internal->lrat || g_then_id || h_neg_then_id);
+  assert (!internal->lrat || g_neg_then_id || h_then_id);
   unsimplified.push_back (-lhs1);
   unsimplified.push_back (lhs2);
   unsimplified.push_back (-cond);
