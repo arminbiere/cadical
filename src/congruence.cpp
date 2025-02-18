@@ -5849,48 +5849,48 @@ void Closure::add_ite_matching_proof_chain (
     LOG (g, "get ids from");
     assert (g->pos_lhs_ids.size () == 4);
     auto &g_then_clause = g->pos_lhs_ids[0].clause;
-    g_then_clause = produce_rewritten_clause_lrat (g_then_clause, g->lhs);
+    g_then_clause = produce_rewritten_clause_lrat (g_then_clause, g->lhs, false);
     if (g_then_clause)
       g_then_id = g_then_clause->id;
 
     auto &g_neg_then_clause = g->pos_lhs_ids[1].clause;
     g_neg_then_clause =
-        produce_rewritten_clause_lrat (g_neg_then_clause, g->lhs);
+        produce_rewritten_clause_lrat (g_neg_then_clause, g->lhs, false);
     if (g_neg_then_clause)
       g_neg_then_id = g_neg_then_clause->id;
 
     auto &g_else_clause = g->pos_lhs_ids[2].clause;
-    g_else_clause = produce_rewritten_clause_lrat (g_else_clause, g->lhs);
+    g_else_clause = produce_rewritten_clause_lrat (g_else_clause, g->lhs, false);
     if (g_else_clause)
       g_else_id = g_else_clause->id;
 
     auto &g_neg_else_clause = g->pos_lhs_ids[3].clause;
     g_neg_else_clause =
-        produce_rewritten_clause_lrat (g_neg_else_clause, g->lhs);
+        produce_rewritten_clause_lrat (g_neg_else_clause, g->lhs, false);
     if (g_neg_else_clause)
       g_neg_else_id = g_neg_else_clause->id;
 
     LOG (h, "now clauses from");
     assert (h->pos_lhs_ids.size () == 4);
     auto &h_then_clause = h->pos_lhs_ids[0].clause;
-    h_then_clause = produce_rewritten_clause_lrat (h_then_clause, h->lhs);
+    h_then_clause = produce_rewritten_clause_lrat (h_then_clause, h->lhs, false);
     if (h_then_clause)
       h_then_id = h_then_clause->id;
 
     auto &h_neg_then_clause = h->pos_lhs_ids[1].clause;
     h_neg_then_clause =
-        produce_rewritten_clause_lrat (h_neg_then_clause, h->lhs);
+        produce_rewritten_clause_lrat (h_neg_then_clause, h->lhs, false);
     if (h_neg_then_clause)
       h_neg_then_id = h_neg_then_clause->id;
 
     auto &h_else_clause = h->pos_lhs_ids[2].clause;
-    h_else_clause = produce_rewritten_clause_lrat (h_else_clause, h->lhs);
+    h_else_clause = produce_rewritten_clause_lrat (h_else_clause, h->lhs, false);
     if (h_else_clause)
       h_else_id = h_else_clause->id;
 
     auto &h_neg_else_clause = h->pos_lhs_ids[3].clause;
     h_neg_else_clause =
-        produce_rewritten_clause_lrat (h_neg_else_clause, h->lhs);
+        produce_rewritten_clause_lrat (h_neg_else_clause, h->lhs, false);
     if (h_neg_else_clause)
       h_neg_else_id = h_neg_else_clause->id;
   }
