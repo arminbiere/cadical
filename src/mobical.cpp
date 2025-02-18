@@ -219,6 +219,7 @@ struct DoNot {
     bool atall = false;    // do not shrink anything              's'
     bool phases = false;   // shrink complete incremental solving 'p'
     bool clauses = false;  // shrink full clauses                 'c'
+    bool lemmas = false;   // shrink external lemmas              'u'
     bool literals = false; // shrink literals which shrinks       'l'
     bool basic = false;    // shrink other basic calls            'b'
     bool options = false;  // shrink option calls                 'o'
@@ -3677,8 +3678,8 @@ bool Trace::shrink_clauses (int expected) {
 }
 
 bool Trace::shrink_lemmas (int expected) {
-  // TODO: introduce donot-shrink-lemmas
-  // if (mobical.donot.shrink.lemmas) return false;
+  if (mobical.donot.shrink.lemmas)
+    return false;
   notify ('u');
   Segments segments;
   for (size_t r = size (), l; r > 1; r = l) {
@@ -4852,6 +4853,8 @@ int Mobical::main (int argc, char **argv) {
       donot.shrink.phases = true;
     else if (!strcmp (argv[i], "--do-not-shrink-clauses"))
       donot.shrink.clauses = true;
+    else if (!strcmp (argv[i], "--do-not-shrink-lemmas"))
+      donot.shrink.lemmas = true;
     else if (!strcmp (argv[i], "--do-not-shrink-literals"))
       donot.shrink.literals = true;
     else if (!strcmp (argv[i], "--do-not-shrink-basic") ||
