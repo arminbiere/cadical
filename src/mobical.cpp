@@ -1314,7 +1314,7 @@ struct Call {
     BEFORE =
         ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
-    DURING = LEMMA, // | CONTINUE,
+    DURING = LEMMA, 
     LITTYPE = PHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE | FAILED |
               FIXED | FREEZE | FROZEN | MELT | CONSTRAIN | OBSERVE | LEMMA,
     EXTENDMAP = PHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
@@ -1392,10 +1392,6 @@ static bool before_type (Call::Type t) {
 
 static bool process_type (Call::Type t) {
   return (((int) t & (int) Call::PROCESS)) != 0;
-}
-
-static bool during_type (Call::Type t) {
-  return (((int) t & (int) Call::DURING)) != 0;
 }
 
 static bool after_type (Call::Type t) {
@@ -3640,7 +3636,7 @@ bool Trace::shrink_phases (int expected) {
       ;
     if (r < size () && process_type (calls[r]->type))
       r++;
-    for (; r < size () && during_type (calls[r]->type); r++)
+    for (; r < size () && calls[r]->type == Call::LEMMA; r++)
       ;
     for (; r < size () && after_type (calls[r]->type); r++)
       ;
@@ -3648,8 +3644,10 @@ bool Trace::shrink_phases (int expected) {
       segments.push_back (Segment (l, r));
     else {
       assert (l == r);
-      if (!config_type (calls[r]->type))
+      if (!config_type (calls[r]->type)) {
+        assert (calls[r]->type != Call::LEMMA);
         segments.push_back (Segment (r, r + 1));
+      }
       ++r;
     }
   }
@@ -4693,7 +4691,6 @@ void Reader::parse () {
       case Call::RESET:
       case Call::CONNECT:
       case Call::LEMMA:
-      // case Call::CONTINUE:
       case Call::DISCONNECT:
         new_state = c->type;
         break;
