@@ -5596,12 +5596,6 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
                                         int removed_lit, int replaced) {
   assert (internal->lrat_chain.empty ());
   assert (g->rhs.size () == 3);
-  assert (g->pos_lhs_ids.size () == 4);
-  assert (idx1 < g->pos_lhs_ids.size ());
-  assert (idx2 < g->pos_lhs_ids.size ());
-  int lit = g->pos_lhs_ids[idx2].current_lit, other = g->lhs;
-  size_t new_idx1 = idx1;
-  size_t new_idx2 = idx2;
   for (auto litId : g->pos_lhs_ids) {
     LOG (litId.clause, "%d ->", litId.current_lit);
   }
@@ -5616,6 +5610,13 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
   }
   if (!internal->lrat)
     return false;
+
+  assert (g->pos_lhs_ids.size () == 4);
+  assert (idx1 < g->pos_lhs_ids.size ());
+  assert (idx2 < g->pos_lhs_ids.size ());
+  int lit = g->pos_lhs_ids[idx2].current_lit, other = g->lhs;
+  size_t new_idx1 = idx1;
+  size_t new_idx2 = idx2;
   produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs, new_idx1,
                                            new_idx2);
 
