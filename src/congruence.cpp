@@ -2015,7 +2015,7 @@ void Closure::init_and_gate_extraction () {
 void Closure::check_and_gate_implied (Gate *g) {
   assert (internal->clause.empty ());
   assert (g->tag == Gate_Type::And_Gate);
-  if (!internal->opts.check)
+  if (internal->lrat)
     return;
   LOG (g, "checking implied");
   const int lhs = g->lhs;
@@ -3053,8 +3053,6 @@ void inc_lits (vector<int> &lits) {
 
 void Closure::check_ternary (int a, int b, int c) {
   assert (internal->clause.empty ());
-  if (!internal->opts.check)
-    return;
   if (internal->lrat)
     return;
   auto &clause = internal->clause;
@@ -3074,8 +3072,6 @@ void Closure::check_ternary (int a, int b, int c) {
 
 void Closure::check_binary_implied (int a, int b) {
   assert (internal->clause.empty ());
-  if (!internal->opts.check)
-    return;
   if (internal->lrat)
     return;
   auto &clause = internal->clause;
@@ -3087,8 +3083,6 @@ void Closure::check_binary_implied (int a, int b) {
 }
 
 void Closure::check_implied () {
-  if (!internal->opts.check)
-    return;
   if (internal->lrat)
     return;
   internal->external->check_learned_clause ();
@@ -3163,8 +3157,6 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
 void Closure::check_xor_gate_implied (Gate const *const g) {
   assert (internal->clause.empty ());
   assert (g->tag == Gate_Type::XOr_Gate);
-  if (!internal->opts.check)
-    return;
   if (internal->lrat) {
     return;
   }
@@ -5909,8 +5901,6 @@ void Closure::add_ite_matching_proof_chain (
     return;
   if (!internal->proof)
     return;
-  if (!internal->opts.check)
-    return;
   LOG (g, "starting ITE matching proof chain");
   assert (unsimplified.empty ());
   assert (chain.empty ());
@@ -6240,7 +6230,7 @@ void check_ite_lits_normalized (const std::vector<int> &lits) {
 
 void Closure::check_ite_implied (int lhs, int cond, int then_lit,
                                  int else_lit) {
-  if (!internal->opts.check)
+  if (internal->lrat)
     return;
   check_ternary (cond, -else_lit, lhs);
   check_ternary (cond, else_lit, -lhs);
@@ -6309,7 +6299,7 @@ void Closure::check_ite_lrat_reasons (Gate *g, bool normalized) {
 
 void Closure::check_ite_gate_implied (Gate *g) {
   assert (g->tag == Gate_Type::ITE_Gate);
-  if (!internal->opts.check)
+  if (internal->lrat)
     return;
   check_ite_implied (g->lhs, g->rhs[0], g->rhs[1], g->rhs[2]);
 }
