@@ -5297,7 +5297,18 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       // cond ? then_lit : !then_lit
       // cond & then_lit | !cond & !then_lit
       // !(cond ^ then_lit)
-      if (not_lhs == cond) {
+      if (lhs == cond) {
+        produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, not_lhs,
+                                                 false);
+        if (internal->lrat) {
+          assert (g->pos_lhs_ids.size () == 2);
+          lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
+          lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
+        }
+        learn_congruence_unit (-then_lit);
+        garbage = true;
+      }
+      else if (not_lhs == cond) {
         produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, not_lhs,
                                                  false);
         if (internal->lrat) {
