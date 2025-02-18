@@ -5200,7 +5200,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
 #ifndef NDEBUG
           std::for_each (
               begin (g->pos_lhs_ids), end (g->pos_lhs_ids),
-              [] (LitClausePair l) { assert (l.clause->size == 3); });
+              [g] (LitClausePair l) { assert (l.clause->size == 1+g->arity ()); });
 #endif
         } else if (new_tag == Gate_Type::And_Gate) {
           // we have to get rid of one clause, two become binaries, and
