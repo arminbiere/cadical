@@ -4834,6 +4834,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
     if (g->lhs == -other_lit) {
       LOG ("special case: %s=%s, checking if other: %s %s", LOGLIT (g->lhs),
            LOGLIT (-lit_to_merge), LOGLIT (cond_lit), LOGLIT (other_lit));
+      assert (lit_to_merge != -g->lhs); // should have been rewritten before
 
       if (rewritting_then && cond_lit == g->lhs) {
         LOG ("t=-lhs/c=lhs");
@@ -4887,17 +4888,20 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
       }
       if (rewritting_then && cond_lit == -g->lhs) {
         LOG ("t=-lhs/c=-lhs");
-	assert (g->pos_lhs_ids.size () == 4);
-        push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[0].clause,
+        push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[1].clause,
                                          Rewrite (), lrat_chain);
 	unsimplified.push_back (-cond_lit);
 	LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
 	reasons_unit = {id_unit};
-	g->pos_lhs_ids[3].clause = produce_rewritten_clause_lrat(g->pos_lhs_ids[3].clause);
+	g->pos_lhs_ids[2].clause = produce_rewritten_clause_lrat(g->pos_lhs_ids[2].clause);
 
         reasons_implication.push_back (id_unit);
-        reasons_implication.push_back (g->pos_lhs_ids[3].clause->id);
+        reasons_implication.push_back (g->pos_lhs_ids[2].clause->id);
         return;
+      }
+      if (lit_to_merge == g->lhs) {
+        LOG ("t=-lhs/e=lhs");
+	assert (false && "todo add special case for this too");
       }
 
       if (other_lit == g->lhs) {
@@ -5050,7 +5054,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       check_ite_implied (g->lhs, cond, then_lit, else_lit);
       std::vector<LRAT_ID> reasons_implication, reasons_back, reasons_unit;
       LOG ("%d = %d ?", g->lhs, -g->rhs[0]);
-      if (g->lhs == -g->rhs[0]) { // it is too hard to produce LRAT chains
+      if (g->lhs == g->rhs[0]) { // it is too hard to produce LRAT chains
                                   // in this case
         produce_ite_merge_lhs_then_else_reasons (
             g, reasons_implication, reasons_back, reasons_unit, true);
