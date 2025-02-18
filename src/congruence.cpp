@@ -4907,9 +4907,37 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         reasons_implication.push_back (g->pos_lhs_ids[2].clause->id);
         return;
       }
-      if (lit_to_merge == g->lhs) {
-        LOG ("t=-lhs/e=lhs");
-        assert (false && "todo add special case for this too");
+      if (rewritting_then && lit_to_merge == g->lhs) {
+        LOG ("t=-lhs/e=lhs from rewriting then");
+        g->pos_lhs_ids[idx1].clause =
+            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx1].clause);
+        g->pos_lhs_ids[idx2].clause =
+            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx2].clause);
+        assert (g->pos_lhs_ids[idx1].clause);
+        assert (g->pos_lhs_ids[idx2].clause);
+        lrat_chain.push_back (g->pos_lhs_ids[idx1].clause->id);
+        lrat_chain.push_back (g->pos_lhs_ids[idx2].clause->id);
+	unsimplified.push_back (-cond_lit);
+        LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
+	reasons_unit = {id_unit};
+
+        return;
+      }
+      if (!rewritting_then && lit_to_merge == g->lhs) {
+        LOG ("t=-lhs/e=lhs from rewriting else");
+        g->pos_lhs_ids[idx1].clause =
+            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx1].clause);
+        g->pos_lhs_ids[idx2].clause =
+            produce_rewritten_clause_lrat (g->pos_lhs_ids[idx2].clause);
+        assert (g->pos_lhs_ids[idx1].clause);
+        assert (g->pos_lhs_ids[idx2].clause);
+        lrat_chain.push_back (g->pos_lhs_ids[idx1].clause->id);
+        lrat_chain.push_back (g->pos_lhs_ids[idx2].clause->id);
+	unsimplified.push_back (cond_lit);
+        LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
+	reasons_unit = {id_unit};
+
+        return;
       }
 
       if (other_lit == g->lhs) {
@@ -4925,12 +4953,14 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         reasons_unit.push_back (g->pos_lhs_ids[idx2].clause->id);
         return;
       }
-      if (other_lit == -g->lhs) {
-        assert (false);
-      }
-      if (other_lit == g->lhs) {
-        assert (false);
-      }
+      // if (other_lit == -g->lhs) {
+      //   assert (false);
+      // }
+      // if (other_lit == g->lhs) {
+      //   assert (false);
+      // }
+
+
     }
 
     LOG ("normal path");
