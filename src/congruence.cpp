@@ -5238,16 +5238,6 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         }
         learn_congruence_unit (-else_lit);
         garbage = true;
-      } else if (g->lhs == then_lit) {
-        produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs,
-                                                 false);
-        if (internal->lrat) {
-          assert (g->pos_lhs_ids.size () == 2);
-          lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
-          lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
-        }
-        learn_congruence_unit (cond);
-        garbage = true;
       } else {
         LOG ("changing to xor");
         new_tag = Gate_Type::XOr_Gate;
