@@ -4385,6 +4385,8 @@ void Reader::parse () {
         error ("invalid argument '%s' to 'lemma'", first);
       if (second)
         error ("additional argument '%s' to 'lemma'", second);
+      if (enforce && lit == INT_MIN)
+        error ("invalid literal '%d' as argument to 'lemma'", lit);
       // if (!lemma_adding && !lit) error ("empty lemma is learned.");
       lemma_adding = lit;
       c = new LemmaCall (lit);
@@ -4718,6 +4720,12 @@ void Reader::parse () {
 
     lineno++;
   }
+  if (adding) 
+    error ("EOF after 'add %d' without 'add 0'", adding);
+  if (lemma_adding) 
+    error ("EOF after 'lemma %d' without 'lemma 0'", lemma_adding);
+  if (constraining)
+    error ("EOF after 'constrain %d' without 'constrain 0'", constraining);
 }
 
 /*------------------------------------------------------------------------*/
