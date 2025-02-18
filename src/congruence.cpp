@@ -1185,28 +1185,21 @@ bool Closure::merge_literals_lrat (
   assert (find_representative (larger_repr) == larger_repr);
   if (lit == -other) {
     LOG ("merging clashing %d and %d", lit, other);
-    assert (!val_lit && !val_other);
     if (internal->lrat) {
-      //      if (!lazy_propagated (smaller))
-
-      /*
-      LRAT_ID id = internal->unit_id (-smaller);
-      internal->lrat_chain.push_back (id);
-*/
-
       for (auto id : *smaller_chain)
-        internal->lrat_chain.push_back (id);
+        lrat_chain.push_back (id);
     }
-    internal->assign_unit (smaller);
+    unsimplified.push_back (smaller);
+    LRAT_ID id = simplify_and_add_to_proof_chain (unsimplified);
 
     if (internal->lrat) {
-      LRAT_ID id = internal->unit_id (smaller);
       internal->lrat_chain.push_back (id);
       for (auto id : *larger_chain)
         internal->lrat_chain.push_back (id);
       LOG (internal->lrat_chain, "lrat chain");
     }
     internal->learn_empty_clause ();
+    delete_proof_chain();
     return false;
   }
 
