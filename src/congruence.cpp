@@ -5185,7 +5185,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         rhs[1] = else_lit;
         assert (rhs[0] != g->lhs);
         assert (rhs[1] != g->lhs);
-        produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs);
+        produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs,
+                                                 false);
       }
     } else {
       shrink = false;
