@@ -598,7 +598,7 @@ struct Closure {
   void produce_ite_merge_lhs_then_else_reasons (
       Gate *g, std::vector<LRAT_ID> &reasons_implication,
       std::vector<LRAT_ID> &reasons_back,
-						std::vector<LRAT_ID> &reasons_unit, bool);
+						std::vector<LRAT_ID> &reasons_unit, bool, bool&);
   void rewrite_ite_gate_update_lrat_reasons (Gate *g, int src, int dst);
   void simplify_ite_gate_produce_unit_lrat (Gate *g, int lit, size_t idx1,
                                             size_t idx2);

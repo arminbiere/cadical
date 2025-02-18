@@ -4820,7 +4820,7 @@ void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
 void Closure::produce_ite_merge_lhs_then_else_reasons (
     Gate *g, std::vector<LRAT_ID> &reasons_implication,
     std::vector<LRAT_ID> &reasons_back, std::vector<LRAT_ID> &reasons_unit,
-    bool rewritting_then) {
+						       bool rewritting_then, bool &learn_units) {
 
   const size_t idx1 = rewritting_then ? 0 : 2;
   const size_t idx2 = idx1 + 1;
@@ -4844,6 +4844,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
 
       if (rewritting_then && cond_lit == g->lhs) {
         LOG ("t=-lhs/c=lhs");
+	learn_units = true;
         // is a unit
         push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[0].clause,
                                          Rewrite (), lrat_chain);
@@ -4860,6 +4861,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
       }
       if (!rewritting_then && cond_lit == g->lhs) {
         LOG ("e=-lhs/c=lhs");
+	learn_units = true;
         // is a unit
         push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[3].clause,
                                          Rewrite (), lrat_chain);
@@ -4876,6 +4878,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
       }
       if (!rewritting_then && cond_lit == -g->lhs) {
         LOG ("e=-lhs/c=-lhs");
+	learn_units = true;
         // TODO: this function does not work to produce units for this case
         // c LOG 0 rewriting 4 by 3 in gate[42] (arity: 3) -3 := ITE 3 7
         // ...
@@ -4900,6 +4903,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
       }
       if (rewritting_then && cond_lit == -g->lhs) {
         LOG ("t=-lhs/c=-lhs");
+	learn_units = true;
         push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[1].clause,
                                          Rewrite (), lrat_chain);
         unsimplified.push_back (-cond_lit);
@@ -4915,6 +4919,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
       }
       if (rewritting_then && lit_to_merge == g->lhs) {
         LOG ("t=-lhs/e=lhs from rewriting then");
+	learn_units = true;
         g->pos_lhs_ids[idx1].clause =
             produce_rewritten_clause_lrat (g->pos_lhs_ids[idx1].clause);
         g->pos_lhs_ids[idx2].clause =
@@ -4932,6 +4937,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
       }
       if (!rewritting_then && lit_to_merge == g->lhs) {
         LOG ("t=-lhs/e=lhs from rewriting else");
+	learn_units = true;
         g->pos_lhs_ids[idx1].clause =
             produce_rewritten_clause_lrat (g->pos_lhs_ids[idx1].clause);
         g->pos_lhs_ids[idx2].clause =
@@ -4949,6 +4955,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
 
       if (other_lit == g->lhs) {
         LOG ("TODO FIX ME t=-lhs/e=lhs");
+	learn_units = true;
         // in the other direction we are merging a literal with itself
         g->pos_lhs_ids[idx1].clause =
             produce_rewritten_clause_lrat (g->pos_lhs_ids[idx1].clause);
@@ -5095,10 +5102,12 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       check_ite_implied (g->lhs, cond, then_lit, else_lit);
       std::vector<LRAT_ID> reasons_implication, reasons_back, reasons_unit;
       LOG ("%d = %d ?", g->lhs, -g->rhs[0]);
-      if (g->lhs == g->rhs[0]) { // it is too hard to produce LRAT chains
+      bool learn_units_instead_of_equivalence = false;
+      produce_ite_merge_lhs_then_else_reasons (
+          g, reasons_implication, reasons_back, reasons_unit, true,
+          learn_units_instead_of_equivalence);
+      if (learn_units_instead_of_equivalence) { // it is too hard to produce LRAT chains
                                  // in this case
-        produce_ite_merge_lhs_then_else_reasons (
-            g, reasons_implication, reasons_back, reasons_unit, true);
 
         if (internal->lrat)
           lrat_chain = reasons_unit;
@@ -5107,8 +5116,6 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
           lrat_chain = reasons_implication;
         learn_congruence_unit (else_lit);
       } else {
-        produce_ite_merge_lhs_then_else_reasons (
-            g, reasons_implication, reasons_back, reasons_unit, true);
         if (merge_literals_lrat (g->lhs, else_lit, reasons_implication,
                                  reasons_back)) {
           ++internal->stats.congruence.unaries;
@@ -5199,10 +5206,11 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
     if (not_dst == g->lhs) { // TODO not in kissat
       rhs[2] = dst;
       std::vector<LRAT_ID> reasons_implication, reasons_back, reasons_unit;
+      bool learn_units_instead_of_equivalence = false;
       produce_ite_merge_lhs_then_else_reasons (
-          g, reasons_implication, reasons_back, reasons_unit, false);
-      if (g->lhs == -g->rhs[0] ||
-          g->lhs == g->rhs[0]) { // Too hard to produce LRAT
+          g, reasons_implication, reasons_back, reasons_unit, false,
+          learn_units_instead_of_equivalence);
+      if (learn_units_instead_of_equivalence) { // Too hard to produce LRAT
         if (internal->lrat)
           lrat_chain = reasons_unit;
         learn_congruence_unit (cond);
