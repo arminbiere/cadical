@@ -1780,15 +1780,23 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
     const int unit = (val_lit < 0) ? -other : other;
     if (internal->lrat)
       lrat_chain.push_back (internal->unit_id (unit));
+    if (val_lit < 0)
+      lrat_chain.push_back (c2->id);
+    else
+      lrat_chain.push_back (c1->id);
     learn_congruence_unit (unit);
     return false;
   }
 
   if (!val_lit && val_other) {
-    LOG ("merging assigned %d and unassigned %d", lit, other);
+    LOG ("merging assigned %d and unassigned %d", other, lit);
     const int unit = (val_other < 0) ? -lit : lit;
     if (internal->lrat)
-      lrat_chain.push_back (internal->unit_id (other));
+      lrat_chain.push_back (internal->unit_id (val_other < 0 ? -other : other));
+    if (val_lit < 0)
+      lrat_chain.push_back (c1->id);
+    else
+      lrat_chain.push_back (c2->id);
     learn_congruence_unit (unit);
     return false;
   }
