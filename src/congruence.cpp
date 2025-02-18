@@ -1112,6 +1112,8 @@ bool Closure::learn_congruence_unit (int lit) {
   if (no_conflict)
     return true;
   internal->learn_empty_clause ();
+  if (internal->lrat)
+    lrat_chain.clear ();
 
   return false;
 }
@@ -2495,7 +2497,7 @@ bool Closure::simplify_gate (Gate *g) {
     assert (false);
     break;
   }
-
+  assert (lrat_chain.empty ());
   return !internal->unsat;
 }
 
@@ -4139,7 +4141,7 @@ bool Closure::rewrite_gate (Gate *g, int dst, int src, LRAT_ID id1,
     assert (false);
     break;
   }
-  assert (lrat_chain.empty ());
+  assert (internal->unsat || lrat_chain.empty ());
   return !internal->unsat;
 }
 
@@ -4354,11 +4356,11 @@ size_t Closure::propagate_units_and_equivalences () {
     schedule.pop ();
     scheduled[abs (lit)] = false;
     if (!propagate_equivalence (lit))
-      break;
+	break;
   }
 
   assert (internal->unsat || schedule.empty ());
-  assert (lrat_chain.empty ());
+  assert (internal->unsat || lrat_chain.empty ());
 
   LOG ("propagated %zu congruence units", units);
   LOG ("propagated %zu congruence equivalences", propagated);
