@@ -115,9 +115,7 @@ Factoring::Factoring (Internal *i, int64_t l, bool preprocess)
   const unsigned max_var = internal->max_var;
   const unsigned max_lit = 2 * (max_var + 1);
   initial = max_var;
-  bound = preprocess && internal->opts.fastelim
-              ? internal->opts.fastelimbound
-              : internal->lim.elimbound;
+  bound = internal->lim.elimbound;
   enlarge_zero (count, max_lit);
   quotients.first = quotients.last = 0;
 }
@@ -875,7 +873,7 @@ bool Internal::factor (bool preprocess) {
 
   SET_EFFORT_LIMIT (limit, factor, stats.factor);
   if (!stats.factor)
-    limit += opts.factoriniticks * 1e3;
+    limit += opts.factoriniticks * 1e6;
 
   START_SIMPLIFIER (factor, FACTOR);
   stats.factor++;

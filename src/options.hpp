@@ -112,7 +112,7 @@ OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
 OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds") \
 OPTION( factoreffort,     50,  0,1e6,0,0,1, "relative effort per mille") \
-OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort per thousand") \
+OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort in millions") \
 OPTION( factorsize,        5,  2,2e9,0,0,1, "clause size limit") \
 OPTION( factorthresh,      7,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( fastelim,          0,  0,  1,0,1,1, "fast BVE during preprocessing") \
