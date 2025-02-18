@@ -2346,6 +2346,14 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
       assert (clause.size () && clause.back () == -g->lhs);
       clause.clear ();
     }
+
+    if (internal->lrat && internal->val (-g->lhs) < 0) {
+      internal->lrat_chain.push_back (internal->unit_id (g->lhs));
+      for (auto id : lrat_chain)
+        internal->lrat_chain.push_back(id);
+      lrat_chain.clear ();
+      swap (internal->lrat_chain, lrat_chain);
+    }
     learn_congruence_unit (-g->lhs);
 
     assert (clause.empty ());
