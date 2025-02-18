@@ -4786,7 +4786,7 @@ bool Closure::rewrite_ite_gate_to_and (Gate *g, int src, int dst,
         return true;
       }
     }
-    {
+    if (!internal->unsat) {
       const int lit = g->rhs[1];
       const char v = internal->val (lit);
       if (v > 0) {
