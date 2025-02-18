@@ -5488,9 +5488,9 @@ void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit,
   assert (idx1 != idx2);
   Clause *c = g->pos_lhs_ids[idx1].clause;
   Clause *d = g->pos_lhs_ids[idx2].clause;
-  c = produce_rewritten_clause_lrat (c, 0, true);
+  c = produce_rewritten_clause_lrat (c, g->lhs, true);
   assert (c);
-  d = produce_rewritten_clause_lrat (d, 0, true);
+  d = produce_rewritten_clause_lrat (d, g->lhs, true);
   assert (d);
   lrat_chain.push_back (c->id);
   lrat_chain.push_back (d->id);
