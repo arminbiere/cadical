@@ -4865,6 +4865,14 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
       }
       if (!rewritting_then && cond_lit == -g->lhs) {
         LOG ("e=-lhs/c=-lhs");
+        // TODO: this function does not work to produce units for this case
+	// c LOG 0 rewriting 4 by 3 in gate[42] (arity: 3) -3 := ITE 3 7
+	// ...
+        // c LOG 0 clause[50] 4 -3
+        // c LOG 0 clause[44] 5 3
+        // c LOG 0 clause[2] -3 -4 -5
+	// the first two are rewriting, but they are not ordered properly
+	// and we need the '5' clause to come after
         push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[3].clause,
                                          Rewrite (), lrat_chain);
 	unsimplified.push_back (-cond_lit);
