@@ -1184,22 +1184,25 @@ bool Closure::merge_literals_lrat (
   assert (find_representative (smaller_repr) == smaller_repr);
   assert (find_representative (larger_repr) == larger_repr);
   if (lit == -other) {
+    assert (chain.empty());
     LOG ("merging clashing %d and %d", lit, other);
-    if (internal->lrat) {
-      for (auto id : *smaller_chain)
-        lrat_chain.push_back (id);
-    }
-    unsimplified.push_back (smaller);
-    LRAT_ID id = simplify_and_add_to_proof_chain (unsimplified);
+    if (internal->proof) {
+      if (internal->lrat) {
+        for (auto id : *smaller_chain)
+          lrat_chain.push_back (id);
+      }
+      unsimplified.push_back (smaller);
+      LRAT_ID id = simplify_and_add_to_proof_chain (unsimplified);
 
-    if (internal->lrat) {
-      internal->lrat_chain.push_back (id);
-      for (auto id : *larger_chain)
+      if (internal->lrat) {
         internal->lrat_chain.push_back (id);
-      LOG (internal->lrat_chain, "lrat chain");
+        for (auto id : *larger_chain)
+          internal->lrat_chain.push_back (id);
+        LOG (internal->lrat_chain, "lrat chain");
+      }
     }
     internal->learn_empty_clause ();
-    delete_proof_chain();
+    delete_proof_chain ();
     return false;
   }
 
