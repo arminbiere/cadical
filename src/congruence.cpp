@@ -5438,7 +5438,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         add_ite_matching_proof_chain (g, h, normalized_lhs, h->lhs,
                                       extra_reasons_lit,
                                       extra_reasons_ulit);
-        if (merge_literals_lrat (h->lhs, normalized_lhs, extra_reasons_lit,
+        if (merge_literals_lrat (normalized_lhs, h->lhs, extra_reasons_lit,
                                  extra_reasons_ulit))
           ++internal->stats.congruence.ites;
         delete_proof_chain ();
@@ -5938,6 +5938,7 @@ void Closure::add_ite_matching_proof_chain (
     unsimplified.clear ();
     return;
   }
+  LOG ("normal path");
   assert (degenerated_g_then || (g_then_id && g_neg_then_id));
   assert (degenerated_g_else || (g_else_id && g_neg_else_id));
   assert (degenerated_h_then || (h_then_id && h_neg_then_id));
@@ -5949,7 +5950,7 @@ void Closure::add_ite_matching_proof_chain (
   unsimplified.push_back (-cond);
   LRAT_ID id1 = -1;
   if (degenerated_g_then || degenerated_h_then) {
-    id1 = degenerated_g_then ? h_then_id : g_neg_then_id;
+    id1 = degenerated_g_then ? h_neg_then_id : g_then_id;
   } else {
     if (internal->lrat) {
       lrat_chain.push_back (g_then_id);
