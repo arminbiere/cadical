@@ -6022,10 +6022,10 @@ void Closure::add_ite_matching_proof_chain (
   }
   if (degenerated_g_not_cond || degenerated_h_not_cond) {
     LOG ("special case: cond = -lhs");
-    assert (g_neg_then_id && h_then_id && g_else_id && h_neg_else_id);
     unsimplified.push_back (lhs1);
     unsimplified.push_back (-lhs2);
     if (internal->lrat) {
+      assert (g_neg_then_id && h_then_id && g_else_id && h_neg_else_id);
       lrat_chain.push_back (g_neg_then_id);
       lrat_chain.push_back (h_then_id);
     }
