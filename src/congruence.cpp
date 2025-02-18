@@ -5114,7 +5114,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         learn_congruence_unit (-cond);
         if (internal->lrat)
           lrat_chain = reasons_implication;
-        learn_congruence_unit (else_lit);
+        learn_congruence_unit (-else_lit);
       } else {
         if (merge_literals_lrat (g->lhs, else_lit, reasons_implication,
                                  reasons_back)) {
@@ -5214,9 +5214,11 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         if (internal->lrat)
           lrat_chain = reasons_unit;
         learn_congruence_unit (cond);
-        if (internal->lrat)
-          lrat_chain = reasons_implication;
-        learn_congruence_unit (then_lit);
+	if (then_lit != lhs) {
+          if (internal->lrat)
+            lrat_chain = reasons_implication;
+          learn_congruence_unit (then_lit);
+	}
       } else {
         if (merge_literals_lrat (g->lhs, then_lit, reasons_implication,
                                  reasons_back)) {
