@@ -590,7 +590,7 @@ struct Closure {
   void gate_sort_lrat_reasons (LitClausePair &, int, int except2 = 0,
                                bool flip = 0);
 
-  void rewrite_ite_gate_lrat_and (Gate *g, int dst, int src, size_t c,
+  bool rewrite_ite_gate_to_and (Gate *g, int dst, int src, size_t c,
                                   size_t d);
   void produce_ite_merge_then_else_reasons (
       Gate *g, int dst, int src, std::vector<LRAT_ID> &reasons_implication,
@@ -606,7 +606,7 @@ struct Closure {
       Gate *g, Gate *h, std::vector<LRAT_ID> &reasons_lrat,
 					 std::vector<LRAT_ID> &reasons_lrat_back);
   // first index is a binary clause after unit propagation and the second has length 3
-  void simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1, size_t idx2,
+  bool simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
                                       int removed, int replaced); 
   void
   merge_ite_gate_produce_lrat (std::vector<LitClausePair> &clauses,

@@ -4762,12 +4762,51 @@ void Closure::rewrite_ite_gate_update_lrat_reasons (Gate *g, int src,
   check_ite_lrat_reasons (g, false);
 }
 
-void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
+bool Closure::rewrite_ite_gate_to_and (Gate *g, int src, int dst,
                                          size_t idx1, size_t idx2) {
   assert (internal->lrat_chain.empty ());
   assert (!g->garbage);
+  if (internal->val (g->lhs) > 0) {
+    {
+      const int lit = g->rhs[0];
+      const char v = internal->val (lit);
+      if (v > 0) {
+      } else if (!v) {
+        if (internal->lrat)
+          push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[1].clause,
+                                           Rewrite (), lrat_chain);
+        learn_congruence_unit (g->rhs[0]);
+      } else {
+        if (internal->lrat)
+          push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[1].clause,
+                                           Rewrite (), lrat_chain);
+        push_lrat_unit (g->rhs[0]);
+        internal->learn_empty_clause ();
+        return true;
+      }
+    }
+    {
+      const int lit = g->rhs[1];
+      const char v = internal->val (lit);
+      if (v > 0) {
+      } else if (!v) {
+        if (internal->lrat)
+          push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[1].clause,
+                                           Rewrite (), lrat_chain);
+        learn_congruence_unit (g->rhs[0]);
+      } else {
+        if (internal->lrat)
+          push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[2].clause,
+                                           Rewrite (), lrat_chain);
+        push_lrat_unit (g->rhs[0]);
+        internal->learn_empty_clause ();
+        return true;
+      }
+    }
+    return true;
+  }
   if (!internal->lrat)
-    return;
+    return false;
   assert (g->rhs.size () == 3);
   assert (g->pos_lhs_ids.size () == 4);
   assert (idx1 < g->pos_lhs_ids.size ());
@@ -4780,7 +4819,7 @@ void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
 
   if ((idx1 == (size_t) -1 || idx2 == (size_t) -1)) {
     // degenerated and gate
-    return;
+    return false;
   }
 
   assert (idx1 != (size_t) -1);
@@ -4834,6 +4873,7 @@ void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
   }
 
 #endif
+  return false;
 }
 
 void Closure::produce_ite_merge_lhs_then_else_reasons (
@@ -5082,21 +5122,21 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       if (then_lit == lhs || else_lit == lhs)
         garbage = true;
       else
-        rewrite_ite_gate_lrat_and (g, src, dst, 1, 3);
+        garbage = rewrite_ite_gate_to_and (g, src, dst, 1, 3);
     } else if (not_dst == then_lit) {
       // !then_lit ? then_lit : else_lit
       // !then_lit & then_lit | then_lit & else_lit
       // then_lit & else_lit
       rhs[0] = else_lit;
       assert (rhs[1] == then_lit);
-      rewrite_ite_gate_lrat_and (g, src, dst, 0, 2);
+      garbage = rewrite_ite_gate_to_and (g, src, dst, 0, 2);
     } else if (dst == else_lit) {
       // else_list ? then_lit : else_lit
       // else_list & then_lit | !else_list & else_lit
       // else_list & then_lit
       rhs[0] = else_lit;
       assert (rhs[1] == then_lit);
-      rewrite_ite_gate_lrat_and (g, src, dst, 2, 0);
+      garbage = rewrite_ite_gate_to_and (g, src, dst, 2, 0);
     } else if (not_dst == else_lit) {
       // !else_list ? then_lit : else_lit
       // !else_list & then_lit | else_lit & else_lit
@@ -5109,7 +5149,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       if (then_lit == lhs || else_lit == lhs)
         garbage = true;
       else
-        rewrite_ite_gate_lrat_and (g, src, dst, 3, 1);
+        garbage = rewrite_ite_gate_to_and (g, src, dst, 3, 1);
     } else {
       shrink = false;
       rhs[0] = dst;
@@ -5162,14 +5202,14 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       if (else_lit == lhs || cond == lhs)
         garbage = true;
       else
-        rewrite_ite_gate_lrat_and (g, src, dst, 1, 3);
+        garbage = rewrite_ite_gate_to_and (g, src, dst, 1, 3);
     } else if (not_dst == cond) {
       // cond ? !cond : else_lit
       // cond & !cond | !cond & else_lit
       // !cond & else_lit
       rhs[0] = not_cond;
       rhs[1] = else_lit;
-      rewrite_ite_gate_lrat_and (g, src, dst, 0, 2);
+      garbage = rewrite_ite_gate_to_and (g, src, dst, 0, 2);
     } else if (dst == else_lit) {
       // cond ? else_lit : else_lit
       // else_lit
@@ -5196,7 +5236,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
           lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
         }
         learn_congruence_unit (-else_lit);
-        garbage = true;
+	garbage = true;
       } else if (g->lhs == then_lit) {
         produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs,
                                                  false);
@@ -5275,7 +5315,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       // cond & then_lit
       assert (rhs[0] == cond);
       assert (rhs[1] == then_lit);
-      rewrite_ite_gate_lrat_and (g, src, dst, 2, 0);
+      rewrite_ite_gate_to_and (g, src, dst, 2, 0);
     } else if (not_dst == cond) {
       // cond ? then_lit : !cond
       // cond & then_lit | !cond & !cond
@@ -5288,7 +5328,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       if (then_lit == lhs || cond == lhs)
         garbage = true;
       else
-        rewrite_ite_gate_lrat_and (g, src, dst, 3, 1);
+        rewrite_ite_gate_to_and (g, src, dst, 3, 1);
     } else if (dst == then_lit) {
       // cond ? then_lit : then_lit
       // then_lit
@@ -5797,21 +5837,21 @@ void Closure::simplify_ite_gate (Gate *g) {
         g->lhs = -lhs;
         rhs[0] = -cond;
         rhs[1] = -else_lit;
-        garbage = simplify_ite_gate_to_and (g, 1, 3, then_lit, -cond);
+        simplify_ite_gate_to_and (g, 1, 3, then_lit, -cond);
       } else if (v_then < 0) {
         rhs[0] = -cond;
         rhs[1] = else_lit;
-        garbage = simplify_ite_gate_to_and (g, 0, 2, -then_lit, -cond);
+        simplify_ite_gate_to_and (g, 0, 2, -then_lit, -cond);
       } else if (v_else > 0) {
         g->lhs = -lhs;
         rhs[0] = -then_lit;
         rhs[1] = cond;
-        garbage = simplify_ite_gate_to_and (g, 3, 1, else_lit, -then_lit);
+        simplify_ite_gate_to_and (g, 3, 1, else_lit, -then_lit);
       } else {
         assert (v_else < 0);
         rhs[0] = then_lit;
         rhs[1] = cond;
-        garbage = simplify_ite_gate_to_and (g, 2, 0, -else_lit, -then_lit);
+        simplify_ite_gate_to_and (g, 2, 0, -else_lit, -then_lit);
       }
       if (internal->vlit (rhs[0]) > internal->vlit (rhs[1]))
         std::swap (rhs[0], rhs[1]);
