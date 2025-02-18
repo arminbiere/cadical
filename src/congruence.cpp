@@ -1185,17 +1185,23 @@ bool Closure::merge_literals_lrat (
   assert (find_representative (larger_repr) == larger_repr);
   if (lit == -other) {
     LOG ("merging clashing %d and %d", lit, other);
+    assert (!val_lit && !val_other);
     if (internal->lrat) {
       //      if (!lazy_propagated (smaller))
 
+      /*
       LRAT_ID id = internal->unit_id (-smaller);
       internal->lrat_chain.push_back (id);
+*/
 
       for (auto id : *smaller_chain)
         internal->lrat_chain.push_back (id);
     }
+    internal->assign_unit (smaller);
 
     if (internal->lrat) {
+      LRAT_ID id = internal->unit_id (smaller);
+      internal->lrat_chain.push_back (id);
       for (auto id : *larger_chain)
         internal->lrat_chain.push_back (id);
       LOG (internal->lrat_chain, "lrat chain");
@@ -2105,7 +2111,8 @@ void Closure::update_and_gate_unit_build_lrat_chain (
 
   if (g->neg_lhs_ids.size () != 1) {
     assert (g->lhs == g->rhs[0] || (g->lhs == src && g->rhs[0] == dst));
-    assert (g->pos_lhs_ids.size () <= 1); // either degenerated or empty A = A
+    assert (g->pos_lhs_ids.size () <=
+            1); // either degenerated or empty A = A
     return;
   }
   assert (g->neg_lhs_ids.size () == 1);
@@ -4920,9 +4927,9 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         assert (g->pos_lhs_ids[idx2].clause);
         lrat_chain.push_back (g->pos_lhs_ids[idx1].clause->id);
         lrat_chain.push_back (g->pos_lhs_ids[idx2].clause->id);
-	unsimplified.push_back (-cond_lit);
+        unsimplified.push_back (-cond_lit);
         LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
-	reasons_unit = {id_unit};
+        reasons_unit = {id_unit};
         unsimplified.clear ();
 
         return;
@@ -4937,7 +4944,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         assert (g->pos_lhs_ids[idx2].clause);
         lrat_chain.push_back (g->pos_lhs_ids[idx1].clause->id);
         lrat_chain.push_back (g->pos_lhs_ids[idx2].clause->id);
-	unsimplified.push_back (cond_lit);
+        unsimplified.push_back (cond_lit);
         LRAT_ID id_unit = simplify_and_add_to_proof_chain (unsimplified);
         reasons_unit = {id_unit};
         unsimplified.clear ();
@@ -4963,8 +4970,6 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
       // if (other_lit == g->lhs) {
       //   assert (false);
       // }
-
-
     }
 
     LOG ("normal path");
