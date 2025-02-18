@@ -5204,10 +5204,25 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         new_tag = Gate_Type::XOr_Gate;
         assert (rhs[0] == cond);
         rhs[1] = else_lit;
-        assert (rhs[0] != g->lhs);
-        assert (rhs[1] != g->lhs);
-        produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs,
-                                                 false);
+	if (rhs[0] == -g->lhs) {
+	  LOG (g, "special XOR:");
+          produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, not_lhs,
+                                                   false);
+          if (internal->lrat) {
+            assert (g->pos_lhs_ids.size () == 2);
+            lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
+            lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
+          }
+          learn_congruence_unit (rhs[1]);
+          garbage = true;
+        } else {
+          assert (rhs[0] != g->lhs);
+          assert (rhs[1] != g->lhs);
+          assert (rhs[0] != -g->lhs);
+          assert (rhs[1] != -g->lhs);
+          produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs,
+                                                   false);
+        }
       }
     } else {
       shrink = false;
