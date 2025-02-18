@@ -4722,8 +4722,8 @@ void Closure::produce_ite_merge_then_else_reasons (
   produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs, false);
   if (g->lhs == -g->rhs[0]) {
     LOG ("degenerated case with lhs = -cond");
-    LOG (g->pos_lhs_ids[1].clause, "1:");
-    LOG (g->pos_lhs_ids[2].clause, "2:");
+    LOG (g->pos_lhs_ids[0].clause, "1:");
+    LOG (g->pos_lhs_ids[1].clause, "2:");
     reasons_back.push_back (g->pos_lhs_ids[0].clause->id);
     reasons_implication.push_back (g->pos_lhs_ids[1].clause->id);
     return;
@@ -4732,8 +4732,8 @@ void Closure::produce_ite_merge_then_else_reasons (
     LOG ("degenerated case with lhs = cond");
     assert (g->pos_lhs_ids[0].clause);
     assert (g->pos_lhs_ids[1].clause);
-    reasons_back.push_back (g->pos_lhs_ids[0].clause->id);
-    reasons_implication.push_back (g->pos_lhs_ids[1].clause->id);
+    reasons_back.push_back (g->pos_lhs_ids[1].clause->id);
+    reasons_implication.push_back (g->pos_lhs_ids[0].clause->id);
     return;
   }
   assert (g->pos_lhs_ids.size () == 4);
