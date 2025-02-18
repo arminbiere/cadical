@@ -639,10 +639,16 @@ void Closure::produce_rewritten_clause_lrat_and_clean (
     litIds[j].current_lit =
         find_eager_representative (litIds[i].current_lit);
     if (i == old_position1) {
-      old_position1 = j;
+      if (litIds[j].clause)
+	old_position1 = j;
+      else
+	old_position1 = -1;
     }
     if (i == old_position2) {
-      old_position2 = j;
+      if (litIds[j].clause)
+	old_position2 = j;
+      else
+	old_position2 = -1;
     }
     if (litIds[j].clause)
       ++j;
@@ -4731,16 +4737,14 @@ void Closure::rewrite_ite_gate_lrat_and (Gate *g, int src, int dst,
   (void) src;
   produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs, idx1,
                                            idx2, false);
-
-  if (dst == g->lhs) {
-    // in this case, we actually have a degenerated AND gate
-    // and we do not need to do anything
-    return;
-  }
-  if (dst == -g->lhs) {
+  
+  if ((idx1 == (size_t)-1 || idx2 == (size_t)-1)) {
+    // degenerated and gate
     return;
   }
 
+  assert (idx1 != (size_t)-1);
+  assert (idx2 != (size_t)-1);
   assert (idx1 < g->pos_lhs_ids.size ());
   assert (idx2 < g->pos_lhs_ids.size ());
   Clause *c = g->pos_lhs_ids[idx1].clause;
@@ -5041,7 +5045,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       if (else_lit == lhs || cond == lhs)
 	garbage = true;
       else
-	rewrite_ite_gate_lrat_and (g, src, dst, 0, 3);
+	rewrite_ite_gate_lrat_and (g, src, dst, 1, 3);
     } else if (not_dst == cond) {
       // cond ? !cond : else_lit
       // cond & !cond | !cond & else_lit
@@ -5773,18 +5777,17 @@ void Closure::add_ite_matching_proof_chain (
     unsimplified.push_back (lhs1);
     unsimplified.push_back (-lhs2);
     if (internal->lrat) {
-      lrat_chain.push_back (g_else_id);
-      lrat_chain.push_back (h_neg_else_id);
+      lrat_chain.push_back (g_neg_then_id);
+      lrat_chain.push_back (h_then_id);
     }
     LRAT_ID id1 = simplify_and_add_to_proof_chain (unsimplified);
-
 
     unsimplified.clear();
     unsimplified.push_back (-lhs1);
     unsimplified.push_back (lhs2);
     if (internal->lrat) {
-      lrat_chain.push_back (g_neg_then_id);
-      lrat_chain.push_back (h_then_id);
+      lrat_chain.push_back (g_else_id);
+      lrat_chain.push_back (h_neg_else_id);
     }
     LRAT_ID id2 = simplify_and_add_to_proof_chain (unsimplified);
     reasons1.push_back (id1);
