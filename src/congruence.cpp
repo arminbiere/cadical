@@ -3366,6 +3366,7 @@ void Closure::add_xor_matching_proof_chain (
     return;
   if (!internal->proof)
     return;
+  assert (unsimplified.empty ());
   unsimplified = g->rhs;
   vector<LitClausePair> first;
   vector<LitClausePair> second;
@@ -3460,6 +3461,7 @@ void Closure::add_xor_matching_proof_chain (
   assert (!internal->lrat || to_lrat.size () == 1);
   assert (!internal->lrat || back_lrat.size () == 1);
   LOG ("finished XOR matching proof");
+  assert (unsimplified.empty ());
 }
 
 // this function needs to either put the clauses from
@@ -4860,6 +4862,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         g->pos_lhs_ids[3].clause =
             produce_rewritten_clause_lrat (g->pos_lhs_ids[3].clause);
         reasons_implication.push_back (g->pos_lhs_ids[3].clause->id);
+        unsimplified.clear ();
         return;
       }
       if (!rewritting_then && cond_lit == g->lhs) {
@@ -5932,6 +5935,7 @@ void Closure::add_ite_matching_proof_chain (
     LRAT_ID id2 = simplify_and_add_to_proof_chain (unsimplified);
     reasons1.push_back (id1);
     reasons2.push_back (id2);
+    unsimplified.clear ();
     return;
   }
   assert (degenerated_g_then || (g_then_id && g_neg_then_id));
