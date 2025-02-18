@@ -2244,7 +2244,6 @@ private:
   void add_options (int expected);
   bool shrink_phases (int expected);
   bool shrink_clauses (int expected);
-  bool shrink_userphases (int expected);
   bool shrink_lemmas (int expected);
   bool shrink_literals (int expected);
   bool shrink_basic (int expected);
@@ -3677,30 +3676,6 @@ bool Trace::shrink_clauses (int expected) {
   return shrink_segments (segments, expected);
 }
 
-bool Trace::shrink_userphases (int expected) {
-  // TODO: introduce donot-shrink-lemmas
-  // if (mobical.donot.shrink.lemmas) return false;
-  notify ('a');
-  Segments segments;
-  size_t r;
-  size_t l = 1;
-  for (; l < size () && !during_type (calls[l]->type); l++)
-    ;
-  for (; l < size (); l++) {
-    if (!during_type (calls[l]->type))
-      continue;
-    r = l;
-    while (r < size () && calls[r]->type == Call::LEMMA)
-      r++;
-    // assert (calls[r]->type == Call::CONTINUE);
-    // if (r < size () && calls[r]->type == Call::CONTINUE) {
-    //   segments.push_back (Segment (l, r + 1));
-    //   l = r;
-    // }
-  }
-  return shrink_segments (segments, expected);
-}
-
 bool Trace::shrink_lemmas (int expected) {
   // TODO: introduce donot-shrink-lemmas
   // if (mobical.donot.shrink.lemmas) return false;
@@ -4137,8 +4112,6 @@ void Trace::shrink (int expected) {
       s = true, l = PHASES;
     if (l != CLAUSES && shrink_clauses (expected))
       s = true, l = CLAUSES;
-    if (l != UPHASES && shrink_userphases (expected))
-      s = true, l = UPHASES;
     if (l != LEMMAS && shrink_lemmas (expected))
       s = true, l = LEMMAS;
     if (l != LITERALS && shrink_literals (expected))
