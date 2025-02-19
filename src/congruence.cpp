@@ -1749,6 +1749,16 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
   assert (!internal->unsat);
   LRAT_ID id1 = c1 ? c1->id : 0;
   LRAT_ID id2 = c2 ? c2->id : 0;
+  if (internal->lrat) {
+    assert (c1);
+    assert (c2);
+    assert (c1->size == 2);
+    assert (c2->size == 2);
+    assert (c1->literals[0] == lit || c1->literals[1] == lit);
+    assert (c2->literals[0] == other || c2->literals[1] == other);
+    assert (c1->literals[0] == -other || c1->literals[1] == -other);
+    assert (c2->literals[0] == -lit || c2->literals[1] == -lit);
+  }
   LOG ("merging literals %d and %d lrat", lit, other);
   int repr_lit = find_representative (lit);
   int repr_other = find_representative (other);
