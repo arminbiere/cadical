@@ -2161,7 +2161,9 @@ void Closure::update_and_gate_build_lrat_chain (
     Gate *g, Gate *h, std::vector<LRAT_ID> &extra_reasons_lit,
     std::vector<LRAT_ID> &extra_reasons_ulit) {
   assert (g != h);
-  // If the gates are identical, do not even attempt to build the LRAT chain
+  LOG (g, "merging");
+  LOG (h, "with");
+  // If the LHS are identical, do not even attempt to build the LRAT chain
   if (find_representative (g->lhs) == find_representative (h->lhs))
     return;
   const bool g_tautology = gate_contains (g, g->lhs);
@@ -2174,7 +2176,7 @@ void Closure::update_and_gate_build_lrat_chain (
       if (litId.current_lit == h->lhs) {
         assert (extra_reasons_lit.empty ());
         LOG (litId.clause, "binary clause to push into the reason");
-        litId.clause = produce_rewritten_clause_lrat (litId.clause, g->lhs);
+        litId.clause = produce_rewritten_clause_lrat (litId.clause, g->lhs, false);
         assert (litId.clause);
         extra_reasons_lit.push_back (litId.clause->id);
       }
@@ -2186,7 +2188,7 @@ void Closure::update_and_gate_build_lrat_chain (
       if (litId.current_lit == g->lhs) {
         assert (extra_reasons_ulit.empty ());
         LOG (litId.clause, "binary clause to push into the reason");
-        litId.clause = produce_rewritten_clause_lrat (litId.clause, h->lhs);
+        litId.clause = produce_rewritten_clause_lrat (litId.clause, h->lhs, false);
         assert (litId.clause);
         extra_reasons_ulit.push_back (litId.clause->id);
       }
@@ -2224,7 +2226,7 @@ void Closure::update_and_gate_build_lrat_chain (
     assert (!extra_reasons_tauto.empty ());
 
     // other direction, we have to resolve
-    LOG ("now the other direction");
+    LOG (tauto, "now the other direction");
     for (auto &litId : tauto->pos_lhs_ids) {
       LOG (litId.clause,
            "binary clause from %d to push into the reason [avoiding %d]",
@@ -2232,14 +2234,14 @@ void Closure::update_and_gate_build_lrat_chain (
       if (litId.current_lit != tauto->lhs) {
         LOG (litId.clause, "binary clause to push into the reason");
         litId.clause =
-            produce_rewritten_clause_lrat (litId.clause, tauto->lhs);
+          produce_rewritten_clause_lrat (litId.clause, tauto->lhs, false);
         assert (litId.clause);
         extra_reasons_other.push_back (litId.clause->id);
       }
     }
     assert (!extra_reasons_other.empty ());
     produce_rewritten_clause_lrat_and_clean (other->neg_lhs_ids,
-                                             other->lhs);
+                                             other->lhs, false);
     push_id_on_chain (extra_reasons_other, other->neg_lhs_ids);
     assert (!extra_reasons_tauto.empty ());
     assert (!extra_reasons_other.empty ());
@@ -2248,13 +2250,13 @@ void Closure::update_and_gate_build_lrat_chain (
   // default: resolve all clauses
   // first rewrite
   // TODO: do we really need dest as second exclusion?
-  produce_rewritten_clause_lrat_and_clean (h->pos_lhs_ids, -h->lhs);
+  produce_rewritten_clause_lrat_and_clean (h->pos_lhs_ids, -h->lhs, false);
   assert (internal->clause.empty ());
-  produce_rewritten_clause_lrat_and_clean (h->neg_lhs_ids, -h->lhs);
+  produce_rewritten_clause_lrat_and_clean (h->neg_lhs_ids, -h->lhs, false);
   assert (internal->clause.empty ());
-  produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, -g->lhs);
+  produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, -g->lhs, false);
   assert (internal->clause.empty ());
-  produce_rewritten_clause_lrat_and_clean (g->neg_lhs_ids, -g->lhs);
+  produce_rewritten_clause_lrat_and_clean (g->neg_lhs_ids, -g->lhs, false);
   assert (internal->clause.empty ());
 
   push_id_on_chain (extra_reasons_ulit, h->pos_lhs_ids);
