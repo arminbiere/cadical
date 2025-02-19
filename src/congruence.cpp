@@ -1473,9 +1473,9 @@ bool Closure::merge_literals_lrat (
   assert (find_representative (larger_repr) == larger_repr);
   if (lit == -other) {
     LOG ("merging clashing %d and %d", lit, other);
-    if (internal->lrat)
-      internal->lrat_chain = *smaller_chain;
     if (!val_smaller) {
+      if (internal->lrat)
+        internal->lrat_chain = *smaller_chain;
       internal->assign_unit (smaller);
       if (internal->lrat)
         internal->lrat_chain.clear ();
@@ -1492,8 +1492,10 @@ bool Closure::merge_literals_lrat (
       return false;
     } else {
       if (internal->lrat)
+	internal->lrat_chain = (val_smaller < 0 ? *smaller_chain : *larger_chain);
+      if (internal->lrat)
         internal->lrat_chain.push_back (
-            internal->unit_id (val_smaller ? -smaller : smaller));
+            internal->unit_id (val_smaller > 0 ? smaller : -smaller));
       internal->learn_empty_clause ();
       return false;
     }
