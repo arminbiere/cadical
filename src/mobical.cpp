@@ -219,6 +219,7 @@ struct DoNot {
     bool atall = false;    // do not shrink anything              's'
     bool phases = false;   // shrink complete incremental solving 'p'
     bool clauses = false;  // shrink full clauses                 'c'
+    bool lemmas = false;   // shrink external lemmas              'u'
     bool literals = false; // shrink literals which shrinks       'l'
     bool basic = false;    // shrink other basic calls            'b'
     bool options = false;  // shrink option calls                 'o'
@@ -1313,7 +1314,7 @@ struct Call {
     BEFORE =
         ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
-    DURING = LEMMA, // | CONTINUE,
+    DURING = LEMMA,
     LITTYPE = PHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE | FAILED |
               FIXED | FREEZE | FROZEN | MELT | CONSTRAIN | OBSERVE | LEMMA,
     EXTENDMAP = PHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
@@ -1391,10 +1392,6 @@ static bool before_type (Call::Type t) {
 
 static bool process_type (Call::Type t) {
   return (((int) t & (int) Call::PROCESS)) != 0;
-}
-
-static bool during_type (Call::Type t) {
-  return (((int) t & (int) Call::DURING)) != 0;
 }
 
 static bool after_type (Call::Type t) {
@@ -2083,8 +2080,8 @@ public:
         // They are (ideally) are executed already
         if (c->type == Call::LEMMA)
           continue;
-        // if (c->type == Call::CONTINUE)
-        //   continue;
+          // if (c->type == Call::CONTINUE)
+          //   continue;
 #ifdef MOBICAL_MEMORY
         if (c->type == Call::MAXALLOC) {
           memory_bad_alloc = c->val;
@@ -2244,7 +2241,6 @@ private:
   void add_options (int expected);
   bool shrink_phases (int expected);
   bool shrink_clauses (int expected);
-  bool shrink_userphases (int expected);
   bool shrink_lemmas (int expected);
   bool shrink_literals (int expected);
   bool shrink_basic (int expected);
@@ -3640,7 +3636,7 @@ bool Trace::shrink_phases (int expected) {
       ;
     if (r < size () && process_type (calls[r]->type))
       r++;
-    for (; r < size () && during_type (calls[r]->type); r++)
+    for (; r < size () && calls[r]->type == Call::LEMMA; r++)
       ;
     for (; r < size () && after_type (calls[r]->type); r++)
       ;
@@ -3648,8 +3644,10 @@ bool Trace::shrink_phases (int expected) {
       segments.push_back (Segment (l, r));
     else {
       assert (l == r);
-      if (!config_type (calls[r]->type))
+      if (!config_type (calls[r]->type)) {
+        assert (calls[r]->type != Call::LEMMA);
         segments.push_back (Segment (r, r + 1));
+      }
       ++r;
     }
   }
@@ -3677,33 +3675,9 @@ bool Trace::shrink_clauses (int expected) {
   return shrink_segments (segments, expected);
 }
 
-bool Trace::shrink_userphases (int expected) {
-  // TODO: introduce donot-shrink-lemmas
-  // if (mobical.donot.shrink.lemmas) return false;
-  notify ('a');
-  Segments segments;
-  size_t r;
-  size_t l = 1;
-  for (; l < size () && !during_type (calls[l]->type); l++)
-    ;
-  for (; l < size (); l++) {
-    if (!during_type (calls[l]->type))
-      continue;
-    r = l;
-    while (r < size () && calls[r]->type == Call::LEMMA)
-      r++;
-    // assert (calls[r]->type == Call::CONTINUE);
-    // if (r < size () && calls[r]->type == Call::CONTINUE) {
-    //   segments.push_back (Segment (l, r + 1));
-    //   l = r;
-    // }
-  }
-  return shrink_segments (segments, expected);
-}
-
 bool Trace::shrink_lemmas (int expected) {
-  // TODO: introduce donot-shrink-lemmas
-  // if (mobical.donot.shrink.lemmas) return false;
+  if (mobical.donot.shrink.lemmas)
+    return false;
   notify ('u');
   Segments segments;
   for (size_t r = size (), l; r > 1; r = l) {
@@ -4137,8 +4111,6 @@ void Trace::shrink (int expected) {
       s = true, l = PHASES;
     if (l != CLAUSES && shrink_clauses (expected))
       s = true, l = CLAUSES;
-    if (l != UPHASES && shrink_userphases (expected))
-      s = true, l = UPHASES;
     if (l != LEMMAS && shrink_lemmas (expected))
       s = true, l = LEMMAS;
     if (l != LITERALS && shrink_literals (expected))
@@ -4411,6 +4383,8 @@ void Reader::parse () {
         error ("invalid argument '%s' to 'lemma'", first);
       if (second)
         error ("additional argument '%s' to 'lemma'", second);
+      if (enforce && lit == INT_MIN)
+        error ("invalid literal '%d' as argument to 'lemma'", lit);
       // if (!lemma_adding && !lit) error ("empty lemma is learned.");
       lemma_adding = lit;
       c = new LemmaCall (lit);
@@ -4717,7 +4691,6 @@ void Reader::parse () {
       case Call::RESET:
       case Call::CONNECT:
       case Call::LEMMA:
-      // case Call::CONTINUE:
       case Call::DISCONNECT:
         new_state = c->type;
         break;
@@ -4744,6 +4717,12 @@ void Reader::parse () {
 
     lineno++;
   }
+  if (adding)
+    error ("EOF after 'add %d' without 'add 0'", adding);
+  if (lemma_adding)
+    error ("EOF after 'lemma %d' without 'lemma 0'", lemma_adding);
+  if (constraining)
+    error ("EOF after 'constrain %d' without 'constrain 0'", constraining);
 }
 
 /*------------------------------------------------------------------------*/
@@ -4879,6 +4858,8 @@ int Mobical::main (int argc, char **argv) {
       donot.shrink.phases = true;
     else if (!strcmp (argv[i], "--do-not-shrink-clauses"))
       donot.shrink.clauses = true;
+    else if (!strcmp (argv[i], "--do-not-shrink-lemmas"))
+      donot.shrink.lemmas = true;
     else if (!strcmp (argv[i], "--do-not-shrink-literals"))
       donot.shrink.literals = true;
     else if (!strcmp (argv[i], "--do-not-shrink-basic") ||

@@ -112,11 +112,13 @@ OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
 OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds") \
 OPTION( factoreffort,     50,  0,1e6,0,0,1, "relative effort per mille") \
-OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort per thousand") \
+OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort in millions") \
 OPTION( factorsize,        5,  2,2e9,0,0,1, "clause size limit") \
 OPTION( factorthresh,      7,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
-OPTION( fastelim,          0,  0,  1,0,1,1, "fast BVE during preprocessing") \
-OPTION( fastelimbound,     7, -1,1e3,1,0,1, "fast BVE bound during preprocessing") \
+OPTION( fastelim,          1,  0,  1,0,1,1, "fast BVE during preprocessing") \
+OPTION( fastelimbound,     8,  1,1e3,1,0,1, "fast BVE bound during preprocessing") \
+OPTION( fastelimclslim,  1e2,  2,2e9,2,0,1, "fast BVE resolvent size limit") \
+OPTION( fastelimocclim,  100,  1,2e9,2,0,1, "fast BVE occurence limit during preprocessing") \
 OPTION( fastelimrounds,    4,  1,512,1,0,1, "number of fastelim rounds") \
 OPTION( flush,             0,  0,  1,0,1,1, "flush redundant clauses") \
 OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \
@@ -235,7 +237,7 @@ OPTION( vivifyinst,        1,  0,  1,0,0,1, "instantiate last literal when vivif
 OPTION( vivifyirred,       1,  0,  1,0,1,1, "vivification irred") \
 OPTION( vivifyirredeff,    3,  1,100,1,0,1, "irredundant efficiency per mille") \
 OPTION( vivifyonce,        0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \
-OPTION( vivifyretry,       0,  0,  5,0,1,1, "re-vivify clause if vivify was successful") \
+OPTION( vivifyretry,       0,  0,  5,0,0,1, "re-vivify clause if vivify was successful") \
 OPTION( vivifyschedmax,  5e3, 10,2e9,0,0,1, "maximum schedule size") \
 OPTION( vivifythresh,     20,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( vivifytier1,       1,  0,  1,0,1,1, "vivification tier1") \

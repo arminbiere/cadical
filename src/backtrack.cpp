@@ -79,7 +79,7 @@ void Internal::backtrack (int new_level) {
     return;
 
   update_target_and_best ();
-  backtrack_without_updating_phases(new_level);
+  backtrack_without_updating_phases (new_level);
 }
 
 void Internal::backtrack_without_updating_phases (int new_level) {

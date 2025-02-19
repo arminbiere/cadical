@@ -153,7 +153,8 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
   LOG ("starting hyper ternary resolutions on pivot %d", pivot);
   steps -= 1 + cache_lines (occs (pivot).size (), sizeof (Clause *));
   for (const auto &c : occs (pivot)) {
-    if (steps < 0) break;
+    if (steps < 0)
+      break;
     if (htrs < 0)
       break;
     if (c->garbage)
@@ -276,7 +277,7 @@ bool Internal::ternary_round (int64_t &steps_limit, int64_t &htrs_limit) {
 
   steps_limit -= 1 + cache_lines (clauses.size (), sizeof (Clause *));
   for (const auto &c : clauses) {
-    steps_limit --;
+    steps_limit--;
     if (c->garbage)
       continue;
     if (c->size > 3)
@@ -368,7 +369,7 @@ bool Internal::ternary () {
     return false;
 
   SET_EFFORT_LIMIT (limit, ternary, true);
-  
+
   START_SIMPLIFIER (ternary, TERNARY);
   stats.ternary++;
 

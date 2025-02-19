@@ -45,7 +45,8 @@ bool Internal::stabilizing () {
          stats.conflicts, stats.ticks.search[stable]);
   if (!inc.stabilize)
     inc.stabilize = delta_ticks;
-  if (!inc.stabilize) // rare occurence in incremental calls requiring no ticks
+  if (!inc.stabilize) // rare occurence in incremental calls requiring no
+                      // ticks
     inc.stabilize = 1;
 
   stable = !stable; // Switch!!!!!
@@ -63,7 +64,8 @@ bool Internal::stabilizing () {
 
   swap_averages ();
   PHASE ("stabilizing", stats.stabphases,
-         "next %s stabilization limit %" PRId64 " at ticks interval %" PRId64,
+         "next %s stabilization limit %" PRId64
+         " at ticks interval %" PRId64,
          next_mode, lim.stabilize, next_delta_ticks);
   report (stable ? '[' : '{');
   if (stable)

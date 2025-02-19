@@ -19,7 +19,7 @@ class Proof {
 
   Internal *internal;
 
-  vector<int> clause;           // of external literals
+  vector<int> clause;          // of external literals
   vector<int64_t> proof_chain; // LRAT style proof chain of clause
   int64_t clause_id;           // id of added clause
   bool redundant;
@@ -67,14 +67,12 @@ public:
   //
   void add_external_original_clause (int64_t, bool, const vector<int> &,
                                      bool restore = false);
-  void delete_external_original_clause (int64_t, bool,
-                                        const vector<int> &);
+  void delete_external_original_clause (int64_t, bool, const vector<int> &);
 
   // Add derived (such as learned) clauses to the proof.
   //
   void add_derived_empty_clause (int64_t, const vector<int64_t> &);
-  void add_derived_unit_clause (int64_t, int unit,
-                                const vector<int64_t> &);
+  void add_derived_unit_clause (int64_t, int unit, const vector<int64_t> &);
   void add_derived_clause (Clause *c, const vector<int64_t> &);
   void add_derived_clause (int64_t, bool, const vector<int> &,
                            const vector<int64_t> &);

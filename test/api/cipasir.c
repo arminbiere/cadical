@@ -126,7 +126,8 @@ int main (void) {
   for (int i = 0; i < 2; i++)
     ipasir_release (solvers[i]);
   for (int i = 0; i < 2; i++) {
-    printf ("solver[%d] imported %u, aborted %u clauses\n", i, learners[i].learned, learners[i].aborted);
+    printf ("solver[%d] imported %u, aborted %u clauses\n", i,
+            learners[i].learned, learners[i].aborted);
   }
   return 0;
 }

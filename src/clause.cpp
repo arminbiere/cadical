@@ -156,17 +156,14 @@ void Internal::promote_clause (Clause *c, int new_glue) {
   int old_glue = c->glue;
   if (new_glue >= old_glue)
     return;
-  if (old_glue > tier1limit &&
-      new_glue <= tier1limit) {
+  if (old_glue > tier1limit && new_glue <= tier1limit) {
     LOG (c, "promoting with new glue %d to tier1", new_glue);
     stats.promoted1++;
     c->used = max_used;
-  } else if (old_glue > tier2limit &&
-             new_glue <= tier2limit) {
+  } else if (old_glue > tier2limit && new_glue <= tier2limit) {
     LOG (c, "promoting with new glue %d to tier2", new_glue);
     stats.promoted2++;
-  }
-  else if (old_glue <= tier2limit)
+  } else if (old_glue <= tier2limit)
     LOG (c, "keeping with new glue %d in tier2", new_glue);
   else
     LOG (c, "keeping with new glue %d in tier3", new_glue);
@@ -188,8 +185,7 @@ void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
     LOG (c, "promoting with new glue %d to tier1", new_glue);
     stats.promoted1++;
     c->used = max_used;
-  } else if (old_glue > tier2limit &&
-             new_glue <= tier2limit) {
+  } else if (old_glue > tier2limit && new_glue <= tier2limit) {
     LOG (c, "promoting with new glue %d to tier2", new_glue);
     stats.promoted2++;
   } else if (old_glue <= tier2limit)
@@ -600,7 +596,9 @@ Clause *Internal::new_factor_clause () {
 
 // Add hyper ternary resolved clause during 'congruence' and watch it
 //
-Clause *Internal::new_hyper_ternary_resolved_clause_and_watch (bool red, bool full_watching) {
+Clause *
+Internal::new_hyper_ternary_resolved_clause_and_watch (bool red,
+                                                       bool full_watching) {
   external->check_learned_clause ();
   size_t size = clause.size ();
   Clause *res = new_clause (red, size);
@@ -609,7 +607,7 @@ Clause *Internal::new_hyper_ternary_resolved_clause_and_watch (bool red, bool fu
   }
   if (full_watching) {
     assert (watching ());
-    watch_clause(res);
+    watch_clause (res);
   }
   return res;
 }

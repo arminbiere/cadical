@@ -1,6 +1,7 @@
 #ifndef _factor_hpp_INCLUDED
 #define _factor_hpp_INCLUDED
 
+#include "clause.hpp"
 #include "heap.hpp"
 
 namespace CaDiCaL {
@@ -28,7 +29,7 @@ struct Quotient {
 typedef heap<factor_occs_size> FactorSchedule;
 
 struct Factoring {
-  Factoring (Internal *, int64_t, bool);
+  Factoring (Internal *, int64_t);
   ~Factoring ();
 
   // These are initialized by the constructor

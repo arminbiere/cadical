@@ -129,6 +129,7 @@ struct External {
   //----------------------------------------------------------------------//
 
   signed char *solution; // Given solution checking for debugging.
+  int solution_size;     // Given solution checking for debugging.
   vector<int> original;  // Saved original formula for checking.
 
   // If 'opts.checkfrozen' is set make sure that only literals are added
@@ -266,9 +267,12 @@ struct External {
   ~External ();
 
   void enlarge (int new_max_var); // Enlarge allocated 'vsize'.
-  void init (int new_max_var, bool extension = false);    // Initialize up-to 'new_max_var'.
+  void init (int new_max_var,
+             bool extension = false); // Initialize up-to 'new_max_var'.
 
-  int internalize (int, bool extension = false); // Translate external to internal literal.
+  int internalize (
+      int,
+      bool extension = false); // Translate external to internal literal.
 
   /*----------------------------------------------------------------------*/
 
@@ -428,6 +432,12 @@ struct External {
   /*----------------------------------------------------------------------*/
 
   // For debugging and testing only.  See 'solution.hpp' for more details.
+  // TODO: if elit > solution_size, elit is an extension variable. For now
+  // the clause will count as satisfied regardless. For the future one
+  // should check that actually there is one consistent extension for the
+  // solution that satisfies the clauses with this extension variable (by
+  // setting it to a value once a clause is learned which is not satisfied
+  // already).
   //
   inline int sol (int elit) const {
     assert (solution);
@@ -435,6 +445,8 @@ struct External {
     int eidx = abs (elit);
     if (eidx > max_var)
       return 0;
+    else if (eidx > solution_size)
+      return elit;
     signed char value = solution[eidx];
     if (!value)
       return 0;

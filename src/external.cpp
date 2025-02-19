@@ -119,7 +119,8 @@ int External::internalize (int elit, bool extension) {
     assert (elit != INT_MIN);
     const int eidx = abs (elit);
     if (extension && eidx <= max_var)
-      FATAL ("can not add a definition for an already used variable %d", eidx);
+      FATAL ("can not add a definition for an already used variable %d",
+             eidx);
     if (eidx > max_var) {
       init (eidx, extension);
     }

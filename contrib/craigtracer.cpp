@@ -534,9 +534,8 @@ void CraigTracer::reset_assumptions () {
   assumption_clauses.clear ();
 }
 
-void CraigTracer::conclude_unsat (
-    CaDiCaL::ConclusionType conclusion,
-    const std::vector<int64_t> &proof_chain) {
+void CraigTracer::conclude_unsat (CaDiCaL::ConclusionType conclusion,
+                                  const std::vector<int64_t> &proof_chain) {
   if (craig_interpolant) {
     delete craig_interpolant;
     craig_interpolant = 0;

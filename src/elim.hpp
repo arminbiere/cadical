@@ -19,26 +19,21 @@ struct proof_clause {
   int64_t id;
   vector<int> literals;
   // for lrat
-  unsigned cid;  // kitten id
+  unsigned cid; // kitten id
   bool learned;
   vector<int64_t> chain;
 };
 
-enum GateType {
-  NO = 0,
-  EQUI = 1,
-  AND = 2,
-  ITE = 3,
-  XOR = 4,
-  DEF = 5
-};
+enum GateType { NO = 0, EQUI = 1, AND = 2, ITE = 3, XOR = 4, DEF = 5 };
 
 struct Eliminator {
 
   Internal *internal;
   ElimSchedule schedule;
 
-  Eliminator (Internal *i) : internal (i), schedule (elim_more (i)), definition_unit (0), gatetype (NO) {}
+  Eliminator (Internal *i)
+      : internal (i), schedule (elim_more (i)), definition_unit (0),
+        gatetype (NO) {}
   ~Eliminator ();
 
   queue<Clause *> backward;

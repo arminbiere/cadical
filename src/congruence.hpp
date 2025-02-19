@@ -182,6 +182,8 @@ struct Gate {
   vector<LRAT_ID> units; // TODO: remove, should not be useful anymore
   vector<LitClausePair> pos_lhs_ids;
   vector<LitClausePair> neg_lhs_ids;
+  bool degenerated_and_neg = false; // LRAT only relevant for AND Gates, neg lhs in RHS
+  bool degenerated_and_pos = false; // LRAT only relevant for AND Gates, pos lhs in RHS
   vector<int> rhs;
 
   size_t arity () const { return rhs.size (); }
@@ -281,7 +283,7 @@ struct Closure {
   int eager_representative (int lit) const;
   LRAT_ID &eager_representative_id (int lit);
   LRAT_ID eager_representative_id (int lit) const;
-  std::vector <char> lazy_propagated_idx;
+  std::vector<char> lazy_propagated_idx;
   char &lazy_propagated (int lit);
 
   int find_lrat_representative_with_marks (int lit);
@@ -385,7 +387,7 @@ struct Closure {
   void push_id_on_chain (std::vector<LRAT_ID> &chain, Rewrite rewrite, int);
   void update_and_gate_build_lrat_chain (
       Gate *g, Gate *h, std::vector<LRAT_ID> &extra_reasons_lit,
-      std::vector<LRAT_ID> &extra_reasons_ulit);
+					 std::vector<LRAT_ID> &extra_reasons_ulit, bool remove_units = true);
   void update_and_gate_unit_build_lrat_chain (
       Gate *g, int src, LRAT_ID id1, LRAT_ID id2, int dst,
       std::vector<LRAT_ID> &extra_reasons_lit,
@@ -481,7 +483,8 @@ struct Closure {
   void check_ite_gate_implied (Gate *g);
   void check_and_gate_implied (Gate *g);
   void check_ite_lrat_reasons (Gate *g, bool = false);
-  void check_contained_module_rewriting (Clause *c, int lit, bool, int except);
+  void check_contained_module_rewriting (Clause *c, int lit, bool,
+                                         int except);
   void delete_proof_chain ();
 
   // ite gate extraction
@@ -523,8 +526,7 @@ struct Closure {
   bool learn_congruence_unit (
       int unit); // TODO remove and replace by _lrat version
   void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src,
-                                                   int dst, LRAT_ID id1,
-                                                   LRAT_ID id2,
+                                                   int dst, 
                                                    int clashing,
                                                    int falsified, int unit);
   void learn_congruence_unit_when_lhs_set (Gate *g, int src, LRAT_ID id1,
@@ -535,7 +537,8 @@ struct Closure {
   void subsume_clause (Clause *subsuming, Clause *subsumed);
   bool find_subsuming_clause (Clause *c);
   void produce_rewritten_clause_lrat_and_clean (vector<LitClausePair> &,
-                                                int execept_lhs = 0, bool =true);
+                                                int execept_lhs = 0,
+                                                bool = true);
   // rewrite the clause using eager rewriting and rew1 and rew2, except for
   // 2 literals Usage:
   //   - the except are used to ignore LHS of gates that have not and should
@@ -551,7 +554,8 @@ struct Closure {
   // remove the tautological clauses
   void produce_rewritten_clause_lrat_and_clean (
       std::vector<LitClausePair> &litIds, int except_lhs,
-      size_t &old_position1, size_t &old_position2);
+      size_t &old_position1, size_t &old_position2,
+      bool remove_units = true);
   // binary extraction and ternary strengthening
   void extract_binaries ();
   bool find_binary (int, int) const;
@@ -589,24 +593,25 @@ struct Closure {
   void gate_sort_lrat_reasons (LitClausePair &, int, int except2 = 0,
                                bool flip = 0);
 
-  void rewrite_ite_gate_lrat_and (Gate *g, int dst, int src, size_t c,
-                                  size_t d);
+  bool rewrite_ite_gate_to_and (Gate *g, int dst, int src, size_t c,
+                                size_t d, int cond_lit_to_learn_if_degenerated);
   void produce_ite_merge_then_else_reasons (
       Gate *g, int dst, int src, std::vector<LRAT_ID> &reasons_implication,
       std::vector<LRAT_ID> &reasons_back);
   void produce_ite_merge_lhs_then_else_reasons (
       Gate *g, std::vector<LRAT_ID> &reasons_implication,
       std::vector<LRAT_ID> &reasons_back,
-						std::vector<LRAT_ID> &reasons_unit, bool);
+      std::vector<LRAT_ID> &reasons_unit, bool, bool &);
   void rewrite_ite_gate_update_lrat_reasons (Gate *g, int src, int dst);
   void simplify_ite_gate_produce_unit_lrat (Gate *g, int lit, size_t idx1,
                                             size_t idx2);
   void merge_and_gate_lrat_produce_lrat (
       Gate *g, Gate *h, std::vector<LRAT_ID> &reasons_lrat,
-					 std::vector<LRAT_ID> &reasons_lrat_back);
-  // first index is a binary clause after unit propagation and the second has length 3
-  void simplify_ite_gate_to_and_lrat (Gate *g, size_t idx1, size_t idx2,
-                                      int removed, int replaced); 
+      std::vector<LRAT_ID> &reasons_lrat_back, bool remove_units = true);
+  // first index is a binary clause after unit propagation and the second
+  // has length 3
+  bool simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
+                                 int removed);
   void
   merge_ite_gate_produce_lrat (std::vector<LitClausePair> &clauses,
                                std::vector<LRAT_ID> &reasons_implication,
@@ -617,7 +622,7 @@ struct Closure {
 
   void simplify_ite_gate_condition_set (
       Gate *g, std::vector<LRAT_ID> &reasons_lrat,
-					std::vector<LRAT_ID> &reasons_back_lrat, size_t idx1, size_t idx2);
+      std::vector<LRAT_ID> &reasons_back_lrat, size_t idx1, size_t idx2);
   bool normalize_ite_lits_gate (Gate *rhs);
 };
 

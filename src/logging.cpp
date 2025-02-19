@@ -67,8 +67,8 @@ void Logger::log (Internal *internal, const Clause *c, const char *fmt,
           printf (" %d", lit);
       } else {
         for (const auto &lit : *c) {
-	  printf (" %s", loglit (internal, lit).c_str ());
-	}
+          printf (" %s", loglit (internal, lit).c_str ());
+        }
       }
     }
   } else if (internal->level)
@@ -88,12 +88,14 @@ void Logger::log (Internal *internal, const Gate *g, const char *fmt, ...) {
   vprintf (fmt, ap);
   va_end (ap);
   if (g) {
-    printf ("%s gate[%" PRIu64 "] (arity: %ld) %s := %s",
+    printf ("%s%s%s gate[%" PRIu64 "] (arity: %ld) %s := %s",
+	    g->degenerated_and_pos ? " deg+" : "",
+	    g->degenerated_and_neg ? " deg-" : "",
             g->garbage ? " garbage" : "", g->id, g->arity (),
             loglit (internal, g->lhs).c_str (),
             string_of_gate (g->tag).c_str ());
     for (const auto &lit : g->rhs) {
-      printf (" %s", loglit (internal, lit).c_str());
+      printf (" %s", loglit (internal, lit).c_str ());
     }
   } else
     printf (" null gate");
@@ -175,8 +177,8 @@ void Logger::log (Internal *internal, const vector<int64_t> &c,
 
 // for LRAT proof clauses
 
-void Logger::log (Internal *internal, const int *literals, const unsigned size,
-                  const char *fmt, ...) {
+void Logger::log (Internal *internal, const int *literals,
+                  const unsigned size, const char *fmt, ...) {
   print_log_prefix (internal);
   tout.magenta ();
   va_list ap;
@@ -192,7 +194,6 @@ void Logger::log (Internal *internal, const int *literals, const unsigned size,
   fflush (stdout);
 }
 
-
 string Logger::loglit (Internal *internal, int lit) {
   std::string v = std::to_string (lit);
   if (lit && -internal->max_var <= lit && internal->max_var >= lit) {
@@ -203,9 +204,9 @@ string Logger::loglit (Internal *internal, int lit) {
         v = v + "+";
     }
     if (va > 0)
-      v+= "=1";
+      v += "=1";
     else if (va < 0)
-      v+= "=-1";
+      v += "=-1";
   }
   return v;
 }

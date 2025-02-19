@@ -64,8 +64,10 @@ int Internal::second_literal_in_binary_clause_lrat (Clause *c, int first) {
     if (lit == first)
       continue;
     const signed char tmp = val (lit);
-    if (tmp < 0) continue;
-    if (tmp > 0) return 0;
+    if (tmp < 0)
+      continue;
+    if (tmp > 0)
+      return 0;
     if (!tmp) {
       if (second) {
         second = INT_MIN;

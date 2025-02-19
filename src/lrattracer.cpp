@@ -53,13 +53,11 @@ inline void LratTracer::put_binary_lit (int lit) {
   file->put (ch);
 }
 
-inline void LratTracer::put_binary_id (int64_t id, bool can_be_negative) {
+inline void LratTracer::put_binary_id (int64_t id) {
   assert (binary);
   assert (file);
   uint64_t x = abs (id);
-  if (can_be_negative) {
-    x = 2 * x + (id < 0);
-  }
+  x = 2 * x + (id < 0);
   unsigned char ch;
   while (x & ~0x7f) {
     ch = (x & 0x7f) | 0x80;
