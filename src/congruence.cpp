@@ -5690,15 +5690,21 @@ void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit,
   assert (idx1 < g->pos_lhs_ids.size ());
   assert (idx2 < g->pos_lhs_ids.size ());
   assert (g->pos_lhs_ids.size () == 4);
+  
   assert (idx1 != idx2);
   Clause *c = g->pos_lhs_ids[idx1].clause;
   Clause *d = g->pos_lhs_ids[idx2].clause;
   c = produce_rewritten_clause_lrat (c, g->lhs, true);
-  assert (c);
-  d = produce_rewritten_clause_lrat (d, g->lhs, true);
-  assert (d);
-  lrat_chain.push_back (c->id);
-  lrat_chain.push_back (d->id);
+  if (c) {
+    lrat_chain.push_back (c->id);
+    d = produce_rewritten_clause_lrat (d, g->lhs, true);
+    if (d)
+      lrat_chain.push_back (d->id);
+  } else if (!c) {
+    push_id_and_rewriting_lrat_unit (d, Rewrite (), lrat_chain, true, Rewrite (), g->lhs);
+    assert (d);
+    lrat_chain.push_back (d->id);
+  }
 }
 
 // TODO merge
