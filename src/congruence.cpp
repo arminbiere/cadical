@@ -5473,10 +5473,16 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
             produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids,
                                                      g->lhs);
             assert (!internal->lrat || g->pos_lhs_ids.size () == 2);
-            merge_literals_equivalence (
-                g->lhs, g->rhs[0],
-                internal->lrat ? g->pos_lhs_ids[0].clause : nullptr,
-                internal->lrat ? g->pos_lhs_ids[1].clause : nullptr);
+	    Clause *c1 = nullptr, *c2 = nullptr;
+            if (internal->lrat) {
+              c1 = (g->pos_lhs_ids[0].current_lit == -g->rhs[0]
+                        ? g->pos_lhs_ids[0].clause
+                        : g->pos_lhs_ids[1].clause);
+              c2 = (g->pos_lhs_ids[0].current_lit == -g->rhs[0]
+                        ? g->pos_lhs_ids[1].clause
+                        : g->pos_lhs_ids[0].clause);
+            }
+            merge_literals_equivalence (g->lhs, g->rhs[0], c1, c2);
             garbage = true;
           }
         }
