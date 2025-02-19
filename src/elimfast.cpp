@@ -18,10 +18,10 @@ int64_t Internal::flush_elimfast_occs (int lit) {
   const int64_t failed = occslim + 1;
   Occs &os = occs (lit);
   const const_occs_iterator end = os.end ();
-  occs_iterator j = os.begin (), i;
+  occs_iterator j = os.begin (), i = j;
   int64_t res = 0;
-  for (i = j; i != end; i++) {
-    Clause *c = *i;
+  while (i != end) {
+    Clause *c = *i++;
     if (c->collect ())
       continue;
     *j++ = c;
