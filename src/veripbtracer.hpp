@@ -8,7 +8,7 @@ namespace CaDiCaL {
 struct HashId {
   HashId *next;  // collision chain link for hash table
   uint64_t hash; // previously computed full 64-bit hash
-  int64_t id;   // id of clause
+  int64_t id;    // id of clause
 };
 
 class VeripbTracer : public FileTracer {
@@ -31,7 +31,7 @@ class VeripbTracer : public FileTracer {
 
   uint64_t nonces[num_nonces]; // random numbers for hashing
   uint64_t last_hash;          // last computed hash value of clause
-  int64_t last_id;            // id of the last added clause
+  int64_t last_id;             // id of the last added clause
   HashId *last_clause;
   uint64_t compute_hash (int64_t); // compute and save hash value of clause
 

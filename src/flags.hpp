@@ -24,7 +24,8 @@ struct Flags { // Variable flags.
   bool sweep : 1;
   bool blockable : 1;
 
-  unsigned char marked_signed : 2; // generate correct LRAT chains in decompose
+  unsigned char
+      marked_signed : 2; // generate correct LRAT chains in decompose
   unsigned char factor : 2;
 
   // These literal flags are used by blocked clause elimination ('block').

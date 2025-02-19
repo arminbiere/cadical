@@ -110,14 +110,12 @@ void Internal::reset_factor_mode () {
   connect_watches ();
 }
 
-Factoring::Factoring (Internal *i, int64_t l, bool preprocess)
+Factoring::Factoring (Internal *i, int64_t l)
     : internal (i), limit (l), schedule (i) {
   const unsigned max_var = internal->max_var;
   const unsigned max_lit = 2 * (max_var + 1);
   initial = max_var;
-  bound = preprocess && internal->opts.fastelim
-              ? internal->opts.fastelimbound
-              : internal->lim.elimbound;
+  bound = internal->lim.elimbound;
   enlarge_zero (count, max_lit);
   quotients.first = quotients.last = 0;
 }
@@ -767,8 +765,8 @@ void Internal::schedule_factorization (Factoring &factoring) {
 #endif
 }
 
-bool Internal::run_factorization (int64_t limit, bool preprocess) {
-  Factoring factoring = Factoring (this, limit, preprocess);
+bool Internal::run_factorization (int64_t limit) {
+  Factoring factoring = Factoring (this, limit);
   schedule_factorization (factoring);
   bool done = false;
 #ifndef QUIET
@@ -854,15 +852,16 @@ int Internal::get_new_extension_variable () {
   return new_internal;
 }
 
-bool Internal::factor (bool preprocess) {
+bool Internal::factor () {
   if (unsat)
     return false;
   if (terminated_asynchronously ())
     return false;
   if (!opts.factor)
     return false;
-  assert (stats.mark.factor || clauses.empty ());
-  // update last.factor.marked and flags.factor to trigger factor
+  // The following assertion fails if there are *only* user propagator
+  // clauses (which are redundant).
+  // assert (stats.mark.factor || clauses.empty ());
   if (last.factor.marked >= stats.mark.factor) {
     VERBOSE (3,
              "factorization skipped as no literals have been"
@@ -874,7 +873,7 @@ bool Internal::factor (bool preprocess) {
 
   SET_EFFORT_LIMIT (limit, factor, stats.factor);
   if (!stats.factor)
-    limit += opts.factoriniticks * 1e3;
+    limit += opts.factoriniticks * 1e6;
 
   START_SIMPLIFIER (factor, FACTOR);
   stats.factor++;
@@ -889,7 +888,7 @@ bool Internal::factor (bool preprocess) {
 #endif
 
   factor_mode ();
-  bool completed = run_factorization (limit, preprocess);
+  bool completed = run_factorization (limit);
   reset_factor_mode ();
 
   propagated = 0;

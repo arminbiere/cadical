@@ -1,5 +1,4 @@
-#include <stdint.h>
-static const char *version = "0.2.0";
+static const char *version = "0.2.1-dev";
 
 // clang-format off
 
@@ -87,6 +86,7 @@ static const char * usage =
 #include <limits.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -97,14 +97,11 @@ struct file {
   size_t bytes;
   size_t lines;
   bool binary;
-  char close;
+  bool fclose;
+  bool pclose;
   bool eof;
   int last;
   int saved;
-};
-
-struct bool_stack {
-  bool *begin, *end, *allocated;
 };
 
 struct int_stack {
@@ -189,7 +186,8 @@ static int first_clause_added_in_proof;
 static struct {
   struct char_map marks;
   struct char_map values;
-  struct size_t_map used;
+  struct size_t_map pos_count;
+  struct size_t_map neg_count;
   int original;
 } variables;
 
@@ -197,6 +195,7 @@ static struct int_stack trail;
 
 static struct {
   struct char_map status;
+  struct char_map marked;
   struct ints_map literals;
   struct ints_map antecedents;
   struct size_t_map deleted;
@@ -404,6 +403,10 @@ static void *coverage_realloc (size_t line, void *p, size_t bytes) {
 
 #define ACCESS(STACK, OFFSET) \
   ((STACK).begin[assert ((OFFSET) < SIZE (STACK)), (OFFSET)])
+
+#define COUNT(LIT) \
+  (ACCESS ((((LIT) > 0) ? variables.pos_count : variables.neg_count), \
+           abs (LIT)))
 
 #define POP(STACK) (assert (!EMPTY (STACK)), *--(STACK).end)
 
@@ -857,8 +860,7 @@ static void crr (int id, const char *fmt, ...) {
 
 static void mark_used_literals (int *literals) {
   for (int *l = literals, lit; (lit = *l); l++) {
-    const unsigned idx = 2 * abs (lit) + (lit < 0);
-    size_t *count = &ACCESS (variables.used, idx);
+    size_t *count = &COUNT (lit);
     // SIZE_MAX is at least 65535, which should be enough.
     if (*count != SIZE_MAX)
       (*count)++;
@@ -870,26 +872,24 @@ static void check_clause_extension (int id, int *literals,
   if (!*antecedents) {
     bool pure = false;
     for (int *l = literals, lit; (lit = *l); l++) {
-      const unsigned idx = 2 * abs (lit) + (lit > 0); // access -lit
-      const size_t count = ACCESS (variables.used, idx);
+      const size_t count = COUNT (-lit);
       if (!count) {
         pure = true;
         break;
       }
     }
     if (!pure)
-      crr (id, "empty antecedents but clause not pure");
+      crr (id, "empty antecedents "
+               "(for extensions the clause should be pure)");
   } else {
     int ext = 0;
     for (int *l = literals, lit; (lit = *l); l++) {
       signed char value = assigned_literal (lit);
-      const unsigned idx = 2 * abs (lit) + (lit < 0);
-      size_t count = ACCESS (variables.used, idx);
-      if (!count && ext)
-        crr (id, "multiple pure literals '%d' and '%d' in extension clause",
-             ext, lit);
-      if (!count)
+      size_t count = COUNT (lit);
+      if (!count) {
         ext = lit;
+        dbg ("no occurrence of literal '%d' so far", lit);
+      }
       if (value < 0) {
         if (strict)
           crr (id, "duplicated literal '%d'", lit);
@@ -902,18 +902,27 @@ static void check_clause_extension (int id, int *literals,
       assign_literal (-lit);
     }
     if (!ext)
-      crr (id, "no pure literal for extension check");
-    const unsigned eidx = 2 * abs (ext) + (ext > 0);
-    size_t numants = ACCESS (variables.used, eidx); // access -ext
+      crr (id, "no pure literal for extension check "
+               "(empty clause)");
+    size_t numants = COUNT (-ext);
     for (int *a = antecedents, aid; (aid = *a); a++) {
-      if (numants)
+      if (aid > 0)
+        crr (id,
+             "positive id '%d' in extension check not supported "
+             "(expected only negative antecedents)",
+             aid);
+      ADJUST (clauses.marked, -aid);
+      if (ACCESS (clauses.marked, -aid)++) {
+        if (strict)
+          crr (id, "multiple occurrence of (negative) id '%d'", aid);
+        dbg ("skipping multple occurrence of '%d", aid);
+      } else if (numants)
         numants--;
       else
         crr (id,
-             "more antecedents than occurrences of '%d' (or more than %zd)",
+             "more antecedents than occurrences of '%d' "
+             "(or more than %zd)",
              -ext, SIZE_MAX);
-      if (aid > 0)
-        crr (id, "positive id '%d' in extension check not supported", aid);
       int *als = ACCESS (clauses.literals, -aid);
       dbgs (als, "checking blocked antecedent %d clause", -aid);
       bool hasnotext = false;
@@ -935,8 +944,10 @@ static void check_clause_extension (int id, int *literals,
         crr (id, "antecedent %d does not contain extension literal %d",
              -aid, -ext);
       if (!blocked)
-        crr (id, "antecedent %d not blocked", -aid);
+        crr (id, "antecedent %d not blocked in extension clause", -aid);
     }
+    for (int *a = antecedents, aid; (aid = *a); a++)
+      ACCESS (clauses.marked, -aid) = 0;
     if (numants)
       crr (id, "occurrences of '%d' not equal antecendents (missing %zd)",
            -ext, numants);
@@ -944,12 +955,37 @@ static void check_clause_extension (int id, int *literals,
   }
 }
 
+static void adjust_variables (int idx) {
+  if (strict)
+    ADJUST (variables.marks, idx); // 2 * idx + 1
+  else
+    ADJUST (variables.values, idx);
+  if (!norat) {
+    ADJUST (variables.pos_count, idx);
+    ADJUST (variables.neg_count, idx);
+  }
+}
+
+static void import_literals (int *literals) {
+  int max_idx = 0;
+  for (int *l = literals, lit; (lit = *l); l++) {
+    assert (lit != INT_MIN);
+    int idx = abs (lit);
+    if (idx > max_idx)
+      max_idx = idx;
+  }
+  adjust_variables (max_idx);
+}
+
 static void check_clause_non_strictly_by_propagation (int id, int *literals,
                                                       int *antecedents) {
   assert (!strict);
   assert (EMPTY (trail));
 
+  import_literals (literals);
+
   statistics.clauses.resolved++;
+
   for (int *l = literals, lit; (lit = *l); l++) {
     signed char value = assigned_literal (lit);
     if (value < 0) {
@@ -1102,7 +1138,8 @@ static void check_clause (int id, int *literals, int *antecedents) {
     check_clause_strictly_by_resolution (id, literals, antecedents);
   else
     check_clause_non_strictly_by_propagation (id, literals, antecedents);
-  if (!norat)
+  if (!norat) // TODO: lazy counts when needed (supercedes norat option
+              // (--rup))
     mark_used_literals (literals);
 }
 
@@ -1232,12 +1269,7 @@ static void parse_cnf () {
     prr ("expected new-line after 'p cnf %d %d'", header_variables,
          header_clauses);
   msg ("found 'p cnf %d %d' header", header_variables, header_clauses);
-  if (strict)
-    ADJUST (variables.marks, header_variables);
-  else
-    ADJUST (variables.values, header_variables);
-  if (!norat) // actually allocates 2 * header_variables + 2
-    ADJUST (variables.used, 2 * header_variables + 1);
+  adjust_variables (header_variables);
   ADJUST (clauses.literals, header_clauses);
   ADJUST (clauses.status, header_clauses);
   int lit = 0, parsed_clauses = 0;
@@ -1336,8 +1368,10 @@ static void parse_cnf () {
   assert (EMPTY (parsed_literals));
   RELEASE (parsed_literals);
 
-  if (input.close)
+  if (input.fclose)
     fclose (input.file);
+  if (input.pclose)
+    pclose (input.file);
   *cnf.input = input;
 
   vrb ("read %zu CNF lines with %s", input.lines,
@@ -1546,10 +1580,11 @@ static void parse_proof () {
       while (ISDIGIT (ch = read_ascii ())) {
         if (!id)
           prr ("unexpected digit '%c' after '0'", ch);
-        if (INT_MAX / 10 < id)
+        if (INT_MAX / 10 < id) {
         LINE_IDENTIFIER_EXCEEDS_INT_MAX:
           prr ("line identifier '%s' exceeds 'INT_MAX'",
                exceeds_int_max (id, ch));
+        }
         id *= 10;
         int digit = ch - '0';
         if (INT_MAX - digit < id) {
@@ -1621,10 +1656,11 @@ static void parse_proof () {
           while (ISDIGIT ((ch = read_ascii ()))) {
             if (!other)
               prr ("unexpected digit '%c' after '0' in deletion", ch);
-            if (INT_MAX / 10 < other)
+            if (INT_MAX / 10 < other) {
             DELETED_CLAUSE_IDENTIFIER_EXCEEDS_INT_MAX:
               prr ("deleted clause identifier '%s' exceeds 'INT_MAX'",
                    exceeds_int_max (other, ch));
+            }
             other *= 10;
             int digit = ch - '0';
             if (INT_MAX - digit < other) {
@@ -1954,8 +1990,10 @@ static void parse_proof () {
   }
   RELEASE (parsed_antecedents);
   RELEASE (parsed_literals);
-  if (input.close)
+  if (input.fclose)
     fclose (input.file);
+  if (input.pclose)
+    pclose (input.file);
   *proof.input = input;
 
   RELEASE (clauses.deleted);
@@ -2087,15 +2125,20 @@ static struct file *write_file (struct file *file) {
   assert (file->path);
   if (!strcmp (file->path, "/dev/null")) {
     assert (!file->file);
-    assert (!file->close);
+    assert (!file->fclose);
+    assert (!file->pclose);
   } else if (!strcmp (file->path, "-")) {
     file->file = stdout;
     file->path = "<stdout>";
-    assert (!file->close);
-  } else if (!(file->file = fopen (file->path, "w")))
-    die ("can not write '%s'", file->path);
-  else
-    file->close = 1;
+    assert (!file->fclose);
+    assert (!file->pclose);
+  } else {
+    file->file = fopen (file->path, "w");
+    if (!file->file)
+      die ("can not write '%s'", file->path);
+    file->fclose = 1;
+    assert (!file->pclose);
+  }
   return file;
 }
 
@@ -2266,8 +2309,10 @@ static void write_proof () {
 
   assert (proof.output);
   flush_buffer ();
-  if (output.close)
+  if (output.fclose)
     fclose (output.file);
+  if (output.pclose)
+    pclose (output.file);
   *proof.output = output;
 
   msg ("trimmed %s to %s %.0f%%", pretty_bytes (proof.input->bytes),
@@ -2310,8 +2355,10 @@ static void write_cnf () {
   msg ("wrote %zu clauses to CNF", count);
 
   flush_buffer ();
-  if (output.close)
+  if (output.fclose)
     fclose (output.file);
+  if (output.pclose)
+    pclose (output.file);
   *cnf.output = output;
 
   vrb ("wrote %zu proof lines of %s", output.lines,
@@ -2335,8 +2382,11 @@ static void release () {
     RELEASE (variables.marks);
   else
     RELEASE (variables.values);
-  if (!norat)
-    RELEASE (variables.used);
+  if (!norat) {
+    RELEASE (variables.pos_count);
+    RELEASE (variables.neg_count);
+    RELEASE (clauses.marked);
+  }
   RELEASE (trail);
   release_ints_map (&clauses.literals);
   release_ints_map (&clauses.antecedents);
@@ -2424,19 +2474,41 @@ static void options (int argc, char **argv) {
     die ("can not use '<stdout>' for both last two output files");
 }
 
+static bool matches (const char *str, const char *suffix) {
+  size_t k = strlen (str), l = strlen (suffix);
+  return l <= k && !strcmp (str + k - l, suffix);
+}
+
+static FILE *read_pipe (const char *fmt, const char *path) {
+  char *cmd = malloc (strlen (fmt) + strlen (path));
+  sprintf (cmd, fmt, path);
+  FILE *res = popen (cmd, "r");
+  free (cmd);
+  return res;
+}
+
 static struct file *read_file (struct file *file) {
-  assert (file->path);
-  if (!strcmp (file->path, "/dev/null")) {
+  const char *path = file->path;
+  assert (path);
+  if (!strcmp (path, "/dev/null")) {
     assert (!file->file);
-    assert (!file->close);
-  } else if (!strcmp (file->path, "-")) {
+    assert (!file->fclose);
+    assert (!file->pclose);
+  } else if (!strcmp (path, "-")) {
     file->file = stdin;
-    file->path = "<stdin>";
-    assert (!file->close);
-  } else if (!(file->file = fopen (file->path, "r")))
-    die ("can not read '%s'", file->path);
-  else
-    file->close = 1;
+    path = "<stdin>";
+    assert (!file->fclose);
+    assert (!file->pclose);
+  } else {
+    assert (!file->fclose);
+    assert (!file->pclose);
+    if (matches (path, ".xz"))
+      file->file = read_pipe ("xz -d -c %s", path), file->pclose = true;
+    else
+      file->file = fopen (path, "r"), file->fclose = true;
+    if (!file->file)
+      die ("can not read '%s'", path);
+  }
   file->saved = EOF;
   return file;
 }
@@ -2589,9 +2661,10 @@ static void open_input_files () {
 static void print_banner () {
   if (verbosity < 0)
     return;
-  printf ("c LRAT-TRIM Version %s trims LRAT proofs\n"
-          "c Copyright (c) 2023 Armin Biere University of Freiburg\n",
-          version);
+  printf (
+      "c LRAT-TRIM Version %s trims LRAT proofs\n"
+      "c Copyright (c) 2023-2025 A. Biere, F. Pollitt, Univ. Freiburg\n",
+      version);
   fflush (stdout);
 }
 

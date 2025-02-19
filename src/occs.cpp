@@ -21,7 +21,7 @@ void Internal::reset_occs () {
 void Internal::clear_occs () {
   assert (occurring ());
   for (auto &occ : otab)
-    occ.clear();
+    occ.clear ();
   LOG ("clear occurrence lists");
 }
 

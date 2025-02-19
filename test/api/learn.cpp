@@ -50,10 +50,11 @@ static void formula (CaDiCaL::Solver &solver) {
 int main () {
   CaDiCaL::Solver ping, pong;
   ping.set ("log", 1), pong.set ("log", 1);
-  ping.set ("congruence", 0), pong.set ("congruencexor", 0);
+  ping.set ("congruence", 0), pong.set ("congruence", 0);
   ping.set ("sweep", 0), pong.set ("sweep", 0);
   ping.set ("otfs", 0), pong.set ("otfs", 0);
   ping.set ("factor", 0), pong.set ("factor", 0);
+  ping.set ("fastelim", 0), pong.set ("fastelim", 0);
   Wrapper wing (&ping), wong (&pong);
   formula (ping), formula (pong);
   int a = ping.solve ();

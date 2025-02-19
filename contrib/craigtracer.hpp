@@ -141,8 +141,7 @@ public:
                             const std::vector<int> &c,
                             bool restore) override;
   void
-  add_derived_clause (int64_t id, bool redundant,
-                      const std::vector<int> &c,
+  add_derived_clause (int64_t id, bool redundant, const std::vector<int> &c,
                       const std::vector<int64_t> &proof_chain) override;
   void
   add_assumption_clause (int64_t id, const std::vector<int> &c,

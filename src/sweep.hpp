@@ -6,12 +6,12 @@ namespace CaDiCaL {
 struct Internal;
 
 struct sweep_proof_clause {
-  unsigned sweep_id;  // index for sweeper.clauses
-  int64_t cad_id;   // cadical id
-  unsigned kit_id;  // kitten id
+  unsigned sweep_id; // index for sweeper.clauses
+  int64_t cad_id;    // cadical id
+  unsigned kit_id;   // kitten id
   bool learned;
   vector<int> literals;
-  vector<unsigned> chain;  // lrat
+  vector<unsigned> chain; // lrat
 };
 
 struct sweep_blocked_clause {
@@ -32,7 +32,7 @@ struct Sweeper {
   Internal *internal;
   Random random;
   vector<unsigned> depths;
-  int* reprs;
+  int *reprs;
   vector<int> next, prev;
   int first, last, blit;
   unsigned encoded;

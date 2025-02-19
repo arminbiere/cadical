@@ -195,9 +195,7 @@ void Internal::flush_trace (bool print) {
 
 /*------------------------------------------------------------------------*/
 
-Proof::Proof (Internal *s) : internal (s) {
-  LOG ("PROOF new");
-}
+Proof::Proof (Internal *s) : internal (s) { LOG ("PROOF new"); }
 
 Proof::~Proof () { LOG ("PROOF delete"); }
 
@@ -220,8 +218,7 @@ inline void Proof::add_literals (const vector<int> &c) {
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_original_clause (int64_t id, bool r,
-                                 const vector<int> &c) {
+void Proof::add_original_clause (int64_t id, bool r, const vector<int> &c) {
   LOG (c, "PROOF adding original internal clause");
   add_literals (c);
   clause_id = id;
@@ -431,7 +428,6 @@ void Proof::finalize_external_unit (int64_t id, int lit) {
   clause_id = id;
   finalize_clause ();
 }
-
 
 /*------------------------------------------------------------------------*/
 

@@ -19,7 +19,7 @@ namespace CaDiCaL {
 struct LratCheckerClause {
   LratCheckerClause *next; // collision chain link for hash table
   uint64_t hash;           // previously computed full 64-bit hash
-  int64_t id;             // id of clause
+  int64_t id;              // id of clause
   bool garbage;            // for garbage clauses
   unsigned size;
   bool used;
@@ -68,8 +68,8 @@ class LratChecker : public StatTracer {
 
   static const unsigned num_nonces = 4;
 
-  uint64_t nonces[num_nonces];      // random numbers for hashing
-  uint64_t last_hash;               // last computed hash value of clause
+  uint64_t nonces[num_nonces];     // random numbers for hashing
+  uint64_t last_hash;              // last computed hash value of clause
   int64_t last_id;                 // id of the last added/deleted clause
   int64_t current_id;              // id of the last added clause
   uint64_t compute_hash (int64_t); // compute and save hash value of clause
@@ -90,9 +90,9 @@ class LratChecker : public StatTracer {
   LratCheckerClause *new_clause ();
   void delete_clause (LratCheckerClause *);
 
-  bool check (vector<int64_t>); // check RUP
+  bool check (vector<int64_t>);            // check RUP
   bool check_resolution (vector<int64_t>); // check resolution
-  bool check_blocked (vector<int64_t>); // check ER
+  bool check_blocked (vector<int64_t>);    // check ER
 
   struct {
 

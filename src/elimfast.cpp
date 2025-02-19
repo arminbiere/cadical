@@ -4,11 +4,44 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// Implements a variant of elimination with a much lower limit to be run as preprocessing. See elim
-// for comments
+// Implements a variant of elimination with a much lower limit to be run as
+// preprocessing. See elim for comments
 
 /*------------------------------------------------------------------------*/
- 
+
+// Flush garbage clause, check fast elimination limits and return number of
+// remaining occurrences (or 'fastelimbound + 1' if some limit was hit).
+
+int64_t Internal::flush_elimfast_occs (int lit) {
+  const int64_t occslim = opts.fastelimbound;
+  const int64_t clslim = opts.fastelimocclim;
+  const int64_t failed = occslim + 1;
+  Occs &os = occs (lit);
+  const const_occs_iterator end = os.end ();
+  occs_iterator j = os.begin (), i = j;
+  int64_t res = 0;
+  while (i != end) {
+    Clause *c = *i++;
+    if (c->collect ())
+      continue;
+    *j++ = c;
+    if (c->size > clslim) {
+      res = failed;
+      break;
+    }
+    if (++res > occslim) {
+      assert (opts.fastelimbound < 0 || res == failed);
+      break;
+    }
+  }
+  if (i != j) {
+    while (i != end)
+      *j++ = *i++;
+    os.resize (j - os.begin ());
+    shrink_occs (os);
+  }
+  return res;
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -20,7 +53,7 @@ namespace CaDiCaL {
 // than negative occurrences.
 
 bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
-						int pivot) {
+                                                int pivot) {
   assert (eliminator.gates.empty ());
   assert (!eliminator.definition_unit);
 
@@ -31,15 +64,28 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
 
   const Occs &ps = occs (pivot);
   const Occs &ns = occs (-pivot);
-  const int64_t pos = ps.size ();
-  const int64_t neg = ns.size ();
+
+  int64_t pos = ps.size ();
+  int64_t neg = ns.size ();
+
+  int64_t bound = opts.fastelimbound;
+
   if (!pos || !neg)
-    return lim.elimbound >= 0;
-  const int64_t bound = opts.fastelimbound;
+    return bound >= 0;
+
+  const int64_t sum = pos + neg;
+  const int64_t product = pos * neg;
+  if (bound > sum)
+    bound = sum;
 
   LOG ("checking number resolvents on %d bounded by "
        "%" PRId64 " = %" PRId64 " + %" PRId64 " + %d",
        pivot, bound, pos, neg, opts.fastelimbound);
+
+  if (product <= bound) {
+    LOG ("fast elimination occurrence limits sufficiently small enough");
+    return true;
+  }
 
   // Try all resolutions between a positive occurrence (outer loop) of
   // 'pivot' and a negative occurrence of 'pivot' (inner loop) as long the
@@ -63,7 +109,7 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
         LOG ("now at least %" PRId64
              " non-tautological resolvents on pivot %d",
              resolvents, pivot);
-        if (size > opts.elimclslim) {
+        if (size > opts.fastelimclslim) {
           LOG ("resolvent size %d too big after %" PRId64
                " resolvents on %d",
                size, resolvents, pivot);
@@ -87,12 +133,11 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
 }
 /*------------------------------------------------------------------------*/
 
-
 /*------------------------------------------------------------------------*/
 // Add all resolvents on 'pivot' and connect them.
 
 inline void Internal::elimfast_add_resolvents (Eliminator &eliminator,
-                                           int pivot) {
+                                               int pivot) {
 
   assert (eliminator.gates.empty ());
   assert (!eliminator.definition_unit);
@@ -137,33 +182,48 @@ inline void Internal::elimfast_add_resolvents (Eliminator &eliminator,
 /*------------------------------------------------------------------------*/
 
 // Try to eliminate 'pivot' by bounded variable elimination.
-void Internal::try_to_fasteliminate_variable (Eliminator &eliminator, int pivot,
-                                          bool &deleted_binary_clause) {
+void Internal::try_to_fasteliminate_variable (Eliminator &eliminator,
+                                              int pivot,
+                                              bool &deleted_binary_clause) {
 
   if (!active (pivot))
     return;
   assert (!frozen (pivot));
 
-  // First flush garbage clauses.
-  //
-  int64_t pos = flush_occs (pivot);
-  int64_t neg = flush_occs (-pivot);
+  // First flush garbage clauses and check limits.
+
+  int64_t bound = opts.fastelimbound;
+
+  int64_t pos = flush_elimfast_occs (pivot);
+  if (pos > bound) {
+    LOG ("too many occurrences thus not eliminated %d", pivot);
+    assert (!eliminator.schedule.contains (abs (pivot)));
+    return;
+  }
+
+  int64_t neg = flush_elimfast_occs (-pivot);
+  if (neg > bound) {
+    LOG ("too many occurrences thus not eliminated %d", -pivot);
+    assert (!eliminator.schedule.contains (abs (pivot)));
+    return;
+  }
+
+  const int64_t product = pos * neg;
+  const int64_t sum = pos + neg;
+  if (bound > sum)
+    bound = sum;
 
   if (pos > neg) {
     pivot = -pivot;
     swap (pos, neg);
   }
+
   LOG ("pivot %d occurs positively %" PRId64
        " times and negatively %" PRId64 " times",
        pivot, pos, neg);
+
   assert (!eliminator.schedule.contains (abs (pivot)));
   assert (pos <= neg);
-
-  if (pos && neg > opts.elimocclim) {
-    LOG ("too many occurrences thus not eliminated %d", pivot);
-    assert (!eliminator.schedule.contains (abs (pivot)));
-    return;
-  }
 
   LOG ("trying to eliminate %d", pivot);
   assert (!flags (pivot).eliminated ());
@@ -175,7 +235,8 @@ void Internal::try_to_fasteliminate_variable (Eliminator &eliminator, int pivot,
   stable_sort (ns.begin (), ns.end (), clause_smaller_size ());
 
   if (!unsat && !val (pivot)) {
-    if (elimfast_resolvents_are_bounded (eliminator, pivot)) {
+    if (product <= bound ||
+        elimfast_resolvents_are_bounded (eliminator, pivot)) {
       LOG ("number of resolvents on %d are bounded", pivot);
       elimfast_add_resolvents (eliminator, pivot);
       if (!unsat)
@@ -200,12 +261,14 @@ void Internal::try_to_fasteliminate_variable (Eliminator &eliminator, int pivot,
 // variables have been tried).  Otherwise it was asynchronously terminated
 // or the resolution limit was hit.
 
-int Internal::elimfast_round (bool &completed, bool &deleted_binary_clause) {
+int Internal::elimfast_round (bool &completed,
+                              bool &deleted_binary_clause) {
 
   assert (opts.fastelim);
   assert (!unsat);
 
-  START_SIMPLIFIER (elim, ELIM);
+  START_SIMPLIFIER (fastelim, ELIM);
+
   stats.elimfastrounds++;
 
   assert (!level);
@@ -355,7 +418,7 @@ int Internal::elimfast_round (bool &completed, bool &deleted_binary_clause) {
     mark_redundant_clauses_with_eliminated_variables_as_garbage ();
 
   int eliminated = stats.all.eliminated - old_eliminated;
-    stats.all.fasteliminated += eliminated;
+  stats.all.fasteliminated += eliminated;
 #ifndef QUIET
   int64_t resolutions = stats.elimres - old_resolutions;
   PHASE ("fastelim-round", stats.elimfastrounds,
@@ -365,7 +428,7 @@ int Internal::elimfast_round (bool &completed, bool &deleted_binary_clause) {
 
   const int units = stats.all.fixed - old_fixed;
   report ('e', !opts.reportall && !(eliminated + units));
-  STOP_SIMPLIFIER (elim, ELIM);
+  STOP_SIMPLIFIER (fastelim, ELIM);
 
   return eliminated; // non-zero if successful
 }
@@ -425,8 +488,9 @@ void Internal::elimfast () {
         elimfast_round (round_complete, deleted_binary_clause);
 
     if (!round_complete) {
-      PHASE ("fastelim-phase", stats.elimphases, "last round %d incomplete %s",
-             round, eliminated ? "but successful" : "and unsuccessful");
+      PHASE ("fastelim-phase", stats.elimphases,
+             "last round %d incomplete %s", round,
+             eliminated ? "but successful" : "and unsuccessful");
       assert (!phase_complete);
       break;
     }
@@ -492,8 +556,9 @@ void Internal::elimfast () {
 
 #ifndef QUIET
   eliminated = stats.all.eliminated - old_eliminated;
-  PHASE ("fastelim-phase", stats.elimphases, "eliminated %d variables %.2f%%",
-         eliminated, percent (eliminated, old_active_variables));
+  PHASE ("fastelim-phase", stats.elimphases,
+         "eliminated %d variables %.2f%%", eliminated,
+         percent (eliminated, old_active_variables));
 #endif
 
   if (external_prop) {

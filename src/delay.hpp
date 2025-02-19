@@ -21,7 +21,7 @@ struct Delay {
   }
 
   void bump_delay () {
-    current += current < std::numeric_limits<unsigned>::max();
+    current += current < std::numeric_limits<unsigned>::max ();
     count = current;
   }
 
@@ -33,7 +33,6 @@ struct Delay {
   }
 };
 
-
-}// namespace CaDiCaL
+} // namespace CaDiCaL
 
 #endif

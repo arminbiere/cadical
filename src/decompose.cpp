@@ -122,7 +122,6 @@ void Internal::clear_sign_marked_literals () {
   sign_marked.clear ();
 }
 
-
 // This performs one round of Tarjan's algorithm, e.g., equivalent literal
 // detection and substitution, on the whole formula.  We might want to
 // repeat it since its application might produce new binary clauses or

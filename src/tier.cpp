@@ -7,13 +7,14 @@ void Internal::recompute_tier () {
     return;
 
   ++stats.tierecomputed;
-  const int64_t delta = stats.tierecomputed >= 16 ? 1u << 16 : (1u << stats.tierecomputed);
+  const int64_t delta =
+      stats.tierecomputed >= 16 ? 1u << 16 : (1u << stats.tierecomputed);
   lim.recompute_tier = stats.conflicts + delta;
   LOG ("rescheduling in %zd at %zd (conflicts at %zd)", delta,
        lim.recompute_tier, stats.conflicts);
 #ifndef NDEBUG
   uint64_t total_used = 0;
-  for (auto u: stats.used[stable])
+  for (auto u : stats.used[stable])
     total_used += u;
   assert (total_used == stats.bump_used[stable]);
 #endif
@@ -25,8 +26,10 @@ void Internal::recompute_tier () {
     LOG ("tier2 limit = %d", tier2[stable]);
     return;
   } else {
-    uint64_t accumulated_tier1_limit = stats.bump_used[stable] * opts.tier1limit / 100;
-    uint64_t accumulated_tier2_limit = stats.bump_used[stable] * opts.tier2limit / 100;
+    uint64_t accumulated_tier1_limit =
+        stats.bump_used[stable] * opts.tier1limit / 100;
+    uint64_t accumulated_tier2_limit =
+        stats.bump_used[stable] * opts.tier2limit / 100;
     uint64_t accumulated_used = 0;
     for (size_t glue = 0; glue < stats.used[stable].size (); ++glue) {
       const uint64_t u = stats.used[stable][glue];
@@ -41,9 +44,10 @@ void Internal::recompute_tier () {
     }
   }
 
-  LOG ("tier1 limit = %d in %s mode", tier1[stable], stable ? "stable" : "focused");
-  LOG ("tier2 limit = %d in %s mode", tier2[stable], stable ? "stable" : "focused");
+  LOG ("tier1 limit = %d in %s mode", tier1[stable],
+       stable ? "stable" : "focused");
+  LOG ("tier2 limit = %d in %s mode", tier2[stable],
+       stable ? "stable" : "focused");
 }
 
-
-}  // namespace CaDiCaL
+} // namespace CaDiCaL

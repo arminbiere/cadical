@@ -55,7 +55,7 @@ struct Logger {
   static void log (Internal *, const vector<int64_t> &, const char *fmt,
                    ...) CADICAL_ATTRIBUTE_FORMAT (3, 4);
 
-  static void log (Internal *, const int*, const unsigned, const char *fmt,
+  static void log (Internal *, const int *, const unsigned, const char *fmt,
                    ...) CADICAL_ATTRIBUTE_FORMAT (4, 5);
 
   static void log_empty_line (Internal *);
@@ -80,8 +80,7 @@ struct Logger {
     Logger::log (internal, __VA_ARGS__); \
   } while (0)
 
-#define LOGLIT(lit) \
-  Logger::loglit (internal, lit).c_str()
+#define LOGLIT(lit) Logger::loglit (internal, lit).c_str ()
 
 /*------------------------------------------------------------------------*/
 #else // end of 'then' part of 'ifdef LOGGING'
@@ -91,7 +90,7 @@ struct Logger {
   do { \
   } while (0)
 
-#define LOGLIT(...) \
+#define LOGLIT(...)
 
 /*------------------------------------------------------------------------*/
 #endif // end of 'else' part of 'ifdef LOGGING'

@@ -643,7 +643,7 @@ void Internal::explain_external_propagations () {
     f.seen = false;
   }
 
-#if 0  // has been fuzzed extensively
+#if 0 // has been fuzzed extensively
   for (auto idx : vars) {
     assert (!flags (idx).seen);
   }
@@ -950,8 +950,8 @@ void Internal::notify_assignments () {
     // This happens on root level, so notification about their assignment is
     // already done.
     assert (external->observed (elit) ||
-      (fixed(ilit) && !external->ervars[abs (elit)]));
-    assigned.push_back(elit);
+            (fixed (ilit) && !external->ervars[abs (elit)]));
+    assigned.push_back (elit);
   }
 
   external->propagator->notify_assignment (assigned);

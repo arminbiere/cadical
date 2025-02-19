@@ -479,7 +479,8 @@ bool Checker::check_blocked () {
           first = lit;
         }
       }
-      if (count == 1) not_blocked.push_back (first);
+      if (count == 1)
+        not_blocked.push_back (first);
     }
   }
   for (const auto &lit : not_blocked) {
@@ -487,7 +488,8 @@ bool Checker::check_blocked () {
   }
   bool blocked = false;
   for (const auto &lit : unsimplified) {
-    if (mark (-lit)) blocked = true;
+    if (mark (-lit))
+      blocked = true;
     mark (-lit) = false;
   }
   return blocked;

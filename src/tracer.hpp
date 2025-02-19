@@ -30,8 +30,7 @@ public:
   // Includes ID and whether the clause is redundant or irredundant
   // Arguments: ID, redundant, clause, restored
   //
-  virtual void add_original_clause (int64_t, bool,
-                                    const std::vector<int> &,
+  virtual void add_original_clause (int64_t, bool, const std::vector<int> &,
                                     bool = false) {}
 
   // Notify the observer that a new clause has been derived.

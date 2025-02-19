@@ -1195,12 +1195,12 @@ struct Internal {
   int elim_round (bool &completed, bool &);
   void elim (bool update_limits = true);
 
+  int64_t flush_elimfast_occs (int lit);
   void elimfast_add_resolvents (Eliminator &, int pivot);
   bool elimfast_resolvents_are_bounded (Eliminator &, int pivot);
   void try_to_fasteliminate_variable (Eliminator &, int pivot, bool &);
   int elimfast_round (bool &completed, bool &);
   void elimfast ();
-
 
   // sweeping in 'sweep.cpp'
   int sweep_solve ();
@@ -1281,8 +1281,8 @@ struct Internal {
   bool apply_factoring (Factoring &factoring, Quotient *q);
   void update_factor_candidate (Factoring &, int);
   void schedule_factorization (Factoring &);
-  bool run_factorization (int64_t limit, bool);
-  bool factor (bool);
+  bool run_factorization (int64_t limit);
+  bool factor ();
   int get_new_extension_variable ();
   Clause *new_factor_clause ();
 

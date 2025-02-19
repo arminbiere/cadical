@@ -60,8 +60,7 @@ void External::push_clause_on_extension_stack (Clause *c, int pivot) {
   push_clause_on_extension_stack (c);
 }
 
-void External::push_binary_clause_on_extension_stack (int64_t id,
-                                                      int pivot,
+void External::push_binary_clause_on_extension_stack (int64_t id, int pivot,
                                                       int other) {
   internal->stats.weakened++;
   internal->stats.weakenedlen += 2;
@@ -271,7 +270,8 @@ void External::conclude_sat () {
     extend ();
   vector<int> model;
   for (int idx = 1; idx <= max_var; idx++) {
-    if (ervars[idx]) continue;
+    if (ervars[idx])
+      continue;
     const int lit = ival (idx);
     model.push_back (lit);
   }
