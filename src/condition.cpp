@@ -907,7 +907,7 @@ void Internal::condition (bool update_limits) {
   // 'condition' we can try them.
   //
   long limit = stats.propagations.search;
-  limit *= opts.conditionreleff;
+  limit *= opts.conditioneffort;
   limit /= 1000;
   if (limit < opts.conditionmineff)
     limit = opts.conditionmineff;

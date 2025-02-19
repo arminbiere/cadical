@@ -8,7 +8,7 @@ namespace CaDiCaL {
 struct IdrupClause {
   IdrupClause *next; // collision chain link for hash table
   uint64_t hash;     // previously computed full 64-bit hash
-  uint64_t id;       // id of clause
+  int64_t id;        // id of clause
   unsigned size;
   int literals[1];
 };
@@ -32,9 +32,9 @@ class IdrupTracer : public FileTracer {
 
   uint64_t nonces[num_nonces]; // random numbers for hashing
   uint64_t last_hash;          // last computed hash value of clause
-  uint64_t last_id;            // id of the last added clause
+  int64_t last_id;             // id of the last added clause
   IdrupClause *last_clause;
-  uint64_t compute_hash (uint64_t); // compute and save hash value of clause
+  uint64_t compute_hash (int64_t); // compute and save hash value of clause
 
   IdrupClause *new_clause ();
   void delete_clause (IdrupClause *);
@@ -44,7 +44,7 @@ class IdrupTracer : public FileTracer {
   void enlarge_clauses (); // enlarge hash table for clauses
   void insert ();          // insert clause in hash table
   bool
-  find_and_delete (const uint64_t); // find clause position in hash table
+  find_and_delete (const int64_t); // find clause position in hash table
 
 #ifndef QUIET
   int64_t added, deleted, weakened, restore, original, solved;
@@ -54,15 +54,16 @@ class IdrupTracer : public FileTracer {
 
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
-  void put_binary_id (uint64_t id);
+  void put_binary_id (int64_t id, bool = false);
 
   void idrup_add_derived_clause (const vector<int> &clause);
-  void idrup_delete_clause (uint64_t id, const vector<int> &clause);
+  void idrup_delete_clause (int64_t id, const vector<int> &clause);
   void idrup_add_restored_clause (const vector<int> &clause);
   void idrup_add_original_clause (const vector<int> &clause);
-  void idrup_conclude_and_delete (const vector<uint64_t> &conclusion);
+  void idrup_conclude_and_delete (const vector<int64_t> &conclusion);
   void idrup_report_status (int status);
   void idrup_conclude_sat (const vector<int> &model);
+  void idrup_conclude_unknown (const vector<int> &trail);
   void idrup_solve_query ();
 
 public:
@@ -70,26 +71,27 @@ public:
   ~IdrupTracer ();
 
   // proof section:
-  void add_derived_clause (uint64_t, bool, const vector<int> &,
-                           const vector<uint64_t> &) override;
-  void add_assumption_clause (uint64_t, const vector<int> &,
-                              const vector<uint64_t> &) override;
-  void weaken_minus (uint64_t, const vector<int> &) override;
-  void delete_clause (uint64_t, bool, const vector<int> &) override;
-  void add_original_clause (uint64_t, bool, const vector<int> &,
+  void add_derived_clause (int64_t, bool, const vector<int> &,
+                           const vector<int64_t> &) override;
+  void add_assumption_clause (int64_t, const vector<int> &,
+                              const vector<int64_t> &) override;
+  void weaken_minus (int64_t, const vector<int> &) override;
+  void delete_clause (int64_t, bool, const vector<int> &) override;
+  void add_original_clause (int64_t, bool, const vector<int> &,
                             bool = false) override;
-  void report_status (int, uint64_t) override;
+  void report_status (int, int64_t) override;
   void conclude_sat (const vector<int> &) override;
-  void conclude_unsat (ConclusionType, const vector<uint64_t> &) override;
+  void conclude_unsat (ConclusionType, const vector<int64_t> &) override;
+  void conclude_unknown (const vector<int> &) override;
 
   void solve_query () override;
   void add_assumption (int) override;
   void reset_assumptions () override;
 
   // skip
-  void begin_proof (uint64_t) override {}
-  void finalize_clause (uint64_t, const vector<int> &) override {}
-  void strengthen (uint64_t) override {}
+  void begin_proof (int64_t) override {}
+  void finalize_clause (int64_t, const vector<int> &) override {}
+  void strengthen (int64_t) override {}
   void add_constraint (const vector<int> &) override {}
 
   // logging and file io

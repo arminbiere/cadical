@@ -82,6 +82,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
         continue;
       int negated = 0;
       unsigned found = 0;
+      satisfied = false;
       for (const auto &lit : *d) {
         signed char tmp = val (lit);
         if (tmp > 0) {
@@ -119,9 +120,10 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
           assert (minimize_chain.empty ());
           assert (analyzed.empty ());
           assert (lrat_chain.empty ());
-          for (const auto &lit : *d) {         // find out if we get
-            const signed char tmp = val (lit); // a new unit or just
-            if (tmp < 0) {                     // strengthen c
+          // figure out wether we strengthen c or get a new unit
+          for (const auto &lit : *d) {
+            const signed char tmp = val (lit);
+            if (tmp < 0) {
               if (!lrat)
                 continue;
               Flags &f = flags (lit);
@@ -140,7 +142,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
               continue;
             if (unit) {
               unit = INT_MIN;
-              break;
+              continue; // needed to guarantee d is not satsified
             } else
               unit = lit;
           }
@@ -172,15 +174,14 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
                 f.seen = true;
                 continue;
               }
-              const unsigned uidx = vlit (-lit);
-              uint64_t id = unit_clauses (uidx);
-              assert (id);
+              int64_t id = unit_id (-lit);
               lrat_chain.push_back (id);
             }
             clear_analyzed_literals ();
             lrat_chain.push_back (d->id);
             lrat_chain.push_back (c->id);
-          }
+          } else if (lrat)
+            clear_analyzed_literals ();
           if (satisfied) {
             assert (lrat_chain.empty ());
             mark_garbage (d);

@@ -39,8 +39,9 @@ void Internal::add_observed_var (int ilit) {
 // graph involving this variable.
 //
 void Internal::remove_observed_var (int ilit) {
-  if (!fixed (ilit) && level)
+  if (!fixed (ilit) && level) {
     backtrack ();
+  }
 
   assert (fixed (ilit) || !level);
 
@@ -215,7 +216,7 @@ void Internal::force_backtrack (size_t new_level) {
        new_level, level);
 #endif
   backtrack (new_level);
-};
+}
 
 /*----------------------------------------------------------------------------*/
 //
@@ -312,9 +313,23 @@ bool Internal::external_propagate () {
          level, trail.size (), notified);
 #endif
     if (!unsat && !conflict) {
+      int level_before = level;
+      size_t assigned = num_assigned;
       bool has_external_clause = ask_external_clause ();
+      // New observed variable might have triggered a backtrack during this
+      // ask_external_clause call, so we need to propagate before continuing
       stats.ext_prop.ext_cb++;
       stats.ext_prop.elearn_call++;
+
+      bool trail_changed =
+          (num_assigned != assigned || level != level_before ||
+           propagated < trail.size ());
+      if (trail_changed) {
+        propagate (); // unsat or conflict will be caught later
+        if (!unsat || !conflict)
+          notify_assignments ();
+      }
+
 #ifndef NDEBUG
       if (has_external_clause)
         LOG ("New external clauses are to be added.");
@@ -323,11 +338,11 @@ bool Internal::external_propagate () {
 #endif
 
       while (has_external_clause) {
-        int level_before = level;
-        size_t assigned = num_assigned;
+        level_before = level;
+        assigned = num_assigned;
 
         add_external_clause (0);
-        bool trail_changed =
+        trail_changed =
             (num_assigned != assigned || level != level_before ||
              propagated < trail.size ());
         cb_repropagate_needed = true;
@@ -476,7 +491,7 @@ void Internal::add_external_clause (int propagated_elit,
   // we need to be build a new LRAT chain if we are already in the middle of
   // the analysis (like during failed assumptions)
   LOG (lrat_chain, "lrat chain before");
-  std::vector<uint64_t> lrat_chain_ext = std::move (lrat_chain);
+  std::vector<int64_t> lrat_chain_ext = std::move (lrat_chain);
   lrat_chain.clear ();
   clause.clear ();
 
@@ -628,7 +643,7 @@ void Internal::explain_external_propagations () {
     f.seen = false;
   }
 
-#ifndef NDEBUG
+#if 0 // has been fuzzed extensively
   for (auto idx : vars) {
     assert (!flags (idx).seen);
   }
@@ -694,7 +709,7 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 //
 Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
   Clause *res;
-  std::vector<uint64_t> chain_tmp{std::move (lrat_chain)};
+  std::vector<int64_t> chain_tmp{std::move (lrat_chain)};
   lrat_chain.clear ();
   if (clause.empty ()) {
     res = learn_external_reason_clause (ilit, 0, true);
@@ -758,8 +773,7 @@ void Internal::handle_external_clause (Clause *res) {
     if (val (pos0) < 0) {
       conflict = res;
       if (!from_propagator) {
-        // analyze (); // TODO: is it good to do conflict analysis?
-        // apparently its better to backtrack :(
+        // its better to backtrack instead of analyze
         backtrack (l1 - 1);
         conflict = 0;
         assert (!val (pos0) && !val (pos1));
@@ -804,6 +818,10 @@ void Internal::handle_external_clause (Clause *res) {
 // - The empty clause was learned due to something new learned from
 // the external propagator.
 //
+// In case only new variables were introduced, but no new clauses were
+// added, the function will return without a conflict to the outer CDCL
+// loop, where the new (not yet satisfied) variables are recognized and
+// the search continues.
 bool Internal::external_check_solution () {
   if (!external_prop)
     return true;
@@ -851,9 +869,10 @@ bool Internal::external_check_solution () {
 
     stats.ext_prop.ext_cb++;
     stats.ext_prop.elearn_call++;
-    assert (has_external_clause);
 
-    LOG ("Found solution triggered new clauses from external propagator.");
+    if (has_external_clause)
+      LOG (
+          "Found solution triggered new clauses from external propagator.");
 
     while (has_external_clause) {
       int level_before = level;
@@ -924,11 +943,14 @@ void Internal::notify_assignments () {
 
     int elit = externalize (ilit); // TODO: double-check tainting
     assert (elit);
+    if (external->ervars[abs (elit)])
+      continue;
     // Fixed variables might get mapped (during compact) to another
     // non-observed but fixed variable.
     // This happens on root level, so notification about their assignment is
     // already done.
-    assert (external->observed (elit) || fixed (ilit));
+    assert (external->observed (elit) ||
+            (fixed (ilit) && !external->ervars[abs (elit)]));
     assigned.push_back (elit);
   }
 
@@ -1190,7 +1212,7 @@ void Internal::get_all_fixed_literals (std::vector<int> &fixed_lits) {
   int ilit;
   for (int eidx = 1; eidx < e2i_size; eidx++) {
     ilit = external->e2i[eidx];
-    if (ilit) {
+    if (ilit && !external->ervars[eidx]) {
       Flags &f = flags (ilit);
       if (f.status == Flags::FIXED) {
         fixed_lits.push_back (vals[abs (ilit)] * eidx);

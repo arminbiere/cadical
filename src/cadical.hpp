@@ -197,6 +197,7 @@ enum State {
 // Opaque classes needed in the API and declared in the same namespace.
 
 class File;
+class Testing;
 struct Internal;
 struct External;
 
@@ -211,7 +212,7 @@ class ClauseIterator;
 class WitnessIterator;
 class ExternalPropagator;
 class Tracer;
-class InternalTracer;
+struct InternalTracer;
 class FileTracer;
 class StatTracer;
 
@@ -462,6 +463,21 @@ public:
   //
   bool constraint_failed ();
 
+  // Collects a subset of those literals that are implied by unit
+  // propagation by assuming the currently defined (potentially empty) set
+  // of assumptions (see IPASIR assume(lit)) function. In case unit
+  // propgation over the defined set of assumptions (or over the clause
+  // database on its own) leads to conflict, the function returns 20 and the
+  // content of 'implicants' is undefined. In case unit propagation happens
+  // to satisfy all the clauses (not probable, but not impossible), the
+  // function returns 10 and 'implicants' is a solution of the current
+  // formula under the current assumptions (after solution reconstruction).
+  // In any other case, the function returns 0 (indicating 'UNKNOWN') and
+  // 'implicants' lists the non-conflicting current value of the trail.
+
+  int propagate ();
+  void get_entrailed_literals (std::vector<int> &implicants);
+
   //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be
   // zero if the formula is proven to be satisfiable or unsatisfiable.  This
@@ -525,6 +541,12 @@ public:
   // literal is used as an argument except for the functions 'val', 'fixed',
   // 'failed' and 'frozen'.  However, the library internally keeps a maximum
   // variable index, which can be queried.
+  // With factor (BVA) the solver might also add new variables. In that case
+  // the user is required to use this to check which variables are currently
+  // free before adding new variables of their own.
+  // The alternative is to reserve variables in batches with
+  // 'reserve_difference'. Using 'reserve' in combination with any technique
+  // that could add variables (currently only factor) is not advised.
   //
   //   require (VALID | SOLVING)
   //   ensure (VALID | SOLVING)
@@ -540,6 +562,18 @@ public:
   //   ensure (STEADY )
   //
   void reserve (int min_max_var);
+
+  // Increase the maximum variable index by a number of new variables.
+  // initializes 'number_of_vars' new variables and protects them from
+  // being used by the solver as extension variables (BVA).
+  // It returns the new maximum variable index which is the highest
+  // variable name of the consecutive range of newly reserved variables.
+  // It has the same state transition and conditions as 'reserve' above.
+  //
+  //   require (READY)
+  //   ensure (STEADY )
+  //
+  int reserve_difference (int number_of_vars);
 
 #ifndef NTRACING
   //------------------------------------------------------------------------
@@ -817,9 +851,11 @@ public:
   // With a failing constraint these can be multiple clauses.
   // Then it will trigger a conclude_unsat event with the id(s)
   // of the newly learnt clauses or the id of the global conflict.
+  // In case the solver is in UNKNOWN, it will collect the currently
+  // entrailed literals and add them to the proof.
   //
-  //   require (SATISFIED || UNSATISFIED)
-  //   ensure (SATISFIED || UNSATISFIED)
+  //   require (SATISFIED || UNSATISFIED || UNKNOWN)
+  //   ensure (SATISFIED || UNSATISFIED || UNKNOWN)
   //
   void conclude ();
 
@@ -970,6 +1006,8 @@ private:
   //
   Internal *internal; // Hidden internal solver.
   External *external; // Hidden API to internal solver mapping.
+
+  friend class Testing; // Access to 'internal' for testing only!
 
 #ifndef NTRACING
   // The API calls to the solver can be traced by setting the environment
@@ -1160,8 +1198,9 @@ public:
   virtual void notify_backtrack (size_t new_level) = 0;
 
   // Check by the external propagator the found complete solution (after
-  // solution reconstruction). If it returns false, the propagator must
-  // provide an external clause during the next callback.
+  // solution reconstruction). If it returns false, the propagator should
+  // provide an external clause during the next callback or introduce new
+  // observed variables during this callback.
   //
   virtual bool cb_check_found_model (const std::vector<int> &model) = 0;
 
@@ -1273,7 +1312,7 @@ public:
   virtual ~WitnessIterator () {}
   virtual bool witness (const std::vector<int> &clause,
                         const std::vector<int> &witness,
-                        uint64_t id = 0) = 0;
+                        int64_t id = 0) = 0;
 };
 
 /*------------------------------------------------------------------------*/

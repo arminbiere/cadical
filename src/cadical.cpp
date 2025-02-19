@@ -266,6 +266,8 @@ void App::print_witness (FILE *file) {
       fputc ('v', file), c = 1;
     if (i++ == max_var)
       tmp = 0;
+    else if (solver->external->ervars[i])
+      continue;
     else
       tmp = solver->val (i) < 0 ? -i : i;
     char str[32];

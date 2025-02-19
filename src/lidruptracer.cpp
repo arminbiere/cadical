@@ -76,7 +76,6 @@ LidrupClause *LidrupTracer::new_clause () {
   res->next = 0;
   res->hash = last_hash;
   res->id = last_id;
-  // res->chain = std::vector<uint64_t> ();
   for (const auto &id : imported_chain) {
     res->chain.push_back (id);
   }
@@ -107,14 +106,14 @@ uint64_t LidrupTracer::reduce_hash (uint64_t hash, uint64_t size) {
   return res;
 }
 
-uint64_t LidrupTracer::compute_hash (const uint64_t id) {
+uint64_t LidrupTracer::compute_hash (const int64_t id) {
   assert (id > 0);
   unsigned j = id % num_nonces;
   uint64_t tmp = nonces[j] * (uint64_t) id;
   return last_hash = tmp;
 }
 
-bool LidrupTracer::find_and_delete (const uint64_t id) {
+bool LidrupTracer::find_and_delete (const int64_t id) {
   if (!num_clauses)
     return false;
   LidrupClause **res = 0, *c;
@@ -178,10 +177,13 @@ inline void LidrupTracer::put_binary_lit (int lit) {
   file->put (ch);
 }
 
-inline void LidrupTracer::put_binary_id (uint64_t id) {
+inline void LidrupTracer::put_binary_id (int64_t id, bool can_be_negative) {
   assert (binary);
   assert (file);
-  uint64_t x = id;
+  uint64_t x = abs (id);
+  if (can_be_negative) {
+    x = 2 * x + (id < 0);
+  }
   unsigned char ch;
   while (x & ~0x7f) {
     ch = (x & 0x7f) | 0x80;
@@ -194,14 +196,14 @@ inline void LidrupTracer::put_binary_id (uint64_t id) {
 
 /*------------------------------------------------------------------------*/
 
-void LidrupTracer::lidrup_add_restored_clause (uint64_t id) {
+void LidrupTracer::lidrup_add_restored_clause (int64_t id) {
   if (!batch_weaken.empty () || !batch_delete.empty ())
     lidrup_batch_weaken_restore_and_delete ();
   batch_restore.push_back (id);
 }
 
 void LidrupTracer::lidrup_add_derived_clause (
-    uint64_t id, const vector<int> &clause, const vector<uint64_t> &chain) {
+    int64_t id, const vector<int> &clause, const vector<int64_t> &chain) {
   lidrup_batch_weaken_restore_and_delete ();
   if (binary) {
     file->put ('l');
@@ -229,10 +231,9 @@ void LidrupTracer::lidrup_add_derived_clause (
     put_binary_zero ();
   else
     file->put ("0\n");
-  // flush_if_piping ();
 }
 
-void LidrupTracer::lidrup_add_original_clause (uint64_t id,
+void LidrupTracer::lidrup_add_original_clause (int64_t id,
                                                const vector<int> &clause) {
   lidrup_batch_weaken_restore_and_delete ();
   if (binary) {
@@ -252,7 +253,6 @@ void LidrupTracer::lidrup_add_original_clause (uint64_t id,
     put_binary_zero ();
   else
     file->put ("0\n");
-  // flush_if_piping ();
 }
 
 void LidrupTracer::lidrup_batch_weaken_restore_and_delete () {
@@ -323,13 +323,13 @@ void LidrupTracer::lidrup_batch_weaken_restore_and_delete () {
 }
 
 void LidrupTracer::lidrup_conclude_and_delete (
-    const vector<uint64_t> &conclusion) {
+    const vector<int64_t> &conclusion) {
   lidrup_batch_weaken_restore_and_delete ();
-  uint64_t size = conclusion.size ();
+  int64_t size = conclusion.size ();
   if (size > 1) {
     if (binary) {
       file->put ('U');
-      put_binary_id (size); // TODO: put_binary_id ok for size?
+      put_binary_id (size);
     } else {
       file->put ("U ");
       file->put (size), file->put ("\n");
@@ -418,6 +418,25 @@ void LidrupTracer::lidrup_conclude_sat (const vector<int> &model) {
   flush_if_piping ();
 }
 
+void LidrupTracer::lidrup_conclude_unknown (const vector<int> &trail) {
+  lidrup_batch_weaken_restore_and_delete ();
+  if (binary)
+    file->put ('e');
+  else
+    file->put ("e ");
+  for (auto &lit : trail) {
+    if (binary)
+      put_binary_lit (lit);
+    else
+      file->put (lit), file->put (' ');
+  }
+  if (binary)
+    put_binary_zero ();
+  else
+    file->put ("0\n");
+  flush_if_piping ();
+}
+
 void LidrupTracer::lidrup_solve_query () {
   lidrup_batch_weaken_restore_and_delete ();
   if (binary)
@@ -439,9 +458,9 @@ void LidrupTracer::lidrup_solve_query () {
 
 /*------------------------------------------------------------------------*/
 
-void LidrupTracer::add_derived_clause (uint64_t id, bool,
+void LidrupTracer::add_derived_clause (int64_t id, bool,
                                        const vector<int> &clause,
-                                       const vector<uint64_t> &chain) {
+                                       const vector<int64_t> &chain) {
   if (file->closed ())
     return;
   assert (imported_clause.empty ());
@@ -452,9 +471,9 @@ void LidrupTracer::add_derived_clause (uint64_t id, bool,
 #endif
 }
 
-void LidrupTracer::add_assumption_clause (uint64_t id,
+void LidrupTracer::add_assumption_clause (int64_t id,
                                           const vector<int> &clause,
-                                          const vector<uint64_t> &chain) {
+                                          const vector<int64_t> &chain) {
   if (file->closed ())
     return;
   assert (imported_clause.empty ());
@@ -471,7 +490,7 @@ void LidrupTracer::add_assumption_clause (uint64_t id,
   imported_chain.clear ();
 }
 
-void LidrupTracer::delete_clause (uint64_t id, bool, const vector<int> &) {
+void LidrupTracer::delete_clause (int64_t id, bool, const vector<int> &) {
   if (file->closed ())
     return;
   assert (imported_clause.empty ());
@@ -494,7 +513,7 @@ void LidrupTracer::delete_clause (uint64_t id, bool, const vector<int> &) {
   }
 }
 
-void LidrupTracer::weaken_minus (uint64_t id, const vector<int> &) {
+void LidrupTracer::weaken_minus (int64_t id, const vector<int> &) {
   if (file->closed ())
     return;
   assert (imported_clause.empty ());
@@ -504,7 +523,7 @@ void LidrupTracer::weaken_minus (uint64_t id, const vector<int> &) {
 }
 
 void LidrupTracer::conclude_unsat (ConclusionType,
-                                   const vector<uint64_t> &conclusion) {
+                                   const vector<int64_t> &conclusion) {
   if (file->closed ())
     return;
   assert (imported_clause.empty ());
@@ -512,7 +531,7 @@ void LidrupTracer::conclude_unsat (ConclusionType,
   lidrup_conclude_and_delete (conclusion);
 }
 
-void LidrupTracer::add_original_clause (uint64_t id, bool,
+void LidrupTracer::add_original_clause (int64_t id, bool,
                                         const vector<int> &clause,
                                         bool restored) {
   if (file->closed ())
@@ -537,7 +556,7 @@ void LidrupTracer::add_original_clause (uint64_t id, bool,
 #endif
 }
 
-void LidrupTracer::report_status (int status, uint64_t) {
+void LidrupTracer::report_status (int status, int64_t) {
   if (file->closed ())
     return;
   LOG ("LIDRUP TRACER tracing report of status %d", status);
@@ -549,6 +568,13 @@ void LidrupTracer::conclude_sat (const vector<int> &model) {
     return;
   LOG (model, "LIDRUP TRACER tracing conclusion of model");
   lidrup_conclude_sat (model);
+}
+
+void LidrupTracer::conclude_unknown (const vector<int> &entrailed) {
+  if (file->closed ())
+    return;
+  LOG (entrailed, "LIDRUP TRACER tracing conclusion of UNK");
+  lidrup_conclude_unknown (entrailed);
 }
 
 void LidrupTracer::solve_query () {

@@ -3,9 +3,7 @@ set cover 1
 set restoreflush 1
 set check 1
 set elimocclim 0
-set proberounds 0
 set subsume 0
-set vivifymineff 0
 add -2
 add -4
 add 1

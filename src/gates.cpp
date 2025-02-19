@@ -57,7 +57,6 @@ int Internal::second_literal_in_binary_clause (Eliminator &eliminator,
 // need a copy from above that does not care about garbage
 
 int Internal::second_literal_in_binary_clause_lrat (Clause *c, int first) {
-  // TODO: this seems to work
   if (c->garbage)
     return 0;
   int second = 0;
@@ -65,6 +64,10 @@ int Internal::second_literal_in_binary_clause_lrat (Clause *c, int first) {
     if (lit == first)
       continue;
     const signed char tmp = val (lit);
+    if (tmp < 0)
+      continue;
+    if (tmp > 0)
+      return 0;
     if (!tmp) {
       if (second) {
         second = INT_MIN;
@@ -140,9 +143,7 @@ void Internal::mark_binary_literals (Eliminator &eliminator, int first) {
             continue;
           analyzed.push_back (lit);
           f.seen = true;
-          const unsigned uidx = vlit (-lit);
-          uint64_t id = unit_clauses (uidx);
-          assert (id);
+          int64_t id = unit_id (-lit);
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);
         }
@@ -155,9 +156,7 @@ void Internal::mark_binary_literals (Eliminator &eliminator, int first) {
             continue;
           analyzed.push_back (lit);
           f.seen = true;
-          const unsigned uidx = vlit (-lit);
-          uint64_t id = unit_clauses (uidx);
-          assert (id);
+          int64_t id = unit_id (-lit);
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);
         }
@@ -242,9 +241,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
             continue;
           analyzed.push_back (lit);
           f.seen = true;
-          const unsigned uidx = vlit (-lit);
-          uint64_t id = unit_clauses (uidx);
-          assert (id);
+          int64_t id = unit_id (-lit);
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);
         }
@@ -257,9 +254,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
             continue;
           analyzed.push_back (lit);
           f.seen = true;
-          const unsigned uidx = vlit (-lit);
-          uint64_t id = unit_clauses (uidx);
-          assert (id);
+          int64_t id = unit_id (-lit);
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);
         }
@@ -306,6 +301,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
     assert (!d->gate);
     d->gate = true;
     eliminator.gates.push_back (d);
+    eliminator.gatetype = EQUI;
 
     break;
   }
@@ -400,6 +396,7 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
 #endif
     stats.elimands++;
     stats.elimgates++;
+    eliminator.gatetype = AND;
 
     (void) arity;
     assert (!c->gate);
@@ -568,6 +565,7 @@ void Internal::find_if_then_else (Eliminator &eliminator, int pivot) {
       eliminator.gates.push_back (d2);
       stats.elimgates++;
       stats.elimites++;
+      eliminator.gatetype = ITE;
       return;
     }
   }
@@ -582,8 +580,12 @@ bool Internal::get_clause (Clause *c, vector<int> &l) {
     return false;
   l.clear ();
   for (const auto &lit : *c) {
-    if (val (lit))
+    if (val (lit) < 0)
       continue;
+    if (val (lit) > 0) {
+      l.clear ();
+      return false;
+    }
     l.push_back (lit);
   }
   return true;
@@ -599,8 +601,10 @@ bool Internal::is_clause (Clause *c, const vector<int> &lits) {
     return false;
   int found = 0;
   for (const auto &lit : *c) {
-    if (val (lit))
+    if (val (lit) < 0)
       continue;
+    if (val (lit) > 0)
+      return false;
     const auto it = find (lits.begin (), lits.end (), lit);
     if (it == lits.end ())
       return false;
@@ -716,7 +720,7 @@ void Internal::find_xor_gate (Eliminator &eliminator, int pivot) {
       *j++ = e;
     }
     eliminator.gates.resize (j - eliminator.gates.begin ());
-
+    eliminator.gatetype = XOR;
     break;
   }
 }
@@ -744,6 +748,7 @@ void Internal::find_gate_clauses (Eliminator &eliminator, int pivot) {
   find_and_gate (eliminator, -pivot);
   find_if_then_else (eliminator, pivot);
   find_xor_gate (eliminator, pivot);
+  find_definition (eliminator, pivot);
 }
 
 void Internal::unmark_gate_clauses (Eliminator &eliminator) {
@@ -753,6 +758,7 @@ void Internal::unmark_gate_clauses (Eliminator &eliminator) {
     c->gate = false;
   }
   eliminator.gates.clear ();
+  eliminator.definition_unit = 0;
 }
 
 /*------------------------------------------------------------------------*/

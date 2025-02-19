@@ -1,6 +1,11 @@
 #ifndef _clause_hpp_INCLUDED
 #define _clause_hpp_INCLUDED
 
+#include "util.hpp"
+#include <climits>
+#include <cstdint>
+#include <cstdlib>
+
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
@@ -24,7 +29,7 @@ typedef const int *const_literal_iterator;
 
 struct Clause {
   union {
-    uint64_t id;  // Used to create LRAT-style proofs
+    int64_t id;   // Used to create LRAT-style proofs
     Clause *copy; // Only valid if 'moved', then that's where to.
     //
     // The 'copy' field is only valid for 'moved' clauses in the moving
@@ -40,13 +45,14 @@ struct Clause {
   bool gate : 1;     // Clause part of a gate (function definition).
   bool hyper : 1;    // redundant hyper binary or ternary resolved
   bool instantiated : 1; // tried to instantiate
-  bool keep : 1;         // always keep this clause (if redundant)
   bool moved : 1;        // moved during garbage collector ('copy' valid)
   bool reason : 1;       // reason / antecedent clause can not be collected
   bool redundant : 1;    // aka 'learned' so not 'irredundant' (original)
   bool transred : 1;     // already checked for transitive reduction
   bool subsume : 1;      // not checked in last subsumption round
-  unsigned used : 2; // resolved in conflict analysis since last 'reduce'
+  bool swept : 1;        // clause used to sweep equivalences
+  bool flushed : 1;      // garbage in proof deleted binaries
+  unsigned used : 8; // resolved in conflict analysis since last 'reduce'
   bool vivified : 1; // clause already vivified
   bool vivify : 1;   // clause scheduled to be vivified
 
@@ -171,6 +177,7 @@ struct clause_smaller_size {
 
 struct clause_lit_less_than {
   bool operator() (int a, int b) const {
+    using namespace std;
     int s = abs (a), t = abs (b);
     return s < t || (s == t && a < b);
   }

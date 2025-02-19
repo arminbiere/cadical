@@ -438,6 +438,17 @@ void Solver::reserve (int min_max_var) {
   LOG_API_CALL_END ("reserve", min_max_var);
 }
 
+int Solver::reserve_difference (int number_of_vars) {
+  TRACE ("reserve_difference", number_of_vars);
+  REQUIRE_VALID_STATE ();
+  transition_to_steady_state ();
+  external->reset_extended ();
+  int new_max_var = external->max_var + number_of_vars;
+  external->init (new_max_var);
+  LOG_API_CALL_END ("reserve_difference", number_of_vars);
+  return new_max_var;
+}
+
 /*------------------------------------------------------------------------*/
 #ifndef NTRACING
 
@@ -691,6 +702,35 @@ void Solver::reset_constraint () {
 
 /*------------------------------------------------------------------------*/
 
+int Solver::propagate () {
+  TRACE ("propagate_assumptions");
+  REQUIRE_VALID_STATE ();
+  transition_to_steady_state ();
+  const int res = external->propagate_assumptions ();
+  if (tracing_nb_lidrup_env_var_method)
+    flush_proof_trace (true);
+  LOG_API_CALL_RETURNS ("propagate_assumptions", res);
+  if (res == 10)
+    STATE (SATISFIED);
+  else if (res == 20)
+    STATE (UNSATISFIED);
+  else
+    STATE (STEADY);
+  return res;
+}
+
+void Solver::get_entrailed_literals (std::vector<int> &entrailed) {
+  TRACE ("get_entrailed_literals");
+  REQUIRE_STEADY_STATE ();
+  external->conclude_unknown ();
+  external->get_entrailed_literals (entrailed);
+  if (tracing_nb_lidrup_env_var_method)
+    flush_proof_trace (true);
+  LOG_API_CALL_RETURNS ("get_entrailed_literals", (int) entrailed.size ());
+}
+
+/*------------------------------------------------------------------------*/
+
 int Solver::call_external_solve_and_check_results (bool preprocess_only) {
   transition_to_steady_state ();
   assert (state () & READY);
@@ -714,7 +754,6 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
     Solver checker;
     // checking restored clauses does not work (because the clauses are not added)
     checker.set("checkproof", 1);
-    checker.set("lratexternal", 0);
     checker.set("lrat", 0);
     checker.prefix ("checker ");
     copy (checker);
@@ -1198,13 +1237,17 @@ bool Solver::disconnect_proof_tracer (FileTracer *tracer) {
 void Solver::conclude () {
   TRACE ("conclude");
   REQUIRE_VALID_STATE ();
-  REQUIRE (state () == UNSATISFIED || state () == SATISFIED,
-           "can only conclude in satisfied or unsatisfied state");
+  REQUIRE (state () == UNSATISFIED || state () == SATISFIED ||
+               state () == STEADY,
+           "can only conclude in satisfied, unsatisfied or STEADY state");
   if (state () == UNSATISFIED)
     internal->conclude_unsat ();
   else if (state () == SATISFIED)
     external->conclude_sat ();
-  assert (state () == UNSATISFIED || state () == SATISFIED);
+  else if (state () == STEADY)
+    external->conclude_unknown ();
+  assert (state () == UNSATISFIED || state () == SATISFIED ||
+          state () == STEADY);
   LOG_API_CALL_END ("conclude");
 }
 
@@ -1566,7 +1609,7 @@ struct WitnessWriter : public WitnessIterator {
     }
     return file->put ('0');
   }
-  bool witness (const vector<int> &c, const vector<int> &w, uint64_t) {
+  bool witness (const vector<int> &c, const vector<int> &w, int64_t) {
     if (!write (c))
       return false;
     if (!file->put (' '))
@@ -1629,7 +1672,7 @@ struct WitnessCopier : public WitnessIterator {
 
 public:
   WitnessCopier (External *d) : dst (d) {}
-  bool witness (const vector<int> &c, const vector<int> &w, uint64_t id) {
+  bool witness (const vector<int> &c, const vector<int> &w, int64_t id) {
     dst->push_external_clause_and_witness_on_extension_stack (c, w, id);
     return true;
   }

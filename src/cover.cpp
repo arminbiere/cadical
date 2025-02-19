@@ -377,7 +377,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       // Only copy extension stack if successful.
       int prev = INT_MIN;
       bool already_pushed = false;
-      uint64_t last_id = 0;
+      int64_t last_id = 0;
       LOG (c, "covered tautological");
       assert (clause.empty ());
       LOG (coveror.extend, "extension = ");
@@ -485,7 +485,7 @@ int64_t Internal::cover_round () {
   connect_watches (true); // irredundant watches only is enough
 
   int64_t delta = stats.propagations.search;
-  delta *= 1e-3 * opts.coverreleff;
+  delta *= 1e-3 * opts.covereffort;
   if (delta < opts.covermineff)
     delta = opts.covermineff;
   if (delta > opts.covermaxeff)

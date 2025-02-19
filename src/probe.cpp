@@ -13,16 +13,16 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-bool Internal::probing () {
-  if (!opts.probe)
+bool Internal::inprobing () {
+  if (!opts.inprobing)
     return false;
   if (!preprocessing && !opts.inprocessing)
     return false;
   if (preprocessing)
     assert (lim.preprocessing);
-  if (stats.probingphases && last.probe.reductions == stats.reductions)
+  if (stats.inprobingphases && last.inprobe.reductions == stats.reductions)
     return false;
-  return lim.probe <= stats.conflicts;
+  return lim.inprobe <= stats.conflicts;
 }
 
 /*------------------------------------------------------------------------*/
@@ -73,7 +73,7 @@ void Internal::init_probehbr_lrat () {
     // commented because not needed... should be empty already
     /*
     for (size_t j = 0; j < size; j++) {
-      vector<uint64_t> empty;
+      vector<int64_t> empty;
       probehbr_chains[i][j] = empty;
     }
     */
@@ -90,7 +90,8 @@ void Internal::get_probehbr_lrat (int lit, int uip) {
   assert (lrat_chain.empty ());
   assert (val (uip) < 0);
   lrat_chain = probehbr_chains[vlit (lit)][vlit (uip)];
-  lrat_chain.push_back (unit_clauses (vlit (-uip)));
+  int64_t id = unit_id (-uip);
+  lrat_chain.push_back (id);
 }
 
 // sets the corresponding probehbr_chain to what is currently stored in
@@ -133,9 +134,7 @@ void Internal::probe_dominator_lrat (int dom, Clause *reason) {
       probe_dominator_lrat (dom, u.reason);
       continue;
     }
-    const unsigned uidx = vlit (other);
-    uint64_t id = unit_clauses (uidx);
-    assert (id);
+    int64_t id = unit_id (other);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (reason->id);
@@ -364,8 +363,8 @@ inline void Internal::probe_lrat_for_units (int lit) {
     assert (val (reason_lit));
     if (!val (reason_lit))
       continue;
-    const unsigned uidx = vlit (val (reason_lit) * reason_lit);
-    uint64_t id = unit_clauses (uidx);
+    const int signed_reason_lit = val (reason_lit) * reason_lit;
+    int64_t id = unit_id (signed_reason_lit);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (probe_reason->id);
@@ -383,16 +382,19 @@ inline void Internal::probe_lrat_for_units (int lit) {
 
 inline void Internal::probe_propagate2 () {
   require_mode (PROBE);
+  int64_t &ticks = stats.ticks.probe;
   while (propagated2 != trail.size ()) {
     const int lit = -trail[propagated2++];
     LOG ("probe propagating %d over binary clauses", -lit);
     Watches &ws = watches (lit);
+    ticks += 1 + cache_lines (ws.size (), sizeof (const_watch_iterator *));
     for (const auto &w : ws) {
       if (!w.binary ())
         continue;
       const signed char b = val (w.blit);
       if (b > 0)
         continue;
+      ticks++;
       if (b < 0)
         conflict = w.clause; // but continue
       else {
@@ -412,6 +414,7 @@ bool Internal::probe_propagate () {
   assert (!unsat);
   START (propagate);
   int64_t before = propagated2 = propagated;
+  int64_t &ticks = stats.ticks.probe;
   while (!conflict) {
     if (propagated2 != trail.size ())
       probe_propagate2 ();
@@ -419,6 +422,8 @@ bool Internal::probe_propagate () {
       const int lit = -trail[propagated++];
       LOG ("probe propagating %d over large clauses", -lit);
       Watches &ws = watches (lit);
+      ticks += 1 + cache_lines (ws.size (),
+                                sizeof (sizeof (const_watch_iterator *)));
       size_t i = 0, j = 0;
       while (i != ws.size ()) {
         const Watch w = ws[j++] = ws[i++];
@@ -427,6 +432,7 @@ bool Internal::probe_propagate () {
         const signed char b = val (w.blit);
         if (b > 0)
           continue;
+        ticks++;
         if (w.clause->garbage)
           continue;
         const literal_iterator lits = w.clause->begin ();
@@ -455,6 +461,7 @@ bool Internal::probe_propagate () {
           if (v > 0)
             ws[j - 1].blit = r;
           else if (!v) {
+            ticks++;
             LOG (w.clause, "unwatch %d in", r);
             *k = lit;
             lits[0] = other;
@@ -462,6 +469,7 @@ bool Internal::probe_propagate () {
             watch_literal (r, lit, w.clause);
             j--;
           } else if (!u) {
+            ticks++;
             if (level == 1) {
               lits[0] = other, lits[1] = lit;
               assert (lrat_chain.empty ());
@@ -469,6 +477,7 @@ bool Internal::probe_propagate () {
               int dom = hyper_binary_resolve (w.clause);
               probe_assign (other, dom);
             } else {
+              ticks++;
               assert (lrat_chain.empty ());
               assert (!probe_reason);
               probe_reason = w.clause;
@@ -625,13 +634,17 @@ void Internal::generate_probes () {
 
   assert (probes.empty ());
 
+  int64_t &ticks = stats.ticks.probe;
+
   // First determine all the literals which occur in binary clauses. It is
   // way faster to go over the clauses once, instead of walking the watch
   // lists for each literal.
   //
   init_noccs ();
+  ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
   for (const auto &c : clauses) {
     int a, b;
+    ticks++;
     if (!is_binary_clause (c, a, b))
       continue;
     noccs (a)++;
@@ -648,6 +661,8 @@ void Internal::generate_probes () {
     // This argument requires that equivalent literal substitution through
     // 'decompose' is performed, because otherwise there might be 'cyclic
     // roots' which are not tried, i.e., -1 2 0, 1 -2 0, 1 2 3 0, 1 2 -3 0.
+
+    ticks += 2;
 
     const bool have_pos_bin_occs = noccs (idx) > 0;
     const bool have_neg_bin_occs = noccs (-idx) > 0;
@@ -683,10 +698,13 @@ void Internal::generate_probes () {
 void Internal::flush_probes () {
 
   assert (!probes.empty ());
+  int64_t &ticks = stats.ticks.probe;
 
   init_noccs ();
+  ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
   for (const auto &c : clauses) {
     int a, b;
+    ticks++;
     if (!is_binary_clause (c, a, b))
       continue;
     noccs (a)++;
@@ -699,6 +717,7 @@ void Internal::flush_probes () {
     int lit = *i;
     if (!active (lit))
       continue;
+    ticks += 2;
     const bool have_pos_bin_occs = noccs (lit) > 0;
     const bool have_neg_bin_occs = noccs (-lit) > 0;
     if (have_pos_bin_occs == have_neg_bin_occs)
@@ -765,34 +784,28 @@ int Internal::next_probe () {
   }
 }
 
-bool Internal::probe_round () {
+bool Internal::probe () {
 
+  if (!opts.probe)
+    return false;
   if (unsat)
     return false;
   if (terminated_asynchronously ())
     return false;
 
+  SET_EFFORT_LIMIT (limit, probe, true);
+
   START_SIMPLIFIER (probe, PROBE);
   stats.probingrounds++;
 
   // Probing is limited in terms of non-probing propagations
-  // 'stats.propagations'. We allow a certain percentage 'opts.probereleff'
+  // 'stats.propagations'. We allow a certain percentage 'opts.probeeffort'
   // (say %5) of probing propagations in each probing with a lower bound of
   // 'opts.probmineff'.
   //
-  int64_t delta = stats.propagations.search;
-  delta -= last.probe.propagations;
-  delta *= 1e-3 * opts.probereleff;
-  if (delta < opts.probemineff)
-    delta = opts.probemineff;
-  if (delta > opts.probemaxeff)
-    delta = opts.probemaxeff;
-  delta += 2l * active ();
 
   PHASE ("probe-round", stats.probingrounds,
-         "probing limit of %" PRId64 " propagations ", delta);
-
-  int64_t limit = stats.propagations.probe + delta;
+         "probing limit of %" PRId64 " propagations ", limit);
 
   int old_failed = stats.failed;
 #ifndef QUIET
@@ -816,7 +829,7 @@ bool Internal::probe_round () {
   int probe;
   init_probehbr_lrat ();
   while (!unsat && !terminated_asynchronously () &&
-         stats.propagations.probe < limit && (probe = next_probe ())) {
+         stats.ticks.probe < limit && (probe = next_probe ())) {
     stats.probed++;
     LOG ("probing %d", probe);
     probe_assign_decision (probe);
@@ -861,7 +874,44 @@ bool Internal::probe_round () {
 
 /*------------------------------------------------------------------------*/
 
-void CaDiCaL::Internal::probe (bool update_limits) {
+// This schedules a number of inprocessing techniques.
+// These range from very cheap and beneficial (decompose) to
+// more expensive and sometimes less beneficial. We want to limit
+// expensive techniques to some fraction of total time or search time.
+// this is done using 'ticks'.
+// Generally, there are options for each of the techniques to set the
+// efficiency, i.e., the fraction of ticks they are allowed as budget.
+// Whenever e.g. vivify is called, the budget is calculated from the
+// search ticks that have passed since the last vivify round and this
+// efficiency.
+// We want to be able to run inprocessing frequently, without it dominating
+// runtimes. This entire inprocessing scheme is scheduled after a certain
+// amount of conflicts were found, the gap between two inprocessing rounds
+// increasing by a constant number each time. In effect, the number of
+// inprocessing rounds is allways the square root of the number of conflicts
+// with some constant factor.
+// This factor can also be with the option 'inprobeint'
+// Some of the techniques are not run always, for different reasons.
+// 'factor' or BVA depends on certain structures of the irredundant clauses
+// and as such will only be run when new irredundant clauses are derived or
+// it was not able to finish with the entire search space.
+// 'sweeping' is especially usefull on certain classes of formulas, and uses
+// a increasing or decreasing delay that depends on how usefull it was.
+// In cases where it is less usefull, we obviously want to reset the budged,
+// even if the routine was delayed.
+// Additionally 'vivify', 'sweep' and 'factor' can also have a big initial
+// overhead in setting up the datastructures. This has to be accounted for
+// with the 'ticks', however, since inprocessing is done frequently, this
+// overhead is too expensive to pay. So instead, we accumulate the budget
+// of 'ticks' and delay the technique until it passes a certain threshhold,
+// which depends on the the cost of initialization. Note that in the case of
+// sweeping, we have two different delays, one which resets the budged, and
+// one which passes it to the next round. In this case the former takes
+// precendent, until we would run sweeping once, at which point the focus
+// switches to the latter delay until the budget is big enough, such that
+// sweeping can be run. Then we switch back to the other delay.
+
+void CaDiCaL::Internal::inprobe (bool update_limits) {
 
   if (unsat)
     return;
@@ -872,32 +922,32 @@ void CaDiCaL::Internal::probe (bool update_limits) {
     return;
   }
 
-  stats.probingphases++;
+  stats.inprobingphases++;
   if (external_prop) {
     assert (!level);
     private_steps = true;
   }
   const int before = active ();
+  const int before_extended = stats.variables_extension;
 
-  // We trigger equivalent literal substitution (ELS) before ...
+  // schedule of inprobing techniques.
   //
-  decompose ();
+  {
+    mark_duplicated_binary_clauses_as_garbage ();
+    decompose ();
+    if (ternary ())
+      decompose (); // If we derived a binary clause
+    if (probe ())
+      decompose ();
 
-  if (ternary ()) // If we derived a binary clause
-    decompose (); // then start another round of ELS.
-
-  // Remove duplicated binary clauses and perform in essence hyper unary
-  // resolution, i.e., derive the unit '2' from '1 2' and '-1 2'.
-  //
-  mark_duplicated_binary_clauses_as_garbage ();
-
-  for (int round = 1; round <= opts.proberounds; round++)
-    if (!probe_round ())
-      break;
-
-  decompose (); // ... and (ELS) afterwards.
-
-  last.probe.propagations = stats.propagations.search;
+    if (extract_gates ())
+      decompose ();
+    if (sweep ())     // full occurrence list
+      decompose ();   // ... and (ELS) afterwards.
+    (void) vivify (); // resets watches
+    transred ();      // builds big.
+    factor (false);   // resets watches, partial occurrence list
+  }
 
   if (external_prop) {
     assert (!level);
@@ -908,26 +958,30 @@ void CaDiCaL::Internal::probe (bool update_limits) {
     return;
 
   const int after = active ();
-  const int removed = before - after;
+  const int after_extended = stats.variables_extension;
+  const int diff_extended = after_extended - before_extended;
+  assert (diff_extended >= 0);
+  const int removed = before - after + diff_extended;
   assert (removed >= 0);
 
   if (removed) {
-    stats.probesuccess++;
-    PHASE ("probe-phase", stats.probingphases,
+    stats.inprobesuccess++;
+    PHASE ("probe-phase", stats.inprobingphases,
            "successfully removed %d active variables %.0f%%", removed,
            percent (removed, before));
   } else
-    PHASE ("probe-phase", stats.probingphases,
+    PHASE ("probe-phase", stats.inprobingphases,
            "could not remove any active variable");
 
-  const int64_t delta = opts.probeint * (stats.probingphases + 1);
-  lim.probe = stats.conflicts + delta;
+  const int64_t delta =
+      25 * opts.inprobeint * log10 (stats.inprobingphases + 9);
+  lim.inprobe = stats.conflicts + delta;
 
-  PHASE ("probe-phase", stats.probingphases,
+  PHASE ("probe-phase", stats.inprobingphases,
          "new limit at %" PRId64 " conflicts after %" PRId64 " conflicts",
-         lim.probe, delta);
+         lim.inprobe, delta);
 
-  last.probe.reductions = stats.reductions;
+  last.inprobe.reductions = stats.reductions;
 }
 
 } // namespace CaDiCaL

@@ -62,6 +62,8 @@ inline void Internal::mark_added (int lit, int size, bool redundant) {
     mark_ternary (lit);
   if (!redundant)
     mark_block (lit);
+  if (!redundant || size == 2)
+    mark_factor (lit);
 }
 
 void Internal::mark_added (Clause *c) {
@@ -82,16 +84,6 @@ Clause *Internal::new_clause (bool red, int glue) {
   if (glue > size)
     glue = size;
 
-  // Determine whether this clauses should be kept all the time.
-  //
-  bool keep;
-  if (!red)
-    keep = true;
-  else if (glue <= opts.reducetier1glue)
-    keep = true;
-  else
-    keep = false;
-
   size_t bytes = Clause::bytes (size);
   Clause *c = (Clause *) new char[bytes];
   DeferDeleteArray<char> clause_delete ((char *) c);
@@ -106,12 +98,13 @@ Clause *Internal::new_clause (bool red, int glue) {
   c->gate = false;
   c->hyper = false;
   c->instantiated = false;
-  c->keep = keep;
   c->moved = false;
   c->reason = false;
   c->redundant = red;
   c->transred = false;
   c->subsume = false;
+  c->swept = false;
+  c->flushed = false;
   c->vivified = false;
   c->vivify = false;
   c->used = 0;
@@ -154,25 +147,48 @@ Clause *Internal::new_clause (bool red, int glue) {
 
 void Internal::promote_clause (Clause *c, int new_glue) {
   assert (c->redundant);
-  if (c->keep)
+  const int tier1limit = tier1[false];
+  const int tier2limit = max (tier1limit, tier2[false]);
+  if (!c->redundant)
     return;
   if (c->hyper)
     return;
   int old_glue = c->glue;
   if (new_glue >= old_glue)
     return;
-  if (!c->keep && new_glue <= opts.reducetier1glue) {
+  if (old_glue > tier1limit && new_glue <= tier1limit) {
     LOG (c, "promoting with new glue %d to tier1", new_glue);
     stats.promoted1++;
-    c->keep = true;
-  } else if (old_glue > opts.reducetier2glue &&
-             new_glue <= opts.reducetier2glue) {
+    c->used = max_used;
+  } else if (old_glue > tier2limit && new_glue <= tier2limit) {
     LOG (c, "promoting with new glue %d to tier2", new_glue);
     stats.promoted2++;
-    c->used = 2;
-  } else if (c->keep)
-    LOG (c, "keeping with new glue %d in tier1", new_glue);
-  else if (old_glue <= opts.reducetier2glue)
+  } else if (old_glue <= tier2limit)
+    LOG (c, "keeping with new glue %d in tier2", new_glue);
+  else
+    LOG (c, "keeping with new glue %d in tier3", new_glue);
+  stats.improvedglue++;
+  c->glue = new_glue;
+}
+/*------------------------------------------------------------------------*/
+
+void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
+  assert (c->redundant);
+  if (c->hyper)
+    return;
+  int old_glue = c->glue;
+  const int tier1limit = tier1[false];
+  const int tier2limit = max (tier1limit, tier2[false]);
+  if (new_glue >= old_glue)
+    return;
+  if (new_glue <= tier1limit) {
+    LOG (c, "promoting with new glue %d to tier1", new_glue);
+    stats.promoted1++;
+    c->used = max_used;
+  } else if (old_glue > tier2limit && new_glue <= tier2limit) {
+    LOG (c, "promoting with new glue %d to tier2", new_glue);
+    stats.promoted2++;
+  } else if (old_glue <= tier2limit)
     LOG (c, "keeping with new glue %d in tier2", new_glue);
   else
     LOG (c, "keeping with new glue %d in tier3", new_glue);
@@ -210,7 +226,7 @@ size_t Internal::shrink_clause (Clause *c, int new_size) {
   size_t res = old_bytes - new_bytes;
 
   if (c->redundant)
-    promote_clause (c, min (c->size - 1, c->glue));
+    promote_clause_glue_only (c, min (c->size - 1, c->glue));
   else {
     int delta_size = old_size - new_size;
     assert (stats.irrlits >= delta_size);
@@ -255,7 +271,7 @@ void Internal::delete_clause (Clause *c) {
     // from the proof perspective is that the deletion of these binary
     // clauses occurs later in the proof file.
     //
-    if (proof && c->size == 2) {
+    if (proof && c->size == 2 && !c->flushed) {
       proof->delete_clause (c);
     }
   }
@@ -285,7 +301,8 @@ void Internal::mark_garbage (Clause *c) {
   // Delay tracing deletion of binary clauses.  See the discussion above in
   // 'delete_clause' and also in 'propagate'.
   //
-  if (proof && c->size != 2) {
+  if (proof && (c->size != 2 || !watching ())) {
+    c->flushed = true;
     proof->delete_clause (c);
   }
 
@@ -323,7 +340,7 @@ void Internal::mark_garbage (Clause *c) {
 // Almost the same function as 'search_assign' except that we do not pretend
 // to learn a new unit clause (which was confusing in log files).
 
-void Internal::assign_original_unit (uint64_t id, int lit) {
+void Internal::assign_original_unit (int64_t id, int lit) {
   assert (!level || opts.chrono);
   assert (!unsat);
   const int idx = vidx (lit);
@@ -361,7 +378,7 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
 //
 // TODO: Find another name for 'tainted' in the context of ilb, tainted
 // is reconstruction related already and they should not mix.
-void Internal::add_new_original_clause (uint64_t id) {
+void Internal::add_new_original_clause (int64_t id) {
 
   if (!from_propagator && level && !opts.ilb) {
     backtrack ();
@@ -399,8 +416,7 @@ void Internal::add_new_original_clause (uint64_t id) {
             int elit = externalize (lit);
             unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
             if (!external->ext_units[eidx]) {
-              uint64_t uid = (unit_clauses (vlit (-lit)));
-              assert (uid);
+              int64_t uid = unit_id (-lit);
               lrat_chain.push_back (uid);
             }
           }
@@ -435,7 +451,7 @@ void Internal::add_new_original_clause (uint64_t id) {
       proof->delete_external_original_clause (id, false, external->eclause);
     }
   } else {
-    uint64_t new_id = id;
+    int64_t new_id = id;
     const size_t size = clause.size ();
     if (original.size () > size) {
       new_id = ++clause_id;
@@ -562,6 +578,40 @@ Clause *Internal::new_hyper_ternary_resolved_clause (bool red) {
   return res;
 }
 
+Clause *Internal::new_factor_clause () {
+  external->check_learned_clause ();
+  stats.factor_added++;
+  stats.literals_factored += clause.size ();
+  Clause *res = new_clause (false, 0);
+  if (proof) {
+    proof->add_derived_clause (res, lrat_chain);
+  }
+  assert (!watching ());
+  assert (occurring ());
+  for (const auto &lit : *res) {
+    occs (lit).push_back (res);
+  }
+  return res;
+}
+
+// Add hyper ternary resolved clause during 'congruence' and watch it
+//
+Clause *
+Internal::new_hyper_ternary_resolved_clause_and_watch (bool red,
+                                                       bool full_watching) {
+  external->check_learned_clause ();
+  size_t size = clause.size ();
+  Clause *res = new_clause (red, size);
+  if (proof) {
+    proof->add_derived_clause (res, lrat_chain);
+  }
+  if (full_watching) {
+    assert (watching ());
+    watch_clause (res);
+  }
+  return res;
+}
+
 // Add a new clause with same glue and redundancy as 'orig' but literals are
 // assumed to be in 'clause' in 'decompose' and 'vivify'.
 //
@@ -569,7 +619,6 @@ Clause *Internal::new_clause_as (const Clause *orig) {
   external->check_learned_clause ();
   const int new_glue = orig->glue;
   Clause *res = new_clause (orig->redundant, new_glue);
-  assert (!orig->redundant || !orig->keep || res->keep);
   if (proof) {
     proof->add_derived_clause (res, lrat_chain);
   }

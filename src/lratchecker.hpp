@@ -9,8 +9,7 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 // This checker implements an LRUP checker.
-// It requires LRAT-style proof chains for each learned clause that we can
-// currently only build with lratbuilder.
+// It requires LRAT-style proof chains for each learned clause
 //
 // Most of the infrastructure is taken from checker, but without the
 // propagation
@@ -20,7 +19,7 @@ namespace CaDiCaL {
 struct LratCheckerClause {
   LratCheckerClause *next; // collision chain link for hash table
   uint64_t hash;           // previously computed full 64-bit hash
-  uint64_t id;             // id of clause
+  int64_t id;              // id of clause
   bool garbage;            // for garbage clauses
   unsigned size;
   bool used;
@@ -37,7 +36,6 @@ class LratChecker : public StatTracer {
   // Capacity of variable values.
   //
   int64_t size_vars;
-  bool strict_lrat;
 
   // The 'watchers' and 'marks' data structures are not that time critical
   // and thus we access them by first mapping a literal to 'unsigned'.
@@ -49,7 +47,7 @@ class LratChecker : public StatTracer {
 
   vector<signed char> checked_lits;
   vector<signed char> marks; // mark bits of literals
-  unordered_map<uint64_t, vector<int>> clauses_to_reconstruct;
+  unordered_map<int64_t, vector<int>> clauses_to_reconstruct;
   vector<int> assumptions;
   vector<int> constraint;
   bool concluded;
@@ -62,7 +60,7 @@ class LratChecker : public StatTracer {
   LratCheckerClause *garbage;  // linked list of garbage clauses
 
   vector<int> imported_clause; // original clause for reporting
-  vector<uint64_t> assumption_clauses;
+  vector<int64_t> assumption_clauses;
 
   void enlarge_vars (int64_t idx);
   void import_literal (int lit);
@@ -70,11 +68,11 @@ class LratChecker : public StatTracer {
 
   static const unsigned num_nonces = 4;
 
-  uint64_t nonces[num_nonces];      // random numbers for hashing
-  uint64_t last_hash;               // last computed hash value of clause
-  uint64_t last_id;                 // id of the last added/deleted clause
-  uint64_t current_id;              // id of the last added clause
-  uint64_t compute_hash (uint64_t); // compute and save hash value of clause
+  uint64_t nonces[num_nonces];     // random numbers for hashing
+  uint64_t last_hash;              // last computed hash value of clause
+  int64_t last_id;                 // id of the last added/deleted clause
+  int64_t current_id;              // id of the last added clause
+  uint64_t compute_hash (int64_t); // compute and save hash value of clause
 
   // Reduce hash value to the actual size.
   //
@@ -83,7 +81,7 @@ class LratChecker : public StatTracer {
   void enlarge_clauses (); // enlarge hash table for clauses
   void insert ();          // insert clause in hash table
   LratCheckerClause **
-  find (const uint64_t); // find clause position in hash table
+  find (const int64_t); // find clause position in hash table
 
   void add_clause (const char *type);
 
@@ -92,9 +90,9 @@ class LratChecker : public StatTracer {
   LratCheckerClause *new_clause ();
   void delete_clause (LratCheckerClause *);
 
-  bool check (vector<uint64_t>); // check if new clause is implied by rup
-  bool check_resolution (
-      vector<uint64_t>); // check if new clause is implied by resolution
+  bool check (vector<int64_t>);            // check RUP
+  bool check_resolution (vector<int64_t>); // check resolution
+  bool check_blocked (vector<int64_t>);    // check ER
 
   struct {
 
@@ -120,29 +118,29 @@ public:
   virtual ~LratChecker ();
 
   void connect_internal (Internal *i) override;
-  void begin_proof (uint64_t) override;
+  void begin_proof (int64_t) override;
 
-  void add_original_clause (uint64_t, bool, const vector<int> &,
+  void add_original_clause (int64_t, bool, const vector<int> &,
                             bool restore) override;
-  void restore_clause (uint64_t, const vector<int> &);
+  void restore_clause (int64_t, const vector<int> &);
 
   // check the proof chain for the new clause and add it to the checker
-  void add_derived_clause (uint64_t, bool, const vector<int> &,
-                           const vector<uint64_t> &) override;
+  void add_derived_clause (int64_t, bool, const vector<int> &,
+                           const vector<int64_t> &) override;
 
   // check if the clause is present and delete it from the checker
-  void delete_clause (uint64_t, bool, const vector<int> &) override;
+  void delete_clause (int64_t, bool, const vector<int> &) override;
   // check if the clause is present and delete it from the checker
-  void weaken_minus (uint64_t, const vector<int> &) override;
+  void weaken_minus (int64_t, const vector<int> &) override;
 
   // check if the clause is present and delete it from the checker
-  void finalize_clause (uint64_t, const vector<int> &) override;
+  void finalize_clause (int64_t, const vector<int> &) override;
 
   // check the proof chain of the assumption clause and delete it
   // immediately also check that they contain only assumptions and
   // constraints
-  void add_assumption_clause (uint64_t, const vector<int> &,
-                              const vector<uint64_t> &) override;
+  void add_assumption_clause (int64_t, const vector<int> &,
+                              const vector<int64_t> &) override;
 
   // mark lit as assumption
   void add_assumption (int) override;
@@ -153,9 +151,9 @@ public:
   void reset_assumptions () override;
 
   // check if all clauses have been deleted
-  void report_status (int, uint64_t) override;
+  void report_status (int, int64_t) override;
 
-  void conclude_unsat (ConclusionType, const vector<uint64_t> &) override;
+  void conclude_unsat (ConclusionType, const vector<int64_t> &) override;
 
   void print_stats () override;
   void dump (); // for debugging purposes only

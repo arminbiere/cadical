@@ -46,8 +46,13 @@ void Internal::remove_falsified_literals (Clause *c) {
       num_non_false++;
   if (num_non_false < 2)
     return;
-  if (proof)
+  if (proof) {
+    // Flush changes the clause id, external forgettables need to be
+    // marked here (or the new id could be used instead of old one)
+    if (opts.check && is_external_forgettable (c->id))
+      mark_garbage_external_forgettable (c->id);
     proof->flush_clause (c);
+  }
   literal_iterator j = c->begin ();
   for (i = j; i != end; i++) {
     const int lit = *j++ = *i, tmp = fixed (lit);
@@ -176,7 +181,7 @@ size_t Internal::flush_occs (int lit) {
     if (c->collect ())
       continue;
     *j++ = c->moved ? c->copy : c;
-    assert (!c->redundant);
+    // assert (!c->redundant); // -> not true in sweeping
     res++;
   }
   os.resize (j - os.begin ());

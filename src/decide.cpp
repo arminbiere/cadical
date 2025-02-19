@@ -249,5 +249,4 @@ int Internal::decide () {
   STOP (decide);
   return res;
 }
-
 } // namespace CaDiCaL

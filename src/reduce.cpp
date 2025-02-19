@@ -32,6 +32,8 @@ bool Internal::flushing () {
 /*------------------------------------------------------------------------*/
 
 void Internal::mark_clauses_to_be_flushed () {
+  const int tier1limit = tier1[false];
+  const int tier2limit = max (tier1limit, tier2[false]);
   for (const auto &c : clauses) {
     if (!c->redundant)
       continue; // keep irredundant
@@ -42,8 +44,10 @@ void Internal::mark_clauses_to_be_flushed () {
     const unsigned used = c->used;
     if (used)
       c->used--;
-    if (used)
-      continue;       // but keep recently used clauses
+    if (c->glue < tier1limit && used)
+      continue;
+    if (c->glue < tier2limit && used >= max_used - 1)
+      continue;
     mark_garbage (c); // flush unused clauses
     if (c->hyper)
       stats.flush.hyper++;
@@ -90,6 +94,8 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   // they otherwise have the same glue and size).
 
   vector<Clause *> stack;
+  const int tier1limit = tier1[false];
+  const int tier2limit = max (tier1limit, tier2[false]);
 
   stack.reserve (stats.current.redundant);
 
@@ -103,22 +109,20 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     const unsigned used = c->used;
     if (used)
       c->used--;
+    if (c->glue <= tier1limit && used)
+      continue;
+    if (c->glue <= tier2limit && used >= max_used - 1)
+      continue;
     if (c->hyper) {          // Hyper binary and ternary resolvents
       assert (c->size <= 3); // are only kept for one reduce round
       if (!used)
-        mark_garbage (c); // (even if 'c->keep' is true) unless
+        mark_garbage (c); // unless
       continue;           //  used recently.
     }
-    if (used)
-      continue; // Do keep recently used clauses.
-    if (c->keep)
-      continue; // Forced to keep (see above).
-
     stack.push_back (c);
   }
 
   stable_sort (stack.begin (), stack.end (), reduce_less_useful ());
-
   size_t target = 1e-2 * opts.reducetarget * stack.size ();
 
   // This is defensive code, which I usually consider a bug, but here I am
@@ -189,6 +193,23 @@ bool Internal::propagate_out_of_order_units () {
 
 /*------------------------------------------------------------------------*/
 
+// reduction is scheduled with reduceint, reducetarget and reduceopt.
+// with reduceopt=1 the number of learnt clauses scale with
+// sqrt of conflicts times reduceint
+// the scaling is the same as with reduceopt=0 (the classical default)
+// however, the constants are different. To avoid this (and get roughly the
+// same behaviour with reduceopt=0 and reduceopt=1) we need to scale the
+// interval, namely (reduceint^2/2)
+// Lastly, reduceopt=2 just replaces sqrt conflicts with log conflicts.
+// The learnt clauses should not be bigger than
+// 1/reducetarget * reduceint * function (conflicts)
+// for function being log if reduceint=2 an sqrt otherwise.
+// This is however only the theoretical target and second chance for
+// tier2 clauses and very long lifespan of tier1 clauses (through used flag)
+// make this behave differently.
+// reduceinit shifts the curve to the right, increasing the number of
+// clauses in the solver. This impact will decrease over time.
+
 void Internal::reduce () {
   START (reduce);
 
@@ -211,12 +232,26 @@ void Internal::reduce () {
   garbage_collection ();
 
   {
-    int64_t delta = opts.reduceint * (stats.reductions + 1);
+    int64_t delta = opts.reduceint;
+    double factor = stats.reductions + 1;
+    if (opts.reduceopt ==
+        0) // adjust delta such this is the same as reduceopt=1
+      delta = delta * delta / 2;
+    else if (opts.reduceopt == 1) {
+      // this is the same as reduceopt=0 if reduceint = sqrt (reduceint) =
+      // 17
+      factor = sqrt ((double) stats.conflicts);
+    } else if (opts.reduceopt == 2)
+      // log scaling instead
+      factor = log ((double) stats.conflicts);
+    if (factor < 1)
+      factor = 1;
+    delta = delta * factor;
     if (irredundant () > 1e5) {
       delta *= log (irredundant () / 1e4) / log (10);
-      if (delta < 1)
-        delta = 1;
     }
+    if (delta < 1)
+      delta = 1;
     lim.reduce = stats.conflicts + delta;
     PHASE ("reduce", stats.reductions,
            "new reduce limit %" PRId64 " after %" PRId64 " conflicts",

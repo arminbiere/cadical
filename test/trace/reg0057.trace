@@ -4,7 +4,6 @@
 3 set elimint 1
 4 set elimprod 0
 5 set elimsum 0
-6 set vivifymineff 0
 7 add -2
 8 add -7
 9 add 0

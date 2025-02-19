@@ -37,8 +37,16 @@ struct Internal;
 
 /*------------------------------------------------------------------------*/
 
+#ifdef PROFILE_MODE
+#define MROFILE PROFILE
+#else
+#define MROFILE(...) /**/
+#endif
+
 #define PROFILES \
   PROFILE (analyze, 3) \
+  MROFILE (analyzestable, 4) \
+  MROFILE (analyzeunstable, 4) \
   PROFILE (backward, 3) \
   PROFILE (block, 2) \
   PROFILE (bump, 4) \
@@ -47,29 +55,47 @@ struct Internal;
   PROFILE (collect, 3) \
   PROFILE (compact, 3) \
   PROFILE (condition, 2) \
+  PROFILE (congruence, 2) \
+  PROFILE (congruencemerge, 4) \
+  PROFILE (congruencematching, 4) \
   PROFILE (connect, 3) \
   PROFILE (copy, 4) \
   PROFILE (cover, 2) \
   PROFILE (decide, 3) \
   PROFILE (decompose, 3) \
+  PROFILE (definition, 2) \
   PROFILE (elim, 2) \
+  PROFILE (factor, 2) \
+  PROFILE (fastelim, 2) \
   PROFILE (extend, 3) \
+  PROFILE (extract, 3) \
+  PROFILE (extractands, 4) \
+  PROFILE (extractbinaries, 4) \
+  PROFILE (extractites, 4) \
+  PROFILE (extractxors, 4) \
   PROFILE (instantiate, 2) \
   PROFILE (lucky, 2) \
   PROFILE (lookahead, 2) \
   PROFILE (minimize, 4) \
   PROFILE (shrink, 4) \
-  PROFILE (parse, \
-           0) /*Set to '0' as 'opts.profile' might change in parsing*/ \
+  PROFILE (parse, 0) /* As 'opts.profile' might change in parsing*/ \
   PROFILE (probe, 2) \
   PROFILE (deduplicate, 3) \
   PROFILE (propagate, 4) \
+  MROFILE (propstable, 4) \
+  MROFILE (propunstable, 4) \
   PROFILE (reduce, 3) \
   PROFILE (restart, 3) \
   PROFILE (restore, 2) \
   PROFILE (search, 1) \
   PROFILE (solve, 0) \
   PROFILE (stable, 2) \
+  PROFILE (sweep, 2) \
+  PROFILE (sweepbackbone, 3) \
+  PROFILE (sweepequivalences, 3) \
+  PROFILE (sweepflip, 4) \
+  PROFILE (sweepimplicant, 4) \
+  PROFILE (sweepsolve, 4) \
   PROFILE (preprocess, 2) \
   PROFILE (simplify, 1) \
   PROFILE (subsume, 2) \

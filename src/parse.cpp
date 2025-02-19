@@ -349,6 +349,7 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
 
 const char *Parser::parse_solution_non_profiled () {
   external->solution = new signed char[external->max_var + 1u];
+  external->solution_size = external->max_var;
   clear_n (external->solution, external->max_var + 1u);
   int ch;
   for (;;) {
