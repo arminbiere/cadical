@@ -1759,11 +1759,11 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
     assert (c1->literals[0] == -other || c1->literals[1] == -other);
     assert (c2->literals[0] == -lit || c2->literals[1] == -lit);
   }
-  LOG ("merging literals %d and %d lrat", lit, other);
   int repr_lit = find_representative (lit);
   int repr_other = find_representative (other);
   find_representative_and_compress_both (lit);
   find_representative_and_compress_both (other);
+  LOG ("merging literals %d [=%d] and %d [=%d] lrat", lit, repr_lit, other, repr_other);
 
   if (repr_lit == repr_other) {
     LOG ("already merged %d and %d", lit, other);
@@ -1871,7 +1871,7 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
     return false;
   }
 
-  LOG ("merging %d and %d", lit, other);
+  LOG ("merging %d [=%d] and %d [=%d]", lit, repr_lit, other, repr_other);
   promote_clause (c1), promote_clause (c2);
   bool learn_clause = (lit != repr_lit) || (other != repr_other);
   if (learn_clause) {
@@ -5482,6 +5482,9 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
               c2 = (g->pos_lhs_ids[0].current_lit == -g->rhs[0]
                         ? g->pos_lhs_ids[1].clause
                         : g->pos_lhs_ids[0].clause);
+            } else {
+              add_binary_clause (-g->lhs, g->rhs[0]);
+              add_binary_clause (g->lhs, -g->rhs[0]);
             }
             merge_literals_equivalence (g->lhs, g->rhs[0], c1, c2);
             garbage = true;
