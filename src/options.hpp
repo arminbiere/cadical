@@ -237,7 +237,7 @@ OPTION( vivifyinst,        1,  0,  1,0,0,1, "instantiate last literal when vivif
 OPTION( vivifyirred,       1,  0,  1,0,1,1, "vivification irred") \
 OPTION( vivifyirredeff,    3,  1,100,1,0,1, "irredundant efficiency per mille") \
 OPTION( vivifyonce,        0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \
-OPTION( vivifyretry,       0,  0,  5,0,1,1, "re-vivify clause if vivify was successful") \
+OPTION( vivifyretry,       0,  0,  5,0,0,1, "re-vivify clause if vivify was successful") \
 OPTION( vivifyschedmax,  5e3, 10,2e9,0,0,1, "maximum schedule size") \
 OPTION( vivifythresh,     20,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( vivifytier1,       1,  0,  1,0,1,1, "vivification tier1") \
