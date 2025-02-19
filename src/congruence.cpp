@@ -1057,14 +1057,12 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
             for (const auto &litId : g->pos_lhs_ids) {
               LOG (litId.clause, "definition clause %d ->",
                    litId.current_lit);
-              if ((litId.current_lit) == src || (litId.current_lit) == -dst || true) {
-                push_id_and_rewriting_lrat_unit (
-                    litId.clause, Rewrite (), proof_chain, false,
-                    Rewrite (), -g->lhs);
-                LOG (proof_chain, "produced lrat chain so far");
-              }
+              push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
+                                               proof_chain, false,
+                                               Rewrite (), -g->lhs);
+              LOG (proof_chain, "produced lrat chain so far");
             }
-	  }
+          }
         } else {
           LOG ("normal AND gate");
           for (const auto &litId : g->pos_lhs_ids) {
