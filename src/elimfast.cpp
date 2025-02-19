@@ -30,7 +30,7 @@ int64_t Internal::flush_elimfast_occs (int lit) {
       break;
     }
     if (++res > occslim) {
-      assert (res == failed);
+      assert (opts.fastelimbound < 0 || res == failed);
       break;
     }
   }

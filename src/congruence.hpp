@@ -182,6 +182,7 @@ struct Gate {
   vector<LRAT_ID> units; // TODO: remove, should not be useful anymore
   vector<LitClausePair> pos_lhs_ids;
   vector<LitClausePair> neg_lhs_ids;
+  bool degenerated_and = false; // LRAT only relevant for AND Gates
   vector<int> rhs;
 
   size_t arity () const { return rhs.size (); }
@@ -524,8 +525,7 @@ struct Closure {
   bool learn_congruence_unit (
       int unit); // TODO remove and replace by _lrat version
   void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src,
-                                                   int dst, LRAT_ID id1,
-                                                   LRAT_ID id2,
+                                                   int dst, 
                                                    int clashing,
                                                    int falsified, int unit);
   void learn_congruence_unit_when_lhs_set (Gate *g, int src, LRAT_ID id1,
@@ -610,7 +610,7 @@ struct Closure {
   // first index is a binary clause after unit propagation and the second
   // has length 3
   bool simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
-                                 int removed, int replaced);
+                                 int removed);
   void
   merge_ite_gate_produce_lrat (std::vector<LitClausePair> &clauses,
                                std::vector<LRAT_ID> &reasons_implication,
