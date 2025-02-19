@@ -182,7 +182,8 @@ struct Gate {
   vector<LRAT_ID> units; // TODO: remove, should not be useful anymore
   vector<LitClausePair> pos_lhs_ids;
   vector<LitClausePair> neg_lhs_ids;
-  bool degenerated_and = false; // LRAT only relevant for AND Gates
+  bool degenerated_and_neg = false; // LRAT only relevant for AND Gates, neg lhs in RHS
+  bool degenerated_and_pos = false; // LRAT only relevant for AND Gates, pos lhs in RHS
   vector<int> rhs;
 
   size_t arity () const { return rhs.size (); }

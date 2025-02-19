@@ -1027,7 +1027,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
           if (litId.current_lit == clashing) {
             push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
                                              proof_chain, true, Rewrite (),
-                                             g->degenerated_and ? 0 : -g->lhs);
+                                             g->degenerated_and_neg ? 0 : -g->lhs);
           }
         }
       } else {
@@ -1038,19 +1038,33 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
         // 9: -2v1
         // 6: 3v1
         // The chain cannot start by 9
-        bool lhs_in_rhs = g->degenerated_and;
-        if (lhs_in_rhs) {
-          LOG ("degenerated AND gate");
-          for (const auto &litId : g->pos_lhs_ids) {
-            if (litId.current_lit == clashing) {
-              push_id_and_rewriting_lrat_unit (
-                  litId.clause, Rewrite (), proof_chain, true, Rewrite (),
-                  lhs_in_rhs ? 0 : -g->lhs);
-              LOG (proof_chain, "produced lrat chain so far");
-              break;
+        if (g->degenerated_and_neg || g->degenerated_and_pos) {
+	  LOG ("%d %d %d", src, dst, g->lhs);
+          if (src == g->lhs || dst == g->lhs) {
+            LOG ("degenerated AND gate with dst=lhs");
+            for (const auto &litId : g->pos_lhs_ids) {
+              LOG (litId.clause, "definition clause %d ->",
+                   litId.current_lit);
+              if (litId.current_lit == clashing) {
+                push_id_and_rewriting_lrat_unit (
+                    litId.clause, Rewrite (), proof_chain, true,
+                    Rewrite (), 0);
+                LOG (proof_chain, "produced lrat chain so far");
+              }
             }
-          }
-          LOG ("end of loop");
+          } else {
+            LOG ("degenerated AND gate with conflict without LHS");
+            for (const auto &litId : g->pos_lhs_ids) {
+              LOG (litId.clause, "definition clause %d ->",
+                   litId.current_lit);
+              if ((litId.current_lit) == src || (litId.current_lit) == -dst || true) {
+                push_id_and_rewriting_lrat_unit (
+                    litId.clause, Rewrite (), proof_chain, false,
+                    Rewrite (), -g->lhs);
+                LOG (proof_chain, "produced lrat chain so far");
+              }
+            }
+	  }
         } else {
           LOG ("normal AND gate");
           for (const auto &litId : g->pos_lhs_ids) {
@@ -2488,9 +2502,9 @@ void Closure::simplify_and_gate (Gate *g) {
       ulhs_in_rhs = true;
     *it++ = lit;
     if (lit == g->lhs)
-      g->degenerated_and = true;
+      g->degenerated_and_pos = true;
     if (lit == -g->lhs)
-      g->degenerated_and = true;
+      g->degenerated_and_neg = true;
   }
 
   if (internal->lrat) { // updating reasons
@@ -4063,7 +4077,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
   assert (dst);
   assert (internal->val (src) == internal->val (dst));
   GatesTable::iterator git = (g->indexed ? table.find (g) : end (table));
-  LOG (g, "rewriting %d into %d in %s", src, dst, g->garbage ? "garbage" : "");
+  LOG (g, "rewriting %d into %d in", src, dst);
   int clashing = 0, falsifies = 0;
   unsigned dst_count = 0, not_dst_count = 0;
   auto q = begin (g->rhs);
@@ -4073,11 +4087,11 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
     if (lit == -g->lhs) {
       LOG ("found negated LHS literal %d", lit);
       clashing = lit;
-      g->degenerated_and = true;
+      g->degenerated_and_neg = true;
       break;
     }
     if (lit == g->lhs)
-      g->degenerated_and = true;
+      g->degenerated_and_pos = true;
     const signed char val = internal->val (lit);
     if (val > 0) {
       if (internal->lrat)
@@ -4801,15 +4815,17 @@ bool Closure::rewrite_ite_gate_to_and (Gate *g, int src, int dst,
                                        size_t idx1, size_t idx2, int cond_lit_to_learn_if_degenerated) {
   assert (internal->lrat_chain.empty ());
   assert (!g->garbage);
+  LOG (g, "rewriting to proper AND");
   if (internal->val (g->lhs) > 0) {
     {
       const int lit = g->rhs[0];
       const char v = internal->val (lit);
       if (v > 0) {
       } else if (!v) {
-        if (internal->lrat){
+        if (internal->lrat) {
           push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx1].clause,
-                                           Rewrite (), lrat_chain);}
+                                           Rewrite (), lrat_chain);
+        }
         learn_congruence_unit (cond_lit_to_learn_if_degenerated);
       } else {
         if (internal->lrat)
@@ -4849,6 +4865,9 @@ bool Closure::rewrite_ite_gate_to_and (Gate *g, int src, int dst,
   }
   if (!internal->lrat)
     return false;
+ LOG ("updating flags");
+  g->degenerated_and_neg = (g->rhs[1] == -g->lhs || g->rhs[0] == -g->lhs);
+  g->degenerated_and_pos = (g->rhs[0] == -g->lhs || g->rhs[1] == g->lhs);
   assert (g->rhs.size () == 3);
   assert (g->pos_lhs_ids.size () == 4);
   assert (idx1 < g->pos_lhs_ids.size ());
@@ -5715,6 +5734,8 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
   }
   if (!internal->lrat)
     return false;
+  g->degenerated_and_neg = (g->rhs[1] == -g->lhs || g->rhs[0] == -g->lhs);
+  g->degenerated_and_pos = (g->rhs[0] == -g->lhs || g->rhs[1] == g->lhs);
 
   assert (g->pos_lhs_ids.size () == 4);
   assert (idx1 < g->pos_lhs_ids.size ());
@@ -5727,7 +5748,6 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
 
   if (g->pos_lhs_ids.size () == 1) {
     LOG (g, "degenerated AND gate");
-    g->degenerated_and = true;
     for (auto &litId : g->pos_lhs_ids) {
       LOG (litId.clause, "%d ->", litId.current_lit);
       if (litId.current_lit == removed_lit)
