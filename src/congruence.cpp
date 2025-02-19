@@ -4782,7 +4782,6 @@ bool Closure::rewrite_ite_gate_to_and (Gate *g, int src, int dst,
       if (v > 0) {
       } else if (!v) {
         if (internal->lrat){
-	  LOG ("unit is at idx1 %d", idx1);
           push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[idx1].clause,
                                            Rewrite (), lrat_chain);}
         learn_congruence_unit (idx1 < 2 ? -dst : dst);
@@ -5505,7 +5504,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
 #ifndef NDEBUG
             std::for_each (begin (g->pos_lhs_ids), end (g->pos_lhs_ids),
                            [g] (LitClausePair l) {
-                             assert (l.clause->size == 1 + g->arity ());
+                             assert ((size_t)l.clause->size == 1 + g->arity ());
                            });
 #endif
           } else if (new_tag == Gate_Type::And_Gate) {
@@ -6260,6 +6259,9 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
   g->tag = Gate_Type::ITE_Gate;
   g->rhs = {rhs};
   g->pos_lhs_ids = clauses;
+#ifndef LOGGING
+  g->id = -1;
+#endif
   Gate *h = find_ite_gate (g, negate_lhs);
   if (negate_lhs)
     lhs = -lhs;
