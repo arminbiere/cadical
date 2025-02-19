@@ -593,7 +593,7 @@ struct Closure {
                                bool flip = 0);
 
   bool rewrite_ite_gate_to_and (Gate *g, int dst, int src, size_t c,
-                                size_t d);
+                                size_t d, int cond_lit_to_learn_if_degenerated);
   void produce_ite_merge_then_else_reasons (
       Gate *g, int dst, int src, std::vector<LRAT_ID> &reasons_implication,
       std::vector<LRAT_ID> &reasons_back);
