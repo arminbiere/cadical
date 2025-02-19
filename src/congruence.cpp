@@ -5164,7 +5164,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       if (then_lit == lhs || else_lit == lhs)
         garbage = true;
       else
-        garbage = rewrite_ite_gate_to_and (g, src, dst, 1, 3, dst);
+        garbage = rewrite_ite_gate_to_and (g, src, dst, 1, 3, -dst);
     } else if (not_dst == then_lit) {
       // !then_lit ? then_lit : else_lit
       // !then_lit & then_lit | then_lit & else_lit
