@@ -5248,10 +5248,6 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         rhs[1] = else_lit;
 	assert (!internal->lrat || !g->pos_lhs_ids.empty());
         {
-          assert (rhs[0] != g->lhs);
-          assert (rhs[1] != g->lhs);
-          assert (rhs[0] != -g->lhs);
-          assert (rhs[1] != -g->lhs);
           for (auto litId : g->pos_lhs_ids) {
             LOG (litId.clause, "%d ->", litId.current_lit);
           }
@@ -5410,40 +5406,74 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       rhs.resize (2);
       assert (rhs[0] != -rhs[1]);
       if (new_tag == Gate_Type::XOr_Gate) {
-        int i = 0;
-        bool negated = false;
-        for (int j = 0; j < 2; ++i, ++j) {
-          assert (i <= j);
-          const int lit = rhs[i] = rhs[j];
-          const char v = internal->val (lit);
-          if (v > 0) {
-            --i;
-            negated = !negated;
-          } else if (v < 0) {
-            --i;
+        if (rhs[0] == -g->lhs|| rhs[1] ==-g->lhs) {
+          LOG (g, "special XOR:");
+	  const int unit = rhs[0] ^ -g->lhs ^ rhs[1];
+          produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, not_lhs,
+                                                   false);
+          if (internal->lrat) {
+            assert (g->pos_lhs_ids.size () == 2);
+            lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
+            lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
+          }
+          learn_congruence_unit (unit);
+          garbage = true;
+        } else if (rhs[0] == g->lhs|| rhs[1] == g->lhs) {
+          LOG (g, "special XOR:");
+	  const int unit = rhs[0] ^ g->lhs ^ rhs[1];
+          produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, not_lhs,
+                                                   false);
+          if (internal->lrat) {
+            assert (g->pos_lhs_ids.size () == 2);
+            lrat_chain.push_back (g->pos_lhs_ids[0].clause->id);
+            lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
+          }
+          learn_congruence_unit (-unit);
+          garbage = true;
+        } else {
+          int i = 0;
+          bool negated = false;
+          for (int j = 0; j < 2; ++i, ++j) {
+            assert (i <= j);
+            const int lit = rhs[i] = rhs[j];
+            const char v = internal->val (lit);
+            if (v > 0) {
+              --i;
+              negated = !negated;
+            } else if (v < 0) {
+              --i;
+            }
+          }
+          assert (i <= 2);
+          rhs.resize (i);
+          if (negated) {
+            g->lhs = -g->lhs;
+          }
+          if (i != 2) {
+            LOG (g, "removed units");
+          }
+          if (!i)
+            garbage = true;
+          else if (i == 1) {
+            for (auto litId : g->pos_lhs_ids) {
+              LOG (litId.clause, "%d ->", litId.current_lit);
+            }
+            produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids,
+                                                     g->lhs);
+            assert (!internal->lrat || g->pos_lhs_ids.size () == 2);
+            merge_literals_equivalence (
+                g->lhs, g->rhs[0],
+                internal->lrat ? g->pos_lhs_ids[0].clause : nullptr,
+                internal->lrat ? g->pos_lhs_ids[1].clause : nullptr);
+            garbage = true;
           }
         }
-        assert (i <= 2);
-        rhs.resize (i);
-        if (negated) {
-          g->lhs = -g->lhs;
+        if (!garbage) {
+          assert (rhs[0] != g->lhs);
+          assert (rhs[1] != g->lhs);
+          assert (rhs[0] != -g->lhs);
+          assert (rhs[1] != -g->lhs);
         }
-        if (i != 2) {
-          LOG (g, "removed units");
-        }
-	if (!i)
-	  garbage = true;
-	if (i == 1) {
-	  for (auto litId : g->pos_lhs_ids) {
-	    LOG (litId.clause, "%d ->", litId.current_lit);
-	  }
-	  produce_rewritten_clause_lrat_and_clean (g->pos_lhs_ids, g->lhs);
-	  assert (!internal->lrat || g->pos_lhs_ids.size() == 2);
-	  merge_literals_equivalence (g->lhs, g->rhs[0],
-				      internal->lrat ? g->pos_lhs_ids[0].clause : nullptr,
-				      internal->lrat ? g->pos_lhs_ids[1].clause : nullptr);
-	  garbage = true;
-	}
       }
 
       if (!garbage) {
