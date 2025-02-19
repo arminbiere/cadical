@@ -1039,9 +1039,10 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
         // 6: 3v1
         // The chain cannot start by 9
         for (const auto &litId : g->pos_lhs_ids) {
+	  bool lhs_in_rhs = g->pos_lhs_ids.size () == 1;
           push_id_and_rewriting_lrat_unit (
               litId.clause, Rewrite (src, dst, id1, id2), proof_chain,
-              false, Rewrite (), -g->lhs);
+              false, Rewrite (), lhs_in_rhs ? 0 : -g->lhs);
           LOG (proof_chain, "produced lrat chain so far");
         }
       }
@@ -2283,7 +2284,10 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
     if (internal->lrat)
       learn_congruence_unit_falsifies_lrat_chain (g, src, dst, id1, id2,
                                                   clashing, falsifies, 0);
-    learn_congruence_unit (-g->lhs);
+    int unit = -g->lhs;
+    if (unit == src) unit = dst;
+    else if (unit == -src) unit = -dst;
+    learn_congruence_unit (unit);
     if (internal->lrat)
       lrat_chain.clear ();
   } else if (g->arity () == 1) {
