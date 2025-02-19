@@ -61,17 +61,39 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
   assert (!unsat);
   assert (active (pivot));
 
+  int64_t bound = opts.fastelimbound;
+
   const Occs &ps = occs (pivot);
-  const Occs &ns = occs (-pivot);
   const int64_t pos = ps.size ();
+  if (pos > bound) {
+    LOG ("positive number of fast elimination occurrence limit hit");
+    return false;
+  }
+
+  const Occs &ns = occs (-pivot);
   const int64_t neg = ns.size ();
+  if (neg > bound) {
+    LOG ("negative number of fast elimination occurrence limit hit");
+    return false;
+  }
+
   if (!pos || !neg)
     return lim.elimbound >= 0;
-  const int64_t bound = opts.fastelimbound;
+
+  const int64_t sum = pos + neg;
+  const int64_t product = pos * neg;
+
+  if (bound > sum)
+    bound = sum;
 
   LOG ("checking number resolvents on %d bounded by "
        "%" PRId64 " = %" PRId64 " + %" PRId64 " + %d",
        pivot, bound, pos, neg, opts.fastelimbound);
+
+  if (product <= bound) {
+    LOG ("fast elimination occurrence limits sufficiently small enough");
+    return true;
+  }
 
   // Try all resolutions between a positive occurrence (outer loop) of
   // 'pivot' and a negative occurrence of 'pivot' (inner loop) as long the
