@@ -12,10 +12,11 @@ namespace CaDiCaL {
 // Flush garbage clause, check fast elimination limits and return number of
 // remaining occurrences (or 'fastelimbound + 1' if some limit was hit).
 
-int64_t Internal::elimfast_occs (Occs &os) {
+int64_t Internal::flush_elimfast_occs (int lit) {
   const int64_t occslim = opts.fastelimbound;
   const int64_t clslim = opts.fastelimocclim;
   const int64_t failed = occslim + 1;
+  Occs &os = occs (lit);
   const const_occs_iterator end = os.end ();
   occs_iterator j = os.begin (), i;
   int64_t res = 0;
@@ -61,28 +62,19 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
   assert (!unsat);
   assert (active (pivot));
 
+  const Occs &ps = occs (pivot);
+  const Occs &ns = occs (-pivot);
+
+  int64_t pos = ps.size ();
+  int64_t neg = ns.size ();
+
   int64_t bound = opts.fastelimbound;
 
-  const Occs &ps = occs (pivot);
-  const int64_t pos = ps.size ();
-  if (pos > bound) {
-    LOG ("positive number of fast elimination occurrence limit hit");
-    return false;
-  }
-
-  const Occs &ns = occs (-pivot);
-  const int64_t neg = ns.size ();
-  if (neg > bound) {
-    LOG ("negative number of fast elimination occurrence limit hit");
-    return false;
-  }
-
   if (!pos || !neg)
-    return lim.elimbound >= 0;
+    return bound >= 0;
 
   const int64_t sum = pos + neg;
   const int64_t product = pos * neg;
-
   if (bound > sum)
     bound = sum;
 
@@ -198,26 +190,40 @@ void Internal::try_to_fasteliminate_variable (Eliminator &eliminator,
     return;
   assert (!frozen (pivot));
 
-  // First flush garbage clauses.
-  //
-  int64_t pos = flush_occs (pivot);
-  int64_t neg = flush_occs (-pivot);
+  // First flush garbage clauses and check limits.
+
+  int64_t bound = opts.fastelimbound;
+
+  int64_t pos = flush_elimfast_occs (pivot);
+  if (pos > bound) {
+    LOG ("too many occurrences thus not eliminated %d", pivot);
+    assert (!eliminator.schedule.contains (abs (pivot)));
+    return;
+  }
+
+  int64_t neg = flush_elimfast_occs (-pivot);
+  if (neg > bound) {
+    LOG ("too many occurrences thus not eliminated %d", -pivot);
+    assert (!eliminator.schedule.contains (abs (pivot)));
+    return;
+  }
+
+  const int64_t product = pos * neg;
+  const int64_t sum = pos + neg;
+  if (bound > sum)
+    bound = sum;
 
   if (pos > neg) {
     pivot = -pivot;
     swap (pos, neg);
   }
+
   LOG ("pivot %d occurs positively %" PRId64
        " times and negatively %" PRId64 " times",
        pivot, pos, neg);
+
   assert (!eliminator.schedule.contains (abs (pivot)));
   assert (pos <= neg);
-
-  if (pos && neg > opts.fastelimocclim) {
-    LOG ("too many occurrences thus not eliminated %d", pivot);
-    assert (!eliminator.schedule.contains (abs (pivot)));
-    return;
-  }
 
   LOG ("trying to eliminate %d", pivot);
   assert (!flags (pivot).eliminated ());
@@ -229,7 +235,8 @@ void Internal::try_to_fasteliminate_variable (Eliminator &eliminator,
   stable_sort (ns.begin (), ns.end (), clause_smaller_size ());
 
   if (!unsat && !val (pivot)) {
-    if (elimfast_resolvents_are_bounded (eliminator, pivot)) {
+    if (product <= bound ||
+        elimfast_resolvents_are_bounded (eliminator, pivot)) {
       LOG ("number of resolvents on %d are bounded", pivot);
       elimfast_add_resolvents (eliminator, pivot);
       if (!unsat)

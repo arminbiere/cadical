@@ -1195,7 +1195,7 @@ struct Internal {
   int elim_round (bool &completed, bool &);
   void elim (bool update_limits = true);
 
-  int64_t elimfast_occs (Occs &);
+  int64_t flush_elimfast_occs (int lit);
   void elimfast_add_resolvents (Eliminator &, int pivot);
   bool elimfast_resolvents_are_bounded (Eliminator &, int pivot);
   void try_to_fasteliminate_variable (Eliminator &, int pivot, bool &);
