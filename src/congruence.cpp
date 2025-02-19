@@ -1004,7 +1004,7 @@ void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src,
 // Something very important here: as we are producing a unit, we cannot
 // simplify or rewrite the clauses as this will produce units.
 void Closure::learn_congruence_unit_falsifies_lrat_chain (
-    Gate *g, int src, int dst, LRAT_ID id1, LRAT_ID id2, int clashing,
+    Gate *g, int src, int dst, int clashing,
     int falsified, int unit) {
   if (!internal->lrat)
     return;
@@ -1318,7 +1318,6 @@ bool Closure::merge_literals_lrat (
         else
           c = eq1_tmp;
       }
-      int neg = val_lit ? lit : -lit;
       push_id_and_rewriting_lrat_unit (c, Rewrite (), lrat_chain, true,
                                        Rewrite (), unit);
     }
@@ -2297,7 +2296,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
   bool garbage = true;
   if (falsifies || clashing) {
     if (internal->lrat)
-      learn_congruence_unit_falsifies_lrat_chain (g, src, dst, id1, id2,
+      learn_congruence_unit_falsifies_lrat_chain (g, src, dst,
                                                   clashing, falsifies, 0);
     int unit = -g->lhs;
     if (unit == src) unit = dst;
@@ -2309,7 +2308,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
     const signed char v = internal->val (g->lhs);
     if (v > 0) {
       if (internal->lrat)
-        learn_congruence_unit_falsifies_lrat_chain (g, src, dst, id1, id2,
+        learn_congruence_unit_falsifies_lrat_chain (g, src, dst,
                                                     0, 0, g->lhs);
       learn_congruence_unit (g->rhs[0]);
       if (internal->lrat)
@@ -5699,7 +5698,7 @@ void Closure::merge_and_gate_lrat_produce_lrat (
 
 // odd copy of rewrite_ite_gate_lrat_and
 bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
-                                        int removed_lit, int replaced) {
+                                        int removed_lit) {
   assert (internal->lrat_chain.empty ());
   assert (g->rhs.size () == 3);
   for (auto litId : g->pos_lhs_ids) {
@@ -5945,21 +5944,21 @@ void Closure::simplify_ite_gate (Gate *g) {
         g->lhs = -lhs;
         rhs[0] = -cond;
         rhs[1] = -else_lit;
-        simplify_ite_gate_to_and (g, 1, 3, then_lit, -cond);
+        simplify_ite_gate_to_and (g, 1, 3, then_lit);
       } else if (v_then < 0) {
         rhs[0] = -cond;
         rhs[1] = else_lit;
-        simplify_ite_gate_to_and (g, 0, 2, -then_lit, -cond);
+        simplify_ite_gate_to_and (g, 0, 2, -then_lit);
       } else if (v_else > 0) {
         g->lhs = -lhs;
         rhs[0] = -then_lit;
         rhs[1] = cond;
-        simplify_ite_gate_to_and (g, 3, 1, else_lit, -then_lit);
+        simplify_ite_gate_to_and (g, 3, 1, else_lit);
       } else {
         assert (v_else < 0);
         rhs[0] = then_lit;
         rhs[1] = cond;
-        simplify_ite_gate_to_and (g, 2, 0, -else_lit, -then_lit);
+        simplify_ite_gate_to_and (g, 2, 0, -else_lit);
       }
       if (internal->unsat)
         return;

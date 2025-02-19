@@ -1281,8 +1281,8 @@ struct Internal {
   bool apply_factoring (Factoring &factoring, Quotient *q);
   void update_factor_candidate (Factoring &, int);
   void schedule_factorization (Factoring &);
-  bool run_factorization (int64_t limit, bool);
-  bool factor (bool);
+  bool run_factorization (int64_t limit);
+  bool factor ();
   int get_new_extension_variable ();
   Clause *new_factor_clause ();
 

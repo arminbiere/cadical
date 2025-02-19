@@ -709,7 +709,7 @@ void Internal::preprocess_quickly () {
     decompose ();
 
   if (opts.factor)
-    factor (true);
+    factor ();
 
   if (opts.fastelim)
     elimfast ();
