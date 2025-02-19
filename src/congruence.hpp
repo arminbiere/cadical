@@ -385,7 +385,7 @@ struct Closure {
   void push_id_on_chain (std::vector<LRAT_ID> &chain, Rewrite rewrite, int);
   void update_and_gate_build_lrat_chain (
       Gate *g, Gate *h, std::vector<LRAT_ID> &extra_reasons_lit,
-      std::vector<LRAT_ID> &extra_reasons_ulit);
+					 std::vector<LRAT_ID> &extra_reasons_ulit, bool remove_units = true);
   void update_and_gate_unit_build_lrat_chain (
       Gate *g, int src, LRAT_ID id1, LRAT_ID id2, int dst,
       std::vector<LRAT_ID> &extra_reasons_lit,
@@ -606,7 +606,7 @@ struct Closure {
                                             size_t idx2);
   void merge_and_gate_lrat_produce_lrat (
       Gate *g, Gate *h, std::vector<LRAT_ID> &reasons_lrat,
-      std::vector<LRAT_ID> &reasons_lrat_back);
+      std::vector<LRAT_ID> &reasons_lrat_back, bool remove_units = true);
   // first index is a binary clause after unit propagation and the second
   // has length 3
   bool simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
