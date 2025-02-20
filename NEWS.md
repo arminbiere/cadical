@@ -3,9 +3,20 @@ Version 2.2.0
 
 - Congruence closure.
 
-- BVA.
+- Bounded Variable Addition.
+
+  + reverse of BVE, searches for clause sets with a certain structure,
+    factors out common variables and uses extended resolution with a
+    new variable to derive equisatisfiable clauses which replace the old ones.
+
+  + breaking change to incremental usage. To incrementally add new
+    variables to the solver, either use `vars ()`, `reserve_vars ()`
+    or `reserve_difference ()`, see specification in `cadical.hpp`.
+    As a hot-fix, disable with `set ('factor', 0)`
 
 - Clausal Sweeping.
+
+  + introducing the 'kitten' solver to cadical.
 
 - Ticks.
 
