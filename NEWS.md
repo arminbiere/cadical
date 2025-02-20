@@ -17,7 +17,8 @@ Version 2.2.0
 
 - Clausal Sweeping.
 
-  + introducing the 'kitten' solver to cadical. 
+  + introducing the 'kitten' solver to cadical. Enables semantic search
+    for equivalences in sub-parts of the formula.
 
 - Ticks.
 
