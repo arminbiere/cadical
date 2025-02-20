@@ -307,9 +307,11 @@ bool Internal::decompose_round () {
                     mini_chain.clear ();
                   }
                   assign_unit (parent);
-                  if (lrat) {
-                    propagate ();
-                  }
+#ifndef NDEBUG
+                  bool ok =
+#endif
+                      propagate ();
+                  assert (!ok);
                   learn_empty_clause ();
                   lrat_chain.clear ();
                 } else {
