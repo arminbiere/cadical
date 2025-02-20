@@ -1139,12 +1139,13 @@ void Internal::substitute_connected_clauses (Sweeper &sweeper, int lit,
       assert (c->size >= 2);
       if (!c->redundant)
         mark_removed (c);
+      uint64_t new_id = ++clause_id;
       if (proof) {
-        proof->add_derived_clause (++clause_id, c->redundant, clause,
+        proof->add_derived_clause (new_id, c->redundant, clause,
                                    lrat_chain);
         proof->delete_clause (c);
-        c->id = clause_id;
       }
+      c->id = new_id;
       lrat_chain.clear ();
       size_t l;
       int *literals = c->literals;
