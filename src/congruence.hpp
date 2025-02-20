@@ -322,9 +322,14 @@ struct Closure {
   // `lrat_chain`.
   void produce_representative_lrat (int lit);
 
-  // learns a binary clause
+  // learns a binary clause if not unit
+  Clause *maybe_add_binary_clause (int a, int b);
+  // add binary clause
   Clause *add_binary_clause (int a, int b);
+  // add tmp clause
   Clause *add_tmp_binary_clause (int a, int b);
+  // add clause taking core of tmp or full
+  Clause *learn_binary_tmp_or_full_clause (int a, int b);
 
   // promotes a clause from redundant to irredundant. We do this for all
   // clauses involved in gates to make sure that we produce correct result.
@@ -563,7 +568,7 @@ struct Closure {
   bool find_binary (int, int) const;
 
   Clause *new_tmp_clause (std::vector<int> &clause);
-  Clause *promote_tmp_binary_clause (Clause *);
+  Clause *maybe_promote_tmp_binary_clause (Clause *);
   void check_not_tmp_binary_clause (Clause *c);
   Clause *new_clause ();
   //

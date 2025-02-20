@@ -1447,12 +1447,12 @@ bool Closure::merge_literals_lrat (
       push_id_and_rewriting_lrat_full (eq1_tmp, rew1, lrat_chain, true,
                                        rew2);
     }
-    eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
+    eq1_repr = learn_binary_tmp_or_full_clause (-larger_repr, smaller_repr);
   } else {
     if (internal->lrat)
-      eq1_repr = promote_tmp_binary_clause (eq1_tmp);
+      eq1_repr = maybe_promote_tmp_binary_clause (eq1_tmp);
     else
-      eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
+      eq1_repr = maybe_add_binary_clause (-larger_repr, smaller_repr);
   }
 
   if (internal->lrat) {
@@ -1478,13 +1478,13 @@ bool Closure::merge_literals_lrat (
                                        rew2);
     }
 
-    eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
+    eq2_repr = learn_binary_tmp_or_full_clause (larger_repr, -smaller_repr);
 
   } else {
     if (internal->lrat)
-      eq2_repr = promote_tmp_binary_clause (eq2_tmp);
+      eq2_repr = maybe_promote_tmp_binary_clause (eq2_tmp);
     else
-      eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
+      eq2_repr = maybe_add_binary_clause (larger_repr, -smaller_repr);
   }
   lrat_chain.clear ();
 
@@ -1771,12 +1771,12 @@ bool Closure::merge_literals_lrat (
       push_id_and_rewriting_lrat_full (eq1_tmp, rew1, lrat_chain, true,
                                        rew2);
     }
-    eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
+    eq1_repr = learn_binary_tmp_or_full_clause (-larger_repr, smaller_repr);
   } else {
     if (internal->lrat)
-      eq1_repr = promote_tmp_binary_clause (eq1_tmp);
+      eq1_repr = maybe_promote_tmp_binary_clause (eq1_tmp);
     else
-      eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
+      eq1_repr = maybe_add_binary_clause (-larger_repr, smaller_repr);
   }
 
   if (internal->lrat) {
@@ -1801,14 +1801,12 @@ bool Closure::merge_literals_lrat (
       push_id_and_rewriting_lrat_full (eq2_tmp, rew1, lrat_chain, true,
                                        rew2);
     }
-
-    eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
-
+    eq2_repr = learn_binary_tmp_or_full_clause (larger_repr, -smaller_repr);
   } else {
     if (internal->lrat)
-      eq2_repr = promote_tmp_binary_clause (eq2_tmp);
+      eq2_repr = maybe_promote_tmp_binary_clause (eq2_tmp);
     else
-      eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
+      eq2_repr = maybe_add_binary_clause (larger_repr, -smaller_repr);
   }
   lrat_chain.clear ();
 
@@ -1994,7 +1992,7 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
       }
       lrat_chain.push_back (id1);
     }
-    Clause *eq1 = add_binary_clause (repr_lit, -repr_other);
+    Clause *eq1 = learn_binary_tmp_or_full_clause (repr_lit, -repr_other);
 
     if (internal->lrat) {
       lrat_chain.clear ();
@@ -2004,7 +2002,7 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
         lrat_chain.push_back (find_representative_lrat (other));
       lrat_chain.push_back (id2);
     }
-    Clause *eq2 = add_binary_clause (-repr_lit, repr_other);
+    Clause *eq2 = learn_binary_tmp_or_full_clause (-repr_lit, repr_other);
     if (internal->lrat) {
       lrat_chain.clear ();
       if (smaller_repr == repr_lit) {
@@ -2831,9 +2829,21 @@ Gate *Closure::find_first_and_gate (Clause *base_clause, int lhs) {
   return g;
 }
 
-Clause *Closure::add_binary_clause (int a, int b) {
+Clause *Closure::learn_binary_tmp_or_full_clause (int a, int b) {
+  Clause *eq1;
+  if (internal->lrat) {
+    eq1 = add_tmp_binary_clause (a, b);
+    eq1 = maybe_promote_tmp_binary_clause (eq1);
+  } else
+    eq1 = maybe_add_binary_clause (a, b);
+  return eq1;
+}
+
+Clause *Closure::maybe_add_binary_clause (int a, int b) {
   assert (internal->clause.empty ());
   assert (internal->lrat_chain.empty ());
+  assert (!internal->lrat);
+  assert (lrat_chain.empty ());
   LOG ("learning binary clause %d %d", a, b);
   if (internal->unsat)
     return nullptr;
@@ -2860,6 +2870,11 @@ Clause *Closure::add_binary_clause (int a, int b) {
     }
     assert (!a_value), assert (!b_value);
   }
+  return add_binary_clause (a, b);
+
+}
+
+Clause *Closure::add_binary_clause (int a, int b) {
   assert (internal->clause.empty ());
   internal->clause.push_back (a);
   internal->clause.push_back (b);
@@ -2890,11 +2905,13 @@ void Closure::check_not_tmp_binary_clause (Clause *c) {
   assert (internal->lrat);
   assert (internal->lrat_chain.empty ());
   assert (c->size == 2);
+  if (internal->val (c->literals[0]) || internal->val (c->literals[1]))
+    return;
   assert (std::find (begin (extra_clauses), end (extra_clauses), c) == end (extra_clauses));
 #endif
 };
 
-Clause *Closure::promote_tmp_binary_clause (Clause *c) {
+Clause *Closure::maybe_promote_tmp_binary_clause (Clause *c) {
   assert (internal->lrat);
   assert (internal->lrat_chain.empty ());
   assert (c->size == 2);
@@ -2902,6 +2919,8 @@ Clause *Closure::promote_tmp_binary_clause (Clause *c) {
 #ifndef NDEBUG
   assert (std::find (begin (extra_clauses), end (extra_clauses), c) != end (extra_clauses));
 #endif
+  if (internal->val (c->literals[0]) || internal->val (c->literals[1]))
+    return c;
   lrat_chain.push_back(c->id);
   Clause *res = add_binary_clause (c->literals[0], c->literals[1]);
   LOG (res, "promoted to");
@@ -2912,32 +2931,11 @@ Clause *Closure::add_tmp_binary_clause (int a, int b) {
   assert (internal->clause.empty ());
   assert (internal->lrat_chain.empty ());
   assert (internal->lrat);
-  LOG ("learning binary clause %d %d", a, b);
+  LOG ("learning tmp binary clause %d %d", a, b);
   if (internal->unsat)
     return nullptr;
   if (a == -b)
     return nullptr;
-  if (!internal->lrat) {
-    const signed char a_value = internal->val (a);
-    if (a_value > 0)
-      return nullptr;
-    const signed char b_value = internal->val (b);
-    if (b_value > 0)
-      return nullptr;
-    int unit = 0;
-    if (a == b)
-      unit = a;
-    else if (a_value < 0 && !b_value) {
-      unit = b;
-    } else if (!a_value && b_value < 0)
-      unit = a;
-    if (unit) {
-      LOG ("clause reduced to unit %d", unit);
-      learn_congruence_unit (unit);
-      return nullptr;
-    }
-    assert (!a_value), assert (!b_value);
-  }
   assert (internal->clause.empty ());
   internal->clause.push_back (a);
   internal->clause.push_back (b);
@@ -2949,7 +2947,7 @@ Clause *Closure::add_tmp_binary_clause (int a, int b) {
   Clause *res = new_tmp_clause (internal->clause);
   internal->clause.clear ();
   if (internal->lrat) {
-    internal->lrat_chain.clear ();
+    lrat_chain.clear ();
   }
   assert (internal->clause.empty ());
   assert (internal->lrat_chain.empty ());
@@ -5076,7 +5074,8 @@ bool Closure::rewrite_ite_gate_to_and (Gate *g, int src, int dst,
   assert (lit != other);
   lrat_chain.push_back (c->id);
   lrat_chain.push_back (d->id);
-  Clause *e = add_binary_clause (lit, -other);
+  Clause *e = learn_binary_tmp_or_full_clause (lit, -other);
+  assert (e);
 
   auto long_clause =
       std::find_if (begin (g->pos_lhs_ids), end (g->pos_lhs_ids),
@@ -5088,7 +5087,7 @@ bool Closure::rewrite_ite_gate_to_and (Gate *g, int src, int dst,
 
   assert (g->pos_lhs_ids.size () == 1);
 
-  (void) promote_tmp_binary_clause (g->pos_lhs_ids[0].clause);
+  (void) maybe_promote_tmp_binary_clause (g->pos_lhs_ids[0].clause);
   g->pos_lhs_ids.push_back ({lit, e});
 #ifndef NDEBUG
   for (auto litId : g->pos_lhs_ids) {
@@ -5703,11 +5702,11 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
               c2 = (rhs_as_src_first
                         ? g->pos_lhs_ids[1].clause
                     : g->pos_lhs_ids[0].clause);
-	      c1 = promote_tmp_binary_clause (c1);
-	      c2 = promote_tmp_binary_clause (c2);
+	      c1 = maybe_promote_tmp_binary_clause (c1);
+	      c2 = maybe_promote_tmp_binary_clause (c2);
             } else {
-              add_binary_clause (-g->lhs, g->rhs[0]);
-              add_binary_clause (g->lhs, -g->rhs[0]);
+              maybe_add_binary_clause (-g->lhs, g->rhs[0]);
+              maybe_add_binary_clause (g->lhs, -g->rhs[0]);
             }
             merge_literals_equivalence (g->lhs, g->rhs[0], c1, c2);
             garbage = true;
@@ -5800,7 +5799,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
                 connect_goccs (g, lit);
           if (g->tag == Gate_Type::And_Gate && !internal->lrat)
             for (auto lit : g->rhs)
-              add_binary_clause (-g->lhs, lit);
+              maybe_add_binary_clause (-g->lhs, lit);
         }
       }
     } else {
@@ -5966,7 +5965,7 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
   assert (lit != other);
   lrat_chain.push_back (c->id);
   lrat_chain.push_back (d->id);
-  Clause *e = add_binary_clause (lit, -other);
+  Clause *e = add_tmp_binary_clause (lit, -other);
 
   auto long_clause =
       std::find_if (begin (g->pos_lhs_ids), end (g->pos_lhs_ids),
