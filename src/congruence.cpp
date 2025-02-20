@@ -3764,6 +3764,11 @@ void Closure::gate_sort_lrat_reasons (LitClausePair &litId, int lhs,
   clause.clear ();
 }
 
+struct smaller_pair_first_rank {
+  typedef size_t Type;
+  Type operator() (const LitClausePair &a) { return a.current_lit; }
+};
+
 // this is how I planned to sort it and produce the number
 // Look at this first
 void Closure::gate_sort_lrat_reasons (std::vector<LitClausePair> &xs,
@@ -3773,9 +3778,8 @@ void Closure::gate_sort_lrat_reasons (std::vector<LitClausePair> &xs,
   for (auto &litId : xs) {
     gate_sort_lrat_reasons (litId, lhs, except2, flip);
   }
-  std::sort (begin (xs), end (xs), [] (LitClausePair &x, LitClausePair &y) {
-    return (uint32_t) x.current_lit < (uint32_t) y.current_lit;
-  });
+
+  rsort (begin (xs), end (xs), smaller_pair_first_rank ());
 
 #ifndef NDEBUG
   std::for_each (begin (xs), end (xs), [&xs] (const LitClausePair &x) {
@@ -3784,7 +3788,7 @@ void Closure::gate_sort_lrat_reasons (std::vector<LitClausePair> &xs,
 #endif
 }
 
-void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
+void Closure::init_xor_gate_extraction (std::vector<Clause*> &candidates) {
   const unsigned arity_limit = internal->opts.congruencexorarity;
   assert (arity_limit < 32); // we use unsigned int.
   const unsigned size_limit = arity_limit + 1;
@@ -4792,10 +4796,7 @@ void Closure::forward_subsume_matching_clauses () {
     candidates.push_back (c);
   }
 
-  auto sort_order = [&] (Clause *c, Clause *d) {
-    return c->size < d->size;
-  };
-  stable_sort (begin (candidates), end (candidates), sort_order);
+  rsort (begin (candidates), end (candidates), smaller_clause_size_rank ());
   size_t tried = 0, subsumed = 0;
   internal->init_occs ();
   for (auto c : candidates) {
@@ -6649,7 +6650,7 @@ void Closure::check_ite_gate_implied (Gate *g) {
   check_ite_implied (g->lhs, g->rhs[0], g->rhs[1], g->rhs[2]);
 }
 
-void Closure::init_ite_gate_extraction (std::vector<Clause *> &candidates) {
+void Closure::init_ite_gate_extraction (std::vector<ClauseSize> &candidates) {
   std::vector<Clause *> ternary;
   glargecounts.resize (2 * internal->vsize, 0);
   for (auto c : internal->clauses) {
@@ -7098,7 +7099,7 @@ void Closure::extract_ite_gates () {
   if (!internal->opts.congruenceite)
     return;
   START (extractites);
-  std::vector<Clause *> candidates;
+  std::vector<ClauseSize> candidates;
 
   init_ite_gate_extraction (candidates);
 

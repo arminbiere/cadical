@@ -141,6 +141,27 @@ struct LitIdPair {
   LitIdPair () : lit (0), id (0) {}
 };
 
+/*------------------------------------------------------------------------*/
+
+// Sorting the scheduled clauses is way faster if we compute and save the
+// clause size in the schedule to avoid pointer access to clauses during
+// sorting.  This slightly increases the schedule size though.
+
+struct ClauseSize {
+  size_t size;
+  Clause *clause;
+  ClauseSize (int s, Clause *c) : size (s), clause (c) {}
+  ClauseSize (Clause *c): size (c->size), clause (c) {}
+  ClauseSize () {}
+};
+
+struct smaller_clause_size_rank {
+  typedef size_t Type;
+  Type operator() (const ClauseSize &a) { return a.size; }
+};
+
+/*------------------------------------------------------------------------*/
+
 // The core structure of this algorithm: the gate. It is composed of a
 // left-hand side and an array of right-hand side.
 //
@@ -470,7 +491,7 @@ struct Closure {
   Gate *find_xor_gate (Gate *);
 
   void reset_xor_gate_extraction ();
-  void init_xor_gate_extraction (std::vector<Clause *> &candidates);
+  void init_xor_gate_extraction (std::vector<Clause*> &candidates);
   LRAT_ID check_and_add_to_proof_chain (vector<int> &clause);
   void add_xor_matching_proof_chain (Gate *g, int lhs1,
                                      const vector<LitClausePair> &,
@@ -499,7 +520,7 @@ struct Closure {
   void extract_ite_gates_of_variable (int idx);
   void extract_condeq_pairs (int lit, lit_implications &condbin,
                              lit_equivalences &condeq);
-  void init_ite_gate_extraction (std::vector<Clause *> &candidates);
+  void init_ite_gate_extraction (std::vector<ClauseSize> &candidates);
   lit_implications::const_iterator find_lit_implication_second_literal (
       int lit, lit_implications::const_iterator begin,
       lit_implications::const_iterator end);
