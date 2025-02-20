@@ -557,8 +557,11 @@ struct Closure {
   void check_binary_implied (int a, int b);
   void check_implied ();
 
+  // learn units. You can delay units if you want to learn several at once before
+  // propagation. Otherwise, propagate!
   bool learn_congruence_unit (
-      int unit); // TODO remove and replace by _lrat version
+      int unit, bool = false); // TODO remove and replace by _lrat version
+  bool fully_propagate ();  
   void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src,
                                                    int dst, 
                                                    int clashing,

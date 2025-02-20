@@ -1169,11 +1169,27 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
   (void) unit;
 }
 
-bool Closure::learn_congruence_unit (int lit) {
+bool Closure::fully_propagate () {
+  if (internal->unsat)
+    return false;
+  assert (internal->watching ());
+  assert (full_watching);
+  bool no_conflict = internal->propagate ();
+
+  if (no_conflict)
+    return true;
+  internal->learn_empty_clause ();
+  if (internal->lrat)
+    lrat_chain.clear ();
+
+  return false;
+}
+bool Closure::learn_congruence_unit (int lit, bool delay_propagation) {
   if (internal->unsat)
     return false;
   const signed char val_lit = internal->val (lit);
   if (val_lit > 0) {
+    LOG ("already set lit %d", lit);
     if (internal->lrat)
       lrat_chain.clear ();
     return true;
@@ -1193,18 +1209,7 @@ bool Closure::learn_congruence_unit (int lit) {
   internal->assign_unit (lit);
   assert (lrat_chain.empty ());
   assert (internal->lrat_chain.empty ());
-
-  assert (internal->watching ());
-  assert (full_watching);
-  bool no_conflict = internal->propagate ();
-
-  if (no_conflict)
-    return true;
-  internal->learn_empty_clause ();
-  if (internal->lrat)
-    lrat_chain.clear ();
-
-  return false;
+  return delay_propagation || fully_propagate ();
 }
 
 // for merging the literals there are many cases
@@ -5188,7 +5193,7 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
         reasons_implication.push_back (id_unit);
         g->pos_lhs_ids[0].clause = produce_rewritten_clause_lrat (
             g->pos_lhs_ids[0].clause, g->lhs, false);
-        reasons_implication.push_back (g->pos_lhs_ids[3].clause->id);
+        reasons_implication.push_back (g->pos_lhs_ids[0].clause->id);
         unsimplified.clear ();
         return;
       }
@@ -5428,12 +5433,12 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
 
         if (internal->lrat)
           lrat_chain = reasons_unit;
-        learn_congruence_unit (-cond);
+        learn_congruence_unit (-cond, true);
         if (-else_lit == lhs) {
           if (internal->lrat)
             lrat_chain = reasons_implication;
-          learn_congruence_unit (-else_lit);
-        }
+          learn_congruence_unit (cond == -lhs ? -else_lit : else_lit);
+        } else fully_propagate ();
       } else {
         if (merge_literals_lrat (g->lhs, else_lit, reasons_implication,
                                  reasons_back)) {
@@ -5533,12 +5538,12 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       if (learn_units_instead_of_equivalence) { // Too hard to produce LRAT
         if (internal->lrat)
           lrat_chain = reasons_unit;
-        learn_congruence_unit (cond);
+        learn_congruence_unit (cond, true);
         if (then_lit != lhs) {
           if (internal->lrat)
             lrat_chain = reasons_implication;
-          learn_congruence_unit (then_lit);
-        }
+          learn_congruence_unit (cond == -lhs ? -then_lit : then_lit);
+        } else fully_propagate ();
       } else {
         if (merge_literals_lrat (g->lhs, then_lit, reasons_implication,
                                  reasons_back)) {
