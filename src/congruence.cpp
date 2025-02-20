@@ -5356,7 +5356,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       // cond & then_lit
       assert (rhs[0] == cond);
       assert (rhs[1] == then_lit);
-      garbage = rewrite_ite_gate_to_and (g, src, dst, 2, 0, -cond);
+      garbage = rewrite_ite_gate_to_and (g, src, dst, 2, 0, cond);
     } else if (not_dst == cond) {
       // cond ? then_lit : !cond
       // cond & then_lit | !cond & !cond
