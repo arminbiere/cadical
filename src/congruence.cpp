@@ -2353,7 +2353,8 @@ void Closure::update_and_gate_build_lrat_chain (
         LOG (litId.clause, "binary clause to push into the reason");
         litId.clause = produce_rewritten_clause_lrat (
             litId.clause, tauto->lhs, remove_units);
-        assert (litId.clause);
+        if (!litId.clause) // degenerated but does not know yet
+	  continue;
         extra_reasons_other.push_back (litId.clause->id);
       }
     }
