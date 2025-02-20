@@ -167,7 +167,8 @@ void Internal::renotify_full_trail () {
     // This happens on root level, so notification about their assignment is
     // already done.
     assert (external->observed (elit) || fixed (ilit));
-    assigned.push_back (elit);
+    if (!external->ervars[abs (elit)])
+      assigned.push_back (elit);
   }
   if (assigned.size ())
     external->propagator->notify_assignment (assigned);

@@ -141,6 +141,27 @@ struct LitIdPair {
   LitIdPair () : lit (0), id (0) {}
 };
 
+/*------------------------------------------------------------------------*/
+
+// Sorting the scheduled clauses is way faster if we compute and save the
+// clause size in the schedule to avoid pointer access to clauses during
+// sorting.  This slightly increases the schedule size though.
+
+struct ClauseSize {
+  size_t size;
+  Clause *clause;
+  ClauseSize (int s, Clause *c) : size (s), clause (c) {}
+  ClauseSize (Clause *c): size (c->size), clause (c) {}
+  ClauseSize () {}
+};
+
+struct smaller_clause_size_rank {
+  typedef size_t Type;
+  Type operator() (const ClauseSize &a) { return a.size; }
+};
+
+/*------------------------------------------------------------------------*/
+
 // The core structure of this algorithm: the gate. It is composed of a
 // left-hand side and an array of right-hand side.
 //
@@ -167,6 +188,12 @@ struct LitIdPair {
 //
 // TODO: we currently use a vector for the rhs, but we could also use FMA
 // and inline the structure to avoid any indirection.
+//
+// One warning for degenerated gate: it is a monotone property on the
+// defining clauses, but not on the LHS/RHS as the LHS is not rewritten:
+// take 4 = AND 3 4 (degenerated with only the clause -4 3) with a rewriting
+// 4 -> 1 (unchanged clause) and later 1 -> 3 (unchanged clause) but you do
+// not know anymore from the gate that it is degenerated
 struct Gate {
 #ifdef LOGGING
   uint64_t id;
@@ -231,6 +258,7 @@ struct Closure {
   Closure (Internal *i);
 
   Internal *const internal;
+  vector<Clause*> extra_clauses;
   vector<CompactBinary> binaries;
   std::vector<std::pair<size_t, size_t>> offsetsize;
   bool full_watching = false;
@@ -321,8 +349,14 @@ struct Closure {
   // `lrat_chain`.
   void produce_representative_lrat (int lit);
 
-  // learns a binary clause
+  // learns a binary clause if not unit
+  Clause *maybe_add_binary_clause (int a, int b);
+  // add binary clause
   Clause *add_binary_clause (int a, int b);
+  // add tmp clause
+  Clause *add_tmp_binary_clause (int a, int b);
+  // add clause taking core of tmp or full
+  Clause *learn_binary_tmp_or_full_clause (int a, int b);
 
   // promotes a clause from redundant to irredundant. We do this for all
   // clauses involved in gates to make sure that we produce correct result.
@@ -463,7 +497,7 @@ struct Closure {
   Gate *find_xor_gate (Gate *);
 
   void reset_xor_gate_extraction ();
-  void init_xor_gate_extraction (std::vector<Clause *> &candidates);
+  void init_xor_gate_extraction (std::vector<Clause*> &candidates);
   LRAT_ID check_and_add_to_proof_chain (vector<int> &clause);
   void add_xor_matching_proof_chain (Gate *g, int lhs1,
                                      const vector<LitClausePair> &,
@@ -492,7 +526,7 @@ struct Closure {
   void extract_ite_gates_of_variable (int idx);
   void extract_condeq_pairs (int lit, lit_implications &condbin,
                              lit_equivalences &condeq);
-  void init_ite_gate_extraction (std::vector<Clause *> &candidates);
+  void init_ite_gate_extraction (std::vector<ClauseSize> &candidates);
   lit_implications::const_iterator find_lit_implication_second_literal (
       int lit, lit_implications::const_iterator begin,
       lit_implications::const_iterator end);
@@ -523,8 +557,11 @@ struct Closure {
   void check_binary_implied (int a, int b);
   void check_implied ();
 
+  // learn units. You can delay units if you want to learn several at once before
+  // propagation. Otherwise, propagate!
   bool learn_congruence_unit (
-      int unit); // TODO remove and replace by _lrat version
+      int unit, bool = false); // TODO remove and replace by _lrat version
+  bool fully_propagate ();  
   void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src,
                                                    int dst, 
                                                    int clashing,
@@ -560,6 +597,9 @@ struct Closure {
   void extract_binaries ();
   bool find_binary (int, int) const;
 
+  Clause *new_tmp_clause (std::vector<int> &clause);
+  Clause *maybe_promote_tmp_binary_clause (Clause *);
+  void check_not_tmp_binary_clause (Clause *c);
   Clause *new_clause ();
   //
   void sort_literals_by_var (vector<int> &rhs);

@@ -1,8 +1,34 @@
+Version 2.2.0
+-------------
+
+- Congruence closure: detect and, xor, and ITE encoded into the
+  formula and merges equivalent outputs.
+
+- Bounded Variable Addition.
+
+  + reverse of BVE, searches for clause sets with a certain structure,
+    factors out common variables and uses extended resolution with a
+    new variable to derive equisatisfiable clauses which replace the old ones.
+
+  + breaking change to incremental usage. To incrementally add new
+    variables to the solver, either use `vars ()`, `reserve_vars ()`
+    or `reserve_difference ()`, see specification in `cadical.hpp`.
+    As a hot-fix, disable with `set ('factor', 0)`
+
+- Clausal Sweeping.
+
+  + introducing the 'kitten' solver to cadical. Enables semantic search
+    for equivalences in sub-parts of the formula.
+
+- Ticks.
+
+- Improved lucky, by allowing it to do several conflicts.
+
 Version 2.1.3
 -------------
 
 - New interface to support propagation of assumptions. The following functions
-are available now:
+  are available now:
 
   + `propagate ()`: Applies unit propagation on the assumptions given to the
     solver previously (supposed to be called instead of `solve ()`).

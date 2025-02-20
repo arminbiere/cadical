@@ -53,7 +53,7 @@ out=$prefix.out
 ext=$prefix.ext
 log=$prefix.log
 msg "$solver $options -n -O1 -c 0 -o $out -e $ext $input > $log"
-$solver $options --no-factor -n -O1 -c 0 -o $out -e $ext $input > $log
+$solver $options -n -O1 -c 0 -o $out -e $ext $input > $log
 res=$?
 msg "simplifier exit code '$res'"
 msg "sed -e 's,^[vs],c,' -e 's,^c,c [simplifier],' $log"

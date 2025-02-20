@@ -304,25 +304,6 @@ inline int Internal::try_to_subsume_clause (Clause *c,
   return 0;
 }
 
-/*------------------------------------------------------------------------*/
-
-// Sorting the scheduled clauses is way faster if we compute and save the
-// clause size in the schedule to avoid pointer access to clauses during
-// sorting.  This slightly increases the schedule size though.
-
-struct ClauseSize {
-  size_t size;
-  Clause *clause;
-  ClauseSize (int s, Clause *c) : size (s), clause (c) {}
-  ClauseSize () {}
-};
-
-struct smaller_clause_size_rank {
-  typedef size_t Type;
-  Type operator() (const ClauseSize &a) { return a.size; }
-};
-
-/*------------------------------------------------------------------------*/
 
 struct subsume_less_noccs {
   Internal *internal;
