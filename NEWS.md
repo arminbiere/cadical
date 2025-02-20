@@ -17,7 +17,7 @@ Version 2.2.0
 
 - Clausal Sweeping.
 
-  + introducing the 'kitten' solver to cadical.
+  + introducing the 'kitten' solver to cadical. 
 
 - Ticks.
 
