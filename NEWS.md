@@ -1,8 +1,19 @@
+Version 2.2.0
+-------------
+
+- Congruence closure.
+
+- BVA.
+
+- Clausal Sweeping.
+
+- Ticks.
+
 Version 2.1.3
 -------------
 
 - New interface to support propagation of assumptions. The following functions
-are available now:
+  are available now:
 
   + `propagate ()`: Applies unit propagation on the assumptions given to the
     solver previously (supposed to be called instead of `solve ()`).
