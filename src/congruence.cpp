@@ -3055,8 +3055,6 @@ Gate *Closure::find_remaining_and_gate (Clause *base_clause, int lhs) {
     return nullptr;
   }
 
-  for (auto c : lrat_chain_and_gate)
-    promote_clause (c.clause);
   if (!internal->lrat)
     lrat_chain_and_gate.clear ();
   return new_and_gate (base_clause, lhs);
