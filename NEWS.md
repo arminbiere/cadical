@@ -1,7 +1,8 @@
 Version 2.2.0
 -------------
 
-- Congruence closure.
+- Congruence closure: detect and, xor, and ITE encoded into the
+  formula and merges equivalent outputs.
 
 - Bounded Variable Addition.
 
@@ -19,6 +20,8 @@ Version 2.2.0
   + introducing the 'kitten' solver to cadical.
 
 - Ticks.
+
+- Improved lucky, by allowing it to do several conflicts.
 
 Version 2.1.3
 -------------
