@@ -2,7 +2,7 @@
 scriptsdir=`dirname $0`
 bindir=$scriptsdir/../build
 solver=$bindir/cadical
-solutionchecker=$bindir/precochk
+solutionchecker=$bindir/dimocheck
 proofchecker=$bindir/drat-trim
 name=run-cadical-and-check-proof.sh
 colors=$scriptsdir/colors.sh
