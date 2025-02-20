@@ -188,6 +188,12 @@ struct smaller_clause_size_rank {
 //
 // TODO: we currently use a vector for the rhs, but we could also use FMA
 // and inline the structure to avoid any indirection.
+//
+// One warning for degenerated gate: it is a monotone property on the
+// defining clauses, but not on the LHS/RHS as the LHS is not rewritten:
+// take 4 = AND 3 4 (degenerated with only the clause -4 3) with a rewriting
+// 4 -> 1 (unchanged clause) and later 1 -> 3 (unchanged clause) but you do
+// not know anymore from the gate that it is degenerated
 struct Gate {
 #ifdef LOGGING
   uint64_t id;

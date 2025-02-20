@@ -2232,11 +2232,20 @@ void Closure::update_and_gate_unit_build_lrat_chain (
     std::vector<LRAT_ID> &extra_reasons_lit,
     std::vector<LRAT_ID> &extra_reasons_ulit) {
   LOG ("generate chain for gate boiling down to unit");
-
   if (g->neg_lhs_ids.size () != 1) {
+
+    if (g->degenerated_and_neg || g->degenerated_and_pos) {
+      // can happen for 4 = AND 3 4 (degenerated with only the clause -4 3)
+      // with a rewriting 4 -> 1 (unchanged clause)
+      // and later 1 -> 3 (unchanged clause)
+      // but you do not know anymore from the gate that it is degenerated
+      assert (g->pos_lhs_ids.size () == 1);
+      push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[0].clause, Rewrite (),
+                                       extra_reasons_ulit, true, Rewrite ());
+      return;
+    }
     assert (g->lhs == g->rhs[0] || (g->lhs == src && g->rhs[0] == dst));
-    assert (g->pos_lhs_ids.size () <=
-            1); // either degenerated or empty A = A
+    assert (g->pos_lhs_ids.size () <= 1); // either degenerated or empty A = A
     return;
   }
   assert (g->neg_lhs_ids.size () == 1);
@@ -5944,8 +5953,8 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
   }
   if (!internal->lrat)
     return false;
-  g->degenerated_and_neg = (g->rhs[1] == -g->lhs || g->rhs[0] == -g->lhs);
-  g->degenerated_and_pos = (g->rhs[0] == -g->lhs || g->rhs[1] == g->lhs);
+  g->degenerated_and_neg = (g->degenerated_and_neg || g->rhs[1] == -g->lhs || g->rhs[0] == -g->lhs);
+  g->degenerated_and_pos = (g->degenerated_and_pos || g->rhs[0] == g->lhs || g->rhs[1] == g->lhs);
 
   assert (g->pos_lhs_ids.size () == 4);
   assert (idx1 < g->pos_lhs_ids.size ());
