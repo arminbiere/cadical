@@ -2509,7 +2509,7 @@ void Closure::simplify_and_gate (Gate *g) {
     for (size_t j = 0; j < size; ++j) {
       LOG ("looking at %d [%ld %ld]", g->pos_lhs_ids[j].current_lit, i, j);
       g->pos_lhs_ids[i] = g->pos_lhs_ids[j];
-      if (internal->val (g->pos_lhs_ids[i].current_lit) &&
+      if (!g->degenerated_and_pos && internal->val (g->pos_lhs_ids[i].current_lit) &&
           g->pos_lhs_ids[i].current_lit != falsifies)
         continue;
       LOG ("keeping %d [%ld %ld]", g->pos_lhs_ids[i].current_lit, i, j);
