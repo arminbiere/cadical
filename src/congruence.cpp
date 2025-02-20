@@ -139,10 +139,10 @@ void Closure::extract_binaries () {
       continue;
     if (d->size != 3)
       continue;
-    const int a = d->literals[0];
-    const int b = d->literals[1];
-    // TODO this does not compile with pedantic (configure -l -p)
-    const int c = d->literals[2];
+    const int *lits = d->literals;
+    const int a = lits[0];
+    const int b = lits[1];
+    const int c = lits[2]; // obfuscating d->literals[2] which triggers an error in pedandic mode
     if (internal->val (a))
       continue;
     if (internal->val (b))
