@@ -4793,9 +4793,9 @@ void Closure::forward_subsume_matching_clauses () {
   }
 
   auto sort_order = [&] (Clause *c, Clause *d) {
-    return c->size < d->size || (c->size == d->size && c->id < d->id);
+    return c->size < d->size;
   };
-  sort (begin (candidates), end (candidates), sort_order);
+  stable_sort (begin (candidates), end (candidates), sort_order);
   size_t tried = 0, subsumed = 0;
   internal->init_occs ();
   for (auto c : candidates) {
