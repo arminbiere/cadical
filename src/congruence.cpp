@@ -384,19 +384,17 @@ int Closure::find_representative_and_compress (int lit, bool update_eager) {
   if (path_length > 2) {
     LOG ("learning new rewriting from %d to %d (current path length: %d)",
          lit, res, path_length);
-    if (internal->lrat) {
-      produce_representative_lrat (lit);
-    }
     if (update_eager)
       eager_representative (lit) = res;
-    Clause *equiv = add_binary_clause (-lit, res);
-    if (equiv)
-      equiv->hyper = true;
+    if (internal->lrat) {
+      produce_representative_lrat (lit);
+      Clause *equiv = add_tmp_binary_clause (-lit, res);
 
-    if (internal->lrat && equiv) {
-      representative_id (lit) = equiv->id;
-      if (update_eager)
-        eager_representative_id (lit) = equiv->id;
+      if (equiv) {
+        representative_id (lit) = equiv->id;
+        if (update_eager)
+          eager_representative_id (lit) = equiv->id;
+      }
     }
     if (internal->lrat)
       lrat_chain.clear ();
@@ -460,7 +458,7 @@ int Closure::find_eager_representative_and_compress (int lit) {
       produce_eager_representative_lrat (lit);
     }
     eager_representative (lit) = res;
-    Clause *equiv = add_binary_clause (-lit, res);
+    Clause *equiv = add_tmp_binary_clause (-lit, res);
     equiv->hyper = true;
 
     if (internal->lrat && equiv) {
@@ -734,6 +732,72 @@ void Closure::compute_rewritten_clause_lrat_simple (Clause *c, int except) {
   }
 }
 
+Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
+  assert (internal->lrat);
+  assert (!clause.empty ());
+  assert (!lrat_chain.empty ());
+  bool clear = false;
+
+  LOG (clause, "learn new tmp clause");
+  assert (clause.size () >= 2);
+  internal->external->check_learned_clause ();
+
+  assert (internal->clause.size () <= (size_t) INT_MAX);
+  const int size = (int) clause.size ();
+  assert (size >= 2);
+
+  size_t bytes = Clause::bytes (size);
+  Clause *c = (Clause *) new char[bytes];
+  DeferDeleteArray<char> clause_delete ((char *) c);
+
+  c->id = ++internal->clause_id;
+
+  c->conditioned = false;
+  c->covered = false;
+  c->enqueued = false;
+  c->frozen = false;
+  c->garbage = false;
+  c->gate = false;
+  c->hyper = false;
+  c->instantiated = false;
+  c->moved = false;
+  c->reason = false;
+  c->redundant = false;
+  c->transred = false;
+  c->subsume = false;
+  c->swept = false;
+  c->flushed = false;
+  c->vivified = false;
+  c->vivify = false;
+  c->used = 0;
+
+  c->glue = size;
+  c->size = size;
+  c->pos = 2;
+
+  for (int i = 0; i < size; i++)
+    c->literals[i] = clause[i];
+
+  // Just checking that we did not mess up our sophisticated memory layout.
+  // This might be compiler dependent though. Crucial for correctness.
+  //
+  assert (c->bytes () == bytes);
+
+  clause_delete.release ();
+  LOG (c, "new pointer %p", (void *) c);
+
+  if (clear)
+    clause.clear ();
+
+  if (internal->proof) {
+    internal->proof->add_derived_clause (c, lrat_chain);
+  }
+  extra_clauses.push_back(c);
+  assert (internal->lrat_chain.empty ());
+  return c;
+}
+
+
 Clause *Closure::new_clause () {
   assert (internal->clause.empty () || clause.empty ());
   bool clear = false;
@@ -742,16 +806,15 @@ Clause *Closure::new_clause () {
     clear = true;
   }
 
-  LOG (internal->clause, "learn new clause");
-  assert (internal->clause.size () >= 2);
-  internal->external->check_learned_clause ();
-  Clause *c = internal->new_clause (false);
+  Clause *c = internal->new_clause(false);
+
   if (clear)
     internal->clause.clear ();
 
   if (internal->proof) {
     internal->proof->add_derived_clause (c, lrat_chain);
   }
+
   return c;
 }
 
@@ -839,7 +902,7 @@ Clause *Closure::produce_rewritten_clause_lrat (Clause *c, int except_lhs,
     assert (false && "rewriting produced a unit clause");
   } else if (changed) {
     LOG (lrat_chain, "LRAT Chain");
-    d = new_clause ();
+    d = new_tmp_clause (clause);
     LOG (d, "rewritten clause to");
   } else {
     LOG (c, "clause is unchanged, so giving up");
@@ -1236,19 +1299,22 @@ bool Closure::merge_literals_lrat (
   LOG ("merging %d and %d first and then the equivalences of %d and %d "
        "with LRAT",
        lit, other, repr_lit, repr_other);
-  if (internal->lrat)
+  Clause *eq1_tmp = nullptr;
+  if (internal->lrat) {
     lrat_chain = *smaller_chain;
-  Clause *eq1_tmp = add_binary_clause (-larger, smaller);
+    eq1_tmp = add_tmp_binary_clause (-larger, smaller);
+  }
   assert (!internal->lrat || eq1_tmp);
 
+  Clause *eq2_tmp = nullptr;
   if (internal->lrat) {
     lrat_chain = *larger_chain;
     LOG (lrat_chain, "lrat chain");
-  }
 
-  Clause *eq2_tmp = add_binary_clause (
-      larger, -smaller); // the order in the clause is important for the
-                         // repr_lit == -repr_other to get the right chain
+    eq2_tmp = add_tmp_binary_clause (larger, -smaller);
+    // the order in the clause is important for the
+    // repr_lit == -repr_other to get the right chain
+  }
   assert (!internal->lrat || eq2_tmp);
   if (internal->lrat)
     lrat_chain.clear ();
@@ -1383,7 +1449,10 @@ bool Closure::merge_literals_lrat (
     }
     eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
   } else {
-    eq1_repr = eq1_tmp;
+    if (internal->lrat)
+      eq1_repr = promote_tmp_binary_clause (eq1_tmp);
+    else
+      eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
   }
 
   if (internal->lrat) {
@@ -1412,7 +1481,10 @@ bool Closure::merge_literals_lrat (
     eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
 
   } else {
-    eq2_repr = eq2_tmp;
+    if (internal->lrat)
+      eq2_repr = promote_tmp_binary_clause (eq2_tmp);
+    else
+      eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
   }
   lrat_chain.clear ();
 
@@ -1538,20 +1610,24 @@ bool Closure::merge_literals_lrat (
   LOG ("merging %d and %d first and then the equivalences of %d and %d "
        "with LRAT",
        lit, other, repr_lit, repr_other);
-  if (internal->lrat)
+  Clause *eq1_tmp = nullptr;
+  if (internal->lrat) {
     lrat_chain = *smaller_chain;
-  Clause *eq1_tmp = add_binary_clause (-larger, smaller);
+    eq1_tmp = add_tmp_binary_clause (-larger, smaller);
+    assert (eq1_tmp);
+  }
   assert (!internal->lrat || eq1_tmp);
 
+  Clause *eq2_tmp = nullptr;
   if (internal->lrat) {
-
     lrat_chain = *larger_chain;
     LOG (lrat_chain, "lrat chain");
+    // the order in the clause is important for the
+    // repr_lit == -repr_other to get the right chain
+    eq2_tmp = add_tmp_binary_clause (larger, -smaller);
+    assert (eq2_tmp);
   }
 
-  Clause *eq2_tmp = add_binary_clause (
-      larger, -smaller); // the order in the clause is important for the
-                         // repr_lit == -repr_other to get the right chain
   assert (!internal->lrat || eq2_tmp);
   if (internal->lrat)
     lrat_chain.clear ();
@@ -1697,7 +1773,10 @@ bool Closure::merge_literals_lrat (
     }
     eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
   } else {
-    eq1_repr = eq1_tmp;
+    if (internal->lrat)
+      eq1_repr = promote_tmp_binary_clause (eq1_tmp);
+    else
+      eq1_repr = add_binary_clause (-larger_repr, smaller_repr);
   }
 
   if (internal->lrat) {
@@ -1726,7 +1805,10 @@ bool Closure::merge_literals_lrat (
     eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
 
   } else {
-    eq2_repr = eq2_tmp;
+    if (internal->lrat)
+      eq2_repr = promote_tmp_binary_clause (eq2_tmp);
+    else
+      eq2_repr = add_binary_clause (larger_repr, -smaller_repr);
   }
   lrat_chain.clear ();
 
@@ -1735,6 +1817,8 @@ bool Closure::merge_literals_lrat (
     assert (std::find (begin (*eq1_repr), end (*eq1_repr), -larger_repr) !=
             end (*eq1_repr));
     representative_id (-larger_repr) = eq2_repr->id;
+    check_not_tmp_binary_clause (eq1_repr);
+    check_not_tmp_binary_clause (eq2_repr);
     assert (std::find (begin (*eq2_repr), end (*eq2_repr), larger_repr) !=
             end (*eq2_repr));
   }
@@ -1748,6 +1832,8 @@ bool Closure::merge_literals_lrat (
 }
 
 inline void Closure::promote_clause (Clause *c) {
+  if (internal->lrat)
+    check_not_tmp_binary_clause(c);
   if (!c)
     return;
   if (!c->redundant)
@@ -1784,6 +1870,8 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
     assert (c2->literals[0] == other || c2->literals[1] == other);
     assert (c1->literals[0] == -other || c1->literals[1] == -other);
     assert (c2->literals[0] == -lit || c2->literals[1] == -lit);
+    check_not_tmp_binary_clause (c1);
+    check_not_tmp_binary_clause (c2);
   }
   int repr_lit = find_representative (lit);
   int repr_other = find_representative (other);
@@ -1857,12 +1945,6 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
     LOG ("merging clashing %d [=%d] and %d[=%d], smaller: %d", lit,
          repr_lit, other, repr_other, smaller);
     if (internal->lrat) {
-      // if (lit != repr_lit) {
-      // 	const uint64_t repr_id1 = find_representative_lrat (lit);
-      // 	lrat_chain.push_back (repr_id1);
-      // }
-      //      lrat_chain.push_back (id1);
-
       Rewrite rew1 =
           Rewrite (lit, lit == repr_lit ? 0 : repr_lit,
                    lit == repr_lit ? 0 : find_representative_lrat (lit),
@@ -1945,7 +2027,7 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
     }
 
   } else if (internal->lrat) {
-    LOG ("not learning new clause");
+    LOG ("not learning new clause, using already existing one");
     if (smaller_repr == repr_lit) {
       LOG ("setting ids of %d: %" PRIu64 "; %d: %" PRIu64 " (case 1)",
            larger, id1, -larger, id2);
@@ -1958,6 +2040,7 @@ bool Closure::merge_literals_equivalence (int lit, int other, Clause *c1,
       representative_id (larger_repr) = id2;
     }
   }
+
   LOG ("updating %d -> %d", larger_repr, smaller_repr);
   representative (larger_repr) = smaller_repr;
   representative (-larger_repr) = -smaller_repr;
@@ -2786,8 +2869,7 @@ Clause *Closure::add_binary_clause (int a, int b) {
     swap (internal->lrat_chain, lrat_chain);
   }
   LOG (internal->lrat_chain, "chain");
-  Clause *res = internal->new_hyper_ternary_resolved_clause_and_watch (
-      false, full_watching);
+  Clause *res = internal->new_hyper_ternary_resolved_clause_and_watch (false, full_watching);
   const bool already_sorted = internal->vlit (a) < internal->vlit (b);
   binaries.push_back (CompactBinary (res, res->id, already_sorted ? a : b,
                                      already_sorted ? b : a));
@@ -2799,6 +2881,79 @@ Clause *Closure::add_binary_clause (int a, int b) {
     internal->lrat_chain.clear ();
   }
   assert (internal->clause.empty ());
+  assert (internal->lrat_chain.empty ());
+  return res;
+}
+
+void Closure::check_not_tmp_binary_clause (Clause *c) {
+#ifndef NDEBUG
+  assert (internal->lrat);
+  assert (internal->lrat_chain.empty ());
+  assert (c->size == 2);
+  assert (std::find (begin (extra_clauses), end (extra_clauses), c) == end (extra_clauses));
+#endif
+};
+
+Clause *Closure::promote_tmp_binary_clause (Clause *c) {
+  assert (internal->lrat);
+  assert (internal->lrat_chain.empty ());
+  assert (c->size == 2);
+  LOG (c, "promoting tmp");
+#ifndef NDEBUG
+  assert (std::find (begin (extra_clauses), end (extra_clauses), c) != end (extra_clauses));
+#endif
+  lrat_chain.push_back(c->id);
+  Clause *res = add_binary_clause (c->literals[0], c->literals[1]);
+  LOG (res, "promoted to");
+  return res;
+};
+
+Clause *Closure::add_tmp_binary_clause (int a, int b) {
+  assert (internal->clause.empty ());
+  assert (internal->lrat_chain.empty ());
+  assert (internal->lrat);
+  LOG ("learning binary clause %d %d", a, b);
+  if (internal->unsat)
+    return nullptr;
+  if (a == -b)
+    return nullptr;
+  if (!internal->lrat) {
+    const signed char a_value = internal->val (a);
+    if (a_value > 0)
+      return nullptr;
+    const signed char b_value = internal->val (b);
+    if (b_value > 0)
+      return nullptr;
+    int unit = 0;
+    if (a == b)
+      unit = a;
+    else if (a_value < 0 && !b_value) {
+      unit = b;
+    } else if (!a_value && b_value < 0)
+      unit = a;
+    if (unit) {
+      LOG ("clause reduced to unit %d", unit);
+      learn_congruence_unit (unit);
+      return nullptr;
+    }
+    assert (!a_value), assert (!b_value);
+  }
+  assert (internal->clause.empty ());
+  internal->clause.push_back (a);
+  internal->clause.push_back (b);
+  if (internal->lrat) {
+    assert (lrat_chain.size () >= 1);
+    assert (internal->lrat_chain.empty ());
+  }
+  LOG (lrat_chain, "chain");
+  Clause *res = new_tmp_clause (internal->clause);
+  internal->clause.clear ();
+  if (internal->lrat) {
+    internal->lrat_chain.clear ();
+  }
+  assert (internal->clause.empty ());
+  assert (internal->lrat_chain.empty ());
+  LOG (res, "promoted to");
   return res;
 }
 
@@ -3186,10 +3341,12 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
       lrat_chain.push_back (first[2 * i + 1].clause->id);
     }
     if (clause.size () > 1) {
-      Clause *c = new_clause ();
       if (internal->lrat) {
+	Clause *c = new_tmp_clause (clause);
         newclauses.push_back (LitClausePair (0, c));
         lrat_chain.clear ();
+      } else {
+	check_and_add_to_proof_chain (clause);
       }
     }
     if (clause.size () == 1)
@@ -4496,6 +4653,20 @@ void Closure::reset_closure () {
   for (auto gate : garbage)
     delete gate;
   garbage.clear ();
+
+
+  if (internal->lrat) {
+    assert (internal->proof);
+    for (auto c : extra_clauses) {
+      assert (!c->garbage);
+      internal->proof->delete_clause (c);
+      delete c;
+    }
+    extra_clauses.clear ();
+  } else {
+    assert (extra_clauses.empty());
+  }
+  
 }
 
 void Closure::reset_extraction () {
@@ -4717,6 +4888,7 @@ bool Closure::find_subsuming_clause (Clause *subsumed) {
         const int repr_other = find_representative (other);
         if (!marked (repr_other))
           goto CONTINUE_WITH_NEXT_CLAUSE;
+	LOG ("subsuming due to %d -> %d", other, repr_other);
       }
       subsuming = d;
       goto FOUND_SUBSUMING;
@@ -4913,7 +5085,10 @@ bool Closure::rewrite_ite_gate_to_and (Gate *g, int src, int dst,
   LOG (long_clause->clause, "new long clause");
   g->neg_lhs_ids.push_back (*long_clause);
   g->pos_lhs_ids.erase (long_clause);
+
   assert (g->pos_lhs_ids.size () == 1);
+
+  (void) promote_tmp_binary_clause (g->pos_lhs_ids[0].clause);
   g->pos_lhs_ids.push_back ({lit, e});
 #ifndef NDEBUG
   for (auto litId : g->pos_lhs_ids) {
@@ -5527,7 +5702,9 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
                         : g->pos_lhs_ids[1].clause);
               c2 = (rhs_as_src_first
                         ? g->pos_lhs_ids[1].clause
-                        : g->pos_lhs_ids[0].clause);
+                    : g->pos_lhs_ids[0].clause);
+	      c1 = promote_tmp_binary_clause (c1);
+	      c2 = promote_tmp_binary_clause (c2);
             } else {
               add_binary_clause (-g->lhs, g->rhs[0]);
               add_binary_clause (g->lhs, -g->rhs[0]);

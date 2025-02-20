@@ -231,6 +231,7 @@ struct Closure {
   Closure (Internal *i);
 
   Internal *const internal;
+  vector<Clause*> extra_clauses;
   vector<CompactBinary> binaries;
   std::vector<std::pair<size_t, size_t>> offsetsize;
   bool full_watching = false;
@@ -323,6 +324,7 @@ struct Closure {
 
   // learns a binary clause
   Clause *add_binary_clause (int a, int b);
+  Clause *add_tmp_binary_clause (int a, int b);
 
   // promotes a clause from redundant to irredundant. We do this for all
   // clauses involved in gates to make sure that we produce correct result.
@@ -560,6 +562,9 @@ struct Closure {
   void extract_binaries ();
   bool find_binary (int, int) const;
 
+  Clause *new_tmp_clause (std::vector<int> &clause);
+  Clause *promote_tmp_binary_clause (Clause *);
+  void check_not_tmp_binary_clause (Clause *c);
   Clause *new_clause ();
   //
   void sort_literals_by_var (vector<int> &rhs);
