@@ -1120,9 +1120,8 @@ bool Closure::learn_congruence_unit (int lit) {
   LOG ("adding unit %d with current value %d", lit, internal->val (lit));
   ++internal->stats.congruence.units;
   assert (!internal->lrat || !lrat_chain.empty ());
-  // TODO this is done in Kissat, but we try to make the lrat/drat code as
-  // close as possible. So We do not learn the empty clause here.
   if (val_lit < 0) {
+    push_lrat_unit(-lit);
     swap (internal->lrat_chain, lrat_chain);
     internal->learn_empty_clause ();
     return false;
