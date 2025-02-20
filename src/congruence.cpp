@@ -5518,10 +5518,14 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
             assert (!internal->lrat || g->pos_lhs_ids.size () == 2);
 	    Clause *c1 = nullptr, *c2 = nullptr;
             if (internal->lrat) {
-              c1 = (g->pos_lhs_ids[0].current_lit == -g->rhs[0]
+	      assert (g->pos_lhs_ids[0].clause);
+	      bool rhs_as_src_first =
+		g->pos_lhs_ids[0].clause->literals[0] == g->lhs ||
+		g->pos_lhs_ids[0].clause->literals[1] == g->lhs;
+              c1 = (rhs_as_src_first
                         ? g->pos_lhs_ids[0].clause
                         : g->pos_lhs_ids[1].clause);
-              c2 = (g->pos_lhs_ids[0].current_lit == -g->rhs[0]
+              c2 = (rhs_as_src_first
                         ? g->pos_lhs_ids[1].clause
                         : g->pos_lhs_ids[0].clause);
             } else {
