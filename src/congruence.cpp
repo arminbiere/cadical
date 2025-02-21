@@ -1172,6 +1172,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
 bool Closure::fully_propagate () {
   if (internal->unsat)
     return false;
+  LOG ("fully propagating");
   assert (internal->watching ());
   assert (full_watching);
   bool no_conflict = internal->propagate ();
@@ -1605,6 +1606,11 @@ bool Closure::merge_literals_lrat (
       internal->learn_empty_clause ();
       return false;
     }
+  }
+
+  if (val_lit && val_lit == val_other) {
+    LOG ("not merging lits %d and %d assigned to same value", lit, other);
+    return false;
   }
 
   if (val_lit && val_lit == -val_other) {
@@ -2296,6 +2302,9 @@ void Closure::update_and_gate_build_lrat_chain (
   LOG (h, "with");
   // If the LHS are identical, do not even attempt to build the LRAT chain
   if (find_representative (g->lhs) == find_representative (h->lhs))
+    return;
+  // set to same value, don't do anything
+  if (internal->val (g->lhs) && internal->val (g->lhs) == internal->val (h->lhs))
     return;
   const bool g_tautology = gate_contains (g, g->lhs);
   const bool h_tautology = gate_contains (h, h->lhs);
