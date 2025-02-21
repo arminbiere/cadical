@@ -1076,7 +1076,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
   switch (g->tag) {
   case Gate_Type::And_Gate:
     if (clashing) {
-      LOG ("clashing %d where lhs=%d", clashing, -g->lhs);
+      LOG ("clashing %d where -lhs=%d", clashing, -g->lhs);
       // Example: -2 = 1&3 and 3=2
       // The proof consists in taking the binary clause of the clashing
       // literal
@@ -1088,7 +1088,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
           if (litId.current_lit == clashing) {
             push_id_and_rewriting_lrat_unit (
                 litId.clause, Rewrite (), proof_chain, true, Rewrite (),
-                g->degenerated_and_neg ? 0 : -g->lhs);
+                g->degenerated_and_neg || g->degenerated_and_pos ? 0 : -g->lhs);
           }
         }
       } else {
@@ -4326,7 +4326,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
       if (dst_count) {
         assert (!not_dst_count);
         LOG ("clashing literals %d and %d", (dst), (-dst));
-        clashing = dst;
+        clashing = -dst;
         break;
       }
       assert (!not_dst_count);
@@ -4349,7 +4349,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
     assert (!falsifies || !clashing);
     const int orig_falsifies = falsifies == dst ? src : falsifies;
     const int orig_clashing =
-        clashing == -dst || clashing == dst ? src : clashing;
+      clashing == -dst ? -src : (clashing == dst ? src : clashing);
     int keep_clashing = clashing;
     LOG ("keeping chain for falsifies: %d aka %d and clashing: %d aka %d",
          falsifies, orig_falsifies, clashing, orig_clashing);
@@ -6000,14 +6000,17 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
 
   if (g->pos_lhs_ids.size () == 1) {
     LOG (g, "degenerated AND gate");
+    const int replacement_lit = (g->rhs[1] == g->lhs ? g->rhs[0] : g->rhs[1]);
     for (auto &litId : g->pos_lhs_ids) {
       LOG (litId.clause, "%d ->", litId.current_lit);
       if (litId.current_lit == removed_lit)
-        litId.current_lit = -g->rhs[0];
+        litId.current_lit = -replacement_lit;
       if (litId.current_lit == -removed_lit)
-        litId.current_lit = g->rhs[0];
+        litId.current_lit = replacement_lit;
       LOG (litId.clause, "%d ->", litId.current_lit);
       // TODO we need a replacement index
+      assert (std::find (begin (*litId.clause), end (*litId.clause), litId.current_lit) !=
+              end (*litId.clause));
       assert (std::find (begin (g->rhs), end (g->rhs), litId.current_lit) !=
               end (g->rhs));
     }
