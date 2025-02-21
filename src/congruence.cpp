@@ -820,7 +820,7 @@ Clause *Closure::new_clause () {
 // TODO we here duplicate the arguments of push_id_and_rewriting_lrat but we
 // probably do not need that.
 Clause *Closure::produce_rewritten_clause_lrat (Clause *c, int except_lhs,
-                                                bool remove_units) {
+                                                bool remove_units, bool fail_on_unit) {
   assert (internal->clause.empty ());
   assert (internal->lrat_chain.empty ());
   auto tmp_lrat (std::move (lrat_chain));
@@ -897,8 +897,12 @@ Clause *Closure::produce_rewritten_clause_lrat (Clause *c, int except_lhs,
     lrat_chain.clear ();
   } else if (changed && clause.size () == 1) {
     LOG (lrat_chain, "LRAT chain");
-    d = nullptr;
-    assert (false && "rewriting produced a unit clause");
+    if (fail_on_unit) {
+      d = nullptr;
+      assert (false && "rewriting produced a unit clause");
+    } else {
+      d = c;
+    }
   } else if (changed) {
     LOG (lrat_chain, "LRAT Chain");
     d = new_tmp_clause (clause);
