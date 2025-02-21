@@ -1604,9 +1604,15 @@ bool Closure::merge_literals_lrat (
   }
 
   if (val_lit && val_lit == -val_other) {
-    if (internal->lrat)
+    if (internal->lrat) {
       internal->lrat_chain.push_back (
-          internal->unit_id (val_smaller ? -smaller : smaller));
+          internal->unit_id (val_smaller < 0 ? -smaller : smaller));
+      internal->lrat_chain.push_back (
+				      internal->unit_id (val_larger < 0 ? -larger : larger));
+      for (auto id : (val_smaller < 0 ? *smaller_chain : *larger_chain)) {
+	internal->lrat_chain.push_back(id);
+      }
+    }
     internal->learn_empty_clause ();
     return false;
   }
