@@ -28,6 +28,9 @@ Version 2.2.0
   a new (very limited) BVE (fast elim). Fast elimination is never run
   again and normal BVE is used instead.
 
+- Small extension to gate extraction in BVE, now able to extract
+  semantic definitions using 'kitten'
+  (off by default `set ('elimdef', 1)` to enable).
 
 Version 2.1.3
 -------------
