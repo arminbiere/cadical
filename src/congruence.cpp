@@ -5951,11 +5951,11 @@ void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit,
   Clause *d = g->pos_lhs_ids[idx2].clause;
 
   if (g->lhs == -g->rhs[0]) {
-    LOG ("special cause of ite producing the empty clause");
+    LOG ("special case of LHS=-cond where only one clause in LRAT is needed is needed");
     size_t idx = (internal->val (g->rhs[1]) < 0 ? idx2 : idx1);
     c = produce_rewritten_clause_lrat (g->pos_lhs_ids[idx].clause, g->lhs, false, false);
     assert (c);
-    LOG (c, "after rewriting");
+    // not possible to do this in a single lrat chain
     push_id_and_rewriting_lrat_unit (c, Rewrite (), lrat_chain, true,
                                      Rewrite (), g->lhs);
     assert (d);
