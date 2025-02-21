@@ -1065,7 +1065,7 @@ void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src,
     LOG (lrat_chain, "lrat");
     for (auto litId : g->neg_lhs_ids)
       push_id_and_rewriting_lrat_unit (
-          litId.clause, Rewrite (src, dst, id1, id2), lrat_chain, true);
+          litId.clause, Rewrite (src, dst, id1, id2), lrat_chain);
     LOG (lrat_chain, "lrat");
     break;
   default:
@@ -5949,6 +5949,19 @@ void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit,
   assert (idx1 != idx2);
   Clause *c = g->pos_lhs_ids[idx1].clause;
   Clause *d = g->pos_lhs_ids[idx2].clause;
+
+  if (g->lhs == -g->rhs[0]) {
+    LOG ("special cause of ite producing the empty clause");
+    size_t idx = (internal->val (g->rhs[1]) < 0 ? idx2 : idx1);
+    c = produce_rewritten_clause_lrat (g->pos_lhs_ids[idx].clause, g->lhs, false, false);
+    assert (c);
+    LOG (c, "after rewriting");
+    push_id_and_rewriting_lrat_unit (c, Rewrite (), lrat_chain, true,
+                                     Rewrite (), g->lhs);
+    assert (d);
+    return;
+  }
+
   c = produce_rewritten_clause_lrat (c, g->lhs, true);
   if (c) {
     lrat_chain.push_back (c->id);
@@ -6200,7 +6213,13 @@ void Closure::simplify_ite_gate (Gate *g) {
       learn_congruence_unit (lhs);
     } else if (v_then < 0 && v_else < 0) {
       simplify_ite_gate_produce_unit_lrat (g, -lhs, 0, 2);
-      learn_congruence_unit (-lhs);
+      if (cond == lhs) {
+	swap (lrat_chain, internal->lrat_chain);
+	internal->learn_empty_clause();
+	return;
+      }
+      else
+	learn_congruence_unit (-lhs);
     } else if (v_then > 0 && v_else < 0) {
       if (internal->lrat)
         simplify_ite_gate_then_else_set (g, extra_reasons,
