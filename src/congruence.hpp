@@ -586,6 +586,7 @@ struct Closure {
   //   (yet)
   Clause *produce_rewritten_clause_lrat (Clause *c, int execept_lhs = 0,
                                          bool remove_units = true);
+                                         bool remove_units = true, bool = true);
   void compute_rewritten_clause_lrat_simple (Clause *c, int except);
   // variant where we update the indices after removing the tautologies and
   // remove the tautological clauses
