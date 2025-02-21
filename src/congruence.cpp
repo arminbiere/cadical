@@ -1229,7 +1229,7 @@ bool Closure::merge_literals_lrat (
   assert (g->lhs == lit);
   assert (g == h || h->lhs == other);
   (void) g, (void) h;
-  LOG ("merging literals %d and %d", lit, other);
+  LOG ("merging literals %s and %s", LOGLIT(lit), LOGLIT(other));
   // TODO: this should not update_eager but still calculate the LRAT chain
   // below!
   const int repr_lit = find_representative_and_compress (lit, false);
@@ -1248,6 +1248,14 @@ bool Closure::merge_literals_lrat (
 
   const int val_lit = internal->val (lit);
   const int val_other = internal->val (other);
+  if (val_lit) {
+    if (val_lit == val_other) {
+      LOG ("not merging lits %d and %d assigned to same value", lit, other);
+      if (internal->lrat)
+        lrat_chain.clear ();
+      return false;
+    }
+  }
 
   // For LRAT we need to distinguish more cases for a more regular
   // reconstruction.
