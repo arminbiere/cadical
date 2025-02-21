@@ -1130,7 +1130,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
           for (const auto &litId : g->pos_lhs_ids) {
             push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
                                              proof_chain, false, Rewrite (),
-                                             -g->lhs);
+                                             g->degenerated_and_neg || g->degenerated_and_pos ? 0 : -g->lhs);
             LOG (proof_chain, "produced lrat chain so far");
           }
         }
@@ -5092,7 +5092,7 @@ bool Closure::rewrite_ite_gate_to_and (
     return false;
   LOG ("updating flags");
   g->degenerated_and_neg = (g->rhs[1] == -g->lhs || g->rhs[0] == -g->lhs);
-  g->degenerated_and_pos = (g->rhs[0] == -g->lhs || g->rhs[1] == g->lhs);
+  g->degenerated_and_pos = (g->rhs[0] == g->lhs || g->rhs[1] == g->lhs);
   assert (g->rhs.size () == 3);
   assert (g->pos_lhs_ids.size () == 4);
   assert (idx1 < g->pos_lhs_ids.size ());
