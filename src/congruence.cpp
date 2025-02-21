@@ -1106,7 +1106,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
             for (const auto &litId : g->pos_lhs_ids) {
               LOG (litId.clause, "definition clause %d ->",
                    litId.current_lit);
-              if (litId.current_lit == clashing || litId.current_lit == -clashing) {
+              if (litId.current_lit == clashing) {
                 push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
                                                  proof_chain, true,
                                                  Rewrite (), 0);
