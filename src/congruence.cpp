@@ -1184,7 +1184,7 @@ bool Closure::fully_propagate () {
 
   return false;
 }
-bool Closure::learn_congruence_unit (int lit, bool delay_propagation) {
+bool Closure::learn_congruence_unit (int lit, bool delay_propagation, bool force_propagation) {
   if (internal->unsat)
     return false;
   const signed char val_lit = internal->val (lit);
@@ -1192,6 +1192,8 @@ bool Closure::learn_congruence_unit (int lit, bool delay_propagation) {
     LOG ("already set lit %d", lit);
     if (internal->lrat)
       lrat_chain.clear ();
+    if (force_propagation)
+      return fully_propagate();
     return true;
   }
   LOG ("adding unit %d with current value %d", lit, internal->val (lit));
@@ -1209,7 +1211,9 @@ bool Closure::learn_congruence_unit (int lit, bool delay_propagation) {
   internal->assign_unit (lit);
   assert (lrat_chain.empty ());
   assert (internal->lrat_chain.empty ());
-  return delay_propagation || fully_propagate ();
+  if (delay_propagation)
+    return false;
+  else return fully_propagate ();
 }
 
 // for merging the literals there are many cases
@@ -5443,7 +5447,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         if (-else_lit == lhs) {
           if (internal->lrat)
             lrat_chain = reasons_implication;
-          learn_congruence_unit (cond == -lhs ? -else_lit : else_lit);
+          learn_congruence_unit (cond == -lhs ? -else_lit : else_lit, false, true);
         } else fully_propagate ();
       } else {
         if (merge_literals_lrat (g->lhs, else_lit, reasons_implication,
@@ -5546,9 +5550,10 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
           lrat_chain = reasons_unit;
         learn_congruence_unit (cond, true);
         if (then_lit != lhs) {
+	  LOG ("special case, learning %d",cond == -lhs ? -then_lit : then_lit);
           if (internal->lrat)
             lrat_chain = reasons_implication;
-          learn_congruence_unit (cond == -lhs ? -then_lit : then_lit);
+          learn_congruence_unit (cond == -lhs ? -then_lit : then_lit, false, true);
         } else fully_propagate ();
       } else {
         if (merge_literals_lrat (g->lhs, then_lit, reasons_implication,
@@ -7261,6 +7266,10 @@ bool Internal::extract_gates () {
   closure.reset_closure ();
   internal->clear_watches ();
   internal->connect_watches ();
+  if (!internal->unsat) {
+    propagated2 = propagated = 0;
+    propagate ();
+  }
   assert (closure.new_unwatched_binary_clauses.empty ());
   internal->reset_occs ();
   internal->reset_noccs ();
