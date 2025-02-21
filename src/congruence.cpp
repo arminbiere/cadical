@@ -1106,13 +1106,14 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
             for (const auto &litId : g->pos_lhs_ids) {
               LOG (litId.clause, "definition clause %d ->",
                    litId.current_lit);
-              if (litId.current_lit == clashing) {
+              if (litId.current_lit == clashing || litId.current_lit == -clashing) {
                 push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
                                                  proof_chain, true,
                                                  Rewrite (), 0);
                 LOG (proof_chain, "produced lrat chain so far");
               }
             }
+	    assert (!proof_chain.empty ());
           } else {
             LOG ("degenerated AND gate with conflict without LHS");
             for (const auto &litId : g->pos_lhs_ids) {
@@ -1197,7 +1198,7 @@ bool Closure::learn_congruence_unit (int lit, bool delay_propagation, bool force
       return fully_propagate();
     return true;
   }
-  LOG ("adding unit %d with current value %d", lit, internal->val (lit));
+  LOG ("adding unit %s", LOGLIT (lit));
   ++internal->stats.congruence.units;
   assert (!internal->lrat || !lrat_chain.empty ());
   if (val_lit < 0) {
