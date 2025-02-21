@@ -1,8 +1,8 @@
 Version 2.2.0
 -------------
 
-- Congruence closure: detect and, xor, and ITE encoded into the
-  formula and merges equivalent outputs.
+- Congruence closure: detect AND-, XOR-, and ITE-gates encoded into
+  the formula and merges equivalent outputs.
 
 - Bounded Variable Addition.
 
@@ -23,6 +23,14 @@ Version 2.2.0
 - Ticks.
 
 - Improved lucky, by allowing it to do several conflicts.
+
+- New light preprocessing round on with lucky, congruence, factor, and
+  a new (very limited) BVE (fast elim). Fast elimination is never run
+  again and normal BVE is used instead.
+
+- Small extension to gate extraction in BVE, now able to extract
+  semantic definitions using 'kitten'
+  (off by default `set ('elimdef', 1)` to enable).
 
 Version 2.1.3
 -------------

@@ -558,9 +558,9 @@ struct Closure {
   void check_implied ();
 
   // learn units. You can delay units if you want to learn several at once before
-  // propagation. Otherwise, propagate!
-  bool learn_congruence_unit (
-      int unit, bool = false); // TODO remove and replace by _lrat version
+  // propagation. Otherwise, propagate! If you need propagation even if nothing is set, use the
+  // second parameter.
+  bool learn_congruence_unit (int unit, bool = false, bool = false); // TODO remove and replace by _lrat version
   bool fully_propagate ();  
   void learn_congruence_unit_falsifies_lrat_chain (Gate *g, int src,
                                                    int dst, 
@@ -585,7 +585,7 @@ struct Closure {
   //   to be taken into account without being added to the eager rewriting
   //   (yet)
   Clause *produce_rewritten_clause_lrat (Clause *c, int execept_lhs = 0,
-                                         bool remove_units = true);
+                                         bool remove_units = true, bool = true);
   void compute_rewritten_clause_lrat_simple (Clause *c, int except);
   // variant where we update the indices after removing the tautologies and
   // remove the tautological clauses
