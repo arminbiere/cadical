@@ -938,8 +938,7 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
        rewrite1.src, rewrite1.id1, rewrite1.id2, rewrite2.src, rewrite2.id1,
        rewrite2.id2, except_lhs, except_lhs2);
   assert (c);
-  if (!insert_id_after)
-    chain.push_back (c->id);
+  std::vector<LRAT_ID> units, rewriting;
   for (auto other : *c) {
     // unclear how to achieve this in the simplify context where other ==
     // g->lhs might be set assert (internal->val (other) <= 0 || other ==
@@ -951,15 +950,15 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
     } else if (internal->val (other) < 0) {
       LOG ("found unit %d", -other);
       LRAT_ID id = internal->unit_id (-other);
-      chain.push_back (id);
+      units.push_back (id);
     } else if (other == rewrite1.src && rewrite1.id1) {
-      push_id_on_chain (chain, rewrite1, other);
+      push_id_on_chain (rewriting, rewrite1, other);
     } else if (other == -rewrite1.src && rewrite1.id2) {
-      push_id_on_chain (chain, rewrite1, other);
+      push_id_on_chain (rewriting, rewrite1, other);
     } else if (other == rewrite2.src && rewrite2.id1) {
-      push_id_on_chain (chain, rewrite2, other);
+      push_id_on_chain (rewriting, rewrite2, other);
     } else if (other == -rewrite2.src && rewrite2.id2) {
-      push_id_on_chain (chain, rewrite2, other);
+      push_id_on_chain (rewriting, rewrite2, other);
     } else if (other != find_eager_representative_and_compress (other)) {
 #if defined(LOGGING) || !defined(NDEBUG)
       const int rewritten_other = eager_representative (other);
@@ -967,11 +966,18 @@ void Closure::push_id_and_rewriting_lrat_unit (Clause *c, Rewrite rewrite1,
       LOG ("reason for representative of %d %d is %" PRIu64 "", other,
            rewritten_other, find_eager_representative_lrat (other));
 #endif
-      chain.push_back (find_eager_representative_lrat (other));
+      rewriting.push_back (find_eager_representative_lrat (other));
     } else {
       LOG ("no rewriting needed for %d", other);
     }
   }
+  for (auto id : units)
+    chain.push_back (id);
+
+  if (!insert_id_after)
+    chain.push_back (c->id);
+  for (auto id : rewriting)
+    chain.push_back (id);
 
   if (insert_id_after)
     chain.push_back (c->id);
