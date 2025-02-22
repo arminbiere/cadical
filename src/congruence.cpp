@@ -1212,8 +1212,14 @@ bool Closure::learn_congruence_unit (int lit, bool delay_propagation, bool force
   ++internal->stats.congruence.units;
   assert (!internal->lrat || !lrat_chain.empty ());
   if (val_lit < 0) {
-    push_lrat_unit (-lit);
-    swap (internal->lrat_chain, lrat_chain);
+    if (internal->lrat) {
+      assert (internal->lrat_chain.empty ());
+      LRAT_ID id = internal->unit_id (-lit);
+      internal->lrat_chain.push_back (id);
+      for (auto id : lrat_chain)
+        internal->lrat_chain.push_back (id);
+      lrat_chain.clear ();
+    }
     internal->learn_empty_clause ();
     return false;
   }
@@ -2546,9 +2552,9 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
       for (auto id : lrat_chain)
         internal->lrat_chain.push_back (id);
       lrat_chain.clear ();
-      swap (internal->lrat_chain, lrat_chain);
-    }
-    learn_congruence_unit (-g->lhs);
+      internal->learn_empty_clause();
+    } else
+      learn_congruence_unit (-g->lhs);
 
     assert (clause.empty ());
   } else if (g->arity () == 1) {
@@ -5961,6 +5967,17 @@ void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit,
     assert (d);
     return;
   }
+  if (g->lhs == g->rhs[0]) {
+    LOG ("special case of LHS=cond where only one clause in LRAT is needed is needed");
+    size_t idx = (internal->val (g->rhs[1]) > 0 ? idx2 : idx1);
+    c = produce_rewritten_clause_lrat (g->pos_lhs_ids[idx].clause, g->lhs, false, false);
+    assert (c);
+    // not possible to do this in a single lrat chain
+    push_id_and_rewriting_lrat_unit (c, Rewrite (), lrat_chain, true,
+                                     Rewrite (), g->lhs);
+    assert (d);
+    return;
+  }
 
   c = produce_rewritten_clause_lrat (c, g->lhs, true);
   if (c) {
@@ -6213,13 +6230,7 @@ void Closure::simplify_ite_gate (Gate *g) {
       learn_congruence_unit (lhs);
     } else if (v_then < 0 && v_else < 0) {
       simplify_ite_gate_produce_unit_lrat (g, -lhs, 0, 2);
-      if (cond == lhs) {
-	swap (lrat_chain, internal->lrat_chain);
-	internal->learn_empty_clause();
-	return;
-      }
-      else
-	learn_congruence_unit (-lhs);
+      learn_congruence_unit (-lhs);
     } else if (v_then > 0 && v_else < 0) {
       if (internal->lrat)
         simplify_ite_gate_then_else_set (g, extra_reasons,

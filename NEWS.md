@@ -1,6 +1,8 @@
 Version 2.2.0
 -------------
 
+- Renamed `get_entrailed_literals` by `implied`.
+
 - Congruence closure: detect AND-, XOR-, and ITE-gates encoded into
   the formula and merges equivalent outputs.
 
