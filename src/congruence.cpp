@@ -5962,7 +5962,7 @@ void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit,
     return;
   }
   if (g->lhs == g->rhs[0]) {
-    LOG ("special case of LHS=-cond where only one clause in LRAT is needed is needed");
+    LOG ("special case of LHS=cond where only one clause in LRAT is needed is needed");
     size_t idx = (internal->val (g->rhs[1]) > 0 ? idx2 : idx1);
     c = produce_rewritten_clause_lrat (g->pos_lhs_ids[idx].clause, g->lhs, false, false);
     assert (c);
