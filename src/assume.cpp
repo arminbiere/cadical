@@ -574,7 +574,7 @@ void Internal::sort_and_reuse_assumptions () {
     const int alit = assumptions[j];
     const int lev = i;
     target = lev;
-    if (val (alit) &&
+    if (val (alit) > 0 &&
         var (alit).level < lev) { // we can ignore propagated assumptions
       LOG ("ILB skipping propagation %d", alit);
       ++j;
