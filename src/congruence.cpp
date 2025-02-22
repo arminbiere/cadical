@@ -1212,12 +1212,14 @@ bool Closure::learn_congruence_unit (int lit, bool delay_propagation, bool force
   ++internal->stats.congruence.units;
   assert (!internal->lrat || !lrat_chain.empty ());
   if (val_lit < 0) {
-    assert (internal->lrat_chain.empty ());
-    LRAT_ID id = internal->unit_id (-lit);
-    internal->lrat_chain.push_back (id);
-    for (auto id : lrat_chain)
-      internal->lrat_chain.push_back(id);
-    lrat_chain.clear ();
+    if (internal->lrat) {
+      assert (internal->lrat_chain.empty ());
+      LRAT_ID id = internal->unit_id (-lit);
+      internal->lrat_chain.push_back (id);
+      for (auto id : lrat_chain)
+        internal->lrat_chain.push_back (id);
+      lrat_chain.clear ();
+    }
     internal->learn_empty_clause ();
     return false;
   }
