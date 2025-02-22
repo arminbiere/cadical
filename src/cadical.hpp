@@ -121,20 +121,24 @@ enum Status {
 //        READY --------------------------> SOLVING
 //
 //                     (internal)
-//      SOLVING --------------------------> READY
+//      SOLVING --------------------------> SOLVED
 //
 //                val (non zero literal)
 //    SATISFIED --------------------------> SATISFIED
 //
-//               failed (non zero literal )
+//               failed (non zero literal)
 //  UNSATISFIED --------------------------> UNSATISFIED
+//
+//               implied (non zero literal)
+// INCONCLUSIVE --------------------------> INCONCLUSIVE
 //
 //                        delete
 //        VALID --------------------------> DELETING
 //
 // where
 //
-//        READY = CONFIGURING  | STEADY  | SATISFIED | UNSATISFIED
+//       SOLVED = SATISFIED    | UNSATISFIED | INCONCLUSIVE
+//        READY = CONFIGURING  | STEADY      | SOLVED
 //        VALID = READY        | ADDING
 //      INVALID = INITIALIZING | DELETING
 //
@@ -155,7 +159,7 @@ enum Status {
 // 'SATISFIED' state, while extracting failed assumptions with 'failed' only
 // in the 'UNSATISFIED' state.  Solving can only be started in the 'STEADY '
 // or 'CONFIGURING' state or after the previous call to 'solve' yielded an
-// 'STEADY , 'SATISFIED' or 'UNSATISFIED' state.
+// 'INCONCLUSIVE , 'SATISFIED' or 'UNSATISFIED' state.
 //
 // All literals have to be valid literals too, i.e., 32-bit integers
 // different from 'INT_MIN'.  If any of these requirements is violated the
@@ -176,18 +180,19 @@ enum Status {
 // States are represented by a bit-set in order to combine them.
 
 enum State {
-  INITIALIZING = 1, // during initialization (invalid)
-  CONFIGURING = 2,  // configure options (with 'set')
-  STEADY = 4,       // ready to call 'solve'
-  ADDING = 8,       // adding clause literals (zero missing)
-  SOLVING = 16,     // while solving (within 'solve')
-  SATISFIED = 32,   // satisfiable allows 'val'
-  UNSATISFIED = 64, // unsatisfiable allows 'failed'
-  DELETING = 128,   // during and after deletion (invalid)
+  INITIALIZING = 1,   // during initialization (invalid)
+  CONFIGURING = 2,    // configure options (with 'set')
+  STEADY = 4,         // ready to call 'solve'
+  ADDING = 8,         // adding clause literals (zero missing)
+  SOLVING = 16,       // while solving (within 'solve')
+  SATISFIED = 32,     // satisfiable allows 'val'
+  UNSATISFIED = 64,   // unsatisfiable allows 'failed'
+  DELETING = 128,     // during and after deletion (invalid)
+  INCONCLUSIVE = 256, // unknown allows 'implied'
 
   // These combined states are used to check contracts.
 
-  READY = CONFIGURING | STEADY | SATISFIED | UNSATISFIED,
+  READY = CONFIGURING | STEADY | SATISFIED | UNSATISFIED | INCONCLUSIVE,
   VALID = READY | ADDING,
   INVALID = INITIALIZING | DELETING
 };
@@ -279,7 +284,7 @@ public:
   //   20 = UNSATISFIABLE
   //
   //   require (READY)
-  //   ensure (STEADY  | SATISFIED | UNSATISFIED)
+  //   ensure (INCONCLUSIVE  | SATISFIED | UNSATISFIED)
   //
   // Note, that while in this call the solver actually transitions to state
   // 'SOLVING', which however is only visible from a different context,
@@ -475,7 +480,22 @@ public:
   // In any other case, the function returns 0 (indicating 'UNKNOWN') and
   // 'implicants' lists the non-conflicting current value of the trail.
 
+  // Returns
+  //
+  //    0 = UNKNOWN      (unit propagation did not lead to a conflict nor to a 
+  //                      complete assignment, or limit reached or interrupted 
+  //                      through 'terminate')
+  //   10 = SATISFIABLE
+  //   20 = UNSATISFIABLE
+
+  //   require (READY)
+  //   ensure (INCONCLUSIVE  | SATISFIED | UNSATISFIED)
   int propagate ();
+
+  //
+  //   require (INCONCLUSIVE)
+  //   ensure (INCONCLUSIVE)
+  //
   void get_entrailed_literals (std::vector<int> &implicants);
 
   //------------------------------------------------------------------------
@@ -486,7 +506,7 @@ public:
   // returned but the state remains steady.
   //
   //   require (READY)
-  //   ensure (STEADY |SATISFIED|UNSATISFIED)
+  //   ensure (INCONCLUSIVE |SATISFIED|UNSATISFIED)
   //
   int lookahead (void);
 
@@ -715,7 +735,7 @@ public:
   // propagation is performed, which both take some time.
   //
   //   require (READY)
-  //   ensure (STEADY  | SATISFIED | UNSATISFIED)
+  //   ensure (INCONCLUSIVE  | SATISFIED | UNSATISFIED)
   //
   int simplify (int rounds = 3);
 
@@ -723,7 +743,7 @@ public:
   // Force termination of 'solve' asynchronously.
   //
   //  require (SOLVING | READY)
-  //  ensure (STEADY )           // actually not immediately (synchronously)
+  //  ensure (INCONCLUSIVE )     // actually not immediately (synchronously)
   //
   void terminate ();
 

@@ -412,8 +412,15 @@ int Internal::propagate_assumptions () {
 }
 
 void Internal::get_entrailed_literals (std::vector<int> &entrailed) {
+  int last_assumption_level = assumptions.size ();
+  if (constraint.size ())
+    last_assumption_level++;
+  
+  size_t trail_limit = trail.size();
+  if (level > last_assumption_level) 
+    trail_limit = control[last_assumption_level + 1].trail;
 
-  for (size_t i = 0; i < trail.size (); i++)
+  for (size_t i = 0; i < trail_limit; i++)
     entrailed.push_back (trail[i]);
 }
 

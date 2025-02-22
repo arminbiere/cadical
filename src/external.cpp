@@ -510,6 +510,8 @@ void External::get_entrailed_literals (std::vector<int> &trailed) {
   // (Internal does not see these marks, so no earlier filter is
   // possible.)
 
+  trailed.clear();
+
   for (const auto &ilit : ilit_implicants) {
     assert (ilit);
     const int elit = internal->externalize (ilit);
