@@ -1212,8 +1212,12 @@ bool Closure::learn_congruence_unit (int lit, bool delay_propagation, bool force
   ++internal->stats.congruence.units;
   assert (!internal->lrat || !lrat_chain.empty ());
   if (val_lit < 0) {
-    push_lrat_unit (-lit);
-    swap (internal->lrat_chain, lrat_chain);
+    assert (internal->lrat_chain.empty ());
+    LRAT_ID id = internal->unit_id (-lit);
+    internal->lrat_chain.push_back (id);
+    for (auto id : lrat_chain)
+      internal->lrat_chain.push_back(id);
+    lrat_chain.clear ();
     internal->learn_empty_clause ();
     return false;
   }
@@ -2546,9 +2550,9 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
       for (auto id : lrat_chain)
         internal->lrat_chain.push_back (id);
       lrat_chain.clear ();
-      swap (internal->lrat_chain, lrat_chain);
-    }
-    learn_congruence_unit (-g->lhs);
+      internal->learn_empty_clause();
+    } else
+      learn_congruence_unit (-g->lhs);
 
     assert (clause.empty ());
   } else if (g->arity () == 1) {
