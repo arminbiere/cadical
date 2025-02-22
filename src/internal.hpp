@@ -1391,7 +1391,7 @@ struct Internal {
   // Propagate the current set of assumptions and return the
   // non-witness assigned literals
   int propagate_assumptions ();
-  void get_entrailed_literals (std::vector<int> &entrailed);
+  void implied (std::vector<int> &entrailed);
 
   // Forcing decision variables to a certain phase.
   //

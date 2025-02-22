@@ -1721,7 +1721,7 @@ struct PropagateCall : public Call {
     int res = s->propagate ();
     if (!res) {
       std::vector<int> implicants;
-      s->get_entrailed_literals (implicants);
+      s->implied (implicants);
     }
   }
   void print (ostream &o) { o << "propagate " << res << endl; }

@@ -411,7 +411,7 @@ int Internal::propagate_assumptions () {
   return res;
 }
 
-void Internal::get_entrailed_literals (std::vector<int> &entrailed) {
+void Internal::implied (std::vector<int> &entrailed) {
   int last_assumption_level = assumptions.size ();
   if (constraint.size ())
     last_assumption_level++;

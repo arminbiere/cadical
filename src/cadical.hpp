@@ -496,7 +496,7 @@ public:
   //   require (INCONCLUSIVE)
   //   ensure (INCONCLUSIVE)
   //
-  void get_entrailed_literals (std::vector<int> &implicants);
+  void implied (std::vector<int> &implicants);
 
   //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be
