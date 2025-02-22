@@ -56,6 +56,10 @@ void Solver::transition_to_steady_state () {
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
+  } else if (state() == INCONCLUSIVE) {
+    external->reset_assumptions ();
+    external->reset_concluded ();
+    external->reset_constraint ();
   }
   if (state () != STEADY)
     STATE (STEADY);
@@ -715,18 +719,20 @@ int Solver::propagate () {
   else if (res == 20)
     STATE (UNSATISFIED);
   else
-    STATE (STEADY);
+    STATE (INCONCLUSIVE);
   return res;
 }
 
-void Solver::get_entrailed_literals (std::vector<int> &entrailed) {
-  TRACE ("get_entrailed_literals");
-  REQUIRE_STEADY_STATE ();
+void Solver::implied (std::vector<int> &entrailed) {
+  TRACE ("implied");
+  REQUIRE_VALID_STATE ();
+  REQUIRE (state () == INCONCLUSIVE,
+          "can only get implied literals only in unknown state");
   external->conclude_unknown ();
-  external->get_entrailed_literals (entrailed);
+  external->implied (entrailed);
   if (tracing_nb_lidrup_env_var_method)
     flush_proof_trace (true);
-  LOG_API_CALL_RETURNS ("get_entrailed_literals", (int) entrailed.size ());
+  LOG_API_CALL_RETURNS ("implied", (int) entrailed.size ());
 }
 
 /*------------------------------------------------------------------------*/
@@ -741,7 +747,7 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
   else if (res == 20)
     STATE (UNSATISFIED);
   else
-    STATE (STEADY);
+    STATE (INCONCLUSIVE);
 #if 0 // EXPENSIVE ALTERNATIVE ASSUMPTION CHECKING
   // This checks that the set of failed assumptions form a core using the
   // external 'copy (...)' function to copy the solver, which can be trusted
@@ -1238,16 +1244,16 @@ void Solver::conclude () {
   TRACE ("conclude");
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == UNSATISFIED || state () == SATISFIED ||
-               state () == STEADY,
-           "can only conclude in satisfied, unsatisfied or STEADY state");
+               state () == INCONCLUSIVE,
+           "can only conclude in satisfied, unsatisfied or inconclusive state");
   if (state () == UNSATISFIED)
     internal->conclude_unsat ();
   else if (state () == SATISFIED)
     external->conclude_sat ();
-  else if (state () == STEADY)
+  else if (state () == INCONCLUSIVE)
     external->conclude_unknown ();
   assert (state () == UNSATISFIED || state () == SATISFIED ||
-          state () == STEADY);
+          state () == INCONCLUSIVE);
   LOG_API_CALL_END ("conclude");
 }
 
