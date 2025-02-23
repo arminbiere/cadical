@@ -6448,8 +6448,8 @@ void Closure::add_ite_matching_proof_chain (
 
   if (degenerated_h_cond) {
     LOG ("special case: cond = lhs, h degenerated");
-    unsimplified.push_back (-lhs1);
-    unsimplified.push_back (lhs2);
+    unsimplified.push_back (lhs1); // potentially lhs1 == lhs2
+    unsimplified.push_back (-lhs2);
     LRAT_ID id1 = 0;
     if (internal->lrat) {
       lrat_chain.push_back (h_then_id);
@@ -6458,8 +6458,8 @@ void Closure::add_ite_matching_proof_chain (
     id1 = simplify_and_add_to_proof_chain (unsimplified);
 
     unsimplified.clear ();
-    unsimplified.push_back (lhs1);
-    unsimplified.push_back (-lhs2);
+    unsimplified.push_back (-lhs1);
+    unsimplified.push_back (lhs2);
     LRAT_ID id2 = 0;
     if (internal->lrat) {
       lrat_chain.push_back (h_neg_else_id);
@@ -6469,8 +6469,8 @@ void Closure::add_ite_matching_proof_chain (
 
     assert (!internal->lrat || id1);
     assert (!internal->lrat || id2);
-    reasons1.push_back (id1);
-    reasons2.push_back (id2);
+    reasons2.push_back (id1);
+    reasons1.push_back (id2);
     unsimplified.clear ();
     return;
   }
@@ -6499,8 +6499,8 @@ void Closure::add_ite_matching_proof_chain (
     id2 = simplify_and_add_to_proof_chain (unsimplified);
     assert (!internal->lrat || id1);
     assert (!internal->lrat || id2);
-    reasons1.push_back (id1);
-    reasons2.push_back (id2);
+    reasons2.push_back (id1);
+    reasons1.push_back (id2);
     unsimplified.clear ();
     return;
   }
@@ -6529,11 +6529,12 @@ void Closure::add_ite_matching_proof_chain (
     id2 = simplify_and_add_to_proof_chain (unsimplified);
     assert (!internal->lrat || id1);
     assert (!internal->lrat || id2);
-    reasons1.push_back (id1);
-    reasons2.push_back (id2);
+    reasons2.push_back (id1);
+    reasons1.push_back (id2);
     unsimplified.clear ();
     return;
   }
+  
   LOG ("normal path");
   assert (!internal->lrat || degenerated_g_then ||
           (g_then_id && g_neg_then_id));
