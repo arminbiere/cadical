@@ -161,6 +161,43 @@ struct smaller_clause_size_rank {
 };
 
 /*------------------------------------------------------------------------*/
+// There are many special cases for ITE gates and we have to keep track of
+// them as it is a gate property (rewriting might not make it obvious
+// anymore).
+// a = (a ? t : e) results in no -t and no +e gate (a --> a = t  == (-a v -a v t) & (-a v a v -t))
+// a = (-a ? t : e) results in no +t and no -e gate
+// a = (c ? a : e) results in no t gate (none of them)
+// a = (c ? t : a) results in no e gate (none of them)
+
+enum Special_ITE_GATE {
+  NORMAL = 0,
+  NO_PLUS_THEN = (1 << 0),
+  NO_NEG_THEN = (1 << 1),
+  NO_THEN = NO_PLUS_THEN + NO_NEG_THEN,
+  NO_PLUS_ELSE = (1 << 2),
+  NO_NEG_ELSE = (1 << 3),
+  NO_ELSE = NO_PLUS_ELSE + NO_NEG_ELSE,
+  COND_LHS = NO_NEG_THEN + NO_PLUS_ELSE,
+  UCOND_LHS = NO_PLUS_THEN + NO_NEG_ELSE,
+};
+
+inline bool ite_flags_no_then_clauses (int8_t flag) {
+  return (flag & NO_THEN) == NO_THEN;
+}
+
+inline bool ite_flags_no_else_clauses (int8_t flag) {
+  return (flag & NO_ELSE) == NO_ELSE;
+}
+
+inline bool ite_flags_neg_cond_lhs (int8_t flag) {
+  return (flag & UCOND_LHS) == UCOND_LHS;
+}
+
+inline bool ite_flags_cond_lhs (int8_t flag) {
+  return (flag & COND_LHS) == COND_LHS;
+}
+
+/*------------------------------------------------------------------------*/
 
 // The core structure of this algorithm: the gate. It is composed of a
 // left-hand side and an array of right-hand side.
@@ -211,6 +248,7 @@ struct Gate {
   vector<LitClausePair> neg_lhs_ids;
   bool degenerated_and_neg = false; // LRAT only relevant for AND Gates, neg lhs in RHS
   bool degenerated_and_pos = false; // LRAT only relevant for AND Gates, pos lhs in RHS
+  int8_t degenerated_ite = Special_ITE_GATE::NORMAL;
   vector<int> rhs;
 
   size_t arity () const { return rhs.size (); }
@@ -589,6 +627,9 @@ struct Closure {
   //   (yet)
   Clause *produce_rewritten_clause_lrat (Clause *c, int execept_lhs = 0,
                                          bool remove_units = true, bool = true);
+  void produce_rewritten_clause_lrat (vector<LitClausePair> &,
+                                                int execept_lhs = 0,
+                                                bool = true);
   void compute_rewritten_clause_lrat_simple (Clause *c, int except);
   // variant where we update the indices after removing the tautologies and
   // remove the tautological clauses
@@ -656,7 +697,7 @@ struct Closure {
   bool simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
                                  int removed);
   void
-  merge_ite_gate_produce_lrat (std::vector<LitClausePair> &clauses,
+  merge_ite_gate_same_then_else_lrat (std::vector<LitClausePair> &clauses,
                                std::vector<LRAT_ID> &reasons_implication,
                                std::vector<LRAT_ID> &reasons_back);
   void simplify_ite_gate_then_else_set (
