@@ -40,9 +40,9 @@ public:
 };
 
 static void formula (CaDiCaL::Solver &solver) {
-  for (int r = -1; r < 2; r += 2)
-    for (int s = -1; s < 2; s += 2)
-      for (int t = -1; t < 2; t += 2)
+  for (int r = -1; r < 3; r += 2)
+    for (int s = -1; s < 3; s += 2)
+      for (int t = -1; t < 3; t += 2)
         solver.add (r * 1), solver.add (s * 2), solver.add (t * 3),
             solver.add (0);
 }
