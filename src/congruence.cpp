@@ -2721,23 +2721,14 @@ void Closure::simplify_and_gate (Gate *g) {
   LOG (g, "simplifying");
   int falsifies = 0;
   std::vector<int>::iterator it = begin (g->rhs);
-  std::vector<LRAT_ID> &units = g->units;
   bool ulhs_in_rhs = false;
   for (auto lit : g->rhs) {
     const signed char v = internal->val (lit);
     if (v > 0) {
-      if (internal->lrat) {
-        LRAT_ID id = internal->unit_id (lit);
-        units.push_back (id);
-      }
       continue;
     }
     if (v < 0) {
       falsifies = lit;
-      if (internal->lrat) {
-        LRAT_ID id = internal->unit_id (-lit);
-        units.push_back (id);
-      }
       continue;
     }
     if (lit == -g->lhs)
@@ -4451,8 +4442,6 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
       g->degenerated_and_pos = true;
     const signed char val = internal->val (lit);
     if (val > 0) {
-      if (internal->lrat)
-        g->units.push_back (internal->unit_id (lit));
       continue;
     }
     if (val < 0) {

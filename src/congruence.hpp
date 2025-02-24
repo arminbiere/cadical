@@ -243,7 +243,6 @@ struct Gate {
   bool shrunken : 1;
   size_t hash; // TODO remove this field (the C++ implementation is caching
                // it anyway)
-  vector<LRAT_ID> units; // TODO: remove, should not be useful anymore
   vector<LitClausePair> pos_lhs_ids;
   vector<LitClausePair> neg_lhs_ids;
   bool degenerated_and_neg = false; // LRAT only relevant for AND Gates, neg lhs in RHS
