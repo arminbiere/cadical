@@ -5140,10 +5140,10 @@ void Closure::produce_ite_merge_then_else_reasons (
   produce_rewritten_clause_lrat (g->pos_lhs_ids, g->lhs, false);
   if (ite_flags_neg_cond_lhs (flag)) {
     LOG ("degenerated case with lhs = -cond");
-    LOG (g->pos_lhs_ids[0].clause, "1:");
-    LOG (g->pos_lhs_ids[1].clause, "2:");
-    reasons_back.push_back (g->pos_lhs_ids[0].clause->id);
-    reasons_implication.push_back (g->pos_lhs_ids[1].clause->id);
+    LOG (g->pos_lhs_ids[1].clause, "1:");
+    LOG (g->pos_lhs_ids[2].clause, "2:");
+    reasons_back.push_back (g->pos_lhs_ids[1].clause->id);
+    reasons_implication.push_back (g->pos_lhs_ids[2].clause->id);
     return;
   }
   if (ite_flags_cond_lhs (flag)) {
