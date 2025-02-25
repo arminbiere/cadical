@@ -553,7 +553,7 @@ struct Closure {
   void check_ite_implied (int lhs, int cond, int then_lit, int else_lit);
   void check_ite_gate_implied (Gate *g);
   void check_and_gate_implied (Gate *g);
-  void check_ite_lrat_reasons (Gate *g, bool = false);
+  void check_ite_lrat_reasons (Gate *g);
   void check_contained_module_rewriting (Clause *c, int lit, bool,
                                          int except);
   void delete_proof_chain ();

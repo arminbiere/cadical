@@ -5130,7 +5130,7 @@ void Closure::produce_ite_merge_then_else_reasons (
       (g->rhs[1] == -src && g->lhs == -dst && g->rhs[2] == g->lhs) ||
       (g->rhs[2] == -src && g->lhs == -dst && g->rhs[1] == g->lhs))
     return;
-  check_ite_lrat_reasons (g, false);
+  check_ite_lrat_reasons (g);
   assert (g->rhs.size () == 3);
   assert (src == g->rhs[1] || src == g->rhs[2]);
   assert (dst == g->rhs[1] || dst == g->rhs[2]);
@@ -5172,7 +5172,7 @@ void Closure::rewrite_ite_gate_update_lrat_reasons (Gate *g, int src,
     if (litId.current_lit == -src)
       litId.current_lit = -dst;
   }
-  check_ite_lrat_reasons (g, false);
+  check_ite_lrat_reasons (g);
 }
 
 bool Closure::rewrite_ite_gate_to_and (
@@ -6036,7 +6036,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       assert (rhs[0] != -(rhs[2]));
       assert (rhs[1] != -(rhs[2]));
       check_ite_gate_implied (g);
-      check_ite_lrat_reasons (g, false);
+      check_ite_lrat_reasons (g);
       bool negate_lhs;
       Gate *h = find_ite_gate (g, negate_lhs);
       assert (lhs == g->lhs);
@@ -6049,9 +6049,9 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
       if (h) {
         garbage = true;
         check_ite_gate_implied (g);
-        check_ite_lrat_reasons (g, false);
+        check_ite_lrat_reasons (g);
         check_ite_gate_implied (h);
-        check_ite_lrat_reasons (h, false);
+        check_ite_lrat_reasons (h);
         int normalized_lhs = negate_lhs ? not_lhs : lhs;
         std::vector<LRAT_ID> extra_reasons_lit, extra_reasons_ulit;
         add_ite_matching_proof_chain (g, h, normalized_lhs, h->lhs,
@@ -6470,7 +6470,7 @@ void Closure::add_ite_matching_proof_chain (
     Gate *g, Gate *h, int lhs1, int lhs2, std::vector<LRAT_ID> &reasons1,
     std::vector<LRAT_ID> &reasons2) {
   check_ite_lrat_reasons (g);
-  check_ite_lrat_reasons (h, false);
+  check_ite_lrat_reasons (h);
   assert (g->lhs == lhs1);
   assert (h->lhs == lhs2);
   if (lhs1 == lhs2)
@@ -6816,8 +6816,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
     lhs = -lhs;
   g->lhs = lhs;
   check_ite_gate_implied (g);
-  check_ite_lrat_reasons (
-      g, false); // due to merges done before during AND gate detection!
+  check_ite_lrat_reasons (g); // due to merges done before during AND gate detection!
 
   if (h) {
     check_ite_gate_implied (h);
@@ -6907,7 +6906,7 @@ void Closure::check_contained_module_rewriting (Clause *c, int lit,
 #endif
 }
 
-void Closure::check_ite_lrat_reasons (Gate *g, bool normalized) {
+void Closure::check_ite_lrat_reasons (Gate *g) {
 #ifndef NDEBUG
   assert (g->tag == Gate_Type::ITE_Gate);
   if (!internal->lrat)
@@ -6917,7 +6916,7 @@ void Closure::check_ite_lrat_reasons (Gate *g, bool normalized) {
   assert (g->neg_lhs_ids.empty ());
   assert (g->pos_lhs_ids.size () == 4);
 #else
-  (void) g, (void) normalized;
+  (void) g;
 #endif
 }
 
