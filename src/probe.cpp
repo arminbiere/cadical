@@ -423,7 +423,7 @@ bool Internal::probe_propagate () {
       LOG ("probe propagating %d over large clauses", -lit);
       Watches &ws = watches (lit);
       ticks += 1 + cache_lines (ws.size (),
-                                sizeof (sizeof (const_watch_iterator *)));
+                                sizeof (const_watch_iterator *));
       size_t i = 0, j = 0;
       while (i != ws.size ()) {
         const Watch w = ws[j++] = ws[i++];
