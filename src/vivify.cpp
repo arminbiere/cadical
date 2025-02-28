@@ -141,6 +141,9 @@ inline void Internal::demote_clause (Clause *c) {
 
 inline void Internal::vivify_assign (int lit, Clause *reason) {
   require_mode (VIVIFY);
+  if (level == 1 && reason && opts.probe && opts.probehbr) {
+    assert (false);
+  }
   const int idx = vidx (lit);
   assert (!vals[idx]);
   assert (!flags (idx).eliminated () || !reason);
@@ -149,9 +152,11 @@ inline void Internal::vivify_assign (int lit, Clause *reason) {
   v.trail = (int) trail.size (); // used in 'vivify_better_watch'
   assert ((int) num_assigned < max_var);
   num_assigned++;
+  probe_reason = nullptr;
   v.reason = level ? reason : 0; // for conflict analysis
   if (!level)
     learn_unit_clause (lit);
+
   const signed char tmp = sign (lit);
   vals[idx] = tmp;
   vals[-idx] = -tmp;
@@ -173,11 +178,245 @@ void Internal::vivify_assume (int lit) {
   vivify_assign (lit, 0);
 }
 
+/*------------------------------------------------------------------------*/
+// We probe during vivify when we are at level 1 and simplify the clauses on the way
+
+inline std::tuple<Clause*,int> Internal::vivify_hyper_binary_resolve (Clause *reason) {
+  require_mode (VIVIFY);
+  assert (opts.probehbr);
+  assert (level == 1);
+  assert (reason->size > 2);
+  const const_literal_iterator end = reason->end ();
+  const int *lits = reason->literals;
+  const_literal_iterator k;
+#ifndef NDEBUG
+  // First literal unassigned, all others false.
+  assert (!val (lits[0]));
+  for (k = lits + 1; k != end; k++)
+    assert (val (*k) < 0);
+  assert (var (lits[1]).level == 1);
+#endif
+  LOG (reason, "hyper binary resolving");
+  stats.hbrs++;
+  stats.hbrsizes += reason->size;
+  const int lit = lits[1];
+  int dom = -lit, non_root_level_literals = 0;
+  for (k = lits + 2; k != end; k++) {
+    const int other = -*k;
+    assert (val (other) > 0);
+    if (!var (other).level)
+      continue;
+    dom = probe_dominator (dom, other);
+    non_root_level_literals++;
+  }
+  Clause *probe_reason = reason;
+  if (non_root_level_literals) { // !(A)
+    bool contained = false;
+    for (k = lits + 1; !contained && k != end; k++)
+      contained = (*k == -dom);
+    const bool red = !contained || reason->redundant;
+    if (red)
+      stats.hbreds++;
+    LOG ("new %s hyper binary resolvent %d %d",
+         (red ? "redundant" : "irredundant"), -dom, lits[0]);
+    assert (clause.empty ());
+    clause.push_back (-dom);
+    clause.push_back (lits[0]);
+    probe_dominator_lrat (dom, reason);
+    if (lrat)
+      clear_analyzed_literals ();
+    Clause *c = new_hyper_binary_resolved_clause (red, 2);
+    probe_reason = c;
+    if (red)
+      c->hyper = true;
+    clause.clear ();
+    lrat_chain.clear ();
+    if (contained) {
+      stats.hbrsubs++;
+      LOG (reason, "subsumed original");
+      mark_garbage (reason);
+    }
+  }
+  return {probe_reason, dom};
+}
+
+inline void Internal::vivify_probe_propagate2 (int64_t &ticks) {
+  require_mode (VIVIFY);
+  while (propagated2 != trail.size ()) {
+    const int lit = -trail[propagated2++];
+    LOG ("vivify probagation %d over binary clauses", -lit);
+    Watches &ws = watches (lit);
+    ticks += 1 + cache_lines (ws.size (), sizeof (const_watch_iterator *));
+    for (const auto &w : ws) {
+      if (!w.binary ())
+        continue;
+      const signed char b = val (w.blit);
+      if (b > 0)
+        continue;
+      ticks++;
+      if (b < 0)
+        conflict = w.clause; // but continue
+      else {
+        assert (lrat_chain.empty ());
+        assert (!probe_reason);
+        build_chain_for_units (w.blit, w.clause, 0);
+        vivify_probe_assign (w.blit, w.clause, -lit);
+        lrat_chain.clear ();
+      }
+    }
+  }
+}
+inline void Internal::vivify_probe_assign (int lit, Clause *reason, int dom) {
+  require_mode (VIVIFY);
+  assert (level == 1);
+  assert (reason);
+  int idx = vidx (lit);
+  assert (!val (idx));
+  Var &v = var (idx);
+  v.level = level;
+  v.trail = (int) trail.size ();
+  assert ((int) num_assigned < max_var);
+  num_assigned++;
+  v.reason = reason;
+  probe_reason = nullptr;
+  set_parent_reason_literal (lit, dom);
+  if (!level)
+    learn_unit_clause (lit);
+  else
+    assert (level == 1);
+  const signed char tmp = sign (lit);
+  set_val (idx, tmp);
+  assert (val (lit) > 0);
+  assert (val (-lit) < 0);
+  trail.push_back (lit);
+
+  // Do not save the current phase during inprocessing but remember the
+  // number of units on the trail of the last time this literal was
+  // assigned.  This allows us to avoid some redundant failed literal
+  // probing attempts.  Search for 'propfixed' in 'probe.cpp' for details.
+  //
+  if (level)
+    propfixed (lit) = stats.all.fixed;
+
+  LOG (reason, "vivify probe assign %d", lit);
+}
+
+bool Internal::vivify_probe_propagate (int64_t &ticks) {
+  require_mode (VIVIFY);
+  assert (!unsat);
+  START (propagate);
+  int64_t before = propagated2 = propagated;
+  while (!conflict) {
+    if (propagated2 != trail.size ())
+      vivify_probe_propagate2 (ticks);
+    else if (propagated != trail.size ()) {
+      const int lit = -trail[propagated++];
+      LOG ("vivify probagating %d over large clauses", -lit);
+      Watches &ws = watches (lit);
+      ticks += 1 + cache_lines (ws.size (),
+                                sizeof (const_watch_iterator *));
+      size_t i = 0, j = 0;
+      while (i != ws.size ()) {
+        const Watch w = ws[j++] = ws[i++];
+        if (w.binary ())
+          continue;
+        const signed char b = val (w.blit);
+        if (b > 0)
+          continue;
+        ticks++;
+        if (w.clause->garbage)
+          continue;
+        const literal_iterator lits = w.clause->begin ();
+        const int other = lits[0] ^ lits[1] ^ lit;
+        // lits[0] = other, lits[1] = lit;
+        const signed char u = val (other);
+        if (u > 0)
+          ws[j - 1].blit = other;
+        else {
+          const int size = w.clause->size;
+          const const_literal_iterator end = lits + size;
+          const literal_iterator middle = lits + w.clause->pos;
+          literal_iterator k = middle;
+          int r = 0;
+          signed char v = -1;
+          while (k != end && (v = val (r = *k)) < 0)
+            k++;
+          if (v < 0) {
+            k = lits + 2;
+            assert (w.clause->pos <= size);
+            while (k != middle && (v = val (r = *k)) < 0)
+              k++;
+          }
+          w.clause->pos = k - lits;
+          assert (lits + 2 <= k), assert (k <= w.clause->end ());
+          if (v > 0)
+            ws[j - 1].blit = r;
+          else if (!v) {
+            ticks++;
+            LOG (w.clause, "unwatch %d in", r);
+            *k = lit;
+            lits[0] = other;
+            lits[1] = r;
+            watch_literal (r, lit, w.clause);
+            j--;
+          } else if (!u) {
+            if (w.clause == ignore) {
+              LOG ("ignoring propagation due to clause to vivify");
+              continue;
+            }
+            ticks++;
+            if (level == 1) {
+              lits[0] = other, lits[1] = lit;
+              assert (lrat_chain.empty ());
+              assert (!probe_reason);
+	      Clause *probe_reason; int dom;
+              std::tie (probe_reason, dom) = vivify_hyper_binary_resolve (w.clause);
+              vivify_probe_assign (other, probe_reason, dom);
+            } else {
+              ticks++;
+              assert (lrat_chain.empty ());
+              assert (!probe_reason);
+              probe_reason = w.clause;
+              build_chain_for_units (w.blit, w.clause, 0);
+	      assert (!level);
+              vivify_assign (other, 0);
+              lrat_chain.clear ();
+            }
+            vivify_probe_propagate2 (ticks);
+          } else
+            conflict = w.clause;
+        }
+      }
+      if (j != i) {
+        while (i != ws.size ())
+          ws[j++] = ws[i++];
+        ws.resize (j);
+      }
+    } else
+      break;
+  }
+  int64_t delta = propagated2 - before;
+  stats.propagations.probe += delta;
+  if (conflict)
+    LOG (conflict, "conflict");
+  STOP (propagate);
+  return !conflict;
+}
+
+
+
+/*------------------------------------------------------------------------*/
+bool Internal::vivify_propagate (int64_t &ticks) {
+  if (level == 1 && opts.probe && opts.probehbr) // we have to keep track of too many things without hbr
+    return vivify_probe_propagate (ticks);
+  else
+    return vivify_propagate_deep (ticks);
+}
 // Dedicated routine similar to 'propagate' in 'propagate.cpp' and
 // 'probe_propagate' with 'probe_propagate2' in 'probe.cpp'.  Please refer
 // to that code for more explanation on how propagation is implemented.
 
-bool Internal::vivify_propagate (int64_t &ticks) {
+bool Internal::vivify_propagate_deep (int64_t &ticks) {
   require_mode (VIVIFY);
   assert (!unsat);
   START (propagate);
@@ -899,9 +1138,10 @@ bool Internal::vivify_instantiate (
     std::vector<std::tuple<int, Clause *, bool>> &lrat_stack,
     int64_t &ticks) {
   LOG ("now trying instantiation");
+  assert (lrat_chain.empty ());
   conflict = nullptr;
   const int lit = sorted.back ();
-  LOG ("vivify instantiation");
+  LOG ("vivify instantiation on lit %s", LOGLIT (lit));
   assert (!var (lit).reason);
   assert (var (lit).level);
   assert (val (lit));
@@ -948,7 +1188,10 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   c->vivify = false;  // mark as checked / tried
   c->vivified = true; // and globally remember
 
-  assert (!c->garbage);
+  if (c->garbage) {
+    assert (opts.probe);
+    return 0;
+  }
 
   auto &lrat_stack = vivifier.lrat_stack;
   auto &ticks = vivifier.ticks;
@@ -1151,6 +1394,22 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   bool redundant = false;
   const int level_after_assumptions = level;
   assert (level_after_assumptions);
+  if (c->garbage) {
+    LOG ("gabrage clause due to probing, ignoring");
+
+    if (conflict && level == level_after_assumptions) {
+      LOG ("forcing backtracking at least one level after conflict");
+      backtrack_without_updating_phases (level - 1);
+    }
+
+    clause.clear ();
+    clear_analyzed_literals (); // TODO why needed?
+    lrat_chain.clear ();
+    unit_chain.clear ();
+    conflict = nullptr;
+    return 0;
+  }
+
   vivify_deduce (c, conflict, subsume, &subsuming, redundant);
 
   bool res;
@@ -1164,8 +1423,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
     unit_chain.clear ();
     reverse (lrat_chain.begin (), lrat_chain.end ());
   }
-
-  if (subsuming) {
+   if (subsuming) {
     assert (c != subsuming);
     LOG (c, "deleting subsumed clause");
     if (c->redundant && subsuming->redundant && c->glue < subsuming->glue) {
@@ -1277,9 +1535,11 @@ void Internal::vivify_build_lrat (
       continue;
     } else
       stack.push_back ({lit, reason, true});
+
     for (const auto &other : *reason) {
       if (other == lit)
         continue;
+      LOG ("analyzing %s", LOGLIT (other));
       Var &v = var (other);
       Flags &f = flags (other);
       if (f.seen)
@@ -1293,6 +1553,7 @@ void Internal::vivify_build_lrat (
       }
       if (v.reason) { // recursive justification
         LOG ("VIVIFY LRAT pushing %d", other);
+	assert (other);
         stack.push_back ({other, v.reason, false});
       }
     }

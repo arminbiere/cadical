@@ -128,7 +128,7 @@ void Internal::probe_dominator_lrat (int dom, Clause *reason) {
     Var u = var (other);
     if (u.level) {
       if (!u.reason) {
-        LOG ("this may be a problem %d", other);
+        LOG ("this may be a problem %s", LOGLIT(other));
         continue;
       }
       probe_dominator_lrat (dom, u.reason);
@@ -148,7 +148,7 @@ void Internal::probe_dominator_lrat (int dom, Clause *reason) {
 // Compute a dominator of two literals in the binary implication tree.
 
 int Internal::probe_dominator (int a, int b) {
-  require_mode (PROBE);
+//  require_mode (PROBE);
   int l = a, k = b;
   Var *u = &var (l), *v = &var (k);
   assert (val (l) > 0), assert (val (k) > 0);
@@ -350,6 +350,7 @@ void Internal::probe_assign_unit (int lit) {
 // same as in propagate but inlined here
 //
 inline void Internal::probe_lrat_for_units (int lit) {
+  require_mode (PROBE);
   if (!lrat)
     return;
   if (level)
@@ -380,9 +381,8 @@ inline void Internal::probe_lrat_for_units (int lit) {
 // perform hyper binary resolution and thus actually build an implication
 // tree instead of a DAG.  Statistics counters are also different.
 
-inline void Internal::probe_propagate2 () {
+inline void Internal::probe_propagate2 (int64_t &ticks) {
   require_mode (PROBE);
-  int64_t &ticks = stats.ticks.probe;
   while (propagated2 != trail.size ()) {
     const int lit = -trail[propagated2++];
     LOG ("probe propagating %d over binary clauses", -lit);
@@ -409,15 +409,14 @@ inline void Internal::probe_propagate2 () {
   }
 }
 
-bool Internal::probe_propagate () {
+bool Internal::probe_propagate (int64_t &ticks) {
   require_mode (PROBE);
   assert (!unsat);
   START (propagate);
   int64_t before = propagated2 = propagated;
-  int64_t &ticks = stats.ticks.probe;
   while (!conflict) {
     if (propagated2 != trail.size ())
-      probe_propagate2 ();
+      probe_propagate2 (ticks);
     else if (propagated != trail.size ()) {
       const int lit = -trail[propagated++];
       LOG ("probe propagating %d over large clauses", -lit);
@@ -469,6 +468,10 @@ bool Internal::probe_propagate () {
             watch_literal (r, lit, w.clause);
             j--;
           } else if (!u) {
+            if (w.clause == ignore) {
+              LOG ("ignoring propagation due to clause to vivify");
+              continue;
+            }
             ticks++;
             if (level == 1) {
               lits[0] = other, lits[1] = lit;
@@ -485,7 +488,7 @@ bool Internal::probe_propagate () {
               probe_assign_unit (other);
               lrat_chain.clear ();
             }
-            probe_propagate2 ();
+            probe_propagate2 (ticks);
           } else
             conflict = w.clause;
         }
@@ -558,8 +561,9 @@ void Internal::failed_literal (int failed) {
   assert (!val (uip));
   probe_assign_unit (-uip);
   lrat_chain.clear ();
+  int64_t ticks = stats.ticks.probe;
 
-  if (!probe_propagate ())
+  if (!probe_propagate (ticks))
     learn_empty_clause ();
 
   size_t j = 0;
@@ -578,7 +582,7 @@ void Internal::failed_literal (int failed) {
       get_probehbr_lrat (parent, uip); // this is computed during
       probe_assign_unit (-parent);     // propagation and can include
       lrat_chain.clear ();             // multiple chains where only one
-      if (!probe_propagate ())
+      if (!probe_propagate (ticks))
         learn_empty_clause (); // is needed!
     }
     uip = parent;
@@ -825,6 +829,7 @@ bool Internal::probe () {
 
   assert (unsat || propagated == trail.size ());
   propagated = propagated2 = trail.size ();
+  int64_t &ticks = stats.ticks.probe;
 
   int probe;
   init_probehbr_lrat ();
@@ -833,7 +838,7 @@ bool Internal::probe () {
     stats.probed++;
     LOG ("probing %d", probe);
     probe_assign_decision (probe);
-    if (probe_propagate ())
+    if (probe_propagate (ticks))
       backtrack ();
     else
       failed_literal (probe);
@@ -937,8 +942,8 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
     decompose ();
     if (ternary ())
       decompose (); // If we derived a binary clause
-    if (probe ())
-      decompose ();
+    // if (probe ())
+    //   decompose ();
 
     if (extract_gates ())
       decompose ();

@@ -353,7 +353,8 @@ int Internal::lookahead_probing () {
     int hbrs;
 
     probe_assign_decision (probe);
-    if (probe_propagate ())
+    int64_t ticks;
+    if (probe_propagate (ticks))
       hbrs = trail.size (), backtrack ();
     else
       hbrs = 0, failed_literal (probe);

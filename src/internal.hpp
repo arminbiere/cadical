@@ -973,6 +973,7 @@ struct Internal {
   void vivify_assign (int lit, Clause *);
   void vivify_assume (int lit);
   bool vivify_propagate (int64_t &);
+  bool vivify_propagate_deep (int64_t &);
   void vivify_deduce (Clause *candidate, Clause *conflct, int implied,
                       Clause **, bool &);
   bool vivify_clause (Vivifier &, Clause *candidate);
@@ -1327,14 +1328,19 @@ struct Internal {
   void probe_dominator_lrat (int dom, Clause *reason);
   int probe_dominator (int a, int b);
   int hyper_binary_resolve (Clause *);
-  void probe_propagate2 ();
-  bool probe_propagate ();
+  void probe_propagate2 (int64_t &ticks);
+  bool probe_propagate (int64_t &ticks);
   bool is_binary_clause (Clause *c, int &, int &);
   void generate_probes ();
   void flush_probes ();
   int next_probe ();
   bool probe ();
   void inprobe (bool update_limits = true);
+
+  std::tuple<Clause*,int> vivify_hyper_binary_resolve (Clause *);
+  void vivify_probe_propagate2 (int64_t &ticks);
+  void vivify_probe_assign (int lit, Clause *, int dom);
+  bool vivify_probe_propagate (int64_t &ticks);
 
   // ProbSAT/WalkSAT implementation called initially or from 'rephase'.
   //
