@@ -197,8 +197,8 @@ inline std::tuple<Clause*,int> Internal::vivify_hyper_binary_resolve (Clause *re
   assert (var (lits[1]).level == 1);
 #endif
   LOG (reason, "hyper binary resolving");
-  stats.hbrs++;
-  stats.hbrsizes += reason->size;
+  stats.vivifyhbrs++;
+  stats.vivifyhbrsizes += reason->size;
   const int lit = lits[1];
   int dom = -lit, non_root_level_literals = 0;
   for (k = lits + 2; k != end; k++) {
@@ -216,7 +216,7 @@ inline std::tuple<Clause*,int> Internal::vivify_hyper_binary_resolve (Clause *re
       contained = (*k == -dom);
     const bool red = !contained || reason->redundant;
     if (red)
-      stats.hbreds++;
+      stats.vivifyhbreds++;
     LOG ("new %s hyper binary resolvent %d %d",
          (red ? "redundant" : "irredundant"), -dom, lits[0]);
     assert (clause.empty ());
@@ -232,7 +232,7 @@ inline std::tuple<Clause*,int> Internal::vivify_hyper_binary_resolve (Clause *re
     clause.clear ();
     lrat_chain.clear ();
     if (contained) {
-      stats.hbrsubs++;
+      stats.vivifyhbrsubs++;
       LOG (reason, "subsumed original");
       mark_garbage (reason);
     }
@@ -266,6 +266,14 @@ inline void Internal::vivify_probagate2 (int64_t &ticks) {
     }
   }
 }
+
+inline void Internal::vivify_set_parent_reason_literal (int lit, int reason) {
+  const int idx = vidx (lit);
+  if (lit < 0)
+    reason = -reason;
+  parents[idx] = reason;
+}
+
 inline void Internal::vivify_probe_assign (int lit, Clause *reason, int dom) {
   require_mode (VIVIFY);
   assert (level == 1);
@@ -280,7 +288,7 @@ inline void Internal::vivify_probe_assign (int lit, Clause *reason, int dom) {
   num_assigned++;
   v.reason = reason;
   probe_reason = nullptr;
-  set_parent_reason_literal (lit, dom);
+  vivify_set_parent_reason_literal (lit, dom);
   if (!level)
     learn_unit_clause (lit);
   else
@@ -398,7 +406,7 @@ bool Internal::vivify_probagate (int64_t &ticks) {
       break;
   }
   int64_t delta = propagated2 - before;
-  stats.propagations.probe += delta;
+  stats.propagations.vivify += delta;
   if (conflict)
     LOG (conflict, "conflict");
   STOP (propagate);

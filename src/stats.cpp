@@ -273,6 +273,15 @@ void Stats::print (Internal *internal) {
          stats.hbreds, percent (stats.hbreds, stats.hbrs));
     PRT ("  hbrsubs:       %15" PRId64 "   %10.2f %%  per hbr",
          stats.hbrsubs, percent (stats.hbrsubs, stats.hbrs));
+    
+    PRT ("  vivify hbrs:   %15" PRId64 "   %10.2f    per probed",
+         stats.vivifyhbrs, relative (stats.vivifyhbrs, stats.probed));
+    PRT ("  vivifyhbrsizes:%15" PRId64 "   %10.2f    per hbr",
+         stats.vivifyhbrsizes, relative (stats.vivifyhbrsizes, stats.vivifyhbrs));
+    PRT ("  vivify hbreds: %15" PRId64 "   %10.2f %%  per hbr",
+         stats.vivifyhbreds, percent (stats.vivifyhbreds, stats.vivifyhbrs));
+    PRT ("  vivify hbrsubs:%15" PRId64 "   %10.2f %%  per hbr",
+         stats.vivifyhbrsubs, percent (stats.vivifyhbrsubs, stats.vivifyhbrs));
   }
   PRT ("  units:         %15" PRId64 "   %10.2f    interval", stats.units,
        relative (stats.conflicts, stats.units));

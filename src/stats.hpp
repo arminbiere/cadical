@@ -243,6 +243,10 @@ struct Stats {
   int64_t vivifyimplied = 0;  // implied during vivification
   int64_t vivifyinst = 0;     // instantiation during vivification
   int64_t vivifydemote = 0;   // demoting during vivification
+  int64_t vivifyhbrs = 0;           // hyper binary resolvents
+  int64_t vivifyhbrsizes = 0;       // sum of hyper resolved base clauses
+  int64_t vivifyhbreds = 0;         // redundant hyper binary resolvents
+  int64_t vivifyhbrsubs = 0;        // subsuming hyper binary resolvents
   int64_t transreds = 0;
   int64_t transitive = 0;
   struct {

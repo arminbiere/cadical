@@ -1341,6 +1341,7 @@ struct Internal {
   void vivify_probagate2 (int64_t &ticks);
   void vivify_probe_assign (int lit, Clause *, int dom);
   bool vivify_probagate (int64_t &ticks);
+  void vivify_set_parent_reason_literal (int lit, int reason);
 
   // ProbSAT/WalkSAT implementation called initially or from 'rephase'.
   //
