@@ -1338,9 +1338,9 @@ struct Internal {
   void inprobe (bool update_limits = true);
 
   std::tuple<Clause*,int> vivify_hyper_binary_resolve (Clause *);
-  void vivify_probe_propagate2 (int64_t &ticks);
+  void vivify_probagate2 (int64_t &ticks);
   void vivify_probe_assign (int lit, Clause *, int dom);
-  bool vivify_probe_propagate (int64_t &ticks);
+  bool vivify_probagate (int64_t &ticks);
 
   // ProbSAT/WalkSAT implementation called initially or from 'rephase'.
   //

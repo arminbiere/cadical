@@ -141,7 +141,7 @@ inline void Internal::demote_clause (Clause *c) {
 
 inline void Internal::vivify_assign (int lit, Clause *reason) {
   require_mode (VIVIFY);
-  if (level == 1 && reason && opts.probe && opts.probehbr) {
+  if (level == 1 && reason && opts.vivifyprobe && opts.probe && opts.probehbr) {
     assert (false);
   }
   const int idx = vidx (lit);
@@ -240,7 +240,7 @@ inline std::tuple<Clause*,int> Internal::vivify_hyper_binary_resolve (Clause *re
   return {probe_reason, dom};
 }
 
-inline void Internal::vivify_probe_propagate2 (int64_t &ticks) {
+inline void Internal::vivify_probagate2 (int64_t &ticks) {
   require_mode (VIVIFY);
   while (propagated2 != trail.size ()) {
     const int lit = -trail[propagated2++];
@@ -270,6 +270,7 @@ inline void Internal::vivify_probe_assign (int lit, Clause *reason, int dom) {
   require_mode (VIVIFY);
   assert (level == 1);
   assert (reason);
+  assert (opts.vivifyprobe);
   int idx = vidx (lit);
   assert (!val (idx));
   Var &v = var (idx);
@@ -301,14 +302,15 @@ inline void Internal::vivify_probe_assign (int lit, Clause *reason, int dom) {
   LOG (reason, "vivify probe assign %d", lit);
 }
 
-bool Internal::vivify_probe_propagate (int64_t &ticks) {
+bool Internal::vivify_probagate (int64_t &ticks) {
   require_mode (VIVIFY);
   assert (!unsat);
   START (propagate);
+  assert (opts.vivifyprobe);
   int64_t before = propagated2 = propagated;
   while (!conflict) {
     if (propagated2 != trail.size ())
-      vivify_probe_propagate2 (ticks);
+      vivify_probagate2 (ticks);
     else if (propagated != trail.size ()) {
       const int lit = -trail[propagated++];
       LOG ("vivify probagating %d over large clauses", -lit);
@@ -382,7 +384,7 @@ bool Internal::vivify_probe_propagate (int64_t &ticks) {
               vivify_assign (other, 0);
               lrat_chain.clear ();
             }
-            vivify_probe_propagate2 (ticks);
+            vivify_probagate2 (ticks);
           } else
             conflict = w.clause;
         }
@@ -407,8 +409,8 @@ bool Internal::vivify_probe_propagate (int64_t &ticks) {
 
 /*------------------------------------------------------------------------*/
 bool Internal::vivify_propagate (int64_t &ticks) {
-  if (level == 1 && opts.probe && opts.probehbr) // we have to keep track of too many things without hbr
-    return vivify_probe_propagate (ticks);
+  if (level == 1 && opts.vivifyprobe && opts.probe && opts.probehbr) // we have to keep track of too many things without hbr
+    return vivify_probagate (ticks);
   else
     return vivify_propagate_deep (ticks);
 }
