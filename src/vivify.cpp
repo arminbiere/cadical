@@ -141,7 +141,7 @@ inline void Internal::demote_clause (Clause *c) {
 
 inline void Internal::vivify_assign (int lit, Clause *reason) {
   require_mode (VIVIFY);
-  if (level == 1 && reason && opts.vivifyprobe && opts.probe && opts.probehbr) {
+  if (level == 1 && reason && opts.vivifyprobe && opts.probehbr) {
     assert (false);
   }
   const int idx = vidx (lit);
@@ -417,7 +417,7 @@ bool Internal::vivify_probagate (int64_t &ticks) {
 
 /*------------------------------------------------------------------------*/
 bool Internal::vivify_propagate (int64_t &ticks) {
-  if (level == 1 && opts.vivifyprobe && opts.probe && opts.probehbr) // we have to keep track of too many things without hbr
+  if (level == 1 && opts.vivifyprobe && opts.probehbr) // we have to keep track of too many things without hbr
     return vivify_probagate (ticks);
   else
     return vivify_propagate_deep (ticks);
@@ -1199,7 +1199,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   c->vivified = true; // and globally remember
 
   if (c->garbage) {
-    assert (opts.probe);
+    assert (opts.vivifyprobe);
     return 0;
   }
 
