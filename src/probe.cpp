@@ -942,8 +942,8 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
     decompose ();
     if (ternary ())
       decompose (); // If we derived a binary clause
-    // if (probe ())
-    //   decompose ();
+    if (probe ())
+      decompose ();
 
     if (extract_gates ())
       decompose ();
