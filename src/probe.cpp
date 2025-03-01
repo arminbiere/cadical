@@ -468,10 +468,6 @@ bool Internal::probe_propagate (int64_t &ticks) {
             watch_literal (r, lit, w.clause);
             j--;
           } else if (!u) {
-            if (w.clause == ignore) {
-              LOG ("ignoring propagation due to clause to vivify");
-              continue;
-            }
             ticks++;
             if (level == 1) {
               lits[0] = other, lits[1] = lit;
