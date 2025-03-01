@@ -709,6 +709,13 @@ void Closure::produce_rewritten_clause_lrat_and_clean (
   size_t j = 0;
   for (size_t i = 0; i < litIds.size (); ++i) {
     assert (j <= i);
+    if (!litIds[i].clause) {
+      if (i == old_position1)
+	old_position1 = -1;
+      if (i == old_position2)
+	old_position2 = -1;
+      continue;
+    }
     litIds[j].clause = produce_rewritten_clause_lrat (
         litIds[i].clause, except_lhs, remove_units);
     litIds[j].current_lit =
