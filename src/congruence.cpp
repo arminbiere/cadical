@@ -4397,7 +4397,6 @@ void Closure::find_equivalences () {
                   lit, other,
                   internal->lrat ? marked_mu1 (-other).clause : nullptr,
                   w.clause)) {
-            ++internal->stats.congruence.congruent;
           }
           unmark_all ();
           if (internal->unsat)
