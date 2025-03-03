@@ -7076,8 +7076,30 @@ struct litpair_smaller {
   litpair_smaller (Internal *i) : internal (i) {}
   bool operator() (const lit_implication &a,
                    const lit_implication &b) const {
-    const auto s = litpair_rank (internal) (a);
-    const auto t = litpair_rank (internal) (b);
+    const uint64_t s = litpair_rank (internal) (a);
+    const uint64_t t = litpair_rank (internal) (b);
+    return s < t;
+  }
+};
+
+struct litequivalence_rank {
+  CaDiCaL::Internal *internal;
+  litequivalence_rank (Internal *i) : internal (i) {}
+  typedef uint64_t Type;
+  Type operator() (const lit_equivalence &a) const {
+    uint64_t lita = internal->vlit (a.first);
+    uint64_t litb = internal->vlit (a.second);
+    return (lita << 32) + litb;
+  }
+};
+
+struct litequivalence_smaller {
+  CaDiCaL::Internal *internal;
+  litequivalence_smaller (Internal *i) : internal (i) {}
+  bool operator() (const lit_equivalence &a,
+                   const lit_equivalence &b) const {
+    const uint64_t s = litequivalence_rank (internal) (a);
+    const uint64_t t = litequivalence_rank (internal) (b);
     return s < t;
   }
 };
@@ -7287,8 +7309,8 @@ void Closure::find_conditional_equivalences (int lit,
          litpair_rank (this->internal), litpair_smaller (this->internal));
 
   extract_condeq_pairs (lit, condbin, condeq);
-  MSORT (internal->opts.radixsortlim, begin (condbin), end (condbin),
-         litpair_rank (this->internal), litpair_smaller (this->internal));
+  MSORT (internal->opts.radixsortlim, begin (condeq), end (condeq),
+         litequivalence_rank (this->internal), litequivalence_smaller (this->internal));
 
 #ifdef LOGGING
   for (auto pair : condeq)
