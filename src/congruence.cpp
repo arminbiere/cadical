@@ -6973,6 +6973,10 @@ void Closure::init_ite_gate_extraction (
   CONTINUE_COUNTING_NEXT_CLAUSE:;
   }
 
+  LOG ("counted %zu ternary ITE clauses "
+       "(%.0f%% of %" PRIu64 " irredundant clauses)",
+       ternary.size(), percent (ternary.size(), internal->stats.current.irredundant),
+       internal->stats.current.irredundant);
   for (auto c : ternary) {
     assert (!c->garbage);
     assert (!c->redundant);
@@ -7108,9 +7112,6 @@ lit_implications::const_iterator
 Closure::find_lit_implication_second_literal (
     int lit, lit_implications::const_iterator begin,
     lit_implications::const_iterator end) {
-  LOG ("searching for %d in", lit);
-  for (auto it = begin; it != end; ++it)
-    LOG ("%d [%d]", it->first, it->second);
   lit_implications::const_iterator found = std::lower_bound (
       begin, end, lit_implication{lit, lit},
       [] (const lit_implication &a, const lit_implication &b) {
@@ -7198,11 +7199,6 @@ void Closure::extract_condeq_pairs (int lit, lit_implications &condbin,
   lit_implications::const_iterator pos_begin = begin;
   int next_lit = 0;
 
-#ifdef LOGGING
-  for (const auto &pair : condbin)
-    LOG ("unsorted conditional %d equivalence %d = %d", lit, pair.first,
-         pair.second);
-#endif
   LOG ("searching for first positive literal for lit %d", lit);
   for (;;) {
     if (pos_begin == end)
@@ -7269,8 +7265,8 @@ void Closure::extract_condeq_pairs (int lit, lit_implications &condbin,
     const size_t neg_size = neg_end - neg_begin;
     if (pos_size <= neg_size) {
       LOG ("searching negation of %zu conditional binary clauses "
-           "with positive %d in %zu conditional binary clauses with %d",
-           pos_size, (pos_lit), neg_size, (neg_lit));
+           "with positive %s in %zu conditional binary clauses with %s",
+           pos_size, LOGLIT (pos_lit), neg_size, LOGLIT (neg_lit));
       search_condeq (lit, pos_lit, pos_begin, pos_end, neg_lit, neg_begin,
                      neg_end, condeq);
     } else {
