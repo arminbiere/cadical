@@ -56,7 +56,7 @@ void Solver::transition_to_steady_state () {
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
-  } else if (state() == INCONCLUSIVE) {
+  } else if (state () == INCONCLUSIVE) {
     external->reset_assumptions ();
     external->reset_concluded ();
     external->reset_constraint ();
@@ -727,7 +727,7 @@ void Solver::implied (std::vector<int> &entrailed) {
   TRACE ("implied");
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == INCONCLUSIVE,
-          "can only get implied literals only in unknown state");
+           "can only get implied literals only in unknown state");
   external->conclude_unknown ();
   external->implied (entrailed);
   if (tracing_nb_lidrup_env_var_method)
@@ -771,11 +771,13 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
       FATAL ("copying assumption checker failed");
   }
 #endif
+#if 0 // was necessary when INCONCLUSIVE state did not exist
   if (!res) {
     external->reset_assumptions ();
     external->reset_constraint ();
     external->reset_concluded ();
   }
+#endif
   return res;
 }
 
@@ -1243,9 +1245,10 @@ bool Solver::disconnect_proof_tracer (FileTracer *tracer) {
 void Solver::conclude () {
   TRACE ("conclude");
   REQUIRE_VALID_STATE ();
-  REQUIRE (state () == UNSATISFIED || state () == SATISFIED ||
-               state () == INCONCLUSIVE,
-           "can only conclude in satisfied, unsatisfied or inconclusive state");
+  REQUIRE (
+      state () == UNSATISFIED || state () == SATISFIED ||
+          state () == INCONCLUSIVE,
+      "can only conclude in satisfied, unsatisfied or inconclusive state");
   if (state () == UNSATISFIED)
     internal->conclude_unsat ();
   else if (state () == SATISFIED)
