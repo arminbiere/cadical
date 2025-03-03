@@ -293,7 +293,15 @@ public:
   //
   int solve ();
 
-  // Get value (-lit=false, lit=true) of valid non-zero literal.
+  // Get the value of valid non-zero literal.  This follows the IPASIR
+  // semantics which says to return 'lit' if 'lit' is assigned to 'true' and
+  // '-lit' if 'lit' is assigne to false.  This has the consequence that the
+  // return literal is always assigned to 'true' and thus might be a bit
+  // confusing.  To avoid the headache of this semantics (which we
+  // unfortunately should follow to be compatabile with IPASIR) the user can
+  // simply use positive variable indices instead of literals.  Then the
+  // return value is negative if the variable assigne to 'false' and positive
+  // it is assigne to 'true'.
   //
   //   require (SATISFIED)
   //   ensure (SATISFIED)
