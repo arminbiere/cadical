@@ -293,15 +293,15 @@ public:
   //
   int solve ();
 
-  // Get the value of valid non-zero literal.  This follows the IPASIR
+  // Get the value of a valid non-zero literal.  This follows the IPASIR
   // semantics which says to return 'lit' if 'lit' is assigned to 'true' and
-  // '-lit' if 'lit' is assigne to false.  This has the consequence that the
-  // return literal is always assigned to 'true' and thus might be a bit
-  // confusing.  To avoid the headache of this semantics (which we
+  // '-lit' if 'lit' is assigned to false.  This has the consequence that
+  // the returned literal is always assigned to 'true' and thus might be a
+  // bit confusing.  To avoid the headache of these semantics (which we
   // unfortunately should follow to be compatabile with IPASIR) the user can
   // simply use positive variable indices instead of literals.  Then the
-  // return value is negative if the variable assigne to 'false' and positive
-  // it is assigne to 'true'.
+  // returned integer is negative if the variable is assigned to 'false' and
+  // positive it is assigne to 'true'.
   //
   //   require (SATISFIED)
   //   ensure (SATISFIED)
@@ -490,14 +490,17 @@ public:
 
   // Returns
   //
-  //    0 = UNKNOWN      (unit propagation did not lead to a conflict nor to a 
-  //                      complete assignment, or limit reached or interrupted 
-  //                      through 'terminate')
+  //    0 = UNKNOWN      
   //   10 = SATISFIABLE
   //   20 = UNSATISFIABLE
-
+  //
+  // The 'UNKNOWN' result means that unit propagation did not lead to a
+  // conflict nor to a complete assignment, or limit reached or interrupted
+  // through 'terminate'.
+  //
   //   require (READY)
   //   ensure (INCONCLUSIVE  | SATISFIED | UNSATISFIED)
+  //
   int propagate ();
 
   //

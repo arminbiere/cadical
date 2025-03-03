@@ -322,26 +322,26 @@ struct External {
   // 'true' and '-elit' if it is 'false'.  This is a bit confusing but has
   // been standardized in IPASIR:
   //
-  // Assume we 'eidx = 13' and 'vals[13] == false' then '13' is 'false' in
-  // this terminology of the IPASIR interfac.  Accordingly we get
+  // Consiert 'eidx = 13' and 'vals[13] == false' then '13' is 'false' in
+  // this terminology of the IPASIR interface.  Accordingly we get
   //
   //   ival (13) = -13
   //
   // However and this is the confusing thing, as '-13' is true the 'ival'
-  // function should also return '-13'
+  // function should also return '-13':
   //
   //   ival (-13) = -13
   //
-  // With '13' being 'true' so 'vals[13] = true' we similarly have
+  // Now with '13' assumed 'true' so 'vals[13] = true' we similarly have
   //
   //   ival (13) = 13         as '13' is true'
   //
   //   ival (-13) = 13        as '-13' is false
   //
   // To summarize we can think of the IPASIR 'ipasir_val' function, which
-  // 'CaDiCaL' follows as returning the phase literal which is true under
-  // the current assignment no matter whether you give the positive literal
-  // or its negation.
+  // 'CaDiCaL' follows as returning the phase of the literal which is true
+  // under the current assignment no matter whether you give the positive
+  // literal or its negation and thus 'ival (lit) == ival (-lit))"
 
   inline int ival (int elit) const {
     assert (elit != INT_MIN);
