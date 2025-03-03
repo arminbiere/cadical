@@ -7114,14 +7114,14 @@ Closure::find_lit_implication_second_literal (
     lit_implications::const_iterator end) {
   lit_implications::const_iterator found = std::lower_bound (
       begin, end, lit_implication{lit, lit},
-      [] (const lit_implication &a, const lit_implication &b) {
-        return a.second < b.second;
+      [this] (const lit_implication &a, const lit_implication &b) {
+        return internal->vlit (a.second) < internal->vlit (b.second);
       });
 #ifndef NDEBUG
   auto found2 = std::binary_search (
       begin, end, lit_implication{lit, lit},
-      [] (const lit_implication &a, const lit_implication &b) {
-        return a.second < b.second;
+      [this] (const lit_implication &a, const lit_implication &b) {
+        return internal->vlit (a.second) < internal->vlit (b.second);
       });
 #endif
 
