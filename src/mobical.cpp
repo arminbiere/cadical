@@ -1300,6 +1300,9 @@ struct Call {
     MAXALLOC        = shift ( 38 ),
     LEAKALLOC       = shift ( 39 ),
 #endif
+    PROPAGATE_ASSUMPTIONS = shift (40),
+    IMPLIED_LITERALS = shift (41),
+    RESET_ASSUMPTIONS = shift (42),
 
     // clang-format on
 
@@ -1319,7 +1322,7 @@ struct Call {
               FIXED | FREEZE | FROZEN | MELT | CONSTRAIN | OBSERVE | LEMMA,
     EXTENDMAP = PHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
     AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS |
-            FLUSHPROOFTRACE | CLOSEPROOFTRACE,
+            FLUSHPROOFTRACE | CLOSEPROOFTRACE | PROPAGATE_ASSUMPTIONS,
   };
 
   Type type; // Explicit typing.
@@ -1691,6 +1694,42 @@ struct SimplifyCall : public Call {
   Call *copy () { return new SimplifyCall (arg, res); }
   const char *keyword () { return "simplify"; }
 };
+
+struct PropagateAssumptionsCall : public Call {
+  PropagateAssumptionsCall (int r = 0) : Call (PROPAGATE_ASSUMPTIONS, 0, r) {}
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    std::vector<int> entrailed;
+    s->implied (entrailed);
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << "propagate_assumptions " << arg << " " << res << endl; }
+  Call *copy () { return new SimplifyCall (arg, res); }
+  const char *keyword () { return "propagate_assumptions"; }
+};
+
+struct ImpliedCall : public Call {
+  ImpliedCall (int r = 0) : Call (IMPLIED_LITERALS, 0, r) {}
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    std::vector<int> entrailed;
+    s->implied (entrailed);
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << "get_entrailed_literals" << endl; }
+  Call *copy () { return new SimplifyCall (arg, res); }
+  const char *keyword () { return "get_entrailed_literals"; }
+};
+
+struct ResetAssumptionsCall : public Call {
+  ResetAssumptionsCall (int r = 0) : Call (RESET_ASSUMPTIONS, 0, r) {}
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    s->reset_assumptions ();
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << "reset_assumptions" << endl; }
+  Call *copy () { return new SimplifyCall (arg, res); }
+  const char *keyword () { return "reset_assumptions"; }
+};
+
 
 struct LookaheadCall : public Call {
   LookaheadCall (int r = 0) : Call (LOOKAHEAD, 0, r) {}
@@ -4603,6 +4642,12 @@ void Reader::parse () {
             "option --leak-alloc has to be anabled for leak_alloc calls");
       c = new LeakAllocCall ();
 #endif
+    } else if (!strcmp (keyword, "propagate_assumptions")) {
+      c = new PropagateAssumptionsCall ();
+    } else if (!strcmp (keyword, "get_entrailed_literals")) {
+      c = new ImpliedCall ();
+    } else if (!strcmp (keyword, "reset_assumptions")) {
+      c = new ResetAssumptionsCall ();
     } else
       error ("invalid keyword '%s'", keyword);
 
