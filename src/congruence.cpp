@@ -125,19 +125,26 @@ bool gate_contains (Gate *g, int lit) {
 }
 /*------------------------------------------------------------------------*/
 struct compact_binary_rank {
+  CaDiCaL::Internal *internal;
   typedef uint64_t Type;
+  compact_binary_rank (Internal *i) : internal (i) {}
   uint64_t operator() (const CompactBinary &a) {
-    return ((uint64_t) a.lit1 << 32) + a.lit2;
+    return ((uint64_t) internal->vlit (a.lit1) << 32) + internal->vlit (a.lit2);
   };
 };
 
 struct compact_binary_order {
-  bool operator() (const CompactBinary &a, const CompactBinary &b) {
-    return compact_binary_rank () (a) < compact_binary_rank () (b);
+  CaDiCaL::Internal *internal;
+  compact_binary_order (Internal *i) : internal (i) {}
+  bool operator() (const CompactBinary &a,
+                                     const CompactBinary &b) {
+    return compact_binary_rank (internal) (a) < compact_binary_rank (internal) (b);
   };
 };
 
 bool Closure::find_binary (int lit, int other) const {
+  if (internal->vlit (lit) > internal->vlit (other))
+    swap (lit, other);
   const auto offsize =
       offsetsize[internal->vlit (lit)]; // in C++17: [offset, size] =
   const auto offset = offsize.first;
@@ -183,7 +190,7 @@ void Closure::extract_binaries () {
   }
 
   MSORT (internal->opts.radixsortlim, begin (binaries), end (binaries),
-         compact_binary_rank (), compact_binary_order ());
+         compact_binary_rank (internal), compact_binary_order (internal));
 
   {
     const size_t size = binaries.size ();
@@ -252,7 +259,7 @@ void Closure::extract_binaries () {
   // kissat has code to remove duplicates, which we have already removed
   // before starting congruence
   MSORT (internal->opts.radixsortlim, begin (binaries), end (binaries),
-         compact_binary_rank (), compact_binary_order ());
+         compact_binary_rank (internal), compact_binary_order (internal));
   const size_t new_size = binaries.size ();
   {
     size_t i = 0;
