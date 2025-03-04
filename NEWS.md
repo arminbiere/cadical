@@ -1,3 +1,7 @@
+Version 2.1.3-pp:
+-----------------
+- Experimental version with highly unstable additions, do not use it.
+
 Version 2.1.3
 -------------
 
