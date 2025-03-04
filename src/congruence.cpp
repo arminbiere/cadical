@@ -4302,7 +4302,7 @@ void Closure::find_units () {
   RESTART:
     if (!internal->flags (v).active ())
       continue;
-    for (int sgn = -1; sgn < 1; sgn += 2) {
+    for (int sgn = -1; sgn <= 1; sgn += 2) {
       int lit = v * sgn;
       for (auto w : internal->watches (lit)) {
         if (!w.binary ())
