@@ -1698,8 +1698,7 @@ struct SimplifyCall : public Call {
 struct PropagateAssumptionsCall : public Call {
   PropagateAssumptionsCall (int r = 0) : Call (PROPAGATE_ASSUMPTIONS, 0, r) {}
   void execute (Solver *&s, ExtendMap &extendmap) {
-    std::vector<int> entrailed;
-    s->implied (entrailed);
+    s->propagate ();
     (void) (extendmap);
   }
   void print (ostream &o) { o << "propagate_assumptions " << arg << " " << res << endl; }
