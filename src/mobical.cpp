@@ -1702,7 +1702,7 @@ struct PropagateAssumptionsCall : public Call {
     (void) (extendmap);
   }
   void print (ostream &o) { o << "propagate_assumptions " << arg << " " << res << endl; }
-  Call *copy () { return new SimplifyCall (arg, res); }
+  Call *copy () { return new PropagateAssumptionsCall (arg); }
   const char *keyword () { return "propagate_assumptions"; }
 };
 
@@ -1714,7 +1714,7 @@ struct ImpliedCall : public Call {
     (void) (extendmap);
   }
   void print (ostream &o) { o << "get_entrailed_literals" << endl; }
-  Call *copy () { return new SimplifyCall (arg, res); }
+  Call *copy () { return new ImpliedCall (arg); }
   const char *keyword () { return "get_entrailed_literals"; }
 };
 
@@ -1725,7 +1725,7 @@ struct ResetAssumptionsCall : public Call {
     (void) (extendmap);
   }
   void print (ostream &o) { o << "reset_assumptions" << endl; }
-  Call *copy () { return new SimplifyCall (arg, res); }
+  Call *copy () { return new ResetAssumptionsCall (arg); }
   const char *keyword () { return "reset_assumptions"; }
 };
 
