@@ -17,6 +17,7 @@ struct Stats {
 
   int64_t conflicts = 0; // generated conflicts in 'propagate'
   int64_t decisions = 0; // number of decisions in 'decide'
+  int64_t searches = 0;  // number of calls to solver 'solve'
 
   struct {
     int64_t cover = 0;       // propagated during covered clause elimination

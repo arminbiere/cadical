@@ -1470,8 +1470,8 @@ struct Internal {
   int already_solved ();
   int restore_clauses ();
   bool preprocess_round (int round);
-  void preprocess_quickly ();
-  int preprocess ();
+  void preprocess_quickly (bool always);
+  int preprocess (bool always);
   int local_search_round (int round);
   int local_search ();
   int lucky_phases ();

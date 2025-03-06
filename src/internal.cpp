@@ -415,9 +415,9 @@ void Internal::implied (std::vector<int> &entrailed) {
   int last_assumption_level = assumptions.size ();
   if (constraint.size ())
     last_assumption_level++;
-  
-  size_t trail_limit = trail.size();
-  if (level > last_assumption_level) 
+
+  size_t trail_limit = trail.size ();
+  if (level > last_assumption_level)
     trail_limit = control[last_assumption_level + 1].trail;
 
   for (size_t i = 0; i < trail_limit; i++)
@@ -689,12 +689,14 @@ bool Internal::preprocess_round (int round) {
 }
 
 // for now counts as one of the preprocessing rounds TODO: change this?
-void Internal::preprocess_quickly () {
+void Internal::preprocess_quickly (bool always) {
   if (unsat)
     return;
   if (!max_var)
     return;
   if (!opts.preprocesslight)
+    return;
+  if (!always && stats.searches > 1)
     return;
   START (preprocess);
   struct {
@@ -733,8 +735,8 @@ void Internal::preprocess_quickly () {
   report ('P');
 }
 
-int Internal::preprocess () {
-  preprocess_quickly ();
+int Internal::preprocess (bool always) {
+  preprocess_quickly (always);
   for (int i = 0; i < lim.preprocessing; i++)
     if (!preprocess_round (i))
       break;
@@ -879,6 +881,7 @@ int Internal::local_search () {
 //
 int Internal::solve (bool preprocess_only) {
   assert (clause.empty ());
+  stats.searches++;
   START (solve);
   if (proof)
     proof->solve_query ();
@@ -915,7 +918,7 @@ int Internal::solve (bool preprocess_only) {
       res = local_search ();
   }
   if (!res && !level)
-    res = preprocess ();
+    res = preprocess (preprocess_only);
   if (!preprocess_only) {
     if (!res && !level)
       res = local_search ();
