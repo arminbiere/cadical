@@ -7458,20 +7458,24 @@ bool Internal::extract_gates () {
     return false;
   }
 
-  // to remove false literals from clauses
-  // It makes the technique stronger as long clauses
-  // can become binary / ternary
-  //  garbage_collection ();
 
   const int64_t old = stats.congruence.congruent;
   const int old_merged = stats.congruence.congruent;
 
   // congruencebinary is already doing it (and more actually)
   if (!internal->opts.congruencebinaries) {
+    clear_watches ();
+    mark_satisfied_clauses_as_garbage (); // breaks watch lists
+    connect_watches ();
     const bool dedup = opts.deduplicate;
     opts.deduplicate = true;
     mark_duplicated_binary_clauses_as_garbage ();
     opts.deduplicate = dedup;
+  } else {
+    // to remove false literals from clauses
+    // It makes the technique stronger as long clauses
+    // can become binary / ternary
+    mark_satisfied_clauses_as_garbage (); // breaks watch lists but we unwatch anyway afterwards
   }
   ++stats.congruence.rounds;
   clear_watches ();
