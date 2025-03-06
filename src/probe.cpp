@@ -940,7 +940,7 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
     if (probe ())
       decompose ();
 
-    if (extract_gates ())
+    if (extract_gates (preprocessing))
       decompose ();
     if (sweep ())     // full occurrence list
       decompose ();   // ... and (ELS) afterwards.

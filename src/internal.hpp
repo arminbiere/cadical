@@ -1599,7 +1599,7 @@ struct Internal {
   }
 
   // Congruence closure
-  bool extract_gates ();
+  bool extract_gates (bool remove_units_before_run = false);
 
   // Parsing functions in 'parse.cpp'.
   //

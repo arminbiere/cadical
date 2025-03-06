@@ -711,7 +711,7 @@ void Internal::preprocess_quickly (bool always) {
          "starting with %" PRId64 " variables and %" PRId64 " clauses",
          before.vars, before.clauses);
 
-  if (extract_gates ())
+  if (extract_gates (true))
     decompose ();
 
   if (sweep ())
