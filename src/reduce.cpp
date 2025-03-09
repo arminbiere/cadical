@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include <cmath>
 
 namespace CaDiCaL {
 
@@ -123,7 +124,13 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   }
 
   stable_sort (stack.begin (), stack.end (), reduce_less_useful ());
-  size_t target = 1e-2 * opts.reducetarget * stack.size ();
+  int reducetarget;
+  if (opts.reducelow < opts.reducehigh) {
+    reducetarget = opts.reducehigh - (opts.reducehigh - opts.reducelow) / log10(opts.reduce + 9);
+  } else {
+    reducetarget = opts.reducetarget;
+  }
+  size_t target = 1e-2 * reducetarget * stack.size ();
 
   // This is defensive code, which I usually consider a bug, but here I am
   // just not sure that using floating points in the line above is precise

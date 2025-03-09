@@ -157,8 +157,10 @@ OPTION( radixsortlim,     32,  0,2e9,0,0,1, "radix sort limit") \
 OPTION( realtime,          0,  0,  1,0,0,0, "real instead of process time") \
 OPTION( recomputetier,     1,  0,  1,0,0,1, "recompute tiers") \
 OPTION( reduce,            1,  0,  1,0,0,1, "reduce useless clauses") \
+OPTION( reducehigh,       90, 10,1e2,0,0,1, "reduce fraction in percent at the end") \
 OPTION( reduceinit,      300,  1,1e6,0,0,1, "initial interval") \
 OPTION( reduceint,        25,  2,1e6,0,0,1, "reduce interval") \
+OPTION( reducelow,        60, 10,1e2,0,0,1, "reduce fraction in percent at the beginning, if >= reducehigh, use fixed target instead") \
 OPTION( reduceopt,         1,  0,  2,0,0,1, "0=prct,1=sqrt,2=max") \
 OPTION( reducetarget,     75, 10,1e2,0,0,1, "reduce fraction in percent") \
 OPTION( reducetier1glue,   2,  1,2e9,0,0,1, "glue of kept learned clauses") \
