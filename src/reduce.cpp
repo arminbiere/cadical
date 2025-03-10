@@ -126,7 +126,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   stable_sort (stack.begin (), stack.end (), reduce_less_useful ());
   int reducetarget;
   if (opts.reducelow < opts.reducehigh) {
-    reducetarget = opts.reducehigh - (opts.reducehigh - opts.reducelow) / log10(opts.reduce + 9);
+    reducetarget = static_cast<int>((double)opts.reducehigh - (double)(opts.reducehigh - opts.reducelow) / log10(stats.reduced + 10));
   } else {
     reducetarget = opts.reducetarget;
   }
