@@ -476,7 +476,14 @@ public:
   // 'implicants' lists the non-conflicting current value of the trail.
 
   int propagate ();
-  void get_entrailed_literals (std::vector<int> &implicants);
+  void implied (std::vector<int> &implicants);
+
+
+  // push/pop context
+  // TODO: add documentation
+
+  void push ();
+  void pop ();
 
   //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be

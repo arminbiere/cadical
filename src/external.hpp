@@ -344,8 +344,14 @@ struct External {
   /*----------------------------------------------------------------------*/
 
   int propagate_assumptions ();
-  void get_entrailed_literals (std::vector<int> &entrailed);
+  void implied (std::vector<int> &entrailed);
   void conclude_unknown ();
+
+
+ /*----------------------------------------------------------------------*/
+
+  void push_ctx ();
+  void pop_ctx ();
 
   /*----------------------------------------------------------------------*/
   int lookahead ();

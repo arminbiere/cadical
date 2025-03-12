@@ -14,8 +14,8 @@ Internal::Internal ()
       external_prop_is_lazy (true), forced_backt_allowed (false),
       private_steps (false), rephased (0), vsize (0), max_var (0),
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
-      concluded (false), lrat (false), frat (false), level (0), vals (0),
-      score_inc (1.0), scores (this), conflict (0), ignore (0),
+      concluded (false), lrat (false), frat (false), level (0), ctx_level(0),
+      vals (0), score_inc (1.0), scores (this), conflict (0), ignore (0),
       external_reason (&external_reason_clause), newest_clause (0),
       force_no_backtrack (false), from_propagator (false),
       ext_clause_forgettable (false), tainted_literal (0), notified (0),
@@ -401,10 +401,21 @@ int Internal::propagate_assumptions () {
   return res;
 }
 
-void Internal::get_entrailed_literals (std::vector<int> &entrailed) {
+void Internal::implied (std::vector<int> &entrailed) {
 
   for (size_t i = 0; i < trail.size (); i++)
     entrailed.push_back (trail[i]);
+}
+
+/*------------------------------------------------------------------------*/
+
+void Internal::push_ctx () {
+  ctx_level++;
+}
+
+void Internal::pop_ctx () {
+  assert(ctx_level);
+  ctx_level--;
 }
 
 /*------------------------------------------------------------------------*/

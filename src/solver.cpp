@@ -708,14 +708,14 @@ int Solver::propagate () {
   return res;
 }
 
-void Solver::get_entrailed_literals (std::vector<int> &entrailed) {
-  TRACE ("get_entrailed_literals");
+void Solver::implied (std::vector<int> &entrailed) {
+  TRACE ("implied");
   REQUIRE_STEADY_STATE ();
   external->conclude_unknown ();
-  external->get_entrailed_literals (entrailed);
+  external->implied (entrailed);
   if (tracing_nb_lidrup_env_var_method)
     flush_proof_trace (true);
-  LOG_API_CALL_RETURNS ("get_entrailed_literals", (int) entrailed.size ());
+  LOG_API_CALL_RETURNS ("implied", (int) entrailed.size ());
 }
 
 /*------------------------------------------------------------------------*/

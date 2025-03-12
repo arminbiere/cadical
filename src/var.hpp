@@ -14,6 +14,7 @@ struct Var {
 
   int level;      // decision level
   int trail;      // trail height at assignment
+  int clevel;  // level of (push/pop) context where the assignment holds
   Clause *reason; // implication graph edge during search
 };
 

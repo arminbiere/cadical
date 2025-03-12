@@ -197,6 +197,7 @@ struct Internal {
   bool lrat;                    // generate LRAT internally
   bool frat;                    // finalize non-deleted clauses in proof
   int level;                    // decision level ('control.size () - 1')
+  int ctx_level;                // context level (push/pop)
   Phases phases;                // saved, target and best phases
   signed char *vals;            // assignment [-max_var,max_var]
   vector<signed char> marks;    // signed marks [1,max_var]
@@ -1143,7 +1144,10 @@ struct Internal {
   // Propagate the current set of assumptions and return the
   // non-witness assigned literals
   int propagate_assumptions ();
-  void get_entrailed_literals (std::vector<int> &entrailed);
+  void implied (std::vector<int> &entrailed);
+
+  void push_ctx ();
+  void pop_ctx ();
 
   // Forcing decision variables to a certain phase.
   //

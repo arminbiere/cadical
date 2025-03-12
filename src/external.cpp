@@ -483,9 +483,9 @@ int External::propagate_assumptions () {
   return res;
 }
 
-void External::get_entrailed_literals (std::vector<int> &trailed) {
+void External::implied (std::vector<int> &trailed) {
   std::vector<int> ilit_implicants;
-  internal->get_entrailed_literals (ilit_implicants);
+  internal->implied (ilit_implicants);
 
   // Those implied literals must be filtered out that are witnesses
   // on the reconstruction stack -> no inplace externalize is possible.
@@ -507,8 +507,18 @@ void External::conclude_unknown () {
   concluded = true;
 
   vector<int> trail;
-  get_entrailed_literals (trail);
+  implied (trail);
   internal->proof->conclude_unknown (trail);
+}
+
+/*------------------------------------------------------------------------*/
+
+void External::push_ctx () {
+  internal->push_ctx ();
+}
+
+void External::pop_ctx () {
+  internal->pop_ctx ();
 }
 
 /*------------------------------------------------------------------------*/

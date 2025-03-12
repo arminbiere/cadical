@@ -89,6 +89,8 @@ struct Clause {
   int size; // Actual size of 'literals' (at least 2).
   int pos;  // Position of last watch replacement [Gent'13].
 
+  int clevel;  // On which context level was the clause added/derived
+
   // This 'flexible array member' is of variadic 'size' (and actually
   // shrunken if strengthened) and keeps the literals close to the header of
   // the clause to avoid another pointer dereference, which would be costly.
