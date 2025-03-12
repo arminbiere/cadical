@@ -718,6 +718,14 @@ void Solver::implied (std::vector<int> &entrailed) {
   LOG_API_CALL_RETURNS ("implied", (int) entrailed.size ());
 }
 
+void Solver::push () {
+  external->push_ctx ();
+}
+
+void Solver::pop () {
+  external->pop_ctx ();
+}
+
 /*------------------------------------------------------------------------*/
 
 int Solver::call_external_solve_and_check_results (bool preprocess_only) {
