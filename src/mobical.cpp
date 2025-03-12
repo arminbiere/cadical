@@ -1232,9 +1232,9 @@ void Mobical::warning (const char *fmt, ...) {
 // '--do-not-enforce-contracts'.
 //
 // Note that our model based tester is actually more restrictive and does
-// produce all these possible call sequences.  For instance it first adds
-// all clauses before making assumptions and also does not mix in these
-// 'ALWAYS' calls in all possible ways.
+// not produce all these possible call sequences. For instance it first
+// adds all clauses before making assumptions and also does not mix in
+// these 'ALWAYS' calls in all possible ways.
 
 constexpr uint64_t shift (uint64_t bit) { return (uint64_t) 1 << bit; }
 
