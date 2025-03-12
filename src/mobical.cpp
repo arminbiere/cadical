@@ -1386,19 +1386,19 @@ struct Call {
 /*------------------------------------------------------------------------*/
 
 static bool config_type (Call::Type t) {
-  return (((int) t & (int) Call::CONFIG)) != 0;
+  return (((uint64_t) t & (uint64_t) Call::CONFIG)) != 0;
 }
 
 static bool before_type (Call::Type t) {
-  return (((int) t & (int) Call::BEFORE)) != 0;
+  return (((uint64_t) t & (uint64_t) Call::BEFORE)) != 0;
 }
 
 static bool process_type (Call::Type t) {
-  return (((int) t & (int) Call::PROCESS)) != 0;
+  return (((uint64_t) t & (uint64_t) Call::PROCESS)) != 0;
 }
 
 static bool after_type (Call::Type t) {
-  return (((int) t & (int) Call::AFTER)) != 0;
+  return (((uint64_t) t & (uint64_t) Call::AFTER)) != 0;
 }
 
 /*------------------------------------------------------------------------*/
@@ -1696,12 +1696,15 @@ struct SimplifyCall : public Call {
 };
 
 struct PropagateAssumptionsCall : public Call {
-  PropagateAssumptionsCall (int r = 0) : Call (PROPAGATE_ASSUMPTIONS, 0, r) {}
+  PropagateAssumptionsCall (int r = 0)
+      : Call (PROPAGATE_ASSUMPTIONS, 0, r) {}
   void execute (Solver *&s, ExtendMap &extendmap) {
     s->propagate ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "propagate_assumptions " << arg << " " << res << endl; }
+  void print (ostream &o) {
+    o << "propagate_assumptions " << arg << " " << res << endl;
+  }
   Call *copy () { return new PropagateAssumptionsCall (arg); }
   const char *keyword () { return "propagate_assumptions"; }
 };
@@ -1728,7 +1731,6 @@ struct ResetAssumptionsCall : public Call {
   Call *copy () { return new ResetAssumptionsCall (arg); }
   const char *keyword () { return "reset_assumptions"; }
 };
-
 
 struct LookaheadCall : public Call {
   LookaheadCall (int r = 0) : Call (LOOKAHEAD, 0, r) {}
@@ -2118,8 +2120,8 @@ public:
         // They are (ideally) are executed already
         if (c->type == Call::LEMMA)
           continue;
-          // if (c->type == Call::CONTINUE)
-          //   continue;
+        // if (c->type == Call::CONTINUE)
+        //   continue;
 #ifdef MOBICAL_MEMORY
         if (c->type == Call::MAXALLOC) {
           memory_bad_alloc = c->val;
