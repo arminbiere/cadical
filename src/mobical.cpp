@@ -5228,14 +5228,17 @@ int Mobical::main (int argc, char **argv) {
 
         if (res) {
 
-          terminal.cursor (false);
+          if (!donot.shrink.atall) {
 
-          Trace::failed++;
-          trace.shrink (res); // shrink
-          if (!verbose && !terminal)
-            cerr << endl;
-          else
-            terminal.erase_line_if_connected_otherwise_new_line ();
+            terminal.cursor (false);
+
+            Trace::failed++;
+            trace.shrink (res); // shrink
+            if (!verbose && !terminal)
+              cerr << endl;
+            else
+              terminal.erase_line_if_connected_otherwise_new_line ();
+          }
 
         } else
           Trace::ok++;
