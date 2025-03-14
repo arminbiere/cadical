@@ -153,7 +153,7 @@ bool Closure::find_binary (int lit, int other) const {
   const auto end = std::begin (binaries) + size;
   assert (end <= std::end (binaries));
   const CompactBinary target = CompactBinary (nullptr, 0, lit, other);
-  auto it = std::lower_bound (begin, end, target, compact_binary_order ());
+  auto it = std::lower_bound (begin, end, target, compact_binary_order (internal));
   // search_binary only returns a bool
   bool found = (it != end && it->lit1 == lit && it->lit2 == other);
   if (found) {
