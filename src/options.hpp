@@ -56,7 +56,7 @@ OPTION( conditionint,    1e4,  1,2e9,0,0,1, "initial conflict interval") \
 OPTION( conditionmaxeff, 1e7,  0,2e9,1,0,1, "maximum condition efficiency") \
 OPTION( conditionmaxrat, 100,  1,2e9,1,0,1, "maximum clause variable ratio") \
 OPTION( conditionmineff,   0,  0,2e9,1,0,1, "minimum condition efficiency") \
-OPTION( congruence,        1,  0,  1,0,0,1, "congruence closure") \
+OPTION( congruence,        1,  0,  1,0,1,1, "congruence closure") \
 OPTION( congruenceand,     1,  0,  1,0,0,1, "extract AND gates") \
 OPTION( congruenceandarity,1e6,2,5e7,0,0,1, "AND gate arity limit") \
 OPTION( congruencebinaries,1,  0,  1,0,0,1, "extract binary and strengthen ternary clauses") \
