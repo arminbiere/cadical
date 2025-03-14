@@ -55,7 +55,7 @@ struct Delay {
 
     bool delay () {
       if (bypass)
-        return true;
+        return false;
       if (limit) {
         --limit;
         return true;
