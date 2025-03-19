@@ -2519,7 +2519,6 @@ void Closure::update_and_gate_build_lrat_chain (
   }
   // default: resolve all clauses
   // first rewrite
-  // TODO: do we really need dest as second exclusion?
   produce_rewritten_clause_lrat_and_clean (h->pos_lhs_ids, -h->lhs,
                                            remove_units);
   assert (internal->clause.empty ());
@@ -2632,7 +2631,6 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
   assert (!internal->unsat && chain.empty ());
   LOG (g, "updating");
   bool garbage = true;
-  // TODO Florian LRAT for learn_congruence_unit
   assert (g->arity () == 0 || internal->clause.empty ());
   assert (clause.empty ());
   if (g->arity () == 0) {
@@ -2681,9 +2679,8 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
         lrat_chain.push_back (g->pos_lhs_ids[1].clause->id);
       }
       learn_congruence_unit (-g->rhs[0]);
-    } else if (merge_literals (
-                   g->lhs, g->rhs[0], reasons_implication,
-			       reasons_back)) { // TODO Florian merge with LRAT
+    } else if (merge_literals (g->lhs, g->rhs[0], reasons_implication,
+                               reasons_back)) {
       ++internal->stats.congruence.unaries;
       ++internal->stats.congruence.unary_and;
     }
@@ -3478,8 +3475,6 @@ void Closure::add_xor_shrinking_proof_chain (Gate *g, int pivot) {
     LOG (pair.clause, "key %d", pair.current_lit);
   }
 #endif
-  // TODO Florian adjust indices of first depending on order...
-  //
   for (unsigned i = 0; i != end; ++i) {
     while (i && parity != parity_lits (clause))
       inc_lits (clause);
@@ -3801,7 +3796,6 @@ void Closure::add_xor_matching_proof_chain (
     }
     LOG (pair.clause, "key %d", pair.current_lit);
   }
-  // TODO Florian: resort and ids after every round
   do {
     vector<LitIdPair> first_tmp;
     vector<LitIdPair> second_tmp;
@@ -4670,7 +4664,6 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   }
 
   check_xor_gate_implied (g);
-  // TODO stats
 }
 
 // update to produce proofs
@@ -4790,10 +4783,6 @@ size_t Closure::propagate_units_and_equivalences () {
         assert (g->tag == Gate_Type::ITE_Gate ||
                 g->tag == Gate_Type::XOr_Gate ||
                 !gate_contains (g, -g->lhs));
-        // TODO: this would be nice to have!
-        //      assert (g->tag != Gate_Type::ITE_Gate || (g->rhs.size() == 3
-        //      && g->rhs[1] != -g->lhs && g->rhs[2] != -g->lhs));
-        // assert (table.count(g) == 1);
         for (auto lit : g->rhs) {
           assert (!internal->val (lit));
           assert (representative (lit) == lit);
@@ -4960,7 +4949,8 @@ void Closure::forward_subsume_matching_clauses () {
   internal->init_occs ();
   for (auto c : candidates) {
     assert (c->size != 2);
-    // TODO if terminated
+    if (internal->terminated_asynchronously ())
+      break;
     ++tried;
     if (find_subsuming_clause (c)) {
       ++subsumed;
@@ -5428,7 +5418,6 @@ void Closure::produce_ite_merge_lhs_then_else_reasons (
       }
 
       if (other_lit == repr_lhs) {
-        LOG ("TODO FIX ME t=-lhs/e=lhs");
         learn_units = true;
         // in the other direction we are merging a literal with itself
         g->pos_lhs_ids[idx1].clause = produce_rewritten_clause_lrat (
@@ -6058,7 +6047,6 @@ void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit,
                                                    size_t idx2) {
   if (!internal->lrat)
     return;
-  // TODO
   if (internal->val (lit) > 0)
     return;
   assert (internal->lrat);
@@ -6233,7 +6221,6 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
     else if (litId.current_lit == -removed_lit)
       litId.current_lit = g->rhs[0];
     LOG (litId.clause, "%d ->", litId.current_lit);
-    // TODO we need a replacement index
     assert (std::find (begin (g->rhs), end (g->rhs), litId.current_lit) !=
             end (g->rhs));
     assert (std::find (begin (*litId.clause), end (*litId.clause),
