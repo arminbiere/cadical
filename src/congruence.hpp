@@ -69,7 +69,7 @@ struct Internal;
 #define LD_MAX_ARITY 26
 #define MAX_ARITY ((1 << LD_MAX_ARITY) - 1)
 
-enum class Gate_Type { And_Gate, XOr_Gate, ITE_Gate };
+enum class Gate_Type : int8_t { And_Gate, XOr_Gate, ITE_Gate };
 
 // Wrapper when we are looking for implication in if-then-else gates
 struct lit_implication {
@@ -168,14 +168,16 @@ struct smaller_clause_size_rank {
 // a = (-a ? t : e) results in no +t and no -e gate
 // a = (c ? a : e) results in no t gate (none of them)
 // a = (c ? t : a) results in no e gate (none of them)
-
-enum Special_ITE_GATE {
+//
+// We also use for and gates
+enum Special_Gate {
   NORMAL = 0,
   NO_PLUS_THEN = (1 << 0),
   NO_NEG_THEN = (1 << 1),
   NO_THEN = NO_PLUS_THEN + NO_NEG_THEN,
   NO_PLUS_ELSE = (1 << 2),
   NO_NEG_ELSE = (1 << 3),
+  DEGENERATED_AND = (1 << 4),
   NO_ELSE = NO_PLUS_ELSE + NO_NEG_ELSE,
   COND_LHS = NO_NEG_THEN + NO_PLUS_ELSE,
   UCOND_LHS = NO_PLUS_THEN + NO_NEG_ELSE,
@@ -241,19 +243,15 @@ struct Gate {
   bool indexed : 1;
   bool marked : 1;
   bool shrunken : 1;
-  size_t hash; // TODO remove this field (the C++ implementation is caching
-               // it anyway)
   vector<LitClausePair> pos_lhs_ids;
   vector<LitClausePair> neg_lhs_ids;
-  bool degenerated_and_neg = false; // LRAT only relevant for AND Gates, neg lhs in RHS
-  bool degenerated_and_pos = false; // LRAT only relevant for AND Gates, pos lhs in RHS
-  int8_t degenerated_ite = Special_ITE_GATE::NORMAL;
+  int8_t degenerated_gate = Special_Gate::NORMAL;
   vector<int> rhs;
 
   size_t arity () const { return rhs.size (); }
 
   bool operator== (Gate const &lhs) {
-    return tag == lhs.tag && hash == lhs.hash && rhs == lhs.rhs;
+    return tag == lhs.tag && rhs == lhs.rhs;
   }
 };
 
