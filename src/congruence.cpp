@@ -4866,40 +4866,12 @@ void Closure::reset_extraction () {
   full_watching = true;
   if (!internal->unsat && !internal->propagate ()) {
     internal->learn_empty_clause ();
+    return;
   }
 
-#if 0
-  // remove delete watched clauses from the watch list
-  for (auto v : internal->vars) {
-    for (auto sgn = -1; sgn <= 1; sgn += 2) {
-      const int lit = v * sgn;
-      auto &watchers = internal->watches (lit);
-      const size_t size = watchers.size ();
-      size_t j = 0;
-      for (size_t i = 0; i != size; ++i) {
-	const auto w = watchers[i];
-	watchers[j] = watchers[i];
-	if (!w.clause->garbage)
-	  ++j;
-      }
-      watchers.resize(j);
-    }
-  }
-  // watch the remaining non-watched clauses
-  for (auto c : new_unwatched_binary_clauses)
-    internal->watch_clause (c);
-  new_unwatched_binary_clauses.clear();
-  for (auto c : internal->clauses) {
-    if (c->garbage)
-      continue;
-    if (c->size != 2)
-      internal->watch_clause (c);
-  }
-#else // simpler implementation
   new_unwatched_binary_clauses.clear ();
   internal->clear_watches ();
   internal->connect_watches ();
-#endif
 }
 
 void Closure::forward_subsume_matching_clauses () {
@@ -7507,8 +7479,6 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   closure.extract_gates ();
   assert (unsat || closure.chain.empty ());
   assert (unsat || lrat_chain.empty ());
-  internal->clear_watches ();
-  internal->connect_watches ();
   closure.reset_extraction ();
 
   if (!unsat) {
@@ -7546,8 +7516,9 @@ bool Internal::extract_gates (bool remove_units_before_run) {
 
   phase ("congruence-phase", stats.congruence.rounds, "merged %ld literals",
          new_merged - old_merged);
-  if (!unsat && !internal->propagate ())
-    unsat = true;
+  if (!unsat && !internal->propagate ()) {
+    learn_empty_clause();
+  }
 
   STOP_SIMPLIFIER (congruence, CONGRUENCE);
   report ('c', !opts.reportall && !(stats.congruence.congruent - old));
