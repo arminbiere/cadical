@@ -766,15 +766,11 @@ void Closure::compute_rewritten_clause_lrat_simple (Clause *c, int except) {
       continue;
     }
     if (internal->val (lit) < 0) {
-#if 1
       LOG ("found unit %d, removing it", -lit);
       LRAT_ID id = internal->unit_id (-lit);
       lrat_chain.push_back (id);
       changed = true;
       continue;
-#else
-      LOG ("found unit %d, but ignoring it", -lit);
-#endif
     }
     if (internal->val (lit) > 0) {
       LOG ("found positive unit, so clause is subsumed by unit");
