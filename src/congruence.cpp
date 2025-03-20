@@ -2588,6 +2588,18 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
       unit = dst;
     else if (unit == -src)
       unit = -dst;
+    int other = -unit;
+    if (g->degenerated_gate == Special_Gate::DEGENERATED_AND) {
+      other = find_eager_representative_and_compress (-unit);
+      if (internal->lrat && -unit != other) {
+        assert (internal->lrat_chain.empty ());
+        internal->lrat_chain.push_back (eager_representative_id (-unit));
+        for (auto id : lrat_chain)
+          internal->lrat_chain.push_back (id);
+        lrat_chain.clear ();
+        swap (internal->lrat_chain, lrat_chain);
+      }
+    }
     learn_congruence_unit (unit);
     if (internal->lrat)
       lrat_chain.clear ();
@@ -5832,9 +5844,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         if (negate_lhs)
           g->lhs = -g->lhs;
       }
-      if (internal->vlit (rhs[0]) >
-          internal->vlit (
-              rhs[1])) { // unlike kissat, we need to do it after negating
+      // unlike kissat, we need to do it after negating
+      if (internal->vlit (rhs[0]) > internal->vlit (rhs[1])) {
         std::swap (rhs[0], rhs[1]);
         assert (new_tag != Gate_Type::ITE_Gate);
       }
