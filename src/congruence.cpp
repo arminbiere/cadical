@@ -21,6 +21,33 @@ Closure::Closure (Internal *i)
 char &Closure::lazy_propagated (int lit) {
   return lazy_propagated_idx[internal->vidx (lit)];
 }
+std::string special_gate_str (int8_t f) {
+    switch(f) {
+    case NORMAL:
+      return "";
+    case NO_PLUS_ELSE:
+      return "{no +e}";
+    case NO_PLUS_THEN:
+      return "{no +t}";
+    case NO_NEG_ELSE:
+      return "{no -e}";
+    case NO_NEG_THEN:
+      return "{no -t}";
+    case NO_ELSE:
+      return "{no e}";
+    case NO_THEN:
+      return "{no t}";
+    case COND_LHS:
+      return "{no -t +e}";
+    case UCOND_LHS:
+      return "{no +t -e}";
+    case DEGENERATED_AND:
+      return "{AND/bin}";
+    default:
+      assert (false);
+      return "BROKEN GATE";
+    }
+}
 
 void update_ite_flags (Gate *g) {
   int8_t f = g->degenerated_gate;
@@ -6131,9 +6158,11 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
     return false;
 
   if (g->rhs[1] == -g->lhs || g->rhs[0] == -g->lhs)
-    g->degenerated_gate = DEGENERATED_AND;
-  if (g->rhs[0] == g->lhs || g->rhs[1] == g->lhs)
-    g->degenerated_gate = DEGENERATED_AND;
+    g->degenerated_gate = Special_Gate::DEGENERATED_AND;
+  else if (g->rhs[0] == g->lhs || g->rhs[1] == g->lhs)
+    g->degenerated_gate = Special_Gate::DEGENERATED_AND;
+  else
+    g->degenerated_gate = Special_Gate::NORMAL;
 
   assert (g->pos_lhs_ids.size () == 4);
   assert (idx1 < g->pos_lhs_ids.size ());

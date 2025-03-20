@@ -183,6 +183,8 @@ enum Special_Gate {
   UCOND_LHS = NO_PLUS_THEN + NO_NEG_ELSE,
 };
 
+std::string special_gate_str (int8_t f);
+
 inline bool ite_flags_no_then_clauses (int8_t flag) {
   return (flag & NO_THEN) == NO_THEN;
 }
