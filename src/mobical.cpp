@@ -5123,9 +5123,10 @@ int Mobical::main (int argc, char **argv) {
     cerr << "explicitly using no space limit";
   cerr << endl << flush;
 
-  prefix ();
-  if (mobical.add_plain_after_options)
+  if (mobical.add_plain_after_options) {
+    prefix ();
     cerr << "generating only plain instances (--plain)" << endl << flush;
+  }
 
   /*----------------------------------------------------------------------*/
 
