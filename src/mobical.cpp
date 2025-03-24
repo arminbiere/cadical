@@ -5345,8 +5345,10 @@ int Mobical::main (int argc, char **argv) {
       else
         Trace::ok++;
 
-      if (!donot.seeds)
+      if (!donot.seeds && limit != traces)
         terminal.erase_line_if_connected_otherwise_new_line ();
+      else if (!donot.seeds && limit == traces)
+        cerr << endl << flush;
 
       if (res) { // failed
 
