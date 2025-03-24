@@ -852,7 +852,11 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
 
   LOG (clause, "learn new tmp clause");
   assert (clause.size () >= 2);
-  internal->external->check_learned_clause ();
+  if (internal->external->solution) {
+    std::swap (clause, internal->clause);
+    internal->external->check_learned_clause ();
+    std::swap (clause, internal->clause);
+  }
 
   assert (internal->clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
