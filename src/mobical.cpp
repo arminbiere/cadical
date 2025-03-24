@@ -1425,14 +1425,20 @@ struct InitCall : public Call {
 #ifdef MOBICAL_MEMORY
 struct MaxAllocCall : public Call {
   MaxAllocCall (int val) : Call (MAXALLOC, 0, 0, 0, val) {}
-  void execute (Solver *&s) { (void) s; }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    (void) s;
+    (void) extendmap;
+  }
   void print (ostream &o) { o << "max_alloc " << val << endl; }
   Call *copy () { return new MaxAllocCall (val); }
   const char *keyword () { return "max_alloc"; }
 };
 struct LeakAllocCall : public Call {
   LeakAllocCall () : Call (LEAKALLOC) {}
-  void execute (Solver *&s) { (void) s; }
+  void execute (Solver *&s, ExtendMap &extendmap) {
+    (void) s;
+    (void) extendmap;
+  }
   void print (ostream &o) { o << "leak_alloc" << endl; }
   Call *copy () { return new LeakAllocCall (); }
   const char *keyword () { return "leak_alloc"; }
@@ -2165,38 +2171,38 @@ public:
         // consistent.
         mobical.shared->oom++;
       }
-    }
 #ifdef MOBICAL_MEMORY
-    if (deallocated && mobical.mock_pointer) {
-      delete mobical.mock_pointer;
-      mobical.mock_pointer = nullptr;
-    }
-    hooks_uninstall ();
-    // Note: Do not force-deallocate here as otherwise the shrink procedure
-    // will remove the RESET call.
-    if (deallocated) {
-      for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
-        if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
-          reset_child_signal_handlers ();
-          raise (SIGUSR2);
+      if (deallocated && mobical.mock_pointer) {
+        delete mobical.mock_pointer;
+        mobical.mock_pointer = nullptr;
+      }
+      hooks_uninstall ();
+      // Note: Do not force-deallocate here as otherwise the shrink
+      // procedure will remove the RESET call.
+      if (deallocated) {
+        for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+          if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
+            reset_child_signal_handlers ();
+            raise (SIGUSR2);
+          }
+        }
+        if (mobical.shared && process_type (c->type)) {
+          mobical.shared->solved++;
+          if (first)
+            first = false;
+          else
+            mobical.shared->incremental++;
+          c->execute (solver, extendmap);
+          if (c->res == 10)
+            mobical.shared->sat++;
+          if (c->res == 20)
+            mobical.shared->unsat++;
+        } else {
+          c->execute (solver, extendmap);
         }
       }
-      if (mobical.shared && process_type (c->type)) {
-        mobical.shared->solved++;
-        if (first)
-          first = false;
-        else
-          mobical.shared->incremental++;
-        c->execute (solver, extendmap);
-        if (c->res == 10)
-          mobical.shared->sat++;
-        if (c->res == 20)
-          mobical.shared->unsat++;
-      } else {
-        c->execute (solver, extendmap);
-      }
-    }
 #endif
+    }
   }
 
   int vars () {
