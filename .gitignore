@@ -1,5 +1,5 @@
 build
 makefile
 /result
-*.sh
 .cache
+*.json
