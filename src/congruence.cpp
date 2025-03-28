@@ -7531,7 +7531,6 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   internal->connect_watches ();
   if (!internal->unsat) {
     propagated2 = propagated = 0;
-    propagate ();
   }
   assert (closure.new_unwatched_binary_clauses.empty ());
   internal->reset_occs ();
