@@ -50,7 +50,7 @@ static const char *USAGE =
 "  <input> <output>  read trace, shrink and write it to output file\n"
 "  <input>           read and replay the specified input trace\n"
 "\n"
-"In order to let the test exectue '<r>' runs (starting from '<seed>') use:\n"
+"In order to let the test execute '<r>' runs (starting from '<seed>') use:\n"
 "\n"
 "  -L[ ]<r>          execute '<r>' runs\n"
 "\n"
