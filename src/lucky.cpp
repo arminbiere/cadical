@@ -391,6 +391,10 @@ int Internal::lucky_phases () {
   // External propagator assumes a CDCL loop, so lucky is not tried here.
   if (!assumptions.empty () || !constraint.empty () || external_prop)
     return 0;
+  if (!propagate()) {
+    learn_empty_clause();
+    return 20;
+  }
 
   START (search);
   START (lucky);
