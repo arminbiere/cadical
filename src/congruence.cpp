@@ -7317,6 +7317,7 @@ void Closure::merge_condeq (int cond, lit_equivalences &condeq,
   auto q = begin (not_condeq);
   const auto end_not_condeq = end (not_condeq);
   for (auto p : condeq) {
+    q = begin (not_condeq);
     const int lhs = p.first;
     const int then_lit = p.second;
     if (internal->lrat)
