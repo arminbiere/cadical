@@ -1433,7 +1433,7 @@ bool Closure::merge_literals (
   assert (find_representative (smaller_repr) == smaller_repr);
   assert (find_representative (larger_repr) == larger_repr);
   if (lit == -other) {
-    assert (chain.empty ());
+    assert (lrat_chain.empty ());
     LOG ("merging clashing %d and %d", lit, other);
     if (internal->proof) {
       if (internal->lrat) {
