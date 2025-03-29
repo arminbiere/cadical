@@ -736,8 +736,11 @@ void Internal::preprocess_quickly (bool always) {
 }
 
 int Internal::preprocess (bool always) {
+  int res = 0;
   if (!level && !unsat && opts.luckyearly)
-    lucky_phases ();
+    res = lucky_phases ();
+  if (res)
+    return res;
   preprocess_quickly (always);
   for (int i = 0; i < lim.preprocessing; i++)
     if (!preprocess_round (i))
