@@ -263,6 +263,7 @@ fi
 
 [ x"$CXX" = x ] && CXX=g++
 [ x"$CXXFLAGS" = x ] || CXXFLAGS="$CXXFLAGS "
+[ x"$AR" = x ] && AR=ar
 
 case x"$CXX" in
   x*g++*|x*clang++*) CXXFLAGS="${CXXFLAGS}-Wall -Wextra";;
@@ -497,6 +498,7 @@ sed \
 # This 'makefile' is generated from '../makefile.in'." \
 -e "s,@CXX@,$CXX," \
 -e "s#@CXXFLAGS@#$CXXFLAGS#" \
+-e "s#@AR@#$AR#" \
 -e "s#@LIBS@#$libs#" \
 -e "s#@CONTRIB@#$contrib#" \
 -e "s#@ROOT@#$root#" \

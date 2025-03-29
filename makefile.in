@@ -9,6 +9,7 @@
 
 CXX=@CXX@
 CXXFLAGS=@CXXFLAGS@
+AR=@AR@
 
 LIBS=@LIBS@
 ROOT=@ROOT@
@@ -54,7 +55,7 @@ contrib/%.o: $(ROOT)/contrib/%.cpp $(ROOT)/contrib/%.hpp $(ROOT)/src/*.hpp makef
 # tester 'mobical') and the library are the main build targets.
 
 libcadical.a: $(OBJ_SOLVER) $(OBJ_CONTRIB) makefile
-	ar rc $@ $(OBJ_SOLVER) $(OBJ_CONTRIB)
+	$(AR) rc $@ $(OBJ_SOLVER) $(OBJ_CONTRIB)
 
 libcadical.so: $(OBJ_SOLVER) $(OBJ_CONTRIB) $(LIBS) makefile
 	$(COMPILE) -shared -o $@ $(OBJ_SOLVER) $(OBJ_CONTRIB) $(LIBS)
