@@ -28,7 +28,8 @@ Version 2.2.0
 
 - New light preprocessing round on with lucky, congruence, factor, and
   a new (very limited) BVE (fast elim). Fast elimination is never run
-  again and normal BVE is used instead.
+  again and normal BVE is used instead. Lucky is run before and after
+  preprocessing.
 
 - Small extension to gate extraction in BVE, now able to extract
   semantic definitions using 'kitten'
