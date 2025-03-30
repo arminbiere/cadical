@@ -406,17 +406,17 @@ int Internal::lucky_phases () {
   if (!res)
     res = trivially_true_satisfiable ();
   if (!res)
-    res = forward_true_satisfiable ();
-  if (!res)
     res = forward_false_satisfiable ();
+  if (!res)
+    res = forward_true_satisfiable ();
   if (!res)
     res = backward_false_satisfiable ();
   if (!res)
     res = backward_true_satisfiable ();
   if (!res)
-    res = positive_horn_satisfiable ();
-  if (!res)
     res = negative_horn_satisfiable ();
+  if (!res)
+    res = positive_horn_satisfiable ();
   if (res < 0)
     assert (termination_forced), res = 0;
   if (res == 10)
