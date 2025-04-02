@@ -88,6 +88,7 @@ struct ClauseChecker : ClauseIterator {
 int main () {
 
   Solver cadical;
+  cadical.set ("lucky", 0);
 
   // And gate 3 = 1 & 2>
 
