@@ -3511,7 +3511,6 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
   for (size_t i = 0; i < n; i++)
     removed[i] = false;
   bool res = false;
-  Trace shrunken;
   for (;;) {
     for (size_t l = 0, r; l < n; l = r) {
       r = l + granularity;
@@ -3544,17 +3543,12 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
         for (size_t i = l; i < r; i++)
           removed[i] = saved[i];
       } else {
-        shrunken.clear ();
-        for (size_t i = 0; i < tmp.size (); i++)
-          shrunken.push_back (tmp[i]->copy ());
         res = true; // succeeded to shrink
       }
     }
     if (granularity == 1)
       break;
     granularity = (granularity + 1) / 2;
-    if (shrunken.size ())
-      shrunken.clear ();
   }
   if (res) {
     for (size_t i = 0; i < size (); i++)
