@@ -1203,6 +1203,9 @@ void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src,
 
 // Something very important here: as we are producing a unit, we cannot
 // simplify or rewrite the clauses as this will produce units.
+//
+// For special cases, you have to be careful as the reasons are not
+// eagerly reduced. Therefore, we need to filter to keep only the reasons we are interested (usually the ones where we have a clash).
 void Closure::learn_congruence_unit_falsifies_lrat_chain (
     Gate *g, int src, int dst, int clashing, int falsified, int unit) {
   if (!internal->lrat)
@@ -1257,10 +1260,12 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
             for (const auto &litId : g->pos_lhs_ids) {
               LOG (litId.clause, "definition clause %d ->",
                    litId.current_lit);
-              push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
-                                               proof_chain, false,
-                                               Rewrite (), -g->lhs);
-              LOG (proof_chain, "produced lrat chain so far");
+              if (litId.current_lit != clashing) {
+                push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
+                                                 proof_chain, false,
+                                                 Rewrite (), g->lhs);
+                LOG (proof_chain, "produced lrat chain so far");
+              }
             }
           }
         } else {
@@ -1327,6 +1332,7 @@ bool Closure::fully_propagate () {
 bool Closure::learn_congruence_unit (int lit, bool delay_propagation, bool force_propagation) {
   if (internal->unsat)
     return false;
+  LOG (lrat_chain, "assigning due to LRAT chain");
   const signed char val_lit = internal->val (lit);
   if (val_lit > 0) {
     LOG ("already set lit %d", lit);
@@ -1343,6 +1349,7 @@ bool Closure::learn_congruence_unit (int lit, bool delay_propagation, bool force
     if (internal->lrat) {
       assert (internal->lrat_chain.empty ());
       LRAT_ID id = internal->unit_id (-lit);
+      LOG ("for literal %s adding unit %" PRId64, LOGLIT(-lit), id);
       internal->lrat_chain.push_back (id);
       for (auto id : lrat_chain)
         internal->lrat_chain.push_back (id);
@@ -1353,6 +1360,7 @@ bool Closure::learn_congruence_unit (int lit, bool delay_propagation, bool force
   }
 
   LOG (lrat_chain, "assigning due to LRAT chain");
+  assert (internal->lrat_chain.empty ());
   swap (lrat_chain, internal->lrat_chain);
   internal->assign_unit (lit);
   assert (lrat_chain.empty ());
