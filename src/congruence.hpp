@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <queue>
+#include <optional>
 #include <string>
 #include <sys/types.h>
 #include <unordered_set>
@@ -40,6 +41,17 @@ typedef int64_t LRAT_ID;
 // union-find but we only compress paths when rewriting the literal, not
 // before. The compression was not considered important in Kissat, but we do
 // it aggressively as a mirror of the equivalences we have generated.
+//
+// Remark that for AND gates, we rewrite the lhs whenever we change the gate. The issue is that we
+// cannot know if the gate is really degenerated or not without rewriting it:
+//
+//   - take the gate 2 = 1 & 3
+//
+//   - now we rewrite 1 to 2, we get 2 = 2 & 3: this gate is degenerated
+//
+//   - now we rewrite 2 to 4 (RHS only): 2 = 3 & 4: it is not obvious that the gate is
+//   degenerated, but the defining clauses are *not* because we do not rewrite the LHS and we
+//   actually have to use all gates.
 //
 // We have two structures for merging:
 //   - the lazy ones contains alls merges, with functions like
@@ -246,7 +258,7 @@ struct Gate {
   bool marked : 1;
   bool shrunken : 1;
   vector<LitClausePair> pos_lhs_ids;
-  vector<LitClausePair> neg_lhs_ids;
+  optional<LitClausePair> neg_lhs_ids;
   int8_t degenerated_gate = Special_Gate::NORMAL;
   vector<int> rhs;
 
@@ -454,6 +466,8 @@ struct Closure {
   // TODO: does nothing except pushing on the stack, remove!
   void push_id_on_chain (std::vector<LRAT_ID> &chain,
                          const std::vector<LitClausePair> &c);
+  void push_id_on_chain (std::vector<LRAT_ID> &chain,
+                         const std::optional<LitClausePair> &c);
   // TODO: does nothing except pushing on the stack, remove!
   void push_id_on_chain (std::vector<LRAT_ID> &chain, Rewrite rewrite, int);
   void update_and_gate_build_lrat_chain (
@@ -616,6 +630,9 @@ struct Closure {
   void produce_rewritten_clause_lrat_and_clean (vector<LitClausePair> &,
                                                 int execept_lhs = 0,
                                                 bool = true);
+  void produce_rewritten_clause_lrat_and_clean (optional <LitClausePair> &,
+                                                int execept_lhs = 0,
+                                                bool = true);
   // rewrite the clause using eager rewriting and rew1 and rew2, except for
   // 2 literals Usage:
   //   - the except are used to ignore LHS of gates that have not and should
@@ -630,6 +647,12 @@ struct Closure {
                                                 int execept_lhs = 0,
                                                 bool = true);
   void compute_rewritten_clause_lrat_simple (Clause *c, int except);
+  Clause * produce_rewritten_clause_lrat (Clause *c, Rewrite rewrite1,
+                                        std::vector<LRAT_ID> &chain,
+                                        bool = true,
+                                        Rewrite rewrite2 = Rewrite (),
+                                        int execept_lhs = 0,
+                                        int except_lhs2 = 0);
   // variant where we update the indices after removing the tautologies and
   // remove the tautological clauses
   void produce_rewritten_clause_lrat_and_clean (
