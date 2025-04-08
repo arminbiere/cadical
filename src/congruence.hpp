@@ -436,10 +436,12 @@ struct Closure {
                                    Clause *c2);
   bool merge_literals (Gate *g, Gate *h, int lit, int other, int orig_lit, int orig_other,
                             const std::vector<LRAT_ID> & = {},
-                            const std::vector<LRAT_ID> & = {});
+                       const std::vector<LRAT_ID> & = {});
   bool merge_literals (int lit, int other,
-                            const std::vector<LRAT_ID> & = {},
-                            const std::vector<LRAT_ID> & = {});
+                            const std::vector<LRAT_ID> &,
+                       const std::vector<LRAT_ID> &,
+		       int orig_lit,
+		       int orig_other);
 
   // proof production
   vector<LitClausePair> lrat_chain_and_gate;
@@ -731,6 +733,7 @@ struct Closure {
       Gate *g, std::vector<LRAT_ID> &reasons_lrat,
       std::vector<LRAT_ID> &reasons_back_lrat, size_t idx1, size_t idx2);
   bool normalize_ite_lits_gate (Gate *rhs);
+  bool special_duplicates_ite_gates (Gate *g, int dst, int src);
 };
 
 } // namespace CaDiCaL
