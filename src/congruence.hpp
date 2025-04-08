@@ -252,6 +252,7 @@ struct Gate {
   uint64_t id;
 #endif
   int lhs;
+  int rewritten_lhs;
   Gate_Type tag;
   bool garbage : 1;
   bool indexed : 1;

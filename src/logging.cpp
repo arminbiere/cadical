@@ -88,10 +88,10 @@ void Logger::log (Internal *internal, const Gate *g, const char *fmt, ...) {
   vprintf (fmt, ap);
   va_end (ap);
   if (g) {
-    printf ("%s%s gate[%" PRIu64 "] (arity: %ld) %s := %s",
+    printf ("%s%s gate[%" PRIu64 "] (arity: %ld) orig %s := %s := %s",
 	    special_gate_str (g->degenerated_gate).c_str (),
             g->garbage ? " garbage" : "", g->id, g->arity (),
-            loglit (internal, g->lhs).c_str (),
+            loglit (internal, g->lhs).c_str (), loglit (internal, g->rewritten_lhs).c_str (),
             string_of_gate (g->tag).c_str ());
     for (const auto &lit : g->rhs) {
       printf (" %s", loglit (internal, lit).c_str ());
