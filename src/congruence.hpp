@@ -434,7 +434,7 @@ struct Closure {
   // chain.
   bool merge_literals_equivalence (int lit, int other, Clause *c1,
                                    Clause *c2);
-  bool merge_literals (Gate *g, Gate *h, int lit, int other,
+  bool merge_literals (Gate *g, Gate *h, int lit, int other, int orig_lit, int orig_other,
                             const std::vector<LRAT_ID> & = {},
                             const std::vector<LRAT_ID> & = {});
   bool merge_literals (int lit, int other,

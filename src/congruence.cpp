@@ -1511,12 +1511,14 @@ bool Closure::learn_congruence_unit (int lit, bool delay_propagation, bool force
 // TODO: LRAT does not work if the LHS is not in normal form and if the
 // representative is also in the gate.
 bool Closure::merge_literals (
-    Gate *g, Gate *h, int lit, int other,
+    Gate *g, Gate *h, int lit, int other, int orig_lit, int orig_other,
     const std::vector<LRAT_ID> &extra_reasons_lit,
     const std::vector<LRAT_ID> &extra_reasons_ulit) {
   assert (!internal->unsat);
   assert (g->rewritten_lhs == lit);
   assert (g == h || h->rewritten_lhs == other);
+  assert (find_eager_representative(lit) == find_eager_representative(orig_lit));
+  assert (find_eager_representative(other) == find_eager_representative(orig_other));
   (void) g, (void) h;
   LOG ("merging literals %s and %s", LOGLIT(lit), LOGLIT(other));
   const int repr_lit = find_representative_and_compress (lit, false);
@@ -2794,7 +2796,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
         update_and_gate_unit_build_lrat_chain (g, src, id1, id2, g->rhs[0],
                                                extra_reasons_lit,
                                                extra_reasons_ulit);
-      if (merge_literals (g, g, g->rewritten_lhs, g->rhs[0], extra_reasons_lit,
+      if (merge_literals (g, g, g->rewritten_lhs, g->rhs[0], g->lhs, g->rhs[0], extra_reasons_lit,
                                extra_reasons_ulit)) {
         ++internal->stats.congruence.unaries;
         ++internal->stats.congruence.unary_and;
@@ -2812,7 +2814,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
       if (internal->lrat)
         update_and_gate_build_lrat_chain (g, h, extra_reasons_lit2,
                                           extra_reasons_ulit2);
-      if (merge_literals (g, h, g->rewritten_lhs, h->rewritten_lhs, extra_reasons_lit2,
+      if (merge_literals (g, h, g->rewritten_lhs, h->rewritten_lhs, g->lhs, h->lhs, extra_reasons_lit2,
                                extra_reasons_ulit2))
         ++internal->stats.congruence.ands;
     } else {
@@ -2905,7 +2907,7 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
       std::vector<LRAT_ID> reasons_implication, reasons_back;
       add_xor_matching_proof_chain (g, g->rewritten_lhs, h->pos_lhs_ids, h->rewritten_lhs,
                                     reasons_implication, reasons_back);
-      if (merge_literals (g->rewritten_lhs, h->rewritten_lhs, reasons_implication,
+      if (merge_literals (g, h, g->rewritten_lhs, h->rewritten_lhs, g->lhs, h->lhs, reasons_implication,
                           reasons_back)) {
         ++internal->stats.congruence.xors;
       }
@@ -3131,7 +3133,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
     if (internal->lrat)
       merge_and_gate_lrat_produce_lrat (g, h, reasons_lrat_src,
                                         reasons_lrat_usrc);
-    if (merge_literals (g, h, lhs, h->rewritten_lhs, reasons_lrat_src,
+    if (merge_literals (g, h, lhs, h->rewritten_lhs, g->lhs, h->lhs, reasons_lrat_src,
                              reasons_lrat_usrc)) {
       LOG ("found merged literals");
       ++internal->stats.congruence.ands;
@@ -6208,7 +6210,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
             add_xor_matching_proof_chain (g, g->rewritten_lhs, h->pos_lhs_ids, h->rewritten_lhs,
                                           reasons_implication,
                                           reasons_back);
-            if (merge_literals (g->rewritten_lhs, h->rewritten_lhs, reasons_implication,
+            if (merge_literals (g, h, g->rewritten_lhs, h->rewritten_lhs, g->lhs, h->lhs, reasons_implication,
                                      reasons_back))
               ++internal->stats.congruence.xors;
           } else {
@@ -6217,7 +6219,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
             if (internal->lrat)
               merge_and_gate_lrat_produce_lrat (g, h, reasons_implication,
                                                 reasons_back, false);
-            if (merge_literals (g->rewritten_lhs, h->rewritten_lhs, reasons_implication,
+            if (merge_literals (g, h, g->rewritten_lhs, h->rewritten_lhs, g->lhs, h->lhs, reasons_implication,
                                      reasons_back))
               ++internal->stats.congruence.ands;
           }
@@ -7040,7 +7042,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
     std::vector<LRAT_ID> extra_reasons_lit, extra_reasons_ulit;
     add_ite_matching_proof_chain (h, g, h->rewritten_lhs, lhs, extra_reasons_lit,
                                   extra_reasons_ulit);
-    if (merge_literals (h, g, h->rewritten_lhs, lhs, extra_reasons_lit,
+    if (merge_literals (h, g, h->rewritten_lhs, lhs, g->lhs, h->lhs, extra_reasons_lit,
                              extra_reasons_ulit)) {
       ++internal->stats.congruence.ites;
       LOG ("found merged literals");
