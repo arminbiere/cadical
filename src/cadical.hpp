@@ -301,7 +301,7 @@ public:
   // unfortunately should follow to be compatabile with IPASIR) the user can
   // simply use positive variable indices instead of literals.  Then the
   // returned integer is negative if the variable is assigned to 'false' and
-  // positive it is assigne to 'true'.
+  // positive it is assigned to 'true'.
   //
   //   require (SATISFIED)
   //   ensure (SATISFIED)
@@ -490,7 +490,7 @@ public:
 
   // Returns
   //
-  //    0 = UNKNOWN      
+  //    0 = UNKNOWN
   //   10 = SATISFIABLE
   //   20 = UNSATISFIABLE
   //
