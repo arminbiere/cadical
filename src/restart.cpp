@@ -31,12 +31,15 @@ bool Internal::stabilizing () {
     STOP (stable);
   else
     STOP (unstable);
+
+#ifndef QUIET
   const int64_t delta_conflicts =
       stats.conflicts - last.stabilize.conflicts;
-  const int64_t delta_ticks =
-      stats.ticks.search[stable] - last.stabilize.ticks;
   const char *current_mode = stable ? "stable" : "unstable";
   const char *next_mode = stable ? "unstable" : "stable";
+#endif
+  const int64_t delta_ticks =
+      stats.ticks.search[stable] - last.stabilize.ticks;
   PHASE ("stabilizing", stats.stabphases,
          "reached %s stabilization limit %" PRId64 " after %" PRId64
          " conflicts and %" PRId64 " ticks at %" PRId64

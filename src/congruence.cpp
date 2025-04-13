@@ -7549,7 +7549,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
 
   const int64_t new_merged = stats.congruence.congruent;
 
-  phase ("congruence-phase", stats.congruence.rounds, "merged %ld literals",
+  PHASE ("congruence-phase", stats.congruence.rounds, "merged %ld literals",
          new_merged - old_merged);
   if (!unsat && !internal->propagate ()) {
     learn_empty_clause();

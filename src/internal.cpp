@@ -699,11 +699,13 @@ void Internal::preprocess_quickly (bool always) {
   if (!always && stats.searches > 1)
     return;
   START (preprocess);
+#ifndef QUIET
   struct {
     int64_t vars, clauses;
   } before, after;
   before.vars = active ();
   before.clauses = stats.current.irredundant;
+#endif
   // stats.preprocessings++;
   assert (!preprocessing);
   preprocessing = true;
@@ -724,8 +726,10 @@ void Internal::preprocess_quickly (bool always) {
     elimfast ();
   // if (opts.condition)
   // condition (false);
+#ifndef QUIET
   after.vars = active ();
   after.clauses = stats.current.irredundant;
+#endif
   assert (preprocessing);
   preprocessing = false;
   PHASE ("preprocessing", stats.preprocessings,
