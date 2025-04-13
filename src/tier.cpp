@@ -10,7 +10,7 @@ void Internal::recompute_tier () {
   const int64_t delta =
       stats.tierecomputed >= 16 ? 1u << 16 : (1u << stats.tierecomputed);
   lim.recompute_tier = stats.conflicts + delta;
-  LOG ("rescheduling in %zd at %zd (conflicts at %zd)", delta,
+  LOG ("rescheduling in %" PRId64 " at %" PRId64 " (conflicts at %" PRId64 ")", delta,
        lim.recompute_tier, stats.conflicts);
 #ifndef NDEBUG
   uint64_t total_used = 0;

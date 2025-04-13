@@ -427,7 +427,7 @@ int Internal::lucky_phases () {
   const int64_t units = active_before - stats.active;
 
   if (!res && units)
-    LOG ("lucky %zd units", units);
+    LOG ("lucky %" PRId64 " units", units);
   searching_lucky_phases = false;
   STOP (lucky);
   STOP (search);

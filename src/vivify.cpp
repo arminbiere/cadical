@@ -681,7 +681,7 @@ void Internal::vivify_analyze (Clause *start, bool &subsumes,
             continue;
           LOG ("unit reason for %d", other);
           int64_t id = unit_id (-other);
-          LOG ("adding unit reason %zd for %d", id, other);
+          LOG ("adding unit reason %" PRId64 " for %s", id, LOGLIT (other));
           unit_chain.push_back (id);
           f.seen = true;
           analyzed.push_back (other);
@@ -776,7 +776,7 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
           // nevertheless we can use var (l) as if l was still assigned
           // because var is updated lazily
           int64_t id = unit_id (-lit);
-          LOG ("adding unit reason %zd for %d", id, lit);
+          LOG ("adding unit reason %" PRId64 " for %s", id, LOGLIT (lit));
           unit_chain.push_back (id);
         }
         f.seen = true;
@@ -1345,7 +1345,7 @@ vivify_ref create_ref (Internal *internal, Clause *c) {
       {
         const int64_t lit_count = internal->noccs (lit);
         assert (lit_count);
-        LOG ("checking literal %d with %zd occurrences", lit, lit_count);
+        LOG ("checking literal %s with %" PRId64 " occurrences", LOGLIT (lit), lit_count);
         if (lit_count <= best_count)
           continue;
         best_count = lit_count;
@@ -1358,7 +1358,7 @@ vivify_ref create_ref (Internal *internal, Clause *c) {
     assert (best_count < UINT32_MAX);
     ref.count[i] =
         ((uint64_t) best_count << 32) + (uint64_t) internal->vlit (best);
-    LOG ("final count at position %d is %d - %d: %lu", i, best, best_count,
+    LOG ("final count at position %d is %d - %d: %" PRIu64, i, best, best_count,
          ref.count[i]);
     lits[i] = best;
   }
@@ -1371,7 +1371,7 @@ Internal::vivify_prioritize_leftovers ([[maybe_unused]] char tag,
                                        std::vector<Clause *> &schedule) {
   if (prioritized) {
     PHASE ("vivify", stats.vivifications,
-           "[phase %c] leftovers of %" PRId64 " clause", tag, prioritized);
+           "[phase %c] leftovers of %zu clause", tag, prioritized);
   } else {
     PHASE ("vivify", stats.vivifications,
            "[phase %c] prioritizing all clause", tag);

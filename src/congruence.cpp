@@ -128,11 +128,11 @@ void check_correct_ite_flags (const Gate *const g) {
 
 static size_t hash_lits (std::array<int, 16> &nonces,
                          const vector<int> &lits) {
-  size_t hash = 0;
+  uint64_t hash = 0;
   const auto end_nonces = end (nonces);
   const auto begin_nonces = begin (nonces);
   auto n = begin_nonces;
-  for (auto lit : lits) {
+  for (int lit : lits) {
     hash += lit;
     hash *= *n++;
     hash = (hash << 4) | (hash >> 60);
@@ -140,7 +140,7 @@ static size_t hash_lits (std::array<int, 16> &nonces,
       n = begin_nonces;
   }
   hash ^= hash >> 32;
-  return hash;
+  return (size_t)hash;
 }
 
 size_t Hash::operator() (const Gate *const g) const {
@@ -184,7 +184,7 @@ bool Closure::find_binary (int lit, int other) const {
   // search_binary only returns a bool
   bool found = (it != end && it->lit1 == lit && it->lit2 == other);
   if (found) {
-    LOG ("found binary [%zd] %d %d", it->id, lit, other);
+    LOG ("found binary [%" PRId64 "] %d %d", it->id, lit, other);
     if (internal->lrat)
       lrat_chain.push_back (it->id);
   }
@@ -329,7 +329,7 @@ void Closure::unmark_all () {
 
 void Closure::set_mu1_reason (int lit, Clause *c) {
   assert (marked (lit) & 1);
-  LOG (c, "mu1 %d -> %zd", lit, c->id);
+  LOG (c, "mu1 %d -> %" PRId64, lit, c->id);
   mu1_ids[internal->vlit (lit)] = LitClausePair (lit, c);
 }
 
@@ -337,7 +337,7 @@ void Closure::set_mu2_reason (int lit, Clause *c) {
   assert (marked (lit) & 2);
   if (!internal->lrat)
     return;
-  LOG (c, "mu2 %d -> %zd", lit, c->id);
+  LOG (c, "mu2 %d -> %" PRId64, lit, c->id);
   mu2_ids[internal->vlit (lit)] = LitClausePair (lit, c);
 }
 
@@ -345,7 +345,7 @@ void Closure::set_mu4_reason (int lit, Clause *c) {
   assert (marked (lit) & 4);
   if (!internal->lrat)
     return;
-  LOG (c, "mu4 %d -> %zd", lit, c->id);
+  LOG (c, "mu4 %d -> %" PRId64, lit, c->id);
   mu4_ids[internal->vlit (lit)] = LitClausePair (lit, c);
 }
 
@@ -1048,7 +1048,7 @@ Clause *Closure::produce_rewritten_clause_lrat (Clause *c, int except_lhs,
 
 void Closure::push_id_on_chain (std::vector<LRAT_ID> &chain,
                                 Rewrite rewrite, int lit) {
-  LOG ("adding reason %zd for rewriting %d marked",
+  LOG ("adding reason %" PRId64 " for rewriting %d marked",
        lit == rewrite.src ? rewrite.id1 : rewrite.id2, lit);
   chain.push_back (lit == rewrite.src ? rewrite.id1 : rewrite.id2);
 }
@@ -1171,7 +1171,7 @@ void Closure::push_id_on_chain (std::vector<LRAT_ID> &chain, Clause *c) {
 void Closure::push_id_on_chain (std::vector<LRAT_ID> &chain,
                                 const std::vector<LitClausePair> &reasons) {
   for (auto litId : reasons) {
-    LOG (litId.clause, "found lrat in gate %d from %zd", litId.current_lit,
+    LOG (litId.clause, "found lrat in gate %d from %" PRId64, litId.current_lit,
          litId.clause->id);
     push_id_on_chain (chain, litId.clause);
   }
@@ -1224,7 +1224,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
       if (clashing == -g->lhs) {
         for (auto litId : g->pos_lhs_ids) {
           LOG (litId.clause,
-               "found lrat in gate %d from %zd (looking for %d)",
+               "found lrat in gate %d from %" PRId64 " (looking for %d)",
                litId.current_lit, litId.clause->id, falsified);
           if (litId.current_lit == clashing) {
             push_id_and_rewriting_lrat_unit (
@@ -1286,7 +1286,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
       // rewriting)
       for (auto litId : g->pos_lhs_ids) {
         LOG (litId.clause,
-             "found lrat in gate %d from %zd (looking for %d)",
+             "found lrat in gate %d from %" PRId64 " (looking for %d)",
              litId.current_lit, litId.clause->id, falsified);
         if (litId.current_lit == falsified ||
             (litId.current_lit == src && dst == falsified)) {
@@ -2588,7 +2588,7 @@ void Closure::update_and_gate_build_lrat_chain (
 void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
                                int dst, LRAT_ID id1, LRAT_ID id2,
                                int falsifies, int clashing) {
-  LOG (g, "update and gate of arity %ld", g->arity ());
+  LOG (g, "update and gate of arity %zu", g->arity ());
   assert (lrat_chain.empty ());
   bool garbage = true;
   if (falsifies || clashing) {
@@ -2795,16 +2795,16 @@ void Closure::simplify_and_gate (Gate *g) {
   if (internal->lrat) { // updating reasons
     size_t i = 0, size = g->pos_lhs_ids.size ();
     for (size_t j = 0; j < size; ++j) {
-      LOG ("looking at %d [%ld %ld]", g->pos_lhs_ids[j].current_lit, i, j);
+      LOG ("looking at %d [%zu %zu]", g->pos_lhs_ids[j].current_lit, i, j);
       g->pos_lhs_ids[i] = g->pos_lhs_ids[j];
       if (!g->degenerated_gate &&
           internal->val (g->pos_lhs_ids[i].current_lit) &&
           g->pos_lhs_ids[i].current_lit != falsifies)
         continue;
-      LOG ("keeping %d [%ld %ld]", g->pos_lhs_ids[i].current_lit, i, j);
+      LOG ("keeping %d [%zu %zu]", g->pos_lhs_ids[i].current_lit, i, j);
       ++i;
     }
-    LOG ("resizing to %ld", i);
+    LOG ("resizing to %zu", i);
     g->pos_lhs_ids.resize (i);
   }
 
@@ -3172,8 +3172,8 @@ Gate *Closure::find_remaining_and_gate (Clause *base_clause, int lhs) {
     return nullptr;
   }
 
-  LOG ("trying to find AND gate with remaining LHS %d", (lhs));
-  LOG ("negated LHS %d occurs times in %zd binary clauses", (not_lhs),
+  LOG ("trying to find AND gate with remaining LHS %s", LOGLIT (lhs));
+  LOG ("negated LHS %s occurs times in %" PRId64 " binary clauses", LOGLIT(not_lhs),
        internal->noccs (-lhs));
 
   const size_t arity = lits.size () - 1;
@@ -3195,7 +3195,7 @@ Gate *Closure::find_remaining_and_gate (Clause *base_clause, int lhs) {
     ++matched;
     if (!(mark & 2)) {
       lrat_chain_and_gate.push_back (LitClausePair (other, w.clause));
-      LOG ("pushing %d -> %zd", other, w.clause->id);
+      LOG ("pushing %d -> %" PRId64, other, w.clause->id);
       continue;
     }
     LOG ("marking %d mu4", other);
@@ -3324,7 +3324,7 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
   const size_t arity = size - 1;
   if (max_negbincount < arity) {
     LOG (c,
-         "all literals have less than %lu negated occurrences"
+         "all literals have less than %zu negated occurrences"
          "thus skipping",
          arity);
     if (internal->lrat)
@@ -3350,7 +3350,7 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
   }
   const size_t reduced_size = clause_size - reduced;
   assert (reduced_size);
-  LOG (c, "trying as base arity %lu AND gate", arity);
+  LOG (c, "trying as base arity %zu AND gate", arity);
   assert (begin (lits) + reduced_size <= end (lits));
   MSORT (internal->opts.radixsortlim, begin (lits),
          begin (lits) + reduced_size,
@@ -3366,8 +3366,8 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
     if (c->garbage)
       break;
     const int lhs = lits[i];
-    LOG ("trying LHS candidate literal %d with %ld negated occurrences",
-         (lhs), internal->noccs (-lhs));
+    LOG ("trying LHS candidate literal %s with %" PRId64 " negated occurrences",
+         LOGLIT(lhs), internal->noccs (-lhs));
 
     if (first) {
       first = false;
@@ -3392,7 +3392,7 @@ void Closure::extract_and_gates_with_base_clause (Clause *c) {
   }
   lrat_chain_and_gate.clear ();
   if (extracted)
-    LOG (c, "extracted %u with arity %lu AND base", extracted, arity);
+    LOG (c, "extracted %u with arity %zu AND base", extracted, arity);
 }
 
 void Closure::reset_and_gate_extraction () {
@@ -4067,7 +4067,7 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
   CONTINUE_COUNTING_NEXT_CLAUSE:;
   }
 
-  LOG ("considering %zd out of %zd", candidates.size (),
+  LOG ("considering %zu out of %" PRId64, candidates.size (),
        internal->irredundant ());
   const unsigned rounds = internal->opts.congruencexorcounts;
 #ifdef LOGGING
@@ -4113,7 +4113,7 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
     if (!removed)
       break;
 
-    LOG ("after round %d, %zd (%ld %%) remain", round, candidates.size (),
+    LOG ("after round %d, %zd (%zu %%) remain", round, candidates.size (),
          candidates.size () / (1 + original_size) * 100);
   }
 
@@ -4148,7 +4148,7 @@ Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
   assert (least_occurring_literal);
   LOG ("searching XOR side clause watched by %d#%u",
        least_occurring_literal, count_least_occurring);
-  LOG ("searching for size %ld", size_lits);
+  LOG ("searching for size %zu", size_lits);
   for (auto c : internal->occs (least_occurring_literal)) {
     LOG (c, "checking");
     assert (c->size != 2); // TODO kissat has break
@@ -7549,7 +7549,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
 
   const int64_t new_merged = stats.congruence.congruent;
 
-  PHASE ("congruence-phase", stats.congruence.rounds, "merged %ld literals",
+  PHASE ("congruence-phase", stats.congruence.rounds, "merged %" PRId64 " literals",
          new_merged - old_merged);
   if (!unsat && !internal->propagate ()) {
     learn_empty_clause();
