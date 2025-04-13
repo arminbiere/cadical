@@ -2427,14 +2427,6 @@ int kitten_compute_prime_implicant (kitten *kitten, void *state,
   return res;
 }
 
-static bool contains_blit (kitten *kitten, klause *c, const unsigned blit) {
-  for (all_literals_in_klause (lit, c)) {
-    if (lit == blit)
-      return true;
-  }
-  return false;
-}
-
 static bool prime_propagate_blit (kitten *kitten, const unsigned idx,
                                   const unsigned blit) {
   unsigned lit = 2 * idx;
@@ -2504,7 +2496,9 @@ static bool prime_propagate_blit (kitten *kitten, const unsigned idx,
 
 static int compute_prime_implicant_for (kitten *kitten, unsigned blit) {
   value *values = kitten->values;
+#ifndef NDEBUG
   kar *vars = kitten->vars;
+#endif
   unsigneds unassigned;
   INIT_STACK (unassigned);
   bool limit_hit = false;
@@ -2518,7 +2512,7 @@ static int compute_prime_implicant_for (kitten *kitten, unsigned blit) {
       values[blit] = 0;
       values[blit ^ 1] = 0;
       PUSH_STACK (unassigned, tmp > 0 ? blit : blit ^ 1);
-      PUSH_STACK (kitten->prime[i], block); // will be negated!
+      PUSH_STACK (kitten->prime[ignoring], block); // will be negated!
     } else
       assert (false);
     for (all_stack (unsigned, lit, kitten->trail)) {
@@ -2532,7 +2526,6 @@ static int compute_prime_implicant_for (kitten *kitten, unsigned blit) {
         continue;
       assert (values[lit]); // not true when flipping is involved
       const unsigned idx = lit / 2;
-      const unsigned ref = vars[idx].reason;
       assert (vars[idx].level);
       LOG ("non-prime candidate var %d", idx);
       if (prime_propagate_blit (kitten, idx, block)) {
