@@ -280,17 +280,18 @@ fi
 [ x"$CXXFLAGS" = x ] || CXXFLAGS="$CXXFLAGS "
 
 case x"$CXX" in
-  x*g++*|x*clang++*) CXXFLAGS="${CXXFLAGS}-Wall -Wextra";;
-  *) CXXFLAGS="${CXXFLAGS}-W";;
+  x*g++*|x*clang++*) CXXFLAGS="${CXXFLAGS}-Wall -Wextra"; CFLAGS="${CFLAGS}-Wall -Wextra";;
+  *) CXXFLAGS="${CXXFLAGS}-W"; CFLAGS="${CFLAGS}-W";;
 esac
 
 if [ $debug = yes ]
 then
   CXXFLAGS="$CXXFLAGS -g"
+  CFLAGS="$CFLAGS -g"
 else
   case x"$CXX" in
-    x*g++*|x*clang++*) CXXFLAGS="$CXXFLAGS -O3";;
-    *) CXXFLAGS="$CXXFLAGS -O";;
+    x*g++*|x*clang++*) CXXFLAGS="$CXXFLAGS -O3"; CFLAGS="$CFLAGS -O3";;
+    *) CXXFLAGS="$CXXFLAGS -O"; CFLAGS="$CFLAGS -O";;
   esac
 fi
 
