@@ -126,8 +126,7 @@ OPTION( flushint,        1e5,  1,2e9,0,0,1, "initial limit") \
 OPTION( forcephase,        0,  0,  1,0,0,1, "always use initial phase") \
 OPTION( frat,              0,  0,  2,0,0,1, "1=frat(lrat), 2=frat(drat)") \
 OPTION( idrup,             0,  0,  1,0,0,1, "incremental proof format") \
-OPTION( ilb,               0,  0,  1,0,0,1, "ILB (incremental lazy backtrack)") \
-OPTION( ilbassumptions,    0,  0,  1,0,0,1, "trail reuse for assumptions (ILB-like)") \
+OPTION( ilb,               0,  0,  1,0,0,1, "ILB (incremental lazy backtrack) (0: no, 1: assumptions only, 2: everything)") \
 OPTION( inprobeint,      100,  1,2e9,0,0,1, "inprobing interval" ) \
 OPTION( inprobing,         1,  0,  1,0,1,1, "enable probe inprocessing") \
 OPTION( inprocessing,      1,  0,  1,0,1,1, "enable general inprocessing") \

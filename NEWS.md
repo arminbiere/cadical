@@ -35,6 +35,10 @@ Version 2.2.0
   semantic definitions using 'kitten'
   (off by default `set ('elimdef', 1)` to enable).
 
+- ILB interface simplified: instead of having ilbassumptions and ilb,
+  there is now only ilb with values 0, 1 (= only assumptions), and 2
+  (= full reuse).
+
 Version 2.1.3
 -------------
 
