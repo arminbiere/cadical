@@ -1260,12 +1260,10 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
             for (const auto &litId : g->pos_lhs_ids) {
               LOG (litId.clause, "definition clause %d ->",
                    litId.current_lit);
-              if (litId.current_lit != clashing) {
-                push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
-                                                 proof_chain, false,
-                                                 Rewrite (), g->lhs);
-                LOG (proof_chain, "produced lrat chain so far");
-              }
+              push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
+                                               proof_chain, false,
+                                               Rewrite (), g->lhs);
+              LOG (proof_chain, "produced lrat chain so far");
             }
           }
         } else {
@@ -2774,6 +2772,8 @@ void Closure::simplify_and_gate (Gate *g) {
   int falsifies = 0;
   std::vector<int>::iterator it = begin (g->rhs);
   bool ulhs_in_rhs = false;
+  if (g->degenerated_gate != Special_Gate::NORMAL)
+    g->lhs = find_eager_representative (g->lhs);
   for (auto lit : g->rhs) {
     const signed char v = internal->val (lit);
     if (v > 0) {
@@ -4476,13 +4476,15 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
   int clashing = 0, falsifies = 0;
   unsigned dst_count = 0, not_dst_count = 0;
   auto q = begin (g->rhs);
+  if (g->degenerated_gate != Special_Gate::NORMAL)
+    g->lhs = find_eager_representative(g->lhs);
   for (int &lit : g->rhs) {
     if (lit == src)
       lit = dst;
     if (lit == -g->lhs) {
       LOG ("found negated LHS literal %d", lit);
       clashing = lit;
-      g->degenerated_gate = DEGENERATED_AND;;
+      g->degenerated_gate = DEGENERATED_AND;
       break;
     }
     if (lit == g->lhs)

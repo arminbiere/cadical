@@ -169,7 +169,9 @@ struct smaller_clause_size_rank {
 // a = (c ? a : e) results in no t gate (none of them)
 // a = (c ? t : a) results in no e gate (none of them)
 //
-// We also use for and gates
+// We also use it for AND gates. They have a peculiarity: being special can fix itself. To avoid
+// one more special case, we rewrite the LHS in that case too to make sure it remains special.
+//
 enum Special_Gate {
   NORMAL = 0,
   NO_PLUS_THEN = (1 << 0),
