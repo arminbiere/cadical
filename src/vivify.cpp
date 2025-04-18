@@ -757,7 +757,7 @@ void Internal::vivify_deduce (Clause *candidate, Clause *conflict,
   } else {
     reason = (conflict ? conflict : candidate);
     assert (reason);
-    assert (!reason->garbage);
+    assert (!reason->garbage || reason->size == 2);
     mark2 (candidate);
     subsumes = (candidate != reason);
     redundant = reason->redundant;
