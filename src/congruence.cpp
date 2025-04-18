@@ -2406,6 +2406,9 @@ void Closure::update_and_gate_unit_build_lrat_chain (
     std::vector<LRAT_ID> &extra_reasons_lit,
     std::vector<LRAT_ID> &extra_reasons_ulit) {
   LOG ("generate chain for gate boiling down to unit");
+  if (g->lhs == g->rhs[0]) // do not try to produce LRAT chains, we will not need them anyway
+    return;
+
   if (g->neg_lhs_ids.size () != 1) {
 
     if (g->degenerated_gate == Special_Gate::DEGENERATED_AND) {
@@ -4523,6 +4526,11 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
   }
   LOG (lrat_chain, "lrat chain after rewriting");
 
+  if (q != end (g->rhs)) {
+    g->rhs.resize (q - begin (g->rhs));
+    g->shrunken = true;
+  }
+
   if (internal->lrat) { // updating reasons in the chain.
 #ifdef LOGGING
     for (auto litId : g->pos_lhs_ids) {
@@ -4531,6 +4539,10 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
 #endif
     // We remove all assigned literals except the falsified literal such
     // that we can produce an LRAT chain
+    //
+    // Obviously there are exceptions that make everything more complicated, in particular when we
+    // do not need the gate anymore, like in: 3 := And 1@0+=1 3
+    // Then assertion will fail (like the `assert (i)`) but it does not matter.
     size_t i = 0, size = g->pos_lhs_ids.size ();
     bool found = false;
     assert (!falsifies || !clashing);
@@ -4573,21 +4585,17 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
       ++i;
     }
     LOG ("resizing to %zd", i);
-    assert (i);
+    assert (i || (g->arity() == 1 && g->rhs[0] == g->lhs));
     g->pos_lhs_ids.resize (i);
   }
 
-  if (q != end (g->rhs)) {
-    g->rhs.resize (q - begin (g->rhs));
-    g->shrunken = true;
-  }
   assert (dst_count <= 2);
   assert (not_dst_count <= 1);
 
   std::vector<LRAT_ID> reasons_lrat_src, reasons_lrat_usrc;
   shrink_and_gate (g, falsifies, clashing);
   LOG (g, "rewritten as");
-  assert (!internal->lrat || !g->pos_lhs_ids.empty ());
+  assert (!internal->lrat || !g->pos_lhs_ids.empty () || (g->arity() == 1 && g->rhs[0] == g->lhs));
   //  check_and_gate_implied (g);
   update_and_gate (g, git, src, dst, id1, id2, falsifies, clashing);
   ++internal->stats.congruence.rewritten_ands;
