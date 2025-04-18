@@ -6449,7 +6449,7 @@ void Closure::simplify_ite_gate (Gate *g) {
         std::vector<LRAT_ID> reasons_lrat, reasons_lrat_back;
         if (internal->lrat)
           merge_and_gate_lrat_produce_lrat (g, h, reasons_lrat,
-                                            reasons_lrat_back, false);
+                                            reasons_lrat_back, true);
         if (merge_literals (g->lhs, h->lhs, reasons_lrat,
                                  reasons_lrat_back)) {
           ++internal->stats.congruence.ites;
