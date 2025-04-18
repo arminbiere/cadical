@@ -5178,7 +5178,7 @@ void Closure::rewrite_ite_gate_update_lrat_reasons (Gate *g, int src,
     return;
   LOG (g, "updating lrat from");
   for (auto &litId : g->pos_lhs_ids) {
-    assert (litId.clause);
+    assert (litId.clause || g->degenerated_gate != Special_Gate::NORMAL);
     if (litId.current_lit == src)
       litId.current_lit = dst;
     if (litId.current_lit == -src)
