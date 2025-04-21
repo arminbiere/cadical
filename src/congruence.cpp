@@ -5200,7 +5200,7 @@ bool Closure::rewrite_ite_gate_to_and (
     int cond_lit_to_learn_if_degenerated) {
   assert (internal->lrat_chain.empty ());
   assert (!g->garbage);
-  LOG (g, "rewriting to proper AND");
+  LOG (g, "rewriting to proper AND gate, namely");
   if (internal->val (g->lhs) > 0) {
     {
       const int lit = g->rhs[0];
@@ -5250,6 +5250,10 @@ bool Closure::rewrite_ite_gate_to_and (
     }
     return true;
   }
+  if (src == g->lhs)
+    g->lhs = dst;
+  else if (src == -g->lhs)
+    g->lhs = -dst;
   if (!internal->lrat)
     return false;
   LOG ("updating flags");
