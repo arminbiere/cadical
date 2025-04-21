@@ -5195,6 +5195,13 @@ void Closure::rewrite_ite_gate_update_lrat_reasons (Gate *g, int src,
   check_ite_lrat_reasons (g);
 }
 
+
+// Transforms an ITE gate to an AND gate
+//
+// In essence the transformation is simple for LRAT: two long clause need to be resolved to get a
+// binary and one long clause stays the long ternary clause for the resulting gate.  There are two
+// things to be careful: we have to rewrite the LHS too, because if it appears on the RHS too, it
+// will not get rewritten and the proof will not work.
 bool Closure::rewrite_ite_gate_to_and (
     Gate *g, int src, int dst, size_t idx1, size_t idx2,
     int cond_lit_to_learn_if_degenerated) {
@@ -5256,12 +5263,27 @@ bool Closure::rewrite_ite_gate_to_and (
     g->lhs = -dst;
   if (!internal->lrat)
     return false;
-  LOG ("updating flags");
+  LOG (g, "updating flags for");
 
   if (g->rhs[1] == -g->lhs || g->rhs[0] == -g->lhs)
-    g->degenerated_gate = DEGENERATED_AND;
+    g->degenerated_gate = Special_Gate::DEGENERATED_AND;
+
+  if (g->degenerated_gate == Special_Gate::DEGENERATED_AND) {
+    assert (g->rhs[1] == -g->lhs || g->rhs[0] == -g->lhs);
+    if (g->rhs[1] == -g->lhs) {
+      push_id_and_rewriting_lrat_unit(g->pos_lhs_ids[0].clause, Rewrite (), lrat_chain);
+      learn_congruence_unit(-g->lhs);
+      return true;
+    }
+    if (g->rhs[0] == -g->lhs) {
+      push_id_and_rewriting_lrat_unit(g->pos_lhs_ids[2].clause, Rewrite (), lrat_chain);
+      learn_congruence_unit(-g->lhs);
+      return true;
+    }
+  }
   if (g->rhs[0] == g->lhs || g->rhs[1] == g->lhs)
-    g->degenerated_gate = DEGENERATED_AND;
+    g->degenerated_gate = Special_Gate::DEGENERATED_AND;
+
   assert (g->rhs.size () == 3);
   assert (g->pos_lhs_ids.size () == 4);
   assert (idx1 < g->pos_lhs_ids.size ());
