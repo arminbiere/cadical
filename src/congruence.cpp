@@ -3759,6 +3759,7 @@ LRAT_ID Closure::simplify_and_add_to_proof_chain (vector<int> &unsimplified,
       }
     } else {
       id = check_and_add_to_proof_chain (clause);
+      assert (id > 0);
       add_clause_to_chain (clause, id);
     }
   } else {
@@ -6622,8 +6623,9 @@ void Closure::add_ite_matching_proof_chain (
     unsimplified.push_back (lhs2);
     LRAT_ID id1 = 0;
     if (internal->lrat) {
+      assert (g_then_id);
       lrat_chain.push_back (g_then_id);
-      lrat_chain.push_back (h_neg_then_id);
+      if (h_neg_then_id) lrat_chain.push_back (h_neg_then_id);
     }
     id1 = simplify_and_add_to_proof_chain (unsimplified);
 
@@ -6633,7 +6635,7 @@ void Closure::add_ite_matching_proof_chain (
     LRAT_ID id2 = 0;
     if (internal->lrat) {
       lrat_chain.push_back (g_neg_else_id);
-      lrat_chain.push_back (h_else_id);
+      if (h_else_id) lrat_chain.push_back (h_else_id);
     }
     id2 = simplify_and_add_to_proof_chain (unsimplified);
 
@@ -6651,7 +6653,7 @@ void Closure::add_ite_matching_proof_chain (
     unsimplified.push_back (-lhs2);
     LRAT_ID id1 = 0;
     if (internal->lrat) {
-      lrat_chain.push_back (h_then_id);
+      if (h_then_id) lrat_chain.push_back (h_then_id);
       lrat_chain.push_back (g_neg_then_id);
     }
     id1 = simplify_and_add_to_proof_chain (unsimplified);
@@ -6661,7 +6663,7 @@ void Closure::add_ite_matching_proof_chain (
     unsimplified.push_back (lhs2);
     LRAT_ID id2 = 0;
     if (internal->lrat) {
-      lrat_chain.push_back (h_neg_else_id);
+      if (h_neg_else_id) lrat_chain.push_back (h_neg_else_id);
       lrat_chain.push_back (g_else_id);
     }
     id2 = simplify_and_add_to_proof_chain (unsimplified);
@@ -6682,7 +6684,7 @@ void Closure::add_ite_matching_proof_chain (
     if (internal->lrat) {
       assert (g_neg_then_id && h_then_id && g_else_id && h_neg_else_id);
       lrat_chain.push_back (g_neg_then_id);
-      lrat_chain.push_back (h_then_id);
+      if (h_then_id) lrat_chain.push_back (h_then_id);
     }
     id1 = simplify_and_add_to_proof_chain (unsimplified);
 
@@ -6693,7 +6695,7 @@ void Closure::add_ite_matching_proof_chain (
 
     if (internal->lrat) {
       lrat_chain.push_back (g_else_id);
-      lrat_chain.push_back (h_neg_else_id);
+      if (h_neg_else_id) lrat_chain.push_back (h_neg_else_id);
     }
     id2 = simplify_and_add_to_proof_chain (unsimplified);
     assert (!internal->lrat || id1);
@@ -6712,7 +6714,7 @@ void Closure::add_ite_matching_proof_chain (
     if (internal->lrat) {
       assert (g_neg_then_id && h_then_id && g_else_id && h_neg_else_id);
       lrat_chain.push_back (h_neg_then_id);
-      lrat_chain.push_back (g_then_id);
+      if (g_then_id) lrat_chain.push_back (g_then_id);
     }
     id1 = simplify_and_add_to_proof_chain (unsimplified);
 
@@ -6723,7 +6725,7 @@ void Closure::add_ite_matching_proof_chain (
 
     if (internal->lrat) {
       lrat_chain.push_back (h_else_id);
-      lrat_chain.push_back (g_neg_else_id);
+      if (g_neg_else_id) lrat_chain.push_back (g_neg_else_id);
     }
     id2 = simplify_and_add_to_proof_chain (unsimplified);
     assert (!internal->lrat || id1);
