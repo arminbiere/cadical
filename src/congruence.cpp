@@ -5272,12 +5272,12 @@ bool Closure::rewrite_ite_gate_to_and (
   if (g->degenerated_gate == Special_Gate::DEGENERATED_AND) {
     assert (g->rhs[1] == -g->lhs || g->rhs[0] == -g->lhs);
     if (g->rhs[1] == -g->lhs) {
-      push_id_and_rewriting_lrat_unit(g->pos_lhs_ids[0].clause, Rewrite (), lrat_chain);
+      push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[0].clause, Rewrite (), lrat_chain);
       learn_congruence_unit(-g->lhs);
       return true;
     }
     if (g->rhs[0] == -g->lhs) {
-      push_id_and_rewriting_lrat_unit(g->pos_lhs_ids[2].clause, Rewrite (), lrat_chain);
+      push_id_and_rewriting_lrat_unit (g->pos_lhs_ids[1].clause, Rewrite (), lrat_chain);
       learn_congruence_unit(-g->lhs);
       return true;
     }
@@ -6653,8 +6653,8 @@ void Closure::add_ite_matching_proof_chain (
     unsimplified.push_back (-lhs2);
     LRAT_ID id1 = 0;
     if (internal->lrat) {
-      if (h_then_id) lrat_chain.push_back (h_then_id);
-      lrat_chain.push_back (g_neg_then_id);
+      lrat_chain.push_back (h_then_id);
+      if (g_neg_then_id) lrat_chain.push_back (g_neg_then_id);
     }
     id1 = simplify_and_add_to_proof_chain (unsimplified);
 
@@ -6663,8 +6663,8 @@ void Closure::add_ite_matching_proof_chain (
     unsimplified.push_back (lhs2);
     LRAT_ID id2 = 0;
     if (internal->lrat) {
-      if (h_neg_else_id) lrat_chain.push_back (h_neg_else_id);
-      lrat_chain.push_back (g_else_id);
+      lrat_chain.push_back (h_neg_else_id);
+      if (g_else_id) lrat_chain.push_back (g_else_id);
     }
     id2 = simplify_and_add_to_proof_chain (unsimplified);
 
@@ -6682,7 +6682,7 @@ void Closure::add_ite_matching_proof_chain (
     unsimplified.push_back (-lhs2);
     LRAT_ID id1 = 0;
     if (internal->lrat) {
-      assert (g_neg_then_id && h_then_id && g_else_id && h_neg_else_id);
+      assert (g_neg_then_id);
       lrat_chain.push_back (g_neg_then_id);
       if (h_then_id) lrat_chain.push_back (h_then_id);
     }
@@ -6694,6 +6694,7 @@ void Closure::add_ite_matching_proof_chain (
     LRAT_ID id2 = -1;
 
     if (internal->lrat) {
+      assert (g_else_id);
       lrat_chain.push_back (g_else_id);
       if (h_neg_else_id) lrat_chain.push_back (h_neg_else_id);
     }
