@@ -1141,6 +1141,27 @@ void Internal::analyze () {
 
     uip = 0;
     while (!uip) {
+      if (!i) {
+	lazy_external_propagator_out_of_order_clause (uip);
+	if (unsat)
+	  return;
+	else if (uip){
+	  open = 1;
+	  break;
+	}
+	else {
+          LOG (reason, "restarting the analysis on the new conflict");
+	  ++stats.conflicts;
+          reason = conflict;
+          resolvent_size = 0;
+          antecedent_size = 1;
+          resolved = 0;
+          open = 0;
+          analyze_reason (0, reason, open, resolvent_size, antecedent_size);
+          conflict_size = antecedent_size - 1;
+          assert (open > 1);
+        }
+      }
       assert (i > 0);
       const int lit = (*t)[--i];
       if (!flags (lit).seen)
@@ -1264,6 +1285,62 @@ void Internal::analyze () {
 
   if (lim.recompute_tier <= stats.conflicts)
     recompute_tier ();
+}
+
+// In the special case where the external propagator is lazy, the same invariants as OTFS break
+// (but even more complicated). There are three possible cases:
+//   - the clause becomes empty (unsat must be answered)
+//   - the clause is a unit (backtrack and set the clause)
+//   - the clause is a new conflict on lower level and we restart the analysis
+//
+// TODO: we do not really need to keep the clause longer than the conflict analysis.
+void Internal::lazy_external_propagator_out_of_order_clause (int &uip) {
+  assert (!opts.exteagerreasons);
+  assert (external_prop);
+  LOG (clause, "out-of-order conflict");
+  if (clause.empty ()) {
+    LOG (lrat_chain, "lrat_chain:");
+    LOG (clause, "clause:");
+    LOG (unit_chain, "units:");
+    if (lrat) {
+      LOG (unit_chain, "unit chain: ");
+      for (auto id : unit_chain)
+        lrat_chain.push_back (id);
+      unit_chain.clear ();
+      reverse (lrat_chain.begin (), lrat_chain.end ());
+    }
+    LOG (lrat_chain, "lrat_chain:");
+    learn_empty_clause ();
+    if (external->learner)
+      external->export_learned_empty_clause ();
+    conflict = 0;
+  } else if (clause.size () == 1) {
+    LOG ("found out-of-order unit");
+    uip = -clause[0];
+    assert (uip);
+    backtrack (var (uip).level);
+    assert (val (uip) > 0);
+    clause.clear ();
+  }
+  else {
+    int jump;
+    const int glue = clause.size () - 1;
+    conflict = new_driving_clause (glue, jump);
+    UPDATE_AVERAGE (averages.current.level, jump);
+    backtrack (jump);
+    LOG (conflict, "new conflict");
+  }
+  // Clean up.
+  //
+  clear_analyzed_literals ();
+  clear_unit_analyzed_literals ();
+  clear_analyzed_levels ();
+  clause.clear ();
+
+  lrat_chain.clear ();
+  if (unsat) {
+    STOP (analyze);
+  }
 }
 
 // We wait reporting a learned unit until propagation of that unit is

@@ -781,6 +781,7 @@ struct Internal {
   int otfs_find_backtrack_level (int &forced);
   Clause *on_the_fly_strengthen (Clause *conflict, int lit);
   void update_decision_rate_average ();
+  void lazy_external_propagator_out_of_order_clause (int &);
   void analyze ();
   void iterate (); // report learned unit clause
 
