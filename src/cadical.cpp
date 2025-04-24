@@ -25,7 +25,7 @@ class App : public Handler, public Terminator {
 
   Solver *solver; // Global solver.
 
-#ifndef __WIN32
+#ifndef _WIN32
   // Command line options.
   //
   int time_limit; // '-t <sec>'
@@ -109,7 +109,7 @@ void App::print_usage (bool all) {
             "  -q             be quiet\n"
 #endif
             "\n"
-#ifndef __WIN32
+#ifndef _WIN32
             "  -t <sec>       set wall clock time limit\n"
 #endif
     );
@@ -125,7 +125,7 @@ void App::print_usage (bool all) {
         "  -v             increase verbosity (see also '--verbose' below)\n"
         "  -q             be quiet (same as '--quiet')\n"
 #endif
-#ifndef __WIN32
+#ifndef _WIN32
         "  -t <sec>       set wall clock time limit\n"
 #endif
         "\n"
@@ -226,7 +226,7 @@ void App::print_usage (bool all) {
         "stops at the first satisfied cube if there is one and uses that\n"
         "one for the witness to print.  Conflict and decision limits are\n"
         "applied to each individual cube solving call while '-P', '-L'"
-#ifdef __WIN32
+#ifdef _WIN32
         "\n"
 #else
         " and\n"
@@ -491,7 +491,7 @@ int App::main (int argc, char **argv) {
       else
         decision_limit_specified = argv[i];
     }
-#ifndef __WIN32
+#ifndef _WIN32
     else if (!strcmp (argv[i], "-t")) {
       if (++i == argc)
         APPERR ("argument to '-t' missing");
@@ -624,7 +624,7 @@ int App::main (int argc, char **argv) {
   }
 #endif
   if (preprocessing > 0 || localsearch > 0 ||
-#ifndef __WIN32
+#ifndef _WIN32
       time_limit >= 0 ||
 #endif
       conflict_limit >= 0 || decision_limit >= 0) {
@@ -641,7 +641,7 @@ int App::main (int argc, char **argv) {
           localsearch, localsearch_specified);
       solver->limit ("localsearch", localsearch);
     }
-#ifndef __WIN32
+#ifndef _WIN32
     if (time_limit >= 0) {
       solver->message (
           "setting time limit to %d seconds real time (due to '-t %s')",
@@ -909,7 +909,7 @@ int App::main (int argc, char **argv) {
     close (1);
     pclose (less_pipe);
   }
-#ifndef __WIN32
+#ifndef _WIN32
   if (time_limit > 0)
     alarm (0);
 #endif
@@ -925,7 +925,7 @@ void App::init () {
 
   assert (!solver);
 
-#ifndef __WIN32
+#ifndef _WIN32
   time_limit = -1;
 #endif
   force_strict_parsing = 1;

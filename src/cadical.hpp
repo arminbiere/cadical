@@ -1054,10 +1054,14 @@ private:
   //
   // TODO: support for other compilers (beside 'gcc' and 'clang').
 
+#ifndef _WIN32
 #define CADICAL_ATTRIBUTE_FORMAT(FORMAT_POSITION, \
                                  VARIADIC_ARGUMENT_POSITION) \
   __attribute__ ((format (PRINTF_FORMAT, FORMAT_POSITION, \
                           VARIADIC_ARGUMENT_POSITION)))
+#else
+#define CADICAL_ATTRIBUTE_FORMAT(X,Y) /**/
+#endif
 
   // Messages in a common style.
   //

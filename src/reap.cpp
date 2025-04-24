@@ -26,9 +26,17 @@ Reap::Reap () {
   max_bucket = 0;
 }
 
+#ifndef _WIN32
 static inline unsigned leading_zeroes_of_unsigned (unsigned x) {
   return x ? __builtin_clz (x) : sizeof (unsigned) * 8;
 }
+#else
+#include <intrin.h>
+static inline unsigned leading_zeroes_of_unsigned (unsigned x) {
+  unsigned long i;
+  return _BitScanReverse(&i, x) ? sizeof (unsigned) * 8 - 1 - i : sizeof (unsigned) * 8;
+}
+#endif
 
 void Reap::push (unsigned e) {
   assert (last_deleted <= e);

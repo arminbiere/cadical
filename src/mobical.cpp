@@ -154,7 +154,6 @@ extern "C" {
 #include <dlfcn.h>
 #include <execinfo.h>
 #endif
-#include <unistd.h>
 }
 
 #ifdef MOBICAL_MEMORY
@@ -1212,9 +1211,9 @@ struct Call {
     REDUNDANT       = shift (  5 ),
     IRREDUNDANT     = shift (  6 ),
     RESERVE         = shift (  7 ),
-                              
+
     PHASE           = shift (  8 ),
-                              
+
     ADD             = shift (  9 ),
     ASSUME          = shift ( 10 ),
 
