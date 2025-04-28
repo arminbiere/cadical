@@ -6,6 +6,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <queue>
 #include <string>
 #include <sys/types.h>
@@ -248,7 +249,7 @@ struct Gate {
   bool marked : 1;
   bool shrunken : 1;
   vector<LitClausePair> pos_lhs_ids;
-  vector<LitClausePair> neg_lhs_ids;
+  std::optional<LitClausePair> neg_lhs_ids;
   int8_t degenerated_gate = Special_Gate::NORMAL;
   vector<int> rhs;
 
@@ -456,6 +457,8 @@ struct Closure {
   // TODO: does nothing except pushing on the stack, remove!
   void push_id_on_chain (std::vector<LRAT_ID> &chain,
                          const std::vector<LitClausePair> &c);
+  void push_id_on_chain (std::vector<LRAT_ID> &chain,
+                         const std::optional<LitClausePair> &c);
   // TODO: does nothing except pushing on the stack, remove!
   void push_id_on_chain (std::vector<LRAT_ID> &chain, Rewrite rewrite, int);
   void update_and_gate_build_lrat_chain (
@@ -616,6 +619,9 @@ struct Closure {
   void subsume_clause (Clause *subsuming, Clause *subsumed);
   bool find_subsuming_clause (Clause *c);
   void produce_rewritten_clause_lrat_and_clean (vector<LitClausePair> &,
+                                                int execept_lhs = 0,
+                                                bool = true);
+  void produce_rewritten_clause_lrat_and_clean (optional<LitClausePair> &,
                                                 int execept_lhs = 0,
                                                 bool = true);
   // rewrite the clause using eager rewriting and rew1 and rew2, except for

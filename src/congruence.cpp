@@ -735,6 +735,19 @@ void Closure::produce_rewritten_clause_lrat_and_clean (
 }
 
 void Closure::produce_rewritten_clause_lrat_and_clean (
+    std::optional<LitClausePair> &litIds, int except_lhs, bool remove_units) {
+  assert (internal->lrat_chain.empty ());
+  if (auto &litId = litIds; litId) {
+    assert (litId->clause);
+    litId->clause = produce_rewritten_clause_lrat (litId->clause, except_lhs,
+                                                  remove_units);
+    litId->current_lit = find_eager_representative (litId->current_lit);
+    if (!litId->clause)
+      litIds = {};
+  }
+}
+
+void Closure::produce_rewritten_clause_lrat_and_clean (
     std::vector<LitClausePair> &litIds, int except_lhs,
     size_t &old_position1, size_t &old_position2, bool remove_units) {
   assert (internal->lrat_chain.empty ());
@@ -1168,6 +1181,13 @@ void Closure::push_id_on_chain (std::vector<LRAT_ID> &chain, Clause *c) {
   LOG (lrat_chain, "chain");
 }
 
+void Closure::push_id_on_chain (std::vector<LRAT_ID> &chain, const std::optional<LitClausePair> &c) {
+  assert (c);
+  if (auto litId = c; litId)
+    chain.push_back (litId->clause->id);
+  LOG (lrat_chain, "chain");
+}
+
 void Closure::push_id_on_chain (std::vector<LRAT_ID> &chain,
                                 const std::vector<LitClausePair> &reasons) {
   for (auto litId : reasons) {
@@ -1191,9 +1211,9 @@ void Closure::learn_congruence_unit_when_lhs_set (Gate *g, int src,
   case Gate_Type::And_Gate:
     LOG (lrat_chain, "lrat");
     LOG (lrat_chain, "lrat");
-    for (auto litId : g->neg_lhs_ids)
+    if (auto litId = g->neg_lhs_ids; litId)
       push_id_and_rewriting_lrat_unit (
-          litId.clause, Rewrite (src, dst, id1, id2), lrat_chain);
+          litId->clause, Rewrite (src, dst, id1, id2), lrat_chain);
     LOG (lrat_chain, "lrat");
     break;
   default:
@@ -1296,8 +1316,8 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
     } else {
       assert (unit);
       // Example is 1 = 2&3 where 2 and 3 are false
-      for (auto litId : g->neg_lhs_ids) {
-        push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
+      if (auto litId = g->neg_lhs_ids; litId) {
+        push_id_and_rewriting_lrat_unit (litId->clause, Rewrite (),
                                          proof_chain);
       }
       LOG (proof_chain, "produced lrat chain");
@@ -2409,7 +2429,7 @@ void Closure::update_and_gate_unit_build_lrat_chain (
   if (g->lhs == g->rhs[0]) // do not try to produce LRAT chains, we will not need them anyway
     return;
 
-  if (g->neg_lhs_ids.size () != 1) {
+  if (!g->neg_lhs_ids) {
 
     if (g->degenerated_gate == Special_Gate::DEGENERATED_AND) {
       // can happen for 4 = AND 3 4 (degenerated with only the clause -4 3)
@@ -2425,7 +2445,7 @@ void Closure::update_and_gate_unit_build_lrat_chain (
     assert (g->pos_lhs_ids.size () <= 1); // either degenerated or empty A = A
     return;
   }
-  assert (g->neg_lhs_ids.size () == 1);
+  assert (g->neg_lhs_ids);
   assert (!g->pos_lhs_ids.empty ());
 
   const int repr_lit = find_representative (g->lhs);
@@ -2435,7 +2455,7 @@ void Closure::update_and_gate_unit_build_lrat_chain (
     return;
   }
 
-  push_id_and_rewriting_lrat_unit (g->neg_lhs_ids[0].clause, Rewrite (),
+  push_id_and_rewriting_lrat_unit (g->neg_lhs_ids->clause, Rewrite (),
                                    extra_reasons_ulit, true, Rewrite (),
                                    g->lhs, -dst);
   LOG (extra_reasons_ulit, "lrat chain for negative side");
@@ -2552,7 +2572,7 @@ void Closure::update_and_gate_build_lrat_chain (
     assert (!extra_reasons_other.empty ());
     produce_rewritten_clause_lrat_and_clean (other->neg_lhs_ids, other->lhs,
                                              remove_units);
-    push_id_on_chain (extra_reasons_other, other->neg_lhs_ids);
+    push_id_on_chain (extra_reasons_other, other->neg_lhs_ids->clause);
     assert (!extra_reasons_tauto.empty ());
     assert (!extra_reasons_other.empty ());
     return;
@@ -2573,7 +2593,7 @@ void Closure::update_and_gate_build_lrat_chain (
   assert (internal->clause.empty ());
 
   push_id_on_chain (extra_reasons_ulit, h->pos_lhs_ids);
-  push_id_on_chain (extra_reasons_ulit, g->neg_lhs_ids[0].clause);
+  push_id_on_chain (extra_reasons_ulit, g->neg_lhs_ids);
   lrat_chain.clear ();
   LOG (extra_reasons_ulit, "lrat chain for negative side");
 
@@ -2940,7 +2960,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
   g->lhs = lhs;
   g->tag = Gate_Type::And_Gate;
   if (internal->lrat) {
-    g->neg_lhs_ids.push_back (LitClausePair (lhs, base_clause));
+    g->neg_lhs_ids = LitClausePair (lhs, base_clause);
     for (auto i : lrat_chain_and_gate)
       g->pos_lhs_ids.push_back (i);
 #ifdef LOGGING
@@ -2950,9 +2970,9 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
                [] (const LitClausePair &x) { return x.clause->id; });
     LOG (result, "lrat chain positive (%d):", lhs);
     result.clear ();
-    transform (begin (g->neg_lhs_ids), end (g->neg_lhs_ids),
-               back_inserter (result),
-               [] (const LitClausePair &x) { return x.clause->id; });
+    if (auto c = g->neg_lhs_ids; c) {
+      result.push_back (c->clause->id);
+    }
     LOG (result, "lrat chain negative (%d):", lhs);
 #endif
   }
@@ -5332,7 +5352,7 @@ bool Closure::rewrite_ite_gate_to_and (
                     [] (LitClausePair l) { return l.clause->size == 3; });
   assert (long_clause != end (g->pos_lhs_ids));
   LOG (long_clause->clause, "new long clause");
-  g->neg_lhs_ids.push_back (*long_clause);
+  g->neg_lhs_ids = *long_clause;
   g->pos_lhs_ids.erase (long_clause);
 
   assert (g->pos_lhs_ids.size () == 1);
@@ -6014,7 +6034,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
 #endif
             assert (g->pos_lhs_ids.size () == 2 ||
                     gate_contains (g, g->lhs));
-            assert (g->neg_lhs_ids.size () == 1 ||
+            assert (g->neg_lhs_ids ||
                     gate_contains (g, g->lhs));
             assert (g->arity () == 2);
 #ifndef NDEBUG
@@ -6190,7 +6210,6 @@ void Closure::merge_and_gate_lrat_produce_lrat (
   assert (internal->lrat);
   assert (g->tag == Gate_Type::And_Gate);
   assert (h->tag == Gate_Type::And_Gate);
-  assert (g->neg_lhs_ids.size () <= 1);
   update_and_gate_build_lrat_chain (g, h, reasons_lrat_src,
                                     reasons_lrat_usrc, remove_units);
 }
@@ -6280,7 +6299,7 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
                     [] (LitClausePair l) { return l.clause->size == 3; });
   assert (long_clause != end (g->pos_lhs_ids));
   LOG (long_clause->clause, "new long clause");
-  g->neg_lhs_ids.push_back (*long_clause);
+  g->neg_lhs_ids = *long_clause;
   g->pos_lhs_ids.erase (long_clause);
   assert (g->pos_lhs_ids.size () == 1);
   g->pos_lhs_ids.push_back ({lit, e});
@@ -6962,7 +6981,7 @@ void Closure::check_ite_lrat_reasons (Gate *g) {
     return;
   assert (g->rhs.size () == 3);
   assert (is_tautological_ite_gate (g) || g->pos_lhs_ids.size () == 4);
-  assert (g->neg_lhs_ids.empty ());
+  assert (!g->neg_lhs_ids);
   assert (g->pos_lhs_ids.size () == 4);
 #else
   (void) g;
