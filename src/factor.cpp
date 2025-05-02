@@ -595,8 +595,8 @@ bool Internal::self_subsuming_factor (Quotient *q) {
 void Internal::add_factored_divider (Quotient *q, int fresh) {
   const int factor = q->factor;
   LOG ("factored %d divider %d", factor, fresh);
-  clause.push_back (factor);
   clause.push_back (fresh);
+  clause.push_back (factor);
   new_factor_clause ();
   clause.clear ();
   if (lrat)
@@ -612,9 +612,9 @@ void Internal::blocked_clause (Quotient *q, int not_fresh) {
   int64_t new_id = ++clause_id;
   q->bid = new_id;
   assert (clause.empty ());
+  clause.push_back (not_fresh);
   for (Quotient *p = q; p; p = p->prev)
     clause.push_back (-p->factor);
-  clause.push_back (not_fresh);
   assert (!lrat || mini_chain.size ());
   proof->add_derived_clause (new_id, true, clause, mini_chain);
   mini_chain.clear ();
@@ -655,10 +655,10 @@ void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
     lrat_chain.clear ();
   }
   if (proof) {
+    clause.push_back (not_fresh);
     for (Quotient *p = q; p; p = p->prev) {
       clause.push_back (-p->factor);
     }
-    clause.push_back (not_fresh);
     proof->delete_clause (q->bid, true, clause);
     clause.clear ();
   }
