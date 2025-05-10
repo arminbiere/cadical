@@ -636,6 +636,14 @@ void Internal::init_search_limits () {
   }
 
   /*----------------------------------------------------------------------*/
+  if (incremental) {
+    for (auto m : {true, false})
+      for (auto &u : stats.used[m])
+        u = 0;
+    stats.bump_used = {0, 0};
+  }
+
+  /*----------------------------------------------------------------------*/
 
   lim.initialized = true;
 }
