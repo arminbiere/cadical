@@ -641,6 +641,7 @@ void Internal::init_search_limits () {
       for (auto &u : stats.used[m])
         u = 0;
     stats.bump_used = {0, 0};
+    stats.tierecomputed = 0;
   }
 
   /*----------------------------------------------------------------------*/
