@@ -18,6 +18,15 @@ void External::push_id_on_extension_stack (int64_t id) {
 void External::push_clause_literal_on_extension_stack (int ilit) {
   assert (ilit);
   const int elit = internal->externalize (ilit);
+  const int eidx = abs (elit);
+  const bool is_extension_var = ervars[eidx];
+  Flags &f = internal->flags(ilit);
+  if (is_extension_var) {
+    f.factored_but_on_reconstruction_stack = true;
+    LOG ("marking lit %s as tainted", LOGLIT (ilit));
+  }
+
+
   assert (elit);
   extension.push_back (elit);
   LOG ("pushing clause literal %d on extension stack (internal %d)", elit,

@@ -38,7 +38,8 @@ struct Flags { // Variable flags.
   unsigned char assumed : 2;
   unsigned char failed : 2; // 0 if not part of failure
                             // 1 if positive lit is in failure
-                            // 2 if negated lit is in failure
+  // 2 if negated lit is in failure
+  bool factored_but_on_reconstruction_stack : 1;
 
   enum {
     UNUSED = 0,
@@ -54,7 +55,7 @@ struct Flags { // Variable flags.
   // Initialized explicitly in 'Internal::init' through this function.
   //
   Flags () {
-    seen = keep = poison = removable = shrinkable = added = sweep = false;
+    seen = keep = poison = removable = shrinkable = added = sweep = factored_but_on_reconstruction_stack = false;
     subsume = elim = ternary = true;
     block = 3u;
     skip = assumed = failed = marked_signed = factor = 0;
