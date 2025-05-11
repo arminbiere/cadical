@@ -44,6 +44,11 @@ void Internal::recompute_tier () {
     }
   }
 
+  if (!tier1[stable])
+    tier1[stable] = 1;
+  if (!tier2[stable])
+    tier2[stable] = 1;
+
   LOG ("tier1 limit = %d in %s mode", tier1[stable],
        stable ? "stable" : "focused");
   LOG ("tier2 limit = %d in %s mode", tier2[stable],
