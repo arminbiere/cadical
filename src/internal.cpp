@@ -585,12 +585,13 @@ void Internal::init_search_limits () {
   } else
     LOG ("keeping non-stable phase");
 
-  if (!incremental) {
-    inc.stabilize = 0;
-    lim.stabilize = stats.conflicts + opts.stabilizeinit;
-    LOG ("initial stabilize limit %" PRId64 " after %d conflicts",
-         lim.stabilize, (int) opts.stabilizeinit);
-  }
+  inc.stabilize = 0;
+  last.stabilize.conflicts = stats.conflicts;
+  lim.stabilize = stats.conflicts + opts.stabilizeinit;
+  last.stabilize.ticks = stats.ticks.search[0];
+  stats.stabphases = 0;
+  LOG ("initial stabilize limit %" PRId64 " after %d conflicts",
+       lim.stabilize, (int) opts.stabilizeinit);
 
   if (opts.stabilize && opts.reluctant) {
     LOG ("new restart reluctant doubling sequence period %d",
