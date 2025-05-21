@@ -43,8 +43,7 @@ bool Internal::stabilizing () {
          " conflicts and %" PRId64 " ticks",
          current_mode, lim.stabilize, delta_conflicts, delta_ticks,
          stats.conflicts, stats.ticks.search[stable]);
-  if (!inc.stabilize)
-    inc.stabilize = delta_ticks;
+  inc.stabilize = delta_ticks;
   if (!inc.stabilize) // rare occurence in incremental calls requiring no
                       // ticks
     inc.stabilize = 1;
@@ -53,7 +52,7 @@ bool Internal::stabilizing () {
 
   int64_t next_delta_ticks = inc.stabilize;
   int64_t stabphases = stats.stabphases + 1;
-  next_delta_ticks *= stabphases * stabphases;
+  next_delta_ticks *= 2; // stabphases * stabphases;
 
   lim.stabilize = stats.ticks.search[stable] + next_delta_ticks;
   if (lim.stabilize <= stats.ticks.search[stable])
