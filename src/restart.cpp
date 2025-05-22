@@ -20,52 +20,73 @@ bool Internal::stabilizing () {
     return false;
   if (stable && opts.stabilizeonly)
     return true;
-  if (!inc.stabilize) {
+  if (opts.rephaseticks && !inc.stabilize) {
     assert (!stable);
     if (stats.conflicts <= lim.stabilize)
       return false;
-  } else if (stats.ticks.search[stable] <= lim.stabilize)
+  } else if (opts.rephaseticks && stats.ticks.search[stable] <= lim.stabilize)
+    return stable;
+  else if (!opts.rephaseticks && stats.conflicts < lim.stabilize)
     return stable;
   report (stable ? ']' : '}');
   if (stable)
     STOP (stable);
   else
     STOP (unstable);
-  const int64_t delta_conflicts =
-      stats.conflicts - last.stabilize.conflicts;
-  const int64_t delta_ticks =
-      stats.ticks.search[stable] - last.stabilize.ticks;
-  const char *current_mode = stable ? "stable" : "unstable";
-  const char *next_mode = stable ? "unstable" : "stable";
-  PHASE ("stabilizing", stats.stabphases,
-         "reached %s stabilization limit %" PRId64 " after %" PRId64
-         " conflicts and %" PRId64 " ticks at %" PRId64
-         " conflicts and %" PRId64 " ticks",
-         current_mode, lim.stabilize, delta_conflicts, delta_ticks,
-         stats.conflicts, stats.ticks.search[stable]);
-  inc.stabilize = delta_ticks;
-  if (!inc.stabilize) // rare occurence in incremental calls requiring no
-                      // ticks
-    inc.stabilize = 1;
 
   stable = !stable; // Switch!!!!!
+  if (opts.rephaseticks) {
+    const int64_t delta_conflicts =
+        stats.conflicts - last.stabilize.conflicts;
+    const int64_t delta_ticks =
+        stats.ticks.search[stable] - last.stabilize.ticks;
+    const char *current_mode = stable ? "stable" : "unstable";
+    const char *next_mode = stable ? "unstable" : "stable";
+    PHASE ("stabilizing", stats.stabphases,
+           "reached %s stabilization limit %" PRId64 " after %" PRId64
+           " conflicts and %" PRId64 " ticks at %" PRId64
+           " conflicts and %" PRId64 " ticks",
+           current_mode, lim.stabilize, delta_conflicts, delta_ticks,
+           stats.conflicts, stats.ticks.search[stable]);
+    inc.stabilize = delta_ticks;
+    if (!inc.stabilize) // rare occurence in incremental calls requiring no
+                        // ticks
+      inc.stabilize = 1;
 
-  int64_t next_delta_ticks = inc.stabilize;
-  int64_t stabphases = stats.stabphases + 1;
-  next_delta_ticks *= 2; // stabphases * stabphases;
 
-  lim.stabilize = stats.ticks.search[stable] + next_delta_ticks;
-  if (lim.stabilize <= stats.ticks.search[stable])
-    lim.stabilize = stats.ticks.search[stable] + 1;
+    int64_t next_delta_ticks = inc.stabilize;
+    int64_t stabphases = stats.stabphases + 1;
+    next_delta_ticks *= 2; // stabphases * stabphases;
 
+    lim.stabilize = stats.ticks.search[stable] + next_delta_ticks;
+    if (lim.stabilize <= stats.ticks.search[stable])
+      lim.stabilize = stats.ticks.search[stable] + 1;
+    PHASE ("stabilizing", stats.stabphases,
+           "next %s stabilization limit %" PRId64
+           " at ticks interval %" PRId64,
+           next_mode, lim.stabilize, next_delta_ticks);
+  } else {
+    const int stabilizefactor = 200;
+    const int stabilizemaxint = 2e9;
+    PHASE ("stabilizing", stats.stabphases,
+           "reached stabilization limit %" PRId64 " after %" PRId64
+           " conflicts",
+           lim.stabilize, stats.conflicts);
+    inc.stabilize *= stabilizefactor * 1e-2;
+    if (inc.stabilize > stabilizemaxint)
+      inc.stabilize = stabilizemaxint;
+    lim.stabilize = stats.conflicts + inc.stabilize;
+    if (lim.stabilize <= stats.conflicts)
+      lim.stabilize = stats.conflicts + 1;
+    PHASE ("stabilizing", stats.stabphases,
+           "new stabilization limit %" PRId64
+           " at conflicts interval %" PRId64 "",
+           lim.stabilize, inc.stabilize);
+  }
   if (stable)
     stats.stabphases++;
 
   swap_averages ();
-  PHASE ("stabilizing", stats.stabphases,
-         "next %s stabilization limit %" PRId64
-         " at ticks interval %" PRId64,
-         next_mode, lim.stabilize, next_delta_ticks);
   report (stable ? '[' : '{');
   if (stable)
     START (stable);
