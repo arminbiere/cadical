@@ -593,20 +593,21 @@ void Internal::init_search_limits () {
     stats.stabphases = 0;
     LOG ("new ticks-based stabilize limit %" PRId64 " after %d conflicts",
          lim.stabilize, (int) opts.stabilizeinit);
-  } else {
+  } else { //
     const int stabilizeint = 1e3;
     inc.stabilize = stabilizeint;
     lim.stabilize = stats.conflicts + inc.stabilize;
-    LOG ("new conflict-based stabilize limit %" PRId64 " after %" PRId64 " conflicts",
+    LOG ("new conflict-based stabilize limit %" PRId64 " after %" PRId64
+         " conflicts",
          lim.stabilize, inc.stabilize);
-  }
 
-  if (opts.stabilize && opts.reluctant) {
-    LOG ("new restart reluctant doubling sequence period %d",
-         opts.reluctant);
-    reluctant.enable (opts.reluctant, opts.reluctantmax);
-  } else
-    reluctant.disable ();
+    if (opts.stabilize && opts.reluctant) {
+      LOG ("new restart reluctant doubling sequence period %d",
+           opts.reluctant);
+      reluctant.enable (opts.reluctant, opts.reluctantmax);
+    } else
+      reluctant.disable ();
+  }
 
   /*----------------------------------------------------------------------*/
 
