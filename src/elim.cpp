@@ -715,7 +715,8 @@ void Internal::try_to_eliminate_variable (Eliminator &eliminator, int pivot,
     find_gate_clauses (eliminator, pivot);
 
   if (!unsat && !val (pivot)) {
-    if (elim_resolvents_are_bounded (eliminator, pivot)) {
+    // if (elim_resolvents_are_bounded (eliminator, pivot)) {
+    if (pos < 2 || pos * neg - pos - neg <= lim.elimbound) {
       LOG ("number of resolvents on %d are bounded", pivot);
       elim_add_resolvents (eliminator, pivot);
       if (!unsat)
