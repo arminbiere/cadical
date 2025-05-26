@@ -110,6 +110,7 @@ run ctest
 run example
 run example_constraint
 run example_tracer
+run sample
 run terminate
 run learn
 run cfreeze

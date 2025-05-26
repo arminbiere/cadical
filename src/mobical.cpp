@@ -542,8 +542,7 @@ public:
   }
   /*-----------------functions for mobical ends ------------------------*/
 
-  /*------------------ FixedAssignmentListener functions
-   * ---------------------*/
+  /*-------------- FixedAssignmentListener functions -------------------*/
   void notify_fixed_assignment (int lit) override {
     MLOG ("notify_fixed_assignment: "
           << lit << " (current level: " << observed_trail.size () - 1
@@ -574,8 +573,7 @@ public:
 #endif
   }
 
-  /* ---------------- FixedAssignmentListener functions end
-   * ------------------*/
+  /* ------- FixedAssignmentListener functions end ---------------------*/
 
   /* -------------------- ExternalPropagator functions -----------------*/
 
@@ -1921,8 +1919,8 @@ public:
         // They are (ideally) are executed already
         if (c->type == Call::LEMMA)
           continue;
-        // if (c->type == Call::CONTINUE)
-        //   continue;
+          // if (c->type == Call::CONTINUE)
+          //   continue;
 #ifdef MOBICAL_MEMORY
         if (c->type == Call::MAXALLOC) {
           memory_bad_alloc = c->val;
@@ -2301,6 +2299,8 @@ void Trace::generate_options (Random &random, Size size) {
     if (!strcmp (o.name, "simplify"))
       continue;
     if (!strcmp (o.name, "walk"))
+      continue;
+    if (!strcmp (o.name, "randomdecision"))
       continue;
 
     // Probability to change an option is 'fraction'.

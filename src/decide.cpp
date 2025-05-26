@@ -38,10 +38,42 @@ int Internal::next_decision_variable_with_best_score () {
 }
 
 int Internal::next_decision_variable () {
-  if (use_scores ())
+  if (opts.randomdecision)
+    return next_random_decision ();
+  else if (use_scores ())
     return next_decision_variable_with_best_score ();
   else
     return next_decision_variable_on_queue ();
+}
+
+/*------------------------------------------------------------------------*/
+
+// Random phases is good to generate diverse models (i.e., in sampling).
+// Compare to implementation in CMSGen (Golia et.al. FMCAD'21). It should
+// then be combined with disabling pre- and inprocessing (thus '--plain').
+
+int Internal::random_phase () {
+  if (!randphasernginitialized) {
+    randphaserng = opts.seed;
+    randphasernginitialized = true;
+    LOG ("random phase generator seed %d", opts.seed);
+  }
+  return randphaserng.generate_bool () ? 1 : -1;
+}
+
+// Same for random decision variables.
+
+int Internal::next_random_decision () {
+  if (!randdecisionsrnginitialized) {
+    randdecisionsrng = opts.seed;
+    randdecisionsrnginitialized = true;
+    LOG ("random decision generator seed %d", opts.seed);
+  }
+  for (;;) {
+    int res = randdecisionsrng.pick_int (1, max_var);
+    if (ftab[res].active () && !val (res))
+      return res;
+  }
 }
 
 /*------------------------------------------------------------------------*/
@@ -59,6 +91,8 @@ int Internal::decide_phase (int idx, bool target) {
     phase = phases.forced[idx]; // swapped with opts.forcephase case!
   if (!phase && opts.forcephase)
     phase = initial_phase;
+  if (!phase && opts.randomphase)
+    phase = random_phase ();
   if (!phase && target)
     phase = phases.target[idx];
   if (!phase)

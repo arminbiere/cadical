@@ -82,6 +82,8 @@ bool Internal::restarting () {
 // decision exists top (in which case we do not reuse any level).
 
 int Internal::reuse_trail () {
+  if (opts.randomdecision || opts.randomphase)
+    return false;
   const int trivial_decisions =
       assumptions.size ()
       // Plus 1 if the constraint is satisfied via implications of

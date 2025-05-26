@@ -198,6 +198,10 @@ struct Internal {
   bool frat;                    // finalize non-deleted clauses in proof
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
+  Random randdecisionsrng;      // decisions random number generator
+  Random randphaserng;          // phases random number generator
+  bool randphasernginitialized = false;
+  bool randdecisionsrnginitialized = false;
   signed char *vals;            // assignment [-max_var,max_var]
   vector<signed char> marks;    // signed marks [1,max_var]
   vector<unsigned> frozentab;   // frozen counters [1,max_var]
@@ -1173,7 +1177,9 @@ struct Internal {
   bool satisfied ();
   int next_decision_variable_on_queue ();
   int next_decision_variable_with_best_score ();
+  int next_random_decision ();
   int next_decision_variable ();
+  int random_phase ();
   int decide_phase (int idx, bool target);
   int likely_phase (int idx);
   bool better_decision (int lit, int other);
