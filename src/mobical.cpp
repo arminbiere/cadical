@@ -3,7 +3,7 @@
 /* Copyright (C) 2020-2021 Mathias Fleury, Johannes Kepler University Linz*/
 /* Copyright (c) 2020-2021 Nils Froleyks, Johannes Kepler University Linz */
 /* Copyright (C) 2022-2024 Katalin Fazekas, Technical University of Vienna*/
-/* Copyright (C) 2021-2024 Armin Biere, University of Freiburg            */
+/* Copyright (C) 2021-2025 Armin Biere, University of Freiburg            */
 /* Copyright (C) 2021-2023 Mathias Fleury, University of Freiburg         */
 /* Copyright (C) 2023-2024 Florian Pollitt, University of Freiburg        */
 /* Copyright (C) 2024-2024 Tobias Faller Fleury, University of Freiburg   */
