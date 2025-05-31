@@ -718,6 +718,7 @@ struct Internal {
     return cache_lines (n * bytes);
   }
   bool propagate ();
+  void set_conflict (int&conflict_trail_level, Clause *c);
 
 #ifdef PROFILE_MODE
   bool propagate_wrapper ();

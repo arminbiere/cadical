@@ -204,6 +204,22 @@ void Internal::search_assign_external (int lit) {
   notify_assignments ();
 }
 
+void Internal::set_conflict (int &conflict_trail_level, Clause *c) {
+  int new_conflict_level = 0;
+  for (auto lit : *c)
+    new_conflict_level = max (new_conflict_level, var (lit).trail);
+
+  if (conflict) {
+    if (new_conflict_level <= conflict_trail_level) {
+      conflict = c;
+      conflict_trail_level = new_conflict_level;
+    }
+  } else {
+    conflict = c;
+    conflict_trail_level = new_conflict_level;
+  }
+}
+
 /*------------------------------------------------------------------------*/
 
 // The 'propagate' function is usually the hot-spot of a CDCL SAT solver.
@@ -236,8 +252,9 @@ bool Internal::propagate () {
   //
   int64_t before = propagated;
   int64_t ticks = 0;
+  int conflict_level = 0;
 
-  while (!conflict && propagated != trail.size ()) {
+  while (propagated != trail.size ()) {
 
     const int lit = -trail[propagated++];
     LOG ("propagating %d", -lit);
@@ -287,7 +304,7 @@ bool Internal::propagate () {
         // there also only to simplify the code).
 
         if (b < 0)
-          conflict = w.clause; // but continue ...
+	  set_conflict (conflict_level, w.clause);
         else {
           build_chain_for_units (w.blit, w.clause, 0);
           search_assign (w.blit, w.clause);
@@ -298,8 +315,6 @@ bool Internal::propagate () {
       } else {
         assert (w.clause->size > 2);
 
-        if (conflict)
-          break; // Stop if there was a binary conflict already.
 
         // The cache line with the clause data is forced to be loaded here
         // and thus this first memory access below is the real hot-spot of
@@ -442,7 +457,7 @@ bool Internal::propagate () {
             // The other watch is assigned false ('u < 0') and all other
             // literals as well (still 'v < 0'), thus we found a conflict.
 
-            conflict = w.clause;
+	    set_conflict (conflict_level, w.clause);
             break;
           }
         }
