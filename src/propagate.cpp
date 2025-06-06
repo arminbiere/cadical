@@ -205,6 +205,7 @@ void Internal::search_assign_external (int lit) {
 }
 
 void Internal::set_conflict (int &conflict_trail_level, Clause *c) {
+  LOG (c, "checking new conflict");
   int new_conflict_level = 0;
   for (auto lit : *c)
     new_conflict_level = max (new_conflict_level, var (lit).trail);
@@ -254,7 +255,7 @@ bool Internal::propagate () {
   int64_t ticks = 0;
   int conflict_level = 0;
 
-  while (propagated != trail.size ()) {
+  while (propagated != trail.size () && (!conflict_level || (int)propagated <= conflict_level)) {
 
     const int lit = -trail[propagated++];
     LOG ("propagating %d", -lit);
