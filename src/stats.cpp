@@ -89,6 +89,10 @@ void Stats::print (Internal *internal) {
   if (all || stats.conflicts) {
     PRT ("conflicts:       %15" PRId64 "   %10.2f    per second",
          stats.conflicts, relative (stats.conflicts, t));
+    PRT ("other conflicts: %15" PRId64 "   %10.2f    per conflict",
+         stats.secundary_conflict, percent (stats.secundary_conflict, stats.conflicts));
+    PRT ("improv conflicts: %15" PRId64 "   %10.2f    per conflict",
+         stats.conflict_improved, percent (stats.conflict_improved, stats.conflicts));
     PRT ("  backtracked:   %15" PRId64 "   %10.2f %%  of conflicts",
          stats.backtracks, percent (stats.backtracks, stats.conflicts));
   }

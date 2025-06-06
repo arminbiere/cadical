@@ -16,6 +16,8 @@ struct Stats {
   int64_t vars = 0; // internal initialized variables
 
   int64_t conflicts = 0; // generated conflicts in 'propagate'
+  int64_t secundary_conflict = 0;
+  int64_t conflict_improved = 0;
   int64_t decisions = 0; // number of decisions in 'decide'
   int64_t searches = 0;  // number of calls to solver 'solve'
 

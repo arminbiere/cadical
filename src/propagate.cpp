@@ -207,6 +207,8 @@ void Internal::search_assign_external (int lit) {
 void Internal::set_conflict (int &conflict_trail_level, Clause *c) {
   LOG (c, "checking new conflict");
   int new_conflict_level = 0;
+  if (conflict_trail_level)
+    ++stats.secundary_conflict;
   for (auto lit : *c)
     new_conflict_level = max (new_conflict_level, var (lit).trail);
 
@@ -214,6 +216,7 @@ void Internal::set_conflict (int &conflict_trail_level, Clause *c) {
     if (new_conflict_level <= conflict_trail_level) {
       conflict = c;
       conflict_trail_level = new_conflict_level;
+      ++stats.conflict_improved;
     }
   } else {
     conflict = c;
