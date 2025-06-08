@@ -987,4 +987,32 @@ bool Internal::traverse_clauses (ClauseIterator &it) {
   return true;
 }
 
+bool Internal::traverse_red_clauses (ClauseIterator &it) {
+  vector<int> eclause;
+  if (unsat)
+    return it.clause (eclause);
+  for (const auto &c : clauses) {
+    if (c->garbage)
+      continue;
+    if (!c->redundant)
+      continue;
+    bool satisfied = false;
+    for (const auto &ilit : *c) {
+      const int tmp = fixed (ilit);
+      if (tmp > 0) {
+        satisfied = true;
+        break;
+      }
+      if (tmp < 0)
+        continue;
+      const int elit = externalize (ilit);
+      eclause.push_back (elit);
+    }
+    if (!satisfied && !it.clause (eclause))
+      return false;
+    eclause.clear ();
+  }
+  return true;
+}
+
 } // namespace CaDiCaL
