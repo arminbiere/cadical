@@ -6325,7 +6325,7 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
   Clause *c = nullptr;
   if (orig_flag == Special_Gate::NO_ELSE || orig_flag == Special_Gate::NO_THEN) {
     g->degenerated_gate = Special_Gate::DEGENERATED_AND;
-    assert (find_representative(g->lhs) == g->rhs[0] || find_representative(g->lhs) == g->rhs[1]);
+    assert (find_eager_representative(g->lhs) == g->rhs[0] || find_eager_representative(g->lhs) == g->rhs[1]);
     Clause *d = g->pos_lhs_ids[new_idx1].clause;
     assert (d->size == 2);
     g->pos_lhs_ids.clear ();
