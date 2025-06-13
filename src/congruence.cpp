@@ -6323,12 +6323,21 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
   }
   LOG ("normal AND gate with clauses %zd (was: %zd) %zd (was: %zd)", new_idx1, idx1, new_idx2, idx2);
   Clause *c = nullptr;
-  if (orig_flag != Special_Gate::NO_ELSE) {
-    assert (new_idx1 < g->pos_lhs_ids.size ());
-    c = g->pos_lhs_ids[new_idx1].clause;
-    assert (c->size == 2);
-    assert (c);
+  if (orig_flag == Special_Gate::NO_ELSE || orig_flag == Special_Gate::NO_THEN) {
+    LOG ("ITE where lhs %s to %s", LOGLIT (g->lhs), LOGLIT (repr_lhs));
+    g->degenerated_gate = Special_Gate::DEGENERATED_AND;
+    assert (find_representative(g->lhs) == g->rhs[0] || find_representative(g->lhs) == g->rhs[1]);
+    Clause *d = g->pos_lhs_ids[new_idx1].clause;
+    assert (d->size == 2);
+    g->pos_lhs_ids.clear ();
+    g->pos_lhs_ids.push_back({2, d});
+    g->neg_lhs_ids.reset();
+    return false;
   }
+  assert (new_idx1 < g->pos_lhs_ids.size ());
+  c = g->pos_lhs_ids[new_idx1].clause;
+  assert (c->size == 2);
+  assert (c);
   assert (new_idx2 < g->pos_lhs_ids.size ());
   assert (new_idx1 != new_idx2);
   Clause *d = g->pos_lhs_ids[new_idx2].clause;
