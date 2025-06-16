@@ -170,7 +170,13 @@ struct smaller_clause_size_rank {
 // a = (c ? a : e) results in no t gate (none of them)
 // a = (c ? t : a) results in no e gate (none of them)
 //
-// We also use it for AND gates. They have a peculiarity: being special can fix itself. To avoid
+// We also use it for AND gates:
+// a = (a & b)
+// false = (a & b)
+//
+// The latter version can only happen when converting ITE gates to AND gates.
+//
+// They have a peculiarity: being special can fix itself. To avoid
 // one more special case, we rewrite the LHS in that case too to make sure it remains special.
 //
 enum Special_Gate {
@@ -180,7 +186,8 @@ enum Special_Gate {
   NO_THEN = NO_PLUS_THEN + NO_NEG_THEN,
   NO_PLUS_ELSE = (1 << 2),
   NO_NEG_ELSE = (1 << 3),
-  DEGENERATED_AND = (1 << 4),
+  DEGENERATED_AND = (1 << 4), // a = (a & b)
+  DEGENERATED_AND_LHS_FALSE = (1 << 5), // false = (a & b)
   NO_ELSE = NO_PLUS_ELSE + NO_NEG_ELSE,
   COND_LHS = NO_NEG_THEN + NO_PLUS_ELSE,
   UCOND_LHS = NO_PLUS_THEN + NO_NEG_ELSE,
@@ -428,6 +435,10 @@ struct Closure {
                             const std::vector<LRAT_ID> & = {},
                             const std::vector<LRAT_ID> & = {});
   bool merge_literals (int lit, int other,
+                            const std::vector<LRAT_ID> & = {},
+                       const std::vector<LRAT_ID> & = {});
+  // factoring out the merge w.r.t. both cases above
+  bool really_merge_literals (int lit, int other, int repr_lit, int repr_other,
                             const std::vector<LRAT_ID> & = {},
                             const std::vector<LRAT_ID> & = {});
 
