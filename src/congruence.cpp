@@ -1607,7 +1607,20 @@ bool Closure::really_merge_literals (int lit, int other, int repr_lit, int repr_
            LOGLIT (other));
       assert (lrat_chain.empty ());
       if (internal->lrat) {
-        Clause *c = val_lit > 0 ? eq2_tmp : eq1_tmp;
+	Clause *c;
+	// eq1 == -larger, smaller
+	// eq2 == larger, -smaller
+	if (lit == smaller) {
+	  if (val_lit < 0)
+	    c = eq1_tmp;
+	  else
+	    c = eq2_tmp;
+	} else {
+	  if (val_lit < 0)
+	    c = eq2_tmp;
+	  else
+	    c = eq1_tmp;
+	}
         int pos = val_lit < 0 ? other : lit;
         int neg = val_lit < 0 ? -lit : -other;
         push_lrat_unit (pos);
