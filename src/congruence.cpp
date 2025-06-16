@@ -1485,6 +1485,16 @@ bool Closure::really_merge_literals (int lit, int other, int repr_lit, int repr_
   const std::vector<LRAT_ID> *smaller_chain = &extra_reasons_ulit;
   const std::vector<LRAT_ID> *larger_chain = &extra_reasons_lit;
 
+  if (val_lit && val_lit == val_other) {
+    LOG ("not merging lits %d and %d assigned to same value", lit, other);
+    if (internal->lrat)
+      lrat_chain.clear ();
+    return false;
+  }
+  if (repr_lit == repr_other) {
+    LOG ("already merged %s and %s", LOGLIT (lit), LOGLIT (other));
+    return false;
+  }
   if (abs (smaller_repr) > abs (larger_repr)) {
     swap (smaller_repr, larger_repr);
     swap (smaller, larger);
@@ -1760,8 +1770,6 @@ bool Closure::merge_literals (
 
   if (repr_lit == repr_other) {
     LOG ("already merged %s and %s", LOGLIT (lit), LOGLIT (other));
-    if (internal->lrat)
-      lrat_chain.clear ();
     return false;
   }
 
