@@ -1553,7 +1553,12 @@ bool Closure::really_merge_literals (int lit, int other, int repr_lit, int repr_
   if (repr_lit == -repr_other) {
     // now derive empty clause
     Rewrite rew1, rew2;
+    Clause *eq1 = eq1_tmp; // == -larger, smaller
+    Clause *eq2 = eq2_tmp;
     if (internal->lrat) {
+      if (val_larger < 0)
+        swap (eq1, eq2);
+
       // no need to calculate push_id_and_rewriting_lrat here because all
       // the job is done by the arguments already
       rew1 = Rewrite (lit == repr_lit ? 0 : lit, repr_lit,
@@ -1562,7 +1567,7 @@ bool Closure::really_merge_literals (int lit, int other, int repr_lit, int repr_
       rew2 = Rewrite (other == repr_other ? 0 : other, repr_other,
                       other == repr_other ? 0 : representative_id (other),
                       other == repr_other ? 0 : representative_id (-other));
-      push_id_and_rewriting_lrat_unit (eq1_tmp, rew1, lrat_chain, true,
+      push_id_and_rewriting_lrat_unit (eq1, rew1, lrat_chain, true,
                                        rew2);
       swap (lrat_chain, internal->lrat_chain);
     }
@@ -1578,15 +1583,11 @@ bool Closure::really_merge_literals (int lit, int other, int repr_lit, int repr_
         // no need to calculate push_id_and_rewriting_lrat here because all
         // the job is done by the arguments already
         push_id_and_rewriting_lrat_unit (
-            eq2_tmp, rew1, lrat_chain, true, rew2,
+            eq2, rew1, lrat_chain, true, rew2,
             larger != larger_repr ? larger_repr : 0);
         LOG (lrat_chain, "lrat chain");
         swap (lrat_chain, internal->lrat_chain);
       }
-    } else {
-      // otherwise, no need to
-      if (internal->lrat)
-        lrat_chain.push_back (internal->unit_id (larger_repr));
     }
     internal->learn_empty_clause ();
     if (internal->lrat)
