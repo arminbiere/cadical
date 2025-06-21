@@ -763,6 +763,34 @@ void Internal::handle_external_clause (Clause *res) {
     assert (val (pos0) >= 0);
     return;
     // TODO: maybe fix levels
+  } 
+  if (val (pos0) > 0 && val(pos1) < 0) {
+    //It is a clause that would have propagated
+    Var &v = var (pos0);
+    Var &other = var (pos1);
+    
+    if (v.level > other.level) {
+      // It would have propagated pos0 on an earlier level than it is assigned
+      LOG(res, "elevate assignment of %d from level %d to level %d with new reason clause",pos0,var (pos0).level,var (pos1).level );
+
+      if (v.trail > other.trail && opts.chrono) {
+        v.level = other.level;
+        v.reason = res;
+      } else {
+        // we need to rearrange things on the trail to ensure every falsified
+        // literal of the reason clause is before the propagated assignment
+        assert (!force_no_backtrack);
+
+        backtrack (other.level);
+
+        assert (!val (pos0) && val (pos1));
+        search_assign_driving (pos0, res);
+        
+        assert(v.trail > other.trail);
+        assert(v.level == other.level);
+        assert(val (pos0) > 0 && val (pos1) < 0);
+      }
+    }
   }
   const int l1 = var (pos1).level;
   if (val (pos0) < 0) { // conflicting or propagating clause
