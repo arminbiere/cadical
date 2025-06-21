@@ -813,6 +813,9 @@ struct Internal {
   void renotify_trail_after_ilb ();
   void renotify_trail_after_local_search ();
   void renotify_full_trail ();
+
+  // adds the assigned literals to assigned
+  void renotify_full_trail_between_trail_pos (int start_level, int end_level, int propagator_level, std::vector<int> &assigned, bool start_new_level);
   void connect_propagator ();
   void mark_garbage_external_forgettable (int64_t id);
   bool is_external_forgettable (int64_t id);
