@@ -345,7 +345,7 @@ int Internal::propagate_assumptions () {
     proof->solve_query ();
   if (opts.ilb) {
     sort_and_reuse_assumptions ();
-    assert (opts.ilb == 1 || (size_t)level <= assumptions.size ());
+    assert (opts.ilb == 2 || (size_t)level <= assumptions.size ());
     stats.ilbtriggers++;
     stats.ilbsuccess += (level > 0);
     stats.levelsreused += level;
@@ -896,7 +896,7 @@ int Internal::solve (bool preprocess_only) {
     proof->solve_query ();
   if (opts.ilb) {
     sort_and_reuse_assumptions ();
-    assert (opts.ilb == 1 || (size_t)level <= assumptions.size ());
+    assert (opts.ilb || (size_t)level <= assumptions.size ());
     stats.ilbtriggers++;
     stats.ilbsuccess += (level > 0);
     stats.levelsreused += level;

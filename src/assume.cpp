@@ -549,8 +549,16 @@ struct sort_assumptions_smaller {
 
 void Internal::sort_and_reuse_assumptions () {
   assert (opts.ilb >= 1);
-  if (assumptions.empty ())
-    return;
+  if (assumptions.empty ()){
+    if (opts.ilb == 1) {
+      LOG ("no assumptions, reusing nothing (ilb == 1)");
+      backtrack (0);
+    }
+    else { // reuse full trail
+      LOG ("no assumptions, reusing everything (ilb == 2)");
+      return;
+    }
+  }
   MSORT (opts.radixsortlim, assumptions.begin (), assumptions.end (),
          sort_assumptions_positive_rank (this),
          sort_assumptions_smaller (this));
@@ -595,10 +603,10 @@ void Internal::sort_and_reuse_assumptions () {
          lit, alit);
     break;
   }
-  if (opts.ilb == 1 && (size_t)target > assumptions.size ())
+  if (opts.ilb == 1 && (size_t)target > assumptions.size ()) // reusing only assumptions
     target = assumptions.size ();
   if (target < level)
-    backtrack (target);
+    backtrack_without_updating_phases (target);
   LOG ("assumptions allow for reuse of trail up to level %d", level);
   if ((size_t) level > assumptions.size ())
     stats.assumptionsreused += assumptions.size ();

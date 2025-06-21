@@ -95,6 +95,7 @@ void Internal::set_tainted_literal () {
 }
 
 void Internal::renotify_trail_after_ilb () {
+  assert (opts.ilb);
   if (!external_prop || external_prop_is_lazy || !trail.size () ||
       !opts.ilb) {
     return;
