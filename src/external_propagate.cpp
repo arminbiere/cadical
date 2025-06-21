@@ -773,7 +773,7 @@ void Internal::handle_external_clause (Clause *res) {
       // It would have propagated pos0 on an earlier level than it is assigned
       LOG(res, "elevate assignment of %d from level %d to level %d with new reason clause",pos0,var (pos0).level,var (pos1).level );
 
-      if (v.trail > other.trail && opts.chrono) {
+      if (v.trail > other.trail && v.reason && opts.chrono) {
         v.level = other.level;
         v.reason = res;
       } else {
