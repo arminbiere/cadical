@@ -169,15 +169,6 @@ void Internal::renotify_full_trail_between_trail_pos (
 // over slices from the control stack instead of going over the trail
 // directly.
 void Internal::renotify_full_trail () {
-  LOG ("renotifying full trail");
-  LOG ("trail: ");
-  for (auto lit: trail) {
-    LOG ("%s", LOGLIT (lit));
-  }
-  for (auto cs : control) {
-    LOG ("boundaries at %d@%d", cs.decision, cs.trail);
-  }
-
   const size_t end_of_trail = trail.size ();
   if (level) {
     notified = 0; // TODO: save the last notified root-level position
