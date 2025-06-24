@@ -1572,10 +1572,9 @@ struct SimplifyCall : public Call {
 
 struct PropagateAssumptionsCall : public Call {
   PropagateAssumptionsCall (int r = 0) : Call (PROPAGATE_ASSUMPTIONS, 0, r) {}
-  void execute (Solver *&s, ExtendMap &extendmap) {
+  void execute (Solver *&s) {
     std::vector<int> entrailed;
-    s->implied (entrailed);
-    (void) (extendmap);
+    s->get_entrailed_literals (entrailed);
   }
   void print (ostream &o) { o << "propagate_assumptions " << arg << " " << res << endl; }
   Call *copy () { return new SimplifyCall (arg, res); }
@@ -1584,10 +1583,9 @@ struct PropagateAssumptionsCall : public Call {
 
 struct ImpliedCall : public Call {
   ImpliedCall (int r = 0) : Call (IMPLIED_LITERALS, 0, r) {}
-  void execute (Solver *&s, ExtendMap &extendmap) {
+  void execute (Solver *&s) {
     std::vector<int> entrailed;
-    s->implied (entrailed);
-    (void) (extendmap);
+    s->get_entrailed_literals (entrailed);
   }
   void print (ostream &o) { o << "get_entrailed_literals" << endl; }
   Call *copy () { return new SimplifyCall (arg, res); }
@@ -1596,9 +1594,8 @@ struct ImpliedCall : public Call {
 
 struct ResetAssumptionsCall : public Call {
   ResetAssumptionsCall (int r = 0) : Call (RESET_ASSUMPTIONS, 0, r) {}
-  void execute (Solver *&s, ExtendMap &extendmap) {
+  void execute (Solver *&s) {
     s->reset_assumptions ();
-    (void) (extendmap);
   }
   void print (ostream &o) { o << "reset_assumptions" << endl; }
   Call *copy () { return new SimplifyCall (arg, res); }
