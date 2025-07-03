@@ -494,6 +494,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
   if (!failed) {
 
+    const bool target = (stable || opts.target == 2);
     for (auto idx : vars) {
       if (!active (idx)) {
         LOG ("skipping inactive variable %d", idx);
@@ -508,7 +509,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
       if (prev)
         tmp = phases.prev[idx];
       if (!tmp)
-        tmp = sign (decide_phase (idx, true));
+        tmp = sign (decide_phase (idx, target));
       assert (tmp == 1 || tmp == -1);
       set_val (idx, tmp);
       assert (level == 2);
