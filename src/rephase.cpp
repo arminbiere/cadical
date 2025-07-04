@@ -115,8 +115,6 @@ void Internal::rephase () {
   report ('~', 1);
 
   backtrack ();
-  clear_phases (phases.target);
-  target_assigned = 0;
 
   size_t count = lim.rephased[stable]++;
   bool single;
@@ -311,6 +309,10 @@ void Internal::rephase () {
       }
   }
   assert (type);
+
+  // clear after walk such that random walk can still access the target
+  clear_phases (phases.target);
+  target_assigned = 0;
 
   int64_t delta = opts.rephaseint * (stats.rephased.total + 1);
   lim.rephase = stats.conflicts + delta;
