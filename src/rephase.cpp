@@ -23,6 +23,12 @@ bool Internal::rephasing () {
     return false;
   if (opts.forcephase)
     return false;
+  if (opts.rephase == 2) {
+    if (stable)
+      return stats.stabconflicts > lim.rephase;
+    else
+      return false;
+  }
   return stats.conflicts > lim.rephase;
 }
 
@@ -106,7 +112,7 @@ void Internal::rephase () {
   stats.rephased.total++;
   PHASE ("rephase", stats.rephased.total,
          "reached rephase limit %" PRId64 " after %" PRId64 " conflicts",
-         lim.rephase, stats.conflicts);
+         lim.rephase, opts.rephase==2 ? stats.stabconflicts : stats.conflicts);
 
   // Report current 'target' and 'best' and then set 'rephased' below, which
   // will trigger reporting the new 'target' and 'best' after updating it in
@@ -157,6 +163,52 @@ void Internal::rephase () {
       break;
     }
   } else if (single && opts.walk) {
+    // (inverted,best,walk,
+    //  flipping,best,walk,
+    //    random,best,walk,
+    //  original,best,walk)^\omega
+    switch (count % 12) {
+    case 0:
+      type = rephase_inverted ();
+      break;
+    case 1:
+      type = rephase_best ();
+      break;
+    case 2:
+      type = rephase_walk ();
+      break;
+    case 3:
+      type = rephase_flipping ();
+      break;
+    case 4:
+      type = rephase_best ();
+      break;
+    case 5:
+      type = rephase_walk ();
+      break;
+    case 6:
+      type = rephase_random ();
+      break;
+    case 7:
+      type = rephase_best ();
+      break;
+    case 8:
+      type = rephase_walk ();
+      break;
+    case 9:
+      type = rephase_original ();
+      break;
+    case 10:
+      type = rephase_best ();
+      break;
+    case 11:
+      type = rephase_walk ();
+      break;
+    default:
+      type = 0;
+      break;
+    }
+  } else if (opts.rephase == 2 && opts.walk) {
     // (inverted,best,walk,
     //  flipping,best,walk,
     //    random,best,walk,
@@ -315,7 +367,7 @@ void Internal::rephase () {
   target_assigned = 0;
 
   int64_t delta = opts.rephaseint * (stats.rephased.total + 1);
-  lim.rephase = stats.conflicts + delta;
+  lim.rephase = (opts.rephase == 2 ? stats.stabconflicts : stats.conflicts) + delta;
 
   PHASE ("rephase", stats.rephased.total,
          "new rephase limit %" PRId64 " after %" PRId64 " conflicts",
