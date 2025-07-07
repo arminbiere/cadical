@@ -350,7 +350,6 @@ void Internal::compact () {
   mapper.map_vector (phases.target);
   mapper.map_vector (phases.best);
   mapper.map_vector (phases.prev);
-  mapper.map_vector (phases.min);
 
   // Special code for 'frozentab'.
   //

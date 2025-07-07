@@ -195,7 +195,6 @@ void Internal::renotify_full_trail () {
     propagator_level++;
     LOG ("notification of %d", propagator_level);
 
-    int j = start_level;
     renotify_full_trail_between_trail_pos (start_level, end_level,
                                            propagator_level, assigned, true);
   }

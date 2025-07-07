@@ -398,7 +398,7 @@ inline void Internal::walk_save_minimum (Walker &walker) {
   for (auto i : vars) {
     const signed char tmp = vals[i];
     if (tmp)
-      phases.min[i] = phases.saved[i] = tmp;
+      phases.saved[i] = tmp;
   }
 }
 

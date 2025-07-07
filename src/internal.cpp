@@ -143,7 +143,6 @@ void Internal::enlarge (int new_max_var) {
   enlarge_zero (phases.target, new_vsize);
   enlarge_zero (phases.best, new_vsize);
   enlarge_zero (phases.prev, new_vsize);
-  enlarge_zero (phases.min, new_vsize);
   enlarge_zero (marks, new_vsize);
 }
 
