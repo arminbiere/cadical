@@ -363,7 +363,8 @@ void Internal::rephase () {
   assert (type);
 
   // clear after walk such that random walk can still access the target
-  clear_phases (phases.target);
+  // by using the saved phases
+  copy_phases (phases.target);
   target_assigned = 0;
 
   int64_t delta = opts.rephaseint * (stats.rephased.total + 1);
