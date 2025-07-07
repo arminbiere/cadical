@@ -103,7 +103,8 @@ struct Internal;
   PROFILE (transred, 3) \
   PROFILE (unstable, 2) \
   PROFILE (vivify, 2) \
-  PROFILE (walk, 2)
+  PROFILE (walk, 2)\
+  PROFILE (warmup, 3)
 
 /*------------------------------------------------------------------------*/
 

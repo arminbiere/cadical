@@ -253,6 +253,7 @@ OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( walkmineff,        0,  0,1e7,1,0,1, "minimum efficiency") \
 OPTION( walknonstable,     1,  0,  1,0,0,1, "walk in non-stabilizing phase") \
 OPTION( walkredundant,     0,  0,  1,0,0,1, "walk redundant clauses too") \
+OPTION( warmup,            1,  0,  1,0,0,1, "warmup before walk using propagation") \
 
 // Note, keep an empty line right before this line because of the last '\'!
 // Also keep those single spaces after 'OPTION(' for proper sorting.

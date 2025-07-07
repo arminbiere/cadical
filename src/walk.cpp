@@ -406,13 +406,6 @@ inline void Internal::walk_save_minimum (Walker &walker) {
 
 int Internal::walk_round (int64_t limit, bool prev) {
 
-  backtrack ();
-  if (propagated < trail.size () && !propagate ()) {
-    LOG ("empty clause after root level propagation");
-    learn_empty_clause ();
-    return 20;
-  }
-
   stats.walk.count++;
 
   clear_watches ();
@@ -692,6 +685,16 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
 void Internal::walk () {
   START_INNER_WALK ();
+
+  backtrack ();
+  if (propagated < trail.size () && !propagate ()) {
+    LOG ("empty clause after root level propagation");
+    learn_empty_clause ();
+    return;
+  }
+
+  if (opts.warmup)
+    warmup ();
   int64_t limit = stats.propagations.search;
   limit *= 1e-3 * opts.walkeffort;
   if (limit < opts.walkmineff)
