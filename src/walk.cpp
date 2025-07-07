@@ -10,6 +10,9 @@ struct Walker {
 
   Internal *internal;
 
+  // for efficiency, storing the model each time an improvement is
+  // found is too costly. Instead we store some of the flips since
+  // last time and the position of the best model found so far.
   Random random;           // local random number generator
   int64_t propagations;    // number of propagations
   int64_t limit;           // limit on number of propagations
@@ -17,10 +20,16 @@ struct Walker {
   double epsilon;          // smallest considered score
   vector<double> table;    // break value to score table
   vector<double> scores;   // scores of candidate literals
-
+  std::vector<int> flips; // remember the flips compared to the last best saved model
+  int best_trail_pos;
+  int64_t minimum = INT64_MAX;
+  std::vector<signed char> best_values; // best model found so far
   double score (unsigned); // compute score from break count
 
   Walker (Internal *, double size, int64_t limit);
+  void push_flipped (int flipped);
+  void save_walker_trail (bool);
+  void save_final_minimum (int64_t flips, int64_t old_minimum);
 };
 
 // These are in essence the CB values from Adrian Balint's thesis.  They
@@ -62,8 +71,10 @@ inline static double fitcbval (double size) {
 
 Walker::Walker (Internal *i, double size, int64_t l)
     : internal (i), random (internal->opts.seed), // global random seed
-      propagations (0), limit (l) {
+      propagations (0), limit (l), best_trail_pos(-1) {
   random += internal->stats.walk.count; // different seed every time
+  flips.reserve (i->max_var / 4);
+  best_values.resize (i->max_var + 1, 0);
 
   // This is the magic constant in ProbSAT (also called 'CB'), which we pick
   // according to the average size every second invocation and otherwise
@@ -83,6 +94,122 @@ Walker::Walker (Internal *i, double size, int64_t l)
          table.size ());
 }
 
+
+// Add the literal to flip to the queue
+
+void Walker::push_flipped(int flipped) {
+  LOG ("push literal %s on the flips", LOGLIT(flipped));
+  assert (flipped);
+  if (best_trail_pos < 0) {
+    LOG ("not pushing flipped %s to already invalid trail",
+         LOGLIT (flipped));
+    return;
+  }
+
+  const size_t size_trail = flips.size ();
+  const size_t limit = internal->max_var / 4 + 1;
+  if (size_trail < limit) {
+    flips.push_back (flipped);
+    LOG ("pushed flipped %s to trail which now has size %u",
+         LOGLIT (flipped), size_trail + 1);
+    return;
+  }
+
+  if (best_trail_pos) {
+      LOG ("trail reached limit %u but has best position %u", limit,
+           best_trail_pos);
+      save_walker_trail (true);
+      flips.push_back(flipped);
+      LOG ("pushed flipped %s to trail which now has size %zu",
+           LOGLIT (flipped), flips.size());
+      return;
+  }else {
+      LOG ("trail reached limit %zd without best position", limit);
+      flips.clear ();
+      LOG ("not pushing %s to invalidated trail", LOGLIT (flipped));
+      best_trail_pos = -1;
+      LOG ("best trail position becomes invalid");
+    }
+}
+
+
+void Walker::save_walker_trail (bool keep) {
+  assert (best_trail_pos != -1);
+  assert (best_trail_pos <= flips.size());
+  const size_t size_trail = flips.size ();
+  const unsigned kept = flips.size() - best_trail_pos;
+  LOG ("saving %u values of flipped literals on trail of size %u",
+       best_trail_pos, size_trail);
+
+  const auto begin = flips.begin ();
+  const auto best = flips.begin () + best_trail_pos;
+  const auto end = flips.end();
+
+  auto it = begin;
+  for (; it != best; ++it) {
+    const int lit = *it;
+    assert (lit);
+    const signed char value = sign (lit);
+    const int idx = std::abs (lit);
+    best_values[idx] = value;
+  }
+  if (!keep) {
+    LOG ("no need to shift and keep remaining %u literals", kept);
+    return;
+  }
+
+#ifndef NDEBUG
+  for (auto v : internal->vars) {
+    if (internal->active(v))
+      assert (best_values[v] == internal->phases.saved[v]);
+  }
+#endif
+  LOG ("flushed %u literals %.0f%% from trail", best_trail_pos,
+       percent (best_trail_pos, size_trail));
+  assert (it == best);
+  auto jt = begin;
+  for (; it != end; ++it, ++jt) {
+    assert (jt <= it);
+    assert (it < end);
+    *jt = *it;
+  }
+
+  assert ((size_t) (end - jt) == best_trail_pos);
+  assert ((size_t) (jt - begin) == kept);
+  flips.resize(kept);
+  LOG ("keeping %u literals %.0f%% on trail", kept,
+       percent (kept, size_trail));
+  LOG ("reset best trail position to 0");
+  best_trail_pos = 0;
+}
+
+// finally export the final minimum
+void Walker::save_final_minimum (int64_t flips, int64_t old_init_minimum) {
+  assert (minimum <= old_init_minimum);
+  if (minimum == old_init_minimum) {
+    PHASE ("walk", internal->stats.walk.count,
+           "%sno improvement %" PRId64 "%s in %" PRId64 " flips and "
+           "%" PRId64 " propagations",
+           tout.bright_yellow_code (), minimum, tout.normal_code (), flips,
+           propagations);
+    return;
+  }
+
+  PHASE ("walk", internal->stats.walk.count,
+         "best phase minimum %" PRId64 " in %" PRId64 " flips and "
+         "%" PRId64 " propagations",
+         minimum, flips, propagations);
+
+  if (!best_trail_pos || best_trail_pos == -1)
+    LOG ("minimum already saved");
+  else
+    save_walker_trail(false);
+
+  internal->copy_phases (internal->phases.prev);
+  for (auto v : internal->vars) {
+    internal->phases.saved[v] = best_values[v];
+  }
+}
 // The scores are tabulated for faster computation (to avoid 'pow').
 
 inline double Walker::score (unsigned i) {
@@ -391,14 +518,39 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 
 inline void Internal::walk_save_minimum (Walker &walker) {
   int64_t broken = walker.broken.size ();
-  if (broken >= stats.walk.minimum)
+  if (broken >= walker.minimum)
     return;
-  VERBOSE (3, "new global minimum %" PRId64 "", broken);
-  stats.walk.minimum = broken;
+  if (broken <= stats.walk.minimum) {
+    stats.walk.minimum = broken;
+    VERBOSE (3, "new global minimum %" PRId64 "", broken);
+  } else {
+    VERBOSE (3, "new walk minimum %" PRId64 "", broken);
+  }
+
+  walker.minimum = broken;
+
+#ifndef NDEBUG
   for (auto i : vars) {
     const signed char tmp = vals[i];
     if (tmp)
       phases.saved[i] = tmp;
+  }
+#endif
+
+  if (walker.best_trail_pos == -1) {
+    for (auto i : vars) {
+      const signed char tmp = vals[i];
+      if (tmp) {
+        walker.best_values[i] = tmp;
+#ifndef NDEBUG
+        assert (tmp == phases.saved[i]);
+#endif
+      }
+    }
+    walker.best_trail_pos = 0;
+  } else {
+    walker.best_trail_pos = walker.flips.size ();
+    LOG ("new best trail position %u", walker.best_trail_pos);
   }
 }
 
@@ -507,6 +659,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
       set_val (idx, tmp);
       assert (level == 2);
       var (idx).level = 2;
+      walker.best_values[idx] = tmp;
       LOG ("initial assign %d to decision phase", tmp < 0 ? -idx : idx);
     }
 
@@ -583,6 +736,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
   if (!failed) {
 
     int64_t broken = walker.broken.size ();
+    int64_t initial_minimum = broken;
 
     PHASE ("walk", stats.walk.count,
            "starting with %" PRId64 " unsatisfied clauses "
@@ -591,6 +745,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
            stats.current.irredundant);
 
     walk_save_minimum (walker);
+    assert (stats.walk.minimum <= walker.minimum);
 
     int64_t minimum = broken;
 #ifndef QUIET
@@ -606,6 +761,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
       Clause *c = walk_pick_clause (walker);
       const int lit = walk_pick_lit (walker, c);
       walk_flip_lit (walker, lit);
+      walker.push_flipped (lit);
       broken = walker.broken.size ();
       LOG ("now have %" PRId64 " broken clauses in total", broken);
       if (broken >= minimum)
@@ -616,17 +772,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
       walk_save_minimum (walker);
     }
 
-    if (minimum < old_global_minimum)
-      PHASE ("walk", stats.walk.count,
-             "%snew global minimum %" PRId64 "%s in %" PRId64 " flips and "
-             "%" PRId64 " propagations",
-             tout.bright_yellow_code (), minimum, tout.normal_code (),
-             flips, walker.propagations);
-    else
-      PHASE ("walk", stats.walk.count,
-             "best phase minimum %" PRId64 " in %" PRId64 " flips and "
-             "%" PRId64 " propagations",
-             minimum, flips, walker.propagations);
+    walker.save_final_minimum (flips, initial_minimum);
 
     if (opts.profile >= 2) {
       PHASE ("walk", stats.walk.count,
@@ -661,7 +807,6 @@ int Internal::walk_round (int64_t limit, bool prev) {
            "aborted due to inconsistent assumptions");
   }
 
-  copy_phases (phases.prev);
 
   for (auto idx : vars)
     if (active (idx))
