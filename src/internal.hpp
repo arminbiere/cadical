@@ -840,6 +840,7 @@ struct Internal {
   //
   void clear_phases (vector<signed char> &); // reset argument to zero
   void copy_phases (vector<signed char> &);  // copy 'saved' to argument
+  void save_assigned_phases (vector<signed char> &);  // save assigned literals to argument
 
   // Resetting the saved phased in 'rephase.cpp'.
   //
