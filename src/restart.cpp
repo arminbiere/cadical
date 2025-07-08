@@ -18,7 +18,7 @@ namespace CaDiCaL {
 bool Internal::stabilizing () {
   if (!opts.stabilize)
     return false;
-  if (stable && opts.stabilizeonly)
+  if (opts.stabilizeonly)
     return false;
   if (opts.stabilizeticks && !stable) {
     assert (!stable);
@@ -27,7 +27,7 @@ bool Internal::stabilizing () {
   } else if (opts.stabilizeticks &&
              stats.ticks.search[stable] <= lim.stabilize)
     return false;
-  else if (!opts.stabilizeticks && stats.conflicts < lim.stabilize)
+  else if (!opts.stabilizeticks && stats.conflicts <= lim.stabilize)
     return false;
   return true;
 }
@@ -84,6 +84,7 @@ void Internal::stabilize () {
            next_mode, lim.stabilize, delta_conflicts);
   } else {
     last.stabilize.ticks = stats.ticks.search[0];
+    last.stabilize.conflicts = stats.conflicts;
     PHASE ("stabilizing", stats.stabphases,
            "reached stabilization limit %" PRId64 " after %" PRId64
            " conflicts",

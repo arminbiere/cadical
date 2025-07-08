@@ -318,6 +318,8 @@ void Internal::rephase () {
   assert (type);
 
   int64_t delta = inc.stabilize;
+  if (opts.stabilizeonly)
+    delta = (rephased + 1) * opts.rephaseint;
   if (opts.stabilizeticks)
     lim.rephase = stats.ticks.search[stable] + delta;
   else
