@@ -170,7 +170,6 @@ OPTION( reluctant,      1024,  0,2e9,0,0,1, "reluctant doubling period") \
 OPTION( reluctantmax,1048576,  0,2e9,0,0,1, "reluctant doubling period") \
 OPTION( rephase,           1,  0,  1,0,0,1, "enable resetting phase") \
 OPTION( rephaseint,      1e3,  1,2e9,0,0,1, "rephase interval") \
-OPTION( rephaseticks,           1,  0,  1,0,0,1, "enable rephasing scheduled by ticks") \
 OPTION( report,reportdefault,  0,  1,0,0,1, "enable reporting") \
 OPTION( reportall,         0,  0,  1,0,0,1, "report even if not successful") \
 OPTION( reportsolve,       0,  0,  1,0,0,1, "use solving not process time") \
@@ -193,6 +192,7 @@ OPTION( shufflescores,     1,  0,  1,0,0,1, "shuffle variable scores") \
 OPTION( stabilize,         1,  0,  1,0,0,1, "enable stabilizing phases") \
 OPTION( stabilizeinit,   1e3,  1,2e9,0,0,1, "stabilizing interval") \
 OPTION( stabilizeonly,     0,  0,  1,0,0,1, "only stabilizing phases") \
+OPTION( stabilizeticks,    1,  0,  1,0,0,1, "enable stabilize scheduled by ticks") \
 OPTION( stats,             0,  0,  1,0,0,1, "print all statistics at the end of the run") \
 OPTION( subsume,           1,  0,  1,0,1,1, "enable clause subsumption") \
 OPTION( subsumebinlim,   1e4,  0,2e9,1,0,1, "watch list length limit") \

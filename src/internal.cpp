@@ -311,6 +311,8 @@ int Internal::cdcl_loop_with_inprocessing () {
       break;
     else if (restarting ())
       restart (); // restart by backtracking
+    else if (stabilizing ())
+      stabilize (); // restart by backtracking
     else if (rephasing ())
       rephase (); // reset variable phases
     else if (reducing ())
@@ -585,29 +587,21 @@ void Internal::init_search_limits () {
   } else
     LOG ("keeping non-stable phase");
 
-  if (opts.rephaseticks) {
-    inc.stabilize = 0;
+  if (opts.stabilizeticks) {
     last.stabilize.conflicts = stats.conflicts;
     lim.stabilize = stats.conflicts + opts.stabilizeinit;
     last.stabilize.ticks = stats.ticks.search[0];
     stats.stabphases = 0;
-    LOG ("new ticks-based stabilize limit %" PRId64 " after %d conflicts",
+    LOG ("new stabilize limit %" PRId64 " after %d conflicts",
          lim.stabilize, (int) opts.stabilizeinit);
-  } else { //
-    const int stabilizeint = 1e3;
-    inc.stabilize = stabilizeint;
-    lim.stabilize = stats.conflicts + inc.stabilize;
-    LOG ("new conflict-based stabilize limit %" PRId64 " after %" PRId64
-         " conflicts",
-         lim.stabilize, inc.stabilize);
-
-    if (opts.stabilize && opts.reluctant) {
-      LOG ("new restart reluctant doubling sequence period %d",
-           opts.reluctant);
-      reluctant.enable (opts.reluctant, opts.reluctantmax);
-    } else
-      reluctant.disable ();
   }
+
+  if (opts.reluctant) {
+    LOG ("new restart reluctant doubling sequence period %d",
+         opts.reluctant);
+    reluctant.enable (opts.reluctant, opts.reluctantmax);
+  } else
+    reluctant.disable ();
 
   /*----------------------------------------------------------------------*/
 

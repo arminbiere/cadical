@@ -828,6 +828,7 @@ struct Internal {
   // Restarting policy in 'restart.cc'.
   //
   bool stabilizing ();
+  void stabilize ();
   bool restarting ();
   int reuse_trail ();
   void restart ();

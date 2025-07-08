@@ -23,6 +23,10 @@ bool Internal::rephasing () {
     return false;
   if (opts.forcephase)
     return false;
+  if (!stable)
+    return false;
+  if (opts.stabilizeticks)
+    return stats.ticks.search[stable] > lim.rephase;
   return stats.conflicts > lim.rephase;
 }
 
@@ -103,6 +107,7 @@ char Internal::rephase_walk () {
 
 void Internal::rephase () {
 
+  assert (stable);
   stats.rephased.total++;
   PHASE ("rephase", stats.rephased.total,
          "reached rephase limit %" PRId64 " after %" PRId64 " conflicts",
@@ -312,8 +317,11 @@ void Internal::rephase () {
   }
   assert (type);
 
-  int64_t delta = opts.rephaseint * (stats.rephased.total + 1);
-  lim.rephase = stats.conflicts + delta;
+  int64_t delta = inc.stabilize;
+  if (opts.stabilizeticks)
+    lim.rephase = stats.ticks.search[stable] + delta;
+  else
+    lim.rephase = stats.conflicts + delta;
 
   PHASE ("rephase", stats.rephased.total,
          "new rephase limit %" PRId64 " after %" PRId64 " conflicts",

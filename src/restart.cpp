@@ -19,15 +19,23 @@ bool Internal::stabilizing () {
   if (!opts.stabilize)
     return false;
   if (stable && opts.stabilizeonly)
-    return true;
-  if (opts.rephaseticks && !inc.stabilize) {
+    return false;
+  if (opts.stabilizeticks && !stable) {
     assert (!stable);
     if (stats.conflicts <= lim.stabilize)
       return false;
-  } else if (opts.rephaseticks && stats.ticks.search[stable] <= lim.stabilize)
-    return stable;
-  else if (!opts.rephaseticks && stats.conflicts < lim.stabilize)
-    return stable;
+  } else if (opts.stabilizeticks &&
+             stats.ticks.search[stable] <= lim.stabilize)
+    return false;
+  else if (!opts.stabilizeticks && stats.conflicts < lim.stabilize)
+    return false;
+  return true;
+}
+
+void Internal::stabilize () {
+  // restart before stabilizing
+  restart ();
+
   report (stable ? ']' : '}');
   if (stable)
     STOP (stable);
@@ -35,11 +43,11 @@ bool Internal::stabilizing () {
     STOP (unstable);
 
   stable = !stable; // Switch!!!!!
-  if (opts.rephaseticks) {
-    const int64_t delta_conflicts =
-        stats.conflicts - last.stabilize.conflicts;
-    const int64_t delta_ticks =
-        stats.ticks.search[stable] - last.stabilize.ticks;
+  const int64_t delta_conflicts =
+      stats.conflicts - last.stabilize.conflicts;
+  const int64_t delta_ticks = stats.ticks.search[0] - last.stabilize.ticks;
+  if (opts.stabilizeticks && stable) {
+    inc.stabilize = delta_ticks;
     const char *current_mode = stable ? "stable" : "unstable";
     const char *next_mode = stable ? "unstable" : "stable";
     PHASE ("stabilizing", stats.stabphases,
@@ -48,43 +56,56 @@ bool Internal::stabilizing () {
            " conflicts and %" PRId64 " ticks",
            current_mode, lim.stabilize, delta_conflicts, delta_ticks,
            stats.conflicts, stats.ticks.search[stable]);
-    inc.stabilize = delta_ticks;
-    if (!inc.stabilize) // rare occurence in incremental calls requiring no
-                        // ticks
-      inc.stabilize = 1;
 
-
-    int64_t next_delta_ticks = inc.stabilize;
-    int64_t stabphases = stats.stabphases + 1;
-    next_delta_ticks *= 2; // stabphases * stabphases;
-
-    lim.stabilize = stats.ticks.search[stable] + next_delta_ticks;
+    lim.stabilize = stats.ticks.search[stable] + delta_ticks;
     if (lim.stabilize <= stats.ticks.search[stable])
       lim.stabilize = stats.ticks.search[stable] + 1;
     PHASE ("stabilizing", stats.stabphases,
            "next %s stabilization limit %" PRId64
            " at ticks interval %" PRId64,
-           next_mode, lim.stabilize, next_delta_ticks);
+           next_mode, lim.stabilize, delta_ticks);
+  } else if (stable) {
+    inc.stabilize = delta_conflicts;
+    const char *current_mode = stable ? "stable" : "unstable";
+    const char *next_mode = stable ? "unstable" : "stable";
+    PHASE ("stabilizing", stats.stabphases,
+           "reached %s stabilization limit %" PRId64 " after %" PRId64
+           " conflicts and %" PRId64 " ticks at %" PRId64
+           " conflicts and %" PRId64 " ticks",
+           current_mode, lim.stabilize, delta_conflicts, delta_ticks,
+           stats.conflicts, stats.ticks.search[stable]);
+
+    lim.stabilize = stats.conflicts + delta_conflicts;
+    if (lim.stabilize <= stats.conflicts)
+      lim.stabilize = stats.conflicts + 1;
+    PHASE ("stabilizing", stats.stabphases,
+           "next %s stabilization limit %" PRId64
+           " at conflict interval %" PRId64,
+           next_mode, lim.stabilize, delta_conflicts);
   } else {
-    const int stabilizefactor = 200;
-    const int stabilizemaxint = 2e9;
+    last.stabilize.ticks = stats.ticks.search[0];
     PHASE ("stabilizing", stats.stabphases,
            "reached stabilization limit %" PRId64 " after %" PRId64
            " conflicts",
            lim.stabilize, stats.conflicts);
-    inc.stabilize *= stabilizefactor * 1e-2;
-    if (inc.stabilize > stabilizemaxint)
-      inc.stabilize = stabilizemaxint;
-    lim.stabilize = stats.conflicts + inc.stabilize;
+    uint64_t interval = opts.stabilizeinit * (stats.stabphases + 1) *
+                        (stats.stabphases + 1);
+    lim.stabilize = stats.conflicts + interval;
     if (lim.stabilize <= stats.conflicts)
       lim.stabilize = stats.conflicts + 1;
     PHASE ("stabilizing", stats.stabphases,
            "new stabilization limit %" PRId64
            " at conflicts interval %" PRId64 "",
-           lim.stabilize, inc.stabilize);
+           lim.stabilize, interval);
   }
-  if (stable)
+  if (stable) {
     stats.stabphases++;
+
+    inc.stabilize /= stats.stabphases;
+    inc.stabilize++;
+
+    rephase ();
+  }
 
   swap_averages ();
   report (stable ? '[' : '{');
@@ -92,7 +113,6 @@ bool Internal::stabilizing () {
     START (stable);
   else
     START (unstable);
-  return stable;
 }
 
 // Restarts are scheduled by a variant of the Glucose scheme as presented
@@ -107,7 +127,7 @@ bool Internal::restarting () {
     return false;
   if ((size_t) level < assumptions.size () + 2)
     return false;
-  if (stabilizing ())
+  if (stable)
     return reluctant;
   if (stats.conflicts <= lim.restart)
     return false;
