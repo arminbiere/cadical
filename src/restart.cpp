@@ -48,8 +48,9 @@ bool Internal::stabilizing () {
          stats.conflicts, stats.ticks.search[stable]);
   if (!inc.stabilize)
     inc.stabilize = delta_ticks;
-  if (!inc.stabilize) // rare occurence in incremental calls requiring no
-                      // ticks
+
+  // Rare occurrence in incremental calls requiring no ticks:
+  if (!inc.stabilize)
     inc.stabilize = 1;
 
   stable = !stable; // Switch!!!!!
@@ -95,9 +96,15 @@ bool Internal::restarting () {
   if (stats.conflicts <= lim.restart)
     return false;
   double f = averages.current.glue.fast;
-  double margin = (100.0 + opts.restartmargin) / 100.0;
-  double s = averages.current.glue.slow, l = margin * s;
-  LOG ("EMA glue slow %.2f fast %.2f limit %.2f", s, f, l);
+  double m = (100.0 + opts.restartmargin) / 100.0;
+  double s = averages.current.glue.slow;
+  double l = m * s;
+
+  char c = l > f ? '>' : l < f ? '<' : '=';
+  VERBOSE (3, "restart glue limit "
+           "%g = %.2f * %g (slow glue) %c %g (fast glue)",
+           l, m, s, c, f);
+
   return l <= f;
 }
 
