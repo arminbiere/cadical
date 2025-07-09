@@ -91,17 +91,19 @@ bool Internal::restarting () {
     return false;
   if ((size_t) level < assumptions.size () + 2)
     return false;
-  if (stabilizing ())
+  if (stabilizing () && opts.reluctant)
     return reluctant;
   if (stats.conflicts <= lim.restart)
     return false;
   double f = averages.current.glue.fast;
-  double m = (100.0 + opts.restartmargin) / 100.0;
+  int p = stable ? opts.restartmarginstable : opts.restartmarginfocused;
+  double m = (100.0 + p) / 100.0;
   double s = averages.current.glue.slow;
   double l = m * s;
 
   char c = l > f ? '>' : l < f ? '<' : '=';
-  VERBOSE (3, "restart glue limit "
+  VERBOSE (3,
+           "restart glue limit "
            "%g = %.2f * %g (slow glue) %c %g (fast glue)",
            l, m, s, c, f);
 
