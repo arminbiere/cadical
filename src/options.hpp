@@ -166,7 +166,7 @@ OPTION( reducetier1glue,   2,  1,2e9,0,0,1, "glue of kept learned clauses") \
 OPTION( reducetier2glue,   6,  1,2e9,0,0,1, "glue of tier two clauses") \
 OPTION( reluctant,      1024,  0,2e9,0,0,1, "reluctant doubling period") \
 OPTION( reluctantmax,1048576,  0,2e9,0,0,1, "reluctant doubling period") \
-OPTION( rephase,           1,  0,  2,0,0,1, "enable resetting phase (0=no, 1=always, 2=stable only)") \
+OPTION( rephase,           2,  0,  2,0,0,1, "enable resetting phase (0=no, 1=always, 2=stable only)") \
 OPTION( rephaseint,      1e3,  1,2e9,0,0,1, "rephase interval") \
 OPTION( report,reportdefault,  0,  1,0,0,1, "enable reporting") \
 OPTION( reportall,         0,  0,  1,0,0,1, "report even if not successful") \
