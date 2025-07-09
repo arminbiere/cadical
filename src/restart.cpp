@@ -20,7 +20,12 @@ bool Internal::stabilizing () {
     return false;
   if (opts.stabilizeonly)
     return false;
-  if (opts.stabilizeticks && !stable) {
+  if (opts.stabilizeticks && stable) {
+    assert (stable);
+    if (stats.conflicts <= lim.stabilize)
+      return false;
+  }
+  if (opts.stabilizeticks && !stable && !stats.stabphases) {
     assert (!stable);
     if (stats.conflicts <= lim.stabilize)
       return false;
@@ -46,8 +51,7 @@ void Internal::stabilize () {
   const int64_t delta_conflicts =
       stats.conflicts - last.stabilize.conflicts;
   const int64_t delta_ticks = stats.ticks.search[0] - last.stabilize.ticks;
-  if (opts.stabilizeticks && stable) {
-    inc.stabilize = delta_ticks;
+  if (opts.stabilizeticks && !stable) {
     const char *current_mode = stable ? "stable" : "unstable";
     const char *next_mode = stable ? "unstable" : "stable";
     PHASE ("stabilizing", stats.stabphases,
@@ -64,8 +68,7 @@ void Internal::stabilize () {
            "next %s stabilization limit %" PRId64
            " at ticks interval %" PRId64,
            next_mode, lim.stabilize, delta_ticks);
-  } else if (stable) {
-    inc.stabilize = delta_conflicts;
+  } else if (!stable) {
     const char *current_mode = stable ? "stable" : "unstable";
     const char *next_mode = stable ? "unstable" : "stable";
     PHASE ("stabilizing", stats.stabphases,
@@ -101,11 +104,6 @@ void Internal::stabilize () {
   }
   if (stable) {
     stats.stabphases++;
-
-    inc.stabilize /= stats.stabphases;
-    inc.stabilize++;
-
-    rephase ();
   }
 
   swap_averages ();
