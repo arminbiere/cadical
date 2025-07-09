@@ -344,7 +344,7 @@ int Internal::propagate_assumptions () {
     proof->solve_query ();
   if (opts.ilb) {
     sort_and_reuse_assumptions ();
-    assert (opts.ilb == 2 || (size_t)level <= assumptions.size ());
+    assert (opts.ilb == 2 || (size_t) level <= assumptions.size ());
     stats.ilbtriggers++;
     stats.ilbsuccess += (level > 0);
     stats.levelsreused += level;
@@ -591,10 +591,10 @@ void Internal::init_search_limits () {
          lim.stabilize, (int) opts.stabilizeinit);
   }
 
-  if (opts.stabilize && opts.reluctant) {
+  if (opts.stabilize && opts.reluctant && opts.reluctantint) {
     LOG ("new restart reluctant doubling sequence period %d",
          opts.reluctant);
-    reluctant.enable (opts.reluctant, opts.reluctantmax);
+    reluctant.enable (opts.reluctantint, opts.reluctantmax);
   } else
     reluctant.disable ();
 
@@ -723,8 +723,8 @@ void Internal::preprocess_quickly (bool always) {
 
   if (opts.fastelim)
     elimfast ();
-  // if (opts.condition)
-  // condition (false);
+    // if (opts.condition)
+    // condition (false);
 #ifndef QUIET
   after.vars = active ();
   after.clauses = stats.current.irredundant;
@@ -895,7 +895,7 @@ int Internal::solve (bool preprocess_only) {
     proof->solve_query ();
   if (opts.ilb) {
     sort_and_reuse_assumptions ();
-    assert (opts.ilb || (size_t)level <= assumptions.size ());
+    assert (opts.ilb || (size_t) level <= assumptions.size ());
     stats.ilbtriggers++;
     stats.ilbsuccess += (level > 0);
     stats.levelsreused += level;
