@@ -123,11 +123,15 @@ void Internal::renotify_trail_after_local_search () {
 
 void Internal::renotify_full_trail_between_trail_pos (
     int start_level, int end_level, int propagator_level,
-						      std::vector<int> &assigned, bool start_new_level) {
-  assert (assigned.empty());
+    std::vector<int> &assigned, bool start_new_level) {
+  assert (assigned.empty ());
   int j = start_level;
+#ifdef LOGGING
   LOG ("starting notification of level %d from trail %d .. %d",
        propagator_level, start_level, end_level);
+#else
+  (void) propagator_level;
+#endif
   if (start_new_level) {
     if (assigned.size ())
       external->propagator->notify_assignment (assigned);
@@ -179,13 +183,13 @@ void Internal::renotify_full_trail () {
 
   int propagator_level = 0;
 
-
   const int c_size = control.size ();
   { // first all root-level literals
     const int start_level = 0;
-    const int end_level = (control.size () > 1 ? control[1].trail : end_of_trail);
-    renotify_full_trail_between_trail_pos (start_level, end_level,
-                                         propagator_level, assigned, false);
+    const int end_level =
+        (control.size () > 1 ? control[1].trail : end_of_trail);
+    renotify_full_trail_between_trail_pos (
+        start_level, end_level, propagator_level, assigned, false);
   }
 
   // notify all intermediate levels
@@ -195,8 +199,8 @@ void Internal::renotify_full_trail () {
     propagator_level++;
     LOG ("notification of %d", propagator_level);
 
-    renotify_full_trail_between_trail_pos (start_level, end_level,
-                                           propagator_level, assigned, true);
+    renotify_full_trail_between_trail_pos (
+        start_level, end_level, propagator_level, assigned, true);
   }
 
   // and the current level if there is non-root level one
