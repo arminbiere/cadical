@@ -555,9 +555,10 @@ void Internal::init_search_limits () {
 
   // Initialize or reset 'rephase' limits in any case.
 
-  lim.rephase = stats.conflicts + opts.rephaseint;
-  if (opts.stabilize && !opts.stabilizeonly)
-    lim.rephase = 0;
+  if (opts.stabilize && opts.stabilizeonly)
+    lim.rephase = stats.stabconflicts + opts.rephaseint;
+  else if (opts.stabilize)
+    lim.rephase = stats.stabconflicts;
   lim.rephased[0] = lim.rephased[1] = 0;
   LOG ("new rephase limit %" PRId64 " after %" PRId64 " conflicts",
        lim.rephase, lim.rephase - stats.conflicts);

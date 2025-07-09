@@ -25,7 +25,7 @@ bool Internal::rephasing () {
     return false;
   if (!stable)
     return false;
-  return stats.conflicts > lim.rephase;
+  return stats.stabconflicts > lim.rephase;
 }
 
 /*------------------------------------------------------------------------*/
@@ -316,7 +316,7 @@ void Internal::rephase () {
   assert (type);
 
   int64_t delta = (count + 1) * opts.rephaseint;
-  lim.rephase = stats.conflicts + delta;
+  lim.rephase = stats.stabconflicts + delta;
 
   PHASE ("rephase", stats.rephased.total,
          "new rephase limit %" PRId64 " after %" PRId64 " conflicts",
