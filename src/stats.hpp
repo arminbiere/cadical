@@ -118,12 +118,16 @@ struct Stats {
   } rephased;
 
   struct {
+    int64_t decision = 0;
+    int64_t propagated = 0;
+    int64_t count = 0;
+  } warmup;
+
+  struct {
     int64_t count = 0;
     int64_t broken = 0;
     int64_t flips = 0;
     int64_t minimum = 0;
-    int64_t warmupset = 0;
-    int64_t warmup = 0;
   } walk;
 
   struct {

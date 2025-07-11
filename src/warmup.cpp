@@ -33,7 +33,7 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
   assert ((int) num_assigned < max_var);
   assert (num_assigned == trail.size ());
   num_assigned++;
-  stats.walk.warmupset++;
+  stats.warmup.decision++;
   const signed char tmp = sign (lit);
   if (stable || opts.target >= 1)
     phases.target[idx] = tmp;
@@ -73,6 +73,7 @@ void Internal::warmup_propagate_beyond_conflict () {
   assert (!unsat);
 
   START (propagate);
+  assert (!ignore);
 
   int64_t before = propagated;
 
@@ -139,8 +140,6 @@ void Internal::warmup_propagate_beyond_conflict () {
           j--;
           continue;
         }
-        if (w.clause == ignore)
-          continue;
         literal_iterator lits = w.clause->begin ();
         const int other = lits[0] ^ lits[1] ^ lit;
         const signed char u = val (other);
@@ -247,7 +246,7 @@ void Internal::warmup_propagate_beyond_conflict () {
 
   assert (propagated == trail.size ());
 
-  stats.walk.warmupset += (trail.size() - before);
+  stats.warmup.propagated += (trail.size() - before);
   STOP (propagate);
 }
 
@@ -376,7 +375,7 @@ void Internal::warmup () {
   if (!opts.warmup)
     return;
   START (warmup);
-  ++stats.walk.warmup;
+  ++stats.warmup.count;
   assert (!private_steps);
   private_steps = true;
   int res = 0;
@@ -386,7 +385,6 @@ void Internal::warmup () {
   while (!res && num_assigned < (size_t) max_var) {
     assert (propagated == trail.size ());
     res = warmup_decide ();
-    ++stats.walk.warmupset;
     warmup_propagate_beyond_conflict();
   }
   backtrack_without_updating_phases ();
