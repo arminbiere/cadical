@@ -1,6 +1,8 @@
 #ifndef _lrattracer_h_INCLUDED
 #define _lrattracer_h_INCLUDED
 
+#include "tracer.hpp"
+
 namespace CaDiCaL {
 
 class LratTracer : public FileTracer {

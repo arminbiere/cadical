@@ -1,7 +1,7 @@
 #ifndef _veripbtracer_h_INCLUDED
 #define _veripbtracer_h_INCLUDED
 
-class FileTracer;
+#include "tracer.hpp"
 
 namespace CaDiCaL {
 

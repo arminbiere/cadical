@@ -1,6 +1,8 @@
 #ifndef _frattracer_h_INCLUDED
 #define _frattracer_h_INCLUDED
 
+#include "tracer.hpp"
+
 namespace CaDiCaL {
 
 class FratTracer : public FileTracer {

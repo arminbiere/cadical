@@ -1,7 +1,7 @@
 #ifndef _lidruptracer_h_INCLUDED
 #define _lidruptracer_h_INCLUDED
 
-class FileTracer;
+#include "tracer.hpp"
 
 namespace CaDiCaL {
 
