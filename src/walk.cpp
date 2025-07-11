@@ -110,13 +110,13 @@ void Walker::push_flipped(int flipped) {
   const size_t limit = internal->max_var / 4 + 1;
   if (size_trail < limit) {
     flips.push_back (flipped);
-    LOG ("pushed flipped %s to trail which now has size %u",
+    LOG ("pushed flipped %s to trail which now has size %zd",
          LOGLIT (flipped), size_trail + 1);
     return;
   }
 
   if (best_trail_pos) {
-      LOG ("trail reached limit %u but has best position %u", limit,
+      LOG ("trail reached limit %zd but has best position %d", limit,
            best_trail_pos);
       save_walker_trail (true);
       flips.push_back(flipped);
@@ -135,10 +135,12 @@ void Walker::push_flipped(int flipped) {
 
 void Walker::save_walker_trail (bool keep) {
   assert (best_trail_pos != -1);
-  assert (best_trail_pos <= flips.size());
+  assert ((size_t)best_trail_pos <= flips.size ());
+#ifdef LOGGING
   const size_t size_trail = flips.size ();
-  const unsigned kept = flips.size() - best_trail_pos;
-  LOG ("saving %u values of flipped literals on trail of size %u",
+#endif
+  const int kept = flips.size() - best_trail_pos;
+  LOG ("saving %d values of flipped literals on trail of size %zd",
        best_trail_pos, size_trail);
 
   const auto begin = flips.begin ();
@@ -174,8 +176,8 @@ void Walker::save_walker_trail (bool keep) {
     *jt = *it;
   }
 
-  assert ((size_t) (end - jt) == best_trail_pos);
-  assert ((size_t) (jt - begin) == kept);
+  assert ((int) (end - jt) == best_trail_pos);
+  assert ((int) (jt - begin) == kept);
   flips.resize(kept);
   LOG ("keeping %u literals %.0f%% on trail", kept,
        percent (kept, size_trail));
@@ -728,8 +730,6 @@ int Internal::walk_round (int64_t limit, bool prev) {
     }
 #endif
   }
-
-  int64_t old_global_minimum = stats.walk.minimum;
 
   int res; // Tells caller to continue with local search.
 
