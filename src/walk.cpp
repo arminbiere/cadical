@@ -210,10 +210,10 @@ void Walker::save_final_minimum (int64_t flips, int64_t old_init_minimum) {
   else
     save_walker_trail(false);
 
-  internal->copy_phases (internal->phases.prev);
   for (auto v : internal->vars) {
     internal->phases.saved[v] = best_values[v];
   }
+  internal->copy_phases (internal->phases.prev);
 }
 // The scores are tabulated for faster computation (to avoid 'pow').
 
