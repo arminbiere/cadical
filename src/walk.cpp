@@ -23,9 +23,11 @@ struct Walker {
   std::vector<int> flips; // remember the flips compared to the last best saved model
   int best_trail_pos;
   int64_t minimum = INT64_MAX;
-  std::vector<signed char> best_values; // best model found so far
+  std::vector<signed char> best_values; // best model stored so far
   double score (unsigned); // compute score from break count
-
+#ifndef NDEBUG
+  std::vector<signed char> current_best_model; // best model found so far
+#endif
   Walker (Internal *, double size, int64_t limit);
   void push_flipped (int flipped);
   void save_walker_trail (bool);
@@ -75,6 +77,7 @@ Walker::Walker (Internal *i, double size, int64_t l)
   random += internal->stats.walk.count; // different seed every time
   flips.reserve (i->max_var / 4);
   best_values.resize (i->max_var + 1, 0);
+  current_best_model.resize (i->max_var + 1, 0);
 
   // This is the magic constant in ProbSAT (also called 'CB'), which we pick
   // according to the average size every second invocation and otherwise
@@ -163,7 +166,7 @@ void Walker::save_walker_trail (bool keep) {
 #ifndef NDEBUG
   for (auto v : internal->vars) {
     if (internal->active(v))
-      assert (best_values[v] == internal->phases.saved[v]);
+      assert (best_values[v] == current_best_model[v]);
   }
 #endif
   LOG ("flushed %u literals %.0f%% from trail", best_trail_pos,
@@ -535,7 +538,7 @@ inline void Internal::walk_save_minimum (Walker &walker) {
   for (auto i : vars) {
     const signed char tmp = vals[i];
     if (tmp)
-      phases.saved[i] = tmp;
+      walker.current_best_model[i] = tmp;
   }
 #endif
 
@@ -545,7 +548,7 @@ inline void Internal::walk_save_minimum (Walker &walker) {
       if (tmp) {
         walker.best_values[i] = tmp;
 #ifndef NDEBUG
-        assert (tmp == phases.saved[i]);
+        assert (tmp == walker.current_best_model[i]);
 #endif
       }
     }
