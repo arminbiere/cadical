@@ -644,7 +644,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
   if (!failed) {
 
-    const bool target = (stable || opts.target == 2);
+    const bool target = opts.warmup ? false : stable || opts.target == 2;
     for (auto idx : vars) {
       if (!active (idx)) {
         LOG ("skipping inactive variable %d", idx);

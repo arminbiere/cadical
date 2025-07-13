@@ -20,7 +20,7 @@ namespace CaDiCaL {
 // relevant in conflict analysis or in root-level fixing steps.
 
 static Clause decision_reason_clause;
-static Clause *decision_reason = &decision_reason_clause;
+Clause*  Internal::decision_reason = &decision_reason_clause;
 
 // If chronological backtracking is used the actual assignment level might
 // be lower than the current decision level. In this case the assignment

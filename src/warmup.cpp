@@ -17,13 +17,13 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
   const int idx = vidx (lit);
   assert (reason != external_reason);
   assert (!vals[idx]);
-  assert (!flags (idx).eliminated ());
+  assert (!flags (idx).eliminated () || reason == decision_reason);
   Var &v = var (idx);
   int lit_level;
   assert (!(reason == external_reason &&
 	    ((size_t) level <= assumptions.size () + (!!constraint.size ()))));
   assert (reason);
-  assert (level);
+  assert (level || reason == decision_reason);
   // we  purely assign in order here
   lit_level = level;
 
@@ -35,10 +35,7 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
   num_assigned++;
   stats.warmup.decision++;
   const signed char tmp = sign (lit);
-  if (stable || opts.target >= 1)
-    phases.target[idx] = tmp;
-  else
-    phases.saved[idx] = tmp;
+  phases.saved[idx] = tmp;
   vals[idx] = tmp;
   vals[-idx] = -tmp;
   assert (val (lit) > 0);
@@ -361,7 +358,8 @@ int Internal::warmup_decide () {
     int idx = next_decision_variable ();
     const bool target = (stable || opts.target == 2);
     int decision = decide_phase (idx, target);
-    search_assume_decision (decision);
+    new_trail_level (decision);
+    warmup_assign (decision, decision_reason);
   }
   if (res)
     marked_failed = false;
