@@ -33,7 +33,6 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
   assert ((int) num_assigned < max_var);
   assert (num_assigned == trail.size ());
   num_assigned++;
-  stats.warmup.decision++;
   const signed char tmp = sign (lit);
   phases.saved[idx] = tmp;
   vals[idx] = tmp;
@@ -266,7 +265,8 @@ int Internal::warmup_decide () {
       notify_decision ();
     } else {
       LOG ("deciding assumption %d", lit);
-      search_assume_decision (lit);
+      new_trail_level (lit);
+      warmup_assign (lit, decision_reason);
     }
   } else if ((size_t) level == assumptions.size () && constraint.size ()) {
 
@@ -367,17 +367,21 @@ int Internal::warmup_decide () {
   return res;
 }
 
-void Internal::warmup () {
+int Internal::warmup () {
   assert (!unsat);
   assert (!level);
   if (!opts.warmup)
-    return;
+    return 0;
   START (warmup);
   ++stats.warmup.count;
   assert (!private_steps);
   private_steps = true;
   int res = 0;
 
+#ifndef QUIET
+  const int64_t warmup_propagated = stats.warmup.propagated;
+  const int64_t decision = stats.warmup.decision;
+#endif
   assert (propagated == trail.size ());
   LOG ("propagating beyond conflicts to warm-up walk");
   while (!res && num_assigned < (size_t) max_var) {
@@ -385,9 +389,20 @@ void Internal::warmup () {
     res = warmup_decide ();
     warmup_propagate_beyond_conflict();
   }
+  assert (res || num_assigned == (size_t) max_var);
+#ifndef QUIET
+  // constrains with empty levels break this
+  // assert (res || stats.warmup.propagated - warmup_propagated == (int64_t)num_assigned);
+  VERBOSE (3, "warming-up needed %" PRIu64 " propagations including %" PRIu64 " decisions",
+	   stats.warmup.propagated - warmup_propagated,
+	   stats.warmup.decision - decision);
+#endif
+
   backtrack_without_updating_phases ();
   private_steps = false;
   STOP (warmup);
+
+  return res;
 }
 
 }
