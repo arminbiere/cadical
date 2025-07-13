@@ -17,7 +17,7 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
   const int idx = vidx (lit);
   assert (reason != external_reason);
   assert (!vals[idx]);
-  assert (!flags (idx).eliminated ());
+  assert (!flags (idx).eliminated () || reason == decision_reason);
   Var &v = var (idx);
   int lit_level;
   assert (!(reason == external_reason &&
