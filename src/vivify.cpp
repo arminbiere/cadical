@@ -944,6 +944,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
 
   assert (c->size > 2); // see (NO-BINARY) below
   assert (analyzed.empty ());
+  assert (!ignore);
 
   c->vivify = false;  // mark as checked / tried
   c->vivified = true; // and globally remember
@@ -1231,6 +1232,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   clear_analyzed_literals (); // TODO why needed?
   lrat_chain.clear ();
   conflict = nullptr;
+  ignore = nullptr;
   return res;
 }
 
@@ -1941,6 +1943,7 @@ bool Internal::vivify () {
   STOP_SIMPLIFIER (vivify, VIVIFY);
 
   private_steps = false;
+  assert (!ignore);
 
   return true;
 }
