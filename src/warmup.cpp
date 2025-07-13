@@ -17,7 +17,7 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
   const int idx = vidx (lit);
   assert (reason != external_reason);
   assert (!vals[idx]);
-  assert (!flags (idx).eliminated () || reason == decision_reason);
+  assert (!flags (idx).eliminated ());
   Var &v = var (idx);
   int lit_level;
   assert (!(reason == external_reason &&
@@ -354,7 +354,7 @@ int Internal::warmup_decide () {
 #endif
 
   } else {
-    stats.decisions++;
+    stats.warmup.decision++;
     int idx = next_decision_variable ();
     const bool target = (stable || opts.target == 2);
     int decision = decide_phase (idx, target);
