@@ -834,7 +834,7 @@ bool Internal::probe () {
     LOG ("probing %d", probe);
     probe_assign_decision (probe);
     if (probe_propagate ())
-      backtrack ();
+      backtrack_without_updating_phases ();
     else
       failed_literal (probe);
     clean_probehbr_lrat ();

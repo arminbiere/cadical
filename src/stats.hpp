@@ -129,6 +129,7 @@ struct Stats {
     int64_t broken = 0;
     int64_t flips = 0;
     int64_t minimum = 0;
+    int64_t improved = 0;
   } walk;
 
   struct {

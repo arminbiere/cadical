@@ -45,6 +45,9 @@ inline void Internal::unassign (int lit) {
 
 void Internal::update_target_and_best () {
 
+  if (opts.rephase == 2 && !stable)
+    return;
+
   bool reset = (rephased && stats.conflicts > last.rephase.conflicts);
 
   if (reset) {

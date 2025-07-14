@@ -714,6 +714,8 @@ void Stats::print (Internal *internal) {
            percent (stats.walk.minimum, stats.added.irredundant));
     PRT ("  broken:        %15" PRId64 "   %10.2f    per flip",
          stats.walk.broken, relative (stats.walk.broken, stats.walk.flips));
+    PRT ("  improved:      %15" PRId64 "   %10.2f    per walk",
+         stats.walk.improved, relative (stats.walk.improved, stats.walk.count));
   }
   if (all || stats.weakened) {
     PRT ("weakened:        %15" PRId64 "   %10.2f    average size",
