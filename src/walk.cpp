@@ -77,7 +77,9 @@ Walker::Walker (Internal *i, double size, int64_t l)
   random += internal->stats.walk.count; // different seed every time
   flips.reserve (i->max_var / 4);
   best_values.resize (i->max_var + 1, 0);
+#ifndef NDEBUG
   current_best_model.resize (i->max_var + 1, 0);
+#endif
 
   // This is the magic constant in ProbSAT (also called 'CB'), which we pick
   // according to the average size every second invocation and otherwise
