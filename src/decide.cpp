@@ -61,8 +61,21 @@ int Internal::decide_phase (int idx, bool target) {
     phase = initial_phase;
   if (!phase && target)
     phase = phases.target[idx];
-  if (!phase)
-    phase = phases.saved[idx];
+  if (!phase) {
+    if (opts.stubbornIOfocused && opts.rephase == 2) // ported from kissat where it does not seem very useful
+      switch ((stats.rephased.total >> 1) & 7) {
+      case 1:
+        phase = initial_phase;
+        break;
+      case 5: // kissat has 3 but 5 looks better
+        phase = -initial_phase;
+        break;
+      default:
+	phase = phases.saved[idx];
+        break;
+      } else
+      phase = phases.saved[idx];
+  }
 
   // The following should not be necessary and in some version we had even
   // a hard 'COVER' assertion here to check for this.   Unfortunately it
