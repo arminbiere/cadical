@@ -354,9 +354,11 @@ int Internal::warmup_decide () {
 #endif
 
   } else {
+    const bool target = (stable || opts.target == 2);
     stats.warmup.decision++;
     int idx = next_decision_variable ();
-    const bool target = (stable || opts.target == 2);
+    if (flags (idx).eliminated ())
+      ++stats.warmup.dummydecision;
     int decision = decide_phase (idx, target);
     new_trail_level (decision);
     warmup_assign (decision, decision_reason);

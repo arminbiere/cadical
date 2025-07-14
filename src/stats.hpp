@@ -119,6 +119,7 @@ struct Stats {
 
   struct {
     int64_t decision = 0;
+    int64_t dummydecision = 0;
     int64_t propagated = 0;
     int64_t count = 0;
   } warmup;

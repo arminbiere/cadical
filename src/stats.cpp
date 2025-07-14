@@ -684,10 +684,20 @@ void Stats::print (Internal *internal) {
   if (all || stats.walk.count) {
     PRT ("walked:          %15" PRId64 "   %10.2f    interval",
          stats.walk.count, relative (stats.conflicts, stats.walk.count));
-    PRT ("  prop-warmup:   %15" PRId64 "   %10.2f    per warmup",
-         stats.warmup.propagated, relative (stats.warmup.propagated, stats.warmup.count));
-    PRT ("  warmup:        %15" PRId64 "   %10.2f    per walk",
-         stats.warmup.count, relative (stats.warmup.count, stats.walk.count));
+    if (all || stats.warmup.count) {
+      PRT ("  prop-warmup:   %15" PRId64 "   %10.2f    per warmup",
+           stats.warmup.propagated,
+           relative (stats.warmup.propagated, stats.warmup.count));
+      PRT ("  dec-warmup:    %15" PRId64 "   %10.2f    per warmup",
+           stats.warmup.decision,
+           relative (stats.warmup.decision, stats.warmup.count));
+      PRT ("  dummydec-w:    %15" PRId64 "   %10.2f    per warmup",
+           stats.warmup.dummydecision,
+           relative (stats.warmup.dummydecision, stats.warmup.count));
+      PRT ("  warmup:        %15" PRId64 "   %10.2f    per walk",
+           stats.warmup.count,
+           relative (stats.warmup.count, stats.walk.count));
+    }
 #ifndef QUIET
     if (internal->profiles.walk.value > 0)
       PRT ("  flips:         %15" PRId64 "   %10.2f M  per second",
