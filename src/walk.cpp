@@ -646,6 +646,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
   if (!failed) {
 
+    // warmup stores the result in phases, not in target
     const bool target = opts.warmup ? false : stable || opts.target == 2;
     for (auto idx : vars) {
       if (!active (idx)) {

@@ -11,13 +11,15 @@ namespace CaDiCaL {
 // specific warmup version with saving of the target.
 inline void Internal::warmup_assign (int lit, Clause *reason) {
 
-  if (level)
-    require_mode (SEARCH);
+  assert (level); // no need to learn unit clauses here
+  require_mode (SEARCH);
 
   const int idx = vidx (lit);
   assert (reason != external_reason);
   assert (!vals[idx]);
   assert (!flags (idx).eliminated () || reason == decision_reason);
+  assert (!searching_lucky_phases);
+  assert (lrat_chain.empty());
   Var &v = var (idx);
   int lit_level;
   assert (!(reason == external_reason &&
@@ -35,16 +37,10 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
   num_assigned++;
   const signed char tmp = sign (lit);
   phases.saved[idx] = tmp;
-  vals[idx] = tmp;
-  vals[-idx] = -tmp;
+  set_val (idx, tmp);
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
 
-  if (level == 0) {
-    trail.push_back (lit);
-    return;
-  }
-  assert (level > 0);
   trail.push_back (lit);
 #ifdef LOGGING
   if (!lit_level)
@@ -53,14 +49,12 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
     LOG (reason, "search assign %d @ %d", lit, lit_level);
 #endif
 
-  if (watching ()) {
-    const Watches &ws = watches (-lit);
-    if (!ws.empty ()) {
-      const Watch &w = ws[0];
-      __builtin_prefetch (&w, 0, 1);
-    }
+  assert (watching ());
+  const Watches &ws = watches (-lit);
+  if (!ws.empty ()) {
+    const Watch &w = ws[0];
+    __builtin_prefetch (&w, 0, 1);
   }
-  lrat_chain.clear ();
 }
 
 
@@ -190,7 +184,6 @@ void Internal::warmup_propagate_beyond_conflict () {
             //
             build_chain_for_units (other, w.clause, 0);
             warmup_assign (other, w.clause);
-            // lrat_chain.clear (); done in search_assign
 
             // Similar code is in the implementation of the SAT'18 paper on
             // chronological backtracking but in our experience, this code
@@ -383,6 +376,7 @@ int Internal::warmup () {
 #ifndef QUIET
   const int64_t warmup_propagated = stats.warmup.propagated;
   const int64_t decision = stats.warmup.decision;
+  const int64_t dummydecision = stats.warmup.dummydecision;
 #endif
   assert (propagated == trail.size ());
   LOG ("propagating beyond conflicts to warm-up walk");
@@ -395,9 +389,10 @@ int Internal::warmup () {
 #ifndef QUIET
   // constrains with empty levels break this
   // assert (res || stats.warmup.propagated - warmup_propagated == (int64_t)num_assigned);
-  VERBOSE (3, "warming-up needed %" PRIu64 " propagations including %" PRIu64 " decisions",
+  VERBOSE (3, "warming-up needed %" PRIu64 " propagations including %" PRIu64 " decisions (with %" PRIu64 " dummy ones)",
 	   stats.warmup.propagated - warmup_propagated,
-	   stats.warmup.decision - decision);
+	   stats.warmup.decision - decision,
+	   stats.warmup.dummydecision - dummydecision);
 #endif
 
   backtrack_without_updating_phases ();
