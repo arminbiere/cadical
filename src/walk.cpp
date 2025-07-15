@@ -6,6 +6,14 @@ namespace CaDiCaL {
 
 // Random walk local search based on 'ProbSAT' ideas.
 
+// We (based on the Master project from Leah Hohl) tried to ticks
+// local search similarly to the other parts of the solver with
+// limited success however.
+//
+// On the problem `ncc_none_5047_6_3_3_3_0_435991723', the broken part
+// of walk_flip is very cheap and should not be counted in ticks, but
+// on various other problems `9pipe_k' it is very important to ticks
+// this part too.
 struct Walker {
 
   Internal *internal;
@@ -14,7 +22,7 @@ struct Walker {
   // found is too costly. Instead we store some of the flips since
   // last time and the position of the best model found so far.
   Random random;           // local random number generator
-  int64_t propagations;    // number of propagations
+  int64_t ticks;	         // ticks to approximate run time
   int64_t limit;           // limit on number of propagations
   vector<Clause *> broken; // currently unsatisfied clauses
   double epsilon;          // smallest considered score
@@ -73,7 +81,7 @@ inline static double fitcbval (double size) {
 
 Walker::Walker (Internal *i, double size, int64_t l)
     : internal (i), random (internal->opts.seed), // global random seed
-      propagations (0), limit (l), best_trail_pos(-1) {
+      ticks (0), limit (l), best_trail_pos(-1) {
   random += internal->stats.walk.count; // different seed every time
   flips.reserve (i->max_var / 4);
   best_values.resize (i->max_var + 1, 0);
@@ -196,16 +204,16 @@ void Walker::save_final_minimum (int64_t flips, int64_t old_init_minimum) {
   if (minimum == old_init_minimum) {
     PHASE ("walk", internal->stats.walk.count,
            "%sno improvement %" PRId64 "%s in %" PRId64 " flips and "
-           "%" PRId64 " propagations",
+           "%" PRId64 " ticks",
            tout.bright_yellow_code (), minimum, tout.normal_code (), flips,
-           propagations);
+           ticks);
     return;
   }
 
   PHASE ("walk", internal->stats.walk.count,
          "best phase minimum %" PRId64 " in %" PRId64 " flips and "
-         "%" PRId64 " propagations",
-         minimum, flips, propagations);
+         "%" PRId64 " ticks",
+         minimum, flips, ticks);
 
   if (!best_trail_pos || best_trail_pos == -1)
     LOG ("minimum already saved");
@@ -246,12 +254,15 @@ Clause *Internal::walk_pick_clause (Walker &walker) {
 // Compute the number of clauses which would be become unsatisfied if 'lit'
 // is flipped and set to false.  This is called the 'break-count' of 'lit'.
 
-unsigned Internal::walk_break_value (int lit) {
+unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
 
   require_mode (WALK);
+  START(walkbreak);
   assert (val (lit) > 0);
+  const int64_t oldticks = ticks;
 
   unsigned res = 0; // The computed break-count of 'lit'.
+  ticks += (1 + cache_lines (watches(lit).size (), sizeof (Clause *)));
 
   for (auto &w : watches (lit)) {
     assert (w.blit != lit);
@@ -263,6 +274,7 @@ unsigned Internal::walk_break_value (int lit) {
     }
 
     Clause *c = w.clause;
+    ++ticks;
     assert (lit == c->literals[0]);
 
     // Now try to find a second satisfied literal starting at 'literals[1]'
@@ -303,6 +315,8 @@ unsigned Internal::walk_break_value (int lit) {
 
     res++; // Literal 'lit' single satisfies clause 'c'.
   }
+  stats.ticks.walkbreak += (ticks - oldticks);
+  STOP(walkbreak);
 
   return res;
 }
@@ -323,6 +337,7 @@ unsigned Internal::walk_break_value (int lit) {
 int Internal::walk_pick_lit (Walker &walker, Clause *c) {
   LOG ("picking literal by break-count");
   assert (walker.scores.empty ());
+  const int64_t old = ++walker.ticks;
   double sum = 0;
   int64_t propagations = 0;
   for (const auto lit : *c) {
@@ -333,7 +348,7 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
     }
     assert (active (lit));
     propagations++;
-    unsigned tmp = walk_break_value (-lit);
+    unsigned tmp = walk_break_value (-lit, walker.ticks);
     double score = walker.score (tmp);
     LOG ("literal %d break-count %u score %g", lit, tmp, score);
     walker.scores.push_back (score);
@@ -341,7 +356,6 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
   }
   LOG ("scored %zd literals", walker.scores.size ());
   assert (!walker.scores.empty ());
-  walker.propagations += propagations;
   stats.propagations.walk += propagations;
   assert (walker.scores.size () <= (size_t) c->size);
   const double lim = sum * walker.random.generate_double ();
@@ -368,6 +382,7 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
   }
   walker.scores.clear ();
   LOG ("picking literal %d by break-count", res);
+  stats.ticks.walkpick += walker.ticks - old;
   return res;
 }
 
@@ -375,6 +390,8 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
 
 void Internal::walk_flip_lit (Walker &walker, int lit) {
 
+  START(walkflip);
+  const int64_t old = walker.ticks;
   require_mode (WALK);
   LOG ("flipping assign %d", lit);
   assert (val (lit) < 0);
@@ -386,6 +403,14 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
   set_val (idx, tmp);
   assert (val (lit) > 0);
 
+  // we are going to need it anyway and it probably still is in memory
+  const Watches &ws = watches (-lit);
+  if (!ws.empty ()) {
+    const Watch &w = ws[0];
+    __builtin_prefetch (&w, 0, 1);
+  }
+
+  START(walkflipbroken);
   // Then remove 'c' and all other now satisfied (made) clauses.
   {
     // Simply go over all unsatisfied (broken) clauses.
@@ -407,6 +432,10 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
     //
     const double ratio = clause_variable_ratio ();
     const auto eou = walker.broken.end ();
+    // broken is in cache given how central it is... but not always (see the ncc problems).
+    // Value was heuristically determined to give reasonnable values.
+    if (walker.broken.size() > 1000 || true)
+       walker.ticks += 1 + cache_lines (walker.broken.size (), sizeof (Clause*));
     auto j = walker.broken.begin (), i = j;
 #ifdef LOGGING
     int64_t made = 0;
@@ -438,6 +467,7 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
         literals[0] = lit;
         LOG (d, "made");
         watch_literal (literals[0], literals[1], d);
+	++walker.ticks;
 #ifdef LOGGING
         made++;
 #endif
@@ -461,27 +491,30 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
       // in 'walk', if it is interrupted in this loop.
 
       count = ratio; // Starting counting down again.
-      walker.propagations++;
       stats.propagations.walk++;
     }
     LOG ("made %" PRId64 " clauses by flipping %d", made, lit);
     walker.broken.resize (j - walker.broken.begin ());
   }
-
+  stats.ticks.walkflipbroken += walker.ticks - old;
+  STOP(walkflipbroken);
+  START(walkflipWL);
   // Finally add all new unsatisfied (broken) clauses.
   {
-    walker.propagations++;     // This really corresponds now to one
     stats.propagations.walk++; // propagation (in a one-watch scheme).
 
 #ifdef LOGGING
     int64_t broken = 0;
 #endif
     Watches &ws = watches (-lit);
+    // probably still in cache
+    walker.ticks += 1 + cache_lines (ws.size (), sizeof (Clause *));
 
     LOG ("trying to break %zd watched clauses", ws.size ());
 
     for (const auto &w : ws) {
       Clause *d = w.clause;
+      ++walker.ticks;
       LOG (d, "unwatch %d in", -lit);
       int *literals = d->literals, replacement = 0, prev = -lit;
       assert (literals[0] == -lit);
@@ -502,6 +535,7 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
         literals[0] = replacement;
         assert (-lit != replacement);
         watch_literal (replacement, -lit, d);
+        ++walker.ticks;
       } else {
         for (int i = size - 1; i > 0; i--) { // undo shift
           const int other = literals[i];
@@ -511,6 +545,7 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
         assert (literals[0] == -lit);
         LOG (d, "broken");
         walker.broken.push_back (d);
+        ++walker.ticks;
 #ifdef LOGGING
         broken++;
 #endif
@@ -519,6 +554,11 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
     LOG ("broken %" PRId64 " clauses by flipping %d", broken, lit);
     ws.clear ();
   }
+
+  STOP(walkflipWL);
+  STOP(walkflip);
+  stats.ticks.walkflipWL += walker.ticks - old;
+  stats.ticks.walkflip += walker.ticks - old;
 }
 
 /*------------------------------------------------------------------------*/
@@ -586,7 +626,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 #endif
 
   PHASE ("walk", stats.walk.count,
-         "random walk limit of %" PRId64 " propagations", limit);
+         "random walk limit of %" PRId64 " ticks", limit);
 
   // First compute the average clause size for picking the CB constant.
   //
@@ -760,7 +800,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
     int64_t flips = 0;
 #endif
     while (!terminated_asynchronously () && !walker.broken.empty () &&
-           walker.propagations < walker.limit) {
+           walker.ticks < walker.limit) {
 #ifndef QUIET
       flips++;
 #endif
@@ -784,16 +824,16 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
     if (opts.profile >= 2) {
       PHASE ("walk", stats.walk.count,
-             "%.2f million propagations per second",
-             relative (1e-6 * walker.propagations,
+             "%.2f million ticks per second",
+             1e-6 * relative (walker.ticks,
                        time () - profiles.walk.started));
 
       PHASE ("walk", stats.walk.count, "%.2f thousand flips per second",
              relative (1e-3 * flips, time () - profiles.walk.started));
 
     } else {
-      PHASE ("walk", stats.walk.count, "%.2f million propagations",
-             1e-6 * walker.propagations);
+      PHASE ("walk", stats.walk.count, "%.2f ticks",
+             1e-6 * walker.ticks);
 
       PHASE ("walk", stats.walk.count, "%.2f thousand flips", 1e-3 * flips);
     }
@@ -832,6 +872,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
     force_phase_messages = false;
   }
 #endif
+  stats.ticks.walk += walker.ticks;
 
   return res;
 }
@@ -848,12 +889,19 @@ void Internal::walk () {
 
   if (opts.warmup)
     warmup ();
-  int64_t limit = stats.propagations.search;
+  const int64_t ticks = stats.ticks.search[0] + stats.ticks.search[1];
+  int64_t limit = ticks - last.walk.ticks;
+  VERBOSE (2, "walk scheduling: last %" PRId64 " current %" PRId64 " delta %" PRId64, \
+           last.walk.ticks, ticks, limit); \
+  last.walk.ticks = ticks;
   limit *= 1e-3 * opts.walkeffort;
   if (limit < opts.walkmineff)
     limit = opts.walkmineff;
-  if (limit > opts.walkmaxeff)
-    limit = opts.walkmaxeff;
+  // local search is very cache friendly, so we actually really go over a lot of ticks
+  if (limit > 1e3 * opts.walkmaxeff){
+    MSG ("reached maximum efficiency %zd", limit);
+    limit =  1e3 * opts.walkmaxeff;
+  }
   (void) walk_round (limit, false);
   STOP_INNER_WALK ();
 }
