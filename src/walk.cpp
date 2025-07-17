@@ -434,8 +434,7 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
     const auto eou = walker.broken.end ();
     // broken is in cache given how central it is... but not always (see the ncc problems).
     // Value was heuristically determined to give reasonnable values.
-    if (walker.broken.size() > 1000 || true)
-       walker.ticks += 1 + cache_lines (walker.broken.size (), sizeof (Clause*));
+    walker.ticks += 1 + cache_lines (walker.broken.size (), sizeof (Clause*));
     auto j = walker.broken.begin (), i = j;
 #ifdef LOGGING
     int64_t made = 0;
@@ -447,6 +446,7 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
       Clause *d = *j++ = *i++;
 
       int *literals = d->literals, prev = 0;
+      ++walker.ticks;
 
       // Find 'lit' in 'd'.
       //
@@ -497,7 +497,10 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
     walker.broken.resize (j - walker.broken.begin ());
   }
   stats.ticks.walkflipbroken += walker.ticks - old;
-  STOP(walkflipbroken);
+  STOP (walkflipbroken);
+
+  const int64_t old_after_broken = walker.ticks;
+
   START(walkflipWL);
   // Finally add all new unsatisfied (broken) clauses.
   {
@@ -557,7 +560,7 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 
   STOP(walkflipWL);
   STOP(walkflip);
-  stats.ticks.walkflipWL += walker.ticks - old;
+  stats.ticks.walkflipWL += walker.ticks - old_after_broken;
   stats.ticks.walkflip += walker.ticks - old;
 }
 
@@ -587,6 +590,7 @@ inline void Internal::walk_save_minimum (Walker &walker) {
 #endif
 
   if (walker.best_trail_pos == -1) {
+    VERBOSE (3, "saving the new walk minimum %" PRId64 "", broken);
     for (auto i : vars) {
       const signed char tmp = vals[i];
       if (tmp) {
