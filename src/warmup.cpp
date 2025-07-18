@@ -395,10 +395,10 @@ int Internal::warmup () {
 	   stats.warmup.dummydecision - dummydecision);
 #endif
 
-  backtrack_without_updating_phases ();
+  if (!res)
+    backtrack_without_updating_phases ();
   private_steps = false;
   STOP (warmup);
-
   return res;
 }
 

@@ -222,8 +222,10 @@ void Walker::save_final_minimum (int64_t flips, int64_t old_init_minimum) {
 
   ++internal->stats.walk.improved;
   for (auto v : internal->vars) {
-    assert (best_values[v]);
-    internal->phases.saved[v] = best_values[v];
+    if (best_values[v])
+      internal->phases.saved[v] = best_values[v];
+    else
+      assert (!internal->active(v));
   }
   internal->copy_phases (internal->phases.prev);
 }
@@ -598,6 +600,8 @@ inline void Internal::walk_save_minimum (Walker &walker) {
 #ifndef NDEBUG
         assert (tmp == walker.current_best_model[i]);
 #endif
+      } else {
+	assert (!active (i));
       }
     }
     walker.best_trail_pos = 0;
@@ -891,8 +895,14 @@ void Internal::walk () {
     return;
   }
 
+  int res = 0;
   if (opts.warmup)
-    warmup ();
+    res = warmup ();
+  if (res){
+    STOP_INNER_WALK ();
+    return;
+  }
+
   const int64_t ticks = stats.ticks.search[0] + stats.ticks.search[1];
   int64_t limit = ticks - last.walk.ticks;
   VERBOSE (2, "walk scheduling: last %" PRId64 " current %" PRId64 " delta %" PRId64, \
@@ -908,6 +918,7 @@ void Internal::walk () {
   }
   (void) walk_round (limit, false);
   STOP_INNER_WALK ();
+  assert (!unsat);
 }
 
 } // namespace CaDiCaL
