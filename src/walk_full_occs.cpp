@@ -414,7 +414,6 @@ int Internal::walk_full_occs_pick_lit (WalkerFO &walker, Clause *c) {
   const double lim = sum * walker.random.generate_double ();
   LOG ("score sum %g limit %g", sum, lim);
 
-  walker.ticks += 1 + cache_lines (walker.scores.size (), sizeof (Clause*));
   const auto end = c->end ();
   auto i = c->begin ();
   auto j = walker.scores.begin ();
