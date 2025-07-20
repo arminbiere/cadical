@@ -53,16 +53,24 @@ int Internal::next_decision_variable () {
 int Internal::decide_phase (int idx, bool target) {
   const int initial_phase = opts.phase ? 1 : -1;
   int phase = 0;
-  if (force_saved_phase)
+  if (force_saved_phase) {
     phase = phases.saved[idx];
-  if (!phase)
-    phase = phases.forced[idx]; // swapped with opts.forcephase case!
-  if (!phase && opts.forcephase)
-    phase = initial_phase;
-  if (!phase && target)
-    phase = phases.target[idx];
+    LOG ("trying force_saved_phase, i.e., %d", phase);
+  }
   if (!phase) {
-    if (opts.stubbornIOfocused && opts.rephase == 2) // ported from kissat where it does not seem very useful
+    phase = phases.forced[idx]; // swapped with opts.forcephase case!
+    LOG ("trying forced phase, i.e., %d", phase);
+  }
+  assert (force_saved_phase || !phase);
+  if (!phase && opts.forcephase){
+    phase = initial_phase;
+    LOG ("trying initial phase, i.e., %d", phase);
+  }
+  if (!phase && target) {
+    phase = phases.target[idx];
+    if (opts.stubbornIOfocused &&
+        opts.rephase ==
+            2) // ported from kissat where it does not seem very useful
       switch ((stats.rephased.total >> 1) & 7) {
       case 1:
         phase = initial_phase;
@@ -71,9 +79,10 @@ int Internal::decide_phase (int idx, bool target) {
         phase = -initial_phase;
         break;
       default:
-	phase = phases.saved[idx];
+        phase = phases.saved[idx];
         break;
-      } else
+      }
+    else
       phase = phases.saved[idx];
   }
 

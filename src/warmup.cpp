@@ -259,7 +259,7 @@ int Internal::warmup_decide () {
     } else {
       LOG ("deciding assumption %d", lit);
       new_trail_level (lit);
-      warmup_assign (lit, decision_reason);
+      search_assume_decision (lit);
     }
   } else if ((size_t) level == assumptions.size () && constraint.size ()) {
 
@@ -384,6 +384,7 @@ int Internal::warmup () {
     assert (propagated == trail.size ());
     res = warmup_decide ();
     warmup_propagate_beyond_conflict();
+    LOG (lrat_chain, "during warmup with lrat chain:");
   }
   assert (res || num_assigned == (size_t) max_var);
 #ifndef QUIET

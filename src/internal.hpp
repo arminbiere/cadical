@@ -115,6 +115,7 @@ using namespace std;
 
 struct Coveror;
 struct External;
+struct WalkerFO;
 struct Walker;
 class Tracer;
 class FileTracer;
@@ -1351,6 +1352,16 @@ struct Internal {
   void walk_flip_lit (Walker &, int lit);
   int walk_round (int64_t limit, bool prev);
   void walk ();
+
+  unsigned walk_full_occs_pick_clause (WalkerFO &);
+  int walk_full_occs_round (int64_t limit, bool prev);
+  unsigned walk_full_occs_break_value (WalkerFO &, int lit);
+  int walk_full_occs_pick_lit (WalkerFO &, Clause *);
+  void walk_full_occs_flip_lit (WalkerFO &, int lit);
+  void walk_full_occs ();
+  void walk_full_occs_save_minimum (WalkerFO &);
+  void make_clauses_along_occurrences(WalkerFO &walker, int lit);
+  void make_clauses_along_unsatisfied(WalkerFO &walker, int lit);
 
   // Warmup
   inline void warmup_assign (int lit, Clause *reason);

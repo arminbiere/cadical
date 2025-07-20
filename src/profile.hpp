@@ -104,10 +104,11 @@ struct Internal;
   PROFILE (unstable, 2) \
   PROFILE (vivify, 2) \
   PROFILE (walk, 2) \
+  PROFILE (walkpick, 3) \
+  PROFILE (walkbreak, 4) \
   PROFILE (walkflip, 3) \
   PROFILE (walkflipbroken, 4) \
   PROFILE (walkflipWL, 4) \
-  PROFILE (walkbreak, 3) \
   PROFILE (warmup, 3)
 
 /*------------------------------------------------------------------------*/
