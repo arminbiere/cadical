@@ -365,7 +365,6 @@ unsigned Internal::walk_full_occs_break_value (WalkerFO &walker, int lit) {
   for (const auto &w : walker.occs (lit)) {
     const unsigned ref = w.counter_pos;
     assert (ref < walker.tclauses.size ());
-    ++walker.ticks;
     res += (walker.tclauses[ref].count == 1);
   }
 
