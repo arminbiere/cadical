@@ -367,6 +367,7 @@ int Internal::warmup () {
   assert (!level);
   if (!opts.warmup)
     return 0;
+  require_mode(WALK);
   START (warmup);
   ++stats.warmup.count;
   assert (!private_steps);
@@ -400,6 +401,7 @@ int Internal::warmup () {
     backtrack_without_updating_phases ();
   private_steps = false;
   STOP (warmup);
+  require_mode(WALK);
   return res;
 }
 

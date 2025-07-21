@@ -136,6 +136,10 @@ struct WalkerFO {
   void make_clauses_along_unsatisfied(int lit);
   void make_clauses (int lit);
   void break_clauses (int lit);
+  unsigned walk_full_occs_pick_clause ();
+  void walk_full_occs_flip_lit (int lit);
+  int walk_full_occs_pick_lit (Clause *);
+  unsigned walk_full_occs_break_value (int lit);
 
 };
 
@@ -334,15 +338,15 @@ inline double WalkerFO::score (unsigned i) {
 
 /*------------------------------------------------------------------------*/
 
-unsigned Internal::walk_full_occs_pick_clause (WalkerFO &walker) {
-  require_mode (WALK);
-  assert (!walker.broken.empty ());
-  int64_t size = walker.broken.size ();
+unsigned WalkerFO::walk_full_occs_pick_clause () {
+  internal->require_mode (internal->WALK);
+  assert (!broken.empty ());
+  int64_t size = broken.size ();
   if (size > INT_MAX)
     size = INT_MAX;
-  int pos = walker.random.pick_int (0, size - 1);
-  unsigned res = walker.broken[pos].counter_pos;
-  LOG (walker.tclauses[res].clause, "picking random position %d", pos);
+  int pos = random.pick_int (0, size - 1);
+  unsigned res = broken[pos].counter_pos;
+  LOG (tclauses[res].clause, "picking random position %d", pos);
   return res;
 }
 
@@ -351,24 +355,24 @@ unsigned Internal::walk_full_occs_pick_clause (WalkerFO &walker) {
 // Compute the number of clauses which would be become unsatisfied if 'lit'
 // is flipped and set to false.  This is called the 'break-count' of 'lit'.
 
-unsigned Internal::walk_full_occs_break_value (WalkerFO &walker, int lit) {
+unsigned WalkerFO::walk_full_occs_break_value (int lit) {
 
-  require_mode (WALK);
-  assert (val (lit) > 0);
+  internal->require_mode (internal->WALK);
+  assert (internal->val (lit) > 0);
   START(walkbreak);
 
-  const uint64_t old = walker.ticks;
+  const uint64_t old = ticks;
   unsigned res = 0; // The computed break-count of 'lit'.
-  walker.ticks += (1 + cache_lines (walker.occs(lit).size (), sizeof (Clause *)));
+  ticks += (1 + internal->cache_lines (occs(lit).size (), sizeof (Clause *)));
 
 
-  for (const auto &w : walker.occs (lit)) {
+  for (const auto &w : occs (lit)) {
     const unsigned ref = w.counter_pos;
-    assert (ref < walker.tclauses.size ());
-    res += (walker.tclauses[ref].count == 1);
+    assert (ref < tclauses.size ());
+    res += (tclauses[ref].count == 1);
   }
 
-  stats.ticks.walkbreak += walker.ticks - old;
+  internal->stats.ticks.walkbreak += ticks - old;
   STOP(walkbreak);
   return res;
 }
@@ -386,57 +390,56 @@ unsigned Internal::walk_full_occs_break_value (WalkerFO &walker, int lit) {
 // SAT solving we can not flip assumed variables.  Those are assigned at
 // decision level one, while the other variables are assigned at two.
 
-int Internal::walk_full_occs_pick_lit (WalkerFO &walker, Clause *c) {
+int WalkerFO::walk_full_occs_pick_lit (Clause *c) {
   START(walkpick);
   LOG ("picking literal by break-count");
-  assert (walker.scores.empty ());
-  const int64_t old = ++walker.ticks;
+  assert (scores.empty ());
+  const int64_t old = ++ticks;
   double sum = 0;
   int64_t propagations = 0;
   for (const auto lit : *c) {
-    assert (active (lit));
-    if (var (lit).level == 1) {
+    assert (internal->active (lit));
+    if (internal->var (lit).level == 1) {
       LOG ("skipping assumption %d for scoring", -lit);
       continue;
     }
-    assert (active (lit));
     propagations++;
-    unsigned tmp = walk_full_occs_break_value (walker, -lit);
-    double score = walker.score (tmp);
+    unsigned tmp = walk_full_occs_break_value (-lit);
+    double score = this->score (tmp);
     LOG ("literal %d break-count %u score %g", lit, tmp, score);
-    walker.scores.push_back (score);
+    scores.push_back (score);
     sum += score;
   }
-  LOG ("scored %zd literals", walker.scores.size ());
-  assert (!walker.scores.empty ());
-  stats.propagations.walk += propagations;
-  assert (walker.scores.size () <= (size_t) c->size);
-  const double lim = sum * walker.random.generate_double ();
+  LOG ("scored %zd literals", scores.size ());
+  assert (!scores.empty ());
+  internal->stats.propagations.walk += propagations;
+  assert (this->scores.size () <= (size_t) c->size);
+  const double lim = sum * random.generate_double ();
   LOG ("score sum %g limit %g", sum, lim);
 
   const auto end = c->end ();
   auto i = c->begin ();
-  auto j = walker.scores.begin ();
+  auto j = scores.begin ();
   int res;
   for (;;) {
     assert (i != end);
     res = *i++;
-    if (var (res).level > 1)
+    if (internal->var (res).level > 1)
       break;
     LOG ("skipping assumption %d without score", -res);
   }
   sum = *j++;
   while (sum <= lim && i != end) {
     res = *i++;
-    if (var (res).level == 1) {
+    if (internal->var (res).level == 1) {
       LOG ("skipping assumption %d without score", -res);
       continue;
     }
     sum += *j++;
   }
-  walker.scores.clear ();
+  scores.clear ();
   LOG ("picking literal %d by break-count", res);
-  stats.ticks.walkpick += walker.ticks - old;
+  internal->stats.ticks.walkpick += ticks - old;
   STOP(walkpick);
   return res;
 }
@@ -480,6 +483,10 @@ void WalkerFO::make_clauses_along_occurrences(int lit) {
   ticks += (1 + internal->cache_lines (occs.size (), sizeof (Clause *)));
 
   for (auto c : occs) {
+    if (broken.empty()) {
+      LOG ("early abort: satisfiable!");
+      return;
+    }
     this->make_clause(c);
     made++;
   }
@@ -569,26 +576,26 @@ void WalkerFO::break_clauses (int lit) {
   STOP(walkflipbroken);
 }
 
-void Internal::walk_full_occs_flip_lit (WalkerFO &walker, int lit) {
+void WalkerFO::walk_full_occs_flip_lit (int lit) {
 
-  require_mode (WALK);
+  internal->require_mode (internal->WALK);
   LOG ("flipping assign %d", lit);
-  assert (val (lit) < 0);
-  const int64_t old = walker.ticks;
+  assert (internal->val (lit) < 0);
+  const int64_t old = ticks;
 
   // First flip the literal value.
   //
   const int tmp = sign (lit);
   const int idx = abs (lit);
-  set_val (idx, tmp);
-  assert (val (lit) > 0);
+  internal->set_val (idx, tmp);
+  assert (internal->val (lit) > 0);
 
-  walker.make_clauses(lit);
-  walker.break_clauses (-lit);
+  break_clauses (-lit);
+  make_clauses(lit);
 
-  if (!walker.broken.empty())
-    walker.check_all ();
-  internal->stats.ticks.walkflip += walker.ticks - old;
+  if (!broken.empty())
+    check_all ();
+  internal->stats.ticks.walkflip += ticks - old;
 }
 
 /*------------------------------------------------------------------------*/
@@ -836,10 +843,10 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
 #endif
       stats.walk.flips++;
       stats.walk.broken += broken;
-      unsigned pos = walk_full_occs_pick_clause (walker);
+      unsigned pos = walker.walk_full_occs_pick_clause ();
       Clause *c = walker.tclauses[pos].clause;
-      const int lit = walk_full_occs_pick_lit (walker, c);
-      walk_full_occs_flip_lit (walker, lit);
+      const int lit = walker.walk_full_occs_pick_lit (c);
+      walker.walk_full_occs_flip_lit (lit);
       walker.push_flipped (lit);
       broken = walker.broken.size ();
       LOG ("now have %" PRId64 " broken clauses in total", broken);
@@ -914,6 +921,7 @@ void Internal::walk_full_occs () {
   if (propagated < trail.size () && !propagate ()) {
     LOG ("empty clause after root level propagation");
     learn_empty_clause ();
+    STOP_INNER_WALK ();
     return;
   }
 
@@ -921,7 +929,7 @@ void Internal::walk_full_occs () {
   if (opts.warmup)
     res = warmup ();
   if (res) {
-    LOG (lrat_chain, "stopping walk after warmup with lrat chain:");
+    LOG ("stopping walk due to warmup");
     STOP_INNER_WALK ();
     return;
   }

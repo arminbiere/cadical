@@ -1353,11 +1353,7 @@ struct Internal {
   int walk_round (int64_t limit, bool prev);
   void walk ();
 
-  unsigned walk_full_occs_pick_clause (WalkerFO &);
   int walk_full_occs_round (int64_t limit, bool prev);
-  unsigned walk_full_occs_break_value (WalkerFO &, int lit);
-  int walk_full_occs_pick_lit (WalkerFO &, Clause *);
-  void walk_full_occs_flip_lit (WalkerFO &, int lit);
   void walk_full_occs ();
   void walk_full_occs_save_minimum (WalkerFO &);
   void make_clauses_along_occurrences(WalkerFO &walker, int lit);
