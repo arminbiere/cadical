@@ -881,7 +881,6 @@ int Internal::walk_round (int64_t limit, bool prev) {
   }
 #endif
   stats.ticks.walk += walker.ticks;
-
   return res;
 }
 
@@ -892,13 +891,15 @@ void Internal::walk () {
   if (propagated < trail.size () && !propagate ()) {
     LOG ("empty clause after root level propagation");
     learn_empty_clause ();
+    STOP_INNER_WALK ();
     return;
   }
-  return;
+
   int res = 0;
   if (opts.warmup)
     res = warmup ();
   if (res) {
+    LOG ("stopping walk due to warmup");
     STOP_INNER_WALK ();
     return;
   }
