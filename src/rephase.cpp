@@ -385,6 +385,10 @@ void Internal::rephase () {
   last.rephase.conflicts = stats.conflicts;
   rephased = type;
 
+  if (!marked_failed || unsat_constraint) {
+    assert (opts.warmup);
+    return;
+  }
   if (stable)
     shuffle_scores ();
   else
