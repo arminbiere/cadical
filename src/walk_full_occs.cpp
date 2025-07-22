@@ -320,6 +320,7 @@ void WalkerFO::save_final_minimum (int64_t flips, int64_t old_init_minimum) {
   else
     save_walker_trail(false);
 
+  ++internal->stats.walk.improved;
   for (auto v : internal->vars) {
     if (best_values[v])
       internal->phases.saved[v] = best_values[v];
@@ -483,10 +484,13 @@ void WalkerFO::make_clauses_along_occurrences(int lit) {
   ticks += (1 + internal->cache_lines (occs.size (), sizeof (Clause *)));
 
   for (auto c : occs) {
+#if 0
+    // only works if make is after break... but we don't want that
     if (broken.empty()) {
       LOG ("early abort: satisfiable!");
       return;
     }
+#endif
     this->make_clause(c);
     made++;
   }
@@ -590,8 +594,8 @@ void WalkerFO::walk_full_occs_flip_lit (int lit) {
   internal->set_val (idx, tmp);
   assert (internal->val (lit) > 0);
 
+  make_clauses (lit);
   break_clauses (-lit);
-  make_clauses(lit);
 
   if (!broken.empty())
     check_all ();
