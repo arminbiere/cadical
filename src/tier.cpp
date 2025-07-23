@@ -48,7 +48,17 @@ void Internal::recompute_tier () {
     tier1[stable] = 1;
   if (!tier2[stable])
     tier2[stable] = 1;
+  if (tier1[stable] == tier2[stable])
+    ++tier2[stable];
 
+  if (tier1[stable] < opts.tier1minglue) {
+    LOG ("tier1 limit of %d is too low, setting %d instead", tier1[stable], opts.tier1minglue);
+    tier1[stable] = opts.tier1minglue;
+  }
+  if (tier2[stable] < opts.tier2minglue) {
+    LOG ("tier2 limit of %d is too low, setting %d instead", tier2[stable], opts.tier2minglue);
+    tier2[stable] = opts.tier2minglue;
+  }
   phase ("retiered", stats.tierecomputed, "tier1 limit = %d in %s mode, tier2 limit = %d in %s mode", tier1[stable],
        stable ? "stable" : "focused", tier2[stable], stable ? "stable" : "focused");
 }

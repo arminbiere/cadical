@@ -225,7 +225,9 @@ OPTION( ternaryocclim,   1e2,  1,2e9,2,0,1, "ternary occurrence limit") \
 OPTION( ternaryrounds,     2,  1, 16,1,0,1, "maximum ternary rounds") \
 OPTION( ternarythresh,     6,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( tier1limit,       50,  0,100,0,0,1, "limit of tier1 usage in percentage") \
+OPTION( tier1minglue,      0,  0,100,0,0,1, "lowest tier1 limit") \
 OPTION( tier2limit,       90,  0,100,0,0,1, "limit of tier2 usage in percentage") \
+OPTION( tier2minglue,      0,  0,100,0,0,1, "lowest tier2 limit") \
 OPTION( transred,          1,  0,  1,0,1,1, "transitive reduction of BIG") \
 OPTION( transredeffort,  1e2,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( transredmaxeff,  1e8,  0,2e9,1,0,1, "maximum efficiency") \
