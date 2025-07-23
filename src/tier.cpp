@@ -49,10 +49,8 @@ void Internal::recompute_tier () {
   if (!tier2[stable])
     tier2[stable] = 1;
 
-  LOG ("tier1 limit = %d in %s mode", tier1[stable],
-       stable ? "stable" : "focused");
-  LOG ("tier2 limit = %d in %s mode", tier2[stable],
-       stable ? "stable" : "focused");
+  phase ("retiered", stats.tierecomputed, "tier1 limit = %d in %s mode, tier2 limit = %d in %s mode", tier1[stable],
+       stable ? "stable" : "focused", tier2[stable], stable ? "stable" : "focused");
 }
 
 } // namespace CaDiCaL
