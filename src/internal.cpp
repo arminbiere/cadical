@@ -646,11 +646,14 @@ void Internal::init_search_limits () {
   }
 
   /*----------------------------------------------------------------------*/
+  // tier 1 and tier 2 limits
   if (incremental) {
     for (auto m : {true, false})
       for (auto &u : stats.used[m])
         u = 0;
     stats.bump_used = {0, 0};
+    tier1[true] = tier1[false] = opts.tier1minglue ? opts.tier1minglue : 2;
+    tier2[true] = tier2[false] = opts.tier2minglue ? opts.tier2minglue : 6;
     stats.tierecomputed = 0;
   }
 
