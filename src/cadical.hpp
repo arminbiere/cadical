@@ -840,6 +840,7 @@ public:
   bool traverse_red_clauses (ClauseIterator &) const;
   bool traverse_witnesses_backward (WitnessIterator &) const;
   bool traverse_witnesses_forward (WitnessIterator &) const;
+  const std::vector<std::pair<int,int>>& get_eqiv_lits () const;
 
   //------------------------------------------------------------------------
   // Files with explicit path argument support compressed input and output

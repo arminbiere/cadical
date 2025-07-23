@@ -468,6 +468,7 @@ bool Internal::decompose_round () {
       proof->weaken_minus (id1, clause);
     }
     external->push_binary_clause_on_extension_stack (id1, -idx, other);
+    external->eqLits.push_back(std::make_pair(internal->externalize(idx), internal->externalize(other)));
 
     decompose_ids[vlit (-idx)] = id1;
 
