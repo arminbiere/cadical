@@ -531,7 +531,7 @@ Clause *Internal::new_driving_clause (const int glue, int &jump) {
 
     jump = var (clause[1]).level;
     res = new_learned_redundant_clause (glue);
-    res->used = 1 + (glue <= opts.reducetier2glue);
+    res->used = max_used;
   }
 
   LOG ("jump level %d", jump);
@@ -908,7 +908,7 @@ void Internal::otfs_strengthen_clause (Clause *c, int lit, int new_size,
     mark_removed (lit);
   }
   mini_chain.clear ();
-  c->used = true;
+  c->used = max_used;
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
 }
