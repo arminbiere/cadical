@@ -156,10 +156,10 @@ void Internal::promote_clause (Clause *c, int new_glue) {
   int old_glue = c->glue;
   if (new_glue >= old_glue)
     return;
+  c->used = max_used;
   if (old_glue > tier1limit && new_glue <= tier1limit) {
     LOG (c, "promoting with new glue %d to tier1", new_glue);
     stats.promoted1++;
-    c->used = max_used;
   } else if (old_glue > tier2limit && new_glue <= tier2limit) {
     LOG (c, "promoting with new glue %d to tier2", new_glue);
     stats.promoted2++;
@@ -184,7 +184,6 @@ void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
   if (new_glue <= tier1limit) {
     LOG (c, "promoting with new glue %d to tier1", new_glue);
     stats.promoted1++;
-    c->used = max_used;
   } else if (old_glue > tier2limit && new_glue <= tier2limit) {
     LOG (c, "promoting with new glue %d to tier2", new_glue);
     stats.promoted2++;
