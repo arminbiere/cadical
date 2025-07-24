@@ -883,6 +883,12 @@ public:
   bool traverse_witnesses_forward (WitnessIterator &) const;
 
   //------------------------------------------------------------------------
+  // Allows to obtain equivalent literals, where the pair (a,b) means that
+  // a == b. It is possible that (a == a) is returned.
+
+  const std::vector<std::pair<int,int>>& get_eqiv_lits () const;
+
+  //------------------------------------------------------------------------
   // Files with explicit path argument support compressed input and output
   // if appropriate helper functions 'gzip' etc. are available.  They are
   // called through opening a pipe to an external command.

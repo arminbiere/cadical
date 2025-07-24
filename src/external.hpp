@@ -59,6 +59,7 @@ struct External {
   int max_var;  // External maximum variable index.
   size_t vsize; // Allocated external size.
 
+  vector<std::pair<int, int>> eq_lits; // Stores equivalent literals
   vector<bool> vals; // Current external (extended) assignment.
   vector<int> e2i;   // External 'idx' to internal 'lit'.
 

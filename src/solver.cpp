@@ -1507,6 +1507,13 @@ bool Solver::traverse_witnesses_forward (WitnessIterator &it) const {
   return res;
 }
 
+const std::vector<std::pair<int,int>>& Solver::get_eqiv_lits () const {
+  LOG_API_CALL_BEGIN ("get_eqiv_lits");
+  REQUIRE_VALID_STATE ();
+  LOG_API_CALL_RETURNS ("get_eqiv_lits", res);
+  return external->eq_lits;
+}
+
 /*------------------------------------------------------------------------*/
 
 class ClauseCounter : public ClauseIterator {
