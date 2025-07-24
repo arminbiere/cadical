@@ -72,6 +72,9 @@ bool Internal::stabilizing () {
            "reached stabilization limit %" PRId64 " after %" PRId64
            " conflicts",
            lim.stabilize, stats.conflicts);
+    // rare occurence in incremental calls requiring no ticks
+    if (!inc.stabilize)
+      inc.stabilize = 1;
     inc.stabilize *= stabilizefactor * 1e-2;
     if (inc.stabilize > stabilizemaxint)
       inc.stabilize = stabilizemaxint;
