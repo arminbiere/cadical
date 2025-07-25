@@ -110,6 +110,7 @@ struct Last {
   struct {
     int64_t conflicts;
     int64_t ticks;
+    int64_t rephased;
   } stabilize;
   Last ();
 };

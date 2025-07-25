@@ -104,6 +104,8 @@ char Internal::rephase_walk () {
 void Internal::rephase () {
 
   stats.rephased.total++;
+  last.stabilize.rephased++;
+  assert (last.stabilize.rephased <= stats.rephased.total);
   PHASE ("rephase", stats.rephased.total,
          "reached rephase limit %" PRId64 " after %" PRId64 " conflicts",
          lim.rephase, stats.conflicts);
@@ -312,7 +314,7 @@ void Internal::rephase () {
   }
   assert (type);
 
-  int64_t delta = opts.rephaseint * (stats.rephased.total + 1);
+  int64_t delta = opts.rephaseint * (last.stabilize.rephased + 1);
   lim.rephase = stats.conflicts + delta;
 
   PHASE ("rephase", stats.rephased.total,
