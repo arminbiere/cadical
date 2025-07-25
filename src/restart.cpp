@@ -34,10 +34,12 @@ bool Internal::stabilizing () {
   else
     STOP (unstable);
 
-  stable = !stable; // Switch!!!!!
   if (opts.rephaseticks) {
     const int64_t delta_conflicts =
-        stats.conflicts - last.stabilize.conflicts;
+      stats.conflicts - last.stabilize.conflicts;
+    assert (last.stabilize.ticks >= 0);
+    assert (last.stabilize.conflicts >= 0 && last.stabilize.conflicts <= stats.conflicts);
+    assert (last.stabilize.ticks <= stats.ticks.search[stable]);
     const int64_t delta_ticks =
         stats.ticks.search[stable] - last.stabilize.ticks;
     const char *current_mode = stable ? "stable" : "unstable";
@@ -48,7 +50,8 @@ bool Internal::stabilizing () {
            " conflicts and %" PRId64 " ticks",
            current_mode, lim.stabilize, delta_conflicts, delta_ticks,
            stats.conflicts, stats.ticks.search[stable]);
-    inc.stabilize = delta_ticks;
+    if (!inc.stabilize)
+      inc.stabilize = delta_ticks;
     if (!inc.stabilize) // rare occurence in incremental calls requiring no
                         // ticks
       inc.stabilize = 1;
@@ -86,6 +89,8 @@ bool Internal::stabilizing () {
            " at conflicts interval %" PRId64 "",
            lim.stabilize, inc.stabilize);
   }
+  stable = !stable; // Switch!!!!!
+
   if (stable)
     stats.stabphases++;
 
