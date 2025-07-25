@@ -47,7 +47,6 @@ void Internal::stabilize () {
   else
     STOP (unstable);
 
-  stable = !stable; // Switch!!!!!
   const int64_t delta_conflicts =
       stats.conflicts - last.stabilize.conflicts;
   const int64_t delta_ticks =
@@ -103,6 +102,7 @@ void Internal::stabilize () {
            " at conflicts interval %" PRId64 "",
            lim.stabilize, interval);
   }
+  stable = !stable; // Switch!!!!!
   if (stable) {
     stats.stabphases++;
   }
