@@ -462,7 +462,6 @@ bool Internal::propagate () {
             // literals as well (still 'v < 0'), thus we found a conflict.
 
 	    set_conflict (conflict_level, w.clause);
-            break;
           }
         }
       }
