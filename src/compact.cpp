@@ -373,8 +373,13 @@ void Internal::compact () {
   if (external) {
     for (auto src : vars) {
       const int dst = abs (mapper.map_lit (src));
-      if (!dst)
+      if (!dst) {
+        // The variable is removed, so the internal 'src' should not be
+        // observed anymore. (next internalize of the variable will reset
+        // the internal observed flag).
+        relevanttab[src] = 0;
         continue;
+      }
       if (src == dst)
         continue;
       assert (dst < src);
