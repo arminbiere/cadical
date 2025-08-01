@@ -100,6 +100,7 @@ OPTION( flushfactor,       3,  1,1e3,0,0,1, "interval increase") \
 OPTION( flushint,        1e5,  1,2e9,0,0,1, "initial limit") \
 OPTION( forcephase,        0,  0,  1,0,0,1, "always use initial phase") \
 OPTION( frat,              0,  0,  2,0,0,1, "1=frat(lrat), 2=frat(drat)") \
+OPTION( freezeobserved,    1,  0,  1,0,0,0, "freeze observed variables of the external propagator") \
 OPTION( idrup,             0,  0,  1,0,0,1, "incremental proof format") \
 OPTION( ilb,               0,  0,  1,0,0,1, "ILB (incremental lazy backtrack)") \
 OPTION( ilbassumptions,    0,  0,  1,0,0,1, "trail reuse for assumptions (ILB-like)") \
