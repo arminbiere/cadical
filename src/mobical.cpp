@@ -440,14 +440,15 @@ public:
       new_ovars = true;
       return;
     }
-
+    
+    int idx = abs(lit);
     if (!new_ovars) {
-      if (!s->is_witness (abs (lit))) {
-        s->add_observed_var (abs (lit));
-        observed_variables.insert (abs (lit));
+      if (!s->internal->opts.freezeobserved || !s->is_witness (idx)) {
+        s->add_observed_var (idx);
+        observed_variables.insert (idx);
       }
     } else {
-      new_observed_variables.push_back (abs (lit));
+      new_observed_variables.push_back (idx);
     }
   }
 
@@ -455,7 +456,7 @@ public:
     for (std::vector<int>::iterator it = new_observed_variables.begin ();
          it != new_observed_variables.end (); ++it) {
       int lit = *it;
-      if (s->is_witness (lit))
+      if (s->internal->opts.freezeobserved && s->is_witness (lit))
         continue;
       new_observed_variables.erase (it);
       observed_variables.insert (lit);
@@ -479,10 +480,7 @@ public:
   bool compare_trails () {
 #ifndef NDEBUG
     std::set<int> etrail = {}; // Trail of the solver
-    std::set<int> efixed = {}; // Fixed assignments in the solver
-
     std::set<int> otrail = {}; // Observed trail
-    std::set<int> ofixed = {}; // Observed fixed assignments
 
     size_t idx = 0;
 
@@ -540,6 +538,51 @@ public:
 #endif
     return true;
   }
+
+  bool compare_model_to_trail (const std::vector<int> &model) {
+#ifndef NDEBUG
+    std::set<int> otrail = {}; // Observed trail
+    std::set<int> model_set = {};
+
+    for (const auto &level : observed_trail) {
+      for (const auto elit : level) {
+        if (is_observed_now (elit)) {
+          // There can be duplicate assignments due to fixed variables
+          // so assert (otrail_inserted == otrail.size()) will not work.
+          assert (otrail.count (elit) == 0 ||
+                  std::find (observed_fixed.begin (), observed_fixed.end (),
+                             elit) != observed_fixed.end ());
+
+          otrail.insert (elit);
+        }
+      }
+    }
+    for (const auto elit: model) {
+      if (is_observed_now (elit)) {
+        assert (model_set.count (elit) == 0);
+        model_set.insert(elit);
+      }
+    }
+#ifdef LOGGING
+    if (model_set.size () != otrail.size ()) {
+      MLOG ("model_set: ");
+      for (auto const &lit : model_set)
+        MLOGC (lit << " ");
+      MLOGC (std::endl);
+      MLOG ("otrail: ");
+      for (auto const &lit : otrail)
+        MLOGC (lit << " ");
+      MLOGC (std::endl);
+    }
+#endif
+    assert (model_set.size () == observed_variables.size ());
+
+    assert (model_set == otrail);
+
+#endif
+    return true;
+  }
+
   /*-----------------functions for mobical ends ------------------------*/
 
   /*------------------ FixedAssignmentListener functions
@@ -582,11 +625,17 @@ public:
   bool cb_check_found_model (const std::vector<int> &model) override {
     MLOG ("cb_check_found_model (" << model.size () << ") returns: ");
 
-    // Model reconstruction can change the assignments of certain variables,
-    // but the internal trail of the solver and the propagator should be
-    // still in synchron.
-    assert (compare_trails ());
 
+#ifndef NDEBUG
+    if (s->internal->opts.freezeobserved)
+      assert (compare_trails ());
+    else
+      // Model reconstruction can change the assignments of certain variables,
+      // but the internal trail of the solver and the propagator should be
+      // still in sync.
+      assert (compare_model_to_trail(model));
+      
+#endif
     for (const auto lemma : external_lemmas) {
       bool satisfied = false;
 
@@ -1165,7 +1214,7 @@ void Mobical::warning (const char *fmt, ...) {
 //     (ADD|ASSUME|ALWAYS)*
 //     [
 //       (SOLVE|SIMPLIFY|LOOKAHEAD)
-//       (LEMMA|CONTINUE)*
+//       (LEMMA)*
 //       (VAL|FLIP|FAILED|ALWAYS|CONCLUDE|FLUSHPROOFTRACE|CLOSEPROOFTRACE)*
 //     ]
 //   )*
@@ -2104,7 +2153,6 @@ private:
   void add_options (int expected);
   bool shrink_phases (int expected);
   bool shrink_clauses (int expected);
-  bool shrink_userphases (int expected);
   bool shrink_lemmas (int expected);
   bool shrink_literals (int expected);
   bool shrink_basic (int expected);
@@ -3537,30 +3585,6 @@ bool Trace::shrink_clauses (int expected) {
   return shrink_segments (segments, expected);
 }
 
-bool Trace::shrink_userphases (int expected) {
-  // TODO: introduce donot-shrink-lemmas
-  // if (mobical.donot.shrink.lemmas) return false;
-  notify ('a');
-  Segments segments;
-  size_t r;
-  size_t l = 1;
-  for (; l < size () && !during_type (calls[l]->type); l++)
-    ;
-  for (; l < size (); l++) {
-    if (!during_type (calls[l]->type))
-      continue;
-    r = l;
-    while (r < size () && calls[r]->type == Call::LEMMA)
-      r++;
-    // assert (calls[r]->type == Call::CONTINUE);
-    // if (r < size () && calls[r]->type == Call::CONTINUE) {
-    //   segments.push_back (Segment (l, r + 1));
-    //   l = r;
-    // }
-  }
-  return shrink_segments (segments, expected);
-}
-
 bool Trace::shrink_lemmas (int expected) {
   // TODO: introduce donot-shrink-lemmas
   // if (mobical.donot.shrink.lemmas) return false;
@@ -3997,8 +4021,6 @@ void Trace::shrink (int expected) {
       s = true, l = PHASES;
     if (l != CLAUSES && shrink_clauses (expected))
       s = true, l = CLAUSES;
-    if (l != UPHASES && shrink_userphases (expected))
-      s = true, l = UPHASES;
     if (l != LEMMAS && shrink_lemmas (expected))
       s = true, l = LEMMAS;
     if (l != LITERALS && shrink_literals (expected))
@@ -4594,7 +4616,7 @@ void Reader::parse () {
 
       state = new_state;
     }
-
+    
 #ifdef LOGGING
     if (trace.size () == 1 && mobical.add_set_log_to_true)
       trace.push_back (new SetCall ("log", 1));
@@ -4610,6 +4632,10 @@ void Reader::parse () {
 
     lineno++;
   }
+  
+  if (enforce && lemma_adding)
+    error ("last 'lemma %d' is without 'lemma 0'", lemma_adding);
+
 }
 
 /*------------------------------------------------------------------------*/
