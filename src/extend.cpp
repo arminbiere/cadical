@@ -196,6 +196,132 @@ void External::extend () {
   STOP (extend);
 }
 
+
+// This solution reconstruction is used when a (non-lazy) external
+// propagator with non-frozen observed variables is connected.
+// Beyond reconstruction, it also tracks if any observed variable got flipped.
+// It returns true if observed variables got assigned or flipped, while
+// false indicates that nothing observable happened.
+bool External::extend_with_observed () {
+
+  assert (!extended);
+  assert (internal->external_prop && !internal->external_prop_is_lazy);
+  
+  START (extend);
+  internal->stats.extensions++;
+
+  PHASE ("extend", internal->stats.extensions,
+         "mapping internal %d assignments to %d assignments",
+         internal->max_var, max_var);
+
+  std::vector<int> appended_assignments;
+  int64_t observed_changed = 0;
+#ifndef QUIET
+  int64_t updated = 0;
+#endif
+  for (unsigned i = 1; i <= (unsigned) max_var; i++) {
+    const int ilit = e2i[i];
+    if (!ilit)
+      continue;
+    if (is_observed[i]) {
+      if (i >= vals.size ()) {
+        // It is an internal value without having external vals assigned.
+        // Since internally it is already assigned, we can assume that the
+        // corresponding notification was already sent out, there is nothing
+        // to do here.
+        vals.resize (i + 1, false);
+        vals[i] = (internal->val (ilit) > 0);
+        assert (internal->val (ilit));
+        
+        //appended_assignments.push_back(internal->val (ilit));
+        //observed_changed++;
+      } else if (vals[i] != (internal->val (ilit) > 0)) {
+        vals[i] = (internal->val (ilit) > 0);
+        //observed_changed++;
+      }
+    } else {
+      if (i >= vals.size ())
+        vals.resize (i + 1, false);
+      vals[i] = (internal->val (ilit) > 0);
+    }
+#ifndef QUIET
+    updated++;
+#endif
+  }
+  PHASE ("extend", internal->stats.extensions,
+         "updated %" PRId64 " external assignments", updated);
+  PHASE ("extend", internal->stats.extensions,
+         "extending through extension stack of size %zd",
+         extension.size ());
+  const auto begin = extension.begin ();
+  auto i = extension.end ();
+#ifndef QUIET
+  int64_t flipped = 0;
+#endif
+  while (i != begin) {
+    bool satisfied = false;
+    int lit;
+    assert (i != begin);
+    while ((lit = *--i)) {
+      if (satisfied)
+        continue;
+      if (ival (lit) == lit)
+        satisfied = true;
+      assert (i != begin);
+    }
+    assert (i != begin);
+    LOG ("id=%" PRIu64, ((uint64_t) *i << 32) + *(i - 1));
+    assert (*i || *(i - 1));
+    --i;
+    assert (i != begin);
+    --i;
+    assert (i != begin);
+    assert (!*i);
+    --i;
+    assert (i != begin);
+    if (satisfied)
+      while (*--i)
+        assert (i != begin);
+    else {
+      while ((lit = *--i)) {
+        const int tmp = ival (lit); // not 'signed char'!!!
+        if (tmp != lit) {
+          LOG ("flipping blocking literal %d", lit);
+          assert (lit);
+          assert (lit != INT_MIN);
+          size_t idx = abs (lit);
+          if (is_observed[idx]) {
+            observed_changed++;
+          }
+          if (idx >= vals.size ())
+            vals.resize (idx + 1, false);
+          vals[idx] = !vals[idx];
+          internal->stats.extended++;
+#ifndef QUIET
+          flipped++;
+#endif
+        }
+        assert (i != begin);
+      }
+    }
+  }
+  PHASE ("extend", internal->stats.extensions,
+         "flipped %" PRId64 " literals during extension", flipped);
+  PHASE ("extend", internal->stats.extensions,
+         "overall changed %" PRId64 " observed assignment during extension", observed_changed);
+  extended = true;
+  LOG ("extended");
+  STOP (extend);
+
+  if (!observed_changed && appended_assignments.size()) {
+    propagator->notify_assignment (appended_assignments);
+  }
+
+  return observed_changed > 0;
+}
+
+
+
 /*------------------------------------------------------------------------*/
 
 bool External::traverse_witnesses_backward (WitnessIterator &it) {
