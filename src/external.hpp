@@ -187,6 +187,9 @@ struct External {
   void extend ();
   void conclude_sat ();
 
+  // Same as 'extend', but also tracks changes of the notified trail 
+  bool extend_with_observed ();
+
   /*----------------------------------------------------------------------*/
 
   // Marking external literals.
@@ -308,7 +311,7 @@ struct External {
   inline int ival (int elit) const {
     assert (elit != INT_MIN);
     int eidx = abs (elit);
-    bool val = false;
+    bool val = false; // TODO: whats with default phases?
     if (eidx <= max_var && (size_t) eidx < vals.size ())
       val = vals[eidx];
     if (elit < 0)
