@@ -117,7 +117,6 @@ int External::internalize (int elit) {
       assert (internal->max_var < INT_MAX);
       ilit = internal->max_var + 1u;
       internal->init_vars (ilit);
-      e2i[eidx] = ilit;
       LOG ("mapping external %d to internal %d", eidx, ilit);
       e2i[eidx] = ilit;
       internal->i2e.push_back (eidx);
@@ -125,6 +124,9 @@ int External::internalize (int elit) {
       assert (e2i[eidx] == ilit);
       if (elit < 0)
         ilit = -ilit;
+      // Reset internal observed flag in case it was an eliminated variable
+      if (is_observed[abs(elit)]) 
+        internal->add_observed_var (ilit);
     }
     if (internal->opts.checkfrozen) {
       assert (eidx < (int64_t) moltentab.size ());
@@ -328,17 +330,11 @@ void External::add_observed_var (int elit) {
   reset_extended (); // tainting!
 
   int eidx = abs (elit);
-  if (eidx <= max_var &&
-      (marked (witness, elit) || marked (witness, -elit))) {
-    LOG ("Error, only clean variables are allowed to become observed.");
+  if (internal->opts.freezeobserved && eidx <= max_var &&
+      (marked (witness, elit) || marked (witness, -elit))) { 
+    LOG ("Error, with 'freezeobserved' on, only clean variables are allowed to become observed.");
     assert (false);
-
-    // TODO: here needs to come the taint and restore of the newly
-    // observed variable. Restore_clauses must be called before continue.
-    // LOG ("marking tainted %d", elit);
-    // mark (tainted, elit);
-    // mark (tainted, -elit);
-    // restore_clauses ...
+    return;
   }
 
   if (eidx >= (int64_t) is_observed.size ())
@@ -349,14 +345,28 @@ void External::add_observed_var (int elit) {
 
   LOG ("marking %d as externally watched", eidx);
 
-  // Will do the necessary internalization
-  freeze (elit);
+  int ilit = 0;
+  if (internal->opts.freezeobserved) {
+    freeze (elit); // Does the necessary internalization 
+    ilit = internalize (elit);
+  } else {
+    // Do the necessary internalization 
+    bool unmark_taint = (eidx <= max_var && (!marked (tainted, elit) && marked (witness, -elit)));
+    ilit = internalize (elit);
+
+    // At that point there is no need to taint the variable because no actual
+    // clause was given with it so far, so we undo in case internalize was 
+    // introducing a taint mark in the previous call
+    if (ilit && unmark_taint) {
+      unmark (tainted, elit);
+    }
+  }
+  
   is_observed[eidx] = true;
 
-  int ilit = internalize (elit);
   // internal add-observed-var backtracks to a lower decision level to
-  // unassign the variable in case it was already assigned previously (but
-  // not on the current level)
+  // unassign the variable in case it was already assigned on lower decision
+  // level
   internal->add_observed_var (ilit);
 
   if (propagator->is_lazy)
@@ -396,12 +406,33 @@ void External::remove_observed_var (int elit) {
   if (is_observed[eidx]) {
     // Follow opposite order of add_observed_var, first remove internal
     // is_observed
-    int ilit = e2i[eidx]; // internalize (elit);
+    int ilit = 0;
+    if (internal->opts.freezeobserved)
+      ilit = e2i[eidx]; // internalize (elit);
+    else
+      ilit = internalize (elit); 
+    // We need to reactivate/reconstruct to remove observed flag, otherwise
+    // it would remain observed once restored
+    // if (!ilit) {
+    //   ilit = internalize (elit);  // taints and reactivates the variable
+    // Flags &f = internal->flags (ilit);
+    // if (f.status == Flags::UNUSED)
+    //   internal->mark_active (ilit);
+    // else if (f.status != Flags::ACTIVE && f.status != Flags::FIXED)
+    //   internal->reactivate (ilit);
+    // if (!marked (tainted, elit) && marked (witness, -elit)) {
+    //   assert (!internal->opts.checkfrozen);
+    //   LOG ("marking tainted %d", elit);
+    //   mark (tainted, elit);
+    // }
+    // }
+
     internal->remove_observed_var (ilit);
 
     is_observed[eidx] = false;
-    melt (elit);
-    LOG ("unmarking %d as externally watched", eidx);
+    if (internal->opts.freezeobserved)
+      melt (elit);
+    LOG ("unmarking %d as externally observed", eidx);
   }
 }
 
@@ -421,13 +452,7 @@ void External::reset_observed_vars () {
   for (auto elit : vars) {
     int eidx = abs (elit);
     assert (eidx <= max_var);
-    if (is_observed[eidx]) {
-      int ilit = internalize (elit);
-      internal->remove_observed_var (ilit);
-      LOG ("unmarking %d as externally watched", eidx);
-      is_observed[eidx] = false;
-      melt (elit);
-    }
+    remove_observed_var (eidx);
   }
 }
 
