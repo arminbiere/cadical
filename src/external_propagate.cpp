@@ -48,8 +48,11 @@ void Internal::remove_observed_var (int ilit) {
   const int idx = vidx (ilit);
   assert ((size_t) idx < relevanttab.size ());
   unsigned &ref = relevanttab[idx];
-  assert (fixed (ilit) || ref > 0);
-  if (fixed (ilit))
+  
+  assert (ref > 0 || fixed (ilit) || !opts.freezeobserved);
+  if (!ref) // It might have been eliminated already
+    return;
+  else if (fixed (ilit))
     ref = 0;
   else if (ref < UINT_MAX) {
     if (!--ref) {
@@ -123,9 +126,9 @@ void Internal::renotify_trail_after_local_search () {
 // It repeats ALL assignments of the trail, so the already notified
 // root-level assignments will be notified multiple times.
 
-void Internal::renotify_full_trail () {
+void Internal::renotify_full_trail (bool force_notify_backtrack) {
   const size_t end_of_trail = trail.size ();
-  if (level) {
+  if (level || force_notify_backtrack) {
     notified = 0; // TODO: save the last notified root-level position
                   // somewhere and use it here
     notify_backtrack (0);
@@ -242,7 +245,7 @@ bool Internal::external_propagate () {
          level, trail.size (), notified);
 #endif
     cb_repropagate_needed = false;
-    // external->reset_extended (); //TODO for inprocessing
+    external->reset_extended ();
 
     notify_assignments ();
 
@@ -252,6 +255,16 @@ bool Internal::external_propagate () {
     while (elit) {
       assert (external->is_observed[abs (elit)]);
       int ilit = external->e2i[abs (elit)];
+       if (!ilit) {
+        assert (!opts.freezeobserved);
+        // The variable is not in use at the moment, need to reactivate
+        ilit = external->internalize (elit); // taints the literal
+        // We need to restore the removed clauses with that variable in case
+        // a solution is found at one point.
+        LOG ("external propagation of %d triggers reactivation as %d",elit, ilit);
+        // TODO: try eager clause restoration here, instead of delayed until
+        // solution reconstruction.
+      }
       if (elit < 0)
         ilit = -ilit;
       int tmp = val (ilit);
@@ -885,8 +898,26 @@ bool Internal::external_check_solution () {
     added_new_clauses = false;
     LOG ("Final check by external propagator is invoked.");
     stats.ext_prop.echeck_call++;
+    
+    if (!opts.freezeobserved && !external->tainted.empty()) {
+      // The reconstruction stack must be clean before extend () can be called.
+      external->restore_clauses ();
+      if (!satisfied ())
+        break;
+      // The restored clauses might invalidate the found model.
+      added_new_clauses = true;
+    }
+
+    // Solution reconstruction is correct only if the reconstruction stack
+    // was clean and the initial solution satisfies all the present clauses
+    assert (satisfied () && external->tainted.empty());
+    
     external->reset_extended ();
-    external->extend ();
+    bool observed_changed = false;
+    if (opts.freezeobserved || external_prop_is_lazy)
+      external->extend ();
+    else
+      observed_changed = external->extend_with_observed ();
 
     std::vector<int> etrail;
 
@@ -900,15 +931,45 @@ bool Internal::external_check_solution () {
       etrail.push_back (lit);
 #ifndef NDEBUG
 #ifdef LOGGING
-      bool p = external->vals[idx];
+      // Not used variables are set to false by default TODO: check phase?
+      bool p = ((size_t) idx < external->vals.size ()) ? external->vals[idx] : false;
       LOG ("evals[%d]: %d ival(%d): %d", idx, p, idx, lit);
 #endif
 #endif
     }
+    
+    bool is_consistent = false;
+    // In case solution reconstruction changed some observed variables in the
+    // found model, the trail of the propagator and the returned solution are
+    // not compatible. To avoid this issue, here we renotify the whole
+    // found solution as a new trail (in a single decision level), which
+    // either is accepted or gets rejected and in both cases we switch back
+    //  to the actual trail of the solver.
+    if (observed_changed && !external_prop_is_lazy && trail.size()) {
+      LOG ("notify external propagator of all assignments after solution reconstruction");
+#ifndef NDEBUG
+      LOG ("(decision level: %d, trail size: %zd, notified %zd)", level,
+       trail.size (), notified);
+#endif
+      external->propagator->notify_backtrack (0);
+      external->propagator->notify_new_decision_level ();
+      external->propagator->notify_assignment (etrail);
+      notified = etrail.size();
+    
 
-    bool is_consistent =
-        external->propagator->cb_check_found_model (etrail);
-    stats.ext_prop.ext_cb++;
+      is_consistent = external->propagator->cb_check_found_model (etrail);
+      stats.ext_prop.ext_cb++;
+      
+      // The propagator checks the reconstructed model and either accepts
+      // it or not (is_consistent T/F). Either way, the observed trail has
+      // to switched back to the actual trail, so that the search can continue
+      // or a new solve () can be triggered.
+      renotify_full_trail (true);
+    } else {
+      is_consistent = external->propagator->cb_check_found_model (etrail);
+      stats.ext_prop.ext_cb++;
+    }
+
     if (is_consistent) {
       LOG ("Found solution is approved by external propagator.");
       return true;
@@ -989,9 +1050,10 @@ void Internal::notify_assignments () {
     int ilit = trail[notified++];
     if (!observed (ilit))
       continue;
-
+    
     int elit = externalize (ilit); // TODO: double-check tainting
     assert (elit);
+
     // Fixed variables might get mapped (during compact) to another
     // non-observed but fixed variable.
     // This happens on root level, so notification about their assignment is
@@ -1073,14 +1135,27 @@ int Internal::ask_decision () {
     return 0;
 
   int ilit = external->e2i[abs (elit)];
+
+  if (!ilit) {
+    assert (!opts.freezeobserved);
+    // The restored/reactivated variables inherit their observed flag during
+    // internalization
+    ilit = external->internalize (elit); // taints decision literal
+    // We need to restore the removed clauses with that variable
+    if (!external->tainted.empty()) {
+      LOG ("external decision %d triggers restore steps", ilit);
+      external->restore_clauses ();
+    }  
+  }
+
   if (elit < 0)
     ilit = -ilit;
-
-  assert (fixed (ilit) || observed (ilit));
 
   LOG ("Asking external propagator for decision returned: %d (internal: "
        "%d, fixed: %d, val: %d)",
        elit, ilit, fixed (ilit), val (ilit));
+  
+  assert (fixed (ilit) || observed (ilit));
 
   if (fixed (ilit) || val (ilit)) {
     LOG ("Proposed decision variable is already assigned, falling back to "
