@@ -1911,7 +1911,7 @@ bool Internal::sweep () {
     const char *res =
 #endif
         sweep_variable (sweeper, idx);
-    VERBOSE (2, "swept[%" PRIu64 "] external variable %d %s", swept,
+    VERBOSE (3, "swept[%" PRIu64 "] external variable %d %s", swept,
              externalize (idx), res);
     if (++swept == limit) {
       VERBOSE (2,

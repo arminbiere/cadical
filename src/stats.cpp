@@ -706,6 +706,9 @@ void Stats::print (Internal *internal) {
       PRT ("  dummydec-w:    %15" PRId64 "   %10.2f    per warmup",
            stats.warmup.dummydecision,
            relative (stats.warmup.dummydecision, stats.warmup.count));
+      PRT ("  conflicts:    %15" PRId64 "   %10.2f    per warmup",
+           stats.warmup.conflicts,
+           relative (stats.warmup.conflicts, stats.warmup.count));
       PRT ("  warmup:        %15" PRId64 "   %10.2f    per walk",
            stats.warmup.count,
            relative (stats.warmup.count, stats.walk.count));

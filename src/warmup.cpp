@@ -9,7 +9,7 @@ namespace CaDiCaL {
 // The asignmend is the same as the normal assignment however, it updates the target phases so that local search can pick them up later
 
 // specific warmup version with saving of the target.
-inline void Internal::warmup_assign (int lit, Clause *reason) {
+inline void Internal::warmup_assign (int lit, Clause *reason){
 
   assert (level); // no need to learn unit clauses here
   require_mode (SEARCH);
@@ -113,7 +113,8 @@ void Internal::warmup_propagate_beyond_conflict () {
         // there also only to simplify the code).
 
         if (b < 0)
-          ;// conflict = w.clause; // ignoring conflict
+          // ignoring conflict
+          ++stats.warmup.conflicts;
         else {
           warmup_assign (w.blit, w.clause);
         }
@@ -184,49 +185,12 @@ void Internal::warmup_propagate_beyond_conflict () {
             //
             build_chain_for_units (other, w.clause, 0);
             warmup_assign (other, w.clause);
-
-            // Similar code is in the implementation of the SAT'18 paper on
-            // chronological backtracking but in our experience, this code
-            // first does not really seem to be necessary for correctness,
-            // and further does not improve running time either.
-            //
-            if (opts.chrono > 1) {
-
-              const int other_level = var (other).level;
-
-              if (other_level > var (lit).level) {
-
-                // The assignment level of the new unit 'other' is larger
-                // than the assignment level of 'lit'.  Thus we should find
-                // another literal in the clause at that higher assignment
-                // level and watch that instead of 'lit'.
-
-                assert (size > 2);
-
-                int pos, s = 0;
-
-                for (pos = 2; pos < size; pos++)
-                  if (var (s = lits[pos]).level == other_level)
-                    break;
-
-                assert (s);
-                assert (pos < size);
-
-                LOG (w.clause, "unwatch %d in", lit);
-                lits[pos] = lit;
-                lits[0] = other;
-                lits[1] = s;
-                watch_literal (s, other, w.clause);
-
-                j--; // Drop this watch from the watch list of 'lit'.
-              }
-            }
           } else {
-
             assert (u < 0);
             assert (v < 0);
 
 	    // ignoring conflict
+            ++stats.warmup.conflicts;
           }
         }
       }

@@ -1,5 +1,8 @@
 #include "internal.hpp"
 
+
+#include <variant>
+
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
@@ -14,6 +17,9 @@ namespace CaDiCaL {
 // of walk_flip is very cheap and should not be counted in ticks, but
 // on various other problems `9pipe_k' it is very important to ticks
 // this part too.
+
+  using ClauseOrBinary = std::variant <Clause*, TaggedBinary>;
+
 struct Walker {
 
   Internal *internal;
@@ -24,7 +30,7 @@ struct Walker {
   Random random;           // local random number generator
   int64_t ticks;	         // ticks to approximate run time
   int64_t limit;           // limit on number of propagations
-  vector<Clause *> broken; // currently unsatisfied clauses
+  vector<ClauseOrBinary> broken; // currently unsatisfied clauses
   double epsilon;          // smallest considered score
   vector<double> table;    // break value to score table
   vector<double> scores;   // scores of candidate literals
@@ -239,15 +245,18 @@ inline double Walker::score (unsigned i) {
 
 /*------------------------------------------------------------------------*/
 
-Clause *Internal::walk_pick_clause (Walker &walker) {
+ClauseOrBinary Internal::walk_pick_clause (Walker &walker) {
   require_mode (WALK);
   assert (!walker.broken.empty ());
   int64_t size = walker.broken.size ();
   if (size > INT_MAX)
     size = INT_MAX;
   int pos = walker.random.pick_int (0, size - 1);
-  Clause *res = walker.broken[pos];
-  LOG (res, "picking random position %d", pos);
+  ClauseOrBinary res = walker.broken[pos];
+#ifdef LOGGING
+  Clause *c = std::holds_alternative<Clause*>(res) ?  std::get<Clause*>(res) : std::get<TaggedBinary>(res).d;
+  LOG (c, "picking random position %d", pos);
+#endif
   return res;
 }
 
@@ -276,9 +285,12 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
     }
 
     Clause *c = w.clause;
+    assert (c != dummy_binary);
     ++ticks;
+
     assert (lit == c->literals[0]);
 
+#if 1
     // Now try to find a second satisfied literal starting at 'literals[1]'
     // shifting all the traversed literals to right by one position in order
     // to move such a second satisfying literal to 'literals[1]'.  This move
@@ -314,7 +326,31 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
       *i = prev;
       prev = other;
     }
+#else
+    const auto begin = c->begin() + 1;  // do not check the first, we are looking for another literal
+    const auto end = c->end();
+    const auto middle = c->begin() + c->pos;
+    auto k = middle;
+    signed char v = -1;
+    int r = 0;
+    while (k != end && (v = val (r = *k)) < 0)
+      ++k;
 
+    if (v < 0) {
+      k = begin;
+      while (k != middle && (v = val (r = *k)) < 0)
+	++k;
+    }
+    c->pos = k - c->begin();
+    if (c->pos <= 2) // propagates requires this
+      c->pos = 2;
+    assert (c->pos);
+    if (v > 0) {
+      w.blit = *k;
+      LOG (w.clause, "changing blit to");
+      continue; // double satisfied!
+    }
+#endif
     res++; // Literal 'lit' single satisfies clause 'c'.
   }
   stats.ticks.walkbreak += (ticks - oldticks);
@@ -339,7 +375,9 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
 int Internal::walk_pick_lit (Walker &walker, Clause *c) {
   LOG ("picking literal by break-count");
   assert (walker.scores.empty ());
-  const int64_t old = ++walker.ticks;
+  const int64_t old = walker.ticks;
+  ++walker.ticks;
+  //TODO should be +=2!
   double sum = 0;
   int64_t propagations = 0;
   for (const auto lit : *c) {
@@ -382,6 +420,75 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
     }
     sum += *j++;
   }
+  walker.scores.clear ();
+  LOG ("picking literal %d by break-count", res);
+  stats.ticks.walkpick += walker.ticks - old;
+  return res;
+}
+
+int Internal::walk_pick_lit (Walker &walker, ClauseOrBinary c) {
+#if 0
+      if (std::holds_alternative<TaggedBinary> (c))
+        return walk_pick_lit (walker, std::get<TaggedBinary> (c));
+#else
+  if (std::holds_alternative<TaggedBinary> (c)) {
+    dummy_binary->literals[0] = std::get<TaggedBinary> (c).lit;
+    dummy_binary->literals[1] = std::get<TaggedBinary> (c).other;
+    return walk_pick_lit (walker, dummy_binary);
+  }
+#endif
+  return walk_pick_lit (walker, std::get<Clause *> (c));
+}
+
+int Internal::walk_pick_lit (Walker &walker, TaggedBinary c) {
+  LOG ("picking literal by break-count on binary clause %s %s", LOGLIT(c.lit), LOGLIT(c.other));
+  assert (walker.scores.empty ());
+  const int64_t old = walker.ticks;
+  ++walker.ticks;
+  double sum = 0;
+  int64_t propagations = 0;
+  std::array<int, 2> clause = {c.lit, c.other};
+  for (const auto lit : clause) {
+    assert (active (lit));
+    if (var (lit).level == 1) {
+      LOG ("skipping assumption %d for scoring", -lit);
+      continue;
+    }
+    assert (active (lit));
+    propagations++;
+    unsigned tmp = walk_break_value (-lit, walker.ticks);
+    double score = walker.score (tmp);
+    LOG ("literal %d break-count %u score %g", lit, tmp, score);
+    walker.scores.push_back (score);
+    sum += score;
+  }
+  LOG ("scored %zd literals", walker.scores.size ());
+  assert (!walker.scores.empty ());
+  stats.propagations.walk += propagations;
+  assert (walker.scores.size () <= (size_t) 2);
+  const double lim = sum * walker.random.generate_double ();
+  LOG ("score sum %g limit %g", sum, lim);
+  const auto end = clause.end();
+  auto i = clause.begin();
+  auto j = walker.scores.begin ();
+  int res = 0;
+  for (;;) {
+    assert (i != end);
+    res = *i++;
+    if (var (res).level > 1)
+      break;
+    LOG ("skipping assumption %d without score", -res);
+  }
+  sum = *j++;
+  while (sum <= lim && i != end) {
+    res = *i++;
+    if (var (res).level == 1) {
+      LOG ("skipping assumption %d without score", -res);
+      continue;
+    }
+    sum += *j++;
+  }
+  assert (res);
   walker.scores.clear ();
   LOG ("picking literal %d by break-count", res);
   stats.ticks.walkpick += walker.ticks - old;
@@ -445,11 +552,43 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 
     while (i != eou) {
 
-      Clause *d = *j++ = *i++;
+      ClauseOrBinary tagged = *j++ = *i++;
 
-      int *literals = d->literals, prev = 0;
+#if 1
+      if (std::holds_alternative<TaggedBinary> (tagged)) {
+        const TaggedBinary &b = std::get<TaggedBinary> (tagged);
+        int clit = b.lit;
+        int other = b.other;
+        assert (val (clit) < 0 || val (other) < 0);
+#ifdef LOGGING
+	assert (b.d->literals[0] == clit || b.d->literals[1] == clit);
+        assert (b.d->literals[0] == other || b.d->literals[1] == other);
+#endif
+        if (clit == lit || other == lit) {
+          LOG (b.d, "made");
+#ifdef LOGGING
+          watch_binary_literal (clit, other, b.d);
+#else
+          watch_binary_literal (
+              clit, other, dummy_binary); // placeholder, does not matter
+#endif
+          ++walker.ticks;
+#ifdef LOGGING
+          made++;
+#endif
+          j--;
+        } else {
+          LOG (b.d, "still broken");
+          assert (val (clit) < 0 && val (other) < 0);
+        }
+        continue;
+      }
+#endif
+      Clause *d = std::get<Clause*> (tagged);
+      int *literals = d->literals;
       ++walker.ticks;
-
+#if 1
+      int prev = 0;
       // Find 'lit' in 'd'.
       //
       const int size = d->size;
@@ -483,6 +622,42 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
           prev = other;
         }
       }
+#else
+    const auto begin = d->begin();
+    const auto end = d->end();
+    const auto middle = d->begin() + d->pos;
+    auto k = middle;
+    signed char v = -1;
+    int r = 0;
+    while (k != end && (v = val (r = *k)) < 0)
+      ++k;
+
+    if (v < 0) {
+      k = begin; // check the first, we are looking for another literal
+      while (k != middle && (v = val (r = *k)) < 0)
+	++k;
+    }
+
+    if (v > 0) {
+      d->pos = k - begin;
+      if (d->pos <= 2)
+        d->pos = 2;
+      assert (*k == lit);
+      std::swap (literals[0], *k);
+      LOG (d, "made");
+      watch_literal (literals[0], literals[1], d);
+      ++walker.ticks;
+#ifdef LOGGING
+        made++;
+#endif
+        j--;
+    } else {
+      // Otherwise the clause is not satisfied, do nothing
+      LOG (d, "still broken");
+      for (auto lit : d)
+        assert (val (lit) < 0);
+    }
+#endif
 
       if (count--)
         continue;
@@ -495,8 +670,20 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
       count = ratio; // Starting counting down again.
       stats.propagations.walk++;
     }
-    LOG ("made %" PRId64 " clauses by flipping %d", made, lit);
+    LOG ("made %" PRId64 " clauses by flipping %d, still %d broken", made, lit, j - walker.broken.begin ());
+    assert ((j - walker.broken.begin ()) + made == walker.broken.size ());
     walker.broken.resize (j - walker.broken.begin ());
+
+    for (auto d : walker.broken) {
+
+      if (std::holds_alternative<TaggedBinary> (d)) {
+        const TaggedBinary &b = std::get<TaggedBinary> (d);
+	assert (val (b.lit) < 0 && val (b.other) < 0);
+      } else {
+        for (auto lit : *std::get<Clause *> (d))
+          assert (val (lit) < 0);
+      }
+    }
   }
   stats.ticks.walkflipbroken += walker.ticks - old;
   STOP (walkflipbroken);
@@ -519,11 +706,33 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 
     for (const auto &w : ws) {
       Clause *d = w.clause;
+      const int size = d->size;
+#if 1
+      if (size == 2) {
+        const int other = w.blit;
+	assert (w.blit != -lit);
+        if (val (other) > 0) {
+	  LOG (d, "unwatch %d in", -lit);
+          watch_binary_literal (other, -lit, d);
+          continue;
+        }
+        LOG (d, "broken");
+        assert (d != dummy_binary);
+        walker.broken.push_back (TaggedBinary (d, -lit, other));
+        ++walker.ticks;
+#ifdef LOGGING
+        broken++;
+#endif
+        continue;
+      }
+      assert (d->size != 2);
+#endif
       ++walker.ticks;
       LOG (d, "unwatch %d in", -lit);
       int *literals = d->literals, replacement = 0, prev = -lit;
       assert (literals[0] == -lit);
-      const int size = d->size;
+      assert (d != dummy_binary);
+
       for (int i = 1; i < size; i++) {
         const int other = literals[i];
         assert (active (other));
@@ -549,6 +758,7 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
         }
         assert (literals[0] == -lit);
         LOG (d, "broken");
+	assert (d != dummy_binary);
         walker.broken.push_back (d);
         ++walker.ticks;
 #ifdef LOGGING
@@ -766,14 +976,27 @@ int Internal::walk_round (int64_t limit, bool prev) {
       }
 
       if (satisfied) {
-        watch_literal (lits[0], lits[1], c);
+        if (c->size == 2)
+#ifdef LOGGING
+          watch_binary_literal (lits[0], lits[1], c);
+#else
+          watch_binary_literal (lits[0], lits[1], internal->dummy_binary);
+#endif
+        else
+          watch_literal (lits[0], lits[1], c);
 #ifdef LOGGING
         watched++;
 #endif
       } else {
         assert (satisfiable); // at least one non-assumed variable ...
         LOG (c, "broken");
-        walker.broken.push_back (c);
+        assert (c->size == size);
+#if 1
+        if (size == 2)
+          walker.broken.push_back (TaggedBinary (c));
+        else
+#endif
+          walker.broken.push_back (c);
       }
     }
 #ifdef LOGGING
@@ -814,7 +1037,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 #endif
       stats.walk.flips++;
       stats.walk.broken += broken;
-      Clause *c = walk_pick_clause (walker);
+      ClauseOrBinary c = walk_pick_clause (walker);
       const int lit = walk_pick_lit (walker, c);
       walk_flip_lit (walker, lit);
       walker.push_flipped (lit);

@@ -494,6 +494,7 @@ void WalkerFO::make_clauses_along_occurrences(int lit) {
     this->make_clause(c);
     made++;
   }
+  MSG ("made %" PRId64 " clauses by flipping %d, still %zu broken", made, lit, broken.size ());
   LOG("made %zu clauses with flipped %s", made, LOGLIT(lit));
   (void)made;
 }
@@ -730,7 +731,7 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
 
   if (!failed) {
 
-    const bool target = (stable || opts.target == 2);
+    const bool target = opts.warmup ? false : stable || opts.target == 2;
     for (auto idx : vars) {
       if (!active (idx)) {
         LOG ("skipping inactive variable %d", idx);
@@ -807,13 +808,17 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
         LOG (c, "broken");
 	walker.tclauses[pos].pos = walker.broken.size();
         walker.broken.push_back (Tagged (c, pos));
+      } else {
+#ifdef LOGGING
+        watched++; // to be able to compare the number with walk
+#endif
       }
     }
 #ifdef LOGGING
     if (!failed) {
       int64_t broken = walker.broken.size ();
       int64_t total = watched + broken;
-      LOG ("watching %" PRId64 " clauses %.0f%% "
+      MSG ("watching %" PRId64 " clauses %.0f%% "
            "out of %" PRId64 " (watched and broken)",
            watched, percent (watched, total), total);
     }
