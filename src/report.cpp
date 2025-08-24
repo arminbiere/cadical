@@ -135,7 +135,11 @@ Report::Report (const char *h, int precision, int min, double value)
   REPORT ("conflicts", 0, 4, stats.conflicts) \
   REPORT ("redundant", 0, 4, stats.current.redundant) \
   REPORT ("trail", -1, 2, TRAIL) \
+  REPORT ("size/glue", 1, 2, (double)averages.current.size/(double)averages.current.glue.slow) \
+  REPORT ("size", 0, 1, averages.current.size) \
   REPORT ("glue", 0, 1, averages.current.glue.slow) \
+  REPORT ("tier1", 0, 1, tier1[stable]) \
+  REPORT ("tier2", 0, 1, tier2[stable]) \
   REPORT ("irredundant", 0, 4, stats.current.irredundant) \
   REPORT ("variables", 0, 3, active ()) \
   REPORT ("remaining", -1, 2, REMAINING)

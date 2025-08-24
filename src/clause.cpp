@@ -147,6 +147,7 @@ Clause *Internal::new_clause (bool red, int glue) {
 
 void Internal::promote_clause (Clause *c, int new_glue) {
   assert (c->redundant);
+  assert (new_glue);
   const int tier1limit = tier1[false];
   const int tier2limit = max (tier1limit, tier2[false]);
   if (!c->redundant)
@@ -174,6 +175,7 @@ void Internal::promote_clause (Clause *c, int new_glue) {
 
 void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
   assert (c->redundant);
+  assert (new_glue);
   if (c->hyper)
     return;
   int old_glue = c->glue;

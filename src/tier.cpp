@@ -30,8 +30,10 @@ void Internal::recompute_tier () {
         stats.bump_used[stable] * opts.tier1limit / 100;
     uint64_t accumulated_tier2_limit =
         stats.bump_used[stable] * opts.tier2limit / 100;
-    uint64_t accumulated_used = 0;
-    for (size_t glue = 0; glue < stats.used[stable].size (); ++glue) {
+    tier1[stable] = 1;
+    tier2[stable] = 1;
+    uint64_t accumulated_used = stats.used[stable][0];
+    for (size_t glue = 1; glue < stats.used[stable].size (); ++glue) {
       const uint64_t u = stats.used[stable][glue];
       accumulated_used += u;
       if (accumulated_used <= accumulated_tier1_limit) {
@@ -43,6 +45,11 @@ void Internal::recompute_tier () {
       }
     }
   }
+
+  assert (tier1[stable] > 0);
+  if (tier1[stable] >= tier2[stable])
+    tier2[stable] = tier1[stable] + 1;
+  assert (tier2[stable] > tier1[stable]);
 
   LOG ("tier1 limit = %d in %s mode", tier1[stable],
        stable ? "stable" : "focused");
