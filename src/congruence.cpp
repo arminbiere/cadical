@@ -722,7 +722,7 @@ void Closure::index_gate (Gate *g) {
 }
 
 void Closure::produce_rewritten_clause_lrat_and_clean (
-    std::vector<LitClausePair> &litIds, int except_lhs, bool remove_units, bool allow_tautology_in_input) {
+    std::vector<LitClausePair> &litIds, int except_lhs, bool remove_units, [[maybe_unused]] bool allow_tautology_in_input) {
   assert (internal->lrat_chain.empty ());
   for (auto &litId : litIds) {
     assert (litId.clause || allow_tautology_in_input);
