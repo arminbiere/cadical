@@ -746,6 +746,10 @@ void Stats::print (Internal *internal) {
        tout.magenta_code (), internal->opts.realtime ? "real" : "process",
        tout.normal_code ());
 
+  SECTION ("glue usage");
+
+  internal->print_tier_usage_statistics ();
+
 #endif // ifndef QUIET
 }
 
