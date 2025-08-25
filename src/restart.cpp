@@ -59,11 +59,12 @@ bool Internal::stabilizing () {
 
     int64_t next_delta_ticks = inc.stabilize;
     int64_t stabphases = stats.stabphases + 1;
-    next_delta_ticks *= 2; // stabphases * stabphases;
+    next_delta_ticks *= stabphases * stabphases;
 
-    lim.stabilize = stats.ticks.search[stable] + next_delta_ticks;
-    if (lim.stabilize <= stats.ticks.search[stable])
-      lim.stabilize = stats.ticks.search[stable] + 1;
+    const bool next_stable = !stable;
+    lim.stabilize = stats.ticks.search[next_stable] + next_delta_ticks;
+    if (lim.stabilize <= stats.ticks.search[next_stable])
+      lim.stabilize = stats.ticks.search[next_stable] + 1;
     PHASE ("stabilizing", stats.stabphases,
            "next %s stabilization limit %" PRId64
            " at ticks interval %" PRId64,
