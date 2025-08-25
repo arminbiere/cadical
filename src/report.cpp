@@ -142,8 +142,7 @@ Report::Report (const char *h, int precision, int min, double value)
   REPORT ("trail", -1, 2, TRAIL) \
   REPORT ("irredundant", 0, 4, stats.current.irredundant) \
   REPORT ("variables", 0, 3, active ()) \
-  REPORT ("remaining", -1, 2, REMAINING) \
-  REPORT ("redundant", 0, 4, stats.current.redundant) \
+  REPORT ("remaining", -1, 2, REMAINING)
 
 // Note, keep an empty line before this line (because of '\')!
 

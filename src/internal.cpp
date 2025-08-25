@@ -950,10 +950,10 @@ int Internal::solve (bool preprocess_only) {
   if (!res && !level)
     res = preprocess (preprocess_only);
   if (!preprocess_only) {
-    if (!res && !level)
-      res = local_search ();
     if (!res && !level && opts.luckylate)
       res = lucky_phases ();
+    if (!res && !level)
+      res = local_search ();
     if (!res || (res == 10 && external_prop)) {
       if (res == 10 && external_prop && level)
         backtrack ();
