@@ -654,7 +654,7 @@ void Internal::init_search_limits () {
         u = 0;
     stats.bump_used = {0, 0};
     for (auto u : {true, false}){
-      tier1[u] = max (tier1[u], opts.tier1minglue ? opts.tier2minglue : 2);
+      tier1[u] = max (tier1[u], opts.tier1minglue ? opts.tier1minglue : 2);
       tier2[u] = max (tier2[u], opts.tier2minglue ? opts.tier2minglue : 6);
     }
     stats.tierecomputed = 0;
