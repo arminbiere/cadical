@@ -7475,9 +7475,6 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   }
 
 
-  const int64_t old = stats.congruence.congruent;
-  const int old_merged = stats.congruence.congruent;
-
   // congruencebinary is already doing it (and more actually)
   if (!internal->opts.congruencebinaries) {
     if (remove_units_before_run) {
@@ -7510,6 +7507,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   assert (unsat || closure.chain.empty ());
   assert (unsat || lrat_chain.empty ());
   closure.extract_binaries ();
+  const int64_t old_merged = stats.congruence.congruent; // the binary stuff is covered by other techniques
   assert (unsat || closure.chain.empty ());
   assert (unsat || lrat_chain.empty ());
   closure.extract_gates ();
@@ -7556,7 +7554,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   }
 
   STOP_SIMPLIFIER (congruence, CONGRUENCE);
-  report ('c', !opts.reportall && !(stats.congruence.congruent - old));
+  report ('c', !opts.reportall && !(stats.congruence.congruent - old_merged));
 #ifndef NDEBUG
   size_t watched = 0;
   for (auto v : vars) {
