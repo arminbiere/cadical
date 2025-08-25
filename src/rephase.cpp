@@ -314,7 +314,7 @@ void Internal::rephase () {
   }
   assert (type);
 
-  int64_t delta = opts.rephaseint * (last.stabilize.rephased + 1);
+  int64_t delta = opts.rephaseint * (stats.rephased.total + 1);
   lim.rephase = stats.conflicts + delta;
 
   PHASE ("rephase", stats.rephased.total,
