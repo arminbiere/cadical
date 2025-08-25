@@ -601,14 +601,14 @@ void Internal::init_search_limits () {
     LOG ("new conflict-based stabilize limit %" PRId64 " after %" PRId64
          " conflicts",
          lim.stabilize, inc.stabilize);
-
-    if (opts.stabilize && opts.reluctant) {
-      LOG ("new restart reluctant doubling sequence period %d",
-           opts.reluctant);
-      reluctant.enable (opts.reluctant, opts.reluctantmax);
-    } else
-      reluctant.disable ();
   }
+
+  if (opts.stabilize && opts.reluctant) {
+    LOG ("new restart reluctant doubling sequence period %d",
+         opts.reluctant);
+    reluctant.enable (opts.reluctant, opts.reluctantmax);
+  } else
+    reluctant.disable ();
 
   /*----------------------------------------------------------------------*/
 
