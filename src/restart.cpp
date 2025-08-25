@@ -77,7 +77,7 @@ bool Internal::stabilizing () {
            lim.stabilize, stats.conflicts);
     // rare occurence in incremental calls requiring no ticks
     if (!inc.stabilize)
-      inc.stabilize = 1;
+      inc.stabilize = 1e3;
     inc.stabilize *= stabilizefactor * 1e-2;
     if (inc.stabilize > stabilizemaxint)
       inc.stabilize = stabilizemaxint;
