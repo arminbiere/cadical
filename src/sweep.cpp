@@ -919,6 +919,10 @@ int64_t Internal::add_sweep_binary (sweep_proof_clause pc, int lit,
     proof->weaken_minus (id, clause);
   }
   external->push_binary_clause_on_extension_stack (id, lit, other);
+  for (auto &tracer : tracers) {
+    if (externalize (lit) > 0)
+      tracer->notify_equivalence (externalize (lit), externalize (other));
+  }
   clause.clear ();
   lrat_chain.clear ();
   return id;

@@ -216,6 +216,7 @@ class Terminator;
 class ClauseIterator;
 class WitnessIterator;
 class ExternalPropagator;
+class EquivalenceTracer;
 class Tracer;
 struct InternalTracer;
 class FileTracer;
