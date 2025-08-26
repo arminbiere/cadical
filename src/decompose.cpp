@@ -470,7 +470,13 @@ bool Internal::decompose_round () {
     external->push_binary_clause_on_extension_stack (id2, idx, -other);
     decompose_ids[vlit (idx)] = id2;
     for (auto &tracer : tracers) {
-      tracer->notify_equivalence (externalize (idx), externalize (other));
+      const int eidx = externalize (idx);
+      if (external->ervars[abs (eidx)])
+	continue;
+      const int eother = externalize (other);
+      if (external->ervars[abs (eother)])
+	continue;
+      tracer->notify_equivalence (eidx, externalize (other));
     }
 
     clause.clear ();
