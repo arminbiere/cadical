@@ -220,7 +220,7 @@ void Internal::finish_added_clause_with_id (int64_t id, bool restore) {
     proof->add_external_original_clause (id, false, external->eclause,
                                          restore);
   }
-  add_new_original_clause (id);
+  add_new_original_clause (id, restore);
   original.clear ();
 }
 

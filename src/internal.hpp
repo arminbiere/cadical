@@ -665,7 +665,7 @@ struct Internal {
   // Managing clauses in 'clause.cpp'.  Without explicit 'Clause' argument
   // these functions work on the global temporary 'clause'.
   //
-  Clause *new_clause (bool red, int glue = 0);
+  Clause *new_clause (bool red, int glue = 0, bool restore = false);
   void promote_clause (Clause *, int new_glue);
   void promote_clause_glue_only (Clause *, int new_glue);
   size_t shrink_clause (Clause *, int new_size);
@@ -697,7 +697,7 @@ struct Internal {
   void delete_clause (Clause *);
   void mark_garbage (Clause *);
   void assign_original_unit (int64_t, int);
-  void add_new_original_clause (int64_t);
+  void add_new_original_clause (int64_t, bool restore = false);
   Clause *new_learned_redundant_clause (int glue);
   Clause *new_hyper_binary_resolved_clause (bool red, int glue);
   Clause *new_clause_as (const Clause *orig);
@@ -1044,8 +1044,8 @@ struct Internal {
     stats.mark.factor++;
     f.factor |= bit;
   }
-  void mark_added (int lit, int size, bool redundant);
-  void mark_added (Clause *);
+  void mark_added (int lit, int size, bool redundant, bool restore = false);
+  void mark_added (Clause *, bool restore = false);
 
   bool marked_subsume (int lit) const { return flags (lit).subsume; }
 

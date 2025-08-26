@@ -56,26 +56,26 @@ void Internal::mark_removed (Clause *c, int except) {
 // 'ternary' preprocessing reconsider clauses on an added literal as well as
 // trying to block clauses on it.
 
-inline void Internal::mark_added (int lit, int size, bool redundant) {
+inline void Internal::mark_added (int lit, int size, bool redundant, bool restore) {
   mark_subsume (lit);
   if (size == 3)
     mark_ternary (lit);
   if (!redundant)
     mark_block (lit);
-  if (!redundant || size == 2)
+  if ((!redundant || size == 2) && (opts.factorrestorecand || !restore))
     mark_factor (lit);
 }
 
-void Internal::mark_added (Clause *c) {
+void Internal::mark_added (Clause *c, bool restore) {
   LOG (c, "marking added");
   assert (likely_to_be_kept_clause (c));
   for (const auto &lit : *c)
-    mark_added (lit, c->size, c->redundant);
+    mark_added (lit, c->size, c->redundant, restore);
 }
 
 /*------------------------------------------------------------------------*/
 
-Clause *Internal::new_clause (bool red, int glue) {
+Clause *Internal::new_clause (bool red, int glue, bool restore) {
 
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
@@ -138,7 +138,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   LOG (c, "new pointer %p", (void *) c);
 
   if (likely_to_be_kept_clause (c))
-    mark_added (c);
+    mark_added (c, restore);
 
   return c;
 }
@@ -378,7 +378,7 @@ void Internal::assign_original_unit (int64_t id, int lit) {
 //
 // TODO: Find another name for 'tainted' in the context of ilb, tainted
 // is reconstruction related already and they should not mix.
-void Internal::add_new_original_clause (int64_t id) {
+void Internal::add_new_original_clause (int64_t id, bool restore) {
 
   if (!from_propagator && level && !opts.ilb) {
     backtrack ();
@@ -517,7 +517,7 @@ void Internal::add_new_original_clause (int64_t id) {
       int glue = (int) (learned_levels.size () + unassigned);
       assert (glue <= (int) clause.size ());
       bool clause_redundancy = from_propagator && ext_clause_forgettable;
-      Clause *c = new_clause (clause_redundancy, glue);
+      Clause *c = new_clause (clause_redundancy, glue, restore);
       c->id = new_id;
       clause_id--;
       watch_clause (c);
