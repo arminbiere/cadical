@@ -1286,6 +1286,7 @@ struct Internal {
   bool factor ();
   int get_new_extension_variable ();
   Clause *new_factor_clause ();
+  void adjust_scores_and_phases_of_fresh_variables (Factoring &);
 
   // instantiate
   //

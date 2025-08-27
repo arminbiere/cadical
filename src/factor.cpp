@@ -765,6 +765,69 @@ void Internal::schedule_factorization (Factoring &factoring) {
 #endif
 }
 
+void Internal::adjust_scores_and_phases_of_fresh_variables (
+    Factoring &factoring) {
+  if (factoring.fresh.empty ())
+    return;
+  for (auto lit : factoring.fresh) {
+    assert (lit > 0 && internal->max_var);
+    const double old_score = internal->stab[lit];
+    const double new_score = 0;
+    if (old_score == new_score)
+      continue;
+    if (!scores.contains (lit))
+      continue;
+    LOG ("unbumping %s", LOGLIT(lit));
+    internal->stab[lit] = new_score;
+    scores.update (lit);
+  }
+
+  for (auto lit : factoring.fresh) {
+    LOG ("dequeuing %s", LOGLIT(lit));
+    queue.dequeue(links, lit);
+  }
+  for (auto lit : factoring.fresh) {
+    LOG ("enqueuing last %s", LOGLIT(lit));
+    queue.prepend (links, lit);
+  }
+
+  int lit = queue.first;
+  queue.bumped = 0;
+  while (lit) {
+    btab[lit] = ++queue.bumped;
+    lit = links[lit].next;
+  }
+  update_queue_unassigned (queue.last);
+
+  if (stats.bumped < queue.bumped) // really happens for very small examples
+    stats.bumped = queue.bumped;
+
+#ifndef NDEBUG
+  lit = queue.first;
+  int next_lit = links[lit].next;
+  while (next_lit) {
+    assert (btab[lit] < btab[next_lit]);
+    const int tmp = links[next_lit].next;
+    assert (!tmp || links[tmp].prev == next_lit);
+    lit = next_lit;
+    next_lit = tmp;
+  }
+
+  lit = queue.last;
+  next_lit = links[lit].prev;
+  while (next_lit) {
+    assert (btab[lit] > btab[next_lit]);
+    const int tmp = links[next_lit].prev;
+    assert (!tmp || links[tmp].next == next_lit);
+    lit = next_lit;
+    next_lit = tmp;
+  }
+  assert (queue.first);
+  assert (queue.last);
+#endif
+  factoring.fresh.clear ();
+}
+
 bool Internal::run_factorization (int64_t limit) {
   Factoring factoring = Factoring (this, limit);
   schedule_factorization (factoring);
@@ -821,6 +884,7 @@ bool Internal::run_factorization (int64_t limit) {
       }
     }
     release_quotients (factoring);
+    adjust_scores_and_phases_of_fresh_variables (factoring);
   }
 
   // since we cannot remove elements from the heap we check wether the

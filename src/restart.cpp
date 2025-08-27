@@ -63,6 +63,7 @@ bool Internal::stabilizing () {
 
     const bool next_stable = !stable;
     lim.stabilize = stats.ticks.search[next_stable] + next_delta_ticks;
+    last.stabilize.ticks = stats.ticks.search[next_stable];
     if (lim.stabilize <= stats.ticks.search[next_stable])
       lim.stabilize = stats.ticks.search[next_stable] + 1;
     PHASE ("stabilizing", stats.stabphases,
