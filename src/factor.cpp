@@ -785,24 +785,20 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
   for (auto lit : factoring.fresh) {
     LOG ("dequeuing %s", LOGLIT(lit));
     queue.dequeue(links, lit);
-  }
-  for (auto lit : factoring.fresh) {
-    LOG ("enqueuing last %s", LOGLIT(lit));
     queue.prepend (links, lit);
   }
 
-  int lit = queue.first;
+  int lit = queue.last;
   queue.bumped = 0;
   while (lit) {
-    btab[lit] = ++queue.bumped;
-    lit = links[lit].next;
+    btab[lit] = --queue.bumped;
+    lit = links[lit].prev;
   }
   update_queue_unassigned (queue.last);
 
-  if (stats.bumped < queue.bumped) // really happens for very small examples
-    stats.bumped = queue.bumped;
-
 #ifndef NDEBUG
+  for (auto v : vars)
+    assert (val (v) || scores.contains(v));
   lit = queue.first;
   int next_lit = links[lit].next;
   while (next_lit) {
@@ -884,7 +880,6 @@ bool Internal::run_factorization (int64_t limit) {
       }
     }
     release_quotients (factoring);
-    adjust_scores_and_phases_of_fresh_variables (factoring);
   }
 
   // since we cannot remove elements from the heap we check wether the
@@ -894,8 +889,7 @@ bool Internal::run_factorization (int64_t limit) {
     const unsigned idx = factoring.schedule.front ();
     completed = occs (u2i (idx)).empty ();
   }
-  // kissat initializes scores for new variables at this point, however
-  // this is actually done already during resize of internal
+  adjust_scores_and_phases_of_fresh_variables (factoring);
 #ifndef QUIET
   report ('f', !factored);
 #endif
