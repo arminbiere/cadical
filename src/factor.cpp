@@ -772,10 +772,12 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
   if (factoring.fresh.empty ())
     return;
 
+#if 0 // the scores are very low anyway
   for (auto lit : factoring.fresh) {
     assert (lit > 0 && internal->max_var);
     const double old_score = internal->stab[lit];
-    const double new_score = 1.0 / (double)lit; // just trying to make the scores a little different from each other
+    // make the scores a little different from each other with the newest having the highest score
+    const double new_score = 1.0 / (double)(internal->max_var - lit);
     if (old_score == new_score)
       continue;
     if (!scores.contains (lit))
@@ -784,22 +786,29 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
     internal->stab[lit] = new_score;
     scores.update (lit);
   }
+#endif
 
   for (auto lit : factoring.fresh) {
-    LOG ("dequeuing %s", LOGLIT(lit));
-    queue.dequeue(links, lit);
-    queue.prepend (links, lit);
+    LOG ("dequeuing %s", LOGLIT (lit));
+    queue.dequeue (links, lit);
   }
 
-  int lit = queue.last;
+  for (auto lit : factoring.fresh) {
+    LOG ("dequeuing %s", LOGLIT (lit));
+    queue.bury (links, lit);
+  }
+
+  // fix the scores with negative numbers
+  int lit = queue.first;
   queue.bumped = 0;
   while (lit) {
-    btab[lit] = --queue.bumped;
-    lit = links[lit].prev;
+    btab[lit] = ++queue.bumped;
+    lit = links[lit].next;
   }
+  stats.bumped = queue.bumped;
   update_queue_unassigned (queue.last);
 
-#ifndef NDEBUG
+  #ifndef NDEBUG
   for (auto v : vars)
     assert (val (v) || scores.contains(v));
   lit = queue.first;

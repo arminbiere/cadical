@@ -58,7 +58,7 @@ struct Queue {
     l.next = 0;
   }
 
-  inline void prepend (Links &links, int idx) {
+  inline void bury (Links &links, int idx) {
     Link &l = links[idx];
     if ((l.next = first))
       links[first].prev = idx;
