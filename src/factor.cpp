@@ -767,12 +767,15 @@ void Internal::schedule_factorization (Factoring &factoring) {
 
 void Internal::adjust_scores_and_phases_of_fresh_variables (
     Factoring &factoring) {
+  if (!opts.factorunbump)
+    return;
   if (factoring.fresh.empty ())
     return;
+
   for (auto lit : factoring.fresh) {
     assert (lit > 0 && internal->max_var);
     const double old_score = internal->stab[lit];
-    const double new_score = 0;
+    const double new_score = 1.0 / (double)lit; // just trying to make the scores a little different from each other
     if (old_score == new_score)
       continue;
     if (!scores.contains (lit))
