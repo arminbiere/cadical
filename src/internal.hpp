@@ -697,7 +697,7 @@ struct Internal {
   void delete_clause (Clause *);
   void mark_garbage (Clause *);
   void assign_original_unit (int64_t, int);
-  void add_new_original_clause (int64_t, bool restore = false);
+  void add_new_original_clause (int64_t);
   Clause *new_learned_redundant_clause (int glue);
   Clause *new_hyper_binary_resolved_clause (bool red, int glue);
   Clause *new_clause_as (const Clause *orig);

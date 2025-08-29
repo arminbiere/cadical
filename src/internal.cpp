@@ -219,7 +219,7 @@ void Internal::finish_added_clause_with_id (int64_t id, bool restore) {
     proof->add_external_original_clause (id, false, external->eclause,
                                          restore);
   }
-  add_new_original_clause (id, restore);
+  add_new_original_clause (id);
   original.clear ();
 }
 
@@ -638,16 +638,24 @@ void Internal::init_search_limits () {
 
   /*----------------------------------------------------------------------*/
   // tier 1 and tier 2 limits
-  if (incremental) {
+  if (incremental && opts.recomputetier) {
     for (auto m : {true, false})
       for (auto &u : stats.used[m])
         u = 0;
     stats.bump_used = {0, 0};
-    for (auto u : {true, false}){
+    for (auto u : {true, false}) {
       tier1[u] = max (tier1[u], opts.tier1minglue ? opts.tier1minglue : 2);
       tier2[u] = max (tier2[u], opts.tier2minglue ? opts.tier2minglue : 6);
     }
     stats.tierecomputed = 0;
+  }
+
+  /*----------------------------------------------------------------------*/
+  // clause decaying
+  if (incremental)
+    last.incremental_decay.last_id = 0;
+  else {
+    lim.incremental_decay = opts.incdecayint;
   }
 
   /*----------------------------------------------------------------------*/

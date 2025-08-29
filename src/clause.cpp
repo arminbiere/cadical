@@ -379,7 +379,7 @@ void Internal::assign_original_unit (int64_t id, int lit) {
 //
 // TODO: Find another name for 'tainted' in the context of ilb, tainted
 // is reconstruction related already and they should not mix.
-void Internal::add_new_original_clause (int64_t id, bool restore) {
+void Internal::add_new_original_clause (int64_t id) {
 
   if (!from_propagator && level && !opts.ilb) {
     backtrack ();
