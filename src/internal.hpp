@@ -825,6 +825,7 @@ struct Internal {
 #endif
 
   void recompute_tier ();
+  void decay_clauses_upon_incremental_clauses ();
   void print_tier_usage_statistics ();
   // Use last learned clause to subsume some more.
   //

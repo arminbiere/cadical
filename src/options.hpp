@@ -129,6 +129,8 @@ OPTION( forcephase,        0,  0,  1,0,0,1, "always use initial phase") \
 OPTION( frat,              0,  0,  2,0,0,1, "1=frat(lrat), 2=frat(drat)") \
 OPTION( idrup,             0,  0,  1,0,0,1, "incremental proof format") \
 OPTION( ilb,               0,  0,  2,0,0,1, "ILB (incremental lazy backtrack) (0: no, 1: assumptions only, 2: everything)") \
+OPTION( incdecay,          1,  0,  4,0,0,1, "decay clauses when doing incremental clauses" ) \
+OPTION( incdecayint,     1e6,  1,2e9,0,1,1, "decay interval when doing incremental clauses" ) \
 OPTION( inprobeint,      100,  1,2e9,0,0,1, "inprobing interval" ) \
 OPTION( inprobing,         1,  0,  1,0,1,1, "enable probe inprocessing") \
 OPTION( inprocessing,      1,  0,  1,0,1,1, "enable general inprocessing") \

@@ -644,30 +644,43 @@ Clause *Internal::new_resolved_irredundant_clause () {
 void Internal::decay_clauses_upon_incremental_clauses () {
   if (!opts.incdecay)
     return;
-  if (stats.searches > 1)
+  if (!stats.searches)
     return;
   if (stats.conflicts < lim.incremental_decay)
     return;
 
-  lim.incremental_decay += stats.conflicts + opts.incdecayint;
-  LOG ("decaying clauses with next decaying at conflict %" PRId64 "(after the next incremental call)", lim.incremental_decay);
+  PHASE ("decay", stats.incremental_decay,
+         "decaying clauses with next decaying at conflict %" PRId64
+         "(after the next incremental call)",
+         lim.incremental_decay);
 
   for (auto c : clauses) {
     if (c->garbage)
       continue;
     if (!c->redundant)
       continue;
+    if (c->id >= last.incremental_decay.last_id)
+      continue;
     switch (opts.incdecay) {
     case 1: // my intuition
       ++c->glue;
       break;
     case 2: // Armin's idea
-      c->used = 1;
+      if (c->glue < tier1[false])
+        c->used = 1;
+      break;
+    case 3:
+      if (c->glue < tier1[false])
+        c->used = 1;
+      ++c->glue;
       break;
     default:
-      c->used = 0;
       break;
     }
   }
+
+  lim.incremental_decay += stats.conflicts + opts.incdecayint;
+  ++stats.incremental_decay;
+  last.incremental_decay.last_id = clause_id;
 }
 } // namespace CaDiCaL

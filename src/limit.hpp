@@ -27,6 +27,7 @@ struct Limit {
   int64_t report;    // report limit for header
   int64_t restart;   // conflict limit for next 'restart'
   int64_t stabilize; // conflict/ticks limit for next 'stabilize'
+  int64_t incremental_decay; // conflict/ticks limit for next clause 'decay' for incremental clauses
 
   int keptsize;           // maximum kept size in 'reduce'
   int keptglue;           // maximum kept glue in 'reduce'
@@ -112,6 +113,9 @@ struct Last {
     int64_t ticks;
     int64_t rephased;
   } stabilize;
+  struct {
+    int64_t last_id;
+  }  incremental_decay;
   Last ();
 };
 
