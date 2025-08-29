@@ -110,6 +110,8 @@ char Internal::rephase_walk () {
 void Internal::rephase () {
 
   stats.rephased.total++;
+  last.stabilize.rephased++;
+  assert (last.stabilize.rephased <= stats.rephased.total);
   PHASE ("rephase", stats.rephased.total,
          "reached rephase limit %" PRId64 " after %" PRId64 " conflicts",
          lim.rephase, opts.rephase==2 ? stats.stabconflicts : stats.conflicts);
@@ -334,7 +336,7 @@ void Internal::rephase () {
     assert (!stable && opts.walk && opts.walknonstable);
     // flipping,(random,best,walk,flipping,best,walk)^\omega
     if (!count)
-      type = rephase_flipping ();
+      type = rephase_original ();
     else
       switch ((count - 1) % 6) {
       case 0:

@@ -615,6 +615,9 @@ void Internal::mark_eliminated_clauses_as_garbage (
 
   LOG ("marking irredundant clauses with %d as garbage", pivot);
 
+  const int elit = internal->externalize (pivot);
+  const int eidx = abs (elit);
+  const bool is_extension_var = opts.factornoreconstr && external->ervars[eidx] && !flags(pivot).factored_but_on_reconstruction_stack;
   const int64_t substitute = eliminator.gates.size ();
   if (substitute)
     LOG ("pushing %" PRId64 " gate clauses on extension stack", substitute);
@@ -627,11 +630,12 @@ void Internal::mark_eliminated_clauses_as_garbage (
       continue;
     assert (!c->redundant);
     if (!substitute || c->gate) {
-      if (proof)
+      if (proof && !is_extension_var)
         proof->weaken_minus (c);
       if (c->size == 2)
         deleted_binary_clause = true;
-      external->push_clause_on_extension_stack (c, pivot);
+      if (!is_extension_var)
+	external->push_clause_on_extension_stack (c, pivot);
 #ifndef NDEBUG
       pushed++;
 #endif
@@ -649,11 +653,12 @@ void Internal::mark_eliminated_clauses_as_garbage (
       continue;
     assert (!d->redundant);
     if (!substitute || d->gate) {
-      if (proof)
+      if (proof && !is_extension_var)
         proof->weaken_minus (d);
       if (d->size == 2)
         deleted_binary_clause = true;
-      external->push_clause_on_extension_stack (d, -pivot);
+      if (!is_extension_var)
+	external->push_clause_on_extension_stack (d, -pivot);
 #ifndef NDEBUG
       pushed++;
 #endif

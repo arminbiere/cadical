@@ -765,6 +765,77 @@ void Internal::schedule_factorization (Factoring &factoring) {
 #endif
 }
 
+void Internal::adjust_scores_and_phases_of_fresh_variables (
+    Factoring &factoring) {
+  if (!opts.factorunbump)
+    return;
+  if (factoring.fresh.empty ())
+    return;
+
+#if 0 // the scores are very low anyway
+  for (auto lit : factoring.fresh) {
+    assert (lit > 0 && internal->max_var);
+    const double old_score = internal->stab[lit];
+    // make the scores a little different from each other with the newest having the highest score
+    const double new_score = 1.0 / (double)(internal->max_var - lit);
+    if (old_score == new_score)
+      continue;
+    if (!scores.contains (lit))
+      continue;
+    LOG ("unbumping %s", LOGLIT(lit));
+    internal->stab[lit] = new_score;
+    scores.update (lit);
+  }
+#endif
+
+  for (auto lit : factoring.fresh) {
+    LOG ("dequeuing %s", LOGLIT (lit));
+    queue.dequeue (links, lit);
+  }
+
+  for (auto lit : factoring.fresh) {
+    LOG ("dequeuing %s", LOGLIT (lit));
+    queue.bury (links, lit);
+  }
+
+  // fix the scores with negative numbers
+  int lit = queue.first;
+  queue.bumped = 0;
+  while (lit) {
+    btab[lit] = ++queue.bumped;
+    lit = links[lit].next;
+  }
+  stats.bumped = queue.bumped;
+  update_queue_unassigned (queue.last);
+
+  #ifndef NDEBUG
+  for (auto v : vars)
+    assert (val (v) || scores.contains(v));
+  lit = queue.first;
+  int next_lit = links[lit].next;
+  while (next_lit) {
+    assert (btab[lit] < btab[next_lit]);
+    const int tmp = links[next_lit].next;
+    assert (!tmp || links[tmp].prev == next_lit);
+    lit = next_lit;
+    next_lit = tmp;
+  }
+
+  lit = queue.last;
+  next_lit = links[lit].prev;
+  while (next_lit) {
+    assert (btab[lit] > btab[next_lit]);
+    const int tmp = links[next_lit].prev;
+    assert (!tmp || links[tmp].next == next_lit);
+    lit = next_lit;
+    next_lit = tmp;
+  }
+  assert (queue.first);
+  assert (queue.last);
+#endif
+  factoring.fresh.clear ();
+}
+
 bool Internal::run_factorization (int64_t limit) {
   Factoring factoring = Factoring (this, limit);
   schedule_factorization (factoring);
@@ -830,8 +901,7 @@ bool Internal::run_factorization (int64_t limit) {
     const unsigned idx = factoring.schedule.front ();
     completed = occs (u2i (idx)).empty ();
   }
-  // kissat initializes scores for new variables at this point, however
-  // this is actually done already during resize of internal
+  adjust_scores_and_phases_of_fresh_variables (factoring);
 #ifndef QUIET
   report ('f', !factored);
 #endif

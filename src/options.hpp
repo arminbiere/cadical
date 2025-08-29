@@ -113,8 +113,11 @@ OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds") \
 OPTION( factoreffort,     50,  0,1e6,0,0,1, "relative effort per mille") \
 OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort in millions") \
+OPTION( factornoreconstr,  1,  0,  1,0,0,1, "don't push unusued eliminated BVA on reconstruction") \
+OPTION( factorrestorecand, 1,  0,  1,0,0,1, "mark restored clauses as candidates for factor") \
 OPTION( factorsize,        5,  2,2e9,0,0,1, "clause size limit") \
 OPTION( factorthresh,      7,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
+OPTION( factorunbump,      0,  0,  1,0,1,1, "extension variable with lowest importance [1: as in kissat]") \
 OPTION( fastelim,          1,  0,  1,0,1,1, "fast BVE during preprocessing") \
 OPTION( fastelimbound,     8,  1,1e3,1,0,1, "fast BVE bound during preprocessing") \
 OPTION( fastelimclslim,  1e2,  2,2e9,2,0,1, "fast BVE resolvent size limit") \
@@ -169,6 +172,7 @@ OPTION( reluctantint,   1024,  0,2e9,0,0,1, "reluctant doubling period") \
 OPTION( reluctantmax,1048576,  0,2e9,0,0,1, "maximum reluctant doubling period") \
 OPTION( rephase,           1,  0,  2,0,0,1, "enable resetting phase (0=no,1=always,2=stable-only)") \
 OPTION( rephaseint,      1e3,  1,2e9,0,0,1, "rephase interval") \
+OPTION( rephaseticks,           1,  0,  1,0,0,1, "enable rephasing scheduled by ticks") \
 OPTION( report,reportdefault,  0,  1,0,0,1, "enable reporting") \
 OPTION( reportall,         0,  0,  1,0,0,1, "report even if not successful") \
 OPTION( reportsolve,       0,  0,  1,0,0,1, "use solving not process time") \
@@ -224,7 +228,9 @@ OPTION( ternaryocclim,   1e2,  1,2e9,2,0,1, "ternary occurrence limit") \
 OPTION( ternaryrounds,     2,  1, 16,1,0,1, "maximum ternary rounds") \
 OPTION( ternarythresh,     6,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
 OPTION( tier1limit,       50,  0,100,0,0,1, "limit of tier1 usage in percentage") \
+OPTION( tier1minglue,      0,  0,100,0,0,1, "lowest tier1 limit") \
 OPTION( tier2limit,       90,  0,100,0,0,1, "limit of tier2 usage in percentage") \
+OPTION( tier2minglue,      0,  0,100,0,0,1, "lowest tier2 limit") \
 OPTION( transred,          1,  0,  1,0,1,1, "transitive reduction of BIG") \
 OPTION( transredeffort,  1e2,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( transredmaxeff,  1e8,  0,2e9,1,0,1, "maximum efficiency") \

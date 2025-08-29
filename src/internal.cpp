@@ -219,7 +219,7 @@ void Internal::finish_added_clause_with_id (int64_t id, bool restore) {
     proof->add_external_original_clause (id, false, external->eclause,
                                          restore);
   }
-  add_new_original_clause (id);
+  add_new_original_clause (id, restore);
   original.clear ();
 }
 
@@ -554,6 +554,7 @@ void Internal::init_search_limits () {
 
   lim.rephase = stats.conflicts + opts.rephaseint;
   lim.rephased[0] = lim.rephased[1] = 0;
+  last.stabilize.rephased = 0;
   LOG ("new rephase limit %" PRId64 " after %" PRId64 " conflicts",
        lim.rephase, lim.rephase - stats.conflicts);
 
@@ -584,11 +585,21 @@ void Internal::init_search_limits () {
   } else
     LOG ("keeping non-stable phase");
 
-  if (!incremental) {
+  if (opts.rephaseticks) {
     inc.stabilize = 0;
+    last.stabilize.conflicts = stats.conflicts;
     lim.stabilize = stats.conflicts + opts.stabilizeinit;
-    LOG ("initial stabilize limit %" PRId64 " after %d conflicts",
+    last.stabilize.ticks = stats.ticks.search[0];
+    stats.stabphases = 0;
+    LOG ("new ticks-based stabilize limit %" PRId64 " after %d conflicts",
          lim.stabilize, (int) opts.stabilizeinit);
+  } else { //
+    const int stabilizeint = 1e3;
+    inc.stabilize = stabilizeint;
+    lim.stabilize = stats.conflicts + inc.stabilize;
+    LOG ("new conflict-based stabilize limit %" PRId64 " after %" PRId64
+         " conflicts",
+         lim.stabilize, inc.stabilize);
   }
 
   if (opts.stabilize && opts.reluctant && opts.reluctantint) {
@@ -632,6 +643,20 @@ void Internal::init_search_limits () {
   } else {
     lim.localsearch = inc.localsearch;
     LOG ("limiting to %" PRId64 " local search rounds", lim.localsearch);
+  }
+
+  /*----------------------------------------------------------------------*/
+  // tier 1 and tier 2 limits
+  if (incremental) {
+    for (auto m : {true, false})
+      for (auto &u : stats.used[m])
+        u = 0;
+    stats.bump_used = {0, 0};
+    for (auto u : {true, false}){
+      tier1[u] = max (tier1[u], opts.tier1minglue ? opts.tier1minglue : 2);
+      tier2[u] = max (tier2[u], opts.tier2minglue ? opts.tier2minglue : 6);
+    }
+    stats.tierecomputed = 0;
   }
 
   /*----------------------------------------------------------------------*/
@@ -928,10 +953,10 @@ int Internal::solve (bool preprocess_only) {
   if (!res && !level)
     res = preprocess (preprocess_only);
   if (!preprocess_only) {
-    if (!res && !level)
-      res = local_search ();
     if (!res && !level && opts.luckylate)
       res = lucky_phases ();
+    if (!res && !level)
+      res = local_search ();
     if (!res || (res == 10 && external_prop)) {
       if (res == 10 && external_prop && level)
         backtrack ();
