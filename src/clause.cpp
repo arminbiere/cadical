@@ -56,26 +56,26 @@ void Internal::mark_removed (Clause *c, int except) {
 // 'ternary' preprocessing reconsider clauses on an added literal as well as
 // trying to block clauses on it.
 
-inline void Internal::mark_added (int lit, int size, bool redundant, bool restore) {
+inline void Internal::mark_added (int lit, int size, bool redundant) {
   mark_subsume (lit);
   if (size == 3)
     mark_ternary (lit);
   if (!redundant)
     mark_block (lit);
-  if ((!redundant || size == 2) && (opts.factorrestorecand || !restore))
+  if ((!redundant || size == 2))
     mark_factor (lit);
 }
 
-void Internal::mark_added (Clause *c, bool restore) {
+void Internal::mark_added (Clause *c) {
   LOG (c, "marking added");
   assert (likely_to_be_kept_clause (c));
   for (const auto &lit : *c)
-    mark_added (lit, c->size, c->redundant, restore);
+    mark_added (lit, c->size, c->redundant);
 }
 
 /*------------------------------------------------------------------------*/
 
-Clause *Internal::new_clause (bool red, int glue, bool restore) {
+Clause *Internal::new_clause (bool red, int glue) {
 
   assert (clause.size () <= (size_t) INT_MAX);
   const int size = (int) clause.size ();
@@ -138,7 +138,7 @@ Clause *Internal::new_clause (bool red, int glue, bool restore) {
   LOG (c, "new pointer %p", (void *) c);
 
   if (likely_to_be_kept_clause (c))
-    mark_added (c, restore);
+    mark_added (c);
 
   return c;
 }
@@ -518,7 +518,7 @@ void Internal::add_new_original_clause (int64_t id, bool restore) {
       int glue = (int) (learned_levels.size () + unassigned);
       assert (glue <= (int) clause.size ());
       bool clause_redundancy = from_propagator && ext_clause_forgettable;
-      Clause *c = new_clause (clause_redundancy, glue, restore);
+      Clause *c = new_clause (clause_redundancy, glue);
       c->id = new_id;
       clause_id--;
       watch_clause (c);
@@ -641,4 +641,33 @@ Clause *Internal::new_resolved_irredundant_clause () {
   return res;
 }
 
+void Internal::decay_clauses_upon_incremental_clauses () {
+  if (!opts.incdecay)
+    return;
+  if (stats.searches > 1)
+    return;
+  if (stats.conflicts < lim.incremental_decay)
+    return;
+
+  lim.incremental_decay += stats.conflicts + opts.incdecayint;
+  LOG ("decaying clauses with next decaying at conflict %" PRId64 "(after the next incremental call)", lim.incremental_decay);
+
+  for (auto c : clauses) {
+    if (c->garbage)
+      continue;
+    if (!c->redundant)
+      continue;
+    switch (opts.incdecay) {
+    case 1: // my intuition
+      ++c->glue;
+      break;
+    case 2: // Armin's idea
+      c->used = 1;
+      break;
+    default:
+      c->used = 0;
+      break;
+    }
+  }
+}
 } // namespace CaDiCaL

@@ -585,22 +585,13 @@ void Internal::init_search_limits () {
   } else
     LOG ("keeping non-stable phase");
 
-  if (opts.rephaseticks) {
-    inc.stabilize = 0;
-    last.stabilize.conflicts = stats.conflicts;
-    lim.stabilize = stats.conflicts + opts.stabilizeinit;
-    last.stabilize.ticks = stats.ticks.search[0];
-    stats.stabphases = 0;
-    LOG ("new ticks-based stabilize limit %" PRId64 " after %d conflicts",
-         lim.stabilize, (int) opts.stabilizeinit);
-  } else { //
-    const int stabilizeint = 1e3;
-    inc.stabilize = stabilizeint;
-    lim.stabilize = stats.conflicts + inc.stabilize;
-    LOG ("new conflict-based stabilize limit %" PRId64 " after %" PRId64
-         " conflicts",
-         lim.stabilize, inc.stabilize);
-  }
+  inc.stabilize = 0;
+  last.stabilize.conflicts = stats.conflicts;
+  lim.stabilize = stats.conflicts + opts.stabilizeinit;
+  last.stabilize.ticks = stats.ticks.search[0];
+  stats.stabphases = 0;
+  LOG ("new ticks-based stabilize limit %" PRId64 " after %d conflicts",
+       lim.stabilize, (int) opts.stabilizeinit);
 
   if (opts.stabilize && opts.reluctant && opts.reluctantint) {
     LOG ("new restart reluctant doubling sequence period %d",
@@ -957,6 +948,8 @@ int Internal::solve (bool preprocess_only) {
       res = lucky_phases ();
     if (!res && !level)
       res = local_search ();
+    if (!res)
+      decay_clauses_upon_incremental_clauses ();
     if (!res || (res == 10 && external_prop)) {
       if (res == 10 && external_prop && level)
         backtrack ();

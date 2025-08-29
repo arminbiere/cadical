@@ -39,6 +39,8 @@ Version 2.2.0
   there is now only ilb with values 0, 1 (= only assumptions), and 2
   (= full reuse).
 
+- The trace now allows to get equivalent literals during solving
+
 Version 2.1.3
 -------------
 
