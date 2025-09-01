@@ -1256,12 +1256,13 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
           LOG (litId.clause,
                "found lrat in gate %d from %" PRId64 " (looking for %d)",
                litId.current_lit, litId.clause->id, falsified);
-          if (litId.current_lit == clashing) {
+          if (litId.current_lit == clashing || litId.current_lit == -clashing) {
             push_id_and_rewriting_lrat_unit (
                 litId.clause, Rewrite (), proof_chain, true, Rewrite (),
                 g->degenerated_gate == Special_Gate::DEGENERATED_AND || g->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE ? 0 : -g->lhs);
           }
         }
+	assert (!proof_chain.empty());
       } else {
         // Example: 3 = (-1&2) and 2=1
         // The proof consists in taking the binary clause with the rewrites
@@ -4376,21 +4377,28 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
     int keep_clashing = clashing;
     LOG ("keeping chain for falsifies: %d aka %d and clashing: %d aka %d",
          falsifies, orig_falsifies, clashing, orig_clashing);
+    // We do not need all the clauses. Therefore, we keep only the
+    // ones required by clashing.
     for (size_t j = 0; j < size; ++j) {
       LOG (g->pos_lhs_ids[j].clause, "looking at %d [%zd %zd] with val %d",
            g->pos_lhs_ids[j].current_lit, i, j,
            internal->val (g->pos_lhs_ids[i].current_lit));
       g->pos_lhs_ids[i] = g->pos_lhs_ids[j];
-      if (keep_clashing && g->pos_lhs_ids[i].current_lit != orig_clashing &&
-          g->pos_lhs_ids[i].current_lit != -orig_clashing &&
-          g->pos_lhs_ids[i].current_lit != keep_clashing &&
-          g->pos_lhs_ids[i].current_lit != -keep_clashing)
+      int &curr = g->pos_lhs_ids[i].current_lit;
+      // if the gate is not normal, we rewrite the LHS. Therefore, we
+      // also have to update the literal here.
+      if (g->degenerated_gate != Special_Gate::NORMAL && find_eager_representative(curr) == g->lhs)
+	curr = find_eager_representative(curr);
+      if (keep_clashing && curr != orig_clashing &&
+          curr != -orig_clashing &&
+          curr != keep_clashing &&
+          curr != -keep_clashing)
         continue;
-      if (internal->val (g->pos_lhs_ids[i].current_lit) &&
-          g->pos_lhs_ids[i].current_lit != src &&
-          g->pos_lhs_ids[i].current_lit != orig_falsifies)
+      if (internal->val (curr) &&
+          curr != src &&
+          curr != orig_falsifies)
         continue;
-      if (g->pos_lhs_ids[i].current_lit == dst) {
+      if (curr == dst) {
         if (!found)
           found = true;
         else
