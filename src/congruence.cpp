@@ -5963,6 +5963,9 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         add_ite_matching_proof_chain (g, h, normalized_lhs, h->lhs,
                                       extra_reasons_lit,
                                       extra_reasons_ulit);
+        // LHS can change for degenerated gates
+	if  (g->lhs != lhs)
+	  normalized_lhs = find_eager_representative(normalized_lhs);
         if (merge_literals (normalized_lhs, h->lhs, extra_reasons_lit,
                                  extra_reasons_ulit))
           ++internal->stats.congruence.ites;
@@ -6417,7 +6420,18 @@ void Closure::add_ite_matching_proof_chain (
   if (!internal->proof)
     return;
   LOG (g, "starting ITE matching proof chain");
-  LOG (h, "starting ITE matching proof chain with");
+  if (g->degenerated_gate != Special_Gate::NORMAL) {
+    g->lhs = find_eager_representative (g->lhs);
+    lhs1 = find_eager_representative(lhs1);
+    LOG (g, "rewritten LHS of g");
+  }
+  LOG (h, "matching ITE proof chain with");
+  if (h->degenerated_gate != Special_Gate::NORMAL) {
+    h->lhs = find_eager_representative (h->lhs);
+    lhs2 = find_eager_representative(lhs2);
+    LOG (g, "rewritten LHS of h");
+  }
+  LOG ("producing ITE gates %d %d", lhs1, lhs2);
   assert (unsimplified.empty ());
   assert (chain.empty ());
   if (internal->lrat)
@@ -6765,7 +6779,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
     std::vector<LRAT_ID> extra_reasons_lit, extra_reasons_ulit;
     add_ite_matching_proof_chain (h, g, h->lhs, lhs, extra_reasons_lit,
                                   extra_reasons_ulit);
-    if (merge_literals (h, g, h->lhs, lhs, extra_reasons_lit,
+    if (merge_literals (h, g, h->lhs, g->lhs, extra_reasons_lit,
                              extra_reasons_ulit)) {
       ++internal->stats.congruence.ites;
       LOG ("found merged literals");
