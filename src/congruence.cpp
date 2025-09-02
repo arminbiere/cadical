@@ -6131,11 +6131,14 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
   if ((orig_flag == Special_Gate::NO_ELSE || orig_flag == Special_Gate::NO_THEN) &&
       (find_eager_representative(g->lhs) == find_eager_representative(g->rhs[0]) || find_eager_representative(g->lhs) == find_eager_representative(g->rhs[1]))) {
     g->degenerated_gate = Special_Gate::DEGENERATED_AND;
+    LOG (g, "marking as degenerated");
     assert (find_eager_representative(g->lhs) == g->rhs[0] || find_eager_representative(g->lhs) == g->rhs[1]);
     Clause *d = g->pos_lhs_ids[new_idx1].clause;
+    int lit = g->rhs[0];
+    LOG (d, "with reference %s", LOGLIT (lit));
     assert (d->size == 2);
     g->pos_lhs_ids.clear ();
-    g->pos_lhs_ids.push_back({2, d});
+    g->pos_lhs_ids.push_back({lit, d});
     g->neg_lhs_ids.reset();
     return false;
   }
