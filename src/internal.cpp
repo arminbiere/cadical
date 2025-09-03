@@ -344,7 +344,7 @@ int Internal::propagate_assumptions () {
     proof->solve_query ();
   if (opts.ilb) {
     sort_and_reuse_assumptions ();
-    assert (opts.ilb == 2 || (size_t)level <= assumptions.size ());
+    assert (opts.ilb == 2 || (size_t) level <= assumptions.size ());
     stats.ilbtriggers++;
     stats.ilbsuccess += (level > 0);
     stats.levelsreused += level;
@@ -554,6 +554,7 @@ void Internal::init_search_limits () {
 
   lim.rephase = stats.conflicts + opts.rephaseint;
   lim.rephased[0] = lim.rephased[1] = 0;
+  last.stabilize.rephased = 0;
   LOG ("new rephase limit %" PRId64 " after %" PRId64 " conflicts",
        lim.rephase, lim.rephase - stats.conflicts);
 
@@ -584,17 +585,18 @@ void Internal::init_search_limits () {
   } else
     LOG ("keeping non-stable phase");
 
-  if (!incremental) {
-    inc.stabilize = 0;
-    lim.stabilize = stats.conflicts + opts.stabilizeinit;
-    LOG ("initial stabilize limit %" PRId64 " after %d conflicts",
-         lim.stabilize, (int) opts.stabilizeinit);
-  }
+  inc.stabilize = 0;
+  last.stabilize.conflicts = stats.conflicts;
+  lim.stabilize = stats.conflicts + opts.stabilizeinit;
+  last.stabilize.ticks = stats.ticks.search[0];
+  stats.stabphases = 0;
+  LOG ("new ticks-based stabilize limit %" PRId64 " after %d conflicts",
+       lim.stabilize, (int) opts.stabilizeinit);
 
-  if (opts.stabilize && opts.reluctant) {
+  if (opts.stabilize && opts.reluctant && opts.reluctantint) {
     LOG ("new restart reluctant doubling sequence period %d",
          opts.reluctant);
-    reluctant.enable (opts.reluctant, opts.reluctantmax);
+    reluctant.enable (opts.reluctantint, opts.reluctantmax);
   } else
     reluctant.disable ();
 
@@ -632,6 +634,28 @@ void Internal::init_search_limits () {
   } else {
     lim.localsearch = inc.localsearch;
     LOG ("limiting to %" PRId64 " local search rounds", lim.localsearch);
+  }
+
+  /*----------------------------------------------------------------------*/
+  // tier 1 and tier 2 limits
+  if (incremental && opts.recomputetier) {
+    for (auto m : {true, false})
+      for (auto &u : stats.used[m])
+        u = 0;
+    stats.bump_used = {0, 0};
+    for (auto u : {true, false}) {
+      tier1[u] = max (tier1[u], opts.tier1minglue ? opts.tier1minglue : 2);
+      tier2[u] = max (tier2[u], opts.tier2minglue ? opts.tier2minglue : 6);
+    }
+    stats.tierecomputed = 0;
+  }
+
+  /*----------------------------------------------------------------------*/
+  // clause decaying
+  if (incremental)
+    last.incremental_decay.last_id = 0;
+  else {
+    lim.incremental_decay = opts.incdecayint;
   }
 
   /*----------------------------------------------------------------------*/
@@ -723,8 +747,8 @@ void Internal::preprocess_quickly (bool always) {
 
   if (opts.fastelim)
     elimfast ();
-  // if (opts.condition)
-  // condition (false);
+    // if (opts.condition)
+    // condition (false);
 #ifndef QUIET
   after.vars = active ();
   after.clauses = stats.current.irredundant;
@@ -899,7 +923,7 @@ int Internal::solve (bool preprocess_only) {
     proof->solve_query ();
   if (opts.ilb) {
     sort_and_reuse_assumptions ();
-    assert (opts.ilb || (size_t)level <= assumptions.size ());
+    assert (opts.ilb || (size_t) level <= assumptions.size ());
     stats.ilbtriggers++;
     stats.ilbsuccess += (level > 0);
     stats.levelsreused += level;
@@ -932,10 +956,12 @@ int Internal::solve (bool preprocess_only) {
   if (!res && !level)
     res = preprocess (preprocess_only);
   if (!preprocess_only) {
-    if (!res && !level)
-      res = local_search ();
     if (!res && !level && opts.luckylate)
       res = lucky_phases ();
+    if (!res && !level)
+      res = local_search ();
+    if (!res)
+      decay_clauses_upon_incremental_clauses ();
     if (!res || (res == 10 && external_prop)) {
       if (res == 10 && external_prop && level)
         backtrack ();

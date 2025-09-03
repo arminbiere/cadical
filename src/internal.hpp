@@ -879,6 +879,8 @@ struct Internal {
 #endif
 
   void recompute_tier ();
+  void decay_clauses_upon_incremental_clauses ();
+  void print_tier_usage_statistics ();
   // Use last learned clause to subsume some more.
   //
   void eagerly_subsume_recently_learned_clauses (Clause *);
@@ -1344,6 +1346,7 @@ struct Internal {
   bool factor ();
   int get_new_extension_variable ();
   Clause *new_factor_clause ();
+  void adjust_scores_and_phases_of_fresh_variables (Factoring &);
 
   // instantiate
   //

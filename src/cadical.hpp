@@ -216,6 +216,7 @@ class Terminator;
 class ClauseIterator;
 class WitnessIterator;
 class ExternalPropagator;
+class EquivalenceTracer;
 class Tracer;
 struct InternalTracer;
 class FileTracer;
@@ -517,7 +518,7 @@ public:
   // returned but the state remains steady.
   //
   //   require (READY)
-  //   ensure (INCONCLUSIVE |SATISFIED|UNSATISFIED)
+  //   ensure (INCONCLUSIVE | SATISFIED | UNSATISFIED)
   //
   int lookahead (void);
 

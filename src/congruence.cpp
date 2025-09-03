@@ -722,7 +722,7 @@ void Closure::index_gate (Gate *g) {
 }
 
 void Closure::produce_rewritten_clause_lrat_and_clean (
-    std::vector<LitClausePair> &litIds, int except_lhs, bool remove_units, bool allow_tautology_in_input) {
+    std::vector<LitClausePair> &litIds, int except_lhs, bool remove_units, [[maybe_unused]] bool allow_tautology_in_input) {
   assert (internal->lrat_chain.empty ());
   for (auto &litId : litIds) {
     assert (litId.clause || allow_tautology_in_input);
@@ -1256,12 +1256,13 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
           LOG (litId.clause,
                "found lrat in gate %d from %" PRId64 " (looking for %d)",
                litId.current_lit, litId.clause->id, falsified);
-          if (litId.current_lit == clashing) {
+          if (litId.current_lit == clashing || litId.current_lit == -clashing) {
             push_id_and_rewriting_lrat_unit (
                 litId.clause, Rewrite (), proof_chain, true, Rewrite (),
                 g->degenerated_gate == Special_Gate::DEGENERATED_AND || g->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE ? 0 : -g->lhs);
           }
         }
+	assert (!proof_chain.empty());
       } else {
         // Example: 3 = (-1&2) and 2=1
         // The proof consists in taking the binary clause with the rewrites
@@ -4376,21 +4377,28 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
     int keep_clashing = clashing;
     LOG ("keeping chain for falsifies: %d aka %d and clashing: %d aka %d",
          falsifies, orig_falsifies, clashing, orig_clashing);
+    // We do not need all the clauses. Therefore, we keep only the
+    // ones required by clashing.
     for (size_t j = 0; j < size; ++j) {
       LOG (g->pos_lhs_ids[j].clause, "looking at %d [%zd %zd] with val %d",
            g->pos_lhs_ids[j].current_lit, i, j,
            internal->val (g->pos_lhs_ids[i].current_lit));
       g->pos_lhs_ids[i] = g->pos_lhs_ids[j];
-      if (keep_clashing && g->pos_lhs_ids[i].current_lit != orig_clashing &&
-          g->pos_lhs_ids[i].current_lit != -orig_clashing &&
-          g->pos_lhs_ids[i].current_lit != keep_clashing &&
-          g->pos_lhs_ids[i].current_lit != -keep_clashing)
+      int &curr = g->pos_lhs_ids[i].current_lit;
+      // if the gate is not normal, we rewrite the LHS. Therefore, we
+      // also have to update the literal here.
+      if (g->degenerated_gate != Special_Gate::NORMAL && find_eager_representative(curr) == g->lhs)
+	curr = find_eager_representative(curr);
+      if (keep_clashing && curr != orig_clashing &&
+          curr != -orig_clashing &&
+          curr != keep_clashing &&
+          curr != -keep_clashing)
         continue;
-      if (internal->val (g->pos_lhs_ids[i].current_lit) &&
-          g->pos_lhs_ids[i].current_lit != src &&
-          g->pos_lhs_ids[i].current_lit != orig_falsifies)
+      if (internal->val (curr) &&
+          curr != src &&
+          curr != orig_falsifies)
         continue;
-      if (g->pos_lhs_ids[i].current_lit == dst) {
+      if (curr == dst) {
         if (!found)
           found = true;
         else
@@ -5955,6 +5963,9 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
         add_ite_matching_proof_chain (g, h, normalized_lhs, h->lhs,
                                       extra_reasons_lit,
                                       extra_reasons_ulit);
+        // LHS can change for degenerated gates
+	if  (g->lhs != lhs)
+	  normalized_lhs = find_eager_representative(normalized_lhs);
         if (merge_literals (normalized_lhs, h->lhs, extra_reasons_lit,
                                  extra_reasons_ulit))
           ++internal->stats.congruence.ites;
@@ -6409,7 +6420,18 @@ void Closure::add_ite_matching_proof_chain (
   if (!internal->proof)
     return;
   LOG (g, "starting ITE matching proof chain");
-  LOG (h, "starting ITE matching proof chain with");
+  if (g->degenerated_gate != Special_Gate::NORMAL) {
+    g->lhs = find_eager_representative (g->lhs);
+    lhs1 = find_eager_representative(lhs1);
+    LOG (g, "rewritten LHS of g");
+  }
+  LOG (h, "matching ITE proof chain with");
+  if (h->degenerated_gate != Special_Gate::NORMAL) {
+    h->lhs = find_eager_representative (h->lhs);
+    lhs2 = find_eager_representative(lhs2);
+    LOG (g, "rewritten LHS of h");
+  }
+  LOG ("producing ITE gates %d %d", lhs1, lhs2);
   assert (unsimplified.empty ());
   assert (chain.empty ());
   if (internal->lrat)
@@ -6757,7 +6779,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
     std::vector<LRAT_ID> extra_reasons_lit, extra_reasons_ulit;
     add_ite_matching_proof_chain (h, g, h->lhs, lhs, extra_reasons_lit,
                                   extra_reasons_ulit);
-    if (merge_literals (h, g, h->lhs, lhs, extra_reasons_lit,
+    if (merge_literals (h, g, h->lhs, g->lhs, extra_reasons_lit,
                              extra_reasons_ulit)) {
       ++internal->stats.congruence.ites;
       LOG ("found merged literals");
@@ -7399,9 +7421,6 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   }
 
 
-  const int64_t old = stats.congruence.congruent;
-  const int old_merged = stats.congruence.congruent;
-
   // congruencebinary is already doing it (and more actually)
   if (!internal->opts.congruencebinaries) {
     if (remove_units_before_run) {
@@ -7434,6 +7453,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   assert (unsat || closure.chain.empty ());
   assert (unsat || lrat_chain.empty ());
   closure.extract_binaries ();
+  const int64_t old_merged = stats.congruence.congruent; // the binary stuff is covered by other techniques
   assert (unsat || closure.chain.empty ());
   assert (unsat || lrat_chain.empty ());
   closure.extract_gates ();
@@ -7480,7 +7500,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   }
 
   STOP_SIMPLIFIER (congruence, CONGRUENCE);
-  report ('c', !opts.reportall && !(stats.congruence.congruent - old));
+  report ('c', !opts.reportall && !(stats.congruence.congruent - old_merged));
 #ifndef NDEBUG
   size_t watched = 0;
   for (auto v : vars) {

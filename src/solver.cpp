@@ -669,8 +669,9 @@ void Solver::assume (int lit) {
 int Solver::lookahead () {
   TRACE ("lookahead");
   REQUIRE_VALID_OR_SOLVING_STATE ();
+  transition_to_steady_state ();
   int lit = external->lookahead ();
-  TRACE ("lookahead");
+  LOG_API_CALL_END ("lookahead", lit);
   return lit;
 }
 

@@ -92,6 +92,10 @@ void Stats::print (Internal *internal) {
     PRT ("  backtracked:   %15" PRId64 "   %10.2f %%  of conflicts",
          stats.backtracks, percent (stats.backtracks, stats.conflicts));
   }
+  if (all || stats.incremental_decay) {
+    PRT ("inc-decay:       %15" PRId64 "   %10.2f %%   per search",
+         stats.incremental_decay, percent (stats.incremental_decay, stats.searches));
+  }
   if (all || stats.conditioned) {
     PRT ("conditioned:     %15" PRId64
          "   %10.2f %%  of irredundant clauses",
@@ -776,6 +780,10 @@ void Stats::print (Internal *internal) {
   MSG ("%sseconds are measured in %s time for solving%s",
        tout.magenta_code (), internal->opts.realtime ? "real" : "process",
        tout.normal_code ());
+
+  SECTION ("glue usage");
+
+  internal->print_tier_usage_statistics ();
 
 #endif // ifndef QUIET
 }

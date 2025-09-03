@@ -351,6 +351,9 @@ struct Stats {
   int64_t unused = 0;   // number of unused variables
   int64_t active = 0;   // number of active variables
   int64_t inactive = 0; // number of inactive variables
+
+  int64_t incremental_decay = 0;
+
   std::vector<uint64_t> bump_used = {0, 0};
   std::vector<std::vector<uint64_t>> used; // used clauses in focused mode
 

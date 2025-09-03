@@ -139,6 +139,12 @@ public:
   // will give the current trail as a vector.
   //
   virtual void conclude_unknown (const std::vector<int> &) {}
+
+  // Notify the observer that two literals are equivalent
+  //
+  // You receive literals, not variables. You can also get notified
+  // multiple times. You can also get notified of BVA variables.
+  virtual void notify_equivalence (int, int) {}
 };
 
 /*--------------------------------------------------------------------------*/
