@@ -54,7 +54,7 @@ void Internal::recompute_tier () {
   assert (tier2[stable] > tier1[stable]);
 
   assert (tier1[stable]);
-  assert (!tier2[stable]);
+  assert (tier2[stable]);
   if (tier1[stable] == tier2[stable])
     ++tier2[stable];
 
