@@ -798,7 +798,10 @@ int Solver::simplify (int rounds) {
   REQUIRE (rounds >= 0, "negative number of simplification rounds '%d'",
            rounds);
   internal->limit ("preprocessing", rounds);
+  const int lucky = internal->opts.lucky;
+  internal->opts.lucky = 0;
   const int res = call_external_solve_and_check_results (true);
+  internal->opts.lucky = lucky;
   LOG_API_CALL_RETURNS ("simplify", rounds, res);
   return res;
 }
