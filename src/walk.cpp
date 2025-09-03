@@ -290,7 +290,7 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
 
     assert (lit == c->literals[0]);
 
-#if 1
+#if 0
     // Now try to find a second satisfied literal starting at 'literals[1]'
     // shifting all the traversed literals to right by one position in order
     // to move such a second satisfying literal to 'literals[1]'.  This move
@@ -376,8 +376,7 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
   LOG ("picking literal by break-count");
   assert (walker.scores.empty ());
   const int64_t old = walker.ticks;
-  ++walker.ticks;
-  //TODO should be +=2!
+  walker.ticks += 2;
   double sum = 0;
   int64_t propagations = 0;
   for (const auto lit : *c) {
@@ -427,7 +426,7 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
 }
 
 int Internal::walk_pick_lit (Walker &walker, ClauseOrBinary c) {
-#if 0
+#if 1
       if (std::holds_alternative<TaggedBinary> (c))
         return walk_pick_lit (walker, std::get<TaggedBinary> (c));
 #else
@@ -587,7 +586,7 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
       Clause *d = std::get<Clause*> (tagged);
       int *literals = d->literals;
       ++walker.ticks;
-#if 1
+#if 0
       int prev = 0;
       // Find 'lit' in 'd'.
       //
@@ -654,7 +653,7 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
     } else {
       // Otherwise the clause is not satisfied, do nothing
       LOG (d, "still broken");
-      for (auto lit : d)
+      for (auto lit : *d)
         assert (val (lit) < 0);
     }
 #endif
@@ -677,11 +676,15 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
     for (auto d : walker.broken) {
 
       if (std::holds_alternative<TaggedBinary> (d)) {
+#ifndef NDEBUG
         const TaggedBinary &b = std::get<TaggedBinary> (d);
-	assert (val (b.lit) < 0 && val (b.other) < 0);
+        assert (val (b.lit) < 0 && val (b.other) < 0);
+#endif
       } else {
+#ifndef NDEBUG
         for (auto lit : *std::get<Clause *> (d))
           assert (val (lit) < 0);
+#endif
       }
     }
   }
