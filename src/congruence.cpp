@@ -5985,7 +5985,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
                                       extra_reasons_lit,
                                       extra_reasons_ulit);
         // LHS can change for degenerated gates
-	if  (g->lhs != lhs)
+	if  (g->lhs != normalized_lhs)
 	  normalized_lhs = find_eager_representative(normalized_lhs);
         if (merge_literals (normalized_lhs, h->lhs, extra_reasons_lit,
                                  extra_reasons_ulit))
