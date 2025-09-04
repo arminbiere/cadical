@@ -1240,6 +1240,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
     Gate *g, int src, int dst, int clashing, int falsified, int unit) {
   if (!internal->lrat)
     return;
+  assert (unit);
   assert (!g->pos_lhs_ids.empty ());
   assert (internal->analyzed.empty ());
   assert (lrat_chain.empty ());
@@ -1287,12 +1288,13 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
             }
 	    assert (!proof_chain.empty ());
           } else {
-            LOG ("degenerated AND gate with conflict without LHS");
+            LOG ("degenerated AND gate with conflict without LHS for %s", LOGLIT(unit));
             for (const auto &litId : g->pos_lhs_ids) {
               LOG (litId.clause, "definition clause %d ->",
                    litId.current_lit);
+	      const bool insert_after = std::find (begin (*litId.clause), end (*litId.clause), unit) == end (*litId.clause);
               push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
-                                               proof_chain, false,
+                                               proof_chain, insert_after,
                                                Rewrite (), g->lhs);
               LOG (proof_chain, "produced lrat chain so far");
             }
@@ -1300,8 +1302,9 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
         } else {
           LOG ("normal AND gate");
           for (const auto &litId : g->pos_lhs_ids) {
+	    const bool insert_after = std::find (begin (*litId.clause), end (*litId.clause), unit) == end (*litId.clause);
             push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
-                                             proof_chain, false, Rewrite (),
+                                             proof_chain, insert_after, Rewrite (),
                                              g->degenerated_gate == Special_Gate::DEGENERATED_AND || g->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE ? 0 : -g->lhs);
             LOG (proof_chain, "produced lrat chain so far");
           }
@@ -2425,14 +2428,14 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
     return;
   }
   if (falsifies || clashing) {
-    if (internal->lrat)
-      learn_congruence_unit_falsifies_lrat_chain (g, src, dst, clashing,
-                                                  falsifies, 0);
     int unit = -g->lhs;
     if (unit == src)
       unit = dst;
     else if (unit == -src)
       unit = -dst;
+    if (internal->lrat)
+      learn_congruence_unit_falsifies_lrat_chain (g, src, dst, clashing,
+                                                  falsifies, unit);
     int other = -unit;
     if (g->degenerated_gate == Special_Gate::DEGENERATED_AND || g->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE) {
       other = find_eager_representative_and_compress (-unit);
