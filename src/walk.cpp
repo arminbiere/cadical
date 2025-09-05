@@ -710,7 +710,20 @@ inline void Internal::walk_save_minimum (Walker &walker) {
       walker.current_best_model[i] = tmp;
   }
 #endif
-
+  if (walker.minimum == 0) {
+    for (auto c : clauses) {
+      if (c->garbage)
+        continue;
+      int satisfied = 0, falsified = 0;
+      for (const auto &lit : *c) {
+        const int tmp = internal->val (lit);
+        if (tmp > 0) {
+          LOG (c, "root level satisfied literal %d in", lit);
+          satisfied++;
+        }
+      }
+      assert (satisfied);
+  }
   if (walker.best_trail_pos == -1) {
     VERBOSE (3, "saving the new walk minimum %" PRId64 "", broken);
     for (auto i : vars) {
