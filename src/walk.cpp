@@ -715,11 +715,13 @@ inline void Internal::walk_save_minimum (Walker &walker) {
     for (auto c : clauses) {
       if (c->garbage)
         continue;
+      if (c->redundant)
+	continue;
       int satisfied = 0, falsified = 0;
       for (const auto &lit : *c) {
         const int tmp = internal->val (lit);
         if (tmp > 0) {
-          LOG (c, "root level satisfied literal %d in", lit);
+          LOG (c, "satisfied literal %d in", lit);
           satisfied++;
         }
       }
