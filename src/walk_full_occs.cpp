@@ -413,7 +413,6 @@ int WalkerFO::walk_full_occs_pick_lit (Clause *c) {
   }
   LOG ("scored %zd literals", scores.size ());
   assert (!scores.empty ());
-  internal->stats.propagations.walk += propagations;
   assert (this->scores.size () <= (size_t) c->size);
   const double lim = sum * random.generate_double ();
   LOG ("score sum %g limit %g", sum, lim);

@@ -51,7 +51,6 @@ void Stats::print (Internal *internal) {
   propagations += stats.propagations.search;
   propagations += stats.propagations.transred;
   propagations += stats.propagations.vivify;
-  propagations += stats.propagations.walk;
 
   int64_t vivified = stats.vivifysubs + stats.vivifystrs;
   int64_t searchticks = stats.ticks.search[0] + stats.ticks.search[1];
@@ -387,9 +386,6 @@ void Stats::print (Internal *internal) {
   PRT ("  vivifyprops:   %15" PRId64 "   %10.2f %%  of propagations",
        stats.propagations.vivify,
        percent (stats.propagations.vivify, propagations));
-  PRT ("  walkprops:     %15" PRId64 "   %10.2f %%  of propagations",
-       stats.propagations.walk,
-       percent (stats.propagations.walk, propagations));
   if (all || stats.reactivated) {
     PRT ("reactivated:     %15" PRId64 "   %10.2f %%  of all variables",
          stats.reactivated, percent (stats.reactivated, stats.vars));

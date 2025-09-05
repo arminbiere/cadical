@@ -290,46 +290,11 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
 
     assert (lit == c->literals[0]);
 
-#if 0
-    // Now try to find a second satisfied literal starting at 'literals[1]'
-    // shifting all the traversed literals to right by one position in order
-    // to move such a second satisfying literal to 'literals[1]'.  This move
-    // to front strategy improves the chances to find the second satisfying
-    // literal earlier in subsequent break-count computations.
-    //
-    auto begin = c->begin () + 1;
+    const auto begin =
+        c->begin () +
+        1; // do not check the first, we are looking for another literal
     const auto end = c->end ();
-    auto i = begin;
-    int prev = 0;
-    while (i != end) {
-      const int other = *i;
-      *i++ = prev;
-      prev = other;
-      if (val (other) < 0)
-        continue;
-
-      // Found 'other' as second satisfying literal.
-
-      w.blit = other; // Update 'blit'
-      *begin = other; // and move to front.
-
-      break;
-    }
-
-    if (i != end)
-      continue; // Double satisfied!
-
-    // Otherwise restore literals (undo shift to the right).
-    //
-    while (i != begin) {
-      const int other = *--i;
-      *i = prev;
-      prev = other;
-    }
-#else
-    const auto begin = c->begin() + 1;  // do not check the first, we are looking for another literal
-    const auto end = c->end();
-    const auto middle = c->begin() + c->pos;
+    const auto middle = c->begin () + c->pos;
     auto k = middle;
     signed char v = -1;
     int r = 0;
@@ -339,9 +304,9 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
     if (v < 0) {
       k = begin;
       while (k != middle && (v = val (r = *k)) < 0)
-	++k;
+        ++k;
     }
-    c->pos = k - c->begin();
+    c->pos = k - c->begin ();
     if (c->pos <= 2) // propagates requires this
       c->pos = 2;
     assert (c->pos);
@@ -350,7 +315,7 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
       LOG (w.clause, "changing blit to");
       continue; // double satisfied!
     }
-#endif
+
     res++; // Literal 'lit' single satisfies clause 'c'.
   }
   stats.ticks.walkbreak += (ticks - oldticks);
@@ -395,7 +360,6 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
   }
   LOG ("scored %zd literals", walker.scores.size ());
   assert (!walker.scores.empty ());
-  stats.propagations.walk += propagations;
   assert (walker.scores.size () <= (size_t) c->size);
   const double lim = sum * walker.random.generate_double ();
   LOG ("score sum %g limit %g", sum, lim);
@@ -463,7 +427,6 @@ int Internal::walk_pick_lit (Walker &walker, TaggedBinary c) {
   }
   LOG ("scored %zd literals", walker.scores.size ());
   assert (!walker.scores.empty ());
-  stats.propagations.walk += propagations;
   assert (walker.scores.size () <= (size_t) 2);
   const double lim = sum * walker.random.generate_double ();
   LOG ("score sum %g limit %g", sum, lim);
@@ -525,20 +488,6 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 
     LOG ("trying to make %zd broken clauses", walker.broken.size ());
 
-    // We need to measure (and bound) the memory accesses during traversing
-    // broken clauses in terms of 'propagations'. This is tricky since we
-    // are not actually propagating literals.  Instead we use the clause
-    // variable 'ratio' as an approximation to the number of clauses used
-    // during propagating a literal.  Note that we use a one-watch scheme.
-    // Accordingly the number of broken clauses traversed divided by that
-    // ratio is an approximation of the number of propagation this would
-    // correspond to (in terms of memory access).  To eagerly update these
-    // statistics we simply increment the propagation counter after every
-    // 'ratio' traversed clause.  These propagations are particularly
-    // expensive if the number of broken clauses is large which usually
-    // happens initially.
-    //
-    const double ratio = clause_variable_ratio ();
     const auto eou = walker.broken.end ();
     // broken is in cache given how central it is... but not always (see the ncc problems).
     // Value was heuristically determined to give reasonnable values.
@@ -547,20 +496,18 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 #ifdef LOGGING
     int64_t made = 0;
 #endif
-    int64_t count = 0;
 
     while (i != eou) {
 
       ClauseOrBinary tagged = *j++ = *i++;
 
-#if 1
       if (std::holds_alternative<TaggedBinary> (tagged)) {
         const TaggedBinary &b = std::get<TaggedBinary> (tagged);
         int clit = b.lit;
         int other = b.other;
         assert (val (clit) < 0 || val (other) < 0);
 #ifdef LOGGING
-	assert (b.d->literals[0] == clit || b.d->literals[1] == clit);
+        assert (b.d->literals[0] == clit || b.d->literals[1] == clit);
         assert (b.d->literals[0] == other || b.d->literals[1] == other);
 #endif
         if (clit == lit || other == lit) {
@@ -582,92 +529,46 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
         }
         continue;
       }
-#endif
-      Clause *d = std::get<Clause*> (tagged);
+
+      Clause *d = std::get<Clause *> (tagged);
       int *literals = d->literals;
       ++walker.ticks;
-#if 0
-      int prev = 0;
-      // Find 'lit' in 'd'.
-      //
-      const int size = d->size;
-      for (int i = 0; i < size; i++) {
-        const int other = literals[i];
-        assert (active (other));
-        literals[i] = prev;
-        prev = other;
-        if (other == lit)
-          break;
-        assert (val (other) < 0);
+      const auto begin = d->begin ();
+      const auto end = d->end ();
+      const auto middle = d->begin () + d->pos;
+      auto k = middle;
+      signed char v = -1;
+      int r = 0;
+      while (k != end && (v = val (r = *k)) < 0)
+        ++k;
+
+      if (v < 0) {
+        k = begin; // check the first, we are looking for another literal
+        while (k != middle && (v = val (r = *k)) < 0)
+          ++k;
       }
 
-      // If 'lit' is in 'd' then move it to the front to watch it.
-      //
-      if (prev == lit) {
-        literals[0] = lit;
+      if (v > 0) {
+        d->pos = k - begin;
+        if (d->pos <= 2)
+          d->pos = 2;
+        assert (*k == lit);
+        std::swap (literals[0], *k);
         LOG (d, "made");
         watch_literal (literals[0], literals[1], d);
-	++walker.ticks;
+        ++walker.ticks;
 #ifdef LOGGING
         made++;
 #endif
         j--;
-
-      } else { // Otherwise the clause is not satisfied, undo shift.
-
-        for (int i = size - 1; i >= 0; i--) {
-          int other = literals[i];
-          literals[i] = prev;
-          prev = other;
-        }
+      } else {
+        // Otherwise the clause is not satisfied, do nothing
+        LOG (d, "still broken");
+#ifndef NDEBUG
+        for (auto lit : *d)
+          assert (val (lit) < 0);
+#endif
       }
-#else
-    const auto begin = d->begin();
-    const auto end = d->end();
-    const auto middle = d->begin() + d->pos;
-    auto k = middle;
-    signed char v = -1;
-    int r = 0;
-    while (k != end && (v = val (r = *k)) < 0)
-      ++k;
-
-    if (v < 0) {
-      k = begin; // check the first, we are looking for another literal
-      while (k != middle && (v = val (r = *k)) < 0)
-	++k;
-    }
-
-    if (v > 0) {
-      d->pos = k - begin;
-      if (d->pos <= 2)
-        d->pos = 2;
-      assert (*k == lit);
-      std::swap (literals[0], *k);
-      LOG (d, "made");
-      watch_literal (literals[0], literals[1], d);
-      ++walker.ticks;
-#ifdef LOGGING
-        made++;
-#endif
-        j--;
-    } else {
-      // Otherwise the clause is not satisfied, do nothing
-      LOG (d, "still broken");
-      for (auto lit : *d)
-        assert (val (lit) < 0);
-    }
-#endif
-
-      if (count--)
-        continue;
-
-      // Update these counters eagerly.  Otherwise if we delay the update
-      // until all clauses are traversed, interrupting the solver has a high
-      // chance of giving bogus statistics on the number of 'propagations'
-      // in 'walk', if it is interrupted in this loop.
-
-      count = ratio; // Starting counting down again.
-      stats.propagations.walk++;
     }
     LOG ("made %" PRId64 " clauses by flipping %d, still %d broken", made, lit, j - walker.broken.begin ());
     assert ((j - walker.broken.begin ()) + made == walker.broken.size ());
@@ -696,8 +597,6 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
   START(walkflipWL);
   // Finally add all new unsatisfied (broken) clauses.
   {
-    stats.propagations.walk++; // propagation (in a one-watch scheme).
-
 #ifdef LOGGING
     int64_t broken = 0;
 #endif
@@ -709,14 +608,14 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 
     for (const auto &w : ws) {
       Clause *d = w.clause;
-      const int size = d->size;
-#if 1
-      if (size == 2) {
+      const bool binary = w.binary();
+      if (binary) {
         const int other = w.blit;
 	assert (w.blit != -lit);
         if (val (other) > 0) {
 	  LOG (d, "unwatch %d in", -lit);
           watch_binary_literal (other, -lit, d);
+	  ++walker.ticks;
           continue;
         }
         LOG (d, "broken");
@@ -728,40 +627,46 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 #endif
         continue;
       }
+
+      // now the expansive part
       assert (d->size != 2);
-#endif
       ++walker.ticks;
       LOG (d, "unwatch %d in", -lit);
-      int *literals = d->literals, replacement = 0, prev = -lit;
+      int *literals = d->literals;
       assert (literals[0] == -lit);
       assert (d != dummy_binary);
+      const int size = d->size;
 
-      for (int i = 1; i < size; i++) {
-        const int other = literals[i];
-        assert (active (other));
-        literals[i] = prev; // shift all to right
-        prev = other;
-        const signed char tmp = val (other);
-        if (tmp < 0)
-          continue;
-        replacement = other; // satisfying literal
-        break;
+      // do not check the first, we are looking for another literal
+      const auto begin = d->begin () + 1;
+      const auto end = d->end ();
+      const auto middle = d->begin () + d->pos;
+      auto k = middle;
+      signed char v = -1;
+      int r = 0;
+      while (k != end && (v = val (r = *k)) < 0)
+        ++k;
+
+      if (v < 0) {
+        k = begin;
+        while (k != middle && (v = val (r = *k)) < 0)
+          ++k;
       }
-      if (replacement) {
+      d->pos = k - d->begin ();
+      if (d->pos <= 2) // propagates requires this
+        d->pos = 2;
+      assert (d->pos);
+      if (v > 0) {
+	int replacement = *k;
+	*k = literals[1];
         literals[1] = -lit;
         literals[0] = replacement;
-        assert (-lit != replacement);
-        watch_literal (replacement, -lit, d);
-        ++walker.ticks;
+        LOG (w.clause, "changing blit to");
+        continue; // double satisfied!
       } else {
-        for (int i = size - 1; i > 0; i--) { // undo shift
-          const int other = literals[i];
-          literals[i] = prev;
-          prev = other;
-        }
         assert (literals[0] == -lit);
         LOG (d, "broken");
-	assert (d != dummy_binary);
+        assert (d != dummy_binary);
         walker.broken.push_back (d);
         ++walker.ticks;
 #ifdef LOGGING
