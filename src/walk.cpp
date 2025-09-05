@@ -723,6 +723,7 @@ inline void Internal::walk_save_minimum (Walker &walker) {
         }
       }
       assert (satisfied);
+    }
   }
   if (walker.best_trail_pos == -1) {
     VERBOSE (3, "saving the new walk minimum %" PRId64 "", broken);
