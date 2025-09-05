@@ -1240,6 +1240,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
     Gate *g, int src, int dst, int clashing, int falsified, int unit) {
   if (!internal->lrat)
     return;
+  assert (unit);
   assert (!g->pos_lhs_ids.empty ());
   assert (internal->analyzed.empty ());
   assert (lrat_chain.empty ());
@@ -1256,7 +1257,7 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
           LOG (litId.clause,
                "found lrat in gate %d from %" PRId64 " (looking for %d)",
                litId.current_lit, litId.clause->id, falsified);
-          if (litId.current_lit == clashing || litId.current_lit == -clashing) {
+          if (litId.current_lit == clashing) {
             push_id_and_rewriting_lrat_unit (
                 litId.clause, Rewrite (), proof_chain, true, Rewrite (),
                 g->degenerated_gate == Special_Gate::DEGENERATED_AND || g->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE ? 0 : -g->lhs);
@@ -1287,12 +1288,13 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
             }
 	    assert (!proof_chain.empty ());
           } else {
-            LOG ("degenerated AND gate with conflict without LHS");
+            LOG ("degenerated AND gate with conflict without LHS for %s", LOGLIT(unit));
             for (const auto &litId : g->pos_lhs_ids) {
               LOG (litId.clause, "definition clause %d ->",
                    litId.current_lit);
+	      const bool insert_after = std::find (begin (*litId.clause), end (*litId.clause), unit) == end (*litId.clause);
               push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
-                                               proof_chain, false,
+                                               proof_chain, insert_after,
                                                Rewrite (), g->lhs);
               LOG (proof_chain, "produced lrat chain so far");
             }
@@ -1300,8 +1302,9 @@ void Closure::learn_congruence_unit_falsifies_lrat_chain (
         } else {
           LOG ("normal AND gate");
           for (const auto &litId : g->pos_lhs_ids) {
+	    const bool insert_after = std::find (begin (*litId.clause), end (*litId.clause), unit) == end (*litId.clause);
             push_id_and_rewriting_lrat_unit (litId.clause, Rewrite (),
-                                             proof_chain, false, Rewrite (),
+                                             proof_chain, insert_after, Rewrite (),
                                              g->degenerated_gate == Special_Gate::DEGENERATED_AND || g->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE ? 0 : -g->lhs);
             LOG (proof_chain, "produced lrat chain so far");
           }
@@ -2095,8 +2098,16 @@ void Closure::init_and_gate_extraction () {
 void Closure::check_and_gate_implied (Gate *g) {
   assert (internal->clause.empty ());
   assert (g->tag == Gate_Type::And_Gate);
-  if (internal->lrat)
+  if (internal->lrat) {
+    assert (g->degenerated_gate != Special_Gate::NORMAL || g->neg_lhs_ids);
+    for (auto c : g->pos_lhs_ids) {
+      assert (std::find_if (
+                  begin (*c.clause), end (*c.clause), [this, c] (int lit) {
+                    return find_eager_representative (lit) == c.current_lit;
+                  }) != end (*c.clause));
+    }
     return;
+  }
   LOG (g, "checking implied");
   const int lhs = g->lhs;
   const int not_lhs = -lhs;
@@ -2417,14 +2428,14 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
     return;
   }
   if (falsifies || clashing) {
-    if (internal->lrat)
-      learn_congruence_unit_falsifies_lrat_chain (g, src, dst, clashing,
-                                                  falsifies, 0);
     int unit = -g->lhs;
     if (unit == src)
       unit = dst;
     else if (unit == -src)
       unit = -dst;
+    if (internal->lrat)
+      learn_congruence_unit_falsifies_lrat_chain (g, src, dst, clashing,
+                                                  falsifies, unit);
     int other = -unit;
     if (g->degenerated_gate == Special_Gate::DEGENERATED_AND || g->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE) {
       other = find_eager_representative_and_compress (-unit);
@@ -2599,8 +2610,16 @@ void Closure::simplify_and_gate (Gate *g) {
   int falsifies = 0;
   std::vector<int>::iterator it = begin (g->rhs);
   bool ulhs_in_rhs = false;
-  if (g->degenerated_gate != Special_Gate::NORMAL)
+  if (g->degenerated_gate != Special_Gate::NORMAL) {
+    const int old_lhs = g->lhs;
     g->lhs = find_eager_representative (g->lhs);
+    for (auto &c : g->pos_lhs_ids) {
+      if (c.current_lit == old_lhs)
+	c.current_lit = g->lhs;
+      if (c.current_lit == -old_lhs)
+	c.current_lit = -g->lhs;
+    }
+  }
   for (auto lit : g->rhs) {
     const signed char v = internal->val (lit);
     if (v > 0) {
@@ -3236,8 +3255,8 @@ void Closure::extract_and_gates () {
   init_and_gate_extraction ();
 
   const size_t size = internal->clauses.size ();
-  for (size_t i = 0; i < size && !internal->terminated_asynchronously ();
-       ++i) { // we can learn new binary clauses, but no for loop
+  for (size_t i = 0; i < size && !internal->terminated_asynchronously (); ++i) {
+    // we can learn new binary clauses, but so no for loop
     assert (lrat_chain.empty ());
     Clause *c = internal->clauses[i];
     if (c->garbage)
@@ -4304,17 +4323,19 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
   int clashing = 0, falsifies = 0;
   unsigned dst_count = 0, not_dst_count = 0;
   auto q = begin (g->rhs);
-  if (g->degenerated_gate != Special_Gate::NORMAL)
-    g->lhs = find_eager_representative(g->lhs);
+  if (g->degenerated_gate != Special_Gate::NORMAL) {
+    g->lhs = find_eager_representative (g->lhs);
+    LOG (g, "updating LHS to");
+  }
   for (int &lit : g->rhs) {
-    if (lit == src)
-      lit = dst;
-    if (lit == -g->lhs) {
+    if (lit == -g->lhs || (lit == src && dst == -g->lhs)) {
       LOG ("found negated LHS literal %d", lit);
       clashing = lit;
       g->degenerated_gate = DEGENERATED_AND;
       break;
     }
+    if (lit == src)
+      lit = dst;
     if (lit == g->lhs)
       g->degenerated_gate = Special_Gate::DEGENERATED_AND;
     if (-lit == g->lhs)
@@ -4331,7 +4352,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
     if (lit == dst) {
       if (not_dst_count) {
         LOG ("clashing literals %d and %d", (-dst), (dst));
-        clashing = -dst;
+        clashing = dst;
         break;
       }
       if (dst_count++)
@@ -5964,7 +5985,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
                                       extra_reasons_lit,
                                       extra_reasons_ulit);
         // LHS can change for degenerated gates
-	if  (g->lhs != lhs)
+	if  (g->lhs != normalized_lhs)
 	  normalized_lhs = find_eager_representative(normalized_lhs);
         if (merge_literals (normalized_lhs, h->lhs, extra_reasons_lit,
                                  extra_reasons_ulit))
@@ -6061,8 +6082,8 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
                                         int removed_lit) {
   assert (internal->lrat_chain.empty ());
   assert (g->rhs.size () == 3);
-  LOG ("transforming to gate %s = %s & %s", LOGLIT (g->lhs),
-       LOGLIT (g->rhs[0]), LOGLIT (g->rhs[1]));
+  LOG ("transforming to gate[%" PRIu64 "] %s = %s & %s with idx1=%zd, idx2=%zd", g->id, LOGLIT (g->lhs),
+       LOGLIT (g->rhs[0]), LOGLIT (g->rhs[1]), idx1, idx2);
   const int8_t orig_flag = g->degenerated_gate;
 #ifdef LOGGING
   for (auto litId : g->pos_lhs_ids) {
@@ -6128,14 +6149,23 @@ bool Closure::simplify_ite_gate_to_and (Gate *g, size_t idx1, size_t idx2,
   }
   LOG ("normal AND gate with clauses %zd (was: %zd) %zd (was: %zd)", new_idx1, idx1, new_idx2, idx2);
   Clause *c = nullptr;
-  if ((orig_flag == Special_Gate::NO_ELSE || orig_flag == Special_Gate::NO_THEN) &&
-      (find_eager_representative(g->lhs) == find_eager_representative(g->rhs[0]) || find_eager_representative(g->lhs) == find_eager_representative(g->rhs[1]))) {
+  if ((orig_flag == Special_Gate::NO_ELSE ||
+       orig_flag == Special_Gate::NO_THEN) &&
+      (find_eager_representative (g->lhs) ==
+           find_eager_representative (g->rhs[0]) ||
+       find_eager_representative (g->lhs) ==
+           find_eager_representative (g->rhs[1]))) {
     g->degenerated_gate = Special_Gate::DEGENERATED_AND;
+    LOG (g, "marking as degenerated");
     assert (find_eager_representative(g->lhs) == g->rhs[0] || find_eager_representative(g->lhs) == g->rhs[1]);
     Clause *d = g->pos_lhs_ids[new_idx1].clause;
+    // TODO there should be a better way than dereferencing the clause even if it is cheap as we have just written the proof out
+    assert (-g->lhs == d->literals[0] || -g->lhs == d->literals[1]);
+    int lit = d->literals[0] ^ d->literals[1] ^ -g->lhs;
+    LOG (d, "with reference %s at position %zd", LOGLIT (lit), new_idx1);
     assert (d->size == 2);
     g->pos_lhs_ids.clear ();
-    g->pos_lhs_ids.push_back({2, d});
+    g->pos_lhs_ids.push_back({lit, d});
     g->neg_lhs_ids.reset();
     return false;
   }
@@ -6643,7 +6673,7 @@ void Closure::add_ite_matching_proof_chain (
     unsimplified.clear ();
     return;
   }
-  
+
   LOG ("normal path");
   assert (!internal->lrat || degenerated_g_then ||
           (g_then_id && g_neg_then_id));

@@ -10,6 +10,7 @@
 
 int main () {
   CaDiCaL::Solver *solver = new CaDiCaL::Solver ();
+  solver->set ("factor", 0); // important: deactivate BVA
   CaDiCraig::CraigTracer *tracer = new CaDiCraig::CraigTracer ();
   solver->connect_proof_tracer (tracer, true);
   tracer->set_craig_construction (CaDiCraig::CraigConstruction::ASYMMETRIC);
