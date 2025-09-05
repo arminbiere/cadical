@@ -312,7 +312,7 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
     assert (c->pos);
     if (v > 0) {
       w.blit = *k;
-      LOG (w.clause, "changing blit to");
+      LOG (w.clause, "changing blit to %s", LOGLIT(w.blit));
       continue; // double satisfied!
     }
 
@@ -661,7 +661,9 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 	*k = literals[1];
         literals[1] = -lit;
         literals[0] = replacement;
-        LOG (w.clause, "changing blit to");
+	assert (replacement != -lit);
+	watch_literal (replacement, -lit, d);
+        LOG (w.clause, "changing");
         continue; // double satisfied!
       } else {
         assert (literals[0] == -lit);
