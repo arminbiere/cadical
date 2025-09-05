@@ -195,6 +195,10 @@ void Internal::warmup_propagate_beyond_conflict () {
         }
       }
     }
+
+    if (j != i) {
+      ws.resize (j - ws.begin ());
+    }
   }
 
   assert (propagated == trail.size ());
