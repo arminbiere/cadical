@@ -571,8 +571,8 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 #endif
       }
     }
-    LOG ("made %" PRId64 " clauses by flipping %d, still %d broken", made, lit, j - walker.broken.begin ());
-    assert ((j - walker.broken.begin ()) + made == walker.broken.size ());
+    LOG ("made %" PRId64 " clauses by flipping %d, still %" PRId64 " broken", made, lit, j - walker.broken.begin ());
+    assert ((int64_t)(j - walker.broken.begin ()) + made == (int64_t)walker.broken.size ());
     walker.broken.resize (j - walker.broken.begin ());
 
     for (auto d : walker.broken) {
@@ -636,7 +636,6 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
       int *literals = d->literals;
       assert (literals[0] == -lit);
       assert (d != dummy_binary);
-      const int size = d->size;
 
       // do not check the first, we are looking for another literal
       const auto begin = d->begin () + 1;
@@ -717,7 +716,7 @@ inline void Internal::walk_save_minimum (Walker &walker) {
         continue;
       if (c->redundant)
 	continue;
-      int satisfied = 0, falsified = 0;
+      int satisfied = 0;
       for (const auto &lit : *c) {
         const int tmp = internal->val (lit);
         if (tmp > 0) {
