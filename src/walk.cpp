@@ -503,8 +503,8 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 
       if (std::holds_alternative<TaggedBinary> (tagged)) {
         const TaggedBinary &b = std::get<TaggedBinary> (tagged);
-        int clit = b.lit;
-        int other = b.other;
+        const int clit = b.lit;
+        const int other = b.other;
         assert (val (clit) < 0 || val (other) < 0);
 #ifdef LOGGING
         assert (b.d->literals[0] == clit || b.d->literals[1] == clit);
@@ -512,12 +512,13 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 #endif
         if (clit == lit || other == lit) {
           LOG (b.d, "made");
-
+          const int first_lit = lit;
+          const int second_lit = clit ^ lit ^ other;
 #ifdef LOGGING
-          watch_binary_literal (lit, clit ^ lit ^ other, b.d);
+          watch_binary_literal (first_lit, second_lit, b.d);
 #else
-          watch_binary_literal (
-              clit, clit ^ lit ^ other, dummy_binary); // placeholder, does not matter
+          // placeholder for the clause, does not matter
+          watch_binary_literal (first_lit, second_lit, dummy_binary);
 #endif
           ++walker.ticks;
 #ifdef LOGGING
@@ -544,15 +545,17 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
         ++k;
 
       if (v < 0) {
-        k = begin; // check the first, we are looking for another literal
+        k = begin; // check also the first literal, we are looking for
+                   // another literal
         while (k != middle && (v = val (r = *k)) < 0)
           ++k;
       }
 
       if (v > 0) {
-        d->pos = k - begin;
-        if (d->pos <= 2)
-          d->pos = 2;
+        int pos = k - begin;
+        if (pos <= 2)
+          pos = 2;
+        d->pos = pos;
         assert (*k == lit);
         std::swap (literals[0], *k);
         LOG (d, "made");
@@ -574,21 +577,17 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
     LOG ("made %" PRId64 " clauses by flipping %d, still %" PRId64 " broken", made, lit, j - walker.broken.begin ());
     assert ((int64_t)(j - walker.broken.begin ()) + made == (int64_t)walker.broken.size ());
     walker.broken.resize (j - walker.broken.begin ());
-
-    for (auto d : walker.broken) {
-
-      if (std::holds_alternative<TaggedBinary> (d)) {
 #ifndef NDEBUG
+    for (auto d : walker.broken) {
+      if (std::holds_alternative<TaggedBinary> (d)) {
         const TaggedBinary &b = std::get<TaggedBinary> (d);
         assert (val (b.lit) < 0 && val (b.other) < 0);
-#endif
       } else {
-#ifndef NDEBUG
         for (auto lit : *std::get<Clause *> (d))
           assert (val (lit) < 0);
-#endif
       }
     }
+#endif
   }
   stats.ticks.walkflipbroken += walker.ticks - old;
   STOP (walkflipbroken);
