@@ -223,10 +223,8 @@ int Internal::warmup_decide () {
       LOG ("assumption %d already satisfied", lit);
       new_trail_level (0);
       LOG ("added pseudo decision level");
-      notify_decision ();
     } else {
       LOG ("deciding assumption %d", lit);
-      new_trail_level (lit);
       search_assume_decision (lit);
     }
   } else if ((size_t) level == assumptions.size () && constraint.size ()) {
