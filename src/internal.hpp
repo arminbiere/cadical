@@ -102,6 +102,7 @@ extern "C" {
 #include "veripbtracer.hpp"
 #include "version.hpp"
 #include "vivify.hpp"
+#include "walk.hpp"
 #include "watch.hpp"
 
 // c headers
@@ -112,44 +113,6 @@ extern "C" {
 
 namespace CaDiCaL {
 
-
-struct TaggedBinary {
-  int lit, other;
-#ifdef LOGGING
-  Clause *d;
-#endif
-  TaggedBinary ()
-      : lit (0), other (0)
-#ifdef LOGGING
-        ,
-        d (nullptr)
-#endif
-  {assert (false);};
-
-  TaggedBinary (Clause *c, int clit, int cother)
-      : lit (clit), other (cother)
-#ifdef LOGGING
-        , d (c)
-#endif
-        {
-    assert (c->literals[0] == lit || c->literals[1] == lit);
-    assert (c->literals[0] == other || c->literals[1] == other);
-#ifndef LOGGING
-	  (void)c;
-#endif
-  }
-
-  TaggedBinary (Clause *c) {
-    assert (c->size == 2);
-    lit = c->literals[0];
-    other = c->literals[1];
-#ifdef LOGGING
-    d = c;
-#else
-    (void) c;
-#endif
-  }
-};
 
 using namespace std;
 
@@ -1401,9 +1364,9 @@ struct Internal {
   // ProbSAT/WalkSAT implementation called initially or from 'rephase'.
   //
   void walk_save_minimum (Walker &);
-  std::variant <Clause*, TaggedBinary> walk_pick_clause (Walker &);
+  ClauseOrBinary walk_pick_clause (Walker &);
   unsigned walk_break_value (int lit, int64_t &ticks);
-  int walk_pick_lit (Walker &walker, std::variant <Clause*, TaggedBinary>);
+  int walk_pick_lit (Walker &walker, ClauseOrBinary);
   int walk_pick_lit (Walker &, Clause *);
   void walk_flip_lit (Walker &, int lit);
   int walk_pick_lit (Walker &walker, TaggedBinary c);

@@ -1,4 +1,6 @@
 #include "internal.hpp"
+#include "walk.hpp"
+#include "random.hpp"
 
 
 #include <variant>
@@ -18,7 +20,8 @@ namespace CaDiCaL {
 // on various other problems `9pipe_k' it is very important to ticks
 // this part too.
 
-  using ClauseOrBinary = std::variant <Clause*, TaggedBinary>;
+
+//  using ClauseOrBinary = std::variant <Clause*, TaggedBinary>;
 
 struct Walker {
 
@@ -254,7 +257,11 @@ ClauseOrBinary Internal::walk_pick_clause (Walker &walker) {
   int pos = walker.random.pick_int (0, size - 1);
   ClauseOrBinary res = walker.broken[pos];
 #ifdef LOGGING
-  Clause *c = std::holds_alternative<Clause*>(res) ?  std::get<Clause*>(res) : std::get<TaggedBinary>(res).d;
+  Clause *c;
+  if (!res.is_binary ())
+    c = res.clause ();
+  else
+    c = res.tagged_binary ().d;
   LOG (c, "picking random position %d", pos);
 #endif
   return res;
@@ -391,8 +398,8 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
 
 int Internal::walk_pick_lit (Walker &walker, ClauseOrBinary c) {
 #if 1
-      if (std::holds_alternative<TaggedBinary> (c))
-        return walk_pick_lit (walker, std::get<TaggedBinary> (c));
+      if (c.is_binary())
+        return walk_pick_lit (walker, c.tagged_binary());
 #else
   if (std::holds_alternative<TaggedBinary> (c)) {
     dummy_binary->literals[0] = std::get<TaggedBinary> (c).lit;
@@ -400,7 +407,7 @@ int Internal::walk_pick_lit (Walker &walker, ClauseOrBinary c) {
     return walk_pick_lit (walker, dummy_binary);
   }
 #endif
-  return walk_pick_lit (walker, std::get<Clause *> (c));
+  return walk_pick_lit (walker, c.clause ());
 }
 
 int Internal::walk_pick_lit (Walker &walker, TaggedBinary c) {
@@ -501,8 +508,8 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 
       ClauseOrBinary tagged = *j++ = *i++;
 
-      if (std::holds_alternative<TaggedBinary> (tagged)) {
-        const TaggedBinary &b = std::get<TaggedBinary> (tagged);
+      if (tagged.is_binary()) {
+        const TaggedBinary &b = tagged.tagged_binary ();
         const int clit = b.lit;
         const int other = b.other;
         assert (val (clit) < 0 || val (other) < 0);
@@ -532,7 +539,8 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
         continue;
       }
 
-      Clause *d = std::get<Clause *> (tagged);
+      START(walkflipbrokenlong);
+      Clause *d = tagged.clause ();
       int *literals = d->literals;
       ++walker.ticks;
       const auto begin = d->begin ();
@@ -573,17 +581,19 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
           assert (val (lit) < 0);
 #endif
       }
+      STOP (walkflipbrokenlong);
     }
     LOG ("made %" PRId64 " clauses by flipping %d, still %" PRId64 " broken", made, lit, j - walker.broken.begin ());
-    assert ((int64_t)(j - walker.broken.begin ()) + made == (int64_t)walker.broken.size ());
+    assert ((int64_t) (j - walker.broken.begin ()) + made ==
+            (int64_t) walker.broken.size ());
     walker.broken.resize (j - walker.broken.begin ());
 #ifndef NDEBUG
     for (auto d : walker.broken) {
-      if (std::holds_alternative<TaggedBinary> (d)) {
-        const TaggedBinary &b = std::get<TaggedBinary> (d);
+      if (d.is_binary()) {
+        const TaggedBinary &b = d.tagged_binary();
         assert (val (b.lit) < 0 && val (b.other) < 0);
       } else {
-        for (auto lit : *std::get<Clause *> (d))
+        for (auto lit : *d.clause())
           assert (val (lit) < 0);
       }
     }
