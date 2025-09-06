@@ -539,7 +539,6 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
         continue;
       }
 
-      START(walkflipbrokenlong);
       Clause *d = tagged.clause ();
       int *literals = d->literals;
       ++walker.ticks;
@@ -581,7 +580,6 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
           assert (val (lit) < 0);
 #endif
       }
-      STOP (walkflipbrokenlong);
     }
     LOG ("made %" PRId64 " clauses by flipping %d, still %" PRId64 " broken", made, lit, j - walker.broken.begin ());
     assert ((int64_t) (j - walker.broken.begin ()) + made ==
