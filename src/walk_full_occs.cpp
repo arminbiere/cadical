@@ -493,7 +493,7 @@ void WalkerFO::make_clauses_along_occurrences(int lit) {
     this->make_clause(c);
     made++;
   }
-  MSG ("made %" PRId64 " clauses by flipping %d, still %zu broken", made, lit, broken.size ());
+  LOG("made %" PRId64 " clauses by flipping %d, still %zu broken", made, lit, broken.size ());
   LOG("made %zu clauses with flipped %s", made, LOGLIT(lit));
   (void)made;
 }

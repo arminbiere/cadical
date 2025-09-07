@@ -336,8 +336,6 @@ int Internal::warmup () {
   require_mode(WALK);
   START (warmup);
   ++stats.warmup.count;
-  assert (!private_steps);
-  private_steps = true;
   int res = 0;
 
 #ifndef QUIET
@@ -345,7 +343,24 @@ int Internal::warmup () {
   const int64_t decision = stats.warmup.decision;
   const int64_t dummydecision = stats.warmup.dummydecision;
 #endif
+  // first propagate assumptions in case we find a conflict.  One
+  // subtle thing, if we find a conflict in the assumption, then we
+  // actually do need the notifications. Otherwise, we there should be
+  // no notification at all (not even the `backtrack ()` at the end).
+  const size_t assms_contraint_level = assumptions.size () + !constraint.empty ();
+  while (!res && (size_t) level < assms_contraint_level) {
+    assert (num_assigned < (size_t) max_var);
+    res = warmup_decide ();
+    warmup_propagate_beyond_conflict();
+  }
+  const bool no_backtrack_notification = (level == 0);
+
+  // now we do not need any notification and can simply propagate
   assert (propagated == trail.size ());
+  assert (!private_steps);
+  private_steps = true;
+
+
   LOG ("propagating beyond conflicts to warm-up walk");
   while (!res && num_assigned < (size_t) max_var) {
     assert (propagated == trail.size ());
@@ -363,6 +378,9 @@ int Internal::warmup () {
 	   stats.warmup.dummydecision - dummydecision);
 #endif
 
+  // now we backtrack, notifying only if there was something to
+  // notify.
+  private_steps = no_backtrack_notification;
   if (!res)
     backtrack_without_updating_phases ();
   private_steps = false;
