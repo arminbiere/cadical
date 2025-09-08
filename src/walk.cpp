@@ -466,8 +466,8 @@ int Internal::walk_pick_lit (Walker &walker, TaggedBinary c) {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::walk_flip_lit (Walker &walker, int lit) {
-
+// flips a literal unless we run out of ticks.
+bool Internal::walk_flip_lit (Walker &walker, int lit) {
   START(walkflip);
   const int64_t old = walker.ticks;
   require_mode (WALK);
@@ -595,7 +595,12 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
       }
     }
 #endif
+    if (walker.ticks > walker.limit) {
+      STOP (walkflip);
+      return false;
+    }
   }
+
   stats.ticks.walkflipbroken += walker.ticks - old;
 
   const int64_t old_after_broken = walker.ticks;
@@ -633,6 +638,10 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
         continue;
       }
 
+      if (walker.ticks > walker.limit) {
+        STOP (walkflip);
+        return false;
+      }
       // now the expansive part
       assert (d->size != 2);
       ++walker.ticks;
@@ -683,9 +692,10 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
     LOG ("broken %" PRId64 " clauses by flipping %d", broken, lit);
     ws.clear ();
   }
-
+  STOP (walkflip);
   stats.ticks.walkflipWL += walker.ticks - old_after_broken;
   stats.ticks.walkflip += walker.ticks - old;
+  return true;
 }
 
 /*------------------------------------------------------------------------*/
@@ -967,7 +977,9 @@ int Internal::walk_round (int64_t limit, bool prev) {
       stats.walk.broken += broken;
       ClauseOrBinary c = walk_pick_clause (walker);
       const int lit = walk_pick_lit (walker, c);
-      walk_flip_lit (walker, lit);
+      bool finished = walk_flip_lit (walker, lit);
+      if (!finished)
+        break;
       walker.push_flipped (lit);
       broken = walker.broken.size ();
       LOG ("now have %" PRId64 " broken clauses in total", broken);

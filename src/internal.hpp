@@ -1368,7 +1368,7 @@ struct Internal {
   unsigned walk_break_value (int lit, int64_t &ticks);
   int walk_pick_lit (Walker &walker, ClauseOrBinary);
   int walk_pick_lit (Walker &, Clause *);
-  void walk_flip_lit (Walker &, int lit);
+  bool walk_flip_lit (Walker &, int lit);
   int walk_pick_lit (Walker &walker, TaggedBinary c);
   int walk_round (int64_t limit, bool prev);
   void walk ();
