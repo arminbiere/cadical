@@ -488,7 +488,6 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
     __builtin_prefetch (&w, 0, 1);
   }
 
-  START(walkflipbroken);
   // Then remove 'c' and all other now satisfied (made) clauses.
   {
     // Simply go over all unsatisfied (broken) clauses.
@@ -598,11 +597,9 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
 #endif
   }
   stats.ticks.walkflipbroken += walker.ticks - old;
-  STOP (walkflipbroken);
 
   const int64_t old_after_broken = walker.ticks;
 
-  START(walkflipWL);
   // Finally add all new unsatisfied (broken) clauses.
   {
 #ifdef LOGGING
@@ -687,8 +684,6 @@ void Internal::walk_flip_lit (Walker &walker, int lit) {
     ws.clear ();
   }
 
-  STOP(walkflipWL);
-  STOP(walkflip);
   stats.ticks.walkflipWL += walker.ticks - old_after_broken;
   stats.ticks.walkflip += walker.ticks - old;
 }
