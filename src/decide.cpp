@@ -57,11 +57,11 @@ int Internal::decide_phase (int idx, bool target) {
     phase = phases.saved[idx];
     LOG ("trying force_saved_phase, i.e., %d", phase);
   }
+  assert (force_saved_phase || !phase);
   if (!phase) {
     phase = phases.forced[idx]; // swapped with opts.forcephase case!
     LOG ("trying forced phase, i.e., %d", phase);
   }
-  assert (force_saved_phase || !phase);
   if (!phase && opts.forcephase){
     phase = initial_phase;
     LOG ("trying initial phase, i.e., %d", phase);
