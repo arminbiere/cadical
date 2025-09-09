@@ -48,6 +48,18 @@ inline const char *Parser::parse_positive_int (int &ch, int &res,
   return 0;
 }
 
+inline const char *Parser::parse_positive_uint64_t (int &ch, uint64_t &res,
+                                               const char *name) {
+  assert (isdigit (ch));
+  res = ch - '0';
+  while (isdigit (ch = parse_char ())) {
+    int digit = ch - '0';
+    if (UINT64_MAX / 10 < res || UINT64_MAX - digit < 10 * res)
+      PER ("too large '%s' in header", name);
+    res = 10 * res + digit;
+  }
+  return 0;
+}
 static const char *cube_token = "unexpected 'a' in CNF";
 
 inline const char *Parser::parse_lit (int &ch, int &lit, int &vars,
@@ -95,7 +107,8 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
 #endif
 
   bool found_inccnf_header = false;
-  int ch, clauses = 0;
+  int ch = 0;
+  uint64_t clauses = 0;
   vars = 0;
 
   // First read comments before header with possibly embedded options.
@@ -158,11 +171,11 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
         PER ("expected ' ' after 'p cnf %d'", vars);
       if (!isdigit (ch = parse_char ()))
         PER ("expected digit after 'p cnf %d '", vars);
-      err = parse_positive_int (ch, clauses, "<num-clauses>");
+      err = parse_positive_uint64_t (ch, clauses, "<num-clauses>");
       if (err)
         return err;
       if (ch != '\n')
-        PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
+        PER ("expected new-line after 'p cnf %d %" PRIu64 "'", vars, clauses);
     } else {
       if (parse_char () != 'n')
         PER ("expected 'n' after 'p c'");
@@ -186,17 +199,17 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
       while (isspace (ch));
       if (!isdigit (ch))
         PER ("expected digit after 'p cnf %d '", vars);
-      err = parse_positive_int (ch, clauses, "<num-clauses>");
+      err = parse_positive_uint64_t (ch, clauses, "<num-clauses>");
       if (err)
         return err;
       while (ch != '\n') {
         if (ch != '\r' && !isspace (ch))
-          PER ("expected new-line after 'p cnf %d %d'", vars, clauses);
+          PER ("expected new-line after 'p cnf %d %" PRIu64 "'", vars, clauses);
         ch = parse_char ();
       }
     }
 
-    MSG ("found %s'p cnf %d %d'%s header", tout.green_code (), vars,
+    MSG ("found %s'p cnf %d %" PRIu64 "'%s header", tout.green_code (), vars,
          clauses, tout.normal_code ());
 
     if (strict != FORCED)
@@ -233,7 +246,7 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
 
   // Now read body of DIMACS part.
   //
-  int lit = 0, parsed = 0;
+  int lit = 0; uint64_t parsed = 0;
   while ((ch = parse_char ()) != EOF) {
     if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r')
       continue;
@@ -268,7 +281,7 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
 
 #ifndef QUIET
   double end = internal->time ();
-  MSG ("parsed %d clauses in %.2f seconds %s time", parsed, end - start,
+  MSG ("parsed %" PRIu64 "clauses in %.2f seconds %s time", parsed, end - start,
        internal->opts.realtime ? "real" : "process");
 #endif
 
