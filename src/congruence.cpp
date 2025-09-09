@@ -4753,7 +4753,7 @@ void Closure::reset_closure () {
     for (auto c : extra_clauses) {
       assert (!c->garbage);
       internal->proof->delete_clause (c);
-      delete c;
+      delete[] c;
     }
     extra_clauses.clear ();
   } else {
