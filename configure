@@ -34,6 +34,8 @@ quiet=no
 m32=no
 contrib=yes
 ipasir=yes
+shared=no
+pic=no
 
 #--------------------------------------------------------------------------#
 
@@ -114,6 +116,7 @@ where '<option>' is one of the following
 -ggdb3             pass '-ggdb3' to makefile (like '-s')
 -O|-O[123]         pass '-O' or '-O[123]' to the makefile
 -static...         pass '-static...' option to makefile
+-shared            add '-fpic' compilation flag and produce shared library
 
 The environment variable CXX can be used to set a different C++
 compiler than the default 'g++'.  Similarly you can add additional
@@ -176,9 +179,11 @@ do
     --no-unlocked) unlocked=no;;
 
     -m32) options="$options $1";m32=yes;;
+    -fpic|-fPIC) options="$options $1"; pic=yes;;
     -f*|-W*|-ggdb3|-O|-O1|-O2|-O3) options="$options $1";;
     -s|--symbols) options="$options -ggdb3";;
     -static*) options="$options $1";;
+    -shared|--shared) shared=yes;;
 
     CXX=*)
       CXX="`expr \"$1\" : 'CXX=\(.*\)'`"
@@ -339,6 +344,7 @@ fi
 [ $tracing = no ] && CXXFLAGS="$CXXFLAGS -DNTRACING"
 [ $contrib = no ] && CXXFLAGS="$CXXFLAGS -DNCONTRIB"
 [ $ipasir = no ] && CXXFLAGS="$CXXFLAGS -DNIPASIR"
+[ $shared = yes -a $pic = no ] && CXXFLAGS="$CXXFLAGS -fpic"
 
 [ $contracts = no ] && CFLAGS="$CFLAGS -DNCONTRACTS"
 [ $tracing = no ] && CFLAGS="$CFLAGS -DNTRACING"
@@ -553,6 +559,24 @@ fi
 [ $closefrom = no ] && CXXFLAGS="$CXXFLAGS -DNCLOSEFROM"
 
 #--------------------------------------------------------------------------#
+# Preparing make goals (@GOALS@)
+goals="libcadical.a cadical mobical"
+sharedlibrary="libcadical.so"
+if [ $shared = yes ]
+then
+  msg "adding '$sharedlibrary' shared library to default makefile goal, too"
+  goals="$goals $sharedlibrary"
+else
+  if [ -f $sharedlibrary ]
+  then
+    msg "removing stale dynamic library '$sharedlibrary' (without '-shared')"
+    rm -f $sharedlibrary || exit 1
+  fi
+  msg "no '$sharedlibrary' shared library generated (without '-shared')"
+fi
+
+
+#--------------------------------------------------------------------------#
 
 # Instantiate '../makefile.in' template to produce 'makefile' in 'build'.
 
@@ -569,6 +593,7 @@ sed \
 -e "s#@CONTRIB@#$contrib#" \
 -e "s#@IPASIR@#$ipasir#" \
 -e "s#@ROOT@#$root#" \
+-e "s#@GOALS@#$goals#" \
 ../makefile.in > makefile
 
 msg "generated '$build/makefile' from '../makefile.in'"

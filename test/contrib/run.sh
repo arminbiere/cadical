@@ -88,7 +88,7 @@ run () {
   rm -f $name.log $name.o $name
   status=0
   cmd $COMPILE$language -I$source -I$contrib -o $name.o -c $src
-  cmd $COMPILE -o $name $name.o -L$CADICALBUILD -lcadical
+  cmd $COMPILE -o $name $name.o -L$CADICALBUILD $CADICALBUILD/libcadical.a
   cmd $name
   if test $status = 0
   then

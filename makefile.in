@@ -42,7 +42,7 @@ COMPILEC=$(CXX) $(CFLAGS) -I$(DIR) -I../src
 
 #--------------------------------------------------------------------------#
 
-all: libcadical.a cadical mobical
+all: @GOALS@
 
 #--------------------------------------------------------------------------#
 
@@ -62,13 +62,16 @@ all: libcadical.a cadical mobical
 # tester 'mobical') and the library are the main build targets.
 
 cadical: cadical.o libcadical.a makefile
-	$(COMPILE) -o $@ $< -L. -lcadical $(LIBS)
+	$(COMPILE) -o $@ $< -L. libcadical.a $(LIBS)
 
 mobical: mobical.o libcadical.a makefile $(LIBS)
-	$(COMPILE) -o $@ $< -L. -lcadical
+	$(COMPILE) -o $@ $< -L. libcadical.a
 
 libcadical.a: $(OBJ_SOLVER) $(OBJ_CONTRIB) $(OBJ_C) makefile
 	ar rc $@ $(OBJ_SOLVER) $(OBJ_CONTRIB) $(OBJ_C)
+
+libcadical.so: $(OBJ_SOLVER) $(OBJ_CONTRIB) $(LIBS) makefile
+	$(COMPILE) -shared -o $@ $(OBJ_SOLVER) $(OBJ_CONTRIB) $(LIBS)
 
 #--------------------------------------------------------------------------#
 
