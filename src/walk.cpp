@@ -437,7 +437,7 @@ int Internal::walk_pick_lit (Walker &walker, ClauseOrBinary c) {
   return walk_pick_lit (walker, c.clause ());
 }
 
-int Internal::walk_pick_lit (Walker &walker, TaggedBinary c) {
+int Internal::walk_pick_lit (Walker &walker, const TaggedBinary c) {
   LOG ("picking literal by break-count on binary clause [%" PRIu64 "]%s %s",
        c.d->id, LOGLIT (c.lit), LOGLIT (c.other));
   assert (walker.scores.empty ());
