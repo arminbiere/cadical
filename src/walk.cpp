@@ -550,12 +550,15 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
 #endif
         if (clit == lit || other == lit) {
           LOG (b.d, "made");
+          const int first_lit = lit;
+          const int second_lit = clit ^ lit ^ other;
 #ifdef LOGGING
-          watch_binary_literal (clit, other, b.d);
+          watch_binary_literal (first_lit, second_lit, b.d);
 #else
           // placeholder for the clause, does not matter
-          watch_binary_literal (clit, other,dummy_binary);
+          watch_binary_literal (first_lit, second_lit, dummy_binary);
 #endif
+
           ++walker.ticks;
 #ifdef LOGGING
           made++;
