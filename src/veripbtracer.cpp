@@ -214,7 +214,7 @@ void VeripbTracer::veripb_add_derived_clause (
   }
   file->put (">= 1 ; ");
   file->put (id);
-  file->put (" ;\n");
+  file->put ("\n");
   if (!redundant && checked_deletions) {
     file->put ("core id ");
     file->put (id);
@@ -233,7 +233,7 @@ void VeripbTracer::veripb_add_derived_clause (int64_t id, bool redundant,
     file->put (abs (external_lit));
     file->put (' ');
   }
-  file->put (">= 1 ;\n");
+  file->put (">= 1\n");
   if (!redundant && checked_deletions) {
     file->put ("core id ");
     file->put (id);
