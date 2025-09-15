@@ -47,6 +47,9 @@ Internal::Internal ()
   dummy_binary = (Clause *) new char[bytes];
   memset (dummy_binary, 0, bytes);
   dummy_binary->size = 2;
+
+  static_assert (max_used == (1 << USED_SIZE) - 1);
+
 }
 
 Internal::~Internal () {

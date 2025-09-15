@@ -27,6 +27,7 @@ typedef const int *const_literal_iterator;
 // memory but more importantly also requires another memory access and thus
 // is very costly.
 
+#define USED_SIZE 5
 struct Clause {
   union {
     int64_t id;   // Used to create LRAT-style proofs
@@ -37,6 +38,7 @@ struct Clause {
     // compactly in a contiguous memory arena.  Otherwise, so almost all of
     // the time, 'id' is valid.  See 'collect.cpp' for details.
   };
+  unsigned used : USED_SIZE; // resolved in conflict analysis since last 'reduce'
   bool conditioned : 1; // Tried for globally blocked clause elimination.
   bool covered : 1;  // Already considered for covered clause elimination.
   bool enqueued : 1; // Enqueued on backward queue.
