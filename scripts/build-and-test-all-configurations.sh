@@ -116,5 +116,6 @@ run -m32 -a -p
 
 run -shared
 run -shared -p
+run -shared -p -m32
 
 echo "successfully compiled and tested ${GOOD}${ok}${NORMAL} configurations"
