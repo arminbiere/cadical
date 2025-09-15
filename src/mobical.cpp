@@ -4822,7 +4822,10 @@ extern "C" {
 // The usage of MAP_ANONYMOUS vs MAP_ANON depends on the actual system
 #if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
 #define MAP_ANONYMOUS MAP_ANON
+#elif !defined(MAP_ANONYMOUS)
+#error "System does not support mapping anonymous pages?"
 #endif
+
 
 Mobical::Mobical () {
   const int prot = PROT_READ | PROT_WRITE;
