@@ -39,6 +39,7 @@
           installPhase = ''
             mkdir -p $out/lib
             # once cadiback doesn't need these folders anymore, remove this copy
+            rm build/makefile
             cp -r configure src/ build/ $out
             cp build/libcadical.a $out/lib
             mkdir -p $out/include
