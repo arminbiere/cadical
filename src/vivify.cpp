@@ -1482,24 +1482,13 @@ void Internal::vivify_initialize (Vivifier &vivifier, int64_t &ticks) {
   vivify_propagate (ticks);
 #endif
   vivify_propagate (ticks);
+
+  PHASE ("vivify", stats.vivifications,
+         "[phase %c] leftovers out of %zu clauses", 'u', vivifier.schedule_tier1.size ());
 }
 
 inline std::vector<vivify_ref> &current_refs_schedule (Vivifier &vivifier) {
-  switch (vivifier.tier) {
-  case Vivify_Mode::TIER1:
-    return vivifier.refs_schedule_tier1;
-    break;
-  case Vivify_Mode::TIER2:
-    return vivifier.refs_schedule_tier2;
-    break;
-  case Vivify_Mode::TIER3:
-    return vivifier.refs_schedule_tier3;
-    break;
-  default:
-    return vivifier.refs_schedule_irred;
-    break;
-  }
-  __builtin_unreachable ();
+  return vivifier.refs_schedule;
 }
 
 inline std::vector<Clause *> &current_schedule (Vivifier &vivifier) {
@@ -1570,18 +1559,14 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
   if (terminated_asynchronously ())
     return;
 
-  PHASE ("vivify", stats.vivifications,
-         "starting %c vivification round ticks limit %" PRId64 "",
-         vivifier.tag, ticks_limit);
-
-  PHASE ("vivify", stats.vivifications,
-         "starting %c vivification round ticks limit %" PRId64 "",
-         vivifier.tag, ticks_limit);
-
-  assert (watching ());
-
   auto &refs_schedule = current_refs_schedule (vivifier);
   auto &schedule = current_schedule (vivifier);
+
+  PHASE ("vivify", stats.vivifications,
+         "starting %c vivification round ticks limit %" PRId64 " with %" PRId64 " clauses",
+         vivifier.tag, ticks_limit, schedule.size ());
+
+  assert (watching ());
 
   int64_t ticks = 1 + schedule.size ();
 
@@ -1619,7 +1604,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
     std::transform (begin (refs_schedule), end (refs_schedule),
                     begin (schedule),
                     [] (vivify_ref c) { return c.clause; });
-    erase_vector (refs_schedule);
+    refs_schedule.clear ();
     LOG ("clause after sorting final:");
   } else {
     // skip sorting but still put clauses with the vivify tag at the end to
@@ -1689,8 +1674,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
 #elif 1
     // if we have gone through all the leftovers, the current clauses are
     // leftovers for the next round
-    if (!schedule.empty () && !schedule.front ()->vivify &&
-        schedule.back ()->vivify)
+    if (!schedule.empty () && !schedule.front ()->vivify)
       for (auto c : schedule)
         c->vivify = true;
 #else
