@@ -978,7 +978,6 @@ int Internal::walk_round (int64_t limit, bool prev) {
       set_val (idx, tmp);
       assert (level == 2);
       var (idx).level = 2;
-      walker.best_values[idx] = tmp;
       LOG ("initial assign %d to decision phase", tmp < 0 ? -idx : idx);
     }
 
