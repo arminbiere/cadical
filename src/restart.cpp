@@ -32,15 +32,15 @@ bool Internal::stabilizing () {
   else
     STOP (unstable);
 
-  const int64_t delta_conflicts =
-      stats.conflicts - last.stabilize.conflicts;
   assert (last.stabilize.ticks >= 0);
   assert (last.stabilize.conflicts >= 0 &&
           last.stabilize.conflicts <= stats.conflicts);
   assert (last.stabilize.ticks <= stats.ticks.search[stable]);
-#ifndef QUIET
   const int64_t delta_ticks =
       stats.ticks.search[stable] - last.stabilize.ticks;
+#ifndef QUIET
+  const int64_t delta_conflicts =
+      stats.conflicts - last.stabilize.conflicts;
   const char *current_mode = stable ? "stable" : "unstable";
   const char *next_mode = stable ? "unstable" : "stable";
 #endif
@@ -106,11 +106,13 @@ bool Internal::restarting () {
   double s = averages.current.glue.slow;
   double l = m * s;
 
+#ifndef QUIET
   char c = l > f ? '>' : l < f ? '<' : '=';
   VERBOSE (3,
            "restart glue limit "
            "%g = %.2f * %g (slow glue) %c %g (fast glue)",
            l, m, s, c, f);
+#endif
 
   return l <= f;
 }
