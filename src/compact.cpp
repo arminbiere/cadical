@@ -212,16 +212,18 @@ void Internal::compact () {
     if (!src) {
       continue;
     }
-    assert (eidx > 0);
-    assert (external->ext_units.size () >= (size_t) 2 * eidx + 1);
-    uint64_t id1 = external->ext_units[2 * eidx];
-    uint64_t id2 = external->ext_units[2 * eidx + 1];
-    assert (!id1 || !id2);
-    if (!id1 && !id2) {
-      uint64_t new_id1 = unit_clauses[2 * src];
-      uint64_t new_id2 = unit_clauses[2 * src + 1];
-      external->ext_units[2 * eidx] = new_id1;
-      external->ext_units[2 * eidx + 1] = new_id2;
+    if (lrat || frat) {
+      assert (eidx > 0);
+      assert (external->ext_units.size () >= (size_t) 2 * eidx + 1);
+      uint64_t id1 = external->ext_units[2 * eidx];
+      uint64_t id2 = external->ext_units[2 * eidx + 1];
+      assert (!id1 || !id2);
+      if (!id1 && !id2) {
+        uint64_t new_id1 = unit_clauses (2 * src);
+        uint64_t new_id2 = unit_clauses (2 * src + 1);
+        external->ext_units[2 * eidx] = new_id1;
+        external->ext_units[2 * eidx + 1] = new_id2;
+      }
     }
     int dst = mapper.map_lit (src);
     LOG ("compact %" PRId64
@@ -232,39 +234,40 @@ void Internal::compact () {
 
   // Delete garbage units. Needs to occur before resizing unit_clauses
   //
-  for (auto src : internal->vars) {
-    const int dst = mapper.map_idx (src);
-    assert (dst <= src);
-    const signed char tmp = internal->val (src);
-    if (!dst && !tmp) {
-      unit_clauses[2 * src] = 0;
-      unit_clauses[2 * src + 1] = 0;
-      continue;
-    }
-    if (!tmp || src == mapper.first_fixed) {
-      assert (0 < dst);
-      if (dst == src)
+  if (lrat || frat) {
+    for (auto src : internal->vars) {
+      const int dst = mapper.map_idx (src);
+      assert (dst <= src);
+      const signed char tmp = internal->val (src);
+      if (!dst && !tmp) {
+        unit_clauses (2 * src) = 0;
+        unit_clauses (2 * src + 1) = 0;
         continue;
-      assert (!unit_clauses[2 * dst] && !unit_clauses[2 * dst + 1]);
-      unit_clauses[2 * dst] = unit_clauses[2 * src];
-      unit_clauses[2 * dst + 1] = unit_clauses[2 * src + 1];
-      unit_clauses[2 * src] = 0;
-      unit_clauses[2 * src + 1] = 0;
-      continue;
+      }
+      if (!tmp || src == mapper.first_fixed) {
+        assert (0 < dst);
+        if (dst == src)
+          continue;
+        assert (!unit_clauses (2 * dst) && !unit_clauses (2 * dst + 1));
+        unit_clauses (2 * dst) = unit_clauses (2 * src);
+        unit_clauses (2 * dst + 1) = unit_clauses (2 * src + 1);
+        unit_clauses (2 * src) = 0;
+        unit_clauses (2 * src + 1) = 0;
+        continue;
+      }
+      uint64_t id = unit_clauses (2 * src);
+      int lit = src;
+      if (!id) {
+        id = unit_clauses (2 * src + 1);
+        lit = -lit;
+      }
+      unit_clauses (2 * src) = 0;
+      unit_clauses (2 * src + 1) = 0;
+      assert (id);
     }
-    uint64_t id = unit_clauses[2 * src];
-    int lit = src;
-    if (!id) {
-      id = unit_clauses[2 * src + 1];
-      lit = -lit;
-    }
-    unit_clauses[2 * src] = 0;
-    unit_clauses[2 * src + 1] = 0;
-    assert (id);
+    unit_clauses_idx.resize (2 * mapper.new_vsize);
+    shrink_vector (unit_clauses_idx);
   }
-  unit_clauses.resize (2 * mapper.new_vsize);
-  shrink_vector (unit_clauses);
-
   // Map the literals in all clauses.
   //
   for (const auto &c : clauses) {
@@ -355,27 +358,33 @@ void Internal::compact () {
     if (src == dst)
       continue;
     assert (dst < src);
+    if ((size_t) src >= frozentab.size ())
+      break;
+    if ((size_t) dst >= frozentab.size ())
+      break;
     frozentab[dst] += frozentab[src];
     frozentab[src] = 0;
   }
-  frozentab.resize (mapper.new_vsize);
+  frozentab.resize (min (frozentab.size (), mapper.new_vsize));
   shrink_vector (frozentab);
 
   // Special code for 'relevanttab'.
   //
-  for (auto src : vars) {
-    const int dst = abs (mapper.map_lit (src));
-    if (!dst)
-      continue;
-    if (src == dst)
-      continue;
-    assert (dst < src);
+  if (external) {
+    for (auto src : vars) {
+      const int dst = abs (mapper.map_lit (src));
+      if (!dst)
+        continue;
+      if (src == dst)
+        continue;
+      assert (dst < src);
 
-    relevanttab[dst] += relevanttab[src];
-    relevanttab[src] = 0;
+      relevanttab[dst] += relevanttab[src];
+      relevanttab[src] = 0;
+    }
+    relevanttab.resize (mapper.new_vsize);
+    shrink_vector (relevanttab);
   }
-  relevanttab.resize (mapper.new_vsize);
-  shrink_vector (relevanttab);
 
   /*----------------------------------------------------------------------*/
 
@@ -411,6 +420,7 @@ void Internal::compact () {
     vals -= vsize;
     delete[] vals;
     vals = new_vals;
+    vsize = mapper.new_vsize;
   }
 
   // 'constrain' uses 'val', so this code has to be after remapping that
@@ -516,7 +526,6 @@ void Internal::compact () {
   /*----------------------------------------------------------------------*/
 
   max_var = mapper.new_max_var;
-  vsize = mapper.new_vsize;
 
   stats.unused = 0;
   stats.inactive = stats.now.fixed = mapper.first_fixed ? 1 : 0;

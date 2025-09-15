@@ -24,7 +24,7 @@
 
 #ifdef NBUILD
 #ifndef VERSION
-#define VERSION "2.0.0"
+#define VERSION "2.1.3"
 #endif // VERSION
 #endif // NBUILD
 
@@ -32,9 +32,11 @@
 
 // The copyright of the code is here.
 
-static const char *COPYRIGHT =
-    "Copyright (c) 2016-2024 A. Biere, M. Fleury, N. Froleyks, K. Fazekas, "
-    "F. Pollitt";
+static const char *COPYRIGHT = "Copyright (c) 2016-2024";
+static const char *AUTHORS =
+    "A. Biere, M. Fleury, N. Froleyks, K. Fazekas, F. Pollitt, T. Faller";
+static const char *AFFILIATIONS =
+    "JKU Linz, University of Freiburg, TU Wien";
 
 /*------------------------------------------------------------------------*/
 
@@ -94,6 +96,8 @@ namespace CaDiCaL {
 
 const char *version () { return VERSION; }
 const char *copyright () { return COPYRIGHT; }
+const char *authors () { return AUTHORS; }
+const char *affiliations () { return AFFILIATIONS; }
 const char *signature () { return "cadical-" VERSION SHORTIDSTR; }
 const char *identifier () { return IDENTIFIER; }
 const char *compiler () { return COMPILER; }

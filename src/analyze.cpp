@@ -33,8 +33,10 @@ void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   external->check_learned_unit_clause (lit);
   int64_t id = ++clause_id;
-  const unsigned uidx = vlit (lit);
-  unit_clauses[uidx] = id;
+  if (lrat || frat) {
+    const unsigned uidx = vlit (lit);
+    unit_clauses (uidx) = id;
+  }
   if (proof) {
     proof->add_derived_unit_clause (id, lit, lrat_chain);
   }
@@ -263,7 +265,7 @@ inline void Internal::analyze_literal (int lit, int &open,
     unit_analyzed.push_back (lit);
     assert (val (lit) < 0);
     const unsigned uidx = vlit (-lit);
-    uint64_t id = unit_clauses[uidx];
+    uint64_t id = unit_clauses (uidx);
     assert (id);
     unit_chain.push_back (id);
     return;
@@ -271,11 +273,33 @@ inline void Internal::analyze_literal (int lit, int &open,
   ++antecedent_size;
   if (f.seen)
     return;
-  f.seen = true;
-  analyzed.push_back (lit);
+
+  // before marking as seen, get reason and check for missed unit
 
   assert (val (lit) < 0);
   assert (v.level <= level);
+  if (v.reason == external_reason) {
+    assert (!opts.exteagerreasons);
+    v.reason = learn_external_reason_clause (-lit, 0, true);
+    if (!v.reason) { // actually a unit
+      --antecedent_size;
+      LOG ("%d unit after explanation", -lit);
+      if (f.seen || !lrat)
+        return;
+      f.seen = true;
+      unit_analyzed.push_back (lit);
+      assert (val (lit) < 0);
+      const unsigned uidx = vlit (-lit);
+      uint64_t id = unit_clauses (uidx);
+      assert (id);
+      unit_chain.push_back (id);
+      return;
+    }
+  }
+
+  f.seen = true;
+  analyzed.push_back (lit);
+
   assert (v.reason != external_reason);
   if (v.level < level)
     clause.push_back (lit);
@@ -391,7 +415,7 @@ void Internal::clear_analyzed_literals () {
     assert (!f.removable);
   }
   analyzed.clear ();
-#ifndef NDEBUG
+#if 0 // to expensive, even for debugging mode
   if (unit_analyzed.size ())
     return;
   for (auto idx : vars) {
@@ -781,8 +805,15 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
     if (highest_pos != 1)
       swap (lits[1], lits[highest_pos]);
     LOG ("removing %d literals", new_conflict->size - new_size);
-    otfs_strengthen_clause (new_conflict, uip, new_size, sorted);
-    assert (new_size == new_conflict->size);
+
+    if (new_size == 1) {
+      LOG (new_conflict, "new size = 1, so interrupting");
+      assert (!opts.exteagerreasons);
+      return 0;
+    } else {
+      otfs_strengthen_clause (new_conflict, uip, new_size, sorted);
+      assert (new_size == new_conflict->size);
+    }
   }
 
   if (other_init != other)
@@ -874,7 +905,7 @@ void Internal::analyze () {
 
   /*----------------------------------------------------------------------*/
 
-  if (external_prop && !external_prop_is_lazy) {
+  if (external_prop && !external_prop_is_lazy && opts.exteagerreasons) {
     explain_external_propagations ();
   }
 
@@ -988,12 +1019,30 @@ void Internal::analyze () {
         resolvent_size < antecedent_size) {
       assert (reason != conflict);
       LOG (analyzed, "found candidate for OTFS conflict");
+      LOG (clause, "found candidate for OTFS conflict");
       LOG (reason, "found candidate (size %d) for OTFS resolvent",
            antecedent_size);
+      const int other = reason->literals[0] ^ reason->literals[1] ^ uip;
+      assert (other != uip);
       reason = on_the_fly_strengthen (reason, uip);
-      assert (conflict_size >= 2);
       if (opts.bump)
         bump_variables ();
+
+      assert (conflict_size);
+      if (!reason) {
+        uip = -other;
+        assert (open == 1);
+        LOG ("clause is actually unit %d, stopping", -uip);
+        reverse (begin (mini_chain), end (mini_chain));
+        for (auto id : mini_chain)
+          lrat_chain.push_back (id);
+        mini_chain.clear ();
+        clear_analyzed_levels ();
+        assert (!opts.exteagerreasons);
+        clause.clear ();
+        break;
+      }
+      assert (conflict_size >= 2);
 
       if (resolved == 1 && resolvent_size < conflict_size) {
         // in this case both clauses are part of the CNF, so one subsumes
@@ -1056,6 +1105,11 @@ void Internal::analyze () {
     if (!--open)
       break;
     reason = var (uip).reason;
+    if (reason == external_reason) {
+      assert (!opts.exteagerreasons);
+      reason = learn_external_reason_clause (-uip, 0, true);
+      var (uip).reason = reason;
+    }
     assert (reason != external_reason);
     LOG (reason, "analyzing %d reason", uip);
     assert (resolvent_size);
@@ -1078,7 +1132,7 @@ void Internal::analyze () {
   // up to this point lrat_chain contains the proof for current clause in
   // reversed order. in minimize and shrink the clause is changed and
   // therefore lrat_chain has to be extended. Unfortunately we cannot create
-  // the chain directly during minimazation (or shrinking) but afterwards we
+  // the chain directly during minimization (or shrinking) but afterwards we
   // can calculate it pretty easily and even better the same algorithm works
   // for both shrinking and minimization.
 

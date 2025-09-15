@@ -32,6 +32,15 @@ bool Internal::minimize_literal (int lit, int depth) {
     return false;
   bool res = true;
   assert (v.reason);
+  if (v.reason == external_reason) {
+    assert (!opts.exteagerreasons);
+    v.reason = learn_external_reason_clause (lit, 0, true);
+    if (!v.reason) {
+      assert (!v.level);
+      return true;
+    }
+  }
+  assert (v.reason != external_reason);
   const const_literal_iterator end = v.reason->end ();
   const_literal_iterator i;
   for (i = v.reason->begin (); res && i != end; i++) {
@@ -164,10 +173,10 @@ void Internal::calculate_minimize_chain (int lit, std::vector<int> &stack) {
       if (f.seen)
         continue;
       f.seen = true;
-      analyzed.push_back (idx);
+      unit_analyzed.push_back (idx);
       const int lit = val (idx) > 0 ? idx : -idx;
       const unsigned uidx = vlit (lit); // I didn't clean added flag
-      uint64_t id = unit_clauses[uidx];
+      uint64_t id = unit_clauses (uidx);
       assert (id);
       unit_chain.push_back (id);
       continue;

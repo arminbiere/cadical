@@ -27,7 +27,7 @@ public:
   /*------------------------------------------------------------------------*/
 
   // Notify the tracer that a original clause has been added.
-  // Includes ID and wether the clause is redundant or irredundant
+  // Includes ID and whether the clause is redundant or irredundant
   // Arguments: ID, redundant, clause, restored
   //
   virtual void add_original_clause (uint64_t, bool,
@@ -35,7 +35,7 @@ public:
                                     bool = false) {}
 
   // Notify the observer that a new clause has been derived.
-  // Includes ID and wether the clause is redundant or irredundant
+  // Includes ID and whether the clause is redundant or irredundant
   // If antecedents are derived they will be included here.
   // Arguments: ID, redundant, clause, antecedents
   //
@@ -129,6 +129,11 @@ public:
   // will give the complete model as a vector.
   //
   virtual void conclude_sat (const std::vector<int> &) {}
+
+  // Notify the observer that conclude unknown was requested.
+  // will give the current trail as a vector.
+  //
+  virtual void conclude_unknown (const std::vector<int> &) {}
 };
 
 /*--------------------------------------------------------------------------*/

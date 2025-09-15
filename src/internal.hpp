@@ -173,25 +173,29 @@ struct Internal {
   bool external_prop;         // true if an external propagator is connected
   bool did_external_prop;     // true if ext. propagation happened
   bool external_prop_is_lazy; // true if the external propagator is lazy
-  char rephased;              // last type of resetting phases
-  Reluctant reluctant;        // restart counter in stable mode
-  size_t vsize;               // actually allocated variable data size
-  int max_var;                // internal maximum variable index
-  uint64_t clause_id;         // last used id for clauses
-  uint64_t original_id;       // ids for original clauses to produce LRAT
-  uint64_t reserved_ids;      // number of reserved ids for original clauses
-  uint64_t conflict_id;       // store conflict id for finalize (frat)
-  bool concluded;             // keeps track of conclude
-  vector<uint64_t> conclusion;   // store ids of conclusion clauses
-  vector<uint64_t> unit_clauses; // keep track of unit_clauses (LRAT/FRAT)
-  vector<uint64_t> lrat_chain;   // create LRAT in solver: option lratdirect
-  vector<uint64_t> mini_chain;   // used to create LRAT in minimize
+  bool forced_backt_allowed;  // external propagator can force backtracking
+  bool private_steps;    // no notification of ext. prop during these steps
+  char rephased;         // last type of resetting phases
+  Reluctant reluctant;   // restart counter in stable mode
+  size_t vsize;          // actually allocated variable data size
+  int max_var;           // internal maximum variable index
+  uint64_t clause_id;    // last used id for clauses
+  uint64_t original_id;  // ids for original clauses to produce LRAT
+  uint64_t reserved_ids; // number of reserved ids for original clauses
+  uint64_t conflict_id;  // store conflict id for finalize (frat)
+  bool concluded;        // keeps track of conclude
+  vector<uint64_t> conclusion; // store ids of conclusion clauses
+  vector<uint64_t>
+      unit_clauses_idx;        // keep track of unit_clauses (LRAT/FRAT)
+  vector<uint64_t> lrat_chain; // create LRAT in solver: option lratdirect
+  vector<uint64_t> mini_chain; // used to create LRAT in minimize
   vector<uint64_t> minimize_chain; // used to create LRAT in minimize
   vector<uint64_t> unit_chain;     // used to avoid duplicate units
   vector<Clause *> inst_chain;     // for LRAT in instantiate
   vector<vector<vector<uint64_t>>>
       probehbr_chains;          // only used if opts.probehbr=false
   bool lrat;                    // generate LRAT internally
+  bool frat;                    // finalize non-deleted clauses in proof
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
   signed char *vals;            // assignment [-max_var,max_var]
@@ -221,6 +225,7 @@ struct Internal {
   Clause *newest_clause;        // used in external_propagate
   bool force_no_backtrack;      // for new clauses with external propagator
   bool from_propagator;         // differentiate new clauses...
+  bool ext_clause_forgettable;  // Is new clause from propagator forgettable
   int tainted_literal;          // used for ILB
   size_t notified;           // next trail position to notify external prop
   Clause *probe_reason;      // set during probing
@@ -258,7 +263,7 @@ struct Internal {
   Proof *proof;             // abstraction layer between solver and tracers
   LratBuilder *lratbuilder; // special proof tracer
   vector<Tracer *>
-      tracers; // proof tracing objects (ie interpolant calulator)
+      tracers; // proof tracing objects (ie interpolant calculator)
   vector<FileTracer *>
       file_tracers; // file proof tracers (ie DRAT, LRAT...)
   vector<StatTracer *> stat_tracers; // checkers
@@ -380,6 +385,11 @@ struct Internal {
     return res;
   }
 
+  inline uint64_t &unit_clauses (int lit) {
+    assert (lrat || frat);
+    return unit_clauses_idx[lit];
+  }
+
   // Helper functions to access variable and literal data.
   //
   Var &var (int lit) { return vtab[vidx (lit)]; }
@@ -426,7 +436,7 @@ struct Internal {
   }
 
   // Use only bits 6 and 7 to store the sign or zero.  The remaining
-  // bits can be use as additional flags.
+  // bits can be used as additional flags.
   //
   signed char marked67 (int lit) const {
     signed char res = marks[vidx (lit)] >> 6;
@@ -663,19 +673,30 @@ struct Internal {
   Clause *wrapped_learn_external_reason_clause (int lit);
   void explain_external_propagations ();
   void explain_reason (int lit, Clause *, int &open);
-  void move_literal_to_watch (bool other_watch);
+  void move_literals_to_watch ();
   void handle_external_clause (Clause *);
   void notify_assignments ();
   void notify_decision ();
   void notify_backtrack (size_t new_level);
+  void force_backtrack (size_t new_level);
   int ask_decision ();
+  bool ask_external_clause ();
   void add_observed_var (int ilit);
   void remove_observed_var (int ilit);
   bool observed (int ilit) const;
   bool is_decision (int ilit);
   void check_watched_literal_invariants ();
   void set_tainted_literal ();
+  void renotify_trail_after_ilb ();
+  void renotify_trail_after_local_search ();
+  void renotify_full_trail ();
   void connect_propagator ();
+  void mark_garbage_external_forgettable (int64_t id);
+  bool is_external_forgettable (int64_t id);
+#ifndef NDEBUG
+  bool get_merged_literals (std::vector<int> &);
+  void get_all_fixed_literals (std::vector<int> &);
+#endif
 
   // Use last learned clause to subsume some more.
   //
@@ -1003,7 +1024,7 @@ struct Internal {
   void mark_redundant_clauses_with_eliminated_variables_as_garbage ();
   void unmark_binary_literals (Eliminator &);
   bool resolve_clauses (Eliminator &, Clause *, int pivot, Clause *, bool);
-  void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot);
+  void mark_eliminated_clauses_as_garbage (Eliminator &, int pivot, bool &);
   bool elim_resolvents_are_bounded (Eliminator &, int pivot);
   void elim_update_removed_lit (Eliminator &, int lit);
   void elim_update_removed_clause (Eliminator &, Clause *, int except = 0);
@@ -1013,9 +1034,9 @@ struct Internal {
   void elim_backward_clauses (Eliminator &);
   void elim_propagate (Eliminator &, int unit);
   void elim_on_the_fly_self_subsumption (Eliminator &, Clause *, int);
-  void try_to_eliminate_variable (Eliminator &, int pivot);
+  void try_to_eliminate_variable (Eliminator &, int pivot, bool &);
   void increase_elimination_bound ();
-  int elim_round (bool &completed);
+  int elim_round (bool &completed, bool &);
   void elim (bool update_limits = true);
 
   // instantiate
@@ -1119,6 +1140,11 @@ struct Internal {
   failed_constraint ();     // Was constraint used to proof unsatisfiablity?
   void reset_constraint (); // Reset after 'solve' call.
 
+  // Propagate the current set of assumptions and return the
+  // non-witness assigned literals
+  int propagate_assumptions ();
+  void get_entrailed_literals (std::vector<int> &entrailed);
+
   // Forcing decision variables to a certain phase.
   //
   void phase (int lit);
@@ -1190,7 +1216,7 @@ struct Internal {
   // local search and searching for lucky phases, which in full solving
   // mode except for the last are usually optional and then followed by
   // the main CDCL search loop with inprocessing.  If only preprocessing
-  // is requested from 'External::simplifiy' only preprocessing is called
+  // is requested from 'External::simplify' only preprocessing is called
   // though. This is all orchestrated by the 'solve' function.
   //
   int already_solved ();
@@ -1288,6 +1314,12 @@ struct Internal {
   //
   void freeze (int lit) {
     int idx = vidx (lit);
+    if ((size_t) idx >= frozentab.size ()) {
+      size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) max_var;
+      while (new_vsize <= (size_t) max_var)
+        new_vsize *= 2;
+      frozentab.resize (new_vsize);
+    }
     unsigned &ref = frozentab[idx];
     if (ref < UINT_MAX) {
       ref++;
@@ -1312,7 +1344,10 @@ struct Internal {
     } else
       LOG ("variable %d remains frozen forever", idx);
   }
-  bool frozen (int lit) { return frozentab[vidx (lit)] > 0; }
+  bool frozen (int lit) {
+    return (size_t) vidx (lit) < frozentab.size () &&
+           frozentab[vidx (lit)] > 0;
+  }
 
   // Parsing functions in 'parse.cpp'.
   //
@@ -1325,15 +1360,20 @@ struct Internal {
   void new_proof_on_demand ();
   void setup_lrat_builder ();            // if opts.externallrat=true
   void force_lrat ();                    // sets lrat=true
+  void resize_unit_clauses_idx ();       // resizes unit_clauses_idx
   void close_trace (bool stats = false); // Stop proof tracing.
   void flush_trace (bool stats = false); // Flush proof trace file.
   void trace (File *);                   // Start write proof file.
   void check ();                         // Enable online proof checking.
 
-  void connect_proof_tracer (Tracer *tracer, bool antecedents);
-  void connect_proof_tracer (InternalTracer *tracer, bool antecedents);
-  void connect_proof_tracer (StatTracer *tracer, bool antecedents);
-  void connect_proof_tracer (FileTracer *tracer, bool antecedents);
+  void connect_proof_tracer (Tracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
+  void connect_proof_tracer (InternalTracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
+  void connect_proof_tracer (StatTracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
+  void connect_proof_tracer (FileTracer *tracer, bool antecedents,
+                             bool finalize_clauses = false);
   bool disconnect_proof_tracer (Tracer *tracer);
   bool disconnect_proof_tracer (StatTracer *tracer);
   bool disconnect_proof_tracer (FileTracer *tracer);

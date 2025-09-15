@@ -271,6 +271,9 @@ struct vivify_clause_later {
 
   bool operator() (Clause *a, Clause *b) const {
 
+    if (a == b)
+      return false;
+
     COVER (same_clause (a, b));
 
     // First focus on clauses scheduled in the last vivify round but not
@@ -1073,9 +1076,9 @@ void Internal::vivify_build_lrat (
       // f.seen = true;              // but we cannot because we have
       if (!v.level) { // already backtracked (sometimes)
         const unsigned uidx =
-            vlit (-other);                // nevertheless we can use var (l)
-        uint64_t id = unit_clauses[uidx]; // as if l was still assigned
-        assert (id);                      // because var is updated lazily
+            vlit (-other); // nevertheless we can use var (l)
+        uint64_t id = unit_clauses (uidx); // as if l was still assigned
+        assert (id);                       // because var is updated lazily
         lrat_chain.push_back (id);
         f.seen = true;
         analyzed.push_back (other);
@@ -1105,7 +1108,7 @@ inline void Internal::vivify_chain_for_units (int lit, Clause *reason) {
       continue;
     assert (val (reason_lit));
     const unsigned uidx = vlit (val (reason_lit) * reason_lit);
-    uint64_t id = unit_clauses[uidx];
+    uint64_t id = unit_clauses (uidx);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (reason->id);

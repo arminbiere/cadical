@@ -50,10 +50,11 @@ inline LratBuilderWatcher &LratBuilder::watcher (int lit) {
 LratBuilderClause *LratBuilder::new_clause () {
   const size_t size = simplified.size ();
   assert (size <= UINT_MAX);
-  const int off = size ? -1 : 0;
+  const int off = size ? 1 : 0;
   const size_t bytes =
       sizeof (LratBuilderClause) + (size - off) * sizeof (int);
   LratBuilderClause *res = (LratBuilderClause *) new char[bytes];
+  DeferDeleteArray<char> delete_res ((char *) res);
   res->garbage = false;
   res->next = 0;
   res->hash = last_hash;
@@ -65,10 +66,12 @@ LratBuilderClause *LratBuilder::new_clause () {
     *p++ = lit;
 
   if (size == 0) {
+    delete_res.release ();
     return res;
   }
   if (size == 1) {
     unit_clauses.push_back (res);
+    delete_res.release ();
     return res;
   }
 
@@ -96,6 +99,7 @@ LratBuilderClause *LratBuilder::new_clause () {
   } else {
     LOG ("LRAT BUILDER clause not added to watchers");
   }
+  delete_res.release ();
   return res;
 }
 
@@ -108,7 +112,7 @@ void LratBuilder::delete_clause (LratBuilderClause *c) {
     assert (num_garbage);
     num_garbage--;
   }
-  delete[](char *) c;
+  delete[] (char *) c;
 }
 
 void LratBuilder::enlarge_clauses () {
@@ -270,6 +274,7 @@ void LratBuilder::enlarge_vars (int64_t idx) {
   vals -= size_vars;
   delete[] vals;
   vals = new_vals;
+  size_vars = new_size_vars;
 
   reasons.resize (new_size_vars);
   unit_reasons.resize (new_size_vars);
@@ -287,7 +292,6 @@ void LratBuilder::enlarge_vars (int64_t idx) {
   checked_lits.resize (2 * new_size_vars);
 
   assert (idx < new_size_vars);
-  size_vars = new_size_vars;
 }
 
 inline void LratBuilder::import_literal (int lit) {
@@ -328,7 +332,7 @@ void LratBuilder::tautological () {
     if (lit == -prev) {
       new_clause_taut = true;
       return;
-    }                  // tautological clause
+    } // tautological clause
     *j++ = prev = lit; // which means we don't care
   }
   simplified.resize (j - simplified.begin ());
@@ -351,9 +355,9 @@ uint64_t LratBuilder::reduce_hash (uint64_t hash, uint64_t size) {
 
 uint64_t LratBuilder::compute_hash (const uint64_t id) {
   assert (id > 0);
-  unsigned j = id % num_nonces;             // dont know if this is a good
-  uint64_t tmp = nonces[j] * (uint64_t) id; // hash funktion or if it is
-  return last_hash = tmp; // even better than just using id
+  unsigned j = id % num_nonces;             // Don't know if this is a good
+  uint64_t tmp = nonces[j] * (uint64_t) id; // hash function or even better
+  return last_hash = tmp;                   // than just using id.
 }
 
 LratBuilderClause **LratBuilder::find (const uint64_t id) {
@@ -695,6 +699,10 @@ void LratBuilder::add_clause (const char *type) {
   (void) type;
 #endif
 
+  // If there are enough garbage clauses collect them.
+  if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
+    collect_garbage_clauses ();
+
   LratBuilderClause *c = insert ();
   if (inconsistent) {
     LOG ("LRAT BUILDER state already inconsistent so nothing more to do");
@@ -900,10 +908,6 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> &c) {
              d->id);
       }
     }
-
-    // If there are enough garbage clauses collect them.
-    if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
-      collect_garbage_clauses ();
   } else {
     fatal_message_start ();
     fputs ("deleted clause not in proof:\n", stderr);

@@ -26,43 +26,64 @@ void Internal::setup_lrat_builder () {
   }
 }
 
+void Internal::resize_unit_clauses_idx () {
+  size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) max_var;
+  unit_clauses_idx.resize (2 * new_vsize, 0);
+}
+
 void Internal::force_lrat () {
   if (lrat || lratbuilder)
     return;
   lrat = true;
 }
 
-void Internal::connect_proof_tracer (Tracer *tracer, bool antecedents) {
+void Internal::connect_proof_tracer (Tracer *tracer, bool antecedents,
+                                     bool finalize_clauses) {
   new_proof_on_demand ();
   if (antecedents)
     force_lrat ();
+  if (finalize_clauses)
+    frat = true;
+  resize_unit_clauses_idx ();
   proof->connect (tracer);
   tracers.push_back (tracer);
 }
 
 void Internal::connect_proof_tracer (InternalTracer *tracer,
-                                     bool antecedents) {
+                                     bool antecedents,
+                                     bool finalize_clauses) {
   new_proof_on_demand ();
   if (antecedents)
     force_lrat ();
+  if (finalize_clauses)
+    frat = true;
+  resize_unit_clauses_idx ();
   tracer->connect_internal (this);
   proof->connect (tracer);
   tracers.push_back (tracer);
 }
 
-void Internal::connect_proof_tracer (StatTracer *tracer, bool antecedents) {
+void Internal::connect_proof_tracer (StatTracer *tracer, bool antecedents,
+                                     bool finalize_clauses) {
   new_proof_on_demand ();
   if (antecedents)
     force_lrat ();
+  if (finalize_clauses)
+    frat = true;
+  resize_unit_clauses_idx ();
   tracer->connect_internal (this);
   proof->connect (tracer);
   stat_tracers.push_back (tracer);
 }
 
-void Internal::connect_proof_tracer (FileTracer *tracer, bool antecedents) {
+void Internal::connect_proof_tracer (FileTracer *tracer, bool antecedents,
+                                     bool finalize_clauses) {
   new_proof_on_demand ();
   if (antecedents)
     force_lrat ();
+  if (finalize_clauses)
+    frat = true;
+  resize_unit_clauses_idx ();
   tracer->connect_internal (this);
   proof->connect (tracer);
   file_tracers.push_back (tracer);
@@ -119,9 +140,10 @@ void Internal::trace (File *file) {
   } else if (opts.frat) {
     LOG ("PROOF connecting FRAT tracer");
     bool antecedents = opts.frat == 1;
+    resize_unit_clauses_idx ();
     FileTracer *ft =
         new FratTracer (this, file, opts.binary, opts.frat == 1);
-    connect_proof_tracer (ft, antecedents);
+    connect_proof_tracer (ft, antecedents, true);
   } else if (opts.lrat) {
     LOG ("PROOF connecting LRAT tracer");
     FileTracer *ft = new LratTracer (this, file, opts.binary);
@@ -147,16 +169,23 @@ void Internal::check () {
   new_proof_on_demand ();
   if (opts.checkproof > 1) {
     StatTracer *lratchecker = new LratChecker (this);
+    DeferDeletePtr<LratChecker> delete_lratchecker (
+        (LratChecker *) lratchecker);
     LOG ("PROOF connecting LRAT proof checker");
     force_lrat ();
+    frat = true;
+    resize_unit_clauses_idx ();
     proof->connect (lratchecker);
     stat_tracers.push_back (lratchecker);
+    delete_lratchecker.release ();
   }
   if (opts.checkproof == 1 || opts.checkproof == 3) {
     StatTracer *checker = new Checker (this);
+    DeferDeletePtr<Checker> delete_checker ((Checker *) checker);
     LOG ("PROOF connecting proof checker");
     proof->connect (checker);
     stat_tracers.push_back (checker);
+    delete_checker.release ();
   }
 }
 
@@ -329,7 +358,7 @@ void Proof::add_assumption_clause (uint64_t id, int lit,
 
 void Proof::delete_clause (Clause *c) {
   LOG (c, "PROOF deleting from proof");
-  assert (clause.empty ());
+  clause.clear (); // Can be non-empty if an allocation fails during adding.
   add_literals (c);
   clause_id = c->id;
   redundant = c->redundant;
@@ -422,13 +451,16 @@ void Proof::finalize_external_unit (uint64_t id, int lit) {
 void Proof::flush_clause (Clause *c) {
   LOG (c, "PROOF flushing falsified literals in");
   assert (clause.empty ());
+  const bool antecedents = (internal->lrat || internal->frat);
   for (int i = 0; i < c->size; i++) {
     int internal_lit = c->literals[i];
     if (internal->fixed (internal_lit) < 0) {
-      const unsigned uidx = internal->vlit (-internal_lit);
-      uint64_t id = internal->unit_clauses[uidx];
-      assert (id);
-      proof_chain.push_back (id);
+      if (antecedents) {
+        const unsigned uidx = internal->vlit (-internal_lit);
+        uint64_t id = internal->unit_clauses (uidx);
+        assert (id);
+        proof_chain.push_back (id);
+      }
       continue;
     }
     add_literal (internal_lit);
@@ -628,6 +660,13 @@ void Proof::conclude_sat (const vector<int> &model) {
   LOG (clause, "PROOF conclude sat");
   for (auto &tracer : tracers) {
     tracer->conclude_sat (model);
+  }
+}
+
+void Proof::conclude_unknown (const vector<int> &trail) {
+  LOG (clause, "PROOF conclude unknown");
+  for (auto &tracer : tracers) {
+    tracer->conclude_unknown (trail);
   }
 }
 

@@ -152,7 +152,7 @@ void External::extend () {
     while ((lit = *--i)) {
       if (satisfied)
         continue;
-      if (ival (lit) > 0)
+      if (ival (lit) == lit)
         satisfied = true;
       assert (i != begin);
     }
@@ -172,7 +172,7 @@ void External::extend () {
     else {
       while ((lit = *--i)) {
         const int tmp = ival (lit); // not 'signed char'!!!
-        if (tmp < 0) {
+        if (tmp != lit) {
           LOG ("flipping blocking literal %d", lit);
           assert (lit);
           assert (lit != INT_MIN);
@@ -211,7 +211,7 @@ bool External::traverse_witnesses_backward (WitnessIterator &it) {
     assert (!lit);
     --i;
     const uint64_t id =
-        ((uint64_t) * (i - 1) << 32) + static_cast<uint64_t> (*i);
+        ((uint64_t) *(i - 1) << 32) + static_cast<uint64_t> (*i);
     assert (id);
     i -= 2;
     assert (!*i);
@@ -270,12 +270,8 @@ void External::conclude_sat () {
   if (!extended)
     extend ();
   vector<int> model;
-  for (int i = 1; i <= max_var; i++) {
-    int lit = i;
-    const int value = ival (lit);
-    assert (value);
-    if (value < 0)
-      lit = -lit;
+  for (int idx = 1; idx <= max_var; idx++) {
+    const int lit = ival (idx);
     model.push_back (lit);
   }
   internal->proof->conclude_sat (model);

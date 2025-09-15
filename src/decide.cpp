@@ -225,14 +225,24 @@ int Internal::decide () {
 #endif
 
   } else {
-    stats.decisions++;
+
     int decision = ask_decision ();
-    if (!decision) {
-      int idx = next_decision_variable ();
-      const bool target = (opts.target > 1 || (stable && opts.target));
-      decision = decide_phase (idx, target);
+    if ((size_t) level < assumptions.size () ||
+        ((size_t) level == assumptions.size () && constraint.size ())) {
+      // Forced backtrack below pseudo decision levels.
+      // So one of the two branches above will handle it.
+      STOP (decide);
+      res = decide (); // STARTS and STOPS profiling
+      START (decide);
+    } else {
+      stats.decisions++;
+      if (!decision) {
+        int idx = next_decision_variable ();
+        const bool target = (opts.target > 1 || (stable && opts.target));
+        decision = decide_phase (idx, target);
+      }
+      search_assume_decision (decision);
     }
-    search_assume_decision (decision);
   }
   if (res)
     marked_failed = false;

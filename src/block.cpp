@@ -717,8 +717,8 @@ void Internal::block_literal (Blocker &blocker, int lit) {
   else if (!noccs (lit)) {
     // Rare situation, where the clause length limit was hit for 'lit' and
     // '-lit' is skipped and then it becomes pure.  Can be ignored.  We also
-    // so it once happing for a 'elimboundmin=-1' and zero positive and one
-    // negative occurrence.
+    // so it once happening for a 'elimboundmin=-1' and zero positive and
+    // one negative occurrence.
   } else if (noccs (-lit) == 1)
     block_literal_with_one_negative_occ (blocker, lit);
   else

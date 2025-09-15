@@ -34,7 +34,9 @@ public:
   bool operator== (const AigEdge &other) const {
     return index == other.index;
   }
-  bool operator<(const AigEdge &other) const { return index < other.index; }
+  bool operator< (const AigEdge &other) const {
+    return index < other.index;
+  }
   bool operator> (const AigEdge &other) const {
     return index > other.index;
   }
@@ -332,7 +334,7 @@ struct CraigData {
 
 CraigTracer::CraigTracer ()
     : CaDiCaL::Tracer (), marked_history (), marked_lits (),
-      craig_clause_current_id (1), craig_clause_ids (), craig_var_labels (),
+      craig_clause_current_id (1), craig_var_labels (),
       craig_clause_labels (),
       craig_constraint_label (CraigClauseType::L_CLAUSE), craig_clauses (),
       craig_interpolants (), craig_construction (CraigConstruction::NONE),
@@ -341,8 +343,9 @@ CraigTracer::CraigTracer ()
       craig_aig_dual_asym (new Aig ()) {}
 
 CraigTracer::~CraigTracer () {
-  for (auto it : craig_interpolants)
-    delete it.second;
+  for (auto *partial_interpolant : craig_interpolants)
+    if (partial_interpolant)
+      delete partial_interpolant;
   if (craig_interpolant)
     delete craig_interpolant;
 
@@ -364,15 +367,26 @@ bool CraigTracer::has_craig_interpolant () {
   return craig_interpolant != 0;
 }
 
+// C++11 version of insert_or_assign because it is only C++20
+template <typename A>
+void insert_or_assign (std::unordered_map<int, A> &craig_var_labels, int id,
+                       A variable_type) {
+  auto it = craig_var_labels.find (id);
+  if (it != end (craig_var_labels))
+    it->second = variable_type;
+  else
+    craig_var_labels.emplace (id, variable_type);
+}
 void CraigTracer::label_variable (int id, CraigVarType variable_type) {
   assert (id > 0);
-  craig_var_labels[id] = variable_type;
-  marked_lits[id] = 0;
+  insert_or_assign<CraigVarType> (craig_var_labels, id, variable_type);
+  insert_or_assign<uint8_t> (marked_lits, id, 0);
+  // marked_lits.insert_or_assign (id, 0);
 }
 
 void CraigTracer::label_clause (int id, CraigClauseType clause_type) {
   assert (id > 0);
-  craig_clause_labels[id] = clause_type;
+  insert_or_assign<CraigClauseType> (craig_clause_labels, id, clause_type);
 }
 
 void CraigTracer::label_constraint (CraigClauseType clause_type) {
@@ -385,26 +399,26 @@ void CraigTracer::add_original_clause (uint64_t id, bool redundant,
   assert (id > 0);
   (void) redundant;
 
-  if (!restore) {
-    craig_clause_ids[id] = craig_clause_current_id++;
+  if (restore) {
+    craig_clauses[id - 1] = c;
+    return;
   }
 
-  int original_id = craig_clause_ids[id];
-
-#ifndef NDEBUG
+  int original_id = craig_clause_current_id++;
   assert (craig_clause_labels.find (original_id) !=
           craig_clause_labels.end ());
+#ifndef NDEBUG
   for (auto &l : c) {
     assert (craig_var_labels.find (std::abs (l)) !=
             craig_var_labels.end ());
   }
 #endif
-
-  auto clause_label = craig_clause_labels[original_id];
+  auto clause_label = craig_clause_labels.find (original_id)->second;
   auto *interpolant = create_interpolant_for_clause (c, clause_label);
 
-  craig_clauses[id] = c;
-  craig_interpolants[id] = interpolant;
+  assert (craig_clauses.size () == id - 1);
+  craig_clauses.push_back (c);
+  craig_interpolants.push_back (interpolant);
 }
 
 void CraigTracer::add_derived_clause (
@@ -412,22 +426,20 @@ void CraigTracer::add_derived_clause (
     const std::vector<uint64_t> &proof_chain) {
   assert (proof_chain.size () >= 1);
   (void) redundant;
-
 #ifndef NDEBUG
   for (auto &clause : proof_chain)
-    assert (craig_interpolants.find (clause) != craig_interpolants.end ());
+    assert (craig_interpolants[clause - 1] != nullptr);
 #endif
-
   // Mark literals of conflicting clause.
-  for (auto &l : craig_clauses[proof_chain.back ()])
+  for (auto &l : craig_clauses[proof_chain.back () - 1])
     mark_literal (l);
 
   // Find pivot literal of each clause that was resolved with
   // and extend Craig interpolant for it.
   auto *interpolant =
-      new CraigData (*craig_interpolants[proof_chain.back ()]);
+      new CraigData (*craig_interpolants[proof_chain.back () - 1]);
   for (int i = proof_chain.size () - 2; i >= 0; i--) {
-    for (auto &l : craig_clauses[proof_chain[i]]) {
+    for (auto &l : craig_clauses[proof_chain[i] - 1]) {
       // Function mark_literal returns true if inverse literal was marked
       // before and marks literal l for the following resolvent literal
       // checks.
@@ -435,13 +447,17 @@ void CraigTracer::add_derived_clause (
         continue;
 
       extend_interpolant_with_resolution (
-          *interpolant, -l, *craig_interpolants[proof_chain[i]]);
+          *interpolant, -l, *craig_interpolants[proof_chain[i] - 1]);
     }
   }
   unmark_all ();
-
-  craig_clauses[id] = c;
-  craig_interpolants[id] = interpolant;
+#ifndef NDEBUG
+  assert (craig_clauses.size () == id - 1);
+#else
+  (void) id;
+#endif
+  craig_clauses.push_back (c);
+  craig_interpolants.push_back (interpolant);
 }
 
 void CraigTracer::add_assumption_clause (
@@ -453,7 +469,7 @@ void CraigTracer::add_assumption_clause (
     // We have a resolution of multiple clauses and therefore reuse
     // the existing code to build our Craig interpolant.
     add_derived_clause (id, true, c, proof_chain);
-    interpolant = craig_interpolants[id];
+    interpolant = craig_interpolants[id - 1];
   } else {
     assert (c.size () == 2);
     bool c0_is_assumption =
@@ -463,9 +479,9 @@ void CraigTracer::add_assumption_clause (
 
     if (!c0_is_assumption || !c1_is_assumption) {
       int l = c0_is_assumption ? -c[1] : -c[0];
-      craig_clauses[id] = {l};
-      craig_interpolants[id] = create_interpolant_for_assumption (-l);
-
+      assert (craig_clauses.size () == id - 1);
+      craig_clauses.push_back ({l});
+      craig_interpolants.push_back (create_interpolant_for_assumption (-l));
       assumption_clauses.push_back (id);
       return;
     }
@@ -486,9 +502,11 @@ void CraigTracer::add_assumption_clause (
     }
   }
 
-  craig_clauses[id] = c;
-  craig_interpolants[id] = interpolant;
-
+  if (proof_chain.size () == 0) {
+    assert (craig_clauses.size () == id - 1);
+    craig_clauses.push_back (c);
+    craig_interpolants.push_back (interpolant);
+  }
   assumption_clauses.push_back (id);
 }
 
@@ -497,14 +515,8 @@ void CraigTracer::delete_clause (uint64_t id, bool redundant,
   (void) redundant;
   (void) c;
 
-  auto it1 = craig_clauses.find (id);
-  assert (it1 != craig_clauses.end ());
-  craig_clauses.erase (it1);
-
-  auto it2 = craig_interpolants.find (id);
-  assert (it2 != craig_interpolants.end ());
-  delete it2->second;
-  craig_interpolants.erase (it2);
+  assert (craig_clauses.size () >= id - 1);
+  craig_clauses[id - 1].resize (0);
 }
 
 void CraigTracer::add_assumption (int lit) { assumptions.insert (lit); }
@@ -515,7 +527,7 @@ void CraigTracer::add_constraint (const std::vector<int> &c) {
 
 void CraigTracer::reset_assumptions () {
   for (auto &id : assumption_clauses) {
-    delete_clause (id, true, craig_clauses[id]);
+    delete_clause (id, true, craig_clauses[id - 1]);
   }
   assumptions.clear ();
   constraint.clear ();
@@ -536,16 +548,16 @@ void CraigTracer::conclude_unsat (
     // The proof_chain contains a single empty clause.
     // chain = (c1), c1 = {}
     assert (proof_chain.size () == 1);
-    assert (craig_clauses[proof_chain[0]].empty ());
-    interpolant = new CraigData (*craig_interpolants[proof_chain[0]]);
+    assert (craig_clauses[proof_chain[0] - 1].empty ());
+    interpolant = new CraigData (*craig_interpolants[proof_chain[0] - 1]);
   } else if (conclusion == CaDiCaL::ConclusionType::ASSUMPTIONS) {
     // One or more constraints are responsible for the conflict.
     // The proof_chain contains a single clause with failing assumptions.
     // The interpolant of that clause already has been resolved with
     // assumption interpolants. chain = (c1), c1 = { -a1, -a2, -a3, ... }
     assert (proof_chain.size () == 1);
-    assert (craig_clauses[proof_chain[0]].size () > 0);
-    interpolant = new CraigData (*craig_interpolants[proof_chain[0]]);
+    assert (craig_clauses[proof_chain[0] - 1].size () > 0);
+    interpolant = new CraigData (*craig_interpolants[proof_chain[0] - 1]);
   } else if (conclusion == CaDiCaL::ConclusionType::CONSTRAINT) {
     // The constraint clause is responsible for the conflict.
 
@@ -558,7 +570,7 @@ void CraigTracer::conclude_unsat (
     interpolant =
         create_interpolant_for_clause (constraint, craig_constraint_label);
     for (int i = proof_chain.size () - 1; i >= 0; i--) {
-      for (auto &l : craig_clauses[proof_chain[i]]) {
+      for (auto &l : craig_clauses[proof_chain[i] - 1]) {
         // Function mark_literal returns true if inverse literal was marked
         // before and marks literal l for the following resolvent literal
         // checks.
@@ -566,7 +578,7 @@ void CraigTracer::conclude_unsat (
           continue;
 
         extend_interpolant_with_resolution (
-            *interpolant, -l, *craig_interpolants[proof_chain[i]]);
+            *interpolant, -l, *craig_interpolants[proof_chain[i] - 1]);
       }
     }
 

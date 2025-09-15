@@ -1,7 +1,8 @@
 #!/bin/sh
+set -x
 cd `dirname $0`/..
 root=`pwd`
-tmp=/tmp/prepare-cadical-sc2021-submission.log
+tmp=/tmp/prepare-cadical-sc2024-submission.log
 VERSION=`cat VERSION`
 rm -f $tmp
 ##########################################################################

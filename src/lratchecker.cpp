@@ -30,7 +30,7 @@ signed char &LratChecker::checked_lit (int lit) {
 LratCheckerClause *LratChecker::new_clause () {
   const size_t size = imported_clause.size ();
   assert (size <= UINT_MAX);
-  const int off = size ? -1 : 0;
+  const int off = size ? 1 : 0;
   const size_t bytes =
       sizeof (LratCheckerClause) + (size - off) * sizeof (int);
   LratCheckerClause *res = (LratCheckerClause *) new char[bytes];
@@ -68,7 +68,7 @@ void LratChecker::delete_clause (LratCheckerClause *c) {
     assert (num_garbage);
     num_garbage--;
   }
-  delete[](char *) c;
+  delete[] (char *) c;
 }
 
 void LratChecker::enlarge_clauses () {
@@ -199,9 +199,9 @@ uint64_t LratChecker::reduce_hash (uint64_t hash, uint64_t size) {
 
 uint64_t LratChecker::compute_hash (const uint64_t id) {
   assert (id > 0);
-  unsigned j = id % num_nonces;             // dont know if this is a good
-  uint64_t tmp = nonces[j] * (uint64_t) id; // hash funktion or if it is
-  return last_hash = tmp; // even better than just using id
+  unsigned j = id % num_nonces;             // Don't know if this is a good
+  uint64_t tmp = nonces[j] * (uint64_t) id; // hash function or even better
+  return last_hash = tmp;                   // than just using id.
 }
 
 LratCheckerClause **LratChecker::find (const uint64_t id) {

@@ -68,12 +68,21 @@ int inline Internal::shrink_literal (int lit, int blevel,
   assert (val (lit) < 0);
 
   Flags &f = flags (lit);
-  const Var &v = var (lit);
+  Var &v = var (lit);
   assert (v.level <= blevel);
 
   if (!v.level) {
     LOG ("skipping root level assigned %d", (lit));
     return 0;
+  }
+
+  if (v.reason == external_reason) {
+    assert (!opts.exteagerreasons);
+    v.reason = learn_external_reason_clause (-lit, 0, true);
+    if (!v.reason) {
+      assert (!v.level);
+      return 0;
+    }
   }
   assert (v.reason != external_reason);
   if (f.shrinkable) {
@@ -267,6 +276,7 @@ Internal::shrink_block (std::vector<int>::reverse_iterator &rbegin_lits,
   assert (rbegin_lits >= clause.rbegin ());
   assert (rend_block < clause.rend ());
   assert (rbegin_lits < rend_block);
+  assert (opts.shrink);
 
 #ifdef LOGGING
 
@@ -279,8 +289,8 @@ Internal::shrink_block (std::vector<int>::reverse_iterator &rbegin_lits,
     LOG ("shrinking up to %u", max_trail);
 #endif
 
-  const bool resolve_large_clauses = (opts.shrink > 2);
-  bool failed = (opts.shrink == 0);
+  const bool resolve_large_clauses = (opts.shrink > 1);
+  bool failed = false;
   unsigned block_shrunken = 0;
   std::vector<int>::size_type minimized_start = minimized.size ();
   int uip = uip0;

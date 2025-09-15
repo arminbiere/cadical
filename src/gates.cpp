@@ -80,7 +80,7 @@ int Internal::second_literal_in_binary_clause_lrat (Clause *c, int first) {
   return second;
 }
 
-// I needed to find the second clause for hyper unary resultion to build
+// I needed to find the second clause for hyper unary resolution to build
 // LRAT this is not efficient but I could not find a better way then just
 // finding the corresponding clause in all possible clauses
 //
@@ -141,7 +141,7 @@ void Internal::mark_binary_literals (Eliminator &eliminator, int first) {
           analyzed.push_back (lit);
           f.seen = true;
           const unsigned uidx = vlit (-lit);
-          uint64_t id = unit_clauses[uidx];
+          uint64_t id = unit_clauses (uidx);
           assert (id);
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);
@@ -156,7 +156,7 @@ void Internal::mark_binary_literals (Eliminator &eliminator, int first) {
           analyzed.push_back (lit);
           f.seen = true;
           const unsigned uidx = vlit (-lit);
-          uint64_t id = unit_clauses[uidx];
+          uint64_t id = unit_clauses (uidx);
           assert (id);
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);
@@ -243,7 +243,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
           analyzed.push_back (lit);
           f.seen = true;
           const unsigned uidx = vlit (-lit);
-          uint64_t id = unit_clauses[uidx];
+          uint64_t id = unit_clauses (uidx);
           assert (id);
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);
@@ -258,7 +258,7 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
           analyzed.push_back (lit);
           f.seen = true;
           const unsigned uidx = vlit (-lit);
-          uint64_t id = unit_clauses[uidx];
+          uint64_t id = unit_clauses (uidx);
           assert (id);
           lrat_chain.push_back (id);
           // LOG ("gates added id %" PRId64, id);

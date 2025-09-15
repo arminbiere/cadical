@@ -112,6 +112,8 @@ public:
     return true;
   }
 
+  bool endl () { return put ('\n'); }
+
   bool put (unsigned char ch) {
     assert (writing);
     if (cadical_putc_unlocked (ch, file) == EOF)

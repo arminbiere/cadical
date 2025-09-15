@@ -10,9 +10,9 @@
 #include "tracer.hpp"
 
 #include <iostream>
-#include <map>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace CaDiCraig {
@@ -174,16 +174,15 @@ private:
   std::vector<uint64_t> assumption_clauses;
 
   std::vector<int> marked_history;
-  std::map<int, uint8_t> marked_lits;
+  std::unordered_map<int, uint8_t> marked_lits;
 
   int craig_clause_current_id;
-  std::map<int, uint64_t> craig_clause_ids;
-  std::map<int, CraigVarType> craig_var_labels;
-  std::map<int, CraigClauseType> craig_clause_labels;
+  std::unordered_map<int, CraigVarType> craig_var_labels;
+  std::unordered_map<int, CraigClauseType> craig_clause_labels;
   CraigClauseType craig_constraint_label;
 
-  std::map<uint64_t, std::vector<int>> craig_clauses;
-  std::map<uint64_t, CraigData *> craig_interpolants;
+  std::vector<std::vector<int>> craig_clauses;
+  std::vector<CraigData *> craig_interpolants;
 
   CraigConstruction craig_construction;
   size_t craig_id;

@@ -83,6 +83,7 @@ static uint64_t hash_machine_identifier () {
 extern "C" {
 #include <ifaddrs.h>
 #include <netdb.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>

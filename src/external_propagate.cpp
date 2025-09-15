@@ -17,7 +17,9 @@ void Internal::add_observed_var (int ilit) {
     LOG ("variable %d is observed %u times", idx, ref);
   } else
     LOG ("variable %d remains observed forever", idx);
-
+  // TODO: instead of actually backtracking, it would be enough to notify
+  // backtrack and re-play again every levels' notification to the
+  // propagator
   if (val (ilit) && level && !fixed (ilit)) {
     // The variable is already assigned, but we can not send a notification
     // about it because it happened on an earlier decision level.
@@ -25,6 +27,8 @@ void Internal::add_observed_var (int ilit) {
     // undo this unnotifiable assignment.
     const int assignment_level = var (ilit).level;
     backtrack (assignment_level - 1);
+  } else if (level && fixed (ilit)) {
+    backtrack (0);
   }
 }
 
@@ -35,12 +39,14 @@ void Internal::add_observed_var (int ilit) {
 // graph involving this variable.
 //
 void Internal::remove_observed_var (int ilit) {
-  if (!fixed (ilit) && level)
+  if (!fixed (ilit) && level) {
     backtrack ();
+  }
 
   assert (fixed (ilit) || !level);
 
   const int idx = vidx (ilit);
+  assert ((size_t) idx < relevanttab.size ());
   unsigned &ref = relevanttab[idx];
   assert (fixed (ilit) || ref > 0);
   if (fixed (ilit))
@@ -60,6 +66,7 @@ void Internal::remove_observed_var (int ilit) {
 // Supposed to be used only by mobical.
 //
 bool Internal::observed (int ilit) const {
+  assert ((size_t) vidx (ilit) < relevanttab.size ());
   return relevanttab[vidx (ilit)] > 0;
 }
 
@@ -87,6 +94,96 @@ void Internal::set_tainted_literal () {
   }
 }
 
+void Internal::renotify_trail_after_ilb () {
+  if (!external_prop || external_prop_is_lazy || !trail.size () ||
+      !opts.ilb) {
+    return;
+  }
+  LOG ("notify external propagator about new assignments (after ilb)");
+#ifndef NDEBUG
+  LOG ("(decision level: %d, trail size: %zd, notified %zd)", level,
+       trail.size (), notified);
+#endif
+  renotify_full_trail ();
+}
+
+void Internal::renotify_trail_after_local_search () {
+  if (!external_prop || external_prop_is_lazy || !trail.size ()) {
+    return;
+  }
+  LOG ("notify external propagator about new assignments (after local "
+       "search)");
+#ifndef NDEBUG
+  LOG ("(decision level: %d, trail size: %zd, notified %zd)", level,
+       trail.size (), notified);
+#endif
+  renotify_full_trail ();
+}
+
+// It repeats ALL assignments of the trail, so the already notified
+// root-level assignments will be notified multiple times.
+
+void Internal::renotify_full_trail () {
+  const size_t end_of_trail = trail.size ();
+  if (level) {
+    notified = 0; // TODO: save the last notified root-level position
+                  // somewhere and use it here
+    notify_backtrack (0);
+  }
+  std::vector<int> assigned;
+
+  int prev_max_level = 0;
+  int current_level = 0;
+  int propagator_level = 0;
+
+  while (notified < end_of_trail) {
+    int ilit = trail[notified++];
+    // In theory, 0 ilit can happen due to pseudo-decision levels
+    if (!ilit)
+      current_level = prev_max_level + 1;
+    else
+      current_level = var (ilit).level;
+
+    if (current_level > propagator_level) {
+      if (assigned.size ())
+        external->propagator->notify_assignment (assigned);
+      while (current_level > propagator_level) {
+        external->propagator->notify_new_decision_level ();
+        propagator_level++;
+      }
+      assigned.clear ();
+    }
+    // Current level can be smaller than prev_max_level due to chrono
+    if (current_level > prev_max_level)
+      prev_max_level = current_level;
+
+    if (!observed (ilit))
+      continue;
+
+    int elit = externalize (ilit); // TODO: double-check tainting
+    assert (elit);
+    // Fixed variables might get mapped (during compact) to another
+    // non-observed but fixed variable.
+    // This happens on root level, so notification about their assignment is
+    // already done.
+    assert (external->observed (elit) || fixed (ilit));
+    assigned.push_back (elit);
+  }
+  if (assigned.size ())
+    external->propagator->notify_assignment (assigned);
+  assigned.clear ();
+
+  // In case there are some left over empty levels on the top of the trail,
+  // the external propagtor must be notified about them so the levels are
+  // synced
+  while (level > propagator_level) {
+    external->propagator->notify_new_decision_level ();
+    propagator_level++;
+  }
+
+  return;
+}
+
 /*----------------------------------------------------------------------------*/
 //
 // Check if the variable is assigned by decision.
@@ -109,6 +206,18 @@ bool Internal::is_decision (int ilit) {
   return true;
 }
 
+void Internal::force_backtrack (size_t new_level) {
+  if (!forced_backt_allowed || level <= 0 || new_level >= (size_t) level)
+    return;
+
+#ifndef NDEBUG
+  LOG ("external propagator forces backtrack to decision level"
+       "%zd (from level %d)",
+       new_level, level);
+#endif
+  backtrack (new_level);
+}
+
 /*----------------------------------------------------------------------------*/
 //
 // Call external propagator to check if there is a literal to be propagated.
@@ -121,18 +230,18 @@ bool Internal::is_decision (int ilit) {
 bool Internal::external_propagate () {
   if (level)
     require_mode (SEARCH);
-
   assert (!unsat);
 
   size_t before = num_assigned;
-
-  if (!conflict && external_prop && !external_prop_is_lazy) {
+  bool cb_repropagate_needed = true;
+  while (cb_repropagate_needed && !conflict && external_prop &&
+         !external_prop_is_lazy && !private_steps) {
 #ifndef NDEBUG
     LOG ("external propagation starts (decision level: %d, trail size: "
          "%zd, notified %zd)",
          level, trail.size (), notified);
 #endif
-
+    cb_repropagate_needed = false;
     // external->reset_extended (); //TODO for inprocessing
 
     notify_assignments ();
@@ -204,10 +313,23 @@ bool Internal::external_propagate () {
          level, trail.size (), notified);
 #endif
     if (!unsat && !conflict) {
-      bool has_external_clause =
-          external->propagator->cb_has_external_clause ();
+      int level_before = level;
+      size_t assigned = num_assigned;
+      bool has_external_clause = ask_external_clause ();
+      // New observed variable might have triggered a backtrack during this
+      // ask_external_clause call, so we need to propagate before continuing
       stats.ext_prop.ext_cb++;
       stats.ext_prop.elearn_call++;
+
+      bool trail_changed =
+          (num_assigned != assigned || level != level_before ||
+           propagated < trail.size ());
+      if (trail_changed) {
+        propagate (); // unsat or conflict will be caught later
+        if (!unsat || !conflict)
+          notify_assignments ();
+      }
+
 #ifndef NDEBUG
       if (has_external_clause)
         LOG ("New external clauses are to be added.");
@@ -216,25 +338,30 @@ bool Internal::external_propagate () {
 #endif
 
       while (has_external_clause) {
-        int level_before = level;
-        size_t assigned = num_assigned;
+        level_before = level;
+        assigned = num_assigned;
 
         add_external_clause (0);
-        bool trail_changed =
+        trail_changed =
             (num_assigned != assigned || level != level_before ||
              propagated < trail.size ());
+        cb_repropagate_needed = true;
 
-        if (unsat || conflict)
+        if (unsat || conflict) {
+          cb_repropagate_needed = false;
           break;
+        }
 
         if (trail_changed) {
           propagate ();
-          if (unsat || conflict)
+          if (unsat || conflict) {
+            cb_repropagate_needed = false;
             break;
+          }
+
           notify_assignments ();
         }
-        has_external_clause =
-            external->propagator->cb_has_external_clause ();
+        has_external_clause = ask_external_clause ();
         stats.ext_prop.ext_cb++;
         stats.ext_prop.elearn_call++;
       }
@@ -253,56 +380,68 @@ bool Internal::external_propagate () {
 
 /*----------------------------------------------------------------------------*/
 //
+// Helper function, calls 'cb_has_external_clause', while maintains the
+// related redundancy type of the clause.
+//
+
+bool Internal::ask_external_clause () {
+  ext_clause_forgettable = false;
+  bool res =
+      external->propagator->cb_has_external_clause (ext_clause_forgettable);
+
+  return res;
+}
+/*----------------------------------------------------------------------------*/
+//
 // Literals of the externally learned clause must be reordered based on the
 // assignment levels of the literals.
 //
-void Internal::move_literal_to_watch (bool other_watch) {
+void Internal::move_literals_to_watch () {
   if (clause.size () < 2)
     return;
   if (!level)
     return;
-  int i = 0;
-  if (other_watch)
-    i++;
 
-  int highest_position = i;
-  int highest_literal = clause[i];
+  for (int i = 0; i < 2; i++) {
+    int highest_position = i;
+    int highest_literal = clause[i];
 
-  int highest_level = var (highest_literal).level;
-  int highest_value = val (highest_literal);
+    int highest_level = var (highest_literal).level;
+    int highest_value = val (highest_literal);
 
-  for (size_t j = i + 1; j < clause.size (); j++) {
-    const int other = clause[j];
-    const int other_level = var (other).level;
-    const int other_value = val (other);
+    for (size_t j = i + 1; j < clause.size (); j++) {
+      const int other = clause[j];
+      const int other_level = var (other).level;
+      const int other_value = val (other);
 
-    if (other_value < 0) {
-      if (highest_value >= 0)
-        continue;
-      if (other_level <= highest_level)
-        continue;
-    } else if (other_value > 0) {
-      if (highest_value > 0 && other_level >= highest_level)
-        continue;
-    } else {
-      if (highest_value >= 0)
-        continue;
+      if (other_value < 0) {
+        if (highest_value >= 0)
+          continue;
+        if (other_level <= highest_level)
+          continue;
+      } else if (other_value > 0) {
+        if (highest_value > 0 && other_level >= highest_level)
+          continue;
+      } else {
+        if (highest_value >= 0)
+          continue;
+      }
+
+      highest_position = j;
+      highest_literal = other;
+      highest_level = other_level;
+      highest_value = other_value;
     }
-
-    highest_position = j;
-    highest_literal = other;
-    highest_level = other_level;
-    highest_value = other_value;
-  }
 #ifndef NDEBUG
-  LOG ("highest position: %d highest level: %d highest value: %d",
-       highest_position, highest_level, highest_value);
+    LOG ("highest position: %d highest level: %d highest value: %d",
+         highest_position, highest_level, highest_value);
 #endif
 
-  if (highest_position == i)
-    return;
-  if (highest_position > i) {
-    std::swap (clause[i], clause[highest_position]);
+    if (highest_position == i)
+      continue;
+    if (highest_position > i) {
+      std::swap (clause[i], clause[highest_position]);
+    }
   }
 }
 
@@ -337,6 +476,11 @@ void Internal::add_external_clause (int propagated_elit,
   int elit = 0;
 
   if (propagated_elit) {
+    // Propagation reason clauses are by default assumed to be forgettable
+    // irredundant. In case they would be unforgettably important, the
+    // propagator can add them as an explicit unforgettable external clause
+    // or set 'are_reasons_forgettable' to false.
+    ext_clause_forgettable = external->propagator->are_reasons_forgettable;
 #ifndef NDEBUG
     LOG ("add external reason of propagated lit: %d", propagated_elit);
 #endif
@@ -344,14 +488,16 @@ void Internal::add_external_clause (int propagated_elit,
   } else
     elit = external->propagator->cb_add_external_clause_lit ();
 
+  // we need to be build a new LRAT chain if we are already in the middle of
+  // the analysis (like during failed assumptions)
+  LOG (lrat_chain, "lrat chain before");
+  std::vector<uint64_t> lrat_chain_ext = std::move (lrat_chain);
+  lrat_chain.clear ();
+  clause.clear ();
+
   // Read out the external lemma into original and simplify it into clause
   assert (clause.empty ());
   assert (original.empty ());
-
-  // we need to be build a new LRAT chain if we are already in the middle of
-  // the analysis (like during failed assumptions)
-  std::vector<uint64_t> lrat_chain_ext;
-  assert (lrat_chain_ext.empty ());
 
   assert (!force_no_backtrack);
   assert (!from_propagator);
@@ -371,6 +517,8 @@ void Internal::add_external_clause (int propagated_elit,
   assert (clause.empty ());
   force_no_backtrack = false;
   from_propagator = false;
+  lrat_chain = std::move (lrat_chain_ext);
+  LOG (lrat_chain, "lrat chain after");
 }
 
 /*----------------------------------------------------------------------------*/
@@ -379,8 +527,10 @@ void Internal::add_external_clause (int propagated_elit,
 // backward reachable externally propagated literal starting from 'ilit'.
 //
 void Internal::explain_reason (int ilit, Clause *reason, int &open) {
+  if (!opts.exteagerreasons)
+    return;
 #ifndef NDEBUG
-  LOG (reason, "explain_reason %d (open: %d)", ilit, open);
+  LOG (reason, "explain_reason of %d (open: %d)", ilit, open);
 #endif
   assert (reason);
   assert (reason != external_reason);
@@ -451,6 +601,19 @@ void Internal::explain_external_propagations () {
       break;
   }
   assert (!open);
+
+  if (!opts.exteagerrecalc) {
+    for (auto lit : seen_lits) {
+      Flags &f = flags (lit);
+      f.seen = false;
+    }
+#ifndef NDEBUG
+    for (auto idx : vars) {
+      assert (!flags (idx).seen);
+    }
+#endif
+  }
+
   // Traverse now in the opposite direction (from lower to higher levels)
   // and calculate the actual assignment level for the seen assignments.
   for (auto it = seen_lits.rbegin (); it != seen_lits.rend (); ++it) {
@@ -492,8 +655,8 @@ void Internal::explain_external_propagations () {
 // Learns the reason clause of the propagation of ilit from the
 // external propagator via 'add_external_clause'.
 // In case of falsified propagation steps, if the propagated literal is
-// already fixed to the opposite value externalize will not necessarily give
-// back the original elit (but an equivalent one). To avoid that, in
+// already fixed to the opposite value, externalize will not necessarily
+// give back the original elit (but an equivalent one). To avoid that, in
 // falsified propagation cases the propagated elit is added as a second
 // argument.
 //
@@ -501,6 +664,8 @@ Clause *Internal::learn_external_reason_clause (int ilit,
                                                 int falsified_elit,
                                                 bool no_backtrack) {
   assert (external->propagator);
+  // we cannot modify clause during analysis
+  auto clause_tmp = std::move (clause);
 
   assert (clause.empty ());
   assert (original.empty ());
@@ -516,6 +681,21 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 
   LOG ("ilit: %d, elit: %d", ilit, elit);
   add_external_clause (elit, no_backtrack);
+
+#ifndef NDEBUG
+  if (!falsified_elit && newest_clause) {
+    // Check if external propagation is correct wrt to the topological order
+    // defined by the trail. In case it is a falsified external propagation
+    // step, the order does not matter, the reason simply supposed to be a
+    // falsified clause.
+    const int propagated_ilit = ilit;
+    for (auto const reason_ilit : *newest_clause) {
+      assert (var (reason_ilit).trail <= var (propagated_ilit).trail);
+    }
+  }
+#endif
+
+  clause = std::move (clause_tmp);
   return newest_clause;
 }
 
@@ -538,7 +718,7 @@ Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
     clause.clear ();
     res = learn_external_reason_clause (ilit, 0, true);
     // The learn_external_reason clause can leave a literal in clause when
-    // there there is a falsified elit arg. Here it is not allowed to
+    // there is a falsified elit arg. Here it is not allowed to
     // happen.
     assert (clause.empty ());
 
@@ -639,6 +819,10 @@ void Internal::handle_external_clause (Clause *res) {
 // - The empty clause was learned due to something new learned from
 // the external propagator.
 //
+// In case only new variables were introduced, but no new clauses were
+// added, the function will return without a conflict to the outer CDCL
+// loop, where the new (not yet satisfied) variables are recognized and
+// the search continues.
 bool Internal::external_check_solution () {
   if (!external_prop)
     return true;
@@ -661,18 +845,15 @@ bool Internal::external_check_solution () {
     // Here the variables must be filtered by external->is_observed,
     // because fixed variables are internally not necessarily observed
     // anymore.
-    for (unsigned i = 1; i <= (unsigned) external->max_var; i++) {
-      if (!external->is_observed[i])
+    for (int idx = 1; idx <= external->max_var; idx++) {
+      if (!external->is_observed[idx])
         continue;
-      const int tmp = external->ival (i);
-      if (tmp > 0)
-        etrail.push_back (i);
-      else
-        etrail.push_back (-i);
+      const int lit = external->ival (idx);
+      etrail.push_back (lit);
 #ifndef NDEBUG
 #ifdef LOGGING
-      bool p = external->vals[i];
-      LOG ("evals[%d]: %d ival(%d): %d", i, p, i, tmp);
+      bool p = external->vals[idx];
+      LOG ("evals[%d]: %d ival(%d): %d", idx, p, idx, lit);
 #endif
 #endif
     }
@@ -685,13 +866,14 @@ bool Internal::external_check_solution () {
       return true;
     }
 
-    bool has_external_clause =
-        external->propagator->cb_has_external_clause ();
+    bool has_external_clause = ask_external_clause ();
+
     stats.ext_prop.ext_cb++;
     stats.ext_prop.elearn_call++;
-    assert (has_external_clause);
 
-    LOG ("Found solution triggered new clauses from external propagator.");
+    if (has_external_clause)
+      LOG (
+          "Found solution triggered new clauses from external propagator.");
 
     while (has_external_clause) {
       int level_before = level;
@@ -720,7 +902,7 @@ bool Internal::external_check_solution () {
       //
       if (unsat || conflict || trail_changed)
         break;
-      has_external_clause = external->propagator->cb_has_external_clause ();
+      has_external_clause = ask_external_clause ();
       stats.ext_prop.ext_cb++;
       stats.ext_prop.elearn_call++;
     }
@@ -744,22 +926,34 @@ bool Internal::external_check_solution () {
 // Notify the external propagator that an observed variable got assigned.
 //
 void Internal::notify_assignments () {
-  if (!external_prop || external_prop_is_lazy)
+  if (!external_prop || external_prop_is_lazy || private_steps)
     return;
 
   const size_t end_of_trail = trail.size ();
-  if (notified < end_of_trail)
-    LOG ("notify external propagator about new assignments");
+
+  if (notified >= end_of_trail)
+    return;
+
+  LOG ("notify external propagator about new assignments");
+  std::vector<int> assigned;
+
   while (notified < end_of_trail) {
     int ilit = trail[notified++];
-    if (fixed (ilit) || !observed (ilit))
-      continue; // fixed literals are notified eagerly in mark_fixed, not
-                // here
+    if (!observed (ilit))
+      continue;
+
     int elit = externalize (ilit); // TODO: double-check tainting
     assert (elit);
-    assert (external->observed (elit));
-    external->propagator->notify_assignment (elit, false);
+    // Fixed variables might get mapped (during compact) to another
+    // non-observed but fixed variable.
+    // This happens on root level, so notification about their assignment is
+    // already done.
+    assert (external->observed (elit) || fixed (ilit));
+    assigned.push_back (elit);
   }
+
+  external->propagator->notify_assignment (assigned);
+  return;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -774,7 +968,7 @@ void Internal::connect_propagator () {
 // Notify the external propagator that a new decision level is started.
 //
 void Internal::notify_decision () {
-  if (!external_prop || external_prop_is_lazy)
+  if (!external_prop || external_prop_is_lazy || private_steps)
     return;
   external->propagator->notify_new_decision_level ();
 }
@@ -784,7 +978,7 @@ void Internal::notify_decision () {
 // Notify the external propagator that backtrack to new_level.
 //
 void Internal::notify_backtrack (size_t new_level) {
-  if (!external_prop || external_prop_is_lazy)
+  if (!external_prop || external_prop_is_lazy || private_steps)
     return;
   external->propagator->notify_backtrack (new_level);
 }
@@ -795,14 +989,37 @@ void Internal::notify_backtrack (size_t new_level) {
 // decision.
 //
 int Internal::ask_decision () {
-  if (!external_prop || external_prop_is_lazy)
+  if (!external_prop || external_prop_is_lazy || private_steps)
     return 0;
+
+  assert (!unsat);
+  assert (!conflict);
+  notify_assignments ();
+  int level_before = level;
+  forced_backt_allowed = true;
   int elit = external->propagator->cb_decide ();
+  forced_backt_allowed = false;
   stats.ext_prop.ext_cb++;
+
+  if (level_before != level) {
+
+    propagate ();
+    assert (!unsat);
+    assert (!conflict);
+    notify_assignments ();
+
+    // In case the external propagator forced to backtrack below the
+    // pseduo decision levels, we must go back to the CDCL loop instead of
+    // making a decision.
+    if ((size_t) level < assumptions.size () ||
+        ((size_t) level == assumptions.size () && constraint.size ())) {
+      return 0;
+    }
+  }
 
   if (!elit)
     return 0;
-  LOG ("external propagator wants to propose a decision: %d", elit);
+  LOG ("external propagator proposes decision: %d", elit);
   assert (external->is_observed[abs (elit)]);
   if (!external->is_observed[abs (elit)])
     return 0;
@@ -824,6 +1041,33 @@ int Internal::ask_decision () {
   }
 
   return ilit;
+}
+
+/*----------------------------------------------------------------------------*/
+//
+// Check if the clause is a forgettable clause coming from the external
+// propagator.
+//
+bool Internal::is_external_forgettable (int64_t id) {
+  assert (opts.check);
+  return (external->forgettable_original.find (id) !=
+          external->forgettable_original.end ());
+}
+
+/*----------------------------------------------------------------------------*/
+//
+// When an external forgettable clause is deleted, it is marked in the
+// 'forgettable_original' hash, so that the internal model checking can
+// ignore it.
+//
+void Internal::mark_garbage_external_forgettable (int64_t id) {
+  assert (opts.check);
+  assert (is_external_forgettable (id));
+
+  LOG (external->forgettable_original[id],
+       "forgettable external lemma is deleted:");
+  // Mark as removed by flipping the first flag to false.
+  external->forgettable_original[id][0] = 0;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -906,5 +1150,74 @@ void Internal::check_watched_literal_invariants () {
               (var (clause[1]).level >= var (clause[i]).level));
   }
 }
+
+#ifndef NDEBUG
+
+/*----------------------------------------------------------------------------*/
+//
+// An expensive function that can be used for deep-debug trail-related
+// issues in mobical. Do not use it unless it is really unavoidable.
+//
+// eq_class contains all the merged external literals that are currently
+// compacted to the internal literal of trail[0] and return true.
+//
+// In case trail[0] does not exists or is not on the root level, the
+// function returns false (indicating that there was no merger literal
+// found).
+//
+bool Internal::get_merged_literals (std::vector<int> &eq_class) {
+  eq_class.clear ();
+
+  if (!trail.size ())
+    return false;
+
+  int ilit = trail[0];
+  size_t lit_level = var (ilit).level;
+
+  if (!lit_level) {
+    // Collect all the variables that are merged and mapped to that ilit
+    size_t e2i_size = external->e2i.size ();
+    int ivar = abs (ilit);
+    for (size_t i = 0; i < e2i_size; i++) {
+      int other = abs (external->e2i[i]);
+      if (other == ivar) {
+        if (external->e2i[i] == ilit)
+          eq_class.push_back (i);
+        else
+          eq_class.push_back (-1 * i);
+      }
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
+/*----------------------------------------------------------------------------*/
+//
+// Collect all external variables that are FIXED internally. Again an
+// expensive function that should be called only for debugging in mobical.
+//
+// Do not use it unless it is really unavoidable.
+//
+void Internal::get_all_fixed_literals (std::vector<int> &fixed_lits) {
+  fixed_lits.clear ();
+  if (!trail.size ())
+    return;
+
+  int e2i_size = external->e2i.size ();
+  int ilit;
+  for (int eidx = 1; eidx < e2i_size; eidx++) {
+    ilit = external->e2i[eidx];
+    if (ilit) {
+      Flags &f = flags (ilit);
+      if (f.status == Flags::FIXED) {
+        fixed_lits.push_back (vals[abs (ilit)] * eidx);
+      }
+    }
+  }
+}
+#endif
 
 } // namespace CaDiCaL

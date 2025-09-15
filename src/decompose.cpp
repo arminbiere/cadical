@@ -8,15 +8,6 @@ void Internal::decompose_analyze_binary_chain (DFS *dfs, int from) {
   LOG ("binary chain starting at %d", from);
   DFS &from_dfs = dfs[vlit (from)];
   Clause *reason = from_dfs.parent;
-  /*
-  if (val (from) > 0) {
-    const unsigned uidx = vlit (from);
-    uint64_t id = unit_clauses[uidx];
-    assert (id);
-    mini_chain.push_back (id);
-    return;
-  }
-  */
   if (!reason)
     return;
   assert (reason->size == 2);
@@ -97,7 +88,7 @@ void Internal::build_lrat_for_clause (
         continue;
       mark_decomposed (other);
       const unsigned uidx = vlit (other);
-      uint64_t id = unit_clauses[uidx];
+      uint64_t id = unit_clauses (uidx);
       assert (id);
       lrat_chain.push_back (id);
       continue;
@@ -118,7 +109,7 @@ void Internal::build_lrat_for_clause (
         break;
       mark_decomposed (implied);
       const unsigned uidx = vlit (implied);
-      uint64_t id = unit_clauses[uidx];
+      uint64_t id = unit_clauses (uidx);
       assert (id);
       mini_chain.push_back (id);
       break;
@@ -167,7 +158,9 @@ bool Internal::decompose_round () {
 
   const size_t size_dfs = 2 * (1 + (size_t) max_var);
   DFS *dfs = new DFS[size_dfs];
+  DeferDeleteArray<DFS> dfs_delete (dfs);
   int *reprs = new int[size_dfs];
+  DeferDeleteArray<int> reprs_delete (reprs);
   clear_n (reprs, size_dfs);
   vector<vector<Clause *>> dfs_chains;
   dfs_chains.resize (size_dfs);
@@ -344,9 +337,9 @@ bool Internal::decompose_round () {
 
               if (unsat)
                 break;
-
+#ifndef QUIET
               LOG ("SCC of representative %d of size %d", repr, size);
-
+#endif
               do {
                 assert (!scc.empty ());
                 other = scc.back ();
@@ -547,7 +540,7 @@ bool Internal::decompose_round () {
         f.seen = true;
         analyzed.push_back (lit);
         const unsigned uidx = vlit (-lit);
-        uint64_t id = unit_clauses[uidx];
+        uint64_t id = unit_clauses (uidx);
         assert (id);
         lrat_chain.push_back (id);
         continue;
@@ -562,7 +555,7 @@ bool Internal::decompose_round () {
             f.seen = true;
             analyzed.push_back (other);
             const unsigned uidx = vlit (-other);
-            uint64_t id = unit_clauses[uidx];
+            uint64_t id = unit_clauses (uidx);
             assert (id);
             lrat_chain.push_back (id);
           }
@@ -726,8 +719,8 @@ bool Internal::decompose_round () {
       mark_substituted (idx);
   }
 
-  delete[] reprs;
-  delete[] dfs;
+  reprs_delete.free ();
+  dfs_delete.free ();
   erase_vector (dfs_chains);
 
   flush_all_occs_and_watches (); // particularly the 'blit's

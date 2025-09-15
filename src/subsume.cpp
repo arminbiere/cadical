@@ -188,6 +188,15 @@ void Internal::strengthen_clause (Clause *c, int lit) {
   auto new_end = remove (c->begin (), c->end (), lit);
   assert (new_end + 1 == c->end ()), (void) new_end;
   (void) shrink_clause (c, c->size - 1);
+  // In an earlier version (probably from the time where the used flag was a
+  // single bit) the code was
+  //
+  // c->used = 1
+  //
+  // This code was subsequently removed leading to a performance regression
+  // that can be solved by the simpler (there is a more meaningfull way, but
+  // it is not yet part of the master branch of CaDiCaL):
+  c->used = 0;
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
 }
@@ -216,7 +225,7 @@ inline int Internal::try_to_subsume_clause (Clause *c,
 
     // Only clauses which have a variable which has recently been added are
     // checked for being subsumed.  The idea is that all these newly added
-    // clauses are candidates for subsubming the clause.  Then we also only
+    // clauses are candidates for subsuming the clause.  Then we also only
     // need to check occurrences of these variables.  The occurrence lists
     // of other literal do not have to be checked.
     //
@@ -656,6 +665,11 @@ void Internal::subsume (bool update_limits) {
     return;
   }
 
+  if (external_prop) {
+    assert (!level);
+    private_steps = true;
+  }
+
   if (opts.subsume) {
     reset_watches ();
     subsume_round ();
@@ -673,6 +687,11 @@ void Internal::subsume (bool update_limits) {
     vivify ();
   if (opts.transred)
     transred ();
+
+  if (external_prop) {
+    assert (!level);
+    private_steps = false;
+  }
 
 UPDATE_LIMITS:
 

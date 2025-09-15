@@ -1271,7 +1271,7 @@ int verify (struct solver *S, int begin, int end) {
           (lemmas - S->DB)) {         // what is this check?
         if (S->mode != FORWARD_SAT) { // ignore pseudo unit clause deletion
           if (S->verb) {
-            printf ("c ignoring deletion intruction %li: ",
+            printf ("c ignoring deletion instruction %li: ",
                     (lemmas - S->DB));
             printClause (lemmas);
           }
@@ -1643,7 +1643,7 @@ int parse (struct solver *S) {
     if (tmp > 0 && tmp != EOF)
       break;
     tmp = fscanf (S->inputFile, "%*s\n");
-  }                               // In case a commment line was found
+  } // In case a comment line was found
   while (tmp != 2 && tmp != EOF); // Skip it and read next line
   int nZeros = S->nClauses;
 
@@ -2065,7 +2065,7 @@ void printHelp () {
   printf ("  -r TRACE    resolution graph in the TRACE file (TRACECHECK "
           "format)\n\n");
   printf ("  -t <lim>    time limit in seconds (default %i)\n", TIMEOUT);
-  printf ("  -u          default unit propatation (i.e., no core-first)\n");
+  printf ("  -u          default unit propagation (i.e., no core-first)\n");
   printf ("  -f          forward mode for UNSAT\n");
   printf ("  -v          more verbose output\n");
   printf ("  -b          show progress bar\n");

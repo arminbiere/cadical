@@ -133,6 +133,10 @@ struct Profiles {
                                       internal->time ());) \
   } while (0)
 
+#define PROFILE_ACTIVE(P) \
+  ((internal->profiles.P.level <= internal->opts.profile) && \
+   (internal->profiles.P.active))
+
 /*------------------------------------------------------------------------*/
 
 #define START_SIMPLIFIER(S, M) \
@@ -215,7 +219,8 @@ struct Profiles {
         if (stable && internal->profiles.stable.level <= L) \
             internal->start_profiling (internal->profiles.stable, N); \
         if (!stable && internal->profiles.unstable.level <= L) \
-            internal->start_profiling (internal->profiles.unstable, N);) \
+            internal->start_profiling (internal->profiles.unstable, N); \
+        internal->profiles.walk.started = (N);) \
   } while (0)
 
 /*------------------------------------------------------------------------*/

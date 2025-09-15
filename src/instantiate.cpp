@@ -72,7 +72,7 @@ inline void Internal::inst_assign (int lit) {
 
 // Conflict analysis is only needed to do valid resolution proofs.
 // We remember propagated clauses in order of assignment (in inst_chain)
-// which allows us to do a variant of conflict analysis if the instatiation
+// which allows us to do a variant of conflict analysis if the instantiation
 // attempt succeeds.
 //
 bool Internal::inst_propagate () { // Adapted from 'propagate'.
@@ -279,7 +279,7 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
         continue;
       }
       const unsigned uidx = vlit (-other);
-      uint64_t id = unit_clauses[uidx];
+      uint64_t id = unit_clauses (uidx);
       assert (id);
       lrat_chain.push_back (id);
     }

@@ -93,7 +93,7 @@ IdrupClause *IdrupTracer::new_clause () {
 void IdrupTracer::delete_clause (IdrupClause *c) {
   assert (c);
   num_clauses--;
-  delete[](char *) c;
+  delete[] (char *) c;
 }
 
 uint64_t IdrupTracer::reduce_hash (uint64_t hash, uint64_t size) {
@@ -346,6 +346,24 @@ void IdrupTracer::idrup_conclude_sat (const vector<int> &model) {
   flush_if_piping ();
 }
 
+void IdrupTracer::idrup_conclude_unknown (const vector<int> &trail) {
+  if (binary)
+    file->put ('e');
+  else
+    file->put ("e ");
+  for (auto &lit : trail) {
+    if (binary)
+      put_binary_lit (lit);
+    else
+      file->put (lit), file->put (' ');
+  }
+  if (binary)
+    put_binary_zero ();
+  else
+    file->put ("0\n");
+  flush_if_piping ();
+}
+
 void IdrupTracer::idrup_solve_query () {
   if (binary)
     file->put ('q');
@@ -460,6 +478,13 @@ void IdrupTracer::conclude_sat (const vector<int> &model) {
     return;
   LOG (model, "IDRUP TRACER tracing conclusion of model");
   idrup_conclude_sat (model);
+}
+
+void IdrupTracer::conclude_unknown (const vector<int> &trail) {
+  if (file->closed ())
+    return;
+  LOG (trail, "IDRUP TRACER tracing conclusion of unknown state");
+  idrup_conclude_unknown (trail);
 }
 
 void IdrupTracer::solve_query () {

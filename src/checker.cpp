@@ -40,6 +40,7 @@ CheckerClause *Checker::new_clause () {
   assert (size > 1), assert (size <= UINT_MAX);
   const size_t bytes = sizeof (CheckerClause) + (size - 2) * sizeof (int);
   CheckerClause *res = (CheckerClause *) new char[bytes];
+  DeferDeleteArray<char> delete_res ((char *) res);
   res->next = 0;
   res->hash = last_hash;
   res->size = size;
@@ -67,6 +68,7 @@ CheckerClause *Checker::new_clause () {
   watcher (literals[0]).push_back (CheckerWatch (literals[1], res));
   watcher (literals[1]).push_back (CheckerWatch (literals[0], res));
 
+  delete_res.release ();
   return res;
 }
 
@@ -79,7 +81,7 @@ void Checker::delete_clause (CheckerClause *c) {
     assert (num_garbage);
     num_garbage--;
   }
-  delete[](char *) c;
+  delete[] (char *) c;
 }
 
 void Checker::enlarge_clauses () {
@@ -230,12 +232,12 @@ void Checker::enlarge_vars (int64_t idx) {
   vals -= size_vars;
   delete[] vals;
   vals = new_vals;
+  size_vars = new_size_vars;
 
   watchers.resize (2 * new_size_vars);
   marks.resize (2 * new_size_vars);
 
   assert (idx < new_size_vars);
-  size_vars = new_size_vars;
 }
 
 inline void Checker::import_literal (int lit) {
@@ -461,6 +463,10 @@ void Checker::add_clause (const char *type) {
   (void) type;
 #endif
 
+  // If there are enough garbage clauses collect them first.
+  if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
+    collect_garbage_clauses ();
+
   int unit = 0;
   for (const auto &lit : simplified) {
     const signed char tmp = val (lit);
@@ -546,6 +552,8 @@ void Checker::delete_clause (uint64_t id, bool, const vector<int> &c) {
   START (checking);
   LOG (c, "CHECKER checking deletion of clause");
   stats.deleted++;
+  simplified.clear ();   // Can be non-empty if clause allocation fails.
+  unsimplified.clear (); // Can be non-empty if clause allocation fails.
   import_clause (c);
   last_id = id;
   if (!tautological ()) {
@@ -560,10 +568,6 @@ void Checker::delete_clause (uint64_t id, bool, const vector<int> &c) {
       d->next = garbage;
       garbage = d;
       d->size = 0;
-      // If there are enough garbage clauses collect them.
-      if (num_garbage >
-          0.5 * max ((size_t) size_clauses, (size_t) size_vars))
-        collect_garbage_clauses ();
     } else {
       fatal_message_start ();
       fputs ("deleted clause not in proof:\n", stderr);

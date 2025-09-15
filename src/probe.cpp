@@ -4,7 +4,7 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// Failed literal probing uses it's own propagation and assignment
+// Failed literal probing uses its own propagation and assignment
 // functions.  It further provides on-the-fly generation of hyper binary
 // resolvents but only probes on roots of the binary implication graph.  The
 // search for failed literals is limited, but untried roots are kept until
@@ -90,7 +90,7 @@ void Internal::get_probehbr_lrat (int lit, int uip) {
   assert (lrat_chain.empty ());
   assert (val (uip) < 0);
   lrat_chain = probehbr_chains[vlit (lit)][vlit (uip)];
-  lrat_chain.push_back (unit_clauses[vlit (-uip)]);
+  lrat_chain.push_back (unit_clauses (vlit (-uip)));
 }
 
 // sets the corresponding probehbr_chain to what is currently stored in
@@ -134,7 +134,7 @@ void Internal::probe_dominator_lrat (int dom, Clause *reason) {
       continue;
     }
     const unsigned uidx = vlit (other);
-    uint64_t id = unit_clauses[uidx];
+    uint64_t id = unit_clauses (uidx);
     assert (id);
     lrat_chain.push_back (id);
   }
@@ -365,7 +365,7 @@ inline void Internal::probe_lrat_for_units (int lit) {
     if (!val (reason_lit))
       continue;
     const unsigned uidx = vlit (val (reason_lit) * reason_lit);
-    uint64_t id = unit_clauses[uidx];
+    uint64_t id = unit_clauses (uidx);
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (probe_reason->id);
@@ -873,7 +873,10 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   }
 
   stats.probingphases++;
-
+  if (external_prop) {
+    assert (!level);
+    private_steps = true;
+  }
   const int before = active ();
 
   // We trigger equivalent literal substitution (ELS) before ...
@@ -895,6 +898,11 @@ void CaDiCaL::Internal::probe (bool update_limits) {
   decompose (); // ... and (ELS) afterwards.
 
   last.probe.propagations = stats.propagations.search;
+
+  if (external_prop) {
+    assert (!level);
+    private_steps = false;
+  }
 
   if (!update_limits)
     return;
