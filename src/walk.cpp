@@ -535,7 +535,6 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
     while (i != eou) {
 
       ClauseOrBinary tagged = *j++ = *i++;
-      LOG ("looking at clause");
 
       if (tagged.is_binary ()) {
         const TaggedBinary &b = tagged.tagged_binary ();
@@ -573,7 +572,6 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
       Clause *d = tagged.clause ();
       ++walker.ticks;
       int *literals = d->literals;
-#if 1
       LOG (d, "search for replacement");
       int prev = 0;
       // Find 'lit' in 'd'.
@@ -608,46 +606,6 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
         }
       }
       LOG (d, "clause after undoing shift");
-#else
-      const auto begin = d->begin ();
-      const auto end = d->end ();
-      const auto middle = d->begin () + d->pos;
-      auto k = middle;
-      signed char v = -1;
-      int r = 0;
-      while (k != end && (v = val (r = *k)) < 0)
-        ++k;
-
-      if (v < 0) {
-        k = begin; // check also the first literal, we are looking for
-                   // another literal
-        while (k != middle && (v = val (r = *k)) < 0)
-          ++k;
-      }
-
-      if (v > 0) {
-        int pos = k - begin;
-        if (pos <= 2)
-          pos = 2;
-        d->pos = pos;
-        assert (*k == lit);
-        std::swap (literals[0], *k);
-        LOG (d, "made");
-        watch_literal (literals[0], literals[1], d);
-        ++walker.ticks;
-#ifdef LOGGING
-        made++;
-#endif
-        j--;
-      } else {
-        // Otherwise the clause is not satisfied, do nothing
-        LOG (d, "still broken");
-#ifndef NDEBUG
-        for (auto lit : *d)
-          assert (val (lit) < 0);
-#endif
-      }
-#endif
     }
     LOG ("made %" PRId64 " clauses by flipping %d, still %" PRId64
          " broken",
@@ -716,7 +674,6 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
       // now the expansive part
       assert (d->size != 2);
       ++walker.ticks;
-#if 1
       int *literals = d->literals, replacement = 0, prev = -lit;
       const int size = d->size;
       assert (literals[0] == -lit);
@@ -754,51 +711,6 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
         broken++;
 #endif
       }
-#else
-    LOG (d, "unwatch %d in", -lit);
-    int *literals = d->literals;
-    assert (literals[0] == -lit);
-    assert (d != dummy_binary);
-
-    // do not check the first, we are looking for another literal
-    const auto begin = d->begin () + 1;
-    const auto end = d->end ();
-    const auto middle = d->begin () + d->pos;
-    auto k = middle;
-    signed char v = -1;
-    int r = 0;
-    while (k != end && (v = val (r = *k)) < 0)
-      ++k;
-
-    if (v < 0) {
-      k = begin;
-      while (k != middle && (v = val (r = *k)) < 0)
-        ++k;
-    }
-    d->pos = k - d->begin ();
-    if (d->pos <= 2) // propagates requires this
-      d->pos = 2;
-    assert (d->pos);
-    if (v > 0) {
-      int replacement = *k;
-      *k = literals[1];
-      literals[1] = -lit;
-      literals[0] = replacement;
-      assert (replacement != -lit);
-      watch_literal (replacement, -lit, d);
-      LOG (w.clause, "changing");
-      continue; // double satisfied!
-    } else {
-      assert (literals[0] == -lit);
-      LOG (d, "broken");
-      assert (d != dummy_binary);
-      walker.broken.push_back (d);
-      ++walker.ticks;
-#ifdef LOGGING
-      broken++;
-#endif
-    }
-#endif
       LOG ("broken %" PRId64 " clauses by flipping %d", broken, lit);
       ws.clear ();
     }
@@ -1026,11 +938,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
       if (satisfied) {
         LOG (c, "pushing to satisfied");
         if (c->size == 2)
-#ifdef LOGGING
           watch_binary_literal (lits[0], lits[1], c);
-#else
-          watch_binary_literal (lits[0], lits[1], internal->dummy_binary);
-#endif
         else
           watch_literal (lits[0], lits[1], c);
 #ifdef LOGGING
@@ -1040,11 +948,9 @@ int Internal::walk_round (int64_t limit, bool prev) {
         assert (satisfiable); // at least one non-assumed variable ...
         LOG (c, "broken");
         assert (c->size == size);
-#if 1
         if (size == 2)
           walker.broken.push_back (TaggedBinary (c));
         else
-#endif
           walker.broken.push_back (c);
       }
     }
