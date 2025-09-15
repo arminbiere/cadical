@@ -551,7 +551,6 @@ then
 fi
 
 msg "linking '$root/makefile'"
-ln -s $root/makefile $src/makefile
 
 #--------------------------------------------------------------------------#
 
