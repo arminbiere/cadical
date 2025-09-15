@@ -3,8 +3,6 @@
 #include "random.hpp"
 
 
-#include <variant>
-
 namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
@@ -138,32 +136,33 @@ void Walker::push_flipped(int flipped) {
   }
 
   if (best_trail_pos) {
-      LOG ("trail reached limit %zd but has best position %d", limit,
-           best_trail_pos);
-      save_walker_trail (true);
-      flips.push_back(flipped);
-      LOG ("pushed flipped %s to trail which now has size %zu",
-           LOGLIT (flipped), flips.size());
-      return;
-  }else {
-      LOG ("trail reached limit %zd without best position", limit);
-      flips.clear ();
-      LOG ("not pushing %s to invalidated trail", LOGLIT (flipped));
-      best_trail_pos = -1;
-      LOG ("best trail position becomes invalid");
-    }
+    LOG ("trail reached limit %zd but has best position %d", limit,
+         best_trail_pos);
+    save_walker_trail (true);
+    flips.push_back (flipped);
+    LOG ("pushed flipped %s to trail which now has size %zu",
+         LOGLIT (flipped), flips.size ());
+    return;
+  } else {
+    LOG ("trail reached limit %zd without best position", limit);
+    flips.clear ();
+    LOG ("not pushing %s to invalidated trail", LOGLIT (flipped));
+    best_trail_pos = -1;
+    LOG ("best trail position becomes invalid");
+  }
 }
 
 
 void Walker::save_walker_trail (bool keep) {
   assert (best_trail_pos != -1);
-  assert ((size_t)best_trail_pos <= flips.size ());
+  assert ((size_t) best_trail_pos <= flips.size ());
+//  assert (!keep || best_trail_pos == flips.size());
 #ifdef LOGGING
   const size_t size_trail = flips.size ();
 #endif
   const int kept = flips.size() - best_trail_pos;
-  LOG ("saving %d values of flipped literals on trail of size %zd",
-       best_trail_pos, size_trail);
+  MSG ("saving %d values of flipped literals on trail of size %zd",
+       best_trail_pos, flips.size());
 
   const auto begin = flips.begin ();
   const auto best = flips.begin () + best_trail_pos;
@@ -445,7 +444,7 @@ int Internal::walk_pick_lit (Walker &walker, const TaggedBinary c) {
   ++walker.ticks;
   double sum = 0;
   int64_t propagations = 0;
-  std::array<int, 2> clause = {c.lit, c.other};
+  const std::array<int, 2> clause = {c.lit, c.other};
   for (const auto lit : clause) {
     assert (active (lit));
     if (var (lit).level == 1) {
