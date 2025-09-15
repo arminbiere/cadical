@@ -2100,12 +2100,14 @@ void Closure::check_and_gate_implied (Gate *g) {
   assert (g->tag == Gate_Type::And_Gate);
   if (internal->lrat) {
     assert (g->degenerated_gate != Special_Gate::NORMAL || g->neg_lhs_ids);
+#ifndef NDEBUG
     for (auto c : g->pos_lhs_ids) {
       assert (std::find_if (
                   begin (*c.clause), end (*c.clause), [this, c] (int lit) {
                     return find_eager_representative (lit) == c.current_lit;
                   }) != end (*c.clause));
     }
+#endif
     return;
   }
   LOG (g, "checking implied");
