@@ -382,7 +382,7 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
   LOG ("picking literal by break-count");
   assert (walker.scores.empty ());
   const int64_t old = walker.ticks;
-  walker.ticks += 2;
+  walker.ticks += 1;
   double sum = 0;
   int64_t propagations = 0;
   for (const auto lit : *c) {
@@ -441,7 +441,6 @@ int Internal::walk_pick_lit (Walker &walker, const TaggedBinary c) {
        c.d->id, LOGLIT (c.lit), LOGLIT (c.other));
   assert (walker.scores.empty ());
   const int64_t old = walker.ticks;
-  ++walker.ticks;
   double sum = 0;
   int64_t propagations = 0;
   const std::array<int, 2> clause = {c.lit, c.other};
