@@ -54,7 +54,6 @@ struct Clause {
   bool subsume : 1;      // not checked in last subsumption round
   bool swept : 1;        // clause used to sweep equivalences
   bool flushed : 1;      // garbage in proof deleted binaries
-  unsigned used : 8; // resolved in conflict analysis since last 'reduce'
   bool vivified : 1; // clause already vivified
   bool vivify : 1;   // clause scheduled to be vivified
 
